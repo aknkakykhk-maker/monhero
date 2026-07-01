@@ -57,7 +57,20 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-01 23:58"; // 更新のたびに手動で書き換える(日付+時刻)
+const BUILD_DATE = "2026-07-01 23:59"; // 更新のたびに手動で書き換える(日付+時刻)
+
+// --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
+const XP_PER_WAVE = 10;
+const xpForLevel = (level) => Math.round(50 * Math.pow(level, 1.8)); // そのレベルから次レベルに必要なXP
+const levelInfo = (totalXp) => {
+  let level = 1, xp = totalXp;
+  for (let i = 0; i < 200; i++) {
+    const need = xpForLevel(level);
+    if (xp < need) break;
+    xp -= need; level++;
+  }
+  return { level, xpIntoLevel: xp, xpForNext: xpForLevel(level) };
+};
 
 // =====================================================================
 // AUDIO: すべてオリジナル生成のBGM/SE (Tone.jsをCDNから動的読込)
@@ -402,6 +415,7 @@ function MonsterHeroGame() {
   const [totalRecoveryDelta, setTotalRecoveryDelta] = useState(0); // cumulative recovery-rate correction across all waves
   const [waveResult, setWaveResult] = useState(null);
   const [breederName, setBreederName] = useState('名無しのブリーダー');
+  const [breederXp, setBreederXp] = useState(0); // 累計経験値(WAVEクリア数ベース・端末保存)
   const [showNameEdit, setShowNameEdit] = useState(false);
   const [tempName, setTempName] = useState('');
   const [tempBuffs, setTempBuffs] = useState({ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false });
@@ -409,6 +423,7 @@ function MonsterHeroGame() {
   const [showHelp, setShowHelp] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0); // 0=OFF,1=低,2=中,3=高
   const audioOn = audioLevel > 0;
+  const breederLevel = levelInfo(breederXp);
   const AUDIO_VOLS = [0, 0.4, 0.7, 1.0];
   const AUDIO_LABELS = ['🔇 OFF', '🔈 低', '🔉 中', '🔊 高'];
   const [helpTab, setHelpTab] = useState('goal');
@@ -517,6 +532,8 @@ function MonsterHeroGame() {
     (async () => {
       const savedName = await storeGet('mh_breeder_name', '名無しのブリーダー', false);
       setBreederName(savedName);
+      const savedXp = await storeGet('mh_breeder_xp', 0, false);
+      setBreederXp(savedXp);
       const scores = {};
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async d => { scores[d] = await storeGet(`mh_hs_${d}`, 0, false); }));
       setHighScores(scores);
@@ -566,6 +583,18 @@ function MonsterHeroGame() {
     setShowNameEdit(false);
   };
 
+  // クリアしたWAVE数に応じてブリーダー経験値を加算(端末保存)。難易度が高いほど多めに獲得
+  const awardWaveXp = async (wavesCleared) => {
+    if (wavesCleared <= 0) return;
+    const gain = Math.round(XP_PER_WAVE * wavesCleared * (DIFFICULTY_SETTINGS[difficulty]?.score || 1.0));
+    if (gain <= 0) return;
+    setBreederXp(prev => {
+      const next = prev + gain;
+      storeSet('mh_breeder_xp', next, false);
+      return next;
+    });
+  };
+
   // Save score on game end
   useEffect(() => {
     if (hp <= 0 || gameState === 'CHAMPION') {
@@ -576,6 +605,7 @@ function MonsterHeroGame() {
             await storeSet(`mh_hs_${difficulty}`, score, false);
             setHighScores(prev => ({ ...prev, [difficulty]: score }));
           }
+          await awardWaveXp(gameState === 'CHAMPION' ? 10 : Math.max(0, wave - 1));
         } catch {}
       })();
     }
@@ -644,9 +674,10 @@ function MonsterHeroGame() {
         }
       } catch {}
     }
+    try { await awardWaveXp(Math.max(0, wave - 1)); } catch {}
     setShowQuitConfirm(false);
     handleGoToTitle();
-  }, [score, difficulty, highScores, breederName, mainHero, slots]);
+  }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
 
   const handleRetry = useCallback(() => {
     const s = resetAllState();
@@ -1203,7 +1234,11 @@ function MonsterHeroGame() {
               </div>
               <div className="shrink-0 w-full flex flex-col items-center mb-2">
                 <div className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mb-1">Breeder Profile</div>
-                <button onClick={()=>{setTempName(breederName); setShowNameEdit(true);}} className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group backdrop-blur-sm"><User size={14} className="text-indigo-400"/><span className="font-black text-sm text-white group-hover:text-indigo-300 transition-colors">{breederName}</span><Edit3 size={12} className="text-slate-500 group-hover:text-white"/></button>
+                <button onClick={()=>{setTempName(breederName); setShowNameEdit(true);}} className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group backdrop-blur-sm"><User size={14} className="text-indigo-400"/><span className="font-black text-sm text-white group-hover:text-indigo-300 transition-colors">{breederName}</span><span className="px-1.5 py-0.5 rounded-full bg-indigo-600/90 border border-indigo-400/50 text-[8px] font-black text-white">Lv.{breederLevel.level}</span><Edit3 size={12} className="text-slate-500 group-hover:text-white"/></button>
+                <div className="w-full max-w-[180px] mt-1.5">
+                  <div className="h-1 bg-slate-800 rounded-full overflow-hidden border border-white/5"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-400 transition-all duration-500" style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></div></div>
+                  <div className="text-[6px] text-slate-600 font-mono text-center mt-0.5 tracking-wider">{breederLevel.xpIntoLevel} / {breederLevel.xpForNext} XP</div>
+                </div>
               </div>
               <div className="shrink-0 flex flex-col gap-2 w-full">
                 <div className="grid grid-cols-3 gap-2 justify-center">
