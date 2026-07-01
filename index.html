@@ -1557,7 +1557,7 @@ function MonsterHeroGame() {
                 </div>
               </div>
             )}
-            <div className="h-[34%] shrink-0 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-start gap-1 z-10 relative">
+            <div className="h-[34%] shrink-0 px-2 bg-slate-950 border-y border-white/5 flex flex-col items-center justify-center gap-1 z-10 relative">
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1" style={{zIndex:200}}>{popups.filter(p=>p.side==='hero').map((p)=>(<div key={p.id} className={`${p.color} font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] leading-tight px-2 py-0.5 rounded-lg`} style={{backgroundColor:'rgba(2,6,23,0.55)'}}>{p.text}</div>))}</div>
               <div className="w-full space-y-1 px-2 py-1 bg-black/40 rounded-xl border border-white/5">
                 <div className="flex items-center gap-2 relative"><Heart className="text-pink-500 shrink-0" size={12}/><div className="flex-1"><div className="flex justify-between text-[7px] font-bold text-pink-400 mb-0.5 uppercase tracking-widest"><span>Ally Life</span><span className="font-mono">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</span></div><div className="h-1.5 bg-slate-900 rounded-full overflow-hidden border border-white/5 shadow-inner"><div className="h-full bg-gradient-to-r from-pink-700 to-rose-400 transition-all duration-1000" style={{width:`${(hp/effectiveMaxHp)*100}%`}}></div></div></div><div className="absolute left-1/2 -translate-x-1/2 -top-2 flex flex-col items-center gap-0.5 pointer-events-none" style={{zIndex:210}}>{popups.filter(p=>p.side==='life').map((p)=>(<div key={p.id} className={`${p.color} text-base font-black drop-shadow-[0_2px_8px_rgba(0,0,0,1)] whitespace-nowrap px-2 py-0.5 rounded-lg animate-bounce`} style={{backgroundColor:'rgba(2,6,23,0.8)'}}>{p.text}</div>))}</div></div>
@@ -1612,7 +1612,7 @@ function MonsterHeroGame() {
                   </div>
                 );
               })()}
-              <div className="grid grid-cols-4 gap-2 w-full relative flex-1" style={{minHeight:'96px'}}>
+              <div className="grid grid-cols-4 gap-2 w-full relative shrink-0" style={{height:'130px'}}>
                 {slots.map((s,i)=>{
                   // Count how many cards already assigned to this slot
                   const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
