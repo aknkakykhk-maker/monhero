@@ -57,7 +57,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-01"; // 更新のたびに手動で書き換える
+const BUILD_DATE = "2026-07-01 23:16"; // 更新のたびに手動で書き換える(日付+時刻)
 
 // =====================================================================
 // AUDIO: すべてオリジナル生成のBGM/SE (Tone.jsをCDNから動的読込)
@@ -1196,7 +1196,7 @@ function MonsterHeroGame() {
               </div>
             )}
             <div className="text-[7px] text-slate-600 font-mono tracking-widest uppercase shrink-0 pt-2">スコアはブラウザ内に保存されます</div>
-            <div className="absolute bottom-1.5 right-2 text-[7px] text-slate-700 font-mono tracking-wide pointer-events-none select-none">Updated {BUILD_DATE}</div>
+            <div className="absolute bottom-1.5 left-2 text-[7px] text-slate-700 font-mono tracking-wide pointer-events-none select-none">Updated {BUILD_DATE}</div>
           </div>
         )}
 
