@@ -57,7 +57,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-01 23:37"; // 更新のたびに手動で書き換える(日付+時刻)
+const BUILD_DATE = "2026-07-01 23:48"; // 更新のたびに手動で書き換える(日付+時刻)
 
 // =====================================================================
 // AUDIO: すべてオリジナル生成のBGM/SE (Tone.jsをCDNから動的読込)
@@ -399,17 +399,23 @@ function MonsterHeroGame() {
   const effectiveMaxHp = useMemo(() => Math.floor(maxHp * (1.0 + muaHpBonus)), [maxHp, muaHpBonus]);
   const effectiveMaxGuts = useMemo(() => Math.floor(maxGuts * (1.0 + muaGutsBonus)), [maxGuts, muaGutsBonus]);
 
-  // Load shared rankings from storage: each entry stored under key `rank:{diff}:{name}` (shared)
+  // 全国ランキングをSupabaseから取得。失敗時は端末内保存の値にフォールバック
   const loadRankings = useCallback(async () => {
     const byDiff = {};
     try {
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async (d) => {
         try {
-          const rows = await storeGet(`mh_rank_${d}`, [], false);
-          if (Array.isArray(rows) && rows.length) {
-            byDiff[d] = rows.slice().sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,20);
-          }
-        } catch {}
+          const rows = await sbFetchRankings(d, 20);
+          byDiff[d] = (rows || []).map(r => ({ userName: r.user_name, hero: r.hero, party: r.party, score: r.score }));
+        } catch (e) {
+          console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
+          try {
+            const rows = await storeGet(`mh_rank_${d}`, [], false);
+            if (Array.isArray(rows) && rows.length) {
+              byDiff[d] = rows.slice().sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,20);
+            }
+          } catch {}
+        }
       }));
       setLocalRankings(byDiff);
     } catch {}
@@ -501,20 +507,33 @@ function MonsterHeroGame() {
   const submitLocalScore = async (diff, finalScore) => {
     const party = slots.map(s => s ? { name: s.name, emoji: s.emoji, imgUrl: s.imgUrl || null } : null);
     const name = breederName || '名無しのブリーダー';
-    const entry = { userName: name, hero: mainHero?.name || 'Unknown', party, score: finalScore, diff };
+    const heroName = mainHero?.name || 'Unknown';
+    // 全国ランキング(Supabase)への送信を優先。失敗時のみ端末内保存にフォールバック
     try {
-      const rows = await storeGet(`mh_rank_${diff}`, [], false);
-      const list = Array.isArray(rows) ? rows.slice() : [];
-      const idx = list.findIndex(r => r.userName === name);
-      if (idx >= 0) {
-        if ((list[idx].score || 0) < finalScore) list[idx] = entry; // keep best
+      const existing = await sbFindPlayer(diff, name);
+      const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore };
+      if (existing) {
+        if ((existing.score || 0) < finalScore) await sbUpdateScore(existing.id, row); // keep best
       } else {
-        list.push(entry);
+        await sbInsertScore(row);
       }
-      list.sort((a,b)=>(b.score||0)-(a.score||0));
-      await storeSet(`mh_rank_${diff}`, list.slice(0,50), false);
     } catch (e) {
-      console.error('[ranking] submit failed:', e && e.message ? e.message : e);
+      console.error('[ranking] supabase submit failed, falling back to local:', e && e.message ? e.message : e);
+      const entry = { userName: name, hero: heroName, party, score: finalScore, diff };
+      try {
+        const rows = await storeGet(`mh_rank_${diff}`, [], false);
+        const list = Array.isArray(rows) ? rows.slice() : [];
+        const idx = list.findIndex(r => r.userName === name);
+        if (idx >= 0) {
+          if ((list[idx].score || 0) < finalScore) list[idx] = entry; // keep best
+        } else {
+          list.push(entry);
+        }
+        list.sort((a,b)=>(b.score||0)-(a.score||0));
+        await storeSet(`mh_rank_${diff}`, list.slice(0,50), false);
+      } catch (e2) {
+        console.error('[ranking] local fallback also failed:', e2 && e2.message ? e2.message : e2);
+      }
     }
     await loadRankings();
   };
