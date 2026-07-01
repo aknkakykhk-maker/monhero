@@ -27,7 +27,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 <div id="err-box" style="display:none;position:fixed;top:34px;left:0;right:0;background:#991b1b;color:#fff;font:12px monospace;padding:10px;z-index:100001;white-space:pre-wrap;max-height:50vh;overflow:auto;"></div>
 <div id="loading"><div class="ldspin"></div><div style="font-weight:900;letter-spacing:2px;">LOADING...</div></div>
 <div id="root"></div>
-<script type="text/babel" data-presets="react">
+<script type="text/plain" id="game-src">
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const { useState, useEffect, useCallback, useMemo } = React;
 const _LI = window.lucide || {};
@@ -2132,6 +2132,28 @@ try {
   const l=document.getElementById('loading'); if(l) l.style.display='none';
   const b=document.getElementById('ver-banner'); if(b) b.style.display='none';
 } catch(e){ window.__mhErr && window.__mhErr('render tail: '+e.message); }
+</script>
+<script>
+(function(){
+  function fail(m){ if(window.__mhErr) window.__mhErr(m); else { document.body.innerHTML='<pre style="color:#f88;padding:16px;white-space:pre-wrap">'+m+'</pre>'; } }
+  function run(){
+    try {
+      if(!window.Babel){ fail('Babel not loaded (CDN blocked?)'); return; }
+      if(!window.React){ fail('React not loaded (CDN blocked?)'); return; }
+      if(!window.ReactDOM){ fail('ReactDOM not loaded (CDN blocked?)'); return; }
+      var src = document.getElementById('game-src').textContent;
+      var out;
+      try {
+        out = Babel.transform(src, { presets: ['react'], filename:'game.jsx' }).code;
+      } catch(e){ fail('Babel transform error: ' + (e && e.message ? e.message : e)); return; }
+      try {
+        (0, eval)(out);
+      } catch(e){ fail('Runtime error: ' + (e && e.message ? e.message : e) + '\n' + (e && e.stack ? e.stack : '')); return; }
+    } catch(e){ fail('Bootstrap error: ' + (e && e.message ? e.message : e)); }
+  }
+  if(document.readyState === 'complete' || document.readyState === 'interactive'){ setTimeout(run, 50); }
+  else { window.addEventListener('DOMContentLoaded', function(){ setTimeout(run, 50); }); }
+})();
 </script>
 </body>
 </html>
