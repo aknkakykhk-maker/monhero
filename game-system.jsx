@@ -57,7 +57,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-01 23:16"; // 更新のたびに手動で書き換える(日付+時刻)
+const BUILD_DATE = "2026-07-01 23:30"; // 更新のたびに手動で書き換える(日付+時刻)
 
 // =====================================================================
 // AUDIO: すべてオリジナル生成のBGM/SE (Tone.jsをCDNから動的読込)
@@ -222,6 +222,16 @@ const DIFFICULTY_SETTINGS = {
   Master:   { label: "Master",   power: 5.0,  score: 5.0,  color: "bg-slate-200 text-black", shadow: "shadow-white/50" },
 };
 
+// ブリーダー教えカード使用時の専用演出(色・アイコン・掛け声)
+const TEACHING_FX_STYLE = {
+  oryo:    { icon:"🌸", label:"闘気上昇!",   text:"text-red-300",     ring:"border-red-300",     rgb:"239,68,68" },
+  dra:     { icon:"🐉", label:"鉄壁化!",     text:"text-emerald-300", ring:"border-emerald-300", rgb:"16,185,129" },
+  cadmium: { icon:"🧪", label:"計算完了!",   text:"text-cyan-300",    ring:"border-cyan-300",    rgb:"6,182,212" },
+  mua:     { icon:"💖", label:"祝福!",       text:"text-pink-300",    ring:"border-pink-300",    rgb:"236,72,153" },
+  atsu:    { icon:"🔥", label:"挑発!",       text:"text-orange-300",  ring:"border-orange-300",  rgb:"234,88,12" },
+  myaru:   { icon:"🐈", label:"怪薬投与!",   text:"text-purple-300",  ring:"border-purple-300",  rgb:"168,85,247" },
+};
+
 
 // Storage helpers — localStorage/sessionStorage are NOT available in this artifact
 // environment (they throw and blank the screen). Use window.storage exclusively,
@@ -359,6 +369,7 @@ function MonsterHeroGame() {
   const [slotSettle, setSlotSettle] = useState(null); // はめ込み成功したスロットindex
   const [enemySkillName, setEnemySkillName] = useState(null); // 敵アクションの技名インライン表示
   const [guardFx, setGuardFx] = useState(false); // ガード成功のキーン演出
+  const [teachingFx, setTeachingFx] = useState(null); // {id} ブリーダー教えカード使用時の専用演出
   const [enemyAttackAnim, setEnemyAttackAnim] = useState(false);
   const [enemyAttackFx, setEnemyAttackFx] = useState(null); // null | {kind:'normal'|'special'}
   const [muaGutsBonus, setMuaGutsBonus] = useState(0);
@@ -636,6 +647,14 @@ function MonsterHeroGame() {
     setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),2500);
   };
 
+  // ブリーダー教えカード使用時の専用演出を発火
+  const fireTeachingFx = (id) => {
+    if (!TEACHING_FX_STYLE[id]) return;
+    const fxId = Date.now()+Math.random();
+    setTeachingFx({id, fxId});
+    setTimeout(()=>setTeachingFx(p=>(p&&p.fxId===fxId?null:p)), 900);
+  };
+
   // Whether a card needs to be assigned to a monster (attack-type cards)
   const cardNeedsMonster = (card) => {
     if(!card) return false;
@@ -855,6 +874,7 @@ function MonsterHeroGame() {
       setGuts(p=>Math.max(0,p-getCardGuts(card)));
       if (card.type==='draw') continue;
       if (card.type==='buff'||card.type==='debuff') {
+        fireTeachingFx(card.id);
         if (card.subType==='atk_buff') { addPopup(`攻撃UP!`,'hero','text-red-400 font-black text-2xl drop-shadow-md'); setOryoTotal(p=>p+card.baseValue); localOryoAdd+=card.baseValue; }
         else if (card.subType==='dmg_cut_buff') { addPopup(`防御UP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=level===0?0.03:(level===1?0.06:0.10); setDraTotal(p=>Math.min(0.9,p+cutValue)); }
         else if (card.subType==='guts_buff') { addPopup(`⚡ ガッツ上限UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); setCadmiumTotal(p=>p+(card.baseValue-1.0)); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let gutsLimitUp=level===1?0.05:(level>=2?0.07:0.05); setMuaGutsBonus(p=>p+gutsLimitUp); if(level>=1){let hpLimitUp=level===1?0.05:0.07; let autoHeal=level===1?0.02:0.05; setMuaHpBonus(p=>p+hpLimitUp); setAutoHpRecoveryRate(p=>p+autoHeal); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md');} }
@@ -863,6 +883,7 @@ function MonsterHeroGame() {
       }
       else if (card.type==='heal') {
         Audio_.se.heal();
+        fireTeachingFx(card.id);
         const owned=ownedTeachings.find(t=>t.id===card.id); const level=owned?owned.evoLevel:0;
         if (card.id==='mua') {
           let hpRecRate=level===1?0.7:(level>=2?0.9:0.5), gutsRecRate=level>=1?(level>=2?0.9:0.7):0;
@@ -1252,6 +1273,23 @@ function MonsterHeroGame() {
                     <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 45%, rgba(255,255,255,0.5) 0%, rgba(56,189,248,0.3) 20%, rgba(0,0,0,0) 45%)',animation:'guardFlash 350ms ease-out forwards'}}></div>
                   </div>
                 )}
+                {teachingFx&&TEACHING_FX_STYLE[teachingFx.id]&&(()=>{
+                  const fx=TEACHING_FX_STYLE[teachingFx.id];
+                  return (
+                    <div key={teachingFx.fxId} className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:63000}}>
+                      <div className="absolute" style={{animation:'guardShine 550ms ease-out forwards'}}>
+                        <div className="text-[110px] drop-shadow-[0_0_30px_rgba(255,255,255,0.9)]">{fx.icon}</div>
+                      </div>
+                      {[0,1,2,3,4,5,6,7].map(k=>(
+                        <div key={k} className="absolute" style={{transform:`rotate(${k*45}deg)`}}>
+                          <div className={`rounded-full border-4 ${fx.ring}`} style={{width:'30px',height:'30px',animation:`guardSpark 550ms ease-out ${k*20}ms forwards`}}></div>
+                        </div>
+                      ))}
+                      <div className={`absolute font-black text-3xl tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${fx.text}`} style={{top:'32%',animation:'guardShine 550ms ease-out forwards'}}>{fx.label}</div>
+                      <div className="absolute inset-0" style={{background:`radial-gradient(circle at 50% 45%, rgba(${fx.rgb},0.5) 0%, rgba(${fx.rgb},0.25) 22%, rgba(0,0,0,0) 48%)`,animation:'guardFlash 400ms ease-out forwards'}}></div>
+                    </div>
+                  );
+                })()}
                 {enemy?.id==='Moo'&&enemy?.imgUrl&&(
                   <div className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
                     <img src={enemy.imgUrl} alt="ムー" style={{width:'100%',height:'100%',animation:enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite',imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className="object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]"/>
