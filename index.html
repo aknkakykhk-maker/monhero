@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>モンスターヒーロー</title>
+<script>
+window.__mhErr = function(msg){ try{ var e=document.getElementById('err-box'); if(e){ e.style.display='block'; e.textContent += msg + "\n"; } var b=document.getElementById('ver-banner'); if(b){ b.style.background='#dc2626'; b.textContent='ERROR (see red box)'; } }catch(_){} };
+window.addEventListener('error', function(ev){ window.__mhErr('[error] ' + (ev.message||'') + ' @ ' + (ev.filename||'') + ':' + (ev.lineno||'')); });
+window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[promise] ' + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason)); });
+</script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/lucide-react@0.383.0/dist/umd/lucide-react.js" crossorigin></script>
@@ -18,6 +23,8 @@
 </style>
 </head>
 <body>
+<div id="ver-banner" style="position:fixed;top:0;left:0;right:0;background:#16a34a;color:#fff;font:900 13px sans-serif;padding:6px 10px;z-index:100000;text-align:center;letter-spacing:1px;">GH-BUILD v56 / LOADING ENGINE...</div>
+<div id="err-box" style="display:none;position:fixed;top:34px;left:0;right:0;background:#991b1b;color:#fff;font:12px monospace;padding:10px;z-index:100001;white-space:pre-wrap;max-height:50vh;overflow:auto;"></div>
 <div id="loading"><div class="ldspin"></div><div style="font-weight:900;letter-spacing:2px;">LOADING...</div></div>
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
@@ -2121,7 +2128,10 @@ const rootEl = document.getElementById('root');
 const _root = ReactDOM.createRoot(rootEl);
 _root.render(React.createElement(MonsterHeroGame));
 
-try { const l=document.getElementById('loading'); if(l) l.style.display='none'; } catch(e){}
+try {
+  const l=document.getElementById('loading'); if(l) l.style.display='none';
+  const b=document.getElementById('ver-banner'); if(b) b.style.display='none';
+} catch(e){ window.__mhErr && window.__mhErr('render tail: '+e.message); }
 </script>
 </body>
 </html>
