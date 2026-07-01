@@ -57,7 +57,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-01 23:48"; // 更新のたびに手動で書き換える(日付+時刻)
+const BUILD_DATE = "2026-07-01 23:58"; // 更新のたびに手動で書き換える(日付+時刻)
 
 // =====================================================================
 // AUDIO: すべてオリジナル生成のBGM/SE (Tone.jsをCDNから動的読込)
@@ -233,11 +233,18 @@ const TEACHING_FX_STYLE = {
 };
 
 
-// Storage helpers — localStorage/sessionStorage are NOT available in this artifact
-// environment (they throw and blank the screen). Use window.storage exclusively,
-// with an in-memory fallback so the game still runs even if storage is unavailable.
+// Storage helpers — window.storage は元々の別プラットフォーム向けAPIで、
+// GitHub Pages上には存在しない。実ブラウザのlocalStorageを使い、
+// それも使えない場合のみメモリ内フォールバック(リロードで消える)にする。
 const _memStore = {};
 const hasWinStorage = () => typeof window !== 'undefined' && !!window.storage;
+const hasLocalStorage = () => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return false;
+    const k = '__mh_ls_test__'; window.localStorage.setItem(k, '1'); window.localStorage.removeItem(k);
+    return true;
+  } catch { return false; }
+};
 
 const storeGet = async (key, def, shared=false) => {
   try {
@@ -245,13 +252,22 @@ const storeGet = async (key, def, shared=false) => {
       const r = await window.storage.get(key, shared);
       return r && r.value !== undefined && r.value !== null ? JSON.parse(r.value) : def;
     }
+  } catch { /* fall through */ }
+  try {
+    if (hasLocalStorage()) {
+      const raw = window.localStorage.getItem(key);
+      return raw !== null ? JSON.parse(raw) : def;
+    }
   } catch { /* fall through to memory */ }
   return key in _memStore ? _memStore[key] : def;
 };
 const storeSet = async (key, val, shared=false) => {
   _memStore[key] = val;
   try {
-    if (hasWinStorage()) { await window.storage.set(key, JSON.stringify(val), shared); }
+    if (hasWinStorage()) { await window.storage.set(key, JSON.stringify(val), shared); return; }
+  } catch {}
+  try {
+    if (hasLocalStorage()) { window.localStorage.setItem(key, JSON.stringify(val)); }
   } catch {}
 };
 const storeList = async (prefix, shared=false) => {
@@ -261,11 +277,15 @@ const storeList = async (prefix, shared=false) => {
       return (r && r.keys) ? r.keys : [];
     }
   } catch {}
+  try {
+    if (hasLocalStorage()) {
+      const keys = [];
+      for (let i=0;i<window.localStorage.length;i++){ const k=window.localStorage.key(i); if(k&&k.startsWith(prefix)) keys.push(k); }
+      return keys;
+    }
+  } catch {}
   return Object.keys(_memStore).filter(k => k.startsWith(prefix));
 };
-// legacy sync helpers kept for any remaining local-only personal data (memory-backed)
-const lsGet = (k, def) => (k in _memStore ? _memStore[k] : def);
-const lsSet = (k, v) => { _memStore[k] = v; };
 
 // ===== Supabase shared ranking (REST API via fetch) =====
 const SUPABASE_URL = 'https://zrzevudkbgtxlbvmuziy.supabase.co';
