@@ -1,5 +1,34 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { Heart, Zap, Sword, Shield, X, Award, Skull, PlusCircle, Target, ShieldCheck, Trophy, Timer, Play, Sparkles, Activity, ChevronRight, Crown, Edit3, ArrowLeft, Search, Layers, AlertCircle, Flag, RotateCcw, MinusCircle, Star, Users, User, Check, HelpCircle, BookOpen, Info, RefreshCcw, ArrowDownCircle } from "lucide-react";
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>モンスターヒーロー</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/lucide-react@0.383.0/dist/umd/lucide-react.js" crossorigin></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; }
+  #root { width:100%; min-height:100vh; }
+  #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; background:#050510; color:#a5b4fc; font-family:sans-serif; z-index:99999; }
+  .ldspin { width:44px; height:44px; border:4px solid rgba(165,180,252,0.25); border-top-color:#a5b4fc; border-radius:50%; animation:ldrot 0.8s linear infinite; }
+  @keyframes ldrot { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="loading"><div class="ldspin"></div><div style="font-weight:900;letter-spacing:2px;">LOADING...</div></div>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+// ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
+const { useState, useEffect, useCallback, useMemo } = React;
+const _LI = window.lucide || {};
+// lucide-react UMD (LucideReact) からアイコンコンポーネントを取得
+const _LR = window.LucideReact || window.lucideReact || window['lucide-react'] || {};
+const _icon = (name) => (_LR && _LR[name]) ? _LR[name] : ((props) => React.createElement('span', {style:{display:'inline-block',width:(props&&props.size)||16,height:(props&&props.size)||16}}));
+const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle');
+
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
@@ -351,7 +380,7 @@ const sbUpdateScore = async (id, row) => {
   if (!res.ok) throw new Error(`update ${res.status}`);
 };
 
-export default function MonsterHeroGame() {
+function MonsterHeroGame() {
   const [gameState, setGameState] = useState('TITLE');
   const [difficulty, setDifficulty] = useState('Normal');
   const [score, setScore] = useState(0);
@@ -2085,3 +2114,14 @@ const createAnimationStyle = () => {
   document.head.appendChild(style);
 };
 createAnimationStyle();
+
+
+// ==== GitHub Pages 用: グローバルからReact/フックを取得してレンダリング ====
+const rootEl = document.getElementById('root');
+const _root = ReactDOM.createRoot(rootEl);
+_root.render(React.createElement(MonsterHeroGame));
+
+try { const l=document.getElementById('loading'); if(l) l.style.display='none'; } catch(e){}
+</script>
+</body>
+</html>
