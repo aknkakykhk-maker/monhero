@@ -27,7 +27,11 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 <div id="err-box" style="display:none;position:fixed;top:34px;left:0;right:0;background:#991b1b;color:#fff;font:12px monospace;padding:10px;z-index:100001;white-space:pre-wrap;max-height:50vh;overflow:auto;"></div>
 <div id="loading"><div class="ldspin"></div><div style="font-weight:900;letter-spacing:2px;">LOADING...</div></div>
 <div id="root"></div>
-<div style="position:fixed;bottom:2px;right:4px;font:900 9px monospace;color:rgba(255,255,255,0.35);z-index:99999;pointer-events:none;">LA</div>
+<div id="audio-diag" style="position:fixed;bottom:16px;left:4px;right:4px;font:700 11px monospace;color:#7dd3fc;background:rgba(0,0,0,0.8);padding:6px 8px;border-radius:6px;z-index:99998;pointer-events:none;max-height:30vh;overflow:hidden;white-space:pre-wrap;"></div>
+<script>
+window.__mhAudioDiag = function(msg){ try{ var e=document.getElementById('audio-diag'); if(e){ e.textContent += '[音声] '+msg+"\n"; } }catch(_){} };
+</script>
+<div style="position:fixed;bottom:2px;right:4px;font:900 9px monospace;color:rgba(255,255,255,0.35);z-index:99999;pointer-events:none;">LF</div>
 <script type="text/plain" id="game-src">
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const { useState, useEffect, useCallback, useMemo } = React;
@@ -106,11 +110,12 @@ const Audio_ = (() => {
       if (typeof document === 'undefined') { res(); return; }
       const s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js';
-      s.onload = () => { Tone = window.Tone; res(); };
-      s.onerror = () => { res(); };
+      s.onload = () => { Tone = window.Tone; try{window.__mhAudioDiag&&window.__mhAudioDiag('Tone.js 読込OK');}catch(_){} res(); };
+      s.onerror = () => { try{window.__mhAudioDiag&&window.__mhAudioDiag('Tone.js 読込失敗(CDNブロック)');}catch(_){} res(); };
       document.head.appendChild(s);
     }).then(async () => {
-      if (!Tone) return;
+      if (!Tone) { try{window.__mhAudioDiag&&window.__mhAudioDiag('Tone未定義(初期化中断)');}catch(_){} return; }
+      try {
       bgmBus = new Tone.Gain(0.04).toDestination(); // BGM専用バス(SEには影響しない・初期は最小)
       reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).toDestination(); // SE用リバーブ
       lead = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.2 }, volume: -13 }).connect(bgmBus);
@@ -118,11 +123,13 @@ const Audio_ = (() => {
       bass = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.4, release: 0.3 }, volume: -15 }).connect(bgmBus);
       try { await reverb.ready; } catch (e) {}
       ready = true;
+      try{window.__mhAudioDiag&&window.__mhAudioDiag('音声初期化OK');}catch(_){}
+      } catch(e){ try{window.__mhAudioDiag&&window.__mhAudioDiag('音声初期化エラー: '+(e&&e.message?e.message:e));}catch(_){} }
     });
     return loading;
   };
 
-  const ensure = async () => { await load(); if (Tone && !started) { try { await Tone.start(); started = true; } catch (e) {} } };
+  const ensure = async () => { await load(); if (Tone && !started) { try { await Tone.start(); started = true; try{window.__mhAudioDiag&&window.__mhAudioDiag('Tone.start OK 状態:'+(Tone.context?Tone.context.state:'?'));}catch(_){} } catch (e) { try{window.__mhAudioDiag&&window.__mhAudioDiag('Tone.startエラー: '+(e&&e.message?e.message:e));}catch(_){} } } };
 
   const T = {
     title: { bpm: 120, mel: [['C5','8n'],['C5','8n'],['C5','4n'],['G5','8n'],['C5','8n'],['E5','4n'],['F5','8n'],['G5','8n'],['A5','4n'],['G5','4n'],['E5','4n'],['D5','8n'],['E5','8n'],['F5','4n'],['A5','8n'],['G5','8n'],['F5','4n'],['E5','8n'],['D5','8n'],['C5','2n'],['G5','4n'],['C6','4n'],['B5','8n'],['A5','8n'],['G5','4n'],['A5','4n'],['F5','8n'],['G5','8n'],['A5','4n'],['C6','4n'],['B5','4n'],['A5','8n'],['G5','8n'],['F5','4n'],['E5','8n'],['D5','8n'],['E5','4n'],['G5','4n'],['F5','8n'],['E5','8n'],['C5','2n']], bass: ['C2','C2','F2','G2','C2','F2','G2','C2'], arp: [['C4','E4','G4'],['C4','E4','G4'],['F3','A3','C4'],['G3','B3','D4'],['C4','E4','G4'],['F3','A3','C4'],['G3','B3','D4'],['C4','E4','G4']] },
@@ -178,6 +185,17 @@ const Audio_ = (() => {
     if (Tone) {
       try { Tone.Destination.volume.value = seDb; } catch (e) {}
       try { if (bgmBus) bgmBus.gain.rampTo(bgmGain, 0.1); } catch (e) {}
+      // iOS音声ロック解除: 有効化時に即座にテスト音を鳴らす
+      if (on) {
+        try {
+          const tb = new Tone.Synth({ oscillator:{type:'triangle'}, envelope:{attack:0.005,decay:0.15,sustain:0.1,release:0.2}, volume: -6 }).toDestination();
+          const now = Tone.now();
+          tb.triggerAttackRelease('C5','8n', now);
+          tb.triggerAttackRelease('G5','8n', now+0.12);
+          setTimeout(()=>{ try{tb.dispose();}catch(e){} }, 800);
+          try{window.__mhAudioDiag&&window.__mhAudioDiag('テスト音再生(♪ピロン) dest音量:'+seDb+'dB');}catch(_){}
+        } catch(e){ try{window.__mhAudioDiag&&window.__mhAudioDiag('テスト音エラー: '+(e&&e.message?e.message:e));}catch(_){} }
+      }
     }
     if (on && !enabled) { await setEnabled(true); }
     else if (!on && enabled) { await setEnabled(false); }
@@ -1364,7 +1382,7 @@ function MonsterHeroGame() {
                 </div>
               </div>
             )}
-            <main className="flex-1 relative flex flex-col items-center justify-center pt-3 p-2 overflow-hidden min-h-0">
+            <main className="flex-1 relative flex flex-col items-center justify-between pt-3 pb-1 px-2 overflow-visible min-h-0">
               <button onClick={()=>setShowEnemyInfo(true)} className="absolute right-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">解析</span></button>
               <button onClick={useEmergency} disabled={isBusy} className="absolute left-2 bottom-20 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg"><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[7px] font-black text-white">緊急</span></button>
               <div className="mt-1 relative flex flex-col items-center">
@@ -1510,7 +1528,7 @@ function MonsterHeroGame() {
               </div>
               {/* 技詳細パネルはmain外(画面直下)に移動して、ムー画像と同階層でz-index勝負させる */}
               {enemy&&enemyIntent&&!isBusy&&(<div className={`mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0 ${focusedCard?'invisible':'visible'} ${enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400':'bg-red-950 border-red-600/50 text-red-400'}`}><Target size={12}/><div className="text-[9px] font-black uppercase tracking-tight">{enemyIntent.label} (予測: {getPredictedDamage(enemyIntent)})</div></div>)}
-              <div className={`flex flex-wrap justify-center gap-1 max-w-[340px] mb-2 ${enemy&&enemyIntent&&!isBusy?'':'mt-auto'} shrink-0 relative z-[40] ${focusedCard?'invisible':'visible'}`}>
+              <div className={`flex flex-wrap justify-center gap-1 max-w-[340px] mt-auto mb-1 shrink-0 relative z-[40] ${focusedCard?'invisible':'visible'}`}>
                 {/* === 永続バフ（常時表示・数値が増減） === */}
                 <div className="text-[7px] font-black text-red-500 bg-black/60 px-2 py-0.5 rounded border border-red-500/50 flex items-center gap-1 shadow-lg uppercase"><Sword size={7}/> ATK +{Math.floor((oryoTotal+muaAtkBonus)*100)}%</div>
                 <div className="text-[7px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"><Shield size={7}/> DEF +{Math.floor(draTotal*100)}%</div>
