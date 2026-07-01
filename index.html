@@ -15,12 +15,8 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; }
-  #root { width:100%; height:100dvh; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-  #root > div { width:100%; height:100dvh; max-width:520px; }
-  @media (min-aspect-ratio: 3/5) {
-    /* 横長寄り(タブレット/PC)では幅も抑える */
-    #root > div { max-width:460px; }
-  }
+  #root { width:100%; height:100dvh; overflow:hidden; }
+  #root > div { width:100%; height:100dvh; max-width:600px; margin:0 auto; }
   #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; background:#050510; color:#a5b4fc; font-family:sans-serif; z-index:99999; }
   .ldspin { width:44px; height:44px; border:4px solid rgba(165,180,252,0.25); border-top-color:#a5b4fc; border-radius:50%; animation:ldrot 0.8s linear infinite; }
   @keyframes ldrot { to { transform:rotate(360deg); } }
@@ -31,6 +27,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 <div id="err-box" style="display:none;position:fixed;top:34px;left:0;right:0;background:#991b1b;color:#fff;font:12px monospace;padding:10px;z-index:100001;white-space:pre-wrap;max-height:50vh;overflow:auto;"></div>
 <div id="loading"><div class="ldspin"></div><div style="font-weight:900;letter-spacing:2px;">LOADING...</div></div>
 <div id="root"></div>
+<div style="position:fixed;bottom:2px;right:4px;font:900 9px monospace;color:rgba(255,255,255,0.35);z-index:99999;pointer-events:none;">LA</div>
 <script type="text/plain" id="game-src">
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const { useState, useEffect, useCallback, useMemo } = React;
@@ -1266,7 +1263,7 @@ function MonsterHeroGame() {
   const getFullEvolutionDetails = (t) => [0,1,2].map(lvl=>({lvl,name:BREEDER_EVO_NAMES[t.id][lvl],desc:getDynamicDesc(t,true,lvl)}));
 
   return (
-    <div onPointerDown={(e)=>{const rect=e.currentTarget.getBoundingClientRect(); spawnRipple(e.clientX-rect.left, e.clientY-rect.top);}} className="h-screen w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={{height:'100dvh'}}>
+    <div onPointerDown={(e)=>{const rect=e.currentTarget.getBoundingClientRect(); spawnRipple(e.clientX-rect.left, e.clientY-rect.top);}} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={{height:'100%'}}>
       <div className="absolute inset-0 bg-gradient-to-b from-slate-950 to-black z-0"></div>
       <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
         {ripples.map(r=>(
@@ -1422,7 +1419,7 @@ function MonsterHeroGame() {
                 )}
                 {/* 行動予測ラベルはmain下部に移動 */}
                 <div className={`rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim?{padding:enemy?.id==='Moo'?'clamp(48px,12dvh,110px)':'clamp(8px,2.2dvh,28px)',animation:(enemyAttackFx?.kind==='move'?(enemy?.id==='Moo'?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):'enemyAttackFly 450ms ease-in forwards'), ...(enemy?.id==='Moo'&&enemyAttackFx?.kind!=='move'?{transform:'translateY(3dvh)'}:{}),...(enemy?.id!=='Moo'&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:enemy?.id==='Moo'?'clamp(48px,12dvh,110px)':'clamp(8px,2.2dvh,28px)',...(enemy?.id==='Moo'?{transform:'translateY(3dvh)'}:{})}}>
-                  {enemy?.imgUrl?(enemy?.id==='Moo'?null:<img src={enemy.imgUrl} alt={enemy?.name} style={{width:'clamp(72px,13dvh,130px)',height:'clamp(80px,16dvh,150px)'}} className="object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"/>):(<div style={{fontSize:'clamp(58px,11dvh,104px)',lineHeight:1}} className="drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">{enemy?.emoji}</div>)}
+                  {enemy?.imgUrl?(enemy?.id==='Moo'?null:<img src={enemy.imgUrl} alt={enemy?.name} style={{width:'clamp(70px,12dvh,120px)',height:'clamp(80px,16dvh,150px)'}} className="object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"/>):(<div style={{fontSize:'clamp(58px,11dvh,104px)',lineHeight:1}} className="drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">{enemy?.emoji}</div>)}
                   {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
                   {enemy?.id==='Moo'&&(
                     <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible" style={{zIndex:1}}>
@@ -1513,7 +1510,7 @@ function MonsterHeroGame() {
               </div>
               {/* 技詳細パネルはmain外(画面直下)に移動して、ムー画像と同階層でz-index勝負させる */}
               {enemy&&enemyIntent&&!isBusy&&(<div className={`mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0 ${focusedCard?'invisible':'visible'} ${enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400':'bg-red-950 border-red-600/50 text-red-400'}`}><Target size={12}/><div className="text-[9px] font-black uppercase tracking-tight">{enemyIntent.label} (予測: {getPredictedDamage(enemyIntent)})</div></div>)}
-              <div className={`flex flex-wrap justify-center gap-1 max-w-[320px] mb-3 ${enemy&&enemyIntent&&!isBusy?'':'mt-auto'} shrink-0 overflow-y-auto scrollbar-hide relative z-[40] ${focusedCard?'invisible':'visible'}`} style={{maxHeight:'clamp(46px,12dvh,96px)',minHeight:'clamp(42px,9dvh,80px)'}}>
+              <div className={`flex flex-wrap justify-center gap-1 max-w-[340px] mb-2 ${enemy&&enemyIntent&&!isBusy?'':'mt-auto'} shrink-0 relative z-[40] ${focusedCard?'invisible':'visible'}`}>
                 {/* === 永続バフ（常時表示・数値が増減） === */}
                 <div className="text-[7px] font-black text-red-500 bg-black/60 px-2 py-0.5 rounded border border-red-500/50 flex items-center gap-1 shadow-lg uppercase"><Sword size={7}/> ATK +{Math.floor((oryoTotal+muaAtkBonus)*100)}%</div>
                 <div className="text-[7px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"><Shield size={7}/> DEF +{Math.floor(draTotal*100)}%</div>
@@ -1601,7 +1598,7 @@ function MonsterHeroGame() {
                   </div>
                 );
               })()}
-              <div className="grid grid-cols-4 gap-2 w-full h-[78%] relative">
+              <div className="grid grid-cols-4 gap-2 w-full relative" style={{height:'96px'}}>
                 {slots.map((s,i)=>{
                   // Count how many cards already assigned to this slot
                   const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
