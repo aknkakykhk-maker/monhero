@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 23:12"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 23:18"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1190,7 +1190,21 @@ function MonsterHeroGame() {
         if (card.subType==='atk_buff') { addPopup(`攻撃UP!`,'hero','text-red-400 font-black text-2xl drop-shadow-md'); setOryoTotal(p=>p+card.baseValue); localOryoAdd+=card.baseValue; }
         else if (card.subType==='dmg_cut_buff') { addPopup(`防御UP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=level===0?0.03:(level===1?0.06:0.10); setDraTotal(p=>Math.min(0.9,p+cutValue)); }
         else if (card.subType==='guts_buff') { addPopup(`⚡ ガッツ上限UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let gutsRecoverAdd=level===0?0.02:(level===1?0.03:0.05); setCadmiumTotal(p=>p+gutsRecoverAdd); let gutsLimitUp=level===1?0.05:(level>=2?0.07:0.05); setMuaGutsBonus(p=>p+gutsLimitUp); if(level>=1){let hpLimitUp=level===1?0.05:0.07; let autoHeal=level===1?0.02:0.05; setMuaHpBonus(p=>p+hpLimitUp); setAutoHpRecoveryRate(p=>p+autoHeal); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md');} }
-        else if (card.subType==='stun_atsu') { immediateInvincible=true; setTempBuffs(p=>({...p,invincible:true})); const d=getDmg(card,slotIdx,slots[slotIdx],localOryoAdd,localDmgModAdd,attackCount>0); totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx}); }
+        else if (card.subType==='stun_atsu') {
+          immediateInvincible=true; setTempBuffs(p=>({...p,invincible:true}));
+          const stunMon=slots[slotIdx];
+          const d=getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,attackCount>0); totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
+          // 勇者特性「連撃」: ザンが勇者モンの時、ザンの攻撃(あつの挑発シリーズ含む)に連撃ヒットを追加
+          if (stunMon?.id==='Zan' && mainHero?.id==='Zan') {
+            const comboBase=Math.floor(d*(0.3+comboDmgBonus));
+            if (comboBase>0) {
+              const comboCrit=tempBuffs.guaranteedCrit||(Math.random()<((card.crit||0.1)+critRateBonus));
+              const comboFinal=comboCrit?Math.floor(comboBase*(1.5+critDmgBonus)):comboBase;
+              if (comboCrit) hasCrit=true; totalDmg+=comboFinal;
+              attackHits.push({dmg:comboFinal, isCrit:comboCrit, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false});
+            }
+          }
+        }
         else if (card.subType==='buff_myaru') { setTempBuffs(p=>({...p,nextTurnAtkMult:card.baseValue})); const selfDmgAmt=Math.floor(hp*card.selfDmg); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black'); setHp(p=>Math.max(1,p-selfDmgAmt)); }
       }
       else if (card.type==='heal') {
