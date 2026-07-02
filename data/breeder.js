@@ -27,8 +27,14 @@ const TEACHING_CARDS = [
   { id:'myaru',   baseName:"みゃるの薬",      icon:MYARU_FACE_ICON,   type:'buff',   subType:'buff_myaru',  baseValue:2.0, step:0.5, selfDmg:0.5, dmgStep:0.1, desc:"次ターン攻撃2倍＆自傷", evoLevel:0, guts:20 }
 ];
 
+// 初期から無料で使えるブリーダーカード(教えカード)のid一覧(固定)。
+// 今後TEACHING_CARDSに新規カードを追加しても、ここに含めない限り
+// 自動では解放されず、ブリーダーマーケットで購入して解放する対象になる。
+const STARTER_TEACHING_IDS = ['oryo','dra','cadmium','mua','atsu','myaru'];
+
 // ブリーダーマーケット: ブリーダーレベルアップで得たポイントで購入できるアイテム
-// type:'icon' はプロフィールアイコン。今後アイコン以外のtype(例:'effect'など)を追加していく想定
+// type:'icon' はプロフィールアイコン、type:'disc' はモンスターの円盤石(購入でそのモンスターが解放される)、
+// type:'breeder' はブリーダーカードの解放アイテム。idはicon以外の場合、解放対象(モンスター/カード)のidと一致させる。
 const BREEDER_MARKET_ITEMS = [
   { id:'oryo',    name:"おりょうのアイコン",     type:'icon', icon:ORYO_FACE_ICON,    cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
