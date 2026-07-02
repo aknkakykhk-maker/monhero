@@ -59,7 +59,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 16:55"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 19:06"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -429,6 +429,12 @@ function MonsterHeroGame() {
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
+  const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
+  const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS); // モンスター編成(解放済みの中から周回で使う候補、端末保存)
+  const [unlockedTeachingIds, setUnlockedTeachingIds] = useState(STARTER_TEACHING_IDS); // 解放済みブリーダーカードid(初期6枚+購入分、端末保存)
+  const [teachingRosterIds, setTeachingRosterIds] = useState(STARTER_TEACHING_IDS); // ブリーダーカード編成(解放済みの中から周回で使う候補、端末保存)
+  const [marketTab, setMarketTab] = useState('icon'); // ブリーダーマーケットの表示カテゴリ: 'icon'|'disc'|'breeder'
+  const [rosterTab, setRosterTab] = useState('monster'); // 編成画面の表示カテゴリ: 'monster'|'teaching'
   const [showNameEdit, setShowNameEdit] = useState(false);
   const [tempName, setTempName] = useState('');
   const [tempBuffs, setTempBuffs] = useState({ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false });
@@ -576,6 +582,14 @@ function MonsterHeroGame() {
       setBreederPoints(savedPoints);
       const savedMarketIcons = await storeGet('mh_market_icons', [], false);
       setOwnedMarketIcons(savedMarketIcons);
+      const savedUnlockedMonsters = await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false);
+      setUnlockedMonsterIds(savedUnlockedMonsters);
+      const savedMonsterRoster = await storeGet('mh_monster_roster', savedUnlockedMonsters, false);
+      setMonsterRosterIds(savedMonsterRoster);
+      const savedUnlockedTeachings = await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false);
+      setUnlockedTeachingIds(savedUnlockedTeachings);
+      const savedTeachingRoster = await storeGet('mh_teaching_roster', savedUnlockedTeachings, false);
+      setTeachingRosterIds(savedTeachingRoster);
       const scores = {}; const attempts = {}; const clears = {};
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async d => {
         scores[d] = await storeGet(`mh_hs_${d}`, 0, false);
@@ -661,11 +675,57 @@ function MonsterHeroGame() {
     setShowNameEdit(false);
   };
 
-  // ブリーダーマーケットでアイテム(アイコン)を購入。ポイント消費&所持リストに追加(端末保存)
-  const buyMarketIcon = (item) => {
-    if (ownedMarketIcons.includes(item.id) || breederPoints < item.cost) return;
+  // 現在の周回で使う候補モンスター/ブリーダーカード(編成で選んだもの)。空の場合は解放済み全体にフォールバック
+  const getActiveMonsterList = () => {
+    const list = Object.values(ALL_PLAYER_MONSTERS).filter(m => monsterRosterIds.includes(m.id));
+    return list.length > 0 ? list : Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
+  };
+  const getActiveTeachingCards = () => {
+    const list = TEACHING_CARDS.filter(t => teachingRosterIds.includes(t.id));
+    return list.length > 0 ? list : TEACHING_CARDS.filter(t => unlockedTeachingIds.includes(t.id));
+  };
+
+  // マーケットアイテムが購入済み(=解放済み)かどうか。typeによって参照する解放リストが異なる
+  const isMarketItemOwned = (item) => {
+    if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
+    if (item.type === 'breeder') return unlockedTeachingIds.includes(item.id);
+    return ownedMarketIcons.includes(item.id);
+  };
+
+  // ブリーダーマーケットでアイテムを購入。ポイント消費&種別ごとの解放リストに追加(端末保存)。
+  // アイコンはプロフィールアイコンとして使用可能に、円盤石/ブリーダーは解放と同時に編成へも自動追加する
+  const buyMarketItem = (item) => {
+    if (isMarketItemOwned(item) || breederPoints < item.cost) return;
     setBreederPoints(prev => { const next = prev - item.cost; storeSet('mh_breeder_points', next, false); return next; });
-    setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
+    if (item.type === 'disc') {
+      setUnlockedMonsterIds(prev => { const next = [...prev, item.id]; storeSet('mh_unlocked_monsters', next, false); return next; });
+      setMonsterRosterIds(prev => { const next = [...prev, item.id]; storeSet('mh_monster_roster', next, false); return next; });
+    } else if (item.type === 'breeder') {
+      setUnlockedTeachingIds(prev => { const next = [...prev, item.id]; storeSet('mh_unlocked_teachings', next, false); return next; });
+      setTeachingRosterIds(prev => { const next = [...prev, item.id]; storeSet('mh_teaching_roster', next, false); return next; });
+    } else {
+      setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
+    }
+  };
+
+  // 編成画面: 解放済みモンスター/ブリーダーカードの中から、次回以降の周回で候補にするものを選ぶ(最低1つは残す)
+  const toggleMonsterRoster = (id) => {
+    setMonsterRosterIds(prev => {
+      const inRoster = prev.includes(id);
+      if (inRoster && prev.length <= 1) return prev;
+      const next = inRoster ? prev.filter(x => x !== id) : [...prev, id];
+      storeSet('mh_monster_roster', next, false);
+      return next;
+    });
+  };
+  const toggleTeachingRoster = (id) => {
+    setTeachingRosterIds(prev => {
+      const inRoster = prev.includes(id);
+      if (inRoster && prev.length <= 1) return prev;
+      const next = inRoster ? prev.filter(x => x !== id) : [...prev, id];
+      storeSet('mh_teaching_roster', next, false);
+      return next;
+    });
   };
 
   // クリアしたWAVE数に応じてブリーダー経験値を加算(端末保存)。難易度が高いほど多めに獲得
@@ -745,7 +805,7 @@ function MonsterHeroGame() {
     score:0, wave:1, hp:500, maxHp:500, guts:50, maxGuts:100, atk:100, def:100,
     slots:[null,null,null,null], mainHero:null, hand:[], deck:[], graveyard:[],
     enemy:null, enemyDist:2, selectedCards:[], isBusy:false,
-    monSelection:Object.values(ALL_PLAYER_MONSTERS), ownedUniques:[], ownedTeachings:[],
+    monSelection:getActiveMonsterList(), ownedUniques:[], ownedTeachings:[],
     atkLevel:0, guardLevel:0, guardBonusCount:0, upgradePoints:0, turnCount:1,
     oryoTotal:0, draTotal:0, critRateBonus:0, critDmgBonus:0, cadmiumTotal:0, muaAtkBonus:0, muaHpBonus:0, muaGutsBonus:0,
     autoHpRecoveryRate:0.1, currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
@@ -1248,7 +1308,7 @@ function MonsterHeroGame() {
       const initialUnique={...m.unique,evoLevel:0};
       setOwnedUniques([initialUnique]); setMainHero(m); setMaxHp(m.baseHp); setHp(m.baseHp);
       setMaxGuts(m.baseGuts); setGuts(Math.floor(m.baseGuts*0.5)); setAtk(m.baseAtk); setDef(m.baseDef);
-      setTeachingPool([...TEACHING_CARDS]); setGameState('PICK_TEACHING');
+      setTeachingPool([...getActiveTeachingCards()]); setGameState('PICK_TEACHING');
     } else {
       const bonus=m.plusStats||{};
       const bHp=maxHp, bAtk=atk, bDef=def, bGuts=maxGuts;
@@ -1288,18 +1348,19 @@ function MonsterHeroGame() {
     setTimeout(()=>{
       setEffect(null);
       const joinWaves=[2,4,6];
-      if(joinWaves.includes(wave)&&slots.filter(s=>s).length<4){
-        const activeIds=slots.filter(s=>s).map(s=>s.id);
-        const avail=Object.values(ALL_PLAYER_MONSTERS).filter(m=>!activeIds.includes(m.id));
+      const activeIds=slots.filter(s=>s).map(s=>s.id);
+      const avail=getActiveMonsterList().filter(m=>!activeIds.includes(m.id));
+      if(joinWaves.includes(wave)&&slots.filter(s=>s).length<4&&avail.length>0){
         setMonSelection(avail.sort(()=>Math.random()-0.5).slice(0,4)); setGameState('PICK_ALLY');
       } else if([1,3,5,7,9].includes(wave)){
+        const activeCards=getActiveTeachingCards();
         const upgradeableIds=ownedTeachings.filter(ot=>ot.evoLevel<2).map(ot=>ot.id);
-        const upgradeableCards=TEACHING_CARDS.filter(tc=>upgradeableIds.includes(tc.id));
-        const notOwnedCards=TEACHING_CARDS.filter(tc=>!ownedTeachings.some(ot=>ot.id===tc.id));
+        const upgradeableCards=activeCards.filter(tc=>upgradeableIds.includes(tc.id));
+        const notOwnedCards=activeCards.filter(tc=>!ownedTeachings.some(ot=>ot.id===tc.id));
         let pool=[];
         if(upgradeableCards.length>0) pool.push(...upgradeableCards.sort(()=>Math.random()-0.5).slice(0,2));
         const needed=4-pool.length; if(needed>0&&notOwnedCards.length>0) pool.push(...notOwnedCards.sort(()=>Math.random()-0.5).slice(0,needed));
-        while(pool.length<4&&TEACHING_CARDS.length>=4){const random=TEACHING_CARDS[Math.floor(Math.random()*TEACHING_CARDS.length)]; if(!pool.find(p=>p.id===random.id)) pool.push(random);}
+        while(pool.length<4&&activeCards.length>=4){const random=activeCards[Math.floor(Math.random()*activeCards.length)]; if(!pool.find(p=>p.id===random.id)) pool.push(random);}
         setTeachingPool(pool); setGameState('PICK_TEACHING');
       } else { initBattle(wave+1,slots,ownedUniques,ownedTeachings,nGB); }
     },900);
@@ -1388,7 +1449,7 @@ function MonsterHeroGame() {
                 <div className="text-[9px] font-mono text-amber-500 font-bold bg-white/5 py-1.5 rounded-lg border border-white/10">HIGH SCORE ({difficulty}): {(highScores[difficulty]||0).toLocaleString()}</div>
               </div>
               <div className="shrink-0 flex flex-col gap-2 w-full mt-2">
-                <button onClick={()=>{setTestMooMode(false); setMonSelection(Object.values(ALL_PLAYER_MONSTERS)); setGameState('PICK_HERO');}} className="w-full bg-white text-black py-3 rounded-xl font-black text-lg active:scale-95 transition-transform uppercase shadow-[0_0_20px_rgba(255,255,255,0.2)]">召喚開始</button>
+                <button onClick={()=>{setTestMooMode(false); setMonSelection(getActiveMonsterList()); setGameState('PICK_HERO');}} className="w-full bg-white text-black py-3 rounded-xl font-black text-lg active:scale-95 transition-transform uppercase shadow-[0_0_20px_rgba(255,255,255,0.2)]">召喚開始</button>
                 <div className="grid grid-cols-2 gap-2">
                   <button onClick={()=>{setRankingViewDiff(difficulty); setShowRanking(true); loadRankings();}} className="w-full bg-slate-900 border border-indigo-500/50 text-indigo-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><Users size={14}/> Ranking</button>
                   <button onClick={()=>setShowHelp(true)} className="w-full bg-slate-900 border border-emerald-500/50 text-emerald-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><HelpCircle size={14}/> Help</button>
@@ -1456,6 +1517,10 @@ function MonsterHeroGame() {
                 <span className="flex items-center gap-1.5"><Coins size={14} className="text-amber-400"/><span className="text-[11px] font-black text-amber-200">{breederPoints} pt</span></span>
                 <span className="flex items-center gap-1 text-[10px] font-black text-amber-400 group-hover:text-amber-200"><ShoppingBag size={12}/>ブリーダーマーケット<ChevronRight size={11}/></span>
               </button>
+              <button onClick={()=>setGameState('ROSTER')} className="w-full flex items-center justify-between gap-2 bg-indigo-950/40 border border-indigo-500/40 px-4 py-2.5 rounded-xl active:scale-95 group">
+                <span className="flex items-center gap-1.5"><Layers size={14} className="text-indigo-400"/><span className="text-[11px] font-black text-indigo-200">{monsterRosterIds.length}体・{teachingRosterIds.length}枚</span></span>
+                <span className="flex items-center gap-1 text-[10px] font-black text-indigo-400 group-hover:text-indigo-200"><Layers size={12}/>編成<ChevronRight size={11}/></span>
+              </button>
             </div>
             <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-2 px-1 shrink-0">難易度別 記録</div>
             <div className="flex flex-col gap-2 mb-4">
@@ -1485,23 +1550,80 @@ function MonsterHeroGame() {
               <span className="text-lg font-black text-amber-300">{breederPoints}</span>
               <span className="text-[10px] text-slate-400 font-bold">ポイント所持(レベルアップで+1)</span>
             </div>
-            <div className="grid grid-cols-2 gap-3 pb-4">
-              {BREEDER_MARKET_ITEMS.map(item=>{
-                const owned = ownedMarketIcons.includes(item.id);
-                const canBuy = !owned && breederPoints>=item.cost;
-                return (
-                  <div key={item.id} className={`rounded-2xl border-2 p-3 flex flex-col items-center gap-2 ${owned?'bg-emerald-900/30 border-emerald-500/50':'bg-slate-900 border-slate-800'}`}>
-                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/10 shrink-0"><img src={item.icon} alt={item.name} className="w-full h-full object-cover"/></div>
-                    <div className="text-xs font-black text-white">{item.name}</div>
-                    {owned?(
-                      <div className="text-[9px] font-black text-emerald-400 bg-emerald-950/50 px-3 py-1.5 rounded-full">所持済み</div>
-                    ):(
-                      <button onClick={()=>buyMarketIcon(item)} disabled={!canBuy} className={`text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 ${canBuy?'bg-amber-500 text-black active:scale-95':'bg-slate-800 text-slate-500'}`}><Coins size={10}/>{item.cost}pt で購入</button>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="flex gap-1.5 mb-3 shrink-0">
+              {[{key:'icon',label:'アイコン'},{key:'disc',label:'円盤石'},{key:'breeder',label:'ブリーダー'}].map(tab=>(
+                <button key={tab.key} onClick={()=>setMarketTab(tab.key)} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab===tab.key?'bg-amber-500 text-black':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
+              ))}
             </div>
+            {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab).length===0?(
+              <div className="text-center text-[11px] text-slate-600 font-bold py-10">まだ商品がありません</div>
+            ):(
+              <div className="grid grid-cols-2 gap-3 pb-4">
+                {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab).map(item=>{
+                  const owned = isMarketItemOwned(item);
+                  const canBuy = !owned && breederPoints>=item.cost;
+                  return (
+                    <div key={item.id} className={`rounded-2xl border-2 p-3 flex flex-col items-center gap-2 ${owned?'bg-emerald-900/30 border-emerald-500/50':'bg-slate-900 border-slate-800'}`}>
+                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/10 shrink-0"><img src={item.icon} alt={item.name} className="w-full h-full object-cover"/></div>
+                      <div className="text-xs font-black text-white">{item.name}</div>
+                      {owned?(
+                        <div className="text-[9px] font-black text-emerald-400 bg-emerald-950/50 px-3 py-1.5 rounded-full">所持済み</div>
+                      ):(
+                        <button onClick={()=>buyMarketItem(item)} disabled={!canBuy} className={`text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 ${canBuy?'bg-amber-500 text-black active:scale-95':'bg-slate-800 text-slate-500'}`}><Coins size={10}/>{item.cost}pt で購入</button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ROSTER (編成) */}
+        {gameState==='ROSTER'&&(
+          <div className="flex-1 flex flex-col h-full overflow-y-auto mh-scroll p-4">
+            <div className="flex items-center gap-2 mb-2 shrink-0">
+              <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">編成</h2>
+            </div>
+            <div className="flex gap-1.5 mb-3 shrink-0">
+              {[{key:'monster',label:'モンスター編成'},{key:'teaching',label:'ブリーダーカード編成'}].map(tab=>(
+                <button key={tab.key} onClick={()=>setRosterTab(tab.key)} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${rosterTab===tab.key?'bg-indigo-500 text-white':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
+              ))}
+            </div>
+            {rosterTab==='monster'?(
+              <>
+                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">編成中: {monsterRosterIds.length}体 / 解放済み{unlockedMonsterIds.length}体　※次回以降の周回の候補になります</div>
+                <div className="grid grid-cols-3 gap-3 pb-4">
+                  {unlockedMonsterIds.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>{
+                    const selected = monsterRosterIds.includes(m.id);
+                    return (
+                      <button key={m.id} onClick={()=>toggleMonsterRoster(m.id)} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} className="w-full h-full object-cover"/></div>
+                        <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
+                        <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'編成中':'編成外'}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ):(
+              <>
+                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">編成中: {teachingRosterIds.length}枚 / 解放済み{unlockedTeachingIds.length}枚　※次回以降の周回の候補になります</div>
+                <div className="grid grid-cols-3 gap-3 pb-4">
+                  {unlockedTeachingIds.map(id=>TEACHING_CARDS.find(t=>t.id===id)).filter(Boolean).map(t=>{
+                    const selected = teachingRosterIds.includes(t.id);
+                    return (
+                      <button key={t.id} onClick={()=>toggleTeachingRoster(t.id)} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 ${selected?'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400':'bg-slate-900 border-slate-800'}`}>
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,48)}</div>
+                        <div className="text-[10px] font-black text-white truncate w-full text-center">{t.baseName}</div>
+                        <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-purple-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'編成中':'編成外'}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -2032,7 +2154,7 @@ function MonsterHeroGame() {
               return(<div key={u.monId} className="bg-slate-900 p-3 rounded-2xl border border-slate-800 shrink-0"><div className="flex items-center gap-3 mb-2"><span style={{fontSize:'30px'}}>{u.icon}</span><div className="text-left flex-1"><div className="font-black uppercase text-white" style={{fontSize:'13px'}}>{u.names[u.evoLevel]} <span className="text-slate-500">Lv.{u.evoLevel}{u.evoLevel<8&&<span className="text-amber-500"> → {u.evoLevel+1}</span>}</span></div>{u.evoLevel<8?(<div className="text-slate-400 font-mono flex flex-wrap gap-x-3 gap-y-0.5 mt-1" style={{fontSize:'9px'}}><div>技威力 {Math.floor(currentMult*100)} → <span className="text-red-400 font-bold">{Math.floor(nextMult*100)}</span></div><div>消費 {currentGuts} → <span className="text-amber-400 font-bold">{nextGuts}</span></div><div>会心 {curCrit}% → <span className="text-yellow-400 font-bold">{nextCrit}%</span></div></div>):(<div className="text-slate-400 font-mono flex flex-wrap gap-x-3 gap-y-0.5 mt-1" style={{fontSize:'9px'}}><div>技威力 {Math.floor(currentMult*100)}</div><div>消費 {currentGuts}</div><div className="text-yellow-400">会心 {curCrit}%</div><div className="text-amber-500 font-black">MAX</div></div>)}</div></div><div className="flex items-center justify-between bg-black/20 p-2 rounded-xl"><span className="text-slate-500 font-black uppercase tracking-wider" style={{fontSize:'9px'}}>レベル調整</span><div className="flex items-center gap-3"><button disabled={u.evoLevel<=0} onClick={()=>upgradeUnique(u.monId,-1)} className="w-9 h-9 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90"><MinusCircle size={18}/></button><button disabled={upgradePoints<=0||u.evoLevel>=8} onClick={()=>upgradeUnique(u.monId,1)} className="w-9 h-9 flex items-center justify-center bg-amber-600 rounded-lg text-white disabled:opacity-20 active:scale-90"><PlusCircle size={18}/></button></div></div></div>);
             })}
           </div>
-          <button onClick={()=>{const availableTeachings=TEACHING_CARDS.filter(tc=>{const owned=ownedTeachings.find(ot=>ot.id===tc.id); return!owned||owned.evoLevel<2;}); setTeachingPool(availableTeachings.sort(()=>Math.random()-0.5).slice(0,4)); setGameState('PICK_TEACHING');}} className="w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform mt-auto shrink-0">ブリーダー継承へ</button>
+          <button onClick={()=>{const availableTeachings=getActiveTeachingCards().filter(tc=>{const owned=ownedTeachings.find(ot=>ot.id===tc.id); return!owned||owned.evoLevel<2;}); setTeachingPool(availableTeachings.sort(()=>Math.random()-0.5).slice(0,4)); setGameState('PICK_TEACHING');}} className="w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform mt-auto shrink-0">ブリーダー継承へ</button>
         </div>
       )}
 

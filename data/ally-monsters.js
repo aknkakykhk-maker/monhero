@@ -19,3 +19,8 @@ const ALL_PLAYER_MONSTERS = {
   Monol:  { id:'Monol',  name:"モノリス", emoji:"⬛", imgUrl:MONOL_IMG, iconUrl:MONOL_ICON, trait:"反射", traitDesc:"勇者モン選択時：被弾時30%の確率でダメージを反射", baseHp:700, baseGuts:80, baseAtk:100, baseDef:250, plusStats:{hp:400,atk:0,def:100,guts:0}, unique:{name:"トリオビームX",icon:"📐",monId:"Monol",baseMult:2.2,baseGuts:44,evoLevel:0,names:["トリオビームX","サケビ声","トリオビームY","怪光線","超おんぱ","ファームアルファ","トリオビームZ","フォームガンマ","トリオビーム∞"],effectDesc:"障壁：味方丈夫さUP(永続)＆敵攻DOWN(WAVE限定)＆次ターン反射"}},
   Oboro:  { id:'Oboro',  name:"オボロゲソウ", emoji:"🌾", imgUrl:OBORO_IMG, iconUrl:OBORO_ICON, trait:"吸収", traitDesc:"勇者モン選択時：30%の確率で被ダメをHP(100%)とG(10%)へ変換", baseHp:900, baseGuts:115, baseAtk:90, baseDef:60, plusStats:{hp:600,atk:0,def:0,guts:10}, unique:{name:"種ガン",icon:"🍃",monId:"Oboro",baseMult:2.0,baseGuts:40,evoLevel:0,names:["種ガン","葉っぱブレード","花粉","キンプン","種マシンガン","フラワービーム","乱れ咲き","蒼花爆散","クリスマスツリー"],effectDesc:"ドレイン：与ダメの50%ライフ回復、与ダメの5%ガッツ回復"}}
 };
+
+// 初期から無料で使えるモンスターのid一覧(固定)。
+// 今後ALL_PLAYER_MONSTERSに新規モンスターを追加しても、ここに含めない限り
+// 自動では解放されず、ブリーダーマーケットで円盤石を購入して解放する対象になる。
+const STARTER_MONSTER_IDS = ['Mocchi','Suezo','Golem','Tiger','Ham','Pixie','Monol','Oboro'];
