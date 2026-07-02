@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 22:59"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 23:12"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -2449,23 +2449,27 @@ const createAnimationStyle = () => {
     }
     @keyframes zanComboDash {
       0% {
-        transform: translateY(0) scale(1);
+        transform: translate(0,0) scale(1) skewX(0deg);
         filter: drop-shadow(0 0 4px rgba(34,211,238,0.4));
       }
-      25% {
-        transform: translateY(-70px) scale(1.15);
-        filter: drop-shadow(-16px 8px 0 rgba(34,211,238,0.25)) drop-shadow(-30px 15px 0 rgba(34,211,238,0.12)) drop-shadow(0 0 16px rgba(34,211,238,0.9));
+      18% {
+        transform: translate(-100px,-14px) scale(1.08) skewX(18deg);
+        filter: drop-shadow(48px 6px 0 rgba(34,211,238,0.35)) drop-shadow(84px 10px 0 rgba(34,211,238,0.16)) drop-shadow(0 0 14px rgba(34,211,238,0.9));
       }
-      50% {
-        transform: translateY(-170px) scale(1.3);
-        filter: drop-shadow(-20px 10px 0 rgba(34,211,238,0.3)) drop-shadow(-38px 19px 0 rgba(34,211,238,0.15)) drop-shadow(0 0 22px rgba(255,255,255,0.95));
+      40% {
+        transform: translate(150px,-8px) scale(1.15) skewX(-22deg);
+        filter: drop-shadow(-70px -4px 0 rgba(34,211,238,0.32)) drop-shadow(-130px -8px 0 rgba(34,211,238,0.15)) drop-shadow(0 0 24px rgba(255,255,255,0.95));
       }
-      75% {
-        transform: translateY(-170px) scale(1.3);
-        filter: drop-shadow(-14px 7px 0 rgba(34,211,238,0.2)) drop-shadow(0 0 22px rgba(34,211,238,0.9));
+      58% {
+        transform: translate(-70px,-4px) scale(1.1) skewX(14deg);
+        filter: drop-shadow(36px 3px 0 rgba(34,211,238,0.28)) drop-shadow(0 0 20px rgba(34,211,238,0.9));
+      }
+      78% {
+        transform: translate(0,0) scale(1) skewX(0deg);
+        filter: drop-shadow(0 0 24px rgba(255,255,255,0.9));
       }
       100% {
-        transform: translateY(0) scale(1);
+        transform: translate(0,0) scale(1) skewX(0deg);
         filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
     }
