@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 21:38"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 21:52"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1048,6 +1048,14 @@ function MonsterHeroGame() {
     return finalDmg;
   }, [enemyDist, mainHero, atk, tempBuffs, oryoTotal, muaAtkBonus, distDmgBonus]);
 
+  // ザンの勇者特性「連撃」による追加ヒット分の合計(プレビュー用)。実際のバトルログはprocessTurn内で別枠ヒットとして計算する
+  const getComboBonusDmg = useCallback((card, mon, baseDmg) => {
+    if (!(mainHero?.id==='Zan' && mon?.id==='Zan') || baseDmg<=0) return 0;
+    let bonus = Math.floor(baseDmg*(0.3+comboDmgBonus));
+    if (card.type==='unique') bonus += Math.floor(baseDmg*(0.2+comboDmgBonus));
+    return bonus;
+  }, [mainHero, comboDmgBonus]);
+
   const handleEnemyTurn = async (lastActionType, immediateEffects={}, overrideIntent=null) => {
     if (!enemy) return;
     const intent = overrideIntent||enemyIntent;
@@ -1262,7 +1270,7 @@ function MonsterHeroGame() {
             }
             setAttackAnim(null);
             setSlotSkill(null);
-            await wait(Math.round(120*spd)); // 攻撃モーションが終わってから一拍おいてダメージを表示する
+            await wait(160); // 攻撃モーションが終わってから一拍おいてダメージを表示する(速度倍率の影響を受けず一定の間を確保)
           }
           const hitColor=hit.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if(hit.isCrit) triggerShake();
@@ -2057,7 +2065,8 @@ function MonsterHeroGame() {
                     let committedAtk=0;
                     selectedCards.forEach(idx=>{const card=hand[idx]; if(isAttackCard(card)&&cardAssignments[idx]!=null)committedAtk++;});
                     const isSecondOrLater = committedAtk>=1;
-                    previewDmg=getDmg(pendingCardObj,i,s,0,0,isSecondOrLater);
+                    const baseDmg=getDmg(pendingCardObj,i,s,0,0,isSecondOrLater);
+                    previewDmg=baseDmg+getComboBonusDmg(pendingCardObj,s,baseDmg);
                     isPendingPreview=true;
                   } else if(s){
                     // global attack counter across all selected cards in selection order
@@ -2066,7 +2075,8 @@ function MonsterHeroGame() {
                       const card=hand[idx];
                       const isAtk=isAttackCard(card);
                       if(cardAssignments[idx]===i){
-                        previewDmg+=getDmg(card,i,s,0,0,isAtk&&globalAtkCnt>0);
+                        const baseDmg=getDmg(card,i,s,0,0,isAtk&&globalAtkCnt>0);
+                        previewDmg+=baseDmg+getComboBonusDmg(card,s,baseDmg);
                       }
                       if(isAtk&&cardAssignments[idx]!=null)globalAtkCnt++;
                     });
