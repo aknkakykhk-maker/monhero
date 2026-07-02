@@ -46,5 +46,5 @@ const BREEDER_MARKET_ITEMS = [
   { id:'mocchi_pet', name:"モッチー_2のアイコン",  type:'icon', icon:MOCCHI_PET_ICON,   cost:1 },
   { id:'gezudero', name:"ゲズデロのアイコン",    type:'icon', icon:GEZUDERO_ICON,     cost:1 },
   { id:'melopanman', name:"メロぱんまんのアイコン", type:'icon', icon:MELOPANMAN_ICON,   cost:1 },
-  { id:'zan', name:"ザンの円盤石", type:'disc', icon:ZAN_DISC_ICON, cost:500, available:false }
+  { id:'Zan', name:"ザンの円盤石", type:'disc', icon:ZAN_DISC_ICON, cost:500 }
 ];
