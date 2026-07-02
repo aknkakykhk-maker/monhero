@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 20:42"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 20:49"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -442,6 +442,8 @@ function MonsterHeroGame() {
   const [teachingRosterIds, setTeachingRosterIds] = useState(STARTER_TEACHING_IDS); // ブリーダーカード編成(解放済みの中から周回で使う候補、端末保存)
   const [marketTab, setMarketTab] = useState('icon'); // ブリーダーマーケットの表示カテゴリ: 'icon'|'disc'|'breeder'
   const [rosterTab, setRosterTab] = useState('monster'); // 編成画面の表示カテゴリ: 'monster'|'teaching'
+  const [draftMonsterRoster, setDraftMonsterRoster] = useState([]); // 編成画面での仮選択(決定を押すまでmonsterRosterIdsには反映しない)
+  const [draftTeachingRoster, setDraftTeachingRoster] = useState([]); // 編成画面での仮選択(決定を押すまでteachingRosterIdsには反映しない)
   const [showNameEdit, setShowNameEdit] = useState(false);
   const [tempName, setTempName] = useState('');
   const [tempBuffs, setTempBuffs] = useState({ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false });
@@ -728,27 +730,25 @@ function MonsterHeroGame() {
     }
   };
 
-  // 編成画面: 解放済みモンスター/ブリーダーカードの中から、次回以降の周回で使う候補を選ぶ。
-  // モンスター8体・ブリーダーカード6枚が上限で固定(超えられない。入れ替えは1つ外してから選ぶ。0にはできない)
-  const toggleMonsterRoster = (id) => {
-    setMonsterRosterIds(prev => {
-      const inRoster = prev.includes(id);
-      if (inRoster && prev.length <= 1) return prev;
-      if (!inRoster && prev.length >= STARTER_MONSTER_IDS.length) return prev;
-      const next = inRoster ? prev.filter(x => x !== id) : [...prev, id];
-      storeSet('mh_monster_roster', next, false);
-      return next;
-    });
+  // 編成画面: 解放済みモンスター/ブリーダーカードの中から、次回以降の周回で使う候補を仮選択する。
+  // 仮選択は自由に増減でき、「決定」を押してモンスター8体・ブリーダーカード6枚ちょうどの時だけ確定保存する
+  const toggleDraftMonster = (id) => {
+    setDraftMonsterRoster(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
-  const toggleTeachingRoster = (id) => {
-    setTeachingRosterIds(prev => {
-      const inRoster = prev.includes(id);
-      if (inRoster && prev.length <= 1) return prev;
-      if (!inRoster && prev.length >= STARTER_TEACHING_IDS.length) return prev;
-      const next = inRoster ? prev.filter(x => x !== id) : [...prev, id];
-      storeSet('mh_teaching_roster', next, false);
-      return next;
-    });
+  const toggleDraftTeaching = (id) => {
+    setDraftTeachingRoster(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const confirmMonsterRoster = () => {
+    if (draftMonsterRoster.length !== STARTER_MONSTER_IDS.length) return;
+    setMonsterRosterIds(draftMonsterRoster);
+    storeSet('mh_monster_roster', draftMonsterRoster, false);
+    setGameState('PROFILE');
+  };
+  const confirmTeachingRoster = () => {
+    if (draftTeachingRoster.length !== STARTER_TEACHING_IDS.length) return;
+    setTeachingRosterIds(draftTeachingRoster);
+    storeSet('mh_teaching_roster', draftTeachingRoster, false);
+    setGameState('PROFILE');
   };
 
   // クリアしたWAVE数に応じてブリーダー経験値を加算(端末保存)。難易度が高いほど多めに獲得
@@ -1583,11 +1583,11 @@ function MonsterHeroGame() {
                 <span className="flex items-center gap-1 text-[10px] font-black text-amber-400 group-hover:text-amber-200"><ShoppingBag size={12}/>ブリーダーマーケット<ChevronRight size={11}/></span>
               </button>
               <div className="grid grid-cols-2 gap-2 w-full">
-                <button onClick={()=>{setRosterTab('monster'); setGameState('ROSTER');}} className="flex flex-col items-center justify-center gap-1 bg-indigo-950/40 border border-indigo-500/40 px-2 py-2.5 rounded-xl active:scale-95">
+                <button onClick={()=>{setDraftMonsterRoster(monsterRosterIds); setDraftTeachingRoster(teachingRosterIds); setRosterTab('monster'); setGameState('ROSTER');}} className="flex flex-col items-center justify-center gap-1 bg-indigo-950/40 border border-indigo-500/40 px-2 py-2.5 rounded-xl active:scale-95">
                   <span className="flex items-center gap-1 text-[9px] font-black text-indigo-400 uppercase"><Layers size={11}/>モンスター編成</span>
                   <span className="text-[12px] font-black text-indigo-200">{unlockedMonsterIds.length}体</span>
                 </button>
-                <button onClick={()=>{setRosterTab('teaching'); setGameState('ROSTER');}} className="flex flex-col items-center justify-center gap-1 bg-purple-950/40 border border-purple-500/40 px-2 py-2.5 rounded-xl active:scale-95">
+                <button onClick={()=>{setDraftMonsterRoster(monsterRosterIds); setDraftTeachingRoster(teachingRosterIds); setRosterTab('teaching'); setGameState('ROSTER');}} className="flex flex-col items-center justify-center gap-1 bg-purple-950/40 border border-purple-500/40 px-2 py-2.5 rounded-xl active:scale-95">
                   <span className="flex items-center gap-1 text-[9px] font-black text-purple-400 uppercase"><Layers size={11}/>ブリーダーカード編成</span>
                   <span className="text-[12px] font-black text-purple-200">{unlockedTeachingIds.length}枚</span>
                 </button>
@@ -1676,35 +1676,37 @@ function MonsterHeroGame() {
             </div>
             {rosterTab==='monster'?(
               <>
-                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">編成中: {monsterRosterIds.length}/{STARTER_MONSTER_IDS.length}体 / 解放済み{unlockedMonsterIds.length}体　※次回以降の周回の候補になります<br/>※編成は{STARTER_MONSTER_IDS.length}体固定です(入れ替えは1体外してから選んでください)</div>
+                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">仮選択中: {draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}体 / 解放済み{unlockedMonsterIds.length}体<br/>※ちょうど{STARTER_MONSTER_IDS.length}体選ぶと「決定」できます</div>
                 <div className="grid grid-cols-3 gap-3 pb-4">
                   {unlockedMonsterIds.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>{
-                    const selected = monsterRosterIds.includes(m.id);
+                    const selected = draftMonsterRoster.includes(m.id);
                     return (
-                      <button key={m.id} onClick={()=>toggleMonsterRoster(m.id)} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
+                      <button key={m.id} onClick={()=>toggleDraftMonster(m.id)} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
                         <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} className="w-full h-full object-cover"/></div>
                         <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
-                        <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'編成中':'編成外'}</div>
+                        <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
                       </button>
                     );
                   })}
                 </div>
+                <button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className={`w-full py-3 rounded-2xl font-black text-sm mt-2 mb-4 shrink-0 ${draftMonsterRoster.length===STARTER_MONSTER_IDS.length?'bg-indigo-500 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}>決定 ({draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length})</button>
               </>
             ):(
               <>
-                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">編成中: {teachingRosterIds.length}/{STARTER_TEACHING_IDS.length}枚 / 解放済み{unlockedTeachingIds.length}枚　※次回以降の周回の候補になります<br/>※編成は{STARTER_TEACHING_IDS.length}枚固定です(入れ替えは1枚外してから選んでください)</div>
+                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">仮選択中: {draftTeachingRoster.length}/{STARTER_TEACHING_IDS.length}枚 / 解放済み{unlockedTeachingIds.length}枚<br/>※ちょうど{STARTER_TEACHING_IDS.length}枚選ぶと「決定」できます</div>
                 <div className="grid grid-cols-3 gap-3 pb-4">
                   {unlockedTeachingIds.map(id=>TEACHING_CARDS.find(t=>t.id===id)).filter(Boolean).map(t=>{
-                    const selected = teachingRosterIds.includes(t.id);
+                    const selected = draftTeachingRoster.includes(t.id);
                     return (
-                      <button key={t.id} onClick={()=>toggleTeachingRoster(t.id)} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 ${selected?'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400':'bg-slate-900 border-slate-800'}`}>
+                      <button key={t.id} onClick={()=>toggleDraftTeaching(t.id)} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 ${selected?'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400':'bg-slate-900 border-slate-800'}`}>
                         <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,48)}</div>
                         <div className="text-[10px] font-black text-white truncate w-full text-center">{t.baseName}</div>
-                        <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-purple-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'編成中':'編成外'}</div>
+                        <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-purple-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
                       </button>
                     );
                   })}
                 </div>
+                <button onClick={confirmTeachingRoster} disabled={draftTeachingRoster.length!==STARTER_TEACHING_IDS.length} className={`w-full py-3 rounded-2xl font-black text-sm mt-2 mb-4 shrink-0 ${draftTeachingRoster.length===STARTER_TEACHING_IDS.length?'bg-purple-500 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}>決定 ({draftTeachingRoster.length}/{STARTER_TEACHING_IDS.length})</button>
               </>
             )}
           </div>
