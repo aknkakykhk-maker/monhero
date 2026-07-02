@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 23:28"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 23:45"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -944,7 +944,7 @@ function MonsterHeroGame() {
   const getPredictedDamage = useCallback((intent) => {
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='CHARGE')) return 0;
     const atkVal = Math.floor(intent.value*(1.0-waveEnemyAtkDebuff));
-    const dmgBase = Math.max(30,(atkVal*tempBuffs.takenDamageMult)-(def*0.15))*(mainHero?.id==='Mocchi'?0.8:1.0);
+    const dmgBase = Math.max(30,(atkVal*tempBuffs.takenDamageMult)-(def*0.15))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0);
     return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-draTotal))));
   }, [def, tempBuffs.takenDamageMult, mainHero, draTotal, waveEnemyAtkDebuff]);
 
@@ -1242,7 +1242,7 @@ function MonsterHeroGame() {
       else if (card.type!=='guard'&&card.type!=='weak_guard') {
         const activeMon=slots[slotIdx];
         if (card.type==='unique') {
-          if(activeMon.id==='Mocchi'){setDraTotal(p=>p+0.03); setTempBuffs(p=>({...p,enemyTakenDmgMod:p.enemyTakenDmgMod+0.1})); localDmgModAdd+=0.1; addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold');}
+          if(activeMon.id==='Mocchi'||activeMon.id==='Mitarashi'){setDraTotal(p=>p+0.03); setTempBuffs(p=>({...p,enemyTakenDmgMod:p.enemyTakenDmgMod+0.1})); localDmgModAdd+=0.1; addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold');}
           else if(activeMon.id==='Golem'){setOryoTotal(p=>p+0.1); localOryoAdd+=0.1; addPopup('闘志UP!','hero','text-red-600 text-lg font-bold');}
           else if(activeMon.id==='Zan'){setComboDmgBonus(p=>p+0.03); addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
         }
