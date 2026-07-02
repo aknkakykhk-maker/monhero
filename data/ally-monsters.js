@@ -7,7 +7,8 @@ const HERO_ATK_NAMES = {
   Tiger:  ["たいあたり","ひっかき","突進","つながるワンツー","影撃","空中回転アタック","無制限バースト","炎撃","コンビネーション"],
   Monol:  ["たおれこみ","針ぶっ刺し","大たおれこみ","わらわら","針かみつき","2連アタック","超たおれこみ","超針ぶっ刺し","3連アタック"],
   Oboro:  ["ビンタ","つっつき","根っこ","コンビネーション","捕食","雑草魂","フェイスドリル","超捕食","ドリルコンビネーション"],
-  Zan:    ["シングルショット","ミラージュシフト","サマーソルト","レッグアーク","ソニックナイフ","ダブルサマー","ダブルショット","トリプルサマー","アサルトダンス"]
+  Zan:    ["シングルショット","ミラージュシフト","サマーソルト","レッグアーク","ソニックナイフ","ダブルサマー","ダブルショット","トリプルサマー","アサルトダンス"],
+  Mitarashi: ["もんた","もちき","ガッチョ","もっちゃん","ガッチャー","桜吹雪","もっさん","枝垂れ桜","もっさま"]
 };
 
 const ALL_PLAYER_MONSTERS = {
@@ -19,7 +20,8 @@ const ALL_PLAYER_MONSTERS = {
   Pixie:  { id:'Pixie',  name:"ピクシー", emoji:"🧚", imgUrl:PIXIE_IMG, iconUrl:PIXIE_ICON, trait:"魔力開放", traitDesc:"勇者モン選択時：固有技のダメージが2倍", baseHp:250, baseGuts:140, baseAtk:160, baseDef:50, plusStats:{hp:100,atk:20,def:0,guts:60}, unique:{name:"バン",icon:"🌟",monId:"Pixie",baseMult:2.1,baseGuts:42,evoLevel:0,names:["バン","ギガレイ","ギガサンダー","ビッグバン","ギガライトニング","コズミッグバン","テラレイ","テラバン","ドラゴ・ノヴァ"],effectDesc:"魔法空間：次ターン、カード消費ガッツ0"}},
   Monol:  { id:'Monol',  name:"モノリス", emoji:"⬛", imgUrl:MONOL_IMG, iconUrl:MONOL_ICON, trait:"反射", traitDesc:"勇者モン選択時：被弾時30%の確率でダメージを反射", baseHp:700, baseGuts:80, baseAtk:100, baseDef:250, plusStats:{hp:400,atk:0,def:100,guts:0}, unique:{name:"トリオビームX",icon:"📐",monId:"Monol",baseMult:2.2,baseGuts:44,evoLevel:0,names:["トリオビームX","サケビ声","トリオビームY","怪光線","超おんぱ","ファームアルファ","トリオビームZ","フォームガンマ","トリオビーム∞"],effectDesc:"障壁：味方丈夫さUP(永続)＆敵攻DOWN(WAVE限定)＆次ターン反射"}},
   Oboro:  { id:'Oboro',  name:"オボロゲソウ", emoji:"🌾", imgUrl:OBORO_IMG, iconUrl:OBORO_ICON, trait:"吸収", traitDesc:"勇者モン選択時：30%の確率で被ダメをHP(100%)とG(10%)へ変換", baseHp:900, baseGuts:115, baseAtk:90, baseDef:60, plusStats:{hp:600,atk:0,def:0,guts:10}, unique:{name:"種ガン",icon:"🍃",monId:"Oboro",baseMult:2.0,baseGuts:40,evoLevel:0,names:["種ガン","葉っぱブレード","花粉","キンプン","種マシンガン","フラワービーム","乱れ咲き","蒼花爆散","クリスマスツリー"],effectDesc:"ドレイン：与ダメの50%ライフ回復、与ダメの5%ガッツ回復"}},
-  Zan:    { id:'Zan',    name:"ザン", emoji:"⚔️", imgUrl:ZAN_IMG, iconUrl:ZAN_ICON, trait:"連撃", traitDesc:"勇者モン選択時：ザンで攻撃した場合、与ダメの30%で連撃", baseHp:380, baseGuts:130, baseAtk:150, baseDef:50, plusStats:{hp:100,atk:40,def:0,guts:40}, unique:{name:"リバースレイド",icon:"⚔️",monId:"Zan",baseMult:2.5,baseGuts:50,evoLevel:0,names:["リバースレイド","ソニックレイヴ","メテオドライブ","アサルトレイド","ライジングレイヴ","アクシズバレット","ダークホウスト","アサルトライジング","ブラッディクロス"],effectDesc:"連斬：連撃ヒットがもう1回追加(与ダメ20%)＆連撃ダメージ+3%(永続/重複可)"}}
+  Zan:    { id:'Zan',    name:"ザン", emoji:"⚔️", imgUrl:ZAN_IMG, iconUrl:ZAN_ICON, trait:"連撃", traitDesc:"勇者モン選択時：ザンで攻撃した場合、与ダメの30%で連撃", baseHp:380, baseGuts:130, baseAtk:150, baseDef:50, plusStats:{hp:100,atk:40,def:0,guts:40}, unique:{name:"リバースレイド",icon:"⚔️",monId:"Zan",baseMult:2.5,baseGuts:50,evoLevel:0,names:["リバースレイド","ソニックレイヴ","メテオドライブ","アサルトレイド","ライジングレイヴ","アクシズバレット","ダークホウスト","アサルトライジング","ブラッディクロス"],effectDesc:"連斬：連撃ヒットがもう1回追加(与ダメ20%)＆連撃ダメージ+3%(永続/重複可)"}},
+  Mitarashi: { id:'Mitarashi', name:"ミタラシ", emoji:"🐉", imgUrl:MITARASHI_IMG, iconUrl:MITARASHI_ICON, trait:"もち肌", traitDesc:"勇者モン選択時：被ダメージ20%軽減", baseHp:600, baseGuts:100, baseAtk:120, baseDef:120, plusStats:{hp:250,atk:30,def:30,guts:10}, unique:{name:"モッチ砲",icon:"💣",monId:"Mitarashi",baseMult:2.2,baseGuts:44,evoLevel:0,names:["モッチ砲","大モッチ砲","超モッチ砲","超モッチ砲2","超モッチ砲3","超モッチ砲ゴッド","超モッチ砲ブルー","身勝手のモッチ砲 兆","身勝手のモッチ砲 極"],effectDesc:"攻防一体：味方丈夫さ3%増＆敵被ダメ10%増(永続)"}}
 };
 
 // 初期から無料で使えるモンスターのid一覧(固定)。
