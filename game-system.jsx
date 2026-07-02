@@ -59,7 +59,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 19:06"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 19:32"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -712,7 +712,7 @@ function MonsterHeroGame() {
   const toggleMonsterRoster = (id) => {
     setMonsterRosterIds(prev => {
       const inRoster = prev.includes(id);
-      if (inRoster && prev.length <= 1) return prev;
+      if (inRoster && prev.length <= STARTER_MONSTER_IDS.length) return prev;
       const next = inRoster ? prev.filter(x => x !== id) : [...prev, id];
       storeSet('mh_monster_roster', next, false);
       return next;
@@ -721,7 +721,7 @@ function MonsterHeroGame() {
   const toggleTeachingRoster = (id) => {
     setTeachingRosterIds(prev => {
       const inRoster = prev.includes(id);
-      if (inRoster && prev.length <= 1) return prev;
+      if (inRoster && prev.length <= STARTER_TEACHING_IDS.length) return prev;
       const next = inRoster ? prev.filter(x => x !== id) : [...prev, id];
       storeSet('mh_teaching_roster', next, false);
       return next;
@@ -1517,10 +1517,16 @@ function MonsterHeroGame() {
                 <span className="flex items-center gap-1.5"><Coins size={14} className="text-amber-400"/><span className="text-[11px] font-black text-amber-200">{breederPoints} pt</span></span>
                 <span className="flex items-center gap-1 text-[10px] font-black text-amber-400 group-hover:text-amber-200"><ShoppingBag size={12}/>ブリーダーマーケット<ChevronRight size={11}/></span>
               </button>
-              <button onClick={()=>setGameState('ROSTER')} className="w-full flex items-center justify-between gap-2 bg-indigo-950/40 border border-indigo-500/40 px-4 py-2.5 rounded-xl active:scale-95 group">
-                <span className="flex items-center gap-1.5"><Layers size={14} className="text-indigo-400"/><span className="text-[11px] font-black text-indigo-200">{monsterRosterIds.length}体・{teachingRosterIds.length}枚</span></span>
-                <span className="flex items-center gap-1 text-[10px] font-black text-indigo-400 group-hover:text-indigo-200"><Layers size={12}/>編成<ChevronRight size={11}/></span>
-              </button>
+              <div className="grid grid-cols-2 gap-2 w-full">
+                <button onClick={()=>{setRosterTab('monster'); setGameState('ROSTER');}} className="flex flex-col items-center justify-center gap-1 bg-indigo-950/40 border border-indigo-500/40 px-2 py-2.5 rounded-xl active:scale-95">
+                  <span className="flex items-center gap-1 text-[9px] font-black text-indigo-400 uppercase"><Layers size={11}/>モンスター編成</span>
+                  <span className="text-[12px] font-black text-indigo-200">{monsterRosterIds.length}体</span>
+                </button>
+                <button onClick={()=>{setRosterTab('teaching'); setGameState('ROSTER');}} className="flex flex-col items-center justify-center gap-1 bg-purple-950/40 border border-purple-500/40 px-2 py-2.5 rounded-xl active:scale-95">
+                  <span className="flex items-center gap-1 text-[9px] font-black text-purple-400 uppercase"><Layers size={11}/>ブリーダーカード編成</span>
+                  <span className="text-[12px] font-black text-purple-200">{teachingRosterIds.length}枚</span>
+                </button>
+              </div>
             </div>
             <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-2 px-1 shrink-0">難易度別 記録</div>
             <div className="flex flex-col gap-2 mb-4">
@@ -1593,7 +1599,7 @@ function MonsterHeroGame() {
             </div>
             {rosterTab==='monster'?(
               <>
-                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">編成中: {monsterRosterIds.length}体 / 解放済み{unlockedMonsterIds.length}体　※次回以降の周回の候補になります</div>
+                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">編成中: {monsterRosterIds.length}体 / 解放済み{unlockedMonsterIds.length}体　※次回以降の周回の候補になります<br/>※最低{STARTER_MONSTER_IDS.length}体は編成から外せません</div>
                 <div className="grid grid-cols-3 gap-3 pb-4">
                   {unlockedMonsterIds.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>{
                     const selected = monsterRosterIds.includes(m.id);
@@ -1609,7 +1615,7 @@ function MonsterHeroGame() {
               </>
             ):(
               <>
-                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">編成中: {teachingRosterIds.length}枚 / 解放済み{unlockedTeachingIds.length}枚　※次回以降の周回の候補になります</div>
+                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">編成中: {teachingRosterIds.length}枚 / 解放済み{unlockedTeachingIds.length}枚　※次回以降の周回の候補になります<br/>※最低{STARTER_TEACHING_IDS.length}枚は編成から外せません</div>
                 <div className="grid grid-cols-3 gap-3 pb-4">
                   {unlockedTeachingIds.map(id=>TEACHING_CARDS.find(t=>t.id===id)).filter(Boolean).map(t=>{
                     const selected = teachingRosterIds.includes(t.id);
