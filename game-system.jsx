@@ -57,7 +57,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 10:12"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 10:19"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -559,7 +559,14 @@ function MonsterHeroGame() {
       setHighScores(scores);
       setAttemptCounts(attempts);
       setClearCounts(clears);
-      const wasOnboarded = await storeGet('mh_onboarded', false, false);
+      let wasOnboarded = await storeGet('mh_onboarded', null, false);
+      if (wasOnboarded === null) {
+        // onboardedフラグ自体が無い = 既存プレイヤーか初回か不明なので、
+        // 既存のセーブデータ(名前変更済み/XPあり/ハイスコアあり)があれば既存プレイヤーとみなす
+        const hasExistingData = savedName !== '名無しのブリーダー' || savedXp > 0 || Object.values(scores).some(s => s > 0);
+        wasOnboarded = hasExistingData;
+        await storeSet('mh_onboarded', wasOnboarded, false);
+      }
       setOnboarded(wasOnboarded);
       if (!wasOnboarded) setGameState('PROFILE');
       await loadRankings();
@@ -575,10 +582,21 @@ function MonsterHeroGame() {
     try {
       const existing = await sbFindPlayer(diff, name);
       const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level };
-      if (existing) {
-        if ((existing.score || 0) < finalScore) await sbUpdateScore(existing.id, row); // keep best
-      } else {
-        await sbInsertScore(row);
+      try {
+        if (existing) {
+          if ((existing.score || 0) < finalScore) await sbUpdateScore(existing.id, row); // keep best
+        } else {
+          await sbInsertScore(row);
+        }
+      } catch (eLevel) {
+        // level列がテーブルに無い等でエラーになった場合、level無しで再送信(本体の送信を優先)
+        console.error('[ranking] submit with level failed, retrying without level:', eLevel && eLevel.message ? eLevel.message : eLevel);
+        const { level: _drop, ...rowNoLevel } = row;
+        if (existing) {
+          if ((existing.score || 0) < finalScore) await sbUpdateScore(existing.id, rowNoLevel);
+        } else {
+          await sbInsertScore(rowNoLevel);
+        }
       }
     } catch (e) {
       console.error('[ranking] supabase submit failed, falling back to local:', e && e.message ? e.message : e);
