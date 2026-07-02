@@ -57,7 +57,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 10:54"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 11:05"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -586,23 +586,30 @@ function MonsterHeroGame() {
     // 全国ランキング(Supabase)への送信を優先。失敗時のみ端末内保存にフォールバック
     try {
       const existing = await sbFindPlayer(diff, name);
-      const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level, icon };
-      try {
-        if (existing) {
-          if ((existing.score || 0) < finalScore) await sbUpdateScore(existing.id, row); // keep best
-        } else {
-          await sbInsertScore(row);
-        }
-      } catch (eExtra) {
-        // level/icon列がテーブルに無い等でエラーになった場合、それらを外して再送信(本体の送信を優先)
-        console.error('[ranking] submit with level/icon failed, retrying without them:', eExtra && eExtra.message ? eExtra.message : eExtra);
-        const rowCore = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore };
-        if (existing) {
-          if ((existing.score || 0) < finalScore) await sbUpdateScore(existing.id, rowCore);
-        } else {
-          await sbInsertScore(rowCore);
+      const rowCore = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore };
+      // level/icon列がテーブルに無い場合でも、片方だけでも保存できるよう段階的に試す
+      // (level無し/icon無しどちらかだけが未対応でも、対応している方は失わない)
+      const variants = [
+        { ...rowCore, level, icon },
+        { ...rowCore, level },
+        { ...rowCore, icon },
+        rowCore,
+      ];
+      let saved = false;
+      for (const row of variants) {
+        try {
+          if (existing) {
+            if ((existing.score || 0) < finalScore) await sbUpdateScore(existing.id, row); // keep best
+          } else {
+            await sbInsertScore(row);
+          }
+          saved = true;
+          break;
+        } catch (eVariant) {
+          console.error('[ranking] submit variant failed, trying next:', eVariant && eVariant.message ? eVariant.message : eVariant);
         }
       }
+      if (!saved) throw new Error('all submit variants failed');
     } catch (e) {
       console.error('[ranking] supabase submit failed, falling back to local:', e && e.message ? e.message : e);
       const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon };
@@ -800,6 +807,9 @@ function MonsterHeroGame() {
     if(card.type==='debuff'&&card.subType==='stun_atsu') return true;
     return false;
   };
+  // ダメージを与える(攻撃順・ダメージ予測の対象になる)カードか。あつの挑発(stun_atsu)は
+  // debuffだが実際にダメージを与えるためprocessTurnと同様ここでも攻撃扱いする
+  const isAttackCard = (card) => !!card && (['atk','range_atk','unique'].includes(card.type) || (card.type==='debuff'&&card.subType==='stun_atsu'));
 
   // カード選択(タップ/ドラッグ共通)
   const selectCardAt = (i) => {
@@ -1668,17 +1678,16 @@ function MonsterHeroGame() {
                 // Overall total damage across ALL monster slots, matching processTurn's global attack order.
                 // Existing total = sum of already-assigned attack cards.
                 // If a card is pending and validly assignable somewhere, also compute the projected new total.
-                const atkTypes=['atk','range_atk','unique'];
                 // committed (already assigned) attack cards in selection order
                 let committedTotal=0; let committedAtkCnt=0;
                 selectedCards.forEach(idx=>{
                   const card=hand[idx]; const slotIdx=cardAssignments[idx];
                   if(slotIdx==null) return;
-                  const isAtk=atkTypes.includes(card.type);
+                  const isAtk=isAttackCard(card);
                   if(isAtk){ committedTotal+=getDmg(card,slotIdx,slots[slotIdx],0,0,committedAtkCnt>0); committedAtkCnt++; }
                 });
                 const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);
-                const pendingIsAtk=pendingCardObj&&atkTypes.includes(pendingCardObj.type);
+                const pendingIsAtk=isAttackCard(pendingCardObj);
                 // projected damage the pending card would add (as the next attack in order)
                 let pendingAdd=0; let pendingValidSlot=null;
                 if(pendingIsAtk){
@@ -1727,16 +1736,16 @@ function MonsterHeroGame() {
                     if(pendingCardObj.type==='unique') canAssign = canAssign && (s.id===pendingCardObj.monId);
                   }
                   // Count how many attack cards are already assigned (across all slots) to determine attack order
-                  const assignedAttackCount=selectedCards.filter(idx=>{const c=hand[idx]; return cardAssignments[idx]!=null && ['atk','range_atk','unique'].includes(c.type);}).length;
+                  const assignedAttackCount=selectedCards.filter(idx=>{const c=hand[idx]; return cardAssignments[idx]!=null && isAttackCard(c);}).length;
                   // Preview damage:
                   // - if a card is pending assignment, show what THIS card would do on this monster
                   // - otherwise show the sum of damage from cards already assigned to this slot,
                   //   using the GLOBAL attack order (2nd+ attack = half damage), matching processTurn
                   let previewDmg=0; let isPendingPreview=false;
-                  if(s && pendingCardObj && canAssign && ['atk','range_atk','unique'].includes(pendingCardObj.type)){
+                  if(s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)){
                     // 既に割り当て済みの攻撃カード枚数を選択順で正確に数え、保留カードはその次の攻撃として扱う
                     let committedAtk=0;
-                    selectedCards.forEach(idx=>{const card=hand[idx]; if(['atk','range_atk','unique'].includes(card.type)&&cardAssignments[idx]!=null)committedAtk++;});
+                    selectedCards.forEach(idx=>{const card=hand[idx]; if(isAttackCard(card)&&cardAssignments[idx]!=null)committedAtk++;});
                     const isSecondOrLater = committedAtk>=1;
                     previewDmg=getDmg(pendingCardObj,i,s,0,0,isSecondOrLater);
                     isPendingPreview=true;
@@ -1745,7 +1754,7 @@ function MonsterHeroGame() {
                     let globalAtkCnt=0;
                     selectedCards.forEach(idx=>{
                       const card=hand[idx];
-                      const isAtk=['atk','range_atk','unique'].includes(card.type);
+                      const isAtk=isAttackCard(card);
                       if(cardAssignments[idx]===i){
                         previewDmg+=getDmg(card,i,s,0,0,isAtk&&globalAtkCnt>0);
                       }
