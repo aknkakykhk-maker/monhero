@@ -23,3 +23,13 @@ const TEACHING_CARDS = [
   { id:'atsu',    baseName:"あつの挑発",      icon:ATSU_FACE_ICON,    type:'debuff', subType:'stun_atsu',   baseValue:1.5, step:1.5,  desc:"このターン敵行動無効＆攻撃", evoLevel:0, guts:20 },
   { id:'myaru',   baseName:"みゃるの薬",      icon:MYARU_FACE_ICON,   type:'buff',   subType:'buff_myaru',  baseValue:2.0, step:0.5, selfDmg:0.5, dmgStep:0.1, desc:"次ターン攻撃2倍＆自傷", evoLevel:0, guts:20 }
 ];
+
+// ブリーダーマーケット: ブリーダーレベルアップで得たポイントで購入できるプロフィールアイコン
+const BREEDER_MARKET_ITEMS = [
+  { id:'oryo',    name:"おりょう",     icon:ORYO_FACE_ICON,    cost:1 },
+  { id:'dra',     name:"ドラ",        icon:DRA_FACE_ICON,     cost:1 },
+  { id:'cadmium', name:"かどみうむ",   icon:CADMIUM_FACE_ICON, cost:1 },
+  { id:'mua',     name:"みゅあ",      icon:MUA_FACE_ICON,     cost:1 },
+  { id:'atsu',    name:"あつ",        icon:ATSU_FACE_ICON,    cost:1 },
+  { id:'myaru',   name:"みゃる",      icon:MYARU_FACE_ICON,   cost:1 }
+];
