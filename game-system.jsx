@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 22:03"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1257,12 +1257,35 @@ function MonsterHeroGame() {
       if(totalDmg>0){
         const fallbackSlot = lastActionSlot !== null ? lastActionSlot : slots.findIndex(s => s !== null);
         const multiHit = attackHits.length > 1;
-        // Process each attack hit one by one
-        for (let i=0; i<attackHits.length; i++) {
-          const hit = attackHits[i];
-          // ザンの連撃(本体攻撃+連撃ヒットのペア)は2倍速でテンポよく演出する
-          const isComboPair = hit.skillName==='連撃' || attackHits[i+1]?.skillName==='連撃';
-          const spd = isComboPair ? 0.35 : 1.0;
+        // Process each attack hit one by one (ザンの連撃グループのみ特別扱い)
+        let hitIdx=0;
+        while (hitIdx < attackHits.length) {
+          const hit = attackHits[hitIdx];
+          const isZanGroupStart = hit.skillName!=='連撃' && attackHits[hitIdx+1]?.skillName==='連撃';
+          if (isZanGroupStart) {
+            // ザンの連撃グループ: 残像のような一瞬の突進を1回だけ見せ、モーションが終わってからダメージをバババッと立て続けに表示する
+            const group=[hit]; let j=hitIdx+1;
+            while (attackHits[j] && attackHits[j].skillName==='連撃') { group.push(attackHits[j]); j++; }
+            const animSlot = (hit.slotIdx!=null && slots[hit.slotIdx]) ? hit.slotIdx : fallbackSlot;
+            if(animSlot >= 0 && slots[animSlot]) {
+              setSlotSkill({slotIndex: animSlot, name: hit.skillName, type: hit.isUnique?'unique':(hit.isSpecial?'special':'normal')});
+              setAttackAnim({slotIndex: animSlot, zanCombo:true});
+              Audio_.se.special();
+              await wait(320);
+              setAttackAnim(null);
+              setSlotSkill(null);
+              await wait(100);
+            }
+            for (const h of group) {
+              const hitColor=h.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
+              if(h.isCrit) triggerShake();
+              addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
+              setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-h.dmg)}));
+              await wait(140);
+            }
+            hitIdx=j;
+            continue;
+          }
           const animSlot = (hit.slotIdx!=null && slots[hit.slotIdx]) ? hit.slotIdx : fallbackSlot;
           if(animSlot >= 0 && slots[animSlot]) {
             // スロット上に技名をインライン表示
@@ -1271,22 +1294,23 @@ function MonsterHeroGame() {
               // 固有技: タメ(下に沈む)→敵に向かって突進
               setAttackAnim({slotIndex: animSlot, charge:true});
               Audio_.se.special();
-              await wait(Math.round(650*spd));
+              await wait(650);
               setAttackAnim({slotIndex: animSlot, charge:false});
-              await wait(Math.round(500*spd));
+              await wait(500);
             } else {
               setAttackAnim({slotIndex: animSlot});
               if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-              await wait(Math.round(450*spd));
+              await wait(450);
             }
             setAttackAnim(null);
             setSlotSkill(null);
-            await wait(160); // 攻撃モーションが終わってから一拍おいてダメージを表示する(速度倍率の影響を受けず一定の間を確保)
+            await wait(160); // 攻撃モーションが終わってから一拍おいてダメージを表示する
           }
           const hitColor=hit.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if(hit.isCrit) triggerShake();
           addPopup(hit.isCrit?`${hit.dmg}!!`:`${hit.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
-          setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-hit.dmg)})); await wait(Math.round(550*spd));
+          setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-hit.dmg)})); await wait(550);
+          hitIdx++;
         }
         setCurrentWaveDamage(p=>p+totalDmg);
         const turnDistDmg=[0,0,0,0];
@@ -2111,7 +2135,7 @@ function MonsterHeroGame() {
                       setSlotSettle(i);
                       setTimeout(()=>{ setSlotSettle(null); }, 500);
                     }
-                  }} disabled={isBusy} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?'specialLunge 500ms ease-in forwards':'attackFly 450ms ease-in forwards'))}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined)}>
+                  }} disabled={isBusy} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?'specialLunge 500ms ease-in forwards':'attackFly 450ms ease-in forwards')))}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined)}>
                     <div className="h-[25%] bg-black/60 flex items-center justify-center px-1 border-b border-white/10 z-20"><span className="text-[7px] font-black text-white truncate uppercase leading-none">{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[7px] font-black text-indigo-300">×{assignedCount}</span>}</div>
                     <div className="flex-1 flex flex-col items-center justify-center relative">
                       {slotSettle===i&&(
@@ -2417,6 +2441,28 @@ const createAnimationStyle = () => {
       60% {
         transform: translateY(-180px) scale(1.35);
         filter: drop-shadow(0 0 25px rgba(220,38,38,1));
+      }
+      100% {
+        transform: translateY(0) scale(1);
+        filter: drop-shadow(0 0 0 rgba(0,0,0,0));
+      }
+    }
+    @keyframes zanComboDash {
+      0% {
+        transform: translateY(0) scale(1);
+        filter: drop-shadow(0 0 4px rgba(34,211,238,0.4));
+      }
+      25% {
+        transform: translateY(-70px) scale(1.15);
+        filter: drop-shadow(-16px 8px 0 rgba(34,211,238,0.25)) drop-shadow(-30px 15px 0 rgba(34,211,238,0.12)) drop-shadow(0 0 16px rgba(34,211,238,0.9));
+      }
+      50% {
+        transform: translateY(-170px) scale(1.3);
+        filter: drop-shadow(-20px 10px 0 rgba(34,211,238,0.3)) drop-shadow(-38px 19px 0 rgba(34,211,238,0.15)) drop-shadow(0 0 22px rgba(255,255,255,0.95));
+      }
+      75% {
+        transform: translateY(-170px) scale(1.3);
+        filter: drop-shadow(-14px 7px 0 rgba(34,211,238,0.2)) drop-shadow(0 0 22px rgba(34,211,238,0.9));
       }
       100% {
         transform: translateY(0) scale(1);
