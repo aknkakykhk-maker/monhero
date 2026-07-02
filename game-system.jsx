@@ -59,7 +59,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 19:43"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 19:46"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -700,11 +700,18 @@ function MonsterHeroGame() {
     return ownedMarketIcons.includes(item.id);
   };
 
-  // ブリーダーマーケットでアイテムを購入。ポイント消費&種別ごとの解放リストに追加(端末保存)。
-  // アイコンはプロフィールアイコンとして使用可能に、円盤石/ブリーダーは解放と同時に編成へも自動追加する
+  // ブリーダーマーケットでアイテムを購入。アイコンはpt、円盤石/ブリーダーはゴールドを消費し、
+  // 種別ごとの解放リストに追加(端末保存)。円盤石/ブリーダーは解放と同時に編成へも自動追加する
   const buyMarketItem = (item) => {
-    if (isMarketItemOwned(item) || breederPoints < item.cost) return;
-    setBreederPoints(prev => { const next = prev - item.cost; storeSet('mh_breeder_points', next, false); return next; });
+    if (isMarketItemOwned(item)) return;
+    const usesGold = item.type === 'disc' || item.type === 'breeder';
+    if (usesGold) {
+      if (gold < item.cost) return;
+      setGold(prev => { const next = prev - item.cost; storeSet('mh_gold', next, false); return next; });
+    } else {
+      if (breederPoints < item.cost) return;
+      setBreederPoints(prev => { const next = prev - item.cost; storeSet('mh_breeder_points', next, false); return next; });
+    }
     if (item.type === 'disc') {
       setUnlockedMonsterIds(prev => { const next = [...prev, item.id]; storeSet('mh_unlocked_monsters', next, false); return next; });
       setMonsterRosterIds(prev => { const next = [...prev, item.id]; storeSet('mh_monster_roster', next, false); return next; });
@@ -1600,10 +1607,17 @@ function MonsterHeroGame() {
               <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">ブリーダーマーケット</h2>
             </div>
-            <div className="flex items-center justify-center gap-2 mb-4 shrink-0 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
-              <Coins size={16} className="text-amber-400"/>
-              <span className="text-lg font-black text-amber-300">{breederPoints}</span>
-              <span className="text-[10px] text-slate-400 font-bold">ポイント所持(レベルアップで+1)</span>
+            <div className="flex gap-2 mb-4 shrink-0">
+              <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
+                <Coins size={16} className="text-amber-400"/>
+                <span className="text-lg font-black text-amber-300">{breederPoints}</span>
+                <span className="text-[9px] text-slate-400 font-bold">pt(Lv.UPで+1)</span>
+              </div>
+              <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
+                <Coins size={16} className="text-amber-400"/>
+                <span className="text-lg font-black text-amber-300">{gold.toLocaleString()}</span>
+                <span className="text-[9px] text-slate-400 font-bold">G(WAVEクリアで獲得)</span>
+              </div>
             </div>
             <div className="flex gap-1.5 mb-3 shrink-0">
               {[{key:'icon',label:'アイコン'},{key:'disc',label:'円盤石'},{key:'breeder',label:'ブリーダー'}].map(tab=>(
@@ -1616,7 +1630,9 @@ function MonsterHeroGame() {
               <div className="grid grid-cols-2 gap-3 pb-4">
                 {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab).map(item=>{
                   const owned = isMarketItemOwned(item);
-                  const canBuy = !owned && breederPoints>=item.cost;
+                  const usesGold = item.type==='disc' || item.type==='breeder';
+                  const balance = usesGold ? gold : breederPoints;
+                  const canBuy = !owned && balance>=item.cost;
                   return (
                     <div key={item.id} className={`rounded-2xl border-2 p-3 flex flex-col items-center gap-2 ${owned?'bg-emerald-900/30 border-emerald-500/50':'bg-slate-900 border-slate-800'}`}>
                       <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/10 shrink-0"><img src={item.icon} alt={item.name} className="w-full h-full object-cover"/></div>
@@ -1624,7 +1640,7 @@ function MonsterHeroGame() {
                       {owned?(
                         <div className="text-[9px] font-black text-emerald-400 bg-emerald-950/50 px-3 py-1.5 rounded-full">所持済み</div>
                       ):(
-                        <button onClick={()=>buyMarketItem(item)} disabled={!canBuy} className={`text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 ${canBuy?'bg-amber-500 text-black active:scale-95':'bg-slate-800 text-slate-500'}`}><Coins size={10}/>{item.cost}pt で購入</button>
+                        <button onClick={()=>buyMarketItem(item)} disabled={!canBuy} className={`text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 ${canBuy?'bg-amber-500 text-black active:scale-95':'bg-slate-800 text-slate-500'}`}><Coins size={10}/>{item.cost}{usesGold?'G':'pt'} で購入</button>
                       )}
                     </div>
                   );
