@@ -57,7 +57,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 10:19"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 10:54"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -423,6 +423,8 @@ function MonsterHeroGame() {
   const [breederXp, setBreederXp] = useState(0); // 累計経験値(WAVEクリア数ベース・端末保存)
   const [xpAnimFrom, setXpAnimFrom] = useState(null); // タイトル帰還時にバーを伸ばすアニメーション用(直前のXP)
   const [levelUpFlash, setLevelUpFlash] = useState(null); // レベルアップ演出用(新しいレベル数)
+  const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid(未選択はnull)
+  const [showIconPicker, setShowIconPicker] = useState(false);
   const [showNameEdit, setShowNameEdit] = useState(false);
   const [tempName, setTempName] = useState('');
   const [tempBuffs, setTempBuffs] = useState({ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false });
@@ -454,7 +456,7 @@ function MonsterHeroGame() {
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async (d) => {
         try {
           const rows = await sbFetchRankings(d, 20);
-          byDiff[d] = (rows || []).map(r => ({ userName: r.user_name, hero: r.hero, party: r.party, score: r.score, level: r.level }));
+          byDiff[d] = (rows || []).map(r => ({ userName: r.user_name, hero: r.hero, party: r.party, score: r.score, level: r.level, icon: r.icon }));
           sourceByDiff[d] = 'global';
         } catch (e) {
           console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
@@ -548,6 +550,8 @@ function MonsterHeroGame() {
     (async () => {
       const savedName = await storeGet('mh_breeder_name', '名無しのブリーダー', false);
       setBreederName(savedName);
+      const savedIcon = await storeGet('mh_breeder_icon', null, false);
+      setBreederIcon(savedIcon);
       const savedXp = await storeGet('mh_breeder_xp', 0, false);
       setBreederXp(savedXp);
       const scores = {}; const attempts = {}; const clears = {};
@@ -578,29 +582,30 @@ function MonsterHeroGame() {
     const name = breederName || '名無しのブリーダー';
     const heroName = mainHero?.name || 'Unknown';
     const level = breederLevel.level;
+    const icon = breederIcon;
     // 全国ランキング(Supabase)への送信を優先。失敗時のみ端末内保存にフォールバック
     try {
       const existing = await sbFindPlayer(diff, name);
-      const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level };
+      const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level, icon };
       try {
         if (existing) {
           if ((existing.score || 0) < finalScore) await sbUpdateScore(existing.id, row); // keep best
         } else {
           await sbInsertScore(row);
         }
-      } catch (eLevel) {
-        // level列がテーブルに無い等でエラーになった場合、level無しで再送信(本体の送信を優先)
-        console.error('[ranking] submit with level failed, retrying without level:', eLevel && eLevel.message ? eLevel.message : eLevel);
-        const { level: _drop, ...rowNoLevel } = row;
+      } catch (eExtra) {
+        // level/icon列がテーブルに無い等でエラーになった場合、それらを外して再送信(本体の送信を優先)
+        console.error('[ranking] submit with level/icon failed, retrying without them:', eExtra && eExtra.message ? eExtra.message : eExtra);
+        const rowCore = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore };
         if (existing) {
-          if ((existing.score || 0) < finalScore) await sbUpdateScore(existing.id, rowNoLevel);
+          if ((existing.score || 0) < finalScore) await sbUpdateScore(existing.id, rowCore);
         } else {
-          await sbInsertScore(rowNoLevel);
+          await sbInsertScore(rowCore);
         }
       }
     } catch (e) {
       console.error('[ranking] supabase submit failed, falling back to local:', e && e.message ? e.message : e);
-      const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level };
+      const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon };
       try {
         const rows = await storeGet(`mh_rank_${diff}`, [], false);
         const list = Array.isArray(rows) ? rows.slice() : [];
@@ -1321,7 +1326,7 @@ function MonsterHeroGame() {
               </div>
               <div className="shrink-0 w-full flex flex-col items-center mb-2">
                 <div className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mb-1">Breeder Profile</div>
-                <button onClick={()=>setGameState('PROFILE')} className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group backdrop-blur-sm"><User size={14} className="text-indigo-400"/><span className="font-black text-sm text-white group-hover:text-indigo-300 transition-colors">{breederName}</span><ChevronRight size={12} className="text-slate-500 group-hover:text-white"/></button>
+                <button onClick={()=>setGameState('PROFILE')} className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group backdrop-blur-sm">{breederIcon&&ALL_PLAYER_MONSTERS[breederIcon]?.iconUrl?(<div className="w-4 h-4 rounded-full overflow-hidden shrink-0"><img src={ALL_PLAYER_MONSTERS[breederIcon].iconUrl} alt="" className="w-full h-full object-cover"/></div>):(<User size={14} className="text-indigo-400"/>)}<span className="font-black text-sm text-white group-hover:text-indigo-300 transition-colors">{breederName}</span><ChevronRight size={12} className="text-slate-500 group-hover:text-white"/></button>
               </div>
               <div className="shrink-0 flex flex-col gap-2 w-full">
                 <div className="grid grid-cols-3 gap-2 justify-center">
@@ -1350,6 +1355,7 @@ function MonsterHeroGame() {
                       <div key={i} className={`flex flex-col p-3 rounded-2xl border ${i===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`}>
                         <div className="flex items-center gap-4">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${i===0?'bg-amber-500 text-black':i===1?'bg-slate-300 text-black':i===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{i+1}</div>
+                          {r.icon&&ALL_PLAYER_MONSTERS[r.icon]?.iconUrl&&(<div className="w-7 h-7 rounded-full overflow-hidden border border-white/20 shrink-0"><img src={ALL_PLAYER_MONSTERS[r.icon].iconUrl} alt="" className="w-full h-full object-cover"/></div>)}
                           <div className="flex-1 min-w-0 flex items-center gap-1.5">{r.level!=null&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-indigo-600/90 border border-indigo-400/50 text-[7px] font-black text-white">Lv.{r.level}</span>}<div className="text-[11px] font-black text-white truncate uppercase tracking-tighter">{r.userName}</div></div>
                           <div className="text-right font-mono font-black text-indigo-400 text-sm whitespace-nowrap">{r.score.toLocaleString()} pt</div>
                         </div>
@@ -1383,7 +1389,10 @@ function MonsterHeroGame() {
               </div>
             )}
             <div className="shrink-0 bg-slate-900/80 border border-white/10 rounded-3xl p-5 flex flex-col items-center gap-3 mb-4">
-              <div className="w-20 h-20 rounded-full bg-slate-800 border-2 border-indigo-400/50 flex items-center justify-center"><User size={36} className="text-indigo-400"/></div>
+              <button onClick={()=>setShowIconPicker(true)} className="relative w-20 h-20 rounded-full bg-slate-800 border-2 border-indigo-400/50 flex items-center justify-center overflow-hidden active:scale-95">
+                {breederIcon&&ALL_PLAYER_MONSTERS[breederIcon]?.iconUrl?(<img src={ALL_PLAYER_MONSTERS[breederIcon].iconUrl} alt="icon" className="w-full h-full object-cover"/>):(<User size={36} className="text-indigo-400"/>)}
+                <div className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"><Edit3 size={9} className="text-white"/></div>
+              </button>
               <button onClick={()=>{setTempName(breederName); setShowNameEdit(true);}} className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group">
                 <span className="font-black text-base text-white">{breederName}</span><Edit3 size={13} className="text-slate-500 group-hover:text-white"/>
               </button>
@@ -1415,6 +1424,22 @@ function MonsterHeroGame() {
               <h3 className="text-lg font-black text-white mb-1">ブリーダー名変更</h3>
               <input type="text" value={tempName} onChange={e=>setTempName(e.target.value)} maxLength={10} className="w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-4"/>
               <div className="flex gap-2"><button onClick={()=>setShowNameEdit(false)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">戻る</button><button onClick={handleSaveName} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs">保存</button></div>
+            </div>
+          </div>
+        )}
+
+        {showIconPicker&&(
+          <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
+              <h3 className="text-lg font-black text-white mb-4 text-center">アイコンを選択</h3>
+              <div className="grid grid-cols-4 gap-3 mb-4">
+                {Object.values(ALL_PLAYER_MONSTERS).map(m=>(
+                  <button key={m.id} onClick={()=>{setBreederIcon(m.id); storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
+                    <img src={m.iconUrl} alt={m.name} className="w-full h-full object-cover"/>
+                  </button>
+                ))}
+              </div>
+              <button onClick={()=>setShowIconPicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
             </div>
           </div>
         )}
