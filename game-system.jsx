@@ -59,7 +59,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 16:48"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 16:55"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1320,7 +1320,7 @@ function MonsterHeroGame() {
     const formatVal=(v)=>Math.round(v*100);
     if(t.id==='oryo') return `攻撃ステータス ${formatVal(0.1+level*0.1)}%アップ`;
     if(t.id==='dra') return `被ダメージ ${[3,6,10][level]}%ダウン`;
-    if(t.id==='cadmium') return level===0?`自動G回復+2%・ガッツ上限5%UP`:(level===1?`自動G回復+3%・ライフ/G上限5%UP・ライフ自動回復2%`:`自動G回復+5%・ライフ/G上限7%UP・ライフ自動回復5%`);
+    if(t.id==='cadmium') return level===0?`G自動回復+2%・ガッツ上限5%UP`:(level===1?`自動ライフ回復2%・G自動回復+3%・ライフ/G上限5%UP`:`自動ライフ回復5%・G自動回復+5%・ライフ/G上限7%UP`);
     if(t.id==='mua') return level===0?"HP50%回復・HP/攻/ガッツ3%UP":(level===1?"HP&ガッツ70%回復・HP5%/攻3%/ガッツ3%UP":"HP&ガッツ90%回復・HP8%/攻5%/ガッツ5%UP");
     if(t.id==='atsu') return `敵行動無効＋攻撃 (${(t.baseValue+level*t.step).toFixed(1)}倍)`;
     if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=formatVal(Math.max(0.1,t.selfDmg-level*t.dmgStep)); return `次ターン攻撃${v.toFixed(1)}倍・自傷${d}%`;}
