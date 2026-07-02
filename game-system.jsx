@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 00:07"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 00:13"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1731,10 +1731,15 @@ function MonsterHeroGame() {
                   const usesGold = item.type==='disc' || item.type==='breeder';
                   const balance = usesGold ? gold : breederPoints;
                   const canBuy = !comingSoon && !owned && balance>=item.cost;
+                  const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
+                  const detailTeaching = item.type==='breeder' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
                   return (
                     <div key={item.id} className={`rounded-2xl border-2 p-3 flex flex-col items-center gap-2 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
                       <div className={`w-16 h-16 rounded-full overflow-hidden border-2 border-white/10 shrink-0 ${comingSoon?'grayscale opacity-50':''}`}><img src={item.icon} alt={item.name} className="w-full h-full object-cover"/></div>
                       <div className={`text-xs font-black ${comingSoon?'text-slate-500':'text-white'}`}>{item.name}</div>
+                      {(detailMon||detailTeaching)&&!comingSoon&&(
+                        <button onClick={()=>{if(detailMon) setRosterDetailMon(detailMon); else setRosterDetailTeaching(detailTeaching);}} className="text-[9px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-3 py-1 rounded-full active:scale-95 flex items-center gap-1"><BookOpen size={9}/>詳細を見る</button>
+                      )}
                       {comingSoon?(
                         <div className="text-[9px] font-black text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full">近日追加予定</div>
                       ):owned?(
@@ -1752,7 +1757,6 @@ function MonsterHeroGame() {
 
         {/* ROSTER (編成) */}
         {gameState==='ROSTER'&&(
-          <>
           <div className="flex-1 flex flex-col h-full overflow-y-auto mh-scroll p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
               <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
@@ -1799,42 +1803,42 @@ function MonsterHeroGame() {
               </>
             )}
           </div>
-          {rosterDetailMon&&(
-            <div className="fixed inset-0 z-[31000] flex items-center justify-center p-4" style={{backgroundColor:'rgba(0,0,0,0.92)'}}>
-              <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
-                <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
-                  {rosterDetailMon.imgUrl?(<img src={rosterDetailMon.imgUrl} alt={rosterDetailMon.name} className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-110"/>):(<div className="text-6xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{rosterDetailMon.emoji}</div>)}
-                  <div className="flex-1"><h3 className="text-xl font-black text-white">{rosterDetailMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div></div>
-                  <button onClick={()=>setRosterDetailMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
-                </div>
-                <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
-                  <div className="grid grid-cols-2 gap-2 shrink-0">
-                    <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">基本ステータス</div><div className="space-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{rosterDetailMon.baseHp}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{rosterDetailMon.baseAtk}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{rosterDetailMon.baseDef}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{rosterDetailMon.baseGuts}</span></div></div></div>
-                    <div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{rosterDetailMon.traitDesc}</div></div>
-                  </div>
-                  <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{rosterDetailMon.plusStats.hp>0&&`HP+${rosterDetailMon.plusStats.hp} `}{rosterDetailMon.plusStats.atk>0&&`攻+${rosterDetailMon.plusStats.atk} `}{rosterDetailMon.plusStats.def>0&&`防+${rosterDetailMon.plusStats.def} `}{rosterDetailMon.plusStats.guts>0&&`G+${rosterDetailMon.plusStats.guts} `}</div></div>
-                  <div className="bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0"><div className="flex items-center gap-2 mb-2 border-b border-white/5 pb-1"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技: {rosterDetailMon.unique.name}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic mb-2">"{rosterDetailMon.unique.effectDesc}"</div></div>
-                </div>
-                <button onClick={()=>setRosterDetailMon(null)} className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95">閉じる</button>
-              </div>
-            </div>
-          )}
-          {rosterDetailTeaching&&(()=>{const owned=ownedTeachings.find(ot=>ot.id===rosterDetailTeaching.id); const currentLvl=owned?owned.evoLevel:-1; return(
-            <div className="fixed inset-0 z-[31000] flex items-center justify-center p-6" style={{backgroundColor:'rgba(0,0,0,0.92)'}}>
-              <div className="bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full">
-                <div className="text-6xl mb-2 shrink-0">{cardIconNode(rosterDetailTeaching.icon,76)}</div>
-                <h3 className="text-lg font-black text-white mb-4 shrink-0">{BREEDER_EVO_NAMES[rosterDetailTeaching.id][Math.max(currentLvl,0)]}</h3>
-                <div className="w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
-                  {getFullEvolutionDetails(rosterDetailTeaching).map(info=>{const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
-                    return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[7px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{!owned&&info.lvl===0&&<span className="text-[7px] bg-slate-600 text-white px-1.5 rounded">未習得</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
-                  })}
-                </div>
-                <button onClick={()=>setRosterDetailTeaching(null)} className="w-full bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs shrink-0">閉じる</button>
-              </div>
-            </div>
-          );})()}
-          </>
         )}
+
+        {rosterDetailMon&&(
+          <div className="fixed inset-0 z-[31000] flex items-center justify-center p-4" style={{backgroundColor:'rgba(0,0,0,0.92)'}}>
+            <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
+              <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
+                {rosterDetailMon.imgUrl?(<img src={rosterDetailMon.imgUrl} alt={rosterDetailMon.name} className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-110"/>):(<div className="text-6xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{rosterDetailMon.emoji}</div>)}
+                <div className="flex-1"><h3 className="text-xl font-black text-white">{rosterDetailMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div></div>
+                <button onClick={()=>setRosterDetailMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
+              </div>
+              <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
+                <div className="grid grid-cols-2 gap-2 shrink-0">
+                  <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">基本ステータス</div><div className="space-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{rosterDetailMon.baseHp}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{rosterDetailMon.baseAtk}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{rosterDetailMon.baseDef}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{rosterDetailMon.baseGuts}</span></div></div></div>
+                  <div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{rosterDetailMon.traitDesc}</div></div>
+                </div>
+                <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{rosterDetailMon.plusStats.hp>0&&`HP+${rosterDetailMon.plusStats.hp} `}{rosterDetailMon.plusStats.atk>0&&`攻+${rosterDetailMon.plusStats.atk} `}{rosterDetailMon.plusStats.def>0&&`防+${rosterDetailMon.plusStats.def} `}{rosterDetailMon.plusStats.guts>0&&`G+${rosterDetailMon.plusStats.guts} `}</div></div>
+                <div className="bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0"><div className="flex items-center gap-2 mb-2 border-b border-white/5 pb-1"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技: {rosterDetailMon.unique.name}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic mb-2">"{rosterDetailMon.unique.effectDesc}"</div></div>
+              </div>
+              <button onClick={()=>setRosterDetailMon(null)} className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95">閉じる</button>
+            </div>
+          </div>
+        )}
+        {rosterDetailTeaching&&(()=>{const owned=ownedTeachings.find(ot=>ot.id===rosterDetailTeaching.id); const currentLvl=owned?owned.evoLevel:-1; return(
+          <div className="fixed inset-0 z-[31000] flex items-center justify-center p-6" style={{backgroundColor:'rgba(0,0,0,0.92)'}}>
+            <div className="bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full">
+              <div className="text-6xl mb-2 shrink-0">{cardIconNode(rosterDetailTeaching.icon,76)}</div>
+              <h3 className="text-lg font-black text-white mb-4 shrink-0">{BREEDER_EVO_NAMES[rosterDetailTeaching.id][Math.max(currentLvl,0)]}</h3>
+              <div className="w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
+                {getFullEvolutionDetails(rosterDetailTeaching).map(info=>{const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
+                  return(<div key={info.lvl} className={`p-2 rounded-xl border ${isCurrent?'bg-purple-900/50 border-purple-400':isNext?'bg-amber-900/30 border-amber-500/50':'bg-black/30 border-white/5'}`}><div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${isCurrent?'text-purple-300':isNext?'text-amber-300':'text-slate-500'}`}>Lv.{info.lvl} {info.name}</span>{isCurrent&&<span className="text-[7px] bg-purple-500 text-white px-1.5 rounded">所持</span>}{!owned&&info.lvl===0&&<span className="text-[7px] bg-slate-600 text-white px-1.5 rounded">未習得</span>}</div><div className="text-[8px] text-slate-300">{info.desc}</div></div>);
+                })}
+              </div>
+              <button onClick={()=>setRosterDetailTeaching(null)} className="w-full bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs shrink-0">閉じる</button>
+            </div>
+          </div>
+        );})()}
 
         {showNameEdit&&(
           <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
