@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 00:13"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 00:26"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -974,7 +974,7 @@ function MonsterHeroGame() {
   const isAttackCard = (card) => !!card && (['atk','range_atk','unique'].includes(card.type) || (card.type==='debuff'&&card.subType==='stun_atsu'));
   // カードのicon欄が画像(顔アイコン)かemoji文字かを判別して描画
   const cardIconNode = (icon, sizePx) => (typeof icon==='string' && icon.startsWith('data:'))
-    ? <img src={icon} alt="" style={{width:sizePx,height:sizePx}} className="rounded-full object-cover inline-block shrink-0"/>
+    ? <img src={icon} alt="" draggable={false} style={{width:sizePx,height:sizePx,WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="rounded-full object-cover inline-block shrink-0"/>
     : icon;
   // プロフィールアイコンidから表示URLを解決(味方モンスター由来 or ブリーダーマーケット購入品)
   const resolveIconUrl = (id) => {
@@ -1774,8 +1774,8 @@ function MonsterHeroGame() {
                   {unlockedMonsterIds.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>{
                     const selected = draftMonsterRoster.includes(m.id);
                     return (
-                      <button key={m.id} onPointerDown={()=>startLongPress(()=>setRosterDetailMon(m))} onPointerUp={()=>endLongPress(()=>toggleDraftMonster(m.id))} onPointerLeave={cancelLongPress} onContextMenu={(e)=>e.preventDefault()} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
-                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} className="w-full h-full object-cover"/></div>
+                      <button key={m.id} onPointerDown={()=>startLongPress(()=>setRosterDetailMon(m))} onPointerUp={()=>endLongPress(()=>toggleDraftMonster(m.id))} onPointerLeave={cancelLongPress} onContextMenu={(e)=>e.preventDefault()} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',touchAction:'manipulation'}} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                         <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
                         <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
                       </button>
@@ -1791,7 +1791,7 @@ function MonsterHeroGame() {
                   {unlockedTeachingIds.map(id=>TEACHING_CARDS.find(t=>t.id===id)).filter(Boolean).map(t=>{
                     const selected = draftTeachingRoster.includes(t.id);
                     return (
-                      <button key={t.id} onPointerDown={()=>startLongPress(()=>setRosterDetailTeaching(t))} onPointerUp={()=>endLongPress(()=>toggleDraftTeaching(t.id))} onPointerLeave={cancelLongPress} onContextMenu={(e)=>e.preventDefault()} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400':'bg-slate-900 border-slate-800'}`}>
+                      <button key={t.id} onPointerDown={()=>startLongPress(()=>setRosterDetailTeaching(t))} onPointerUp={()=>endLongPress(()=>toggleDraftTeaching(t.id))} onPointerLeave={cancelLongPress} onContextMenu={(e)=>e.preventDefault()} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',touchAction:'manipulation'}} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400':'bg-slate-900 border-slate-800'}`}>
                         <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,48)}</div>
                         <div className="text-[10px] font-black text-white truncate w-full text-center">{t.baseName}</div>
                         <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-purple-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
