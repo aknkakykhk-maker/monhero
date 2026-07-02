@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 22:36"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 22:44"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1263,8 +1263,13 @@ function MonsterHeroGame() {
             const animSlot = (hit.slotIdx!=null && slots[hit.slotIdx]) ? hit.slotIdx : fallbackSlot;
             if(animSlot >= 0 && slots[animSlot]) {
               setSlotSkill({slotIndex: animSlot, name: hit.skillName, type: hit.isUnique?'unique':(hit.isSpecial?'special':'normal')});
-              setAttackAnim({slotIndex: animSlot, zanCombo:true});
               Audio_.se.special();
+              if (hit.isUnique) {
+                // 固有技は他のモンスターと同じタメ(charge)を先に見せてから、連撃らしい残像ダッシュへ移る
+                setAttackAnim({slotIndex: animSlot, charge:true});
+                await wait(650);
+              }
+              setAttackAnim({slotIndex: animSlot, zanCombo:true});
               await wait(320);
               setAttackAnim(null);
               setSlotSkill(null);
