@@ -57,7 +57,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-01 23:59"; // 更新のたびに手動で書き換える(日付+時刻)
+const BUILD_DATE = "2026-07-02 00:20"; // 更新のたびに手動で書き換える(日付+時刻)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -207,7 +207,8 @@ const Audio_ = (() => {
       setTimeout(() => { try { charge.dispose(); boom.dispose(); metal.dispose(); blast.dispose(); dread.dispose(); } catch (e) {} }, 2000); },
     enemyMove: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.05 }, volume: -14 }).toDestination(); s.triggerAttackRelease('E4', '32n', t); s.triggerAttackRelease('B3', '16n', t + 0.06); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 400); },
     join: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.18, sustain: 0.3, release: 0.4 }, volume: -10 }).connect(reverb); const t = Tone.now(); const seq = [[0,'E5','8n'],[0.15,'G5','8n'],[0.3,'C6','8n'],[0.45,'E6','4n'],[0.45,'C6','4n'],[0.45,'G5','4n'],[0.8,'D6','8n'],[0.95,'E6','4n'],[0.95,'C6','4n'],[0.95,'G5','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); setTimeout(() => { try { v.dispose(); } catch (e) {} }, 1800); },
-    victory: async () => { if (!enabled) return; await ensure(); if (!Tone) return; clearParts(); currentKey = null; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.4 }, volume: -19 }).connect(reverb); const vb = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.4, release: 0.3 }, volume: -19 }).toDestination(); const t = Tone.now(); const seq = [[0,'C5','8n'],[0,'E5','8n'],[0,'G5','8n'],[0.18,'C5','8n'],[0.18,'E5','8n'],[0.18,'G5','8n'],[0.36,'C5','8n'],[0.36,'E5','8n'],[0.36,'G5','8n'],[0.54,'G5','4n'],[0.54,'C6','4n'],[0.54,'E6','4n'],[0.9,'F5','8n'],[0.9,'A5','8n'],[1.08,'G5','8n'],[1.08,'B5','8n'],[1.26,'C6','2n'],[1.26,'E6','2n'],[1.26,'G6','2n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); [[0,'C3'],[0.54,'C3'],[0.9,'F2'],[1.08,'G2'],[1.26,'C3']].forEach(([tt, n]) => vb.triggerAttackRelease(n, '4n', t + tt)); setTimeout(() => { try { v.dispose(); vb.dispose(); } catch (e) {} }, 2600); }
+    victory: async () => { if (!enabled) return; await ensure(); if (!Tone) return; clearParts(); currentKey = null; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.4 }, volume: -19 }).connect(reverb); const vb = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.4, release: 0.3 }, volume: -19 }).toDestination(); const t = Tone.now(); const seq = [[0,'C5','8n'],[0,'E5','8n'],[0,'G5','8n'],[0.18,'C5','8n'],[0.18,'E5','8n'],[0.18,'G5','8n'],[0.36,'C5','8n'],[0.36,'E5','8n'],[0.36,'G5','8n'],[0.54,'G5','4n'],[0.54,'C6','4n'],[0.54,'E6','4n'],[0.9,'F5','8n'],[0.9,'A5','8n'],[1.08,'G5','8n'],[1.08,'B5','8n'],[1.26,'C6','2n'],[1.26,'E6','2n'],[1.26,'G6','2n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); [[0,'C3'],[0.54,'C3'],[0.9,'F2'],[1.08,'G2'],[1.26,'C3']].forEach(([tt, n]) => vb.triggerAttackRelease(n, '4n', t + tt)); setTimeout(() => { try { v.dispose(); vb.dispose(); } catch (e) {} }, 2600); },
+    levelUp: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.15, sustain: 0.2, release: 0.3 }, volume: -12 }).connect(reverb); const seq = [[0,'C5','16n'],[0.08,'E5','16n'],[0.16,'G5','16n'],[0.24,'C6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const sp = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.4 }, volume: -16 }).connect(reverb); sp.triggerAttackRelease('C6', '2n', t + 0.24); setTimeout(() => { try { v.dispose(); sp.dispose(); } catch (e) {} }, 1200); }
   };
 
   return { playBGM, stopBGM, setEnabled, isEnabled, setVolume, se };
@@ -416,6 +417,8 @@ function MonsterHeroGame() {
   const [waveResult, setWaveResult] = useState(null);
   const [breederName, setBreederName] = useState('名無しのブリーダー');
   const [breederXp, setBreederXp] = useState(0); // 累計経験値(WAVEクリア数ベース・端末保存)
+  const [xpAnimFrom, setXpAnimFrom] = useState(null); // タイトル帰還時にバーを伸ばすアニメーション用(直前のXP)
+  const [levelUpFlash, setLevelUpFlash] = useState(null); // レベルアップ演出用(新しいレベル数)
   const [showNameEdit, setShowNameEdit] = useState(false);
   const [tempName, setTempName] = useState('');
   const [tempBuffs, setTempBuffs] = useState({ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false });
@@ -424,6 +427,11 @@ function MonsterHeroGame() {
   const [audioLevel, setAudioLevel] = useState(0); // 0=OFF,1=低,2=中,3=高
   const audioOn = audioLevel > 0;
   const breederLevel = levelInfo(breederXp);
+  // タイトル帰還時の演出用: レベルを跨がない場合のみ直前の進捗から表示してCSSトランジションで伸ばす。
+  // レベルを跨いだ場合は不自然な逆行を避けるため最終状態を即表示し、代わりにLEVEL UPバナーで演出する。
+  const xpAnimFromLevel = xpAnimFrom != null ? levelInfo(xpAnimFrom) : null;
+  const leveledUpThisAnim = xpAnimFromLevel != null && xpAnimFromLevel.level < breederLevel.level;
+  const displayLevel = (xpAnimFromLevel && !leveledUpThisAnim) ? xpAnimFromLevel : breederLevel;
   const AUDIO_VOLS = [0, 0.4, 0.7, 1.0];
   const AUDIO_LABELS = ['🔇 OFF', '🔈 低', '🔉 中', '🔊 高'];
   const [helpTab, setHelpTab] = useState('goal');
@@ -441,7 +449,7 @@ function MonsterHeroGame() {
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async (d) => {
         try {
           const rows = await sbFetchRankings(d, 20);
-          byDiff[d] = (rows || []).map(r => ({ userName: r.user_name, hero: r.hero, party: r.party, score: r.score }));
+          byDiff[d] = (rows || []).map(r => ({ userName: r.user_name, hero: r.hero, party: r.party, score: r.score, level: r.level }));
         } catch (e) {
           console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
           try {
@@ -545,10 +553,11 @@ function MonsterHeroGame() {
     const party = slots.map(s => s ? { name: s.name, emoji: s.emoji, imgUrl: s.imgUrl || null } : null);
     const name = breederName || '名無しのブリーダー';
     const heroName = mainHero?.name || 'Unknown';
+    const level = breederLevel.level;
     // 全国ランキング(Supabase)への送信を優先。失敗時のみ端末内保存にフォールバック
     try {
       const existing = await sbFindPlayer(diff, name);
-      const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore };
+      const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level };
       if (existing) {
         if ((existing.score || 0) < finalScore) await sbUpdateScore(existing.id, row); // keep best
       } else {
@@ -556,7 +565,7 @@ function MonsterHeroGame() {
       }
     } catch (e) {
       console.error('[ranking] supabase submit failed, falling back to local:', e && e.message ? e.message : e);
-      const entry = { userName: name, hero: heroName, party, score: finalScore, diff };
+      const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level };
       try {
         const rows = await storeGet(`mh_rank_${diff}`, [], false);
         const list = Array.isArray(rows) ? rows.slice() : [];
@@ -590,6 +599,7 @@ function MonsterHeroGame() {
     if (gain <= 0) return;
     setBreederXp(prev => {
       const next = prev + gain;
+      setXpAnimFrom(prev); // タイトル帰還時にprev→nextへバー(または演出)を再生する
       storeSet('mh_breeder_xp', next, false);
       return next;
     });
@@ -610,6 +620,21 @@ function MonsterHeroGame() {
       })();
     }
   }, [hp, gameState]);
+
+  // タイトル帰還時、獲得したXP分をバー(またはレベルアップ演出)で見せる
+  useEffect(() => {
+    if (gameState !== 'TITLE' || xpAnimFrom == null) return;
+    const fromLevel = levelInfo(xpAnimFrom).level;
+    const toLevel = levelInfo(breederXp).level;
+    if (toLevel > fromLevel) {
+      const t1 = setTimeout(() => { Audio_.se.levelUp(); setLevelUpFlash(toLevel); }, 200);
+      const t2 = setTimeout(() => { setLevelUpFlash(null); setXpAnimFrom(null); }, 2400);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    } else {
+      const t = setTimeout(() => setXpAnimFrom(null), 150);
+      return () => clearTimeout(t);
+    }
+  }, [gameState, xpAnimFrom, breederXp]);
 
   const cardLimit = useMemo(() => {
     const allyCount = slots.filter(s => s !== null).length;
@@ -1232,13 +1257,30 @@ function MonsterHeroGame() {
                 <h1 className="text-5xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-purple-200 to-purple-500 leading-none uppercase drop-shadow-[0_4px_16px_rgba(0,0,0,1)]">Monster Hero</h1>
                 <p className="text-purple-300 text-[9px] tracking-[0.4em] uppercase font-bold mt-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">Grand Champion Quest</p>
               </div>
+              <div className="shrink-0 w-full flex flex-col items-center mb-2 relative">
+                <div key={displayLevel.level} className="flex items-center gap-2 mb-1" style={{animation:'levelHeaderPop 400ms ease-out'}}>
+                  <Crown size={16} className="text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]"/>
+                  <span className="text-3xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-purple-200 to-indigo-200 drop-shadow-[0_2px_10px_rgba(129,140,248,0.8)]">LV.{displayLevel.level}</span>
+                </div>
+                <div className="w-full max-w-[240px]">
+                  <div className="h-2.5 bg-slate-900/80 rounded-full overflow-hidden border border-indigo-400/40 shadow-inner">
+                    <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-400 to-pink-400 transition-all duration-700 ease-out" style={{width:`${Math.min(100,(displayLevel.xpIntoLevel/displayLevel.xpForNext)*100)}%`, animation: xpAnimFrom!=null?'xpBarFill 700ms ease-out':'none'}}></div>
+                  </div>
+                  <div className="text-[8px] text-indigo-300 font-mono font-bold text-center mt-1 tracking-wider">{displayLevel.xpIntoLevel.toLocaleString()} / {displayLevel.xpForNext.toLocaleString()} XP</div>
+                </div>
+                {levelUpFlash!=null&&(
+                  <div className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:70000}}>
+                    <div className="flex flex-col items-center gap-1" style={{animation:'levelUpBanner 2200ms ease-out forwards'}}>
+                      <div className="text-5xl">🎉</div>
+                      <div className="text-2xl font-black italic text-amber-300 uppercase tracking-widest drop-shadow-[0_2px_12px_rgba(251,191,36,0.9)]">Level Up!</div>
+                      <div className="text-4xl font-black italic text-white drop-shadow-[0_2px_12px_rgba(129,140,248,0.9)]">LV.{levelUpFlash}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="shrink-0 w-full flex flex-col items-center mb-2">
                 <div className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mb-1">Breeder Profile</div>
-                <button onClick={()=>{setTempName(breederName); setShowNameEdit(true);}} className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group backdrop-blur-sm"><User size={14} className="text-indigo-400"/><span className="font-black text-sm text-white group-hover:text-indigo-300 transition-colors">{breederName}</span><span className="px-1.5 py-0.5 rounded-full bg-indigo-600/90 border border-indigo-400/50 text-[8px] font-black text-white">Lv.{breederLevel.level}</span><Edit3 size={12} className="text-slate-500 group-hover:text-white"/></button>
-                <div className="w-full max-w-[180px] mt-1.5">
-                  <div className="h-1 bg-slate-800 rounded-full overflow-hidden border border-white/5"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-400 transition-all duration-500" style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></div></div>
-                  <div className="text-[6px] text-slate-600 font-mono text-center mt-0.5 tracking-wider">{breederLevel.xpIntoLevel} / {breederLevel.xpForNext} XP</div>
-                </div>
+                <button onClick={()=>{setTempName(breederName); setShowNameEdit(true);}} className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group backdrop-blur-sm"><User size={14} className="text-indigo-400"/><span className="font-black text-sm text-white group-hover:text-indigo-300 transition-colors">{breederName}</span><Edit3 size={12} className="text-slate-500 group-hover:text-white"/></button>
               </div>
               <div className="shrink-0 flex flex-col gap-2 w-full">
                 <div className="grid grid-cols-3 gap-2 justify-center">
@@ -1276,7 +1318,7 @@ function MonsterHeroGame() {
                       <div key={i} className={`flex flex-col p-3 rounded-2xl border ${i===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`}>
                         <div className="flex items-center gap-4">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${i===0?'bg-amber-500 text-black':i===1?'bg-slate-300 text-black':i===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{i+1}</div>
-                          <div className="flex-1 min-w-0"><div className="text-[11px] font-black text-white truncate uppercase tracking-tighter">{r.userName}</div></div>
+                          <div className="flex-1 min-w-0 flex items-center gap-1.5">{r.level!=null&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-indigo-600/90 border border-indigo-400/50 text-[7px] font-black text-white">Lv.{r.level}</span>}<div className="text-[11px] font-black text-white truncate uppercase tracking-tighter">{r.userName}</div></div>
                           <div className="text-right font-mono font-black text-indigo-400 text-sm whitespace-nowrap">{r.score.toLocaleString()} pt</div>
                         </div>
                         <div className="mt-2 bg-black/40 rounded-xl p-2 border border-white/5 flex items-center gap-2 flex-wrap">
@@ -1528,7 +1570,7 @@ function MonsterHeroGame() {
                   const isAtk=atkTypes.includes(card.type);
                   if(isAtk){ committedTotal+=getDmg(card,slotIdx,slots[slotIdx],0,0,committedAtkCnt>0); committedAtkCnt++; }
                 });
-                const pendingCardObj=pendingCard!=null?hand[pendingCard]:null;
+                const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);
                 const pendingIsAtk=pendingCardObj&&atkTypes.includes(pendingCardObj.type);
                 // projected damage the pending card would add (as the next attack in order)
                 let pendingAdd=0; let pendingValidSlot=null;
@@ -1570,7 +1612,7 @@ function MonsterHeroGame() {
                   const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
                   // 通常は1枠1枚。ハム勇者モンが居る『ハムのスロット』のみ連続攻撃で複数枚OK
                   const maxUses=(mainHero?.id==='Ham'&&s?.id==='Ham')?cardLimit:1;
-                  const pendingCardObj=pendingCard!=null?hand[pendingCard]:null;
+                  const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);
                   // Can this slot accept the pending card?
                   let canAssign=false;
                   if(s && pendingCardObj){
@@ -1972,6 +2014,23 @@ const createAnimationStyle = () => {
       30% { transform: scale(1.25); opacity: 1; }
       70% { transform: scale(1.1); opacity: 1; }
       100% { transform: scale(1.4); opacity: 0; }
+    }
+    @keyframes levelHeaderPop {
+      0% { transform: scale(0.5); opacity: 0; }
+      55% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes levelUpBanner {
+      0% { transform: scale(0.3) translateY(20px); opacity: 0; }
+      20% { transform: scale(1.15) translateY(0); opacity: 1; }
+      35% { transform: scale(1) translateY(0); opacity: 1; }
+      85% { transform: scale(1) translateY(0); opacity: 1; }
+      100% { transform: scale(0.9) translateY(-10px); opacity: 0; }
+    }
+    @keyframes xpBarFill {
+      0% { filter: brightness(1); }
+      50% { filter: brightness(1.6); }
+      100% { filter: brightness(1); }
     }
     @keyframes guardSpark {
       0% { transform: translateY(0) scale(0.3); opacity: 0; }
