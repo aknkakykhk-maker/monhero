@@ -59,7 +59,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 13:01"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 13:10"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1455,11 +1455,11 @@ function MonsterHeroGame() {
             <div className="flex flex-col gap-2 mb-4">
               {Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>(
                 <div key={key} className="bg-slate-900/60 border border-white/5 rounded-2xl p-3 flex items-center gap-3">
-                  <div className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase shrink-0 ${setting.color} ${key==='Master'?'':'text-white'}`}>{setting.label}</div>
-                  <div className="flex-1 grid grid-cols-3 gap-1 text-center">
-                    <div><div className="text-[7px] text-slate-500 uppercase tracking-wide">挑戦</div><div className="text-xs font-black text-white">{attemptCounts[key]||0}</div></div>
-                    <div><div className="text-[7px] text-slate-500 uppercase tracking-wide">クリア</div><div className="text-xs font-black text-emerald-400">{clearCounts[key]||0}</div></div>
-                    <div><div className="text-[7px] text-slate-500 uppercase tracking-wide">ハイスコア</div><div className="text-xs font-black text-amber-400">{(highScores[key]||0).toLocaleString()}</div></div>
+                  <div className={`px-1 py-1 rounded-lg text-[9px] font-black uppercase shrink-0 w-20 text-center ${setting.color} ${key==='Master'?'':'text-white'}`}>{setting.label}</div>
+                  <div className="flex-1 grid grid-cols-3 gap-1">
+                    <div className="text-center"><div className="text-[7px] text-slate-500 uppercase tracking-wide">挑戦</div><div className="text-xs font-black text-white">{attemptCounts[key]||0}</div></div>
+                    <div className="text-center"><div className="text-[7px] text-slate-500 uppercase tracking-wide">クリア</div><div className="text-xs font-black text-emerald-400">{clearCounts[key]||0}</div></div>
+                    <div className="text-right"><div className="text-[7px] text-slate-500 uppercase tracking-wide">ハイスコア</div><div className="text-xs font-black text-amber-400">{(highScores[key]||0).toLocaleString()}</div></div>
                   </div>
                 </div>
               ))}
