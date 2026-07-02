@@ -57,7 +57,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 00:20"; // 更新のたびに手動で書き換える(日付+時刻)
+const BUILD_DATE = "2026-07-02 00:30"; // 更新のたびに手動で書き換える(日付+時刻)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -338,6 +338,7 @@ function MonsterHeroGame() {
   const [score, setScore] = useState(0);
   const [highScores, setHighScores] = useState({});
   const [localRankings, setLocalRankings] = useState({});
+  const [rankingSourceByDiff, setRankingSourceByDiff] = useState({}); // {[diff]: 'global'|'local'} 表示中データの取得元
   const [showRanking, setShowRanking] = useState(false);
   const [screenShake, setScreenShake] = useState(false);
   const [bigShake, setBigShake] = useState(false);
@@ -445,13 +446,16 @@ function MonsterHeroGame() {
   // 全国ランキングをSupabaseから取得。失敗時は端末内保存の値にフォールバック
   const loadRankings = useCallback(async () => {
     const byDiff = {};
+    const sourceByDiff = {};
     try {
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async (d) => {
         try {
           const rows = await sbFetchRankings(d, 20);
           byDiff[d] = (rows || []).map(r => ({ userName: r.user_name, hero: r.hero, party: r.party, score: r.score, level: r.level }));
+          sourceByDiff[d] = 'global';
         } catch (e) {
           console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
+          sourceByDiff[d] = 'local';
           try {
             const rows = await storeGet(`mh_rank_${d}`, [], false);
             if (Array.isArray(rows) && rows.length) {
@@ -460,6 +464,7 @@ function MonsterHeroGame() {
           } catch {}
         }
       }));
+      setRankingSourceByDiff(sourceByDiff);
       setLocalRankings(byDiff);
     } catch {}
   }, []);
@@ -1329,7 +1334,7 @@ function MonsterHeroGame() {
                     ))
                   )}
                 </div>
-                <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">※ この端末に保存されたトップ20記録</div>
+                <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">{rankingSourceByDiff[rankingViewDiff]==='local'?'※ サーバーに接続できず、この端末に保存されたトップ20記録を表示中':'※ 全国のブリーダーから集計したトップ20記録'}</div>
               </div>
             )}
             <div className="text-[7px] text-slate-600 font-mono tracking-widest uppercase shrink-0 pt-2">スコアはブラウザ内に保存されます</div>
