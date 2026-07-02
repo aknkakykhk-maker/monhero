@@ -59,7 +59,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 15:33"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 16:48"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -399,7 +399,7 @@ function MonsterHeroGame() {
   const [draTotal, setDraTotal] = useState(0);
   const [critRateBonus, setCritRateBonus] = useState(0);
   const [critDmgBonus, setCritDmgBonus] = useState(0);
-  const [cadmiumTotal, setCadmiumTotal] = useState(1.0);
+  const [cadmiumTotal, setCadmiumTotal] = useState(0); // 自動ガッツ回復率への加算値(旧仕様は倍率だったが加算方式に変更)
   const [muaAtkBonus, setMuaAtkBonus] = useState(0);
   const [muaHpBonus, setMuaHpBonus] = useState(0);
   const [attackAnim, setAttackAnim] = useState(null); // {slotIndex}
@@ -747,7 +747,7 @@ function MonsterHeroGame() {
     enemy:null, enemyDist:2, selectedCards:[], isBusy:false,
     monSelection:Object.values(ALL_PLAYER_MONSTERS), ownedUniques:[], ownedTeachings:[],
     atkLevel:0, guardLevel:0, guardBonusCount:0, upgradePoints:0, turnCount:1,
-    oryoTotal:0, draTotal:0, critRateBonus:0, critDmgBonus:0, cadmiumTotal:1.0, muaAtkBonus:0, muaHpBonus:0, muaGutsBonus:0,
+    oryoTotal:0, draTotal:0, critRateBonus:0, critDmgBonus:0, cadmiumTotal:0, muaAtkBonus:0, muaHpBonus:0, muaGutsBonus:0,
     autoHpRecoveryRate:0.1, currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
     tempBuffs:{ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false },
     waveEnemyAtkDebuff:0, focusedCard:null, enemyIntent:null, effect:null
@@ -1010,9 +1010,8 @@ function MonsterHeroGame() {
     }
     setEnemySkillName(null);
     if (currentHp<=0) { setIsBusy(false); return; }
-    const gutsRecoveryRate=Math.max(0,0.05+(autoHpRecoveryRate-0.1));
-    const recoverBase=Math.floor(effectiveMaxGuts*gutsRecoveryRate);
-    const gutsRegen=Math.floor(recoverBase*cadmiumTotal);
+    const gutsRecoveryRate=Math.max(0,0.05+(autoHpRecoveryRate-0.1))+cadmiumTotal;
+    const gutsRegen=Math.floor(effectiveMaxGuts*gutsRecoveryRate);
     setGuts(p=>Math.min(effectiveMaxGuts,p+gutsRegen));
     let didRegen=false;
     if (autoHpRecoveryRate>0) {
@@ -1067,7 +1066,7 @@ function MonsterHeroGame() {
         fireTeachingFx(card.id);
         if (card.subType==='atk_buff') { addPopup(`攻撃UP!`,'hero','text-red-400 font-black text-2xl drop-shadow-md'); setOryoTotal(p=>p+card.baseValue); localOryoAdd+=card.baseValue; }
         else if (card.subType==='dmg_cut_buff') { addPopup(`防御UP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=level===0?0.03:(level===1?0.06:0.10); setDraTotal(p=>Math.min(0.9,p+cutValue)); }
-        else if (card.subType==='guts_buff') { addPopup(`⚡ ガッツ上限UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); setCadmiumTotal(p=>p+(card.baseValue-1.0)); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let gutsLimitUp=level===1?0.05:(level>=2?0.07:0.05); setMuaGutsBonus(p=>p+gutsLimitUp); if(level>=1){let hpLimitUp=level===1?0.05:0.07; let autoHeal=level===1?0.02:0.05; setMuaHpBonus(p=>p+hpLimitUp); setAutoHpRecoveryRate(p=>p+autoHeal); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md');} }
+        else if (card.subType==='guts_buff') { addPopup(`⚡ ガッツ上限UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let gutsRecoverAdd=level===0?0.02:(level===1?0.03:0.05); setCadmiumTotal(p=>p+gutsRecoverAdd); let gutsLimitUp=level===1?0.05:(level>=2?0.07:0.05); setMuaGutsBonus(p=>p+gutsLimitUp); if(level>=1){let hpLimitUp=level===1?0.05:0.07; let autoHeal=level===1?0.02:0.05; setMuaHpBonus(p=>p+hpLimitUp); setAutoHpRecoveryRate(p=>p+autoHeal); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md');} }
         else if (card.subType==='stun_atsu') { immediateInvincible=true; setTempBuffs(p=>({...p,invincible:true})); const d=getDmg(card,slotIdx,slots[slotIdx],localOryoAdd,localDmgModAdd,attackCount>0); totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx}); }
         else if (card.subType==='buff_myaru') { setTempBuffs(p=>({...p,nextTurnAtkMult:card.baseValue})); const selfDmgAmt=Math.floor(hp*card.selfDmg); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black'); setHp(p=>Math.max(1,p-selfDmgAmt)); }
       }
@@ -1321,7 +1320,7 @@ function MonsterHeroGame() {
     const formatVal=(v)=>Math.round(v*100);
     if(t.id==='oryo') return `攻撃ステータス ${formatVal(0.1+level*0.1)}%アップ`;
     if(t.id==='dra') return `被ダメージ ${[3,6,10][level]}%ダウン`;
-    if(t.id==='cadmium') return level===0?`自動ガッツ回復1.3倍・ガッツ上限5%UP`:(level===1?`自動G回復1.5倍・HP/G上限5%UP・HP2%再生`:`自動G回復1.7倍・HP/G上限7%UP・HP5%再生`);
+    if(t.id==='cadmium') return level===0?`自動G回復+2%・ガッツ上限5%UP`:(level===1?`自動G回復+3%・ライフ/G上限5%UP・ライフ自動回復2%`:`自動G回復+5%・ライフ/G上限7%UP・ライフ自動回復5%`);
     if(t.id==='mua') return level===0?"HP50%回復・HP/攻/ガッツ3%UP":(level===1?"HP&ガッツ70%回復・HP5%/攻3%/ガッツ3%UP":"HP&ガッツ90%回復・HP8%/攻5%/ガッツ5%UP");
     if(t.id==='atsu') return `敵行動無効＋攻撃 (${(t.baseValue+level*t.step).toFixed(1)}倍)`;
     if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=formatVal(Math.max(0.1,t.selfDmg-level*t.dmgStep)); return `次ターン攻撃${v.toFixed(1)}倍・自傷${d}%`;}
@@ -1732,7 +1731,7 @@ function MonsterHeroGame() {
                 <div className="text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"><Sparkles size={7}/> クリ率 +{Math.round(critRateBonus*100)}%</div>
                 <div className="text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"><Sparkles size={7}/> クリダメ +{Math.round(critDmgBonus*100)}%</div>
                 <div className={`text-[7px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${autoHpRecoveryRate>=0.1?'text-rose-400 border-rose-400/50':'text-red-400 border-red-400/50'}`}><Heart size={7}/> ライフ回復 {Math.round(autoHpRecoveryRate*100)}%</div>
-                <div className="text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"><Zap size={7}/> ガッツ回復 {Math.round(Math.max(0,0.05+(autoHpRecoveryRate-0.1))*cadmiumTotal*100)}%</div>
+                <div className="text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"><Zap size={7}/> ガッツ回復 {Math.round((Math.max(0,0.05+(autoHpRecoveryRate-0.1))+cadmiumTotal)*100)}%</div>
                 {/* === ターン限定バフ（都度表示） === */}
                 {tempBuffs.atkMult>1&&<div className="text-[7px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"><Sparkles size={8}/> Boost x{tempBuffs.atkMult.toFixed(1)}</div>}
                 {tempBuffs.stunEnemy&&<div className="text-[7px] font-black text-yellow-400 bg-yellow-950/60 px-2 py-1 rounded-full border border-yellow-500/50 animate-pulse uppercase flex items-center gap-1"><Zap size={8}/> スタン予約</div>}
