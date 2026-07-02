@@ -59,10 +59,12 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 19:32"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 19:43"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
+// --- ゴールド: クリアWAVE数に応じて獲得(Normal基準100G/WAVE、他難易度はスコア補正倍率で変動) ---
+const GOLD_PER_WAVE = 100;
 const xpForLevel = (level) => Math.round(50 * Math.pow(level, 1.8)); // そのレベルから次レベルに必要なXP
 const levelInfo = (totalXp) => {
   let level = 1, xp = totalXp;
@@ -424,6 +426,9 @@ function MonsterHeroGame() {
   const [breederName, setBreederName] = useState('名無しのブリーダー');
   const [breederXp, setBreederXp] = useState(0); // 累計経験値(WAVEクリア数ベース・端末保存)
   const [xpAnimFrom, setXpAnimFrom] = useState(null); // タイトル帰還時にバーを伸ばすアニメーション用(直前のXP)
+  const [gold, setGold] = useState(0); // 累計ゴールド(WAVEクリア数ベース・端末保存)
+  const [goldAnimFrom, setGoldAnimFrom] = useState(null); // タイトル帰還時にカウントアップ表示するための直前のゴールド
+  const [goldDisplayValue, setGoldDisplayValue] = useState(0); // カウントアップ演出中に表示する値
   const [levelUpFlash, setLevelUpFlash] = useState(null); // レベルアップ演出用(新しいレベル数)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -564,6 +569,9 @@ function MonsterHeroGame() {
       setBreederIcon(savedIcon);
       const savedXp = await storeGet('mh_breeder_xp', 0, false);
       setBreederXp(savedXp);
+      const savedGold = await storeGet('mh_gold', 0, false);
+      setGold(savedGold);
+      setGoldDisplayValue(savedGold);
       let savedPoints = await storeGet('mh_breeder_points', 0, false);
       // ブリーダーポイント導入前からのプレイヤーには、既存レベル分(Lv-1)を一度だけ遡って付与
       const pointsMigrated = await storeGet('mh_points_migrated', false, false);
@@ -741,6 +749,19 @@ function MonsterHeroGame() {
     });
   };
 
+  // クリアしたWAVE数に応じてゴールドを加算(端末保存)。難易度のスコア補正倍率でNormal基準から変動
+  const awardWaveGold = async (wavesCleared) => {
+    if (wavesCleared <= 0) return;
+    const gain = Math.round(GOLD_PER_WAVE * wavesCleared * (DIFFICULTY_SETTINGS[difficulty]?.score || 1.0));
+    if (gain <= 0) return;
+    setGold(prev => {
+      const next = prev + gain;
+      setGoldAnimFrom(prev); // タイトル帰還時にprev→nextへカウントアップ表示する
+      storeSet('mh_gold', next, false);
+      return next;
+    });
+  };
+
   // Save score on game end
   useEffect(() => {
     if (hp <= 0 || gameState === 'CHAMPION') {
@@ -752,6 +773,7 @@ function MonsterHeroGame() {
             setHighScores(prev => ({ ...prev, [difficulty]: score }));
           }
           await awardWaveXp(gameState === 'CHAMPION' ? 10 : Math.max(0, wave - 1));
+          await awardWaveGold(gameState === 'CHAMPION' ? 10 : Math.max(0, wave - 1));
           if (gameState === 'CHAMPION') {
             setClearCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_clears_${difficulty}`, next[difficulty], false); return next; });
           }
@@ -776,6 +798,22 @@ function MonsterHeroGame() {
       return () => clearTimeout(t);
     }
   }, [gameState, xpAnimFrom, breederXp]);
+
+  // タイトル帰還時、獲得したゴールド分をカウントアップ表示する
+  useEffect(() => {
+    if (gameState !== 'TITLE' || goldAnimFrom == null) { setGoldDisplayValue(gold); return; }
+    if (goldAnimFrom === gold) { setGoldAnimFrom(null); return; }
+    const from = goldAnimFrom, to = gold, duration = 700, start = performance.now();
+    let raf;
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      setGoldDisplayValue(Math.round(from + (to - from) * t));
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else setGoldAnimFrom(null);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [gameState, goldAnimFrom, gold]);
 
   const cardLimit = useMemo(() => {
     const allyCount = slots.filter(s => s !== null).length;
@@ -841,6 +879,7 @@ function MonsterHeroGame() {
       } catch {}
     }
     try { await awardWaveXp(Math.max(0, wave - 1)); } catch {}
+    try { await awardWaveGold(Math.max(0, wave - 1)); } catch {}
     setShowQuitConfirm(false);
     handleGoToTitle();
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
@@ -1426,6 +1465,11 @@ function MonsterHeroGame() {
                   </div>
                   <div className="text-[8px] text-indigo-300 font-mono font-bold text-center mt-1 tracking-wider">{displayLevel.xpIntoLevel.toLocaleString()} / {displayLevel.xpForNext.toLocaleString()} XP</div>
                 </div>
+                <div className="mt-1.5 flex items-center gap-1.5 bg-amber-950/60 border border-amber-500/30 px-3 py-1 rounded-full">
+                  <Coins size={11} className="text-amber-400"/>
+                  <span className="text-[11px] font-black text-amber-300 font-mono">{goldDisplayValue.toLocaleString()}</span>
+                  <span className="text-[8px] text-amber-500/70 font-bold">G</span>
+                </div>
                 {levelUpFlash!=null&&(
                   <div className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:70000}}>
                     <div className="flex flex-col items-center gap-1" style={{animation:'levelUpBanner 2200ms ease-out forwards'}}>
@@ -1512,6 +1556,11 @@ function MonsterHeroGame() {
               <div className="w-full max-w-[240px]">
                 <div className="h-2 bg-slate-800 rounded-full overflow-hidden border border-white/5"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-400" style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></div></div>
                 <div className="text-[8px] text-slate-500 font-mono text-center mt-1">{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</div>
+              </div>
+              <div className="flex items-center gap-1.5 bg-amber-950/60 border border-amber-500/30 px-3 py-1 rounded-full">
+                <Coins size={11} className="text-amber-400"/>
+                <span className="text-[11px] font-black text-amber-300 font-mono">{gold.toLocaleString()}</span>
+                <span className="text-[8px] text-amber-500/70 font-bold">G</span>
               </div>
               <button onClick={()=>setGameState('BREEDER_MARKET')} className="w-full flex items-center justify-between gap-2 bg-amber-950/40 border border-amber-500/40 px-4 py-2.5 rounded-xl active:scale-95 group">
                 <span className="flex items-center gap-1.5"><Coins size={14} className="text-amber-400"/><span className="text-[11px] font-black text-amber-200">{breederPoints} pt</span></span>
