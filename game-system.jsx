@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 21:10"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 21:17"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1040,13 +1040,13 @@ function MonsterHeroGame() {
     else if (card.type==='unique') { const level=card.evoLevel||0; baseDmgMult=card.baseMult+(level*0.5); }
     else if (card.type==='range_atk') { const isTargetDist=(enemyDist===card.rangeIdx); baseDmgMult=isTargetDist?card.mult:(card.mult*0.4); }
     else { baseDmgMult=card.mult||card.baseMult||1.0; }
-    let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0)*(mon?.id==='Zan'?(1.0+(mainHero?.id==='Zan'?0.3:0)+comboDmgBonus):1.0);
+    let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0);
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0);
     const totalBuffMult=traitMult*tempBuffs.atkMult*(1.0+oryoTotal+muaAtkBonus+additionalOryo)*distBonusMult;
     let finalDmg=Math.floor(atk*distMult*baseDmgMult*totalBuffMult*(tempBuffs.enemyTakenDmgMod+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     return finalDmg;
-  }, [enemyDist, mainHero, atk, tempBuffs, oryoTotal, muaAtkBonus, distDmgBonus, comboDmgBonus]);
+  }, [enemyDist, mainHero, atk, tempBuffs, oryoTotal, muaAtkBonus, distDmgBonus]);
 
   const handleEnemyTurn = async (lastActionType, immediateEffects={}, overrideIntent=null) => {
     if (!enemy) return;
@@ -1205,12 +1205,19 @@ function MonsterHeroGame() {
         if (card.type==='unique') {
           if(activeMon.id==='Mocchi'){setDraTotal(p=>p+0.03); setTempBuffs(p=>({...p,enemyTakenDmgMod:p.enemyTakenDmgMod+0.1})); localDmgModAdd+=0.1; addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold');}
           else if(activeMon.id==='Golem'){setOryoTotal(p=>p+0.1); localOryoAdd+=0.1; addPopup('闘志UP!','hero','text-red-600 text-lg font-bold');}
-          else if(activeMon.id==='Zan'){setComboDmgBonus(p=>p+0.03); localDmgModAdd+=0.2; addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
+          else if(activeMon.id==='Zan'){setComboDmgBonus(p=>p+0.03); addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
         }
         const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,attackCount>0); attackCount++;
         const isCrit=tempBuffs.guaranteedCrit||(Math.random()<((card.crit||0.1)+critRateBonus));
         const finalD=isCrit?Math.floor(d*(1.5+critDmgBonus)):d; if(isCrit) hasCrit=true; totalDmg+=finalD;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique'});
+        if (mainHero?.id==='Zan' && activeMon.id==='Zan') {
+          // 勇者特性「連撃」: ザンの攻撃に続けて連撃ダメージを別枠で発生させる。
+          // 連斬(固有技)使用時はこのターンだけ+20%、さらに使用のたびに割合が永続+3%スタックする
+          const comboRate = 0.3 + comboDmgBonus + (card.type==='unique' ? 0.2 : 0);
+          const comboHitDmg = Math.floor(finalD*comboRate);
+          if (comboHitDmg > 0) { totalDmg += comboHitDmg; attackHits.push({dmg:comboHitDmg, isCrit:false, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false}); }
+        }
         if (card.type==='range_atk' && card.rangeIdx!=null) { forcedMoveTarget=(card.rangeIdx+1)%4; }
         if (card.type==='unique') {
           if(activeMon.id==='Ham'){immediateStun=true; setTempBuffs(p=>({...p,stunEnemy:true})); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
