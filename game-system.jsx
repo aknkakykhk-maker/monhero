@@ -59,11 +59,11 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 19:46"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 19:49"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
-// --- ゴールド: クリアWAVE数に応じて獲得(Normal基準100G/WAVE、他難易度はスコア補正倍率で変動) ---
+// --- ゴールド: クリアWAVE数に応じて獲得(Normal基準100G/WAVE、他難易度はDIFFICULTY_SETTINGS.goldの倍率で変動) ---
 const GOLD_PER_WAVE = 100;
 const xpForLevel = (level) => Math.round(50 * Math.pow(level, 1.8)); // そのレベルから次レベルに必要なXP
 const levelInfo = (totalXp) => {
@@ -232,12 +232,12 @@ const RANGE_STYLES = {
 };
 
 const DIFFICULTY_SETTINGS = {
-  Beginner: { label: "Beginner", power: 0.25, score: 0.25, color: "bg-cyan-600", shadow: "shadow-cyan-600/50" },
-  Easy:     { label: "Easy",     power: 0.5,  score: 0.5,  color: "bg-emerald-600", shadow: "shadow-emerald-600/50" },
-  Normal:   { label: "Normal",   power: 1.0,  score: 1.0,  color: "bg-indigo-600", shadow: "shadow-indigo-600/50" },
-  Hard:     { label: "Hard",     power: 1.5,  score: 2.0,  color: "bg-red-600", shadow: "shadow-red-600/50" },
-  Expert:   { label: "Expert",   power: 3.0,  score: 3.0,  color: "bg-purple-600", shadow: "shadow-purple-600/50" },
-  Master:   { label: "Master",   power: 5.0,  score: 5.0,  color: "bg-slate-200 text-black", shadow: "shadow-white/50" },
+  Beginner: { label: "Beginner", power: 0.25, score: 0.25, gold: 0.25, color: "bg-cyan-600", shadow: "shadow-cyan-600/50" },
+  Easy:     { label: "Easy",     power: 0.5,  score: 0.5,  gold: 0.5,  color: "bg-emerald-600", shadow: "shadow-emerald-600/50" },
+  Normal:   { label: "Normal",   power: 1.0,  score: 1.0,  gold: 1.0,  color: "bg-indigo-600", shadow: "shadow-indigo-600/50" },
+  Hard:     { label: "Hard",     power: 1.5,  score: 2.0,  gold: 1.2,  color: "bg-red-600", shadow: "shadow-red-600/50" },
+  Expert:   { label: "Expert",   power: 3.0,  score: 3.0,  gold: 1.5,  color: "bg-purple-600", shadow: "shadow-purple-600/50" },
+  Master:   { label: "Master",   power: 5.0,  score: 5.0,  gold: 2.0,  color: "bg-slate-200 text-black", shadow: "shadow-white/50" },
 };
 
 // ブリーダー教えカード使用時の専用演出(色・アイコン・掛け声)
@@ -759,7 +759,7 @@ function MonsterHeroGame() {
   // クリアしたWAVE数に応じてゴールドを加算(端末保存)。難易度のスコア補正倍率でNormal基準から変動
   const awardWaveGold = async (wavesCleared) => {
     if (wavesCleared <= 0) return;
-    const gain = Math.round(GOLD_PER_WAVE * wavesCleared * (DIFFICULTY_SETTINGS[difficulty]?.score || 1.0));
+    const gain = Math.round(GOLD_PER_WAVE * wavesCleared * (DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0));
     if (gain <= 0) return;
     setGold(prev => {
       const next = prev + gain;
