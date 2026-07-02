@@ -33,5 +33,5 @@ const BREEDER_MARKET_ITEMS = [
   { id:'mua',     name:"みゅあ",      icon:MUA_FACE_ICON,     cost:1 },
   { id:'atsu',    name:"あつ",        icon:ATSU_FACE_ICON,    cost:1 },
   { id:'myaru',   name:"みゃる",      icon:MYARU_FACE_ICON,   cost:1 },
-  { id:'mocchi_pet', name:"モッチー",  icon:MOCCHI_PET_ICON,   cost:1 }
+  { id:'mocchi_pet', name:"モッチー_2",  icon:MOCCHI_PET_ICON,   cost:1 }
 ];
