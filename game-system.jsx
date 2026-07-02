@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 21:17"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 21:25"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1238,6 +1238,9 @@ function MonsterHeroGame() {
         // Process each attack hit one by one
         for (let i=0; i<attackHits.length; i++) {
           const hit = attackHits[i];
+          // ザンの連撃(本体攻撃+連撃ヒットのペア)は2倍速でテンポよく演出する
+          const isComboPair = hit.skillName==='連撃' || attackHits[i+1]?.skillName==='連撃';
+          const spd = isComboPair ? 0.5 : 1.0;
           const animSlot = (hit.slotIdx!=null && slots[hit.slotIdx]) ? hit.slotIdx : fallbackSlot;
           if(animSlot >= 0 && slots[animSlot]) {
             // スロット上に技名をインライン表示
@@ -1246,13 +1249,13 @@ function MonsterHeroGame() {
               // 固有技: タメ(下に沈む)→敵に向かって突進
               setAttackAnim({slotIndex: animSlot, charge:true});
               Audio_.se.special();
-              await wait(650);
+              await wait(Math.round(650*spd));
               setAttackAnim({slotIndex: animSlot, charge:false});
-              await wait(500);
+              await wait(Math.round(500*spd));
             } else {
               setAttackAnim({slotIndex: animSlot});
               if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-              await wait(450);
+              await wait(Math.round(450*spd));
             }
             setAttackAnim(null);
             setSlotSkill(null);
@@ -1260,7 +1263,7 @@ function MonsterHeroGame() {
           const hitColor=hit.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if(hit.isCrit) triggerShake();
           addPopup(hit.isCrit?`${hit.dmg}!!`:`${hit.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
-          setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-hit.dmg)})); await wait(550);
+          setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-hit.dmg)})); await wait(Math.round(550*spd));
         }
         setCurrentWaveDamage(p=>p+totalDmg);
         const turnDistDmg=[0,0,0,0];
