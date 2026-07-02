@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 21:52"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 22:03"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1220,13 +1220,24 @@ function MonsterHeroGame() {
         const finalD=isCrit?Math.floor(d*(1.5+critDmgBonus)):d; if(isCrit) hasCrit=true; totalDmg+=finalD;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique'});
         if (mainHero?.id==='Zan' && activeMon.id==='Zan') {
-          // 勇者特性「連撃」: ザンの攻撃に続けて連撃ヒットを別枠で発生させる(使用のたびに割合が永続+3%スタック)
-          const comboHitDmg = Math.floor(finalD*(0.3+comboDmgBonus));
-          if (comboHitDmg > 0) { totalDmg += comboHitDmg; attackHits.push({dmg:comboHitDmg, isCrit:false, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false}); }
+          // 勇者特性「連撃」: ザンの攻撃に続けて連撃ヒットを別枠で発生させる。会心もメイン攻撃とは独立して判定する
+          // (元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せないようにする)
+          const comboBase = Math.floor(d*(0.3+comboDmgBonus));
+          if (comboBase > 0) {
+            const comboIsCrit = tempBuffs.guaranteedCrit||(Math.random()<((card.crit||0.1)+critRateBonus));
+            const comboFinal = comboIsCrit?Math.floor(comboBase*(1.5+critDmgBonus)):comboBase;
+            if (comboIsCrit) hasCrit=true; totalDmg += comboFinal;
+            attackHits.push({dmg:comboFinal, isCrit:comboIsCrit, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false});
+          }
           if (card.type==='unique') {
-            // 連斬(固有技)はこの連撃に加えて、もう1回連撃ヒットを追加する
-            const comboHitDmg2 = Math.floor(finalD*(0.2+comboDmgBonus));
-            if (comboHitDmg2 > 0) { totalDmg += comboHitDmg2; attackHits.push({dmg:comboHitDmg2, isCrit:false, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false}); }
+            // 連斬(固有技)はこの連撃に加えて、もう1回連撃ヒットを追加する(こちらも会心を個別判定)
+            const comboBase2 = Math.floor(d*(0.2+comboDmgBonus));
+            if (comboBase2 > 0) {
+              const comboIsCrit2 = tempBuffs.guaranteedCrit||(Math.random()<((card.crit||0.1)+critRateBonus));
+              const comboFinal2 = comboIsCrit2?Math.floor(comboBase2*(1.5+critDmgBonus)):comboBase2;
+              if (comboIsCrit2) hasCrit=true; totalDmg += comboFinal2;
+              attackHits.push({dmg:comboFinal2, isCrit:comboIsCrit2, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false});
+            }
           }
         }
         if (card.type==='range_atk' && card.rangeIdx!=null) { forcedMoveTarget=(card.rangeIdx+1)%4; }
@@ -1750,7 +1761,7 @@ function MonsterHeroGame() {
             <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
               <h3 className="text-lg font-black text-white mb-4 text-center">アイコンを選択</h3>
               <div className="grid grid-cols-4 gap-3 mb-4">
-                {Object.values(ALL_PLAYER_MONSTERS).map(m=>(
+                {STARTER_MONSTER_IDS.map(id=>ALL_PLAYER_MONSTERS[id]).map(m=>(
                   <button key={m.id} onClick={()=>{setBreederIcon(m.id); storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
                     <img src={m.iconUrl} alt={m.name} className="w-full h-full object-cover"/>
                   </button>
