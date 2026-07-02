@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 22:36"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1219,26 +1219,20 @@ function MonsterHeroGame() {
         const isCrit=tempBuffs.guaranteedCrit||(Math.random()<((card.crit||0.1)+critRateBonus));
         const finalD=isCrit?Math.floor(d*(1.5+critDmgBonus)):d; if(isCrit) hasCrit=true; totalDmg+=finalD;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique'});
-        if (mainHero?.id==='Zan' && activeMon.id==='Zan') {
-          // 勇者特性「連撃」: ザンの攻撃に続けて連撃ヒットを別枠で発生させる。会心もメイン攻撃とは独立して判定する
-          // (元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せないようにする)
-          const comboBase = Math.floor(d*(0.3+comboDmgBonus));
-          if (comboBase > 0) {
-            const comboIsCrit = tempBuffs.guaranteedCrit||(Math.random()<((card.crit||0.1)+critRateBonus));
-            const comboFinal = comboIsCrit?Math.floor(comboBase*(1.5+critDmgBonus)):comboBase;
-            if (comboIsCrit) hasCrit=true; totalDmg += comboFinal;
-            attackHits.push({dmg:comboFinal, isCrit:comboIsCrit, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false});
-          }
-          if (card.type==='unique') {
-            // 連斬(固有技)はこの連撃に加えて、もう1回連撃ヒットを追加する(こちらも会心を個別判定)
-            const comboBase2 = Math.floor(d*(0.2+comboDmgBonus));
-            if (comboBase2 > 0) {
-              const comboIsCrit2 = tempBuffs.guaranteedCrit||(Math.random()<((card.crit||0.1)+critRateBonus));
-              const comboFinal2 = comboIsCrit2?Math.floor(comboBase2*(1.5+critDmgBonus)):comboBase2;
-              if (comboIsCrit2) hasCrit=true; totalDmg += comboFinal2;
-              attackHits.push({dmg:comboFinal2, isCrit:comboIsCrit2, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false});
-            }
-          }
+        if (activeMon.id==='Zan') {
+          // 会心はメイン攻撃とは独立して判定する(元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せない)
+          const rollCombo=(rate)=>{
+            const base=Math.floor(d*rate);
+            if (base<=0) return;
+            const crit=tempBuffs.guaranteedCrit||(Math.random()<((card.crit||0.1)+critRateBonus));
+            const final=crit?Math.floor(base*(1.5+critDmgBonus)):base;
+            if (crit) hasCrit=true; totalDmg += final;
+            attackHits.push({dmg:final, isCrit:crit, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false});
+          };
+          // 勇者特性「連撃」: ザンが勇者モンの時のみ、ザンの攻撃(通常/固有問わず)に連撃ヒットを追加
+          if (mainHero?.id==='Zan') rollCombo(0.3+comboDmgBonus);
+          // 固有技「連斬」自体の連撃: 勇者モンかどうかに関わらず、固有技を使えば発生する
+          if (card.type==='unique') rollCombo(0.2+comboDmgBonus);
         }
         if (card.type==='range_atk' && card.rangeIdx!=null) { forcedMoveTarget=(card.rangeIdx+1)%4; }
         if (card.type==='unique') {
@@ -1304,7 +1298,6 @@ function MonsterHeroGame() {
             }
             setAttackAnim(null);
             setSlotSkill(null);
-            await wait(160); // 攻撃モーションが終わってから一拍おいてダメージを表示する
           }
           const hitColor=hit.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if(hit.isCrit) triggerShake();
