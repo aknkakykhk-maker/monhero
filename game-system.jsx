@@ -59,7 +59,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 13:10"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 13:27"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -563,9 +563,16 @@ function MonsterHeroGame() {
       const pointsMigrated = await storeGet('mh_points_migrated', false, false);
       if (!pointsMigrated) {
         const backfill = Math.max(0, levelInfo(savedXp).level - 1);
-        if (backfill > 0) { savedPoints += backfill; await storeSet('mh_breeder_points', savedPoints, false); }
+        if (backfill > 0) savedPoints += backfill;
         await storeSet('mh_points_migrated', true, false);
       }
+      // 全プレイヤー(新規・既存問わず)に初期ポイントを1回だけ付与
+      const baseGranted = await storeGet('mh_points_base_granted', false, false);
+      if (!baseGranted) {
+        savedPoints += 1;
+        await storeSet('mh_points_base_granted', true, false);
+      }
+      await storeSet('mh_breeder_points', savedPoints, false);
       setBreederPoints(savedPoints);
       const savedMarketIcons = await storeGet('mh_market_icons', [], false);
       setOwnedMarketIcons(savedMarketIcons);
