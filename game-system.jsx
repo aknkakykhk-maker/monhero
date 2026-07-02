@@ -59,7 +59,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 19:49"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 20:04"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -703,6 +703,7 @@ function MonsterHeroGame() {
   // ブリーダーマーケットでアイテムを購入。アイコンはpt、円盤石/ブリーダーはゴールドを消費し、
   // 種別ごとの解放リストに追加(端末保存)。円盤石/ブリーダーは解放と同時に編成へも自動追加する
   const buyMarketItem = (item) => {
+    if (item.available === false) return; // 実装準備中のアイテムは購入不可
     if (isMarketItemOwned(item)) return;
     const usesGold = item.type === 'disc' || item.type === 'breeder';
     if (usesGold) {
@@ -1629,15 +1630,18 @@ function MonsterHeroGame() {
             ):(
               <div className="grid grid-cols-2 gap-3 pb-4">
                 {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab).map(item=>{
-                  const owned = isMarketItemOwned(item);
+                  const comingSoon = item.available === false;
+                  const owned = !comingSoon && isMarketItemOwned(item);
                   const usesGold = item.type==='disc' || item.type==='breeder';
                   const balance = usesGold ? gold : breederPoints;
-                  const canBuy = !owned && balance>=item.cost;
+                  const canBuy = !comingSoon && !owned && balance>=item.cost;
                   return (
-                    <div key={item.id} className={`rounded-2xl border-2 p-3 flex flex-col items-center gap-2 ${owned?'bg-emerald-900/30 border-emerald-500/50':'bg-slate-900 border-slate-800'}`}>
-                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/10 shrink-0"><img src={item.icon} alt={item.name} className="w-full h-full object-cover"/></div>
-                      <div className="text-xs font-black text-white">{item.name}</div>
-                      {owned?(
+                    <div key={item.id} className={`rounded-2xl border-2 p-3 flex flex-col items-center gap-2 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
+                      <div className={`w-16 h-16 rounded-full overflow-hidden border-2 border-white/10 shrink-0 ${comingSoon?'grayscale opacity-50':''}`}><img src={item.icon} alt={item.name} className="w-full h-full object-cover"/></div>
+                      <div className={`text-xs font-black ${comingSoon?'text-slate-500':'text-white'}`}>{item.name}</div>
+                      {comingSoon?(
+                        <div className="text-[9px] font-black text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full">近日追加予定</div>
+                      ):owned?(
                         <div className="text-[9px] font-black text-emerald-400 bg-emerald-950/50 px-3 py-1.5 rounded-full">所持済み</div>
                       ):(
                         <button onClick={()=>buyMarketItem(item)} disabled={!canBuy} className={`text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 ${canBuy?'bg-amber-500 text-black active:scale-95':'bg-slate-800 text-slate-500'}`}><Coins size={10}/>{item.cost}{usesGold?'G':'pt'} で購入</button>
