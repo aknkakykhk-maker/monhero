@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 20:12"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 20:30"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -402,6 +402,7 @@ function MonsterHeroGame() {
   const [draTotal, setDraTotal] = useState(0);
   const [critRateBonus, setCritRateBonus] = useState(0);
   const [critDmgBonus, setCritDmgBonus] = useState(0);
+  const [comboDmgBonus, setComboDmgBonus] = useState(0); // ザン固有技(連斬)使用で永続+3%、ザンの攻撃ダメージに加算
   const [cadmiumTotal, setCadmiumTotal] = useState(0); // 自動ガッツ回復率への加算値(旧仕様は倍率だったが加算方式に変更)
   const [muaAtkBonus, setMuaAtkBonus] = useState(0);
   const [muaHpBonus, setMuaHpBonus] = useState(0);
@@ -854,7 +855,7 @@ function MonsterHeroGame() {
     enemy:null, enemyDist:2, selectedCards:[], isBusy:false,
     monSelection:getActiveMonsterList(), ownedUniques:[], ownedTeachings:[],
     atkLevel:0, guardLevel:0, guardBonusCount:0, upgradePoints:0, turnCount:1,
-    oryoTotal:0, draTotal:0, critRateBonus:0, critDmgBonus:0, cadmiumTotal:0, muaAtkBonus:0, muaHpBonus:0, muaGutsBonus:0,
+    oryoTotal:0, draTotal:0, critRateBonus:0, critDmgBonus:0, comboDmgBonus:0, cadmiumTotal:0, muaAtkBonus:0, muaHpBonus:0, muaGutsBonus:0,
     autoHpRecoveryRate:0.1, currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
     tempBuffs:{ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false },
     waveEnemyAtkDebuff:0, focusedCard:null, enemyIntent:null, effect:null
@@ -868,7 +869,7 @@ function MonsterHeroGame() {
     setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques);
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
-    setOryoTotal(s.oryoTotal); setDraTotal(s.draTotal); setCritRateBonus(s.critRateBonus||0); setCritDmgBonus(s.critDmgBonus||0); setCadmiumTotal(s.cadmiumTotal);
+    setOryoTotal(s.oryoTotal); setDraTotal(s.draTotal); setCritRateBonus(s.critRateBonus||0); setCritDmgBonus(s.critDmgBonus||0); setComboDmgBonus(s.comboDmgBonus||0); setCadmiumTotal(s.cadmiumTotal);
     setMuaAtkBonus(s.muaAtkBonus); setMuaHpBonus(s.muaHpBonus); setMuaGutsBonus(s.muaGutsBonus);
     setAutoHpRecoveryRate(s.autoHpRecoveryRate); setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult); setTempBuffs(s.tempBuffs); setWaveEnemyAtkDebuff(s.waveEnemyAtkDebuff);
@@ -901,7 +902,7 @@ function MonsterHeroGame() {
     setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques);
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
-    setOryoTotal(s.oryoTotal); setDraTotal(s.draTotal); setCritRateBonus(s.critRateBonus||0); setCritDmgBonus(s.critDmgBonus||0); setCadmiumTotal(s.cadmiumTotal);
+    setOryoTotal(s.oryoTotal); setDraTotal(s.draTotal); setCritRateBonus(s.critRateBonus||0); setCritDmgBonus(s.critDmgBonus||0); setComboDmgBonus(s.comboDmgBonus||0); setCadmiumTotal(s.cadmiumTotal);
     setMuaAtkBonus(s.muaAtkBonus); setMuaHpBonus(s.muaHpBonus); setMuaGutsBonus(s.muaGutsBonus);
     setAutoHpRecoveryRate(s.autoHpRecoveryRate); setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult); setTempBuffs(s.tempBuffs); setWaveEnemyAtkDebuff(s.waveEnemyAtkDebuff);
@@ -1034,13 +1035,13 @@ function MonsterHeroGame() {
     else if (card.type==='unique') { const level=card.evoLevel||0; baseDmgMult=card.baseMult+(level*0.5); }
     else if (card.type==='range_atk') { const isTargetDist=(enemyDist===card.rangeIdx); baseDmgMult=isTargetDist?card.mult:(card.mult*0.4); }
     else { baseDmgMult=card.mult||card.baseMult||1.0; }
-    let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0);
+    let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0)*(mon?.id==='Zan'?(1.0+(mainHero?.id==='Zan'?0.3:0)+comboDmgBonus):1.0);
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0);
     const totalBuffMult=traitMult*tempBuffs.atkMult*(1.0+oryoTotal+muaAtkBonus+additionalOryo)*distBonusMult;
     let finalDmg=Math.floor(atk*distMult*baseDmgMult*totalBuffMult*(tempBuffs.enemyTakenDmgMod+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     return finalDmg;
-  }, [enemyDist, mainHero, atk, tempBuffs, oryoTotal, muaAtkBonus, distDmgBonus]);
+  }, [enemyDist, mainHero, atk, tempBuffs, oryoTotal, muaAtkBonus, distDmgBonus, comboDmgBonus]);
 
   const handleEnemyTurn = async (lastActionType, immediateEffects={}, overrideIntent=null) => {
     if (!enemy) return;
@@ -1199,6 +1200,7 @@ function MonsterHeroGame() {
         if (card.type==='unique') {
           if(activeMon.id==='Mocchi'){setDraTotal(p=>p+0.03); setTempBuffs(p=>({...p,enemyTakenDmgMod:p.enemyTakenDmgMod+0.1})); localDmgModAdd+=0.1; addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold');}
           else if(activeMon.id==='Golem'){setOryoTotal(p=>p+0.1); localOryoAdd+=0.1; addPopup('闘志UP!','hero','text-red-600 text-lg font-bold');}
+          else if(activeMon.id==='Zan'){setComboDmgBonus(p=>p+0.03); localDmgModAdd+=0.2; addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
         }
         const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,attackCount>0); attackCount++;
         const isCrit=tempBuffs.guaranteedCrit||(Math.random()<((card.crit||0.1)+critRateBonus));
@@ -1928,6 +1930,7 @@ function MonsterHeroGame() {
                 <div className="text-[7px] font-black text-amber-500 bg-black/60 px-2 py-0.5 rounded border border-amber-500/50 flex items-center gap-1 shadow-lg uppercase"><Zap size={7}/> ガッツ +{Math.floor(muaGutsBonus*100)}%</div>
                 <div className="text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"><Sparkles size={7}/> クリ率 +{Math.round(critRateBonus*100)}%</div>
                 <div className="text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"><Sparkles size={7}/> クリダメ +{Math.round(critDmgBonus*100)}%</div>
+                <div className="text-[7px] font-black text-cyan-400 bg-black/60 px-2 py-0.5 rounded border border-cyan-400/50 flex items-center gap-1 shadow-lg uppercase"><Sword size={7}/> 連撃 +{Math.round(comboDmgBonus*100)}%</div>
                 <div className={`text-[7px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${autoHpRecoveryRate>=0.1?'text-rose-400 border-rose-400/50':'text-red-400 border-red-400/50'}`}><Heart size={7}/> ライフ回復 {Math.round(autoHpRecoveryRate*100)}%</div>
                 <div className="text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"><Zap size={7}/> ガッツ回復 {Math.round((Math.max(0,0.05+(autoHpRecoveryRate-0.1))+cadmiumTotal)*100)}%</div>
                 {/* === ターン限定バフ（都度表示） === */}
