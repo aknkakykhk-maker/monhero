@@ -38,7 +38,9 @@ const _ICON_PATHS = {
   HelpCircle: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
   BookOpen: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
   Info: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
-  RefreshCcw: '<polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>'
+  RefreshCcw: '<polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>',
+  Coins: '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>',
+  ShoppingBag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>'
 };
 const _icon = (name) => (props) => {
   props = props || {};
@@ -52,12 +54,12 @@ const _icon = (name) => (props) => {
     dangerouslySetInnerHTML:{ __html: inner }
   });
 };
-const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle');
+const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag');
 
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 11:53"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 12:57"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -423,8 +425,10 @@ function MonsterHeroGame() {
   const [breederXp, setBreederXp] = useState(0); // 累計経験値(WAVEクリア数ベース・端末保存)
   const [xpAnimFrom, setXpAnimFrom] = useState(null); // タイトル帰還時にバーを伸ばすアニメーション用(直前のXP)
   const [levelUpFlash, setLevelUpFlash] = useState(null); // レベルアップ演出用(新しいレベル数)
-  const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid(未選択はnull)
+  const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
+  const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [showNameEdit, setShowNameEdit] = useState(false);
   const [tempName, setTempName] = useState('');
   const [tempBuffs, setTempBuffs] = useState({ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false });
@@ -554,6 +558,10 @@ function MonsterHeroGame() {
       setBreederIcon(savedIcon);
       const savedXp = await storeGet('mh_breeder_xp', 0, false);
       setBreederXp(savedXp);
+      const savedPoints = await storeGet('mh_breeder_points', 0, false);
+      setBreederPoints(savedPoints);
+      const savedMarketIcons = await storeGet('mh_market_icons', [], false);
+      setOwnedMarketIcons(savedMarketIcons);
       const scores = {}; const attempts = {}; const clears = {};
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async d => {
         scores[d] = await storeGet(`mh_hs_${d}`, 0, false);
@@ -639,6 +647,13 @@ function MonsterHeroGame() {
     setShowNameEdit(false);
   };
 
+  // ブリーダーマーケットでアイテム(アイコン)を購入。ポイント消費&所持リストに追加(端末保存)
+  const buyMarketIcon = (item) => {
+    if (ownedMarketIcons.includes(item.id) || breederPoints < item.cost) return;
+    setBreederPoints(prev => { const next = prev - item.cost; storeSet('mh_breeder_points', next, false); return next; });
+    setOwnedMarketIcons(prev => { const next = [...prev, item.id]; storeSet('mh_market_icons', next, false); return next; });
+  };
+
   // クリアしたWAVE数に応じてブリーダー経験値を加算(端末保存)。難易度が高いほど多めに獲得
   const awardWaveXp = async (wavesCleared) => {
     if (wavesCleared <= 0) return;
@@ -677,6 +692,8 @@ function MonsterHeroGame() {
     const fromLevel = levelInfo(xpAnimFrom).level;
     const toLevel = levelInfo(breederXp).level;
     if (toLevel > fromLevel) {
+      const gainedLevels = toLevel - fromLevel;
+      setBreederPoints(prev => { const next = prev + gainedLevels; storeSet('mh_breeder_points', next, false); return next; });
       const t1 = setTimeout(() => { Audio_.se.levelUp(); setLevelUpFlash(toLevel); }, 200);
       const t2 = setTimeout(() => { setLevelUpFlash(null); setXpAnimFrom(null); }, 2400);
       return () => { clearTimeout(t1); clearTimeout(t2); };
@@ -814,6 +831,13 @@ function MonsterHeroGame() {
   const cardIconNode = (icon, sizePx) => (typeof icon==='string' && icon.startsWith('data:'))
     ? <img src={icon} alt="" style={{width:sizePx,height:sizePx}} className="rounded-full object-cover inline-block shrink-0"/>
     : icon;
+  // プロフィールアイコンidから表示URLを解決(味方モンスター由来 or ブリーダーマーケット購入品)
+  const resolveIconUrl = (id) => {
+    if (!id) return null;
+    if (ALL_PLAYER_MONSTERS[id]?.iconUrl) return ALL_PLAYER_MONSTERS[id].iconUrl;
+    const item = BREEDER_MARKET_ITEMS.find(m => m.id === id);
+    return item ? item.icon : null;
+  };
 
   // カード選択(タップ/ドラッグ共通)
   const selectCardAt = (i) => {
@@ -1340,7 +1364,7 @@ function MonsterHeroGame() {
               </div>
               <div className="shrink-0 w-full flex flex-col items-center mb-2">
                 <div className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mb-1">Breeder Profile</div>
-                <button onClick={()=>setGameState('PROFILE')} className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group backdrop-blur-sm">{breederIcon&&ALL_PLAYER_MONSTERS[breederIcon]?.iconUrl?(<div className="w-4 h-4 rounded-full overflow-hidden shrink-0"><img src={ALL_PLAYER_MONSTERS[breederIcon].iconUrl} alt="" className="w-full h-full object-cover"/></div>):(<User size={14} className="text-indigo-400"/>)}<span className="font-black text-sm text-white group-hover:text-indigo-300 transition-colors">{breederName}</span><ChevronRight size={12} className="text-slate-500 group-hover:text-white"/></button>
+                <button onClick={()=>setGameState('PROFILE')} className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group backdrop-blur-sm">{resolveIconUrl(breederIcon)?(<div className="w-4 h-4 rounded-full overflow-hidden shrink-0"><img src={resolveIconUrl(breederIcon)} alt="" className="w-full h-full object-cover"/></div>):(<User size={14} className="text-indigo-400"/>)}<span className="font-black text-sm text-white group-hover:text-indigo-300 transition-colors">{breederName}</span><ChevronRight size={12} className="text-slate-500 group-hover:text-white"/></button>
               </div>
               <div className="shrink-0 flex flex-col gap-2 w-full">
                 <div className="grid grid-cols-3 gap-2 justify-center">
@@ -1369,7 +1393,7 @@ function MonsterHeroGame() {
                       <div key={i} className={`flex flex-col p-3 rounded-2xl border ${i===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`}>
                         <div className="flex items-center gap-4">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${i===0?'bg-amber-500 text-black':i===1?'bg-slate-300 text-black':i===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{i+1}</div>
-                          {r.icon&&ALL_PLAYER_MONSTERS[r.icon]?.iconUrl&&(<div className="w-7 h-7 rounded-full overflow-hidden border border-white/20 shrink-0"><img src={ALL_PLAYER_MONSTERS[r.icon].iconUrl} alt="" className="w-full h-full object-cover"/></div>)}
+                          {resolveIconUrl(r.icon)&&(<div className="w-7 h-7 rounded-full overflow-hidden border border-white/20 shrink-0"><img src={resolveIconUrl(r.icon)} alt="" className="w-full h-full object-cover"/></div>)}
                           <div className="flex-1 min-w-0 flex items-center gap-1.5">{r.level!=null&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-indigo-600/90 border border-indigo-400/50 text-[7px] font-black text-white">Lv.{r.level}</span>}<div className="text-[11px] font-black text-white truncate uppercase tracking-tighter">{r.userName}</div></div>
                           <div className="text-right font-mono font-black text-indigo-400 text-sm whitespace-nowrap">{r.score.toLocaleString()} pt</div>
                         </div>
@@ -1404,7 +1428,7 @@ function MonsterHeroGame() {
             )}
             <div className="shrink-0 bg-slate-900/80 border border-white/10 rounded-3xl p-5 flex flex-col items-center gap-3 mb-4">
               <button onClick={()=>setShowIconPicker(true)} className="relative w-20 h-20 rounded-full bg-slate-800 border-2 border-indigo-400/50 flex items-center justify-center overflow-hidden active:scale-95">
-                {breederIcon&&ALL_PLAYER_MONSTERS[breederIcon]?.iconUrl?(<img src={ALL_PLAYER_MONSTERS[breederIcon].iconUrl} alt="icon" className="w-full h-full object-cover"/>):(<User size={36} className="text-indigo-400"/>)}
+                {resolveIconUrl(breederIcon)?(<img src={resolveIconUrl(breederIcon)} alt="icon" className="w-full h-full object-cover"/>):(<User size={36} className="text-indigo-400"/>)}
                 <div className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"><Edit3 size={9} className="text-white"/></div>
               </button>
               <button onClick={()=>{setTempName(breederName); setShowNameEdit(true);}} className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group">
@@ -1415,6 +1439,10 @@ function MonsterHeroGame() {
                 <div className="h-2 bg-slate-800 rounded-full overflow-hidden border border-white/5"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-400" style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></div></div>
                 <div className="text-[8px] text-slate-500 font-mono text-center mt-1">{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</div>
               </div>
+              <button onClick={()=>setGameState('BREEDER_MARKET')} className="w-full flex items-center justify-between gap-2 bg-amber-950/40 border border-amber-500/40 px-4 py-2.5 rounded-xl active:scale-95 group">
+                <span className="flex items-center gap-1.5"><Coins size={14} className="text-amber-400"/><span className="text-[11px] font-black text-amber-200">{breederPoints} pt</span></span>
+                <span className="flex items-center gap-1 text-[10px] font-black text-amber-400 group-hover:text-amber-200"><ShoppingBag size={12}/>ブリーダーマーケット<ChevronRight size={11}/></span>
+              </button>
             </div>
             <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-2 px-1 shrink-0">難易度別 記録</div>
             <div className="flex flex-col gap-2 mb-4">
@@ -1428,6 +1456,38 @@ function MonsterHeroGame() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* BREEDER MARKET */}
+        {gameState==='BREEDER_MARKET'&&(
+          <div className="flex-1 flex flex-col h-full overflow-y-auto mh-scroll p-4">
+            <div className="flex items-center gap-2 mb-2 shrink-0">
+              <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">ブリーダーマーケット</h2>
+            </div>
+            <div className="flex items-center justify-center gap-2 mb-4 shrink-0 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
+              <Coins size={16} className="text-amber-400"/>
+              <span className="text-lg font-black text-amber-300">{breederPoints}</span>
+              <span className="text-[10px] text-slate-400 font-bold">ポイント所持(レベルアップで+1)</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 pb-4">
+              {BREEDER_MARKET_ITEMS.map(item=>{
+                const owned = ownedMarketIcons.includes(item.id);
+                const canBuy = !owned && breederPoints>=item.cost;
+                return (
+                  <div key={item.id} className={`rounded-2xl border-2 p-3 flex flex-col items-center gap-2 ${owned?'bg-emerald-900/30 border-emerald-500/50':'bg-slate-900 border-slate-800'}`}>
+                    <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white/10 shrink-0"><img src={item.icon} alt={item.name} className="w-full h-full object-cover"/></div>
+                    <div className="text-xs font-black text-white">{item.name}</div>
+                    {owned?(
+                      <div className="text-[9px] font-black text-emerald-400 bg-emerald-950/50 px-3 py-1.5 rounded-full">所持済み</div>
+                    ):(
+                      <button onClick={()=>buyMarketIcon(item)} disabled={!canBuy} className={`text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 ${canBuy?'bg-amber-500 text-black active:scale-95':'bg-slate-800 text-slate-500'}`}><Coins size={10}/>{item.cost}pt で購入</button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -1453,6 +1513,16 @@ function MonsterHeroGame() {
                   </button>
                 ))}
               </div>
+              {ownedMarketIcons.length>0&&(<>
+                <h4 className="text-[10px] font-black text-amber-400 mb-2 text-center uppercase tracking-widest flex items-center justify-center gap-1"><ShoppingBag size={10}/>マーケット購入アイコン</h4>
+                <div className="grid grid-cols-4 gap-3 mb-4">
+                  {BREEDER_MARKET_ITEMS.filter(m=>ownedMarketIcons.includes(m.id)).map(m=>(
+                    <button key={m.id} onClick={()=>{setBreederIcon(m.id); storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-amber-400 ring-2 ring-amber-400':'border-slate-700'}`}>
+                      <img src={m.icon} alt={m.name} className="w-full h-full object-cover"/>
+                    </button>
+                  ))}
+                </div>
+              </>)}
               <button onClick={()=>setShowIconPicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
             </div>
           </div>
