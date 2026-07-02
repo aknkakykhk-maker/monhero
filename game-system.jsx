@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-02 21:25"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-02 21:33"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1212,11 +1212,14 @@ function MonsterHeroGame() {
         const finalD=isCrit?Math.floor(d*(1.5+critDmgBonus)):d; if(isCrit) hasCrit=true; totalDmg+=finalD;
         attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique'});
         if (mainHero?.id==='Zan' && activeMon.id==='Zan') {
-          // 勇者特性「連撃」: ザンの攻撃に続けて連撃ダメージを別枠で発生させる。
-          // 連斬(固有技)使用時はこのターンだけ+20%、さらに使用のたびに割合が永続+3%スタックする
-          const comboRate = 0.3 + comboDmgBonus + (card.type==='unique' ? 0.2 : 0);
-          const comboHitDmg = Math.floor(finalD*comboRate);
+          // 勇者特性「連撃」: ザンの攻撃に続けて連撃ヒットを別枠で発生させる(使用のたびに割合が永続+3%スタック)
+          const comboHitDmg = Math.floor(finalD*(0.3+comboDmgBonus));
           if (comboHitDmg > 0) { totalDmg += comboHitDmg; attackHits.push({dmg:comboHitDmg, isCrit:false, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false}); }
+          if (card.type==='unique') {
+            // 連斬(固有技)はこの連撃に加えて、もう1回連撃ヒットを追加する
+            const comboHitDmg2 = Math.floor(finalD*(0.2+comboDmgBonus));
+            if (comboHitDmg2 > 0) { totalDmg += comboHitDmg2; attackHits.push({dmg:comboHitDmg2, isCrit:false, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false}); }
+          }
         }
         if (card.type==='range_atk' && card.rangeIdx!=null) { forcedMoveTarget=(card.rangeIdx+1)%4; }
         if (card.type==='unique') {
@@ -1240,7 +1243,7 @@ function MonsterHeroGame() {
           const hit = attackHits[i];
           // ザンの連撃(本体攻撃+連撃ヒットのペア)は2倍速でテンポよく演出する
           const isComboPair = hit.skillName==='連撃' || attackHits[i+1]?.skillName==='連撃';
-          const spd = isComboPair ? 0.5 : 1.0;
+          const spd = isComboPair ? 0.35 : 1.0;
           const animSlot = (hit.slotIdx!=null && slots[hit.slotIdx]) ? hit.slotIdx : fallbackSlot;
           if(animSlot >= 0 && slots[animSlot]) {
             // スロット上に技名をインライン表示
