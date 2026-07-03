@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 12:20"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 12:26"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1840,7 +1840,7 @@ function MonsterHeroGame() {
 
         {/* BREEDER MARKET */}
         {gameState==='BREEDER_MARKET'&&(
-          <div className="flex-1 flex flex-col h-full overflow-y-auto mh-scroll p-4">
+          <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
               <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">マーケット</h2>
@@ -1862,6 +1862,7 @@ function MonsterHeroGame() {
                 <button key={tab.key} onClick={()=>setMarketTab(tab.key)} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab===tab.key?'bg-amber-500 text-black':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
               ))}
             </div>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
             {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab).length===0?(
               <div className="text-center text-[11px] text-slate-600 font-bold py-10">まだ商品がありません</div>
             ):(
@@ -1893,12 +1894,13 @@ function MonsterHeroGame() {
                 })}
               </div>
             )}
+            </div>
           </div>
         )}
 
         {/* ROSTER (編成) */}
         {gameState==='ROSTER'&&(
-          <div className="flex-1 flex flex-col h-full overflow-y-auto mh-scroll p-4">
+          <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
               <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">編成</h2>
@@ -1909,39 +1911,43 @@ function MonsterHeroGame() {
               ))}
             </div>
             {rosterTab==='monster'?(
-              <>
+              <div className="flex-1 min-h-0 flex flex-col">
                 <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">仮選択中: {draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}体 / 解放済み{unlockedMonsterIds.length}体<br/>※ちょうど{STARTER_MONSTER_IDS.length}体選ぶと「決定」できます・長押しで詳細表示</div>
-                <div className="grid grid-cols-3 gap-3 pb-4">
-                  {unlockedMonsterIds.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>{
-                    const selected = draftMonsterRoster.includes(m.id);
-                    return (
-                      <button key={m.id} onPointerDown={()=>startLongPress(()=>setRosterDetailMon(m))} onPointerUp={()=>endLongPress(()=>toggleDraftMonster(m.id))} onPointerLeave={cancelLongPress} onContextMenu={(e)=>e.preventDefault()} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',touchAction:'manipulation'}} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
-                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                        <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
-                        <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
-                      </button>
-                    );
-                  })}
+                <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+                  <div className="grid grid-cols-3 gap-3 pb-4">
+                    {unlockedMonsterIds.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>{
+                      const selected = draftMonsterRoster.includes(m.id);
+                      return (
+                        <button key={m.id} onPointerDown={()=>startLongPress(()=>setRosterDetailMon(m))} onPointerUp={()=>endLongPress(()=>toggleDraftMonster(m.id))} onPointerLeave={cancelLongPress} onContextMenu={(e)=>e.preventDefault()} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',touchAction:'manipulation'}} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
+                          <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                          <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
+                          <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className={`w-full py-3 rounded-2xl font-black text-sm mt-2 mb-4 shrink-0 ${draftMonsterRoster.length===STARTER_MONSTER_IDS.length?'bg-indigo-500 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}>決定 ({draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length})</button>
-              </>
+                <button onClick={confirmMonsterRoster} disabled={draftMonsterRoster.length!==STARTER_MONSTER_IDS.length} className={`w-full py-3 rounded-2xl font-black text-sm mt-2 shrink-0 ${draftMonsterRoster.length===STARTER_MONSTER_IDS.length?'bg-indigo-500 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}>決定 ({draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length})</button>
+              </div>
             ):(
-              <>
+              <div className="flex-1 min-h-0 flex flex-col">
                 <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">仮選択中: {draftTeachingRoster.length}/{STARTER_TEACHING_IDS.length}枚 / 解放済み{unlockedTeachingIds.length}枚<br/>※ちょうど{STARTER_TEACHING_IDS.length}枚選ぶと「決定」できます・長押しで詳細表示</div>
-                <div className="grid grid-cols-3 gap-3 pb-4">
-                  {unlockedTeachingIds.map(id=>TEACHING_CARDS.find(t=>t.id===id)).filter(Boolean).map(t=>{
-                    const selected = draftTeachingRoster.includes(t.id);
-                    return (
-                      <button key={t.id} onPointerDown={()=>startLongPress(()=>setRosterDetailTeaching(t))} onPointerUp={()=>endLongPress(()=>toggleDraftTeaching(t.id))} onPointerLeave={cancelLongPress} onContextMenu={(e)=>e.preventDefault()} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',touchAction:'manipulation'}} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400':'bg-slate-900 border-slate-800'}`}>
-                        <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,48)}</div>
-                        <div className="text-[10px] font-black text-white truncate w-full text-center">{t.baseName}</div>
-                        <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-purple-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
-                      </button>
-                    );
-                  })}
+                <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+                  <div className="grid grid-cols-3 gap-3 pb-4">
+                    {unlockedTeachingIds.map(id=>TEACHING_CARDS.find(t=>t.id===id)).filter(Boolean).map(t=>{
+                      const selected = draftTeachingRoster.includes(t.id);
+                      return (
+                        <button key={t.id} onPointerDown={()=>startLongPress(()=>setRosterDetailTeaching(t))} onPointerUp={()=>endLongPress(()=>toggleDraftTeaching(t.id))} onPointerLeave={cancelLongPress} onContextMenu={(e)=>e.preventDefault()} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',touchAction:'manipulation'}} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400':'bg-slate-900 border-slate-800'}`}>
+                          <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,48)}</div>
+                          <div className="text-[10px] font-black text-white truncate w-full text-center">{t.baseName}</div>
+                          <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-purple-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <button onClick={confirmTeachingRoster} disabled={draftTeachingRoster.length!==STARTER_TEACHING_IDS.length} className={`w-full py-3 rounded-2xl font-black text-sm mt-2 mb-4 shrink-0 ${draftTeachingRoster.length===STARTER_TEACHING_IDS.length?'bg-purple-500 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}>決定 ({draftTeachingRoster.length}/{STARTER_TEACHING_IDS.length})</button>
-              </>
+                <button onClick={confirmTeachingRoster} disabled={draftTeachingRoster.length!==STARTER_TEACHING_IDS.length} className={`w-full py-3 rounded-2xl font-black text-sm mt-2 shrink-0 ${draftTeachingRoster.length===STARTER_TEACHING_IDS.length?'bg-purple-500 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}>決定 ({draftTeachingRoster.length}/{STARTER_TEACHING_IDS.length})</button>
+              </div>
             )}
           </div>
         )}
