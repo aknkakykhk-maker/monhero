@@ -60,10 +60,17 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 11:18"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 11:25"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
-// --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
-const XP_PER_WAVE = 10;
+// --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
+// 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
+const WAVE_XP_TABLE = [4, 5, 6, 7, 8, 10, 12, 14, 16, 18];
+const waveXpGain = (waveNum, mult) => Math.round((WAVE_XP_TABLE[waveNum - 1] || 0) * mult);
+const xpForWavesCleared = (wavesCleared, mult) => {
+  let sum = 0;
+  for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveXpGain(w, mult);
+  return sum;
+};
 // --- ゴールド: クリアWAVE数に応じて獲得(Normal基準100G/WAVE、他難易度はDIFFICULTY_SETTINGS.goldの倍率で変動) ---
 const GOLD_PER_WAVE = 100;
 const xpForLevel = (level) => Math.round(50 * Math.pow(level, 1.8)); // そのレベルから次レベルに必要なXP
@@ -421,6 +428,20 @@ const RewardSummaryCard = ({ summary }) => (
         )}
       </div>
     )}
+    {summary.waveHistory && summary.waveHistory.length > 0 && (
+      <div className="pt-2 border-t border-white/10">
+        <div className="text-[10px] text-cyan-300 font-black flex items-center gap-1 mb-1"><Trophy size={11}/>WAVE別ログ</div>
+        <div className="space-y-0.5">
+          {summary.waveHistory.map(w => (
+            <div key={w.wave} className="flex items-center justify-between text-[9px] bg-white/5 rounded-lg px-2 py-1">
+              <span className="text-slate-400 font-bold shrink-0">WAVE {w.wave}</span>
+              <span className="text-white font-mono font-bold">スコア +{w.roundScore.toLocaleString()}</span>
+              <span className="text-indigo-300 font-mono font-bold shrink-0">XP +{w.xpGain.toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
   </div>
 );
 
@@ -519,6 +540,7 @@ function MonsterHeroGame() {
   const [distAptPoints, setDistAptPoints] = useState({}); // 絆レベルアップで貯まる間合い適性強化ポイント { [monId]: pt } (端末保存)
   const [distAptOverrides, setDistAptOverrides] = useState({}); // 強化ポイントで上げた間合い適性 { [monId]: [g0,g1,g2,g3] } (端末保存)
   const [finalRewardSummary, setFinalRewardSummary] = useState(null); // 最終リザルト画面に出す今回の獲得内訳
+  const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
@@ -888,11 +910,11 @@ function MonsterHeroGame() {
   // クリアしたWAVE数に応じてブリーダー経験値・ゴールド・勇者モンの絆経験値をまとめて加算(端末保存)。
   // 最終リザルト画面(CHAMPION/敗北)に出す獲得内訳もここで組み立てる
   const awardRunRewards = async (wavesCleared) => {
-    if (wavesCleared <= 0) { setFinalRewardSummary({ breederXpGain: 0, breederLevelBefore: breederLevel, breederLevelAfter: breederLevel, goldBefore: gold, goldAfter: gold, heroBondGain: null }); return; }
+    if (wavesCleared <= 0) { setFinalRewardSummary({ breederXpGain: 0, breederLevelBefore: breederLevel, breederLevelAfter: breederLevel, goldBefore: gold, goldAfter: gold, heroBondGain: null, waveHistory }); return; }
     const scoreMult = DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
     const goldMult = DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
 
-    const breederXpGain = Math.round(XP_PER_WAVE * wavesCleared * scoreMult);
+    const breederXpGain = xpForWavesCleared(wavesCleared, scoreMult);
     const breederLevelBefore = levelInfo(breederXp);
     const nextXp = breederXp + breederXpGain;
     const breederLevelAfter = levelInfo(nextXp);
@@ -912,7 +934,7 @@ function MonsterHeroGame() {
     let heroBondGain = null;
     if (mainHero) {
       const before = levelInfo(bondXp[mainHero.id] || 0);
-      const gain = Math.round(XP_PER_WAVE * wavesCleared * scoreMult);
+      const gain = xpForWavesCleared(wavesCleared, scoreMult);
       const nextMonXp = (bondXp[mainHero.id] || 0) + gain;
       const after = levelInfo(nextMonXp);
       const nextBondXp = { ...bondXp, [mainHero.id]: nextMonXp };
@@ -925,7 +947,7 @@ function MonsterHeroGame() {
       heroBondGain = { monId: mainHero.id, name: mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after };
     }
 
-    setFinalRewardSummary({ breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain });
+    setFinalRewardSummary({ breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, waveHistory });
   };
 
   // Save score on game end
@@ -981,7 +1003,7 @@ function MonsterHeroGame() {
     oryoTotal:0, draTotal:0, critRateBonus:0, critDmgBonus:0, comboDmgBonus:0, cadmiumTotal:0, muaAtkBonus:0, muaHpBonus:0, muaGutsBonus:0,
     autoHpRecoveryRate:0.1, currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
     tempBuffs:{ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false },
-    waveEnemyAtkDebuff:0, focusedCard:null, enemyIntent:null, effect:null, finalRewardSummary:null
+    waveEnemyAtkDebuff:0, focusedCard:null, enemyIntent:null, effect:null, finalRewardSummary:null, waveHistory:[]
   });
 
   const handleGoToTitle = useCallback(() => {
@@ -996,7 +1018,7 @@ function MonsterHeroGame() {
     setMuaAtkBonus(s.muaAtkBonus); setMuaHpBonus(s.muaHpBonus); setMuaGutsBonus(s.muaGutsBonus);
     setAutoHpRecoveryRate(s.autoHpRecoveryRate); setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult); setTempBuffs(s.tempBuffs); setWaveEnemyAtkDebuff(s.waveEnemyAtkDebuff);
-    setPendingReward(null); setFocusedCard(s.focusedCard); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary);
+    setPendingReward(null); setFocusedCard(s.focusedCard); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]);
     setGameState('TITLE');
   }, []);
 
@@ -1028,7 +1050,7 @@ function MonsterHeroGame() {
     setMuaAtkBonus(s.muaAtkBonus); setMuaHpBonus(s.muaHpBonus); setMuaGutsBonus(s.muaGutsBonus);
     setAutoHpRecoveryRate(s.autoHpRecoveryRate); setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult); setTempBuffs(s.tempBuffs); setWaveEnemyAtkDebuff(s.waveEnemyAtkDebuff);
-    setFocusedCard(s.focusedCard); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary);
+    setFocusedCard(s.focusedCard); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]);
     setGameState('PICK_HERO');
   }, []);
 
@@ -1489,6 +1511,7 @@ function MonsterHeroGame() {
       setAutoHpRecoveryRate(p=>Math.max(0,p+recoveryDelta));
       setTotalRecoveryDelta(newTotalRecoveryDelta);
       setWaveResult({wave,waveMult,turn:turnCount,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,gainedDistBonus,newDistBonus,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
+      setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, xpGain: waveXpGain(wave, scoreMultiplier) }]);
       setTimeout(()=>setGameState('WAVE_RESULT'),500); return;
     }
     let endTurnDist=enemyDist;
