@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 09:46"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 09:50"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -1064,9 +1064,9 @@ function MonsterHeroGame() {
     else if (card.type==='range_atk') { const isTargetDist=(enemyDist===card.rangeIdx); baseDmgMult=isTargetDist?card.mult:(card.mult*0.4); }
     else { baseDmgMult=card.mult||card.baseMult||1.0; }
     let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0);
-    const distBonusMult=1.0+(distDmgBonus[slotIdx]||0);
-    const aptMult=DIST_APTITUDE_MULT[getDistAptitude(mon,slotIdx)]||1.0;
-    const totalBuffMult=traitMult*tempBuffs.atkMult*(1.0+oryoTotal+muaAtkBonus+additionalOryo)*distBonusMult*aptMult;
+    const aptBonus=DIST_APTITUDE_MULT[getDistAptitude(mon,slotIdx)]-1.0;
+    const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+aptBonus;
+    const totalBuffMult=traitMult*tempBuffs.atkMult*(1.0+oryoTotal+muaAtkBonus+additionalOryo)*distBonusMult;
     let finalDmg=Math.floor(atk*distMult*baseDmgMult*totalBuffMult*(tempBuffs.enemyTakenDmgMod+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     return finalDmg;
@@ -2243,7 +2243,7 @@ function MonsterHeroGame() {
                           ))}
                         </div>
                       )}
-                      {distDmgBonus[i]>0&&(<div className="absolute bottom-0.5 right-0.5 text-[6px] font-black text-cyan-300 leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border border-cyan-400/30 z-30"><Sword size={5}/>+{(distDmgBonus[i]*100).toFixed(1)}%</div>)}
+                      {(()=>{const totalBonus=(distDmgBonus[i]||0)+(DIST_APTITUDE_MULT[getDistAptitude(s,i)]-1.0); return totalBonus!==0&&(<div className={`absolute bottom-0.5 right-0.5 text-[6px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':'text-red-300 border-red-400/30'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
                       {previewDmg>0&&(<div className={`absolute ${slotAssignedCards.length>0?'top-[18px]':'top-0'} ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'} text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`}>{isPendingPreview&&assignedAttackCount>=1?'½ ':''}DMG:{previewDmg}</div>)}
                       {s?.imgUrl?(<img src={s.imgUrl} alt={s.name} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                     </div>
