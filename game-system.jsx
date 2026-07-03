@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 10:10"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 10:58"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -344,6 +344,39 @@ const sbUpdateScore = async (id, row) => {
   if (!res.ok) throw new Error(`update ${res.status}`);
 };
 
+// 最終リザルト画面(CHAMPION/敗北)共通: 今回の周回で獲得したブリーダー経験値・ダイヤ・
+// 編成モンスターの絆経験値をまとめて表示するカード
+const RewardSummaryCard = ({ summary }) => (
+  <div className="w-full max-w-xs bg-black/30 border border-white/10 rounded-2xl p-3 mb-2 text-left space-y-2 max-h-[38vh] overflow-y-auto shrink-0">
+    <div>
+      <div className="flex items-center justify-between text-[11px]">
+        <span className="text-indigo-300 font-black flex items-center gap-1"><Crown size={12}/>ブリーダー経験値</span>
+        <span className="text-white font-mono font-bold">+{summary.xpGain.toLocaleString()}</span>
+      </div>
+      <div className="text-[9px] text-slate-400 font-mono mt-0.5">
+        LV.{summary.breederLevelBefore.level}{summary.breederLevelAfter.level>summary.breederLevelBefore.level && <span className="text-amber-400 font-black"> → LV.{summary.breederLevelAfter.level} UP!</span>}
+      </div>
+    </div>
+    <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+      <span className="text-amber-300 font-black flex items-center gap-1"><Gem size={12}/>ダイヤ</span>
+      <span className="text-white font-mono font-bold">+{summary.goldGain.toLocaleString()}</span>
+    </div>
+    {summary.bondGains.length>0 && (
+      <div className="pt-2 border-t border-white/10">
+        <div className="text-[9px] text-pink-300 font-black uppercase mb-1 flex items-center gap-1"><Heart size={10}/>絆レベル</div>
+        <div className="space-y-1">
+          {summary.bondGains.map(b=>(
+            <div key={b.monId} className="flex items-center justify-between text-[9px]">
+              <span className="flex items-center gap-1.5 text-slate-300 truncate">{b.iconUrl?<img src={b.iconUrl} alt="" className="w-4 h-4 rounded-full object-cover shrink-0"/>:<span>{b.emoji}</span>}{b.name}</span>
+              {b.levelAfter>b.levelBefore ? <span className="text-amber-400 font-black font-mono shrink-0">Lv{b.levelBefore}→Lv{b.levelAfter} UP!</span> : <span className="text-slate-500 font-mono shrink-0">+{b.xpGain}XP</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+);
+
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('TITLE');
   const [difficulty, setDifficulty] = useState('Normal');
@@ -434,11 +467,9 @@ function MonsterHeroGame() {
   const [waveResult, setWaveResult] = useState(null);
   const [breederName, setBreederName] = useState('名無しのブリーダー');
   const [breederXp, setBreederXp] = useState(0); // 累計経験値(WAVEクリア数ベース・端末保存)
-  const [xpAnimFrom, setXpAnimFrom] = useState(null); // タイトル帰還時にバーを伸ばすアニメーション用(直前のXP)
   const [gold, setGold] = useState(0); // 累計ゴールド(WAVEクリア数ベース・端末保存)
-  const [goldAnimFrom, setGoldAnimFrom] = useState(null); // タイトル帰還時にカウントアップ表示するための直前のゴールド
-  const [goldDisplayValue, setGoldDisplayValue] = useState(0); // カウントアップ演出中に表示する値
-  const [levelUpFlash, setLevelUpFlash] = useState(null); // レベルアップ演出用(新しいレベル数)
+  const [bondXp, setBondXp] = useState({}); // モンスターごとの絆レベル累計経験値 { [monId]: xp } (端末保存)
+  const [finalRewardSummary, setFinalRewardSummary] = useState(null); // 最終リザルト画面に出す今回の獲得内訳
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
@@ -461,11 +492,7 @@ function MonsterHeroGame() {
   const [audioLevel, setAudioLevel] = useState(0); // 0=OFF,1=低,2=中,3=高
   const audioOn = audioLevel > 0;
   const breederLevel = levelInfo(breederXp);
-  // タイトル帰還時の演出用: レベルを跨がない場合のみ直前の進捗から表示してCSSトランジションで伸ばす。
-  // レベルを跨いだ場合は不自然な逆行を避けるため最終状態を即表示し、代わりにLEVEL UPバナーで演出する。
-  const xpAnimFromLevel = xpAnimFrom != null ? levelInfo(xpAnimFrom) : null;
-  const leveledUpThisAnim = xpAnimFromLevel != null && xpAnimFromLevel.level < breederLevel.level;
-  const displayLevel = (xpAnimFromLevel && !leveledUpThisAnim) ? xpAnimFromLevel : breederLevel;
+  const getBondLevel = (monId) => levelInfo(bondXp[monId] || 0);
   const AUDIO_VOLS = [0, 0.4, 0.7, 1.0];
   const AUDIO_LABELS = ['🔇 OFF', '🔈 低', '🔉 中', '🔊 高'];
   const [helpTab, setHelpTab] = useState('goal');
@@ -584,7 +611,8 @@ function MonsterHeroGame() {
       setBreederXp(savedXp);
       const savedGold = await storeGet('mh_gold', 0, false);
       setGold(savedGold);
-      setGoldDisplayValue(savedGold);
+      const savedBondXp = await storeGet('mh_bond_xp', {}, false);
+      setBondXp(savedBondXp);
       let savedPoints = await storeGet('mh_breeder_points', 0, false);
       // ブリーダーポイント導入前からのプレイヤーには、既存レベル分(Lv-1)を一度だけ遡って付与
       const pointsMigrated = await storeGet('mh_points_migrated', false, false);
@@ -774,30 +802,41 @@ function MonsterHeroGame() {
     setGameState('PROFILE');
   };
 
-  // クリアしたWAVE数に応じてブリーダー経験値を加算(端末保存)。難易度が高いほど多めに獲得
-  const awardWaveXp = async (wavesCleared) => {
-    if (wavesCleared <= 0) return;
-    const gain = Math.round(XP_PER_WAVE * wavesCleared * (DIFFICULTY_SETTINGS[difficulty]?.score || 1.0));
-    if (gain <= 0) return;
-    setBreederXp(prev => {
-      const next = prev + gain;
-      setXpAnimFrom(prev); // タイトル帰還時にprev→nextへバー(または演出)を再生する
-      storeSet('mh_breeder_xp', next, false);
-      return next;
-    });
-  };
+  // クリアしたWAVE数に応じてブリーダー経験値・ゴールド・編成モンスターの絆経験値をまとめて加算(端末保存)。
+  // 最終リザルト画面(CHAMPION/敗北)に出す獲得内訳もここで組み立てる
+  const awardRunRewards = async (wavesCleared) => {
+    if (wavesCleared <= 0) { setFinalRewardSummary({ xpGain: 0, breederLevelBefore: breederLevel, breederLevelAfter: breederLevel, goldGain: 0, bondGains: [] }); return; }
+    const scoreMult = DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
+    const goldMult = DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
 
-  // クリアしたWAVE数に応じてゴールドを加算(端末保存)。難易度のスコア補正倍率でNormal基準から変動
-  const awardWaveGold = async (wavesCleared) => {
-    if (wavesCleared <= 0) return;
-    const gain = Math.round(GOLD_PER_WAVE * wavesCleared * (DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0));
-    if (gain <= 0) return;
-    setGold(prev => {
-      const next = prev + gain;
-      setGoldAnimFrom(prev); // タイトル帰還時にprev→nextへカウントアップ表示する
-      storeSet('mh_gold', next, false);
-      return next;
+    const xpGain = Math.round(XP_PER_WAVE * wavesCleared * scoreMult);
+    const breederLevelBefore = levelInfo(breederXp);
+    const nextXp = breederXp + xpGain;
+    const breederLevelAfter = levelInfo(nextXp);
+    setBreederXp(nextXp);
+    storeSet('mh_breeder_xp', nextXp, false);
+    const gainedLevels = breederLevelAfter.level - breederLevelBefore.level;
+    if (gainedLevels > 0) {
+      Audio_.se.levelUp();
+      setBreederPoints(prev => { const next = prev + gainedLevels; storeSet('mh_breeder_points', next, false); return next; });
+    }
+
+    const goldGain = Math.round(GOLD_PER_WAVE * wavesCleared * goldMult);
+    setGold(prev => { const next = prev + goldGain; storeSet('mh_gold', next, false); return next; });
+
+    const partyMons = slots.filter(Boolean);
+    const nextBondXp = { ...bondXp };
+    const bondGains = partyMons.map(mon => {
+      const before = levelInfo(nextBondXp[mon.id] || 0);
+      const gain = Math.round(XP_PER_WAVE * wavesCleared * scoreMult);
+      nextBondXp[mon.id] = (nextBondXp[mon.id] || 0) + gain;
+      const after = levelInfo(nextBondXp[mon.id]);
+      return { monId: mon.id, name: mon.name, emoji: mon.emoji, iconUrl: mon.iconUrl, xpGain: gain, levelBefore: before.level, levelAfter: after.level };
     });
+    setBondXp(nextBondXp);
+    storeSet('mh_bond_xp', nextBondXp, false);
+
+    setFinalRewardSummary({ xpGain, breederLevelBefore, breederLevelAfter, goldGain, bondGains });
   };
 
   // Save score on game end
@@ -810,8 +849,7 @@ function MonsterHeroGame() {
             await storeSet(`mh_hs_${difficulty}`, score, false);
             setHighScores(prev => ({ ...prev, [difficulty]: score }));
           }
-          await awardWaveXp(gameState === 'CHAMPION' ? 10 : Math.max(0, wave - 1));
-          await awardWaveGold(gameState === 'CHAMPION' ? 10 : Math.max(0, wave - 1));
+          await awardRunRewards(gameState === 'CHAMPION' ? 10 : Math.max(0, wave - 1));
           if (gameState === 'CHAMPION') {
             setClearCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_clears_${difficulty}`, next[difficulty], false); return next; });
           }
@@ -820,38 +858,6 @@ function MonsterHeroGame() {
     }
   }, [hp, gameState]);
 
-  // タイトル帰還時、獲得したXP分をバー(またはレベルアップ演出)で見せる
-  useEffect(() => {
-    if (gameState !== 'TITLE' || xpAnimFrom == null) return;
-    const fromLevel = levelInfo(xpAnimFrom).level;
-    const toLevel = levelInfo(breederXp).level;
-    if (toLevel > fromLevel) {
-      const gainedLevels = toLevel - fromLevel;
-      setBreederPoints(prev => { const next = prev + gainedLevels; storeSet('mh_breeder_points', next, false); return next; });
-      const t1 = setTimeout(() => { Audio_.se.levelUp(); setLevelUpFlash(toLevel); }, 200);
-      const t2 = setTimeout(() => { setLevelUpFlash(null); setXpAnimFrom(null); }, 2400);
-      return () => { clearTimeout(t1); clearTimeout(t2); };
-    } else {
-      const t = setTimeout(() => setXpAnimFrom(null), 150);
-      return () => clearTimeout(t);
-    }
-  }, [gameState, xpAnimFrom, breederXp]);
-
-  // タイトル帰還時、獲得したゴールド分をカウントアップ表示する
-  useEffect(() => {
-    if (gameState !== 'TITLE' || goldAnimFrom == null) { setGoldDisplayValue(gold); return; }
-    if (goldAnimFrom === gold) { setGoldAnimFrom(null); return; }
-    const from = goldAnimFrom, to = gold, duration = 700, start = performance.now();
-    let raf;
-    const tick = (now) => {
-      const t = Math.min(1, (now - start) / duration);
-      setGoldDisplayValue(Math.round(from + (to - from) * t));
-      if (t < 1) raf = requestAnimationFrame(tick);
-      else setGoldAnimFrom(null);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [gameState, goldAnimFrom, gold]);
 
   const cardLimit = useMemo(() => {
     const allyCount = slots.filter(s => s !== null).length;
@@ -886,7 +892,7 @@ function MonsterHeroGame() {
     oryoTotal:0, draTotal:0, critRateBonus:0, critDmgBonus:0, comboDmgBonus:0, cadmiumTotal:0, muaAtkBonus:0, muaHpBonus:0, muaGutsBonus:0,
     autoHpRecoveryRate:0.1, currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
     tempBuffs:{ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false },
-    waveEnemyAtkDebuff:0, focusedCard:null, enemyIntent:null, effect:null
+    waveEnemyAtkDebuff:0, focusedCard:null, enemyIntent:null, effect:null, finalRewardSummary:null
   });
 
   const handleGoToTitle = useCallback(() => {
@@ -901,7 +907,7 @@ function MonsterHeroGame() {
     setMuaAtkBonus(s.muaAtkBonus); setMuaHpBonus(s.muaHpBonus); setMuaGutsBonus(s.muaGutsBonus);
     setAutoHpRecoveryRate(s.autoHpRecoveryRate); setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult); setTempBuffs(s.tempBuffs); setWaveEnemyAtkDebuff(s.waveEnemyAtkDebuff);
-    setPendingReward(null); setFocusedCard(s.focusedCard); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect);
+    setPendingReward(null); setFocusedCard(s.focusedCard); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary);
     setGameState('TITLE');
   }, []);
 
@@ -916,8 +922,7 @@ function MonsterHeroGame() {
         }
       } catch {}
     }
-    try { await awardWaveXp(Math.max(0, wave - 1)); } catch {}
-    try { await awardWaveGold(Math.max(0, wave - 1)); } catch {}
+    try { await awardRunRewards(Math.max(0, wave - 1)); } catch {}
     setShowQuitConfirm(false);
     handleGoToTitle();
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
@@ -934,7 +939,7 @@ function MonsterHeroGame() {
     setMuaAtkBonus(s.muaAtkBonus); setMuaHpBonus(s.muaHpBonus); setMuaGutsBonus(s.muaGutsBonus);
     setAutoHpRecoveryRate(s.autoHpRecoveryRate); setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult); setTempBuffs(s.tempBuffs); setWaveEnemyAtkDebuff(s.waveEnemyAtkDebuff);
-    setFocusedCard(s.focusedCard); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null);
+    setFocusedCard(s.focusedCard); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary);
     setGameState('PICK_HERO');
   }, []);
 
@@ -1565,30 +1570,21 @@ function MonsterHeroGame() {
                 <p className="text-purple-300 text-[9px] tracking-[0.4em] uppercase font-bold mt-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">Grand Champion Quest</p>
               </div>
               <div className="shrink-0 w-full flex flex-col items-center mb-2 relative">
-                <div key={displayLevel.level} className="flex items-center gap-2 mb-1" style={{animation:'levelHeaderPop 400ms ease-out'}}>
+                <div className="flex items-center gap-2 mb-1">
                   <Crown size={16} className="text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]"/>
-                  <span className="text-3xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-purple-200 to-indigo-200 drop-shadow-[0_2px_10px_rgba(129,140,248,0.8)]">LV.{displayLevel.level}</span>
+                  <span className="text-3xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-purple-200 to-indigo-200 drop-shadow-[0_2px_10px_rgba(129,140,248,0.8)]">LV.{breederLevel.level}</span>
                 </div>
                 <div className="w-full max-w-[240px]">
                   <div className="h-2.5 bg-slate-900/80 rounded-full overflow-hidden border border-indigo-400/40 shadow-inner">
-                    <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-400 to-pink-400 transition-all duration-700 ease-out" style={{width:`${Math.min(100,(displayLevel.xpIntoLevel/displayLevel.xpForNext)*100)}%`, animation: xpAnimFrom!=null?'xpBarFill 700ms ease-out':'none'}}></div>
+                    <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-400 to-pink-400" style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></div>
                   </div>
-                  <div className="text-[8px] text-indigo-300 font-mono font-bold text-center mt-1 tracking-wider">{displayLevel.xpIntoLevel.toLocaleString()} / {displayLevel.xpForNext.toLocaleString()} XP</div>
+                  <div className="text-[8px] text-indigo-300 font-mono font-bold text-center mt-1 tracking-wider">{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</div>
                 </div>
                 <div className="mt-1.5 flex items-center gap-1.5 bg-amber-950/60 border border-amber-500/30 px-3 py-1 rounded-full">
                   <Gem size={11} className="text-amber-400"/>
-                  <span className="text-[11px] font-black text-amber-300 font-mono">{goldDisplayValue.toLocaleString()}</span>
+                  <span className="text-[11px] font-black text-amber-300 font-mono">{gold.toLocaleString()}</span>
                   <span className="text-[8px] text-amber-500/70 font-bold">ダイヤ</span>
                 </div>
-                {levelUpFlash!=null&&(
-                  <div className="fixed inset-0 pointer-events-none flex items-center justify-center" style={{zIndex:70000}}>
-                    <div className="flex flex-col items-center gap-1" style={{animation:'levelUpBanner 2200ms ease-out forwards'}}>
-                      <div className="text-5xl">🎉</div>
-                      <div className="text-2xl font-black italic text-amber-300 uppercase tracking-widest drop-shadow-[0_2px_12px_rgba(251,191,36,0.9)]">Level Up!</div>
-                      <div className="text-4xl font-black italic text-white drop-shadow-[0_2px_12px_rgba(129,140,248,0.9)]">LV.{levelUpFlash}</div>
-                    </div>
-                  </div>
-                )}
               </div>
               <div className="shrink-0 w-full flex flex-col items-center mb-2">
                 <div className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mb-1">Breeder Profile</div>
@@ -1817,7 +1813,7 @@ function MonsterHeroGame() {
             <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
               <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
                 {rosterDetailMon.imgUrl?(<img src={rosterDetailMon.imgUrl} alt={rosterDetailMon.name} className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-110"/>):(<div className="text-6xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{rosterDetailMon.emoji}</div>)}
-                <div className="flex-1"><h3 className="text-xl font-black text-white">{rosterDetailMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div></div>
+                <div className="flex-1"><h3 className="text-xl font-black text-white">{rosterDetailMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div><div className="text-[9px] text-pink-300 font-black flex items-center gap-1 mt-0.5"><Heart size={9}/>絆Lv.{getBondLevel(rosterDetailMon.id).level}</div></div>
                 <button onClick={()=>setRosterDetailMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
               </div>
               <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
@@ -2308,7 +2304,7 @@ function MonsterHeroGame() {
               <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
                 <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
                   {currentPickingMon.imgUrl?(<img src={currentPickingMon.imgUrl} alt={currentPickingMon.name} className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-110"/>):(<div className="text-6xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{currentPickingMon.emoji}</div>)}
-                  <div className="flex-1"><h3 className="text-xl font-black text-white">{currentPickingMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div></div><button onClick={()=>setCurrentPickingMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
+                  <div className="flex-1"><h3 className="text-xl font-black text-white">{currentPickingMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div><div className="text-[9px] text-pink-300 font-black flex items-center gap-1 mt-0.5"><Heart size={9}/>絆Lv.{getBondLevel(currentPickingMon.id).level}</div></div><button onClick={()=>setCurrentPickingMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
                 </div>
                 <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
                   <div className="grid grid-cols-2 gap-2 shrink-0">
@@ -2475,10 +2471,10 @@ function MonsterHeroGame() {
       {showQuitConfirm&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">現在のスコア {score.toLocaleString()} pt がランキングに記録されます</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">記録してタイトルへ</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>)}
 
       {/* CHAMPION */}
-      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><Crown size={80} className="text-white animate-bounce mb-4"/><h1 className="text-4xl font-black italic text-white uppercase">CHAMPION</h1><div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-8 mb-10 shadow-2xl"><div className="text-6xl font-mono font-black text-white">{score.toLocaleString()}</div></div><button onClick={handleGoToTitle} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform">タイトルへ</button></div>)}
+      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center overflow-y-auto" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><Crown size={64} className="text-white animate-bounce mb-3 shrink-0"/><h1 className="text-3xl font-black italic text-white uppercase shrink-0">CHAMPION</h1><div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 shadow-2xl shrink-0"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<button onClick={handleGoToTitle} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2">タイトルへ</button></div>)}
 
       {/* GAME OVER */}
-      {hp<=0&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><Skull size={60} className="text-red-700 mb-6 animate-pulse"/><h2 className="text-3xl font-black italic text-white uppercase">敗 北</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div><div className="flex flex-col gap-3 w-full max-w-xs"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
+      {hp<=0&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center overflow-y-auto" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><Skull size={48} className="text-red-700 mb-3 animate-pulse shrink-0"/><h2 className="text-2xl font-black italic text-white uppercase shrink-0">敗 北</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 w-full max-w-xs shrink-0"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
 
       {/* EFFECT OVERLAY */}
       {effect&&(<div className="fixed inset-0 z-[70000] flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
@@ -2593,23 +2589,6 @@ const createAnimationStyle = () => {
       30% { transform: scale(1.25); opacity: 1; }
       70% { transform: scale(1.1); opacity: 1; }
       100% { transform: scale(1.4); opacity: 0; }
-    }
-    @keyframes levelHeaderPop {
-      0% { transform: scale(0.5); opacity: 0; }
-      55% { transform: scale(1.2); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    @keyframes levelUpBanner {
-      0% { transform: scale(0.3) translateY(20px); opacity: 0; }
-      20% { transform: scale(1.15) translateY(0); opacity: 1; }
-      35% { transform: scale(1) translateY(0); opacity: 1; }
-      85% { transform: scale(1) translateY(0); opacity: 1; }
-      100% { transform: scale(0.9) translateY(-10px); opacity: 0; }
-    }
-    @keyframes xpBarFill {
-      0% { filter: brightness(1); }
-      50% { filter: brightness(1.6); }
-      100% { filter: brightness(1); }
     }
     @keyframes guardSpark {
       0% { transform: translateY(0) scale(0.3); opacity: 0; }
