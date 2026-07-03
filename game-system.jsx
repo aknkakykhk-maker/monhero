@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 12:07"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 12:11"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -573,6 +573,20 @@ function MonsterHeroGame() {
   const audioOn = audioLevel > 0;
   const breederLevel = levelInfo(breederXp);
   const getBondLevel = (monId) => levelInfo(bondXp[monId] || 0);
+  // モンスター詳細画面(rosterDetailMon/currentPickingMon)共通: 絆レベルとその進捗ゲージを表示
+  const bondGaugeNode = (monId) => {
+    const lvl = getBondLevel(monId);
+    const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel / Math.max(1, lvl.xpForNext)) * 100));
+    return (
+      <div className="mt-1">
+        <div className="text-[9px] text-pink-300 font-black flex items-center gap-1"><Heart size={9}/>絆Lv.{lvl.level}</div>
+        <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5">
+          <div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div>
+        </div>
+        <div className="text-[7px] text-pink-400/70 font-mono mt-0.5">{lvl.xpIntoLevel.toLocaleString()} / {lvl.xpForNext.toLocaleString()} XP</div>
+      </div>
+    );
+  };
   const getDistAptitude = (mon, slotIdx) => {
     if (!mon) return 'C';
     const ov = distAptOverrides[mon.id];
@@ -1935,7 +1949,7 @@ function MonsterHeroGame() {
             <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
               <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
                 {rosterDetailMon.imgUrl?(<img src={rosterDetailMon.imgUrl} alt={rosterDetailMon.name} className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-110"/>):(<div className="text-6xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{rosterDetailMon.emoji}</div>)}
-                <div className="flex-1"><h3 className="text-xl font-black text-white">{rosterDetailMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div><div className="text-[9px] text-pink-300 font-black flex items-center gap-1 mt-0.5"><Heart size={9}/>絆Lv.{getBondLevel(rosterDetailMon.id).level}</div></div>
+                <div className="flex-1"><h3 className="text-xl font-black text-white">{rosterDetailMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div>{bondGaugeNode(rosterDetailMon.id)}</div>
                 <button onClick={()=>setRosterDetailMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
               </div>
               <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
@@ -2426,7 +2440,7 @@ function MonsterHeroGame() {
               <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
                 <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
                   {currentPickingMon.imgUrl?(<img src={currentPickingMon.imgUrl} alt={currentPickingMon.name} className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-110"/>):(<div className="text-6xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{currentPickingMon.emoji}</div>)}
-                  <div className="flex-1"><h3 className="text-xl font-black text-white">{currentPickingMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div><div className="text-[9px] text-pink-300 font-black flex items-center gap-1 mt-0.5"><Heart size={9}/>絆Lv.{getBondLevel(currentPickingMon.id).level}</div></div><button onClick={()=>setCurrentPickingMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
+                  <div className="flex-1"><h3 className="text-xl font-black text-white">{currentPickingMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div>{bondGaugeNode(currentPickingMon.id)}</div><button onClick={()=>setCurrentPickingMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
                 </div>
                 <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
                   <div className="grid grid-cols-2 gap-2 shrink-0">
