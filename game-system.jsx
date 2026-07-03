@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 12:47"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 13:01"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1456,18 +1456,10 @@ function MonsterHeroGame() {
           if(animSlot >= 0 && slots[animSlot]) {
             // スロット上に技名をインライン表示
             setSlotSkill({slotIndex: animSlot, name: hit.skillName, type: hit.isUnique?'unique':(hit.isSpecial?'special':'normal')});
-            if(hit.isUnique){
-              // 固有技: タメ(下に沈む)→敵に向かって突進
-              setAttackAnim({slotIndex: animSlot, charge:true});
-              Audio_.se.special();
-              await wait(650);
-              setAttackAnim({slotIndex: animSlot, charge:false});
-              await wait(500);
-            } else {
-              setAttackAnim({slotIndex: animSlot});
-              if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-              await wait(450);
-            }
+            // ザンの連撃ダッシュ以外は固有技も通常攻撃と同じ浮き上がりモーション(attackFly)に統一
+            setAttackAnim({slotIndex: animSlot});
+            if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
+            await wait(450);
             setAttackAnim(null);
             setSlotSkill(null);
           }
