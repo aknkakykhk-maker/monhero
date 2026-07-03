@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 09:55"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 10:03"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -229,8 +229,8 @@ const RANGE_LABELS = ["零", "近", "中", "遠"];
 // モンスターごとの間合い(距離)適性。距離ラベル配列と同じ並び([零,近,中,遠])のグレードを
 // distAptitude:['C','C','C','C'] の形でモンスターデータに持たせ、そのモンスターが
 // 該当スロットで攻撃した時のダメージに以下の倍率を掛ける。値は今後モンスターごとに調整予定。
-const DIST_APTITUDE_MULT = { S: 1.15, A: 1.1, B: 1.05, C: 1.0, D: 0.95, E: 0.9, F: 0.85 };
-const DIST_APTITUDE_COLOR = { S: "text-amber-300 bg-amber-950/60 border-amber-400/50", A: "text-purple-300 bg-purple-950/60 border-purple-400/50", B: "text-blue-300 bg-blue-950/60 border-blue-400/50", C: "text-emerald-300 bg-emerald-950/60 border-emerald-400/50", D: "text-slate-300 bg-slate-800/60 border-slate-500/50", E: "text-orange-300 bg-orange-950/60 border-orange-400/50", F: "text-red-300 bg-red-950/60 border-red-400/50" };
+const DIST_APTITUDE_MULT = { S: 1.15, A: 1.1, B: 1.05, C: 1.0, D: 0.95, E: 0.9, F: 0.85, G: 0.8 };
+const DIST_APTITUDE_COLOR = { S: "text-amber-300 bg-amber-950/60 border-amber-400/50", A: "text-purple-300 bg-purple-950/60 border-purple-400/50", B: "text-blue-300 bg-blue-950/60 border-blue-400/50", C: "text-emerald-300 bg-emerald-950/60 border-emerald-400/50", D: "text-slate-300 bg-slate-800/60 border-slate-500/50", E: "text-orange-300 bg-orange-950/60 border-orange-400/50", F: "text-red-300 bg-red-950/60 border-red-400/50", G: "text-red-500 bg-red-950/80 border-red-600/60" };
 const getDistAptitude = (mon, slotIdx) => (mon?.distAptitude && mon.distAptitude[slotIdx]) || 'C';
 const RANGE_STYLES = {
   0: { bg: "bg-red-950/90", border: "border-red-500", text: "text-red-400", shadow: "shadow-red-500/50", glow: "drop-shadow-[0_0_15px_rgba(239,68,68,0.9)]", slotBg: "bg-red-900/50", labelBg: "bg-red-600 text-white" },
