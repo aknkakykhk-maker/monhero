@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 12:11"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 12:20"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -411,34 +411,36 @@ const CountUpNumber = ({ from, to }) => {
 // 最終リザルト画面(CHAMPION/敗北)共通: 今回の周回で獲得したブリーダー経験値・ダイヤ・
 // 勇者モンの絆経験値をまとめて表示するカード
 const RewardSummaryCard = ({ summary }) => (
-  <div className="w-full max-w-xs bg-black/30 border border-white/10 rounded-2xl p-3 mb-2 text-left space-y-3 max-h-[42vh] overflow-y-auto shrink-0">
-    <div>
-      <div className="flex items-center justify-between text-[11px] mb-1">
-        <span className="text-indigo-300 font-black flex items-center gap-1"><Crown size={12}/>ブリーダー経験値</span>
-        <span className="text-white font-mono font-bold">+{summary.breederXpGain.toLocaleString()}</span>
-      </div>
-      <LevelGrowthBar levelBefore={summary.breederLevelBefore} levelAfter={summary.breederLevelAfter}/>
-    </div>
-    <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
-      <span className="text-amber-300 font-black flex items-center gap-1"><Gem size={12}/>ダイヤ</span>
-      <span className="text-white font-mono font-bold"><CountUpNumber from={summary.goldBefore} to={summary.goldAfter}/></span>
-    </div>
-    {summary.heroBondGain && (
-      <div className="pt-2 border-t border-white/10">
+  <div className="w-full max-w-xs bg-black/30 border border-white/10 rounded-2xl p-3 mb-2 text-left shrink-0 flex flex-col min-h-0">
+    <div className="space-y-3 shrink-0">
+      <div>
         <div className="flex items-center justify-between text-[11px] mb-1">
-          <span className="text-pink-300 font-black flex items-center gap-1 truncate"><Heart size={12}/>絆レベル：{summary.heroBondGain.name}</span>
-          <span className="text-white font-mono font-bold shrink-0">+{summary.heroBondGain.xpGain.toLocaleString()}</span>
+          <span className="text-indigo-300 font-black flex items-center gap-1"><Crown size={12}/>ブリーダー経験値</span>
+          <span className="text-white font-mono font-bold">+{summary.breederXpGain.toLocaleString()}</span>
         </div>
-        <LevelGrowthBar levelBefore={summary.heroBondGain.levelBefore} levelAfter={summary.heroBondGain.levelAfter}/>
-        {summary.heroBondGain.levelAfter.level > summary.heroBondGain.levelBefore.level && (
-          <div className="text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"><Sparkles size={9}/>強化ポイント +{summary.heroBondGain.levelAfter.level - summary.heroBondGain.levelBefore.level}</div>
-        )}
+        <LevelGrowthBar levelBefore={summary.breederLevelBefore} levelAfter={summary.breederLevelAfter}/>
       </div>
-    )}
+      <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+        <span className="text-amber-300 font-black flex items-center gap-1"><Gem size={12}/>ダイヤ</span>
+        <span className="text-white font-mono font-bold"><CountUpNumber from={summary.goldBefore} to={summary.goldAfter}/></span>
+      </div>
+      {summary.heroBondGain && (
+        <div className="pt-2 border-t border-white/10">
+          <div className="flex items-center justify-between text-[11px] mb-1">
+            <span className="text-pink-300 font-black flex items-center gap-1 truncate"><Heart size={12}/>絆レベル：{summary.heroBondGain.name}</span>
+            <span className="text-white font-mono font-bold shrink-0">+{summary.heroBondGain.xpGain.toLocaleString()}</span>
+          </div>
+          <LevelGrowthBar levelBefore={summary.heroBondGain.levelBefore} levelAfter={summary.heroBondGain.levelAfter}/>
+          {summary.heroBondGain.levelAfter.level > summary.heroBondGain.levelBefore.level && (
+            <div className="text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"><Sparkles size={9}/>強化ポイント +{summary.heroBondGain.levelAfter.level - summary.heroBondGain.levelBefore.level}</div>
+          )}
+        </div>
+      )}
+    </div>
     {summary.waveHistory && summary.waveHistory.length > 0 && (
-      <div className="pt-2 border-t border-white/10">
-        <div className="text-[10px] text-cyan-300 font-black flex items-center gap-1 mb-1"><Trophy size={11}/>WAVE別ログ</div>
-        <div className="space-y-0.5">
+      <div className="pt-2 mt-3 border-t border-white/10 shrink-0 flex flex-col min-h-0">
+        <div className="text-[10px] text-cyan-300 font-black flex items-center gap-1 mb-1 shrink-0"><Trophy size={11}/>WAVE別ログ</div>
+        <div className="space-y-0.5 overflow-y-auto mh-scroll max-h-[18vh]">
           {summary.waveHistory.map(w => (
             <div key={w.wave} className="flex items-center justify-between gap-1 text-[9px] bg-white/5 rounded-lg px-2 py-1">
               <span className="text-slate-400 font-bold shrink-0">WAVE {w.wave}</span>
@@ -2607,12 +2609,12 @@ function MonsterHeroGame() {
       {showQuitConfirm&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">現在のスコア {score.toLocaleString()} pt がランキングに記録されます</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>)}
 
       {/* CHAMPION */}
-      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center overflow-y-auto" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><Crown size={64} className="text-white animate-bounce mb-3 shrink-0"/><h1 className="text-3xl font-black italic text-white uppercase shrink-0">CHAMPION</h1><div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 shadow-2xl shrink-0"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<button onClick={handleGoToTitle} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2">タイトルへ</button></div>)}
+      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1><div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}</div><button onClick={handleGoToTitle} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2">タイトルへ</button></div>)}
 
       {/* GAME OVER */}
-      {hp<=0&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center overflow-y-auto" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><Skull size={48} className="text-red-700 mb-3 animate-pulse shrink-0"/><h2 className="text-2xl font-black italic text-white uppercase shrink-0">敗 北</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 w-full max-w-xs shrink-0"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
+      {hp<=0&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
 
-      {gaveUp&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center overflow-y-auto" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><Flag size={48} className="text-slate-400 mb-3 shrink-0"/><h2 className="text-2xl font-black italic text-white uppercase shrink-0">リタイア</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 w-full max-w-xs shrink-0"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
+      {gaveUp&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Flag size={48} className="text-slate-400 mb-3"/><h2 className="text-2xl font-black italic text-white uppercase">リタイア</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
 
       {/* EFFECT OVERLAY */}
       {effect&&(<div className="fixed inset-0 z-[70000] flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
