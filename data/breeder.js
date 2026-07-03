@@ -41,6 +41,8 @@ const STARTER_TEACHING_IDS = ['oryo','dra','cadmium','mua','atsu','myaru'];
 // ブリーダーマーケット: ブリーダーレベルアップで得たポイントで購入できるアイテム
 // type:'icon' はプロフィールアイコン、type:'disc' はモンスターの円盤石(購入でそのモンスターが解放される)、
 // type:'breeder' はブリーダーカードの解放アイテム。idはicon以外の場合、解放対象(モンスター/カード)のidと一致させる。
+// 円盤石のiconは、ザン/ミタラシと同じ石版デザイン(円形の装飾リング+中央に全身を配置)で統一する。
+// 新モンスター実装時は先に available:false の円盤石だけ追加し、本体(ALL_PLAYER_MONSTERS)の実装は別途行う。
 const BREEDER_MARKET_ITEMS = [
   { id:'oryo',    name:"おりょうのアイコン",     type:'icon', icon:ORYO_FACE_ICON,    cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
