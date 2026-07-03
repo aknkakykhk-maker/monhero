@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-04 01:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-04 02:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1025,17 +1025,21 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (hp <= 0 || gameState === 'CHAMPION') {
       (async () => {
+        // スコア送信(全国ランキング等、通信を伴う)が失敗しても、経験値・ダイヤ付与(最終リザルト画面表示に必須)は
+        // 必ず実行されるよう、try/catchを分離する
         try {
           if (score > 0) await submitLocalScore(difficulty, score);
           if (score > (highScores[difficulty] || 0)) {
             await storeSet(`mh_hs_${difficulty}`, score, false);
             setHighScores(prev => ({ ...prev, [difficulty]: score }));
           }
+        } catch (e) { console.error('[result] score submit failed:', e && e.message ? e.message : e); }
+        try {
           await awardRunRewards(gameState === 'CHAMPION' ? 10 : Math.max(0, wave - 1));
           if (gameState === 'CHAMPION') {
             setClearCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_clears_${difficulty}`, next[difficulty], false); return next; });
           }
-        } catch {}
+        } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
       })();
     }
   }, [hp, gameState]);
@@ -1609,15 +1613,18 @@ function MonsterHeroGame() {
       setTimeout(()=>setGameState('WAVE_RESULT'),500); return;
     }
     let endTurnDist=enemyDist;
+    let forcedMoveHappened=false;
     if (forcedMoveTarget!=null && forcedMoveTarget!==enemyDist) {
       endTurnDist=forcedMoveTarget;
       setEnemyDist(forcedMoveTarget);
       addPopup(`強制移動！ ${RANGE_LABELS[forcedMoveTarget]}距離へ`,'enemy','text-cyan-400 font-black text-lg drop-shadow-md');
       await wait(700);
+      forcedMoveHappened=true;
     }
     // 予測表示している enemyIntent をそのまま実行する（再抽選しない）
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
-    const executedIntent=enemyIntent;
+    // 距離撃で強制移動させた場合は、敵自身のMOVE行動で上書きされないよう優先する(距離撃 > 敵の自発的な移動)
+    const executedIntent=(forcedMoveHappened&&enemyIntent?.type==='MOVE')?{type:'WAIT',value:0,label:"様子を見ている",icon:"⏳"}:enemyIntent;
     await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardPower:currentTurnGuardPower},executedIntent);
     // 敵の行動が終わった後で、次ターンの予測を1回だけ抽選してセット
     // 敵が移動した場合は移動後の距離を基準にする
