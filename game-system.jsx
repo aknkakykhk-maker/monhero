@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 19:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-03 20:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -523,6 +523,8 @@ function MonsterHeroGame() {
   const [critDmgBonus, setCritDmgBonus] = useState(0);
   const [comboDmgBonus, setComboDmgBonus] = useState(0); // ザン固有技(連斬)使用で永続+3%、ザンの攻撃ダメージに加算
   const [cadmiumTotal, setCadmiumTotal] = useState(0); // 自動ガッツ回復率への加算値(旧仕様は倍率だったが加算方式に変更)
+  const [chuuniDmgCutUses, setChuuniDmgCutUses] = useState(0); // アーク/イブリース「中二病」特性: 敵の攻撃を被ダメ50%カットした回数(WAVE毎に0リセット、上限2)
+  const [chuuniUniqueStack, setChuuniUniqueStack] = useState(0); // アーク/イブリース「中二病」特性: 固有技使用回数(永続/重複)。消費ガッツ+10%・ダメージ倍率+0.1を回数分積み上げる
   const [muaAtkBonus, setMuaAtkBonus] = useState(0);
   const [muaHpBonus, setMuaHpBonus] = useState(0);
   const [attackAnim, setAttackAnim] = useState(null); // {slotIndex}
@@ -575,7 +577,7 @@ function MonsterHeroGame() {
   const [restoreInput, setRestoreInput] = useState('');
   const [restoreMsg, setRestoreMsg] = useState('');
   const [updateAvailable, setUpdateAvailable] = useState(false); // version.jsonが現在のBUILD_DATEと異なる場合true(新バージョン通知)
-  const [tempBuffs, setTempBuffs] = useState({ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false });
+  const [tempBuffs, setTempBuffs] = useState({ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, nextTurnTakenDamageMult:1.0, gutsCostMult:1.0, nextTurnGutsCostMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false });
   const [waveEnemyAtkDebuff, setWaveEnemyAtkDebuff] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0); // 0=OFF,1=低,2=中,3=高
@@ -1058,8 +1060,11 @@ function MonsterHeroGame() {
       if (card.type === 'unique') { const level = card.evoLevel || 0; actualBaseMult = card.baseMult; actualCurrentMult = card.baseMult + (level * 0.5); actualBaseGuts = card.baseGuts; }
       else { actualCurrentMult = card.mult; actualBaseMult = card.baseMult; actualBaseGuts = card.baseGuts; }
       if (actualBaseMult > 0) { const increaseRate = actualCurrentMult / actualBaseMult; cost = Math.floor(actualBaseGuts * increaseRate); }
+      // 中二病特性: 固有技使用のたびに永続で消費ガッツ+10%(重複可)
+      if (card.type === 'unique' && (card.monId==='Ark'||card.monId==='Iblis')) cost = Math.floor(cost * (1 + 0.1*chuuniUniqueStack));
     }
     if (tempBuffs.zeroGuts && ['atk','range_atk','unique'].includes(card.type)) cost = 0;
+    cost = Math.floor(cost * (tempBuffs.gutsCostMult||1.0));
     return cost;
   };
 
@@ -1069,9 +1074,9 @@ function MonsterHeroGame() {
     enemy:null, enemyDist:2, selectedCards:[], isBusy:false,
     monSelection:getActiveMonsterList(), ownedUniques:[], ownedTeachings:[],
     atkLevel:0, guardLevel:0, guardBonusCount:0, upgradePoints:0, turnCount:1,
-    oryoTotal:0, draTotal:0, critRateBonus:0, critDmgBonus:0, comboDmgBonus:0, cadmiumTotal:0, muaAtkBonus:0, muaHpBonus:0, muaGutsBonus:0,
+    oryoTotal:0, draTotal:0, critRateBonus:0, critDmgBonus:0, comboDmgBonus:0, cadmiumTotal:0, muaAtkBonus:0, muaHpBonus:0, muaGutsBonus:0, chuuniDmgCutUses:0, chuuniUniqueStack:0,
     autoHpRecoveryRate:0.1, currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
-    tempBuffs:{ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false },
+    tempBuffs:{ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, nextTurnTakenDamageMult:1.0, gutsCostMult:1.0, nextTurnGutsCostMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false },
     waveEnemyAtkDebuff:0, focusedCard:null, enemyIntent:null, effect:null, finalRewardSummary:null, waveHistory:[], gaveUp:false
   });
 
@@ -1084,7 +1089,7 @@ function MonsterHeroGame() {
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
     setOryoTotal(s.oryoTotal); setDraTotal(s.draTotal); setCritRateBonus(s.critRateBonus||0); setCritDmgBonus(s.critDmgBonus||0); setComboDmgBonus(s.comboDmgBonus||0); setCadmiumTotal(s.cadmiumTotal);
-    setMuaAtkBonus(s.muaAtkBonus); setMuaHpBonus(s.muaHpBonus); setMuaGutsBonus(s.muaGutsBonus);
+    setMuaAtkBonus(s.muaAtkBonus); setMuaHpBonus(s.muaHpBonus); setMuaGutsBonus(s.muaGutsBonus); setChuuniDmgCutUses(s.chuuniDmgCutUses||0); setChuuniUniqueStack(s.chuuniUniqueStack||0);
     setAutoHpRecoveryRate(s.autoHpRecoveryRate); setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult); setTempBuffs(s.tempBuffs); setWaveEnemyAtkDebuff(s.waveEnemyAtkDebuff);
     setPendingReward(null); setFocusedCard(s.focusedCard); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
@@ -1116,7 +1121,7 @@ function MonsterHeroGame() {
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
     setOryoTotal(s.oryoTotal); setDraTotal(s.draTotal); setCritRateBonus(s.critRateBonus||0); setCritDmgBonus(s.critDmgBonus||0); setComboDmgBonus(s.comboDmgBonus||0); setCadmiumTotal(s.cadmiumTotal);
-    setMuaAtkBonus(s.muaAtkBonus); setMuaHpBonus(s.muaHpBonus); setMuaGutsBonus(s.muaGutsBonus);
+    setMuaAtkBonus(s.muaAtkBonus); setMuaHpBonus(s.muaHpBonus); setMuaGutsBonus(s.muaGutsBonus); setChuuniDmgCutUses(s.chuuniDmgCutUses||0); setChuuniUniqueStack(s.chuuniUniqueStack||0);
     setAutoHpRecoveryRate(s.autoHpRecoveryRate); setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult); setTempBuffs(s.tempBuffs); setWaveEnemyAtkDebuff(s.waveEnemyAtkDebuff);
     setFocusedCard(s.focusedCard); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
@@ -1135,9 +1140,10 @@ function MonsterHeroGame() {
   const getPredictedDamage = useCallback((intent) => {
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='CHARGE')) return 0;
     const atkVal = Math.floor(intent.value*(1.0-waveEnemyAtkDebuff));
-    const dmgBase = Math.max(30,(atkVal*tempBuffs.takenDamageMult)-(def*0.15))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0);
+    const chuuniCutActive = (mainHero?.id==='Ark'||mainHero?.id==='Iblis') && chuuniDmgCutUses<2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
+    const dmgBase = Math.max(30,(atkVal*tempBuffs.takenDamageMult)-(def*0.15))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
     return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-draTotal))));
-  }, [def, tempBuffs.takenDamageMult, mainHero, draTotal, waveEnemyAtkDebuff]);
+  }, [def, tempBuffs.takenDamageMult, mainHero, draTotal, waveEnemyAtkDebuff, chuuniDmgCutUses]);
 
   const addPopup = (text, side, color) => {
     const id = Date.now()+Math.random();
@@ -1245,7 +1251,7 @@ function MonsterHeroGame() {
     const distMult = [1.5,1.3,1.1,0.9][distDiff]||1.0;
     let baseDmgMult = 1.0;
     if (card.subType==='stun_atsu') { baseDmgMult = card.baseValue||1.5; }
-    else if (card.type==='unique') { const level=card.evoLevel||0; baseDmgMult=card.baseMult+(level*0.5); }
+    else if (card.type==='unique') { const level=card.evoLevel||0; const chuuniBonus=(card.monId==='Ark'||card.monId==='Iblis')?0.1*chuuniUniqueStack:0; baseDmgMult=card.baseMult+(level*0.5)+chuuniBonus; }
     else if (card.type==='range_atk') { const isTargetDist=(enemyDist===card.rangeIdx); baseDmgMult=isTargetDist?card.mult:(card.mult*0.4); }
     else { baseDmgMult=card.mult||card.baseMult||1.0; }
     let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0);
@@ -1255,7 +1261,7 @@ function MonsterHeroGame() {
     let finalDmg=Math.floor(atk*distMult*baseDmgMult*totalBuffMult*(tempBuffs.enemyTakenDmgMod+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     return finalDmg;
-  }, [enemyDist, mainHero, atk, tempBuffs, oryoTotal, muaAtkBonus, distDmgBonus]);
+  }, [enemyDist, mainHero, atk, tempBuffs, oryoTotal, muaAtkBonus, distDmgBonus, chuuniUniqueStack]);
 
   // ザンの勇者特性「連撃」による追加ヒット分の合計(プレビュー用)。実際のバトルログはprocessTurn内で別枠ヒットとして計算する
   const getComboBonusDmg = useCallback((card, mon, baseDmg) => {
@@ -1298,6 +1304,10 @@ function MonsterHeroGame() {
       } else if (intent.type==='ATTACK'||intent.type==='CHARGE') {
         const guardValue = immediateEffects.guardPower>0 ? Math.floor(def*immediateEffects.guardPower) : 0;
         const incomingDmg = getPredictedDamage(intent);
+        if ((mainHero?.id==='Ark'||mainHero?.id==='Iblis') && chuuniDmgCutUses<2) {
+          setChuuniDmgCutUses(p=>p+1);
+          addPopup('中二病発動!被ダメ50%カット','hero','text-pink-400 text-sm font-bold');
+        }
         const isReflect = tempBuffs.reflect||(mainHero?.id==='Monol'&&Math.random()<0.3);
         const isAbsorb = mainHero?.id==='Oboro'&&Math.random()<0.3;
 
@@ -1351,7 +1361,7 @@ function MonsterHeroGame() {
     }
     if (gutsRegen>0) { addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     if (didRegen) { await wait(500); }
-    setTempBuffs(p=>({...p, atkMult:p.nextTurnAtkMult, nextTurnAtkMult:1.0, takenDamageMult:1.0, zeroGuts:p.nextTurnZeroGuts, nextTurnZeroGuts:false, guaranteedCrit:p.nextTurnGuaranteedCrit, nextTurnGuaranteedCrit:false, stunEnemy:false, invincible:false, reflect:p.nextTurnReflect, nextTurnReflect:false }));
+    setTempBuffs(p=>({...p, atkMult:p.nextTurnAtkMult, nextTurnAtkMult:1.0, takenDamageMult:p.nextTurnTakenDamageMult, nextTurnTakenDamageMult:1.0, gutsCostMult:p.nextTurnGutsCostMult, nextTurnGutsCostMult:1.0, zeroGuts:p.nextTurnZeroGuts, nextTurnZeroGuts:false, guaranteedCrit:p.nextTurnGuaranteedCrit, nextTurnGuaranteedCrit:false, stunEnemy:false, invincible:false, reflect:p.nextTurnReflect, nextTurnReflect:false }));
     const nextTurn=turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){setHp(0);} setIsBusy(false);
   };
 
@@ -1465,6 +1475,16 @@ function MonsterHeroGame() {
           else if(activeMon.id==='Tiger'){setTempBuffs(p=>({...p,nextTurnGuaranteedCrit:true})); setCritRateBonus(p=>p+0.02); setCritDmgBonus(p=>p+0.02); addPopup('次ターン会心確定!','hero','text-red-400 text-lg font-bold'); addPopup('会心率+2% 会心ダメ+2%','hero','text-yellow-400 text-sm font-bold');}
           else if(activeMon.id==='Monol'){setDraTotal(p=>p+0.03); setWaveEnemyAtkDebuff(p=>Math.min(0.9,p+0.10)); setTempBuffs(p=>({...p,nextTurnReflect:true})); addPopup('次ターン反射！','hero','text-purple-400 text-lg font-bold');}
           else if(activeMon.id==='Oboro'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05); setHp(p=>Math.min(effectiveMaxHp,p+hRec)); setGuts(p=>Math.min(effectiveMaxGuts,p+gRec)); addPopup(`💚 ドレイン +${hRec}`,'life','text-emerald-400 text-xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');}
+          else if(activeMon.id==='Ark'||activeMon.id==='Iblis'){
+            // 贖罪: 与ダメの20%で連撃
+            const comboAmt=Math.floor(finalD*0.2);
+            if(comboAmt>0){totalDmg+=comboAmt; attackHits.push({dmg:comboAmt, isCrit:false, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false});}
+            // 中二病: 固有技使用のたびに永続で消費ガッツ+10%・ダメージ倍率+0.1(重複可)
+            setChuuniUniqueStack(p=>p+1);
+            // 贖罪: 次ターン消費ガッツ15%増・被ダメージ50%減(1回)
+            setTempBuffs(p=>({...p, nextTurnTakenDamageMult:0.5, nextTurnGutsCostMult:1.15}));
+            addPopup('次ターン被ダメ50%減!','hero','text-pink-400 text-lg font-bold');
+          }
         }
       }
     }
@@ -1626,14 +1646,14 @@ function MonsterHeroGame() {
     const newEnemy={...base,id:enemyKey,hp:Math.floor(base.baseHp*mod),maxHp:Math.floor(base.baseHp*mod),atk:Math.floor(base.baseAtk*mod)};
     const dist=Math.floor(Math.random()*4);
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyIntent(getNextEnemyAction(newEnemy,dist));
-    setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveEnemyAtkDebuff(0);
+    setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveEnemyAtkDebuff(0); setChuuniDmgCutUses(0);
   }, [getNextEnemyAction, difficulty]);
 
   const initBattle = (w, s, u, t, gB) => {
     setWave(w); spawnEnemy(w);
     const pool=buildDeck(s||slots,atkLevel,guardLevel,u||ownedUniques,t||ownedTeachings,gB!==undefined?gB:guardBonusCount);
     setHand(pool.slice(0,5)); setDeck(pool.slice(5)); setGraveyard([]); setGameState('BATTLE'); setIsBusy(false);
-    setTempBuffs(p=>({...p,takenDamageMult:1.0,atkMult:1.0,nextTurnAtkMult:1.0,enemyTakenDmgMod:1.0,zeroGuts:false,nextTurnZeroGuts:false,guaranteedCrit:false,nextTurnGuaranteedCrit:false,reflect:false,nextTurnReflect:false}));
+    setTempBuffs(p=>({...p,takenDamageMult:1.0,nextTurnTakenDamageMult:1.0,gutsCostMult:1.0,nextTurnGutsCostMult:1.0,atkMult:1.0,nextTurnAtkMult:1.0,enemyTakenDmgMod:1.0,zeroGuts:false,nextTurnZeroGuts:false,guaranteedCrit:false,nextTurnGuaranteedCrit:false,reflect:false,nextTurnReflect:false}));
   };
 
   const setupMon = (m, slotIdx) => {
