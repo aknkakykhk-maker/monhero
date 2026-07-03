@@ -29,16 +29,17 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
 <style>
-  html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; }
-  #root { width:100%; height:100dvh; overflow:hidden; }
-  #root > div { width:100%; height:100dvh; max-width:600px; margin:0 auto; }
+  html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
+  body { height:100dvh; box-sizing:border-box; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
+  #root { width:100%; height:100%; overflow:hidden; }
+  #root > div { width:100%; height:100%; max-width:600px; margin:0 auto; }
   #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; background:#050510; color:#a5b4fc; font-family:sans-serif; z-index:99999; }
   .ldspin { width:44px; height:44px; border:4px solid rgba(165,180,252,0.25); border-top-color:#a5b4fc; border-radius:50%; animation:ldrot 0.8s linear infinite; }
   @keyframes ldrot { to { transform:rotate(360deg); } }
 </style>
 </head>
 <body>
-<div id="ver-banner" style="position:fixed;top:0;left:0;right:0;background:#16a34a;color:#fff;font:900 13px sans-serif;padding:6px 10px;z-index:100000;text-align:center;letter-spacing:1px;">GH-BUILD v56 / LOADING ENGINE...</div>
+<div id="ver-banner" style="position:fixed;top:0;left:0;right:0;background:#16a34a;color:#fff;font:900 13px sans-serif;padding:6px 10px;padding-top:calc(6px + env(safe-area-inset-top));z-index:100000;text-align:center;letter-spacing:1px;">GH-BUILD v56 / LOADING ENGINE...</div>
 <div id="loading"><div class="ldspin"></div><div style="font-weight:900;letter-spacing:2px;">LOADING...</div></div>
 <div id="root"></div>
 <div style="position:fixed;bottom:2px;right:4px;font:900 9px monospace;color:rgba(255,255,255,0.35);z-index:99999;pointer-events:none;">LF</div>
