@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 19:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-03 19:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1075,7 +1075,7 @@ function MonsterHeroGame() {
     waveEnemyAtkDebuff:0, focusedCard:null, enemyIntent:null, effect:null, finalRewardSummary:null, waveHistory:[], gaveUp:false
   });
 
-  const handleGoToTitle = useCallback(() => {
+  const handleGoToTitle = () => {
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
@@ -1089,7 +1089,7 @@ function MonsterHeroGame() {
     setWaveResult(s.waveResult); setTempBuffs(s.tempBuffs); setWaveEnemyAtkDebuff(s.waveEnemyAtkDebuff);
     setPendingReward(null); setFocusedCard(s.focusedCard); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setGameState('TITLE');
-  }, []);
+  };
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
   const handleGiveUp = useCallback(async () => {
@@ -1107,7 +1107,7 @@ function MonsterHeroGame() {
     setGaveUp(true);
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
 
-  const handleRetry = useCallback(() => {
+  const handleRetry = () => {
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
@@ -1121,7 +1121,7 @@ function MonsterHeroGame() {
     setWaveResult(s.waveResult); setTempBuffs(s.tempBuffs); setWaveEnemyAtkDebuff(s.waveEnemyAtkDebuff);
     setFocusedCard(s.focusedCard); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setGameState('PICK_HERO');
-  }, []);
+  };
 
   const getNextEnemyAction = useCallback((ent, currentDist) => {
     if (!ent) return null;
