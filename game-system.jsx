@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 00:50"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 09:24"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -226,6 +226,12 @@ const MOO_IMG = "";
 
 // --- Game Data ---
 const RANGE_LABELS = ["零", "近", "中", "遠"];
+// モンスターごとの間合い(距離)適性。距離ラベル配列と同じ並び([零,近,中,遠])のグレードを
+// distAptitude:['C','C','C','C'] の形でモンスターデータに持たせ、そのモンスターが
+// 該当スロットで攻撃した時のダメージに以下の倍率を掛ける。値は今後モンスターごとに調整予定。
+const DIST_APTITUDE_MULT = { S: 1.2, A: 1.15, B: 1.1, C: 1.0, D: 0.9, E: 0.8, F: 0.7 };
+const DIST_APTITUDE_COLOR = { S: "text-amber-300 bg-amber-950/60 border-amber-400/50", A: "text-purple-300 bg-purple-950/60 border-purple-400/50", B: "text-blue-300 bg-blue-950/60 border-blue-400/50", C: "text-emerald-300 bg-emerald-950/60 border-emerald-400/50", D: "text-slate-300 bg-slate-800/60 border-slate-500/50", E: "text-orange-300 bg-orange-950/60 border-orange-400/50", F: "text-red-300 bg-red-950/60 border-red-400/50" };
+const getDistAptitude = (mon, slotIdx) => (mon?.distAptitude && mon.distAptitude[slotIdx]) || 'C';
 const RANGE_STYLES = {
   0: { bg: "bg-red-950/90", border: "border-red-500", text: "text-red-400", shadow: "shadow-red-500/50", glow: "drop-shadow-[0_0_15px_rgba(239,68,68,0.9)]", slotBg: "bg-red-900/50", labelBg: "bg-red-600 text-white" },
   1: { bg: "bg-yellow-950/90", border: "border-yellow-500", text: "text-yellow-400", shadow: "shadow-yellow-500/50", glow: "drop-shadow-[0_0_15px_rgba(234,179,8,0.9)]", slotBg: "bg-yellow-900/50", labelBg: "bg-yellow-600 text-black" },
@@ -1059,7 +1065,8 @@ function MonsterHeroGame() {
     else { baseDmgMult=card.mult||card.baseMult||1.0; }
     let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0);
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0);
-    const totalBuffMult=traitMult*tempBuffs.atkMult*(1.0+oryoTotal+muaAtkBonus+additionalOryo)*distBonusMult;
+    const aptMult=DIST_APTITUDE_MULT[getDistAptitude(mon,slotIdx)]||1.0;
+    const totalBuffMult=traitMult*tempBuffs.atkMult*(1.0+oryoTotal+muaAtkBonus+additionalOryo)*distBonusMult*aptMult;
     let finalDmg=Math.floor(atk*distMult*baseDmgMult*totalBuffMult*(tempBuffs.enemyTakenDmgMod+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     return finalDmg;
@@ -1819,6 +1826,7 @@ function MonsterHeroGame() {
                   <div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{rosterDetailMon.traitDesc}</div></div>
                 </div>
                 <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{rosterDetailMon.plusStats.hp>0&&`HP+${rosterDetailMon.plusStats.hp} `}{rosterDetailMon.plusStats.atk>0&&`攻+${rosterDetailMon.plusStats.atk} `}{rosterDetailMon.plusStats.def>0&&`防+${rosterDetailMon.plusStats.def} `}{rosterDetailMon.plusStats.guts>0&&`G+${rosterDetailMon.plusStats.guts} `}</div></div>
+                <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(rosterDetailMon,idx); return(<div key={idx} className={`flex flex-col items-center justify-center py-1 rounded-lg border ${DIST_APTITUDE_COLOR[grade]}`}><span className="text-[7px] font-bold opacity-80">{label}</span><span className="text-[13px] font-black leading-none">{grade}</span></div>);})}</div></div>
                 <div className="bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0"><div className="flex items-center gap-2 mb-2 border-b border-white/5 pb-1"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技: {rosterDetailMon.unique.name}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic mb-2">"{rosterDetailMon.unique.effectDesc}"</div></div>
               </div>
               <button onClick={()=>setRosterDetailMon(null)} className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95">閉じる</button>
@@ -2307,6 +2315,7 @@ function MonsterHeroGame() {
                     <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">基本ステータス</div><div className="space-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseHp:`${maxHp} → ${maxHp+(currentPickingMon.plusStats?.hp||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseAtk:`${atk} → ${atk+(currentPickingMon.plusStats?.atk||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseDef:`${def} → ${def+(currentPickingMon.plusStats?.def||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseGuts:`${maxGuts} → ${maxGuts+(currentPickingMon.plusStats?.guts||0)}`}</span></div></div></div>
                     {gameState==='PICK_HERO'?(<div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{currentPickingMon.traitDesc}</div></div>):(<div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{currentPickingMon.plusStats.hp>0&&`HP+${currentPickingMon.plusStats.hp} `}{currentPickingMon.plusStats.atk>0&&`攻+${currentPickingMon.plusStats.atk} `}{currentPickingMon.plusStats.def>0&&`防+${currentPickingMon.plusStats.def} `}{currentPickingMon.plusStats.guts>0&&`G+${currentPickingMon.plusStats.guts} `}</div></div>)}
                   </div>
+                  <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(currentPickingMon,idx); return(<div key={idx} className={`flex flex-col items-center justify-center py-1 rounded-lg border ${DIST_APTITUDE_COLOR[grade]}`}><span className="text-[7px] font-bold opacity-80">{label}</span><span className="text-[13px] font-black leading-none">{grade}</span></div>);})}</div></div>
                   <div className="bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0"><div className="flex items-center gap-2 mb-2 border-b border-white/5 pb-1"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技: {currentPickingMon.unique.name}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic mb-2">"{currentPickingMon.unique.effectDesc}"</div></div>
                 </div>
                 <div className="flex gap-2 mt-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 bg-slate-800 text-slate-400 py-3.5 rounded-2xl font-black text-sm uppercase">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className="w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg">決定</button></div>
