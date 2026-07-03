@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 10:58"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 11:18"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -229,9 +229,10 @@ const RANGE_LABELS = ["零", "近", "中", "遠"];
 // モンスターごとの間合い(距離)適性。距離ラベル配列と同じ並び([零,近,中,遠])のグレードを
 // distAptitude:['C','C','C','C'] の形でモンスターデータに持たせ、そのモンスターが
 // 該当スロットで攻撃した時のダメージに以下の倍率を掛ける。値は今後モンスターごとに調整予定。
-const DIST_APTITUDE_MULT = { S: 1.15, A: 1.1, B: 1.05, C: 1.0, D: 0.95, E: 0.9, F: 0.85, G: 0.8 };
-const DIST_APTITUDE_COLOR = { S: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", A: "text-red-400 bg-red-950/60 border-red-400/50", B: "text-pink-300 bg-pink-950/60 border-pink-400/50", C: "text-green-300 bg-green-950/60 border-green-400/50", D: "text-teal-300 bg-teal-950/60 border-teal-400/50", E: "text-cyan-300 bg-cyan-950/60 border-cyan-400/50", F: "text-purple-300 bg-purple-950/60 border-purple-400/50", G: "text-slate-400 bg-slate-800/60 border-slate-500/50" };
-const getDistAptitude = (mon, slotIdx) => (mon?.distAptitude && mon.distAptitude[slotIdx]) || 'C';
+// グレード配列: 下から上へ。C(=0%)を基準にG~Sは±5%刻み、S以上(S+~M)は+2.5%刻みで頭打ちはM(+25%)
+const DIST_APTITUDE_GRADES = ['G','F','E','D','C','B','A','S','S+','SS','SS+','M'];
+const DIST_APTITUDE_MULT = { G: 0.8, F: 0.85, E: 0.9, D: 0.95, C: 1.0, B: 1.05, A: 1.1, S: 1.15, 'S+': 1.175, SS: 1.2, 'SS+': 1.225, M: 1.25 };
+const DIST_APTITUDE_COLOR = { S: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", 'S+': "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", SS: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", 'SS+': "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", M: "text-fuchsia-300 bg-gradient-to-br from-purple-950/70 to-pink-950/70 border-fuchsia-400/60", A: "text-red-400 bg-red-950/60 border-red-400/50", B: "text-pink-300 bg-pink-950/60 border-pink-400/50", C: "text-green-300 bg-green-950/60 border-green-400/50", D: "text-teal-300 bg-teal-950/60 border-teal-400/50", E: "text-cyan-300 bg-cyan-950/60 border-cyan-400/50", F: "text-purple-300 bg-purple-950/60 border-purple-400/50", G: "text-slate-400 bg-slate-800/60 border-slate-500/50" };
 const RANGE_STYLES = {
   0: { bg: "bg-red-950/90", border: "border-red-500", text: "text-red-400", shadow: "shadow-red-500/50", glow: "drop-shadow-[0_0_15px_rgba(239,68,68,0.9)]", slotBg: "bg-red-900/50", labelBg: "bg-red-600 text-white" },
   1: { bg: "bg-yellow-950/90", border: "border-yellow-500", text: "text-yellow-400", shadow: "shadow-yellow-500/50", glow: "drop-shadow-[0_0_15px_rgba(234,179,8,0.9)]", slotBg: "bg-yellow-900/50", labelBg: "bg-yellow-600 text-black" },
@@ -344,34 +345,80 @@ const sbUpdateScore = async (id, row) => {
   if (!res.ok) throw new Error(`update ${res.status}`);
 };
 
-// 最終リザルト画面(CHAMPION/敗北)共通: 今回の周回で獲得したブリーダー経験値・ダイヤ・
-// 編成モンスターの絆経験値をまとめて表示するカード
-const RewardSummaryCard = ({ summary }) => (
-  <div className="w-full max-w-xs bg-black/30 border border-white/10 rounded-2xl p-3 mb-2 text-left space-y-2 max-h-[38vh] overflow-y-auto shrink-0">
+// 最終リザルト画面(CHAMPION/敗北)共通: レベルの経験値バーが直前の進捗から今回の獲得分まで伸びる演出。
+// レベルを跨ぐ場合は満タンまで伸ばしてからLEVEL UPを見せ、次レベルの進捗へ切り替える
+const LevelGrowthBar = ({ levelBefore, levelAfter }) => {
+  const leveledUp = levelAfter.level > levelBefore.level;
+  const [curLevel, setCurLevel] = useState(levelBefore.level);
+  const [pct, setPct] = useState(Math.max(0, Math.min(100, (levelBefore.xpIntoLevel / Math.max(1, levelBefore.xpForNext)) * 100)));
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    const timers = [];
+    if (leveledUp) {
+      timers.push(setTimeout(() => setPct(100), 200));
+      timers.push(setTimeout(() => { Audio_.se.levelUp(); setFlash(true); }, 900));
+      timers.push(setTimeout(() => { setFlash(false); setCurLevel(levelAfter.level); setPct(0); }, 2000));
+      timers.push(setTimeout(() => setPct(Math.max(0, Math.min(100, (levelAfter.xpIntoLevel / Math.max(1, levelAfter.xpForNext)) * 100))), 2100));
+    } else {
+      timers.push(setTimeout(() => setPct(Math.max(0, Math.min(100, (levelAfter.xpIntoLevel / Math.max(1, levelAfter.xpForNext)) * 100))), 200));
+    }
+    return () => timers.forEach(clearTimeout);
+  }, []);
+  return (
     <div>
-      <div className="flex items-center justify-between text-[11px]">
+      <div className="flex items-center justify-between text-[9px] mb-0.5">
+        <span className="font-mono text-slate-300 font-bold">LV.{curLevel}</span>
+        {flash && <span className="text-amber-400 font-black animate-pulse">LEVEL UP!</span>}
+      </div>
+      <div className="h-2 bg-slate-800 rounded-full overflow-hidden border border-white/10">
+        <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-400 transition-all duration-700 ease-out" style={{width:`${pct}%`}}></div>
+      </div>
+    </div>
+  );
+};
+
+// 数値がfrom→toへカウントアップする演出(ダイヤ表示用、バー無し)
+const CountUpNumber = ({ from, to }) => {
+  const [val, setVal] = useState(from);
+  useEffect(() => {
+    const duration = 700, start = performance.now();
+    let raf;
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      setVal(Math.round(from + (to - from) * t));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    const timer = setTimeout(() => { raf = requestAnimationFrame(tick); }, 200);
+    return () => { clearTimeout(timer); cancelAnimationFrame(raf); };
+  }, []);
+  return <span>{val.toLocaleString()}</span>;
+};
+
+// 最終リザルト画面(CHAMPION/敗北)共通: 今回の周回で獲得したブリーダー経験値・ダイヤ・
+// 勇者モンの絆経験値をまとめて表示するカード
+const RewardSummaryCard = ({ summary }) => (
+  <div className="w-full max-w-xs bg-black/30 border border-white/10 rounded-2xl p-3 mb-2 text-left space-y-3 max-h-[42vh] overflow-y-auto shrink-0">
+    <div>
+      <div className="flex items-center justify-between text-[11px] mb-1">
         <span className="text-indigo-300 font-black flex items-center gap-1"><Crown size={12}/>ブリーダー経験値</span>
-        <span className="text-white font-mono font-bold">+{summary.xpGain.toLocaleString()}</span>
+        <span className="text-white font-mono font-bold">+{summary.breederXpGain.toLocaleString()}</span>
       </div>
-      <div className="text-[9px] text-slate-400 font-mono mt-0.5">
-        LV.{summary.breederLevelBefore.level}{summary.breederLevelAfter.level>summary.breederLevelBefore.level && <span className="text-amber-400 font-black"> → LV.{summary.breederLevelAfter.level} UP!</span>}
-      </div>
+      <LevelGrowthBar levelBefore={summary.breederLevelBefore} levelAfter={summary.breederLevelAfter}/>
     </div>
     <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
       <span className="text-amber-300 font-black flex items-center gap-1"><Gem size={12}/>ダイヤ</span>
-      <span className="text-white font-mono font-bold">+{summary.goldGain.toLocaleString()}</span>
+      <span className="text-white font-mono font-bold"><CountUpNumber from={summary.goldBefore} to={summary.goldAfter}/></span>
     </div>
-    {summary.bondGains.length>0 && (
+    {summary.heroBondGain && (
       <div className="pt-2 border-t border-white/10">
-        <div className="text-[9px] text-pink-300 font-black uppercase mb-1 flex items-center gap-1"><Heart size={10}/>絆レベル</div>
-        <div className="space-y-1">
-          {summary.bondGains.map(b=>(
-            <div key={b.monId} className="flex items-center justify-between text-[9px]">
-              <span className="flex items-center gap-1.5 text-slate-300 truncate">{b.iconUrl?<img src={b.iconUrl} alt="" className="w-4 h-4 rounded-full object-cover shrink-0"/>:<span>{b.emoji}</span>}{b.name}</span>
-              {b.levelAfter>b.levelBefore ? <span className="text-amber-400 font-black font-mono shrink-0">Lv{b.levelBefore}→Lv{b.levelAfter} UP!</span> : <span className="text-slate-500 font-mono shrink-0">+{b.xpGain}XP</span>}
-            </div>
-          ))}
+        <div className="flex items-center justify-between text-[11px] mb-1">
+          <span className="text-pink-300 font-black flex items-center gap-1 truncate"><Heart size={12}/>絆レベル：{summary.heroBondGain.name}</span>
+          <span className="text-white font-mono font-bold shrink-0">+{summary.heroBondGain.xpGain.toLocaleString()}</span>
         </div>
+        <LevelGrowthBar levelBefore={summary.heroBondGain.levelBefore} levelAfter={summary.heroBondGain.levelAfter}/>
+        {summary.heroBondGain.levelAfter.level > summary.heroBondGain.levelBefore.level && (
+          <div className="text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"><Sparkles size={9}/>強化ポイント +{summary.heroBondGain.levelAfter.level - summary.heroBondGain.levelBefore.level}</div>
+        )}
       </div>
     )}
   </div>
@@ -468,7 +515,9 @@ function MonsterHeroGame() {
   const [breederName, setBreederName] = useState('名無しのブリーダー');
   const [breederXp, setBreederXp] = useState(0); // 累計経験値(WAVEクリア数ベース・端末保存)
   const [gold, setGold] = useState(0); // 累計ゴールド(WAVEクリア数ベース・端末保存)
-  const [bondXp, setBondXp] = useState({}); // モンスターごとの絆レベル累計経験値 { [monId]: xp } (端末保存)
+  const [bondXp, setBondXp] = useState({}); // モンスターごとの絆レベル累計経験値 { [monId]: xp } (端末保存・勇者モンのみ加算)
+  const [distAptPoints, setDistAptPoints] = useState({}); // 絆レベルアップで貯まる間合い適性強化ポイント { [monId]: pt } (端末保存)
+  const [distAptOverrides, setDistAptOverrides] = useState({}); // 強化ポイントで上げた間合い適性 { [monId]: [g0,g1,g2,g3] } (端末保存)
   const [finalRewardSummary, setFinalRewardSummary] = useState(null); // 最終リザルト画面に出す今回の獲得内訳
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -493,6 +542,12 @@ function MonsterHeroGame() {
   const audioOn = audioLevel > 0;
   const breederLevel = levelInfo(breederXp);
   const getBondLevel = (monId) => levelInfo(bondXp[monId] || 0);
+  const getDistAptitude = (mon, slotIdx) => {
+    if (!mon) return 'C';
+    const ov = distAptOverrides[mon.id];
+    if (ov && ov[slotIdx]) return ov[slotIdx];
+    return (mon.distAptitude && mon.distAptitude[slotIdx]) || 'C';
+  };
   const AUDIO_VOLS = [0, 0.4, 0.7, 1.0];
   const AUDIO_LABELS = ['🔇 OFF', '🔈 低', '🔉 中', '🔊 高'];
   const [helpTab, setHelpTab] = useState('goal');
@@ -613,6 +668,10 @@ function MonsterHeroGame() {
       setGold(savedGold);
       const savedBondXp = await storeGet('mh_bond_xp', {}, false);
       setBondXp(savedBondXp);
+      const savedAptPoints = await storeGet('mh_dist_apt_points', {}, false);
+      setDistAptPoints(savedAptPoints);
+      const savedAptOverrides = await storeGet('mh_dist_apt_overrides', {}, false);
+      setDistAptOverrides(savedAptOverrides);
       let savedPoints = await storeGet('mh_breeder_points', 0, false);
       // ブリーダーポイント導入前からのプレイヤーには、既存レベル分(Lv-1)を一度だけ遡って付与
       const pointsMigrated = await storeGet('mh_points_migrated', false, false);
@@ -802,41 +861,71 @@ function MonsterHeroGame() {
     setGameState('PROFILE');
   };
 
-  // クリアしたWAVE数に応じてブリーダー経験値・ゴールド・編成モンスターの絆経験値をまとめて加算(端末保存)。
+  // 間合い適性の強化ポイントを1消費し、対象モンスターの対象距離の適性を1段階上げる
+  const spendAptPoint = (monId, slotIdx) => {
+    if ((distAptPoints[monId] || 0) <= 0) return;
+    const mon = ALL_PLAYER_MONSTERS[monId];
+    if (!mon) return;
+    const current = getDistAptitude(mon, slotIdx);
+    const idx = DIST_APTITUDE_GRADES.indexOf(current);
+    if (idx < 0 || idx >= DIST_APTITUDE_GRADES.length - 1) return; // 既にM(上限)
+    const nextGrade = DIST_APTITUDE_GRADES[idx + 1];
+    setDistAptOverrides(prev => {
+      const base = prev[monId] ? [...prev[monId]] : [...(mon.distAptitude || ['C','C','C','C'])];
+      base[slotIdx] = nextGrade;
+      const next = { ...prev, [monId]: base };
+      storeSet('mh_dist_apt_overrides', next, false);
+      return next;
+    });
+    setDistAptPoints(prev => {
+      const next = { ...prev, [monId]: (prev[monId] || 0) - 1 };
+      storeSet('mh_dist_apt_points', next, false);
+      return next;
+    });
+    Audio_.se.tap();
+  };
+
+  // クリアしたWAVE数に応じてブリーダー経験値・ゴールド・勇者モンの絆経験値をまとめて加算(端末保存)。
   // 最終リザルト画面(CHAMPION/敗北)に出す獲得内訳もここで組み立てる
   const awardRunRewards = async (wavesCleared) => {
-    if (wavesCleared <= 0) { setFinalRewardSummary({ xpGain: 0, breederLevelBefore: breederLevel, breederLevelAfter: breederLevel, goldGain: 0, bondGains: [] }); return; }
+    if (wavesCleared <= 0) { setFinalRewardSummary({ breederXpGain: 0, breederLevelBefore: breederLevel, breederLevelAfter: breederLevel, goldBefore: gold, goldAfter: gold, heroBondGain: null }); return; }
     const scoreMult = DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
     const goldMult = DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
 
-    const xpGain = Math.round(XP_PER_WAVE * wavesCleared * scoreMult);
+    const breederXpGain = Math.round(XP_PER_WAVE * wavesCleared * scoreMult);
     const breederLevelBefore = levelInfo(breederXp);
-    const nextXp = breederXp + xpGain;
+    const nextXp = breederXp + breederXpGain;
     const breederLevelAfter = levelInfo(nextXp);
     setBreederXp(nextXp);
     storeSet('mh_breeder_xp', nextXp, false);
     const gainedLevels = breederLevelAfter.level - breederLevelBefore.level;
     if (gainedLevels > 0) {
-      Audio_.se.levelUp();
       setBreederPoints(prev => { const next = prev + gainedLevels; storeSet('mh_breeder_points', next, false); return next; });
     }
 
     const goldGain = Math.round(GOLD_PER_WAVE * wavesCleared * goldMult);
-    setGold(prev => { const next = prev + goldGain; storeSet('mh_gold', next, false); return next; });
+    const goldBefore = gold;
+    const goldAfter = gold + goldGain;
+    setGold(goldAfter);
+    storeSet('mh_gold', goldAfter, false);
 
-    const partyMons = slots.filter(Boolean);
-    const nextBondXp = { ...bondXp };
-    const bondGains = partyMons.map(mon => {
-      const before = levelInfo(nextBondXp[mon.id] || 0);
+    let heroBondGain = null;
+    if (mainHero) {
+      const before = levelInfo(bondXp[mainHero.id] || 0);
       const gain = Math.round(XP_PER_WAVE * wavesCleared * scoreMult);
-      nextBondXp[mon.id] = (nextBondXp[mon.id] || 0) + gain;
-      const after = levelInfo(nextBondXp[mon.id]);
-      return { monId: mon.id, name: mon.name, emoji: mon.emoji, iconUrl: mon.iconUrl, xpGain: gain, levelBefore: before.level, levelAfter: after.level };
-    });
-    setBondXp(nextBondXp);
-    storeSet('mh_bond_xp', nextBondXp, false);
+      const nextMonXp = (bondXp[mainHero.id] || 0) + gain;
+      const after = levelInfo(nextMonXp);
+      const nextBondXp = { ...bondXp, [mainHero.id]: nextMonXp };
+      setBondXp(nextBondXp);
+      storeSet('mh_bond_xp', nextBondXp, false);
+      const gainedBondLevels = after.level - before.level;
+      if (gainedBondLevels > 0) {
+        setDistAptPoints(prev => { const next = { ...prev, [mainHero.id]: (prev[mainHero.id] || 0) + gainedBondLevels }; storeSet('mh_dist_apt_points', next, false); return next; });
+      }
+      heroBondGain = { monId: mainHero.id, name: mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after };
+    }
 
-    setFinalRewardSummary({ xpGain, breederLevelBefore, breederLevelAfter, goldGain, bondGains });
+    setFinalRewardSummary({ breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain });
   };
 
   // Save score on game end
@@ -1822,7 +1911,7 @@ function MonsterHeroGame() {
                   <div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{rosterDetailMon.traitDesc}</div></div>
                 </div>
                 <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{rosterDetailMon.plusStats.hp>0&&`HP+${rosterDetailMon.plusStats.hp} `}{rosterDetailMon.plusStats.atk>0&&`攻+${rosterDetailMon.plusStats.atk} `}{rosterDetailMon.plusStats.def>0&&`防+${rosterDetailMon.plusStats.def} `}{rosterDetailMon.plusStats.guts>0&&`G+${rosterDetailMon.plusStats.guts} `}</div></div>
-                <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(rosterDetailMon,idx); return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span></div>);})}</div></div>
+                <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {distAptPoints[rosterDetailMon.id]||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(rosterDetailMon,idx); const canUp=(distAptPoints[rosterDetailMon.id]||0)>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>spendAptPoint(rosterDetailMon.id,idx)} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
                 <div className="bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0"><div className="flex items-center gap-2 mb-2 border-b border-white/5 pb-1"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技: {rosterDetailMon.unique.name}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic mb-2">"{rosterDetailMon.unique.effectDesc}"</div></div>
               </div>
               <button onClick={()=>setRosterDetailMon(null)} className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95">閉じる</button>
@@ -2311,7 +2400,7 @@ function MonsterHeroGame() {
                     <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">基本ステータス</div><div className="space-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseHp:`${maxHp} → ${maxHp+(currentPickingMon.plusStats?.hp||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseAtk:`${atk} → ${atk+(currentPickingMon.plusStats?.atk||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseDef:`${def} → ${def+(currentPickingMon.plusStats?.def||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseGuts:`${maxGuts} → ${maxGuts+(currentPickingMon.plusStats?.guts||0)}`}</span></div></div></div>
                     {gameState==='PICK_HERO'?(<div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{currentPickingMon.traitDesc}</div></div>):(<div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{currentPickingMon.plusStats.hp>0&&`HP+${currentPickingMon.plusStats.hp} `}{currentPickingMon.plusStats.atk>0&&`攻+${currentPickingMon.plusStats.atk} `}{currentPickingMon.plusStats.def>0&&`防+${currentPickingMon.plusStats.def} `}{currentPickingMon.plusStats.guts>0&&`G+${currentPickingMon.plusStats.guts} `}</div></div>)}
                   </div>
-                  <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(currentPickingMon,idx); return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span></div>);})}</div></div>
+                  <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {distAptPoints[currentPickingMon.id]||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(currentPickingMon,idx); const canUp=(distAptPoints[currentPickingMon.id]||0)>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>spendAptPoint(currentPickingMon.id,idx)} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
                   <div className="bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0"><div className="flex items-center gap-2 mb-2 border-b border-white/5 pb-1"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技: {currentPickingMon.unique.name}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic mb-2">"{currentPickingMon.unique.effectDesc}"</div></div>
                 </div>
                 <div className="flex gap-2 mt-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 bg-slate-800 text-slate-400 py-3.5 rounded-2xl font-black text-sm uppercase">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className="w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg">決定</button></div>
