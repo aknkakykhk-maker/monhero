@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 13:53"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 14:03"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -568,6 +568,12 @@ function MonsterHeroGame() {
   const [rosterDetailTeaching, setRosterDetailTeaching] = useState(null); // 編成画面: 長押しで詳細表示中のブリーダーカード
   const [showNameEdit, setShowNameEdit] = useState(false);
   const [tempName, setTempName] = useState('');
+  const [showBackup, setShowBackup] = useState(false); // データバックアップ/復元モーダル
+  const [backupTab, setBackupTab] = useState('export'); // 'export'|'import'
+  const [backupCode, setBackupCode] = useState('');
+  const [backupCopied, setBackupCopied] = useState(false);
+  const [restoreInput, setRestoreInput] = useState('');
+  const [restoreMsg, setRestoreMsg] = useState('');
   const [tempBuffs, setTempBuffs] = useState({ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false });
   const [waveEnemyAtkDebuff, setWaveEnemyAtkDebuff] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
@@ -829,6 +835,37 @@ function MonsterHeroGame() {
     setBreederName(n);
     await storeSet('mh_breeder_name', n, false);
     setShowNameEdit(false);
+  };
+
+  // 端末のlocalStorageに保存された進行状況(mh_で始まる全キー)をひとつの文字列コードに書き出す。
+  // ホーム画面アイコンを作り直すとiOSではデータが引き継がれないため、その手動バックアップ手段として使う
+  const generateBackupCode = () => {
+    try {
+      if (!hasLocalStorage()) { setBackupCode(''); return; }
+      const data = {};
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i);
+        if (k && k.startsWith('mh_')) data[k] = window.localStorage.getItem(k);
+      }
+      const json = JSON.stringify(data);
+      const code = btoa(unescape(encodeURIComponent(json)));
+      setBackupCode(code);
+    } catch { setBackupCode(''); }
+  };
+  const copyBackupCode = async () => {
+    try { await navigator.clipboard.writeText(backupCode); setBackupCopied(true); setTimeout(()=>setBackupCopied(false), 2000); } catch {}
+  };
+  const restoreFromBackupCode = () => {
+    setRestoreMsg('');
+    try {
+      const json = decodeURIComponent(escape(atob(restoreInput.trim())));
+      const data = JSON.parse(json);
+      const keys = Object.keys(data).filter(k => k.startsWith('mh_'));
+      if (keys.length === 0) { setRestoreMsg('コードが正しくありません'); return; }
+      keys.forEach(k => window.localStorage.setItem(k, data[k]));
+      setRestoreMsg('復元しました。再読み込みします...');
+      setTimeout(() => window.location.reload(), 900);
+    } catch { setRestoreMsg('コードが正しくありません'); }
   };
 
   // 現在の周回で使う候補モンスター/ブリーダーカード(編成で選んだもの)。空の場合は解放済み全体にフォールバック
@@ -1821,6 +1858,7 @@ function MonsterHeroGame() {
                 </div>
               ))}
             </div>
+            <button onClick={()=>{setShowBackup(true); setBackupTab('export'); setBackupCode(''); setBackupCopied(false); setRestoreInput(''); setRestoreMsg('');}} className="shrink-0 w-full flex items-center justify-center gap-2 bg-slate-900/60 border border-white/10 text-slate-300 py-3 rounded-2xl font-black text-xs uppercase active:scale-95 mb-2"><ShieldCheck size={14} className="text-emerald-400"/>データのバックアップ・復元</button>
           </div>
         )}
 
@@ -2012,6 +2050,38 @@ function MonsterHeroGame() {
                 </div>
               </>)}
               <button onClick={()=>setShowIconPicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+            </div>
+          </div>
+        )}
+
+        {showBackup&&(
+          <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl max-h-full overflow-y-auto mh-scroll">
+              <h3 className="text-lg font-black text-white mb-1 text-center flex items-center justify-center gap-2"><ShieldCheck size={18} className="text-emerald-400"/>データのバックアップ</h3>
+              <p className="text-[9px] text-slate-500 text-center mb-4 leading-tight">ホーム画面のアイコンを作り直すとデータが引き継がれないことがあります。バックアップコードを控えておけば、新しいアイコンから復元できます。</p>
+              <div className="flex gap-1.5 mb-4">
+                <button onClick={()=>setBackupTab('export')} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${backupTab==='export'?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>バックアップ作成</button>
+                <button onClick={()=>setBackupTab('import')} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${backupTab==='import'?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>復元する</button>
+              </div>
+              {backupTab==='export'?(
+                <div className="space-y-3">
+                  {backupCode?(
+                    <>
+                      <textarea readOnly value={backupCode} onFocus={(e)=>e.target.select()} className="w-full h-24 bg-black/50 border border-slate-700 rounded-xl p-2 text-white text-[9px] font-mono resize-none"/>
+                      <button onClick={copyBackupCode} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-xs active:scale-95">{backupCopied?'コピーしました！':'コードをコピー'}</button>
+                    </>
+                  ):(
+                    <button onClick={generateBackupCode} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-xs active:scale-95">バックアップコードを作成</button>
+                  )}
+                </div>
+              ):(
+                <div className="space-y-3">
+                  <textarea value={restoreInput} onChange={(e)=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け" className="w-full h-24 bg-black/50 border border-slate-700 rounded-xl p-2 text-white text-[9px] font-mono resize-none"/>
+                  {restoreMsg&&<div className="text-[10px] text-center font-bold text-amber-300">{restoreMsg}</div>}
+                  <button onClick={restoreFromBackupCode} disabled={!restoreInput.trim()} className={`w-full py-3 rounded-xl font-black text-xs ${restoreInput.trim()?'bg-emerald-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}>このコードで復元する</button>
+                </div>
+              )}
+              <button onClick={()=>setShowBackup(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs mt-3">閉じる</button>
             </div>
           </div>
         )}
