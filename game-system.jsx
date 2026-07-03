@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 11:48"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 12:07"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -507,6 +507,7 @@ function MonsterHeroGame() {
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const [showEnemyInfo, setShowEnemyInfo] = useState(false);
   const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+  const [gaveUp, setGaveUp] = useState(false); // ギブアップ確定後、最終リザルト画面を表示中かどうか
   const [lastActionSlot, setLastActionSlot] = useState(null);
   const [cardAssignments, setCardAssignments] = useState({}); // {cardHandIndex: slotIndex}
   const [pendingCard, setPendingCard] = useState(null); // cardHandIndex awaiting monster assignment
@@ -1012,7 +1013,7 @@ function MonsterHeroGame() {
     oryoTotal:0, draTotal:0, critRateBonus:0, critDmgBonus:0, comboDmgBonus:0, cadmiumTotal:0, muaAtkBonus:0, muaHpBonus:0, muaGutsBonus:0,
     autoHpRecoveryRate:0.1, currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
     tempBuffs:{ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false },
-    waveEnemyAtkDebuff:0, focusedCard:null, enemyIntent:null, effect:null, finalRewardSummary:null, waveHistory:[]
+    waveEnemyAtkDebuff:0, focusedCard:null, enemyIntent:null, effect:null, finalRewardSummary:null, waveHistory:[], gaveUp:false
   });
 
   const handleGoToTitle = useCallback(() => {
@@ -1027,11 +1028,11 @@ function MonsterHeroGame() {
     setMuaAtkBonus(s.muaAtkBonus); setMuaHpBonus(s.muaHpBonus); setMuaGutsBonus(s.muaGutsBonus);
     setAutoHpRecoveryRate(s.autoHpRecoveryRate); setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult); setTempBuffs(s.tempBuffs); setWaveEnemyAtkDebuff(s.waveEnemyAtkDebuff);
-    setPendingReward(null); setFocusedCard(s.focusedCard); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]);
+    setPendingReward(null); setFocusedCard(s.focusedCard); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setGameState('TITLE');
   }, []);
 
-  // Give up mid-run: record current score to ranking, then return to title
+  // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
   const handleGiveUp = useCallback(async () => {
     if (score > 0) {
       try {
@@ -1044,7 +1045,7 @@ function MonsterHeroGame() {
     }
     try { await awardRunRewards(Math.max(0, wave - 1)); } catch {}
     setShowQuitConfirm(false);
-    handleGoToTitle();
+    setGaveUp(true);
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
 
   const handleRetry = useCallback(() => {
@@ -1059,7 +1060,7 @@ function MonsterHeroGame() {
     setMuaAtkBonus(s.muaAtkBonus); setMuaHpBonus(s.muaHpBonus); setMuaGutsBonus(s.muaGutsBonus);
     setAutoHpRecoveryRate(s.autoHpRecoveryRate); setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult); setTempBuffs(s.tempBuffs); setWaveEnemyAtkDebuff(s.waveEnemyAtkDebuff);
-    setFocusedCard(s.focusedCard); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]);
+    setFocusedCard(s.focusedCard); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setGameState('PICK_HERO');
   }, []);
 
@@ -2589,13 +2590,15 @@ function MonsterHeroGame() {
       {showEnemyInfo&&enemy&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3><button onClick={()=>setShowEnemyInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center">{enemy.imgUrl?(<img src={enemy.imgUrl} alt={enemy.name} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]">{enemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{enemy.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"><div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{enemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{enemy.atk}</div></div></div></div></div></div>)}
 
       {/* QUIT CONFIRM */}
-      {showQuitConfirm&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">現在のスコア {score.toLocaleString()} pt がランキングに記録されます</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">記録してタイトルへ</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>)}
+      {showQuitConfirm&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">現在のスコア {score.toLocaleString()} pt がランキングに記録されます</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>)}
 
       {/* CHAMPION */}
       {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center overflow-y-auto" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><Crown size={64} className="text-white animate-bounce mb-3 shrink-0"/><h1 className="text-3xl font-black italic text-white uppercase shrink-0">CHAMPION</h1><div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 shadow-2xl shrink-0"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<button onClick={handleGoToTitle} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2">タイトルへ</button></div>)}
 
       {/* GAME OVER */}
       {hp<=0&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center overflow-y-auto" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><Skull size={48} className="text-red-700 mb-3 animate-pulse shrink-0"/><h2 className="text-2xl font-black italic text-white uppercase shrink-0">敗 北</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 w-full max-w-xs shrink-0"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
+
+      {gaveUp&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center overflow-y-auto" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><Flag size={48} className="text-slate-400 mb-3 shrink-0"/><h2 className="text-2xl font-black italic text-white uppercase shrink-0">リタイア</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 w-full max-w-xs shrink-0"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}<div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
 
       {/* EFFECT OVERLAY */}
       {effect&&(<div className="fixed inset-0 z-[70000] flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
