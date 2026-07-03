@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 15:30"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 16:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -574,6 +574,7 @@ function MonsterHeroGame() {
   const [backupCopied, setBackupCopied] = useState(false);
   const [restoreInput, setRestoreInput] = useState('');
   const [restoreMsg, setRestoreMsg] = useState('');
+  const [updateAvailable, setUpdateAvailable] = useState(false); // version.jsonが現在のBUILD_DATEと異なる場合true(新バージョン通知)
   const [tempBuffs, setTempBuffs] = useState({ atkMult:1.0, nextTurnAtkMult:1.0, stunEnemy:false, invincible:false, takenDamageMult:1.0, zeroGuts:false, nextTurnZeroGuts:false, guaranteedCrit:false, nextTurnGuaranteedCrit:false, enemyTakenDmgMod:1.0, reflect:false, nextTurnReflect:false });
   const [waveEnemyAtkDebuff, setWaveEnemyAtkDebuff] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
@@ -650,6 +651,25 @@ function MonsterHeroGame() {
 
   // 音の有効/無効・音量を反映
   useEffect(() => { Audio_.setVolume(AUDIO_VOLS[audioLevel]); }, [audioLevel]);
+
+  // 新バージョン検知: ホーム画面アプリはバックグラウンドから復帰しても自動再読み込みされず
+  // 古いバージョンのまま使い続けてしまうことがあるため、version.jsonを定期的に確認し
+  // BUILD_DATEと異なれば更新バナーを表示する
+  useEffect(() => {
+    const checkVersion = async () => {
+      try {
+        const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.build && data.build !== BUILD_DATE) setUpdateAvailable(true);
+      } catch {}
+    };
+    checkVersion();
+    const onVisible = () => { if (document.visibilityState === 'visible') checkVersion(); };
+    document.addEventListener('visibilitychange', onVisible);
+    const interval = setInterval(checkVersion, 5 * 60 * 1000);
+    return () => { document.removeEventListener('visibilitychange', onVisible); clearInterval(interval); };
+  }, []);
 
   // カードドラッグ中のグローバル処理(タッチ/マウス両対応)
   useEffect(() => {
@@ -1712,6 +1732,11 @@ function MonsterHeroGame() {
           <span key={r.id} style={{position:'absolute',left:r.x,top:r.y,width:'48px',height:'48px',marginLeft:'-24px',marginTop:'-24px',borderRadius:'9999px',border:'2px solid rgba(255,255,255,0.9)',boxShadow:'0 0 10px rgba(255,255,255,0.6)',transformOrigin:'center',animation:'mhRipple 550ms ease-out forwards'}}/>
         ))}
       </div>
+      {updateAvailable&&(
+        <div className="fixed left-0 right-0 flex justify-center px-4" style={{position:'fixed',top:'calc(10px + env(safe-area-inset-top))',left:0,right:0,zIndex:2147483647,pointerEvents:'none'}}>
+          <button onClick={()=>window.location.reload()} className="bg-emerald-500 text-black font-black text-[11px] px-4 py-2.5 rounded-full shadow-2xl active:scale-95 flex items-center gap-1.5 animate-pulse" style={{pointerEvents:'auto'}}><RefreshCcw size={12}/>新しいバージョンがあります。タップして更新</button>
+        </div>
+      )}
       <div className="relative z-10 h-full flex flex-col" style={screenShake?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* TITLE */}
@@ -1946,7 +1971,10 @@ function MonsterHeroGame() {
                           <button onClick={()=>toggleDraftMonster(m.id)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
                             <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                             <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
-                            <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={7}/>絆Lv.{getBondLevel(m.id).level}</div>
+                            <div className="w-full">
+                              <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5 mb-0.5"><Heart size={7}/>絆Lv.{getBondLevel(m.id).level}</div>
+                              <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${Math.max(0,Math.min(100,(getBondLevel(m.id).xpIntoLevel/Math.max(1,getBondLevel(m.id).xpForNext))*100))}%`}}></div></div>
+                            </div>
                             <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
                           </button>
                           <button onClick={(e)=>{e.stopPropagation(); setRosterDetailMon(m);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
