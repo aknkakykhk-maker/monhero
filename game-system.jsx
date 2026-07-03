@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 09:24"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 09:35"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル: WAVEクリア数ベースの経験値。上げれば上げるほど必要量が増えていく ---
 const XP_PER_WAVE = 10;
@@ -2331,10 +2331,12 @@ function MonsterHeroGame() {
           {currentPickingMon?.imgUrl?(<img src={currentPickingMon.imgUrl} alt="mon" className="w-28 h-28 mb-4 object-contain animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] scale-110"/>):(<div className="text-7xl mb-4 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]">{currentPickingMon?.emoji}</div>)}
           <h2 className="text-lg font-black mb-6 italic uppercase tracking-widest text-indigo-400">配置場所を決定せよ</h2>
           <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
-            {slots.map((s,i)=>(<button key={i} disabled={s!==null} onClick={()=>setupMon(currentPickingMon,i)} className={`h-20 rounded-2xl border-2 flex flex-col items-center justify-center transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s?'opacity-100 shadow-xl':'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`}>
+            {slots.map((s,i)=>{const grade=getDistAptitude(currentPickingMon,i); const pct=Math.round((DIST_APTITUDE_MULT[grade]-1)*100);
+              return(<button key={i} disabled={s!==null} onClick={()=>setupMon(currentPickingMon,i)} className={`h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s?'opacity-100 shadow-xl':'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`}>
               <span className={`text-[10px] font-black mb-1 uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`}>{RANGE_LABELS[i]}距離</span>
               {s?(s.imgUrl?<img src={s.imgUrl} alt={s.name} className="w-10 h-10 mt-1 object-contain drop-shadow-md scale-125"/>:<span className="text-xl mt-1 drop-shadow-md">{s.emoji}</span>):<PlusCircle className="text-white/50 mt-1" size={20}/>}
-            </button>))}
+              {!s&&<span className={`text-[9px] font-black mt-1 px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {pct>=0?'+':''}{pct}%</span>}
+            </button>);})}
           </div>
           <button onClick={()=>setGameState(mainHero?'PICK_ALLY':'PICK_HERO')} className="mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90"><ArrowLeft size={14}/> モンスターを選び直す</button>
         </div>
