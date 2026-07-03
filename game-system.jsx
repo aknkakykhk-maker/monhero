@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 16:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-03 16:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1826,11 +1826,12 @@ function MonsterHeroGame() {
 
         {/* PROFILE */}
         {gameState==='PROFILE'&&(
-          <div className="flex-1 flex flex-col h-full overflow-y-auto mh-scroll p-4">
+          <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-4 shrink-0">
               <button onClick={()=>{ if(!onboarded){ setOnboarded(true); storeSet('mh_onboarded', true, false); } setGameState('TITLE'); }} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">プロフィール</h2>
             </div>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
             {!onboarded&&(
               <div className="mb-4 bg-indigo-950/60 border border-indigo-500/40 rounded-2xl p-4 text-center shrink-0">
                 <div className="text-sm font-black text-white mb-1">ようこそ、ブリーダーさん！</div>
@@ -1884,6 +1885,7 @@ function MonsterHeroGame() {
               ))}
             </div>
             <button onClick={()=>{setShowBackup(true); setBackupTab('export'); setBackupCode(''); setBackupCopied(false); setRestoreInput(''); setRestoreMsg('');}} className="shrink-0 w-full flex items-center justify-center gap-2 bg-slate-900/60 border border-white/10 text-slate-300 py-3 rounded-2xl font-black text-xs uppercase active:scale-95 mb-2"><ShieldCheck size={14} className="text-emerald-400"/>データのバックアップ・復元</button>
+            </div>
           </div>
         )}
 
