@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-04 01:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-04 01:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1499,7 +1499,9 @@ function MonsterHeroGame() {
         let hitIdx=0;
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
-          const isZanGroupStart = hit.skillName!=='連撃' && attackHits[hitIdx+1]?.skillName==='連撃';
+          // ザンの専用モーションは「勇者モン選択時のみ発生する連撃ヒットの有無」ではなく、
+          // 攻撃しているのがザン自身かどうかで判定する(供モン加入時でも通常攻撃のモーションは変わらないようにする)
+          const isZanGroupStart = hit.skillName!=='連撃' && slots[hit.slotIdx]?.id==='Zan';
           if (isZanGroupStart) {
             // ザンの連撃グループ: 残像のような一瞬の突進を1回だけ見せ、モーションが終わってからダメージをバババッと立て続けに表示する
             const group=[hit]; let j=hitIdx+1;
