@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-03 11:25"; // 更新のたびに手動で書き換える(日付+時刻、JST)
+const BUILD_DATE = "2026-07-03 11:48"; // 更新のたびに手動で書き換える(日付+時刻、JST)
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -71,8 +71,15 @@ const xpForWavesCleared = (wavesCleared, mult) => {
   for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveXpGain(w, mult);
   return sum;
 };
-// --- ゴールド: クリアWAVE数に応じて獲得(Normal基準100G/WAVE、他難易度はDIFFICULTY_SETTINGS.goldの倍率で変動) ---
-const GOLD_PER_WAVE = 100;
+// --- ゴールド: WAVEクリアごとに獲得。経験値と同じ配分でWAVEが進むほど段階的に増加するが、
+// 10WAVE制覇時の合計は旧仕様(一律100G×10WAVE=1000、Normal基準)と変わらない
+const WAVE_GOLD_TABLE = WAVE_XP_TABLE.map(v => v * 10);
+const waveGoldGain = (waveNum, mult) => Math.round((WAVE_GOLD_TABLE[waveNum - 1] || 0) * mult);
+const goldForWavesCleared = (wavesCleared, mult) => {
+  let sum = 0;
+  for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveGoldGain(w, mult);
+  return sum;
+};
 const xpForLevel = (level) => Math.round(50 * Math.pow(level, 1.8)); // そのレベルから次レベルに必要なXP
 const levelInfo = (totalXp) => {
   let level = 1, xp = totalXp;
@@ -433,10 +440,11 @@ const RewardSummaryCard = ({ summary }) => (
         <div className="text-[10px] text-cyan-300 font-black flex items-center gap-1 mb-1"><Trophy size={11}/>WAVE別ログ</div>
         <div className="space-y-0.5">
           {summary.waveHistory.map(w => (
-            <div key={w.wave} className="flex items-center justify-between text-[9px] bg-white/5 rounded-lg px-2 py-1">
+            <div key={w.wave} className="flex items-center justify-between gap-1 text-[9px] bg-white/5 rounded-lg px-2 py-1">
               <span className="text-slate-400 font-bold shrink-0">WAVE {w.wave}</span>
-              <span className="text-white font-mono font-bold">スコア +{w.roundScore.toLocaleString()}</span>
-              <span className="text-indigo-300 font-mono font-bold shrink-0">XP +{w.xpGain.toLocaleString()}</span>
+              <span className="text-white font-mono font-bold truncate">スコア +{w.roundScore.toLocaleString()}</span>
+              <span className="text-indigo-300 font-mono font-bold shrink-0">XP+{w.xpGain.toLocaleString()}</span>
+              <span className="text-amber-300 font-mono font-bold shrink-0">💎+{w.goldGain.toLocaleString()}</span>
             </div>
           ))}
         </div>
@@ -577,6 +585,7 @@ function MonsterHeroGame() {
   const [testMooMode, setTestMooMode] = useState(false); // TEMP: ムー戦テストモード
 
   const scoreMultiplier = useMemo(() => DIFFICULTY_SETTINGS[difficulty]?.score || 1.0, [difficulty]);
+  const goldMultiplier = useMemo(() => DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0, [difficulty]);
   const effectiveMaxHp = useMemo(() => Math.floor(maxHp * (1.0 + muaHpBonus)), [maxHp, muaHpBonus]);
   const effectiveMaxGuts = useMemo(() => Math.floor(maxGuts * (1.0 + muaGutsBonus)), [maxGuts, muaGutsBonus]);
 
@@ -925,7 +934,7 @@ function MonsterHeroGame() {
       setBreederPoints(prev => { const next = prev + gainedLevels; storeSet('mh_breeder_points', next, false); return next; });
     }
 
-    const goldGain = Math.round(GOLD_PER_WAVE * wavesCleared * goldMult);
+    const goldGain = goldForWavesCleared(wavesCleared, goldMult);
     const goldBefore = gold;
     const goldAfter = gold + goldGain;
     setGold(goldAfter);
@@ -1511,7 +1520,7 @@ function MonsterHeroGame() {
       setAutoHpRecoveryRate(p=>Math.max(0,p+recoveryDelta));
       setTotalRecoveryDelta(newTotalRecoveryDelta);
       setWaveResult({wave,waveMult,turn:turnCount,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,gainedDistBonus,newDistBonus,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
-      setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, xpGain: waveXpGain(wave, scoreMultiplier) }]);
+      setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, xpGain: waveXpGain(wave, scoreMultiplier), goldGain: waveGoldGain(wave, goldMultiplier) }]);
       setTimeout(()=>setGameState('WAVE_RESULT'),500); return;
     }
     let endTurnDist=enemyDist;
