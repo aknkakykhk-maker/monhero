@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-04 22:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-05 02:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1803,7 +1803,7 @@ function MonsterHeroGame() {
             </div>
             <div className="relative z-10 flex flex-col items-center justify-end w-full max-w-sm gap-2">
               <div className="shrink-0 w-full flex flex-col items-center mb-1">
-                <h1 className="text-5xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-purple-200 to-purple-500 leading-none uppercase drop-shadow-[0_4px_16px_rgba(0,0,0,1)]">Monster Hero</h1>
+                <h1 className="text-4xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-purple-200 to-purple-500 leading-none uppercase drop-shadow-[0_4px_16px_rgba(0,0,0,1)] whitespace-nowrap">Monster Hero</h1>
                 <p className="text-purple-300 text-[9px] tracking-[0.4em] uppercase font-bold mt-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">Grand Champion Quest</p>
               </div>
               <div className="shrink-0 w-full flex flex-col items-center mb-2 relative">
