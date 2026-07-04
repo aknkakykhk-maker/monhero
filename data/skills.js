@@ -46,8 +46,6 @@ const TYPE_COLORS = {
   draw:      "from-slate-600 to-slate-800 border-slate-400 text-white"
 };
 
-const TYPE_SOLID = { atk:'#b91c1c', range_atk:'#1d4ed8', unique:'#ca8a04', guard:'#047857', weak_guard:'#064e3b', buff:'#7e22ce', debuff:'#4338ca', heal:'#be185d', draw:'#334155' };
-
 // カードの背景グラデーション・枠線色はTailwindのCDN即時生成(JIT)に頼ると
 // 組み合わせによってまれに生成に失敗し透明のまま描画されることがあるため、
 // カード本体の見た目に直結するこれらの色は全タイプJIT任せにせずinline styleで確実に反映する。
