@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-04 21:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-04 22:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1769,6 +1769,11 @@ function MonsterHeroGame() {
   // 消費ガッツはgetCardGutsと同じ式(基礎ガッツ×現在倍率/基礎倍率)でレベルごとに再計算する(技威力が上がるほど消費ガッツも増える)
   const getAtkSkillLevels = (mon) => { const names=HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi']; return [0,1,2,3,4,5,6,7,8].map(lvl=>{const e=BASE_ATK_EVOLUTION[lvl]; return {lvl,name:names[lvl],power:Math.floor(e.mult*100),crit:Math.round(e.crit*100),guts:Math.floor(e.baseGuts*(e.mult/e.baseMult))};}); };
   const getUniqueSkillLevels = (mon) => [0,1,2,3,4,5,6,7,8].map(lvl=>{const curMult=mon.unique.baseMult+lvl*0.5; return {lvl,name:mon.unique.names[lvl],power:Math.floor(curMult*100),crit:Math.round((0.10+0.05*Math.min(lvl,8))*100),guts:Math.floor(mon.unique.baseGuts*(curMult/mon.unique.baseMult))};});
+  // モンスター詳細系のポップアップ(編成画面/勇者選択画面など)で共通利用する、通常技・固有技セクション(タップでレベル別詳細)
+  const renderSkillSection = (mon) => (<>
+    <button onClick={()=>setRosterSkillDetail({mon,kind:'atk'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Sword size={12} className="text-red-400"/><span className="text-[10px] font-black uppercase">通常技: {(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {Math.floor(BASE_ATK_EVOLUTION[0].mult*100)}</span><span className="text-amber-400 font-bold">消費G {BASE_ATK_EVOLUTION[0].baseGuts}</span></div></button>
+    <button onClick={()=>setRosterSkillDetail({mon,kind:'unique'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技: {mon.unique.name}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-4 text-[9px] font-mono mb-2"><span className="text-red-400 font-bold">技威力 {Math.floor(mon.unique.baseMult*100)}</span><span className="text-amber-400 font-bold">消費G {mon.unique.baseGuts}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic">"{mon.unique.effectDesc}"</div></button>
+  </>);
 
   return (
     <div onPointerDown={(e)=>{const rect=e.currentTarget.getBoundingClientRect(); spawnRipple(e.clientX-rect.left, e.clientY-rect.top);}} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={{height:'100%'}}>
@@ -2074,24 +2079,12 @@ function MonsterHeroGame() {
                 </div>
                 <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{rosterDetailMon.plusStats.hp>0&&`HP+${rosterDetailMon.plusStats.hp} `}{rosterDetailMon.plusStats.atk>0&&`攻+${rosterDetailMon.plusStats.atk} `}{rosterDetailMon.plusStats.def>0&&`防+${rosterDetailMon.plusStats.def} `}{rosterDetailMon.plusStats.guts>0&&`G+${rosterDetailMon.plusStats.guts} `}</div></div>
                 <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {distAptPoints[rosterDetailMon.id]||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(rosterDetailMon,idx); const canUp=(distAptPoints[rosterDetailMon.id]||0)>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>spendAptPoint(rosterDetailMon.id,idx)} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
-                <button onClick={()=>setRosterSkillDetail({mon:rosterDetailMon,kind:'atk'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Sword size={12} className="text-red-400"/><span className="text-[10px] font-black uppercase">通常技: {(HERO_ATK_NAMES[rosterDetailMon.id]||HERO_ATK_NAMES['Mocchi'])[0]}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {Math.floor(BASE_ATK_EVOLUTION[0].mult*100)}</span><span className="text-amber-400 font-bold">消費G {BASE_ATK_EVOLUTION[0].baseGuts}</span></div></button>
-                <button onClick={()=>setRosterSkillDetail({mon:rosterDetailMon,kind:'unique'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技: {rosterDetailMon.unique.name}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-4 text-[9px] font-mono mb-2"><span className="text-red-400 font-bold">技威力 {Math.floor(rosterDetailMon.unique.baseMult*100)}</span><span className="text-amber-400 font-bold">消費G {rosterDetailMon.unique.baseGuts}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic">"{rosterDetailMon.unique.effectDesc}"</div></button>
+                {renderSkillSection(rosterDetailMon)}
               </div>
               <button onClick={()=>setRosterDetailMon(null)} className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95">閉じる</button>
             </div>
           </div>
         )}
-        {rosterSkillDetail&&(()=>{const mon=rosterSkillDetail.mon; const isUnique=rosterSkillDetail.kind==='unique'; const levels=isUnique?getUniqueSkillLevels(mon):getAtkSkillLevels(mon); const title=isUnique?`固有技: ${mon.unique.name}`:`通常技: ${(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}`; return(
-          <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:32000}}>
-            <div className="bg-slate-900 border-2 border-amber-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0"><h3 className="text-sm font-black text-white uppercase">{title}</h3><button onClick={()=>setRosterSkillDetail(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button></div>
-              <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5">
-                {levels.map(info=>(<div key={info.lvl} className="p-2 rounded-xl border bg-black/30 border-white/5"><div className="flex justify-between items-center mb-1"><span className="text-[9px] font-black text-amber-300">Lv.{info.lvl} {info.name}</span></div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {info.power}</span><span className="text-yellow-400 font-bold">会心率 {info.crit}%</span><span className="text-amber-400 font-bold">消費G {info.guts}</span></div></div>))}
-              </div>
-              <button onClick={()=>setRosterSkillDetail(null)} className="w-full bg-amber-600 text-white py-3 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95">閉じる</button>
-            </div>
-          </div>
-        );})()}
         {rosterDetailTeaching&&(()=>{const owned=ownedTeachings.find(ot=>ot.id===rosterDetailTeaching.id); const currentLvl=owned?owned.evoLevel:-1; return(
           <div className="fixed inset-0 z-[31000] flex items-center justify-center p-6" style={{backgroundColor:'rgba(0,0,0,0.92)'}}>
             <div className="bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full">
@@ -2600,7 +2593,7 @@ function MonsterHeroGame() {
                     {gameState==='PICK_HERO'?(<div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{currentPickingMon.traitDesc}</div></div>):(<div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{currentPickingMon.plusStats.hp>0&&`HP+${currentPickingMon.plusStats.hp} `}{currentPickingMon.plusStats.atk>0&&`攻+${currentPickingMon.plusStats.atk} `}{currentPickingMon.plusStats.def>0&&`防+${currentPickingMon.plusStats.def} `}{currentPickingMon.plusStats.guts>0&&`G+${currentPickingMon.plusStats.guts} `}</div></div>)}
                   </div>
                   <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {distAptPoints[currentPickingMon.id]||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(currentPickingMon,idx); const canUp=(distAptPoints[currentPickingMon.id]||0)>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>spendAptPoint(currentPickingMon.id,idx)} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
-                  <div className="bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0"><div className="flex items-center gap-2 mb-2 border-b border-white/5 pb-1"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技: {currentPickingMon.unique.name}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic mb-2">"{currentPickingMon.unique.effectDesc}"</div></div>
+                  {renderSkillSection(currentPickingMon)}
                 </div>
                 <div className="flex gap-2 mt-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 bg-slate-800 text-slate-400 py-3.5 rounded-2xl font-black text-sm uppercase">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className="w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg">決定</button></div>
               </div>
@@ -2807,6 +2800,17 @@ function MonsterHeroGame() {
         {effect.subLabel&&<p className="text-indigo-400 font-mono text-[10px] mt-4 font-black whitespace-pre-line relative">{effect.subLabel}</p>}
         <div style={{fontSize:effect.type==='unique'?'60px':'48px'}} className="mt-8 animate-bounce relative">{effect.icon}</div>
       </div>)}
+        {rosterSkillDetail&&(()=>{const mon=rosterSkillDetail.mon; const isUnique=rosterSkillDetail.kind==='unique'; const levels=isUnique?getUniqueSkillLevels(mon):getAtkSkillLevels(mon); const title=isUnique?`固有技: ${mon.unique.name}`:`通常技: ${(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}`; return(
+          <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:32000}}>
+            <div className="bg-slate-900 border-2 border-amber-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0"><h3 className="text-sm font-black text-white uppercase">{title}</h3><button onClick={()=>setRosterSkillDetail(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button></div>
+              <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5">
+                {levels.map(info=>(<div key={info.lvl} className="p-2 rounded-xl border bg-black/30 border-white/5"><div className="flex justify-between items-center mb-1"><span className="text-[9px] font-black text-amber-300">Lv.{info.lvl} {info.name}</span></div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {info.power}</span><span className="text-yellow-400 font-bold">会心率 {info.crit}%</span><span className="text-amber-400 font-bold">消費G {info.guts}</span></div></div>))}
+              </div>
+              <button onClick={()=>setRosterSkillDetail(null)} className="w-full bg-amber-600 text-white py-3 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95">閉じる</button>
+            </div>
+          </div>
+        );})()}
     </div>
   );
 }
