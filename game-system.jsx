@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-04 02:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-04 17:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1503,9 +1503,9 @@ function MonsterHeroGame() {
         let hitIdx=0;
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
-          // ザンの専用モーションは「勇者モン選択時のみ発生する連撃ヒットの有無」ではなく、
-          // 攻撃しているのがザン自身かどうかで判定する(供モン加入時でも通常攻撃のモーションは変わらないようにする)
-          const isZanGroupStart = hit.skillName!=='連撃' && slots[hit.slotIdx]?.id==='Zan';
+          // 専用モーションはモンスターの atkMotion フィールドで判定する(勇者モン選択時のみ発生する
+          // 連撃ヒットの有無に依存させると、供モン加入時に通常攻撃のモーションが変わってしまうため)
+          const isZanGroupStart = hit.skillName!=='連撃' && slots[hit.slotIdx]?.atkMotion==='zanCombo';
           if (isZanGroupStart) {
             // ザンの連撃グループ: 残像のような一瞬の突進を1回だけ見せ、モーションが終わってからダメージをバババッと立て続けに表示する
             const group=[hit]; let j=hitIdx+1;
@@ -1541,7 +1541,7 @@ function MonsterHeroGame() {
           if(!hit.noAnim && animSlot >= 0 && slots[animSlot]) {
             // スロット上に技名をインライン表示
             setSlotSkill({slotIndex: animSlot, name: hit.skillName, type: hit.isUnique?'unique':(hit.isSpecial?'special':'normal')});
-            const motion = slots[animSlot]?.atkMotion; // モンスター専用の攻撃モーション('floatStab'等)。未指定なら共通モーション
+            const motion = slots[animSlot]?.atkMotion; // モンスターごとの専用モーション種別('default'/'zanCombo'/'floatStab'等)。全モンスターがdata側で必ず指定する
             if(hit.isUnique){
               // 固有技: タメ(下に沈む)は全モンスター共通→その後は専用モーションがあればそちらへ、なければ敵に向かって突進
               setAttackAnim({slotIndex: animSlot, charge:true});
