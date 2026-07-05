@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-05 03:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-05 14:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1029,9 +1029,9 @@ function MonsterHeroGame() {
     setFinalRewardSummary({ breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, waveHistory });
   };
 
-  // Save score on game end
+  // Save score on game end (CHAMPION is awarded synchronously in handleNextWave instead, so its result screen never renders before the summary is ready)
   useEffect(() => {
-    if (hp <= 0 || gameState === 'CHAMPION') {
+    if (hp <= 0) {
       (async () => {
         // スコア送信(全国ランキング等、通信を伴う)が失敗しても、経験値・ダイヤ付与(最終リザルト画面表示に必須)は
         // 必ず実行されるよう、try/catchを分離する
@@ -1043,10 +1043,7 @@ function MonsterHeroGame() {
           }
         } catch (e) { console.error('[result] score submit failed:', e && e.message ? e.message : e); }
         try {
-          await awardRunRewards(gameState === 'CHAMPION' ? 10 : Math.max(0, wave - 1));
-          if (gameState === 'CHAMPION') {
-            setClearCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_clears_${difficulty}`, next[difficulty], false); return next; });
-          }
+          await awardRunRewards(Math.max(0, wave - 1));
         } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
       })();
     }
@@ -1643,7 +1640,27 @@ function MonsterHeroGame() {
     setEnemyIntent(getNextEnemyAction(enemy,distForNextPredict));
   };
 
-  const handleNextWave = () => { setEffect(null); if(wave===10) setGameState('CHAMPION'); else setGameState('REWARD_PICK'); };
+  // WAVE 10のムーを撃破した場合はリザルト画面(CHAMPION)に切り替える前にスコア記録・獲得報酬の計算を完了させ、
+  // ギブアップ時と同様に画面が出た瞬間から獲得内訳が表示された状態にする
+  const handleNextWave = async () => {
+    setEffect(null);
+    if (wave === 10) {
+      try {
+        if (score > 0) await submitLocalScore(difficulty, score);
+        if (score > (highScores[difficulty] || 0)) {
+          await storeSet(`mh_hs_${difficulty}`, score, false);
+          setHighScores(prev => ({ ...prev, [difficulty]: score }));
+        }
+      } catch (e) { console.error('[result] score submit failed:', e && e.message ? e.message : e); }
+      try {
+        await awardRunRewards(10);
+        setClearCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_clears_${difficulty}`, next[difficulty], false); return next; });
+      } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
+      setGameState('CHAMPION');
+    } else {
+      setGameState('REWARD_PICK');
+    }
+  };
 
   const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus) => {
     const atkNames=HERO_ATK_NAMES[mainHero?.id]||HERO_ATK_NAMES['Mocchi'];
