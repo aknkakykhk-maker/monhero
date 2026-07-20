@@ -77,6 +77,31 @@
     font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ember2);
     border:1px solid var(--gold-dim); padding:1px 6px; border-radius:6px;
   }
+  .section-title{
+    font-size:12.5px; font-weight:900; color:var(--cream); margin:0 0 10px;
+    padding-bottom:6px; border-bottom:1px solid var(--line); letter-spacing:.03em;
+  }
+  .stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 0;}
+  .stat-box{background:#0d0a14; border:1px solid var(--line); border-radius:10px; padding:12px 6px; text-align:center;}
+  .stat-box .v{font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; color:var(--gold);}
+  .stat-box .l{font-size:10px; color:var(--muted); margin-top:2px;}
+  .hist-item{display:flex; justify-content:space-between; align-items:center; background:#0d0a14; border:1px solid var(--line); border-radius:8px; padding:9px 12px; margin-bottom:6px; font-size:12.5px; gap:8px;}
+  .hist-item .res{font-weight:900; font-size:11px; padding:2px 8px; border-radius:6px; white-space:nowrap;}
+  .hist-item .res.p1{color:var(--gold); background:#241a0c;}
+  .hist-item .res.p2{color:#cfd6e6; background:#181c26;}
+  .hist-item .res.p3{color:#e0a86b; background:#241708;}
+  .hist-item .res.p4{color:var(--muted); background:#161320;}
+  .hist-item .res.pother{color:var(--muted); background:#161320;}
+  .past-tournament-item{
+    background:#0d0a14; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px;
+    display:flex; gap:12px; align-items:center; cursor:pointer;
+  }
+  .past-tournament-item img{width:52px; height:52px; object-fit:cover; border-radius:8px; flex-shrink:0; border:1px solid var(--line);}
+  .past-tournament-item .noimg{width:52px; height:52px; border-radius:8px; flex-shrink:0; background:#161320; display:flex; align-items:center; justify-content:center; font-size:20px;}
+  .past-tournament-item .meta{flex:1; min-width:0;}
+  .past-tournament-item .t{font-weight:700; font-size:13px; color:var(--cream);}
+  .past-tournament-item .c{font-size:11px; color:var(--gold); margin-top:2px;}
+  .past-tournament-detail{margin-top:-4px; margin-bottom:10px; padding:12px; background:#0d0a14; border:1px solid var(--line); border-radius:10px; font-size:12.5px; color:var(--muted); line-height:1.9;}
   p.hint{font-size:12px; color:var(--muted); line-height:1.7; margin:0 0 12px;}
   textarea{
     width:100%; min-height:150px; background:#0d0a14; color:var(--cream); border:1px solid var(--line);
@@ -242,18 +267,22 @@
     <button data-tab="bracket">対戦表</button>
     <button data-tab="video">動画</button>
     <button data-tab="card">優勝カード</button>
+    <button data-tab="record">戦績</button>
   </nav>
 
   <section class="panel tab-panel" id="tab-tournament" style="display:none;">
     <h2><span class="num">00</span> 大会管理</h2>
-    <p class="hint">公開ページ(告知ポスター・エントリー・コメント)に表示する大会を作成・編集します。一番新しく作った大会が「現在の大会」として公開ページに表示されます。<br>※データベース(Supabase)未接続の間は、この端末だけに保存され、公開ページや他の端末には反映されません。</p>
+    <p class="hint">告知ポスターや詳細を登録して大会を作成できます。この端末だけに保存されます。</p>
+
+    <h3 class="section-title">🏆 開催中の大会</h3>
     <div id="currentTournamentBox"></div>
-    <div class="row">
-      <button class="btn btn-primary" id="newTournamentBtn">新しい大会を作る</button>
-      <button class="btn btn-ghost" id="refreshTournamentsBtn">一覧を更新</button>
-    </div>
+
+    <h3 class="section-title" style="margin-top:22px;">➕ 大会を作成</h3>
+    <p class="hint">新しい大会を作成すると、今の大会は「過去の大会」に自動で保存されます。</p>
+    <button class="btn btn-primary" id="newTournamentBtn">新しい大会を作成する</button>
     <div id="tournamentForm" style="display:none;"></div>
-    <p class="hint" style="margin-top:16px;">過去の大会</p>
+
+    <h3 class="section-title" style="margin-top:22px;">📜 過去の大会</h3>
     <div id="tournamentList"></div>
   </section>
 
@@ -326,10 +355,16 @@
     <canvas id="cardCanvas" width="1000" height="1000"></canvas>
   </section>
 
-  <footer class="note">組み合わせ・勝敗・動画リンクは、この端末のブラウザ内に保存されます。大会・エントリー・コメントは共有データベースに保存され、公開ページに反映されます。</footer>
+  <section class="panel tab-panel" id="tab-record" style="display:none;">
+    <h2><span class="num">06</span> 参加者の戦績</h2>
+    <p class="hint">名前をタップすると、これまでの大会での成績(優勝・準優勝・3位の回数や、大会ごとの結果)を確認できます。</p>
+    <div class="taglist" id="recordRosterList"></div>
+    <div id="recordResultArea" style="margin-top:16px;"></div>
+  </section>
+
+  <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
 </div>
 
-<script src="supabase.js"></script>
 <script src="tap-ripple.js"></script>
 <script>
 (function(){
@@ -343,10 +378,9 @@
     matches: [],       // matches[round][i] = {a,b,winner,loser,video}
     winnerName: "",
     thirdPlaceMatch: null, // {a,b,winner} 準決勝(2試合)完了時に敗者同士で自動生成
-    tournamentId: null, // 現在管理中の大会(atsucup_tournaments.id)
-    localTournament: null // {title,details,poster_url} データベース未接続時、この端末だけに保存する大会情報
+    tournamentMeta: { title: "", details: "", posterUrl: null }, // 開催中の大会の情報(この端末だけに保存)
+    history: [] // 過去に「大会を作成」で確定させた大会の記録(戦績集計に使う)
   };
-  let tournaments = []; // DBから取得した大会一覧(新しい順)
 
   const STORE_KEY = "atsucup:state:v2";
 
@@ -357,7 +391,11 @@
     }catch(e){
       // 容量オーバー等で保存に失敗した場合、ポスター画像を除いてでも他の進行状況(参加者・対戦表・結果)は必ず保存する
       try{
-        const fallback = { ...state, localTournament: state.localTournament ? { ...state.localTournament, poster_url: null } : null };
+        const fallback = {
+          ...state,
+          tournamentMeta: { ...state.tournamentMeta, posterUrl: null },
+          history: state.history.map(h=>({ ...h, posterUrl: null }))
+        };
         localStorage.setItem(STORE_KEY, JSON.stringify(fallback));
         console.error('[atsucup] persist: quota exceeded, saved without local poster image', e);
       }catch(e2){
@@ -387,102 +425,16 @@
       if(btn.dataset.tab === "bracket") renderBracket();
       if(btn.dataset.tab === "video") renderVideoTab();
       if(btn.dataset.tab === "tournament") renderTournamentTab();
+      if(btn.dataset.tab === "record"){ renderRecordRoster(); renderRecordResult(); }
     });
   });
 
-  /* ---------- tournament management (Supabase) ---------- */
+  /* ---------- tournament management (この端末内だけで完結) ---------- */
   const currentTournamentBox = document.getElementById("currentTournamentBox");
   const tournamentForm = document.getElementById("tournamentForm");
   const tournamentList = document.getElementById("tournamentList");
 
-  let tournamentLoadError = null;
-  async function loadTournaments(){
-    try{
-      tournaments = await AtsuCupDB.sbSelect("atsucup_tournaments", "select=*&order=created_at.desc");
-      tournamentLoadError = null;
-    }catch(e){
-      tournaments = [];
-      tournamentLoadError = e;
-    }
-    if(!state.tournamentId && tournaments.length){ state.tournamentId = tournaments[0].id; persist(); }
-    renderTournamentTab();
-  }
-
-  function currentTournament(){
-    const dbCur = tournaments.find(t=>t.id===state.tournamentId);
-    if(dbCur) return dbCur;
-    if(state.localTournament) return { ...state.localTournament, id:null, entry_open:true, finished:false, champion_name:null };
-    return null;
-  }
-
-  function renderTournamentTab(){
-    const cur = currentTournament();
-    if(!cur){
-      currentTournamentBox.innerHTML = tournamentLoadError
-        ? `<div class="warn-box">大会データの取得に失敗しました。supabase-setup.sqlを実行済みか確認してください。(${escapeHtml(tournamentLoadError.message||String(tournamentLoadError))})</div>`
-        : `<div class="empty-state"><span class="big">🏆</span>まだ大会がありません。<br>「新しい大会を作る」から告知ポスターと詳細を登録してください。</div>`;
-    }else{
-      const isLocalOnly = !cur.id;
-      currentTournamentBox.innerHTML = `
-        <div class="video-card">
-          <div class="vs">現在管理中の大会 ${isLocalOnly?'<span class="rlabel" style="color:#ff8080;border-color:#5a2222;">この端末のみ・未公開</span>':(cur.finished?'<span class="rlabel">終了済み</span>':(cur.entry_open?'<span class="rlabel" style="color:var(--ok);border-color:#1f5c42;">エントリー受付中</span>':'<span class="rlabel">エントリー締切</span>'))}</div>
-          ${cur.poster_url?`<img src="${escapeHtml(cur.poster_url)}" alt="poster" style="width:100%;border-radius:10px;margin-bottom:10px;display:block;">`:''}
-          <div style="font-family:'Cinzel','Noto Serif JP',serif;font-weight:900;font-size:18px;color:var(--gold);margin-bottom:6px;">${escapeHtml(cur.title)}</div>
-          <div style="font-size:12px;color:var(--muted);white-space:pre-wrap;line-height:1.8;">${escapeHtml(cur.details||'')}</div>
-          ${cur.champion_name?`<div style="margin-top:10px;color:var(--gold);font-weight:900;">👑 優勝: ${escapeHtml(cur.champion_name)}</div>`:''}
-          ${isLocalOnly?`<div class="warn-box" style="margin-top:10px;">データベース未接続のため、この端末だけに保存されています。公開ページや他の端末には表示されません。</div>`:''}
-        </div>
-        <div class="row">
-          ${isLocalOnly?'':`<button class="btn ${cur.entry_open?'btn-ghost':'btn-gold'}" id="toggleEntryBtn">${cur.entry_open?'エントリーを締め切る':'エントリーを再開する'}</button>`}
-          <button class="btn btn-ghost" id="editTournamentBtn">編集する</button>
-        </div>
-      `;
-      if(!isLocalOnly){
-        document.getElementById("toggleEntryBtn").addEventListener("click", async ()=>{
-          try{
-            await AtsuCupDB.sbUpdate("atsucup_tournaments", cur.id, { entry_open: !cur.entry_open });
-            await loadTournaments();
-          }catch(e){ alert("更新に失敗しました: "+(e.message||e)); }
-        });
-      }
-      document.getElementById("editTournamentBtn").addEventListener("click", ()=> openTournamentForm(cur));
-    }
-
-    tournamentList.innerHTML = "";
-    const others = tournaments.filter(t=>t.id !== (cur&&cur.id));
-    if(!others.length){
-      tournamentList.innerHTML = `<div class="empty-state" style="padding:16px 10px;">過去の大会はまだありません。</div>`;
-    }else{
-      others.forEach(t=>{
-        const el = document.createElement("div");
-        el.className = "video-card";
-        el.innerHTML = `
-          <div class="vs">${escapeHtml(t.title)} ${t.finished?`<span class="rlabel">👑 ${escapeHtml(t.champion_name||'-')}</span>`:'<span class="rlabel">未終了</span>'}</div>
-          <button class="btn btn-ghost" data-select="${t.id}">この大会を選んで管理する</button>
-        `;
-        tournamentList.appendChild(el);
-      });
-      tournamentList.querySelectorAll("[data-select]").forEach(b=>{
-        b.addEventListener("click", ()=>{
-          state.tournamentId = b.dataset.select;
-          persist();
-          renderTournamentTab();
-        });
-      });
-    }
-  }
-
-  function fileToDataUrl(file){
-    return new Promise((resolve, reject)=>{
-      const reader = new FileReader();
-      reader.onload = ()=>resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  // データベース未接続時、この端末(localStorage)に保存する用のポスター画像を縮小・圧縮する。
-  // 原寸のままだと写真1枚で保存容量の上限を超え、以降の全操作が保存されなくなる不具合があったため。
+  // データベース未接続でも保存容量の上限を超えないよう、ポスター画像は縮小・圧縮してから保存する
   function resizeImageToDataUrl(file, maxDim, quality){
     return new Promise((resolve, reject)=>{
       const img = new Image();
@@ -504,15 +456,69 @@
     });
   }
 
-  function openTournamentForm(existing){
+  function renderTournamentTab(){
+    const meta = state.tournamentMeta;
+    if(!meta || !meta.title){
+      currentTournamentBox.innerHTML = `<div class="empty-state"><span class="big">🏆</span>まだ大会が作成されていません。<br>下の「大会を作成」から告知ポスターと詳細を登録してください。</div>`;
+    }else{
+      const statusBadge = state.winnerName
+        ? `<span class="rlabel" style="color:var(--gold);border-color:var(--gold-dim);">優勝者決定</span>`
+        : `<span class="rlabel" style="color:var(--ok);border-color:#1f5c42;">進行中</span>`;
+      currentTournamentBox.innerHTML = `
+        <div class="video-card">
+          <div class="vs">${statusBadge}</div>
+          ${meta.posterUrl?`<img src="${escapeHtml(meta.posterUrl)}" alt="poster" style="width:100%;border-radius:10px;margin-bottom:10px;display:block;">`:''}
+          <div style="font-family:'Cinzel','Noto Serif JP',serif;font-weight:900;font-size:18px;color:var(--gold);margin-bottom:6px;">${escapeHtml(meta.title)}</div>
+          <div style="font-size:12px;color:var(--muted);white-space:pre-wrap;line-height:1.8;">${escapeHtml(meta.details||'')}</div>
+          ${state.winnerName?`<div style="margin-top:10px;color:var(--gold);font-weight:900;">👑 優勝: ${escapeHtml(state.winnerName)}</div>`:''}
+          ${state.thirdPlaceMatch&&state.thirdPlaceMatch.winner?`<div style="color:var(--muted);font-weight:700;">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>`:''}
+        </div>
+        <div class="row">
+          <button class="btn btn-ghost" id="editTournamentBtn">編集する</button>
+        </div>
+      `;
+      document.getElementById("editTournamentBtn").addEventListener("click", ()=> openTournamentForm(meta));
+    }
+
+    tournamentList.innerHTML = "";
+    if(!state.history.length){
+      tournamentList.innerHTML = `<div class="empty-state" style="padding:16px 10px;">過去の大会はまだありません。</div>`;
+    }else{
+      state.history.slice().reverse().forEach(h=>{
+        const el = document.createElement("div");
+        el.className = "past-tournament-item";
+        el.innerHTML = `
+          ${h.posterUrl?`<img src="${escapeHtml(h.posterUrl)}" alt="">`:`<div class="noimg">🏆</div>`}
+          <div class="meta">
+            <div class="t">${escapeHtml(h.title)}</div>
+            <div class="c">${h.championName?'👑 '+escapeHtml(h.championName):'結果未記録'}</div>
+          </div>
+        `;
+        el.addEventListener("click", ()=>{
+          const existingDetail = el.nextElementSibling;
+          if(existingDetail && existingDetail.classList.contains("past-tournament-detail")){ existingDetail.remove(); return; }
+          const placements = computePlacements(h);
+          const lines = (h.participants||[]).map(p=>`${p.name}: ${(placements[p.name]||{label:'参加'}).label}`).join('\n');
+          const d = document.createElement("div");
+          d.className = "past-tournament-detail";
+          d.style.whiteSpace = 'pre-wrap';
+          d.textContent = (h.details ? h.details + '\n\n' : '') + (lines || '参加者データなし');
+          el.after(d);
+        });
+        tournamentList.appendChild(el);
+      });
+    }
+  }
+
+  function openTournamentForm(editingMeta){
     tournamentForm.style.display = "block";
     tournamentForm.innerHTML = `
       <div class="video-card">
-        <div class="field" style="margin-bottom:8px;"><label>大会名</label><input type="text" id="tfTitle" placeholder="例: 第30回 あつ杯" value="${existing?escapeHtml(existing.title):''}"></div>
-        <div class="field" style="margin-bottom:8px;"><label>詳細・ルール</label><textarea id="tfDetails" style="min-height:100px;">${existing?escapeHtml(existing.details||''):''}</textarea></div>
+        <div class="field" style="margin-bottom:8px;"><label>大会名</label><input type="text" id="tfTitle" placeholder="例: 第30回 あつ杯" value="${editingMeta?escapeHtml(editingMeta.title):''}"></div>
+        <div class="field" style="margin-bottom:8px;"><label>詳細・ルール</label><textarea id="tfDetails" style="min-height:100px;">${editingMeta?escapeHtml(editingMeta.details||''):''}</textarea></div>
         <div class="field" style="margin-bottom:8px;"><label>告知ポスター画像</label><input type="file" id="tfPoster" accept="image/*"></div>
         <div class="row">
-          <button class="btn btn-primary" id="tfSave">${existing?'更新する':'作成して公開する'}</button>
+          <button class="btn btn-primary" id="tfSave">${editingMeta?'更新する':'この内容で作成する'}</button>
           <button class="btn btn-ghost" id="tfCancel">キャンセル</button>
         </div>
       </div>
@@ -525,45 +531,53 @@
       if(!title){ alert("大会名を入力してください。"); return; }
       const saveBtn = document.getElementById("tfSave");
       saveBtn.disabled = true; saveBtn.textContent = "保存中...";
-      const existingPosterUrl = existing ? existing.poster_url : null;
-      const hasNewFile = !!(fileInput.files && fileInput.files[0]);
       try{
-        let posterUrl = existingPosterUrl;
-        if(hasNewFile){
-          posterUrl = await AtsuCupDB.sbUploadPoster(fileInput.files[0]);
+        let posterUrl = editingMeta ? editingMeta.posterUrl : null;
+        if(fileInput.files && fileInput.files[0]){
+          posterUrl = await resizeImageToDataUrl(fileInput.files[0], 900, 0.75);
         }
-        if(existing && existing.id){
-          await AtsuCupDB.sbUpdate("atsucup_tournaments", existing.id, { title, details, poster_url: posterUrl });
-        }else{
-          const row = await AtsuCupDB.sbInsert("atsucup_tournaments", { title, details, poster_url: posterUrl, entry_open: true, finished: false });
-          state.tournamentId = row.id;
-        }
-        state.localTournament = null; // データベースに保存できたので端末限定の保存分は不要
+        state.tournamentMeta = { title, details, posterUrl };
         persist();
         tournamentForm.style.display = "none";
         tournamentForm.innerHTML = "";
-        await loadTournaments();
+        renderTournamentTab();
       }catch(e){
-        // データベース未接続などで保存に失敗した場合は、この端末だけにでも反映されるようフォールバックする
-        try{
-          const localPosterUrl = hasNewFile ? await resizeImageToDataUrl(fileInput.files[0], 900, 0.75) : existingPosterUrl;
-          state.localTournament = { title, details, poster_url: localPosterUrl };
-          persist();
-          tournamentForm.style.display = "none";
-          tournamentForm.innerHTML = "";
-          renderTournamentTab();
-          alert("データベースへの保存に失敗したため、この端末だけに保存しました(公開ページや他の端末には反映されません)。\n" + (e.message||e));
-        }catch(e2){
-          alert("保存に失敗しました: " + (e.message||e));
-        }
+        alert("保存に失敗しました: " + (e.message||e));
       }finally{
-        saveBtn.disabled = false; saveBtn.textContent = existing?'更新する':'作成して公開する';
+        saveBtn.disabled = false; saveBtn.textContent = editingMeta?'更新する':'この内容で作成する';
       }
     });
   }
 
-  document.getElementById("newTournamentBtn").addEventListener("click", ()=> openTournamentForm(null));
-  document.getElementById("refreshTournamentsBtn").addEventListener("click", loadTournaments);
+  // 今の大会(未終了でも)を「過去の大会」として記録に残す
+  function archiveCurrentTournament(){
+    state.history.push({
+      id: 'h'+Date.now()+Math.random().toString(36).slice(2,8),
+      title: state.tournamentMeta.title,
+      details: state.tournamentMeta.details,
+      posterUrl: state.tournamentMeta.posterUrl,
+      createdAt: new Date().toISOString(),
+      finished: !!state.winnerName,
+      championName: state.winnerName || null,
+      matches: JSON.parse(JSON.stringify(state.matches)),
+      thirdPlaceMatch: state.thirdPlaceMatch ? JSON.parse(JSON.stringify(state.thirdPlaceMatch)) : null,
+      participants: state.people.map(p=>({...p}))
+    });
+  }
+
+  document.getElementById("newTournamentBtn").addEventListener("click", ()=>{
+    if(state.tournamentMeta && state.tournamentMeta.title){
+      if(!state.winnerName){
+        const ok = confirm("現在の大会はまだ優勝者が決まっていません。新しい大会を作成すると、今の進行状況は「過去の大会」に記録されます。よろしいですか？");
+        if(!ok) return;
+      }
+      archiveCurrentTournament();
+    }
+    state.tournamentMeta = { title:"", details:"", posterUrl:null };
+    resetDownstream();
+    renderAll();
+    openTournamentForm(null);
+  });
 
   function recMapOf(){
     const m = {};
@@ -903,7 +917,6 @@
     propagateByes();
     persist();
     renderBracket();
-    recordMatchResult(roundLabel(roundSizeBefore), val, loser);
   }
 
   function pickThirdPlaceWinner(side){
@@ -911,26 +924,102 @@
     if(!m) return;
     const val = side === 'a' ? m.a : m.b;
     if(!val) return;
-    const loser = side === 'a' ? m.b : m.a;
     m.winner = val;
     persist();
     renderBracket();
-    recordMatchResult('3位決定戦', val, loser);
   }
 
-  // 対戦結果を戦績用に記録し、優勝が決まったら大会レコードも更新する
-  async function recordMatchResult(roundLbl, winner, loser){
-    const cur = currentTournament();
-    if(!cur) return;
-    try{
-      const rows = [{ tournament_id: cur.id, round_label: roundLbl, player_name: winner, opponent_name: loser||null, result: loser?'win':'bye' }];
-      if(loser) rows.push({ tournament_id: cur.id, round_label: roundLbl, player_name: loser, opponent_name: winner, result: 'lose' });
-      await AtsuCupDB.sbInsertMany("atsucup_match_results", rows);
-      if(state.winnerName === winner){
-        await AtsuCupDB.sbUpdate("atsucup_tournaments", cur.id, { finished: true, champion_name: winner, entry_open: false });
-        await loadTournaments();
+  // 大会の最終結果(matches/thirdPlaceMatch/championName)から、参加者ごとの順位を割り出す
+  function computePlacements(entry){
+    const result = {};
+    const matches = entry.matches || [];
+    const champion = entry.championName;
+    const finalRound = matches.length ? matches[matches.length-1] : null;
+    const runnerUp = (finalRound && finalRound[0]) ? finalRound[0].loser : null;
+    const thirdName = entry.thirdPlaceMatch ? entry.thirdPlaceMatch.winner : null;
+    const fourthName = (entry.thirdPlaceMatch && thirdName) ? (entry.thirdPlaceMatch.a===thirdName ? entry.thirdPlaceMatch.b : entry.thirdPlaceMatch.a) : null;
+    (entry.participants||[]).forEach(p=>{
+      let place=null, label='参加(結果未確定)';
+      if(champion && p.name===champion){ place=1; label='🥇 優勝'; }
+      else if(runnerUp && p.name===runnerUp){ place=2; label='🥈 準優勝'; }
+      else if(thirdName && p.name===thirdName){ place=3; label='🥉 3位'; }
+      else if(fourthName && p.name===fourthName){ place=4; label='4位'; }
+      else{
+        let roundIdx=-1;
+        matches.forEach((round,r)=>{ round.forEach(m=>{ if(m.loser===p.name) roundIdx=Math.max(roundIdx,r); }); });
+        if(roundIdx>=0){ label = roundLabel(matches[roundIdx].length)+'敗退'; }
       }
-    }catch(e){ console.error('[atsucup] match result record failed:', e && e.message ? e.message : e); }
+      result[p.name] = {place, label};
+    });
+    return result;
+  }
+
+  /* ---------- 戦績タブ ---------- */
+  let selectedRecordName = null;
+
+  // 過去の大会(state.history)に加え、優勝が決まった今回の大会もあわせて集計対象にする
+  function allFinishedEntries(){
+    const list = state.history.slice();
+    if(state.tournamentMeta && state.tournamentMeta.title && state.winnerName){
+      list.push({
+        title: state.tournamentMeta.title,
+        championName: state.winnerName,
+        matches: state.matches,
+        thirdPlaceMatch: state.thirdPlaceMatch,
+        participants: state.people
+      });
+    }
+    return list;
+  }
+
+  function renderRecordRoster(){
+    const list = document.getElementById('recordRosterList');
+    list.innerHTML = '';
+    if(!state.roster.length){
+      list.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「参加者」タブから登録してください。</div>`;
+      return;
+    }
+    state.roster.forEach(name=>{
+      const chip = document.createElement('div');
+      chip.className = 'roster-chip' + (name===selectedRecordName ? ' selected' : '');
+      chip.innerHTML = `<span>${escapeHtml(name)}</span>`;
+      chip.addEventListener('click', ()=>{
+        selectedRecordName = name;
+        renderRecordRoster();
+        renderRecordResult();
+      });
+      list.appendChild(chip);
+    });
+  }
+
+  function renderRecordResult(){
+    const area = document.getElementById('recordResultArea');
+    if(!selectedRecordName){ area.innerHTML = ''; return; }
+    const entries = allFinishedEntries().filter(e => (e.participants||[]).some(p=>p.name===selectedRecordName));
+    if(!entries.length){
+      area.innerHTML = `<div class="empty-state" style="padding:16px 10px;">「${escapeHtml(selectedRecordName)}」がまだ参加した大会の結果がありません。</div>`;
+      return;
+    }
+    let p1=0, p2=0, p3=0;
+    const rows = entries.map(e=>{
+      const pl = computePlacements(e)[selectedRecordName] || {place:null, label:'参加'};
+      if(pl.place===1) p1++; else if(pl.place===2) p2++; else if(pl.place===3) p3++;
+      return { title: e.title, label: pl.label, place: pl.place };
+    });
+    const resClass = p => p===1?'p1':p===2?'p2':p===3?'p3':p===4?'p4':'pother';
+    area.innerHTML = `
+      <div class="stat-grid">
+        <div class="stat-box"><div class="v">${p1}</div><div class="l">優勝</div></div>
+        <div class="stat-box"><div class="v">${p2}</div><div class="l">準優勝</div></div>
+        <div class="stat-box"><div class="v">${p3}</div><div class="l">3位</div></div>
+      </div>
+      ${rows.map(r=>`
+        <div class="hist-item">
+          <span>${escapeHtml(r.title)}</span>
+          <span class="res ${resClass(r.place)}">${escapeHtml(r.label)}</span>
+        </div>
+      `).join('')}
+    `;
   }
 
   // ルーレットでまだ引かれていない名前は対戦表上でも隠す(演出用)
@@ -1104,7 +1193,7 @@
     grad.addColorStop(0, '#2a1f38'); grad.addColorStop(1, '#0a0810');
     c.fillStyle = grad; c.fillRect(0, 0, canvas.width, canvas.height);
 
-    const cur = currentTournament();
+    const cur = state.tournamentMeta;
     c.textAlign = 'center';
     c.fillStyle = '#e8b34c';
     c.font = "900 30px 'Cinzel','Noto Serif JP',serif";
@@ -1337,11 +1426,11 @@
     renderRoulettePreview();
     drawWheel();
     renderBracket();
+    renderTournamentTab();
     if(state.winnerName) document.getElementById("winnerName").value = state.winnerName;
   }
 
   restore();
-  loadTournaments();
 })();
 </script>
 </body>
