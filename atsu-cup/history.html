@@ -13,6 +13,10 @@
   .place-row.p1{border-color:var(--gold-dim);}
   .place-row.p1 .p{color:var(--gold);}
   .list-view.hidden, .detail-view.hidden{display:none;}
+  .past-tournament-item .del{
+    background:none; border:1px solid var(--line); border-radius:8px; color:#ff7373; font-size:13px;
+    cursor:pointer; padding:8px 10px; line-height:1; flex-shrink:0;
+  }
 </style>
 </head>
 <body>
@@ -70,9 +74,17 @@
           <div class="t">${escapeHtml(h.title)}</div>
           <div class="c">${h.championName?'👑 '+escapeHtml(h.championName):'結果未記録'}</div>
         </div>
+        <button class="del" data-del="${escapeHtml(h.id)}" title="この大会を削除">✕</button>
         <div class="arrow">›</div>
       `;
       el.addEventListener("click", ()=> showDetail(h.id));
+      el.querySelector('[data-del]').addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        if(!confirm(`「${h.title}」を過去の大会から削除します。よろしいですか？(元に戻せません)`)) return;
+        state.history = state.history.filter(x=>x.id!==h.id);
+        AtsuCup.persist();
+        renderList();
+      });
       tournamentList.appendChild(el);
     });
   }
@@ -111,7 +123,10 @@
     }
 
     detailView.innerHTML = `
-      <button class="btn btn-ghost" id="backToListBtn">‹ 一覧へ戻る</button>
+      <div class="row" style="margin-top:0;">
+        <button class="btn btn-ghost" id="backToListBtn">‹ 一覧へ戻る</button>
+        <button class="btn btn-ghost" id="deleteHistoryBtn" style="color:#ff7373;">🗑️ この大会を削除</button>
+      </div>
       <div class="video-card" style="margin-top:14px;">
         ${h.posterUrl?`<img class="poster-img" src="${escapeHtml(h.posterUrl)}" alt="poster">`:''}
         <div class="cur-title">${escapeHtml(h.title)}</div>
@@ -130,6 +145,14 @@
     document.getElementById('backToListBtn').addEventListener('click', ()=>{
       detailView.classList.add('hidden');
       listView.classList.remove('hidden');
+    });
+    document.getElementById('deleteHistoryBtn').addEventListener('click', ()=>{
+      if(!confirm(`「${h.title}」を過去の大会から削除します。よろしいですか？(元に戻せません)`)) return;
+      state.history = state.history.filter(x=>x.id!==h.id);
+      AtsuCup.persist();
+      detailView.classList.add('hidden');
+      listView.classList.remove('hidden');
+      renderList();
     });
     window.scrollTo({top:0, behavior:'instant'});
   }

@@ -56,10 +56,28 @@
   .slot.empty{color:#463b58; cursor:default;}
   .slot.pending{color:var(--muted); cursor:default; letter-spacing:.05em;}
   .slot.pending .q{display:inline-block; animation:atsuPendingPulse 1.3s ease-in-out infinite;}
-  .slot.swap-picked{background:rgba(255,106,43,.28); outline:2px solid var(--ember2); outline-offset:-2px;}
+  .slot.drop-target{background:rgba(255,106,43,.28); outline:2px solid var(--ember2); outline-offset:-2px;}
+  .slot.dragging-slot{ box-shadow:0 10px 26px rgba(0,0,0,.6); z-index:30; }
   @keyframes atsuPendingPulse{ 0%,100%{opacity:.5;} 50%{opacity:1;} }
   .slot:not(.bye):not(.empty):not(.pending):active{background:rgba(255,255,255,.08);}
   .slot:not([data-r]):not(.bye):not(.empty):not(.pending){cursor:default;}
+  .slot-edit-btn{
+    flex-shrink:0; background:none; border:1px solid var(--line); border-radius:6px; color:var(--muted);
+    font-size:11px; padding:3px 5px; line-height:1; cursor:pointer;
+  }
+  .slot-drag-handle{
+    flex-shrink:0; width:22px; height:22px; display:flex; align-items:center; justify-content:center;
+    color:var(--muted); font-size:16px; cursor:grab; touch-action:none;
+  }
+  .slot-nm-input{
+    flex:1; min-width:0; background:#161320; border:1px solid var(--ember2); color:var(--cream);
+    border-radius:6px; padding:3px 6px; font-size:13px; font-family:'Noto Sans JP',sans-serif;
+  }
+  .bracket-poster-scroll{
+    overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);
+    margin-bottom:6px; background:#0a0810;
+  }
+  .bracket-poster-scroll img{ display:block; max-width:none; }
   .warn-box{
     margin-top:14px; background:#241214; border:1px solid #5a2222; border-radius:10px; padding:10px 12px;
     font-size:12px; color:#ffb3b3; line-height:1.8;
@@ -168,10 +186,16 @@
 
   <section class="panel" id="bracketPanel">
     <h2><span class="num">03</span> 対戦表</h2>
+    <div id="bracketPosterSection" style="display:none;">
+      <p class="hint">組み合わせが決まると、見やすい対戦表がここに表示されます(横スクロールできます)。</p>
+      <div class="bracket-poster-scroll"><img id="bracketPosterImg" alt="対戦表"></div>
+    </div>
+
+    <h3 class="section-title" style="margin-top:20px;">✏️ 編集・対戦を進める</h3>
     <div class="row" id="bracketTopActions" style="display:none; margin-top:0; margin-bottom:14px;">
       <button class="btn btn-ghost" id="saveBracketImgBtnTop">📸 画像で保存</button>
-      <button class="btn btn-ghost" id="swapModeBtn" style="display:none;">🔀 組み合わせを入れ替える</button>
     </div>
+    <p class="hint" id="editHint" style="display:none; margin-top:0;">✏️で名前を書き換え、⠿をドラッグすると1回戦の組み合わせを入れ替えられます(対戦開始前のみ)。</p>
     <div id="bracketArea"></div>
   </section>
 
@@ -189,8 +213,6 @@
 
   let decideMode = 'roulette';
   let manualOrder = null;
-  let swapMode = false;
-  let swapPick = null;
 
   function initials(name){ return (name||'').trim().charAt(0) || '?'; }
 
@@ -487,7 +509,7 @@
   });
 
   /* ---------- 対戦表 ---------- */
-  function slotHtml(val, winner, r, m, side, recMap, isPicked){
+  function slotHtml(val, winner, r, m, side, recMap, editable){
     if(val === null || val === undefined){
       if(val === null) return `<div class="slot bye">BYE (不戦勝)</div>`;
       return `<div class="slot empty">未定</div>`;
@@ -497,11 +519,102 @@
     }
     const isWinner = winner === val;
     const cam = recMap[val] ? "📹" : "🚫";
-    return `<div class="slot ${isWinner?'winner':''} ${isPicked?'swap-picked':''}" data-r="${r}" data-m="${m}" data-side="${side}">
+    const editControls = editable ? `
+      <button class="slot-edit-btn" data-editname data-r="${r}" data-m="${m}" data-side="${side}">✏️</button>
+      <span class="slot-drag-handle" data-draghandle data-r="${r}" data-m="${m}" data-side="${side}">⠿</span>
+    ` : '';
+    return `<div class="slot ${isWinner?'winner':''}" data-r="${r}" data-m="${m}" data-side="${side}">
       <span class="avatar">${escapeHtml(initials(val))}</span>
       <span class="nm">${escapeHtml(val)}</span>
       <span class="cam-mark">${cam}</span>
+      ${editControls}
     </div>`;
+  }
+
+  // ラウンド1の対戦カードの名前をその場で書き換える
+  function startEditSlotName(r, m, side){
+    const slotEl = document.querySelector(`.slot[data-r="${r}"][data-m="${m}"][data-side="${side}"]`);
+    if(!slotEl) return;
+    const nmSpan = slotEl.querySelector('.nm');
+    if(!nmSpan) return;
+    const match = state.matches[r][m];
+    const current = side==='a' ? match.a : match.b;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'slot-nm-input';
+    input.value = current;
+    input.addEventListener('click', ev=> ev.stopPropagation());
+    nmSpan.replaceWith(input);
+    input.focus(); input.select();
+    let done = false;
+    const commit = ()=>{
+      if(done) return;
+      done = true;
+      const val = input.value.trim();
+      if(val){
+        if(side==='a') match.a = val; else match.b = val;
+        if(match.b === null) match.winner = match.a;
+        AtsuCup.persist();
+      }
+      renderBracket();
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ input.blur(); } });
+  }
+
+  // ラウンド1の対戦カードをドラッグして、別の枠と中身を入れ替える
+  function swapRound1(m1, s1, m2, s2){
+    if(m1===m2 && s1===s2) return;
+    const match1 = state.matches[0][m1];
+    const match2 = state.matches[0][m2];
+    const tmp = match1[s1];
+    match1[s1] = match2[s2];
+    match2[s2] = tmp;
+    if(match1.b === null) match1.winner = match1.a;
+    if(match2.b === null) match2.winner = match2.a;
+    AtsuCup.persist();
+    renderBracket();
+  }
+
+  function attachRound1SlotDrag(handleEl){
+    handleEl.addEventListener('click', ev=> ev.stopPropagation());
+    handleEl.addEventListener('pointerdown', (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      const m = +handleEl.dataset.m, side = handleEl.dataset.side;
+      const slotEl = handleEl.closest('.slot');
+      const startX = e.clientX, startY = e.clientY;
+      slotEl.classList.add('dragging-slot');
+      slotEl.style.pointerEvents = 'none';
+      let dropTarget = null;
+
+      function onMove(ev){
+        const dx = ev.clientX - startX, dy = ev.clientY - startY;
+        slotEl.style.transform = `translate(${dx}px,${dy}px)`;
+        const elUnder = document.elementFromPoint(ev.clientX, ev.clientY);
+        document.querySelectorAll('.slot.drop-target').forEach(x=>x.classList.remove('drop-target'));
+        const targetSlot = elUnder ? elUnder.closest('.slot[data-r="0"]') : null;
+        if(targetSlot && targetSlot!==slotEl){
+          dropTarget = targetSlot;
+          targetSlot.classList.add('drop-target');
+        }else{
+          dropTarget = null;
+        }
+      }
+      function onUp(){
+        slotEl.style.transform = '';
+        slotEl.style.pointerEvents = '';
+        slotEl.classList.remove('dragging-slot');
+        document.querySelectorAll('.slot.drop-target').forEach(x=>x.classList.remove('drop-target'));
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        if(dropTarget){
+          swapRound1(m, side, +dropTarget.dataset.m, dropTarget.dataset.side);
+        }
+      }
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
   }
 
   function findNextMatch(){
@@ -564,31 +677,6 @@
   }
 
   function handleSlotClick(r, m, side){
-    if(swapMode){
-      if(r !== 0) return; // 組み替えはラウンド1のみ
-      const match = state.matches[0][m];
-      const val = side==='a' ? match.a : match.b;
-      if(val==null) return;
-      if(!swapPick){
-        swapPick = {m, side};
-        renderBracket();
-        return;
-      }
-      if(swapPick.m===m && swapPick.side===side){
-        swapPick = null; renderBracket(); return;
-      }
-      const match2 = state.matches[0][swapPick.m];
-      const a = match2[swapPick.side];
-      const b = match[side];
-      match2[swapPick.side] = b;
-      match[side] = a;
-      if(match2.b === null) match2.winner = match2.a;
-      if(match.b === null) match.winner = match.a;
-      swapPick = null;
-      AtsuCup.persist();
-      renderBracket();
-      return;
-    }
     if(r === 'third'){ AtsuCup.pickThirdPlaceWinner(side); }
     else{ AtsuCup.pickWinner(r, m, side); }
     renderBracket();
@@ -598,28 +686,27 @@
   function renderBracket(){
     const area = document.getElementById("bracketArea");
     const recMap = AtsuCup.recMapOf();
-    const swapModeBtn = document.getElementById('swapModeBtn');
     document.getElementById("bracketTopActions").style.display = state.matches.length ? 'flex' : 'none';
 
-    const canSwap = state.matches.length>0 && state.remaining.length===0 && AtsuCup.bracketNotStarted();
-    swapModeBtn.style.display = canSwap ? 'inline-flex' : 'none';
-    if(!canSwap){ swapMode = false; }
-    swapModeBtn.textContent = swapMode ? '✅ 入れ替え完了' : '🔀 組み合わせを入れ替える';
-    swapModeBtn.className = 'btn ' + (swapMode ? 'btn-gold' : 'btn-ghost');
+    // 対戦開始前(ラウンド1がまだ1試合も決着していない)なら、対戦表から直接編集・入れ替えできる
+    const editableR1 = state.matches.length>0 && state.remaining.length===0 && AtsuCup.bracketNotStarted();
+    document.getElementById('editHint').style.display = editableR1 ? 'block' : 'none';
 
     if(!state.people.length){
       area.innerHTML = `<div class="empty-state"><span class="big">🙋</span>参加者がいません。<br>「参加者を編集する」から選んでください。</div>`;
+      document.getElementById('bracketPosterSection').style.display = 'none';
       return;
     }
     if(!state.matches.length){
       area.innerHTML = `<div class="empty-state"><span class="big">🌀</span>まだ組み合わせがありません。</div>`;
+      document.getElementById('bracketPosterSection').style.display = 'none';
       return;
     }
 
     let html = '';
 
     const next = findNextMatch();
-    if(next && !swapMode){
+    if(next){
       const m = next.match;
       html += `<div class="next-match-box">
         <div class="lbl">🎯 次の対戦${next.r==='third'?'(3位決定戦)':''}</div>
@@ -629,9 +716,6 @@
           <div class="next-slot" data-nr="${next.r}" data-nm="${next.m}" data-nside="b"><span class="avatar">${escapeHtml(initials(m.b))}</span><span>${escapeHtml(m.b)}</span><span>${recMap[m.b]?'📹':'🚫'}</span></div>
         </div>
       </div>`;
-    }
-    if(swapMode){
-      html += `<p class="hint">入れ替えたい2人を順番にタップしてください。(ラウンド1のみ)</p>`;
     }
 
     // 実際のトーナメント表らしく見えるよう、各試合の縦位置を「前の2試合の中間」に配置する(ピラミッド型)
@@ -643,11 +727,9 @@
       round.forEach((m,i)=>{
         const isForced = m.a && m.b && AtsuCup.isRevealed(m.a) && AtsuCup.isRevealed(m.b) && !recMap[m.a] && !recMap[m.b];
         const isReady = m.a && m.b && AtsuCup.isRevealed(m.a) && AtsuCup.isRevealed(m.b) && !m.winner;
-        const pickedA = swapMode && swapPick && r===0 && swapPick.m===i && swapPick.side==='a';
-        const pickedB = swapMode && swapPick && r===0 && swapPick.m===i && swapPick.side==='b';
-        html += `<div class="match ${isForced?'forced':''} ${isReady && !swapMode?'ready':''}" style="top:${matchTop(r,i)}px;">`;
-        html += slotHtml(m.a, m.winner, r, i, 'a', recMap, pickedA);
-        html += slotHtml(m.b, m.winner, r, i, 'b', recMap, pickedB);
+        html += `<div class="match ${isForced?'forced':''} ${isReady?'ready':''}" style="top:${matchTop(r,i)}px;">`;
+        html += slotHtml(m.a, m.winner, r, i, 'a', recMap, editableR1 && r===0);
+        html += slotHtml(m.b, m.winner, r, i, 'b', recMap, editableR1 && r===0);
         html += `</div>`;
       });
       html += `</div></div>`;
@@ -682,6 +764,7 @@
 
     area.innerHTML = html;
     drawBracketConnectors(area);
+    renderBracketPoster();
 
     area.querySelectorAll(".slot[data-r]").forEach(el=>{
       el.addEventListener("click", ()=>{
@@ -695,6 +778,15 @@
         handleSlotClick(r, +el.dataset.nm, el.dataset.nside);
       });
     });
+    area.querySelectorAll("[data-editname]").forEach(el=>{
+      el.addEventListener("click", (ev)=>{
+        ev.stopPropagation();
+        startEditSlotName(+el.dataset.r, +el.dataset.m, el.dataset.side);
+      });
+    });
+    area.querySelectorAll("[data-draghandle]").forEach(el=>{
+      attachRound1SlotDrag(el);
+    });
     const toCardBtn = document.getElementById("toCardBtn");
     if(toCardBtn){
       toCardBtn.addEventListener("click", ()=>{
@@ -705,15 +797,9 @@
     }
   }
 
-  document.getElementById('swapModeBtn').addEventListener('click', ()=>{
-    swapMode = !swapMode;
-    swapPick = null;
-    renderBracket();
-  });
-
   /* ---------- 対戦表を画像で保存 ---------- */
-  async function drawBracketImage(){
-    if(!state.matches.length) return;
+  async function buildBracketCanvas(){
+    if(!state.matches.length) return null;
     if(document.fonts && document.fonts.ready){ await document.fonts.ready; }
     const recMap = AtsuCup.recMapOf();
     const colW = 230, rowH = 76, colGap = 36, padTop = 130, padSide = 40;
@@ -823,13 +909,37 @@
       c.fillText('👑 CHAMPION: ' + state.winnerName, canvas.width/2, footerY+20);
     }
 
+    return canvas;
+  }
+
+  async function downloadBracketImage(){
+    const canvas = await buildBracketCanvas();
+    if(!canvas) return;
+    const cur = state.tournamentMeta;
     const link = document.createElement('a');
     const nameForFile = (cur && cur.title) ? cur.title.replace(/[^\w぀-ヿ一-鿿]/g,'') : 'tournament';
     link.download = `atsucup_bracket_${nameForFile}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   }
-  document.getElementById("saveBracketImgBtnTop").addEventListener("click", drawBracketImage);
+  document.getElementById("saveBracketImgBtnTop").addEventListener("click", downloadBracketImage);
+
+  // 組み合わせが決まったら、見やすい対戦表(canvas描画)を画面にそのまま表示する
+  let posterRenderToken = 0;
+  async function renderBracketPoster(){
+    const section = document.getElementById('bracketPosterSection');
+    const img = document.getElementById('bracketPosterImg');
+    if(!state.matches.length || !state.matches[0].length){
+      section.style.display = 'none';
+      return;
+    }
+    const token = ++posterRenderToken;
+    const canvas = await buildBracketCanvas();
+    if(token !== posterRenderToken) return; // 描画中に状態が変わっていたら古い結果は捨てる
+    if(!canvas){ section.style.display = 'none'; return; }
+    img.src = canvas.toDataURL('image/png');
+    section.style.display = 'block';
+  }
 
   /* ---------- 全体の再描画 ---------- */
   function renderDecideVisibility(){
