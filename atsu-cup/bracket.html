@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>あつ杯 対戦表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="atsucup-style.css">
+<style>
+  .bracket-poster-scroll{
+    overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);
+    margin-bottom:10px; background:#0a0810;
+  }
+  .bracket-poster-scroll img{ display:block; max-width:none; }
+  .avatar{
+    width:26px; height:26px; border-radius:50%; background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900;
+    color:var(--gold); flex-shrink:0;
+  }
+  .next-match-box{
+    background:linear-gradient(180deg,rgba(255,145,69,.16),rgba(255,106,43,.06)); border:1px solid var(--ember2);
+    border-radius:14px; padding:14px; margin-bottom:18px;
+  }
+  .next-match-box .lbl{font-size:11px; letter-spacing:.15em; color:var(--ember2); font-weight:900; text-transform:uppercase; margin-bottom:10px;}
+  .match-pick-row{display:flex; align-items:stretch; gap:8px;}
+  .pick-btn{
+    flex:1; display:flex; align-items:center; gap:8px; min-width:0; background:#161320; border:1px solid var(--line);
+    border-radius:10px; color:var(--cream); font-weight:700; font-size:13.5px; padding:12px; cursor:pointer; text-align:left;
+  }
+  .pick-btn span.nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .pick-btn:active{ transform:scale(.97); background:rgba(255,255,255,.08); }
+  .pick-btn.winner{ background:linear-gradient(90deg,rgba(232,179,76,.28),rgba(232,179,76,.08)); border-color:var(--gold-dim); color:var(--gold); font-weight:900; }
+  .pick-btn.forced{ border-color:#7a2c2c; }
+  .pick-btn:disabled{ cursor:default; opacity:.55; }
+  .vs-label{ align-self:center; color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:11px; flex-shrink:0; }
+  .bye-row{ color:var(--muted); font-style:italic; font-size:13px; padding:10px 4px; }
+  .warn-box{
+    margin-top:14px; background:#241214; border:1px solid #5a2222; border-radius:10px; padding:10px 12px;
+    font-size:12px; color:#ffb3b3; line-height:1.8;
+  }
+  .champion-box{
+    margin-top:18px; text-align:center; padding:22px 14px; border-radius:14px;
+    background:radial-gradient(circle at 50% 0%, rgba(232,179,76,.2), transparent 70%), #14100a; border:1px solid var(--gold-dim);
+  }
+  .champion-box .label{font-size:11px; letter-spacing:.2em; color:var(--muted); text-transform:uppercase;}
+  .champion-box .name{
+    font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:26px; color:var(--gold);
+    margin:6px 0 14px; text-shadow:0 0 16px rgba(232,179,76,.5);
+  }
+</style>
+</head>
+<body>
+<a class="back-link" href="index.html">‹ トップへ</a>
+<div class="wrap">
+  <header class="top">
+    <div class="crown-mark">🏆</div>
+    <h1>対戦表</h1>
+    <div class="sub">BRACKET</div>
+  </header>
+
+  <div id="emptyStateBox"></div>
+
+  <section class="panel" id="posterPanel" style="display:none;">
+    <h2><span class="num">01</span> 見やすい対戦表</h2>
+    <p class="hint">横スクロールできます。結果を入力するたびに自動で更新されます。</p>
+    <div class="bracket-poster-scroll"><img id="bracketPosterImg" alt="対戦表"></div>
+    <button class="btn btn-ghost" id="saveBracketImgBtn">📸 画像で保存</button>
+  </section>
+
+  <section class="panel" id="progressPanel" style="display:none;">
+    <h2><span class="num">02</span> 対戦を進める</h2>
+    <div id="matchListArea"></div>
+  </section>
+
+  <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+</div>
+
+<script src="tap-ripple.js"></script>
+<script src="atsucup-core.js"></script>
+<script>
+(function(){
+  "use strict";
+  const state = AtsuCup.state;
+  const escapeHtml = AtsuCup.escapeHtml;
+  AtsuCup.restore();
+
+  function initials(name){ return (name||'').trim().charAt(0) || '?'; }
+
+  const hasPairing = state.matches.length>0 && state.matches[0].length>0 && state.remaining.length===0;
+
+  if(!hasPairing){
+    document.getElementById('emptyStateBox').innerHTML = `
+      <section class="panel">
+        <div class="empty-state"><span class="big">🎲</span>まだ組み合わせが決まっていません。</div>
+        <a class="btn btn-primary" style="width:100%;" href="matchup.html">組み合わせを決める →</a>
+      </section>
+    `;
+    return;
+  }
+
+  document.getElementById('posterPanel').style.display = 'block';
+  document.getElementById('progressPanel').style.display = 'block';
+
+  function findNextMatch(){
+    for(let r=0;r<state.matches.length;r++){
+      for(let m=0;m<state.matches[r].length;m++){
+        const match = state.matches[r][m];
+        if(match.a && match.b && !match.winner){
+          return {r,m,match};
+        }
+      }
+    }
+    if(state.thirdPlaceMatch && !state.thirdPlaceMatch.winner && state.thirdPlaceMatch.a && state.thirdPlaceMatch.b){
+      return {r:'third', m:0, match:state.thirdPlaceMatch};
+    }
+    return null;
+  }
+
+  function pick(r, m, side){
+    if(r === 'third'){ AtsuCup.pickThirdPlaceWinner(side); }
+    else{ AtsuCup.pickWinner(r, m, side); }
+    renderMatchList();
+    renderBracketPoster();
+  }
+
+  function pickBtnHtml(name, winner, r, m, side, recMap, isForced){
+    const isWinner = winner === name;
+    return `<button class="pick-btn ${isWinner?'winner':''} ${isForced?'forced':''}" data-r="${r}" data-m="${m}" data-side="${side}">
+      <span class="avatar">${escapeHtml(initials(name))}</span>
+      <span class="nm">${escapeHtml(name)}</span>
+      <span>${recMap[name]?'📹':'🚫'}</span>
+    </button>`;
+  }
+
+  function matchCardHtml(m, r, i, recMap){
+    if(m.b === null){
+      return `<div class="video-card"><div class="bye-row">🐰 ${escapeHtml(m.a)} — BYE(不戦勝)</div></div>`;
+    }
+    const isForced = !recMap[m.a] && !recMap[m.b];
+    return `<div class="video-card">
+      <div class="match-pick-row">
+        ${pickBtnHtml(m.a, m.winner, r, i, 'a', recMap, isForced)}
+        <span class="vs-label">VS</span>
+        ${pickBtnHtml(m.b, m.winner, r, i, 'b', recMap, isForced)}
+      </div>
+    </div>`;
+  }
+
+  function renderMatchList(){
+    const area = document.getElementById('matchListArea');
+    const recMap = AtsuCup.recMapOf();
+    let html = '';
+
+    const next = findNextMatch();
+    if(next){
+      const m = next.match;
+      html += `<div class="next-match-box">
+        <div class="lbl">🎯 次の対戦${next.r==='third'?'(3位決定戦)':''}</div>
+        <div class="match-pick-row">
+          ${pickBtnHtml(m.a, m.winner, next.r, next.m, 'a', recMap, false)}
+          <span class="vs-label">VS</span>
+          ${pickBtnHtml(m.b, m.winner, next.r, next.m, 'b', recMap, false)}
+        </div>
+      </div>`;
+    }
+
+    state.matches.forEach((round, r)=>{
+      html += `<h3 class="section-title" style="margin-top:16px;">${AtsuCup.roundLabel(round.length)}</h3>`;
+      round.forEach((m,i)=>{ html += matchCardHtml(m, r, i, recMap); });
+    });
+
+    const forced = AtsuCup.forcedPairsList();
+    if(forced.length){
+      html += `<div class="warn-box">⚠️ 撮影OKの人が足りず、以下は撮影不可同士の対戦になっています:<br>` +
+        forced.map(f=>`・${AtsuCup.roundLabel(state.matches[f.r].length)}: ${escapeHtml(f.a)} vs ${escapeHtml(f.b)}`).join("<br>") + `</div>`;
+    }
+
+    if(state.thirdPlaceMatch){
+      const tp = state.thirdPlaceMatch;
+      html += `<h3 class="section-title" style="margin-top:16px;">🥉 3位決定戦</h3>
+        <div class="video-card">
+          <div class="match-pick-row">
+            ${pickBtnHtml(tp.a, tp.winner, 'third', 0, 'a', recMap, false)}
+            <span class="vs-label">VS</span>
+            ${pickBtnHtml(tp.b, tp.winner, 'third', 0, 'b', recMap, false)}
+          </div>
+        </div>`;
+    }
+
+    if(state.winnerName){
+      html += `<div class="champion-box"><div class="label">Champion</div><div class="name">👑 ${escapeHtml(state.winnerName)}</div>
+        ${state.thirdPlaceMatch&&state.thirdPlaceMatch.winner?`<div style="color:var(--muted);font-weight:700;margin-bottom:10px;">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>`:''}
+        <div class="row" style="justify-content:center;">
+          <button class="btn btn-gold" id="toCardBtn">優勝カードを作る</button>
+          <a class="btn btn-ghost" href="hall.html">歴代優勝者を見る</a>
+        </div>
+      </div>`;
+    }
+
+    area.innerHTML = html;
+    area.querySelectorAll(".pick-btn[data-r]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const r = el.dataset.r === 'third' ? 'third' : +el.dataset.r;
+        pick(r, +el.dataset.m, el.dataset.side);
+      });
+    });
+    const toCardBtn = document.getElementById("toCardBtn");
+    if(toCardBtn){
+      toCardBtn.addEventListener("click", ()=>{
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = 1000; tmpCanvas.height = 1000;
+        AtsuCup.generateAndSaveCard(tmpCanvas, state.tournamentMeta.title, state.winnerName);
+      });
+    }
+  }
+
+  /* ---------- 見やすい対戦表(canvas描画) ---------- */
+  async function buildBracketCanvas(){
+    if(!state.matches.length) return null;
+    if(document.fonts && document.fonts.ready){ await document.fonts.ready; }
+    const recMap = AtsuCup.recMapOf();
+    const colW = 230, rowH = 76, colGap = 36, padTop = 130, padSide = 40;
+    const maxMatches = state.matches[0].length;
+    const hasThird = !!state.thirdPlaceMatch;
+    const canvas = document.createElement('canvas');
+    canvas.width = padSide*2 + state.matches.length*colW + (state.matches.length-1)*colGap;
+    canvas.height = padTop + maxMatches*rowH + 70 + (hasThird?110:0) + 100;
+    const c = canvas.getContext('2d');
+
+    const grad = c.createRadialGradient(canvas.width/2, 0, 40, canvas.width/2, 0, canvas.width*0.75);
+    grad.addColorStop(0, '#2a1f38'); grad.addColorStop(1, '#0a0810');
+    c.fillStyle = grad; c.fillRect(0, 0, canvas.width, canvas.height);
+
+    const cur = state.tournamentMeta;
+    c.textAlign = 'center';
+    c.fillStyle = '#e8b34c';
+    c.font = "900 30px 'Cinzel','Noto Serif JP',serif";
+    c.fillText((cur && cur.title) || 'あつ杯 トーナメント表', canvas.width/2, 56);
+    c.font = "600 12px 'JetBrains Mono',monospace";
+    c.fillStyle = 'rgba(255,255,255,.45)';
+    c.fillText(new Date().toLocaleDateString('ja-JP'), canvas.width/2, 80);
+
+    function roundRect(x,y,w,h,r){
+      c.beginPath();
+      c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+      c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath();
+    }
+    function drawSlot(x, y, w, name, winner, isBye){
+      c.textAlign = 'left';
+      if(isBye){
+        c.fillStyle = '#8a7fa0'; c.font = "italic 12px 'Noto Sans JP',sans-serif";
+        c.fillText('BYE (不戦勝)', x+12, y+19);
+        return;
+      }
+      if(name == null){
+        c.fillStyle = '#463b58'; c.font = "12px 'Noto Sans JP',sans-serif";
+        c.fillText('未定', x+12, y+19);
+        return;
+      }
+      const isWin = winner === name;
+      c.fillStyle = isWin ? '#e8b34c' : '#f1e6cf';
+      c.font = (isWin ? '900 ' : '700 ') + "13px 'Noto Sans JP',sans-serif";
+      const label = name.length > 11 ? name.slice(0,10)+'…' : name;
+      c.fillText((isWin ? '👑 ' : '') + label, x+12, y+19);
+      c.textAlign = 'right';
+      c.font = "12px sans-serif";
+      c.fillText(recMap[name] ? '📹' : '🚫', x+w-10, y+19);
+    }
+    function drawMatch(x, y, m){
+      const isForced = m.a && m.b && !recMap[m.a] && !recMap[m.b];
+      c.fillStyle = '#0d0a14';
+      roundRect(x, y, colW, 58, 10); c.fill();
+      c.strokeStyle = isForced ? '#7a2c2c' : '#3a2f4d';
+      c.lineWidth = 1.5;
+      roundRect(x, y, colW, 58, 10); c.stroke();
+      c.beginPath(); c.moveTo(x, y+29); c.lineTo(x+colW, y+29);
+      c.strokeStyle = '#3a2f4d'; c.lineWidth = 1; c.stroke();
+      drawSlot(x, y, colW, m.a, m.winner, false);
+      drawSlot(x, y+29, colW, m.b, m.winner, m.b===null);
+    }
+
+    const positions = [];
+    state.matches.forEach((round, r)=>{
+      const x = padSide + r*(colW+colGap);
+      const totalH = maxMatches*rowH;
+      const step = totalH/round.length;
+      positions[r] = round.map((m,i)=>({x, y: padTop + step*i + (step-58)/2}));
+    });
+    c.lineWidth = 2; c.strokeStyle = '#4a3d63';
+    for(let r=0; r<state.matches.length-1; r++){
+      state.matches[r+1].forEach((nm, ni)=>{
+        const t = positions[r+1][ni];
+        const tx = t.x, ty = t.y + 29;
+        [nm.a, nm.b].forEach(name=>{
+          if(!name) return;
+          const srcIdx = state.matches[r].findIndex(x=>x.winner && x.winner===name);
+          if(srcIdx < 0) return;
+          const s = positions[r][srcIdx];
+          const sx = s.x + colW, sy = s.y + 29;
+          const midX = (sx+tx)/2;
+          c.beginPath();
+          c.moveTo(sx, sy); c.lineTo(midX, sy); c.lineTo(midX, ty); c.lineTo(tx, ty);
+          c.stroke();
+        });
+      });
+    }
+    state.matches.forEach((round, r)=>{
+      const x = padSide + r*(colW+colGap);
+      c.textAlign = 'center'; c.font = "700 11px 'JetBrains Mono',monospace"; c.fillStyle = '#9a8fae';
+      c.fillText(AtsuCup.roundLabel(round.length).toUpperCase(), x+colW/2, padTop-14);
+      round.forEach((m,i)=>{
+        drawMatch(positions[r][i].x, positions[r][i].y, m);
+      });
+    });
+
+    let footerY = padTop + maxMatches*rowH + 40;
+    if(hasThird){
+      c.textAlign = 'center'; c.font = "700 12px 'JetBrains Mono',monospace"; c.fillStyle = '#9a8fae';
+      c.fillText('🥉 3位決定戦', canvas.width/2, footerY);
+      drawMatch(canvas.width/2 - colW/2, footerY+12, state.thirdPlaceMatch);
+      footerY += 100;
+    }
+    if(state.winnerName){
+      c.textAlign = 'center';
+      c.font = "900 26px 'Cinzel','Noto Serif JP',serif"; c.fillStyle = '#e8b34c';
+      c.fillText('👑 CHAMPION: ' + state.winnerName, canvas.width/2, footerY+20);
+    }
+
+    return canvas;
+  }
+
+  async function downloadBracketImage(){
+    const canvas = await buildBracketCanvas();
+    if(!canvas) return;
+    const cur = state.tournamentMeta;
+    const link = document.createElement('a');
+    const nameForFile = (cur && cur.title) ? cur.title.replace(/[^\w぀-ヿ一-鿿]/g,'') : 'tournament';
+    link.download = `atsucup_bracket_${nameForFile}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+  document.getElementById("saveBracketImgBtn").addEventListener("click", downloadBracketImage);
+
+  let posterRenderToken = 0;
+  async function renderBracketPoster(){
+    const img = document.getElementById('bracketPosterImg');
+    const token = ++posterRenderToken;
+    const canvas = await buildBracketCanvas();
+    if(token !== posterRenderToken) return;
+    if(!canvas) return;
+    img.src = canvas.toDataURL('image/png');
+  }
+
+  renderMatchList();
+  renderBracketPoster();
+})();
+</script>
+</body>
+</html>
