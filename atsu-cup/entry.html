@@ -7,15 +7,39 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="atsucup-style.css">
+<style>
+  .flow-banner{
+    background:linear-gradient(180deg,rgba(255,145,69,.18),rgba(255,106,43,.06)); border:1px solid var(--ember2);
+    border-radius:14px; padding:12px 14px; margin-bottom:16px; font-size:12.5px; color:var(--cream); line-height:1.8;
+  }
+  .roster-row{
+    display:flex; align-items:center; gap:10px; background:#0d0a14; border:1.5px solid var(--line);
+    border-radius:12px; padding:12px 14px; margin-bottom:8px; cursor:pointer;
+  }
+  .roster-row.selected{ border-color:var(--ember2); background:linear-gradient(180deg,rgba(255,145,69,.14),rgba(255,106,43,.05)); }
+  .roster-row .check{
+    width:24px; height:24px; border-radius:50%; border:2px solid var(--line); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:12px; color:transparent;
+  }
+  .roster-row.selected .check{ border-color:var(--ember2); background:var(--ember2); color:#1a0a02; }
+  .roster-row .nm{flex:1; font-weight:700; font-size:14.5px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .roster-row .rm{
+    background:none; border:1px solid var(--line); border-radius:8px; color:#6b5f82; font-size:13px;
+    cursor:pointer; padding:6px 9px; line-height:1; flex-shrink:0;
+  }
+  .next-flow-box{ position:sticky; bottom:0; margin-top:20px; }
+</style>
 </head>
 <body>
-<a class="back-link" href="admin.html">‹ 大会管理へ</a>
+<a class="back-link" href="index.html">‹ トップへ</a>
 <div class="wrap">
   <header class="top">
     <div class="crown-mark">🙋</div>
     <h1>参加者登録</h1>
     <div class="sub">ENTRY</div>
   </header>
+
+  <div id="flowBanner"></div>
 
   <section class="panel">
     <h2><span class="num">01</span> 新しい参加者を登録する</h2>
@@ -27,11 +51,20 @@
   </section>
 
   <section class="panel">
-    <h2><span class="num">02</span> 今回の参加者を選ぶ</h2>
-    <p class="hint">タップで今回の大会への参加/不参加を切り替えます。参加中の人は📹/🚫で撮影可否を切り替えられます。✕で登録者一覧から削除します。</p>
+    <h2><span class="num">02</span> 今回参加する人</h2>
     <div id="countBadges"></div>
-    <div class="taglist" id="rosterList"></div>
+    <div id="selectedList" style="margin-top:12px;"></div>
   </section>
+
+  <section class="panel">
+    <h2><span class="num">03</span> 登録済みの人から追加</h2>
+    <p class="hint">タップで今回の大会に追加します。✕で登録者一覧から完全に削除します。</p>
+    <div id="availableList"></div>
+  </section>
+
+  <div class="next-flow-box" id="nextFlowBox" style="display:none;">
+    <a class="btn btn-gold" style="width:100%;" href="matchup.html">次へ: 組み合わせを決める →</a>
+  </div>
 
   <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
 </div>
@@ -47,7 +80,13 @@
 
   const rosterInput = document.getElementById("rosterInput");
   const countBadges = document.getElementById("countBadges");
-  const rosterList = document.getElementById("rosterList");
+  const selectedList = document.getElementById("selectedList");
+  const availableList = document.getElementById("availableList");
+  const nextFlowBox = document.getElementById("nextFlowBox");
+
+  if(new URLSearchParams(location.search).get('flow') === 'new'){
+    document.getElementById('flowBanner').innerHTML = `<div class="flow-banner">✅ 大会を作成しました。続けてこの大会に参加する人を選んでください。選び終わったら下の「次へ」から組み合わせを決められます。</div>`;
+  }
 
   function renderBadges(){
     const total = state.people.length;
@@ -59,55 +98,79 @@
       <span class="count-badge muted2">🚫 撮影不可: ${norec}人</span>`;
   }
 
-  // 参加者マスタ(state.roster)を1つの一覧として表示。
-  // タップで今回の大会への参加/不参加を切り替え、選択中は📹/🚫で撮影可否をその場で切り替えられる
-  function renderRoster(){
-    rosterList.innerHTML = "";
-    if(!state.roster.length){
-      rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。上のフォームから名前を登録してください。</div>`;
-      renderBadges();
-      return;
-    }
-    state.roster.forEach(name=>{
-      const person = state.people.find(p=>p.name===name);
-      const isSel = !!person;
-      const chip = document.createElement('div');
-      chip.className = 'roster-chip' + (isSel ? ' selected' : '');
-      chip.innerHTML = `
-        <span data-select="${escapeHtml(name)}">${isSel?'✅ ':''}${escapeHtml(name)}</span>
-        ${isSel ? `<button class="cam-toggle-inline ${person.rec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(name)}">${person.rec?'📹':'🚫'}</button>` : ''}
-        <button class="rm" data-roster-rm="${escapeHtml(name)}" title="登録者一覧から削除">✕</button>
-      `;
-      rosterList.appendChild(chip);
-    });
-    rosterList.querySelectorAll('[data-select]').forEach(el=>{
-      el.addEventListener('click', ()=>{
-        const name = el.dataset.select;
-        const idx = state.people.findIndex(p=>p.name===name);
-        if(idx>=0){ state.people.splice(idx,1); }
-        else{ state.people.push({name, rec:true}); }
-        AtsuCup.resetDownstream();
-        renderRoster();
+  function toggleSelect(name){
+    const idx = state.people.findIndex(p=>p.name===name);
+    if(idx>=0){ state.people.splice(idx,1); }
+    else{ state.people.push({name, rec:true}); }
+    AtsuCup.resetDownstream();
+    renderAll();
+  }
+
+  function renderAll(){
+    renderBadges();
+    nextFlowBox.style.display = state.people.length ? 'block' : 'none';
+
+    // 今回参加する人(選択中)
+    selectedList.innerHTML = "";
+    if(!state.people.length){
+      selectedList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ選ばれていません。下の「登録済みの人から追加」からタップして選んでください。</div>`;
+    }else{
+      state.people.forEach(person=>{
+        const row = document.createElement('div');
+        row.className = 'roster-row selected';
+        row.innerHTML = `
+          <span class="check">✓</span>
+          <span class="nm" data-select="${escapeHtml(person.name)}">${escapeHtml(person.name)}</span>
+          <button class="cam-toggle-inline ${person.rec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(person.name)}">${person.rec?'📹':'🚫'}</button>
+          <button class="rm" data-toggle="${escapeHtml(person.name)}" title="今回の参加から外す">外す</button>
+        `;
+        selectedList.appendChild(row);
       });
+    }
+
+    // 登録済みだが今回は未選択の人
+    const unselected = state.roster.filter(name => !state.people.some(p=>p.name===name));
+    availableList.innerHTML = "";
+    if(!state.roster.length){
+      availableList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。上のフォームから名前を登録してください。</div>`;
+    }else if(!unselected.length){
+      availableList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">登録済みの人は全員選択中です。</div>`;
+    }else{
+      unselected.forEach(name=>{
+        const row = document.createElement('div');
+        row.className = 'roster-row';
+        row.innerHTML = `
+          <span class="check"></span>
+          <span class="nm" data-select="${escapeHtml(name)}">${escapeHtml(name)}</span>
+          <button class="rm" data-roster-rm="${escapeHtml(name)}" title="登録者一覧から削除">✕</button>
+        `;
+        availableList.appendChild(row);
+      });
+    }
+
+    document.querySelectorAll('[data-select]').forEach(el=>{
+      el.addEventListener('click', ()=> toggleSelect(el.dataset.select));
     });
-    rosterList.querySelectorAll('[data-cam]').forEach(el=>{
+    document.querySelectorAll('[data-toggle]').forEach(el=>{
+      el.addEventListener('click', (ev)=>{ ev.stopPropagation(); toggleSelect(el.dataset.toggle); });
+    });
+    document.querySelectorAll('[data-cam]').forEach(el=>{
       el.addEventListener('click', (ev)=>{
         ev.stopPropagation();
         const person = state.people.find(p=>p.name===el.dataset.cam);
-        if(person){ person.rec = !person.rec; AtsuCup.persist(); renderRoster(); }
+        if(person){ person.rec = !person.rec; AtsuCup.persist(); renderAll(); }
       });
     });
-    rosterList.querySelectorAll('[data-roster-rm]').forEach(el=>{
+    document.querySelectorAll('[data-roster-rm]').forEach(el=>{
       el.addEventListener('click', (ev)=>{
         ev.stopPropagation();
         const name = el.dataset.rosterRm;
         state.roster = state.roster.filter(n=>n!==name);
         state.people = state.people.filter(p=>p.name!==name);
         AtsuCup.resetDownstream();
-        renderRoster();
+        renderAll();
       });
     });
-    renderBadges();
   }
 
   document.getElementById("addToRoster").addEventListener("click", ()=>{
@@ -120,10 +183,10 @@
     });
     rosterInput.value = "";
     AtsuCup.resetDownstream();
-    renderRoster();
+    renderAll();
   });
 
-  renderRoster();
+  renderAll();
 })();
 </script>
 </body>
