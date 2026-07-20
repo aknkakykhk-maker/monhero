@@ -761,8 +761,11 @@
     const extraSpins = 4 + Math.random()*4;
     const backStrength = 0.7 + Math.random()*1.3;
     const duration = 2600 + Math.random()*1500;
-    const correction = -Math.PI/2 - (currentRotation % (Math.PI*2)) - targetSegCenter;
-    const finalRotation = currentRotation + spinDir*extraSpins*Math.PI*2 + correction;
+    // extraSpinsは端数を含む(2πのちょうど整数倍ではない)ため、回転量を先に加算した
+    // baseRotationを基準に補正しないと、ポインターの停止位置と当選者がずれてしまう
+    const baseRotation = currentRotation + spinDir*extraSpins*Math.PI*2;
+    const correction = -Math.PI/2 - (baseRotation % (Math.PI*2)) - targetSegCenter;
+    const finalRotation = baseRotation + correction;
     const startRotation = currentRotation;
     const delta = finalRotation - startRotation;
     const startTime = performance.now();
