@@ -166,7 +166,24 @@ const AtsuCup = (function(){
         if(allDecided && round.length > 1 && !state.matches[r+1]){
           const winners = round.map(m=>m.winner);
           const recMap = recMapOf();
-          const pairs = pairWithConstraint(winners, recMap);
+          // 本物のトーナメント表と同じく、隣り合う勝者同士を固定位置で組むのが基本。
+          // ただし両者とも撮影不可になる場合だけ、両方とも撮影OKな隣の試合から1人借りて入れ替える例外処理を行う
+          // (それでも解消できない場合はそのまま続行する)
+          const pairs = [];
+          for(let k=0;k<winners.length;k+=2){ pairs.push([winners[k], winners[k+1]]); }
+          for(let k=0;k<pairs.length;k++){
+            const [a,b] = pairs[k];
+            if(recMap[a] || recMap[b]) continue;
+            for(let j=0;j<pairs.length;j++){
+              if(j===k) continue;
+              const [c,d] = pairs[j];
+              if(recMap[c] && recMap[d]){
+                pairs[k] = [a, c];
+                pairs[j] = [b, d];
+                break;
+              }
+            }
+          }
           state.matches[r+1] = pairs.map(([a,b])=>({a,b,winner:null,loser:null,video:""}));
           // 準決勝(2試合)から決勝が生まれるタイミングで、両者の敗者による3位決定戦を自動生成
           if(round.length === 2 && !state.thirdPlaceMatch){
