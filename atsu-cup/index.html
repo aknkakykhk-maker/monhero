@@ -2,30 +2,769 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>あつ杯管理ツール</title>
-<meta name="theme-color" content="#000000">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>あつ杯 運営ツール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
-  html, body { margin:0; padding:0; background:#000; height:100%; }
-  body {
-    height:100dvh; box-sizing:border-box;
-    padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:14px; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
-    background:radial-gradient(circle at 50% 0%, #1f1305 0%, #000000 65%);
-    color:#fff; text-align:center; padding-left:24px; padding-right:24px;
+  :root{
+    --bg:#0a0810; --bg2:#14101c; --panel:#1b1626; --panel2:#241d33; --line:#3a2f4d;
+    --ember:#ff6a2b; --ember2:#ff9145; --gold:#e8b34c; --gold-dim:#8a6a2c;
+    --cream:#f1e6cf; --muted:#9a8fae; --danger:#ff4d4d; --ok:#3ecf8e;
   }
-  a.back { position:fixed; top:calc(16px + env(safe-area-inset-top)); left:16px; color:rgba(255,255,255,0.5); font:900 12px sans-serif; text-decoration:none; padding:8px 14px; border:1px solid rgba(255,255,255,0.15); border-radius:999px; }
-  .icon { font-size:48px; }
-  h1 { font-size:20px; font-weight:900; margin:0; }
-  p { color:rgba(255,255,255,0.5); font-size:12px; margin:0; max-width:320px; line-height:1.6; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--cream);font-family:'Noto Sans JP',sans-serif;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,106,43,0.18), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 100%, rgba(232,179,76,0.10), transparent 60%),
+      var(--bg);
+    padding-bottom:48px;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:18px 14px 0;}
+  a.back-link{
+    position:fixed; top:calc(12px + env(safe-area-inset-top)); left:12px; z-index:50;
+    color:var(--muted); font:900 11px 'Noto Sans JP',sans-serif; text-decoration:none;
+    padding:7px 12px; border:1px solid var(--line); border-radius:999px; background:rgba(10,8,16,.7);
+    backdrop-filter:blur(4px);
+  }
+  header.top{padding:22px 6px 14px; text-align:center; position:relative;}
+  .crown-mark{font-size:26px; filter:drop-shadow(0 0 8px rgba(232,179,76,.6));}
+  h1{
+    font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:26px; letter-spacing:.06em;
+    margin:6px 0 2px; background:linear-gradient(180deg,#fff2da,var(--gold) 60%, var(--ember2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .sub{font-size:11px; letter-spacing:.18em; color:var(--muted); text-transform:uppercase;}
+  nav.tabs{
+    display:flex; gap:5px; margin:18px 0 16px; background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:5px; overflow-x:auto;
+  }
+  nav.tabs button{
+    flex:1; padding:10px 4px; border:none; border-radius:10px; background:transparent;
+    color:var(--muted); font-family:'Noto Sans JP',sans-serif; font-weight:700; font-size:11.5px;
+    letter-spacing:.01em; cursor:pointer; transition:all .2s; white-space:nowrap;
+  }
+  nav.tabs button.active{
+    background:linear-gradient(180deg,var(--ember2),var(--ember)); color:#1a0a02;
+    box-shadow:0 3px 10px rgba(255,106,43,.35);
+  }
+  .panel{
+    background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--line);
+    border-radius:16px; padding:18px 16px; margin-bottom:16px; position:relative; overflow:hidden;
+  }
+  .panel::before{
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent); opacity:.5;
+  }
+  .panel h2{
+    font-family:'Cinzel','Noto Serif JP',serif; font-size:15px; letter-spacing:.05em; color:var(--gold);
+    margin:0 0 12px; display:flex; align-items:center; gap:8px;
+  }
+  .panel h2 .num{
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ember2);
+    border:1px solid var(--gold-dim); padding:1px 6px; border-radius:6px;
+  }
+  p.hint{font-size:12px; color:var(--muted); line-height:1.7; margin:0 0 12px;}
+  textarea{
+    width:100%; min-height:150px; background:#0d0a14; color:var(--cream); border:1px solid var(--line);
+    border-radius:10px; padding:12px; font-size:14px; font-family:'Noto Sans JP',sans-serif;
+    resize:vertical; line-height:1.8;
+  }
+  textarea:focus{outline:none; border-color:var(--gold-dim);}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px; border:none; border-radius:11px;
+    padding:12px 18px; font-weight:700; font-size:13.5px; cursor:pointer; font-family:'Noto Sans JP',sans-serif;
+    letter-spacing:.02em; transition:transform .12s, opacity .12s;
+  }
+  .btn:active{transform:scale(.96);}
+  .btn-primary{background:linear-gradient(180deg,var(--ember2),var(--ember)); color:#1a0a02; box-shadow:0 4px 14px rgba(255,106,43,.3);}
+  .btn-gold{background:linear-gradient(180deg,#f3d488,var(--gold)); color:#241800; box-shadow:0 4px 14px rgba(232,179,76,.3);}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--muted);}
+  .btn:disabled{opacity:.4; pointer-events:none;}
+  .row{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .count-badge{
+    display:inline-block; margin:10px 6px 0 0; font-family:'JetBrains Mono',monospace; font-size:12px;
+    color:var(--gold); background:#241a0c; border:1px solid var(--gold-dim); padding:3px 10px; border-radius:20px;
+  }
+  .count-badge.muted2{color:var(--muted); background:#161320; border-color:var(--line);}
+  .taglist{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px;}
+  .tag{
+    background:#241d33; border:1px solid var(--line); color:var(--cream); padding:5px 6px 5px 10px;
+    border-radius:8px; font-size:12.5px; display:flex; align-items:center; gap:8px;
+  }
+  .tag.no-rec{border-color:#5a2222;}
+  .tag .cam-toggle{
+    background:none; border:1px solid var(--line); border-radius:6px; font-size:12px; padding:3px 6px; cursor:pointer;
+  }
+  .tag.rec-yes .cam-toggle{color:var(--ok); border-color:#1f5c42;}
+  .tag.rec-no .cam-toggle{color:#ff7373; border-color:#5a2222;}
+  .tag .rm{background:none;border:none;color:#8a7fa0;font-size:13px;cursor:pointer;padding:0;line-height:1;}
+  .wheel-stage{display:flex; flex-direction:column; align-items:center; padding:8px 0 4px;}
+  .wheel-holder{position:relative; width:280px; height:280px; margin:0 auto;}
+  .pointer{
+    position:absolute; top:-14px; left:50%; transform:translateX(-50%); width:0; height:0;
+    border-left:14px solid transparent; border-right:14px solid transparent; border-top:22px solid var(--gold);
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,.5)); z-index:5;
+  }
+  canvas#wheel{border-radius:50%; box-shadow:0 0 0 4px #0d0a14, 0 0 0 6px var(--gold-dim), 0 10px 30px rgba(0,0,0,.5);}
+  .wheel-center{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:64px; height:64px;
+    border-radius:50%; background:radial-gradient(circle at 35% 30%, #3a2c14, #14100a); border:2px solid var(--gold);
+    display:flex; align-items:center; justify-content:center; z-index:4; font-size:20px;
+    box-shadow:0 0 14px rgba(232,179,76,.4);
+  }
+  .picked-banner{
+    margin-top:16px; text-align:center; min-height:34px; font-family:'Cinzel','Noto Serif JP',serif;
+    font-size:19px; font-weight:900; color:var(--gold); text-shadow:0 0 12px rgba(232,179,76,.5);
+  }
+  .order-list{margin-top:14px; display:flex; flex-direction:column; gap:6px;}
+  .order-item{
+    display:flex; align-items:center; gap:10px; background:#0d0a14; border:1px solid var(--line);
+    border-radius:8px; padding:8px 10px; font-size:13px;
+  }
+  .order-item .idx{font-family:'JetBrains Mono',monospace; color:var(--ember2); width:22px; text-align:right; font-size:12px;}
+  .order-item .cam{margin-left:auto; font-size:12px; opacity:.8;}
+  .bracket-scroll{overflow-x:auto; padding-bottom:8px; margin:0 -16px; padding-left:16px; padding-right:16px;}
+  .bracket{display:flex; gap:26px; min-width:max-content; padding:6px 2px 12px;}
+  .round-col{display:flex; flex-direction:column; justify-content:space-around; gap:14px; min-width:160px;}
+  .round-title{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--muted); text-align:center;
+    letter-spacing:.1em; margin-bottom:6px; text-transform:uppercase;
+  }
+  .match{background:#0d0a14; border:1px solid var(--line); border-radius:10px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,.3);}
+  .match.forced{border-color:#7a2c2c; box-shadow:0 0 0 1px #7a2c2c inset;}
+  .slot{
+    padding:9px 10px; font-size:12.5px; display:flex; align-items:center; justify-content:space-between; gap:6px;
+    cursor:pointer; border-bottom:1px solid var(--line); color:var(--cream); transition:background .15s;
+  }
+  .slot:last-child{border-bottom:none;}
+  .slot .cam-mark{font-size:10.5px; opacity:.75;}
+  .slot.bye{color:var(--muted); font-style:italic; cursor:default;}
+  .slot.winner{background:linear-gradient(90deg,rgba(255,106,43,.22),transparent); color:var(--gold); font-weight:700;}
+  .slot.winner::after{content:'👑'; font-size:11px;}
+  .slot.empty{color:#463b58; cursor:default;}
+  .slot:not(.bye):not(.empty):active{background:rgba(255,255,255,.06);}
+  .warn-box{
+    margin-top:14px; background:#241214; border:1px solid #5a2222; border-radius:10px; padding:10px 12px;
+    font-size:12px; color:#ffb3b3; line-height:1.8;
+  }
+  .champion-box{
+    margin-top:18px; text-align:center; padding:20px 14px; border-radius:14px;
+    background:radial-gradient(circle at 50% 0%, rgba(232,179,76,.18), transparent 70%), #14100a; border:1px solid var(--gold-dim);
+  }
+  .champion-box .label{font-size:11px; letter-spacing:.2em; color:var(--muted); text-transform:uppercase;}
+  .champion-box .name{
+    font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:26px; color:var(--gold);
+    margin:6px 0 14px; text-shadow:0 0 16px rgba(232,179,76,.5);
+  }
+  .card-controls{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+  .field{flex:1; min-width:120px;}
+  .field label{display:block; font-size:11px; color:var(--muted); margin-bottom:5px; letter-spacing:.05em;}
+  .field input, .field select{
+    width:100%; background:#0d0a14; border:1px solid var(--line); color:var(--cream); border-radius:9px;
+    padding:10px; font-size:13.5px; font-family:'Noto Sans JP',sans-serif;
+  }
+  canvas#cardCanvas{width:100%; border-radius:14px; border:1px solid var(--line); display:block; margin-top:6px;}
+  .empty-state{text-align:center; padding:34px 10px; color:var(--muted); font-size:13px; line-height:1.9;}
+  .empty-state .big{font-size:30px; display:block; margin-bottom:8px;}
+  .video-card{background:#0d0a14; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:12px;}
+  .video-card .vs{font-size:13px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .video-card .vs .rlabel{font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); border:1px solid var(--line); border-radius:5px; padding:1px 5px;}
+  .video-card input{
+    width:100%; background:#161320; border:1px solid var(--line); color:var(--cream); border-radius:8px;
+    padding:9px 10px; font-size:12.5px; font-family:'JetBrains Mono',monospace; margin-bottom:8px;
+  }
+  .video-embed{width:100%; aspect-ratio:16/9; border-radius:10px; overflow:hidden; background:#000; border:1px solid var(--line);}
+  .video-embed iframe, .video-embed video{width:100%; height:100%; border:none;}
+  .video-link-btn{
+    display:inline-block; font-size:12px; color:var(--gold); border:1px solid var(--gold-dim); border-radius:8px;
+    padding:8px 12px; text-decoration:none;
+  }
+  footer.note{text-align:center; font-size:11px; color:#544a67; margin-top:6px; padding:0 20px; line-height:1.8;}
 </style>
 </head>
 <body>
-  <a class="back" href="../index.html">‹ 戻る</a>
-  <div class="icon">🏆</div>
-  <h1>あつ杯管理ツール</h1>
-  <p>準備中です。トーナメント表・組み合わせルーレットなどの機能をここに実装していきます。</p>
+<a class="back-link" href="../index.html">‹ 戻る</a>
+<div class="wrap">
+  <header class="top">
+    <div class="crown-mark">👑</div>
+    <h1>あつ杯 運営ツール</h1>
+    <div class="sub">LINE monster farm・tournament suite</div>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="entry" class="active">参加者</button>
+    <button data-tab="roulette">抽選</button>
+    <button data-tab="bracket">対戦表</button>
+    <button data-tab="video">動画</button>
+    <button data-tab="card">優勝カード</button>
+  </nav>
+
+  <section class="panel tab-panel" id="tab-entry">
+    <h2><span class="num">01</span> 参加者登録</h2>
+    <p class="hint">1行に1人ずつ名前を入力してください。登録後、各参加者の「撮影OK / 不可」を切り替えられます(撮影不可同士は対戦しないように自動で組み合わせます)。</p>
+    <textarea id="nameInput" placeholder="みゃる&#10;たいたん&#10;かどみうむ&#10;ソラシド&#10;..."></textarea>
+    <div class="row">
+      <button class="btn btn-primary" id="saveNames">この内容で登録する</button>
+      <button class="btn btn-ghost" id="clearNames">クリア</button>
+    </div>
+    <div id="countBadges"></div>
+    <div class="taglist" id="tagList"></div>
+  </section>
+
+  <section class="panel tab-panel" id="tab-roulette" style="display:none;">
+    <h2><span class="num">02</span> 抽選ルーレット</h2>
+    <p class="hint">ルーレットで対戦表に並べる順番を1人ずつランダムに決めます。全員決まると、撮影不可同士が当たらないように自動で組み合わせて対戦表を作ります。</p>
+    <div class="wheel-stage">
+      <div class="wheel-holder">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="280" height="280"></canvas>
+        <div class="wheel-center">🐾</div>
+      </div>
+      <div class="picked-banner" id="pickedBanner">&nbsp;</div>
+      <div class="row" style="justify-content:center;">
+        <button class="btn btn-gold" id="spinBtn">ルーレットを回す</button>
+        <button class="btn btn-ghost" id="resetOrder">やり直す</button>
+      </div>
+    </div>
+    <div class="order-list" id="orderList"></div>
+  </section>
+
+  <section class="panel tab-panel" id="tab-bracket" style="display:none;">
+    <h2><span class="num">03</span> トーナメント対戦表</h2>
+    <p class="hint">名前をタップすると勝者として次のラウンドに進みます。2回戦以降の組み合わせは、その回の勝者が決まってから撮影可否を見て自動編成されます。</p>
+    <div id="bracketArea"></div>
+  </section>
+
+  <section class="panel tab-panel" id="tab-video" style="display:none;">
+    <h2><span class="num">04</span> 対戦動画</h2>
+    <p class="hint">動画ファイル自体はこのアプリには保存できません。YouTube(限定公開)やX、ミラティブのアーカイブなど、どこかにアップロードした後の「リンク」をここに貼ると、配信中このアプリ内でまとめて再生・鑑賞できます。</p>
+    <div id="videoArea"></div>
+  </section>
+
+  <section class="panel tab-panel" id="tab-card" style="display:none;">
+    <h2><span class="num">05</span> 優勝者カード生成</h2>
+    <p class="hint">大会名・優勝者名を入力して画像を生成、そのまま保存できます。</p>
+    <div class="card-controls">
+      <div class="field"><label>回数</label><input type="text" id="cupNo" placeholder="例: 30" value="30"></div>
+      <div class="field"><label>優勝者名</label><input type="text" id="winnerName" placeholder="例: おりょう"></div>
+      <div class="field">
+        <label>テーマ</label>
+        <select id="cardTheme">
+          <option value="ember">火山・紅蓮</option>
+          <option value="ice">氷結・蒼氷</option>
+          <option value="forest">森林・翠玉</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn btn-primary" id="genCard">カードを生成</button>
+      <button class="btn btn-gold" id="dlCard" disabled>画像を保存</button>
+    </div>
+    <canvas id="cardCanvas" width="1000" height="1000"></canvas>
+  </section>
+
+  <footer class="note">組み合わせ・勝敗・動画リンクは、この端末のブラウザ内に保存されます。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  let state = {
+    people: [],       // [{name, rec}]
+    order: [],
+    remaining: [],
+    matches: [],       // matches[round][i] = {a,b,winner,video}
+    winnerName: ""
+  };
+
+  const STORE_KEY = "atsucup:state:v2";
+
+  function persist(){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+  function restore(){
+    try{
+      const raw = localStorage.getItem(STORE_KEY);
+      if(raw) Object.assign(state, JSON.parse(raw));
+    }catch(e){}
+    renderAll();
+  }
+
+  document.querySelectorAll("nav.tabs button").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      document.querySelectorAll(".tab-panel").forEach(p=>p.style.display="none");
+      document.getElementById("tab-"+btn.dataset.tab).style.display="block";
+      if(btn.dataset.tab === "roulette") drawWheel();
+      if(btn.dataset.tab === "bracket") renderBracket();
+      if(btn.dataset.tab === "video") renderVideoTab();
+    });
+  });
+
+  function recMapOf(){
+    const m = {};
+    state.people.forEach(p=> m[p.name]=p.rec);
+    return m;
+  }
+
+  /* ---------- entry ---------- */
+  const nameInput = document.getElementById("nameInput");
+  const countBadges = document.getElementById("countBadges");
+  const tagList = document.getElementById("tagList");
+
+  function renderTags(){
+    tagList.innerHTML = "";
+    state.people.forEach((p)=>{
+      const t = document.createElement("div");
+      t.className = "tag " + (p.rec ? "rec-yes" : "rec-no") + (p.rec?"":" no-rec");
+      t.innerHTML = `<span>${escapeHtml(p.name)}</span>
+        <button class="cam-toggle" data-name="${escapeHtml(p.name)}">${p.rec ? "📹 OK" : "🚫 不可"}</button>
+        <button class="rm" data-name-rm="${escapeHtml(p.name)}">✕</button>`;
+      tagList.appendChild(t);
+    });
+    tagList.querySelectorAll(".cam-toggle").forEach(b=>{
+      b.addEventListener("click", ()=>{
+        const person = state.people.find(p=>p.name===b.dataset.name);
+        if(person){ person.rec = !person.rec; persist(); renderTags(); renderBadges(); }
+      });
+    });
+    tagList.querySelectorAll(".rm").forEach(b=>{
+      b.addEventListener("click", ()=>{
+        state.people = state.people.filter(p=>p.name !== b.dataset.nameRm);
+        resetDownstream();
+        renderAll();
+      });
+    });
+    renderBadges();
+  }
+
+  function renderBadges(){
+    const total = state.people.length;
+    const rec = state.people.filter(p=>p.rec).length;
+    const norec = total - rec;
+    countBadges.innerHTML = `
+      <span class="count-badge">登録済み: ${total}人</span>
+      <span class="count-badge muted2">📹 撮影OK: ${rec}人</span>
+      <span class="count-badge muted2">🚫 撮影不可: ${norec}人</span>`;
+  }
+
+  document.getElementById("saveNames").addEventListener("click", ()=>{
+    const lines = nameInput.value.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(lines.length < 2){ alert("2人以上の名前を入力してください。"); return; }
+    const uniq = [...new Set(lines)];
+    const newPeople = uniq.map(name=>{
+      const existing = state.people.find(p=>p.name===name);
+      return existing ? existing : {name, rec:true};
+    });
+    state.people = newPeople;
+    resetDownstream();
+    renderAll();
+    document.querySelector('nav.tabs button[data-tab="roulette"]').click();
+  });
+  document.getElementById("clearNames").addEventListener("click", ()=>{ nameInput.value=""; });
+
+  function resetDownstream(){
+    state.order = [];
+    state.remaining = state.people.map(p=>p.name);
+    state.matches = [];
+    state.winnerName = "";
+    persist();
+  }
+
+  /* ---------- roulette ---------- */
+  const wheelCanvas = document.getElementById("wheel");
+  const ctx = wheelCanvas.getContext("2d");
+  const pickedBanner = document.getElementById("pickedBanner");
+  const orderList = document.getElementById("orderList");
+  const spinBtn = document.getElementById("spinBtn");
+  const WHEEL_COLORS = ["#ff6a2b","#e8b34c","#7c4dff","#2bc9a0","#ff4d94","#4fb0e8","#a8e83b","#ff9145"];
+  let currentRotation = 0;
+  let spinning = false;
+
+  function drawWheel(){
+    const list = state.remaining.length ? state.remaining : ["参加者を登録してください"];
+    const n = list.length;
+    const R = wheelCanvas.width/2;
+    ctx.clearRect(0,0,wheelCanvas.width,wheelCanvas.height);
+    ctx.save();
+    ctx.translate(R,R);
+    ctx.rotate(currentRotation);
+    const seg = (Math.PI*2)/n;
+    for(let i=0;i<n;i++){
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.arc(0,0,R-4, i*seg, (i+1)*seg);
+      ctx.closePath();
+      ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
+      ctx.fill();
+      ctx.save();
+      ctx.rotate(i*seg + seg/2);
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#160f08";
+      ctx.font = "bold 13px 'Noto Sans JP', sans-serif";
+      const label = list[i].length > 8 ? list[i].slice(0,7)+"…" : list[i];
+      ctx.fillText(label, R-16, 5);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function renderOrderList(){
+    const recMap = recMapOf();
+    orderList.innerHTML = "";
+    state.order.forEach((n,i)=>{
+      const el = document.createElement("div");
+      el.className = "order-item";
+      el.innerHTML = `<span class="idx">${i+1}</span><span>${escapeHtml(n)}</span><span class="cam">${recMap[n]?"📹":"🚫"}</span>`;
+      orderList.appendChild(el);
+    });
+  }
+
+  spinBtn.addEventListener("click", ()=>{
+    if(spinning) return;
+    if(!state.remaining.length){
+      if(!state.people.length){ alert("先に参加者を登録してください。"); return; }
+      return;
+    }
+    spinning = true;
+    spinBtn.disabled = true;
+    const n = state.remaining.length;
+    const seg = (Math.PI*2)/n;
+    const winnerIdx = Math.floor(Math.random()*n);
+    const targetSegCenter = winnerIdx*seg + seg/2;
+    const extraSpins = 5 + Math.random()*2;
+    const finalRotation = currentRotation + extraSpins*Math.PI*2 + ( -Math.PI/2 - (currentRotation % (Math.PI*2)) - targetSegCenter );
+    const startRotation = currentRotation;
+    const delta = finalRotation - startRotation;
+    const duration = 3200;
+    const startTime = performance.now();
+    function easeOutQuint(t){ return 1 - Math.pow(1-t,5); }
+    function frame(now){
+      const t = Math.min(1, (now-startTime)/duration);
+      currentRotation = startRotation + delta*easeOutQuint(t);
+      drawWheel();
+      if(t < 1){ requestAnimationFrame(frame); }
+      else{
+        spinning = false;
+        spinBtn.disabled = false;
+        const picked = state.remaining[winnerIdx];
+        state.remaining.splice(winnerIdx,1);
+        state.order.push(picked);
+        pickedBanner.textContent = "🎯 " + picked;
+        renderOrderList();
+        persist();
+        if(state.remaining.length === 0){
+          buildBracketFromOrder();
+          setTimeout(()=>{ document.querySelector('nav.tabs button[data-tab="bracket"]').click(); }, 600);
+        }
+      }
+    }
+    requestAnimationFrame(frame);
+  });
+
+  document.getElementById("resetOrder").addEventListener("click", ()=>{
+    state.order = [];
+    state.remaining = state.people.map(p=>p.name);
+    pickedBanner.innerHTML = "&nbsp;";
+    renderOrderList();
+    drawWheel();
+    persist();
+  });
+
+  /* ---------- bracket (with recording-constraint pairing) ---------- */
+  function nextPow2(n){ let p=1; while(p<n) p*=2; return p; }
+  function shuffleArray(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  // pairs a list of names so that two non-recorders are matched together
+  // only when unavoidable (more non-recorders than recorders in the pool).
+  function pairWithConstraint(list, recMap){
+    let Ns = list.filter(n=>!recMap[n]);
+    let Rs = list.filter(n=>recMap[n]);
+    shuffleArray(Ns); shuffleArray(Rs);
+    const pairs = [];
+    while(Ns.length && Rs.length){ pairs.push([Ns.pop(), Rs.pop()]); }
+    while(Ns.length>=2){ pairs.push([Ns.pop(), Ns.pop()]); }
+    while(Rs.length>=2){ pairs.push([Rs.pop(), Rs.pop()]); }
+    shuffleArray(pairs);
+    return pairs;
+  }
+
+  function buildBracketFromOrder(){
+    const order = state.order.length ? state.order : state.people.map(p=>p.name);
+    const recMap = recMapOf();
+    const size = nextPow2(order.length);
+    const byes = size - order.length;
+    let pool = [...order];
+    const byePlayers = [];
+    for(let i=0;i<byes;i++){
+      let idx = pool.findIndex(n=>!recMap[n]);
+      if(idx===-1) idx = 0;
+      byePlayers.push(pool.splice(idx,1)[0]);
+    }
+    const pairs = pairWithConstraint(pool, recMap);
+    const round1 = [];
+    byePlayers.forEach(p=> round1.push({a:p, b:null, winner:p, video:""}));
+    pairs.forEach(([a,b])=> round1.push({a, b, winner:null, video:""}));
+    shuffleArray(round1);
+    state.matches = [round1];
+    propagateByes();
+    persist();
+    renderBracket();
+  }
+
+  function propagateByes(){
+    let changed = true;
+    while(changed){
+      changed = false;
+      for(let r=0; r<state.matches.length; r++){
+        const round = state.matches[r];
+        const allDecided = round.every(m => m.winner);
+        if(allDecided && round.length > 1 && !state.matches[r+1]){
+          const winners = round.map(m=>m.winner);
+          const recMap = recMapOf();
+          const pairs = pairWithConstraint(winners, recMap);
+          state.matches[r+1] = pairs.map(([a,b])=>({a,b,winner:null,video:""}));
+          changed = true;
+        } else if(allDecided && round.length === 1){
+          state.winnerName = round[0].winner;
+        }
+      }
+    }
+  }
+
+  function pickWinner(r, m, side){
+    const match = state.matches[r][m];
+    const val = side === 'a' ? match.a : match.b;
+    if(!val) return;
+    match.winner = val;
+    state.matches = state.matches.slice(0, r+1);
+    if(state.matches[r].length === 1){
+      if(match.winner){ state.winnerName = match.winner; }
+    }
+    propagateByes();
+    persist();
+    renderBracket();
+  }
+
+  function forcedPairsList(){
+    const recMap = recMapOf();
+    const forced = [];
+    state.matches.forEach((round, r)=>{
+      round.forEach(m=>{
+        if(m.a && m.b && !recMap[m.a] && !recMap[m.b]){
+          forced.push({r, a:m.a, b:m.b});
+        }
+      });
+    });
+    return forced;
+  }
+
+  function roundLabel(total){
+    const map = {1:"決勝",2:"準決勝",4:"準々決勝",8:"ベスト16",16:"ベスト32",32:"ベスト64"};
+    return map[total] || `${total*2}回戦`;
+  }
+
+  function renderBracket(){
+    const area = document.getElementById("bracketArea");
+    const recMap = recMapOf();
+    if(!state.matches.length){
+      area.innerHTML = `<div class="empty-state"><span class="big">🌀</span>まだ組み合わせがありません。<br>「参加者」タブで登録後、「抽選」で組み合わせを決めてください。</div>`;
+      return;
+    }
+    let html = `<div class="bracket-scroll"><div class="bracket">`;
+    state.matches.forEach((round, r)=>{
+      html += `<div class="round-col"><div class="round-title">${roundLabel(round.length)}</div>`;
+      round.forEach((m,i)=>{
+        const isForced = m.a && m.b && !recMap[m.a] && !recMap[m.b];
+        html += `<div class="match ${isForced?'forced':''}">`;
+        html += slotHtml(m.a, m.winner, r, i, 'a', recMap);
+        html += slotHtml(m.b, m.winner, r, i, 'b', recMap);
+        html += `</div>`;
+      });
+      html += `</div>`;
+    });
+    html += `</div></div>`;
+
+    const forced = forcedPairsList();
+    if(forced.length){
+      html += `<div class="warn-box">⚠️ 撮影OKの人が足りず、以下は撮影不可同士の対戦になっています:<br>` +
+        forced.map(f=>`・${roundLabel(state.matches[f.r].length)}: ${escapeHtml(f.a)} vs ${escapeHtml(f.b)}`).join("<br>") + `</div>`;
+    }
+
+    if(state.winnerName){
+      html += `<div class="champion-box"><div class="label">Champion</div><div class="name">👑 ${escapeHtml(state.winnerName)}</div>
+        <button class="btn btn-gold" id="toCardBtn">優勝カードを作る</button></div>`;
+    }
+    area.innerHTML = html;
+    area.querySelectorAll(".slot[data-r]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        pickWinner(+el.dataset.r, +el.dataset.m, el.dataset.side);
+      });
+    });
+    const toCardBtn = document.getElementById("toCardBtn");
+    if(toCardBtn){
+      toCardBtn.addEventListener("click", ()=>{
+        document.querySelector('nav.tabs button[data-tab="card"]').click();
+        document.getElementById('winnerName').value = state.winnerName;
+      });
+    }
+  }
+
+  function slotHtml(val, winner, r, m, side, recMap){
+    if(val === null || val === undefined){
+      if(val === null) return `<div class="slot bye">BYE (不戦勝)</div>`;
+      return `<div class="slot empty">未定</div>`;
+    }
+    const isWinner = winner === val;
+    const cam = recMap[val] ? "📹" : "🚫";
+    return `<div class="slot ${isWinner?'winner':''}" data-r="${r}" data-m="${m}" data-side="${side}"><span>${escapeHtml(val)}</span><span class="cam-mark">${cam}</span></div>`;
+  }
+
+  /* ---------- video tab ---------- */
+  function ytId(url){
+    const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([\w-]{6,})/);
+    return m ? m[1] : null;
+  }
+  function hostFromUrl(u){ try{ return new URL(u).hostname.replace('www.',''); }catch(e){ return 'link'; } }
+  function videoEmbedHtml(url){
+    if(!url) return '';
+    const yid = ytId(url);
+    if(yid){ return `<div class="video-embed"><iframe src="https://www.youtube.com/embed/${yid}" allowfullscreen loading="lazy"></iframe></div>`; }
+    if(/\.(mp4|webm|mov)(\?|$)/i.test(url)){ return `<div class="video-embed"><video controls preload="metadata" src="${url}"></video></div>`; }
+    return `<a class="video-link-btn" href="${url}" target="_blank" rel="noopener">🔗 動画を開く (${hostFromUrl(url)})</a>`;
+  }
+
+  function allPlayableMatches(){
+    const list = [];
+    state.matches.forEach((round, r)=>{
+      round.forEach((m,i)=>{
+        if(m.a && m.b) list.push({r,i,m});
+      });
+    });
+    return list;
+  }
+
+  function renderVideoTab(){
+    const area = document.getElementById("videoArea");
+    const list = allPlayableMatches();
+    if(!list.length){
+      area.innerHTML = `<div class="empty-state"><span class="big">🎬</span>対戦カードがまだありません。<br>対戦表で組み合わせを作ると、ここにリンク欄が表示されます。</div>`;
+      return;
+    }
+    area.innerHTML = list.map(({r,i,m})=>{
+      return `<div class="video-card">
+        <div class="vs"><span class="rlabel">${roundLabel(state.matches[r].length)}</span> ${escapeHtml(m.a)} vs ${escapeHtml(m.b)} ${m.winner?`<span class="rlabel">勝者: ${escapeHtml(m.winner)}</span>`:''}</div>
+        <input type="text" placeholder="動画リンクを貼り付け (YouTube / X / その他)" value="${m.video?escapeHtml(m.video):''}" data-r="${r}" data-i="${i}">
+        ${videoEmbedHtml(m.video)}
+      </div>`;
+    }).join("");
+    area.querySelectorAll("input").forEach(inp=>{
+      inp.addEventListener("change", ()=>{
+        const r = +inp.dataset.r, i = +inp.dataset.i;
+        state.matches[r][i].video = inp.value.trim();
+        persist();
+        renderVideoTab();
+      });
+    });
+  }
+
+  /* ---------- card ---------- */
+  const cardCanvas = document.getElementById("cardCanvas");
+  const cctx = cardCanvas.getContext("2d");
+  const dlBtn = document.getElementById("dlCard");
+  const THEMES = {
+    ember:{bg1:"#3a0f02",bg2:"#0a0603",ring:"#e8b34c",accent:"#ff6a2b",glow:"rgba(255,106,43,.55)"},
+    ice:{bg1:"#04213a",bg2:"#040912",ring:"#bfe9ff",accent:"#4fd1e8",glow:"rgba(79,209,232,.55)"},
+    forest:{bg1:"#0c3a1a",bg2:"#050c07",ring:"#a8e83b",accent:"#2bc97a",glow:"rgba(43,201,122,.5)"}
+  };
+  function drawCard(){
+    const cupNo = document.getElementById("cupNo").value.trim() || "?";
+    const name = document.getElementById("winnerName").value.trim();
+    const theme = THEMES[document.getElementById("cardTheme").value];
+    if(!name){ alert("優勝者名を入力してください。"); return; }
+    const W = cardCanvas.width, H = cardCanvas.height;
+    cctx.clearRect(0,0,W,H);
+    const grad = cctx.createRadialGradient(W/2,H*0.38,40,W/2,H*0.38,W*0.75);
+    grad.addColorStop(0, theme.bg1); grad.addColorStop(1, theme.bg2);
+    cctx.fillStyle = grad; cctx.fillRect(0,0,W,H);
+    cctx.save(); cctx.translate(W/2,H*0.38); cctx.globalAlpha = 0.25;
+    for(let i=0;i<28;i++){
+      cctx.rotate(Math.PI*2/28);
+      cctx.beginPath(); cctx.moveTo(0,0); cctx.lineTo(W*0.7,-14); cctx.lineTo(W*0.7,14); cctx.closePath();
+      cctx.fillStyle = theme.accent; cctx.fill();
+    }
+    cctx.restore(); cctx.globalAlpha = 1;
+    const circ = cctx.createRadialGradient(W/2,H*0.42,W*0.1,W/2,H*0.42,W*0.62);
+    circ.addColorStop(0,"rgba(0,0,0,0)"); circ.addColorStop(1,"rgba(0,0,0,0.55)");
+    cctx.fillStyle = circ; cctx.fillRect(0,0,W,H);
+    cctx.strokeStyle = theme.ring; cctx.lineWidth = 10;
+    cctx.beginPath(); cctx.arc(W/2,H/2,W/2-10,0,Math.PI*2); cctx.stroke();
+    cctx.strokeStyle = "rgba(255,255,255,.25)"; cctx.lineWidth = 2;
+    cctx.beginPath(); cctx.arc(W/2,H/2,W/2-26,0,Math.PI*2); cctx.stroke();
+    const bx = W*0.83, by = H*0.15;
+    cctx.save(); cctx.shadowColor = theme.glow; cctx.shadowBlur = 26;
+    cctx.beginPath(); cctx.arc(bx,by,72,0,Math.PI*2); cctx.fillStyle = "rgba(10,8,10,0.55)"; cctx.fill();
+    cctx.lineWidth = 5; cctx.strokeStyle = theme.ring; cctx.stroke(); cctx.restore();
+    cctx.fillStyle = theme.ring; cctx.font = "46px serif"; cctx.textAlign = "center";
+    cctx.fillText("👑", bx, by-8);
+    cctx.font = "900 30px 'JetBrains Mono', monospace"; cctx.fillStyle = "#fff";
+    cctx.fillText("A."+cupNo, bx, by+42);
+    cctx.font = "80px serif"; cctx.fillStyle = theme.ring; cctx.textAlign = "center";
+    cctx.shadowColor = theme.glow; cctx.shadowBlur = 30;
+    cctx.fillText("👑", W/2, H*0.30); cctx.shadowBlur = 0;
+    cctx.font = "600 22px 'Noto Sans JP', sans-serif"; cctx.fillStyle = "rgba(255,255,255,.75)";
+    cctx.letterSpacing = "6px"; cctx.fillText("W I N N E R", W/2, H*0.40); cctx.letterSpacing = "0px";
+    let fontSize = 92;
+    cctx.font = `900 ${fontSize}px 'Cinzel', 'Noto Serif JP', serif`;
+    while(cctx.measureText(name).width > W*0.78 && fontSize > 40){
+      fontSize -= 4; cctx.font = `900 ${fontSize}px 'Cinzel', 'Noto Serif JP', serif`;
+    }
+    cctx.fillStyle = "#fff8ec"; cctx.shadowColor = theme.glow; cctx.shadowBlur = 36;
+    cctx.fillText(name, W/2, H*0.56); cctx.shadowBlur = 0;
+    cctx.font = "700 26px 'Noto Serif JP', serif"; cctx.fillStyle = theme.ring;
+    cctx.fillText(`優勝者 ${name}`, W/2, H*0.88);
+    cctx.font = "500 15px 'JetBrains Mono', monospace"; cctx.fillStyle = "rgba(255,255,255,.5)";
+    cctx.fillText(`第 ${cupNo} 回 あつ杯`, W/2, H*0.93);
+    dlBtn.disabled = false;
+  }
+  document.getElementById("genCard").addEventListener("click", async ()=>{
+    if(document.fonts && document.fonts.ready){ await document.fonts.ready; }
+    drawCard();
+  });
+  dlBtn.addEventListener("click", ()=>{
+    const link = document.createElement("a");
+    const name = document.getElementById("winnerName").value.trim() || "champion";
+    link.download = `atsucup_winner_${name}.png`;
+    link.href = cardCanvas.toDataURL("image/png");
+    link.click();
+  });
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function renderAll(){
+    nameInput.value = state.people.map(p=>p.name).join("\n");
+    renderTags();
+    renderOrderList();
+    drawWheel();
+    renderBracket();
+    if(state.winnerName) document.getElementById("winnerName").value = state.winnerName;
+  }
+
+  restore();
+})();
+</script>
 </body>
 </html>
