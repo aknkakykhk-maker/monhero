@@ -26,16 +26,25 @@
   .next-match-box .lbl{font-size:11px; letter-spacing:.15em; color:var(--ember2); font-weight:900; text-transform:uppercase; margin-bottom:10px;}
   .match-pick-row{display:flex; align-items:stretch; gap:8px;}
   .pick-btn{
-    flex:1; display:flex; align-items:center; gap:8px; min-width:0; background:#161320; border:1px solid var(--line);
-    border-radius:10px; color:var(--cream); font-weight:700; font-size:13.5px; padding:12px; cursor:pointer; text-align:left;
+    flex:1; display:flex; align-items:center; gap:4px; min-width:0; background:#161320; border:1px solid var(--line);
+    border-radius:10px; color:var(--cream); font-weight:700; font-size:13.5px; padding:4px;
   }
+  .pick-main{ flex:1; display:flex; align-items:center; gap:8px; min-width:0; padding:8px; cursor:pointer; border-radius:8px; }
+  .pick-main:active{ background:rgba(255,255,255,.08); }
   .pick-btn span.nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .pick-btn:active{ transform:scale(.97); background:rgba(255,255,255,.08); }
   .pick-btn.winner{ background:linear-gradient(90deg,rgba(232,179,76,.28),rgba(232,179,76,.08)); border-color:var(--gold-dim); color:var(--gold); font-weight:900; }
   .pick-btn.forced{ border-color:#7a2c2c; }
-  .pick-btn:disabled{ cursor:default; opacity:.55; }
+  .pick-edit-btn{
+    flex-shrink:0; background:none; border:1px solid var(--line); border-radius:6px; color:var(--muted);
+    font-size:12px; padding:0 7px; cursor:pointer; align-self:center; height:30px;
+  }
+  .nm-edit-input{
+    flex:1; min-width:0; background:#0d0a14; border:1px solid var(--ember2); color:var(--cream);
+    border-radius:6px; padding:5px 8px; font-size:13px; font-family:'Noto Sans JP',sans-serif;
+  }
   .vs-label{ align-self:center; color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:11px; flex-shrink:0; }
-  .bye-row{ color:var(--muted); font-style:italic; font-size:13px; padding:10px 4px; }
+  .bye-row{ color:var(--muted); font-style:italic; font-size:13px; padding:10px 4px; display:flex; align-items:center; gap:8px; }
+  .bye-row .nm{ cursor:pointer; }
   .warn-box{
     margin-top:14px; background:#241214; border:1px solid #5a2222; border-radius:10px; padding:10px 12px;
     font-size:12px; color:#ffb3b3; line-height:1.8;
@@ -76,6 +85,7 @@
   </section>
 
   <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+  <datalist id="rosterCandidatesBracket"></datalist>
 </div>
 
 <script src="tap-ripple.js"></script>
@@ -86,6 +96,10 @@
   const state = AtsuCup.state;
   const escapeHtml = AtsuCup.escapeHtml;
   AtsuCup.restore();
+
+  // 名前を書き換える際、登録済みの参加者を候補として選べるようにする
+  document.getElementById('rosterCandidatesBracket').innerHTML =
+    state.roster.map(n=>`<option value="${escapeHtml(n)}">`).join('');
 
   function initials(name){ return (name||'').trim().charAt(0) || '?'; }
   function truncate(s, n){ return (s && s.length > n) ? s.slice(0,n-1)+'…' : (s||''); }
@@ -250,18 +264,52 @@
     renderTree();
   }
 
+  // 対戦が始まった後でも名前をタップして書き換えられるようにする(全ラウンド・優勝者名まで連動して直る)
+  function startEditMatchName(r, m, side){
+    const mainEl = document.querySelector(`.pick-main[data-r="${r}"][data-m="${m}"][data-side="${side}"], .bye-nm[data-r="${r}"][data-m="${m}"][data-side="${side}"]`);
+    if(!mainEl) return;
+    const nmSpan = mainEl.classList.contains('bye-nm') ? mainEl : mainEl.querySelector('.nm');
+    if(!nmSpan) return;
+    const match = r === 'third' ? state.thirdPlaceMatch : state.matches[r][m];
+    const current = side === 'a' ? match.a : match.b;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'nm-edit-input';
+    input.value = current;
+    input.setAttribute('list', 'rosterCandidatesBracket');
+    input.addEventListener('click', ev=> ev.stopPropagation());
+    nmSpan.replaceWith(input);
+    input.focus(); input.select();
+    let done = false;
+    const commit = ()=>{
+      if(done) return;
+      done = true;
+      const val = input.value.trim();
+      if(val && val !== current){ AtsuCup.renameParticipant(current, val); }
+      renderMatchList();
+      renderTree();
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ input.blur(); } });
+  }
+
   function pickBtnHtml(name, winner, r, m, side, recMap, isForced){
     const isWinner = winner === name;
-    return `<button class="pick-btn ${isWinner?'winner':''} ${isForced?'forced':''}" data-r="${r}" data-m="${m}" data-side="${side}">
-      <span class="avatar">${escapeHtml(initials(name))}</span>
-      <span class="nm">${escapeHtml(name)}</span>
-      <span>${recMap[name]?'📹':'🚫'}</span>
-    </button>`;
+    return `<div class="pick-btn ${isWinner?'winner':''} ${isForced?'forced':''}">
+      <span class="pick-main" data-r="${r}" data-m="${m}" data-side="${side}">
+        <span class="avatar">${escapeHtml(initials(name))}</span>
+        <span class="nm">${escapeHtml(name)}</span>
+        <span>${recMap[name]?'📹':'🚫'}</span>
+      </span>
+      <button class="pick-edit-btn" data-editname data-r="${r}" data-m="${m}" data-side="${side}">✏️</button>
+    </div>`;
   }
 
   function matchCardHtml(m, r, i, recMap){
     if(m.b === null){
-      return `<div class="video-card"><div class="bye-row">🐰 ${escapeHtml(m.a)} — BYE(不戦勝)</div></div>`;
+      return `<div class="video-card"><div class="bye-row">🐰 <span class="nm bye-nm" data-r="${r}" data-m="${i}" data-side="a">${escapeHtml(m.a)}</span> — BYE(不戦勝)
+        <button class="pick-edit-btn" data-editname data-r="${r}" data-m="${i}" data-side="a">✏️</button>
+      </div></div>`;
     }
     const isForced = !recMap[m.a] && !recMap[m.b];
     return `<div class="video-card">
@@ -325,10 +373,17 @@
     }
 
     area.innerHTML = html;
-    area.querySelectorAll(".pick-btn[data-r]").forEach(el=>{
+    area.querySelectorAll(".pick-main[data-r]").forEach(el=>{
       el.addEventListener("click", ()=>{
         const r = el.dataset.r === 'third' ? 'third' : +el.dataset.r;
         pick(r, +el.dataset.m, el.dataset.side);
+      });
+    });
+    area.querySelectorAll("[data-editname]").forEach(el=>{
+      el.addEventListener("click", (ev)=>{
+        ev.stopPropagation();
+        const r = el.dataset.r === 'third' ? 'third' : +el.dataset.r;
+        startEditMatchName(r, +el.dataset.m, el.dataset.side);
       });
     });
     const toCardBtn = document.getElementById("toCardBtn");

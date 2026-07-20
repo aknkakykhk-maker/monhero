@@ -229,6 +229,31 @@ const AtsuCup = (function(){
     persist();
   }
 
+  // 対戦が始まった後でも参加者名を書き換えられるよう、全ラウンド・3位決定戦・優勝者名・参加者一覧まで
+  // 同じ名前をまとめて置き換える(対戦表の接続線は勝者名の一致で辿っているため、一部だけ書き換えると
+  // つながりが壊れてしまう)
+  function renameParticipant(oldName, newName){
+    if(!oldName || !newName || oldName === newName) return;
+    const swap = v => v === oldName ? newName : v;
+    state.matches.forEach(round=>{
+      round.forEach(m=>{
+        m.a = swap(m.a); m.b = swap(m.b);
+        m.winner = swap(m.winner); m.loser = swap(m.loser);
+      });
+    });
+    if(state.thirdPlaceMatch){
+      const tp = state.thirdPlaceMatch;
+      tp.a = swap(tp.a); tp.b = swap(tp.b); tp.winner = swap(tp.winner);
+    }
+    state.winnerName = swap(state.winnerName);
+    state.order = state.order.map(swap);
+    const person = state.people.find(p=>p.name===oldName);
+    if(person) person.name = newName;
+    const rIdx = state.roster.indexOf(oldName);
+    if(rIdx>=0) state.roster[rIdx] = newName;
+    persist();
+  }
+
   // ラウンド1がまだ1試合も決着していない(=組み合わせをいつでも自由に組み替えられる)かどうか
   function bracketNotStarted(){
     if(!state.matches.length) return true;
@@ -430,7 +455,7 @@ const AtsuCup = (function(){
   return {
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildRound1Manual, resetDownstream,
-    propagateByes, pickWinner, pickThirdPlaceWinner, bracketNotStarted, isRevealed, forcedPairsList,
+    propagateByes, pickWinner, pickThirdPlaceWinner, renameParticipant, bracketNotStarted, isRevealed, forcedPairsList,
     computePlacements, allFinishedEntries, archiveCurrentTournament, endCurrentTournament,
     THEMES, themeForTitle, drawCard, generateAndSaveCard, championEntries,
     ytId, hostFromUrl, videoEmbedHtml, matchesToPlayable, videoTournamentList
