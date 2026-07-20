@@ -15,8 +15,8 @@
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--cream);font-family:'Noto Sans JP',sans-serif;}
   /* どこを押したか分かるよう、押せる要素は共通でタップ時に縮む */
-  button, .cam-toggle, .rm, [data-select]{ transition:transform .1s ease, background .1s ease, opacity .1s ease; }
-  button:active, .cam-toggle:active, .rm:active{ transform:scale(.93); }
+  button, .rm, [data-select]{ transition:transform .1s ease, background .1s ease, opacity .1s ease; }
+  button:active, .rm:active{ transform:scale(.93); }
   .slot:not(.bye):not(.empty):active{ transform:scale(.97); }
   body{
     min-height:100vh;
@@ -126,17 +126,6 @@
   }
   .count-badge.muted2{color:var(--muted); background:#161320; border-color:var(--line);}
   .taglist{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px;}
-  .tag{
-    background:#241d33; border:1px solid var(--line); color:var(--cream); padding:5px 6px 5px 10px;
-    border-radius:8px; font-size:12.5px; display:flex; align-items:center; gap:8px;
-  }
-  .tag.no-rec{border-color:#5a2222;}
-  .tag .cam-toggle{
-    background:none; border:1px solid var(--line); border-radius:6px; font-size:12px; padding:3px 6px; cursor:pointer;
-  }
-  .tag.rec-yes .cam-toggle{color:var(--ok); border-color:#1f5c42;}
-  .tag.rec-no .cam-toggle{color:#ff7373; border-color:#5a2222;}
-  .tag .rm{background:none;border:none;color:#8a7fa0;font-size:13px;cursor:pointer;padding:0;line-height:1;}
   .roster-chip{
     background:#161320; border:1.5px solid var(--line); color:var(--muted); padding:6px 8px 6px 12px;
     border-radius:20px; font-size:12.5px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer;
@@ -146,6 +135,11 @@
   }
   .roster-chip .rm{background:none;border:none;color:#6b5f82;font-size:12px;cursor:pointer;padding:0 0 0 2px;line-height:1;}
   .roster-chip.selected .rm{color:rgba(255,255,255,.55);}
+  .cam-toggle-inline{
+    background:none; border:1px solid var(--line); border-radius:6px; font-size:12px; padding:2px 6px; cursor:pointer; line-height:1.4;
+  }
+  .cam-toggle-inline.rec-yes{color:var(--ok); border-color:#1f5c42;}
+  .cam-toggle-inline.rec-no{color:#ff7373; border-color:#5a2222;}
   .wheel-stage{display:flex; flex-direction:column; align-items:center; padding:8px 0 4px;}
   .wheel-holder{position:relative; width:280px; height:280px; margin:0 auto;}
   .pointer{
@@ -288,16 +282,14 @@
 
   <section class="panel tab-panel" id="tab-entry">
     <h2><span class="num">01</span> 参加者登録</h2>
-    <p class="hint">初めての人はここで名前を登録すると、次回以降は一覧からタップするだけで参加者に選べます(この端末に保存されます)。</p>
+    <p class="hint">新しい人はここで名前を登録してください(この端末に保存され、次回以降も一覧から選べます)。</p>
     <textarea id="rosterInput" placeholder="みゃる&#10;たいたん&#10;かどみうむ&#10;ソラシド&#10;..." style="min-height:70px;"></textarea>
     <div class="row">
-      <button class="btn btn-primary" id="addToRoster">登録してこの大会に追加</button>
+      <button class="btn btn-primary" id="addToRoster">登録する</button>
     </div>
-    <p class="hint" style="margin-top:18px; margin-bottom:6px;">今回の参加者を選ぶ(タップで選択/解除・✕で登録者一覧から削除)</p>
-    <div class="taglist" id="rosterList"></div>
+    <p class="hint" style="margin-top:18px; margin-bottom:6px;">今回の参加者を選ぶ(タップで選択/解除・📹🚫で撮影可否・✕で登録者一覧から削除)</p>
     <div id="countBadges"></div>
-    <p class="hint" style="margin-top:18px; margin-bottom:6px;">選ばれた参加者(📹/🚫をタップで撮影可否を切り替え)</p>
-    <div class="taglist" id="tagList"></div>
+    <div class="taglist" id="rosterList"></div>
   </section>
 
   <section class="panel tab-panel" id="tab-roulette" style="display:none;">
@@ -412,6 +404,10 @@
       const raw = localStorage.getItem(STORE_KEY);
       if(raw) Object.assign(state, JSON.parse(raw));
     }catch(e){}
+    // 以前のバージョンで参加者マスタ(roster)に登録されないまま選択されていた人がいれば、
+    // ここで登録者一覧に反映しておく(「選ばれているのに登録者一覧に出ない」不整合の解消)
+    const rosterSet = new Set(state.roster);
+    state.people.forEach(p=>{ if(!rosterSet.has(p.name)){ state.roster.push(p.name); rosterSet.add(p.name); } });
     renderAll();
   }
 
@@ -588,22 +584,27 @@
   /* ---------- entry ---------- */
   const rosterInput = document.getElementById("rosterInput");
   const countBadges = document.getElementById("countBadges");
-  const tagList = document.getElementById("tagList");
   const rosterList = document.getElementById("rosterList");
 
-  // 参加者マスタ(state.roster)をタップ選択チップとして表示。タップで今回の大会への参加/不参加を切り替える
+  // 参加者マスタ(state.roster)を1つの一覧として表示。
+  // タップで今回の大会への参加/不参加を切り替え、選択中は📹/🚫で撮影可否をその場で切り替えられる
   function renderRoster(){
     rosterList.innerHTML = "";
     if(!state.roster.length){
       rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。上のフォームから名前を登録してください。</div>`;
+      renderBadges();
       return;
     }
-    const selectedNames = new Set(state.people.map(p=>p.name));
     state.roster.forEach(name=>{
-      const isSel = selectedNames.has(name);
+      const person = state.people.find(p=>p.name===name);
+      const isSel = !!person;
       const chip = document.createElement('div');
       chip.className = 'roster-chip' + (isSel ? ' selected' : '');
-      chip.innerHTML = `<span data-select="${escapeHtml(name)}">${isSel?'✅ ':''}${escapeHtml(name)}</span><button class="rm" data-roster-rm="${escapeHtml(name)}" title="登録者一覧から削除">✕</button>`;
+      chip.innerHTML = `
+        <span data-select="${escapeHtml(name)}">${isSel?'✅ ':''}${escapeHtml(name)}</span>
+        ${isSel ? `<button class="cam-toggle-inline ${person.rec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(name)}">${person.rec?'📹':'🚫'}</button>` : ''}
+        <button class="rm" data-roster-rm="${escapeHtml(name)}" title="登録者一覧から削除">✕</button>
+      `;
       rosterList.appendChild(chip);
     });
     rosterList.querySelectorAll('[data-select]').forEach(el=>{
@@ -616,37 +617,19 @@
         renderAll();
       });
     });
+    rosterList.querySelectorAll('[data-cam]').forEach(el=>{
+      el.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const person = state.people.find(p=>p.name===el.dataset.cam);
+        if(person){ person.rec = !person.rec; persist(); renderRoster(); }
+      });
+    });
     rosterList.querySelectorAll('[data-roster-rm]').forEach(el=>{
       el.addEventListener('click', (ev)=>{
         ev.stopPropagation();
         const name = el.dataset.rosterRm;
         state.roster = state.roster.filter(n=>n!==name);
         state.people = state.people.filter(p=>p.name!==name);
-        resetDownstream();
-        renderAll();
-      });
-    });
-  }
-
-  function renderTags(){
-    tagList.innerHTML = "";
-    state.people.forEach((p)=>{
-      const t = document.createElement("div");
-      t.className = "tag " + (p.rec ? "rec-yes" : "rec-no") + (p.rec?"":" no-rec");
-      t.innerHTML = `<span>${escapeHtml(p.name)}</span>
-        <button class="cam-toggle" data-name="${escapeHtml(p.name)}">${p.rec ? "📹 OK" : "🚫 不可"}</button>
-        <button class="rm" data-name-rm="${escapeHtml(p.name)}">✕</button>`;
-      tagList.appendChild(t);
-    });
-    tagList.querySelectorAll(".cam-toggle").forEach(b=>{
-      b.addEventListener("click", ()=>{
-        const person = state.people.find(p=>p.name===b.dataset.name);
-        if(person){ person.rec = !person.rec; persist(); renderTags(); renderBadges(); }
-      });
-    });
-    tagList.querySelectorAll(".rm").forEach(b=>{
-      b.addEventListener("click", ()=>{
-        state.people = state.people.filter(p=>p.name !== b.dataset.nameRm);
         resetDownstream();
         renderAll();
       });
@@ -1422,7 +1405,6 @@
 
   function renderAll(){
     renderRoster();
-    renderTags();
     renderRoulettePreview();
     drawWheel();
     renderBracket();
