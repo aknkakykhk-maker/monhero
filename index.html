@@ -6,76 +6,56 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>モンスターヒーロー</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
-<link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png">
-<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
-<link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="モンスターヒーロー">
-<meta name="mobile-web-app-capable" content="yes">
+<title>LF Apps</title>
 <meta name="theme-color" content="#000000">
-<script>
-window.__mhErr = function(msg){ try{ console.error(msg); }catch(_){} };
-window.addEventListener('error', function(ev){ window.__mhErr('[error] ' + (ev.message||'') + ' @ ' + (ev.filename||'') + ':' + (ev.lineno||'')); });
-window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[promise] ' + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason)); });
-</script>
-<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
-  body { height:100dvh; box-sizing:border-box; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
-  #root { width:100%; height:100%; overflow:hidden; }
-  #root > div { width:100%; height:100%; max-width:600px; margin:0 auto; }
-  #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; background:#050510; color:#a5b4fc; font-family:sans-serif; z-index:99999; }
-  .ldspin { width:44px; height:44px; border:4px solid rgba(165,180,252,0.25); border-top-color:#a5b4fc; border-radius:50%; animation:ldrot 0.8s linear infinite; }
-  @keyframes ldrot { to { transform:rotate(360deg); } }
+  body {
+    height:100dvh; box-sizing:border-box;
+    padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:28px; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
+    background:radial-gradient(circle at 50% 0%, #111827 0%, #000000 65%);
+  }
+  .hub-title { color:#fff; font-weight:900; font-style:italic; font-size:15px; letter-spacing:4px; text-transform:uppercase; opacity:.55; }
+  .hub-grid { display:flex; flex-direction:column; gap:16px; width:100%; max-width:360px; padding:0 24px; box-sizing:border-box; }
+  .hub-card {
+    display:flex; align-items:center; gap:16px;
+    padding:20px; border-radius:24px; border:1px solid rgba(255,255,255,0.1);
+    text-decoration:none; -webkit-tap-highlight-color:transparent;
+    transition:transform .12s ease;
+  }
+  .hub-card:active { transform:scale(0.96); }
+  .hub-card.mh { background:linear-gradient(135deg, rgba(22,163,74,0.25), rgba(15,23,42,0.9)); box-shadow:0 0 30px rgba(34,197,94,0.12); }
+  .hub-card.ac { background:linear-gradient(135deg, rgba(217,119,6,0.25), rgba(15,23,42,0.9)); box-shadow:0 0 30px rgba(251,191,36,0.12); }
+  .hub-icon { font-size:34px; line-height:1; flex-shrink:0; }
+  .hub-text { flex:1; min-width:0; }
+  .hub-name { color:#fff; font-weight:900; font-size:17px; letter-spacing:.5px; }
+  .hub-desc { color:rgba(255,255,255,0.55); font-size:11px; margin-top:4px; font-weight:600; }
+  .hub-arrow { color:rgba(255,255,255,0.4); font-size:20px; flex-shrink:0; }
+  .hub-footer { color:rgba(255,255,255,0.25); font-size:9px; font-family:monospace; letter-spacing:1px; margin-top:8px; }
 </style>
 </head>
 <body>
-<div id="ver-banner" style="position:fixed;top:0;left:0;right:0;background:#16a34a;color:#fff;font:900 13px sans-serif;padding:6px 10px;padding-top:calc(6px + env(safe-area-inset-top));z-index:100000;text-align:center;letter-spacing:1px;">GH-BUILD v56 / LOADING ENGINE...</div>
-<div id="loading"><div class="ldspin"></div><div style="font-weight:900;letter-spacing:2px;">LOADING...</div></div>
-<div id="root"></div>
-<div style="position:fixed;bottom:2px;right:4px;font:900 9px monospace;color:rgba(255,255,255,0.35);z-index:99999;pointer-events:none;">LF</div>
-<script src="data/images-ally.js?v=20260703b"></script>
-<script src="data/images-enemy.js?v=20260701"></script>
-<script src="data/ally-monsters.js?v=20260703b"></script>
-<script src="data/breeder.js?v=20260702x"></script>
-<script src="data/enemy-monsters.js?v=20260701"></script>
-<script src="data/skills.js?v=20260701"></script>
-<script>
-(function(){
-  function fail(m){ if(window.__mhErr) window.__mhErr(m); else { document.body.innerHTML='<pre style="color:#f88;padding:16px;white-space:pre-wrap">'+m+'</pre>'; } }
-  function run(){
-    try {
-      if(!window.Babel){ fail('Babel not loaded (CDN blocked?)'); return; }
-      if(!window.React){ fail('React not loaded (CDN blocked?)'); return; }
-      if(!window.ReactDOM){ fail('ReactDOM not loaded (CDN blocked?)'); return; }
-      fetch('game-system.jsx?t=' + Date.now(), { cache: 'no-store' }).then(function(res){
-        if(!res.ok) throw new Error('game-system.jsx fetch failed: ' + res.status);
-        return res.text();
-      }).then(function(src){
-        var out;
-        try {
-          out = Babel.transform(src, { presets: [['react', { runtime: 'classic' }]], filename:'game-system.jsx' }).code;
-          // 安全策: 万一 import/export 文が残っていても実行できるよう除去
-          out = out.replace(/^\s*import\s+[^;]*;?\s*$/gm, '').replace(/^\s*export\s+default\s+/gm, '').replace(/^\s*export\s+/gm, '');
-        } catch(e){ fail('Babel transform error: ' + (e && e.message ? e.message : e)); return; }
-        try {
-          (0, eval)(out);
-        } catch(e){ fail('Runtime error: ' + (e && e.message ? e.message : e) + '\n' + (e && e.stack ? e.stack : '')); return; }
-      }).catch(function(e){ fail('game-system.jsx load error: ' + (e && e.message ? e.message : e)); });
-    } catch(e){ fail('Bootstrap error: ' + (e && e.message ? e.message : e)); }
-  }
-  if(document.readyState === 'complete' || document.readyState === 'interactive'){ setTimeout(run, 50); }
-  else { window.addEventListener('DOMContentLoaded', function(){ setTimeout(run, 50); }); }
-})();
-</script>
+  <div class="hub-title">LF Apps</div>
+  <div class="hub-grid">
+    <a class="hub-card mh" href="monster-hero/index.html">
+      <div class="hub-icon">🐲</div>
+      <div class="hub-text">
+        <div class="hub-name">モンスターヒーロー</div>
+        <div class="hub-desc">絆を深めながら戦うカードバトルRPG</div>
+      </div>
+      <div class="hub-arrow">›</div>
+    </a>
+    <a class="hub-card ac" href="atsu-cup/index.html">
+      <div class="hub-icon">🏆</div>
+      <div class="hub-text">
+        <div class="hub-name">あつ杯管理ツール</div>
+        <div class="hub-desc">トーナメント表・組み合わせルーレット</div>
+      </div>
+      <div class="hub-arrow">›</div>
+    </a>
+  </div>
+  <div class="hub-footer">SELECT AN APP</div>
 </body>
 </html>
