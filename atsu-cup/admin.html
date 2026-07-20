@@ -252,7 +252,7 @@
 </head>
 <body>
 <a class="back-link" href="../index.html">‹ ハブへ</a>
-<a class="back-link" style="left:auto;right:12px;" href="index.html" target="_blank">公開ページを見る ›</a>
+<a class="back-link" style="left:auto;right:12px;" href="index.html">トップへ ›</a>
 <div class="wrap">
   <header class="top">
     <div class="crown-mark">👑</div>
@@ -1431,6 +1431,14 @@
   }
 
   restore();
+
+  // URLの#タブ名を見て、そのタブを開いた状態で表示する(トップページからの直接リンク用)
+  (function openTabFromHash(){
+    const tab = location.hash.replace('#','');
+    if(!tab) return;
+    const btn = document.querySelector(`nav.tabs button[data-tab="${tab}"]`);
+    if(btn) btn.click();
+  })();
 })();
 </script>
 </body>

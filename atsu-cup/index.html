@@ -10,17 +10,10 @@
   :root{
     --bg:#0a0810; --bg2:#14101c; --panel:#1b1626; --panel2:#241d33; --line:#3a2f4d;
     --ember:#ff6a2b; --ember2:#ff9145; --gold:#e8b34c; --gold-dim:#8a6a2c;
-    --cream:#f1e6cf; --muted:#9a8fae; --danger:#ff4d4d; --ok:#3ecf8e;
+    --cream:#f1e6cf; --muted:#9a8fae; --ok:#3ecf8e;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--cream);font-family:'Noto Sans JP',sans-serif;}
-  /* どこを押したか分かるよう、押せる要素は共通でタップ時に縮む */
-  button{ transition:transform .1s ease, opacity .1s ease; }
-  button:active{ transform:scale(.93); }
-  .past-item{ transition:transform .1s ease, background .1s ease; }
-  .past-item:active{ transform:scale(.97); background:#161320; }
-  a.back-link:active{ transform:scale(.93); }
-  footer.note a:active{ opacity:.6; }
   body{
     min-height:100vh;
     background:
@@ -36,6 +29,7 @@
     padding:7px 12px; border:1px solid var(--line); border-radius:999px; background:rgba(10,8,16,.7);
     backdrop-filter:blur(4px); transition:transform .1s ease;
   }
+  a.back-link:active{ transform:scale(.93); }
   header.top{padding:22px 6px 14px; text-align:center; position:relative;}
   .crown-mark{font-size:26px; filter:drop-shadow(0 0 8px rgba(232,179,76,.6));}
   h1{
@@ -53,87 +47,44 @@
     background:linear-gradient(90deg,transparent,var(--gold),transparent); opacity:.5;
   }
   .panel h2{
-    font-family:'Cinzel','Noto Serif JP',serif; font-size:15px; letter-spacing:.05em; color:var(--gold);
-    margin:0 0 12px; display:flex; align-items:center; gap:8px;
+    font-family:'Cinzel','Noto Serif JP',serif; font-size:14px; letter-spacing:.05em; color:var(--gold);
+    margin:0 0 12px;
   }
-  .panel h2 .num{
-    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ember2);
-    border:1px solid var(--gold-dim); padding:1px 6px; border-radius:6px;
-  }
-  p.hint{font-size:12px; color:var(--muted); line-height:1.7; margin:0 0 12px;}
+  .empty-state{text-align:center; padding:20px 10px; color:var(--muted); font-size:13px; line-height:1.9;}
+  .empty-state .big{font-size:28px; display:block; margin-bottom:8px;}
   .poster-img{width:100%; border-radius:12px; display:block; margin-bottom:12px; border:1px solid var(--line);}
   .status-badge{
     display:inline-block; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
     padding:3px 10px; border-radius:20px; margin-bottom:10px;
   }
   .status-badge.open{color:var(--ok); background:#0c2318; border:1px solid #1f5c42;}
-  .status-badge.closed{color:var(--muted); background:#161320; border:1px solid var(--line);}
-  .status-badge.finished{color:var(--gold); background:#241a0c; border:1px solid var(--gold-dim);}
-  .tournament-title{
-    font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:20px; color:var(--gold);
+  .status-badge.done{color:var(--gold); background:#241a0c; border:1px solid var(--gold-dim);}
+  .cur-title{
+    font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:19px; color:var(--gold);
     margin:0 0 8px;
   }
-  .tournament-details{font-size:13px; color:var(--cream); line-height:1.9; white-space:pre-wrap; margin-bottom:4px;}
-  .champion-line{margin-top:12px; font-weight:900; color:var(--gold); font-size:15px;}
-  textarea, input[type=text]{
-    width:100%; background:#0d0a14; color:var(--cream); border:1px solid var(--line);
-    border-radius:10px; padding:12px; font-size:14px; font-family:'Noto Sans JP',sans-serif;
-    line-height:1.8;
-  }
-  textarea{min-height:80px; resize:vertical;}
-  textarea:focus, input:focus{outline:none; border-color:var(--gold-dim);}
-  .field{margin-bottom:12px;}
-  .field label{display:block; font-size:11px; color:var(--muted); margin-bottom:6px; letter-spacing:.05em;}
-  .toggle-row{display:flex; align-items:center; justify-content:space-between; background:#0d0a14; border:1px solid var(--line); border-radius:10px; padding:12px;}
-  .toggle-row .label{font-size:13px;}
-  .switch{position:relative; width:46px; height:26px; flex-shrink:0;}
-  .switch input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer;}
-  .switch .track{position:absolute; inset:0; background:#3a2f4d; border-radius:999px; transition:background .15s;}
-  .switch .thumb{position:absolute; top:3px; left:3px; width:20px; height:20px; background:#fff; border-radius:50%; transition:transform .15s;}
-  .switch input:checked + .track{background:var(--ok);}
-  .switch input:checked + .track + .thumb{transform:translateX(20px);}
+  .cur-details{font-size:12.5px; color:var(--cream); line-height:1.8; white-space:pre-wrap; margin-bottom:4px;}
+  .cur-line{margin-top:8px; font-weight:900; font-size:13.5px;}
+  .cur-line.champ{color:var(--gold);}
+  .cur-line.third{color:var(--muted);}
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:6px; border:none; border-radius:11px;
     padding:12px 18px; font-weight:700; font-size:13.5px; cursor:pointer; font-family:'Noto Sans JP',sans-serif;
-    letter-spacing:.02em; transition:transform .12s, opacity .12s; width:100%;
+    letter-spacing:.02em; transition:transform .1s ease; width:100%; margin-top:12px;
+    text-decoration:none; box-sizing:border-box;
   }
   .btn:active{transform:scale(.97);}
   .btn-primary{background:linear-gradient(180deg,var(--ember2),var(--ember)); color:#1a0a02; box-shadow:0 4px 14px rgba(255,106,43,.3);}
-  .btn-gold{background:linear-gradient(180deg,#f3d488,var(--gold)); color:#241800; box-shadow:0 4px 14px rgba(232,179,76,.3);}
-  .btn:disabled{opacity:.4; pointer-events:none;}
-  .empty-state{text-align:center; padding:24px 10px; color:var(--muted); font-size:13px; line-height:1.9;}
-  .empty-state .big{font-size:28px; display:block; margin-bottom:8px;}
-  .past-item{
-    background:#0d0a14; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px;
-    display:flex; gap:12px; align-items:center; cursor:pointer;
+  .menu-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
+  .menu-card{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    background:#0d0a14; border:1px solid var(--line); border-radius:14px; padding:18px 8px;
+    text-decoration:none; color:var(--cream); font-weight:700; font-size:12.5px; text-align:center;
+    transition:transform .1s ease, border-color .15s ease;
   }
-  .past-item img{width:52px; height:52px; object-fit:cover; border-radius:8px; flex-shrink:0; border:1px solid var(--line);}
-  .past-item .noimg{width:52px; height:52px; border-radius:8px; flex-shrink:0; background:#161320; display:flex; align-items:center; justify-content:center; font-size:20px;}
-  .past-item .meta{flex:1; min-width:0;}
-  .past-item .t{font-weight:700; font-size:13px; color:var(--cream);}
-  .past-item .c{font-size:11px; color:var(--gold); margin-top:2px;}
-  .past-detail{margin-top:-4px; margin-bottom:10px; padding:12px; background:#0d0a14; border:1px solid var(--line); border-radius:10px; font-size:12.5px; color:var(--muted); white-space:pre-wrap; line-height:1.8;}
-  .comment-item{background:#0d0a14; border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px;}
-  .comment-item .cn{font-weight:900; font-size:12.5px; color:var(--gold);}
-  .comment-item .cb{font-size:13px; margin-top:4px; line-height:1.7; white-space:pre-wrap;}
-  .comment-item .ct{font-size:10px; color:var(--muted); margin-top:6px; font-family:'JetBrains Mono',monospace;}
-  .stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 0;}
-  .stat-box{background:#0d0a14; border:1px solid var(--line); border-radius:10px; padding:12px 6px; text-align:center;}
-  .stat-box .v{font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; color:var(--gold);}
-  .stat-box .l{font-size:10px; color:var(--muted); margin-top:2px;}
-  .hist-item{display:flex; justify-content:space-between; align-items:center; background:#0d0a14; border:1px solid var(--line); border-radius:8px; padding:9px 12px; margin-bottom:6px; font-size:12.5px;}
-  .hist-item .res{font-weight:900; font-size:11px; padding:2px 8px; border-radius:6px;}
-  .hist-item .res.win{color:var(--ok); background:#0c2318;}
-  .hist-item .res.lose{color:#ff8080; background:#241214;}
-  .hist-item .res.bye{color:var(--muted); background:#161320;}
+  .menu-card:active{transform:scale(.95); border-color:var(--ember2);}
+  .menu-card .ic{font-size:28px;}
   footer.note{text-align:center; font-size:11px; color:#544a67; margin-top:6px; padding:0 20px; line-height:1.8;}
-  footer.note a{color:#7a6f94;}
-  .mh-ripple {
-    position:fixed; width:48px; height:48px; margin-left:-24px; margin-top:-24px;
-    border-radius:9999px; border:2px solid rgba(255,255,255,0.9); box-shadow:0 0 10px rgba(255,255,255,0.6);
-    transform-origin:center; animation:mhRipple 550ms ease-out forwards; pointer-events:none; z-index:2147483647;
-  }
-  @keyframes mhRipple { 0%{transform:scale(0.3);opacity:0.55;} 100%{transform:scale(1.8);opacity:0;} }
 </style>
 </head>
 <body>
@@ -145,231 +96,53 @@
     <div class="sub">LINE monster farm・tournament</div>
   </header>
 
-  <section class="panel" id="posterPanel">
-    <div class="empty-state"><span class="big">🏆</span>読み込み中...</div>
-  </section>
+  <section class="panel" id="currentBox"></section>
 
-  <section class="panel" id="entryPanel" style="display:none;">
-    <h2><span class="num">Entry</span> エントリー</h2>
-    <p class="hint">名前・フリーマッチID・動画撮影の可否を入力して送信してください。撮影不可を選んだ場合、撮影不可の人同士が優先して対戦するよう組み合わせが調整されます。</p>
-    <div class="field"><label>名前</label><input type="text" id="entryName" placeholder="例: おりょう" maxlength="30"></div>
-    <div class="field"><label>フリーマッチID</label><input type="text" id="entryFmid" placeholder="対戦用のフリーマッチIDを貼り付け" maxlength="60"></div>
-    <div class="field">
-      <div class="toggle-row">
-        <span class="label">📹 動画撮影OK</span>
-        <label class="switch"><input type="checkbox" id="entryVideoOk" checked><span class="track"></span><span class="thumb"></span></label>
-      </div>
+  <section class="panel">
+    <h2>メニュー</h2>
+    <div class="menu-grid">
+      <a class="menu-card" href="admin.html#tournament"><span class="ic">🏆</span>大会管理</a>
+      <a class="menu-card" href="admin.html#entry"><span class="ic">🙋</span>参加者登録</a>
+      <a class="menu-card" href="admin.html#roulette"><span class="ic">🎡</span>抽選ルーレット</a>
+      <a class="menu-card" href="admin.html#bracket"><span class="ic">🗂️</span>対戦表</a>
+      <a class="menu-card" href="admin.html#video"><span class="ic">🎬</span>対戦動画</a>
+      <a class="menu-card" href="admin.html#card"><span class="ic">🖼️</span>優勝カード</a>
+      <a class="menu-card" href="admin.html#record"><span class="ic">📊</span>戦績</a>
     </div>
-    <button class="btn btn-primary" id="entrySubmit">エントリーする</button>
-    <div id="entryMsg" style="margin-top:10px; font-size:12px; color:var(--ok); text-align:center;"></div>
   </section>
 
-  <section class="panel" id="commentPanel" style="display:none;">
-    <h2><span class="num">Comments</span> コメント</h2>
-    <div id="commentList"></div>
-    <div class="field" style="margin-top:10px;"><label>名前</label><input type="text" id="commentName" placeholder="お名前" maxlength="30"></div>
-    <div class="field"><label>コメント</label><textarea id="commentBody" placeholder="応援メッセージなど" maxlength="400"></textarea></div>
-    <button class="btn btn-gold" id="commentSubmit">コメントする</button>
-  </section>
-
-  <section class="panel" id="pastPanel">
-    <h2><span class="num">History</span> 過去の大会</h2>
-    <div id="pastList"><div class="empty-state" style="padding:16px 10px;">読み込み中...</div></div>
-  </section>
-
-  <section class="panel" id="recordPanel">
-    <h2><span class="num">Record</span> 戦績を調べる</h2>
-    <p class="hint">エントリー・対戦表に使った名前で検索してください(完全一致)。</p>
-    <div class="field"><input type="text" id="recordName" placeholder="名前を入力"></div>
-    <button class="btn btn-primary" id="recordSearch">検索する</button>
-    <div id="recordResult" style="margin-top:14px;"></div>
-  </section>
-
-  <footer class="note">エントリー・コメントは共有データベースに保存され、大会の運営者に公開されます。<br><a href="admin.html">運営者はこちら</a></footer>
+  <footer class="note">大会・参加者・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
 </div>
 
-<script src="supabase.js"></script>
 <script src="tap-ripple.js"></script>
 <script>
 (function(){
   "use strict";
-
-  let current = null;      // 現在の大会(atsucup_tournaments)
-  let pastList = [];       // 過去の大会
   const escapeHtml = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const fmtDate = iso => { try{ const d = new Date(iso); return `${d.getMonth()+1}/${d.getDate()}`; }catch(e){ return ''; } };
-
-  async function init(){
-    try{
-      const all = await AtsuCupDB.sbSelect("atsucup_tournaments", "select=*&order=created_at.desc");
-      current = all[0] || null;
-      pastList = all.slice(1);
-    }catch(e){
-      document.getElementById("posterPanel").innerHTML = `<div class="empty-state"><span class="big">⚠️</span>大会情報の取得に失敗しました。<br>時間をおいて再読み込みしてください。</div>`;
-      document.getElementById("pastList").innerHTML = `<div class="empty-state" style="padding:16px 10px;">読み込みに失敗しました。</div>`;
-      return;
-    }
-    renderPoster();
-    renderEntry();
-    renderPast();
-    if(current){ renderComments(); }
-  }
-
-  function renderPoster(){
-    const panel = document.getElementById("posterPanel");
-    if(!current){
-      panel.innerHTML = `<div class="empty-state"><span class="big">🏆</span>まだ大会の告知がありません。<br>開催が決まり次第、ここに表示されます。</div>`;
-      return;
-    }
-    const badge = current.finished
-      ? `<span class="status-badge finished">終了</span>`
-      : (current.entry_open ? `<span class="status-badge open">エントリー受付中</span>` : `<span class="status-badge closed">エントリー締切</span>`);
-    panel.innerHTML = `
-      ${current.poster_url ? `<img class="poster-img" src="${escapeHtml(current.poster_url)}" alt="poster">` : ''}
-      ${badge}
-      <div class="tournament-title">${escapeHtml(current.title)}</div>
-      <div class="tournament-details">${escapeHtml(current.details||'')}</div>
-      ${current.champion_name ? `<div class="champion-line">👑 優勝: ${escapeHtml(current.champion_name)}</div>` : ''}
-    `;
-  }
-
-  function renderEntry(){
-    const panel = document.getElementById("entryPanel");
-    const commentPanel = document.getElementById("commentPanel");
-    if(!current || !current.entry_open){
-      panel.style.display = "none";
+  const box = document.getElementById('currentBox');
+  try{
+    const raw = localStorage.getItem('atsucup:state:v2');
+    const state = raw ? JSON.parse(raw) : null;
+    const meta = state && state.tournamentMeta;
+    if(!meta || !meta.title){
+      box.innerHTML = `<div class="empty-state"><span class="big">🏆</span>まだ大会が作成されていません。<br>「大会管理」から作成してください。</div>`;
     }else{
-      panel.style.display = "block";
-    }
-    commentPanel.style.display = current ? "block" : "none";
-  }
-
-  document.getElementById("entrySubmit").addEventListener("click", async ()=>{
-    if(!current){ return; }
-    const name = document.getElementById("entryName").value.trim();
-    const fmid = document.getElementById("entryFmid").value.trim();
-    const videoOk = document.getElementById("entryVideoOk").checked;
-    const msg = document.getElementById("entryMsg");
-    if(!name || !fmid){ msg.style.color = "var(--danger)"; msg.textContent = "名前とフリーマッチIDを入力してください。"; return; }
-    const btn = document.getElementById("entrySubmit");
-    btn.disabled = true;
-    try{
-      await AtsuCupDB.sbInsert("atsucup_entries", { tournament_id: current.id, name, freematch_id: fmid, video_ok: videoOk });
-      msg.style.color = "var(--ok)";
-      msg.textContent = "エントリーしました！当日をお楽しみに。";
-      document.getElementById("entryName").value = "";
-      document.getElementById("entryFmid").value = "";
-    }catch(e){
-      msg.style.color = "var(--danger)";
-      msg.textContent = "送信に失敗しました。時間をおいて再度お試しください。";
-    }finally{
-      btn.disabled = false;
-    }
-  });
-
-  async function renderComments(){
-    const list = document.getElementById("commentList");
-    list.innerHTML = `<div class="empty-state" style="padding:10px;">読み込み中...</div>`;
-    try{
-      const comments = await AtsuCupDB.sbSelect("atsucup_comments", `select=*&tournament_id=eq.${current.id}&order=created_at.desc`);
-      if(!comments.length){
-        list.innerHTML = `<div class="empty-state" style="padding:10px;">まだコメントはありません。</div>`;
-      }else{
-        list.innerHTML = comments.map(c=>`
-          <div class="comment-item">
-            <div class="cn">${escapeHtml(c.name)}</div>
-            <div class="cb">${escapeHtml(c.body)}</div>
-            <div class="ct">${fmtDate(c.created_at)}</div>
-          </div>
-        `).join("");
-      }
-    }catch(e){
-      list.innerHTML = `<div class="empty-state" style="padding:10px;">コメントの取得に失敗しました。</div>`;
-    }
-  }
-
-  document.getElementById("commentSubmit").addEventListener("click", async ()=>{
-    if(!current) return;
-    const name = document.getElementById("commentName").value.trim();
-    const body = document.getElementById("commentBody").value.trim();
-    if(!name || !body){ alert("名前とコメントを入力してください。"); return; }
-    const btn = document.getElementById("commentSubmit");
-    btn.disabled = true;
-    try{
-      await AtsuCupDB.sbInsert("atsucup_comments", { tournament_id: current.id, name, body });
-      document.getElementById("commentBody").value = "";
-      await renderComments();
-    }catch(e){
-      alert("送信に失敗しました。時間をおいて再度お試しください。");
-    }finally{
-      btn.disabled = false;
-    }
-  });
-
-  function renderPast(){
-    const list = document.getElementById("pastList");
-    if(!pastList.length){
-      list.innerHTML = `<div class="empty-state" style="padding:16px 10px;">過去の大会はまだありません。</div>`;
-      return;
-    }
-    list.innerHTML = "";
-    pastList.forEach(t=>{
-      const item = document.createElement("div");
-      item.className = "past-item";
-      item.innerHTML = `
-        ${t.poster_url ? `<img src="${escapeHtml(t.poster_url)}" alt="">` : `<div class="noimg">🏆</div>`}
-        <div class="meta">
-          <div class="t">${escapeHtml(t.title)}</div>
-          <div class="c">${t.champion_name ? '👑 ' + escapeHtml(t.champion_name) : (t.finished ? '結果未記録' : '開催中/未終了')}</div>
-        </div>
+      const badge = state.winnerName
+        ? `<span class="status-badge done">優勝者決定</span>`
+        : `<span class="status-badge open">進行中</span>`;
+      box.innerHTML = `
+        ${badge}
+        ${meta.posterUrl ? `<img class="poster-img" src="${escapeHtml(meta.posterUrl)}" alt="poster">` : ''}
+        <div class="cur-title">${escapeHtml(meta.title)}</div>
+        ${meta.details ? `<div class="cur-details">${escapeHtml(meta.details)}</div>` : ''}
+        ${state.winnerName ? `<div class="cur-line champ">👑 優勝: ${escapeHtml(state.winnerName)}</div>` : ''}
+        ${(state.thirdPlaceMatch && state.thirdPlaceMatch.winner) ? `<div class="cur-line third">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>` : ''}
+        <a class="btn btn-primary" href="admin.html#tournament">大会を管理する</a>
       `;
-      item.addEventListener("click", ()=>{
-        let detail = item.nextElementSibling;
-        if(detail && detail.classList.contains("past-detail")){ detail.remove(); return; }
-        const el = document.createElement("div");
-        el.className = "past-detail";
-        el.textContent = t.details || "(詳細はありません)";
-        item.after(el);
-      });
-      list.appendChild(item);
-    });
-  }
-
-  document.getElementById("recordSearch").addEventListener("click", async ()=>{
-    const name = document.getElementById("recordName").value.trim();
-    const result = document.getElementById("recordResult");
-    if(!name){ result.innerHTML = `<div class="empty-state" style="padding:10px;">名前を入力してください。</div>`; return; }
-    result.innerHTML = `<div class="empty-state" style="padding:10px;">検索中...</div>`;
-    try{
-      const rows = await AtsuCupDB.sbSelect("atsucup_match_results", `select=*&player_name=eq.${encodeURIComponent(name)}&order=created_at.desc`);
-      if(!rows.length){
-        result.innerHTML = `<div class="empty-state" style="padding:10px;">対戦記録が見つかりませんでした。</div>`;
-        return;
-      }
-      const wins = rows.filter(r=>r.result==='win').length;
-      const loses = rows.filter(r=>r.result==='lose').length;
-      const champTitles = pastConcatCurrent().filter(t=>t.champion_name===name);
-      result.innerHTML = `
-        <div class="stat-grid">
-          <div class="stat-box"><div class="v">${wins}</div><div class="l">勝ち</div></div>
-          <div class="stat-box"><div class="v">${loses}</div><div class="l">負け</div></div>
-          <div class="stat-box"><div class="v">${champTitles.length}</div><div class="l">優勝</div></div>
-        </div>
-        ${rows.map(r=>`
-          <div class="hist-item">
-            <span>${escapeHtml(r.round_label)} ${r.opponent_name?('vs ' + escapeHtml(r.opponent_name)):''}</span>
-            <span class="res ${r.result}">${r.result==='win'?'勝ち':r.result==='lose'?'負け':'不戦勝'}</span>
-          </div>
-        `).join("")}
-      `;
-    }catch(e){
-      result.innerHTML = `<div class="empty-state" style="padding:10px;">検索に失敗しました。</div>`;
     }
-  });
-
-  function pastConcatCurrent(){ return current ? [current, ...pastList] : pastList; }
-
-  init();
+  }catch(e){
+    box.innerHTML = `<div class="empty-state"><span class="big">⚠️</span>読み込みに失敗しました。</div>`;
+  }
 })();
 </script>
 </body>
