@@ -15,8 +15,8 @@
   }
   .tree-scroll svg{ display:block; }
   .avatar{
-    width:26px; height:26px; border-radius:50%; background:linear-gradient(180deg,var(--panel2),var(--panel));
-    border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900;
+    width:30px; height:30px; border-radius:50%; background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900;
     color:var(--gold); flex-shrink:0;
   }
   .next-match-box{
@@ -24,26 +24,26 @@
     border-radius:14px; padding:14px; margin-bottom:18px;
   }
   .next-match-box .lbl{font-size:11px; letter-spacing:.15em; color:var(--ember2); font-weight:900; text-transform:uppercase; margin-bottom:10px;}
-  .match-pick-row{display:flex; align-items:stretch; gap:8px;}
+  .match-pick-row{display:flex; flex-direction:column; gap:6px;}
   .pick-btn{
-    flex:1; display:flex; align-items:center; gap:4px; min-width:0; background:#161320; border:1px solid var(--line);
-    border-radius:10px; color:var(--cream); font-weight:700; font-size:13.5px; padding:4px;
+    display:flex; align-items:center; gap:6px; min-width:0; background:#161320; border:1px solid var(--line);
+    border-radius:10px; color:var(--cream); font-weight:700; font-size:16px; padding:4px;
   }
-  .pick-main{ flex:1; display:flex; align-items:center; gap:8px; min-width:0; padding:8px; cursor:pointer; border-radius:8px; }
+  .pick-main{ flex:1; display:flex; align-items:center; gap:10px; min-width:0; padding:9px 8px; cursor:pointer; border-radius:8px; }
   .pick-main:active{ background:rgba(255,255,255,.08); }
   .pick-btn span.nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .pick-btn.winner{ background:linear-gradient(90deg,rgba(232,179,76,.28),rgba(232,179,76,.08)); border-color:var(--gold-dim); color:var(--gold); font-weight:900; }
   .pick-btn.forced{ border-color:#7a2c2c; }
   .pick-edit-btn{
     flex-shrink:0; background:none; border:1px solid var(--line); border-radius:6px; color:var(--muted);
-    font-size:12px; padding:0 7px; cursor:pointer; align-self:center; height:30px;
+    font-size:14px; padding:0 10px; cursor:pointer; align-self:center; height:34px;
   }
   .nm-edit-input{
     flex:1; min-width:0; background:#0d0a14; border:1px solid var(--ember2); color:var(--cream);
-    border-radius:6px; padding:5px 8px; font-size:13px; font-family:'Noto Sans JP',sans-serif;
+    border-radius:6px; padding:7px 9px; font-size:15px; font-family:'Noto Sans JP',sans-serif;
   }
-  .vs-label{ align-self:center; color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:11px; flex-shrink:0; }
-  .bye-row{ color:var(--muted); font-style:italic; font-size:13px; padding:10px 4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .vs-label{ align-self:center; color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.1em; }
+  .bye-row{ color:var(--muted); font-style:italic; font-size:15px; padding:10px 4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .bye-row .nm{ cursor:pointer; }
   .add-challenger-btn{
     flex-shrink:0; background:none; border:1px dashed var(--ember2); border-radius:6px; color:var(--ember2);
