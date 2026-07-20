@@ -29,19 +29,21 @@
     color:var(--gold); flex-shrink:0;
   }
   .bracket-scroll{overflow-x:auto; padding-bottom:8px; margin:0 -16px; padding-left:16px; padding-right:16px;}
-  .bracket{display:flex; gap:50px; min-width:max-content; padding:6px 2px 16px; position:relative;}
-  .round-col{display:flex; flex-direction:column; justify-content:space-around; gap:16px; min-width:190px; position:relative; z-index:1;}
+  .bracket{display:flex; gap:38px; min-width:max-content; padding:6px 2px 16px; position:relative; align-items:flex-start;}
+  .round-block{display:flex; flex-direction:column; flex-shrink:0;}
+  .round-col{width:190px; position:relative; z-index:1; flex-shrink:0;}
   .round-title{
     font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--bg); text-align:center;
-    letter-spacing:.1em; margin-bottom:8px; text-transform:uppercase; background:var(--gold); border-radius:999px;
+    letter-spacing:.1em; margin-bottom:10px; text-transform:uppercase; background:var(--gold); border-radius:999px;
     padding:4px 10px; font-weight:900;
   }
   svg.bracket-lines{position:absolute; left:0; top:0; z-index:0; pointer-events:none;}
+  .round-col .match{position:absolute; left:0; right:0;}
   .match{background:#0d0a14; border:1.5px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.35); position:relative; z-index:1;}
   .match.forced{border-color:#7a2c2c; box-shadow:0 0 0 1px #7a2c2c inset;}
   .match.ready{border-color:var(--ember2); box-shadow:0 0 0 1px var(--ember2) inset, 0 0 14px rgba(255,106,43,.25);}
   .slot{
-    padding:12px; font-size:13.5px; display:flex; align-items:center; gap:8px;
+    height:46px; padding:0 12px; box-sizing:border-box; font-size:13.5px; display:flex; align-items:center; gap:8px;
     cursor:pointer; border-bottom:1px solid var(--line); color:var(--cream); transition:background .15s;
   }
   .slot .nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -105,12 +107,23 @@
   .order-list{margin-top:14px; display:flex; flex-direction:column; gap:6px;}
   .order-item{
     display:flex; align-items:center; gap:8px; background:#0d0a14; border:1px solid var(--line);
-    border-radius:10px; padding:9px 10px; font-size:13px;
+    border-radius:10px; padding:9px 10px; font-size:13px; touch-action:pan-y;
   }
   .order-item.is-bye{border-color:var(--gold-dim); background:#181206;}
+  .order-item.dragging{ box-shadow:0 8px 22px rgba(0,0,0,.5); border-color:var(--ember2); z-index:20; position:relative; }
+  .order-item .drag-handle{
+    flex-shrink:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+    color:var(--muted); font-size:18px; cursor:grab; touch-action:none; border-radius:6px;
+  }
+  .order-item .drag-handle:active{ cursor:grabbing; background:rgba(255,255,255,.08); }
   .order-item .idx{font-family:'JetBrains Mono',monospace; color:var(--ember2); width:20px; text-align:right; font-size:12px; flex-shrink:0;}
-  .order-item .cam{font-size:12px; opacity:.8;}
-  .order-item button{padding:6px 10px; margin:0; font-size:13px;}
+  .order-item .nm-edit{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:6px 4px; border-radius:6px; cursor:text;}
+  .order-item .nm-edit:active{ background:rgba(255,255,255,.08); }
+  .order-item .nm-edit-input{
+    flex:1; min-width:0; background:#161320; border:1px solid var(--ember2); color:var(--cream);
+    border-radius:6px; padding:5px 8px; font-size:13px; font-family:'Noto Sans JP',sans-serif;
+  }
+  .order-item .cam{font-size:12px; opacity:.8; flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -181,6 +194,14 @@
 
   function initials(name){ return (name||'').trim().charAt(0) || '?'; }
 
+  // 対戦表をピラミッド型に見せるための座標計算(1試合=92px、ラウンド0の間隔=22px を基準に、
+  // 各ラウンドの試合は前のラウンドの2試合のちょうど中間の高さに配置する)
+  const BRACKET_MATCH_H = 92, BRACKET_ROW_GAP = 22, BRACKET_UNIT = BRACKET_MATCH_H + BRACKET_ROW_GAP;
+  function matchTop(r, i){
+    const span = Math.pow(2, r);
+    return (i*span + (span-1)/2) * BRACKET_UNIT;
+  }
+
   /* ---------- 参加者サマリー ---------- */
   function renderPeopleSummary(){
     const box = document.getElementById('peopleSummary');
@@ -234,17 +255,16 @@
     const size = AtsuCup.nextPow2(manualOrder.length);
     const byeCount = size - manualOrder.length;
     manualBox.innerHTML = `
-      <p class="hint">↑↓で順番を並べ替えてください。上から2人ずつ対戦になり、下の${byeCount}人が不戦勝(BYE)になります。</p>
-      <div class="order-list">
+      <p class="hint">⠿を長押ししてドラッグすると順番を並べ替えられます。名前をタップすると直接書き換えられます。上から2人ずつ対戦になり、下の${byeCount}人が不戦勝(BYE)になります。</p>
+      <div class="order-list" id="manualOrderList">
         ${manualOrder.map((name,i)=>{
           const isBye = byeCount>0 && i >= manualOrder.length - byeCount;
-          return `<div class="order-item ${isBye?'is-bye':''}">
+          return `<div class="order-item ${isBye?'is-bye':''}" data-idx="${i}">
+            <span class="drag-handle">⠿</span>
             <span class="idx">${i+1}</span>
-            <span style="flex:1;">${escapeHtml(name)}</span>
+            <span class="nm-edit" data-edit="${i}">${escapeHtml(name)}</span>
             <span class="cam">${recMap[name]?'📹':'🚫'}</span>
             ${isBye?'<span class="count-badge" style="margin:0;">BYE</span>':''}
-            <button class="btn btn-ghost" data-move="-1" data-idx="${i}">↑</button>
-            <button class="btn btn-ghost" data-move="1" data-idx="${i}">↓</button>
           </div>`;
         }).join('')}
       </div>
@@ -252,15 +272,73 @@
         <button class="btn btn-primary" id="applyManualBtn">この組み合わせで決定する</button>
       </div>
     `;
-    manualBox.querySelectorAll('[data-move]').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const idx = +btn.dataset.idx, dir = +btn.dataset.move;
-        const j = idx+dir;
-        if(j<0 || j>=manualOrder.length) return;
-        [manualOrder[idx], manualOrder[j]] = [manualOrder[j], manualOrder[idx]];
-        renderManualEditor();
+
+    // 名前をタップするとその場でテキスト入力に切り替えて書き換えられる
+    manualBox.querySelectorAll('[data-edit]').forEach(span=>{
+      span.addEventListener('click', ()=>{
+        const idx = +span.dataset.edit;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'nm-edit-input';
+        input.value = manualOrder[idx];
+        span.replaceWith(input);
+        input.focus();
+        input.select();
+        let done = false;
+        const commit = ()=>{
+          if(done) return;
+          done = true;
+          const val = input.value.trim();
+          if(val) manualOrder[idx] = val;
+          renderManualEditor();
+        };
+        input.addEventListener('blur', commit);
+        input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ input.blur(); } });
       });
     });
+
+    // ⠿ドラッグハンドルで並び替え(ポインターイベントでマウス・タッチ両対応)
+    const listEl = document.getElementById('manualOrderList');
+    listEl.querySelectorAll('.order-item').forEach(row=>{
+      const handle = row.querySelector('.drag-handle');
+      handle.addEventListener('pointerdown', (e)=>{
+        e.preventDefault();
+        const startIdx = +row.dataset.idx;
+        let curIdx = startIdx;
+        const startY = e.clientY;
+        const rows = Array.from(listEl.children);
+        const rowStep = rows.length>1 ? (rows[1].offsetTop - rows[0].offsetTop) : row.offsetHeight;
+        row.classList.add('dragging');
+        row.setPointerCapture(e.pointerId);
+
+        function onMove(ev){
+          const dy = ev.clientY - startY;
+          const steps = Math.round(dy / rowStep);
+          const newIdx = Math.max(0, Math.min(manualOrder.length-1, startIdx + steps));
+          row.style.transform = `translateY(${dy - (newIdx-startIdx)*rowStep}px)`;
+          if(newIdx !== curIdx){
+            const item = manualOrder.splice(curIdx,1)[0];
+            manualOrder.splice(newIdx,0,item);
+            // 自分以外の行を現在のDOM順で並べ、newIdx番目の直前に自分を差し込む
+            const others = Array.from(listEl.children).filter(el=>el!==row);
+            const refEl = others[newIdx] || null;
+            if(refEl) listEl.insertBefore(row, refEl);
+            else listEl.appendChild(row);
+            curIdx = newIdx;
+          }
+        }
+        function onUp(){
+          row.style.transform = '';
+          row.classList.remove('dragging');
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+          renderManualEditor();
+        }
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      });
+    });
+
     document.getElementById('applyManualBtn').addEventListener('click', ()=>{
       state.matches = [AtsuCup.buildRound1Manual(manualOrder)];
       state.order = [...manualOrder];
@@ -556,20 +634,23 @@
       html += `<p class="hint">入れ替えたい2人を順番にタップしてください。(ラウンド1のみ)</p>`;
     }
 
+    // 実際のトーナメント表らしく見えるよう、各試合の縦位置を「前の2試合の中間」に配置する(ピラミッド型)
+    const round0Len = state.matches[0].length;
+    const colHeight = round0Len*BRACKET_UNIT - BRACKET_ROW_GAP;
     html += `<div class="bracket-scroll"><div class="bracket">`;
     state.matches.forEach((round, r)=>{
-      html += `<div class="round-col"><div class="round-title">${AtsuCup.roundLabel(round.length)}</div>`;
+      html += `<div class="round-block"><div class="round-title">${AtsuCup.roundLabel(round.length)}</div><div class="round-col" style="height:${colHeight}px;">`;
       round.forEach((m,i)=>{
         const isForced = m.a && m.b && AtsuCup.isRevealed(m.a) && AtsuCup.isRevealed(m.b) && !recMap[m.a] && !recMap[m.b];
         const isReady = m.a && m.b && AtsuCup.isRevealed(m.a) && AtsuCup.isRevealed(m.b) && !m.winner;
         const pickedA = swapMode && swapPick && r===0 && swapPick.m===i && swapPick.side==='a';
         const pickedB = swapMode && swapPick && r===0 && swapPick.m===i && swapPick.side==='b';
-        html += `<div class="match ${isForced?'forced':''} ${isReady && !swapMode?'ready':''}">`;
+        html += `<div class="match ${isForced?'forced':''} ${isReady && !swapMode?'ready':''}" style="top:${matchTop(r,i)}px;">`;
         html += slotHtml(m.a, m.winner, r, i, 'a', recMap, pickedA);
         html += slotHtml(m.b, m.winner, r, i, 'b', recMap, pickedB);
         html += `</div>`;
       });
-      html += `</div>`;
+      html += `</div></div>`;
     });
     html += `</div></div>`;
 
