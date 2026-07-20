@@ -424,6 +424,7 @@
       if(!state.people.length){ alert("先に参加者を登録してください。"); return; }
       return;
     }
+    document.getElementById('rouletteBox').scrollIntoView({behavior:'smooth', block:'center'});
     spinning = true;
     spinBtn.disabled = true;
     const n = state.remaining.length;
