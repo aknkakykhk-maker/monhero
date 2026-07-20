@@ -17,42 +17,132 @@
     <div class="sub">LINE monster farm・tournament</div>
   </header>
 
-  <section class="panel" id="currentBox"></section>
+  <section class="panel">
+    <h2><span class="num">00</span> 開催中の大会</h2>
+    <div id="currentTournamentBox"></div>
 
-  <footer class="note">大会・参加者・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+    <h3 class="section-title" style="margin-top:22px;">➕ 大会を作成</h3>
+    <p class="hint">新しい大会を作成すると、今の大会は「過去の大会」に自動で保存されます。参加者選択・組み合わせ抽選までこのまま続けて行えます。</p>
+    <button class="btn btn-primary" id="newTournamentBtn">新しい大会を作成する</button>
+    <div id="tournamentForm" style="display:none;"></div>
+  </section>
+
+  <section class="panel">
+    <h2><span class="num">01</span> このツールでできること</h2>
+    <div class="menu-grid">
+      <a class="menu-card" href="history.html"><span class="ic">📜</span>過去の大会</a>
+      <a class="menu-card" href="entry.html"><span class="ic">🙋</span>参加者登録</a>
+      <a class="menu-card" href="video.html"><span class="ic">🎬</span>対戦動画</a>
+      <a class="menu-card" href="hall.html"><span class="ic">👑</span>歴代優勝者</a>
+      <a class="menu-card" href="record.html"><span class="ic">📊</span>戦績</a>
+    </div>
+  </section>
+
+  <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
 </div>
 
 <script src="tap-ripple.js"></script>
+<script src="atsucup-core.js"></script>
 <script>
 (function(){
   "use strict";
-  const escapeHtml = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const box = document.getElementById('currentBox');
-  try{
-    const raw = localStorage.getItem('atsucup:state:v2');
-    const state = raw ? JSON.parse(raw) : null;
-    const meta = state && state.tournamentMeta;
+  const state = AtsuCup.state;
+  const escapeHtml = AtsuCup.escapeHtml;
+  AtsuCup.restore();
+
+  const currentTournamentBox = document.getElementById("currentTournamentBox");
+  const tournamentForm = document.getElementById("tournamentForm");
+
+  function renderCurrentTournamentBox(){
+    const meta = state.tournamentMeta;
     if(!meta || !meta.title){
-      box.innerHTML = `<div class="empty-state"><span class="big">🏆</span>まだ大会が作成されていません。</div>
-        <a class="btn btn-primary" style="width:100%;" href="admin.html">大会管理を開く</a>`;
-    }else{
-      const badge = state.winnerName
-        ? `<span class="status-badge done">優勝者決定</span>`
-        : `<span class="status-badge open">進行中</span>`;
-      box.innerHTML = `
-        ${badge}
-        ${meta.posterUrl ? `<img class="poster-img" src="${escapeHtml(meta.posterUrl)}" alt="poster">` : ''}
-        <div class="cur-title">${escapeHtml(meta.title)}</div>
-        ${meta.details ? `<div class="cur-details">${escapeHtml(meta.details)}</div>` : ''}
-        ${state.winnerName ? `<div class="cur-line champ">👑 優勝: ${escapeHtml(state.winnerName)}</div>` : ''}
-        ${(state.thirdPlaceMatch && state.thirdPlaceMatch.winner) ? `<div class="cur-line third">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>` : ''}
-        <a class="btn btn-primary" style="width:100%;" href="admin.html">大会管理を開く</a>
-      `;
+      currentTournamentBox.innerHTML = `<div class="empty-state"><span class="big">🏆</span>まだ大会が作成されていません。<br>下の「大会を作成」から告知ポスターと詳細を登録してください。</div>`;
+      return;
     }
-  }catch(e){
-    box.innerHTML = `<div class="empty-state"><span class="big">⚠️</span>読み込みに失敗しました。</div>
-      <a class="btn btn-primary" style="width:100%;" href="admin.html">大会管理を開く</a>`;
+    const statusBadge = state.winnerName
+      ? `<span class="status-badge done">優勝者決定</span>`
+      : `<span class="status-badge open">進行中</span>`;
+    currentTournamentBox.innerHTML = `
+      ${statusBadge}
+      ${meta.posterUrl?`<img class="poster-img" src="${escapeHtml(meta.posterUrl)}" alt="poster">`:''}
+      <div class="cur-title">${escapeHtml(meta.title)}</div>
+      <div class="cur-details">${escapeHtml(meta.details||'')}</div>
+      ${state.winnerName?`<div class="cur-line champ">👑 優勝: ${escapeHtml(state.winnerName)}</div>`:''}
+      ${state.thirdPlaceMatch&&state.thirdPlaceMatch.winner?`<div class="cur-line third">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>`:''}
+      <div class="row">
+        <a class="btn btn-gold" href="matchup.html">🎲 組み合わせ・対戦を進める</a>
+      </div>
+      <div class="row">
+        <button class="btn btn-ghost" id="editTournamentBtn">編集する</button>
+        <button class="btn btn-ghost" id="endTournamentBtn">この大会を終了する</button>
+      </div>
+    `;
+    document.getElementById("editTournamentBtn").addEventListener("click", ()=> openTournamentForm(meta));
+    document.getElementById("endTournamentBtn").addEventListener("click", ()=>{
+      const ok = confirm(state.winnerName
+        ? "この大会を終了して「過去の大会」に保存します。よろしいですか？"
+        : "この大会はまだ優勝者が決まっていません。それでも終了して「過去の大会」に保存しますか？");
+      if(!ok) return;
+      AtsuCup.endCurrentTournament();
+      renderCurrentTournamentBox();
+    });
   }
+
+  function openTournamentForm(editingMeta){
+    tournamentForm.style.display = "block";
+    tournamentForm.innerHTML = `
+      <div class="video-card">
+        <div class="field" style="margin-bottom:8px;"><label>大会名</label><input type="text" id="tfTitle" placeholder="例: 第30回 あつ杯" value="${editingMeta?escapeHtml(editingMeta.title):''}"></div>
+        <div class="field" style="margin-bottom:8px;"><label>詳細・ルール</label><textarea id="tfDetails" style="min-height:100px;">${editingMeta?escapeHtml(editingMeta.details||''):''}</textarea></div>
+        <div class="field" style="margin-bottom:8px;"><label>告知ポスター画像</label><input type="file" id="tfPoster" accept="image/*"></div>
+        <div class="row">
+          <button class="btn btn-primary" id="tfSave">${editingMeta?'更新する':'この内容で作成して参加者を選ぶ'}</button>
+          <button class="btn btn-ghost" id="tfCancel">キャンセル</button>
+        </div>
+      </div>
+    `;
+    document.getElementById("tfCancel").addEventListener("click", ()=>{ tournamentForm.style.display="none"; tournamentForm.innerHTML=""; });
+    document.getElementById("tfSave").addEventListener("click", async ()=>{
+      const title = document.getElementById("tfTitle").value.trim();
+      const details = document.getElementById("tfDetails").value.trim();
+      const fileInput = document.getElementById("tfPoster");
+      if(!title){ alert("大会名を入力してください。"); return; }
+      const saveBtn = document.getElementById("tfSave");
+      saveBtn.disabled = true; saveBtn.textContent = "保存中...";
+      try{
+        let posterUrl = editingMeta ? editingMeta.posterUrl : null;
+        if(fileInput.files && fileInput.files[0]){
+          posterUrl = await AtsuCup.resizeImageToDataUrl(fileInput.files[0], 900, 0.75);
+        }
+        state.tournamentMeta = { title, details, posterUrl };
+        AtsuCup.persist();
+        tournamentForm.style.display = "none";
+        tournamentForm.innerHTML = "";
+        if(!editingMeta){
+          // 新規作成の直後は、参加者選択→組み合わせ抽選までひと続きで行えるよう誘導する
+          location.href = "entry.html?flow=new";
+          return;
+        }
+        renderCurrentTournamentBox();
+      }catch(e){
+        alert("保存に失敗しました: " + (e.message||e));
+      }finally{
+        saveBtn.disabled = false; saveBtn.textContent = editingMeta?'更新する':'この内容で作成して参加者を選ぶ';
+      }
+    });
+  }
+
+  document.getElementById("newTournamentBtn").addEventListener("click", ()=>{
+    if(state.tournamentMeta && state.tournamentMeta.title){
+      const ok = confirm("現在の大会を終了して「過去の大会」に保存し、新しい大会を作成します。よろしいですか？");
+      if(!ok) return;
+    }
+    AtsuCup.endCurrentTournament();
+    renderCurrentTournamentBox();
+    openTournamentForm(null);
+  });
+
+  renderCurrentTournamentBox();
 })();
 </script>
 </body>
