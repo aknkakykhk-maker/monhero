@@ -29,6 +29,18 @@ a.back-link:active{ transform:scale(.93); }
   transform-origin:center; animation:mhRipple 550ms ease-out forwards; pointer-events:none; z-index:2147483647;
 }
 @keyframes mhRipple { 0%{transform:scale(0.3);opacity:0.55;} 100%{transform:scale(1.8);opacity:0;} }
+.atsucup-update-banner{
+  position:fixed; top:calc(10px + env(safe-area-inset-top)); left:0; right:0; z-index:2147483647;
+  display:flex; justify-content:center; padding:0 16px; pointer-events:none;
+}
+.atsucup-update-banner button{
+  pointer-events:auto; background:linear-gradient(90deg,var(--gold),var(--ember2)); color:#1a1208; font-weight:900; font-size:11px;
+  padding:10px 16px; border-radius:999px; border:none; box-shadow:0 8px 24px rgba(0,0,0,.5);
+  display:flex; align-items:center; gap:6px; animation:atsucupPulse 1.6s ease-in-out infinite;
+  font-family:'Noto Sans JP',sans-serif; -webkit-tap-highlight-color:transparent; cursor:pointer;
+}
+.atsucup-update-banner button:active{ transform:scale(.95); }
+@keyframes atsucupPulse { 0%,100%{opacity:1;} 50%{opacity:.75;} }
 header.top{padding:22px 6px 14px; text-align:center; position:relative;}
 .crown-mark{font-size:26px; filter:drop-shadow(0 0 8px rgba(232,179,76,.6));}
 h1{

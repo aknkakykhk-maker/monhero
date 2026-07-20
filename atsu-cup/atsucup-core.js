@@ -254,6 +254,25 @@ const AtsuCup = (function(){
     persist();
   }
 
+  // 大会途中で参加者が増えた場合、空いているBYE(不戦勝)枠に新しい参加者を入れて実際の対戦に変える。
+  // それより先のラウンドは(再選択時と同じく)いったん無効になり、決着がつき次第また自動で組み直される。
+  function addChallengerToBye(r, m, name){
+    const match = state.matches[r] && state.matches[r][m];
+    if(!match || match.b !== null) return;
+    name = (name||'').trim();
+    if(!name || name === match.a) return;
+    match.b = name;
+    match.winner = null;
+    match.loser = null;
+    if(!state.roster.includes(name)) state.roster.push(name);
+    if(!state.people.some(p=>p.name===name)) state.people.push({name, rec:true});
+    state.matches = state.matches.slice(0, r+1);
+    state.thirdPlaceMatch = null;
+    state.winnerName = "";
+    propagateByes();
+    persist();
+  }
+
   // ラウンド1がまだ1試合も決着していない(=組み合わせをいつでも自由に組み替えられる)かどうか
   function bracketNotStarted(){
     if(!state.matches.length) return true;
@@ -452,10 +471,40 @@ const AtsuCup = (function(){
     return list;
   }
 
+  /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
+  // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+  const BUILD_DATE = "2026-07-20 18:30";
+  function initUpdateBanner(){
+    if(typeof document === 'undefined' || !document.body) return;
+    if(document.getElementById('atsucupUpdateBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'atsucupUpdateBanner';
+    banner.className = 'atsucup-update-banner';
+    banner.style.display = 'none';
+    banner.innerHTML = '<button id="atsucupUpdateReloadBtn">⟳ 新しいバージョンがあります。タップして更新</button>';
+    document.body.appendChild(banner);
+    document.getElementById('atsucupUpdateReloadBtn').addEventListener('click', ()=> location.reload());
+    function checkVersion(){
+      fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(res=> res.ok ? res.json() : null)
+        .then(data=>{
+          if(data && data.build && data.build !== BUILD_DATE){ banner.style.display = 'flex'; }
+        })
+        .catch(()=>{});
+    }
+    checkVersion();
+    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') checkVersion(); });
+    setInterval(checkVersion, 5 * 60 * 1000);
+  }
+  if(typeof document !== 'undefined'){
+    if(document.body) initUpdateBanner();
+    else document.addEventListener('DOMContentLoaded', initUpdateBanner);
+  }
+
   return {
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildRound1Manual, resetDownstream,
-    propagateByes, pickWinner, pickThirdPlaceWinner, renameParticipant, bracketNotStarted, isRevealed, forcedPairsList,
+    propagateByes, pickWinner, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, isRevealed, forcedPairsList,
     computePlacements, allFinishedEntries, archiveCurrentTournament, endCurrentTournament,
     THEMES, themeForTitle, drawCard, generateAndSaveCard, championEntries,
     ytId, hostFromUrl, videoEmbedHtml, matchesToPlayable, videoTournamentList
