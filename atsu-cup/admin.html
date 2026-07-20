@@ -260,7 +260,7 @@
     <button data-tab="roulette">抽選</button>
     <button data-tab="bracket">対戦表</button>
     <button data-tab="video">動画</button>
-    <button data-tab="card">優勝カード</button>
+    <button data-tab="hall">歴代優勝者</button>
     <button data-tab="record">戦績</button>
   </nav>
 
@@ -322,29 +322,15 @@
   <section class="panel tab-panel" id="tab-video" style="display:none;">
     <h2><span class="num">04</span> 対戦動画</h2>
     <p class="hint">動画ファイル自体はこのアプリには保存できません。YouTube(限定公開)やX、ミラティブのアーカイブなど、どこかにアップロードした後の「リンク」をここに貼ると、配信中このアプリ内でまとめて再生・鑑賞できます。</p>
+    <div class="field" style="margin-bottom:14px;"><label>大会を選ぶ</label><select id="videoTournamentSelect"></select></div>
     <div id="videoArea"></div>
   </section>
 
-  <section class="panel tab-panel" id="tab-card" style="display:none;">
-    <h2><span class="num">05</span> 優勝者カード生成</h2>
-    <p class="hint">大会名・優勝者名を入力して画像を生成、そのまま保存できます。</p>
-    <div class="card-controls">
-      <div class="field"><label>回数</label><input type="text" id="cupNo" placeholder="例: 30" value="30"></div>
-      <div class="field"><label>優勝者名</label><input type="text" id="winnerName" placeholder="例: おりょう"></div>
-      <div class="field">
-        <label>テーマ</label>
-        <select id="cardTheme">
-          <option value="ember">火山・紅蓮</option>
-          <option value="ice">氷結・蒼氷</option>
-          <option value="forest">森林・翠玉</option>
-        </select>
-      </div>
-    </div>
-    <div class="row">
-      <button class="btn btn-primary" id="genCard">カードを生成</button>
-      <button class="btn btn-gold" id="dlCard" disabled>画像を保存</button>
-    </div>
-    <canvas id="cardCanvas" width="1000" height="1000"></canvas>
+  <section class="panel tab-panel" id="tab-hall" style="display:none;">
+    <h2><span class="num">05</span> 歴代優勝者</h2>
+    <p class="hint">過去の大会の優勝者一覧です。タップすると優勝カード画像を生成してそのまま保存できます。</p>
+    <div id="hallList"></div>
+    <canvas id="cardCanvas" width="1000" height="1000" style="display:none;"></canvas>
   </section>
 
   <section class="panel tab-panel" id="tab-record" style="display:none;">
@@ -421,6 +407,7 @@
       if(btn.dataset.tab === "bracket") renderBracket();
       if(btn.dataset.tab === "video") renderVideoTab();
       if(btn.dataset.tab === "tournament") renderTournamentTab();
+      if(btn.dataset.tab === "hall") renderHallTab();
       if(btn.dataset.tab === "record"){ renderRecordRoster(); renderRecordResult(); }
     });
   });
@@ -471,9 +458,17 @@
         </div>
         <div class="row">
           <button class="btn btn-ghost" id="editTournamentBtn">編集する</button>
+          <button class="btn btn-gold" id="endTournamentBtn">この大会を終了する</button>
         </div>
       `;
       document.getElementById("editTournamentBtn").addEventListener("click", ()=> openTournamentForm(meta));
+      document.getElementById("endTournamentBtn").addEventListener("click", ()=>{
+        const ok = confirm(state.winnerName
+          ? "この大会を終了して「過去の大会」に保存します。よろしいですか？"
+          : "この大会はまだ優勝者が決まっていません。それでも終了して「過去の大会」に保存しますか？");
+        if(!ok) return;
+        endCurrentTournament();
+      });
     }
 
     tournamentList.innerHTML = "";
@@ -561,17 +556,22 @@
     });
   }
 
-  document.getElementById("newTournamentBtn").addEventListener("click", ()=>{
+  // 今の大会を終わらせて「過去の大会」に保存し、開催中を空の状態に戻す(優勝者が未定でも終了できる)
+  function endCurrentTournament(){
     if(state.tournamentMeta && state.tournamentMeta.title){
-      if(!state.winnerName){
-        const ok = confirm("現在の大会はまだ優勝者が決まっていません。新しい大会を作成すると、今の進行状況は「過去の大会」に記録されます。よろしいですか？");
-        if(!ok) return;
-      }
       archiveCurrentTournament();
     }
     state.tournamentMeta = { title:"", details:"", posterUrl:null };
     resetDownstream();
     renderAll();
+  }
+
+  document.getElementById("newTournamentBtn").addEventListener("click", ()=>{
+    if(state.tournamentMeta && state.tournamentMeta.title){
+      const ok = confirm("現在の大会を終了して「過去の大会」に保存し、新しい大会を作成します。よろしいですか？");
+      if(!ok) return;
+    }
+    endCurrentTournament();
     openTournamentForm(null);
   });
 
@@ -917,8 +917,10 @@
     const result = {};
     const matches = entry.matches || [];
     const champion = entry.championName;
+    // 決勝(最終ラウンドが1試合だけ)が優勝者確定まで終わっている場合のみ準優勝を確定させる。
+    // 途中終了した大会では最後の配列要素が準決勝以前のこともあるため、誤って準優勝扱いにしない。
     const finalRound = matches.length ? matches[matches.length-1] : null;
-    const runnerUp = (finalRound && finalRound[0]) ? finalRound[0].loser : null;
+    const runnerUp = (champion && finalRound && finalRound.length===1 && finalRound[0]) ? finalRound[0].loser : null;
     const thirdName = entry.thirdPlaceMatch ? entry.thirdPlaceMatch.winner : null;
     const fourthName = (entry.thirdPlaceMatch && thirdName) ? (entry.thirdPlaceMatch.a===thirdName ? entry.thirdPlaceMatch.b : entry.thirdPlaceMatch.a) : null;
     (entry.participants||[]).forEach(p=>{
@@ -1138,8 +1140,7 @@
       const toCardBtn = document.getElementById("toCardBtn");
       if(toCardBtn){
         toCardBtn.addEventListener("click", ()=>{
-          document.querySelector('nav.tabs button[data-tab="card"]').click();
-          document.getElementById('winnerName').value = state.winnerName;
+          generateAndSaveCard(state.tournamentMeta.title, state.winnerName);
         });
       }
     }
@@ -1294,9 +1295,9 @@
     return `<a class="video-link-btn" href="${url}" target="_blank" rel="noopener">🔗 動画を開く (${hostFromUrl(url)})</a>`;
   }
 
-  function allPlayableMatches(){
+  function matchesToPlayable(matches){
     const list = [];
-    state.matches.forEach((round, r)=>{
+    (matches||[]).forEach((round, r)=>{
       round.forEach((m,i)=>{
         if(m.a && m.b) list.push({r,i,m});
       });
@@ -1304,16 +1305,47 @@
     return list;
   }
 
+  // 「開催中の大会」と「過去の大会(state.history)」をまとめて選択肢にする
+  function videoTournamentList(){
+    const list = [];
+    if(state.tournamentMeta && state.tournamentMeta.title){
+      list.push({ key:'current', title: state.tournamentMeta.title, matches: state.matches });
+    }
+    state.history.slice().reverse().forEach(h=>{
+      list.push({ key:h.id, title: h.title, matches: h.matches || [] });
+    });
+    return list;
+  }
+
+  let selectedVideoKey = null;
+
   function renderVideoTab(){
+    const select = document.getElementById("videoTournamentSelect");
     const area = document.getElementById("videoArea");
-    const list = allPlayableMatches();
+    const tournaments = videoTournamentList();
+    if(!tournaments.length){
+      select.style.display = "none";
+      area.innerHTML = `<div class="empty-state"><span class="big">🎬</span>まだ大会がありません。<br>「大会管理」から大会を作成してください。</div>`;
+      return;
+    }
+    select.style.display = "block";
+    if(!selectedVideoKey || !tournaments.some(t=>t.key===selectedVideoKey)){
+      selectedVideoKey = tournaments[0].key;
+    }
+    select.innerHTML = tournaments.map(t=>
+      `<option value="${escapeHtml(t.key)}" ${t.key===selectedVideoKey?'selected':''}>${escapeHtml(t.title)}</option>`
+    ).join("");
+    select.onchange = ()=>{ selectedVideoKey = select.value; renderVideoTab(); };
+
+    const target = tournaments.find(t=>t.key===selectedVideoKey);
+    const list = matchesToPlayable(target.matches);
     if(!list.length){
-      area.innerHTML = `<div class="empty-state"><span class="big">🎬</span>対戦カードがまだありません。<br>対戦表で組み合わせを作ると、ここにリンク欄が表示されます。</div>`;
+      area.innerHTML = `<div class="empty-state"><span class="big">🎬</span>この大会にはまだ対戦カードがありません。</div>`;
       return;
     }
     area.innerHTML = list.map(({r,i,m})=>{
       return `<div class="video-card">
-        <div class="vs"><span class="rlabel">${roundLabel(state.matches[r].length)}</span> ${escapeHtml(m.a)} vs ${escapeHtml(m.b)} ${m.winner?`<span class="rlabel">勝者: ${escapeHtml(m.winner)}</span>`:''}</div>
+        <div class="vs"><span class="rlabel">${roundLabel(target.matches[r].length)}</span> ${escapeHtml(m.a)} vs ${escapeHtml(m.b)} ${m.winner?`<span class="rlabel">勝者: ${escapeHtml(m.winner)}</span>`:''}</div>
         <input type="text" placeholder="動画リンクを貼り付け (YouTube / X / その他)" value="${m.video?escapeHtml(m.video):''}" data-r="${r}" data-i="${i}">
         ${videoEmbedHtml(m.video)}
       </div>`;
@@ -1321,27 +1353,33 @@
     area.querySelectorAll("input").forEach(inp=>{
       inp.addEventListener("change", ()=>{
         const r = +inp.dataset.r, i = +inp.dataset.i;
-        state.matches[r][i].video = inp.value.trim();
+        target.matches[r][i].video = inp.value.trim();
+        if(target.key !== 'current'){
+          const h = state.history.find(x=>x.id===target.key);
+          if(h) h.matches = target.matches;
+        }
         persist();
         renderVideoTab();
       });
     });
   }
 
-  /* ---------- card ---------- */
+  /* ---------- 歴代優勝者(hall of fame) ---------- */
   const cardCanvas = document.getElementById("cardCanvas");
   const cctx = cardCanvas.getContext("2d");
-  const dlBtn = document.getElementById("dlCard");
   const THEMES = {
     ember:{bg1:"#3a0f02",bg2:"#0a0603",ring:"#e8b34c",accent:"#ff6a2b",glow:"rgba(255,106,43,.55)"},
     ice:{bg1:"#04213a",bg2:"#040912",ring:"#bfe9ff",accent:"#4fd1e8",glow:"rgba(79,209,232,.55)"},
     forest:{bg1:"#0c3a1a",bg2:"#050c07",ring:"#a8e83b",accent:"#2bc97a",glow:"rgba(43,201,122,.5)"}
   };
-  function drawCard(){
-    const cupNo = document.getElementById("cupNo").value.trim() || "?";
-    const name = document.getElementById("winnerName").value.trim();
-    const theme = THEMES[document.getElementById("cardTheme").value];
-    if(!name){ alert("優勝者名を入力してください。"); return; }
+  const THEME_KEYS = Object.keys(THEMES);
+  // 大会名から毎回同じテーマ色になるよう決定的に選ぶ(見た目に変化を持たせるため)
+  function themeForTitle(title){
+    let h = 0;
+    for(let i=0;i<title.length;i++) h = (h*31 + title.charCodeAt(i)) >>> 0;
+    return THEMES[THEME_KEYS[h % THEME_KEYS.length]];
+  }
+  function drawCard(title, name, theme){
     const W = cardCanvas.width, H = cardCanvas.height;
     cctx.clearRect(0,0,W,H);
     const grad = cctx.createRadialGradient(W/2,H*0.38,40,W/2,H*0.38,W*0.75);
@@ -1361,14 +1399,6 @@
     cctx.beginPath(); cctx.arc(W/2,H/2,W/2-10,0,Math.PI*2); cctx.stroke();
     cctx.strokeStyle = "rgba(255,255,255,.25)"; cctx.lineWidth = 2;
     cctx.beginPath(); cctx.arc(W/2,H/2,W/2-26,0,Math.PI*2); cctx.stroke();
-    const bx = W*0.83, by = H*0.15;
-    cctx.save(); cctx.shadowColor = theme.glow; cctx.shadowBlur = 26;
-    cctx.beginPath(); cctx.arc(bx,by,72,0,Math.PI*2); cctx.fillStyle = "rgba(10,8,10,0.55)"; cctx.fill();
-    cctx.lineWidth = 5; cctx.strokeStyle = theme.ring; cctx.stroke(); cctx.restore();
-    cctx.fillStyle = theme.ring; cctx.font = "46px serif"; cctx.textAlign = "center";
-    cctx.fillText("👑", bx, by-8);
-    cctx.font = "900 30px 'JetBrains Mono', monospace"; cctx.fillStyle = "#fff";
-    cctx.fillText("A."+cupNo, bx, by+42);
     cctx.font = "80px serif"; cctx.fillStyle = theme.ring; cctx.textAlign = "center";
     cctx.shadowColor = theme.glow; cctx.shadowBlur = 30;
     cctx.fillText("👑", W/2, H*0.30); cctx.shadowBlur = 0;
@@ -1383,21 +1413,54 @@
     cctx.fillText(name, W/2, H*0.56); cctx.shadowBlur = 0;
     cctx.font = "700 26px 'Noto Serif JP', serif"; cctx.fillStyle = theme.ring;
     cctx.fillText(`優勝者 ${name}`, W/2, H*0.88);
-    cctx.font = "500 15px 'JetBrains Mono', monospace"; cctx.fillStyle = "rgba(255,255,255,.5)";
-    cctx.fillText(`第 ${cupNo} 回 あつ杯`, W/2, H*0.93);
-    dlBtn.disabled = false;
+    let titleSize = 15;
+    cctx.font = `500 ${titleSize}px 'JetBrains Mono', monospace`;
+    while(cctx.measureText(title).width > W*0.8 && titleSize > 9){
+      titleSize -= 1; cctx.font = `500 ${titleSize}px 'JetBrains Mono', monospace`;
+    }
+    cctx.fillStyle = "rgba(255,255,255,.5)";
+    cctx.fillText(title, W/2, H*0.93);
   }
-  document.getElementById("genCard").addEventListener("click", async ()=>{
+  async function generateAndSaveCard(title, name){
     if(document.fonts && document.fonts.ready){ await document.fonts.ready; }
-    drawCard();
-  });
-  dlBtn.addEventListener("click", ()=>{
+    drawCard(title, name, themeForTitle(title));
+    cardCanvas.style.display = "block";
     const link = document.createElement("a");
-    const name = document.getElementById("winnerName").value.trim() || "champion";
     link.download = `atsucup_winner_${name}.png`;
     link.href = cardCanvas.toDataURL("image/png");
     link.click();
-  });
+  }
+  // 優勝が確定した過去の大会だけを、新しい順に一覧表示する
+  function championEntries(){
+    return state.history.filter(h=>h.championName).slice().reverse();
+  }
+  function renderHallTab(){
+    const list = document.getElementById("hallList");
+    cardCanvas.style.display = "none";
+    const entries = championEntries();
+    if(!entries.length){
+      list.innerHTML = `<div class="empty-state"><span class="big">👑</span>まだ優勝者が確定した大会がありません。<br>「大会管理」で優勝者を決めて大会を終了すると、ここに記録されます。</div>`;
+      return;
+    }
+    list.innerHTML = entries.map((h,idx)=>{
+      const date = h.createdAt ? new Date(h.createdAt).toLocaleDateString('ja-JP') : '';
+      return `
+      <div class="past-tournament-item" data-idx="${idx}">
+        ${h.posterUrl?`<img src="${escapeHtml(h.posterUrl)}" alt="">`:`<div class="noimg">👑</div>`}
+        <div class="meta">
+          <div class="t">${escapeHtml(h.title)}</div>
+          <div class="c">👑 ${escapeHtml(h.championName)}${date?` ・ ${date}`:''}</div>
+        </div>
+      </div>`;
+    }).join("");
+    list.querySelectorAll(".past-tournament-item").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const h = entries[+el.dataset.idx];
+        generateAndSaveCard(h.title, h.championName);
+        cardCanvas.scrollIntoView({behavior:"smooth", block:"center"});
+      });
+    });
+  }
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1409,7 +1472,6 @@
     drawWheel();
     renderBracket();
     renderTournamentTab();
-    if(state.winnerName) document.getElementById("winnerName").value = state.winnerName;
   }
 
   restore();
