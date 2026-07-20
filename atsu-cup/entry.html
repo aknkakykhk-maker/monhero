@@ -12,22 +12,21 @@
     background:linear-gradient(180deg,rgba(255,145,69,.18),rgba(255,106,43,.06)); border:1px solid var(--ember2);
     border-radius:14px; padding:12px 14px; margin-bottom:16px; font-size:12.5px; color:var(--cream); line-height:1.8;
   }
-  .roster-row{
-    display:flex; align-items:center; gap:10px; background:#0d0a14; border:1.5px solid var(--line);
-    border-radius:12px; padding:12px 14px; margin-bottom:8px; cursor:pointer;
+  .selected-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+  .available-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px;}
+  .roster-cell{
+    display:flex; align-items:center; gap:6px; min-width:0; background:#0d0a14; border:1.5px solid var(--line);
+    border-radius:10px; padding:9px 8px; cursor:pointer;
   }
-  .roster-row.selected{ border-color:var(--ember2); background:linear-gradient(180deg,rgba(255,145,69,.14),rgba(255,106,43,.05)); }
-  .roster-row .check{
-    width:24px; height:24px; border-radius:50%; border:2px solid var(--line); flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; font-size:12px; color:transparent;
+  .roster-cell.selected{ border-color:var(--ember2); background:linear-gradient(180deg,rgba(255,145,69,.14),rgba(255,106,43,.05)); flex-direction:column; align-items:stretch; gap:6px; }
+  .roster-cell .nm{flex:1; min-width:0; font-weight:700; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .roster-cell .cell-actions{ display:flex; align-items:center; gap:6px; }
+  .roster-cell .rm{
+    flex-shrink:0; background:none; border:1px solid var(--line); border-radius:6px; color:#6b5f82; font-size:11px;
+    cursor:pointer; padding:3px 6px; line-height:1;
   }
-  .roster-row.selected .check{ border-color:var(--ember2); background:var(--ember2); color:#1a0a02; }
-  .roster-row .nm{flex:1; font-weight:700; font-size:14.5px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .roster-row .rm{
-    background:none; border:1px solid var(--line); border-radius:8px; color:#6b5f82; font-size:13px;
-    cursor:pointer; padding:6px 9px; line-height:1; flex-shrink:0;
-  }
-  .next-flow-box{ position:sticky; bottom:0; margin-top:20px; }
+  .roster-cell .cam-toggle-inline{ flex-shrink:0; padding:2px 6px; font-size:11px; }
+  .next-flow-box{ margin-top:20px; }
 </style>
 </head>
 <body>
@@ -110,41 +109,46 @@
     renderBadges();
     nextFlowBox.style.display = state.people.length ? 'block' : 'none';
 
-    // 今回参加する人(選択中)
+    // 今回参加する人(選択中)・2列表示
+    selectedList.className = '';
     selectedList.innerHTML = "";
     if(!state.people.length){
       selectedList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ選ばれていません。下の「登録済みの人から追加」からタップして選んでください。</div>`;
     }else{
+      selectedList.className = 'selected-grid';
       state.people.forEach(person=>{
-        const row = document.createElement('div');
-        row.className = 'roster-row selected';
-        row.innerHTML = `
-          <span class="check">✓</span>
-          <span class="nm" data-select="${escapeHtml(person.name)}">${escapeHtml(person.name)}</span>
-          <button class="cam-toggle-inline ${person.rec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(person.name)}">${person.rec?'📹':'🚫'}</button>
-          <button class="rm" data-toggle="${escapeHtml(person.name)}" title="今回の参加から外す">外す</button>
+        const cell = document.createElement('div');
+        cell.className = 'roster-cell selected';
+        cell.innerHTML = `
+          <span class="nm">${escapeHtml(person.name)}</span>
+          <div class="cell-actions">
+            <button class="cam-toggle-inline ${person.rec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(person.name)}">${person.rec?'📹':'🚫'}</button>
+            <button class="rm" data-toggle="${escapeHtml(person.name)}" title="今回の参加から外す">外す</button>
+          </div>
         `;
-        selectedList.appendChild(row);
+        selectedList.appendChild(cell);
       });
     }
 
-    // 登録済みだが今回は未選択の人
+    // 登録済みだが今回は未選択の人・3列表示
     const unselected = state.roster.filter(name => !state.people.some(p=>p.name===name));
+    availableList.className = '';
     availableList.innerHTML = "";
     if(!state.roster.length){
       availableList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。上のフォームから名前を登録してください。</div>`;
     }else if(!unselected.length){
       availableList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">登録済みの人は全員選択中です。</div>`;
     }else{
+      availableList.className = 'available-grid';
       unselected.forEach(name=>{
-        const row = document.createElement('div');
-        row.className = 'roster-row';
-        row.innerHTML = `
-          <span class="check"></span>
-          <span class="nm" data-select="${escapeHtml(name)}">${escapeHtml(name)}</span>
+        const cell = document.createElement('div');
+        cell.className = 'roster-cell';
+        cell.dataset.select = name;
+        cell.innerHTML = `
+          <span class="nm">${escapeHtml(name)}</span>
           <button class="rm" data-roster-rm="${escapeHtml(name)}" title="登録者一覧から削除">✕</button>
         `;
-        availableList.appendChild(row);
+        availableList.appendChild(cell);
       });
     }
 
