@@ -207,17 +207,17 @@
   </header>
 
   <nav class="tabs">
-    <button data-tab="tournament" class="active">大会</button>
-    <button data-tab="entry">参加者</button>
+    <button data-tab="tournament">大会</button>
+    <button data-tab="entry" class="active">参加者</button>
     <button data-tab="roulette">抽選</button>
     <button data-tab="bracket">対戦表</button>
     <button data-tab="video">動画</button>
     <button data-tab="card">優勝カード</button>
   </nav>
 
-  <section class="panel tab-panel" id="tab-tournament">
+  <section class="panel tab-panel" id="tab-tournament" style="display:none;">
     <h2><span class="num">00</span> 大会管理</h2>
-    <p class="hint">公開ページ(告知ポスター・エントリー・コメント)に表示する大会を作成・編集します。一番新しく作った大会が「現在の大会」として公開ページに表示されます。</p>
+    <p class="hint">公開ページ(告知ポスター・エントリー・コメント)に表示する大会を作成・編集します。一番新しく作った大会が「現在の大会」として公開ページに表示されます。<br>※この機能を使うにはデータベースの準備(supabase-setup.sqlの実行)が必要です。準備前は下記にエラーが表示されますが、他のタブの機能には影響ありません。</p>
     <div id="currentTournamentBox"></div>
     <div class="row">
       <button class="btn btn-primary" id="newTournamentBtn">新しい大会を作る</button>
@@ -228,7 +228,7 @@
     <div id="tournamentList"></div>
   </section>
 
-  <section class="panel tab-panel" id="tab-entry" style="display:none;">
+  <section class="panel tab-panel" id="tab-entry">
     <h2><span class="num">01</span> 参加者登録</h2>
     <p class="hint">1行に1人ずつ名前を入力してください。登録後、各参加者の「撮影OK / 不可」を切り替えられます(撮影不可同士は対戦しないように自動で組み合わせます)。</p>
     <div class="row" style="margin-top:0; margin-bottom:12px;">
