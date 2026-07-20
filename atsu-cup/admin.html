@@ -156,7 +156,13 @@
   .slot.winner{background:linear-gradient(90deg,rgba(255,106,43,.22),transparent); color:var(--gold); font-weight:700;}
   .slot.winner::after{content:'👑'; font-size:11px;}
   .slot.empty{color:#463b58; cursor:default;}
-  .slot:not(.bye):not(.empty):active{background:rgba(255,255,255,.06);}
+  .slot.pending{color:var(--muted); cursor:default; letter-spacing:.05em;}
+  .slot.pending .q{display:inline-block; animation:atsuPendingPulse 1.3s ease-in-out infinite;}
+  @keyframes atsuPendingPulse{ 0%,100%{opacity:.5;} 50%{opacity:1;} }
+  .slot:not(.bye):not(.empty):not(.pending):active{background:rgba(255,255,255,.06);}
+  .slot:not([data-r]):not(.bye):not(.empty):not(.pending){cursor:default;}
+  #roulettePreview .bracket-scroll{margin-top:14px;}
+  #roulettePreview .round-col{min-width:130px;}
   .warn-box{
     margin-top:14px; background:#241214; border:1px solid #5a2222; border-radius:10px; padding:10px 12px;
     font-size:12px; color:#ffb3b3; line-height:1.8;
@@ -245,7 +251,7 @@
 
   <section class="panel tab-panel" id="tab-roulette" style="display:none;">
     <h2><span class="num">02</span> 抽選ルーレット</h2>
-    <p class="hint">ルーレットで対戦表に並べる順番を1人ずつランダムに決めます。全員決まると、撮影不可同士が当たらないように自動で組み合わせて対戦表を作ります。</p>
+    <p class="hint">対戦表は撮影不可同士が当たらないよう、あらかじめ自動で組んであります。ルーレットで1人ずつ引くたびに、その人の対戦表上の位置が少しずつ明らかになっていきます。</p>
     <div class="wheel-stage">
       <div class="wheel-holder">
         <div class="pointer"></div>
@@ -258,7 +264,7 @@
         <button class="btn btn-ghost" id="resetOrder">やり直す</button>
       </div>
     </div>
-    <div class="order-list" id="orderList"></div>
+    <div id="roulettePreview"></div>
   </section>
 
   <section class="panel tab-panel" id="tab-bracket" style="display:none;">
@@ -308,8 +314,9 @@
     people: [],       // [{name, rec}]
     order: [],
     remaining: [],
-    matches: [],       // matches[round][i] = {a,b,winner,video}
+    matches: [],       // matches[round][i] = {a,b,winner,loser,video}
     winnerName: "",
+    thirdPlaceMatch: null, // {a,b,winner} 準決勝(2試合)完了時に敗者同士で自動生成
     tournamentId: null, // 現在管理中の大会(atsucup_tournaments.id)
     localTournament: null // {title,details,poster_url} データベース未接続時、この端末だけに保存する大会情報
   };
@@ -581,7 +588,8 @@
   function resetDownstream(){
     state.order = [];
     state.remaining = state.people.map(p=>p.name);
-    state.matches = [];
+    state.matches = state.remaining.length ? [buildRound1(state.remaining)] : [];
+    state.thirdPlaceMatch = null;
     state.winnerName = "";
     persist();
   }
@@ -590,7 +598,6 @@
   const wheelCanvas = document.getElementById("wheel");
   const ctx = wheelCanvas.getContext("2d");
   const pickedBanner = document.getElementById("pickedBanner");
-  const orderList = document.getElementById("orderList");
   const spinBtn = document.getElementById("spinBtn");
   const WHEEL_COLORS = ["#ff6a2b","#e8b34c","#7c4dff","#2bc9a0","#ff4d94","#4fb0e8","#a8e83b","#ff9145"];
   let currentRotation = 0;
@@ -624,15 +631,21 @@
     ctx.restore();
   }
 
-  function renderOrderList(){
-    const recMap = recMapOf();
-    orderList.innerHTML = "";
-    state.order.forEach((n,i)=>{
-      const el = document.createElement("div");
-      el.className = "order-item";
-      el.innerHTML = `<span class="idx">${i+1}</span><span>${escapeHtml(n)}</span><span class="cam">${recMap[n]?"📹":"🚫"}</span>`;
-      orderList.appendChild(el);
-    });
+  // 対戦表(state.matches[0])はあらかじめ組んであるので、ここでは「誰が引かれたか」を
+  // renderBracket()の非インタラクティブ版で少しずつ見せるだけ
+  function renderRoulettePreview(){
+    if(!state.matches.length){
+      document.getElementById("roulettePreview").innerHTML = "";
+      return;
+    }
+    renderBracket("roulettePreview", false);
+  }
+
+  // 惰性で回りすぎてから、少し戻って収まる「戻り滑り」演出のイージング
+  function easeOutBackSpin(t){
+    const s = 1.2;
+    const p = t - 1;
+    return 1 + (s + 1) * p * p * p + s * p * p;
   }
 
   spinBtn.addEventListener("click", ()=>{
@@ -651,26 +664,26 @@
     const finalRotation = currentRotation + extraSpins*Math.PI*2 + ( -Math.PI/2 - (currentRotation % (Math.PI*2)) - targetSegCenter );
     const startRotation = currentRotation;
     const delta = finalRotation - startRotation;
-    const duration = 3200;
+    const duration = 3400;
     const startTime = performance.now();
-    function easeOutQuint(t){ return 1 - Math.pow(1-t,5); }
     function frame(now){
       const t = Math.min(1, (now-startTime)/duration);
-      currentRotation = startRotation + delta*easeOutQuint(t);
+      currentRotation = startRotation + delta*easeOutBackSpin(t);
       drawWheel();
       if(t < 1){ requestAnimationFrame(frame); }
       else{
+        currentRotation = finalRotation;
+        drawWheel();
         spinning = false;
         spinBtn.disabled = false;
         const picked = state.remaining[winnerIdx];
         state.remaining.splice(winnerIdx,1);
         state.order.push(picked);
         pickedBanner.textContent = "🎯 " + picked;
-        renderOrderList();
+        renderRoulettePreview();
         persist();
         if(state.remaining.length === 0){
-          buildBracketFromOrder();
-          setTimeout(()=>{ document.querySelector('nav.tabs button[data-tab="bracket"]').click(); }, 600);
+          setTimeout(()=>{ document.querySelector('nav.tabs button[data-tab="bracket"]').click(); }, 900);
         }
       }
     }
@@ -680,8 +693,11 @@
   document.getElementById("resetOrder").addEventListener("click", ()=>{
     state.order = [];
     state.remaining = state.people.map(p=>p.name);
+    state.matches = state.remaining.length ? [buildRound1(state.remaining)] : [];
+    state.thirdPlaceMatch = null;
+    state.winnerName = "";
     pickedBanner.innerHTML = "&nbsp;";
-    renderOrderList();
+    renderRoulettePreview();
     drawWheel();
     persist();
   });
@@ -710,12 +726,12 @@
     return pairs;
   }
 
-  function buildBracketFromOrder(){
-    const order = state.order.length ? state.order : state.people.map(p=>p.name);
+  // 参加者リストから、撮影不可同士が当たらないようラウンド1(不戦勝含む)を組む
+  function buildRound1(names){
     const recMap = recMapOf();
-    const size = nextPow2(order.length);
-    const byes = size - order.length;
-    let pool = [...order];
+    const size = nextPow2(names.length);
+    const byes = size - names.length;
+    let pool = [...names];
     const byePlayers = [];
     for(let i=0;i<byes;i++){
       let idx = pool.findIndex(n=>!recMap[n]);
@@ -724,13 +740,10 @@
     }
     const pairs = pairWithConstraint(pool, recMap);
     const round1 = [];
-    byePlayers.forEach(p=> round1.push({a:p, b:null, winner:p, video:""}));
-    pairs.forEach(([a,b])=> round1.push({a, b, winner:null, video:""}));
+    byePlayers.forEach(p=> round1.push({a:p, b:null, winner:p, loser:null, video:""}));
+    pairs.forEach(([a,b])=> round1.push({a, b, winner:null, loser:null, video:""}));
     shuffleArray(round1);
-    state.matches = [round1];
-    propagateByes();
-    persist();
-    renderBracket();
+    return round1;
   }
 
   function propagateByes(){
@@ -744,7 +757,14 @@
           const winners = round.map(m=>m.winner);
           const recMap = recMapOf();
           const pairs = pairWithConstraint(winners, recMap);
-          state.matches[r+1] = pairs.map(([a,b])=>({a,b,winner:null,video:""}));
+          state.matches[r+1] = pairs.map(([a,b])=>({a,b,winner:null,loser:null,video:""}));
+          // 準決勝(2試合)から決勝が生まれるタイミングで、両者の敗者による3位決定戦を自動生成
+          if(round.length === 2 && !state.thirdPlaceMatch){
+            const [m0, m1] = round;
+            if(m0.loser && m1.loser){
+              state.thirdPlaceMatch = { a:m0.loser, b:m1.loser, winner:null };
+            }
+          }
           changed = true;
         } else if(allDecided && round.length === 1){
           state.winnerName = round[0].winner;
@@ -760,6 +780,12 @@
     const loser = side === 'a' ? match.b : match.a;
     const roundSizeBefore = state.matches[r].length;
     match.winner = val;
+    match.loser = loser || null;
+    if(state.matches.length > r+1){
+      // 既に決着済みの回を選び直した場合、それより先の結果は無効になる
+      state.thirdPlaceMatch = null;
+      state.winnerName = "";
+    }
     state.matches = state.matches.slice(0, r+1);
     if(state.matches[r].length === 1){
       if(match.winner){ state.winnerName = match.winner; }
@@ -768,6 +794,18 @@
     persist();
     renderBracket();
     recordMatchResult(roundLabel(roundSizeBefore), val, loser);
+  }
+
+  function pickThirdPlaceWinner(side){
+    const m = state.thirdPlaceMatch;
+    if(!m) return;
+    const val = side === 'a' ? m.a : m.b;
+    if(!val) return;
+    const loser = side === 'a' ? m.b : m.a;
+    m.winner = val;
+    persist();
+    renderBracket();
+    recordMatchResult('3位決定戦', val, loser);
   }
 
   // 対戦結果を戦績用に記録し、優勝が決まったら大会レコードも更新する
@@ -785,12 +823,18 @@
     }catch(e){ console.error('[atsucup] match result record failed:', e && e.message ? e.message : e); }
   }
 
+  // ルーレットでまだ引かれていない名前は対戦表上でも隠す(演出用)
+  function isRevealed(name){
+    if(name == null) return true;
+    return state.remaining.length === 0 || state.order.includes(name);
+  }
+
   function forcedPairsList(){
     const recMap = recMapOf();
     const forced = [];
     state.matches.forEach((round, r)=>{
       round.forEach(m=>{
-        if(m.a && m.b && !recMap[m.a] && !recMap[m.b]){
+        if(m.a && m.b && isRevealed(m.a) && isRevealed(m.b) && !recMap[m.a] && !recMap[m.b]){
           forced.push({r, a:m.a, b:m.b});
         }
       });
@@ -803,21 +847,25 @@
     return map[total] || `${total*2}回戦`;
   }
 
-  function renderBracket(){
-    const area = document.getElementById("bracketArea");
+  function renderBracket(targetId, interactive){
+    targetId = targetId || "bracketArea";
+    interactive = interactive !== false;
+    const area = document.getElementById(targetId);
     const recMap = recMapOf();
     if(!state.matches.length){
-      area.innerHTML = `<div class="empty-state"><span class="big">🌀</span>まだ組み合わせがありません。<br>「参加者」タブで登録後、「抽選」で組み合わせを決めてください。</div>`;
+      area.innerHTML = interactive
+        ? `<div class="empty-state"><span class="big">🌀</span>まだ組み合わせがありません。<br>「参加者」タブで登録後、「抽選」で組み合わせを決めてください。</div>`
+        : '';
       return;
     }
     let html = `<div class="bracket-scroll"><div class="bracket">`;
     state.matches.forEach((round, r)=>{
       html += `<div class="round-col"><div class="round-title">${roundLabel(round.length)}</div>`;
       round.forEach((m,i)=>{
-        const isForced = m.a && m.b && !recMap[m.a] && !recMap[m.b];
+        const isForced = m.a && m.b && isRevealed(m.a) && isRevealed(m.b) && !recMap[m.a] && !recMap[m.b];
         html += `<div class="match ${isForced?'forced':''}">`;
-        html += slotHtml(m.a, m.winner, r, i, 'a', recMap);
-        html += slotHtml(m.b, m.winner, r, i, 'b', recMap);
+        html += slotHtml(m.a, m.winner, r, i, 'a', recMap, interactive);
+        html += slotHtml(m.b, m.winner, r, i, 'b', recMap, interactive);
         html += `</div>`;
       });
       html += `</div>`;
@@ -830,33 +878,156 @@
         forced.map(f=>`・${roundLabel(state.matches[f.r].length)}: ${escapeHtml(f.a)} vs ${escapeHtml(f.b)}`).join("<br>") + `</div>`;
     }
 
+    if(state.thirdPlaceMatch){
+      const tp = state.thirdPlaceMatch;
+      html += `<div class="video-card" style="margin-top:14px;"><div class="vs">🥉 3位決定戦</div>
+        <div class="match" style="max-width:280px;">
+          ${slotHtml(tp.a, tp.winner, 'third', 0, 'a', recMap, interactive)}
+          ${slotHtml(tp.b, tp.winner, 'third', 0, 'b', recMap, interactive)}
+        </div>
+      </div>`;
+    }
+
     if(state.winnerName){
       html += `<div class="champion-box"><div class="label">Champion</div><div class="name">👑 ${escapeHtml(state.winnerName)}</div>
-        <button class="btn btn-gold" id="toCardBtn">優勝カードを作る</button></div>`;
+        ${state.thirdPlaceMatch&&state.thirdPlaceMatch.winner?`<div style="color:var(--muted);font-weight:700;margin-bottom:10px;">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>`:''}
+        <div class="row" style="justify-content:center;">
+          ${interactive?'<button class="btn btn-gold" id="toCardBtn">優勝カードを作る</button>':''}
+          ${interactive?'<button class="btn btn-ghost" id="saveBracketImgBtn">対戦表を画像で保存</button>':''}
+        </div>
+      </div>`;
     }
     area.innerHTML = html;
-    area.querySelectorAll(".slot[data-r]").forEach(el=>{
-      el.addEventListener("click", ()=>{
-        pickWinner(+el.dataset.r, +el.dataset.m, el.dataset.side);
+    if(interactive){
+      area.querySelectorAll(".slot[data-r]").forEach(el=>{
+        el.addEventListener("click", ()=>{
+          if(el.dataset.r === 'third'){ pickThirdPlaceWinner(el.dataset.side); }
+          else{ pickWinner(+el.dataset.r, +el.dataset.m, el.dataset.side); }
+        });
       });
-    });
-    const toCardBtn = document.getElementById("toCardBtn");
-    if(toCardBtn){
-      toCardBtn.addEventListener("click", ()=>{
-        document.querySelector('nav.tabs button[data-tab="card"]').click();
-        document.getElementById('winnerName').value = state.winnerName;
-      });
+      const toCardBtn = document.getElementById("toCardBtn");
+      if(toCardBtn){
+        toCardBtn.addEventListener("click", ()=>{
+          document.querySelector('nav.tabs button[data-tab="card"]').click();
+          document.getElementById('winnerName').value = state.winnerName;
+        });
+      }
+      const saveBracketImgBtn = document.getElementById("saveBracketImgBtn");
+      if(saveBracketImgBtn){
+        saveBracketImgBtn.addEventListener("click", drawBracketImage);
+      }
     }
   }
 
-  function slotHtml(val, winner, r, m, side, recMap){
+  function slotHtml(val, winner, r, m, side, recMap, interactive){
     if(val === null || val === undefined){
       if(val === null) return `<div class="slot bye">BYE (不戦勝)</div>`;
       return `<div class="slot empty">未定</div>`;
     }
+    if(!isRevealed(val)){
+      return `<div class="slot pending"><span class="q">🎲 ？？？</span></div>`;
+    }
     const isWinner = winner === val;
     const cam = recMap[val] ? "📹" : "🚫";
-    return `<div class="slot ${isWinner?'winner':''}" data-r="${r}" data-m="${m}" data-side="${side}"><span>${escapeHtml(val)}</span><span class="cam-mark">${cam}</span></div>`;
+    const attrs = interactive ? `data-r="${r}" data-m="${m}" data-side="${side}"` : '';
+    return `<div class="slot ${isWinner?'winner':''}" ${attrs}><span>${escapeHtml(val)}</span><span class="cam-mark">${cam}</span></div>`;
+  }
+
+  // 完成した対戦表をcanvasに描画し、画像として保存する
+  async function drawBracketImage(){
+    if(!state.matches.length) return;
+    if(document.fonts && document.fonts.ready){ await document.fonts.ready; }
+    const recMap = recMapOf();
+    const colW = 230, rowH = 76, colGap = 36, padTop = 130, padSide = 40;
+    const maxMatches = state.matches[0].length;
+    const hasThird = !!state.thirdPlaceMatch;
+    const canvas = document.createElement('canvas');
+    canvas.width = padSide*2 + state.matches.length*colW + (state.matches.length-1)*colGap;
+    canvas.height = padTop + maxMatches*rowH + 70 + (hasThird?110:0) + 100;
+    const c = canvas.getContext('2d');
+
+    const grad = c.createRadialGradient(canvas.width/2, 0, 40, canvas.width/2, 0, canvas.width*0.75);
+    grad.addColorStop(0, '#2a1f38'); grad.addColorStop(1, '#0a0810');
+    c.fillStyle = grad; c.fillRect(0, 0, canvas.width, canvas.height);
+
+    const cur = currentTournament();
+    c.textAlign = 'center';
+    c.fillStyle = '#e8b34c';
+    c.font = "900 30px 'Cinzel','Noto Serif JP',serif";
+    c.fillText((cur && cur.title) || 'あつ杯 トーナメント表', canvas.width/2, 56);
+    c.font = "600 12px 'JetBrains Mono',monospace";
+    c.fillStyle = 'rgba(255,255,255,.45)';
+    c.fillText(new Date().toLocaleDateString('ja-JP'), canvas.width/2, 80);
+
+    function roundRect(x,y,w,h,r){
+      c.beginPath();
+      c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+      c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath();
+    }
+    function drawSlot(x, y, w, name, winner, isBye){
+      c.textAlign = 'left';
+      if(isBye){
+        c.fillStyle = '#8a7fa0'; c.font = "italic 12px 'Noto Sans JP',sans-serif";
+        c.fillText('BYE (不戦勝)', x+12, y+19);
+        return;
+      }
+      if(name == null){
+        c.fillStyle = '#463b58'; c.font = "12px 'Noto Sans JP',sans-serif";
+        c.fillText('未定', x+12, y+19);
+        return;
+      }
+      const isWin = winner === name;
+      c.fillStyle = isWin ? '#e8b34c' : '#f1e6cf';
+      c.font = (isWin ? '900 ' : '700 ') + "13px 'Noto Sans JP',sans-serif";
+      const label = name.length > 11 ? name.slice(0,10)+'…' : name;
+      c.fillText((isWin ? '👑 ' : '') + label, x+12, y+19);
+      c.textAlign = 'right';
+      c.font = "12px sans-serif";
+      c.fillText(recMap[name] ? '📹' : '🚫', x+w-10, y+19);
+    }
+    function drawMatch(x, y, m){
+      const isForced = m.a && m.b && !recMap[m.a] && !recMap[m.b];
+      c.fillStyle = '#0d0a14';
+      roundRect(x, y, colW, 58, 10); c.fill();
+      c.strokeStyle = isForced ? '#7a2c2c' : '#3a2f4d';
+      c.lineWidth = 1.5;
+      roundRect(x, y, colW, 58, 10); c.stroke();
+      c.beginPath(); c.moveTo(x, y+29); c.lineTo(x+colW, y+29);
+      c.strokeStyle = '#3a2f4d'; c.lineWidth = 1; c.stroke();
+      drawSlot(x, y, colW, m.a, m.winner, false);
+      drawSlot(x, y+29, colW, m.b, m.winner, m.b===null);
+    }
+
+    state.matches.forEach((round, r)=>{
+      const x = padSide + r*(colW+colGap);
+      c.textAlign = 'center'; c.font = "700 11px 'JetBrains Mono',monospace"; c.fillStyle = '#9a8fae';
+      c.fillText(roundLabel(round.length).toUpperCase(), x+colW/2, padTop-14);
+      const totalH = maxMatches*rowH;
+      const step = totalH/round.length;
+      round.forEach((m,i)=>{
+        const y = padTop + step*i + (step-58)/2;
+        drawMatch(x, y, m);
+      });
+    });
+
+    let footerY = padTop + maxMatches*rowH + 40;
+    if(hasThird){
+      c.textAlign = 'center'; c.font = "700 12px 'JetBrains Mono',monospace"; c.fillStyle = '#9a8fae';
+      c.fillText('🥉 3位決定戦', canvas.width/2, footerY);
+      drawMatch(canvas.width/2 - colW/2, footerY+12, state.thirdPlaceMatch);
+      footerY += 100;
+    }
+    if(state.winnerName){
+      c.textAlign = 'center';
+      c.font = "900 26px 'Cinzel','Noto Serif JP',serif"; c.fillStyle = '#e8b34c';
+      c.fillText('👑 CHAMPION: ' + state.winnerName, canvas.width/2, footerY+20);
+    }
+
+    const link = document.createElement('a');
+    const nameForFile = (cur && cur.title) ? cur.title.replace(/[^\w぀-ヿ一-鿿]/g,'') : 'tournament';
+    link.download = `atsucup_bracket_${nameForFile}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
   }
 
   /* ---------- video tab ---------- */
@@ -985,7 +1156,7 @@
   function renderAll(){
     nameInput.value = state.people.map(p=>p.name).join("\n");
     renderTags();
-    renderOrderList();
+    renderRoulettePreview();
     drawWheel();
     renderBracket();
     if(state.winnerName) document.getElementById("winnerName").value = state.winnerName;
