@@ -217,7 +217,7 @@
 
   <section class="panel tab-panel" id="tab-tournament" style="display:none;">
     <h2><span class="num">00</span> 大会管理</h2>
-    <p class="hint">公開ページ(告知ポスター・エントリー・コメント)に表示する大会を作成・編集します。一番新しく作った大会が「現在の大会」として公開ページに表示されます。<br>※この機能を使うにはデータベースの準備(supabase-setup.sqlの実行)が必要です。準備前は下記にエラーが表示されますが、他のタブの機能には影響ありません。</p>
+    <p class="hint">公開ページ(告知ポスター・エントリー・コメント)に表示する大会を作成・編集します。一番新しく作った大会が「現在の大会」として公開ページに表示されます。<br>※データベース(Supabase)未接続の間は、この端末だけに保存され、公開ページや他の端末には反映されません。</p>
     <div id="currentTournamentBox"></div>
     <div class="row">
       <button class="btn btn-primary" id="newTournamentBtn">新しい大会を作る</button>
@@ -310,7 +310,8 @@
     remaining: [],
     matches: [],       // matches[round][i] = {a,b,winner,video}
     winnerName: "",
-    tournamentId: null // 現在管理中の大会(atsucup_tournaments.id)
+    tournamentId: null, // 現在管理中の大会(atsucup_tournaments.id)
+    localTournament: null // {title,details,poster_url} データベース未接続時、この端末だけに保存する大会情報
   };
   let tournaments = []; // DBから取得した大会一覧(新しい順)
 
@@ -345,46 +346,56 @@
   const tournamentForm = document.getElementById("tournamentForm");
   const tournamentList = document.getElementById("tournamentList");
 
+  let tournamentLoadError = null;
   async function loadTournaments(){
     try{
       tournaments = await AtsuCupDB.sbSelect("atsucup_tournaments", "select=*&order=created_at.desc");
+      tournamentLoadError = null;
     }catch(e){
       tournaments = [];
-      currentTournamentBox.innerHTML = `<div class="warn-box">大会データの取得に失敗しました。supabase-setup.sqlを実行済みか確認してください。(${escapeHtml(e.message||String(e))})</div>`;
-      return;
+      tournamentLoadError = e;
     }
     if(!state.tournamentId && tournaments.length){ state.tournamentId = tournaments[0].id; persist(); }
     renderTournamentTab();
   }
 
   function currentTournament(){
-    return tournaments.find(t=>t.id===state.tournamentId) || null;
+    const dbCur = tournaments.find(t=>t.id===state.tournamentId);
+    if(dbCur) return dbCur;
+    if(state.localTournament) return { ...state.localTournament, id:null, entry_open:true, finished:false, champion_name:null };
+    return null;
   }
 
   function renderTournamentTab(){
     const cur = currentTournament();
     if(!cur){
-      currentTournamentBox.innerHTML = `<div class="empty-state"><span class="big">🏆</span>まだ大会がありません。<br>「新しい大会を作る」から告知ポスターと詳細を登録してください。</div>`;
+      currentTournamentBox.innerHTML = tournamentLoadError
+        ? `<div class="warn-box">大会データの取得に失敗しました。supabase-setup.sqlを実行済みか確認してください。(${escapeHtml(tournamentLoadError.message||String(tournamentLoadError))})</div>`
+        : `<div class="empty-state"><span class="big">🏆</span>まだ大会がありません。<br>「新しい大会を作る」から告知ポスターと詳細を登録してください。</div>`;
     }else{
+      const isLocalOnly = !cur.id;
       currentTournamentBox.innerHTML = `
         <div class="video-card">
-          <div class="vs">現在管理中の大会 ${cur.finished?'<span class="rlabel">終了済み</span>':(cur.entry_open?'<span class="rlabel" style="color:var(--ok);border-color:#1f5c42;">エントリー受付中</span>':'<span class="rlabel">エントリー締切</span>')}</div>
+          <div class="vs">現在管理中の大会 ${isLocalOnly?'<span class="rlabel" style="color:#ff8080;border-color:#5a2222;">この端末のみ・未公開</span>':(cur.finished?'<span class="rlabel">終了済み</span>':(cur.entry_open?'<span class="rlabel" style="color:var(--ok);border-color:#1f5c42;">エントリー受付中</span>':'<span class="rlabel">エントリー締切</span>'))}</div>
           ${cur.poster_url?`<img src="${escapeHtml(cur.poster_url)}" alt="poster" style="width:100%;border-radius:10px;margin-bottom:10px;display:block;">`:''}
           <div style="font-family:'Cinzel','Noto Serif JP',serif;font-weight:900;font-size:18px;color:var(--gold);margin-bottom:6px;">${escapeHtml(cur.title)}</div>
           <div style="font-size:12px;color:var(--muted);white-space:pre-wrap;line-height:1.8;">${escapeHtml(cur.details||'')}</div>
           ${cur.champion_name?`<div style="margin-top:10px;color:var(--gold);font-weight:900;">👑 優勝: ${escapeHtml(cur.champion_name)}</div>`:''}
+          ${isLocalOnly?`<div class="warn-box" style="margin-top:10px;">データベース未接続のため、この端末だけに保存されています。公開ページや他の端末には表示されません。</div>`:''}
         </div>
         <div class="row">
-          <button class="btn ${cur.entry_open?'btn-ghost':'btn-gold'}" id="toggleEntryBtn">${cur.entry_open?'エントリーを締め切る':'エントリーを再開する'}</button>
+          ${isLocalOnly?'':`<button class="btn ${cur.entry_open?'btn-ghost':'btn-gold'}" id="toggleEntryBtn">${cur.entry_open?'エントリーを締め切る':'エントリーを再開する'}</button>`}
           <button class="btn btn-ghost" id="editTournamentBtn">編集する</button>
         </div>
       `;
-      document.getElementById("toggleEntryBtn").addEventListener("click", async ()=>{
-        try{
-          await AtsuCupDB.sbUpdate("atsucup_tournaments", cur.id, { entry_open: !cur.entry_open });
-          await loadTournaments();
-        }catch(e){ alert("更新に失敗しました: "+(e.message||e)); }
-      });
+      if(!isLocalOnly){
+        document.getElementById("toggleEntryBtn").addEventListener("click", async ()=>{
+          try{
+            await AtsuCupDB.sbUpdate("atsucup_tournaments", cur.id, { entry_open: !cur.entry_open });
+            await loadTournaments();
+          }catch(e){ alert("更新に失敗しました: "+(e.message||e)); }
+        });
+      }
       document.getElementById("editTournamentBtn").addEventListener("click", ()=> openTournamentForm(cur));
     }
 
@@ -412,6 +423,15 @@
     }
   }
 
+  function fileToDataUrl(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=>resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   function openTournamentForm(existing){
     tournamentForm.style.display = "block";
     tournamentForm.innerHTML = `
@@ -433,23 +453,37 @@
       if(!title){ alert("大会名を入力してください。"); return; }
       const saveBtn = document.getElementById("tfSave");
       saveBtn.disabled = true; saveBtn.textContent = "保存中...";
+      const existingPosterUrl = existing ? existing.poster_url : null;
+      const hasNewFile = !!(fileInput.files && fileInput.files[0]);
       try{
-        let posterUrl = existing ? existing.poster_url : null;
-        if(fileInput.files && fileInput.files[0]){
+        let posterUrl = existingPosterUrl;
+        if(hasNewFile){
           posterUrl = await AtsuCupDB.sbUploadPoster(fileInput.files[0]);
         }
-        if(existing){
+        if(existing && existing.id){
           await AtsuCupDB.sbUpdate("atsucup_tournaments", existing.id, { title, details, poster_url: posterUrl });
         }else{
           const row = await AtsuCupDB.sbInsert("atsucup_tournaments", { title, details, poster_url: posterUrl, entry_open: true, finished: false });
           state.tournamentId = row.id;
-          persist();
         }
+        state.localTournament = null; // データベースに保存できたので端末限定の保存分は不要
+        persist();
         tournamentForm.style.display = "none";
         tournamentForm.innerHTML = "";
         await loadTournaments();
       }catch(e){
-        alert("保存に失敗しました: " + (e.message||e));
+        // データベース未接続などで保存に失敗した場合は、この端末だけにでも反映されるようフォールバックする
+        try{
+          const localPosterUrl = hasNewFile ? await fileToDataUrl(fileInput.files[0]) : existingPosterUrl;
+          state.localTournament = { title, details, poster_url: localPosterUrl };
+          persist();
+          tournamentForm.style.display = "none";
+          tournamentForm.innerHTML = "";
+          renderTournamentTab();
+          alert("データベースへの保存に失敗したため、この端末だけに保存しました(公開ページや他の端末には反映されません)。\n" + (e.message||e));
+        }catch(e2){
+          alert("保存に失敗しました: " + (e.message||e));
+        }
       }finally{
         saveBtn.disabled = false; saveBtn.textContent = existing?'更新する':'作成して公開する';
       }
