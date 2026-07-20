@@ -43,8 +43,12 @@
     border-radius:6px; padding:5px 8px; font-size:13px; font-family:'Noto Sans JP',sans-serif;
   }
   .vs-label{ align-self:center; color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:11px; flex-shrink:0; }
-  .bye-row{ color:var(--muted); font-style:italic; font-size:13px; padding:10px 4px; display:flex; align-items:center; gap:8px; }
+  .bye-row{ color:var(--muted); font-style:italic; font-size:13px; padding:10px 4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .bye-row .nm{ cursor:pointer; }
+  .add-challenger-btn{
+    flex-shrink:0; background:none; border:1px dashed var(--ember2); border-radius:6px; color:var(--ember2);
+    font-size:11px; font-weight:700; padding:6px 9px; cursor:pointer; margin-left:auto;
+  }
   .warn-box{
     margin-top:14px; background:#241214; border:1px solid #5a2222; border-radius:10px; padding:10px 12px;
     font-size:12px; color:#ffb3b3; line-height:1.8;
@@ -293,6 +297,31 @@
     input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ input.blur(); } });
   }
 
+  // BYE(不戦勝)枠に大会途中の追加参加者を入れ、実際の対戦に変える
+  function startAddChallenger(r, m){
+    const btn = document.querySelector(`.add-challenger-btn[data-r="${r}"][data-m="${m}"]`);
+    if(!btn) return;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'nm-edit-input';
+    input.placeholder = '対戦相手の名前';
+    input.setAttribute('list', 'rosterCandidatesBracket');
+    input.addEventListener('click', ev=> ev.stopPropagation());
+    btn.replaceWith(input);
+    input.focus();
+    let done = false;
+    const commit = ()=>{
+      if(done) return;
+      done = true;
+      const val = input.value.trim();
+      if(val){ AtsuCup.addChallengerToBye(r, m, val); }
+      renderMatchList();
+      renderTree();
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ input.blur(); } });
+  }
+
   function pickBtnHtml(name, winner, r, m, side, recMap, isForced){
     const isWinner = winner === name;
     return `<div class="pick-btn ${isWinner?'winner':''} ${isForced?'forced':''}">
@@ -309,6 +338,7 @@
     if(m.b === null){
       return `<div class="video-card"><div class="bye-row">🐰 <span class="nm bye-nm" data-r="${r}" data-m="${i}" data-side="a">${escapeHtml(m.a)}</span> — BYE(不戦勝)
         <button class="pick-edit-btn" data-editname data-r="${r}" data-m="${i}" data-side="a">✏️</button>
+        <button class="add-challenger-btn" data-addchallenger data-r="${r}" data-m="${i}">＋ 途中参加者を追加</button>
       </div></div>`;
     }
     const isForced = !recMap[m.a] && !recMap[m.b];
@@ -384,6 +414,12 @@
         ev.stopPropagation();
         const r = el.dataset.r === 'third' ? 'third' : +el.dataset.r;
         startEditMatchName(r, +el.dataset.m, el.dataset.side);
+      });
+    });
+    area.querySelectorAll("[data-addchallenger]").forEach(el=>{
+      el.addEventListener("click", (ev)=>{
+        ev.stopPropagation();
+        startAddChallenger(+el.dataset.r, +el.dataset.m);
       });
     });
     const toCardBtn = document.getElementById("toCardBtn");
