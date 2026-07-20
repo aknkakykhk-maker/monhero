@@ -147,6 +147,7 @@
   </section>
 
   <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+  <datalist id="rosterCandidates"></datalist>
 </div>
 
 <script src="tap-ripple.js"></script>
@@ -157,6 +158,10 @@
   const state = AtsuCup.state;
   const escapeHtml = AtsuCup.escapeHtml;
   AtsuCup.restore();
+
+  // 組み合わせの名前を書き換える際、登録済みの参加者を候補として選べるようにする
+  document.getElementById('rosterCandidates').innerHTML =
+    state.roster.map(n=>`<option value="${escapeHtml(n)}">`).join('');
 
   let decideMode = 'roulette';
   let manualOrder = null;
@@ -475,6 +480,7 @@
     input.type = 'text';
     input.className = 'nm-edit-input';
     input.value = current;
+    input.setAttribute('list', 'rosterCandidates'); // 自由入力に加え、登録済み参加者から候補選択もできるようにする
     input.addEventListener('click', ev=> ev.stopPropagation());
     nmSpan.replaceWith(input);
     input.focus(); input.select();

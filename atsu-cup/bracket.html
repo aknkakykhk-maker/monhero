@@ -8,11 +8,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="atsucup-style.css">
 <style>
-  .bracket-poster-scroll{
+  .tree-title{font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:16px; color:var(--gold); margin-bottom:10px;}
+  .tree-scroll{
     overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);
-    margin-bottom:10px; background:#0a0810;
+    background:#0a0810; padding:10px 0;
   }
-  .bracket-poster-scroll img{ display:block; max-width:none; }
+  .tree-scroll svg{ display:block; }
   .avatar{
     width:26px; height:26px; border-radius:50%; background:linear-gradient(180deg,var(--panel2),var(--panel));
     border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900;
@@ -61,11 +62,12 @@
 
   <div id="emptyStateBox"></div>
 
-  <section class="panel" id="posterPanel" style="display:none;">
-    <h2><span class="num">01</span> 見やすい対戦表</h2>
-    <p class="hint">横スクロールできます。結果を入力するたびに自動で更新されます。</p>
-    <div class="bracket-poster-scroll"><img id="bracketPosterImg" alt="対戦表"></div>
-    <button class="btn btn-ghost" id="saveBracketImgBtn">📸 画像で保存</button>
+  <section class="panel" id="treePanel" style="display:none;">
+    <h2><span class="num">01</span> トーナメント表</h2>
+    <div class="tree-title" id="treeTitle"></div>
+    <p class="hint">横スクロールできます。勝ち上がった人の線は金色でつながり、優勝が決まるとトロフィーまで届きます。</p>
+    <div class="tree-scroll" id="treeScroll"></div>
+    <button class="btn btn-ghost" id="saveBracketImgBtn" style="margin-top:12px;">📸 画像で保存</button>
   </section>
 
   <section class="panel" id="progressPanel" style="display:none;">
@@ -86,6 +88,7 @@
   AtsuCup.restore();
 
   function initials(name){ return (name||'').trim().charAt(0) || '?'; }
+  function truncate(s, n){ return (s && s.length > n) ? s.slice(0,n-1)+'…' : (s||''); }
 
   const hasPairing = state.matches.length>0 && state.matches[0].length>0 && state.remaining.length===0;
 
@@ -99,9 +102,132 @@
     return;
   }
 
-  document.getElementById('posterPanel').style.display = 'block';
+  document.getElementById('treePanel').style.display = 'block';
   document.getElementById('progressPanel').style.display = 'block';
+  document.getElementById('treeTitle').textContent = (state.tournamentMeta && state.tournamentMeta.title) || 'あつ杯 トーナメント表';
 
+  /* ---------- 本物のトーナメント表(参加者を縦一列に並べ、線でつなぐ) ---------- */
+  const TREE_ROW_H = 42;
+  const TREE_LABEL_W = 132;
+  const TREE_COL_W = 42;
+
+  function leafY(i){ return (i+0.5)*TREE_ROW_H; }
+  function jointY(r, i){
+    if(r === 0) return (leafY(2*i) + leafY(2*i+1)) / 2;
+    return (jointY(r-1, 2*i) + jointY(r-1, 2*i+1)) / 2;
+  }
+  function colX(r){ return TREE_LABEL_W + (r+1)*TREE_COL_W; }
+  function findSrcIndex(round, name){
+    if(!round || !name) return -1;
+    return round.findIndex(x=>x.winner===name);
+  }
+
+  function buildTreeSVG(){
+    const round0 = state.matches[0];
+    const leafCount = round0.length * 2;
+    const totalRounds = Math.round(Math.log2(leafCount));
+    const recMap = AtsuCup.recMapOf();
+
+    const trophyX = colX(totalRounds-1) + TREE_COL_W;
+    const svgW = trophyX + 74;
+    const svgH = leafCount * TREE_ROW_H;
+
+    let leavesSvg = '';
+    round0.forEach((m,i)=>{
+      [[2*i, m.a, false], [2*i+1, m.b, m.b===null]].forEach(([idx, name, bye])=>{
+        const y = leafY(idx);
+        if(bye){
+          leavesSvg += `<text x="6" y="${y+5}" font-size="13" font-style="italic" fill="#6b5f82">BYE</text>`;
+        }else{
+          const isChamp = !!state.winnerName && name === state.winnerName;
+          leavesSvg += `<text x="6" y="${y+5}" font-size="13.5" font-weight="${isChamp?'900':'700'}" fill="${isChamp?'#e8b34c':'#f1e6cf'}">${escapeHtml(truncate(name,9))}</text>`;
+          leavesSvg += `<text x="${TREE_LABEL_W-10}" y="${y+5}" font-size="11" text-anchor="end">${recMap[name]?'📹':'🚫'}</text>`;
+        }
+      });
+    });
+
+    let linesSvg = '';
+    let labelsSvg = '';
+    for(let r=0; r<totalRounds; r++){
+      const matchCount = leafCount / Math.pow(2, r+1);
+      const prevRound = r===0 ? null : state.matches[r-1];
+      const stubStartX = r===0 ? TREE_LABEL_W : colX(r-1);
+      const jx = colX(r);
+      for(let i=0;i<matchCount;i++){
+        const m = state.matches[r] && state.matches[r][i];
+        let childY0, childY1;
+        if(r === 0){
+          childY0 = leafY(2*i); childY1 = leafY(2*i+1);
+        }else{
+          const srcA = m ? findSrcIndex(prevRound, m.a) : -1;
+          const srcB = m ? findSrcIndex(prevRound, m.b) : -1;
+          childY0 = jointY(r-1, srcA>=0?srcA:2*i);
+          childY1 = jointY(r-1, srcB>=0?srcB:2*i+1);
+        }
+        const midY = (childY0+childY1)/2;
+        const outEndX = (r === totalRounds-1) ? trophyX : colX(r+1);
+
+        linesSvg += `<path d="M${stubStartX},${childY0} H${jx}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
+        linesSvg += `<path d="M${stubStartX},${childY1} H${jx}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
+        linesSvg += `<path d="M${jx},${childY0} V${childY1}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
+        linesSvg += `<path d="M${jx},${midY} H${outEndX}" stroke="#3a2f4d" stroke-width="2" fill="none"/>`;
+
+        if(m && m.winner){
+          const winY = (m.winner === m.a) ? childY0 : childY1;
+          linesSvg += `<path d="M${stubStartX},${winY} H${jx}" stroke="#e8b34c" stroke-width="3" fill="none"/>`;
+          linesSvg += `<path d="M${jx},${winY} V${midY}" stroke="#e8b34c" stroke-width="3" fill="none"/>`;
+          linesSvg += `<path d="M${jx},${midY} H${outEndX}" stroke="#e8b34c" stroke-width="3" fill="none"/>`;
+          labelsSvg += `<text x="${jx+6}" y="${midY-6}" font-size="11" font-weight="700" fill="#e8b34c">${escapeHtml(truncate(m.winner,8))}</text>`;
+        }
+      }
+    }
+
+    let trophySvg = '';
+    if(state.winnerName){
+      const finalY = jointY(totalRounds-1, 0);
+      trophySvg = `<text x="${trophyX+8}" y="${finalY+8}" font-size="24">🏆</text>`;
+    }
+
+    return `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="${svgW}" height="${svgH}" fill="#0a0810"/>
+      ${linesSvg}
+      ${leavesSvg}
+      ${labelsSvg}
+      ${trophySvg}
+    </svg>`;
+  }
+
+  function renderTree(){
+    document.getElementById('treeScroll').innerHTML = buildTreeSVG();
+  }
+
+  async function buildTreeCanvas(){
+    const svgStr = buildTreeSVG();
+    const svgBlob = new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(svgBlob);
+    try{
+      const img = new Image();
+      await new Promise((resolve,reject)=>{ img.onload=resolve; img.onerror=reject; img.src=url; });
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width; canvas.height = img.height;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      return canvas;
+    }finally{
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  document.getElementById('saveBracketImgBtn').addEventListener('click', async ()=>{
+    const canvas = await buildTreeCanvas();
+    const cur = state.tournamentMeta;
+    const link = document.createElement('a');
+    const nameForFile = (cur && cur.title) ? cur.title.replace(/[^\w぀-ヿ一-鿿]/g,'') : 'tournament';
+    link.download = `atsucup_bracket_${nameForFile}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+
+  /* ---------- 対戦を進める(次の対戦・ラウンド別一覧) ---------- */
   function findNextMatch(){
     for(let r=0;r<state.matches.length;r++){
       for(let m=0;m<state.matches[r].length;m++){
@@ -121,7 +247,7 @@
     if(r === 'third'){ AtsuCup.pickThirdPlaceWinner(side); }
     else{ AtsuCup.pickWinner(r, m, side); }
     renderMatchList();
-    renderBracketPoster();
+    renderTree();
   }
 
   function pickBtnHtml(name, winner, r, m, side, recMap, isForced){
@@ -215,145 +341,8 @@
     }
   }
 
-  /* ---------- 見やすい対戦表(canvas描画) ---------- */
-  async function buildBracketCanvas(){
-    if(!state.matches.length) return null;
-    if(document.fonts && document.fonts.ready){ await document.fonts.ready; }
-    const recMap = AtsuCup.recMapOf();
-    const colW = 230, rowH = 76, colGap = 36, padTop = 130, padSide = 40;
-    const maxMatches = state.matches[0].length;
-    const hasThird = !!state.thirdPlaceMatch;
-    const canvas = document.createElement('canvas');
-    canvas.width = padSide*2 + state.matches.length*colW + (state.matches.length-1)*colGap;
-    canvas.height = padTop + maxMatches*rowH + 70 + (hasThird?110:0) + 100;
-    const c = canvas.getContext('2d');
-
-    const grad = c.createRadialGradient(canvas.width/2, 0, 40, canvas.width/2, 0, canvas.width*0.75);
-    grad.addColorStop(0, '#2a1f38'); grad.addColorStop(1, '#0a0810');
-    c.fillStyle = grad; c.fillRect(0, 0, canvas.width, canvas.height);
-
-    const cur = state.tournamentMeta;
-    c.textAlign = 'center';
-    c.fillStyle = '#e8b34c';
-    c.font = "900 30px 'Cinzel','Noto Serif JP',serif";
-    c.fillText((cur && cur.title) || 'あつ杯 トーナメント表', canvas.width/2, 56);
-    c.font = "600 12px 'JetBrains Mono',monospace";
-    c.fillStyle = 'rgba(255,255,255,.45)';
-    c.fillText(new Date().toLocaleDateString('ja-JP'), canvas.width/2, 80);
-
-    function roundRect(x,y,w,h,r){
-      c.beginPath();
-      c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
-      c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath();
-    }
-    function drawSlot(x, y, w, name, winner, isBye){
-      c.textAlign = 'left';
-      if(isBye){
-        c.fillStyle = '#8a7fa0'; c.font = "italic 12px 'Noto Sans JP',sans-serif";
-        c.fillText('BYE (不戦勝)', x+12, y+19);
-        return;
-      }
-      if(name == null){
-        c.fillStyle = '#463b58'; c.font = "12px 'Noto Sans JP',sans-serif";
-        c.fillText('未定', x+12, y+19);
-        return;
-      }
-      const isWin = winner === name;
-      c.fillStyle = isWin ? '#e8b34c' : '#f1e6cf';
-      c.font = (isWin ? '900 ' : '700 ') + "13px 'Noto Sans JP',sans-serif";
-      const label = name.length > 11 ? name.slice(0,10)+'…' : name;
-      c.fillText((isWin ? '👑 ' : '') + label, x+12, y+19);
-      c.textAlign = 'right';
-      c.font = "12px sans-serif";
-      c.fillText(recMap[name] ? '📹' : '🚫', x+w-10, y+19);
-    }
-    function drawMatch(x, y, m){
-      const isForced = m.a && m.b && !recMap[m.a] && !recMap[m.b];
-      c.fillStyle = '#0d0a14';
-      roundRect(x, y, colW, 58, 10); c.fill();
-      c.strokeStyle = isForced ? '#7a2c2c' : '#3a2f4d';
-      c.lineWidth = 1.5;
-      roundRect(x, y, colW, 58, 10); c.stroke();
-      c.beginPath(); c.moveTo(x, y+29); c.lineTo(x+colW, y+29);
-      c.strokeStyle = '#3a2f4d'; c.lineWidth = 1; c.stroke();
-      drawSlot(x, y, colW, m.a, m.winner, false);
-      drawSlot(x, y+29, colW, m.b, m.winner, m.b===null);
-    }
-
-    const positions = [];
-    state.matches.forEach((round, r)=>{
-      const x = padSide + r*(colW+colGap);
-      const totalH = maxMatches*rowH;
-      const step = totalH/round.length;
-      positions[r] = round.map((m,i)=>({x, y: padTop + step*i + (step-58)/2}));
-    });
-    c.lineWidth = 2; c.strokeStyle = '#4a3d63';
-    for(let r=0; r<state.matches.length-1; r++){
-      state.matches[r+1].forEach((nm, ni)=>{
-        const t = positions[r+1][ni];
-        const tx = t.x, ty = t.y + 29;
-        [nm.a, nm.b].forEach(name=>{
-          if(!name) return;
-          const srcIdx = state.matches[r].findIndex(x=>x.winner && x.winner===name);
-          if(srcIdx < 0) return;
-          const s = positions[r][srcIdx];
-          const sx = s.x + colW, sy = s.y + 29;
-          const midX = (sx+tx)/2;
-          c.beginPath();
-          c.moveTo(sx, sy); c.lineTo(midX, sy); c.lineTo(midX, ty); c.lineTo(tx, ty);
-          c.stroke();
-        });
-      });
-    }
-    state.matches.forEach((round, r)=>{
-      const x = padSide + r*(colW+colGap);
-      c.textAlign = 'center'; c.font = "700 11px 'JetBrains Mono',monospace"; c.fillStyle = '#9a8fae';
-      c.fillText(AtsuCup.roundLabel(round.length).toUpperCase(), x+colW/2, padTop-14);
-      round.forEach((m,i)=>{
-        drawMatch(positions[r][i].x, positions[r][i].y, m);
-      });
-    });
-
-    let footerY = padTop + maxMatches*rowH + 40;
-    if(hasThird){
-      c.textAlign = 'center'; c.font = "700 12px 'JetBrains Mono',monospace"; c.fillStyle = '#9a8fae';
-      c.fillText('🥉 3位決定戦', canvas.width/2, footerY);
-      drawMatch(canvas.width/2 - colW/2, footerY+12, state.thirdPlaceMatch);
-      footerY += 100;
-    }
-    if(state.winnerName){
-      c.textAlign = 'center';
-      c.font = "900 26px 'Cinzel','Noto Serif JP',serif"; c.fillStyle = '#e8b34c';
-      c.fillText('👑 CHAMPION: ' + state.winnerName, canvas.width/2, footerY+20);
-    }
-
-    return canvas;
-  }
-
-  async function downloadBracketImage(){
-    const canvas = await buildBracketCanvas();
-    if(!canvas) return;
-    const cur = state.tournamentMeta;
-    const link = document.createElement('a');
-    const nameForFile = (cur && cur.title) ? cur.title.replace(/[^\w぀-ヿ一-鿿]/g,'') : 'tournament';
-    link.download = `atsucup_bracket_${nameForFile}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  }
-  document.getElementById("saveBracketImgBtn").addEventListener("click", downloadBracketImage);
-
-  let posterRenderToken = 0;
-  async function renderBracketPoster(){
-    const img = document.getElementById('bracketPosterImg');
-    const token = ++posterRenderToken;
-    const canvas = await buildBracketCanvas();
-    if(token !== posterRenderToken) return;
-    if(!canvas) return;
-    img.src = canvas.toDataURL('image/png');
-  }
-
+  renderTree();
   renderMatchList();
-  renderBracketPoster();
 })();
 </script>
 </body>
