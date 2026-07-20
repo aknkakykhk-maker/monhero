@@ -151,13 +151,14 @@
   .order-item .idx{font-family:'JetBrains Mono',monospace; color:var(--ember2); width:22px; text-align:right; font-size:12px;}
   .order-item .cam{margin-left:auto; font-size:12px; opacity:.8;}
   .bracket-scroll{overflow-x:auto; padding-bottom:8px; margin:0 -16px; padding-left:16px; padding-right:16px;}
-  .bracket{display:flex; gap:26px; min-width:max-content; padding:6px 2px 12px;}
-  .round-col{display:flex; flex-direction:column; justify-content:space-around; gap:14px; min-width:160px;}
+  .bracket{display:flex; gap:44px; min-width:max-content; padding:6px 2px 12px; position:relative;}
+  .round-col{display:flex; flex-direction:column; justify-content:space-around; gap:14px; min-width:160px; position:relative; z-index:1;}
   .round-title{
     font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--muted); text-align:center;
     letter-spacing:.1em; margin-bottom:6px; text-transform:uppercase;
   }
-  .match{background:#0d0a14; border:1px solid var(--line); border-radius:10px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,.3);}
+  svg.bracket-lines{position:absolute; left:0; top:0; z-index:0; pointer-events:none;}
+  .match{background:#0d0a14; border:1px solid var(--line); border-radius:10px; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,.3); position:relative; z-index:1;}
   .match.forced{border-color:#7a2c2c; box-shadow:0 0 0 1px #7a2c2c inset;}
   .slot{
     padding:9px 10px; font-size:12.5px; display:flex; align-items:center; justify-content:space-between; gap:6px;
@@ -340,8 +341,24 @@
 
   const STORE_KEY = "atsucup:state:v2";
 
+  let persistFailWarned = false;
   function persist(){
-    try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+    try{
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    }catch(e){
+      // 容量オーバー等で保存に失敗した場合、ポスター画像を除いてでも他の進行状況(参加者・対戦表・結果)は必ず保存する
+      try{
+        const fallback = { ...state, localTournament: state.localTournament ? { ...state.localTournament, poster_url: null } : null };
+        localStorage.setItem(STORE_KEY, JSON.stringify(fallback));
+        console.error('[atsucup] persist: quota exceeded, saved without local poster image', e);
+      }catch(e2){
+        console.error('[atsucup] persist failed completely:', e2);
+        if(!persistFailWarned){
+          persistFailWarned = true;
+          alert('この端末への保存に失敗しました(空き容量不足の可能性があります)。直前の操作が保存されていない場合があるので、画面を切り替える前に一度リロードして反映されているか確認してください。');
+        }
+      }
+    }
   }
   function restore(){
     try{
@@ -455,6 +472,29 @@
     });
   }
 
+  // データベース未接続時、この端末(localStorage)に保存する用のポスター画像を縮小・圧縮する。
+  // 原寸のままだと写真1枚で保存容量の上限を超え、以降の全操作が保存されなくなる不具合があったため。
+  function resizeImageToDataUrl(file, maxDim, quality){
+    return new Promise((resolve, reject)=>{
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = ()=>{
+        let { width, height } = img;
+        if(width > maxDim || height > maxDim){
+          if(width >= height){ height = Math.round(height * maxDim / width); width = maxDim; }
+          else{ width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = (e)=>{ URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  }
+
   function openTournamentForm(existing){
     tournamentForm.style.display = "block";
     tournamentForm.innerHTML = `
@@ -497,7 +537,7 @@
       }catch(e){
         // データベース未接続などで保存に失敗した場合は、この端末だけにでも反映されるようフォールバックする
         try{
-          const localPosterUrl = hasNewFile ? await fileToDataUrl(fileInput.files[0]) : existingPosterUrl;
+          const localPosterUrl = hasNewFile ? await resizeImageToDataUrl(fileInput.files[0], 900, 0.75) : existingPosterUrl;
           state.localTournament = { title, details, poster_url: localPosterUrl };
           persist();
           tournamentForm.style.display = "none";
@@ -895,6 +935,51 @@
     return map[total] || `${total*2}回戦`;
   }
 
+  // 各試合の勝者が次のラウンドのどの試合に入ったかを実際のデータから調べ、
+  // 対戦表らしく見えるようトーナメント表の接続線をSVGで描画する
+  function drawBracketConnectors(area){
+    const bracketEl = area.querySelector('.bracket');
+    if(!bracketEl) return;
+    const roundCols = Array.from(bracketEl.querySelectorAll('.round-col'));
+    if(roundCols.length < 2) return;
+    const bracketRect = bracketEl.getBoundingClientRect();
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('class', 'bracket-lines');
+    svg.style.width = bracketEl.scrollWidth + 'px';
+    svg.style.height = bracketEl.scrollHeight + 'px';
+
+    for(let r=0; r<roundCols.length-1; r++){
+      if(!state.matches[r] || !state.matches[r+1]) continue;
+      const srcMatchEls = Array.from(roundCols[r].querySelectorAll('.match'));
+      const nextMatchEls = Array.from(roundCols[r+1].querySelectorAll('.match'));
+      state.matches[r+1].forEach((nm, ni)=>{
+        const targetEl = nextMatchEls[ni];
+        if(!targetEl) return;
+        const tRect = targetEl.getBoundingClientRect();
+        const tx = tRect.left - bracketRect.left;
+        const ty = tRect.top - bracketRect.top + tRect.height/2;
+        [nm.a, nm.b].forEach(name=>{
+          if(!name) return;
+          const srcIdx = state.matches[r].findIndex(x=>x.winner && x.winner===name);
+          const srcEl = srcIdx>=0 ? srcMatchEls[srcIdx] : null;
+          if(!srcEl) return;
+          const sRect = srcEl.getBoundingClientRect();
+          const sx = sRect.right - bracketRect.left;
+          const sy = sRect.top - bracketRect.top + sRect.height/2;
+          const midX = (sx+tx)/2;
+          const path = document.createElementNS(svgNS, 'path');
+          path.setAttribute('d', `M${sx},${sy} H${midX} V${ty} H${tx}`);
+          path.setAttribute('fill', 'none');
+          path.setAttribute('stroke', '#4a3d63');
+          path.setAttribute('stroke-width', '2');
+          svg.appendChild(path);
+        });
+      });
+    }
+    bracketEl.insertBefore(svg, bracketEl.firstChild);
+  }
+
   function renderBracket(targetId, interactive){
     targetId = targetId || "bracketArea";
     interactive = interactive !== false;
@@ -948,6 +1033,7 @@
       </div>`;
     }
     area.innerHTML = html;
+    drawBracketConnectors(area);
     if(interactive){
       area.querySelectorAll(".slot[data-r]").forEach(el=>{
         el.addEventListener("click", ()=>{
@@ -1044,15 +1130,38 @@
       drawSlot(x, y+29, colW, m.b, m.winner, m.b===null);
     }
 
+    // 先に各試合の座標を計算しておき、勝者の実データから接続線を描いてから箱を上に重ねて描く
+    const positions = [];
+    state.matches.forEach((round, r)=>{
+      const x = padSide + r*(colW+colGap);
+      const totalH = maxMatches*rowH;
+      const step = totalH/round.length;
+      positions[r] = round.map((m,i)=>({x, y: padTop + step*i + (step-58)/2}));
+    });
+    c.lineWidth = 2; c.strokeStyle = '#4a3d63';
+    for(let r=0; r<state.matches.length-1; r++){
+      state.matches[r+1].forEach((nm, ni)=>{
+        const t = positions[r+1][ni];
+        const tx = t.x, ty = t.y + 29;
+        [nm.a, nm.b].forEach(name=>{
+          if(!name) return;
+          const srcIdx = state.matches[r].findIndex(x=>x.winner && x.winner===name);
+          if(srcIdx < 0) return;
+          const s = positions[r][srcIdx];
+          const sx = s.x + colW, sy = s.y + 29;
+          const midX = (sx+tx)/2;
+          c.beginPath();
+          c.moveTo(sx, sy); c.lineTo(midX, sy); c.lineTo(midX, ty); c.lineTo(tx, ty);
+          c.stroke();
+        });
+      });
+    }
     state.matches.forEach((round, r)=>{
       const x = padSide + r*(colW+colGap);
       c.textAlign = 'center'; c.font = "700 11px 'JetBrains Mono',monospace"; c.fillStyle = '#9a8fae';
       c.fillText(roundLabel(round.length).toUpperCase(), x+colW/2, padTop-14);
-      const totalH = maxMatches*rowH;
-      const step = totalH/round.length;
       round.forEach((m,i)=>{
-        const y = padTop + step*i + (step-58)/2;
-        drawMatch(x, y, m);
+        drawMatch(positions[r][i].x, positions[r][i].y, m);
       });
     });
 
