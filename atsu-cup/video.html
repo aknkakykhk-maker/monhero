@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>あつ杯 対戦動画</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="atsucup-style.css">
+</head>
+<body>
+<a class="back-link" href="admin.html">‹ 大会管理へ</a>
+<div class="wrap">
+  <header class="top">
+    <div class="crown-mark">🎬</div>
+    <h1>対戦動画</h1>
+    <div class="sub">VIDEO</div>
+  </header>
+
+  <section class="panel">
+    <h2><span class="num">01</span> 対戦動画</h2>
+    <p class="hint">動画ファイル自体はこのアプリには保存できません。YouTube(限定公開)やX、ミラティブのアーカイブなど、どこかにアップロードした後の「リンク」をここに貼ると、このアプリ内でまとめて再生・鑑賞できます。</p>
+    <div class="field" style="margin-bottom:14px;"><label>大会を選ぶ</label><select id="videoTournamentSelect"></select></div>
+    <div id="videoArea"></div>
+  </section>
+
+  <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+</div>
+
+<script src="tap-ripple.js"></script>
+<script src="atsucup-core.js"></script>
+<script>
+(function(){
+  "use strict";
+  const state = AtsuCup.state;
+  const escapeHtml = AtsuCup.escapeHtml;
+  const roundLabel = AtsuCup.roundLabel;
+  AtsuCup.restore();
+
+  let selectedVideoKey = null;
+
+  function renderVideoTab(){
+    const select = document.getElementById("videoTournamentSelect");
+    const area = document.getElementById("videoArea");
+    const tournaments = AtsuCup.videoTournamentList();
+    if(!tournaments.length){
+      select.style.display = "none";
+      area.innerHTML = `<div class="empty-state"><span class="big">🎬</span>まだ大会がありません。<br>「大会管理」から大会を作成してください。</div>`;
+      return;
+    }
+    select.style.display = "block";
+    if(!selectedVideoKey || !tournaments.some(t=>t.key===selectedVideoKey)){
+      selectedVideoKey = tournaments[0].key;
+    }
+    select.innerHTML = tournaments.map(t=>
+      `<option value="${escapeHtml(t.key)}" ${t.key===selectedVideoKey?'selected':''}>${escapeHtml(t.title)}</option>`
+    ).join("");
+    select.onchange = ()=>{ selectedVideoKey = select.value; renderVideoTab(); };
+
+    const target = tournaments.find(t=>t.key===selectedVideoKey);
+    const list = AtsuCup.matchesToPlayable(target.matches);
+    if(!list.length){
+      area.innerHTML = `<div class="empty-state"><span class="big">🎬</span>この大会にはまだ対戦カードがありません。</div>`;
+      return;
+    }
+    area.innerHTML = list.map(({r,i,m})=>{
+      return `<div class="video-card">
+        <div class="vs"><span class="rlabel">${roundLabel(target.matches[r].length)}</span> ${escapeHtml(m.a)} vs ${escapeHtml(m.b)} ${m.winner?`<span class="rlabel">勝者: ${escapeHtml(m.winner)}</span>`:''}</div>
+        <input type="text" placeholder="動画リンクを貼り付け (YouTube / X / その他)" value="${m.video?escapeHtml(m.video):''}" data-r="${r}" data-i="${i}">
+        ${AtsuCup.videoEmbedHtml(m.video)}
+      </div>`;
+    }).join("");
+    area.querySelectorAll("input").forEach(inp=>{
+      inp.addEventListener("change", ()=>{
+        const r = +inp.dataset.r, i = +inp.dataset.i;
+        target.matches[r][i].video = inp.value.trim();
+        if(target.key !== 'current'){
+          const h = state.history.find(x=>x.id===target.key);
+          if(h) h.matches = target.matches;
+        }
+        AtsuCup.persist();
+        renderVideoTab();
+      });
+    });
+  }
+
+  renderVideoTab();
+})();
+</script>
+</body>
+</html>

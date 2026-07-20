@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>あつ杯 戦績</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="atsucup-style.css">
+</head>
+<body>
+<a class="back-link" href="admin.html">‹ 大会管理へ</a>
+<div class="wrap">
+  <header class="top">
+    <div class="crown-mark">📊</div>
+    <h1>参加者の戦績</h1>
+    <div class="sub">RECORD</div>
+  </header>
+
+  <section class="panel">
+    <h2><span class="num">01</span> 参加者の戦績</h2>
+    <p class="hint">名前をタップすると、これまでの大会での成績(優勝・準優勝・3位の回数や、大会ごとの結果)を確認できます。</p>
+    <div class="taglist" id="recordRosterList"></div>
+    <div id="recordResultArea" style="margin-top:16px;"></div>
+  </section>
+
+  <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+</div>
+
+<script src="tap-ripple.js"></script>
+<script src="atsucup-core.js"></script>
+<script>
+(function(){
+  "use strict";
+  const state = AtsuCup.state;
+  const escapeHtml = AtsuCup.escapeHtml;
+  AtsuCup.restore();
+
+  let selectedRecordName = null;
+
+  function renderRecordRoster(){
+    const list = document.getElementById('recordRosterList');
+    list.innerHTML = '';
+    if(!state.roster.length){
+      list.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「参加者登録」から登録してください。</div>`;
+      return;
+    }
+    state.roster.forEach(name=>{
+      const chip = document.createElement('div');
+      chip.className = 'roster-chip' + (name===selectedRecordName ? ' selected' : '');
+      chip.innerHTML = `<span>${escapeHtml(name)}</span>`;
+      chip.addEventListener('click', ()=>{
+        selectedRecordName = name;
+        renderRecordRoster();
+        renderRecordResult();
+      });
+      list.appendChild(chip);
+    });
+  }
+
+  function renderRecordResult(){
+    const area = document.getElementById('recordResultArea');
+    if(!selectedRecordName){ area.innerHTML = ''; return; }
+    const entries = AtsuCup.allFinishedEntries().filter(e => (e.participants||[]).some(p=>p.name===selectedRecordName));
+    if(!entries.length){
+      area.innerHTML = `<div class="empty-state" style="padding:16px 10px;">「${escapeHtml(selectedRecordName)}」がまだ参加した大会の結果がありません。</div>`;
+      return;
+    }
+    let p1=0, p2=0, p3=0;
+    const rows = entries.map(e=>{
+      const pl = AtsuCup.computePlacements(e)[selectedRecordName] || {place:null, label:'参加'};
+      if(pl.place===1) p1++; else if(pl.place===2) p2++; else if(pl.place===3) p3++;
+      return { title: e.title, label: pl.label, place: pl.place };
+    });
+    const resClass = p => p===1?'p1':p===2?'p2':p===3?'p3':p===4?'p4':'pother';
+    area.innerHTML = `
+      <div class="stat-grid">
+        <div class="stat-box"><div class="v">${p1}</div><div class="l">優勝</div></div>
+        <div class="stat-box"><div class="v">${p2}</div><div class="l">準優勝</div></div>
+        <div class="stat-box"><div class="v">${p3}</div><div class="l">3位</div></div>
+      </div>
+      ${rows.map(r=>`
+        <div class="hist-item">
+          <span>${escapeHtml(r.title)}</span>
+          <span class="res ${resClass(r.place)}">${escapeHtml(r.label)}</span>
+        </div>
+      `).join('')}
+    `;
+  }
+
+  renderRecordRoster();
+  renderRecordResult();
+})();
+</script>
+</body>
+</html>

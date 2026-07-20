@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>あつ杯 過去の大会</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="atsucup-style.css">
+<style>
+  .place-row{display:flex; justify-content:space-between; align-items:center; background:#0d0a14; border:1px solid var(--line); border-radius:8px; padding:9px 12px; margin-bottom:6px; font-size:13px;}
+  .place-row .p{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); width:24px;}
+  .place-row.p1{border-color:var(--gold-dim);}
+  .place-row.p1 .p{color:var(--gold);}
+  .list-view.hidden, .detail-view.hidden{display:none;}
+</style>
+</head>
+<body>
+<a class="back-link" href="admin.html">‹ 大会管理へ</a>
+<div class="wrap">
+  <header class="top">
+    <div class="crown-mark">📜</div>
+    <h1>過去の大会</h1>
+    <div class="sub">HISTORY</div>
+  </header>
+
+  <section class="panel list-view" id="listView">
+    <h2><span class="num">01</span> 過去の大会一覧</h2>
+    <p class="hint">タップすると、その大会の詳細(順位・対戦結果・動画)を確認できます。</p>
+    <div id="tournamentList"></div>
+  </section>
+
+  <section class="panel detail-view hidden" id="detailView"></section>
+
+  <footer class="note">大会・参加者・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+</div>
+
+<script src="tap-ripple.js"></script>
+<script src="atsucup-core.js"></script>
+<script>
+(function(){
+  "use strict";
+  const state = AtsuCup.state;
+  const escapeHtml = AtsuCup.escapeHtml;
+  const roundLabel = AtsuCup.roundLabel;
+  AtsuCup.restore();
+
+  const listView = document.getElementById('listView');
+  const detailView = document.getElementById('detailView');
+  const tournamentList = document.getElementById('tournamentList');
+
+  function recMapOfEntry(entry){
+    const m = {};
+    (entry.participants||[]).forEach(p=> m[p.name]=p.rec);
+    return m;
+  }
+
+  function renderList(){
+    tournamentList.innerHTML = "";
+    if(!state.history.length){
+      tournamentList.innerHTML = `<div class="empty-state" style="padding:16px 10px;">過去の大会はまだありません。<br>「大会管理」で大会を終了すると、ここに記録されます。</div>`;
+      return;
+    }
+    state.history.slice().reverse().forEach(h=>{
+      const el = document.createElement("div");
+      el.className = "past-tournament-item";
+      el.innerHTML = `
+        ${h.posterUrl?`<img src="${escapeHtml(h.posterUrl)}" alt="">`:`<div class="noimg">🏆</div>`}
+        <div class="meta">
+          <div class="t">${escapeHtml(h.title)}</div>
+          <div class="c">${h.championName?'👑 '+escapeHtml(h.championName):'結果未記録'}</div>
+        </div>
+        <div class="arrow">›</div>
+      `;
+      el.addEventListener("click", ()=> showDetail(h.id));
+      tournamentList.appendChild(el);
+    });
+  }
+
+  function showDetail(id){
+    const h = state.history.find(x=>x.id===id);
+    if(!h) return;
+    listView.classList.add('hidden');
+    detailView.classList.remove('hidden');
+
+    const placements = AtsuCup.computePlacements(h);
+    const rows = (h.participants||[]).map(p=>({ name:p.name, ...(placements[p.name]||{place:null,label:'参加'}) }));
+    rows.sort((a,b)=> (a.place||99) - (b.place||99));
+    const date = h.createdAt ? new Date(h.createdAt).toLocaleDateString('ja-JP') : '';
+    const recMap = recMapOfEntry(h);
+
+    const matchRounds = (h.matches||[]).map((round, r)=>{
+      const items = round.map(m=>{
+        if(m.b===null){
+          return `<div class="video-card"><div class="vs"><span class="rlabel">${roundLabel(round.length)}</span> ${escapeHtml(m.a)} <span class="rlabel">BYE(不戦勝)</span></div></div>`;
+        }
+        return `<div class="video-card">
+          <div class="vs"><span class="rlabel">${roundLabel(round.length)}</span> ${escapeHtml(m.a)}${recMap[m.a]?'📹':'🚫'} vs ${escapeHtml(m.b)}${recMap[m.b]?'📹':'🚫'} ${m.winner?`<span class="rlabel">勝者: ${escapeHtml(m.winner)}</span>`:'<span class="rlabel">未決着</span>'}</div>
+          ${AtsuCup.videoEmbedHtml(m.video)}
+        </div>`;
+      }).join('');
+      return items;
+    }).join('');
+
+    let thirdHtml = '';
+    if(h.thirdPlaceMatch){
+      const tp = h.thirdPlaceMatch;
+      thirdHtml = `<div class="video-card">
+        <div class="vs"><span class="rlabel">3位決定戦</span> ${escapeHtml(tp.a)} vs ${escapeHtml(tp.b)} ${tp.winner?`<span class="rlabel">勝者: ${escapeHtml(tp.winner)}</span>`:'<span class="rlabel">未決着</span>'}</div>
+      </div>`;
+    }
+
+    detailView.innerHTML = `
+      <button class="btn btn-ghost" id="backToListBtn">‹ 一覧へ戻る</button>
+      <div class="video-card" style="margin-top:14px;">
+        ${h.posterUrl?`<img class="poster-img" src="${escapeHtml(h.posterUrl)}" alt="poster">`:''}
+        <div class="cur-title">${escapeHtml(h.title)}</div>
+        ${h.details?`<div class="cur-details">${escapeHtml(h.details)}</div>`:''}
+        ${date?`<div class="cur-details" style="color:var(--muted);">開催日: ${date}</div>`:''}
+        ${h.championName?`<div class="cur-line champ">👑 優勝: ${escapeHtml(h.championName)}</div>`:'<div class="cur-line" style="color:var(--muted);">結果未記録(途中終了)</div>'}
+      </div>
+
+      <h3 class="section-title" style="margin-top:18px;">🏅 順位</h3>
+      ${rows.map(r=>`<div class="place-row ${r.place===1?'p1':''}"><span class="p">${r.place?('#'+r.place):'-'}</span><span style="flex:1;">${escapeHtml(r.name)}</span><span>${escapeHtml(r.label)}</span></div>`).join('') || '<div class="empty-state" style="padding:12px;">参加者データがありません。</div>'}
+
+      <h3 class="section-title" style="margin-top:18px;">⚔️ 対戦結果</h3>
+      ${matchRounds || '<div class="empty-state" style="padding:12px;">対戦データがありません。</div>'}
+      ${thirdHtml}
+    `;
+    document.getElementById('backToListBtn').addEventListener('click', ()=>{
+      detailView.classList.add('hidden');
+      listView.classList.remove('hidden');
+    });
+    window.scrollTo({top:0, behavior:'instant'});
+  }
+
+  renderList();
+})();
+</script>
+</body>
+</html>

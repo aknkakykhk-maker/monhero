@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>あつ杯 歴代優勝者</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="atsucup-style.css">
+<style>
+  canvas#cardCanvas{width:100%; border-radius:14px; border:1px solid var(--line); display:block; margin-top:14px;}
+</style>
+</head>
+<body>
+<a class="back-link" href="admin.html">‹ 大会管理へ</a>
+<div class="wrap">
+  <header class="top">
+    <div class="crown-mark">👑</div>
+    <h1>歴代優勝者</h1>
+    <div class="sub">HALL OF FAME</div>
+  </header>
+
+  <section class="panel">
+    <h2><span class="num">01</span> 歴代優勝者</h2>
+    <p class="hint">過去の大会の優勝者一覧です。タップすると優勝カード画像を生成してそのまま保存できます。</p>
+    <div id="hallList"></div>
+    <canvas id="cardCanvas" width="1000" height="1000" style="display:none;"></canvas>
+  </section>
+
+  <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+</div>
+
+<script src="tap-ripple.js"></script>
+<script src="atsucup-core.js"></script>
+<script>
+(function(){
+  "use strict";
+  const escapeHtml = AtsuCup.escapeHtml;
+  AtsuCup.restore();
+
+  const cardCanvas = document.getElementById("cardCanvas");
+
+  function renderHallTab(){
+    const list = document.getElementById("hallList");
+    cardCanvas.style.display = "none";
+    const entries = AtsuCup.championEntries();
+    if(!entries.length){
+      list.innerHTML = `<div class="empty-state"><span class="big">👑</span>まだ優勝者が確定した大会がありません。<br>「大会管理」で優勝者を決めて大会を終了すると、ここに記録されます。</div>`;
+      return;
+    }
+    list.innerHTML = entries.map((h,idx)=>{
+      const date = h.createdAt ? new Date(h.createdAt).toLocaleDateString('ja-JP') : '';
+      return `
+      <div class="past-tournament-item" data-idx="${idx}">
+        ${h.posterUrl?`<img src="${escapeHtml(h.posterUrl)}" alt="">`:`<div class="noimg">👑</div>`}
+        <div class="meta">
+          <div class="t">${escapeHtml(h.title)}</div>
+          <div class="c">👑 ${escapeHtml(h.championName)}${date?` ・ ${date}`:''}</div>
+        </div>
+      </div>`;
+    }).join("");
+    list.querySelectorAll(".past-tournament-item").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const h = entries[+el.dataset.idx];
+        AtsuCup.generateAndSaveCard(cardCanvas, h.title, h.championName);
+        cardCanvas.scrollIntoView({behavior:"smooth", block:"center"});
+      });
+    });
+  }
+
+  renderHallTab();
+})();
+</script>
+</body>
+</html>

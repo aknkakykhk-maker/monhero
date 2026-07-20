@@ -6,86 +6,7 @@
 <title>あつ杯</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#0a0810; --bg2:#14101c; --panel:#1b1626; --panel2:#241d33; --line:#3a2f4d;
-    --ember:#ff6a2b; --ember2:#ff9145; --gold:#e8b34c; --gold-dim:#8a6a2c;
-    --cream:#f1e6cf; --muted:#9a8fae; --ok:#3ecf8e;
-  }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--cream);font-family:'Noto Sans JP',sans-serif;}
-  body{
-    min-height:100vh;
-    background:
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,106,43,0.18), transparent 60%),
-      radial-gradient(ellipse 60% 40% at 90% 100%, rgba(232,179,76,0.10), transparent 60%),
-      var(--bg);
-    padding-bottom:48px;
-  }
-  .wrap{max-width:640px;margin:0 auto;padding:18px 14px 0;}
-  a.back-link{
-    position:fixed; top:calc(12px + env(safe-area-inset-top)); left:12px; z-index:50;
-    color:var(--muted); font:900 11px 'Noto Sans JP',sans-serif; text-decoration:none;
-    padding:7px 12px; border:1px solid var(--line); border-radius:999px; background:rgba(10,8,16,.7);
-    backdrop-filter:blur(4px); transition:transform .1s ease;
-  }
-  a.back-link:active{ transform:scale(.93); }
-  header.top{padding:22px 6px 14px; text-align:center; position:relative;}
-  .crown-mark{font-size:26px; filter:drop-shadow(0 0 8px rgba(232,179,76,.6));}
-  h1{
-    font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:26px; letter-spacing:.06em;
-    margin:6px 0 2px; background:linear-gradient(180deg,#fff2da,var(--gold) 60%, var(--ember2));
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-  }
-  .sub{font-size:11px; letter-spacing:.18em; color:var(--muted); text-transform:uppercase;}
-  .panel{
-    background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--line);
-    border-radius:16px; padding:18px 16px; margin-bottom:16px; position:relative; overflow:hidden;
-  }
-  .panel::before{
-    content:''; position:absolute; top:0; left:0; right:0; height:2px;
-    background:linear-gradient(90deg,transparent,var(--gold),transparent); opacity:.5;
-  }
-  .panel h2{
-    font-family:'Cinzel','Noto Serif JP',serif; font-size:14px; letter-spacing:.05em; color:var(--gold);
-    margin:0 0 12px;
-  }
-  .empty-state{text-align:center; padding:20px 10px; color:var(--muted); font-size:13px; line-height:1.9;}
-  .empty-state .big{font-size:28px; display:block; margin-bottom:8px;}
-  .poster-img{width:100%; border-radius:12px; display:block; margin-bottom:12px; border:1px solid var(--line);}
-  .status-badge{
-    display:inline-block; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
-    padding:3px 10px; border-radius:20px; margin-bottom:10px;
-  }
-  .status-badge.open{color:var(--ok); background:#0c2318; border:1px solid #1f5c42;}
-  .status-badge.done{color:var(--gold); background:#241a0c; border:1px solid var(--gold-dim);}
-  .cur-title{
-    font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:19px; color:var(--gold);
-    margin:0 0 8px;
-  }
-  .cur-details{font-size:12.5px; color:var(--cream); line-height:1.8; white-space:pre-wrap; margin-bottom:4px;}
-  .cur-line{margin-top:8px; font-weight:900; font-size:13.5px;}
-  .cur-line.champ{color:var(--gold);}
-  .cur-line.third{color:var(--muted);}
-  .btn{
-    display:inline-flex; align-items:center; justify-content:center; gap:6px; border:none; border-radius:11px;
-    padding:12px 18px; font-weight:700; font-size:13.5px; cursor:pointer; font-family:'Noto Sans JP',sans-serif;
-    letter-spacing:.02em; transition:transform .1s ease; width:100%; margin-top:12px;
-    text-decoration:none; box-sizing:border-box;
-  }
-  .btn:active{transform:scale(.97);}
-  .btn-primary{background:linear-gradient(180deg,var(--ember2),var(--ember)); color:#1a0a02; box-shadow:0 4px 14px rgba(255,106,43,.3);}
-  .menu-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
-  .menu-card{
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
-    background:#0d0a14; border:1px solid var(--line); border-radius:14px; padding:18px 8px;
-    text-decoration:none; color:var(--cream); font-weight:700; font-size:12.5px; text-align:center;
-    transition:transform .1s ease, border-color .15s ease;
-  }
-  .menu-card:active{transform:scale(.95); border-color:var(--ember2);}
-  .menu-card .ic{font-size:28px;}
-  footer.note{text-align:center; font-size:11px; color:#544a67; margin-top:6px; padding:0 20px; line-height:1.8;}
-</style>
+<link rel="stylesheet" href="atsucup-style.css">
 </head>
 <body>
 <a class="back-link" href="../index.html">‹ 戻る</a>
@@ -97,17 +18,6 @@
   </header>
 
   <section class="panel" id="currentBox"></section>
-
-  <section class="panel">
-    <h2>メニュー</h2>
-    <div class="menu-grid">
-      <a class="menu-card" href="admin.html#tournament"><span class="ic">🏆</span>大会管理</a>
-      <a class="menu-card" href="admin.html#entry"><span class="ic">🙋</span>参加者登録</a>
-      <a class="menu-card" href="admin.html#video"><span class="ic">🎬</span>対戦動画</a>
-      <a class="menu-card" href="admin.html#hall"><span class="ic">👑</span>歴代優勝者</a>
-      <a class="menu-card" href="admin.html#record"><span class="ic">📊</span>戦績</a>
-    </div>
-  </section>
 
   <footer class="note">大会・参加者・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
 </div>
@@ -123,7 +33,8 @@
     const state = raw ? JSON.parse(raw) : null;
     const meta = state && state.tournamentMeta;
     if(!meta || !meta.title){
-      box.innerHTML = `<div class="empty-state"><span class="big">🏆</span>まだ大会が作成されていません。<br>「大会管理」から作成してください。</div>`;
+      box.innerHTML = `<div class="empty-state"><span class="big">🏆</span>まだ大会が作成されていません。</div>
+        <a class="btn btn-primary" style="width:100%;" href="admin.html">大会管理を開く</a>`;
     }else{
       const badge = state.winnerName
         ? `<span class="status-badge done">優勝者決定</span>`
@@ -135,11 +46,12 @@
         ${meta.details ? `<div class="cur-details">${escapeHtml(meta.details)}</div>` : ''}
         ${state.winnerName ? `<div class="cur-line champ">👑 優勝: ${escapeHtml(state.winnerName)}</div>` : ''}
         ${(state.thirdPlaceMatch && state.thirdPlaceMatch.winner) ? `<div class="cur-line third">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>` : ''}
-        <a class="btn btn-primary" href="admin.html#tournament">大会を管理する</a>
+        <a class="btn btn-primary" style="width:100%;" href="admin.html">大会管理を開く</a>
       `;
     }
   }catch(e){
-    box.innerHTML = `<div class="empty-state"><span class="big">⚠️</span>読み込みに失敗しました。</div>`;
+    box.innerHTML = `<div class="empty-state"><span class="big">⚠️</span>読み込みに失敗しました。</div>
+      <a class="btn btn-primary" style="width:100%;" href="admin.html">大会管理を開く</a>`;
   }
 })();
 </script>
