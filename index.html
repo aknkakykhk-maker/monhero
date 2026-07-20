@@ -34,9 +34,24 @@
   .hub-desc { color:rgba(255,255,255,0.55); font-size:11px; margin-top:4px; font-weight:600; }
   .hub-arrow { color:rgba(255,255,255,0.4); font-size:20px; flex-shrink:0; }
   .hub-footer { color:rgba(255,255,255,0.25); font-size:9px; font-family:monospace; letter-spacing:1px; margin-top:8px; }
+  .update-banner {
+    position:fixed; top:calc(10px + env(safe-area-inset-top)); left:0; right:0; z-index:2147483647;
+    display:flex; justify-content:center; padding:0 16px; pointer-events:none;
+  }
+  .update-banner button {
+    pointer-events:auto; background:#10b981; color:#000; font-weight:900; font-size:11px;
+    padding:10px 16px; border-radius:999px; border:none; box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    display:flex; align-items:center; gap:6px; animation:mhPulse 1.6s ease-in-out infinite;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .update-banner button:active { transform:scale(.95); }
+  @keyframes mhPulse { 0%,100%{opacity:1;} 50%{opacity:.75;} }
 </style>
 </head>
 <body>
+  <div class="update-banner" id="updateBanner" style="display:none;">
+    <button id="updateReloadBtn">⟳ 新しいバージョンがあります。タップして更新</button>
+  </div>
   <div class="hub-title">LF Apps</div>
   <div class="hub-grid">
     <a class="hub-card mh" href="monster-hero/index.html">
@@ -58,4 +73,24 @@
   </div>
   <div class="hub-footer">SELECT AN APP</div>
 </body>
+<script>
+(function(){
+  // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+  var HUB_BUILD = "2026-07-20 17:04";
+  function checkVersion(){
+    fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(function(res){ return res.ok ? res.json() : null; })
+      .then(function(data){
+        if(data && data.build && data.build !== HUB_BUILD){
+          document.getElementById('updateBanner').style.display = 'flex';
+        }
+      })
+      .catch(function(){});
+  }
+  document.getElementById('updateReloadBtn').addEventListener('click', function(){ location.reload(); });
+  checkVersion();
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState === 'visible') checkVersion(); });
+  setInterval(checkVersion, 5 * 60 * 1000);
+})();
+</script>
 </html>
