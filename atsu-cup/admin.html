@@ -112,6 +112,15 @@
   .tag.rec-yes .cam-toggle{color:var(--ok); border-color:#1f5c42;}
   .tag.rec-no .cam-toggle{color:#ff7373; border-color:#5a2222;}
   .tag .rm{background:none;border:none;color:#8a7fa0;font-size:13px;cursor:pointer;padding:0;line-height:1;}
+  .roster-chip{
+    background:#161320; border:1.5px solid var(--line); color:var(--muted); padding:6px 8px 6px 12px;
+    border-radius:20px; font-size:12.5px; font-weight:700; display:flex; align-items:center; gap:6px; cursor:pointer;
+  }
+  .roster-chip.selected{
+    background:linear-gradient(180deg,rgba(255,145,69,.22),rgba(255,106,43,.12)); border-color:var(--ember2); color:var(--cream);
+  }
+  .roster-chip .rm{background:none;border:none;color:#6b5f82;font-size:12px;cursor:pointer;padding:0 0 0 2px;line-height:1;}
+  .roster-chip.selected .rm{color:rgba(255,255,255,.55);}
   .wheel-stage{display:flex; flex-direction:column; align-items:center; padding:8px 0 4px;}
   .wheel-holder{position:relative; width:280px; height:280px; margin:0 auto;}
   .pointer{
@@ -250,16 +259,15 @@
 
   <section class="panel tab-panel" id="tab-entry">
     <h2><span class="num">01</span> 参加者登録</h2>
-    <p class="hint">1行に1人ずつ名前を入力してください。登録後、各参加者の「撮影OK / 不可」を切り替えられます(撮影不可同士は対戦しないように自動で組み合わせます)。</p>
-    <div class="row" style="margin-top:0; margin-bottom:12px;">
-      <button class="btn btn-gold" id="importEntriesBtn">公開ページのエントリーを読み込む</button>
-    </div>
-    <textarea id="nameInput" placeholder="みゃる&#10;たいたん&#10;かどみうむ&#10;ソラシド&#10;..."></textarea>
+    <p class="hint">初めての人はここで名前を登録すると、次回以降は一覧からタップするだけで参加者に選べます(この端末に保存されます)。</p>
+    <textarea id="rosterInput" placeholder="みゃる&#10;たいたん&#10;かどみうむ&#10;ソラシド&#10;..." style="min-height:70px;"></textarea>
     <div class="row">
-      <button class="btn btn-primary" id="saveNames">この内容で登録する</button>
-      <button class="btn btn-ghost" id="clearNames">クリア</button>
+      <button class="btn btn-primary" id="addToRoster">登録してこの大会に追加</button>
     </div>
+    <p class="hint" style="margin-top:18px; margin-bottom:6px;">今回の参加者を選ぶ(タップで選択/解除・✕で登録者一覧から削除)</p>
+    <div class="taglist" id="rosterList"></div>
     <div id="countBadges"></div>
+    <p class="hint" style="margin-top:18px; margin-bottom:6px;">選ばれた参加者(📹/🚫をタップで撮影可否を切り替え)</p>
     <div class="taglist" id="tagList"></div>
   </section>
 
@@ -328,7 +336,8 @@
   "use strict";
 
   let state = {
-    people: [],       // [{name, rec}]
+    people: [],       // [{name, rec}] 今回の大会に選ばれている参加者
+    roster: [],       // [name, ...] この端末に登録済みの参加者マスタ(大会をまたいで再利用)
     order: [],
     remaining: [],
     matches: [],       // matches[round][i] = {a,b,winner,loser,video}
@@ -556,29 +565,6 @@
   document.getElementById("newTournamentBtn").addEventListener("click", ()=> openTournamentForm(null));
   document.getElementById("refreshTournamentsBtn").addEventListener("click", loadTournaments);
 
-  document.getElementById("importEntriesBtn").addEventListener("click", async ()=>{
-    const cur = currentTournament();
-    if(!cur){ alert("先に「大会」タブで大会を作成・選択してください。"); return; }
-    try{
-      const entries = await AtsuCupDB.sbSelect("atsucup_entries", `select=*&tournament_id=eq.${cur.id}&order=created_at.asc`);
-      if(!entries.length){ alert("まだエントリーがありません。"); return; }
-      const existingNames = new Set(state.people.map(p=>p.name));
-      let added = 0;
-      entries.forEach(en=>{
-        if(!existingNames.has(en.name)){
-          state.people.push({ name: en.name, rec: !!en.video_ok });
-          existingNames.add(en.name);
-          added++;
-        }
-      });
-      resetDownstream();
-      renderAll();
-      alert(`${entries.length}件のエントリーのうち、${added}人を新しく追加しました。`);
-    }catch(e){
-      alert("エントリーの取得に失敗しました: " + (e.message||e));
-    }
-  });
-
   function recMapOf(){
     const m = {};
     state.people.forEach(p=> m[p.name]=p.rec);
@@ -586,9 +572,47 @@
   }
 
   /* ---------- entry ---------- */
-  const nameInput = document.getElementById("nameInput");
+  const rosterInput = document.getElementById("rosterInput");
   const countBadges = document.getElementById("countBadges");
   const tagList = document.getElementById("tagList");
+  const rosterList = document.getElementById("rosterList");
+
+  // 参加者マスタ(state.roster)をタップ選択チップとして表示。タップで今回の大会への参加/不参加を切り替える
+  function renderRoster(){
+    rosterList.innerHTML = "";
+    if(!state.roster.length){
+      rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。上のフォームから名前を登録してください。</div>`;
+      return;
+    }
+    const selectedNames = new Set(state.people.map(p=>p.name));
+    state.roster.forEach(name=>{
+      const isSel = selectedNames.has(name);
+      const chip = document.createElement('div');
+      chip.className = 'roster-chip' + (isSel ? ' selected' : '');
+      chip.innerHTML = `<span data-select="${escapeHtml(name)}">${isSel?'✅ ':''}${escapeHtml(name)}</span><button class="rm" data-roster-rm="${escapeHtml(name)}" title="登録者一覧から削除">✕</button>`;
+      rosterList.appendChild(chip);
+    });
+    rosterList.querySelectorAll('[data-select]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const name = el.dataset.select;
+        const idx = state.people.findIndex(p=>p.name===name);
+        if(idx>=0){ state.people.splice(idx,1); }
+        else{ state.people.push({name, rec:true}); }
+        resetDownstream();
+        renderAll();
+      });
+    });
+    rosterList.querySelectorAll('[data-roster-rm]').forEach(el=>{
+      el.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const name = el.dataset.rosterRm;
+        state.roster = state.roster.filter(n=>n!==name);
+        state.people = state.people.filter(p=>p.name!==name);
+        resetDownstream();
+        renderAll();
+      });
+    });
+  }
 
   function renderTags(){
     tagList.innerHTML = "";
@@ -626,20 +650,18 @@
       <span class="count-badge muted2">🚫 撮影不可: ${norec}人</span>`;
   }
 
-  document.getElementById("saveNames").addEventListener("click", ()=>{
-    const lines = nameInput.value.split("\n").map(s=>s.trim()).filter(Boolean);
-    if(lines.length < 2){ alert("2人以上の名前を入力してください。"); return; }
-    const uniq = [...new Set(lines)];
-    const newPeople = uniq.map(name=>{
-      const existing = state.people.find(p=>p.name===name);
-      return existing ? existing : {name, rec:true};
+  document.getElementById("addToRoster").addEventListener("click", ()=>{
+    const lines = rosterInput.value.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(!lines.length){ alert("名前を入力してください。"); return; }
+    const uniqNew = [...new Set(lines)].filter(n=>!state.roster.includes(n));
+    state.roster = [...state.roster, ...uniqNew];
+    uniqNew.forEach(name=>{
+      if(!state.people.some(p=>p.name===name)) state.people.push({name, rec:true});
     });
-    state.people = newPeople;
+    rosterInput.value = "";
     resetDownstream();
     renderAll();
-    document.querySelector('nav.tabs button[data-tab="roulette"]').click();
   });
-  document.getElementById("clearNames").addEventListener("click", ()=>{ nameInput.value=""; });
 
   function resetDownstream(){
     state.order = [];
@@ -1310,7 +1332,7 @@
   }
 
   function renderAll(){
-    nameInput.value = state.people.map(p=>p.name).join("\n");
+    renderRoster();
     renderTags();
     renderRoulettePreview();
     drawWheel();
