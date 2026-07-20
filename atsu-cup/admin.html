@@ -14,6 +14,10 @@
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--cream);font-family:'Noto Sans JP',sans-serif;}
+  /* どこを押したか分かるよう、押せる要素は共通でタップ時に縮む */
+  button, .cam-toggle, .rm, [data-select]{ transition:transform .1s ease, background .1s ease, opacity .1s ease; }
+  button:active, .cam-toggle:active, .rm:active{ transform:scale(.93); }
+  .slot:not(.bye):not(.empty):active{ transform:scale(.97); }
   body{
     min-height:100vh;
     background:
@@ -27,8 +31,9 @@
     position:fixed; top:calc(12px + env(safe-area-inset-top)); left:12px; z-index:50;
     color:var(--muted); font:900 11px 'Noto Sans JP',sans-serif; text-decoration:none;
     padding:7px 12px; border:1px solid var(--line); border-radius:999px; background:rgba(10,8,16,.7);
-    backdrop-filter:blur(4px);
+    backdrop-filter:blur(4px); transition:transform .1s ease;
   }
+  a.back-link:active{ transform:scale(.93); }
   header.top{padding:22px 6px 14px; text-align:center; position:relative;}
   .crown-mark{font-size:26px; filter:drop-shadow(0 0 8px rgba(232,179,76,.6));}
   h1{
