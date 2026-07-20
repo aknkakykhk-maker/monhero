@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>あつ杯 参加者登録</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="atsucup-style.css">
+</head>
+<body>
+<a class="back-link" href="admin.html">‹ 大会管理へ</a>
+<div class="wrap">
+  <header class="top">
+    <div class="crown-mark">🙋</div>
+    <h1>参加者登録</h1>
+    <div class="sub">ENTRY</div>
+  </header>
+
+  <section class="panel">
+    <h2><span class="num">01</span> 新しい参加者を登録する</h2>
+    <p class="hint">1行に1人ずつ名前を入力してください。この端末に保存され、次回以降も一覧から選べます。</p>
+    <textarea id="rosterInput" placeholder="みゃる&#10;たいたん&#10;かどみうむ&#10;ソラシド&#10;..." style="min-height:70px;"></textarea>
+    <div class="row">
+      <button class="btn btn-primary" id="addToRoster">登録する</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2><span class="num">02</span> 今回の参加者を選ぶ</h2>
+    <p class="hint">タップで今回の大会への参加/不参加を切り替えます。参加中の人は📹/🚫で撮影可否を切り替えられます。✕で登録者一覧から削除します。</p>
+    <div id="countBadges"></div>
+    <div class="taglist" id="rosterList"></div>
+  </section>
+
+  <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+</div>
+
+<script src="tap-ripple.js"></script>
+<script src="atsucup-core.js"></script>
+<script>
+(function(){
+  "use strict";
+  const state = AtsuCup.state;
+  const escapeHtml = AtsuCup.escapeHtml;
+  AtsuCup.restore();
+
+  const rosterInput = document.getElementById("rosterInput");
+  const countBadges = document.getElementById("countBadges");
+  const rosterList = document.getElementById("rosterList");
+
+  function renderBadges(){
+    const total = state.people.length;
+    const rec = state.people.filter(p=>p.rec).length;
+    const norec = total - rec;
+    countBadges.innerHTML = `
+      <span class="count-badge">選択中: ${total}人</span>
+      <span class="count-badge muted2">📹 撮影OK: ${rec}人</span>
+      <span class="count-badge muted2">🚫 撮影不可: ${norec}人</span>`;
+  }
+
+  // 参加者マスタ(state.roster)を1つの一覧として表示。
+  // タップで今回の大会への参加/不参加を切り替え、選択中は📹/🚫で撮影可否をその場で切り替えられる
+  function renderRoster(){
+    rosterList.innerHTML = "";
+    if(!state.roster.length){
+      rosterList.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。上のフォームから名前を登録してください。</div>`;
+      renderBadges();
+      return;
+    }
+    state.roster.forEach(name=>{
+      const person = state.people.find(p=>p.name===name);
+      const isSel = !!person;
+      const chip = document.createElement('div');
+      chip.className = 'roster-chip' + (isSel ? ' selected' : '');
+      chip.innerHTML = `
+        <span data-select="${escapeHtml(name)}">${isSel?'✅ ':''}${escapeHtml(name)}</span>
+        ${isSel ? `<button class="cam-toggle-inline ${person.rec?'rec-yes':'rec-no'}" data-cam="${escapeHtml(name)}">${person.rec?'📹':'🚫'}</button>` : ''}
+        <button class="rm" data-roster-rm="${escapeHtml(name)}" title="登録者一覧から削除">✕</button>
+      `;
+      rosterList.appendChild(chip);
+    });
+    rosterList.querySelectorAll('[data-select]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const name = el.dataset.select;
+        const idx = state.people.findIndex(p=>p.name===name);
+        if(idx>=0){ state.people.splice(idx,1); }
+        else{ state.people.push({name, rec:true}); }
+        AtsuCup.resetDownstream();
+        renderRoster();
+      });
+    });
+    rosterList.querySelectorAll('[data-cam]').forEach(el=>{
+      el.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const person = state.people.find(p=>p.name===el.dataset.cam);
+        if(person){ person.rec = !person.rec; AtsuCup.persist(); renderRoster(); }
+      });
+    });
+    rosterList.querySelectorAll('[data-roster-rm]').forEach(el=>{
+      el.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const name = el.dataset.rosterRm;
+        state.roster = state.roster.filter(n=>n!==name);
+        state.people = state.people.filter(p=>p.name!==name);
+        AtsuCup.resetDownstream();
+        renderRoster();
+      });
+    });
+    renderBadges();
+  }
+
+  document.getElementById("addToRoster").addEventListener("click", ()=>{
+    const lines = rosterInput.value.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(!lines.length){ alert("名前を入力してください。"); return; }
+    const uniqNew = [...new Set(lines)].filter(n=>!state.roster.includes(n));
+    state.roster = [...state.roster, ...uniqNew];
+    uniqNew.forEach(name=>{
+      if(!state.people.some(p=>p.name===name)) state.people.push({name, rec:true});
+    });
+    rosterInput.value = "";
+    AtsuCup.resetDownstream();
+    renderRoster();
+  });
+
+  renderRoster();
+})();
+</script>
+</body>
+</html>
