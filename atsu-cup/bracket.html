@@ -14,6 +14,17 @@
     background:#0a0810; padding:10px 0;
   }
   .tree-scroll svg{ display:block; }
+  .tree-tap{ cursor:pointer; }
+  .tree-tap rect{ transition: fill .12s ease; }
+  .tree-tap:active rect{ fill: rgba(232,179,76,.16) !important; }
+  .tree-edit-icon{ cursor:pointer; }
+  .tree-edit-icon:active{ opacity:.5; }
+  .tree-edit-input{
+    width:100%; height:100%; box-sizing:border-box; font-size:12px; padding:3px 5px;
+    background:#0d0a14; border:1px solid var(--ember2); color:var(--cream); border-radius:5px;
+    font-family:'Noto Sans JP',sans-serif;
+  }
+  .tree-hint{ font-size:11px; color:var(--muted); margin:8px 2px 0; }
   .avatar{
     width:30px; height:30px; border-radius:50%; background:linear-gradient(180deg,var(--panel2),var(--panel));
     border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900;
@@ -126,8 +137,8 @@
 
   /* ---------- 本物のトーナメント表(参加者を縦一列に並べ、線でつなぐ) ---------- */
   const TREE_ROW_H = 42;
-  const TREE_LABEL_W = 132;
-  const TREE_COL_W = 42;
+  const TREE_LABEL_W = 160;
+  const TREE_COL_W = 64;
 
   function leafY(i){ return (i+0.5)*TREE_ROW_H; }
   function jointY(r, i){
@@ -139,8 +150,22 @@
     if(!round || !name) return -1;
     return round.findIndex(x=>x.winner===name);
   }
+  // 勝ち上がった人が次にどの対戦(ラウンド・試合・どちら側)で待っているかを、
+  // 実際のデータ(名前の一致)から探す。撮影不可の例外入れ替えが起きていても正しく辿れる。
+  function findNextSlot(nextRound, name){
+    if(!nextRound || !name) return null;
+    for(let idx=0; idx<nextRound.length; idx++){
+      if(nextRound[idx].a === name) return {m:idx, side:'a'};
+      if(nextRound[idx].b === name) return {m:idx, side:'b'};
+    }
+    return null;
+  }
 
-  function buildTreeSVG(){
+  // 名前をタップで書き換えるための入力欄を、トーナメント表の該当位置に重ねて表示する場所(x,y,幅,高さ)
+  let treeSlotRects = {};
+
+  function buildTreeSVG(interactive){
+    treeSlotRects = {};
     const round0 = state.matches[0];
     const leafCount = round0.length * 2;
     const totalRounds = Math.round(Math.log2(leafCount));
@@ -152,14 +177,20 @@
 
     let leavesSvg = '';
     round0.forEach((m,i)=>{
-      [[2*i, m.a, false], [2*i+1, m.b, m.b===null]].forEach(([idx, name, bye])=>{
+      [[2*i, m.a, false, 'a'], [2*i+1, m.b, m.b===null, 'b']].forEach(([idx, name, bye, side])=>{
         const y = leafY(idx);
         if(bye){
           leavesSvg += `<text x="6" y="${y+5}" font-size="13" font-style="italic" fill="#6b5f82">BYE</text>`;
-        }else{
-          const isChamp = !!state.winnerName && name === state.winnerName;
-          leavesSvg += `<text x="6" y="${y+5}" font-size="13.5" font-weight="${isChamp?'900':'700'}" fill="${isChamp?'#e8b34c':'#f1e6cf'}">${escapeHtml(truncate(name,9))}</text>`;
-          leavesSvg += `<text x="${TREE_LABEL_W-10}" y="${y+5}" font-size="11" text-anchor="end">${recMap[name]?'📹':'🚫'}</text>`;
+          return;
+        }
+        const isChamp = !!state.winnerName && name === state.winnerName;
+        const rx=2, ry=y-16, rw=TREE_LABEL_W-42, rh=32;
+        treeSlotRects[`0_${i}_${side}`] = {x:rx, y:ry, w:rw, h:rh};
+        leavesSvg += `<text x="6" y="${y+5}" font-size="13.5" font-weight="${isChamp?'900':'700'}" fill="${isChamp?'#e8b34c':'#f1e6cf'}">${escapeHtml(truncate(name,8))}</text>`;
+        leavesSvg += `<text x="${TREE_LABEL_W-36}" y="${y+5}" font-size="11" text-anchor="end">${recMap[name]?'📹':'🚫'}</text>`;
+        if(interactive){
+          leavesSvg += `<text class="tree-edit-icon" data-editr="0" data-editm="${i}" data-editside="${side}" x="${TREE_LABEL_W-6}" y="${y+5}" font-size="13" text-anchor="end">✏️</text>`;
+          leavesSvg += `<g class="tree-tap" data-r="0" data-m="${i}" data-side="${side}"><rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" fill="transparent"/></g>`;
         }
       });
     });
@@ -192,10 +223,23 @@
 
         if(m && m.winner){
           const winY = (m.winner === m.a) ? childY0 : childY1;
+          const winSide = (m.winner === m.a) ? 'a' : 'b';
           linesSvg += `<path d="M${stubStartX},${winY} H${jx}" stroke="#e8b34c" stroke-width="3" fill="none"/>`;
           linesSvg += `<path d="M${jx},${winY} V${midY}" stroke="#e8b34c" stroke-width="3" fill="none"/>`;
           linesSvg += `<path d="M${jx},${midY} H${outEndX}" stroke="#e8b34c" stroke-width="3" fill="none"/>`;
-          labelsSvg += `<text x="${jx+6}" y="${midY-6}" font-size="11" font-weight="700" fill="#e8b34c">${escapeHtml(truncate(m.winner,8))}</text>`;
+
+          // 入力欄(リネーム)を重ねる場所は名前+鉛筆アイコンの行全体、タップ判定(勝ち上がり選択)は名前の行だけに絞って
+          // 鉛筆アイコンのクリックを奪わないようにする
+          treeSlotRects[`${r}_${i}_${winSide}`] = {x:jx+2, y:midY-16, w:TREE_COL_W-8, h:30};
+          const tapY = midY-17, tapH = 17;
+          labelsSvg += `<text x="${jx+6}" y="${midY-6}" font-size="11" font-weight="700" fill="#e8b34c">${escapeHtml(truncate(m.winner,7))}</text>`;
+          if(interactive){
+            labelsSvg += `<text class="tree-edit-icon" data-editr="${r}" data-editm="${i}" data-editside="${winSide}" x="${jx+6}" y="${midY+9}" font-size="11" opacity="0.85">✏️</text>`;
+            const nextSlot = findNextSlot(state.matches[r+1], m.winner);
+            if(nextSlot){
+              labelsSvg += `<g class="tree-tap" data-r="${r+1}" data-m="${nextSlot.m}" data-side="${nextSlot.side}"><rect x="${jx+2}" y="${tapY}" width="${TREE_COL_W-8}" height="${tapH}" fill="transparent"/></g>`;
+            }
+          }
         }
       }
     }
@@ -215,12 +259,65 @@
     </svg>`;
   }
 
+  // タップで勝敗を決める・鉛筆マークで名前を書き換える、をトーナメント表そのものの上で行えるようにする
+  function wireTreeInteractions(){
+    document.querySelectorAll('#treeScroll .tree-tap').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        pick(+el.dataset.r, +el.dataset.m, el.dataset.side);
+      });
+    });
+    document.querySelectorAll('#treeScroll .tree-edit-icon').forEach(el=>{
+      el.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        startEditTreeName(+el.dataset.editr, +el.dataset.editm, el.dataset.editside);
+      });
+    });
+  }
+
+  function startEditTreeName(r, m, side){
+    const match = state.matches[r][m];
+    if(!match) return;
+    const current = side === 'a' ? match.a : match.b;
+    const rect = treeSlotRects[`${r}_${m}_${side}`];
+    const svgEl = document.querySelector('#treeScroll svg');
+    if(!rect || !svgEl) return;
+    const already = svgEl.querySelector('foreignObject.tree-edit-fo');
+    if(already) already.remove();
+    const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+    fo.setAttribute('class', 'tree-edit-fo');
+    fo.setAttribute('x', rect.x);
+    fo.setAttribute('y', rect.y);
+    fo.setAttribute('width', rect.w);
+    fo.setAttribute('height', rect.h);
+    const input = document.createElementNS('http://www.w3.org/1999/xhtml', 'input');
+    input.setAttribute('type', 'text');
+    input.setAttribute('class', 'tree-edit-input');
+    input.value = current;
+    input.setAttribute('list', 'rosterCandidatesBracket');
+    input.addEventListener('click', ev=> ev.stopPropagation());
+    fo.appendChild(input);
+    svgEl.appendChild(fo);
+    input.focus(); input.select();
+    let done = false;
+    const commit = ()=>{
+      if(done) return;
+      done = true;
+      const val = input.value.trim();
+      if(val && val !== current){ AtsuCup.renameParticipant(current, val); }
+      renderMatchList();
+      renderTree();
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ input.blur(); } });
+  }
+
   function renderTree(){
-    document.getElementById('treeScroll').innerHTML = buildTreeSVG();
+    document.getElementById('treeScroll').innerHTML = buildTreeSVG(true);
+    wireTreeInteractions();
   }
 
   async function buildTreeCanvas(){
-    const svgStr = buildTreeSVG();
+    const svgStr = buildTreeSVG(false);
     const svgBlob = new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'});
     const url = URL.createObjectURL(svgBlob);
     try{
