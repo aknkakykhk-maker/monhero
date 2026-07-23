@@ -62,10 +62,10 @@
     const statusBadge = state.winnerName
       ? `<span class="status-badge done">優勝者決定</span>`
       : `<span class="status-badge open">進行中</span>`;
-    // 組み合わせが決まっていれば対戦表へ、まだなら組み合わせを決めるページへ案内する
+    // 優勝が決まっていれば最終結果へ、組み合わせが決まっていれば対戦表へ、まだなら組み合わせを決めるページへ案内する
     const hasPairing = state.matches.length>0 && state.matches[0].length>0 && state.remaining.length===0;
-    const progressHref = hasPairing ? "bracket.html" : "matchup.html";
-    const progressLabel = hasPairing ? "🏆 対戦表を見る・対戦を進める" : "🎲 組み合わせを決める";
+    const progressHref = state.winnerName ? "results.html" : hasPairing ? "bracket.html" : "matchup.html";
+    const progressLabel = state.winnerName ? "🏆 最終結果を見る" : hasPairing ? "🏆 対戦表を見る・対戦を進める" : "🎲 組み合わせを決める";
     currentTournamentBox.innerHTML = `
       ${statusBadge}
       ${meta.posterUrl?`<img class="poster-img" src="${escapeHtml(meta.posterUrl)}" alt="poster">`:''}

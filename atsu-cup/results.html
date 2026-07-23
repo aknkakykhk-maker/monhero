@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>あつ杯 最終結果</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="atsucup-style.css">
+<style>
+  .tournament-title-line{ text-align:center; font-size:13px; color:var(--muted); margin:-8px 0 18px; }
+  .place-card{
+    display:flex; align-items:center; gap:14px; border-radius:14px; padding:16px 18px; margin-bottom:10px;
+    border:1px solid var(--line); background:#0d0a14;
+  }
+  .place-card .medal{ font-size:30px; flex-shrink:0; width:44px; text-align:center; }
+  .place-card .info{ flex:1; min-width:0; }
+  .place-card .rank-label{ font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); font-weight:900; }
+  .place-card .nm{ font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:20px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .place-card.p1{ border-color:var(--gold-dim); background:radial-gradient(circle at 0% 0%, rgba(232,179,76,.22), transparent 70%), #14100a; }
+  .place-card.p1 .nm{ color:var(--gold); font-size:26px; text-shadow:0 0 14px rgba(232,179,76,.5); }
+  .place-card.p2{ border-color:#5b6478; background:radial-gradient(circle at 0% 0%, rgba(207,214,230,.14), transparent 70%), #10121a; }
+  .place-card.p2 .nm{ color:#cfd6e6; }
+  .place-card.p3{ border-color:#8a5a2c; background:radial-gradient(circle at 0% 0%, rgba(224,168,107,.16), transparent 70%), #140d08; }
+  .place-card.p3 .nm{ color:#e0a86b; }
+  .place-card.p4{ border-color:var(--line); }
+  .place-card.p4 .nm{ color:var(--cream); font-size:17px; }
+  .rest-group{ margin-bottom:14px; }
+  .rest-group-title{ font-size:12px; font-weight:900; color:var(--ember2); margin-bottom:6px; }
+  .rest-name-list{ display:flex; flex-wrap:wrap; gap:6px; }
+  .rest-name-chip{ background:#161320; border:1px solid var(--line); border-radius:999px; padding:6px 12px; font-size:12.5px; }
+</style>
+</head>
+<body>
+<a class="back-link" href="bracket.html">‹ 対戦表へ</a>
+<div class="wrap">
+  <header class="top">
+    <div class="crown-mark">🏆</div>
+    <h1>最終結果</h1>
+    <div class="sub">RESULTS</div>
+  </header>
+
+  <div id="emptyStateBox"></div>
+
+  <div class="tournament-title-line" id="tournamentTitleLine"></div>
+
+  <section class="panel" id="topSection" style="display:none;">
+    <h2><span class="num">01</span> 上位入賞</h2>
+    <div id="topPlacesArea"></div>
+  </section>
+
+  <section class="panel" id="restSection" style="display:none;">
+    <h2><span class="num">02</span> その他の順位</h2>
+    <div id="restPlacesArea"></div>
+  </section>
+
+  <section class="panel" id="actionsSection" style="display:none;">
+    <div class="row">
+      <button class="btn btn-gold" id="toCardBtn">優勝カードを作る</button>
+      <a class="btn btn-ghost" href="hall.html">歴代優勝者を見る</a>
+    </div>
+    <div class="row">
+      <a class="btn btn-ghost" style="width:100%;" href="bracket.html">🌳 対戦表を見る</a>
+    </div>
+  </section>
+
+  <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
+</div>
+
+<script src="tap-ripple.js"></script>
+<script src="atsucup-core.js"></script>
+<script>
+(function(){
+  "use strict";
+  const state = AtsuCup.state;
+  const escapeHtml = AtsuCup.escapeHtml;
+  AtsuCup.restore();
+
+  if(!state.winnerName){
+    document.getElementById('emptyStateBox').innerHTML = `
+      <section class="panel">
+        <div class="empty-state"><span class="big">🏆</span>まだ優勝者が決まっていません。</div>
+        <a class="btn btn-primary" style="width:100%;" href="bracket.html">対戦表へ戻る →</a>
+      </section>
+    `;
+    return;
+  }
+
+  document.getElementById('tournamentTitleLine').textContent = (state.tournamentMeta && state.tournamentMeta.title) || '';
+
+  const entry = {
+    matches: state.matches,
+    thirdPlaceMatch: state.thirdPlaceMatch,
+    championName: state.winnerName,
+    participants: state.people
+  };
+  const placements = AtsuCup.computePlacements(entry);
+
+  const top = {1:null, 2:null, 3:null, 4:null};
+  const restByRound = {};
+  Object.entries(placements).forEach(([name, info])=>{
+    if(info.place && info.place<=4){
+      top[info.place] = name;
+    }else if(info.roundIdx>=0){
+      if(!restByRound[info.roundIdx]) restByRound[info.roundIdx] = [];
+      restByRound[info.roundIdx].push(name);
+    }
+  });
+
+  const medalEmoji = {1:'🥇', 2:'🥈', 3:'🥉', 4:'🎖️'};
+  const rankLabelText = {1:'CHAMPION', 2:'2ND PLACE', 3:'3RD PLACE', 4:'4TH PLACE'};
+  let topHtml = '';
+  [1,2,3,4].forEach(place=>{
+    const name = top[place];
+    if(!name) return;
+    topHtml += `<div class="place-card p${place}">
+      <div class="medal">${medalEmoji[place]}</div>
+      <div class="info">
+        <div class="rank-label">${rankLabelText[place]}</div>
+        <div class="nm">${escapeHtml(name)}</div>
+      </div>
+    </div>`;
+  });
+  if(topHtml){
+    document.getElementById('topSection').style.display = 'block';
+    document.getElementById('topPlacesArea').innerHTML = topHtml;
+  }
+
+  const roundIdxs = Object.keys(restByRound).map(Number).sort((a,b)=>b-a);
+  let restHtml = '';
+  roundIdxs.forEach(ridx=>{
+    const names = restByRound[ridx];
+    const round = state.matches[ridx];
+    if(!round) return;
+    const label = AtsuCup.roundLabel(round.length) + '敗退';
+    restHtml += `<div class="rest-group">
+      <div class="rest-group-title">${escapeHtml(label)}(${names.length}人)</div>
+      <div class="rest-name-list">${names.map(n=>`<span class="rest-name-chip">${escapeHtml(n)}</span>`).join('')}</div>
+    </div>`;
+  });
+  if(restHtml){
+    document.getElementById('restSection').style.display = 'block';
+    document.getElementById('restPlacesArea').innerHTML = restHtml;
+  }
+
+  document.getElementById('actionsSection').style.display = 'block';
+  document.getElementById('toCardBtn').addEventListener('click', ()=>{
+    const tmpCanvas = document.createElement('canvas');
+    tmpCanvas.width = 1000; tmpCanvas.height = 1000;
+    AtsuCup.generateAndSaveCard(tmpCanvas, state.tournamentMeta.title, state.winnerName);
+  });
+})();
+</script>
+</body>
+</html>
