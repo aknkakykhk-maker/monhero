@@ -8,13 +8,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="atsucup-style.css">
 <style>
-  /* このページだけ左右の余白を詰めて、トーナメント表によりスペースを使う */
-  .wrap{ padding-left:8px; padding-right:8px; }
-  #treePanel{ padding-left:6px; padding-right:6px; }
-  .tree-title{font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:16px; color:var(--gold); margin-bottom:10px; padding:0 10px;}
+  /* このページだけ左右の余白と縦の隙間を詰めて、トーナメント表により多くのスペースを使う */
+  .wrap{ padding-left:8px; padding-right:8px; padding-top:10px; }
+  #treePanel{ padding:10px 6px 14px; }
+  #treePanel h2{ margin-bottom:4px; }
+  .tree-title{font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:15px; color:var(--gold); margin-bottom:4px; padding:0 10px;}
   .tree-scroll{
     overflow-x:auto; overflow-y:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);
-    background:#0a0810; padding:10px 0; max-height:80vh;
+    background:#0a0810; padding:8px 0; max-height:84vh;
   }
   .tree-scroll svg{ display:block; width:max(100%, var(--svg-natural-w, 0px)); height:auto; }
   .tree-tap{ cursor:pointer; }
@@ -107,8 +108,8 @@
   <section class="panel" id="treePanel" style="display:none;">
     <h2><span class="num">01</span> トーナメント表</h2>
     <div class="tree-title" id="treeTitle"></div>
-    <p class="hint">対戦をタップすると勝敗を選べます。✏️で名前の書き換え、シード枠の➕で途中参加者を追加できます。横スクロールできます。</p>
-    <div class="row" id="jumpRow" style="display:none; margin-bottom:10px;">
+    <p class="hint" style="margin:2px 0 8px;">タップで勝敗選択・✏️で名前変更・シード枠の➕で途中参加</p>
+    <div class="row" id="jumpRow" style="display:none; margin-bottom:8px;">
       <button class="btn btn-ghost" id="jumpNextBtn" style="width:100%;">🎯 次の対戦へ</button>
     </div>
     <div class="tree-scroll" id="treeScroll"></div>
@@ -488,7 +489,8 @@
     }
     const zones = document.querySelectorAll(`#treeScroll .tree-tap[data-r="${next.r}"][data-m="${next.m}"]`);
     if(!zones.length) return;
-    zones[0].scrollIntoView({behavior:'smooth', block:'center', inline:'center'});
+    // inline:'nearest'にして、必要最小限の横スクロールに留める(左端の名前欄が隠れないように)
+    zones[0].scrollIntoView({behavior:'smooth', block:'center', inline:'nearest'});
     zones.forEach(z=>{
       z.classList.remove('tree-flash');
       void z.getBoundingClientRect();
