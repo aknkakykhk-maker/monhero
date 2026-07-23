@@ -614,8 +614,9 @@
     if(state.winnerName){
       championArea.innerHTML = `<div class="champion-box"><div class="label">Champion</div><div class="name">👑 ${escapeHtml(state.winnerName)}</div>
         ${state.thirdPlaceMatch&&state.thirdPlaceMatch.winner?`<div style="color:var(--muted);font-weight:700;margin-bottom:10px;">🥉 3位: ${escapeHtml(state.thirdPlaceMatch.winner)}</div>`:''}
+        <a class="btn btn-gold" style="width:100%; margin-bottom:10px;" href="results.html">🏆 最終結果を見る(1位〜4位・全順位)</a>
         <div class="row" style="justify-content:center;">
-          <button class="btn btn-gold" id="toCardBtn">優勝カードを作る</button>
+          <button class="btn btn-ghost" id="toCardBtn">優勝カードを作る</button>
           <a class="btn btn-ghost" href="hall.html">歴代優勝者を見る</a>
         </div>
       </div>`;

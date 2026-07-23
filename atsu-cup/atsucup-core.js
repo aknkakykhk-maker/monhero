@@ -325,17 +325,16 @@ const AtsuCup = (function(){
     const thirdName = entry.thirdPlaceMatch ? entry.thirdPlaceMatch.winner : null;
     const fourthName = (entry.thirdPlaceMatch && thirdName) ? (entry.thirdPlaceMatch.a===thirdName ? entry.thirdPlaceMatch.b : entry.thirdPlaceMatch.a) : null;
     (entry.participants||[]).forEach(p=>{
-      let place=null, label='参加(結果未確定)';
+      let place=null, label='参加(結果未確定)', roundIdx=-1;
       if(champion && p.name===champion){ place=1; label='🥇 優勝'; }
       else if(runnerUp && p.name===runnerUp){ place=2; label='🥈 準優勝'; }
       else if(thirdName && p.name===thirdName){ place=3; label='🥉 3位'; }
       else if(fourthName && p.name===fourthName){ place=4; label='4位'; }
       else{
-        let roundIdx=-1;
         matches.forEach((round,r)=>{ round.forEach(m=>{ if(m.loser===p.name) roundIdx=Math.max(roundIdx,r); }); });
         if(roundIdx>=0){ label = roundLabel(matches[roundIdx].length)+'敗退'; }
       }
-      result[p.name] = {place, label};
+      result[p.name] = {place, label, roundIdx};
     });
     return result;
   }
@@ -530,7 +529,7 @@ const AtsuCup = (function(){
 
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-23 21:00";
+  const BUILD_DATE = "2026-07-23 21:30";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
