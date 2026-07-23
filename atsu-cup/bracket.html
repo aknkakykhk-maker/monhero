@@ -8,21 +8,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="atsucup-style.css">
 <style>
-  /* このページだけ左右の余白と縦の隙間を詰めて、トーナメント表により多くのスペースを使う */
-  .wrap{ padding-left:8px; padding-right:8px; padding-top:6px; }
-  header.top{ padding:4px 6px 2px; }
-  .crown-mark{ font-size:17px; }
-  header.top h1{ font-size:18px; margin:2px 0 0; }
-  header.top .sub{ font-size:9px; }
-  #treePanel{ padding:8px 6px 14px; }
-  #treePanel h2{ margin-bottom:2px; }
-  .tree-title{font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:14px; color:var(--gold); margin-bottom:2px; padding:0 10px;}
+  /* このページだけ左右の余白と縦の隙間を詰めて、トーナメント表により多くのスペースを使う。
+     見出しは大会名の1行のみとし、装飾的なヘッダーやセクション見出しは置かない */
+  .wrap{ padding-left:8px; padding-right:8px; padding-top:44px; }
+  #treePanel{ padding:6px 6px 14px; }
+  .tree-title{font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:15px; color:var(--gold); margin-bottom:2px; padding:0 10px;}
   #treePanel > p.hint{ margin:0 0 6px !important; font-size:10.5px; }
   #jumpRow{ margin-bottom:6px !important; }
   #jumpRow .btn{ padding:8px 14px; font-size:12.5px; }
   .tree-scroll{
     overflow-x:auto; overflow-y:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);
-    background:#0a0810; padding:8px 0; max-height:84vh;
+    background:#0a0810; padding:8px 0; max-height:94vh;
   }
   .tree-scroll svg{ display:block; width:max(100%, var(--svg-natural-w, 0px)); height:auto; }
   .tree-tap{ cursor:pointer; }
@@ -104,16 +100,9 @@
 <body>
 <a class="back-link" href="index.html">‹ トップへ</a>
 <div class="wrap">
-  <header class="top">
-    <div class="crown-mark">🏆</div>
-    <h1>対戦表</h1>
-    <div class="sub">BRACKET</div>
-  </header>
-
   <div id="emptyStateBox"></div>
 
   <section class="panel" id="treePanel" style="display:none;">
-    <h2><span class="num">01</span> トーナメント表</h2>
     <div class="tree-title" id="treeTitle"></div>
     <p class="hint" style="margin:2px 0 8px;">タップで勝敗選択・✏️で名前変更・シード枠の➕で途中参加</p>
     <div class="row" id="jumpRow" style="display:none; margin-bottom:8px;">
@@ -180,10 +169,11 @@
   const initialLeafCount = state.matches[0] ? state.matches[0].length * 2 : 0;
   const TREE_ROW_MIN_H = initialLeafCount<=8 ? 40 : initialLeafCount<=16 ? 30 : initialLeafCount<=24 ? 22 : 18;
   const TREE_ROW_MAX_H = initialLeafCount<=8 ? 90 : initialLeafCount<=16 ? 60 : initialLeafCount<=24 ? 40 : 26;
-  // ヘッダー・見出し・「次の対戦へ」ボタン・下の保存ボタン分の目安の高さ。
+  // 大会名の見出し・ヒント文・「次の対戦へ」ボタン分の目安の高さ。
+  // 画像で保存ボタン等、表より下の要素は画面に収まっている必要がないため、下側の余白は最小限でよい。
   // 人数が少ない大会だと下限の行の高さでは画面の下に余白が余ってしまうため、
   // 実際の画面の高さから逆算し、余っている縦幅をできるだけ行の高さに還元する。
-  const TREE_CHROME_RESERVE = 260;
+  const TREE_CHROME_RESERVE = 165;
   const treeAvailableH = Math.max(200, window.innerHeight - TREE_CHROME_RESERVE);
   const TREE_ROW_H = initialLeafCount
     ? Math.max(TREE_ROW_MIN_H, Math.min(TREE_ROW_MAX_H, treeAvailableH / initialLeafCount))
