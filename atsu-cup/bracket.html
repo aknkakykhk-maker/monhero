@@ -14,7 +14,7 @@
   .tree-title{font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:16px; color:var(--gold); margin-bottom:10px; padding:0 10px;}
   .tree-scroll{
     overflow-x:auto; overflow-y:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);
-    background:#0a0810; padding:10px 0; max-height:62vh;
+    background:#0a0810; padding:10px 0; max-height:80vh;
   }
   .tree-scroll svg{ display:block; width:max(100%, var(--svg-natural-w, 0px)); height:auto; }
   .tree-tap{ cursor:pointer; }
@@ -71,6 +71,26 @@
     font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:26px; color:var(--gold);
     margin:6px 0 14px; text-shadow:0 0 16px rgba(232,179,76,.5);
   }
+  .match-pick-modal{ position:fixed; inset:0; z-index:2147483000; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .match-pick-modal-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.62); backdrop-filter:blur(2px); }
+  .match-pick-modal-card{
+    position:relative; width:100%; max-width:360px; background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line); border-radius:16px; padding:20px 18px; box-shadow:0 20px 60px rgba(0,0,0,.6);
+  }
+  .match-pick-modal-title{
+    text-align:center; font-size:11px; letter-spacing:.15em; color:var(--ember2); font-weight:900;
+    text-transform:uppercase; margin-bottom:14px;
+  }
+  .match-pick-modal-row{ display:flex; flex-direction:column; gap:10px; align-items:stretch; }
+  .match-pick-modal-row .vs-label{ text-align:center; }
+  .modal-pick-btn{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
+    background:#161320; border:1px solid var(--line); border-radius:12px; color:var(--cream);
+    font-weight:900; font-size:17px; padding:16px 18px; cursor:pointer; font-family:'Noto Sans JP',sans-serif;
+  }
+  .modal-pick-btn .nm{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .modal-pick-btn:active{ background:rgba(255,255,255,.08); }
+  .modal-pick-btn.winner{ background:linear-gradient(90deg,rgba(232,179,76,.28),rgba(232,179,76,.08)); border-color:var(--gold-dim); color:var(--gold); }
 </style>
 </head>
 <body>
@@ -87,7 +107,7 @@
   <section class="panel" id="treePanel" style="display:none;">
     <h2><span class="num">01</span> トーナメント表</h2>
     <div class="tree-title" id="treeTitle"></div>
-    <p class="hint">名前をタップすると勝敗を決められます。✏️で名前の書き換え、BYE枠の➕で途中参加者を追加できます。横スクロールできます。</p>
+    <p class="hint">対戦をタップすると勝敗を選べます。✏️で名前の書き換え、シード枠の➕で途中参加者を追加できます。横スクロールできます。</p>
     <div class="row" id="jumpRow" style="display:none; margin-bottom:10px;">
       <button class="btn btn-ghost" id="jumpNextBtn" style="width:100%;">🎯 次の対戦へ</button>
     </div>
@@ -100,6 +120,19 @@
 
   <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
   <datalist id="rosterCandidatesBracket"></datalist>
+</div>
+
+<div class="match-pick-modal" id="matchPickModal" style="display:none;">
+  <div class="match-pick-modal-backdrop" id="matchPickModalBackdrop"></div>
+  <div class="match-pick-modal-card">
+    <div class="match-pick-modal-title" id="modalMatchTitle"></div>
+    <div class="match-pick-modal-row">
+      <button type="button" class="modal-pick-btn" id="modalPickA"></button>
+      <span class="vs-label">VS</span>
+      <button type="button" class="modal-pick-btn" id="modalPickB"></button>
+    </div>
+    <button type="button" class="btn btn-ghost" id="modalCancelBtn" style="width:100%; margin-top:12px;">キャンセル</button>
+  </div>
 </div>
 
 <script src="tap-ripple.js"></script>
@@ -137,7 +170,7 @@
   // 参加者が多いほど表が縦に長くなりすぎないよう、行の高さを段階的に詰める
   // (leafCountは大会作成時の1回戦の人数で決まり、以降の途中参加等では変わらない)
   const initialLeafCount = state.matches[0] ? state.matches[0].length * 2 : 0;
-  const TREE_ROW_H = initialLeafCount<=8 ? 40 : initialLeafCount<=16 ? 32 : 26;
+  const TREE_ROW_H = initialLeafCount<=8 ? 40 : initialLeafCount<=16 ? 30 : initialLeafCount<=24 ? 22 : 18;
   const TREE_LABEL_W = 148;
   const TREE_COL_W = 46;
 
@@ -184,7 +217,7 @@
       [[2*i, m.a, false, 'a'], [2*i+1, m.b, m.b===null, 'b']].forEach(([idx, name, bye, side])=>{
         const y = leafY(idx);
         if(bye){
-          leavesSvg += `<text x="6" y="${y+5}" font-size="13" font-style="italic" fill="#6b5f82">BYE</text>`;
+          leavesSvg += `<text x="6" y="${y+5}" font-size="13" font-style="italic" fill="#6b5f82">シード</text>`;
           if(interactive){
             const rh0 = Math.min(32, TREE_ROW_H-2);
             treeSlotRects[`bye_${i}`] = {x:2, y:y-rh0/2, w:TREE_LABEL_W-38, h:rh0};
@@ -272,7 +305,7 @@
   function wireTreeInteractions(){
     document.querySelectorAll('#treeScroll .tree-tap').forEach(el=>{
       el.addEventListener('click', ()=>{
-        pick(+el.dataset.r, +el.dataset.m, el.dataset.side);
+        openMatchPickModal(+el.dataset.r, +el.dataset.m);
       });
     });
     document.querySelectorAll('#treeScroll .tree-edit-icon').forEach(el=>{
@@ -421,6 +454,29 @@
     renderTree();
     renderExtras();
   }
+
+  // トーナメント表が小さくなっても誤タップしにくいよう、対戦をタップすると
+  // 「A vs B」がはっきり分かるモーダルを開いてから勝者を選べるようにする
+  function openMatchPickModal(r, m){
+    const match = state.matches[r] && state.matches[r][m];
+    if(!match || !match.a || !match.b) return;
+    const recMap = AtsuCup.recMapOf();
+    document.getElementById('modalMatchTitle').textContent = AtsuCup.roundLabel(state.matches[r].length);
+    const btnA = document.getElementById('modalPickA');
+    const btnB = document.getElementById('modalPickB');
+    btnA.innerHTML = `<span class="nm">${escapeHtml(match.a)}</span><span>${recMap[match.a]?'📹':'🚫'}</span>`;
+    btnB.innerHTML = `<span class="nm">${escapeHtml(match.b)}</span><span>${recMap[match.b]?'📹':'🚫'}</span>`;
+    btnA.classList.toggle('winner', match.winner===match.a);
+    btnB.classList.toggle('winner', match.winner===match.b);
+    btnA.onclick = ()=>{ pick(r, m, 'a'); closeMatchPickModal(); };
+    btnB.onclick = ()=>{ pick(r, m, 'b'); closeMatchPickModal(); };
+    document.getElementById('matchPickModal').style.display = 'flex';
+  }
+  function closeMatchPickModal(){
+    document.getElementById('matchPickModal').style.display = 'none';
+  }
+  document.getElementById('matchPickModalBackdrop').addEventListener('click', closeMatchPickModal);
+  document.getElementById('modalCancelBtn').addEventListener('click', closeMatchPickModal);
 
   // 次の対戦へトーナメント表をスクロールし、該当箇所を光らせて分かりやすくする
   function jumpToNextMatch(next){
