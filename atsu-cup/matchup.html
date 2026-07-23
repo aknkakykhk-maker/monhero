@@ -42,6 +42,13 @@
     position:fixed; font-size:22px; pointer-events:none; z-index:2147483000;
     animation:atsuSeedFly 900ms ease-out forwards;
   }
+  .back-to-roulette-btn{
+    position:fixed; right:14px; bottom:calc(16px + env(safe-area-inset-bottom)); z-index:60;
+    display:none; align-items:center; gap:6px; background:linear-gradient(90deg,var(--gold),var(--ember2));
+    color:#1a1208; font-weight:900; font-size:12.5px; padding:11px 16px; border:none; border-radius:999px;
+    box-shadow:0 8px 24px rgba(0,0,0,.5); cursor:pointer; font-family:'Noto Sans JP',sans-serif;
+  }
+  .back-to-roulette-btn:active{ transform:scale(.94); }
   @keyframes atsuSeedFly{
     0%{ transform:translate(-50%,-50%) scale(.5); opacity:1; }
     100%{ transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.15); opacity:0; }
@@ -164,6 +171,8 @@
   <datalist id="rosterCandidates"></datalist>
 </div>
 
+<button type="button" class="back-to-roulette-btn" id="backToRouletteBtn">🎡 ルーレットに戻る</button>
+
 <script src="tap-ripple.js"></script>
 <script src="atsucup-core.js"></script>
 <script>
@@ -231,6 +240,7 @@
       document.getElementById('rouletteBox').style.display = 'block';
       document.getElementById('manualBox').style.display = 'none';
       renderDecideModeTabs();
+      updateBackToRouletteBtn();
     });
     document.getElementById('modeManualBtn').addEventListener('click', ()=>{
       decideMode = 'manual';
@@ -249,8 +259,19 @@
       document.getElementById('manualBox').style.display = 'block';
       renderDecideModeTabs();
       renderManualEditor();
+      updateBackToRouletteBtn();
     });
   }
+
+  // ルーレットを回した後、組み合わせ確認のため下にスクロールした状態からでも、
+  // ワンタップでルーレットの位置まで戻れるようにする
+  function updateBackToRouletteBtn(){
+    const show = decideMode==='roulette' && state.people.length>0 && AtsuCup.bracketNotStarted();
+    document.getElementById('backToRouletteBtn').style.display = show ? 'flex' : 'none';
+  }
+  document.getElementById('backToRouletteBtn').addEventListener('click', ()=>{
+    document.getElementById('rouletteBox').scrollIntoView({behavior:'smooth', block:'center'});
+  });
 
   function renderManualEditor(){
     const manualBox = document.getElementById('manualBox');
@@ -767,6 +788,7 @@
     renderDecideVisibility();
     drawWheel();
     renderPairingPreview();
+    updateBackToRouletteBtn();
   }
 
   renderDecideModeTabs();

@@ -9,10 +9,17 @@
 <link rel="stylesheet" href="atsucup-style.css">
 <style>
   /* このページだけ左右の余白と縦の隙間を詰めて、トーナメント表により多くのスペースを使う */
-  .wrap{ padding-left:8px; padding-right:8px; padding-top:10px; }
-  #treePanel{ padding:10px 6px 14px; }
-  #treePanel h2{ margin-bottom:4px; }
-  .tree-title{font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:15px; color:var(--gold); margin-bottom:4px; padding:0 10px;}
+  .wrap{ padding-left:8px; padding-right:8px; padding-top:6px; }
+  header.top{ padding:4px 6px 2px; }
+  .crown-mark{ font-size:17px; }
+  header.top h1{ font-size:18px; margin:2px 0 0; }
+  header.top .sub{ font-size:9px; }
+  #treePanel{ padding:8px 6px 14px; }
+  #treePanel h2{ margin-bottom:2px; }
+  .tree-title{font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:14px; color:var(--gold); margin-bottom:2px; padding:0 10px;}
+  #treePanel > p.hint{ margin:0 0 6px !important; font-size:10.5px; }
+  #jumpRow{ margin-bottom:6px !important; }
+  #jumpRow .btn{ padding:8px 14px; font-size:12.5px; }
   .tree-scroll{
     overflow-x:auto; overflow-y:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);
     background:#0a0810; padding:8px 0; max-height:84vh;
@@ -176,7 +183,7 @@
   // ヘッダー・見出し・「次の対戦へ」ボタン・下の保存ボタン分の目安の高さ。
   // 人数が少ない大会だと下限の行の高さでは画面の下に余白が余ってしまうため、
   // 実際の画面の高さから逆算し、余っている縦幅をできるだけ行の高さに還元する。
-  const TREE_CHROME_RESERVE = 330;
+  const TREE_CHROME_RESERVE = 260;
   const treeAvailableH = Math.max(200, window.innerHeight - TREE_CHROME_RESERVE);
   const TREE_ROW_H = initialLeafCount
     ? Math.max(TREE_ROW_MIN_H, Math.min(TREE_ROW_MAX_H, treeAvailableH / initialLeafCount))
