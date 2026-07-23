@@ -52,6 +52,13 @@
     border-radius:10px; padding:9px 10px; font-size:13px; touch-action:pan-y;
   }
   .order-item.dragging{ box-shadow:0 8px 22px rgba(0,0,0,.5); border-color:var(--ember2); z-index:20; position:relative; }
+  .order-item.is-seed{ border-color:var(--gold-dim); background:#181206; }
+  .seed-toggle-btn, .remove-btn{
+    flex-shrink:0; background:none; border:1px solid var(--line); border-radius:6px; color:var(--muted);
+    font-size:13px; padding:5px 8px; cursor:pointer;
+  }
+  .seed-toggle-btn.active{ background:rgba(232,179,76,.18); border-color:var(--gold-dim); color:var(--gold); }
+  .remove-btn{ color:#ff8f8f; }
   .order-item .drag-handle{
     flex-shrink:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center;
     color:var(--muted); font-size:18px; cursor:grab; touch-action:none; border-radius:6px;
@@ -171,8 +178,9 @@
     state.roster.map(n=>`<option value="${escapeHtml(n)}">`).join('');
 
   let decideMode = 'roulette';
-  let manualPairOrder = null; // 対戦順(上から2人ずつ組む対象、シードに選んだ人は含まない)
-  let manualSeeds = [];       // シード(不戦勝)に指定した人
+  let manualPool = [];        // まだ順番に組み込んでいない候補
+  let manualBuilt = [];       // タップした順に並んだ{name, seed}の配列(これがそのまま組み合わせの順番になる)
+  let manualSeedMode = false; // オンの間に候補をタップすると、その人はシード(不戦勝)として追加される
 
   // 既に組み合わせが決まっている場合、そのBYE(不戦勝)を初期シードとして引き継ぐ
   function flattenSeeds(){
@@ -219,16 +227,24 @@
       <button class="btn ${decideMode==='manual'?'btn-gold':'btn-ghost'}" id="modeManualBtn">✋ 手動で決める</button>
     `;
     document.getElementById('modeRouletteBtn').addEventListener('click', ()=>{
-      decideMode = 'roulette'; manualPairOrder = null; manualSeeds = [];
+      decideMode = 'roulette'; manualPool = []; manualBuilt = []; manualSeedMode = false;
       document.getElementById('rouletteBox').style.display = 'block';
       document.getElementById('manualBox').style.display = 'none';
       renderDecideModeTabs();
     });
     document.getElementById('modeManualBtn').addEventListener('click', ()=>{
       decideMode = 'manual';
-      const seeds = flattenSeeds();
-      manualSeeds = seeds;
-      manualPairOrder = flattenOrder().filter(n=>!seeds.includes(n));
+      if(state.matches.length && state.matches[0].length){
+        // 既に組み合わせが決まっている場合は、その並び順・シードをそのまま引き継いで表示する
+        const seeds = flattenSeeds();
+        manualBuilt = flattenOrder().map(n=>({name:n, seed:seeds.includes(n)}));
+        manualPool = [];
+      }else{
+        // まだ決まっていない場合は、参加者を全員「候補」に置き、タップした順に組み合わせを作ってもらう
+        manualBuilt = [];
+        manualPool = state.people.map(p=>p.name);
+      }
+      manualSeedMode = false;
       document.getElementById('rouletteBox').style.display = 'none';
       document.getElementById('manualBox').style.display = 'block';
       renderDecideModeTabs();
@@ -239,55 +255,86 @@
   function renderManualEditor(){
     const manualBox = document.getElementById('manualBox');
     const recMap = AtsuCup.recMapOf();
-    const total = manualPairOrder.length + manualSeeds.length;
+    const total = manualBuilt.length + manualPool.length;
     const size = AtsuCup.nextPow2(total);
     const byeCount = size - total;
-    const seedDone = manualSeeds.length === byeCount;
-    const allNames = manualPairOrder.concat(manualSeeds);
+    const seedCount = manualBuilt.filter(b=>b.seed).length;
+    const seedDone = seedCount === byeCount;
+    const allPlaced = manualPool.length === 0;
+    const canConfirm = total>0 && allPlaced && seedDone;
+
+    let applyLabel = 'この組み合わせで決定する';
+    if(!allPlaced) applyLabel = `あと${manualPool.length}人選んでください`;
+    else if(!seedDone) applyLabel = byeCount>seedCount ? `シードをあと${byeCount-seedCount}人選んでください` : `シードが${seedCount-byeCount}人多いです`;
 
     manualBox.innerHTML = `
-      ${byeCount>0 ? `
-        <div class="manual-seed-label">🌱 シード(不戦勝)を選ぶ <span class="count-badge ${seedDone?'':'muted2'}" style="margin:0;">${manualSeeds.length}/${byeCount}人</span></div>
-        <p class="hint" style="margin-top:2px;">タップでシード(不戦勝)に指定できます。対戦をせずに次に進める人数分(${byeCount}人)選んでください。</p>
-        <div class="seed-chip-list" id="seedChipList">
-          ${allNames.map(name=>{
-            const isSeed = manualSeeds.includes(name);
-            return `<button type="button" class="seed-chip ${isSeed?'active':''}" data-seedtoggle="${escapeHtml(name)}">${isSeed?'🌱 ':''}${escapeHtml(name)}</button>`;
-          }).join('')}
+      <div class="row" style="margin-bottom:6px;">
+        <button type="button" class="btn ${manualSeedMode?'btn-gold':'btn-ghost'}" id="seedModeBtn" style="width:100%;">
+          ${manualSeedMode ? '🌱 次にタップした人はシード(不戦勝)になります' : '🌱 次をシード(不戦勝)として追加する'}
+        </button>
+      </div>
+      <p class="hint" style="margin-top:0;">下の候補を対戦させたい順にタップしてください。タップした順番がそのまま組み合わせの順番になります。${byeCount>0?`(シードは${byeCount}人必要・現在${seedCount}人)`:''}</p>
+
+      ${manualPool.length ? `
+        <div class="manual-seed-label">候補(タップで追加)</div>
+        <div class="seed-chip-list" id="manualPoolList">
+          ${manualPool.map(name=>`<button type="button" class="seed-chip" data-pooltap="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('')}
         </div>
       ` : ''}
-      <p class="hint" style="margin-top:14px;">⠿を長押ししてドラッグすると順番を並べ替えられます。名前をタップすると直接書き換えられます。上から2人ずつ対戦になります。</p>
-      <div class="order-list" id="manualOrderList">
-        ${manualPairOrder.map((name,i)=>{
-          return `<div class="order-item" data-idx="${i}">
-            <span class="drag-handle">⠿</span>
-            <span class="idx">${i+1}</span>
-            <span class="nm-edit" data-edit="${escapeHtml(name)}">${escapeHtml(name)}</span>
-            <span class="cam">${recMap[name]?'📹':'🚫'}</span>
-          </div>`;
-        }).join('')}
-      </div>
-      <div class="row">
-        <button class="btn btn-primary" id="applyManualBtn" ${seedDone?'':'disabled'}>${seedDone ? 'この組み合わせで決定する' : `あとシードを${byeCount-manualSeeds.length}人選んでください`}</button>
+
+      <div class="manual-seed-label" style="margin-top:16px;">決定した順番${manualBuilt.length?`(${manualBuilt.length}人)`:''}</div>
+      ${manualBuilt.length ? `
+        <p class="hint" style="margin-top:0;">⠿のドラッグで並び替え、名前タップで書き換え、🌱でシードの切り替え、✕で候補に戻せます。上から2人ずつ対戦になります。</p>
+        <div class="order-list" id="manualOrderList">
+          ${manualBuilt.map((b,i)=>`
+            <div class="order-item ${b.seed?'is-seed':''}" data-idx="${i}">
+              <span class="drag-handle">⠿</span>
+              <span class="idx">${i+1}</span>
+              <span class="nm-edit" data-edit="${escapeHtml(b.name)}">${escapeHtml(b.name)}</span>
+              <span class="cam">${recMap[b.name]?'📹':'🚫'}</span>
+              <button type="button" class="seed-toggle-btn ${b.seed?'active':''}" data-seedtoggleidx="${i}" title="シードの切り替え">🌱</button>
+              <button type="button" class="remove-btn" data-removeidx="${i}" title="候補に戻す">✕</button>
+            </div>
+          `).join('')}
+        </div>
+      ` : `<div class="empty-state" style="padding:10px;">上の候補をタップして、対戦させたい順番に並べてください。</div>`}
+
+      <div class="row" style="margin-top:14px;">
+        <button class="btn btn-primary" id="applyManualBtn" ${canConfirm?'':'disabled'}>${applyLabel}</button>
       </div>
     `;
 
-    if(byeCount>0){
-      manualBox.querySelectorAll('[data-seedtoggle]').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const name = btn.dataset.seedtoggle;
-          if(manualSeeds.includes(name)){
-            manualSeeds = manualSeeds.filter(n=>n!==name);
-            manualPairOrder.push(name);
-          }else{
-            if(manualSeeds.length >= byeCount) return;
-            manualPairOrder = manualPairOrder.filter(n=>n!==name);
-            manualSeeds.push(name);
-          }
-          renderManualEditor();
-        });
+    const seedModeBtn = document.getElementById('seedModeBtn');
+    seedModeBtn.addEventListener('click', ()=>{
+      manualSeedMode = !manualSeedMode;
+      renderManualEditor();
+    });
+
+    manualBox.querySelectorAll('[data-pooltap]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const name = btn.dataset.pooltap;
+        manualPool = manualPool.filter(n=>n!==name);
+        manualBuilt.push({name, seed: manualSeedMode});
+        renderManualEditor();
       });
-    }
+    });
+
+    manualBox.querySelectorAll('[data-seedtoggleidx]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const idx = +btn.dataset.seedtoggleidx;
+        manualBuilt[idx].seed = !manualBuilt[idx].seed;
+        renderManualEditor();
+      });
+    });
+
+    manualBox.querySelectorAll('[data-removeidx]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const idx = +btn.dataset.removeidx;
+        const [removed] = manualBuilt.splice(idx,1);
+        manualPool.push(removed.name);
+        renderManualEditor();
+      });
+    });
 
     manualBox.querySelectorAll('[data-edit]').forEach(span=>{
       span.addEventListener('click', ()=>{
@@ -305,10 +352,8 @@
           done = true;
           const val = input.value.trim();
           if(val && val !== oldName){
-            const pi = manualPairOrder.indexOf(oldName);
-            if(pi>=0) manualPairOrder[pi] = val;
-            const si = manualSeeds.indexOf(oldName);
-            if(si>=0) manualSeeds[si] = val;
+            const entry = manualBuilt.find(b=>b.name===oldName);
+            if(entry) entry.name = val;
           }
           renderManualEditor();
         };
@@ -318,55 +363,60 @@
     });
 
     const listEl = document.getElementById('manualOrderList');
-    listEl.querySelectorAll('.order-item').forEach(row=>{
-      const handle = row.querySelector('.drag-handle');
-      handle.addEventListener('pointerdown', (e)=>{
-        e.preventDefault();
-        const startIdx = +row.dataset.idx;
-        let curIdx = startIdx;
-        const startY = e.clientY;
-        const rows = Array.from(listEl.children);
-        const rowStep = rows.length>1 ? (rows[1].offsetTop - rows[0].offsetTop) : row.offsetHeight;
-        row.classList.add('dragging');
-        row.setPointerCapture(e.pointerId);
+    if(listEl){
+      listEl.querySelectorAll('.order-item').forEach(row=>{
+        const handle = row.querySelector('.drag-handle');
+        handle.addEventListener('pointerdown', (e)=>{
+          e.preventDefault();
+          const startIdx = +row.dataset.idx;
+          let curIdx = startIdx;
+          const startY = e.clientY;
+          const rows = Array.from(listEl.children);
+          const rowStep = rows.length>1 ? (rows[1].offsetTop - rows[0].offsetTop) : row.offsetHeight;
+          row.classList.add('dragging');
+          row.setPointerCapture(e.pointerId);
 
-        function onMove(ev){
-          const dy = ev.clientY - startY;
-          const steps = Math.round(dy / rowStep);
-          const newIdx = Math.max(0, Math.min(manualPairOrder.length-1, startIdx + steps));
-          row.style.transform = `translateY(${dy - (newIdx-startIdx)*rowStep}px)`;
-          if(newIdx !== curIdx){
-            const item = manualPairOrder.splice(curIdx,1)[0];
-            manualPairOrder.splice(newIdx,0,item);
-            const others = Array.from(listEl.children).filter(el=>el!==row);
-            const refEl = others[newIdx] || null;
-            if(refEl) listEl.insertBefore(row, refEl);
-            else listEl.appendChild(row);
-            curIdx = newIdx;
+          function onMove(ev){
+            const dy = ev.clientY - startY;
+            const steps = Math.round(dy / rowStep);
+            const newIdx = Math.max(0, Math.min(manualBuilt.length-1, startIdx + steps));
+            row.style.transform = `translateY(${dy - (newIdx-startIdx)*rowStep}px)`;
+            if(newIdx !== curIdx){
+              const item = manualBuilt.splice(curIdx,1)[0];
+              manualBuilt.splice(newIdx,0,item);
+              const others = Array.from(listEl.children).filter(el=>el!==row);
+              const refEl = others[newIdx] || null;
+              if(refEl) listEl.insertBefore(row, refEl);
+              else listEl.appendChild(row);
+              curIdx = newIdx;
+            }
           }
-        }
-        function onUp(){
-          row.style.transform = '';
-          row.classList.remove('dragging');
-          document.removeEventListener('pointermove', onMove);
-          document.removeEventListener('pointerup', onUp);
-          renderManualEditor();
-        }
-        document.addEventListener('pointermove', onMove);
-        document.addEventListener('pointerup', onUp);
+          function onUp(){
+            row.style.transform = '';
+            row.classList.remove('dragging');
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
+            renderManualEditor();
+          }
+          document.addEventListener('pointermove', onMove);
+          document.addEventListener('pointerup', onUp);
+        });
       });
-    });
+    }
 
     const applyBtn = document.getElementById('applyManualBtn');
     applyBtn.addEventListener('click', ()=>{
-      if(manualSeeds.length !== byeCount) return;
-      state.matches = [AtsuCup.buildRound1Manual(manualPairOrder.concat(manualSeeds), manualSeeds)];
-      state.order = [...manualSeeds, ...manualPairOrder];
+      if(!canConfirm) return;
+      const orderedNames = manualBuilt.map(b=>b.name);
+      const seedNames = manualBuilt.filter(b=>b.seed).map(b=>b.name);
+      state.matches = [AtsuCup.buildRound1Manual(orderedNames, seedNames)];
+      state.order = orderedNames;
       state.remaining = [];
       state.thirdPlaceMatch = null;
       state.winnerName = "";
-      manualPairOrder = null;
-      manualSeeds = [];
+      manualBuilt = [];
+      manualPool = [];
+      manualSeedMode = false;
       AtsuCup.persist();
       decideMode = 'roulette';
       document.getElementById('rouletteBox').style.display = 'block';
