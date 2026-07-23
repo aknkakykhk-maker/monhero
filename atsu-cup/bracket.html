@@ -337,10 +337,11 @@
     const rect = treeSlotRects[`bye_${m}`];
     const svgEl = document.querySelector('#treeScroll svg');
     if(!rect || !svgEl) return;
-    // この不戦勝が既に次の対戦以降まで進んでいた場合、追加すると先の結果がすべてリセットされるため
-    // 気付かないまま優勝結果等が消えてしまわないよう、事前に確認する
-    if(state.matches.length > 1){
-      const ok = confirm('この不戦勝はすでに次の対戦以降に進んでいます。\n途中参加者を追加すると、次の対戦以降の結果はいったんリセットされます。よろしいですか?');
+    // 1回戦を残したまま2回戦以降を先に消化できるようになったため、次のラウンドの枠が存在していても
+    // まだ何も確定していないことがある。実際に対戦カードや結果が先に進んでいる場合だけ、
+    // 気付かないまま消えてしまわないよう事前に確認する
+    if(AtsuCup.hasDownstreamProgress(0)){
+      const ok = confirm('この不戦勝より先のラウンドに、既に対戦カードや結果が決まっています。\n途中参加者を追加すると、次の対戦以降の結果はいったんリセットされます。よろしいですか?');
       if(!ok) return;
     }
     const already = svgEl.querySelector('foreignObject.tree-edit-fo');
