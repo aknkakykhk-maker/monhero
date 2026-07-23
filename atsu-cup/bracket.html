@@ -168,10 +168,19 @@
   document.getElementById('treeTitle').textContent = (state.tournamentMeta && state.tournamentMeta.title) || 'あつ杯 トーナメント表';
 
   /* ---------- 本物のトーナメント表(参加者を縦一列に並べ、線でつなぐ) ---------- */
-  // 参加者が多いほど表が縦に長くなりすぎないよう、行の高さを段階的に詰める
+  // 参加者が多いほど表が縦に長くなりすぎないよう、行の高さの下限・上限を段階的に決める。
   // (leafCountは大会作成時の1回戦の人数で決まり、以降の途中参加等では変わらない)
   const initialLeafCount = state.matches[0] ? state.matches[0].length * 2 : 0;
-  const TREE_ROW_H = initialLeafCount<=8 ? 40 : initialLeafCount<=16 ? 30 : initialLeafCount<=24 ? 22 : 18;
+  const TREE_ROW_MIN_H = initialLeafCount<=8 ? 40 : initialLeafCount<=16 ? 30 : initialLeafCount<=24 ? 22 : 18;
+  const TREE_ROW_MAX_H = initialLeafCount<=8 ? 90 : initialLeafCount<=16 ? 60 : initialLeafCount<=24 ? 40 : 26;
+  // ヘッダー・見出し・「次の対戦へ」ボタン・下の保存ボタン分の目安の高さ。
+  // 人数が少ない大会だと下限の行の高さでは画面の下に余白が余ってしまうため、
+  // 実際の画面の高さから逆算し、余っている縦幅をできるだけ行の高さに還元する。
+  const TREE_CHROME_RESERVE = 330;
+  const treeAvailableH = Math.max(200, window.innerHeight - TREE_CHROME_RESERVE);
+  const TREE_ROW_H = initialLeafCount
+    ? Math.max(TREE_ROW_MIN_H, Math.min(TREE_ROW_MAX_H, treeAvailableH / initialLeafCount))
+    : TREE_ROW_MIN_H;
   const TREE_LABEL_W = 148;
   const TREE_COL_W = 46;
 
