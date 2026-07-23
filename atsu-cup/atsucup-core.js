@@ -175,20 +175,27 @@ const AtsuCup = (function(){
           const recMap = recMapOf();
           // 本物のトーナメント表と同じく、隣り合う勝者同士を固定位置で組むのが基本。
           // ただし両者とも撮影不可になる場合だけ、両方とも撮影OKな隣の試合から1人借りて入れ替える例外処理を行う
-          // (それでも解消できない場合はそのまま続行する)
+          // (それでも解消できない場合はそのまま続行する)。
+          // 入れ替え相手は「最初に見つかった組」ではなく「一番近い組」を選ぶ。遠く離れた組と入れ替えると
+          // 対戦表の線が他の対戦をまたいで長く交差してしまい、見た目が大きく崩れるため。
           const pairs = [];
           for(let k=0;k<winners.length;k+=2){ pairs.push([winners[k], winners[k+1]]); }
           for(let k=0;k<pairs.length;k++){
             const [a,b] = pairs[k];
             if(recMap[a] || recMap[b]) continue;
+            let bestJ = -1, bestDist = Infinity;
             for(let j=0;j<pairs.length;j++){
               if(j===k) continue;
               const [c,d] = pairs[j];
               if(recMap[c] && recMap[d]){
-                pairs[k] = [a, c];
-                pairs[j] = [b, d];
-                break;
+                const dist = Math.abs(j-k);
+                if(dist < bestDist){ bestDist = dist; bestJ = j; }
               }
+            }
+            if(bestJ>=0){
+              const [c,d] = pairs[bestJ];
+              pairs[k] = [a, c];
+              pairs[bestJ] = [b, d];
             }
           }
           state.matches[r+1] = pairs.map(([a,b])=>({a,b,winner:null,loser:null,video:""}));
@@ -523,7 +530,7 @@ const AtsuCup = (function(){
 
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-23 19:30";
+  const BUILD_DATE = "2026-07-23 21:00";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
