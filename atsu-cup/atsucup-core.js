@@ -112,6 +112,34 @@ const AtsuCup = (function(){
     return pairs;
   }
 
+  // シード(不戦勝)は勝者がその場で確定するため、隣り合う2つのシードが両方とも撮影不可だと
+  // 次のラウンドで撮影不可同士が対戦することが「その時点で」わかってしまう。
+  // 実際の対戦(bが決まっている試合)には手を触れず、シード同士の並び順だけを入れ替えて事前に回避する。
+  function avoidByeCameraCollision(round1, recMap){
+    for(let k=0;k+1<round1.length;k+=2){
+      const m0 = round1[k], m1 = round1[k+1];
+      if(!m0 || !m1 || m0.b !== null || m1.b !== null) continue;
+      if(recMap[m0.a] || recMap[m1.a]) continue;
+      let bestJ = -1, bestDist = Infinity;
+      for(let j=0;j+1<round1.length;j+=2){
+        if(j===k) continue;
+        const n0 = round1[j], n1 = round1[j+1];
+        if(!n0 || !n1 || n0.b !== null || n1.b !== null) continue;
+        if(recMap[n0.a] && recMap[n1.a]){
+          const dist = Math.abs(j-k);
+          if(dist < bestDist){ bestDist = dist; bestJ = j; }
+        }
+      }
+      if(bestJ>=0){
+        const donor = round1[bestJ+1];
+        const tmp = m1.a;
+        m1.a = donor.a; m1.winner = donor.a;
+        donor.a = tmp; donor.winner = tmp;
+      }
+    }
+    return round1;
+  }
+
   // 参加者リストから、撮影不可同士が当たらないようラウンド1(不戦勝含む)を組む
   function buildRound1(names){
     const recMap = recMapOf();
@@ -129,7 +157,7 @@ const AtsuCup = (function(){
     byePlayers.forEach(p=> round1.push({a:p, b:null, winner:p, loser:null, video:""}));
     pairs.forEach(([a,b])=> round1.push({a, b, winner:null, loser:null, video:""}));
     shuffleArray(round1);
-    return round1;
+    return avoidByeCameraCollision(round1, recMap);
   }
 
   // 手動で決めた順番(orderedNames)を、そのまま前から2人ずつ組む。人数が2の累乗に足りない分はBYE(不戦勝)になる。
@@ -151,7 +179,7 @@ const AtsuCup = (function(){
     for(let i=0;i<pairNames.length;i+=2){
       round1.push({a:pairNames[i], b:pairNames[i+1], winner:null, loser:null, video:""});
     }
-    return round1;
+    return avoidByeCameraCollision(round1, recMapOf());
   }
 
   function resetDownstream(){
@@ -529,7 +557,7 @@ const AtsuCup = (function(){
 
   /* ---------- 更新通知バナー(あつ杯の全ページ共通、モンヒロと同じ方式) ---------- */
   // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
-  const BUILD_DATE = "2026-07-23 21:30";
+  const BUILD_DATE = "2026-07-23 22:10";
   function initUpdateBanner(){
     if(typeof document === 'undefined' || !document.body) return;
     if(document.getElementById('atsucupUpdateBanner')) return;
