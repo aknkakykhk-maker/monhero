@@ -14,7 +14,6 @@
     display:flex; align-items:center; gap:10px; background:#0d0a14; border:1px solid var(--line);
     border-radius:10px; padding:10px 12px; margin-bottom:7px; cursor:pointer;
   }
-  .rank-row.selected{ border-color:var(--gold-dim); background:#181206; }
   .rank-row .rank{
     width:30px; flex-shrink:0; text-align:center; font-family:'JetBrains Mono',monospace; font-weight:900;
     font-size:13px; color:var(--muted);
@@ -33,25 +32,6 @@
     margin-bottom:14px; font-size:11px; color:var(--muted); background:#0d0a14; border:1px solid var(--line);
     border-radius:8px; padding:8px 10px; line-height:1.7;
   }
-  .hist-item-wrap{ margin-bottom:6px; }
-  .hist-item-wrap .hist-item{ margin-bottom:0; }
-  .path-list{
-    background:#08060c; border:1px solid var(--line); border-top:none; border-radius:0 0 8px 8px;
-    padding:4px 12px 8px; margin-top:-1px;
-  }
-  .path-step{
-    display:flex; align-items:center; gap:8px; padding:6px 0; font-size:12px; color:var(--muted);
-    border-top:1px dashed var(--line);
-  }
-  .path-step:first-child{ border-top:none; }
-  .path-step.win{ color:var(--cream); }
-  .path-step.lose{ color:var(--muted); }
-  .path-round{
-    flex-shrink:0; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--ember2);
-    background:rgba(255,106,43,.1); border-radius:5px; padding:2px 6px;
-  }
-  .path-mid{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .path-video{ flex-shrink:0; text-decoration:none; font-size:14px; }
 </style>
 </head>
 <body>
@@ -65,11 +45,10 @@
 
   <section class="panel">
     <h2><span class="num">01</span> 戦績ランキング</h2>
-    <p class="hint">名前をタップすると、これまでの大会での成績を確認できます。</p>
+    <p class="hint">名前をタップすると、詳細画面でこれまでの大会での成績を確認できます。</p>
     <div class="points-hint">🏆 ポイントは大会ごとに加算されます: 対戦に1勝で1P / 4位3P / 3位5P / 準優勝7P / 優勝10P</div>
     <div class="sort-tabs" id="sortTabs"></div>
     <div id="rankList"></div>
-    <div id="recordResultArea" style="margin-top:16px;"></div>
   </section>
 
   <footer class="note">参加者・大会・対戦結果・戦績は、すべてこの端末のブラウザ内に保存されます。</footer>
@@ -85,45 +64,6 @@
   AtsuCup.restore();
 
   let sortMode = 'ranking'; // 'ranking' | 'name'
-  let selectedRecordName = null;
-  let expandedEntryIdx = null;
-
-  // 指定の大会(entry)で、その人が各ラウンドで誰と対戦してどうなったかを時系列で並べる
-  function computeParticipantPath(entry, name){
-    const path = [];
-    (entry.matches||[]).forEach(round=>{
-      round.forEach(m=>{
-        if(m.a !== name && m.b !== name) return;
-        if(m.b === null){
-          path.push({ roundLabel: AtsuCup.roundLabel(round.length), opponent:null, result:'bye', video:'' });
-          return;
-        }
-        const opponent = (m.a===name) ? m.b : m.a;
-        const result = m.winner ? (m.winner===name ? 'win' : 'lose') : null;
-        path.push({ roundLabel: AtsuCup.roundLabel(round.length), opponent, result, video: m.video||'' });
-      });
-    });
-    const tp = entry.thirdPlaceMatch;
-    if(tp && (tp.a===name || tp.b===name)){
-      const opponent = tp.a===name ? tp.b : tp.a;
-      const result = tp.winner ? (tp.winner===name ? 'win' : 'lose') : null;
-      path.push({ roundLabel:'3位決定戦', opponent, result, video:'' });
-    }
-    return path;
-  }
-
-  function pathItemHtml(step){
-    if(step.result==='bye'){
-      return `<div class="path-step"><span class="path-round">${escapeHtml(step.roundLabel)}</span><span class="path-mid">🐰 不戦勝(BYE)</span></div>`;
-    }
-    const icon = step.result==='win' ? '⭕' : step.result==='lose' ? '❌' : '➖';
-    const cls = step.result==='win' ? 'win' : step.result==='lose' ? 'lose' : '';
-    return `<div class="path-step ${cls}">
-      <span class="path-round">${escapeHtml(step.roundLabel)}</span>
-      <span class="path-mid">${icon} vs ${step.opponent?escapeHtml(step.opponent):'(未定)'}</span>
-      ${step.video?`<a class="path-video" href="${escapeHtml(step.video)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🎬</a>`:''}
-    </div>`;
-  }
 
   function renderSortTabs(){
     document.getElementById('sortTabs').innerHTML = `
@@ -159,7 +99,7 @@
     }
     list.innerHTML = stats.map((s,i)=>{
       const rank = i+1;
-      return `<div class="rank-row ${s.name===selectedRecordName?'selected':''}" data-name="${escapeHtml(s.name)}">
+      return `<div class="rank-row" data-name="${escapeHtml(s.name)}">
         <div class="rank ${rankBadgeClass(rank)}">${rankLabel(rank)}</div>
         <div class="rr-main">
           <div class="rr-name">${escapeHtml(s.name)}</div>
@@ -170,69 +110,13 @@
     }).join('');
     list.querySelectorAll('.rank-row').forEach(row=>{
       row.addEventListener('click', ()=>{
-        selectedRecordName = row.dataset.name;
-        expandedEntryIdx = null;
-        renderRankList();
-        renderRecordResult();
-      });
-    });
-  }
-
-  function renderRecordResult(){
-    const area = document.getElementById('recordResultArea');
-    if(!selectedRecordName){ area.innerHTML = ''; return; }
-    const entries = AtsuCup.allFinishedEntries().filter(e => (e.participants||[]).some(p=>p.name===selectedRecordName));
-    if(!entries.length){
-      area.innerHTML = `<div class="empty-state" style="padding:16px 10px;">「${escapeHtml(selectedRecordName)}」がまだ参加した大会の結果がありません。</div>`;
-      return;
-    }
-    let p1=0, p2=0, p3=0, totalPoints=0;
-    const rows = entries.map((e,i)=>{
-      const pl = AtsuCup.computePlacements(e)[selectedRecordName] || {place:null, label:'参加'};
-      const pts = AtsuCup.computeTournamentPoints(e)[selectedRecordName] || 0;
-      totalPoints += pts;
-      if(pl.place===1) p1++; else if(pl.place===2) p2++; else if(pl.place===3) p3++;
-      return { idx:i, entry:e, title: e.title, label: pl.label, place: pl.place, pts };
-    });
-    const resClass = p => p===1?'p1':p===2?'p2':p===3?'p3':p===4?'p4':'pother';
-    area.innerHTML = `
-      <div class="stat-grid">
-        <div class="stat-box"><div class="v">${p1}</div><div class="l">優勝</div></div>
-        <div class="stat-box"><div class="v">${p2}</div><div class="l">準優勝</div></div>
-        <div class="stat-box"><div class="v">${p3}</div><div class="l">3位</div></div>
-      </div>
-      <div class="stat-grid" style="grid-template-columns:1fr;">
-        <div class="stat-box"><div class="v">${totalPoints}P</div><div class="l">通算ポイント</div></div>
-      </div>
-      <p class="hint" style="margin-top:2px;">大会名をタップすると、何回戦で誰と対戦したかの詳細が見られます。</p>
-      ${rows.map(r=>{
-        const isOpen = expandedEntryIdx === r.idx;
-        const path = isOpen ? computeParticipantPath(r.entry, selectedRecordName) : [];
-        return `
-        <div class="hist-item-wrap">
-          <div class="hist-item" data-entryidx="${r.idx}" style="cursor:pointer;">
-            <span>${isOpen?'▾':'▸'} ${escapeHtml(r.title)}</span>
-            <span class="row" style="gap:6px;">
-              <span class="res ${resClass(r.place)}">${escapeHtml(r.label)}</span>
-              <span class="count-badge muted2" style="margin:0;">${r.pts}P</span>
-            </span>
-          </div>
-          ${isOpen ? `<div class="path-list">${path.length ? path.map(pathItemHtml).join('') : '<div class="empty-state" style="padding:8px;">対戦記録がありません。</div>'}</div>` : ''}
-        </div>
-      `;}).join('')}
-    `;
-    area.querySelectorAll('.hist-item[data-entryidx]').forEach(el=>{
-      el.addEventListener('click', ()=>{
-        const idx = +el.dataset.entryidx;
-        expandedEntryIdx = (expandedEntryIdx === idx) ? null : idx;
-        renderRecordResult();
+        location.href = 'record-detail.html?name=' + encodeURIComponent(row.dataset.name);
       });
     });
   }
 
   renderSortTabs();
   renderRankList();
-  renderRecordResult();
 })();
 </script>
 </body>
