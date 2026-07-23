@@ -132,13 +132,20 @@ const AtsuCup = (function(){
     return round1;
   }
 
-  // 手動で決めた順番(manualOrder)を、そのまま前から2人ずつ組む。人数が2の累乗に足りない分は
-  // 順番の後ろの人からBYE(不戦勝)になる。
-  function buildRound1Manual(orderedNames){
+  // 手動で決めた順番(orderedNames)を、そのまま前から2人ずつ組む。人数が2の累乗に足りない分はBYE(不戦勝)になる。
+  // seedNamesを指定すると、その人たちを明示的にBYE(シード)として扱う(手動で対戦相手のいない位置を選べる)。
+  // 指定がなければ、従来通り順番の後ろの人から自動でBYEになる。
+  function buildRound1Manual(orderedNames, seedNames){
     const size = nextPow2(orderedNames.length);
     const byeCount = size - orderedNames.length;
-    const pairNames = orderedNames.slice(0, orderedNames.length - byeCount);
-    const byeNames = orderedNames.slice(orderedNames.length - byeCount);
+    let pairNames, byeNames;
+    if(seedNames && seedNames.length){
+      byeNames = orderedNames.filter(n=>seedNames.includes(n));
+      pairNames = orderedNames.filter(n=>!seedNames.includes(n));
+    }else{
+      pairNames = orderedNames.slice(0, orderedNames.length - byeCount);
+      byeNames = orderedNames.slice(orderedNames.length - byeCount);
+    }
     const round1 = [];
     byeNames.forEach(p=> round1.push({a:p, b:null, winner:p, loser:null, video:""}));
     for(let i=0;i<pairNames.length;i+=2){
@@ -326,6 +333,49 @@ const AtsuCup = (function(){
     return result;
   }
 
+  // 大会ごとのポイントを計算する: 実際の対戦での勝利(BYEによる不戦勝は含まない)1回につき1P。
+  // これに加えて順位ボーナス(優勝10P・準優勝7P・3位5P・4位3P)を上乗せする。
+  function computeTournamentPoints(entry){
+    const points = {};
+    (entry.participants||[]).forEach(p=>{ points[p.name] = 0; });
+    (entry.matches||[]).forEach(round=>{
+      round.forEach(m=>{
+        if(m.a && m.b && m.winner){ points[m.winner] = (points[m.winner]||0) + 1; }
+      });
+    });
+    const tp = entry.thirdPlaceMatch;
+    if(tp && tp.a && tp.b && tp.winner){ points[tp.winner] = (points[tp.winner]||0) + 1; }
+    const placements = computePlacements(entry);
+    const bonusByPlace = {1:10, 2:7, 3:5, 4:3};
+    Object.keys(placements).forEach(name=>{
+      const bonus = bonusByPlace[placements[name].place];
+      if(bonus){ points[name] = (points[name]||0) + bonus; }
+    });
+    return points;
+  }
+
+  // 登録者全員(まだ大会に出ていない人も含む)を対象に、通算ポイント・優勝/準優勝/3位/4位の回数を集計する
+  function computeAllTimeStats(){
+    const stats = {};
+    const ensure = name=>{
+      if(!stats[name]) stats[name] = {name, points:0, p1:0, p2:0, p3:0, p4:0, played:0};
+      return stats[name];
+    };
+    state.roster.forEach(name=> ensure(name));
+    allFinishedEntries().forEach(entry=>{
+      const pts = computeTournamentPoints(entry);
+      const placements = computePlacements(entry);
+      (entry.participants||[]).forEach(p=>{
+        const s = ensure(p.name);
+        s.played += 1;
+        s.points += (pts[p.name]||0);
+        const place = placements[p.name] ? placements[p.name].place : null;
+        if(place===1) s.p1++; else if(place===2) s.p2++; else if(place===3) s.p3++; else if(place===4) s.p4++;
+      });
+    });
+    return Object.values(stats);
+  }
+
   // 過去の大会(state.history)に加え、優勝が決まった今回の大会もあわせて集計対象にする
   function allFinishedEntries(){
     const list = state.history.slice();
@@ -505,7 +555,7 @@ const AtsuCup = (function(){
     state, STORE_KEY, persist, restore, escapeHtml, roundLabel, recMapOf, resizeImageToDataUrl,
     nextPow2, shuffleArray, pairWithConstraint, buildRound1, buildRound1Manual, resetDownstream,
     propagateByes, pickWinner, pickThirdPlaceWinner, renameParticipant, addChallengerToBye, bracketNotStarted, isRevealed, forcedPairsList,
-    computePlacements, allFinishedEntries, archiveCurrentTournament, endCurrentTournament,
+    computePlacements, computeTournamentPoints, computeAllTimeStats, allFinishedEntries, archiveCurrentTournament, endCurrentTournament,
     THEMES, themeForTitle, drawCard, generateAndSaveCard, championEntries,
     ytId, hostFromUrl, videoEmbedHtml, matchesToPlayable, videoTournamentList
   };

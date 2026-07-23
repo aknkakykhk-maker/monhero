@@ -10,8 +10,8 @@
 <style>
   .tree-title{font-family:'Cinzel','Noto Serif JP',serif; font-weight:900; font-size:16px; color:var(--gold); margin-bottom:10px;}
   .tree-scroll{
-    overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);
-    background:#0a0810; padding:10px 0;
+    overflow-x:auto; overflow-y:auto; -webkit-overflow-scrolling:touch; border-radius:14px; border:1px solid var(--line);
+    background:#0a0810; padding:10px 0; max-height:62vh;
   }
   .tree-scroll svg{ display:block; }
   .tree-tap{ cursor:pointer; }
@@ -63,6 +63,10 @@
   .warn-box{
     margin-top:14px; background:#241214; border:1px solid #5a2222; border-radius:10px; padding:10px 12px;
     font-size:12px; color:#ffb3b3; line-height:1.8;
+  }
+  .swap-note{
+    margin-top:8px; font-size:11.5px; color:#c9b8ff; background:rgba(139,109,255,.12); border:1px solid rgba(139,109,255,.4);
+    border-radius:8px; padding:6px 9px; display:flex; align-items:center; gap:6px; font-weight:700;
   }
   .champion-box{
     margin-top:18px; text-align:center; padding:22px 14px; border-radius:14px;
@@ -136,7 +140,10 @@
   document.getElementById('treeTitle').textContent = (state.tournamentMeta && state.tournamentMeta.title) || 'あつ杯 トーナメント表';
 
   /* ---------- 本物のトーナメント表(参加者を縦一列に並べ、線でつなぐ) ---------- */
-  const TREE_ROW_H = 42;
+  // 参加者が多いほど表が縦に長くなりすぎないよう、行の高さを段階的に詰める
+  // (leafCountは大会作成時の1回戦の人数で決まり、以降の途中参加等では変わらない)
+  const initialLeafCount = state.matches[0] ? state.matches[0].length * 2 : 0;
+  const TREE_ROW_H = initialLeafCount<=8 ? 42 : initialLeafCount<=16 ? 32 : 24;
   const TREE_LABEL_W = 160;
   const TREE_COL_W = 64;
 
@@ -184,7 +191,8 @@
           return;
         }
         const isChamp = !!state.winnerName && name === state.winnerName;
-        const rx=2, ry=y-16, rw=TREE_LABEL_W-42, rh=32;
+        const rh0 = Math.min(32, TREE_ROW_H-2);
+        const rx=2, ry=y-rh0/2, rw=TREE_LABEL_W-42, rh=rh0;
         treeSlotRects[`0_${i}_${side}`] = {x:rx, y:ry, w:rw, h:rh};
         leavesSvg += `<text x="6" y="${y+5}" font-size="13.5" font-weight="${isChamp?'900':'700'}" fill="${isChamp?'#e8b34c':'#f1e6cf'}">${escapeHtml(truncate(name,8))}</text>`;
         leavesSvg += `<text x="${TREE_LABEL_W-36}" y="${y+5}" font-size="11" text-anchor="end">${recMap[name]?'📹':'🚫'}</text>`;
@@ -366,10 +374,12 @@
   }
 
   // 対戦が始まった後でも名前をタップして書き換えられるようにする(全ラウンド・優勝者名まで連動して直る)
-  function startEditMatchName(r, m, side){
-    const mainEl = document.querySelector(`.pick-main[data-r="${r}"][data-m="${m}"][data-side="${side}"], .bye-nm[data-r="${r}"][data-m="${m}"][data-side="${side}"]`);
-    if(!mainEl) return;
-    const nmSpan = mainEl.classList.contains('bye-nm') ? mainEl : mainEl.querySelector('.nm');
+  // 「次の対戦」欄と対戦一覧に同じ試合が二重表示されることがあるため、どの✏️が押されたか(scopeEl)を
+  // 受け取って、押された箇所だけを書き換える(document内を再検索して別の場所を掴まないようにする)
+  function startEditMatchName(r, m, side, scopeEl){
+    const nmSpan = scopeEl
+      ? scopeEl.querySelector('.nm')
+      : (()=>{ const el = document.querySelector(`.pick-main[data-r="${r}"][data-m="${m}"][data-side="${side}"], .bye-nm[data-r="${r}"][data-m="${m}"][data-side="${side}"]`); return el ? (el.classList.contains('bye-nm') ? el : el.querySelector('.nm')) : null; })();
     if(!nmSpan) return;
     const match = r === 'third' ? state.thirdPlaceMatch : state.matches[r][m];
     const current = side === 'a' ? match.a : match.b;
@@ -398,6 +408,12 @@
   function startAddChallenger(r, m){
     const btn = document.querySelector(`.add-challenger-btn[data-r="${r}"][data-m="${m}"]`);
     if(!btn) return;
+    // この不戦勝が既に2回戦以降まで進んでいた場合、追加すると先の結果がすべてリセットされるため
+    // 気付かないまま優勝結果等が消えてしまわないよう、事前に確認する
+    if(state.matches.length > r+1){
+      const ok = confirm('この不戦勝はすでに次の対戦以降に進んでいます。\n途中参加者を追加すると、次の対戦以降の結果はいったんリセットされます。よろしいですか?');
+      if(!ok) return;
+    }
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'nm-edit-input';
@@ -431,7 +447,27 @@
     </div>`;
   }
 
-  function matchCardHtml(m, r, i, recMap){
+  // 撮影不可同士が隣り合ってしまう回を避けるため、propagateByes()が単純な隣接ペアから
+  // 入れ替えを行った試合を(実データと突き合わせて)検出する。表示上の注記に使う。
+  function swappedMatchIndices(r){
+    if(r === 0) return new Set();
+    const prev = state.matches[r-1];
+    const cur = state.matches[r];
+    if(!prev || !cur || !prev.every(x=>x.winner)) return new Set();
+    const winners = prev.map(x=>x.winner);
+    const naive = [];
+    for(let k=0;k<winners.length;k+=2){ naive.push([winners[k], winners[k+1]]); }
+    const swapped = new Set();
+    cur.forEach((m,i)=>{
+      const pair = naive[i];
+      if(!pair) return;
+      const same = (m.a===pair[0] && m.b===pair[1]) || (m.a===pair[1] && m.b===pair[0]);
+      if(!same) swapped.add(i);
+    });
+    return swapped;
+  }
+
+  function matchCardHtml(m, r, i, recMap, isSwapped){
     if(m.b === null){
       return `<div class="video-card"><div class="bye-row">🐰 <span class="nm bye-nm" data-r="${r}" data-m="${i}" data-side="a">${escapeHtml(m.a)}</span> — BYE(不戦勝)
         <button class="pick-edit-btn" data-editname data-r="${r}" data-m="${i}" data-side="a">✏️</button>
@@ -445,6 +481,7 @@
         <span class="vs-label">VS</span>
         ${pickBtnHtml(m.b, m.winner, r, i, 'b', recMap, isForced)}
       </div>
+      ${isSwapped ? `<div class="swap-note">🔀 撮影不可の人が重ならないよう、対戦相手を入れ替えました</div>` : ''}
     </div>`;
   }
 
@@ -456,6 +493,7 @@
     const next = findNextMatch();
     if(next){
       const m = next.match;
+      const nextSwapped = next.r !== 'third' && swappedMatchIndices(next.r).has(next.m);
       html += `<div class="next-match-box">
         <div class="lbl">🎯 次の対戦${next.r==='third'?'(3位決定戦)':''}</div>
         <div class="match-pick-row">
@@ -463,12 +501,14 @@
           <span class="vs-label">VS</span>
           ${pickBtnHtml(m.b, m.winner, next.r, next.m, 'b', recMap, false)}
         </div>
+        ${nextSwapped ? `<div class="swap-note">🔀 撮影不可の人が重ならないよう、対戦相手を入れ替えました</div>` : ''}
       </div>`;
     }
 
     state.matches.forEach((round, r)=>{
       html += `<h3 class="section-title" style="margin-top:16px;">${AtsuCup.roundLabel(round.length)}</h3>`;
-      round.forEach((m,i)=>{ html += matchCardHtml(m, r, i, recMap); });
+      const swapSet = swappedMatchIndices(r);
+      round.forEach((m,i)=>{ html += matchCardHtml(m, r, i, recMap, swapSet.has(i)); });
     });
 
     const forced = AtsuCup.forcedPairsList();
@@ -510,7 +550,8 @@
       el.addEventListener("click", (ev)=>{
         ev.stopPropagation();
         const r = el.dataset.r === 'third' ? 'third' : +el.dataset.r;
-        startEditMatchName(r, +el.dataset.m, el.dataset.side);
+        const scope = el.closest('.pick-btn, .bye-row');
+        startEditMatchName(r, +el.dataset.m, el.dataset.side, scope);
       });
     });
     area.querySelectorAll("[data-addchallenger]").forEach(el=>{

@@ -7,6 +7,33 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="atsucup-style.css">
+<style>
+  .sort-tabs{display:flex; gap:8px; margin-bottom:14px;}
+  .sort-tabs button{flex:1; margin-top:0;}
+  .rank-row{
+    display:flex; align-items:center; gap:10px; background:#0d0a14; border:1px solid var(--line);
+    border-radius:10px; padding:10px 12px; margin-bottom:7px; cursor:pointer;
+  }
+  .rank-row.selected{ border-color:var(--gold-dim); background:#181206; }
+  .rank-row .rank{
+    width:30px; flex-shrink:0; text-align:center; font-family:'JetBrains Mono',monospace; font-weight:900;
+    font-size:13px; color:var(--muted);
+  }
+  .rank-row .rank.top1{ color:var(--gold); font-size:18px; }
+  .rank-row .rank.top2{ color:#cfd6e6; font-size:16px; }
+  .rank-row .rank.top3{ color:#e0a86b; font-size:16px; }
+  .rank-row .rr-main{flex:1; min-width:0;}
+  .rank-row .rr-name{font-size:14.5px; font-weight:700; color:var(--cream); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .rank-row .rr-sub{font-size:10.5px; color:var(--muted); margin-top:3px;}
+  .rank-row .rr-points{
+    flex-shrink:0; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:900; color:var(--gold); font-size:16px;
+  }
+  .rank-row .rr-points .u{font-size:10px; font-weight:700; color:var(--muted); margin-left:2px;}
+  .points-hint{
+    margin-bottom:14px; font-size:11px; color:var(--muted); background:#0d0a14; border:1px solid var(--line);
+    border-radius:8px; padding:8px 10px; line-height:1.7;
+  }
+</style>
 </head>
 <body>
 <a class="back-link" href="index.html">‹ トップへ</a>
@@ -18,9 +45,11 @@
   </header>
 
   <section class="panel">
-    <h2><span class="num">01</span> 参加者の戦績</h2>
-    <p class="hint">名前をタップすると、これまでの大会での成績(優勝・準優勝・3位の回数や、大会ごとの結果)を確認できます。</p>
-    <div class="taglist" id="recordRosterList"></div>
+    <h2><span class="num">01</span> 戦績ランキング</h2>
+    <p class="hint">名前をタップすると、これまでの大会での成績を確認できます。</p>
+    <div class="points-hint">🏆 ポイントは大会ごとに加算されます: 対戦に1勝で1P / 4位3P / 3位5P / 準優勝7P / 優勝10P</div>
+    <div class="sort-tabs" id="sortTabs"></div>
+    <div id="rankList"></div>
     <div id="recordResultArea" style="margin-top:16px;"></div>
   </section>
 
@@ -36,25 +65,58 @@
   const escapeHtml = AtsuCup.escapeHtml;
   AtsuCup.restore();
 
+  let sortMode = 'ranking'; // 'ranking' | 'name'
   let selectedRecordName = null;
 
-  function renderRecordRoster(){
-    const list = document.getElementById('recordRosterList');
-    list.innerHTML = '';
-    if(!state.roster.length){
+  function renderSortTabs(){
+    document.getElementById('sortTabs').innerHTML = `
+      <button class="btn ${sortMode==='ranking'?'btn-gold':'btn-ghost'}" id="sortRankingBtn">🏆 ランキング順</button>
+      <button class="btn ${sortMode==='name'?'btn-gold':'btn-ghost'}" id="sortNameBtn">🔤 名前順</button>
+    `;
+    document.getElementById('sortRankingBtn').addEventListener('click', ()=>{ sortMode='ranking'; renderSortTabs(); renderRankList(); });
+    document.getElementById('sortNameBtn').addEventListener('click', ()=>{ sortMode='name'; renderSortTabs(); renderRankList(); });
+  }
+
+  function rankBadgeClass(rank){
+    if(sortMode!=='ranking') return '';
+    if(rank===1) return 'top1'; if(rank===2) return 'top2'; if(rank===3) return 'top3';
+    return '';
+  }
+  function rankLabel(rank){
+    if(sortMode!=='ranking') return '';
+    if(rank===1) return '🥇'; if(rank===2) return '🥈'; if(rank===3) return '🥉';
+    return String(rank);
+  }
+
+  function renderRankList(){
+    const list = document.getElementById('rankList');
+    let stats = AtsuCup.computeAllTimeStats();
+    if(!stats.length){
       list.innerHTML = `<div class="empty-state" style="padding:14px 4px;">まだ登録者がいません。「参加者登録」から登録してください。</div>`;
       return;
     }
-    state.roster.forEach(name=>{
-      const chip = document.createElement('div');
-      chip.className = 'roster-chip' + (name===selectedRecordName ? ' selected' : '');
-      chip.innerHTML = `<span>${escapeHtml(name)}</span>`;
-      chip.addEventListener('click', ()=>{
-        selectedRecordName = name;
-        renderRecordRoster();
+    if(sortMode==='ranking'){
+      stats = stats.slice().sort((a,b)=> b.points-a.points || a.name.localeCompare(b.name,'ja'));
+    }else{
+      stats = stats.slice().sort((a,b)=> a.name.localeCompare(b.name,'ja'));
+    }
+    list.innerHTML = stats.map((s,i)=>{
+      const rank = i+1;
+      return `<div class="rank-row ${s.name===selectedRecordName?'selected':''}" data-name="${escapeHtml(s.name)}">
+        <div class="rank ${rankBadgeClass(rank)}">${rankLabel(rank)}</div>
+        <div class="rr-main">
+          <div class="rr-name">${escapeHtml(s.name)}</div>
+          <div class="rr-sub">🥇${s.p1} 🥈${s.p2} 🥉${s.p3} 4位${s.p4} ・ 出場${s.played}回</div>
+        </div>
+        <div class="rr-points">${s.points}<span class="u">P</span></div>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('.rank-row').forEach(row=>{
+      row.addEventListener('click', ()=>{
+        selectedRecordName = row.dataset.name;
+        renderRankList();
         renderRecordResult();
       });
-      list.appendChild(chip);
     });
   }
 
@@ -66,11 +128,13 @@
       area.innerHTML = `<div class="empty-state" style="padding:16px 10px;">「${escapeHtml(selectedRecordName)}」がまだ参加した大会の結果がありません。</div>`;
       return;
     }
-    let p1=0, p2=0, p3=0;
+    let p1=0, p2=0, p3=0, totalPoints=0;
     const rows = entries.map(e=>{
       const pl = AtsuCup.computePlacements(e)[selectedRecordName] || {place:null, label:'参加'};
+      const pts = AtsuCup.computeTournamentPoints(e)[selectedRecordName] || 0;
+      totalPoints += pts;
       if(pl.place===1) p1++; else if(pl.place===2) p2++; else if(pl.place===3) p3++;
-      return { title: e.title, label: pl.label, place: pl.place };
+      return { title: e.title, label: pl.label, place: pl.place, pts };
     });
     const resClass = p => p===1?'p1':p===2?'p2':p===3?'p3':p===4?'p4':'pother';
     area.innerHTML = `
@@ -79,16 +143,23 @@
         <div class="stat-box"><div class="v">${p2}</div><div class="l">準優勝</div></div>
         <div class="stat-box"><div class="v">${p3}</div><div class="l">3位</div></div>
       </div>
+      <div class="stat-grid" style="grid-template-columns:1fr;">
+        <div class="stat-box"><div class="v">${totalPoints}P</div><div class="l">通算ポイント</div></div>
+      </div>
       ${rows.map(r=>`
         <div class="hist-item">
           <span>${escapeHtml(r.title)}</span>
-          <span class="res ${resClass(r.place)}">${escapeHtml(r.label)}</span>
+          <span class="row" style="gap:6px;">
+            <span class="res ${resClass(r.place)}">${escapeHtml(r.label)}</span>
+            <span class="count-badge muted2" style="margin:0;">${r.pts}P</span>
+          </span>
         </div>
       `).join('')}
     `;
   }
 
-  renderRecordRoster();
+  renderSortTabs();
+  renderRankList();
   renderRecordResult();
 })();
 </script>
