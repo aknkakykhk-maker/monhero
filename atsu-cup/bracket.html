@@ -137,9 +137,9 @@
   // 参加者が多いほど表が縦に長くなりすぎないよう、行の高さを段階的に詰める
   // (leafCountは大会作成時の1回戦の人数で決まり、以降の途中参加等では変わらない)
   const initialLeafCount = state.matches[0] ? state.matches[0].length * 2 : 0;
-  const TREE_ROW_H = initialLeafCount<=8 ? 48 : initialLeafCount<=16 ? 36 : 28;
-  const TREE_LABEL_W = 184;
-  const TREE_COL_W = 76;
+  const TREE_ROW_H = initialLeafCount<=8 ? 40 : initialLeafCount<=16 ? 32 : 26;
+  const TREE_LABEL_W = 148;
+  const TREE_COL_W = 46;
 
   function leafY(i){ return (i+0.5)*TREE_ROW_H; }
   function jointY(r, i){
@@ -184,22 +184,22 @@
       [[2*i, m.a, false, 'a'], [2*i+1, m.b, m.b===null, 'b']].forEach(([idx, name, bye, side])=>{
         const y = leafY(idx);
         if(bye){
-          leavesSvg += `<text x="6" y="${y+5}" font-size="14" font-style="italic" fill="#6b5f82">BYE</text>`;
+          leavesSvg += `<text x="6" y="${y+5}" font-size="13" font-style="italic" fill="#6b5f82">BYE</text>`;
           if(interactive){
-            const rh0 = Math.min(38, TREE_ROW_H-2);
-            treeSlotRects[`bye_${i}`] = {x:2, y:y-rh0/2, w:TREE_LABEL_W-48, h:rh0};
-            leavesSvg += `<text class="tree-add-icon" data-addm="${i}" x="${TREE_LABEL_W-6}" y="${y+5}" font-size="15" text-anchor="end">➕</text>`;
+            const rh0 = Math.min(32, TREE_ROW_H-2);
+            treeSlotRects[`bye_${i}`] = {x:2, y:y-rh0/2, w:TREE_LABEL_W-38, h:rh0};
+            leavesSvg += `<text class="tree-add-icon" data-addm="${i}" x="${TREE_LABEL_W-6}" y="${y+5}" font-size="14" text-anchor="end">➕</text>`;
           }
           return;
         }
         const isChamp = !!state.winnerName && name === state.winnerName;
-        const rh0 = Math.min(38, TREE_ROW_H-2);
-        const rx=2, ry=y-rh0/2, rw=TREE_LABEL_W-48, rh=rh0;
+        const rh0 = Math.min(32, TREE_ROW_H-2);
+        const rx=2, ry=y-rh0/2, rw=TREE_LABEL_W-38, rh=rh0;
         treeSlotRects[`0_${i}_${side}`] = {x:rx, y:ry, w:rw, h:rh};
-        leavesSvg += `<text x="6" y="${y+5}" font-size="15" font-weight="${isChamp?'900':'700'}" fill="${isChamp?'#e8b34c':'#f1e6cf'}">${escapeHtml(truncate(name,9))}</text>`;
-        leavesSvg += `<text x="${TREE_LABEL_W-40}" y="${y+5}" font-size="12" text-anchor="end">${recMap[name]?'📹':'🚫'}</text>`;
+        leavesSvg += `<text x="6" y="${y+5}" font-size="13.5" font-weight="${isChamp?'900':'700'}" fill="${isChamp?'#e8b34c':'#f1e6cf'}">${escapeHtml(truncate(name,8))}</text>`;
+        leavesSvg += `<text x="${TREE_LABEL_W-30}" y="${y+5}" font-size="11" text-anchor="end">${recMap[name]?'📹':'🚫'}</text>`;
         if(interactive){
-          leavesSvg += `<text class="tree-edit-icon" data-editr="0" data-editm="${i}" data-editside="${side}" x="${TREE_LABEL_W-6}" y="${y+5}" font-size="14" text-anchor="end">✏️</text>`;
+          leavesSvg += `<text class="tree-edit-icon" data-editr="0" data-editm="${i}" data-editside="${side}" x="${TREE_LABEL_W-6}" y="${y+5}" font-size="13" text-anchor="end">✏️</text>`;
           leavesSvg += `<g class="tree-tap" data-r="0" data-m="${i}" data-side="${side}"><rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" fill="transparent"/></g>`;
         }
       });
@@ -238,16 +238,15 @@
           linesSvg += `<path d="M${jx},${winY} V${midY}" stroke="#e8b34c" stroke-width="3" fill="none"/>`;
           linesSvg += `<path d="M${jx},${midY} H${outEndX}" stroke="#e8b34c" stroke-width="3" fill="none"/>`;
 
-          // 入力欄(リネーム)を重ねる場所は名前+鉛筆アイコンの行全体、タップ判定(勝ち上がり選択)は名前の行だけに絞って
-          // 鉛筆アイコンのクリックを奪わないようにする
-          treeSlotRects[`${r}_${i}_${winSide}`] = {x:jx+2, y:midY-18, w:TREE_COL_W-8, h:34};
-          const tapY = midY-19, tapH = 19;
-          labelsSvg += `<text x="${jx+6}" y="${midY-6}" font-size="12" font-weight="700" fill="#e8b34c">${escapeHtml(truncate(m.winner,8))}</text>`;
+          // 参考にしたトーナメント表と同じく、各ラウンドの合流点には名前を繰り返し表示せず、
+          // 色付きの線だけで勝ち上がりを示す(名前は一番左の本人の欄でのみ表示・編集する)。
+          // ただし、進行中でもその場でリネームできるよう、小さな鉛筆アイコンだけは残す。
+          treeSlotRects[`${r}_${i}_${winSide}`] = {x:jx+2, y:midY-4, w:TREE_COL_W-8, h:22};
           if(interactive){
-            labelsSvg += `<text class="tree-edit-icon" data-editr="${r}" data-editm="${i}" data-editside="${winSide}" x="${jx+6}" y="${midY+10}" font-size="12" opacity="0.85">✏️</text>`;
+            labelsSvg += `<text class="tree-edit-icon" data-editr="${r}" data-editm="${i}" data-editside="${winSide}" x="${jx+4}" y="${midY+13}" font-size="11" opacity="0.85">✏️</text>`;
             const nextSlot = findNextSlot(state.matches[r+1], m.winner);
             if(nextSlot){
-              labelsSvg += `<g class="tree-tap" data-r="${r+1}" data-m="${nextSlot.m}" data-side="${nextSlot.side}"><rect x="${jx+2}" y="${tapY}" width="${TREE_COL_W-8}" height="${tapH}" fill="transparent"/></g>`;
+              labelsSvg += `<g class="tree-tap" data-r="${r+1}" data-m="${nextSlot.m}" data-side="${nextSlot.side}"><rect x="${jx+2}" y="${midY-16}" width="${TREE_COL_W-8}" height="16" fill="transparent"/></g>`;
             }
           }
         }
