@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 02:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 02:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2720,8 +2720,8 @@ function MonsterHeroGame() {
                       <div className="text-[8px] text-fuchsia-300 font-black uppercase mb-1">{regionCount>1?`染色${regionLabels[idx]||idx+1}`:'染色'}</div>
                       <div className="grid grid-cols-4 gap-1.5">
                         <button onClick={()=>setDyePreviewColors(prev=>{const next=[...prev]; next[idx]=null; return next;})} className={`flex flex-col items-center gap-1 bg-black/40 border rounded-lg py-1.5 active:scale-95 ${!dyePreviewColors[idx]?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
-                          <span className="w-6 h-6 rounded-full border border-white/20 bg-slate-800 flex items-center justify-center"><X size={10} className="text-slate-500"/></span>
-                          <span className="text-[7px] text-white font-black">なし</span>
+                          <span className="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={10} className="text-white drop-shadow"/></span>
+                          <span className="text-[7px] text-white font-black">デフォルト</span>
                         </button>
                         {Object.keys(MASU_COLOR_FILTERS).map(colorId=>(
                           <button key={colorId} onClick={()=>setDyePreviewColors(prev=>{const next=[...prev]; next[idx]=colorId; return next;})} className={`flex flex-col items-center gap-1 bg-black/40 border rounded-lg py-1.5 active:scale-95 ${dyePreviewColors[idx]===colorId?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
