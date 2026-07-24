@@ -44,6 +44,8 @@ const STARTER_TEACHING_IDS = ['oryo','dra','cadmium','mua','atsu','myaru'];
 // ブリーダーマーケット: ブリーダーレベルアップで得たポイントで購入できるアイテム
 // type:'icon' はプロフィールアイコン、type:'disc' はモンスターの円盤石(購入でそのモンスターが解放される)、
 // type:'breeder' はブリーダーカードの解放アイテム。idはicon以外の場合、解放対象(モンスター/カード)のidと一致させる。
+// type:'item' はマスモンに使う消耗アイテム(ダイヤで購入・何度でも買える。所持数はownedItemsで管理し、
+// マスモン詳細画面から使用する)。iconの代わりにemojiを指定してよい。
 // 円盤石のiconは必ずDISC_STONE_BASE(円盤石の土台画像、模様入り)を土台にして、その上に
 // 新モンスターの全身を重ねて作る(土台の模様を消したり塗りつぶしたりしない)。他モンスターとキャラの
 // 縦位置(センタリング)が揃うように配置する。
@@ -70,5 +72,7 @@ const BREEDER_MARKET_ITEMS = [
   { id:'ark_icon', name:"アークのアイコン", type:'icon', icon:ARK_FACE_ICON, cost:1 },
   { id:'Ark', name:"アークの円盤石", type:'disc', icon:ARK_DISC_ICON, cost:1500 },
   { id:'iblis_icon', name:"イブリースのアイコン", type:'icon', icon:IBLIS_FACE_ICON, cost:1 },
-  { id:'Iblis', name:"イブリースの円盤石", type:'disc', icon:IBLIS_DISC_ICON, cost:1500 }
+  { id:'Iblis', name:"イブリースの円盤石", type:'disc', icon:IBLIS_DISC_ICON, cost:1500 },
+  { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
+  { id:'dye_mock', name:"染色もどき", type:'item', emoji:"🎨", cost:500, desc:"マスモンに使うと、見た目の色を6色(赤・青・黄・緑・黒・白)から選んで変えられる(簡易的な色変えです)。" }
 ];
