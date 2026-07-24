@@ -41,7 +41,8 @@ const _ICON_PATHS = {
   RefreshCcw: '<polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>',
   Coins: '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>',
   ShoppingBag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
-  Gem: '<path d="M6 3h12l4 6-10 12L2 9Z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/>'
+  Gem: '<path d="M6 3h12l4 6-10 12L2 9Z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/>',
+  Package: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/>'
 };
 const _icon = (name) => (props) => {
   props = props || {};
@@ -55,12 +56,12 @@ const _icon = (name) => (props) => {
     dangerouslySetInnerHTML:{ __html: inner }
   });
 };
-const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag'), Gem=_icon('Gem');
+const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag'), Gem=_icon('Gem'), Package=_icon('Package');
 
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 00:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 00:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -590,7 +591,9 @@ function MonsterHeroGame() {
   //   distApt:[g0,g1,g2,g3](このマスモン専用の間合い適性), statPoints:{hp,atk,def,guts}, color(染色もどきで変えた色id、無ければnull), createdAt }
   const [masuMons, setMasuMons] = useState([]);
   const [ownedItems, setOwnedItems] = useState({}); // マーケットで買った消耗アイテムの所持数 { itemId: count } (端末保存)
-  const [showDyePicker, setShowDyePicker] = useState(false); // マスモン詳細: 染色もどきの色選択モーダル
+  const [pendingItemUse, setPendingItemUse] = useState(null); // アイテム欄で「使う」を押した後、対象のマスモンを選ぶ画面用(itemId)
+  const [dyeTargetMasuId, setDyeTargetMasuId] = useState(null); // 染色もどき: 対象に選んだマスモンid(色選択モーダル表示のトリガー)
+  const [dyePreviewColor, setDyePreviewColor] = useState(null); // 染色もどき: 確定前にプレビュー中の色id
   const [showMasuRegisterModal, setShowMasuRegisterModal] = useState(false); // ラン終了画面: マスモン登録の名前入力
   const [masuNameInput, setMasuNameInput] = useState('');
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
@@ -2183,6 +2186,10 @@ function MonsterHeroGame() {
                   <span className="flex items-center gap-1 text-[9px] font-black text-pink-400 uppercase"><Heart size={11}/>マスモン</span>
                   <span className="text-[12px] font-black text-pink-200">{masuMons.length}体</span>
                 </button>
+                <button onClick={()=>setGameState('ITEM_INVENTORY')} className="col-span-2 flex items-center justify-center gap-1.5 bg-teal-950/40 border border-teal-500/40 px-2 py-2.5 rounded-xl active:scale-95">
+                  <Package size={12} className="text-teal-400"/><span className="text-[9px] font-black text-teal-400 uppercase">アイテム欄</span>
+                  <span className="text-[12px] font-black text-teal-200">{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個</span>
+                </button>
               </div>
             </div>
             <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-2 px-1 shrink-0">難易度別 記録</div>
@@ -2448,6 +2455,77 @@ function MonsterHeroGame() {
           </div>
         )}
 
+        {/* アイテム欄: 所持している消耗アイテムを一覧表示し、「使う」から対象のマスモンを選ぶ */}
+        {gameState==='ITEM_INVENTORY'&&(
+          <div className="flex-1 flex flex-col h-full min-h-0 p-4">
+            <div className="flex items-center gap-2 mb-2 shrink-0">
+              <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <h2 className="text-xl font-black italic text-teal-400 uppercase tracking-widest">アイテム欄</h2>
+            </div>
+            <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">マーケットで買った消耗アイテムです。「使う」から対象のマスモンを選べます。</div>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+              {BREEDER_MARKET_ITEMS.filter(item=>item.type==='item'&&(ownedItems[item.id]||0)>0).length===0?(
+                <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🎒</span><div className="text-[11px] text-slate-400 mt-2">まだアイテムを持っていません。<br/>マーケットの「アイテム」タブから購入できます。</div></div>
+              ):(
+                <div className="flex flex-col gap-2 pb-4">
+                  {BREEDER_MARKET_ITEMS.filter(item=>item.type==='item'&&(ownedItems[item.id]||0)>0).map(item=>(
+                    <div key={item.id} className="rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-3 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30">{item.icon?<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>:<span className="text-2xl">{item.emoji}</span>}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-black text-white truncate">{item.name}</div>
+                        <div className="text-[8px] text-slate-400 leading-tight mt-0.5">{item.desc}</div>
+                        <div className="text-[9px] font-black text-teal-300 mt-0.5">所持数: {ownedItems[item.id]}</div>
+                      </div>
+                      <button onClick={()=>setPendingItemUse(item.id)} className="shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase">使う</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* アイテムの使用対象マスモンを選ぶ画面(アイテム欄で「使う」を押した直後) */}
+        {pendingItemUse&&(()=>{
+          const item = BREEDER_MARKET_ITEMS.find(i=>i.id===pendingItemUse);
+          return (
+            <div className="fixed inset-0 flex flex-col p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:31000}}>
+              <div className="flex items-center gap-2 mb-2 shrink-0">
+                <button onClick={()=>setPendingItemUse(null)} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                <h2 className="text-lg font-black italic text-teal-400 uppercase tracking-widest truncate">{item?.name}を使う対象を選択</h2>
+              </div>
+              <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">対象のマスモンをタップしてください</div>
+              <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+                {masuMons.length===0?(
+                  <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🐾</span><div className="text-[11px] text-slate-400 mt-2">まだマスモンがいません。</div></div>
+                ):(
+                  <div className="grid grid-cols-2 gap-3 pb-4">
+                    {masuMons.map(masu=>{
+                      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+                      if (!base) return null;
+                      const lvl = bondLevelInfo(masu.bondXp||0);
+                      return (
+                        <button key={masu.id} onClick={()=>{
+                          if (pendingItemUse==='dye_mock') {
+                            setDyeTargetMasuId(masu.id); setDyePreviewColor(masu.color||null); setPendingItemUse(null);
+                          } else if (pendingItemUse==='bond_reset_scroll') {
+                            if (window.confirm(`「${masu.name}」の強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻しますか？絆Lvはそのままです。`)) { useBondResetScroll(masu.id); setPendingItemUse(null); }
+                          }
+                        }} className="rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-2.5 flex flex-col items-center gap-1 active:scale-95">
+                          <div className="w-14 h-14 rounded-full overflow-hidden border border-teal-400/40 shrink-0"><img src={base.iconUrl} alt={masu.name} style={monColorStyle(masu.color)} className="w-full h-full object-cover"/></div>
+                          <div className="text-[10px] font-black text-teal-200 truncate w-full text-center">{masu.name}</div>
+                          <div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>
+                          <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5 mt-0.5"><Heart size={7}/>絆Lv.{lvl.level}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {masuMonDetail&&(()=>{
           const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
           const base = ALL_PLAYER_MONSTERS[masu.baseId];
@@ -2490,23 +2568,7 @@ function MonsterHeroGame() {
                     </div>
                   )}
                   <div className="text-[8px] text-slate-500 font-bold text-center px-2">{inRoster?'現在、編成に入っています':'編成画面で選ぶと、次の周回でこのマスモンを使えます'}</div>
-                  {((ownedItems.bond_reset_scroll||0)>0||(ownedItems.dye_mock||0)>0)&&(
-                    <div className="bg-black/40 p-2 rounded-xl border border-amber-500/30 space-y-1.5">
-                      <div className="text-[7px] text-amber-400 uppercase font-bold">アイテムを使う</div>
-                      {(ownedItems.bond_reset_scroll||0)>0&&(
-                        <button onClick={()=>{ if(window.confirm(`「${masu.name}」の強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻しますか？絆Lvはそのままです。`)) useBondResetScroll(masu.id); }} className="w-full flex items-center justify-between bg-amber-950/40 border border-amber-500/30 rounded-lg px-3 py-2 active:scale-95">
-                          <span className="text-[10px] text-amber-200 font-black">📜 絆ポイントリセットの書を使う</span>
-                          <span className="text-[9px] text-amber-400 font-bold">所持:{ownedItems.bond_reset_scroll}</span>
-                        </button>
-                      )}
-                      {(ownedItems.dye_mock||0)>0&&(
-                        <button onClick={()=>setShowDyePicker(true)} className="w-full flex items-center justify-between bg-fuchsia-950/40 border border-fuchsia-500/30 rounded-lg px-3 py-2 active:scale-95">
-                          <span className="text-[10px] text-fuchsia-200 font-black">🎨 染色もどきを使う</span>
-                          <span className="text-[9px] text-fuchsia-400 font-bold">所持:{ownedItems.dye_mock}</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  <div className="text-[8px] text-teal-400/80 font-bold text-center px-2">絆ポイントリセットの書・染色もどきは「アイテム欄」から使用できます</div>
                   <button onClick={()=>{ if(window.confirm(`「${masu.name}」を削除しますか？この操作は取り消せません。`)){ deleteMasuMon(masu.id); setMasuMonDetail(null); } }} className="w-full bg-red-950/40 border border-red-500/30 text-red-400 py-2.5 rounded-xl font-black text-[10px] uppercase active:scale-95">このマスモンを削除する</button>
                 </div>
               </div>
@@ -2514,25 +2576,33 @@ function MonsterHeroGame() {
           );
         })()}
 
-        {showDyePicker&&masuMonDetail&&(()=>{
-          const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
-          const base = ALL_PLAYER_MONSTERS[masu.baseId];
-          if (!base) { setShowDyePicker(false); return null; }
+        {/* 染色もどき: 対象マスモンを選んだ後の色選択・プレビューモーダル */}
+        {dyeTargetMasuId&&(()=>{
+          const masu = getMasuMon(dyeTargetMasuId);
+          const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
+          if (!masu || !base) { setDyeTargetMasuId(null); setDyePreviewColor(null); return null; }
+          const closeDyePicker = () => { setDyeTargetMasuId(null); setDyePreviewColor(null); };
+          const noChange = (dyePreviewColor||null) === (masu.color||null);
           return (
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31500}}>
               <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-3 shadow-2xl">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-black text-white">🎨 色を選んでください</h3>
-                  <button onClick={()=>setShowDyePicker(false)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
+                  <h3 className="text-sm font-black text-white">🎨 {masu.name}の色をプレビュー</h3>
+                  <button onClick={closeDyePicker} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
                 </div>
-                <div className="w-20 h-20 rounded-full overflow-hidden border border-fuchsia-400/40 mx-auto"><img src={base.iconUrl} alt={masu.name} style={monColorStyle(masu.color)} className="w-full h-full object-cover"/></div>
+                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-fuchsia-400/40 mx-auto"><img src={base.iconUrl} alt={masu.name} style={monColorStyle(dyePreviewColor)} className="w-full h-full object-cover"/></div>
+                <div className="text-[9px] text-fuchsia-300 font-black text-center -mt-1">{dyePreviewColor?`プレビュー中: ${MASU_COLOR_LABELS[dyePreviewColor]}`:'現在の色のまま'}</div>
                 <div className="grid grid-cols-3 gap-2">
                   {Object.keys(MASU_COLOR_FILTERS).map(colorId=>(
-                    <button key={colorId} onClick={()=>{ useDyeItem(masu.id, colorId); setShowDyePicker(false); }} className="flex flex-col items-center gap-1 bg-black/40 border border-white/10 rounded-xl py-2 active:scale-95">
+                    <button key={colorId} onClick={()=>setDyePreviewColor(colorId)} className={`flex flex-col items-center gap-1 bg-black/40 border rounded-xl py-2 active:scale-95 ${dyePreviewColor===colorId?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
                       <span className="w-8 h-8 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}></span>
                       <span className="text-[9px] text-white font-black">{MASU_COLOR_LABELS[colorId]}</span>
                     </button>
                   ))}
+                </div>
+                <div className="flex gap-2 mt-1">
+                  <button onClick={closeDyePicker} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">キャンセル</button>
+                  <button onClick={()=>{ useDyeItem(masu.id, dyePreviewColor); closeDyePicker(); }} disabled={noChange} className={`flex-1 py-3 rounded-xl font-black text-xs uppercase ${noChange?'bg-slate-800 text-slate-600':'bg-fuchsia-600 text-white active:scale-95'}`}>この色に染める</button>
                 </div>
               </div>
             </div>
