@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 02:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 03:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -273,14 +273,18 @@ const MASU_COLOR_SWATCH = { red: '#ef4444', blue: '#3b82f6', yellow: '#eab308', 
 // マスモンの色が設定されている場合、対応するCSSフィルターのstyleオブジェクトを返す(画像タグにそのまま渡す)
 const monColorStyle = (colorId) => (colorId && MASU_COLOR_FILTERS[colorId]) ? { filter: MASU_COLOR_FILTERS[colorId] } : undefined;
 // モンスター種ごとの「染色もどき」部位分割データ。各要素は画像内でその部位が持つ代表色相(度)。
-// 事前にモンスター画像を色相クラスタリング解析して求めた値(頭・口・肌など、色の塊ごとに分離)。
+// 事前にモンスター画像を解析して求めた、染色可能な部位ごとの判定条件。
+// 各要素は次のいずれか:
+//   数値(色相の角度)                    … その色相に最も近い彩度のあるピクセルを対象にする
+//   {hue, vMin?, vMax?}                  … 同じ色相でも明度が違う部位を区別したい場合(例: 体は明るい黄、目は暗い黄)
+//   {white:true, sMax?, vMin?}           … 彩度が低い明るい部位(白目・白い毛など)を対象にする
 // 配列が空/未定義のモンスターは部位分割が綺麗に取れなかった(単色に近い等)ため、従来通り全身一括の染色のみ対応。
 const MASU_COLOR_REGION_HUES = {
   Mocchi: [5, 67, 38],
-  Suezo: [48, 357],
-  Golem: [40],
-  Tiger: [233, 43],
-  Ham: [25, 355],
+  Suezo: [{ hue: 48, vMin: 0.5 }, { hue: 50, vMax: 0.5 }, 357],
+  Golem: [35, { white: true, sMax: 0.12, vMin: 0.75 }, 72],
+  Tiger: [233, { white: true, sMax: 0.25, vMin: 0.55 }, 43],
+  Ham: [25, { white: true, sMax: 0.35, vMin: 0.7 }, 355],
   Pixie: [355, 23],
   Monol: [],
   Oboro: [239, 205, 49],
@@ -305,6 +309,30 @@ const _rgbToHsv = (r,g,b) => {
   return [h,s,v];
 };
 const _hueDist = (a,b) => { const d = Math.abs(a-b) % 360; return d>180 ? 360-d : d; };
+// ピクセル(色相hh・彩度ss・明度vv)がregionDefs(MASU_COLOR_REGION_HUESの1モンスター分)の
+// どの部位に属するかを判定し、インデックスを返す(どれにも属さなければ-1=無染色のまま)
+const _classifyDyePixel = (hh, ss, vv, regionDefs) => {
+  // 白系(彩度が低く明るい)部位が定義されていれば先に判定する
+  for (let idx = 0; idx < regionDefs.length; idx++) {
+    const def = regionDefs[idx];
+    if (def && typeof def === 'object' && def.white) {
+      if (ss <= (def.sMax ?? 0.18) && vv >= (def.vMin ?? 0.55)) return idx;
+    }
+  }
+  if (ss < 0.18 || vv < 0.12) return -1;
+  let best = -1, bestD = 999;
+  regionDefs.forEach((def, idx) => {
+    if (def && typeof def === 'object' && def.white) return; // 白系は上で判定済み
+    const hue = (typeof def === 'number') ? def : def.hue;
+    const vMin = (def && typeof def === 'object') ? def.vMin : undefined;
+    const vMax = (def && typeof def === 'object') ? def.vMax : undefined;
+    if (vMin !== undefined && vv < vMin) return;
+    if (vMax !== undefined && vv > vMax) return;
+    const d = _hueDist(hh, hue);
+    if (d < bestD) { bestD = d; best = idx; }
+  });
+  return best;
+};
 // baseIdの画像をCanvasで解析し、部位ごとのアルファマスク(dataURL)を作って返す(baseIdごとに一度だけ計算してキャッシュ)
 const _dyeRegionMaskCache = {};
 const getDyeRegionMasks = (baseId, imgUrl) => {
@@ -337,9 +365,8 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             // 染色対象から除外し常に元の絵のまま残す(輪郭が塗り分けの色を拾ってしまう問題を防ぐ)
             if (alphaAt(x-1,y) < 200 || alphaAt(x+1,y) < 200 || alphaAt(x,y-1) < 200 || alphaAt(x,y+1) < 200) continue;
             const [hh, ss, vv] = _rgbToHsv(r, g, b);
-            if (ss < 0.18 || vv < 0.12) continue;
-            let best = 0, bestD = 999;
-            hues.forEach((hue, idx) => { const d = _hueDist(hh, hue); if (d < bestD) { bestD = d; best = idx; } });
+            const best = _classifyDyePixel(hh, ss, vv, hues);
+            if (best < 0) continue;
             maskDatas[best].data[o+3] = a; // マスクはアルファのみ使う(CSS maskとして重ねる)
           }
           const urls = maskCtxs.map((ctx, idx) => { ctx.putImageData(maskDatas[idx], 0, 0); return maskCanvases[idx].toDataURL(); });
