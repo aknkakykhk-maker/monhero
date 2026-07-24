@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-05 14:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-24 23:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -89,6 +89,19 @@ const levelInfo = (totalXp) => {
     xp -= need; level++;
   }
   return { level, xpIntoLevel: xp, xpForNext: xpForLevel(level) };
+};
+// --- マスモンの絆レベル: ブリーダーレベルより上げやすくするため、必要XPを大幅に割り引く
+// (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く)
+const BOND_XP_DISCOUNT = 0.35;
+const xpForBondLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * BOND_XP_DISCOUNT));
+const bondLevelInfo = (totalXp) => {
+  let level = 1, xp = totalXp;
+  for (let i = 0; i < 200; i++) {
+    const need = xpForBondLevel(level);
+    if (xp < need) break;
+    xp -= need; level++;
+  }
+  return { level, xpIntoLevel: xp, xpForNext: xpForBondLevel(level) };
 };
 
 // =====================================================================
@@ -558,9 +571,16 @@ function MonsterHeroGame() {
   const [breederName, setBreederName] = useState('名無しのブリーダー');
   const [breederXp, setBreederXp] = useState(0); // 累計経験値(WAVEクリア数ベース・端末保存)
   const [gold, setGold] = useState(0); // 累計ゴールド(WAVEクリア数ベース・端末保存)
-  const [bondXp, setBondXp] = useState({}); // モンスターごとの絆レベル累計経験値 { [monId]: xp } (端末保存・勇者モンのみ加算)
-  const [distAptPoints, setDistAptPoints] = useState({}); // 絆レベルアップで貯まる間合い適性強化ポイント { [monId]: pt } (端末保存)
-  const [distAptOverrides, setDistAptOverrides] = useState({}); // 強化ポイントで上げた間合い適性 { [monId]: [g0,g1,g2,g3] } (端末保存)
+  // マスモン: 勇者モンに選んだモンスターをラン終了時に名前を付けて登録した、固有の育成インスタンス。
+  // { id, baseId(元のモンスター種id), name, bondXp, distAptPoints(未使用の強化ポイント),
+  //   distApt:[g0,g1,g2,g3](このマスモン専用の間合い適性), statPoints:{hp,atk,def,guts}, createdAt }
+  const [masuMons, setMasuMons] = useState([]);
+  const [showMasuRegisterModal, setShowMasuRegisterModal] = useState(false); // ラン終了画面: マスモン登録の名前入力
+  const [masuNameInput, setMasuNameInput] = useState('');
+  const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
+  const [masuMonDetail, setMasuMonDetail] = useState(null); // マスモン一覧: タップ中のマスモン詳細
+  const [showMasuRenameModal, setShowMasuRenameModal] = useState(false);
+  const [masuRenameInput, setMasuRenameInput] = useState('');
   const [finalRewardSummary, setFinalRewardSummary] = useState(null); // 最終リザルト画面に出す今回の獲得内訳
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
@@ -591,10 +611,16 @@ function MonsterHeroGame() {
   const [audioLevel, setAudioLevel] = useState(0); // 0=OFF,1=低,2=中,3=高
   const audioOn = audioLevel > 0;
   const breederLevel = levelInfo(breederXp);
-  const getBondLevel = (monId) => levelInfo(bondXp[monId] || 0);
-  // モンスター詳細画面(rosterDetailMon/currentPickingMon)共通: 絆レベルとその進捗ゲージを表示
-  const bondGaugeNode = (monId) => {
-    const lvl = getBondLevel(monId);
+  // マスモン関連のヘルパー。絆レベル・間合い適性・ステータス強化ポイントは、すべてマスモン
+  // インスタンス(masuMons内の1件)に紐づく。プレーンな(マスモン化していない)モンスター種には
+  // 絆レベルの概念自体が存在しない
+  const getMasuMon = (masuId) => masuMons.find(m => m.id === masuId) || null;
+  const getMasuBondLevel = (masuId) => bondLevelInfo(getMasuMon(masuId)?.bondXp || 0);
+  // モンスター詳細画面(rosterDetailMon/currentPickingMon/マスモン一覧)共通: 絆レベルとその進捗ゲージを表示。
+  // masuIdが無い(=まだマスモン化していない)場合は何も表示しない
+  const bondGaugeNode = (masuId) => {
+    if (!masuId) return null;
+    const lvl = getMasuBondLevel(masuId);
     const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel / Math.max(1, lvl.xpForNext)) * 100));
     return (
       <div className="mt-1">
@@ -606,10 +632,10 @@ function MonsterHeroGame() {
       </div>
     );
   };
+  // mon引数は素のモンスター種、またはresolveRosterEntryToMonで解決済みのマスモン反映後オブジェクトのどちらもあり得る。
+  // どちらの場合もmon.distAptitudeを見るだけでよい(マスモンの場合はresolve時にdistApt配列が既に反映されている)
   const getDistAptitude = (mon, slotIdx) => {
     if (!mon) return 'C';
-    const ov = distAptOverrides[mon.id];
-    if (ov && ov[slotIdx]) return ov[slotIdx];
     return (mon.distAptitude && mon.distAptitude[slotIdx]) || 'C';
   };
   const AUDIO_VOLS = [0, 0.4, 0.7, 1.0];
@@ -750,12 +776,40 @@ function MonsterHeroGame() {
       setBreederXp(savedXp);
       const savedGold = await storeGet('mh_gold', 0, false);
       setGold(savedGold);
+      // 旧仕様(モンスター種ごとの絆レベル)。マスモン導入により廃止済みだが、既存プレイヤーの
+      // 育成データをマスモンへ1回だけ移行するために読み込む(このデータ自体はstateとして保持しない)
       const savedBondXp = await storeGet('mh_bond_xp', {}, false);
-      setBondXp(savedBondXp);
       const savedAptPoints = await storeGet('mh_dist_apt_points', {}, false);
-      setDistAptPoints(savedAptPoints);
       const savedAptOverrides = await storeGet('mh_dist_apt_overrides', {}, false);
-      setDistAptOverrides(savedAptOverrides);
+      let savedMasuMons = await storeGet('mh_masu_mons', [], false);
+      // マスモン移行: 旧仕様(モンスター種ごとの絆レベル)で貯まっていた絆経験値・強化ポイント・
+      // 間合い適性を、種の名前を初期名としたマスモンへ1回だけ自動移行する
+      // (既存プレイヤーがそれまで育てていた絆レベルの進捗を消してしまわないため)
+      const masuMigrated = await storeGet('mh_masu_migrated', false, false);
+      if (!masuMigrated) {
+        const migrated = [];
+        Object.keys(savedBondXp).forEach(monId => {
+          if ((savedBondXp[monId] || 0) <= 0) return;
+          const base = ALL_PLAYER_MONSTERS[monId];
+          if (!base) return;
+          migrated.push({
+            id: 'masu_migrated_' + monId,
+            baseId: monId,
+            name: base.name,
+            bondXp: savedBondXp[monId] || 0,
+            distAptPoints: savedAptPoints[monId] || 0,
+            distApt: savedAptOverrides[monId] ? [...savedAptOverrides[monId]] : [...(base.distAptitude || ['C','C','C','C'])],
+            statPoints: { hp: 0, atk: 0, def: 0, guts: 0 },
+            createdAt: Date.now(),
+          });
+        });
+        if (migrated.length) {
+          savedMasuMons = [...savedMasuMons, ...migrated];
+          await storeSet('mh_masu_mons', savedMasuMons, false);
+        }
+        await storeSet('mh_masu_migrated', true, false);
+      }
+      setMasuMons(savedMasuMons);
       let savedPoints = await storeGet('mh_breeder_points', 0, false);
       // ブリーダーポイント導入前からのプレイヤーには、既存レベル分(Lv-1)を一度だけ遡って付与
       const pointsMigrated = await storeGet('mh_points_migrated', false, false);
@@ -898,9 +952,39 @@ function MonsterHeroGame() {
     } catch { setRestoreMsg('コードが正しくありません'); }
   };
 
+  // 編成の1枠(monsterRosterIdsの要素)を、実際に使えるモンスターオブジェクトに変換する。
+  // 通常は素のモンスター種idの文字列だが、"masu:<masuId>"の形式ならマスモンインスタンスを指す。
+  // マスモンの場合、表示名をマスモン名に差し替え、ステータス強化ポイント・間合い適性を反映した
+  // オブジェクトを返す(idは元のモンスター種idのまま保つ。mainHero?.id==='Golem'等の特性判定を壊さないため)
+  const resolveRosterEntryToMon = (entry) => {
+    if (typeof entry === 'string' && entry.startsWith('masu:')) {
+      const masu = getMasuMon(entry.slice(5));
+      if (!masu) return null;
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      if (!base) return null;
+      const sp = masu.statPoints || {};
+      return {
+        ...base,
+        masuId: masu.id,
+        masuName: masu.name,
+        name: masu.name,
+        baseHp: base.baseHp + (sp.hp || 0),
+        baseAtk: base.baseAtk + (sp.atk || 0),
+        baseDef: base.baseDef + (sp.def || 0),
+        baseGuts: base.baseGuts + (sp.guts || 0),
+        distAptitude: masu.distApt || base.distAptitude,
+      };
+    }
+    return ALL_PLAYER_MONSTERS[entry] || null;
+  };
+  // 編成の1枠が対象とする「モンスター種id」を返す(プレーン種でもマスモンでも、種としては同じ扱い)
+  const baseIdOfRosterEntry = (entry) => {
+    if (typeof entry === 'string' && entry.startsWith('masu:')) return getMasuMon(entry.slice(5))?.baseId || null;
+    return entry;
+  };
   // 現在の周回で使う候補モンスター/ブリーダーカード(編成で選んだもの)。空の場合は解放済み全体にフォールバック
   const getActiveMonsterList = () => {
-    const list = Object.values(ALL_PLAYER_MONSTERS).filter(m => monsterRosterIds.includes(m.id));
+    const list = monsterRosterIds.map(resolveRosterEntryToMon).filter(Boolean);
     return list.length > 0 ? list : Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
   };
   const getActiveTeachingCards = () => {
@@ -942,9 +1026,16 @@ function MonsterHeroGame() {
   };
 
   // 編成画面: 解放済みモンスター/ブリーダーカードの中から、次回以降の周回で使う候補を仮選択する。
-  // 仮選択は自由に増減でき、「決定」を押してモンスター8体・ブリーダーカード6枚ちょうどの時だけ確定保存する
-  const toggleDraftMonster = (id) => {
-    setDraftMonsterRoster(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  // 仮選択は自由に増減でき、「決定」を押してモンスター8体・ブリーダーカード6枚ちょうどの時だけ確定保存する。
+  // モンスターは同じ種(baseId)につき1枠のみ選べるため、プレーン種・マスモンを問わず同じ種の
+  // 別の候補を選ぶと、既に選択中だった同じ種の候補は自動的に選択解除される
+  const toggleDraftMonster = (entry) => {
+    setDraftMonsterRoster(prev => {
+      if (prev.includes(entry)) return prev.filter(x => x !== entry);
+      const base = baseIdOfRosterEntry(entry);
+      const withoutSameBase = prev.filter(x => baseIdOfRosterEntry(x) !== base);
+      return [...withoutSameBase, entry];
+    });
   };
   const toggleDraftTeaching = (id) => {
     setDraftTeachingRoster(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -962,28 +1053,98 @@ function MonsterHeroGame() {
     setGameState('PROFILE');
   };
 
-  // 間合い適性の強化ポイントを1消費し、対象モンスターの対象距離の適性を1段階上げる
-  const spendAptPoint = (monId, slotIdx) => {
-    if ((distAptPoints[monId] || 0) <= 0) return;
-    const mon = ALL_PLAYER_MONSTERS[monId];
-    if (!mon) return;
-    const current = getDistAptitude(mon, slotIdx);
+  // マスモンの強化ポイントを1消費し、対象の距離の間合い適性を1段階上げる
+  const spendAptPoint = (masuId, slotIdx) => {
+    const masu = getMasuMon(masuId);
+    if (!masu || (masu.distAptPoints || 0) <= 0) return;
+    const current = (masu.distApt && masu.distApt[slotIdx]) || 'C';
     const idx = DIST_APTITUDE_GRADES.indexOf(current);
     if (idx < 0 || idx >= DIST_APTITUDE_GRADES.length - 1) return; // 既にM(上限)
     const nextGrade = DIST_APTITUDE_GRADES[idx + 1];
-    setDistAptOverrides(prev => {
-      const base = prev[monId] ? [...prev[monId]] : [...(mon.distAptitude || ['C','C','C','C'])];
-      base[slotIdx] = nextGrade;
-      const next = { ...prev, [monId]: base };
-      storeSet('mh_dist_apt_overrides', next, false);
-      return next;
-    });
-    setDistAptPoints(prev => {
-      const next = { ...prev, [monId]: (prev[monId] || 0) - 1 };
-      storeSet('mh_dist_apt_points', next, false);
+    setMasuMons(prev => {
+      const next = prev.map(m => {
+        if (m.id !== masuId) return m;
+        const distApt = [...(m.distApt || ['C','C','C','C'])];
+        distApt[slotIdx] = nextGrade;
+        return { ...m, distApt, distAptPoints: (m.distAptPoints || 0) - 1 };
+      });
+      storeSet('mh_masu_mons', next, false);
       return next;
     });
     Audio_.se.tap();
+  };
+  // マスモンの強化ポイントを1消費し、対象のステータスを1上げる(バランス調整前の暫定仕様: 1pt=+1)
+  const STAT_POINT_KEYS = { hp: 'ライフ', atk: 'ちから', def: '丈夫さ', guts: 'ガッツ' };
+  const spendStatPoint = (masuId, statKey) => {
+    const masu = getMasuMon(masuId);
+    if (!masu || (masu.distAptPoints || 0) <= 0) return;
+    if (!STAT_POINT_KEYS[statKey]) return;
+    setMasuMons(prev => {
+      const next = prev.map(m => {
+        if (m.id !== masuId) return m;
+        const statPoints = { ...(m.statPoints || {}) };
+        statPoints[statKey] = (statPoints[statKey] || 0) + 1;
+        return { ...m, statPoints, distAptPoints: (m.distAptPoints || 0) - 1 };
+      });
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    Audio_.se.tap();
+  };
+  // マスモンの名前を変更する(12文字まで)
+  const renameMasuMon = (masuId, newName) => {
+    const name = (newName || '').trim().slice(0, 12);
+    if (!name) return;
+    setMasuMons(prev => {
+      const next = prev.map(m => m.id === masuId ? { ...m, name } : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+  };
+  // マスモンを削除する。編成に入っていた場合はその枠も取り除く
+  const deleteMasuMon = (masuId) => {
+    setMasuMons(prev => {
+      const next = prev.filter(m => m.id !== masuId);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    const entry = 'masu:' + masuId;
+    setMonsterRosterIds(prev => {
+      if (!prev.includes(entry)) return prev;
+      const next = prev.filter(x => x !== entry);
+      storeSet('mh_monster_roster', next, false);
+      return next;
+    });
+  };
+  // ラン終了画面: 今回のランで勇者モンに選んでいた(まだマスモン化していない)モンスター種を、
+  // 今回のランで得た絆経験値をそのまま初期値として、名前を付けてマスモンとして登録する
+  // ラン終了画面(CHAMPION/敗北/リタイア)共通: マスモン登録ボタン・登録済み表示
+  const masuRegisterButtonNode = () => {
+    if (!finalRewardSummary?.heroBondGain || finalRewardSummary.heroBondGain.masuId) return null;
+    if (masuRegisteredThisRun) return <div className="text-[10px] text-pink-300 font-black mt-1 flex items-center justify-center gap-1 shrink-0"><Heart size={11}/>マスモンとして登録しました！</div>;
+    return (
+      <button onClick={()=>{setMasuNameInput(mainHero?.name||''); setShowMasuRegisterModal(true);}} className="w-full max-w-xs bg-pink-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 mt-1 shrink-0 active:scale-95"><Heart size={14}/>マスモンとして登録する</button>
+    );
+  };
+  const registerMasuMon = (name) => {
+    if (!mainHero || mainHero.masuId) return null; // 既にマスモンの勇者は登録不要(既存インスタンスに加算済み)
+    const base = ALL_PLAYER_MONSTERS[mainHero.id];
+    if (!base) return null;
+    const startXp = finalRewardSummary?.heroBondGain?.xpGain || 0;
+    const startLevel = bondLevelInfo(startXp);
+    const id = 'masu_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    const masu = {
+      id, baseId: mainHero.id,
+      name: (name || base.name).trim().slice(0, 12) || base.name,
+      bondXp: startXp,
+      distAptPoints: Math.max(0, startLevel.level - 1),
+      distApt: [...(base.distAptitude || ['C','C','C','C'])],
+      statPoints: { hp: 0, atk: 0, def: 0, guts: 0 },
+      createdAt: Date.now(),
+    };
+    setMasuMons(prev => { const next = [...prev, masu]; storeSet('mh_masu_mons', next, false); return next; });
+    setMasuRegisteredThisRun(true);
+    return masu;
   };
 
   // クリアしたWAVE数に応じてブリーダー経験値・ゴールド・勇者モンの絆経験値をまとめて加算(端末保存)。
@@ -1010,20 +1171,31 @@ function MonsterHeroGame() {
     setGold(goldAfter);
     storeSet('mh_gold', goldAfter, false);
 
+    // 勇者モンの絆経験値: 既にマスモン化済み(masuIdあり)ならそのインスタンスへ直接加算して確定保存する。
+    // まだマスモン化していないプレーンな種のままなら、加算先が無いため保存はせず(=絆レベルの概念自体が
+    // プレーン種には存在しない)、獲得量だけを計算してラン終了画面に表示する。そこで「マスモンとして
+    // 登録する」を選んだ場合にのみ、この獲得量を初期値として新しいマスモンが作られる(registerMasuMon参照)
     let heroBondGain = null;
     if (mainHero) {
-      const before = levelInfo(bondXp[mainHero.id] || 0);
       const gain = xpForWavesCleared(wavesCleared, scoreMult);
-      const nextMonXp = (bondXp[mainHero.id] || 0) + gain;
-      const after = levelInfo(nextMonXp);
-      const nextBondXp = { ...bondXp, [mainHero.id]: nextMonXp };
-      setBondXp(nextBondXp);
-      storeSet('mh_bond_xp', nextBondXp, false);
-      const gainedBondLevels = after.level - before.level;
-      if (gainedBondLevels > 0) {
-        setDistAptPoints(prev => { const next = { ...prev, [mainHero.id]: (prev[mainHero.id] || 0) + gainedBondLevels }; storeSet('mh_dist_apt_points', next, false); return next; });
+      if (mainHero.masuId) {
+        const masu = getMasuMon(mainHero.masuId);
+        const beforeXp = masu?.bondXp || 0;
+        const before = bondLevelInfo(beforeXp);
+        const afterXp = beforeXp + gain;
+        const after = bondLevelInfo(afterXp);
+        const gainedBondLevels = after.level - before.level;
+        setMasuMons(prev => {
+          const next = prev.map(m => m.id === mainHero.masuId ? { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + gainedBondLevels } : m);
+          storeSet('mh_masu_mons', next, false);
+          return next;
+        });
+        heroBondGain = { name: mainHero.masuName || mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after, masuId: mainHero.masuId };
+      } else {
+        const before = bondLevelInfo(0);
+        const after = bondLevelInfo(gain);
+        heroBondGain = { name: mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after, masuId: null };
       }
-      heroBondGain = { monId: mainHero.id, name: mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after };
     }
 
     setFinalRewardSummary({ breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, waveHistory });
@@ -1100,6 +1272,7 @@ function MonsterHeroGame() {
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
     setPendingReward(null); setFocusedCard(s.focusedCard); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
+    setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
     setGameState('TITLE');
   };
 
@@ -1131,6 +1304,7 @@ function MonsterHeroGame() {
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
     setFocusedCard(s.focusedCard); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
+    setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
     setGameState('PICK_HERO');
   };
 
@@ -1937,6 +2111,14 @@ function MonsterHeroGame() {
                   <span className="flex items-center gap-1 text-[9px] font-black text-purple-400 uppercase"><Layers size={11}/>ブリーダーカード編成</span>
                   <span className="text-[12px] font-black text-purple-200">{unlockedTeachingIds.length}枚</span>
                 </button>
+                <button onClick={()=>setGameState('OWNED_MONSTERS')} className="flex flex-col items-center justify-center gap-1 bg-cyan-950/40 border border-cyan-500/40 px-2 py-2.5 rounded-xl active:scale-95">
+                  <span className="flex items-center gap-1 text-[9px] font-black text-cyan-400 uppercase"><User size={11}/>持っているモンスター</span>
+                  <span className="text-[12px] font-black text-cyan-200">{unlockedMonsterIds.length}体</span>
+                </button>
+                <button onClick={()=>setGameState('MASU_MONS')} className="flex flex-col items-center justify-center gap-1 bg-pink-950/40 border border-pink-500/40 px-2 py-2.5 rounded-xl active:scale-95">
+                  <span className="flex items-center gap-1 text-[9px] font-black text-pink-400 uppercase"><Heart size={11}/>マスモン</span>
+                  <span className="text-[12px] font-black text-pink-200">{masuMons.length}体</span>
+                </button>
               </div>
             </div>
             <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-2 px-1 shrink-0">難易度別 記録</div>
@@ -2031,23 +2213,44 @@ function MonsterHeroGame() {
             </div>
             {rosterTab==='monster'?(
               <div className="flex-1 min-h-0 flex flex-col">
-                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">仮選択中: {draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}体 / 解放済み{unlockedMonsterIds.length}体<br/>※ちょうど{STARTER_MONSTER_IDS.length}体選ぶと「決定」できます・右上のiボタンで詳細表示</div>
+                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">仮選択中: {draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}体 / 解放済み{unlockedMonsterIds.length}体<br/>※ちょうど{STARTER_MONSTER_IDS.length}体選ぶと「決定」できます・右上のiボタンで詳細表示・同じ種は1体まで(マスモン含む)</div>
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   <div className="grid grid-cols-3 gap-3 pb-4">
                     {unlockedMonsterIds.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>{
-                      const selected = draftMonsterRoster.includes(m.id);
+                      const entry = m.id;
+                      const selected = draftMonsterRoster.includes(entry);
                       return (
-                        <div key={m.id} className="relative">
-                          <button onClick={()=>toggleDraftMonster(m.id)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
+                        <div key={entry} className="relative">
+                          <button onClick={()=>toggleDraftMonster(entry)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
                             <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                             <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
-                            <div className="w-full">
-                              <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5 mb-0.5"><Heart size={7}/>絆Lv.{getBondLevel(m.id).level}</div>
-                              <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${Math.max(0,Math.min(100,(getBondLevel(m.id).xpIntoLevel/Math.max(1,getBondLevel(m.id).xpForNext))*100))}%`}}></div></div>
-                            </div>
                             <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
                           </button>
                           <button onClick={(e)=>{e.stopPropagation(); setRosterDetailMon(m);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
+                        </div>
+                      );
+                    })}
+                    {masuMons.map(masu=>{
+                      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+                      if (!base) return null;
+                      const entry = 'masu:' + masu.id;
+                      const selected = draftMonsterRoster.includes(entry);
+                      const lvl = bondLevelInfo(masu.bondXp || 0);
+                      return (
+                        <div key={entry} className="relative">
+                          <button onClick={()=>toggleDraftMonster(entry)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-pink-900/40 border-pink-400 ring-2 ring-pink-400':'bg-slate-900 border-pink-900/50'}`}>
+                            <div className="relative w-12 h-12 shrink-0">
+                              <div className="w-12 h-12 rounded-full overflow-hidden border border-pink-400/40"><img src={base.iconUrl} alt={masu.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                              <div className="absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[6px] font-black text-white leading-tight">マスモン</div>
+                            </div>
+                            <div className="text-[10px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
+                            <div className="text-[7px] text-slate-500 font-bold truncate w-full text-center -mt-1">({base.name})</div>
+                            <div className="w-full">
+                              <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5 mb-0.5"><Heart size={7}/>絆Lv.{lvl.level}</div>
+                              <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${Math.max(0,Math.min(100,(lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100))}%`}}></div></div>
+                            </div>
+                            <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-pink-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
+                          </button>
                         </div>
                       );
                     })}
@@ -2086,7 +2289,7 @@ function MonsterHeroGame() {
             <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
               <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
                 {rosterDetailMon.imgUrl?(<img src={rosterDetailMon.imgUrl} alt={rosterDetailMon.name} className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-110"/>):(<div className="text-6xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{rosterDetailMon.emoji}</div>)}
-                <div className="flex-1"><h3 className="text-xl font-black text-white">{rosterDetailMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div>{bondGaugeNode(rosterDetailMon.id)}</div>
+                <div className="flex-1"><h3 className="text-xl font-black text-white">{rosterDetailMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div><div className="text-[8px] text-slate-500 font-bold mt-1">勇者モンとして選んでラン終了時に登録すると「マスモン」化できます</div></div>
                 <button onClick={()=>setRosterDetailMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
               </div>
               <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
@@ -2095,7 +2298,7 @@ function MonsterHeroGame() {
                   <div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{rosterDetailMon.traitDesc}</div></div>
                 </div>
                 <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{rosterDetailMon.plusStats.hp>0&&`HP+${rosterDetailMon.plusStats.hp} `}{rosterDetailMon.plusStats.atk>0&&`攻+${rosterDetailMon.plusStats.atk} `}{rosterDetailMon.plusStats.def>0&&`防+${rosterDetailMon.plusStats.def} `}{rosterDetailMon.plusStats.guts>0&&`G+${rosterDetailMon.plusStats.guts} `}</div></div>
-                <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {distAptPoints[rosterDetailMon.id]||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(rosterDetailMon,idx); const canUp=(distAptPoints[rosterDetailMon.id]||0)>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>spendAptPoint(rosterDetailMon.id,idx)} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
+                <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="text-[7px] text-cyan-400 uppercase font-bold mb-1">間合い適性</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(rosterDetailMon,idx); return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span></div>);})}</div></div>
                 {renderSkillSection(rosterDetailMon)}
               </div>
               <button onClick={()=>setRosterDetailMon(null)} className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95">閉じる</button>
@@ -2116,6 +2319,130 @@ function MonsterHeroGame() {
             </div>
           </div>
         );})()}
+
+        {/* 持っているモンスター(解放済みの種を一覧表示・タップで詳細) */}
+        {gameState==='OWNED_MONSTERS'&&(
+          <div className="flex-1 flex flex-col h-full min-h-0 p-4">
+            <div className="flex items-center gap-2 mb-2 shrink-0">
+              <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <h2 className="text-xl font-black italic text-cyan-400 uppercase tracking-widest">持っているモンスター</h2>
+            </div>
+            <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</div>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+              <div className="grid grid-cols-3 gap-3 pb-4">
+                {unlockedMonsterIds.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>{
+                  const masuCount = masuMons.filter(ms=>ms.baseId===m.id).length;
+                  return (
+                    <button key={m.id} onClick={()=>setRosterDetailMon(m)} className="rounded-2xl border-2 border-slate-800 bg-slate-900 p-2 flex flex-col items-center gap-1.5 active:scale-95">
+                      <div className="w-14 h-14 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                      <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
+                      <div className="text-[7px] text-pink-400 font-bold">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* マスモン一覧: ラン終了時に登録した固有インスタンス。タップで詳細・改名・強化ポイント使用 */}
+        {gameState==='MASU_MONS'&&(
+          <div className="flex-1 flex flex-col h-full min-h-0 p-4">
+            <div className="flex items-center gap-2 mb-2 shrink-0">
+              <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <h2 className="text-xl font-black italic text-pink-400 uppercase tracking-widest">マスモン</h2>
+            </div>
+            <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</div>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+              {masuMons.length===0?(
+                <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🐾</span><div className="text-[11px] text-slate-400 mt-2">まだマスモンがいません。<br/>勇者モンでランを終えると登録できます。</div></div>
+              ):(
+                <div className="grid grid-cols-2 gap-3 pb-4">
+                  {masuMons.map(masu=>{
+                    const base = ALL_PLAYER_MONSTERS[masu.baseId];
+                    if (!base) return null;
+                    const lvl = bondLevelInfo(masu.bondXp||0);
+                    const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
+                    return (
+                      <button key={masu.id} onClick={()=>setMasuMonDetail(masu)} className="rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2.5 flex flex-col items-center gap-1 active:scale-95">
+                        <div className="w-14 h-14 rounded-full overflow-hidden border border-pink-400/40 shrink-0"><img src={base.iconUrl} alt={masu.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                        <div className="text-[10px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
+                        <div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>
+                        <div className="w-full mt-0.5">
+                          <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={7}/>絆Lv.{lvl.level}</div>
+                          <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
+                        </div>
+                        {(masu.distAptPoints||0)>0&&<div className="text-[7px] text-amber-300 font-black flex items-center gap-0.5 mt-0.5"><Sparkles size={8}/>強化P {masu.distAptPoints}</div>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {masuMonDetail&&(()=>{
+          const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
+          const base = ALL_PLAYER_MONSTERS[masu.baseId];
+          if (!base) { setMasuMonDetail(null); return null; }
+          const lvl = bondLevelInfo(masu.bondXp||0);
+          const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
+          const inRoster = monsterRosterIds.includes('masu:'+masu.id);
+          return (
+            <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000}}>
+              <div className="bg-slate-900 border-2 border-pink-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
+                <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border border-pink-400/40 shrink-0"><img src={base.iconUrl} alt={masu.name} className="w-full h-full object-cover"/></div>
+                  <div className="flex-1 min-w-0">
+                    <button onClick={()=>{setMasuRenameInput(masu.name); setShowMasuRenameModal(true);}} className="flex items-center gap-1.5 active:scale-95">
+                      <h3 className="text-lg font-black text-white truncate">{masu.name}</h3><Edit3 size={12} className="text-slate-500 shrink-0"/>
+                    </button>
+                    <div className="text-[9px] text-pink-400 font-bold uppercase tracking-wider">マスモン・元は{base.name}</div>
+                    <div className="mt-1">
+                      <div className="text-[9px] text-pink-300 font-black flex items-center gap-1"><Heart size={9}/>絆Lv.{lvl.level}</div>
+                      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
+                      <div className="text-[7px] text-pink-400/70 font-mono mt-0.5">{lvl.xpIntoLevel.toLocaleString()} / {lvl.xpForNext.toLocaleString()} XP</div>
+                    </div>
+                  </div>
+                  <button onClick={()=>setMasuMonDetail(null)} className="p-2 bg-white/5 rounded-full active:scale-90 shrink-0"><X size={16}/></button>
+                </div>
+                <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
+                  <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">現在のステータス(強化分込み)</div><div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{base.baseHp+(masu.statPoints?.hp||0)}{(masu.statPoints?.hp||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.hp})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{base.baseAtk+(masu.statPoints?.atk||0)}{(masu.statPoints?.atk||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.atk})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{base.baseDef+(masu.statPoints?.def||0)}{(masu.statPoints?.def||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.def})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{base.baseGuts+(masu.statPoints?.guts||0)}{(masu.statPoints?.guts||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.guts})</span>}</span></div></div></div>
+                  <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=(masu.distApt&&masu.distApt[idx])||'C'; const canUp=(masu.distAptPoints||0)>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>spendAptPoint(masu.id,idx)} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
+                  {(masu.distAptPoints||0)>0&&(
+                    <div className="bg-black/40 p-2 rounded-xl border border-emerald-500/30">
+                      <div className="text-[7px] text-emerald-400 uppercase font-bold mb-1">ステータス強化(強化P 1つにつき+1・調整中)</div>
+                      <div className="grid grid-cols-4 gap-1">
+                        {Object.entries(STAT_POINT_KEYS).map(([key,label])=>(
+                          <button key={key} onClick={()=>spendStatPoint(masu.id,key)} className="flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95">
+                            <span className="text-[7px] text-emerald-300 font-black">{label}</span>
+                            <span className="text-[10px] text-white font-black">+1</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="text-[8px] text-slate-500 font-bold text-center px-2">{inRoster?'現在、編成に入っています':'編成画面で選ぶと、次の周回でこのマスモンを使えます'}</div>
+                  <button onClick={()=>{ if(window.confirm(`「${masu.name}」を削除しますか？この操作は取り消せません。`)){ deleteMasuMon(masu.id); setMasuMonDetail(null); } }} className="w-full bg-red-950/40 border border-red-500/30 text-red-400 py-2.5 rounded-xl font-black text-[10px] uppercase active:scale-95">このマスモンを削除する</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {showMasuRenameModal&&masuMonDetail&&(
+          <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:91000}}>
+            <div className="bg-slate-900 border border-pink-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
+              <h3 className="text-lg font-black text-white mb-1">マスモンの名前を変更</h3>
+              <input type="text" value={masuRenameInput} onChange={e=>setMasuRenameInput(e.target.value.slice(0,12))} maxLength={12} className="w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-4"/>
+              <div className="flex gap-2">
+                <button onClick={()=>setShowMasuRenameModal(false)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">戻る</button>
+                <button onClick={()=>{ renameMasuMon(masuMonDetail.id, masuRenameInput); setMasuMonDetail(prev=>prev?{...prev, name:(masuRenameInput||'').trim().slice(0,12)||prev.name}:prev); setShowMasuRenameModal(false); }} className="flex-1 bg-pink-600 text-white py-3 rounded-xl font-black text-xs">保存</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {showNameEdit&&(
           <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
@@ -2602,14 +2929,32 @@ function MonsterHeroGame() {
               <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
                 <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
                   {currentPickingMon.imgUrl?(<img src={currentPickingMon.imgUrl} alt={currentPickingMon.name} className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-110"/>):(<div className="text-6xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{currentPickingMon.emoji}</div>)}
-                  <div className="flex-1"><h3 className="text-xl font-black text-white">{currentPickingMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile</div>{bondGaugeNode(currentPickingMon.id)}</div><button onClick={()=>setCurrentPickingMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
+                  <div className="flex-1"><h3 className="text-xl font-black text-white">{currentPickingMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile{currentPickingMon.masuId&&<span className="ml-1 text-pink-400">・マスモン({ALL_PLAYER_MONSTERS[currentPickingMon.id]?.name})</span>}</div>{bondGaugeNode(currentPickingMon.masuId)}</div><button onClick={()=>setCurrentPickingMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
                 </div>
                 <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
                   <div className="grid grid-cols-2 gap-2 shrink-0">
                     <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">基本ステータス</div><div className="space-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseHp:`${maxHp} → ${maxHp+(currentPickingMon.plusStats?.hp||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseAtk:`${atk} → ${atk+(currentPickingMon.plusStats?.atk||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseDef:`${def} → ${def+(currentPickingMon.plusStats?.def||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseGuts:`${maxGuts} → ${maxGuts+(currentPickingMon.plusStats?.guts||0)}`}</span></div></div></div>
                     {gameState==='PICK_HERO'?(<div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{currentPickingMon.traitDesc}</div></div>):(<div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{currentPickingMon.plusStats.hp>0&&`HP+${currentPickingMon.plusStats.hp} `}{currentPickingMon.plusStats.atk>0&&`攻+${currentPickingMon.plusStats.atk} `}{currentPickingMon.plusStats.def>0&&`防+${currentPickingMon.plusStats.def} `}{currentPickingMon.plusStats.guts>0&&`G+${currentPickingMon.plusStats.guts} `}</div></div>)}
                   </div>
-                  <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {distAptPoints[currentPickingMon.id]||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(currentPickingMon,idx); const canUp=(distAptPoints[currentPickingMon.id]||0)>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>spendAptPoint(currentPickingMon.id,idx)} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
+                  <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div>{currentPickingMon.masuId&&<div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {getMasuMon(currentPickingMon.masuId)?.distAptPoints||0}</div>}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(currentPickingMon,idx); const pts=currentPickingMon.masuId?(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0):0; const canUp=pts>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>spendAptPoint(currentPickingMon.masuId,idx)} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
+                  {currentPickingMon.masuId&&(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0)>0&&(
+                    <div className="bg-black/40 p-2 rounded-xl border border-emerald-500/30">
+                      <div className="text-[7px] text-emerald-400 uppercase font-bold mb-1">ステータス強化(強化P 1つにつき+1・調整中)</div>
+                      <div className="grid grid-cols-4 gap-1">
+                        {Object.entries(STAT_POINT_KEYS).map(([key,label])=>(
+                          <button key={key} onClick={()=>spendStatPoint(currentPickingMon.masuId,key)} className="flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95">
+                            <span className="text-[7px] text-emerald-300 font-black">{label}</span>
+                            <span className="text-[10px] text-white font-black">+1</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {!currentPickingMon.masuId&&(
+                    <div className="bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center">
+                      {gameState==='PICK_HERO'?'勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます':'絆レベルの強化は勇者モン(マスモン)のみ対象です'}
+                    </div>
+                  )}
                   {renderSkillSection(currentPickingMon)}
                 </div>
                 <div className="flex gap-2 mt-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 bg-slate-800 text-slate-400 py-3.5 rounded-2xl font-black text-sm uppercase">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className="w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg">決定</button></div>
@@ -2790,12 +3135,30 @@ function MonsterHeroGame() {
       {showQuitConfirm&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">現在のスコア {score.toLocaleString()} pt がランキングに記録されます</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>)}
 
       {/* CHAMPION */}
-      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1><div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}</div><button onClick={handleGoToTitle} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2">タイトルへ</button></div>)}
+      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1><div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><button onClick={handleGoToTitle} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2">タイトルへ</button></div>)}
 
       {/* GAME OVER */}
-      {hp<=0&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
+      {hp<=0&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
 
-      {gaveUp&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Flag size={48} className="text-slate-400 mb-3"/><h2 className="text-2xl font-black italic text-white uppercase">リタイア</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
+      {gaveUp&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Flag size={48} className="text-slate-400 mb-3"/><h2 className="text-2xl font-black italic text-white uppercase">リタイア</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
+
+      {/* マスモン登録: ラン終了画面(CHAMPION/敗北/リタイア)から名前を付けて登録するモーダル */}
+      {showMasuRegisterModal&&(
+        <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+          <div className="bg-slate-900 border-2 border-pink-500 rounded-3xl p-6 w-full max-w-sm flex flex-col gap-4 shadow-2xl">
+            <div className="text-center">
+              <div className="text-4xl mb-2">🐾</div>
+              <h3 className="text-lg font-black text-white">マスモンとして登録</h3>
+              <div className="text-[10px] text-slate-400 mt-1">名前を付けて保存すると、今回得た絆レベル・強化ポイントが引き継がれます。同じ種でも違う名前で複数登録できます。</div>
+            </div>
+            <input type="text" value={masuNameInput} onChange={e=>setMasuNameInput(e.target.value.slice(0,12))} placeholder={mainHero?.name||'名前'} maxLength={12} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white text-center font-black focus:outline-none focus:border-pink-400"/>
+            <div className="flex gap-2">
+              <button onClick={()=>setShowMasuRegisterModal(false)} className="w-2/5 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95">キャンセル</button>
+              <button onClick={()=>{ registerMasuMon(masuNameInput); setShowMasuRegisterModal(false); }} className="w-3/5 bg-pink-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95">登録する</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* EFFECT OVERLAY */}
       {effect&&(<div className="fixed inset-0 z-[70000] flex flex-col items-center justify-center pointer-events-none text-center p-8 overflow-hidden" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:70000}}>
