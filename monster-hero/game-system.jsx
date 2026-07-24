@@ -60,7 +60,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-24 23:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 00:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -990,6 +990,12 @@ function MonsterHeroGame() {
         baseAtk: base.baseAtk + (sp.atk || 0),
         baseDef: base.baseDef + (sp.def || 0),
         baseGuts: base.baseGuts + (sp.guts || 0),
+        plusStats: {
+          hp: (base.plusStats?.hp || 0) + (sp.hp || 0),
+          atk: (base.plusStats?.atk || 0) + (sp.atk || 0),
+          def: (base.plusStats?.def || 0) + (sp.def || 0),
+          guts: (base.plusStats?.guts || 0) + (sp.guts || 0),
+        },
         distAptitude: masu.distApt || base.distAptitude,
         color: masu.color || null,
       };
