@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 02:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 02:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -327,10 +327,15 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
           const maskCtxs = maskCanvases.map(c => c.getContext('2d'));
           if (maskCtxs.some(c => !c)) { resolve(null); return; }
           const maskDatas = maskCtxs.map(ctx => ctx.createImageData(w, h));
+          const alphaAt = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : src[(y*w+x)*4+3];
           for (let i = 0; i < w*h; i++) {
             const o = i*4;
             const r = src[o], g = src[o+1], b = src[o+2], a = src[o+3];
             if (a < 20) continue;
+            const x = i % w, y = (i / w) | 0;
+            // 輪郭線のアンチエイリアス部分(透明ピクセルに隣接する1px)は色がにじんでいて誤判定しやすいため、
+            // 染色対象から除外し常に元の絵のまま残す(輪郭が塗り分けの色を拾ってしまう問題を防ぐ)
+            if (alphaAt(x-1,y) < 200 || alphaAt(x+1,y) < 200 || alphaAt(x,y-1) < 200 || alphaAt(x,y+1) < 200) continue;
             const [hh, ss, vv] = _rgbToHsv(r, g, b);
             if (ss < 0.18 || vv < 0.12) continue;
             let best = 0, bestD = 999;
