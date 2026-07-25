@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 16:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 16:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -297,6 +297,35 @@ const MASU_COLOR_TARGET = {
 });
 const MASU_COLOR_LABELS = { red: '赤', orange: '橙', yellow: '黄', lime: '黄緑', green: '緑', teal: '青緑', cyan: 'シアン', sky: '空色', blue: '青', purple: '紫', magenta: 'マゼンタ', pink: 'ピンク', black: '黒', white: '白', red_light: '薄赤', orange_light: '薄橙', yellow_light: '薄黄', lime_light: '薄黄緑', green_light: '薄緑', cyan_light: '薄水色', blue_light: '薄青', purple_light: '薄紫', pink_light: '薄ピンク' };
 const MASU_COLOR_SWATCH = { red: '#ef4444', orange: '#f97316', yellow: '#eab308', lime: '#84cc16', green: '#22c55e', teal: '#14b8a6', cyan: '#06b6d4', sky: '#38bdf8', blue: '#3b82f6', purple: '#a855f7', magenta: '#d946ef', pink: '#ec4899', black: '#1f2937', white: '#f8fafc', red_light: '#fca5a5', orange_light: '#fdba74', yellow_light: '#fde047', lime_light: '#bef264', green_light: '#86efac', cyan_light: '#67e8f9', blue_light: '#93c5fd', purple_light: '#d8b4fe', pink_light: '#f9a8d4' };
+// 「カスタム」色: プリセット18色に無い任意の色相・彩度・明度を選べるようにするため、
+// 色id文字列自体に "custom:色相:彩度:明度"(彩度・明度は0-100の整数)を埋め込んでエンコードする。
+// masu.colorsは元々ただの文字列配列なので、この方式ならデータモデルを変えずに保存できる
+const _encodeCustomColorId = (h, s, v) => `custom:${Math.round(h)}:${Math.round(s * 100)}:${Math.round(v * 100)}`;
+const _parseCustomColorId = (colorId) => {
+  if (typeof colorId !== 'string' || !colorId.startsWith('custom:')) return null;
+  const parts = colorId.slice(7).split(':').map(Number);
+  if (parts.length !== 3 || parts.some(n => !Number.isFinite(n))) return null;
+  const [h, s, v] = parts;
+  return { h: Math.max(0, Math.min(360, h)), s: Math.max(0, Math.min(1, s / 100)), v: Math.max(0, Math.min(1, v / 100)) };
+};
+// プリセット色id・カスタム色idのどちらでも、染色エンジンが使う{h,s,vMin,vMax}形式に解決する
+const _resolveColorTarget = (colorId) => {
+  if (MASU_COLOR_TARGET[colorId]) return MASU_COLOR_TARGET[colorId];
+  const custom = _parseCustomColorId(colorId);
+  if (!custom) return null;
+  // プリセットは狙った明度を中心に前後へ幅を持たせて元絵の陰影を残す(だいたい0.5〜0.6幅)ため、
+  // カスタムも選んだ明度(v)を中心に同じくらいの幅を取ってレンジ化する
+  const vMin = Math.max(0.05, custom.v - 0.32);
+  const vMax = Math.min(1.0, Math.max(custom.v + 0.24, vMin + 0.2));
+  return { h: custom.h, s: custom.s, vMin, vMax };
+};
+const getColorSwatchHex = (colorId) => {
+  if (MASU_COLOR_SWATCH[colorId]) return MASU_COLOR_SWATCH[colorId];
+  const custom = _parseCustomColorId(colorId);
+  if (!custom) return '#64748b';
+  const [r, g, b] = _hsvToRgb(custom.h, custom.s, Math.max(0.35, custom.v));
+  return `rgb(${r},${g},${b})`;
+};
 // モンスター種ごとの「染色もどき」部位分割データ。各要素は画像内でその部位が持つ代表色相(度)。
 // 事前にモンスター画像を解析して求めた、染色可能な部位ごとの判定条件。
 // 各要素は次のいずれか:
@@ -585,7 +614,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
 const MASU_COLOR_PRESERVE_GLOSS = { Ark: true };
 // ImageDataのピクセル配列(RGBA)を、指定した染色色idの狙った色相・彩度に置き換える(明度は元の陰影を保つ)
 const _recolorImageData = (data, colorId, baseId) => {
-  const t = MASU_COLOR_TARGET[colorId];
+  const t = _resolveColorTarget(colorId);
   if (!t) return;
   let satRef = 1;
   if (MASU_COLOR_PRESERVE_GLOSS[baseId]) {
@@ -611,7 +640,7 @@ const _recolorImageData = (data, colorId, baseId) => {
 // imgUrlの画像全体を指定色に染め直した画像をCanvasで生成し、dataURLで返す(色ごとにキャッシュ)
 const _dyeRecolorCache = {};
 const getRecoloredImage = (imgUrl, colorId, baseId) => {
-  if (!MASU_COLOR_TARGET[colorId]) return null;
+  if (!_resolveColorTarget(colorId)) return null;
   const cacheKey = imgUrl + '::' + colorId;
   if (_dyeRecolorCache[cacheKey]) return _dyeRecolorCache[cacheKey];
   const promise = new Promise((resolve) => {
@@ -677,6 +706,76 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, drag
           WebkitMaskSize:'100% 100%', maskSize:'100% 100%',
         }}/>
       ) : null)}
+    </div>
+  );
+};
+// 染色もどきの「カスタム」色選択: 色相バー(1本)+彩度・明度パッド(正方形)で任意の色を選べる
+// 自前のスペクトラムピッカー。端末のOS標準カラーピッカー(<input type="color">)はiOS/Android/PCで
+// 見た目も操作感もバラバラで、アプリのテーマにも合わせられず自動テストもできないため使わず、
+// 既存のVolumeSliderと同じくpointerdown/move/upでドラッグを自前実装している
+const CustomColorPicker = ({ h, s, v, onChange }) => {
+  const squareRef = useRef(null);
+  const hueRef = useRef(null);
+  const [dragTarget, setDragTarget] = useState(null); // 'square'|'hue'|null
+  const updateFromSquare = (clientX, clientY) => {
+    const el = squareRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const ns = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const nv = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
+    onChange(h, ns, nv);
+  };
+  const updateFromHue = (clientX) => {
+    const el = hueRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const nh = Math.max(0, Math.min(360, ((clientX - rect.left) / rect.width) * 360));
+    onChange(nh, s, v);
+  };
+  useEffect(() => {
+    if (!dragTarget) return;
+    const onMove = (e) => { if (dragTarget === 'square') updateFromSquare(e.clientX, e.clientY); else updateFromHue(e.clientX); };
+    const onUp = () => setDragTarget(null);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragTarget, h, s, v]);
+  const [pr, pg, pb] = _hsvToRgb(h, s, v);
+  const previewColor = `rgb(${pr},${pg},${pb})`;
+  const [hr, hg, hb] = _hsvToRgb(h, 1, 1);
+  const pureHueColor = `rgb(${hr},${hg},${hb})`;
+  return (
+    <div className="flex flex-col gap-3">
+      <div
+        ref={squareRef}
+        onPointerDown={(e) => { setDragTarget('square'); updateFromSquare(e.clientX, e.clientY); }}
+        className="relative w-full aspect-square rounded-2xl cursor-pointer touch-none overflow-hidden border border-white/10"
+        style={{ backgroundColor: pureHueColor, backgroundImage: 'linear-gradient(to right, #fff, rgba(255,255,255,0)), linear-gradient(to top, #000, rgba(0,0,0,0))' }}
+      >
+        <div
+          className="absolute rounded-full border-2 border-white shadow-[0_0_6px_rgba(0,0,0,0.8)]"
+          style={{ left: `${s * 100}%`, top: `${(1 - v) * 100}%`, width: '20px', height: '20px', transform: 'translate(-50%,-50%)', backgroundColor: previewColor }}
+        ></div>
+      </div>
+      <div
+        ref={hueRef}
+        onPointerDown={(e) => { setDragTarget('hue'); updateFromHue(e.clientX); }}
+        className="relative w-full h-6 rounded-full cursor-pointer touch-none"
+        style={{ background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)' }}
+      >
+        <div
+          className="absolute top-1/2 rounded-full bg-white border-2 border-slate-900 shadow-[0_0_6px_rgba(0,0,0,0.8)]"
+          style={{ left: `${(h / 360) * 100}%`, width: '18px', height: '18px', transform: 'translate(-50%,-50%)' }}
+        ></div>
+      </div>
     </div>
   );
 };
@@ -1068,6 +1167,7 @@ function MonsterHeroGame() {
   const [pendingItemUse, setPendingItemUse] = useState(null); // アイテム欄で「使う」を押した後、対象のマスモンを選ぶ画面用(itemId)
   const [dyeTargetMasuId, setDyeTargetMasuId] = useState(null); // 染色もどき: 対象に選んだマスモンid(色選択モーダル表示のトリガー)
   const [dyePreviewColors, setDyePreviewColors] = useState([]); // 染色もどき: 確定前にプレビュー中の部位別色id配列(染色①②③)
+  const [customColorPicker, setCustomColorPicker] = useState(null); // 染色もどき: カスタム色選択中の{idx,h,s,v}(nullなら非表示)
   const [showMasuRegisterModal, setShowMasuRegisterModal] = useState(false); // ラン終了画面: マスモン登録の名前入力
   const [masuNameInput, setMasuNameInput] = useState('');
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
@@ -1776,7 +1876,7 @@ function MonsterHeroGame() {
   // colorsはモンスターの染色可能な部位数と同じ長さの配列(各要素は色idまたはnull=染色しない)
   const useDyeItem = (masuId, colors) => {
     if ((ownedItems.dye_mock || 0) <= 0) return;
-    const cleaned = (colors || []).map(c => (c && MASU_COLOR_TARGET[c]) ? c : null);
+    const cleaned = (colors || []).map(c => (c && _resolveColorTarget(c)) ? c : null);
     if (!cleaned.some(Boolean)) return;
     setMasuMons(prev => {
       const next = prev.map(m => m.id === masuId ? { ...m, colors: cleaned, color: undefined } : m);
@@ -3619,7 +3719,7 @@ function MonsterHeroGame() {
           const masu = getMasuMon(dyeTargetMasuId);
           const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
           if (!masu || !base) { setDyeTargetMasuId(null); setDyePreviewColors([]); return null; }
-          const closeDyePicker = () => { setDyeTargetMasuId(null); setDyePreviewColors([]); };
+          const closeDyePicker = () => { setDyeTargetMasuId(null); setDyePreviewColors([]); setCustomColorPicker(null); };
           const regionCount = dyeRegionCount(masu.baseId);
           const curColors = getMasuColors(masu);
           const regionLabels = ['①','②','③'];
@@ -3652,6 +3752,14 @@ function MonsterHeroGame() {
                           <span className="text-[5.5px] text-white font-black leading-none">{MASU_COLOR_LABELS[colorId]}</span>
                         </button>
                         ))}
+                        <button onClick={()=>{
+                          const cur = dyePreviewColors[idx];
+                          const parsed = cur && _parseCustomColorId(cur);
+                          setCustomColorPicker({ idx, h: parsed?.h ?? 210, s: parsed?.s ?? 0.7, v: parsed?.v ?? 0.7 });
+                        }} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${_parseCustomColorId(dyePreviewColors[idx])?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
+                          <span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{background:_parseCustomColorId(dyePreviewColors[idx])?getColorSwatchHex(dyePreviewColors[idx]):'conic-gradient(#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#d946ef,#ef4444)'}}></span>
+                          <span className="text-[5.5px] text-white font-black leading-none">カスタム</span>
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -3659,6 +3767,30 @@ function MonsterHeroGame() {
                 <div className="flex gap-2 mt-1 shrink-0">
                   <button onClick={closeDyePicker} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">キャンセル</button>
                   <button onClick={()=>{ useDyeItem(masu.id, dyePreviewColors); closeDyePicker(); }} disabled={noChange} className={`flex-1 py-3 rounded-xl font-black text-xs uppercase ${noChange?'bg-slate-800 text-slate-600':'bg-fuchsia-600 text-white active:scale-95'}`}>この色に染める</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* 染色もどき: カスタム色選択(色相バー+彩度・明度パッドのスペクトラムピッカー) */}
+        {customColorPicker&&(()=>{
+          const { idx, h, s, v } = customColorPicker;
+          const applyCustom = () => {
+            setDyePreviewColors(prev => { const next = [...prev]; next[idx] = _encodeCustomColorId(h, s, v); return next; });
+            setCustomColorPicker(null);
+          };
+          return (
+            <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:32000}}>
+              <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs flex flex-col gap-3 shadow-2xl">
+                <div className="flex items-center justify-between shrink-0">
+                  <h3 className="text-sm font-black text-white">🎨 カスタムカラー</h3>
+                  <button onClick={()=>setCustomColorPicker(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
+                </div>
+                <CustomColorPicker h={h} s={s} v={v} onChange={(nh,ns,nv)=>setCustomColorPicker(prev=>prev?{...prev, h:nh, s:ns, v:nv}:prev)}/>
+                <div className="flex gap-2 mt-1 shrink-0">
+                  <button onClick={()=>setCustomColorPicker(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">キャンセル</button>
+                  <button onClick={applyCustom} className="flex-1 py-3 rounded-xl font-black text-xs uppercase bg-fuchsia-600 text-white active:scale-95">この色に決定</button>
                 </div>
               </div>
             </div>
