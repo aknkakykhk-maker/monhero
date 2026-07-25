@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 08:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 09:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -186,31 +186,34 @@ const Audio_ = (() => {
   };
   const isEnabled = () => enabled;
 
-  // 段階的音量: vol=0/0.4/0.7/1.0 を BGMバスの実ゲインへマッピング(段階差を明確に・全体小さめ)
-  const setVolume = async (vol) => {
-    const on = vol > 0;
-    // BGM実音量: バスは1以下に抑える(クリップ回避)
-    const bgmGain = vol <= 0 ? 0 : (vol <= 0.4 ? 0.22 : (vol <= 0.7 ? 0.42 : 0.65));
-    // SE用マスター: BGMと同程度の控えめな音量に(SE=master, BGM=master×bgmGain)
-    const seDb = vol <= 0 ? -Infinity : (vol <= 0.4 ? -30 : (vol <= 0.7 ? -25 : -21));
+  // 0〜100(%)を-40dB〜0dBへ線形マッピング(0=無音)。SE/BGMそれぞれ独立に調整できる
+  const _dbFromPct = (pct) => pct <= 0 ? -Infinity : -40 + (Math.min(100, pct) / 100) * 40;
+  const setSeVolume = async (pct) => {
+    await load();
+    if (!Tone) return;
+    try { Tone.Destination.volume.value = _dbFromPct(pct); } catch (e) {}
+  };
+  const setBgmVolume = async (pct) => {
+    await load();
+    if (!Tone || !bgmBus) return;
+    // BGMバスの実ゲインはクリップ回避のため最大0.65に抑える
+    const gain = pct <= 0 ? 0 : Math.pow(10, _dbFromPct(pct) / 20) * 0.65;
+    try { bgmBus.gain.rampTo(gain, 0.1); } catch (e) {}
+  };
+  // iOS等のブラウザ音声ロック解除: ユーザー操作(スライダー等)の直後に1回だけ呼ぶ
+  const unlock = async () => {
+    if (enabled) return;
     await load();
     if (Tone) {
-      try { Tone.Destination.volume.value = seDb; } catch (e) {}
-      try { if (bgmBus) bgmBus.gain.rampTo(bgmGain, 0.1); } catch (e) {}
-      // iOS音声ロック解除: 有効化時に即座にテスト音を鳴らす
-      if (on) {
-        try {
-          const tb = new Tone.Synth({ oscillator:{type:'triangle'}, envelope:{attack:0.005,decay:0.15,sustain:0.1,release:0.2}, volume: -6 }).toDestination();
-          const now = Tone.now();
-          tb.triggerAttackRelease('C5','8n', now);
-          tb.triggerAttackRelease('G5','8n', now+0.12);
-          setTimeout(()=>{ try{tb.dispose();}catch(e){} }, 800);
-        } catch(e){}
-      }
+      try {
+        const tb = new Tone.Synth({ oscillator:{type:'triangle'}, envelope:{attack:0.005,decay:0.15,sustain:0.1,release:0.2}, volume: -6 }).toDestination();
+        const now = Tone.now();
+        tb.triggerAttackRelease('C5','8n', now);
+        tb.triggerAttackRelease('G5','8n', now+0.12);
+        setTimeout(()=>{ try{tb.dispose();}catch(e){} }, 800);
+      } catch(e){}
     }
-    if (on && !enabled) { await setEnabled(true); }
-    else if (!on && enabled) { await setEnabled(false); }
-    else if (on) { enabled = true; await ensure(); }
+    await setEnabled(true);
   };
 
   const se = {
@@ -245,7 +248,7 @@ const Audio_ = (() => {
     levelUp: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.15, sustain: 0.2, release: 0.3 }, volume: -12 }).connect(reverb); const seq = [[0,'C5','16n'],[0.08,'E5','16n'],[0.16,'G5','16n'],[0.24,'C6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const sp = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.4 }, volume: -16 }).connect(reverb); sp.triggerAttackRelease('C6', '2n', t + 0.24); setTimeout(() => { try { v.dispose(); sp.dispose(); } catch (e) {} }, 1200); }
   };
 
-  return { playBGM, stopBGM, setEnabled, isEnabled, setVolume, se };
+  return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, se };
 })();
 
 
@@ -557,6 +560,53 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, drag
           WebkitMaskSize:'100% 100%', maskSize:'100% 100%',
         }}/>
       ) : null)}
+    </div>
+  );
+};
+// SE/BGM音量調整用スライダー(0〜100、ドラッグ操作+微調整用の±ボタン)
+const VolumeSlider = ({ label, icon, value, onChange, onInteractStart, gradient, thumbRing }) => {
+  const trackRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+  const valueFromClientX = (clientX) => {
+    const el = trackRef.current;
+    if (!el) return value;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return value;
+    const pct = ((clientX - rect.left) / rect.width) * 100;
+    return Math.max(0, Math.min(100, Math.round(pct)));
+  };
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e) => onChange(valueFromClientX(e.clientX));
+    const onUp = () => setDragging(false);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }, [dragging]);
+  const startDrag = (e) => {
+    onInteractStart && onInteractStart();
+    setDragging(true);
+    onChange(valueFromClientX(e.clientX));
+  };
+  const step = (delta) => { onInteractStart && onInteractStart(); onChange(Math.max(0, Math.min(100, value + delta))); };
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="w-9 shrink-0 flex flex-col items-center gap-0.5">
+        <span className="text-xs leading-none">{icon}</span>
+        <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider leading-none">{label}</span>
+      </div>
+      <button onClick={()=>step(-1)} className="shrink-0 w-6 h-6 rounded-lg bg-slate-800 border border-white/10 text-slate-300 font-black text-xs active:scale-90 active:bg-slate-700 flex items-center justify-center select-none">−</button>
+      <div ref={trackRef} onPointerDown={startDrag} className="relative flex-1 h-2 rounded-full bg-slate-800 border border-white/10 cursor-pointer touch-none">
+        <div className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${gradient}`} style={{width:`${value}%`}}></div>
+        <div className={`absolute top-1/2 rounded-full bg-white border-2 ${thumbRing} shadow-[0_0_6px_rgba(255,255,255,0.7)] transition-transform ${dragging?'scale-125':''}`} style={{left:`${value}%`, width:'14px', height:'14px', transform:'translate(-50%,-50%)'}}></div>
+      </div>
+      <button onClick={()=>step(1)} className="shrink-0 w-6 h-6 rounded-lg bg-slate-800 border border-white/10 text-slate-300 font-black text-xs active:scale-90 active:bg-slate-700 flex items-center justify-center select-none">＋</button>
+      <span className="w-6 shrink-0 text-right text-[9px] font-mono font-black text-slate-300">{value}</span>
     </div>
   );
 };
@@ -915,8 +965,27 @@ function MonsterHeroGame() {
   const [restoreMsg, setRestoreMsg] = useState('');
   const [updateAvailable, setUpdateAvailable] = useState(false); // version.jsonが現在のBUILD_DATEと異なる場合true(新バージョン通知)
   const [showHelp, setShowHelp] = useState(false);
-  const [audioLevel, setAudioLevel] = useState(0); // 0=OFF,1=低,2=中,3=高
-  const audioOn = audioLevel > 0;
+  const [seVolume, setSeVolumeState] = useState(70); // SE音量 0〜100(端末に保存、初期値は読み込み後に上書き)
+  const [bgmVolume, setBgmVolumeState] = useState(70); // BGM音量 0〜100(同上)
+  const [audioUnlocked, setAudioUnlocked] = useState(false); // ブラウザの自動再生制限解除のため、スライダー等の操作を1回行うまでfalse
+  const audioOn = audioUnlocked;
+  // 音量スライダー操作時に呼ぶ: 未解除ならブラウザの音声ロックを解除しつつ値を保存する
+  const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeState(nv); storeSet('mh_se_volume', nv, false); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
+  const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeState(nv); storeSet('mh_bgm_volume', nv, false); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
+  const audioMutedPrevRef = useRef({ se: 70, bgm: 70 }); // クイックミュート解除時に戻す直前の音量を覚えておく
+  const audioMuted = !audioOn || (seVolume === 0 && bgmVolume === 0);
+  // バトル画面などスペースが限られる場所向けの1タップミュート切替(詳細な音量調整は設定パネルのスライダーで行う)
+  const toggleQuickMute = () => {
+    if (audioMuted) {
+      const prev = audioMutedPrevRef.current;
+      changeSeVolume(prev.se || 70);
+      changeBgmVolume(prev.bgm || 70);
+    } else {
+      audioMutedPrevRef.current = { se: seVolume, bgm: bgmVolume };
+      changeSeVolume(0);
+      changeBgmVolume(0);
+    }
+  };
   const breederLevel = levelInfo(breederXp);
   // マスモン関連のヘルパー。絆レベル・間合い適性・ステータス強化ポイントは、すべてマスモン
   // インスタンス(masuMons内の1件)に紐づく。プレーンな(マスモン化していない)モンスター種には
@@ -948,8 +1017,6 @@ function MonsterHeroGame() {
     if (!mon) return 'C';
     return (mon.distAptitude && mon.distAptitude[slotIdx]) || 'C';
   };
-  const AUDIO_VOLS = [0, 0.4, 0.7, 1.0];
-  const AUDIO_LABELS = ['🔇 OFF', '🔈 低', '🔉 中', '🔊 高'];
   const [helpTab, setHelpTab] = useState('goal');
   const [pendingReward, setPendingReward] = useState(null);
   const [testMooMode, setTestMooMode] = useState(false); // TEMP: ムー戦テストモード
@@ -995,8 +1062,9 @@ function MonsterHeroGame() {
     else if (gameState === 'WAVE_RESULT' || gameState === 'CHAMPION') Audio_.stopBGM();
   }, [gameState, wave, enemy?.id, audioOn]);
 
-  // 音の有効/無効・音量を反映
-  useEffect(() => { Audio_.setVolume(AUDIO_VOLS[audioLevel]); }, [audioLevel]);
+  // SE/BGMそれぞれの音量をAudioエンジンへ反映
+  useEffect(() => { Audio_.setSeVolume(seVolume); }, [seVolume]);
+  useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
 
   // 新バージョン検知: ホーム画面アプリはバックグラウンドから復帰しても自動再読み込みされず
   // 古いバージョンのまま使い続けてしまうことがあるため、version.jsonを定期的に確認し
@@ -1078,6 +1146,10 @@ function MonsterHeroGame() {
   // Load saved data
   useEffect(() => {
     (async () => {
+      const savedSeVolume = await storeGet('mh_se_volume', 70, false);
+      setSeVolumeState(savedSeVolume);
+      const savedBgmVolume = await storeGet('mh_bgm_volume', 70, false);
+      setBgmVolumeState(savedBgmVolume);
       const savedName = await storeGet('mh_breeder_name', '名無しのブリーダー', false);
       setBreederName(savedName);
       const savedIcon = await storeGet('mh_breeder_icon', null, false);
@@ -2393,7 +2465,14 @@ function MonsterHeroGame() {
                   <button onClick={()=>{setRankingViewDiff(difficulty); setShowRanking(true); loadRankings();}} className="w-full bg-slate-900 border border-indigo-500/50 text-indigo-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><Users size={14}/> Ranking</button>
                   <button onClick={()=>setShowHelp(true)} className="w-full bg-slate-900 border border-emerald-500/50 text-emerald-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><HelpCircle size={14}/> Help</button>
                 </div>
-                <button onClick={()=>setAudioLevel(l=>(l+1)%4)} className={`w-full border py-2 rounded-xl font-black text-[11px] active:scale-95 uppercase flex items-center justify-center gap-2 ${audioOn?'bg-indigo-950 border-indigo-500/60 text-indigo-300':'bg-slate-900 border-slate-600/50 text-slate-400'}`}>{AUDIO_LABELS[audioLevel]} {audioLevel===0?'（タップで再生）':'BGM/SE'}</button>
+                <div className={`w-full border rounded-xl p-2 flex flex-col gap-1.5 ${audioOn?'bg-indigo-950/60 border-indigo-500/40':'bg-slate-900 border-slate-600/50'}`}>
+                  <div className="flex items-center justify-between px-0.5">
+                    <span className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">🔊 音量設定</span>
+                    {!audioOn && <span className="text-[7px] text-slate-500 font-bold">操作すると音が有効になります</span>}
+                  </div>
+                  <VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>
+                  <VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/>
+                </div>
               </div>
             </div>
             {showRanking&&(
@@ -3008,7 +3087,7 @@ function MonsterHeroGame() {
           <div className="flex-1 flex flex-col h-full">
             <header className="h-[5%] shrink-0 bg-slate-900 px-4 flex items-center justify-between border-b border-white/5 z-[6500]">
               <div className="flex items-center gap-4"><span className={`text-[8px] font-black bg-opacity-10 px-2 py-0.5 rounded border tracking-wider ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span><span className="text-[8px] font-black text-blue-400 flex items-center gap-1 uppercase tracking-widest"><Timer size={8}/> TURN {turnCount}/20</span></div>
-              <div className="flex items-center gap-2"><div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter mr-1"><Award size={10}/> {score.toLocaleString()}</div><button onClick={()=>setAudioLevel(l=>(l+1)%4)} className="p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[26px] h-[26px] flex items-center justify-center">{['🔇','🔈','🔉','🔊'][audioLevel]}</button><button onClick={()=>setShowHelp(true)} className="p-1.5 bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button onClick={()=>setShowQuitConfirm(true)} className="p-1.5 bg-slate-800 rounded text-slate-400 active:scale-90"><Flag size={14}/></button></div>
+              <div className="flex items-center gap-2"><div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter mr-1"><Award size={10}/> {score.toLocaleString()}</div><button onClick={toggleQuickMute} className="p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[26px] h-[26px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>setShowHelp(true)} className="p-1.5 bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button onClick={()=>setShowQuitConfirm(true)} className="p-1.5 bg-slate-800 rounded text-slate-400 active:scale-90"><Flag size={14}/></button></div>
             </header>
             {enemy&&(
               <div className="shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
