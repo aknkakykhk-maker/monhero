@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 15:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 15:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -311,7 +311,9 @@ const MASU_COLOR_REGION_HUES = {
   // ライガーは全身が細かい毛並みの陰影(1px単位で青⇔白が入れ替わる描き込み)で、色相・彩度だけでは
   // 顔や前脚(白い毛)と背中(青い毛)が誤って混ざりやすいため、白バケツにbboxを指定して顔〜胸〜前脚の
   // 縦の帯に判定範囲を絞り、離れた背中側の影が白と誤判定されないようにしている
-  Tiger: [{ hue: 233, sMin: 0.28 }, { white: true, sMax: 0.28, vMin: 0.4, bbox: [0.26, 0.27, 0.66, 1.0] }, 43],
+  // ユーザー指定により、体(青い毛)と角(オレンジ)をまとめて染色①、顔・前脚(白い毛)は染色②のまま、
+  // 尻尾の先の白っぽい部分を染色③として独立させた(耳の場所は未確定のため一旦保留)
+  Tiger: [{ hue: [233, 38], sMin: 0.22 }, { white: true, sMax: 0.28, vMin: 0.4, bbox: [0.26, 0.27, 0.66, 1.0] }, { posBbox: [[0.80, 0.32, 1.0, 0.56]] }],
   Ham: [25, { white: true, sMax: 0.35, vMin: 0.7 }, 355],
   Pixie: [355, 23, { hue: 10 }],
   Monol: [{ band: [0, 1/3] }, { band: [1/3, 2/3] }, { band: [2/3, 1] }],
@@ -369,13 +371,16 @@ const _bboxMatches = (bbox, nx, ny) => {
 // ピクセル(色相hh・彩度ss・明度vv・画像内の相対位置nx,ny)がregionDefs(MASU_COLOR_REGION_HUESの1モンスター分)の
 // どの部位に属するかを判定し、インデックスを返す(どれにも属さなければ-1=無染色のまま)
 const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
-  // 色を問わず縦位置だけで区切る部位(band)が定義されていれば最優先で判定する
+  // 色を問わず位置だけで区切る部位(band=縦位置のみ、posBbox=矩形範囲(複数可))が
+  // 定義されていれば最優先で判定する(耳と尻尾の先のように、色は共通しないが
+  // まとめて1つの部位として選びたい離れた箇所を指定する場合などに使う)
   for (let idx = 0; idx < regionDefs.length; idx++) {
     const def = regionDefs[idx];
     if (def && typeof def === 'object' && def.band) {
       const [y0, y1] = def.band;
       if (ny >= y0 && ny < y1) return idx;
     }
+    if (def && typeof def === 'object' && def.posBbox && _bboxMatches(def.posBbox, nx, ny)) return idx;
   }
   // 白系・黒系(彩度が低い)部位が定義されていれば次に判定する(vMaxも指定すれば暗い方の
   // 彩度の低いバケツ、例えば黒に近い羽など明度が低すぎて色相が不安定な部位も拾える)。
@@ -392,7 +397,7 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
   if (vv < 0.12) return -1;
   let best = -1, bestD = 999;
   regionDefs.forEach((def, idx) => {
-    if (def && typeof def === 'object' && (def.white || def.band)) return; // 上で判定済み
+    if (def && typeof def === 'object' && (def.white || def.band || def.posBbox)) return; // 上で判定済み
     if (def && typeof def === 'object' && def.bbox && !_bboxMatches(def.bbox, nx, ny)) return;
     const hue = (typeof def === 'number') ? def : def.hue;
     const vMin = (def && typeof def === 'object') ? def.vMin : undefined;
@@ -404,7 +409,9 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
     if (vMax !== undefined && vv > vMax) return;
     if (ss < sMin) return;
     if (sMax !== undefined && ss > sMax) return;
-    const d = _hueDist(hh, hue);
+    // hueは単一の角度の他、配列で複数の色相をまとめて1部位として扱うこともできる
+    // (例:本来離れた色相の部位(青い毛と黄色い角)を1つの染色枠にまとめたい場合)
+    const d = Array.isArray(hue) ? Math.min(...hue.map(h => _hueDist(hh, h))) : _hueDist(hh, hue);
     if (d < bestD) { bestD = d; best = idx; }
   });
   return best;
@@ -461,7 +468,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             // 全域が境目になってしまい丸ごと消えるため、部位定義でnoEdgeGuard:trueを指定すれば
             // この除外をスキップできる
             const def = hues[region];
-            const wantsEdgeGuard = !(def && typeof def === 'object' && def.noEdgeGuard);
+            const wantsEdgeGuard = !(def && typeof def === 'object' && (def.noEdgeGuard || def.posBbox));
             if (wantsEdgeGuard && ss >= 0.1 && vv >= 0.12) {
               let isColorEdge = false;
               for (const [nx, ny] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]) {
