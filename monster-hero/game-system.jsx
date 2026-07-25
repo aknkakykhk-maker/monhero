@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 01:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 02:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -330,9 +330,11 @@ const MASU_COLOR_REGION_HUES = {
   Zan: [235, { hue: 2, noEdgeGuard: true }, { white: true, sMax: 0.24, vMin: 0.58 }],
   Mitarashi: [2, 40, { hue: 28, bbox: [0.29, 0.18, 0.71, 0.26] }],
   Ark: [219, 187, 60],
-  // 紫色部分(耳・眉まわり・前足)は体の白バケツと彩度・明度が近く誤判定しやすいため、
-  // bboxで実際に紫がある範囲(頭部の帯+左右の前足)に判定を絞り込んでいる
-  Iblis: [{ white: true, sMax: 0.15, vMin: 0.7 }, { hue: 264, sMin: 0.14, vMin: 0.35, vMax: 0.9, bbox: [[0.15,0.33,0.85,0.53],[0.10,0.58,0.32,0.75],[0.68,0.58,0.90,0.75]] }, { white: true, sMax: 0.3, vMin: 0.15, vMax: 0.32 }],
+  // 紫色部分(頭上の輪・眉まわり・前足)は体の白バケツと彩度・明度が近く誤判定しやすいため、
+  // bboxで実際に紫がある範囲(頭上の輪+頭部の帯+左右の前足)に判定を絞り込んでいる。
+  // 頭上の輪(y0.22〜0.30)は体を赤系に染めても紫のまま浮いて見えるという指摘を受け、
+  // 頭部の帯のbboxを上に拡張して輪も同じ染色②に含めた(実測でx0.44〜0.55にしか紫が無いことを確認済み)
+  Iblis: [{ white: true, sMax: 0.15, vMin: 0.7 }, { hue: 264, sMin: 0.14, vMin: 0.35, vMax: 0.9, noEdgeGuard: true, noAAGuard: true, bbox: [[0.15,0.18,0.85,0.53],[0.10,0.58,0.32,0.75],[0.68,0.58,0.90,0.75]] }, { white: true, sMax: 0.3, vMin: 0.15, vMax: 0.32 }],
 };
 // 部位判定後の平滑化(ごま塩ノイズ除去)の強さをモンスターごとに調整するテーブル。
 // 既定は半径2の多数決を1回。細かい毛並みの陰影で判定が激しく入れ替わるモンスターは
@@ -1551,20 +1553,33 @@ function MonsterHeroGame() {
     });
     return sorted;
   };
-  // ソート行+表示設定行の共通UI(編成/ベースモン一覧/マスモン一覧で使い回す)
+  // モンスター一覧・マスモン一覧・編成画面のソート/表示設定つき一覧は、画面を開くたび・
+  // 無関係な状態更新のたびに毎回全件ソートし直すと重くなり(タップ反応が悪くなる原因の一つ)、
+  // useMemoで実際に関係する値が変わった時だけ計算し直すようにする
+  const unifiedMonsterEntriesActive = useMemo(
+    () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, monsterRosterIds)).filter(e => monsterDisplayFlags[e.type]),
+    [unlockedMonsterIds, masuMons, monsterRosterIds, monsterSortKey, monsterSortDir, monsterDisplayFlags]
+  );
+  const unifiedMonsterEntriesDraft = useMemo(
+    () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, draftMonsterRoster)).filter(e => monsterDisplayFlags[e.type]),
+    [unlockedMonsterIds, masuMons, draftMonsterRoster, monsterSortKey, monsterSortDir, monsterDisplayFlags]
+  );
+  // ソート行+表示設定行の共通UI(編成/ベースモン一覧/マスモン一覧で使い回す)。
+  // タップ精度が悪いという指摘を受け、チップの当たり判定を指で押しやすいサイズまで拡大している
+  // (min-heightで実際のタップ領域を確保しつつ、隣とぶつからないようgapも広げた)
   const MonsterSortFilterBar = () => (
     <div className="mb-2 shrink-0">
-      <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-hide">
+      <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-hide">
         {MONSTER_SORT_OPTIONS.map(opt => (
-          <button key={opt.key} onClick={() => { if (monsterSortKey === opt.key) setMonsterSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setMonsterSortKey(opt.key); setMonsterSortDir('asc'); } }} className={`shrink-0 px-2.5 py-1 rounded-full text-[9px] font-black flex items-center gap-0.5 ${monsterSortKey === opt.key ? 'bg-indigo-500 text-white' : 'bg-slate-900 border border-slate-800 text-slate-400'}`}>
+          <button key={opt.key} onClick={() => { if (monsterSortKey === opt.key) setMonsterSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setMonsterSortKey(opt.key); setMonsterSortDir('asc'); } }} style={{minHeight:'34px'}} className={`shrink-0 px-3.5 py-2 rounded-full text-[11px] font-black flex items-center gap-0.5 active:scale-95 ${monsterSortKey === opt.key ? 'bg-indigo-500 text-white' : 'bg-slate-900 border border-slate-800 text-slate-400'}`}>
             {opt.label}{monsterSortKey === opt.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}
           </button>
         ))}
       </div>
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide mt-1">
-        <span className="shrink-0 text-[9px] font-bold text-slate-500 self-center">表示:</span>
+      <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide mt-1">
+        <span className="shrink-0 text-[10px] font-bold text-slate-500 self-center">表示:</span>
         {MONSTER_DISPLAY_OPTIONS.map(opt => (
-          <button key={opt.key} onClick={() => setMonsterDisplayFlags(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))} className={`shrink-0 px-2 py-0.5 rounded-full text-[8px] font-black ${monsterDisplayFlags[opt.key] ? 'bg-teal-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}>{opt.label}</button>
+          <button key={opt.key} onClick={() => setMonsterDisplayFlags(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))} style={{minHeight:'30px'}} className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-black active:scale-95 ${monsterDisplayFlags[opt.key] ? 'bg-teal-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}>{opt.label}</button>
         ))}
       </div>
     </div>
@@ -2804,7 +2819,7 @@ function MonsterHeroGame() {
         {gameState==='PROFILE'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-4 shrink-0">
-              <button onClick={()=>{ if(!onboarded){ setOnboarded(true); storeSet('mh_onboarded', true, false); } setGameState('TITLE'); }} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <button onClick={()=>{ if(!onboarded){ setOnboarded(true); storeSet('mh_onboarded', true, false); } setGameState('TITLE'); }} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">プロフィール</h2>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
@@ -2885,7 +2900,7 @@ function MonsterHeroGame() {
         {gameState==='BREEDER_MARKET'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <button onClick={()=>setGameState('PROFILE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">マーケット</h2>
             </div>
             <div className="flex gap-2 mb-4 shrink-0">
@@ -2947,7 +2962,7 @@ function MonsterHeroGame() {
         {gameState==='ROSTER'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <button onClick={()=>setGameState('PROFILE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">編成</h2>
             </div>
             <div className="flex gap-1.5 mb-3 shrink-0">
@@ -2961,7 +2976,7 @@ function MonsterHeroGame() {
                 <MonsterSortFilterBar/>
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   <div className="grid grid-cols-3 gap-3 pb-4">
-                    {sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, draftMonsterRoster)).filter(e=>monsterDisplayFlags[e.type]).map(e=>{
+                    {unifiedMonsterEntriesDraft.map(e=>{
                       if (e.type==='base') {
                         const m = e.base;
                         const selected = e.active;
@@ -3066,14 +3081,14 @@ function MonsterHeroGame() {
         {gameState==='OWNED_MONSTERS'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <button onClick={()=>setGameState('PROFILE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-cyan-400 uppercase tracking-widest">モンスター一覧</h2>
             </div>
             <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</div>
             <MonsterSortFilterBar/>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               <div className="grid grid-cols-3 gap-2.5 pb-4">
-                {sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, monsterRosterIds)).filter(e=>monsterDisplayFlags[e.type]).map(e=>{
+                {unifiedMonsterEntriesActive.map(e=>{
                   if (e.type==='base') {
                     const m = e.base;
                     const masuCount = masuMons.filter(ms=>ms.baseId===m.id).length;
@@ -3111,14 +3126,14 @@ function MonsterHeroGame() {
         {gameState==='MASU_MONS'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <button onClick={()=>setGameState('PROFILE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-pink-400 uppercase tracking-widest">マスモン</h2>
             </div>
             <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</div>
             <MonsterSortFilterBar/>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               {(()=>{
-                const entries = sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, monsterRosterIds)).filter(e=>monsterDisplayFlags[e.type]);
+                const entries = unifiedMonsterEntriesActive;
                 if (entries.length===0) return (
                   <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🐾</span><div className="text-[11px] text-slate-400 mt-2">{masuMons.length===0?<>まだマスモンがいません。<br/>勇者モンでランを終えると登録できます。</>:'表示設定で対象がすべてオフになっています。'}</div></div>
                 );
@@ -3170,7 +3185,7 @@ function MonsterHeroGame() {
             return (
               <div className="flex-1 flex flex-col h-full min-h-0 p-4">
                 <div className="flex items-center gap-2 mb-2 shrink-0">
-                  <button onClick={closeFusion} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                  <button onClick={closeFusion} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
                   <h2 className="text-xl font-black italic text-violet-400 uppercase tracking-widest">合体・主を選ぶ</h2>
                 </div>
                 <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">絆経験値を受け継いで残る「主」となるマスモンを選んでください</div>
@@ -3201,7 +3216,7 @@ function MonsterHeroGame() {
             return (
               <div className="flex-1 flex flex-col h-full min-h-0 p-4">
                 <div className="flex items-center gap-2 mb-2 shrink-0">
-                  <button onClick={()=>{setFusionMainId(null); setFusionStep('main');}} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                  <button onClick={()=>{setFusionMainId(null); setFusionStep('main');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
                   <h2 className="text-xl font-black italic text-violet-400 uppercase tracking-widest">合体・副を選ぶ</h2>
                 </div>
                 <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">「{main.name}」に絆経験値を渡す「副」を選んでください。副は合体後にいなくなります</div>
@@ -3244,7 +3259,7 @@ function MonsterHeroGame() {
             return (
               <div className="flex-1 flex flex-col h-full min-h-0 p-4">
                 <div className="flex items-center gap-2 mb-2 shrink-0">
-                  <button onClick={()=>{setFusionSubId(null); setFusionStep('sub');}} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                  <button onClick={()=>{setFusionSubId(null); setFusionStep('sub');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
                   <h2 className="text-xl font-black italic text-violet-400 uppercase tracking-widest">合体の確認</h2>
                 </div>
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
@@ -3339,7 +3354,7 @@ function MonsterHeroGame() {
         {gameState==='ITEM_INVENTORY'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <button onClick={()=>setGameState('PROFILE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-teal-400 uppercase tracking-widest">アイテム欄</h2>
             </div>
             <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">マーケットで買った消耗アイテムです。「使う」から対象のマスモンを選べます。</div>
@@ -3371,7 +3386,7 @@ function MonsterHeroGame() {
           return (
             <div className="fixed inset-0 flex flex-col p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:31000}}>
               <div className="flex items-center gap-2 mb-2 shrink-0">
-                <button onClick={()=>setPendingItemUse(null)} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                <button onClick={()=>setPendingItemUse(null)} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
                 <h2 className="text-lg font-black italic text-teal-400 uppercase tracking-widest truncate">{item?.name}を使う対象を選択</h2>
               </div>
               <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">対象のマスモンをタップしてください</div>
@@ -4007,7 +4022,7 @@ function MonsterHeroGame() {
       {/* PICK HERO / ALLY */}
       {(gameState==='PICK_HERO'||gameState==='PICK_ALLY')&&(
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden">
-          <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button onClick={handleGoToTitle} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{gameState==='PICK_HERO'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
+          <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button onClick={handleGoToTitle} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{gameState==='PICK_HERO'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
           <div className={`flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col ${gameState==='PICK_ALLY'?'justify-center':''}`}>
             <div className="grid grid-cols-2 gap-2.5">
             {monSelection.map(m=>{const isSel=currentPickingMon?.id===m.id;
@@ -4302,6 +4317,9 @@ const createAnimationStyle = () => {
   const style = document.createElement('style');
   style.id = 'mh-anim-style';
   style.textContent = `
+    /* タップ精度・反応が悪いという指摘を受け、ボタン等の操作要素で二重タップ判定によるズームや
+       300ms遅延を起こさないようにする(iOS Safari等の既定挙動対策) */
+    button, [role="button"] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
     @keyframes attackFly {
       0% {
         transform: translateY(0) scale(1);
