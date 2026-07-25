@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 06:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 07:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -258,41 +258,36 @@ const RANGE_LABELS = ["零", "近", "中", "遠"];
 // distAptitude:['C','C','C','C'] の形でモンスターデータに持たせ、そのモンスターが
 // 該当スロットで攻撃した時のダメージに以下の倍率を掛ける。値は今後モンスターごとに調整予定。
 // グレード配列: 下から上へ。C(=0%)を基準にG~Sは±5%刻み、S以上(S+~M)は+2.5%刻みで頭打ちはM(+25%)
-// マスモンの「染色もどき」: CSSフィルターによる簡易的なパレットスワップ(6色)。
-// 元絵の全色相を一律にずらすだけの簡易処理のため、モンスターによって仕上がりの色味は変わる("もどき")
-// 元の絵の色相に関わらず狙った色にきちんと染まるよう、一度grayscaleで色を消してから
-// sepiaで色を作り直し、hue-rotateで狙った色相まで回転させる方式(単純なhue-rotateだけだと
-// 部位ごとの元の色相によって結果が大きくズレたり、彩度が低い部位に色が乗らなかったりするため)
-const MASU_COLOR_FILTERS = {
-  red: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-49deg) saturate(3)',
-  orange: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-11deg) saturate(3) brightness(1.15)',
-  yellow: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(17deg) saturate(3) brightness(1.5)',
-  lime: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(47deg) saturate(3) brightness(1.35)',
-  green: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(78deg) saturate(3) brightness(1.1)',
-  teal: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(109deg) saturate(3) brightness(1.1)',
-  cyan: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(137deg) saturate(3)',
-  sky: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(162deg) saturate(3)',
-  blue: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-173deg) saturate(3)',
-  purple: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-137deg) saturate(3)',
-  magenta: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-109deg) saturate(3)',
-  pink: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-83deg) saturate(3)',
-  black: 'grayscale(1) brightness(0.4)',
-  white: 'grayscale(1) brightness(1.35) contrast(1.15)',
-  // 薄め(パステル)系: 彩度を抑えて明るめにし、鮮やかな色よりふんわりした発色にする
-  red_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(-49deg) saturate(1.6) brightness(1.2)',
-  orange_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(-11deg) saturate(1.6) brightness(1.25)',
-  yellow_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(17deg) saturate(1.6) brightness(1.5)',
-  lime_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(47deg) saturate(1.6) brightness(1.35)',
-  green_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(78deg) saturate(1.6) brightness(1.2)',
-  cyan_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(137deg) saturate(1.6) brightness(1.15)',
-  blue_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(-173deg) saturate(1.6) brightness(1.15)',
-  purple_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(-137deg) saturate(1.6) brightness(1.15)',
-  pink_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(-83deg) saturate(1.6) brightness(1.2)',
+// マスモンの「染色もどき」: Canvas上でHSVを直接置き換える簡易パレットスワップ。
+// 元絵の全色相を一律にずらすだけの処理のため、モンスターによって仕上がりの色味は変わる("もどき")
+// 以前はCSSのgrayscale/sepia/hue-rotateを重ねる方式だったが、grayscale()が知覚輝度(赤や青は
+// 暗く見える重み)で明度を潰すため、部位の元の色によって同じ「白」「黒」でも明るさがバラバラに
+// なったり、色付きの部位が元の色相の名残でくすんで見えたりする不具合があった。
+// 現在は各ピクセルをHSVに変換し、色相・彩度は狙った色に固定で置き換え、明度(v)だけは元の陰影を
+// 保つように狙った範囲(vMin〜vMax)へ線形に写像する方式にして、元の色に関わらず安定した発色にしている。
+const MASU_COLOR_TARGET = {
+  red: { h: 355, s: 0.8, vMin: 0.35, vMax: 0.95 },
+  orange: { h: 28, s: 0.85, vMin: 0.4, vMax: 0.98 },
+  yellow: { h: 48, s: 0.85, vMin: 0.45, vMax: 1.0 },
+  lime: { h: 78, s: 0.75, vMin: 0.4, vMax: 0.95 },
+  green: { h: 135, s: 0.65, vMin: 0.35, vMax: 0.9 },
+  teal: { h: 168, s: 0.6, vMin: 0.3, vMax: 0.85 },
+  cyan: { h: 190, s: 0.7, vMin: 0.35, vMax: 0.95 },
+  sky: { h: 200, s: 0.75, vMin: 0.4, vMax: 0.98 },
+  blue: { h: 220, s: 0.75, vMin: 0.35, vMax: 0.95 },
+  purple: { h: 265, s: 0.65, vMin: 0.3, vMax: 0.9 },
+  magenta: { h: 300, s: 0.65, vMin: 0.35, vMax: 0.95 },
+  pink: { h: 330, s: 0.65, vMin: 0.4, vMax: 0.98 },
+  black: { h: 0, s: 0, vMin: 0.06, vMax: 0.32 },
+  white: { h: 0, s: 0, vMin: 0.78, vMax: 1.0 },
 };
+// 薄め(パステル)系: 彩度を抑えて明度レンジを底上げし、鮮やかな色よりふんわりした発色にする
+['red', 'orange', 'yellow', 'lime', 'green', 'cyan', 'blue', 'purple', 'pink'].forEach((k) => {
+  const t = MASU_COLOR_TARGET[k];
+  MASU_COLOR_TARGET[k + '_light'] = { h: t.h, s: t.s * 0.45, vMin: Math.min(0.6, t.vMin + 0.2), vMax: 1.0 };
+});
 const MASU_COLOR_LABELS = { red: '赤', orange: '橙', yellow: '黄', lime: '黄緑', green: '緑', teal: '青緑', cyan: 'シアン', sky: '空色', blue: '青', purple: '紫', magenta: 'マゼンタ', pink: 'ピンク', black: '黒', white: '白', red_light: '薄赤', orange_light: '薄橙', yellow_light: '薄黄', lime_light: '薄黄緑', green_light: '薄緑', cyan_light: '薄水色', blue_light: '薄青', purple_light: '薄紫', pink_light: '薄ピンク' };
 const MASU_COLOR_SWATCH = { red: '#ef4444', orange: '#f97316', yellow: '#eab308', lime: '#84cc16', green: '#22c55e', teal: '#14b8a6', cyan: '#06b6d4', sky: '#38bdf8', blue: '#3b82f6', purple: '#a855f7', magenta: '#d946ef', pink: '#ec4899', black: '#1f2937', white: '#f8fafc', red_light: '#fca5a5', orange_light: '#fdba74', yellow_light: '#fde047', lime_light: '#bef264', green_light: '#86efac', cyan_light: '#67e8f9', blue_light: '#93c5fd', purple_light: '#d8b4fe', pink_light: '#f9a8d4' };
-// マスモンの色が設定されている場合、対応するCSSフィルターのstyleオブジェクトを返す(画像タグにそのまま渡す)
-const monColorStyle = (colorId) => (colorId && MASU_COLOR_FILTERS[colorId]) ? { filter: MASU_COLOR_FILTERS[colorId] } : undefined;
 // モンスター種ごとの「染色もどき」部位分割データ。各要素は画像内でその部位が持つ代表色相(度)。
 // 事前にモンスター画像を解析して求めた、染色可能な部位ごとの判定条件。
 // 各要素は次のいずれか:
@@ -306,7 +301,7 @@ const MASU_COLOR_REGION_HUES = {
   Mocchi: [5, 67, { hue: 38, sMin: 0.4 }],
   Suezo: [{ hue: 48, vMin: 0.5 }, { hue: 50, vMax: 0.5 }, 357],
   Golem: [35, { white: true, sMax: 0.12, vMin: 0.75 }, 72],
-  Tiger: [233, { white: true, sMax: 0.2, vMin: 0.5 }, 43],
+  Tiger: [{ hue: 233, sMin: 0.28 }, { white: true, sMax: 0.24, vMin: 0.45 }, 43],
   Ham: [25, { white: true, sMax: 0.35, vMin: 0.7 }, 355],
   Pixie: [355, 23, { hue: 10 }],
   Monol: [{ band: [0, 1/3] }, { band: [1/3, 2/3] }, { band: [2/3, 1] }],
@@ -332,6 +327,18 @@ const _rgbToHsv = (r,g,b) => {
   return [h,s,v];
 };
 const _hueDist = (a,b) => { const d = Math.abs(a-b) % 360; return d>180 ? 360-d : d; };
+// HSV(色相0-360,彩度0-1,明度0-1) -> RGB(各0-255)。染色もどきの色置き換えで使う
+const _hsvToRgb = (h,s,v) => {
+  const c = v*s, x = c*(1-Math.abs((h/60)%2-1)), m = v-c;
+  let r,g,b;
+  if (h<60) [r,g,b]=[c,x,0];
+  else if (h<120) [r,g,b]=[x,c,0];
+  else if (h<180) [r,g,b]=[0,c,x];
+  else if (h<240) [r,g,b]=[0,x,c];
+  else if (h<300) [r,g,b]=[x,0,c];
+  else [r,g,b]=[c,0,x];
+  return [Math.round((r+m)*255), Math.round((g+m)*255), Math.round((b+m)*255)];
+};
 // ピクセル(色相hh・彩度ss・明度vv・画像内の相対位置nx,ny)がregionDefs(MASU_COLOR_REGION_HUESの1モンスター分)の
 // どの部位に属するかを判定し、インデックスを返す(どれにも属さなければ-1=無染色のまま)
 const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
@@ -406,6 +413,8 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             hueMap[i] = _rgbToHsv(src[o], src[o+1], src[o+2])[0];
           }
           const hueAt = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? NaN : hueMap[y*w+x];
+          // 1パス目: 画素ごとに所属部位を判定してグリッド化する(-1=無染色のまま)
+          const grid = new Int8Array(w*h).fill(-1);
           for (let i = 0; i < w*h; i++) {
             const o = i*4;
             const r = src[o], g = src[o+1], b = src[o+2], a = src[o+3];
@@ -423,9 +432,35 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
               }
               if (isColorEdge) continue;
             }
-            const best = _classifyDyePixel(hh, ss, vv, x / w, y / h, hues);
+            grid[i] = _classifyDyePixel(hh, ss, vv, x / w, y / h, hues);
+          }
+          // 2パス目: 毛並みなど細かい濃淡で判定がごま塩状に入れ替わる箇所を、
+          // 周囲5x5の多数決で均して滑らかな塊にする(境界のジグザグ自体は保つ)
+          const smoothed = new Int8Array(grid);
+          const radius = 2;
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              const i = y*w + x;
+              if (grid[i] < 0) continue;
+              const counts = {};
+              for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                  const nx = x+dx, ny = y+dy;
+                  if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+                  const nv = grid[ny*w+nx];
+                  if (nv < 0) continue;
+                  counts[nv] = (counts[nv] || 0) + 1;
+                }
+              }
+              let bestK = grid[i], bestC = -1;
+              for (const k in counts) { if (counts[k] > bestC) { bestC = counts[k]; bestK = +k; } }
+              smoothed[i] = bestK;
+            }
+          }
+          for (let i = 0; i < w*h; i++) {
+            const best = smoothed[i];
             if (best < 0) continue;
-            maskDatas[best].data[o+3] = a; // マスクはアルファのみ使う(CSS maskとして重ねる)
+            maskDatas[best].data[i*4+3] = src[i*4+3]; // マスクはアルファのみ使う(CSS maskとして重ねる)
           }
           const urls = maskCtxs.map((ctx, idx) => { ctx.putImageData(maskDatas[idx], 0, 0); return maskCanvases[idx].toDataURL(); });
           resolve(urls);
@@ -438,20 +473,73 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
   _dyeRegionMaskCache[cacheKey] = promise;
   return promise;
 };
+// ImageDataのピクセル配列(RGBA)を、指定した染色色idの狙った色相・彩度に置き換える(明度は元の陰影を保つ)
+const _recolorImageData = (data, colorId) => {
+  const t = MASU_COLOR_TARGET[colorId];
+  if (!t) return;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i+3] < 10) continue;
+    const vv = _rgbToHsv(data[i], data[i+1], data[i+2])[2];
+    const newV = t.vMin + (t.vMax - t.vMin) * vv;
+    const [r, g, b] = _hsvToRgb(t.h, t.s, newV);
+    data[i] = r; data[i+1] = g; data[i+2] = b;
+  }
+};
+// imgUrlの画像全体を指定色に染め直した画像をCanvasで生成し、dataURLで返す(色ごとにキャッシュ)
+const _dyeRecolorCache = {};
+const getRecoloredImage = (imgUrl, colorId) => {
+  if (!MASU_COLOR_TARGET[colorId]) return null;
+  const cacheKey = imgUrl + '::' + colorId;
+  if (_dyeRecolorCache[cacheKey]) return _dyeRecolorCache[cacheKey];
+  const promise = new Promise((resolve) => {
+    try {
+      const img = new window.Image();
+      img.onload = () => {
+        try {
+          const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { resolve(null); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          const imgData = ctx.getImageData(0, 0, w, h);
+          _recolorImageData(imgData.data, colorId);
+          ctx.putImageData(imgData, 0, 0);
+          resolve(canvas.toDataURL());
+        } catch (e) { resolve(null); }
+      };
+      img.onerror = () => resolve(null);
+      img.src = imgUrl;
+    } catch (e) { resolve(null); }
+  });
+  _dyeRecolorCache[cacheKey] = promise;
+  return promise;
+};
 // マスモンの画像を、部位別の染色(masuColors配列)を反映して表示するコンポーネント。
-// 部位分割データが無いモンスターは従来通り全身一括のCSSフィルターのみ適用する。
+// 部位分割データが無いモンスターは画像全体を染め直した1枚を表示する。
 const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, draggable }) => {
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);
+  const [recolored, setRecolored] = useState({});
   const colors = masuColors || [];
+  const colorKey = colors.join('|');
   useEffect(() => {
     if (!hues || hues.length === 0 || !colors.some(Boolean)) { setMasks(null); return; }
     let cancelled = false;
     Promise.resolve(getDyeRegionMasks(baseId, src)).then(urls => { if (!cancelled) setMasks(urls); });
     return () => { cancelled = true; };
-  }, [baseId, src, colors.join('|')]);
+  }, [baseId, src, colorKey]);
+  useEffect(() => {
+    const wanted = Array.from(new Set(colors.filter(Boolean)));
+    if (wanted.length === 0) { setRecolored({}); return; }
+    let cancelled = false;
+    Promise.all(wanted.map((c) => Promise.resolve(getRecoloredImage(src, c)).then((url) => [c, url])))
+      .then((entries) => { if (!cancelled) setRecolored(Object.fromEntries(entries)); });
+    return () => { cancelled = true; };
+  }, [src, colorKey]);
   if (!hues || hues.length === 0) {
-    return <img src={src} alt={alt} draggable={draggable} className={className} style={{...style, ...monColorStyle(colors[0])}}/>;
+    const recoloredSrc = colors[0] && recolored[colors[0]];
+    return <img src={recoloredSrc || src} alt={alt} draggable={draggable} className={className} style={style}/>;
   }
   if (!masks || !colors.some(Boolean)) {
     return <img src={src} alt={alt} draggable={draggable} className={className} style={style}/>;
@@ -459,12 +547,11 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, drag
   return (
     <div className={className} style={{...style, position:'relative', overflow:'hidden'}}>
       <img src={src} alt={alt} draggable={draggable} style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'inherit'}}/>
-      {hues.map((_, idx) => colors[idx] && masks[idx] ? (
-        <img key={idx} src={src} alt="" draggable={false} style={{
+      {hues.map((_, idx) => (colors[idx] && masks[idx] && recolored[colors[idx]]) ? (
+        <img key={idx} src={recolored[colors[idx]]} alt="" draggable={false} style={{
           position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'inherit',
           WebkitMaskImage:`url(${masks[idx]})`, maskImage:`url(${masks[idx]})`,
           WebkitMaskSize:'100% 100%', maskSize:'100% 100%',
-          filter: MASU_COLOR_FILTERS[colors[idx]],
         }}/>
       ) : null)}
     </div>
@@ -1351,7 +1438,7 @@ function MonsterHeroGame() {
   // colorsはモンスターの染色可能な部位数と同じ長さの配列(各要素は色idまたはnull=染色しない)
   const useDyeItem = (masuId, colors) => {
     if ((ownedItems.dye_mock || 0) <= 0) return;
-    const cleaned = (colors || []).map(c => (c && MASU_COLOR_FILTERS[c]) ? c : null);
+    const cleaned = (colors || []).map(c => (c && MASU_COLOR_TARGET[c]) ? c : null);
     if (!cleaned.some(Boolean)) return;
     setMasuMons(prev => {
       const next = prev.map(m => m.id === masuId ? { ...m, colors: cleaned, color: undefined } : m);
@@ -2813,7 +2900,7 @@ function MonsterHeroGame() {
                           <span className="w-3.5 h-3.5 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={7} className="text-white drop-shadow"/></span>
                           <span className="text-[5.5px] text-white font-black leading-none">元の色</span>
                         </button>
-                        {Object.keys(MASU_COLOR_FILTERS).map(colorId=>(
+                        {Object.keys(MASU_COLOR_TARGET).map(colorId=>(
                           <button key={colorId} onClick={()=>setDyePreviewColors(prev=>{const next=[...prev]; next[idx]=colorId; return next;})} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${dyePreviewColors[idx]===colorId?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
                           <span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}></span>
                           <span className="text-[5.5px] text-white font-black leading-none">{MASU_COLOR_LABELS[colorId]}</span>
