@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 21:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 22:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1182,6 +1182,7 @@ function MonsterHeroGame() {
   const [masuNameInput, setMasuNameInput] = useState('');
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
   const [masuMonDetail, setMasuMonDetail] = useState(null); // マスモン一覧: タップ中のマスモン詳細
+  const [masuEnhanceFrom, setMasuEnhanceFrom] = useState(null); // マスモン強化ページを開く直前のgameState(戻る先。masuMonDetailはROSTER等の複数画面から開けるため)
   const [showMasuRenameModal, setShowMasuRenameModal] = useState(false);
   const [masuRenameInput, setMasuRenameInput] = useState('');
   // 合体: マスモン同士を合体させ、副の絆経験値を主に受け継ぐ機能。fusionStepで画面内の段階を管理する
@@ -3771,7 +3772,7 @@ function MonsterHeroGame() {
           );
         })()}
 
-        {masuMonDetail&&(()=>{
+        {masuMonDetail&&gameState!=='MASU_ENHANCE'&&(()=>{
           const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
           const base = ALL_PLAYER_MONSTERS[masu.baseId];
           if (!base) { setMasuMonDetail(null); return null; }
@@ -3801,20 +3802,9 @@ function MonsterHeroGame() {
                 </div>
                 <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
                   <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">現在のステータス(強化分込み)</div><div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{base.baseHp+(masu.statPoints?.hp||0)}{(masu.statPoints?.hp||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.hp})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{base.baseAtk+(masu.statPoints?.atk||0)}{(masu.statPoints?.atk||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.atk})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{base.baseDef+(masu.statPoints?.def||0)}{(masu.statPoints?.def||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.def})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{base.baseGuts+(masu.statPoints?.guts||0)}{(masu.statPoints?.guts||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.guts})</span>}</span></div></div></div>
-                  <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=(masu.distApt&&masu.distApt[idx])||'C'; const canUp=(masu.distAptPoints||0)>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>{const updated=spendAptPoint(masu.id,idx); if(updated) setMasuMonDetail(updated);}} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
-                  {(masu.distAptPoints||0)>0&&(
-                    <div className="bg-black/40 p-2 rounded-xl border border-emerald-500/30">
-                      <div className="text-[7px] text-emerald-400 uppercase font-bold mb-1">ステータス強化(強化P 1つにつき使用・調整中)</div>
-                      <div className="grid grid-cols-4 gap-1">
-                        {Object.entries(STAT_POINT_KEYS).map(([key,label])=>(
-                          <button key={key} onClick={()=>{const updated=spendStatPoint(masu.id,key); if(updated) setMasuMonDetail(updated);}} className="flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95">
-                            <span className="text-[7px] text-emerald-300 font-black">{label}</span>
-                            <span className="text-[10px] text-white font-black">+{STAT_POINT_GAIN[key]||1}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {(()=>{const ps=mergeMasuIntoMon(masu)?.plusStats||{}; return(<div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{ps.hp>0&&`HP+${ps.hp} `}{ps.atk>0&&`攻+${ps.atk} `}{ps.def>0&&`防+${ps.def} `}{ps.guts>0&&`G+${ps.guts} `}</div></div>);})()}
+                  <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=(masu.distApt&&masu.distApt[idx])||'C'; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span></div>);})}</div></div>
+                  <button onClick={()=>{setMasuEnhanceFrom(gameState); setGameState('MASU_ENHANCE');}} className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white py-2.5 rounded-xl font-black text-[11px] uppercase active:scale-95 flex items-center justify-center gap-1.5 shadow-lg"><Sparkles size={13}/>強化する{(masu.distAptPoints||0)>0&&<span className="bg-white/25 px-1.5 rounded-full text-[9px]">強化P {masu.distAptPoints}</span>}</button>
                   {(masu.fusionHistory||[]).length>0&&(
                     <div className="bg-black/40 p-2 rounded-xl border border-amber-500/30">
                       <div className="text-[7px] text-amber-400 uppercase font-bold mb-1 flex items-center gap-1"><Sparkles size={9}/>合体履歴</div>
@@ -3830,7 +3820,7 @@ function MonsterHeroGame() {
                   )}
                   {(masu.inheritedUniques||[]).length>0&&(
                     <div className="bg-black/40 p-2 rounded-xl border border-amber-500/30">
-                      <div className="text-[7px] text-amber-400 uppercase font-bold mb-1">継承した固有技(現在はバトルで未使用)</div>
+                      <div className="text-[7px] text-amber-400 uppercase font-bold mb-1">継承した固有技(バトル中にスロットのバッジをタップで切替可能)</div>
                       <div className="space-y-1">
                         {masu.inheritedUniques.map((u,idx)=>(
                           <div key={idx} className="text-[8px] text-amber-200 font-bold bg-black/30 rounded-lg px-2 py-1">{u.name}<span className="text-slate-500 font-normal">(元{u.sourceMasuName})</span></div>
@@ -3842,6 +3832,105 @@ function MonsterHeroGame() {
                   <div className="text-[8px] text-teal-400/80 font-bold text-center px-2">絆ポイントリセットの書・染色もどきは「アイテム欄」から使用できます</div>
                   <button onClick={()=>{ if(window.confirm(`「${masu.name}」を削除しますか？この操作は取り消せません。`)){ deleteMasuMon(masu.id); setMasuMonDetail(null); } }} className="w-full bg-red-950/40 border border-red-500/30 text-red-400 py-2.5 rounded-xl font-black text-[10px] uppercase active:scale-95">このマスモンを削除する</button>
                 </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* マスモン強化: 専用ページ(間合い適性・ステータス強化を、変動値のプレビュー付きで行う) */}
+        {gameState==='MASU_ENHANCE'&&masuMonDetail&&(()=>{
+          const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
+          const base = ALL_PLAYER_MONSTERS[masu.baseId];
+          if (!base) { setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); return null; }
+          const lvl = bondLevelInfo(masu.bondXp||0);
+          const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
+          const points = masu.distAptPoints||0;
+          const currentStatValue = (key) => ({hp:base.baseHp,atk:base.baseAtk,def:base.baseDef,guts:base.baseGuts}[key]||0) + (masu.statPoints?.[key]||0);
+          const ps = mergeMasuIntoMon(masu)?.plusStats||{};
+          const backToList = () => { setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); };
+          return (
+            <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col overflow-hidden">
+              <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
+                <button onClick={backToList} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest flex-1">マスモン強化</h2>
+              </div>
+              <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full">
+                <div className="flex items-center gap-4 bg-slate-900 border border-amber-500/30 rounded-3xl p-4 shadow-xl">
+                  <div className="relative w-20 h-20 shrink-0">
+                    <div className={`w-20 h-20 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-2 ring-amber-400':'border-amber-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+                    {(masu.fusionHistory||[]).length>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1.5 py-0.5 text-[8px] font-black text-black leading-tight">+{masu.fusionHistory.length}</div>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-black text-white truncate">{masu.name}</h3>
+                    <div className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">マスモン・元は{base.name}</div>
+                    <div className="mt-1">
+                      <div className="text-[9px] text-pink-300 font-black flex items-center gap-1"><Heart size={9}/>絆Lv.{lvl.level}</div>
+                      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-black/40 p-3 rounded-2xl border border-amber-500/40 flex items-center justify-between">
+                  <div className="text-[10px] text-amber-300 uppercase font-black flex items-center gap-1.5"><Sparkles size={12}/>強化ポイント</div>
+                  <div className="text-xl text-white font-black font-mono">{points}</div>
+                </div>
+                <div className="bg-black/40 p-3 rounded-2xl border border-white/5">
+                  <div className="text-[8px] text-slate-500 uppercase font-bold mb-1">現在のステータス(強化分込み)</div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1"><div className="flex justify-between text-[11px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{currentStatValue('hp')}{(masu.statPoints?.hp||0)>0&&<span className="text-emerald-400 text-[9px]"> (+{masu.statPoints.hp})</span>}</span></div><div className="flex justify-between text-[11px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{currentStatValue('atk')}{(masu.statPoints?.atk||0)>0&&<span className="text-emerald-400 text-[9px]"> (+{masu.statPoints.atk})</span>}</span></div><div className="flex justify-between text-[11px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{currentStatValue('def')}{(masu.statPoints?.def||0)>0&&<span className="text-emerald-400 text-[9px]"> (+{masu.statPoints.def})</span>}</span></div><div className="flex justify-between text-[11px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{currentStatValue('guts')}{(masu.statPoints?.guts||0)>0&&<span className="text-emerald-400 text-[9px]"> (+{masu.statPoints.guts})</span>}</span></div></div>
+                </div>
+                <div className="bg-black/40 p-3 rounded-2xl border border-pink-500/30">
+                  <div className="text-[8px] text-pink-400 uppercase font-bold">合流ボーナス(このマスモンが供モンとして合流した時に加算される値)</div>
+                  <div className="text-[10px] text-white font-bold mt-1">{ps.hp>0&&`HP+${ps.hp} `}{ps.atk>0&&`攻+${ps.atk} `}{ps.def>0&&`防+${ps.def} `}{ps.guts>0&&`G+${ps.guts} `}{!(ps.hp>0||ps.atk>0||ps.def>0||ps.guts>0)&&'なし'}</div>
+                </div>
+                <div className="bg-black/40 p-3 rounded-2xl border border-cyan-500/30">
+                  <div className="text-[9px] text-cyan-400 uppercase font-bold mb-2">間合い適性を強化</div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {RANGE_LABELS.map((label,idx)=>{
+                      const grade=(masu.distApt&&masu.distApt[idx])||'C';
+                      const gIdx=DIST_APTITUDE_GRADES.indexOf(grade);
+                      const nextGrade=gIdx<DIST_APTITUDE_GRADES.length-1?DIST_APTITUDE_GRADES[gIdx+1]:null;
+                      const canUp=points>0&&nextGrade;
+                      return(
+                        <div key={idx} className="flex flex-col items-center gap-1">
+                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
+                          <span className={`w-full text-center py-1 rounded-lg border text-base font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>
+                          <span className="text-[7px] text-slate-500 font-mono h-3">{nextGrade?`次: ${nextGrade}`:'MAX'}</span>
+                          <button disabled={!canUp} onClick={()=>{
+                            const beforeGrade=grade;
+                            const updated=spendAptPoint(masu.id,idx);
+                            if(!updated) return;
+                            setMasuMonDetail(updated);
+                            const afterGrade=(updated.distApt&&updated.distApt[idx])||beforeGrade;
+                            setEffect({type:'enhance',label:`${label}距離適性 強化！`,icon:'📈',monEmoji:base.emoji,imgUrl:base.iconUrl,subLabel:`${label}距離適性 ${beforeGrade} → ${afterGrade}`});
+                            setTimeout(()=>setEffect(null),900);
+                          }} className="w-full text-[9px] font-black bg-amber-600 text-white rounded-lg py-1 active:scale-95 disabled:opacity-20 disabled:bg-slate-700">+1</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="bg-black/40 p-3 rounded-2xl border border-emerald-500/30">
+                  <div className="text-[9px] text-emerald-400 uppercase font-bold mb-2">ステータスを強化</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{
+                      const before=currentStatValue(key);
+                      const gain=STAT_POINT_GAIN[key]||1;
+                      const after=before+gain;
+                      return(
+                        <button key={key} disabled={points<=0} onClick={()=>{
+                          const updated=spendStatPoint(masu.id,key);
+                          if(!updated) return;
+                          setMasuMonDetail(updated);
+                          setEffect({type:'enhance',label:`${label}強化！`,icon:'💪',monEmoji:base.emoji,imgUrl:base.iconUrl,subLabel:`${label} ${before} → ${after}`});
+                          setTimeout(()=>setEffect(null),900);
+                        }} className="flex flex-col items-center gap-1 bg-emerald-950/50 border border-emerald-500/30 rounded-xl py-2.5 active:scale-95 disabled:opacity-20">
+                          <span className="text-[9px] text-emerald-300 font-black">{label}</span>
+                          <span className="text-[11px] text-white font-mono font-black">{before} → <span className="text-emerald-400">{after}</span></span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <button onClick={backToList} className="w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2">完了</button>
               </div>
             </div>
           );
@@ -4690,9 +4779,21 @@ function MonsterHeroGame() {
             <div className="absolute inset-0" style={{animation:'specialFlash 500ms ease-out infinite', background:'radial-gradient(circle at 50% 42%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 55%)'}}></div>
           </>
         )}
-        {effect.imgUrl?(<img src={effect.imgUrl} alt="effect" style={{width:effect.type==='unique'?'180px':'150px',height:effect.type==='unique'?'180px':'150px',animation:effect.type==='unique'?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]'}`}/>):(<div style={{fontSize:effect.type==='unique'?'128px':'112px',animation:effect.type==='unique'?'specialThrob 500ms ease-in-out infinite':undefined}} className="mb-6 relative">{effect.monEmoji}</div>)}
-        <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effect.type==='unique'?'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]':'text-white bg-white/10 border-white/20'}`}>{effect.label}</h2>
-        {effect.subLabel&&<p className="text-indigo-400 font-mono text-[10px] mt-4 font-black whitespace-pre-line relative">{effect.subLabel}</p>}
+        {effect.type==='enhance'&&(
+          <>
+            <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 42%, rgba(251,191,36,0.5) 0%, rgba(234,88,12,0.3) 35%, rgba(0,0,0,0) 68%)', animation:'auraPulse 600ms ease-out infinite'}}></div>
+            <div className="absolute" style={{top:'42%',left:'50%',width:'min(70vw,300px)',height:'min(70vw,300px)',transform:'translate(-50%,-50%)'}}>
+              <div className="absolute inset-0 rounded-full border-4 border-amber-400/70" style={{animation:'auraRing 700ms ease-out infinite'}}></div>
+              <div className="absolute inset-0 rounded-full border-2 border-orange-300/60" style={{animation:'auraRing 900ms ease-out 150ms infinite'}}></div>
+              {[0,60,120,180,240,300].map(deg=>(
+                <div key={deg} className="absolute left-1/2 top-1/2 text-2xl" style={{transform:`translate(-50%,-50%) rotate(${deg}deg) translateY(-120px)`, animation:'sparkFlicker 350ms ease-in-out infinite', animationDelay:`${deg}ms`}}>✨</div>
+              ))}
+            </div>
+          </>
+        )}
+        {effect.imgUrl?(<img src={effect.imgUrl} alt="effect" style={{width:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),height:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':(effect.type==='enhance'?'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]')}`}/>):(<div style={{fontSize:effect.type==='unique'?'128px':(effect.type==='enhance'?'120px':'112px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className="mb-6 relative">{effect.monEmoji}</div>)}
+        <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effect.type==='unique'?'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]':(effect.type==='enhance'?'text-amber-100 bg-amber-600/30 border-amber-400/60 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]':'text-white bg-white/10 border-white/20')}`}>{effect.label}</h2>
+        {effect.subLabel&&<p className={`font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effect.type==='enhance'?'text-amber-300':'text-indigo-400'}`}>{effect.subLabel}</p>}
         <div style={{fontSize:effect.type==='unique'?'60px':'48px'}} className="mt-8 animate-bounce relative">{effect.icon}</div>
       </div>)}
         {rosterSkillDetail&&(()=>{const mon=rosterSkillDetail.mon; const isUnique=rosterSkillDetail.kind==='unique'; const levels=isUnique?getUniqueSkillLevels(mon):getAtkSkillLevels(mon); const title=isUnique?`固有技: ${mon.unique.name}`:`通常技: ${(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}`; return(
