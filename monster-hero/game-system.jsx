@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 04:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 15:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -324,7 +324,9 @@ const MASU_COLOR_REGION_HUES = {
   // 左右の耳(染色③・オレンジ)に挟まれているため平滑化(多数決)で耳側に塗り替えられてしまい
   // 常にオレンジのまま残っていた。posBboxで位置指定して強制的に染色①に含める
   // ICON/IMGでキャラの縦横比・トリミング位置が違うため、両方の帽子部分を覆えるよう広めにとっている
-  Tiger: [{ hue: 233, sMin: 0.28, posBbox: [[0.30, 0.10, 0.68, 0.30]] }, { white: true, sMax: 0.28, vMin: 0.4, bbox: [0.26, 0.27, 0.66, 1.0] }, { hue: 38, posBbox: [[0.665, 0.32, 1.0, 0.62]] }],
+  // region0のposBboxは128px(ICON)/160px(IMG)向けにMASU_COLOR_REGION_SIZE_OVERRIDESで個別上書きしている。
+  // ここに書いた値はそれ以外のサイズで読み込まれた場合の安全側フォールバック(耳には絶対かからない狭い範囲)
+  Tiger: [{ hue: 233, sMin: 0.28, posBbox: [[0.43, 0.11, 0.49, 0.24]] }, { white: true, sMax: 0.28, vMin: 0.4, bbox: [0.26, 0.27, 0.66, 1.0] }, { hue: 38, posBbox: [[0.665, 0.32, 1.0, 0.62]] }],
   Ham: [25, { white: true, sMax: 0.35, vMin: 0.7 }, 355],
   // 染色②は肌(顔・お腹・腕・脚)、染色③は尻尾と両肩の翼(彩度の低い1〜2px幅の細い部位のため
   // noAAGuardで輪郭のにじみ除外もスキップしないと丸ごと消えてしまう)
@@ -349,6 +351,23 @@ const MASU_COLOR_SMOOTH = {
   Iblis: { radius: 3, iterations: 1 },
 };
 const _getSmoothParams = (baseId) => MASU_COLOR_SMOOTH[baseId] || { radius: 2, iterations: 1 };
+// ライガーはICON(128px)とIMG(160px)で同じ正規化座標(0〜1)でも実際の絵の縦横比・耳の位置が異なるため、
+// 頭上の毛(染色①)用の単一posBboxでは両アセットを同時に満たせず、耳側を安全に避けようとすると
+// もう一方で頭の毛が塗り残る・耳側を広く取ろうとするともう一方で耳ごと誤って塗ってしまう問題があった。
+// そのため画像の実ピクセル幅(w)ごとに専用のposBboxを切り替えられるようにしている
+// (耳の色ピクセルとの実測ギリギリのラインから安全マージンを取って算出した座標)
+const MASU_COLOR_REGION_SIZE_OVERRIDES = {
+  Tiger: {
+    128: { 0: { posBbox: [[0.383, 0.117, 0.469, 0.141], [0.352, 0.141, 0.477, 0.164], [0.344, 0.164, 0.484, 0.188], [0.328, 0.188, 0.520, 0.211]] } },
+    160: { 0: { posBbox: [[0.463, 0.163, 0.544, 0.181], [0.438, 0.181, 0.550, 0.200], [0.431, 0.200, 0.556, 0.219], [0.425, 0.219, 0.563, 0.237]] } },
+  },
+};
+// baseIdの部位定義を、実際に読み込んだ画像の幅wに応じて調整する(該当する上書きが無ければそのまま返す)
+const _resolveRegionDefsForSize = (baseId, defs, w) => {
+  const overrides = MASU_COLOR_REGION_SIZE_OVERRIDES[baseId] && MASU_COLOR_REGION_SIZE_OVERRIDES[baseId][w];
+  if (!overrides) return defs;
+  return defs.map((def, idx) => (overrides[idx] && def && typeof def === 'object') ? { ...def, ...overrides[idx] } : def);
+};
 // 染色もどきの色選択UIで見せる部位数(部位分割データが無いモンスターも全身一括の1枠は必ず出す)
 const dyeRegionCount = (baseId) => { const hues = MASU_COLOR_REGION_HUES[baseId]; return (hues && hues.length > 0) ? hues.length : 1; };
 const _rgbToHsv = (r,g,b) => {
@@ -446,13 +465,14 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
       img.onload = () => {
         try {
           const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+          const regionDefs = _resolveRegionDefsForSize(baseId, hues, w);
           const srcCanvas = document.createElement('canvas');
           srcCanvas.width = w; srcCanvas.height = h;
           const srcCtx = srcCanvas.getContext('2d');
           if (!srcCtx) { resolve(null); return; }
           srcCtx.drawImage(img, 0, 0, w, h);
           const src = srcCtx.getImageData(0, 0, w, h).data;
-          const maskCanvases = hues.map(() => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; });
+          const maskCanvases = regionDefs.map(() => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; });
           const maskCtxs = maskCanvases.map(c => c.getContext('2d'));
           if (maskCtxs.some(c => !c)) { resolve(null); return; }
           const maskDatas = maskCtxs.map(ctx => ctx.createImageData(w, h));
@@ -474,9 +494,9 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             if (a < 20) continue;
             const x = i % w, y = (i / w) | 0;
             const [hh, ss, vv] = _rgbToHsv(r, g, b);
-            const region = _classifyDyePixel(hh, ss, vv, x / w, y / h, hues);
+            const region = _classifyDyePixel(hh, ss, vv, x / w, y / h, regionDefs);
             if (region < 0) continue;
-            const def = hues[region];
+            const def = regionDefs[region];
             // 輪郭線のアンチエイリアス部分(透明ピクセルに隣接する1px)は色がにじんでいて誤判定しやすいため、
             // 染色対象から除外し常に元の絵のまま残す(輪郭が塗り分けの色を拾ってしまう問題を防ぐ)。
             // ただし尻尾の先や小さな翼のように1〜2px幅しかない細い付属物は、全域が輪郭のにじみ扱いに
@@ -535,7 +555,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
           for (let i = 0; i < w*h; i++) {
             const orig = grid[i];
             if (orig < 0) continue;
-            const def = hues[orig];
+            const def = regionDefs[orig];
             if (def && typeof def === 'object' && (def.noEdgeGuard || def.posBbox)) smoothed[i] = orig;
           }
           for (let i = 0; i < w*h; i++) {
@@ -1585,7 +1605,11 @@ function MonsterHeroGame() {
   // ボタン1つでフルスクリーンの選択モーダル(showSortFilterModal)を開く方式に変更した。
   // singleType=trueの画面(ベースモン一覧・マスモン一覧)では、種別が固定で意味を持たない
   // 「ベースモン」「マスモン」の選択肢をモーダル側で出さない(編成画面のみ両方混在するため出す)
-  const MonsterSortFilterBar = ({ singleType } = {}) => {
+  // ※コンポーネント本体の中でJSXコンポーネント(<MonsterSortFilterBar/>)として定義すると、
+  // 親が再レンダリングされるたびに毎回「新しい型」とみなされてDOMごと作り直され(アンマウント→再マウント)、
+  // その直下の一覧(モンスターグリッド)がタップの瞬間にレイアウトごと組み直されてタップが取りこぼされる
+  // 不具合の原因になっていたため、あえて通常の関数として呼び出す形にしている(コンポーネント境界を作らない)
+  const renderMonsterSortFilterBar = ({ singleType } = {}) => {
     const sortOpts = singleType ? MONSTER_SORT_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_SORT_OPTIONS;
     const dispOpts = singleType ? MONSTER_DISPLAY_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_DISPLAY_OPTIONS;
     const currentSortOpt = sortOpts.find(o => o.key === monsterSortKey) || sortOpts[0];
@@ -3008,7 +3032,7 @@ function MonsterHeroGame() {
                   </div>
                 </div>
                 <div className="text-[9px] text-slate-500 font-bold mb-1 px-1 shrink-0">解放済み{unlockedMonsterIds.length}体・ちょうど{STARTER_MONSTER_IDS.length}体選ぶと「決定」できます・アイコンタップで編成/解除、iボタンで詳細・同じ種は1体まで(マスモン含む)</div>
-                <MonsterSortFilterBar/>
+                {renderMonsterSortFilterBar()}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   <div className="grid grid-cols-3 gap-3 pb-4">
                     {unifiedMonsterEntriesDraft.map(e=>{
@@ -3137,7 +3161,7 @@ function MonsterHeroGame() {
               <h2 className="text-xl font-black italic text-cyan-400 uppercase tracking-widest">モンスター一覧</h2>
             </div>
             <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</div>
-            <MonsterSortFilterBar singleType/>
+            {renderMonsterSortFilterBar({ singleType: true })}
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               <div className="grid grid-cols-3 gap-2.5 pb-4">
                 {unifiedMonsterEntriesActive.filter(e=>e.type==='base').map(e=>{
@@ -3165,7 +3189,7 @@ function MonsterHeroGame() {
               <h2 className="text-xl font-black italic text-pink-400 uppercase tracking-widest">マスモン</h2>
             </div>
             <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</div>
-            <MonsterSortFilterBar singleType/>
+            {renderMonsterSortFilterBar({ singleType: true })}
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               {(()=>{
                 const entries = unifiedMonsterEntriesActive.filter(e=>e.type==='masu');
