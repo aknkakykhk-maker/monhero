@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 00:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 00:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1054,6 +1054,10 @@ function MonsterHeroGame() {
   const [marketTab, setMarketTab] = useState('icon'); // ブリーダーマーケットの表示カテゴリ: 'icon'|'disc'|'breeder'
   const [rosterTab, setRosterTab] = useState('monster'); // 編成画面の表示カテゴリ: 'monster'|'teaching'
   const [draftMonsterRoster, setDraftMonsterRoster] = useState([]); // 編成画面での仮選択(決定を押すまでmonsterRosterIdsには反映しない)
+  // モンスター一覧系画面(編成・ベースモン一覧・マスモン一覧)共通のソート・表示設定。3画面で共有する
+  const [monsterSortKey, setMonsterSortKey] = useState('lineage'); // 'base'|'masu'|'lineage'|'bond'|'name'|'active'
+  const [monsterSortDir, setMonsterSortDir] = useState('asc'); // 'asc'|'desc'
+  const [monsterDisplayFlags, setMonsterDisplayFlags] = useState({ base: true, masu: true, lineage: true, active: true }); // 各カードに出す情報(複数選択可、オフで非表示)
   const [draftTeachingRoster, setDraftTeachingRoster] = useState([]); // 編成画面での仮選択(決定を押すまでteachingRosterIdsには反映しない)
   const [rosterDetailMon, setRosterDetailMon] = useState(null); // 編成画面: 長押しで詳細表示中のモンスター
   const [rosterDetailTeaching, setRosterDetailTeaching] = useState(null); // 編成画面: 長押しで詳細表示中のブリーダーカード
@@ -1479,6 +1483,71 @@ function MonsterHeroGame() {
     if (typeof entry === 'string' && entry.startsWith('masu:')) return getMasuMon(entry.slice(5))?.baseId || null;
     return entry;
   };
+  // モンスター一覧系画面(編成/ベースモン一覧/マスモン一覧)共通のソートキー定義とラベル
+  const MONSTER_SORT_OPTIONS = [
+    { key: 'base', label: 'ベースモン' },
+    { key: 'masu', label: 'マスモン' },
+    { key: 'lineage', label: '血統' },
+    { key: 'bond', label: '絆レベル' },
+    { key: 'name', label: '名前' },
+    { key: 'active', label: '編成中' },
+  ];
+  const MONSTER_DISPLAY_OPTIONS = [
+    { key: 'base', label: 'ベースモン' },
+    { key: 'masu', label: 'マスモン' },
+    { key: 'lineage', label: '血統' },
+    { key: 'active', label: '編成中' },
+  ];
+  // 「ベースモン(未マスモン化の種)」「マスモン(育成済み個体)」を1つの配列に統一して扱うための変換。
+  // activeIdsには現在編成に入っている種id/'masu:'付きidの配列を渡す(画面によって draftMonsterRoster か
+  // 確定済みの monsterRosterIds かが変わる)
+  const buildUnifiedMonsterEntries = (baseIds, masuList, activeIds) => {
+    const baseEntries = baseIds.map(id => {
+      const base = ALL_PLAYER_MONSTERS[id];
+      if (!base) return null;
+      return { type: 'base', key: id, entryId: id, baseId: id, base, masu: null, name: base.name, lineageName: base.name, bondLevel: null, active: activeIds.includes(id) };
+    }).filter(Boolean);
+    const masuEntries = masuList.map(masu => {
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      if (!base) return null;
+      const entryId = 'masu:' + masu.id;
+      return { type: 'masu', key: entryId, entryId, baseId: masu.baseId, base, masu, name: masu.name, lineageName: base.name, bondLevel: bondLevelInfo(masu.bondXp || 0).level, active: activeIds.includes(entryId) };
+    }).filter(Boolean);
+    return [...baseEntries, ...masuEntries];
+  };
+  const sortMonsterEntries = (entries) => {
+    const dirMul = monsterSortDir === 'desc' ? -1 : 1;
+    const sorted = [...entries].sort((a, b) => {
+      let cmp = 0;
+      if (monsterSortKey === 'base') cmp = (a.type === 'base' ? 0 : 1) - (b.type === 'base' ? 0 : 1);
+      else if (monsterSortKey === 'masu') cmp = (a.type === 'masu' ? 0 : 1) - (b.type === 'masu' ? 0 : 1);
+      else if (monsterSortKey === 'lineage') cmp = a.lineageName.localeCompare(b.lineageName, 'ja');
+      else if (monsterSortKey === 'bond') cmp = (a.bondLevel ?? -1) - (b.bondLevel ?? -1);
+      else if (monsterSortKey === 'name') cmp = a.name.localeCompare(b.name, 'ja');
+      else if (monsterSortKey === 'active') cmp = (a.active ? 0 : 1) - (b.active ? 0 : 1);
+      if (cmp === 0) cmp = a.lineageName.localeCompare(b.lineageName, 'ja');
+      return cmp * dirMul;
+    });
+    return sorted;
+  };
+  // ソート行+表示設定行の共通UI(編成/ベースモン一覧/マスモン一覧で使い回す)
+  const MonsterSortFilterBar = () => (
+    <div className="mb-2 shrink-0">
+      <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-hide">
+        {MONSTER_SORT_OPTIONS.map(opt => (
+          <button key={opt.key} onClick={() => { if (monsterSortKey === opt.key) setMonsterSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setMonsterSortKey(opt.key); setMonsterSortDir('asc'); } }} className={`shrink-0 px-2.5 py-1 rounded-full text-[9px] font-black flex items-center gap-0.5 ${monsterSortKey === opt.key ? 'bg-indigo-500 text-white' : 'bg-slate-900 border border-slate-800 text-slate-400'}`}>
+            {opt.label}{monsterSortKey === opt.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide mt-1">
+        <span className="shrink-0 text-[9px] font-bold text-slate-500 self-center">表示:</span>
+        {MONSTER_DISPLAY_OPTIONS.map(opt => (
+          <button key={opt.key} onClick={() => setMonsterDisplayFlags(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))} className={`shrink-0 px-2 py-0.5 rounded-full text-[8px] font-black ${monsterDisplayFlags[opt.key] ? 'bg-teal-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}>{opt.label}</button>
+        ))}
+      </div>
+    </div>
+  );
   // 現在の周回で使う候補モンスター/ブリーダーカード(編成で選んだもの)。空の場合は解放済み全体にフォールバック
   const getActiveMonsterList = () => {
     const list = monsterRosterIds.map(resolveRosterEntryToMon).filter(Boolean);
@@ -2808,43 +2877,41 @@ function MonsterHeroGame() {
             </div>
             {rosterTab==='monster'?(
               <div className="flex-1 min-h-0 flex flex-col">
-                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">仮選択中: {draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}体 / 解放済み{unlockedMonsterIds.length}体<br/>※ちょうど{STARTER_MONSTER_IDS.length}体選ぶと「決定」できます・右上のiボタンで詳細表示・同じ種は1体まで(マスモン含む)</div>
+                <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">仮選択中: {draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}体 / 解放済み{unlockedMonsterIds.length}体<br/>※ちょうど{STARTER_MONSTER_IDS.length}体選ぶと「決定」できます・右上のiボタンで詳細表示・同じ種は1体まで(マスモン含む)</div>
+                <MonsterSortFilterBar/>
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   <div className="grid grid-cols-3 gap-3 pb-4">
-                    {unlockedMonsterIds.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>{
-                      const entry = m.id;
-                      const selected = draftMonsterRoster.includes(entry);
-                      return (
-                        <div key={entry} className="relative">
-                          <button onClick={()=>toggleDraftMonster(entry)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
-                            <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                            <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
-                            <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
-                          </button>
-                          <button onClick={(e)=>{e.stopPropagation(); setRosterDetailMon(m);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
-                        </div>
-                      );
-                    })}
-                    {masuMons.map(masu=>{
-                      const base = ALL_PLAYER_MONSTERS[masu.baseId];
-                      if (!base) return null;
-                      const entry = 'masu:' + masu.id;
-                      const selected = draftMonsterRoster.includes(entry);
+                    {sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, draftMonsterRoster)).filter(e=>monsterDisplayFlags[e.type]).map(e=>{
+                      if (e.type==='base') {
+                        const m = e.base;
+                        const selected = e.active;
+                        return (
+                          <div key={e.key} className="relative">
+                            <button onClick={()=>toggleDraftMonster(e.entryId)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
+                              <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                              <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
+                              {monsterDisplayFlags.active&&<div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>}
+                            </button>
+                            <button onClick={(ev)=>{ev.stopPropagation(); setRosterDetailMon(m);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
+                          </div>
+                        );
+                      }
+                      const masu = e.masu, base = e.base, selected = e.active;
                       const lvl = bondLevelInfo(masu.bondXp || 0);
                       return (
-                        <div key={entry} className="relative">
-                          <button onClick={()=>toggleDraftMonster(entry)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-pink-900/40 border-pink-400 ring-2 ring-pink-400':'bg-slate-900 border-pink-900/50'}`}>
+                        <div key={e.key} className="relative">
+                          <button onClick={()=>toggleDraftMonster(e.entryId)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-pink-900/40 border-pink-400 ring-2 ring-pink-400':'bg-slate-900 border-pink-900/50'}`}>
                             <div className="relative w-12 h-12 shrink-0">
                               <div className="w-12 h-12 rounded-full overflow-hidden border border-pink-400/40"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                               <div className="absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[6px] font-black text-white leading-tight">マスモン</div>
                             </div>
                             <div className="text-[10px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
-                            <div className="text-[7px] text-slate-500 font-bold truncate w-full text-center -mt-1">({base.name})</div>
+                            {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold truncate w-full text-center -mt-1">({base.name})</div>}
                             <div className="w-full">
                               <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5 mb-0.5"><Heart size={7}/>絆Lv.{lvl.level}</div>
                               <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${Math.max(0,Math.min(100,(lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100))}%`}}></div></div>
                             </div>
-                            <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-pink-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
+                            {monsterDisplayFlags.active&&<div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-pink-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>}
                           </button>
                         </div>
                       );
@@ -2922,16 +2989,36 @@ function MonsterHeroGame() {
               <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-cyan-400 uppercase tracking-widest">モンスター一覧</h2>
             </div>
-            <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</div>
+            <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</div>
+            <MonsterSortFilterBar/>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-              <div className="grid grid-cols-3 gap-3 pb-4">
-                {unlockedMonsterIds.map(id=>ALL_PLAYER_MONSTERS[id]).filter(Boolean).map(m=>{
-                  const masuCount = masuMons.filter(ms=>ms.baseId===m.id).length;
+              <div className="grid grid-cols-3 gap-2.5 pb-4">
+                {sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, monsterRosterIds)).filter(e=>monsterDisplayFlags[e.type]).map(e=>{
+                  if (e.type==='base') {
+                    const m = e.base;
+                    const masuCount = masuMons.filter(ms=>ms.baseId===m.id).length;
+                    return (
+                      <button key={e.key} onClick={()=>setRosterDetailMon(m)} className="rounded-2xl border-2 border-slate-800 bg-slate-900 p-2 flex flex-col items-center gap-1.5 active:scale-95">
+                        <div className="w-14 h-14 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                        <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
+                        <div className="text-[7px] text-pink-400 font-bold">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>
+                        {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white mt-0.5">編成中</div>}
+                      </button>
+                    );
+                  }
+                  const masu = e.masu, base = e.base;
+                  const lvl = bondLevelInfo(masu.bondXp||0);
+                  const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
                   return (
-                    <button key={m.id} onClick={()=>setRosterDetailMon(m)} className="rounded-2xl border-2 border-slate-800 bg-slate-900 p-2 flex flex-col items-center gap-1.5 active:scale-95">
-                      <div className="w-14 h-14 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                      <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
-                      <div className="text-[7px] text-pink-400 font-bold">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>
+                    <button key={e.key} onClick={()=>setMasuMonDetail(masu)} className="rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
+                      <div className="w-12 h-12 rounded-full overflow-hidden border border-pink-400/40 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                      <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
+                      {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>}
+                      <div className="w-full mt-0.5">
+                        <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
+                        <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
+                      </div>
+                      {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white mt-0.5">編成中</div>}
                     </button>
                   );
                 })}
@@ -2947,32 +3034,49 @@ function MonsterHeroGame() {
               <button onClick={()=>setGameState('PROFILE')} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-pink-400 uppercase tracking-widest">マスモン</h2>
             </div>
-            <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</div>
+            <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</div>
+            <MonsterSortFilterBar/>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-              {masuMons.length===0?(
-                <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🐾</span><div className="text-[11px] text-slate-400 mt-2">まだマスモンがいません。<br/>勇者モンでランを終えると登録できます。</div></div>
-              ):(
-                <div className="grid grid-cols-3 gap-2.5 pb-4">
-                  {masuMons.map(masu=>{
-                    const base = ALL_PLAYER_MONSTERS[masu.baseId];
-                    if (!base) return null;
-                    const lvl = bondLevelInfo(masu.bondXp||0);
-                    const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
-                    return (
-                      <button key={masu.id} onClick={()=>setMasuMonDetail(masu)} className="rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
-                        <div className="w-12 h-12 rounded-full overflow-hidden border border-pink-400/40 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                        <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
-                        <div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>
-                        <div className="w-full mt-0.5">
-                          <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
-                          <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
-                        </div>
-                        {(masu.distAptPoints||0)>0&&<div className="text-[7px] text-amber-300 font-black flex items-center gap-0.5 mt-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</div>}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              {(()=>{
+                const entries = sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, monsterRosterIds)).filter(e=>monsterDisplayFlags[e.type]);
+                if (entries.length===0) return (
+                  <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🐾</span><div className="text-[11px] text-slate-400 mt-2">{masuMons.length===0?<>まだマスモンがいません。<br/>勇者モンでランを終えると登録できます。</>:'表示設定で対象がすべてオフになっています。'}</div></div>
+                );
+                return (
+                  <div className="grid grid-cols-3 gap-2.5 pb-4">
+                    {entries.map(e=>{
+                      if (e.type==='masu') {
+                        const masu = e.masu, base = e.base;
+                        const lvl = bondLevelInfo(masu.bondXp||0);
+                        const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
+                        return (
+                          <button key={e.key} onClick={()=>setMasuMonDetail(masu)} className="rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
+                            <div className="w-12 h-12 rounded-full overflow-hidden border border-pink-400/40 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                            <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
+                            {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>}
+                            <div className="w-full mt-0.5">
+                              <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
+                              <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
+                            </div>
+                            {(masu.distAptPoints||0)>0&&<div className="text-[7px] text-amber-300 font-black flex items-center gap-0.5 mt-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</div>}
+                            {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white mt-0.5">編成中</div>}
+                          </button>
+                        );
+                      }
+                      const m = e.base;
+                      const masuCount = masuMons.filter(ms=>ms.baseId===m.id).length;
+                      return (
+                        <button key={e.key} onClick={()=>setRosterDetailMon(m)} className="rounded-2xl border-2 border-slate-800 bg-slate-900 p-2 flex flex-col items-center gap-1.5 active:scale-95">
+                          <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                          <div className="text-[9px] font-black text-white truncate w-full text-center">{m.name}</div>
+                          <div className="text-[7px] text-pink-400 font-bold">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>
+                          {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white mt-0.5">編成中</div>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
