@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 04:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 04:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -260,13 +260,16 @@ const RANGE_LABELS = ["零", "近", "中", "遠"];
 // グレード配列: 下から上へ。C(=0%)を基準にG~Sは±5%刻み、S以上(S+~M)は+2.5%刻みで頭打ちはM(+25%)
 // マスモンの「染色もどき」: CSSフィルターによる簡易的なパレットスワップ(6色)。
 // 元絵の全色相を一律にずらすだけの簡易処理のため、モンスターによって仕上がりの色味は変わる("もどき")
+// 元の絵の色相に関わらず狙った色にきちんと染まるよう、一度grayscaleで色を消してから
+// sepiaで色を作り直し、hue-rotateで狙った色相まで回転させる方式(単純なhue-rotateだけだと
+// 部位ごとの元の色相によって結果が大きくズレたり、彩度が低い部位に色が乗らなかったりするため)
 const MASU_COLOR_FILTERS = {
-  red: 'hue-rotate(-25deg) saturate(1.4) brightness(1.02)',
-  blue: 'hue-rotate(165deg) saturate(1.3)',
-  yellow: 'hue-rotate(55deg) saturate(1.5) brightness(1.1)',
-  green: 'hue-rotate(95deg) saturate(1.35)',
-  black: 'grayscale(0.55) brightness(0.5) contrast(1.2)',
-  white: 'grayscale(0.65) brightness(1.7) contrast(0.75)',
+  red: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-45deg) saturate(3)',
+  yellow: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(10deg) saturate(3)',
+  green: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(80deg) saturate(3)',
+  blue: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(180deg) saturate(3)',
+  black: 'grayscale(1) brightness(0.4)',
+  white: 'grayscale(1) brightness(1.35) contrast(1.15)',
 };
 const MASU_COLOR_LABELS = { red: '赤', blue: '青', yellow: '黄', green: '緑', black: '黒', white: '白' };
 const MASU_COLOR_SWATCH = { red: '#ef4444', blue: '#3b82f6', yellow: '#eab308', green: '#22c55e', black: '#1f2937', white: '#f8fafc' };
