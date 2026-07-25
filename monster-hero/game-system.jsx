@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 02:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 03:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1566,11 +1566,16 @@ function MonsterHeroGame() {
   );
   // ソート行+表示設定行の共通UI(編成/ベースモン一覧/マスモン一覧で使い回す)。
   // タップ精度が悪いという指摘を受け、チップの当たり判定を指で押しやすいサイズまで拡大している
-  // (min-heightで実際のタップ領域を確保しつつ、隣とぶつからないようgapも広げた)
-  const MonsterSortFilterBar = () => (
+  // (min-heightで実際のタップ領域を確保しつつ、隣とぶつからないようgapも広げた)。
+  // singleType=trueの画面(ベースモン一覧・マスモン一覧)では、種別が固定で意味を持たない
+  // 「ベースモン」「マスモン」のソート/表示設定チップを出さない(編成画面のみ両方混在するため出す)
+  const MonsterSortFilterBar = ({ singleType } = {}) => {
+    const sortOpts = singleType ? MONSTER_SORT_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_SORT_OPTIONS;
+    const dispOpts = singleType ? MONSTER_DISPLAY_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_DISPLAY_OPTIONS;
+    return (
     <div className="mb-2 shrink-0">
       <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-hide">
-        {MONSTER_SORT_OPTIONS.map(opt => (
+        {sortOpts.map(opt => (
           <button key={opt.key} onClick={() => { if (monsterSortKey === opt.key) setMonsterSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setMonsterSortKey(opt.key); setMonsterSortDir('asc'); } }} style={{minHeight:'34px'}} className={`shrink-0 px-3.5 py-2 rounded-full text-[11px] font-black flex items-center gap-0.5 active:scale-95 ${monsterSortKey === opt.key ? 'bg-indigo-500 text-white' : 'bg-slate-900 border border-slate-800 text-slate-400'}`}>
             {opt.label}{monsterSortKey === opt.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}
           </button>
@@ -1578,12 +1583,13 @@ function MonsterHeroGame() {
       </div>
       <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide mt-1">
         <span className="shrink-0 text-[10px] font-bold text-slate-500 self-center">表示:</span>
-        {MONSTER_DISPLAY_OPTIONS.map(opt => (
+        {dispOpts.map(opt => (
           <button key={opt.key} onClick={() => setMonsterDisplayFlags(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))} style={{minHeight:'30px'}} className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-black active:scale-95 ${monsterDisplayFlags[opt.key] ? 'bg-teal-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}>{opt.label}</button>
         ))}
       </div>
     </div>
-  );
+    );
+  };
   // 現在の周回で使う候補モンスター/ブリーダーカード(編成で選んだもの)。空の場合は解放済み全体にフォールバック
   const getActiveMonsterList = () => {
     const list = monsterRosterIds.map(resolveRosterEntryToMon).filter(Boolean);
@@ -2868,13 +2874,13 @@ function MonsterHeroGame() {
                   <span className="flex items-center gap-1 text-[9px] font-black text-pink-400 uppercase"><Heart size={11}/>マスモン</span>
                   <span className="text-[12px] font-black text-pink-200">{masuMons.length}体</span>
                 </button>
-                <button onClick={()=>setGameState('ITEM_INVENTORY')} className="col-span-2 flex items-center justify-center gap-1.5 bg-teal-950/40 border border-teal-500/40 px-2 py-2.5 rounded-xl active:scale-95">
-                  <Package size={12} className="text-teal-400"/><span className="text-[9px] font-black text-teal-400 uppercase">アイテム欄</span>
+                <button onClick={()=>setGameState('ITEM_INVENTORY')} className="flex flex-col items-center justify-center gap-1 bg-teal-950/40 border border-teal-500/40 px-2 py-2.5 rounded-xl active:scale-95">
+                  <span className="flex items-center gap-1 text-[9px] font-black text-teal-400 uppercase"><Package size={11}/>アイテム欄</span>
                   <span className="text-[12px] font-black text-teal-200">{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個</span>
                 </button>
-                <button onClick={()=>{ if(masuMons.length<2) return; resetFusionFlow(); setGameState('MASU_FUSION'); }} disabled={masuMons.length<2} className={`col-span-2 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl ${masuMons.length<2?'bg-slate-900/60 border border-slate-800 opacity-50':'bg-violet-950/40 border border-violet-500/40 active:scale-95'}`}>
-                  <Sparkles size={12} className="text-violet-400"/><span className="text-[9px] font-black text-violet-400 uppercase">合体</span>
-                  <span className="text-[9px] font-bold text-slate-500">{masuMons.length<2?'(マスモンが2体以上必要)':'マスモン同士を合体させる'}</span>
+                <button onClick={()=>{ if(masuMons.length<2) return; resetFusionFlow(); setGameState('MASU_FUSION'); }} disabled={masuMons.length<2} className={`flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-xl ${masuMons.length<2?'bg-slate-900/60 border border-slate-800 opacity-50':'bg-violet-950/40 border border-violet-500/40 active:scale-95'}`}>
+                  <span className="flex items-center gap-1 text-[9px] font-black text-violet-400 uppercase"><Sparkles size={11}/>合体</span>
+                  <span className="text-[12px] font-black text-violet-200">{masuMons.length<2?'2体〜':'マスモン同士'}</span>
                 </button>
               </div>
             </div>
@@ -2999,6 +3005,7 @@ function MonsterHeroGame() {
                             <div className="relative w-12 h-12 shrink-0">
                               <div className={`w-12 h-12 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                               <div className="absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[6px] font-black text-white leading-tight">マスモン</div>
+                              {(masu.fusionHistory||[]).length>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1 text-[6px] font-black text-black leading-tight">+{masu.fusionHistory.length}</div>}
                             </div>
                             <div className="text-[10px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
                             {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold truncate w-full text-center -mt-1">({base.name})</div>}
@@ -3008,6 +3015,7 @@ function MonsterHeroGame() {
                             </div>
                             {monsterDisplayFlags.active&&<div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-pink-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>}
                           </button>
+                          <button onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
                         </div>
                       );
                     })}
@@ -3085,35 +3093,18 @@ function MonsterHeroGame() {
               <h2 className="text-xl font-black italic text-cyan-400 uppercase tracking-widest">モンスター一覧</h2>
             </div>
             <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</div>
-            <MonsterSortFilterBar/>
+            <MonsterSortFilterBar singleType/>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               <div className="grid grid-cols-3 gap-2.5 pb-4">
-                {unifiedMonsterEntriesActive.map(e=>{
-                  if (e.type==='base') {
-                    const m = e.base;
-                    const masuCount = masuMons.filter(ms=>ms.baseId===m.id).length;
-                    return (
-                      <button key={e.key} onClick={()=>setRosterDetailMon(m)} className="rounded-2xl border-2 border-slate-800 bg-slate-900 p-2 flex flex-col items-center gap-1.5 active:scale-95">
-                        <div className="w-14 h-14 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                        <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
-                        <div className="text-[7px] text-pink-400 font-bold">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>
-                        {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white mt-0.5">編成中</div>}
-                      </button>
-                    );
-                  }
-                  const masu = e.masu, base = e.base;
-                  const lvl = bondLevelInfo(masu.bondXp||0);
-                  const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
+                {unifiedMonsterEntriesActive.filter(e=>e.type==='base').map(e=>{
+                  const m = e.base;
+                  const masuCount = masuMons.filter(ms=>ms.baseId===m.id).length;
                   return (
-                    <button key={e.key} onClick={()=>setMasuMonDetail(masu)} className="rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
-                      <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                      <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
-                      {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>}
-                      <div className="w-full mt-0.5">
-                        <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
-                        <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
-                      </div>
-                      {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white mt-0.5">編成中</div>}
+                    <button key={e.key} onClick={()=>setRosterDetailMon(m)} className="rounded-2xl border-2 border-slate-800 bg-slate-900 p-2 flex flex-col items-center gap-1.5 active:scale-95">
+                      <div className="w-14 h-14 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                      <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
+                      <div className="text-[7px] text-pink-400 font-bold">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>
+                      {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white mt-0.5">編成中</div>}
                     </button>
                   );
                 })}
@@ -3130,42 +3121,34 @@ function MonsterHeroGame() {
               <h2 className="text-xl font-black italic text-pink-400 uppercase tracking-widest">マスモン</h2>
             </div>
             <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</div>
-            <MonsterSortFilterBar/>
+            <MonsterSortFilterBar singleType/>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               {(()=>{
-                const entries = unifiedMonsterEntriesActive;
+                const entries = unifiedMonsterEntriesActive.filter(e=>e.type==='masu');
                 if (entries.length===0) return (
                   <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🐾</span><div className="text-[11px] text-slate-400 mt-2">{masuMons.length===0?<>まだマスモンがいません。<br/>勇者モンでランを終えると登録できます。</>:'表示設定で対象がすべてオフになっています。'}</div></div>
                 );
                 return (
                   <div className="grid grid-cols-3 gap-2.5 pb-4">
                     {entries.map(e=>{
-                      if (e.type==='masu') {
-                        const masu = e.masu, base = e.base;
-                        const lvl = bondLevelInfo(masu.bondXp||0);
-                        const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
-                        return (
-                          <button key={e.key} onClick={()=>setMasuMonDetail(masu)} className="rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
-                            <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                            <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
-                            {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>}
-                            <div className="w-full mt-0.5">
-                              <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
-                              <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
-                            </div>
-                            {(masu.distAptPoints||0)>0&&<div className="text-[7px] text-amber-300 font-black flex items-center gap-0.5 mt-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</div>}
-                            {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white mt-0.5">編成中</div>}
-                          </button>
-                        );
-                      }
-                      const m = e.base;
-                      const masuCount = masuMons.filter(ms=>ms.baseId===m.id).length;
+                      const masu = e.masu, base = e.base;
+                      const lvl = bondLevelInfo(masu.bondXp||0);
+                      const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
+                      const fusionCount = (masu.fusionHistory||[]).length;
                       return (
-                        <button key={e.key} onClick={()=>setRosterDetailMon(m)} className="rounded-2xl border-2 border-slate-800 bg-slate-900 p-2 flex flex-col items-center gap-1.5 active:scale-95">
-                          <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                          <div className="text-[9px] font-black text-white truncate w-full text-center">{m.name}</div>
-                          <div className="text-[7px] text-pink-400 font-bold">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>
-                          {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white mt-0.5">編成中</div>}
+                        <button key={e.key} onClick={()=>setMasuMonDetail(masu)} className="rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
+                          <div className="relative w-12 h-12 shrink-0">
+                            <div className={`w-12 h-12 rounded-full overflow-hidden border ${fusionCount>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                            {fusionCount>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1 text-[6px] font-black text-black leading-tight">+{fusionCount}</div>}
+                          </div>
+                          <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
+                          {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>}
+                          <div className="w-full mt-0.5">
+                            <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
+                            <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
+                          </div>
+                          {(masu.distAptPoints||0)>0&&<div className="text-[7px] text-amber-300 font-black flex items-center gap-0.5 mt-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</div>}
+                          {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white mt-0.5">編成中</div>}
                         </button>
                       );
                     })}
@@ -3434,7 +3417,10 @@ function MonsterHeroGame() {
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000}}>
               <div className="bg-slate-900 border-2 border-pink-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
                 <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
-                  <div className={`w-20 h-20 rounded-full overflow-hidden border shrink-0 ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-2 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+                  <div className="relative w-20 h-20 shrink-0">
+                    <div className={`w-20 h-20 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-2 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+                    {(masu.fusionHistory||[]).length>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1.5 py-0.5 text-[8px] font-black text-black leading-tight">+{masu.fusionHistory.length}</div>}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <button onClick={()=>{setMasuRenameInput(masu.name); setShowMasuRenameModal(true);}} className="flex items-center gap-1.5 active:scale-95">
                       <h3 className="text-lg font-black text-white truncate">{masu.name}</h3><Edit3 size={12} className="text-slate-500 shrink-0"/>
@@ -3470,7 +3456,7 @@ function MonsterHeroGame() {
                       <div className="space-y-1">
                         {masu.fusionHistory.map((h,idx)=>(
                           <div key={idx} className="text-[8px] text-slate-300 font-bold flex items-center justify-between gap-1 bg-black/30 rounded-lg px-2 py-1">
-                            <span className="truncate">「{h.subName}」を吸収{h.inherited&&<span className="text-amber-300">(固有技継承)</span>}</span>
+                            <span className="truncate">{h.subName}（{ALL_PLAYER_MONSTERS[h.subBaseId]?.name||'?'}）と合体{h.inherited&&<span className="text-amber-300">(固有技継承)</span>}</span>
                             <span className="text-pink-300 font-black shrink-0">+{h.xpGained.toLocaleString()}XP</span>
                           </div>
                         ))}
@@ -4317,9 +4303,6 @@ const createAnimationStyle = () => {
   const style = document.createElement('style');
   style.id = 'mh-anim-style';
   style.textContent = `
-    /* タップ精度・反応が悪いという指摘を受け、ボタン等の操作要素で二重タップ判定によるズームや
-       300ms遅延を起こさないようにする(iOS Safari等の既定挙動対策) */
-    button, [role="button"] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
     @keyframes attackFly {
       0% {
         transform: translateY(0) scale(1);
