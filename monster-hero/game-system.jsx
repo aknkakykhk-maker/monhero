@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 13:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 14:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -308,9 +308,10 @@ const MASU_COLOR_REGION_HUES = {
   Mocchi: [5, 67, { hue: 38, sMin: 0.4 }],
   Suezo: [{ hue: 48, vMin: 0.5 }, { hue: 50, vMax: 0.5 }, 357],
   Golem: [35, { white: true, sMax: 0.12, vMin: 0.75 }, 72],
-  Tiger: [{ hue: 233, sMin: 0.28 }, { white: true, sMax: 0.24, vMin: 0.45 }, 43],
-  // ライガーは全身が細かい毛並みの陰影(1px単位で青⇔白が入れ替わる描き込み)のため、
-  // 部位判定後の平滑化を他モンスターより広い範囲・複数回で行う(下のMASU_COLOR_SMOOTHで指定)
+  // ライガーは全身が細かい毛並みの陰影(1px単位で青⇔白が入れ替わる描き込み)で、色相・彩度だけでは
+  // 顔や前脚(白い毛)と背中(青い毛)が誤って混ざりやすいため、白バケツにbboxを指定して顔〜胸〜前脚の
+  // 縦の帯に判定範囲を絞り、離れた背中側の影が白と誤判定されないようにしている
+  Tiger: [{ hue: 233, sMin: 0.28 }, { white: true, sMax: 0.28, vMin: 0.4, bbox: [0.26, 0.27, 0.66, 1.0] }, 43],
   Ham: [25, { white: true, sMax: 0.35, vMin: 0.7 }, 355],
   Pixie: [355, 23, { hue: 10 }],
   Monol: [{ band: [0, 1/3] }, { band: [1/3, 2/3] }, { band: [2/3, 1] }],
@@ -325,7 +326,7 @@ const MASU_COLOR_REGION_HUES = {
 // radius/iterationsを上げて、小さな塊単位に均す(ただし小さな部位(目など)まで塗り潰さないよう
 // 既定は控えめにしてあり、必要なモンスターだけ個別に強めている)
 const MASU_COLOR_SMOOTH = {
-  Tiger: { radius: 8, iterations: 2 },
+  Tiger: { radius: 3, iterations: 1 },
   Iblis: { radius: 3, iterations: 1 },
 };
 const _getSmoothParams = (baseId) => MASU_COLOR_SMOOTH[baseId] || { radius: 2, iterations: 1 };
@@ -369,10 +370,16 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
     }
   }
   // 白系・黒系(彩度が低い)部位が定義されていれば次に判定する(vMaxも指定すれば暗い方の
-  // 彩度の低いバケツ、例えば黒に近い羽など明度が低すぎて色相が不安定な部位も拾える)
+  // 彩度の低いバケツ、例えば黒に近い羽など明度が低すぎて色相が不安定な部位も拾える)。
+  // bboxを指定すれば、離れた場所にある似た彩度・明度の部位(例:顔は白いが背中の影も
+  // たまたま彩度が低い、等)へ誤って広がらないよう、判定範囲を画像内の特定領域に絞れる
   for (let idx = 0; idx < regionDefs.length; idx++) {
     const def = regionDefs[idx];
     if (def && typeof def === 'object' && def.white) {
+      if (def.bbox) {
+        const [x0, y0, x1, y1] = def.bbox;
+        if (nx < x0 || nx > x1 || ny < y0 || ny > y1) continue;
+      }
       if (ss <= (def.sMax ?? 0.18) && vv >= (def.vMin ?? 0.55) && vv <= (def.vMax ?? 1)) return idx;
     }
   }
