@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 04:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 04:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1192,23 +1192,32 @@ function MonsterHeroGame() {
   useEffect(() => { Audio_.setSeVolume(seVolume); }, [seVolume]);
   useEffect(() => { Audio_.setBgmVolume(bgmVolume); }, [bgmVolume]);
 
-  // 新バージョン検知: ホーム画面アプリはバックグラウンドから復帰しても自動再読み込みされず
-  // 古いバージョンのまま使い続けてしまうことがあるため、version.jsonを定期的に確認し
-  // BUILD_DATEと異なれば更新バナーを表示する
+  // 新バージョン検知: ホーム画面アプリ/背面タブ復帰時は自動再読み込みされず古いバージョンの
+  // ままタップしても反応しないように見える不具合が繰り返し報告されたため、version.jsonを
+  // 頻繁に確認しBUILD_DATEと異なれば更新バナーを出す。さらに、ページを開いた直後(まだ
+  // ゲーム進行中でなく再読み込みしても損失が無いタイミング)に限っては、バナーのタップ待ちにせず
+  // 自動でリロードして常に最新版に揃える(タップし忘れて古いまま使い続けてしまう問題への対策)
   useEffect(() => {
+    let isFirstCheck = true;
     const checkVersion = async () => {
+      const wasFirstCheck = isFirstCheck;
+      isFirstCheck = false;
       try {
         const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
-        if (data && data.build && data.build !== BUILD_DATE) setUpdateAvailable(true);
+        if (data && data.build && data.build !== BUILD_DATE) {
+          if (wasFirstCheck) window.location.reload();
+          else setUpdateAvailable(true);
+        }
       } catch {}
     };
     checkVersion();
     const onVisible = () => { if (document.visibilityState === 'visible') checkVersion(); };
     document.addEventListener('visibilitychange', onVisible);
-    const interval = setInterval(checkVersion, 5 * 60 * 1000);
-    return () => { document.removeEventListener('visibilitychange', onVisible); clearInterval(interval); };
+    window.addEventListener('pageshow', onVisible);
+    const interval = setInterval(checkVersion, 2 * 60 * 1000);
+    return () => { document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
   }, []);
 
   // カードドラッグ中のグローバル処理(タッチ/マウス両対応)
