@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 01:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 02:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -81,19 +81,24 @@ const goldForWavesCleared = (wavesCleared, mult) => {
   for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveGoldGain(w, mult);
   return sum;
 };
-const xpForLevel = (level) => Math.round(50 * Math.pow(level, 1.8)); // そのレベルから次レベルに必要なXP
+const xpForLevel = (level) => Math.round(50 * Math.pow(level, 1.8)); // そのレベルから次レベルに必要なXP(基準値)
+// --- ブリーダーレベル: 上がり方を緩和するため、必要XPを基準値の1/4に割り引く
+// (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く)
+const BREEDER_XP_DISCOUNT = 0.25;
+const xpForBreederLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * BREEDER_XP_DISCOUNT));
 const levelInfo = (totalXp) => {
   let level = 1, xp = totalXp;
   for (let i = 0; i < 200; i++) {
-    const need = xpForLevel(level);
+    const need = xpForBreederLevel(level);
     if (xp < need) break;
     xp -= need; level++;
   }
-  return { level, xpIntoLevel: xp, xpForNext: xpForLevel(level) };
+  return { level, xpIntoLevel: xp, xpForNext: xpForBreederLevel(level) };
 };
-// --- マスモンの絆レベル: ブリーダーレベルより上げやすくするため、必要XPを大幅に割り引く
-// (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く)
-const BOND_XP_DISCOUNT = 0.35;
+// --- マスモンの絆レベル: ブリーダーレベルより上げやすくするため、必要XPを基準値から大幅に割り引く
+// (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く。
+// 従来の0.35から半分の0.175へ緩和し、必要経験値を従来の1/2にした)
+const BOND_XP_DISCOUNT = 0.175;
 const xpForBondLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * BOND_XP_DISCOUNT));
 const bondLevelInfo = (totalXp) => {
   let level = 1, xp = totalXp;
@@ -2871,13 +2876,18 @@ function MonsterHeroGame() {
     applyAtkTierChoice(nAtkL);
   };
 
-  // 通常攻撃・距離攻撃カードの上位レベルは、敵と同じ距離枠にいる味方の距離適性(%)で決まる
-  // (誰もいなければ0%扱い)。15%毎に次のレベルが解放される(0〜14%=Lv0、15〜29%=Lv1…)
+  // 通常攻撃・距離攻撃カードの上位レベルは、敵と同じ距離枠にいる味方の距離適性(%)と、
+  // その距離枠で永続蓄積している距離ダメージ補正(distDmgBonus、ウェーブ報酬で上昇・上限なし)
+  // を合算した値(誰もいなければ0%扱い)で決まる。この合算値はWAVE_RESULT画面の合計表示や
+  // 実際のダメージ計算(4502行付近のtotalBonus)と同じ考え方
+  const ATK_TIER_THRESHOLDS = [0, 15, 20, 25, 30, 40, 50, 75, 100]; // Lv0〜8の解放に必要な合算%
   const computeAtkTier = (currentSlots, dist) => {
     const mon = currentSlots?.[dist];
     if (!mon) return 0;
-    const pct = (DIST_APTITUDE_MULT[getDistAptitude(mon, dist)] - 1.0) * 100;
-    return Math.max(0, Math.min(BASE_ATK_EVOLUTION.length - 1, Math.floor(pct / 15)));
+    const pct = ((distDmgBonus[dist] || 0) + (DIST_APTITUDE_MULT[getDistAptitude(mon, dist)] - 1.0)) * 100;
+    let lvl = 0;
+    for (let i = ATK_TIER_THRESHOLDS.length - 1; i >= 0; i--) { if (pct >= ATK_TIER_THRESHOLDS[i]) { lvl = i; break; } }
+    return Math.max(0, Math.min(BASE_ATK_EVOLUTION.length - 1, lvl));
   };
   // 防御カードの上位レベル・追加枚数は、丈夫さ(バフ・デバフを含まない基礎ステ=defそのもの)が
   // 100毎に自動で1段階上がる
@@ -4669,13 +4679,14 @@ function MonsterHeroGame() {
             {waveResult.distDamage&&(<div className="border-b border-white/10 pb-1.5">
               <div className="text-cyan-400 font-black uppercase tracking-widest mb-1 text-left" style={{fontSize:'9px'}}>距離別ダメージ（味方位置）& 補正値(永続)</div>
               <div className="grid grid-cols-4 gap-1">
-                {['零','近','中','遠'].map((lbl,i)=>{const dmg=waveResult.distDamage[i]||0; const cumDmg=waveResult.totalDistDamage?.[i]||0; const gained=(waveResult.gainedDistBonus?.[i]||0)*100; const total=(waveResult.newDistBonus?.[i]||0)*100; const mon=slots[i];
+                {['零','近','中','遠'].map((lbl,i)=>{const dmg=waveResult.distDamage[i]||0; const cumDmg=waveResult.totalDistDamage?.[i]||0; const gained=(waveResult.gainedDistBonus?.[i]||0)*100; const total=(waveResult.newDistBonus?.[i]||0)*100; const mon=slots[i]; const aptPct=mon?(DIST_APTITUDE_MULT[getDistAptitude(mon,i)]-1.0)*100:0; const combinedTotal=total+aptPct;
                   return(<div key={i} className="bg-black/40 rounded-lg border border-white/5 flex flex-col items-center justify-center" style={{padding:'4px 2px',gap:'2px'}}>
                     <div className="flex items-center" style={{gap:'3px'}}><div className="rounded-full bg-indigo-600/40 border border-indigo-400/50 flex items-center justify-center overflow-hidden shrink-0" style={{width:'26px',height:'26px'}}>{mon?(mon.imgUrl?<img src={mon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span style={{fontSize:'13px'}}>{mon.emoji}</span>):<span className="text-slate-600" style={{fontSize:'9px'}}>-</span>}</div><div className="font-black text-slate-300" style={{fontSize:'10px'}}>{lbl}</div></div>
                     <div className="font-mono font-black text-red-400 leading-none" style={{fontSize:'11px'}}>{dmg.toLocaleString()}</div>
                     <div className="text-orange-300/80 font-mono leading-none" style={{fontSize:'7px'}}>累計{cumDmg.toLocaleString()}</div>
                     <div className="font-mono font-black text-cyan-300 leading-none" style={{fontSize:'9px'}}>+{total.toFixed(1)}%</div>
                     {gained>0&&<div className="text-emerald-400 font-mono leading-none" style={{fontSize:'7px'}}>(+{gained.toFixed(1)})</div>}
+                    {mon&&<div className="text-indigo-300 font-mono font-black leading-none" style={{fontSize:'8px'}}>適性込合計+{combinedTotal.toFixed(1)}%</div>}
                   </div>);})}
               </div>
             </div>)}
@@ -4821,7 +4832,7 @@ function MonsterHeroGame() {
                   </button>
                 ))}
               </div>
-              {isAtkFamily&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">敵と同じ距離枠にいる味方の距離適性を上げると、上位レベルが解放されます</div>}
+              {isAtkFamily&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">敵と同じ距離枠にいる味方の距離適性・距離ダメージ補正の合計値を上げると、上位レベルが解放されます</div>}
               {card.type==='unique'&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">固有技の強化(強化ポイント)で上位レベルが解放されます</div>}
             </div>
           </div>
