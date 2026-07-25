@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 15:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 15:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3435,7 +3435,7 @@ function MonsterHeroGame() {
         {pendingItemUse&&(()=>{
           const item = BREEDER_MARKET_ITEMS.find(i=>i.id===pendingItemUse);
           return (
-            <div className="fixed inset-0 flex flex-col p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:31000}}>
+            <div className="fixed inset-0 flex flex-col p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:31000,paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
               <div className="flex items-center gap-2 mb-2 shrink-0">
                 <button onClick={()=>setPendingItemUse(null)} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
                 <h2 className="text-lg font-black italic text-teal-400 uppercase tracking-widest truncate">{item?.name}を使う対象を選択</h2>
@@ -3445,7 +3445,7 @@ function MonsterHeroGame() {
                 {masuMons.length===0?(
                   <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🐾</span><div className="text-[11px] text-slate-400 mt-2">まだマスモンがいません。</div></div>
                 ):(
-                  <div className="grid grid-cols-2 gap-3 pb-4">
+                  <div className="grid grid-cols-4 gap-2 pb-4">
                     {masuMons.map(masu=>{
                       const base = ALL_PLAYER_MONSTERS[masu.baseId];
                       if (!base) return null;
@@ -3459,11 +3459,11 @@ function MonsterHeroGame() {
                           } else if (pendingItemUse==='bond_reset_scroll') {
                             if (window.confirm(`「${masu.name}」の強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻しますか？絆Lvはそのままです。`)) { useBondResetScroll(masu.id); setPendingItemUse(null); }
                           }
-                        }} className="rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-2.5 flex flex-col items-center gap-1 active:scale-95">
-                          <div className="w-14 h-14 rounded-full overflow-hidden border border-teal-400/40 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
-                          <div className="text-[10px] font-black text-teal-200 truncate w-full text-center">{masu.name}</div>
-                          <div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>
-                          <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5 mt-0.5"><Heart size={7}/>絆Lv.{lvl.level}</div>
+                        }} className="rounded-2xl border-2 border-teal-900/50 bg-slate-900 p-1.5 flex flex-col items-center gap-0.5 active:scale-95">
+                          <div className="w-10 h-10 rounded-full overflow-hidden border border-teal-400/40 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+                          <div className="text-[9px] font-black text-teal-200 truncate w-full text-center">{masu.name}</div>
+                          <div className="text-[6px] text-slate-500 font-bold -mt-0.5 truncate w-full text-center">({base.name})</div>
+                          <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
                         </button>
                       );
                     })}
