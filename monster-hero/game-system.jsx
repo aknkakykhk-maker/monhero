@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 03:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 04:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1073,6 +1073,9 @@ function MonsterHeroGame() {
   const [monsterSortKey, setMonsterSortKey] = useState('lineage'); // 'base'|'masu'|'lineage'|'bond'|'name'|'active'
   const [monsterSortDir, setMonsterSortDir] = useState('asc'); // 'asc'|'desc'
   const [monsterDisplayFlags, setMonsterDisplayFlags] = useState({ base: true, masu: true, lineage: true, active: true }); // 各カードに出す情報(複数選択可、オフで非表示)
+  const [showSortFilterModal, setShowSortFilterModal] = useState(false); // ならべかえ・表示設定モーダルの開閉
+  const [sortFilterModalTab, setSortFilterModalTab] = useState('sort'); // モーダル内タブ: 'sort'|'display'
+  const [sortFilterModalSingleType, setSortFilterModalSingleType] = useState(false); // ベースモン一覧/マスモン一覧から開いた場合true(種別チップを出さない)
   const [draftTeachingRoster, setDraftTeachingRoster] = useState([]); // 編成画面での仮選択(決定を押すまでteachingRosterIdsには反映しない)
   const [rosterDetailMon, setRosterDetailMon] = useState(null); // 編成画面: 長押しで詳細表示中のモンスター
   const [rosterDetailTeaching, setRosterDetailTeaching] = useState(null); // 編成画面: 長押しで詳細表示中のブリーダーカード
@@ -1568,30 +1571,29 @@ function MonsterHeroGame() {
     () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, draftMonsterRoster)).filter(e => monsterDisplayFlags[e.type]),
     [unlockedMonsterIds, masuMons, draftMonsterRoster, monsterSortKey, monsterSortDir, monsterDisplayFlags]
   );
-  // ソート行+表示設定行の共通UI(編成/ベースモン一覧/マスモン一覧で使い回す)。
-  // タップ精度が悪いという指摘を受け、チップの当たり判定を指で押しやすいサイズまで拡大している
-  // (min-heightで実際のタップ領域を確保しつつ、隣とぶつからないようgapも広げた)。
+  // ソート/表示設定の起動バー(編成/ベースモン一覧/マスモン一覧で使い回す)。
+  // 以前は横スクロールの小さいチップを並べていたがタップしづらいという指摘を受け、
+  // ボタン1つでフルスクリーンの選択モーダル(showSortFilterModal)を開く方式に変更した。
   // singleType=trueの画面(ベースモン一覧・マスモン一覧)では、種別が固定で意味を持たない
-  // 「ベースモン」「マスモン」のソート/表示設定チップを出さない(編成画面のみ両方混在するため出す)
+  // 「ベースモン」「マスモン」の選択肢をモーダル側で出さない(編成画面のみ両方混在するため出す)
   const MonsterSortFilterBar = ({ singleType } = {}) => {
     const sortOpts = singleType ? MONSTER_SORT_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_SORT_OPTIONS;
     const dispOpts = singleType ? MONSTER_DISPLAY_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_DISPLAY_OPTIONS;
+    const currentSortOpt = sortOpts.find(o => o.key === monsterSortKey) || sortOpts[0];
+    const activeDisplayCount = dispOpts.filter(o => monsterDisplayFlags[o.key]).length;
+    const openModal = (tab) => { setSortFilterModalSingleType(!!singleType); setSortFilterModalTab(tab); setShowSortFilterModal(true); };
     return (
-    <div className="mb-2 shrink-0">
-      <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-hide">
-        {sortOpts.map(opt => (
-          <button key={opt.key} onClick={() => { if (monsterSortKey === opt.key) setMonsterSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setMonsterSortKey(opt.key); setMonsterSortDir('asc'); } }} style={{minHeight:'34px'}} className={`shrink-0 px-3.5 py-2 rounded-full text-[11px] font-black flex items-center gap-0.5 active:scale-95 ${monsterSortKey === opt.key ? 'bg-indigo-500 text-white' : 'bg-slate-900 border border-slate-800 text-slate-400'}`}>
-            {opt.label}{monsterSortKey === opt.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}
-          </button>
-        ))}
+      <div className="mb-2 shrink-0 flex gap-2">
+        <button onClick={() => openModal('sort')} style={{minHeight:'40px'}} className="flex-1 min-w-0 flex items-center justify-between gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 active:scale-95">
+          <span className="text-[11px] font-black text-white truncate">並べかえ: {currentSortOpt?.label}{monsterSortKey === currentSortOpt?.key && <span>{monsterSortDir === 'asc' ? '▲' : '▼'}</span>}</span>
+          <ChevronRight size={14} className="text-slate-500 shrink-0"/>
+        </button>
+        <button onClick={() => openModal('display')} style={{minHeight:'40px'}} className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 active:scale-95">
+          <span className="text-[11px] font-black text-white">表示設定</span>
+          <span className="text-[9px] text-teal-400 font-black">{activeDisplayCount}</span>
+          <ChevronRight size={14} className="text-slate-500 shrink-0"/>
+        </button>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide mt-1">
-        <span className="shrink-0 text-[10px] font-bold text-slate-500 self-center">表示:</span>
-        {dispOpts.map(opt => (
-          <button key={opt.key} onClick={() => setMonsterDisplayFlags(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))} style={{minHeight:'30px'}} className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-black active:scale-95 ${monsterDisplayFlags[opt.key] ? 'bg-teal-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-500'}`}>{opt.label}</button>
-        ))}
-      </div>
-    </div>
     );
   };
   // 現在の周回で使う候補モンスター/ブリーダーカード(編成で選んだもの)。空の場合は解放済み全体にフォールバック
@@ -2973,16 +2975,30 @@ function MonsterHeroGame() {
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
               <button onClick={()=>setGameState('PROFILE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-              <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">編成</h2>
-            </div>
-            <div className="flex gap-1.5 mb-3 shrink-0">
-              {[{key:'monster',label:'モンスター編成'},{key:'teaching',label:'ブリーダーカード編成'}].map(tab=>(
-                <button key={tab.key} onClick={()=>setRosterTab(tab.key)} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${rosterTab===tab.key?'bg-indigo-500 text-white':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
-              ))}
+              <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{rosterTab==='monster'?'モンスター編成':'ブリーダーカード編成'}</h2>
             </div>
             {rosterTab==='monster'?(
               <div className="flex-1 min-h-0 flex flex-col">
-                <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">仮選択中: {draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}体 / 解放済み{unlockedMonsterIds.length}体<br/>※ちょうど{STARTER_MONSTER_IDS.length}体選ぶと「決定」できます・右上のiボタンで詳細表示・同じ種は1体まで(マスモン含む)</div>
+                {/* 編成中のモンスターを小さいアイコンで並べ、タップで編成から外せる */}
+                <div className="flex items-center gap-2 mb-2 shrink-0 bg-indigo-950/30 border border-indigo-500/30 rounded-2xl px-2 py-2">
+                  <span className="text-[9px] font-black text-indigo-300 shrink-0 leading-tight">編成中<br/>{draftMonsterRoster.length}/{STARTER_MONSTER_IDS.length}</span>
+                  <div className="flex-1 flex gap-1.5 overflow-x-auto scrollbar-hide min-h-[36px] items-center">
+                    {draftMonsterRoster.length===0?(
+                      <span className="text-[9px] text-slate-600 font-bold">まだ選ばれていません</span>
+                    ):(draftMonsterRoster.map(entryId=>{
+                      const isMasu = entryId.startsWith('masu:');
+                      const masu = isMasu ? getMasuMon(entryId.slice(5)) : null;
+                      const base = isMasu ? (masu && ALL_PLAYER_MONSTERS[masu.baseId]) : ALL_PLAYER_MONSTERS[entryId];
+                      if (!base) return null;
+                      return (
+                        <button key={entryId} onClick={()=>toggleDraftMonster(entryId)} className="shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-400 active:scale-90 relative">
+                          {isMasu?(<DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/>):(<img src={base.iconUrl} alt={base.name} className="w-full h-full object-cover"/>)}
+                        </button>
+                      );
+                    }))}
+                  </div>
+                </div>
+                <div className="text-[9px] text-slate-500 font-bold mb-1 px-1 shrink-0">解放済み{unlockedMonsterIds.length}体・ちょうど{STARTER_MONSTER_IDS.length}体選ぶと「決定」できます・アイコンタップで編成/解除、iボタンで詳細・同じ種は1体まで(マスモン含む)</div>
                 <MonsterSortFilterBar/>
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   <div className="grid grid-cols-3 gap-3 pb-4">
@@ -2993,7 +3009,7 @@ function MonsterHeroGame() {
                         return (
                           <div key={e.key} className="relative">
                             <button onClick={()=>toggleDraftMonster(e.entryId)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
-                              <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                              <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                               <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
                               {monsterDisplayFlags.active&&<div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>}
                             </button>
@@ -3006,8 +3022,8 @@ function MonsterHeroGame() {
                       return (
                         <div key={e.key} className="relative">
                           <button onClick={()=>toggleDraftMonster(e.entryId)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-pink-900/40 border-pink-400 ring-2 ring-pink-400':'bg-slate-900 border-pink-900/50'}`}>
-                            <div className="relative w-12 h-12 shrink-0">
-                              <div className={`w-12 h-12 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                            <div className="relative w-10 h-10 shrink-0">
+                              <div className={`w-10 h-10 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                               <div className="absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[6px] font-black text-white leading-tight">マスモン</div>
                               {(masu.fusionHistory||[]).length>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1 text-[6px] font-black text-black leading-tight">+{masu.fusionHistory.length}</div>}
                             </div>
@@ -3029,7 +3045,22 @@ function MonsterHeroGame() {
               </div>
             ):(
               <div className="flex-1 min-h-0 flex flex-col">
-                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">仮選択中: {draftTeachingRoster.length}/{STARTER_TEACHING_IDS.length}枚 / 解放済み{unlockedTeachingIds.length}枚<br/>※ちょうど{STARTER_TEACHING_IDS.length}枚選ぶと「決定」できます・右上のiボタンで詳細表示</div>
+                {/* 編成中のブリーダーカードを小さいアイコンで並べ、タップで編成から外せる */}
+                <div className="flex items-center gap-2 mb-2 shrink-0 bg-purple-950/30 border border-purple-500/30 rounded-2xl px-2 py-2">
+                  <span className="text-[9px] font-black text-purple-300 shrink-0 leading-tight">編成中<br/>{draftTeachingRoster.length}/{STARTER_TEACHING_IDS.length}</span>
+                  <div className="flex-1 flex gap-1.5 overflow-x-auto scrollbar-hide min-h-[36px] items-center">
+                    {draftTeachingRoster.length===0?(
+                      <span className="text-[9px] text-slate-600 font-bold">まだ選ばれていません</span>
+                    ):(draftTeachingRoster.map(id=>{
+                      const t = TEACHING_CARDS.find(tc=>tc.id===id);
+                      if (!t) return null;
+                      return (
+                        <button key={id} onClick={()=>toggleDraftTeaching(id)} className="shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-purple-400 active:scale-90 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,32)}</button>
+                      );
+                    }))}
+                  </div>
+                </div>
+                <div className="text-[9px] text-slate-500 font-bold mb-2 px-1 shrink-0">解放済み{unlockedTeachingIds.length}枚・ちょうど{STARTER_TEACHING_IDS.length}枚選ぶと「決定」できます・アイコンタップで編成/解除、iボタンで詳細</div>
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   <div className="grid grid-cols-3 gap-3 pb-4">
                     {unlockedTeachingIds.map(id=>TEACHING_CARDS.find(t=>t.id===id)).filter(Boolean).map(t=>{
@@ -3037,7 +3068,7 @@ function MonsterHeroGame() {
                       return (
                         <div key={t.id} className="relative">
                           <button onClick={()=>toggleDraftTeaching(t.id)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400':'bg-slate-900 border-slate-800'}`}>
-                            <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 shrink-0 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,48)}</div>
+                            <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 shrink-0 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,40)}</div>
                             <div className="text-[10px] font-black text-white truncate w-full text-center">{t.baseName}</div>
                             <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-purple-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
                           </button>
@@ -3406,6 +3437,53 @@ function MonsterHeroGame() {
                   </div>
                 )}
               </div>
+            </div>
+          );
+        })()}
+
+        {/* ならべかえ・表示設定モーダル: 編成/ベースモン一覧/マスモン一覧のMonsterSortFilterBarから開く。
+            以前は横スクロールの小さいチップだったが押しづらいという指摘を受け、フルスクリーンの
+            タブ切り替え+大きいボタン方式に変更した */}
+        {showSortFilterModal&&(()=>{
+          const sortOpts = sortFilterModalSingleType ? MONSTER_SORT_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_SORT_OPTIONS;
+          const dispOpts = sortFilterModalSingleType ? MONSTER_DISPLAY_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_DISPLAY_OPTIONS;
+          return (
+            <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.98)',zIndex:32500}}>
+              <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10">
+                <h3 className="text-base font-black text-white flex-1">ならべかえ・表示設定</h3>
+                <button onClick={()=>setShowSortFilterModal(false)} className="p-2.5 bg-white/5 rounded-full active:scale-90"><X size={18}/></button>
+              </div>
+              <div className="flex gap-2 px-4 pt-3 shrink-0">
+                {[{key:'sort',label:'ならべかえ'},{key:'display',label:'表示設定'}].map(tab=>(
+                  <button key={tab.key} onClick={()=>setSortFilterModalTab(tab.key)} style={{minHeight:'44px'}} className={`flex-1 rounded-xl text-xs font-black uppercase active:scale-95 ${sortFilterModalTab===tab.key?'bg-indigo-500 text-white':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
+                ))}
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4">
+                {sortFilterModalTab==='sort'?(
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {sortOpts.map(opt=>{
+                      const active = monsterSortKey===opt.key;
+                      return (
+                        <button key={opt.key} onClick={()=>{ if (active) setMonsterSortDir(d=>d==='asc'?'desc':'asc'); else { setMonsterSortKey(opt.key); setMonsterSortDir('asc'); } }} style={{minHeight:'56px'}} className={`rounded-2xl font-black text-sm flex items-center justify-center gap-1.5 active:scale-95 ${active?'bg-indigo-500 text-white ring-2 ring-indigo-300':'bg-slate-900 border border-slate-800 text-slate-300'}`}>
+                          {opt.label}{active&&<span>{monsterSortDir==='asc'?'▲':'▼'}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ):(
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {dispOpts.map(opt=>{
+                      const on = !!monsterDisplayFlags[opt.key];
+                      return (
+                        <button key={opt.key} onClick={()=>setMonsterDisplayFlags(prev=>({...prev,[opt.key]:!prev[opt.key]}))} style={{minHeight:'56px'}} className={`rounded-2xl font-black text-sm flex items-center justify-center gap-1.5 active:scale-95 ${on?'bg-teal-600 text-white ring-2 ring-teal-300':'bg-slate-900 border border-slate-800 text-slate-400'}`}>
+                          {on&&<Check size={15}/>}{opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <button onClick={()=>setShowSortFilterModal(false)} className="mx-4 mb-4 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95 shrink-0">とじる</button>
             </div>
           );
         })()}
