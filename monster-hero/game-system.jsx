@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 15:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 16:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -311,9 +311,9 @@ const MASU_COLOR_REGION_HUES = {
   // ライガーは全身が細かい毛並みの陰影(1px単位で青⇔白が入れ替わる描き込み)で、色相・彩度だけでは
   // 顔や前脚(白い毛)と背中(青い毛)が誤って混ざりやすいため、白バケツにbboxを指定して顔〜胸〜前脚の
   // 縦の帯に判定範囲を絞り、離れた背中側の影が白と誤判定されないようにしている
-  // ユーザー指定により、体(青い毛)と角(オレンジ)をまとめて染色①、顔・前脚(白い毛)は染色②のまま、
-  // 尻尾の先の白っぽい部分を染色③として独立させた(耳の場所は未確定のため一旦保留)
-  Tiger: [{ hue: [233, 38], sMin: 0.22 }, { white: true, sMax: 0.28, vMin: 0.4, bbox: [0.26, 0.27, 0.66, 1.0] }, { posBbox: [[0.80, 0.32, 1.0, 0.56]] }],
+  // ユーザーの手描き指定により、体(青い毛)は染色①、顔・前脚(白い毛)は染色②、
+  // 角(オレンジ)と尻尾の先をまとめて染色③とした(角は色相、尻尾の先は位置で判定)
+  Tiger: [{ hue: 233, sMin: 0.28 }, { white: true, sMax: 0.28, vMin: 0.4, bbox: [0.26, 0.27, 0.66, 1.0] }, { hue: 38, posBbox: [[0.80, 0.32, 1.0, 0.56]] }],
   Ham: [25, { white: true, sMax: 0.35, vMin: 0.7 }, 355],
   Pixie: [355, 23, { hue: 10 }],
   Monol: [{ band: [0, 1/3] }, { band: [1/3, 2/3] }, { band: [2/3, 1] }],
@@ -397,7 +397,8 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
   if (vv < 0.12) return -1;
   let best = -1, bestD = 999;
   regionDefs.forEach((def, idx) => {
-    if (def && typeof def === 'object' && (def.white || def.band || def.posBbox)) return; // 上で判定済み
+    if (def && typeof def === 'object' && (def.white || def.band)) return; // 上で判定済み
+    if (def && typeof def === 'object' && def.posBbox && def.hue === undefined) return; // 位置のみで判定する部位(色相を持たない)は上で判定済み
     if (def && typeof def === 'object' && def.bbox && !_bboxMatches(def.bbox, nx, ny)) return;
     const hue = (typeof def === 'number') ? def : def.hue;
     const vMin = (def && typeof def === 'object') ? def.vMin : undefined;
