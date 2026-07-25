@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 02:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 02:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -348,6 +348,8 @@ const getColorSwatchHex = (colorId) => {
 //   {hue, bbox?:[x0,y0,x1,y1]}           … 画像内の特定範囲(0〜1の相対座標)に絞って同じ色相の部位を区別したい場合
 //   {white:true, sMax?, vMin?}           … 彩度が低い明るい部位(白目・白い毛など)を対象にする
 //   {band:[y0,y1]}                       … 色を問わず、画像の縦位置(0〜1)だけで区切りたい場合(単色の直方体など)
+//   [def, def, ...]                      … 上記のいずれかを複数並べ、いずれかにマッチすれば同じ1部位として扱う
+//                                          (例: 色相の判定+離れた場所の白い部位を1つの染色枠にまとめたい場合)
 // 配列が空/未定義のモンスターは部位分割が綺麗に取れなかった(単色に近い等)ため、従来通り全身一括の染色のみ対応。
 const MASU_COLOR_REGION_HUES = {
   Mocchi: [5, 67, { hue: 38, sMin: 0.4 }],
@@ -379,7 +381,10 @@ const MASU_COLOR_REGION_HUES = {
   Oboro: [{ hue: 239 }, { hue: 205 }, { white: true, sMax: 0.18, vMin: 0.85 }],
   Zan: [235, { hue: 2, noEdgeGuard: true }, { white: true, sMax: 0.24, vMin: 0.58 }],
   Mitarashi: [2, 40, { hue: 28, bbox: [0.29, 0.18, 0.71, 0.26] }],
-  Ark: [219, 187, 60],
+  // 染色③(冠=hue60)は面積が小さく地味だったため、お腹の白バケツ(体の白い部分、実測bbox
+  // x0.36〜0.64/y0.58〜0.775)を同じ染色③にまとめた。目の白目(y0.45〜0.54付近)は
+  // bboxで除外し誤って染まらないようにしている
+  Ark: [219, 187, [60, { white: true, sMax: 0.15, vMin: 0.85, bbox: [0.30, 0.56, 0.70, 0.79] }]],
   // 紫色部分(頭上の輪・眉まわり・前足)は体の白バケツと彩度・明度が近く誤判定しやすいため、
   // bboxで実際に紫がある範囲(頭上の輪+頭部の帯+左右の前足)に判定を絞り込んでいる。
   // 頭上の輪(y0.22〜0.30)は体を赤系に染めても紫のまま浮いて見えるという指摘を受け、
@@ -450,6 +455,10 @@ const _bboxMatches = (bbox, nx, ny) => {
   const boxes = Array.isArray(bbox[0]) ? bbox : [bbox];
   return boxes.some(([x0, y0, x1, y1]) => nx >= x0 && nx <= x1 && ny >= y0 && ny <= y1);
 };
+// regionDefsの1要素は数値/オブジェクトの他、配列(サブ定義の配列)も指定できる。配列にした場合は
+// 「いずれかのサブ定義にマッチすればこの部位」という意味になる(例:色相の判定+別の白バケツ判定を
+// 同じ染色枠にまとめたい場合。1要素=1部位という制約はそのままに、判定条件だけを複数持たせられる)
+const _defAtoms = (def) => Array.isArray(def) ? def : [def];
 // ピクセル(色相hh・彩度ss・明度vv・画像内の相対位置nx,ny)がregionDefs(MASU_COLOR_REGION_HUESの1モンスター分)の
 // どの部位に属するかを判定し、インデックスを返す(どれにも属さなければ-1=無染色のまま)
 const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
@@ -457,45 +466,49 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
   // 定義されていれば最優先で判定する(耳と尻尾の先のように、色は共通しないが
   // まとめて1つの部位として選びたい離れた箇所を指定する場合などに使う)
   for (let idx = 0; idx < regionDefs.length; idx++) {
-    const def = regionDefs[idx];
-    if (def && typeof def === 'object' && def.band) {
-      const [y0, y1] = def.band;
-      if (ny >= y0 && ny < y1) return idx;
+    for (const def of _defAtoms(regionDefs[idx])) {
+      if (def && typeof def === 'object' && def.band) {
+        const [y0, y1] = def.band;
+        if (ny >= y0 && ny < y1) return idx;
+      }
+      if (def && typeof def === 'object' && def.posBbox && _bboxMatches(def.posBbox, nx, ny)) return idx;
     }
-    if (def && typeof def === 'object' && def.posBbox && _bboxMatches(def.posBbox, nx, ny)) return idx;
   }
   // 白系・黒系(彩度が低い)部位が定義されていれば次に判定する(vMaxも指定すれば暗い方の
   // 彩度の低いバケツ、例えば黒に近い羽など明度が低すぎて色相が不安定な部位も拾える)。
   // bboxを指定すれば、離れた場所にある似た彩度・明度の部位(例:顔は白いが背中の影も
   // たまたま彩度が低い、等)へ誤って広がらないよう、判定範囲を画像内の特定領域に絞れる
   for (let idx = 0; idx < regionDefs.length; idx++) {
-    const def = regionDefs[idx];
-    if (def && typeof def === 'object' && def.white) {
-      if (def.bbox && !_bboxMatches(def.bbox, nx, ny)) continue;
-      if (ss <= (def.sMax ?? 0.18) && vv >= (def.vMin ?? 0.55) && vv <= (def.vMax ?? 1)) return idx;
+    for (const def of _defAtoms(regionDefs[idx])) {
+      if (def && typeof def === 'object' && def.white) {
+        if (def.bbox && !_bboxMatches(def.bbox, nx, ny)) continue;
+        if (ss <= (def.sMax ?? 0.18) && vv >= (def.vMin ?? 0.55) && vv <= (def.vMax ?? 1)) return idx;
+      }
     }
   }
   // 明度が極端に低い(ほぼ黒)ピクセルは色相自体が不安定なので、white系バケツで拾えなかった分は対象外にする
   if (vv < 0.12) return -1;
   let best = -1, bestD = 999;
-  regionDefs.forEach((def, idx) => {
-    if (def && typeof def === 'object' && (def.white || def.band)) return; // 上で判定済み
-    if (def && typeof def === 'object' && def.posBbox && def.hue === undefined) return; // 位置のみで判定する部位(色相を持たない)は上で判定済み
-    if (def && typeof def === 'object' && def.bbox && !_bboxMatches(def.bbox, nx, ny)) return;
-    const hue = (typeof def === 'number') ? def : def.hue;
-    const vMin = (def && typeof def === 'object') ? def.vMin : undefined;
-    const vMax = (def && typeof def === 'object') ? def.vMax : undefined;
-    // sMinは部位ごとに指定できる(既定0.18)。彩度の低いパステル調の部位を拾いたい場合はここを下げる
-    const sMin = (def && typeof def === 'object' && def.sMin !== undefined) ? def.sMin : 0.18;
-    const sMax = (def && typeof def === 'object') ? def.sMax : undefined;
-    if (vMin !== undefined && vv < vMin) return;
-    if (vMax !== undefined && vv > vMax) return;
-    if (ss < sMin) return;
-    if (sMax !== undefined && ss > sMax) return;
-    // hueは単一の角度の他、配列で複数の色相をまとめて1部位として扱うこともできる
-    // (例:本来離れた色相の部位(青い毛と黄色い角)を1つの染色枠にまとめたい場合)
-    const d = Array.isArray(hue) ? Math.min(...hue.map(h => _hueDist(hh, h))) : _hueDist(hh, hue);
-    if (d < bestD) { bestD = d; best = idx; }
+  regionDefs.forEach((rawDef, idx) => {
+    for (const def of _defAtoms(rawDef)) {
+      if (def && typeof def === 'object' && (def.white || def.band)) continue; // 上で判定済み
+      if (def && typeof def === 'object' && def.posBbox && def.hue === undefined) continue; // 位置のみで判定する部位(色相を持たない)は上で判定済み
+      if (def && typeof def === 'object' && def.bbox && !_bboxMatches(def.bbox, nx, ny)) continue;
+      const hue = (typeof def === 'number') ? def : def.hue;
+      const vMin = (def && typeof def === 'object') ? def.vMin : undefined;
+      const vMax = (def && typeof def === 'object') ? def.vMax : undefined;
+      // sMinは部位ごとに指定できる(既定0.18)。彩度の低いパステル調の部位を拾いたい場合はここを下げる
+      const sMin = (def && typeof def === 'object' && def.sMin !== undefined) ? def.sMin : 0.18;
+      const sMax = (def && typeof def === 'object') ? def.sMax : undefined;
+      if (vMin !== undefined && vv < vMin) continue;
+      if (vMax !== undefined && vv > vMax) continue;
+      if (ss < sMin) continue;
+      if (sMax !== undefined && ss > sMax) continue;
+      // hueは単一の角度の他、配列で複数の色相をまとめて1部位として扱うこともできる
+      // (例:本来離れた色相の部位(青い毛と黄色い角)を1つの染色枠にまとめたい場合)
+      const d = Array.isArray(hue) ? Math.min(...hue.map(h => _hueDist(hh, h))) : _hueDist(hh, hue);
+      if (d < bestD) { bestD = d; best = idx; }
+    }
   });
   return best;
 };
