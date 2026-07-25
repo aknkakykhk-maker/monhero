@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 18:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 20:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1108,6 +1108,7 @@ function MonsterHeroGame() {
   const [monSelection, setMonSelection] = useState([]);
   const [currentPickingMon, setCurrentPickingMon] = useState(null);
   const [ownedUniques, setOwnedUniques] = useState([]);
+  const [slotUniqueChoice, setSlotUniqueChoice] = useState({}); // スロットidx→選択中の固有技キー('own'または'inh0'等)。合体で引き継いだ固有技をバトル中に切り替えるための選択状態
   const [ownedTeachings, setOwnedTeachings] = useState([]);
   const [teachingPool, setTeachingPool] = useState([]);
   const [popups, setPopups] = useState([]);
@@ -1678,6 +1679,7 @@ function MonsterHeroGame() {
       },
       distAptitude: masu.distApt || base.distAptitude,
       colors: getMasuColors(masu),
+      inheritedUniques: masu.inheritedUniques || [],
     };
   };
   const resolveRosterEntryToMon = (entry) => {
@@ -2179,7 +2181,7 @@ function MonsterHeroGame() {
     score:0, wave:1, hp:500, maxHp:500, guts:50, maxGuts:100, atk:100, def:100,
     slots:[null,null,null,null], mainHero:null, hand:[], deck:[], graveyard:[],
     enemy:null, enemyDist:2, selectedCards:[], isBusy:false,
-    monSelection:getActiveMonsterList(), ownedUniques:[], ownedTeachings:[],
+    monSelection:getActiveMonsterList(), ownedUniques:[], slotUniqueChoice:{}, ownedTeachings:[],
     atkLevel:0, guardLevel:0, guardBonusCount:0, upgradePoints:0, turnCount:1,
     permaBuffs:{ autoHpRecovery:0.1 }, waveBuffs:{}, turnBuffs:{}, nextTurnBuffs:{},
     currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
@@ -2191,7 +2193,7 @@ function MonsterHeroGame() {
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
     setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
-    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques);
+    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{});
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
@@ -2223,7 +2225,7 @@ function MonsterHeroGame() {
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
     setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
-    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques);
+    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{});
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
@@ -2319,8 +2321,9 @@ function MonsterHeroGame() {
     // 攻撃カード: モンスターのいるスロットに割り当て
     if(cardNeedsMonster(c)){
       if(!targetMon) { setFocusedCard(c); return; }
-      // uniqueは自分のモンスターのみ
-      if(c.type==='unique' && targetMon.id!==c.monId){ setFocusedCard(c); return; }
+      // uniqueは自分のモンスターのスロットのみ(合体で引き継いだ固有技はownerSlotIdxで判定する。
+      // monIdは技の出自(元モンスター)を表すため、継承技だとtargetMon.idとは一致しない)
+      if(c.type==='unique' && c.ownerSlotIdx!==slotIdx){ setFocusedCard(c); return; }
       // 既存の割当数チェック(ハム勇者時は複数可)
       const assignedCount=Object.values(cardAssignments).filter(v=>v===slotIdx).length;
       const maxUses=(mainHero?.id==='Ham'&&targetMon?.id==='Ham')?cardLimit:1;
@@ -2371,10 +2374,11 @@ function MonsterHeroGame() {
 
   // ザンの勇者特性「連撃」による追加ヒット分の合計(プレビュー用)。実際のバトルログはprocessTurn内で別枠ヒットとして計算する
   const getComboBonusDmg = useCallback((card, mon, baseDmg) => {
-    if (!(mainHero?.id==='Zan' && mon?.id==='Zan') || baseDmg<=0) return 0;
+    if (baseDmg<=0) return 0;
     const comboDmgBonus = getPermaBuff('comboDmgPct');
-    let bonus = Math.floor(baseDmg*(0.3+comboDmgBonus));
-    if (card.type==='unique') bonus += Math.floor(baseDmg*(0.2+comboDmgBonus));
+    let bonus = 0;
+    if (mainHero?.id==='Zan' && mon?.id==='Zan') bonus += Math.floor(baseDmg*(0.3+comboDmgBonus)); // 勇者特性「連撃」
+    if (card.type==='unique' && card.monId==='Zan') bonus += Math.floor(baseDmg*(0.2+comboDmgBonus)); // 固有技「連斬」自体の連撃(引き継ぎでも発生)
     return bonus;
   }, [mainHero, permaBuffs]);
 
@@ -2554,16 +2558,18 @@ function MonsterHeroGame() {
       else if (card.type!=='guard'&&card.type!=='weak_guard') {
         const activeMon=slots[slotIdx];
         if (card.type==='unique') {
-          if(activeMon.id==='Mocchi'||activeMon.id==='Mitarashi'){addPermaBuff('dmgCutPct',0.03); addWaveBuff('enemyTakenDmgBonus',0.1); localDmgModAdd+=0.1; addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold');}
-          else if(activeMon.id==='Golem'){addPermaBuff('atkPct',0.1); localOryoAdd+=0.1; addPopup('闘志UP!','hero','text-red-600 text-lg font-bold');}
-          else if(activeMon.id==='Zan'){addPermaBuff('comboDmgPct',0.03); addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
+          // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。合体で引き継いだ
+          // 固有技を別のモンスターが使う場合でも、元モンスターの固有技効果を正しく再現するため
+          if(card.monId==='Mocchi'||card.monId==='Mitarashi'){addPermaBuff('dmgCutPct',0.03); addWaveBuff('enemyTakenDmgBonus',0.1); localDmgModAdd+=0.1; addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold');}
+          else if(card.monId==='Golem'){addPermaBuff('atkPct',0.1); localOryoAdd+=0.1; addPopup('闘志UP!','hero','text-red-600 text-lg font-bold');}
+          else if(card.monId==='Zan'){addPermaBuff('comboDmgPct',0.03); addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
         }
         const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,attackCount>0); attackCount++;
         const critRateBonus=getPermaBuff('critRatePct'), critDmgBonus=getPermaBuff('critDmgPct');
         const isCrit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+critRateBonus));
         const finalD=isCrit?Math.floor(d*(1.5+critDmgBonus)):d; if(isCrit) hasCrit=true; totalDmg+=finalD;
-        attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique'});
-        if (activeMon.id==='Zan') {
+        attackHits.push({dmg:finalD, isCrit, slotIdx, isSpecial:(card.type==='unique'||card.type==='range_atk'), skillName:(card.name||card.baseName), isUnique:card.type==='unique', monId:card.type==='unique'?card.monId:undefined});
+        if (activeMon.id==='Zan' || (card.type==='unique' && card.monId==='Zan')) {
           // 会心はメイン攻撃とは独立して判定する(元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せない)
           const comboDmgBonus=getPermaBuff('comboDmgPct');
           const rollCombo=(rate)=>{
@@ -2574,20 +2580,21 @@ function MonsterHeroGame() {
             if (crit) hasCrit=true; totalDmg += final;
             attackHits.push({dmg:final, isCrit:crit, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false});
           };
-          // 勇者特性「連撃」: ザンが勇者モンの時のみ、ザンの攻撃(通常/固有問わず)に連撃ヒットを追加
-          if (mainHero?.id==='Zan') rollCombo(0.3+comboDmgBonus);
-          // 固有技「連斬」自体の連撃: 勇者モンかどうかに関わらず、固有技を使えば発生する
-          if (card.type==='unique') rollCombo(0.2+comboDmgBonus);
+          // 勇者特性「連撃」: ザン自身が攻撃していて、かつザンが勇者モンの時のみ、攻撃(通常/固有問わず)に連撃ヒットを追加
+          if (mainHero?.id==='Zan' && activeMon.id==='Zan') rollCombo(0.3+comboDmgBonus);
+          // 固有技「連斬」自体の連撃: 技の出自(card.monId)がザンなら、誰が使っても発生する(合体で引き継いだ場合も含む)
+          if (card.type==='unique' && card.monId==='Zan') rollCombo(0.2+comboDmgBonus);
         }
         if (card.type==='range_atk' && card.rangeIdx!=null) { forcedMoveTarget=(card.rangeIdx+1)%4; }
         if (card.type==='unique') {
-          if(activeMon.id==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
-          else if(activeMon.id==='Suezo'){const gRec=Math.floor(effectiveMaxGuts*0.5); setGuts(p=>Math.min(effectiveMaxGuts,p+gRec)); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
-          else if(activeMon.id==='Pixie'){setNextTurnBuff('zeroGuts',true); addPopup('次ターン消費0!','hero','text-blue-400 text-lg font-bold');}
-          else if(activeMon.id==='Tiger'){setNextTurnBuff('guaranteedCrit',true); addPermaBuff('critRatePct',0.02); addPermaBuff('critDmgPct',0.02); addPopup('次ターン会心確定!','hero','text-red-400 text-lg font-bold'); addPopup('会心率+2% 会心ダメ+2%','hero','text-yellow-400 text-sm font-bold');}
-          else if(activeMon.id==='Monol'){addPermaBuff('dmgCutPct',0.03); addWaveBuff('enemyAtkDebuffPct',0.10); setNextTurnBuff('reflect',true); addPopup('次ターン反射！','hero','text-purple-400 text-lg font-bold');}
-          else if(activeMon.id==='Oboro'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05); setHp(p=>Math.min(effectiveMaxHp,p+hRec)); setGuts(p=>Math.min(effectiveMaxGuts,p+gRec)); addPopup(`💚 ドレイン +${hRec}`,'life','text-emerald-400 text-xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');}
-          else if(activeMon.id==='Ark'||activeMon.id==='Iblis'){
+          // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
+          if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
+          else if(card.monId==='Suezo'){const gRec=Math.floor(effectiveMaxGuts*0.5); setGuts(p=>Math.min(effectiveMaxGuts,p+gRec)); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
+          else if(card.monId==='Pixie'){setNextTurnBuff('zeroGuts',true); addPopup('次ターン消費0!','hero','text-blue-400 text-lg font-bold');}
+          else if(card.monId==='Tiger'){setNextTurnBuff('guaranteedCrit',true); addPermaBuff('critRatePct',0.02); addPermaBuff('critDmgPct',0.02); addPopup('次ターン会心確定!','hero','text-red-400 text-lg font-bold'); addPopup('会心率+2% 会心ダメ+2%','hero','text-yellow-400 text-sm font-bold');}
+          else if(card.monId==='Monol'){addPermaBuff('dmgCutPct',0.03); addWaveBuff('enemyAtkDebuffPct',0.10); setNextTurnBuff('reflect',true); addPopup('次ターン反射！','hero','text-purple-400 text-lg font-bold');}
+          else if(card.monId==='Oboro'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05); setHp(p=>Math.min(effectiveMaxHp,p+hRec)); setGuts(p=>Math.min(effectiveMaxGuts,p+gRec)); addPopup(`💚 ドレイン +${hRec}`,'life','text-emerald-400 text-xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');}
+          else if(card.monId==='Ark'||card.monId==='Iblis'){
             // 贖罪: 与ダメの20%で追撃(ザンの「連撃」とは別名にして、ザン専用の連撃モーション判定と衝突しないようにする)
             // noAnim:true → 専用モーションを2回連続再生させず、直前のヒットに続けてダメージ数値だけ表示する
             const comboAmt=Math.floor(finalD*0.2);
@@ -2612,8 +2619,11 @@ function MonsterHeroGame() {
         while (hitIdx < attackHits.length) {
           const hit = attackHits[hitIdx];
           // 専用モーションはモンスターの atkMotion フィールドで判定する(勇者モン選択時のみ発生する
-          // 連撃ヒットの有無に依存させると、供モン加入時に通常攻撃のモーションが変わってしまうため)
-          const isZanGroupStart = hit.skillName!=='連撃' && slots[hit.slotIdx]?.atkMotion==='zanCombo';
+          // 連撃ヒットの有無に依存させると、供モン加入時に通常攻撃のモーションが変わってしまうため)。
+          // 固有技(hit.isUnique)の場合は技の出自(hit.monId)側のatkMotionを優先する。合体で引き継いだ
+          // 固有技を別のモンスターが使う場合でも、元モンスターの専用モーションを再現するため
+          const hitMotion = (hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[hit.slotIdx]?.atkMotion;
+          const isZanGroupStart = hit.skillName!=='連撃' && hitMotion==='zanCombo';
           if (isZanGroupStart) {
             // ザンの連撃グループ: 残像のような一瞬の突進を1回だけ見せ、モーションが終わってからダメージをバババッと立て続けに表示する
             const group=[hit]; let j=hitIdx+1;
@@ -2649,7 +2659,7 @@ function MonsterHeroGame() {
           if(!hit.noAnim && animSlot >= 0 && slots[animSlot]) {
             // スロット上に技名をインライン表示
             setSlotSkill({slotIndex: animSlot, name: hit.skillName, type: hit.isUnique?'unique':(hit.isSpecial?'special':'normal')});
-            const motion = slots[animSlot]?.atkMotion; // モンスターごとの専用モーション種別('default'/'zanCombo'/'floatStab'等)。全モンスターがdata側で必ず指定する
+            const motion = (hit.isUnique && hit.monId && ALL_PLAYER_MONSTERS[hit.monId]?.atkMotion) || slots[animSlot]?.atkMotion; // モンスターごとの専用モーション種別('default'/'zanCombo'/'floatStab'等)。全モンスターがdata側で必ず指定する。固有技は技の出自(継承元)のモーションを優先する
             if(hit.isUnique){
               // 固有技: タメ(下に沈む)は全モンスター共通→その後は専用モーションがあればそちらへ、なければ敵に向かって突進
               setAttackAnim({slotIndex: animSlot, charge:true});
@@ -2762,7 +2772,15 @@ function MonsterHeroGame() {
     }
   };
 
-  const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus) => {
+  // スロットで現在選べる固有技一覧(自分の固有技+合体で引き継いだ固有技)を返す。
+  // 表示・選択UIとbuildDeckの両方から使う共通ロジック
+  const getAvailableUniquesForSlot = (mon, cUniques) => {
+    if (!mon) return [];
+    const own = (cUniques||ownedUniques).find(uq=>uq.monId===mon.id);
+    const inherited = mon.inheritedUniques||[];
+    return [...(own?[{key:'own',unique:own}]:[]), ...inherited.map((iu,ii)=>({key:`inh${ii}`,unique:iu}))];
+  };
+  const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus, uChoice) => {
     const atkNames=HERO_ATK_NAMES[mainHero?.id]||HERO_ATK_NAMES['Mocchi'];
     let pool=[];
     pool.push({...BASE_ATK_EVOLUTION[aLvl],name:atkNames[aLvl],type:'atk',uid:Math.random()},{...BASE_ATK_EVOLUTION[aLvl],name:atkNames[aLvl],type:'atk',uid:Math.random()});
@@ -2771,12 +2789,35 @@ function MonsterHeroGame() {
       if(s){
         const revo=RANGE_EVOLUTION[aLvl];
         pool.push({name:`${RANGE_LABELS[idx]}${revo.name}`,type:'range_atk',rangeIdx:idx,guts:revo.guts,baseGuts:revo.baseGuts,mult:revo.mult,baseMult:revo.baseMult,crit:revo.crit,icon:RANGE_LABELS[idx],uid:Math.random(),evoLevel:aLvl});
-        const u=cUniques.find(uq=>uq.monId===s.id);
-        if(u){const currentEvoName=u.names[Math.min(u.evoLevel,u.names.length-1)]; const uCrit=0.10+0.05*Math.min(u.evoLevel,8); pool.push({...u,name:currentEvoName,type:'unique',uid:Math.random(),guts:u.guts||u.baseGuts,baseGuts:u.baseGuts,baseMult:u.baseMult,evoLevel:u.evoLevel,monId:u.monId,crit:uCrit,effectDesc:u.effectDesc});}
+        const options=getAvailableUniquesForSlot(s,cUniques);
+        if(options.length>0){
+          const chosenKey=(uChoice&&uChoice[idx])||'own';
+          const u=(options.find(o=>o.key===chosenKey)||options[0]).unique;
+          const currentEvoName=u.names[Math.min(u.evoLevel||0,u.names.length-1)]; const uCrit=0.10+0.05*Math.min(u.evoLevel||0,8);
+          pool.push({...u,name:currentEvoName,type:'unique',uid:Math.random(),guts:u.guts||u.baseGuts,baseGuts:u.baseGuts,baseMult:u.baseMult,evoLevel:u.evoLevel||0,monId:u.monId,crit:uCrit,effectDesc:u.effectDesc,ownerSlotIdx:idx});
+        }
       }
     });
     cTeachings.forEach(t=>{let name=BREEDER_EVO_NAMES[t.id][Math.min(t.evoLevel||0,2)]; pool.push({...t,name,guts:20,uid:Math.random()});});
     return pool.sort(()=>Math.random()-0.5);
+  };
+  // そのスロットで選択中の固有技を次の候補(自分の固有技⇔合体で引き継いだ固有技)へ切り替える。
+  // 手札・山札・捨て札に既に配られているそのスロットの固有技カードも、名前や威力等をその場で差し替える
+  // (山札から引き直しても最新の選択が反映されるよう、控えているカードにも同じ内容を適用する)
+  const cycleActiveUniqueForSlot = (slotIdx) => {
+    const mon=slots[slotIdx]; if(!mon) return;
+    const options=getAvailableUniquesForSlot(mon,ownedUniques);
+    if(options.length<2) return;
+    const curKey=slotUniqueChoice[slotIdx]||'own';
+    const curIdx=Math.max(0,options.findIndex(o=>o.key===curKey));
+    const next=options[(curIdx+1)%options.length];
+    setSlotUniqueChoice(prev=>({...prev,[slotIdx]:next.key}));
+    const u=next.unique;
+    const currentEvoName=u.names[Math.min(u.evoLevel||0,u.names.length-1)]; const uCrit=0.10+0.05*Math.min(u.evoLevel||0,8);
+    const patch={name:currentEvoName,guts:u.guts||u.baseGuts,baseGuts:u.baseGuts,baseMult:u.baseMult,evoLevel:u.evoLevel||0,monId:u.monId,crit:uCrit,effectDesc:u.effectDesc,names:u.names,icon:u.icon,sourceMasuName:u.sourceMasuName};
+    const patchCard=(c)=>(c.type==='unique'&&c.ownerSlotIdx===slotIdx)?{...c,...patch}:c;
+    setHand(prev=>prev.map(patchCard)); setDeck(prev=>prev.map(patchCard)); setGraveyard(prev=>prev.map(patchCard));
+    Audio_.se.card();
   };
 
   const spawnEnemy = useCallback((w) => {
@@ -2790,7 +2831,7 @@ function MonsterHeroGame() {
 
   const initBattle = (w, s, u, t, gB) => {
     setWave(w); spawnEnemy(w);
-    const pool=buildDeck(s||slots,atkLevel,guardLevel,u||ownedUniques,t||ownedTeachings,gB!==undefined?gB:guardBonusCount);
+    const pool=buildDeck(s||slots,atkLevel,guardLevel,u||ownedUniques,t||ownedTeachings,gB!==undefined?gB:guardBonusCount,slotUniqueChoice);
     setHand(pool.slice(0,5)); setDeck(pool.slice(5)); setGraveyard([]); setGameState('BATTLE'); setIsBusy(false);
     setTurnBuffs({}); setNextTurnBuffs({}); // WAVE毎リセットの一時バフ・デバフを全てクリア
   };
@@ -4171,7 +4212,7 @@ function MonsterHeroGame() {
                     const s=slots[i]; if(!s) continue;
                     const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
                     const maxUses=(mainHero?.id==='Ham'&&s?.id==='Ham')?cardLimit:1; if(assignedCount>=maxUses) continue;
-                    if(pendingCardObj.type==='unique'&&s.id!==pendingCardObj.monId) continue;
+                    if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
                     pendingValidSlot=i; pendingAdd=getDmg(pendingCardObj,i,s,0,0,committedAtkCnt>0); break;
                   }
                 }
@@ -4208,7 +4249,7 @@ function MonsterHeroGame() {
                   let canAssign=false;
                   if(s && pendingCardObj){
                     canAssign = assignedCount<maxUses;
-                    if(pendingCardObj.type==='unique') canAssign = canAssign && (s.id===pendingCardObj.monId);
+                    if(pendingCardObj.type==='unique') canAssign = canAssign && (pendingCardObj.ownerSlotIdx===i);
                   }
                   // Count how many attack cards are already assigned (across all slots) to determine attack order
                   const assignedAttackCount=selectedCards.filter(idx=>{const c=hand[idx]; return cardAssignments[idx]!=null && isAttackCard(c);}).length;
@@ -4259,6 +4300,11 @@ function MonsterHeroGame() {
                     }
                   }} disabled={isBusy} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':'specialLunge 500ms ease-in forwards'):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':'attackFly 450ms ease-in forwards'))))}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined)}>
                     <div className="h-[25%] bg-black/60 flex items-center justify-center px-1 border-b border-white/10 z-20"><span className="text-[7px] font-black text-white truncate uppercase leading-none">{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[7px] font-black text-indigo-300">×{assignedCount}</span>}</div>
+                    {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques); if(uOptions.length<2) return null; const curKey=slotUniqueChoice[i]||'own'; const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
+                      return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy)return; cycleActiveUniqueForSlot(i);}} className="shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95">
+                        <RefreshCcw size={7} className="text-white"/><span className="text-[6px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
+                      </div>);
+                    })()}
                     <div className="flex-1 flex flex-col items-center justify-center relative">
                       {slotSettle===i&&(
                         <div className="absolute inset-0 z-[60] pointer-events-none flex items-center justify-center overflow-visible">
