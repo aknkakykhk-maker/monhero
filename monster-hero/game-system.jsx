@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 21:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 22:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -315,7 +315,10 @@ const MASU_COLOR_REGION_HUES = {
   // 縦の帯に判定範囲を絞り、離れた背中側の影が白と誤判定されないようにしている
   // ユーザーの手描き指定により、体(青い毛)は染色①、顔・前脚(白い毛)は染色②、
   // 角(オレンジ)と尻尾の先をまとめて染色③とした(角は色相、尻尾の先は位置で判定)
-  Tiger: [{ hue: 233, sMin: 0.28 }, { white: true, sMax: 0.28, vMin: 0.4, bbox: [0.26, 0.27, 0.66, 1.0] }, { hue: 38, posBbox: [[0.80, 0.32, 1.0, 0.56]] }],
+  // 尻尾は根元〜中央にかけて彩度が非常に低く(毛色の陰影のグラデーション)、体の青毛(sMin:0.28)にも
+  // 白バケツ(顔用bboxの範囲外)にも該当せず無染色のまま残っていたため、尻尾全体をposBboxで囲って
+  // 位置判定にし、角と同じ染色③に含めた(彩度に関係なく必ず染まるようにする)
+  Tiger: [{ hue: 233, sMin: 0.28 }, { white: true, sMax: 0.28, vMin: 0.4, bbox: [0.26, 0.27, 0.66, 1.0] }, { hue: 38, posBbox: [[0.665, 0.32, 1.0, 0.62]] }],
   Ham: [25, { white: true, sMax: 0.35, vMin: 0.7 }, 355],
   Pixie: [355, 23, { hue: 10 }],
   Monol: [{ band: [0, 1/3] }, { band: [1/3, 2/3] }, { band: [2/3, 1] }],
