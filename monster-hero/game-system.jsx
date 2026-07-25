@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 16:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 16:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3173,12 +3173,15 @@ function MonsterHeroGame() {
                   const m = e.base;
                   const masuCount = masuMons.filter(ms=>ms.baseId===m.id).length;
                   return (
-                    <button key={e.key} onClick={()=>setRosterDetailMon(m)} className="rounded-2xl border-2 border-slate-800 bg-slate-900 p-2 flex flex-col items-center gap-1.5 active:scale-95">
-                      <div className="w-14 h-14 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                      <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
-                      <div className="text-[7px] text-pink-400 font-bold">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>
-                      {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white mt-0.5">編成中</div>}
-                    </button>
+                    <div key={e.key} className="relative">
+                      <button onClick={()=>setRosterDetailMon(m)} className="w-full rounded-2xl border-2 border-slate-800 bg-slate-900 p-2 flex flex-col items-center gap-1.5 active:scale-95">
+                        <div className="w-14 h-14 rounded-full overflow-hidden border border-white/10 shrink-0"><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                        <div className="text-[10px] font-black text-white truncate w-full text-center">{m.name}</div>
+                        <div className="text-[7px] text-pink-400 font-bold">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>
+                        {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white mt-0.5">編成中</div>}
+                      </button>
+                      <button onClick={(ev)=>{ev.stopPropagation(); setRosterDetailMon(m);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
+                    </div>
                   );
                 })}
               </div>
@@ -3209,20 +3212,23 @@ function MonsterHeroGame() {
                       const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
                       const fusionCount = (masu.fusionHistory||[]).length;
                       return (
-                        <button key={e.key} onClick={()=>setMasuMonDetail(masu)} className="rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
-                          <div className="relative w-12 h-12 shrink-0">
-                            <div className={`w-12 h-12 rounded-full overflow-hidden border ${fusionCount>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                            {fusionCount>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1 text-[6px] font-black text-black leading-tight">+{fusionCount}</div>}
-                          </div>
-                          <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
-                          {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>}
-                          <div className="w-full mt-0.5">
-                            <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
-                            <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
-                          </div>
-                          {(masu.distAptPoints||0)>0&&<div className="text-[7px] text-amber-300 font-black flex items-center gap-0.5 mt-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</div>}
-                          {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white mt-0.5">編成中</div>}
-                        </button>
+                        <div key={e.key} className="relative">
+                          <button onClick={()=>setMasuMonDetail(masu)} className="w-full rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
+                            <div className="relative w-12 h-12 shrink-0">
+                              <div className={`w-12 h-12 rounded-full overflow-hidden border ${fusionCount>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                              {fusionCount>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1 text-[6px] font-black text-black leading-tight">+{fusionCount}</div>}
+                            </div>
+                            <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
+                            {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>}
+                            <div className="w-full mt-0.5">
+                              <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
+                              <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
+                            </div>
+                            {(masu.distAptPoints||0)>0&&<div className="text-[7px] text-amber-300 font-black flex items-center gap-0.5 mt-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</div>}
+                            {monsterDisplayFlags.active&&e.active&&<div className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white mt-0.5">編成中</div>}
+                          </button>
+                          <button onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
+                        </div>
                       );
                     })}
                   </div>
@@ -3252,11 +3258,14 @@ function MonsterHeroGame() {
                       if (!base) return null;
                       const lvl = bondLevelInfo(masu.bondXp||0);
                       return (
-                        <button key={masu.id} onClick={()=>{setFusionMainId(masu.id); setFusionStep('sub');}} className="rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
-                          <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${fusedBorder(masu)}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
-                          <div className="text-[9px] font-black text-violet-200 truncate w-full text-center">{masu.name}</div>
-                          <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
-                        </button>
+                        <div key={masu.id} className="relative">
+                          <button onClick={()=>{setFusionMainId(masu.id); setFusionStep('sub');}} className="w-full rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
+                            <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${fusedBorder(masu)}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+                            <div className="text-[9px] font-black text-violet-200 truncate w-full text-center">{masu.name}</div>
+                            <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
+                          </button>
+                          <button onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
+                        </div>
                       );
                     })}
                   </div>
@@ -3286,11 +3295,14 @@ function MonsterHeroGame() {
                         if (!base) return null;
                         const lvl = bondLevelInfo(masu.bondXp||0);
                         return (
-                          <button key={masu.id} onClick={()=>{setFusionSubId(masu.id); setFusionStep('confirm');}} className="rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
-                            <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${fusedBorder(masu)}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
-                            <div className="text-[9px] font-black text-violet-200 truncate w-full text-center">{masu.name}</div>
-                            <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
-                          </button>
+                          <div key={masu.id} className="relative">
+                            <button onClick={()=>{setFusionSubId(masu.id); setFusionStep('confirm');}} className="w-full rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
+                              <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${fusedBorder(masu)}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+                              <div className="text-[9px] font-black text-violet-200 truncate w-full text-center">{masu.name}</div>
+                              <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
+                            </button>
+                            <button onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
+                          </div>
                         );
                       })}
                     </div>
