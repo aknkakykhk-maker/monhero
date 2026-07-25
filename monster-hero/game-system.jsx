@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 07:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 08:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -309,7 +309,7 @@ const MASU_COLOR_REGION_HUES = {
   Zan: [235, 2, { white: true, sMax: 0.22, vMin: 0.65 }],
   Mitarashi: [2, 40, { hue: 28, bbox: [0.29, 0.18, 0.71, 0.26] }],
   Ark: [219, 187, 60],
-  Iblis: [{ white: true, sMax: 0.15, vMin: 0.7 }, { hue: 264, vMin: 0.55 }, { hue: 264, vMax: 0.5 }],
+  Iblis: [{ white: true, sMax: 0.15, vMin: 0.7 }, { hue: 264, sMin: 0.14, vMin: 0.35, vMax: 0.9 }, { white: true, sMax: 0.3, vMin: 0.15, vMax: 0.32 }],
 };
 // 染色もどきの色選択UIで見せる部位数(部位分割データが無いモンスターも全身一括の1枠は必ず出す)
 const dyeRegionCount = (baseId) => { const hues = MASU_COLOR_REGION_HUES[baseId]; return (hues && hues.length > 0) ? hues.length : 1; };
@@ -350,14 +350,16 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
       if (ny >= y0 && ny < y1) return idx;
     }
   }
-  // 白系(彩度が低く明るい)部位が定義されていれば次に判定する
+  // 白系・黒系(彩度が低い)部位が定義されていれば次に判定する(vMaxも指定すれば暗い方の
+  // 彩度の低いバケツ、例えば黒に近い羽など明度が低すぎて色相が不安定な部位も拾える)
   for (let idx = 0; idx < regionDefs.length; idx++) {
     const def = regionDefs[idx];
     if (def && typeof def === 'object' && def.white) {
-      if (ss <= (def.sMax ?? 0.18) && vv >= (def.vMin ?? 0.55)) return idx;
+      if (ss <= (def.sMax ?? 0.18) && vv >= (def.vMin ?? 0.55) && vv <= (def.vMax ?? 1)) return idx;
     }
   }
-  if (ss < 0.18 || vv < 0.12) return -1;
+  // 明度が極端に低い(ほぼ黒)ピクセルは色相自体が不安定なので、white系バケツで拾えなかった分は対象外にする
+  if (vv < 0.12) return -1;
   let best = -1, bestD = 999;
   regionDefs.forEach((def, idx) => {
     if (def && typeof def === 'object' && (def.white || def.band)) return; // 上で判定済み
@@ -368,11 +370,12 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
     const hue = (typeof def === 'number') ? def : def.hue;
     const vMin = (def && typeof def === 'object') ? def.vMin : undefined;
     const vMax = (def && typeof def === 'object') ? def.vMax : undefined;
-    const sMin = (def && typeof def === 'object') ? def.sMin : undefined;
+    // sMinは部位ごとに指定できる(既定0.18)。彩度の低いパステル調の部位を拾いたい場合はここを下げる
+    const sMin = (def && typeof def === 'object' && def.sMin !== undefined) ? def.sMin : 0.18;
     const sMax = (def && typeof def === 'object') ? def.sMax : undefined;
     if (vMin !== undefined && vv < vMin) return;
     if (vMax !== undefined && vv > vMax) return;
-    if (sMin !== undefined && ss < sMin) return;
+    if (ss < sMin) return;
     if (sMax !== undefined && ss > sMax) return;
     const d = _hueDist(hh, hue);
     if (d < bestD) { bestD = d; best = idx; }
@@ -424,7 +427,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             // 染色対象から除外し常に元の絵のまま残す(輪郭が塗り分けの色を拾ってしまう問題を防ぐ)
             if (alphaAt(x-1,y) < 200 || alphaAt(x+1,y) < 200 || alphaAt(x,y-1) < 200 || alphaAt(x,y+1) < 200) continue;
             const [hh, ss, vv] = _rgbToHsv(r, g, b);
-            if (ss >= 0.18 && vv >= 0.12) {
+            if (ss >= 0.1 && vv >= 0.12) {
               let isColorEdge = false;
               for (const [nx, ny] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]) {
                 const nh = hueAt(nx, ny);
