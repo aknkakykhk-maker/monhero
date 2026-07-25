@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 00:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 00:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4738,8 +4738,12 @@ function MonsterHeroGame() {
         let tiles = [];
         if (isAtkFamily) {
           const atkNames = HERO_ATK_NAMES[mainHero?.id]||HERO_ATK_NAMES['Mocchi'];
+          // 解放上限は「現在選んでいるレベル(atkLevel)」ではなく、距離適性から算出される
+          // 上限レベルを都度計算する。atkLevelを直接使うと、一度下位レベルを選んだ後に
+          // 上限自体が下がってしまい、本来解放済みの上位レベルへ戻せなくなる不具合になる
+          const ceilingLvl = computeAtkTier(slots, enemyDist);
           tiles = BASE_ATK_EVOLUTION.map((_,lvl)=>{
-            const unlocked = lvl<=atkLevel;
+            const unlocked = lvl<=ceilingLvl;
             const isActive = lvl===atkLevel;
             const label = card.type==='atk' ? atkNames[lvl] : `${RANGE_LABELS[card.rangeIdx]}${RANGE_EVOLUTION[lvl].name}`;
             const power = Math.floor((card.type==='atk'?BASE_ATK_EVOLUTION[lvl].mult:RANGE_EVOLUTION[lvl].mult)*100);
