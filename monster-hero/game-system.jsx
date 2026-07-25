@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 10:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -111,7 +111,7 @@ const bondLevelInfo = (totalXp) => {
 // =====================================================================
 const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
-  let reverb = null, lead = null, arp = null, bass = null, bgmBus = null;
+  let reverb = null, lead = null, arp = null, bass = null, bgmBus = null, seBus = null;
   let parts = [], currentKey = null;
   let enabled = false; // デフォルト無音
 
@@ -129,8 +129,9 @@ const Audio_ = (() => {
     }).then(async () => {
       if (!Tone) return;
       try {
-      bgmBus = new Tone.Gain(0.04).toDestination(); // BGM専用バス(SEには影響しない・初期は最小)
-      reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).toDestination(); // SE用リバーブ
+      bgmBus = new Tone.Gain(0.04).toDestination(); // BGM専用バス
+      seBus = new Tone.Gain(1).toDestination(); // SE専用バス(BGMとは別ゲインなので互いの音量操作が影響しない)
+      reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).connect(seBus); // SE用リバーブ
       lead = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.2 }, volume: -13 }).connect(bgmBus);
       arp = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.1, release: 0.3 }, volume: -21 }).connect(bgmBus);
       bass = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.4, release: 0.3 }, volume: -15 }).connect(bgmBus);
@@ -186,18 +187,21 @@ const Audio_ = (() => {
   };
   const isEnabled = () => enabled;
 
-  // 0〜100(%)を-40dB〜0dBへ線形マッピング(0=無音)。SE/BGMそれぞれ独立に調整できる
-  const _dbFromPct = (pct) => pct <= 0 ? -Infinity : -40 + (Math.min(100, pct) / 100) * 40;
+  // 0〜100(%)を-40dB〜0dB相当のゲイン(0=無音)へ線形マッピング。SEはseBus、BGMはbgmBusの
+  // ゲインをそれぞれ個別に操作するため、片方を変えてももう片方の音量には影響しない
+  // (以前はSE側をTone.Destination(全体マスター)で調整していたため、SEを変えるとBGMの
+  // 音量まで一緒に変わってしまう不具合があった)
+  const _gainFromPct = (pct) => pct <= 0 ? 0 : Math.pow(10, (-40 + (Math.min(100, pct) / 100) * 40) / 20);
   const setSeVolume = async (pct) => {
     await load();
-    if (!Tone) return;
-    try { Tone.Destination.volume.value = _dbFromPct(pct); } catch (e) {}
+    if (!Tone || !seBus) return;
+    try { seBus.gain.rampTo(_gainFromPct(pct), 0.1); } catch (e) {}
   };
   const setBgmVolume = async (pct) => {
     await load();
     if (!Tone || !bgmBus) return;
     // BGMバスの実ゲインはクリップ回避のため最大0.65に抑える
-    const gain = pct <= 0 ? 0 : Math.pow(10, _dbFromPct(pct) / 20) * 0.65;
+    const gain = _gainFromPct(pct) * 0.65;
     try { bgmBus.gain.rampTo(gain, 0.1); } catch (e) {}
   };
   // iOS等のブラウザ音声ロック解除: ユーザー操作(スライダー等)の直後に1回だけ呼ぶ
@@ -206,7 +210,7 @@ const Audio_ = (() => {
     await load();
     if (Tone) {
       try {
-        const tb = new Tone.Synth({ oscillator:{type:'triangle'}, envelope:{attack:0.005,decay:0.15,sustain:0.1,release:0.2}, volume: -6 }).toDestination();
+        const tb = new Tone.Synth({ oscillator:{type:'triangle'}, envelope:{attack:0.005,decay:0.15,sustain:0.1,release:0.2}, volume: -6 }).connect(seBus);
         const now = Tone.now();
         tb.triggerAttackRelease('C5','8n', now);
         tb.triggerAttackRelease('G5','8n', now+0.12);
@@ -217,34 +221,34 @@ const Audio_ = (() => {
   };
 
   const se = {
-    attack: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.03, octaves: 5, envelope: { attack: 0.001, decay: 0.18, sustain: 0 }, volume: -4 }).toDestination(); s.triggerAttackRelease('C2', '8n', t); const n = new Tone.NoiseSynth({ noise: { type: 'brown' }, envelope: { attack: 0.001, decay: 0.08, sustain: 0 }, volume: -16 }).toDestination(); n.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 500); },
-    special: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const c = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.18, decay: 0.05, sustain: 0.3, release: 0.1 }, volume: -12 }).connect(reverb); c.triggerAttackRelease('C3', '8n.', t); try { c.frequency.rampTo('C4', 0.22, t); } catch (e) {} const bt = t + 0.26; const boom = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 6, envelope: { attack: 0.001, decay: 0.4, sustain: 0 }, volume: -2 }).toDestination(); boom.triggerAttackRelease('C1', '4n', bt); const blast = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.25, sustain: 0 }, volume: -12 }).toDestination(); blast.triggerAttackRelease('8n', bt); const sh = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.002, decay: 0.12, sustain: 0.1, release: 0.2 }, volume: -8 }).connect(reverb); ['C5','G5','C6','E6','G6'].forEach((nn, i) => sh.triggerAttackRelease(nn, '32n', bt + i * 0.05)); setTimeout(() => { try { c.dispose(); boom.dispose(); blast.dispose(); sh.dispose(); } catch (e) {} }, 1400); },
-    guard: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: 200, envelope: { attack: 0.001, decay: 0.18, release: 0.1 }, harmonicity: 5.1, modulationIndex: 16, resonance: 4000, octaves: 1.2, volume: -20 }).toDestination(); s.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 500); },
-    card: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.002, decay: 0.06, sustain: 0, release: 0.03 }, volume: -12 }).toDestination(); s.triggerAttackRelease('E6', '32n', t); s.triggerAttackRelease('A6', '32n', t + 0.04); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 300); },
-    crit: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.002, decay: 0.1, sustain: 0.1, release: 0.15 }, volume: -8 }).connect(reverb); ['C5','E5','G5','C6','E6'].forEach((n, i) => s.triggerAttackRelease(n, '32n', t + i * 0.04)); const b = new Tone.MembraneSynth({ volume: -6 }).toDestination(); b.triggerAttackRelease('C2', '8n', t); setTimeout(() => { try { s.dispose(); b.dispose(); } catch (e) {} }, 700); },
+    attack: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.03, octaves: 5, envelope: { attack: 0.001, decay: 0.18, sustain: 0 }, volume: -4 }).connect(seBus); s.triggerAttackRelease('C2', '8n', t); const n = new Tone.NoiseSynth({ noise: { type: 'brown' }, envelope: { attack: 0.001, decay: 0.08, sustain: 0 }, volume: -16 }).connect(seBus); n.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); n.dispose(); } catch (e) {} }, 500); },
+    special: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const c = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.18, decay: 0.05, sustain: 0.3, release: 0.1 }, volume: -12 }).connect(reverb); c.triggerAttackRelease('C3', '8n.', t); try { c.frequency.rampTo('C4', 0.22, t); } catch (e) {} const bt = t + 0.26; const boom = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 6, envelope: { attack: 0.001, decay: 0.4, sustain: 0 }, volume: -2 }).connect(seBus); boom.triggerAttackRelease('C1', '4n', bt); const blast = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.25, sustain: 0 }, volume: -12 }).connect(seBus); blast.triggerAttackRelease('8n', bt); const sh = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.002, decay: 0.12, sustain: 0.1, release: 0.2 }, volume: -8 }).connect(reverb); ['C5','G5','C6','E6','G6'].forEach((nn, i) => sh.triggerAttackRelease(nn, '32n', bt + i * 0.05)); setTimeout(() => { try { c.dispose(); boom.dispose(); blast.dispose(); sh.dispose(); } catch (e) {} }, 1400); },
+    guard: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MetalSynth({ frequency: 200, envelope: { attack: 0.001, decay: 0.18, release: 0.1 }, harmonicity: 5.1, modulationIndex: 16, resonance: 4000, octaves: 1.2, volume: -20 }).connect(seBus); s.triggerAttackRelease('16n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 500); },
+    card: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.002, decay: 0.06, sustain: 0, release: 0.03 }, volume: -12 }).connect(seBus); s.triggerAttackRelease('E6', '32n', t); s.triggerAttackRelease('A6', '32n', t + 0.04); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 300); },
+    crit: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.002, decay: 0.1, sustain: 0.1, release: 0.15 }, volume: -8 }).connect(reverb); ['C5','E5','G5','C6','E6'].forEach((n, i) => s.triggerAttackRelease(n, '32n', t + i * 0.04)); const b = new Tone.MembraneSynth({ volume: -6 }).connect(seBus); b.triggerAttackRelease('C2', '8n', t); setTimeout(() => { try { s.dispose(); b.dispose(); } catch (e) {} }, 700); },
     zanSlash: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const swish = (st) => { const n = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.08, sustain: 0 }, volume: -18 }).connect(reverb); n.triggerAttackRelease('32n', st); const p = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.11, sustain: 0, release: 0.04 }, volume: -13 }).connect(reverb); p.triggerAttackRelease('C7', '32n', st); try { p.frequency.rampTo('G6', 0.1, st); } catch (e) {} setTimeout(() => { try { n.dispose(); p.dispose(); } catch (e) {} }, 350); }; swish(t); swish(t + 0.09); },
     heal: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.3 }, volume: -12 }).connect(reverb); ['G4','C5','E5','G5','C6'].forEach((n, i) => s.triggerAttackRelease(n, '16n', t + i * 0.07)); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 900); },
-    tap: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 }, volume: -16 }).toDestination(); s.triggerAttackRelease('C6', '64n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 200); },
-    enemyAttack: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.04, octaves: 6, envelope: { attack: 0.001, decay: 0.3, sustain: 0 }, volume: -3 }).toDestination(); s.triggerAttackRelease('A1', '4n', t); const g = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.001, decay: 0.18, sustain: 0 }, volume: -12 }).toDestination(); g.triggerAttackRelease('8n', t); setTimeout(() => { try { s.dispose(); g.dispose(); } catch (e) {} }, 700); },
+    tap: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 }, volume: -16 }).connect(seBus); s.triggerAttackRelease('C6', '64n', t); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 200); },
+    enemyAttack: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.MembraneSynth({ pitchDecay: 0.04, octaves: 6, envelope: { attack: 0.001, decay: 0.3, sustain: 0 }, volume: -3 }).connect(seBus); s.triggerAttackRelease('A1', '4n', t); const g = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.001, decay: 0.18, sustain: 0 }, volume: -12 }).connect(seBus); g.triggerAttackRelease('8n', t); setTimeout(() => { try { s.dispose(); g.dispose(); } catch (e) {} }, 700); },
     enemySpecial: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now();
       // ① 溜め: 下降する不穏なうなり
-      const charge = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.25, decay: 0.05, sustain: 0.4, release: 0.1 }, volume: -8 }).toDestination();
+      const charge = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.25, decay: 0.05, sustain: 0.4, release: 0.1 }, volume: -8 }).connect(seBus);
       charge.triggerAttackRelease('A2', '4n', t); try { charge.frequency.rampTo('A1', 0.4, t); } catch (e) {}
       // ② 大炸裂: 超低音ドゥーン + 金属的インパクト + ホワイトノイズ爆発
       const bt = t + 0.42;
-      const boom = new Tone.MembraneSynth({ pitchDecay: 0.08, octaves: 8, envelope: { attack: 0.001, decay: 0.6, sustain: 0 }, volume: 2 }).toDestination();
+      const boom = new Tone.MembraneSynth({ pitchDecay: 0.08, octaves: 8, envelope: { attack: 0.001, decay: 0.6, sustain: 0 }, volume: 2 }).connect(seBus);
       boom.triggerAttackRelease('C1', '2n', bt);
-      const metal = new Tone.MetalSynth({ frequency: 120, envelope: { attack: 0.001, decay: 0.5, release: 0.2 }, harmonicity: 3.5, modulationIndex: 32, resonance: 3000, octaves: 1.5, volume: -10 }).toDestination();
+      const metal = new Tone.MetalSynth({ frequency: 120, envelope: { attack: 0.001, decay: 0.5, release: 0.2 }, harmonicity: 3.5, modulationIndex: 32, resonance: 3000, octaves: 1.5, volume: -10 }).connect(seBus);
       metal.triggerAttackRelease('16n', bt);
-      const blast = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.4, sustain: 0 }, volume: -6 }).toDestination();
+      const blast = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.001, decay: 0.4, sustain: 0 }, volume: -6 }).connect(seBus);
       blast.triggerAttackRelease('4n', bt);
       // ③ 不穏な残響: 不協和音(半音ぶつけ)
       const dread = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'square' }, envelope: { attack: 0.02, decay: 0.3, sustain: 0.2, release: 0.6 }, volume: -16 }).connect(reverb);
       ['C2','C#2','G2'].forEach(n => dread.triggerAttackRelease(n, '2n', bt + 0.05));
       setTimeout(() => { try { charge.dispose(); boom.dispose(); metal.dispose(); blast.dispose(); dread.dispose(); } catch (e) {} }, 2000); },
-    enemyMove: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.05 }, volume: -14 }).toDestination(); s.triggerAttackRelease('E4', '32n', t); s.triggerAttackRelease('B3', '16n', t + 0.06); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 400); },
+    enemyMove: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.05 }, volume: -14 }).connect(seBus); s.triggerAttackRelease('E4', '32n', t); s.triggerAttackRelease('B3', '16n', t + 0.06); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 400); },
     join: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.18, sustain: 0.3, release: 0.4 }, volume: -10 }).connect(reverb); const t = Tone.now(); const seq = [[0,'E5','8n'],[0.15,'G5','8n'],[0.3,'C6','8n'],[0.45,'E6','4n'],[0.45,'C6','4n'],[0.45,'G5','4n'],[0.8,'D6','8n'],[0.95,'E6','4n'],[0.95,'C6','4n'],[0.95,'G5','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); setTimeout(() => { try { v.dispose(); } catch (e) {} }, 1800); },
-    victory: async () => { if (!enabled) return; await ensure(); if (!Tone) return; clearParts(); currentKey = null; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.4 }, volume: -19 }).connect(reverb); const vb = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.4, release: 0.3 }, volume: -19 }).toDestination(); const t = Tone.now(); const seq = [[0,'C5','8n'],[0,'E5','8n'],[0,'G5','8n'],[0.18,'C5','8n'],[0.18,'E5','8n'],[0.18,'G5','8n'],[0.36,'C5','8n'],[0.36,'E5','8n'],[0.36,'G5','8n'],[0.54,'G5','4n'],[0.54,'C6','4n'],[0.54,'E6','4n'],[0.9,'F5','8n'],[0.9,'A5','8n'],[1.08,'G5','8n'],[1.08,'B5','8n'],[1.26,'C6','2n'],[1.26,'E6','2n'],[1.26,'G6','2n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); [[0,'C3'],[0.54,'C3'],[0.9,'F2'],[1.08,'G2'],[1.26,'C3']].forEach(([tt, n]) => vb.triggerAttackRelease(n, '4n', t + tt)); setTimeout(() => { try { v.dispose(); vb.dispose(); } catch (e) {} }, 2600); },
+    victory: async () => { if (!enabled) return; await ensure(); if (!Tone) return; clearParts(); currentKey = null; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.4 }, volume: -19 }).connect(reverb); const vb = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.4, release: 0.3 }, volume: -19 }).connect(seBus); const t = Tone.now(); const seq = [[0,'C5','8n'],[0,'E5','8n'],[0,'G5','8n'],[0.18,'C5','8n'],[0.18,'E5','8n'],[0.18,'G5','8n'],[0.36,'C5','8n'],[0.36,'E5','8n'],[0.36,'G5','8n'],[0.54,'G5','4n'],[0.54,'C6','4n'],[0.54,'E6','4n'],[0.9,'F5','8n'],[0.9,'A5','8n'],[1.08,'G5','8n'],[1.08,'B5','8n'],[1.26,'C6','2n'],[1.26,'E6','2n'],[1.26,'G6','2n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); [[0,'C3'],[0.54,'C3'],[0.9,'F2'],[1.08,'G2'],[1.26,'C3']].forEach(([tt, n]) => vb.triggerAttackRelease(n, '4n', t + tt)); setTimeout(() => { try { v.dispose(); vb.dispose(); } catch (e) {} }, 2600); },
     levelUp: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.15, sustain: 0.2, release: 0.3 }, volume: -12 }).connect(reverb); const seq = [[0,'C5','16n'],[0.08,'E5','16n'],[0.16,'G5','16n'],[0.24,'C6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const sp = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.4 }, volume: -16 }).connect(reverb); sp.triggerAttackRelease('C6', '2n', t + 0.24); setTimeout(() => { try { v.dispose(); sp.dispose(); } catch (e) {} }, 1200); }
   };
 
@@ -311,7 +315,7 @@ const MASU_COLOR_REGION_HUES = {
   Pixie: [355, 23, { hue: 10 }],
   Monol: [{ band: [0, 1/3] }, { band: [1/3, 2/3] }, { band: [2/3, 1] }],
   Oboro: [{ hue: 239 }, { hue: 205 }, { hue: 0, bbox: [0.35, 0.65, 0.65, 0.85] }],
-  Zan: [235, 2, { white: true, sMax: 0.22, vMin: 0.65 }],
+  Zan: [235, { hue: 2, noEdgeGuard: true }, { white: true, sMax: 0.24, vMin: 0.58 }],
   Mitarashi: [2, 40, { hue: 28, bbox: [0.29, 0.18, 0.71, 0.26] }],
   Ark: [219, 187, 60],
   Iblis: [{ white: true, sMax: 0.15, vMin: 0.7 }, { hue: 264, sMin: 0.14, vMin: 0.35, vMax: 0.9 }, { white: true, sMax: 0.3, vMin: 0.15, vMax: 0.32 }],
@@ -322,6 +326,7 @@ const MASU_COLOR_REGION_HUES = {
 // 既定は控えめにしてあり、必要なモンスターだけ個別に強めている)
 const MASU_COLOR_SMOOTH = {
   Tiger: { radius: 8, iterations: 2 },
+  Iblis: { radius: 3, iterations: 1 },
 };
 const _getSmoothParams = (baseId) => MASU_COLOR_SMOOTH[baseId] || { radius: 2, iterations: 1 };
 // 染色もどきの色選択UIで見せる部位数(部位分割データが無いモンスターも全身一括の1枠は必ず出す)
@@ -440,7 +445,15 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             // 染色対象から除外し常に元の絵のまま残す(輪郭が塗り分けの色を拾ってしまう問題を防ぐ)
             if (alphaAt(x-1,y) < 200 || alphaAt(x+1,y) < 200 || alphaAt(x,y-1) < 200 || alphaAt(x,y+1) < 200) continue;
             const [hh, ss, vv] = _rgbToHsv(r, g, b);
-            if (ss >= 0.1 && vv >= 0.12) {
+            const region = _classifyDyePixel(hh, ss, vv, x / w, y / h, hues);
+            if (region < 0) continue;
+            // 塗り分けの境目(色が隣接するピクセルとの間でにじむ部分)も誤判定しやすいため、
+            // 隣接ピクセルと色相が大きく違う場所は既定で除外する。ただし目のように細い部位は
+            // 全域が境目になってしまい丸ごと消えるため、部位定義でnoEdgeGuard:trueを指定すれば
+            // この除外をスキップできる
+            const def = hues[region];
+            const wantsEdgeGuard = !(def && typeof def === 'object' && def.noEdgeGuard);
+            if (wantsEdgeGuard && ss >= 0.1 && vv >= 0.12) {
               let isColorEdge = false;
               for (const [nx, ny] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]) {
                 const nh = hueAt(nx, ny);
@@ -448,7 +461,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
               }
               if (isColorEdge) continue;
             }
-            grid[i] = _classifyDyePixel(hh, ss, vv, x / w, y / h, hues);
+            grid[i] = region;
           }
           // 2パス目: 毛並みなど細かい濃淡で判定がごま塩状に入れ替わる箇所を、
           // 周囲の多数決で均して滑らかな塊にする(境界のジグザグ自体は保つ)。
@@ -983,6 +996,7 @@ function MonsterHeroGame() {
   const [seVolume, setSeVolumeState] = useState(70); // SE音量 0〜100(端末に保存、初期値は読み込み後に上書き)
   const [bgmVolume, setBgmVolumeState] = useState(70); // BGM音量 0〜100(同上)
   const [audioUnlocked, setAudioUnlocked] = useState(false); // ブラウザの自動再生制限解除のため、スライダー等の操作を1回行うまでfalse
+  const [showAudioSettings, setShowAudioSettings] = useState(false); // 音量設定モーダルの表示状態
   const audioOn = audioUnlocked;
   // 音量スライダー操作時に呼ぶ: 未解除ならブラウザの音声ロックを解除しつつ値を保存する
   const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeState(nv); storeSet('mh_se_volume', nv, false); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
@@ -1259,7 +1273,8 @@ function MonsterHeroGame() {
   }, [loadRankings]);
 
   const submitLocalScore = async (diff, finalScore) => {
-    const party = slots.map(s => s ? { name: s.name, emoji: s.emoji, imgUrl: s.imgUrl || null } : null);
+    // マスモン(絆レベルを持つ育成済みインスタンス)で編成していた場合、ランキング表示にも絆レベルを出せるよう記録する
+    const party = slots.map(s => s ? { name: s.name, emoji: s.emoji, imgUrl: s.imgUrl || null, bondLevel: s.masuId ? getMasuBondLevel(s.masuId).level : null } : null);
     const name = breederName || '名無しのブリーダー';
     const heroName = mainHero?.name || 'Unknown';
     const level = breederLevel.level;
@@ -2480,16 +2495,26 @@ function MonsterHeroGame() {
                   <button onClick={()=>{setRankingViewDiff(difficulty); setShowRanking(true); loadRankings();}} className="w-full bg-slate-900 border border-indigo-500/50 text-indigo-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><Users size={14}/> Ranking</button>
                   <button onClick={()=>setShowHelp(true)} className="w-full bg-slate-900 border border-emerald-500/50 text-emerald-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><HelpCircle size={14}/> Help</button>
                 </div>
-                <div className={`w-full border rounded-xl p-2 flex flex-col gap-1.5 ${audioOn?'bg-indigo-950/60 border-indigo-500/40':'bg-slate-900 border-slate-600/50'}`}>
-                  <div className="flex items-center justify-between px-0.5">
-                    <span className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">🔊 音量設定</span>
-                    {!audioOn && <span className="text-[7px] text-slate-500 font-bold">操作すると音が有効になります</span>}
-                  </div>
-                  <VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>
-                  <VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/>
-                </div>
+                <button onClick={()=>setShowAudioSettings(true)} className={`w-full border py-2 rounded-xl font-black text-[11px] active:scale-95 uppercase flex items-center justify-center gap-2 ${audioMuted?'bg-slate-900 border-slate-600/50 text-slate-400':'bg-indigo-950/60 border-indigo-500/40 text-indigo-300'}`}>{audioMuted?'🔇':'🔊'} 音量設定</button>
               </div>
             </div>
+            {showAudioSettings&&(
+              <div className="fixed inset-0 z-[9500] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:95000}}>
+                <div className="bg-slate-900 border border-indigo-500/50 rounded-3xl p-5 w-full max-w-sm shadow-2xl">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-base font-black text-white flex items-center gap-2">{audioMuted?'🔇':'🔊'} 音量設定</h3>
+                    <button onClick={()=>setShowAudioSettings(false)} className="p-1.5 bg-white/10 rounded-full active:scale-90"><X size={16}/></button>
+                  </div>
+                  {!audioOn && <div className="text-[9px] text-slate-500 font-bold mb-3">操作すると音が有効になります</div>}
+                  <button onClick={toggleQuickMute} className={`w-full border py-2.5 rounded-xl font-black text-xs uppercase active:scale-95 mt-2 mb-4 flex items-center justify-center gap-2 ${audioMuted?'bg-slate-800 border-slate-600/50 text-slate-300':'bg-indigo-600 border-indigo-400 text-white'}`}>{audioMuted?'🔇 音がオフです（タップでオン）':'🔊 音はオンです（タップでオフ）'}</button>
+                  <div className="flex flex-col gap-3">
+                    <VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>
+                    <VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/>
+                  </div>
+                  <button onClick={()=>setShowAudioSettings(false)} className="w-full bg-white text-black py-3 rounded-xl font-black text-xs uppercase active:scale-95 mt-5">閉じる</button>
+                </div>
+              </div>
+            )}
             {showRanking&&(
               <div className="fixed inset-0 z-[8000] flex flex-col p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.97)',zIndex:80000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}>
                 <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest flex items-center gap-2"><Trophy size={20}/> Ranking</h2><div className="flex items-center gap-2"><button onClick={()=>loadRankings()} className="p-2 bg-white/10 rounded-full active:scale-90"><RefreshCcw size={18}/></button><button onClick={()=>setShowRanking(false)} className="p-2 bg-white/10 rounded-full"><X size={20}/></button></div></div>
@@ -2505,8 +2530,10 @@ function MonsterHeroGame() {
                           <div className="text-right font-mono font-black text-indigo-400 text-sm whitespace-nowrap">{r.score.toLocaleString()} pt</div>
                         </div>
                         <div className="mt-2 bg-black/40 rounded-xl p-2 border border-white/5 flex items-center gap-2 flex-wrap">
-                          <div className="flex items-center gap-1 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/30"><Crown size={8} className="text-amber-400"/>{r.party&&r.party.find(p=>p?.name===r.hero)?.imgUrl?(<img src={r.party.find(p=>p?.name===r.hero).imgUrl} alt="hero" className="w-5 h-5 object-contain"/>):(<span className="text-[10px]">{r.party?(r.party.find(p=>p?.name===r.hero)?.emoji||'👑'):'👑'}</span>)}<span className="text-[10px] font-black text-white ml-1">{r.hero}</span></div>
-                          {r.party&&r.party.filter(p=>p&&p.name!==r.hero).map((p,idx)=>(<div key={idx} className="flex items-center gap-0.5">{p.imgUrl?<img src={p.imgUrl} alt="sub" className="w-5 h-5 object-contain"/>:<span className="text-[9px]">{p.emoji}</span>}<span className="text-[8px] font-bold text-slate-300">{p.name.substring(0,4)}</span></div>))}
+                          {(()=>{ const heroMember = r.party&&r.party.find(p=>p?.name===r.hero); return (
+                            <div className="flex items-center gap-1 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/30"><Crown size={8} className="text-amber-400"/>{heroMember?.imgUrl?(<img src={heroMember.imgUrl} alt="hero" className="w-5 h-5 object-contain"/>):(<span className="text-[10px]">{heroMember?.emoji||'👑'}</span>)}<span className="text-[10px] font-black text-white ml-1">{r.hero}</span>{heroMember?.bondLevel!=null&&<span className="text-[7px] font-black text-pink-300 ml-0.5">Lv.{heroMember.bondLevel}</span>}</div>
+                          ); })()}
+                          {r.party&&r.party.filter(p=>p&&p.name!==r.hero).map((p,idx)=>(<div key={idx} className="flex items-center gap-0.5">{p.imgUrl?<img src={p.imgUrl} alt="sub" className="w-5 h-5 object-contain"/>:<span className="text-[9px]">{p.emoji}</span>}<span className="text-[8px] font-bold text-slate-300">{p.name.substring(0,4)}</span>{p.bondLevel!=null&&<span className="text-[7px] font-black text-pink-300">Lv{p.bondLevel}</span>}</div>))}
                         </div>
                       </div>
                     ))
