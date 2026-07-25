@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 03:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 04:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -372,15 +372,24 @@ const MASU_COLOR_REGION_HUES = {
   // ICON/IMGでキャラの縦横比・トリミング位置が違うため、両方の帽子部分を覆えるよう広めにとっている
   // region0/region2のposBboxは128px(ICON)/160px(IMG)向けにMASU_COLOR_REGION_SIZE_OVERRIDESで個別上書きしている。
   // ここに書いた値はそれ以外のサイズで読み込まれた場合の安全側フォールバック(耳には絶対かからない狭い範囲)
-  Tiger: [{ hue: 233, sMin: 0.28, posBbox: [[0.43, 0.11, 0.49, 0.24], [0.665, 0.30, 0.84, 0.65]] }, { white: true, sMax: 0.28, vMin: 0.4, bbox: [0.26, 0.27, 0.66, 1.0] }, { hue: 38, posBbox: [[0.84, 0.28, 1.0, 0.50]] }],
+  // 染色③(耳のオレンジ+尻尾の先端)は面積が小さく、AAガード(透明ピクセルに隣接する縁を除外する仕組み)で
+  // ほぼ全域が縁扱いになって染まらなくなっていたため、noAAGuardを指定して除外をスキップする
+  Tiger: [{ hue: 233, sMin: 0.28, posBbox: [[0.43, 0.11, 0.49, 0.24], [0.665, 0.30, 0.84, 0.65]] }, { white: true, sMax: 0.28, vMin: 0.4, bbox: [0.26, 0.27, 0.66, 1.0] }, { hue: 38, posBbox: [[0.84, 0.28, 1.0, 0.50]], noAAGuard: true }],
   Ham: [25, { white: true, sMax: 0.35, vMin: 0.7 }, 355],
   // 染色②は肌(顔・お腹・腕・脚)、染色③は尻尾と両肩の翼(彩度の低い1〜2px幅の細い部位のため
   // noAAGuardで輪郭のにじみ除外もスキップしないと丸ごと消えてしまう)
   Pixie: [355, { hue: 25, sMin: 0.05, sMax: 0.45 }, { posBbox: [[0.55, 0.60, 0.85, 0.80], [0.28, 0.32, 0.32, 0.40], [0.57, 0.32, 0.61, 0.40]], noAAGuard: true }],
   Monol: [{ band: [0, 1/3] }, { band: [1/3, 2/3] }, { band: [2/3, 1] }],
-  Oboro: [{ hue: 239 }, { hue: 205 }, { white: true, sMax: 0.18, vMin: 0.85 }],
+  // 花の中心(淡い黄色、hue50前後)は彩度が0.18前後あり白バケツ(sMax0.18)に入りきらず、
+  // どの部位にも属さないまま常に無染色で残っていた(花びらだけ染まって中心だけ元の黄色が浮く)ため、
+  // 花びらと同じ染色①にまとめて含めた
+  Oboro: [[{ hue: 239 }, { hue: 50, sMax: 0.3, vMin: 0.8 }], { hue: 205 }, { white: true, sMax: 0.18, vMin: 0.85 }],
   Zan: [235, { hue: 2, noEdgeGuard: true }, { white: true, sMax: 0.24, vMin: 0.58 }],
-  Mitarashi: [2, 40, { hue: 28, bbox: [0.29, 0.18, 0.71, 0.26] }],
+  // 頭上のギザギザした冠は、染色①②③が細かい縞状に入り組んでおり、AAガード・エッジガード
+  // (透明ピクセルへの近さ・隣接ピクセルとの色相差で縁を除外する仕組み)がほぼ全域を縁とみなして
+  // 染まらなくなっていたため、3部位ともスキップする(体の主要面積は十分広く、縁ガード無しでも
+  // にじみは気にならない)
+  Mitarashi: [{ hue: 2, noAAGuard: true }, { hue: 40, noAAGuard: true }, { hue: 28, bbox: [0.29, 0.18, 0.71, 0.26], noAAGuard: true, noEdgeGuard: true }],
   // 染色③(冠=hue60)は面積が小さく地味だったため、お腹の白バケツ(体の白い部分、実測bbox
   // x0.36〜0.64/y0.58〜0.775)を同じ染色③にまとめた。目の白目(y0.45〜0.54付近)は
   // bboxで除外し誤って染まらないようにしている
@@ -510,7 +519,13 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
       if (d < bestD) { bestD = d; best = idx; }
     }
   });
-  return best;
+  // 色相フォールバックには本来「近さ」の上限が無く、どの部位の色相からも遠いピクセル
+  // (例: 花の黄色い中心が、定義済みの青系バケツへ強制的に割り当てられる等)まで
+  // 無理やり最も近い部位に押し込まれ、染色時に浮いた色ムラの原因になっていた。
+  // 明らかに違う色相(60°=オレンジ→黄のように「同系色」とみなせる範囲を超える)は
+  // 無染色のまま(-1)残し、元の絵の色を保つようにする
+  const MAX_HUE_MATCH_DIST = 60;
+  return bestD <= MAX_HUE_MATCH_DIST ? best : -1;
 };
 // baseIdの画像をCanvasで解析し、部位ごとのアルファマスク(dataURL)を作って返す(同じbaseIdでも
 // 画面によって表示に使う画像(iconUrl/imgUrl)が違うため、両方を含めたキーでキャッシュする)
