@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 16:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 16:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -289,14 +289,15 @@ const MASU_COLOR_TARGET = {
   pink: { h: 330, s: 0.65, vMin: 0.4, vMax: 0.98 },
   black: { h: 0, s: 0, vMin: 0.06, vMax: 0.32 },
   white: { h: 0, s: 0, vMin: 0.78, vMax: 1.0 },
+  gray: { h: 0, s: 0, vMin: 0.5, vMax: 0.82 },
 };
 // 薄め(パステル)系: 彩度を抑えて明度レンジを底上げし、鮮やかな色よりふんわりした発色にする
-['red', 'orange', 'yellow', 'lime', 'green', 'cyan', 'blue', 'purple', 'pink'].forEach((k) => {
+['red', 'orange', 'yellow', 'lime', 'green', 'teal', 'cyan', 'sky', 'blue', 'purple', 'magenta', 'pink'].forEach((k) => {
   const t = MASU_COLOR_TARGET[k];
   MASU_COLOR_TARGET[k + '_light'] = { h: t.h, s: t.s * 0.45, vMin: Math.min(0.6, t.vMin + 0.2), vMax: 1.0 };
 });
-const MASU_COLOR_LABELS = { red: '赤', orange: '橙', yellow: '黄', lime: '黄緑', green: '緑', teal: '青緑', cyan: 'シアン', sky: '空色', blue: '青', purple: '紫', magenta: 'マゼンタ', pink: 'ピンク', black: '黒', white: '白', red_light: '薄赤', orange_light: '薄橙', yellow_light: '薄黄', lime_light: '薄黄緑', green_light: '薄緑', cyan_light: '薄水色', blue_light: '薄青', purple_light: '薄紫', pink_light: '薄ピンク' };
-const MASU_COLOR_SWATCH = { red: '#ef4444', orange: '#f97316', yellow: '#eab308', lime: '#84cc16', green: '#22c55e', teal: '#14b8a6', cyan: '#06b6d4', sky: '#38bdf8', blue: '#3b82f6', purple: '#a855f7', magenta: '#d946ef', pink: '#ec4899', black: '#1f2937', white: '#f8fafc', red_light: '#fca5a5', orange_light: '#fdba74', yellow_light: '#fde047', lime_light: '#bef264', green_light: '#86efac', cyan_light: '#67e8f9', blue_light: '#93c5fd', purple_light: '#d8b4fe', pink_light: '#f9a8d4' };
+const MASU_COLOR_LABELS = { red: '赤', orange: '橙', yellow: '黄', lime: '黄緑', green: '緑', teal: '青緑', cyan: 'シアン', sky: '空色', blue: '青', purple: '紫', magenta: 'マゼンタ', pink: 'ピンク', black: '黒', white: '白', gray: '薄灰', red_light: '薄赤', orange_light: '薄橙', yellow_light: '薄黄', lime_light: '薄黄緑', green_light: '薄緑', teal_light: '薄青緑', cyan_light: '薄水色', sky_light: '薄空色', blue_light: '薄青', purple_light: '薄紫', magenta_light: '薄マゼンタ', pink_light: '薄ピンク' };
+const MASU_COLOR_SWATCH = { red: '#ef4444', orange: '#f97316', yellow: '#eab308', lime: '#84cc16', green: '#22c55e', teal: '#14b8a6', cyan: '#06b6d4', sky: '#38bdf8', blue: '#3b82f6', purple: '#a855f7', magenta: '#d946ef', pink: '#ec4899', black: '#1f2937', white: '#f8fafc', gray: '#cbd5e1', red_light: '#fca5a5', orange_light: '#fdba74', yellow_light: '#fde047', lime_light: '#bef264', green_light: '#86efac', teal_light: '#5eead4', cyan_light: '#67e8f9', sky_light: '#7dd3fc', blue_light: '#93c5fd', purple_light: '#d8b4fe', magenta_light: '#f0abfc', pink_light: '#f9a8d4' };
 // 「カスタム」色: プリセット18色に無い任意の色相・彩度・明度を選べるようにするため、
 // 色id文字列自体に "custom:色相:彩度:明度"(彩度・明度は0-100の整数)を埋め込んでエンコードする。
 // masu.colorsは元々ただの文字列配列なので、この方式ならデータモデルを変えずに保存できる
@@ -3776,10 +3777,16 @@ function MonsterHeroGame() {
         {/* 染色もどき: カスタム色選択(色相バー+彩度・明度パッドのスペクトラムピッカー) */}
         {customColorPicker&&(()=>{
           const { idx, h, s, v } = customColorPicker;
+          const masu = getMasuMon(dyeTargetMasuId);
+          const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
           const applyCustom = () => {
             setDyePreviewColors(prev => { const next = [...prev]; next[idx] = _encodeCustomColorId(h, s, v); return next; });
             setCustomColorPicker(null);
           };
+          // ドラッグ中は毎フレームcolorIdが変わり染色エンジンの再描画(Canvas処理)が大量発生するため、
+          // プレビュー表示だけは色相/彩度/明度を粗く丸めて再描画の頻度を抑える(確定時は元の値をそのまま使う)
+          const previewColorId = _encodeCustomColorId(Math.round(h / 4) * 4, Math.round(s * 20) / 20, Math.round(v * 20) / 20);
+          const previewColors = dyePreviewColors.map((c, i) => i === idx ? previewColorId : c);
           return (
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:32000}}>
               <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs flex flex-col gap-3 shadow-2xl">
@@ -3787,6 +3794,9 @@ function MonsterHeroGame() {
                   <h3 className="text-sm font-black text-white">🎨 カスタムカラー</h3>
                   <button onClick={()=>setCustomColorPicker(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
                 </div>
+                {masu&&base&&(
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-fuchsia-400/40 mx-auto shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={previewColors} className="w-full h-full object-cover"/></div>
+                )}
                 <CustomColorPicker h={h} s={s} v={v} onChange={(nh,ns,nv)=>setCustomColorPicker(prev=>prev?{...prev, h:nh, s:ns, v:nv}:prev)}/>
                 <div className="flex gap-2 mt-1 shrink-0">
                   <button onClick={()=>setCustomColorPicker(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">キャンセル</button>
