@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 16:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 18:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -186,6 +186,14 @@ const Audio_ = (() => {
     if (ready && currentKey && T[currentKey]) { clearParts(); buildLoop(T[currentKey]); }
   };
   const isEnabled = () => enabled;
+  // タブ切り替え/バックグラウンド化からの復帰時、iOS等のブラウザは AudioContext を自動的に
+  // サスペンドすることがあり、それを明示的に resume() しないと音が鳴らなくなったままになる。
+  // ensure()内のTone.start()は初回アンロック用でstartedフラグにより一度しか呼ばれないため、
+  // 復帰のたびに呼び直す必要がある(startedフラグ自体には触れないので初回アンロック挙動は変えない)
+  const resumeIfNeeded = async () => {
+    if (!Tone || !enabled) return;
+    try { if (Tone.context && Tone.context.state === 'suspended') await Tone.context.resume(); } catch (e) {}
+  };
 
   // 0〜100(%)を-40dB〜0dB相当のゲイン(0=無音)へ線形マッピング。SEはseBus、BGMはbgmBusの
   // ゲインをそれぞれ個別に操作するため、片方を変えてももう片方の音量には影響しない
@@ -254,7 +262,7 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, se };
+  return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, se };
 })();
 
 
@@ -1221,17 +1229,38 @@ function MonsterHeroGame() {
   const [audioUnlocked, setAudioUnlocked] = useState(false); // ブラウザの自動再生制限解除のため、スライダー等の操作を1回行うまでfalse
   const [showAudioSettings, setShowAudioSettings] = useState(false); // 音量設定モーダルの表示状態
   const audioOn = audioUnlocked;
+  const seRampTokenRef = useRef(0); // ランプ処理の世代管理(古いランプの残りtickが後から新しい値を上書きしないようにする)
+  const bgmRampTokenRef = useRef(0);
+  const setSeVolumeRaw = (nv) => { setSeVolumeState(nv); storeSet('mh_se_volume', nv, false); };
+  const setBgmVolumeRaw = (nv) => { setBgmVolumeState(nv); storeSet('mh_bgm_volume', nv, false); };
   // 音量スライダー操作時に呼ぶ: 未解除ならブラウザの音声ロックを解除しつつ値を保存する
-  const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeState(nv); storeSet('mh_se_volume', nv, false); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
-  const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeState(nv); storeSet('mh_bgm_volume', nv, false); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
+  // (即時反映のため、進行中のランプがあればここで世代を進めて無効化してから値を確定する)
+  const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); seRampTokenRef.current++; setSeVolumeRaw(nv); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
+  const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); bgmRampTokenRef.current++; setBgmVolumeRaw(nv); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
   const audioMutedPrevRef = useRef({ se: 70, bgm: 70 }); // クイックミュート解除時に戻す直前の音量を覚えておく
   const audioMuted = !audioOn || (seVolume === 0 && bgmVolume === 0);
   // バトル画面などスペースが限られる場所向けの1タップミュート切替(詳細な音量調整は設定パネルのスライダーで行う)
+  // ミュート解除時、目標音量まで瞬時に戻すと体感的に「急に音が大きくなって驚く」ため、
+  // 数百msかけて段階的に引き上げる(スライダーを直接ドラッグする通常操作は即時反映のまま変えたいので、
+  // changeSeVolume/changeBgmVolume自体はいじらず、ミュート解除の一括復帰パスだけここを通す)
+  const rampVolumeUp = (fromV, toV, setVolumeRaw, tokenRef) => {
+    const myToken = ++tokenRef.current;
+    const steps = 10, stepMs = 40;
+    let i = 0;
+    const tick = () => {
+      if (tokenRef.current !== myToken) return; // 途中で別の音量変更が入ったため打ち切る
+      i++;
+      setVolumeRaw(Math.round(fromV + (toV - fromV) * (i / steps)));
+      if (i < steps) setTimeout(tick, stepMs);
+    };
+    tick();
+  };
   const toggleQuickMute = () => {
     if (audioMuted) {
       const prev = audioMutedPrevRef.current;
-      changeSeVolume(prev.se || 70);
-      changeBgmVolume(prev.bgm || 70);
+      if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); }
+      rampVolumeUp(seVolume, prev.se || 70, setSeVolumeRaw, seRampTokenRef);
+      rampVolumeUp(bgmVolume, prev.bgm || 70, setBgmVolumeRaw, bgmRampTokenRef);
     } else {
       audioMutedPrevRef.current = { se: seVolume, bgm: bgmVolume };
       changeSeVolume(0);
@@ -1344,6 +1373,15 @@ function MonsterHeroGame() {
     window.addEventListener('pageshow', onVisible);
     const interval = setInterval(checkVersion, 2 * 60 * 1000);
     return () => { document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
+  }, []);
+
+  // タブ切り替え/バックグラウンド化から復帰した際、OSにより自動サスペンドされたAudioContextを
+  // 明示的に復帰させる(そのままだとBGM/SEが鳴らなくなったままになる不具合の対策)
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') Audio_.resumeIfNeeded(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', onVisible);
+    return () => { document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); };
   }, []);
 
   // カードドラッグ中のグローバル処理(タッチ/マウス両対応)
@@ -1615,31 +1653,38 @@ function MonsterHeroGame() {
   // 通常は素のモンスター種idの文字列だが、"masu:<masuId>"の形式ならマスモンインスタンスを指す。
   // マスモンの場合、表示名をマスモン名に差し替え、ステータス強化ポイント・間合い適性を反映した
   // オブジェクトを返す(idは元のモンスター種idのまま保つ。mainHero?.id==='Golem'等の特性判定を壊さないため)
+  // マスモンインスタンスに、種の基礎データ(ALL_PLAYER_MONSTERS)とstatPointsによる強化分を
+  // 合成した「モンスターらしいオブジェクト」を作る。resolveRosterEntryToMon(id経由)と、
+  // spendAptPoint/spendStatPointが返す最新のマスモンをその場で反映したい場面(PICK_ALLYモーダルの
+  // 再同期など)の両方から使う共通ロジック
+  const mergeMasuIntoMon = (masu) => {
+    const base = ALL_PLAYER_MONSTERS[masu.baseId];
+    if (!base) return null;
+    const sp = masu.statPoints || {};
+    return {
+      ...base,
+      masuId: masu.id,
+      masuName: masu.name,
+      name: masu.name,
+      baseHp: base.baseHp + (sp.hp || 0),
+      baseAtk: base.baseAtk + (sp.atk || 0),
+      baseDef: base.baseDef + (sp.def || 0),
+      baseGuts: base.baseGuts + (sp.guts || 0),
+      plusStats: {
+        hp: (base.plusStats?.hp || 0) + (sp.hp || 0),
+        atk: (base.plusStats?.atk || 0) + (sp.atk || 0),
+        def: (base.plusStats?.def || 0) + (sp.def || 0),
+        guts: (base.plusStats?.guts || 0) + (sp.guts || 0),
+      },
+      distAptitude: masu.distApt || base.distAptitude,
+      colors: getMasuColors(masu),
+    };
+  };
   const resolveRosterEntryToMon = (entry) => {
     if (typeof entry === 'string' && entry.startsWith('masu:')) {
       const masu = getMasuMon(entry.slice(5));
       if (!masu) return null;
-      const base = ALL_PLAYER_MONSTERS[masu.baseId];
-      if (!base) return null;
-      const sp = masu.statPoints || {};
-      return {
-        ...base,
-        masuId: masu.id,
-        masuName: masu.name,
-        name: masu.name,
-        baseHp: base.baseHp + (sp.hp || 0),
-        baseAtk: base.baseAtk + (sp.atk || 0),
-        baseDef: base.baseDef + (sp.def || 0),
-        baseGuts: base.baseGuts + (sp.guts || 0),
-        plusStats: {
-          hp: (base.plusStats?.hp || 0) + (sp.hp || 0),
-          atk: (base.plusStats?.atk || 0) + (sp.atk || 0),
-          def: (base.plusStats?.def || 0) + (sp.def || 0),
-          guts: (base.plusStats?.guts || 0) + (sp.guts || 0),
-        },
-        distAptitude: masu.distApt || base.distAptitude,
-        colors: getMasuColors(masu),
-      };
+      return mergeMasuIntoMon(masu);
     }
     return ALL_PLAYER_MONSTERS[entry] || null;
   };
@@ -1812,45 +1857,47 @@ function MonsterHeroGame() {
     setGameState('PROFILE');
   };
 
-  // マスモンの強化ポイントを1消費し、対象の距離の間合い適性を1段階上げる
+  // マスモンの強化ポイントを1消費し、対象の距離の間合い適性を1段階上げる。
+  // 更新後のマスモンを同期的に返す(呼び出し側がPICK_ALLYモーダルのスナップショットである
+  // currentPickingMonをその場で再同期できるようにするため。setMasuMonsは非同期反映のため
+  // 直後にmasuMonsを読み直しても古い値のままになってしまう)
   const spendAptPoint = (masuId, slotIdx) => {
     const masu = getMasuMon(masuId);
-    if (!masu || (masu.distAptPoints || 0) <= 0) return;
+    if (!masu || (masu.distAptPoints || 0) <= 0) return null;
     const current = (masu.distApt && masu.distApt[slotIdx]) || 'C';
     const idx = DIST_APTITUDE_GRADES.indexOf(current);
-    if (idx < 0 || idx >= DIST_APTITUDE_GRADES.length - 1) return; // 既にM(上限)
+    if (idx < 0 || idx >= DIST_APTITUDE_GRADES.length - 1) return null; // 既にM(上限)
     const nextGrade = DIST_APTITUDE_GRADES[idx + 1];
+    const distApt = [...(masu.distApt || ['C','C','C','C'])];
+    distApt[slotIdx] = nextGrade;
+    const updatedMasu = { ...masu, distApt, distAptPoints: (masu.distAptPoints || 0) - 1 };
     setMasuMons(prev => {
-      const next = prev.map(m => {
-        if (m.id !== masuId) return m;
-        const distApt = [...(m.distApt || ['C','C','C','C'])];
-        distApt[slotIdx] = nextGrade;
-        return { ...m, distApt, distAptPoints: (m.distAptPoints || 0) - 1 };
-      });
+      const next = prev.map(m => m.id === masuId ? updatedMasu : m);
       storeSet('mh_masu_mons', next, false);
       return next;
     });
     Audio_.se.tap();
+    return updatedMasu;
   };
   // マスモンの強化ポイントを1消費し、対象のステータスを1上げる(バランス調整前の暫定仕様: 1pt=+1)
   const STAT_POINT_KEYS = { hp: 'ライフ', atk: 'ちから', def: '丈夫さ', guts: 'ガッツ' };
   // 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
   const STAT_POINT_GAIN = { hp: 10, atk: 3, def: 3, guts: 3 };
+  // spendAptPointと同様、更新後のマスモンを同期的に返す
   const spendStatPoint = (masuId, statKey) => {
     const masu = getMasuMon(masuId);
-    if (!masu || (masu.distAptPoints || 0) <= 0) return;
-    if (!STAT_POINT_KEYS[statKey]) return;
+    if (!masu || (masu.distAptPoints || 0) <= 0) return null;
+    if (!STAT_POINT_KEYS[statKey]) return null;
+    const statPoints = { ...(masu.statPoints || {}) };
+    statPoints[statKey] = (statPoints[statKey] || 0) + (STAT_POINT_GAIN[statKey] || 1);
+    const updatedMasu = { ...masu, statPoints, distAptPoints: (masu.distAptPoints || 0) - 1 };
     setMasuMons(prev => {
-      const next = prev.map(m => {
-        if (m.id !== masuId) return m;
-        const statPoints = { ...(m.statPoints || {}) };
-        statPoints[statKey] = (statPoints[statKey] || 0) + (STAT_POINT_GAIN[statKey] || 1);
-        return { ...m, statPoints, distAptPoints: (m.distAptPoints || 0) - 1 };
-      });
+      const next = prev.map(m => m.id === masuId ? updatedMasu : m);
       storeSet('mh_masu_mons', next, false);
       return next;
     });
     Audio_.se.tap();
+    return updatedMasu;
   };
   // 強化ポイントリセットの書: 使用済みの強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻す。
   // 絆レベル・絆経験値そのものは変更しない
@@ -3669,13 +3716,13 @@ function MonsterHeroGame() {
                 </div>
                 <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
                   <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">現在のステータス(強化分込み)</div><div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{base.baseHp+(masu.statPoints?.hp||0)}{(masu.statPoints?.hp||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.hp})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{base.baseAtk+(masu.statPoints?.atk||0)}{(masu.statPoints?.atk||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.atk})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{base.baseDef+(masu.statPoints?.def||0)}{(masu.statPoints?.def||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.def})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{base.baseGuts+(masu.statPoints?.guts||0)}{(masu.statPoints?.guts||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.guts})</span>}</span></div></div></div>
-                  <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=(masu.distApt&&masu.distApt[idx])||'C'; const canUp=(masu.distAptPoints||0)>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>spendAptPoint(masu.id,idx)} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
+                  <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=(masu.distApt&&masu.distApt[idx])||'C'; const canUp=(masu.distAptPoints||0)>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>{const updated=spendAptPoint(masu.id,idx); if(updated) setMasuMonDetail(updated);}} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
                   {(masu.distAptPoints||0)>0&&(
                     <div className="bg-black/40 p-2 rounded-xl border border-emerald-500/30">
                       <div className="text-[7px] text-emerald-400 uppercase font-bold mb-1">ステータス強化(強化P 1つにつき使用・調整中)</div>
                       <div className="grid grid-cols-4 gap-1">
                         {Object.entries(STAT_POINT_KEYS).map(([key,label])=>(
-                          <button key={key} onClick={()=>spendStatPoint(masu.id,key)} className="flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95">
+                          <button key={key} onClick={()=>{const updated=spendStatPoint(masu.id,key); if(updated) setMasuMonDetail(updated);}} className="flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95">
                             <span className="text-[7px] text-emerald-300 font-black">{label}</span>
                             <span className="text-[10px] text-white font-black">+{STAT_POINT_GAIN[key]||1}</span>
                           </button>
@@ -4312,13 +4359,13 @@ function MonsterHeroGame() {
                     <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">基本ステータス</div><div className="space-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseHp:`${maxHp} → ${maxHp+(currentPickingMon.plusStats?.hp||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseAtk:`${atk} → ${atk+(currentPickingMon.plusStats?.atk||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseDef:`${def} → ${def+(currentPickingMon.plusStats?.def||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseGuts:`${maxGuts} → ${maxGuts+(currentPickingMon.plusStats?.guts||0)}`}</span></div></div></div>
                     {gameState==='PICK_HERO'?(<div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{currentPickingMon.traitDesc}</div></div>):(<div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{currentPickingMon.plusStats.hp>0&&`HP+${currentPickingMon.plusStats.hp} `}{currentPickingMon.plusStats.atk>0&&`攻+${currentPickingMon.plusStats.atk} `}{currentPickingMon.plusStats.def>0&&`防+${currentPickingMon.plusStats.def} `}{currentPickingMon.plusStats.guts>0&&`G+${currentPickingMon.plusStats.guts} `}</div></div>)}
                   </div>
-                  <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div>{currentPickingMon.masuId&&<div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {getMasuMon(currentPickingMon.masuId)?.distAptPoints||0}</div>}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(currentPickingMon,idx); const pts=currentPickingMon.masuId?(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0):0; const canUp=pts>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>spendAptPoint(currentPickingMon.masuId,idx)} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
+                  <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div>{currentPickingMon.masuId&&<div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {getMasuMon(currentPickingMon.masuId)?.distAptPoints||0}</div>}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(currentPickingMon,idx); const pts=currentPickingMon.masuId?(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0):0; const canUp=pts>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>{const updated=spendAptPoint(currentPickingMon.masuId,idx); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
                   {currentPickingMon.masuId&&(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0)>0&&(
                     <div className="bg-black/40 p-2 rounded-xl border border-emerald-500/30">
                       <div className="text-[7px] text-emerald-400 uppercase font-bold mb-1">ステータス強化(強化P 1つにつき使用・調整中)</div>
                       <div className="grid grid-cols-4 gap-1">
                         {Object.entries(STAT_POINT_KEYS).map(([key,label])=>(
-                          <button key={key} onClick={()=>spendStatPoint(currentPickingMon.masuId,key)} className="flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95">
+                          <button key={key} onClick={()=>{const updated=spendStatPoint(currentPickingMon.masuId,key); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95">
                             <span className="text-[7px] text-emerald-300 font-black">{label}</span>
                             <span className="text-[10px] text-white font-black">+{STAT_POINT_GAIN[key]||1}</span>
                           </button>
