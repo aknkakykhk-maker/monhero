@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 14:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 15:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -319,7 +319,9 @@ const MASU_COLOR_REGION_HUES = {
   Zan: [235, { hue: 2, noEdgeGuard: true }, { white: true, sMax: 0.24, vMin: 0.58 }],
   Mitarashi: [2, 40, { hue: 28, bbox: [0.29, 0.18, 0.71, 0.26] }],
   Ark: [219, 187, 60],
-  Iblis: [{ white: true, sMax: 0.15, vMin: 0.7 }, { hue: 264, sMin: 0.14, vMin: 0.35, vMax: 0.9 }, { white: true, sMax: 0.3, vMin: 0.15, vMax: 0.32 }],
+  // 紫色部分(耳・眉まわり・前足)は体の白バケツと彩度・明度が近く誤判定しやすいため、
+  // bboxで実際に紫がある範囲(頭部の帯+左右の前足)に判定を絞り込んでいる
+  Iblis: [{ white: true, sMax: 0.15, vMin: 0.7 }, { hue: 264, sMin: 0.14, vMin: 0.35, vMax: 0.9, bbox: [[0.15,0.33,0.85,0.53],[0.10,0.58,0.32,0.75],[0.68,0.58,0.90,0.75]] }, { white: true, sMax: 0.3, vMin: 0.15, vMax: 0.32 }],
 };
 // 部位判定後の平滑化(ごま塩ノイズ除去)の強さをモンスターごとに調整するテーブル。
 // 既定は半径2の多数決を1回。細かい毛並みの陰影で判定が激しく入れ替わるモンスターは
@@ -358,6 +360,12 @@ const _hsvToRgb = (h,s,v) => {
   else [r,g,b]=[c,0,x];
   return [Math.round((r+m)*255), Math.round((g+m)*255), Math.round((b+m)*255)];
 };
+// def.bboxが[x0,y0,x1,y1]なら単一の範囲、[[x0,y0,x1,y1],...]なら複数範囲のどれかに
+// 入っていればtrue(離れた複数箇所(例:両耳と両前足)を1つの部位として扱いたい場合に使う)
+const _bboxMatches = (bbox, nx, ny) => {
+  const boxes = Array.isArray(bbox[0]) ? bbox : [bbox];
+  return boxes.some(([x0, y0, x1, y1]) => nx >= x0 && nx <= x1 && ny >= y0 && ny <= y1);
+};
 // ピクセル(色相hh・彩度ss・明度vv・画像内の相対位置nx,ny)がregionDefs(MASU_COLOR_REGION_HUESの1モンスター分)の
 // どの部位に属するかを判定し、インデックスを返す(どれにも属さなければ-1=無染色のまま)
 const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
@@ -376,10 +384,7 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
   for (let idx = 0; idx < regionDefs.length; idx++) {
     const def = regionDefs[idx];
     if (def && typeof def === 'object' && def.white) {
-      if (def.bbox) {
-        const [x0, y0, x1, y1] = def.bbox;
-        if (nx < x0 || nx > x1 || ny < y0 || ny > y1) continue;
-      }
+      if (def.bbox && !_bboxMatches(def.bbox, nx, ny)) continue;
       if (ss <= (def.sMax ?? 0.18) && vv >= (def.vMin ?? 0.55) && vv <= (def.vMax ?? 1)) return idx;
     }
   }
@@ -388,10 +393,7 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
   let best = -1, bestD = 999;
   regionDefs.forEach((def, idx) => {
     if (def && typeof def === 'object' && (def.white || def.band)) return; // 上で判定済み
-    if (def && typeof def === 'object' && def.bbox) {
-      const [x0, y0, x1, y1] = def.bbox;
-      if (nx < x0 || nx > x1 || ny < y0 || ny > y1) return;
-    }
+    if (def && typeof def === 'object' && def.bbox && !_bboxMatches(def.bbox, nx, ny)) return;
     const hue = (typeof def === 'number') ? def : def.hue;
     const vMin = (def && typeof def === 'object') ? def.vMin : undefined;
     const vMax = (def && typeof def === 'object') ? def.vMax : undefined;
