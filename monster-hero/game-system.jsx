@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 20:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 21:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2406,6 +2406,7 @@ function MonsterHeroGame() {
         addPopup(`${RANGE_LABELS[intent.targetDist]}へ移動！`,'enemy','text-cyan-300 font-black text-xl drop-shadow-md');
         await wait(450);
         setEnemyDist(intent.targetDist);
+        syncAtkTierForDist(intent.targetDist);
         await wait(350);
         setEnemyAttackAnim(false);
         setEnemyAttackFx(null);
@@ -2735,6 +2736,7 @@ function MonsterHeroGame() {
     if (forcedMoveTarget!=null && forcedMoveTarget!==enemyDist) {
       endTurnDist=forcedMoveTarget;
       setEnemyDist(forcedMoveTarget);
+      syncAtkTierForDist(forcedMoveTarget);
       addPopup(`強制移動！ ${RANGE_LABELS[forcedMoveTarget]}距離へ`,'enemy','text-cyan-400 font-black text-lg drop-shadow-md');
       await wait(700);
       forcedMoveHappened=true;
@@ -2819,6 +2821,33 @@ function MonsterHeroGame() {
     setHand(prev=>prev.map(patchCard)); setDeck(prev=>prev.map(patchCard)); setGraveyard(prev=>prev.map(patchCard));
     Audio_.se.card();
   };
+  // 敵の距離が変わった(自発的な移動・距離攻撃による強制移動)直後に呼ぶ: 新しい距離に応じて
+  // 通常攻撃・距離攻撃カードのレベルを再算出し、変化していれば手札・山札・捨て札のカードも
+  // その場で差し替える(既に配られているカードも含めて反映するため)
+  const syncAtkTierForDist = (dist) => {
+    const nAtkL = computeAtkTier(slots, dist);
+    if (nAtkL === atkLevel) return;
+    setAtkLevel(nAtkL);
+    const atkNames=HERO_ATK_NAMES[mainHero?.id]||HERO_ATK_NAMES['Mocchi'];
+    const patchCard=(c)=>{
+      if(c.type==='atk') return {...c,...BASE_ATK_EVOLUTION[nAtkL],name:atkNames[nAtkL]};
+      if(c.type==='range_atk'){const revo=RANGE_EVOLUTION[nAtkL]; return {...c,name:`${RANGE_LABELS[c.rangeIdx]}${revo.name}`,guts:revo.guts,baseGuts:revo.baseGuts,mult:revo.mult,baseMult:revo.baseMult,crit:revo.crit,evoLevel:nAtkL};}
+      return c;
+    };
+    setHand(prev=>prev.map(patchCard)); setDeck(prev=>prev.map(patchCard)); setGraveyard(prev=>prev.map(patchCard));
+  };
+
+  // 通常攻撃・距離攻撃カードの上位レベルは、敵と同じ距離枠にいる味方の距離適性(%)で決まる
+  // (誰もいなければ0%扱い)。15%毎に次のレベルが解放される(0〜14%=Lv0、15〜29%=Lv1…)
+  const computeAtkTier = (currentSlots, dist) => {
+    const mon = currentSlots?.[dist];
+    if (!mon) return 0;
+    const pct = (DIST_APTITUDE_MULT[getDistAptitude(mon, dist)] - 1.0) * 100;
+    return Math.max(0, Math.min(BASE_ATK_EVOLUTION.length - 1, Math.floor(pct / 15)));
+  };
+  // 防御カードの上位レベル・追加枚数は、丈夫さ(バフ・デバフを含まない基礎ステ=defそのもの)が
+  // 100毎に自動で1段階上がる
+  const computeGuardLevel = (defVal) => Math.max(0, Math.min(GUARD_EVOLUTION.length - 1, Math.floor((defVal || 0) / 100)));
 
   const spawnEnemy = useCallback((w) => {
     const enemyKey=ENEMY_SEQUENCE[w-1]; const base=ENEMY_DATA[enemyKey];
@@ -2827,11 +2856,22 @@ function MonsterHeroGame() {
     const dist=Math.floor(Math.random()*4);
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyIntent(getNextEnemyAction(newEnemy,dist));
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
+    return dist;
   }, [getNextEnemyAction, difficulty]);
 
-  const initBattle = (w, s, u, t, gB) => {
-    setWave(w); spawnEnemy(w);
-    const pool=buildDeck(s||slots,atkLevel,guardLevel,u||ownedUniques,t||ownedTeachings,gB!==undefined?gB:guardBonusCount,slotUniqueChoice);
+  // defValは呼び出し元が直前に算出したばかりの丈夫さ(setDefで更新中の値)を明示的に渡すための引数。
+  // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
+  // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
+  // 必ず呼び出し元が保持している最新のローカル値を渡す
+  const initBattle = (w, s, u, t, defVal) => {
+    setWave(w);
+    const currentSlots = s||slots;
+    const dist = spawnEnemy(w);
+    const nAtkL = computeAtkTier(currentSlots, dist);
+    const nGrdL = computeGuardLevel(defVal!==undefined?defVal:def);
+    const nGB = nGrdL;
+    setAtkLevel(nAtkL); setGuardLevel(nGrdL); setGuardBonusCount(nGB);
+    const pool=buildDeck(currentSlots,nAtkL,nGrdL,u||ownedUniques,t||ownedTeachings,nGB,slotUniqueChoice);
     setHand(pool.slice(0,5)); setDeck(pool.slice(5)); setGraveyard([]); setGameState('BATTLE'); setIsBusy(false);
     setTurnBuffs({}); setNextTurnBuffs({}); // WAVE毎リセットの一時バフ・デバフを全てクリア
   };
@@ -2869,18 +2909,22 @@ function MonsterHeroGame() {
     if (!enemy) { // このWAVE1開始が今回の挑戦のスタート地点
       setAttemptCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_attempts_${difficulty}`, next[difficulty], false); return next; });
     }
-    setTimeout(()=>{setOwnedTeachings(nextTeachings); if(!enemy) initBattle(testMooMode?ENEMY_SEQUENCE.length:1,slots,ownedUniques,nextTeachings); else initBattle(wave+1,slots,ownedUniques,nextTeachings); setSelectedTeachingCard(null);},150);
+    setTimeout(()=>{setOwnedTeachings(nextTeachings); if(!enemy) initBattle(testMooMode?ENEMY_SEQUENCE.length:1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},150);
   };
 
   const handleReward = (type) => {
     if (effect) return;
-    let nAtkL=atkLevel, nGrdL=guardLevel, nMaxHp=maxHp, nAtk=atk, nDef=def, nMaxGuts=maxGuts, nGB=guardBonusCount;
-    if(type==='atk'){nAtkL=Math.min(8,atkLevel+1); nAtk=Math.floor(atk*1.10);}
-    else if(type==='def'){nGrdL=Math.min(8,guardLevel+1); nDef=Math.floor((def+20)*1.10); nGB+=1; nMaxHp=Math.floor(maxHp*1.20);}
+    // 攻撃強化・防御強化はステータスのみ上昇させる(技レベル・防御カード枚数は距離適性/丈夫さから
+    // 自動算出されるため、ここでは直接いじらない)
+    let nMaxHp=maxHp, nAtk=atk, nDef=def, nMaxGuts=maxGuts;
+    if(type==='atk'){nAtk=Math.floor(atk*1.10);}
+    else if(type==='def'){nDef=Math.floor((def+20)*1.10); nMaxHp=Math.floor(maxHp*1.20);}
     else if(type==='hp'){nMaxGuts=Math.floor((maxGuts+10)*1.1);}
-    setAtkLevel(nAtkL); setGuardLevel(nGrdL); setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts); setGuardBonusCount(nGB);
+    setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts);
+    const nGrdL=computeGuardLevel(nDef);
+    const guardLevelUp=type==='def'&&nGrdL>computeGuardLevel(def);
     const guardName=GUARD_EVOLUTION[nGrdL].name;
-    setEffect({type:'heal',label:type==='def'?`${guardName}取得！ 枚数UP`:"能力覚醒完了",icon:type==='def'?"🛡️":"⚡",monEmoji:"🆙",subLabel:type==='def'?`デッキの防御カードが [${guardName}] へ進化し、枚数が追加されます。`:''});
+    setEffect({type:'heal',label:guardLevelUp?`${guardName}解放！ 枚数UP`:(type==='def'?"丈夫さUP":"能力覚醒完了"),icon:type==='def'?"🛡️":"⚡",monEmoji:"🆙",subLabel:guardLevelUp?`丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化し、枚数も増えます。`:''});
     setTimeout(()=>{
       setEffect(null);
       const joinWaves=[2,4,6];
@@ -2898,7 +2942,7 @@ function MonsterHeroGame() {
         const needed=4-pool.length; if(needed>0&&notOwnedCards.length>0) pool.push(...notOwnedCards.sort(()=>Math.random()-0.5).slice(0,needed));
         while(pool.length<4&&activeCards.length>=4){const random=activeCards[Math.floor(Math.random()*activeCards.length)]; if(!pool.find(p=>p.id===random.id)) pool.push(random);}
         setTeachingPool(pool); setGameState('PICK_TEACHING');
-      } else { initBattle(wave+1,slots,ownedUniques,ownedTeachings,nGB); }
+      } else { initBattle(wave+1,slots,ownedUniques,ownedTeachings,nDef); }
     },900);
   };
 
@@ -4530,11 +4574,13 @@ function MonsterHeroGame() {
           <div className="w-full max-w-sm space-y-3 mb-3 shrink-0 flex-1 min-h-0 overflow-y-auto mh-scroll flex flex-col justify-center">
             <button disabled={!!effect} onClick={()=>setPendingReward('atk')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='atk'?'bg-red-900/40 border-red-400 scale-[1.03] ring-4 ring-red-500/50 shadow-[0_0_25px_rgba(248,113,113,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
               <div className="p-2 bg-red-600/20 rounded-xl text-red-500 relative"><Sword size={18}/>{pendingReward==='atk'&&<div className="absolute -top-1.5 -right-1.5 bg-red-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
-              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>攻撃覚醒 <ChevronRight size={12}/> {(HERO_ATK_NAMES[mainHero?.id]||HERO_ATK_NAMES['Mocchi'])[Math.min(8,atkLevel+1)]}</div><div className="flex flex-wrap justify-between gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ちから {atk} → <span className="text-red-400 font-bold">{Math.floor(atk*1.10)}</span></div><div>技威力 {Math.floor(BASE_ATK_EVOLUTION[Math.min(8,atkLevel)].mult*100)} → <span className="text-red-400 font-bold">{Math.floor(BASE_ATK_EVOLUTION[Math.min(8,atkLevel+1)].mult*100)}</span></div><div>会心 {Math.round(BASE_ATK_EVOLUTION[Math.min(8,atkLevel)].crit*100)}% → <span className="text-yellow-400 font-bold">{Math.round(BASE_ATK_EVOLUTION[Math.min(8,atkLevel+1)].crit*100)}%</span></div></div></div>
+              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>攻撃覚醒</div><div className="flex flex-wrap justify-between gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ちから {atk} → <span className="text-red-400 font-bold">{Math.floor(atk*1.10)}</span></div></div><div className="text-slate-500 mt-1" style={{fontSize:'8px'}}>※技レベルは距離適性、防御カードは丈夫さに応じて自動で決まります</div></div>
             </button>
             <button disabled={!!effect} onClick={()=>setPendingReward('def')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='def'?'bg-emerald-900/40 border-emerald-400 scale-[1.03] ring-4 ring-emerald-500/50 shadow-[0_0_25px_rgba(52,211,153,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
               <div className="p-2 bg-emerald-600/20 rounded-xl text-emerald-500 relative"><ShieldCheck size={18}/>{pendingReward==='def'&&<div className="absolute -top-1.5 -right-1.5 bg-emerald-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
-              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>防御覚醒 <ChevronRight size={12}/> {GUARD_EVOLUTION[Math.min(8,guardLevel+1)].name}</div><div className="grid grid-cols-2 gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ライフ {maxHp} → <span className="text-pink-400 font-bold">{Math.floor(maxHp*1.20)}</span></div><div>丈夫さ {def} → <span className="text-emerald-400 font-bold">{Math.floor((def+20)*1.10)}</span></div></div><div className="text-emerald-400 font-mono font-bold mt-1" style={{fontSize:'9px'}}>ガード枚数 {2+guardBonusCount} → {3+guardBonusCount}</div></div>
+              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>防御覚醒</div><div className="grid grid-cols-2 gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ライフ {maxHp} → <span className="text-pink-400 font-bold">{Math.floor(maxHp*1.20)}</span></div><div>丈夫さ {def} → <span className="text-emerald-400 font-bold">{Math.floor((def+20)*1.10)}</span></div></div>
+              {(()=>{const nextDef=Math.floor((def+20)*1.10); const curGL=computeGuardLevel(def); const nextGL=computeGuardLevel(nextDef); return nextGL>curGL&&(<div className="text-emerald-400 font-mono font-bold mt-1" style={{fontSize:'9px'}}>丈夫さ100到達で [{GUARD_EVOLUTION[nextGL].name}] 解放！ガード枚数 {2+curGL} → {2+nextGL}</div>);})()}
+              </div>
             </button>
             <button disabled={!!effect} onClick={()=>setPendingReward('hp')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='hp'?'bg-pink-900/40 border-pink-400 scale-[1.03] ring-4 ring-pink-500/50 shadow-[0_0_25px_rgba(244,114,182,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
               <div className="p-2 bg-pink-600/20 rounded-xl text-pink-500 relative"><Heart size={18}/>{pendingReward==='hp'&&<div className="absolute -top-1.5 -right-1.5 bg-pink-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
