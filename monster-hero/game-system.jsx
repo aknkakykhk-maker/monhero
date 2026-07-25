@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 00:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 01:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -249,7 +249,9 @@ const Audio_ = (() => {
     enemyMove: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.05 }, volume: -14 }).connect(seBus); s.triggerAttackRelease('E4', '32n', t); s.triggerAttackRelease('B3', '16n', t + 0.06); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 400); },
     join: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.18, sustain: 0.3, release: 0.4 }, volume: -10 }).connect(reverb); const t = Tone.now(); const seq = [[0,'E5','8n'],[0.15,'G5','8n'],[0.3,'C6','8n'],[0.45,'E6','4n'],[0.45,'C6','4n'],[0.45,'G5','4n'],[0.8,'D6','8n'],[0.95,'E6','4n'],[0.95,'C6','4n'],[0.95,'G5','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); setTimeout(() => { try { v.dispose(); } catch (e) {} }, 1800); },
     victory: async () => { if (!enabled) return; await ensure(); if (!Tone) return; clearParts(); currentKey = null; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.4 }, volume: -19 }).connect(reverb); const vb = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.4, release: 0.3 }, volume: -19 }).connect(seBus); const t = Tone.now(); const seq = [[0,'C5','8n'],[0,'E5','8n'],[0,'G5','8n'],[0.18,'C5','8n'],[0.18,'E5','8n'],[0.18,'G5','8n'],[0.36,'C5','8n'],[0.36,'E5','8n'],[0.36,'G5','8n'],[0.54,'G5','4n'],[0.54,'C6','4n'],[0.54,'E6','4n'],[0.9,'F5','8n'],[0.9,'A5','8n'],[1.08,'G5','8n'],[1.08,'B5','8n'],[1.26,'C6','2n'],[1.26,'E6','2n'],[1.26,'G6','2n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); [[0,'C3'],[0.54,'C3'],[0.9,'F2'],[1.08,'G2'],[1.26,'C3']].forEach(([tt, n]) => vb.triggerAttackRelease(n, '4n', t + tt)); setTimeout(() => { try { v.dispose(); vb.dispose(); } catch (e) {} }, 2600); },
-    levelUp: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.15, sustain: 0.2, release: 0.3 }, volume: -12 }).connect(reverb); const seq = [[0,'C5','16n'],[0.08,'E5','16n'],[0.16,'G5','16n'],[0.24,'C6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const sp = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.4 }, volume: -16 }).connect(reverb); sp.triggerAttackRelease('C6', '2n', t + 0.24); setTimeout(() => { try { v.dispose(); sp.dispose(); } catch (e) {} }, 1200); }
+    levelUp: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.15, sustain: 0.2, release: 0.3 }, volume: -12 }).connect(reverb); const seq = [[0,'C5','16n'],[0.08,'E5','16n'],[0.16,'G5','16n'],[0.24,'C6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const sp = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.4 }, volume: -16 }).connect(reverb); sp.triggerAttackRelease('C6', '2n', t + 0.24); setTimeout(() => { try { v.dispose(); sp.dispose(); } catch (e) {} }, 1200); },
+    // 合体演出用: 上昇アルペジオ→(両者が重なるタイミングで)ベルの一撃+きらめき和音の「ピカーン」
+    fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
   return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, se };
@@ -1041,6 +1043,13 @@ function MonsterHeroGame() {
   const [masuMonDetail, setMasuMonDetail] = useState(null); // マスモン一覧: タップ中のマスモン詳細
   const [showMasuRenameModal, setShowMasuRenameModal] = useState(false);
   const [masuRenameInput, setMasuRenameInput] = useState('');
+  // 合体: マスモン同士を合体させ、副の絆経験値を主に受け継ぐ機能。fusionStepで画面内の段階を管理する
+  const [fusionStep, setFusionStep] = useState('main'); // 'main'|'sub'|'confirm'|'anim'|'result'
+  const [fusionMainId, setFusionMainId] = useState(null); // 主として選んだマスモンid
+  const [fusionSubId, setFusionSubId] = useState(null); // 副として選んだマスモンid(合体後に消滅する)
+  const [fusionInheritUnique, setFusionInheritUnique] = useState(false); // 副の固有技を引き継ぐか(絆Lv10以上同士のみ選択可)
+  const [fusionAnimPhase, setFusionAnimPhase] = useState(0); // 合体演出の進行段階(0=開始前,1=接近,2=フラッシュ)
+  const [fusionResultData, setFusionResultData] = useState(null); // 演出後の結果画面表示用スナップショット
   const [finalRewardSummary, setFinalRewardSummary] = useState(null); // 最終リザルト画面に出す今回の獲得内訳
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
@@ -1250,6 +1259,18 @@ function MonsterHeroGame() {
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
   }, []);
+
+  // 合体演出: anim段階に入ったら接近→マージ→フラッシュの順で進行し、最後に結果画面へ遷移する
+  useEffect(() => {
+    if (fusionStep !== 'anim') return;
+    setFusionAnimPhase(1);
+    const timers = [
+      setTimeout(() => setFusionAnimPhase(2), 700),
+      setTimeout(() => setFusionAnimPhase(3), 1300),
+      setTimeout(() => setFusionStep('result'), 2000),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, [fusionStep]);
 
   // Load saved data
   useEffect(() => {
@@ -1722,6 +1743,61 @@ function MonsterHeroGame() {
       storeSet('mh_monster_roster', next, false);
       return next;
     });
+  };
+  // 合体: 副の絆経験値(累計bondXp)をまるごと主に加算し、副は消滅させる。
+  // 消費ダイヤは(主の絆Lv+副の絆Lv)×100。両者とも絆Lv10以上でfusionInheritUniqueがtrueなら、
+  // 副の固有技を「継承した固有技」としてinheritedUniquesに記録する(現時点ではバトルでは未使用。
+  // 今後バトル中に複数の固有技から選べる仕様に対応した際に使う想定のデータ保持のみ)
+  const executeMasuFusion = () => {
+    const main = getMasuMon(fusionMainId);
+    const sub = getMasuMon(fusionSubId);
+    if (!main || !sub || main.id === sub.id) return null;
+    const mainLvl = bondLevelInfo(main.bondXp || 0);
+    const subLvl = bondLevelInfo(sub.bondXp || 0);
+    const cost = (mainLvl.level + subLvl.level) * 100;
+    if (gold < cost) return null;
+    const beforeXp = main.bondXp || 0;
+    const gainedXp = sub.bondXp || 0;
+    const afterXp = beforeXp + gainedXp;
+    const before = bondLevelInfo(beforeXp);
+    const after = bondLevelInfo(afterXp);
+    const gainedLevels = after.level - before.level;
+    const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
+    const mainBase = ALL_PLAYER_MONSTERS[main.baseId];
+    const canInherit = mainLvl.level >= 10 && subLvl.level >= 10 && fusionInheritUnique;
+    const inheritedUnique = (canInherit && subBase) ? { ...subBase.unique, monId: subBase.id, sourceMasuName: sub.name, evoLevel: 0 } : null;
+    const historyEntry = { subName: sub.name, subBaseId: sub.baseId, subBondLevel: subLvl.level, xpGained: gainedXp, inherited: !!inheritedUnique, timestamp: Date.now() };
+    setMasuMons(prev => {
+      const next = prev
+        .filter(m => m.id !== sub.id)
+        .map(m => m.id === main.id ? {
+          ...m,
+          bondXp: afterXp,
+          distAptPoints: (m.distAptPoints || 0) + gainedLevels,
+          fusionHistory: [...(m.fusionHistory || []), historyEntry],
+          ...(inheritedUnique ? { inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique] } : {}),
+        } : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    const subEntry = 'masu:' + sub.id;
+    setMonsterRosterIds(prev => {
+      if (!prev.includes(subEntry)) return prev;
+      const next = prev.filter(x => x !== subEntry);
+      storeSet('mh_monster_roster', next, false);
+      return next;
+    });
+    const goldAfter = gold - cost;
+    setGold(goldAfter);
+    storeSet('mh_gold', goldAfter, false);
+    return {
+      mainName: main.name, mainIconUrl: mainBase?.iconUrl, mainBaseId: main.baseId, mainEmoji: mainBase?.emoji, mainColors: getMasuColors(main),
+      subName: sub.name, subIconUrl: subBase?.iconUrl, subBaseId: sub.baseId, subEmoji: subBase?.emoji, subColors: getMasuColors(sub),
+      before, after, gainedXp, gainedLevels, inherited: !!inheritedUnique, cost,
+    };
+  };
+  const resetFusionFlow = () => {
+    setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
   };
   // ラン終了画面: 今回のランで勇者モンに選んでいた(まだマスモン化していない)モンスター種を、
   // 今回のランで得た絆経験値をそのまま初期値として、名前を付けてマスモンとして登録する
@@ -2781,6 +2857,10 @@ function MonsterHeroGame() {
                   <Package size={12} className="text-teal-400"/><span className="text-[9px] font-black text-teal-400 uppercase">アイテム欄</span>
                   <span className="text-[12px] font-black text-teal-200">{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個</span>
                 </button>
+                <button onClick={()=>{ if(masuMons.length<2) return; resetFusionFlow(); setGameState('MASU_FUSION'); }} disabled={masuMons.length<2} className={`col-span-2 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl ${masuMons.length<2?'bg-slate-900/60 border border-slate-800 opacity-50':'bg-violet-950/40 border border-violet-500/40 active:scale-95'}`}>
+                  <Sparkles size={12} className="text-violet-400"/><span className="text-[9px] font-black text-violet-400 uppercase">合体</span>
+                  <span className="text-[9px] font-bold text-slate-500">{masuMons.length<2?'(マスモンが2体以上必要)':'マスモン同士を合体させる'}</span>
+                </button>
               </div>
             </div>
             <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-2 px-1 shrink-0">難易度別 記録</div>
@@ -2902,7 +2982,7 @@ function MonsterHeroGame() {
                         <div key={e.key} className="relative">
                           <button onClick={()=>toggleDraftMonster(e.entryId)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-pink-900/40 border-pink-400 ring-2 ring-pink-400':'bg-slate-900 border-pink-900/50'}`}>
                             <div className="relative w-12 h-12 shrink-0">
-                              <div className="w-12 h-12 rounded-full overflow-hidden border border-pink-400/40"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                              <div className={`w-12 h-12 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                               <div className="absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[6px] font-black text-white leading-tight">マスモン</div>
                             </div>
                             <div className="text-[10px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
@@ -3011,7 +3091,7 @@ function MonsterHeroGame() {
                   const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
                   return (
                     <button key={e.key} onClick={()=>setMasuMonDetail(masu)} className="rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
-                      <div className="w-12 h-12 rounded-full overflow-hidden border border-pink-400/40 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                      <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                       <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
                       {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>}
                       <div className="w-full mt-0.5">
@@ -3051,7 +3131,7 @@ function MonsterHeroGame() {
                         const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
                         return (
                           <button key={e.key} onClick={()=>setMasuMonDetail(masu)} className="rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
-                            <div className="w-12 h-12 rounded-full overflow-hidden border border-pink-400/40 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                            <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                             <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
                             {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>}
                             <div className="w-full mt-0.5">
@@ -3080,6 +3160,180 @@ function MonsterHeroGame() {
             </div>
           </div>
         )}
+
+        {/* 合体: マスモン同士を合体させ、副の絆経験値を主に受け継ぐ。主選択→副選択→確認→演出→結果の5段階 */}
+        {gameState==='MASU_FUSION'&&(()=>{
+          const closeFusion = () => { resetFusionFlow(); setGameState('PROFILE'); };
+          const fusedBorder = (masu) => (masu.fusionHistory||[]).length>0 ? 'border-amber-400 ring-1 ring-amber-400' : 'border-violet-400/40';
+
+          if (fusionStep==='main') {
+            return (
+              <div className="flex-1 flex flex-col h-full min-h-0 p-4">
+                <div className="flex items-center gap-2 mb-2 shrink-0">
+                  <button onClick={closeFusion} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                  <h2 className="text-xl font-black italic text-violet-400 uppercase tracking-widest">合体・主を選ぶ</h2>
+                </div>
+                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">絆経験値を受け継いで残る「主」となるマスモンを選んでください</div>
+                <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+                  <div className="grid grid-cols-3 gap-2.5 pb-4">
+                    {masuMons.map(masu=>{
+                      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+                      if (!base) return null;
+                      const lvl = bondLevelInfo(masu.bondXp||0);
+                      return (
+                        <button key={masu.id} onClick={()=>{setFusionMainId(masu.id); setFusionStep('sub');}} className="rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
+                          <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${fusedBorder(masu)}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+                          <div className="text-[9px] font-black text-violet-200 truncate w-full text-center">{masu.name}</div>
+                          <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (fusionStep==='sub') {
+            const main = getMasuMon(fusionMainId);
+            if (!main) { resetFusionFlow(); return null; }
+            const candidates = masuMons.filter(m=>m.id!==fusionMainId);
+            return (
+              <div className="flex-1 flex flex-col h-full min-h-0 p-4">
+                <div className="flex items-center gap-2 mb-2 shrink-0">
+                  <button onClick={()=>{setFusionMainId(null); setFusionStep('main');}} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                  <h2 className="text-xl font-black italic text-violet-400 uppercase tracking-widest">合体・副を選ぶ</h2>
+                </div>
+                <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">「{main.name}」に絆経験値を渡す「副」を選んでください。副は合体後にいなくなります</div>
+                <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+                  {candidates.length===0?(
+                    <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>💫</span><div className="text-[11px] text-slate-400 mt-2">合体できる他のマスモンがいません。</div></div>
+                  ):(
+                    <div className="grid grid-cols-3 gap-2.5 pb-4">
+                      {candidates.map(masu=>{
+                        const base = ALL_PLAYER_MONSTERS[masu.baseId];
+                        if (!base) return null;
+                        const lvl = bondLevelInfo(masu.bondXp||0);
+                        return (
+                          <button key={masu.id} onClick={()=>{setFusionSubId(masu.id); setFusionStep('confirm');}} className="rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
+                            <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${fusedBorder(masu)}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+                            <div className="text-[9px] font-black text-violet-200 truncate w-full text-center">{masu.name}</div>
+                            <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          if (fusionStep==='confirm') {
+            const main = getMasuMon(fusionMainId);
+            const sub = getMasuMon(fusionSubId);
+            if (!main || !sub) { resetFusionFlow(); return null; }
+            const mainBase = ALL_PLAYER_MONSTERS[main.baseId];
+            const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
+            if (!mainBase || !subBase) { resetFusionFlow(); return null; }
+            const mainLvl = bondLevelInfo(main.bondXp||0);
+            const subLvl = bondLevelInfo(sub.bondXp||0);
+            const cost = (mainLvl.level + subLvl.level) * 100;
+            const canAfford = gold >= cost;
+            const canChooseInherit = mainLvl.level>=10 && subLvl.level>=10 && !!subBase.unique;
+            return (
+              <div className="flex-1 flex flex-col h-full min-h-0 p-4">
+                <div className="flex items-center gap-2 mb-2 shrink-0">
+                  <button onClick={()=>{setFusionSubId(null); setFusionStep('sub');}} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                  <h2 className="text-xl font-black italic text-violet-400 uppercase tracking-widest">合体の確認</h2>
+                </div>
+                <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-violet-400 shrink-0"><DyedMonsterImage baseId={main.baseId} src={mainBase.iconUrl} alt={main.name} masuColors={getMasuColors(main)} className="w-full h-full object-cover"/></div>
+                      <div className="text-[9px] font-black text-violet-200">{main.name}</div>
+                      <div className="text-[7px] text-amber-300 font-black">主(残る)</div>
+                    </div>
+                    <Sparkles size={20} className="text-amber-300"/>
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-slate-500 shrink-0"><DyedMonsterImage baseId={sub.baseId} src={subBase.iconUrl} alt={sub.name} masuColors={getMasuColors(sub)} className="w-full h-full object-cover"/></div>
+                      <div className="text-[9px] font-black text-slate-300">{sub.name}</div>
+                      <div className="text-[7px] text-slate-500 font-black">副(消える)</div>
+                    </div>
+                  </div>
+                  <div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-2 space-y-1.5">
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">受け継ぐ絆経験値</span><span className="text-pink-300 font-black">{(sub.bondXp||0).toLocaleString()} XP</span></div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${canAfford?'text-amber-300':'text-red-400'}`}><Gem size={10}/>{cost.toLocaleString()}</span></div>
+                    <div className="text-[7px] text-slate-500">({main.name}絆Lv.{mainLvl.level} + {sub.name}絆Lv.{subLvl.level}) × 100</div>
+                    {!canAfford&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません(所持: {gold.toLocaleString()})</div>}
+                  </div>
+                  {canChooseInherit && (
+                    <button onClick={()=>setFusionInheritUnique(v=>!v)} className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border mb-2 active:scale-95 ${fusionInheritUnique?'bg-amber-950/50 border-amber-500':'bg-slate-900 border-slate-800'}`}>
+                      <span className="text-[10px] font-black text-left text-white">「{sub.name}」の固有技「{subBase.unique.name}」を引き継ぐ<br/><span className="text-[7px] text-slate-500 font-bold">※データとして記録のみ。現在はバトルで使用できません</span></span>
+                      <div className={`w-9 h-5 rounded-full shrink-0 relative ${fusionInheritUnique?'bg-amber-500':'bg-slate-700'}`}><div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${fusionInheritUnique?'left-4':'left-0.5'}`}></div></div>
+                    </button>
+                  )}
+                  <div className="bg-red-950/40 border border-red-500/40 rounded-xl p-3 mb-2">
+                    <div className="text-[9px] text-red-300 font-black flex items-center gap-1 mb-1"><AlertCircle size={11}/>注意</div>
+                    <div className="text-[8px] text-red-200/90 leading-relaxed">合体すると副の「{sub.name}」はいなくなります。この操作は取り消せません。</div>
+                  </div>
+                </div>
+                <button onClick={()=>{
+                  if (!canAfford) return;
+                  const result = executeMasuFusion();
+                  if (!result) return;
+                  setFusionResultData(result);
+                  setFusionStep('anim');
+                  Audio_.se.fusion();
+                }} disabled={!canAfford} className={`w-full py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg shrink-0 mt-1 flex items-center justify-center gap-2 ${canAfford?'bg-violet-600 text-white active:scale-95':'bg-slate-800 text-slate-600'}`}><Sparkles size={16}/>合体する</button>
+              </div>
+            );
+          }
+
+          if (fusionStep==='anim') {
+            const d = fusionResultData;
+            if (!d) return null;
+            return (
+              <div className="fixed inset-0 flex items-center justify-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:32000,overflow:'hidden'}}>
+                {fusionAnimPhase>=3&&(<div className="absolute inset-0" style={{animation:'fusionFlashFade 700ms ease-out forwards'}}></div>)}
+                <div className="flex items-center justify-center gap-6 relative">
+                  <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-violet-400 shadow-[0_0_30px_rgba(167,139,250,0.6)] bg-slate-900" style={{animation: fusionAnimPhase===1?'fusionSlideInLeft 700ms ease-out forwards':fusionAnimPhase>=2?'fusionMergeShake 600ms ease-in-out':'none'}}>
+                    {d.mainIconUrl?(<DyedMonsterImage baseId={d.mainBaseId} src={d.mainIconUrl} alt={d.mainName} masuColors={d.mainColors} className="w-full h-full object-cover"/>):(<div className="w-full h-full flex items-center justify-center text-5xl">{d.mainEmoji}</div>)}
+                  </div>
+                  <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-slate-400 shadow-[0_0_30px_rgba(148,163,184,0.5)] bg-slate-900" style={{animation: fusionAnimPhase===1?'fusionSlideInRight 700ms ease-out forwards':fusionAnimPhase>=2?'fusionMergeShake 600ms ease-in-out':'none'}}>
+                    {d.subIconUrl?(<DyedMonsterImage baseId={d.subBaseId} src={d.subIconUrl} alt={d.subName} masuColors={d.subColors} className="w-full h-full object-cover"/>):(<div className="w-full h-full flex items-center justify-center text-5xl">{d.subEmoji}</div>)}
+                  </div>
+                  {fusionAnimPhase>=3&&(
+                    <div className="absolute left-1/2 top-1/2 rounded-full bg-white" style={{width:'40px',height:'40px',marginLeft:'-20px',marginTop:'-20px',animation:'fusionFlashBurst 700ms ease-out forwards'}}></div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          // result
+          const d = fusionResultData;
+          if (!d) { resetFusionFlow(); return null; }
+          const pctAfter = Math.max(0,Math.min(100,(d.after.xpIntoLevel/Math.max(1,d.after.xpForNext))*100));
+          return (
+            <div className="fixed inset-0 flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:32000}}>
+              <Sparkles size={32} className="text-amber-300 mb-2"/>
+              <h2 className="text-lg font-black text-white mb-1">合体完了！</h2>
+              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.5)] mb-3 bg-slate-900">
+                {d.mainIconUrl?(<DyedMonsterImage baseId={d.mainBaseId} src={d.mainIconUrl} alt={d.mainName} masuColors={d.mainColors} className="w-full h-full object-cover"/>):(<div className="w-full h-full flex items-center justify-center text-5xl">{d.mainEmoji}</div>)}
+              </div>
+              <div className="text-sm font-black text-white text-center mb-3">{d.mainName}が「{d.subName}」の絆経験値<span className="text-pink-300"> {d.gainedXp.toLocaleString()} XP</span>を受け継いだ！</div>
+              <div className="w-full max-w-xs bg-black/40 border border-pink-500/30 rounded-2xl p-3 mb-2">
+                <div className="flex justify-between text-[9px] text-pink-300 font-black mb-1"><span>絆Lv.{d.before.level}</span><span>→</span><span>絆Lv.{d.after.level}</span></div>
+                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pctAfter}%`}}></div></div>
+                {d.gainedLevels>0&&<div className="text-[9px] text-emerald-400 font-black text-center mt-1">絆レベルが{d.gainedLevels}上がった！</div>}
+              </div>
+              {d.inherited&&(<div className="text-[10px] text-amber-300 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2">「{d.subName}」の固有技を継承データとして記録しました</div>)}
+              <div className="text-[9px] text-slate-500 font-bold mb-4">ダイヤを{d.cost.toLocaleString()}消費しました</div>
+              <button onClick={()=>{ resetFusionFlow(); setGameState('MASU_MONS'); }} className="w-full max-w-xs bg-violet-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95">とじる</button>
+            </div>
+          );
+        })()}
 
         {/* アイテム欄: 所持している消耗アイテムを一覧表示し、「使う」から対象のマスモンを選ぶ */}
         {gameState==='ITEM_INVENTORY'&&(
@@ -3165,7 +3419,7 @@ function MonsterHeroGame() {
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000}}>
               <div className="bg-slate-900 border-2 border-pink-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
                 <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
-                  <div className="w-20 h-20 rounded-full overflow-hidden border border-pink-400/40 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+                  <div className={`w-20 h-20 rounded-full overflow-hidden border shrink-0 ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-2 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
                   <div className="flex-1 min-w-0">
                     <button onClick={()=>{setMasuRenameInput(masu.name); setShowMasuRenameModal(true);}} className="flex items-center gap-1.5 active:scale-95">
                       <h3 className="text-lg font-black text-white truncate">{masu.name}</h3><Edit3 size={12} className="text-slate-500 shrink-0"/>
@@ -3191,6 +3445,29 @@ function MonsterHeroGame() {
                             <span className="text-[7px] text-emerald-300 font-black">{label}</span>
                             <span className="text-[10px] text-white font-black">+{STAT_POINT_GAIN[key]||1}</span>
                           </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(masu.fusionHistory||[]).length>0&&(
+                    <div className="bg-black/40 p-2 rounded-xl border border-amber-500/30">
+                      <div className="text-[7px] text-amber-400 uppercase font-bold mb-1 flex items-center gap-1"><Sparkles size={9}/>合体履歴</div>
+                      <div className="space-y-1">
+                        {masu.fusionHistory.map((h,idx)=>(
+                          <div key={idx} className="text-[8px] text-slate-300 font-bold flex items-center justify-between gap-1 bg-black/30 rounded-lg px-2 py-1">
+                            <span className="truncate">「{h.subName}」を吸収{h.inherited&&<span className="text-amber-300">(固有技継承)</span>}</span>
+                            <span className="text-pink-300 font-black shrink-0">+{h.xpGained.toLocaleString()}XP</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(masu.inheritedUniques||[]).length>0&&(
+                    <div className="bg-black/40 p-2 rounded-xl border border-amber-500/30">
+                      <div className="text-[7px] text-amber-400 uppercase font-bold mb-1">継承した固有技(現在はバトルで未使用)</div>
+                      <div className="space-y-1">
+                        {masu.inheritedUniques.map((u,idx)=>(
+                          <div key={idx} className="text-[8px] text-amber-200 font-bold bg-black/30 rounded-lg px-2 py-1">{u.name}<span className="text-slate-500 font-normal">(元{u.sourceMasuName})</span></div>
                         ))}
                       </div>
                     </div>
@@ -4278,6 +4555,33 @@ const createAnimationStyle = () => {
       68% { transform: translate(-11px,-12px) scale(1.008); }
       80% { transform: translate(9px,6px) scale(1.004); }
       90% { transform: translate(-6px,4px) scale(1.002); }
+    }
+    @keyframes fusionSlideInLeft {
+      0% { transform: translateX(-160%) scale(0.8); opacity: 0; }
+      55% { transform: translateX(6%) scale(1.06); opacity: 1; }
+      100% { transform: translateX(0) scale(1); opacity: 1; }
+    }
+    @keyframes fusionSlideInRight {
+      0% { transform: translateX(160%) scale(0.8); opacity: 0; }
+      55% { transform: translateX(-6%) scale(1.06); opacity: 1; }
+      100% { transform: translateX(0) scale(1); opacity: 1; }
+    }
+    @keyframes fusionMergeShake {
+      0%,100% { transform: translate(0,0) scale(1); }
+      20% { transform: translate(-7px,4px) scale(1.03); }
+      40% { transform: translate(7px,-4px) scale(1.06); }
+      60% { transform: translate(-5px,3px) scale(1.04); }
+      80% { transform: translate(4px,-3px) scale(1.02); }
+    }
+    @keyframes fusionFlashBurst {
+      0% { transform: scale(0); opacity: 0; }
+      35% { transform: scale(1.5); opacity: 1; }
+      100% { transform: scale(3.2); opacity: 0; }
+    }
+    @keyframes fusionFlashFade {
+      0%,55% { background-color: rgba(255,255,255,0); }
+      70% { background-color: rgba(255,255,255,0.9); }
+      100% { background-color: rgba(255,255,255,0); }
     }
     .mh-scroll::-webkit-scrollbar { width: 6px; }
     .mh-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 9999px; }
