@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 16:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 17:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -524,21 +524,38 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
   _dyeRegionMaskCache[cacheKey] = promise;
   return promise;
 };
+// 光沢のあるグラデーション塗り(彩度の低いハイライト〜彩度の高い陰の帯で立体感を出す絵)を持つ
+// モンスターの一覧。染色時に彩度を狙った値へ一律固定すると、このグラデーションが均一に塗り潰されて
+// のっぺり・安っぽく見えてしまうため、該当モンスターだけ元の彩度分布に比例させて塗る(下記参照)
+const MASU_COLOR_PRESERVE_GLOSS = { Ark: true };
 // ImageDataのピクセル配列(RGBA)を、指定した染色色idの狙った色相・彩度に置き換える(明度は元の陰影を保つ)
-const _recolorImageData = (data, colorId) => {
+const _recolorImageData = (data, colorId, baseId) => {
   const t = MASU_COLOR_TARGET[colorId];
   if (!t) return;
+  let satRef = 1;
+  if (MASU_COLOR_PRESERVE_GLOSS[baseId]) {
+    // 光沢グラデーションを保つモンスターは、画像全体の最大彩度を基準に各ピクセルの彩度を正規化する
+    // (元絵の彩度が高い部分ほど狙った彩度に近づき、低いハイライト部分はより白っぽく残る)
+    let maxS = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i+3] < 10) continue;
+      const s = _rgbToHsv(data[i], data[i+1], data[i+2])[1];
+      if (s > maxS) maxS = s;
+    }
+    satRef = Math.max(maxS, 0.3);
+  }
   for (let i = 0; i < data.length; i += 4) {
     if (data[i+3] < 10) continue;
-    const vv = _rgbToHsv(data[i], data[i+1], data[i+2])[2];
+    const [, ss, vv] = _rgbToHsv(data[i], data[i+1], data[i+2]);
     const newV = t.vMin + (t.vMax - t.vMin) * vv;
-    const [r, g, b] = _hsvToRgb(t.h, t.s, newV);
+    const newS = MASU_COLOR_PRESERVE_GLOSS[baseId] ? t.s * Math.min(1, ss / satRef) : t.s;
+    const [r, g, b] = _hsvToRgb(t.h, newS, newV);
     data[i] = r; data[i+1] = g; data[i+2] = b;
   }
 };
 // imgUrlの画像全体を指定色に染め直した画像をCanvasで生成し、dataURLで返す(色ごとにキャッシュ)
 const _dyeRecolorCache = {};
-const getRecoloredImage = (imgUrl, colorId) => {
+const getRecoloredImage = (imgUrl, colorId, baseId) => {
   if (!MASU_COLOR_TARGET[colorId]) return null;
   const cacheKey = imgUrl + '::' + colorId;
   if (_dyeRecolorCache[cacheKey]) return _dyeRecolorCache[cacheKey];
@@ -554,7 +571,7 @@ const getRecoloredImage = (imgUrl, colorId) => {
           if (!ctx) { resolve(null); return; }
           ctx.drawImage(img, 0, 0, w, h);
           const imgData = ctx.getImageData(0, 0, w, h);
-          _recolorImageData(imgData.data, colorId);
+          _recolorImageData(imgData.data, colorId, baseId);
           ctx.putImageData(imgData, 0, 0);
           resolve(canvas.toDataURL());
         } catch (e) { resolve(null); }
@@ -584,7 +601,7 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, drag
     const wanted = Array.from(new Set(colors.filter(Boolean)));
     if (wanted.length === 0) { setRecolored({}); return; }
     let cancelled = false;
-    Promise.all(wanted.map((c) => Promise.resolve(getRecoloredImage(src, c)).then((url) => [c, url])))
+    Promise.all(wanted.map((c) => Promise.resolve(getRecoloredImage(src, c, baseId)).then((url) => [c, url])))
       .then((entries) => { if (!cancelled) setRecolored(Object.fromEntries(entries)); });
     return () => { cancelled = true; };
   }, [src, colorKey]);
