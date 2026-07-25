@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 21:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 21:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2604,11 +2604,15 @@ function MonsterHeroGame() {
                           <div className="flex-1 min-w-0 flex items-center gap-1.5">{r.level!=null&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-indigo-600/90 border border-indigo-400/50 text-[7px] font-black text-white">Lv.{r.level}</span>}<div className="text-[11px] font-black text-white truncate uppercase tracking-tighter">{r.userName}</div></div>
                           <div className="text-right font-mono font-black text-indigo-400 text-sm whitespace-nowrap">{r.score.toLocaleString()} pt</div>
                         </div>
-                        <div className="mt-2 bg-black/40 rounded-xl p-2 border border-white/5 flex items-center gap-2 flex-wrap">
+                        <div className="mt-2 bg-black/40 rounded-xl p-2 border border-white/5">
                           {(()=>{ const heroMember = r.party&&r.party.find(p=>p?.name===r.hero); return (
-                            <div className="flex items-center gap-1 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/30"><Crown size={8} className="text-amber-400"/>{heroMember?.imgUrl?(<img src={heroMember.imgUrl} alt="hero" className="w-5 h-5 object-contain"/>):(<span className="text-[10px]">{heroMember?.emoji||'👑'}</span>)}<span className="text-[10px] font-black text-white ml-1">{r.hero}</span>{heroMember?.bondLevel!=null&&<span className="text-[7px] font-black text-pink-300 ml-0.5">Lv.{heroMember.bondLevel}</span>}</div>
+                            <div className="flex items-center gap-1 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/30 w-fit max-w-full"><Crown size={8} className="text-amber-400 shrink-0"/>{heroMember?.imgUrl?(<img src={heroMember.imgUrl} alt="hero" className="w-5 h-5 object-contain shrink-0"/>):(<span className="text-[10px] shrink-0">{heroMember?.emoji||'👑'}</span>)}<span className="text-[10px] font-black text-white ml-1 truncate">{r.hero}</span>{heroMember?.bondLevel!=null&&<span className="text-[7px] font-black text-pink-300 ml-0.5 shrink-0">Lv.{heroMember.bondLevel}</span>}</div>
                           ); })()}
-                          {r.party&&r.party.filter(p=>p&&p.name!==r.hero).map((p,idx)=>(<div key={idx} className="flex items-center gap-0.5">{p.imgUrl?<img src={p.imgUrl} alt="sub" className="w-5 h-5 object-contain"/>:<span className="text-[9px]">{p.emoji}</span>}<span className="text-[8px] font-bold text-slate-300">{p.name.substring(0,4)}</span>{p.bondLevel!=null&&<span className="text-[7px] font-black text-pink-300">Lv{p.bondLevel}</span>}</div>))}
+                          {r.party&&r.party.some(p=>p&&p.name!==r.hero)&&(
+                            <div className="grid grid-cols-3 gap-x-1 gap-y-0.5 mt-1.5">
+                              {r.party.filter(p=>p&&p.name!==r.hero).map((p,idx)=>(<div key={idx} className="flex items-center gap-0.5 min-w-0">{p.imgUrl?<img src={p.imgUrl} alt="sub" className="w-5 h-5 object-contain shrink-0"/>:<span className="text-[9px] shrink-0">{p.emoji}</span>}<span className="text-[8px] font-bold text-slate-300 truncate">{p.name}</span>{p.bondLevel!=null&&<span className="text-[7px] font-black text-pink-300 shrink-0">Lv{p.bondLevel}</span>}</div>))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))
