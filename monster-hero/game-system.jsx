@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 17:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 20:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -307,7 +307,9 @@ const MASU_COLOR_SWATCH = { red: '#ef4444', orange: '#f97316', yellow: '#eab308'
 const MASU_COLOR_REGION_HUES = {
   Mocchi: [5, 67, { hue: 38, sMin: 0.4 }],
   Suezo: [{ hue: 48, vMin: 0.5 }, { hue: 50, vMax: 0.5 }, 357],
-  Golem: [35, { white: true, sMax: 0.12, vMin: 0.75 }, 72],
+  Golem: [35, { white: true, sMax: 0.12, vMin: 0.75, noEdgeGuard: true, bbox: [0.35, 0.08, 0.65, 0.22] }, { posBbox: [
+    [0.35, 0.33, 0.65, 0.50], [0.05, 0.60, 0.22, 0.82], [0.78, 0.60, 0.95, 0.82], [0.20, 0.83, 0.42, 0.99], [0.58, 0.83, 0.80, 0.99],
+  ] }],
   // ライガーは全身が細かい毛並みの陰影(1px単位で青⇔白が入れ替わる描き込み)で、色相・彩度だけでは
   // 顔や前脚(白い毛)と背中(青い毛)が誤って混ざりやすいため、白バケツにbboxを指定して顔〜胸〜前脚の
   // 縦の帯に判定範囲を絞り、離れた背中側の影が白と誤判定されないようにしている
@@ -467,9 +469,11 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             // 塗り分けの境目(色が隣接するピクセルとの間でにじむ部分)も誤判定しやすいため、
             // 隣接ピクセルと色相が大きく違う場所は既定で除外する。ただし目のように細い部位は
             // 全域が境目になってしまい丸ごと消えるため、部位定義でnoEdgeGuard:trueを指定すれば
-            // この除外をスキップできる
+            // この除外をスキップできる。band/posBboxは色を見ずに位置だけで判定する部位なので、
+            // 石材のようなノイズ質感がある絵だと隣接色相差の誤爆でごま塩状に穴が空きやすい。
+            // 位置だけで確定している以上そもそも色境界を気にする必要がないため、既定で除外をスキップする
             const def = hues[region];
-            const wantsEdgeGuard = !(def && typeof def === 'object' && (def.noEdgeGuard || def.posBbox));
+            const wantsEdgeGuard = !(def && typeof def === 'object' && (def.noEdgeGuard || def.posBbox || def.band));
             if (wantsEdgeGuard && ss >= 0.1 && vv >= 0.12) {
               let isColorEdge = false;
               for (const [nx, ny] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]) {
@@ -507,6 +511,15 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
               }
             }
             smoothed = next;
+          }
+          // 目のように面積が小さい部位(noEdgeGuardまたはposBboxで指定)は、周囲を広い部位(体など)に
+          // 囲まれているため多数決の平滑化で塗り潰されて消えてしまうことがある。
+          // そのため元の判定(1パス目の結果)を平滑化後に上書き復元し、確実に残す
+          for (let i = 0; i < w*h; i++) {
+            const orig = grid[i];
+            if (orig < 0) continue;
+            const def = hues[orig];
+            if (def && typeof def === 'object' && (def.noEdgeGuard || def.posBbox)) smoothed[i] = orig;
           }
           for (let i = 0; i < w*h; i++) {
             const best = smoothed[i];
