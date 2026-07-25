@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 23:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 00:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -322,7 +322,7 @@ const MASU_COLOR_REGION_HUES = {
   Ham: [25, { white: true, sMax: 0.35, vMin: 0.7 }, 355],
   // 染色②は肌(顔・お腹・腕・脚)、染色③は尻尾と両肩の翼(彩度の低い1〜2px幅の細い部位のため
   // noAAGuardで輪郭のにじみ除外もスキップしないと丸ごと消えてしまう)
-  Pixie: [355, { hue: 25, sMin: 0.05, sMax: 0.45 }, { posBbox: [[0.55, 0.60, 0.85, 0.80], [0.15, 0.29, 0.33, 0.43], [0.67, 0.29, 0.85, 0.43]], noAAGuard: true }],
+  Pixie: [355, { hue: 25, sMin: 0.05, sMax: 0.45 }, { posBbox: [[0.55, 0.60, 0.85, 0.80], [0.28, 0.32, 0.32, 0.40], [0.57, 0.32, 0.61, 0.40]], noAAGuard: true }],
   Monol: [{ band: [0, 1/3] }, { band: [1/3, 2/3] }, { band: [2/3, 1] }],
   Oboro: [{ hue: 239 }, { hue: 205 }, { white: true, sMax: 0.18, vMin: 0.85 }],
   Zan: [235, { hue: 2, noEdgeGuard: true }, { white: true, sMax: 0.24, vMin: 0.58 }],
@@ -2952,22 +2952,22 @@ function MonsterHeroGame() {
               {masuMons.length===0?(
                 <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🐾</span><div className="text-[11px] text-slate-400 mt-2">まだマスモンがいません。<br/>勇者モンでランを終えると登録できます。</div></div>
               ):(
-                <div className="grid grid-cols-2 gap-3 pb-4">
+                <div className="grid grid-cols-3 gap-2.5 pb-4">
                   {masuMons.map(masu=>{
                     const base = ALL_PLAYER_MONSTERS[masu.baseId];
                     if (!base) return null;
                     const lvl = bondLevelInfo(masu.bondXp||0);
                     const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
                     return (
-                      <button key={masu.id} onClick={()=>setMasuMonDetail(masu)} className="rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2.5 flex flex-col items-center gap-1 active:scale-95">
-                        <div className="w-14 h-14 rounded-full overflow-hidden border border-pink-400/40 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                        <div className="text-[10px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
+                      <button key={masu.id} onClick={()=>setMasuMonDetail(masu)} className="rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
+                        <div className="w-12 h-12 rounded-full overflow-hidden border border-pink-400/40 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                        <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
                         <div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>
                         <div className="w-full mt-0.5">
-                          <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={7}/>絆Lv.{lvl.level}</div>
+                          <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
                           <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
                         </div>
-                        {(masu.distAptPoints||0)>0&&<div className="text-[7px] text-amber-300 font-black flex items-center gap-0.5 mt-0.5"><Sparkles size={8}/>強化P {masu.distAptPoints}</div>}
+                        {(masu.distAptPoints||0)>0&&<div className="text-[7px] text-amber-300 font-black flex items-center gap-0.5 mt-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</div>}
                       </button>
                     );
                   })}
