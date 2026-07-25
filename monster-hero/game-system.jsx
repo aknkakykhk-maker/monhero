@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 04:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 05:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -264,15 +264,23 @@ const RANGE_LABELS = ["零", "近", "中", "遠"];
 // sepiaで色を作り直し、hue-rotateで狙った色相まで回転させる方式(単純なhue-rotateだけだと
 // 部位ごとの元の色相によって結果が大きくズレたり、彩度が低い部位に色が乗らなかったりするため)
 const MASU_COLOR_FILTERS = {
-  red: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-45deg) saturate(3)',
-  yellow: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(10deg) saturate(3)',
-  green: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(80deg) saturate(3)',
-  blue: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(180deg) saturate(3)',
+  red: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-49deg) saturate(3)',
+  orange: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-11deg) saturate(3) brightness(1.15)',
+  yellow: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(17deg) saturate(3) brightness(1.5)',
+  lime: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(47deg) saturate(3) brightness(1.35)',
+  green: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(78deg) saturate(3) brightness(1.1)',
+  teal: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(109deg) saturate(3) brightness(1.1)',
+  cyan: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(137deg) saturate(3)',
+  sky: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(162deg) saturate(3)',
+  blue: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-173deg) saturate(3)',
+  purple: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-137deg) saturate(3)',
+  magenta: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-109deg) saturate(3)',
+  pink: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-83deg) saturate(3)',
   black: 'grayscale(1) brightness(0.4)',
   white: 'grayscale(1) brightness(1.35) contrast(1.15)',
 };
-const MASU_COLOR_LABELS = { red: '赤', blue: '青', yellow: '黄', green: '緑', black: '黒', white: '白' };
-const MASU_COLOR_SWATCH = { red: '#ef4444', blue: '#3b82f6', yellow: '#eab308', green: '#22c55e', black: '#1f2937', white: '#f8fafc' };
+const MASU_COLOR_LABELS = { red: '赤', orange: '橙', yellow: '黄', lime: '黄緑', green: '緑', teal: '青緑', cyan: 'シアン', sky: '空色', blue: '青', purple: '紫', magenta: 'マゼンタ', pink: 'ピンク', black: '黒', white: '白' };
+const MASU_COLOR_SWATCH = { red: '#ef4444', orange: '#f97316', yellow: '#eab308', lime: '#84cc16', green: '#22c55e', teal: '#14b8a6', cyan: '#06b6d4', sky: '#38bdf8', blue: '#3b82f6', purple: '#a855f7', magenta: '#d946ef', pink: '#ec4899', black: '#1f2937', white: '#f8fafc' };
 // マスモンの色が設定されている場合、対応するCSSフィルターのstyleオブジェクトを返す(画像タグにそのまま渡す)
 const monColorStyle = (colorId) => (colorId && MASU_COLOR_FILTERS[colorId]) ? { filter: MASU_COLOR_FILTERS[colorId] } : undefined;
 // モンスター種ごとの「染色もどき」部位分割データ。各要素は画像内でその部位が持つ代表色相(度)。
@@ -2767,15 +2775,15 @@ function MonsterHeroGame() {
                   {Array.from({length:regionCount}).map((_,idx)=>(
                     <div key={idx} className="bg-black/30 rounded-xl p-2 border border-white/5">
                       <div className="text-[8px] text-fuchsia-300 font-black uppercase mb-1">{regionCount>1?`染色${regionLabels[idx]||idx+1}`:'染色'}</div>
-                      <div className="grid grid-cols-4 gap-1.5">
-                        <button onClick={()=>setDyePreviewColors(prev=>{const next=[...prev]; next[idx]=null; return next;})} className={`flex flex-col items-center gap-1 bg-black/40 border rounded-lg py-1.5 active:scale-95 ${!dyePreviewColors[idx]?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
-                          <span className="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={10} className="text-white drop-shadow"/></span>
-                          <span className="text-[7px] text-white font-black">デフォルト</span>
+                      <div className="grid grid-cols-5 gap-1">
+                        <button onClick={()=>setDyePreviewColors(prev=>{const next=[...prev]; next[idx]=null; return next;})} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${!dyePreviewColors[idx]?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
+                          <span className="w-4 h-4 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={8} className="text-white drop-shadow"/></span>
+                          <span className="text-[6px] text-white font-black leading-none">デフォルト</span>
                         </button>
                         {Object.keys(MASU_COLOR_FILTERS).map(colorId=>(
-                          <button key={colorId} onClick={()=>setDyePreviewColors(prev=>{const next=[...prev]; next[idx]=colorId; return next;})} className={`flex flex-col items-center gap-1 bg-black/40 border rounded-lg py-1.5 active:scale-95 ${dyePreviewColors[idx]===colorId?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
-                          <span className="w-6 h-6 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}></span>
-                          <span className="text-[7px] text-white font-black">{MASU_COLOR_LABELS[colorId]}</span>
+                          <button key={colorId} onClick={()=>setDyePreviewColors(prev=>{const next=[...prev]; next[idx]=colorId; return next;})} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${dyePreviewColors[idx]===colorId?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
+                          <span className="w-4 h-4 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}></span>
+                          <span className="text-[6px] text-white font-black leading-none">{MASU_COLOR_LABELS[colorId]}</span>
                         </button>
                         ))}
                       </div>
