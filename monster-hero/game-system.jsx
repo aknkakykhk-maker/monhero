@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 05:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 06:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -278,22 +278,32 @@ const MASU_COLOR_FILTERS = {
   pink: 'grayscale(1) brightness(0.6) sepia(1) hue-rotate(-83deg) saturate(3)',
   black: 'grayscale(1) brightness(0.4)',
   white: 'grayscale(1) brightness(1.35) contrast(1.15)',
+  // 薄め(パステル)系: 彩度を抑えて明るめにし、鮮やかな色よりふんわりした発色にする
+  red_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(-49deg) saturate(1.6) brightness(1.2)',
+  orange_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(-11deg) saturate(1.6) brightness(1.25)',
+  yellow_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(17deg) saturate(1.6) brightness(1.5)',
+  lime_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(47deg) saturate(1.6) brightness(1.35)',
+  green_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(78deg) saturate(1.6) brightness(1.2)',
+  cyan_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(137deg) saturate(1.6) brightness(1.15)',
+  blue_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(-173deg) saturate(1.6) brightness(1.15)',
+  purple_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(-137deg) saturate(1.6) brightness(1.15)',
+  pink_light: 'grayscale(1) brightness(0.75) sepia(1) hue-rotate(-83deg) saturate(1.6) brightness(1.2)',
 };
-const MASU_COLOR_LABELS = { red: '赤', orange: '橙', yellow: '黄', lime: '黄緑', green: '緑', teal: '青緑', cyan: 'シアン', sky: '空色', blue: '青', purple: '紫', magenta: 'マゼンタ', pink: 'ピンク', black: '黒', white: '白' };
-const MASU_COLOR_SWATCH = { red: '#ef4444', orange: '#f97316', yellow: '#eab308', lime: '#84cc16', green: '#22c55e', teal: '#14b8a6', cyan: '#06b6d4', sky: '#38bdf8', blue: '#3b82f6', purple: '#a855f7', magenta: '#d946ef', pink: '#ec4899', black: '#1f2937', white: '#f8fafc' };
+const MASU_COLOR_LABELS = { red: '赤', orange: '橙', yellow: '黄', lime: '黄緑', green: '緑', teal: '青緑', cyan: 'シアン', sky: '空色', blue: '青', purple: '紫', magenta: 'マゼンタ', pink: 'ピンク', black: '黒', white: '白', red_light: '薄赤', orange_light: '薄橙', yellow_light: '薄黄', lime_light: '薄黄緑', green_light: '薄緑', cyan_light: '薄水色', blue_light: '薄青', purple_light: '薄紫', pink_light: '薄ピンク' };
+const MASU_COLOR_SWATCH = { red: '#ef4444', orange: '#f97316', yellow: '#eab308', lime: '#84cc16', green: '#22c55e', teal: '#14b8a6', cyan: '#06b6d4', sky: '#38bdf8', blue: '#3b82f6', purple: '#a855f7', magenta: '#d946ef', pink: '#ec4899', black: '#1f2937', white: '#f8fafc', red_light: '#fca5a5', orange_light: '#fdba74', yellow_light: '#fde047', lime_light: '#bef264', green_light: '#86efac', cyan_light: '#67e8f9', blue_light: '#93c5fd', purple_light: '#d8b4fe', pink_light: '#f9a8d4' };
 // マスモンの色が設定されている場合、対応するCSSフィルターのstyleオブジェクトを返す(画像タグにそのまま渡す)
 const monColorStyle = (colorId) => (colorId && MASU_COLOR_FILTERS[colorId]) ? { filter: MASU_COLOR_FILTERS[colorId] } : undefined;
 // モンスター種ごとの「染色もどき」部位分割データ。各要素は画像内でその部位が持つ代表色相(度)。
 // 事前にモンスター画像を解析して求めた、染色可能な部位ごとの判定条件。
 // 各要素は次のいずれか:
 //   数値(色相の角度)                    … その色相に最も近い彩度のあるピクセルを対象にする
-//   {hue, vMin?, vMax?}                  … 同じ色相でも明度が違う部位を区別したい場合(例: 体は明るい黄、目は暗い黄)
+//   {hue, vMin?, vMax?, sMin?, sMax?}     … 同じ色相でも明度・彩度が違う部位を区別したい場合(例: 体は明るい黄、目は暗い黄)
 //   {hue, bbox?:[x0,y0,x1,y1]}           … 画像内の特定範囲(0〜1の相対座標)に絞って同じ色相の部位を区別したい場合
 //   {white:true, sMax?, vMin?}           … 彩度が低い明るい部位(白目・白い毛など)を対象にする
 //   {band:[y0,y1]}                       … 色を問わず、画像の縦位置(0〜1)だけで区切りたい場合(単色の直方体など)
 // 配列が空/未定義のモンスターは部位分割が綺麗に取れなかった(単色に近い等)ため、従来通り全身一括の染色のみ対応。
 const MASU_COLOR_REGION_HUES = {
-  Mocchi: [5, 67, 38],
+  Mocchi: [5, 67, { hue: 38, sMin: 0.4 }],
   Suezo: [{ hue: 48, vMin: 0.5 }, { hue: 50, vMax: 0.5 }, 357],
   Golem: [35, { white: true, sMax: 0.12, vMin: 0.75 }, 72],
   Tiger: [233, { white: true, sMax: 0.2, vMin: 0.5 }, 43],
@@ -304,7 +314,7 @@ const MASU_COLOR_REGION_HUES = {
   Zan: [235, 2, { white: true, sMax: 0.22, vMin: 0.65 }],
   Mitarashi: [2, 40, { hue: 28, bbox: [0.29, 0.18, 0.71, 0.26] }],
   Ark: [219, 187, 60],
-  Iblis: [{ white: true, sMax: 0.15, vMin: 0.7 }, { hue: 264 }, { hue: 355, bbox: [0.35, 0, 0.65, 0.28] }],
+  Iblis: [{ white: true, sMax: 0.15, vMin: 0.7 }, { hue: 264, vMin: 0.55 }, { hue: 264, vMax: 0.5 }],
 };
 // 染色もどきの色選択UIで見せる部位数(部位分割データが無いモンスターも全身一括の1枠は必ず出す)
 const dyeRegionCount = (baseId) => { const hues = MASU_COLOR_REGION_HUES[baseId]; return (hues && hues.length > 0) ? hues.length : 1; };
@@ -351,8 +361,12 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
     const hue = (typeof def === 'number') ? def : def.hue;
     const vMin = (def && typeof def === 'object') ? def.vMin : undefined;
     const vMax = (def && typeof def === 'object') ? def.vMax : undefined;
+    const sMin = (def && typeof def === 'object') ? def.sMin : undefined;
+    const sMax = (def && typeof def === 'object') ? def.sMax : undefined;
     if (vMin !== undefined && vv < vMin) return;
     if (vMax !== undefined && vv > vMax) return;
+    if (sMin !== undefined && ss < sMin) return;
+    if (sMax !== undefined && ss > sMax) return;
     const d = _hueDist(hh, hue);
     if (d < bestD) { bestD = d; best = idx; }
   });
@@ -383,6 +397,15 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
           if (maskCtxs.some(c => !c)) { resolve(null); return; }
           const maskDatas = maskCtxs.map(ctx => ctx.createImageData(w, h));
           const alphaAt = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : src[(y*w+x)*4+3];
+          // 塗り分けの境目(色が隣接するピクセルとの間でにじむ部分)も誤判定しやすいため、
+          // 先に全ピクセルの色相を計算しておき、隣接ピクセルと色相が大きく違う場所も除外する
+          const hueMap = new Float32Array(w*h).fill(NaN);
+          for (let i = 0; i < w*h; i++) {
+            const o = i*4;
+            if (src[o+3] < 20) continue;
+            hueMap[i] = _rgbToHsv(src[o], src[o+1], src[o+2])[0];
+          }
+          const hueAt = (x, y) => (x < 0 || y < 0 || x >= w || y >= h) ? NaN : hueMap[y*w+x];
           for (let i = 0; i < w*h; i++) {
             const o = i*4;
             const r = src[o], g = src[o+1], b = src[o+2], a = src[o+3];
@@ -392,6 +415,14 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             // 染色対象から除外し常に元の絵のまま残す(輪郭が塗り分けの色を拾ってしまう問題を防ぐ)
             if (alphaAt(x-1,y) < 200 || alphaAt(x+1,y) < 200 || alphaAt(x,y-1) < 200 || alphaAt(x,y+1) < 200) continue;
             const [hh, ss, vv] = _rgbToHsv(r, g, b);
+            if (ss >= 0.18 && vv >= 0.12) {
+              let isColorEdge = false;
+              for (const [nx, ny] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]) {
+                const nh = hueAt(nx, ny);
+                if (!Number.isNaN(nh) && _hueDist(hh, nh) > 35) { isColorEdge = true; break; }
+              }
+              if (isColorEdge) continue;
+            }
             const best = _classifyDyePixel(hh, ss, vv, x / w, y / h, hues);
             if (best < 0) continue;
             maskDatas[best].data[o+3] = a; // マスクはアルファのみ使う(CSS maskとして重ねる)
@@ -2777,15 +2808,15 @@ function MonsterHeroGame() {
                   {Array.from({length:regionCount}).map((_,idx)=>(
                     <div key={idx} className="bg-black/30 rounded-xl p-2 border border-white/5">
                       <div className="text-[8px] text-fuchsia-300 font-black uppercase mb-1">{regionCount>1?`染色${regionLabels[idx]||idx+1}`:'染色'}</div>
-                      <div className="grid grid-cols-5 gap-1">
+                      <div className="grid grid-cols-6 gap-0.5">
                         <button onClick={()=>setDyePreviewColors(prev=>{const next=[...prev]; next[idx]=null; return next;})} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${!dyePreviewColors[idx]?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
-                          <span className="w-4 h-4 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={8} className="text-white drop-shadow"/></span>
-                          <span className="text-[6px] text-white font-black leading-none">デフォルト</span>
+                          <span className="w-3.5 h-3.5 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={7} className="text-white drop-shadow"/></span>
+                          <span className="text-[5.5px] text-white font-black leading-none">元の色</span>
                         </button>
                         {Object.keys(MASU_COLOR_FILTERS).map(colorId=>(
                           <button key={colorId} onClick={()=>setDyePreviewColors(prev=>{const next=[...prev]; next[idx]=colorId; return next;})} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${dyePreviewColors[idx]===colorId?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
-                          <span className="w-4 h-4 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}></span>
-                          <span className="text-[6px] text-white font-black leading-none">{MASU_COLOR_LABELS[colorId]}</span>
+                          <span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}></span>
+                          <span className="text-[5.5px] text-white font-black leading-none">{MASU_COLOR_LABELS[colorId]}</span>
                         </button>
                         ))}
                       </div>
