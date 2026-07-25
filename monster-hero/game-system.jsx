@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 00:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 01:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1109,6 +1109,7 @@ function MonsterHeroGame() {
   const [currentPickingMon, setCurrentPickingMon] = useState(null);
   const [ownedUniques, setOwnedUniques] = useState([]);
   const [slotUniqueChoice, setSlotUniqueChoice] = useState({}); // スロットidx→選択中の固有技キー('own'または'inh0'等)。合体で引き継いだ固有技をバトル中に切り替えるための選択状態
+  const [slotUniqueLevelChoice, setSlotUniqueLevelChoice] = useState({}); // スロットidx→選択中の固有技レベル(0〜評価上限)。未指定(undefined)ならそのモンスターの現在の強化到達レベル(最大)を使う
   const [ownedTeachings, setOwnedTeachings] = useState([]);
   const [teachingPool, setTeachingPool] = useState([]);
   const [popups, setPopups] = useState([]);
@@ -2183,7 +2184,7 @@ function MonsterHeroGame() {
     score:0, wave:1, hp:500, maxHp:500, guts:50, maxGuts:100, atk:100, def:100,
     slots:[null,null,null,null], mainHero:null, hand:[], deck:[], graveyard:[],
     enemy:null, enemyDist:2, selectedCards:[], isBusy:false,
-    monSelection:getActiveMonsterList(), ownedUniques:[], slotUniqueChoice:{}, ownedTeachings:[],
+    monSelection:getActiveMonsterList(), ownedUniques:[], slotUniqueChoice:{}, slotUniqueLevelChoice:{}, ownedTeachings:[],
     atkLevel:0, guardLevel:0, guardBonusCount:0, upgradePoints:0, turnCount:1,
     permaBuffs:{ autoHpRecovery:0.1 }, waveBuffs:{}, turnBuffs:{}, nextTurnBuffs:{},
     currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
@@ -2195,7 +2196,7 @@ function MonsterHeroGame() {
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
     setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
-    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{});
+    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{}); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice||{});
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
@@ -2227,7 +2228,7 @@ function MonsterHeroGame() {
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
     setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
-    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{});
+    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{}); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice||{});
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
@@ -2784,7 +2785,7 @@ function MonsterHeroGame() {
     const inherited = mon.inheritedUniques||[];
     return [...(own?[{key:'own',unique:own}]:[]), ...inherited.map((iu,ii)=>({key:`inh${ii}`,unique:iu}))];
   };
-  const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus, uChoice) => {
+  const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus, uChoice, uLevelChoice) => {
     const atkNames=HERO_ATK_NAMES[mainHero?.id]||HERO_ATK_NAMES['Mocchi'];
     let pool=[];
     pool.push({...BASE_ATK_EVOLUTION[aLvl],name:atkNames[aLvl],type:'atk',uid:Math.random()},{...BASE_ATK_EVOLUTION[aLvl],name:atkNames[aLvl],type:'atk',uid:Math.random()});
@@ -2797,8 +2798,10 @@ function MonsterHeroGame() {
         if(options.length>0){
           const chosenKey=(uChoice&&uChoice[idx])||'own';
           const u=(options.find(o=>o.key===chosenKey)||options[0]).unique;
-          const currentEvoName=u.names[Math.min(u.evoLevel||0,u.names.length-1)]; const uCrit=0.10+0.05*Math.min(u.evoLevel||0,8);
-          pool.push({...u,name:currentEvoName,type:'unique',uid:Math.random(),guts:u.guts||u.baseGuts,baseGuts:u.baseGuts,baseMult:u.baseMult,evoLevel:u.evoLevel||0,monId:u.monId,crit:uCrit,effectDesc:u.effectDesc,ownerSlotIdx:idx});
+          const maxLevel=u.evoLevel||0;
+          const lvl=(uLevelChoice&&uLevelChoice[idx]!=null)?Math.min(uLevelChoice[idx],maxLevel):maxLevel;
+          const currentEvoName=u.names[Math.min(lvl,u.names.length-1)]; const uCrit=0.10+0.05*Math.min(lvl,8);
+          pool.push({...u,name:currentEvoName,type:'unique',uid:Math.random(),guts:u.guts||u.baseGuts,baseGuts:u.baseGuts,baseMult:u.baseMult,evoLevel:lvl,monId:u.monId,crit:uCrit,effectDesc:u.effectDesc,ownerSlotIdx:idx});
         }
       }
     });
@@ -2813,9 +2816,27 @@ function MonsterHeroGame() {
     const options=getAvailableUniquesForSlot(mon,ownedUniques);
     const chosen=options.find(o=>o.key===key); if(!chosen) return;
     setSlotUniqueChoice(prev=>({...prev,[slotIdx]:chosen.key}));
+    setSlotUniqueLevelChoice(prev=>{if(!(slotIdx in prev)) return prev; const n={...prev}; delete n[slotIdx]; return n;}); // 出典切替時はそのまま最大解放レベルへ戻す
     const u=chosen.unique;
     const currentEvoName=u.names[Math.min(u.evoLevel||0,u.names.length-1)]; const uCrit=0.10+0.05*Math.min(u.evoLevel||0,8);
     const patch={name:currentEvoName,guts:u.guts||u.baseGuts,baseGuts:u.baseGuts,baseMult:u.baseMult,evoLevel:u.evoLevel||0,monId:u.monId,crit:uCrit,effectDesc:u.effectDesc,names:u.names,icon:u.icon,sourceMasuName:u.sourceMasuName};
+    const patchCard=(c)=>(c.type==='unique'&&c.ownerSlotIdx===slotIdx)?{...c,...patch}:c;
+    setHand(prev=>prev.map(patchCard)); setDeck(prev=>prev.map(patchCard)); setGraveyard(prev=>prev.map(patchCard));
+    Audio_.se.card();
+  };
+  // 現在アクティブな固有技(自分の技/継承技)の中で、レベル(0〜そのモンスターの現在の強化到達レベル)を
+  // 直接指定して適用する。手札・山札・捨て札に既に配られているそのスロットの固有技カードも差し替える
+  const applyUniqueLevelChoiceForSlot = (slotIdx, level) => {
+    const mon=slots[slotIdx]; if(!mon) return;
+    const options=getAvailableUniquesForSlot(mon,ownedUniques);
+    const activeKey=slotUniqueChoice[slotIdx]||'own';
+    const chosen=options.find(o=>o.key===activeKey)||options[0]; if(!chosen) return;
+    const u=chosen.unique;
+    const maxLevel=u.evoLevel||0;
+    const lvl=Math.max(0,Math.min(level,maxLevel));
+    setSlotUniqueLevelChoice(prev=>({...prev,[slotIdx]:lvl}));
+    const currentEvoName=u.names[Math.min(lvl,u.names.length-1)]; const uCrit=0.10+0.05*Math.min(lvl,8);
+    const patch={name:currentEvoName,guts:u.guts||u.baseGuts,baseGuts:u.baseGuts,baseMult:u.baseMult,evoLevel:lvl,monId:u.monId,crit:uCrit,effectDesc:u.effectDesc,names:u.names,icon:u.icon,sourceMasuName:u.sourceMasuName};
     const patchCard=(c)=>(c.type==='unique'&&c.ownerSlotIdx===slotIdx)?{...c,...patch}:c;
     setHand(prev=>prev.map(patchCard)); setDeck(prev=>prev.map(patchCard)); setGraveyard(prev=>prev.map(patchCard));
     Audio_.se.card();
@@ -2884,7 +2905,7 @@ function MonsterHeroGame() {
     const nGrdL = computeGuardLevel(defVal!==undefined?defVal:def);
     const nGB = nGrdL;
     setAtkLevel(nAtkL); setGuardLevel(nGrdL); setGuardBonusCount(nGB);
-    const pool=buildDeck(currentSlots,nAtkL,nGrdL,u||ownedUniques,t||ownedTeachings,nGB,slotUniqueChoice);
+    const pool=buildDeck(currentSlots,nAtkL,nGrdL,u||ownedUniques,t||ownedTeachings,nGB,slotUniqueChoice,slotUniqueLevelChoice);
     setHand(pool.slice(0,5)); setDeck(pool.slice(5)); setGraveyard([]); setGameState('BATTLE'); setIsBusy(false);
     setTurnBuffs({}); setNextTurnBuffs({}); // WAVE毎リセットの一時バフ・デバフを全てクリア
   };
@@ -4736,6 +4757,7 @@ function MonsterHeroGame() {
         if (!card) { setSkillPicker(null); return null; }
         const isAtkFamily = card.type==='atk' || card.type==='range_atk';
         let tiles = [];
+        let uniqueSources = [];
         if (isAtkFamily) {
           const atkNames = HERO_ATK_NAMES[mainHero?.id]||HERO_ATK_NAMES['Mocchi'];
           // 解放上限は「現在選んでいるレベル(atkLevel)」ではなく、距離適性から算出される
@@ -4751,14 +4773,24 @@ function MonsterHeroGame() {
           });
         } else if (card.type==='unique') {
           const mon = slots[card.ownerSlotIdx];
-          const options = getAvailableUniquesForSlot(mon, ownedUniques);
-          tiles = options.map(opt=>{
-            const isActive = (slotUniqueChoice[card.ownerSlotIdx]||'own')===opt.key;
-            const u = opt.unique;
-            const label = u.names[Math.min(u.evoLevel||0,u.names.length-1)];
-            const power = Math.floor((u.baseMult+(u.evoLevel||0)*0.5)*100);
-            return {key:opt.key, label, power, unlocked:true, isActive, sub: opt.key!=='own'?`${u.sourceMasuName}から継承`:null, onSelect:()=>applyUniqueChoiceForSlot(card.ownerSlotIdx, opt.key)};
-          });
+          uniqueSources = getAvailableUniquesForSlot(mon, ownedUniques);
+          const activeKey = slotUniqueChoice[card.ownerSlotIdx]||'own';
+          const activeOpt = uniqueSources.find(o=>o.key===activeKey) || uniqueSources[0];
+          if (activeOpt) {
+            const u = activeOpt.unique;
+            // 解放上限はそのモンスターの固有技強化到達レベル(evoLevel)。atk/range_atkと同様、
+            // 現在選んでいるレベルではなく強化到達レベル自体を都度参照することで、
+            // 一度下位レベルを選んだ後も上位レベルへ戻せるようにする
+            const maxLevel = u.evoLevel||0;
+            const curLevel = (slotUniqueLevelChoice[card.ownerSlotIdx]!=null) ? Math.min(slotUniqueLevelChoice[card.ownerSlotIdx], maxLevel) : maxLevel;
+            tiles = Array.from({length:9},(_,lvl)=>{
+              const unlocked = lvl<=maxLevel;
+              const isActive = lvl===curLevel;
+              const label = u.names[Math.min(lvl,u.names.length-1)];
+              const power = Math.floor((u.baseMult+lvl*0.5)*100);
+              return {key:String(lvl), label, power, unlocked, isActive, onSelect:()=>applyUniqueLevelChoiceForSlot(card.ownerSlotIdx, lvl)};
+            });
+          }
         }
         const title = card.type==='atk'?'通常技を選択':(card.type==='range_atk'?'距離技を選択':'固有技を選択');
         return (
@@ -4768,6 +4800,14 @@ function MonsterHeroGame() {
                 <h3 className="text-sm font-black text-white uppercase italic">{title}</h3>
                 <button onClick={()=>setSkillPicker(null)} className="p-1.5 bg-white/10 rounded-full active:scale-90"><X size={14}/></button>
               </div>
+              {card.type==='unique'&&uniqueSources.length>1&&(
+                <div className="flex gap-1.5 pb-2 border-b border-white/10 shrink-0 overflow-x-auto">
+                  {uniqueSources.map(opt=>{
+                    const isActiveSource=(slotUniqueChoice[card.ownerSlotIdx]||'own')===opt.key;
+                    return(<button key={opt.key} onClick={()=>applyUniqueChoiceForSlot(card.ownerSlotIdx,opt.key)} className={`shrink-0 px-3 py-1.5 rounded-full text-[9px] font-black border-2 whitespace-nowrap active:scale-95 ${isActiveSource?'bg-indigo-600 border-indigo-400 text-white':'bg-slate-800 border-slate-700 text-slate-400'}`}>{opt.key==='own'?'自分の技':`${opt.unique.sourceMasuName}から継承`}</button>);
+                  })}
+                </div>
+              )}
               <div className="overflow-y-auto mh-scroll flex-1 grid grid-cols-1 gap-1.5 pt-1">
                 {tiles.map(t=>(
                   <button key={t.key} disabled={!t.unlocked} onClick={()=>{t.onSelect(); setSkillPicker(null);}} className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border-2 text-left active:scale-95 transition-all ${t.unlocked?(t.isActive?'bg-indigo-600/40 border-indigo-400 ring-2 ring-indigo-300':'bg-slate-800/70 border-slate-600'):'bg-slate-950/60 border-slate-800 grayscale opacity-45'}`}>
@@ -4782,6 +4822,7 @@ function MonsterHeroGame() {
                 ))}
               </div>
               {isAtkFamily&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">敵と同じ距離枠にいる味方の距離適性を上げると、上位レベルが解放されます</div>}
+              {card.type==='unique'&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">固有技の強化(強化ポイント)で上位レベルが解放されます</div>}
             </div>
           </div>
         );
