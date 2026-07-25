@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 09:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 10:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -305,6 +305,8 @@ const MASU_COLOR_REGION_HUES = {
   Suezo: [{ hue: 48, vMin: 0.5 }, { hue: 50, vMax: 0.5 }, 357],
   Golem: [35, { white: true, sMax: 0.12, vMin: 0.75 }, 72],
   Tiger: [{ hue: 233, sMin: 0.28 }, { white: true, sMax: 0.24, vMin: 0.45 }, 43],
+  // ライガーは全身が細かい毛並みの陰影(1px単位で青⇔白が入れ替わる描き込み)のため、
+  // 部位判定後の平滑化を他モンスターより広い範囲・複数回で行う(下のMASU_COLOR_SMOOTHで指定)
   Ham: [25, { white: true, sMax: 0.35, vMin: 0.7 }, 355],
   Pixie: [355, 23, { hue: 10 }],
   Monol: [{ band: [0, 1/3] }, { band: [1/3, 2/3] }, { band: [2/3, 1] }],
@@ -314,6 +316,14 @@ const MASU_COLOR_REGION_HUES = {
   Ark: [219, 187, 60],
   Iblis: [{ white: true, sMax: 0.15, vMin: 0.7 }, { hue: 264, sMin: 0.14, vMin: 0.35, vMax: 0.9 }, { white: true, sMax: 0.3, vMin: 0.15, vMax: 0.32 }],
 };
+// 部位判定後の平滑化(ごま塩ノイズ除去)の強さをモンスターごとに調整するテーブル。
+// 既定は半径2の多数決を1回。細かい毛並みの陰影で判定が激しく入れ替わるモンスターは
+// radius/iterationsを上げて、小さな塊単位に均す(ただし小さな部位(目など)まで塗り潰さないよう
+// 既定は控えめにしてあり、必要なモンスターだけ個別に強めている)
+const MASU_COLOR_SMOOTH = {
+  Tiger: { radius: 8, iterations: 2 },
+};
+const _getSmoothParams = (baseId) => MASU_COLOR_SMOOTH[baseId] || { radius: 2, iterations: 1 };
 // 染色もどきの色選択UIで見せる部位数(部位分割データが無いモンスターも全身一括の1枠は必ず出す)
 const dyeRegionCount = (baseId) => { const hues = MASU_COLOR_REGION_HUES[baseId]; return (hues && hues.length > 0) ? hues.length : 1; };
 const _rgbToHsv = (r,g,b) => {
@@ -441,27 +451,32 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             grid[i] = _classifyDyePixel(hh, ss, vv, x / w, y / h, hues);
           }
           // 2パス目: 毛並みなど細かい濃淡で判定がごま塩状に入れ替わる箇所を、
-          // 周囲5x5の多数決で均して滑らかな塊にする(境界のジグザグ自体は保つ)
-          const smoothed = new Int8Array(grid);
-          const radius = 2;
-          for (let y = 0; y < h; y++) {
-            for (let x = 0; x < w; x++) {
-              const i = y*w + x;
-              if (grid[i] < 0) continue;
-              const counts = {};
-              for (let dy = -radius; dy <= radius; dy++) {
-                for (let dx = -radius; dx <= radius; dx++) {
-                  const nx = x+dx, ny = y+dy;
-                  if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-                  const nv = grid[ny*w+nx];
-                  if (nv < 0) continue;
-                  counts[nv] = (counts[nv] || 0) + 1;
+          // 周囲の多数決で均して滑らかな塊にする(境界のジグザグ自体は保つ)。
+          // 強さ(半径・回数)はモンスターごとにMASU_COLOR_SMOOTHで調整
+          const { radius, iterations } = _getSmoothParams(baseId);
+          let smoothed = grid;
+          for (let iter = 0; iter < iterations; iter++) {
+            const next = new Int8Array(smoothed);
+            for (let y = 0; y < h; y++) {
+              for (let x = 0; x < w; x++) {
+                const i = y*w + x;
+                if (smoothed[i] < 0) continue;
+                const counts = {};
+                for (let dy = -radius; dy <= radius; dy++) {
+                  for (let dx = -radius; dx <= radius; dx++) {
+                    const nx = x+dx, ny = y+dy;
+                    if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+                    const nv = smoothed[ny*w+nx];
+                    if (nv < 0) continue;
+                    counts[nv] = (counts[nv] || 0) + 1;
+                  }
                 }
+                let bestK = smoothed[i], bestC = -1;
+                for (const k in counts) { if (counts[k] > bestC) { bestC = counts[k]; bestK = +k; } }
+                next[i] = bestK;
               }
-              let bestK = grid[i], bestC = -1;
-              for (const k in counts) { if (counts[k] > bestC) { bestC = counts[k]; bestK = +k; } }
-              smoothed[i] = bestK;
             }
+            smoothed = next;
           }
           for (let i = 0; i < w*h; i++) {
             const best = smoothed[i];
