@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 05:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 05:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -296,7 +296,7 @@ const MASU_COLOR_REGION_HUES = {
   Mocchi: [5, 67, 38],
   Suezo: [{ hue: 48, vMin: 0.5 }, { hue: 50, vMax: 0.5 }, 357],
   Golem: [35, { white: true, sMax: 0.12, vMin: 0.75 }, 72],
-  Tiger: [233, { white: true, sMax: 0.25, vMin: 0.55 }, 43],
+  Tiger: [233, { white: true, sMax: 0.2, vMin: 0.5 }, 43],
   Ham: [25, { white: true, sMax: 0.35, vMin: 0.7 }, 355],
   Pixie: [355, 23, { hue: 10 }],
   Monol: [{ band: [0, 1/3] }, { band: [1/3, 2/3] }, { band: [2/3, 1] }],
@@ -358,12 +358,14 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
   });
   return best;
 };
-// baseIdの画像をCanvasで解析し、部位ごとのアルファマスク(dataURL)を作って返す(baseIdごとに一度だけ計算してキャッシュ)
+// baseIdの画像をCanvasで解析し、部位ごとのアルファマスク(dataURL)を作って返す(同じbaseIdでも
+// 画面によって表示に使う画像(iconUrl/imgUrl)が違うため、両方を含めたキーでキャッシュする)
 const _dyeRegionMaskCache = {};
 const getDyeRegionMasks = (baseId, imgUrl) => {
   const hues = MASU_COLOR_REGION_HUES[baseId];
   if (!hues || hues.length === 0) return null;
-  if (_dyeRegionMaskCache[baseId]) return _dyeRegionMaskCache[baseId];
+  const cacheKey = baseId + '::' + imgUrl;
+  if (_dyeRegionMaskCache[cacheKey]) return _dyeRegionMaskCache[cacheKey];
   const promise = new Promise((resolve) => {
     try {
       const img = new window.Image();
@@ -402,7 +404,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
       img.src = imgUrl;
     } catch (e) { resolve(null); }
   });
-  _dyeRegionMaskCache[baseId] = promise;
+  _dyeRegionMaskCache[cacheKey] = promise;
   return promise;
 };
 // マスモンの画像を、部位別の染色(masuColors配列)を反映して表示するコンポーネント。
