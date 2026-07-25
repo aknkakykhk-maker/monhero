@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 16:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 16:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1097,7 +1097,7 @@ function MonsterHeroGame() {
   // モンスター一覧系画面(編成・ベースモン一覧・マスモン一覧)共通のソート・表示設定。3画面で共有する
   const [monsterSortKey, setMonsterSortKey] = useState('lineage'); // 'base'|'masu'|'lineage'|'bond'|'name'|'active'
   const [monsterSortDir, setMonsterSortDir] = useState('asc'); // 'asc'|'desc'
-  const [monsterDisplayFlags, setMonsterDisplayFlags] = useState({ base: true, masu: true, lineage: true, active: true }); // 各カードに出す情報(複数選択可、オフで非表示)
+  const [monsterDisplayFlags, setMonsterDisplayFlags] = useState({ base: true, masu: true, fused: true, active: true }); // 各カードに出す情報(複数選択可、オフで非表示)
   const [showSortFilterModal, setShowSortFilterModal] = useState(false); // ならべかえ・表示設定モーダルの開閉
   const [sortFilterModalTab, setSortFilterModalTab] = useState('sort'); // モーダル内タブ: 'sort'|'display'
   const [sortFilterModalSingleType, setSortFilterModalSingleType] = useState(false); // ベースモン一覧/マスモン一覧から開いた場合true(種別チップを出さない)
@@ -1555,11 +1555,12 @@ function MonsterHeroGame() {
     { key: 'bond', label: '絆レベル' },
     { key: 'name', label: '名前' },
     { key: 'active', label: '編成中' },
+    { key: 'fused', label: '合体済み' },
   ];
   const MONSTER_DISPLAY_OPTIONS = [
     { key: 'base', label: 'ベースモン' },
     { key: 'masu', label: 'マスモン' },
-    { key: 'lineage', label: '血統' },
+    { key: 'fused', label: '合体済み' },
     { key: 'active', label: '編成中' },
   ];
   // 「ベースモン(未マスモン化の種)」「マスモン(育成済み個体)」を1つの配列に統一して扱うための変換。
@@ -1569,13 +1570,13 @@ function MonsterHeroGame() {
     const baseEntries = baseIds.map(id => {
       const base = ALL_PLAYER_MONSTERS[id];
       if (!base) return null;
-      return { type: 'base', key: id, entryId: id, baseId: id, base, masu: null, name: base.name, lineageName: base.name, bondLevel: null, active: activeIds.includes(id) };
+      return { type: 'base', key: id, entryId: id, baseId: id, base, masu: null, name: base.name, lineageName: base.name, bondLevel: null, active: activeIds.includes(id), fusionCount: 0 };
     }).filter(Boolean);
     const masuEntries = masuList.map(masu => {
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       if (!base) return null;
       const entryId = 'masu:' + masu.id;
-      return { type: 'masu', key: entryId, entryId, baseId: masu.baseId, base, masu, name: masu.name, lineageName: base.name, bondLevel: bondLevelInfo(masu.bondXp || 0).level, active: activeIds.includes(entryId) };
+      return { type: 'masu', key: entryId, entryId, baseId: masu.baseId, base, masu, name: masu.name, lineageName: base.name, bondLevel: bondLevelInfo(masu.bondXp || 0).level, active: activeIds.includes(entryId), fusionCount: (masu.fusionHistory||[]).length };
     }).filter(Boolean);
     return [...baseEntries, ...masuEntries];
   };
@@ -1589,6 +1590,7 @@ function MonsterHeroGame() {
       else if (monsterSortKey === 'bond') cmp = (a.bondLevel ?? -1) - (b.bondLevel ?? -1);
       else if (monsterSortKey === 'name') cmp = a.name.localeCompare(b.name, 'ja');
       else if (monsterSortKey === 'active') cmp = (a.active ? 0 : 1) - (b.active ? 0 : 1);
+      else if (monsterSortKey === 'fused') cmp = (a.fusionCount || 0) - (b.fusionCount || 0);
       if (cmp === 0) cmp = a.lineageName.localeCompare(b.lineageName, 'ja');
       return cmp * dirMul;
     });
@@ -3063,10 +3065,9 @@ function MonsterHeroGame() {
                             <div className="relative w-10 h-10 shrink-0">
                               <div className={`w-10 h-10 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                               <div className="absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[6px] font-black text-white leading-tight">マスモン</div>
-                              {(masu.fusionHistory||[]).length>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1 text-[6px] font-black text-black leading-tight">+{masu.fusionHistory.length}</div>}
+                              {monsterDisplayFlags.fused&&(masu.fusionHistory||[]).length>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1 text-[6px] font-black text-black leading-tight">+{masu.fusionHistory.length}</div>}
                             </div>
                             <div className="text-[10px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
-                            {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold truncate w-full text-center -mt-1">({base.name})</div>}
                             <div className="w-full">
                               <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5 mb-0.5"><Heart size={7}/>絆Lv.{lvl.level}</div>
                               <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${Math.max(0,Math.min(100,(lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100))}%`}}></div></div>
@@ -3216,10 +3217,9 @@ function MonsterHeroGame() {
                           <button onClick={()=>setMasuMonDetail(masu)} className="w-full rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
                             <div className="relative w-12 h-12 shrink-0">
                               <div className={`w-12 h-12 rounded-full overflow-hidden border ${fusionCount>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                              {fusionCount>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1 text-[6px] font-black text-black leading-tight">+{fusionCount}</div>}
+                              {monsterDisplayFlags.fused&&fusionCount>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1 text-[6px] font-black text-black leading-tight">+{fusionCount}</div>}
                             </div>
                             <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
-                            {monsterDisplayFlags.lineage&&<div className="text-[7px] text-slate-500 font-bold -mt-1">({base.name})</div>}
                             <div className="w-full mt-0.5">
                               <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
                               <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
@@ -3498,7 +3498,7 @@ function MonsterHeroGame() {
           const sortOpts = sortFilterModalSingleType ? MONSTER_SORT_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_SORT_OPTIONS;
           const dispOpts = sortFilterModalSingleType ? MONSTER_DISPLAY_OPTIONS.filter(o => o.key !== 'base' && o.key !== 'masu') : MONSTER_DISPLAY_OPTIONS;
           return (
-            <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.98)',zIndex:32500}}>
+            <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.98)',zIndex:32500,paddingTop:'env(safe-area-inset-top)'}}>
               <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10">
                 <h3 className="text-base font-black text-white flex-1">ならべかえ・表示設定</h3>
                 <button onClick={()=>setShowSortFilterModal(false)} className="p-2.5 bg-white/5 rounded-full active:scale-90"><X size={18}/></button>
