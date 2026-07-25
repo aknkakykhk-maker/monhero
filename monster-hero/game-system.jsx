@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 22:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 23:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -320,7 +320,9 @@ const MASU_COLOR_REGION_HUES = {
   // 位置判定にし、角と同じ染色③に含めた(彩度に関係なく必ず染まるようにする)
   Tiger: [{ hue: 233, sMin: 0.28 }, { white: true, sMax: 0.28, vMin: 0.4, bbox: [0.26, 0.27, 0.66, 1.0] }, { hue: 38, posBbox: [[0.665, 0.32, 1.0, 0.62]] }],
   Ham: [25, { white: true, sMax: 0.35, vMin: 0.7 }, 355],
-  Pixie: [355, 23, { hue: 10 }],
+  // 染色②は肌(顔・お腹・腕・脚)、染色③は尻尾と両肩の翼(彩度の低い1〜2px幅の細い部位のため
+  // noAAGuardで輪郭のにじみ除外もスキップしないと丸ごと消えてしまう)
+  Pixie: [355, { hue: 25, sMin: 0.05, sMax: 0.45 }, { posBbox: [[0.55, 0.60, 0.85, 0.80], [0.15, 0.29, 0.33, 0.43], [0.67, 0.29, 0.85, 0.43]], noAAGuard: true }],
   Monol: [{ band: [0, 1/3] }, { band: [1/3, 2/3] }, { band: [2/3, 1] }],
   Oboro: [{ hue: 239 }, { hue: 205 }, { white: true, sMax: 0.18, vMin: 0.85 }],
   Zan: [235, { hue: 2, noEdgeGuard: true }, { white: true, sMax: 0.24, vMin: 0.58 }],
@@ -463,19 +465,23 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             const r = src[o], g = src[o+1], b = src[o+2], a = src[o+3];
             if (a < 20) continue;
             const x = i % w, y = (i / w) | 0;
-            // 輪郭線のアンチエイリアス部分(透明ピクセルに隣接する1px)は色がにじんでいて誤判定しやすいため、
-            // 染色対象から除外し常に元の絵のまま残す(輪郭が塗り分けの色を拾ってしまう問題を防ぐ)
-            if (alphaAt(x-1,y) < 200 || alphaAt(x+1,y) < 200 || alphaAt(x,y-1) < 200 || alphaAt(x,y+1) < 200) continue;
             const [hh, ss, vv] = _rgbToHsv(r, g, b);
             const region = _classifyDyePixel(hh, ss, vv, x / w, y / h, hues);
             if (region < 0) continue;
+            const def = hues[region];
+            // 輪郭線のアンチエイリアス部分(透明ピクセルに隣接する1px)は色がにじんでいて誤判定しやすいため、
+            // 染色対象から除外し常に元の絵のまま残す(輪郭が塗り分けの色を拾ってしまう問題を防ぐ)。
+            // ただし尻尾の先や小さな翼のように1〜2px幅しかない細い付属物は、全域が輪郭のにじみ扱いに
+            // なって丸ごと消えてしまうため、部位定義でnoAAGuard:trueを指定すればこの除外もスキップできる
+            // (posBboxで位置を絞っているぶん、色のにじみを気にする理由がそもそも無い部位向け)
+            const skipAAGuard = !!(def && typeof def === 'object' && def.noAAGuard);
+            if (!skipAAGuard && (alphaAt(x-1,y) < 200 || alphaAt(x+1,y) < 200 || alphaAt(x,y-1) < 200 || alphaAt(x,y+1) < 200)) continue;
             // 塗り分けの境目(色が隣接するピクセルとの間でにじむ部分)も誤判定しやすいため、
             // 隣接ピクセルと色相が大きく違う場所は既定で除外する。ただし目のように細い部位は
             // 全域が境目になってしまい丸ごと消えるため、部位定義でnoEdgeGuard:trueを指定すれば
             // この除外をスキップできる。band/posBboxは色を見ずに位置だけで判定する部位なので、
             // 石材のようなノイズ質感がある絵だと隣接色相差の誤爆でごま塩状に穴が空きやすい。
             // 位置だけで確定している以上そもそも色境界を気にする必要がないため、既定で除外をスキップする
-            const def = hues[region];
             const wantsEdgeGuard = !(def && typeof def === 'object' && (def.noEdgeGuard || def.posBbox || def.band));
             if (wantsEdgeGuard && ss >= 0.1 && vv >= 0.12) {
               let isColorEdge = false;
@@ -809,16 +815,18 @@ const LevelGrowthBar = ({ levelBefore, levelAfter }) => {
   const leveledUp = levelAfter.level > levelBefore.level;
   const [curLevel, setCurLevel] = useState(levelBefore.level);
   const [pct, setPct] = useState(Math.max(0, Math.min(100, (levelBefore.xpIntoLevel / Math.max(1, levelBefore.xpForNext)) * 100)));
+  // 次のレベルまで残り何XPかの表示。バーの伸び(pct)と同じタイミングで切り替える
+  const [remain, setRemain] = useState(Math.max(0, levelBefore.xpForNext - levelBefore.xpIntoLevel));
   const [flash, setFlash] = useState(false);
   useEffect(() => {
     const timers = [];
     if (leveledUp) {
       timers.push(setTimeout(() => setPct(100), 200));
       timers.push(setTimeout(() => { Audio_.se.levelUp(); setFlash(true); }, 900));
-      timers.push(setTimeout(() => { setFlash(false); setCurLevel(levelAfter.level); setPct(0); }, 2000));
-      timers.push(setTimeout(() => setPct(Math.max(0, Math.min(100, (levelAfter.xpIntoLevel / Math.max(1, levelAfter.xpForNext)) * 100))), 2100));
+      timers.push(setTimeout(() => { setFlash(false); setCurLevel(levelAfter.level); setPct(0); setRemain(levelAfter.xpForNext); }, 2000));
+      timers.push(setTimeout(() => { setPct(Math.max(0, Math.min(100, (levelAfter.xpIntoLevel / Math.max(1, levelAfter.xpForNext)) * 100))); setRemain(Math.max(0, levelAfter.xpForNext - levelAfter.xpIntoLevel)); }, 2100));
     } else {
-      timers.push(setTimeout(() => setPct(Math.max(0, Math.min(100, (levelAfter.xpIntoLevel / Math.max(1, levelAfter.xpForNext)) * 100))), 200));
+      timers.push(setTimeout(() => { setPct(Math.max(0, Math.min(100, (levelAfter.xpIntoLevel / Math.max(1, levelAfter.xpForNext)) * 100))); setRemain(Math.max(0, levelAfter.xpForNext - levelAfter.xpIntoLevel)); }, 200));
     }
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -826,7 +834,7 @@ const LevelGrowthBar = ({ levelBefore, levelAfter }) => {
     <div>
       <div className="flex items-center justify-between text-[9px] mb-0.5">
         <span className="font-mono text-slate-300 font-bold">LV.{curLevel}</span>
-        {flash && <span className="text-amber-400 font-black animate-pulse">LEVEL UP!</span>}
+        {flash ? <span className="text-amber-400 font-black animate-pulse">LEVEL UP!</span> : <span className="text-slate-500 font-mono">次Lvまで{remain.toLocaleString()}</span>}
       </div>
       <div className="h-2 bg-slate-800 rounded-full overflow-hidden border border-white/10">
         <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-400 transition-all duration-700 ease-out" style={{width:`${pct}%`}}></div>
@@ -881,12 +889,18 @@ const RewardSummaryCard = ({ summary }) => (
         </div>
       )}
       {summary.allyBondGains && summary.allyBondGains.length > 0 && (
-        <div className="pt-2 border-t border-white/10 space-y-1">
+        <div className="pt-2 border-t border-white/10 space-y-2">
           <div className="text-[10px] text-pink-300 font-black flex items-center gap-1"><Heart size={10}/>仲間の絆経験値</div>
           {summary.allyBondGains.map((a, i) => (
-            <div key={i} className="flex items-center justify-between text-[10px] pl-1">
-              <span className="text-slate-300 font-bold truncate">{a.name}</span>
-              <span className="text-white font-mono font-bold shrink-0">+{a.xpGain.toLocaleString()}{a.levelAfter.level > a.levelBefore.level && <span className="text-amber-300 ml-1">Lv.{a.levelBefore.level}→{a.levelAfter.level}</span>}</span>
+            <div key={i}>
+              <div className="flex items-center justify-between text-[10px] mb-0.5">
+                <span className="text-slate-300 font-bold truncate">{a.name}</span>
+                <span className="text-white font-mono font-bold shrink-0">+{a.xpGain.toLocaleString()}</span>
+              </div>
+              <LevelGrowthBar levelBefore={a.levelBefore} levelAfter={a.levelAfter}/>
+              {a.levelAfter.level > a.levelBefore.level && (
+                <div className="text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"><Sparkles size={9}/>強化ポイント +{a.levelAfter.level - a.levelBefore.level}</div>
+              )}
             </div>
           ))}
         </div>
@@ -1705,25 +1719,42 @@ function MonsterHeroGame() {
     const gain = xpForWavesCleared(wavesCleared, scoreMult);
     const allyGain = Math.max(1, Math.floor(gain / 4));
     const allyMasuIds = slots.filter(s => s && s.masuId && s.masuId !== mainHero?.masuId).map(s => s.masuId);
+    // 表示用の獲得内訳は、setMasuMonsの更新関数(Reactが後で非同期に呼び出すため、この関数の続きの
+    // 行が実行される時点ではまだ実行されているとは限らない)の中で計算するのではなく、現在のmasuMons
+    // (getMasuMon)を直接読んでこの場で同期的に計算する。以前はupdater内でのみ計算していたため、
+    // タイミングによって勇者モン自身の絆経験値欄がリザルト画面に出ないことがあった
     let heroBondGain = null;
-    const allyBondGains = [];
-    if (mainHero || allyMasuIds.length > 0) {
+    if (mainHero?.masuId) {
+      const masu = getMasuMon(mainHero.masuId);
+      const before = bondLevelInfo(masu?.bondXp || 0);
+      const after = bondLevelInfo((masu?.bondXp || 0) + gain);
+      heroBondGain = { name: mainHero.masuName || mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after, masuId: mainHero.masuId };
+    } else if (mainHero) {
+      const before = bondLevelInfo(0);
+      const after = bondLevelInfo(gain);
+      heroBondGain = { name: mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after, masuId: null };
+    }
+    const allyBondGains = allyMasuIds.map(masuId => {
+      const masu = getMasuMon(masuId);
+      if (!masu) return null;
+      const before = bondLevelInfo(masu.bondXp || 0);
+      const after = bondLevelInfo((masu.bondXp || 0) + allyGain);
+      return { name: masu.name, xpGain: allyGain, levelBefore: before, levelAfter: after, masuId };
+    }).filter(Boolean);
+
+    if (mainHero?.masuId || allyMasuIds.length > 0) {
       setMasuMons(prev => {
         const next = prev.map(m => {
           if (mainHero?.masuId && m.id === mainHero.masuId) {
-            const beforeXp = m.bondXp || 0;
-            const before = bondLevelInfo(beforeXp);
-            const afterXp = beforeXp + gain;
+            const before = bondLevelInfo(m.bondXp || 0);
+            const afterXp = (m.bondXp || 0) + gain;
             const after = bondLevelInfo(afterXp);
-            heroBondGain = { name: mainHero.masuName || mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after, masuId: mainHero.masuId };
             return { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + (after.level - before.level) };
           }
           if (allyMasuIds.includes(m.id)) {
-            const beforeXp = m.bondXp || 0;
-            const before = bondLevelInfo(beforeXp);
-            const afterXp = beforeXp + allyGain;
+            const before = bondLevelInfo(m.bondXp || 0);
+            const afterXp = (m.bondXp || 0) + allyGain;
             const after = bondLevelInfo(afterXp);
-            allyBondGains.push({ name: m.name, xpGain: allyGain, levelBefore: before, levelAfter: after, masuId: m.id });
             return { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + (after.level - before.level) };
           }
           return m;
@@ -1731,11 +1762,6 @@ function MonsterHeroGame() {
         storeSet('mh_masu_mons', next, false);
         return next;
       });
-      if (mainHero && !mainHero.masuId) {
-        const before = bondLevelInfo(0);
-        const after = bondLevelInfo(gain);
-        heroBondGain = { name: mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after, masuId: null };
-      }
     }
 
     setFinalRewardSummary({ breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory });
