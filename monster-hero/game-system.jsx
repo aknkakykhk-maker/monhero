@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 22:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 00:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1128,6 +1128,7 @@ function MonsterHeroGame() {
   const [upgradePoints, setUpgradePoints] = useState(0);
   const [turnCount, setTurnCount] = useState(1);
   const [focusedCard, setFocusedCard] = useState(null);
+  const [skillPicker, setSkillPicker] = useState(null); // {handIndex} 技名タップで開く、通常技/距離技/固有技の選択タイル一覧
   const [selectedTeachingCard, setSelectedTeachingCard] = useState(null);
   // ==================== バフ・デバフ統合管理システム ====================
   // 新しいバフ・デバフ効果を追加する際は、専用のuseStateやターン切り替え/WAVE切り替え時の
@@ -2200,7 +2201,7 @@ function MonsterHeroGame() {
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
-    setPendingReward(null); setFocusedCard(s.focusedCard); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
+    setPendingReward(null); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
     setGameState('TITLE');
   };
@@ -2232,7 +2233,7 @@ function MonsterHeroGame() {
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
-    setFocusedCard(s.focusedCard); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
+    setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
     setGameState('PICK_HERO');
   };
@@ -2804,38 +2805,49 @@ function MonsterHeroGame() {
     cTeachings.forEach(t=>{let name=BREEDER_EVO_NAMES[t.id][Math.min(t.evoLevel||0,2)]; pool.push({...t,name,guts:20,uid:Math.random()});});
     return pool.sort(()=>Math.random()-0.5);
   };
-  // そのスロットで選択中の固有技を次の候補(自分の固有技⇔合体で引き継いだ固有技)へ切り替える。
-  // 手札・山札・捨て札に既に配られているそのスロットの固有技カードも、名前や威力等をその場で差し替える
-  // (山札から引き直しても最新の選択が反映されるよう、控えているカードにも同じ内容を適用する)
-  const cycleActiveUniqueForSlot = (slotIdx) => {
+  // 指定スロットの固有技の選択(key)を直接適用する共通処理。手札・山札・捨て札に既に配られている
+  // そのスロットの固有技カードも、名前や威力等をその場で差し替える(山札から引き直しても最新の
+  // 選択が反映されるよう、控えているカードにも同じ内容を適用する)
+  const applyUniqueChoiceForSlot = (slotIdx, key) => {
     const mon=slots[slotIdx]; if(!mon) return;
     const options=getAvailableUniquesForSlot(mon,ownedUniques);
-    if(options.length<2) return;
-    const curKey=slotUniqueChoice[slotIdx]||'own';
-    const curIdx=Math.max(0,options.findIndex(o=>o.key===curKey));
-    const next=options[(curIdx+1)%options.length];
-    setSlotUniqueChoice(prev=>({...prev,[slotIdx]:next.key}));
-    const u=next.unique;
+    const chosen=options.find(o=>o.key===key); if(!chosen) return;
+    setSlotUniqueChoice(prev=>({...prev,[slotIdx]:chosen.key}));
+    const u=chosen.unique;
     const currentEvoName=u.names[Math.min(u.evoLevel||0,u.names.length-1)]; const uCrit=0.10+0.05*Math.min(u.evoLevel||0,8);
     const patch={name:currentEvoName,guts:u.guts||u.baseGuts,baseGuts:u.baseGuts,baseMult:u.baseMult,evoLevel:u.evoLevel||0,monId:u.monId,crit:uCrit,effectDesc:u.effectDesc,names:u.names,icon:u.icon,sourceMasuName:u.sourceMasuName};
     const patchCard=(c)=>(c.type==='unique'&&c.ownerSlotIdx===slotIdx)?{...c,...patch}:c;
     setHand(prev=>prev.map(patchCard)); setDeck(prev=>prev.map(patchCard)); setGraveyard(prev=>prev.map(patchCard));
     Audio_.se.card();
   };
-  // 敵の距離が変わった(自発的な移動・距離攻撃による強制移動)直後に呼ぶ: 新しい距離に応じて
-  // 通常攻撃・距離攻撃カードのレベルを再算出し、変化していれば手札・山札・捨て札のカードも
-  // その場で差し替える(既に配られているカードも含めて反映するため)
-  const syncAtkTierForDist = (dist) => {
-    const nAtkL = computeAtkTier(slots, dist);
-    if (nAtkL === atkLevel) return;
-    setAtkLevel(nAtkL);
+  // そのスロットで選択中の固有技を次の候補(自分の固有技⇔合体で引き継いだ固有技)へ切り替える
+  const cycleActiveUniqueForSlot = (slotIdx) => {
+    const mon=slots[slotIdx]; if(!mon) return;
+    const options=getAvailableUniquesForSlot(mon,ownedUniques);
+    if(options.length<2) return;
+    const curKey=slotUniqueChoice[slotIdx]||'own';
+    const curIdx=Math.max(0,options.findIndex(o=>o.key===curKey));
+    applyUniqueChoiceForSlot(slotIdx, options[(curIdx+1)%options.length].key);
+  };
+  // 通常攻撃・距離攻撃カードのレベルをlvlへ直接適用する共通処理。手札・山札・捨て札に
+  // 既に配られている対象カードも、名前や威力等をその場で差し替える
+  const applyAtkTierChoice = (lvl) => {
+    setAtkLevel(lvl);
     const atkNames=HERO_ATK_NAMES[mainHero?.id]||HERO_ATK_NAMES['Mocchi'];
     const patchCard=(c)=>{
-      if(c.type==='atk') return {...c,...BASE_ATK_EVOLUTION[nAtkL],name:atkNames[nAtkL]};
-      if(c.type==='range_atk'){const revo=RANGE_EVOLUTION[nAtkL]; return {...c,name:`${RANGE_LABELS[c.rangeIdx]}${revo.name}`,guts:revo.guts,baseGuts:revo.baseGuts,mult:revo.mult,baseMult:revo.baseMult,crit:revo.crit,evoLevel:nAtkL};}
+      if(c.type==='atk') return {...c,...BASE_ATK_EVOLUTION[lvl],name:atkNames[lvl]};
+      if(c.type==='range_atk'){const revo=RANGE_EVOLUTION[lvl]; return {...c,name:`${RANGE_LABELS[c.rangeIdx]}${revo.name}`,guts:revo.guts,baseGuts:revo.baseGuts,mult:revo.mult,baseMult:revo.baseMult,crit:revo.crit,evoLevel:lvl};}
       return c;
     };
     setHand(prev=>prev.map(patchCard)); setDeck(prev=>prev.map(patchCard)); setGraveyard(prev=>prev.map(patchCard));
+  };
+  // 敵の距離が変わった(自発的な移動・距離攻撃による強制移動)直後に呼ぶ: 新しい距離に応じて
+  // 通常攻撃・距離攻撃カードのレベルを再算出し、変化していれば適用する(このタイミングでは
+  // プレイヤーが個別に選んだ下位レベルよりも、その時点で解放されている最上位へ揃え直す)
+  const syncAtkTierForDist = (dist) => {
+    const nAtkL = computeAtkTier(slots, dist);
+    if (nAtkL === atkLevel) return;
+    applyAtkTierChoice(nAtkL);
   };
 
   // 通常攻撃・距離攻撃カードの上位レベルは、敵と同じ距離枠にいる味方の距離適性(%)で決まる
@@ -4497,7 +4509,7 @@ function MonsterHeroGame() {
                   }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none'}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}`}>
                     {isSel&&!assignedMon&&(<div className="absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                     {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[9px]">{assignedMon.emoji}</span>}</div>)}
-                    <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5"><div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div><div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button></div>);
+                    <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onPointerDown={(ev)=>ev.stopPropagation()} onClick={(ev)=>{ev.stopPropagation(); if(isBusy)return; setSkillPicker({handIndex:i});}} className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60">{c.name}</div>):(<div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div>)}<div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button></div>);
                 })}
               </div>
             </div>
@@ -4717,6 +4729,59 @@ function MonsterHeroGame() {
           {graveyard.length>0&&(<div><div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">捨て札 ({graveyard.length})</div><div className="grid gap-1.5" style={{gridTemplateColumns:'repeat(5, minmax(0, 1fr))'}}>{graveyard.map(c=>renderCard(c,true))}</div></div>)}
         </>);
       })()}</div></div>)}
+      {/* 技選択: 通常技/距離技/固有技カードの名前をタップすると開く、選択可能なタイル一覧
+          (使えるものは色あり、まだ使えないものはグレーで選べない) */}
+      {skillPicker&&(()=>{
+        const card = hand[skillPicker.handIndex];
+        if (!card) { setSkillPicker(null); return null; }
+        const isAtkFamily = card.type==='atk' || card.type==='range_atk';
+        let tiles = [];
+        if (isAtkFamily) {
+          const atkNames = HERO_ATK_NAMES[mainHero?.id]||HERO_ATK_NAMES['Mocchi'];
+          tiles = BASE_ATK_EVOLUTION.map((_,lvl)=>{
+            const unlocked = lvl<=atkLevel;
+            const isActive = lvl===atkLevel;
+            const label = card.type==='atk' ? atkNames[lvl] : `${RANGE_LABELS[card.rangeIdx]}${RANGE_EVOLUTION[lvl].name}`;
+            const power = Math.floor((card.type==='atk'?BASE_ATK_EVOLUTION[lvl].mult:RANGE_EVOLUTION[lvl].mult)*100);
+            return {key:String(lvl), label, power, unlocked, isActive, onSelect:()=>applyAtkTierChoice(lvl)};
+          });
+        } else if (card.type==='unique') {
+          const mon = slots[card.ownerSlotIdx];
+          const options = getAvailableUniquesForSlot(mon, ownedUniques);
+          tiles = options.map(opt=>{
+            const isActive = (slotUniqueChoice[card.ownerSlotIdx]||'own')===opt.key;
+            const u = opt.unique;
+            const label = u.names[Math.min(u.evoLevel||0,u.names.length-1)];
+            const power = Math.floor((u.baseMult+(u.evoLevel||0)*0.5)*100);
+            return {key:opt.key, label, power, unlocked:true, isActive, sub: opt.key!=='own'?`${u.sourceMasuName}から継承`:null, onSelect:()=>applyUniqueChoiceForSlot(card.ownerSlotIdx, opt.key)};
+          });
+        }
+        const title = card.type==='atk'?'通常技を選択':(card.type==='range_atk'?'距離技を選択':'固有技を選択');
+        return (
+          <div className="fixed inset-0 z-[60000] flex items-end justify-center" style={{backgroundColor:'rgba(0,0,0,0.85)'}} onClick={()=>setSkillPicker(null)}>
+            <div className="bg-slate-900 border-t-2 border-x-2 border-indigo-500 rounded-t-3xl p-4 w-full max-w-md max-h-[75vh] flex flex-col gap-2" onClick={e=>e.stopPropagation()} style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+              <div className="flex justify-between items-center border-b border-white/10 pb-2 shrink-0">
+                <h3 className="text-sm font-black text-white uppercase italic">{title}</h3>
+                <button onClick={()=>setSkillPicker(null)} className="p-1.5 bg-white/10 rounded-full active:scale-90"><X size={14}/></button>
+              </div>
+              <div className="overflow-y-auto mh-scroll flex-1 grid grid-cols-1 gap-1.5 pt-1">
+                {tiles.map(t=>(
+                  <button key={t.key} disabled={!t.unlocked} onClick={()=>{t.onSelect(); setSkillPicker(null);}} className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border-2 text-left active:scale-95 transition-all ${t.unlocked?(t.isActive?'bg-indigo-600/40 border-indigo-400 ring-2 ring-indigo-300':'bg-slate-800/70 border-slate-600'):'bg-slate-950/60 border-slate-800 grayscale opacity-45'}`}>
+                    <div className="min-w-0">
+                      <div className={`text-[11px] font-black truncate ${t.unlocked?'text-white':'text-slate-500'}`}>{t.label}{t.isActive&&<span className="ml-1 text-[8px] text-indigo-300">(使用中)</span>}</div>
+                      {t.sub&&<div className="text-[8px] text-amber-400 font-bold truncate">{t.sub}</div>}
+                    </div>
+                    <div className="shrink-0 flex items-center gap-1">
+                      {t.unlocked?(<span className="text-[9px] font-mono text-red-400 font-bold">技威力{t.power}</span>):(<span className="text-[9px] text-slate-500">🔒未解放</span>)}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {isAtkFamily&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">敵と同じ距離枠にいる味方の距離適性を上げると、上位レベルが解放されます</div>}
+            </div>
+          </div>
+        );
+      })()}
       {focusedCard&&(
         <div className="fixed left-1/2 -translate-x-1/2 bg-slate-900/98 border-2 border-indigo-400 p-2.5 rounded-2xl w-[90%] max-w-[260px] shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-md" style={{bottom:'calc(34% + 80px)',zIndex:110000}} onClick={()=>setFocusedCard(null)}>
           <div className="flex items-center gap-2.5 mb-1 border-b border-white/10 pb-1"><span className="text-xl bg-indigo-500/20 p-1 rounded-xl">{cardIconNode(focusedCard.icon,22)}</span><div className="text-left flex-1 overflow-hidden"><div className="text-[9px] font-black text-white uppercase truncate">{focusedCard.name||focusedCard.baseName}</div><div className="text-[7px] font-bold text-indigo-400 flex items-center gap-1"><Zap size={7}/> {getCardGuts(focusedCard)} Guts</div></div></div>
