@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-25 20:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-25 21:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -877,6 +877,17 @@ const RewardSummaryCard = ({ summary }) => (
           )}
         </div>
       )}
+      {summary.allyBondGains && summary.allyBondGains.length > 0 && (
+        <div className="pt-2 border-t border-white/10 space-y-1">
+          <div className="text-[10px] text-pink-300 font-black flex items-center gap-1"><Heart size={10}/>仲間の絆経験値</div>
+          {summary.allyBondGains.map((a, i) => (
+            <div key={i} className="flex items-center justify-between text-[10px] pl-1">
+              <span className="text-slate-300 font-bold truncate">{a.name}</span>
+              <span className="text-white font-mono font-bold shrink-0">+{a.xpGain.toLocaleString()}{a.levelAfter.level > a.levelBefore.level && <span className="text-amber-300 ml-1">Lv.{a.levelBefore.level}→{a.levelAfter.level}</span>}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
     {summary.waveHistory && summary.waveHistory.length > 0 && (
       <div className="pt-2 mt-3 border-t border-white/10 shrink-0 flex flex-col min-h-0">
@@ -1320,10 +1331,11 @@ function MonsterHeroGame() {
   }, [loadRankings]);
 
   const submitLocalScore = async (diff, finalScore) => {
-    // マスモン(絆レベルを持つ育成済みインスタンス)で編成していた場合、ランキング表示にも絆レベルを出せるよう記録する
-    const party = slots.map(s => s ? { name: s.name, emoji: s.emoji, imgUrl: s.imgUrl || null, bondLevel: s.masuId ? getMasuBondLevel(s.masuId).level : null } : null);
+    // マスモン(絆レベルを持つ育成済みインスタンス)で編成していた場合、ランキング表示にも絆レベルを出せるよう記録する。
+    // 表示名はマスモンの個体名(ブリーダーが自由につけた名前)ではなく、血統(種族)の名前を使う
+    const party = slots.map(s => s ? { name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji: s.emoji, imgUrl: s.imgUrl || null, bondLevel: s.masuId ? getMasuBondLevel(s.masuId).level : null } : null);
     const name = breederName || '名無しのブリーダー';
-    const heroName = mainHero?.name || 'Unknown';
+    const heroName = (mainHero && (ALL_PLAYER_MONSTERS[mainHero.id]?.name || mainHero.name)) || 'Unknown';
     const level = breederLevel.level;
     const icon = breederIcon;
     // 全国ランキング(Supabase)への送信を優先。失敗時のみ端末内保存にフォールバック
@@ -1659,7 +1671,7 @@ function MonsterHeroGame() {
   // クリアしたWAVE数に応じてブリーダー経験値・ゴールド・勇者モンの絆経験値をまとめて加算(端末保存)。
   // 最終リザルト画面(CHAMPION/敗北)に出す獲得内訳もここで組み立てる
   const awardRunRewards = async (wavesCleared) => {
-    if (wavesCleared <= 0) { setFinalRewardSummary({ breederXpGain: 0, breederLevelBefore: breederLevel, breederLevelAfter: breederLevel, goldBefore: gold, goldAfter: gold, heroBondGain: null, waveHistory }); return; }
+    if (wavesCleared <= 0) { setFinalRewardSummary({ breederXpGain: 0, breederLevelBefore: breederLevel, breederLevelAfter: breederLevel, goldBefore: gold, goldAfter: gold, heroBondGain: null, allyBondGains: [], waveHistory }); return; }
     const scoreMult = DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
     const goldMult = DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
 
@@ -1684,30 +1696,46 @@ function MonsterHeroGame() {
     // まだマスモン化していないプレーンな種のままなら、加算先が無いため保存はせず(=絆レベルの概念自体が
     // プレーン種には存在しない)、獲得量だけを計算してラン終了画面に表示する。そこで「マスモンとして
     // 登録する」を選んだ場合にのみ、この獲得量を初期値として新しいマスモンが作られる(registerMasuMon参照)
+    // 供モン(仲間として編成したマスモン)にも、勇者モンの1/4の絆経験値を加算する。勇者モン自身は
+    // slots内にも含まれるが、masuIdで比較して除外する(hero.masuIdが無い=プレーン種の場合は比較先が
+    // 無いので単純にtruthyなmasuIdを持つ全枠が対象になる)
+    const gain = xpForWavesCleared(wavesCleared, scoreMult);
+    const allyGain = Math.max(1, Math.floor(gain / 4));
+    const allyMasuIds = slots.filter(s => s && s.masuId && s.masuId !== mainHero?.masuId).map(s => s.masuId);
     let heroBondGain = null;
-    if (mainHero) {
-      const gain = xpForWavesCleared(wavesCleared, scoreMult);
-      if (mainHero.masuId) {
-        const masu = getMasuMon(mainHero.masuId);
-        const beforeXp = masu?.bondXp || 0;
-        const before = bondLevelInfo(beforeXp);
-        const afterXp = beforeXp + gain;
-        const after = bondLevelInfo(afterXp);
-        const gainedBondLevels = after.level - before.level;
-        setMasuMons(prev => {
-          const next = prev.map(m => m.id === mainHero.masuId ? { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + gainedBondLevels } : m);
-          storeSet('mh_masu_mons', next, false);
-          return next;
+    const allyBondGains = [];
+    if (mainHero || allyMasuIds.length > 0) {
+      setMasuMons(prev => {
+        const next = prev.map(m => {
+          if (mainHero?.masuId && m.id === mainHero.masuId) {
+            const beforeXp = m.bondXp || 0;
+            const before = bondLevelInfo(beforeXp);
+            const afterXp = beforeXp + gain;
+            const after = bondLevelInfo(afterXp);
+            heroBondGain = { name: mainHero.masuName || mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after, masuId: mainHero.masuId };
+            return { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + (after.level - before.level) };
+          }
+          if (allyMasuIds.includes(m.id)) {
+            const beforeXp = m.bondXp || 0;
+            const before = bondLevelInfo(beforeXp);
+            const afterXp = beforeXp + allyGain;
+            const after = bondLevelInfo(afterXp);
+            allyBondGains.push({ name: m.name, xpGain: allyGain, levelBefore: before, levelAfter: after, masuId: m.id });
+            return { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + (after.level - before.level) };
+          }
+          return m;
         });
-        heroBondGain = { name: mainHero.masuName || mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after, masuId: mainHero.masuId };
-      } else {
+        storeSet('mh_masu_mons', next, false);
+        return next;
+      });
+      if (mainHero && !mainHero.masuId) {
         const before = bondLevelInfo(0);
         const after = bondLevelInfo(gain);
         heroBondGain = { name: mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after, masuId: null };
       }
     }
 
-    setFinalRewardSummary({ breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, waveHistory });
+    setFinalRewardSummary({ breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory });
   };
 
   // Save score on game end (CHAMPION is awarded synchronously in handleNextWave instead, so its result screen never renders before the summary is ready)
