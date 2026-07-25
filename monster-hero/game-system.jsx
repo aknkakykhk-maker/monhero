@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 02:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 03:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1765,15 +1765,22 @@ function MonsterHeroGame() {
     });
     return sorted;
   };
+  // 表示設定の4つのチェック(ベースモン/マスモン/合体済み/編成中)は、どれか1つでも該当すれば
+  // 表示する独立したOR条件として扱う(例: ベースモン・マスモンを両方オフにして合体済みだけ
+  // オンにすると、種別に関わらず合体済みのモンスターだけが絞り込まれる)。
+  // 以前は種別(base/masu)しか見ていなかったため、合体済み・編成中のチェックが実質無視され、
+  // 種別を両方オフにすると何も表示されなくなる不具合があった
+  const monsterEntryMatchesDisplayFlags = (e, flags) =>
+    !!flags[e.type] || (!!flags.fused && (e.fusionCount || 0) > 0) || (!!flags.active && !!e.active);
   // モンスター一覧・マスモン一覧・編成画面のソート/表示設定つき一覧は、画面を開くたび・
   // 無関係な状態更新のたびに毎回全件ソートし直すと重くなり(タップ反応が悪くなる原因の一つ)、
   // useMemoで実際に関係する値が変わった時だけ計算し直すようにする
   const unifiedMonsterEntriesActive = useMemo(
-    () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, monsterRosterIds)).filter(e => monsterDisplayFlags[e.type]),
+    () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, monsterRosterIds)).filter(e => monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags)),
     [unlockedMonsterIds, masuMons, monsterRosterIds, monsterSortKey, monsterSortDir, monsterDisplayFlags]
   );
   const unifiedMonsterEntriesDraft = useMemo(
-    () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, draftMonsterRoster)).filter(e => monsterDisplayFlags[e.type]),
+    () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, draftMonsterRoster)).filter(e => monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags)),
     [unlockedMonsterIds, masuMons, draftMonsterRoster, monsterSortKey, monsterSortDir, monsterDisplayFlags]
   );
   // ソート/表示設定の起動バー(編成/ベースモン一覧/マスモン一覧で使い回す)。
