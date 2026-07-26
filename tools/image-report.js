@@ -7,7 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { REPO_ROOT } = require('./harness');
 
-const FILES = ['images-ally.js', 'images-enemy.js', 'breeder.js'];
+const FILES = ['images/images-ally.js', 'images/images-enemy.js', 'breeder.js'];
 let grandTotal = 0, grandWaste = 0;
 
 for (const f of FILES) {

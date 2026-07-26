@@ -47,6 +47,10 @@ const FACE_BOXES = {
   // 頭上に浮かぶ玉〜あご下。玉と輪はイブリースの意匠なので、中途半端に切れないよう
   // 玉の上端から範囲に含めている(背景の飾りはSTRIP_BACKGROUNDで消してから配置する)
   IBLIS: [0.245, 0.05, 0.735, 0.515, 0],
+  // 頭の角の先端〜あご。元絵が160pxしかないため拡大でやや眠くなるが、
+  // 全身がそのまま顔アイコンになっているよりは顔として判別しやすい
+  // (高解像度のイラストに差し替えられれば作り直したい)
+  ZAN: [0.355, 0.085, 0.645, 0.315, -0.01],
 };
 
 // MASU_COLOR_EXCLUDE に合致する画素(背景の飾り)を透明にした元画像を作る
@@ -68,6 +72,30 @@ function stripBackground(img, baseId, dye) {
   return { canvas: c, removed };
 }
 
+// 指定した正規化範囲の中で、実際に不透明な画素が占める範囲(と中心)を測る。
+// 透明な余白を除いた「絵が本当にある位置」を基準にできるので、目視で測った矩形が
+// 多少ずれていても、顔が枠の中央に来るように自動で補正される。
+function opaqueBoundsIn(img, x0, y0, x1, y1) {
+  const c = createCanvas(img.width, img.height);
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const d = ctx.getImageData(0, 0, img.width, img.height).data;
+  const sx = Math.max(0, Math.floor(x0 * img.width)), ex = Math.min(img.width, Math.ceil(x1 * img.width));
+  const sy = Math.max(0, Math.floor(y0 * img.height)), ey = Math.min(img.height, Math.ceil(y1 * img.height));
+  let minX = ex, maxX = sx, minY = ey, maxY = sy, found = false;
+  for (let y = sy; y < ey; y++) {
+    for (let x = sx; x < ex; x++) {
+      if (d[(y * img.width + x) * 4 + 3] < 20) continue;
+      found = true;
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+  }
+  // 不透明な画素が見つからなければ指定範囲をそのまま使う(想定外の保険)
+  if (!found) return { w: ex - sx, h: ey - sy, cx: (sx + ex) / 2, cy: (sy + ey) / 2 };
+  return { w: maxX - minX + 1, h: maxY - minY + 1, cx: (minX + maxX + 1) / 2, cy: (minY + maxY + 1) / 2 };
+}
+
 async function makeFaceIcon(dataUrl, box, name, dye) {
   let img = await decodeDataUrl(dataUrl);
   if (STRIP_BACKGROUND[name]) {
@@ -76,9 +104,12 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
     img = canvas;
   }
   const [x0, y0, x1, y1, biasY = 0] = box;
-  // 頭の実サイズ(元絵のpx)と中心
-  const headW = (x1 - x0) * img.width, headH = (y1 - y0) * img.height;
-  const headCx = ((x0 + x1) / 2) * img.width, headCy = ((y0 + y1) / 2) * img.height;
+  // FACE_BOXES は目視で測った値なので、指定した矩形の中心と、実際に絵が描かれている
+  // 部分の中心はズレることがある(モッチーが横にずれて見えていた原因)。
+  // 指定範囲の中で不透明な画素が実際に占める範囲を測り直し、そちらを中心として使う。
+  const opaque = opaqueBoundsIn(img, x0, y0, x1, y1);
+  const headW = opaque.w, headH = opaque.h;
+  const headCx = opaque.cx, headCy = opaque.cy;
   // 頭の長辺が枠のFIT分を占めるように倍率を決める
   const scale = (SIZE * FIT) / Math.max(headW, headH);
   // 頭の中心が枠の中心(縦だけbiasYぶんずらす)に来るよう、元絵全体を配置する。
@@ -100,7 +131,7 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
   const dye = loadDyeModule();
   fs.mkdirSync(path.join(__dirname, 'out'), { recursive: true });
 
-  const filePath = path.join(REPO_ROOT, 'monster-hero', 'data', 'images-ally.js');
+  const filePath = path.join(REPO_ROOT, 'monster-hero', 'data', 'images', 'images-ally.js');
   let src = fs.readFileSync(filePath, 'utf8');
   let changed = 0;
 

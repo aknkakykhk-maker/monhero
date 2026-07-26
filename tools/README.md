@@ -51,6 +51,31 @@ cd tools && npm install
 5. `data/changelog.js` の先頭に今回の更新内容を追記する(日時は BUILD_DATE と同じ)
 6. コミット → PR → squash マージ
 
+## リポジトリの構成
+
+```
+monster-hero/
+  index.html                  配信のエントリ。ここから下のファイルを読み込む
+  game-v4.html                旧URL。index.html へのリダイレクトだけ置いている
+  game-system.compiled.js     ★自動生成物★ src/game-system.jsx を tools/build.js で変換したもの
+  src/game-system.jsx         ゲーム本体のソース(配信されない。改修はここに行う)
+  data/
+    images/                   立ち絵・アイコンの巨大なbase64(images-ally.js / images-enemy.js)
+    ally-monsters.js          味方モンスターの定義
+    enemy-monsters.js         敵モンスターの定義
+    breeder.js                ブリーダーカード・マーケット・ブリーダー用の画像
+    skills.js                 技・ガード・カードの色定義
+    changelog.js              更新履歴(更新のたびに先頭へ追記する)
+  vendor/                     React / ReactDOM(CDNを使わず同梱している)
+  icons/ manifest.json version.json
+tools/                        開発用の検証スクリプト(配信されない)
+atsu-cup/                     別アプリ(モンヒロとは独立)
+index.html                    2つのアプリへのハブページ
+```
+
+巨大なbase64を `data/images/` にまとめてあるので、ゲームのバランスやデータを直すときに
+開くファイル(`ally-monsters.js` など)と、めったに開かない画像ファイルが混ざらない。
+
 ## ブラウザに配信しているもの
 
 `monster-hero/` は静的サイトとして配信される。以前は React・Tailwind・Babel をすべてCDNから読み、

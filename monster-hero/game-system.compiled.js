@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 79af18adb714674e
+// source-sha256: ed0bd17a271e2eb7
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-27 01:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-27 14:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -138,10 +138,11 @@ const goldForWavesCleared = (wavesCleared, mult) => {
   return sum;
 };
 // そのレベルから次レベルに必要なXP(基準値)。指数を上げるほど高レベルが急に重くなる。
-// 指数1.8では10WAVE完全クリアを1周=100XPとして、ブリーダーLv30到達に約580周・
-// 絆Lv30に約410周かかっており、いくら遊んでもレベルが上がらない状態だったため1.6へ緩和した
-// (Lv30到達がブリーダー約190周・絆約130周と、およそ1/3の周回数になる)
-const XP_CURVE_EXPONENT = 1.6;
+// 10WAVE完全クリアを1周=100XPとして、Lv30到達までの周回数は次のように緩和してきている。
+//   指数1.8(当初)  … ブリーダー約580周 / 絆約410周
+//   指数1.6         … ブリーダー約190周 / 絆約130周
+//   指数1.4(現在)  … ブリーダー約56周  / 絆約35周
+const XP_CURVE_EXPONENT = 1.4;
 const xpForLevel = level => Math.round(50 * Math.pow(level, XP_CURVE_EXPONENT));
 // 緩和前(指数1.8)の必要XPで求めたレベル。今回の緩和で上がったレベル分の
 // ブリーダーポイントを一度だけ遡って配るための計算にのみ使う
@@ -158,8 +159,8 @@ const legacyLevelBefore160 = (totalXp, discount) => {
 };
 // --- ブリーダーレベル: 上がり方を緩和するため、必要XPを基準値から割り引く
 // (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く。
-// 従来の0.25から0.15へ緩和した)
-const BREEDER_XP_DISCOUNT = 0.15;
+// 0.25 → 0.15 → 0.08 と緩和してきている)
+const BREEDER_XP_DISCOUNT = 0.08;
 const xpForBreederLevel = level => Math.max(1, Math.round(xpForLevel(level) * BREEDER_XP_DISCOUNT));
 const levelInfo = totalXp => {
   let level = 1,
@@ -178,10 +179,10 @@ const levelInfo = totalXp => {
 };
 // --- マスモンの絆レベル: ブリーダーレベルより上げやすくするため、必要XPを基準値から大幅に割り引く
 // (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く。
-// 0.35 → 0.175 → 0.10 と緩和してきている。係数を下げると同じ絆経験値でも絆レベルが上がるため、
+// 0.35 → 0.175 → 0.10 → 0.05 と緩和してきている。係数を下げると同じ絆経験値でも絆レベルが上がるため、
 // レベルアップ時に配る強化ポイントが後追いにならないよう、読み込み時にreconcileMasuPointsで
 // 必ず不足分を補填している)
-const BOND_XP_DISCOUNT = 0.10;
+const BOND_XP_DISCOUNT = 0.05;
 const xpForBondLevel = level => Math.max(1, Math.round(xpForLevel(level) * BOND_XP_DISCOUNT));
 const bondLevelInfo = totalXp => {
   let level = 1,
@@ -1456,19 +1457,25 @@ const MASU_COLOR_REGION_HUES = {
     posBbox: [[0.0, 0.30, 0.30, 0.88], [0.70, 0.30, 1.0, 0.88]]
   }],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
-  // 口元(染色③、クレスト最上部の縁取りも同色にまとめている)の3部位。口は背景除去前の
-  // 元イラスト(縮小・切り抜き前の高解像度版)にflood-fillを掛けて輪郭を実測し、口の
-  // 弧形(上下がすぼまる形)に沿って5段の矩形を積み重ねることで、頬の赤を巻き込まず
-  // 口全体(上唇・下唇とも)を一体で拾えるようにしている
+  // 口元(染色③)の3部位。
+  // 以前は口元を位置だけで決めるposBboxで指定していたが、矩形を積み重ねた形が実際の口の輪郭と
+  // 合っておらず、赤い頬まで青く塗り分けられて一番汚い見た目になっていた。
+  // クレスト・お腹・翼・爪・口元はどれも同じ金色なので色相だけでは分けられないが、
+  // 口元だけは頭部の中央(縦0.265〜0.40・横0.29〜0.71)に収まっているため、
+  // 「金色」という色の条件に、口元とそれ以外を分けるbboxを組み合わせて切り分けている。
+  // こうすると判定が実際の塗りの形に沿うので、赤い部分を巻き込むことがない
+  // (元絵の実測値: 赤はS0.82〜0.91、金色はS0.40〜0.65、口元は縦0.265〜0.395の範囲)
   Mitarashi: [{
     hue: 0,
     sMin: 0.3
   }, {
-    hue: 35,
-    sMin: 0.3
+    hue: 38,
+    sMin: 0.25,
+    bbox: [[0.15, 0.0, 0.85, 0.265], [0.0, 0.265, 0.29, 1.0], [0.71, 0.265, 1.0, 1.0], [0.29, 0.40, 0.71, 1.0]]
   }, {
-    posBbox: [[0.42, 0.05, 0.57, 0.09], [0.434, 0.273, 0.563, 0.294], [0.319, 0.294, 0.680, 0.316], [0.314, 0.316, 0.686, 0.336], [0.319, 0.336, 0.680, 0.358], [0.352, 0.358, 0.650, 0.380]],
-    noAAGuard: true,
+    hue: 38,
+    sMin: 0.25,
+    bbox: [0.29, 0.265, 0.71, 0.40],
     noEdgeGuard: true
   }],
   Ark: [219, 187, [60, {
@@ -10520,7 +10527,21 @@ function MonsterHeroGame() {
     size: 18
   }), " \u7DCA\u6025\u56DE\u5FA9"), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u753B\u9762\u5DE6\u4E0B\u306E\u300C\u7DCA\u6025\u300D\u30DC\u30BF\u30F3\u3067\u30E9\u30A4\u30D5\u3068\u30AC\u30C3\u30C4\u3092\u305D\u308C\u305E\u308C\u6700\u5927\u5024\u306E30%\u56DE\u5FA9\u3067\u304D\u307E\u3059\u3002\u305F\u3060\u3057\u4F7F\u7528\u3059\u308B\u3068\u81EA\u5206\u306E\u30BF\u30FC\u30F3\u3092\u6D88\u8CBB\u3057\u3001\u6575\u306E\u884C\u52D5\u304C\u767A\u751F\u3057\u307E\u3059\u3002\u56DE\u6570\u5236\u9650\u306F\u3042\u308A\u307E\u305B\u3093\u3002"))), helpTab === 'growth' && /*#__PURE__*/React.createElement("div", {
+  }, "\u753B\u9762\u5DE6\u4E0B\u306E\u300C\u7DCA\u6025\u300D\u30DC\u30BF\u30F3\u3067\u30E9\u30A4\u30D5\u3068\u30AC\u30C3\u30C4\u3092\u305D\u308C\u305E\u308C\u6700\u5927\u5024\u306E30%\u56DE\u5FA9\u3067\u304D\u307E\u3059\u3002\u305F\u3060\u3057\u4F7F\u7528\u3059\u308B\u3068\u81EA\u5206\u306E\u30BF\u30FC\u30F3\u3092\u6D88\u8CBB\u3057\u3001\u6575\u306E\u884C\u52D5\u304C\u767A\u751F\u3057\u307E\u3059\u3002\u56DE\u6570\u5236\u9650\u306F\u3042\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("section", {
+    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-pink-400 font-black text-base mb-3 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Heart, {
+    size: 18
+  }), " \u5408\u6D41\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
+  }, "WAVE 2\u30FB4\u30FB6\u3067\u4EF2\u9593\u304C\u5408\u6D41\u3059\u308B\u3068\u3001\u305D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u5408\u6D41\u30DC\u30FC\u30CA\u30B9\u5206\u3060\u3051\u30E9\u30A4\u30D5\u30FB\u3061\u304B\u3089\u30FB\u4E08\u592B\u3055\u30FB\u30AC\u30C3\u30C4\u304C\u4E0A\u304C\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/50 p-4 rounded-2xl border border-cyan-500/30"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-slate-400 leading-relaxed"
+  }, "\u3055\u3089\u306B\u3001\u5408\u6D41\u3057\u305F\u30E2\u30F3\u30B9\u30BF\u30FC\u306E", /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-bold"
+  }, "\u9593\u5408\u3044\u9069\u6027"), "\u3082\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002C\u3092\xB10\u3068\u3057\u3066\u3001A\u306A\u3089+2\u6BB5\u968E\u3001E\u306A\u3089-2\u6BB5\u968E\u3068\u3044\u3046\u3088\u3046\u306B\u3001\u5F97\u610F\u30FB\u4E0D\u5F97\u610F\u304C\u305D\u306E\u307E\u307E\u53CD\u6620\u3055\u308C\u307E\u3059\u3002\u5408\u6D41\u3055\u305B\u308B\u9806\u756A\u3084\u7D44\u307F\u5408\u308F\u305B\u3067\u3001\u72D9\u3063\u305F\u8DDD\u96E2\u3092\u4F38\u3070\u305B\u307E\u3059\u3002")))), helpTab === 'growth' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-5"
   }, /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
@@ -10588,7 +10609,29 @@ function MonsterHeroGame() {
     className: "text-[10px] font-black text-white"
   }, c.n), /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] text-slate-400"
-  }, c.d)))))), helpTab === 'meta' && /*#__PURE__*/React.createElement("div", {
+  }, c.d))))), /*#__PURE__*/React.createElement("section", {
+    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-cyan-400 font-black text-base mb-3 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Zap, {
+    size: 18
+  }), " \u6280\u30EC\u30D9\u30EB"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
+  }, "\u901A\u5E38\u6280\u30FB\u8DDD\u96E2\u6280\u30FB\u56FA\u6709\u6280\u306B\u306F\u305D\u308C\u305E\u308C9\u6BB5\u968E\u306E\u30EC\u30D9\u30EB\u304C\u3042\u308A\u307E\u3059\u3002WAVE\u30AF\u30EA\u30A2\u6642\u306E\u5831\u916C\u3067\u89E3\u653E\u30DD\u30A4\u30F3\u30C8\u3092\u7372\u5F97\u3057\u3001\u6280\u30921\u6BB5\u968E\u305A\u3064\u5F37\u5316\u3057\u3066\u3044\u304D\u307E\u3059\u3002\u30EC\u30D9\u30EB\u304C\u4E0A\u304C\u308B\u3068\u5A01\u529B\u3068\u4F1A\u5FC3\u7387\u304C\u4E0A\u304C\u308A\u307E\u3059\u304C\u3001\u6D88\u8CBB\u30AC\u30C3\u30C4\u3082\u5897\u3048\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/50 p-4 rounded-2xl border border-cyan-500/30"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-slate-400 leading-relaxed"
+  }, "\u30D0\u30C8\u30EB\u4E2D\u306F\u30BF\u30A4\u30EB\u9078\u629E\u5F0F\u3067\u3001\u89E3\u653E\u6E08\u307F\u306E\u30EC\u30D9\u30EB\u3067\u3042\u308C\u3070\u4E0B\u4F4D\u306E\u6280\u306B\u623B\u3057\u3066\u4F7F\u3046\u3053\u3068\u3082\u3067\u304D\u307E\u3059(\u6D88\u8CBB\u30AC\u30C3\u30C4\u3092\u7BC0\u7D04\u3057\u305F\u3044\u3068\u304D\u306B\u4FBF\u5229\u3067\u3059)\u3002"))), /*#__PURE__*/React.createElement("section", {
+    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-emerald-400 font-black text-base mb-3 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Sword, {
+    size: 18
+  }), " \u30AC\u30FC\u30C9"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-slate-200 leading-relaxed"
+  }, "\u30AC\u30FC\u30C9\u30AB\u30FC\u30C9\u306E\u8EFD\u6E1B\u91CF\u306F", /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-bold"
+  }, "\u56FA\u5B9A\u5024\uFF0B(\u4E08\u592B\u3055\xD7\u500D\u7387)"), "\u3067\u6C7A\u307E\u308A\u307E\u3059(\u30AC\u30FC\u30C9=200\uFF0B\u4E08\u592B\u3055\xD71.1\u3001\u30CF\u30A4\u30AC\u30FC\u30C9=300\uFF0B\u4E08\u592B\u3055\xD71.2)\u3002\u4E08\u592B\u3055\u304C100\u4E0A\u304C\u308B\u3054\u3068\u306B\u4E0A\u4F4D\u306E\u30AC\u30FC\u30C9\u304C\u89E3\u653E\u3055\u308C\u3001\u624B\u672D\u306B\u5165\u308B\u30AC\u30FC\u30C9\u306E\u679A\u6570\u3082\u5897\u3048\u307E\u3059\u3002"))), helpTab === 'meta' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-5"
   }, /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
@@ -10598,7 +10641,23 @@ function MonsterHeroGame() {
     size: 18
   }), " \u30D6\u30EA\u30FC\u30C0\u30FC\u30EC\u30D9\u30EB"), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "WAVE\u3092\u30AF\u30EA\u30A2\u3059\u308B\u3068\u30D6\u30EA\u30FC\u30C0\u30FCXP\u3092\u7372\u5F97\u3057\u3066\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3057\u307E\u3059\u3002\u30EC\u30D9\u30EB\u304C\u4E0A\u304C\u308B\u305F\u3073\u306B\u30D6\u30EA\u30FC\u30C0\u30FC\u30DD\u30A4\u30F3\u30C8(pt)\u30921\u7372\u5F97\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+  }, "WAVE\u3092\u30AF\u30EA\u30A2\u3059\u308B\u3068\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u3092\u7372\u5F97\u3057\u3066\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3057\u307E\u3059\u3002\u30EC\u30D9\u30EB\u304C\u4E0A\u304C\u308B\u305F\u3073\u306B\u30D6\u30EA\u30FC\u30C0\u30FC\u30DD\u30A4\u30F3\u30C8(pt)\u30921\u7372\u5F97\u3067\u304D\u307E\u3059\u3002pt\u306F\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u30A2\u30A4\u30B3\u30F3\u8CFC\u5165\u306B\u4F7F\u3044\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-violet-400 font-black text-base mb-3 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 18
+  }), " \u30DE\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
+  }, "\u30D7\u30EC\u30A4\u7D42\u4E86\u5F8C\u306E\u30EA\u30B6\u30EB\u30C8\u753B\u9762\u3067\u3001\u305D\u306E\u3068\u304D\u52C7\u8005\u30E2\u30F3\u3060\u3063\u305F\u30E2\u30F3\u30B9\u30BF\u30FC\u306B\u540D\u524D\u3092\u4ED8\u3051\u3066\u767B\u9332\u3067\u304D\u307E\u3059\u3002\u767B\u9332\u3057\u305F\u500B\u4F53\u3092", /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-bold"
+  }, "\u30DE\u30B9\u30E2\u30F3"), "\u3068\u547C\u3073\u3001\u7D46\u30EC\u30D9\u30EB\u30FB\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u30FB\u898B\u305F\u76EE\u306E\u8272\u3092\u305D\u306E\u500B\u4F53\u3060\u3051\u306E\u3082\u306E\u3068\u3057\u3066\u6301\u3061\u7D9A\u3051\u307E\u3059\u3002\u540C\u3058\u7A2E\u985E\u3067\u3082\u5225\u3005\u306B\u80B2\u3066\u3089\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/50 p-4 rounded-2xl border border-violet-500/30"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-black text-white mb-1"
+  }, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u306E\u4F7F\u3044\u9053"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-slate-400 leading-relaxed"
+  }, "\u7D46\u30EC\u30D9\u30EB\u304C1\u4E0A\u304C\u308B\u3054\u3068\u306B1\u30DD\u30A4\u30F3\u30C8\u7372\u5F97\u3057\u307E\u3059\u30021\u30DD\u30A4\u30F3\u30C8\u6D88\u8CBB\u3057\u3066\u3001\u9593\u5408\u3044\u9069\u6027\u30921\u6BB5\u968E\u4E0A\u3052\u308B\u304B\u3001\u30E9\u30A4\u30D5\u30FB\u3061\u304B\u3089\u30FB\u4E08\u592B\u3055\u30FB\u30AC\u30C3\u30C4\u306E\u3044\u305A\u308C\u304B\u3092\u4E0A\u3052\u3089\u308C\u307E\u3059\u3002\u632F\u308A\u76F4\u3057\u305F\u3044\u3068\u304D\u306F\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u300C\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8\u300D\u3092\u4F7F\u3044\u307E\u3059\u3002"))), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-pink-400 font-black text-base mb-3 flex items-center gap-2"
@@ -10606,15 +10665,35 @@ function MonsterHeroGame() {
     size: 18
   }), " \u7D46\u30EC\u30D9\u30EB"), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u52C7\u8005\u30E2\u30F3\u306B\u9078\u3093\u3060\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u3001WAVE\u30AF\u30EA\u30A2\u3054\u3068\u306B\u7D46\u7D4C\u9A13\u5024\u3092\u7372\u5F97\u3057\u3066\u7D46\u30EC\u30D9\u30EB\u304C\u4E0A\u304C\u308A\u307E\u3059(WAVE\u304C\u9032\u3080\u307B\u30691\u56DE\u3042\u305F\u308A\u306E\u7372\u5F97\u91CF\u3082\u5897\u52A0)\u3002\u30EC\u30D9\u30EB\u304C\u4E0A\u304C\u308B\u305F\u3073\u306B\u300C\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u300D\u30921\u7372\u5F97\u3067\u304D\u3001\u305D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u9593\u5408\u3044\u9069\u6027\u3092\u5F37\u5316\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+  }, "\u52C7\u8005\u30E2\u30F3\u306B\u9078\u3093\u3060\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u3001WAVE\u30AF\u30EA\u30A2\u3054\u3068\u306B\u7D46\u7D4C\u9A13\u5024\u3092\u7372\u5F97\u3057\u3066\u7D46\u30EC\u30D9\u30EB\u304C\u4E0A\u304C\u308A\u307E\u3059(WAVE\u304C\u9032\u3080\u307B\u30691\u56DE\u3042\u305F\u308A\u306E\u7372\u5F97\u91CF\u3082\u5897\u52A0)\u3002\u4F9B\u30E2\u30F3\u3068\u3057\u3066\u5408\u6D41\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306B\u3082\u7D4C\u9A13\u5024\u304C\u5165\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-indigo-300 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Trophy, {
+    className: "text-violet-300 font-black text-base mb-3 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Layers, {
     size: 18
-  }), " \u6700\u7D42\u30EA\u30B6\u30EB\u30C8"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u512A\u52DD\u30FB\u6557\u5317\u30FB\u30EA\u30BF\u30A4\u30A2\u3044\u305A\u308C\u304B\u3067\u30D7\u30EC\u30A4\u304C\u7D42\u4E86\u3059\u308B\u3068\u3001\u7372\u5F97\u3057\u305F\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u30FB\u7D46\u7D4C\u9A13\u5024\u3068\u3001WAVE\u3054\u3068\u306E\u7372\u5F97\u30B9\u30B3\u30A2/\u7D4C\u9A13\u5024/\u30C0\u30A4\u30E4\u306E\u5185\u8A33\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+  }), " \u5408\u4F53"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
+  }, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u9762\u306E\u300C\u5408\u4F53\u300D\u304B\u3089\u3001\u30DE\u30B9\u30E2\u30F3\u540C\u58EB\u3092\u5408\u4F53\u3067\u304D\u307E\u3059\u3002\u6B8B\u3059\u5074\u3092", /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-bold"
+  }, "\u4E3B"), "\u3001\u6D88\u3048\u308B\u5074\u3092", /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-bold"
+  }, "\u526F"), "\u3068\u3057\u3066\u9078\u3073\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/50 p-4 rounded-2xl border border-white/5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-slate-300 leading-relaxed"
+  }, "\u526F\u306E\u7D46\u7D4C\u9A13\u5024\u304C\u7D2F\u8A08\u306E\u307E\u307E\u4E3B\u306B\u52A0\u7B97\u3055\u308C\u3001\u4E0A\u304C\u3063\u305F\u30EC\u30D9\u30EB\u306E\u6570\u3060\u3051\u4E3B\u304C\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3092\u7372\u5F97\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/50 p-4 rounded-2xl border border-white/5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-slate-300 leading-relaxed"
+  }, "\u4E3B\u306E\u540D\u524D\u30FB\u898B\u305F\u76EE\u30FB\u9593\u5408\u3044\u9069\u6027\u30FB\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316\u306F\u305D\u306E\u307E\u307E\u7DAD\u6301\u3055\u308C\u307E\u3059(\u526F\u306E\u5F37\u5316\u306F\u5F15\u304D\u7D99\u304C\u308C\u307E\u305B\u3093)\u3002")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/50 p-4 rounded-2xl border border-amber-500/30"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-amber-200 leading-relaxed"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "font-bold"
+  }, "\u56FA\u6709\u6280\u306E\u5F15\u304D\u7D99\u304E"), "\u306F\u3001\u4E3B\u3068\u526F\u304C\u4E21\u65B9\u3068\u3082\u7D46Lv.10\u4EE5\u4E0A\u306E\u3068\u304D\u3060\u3051\u9078\u3079\u307E\u3059\u3002\u6D88\u8CBB\u30C0\u30A4\u30E4\u306F(\u4E3B\u306E\u7D46Lv\uFF0B\u526F\u306E\u7D46Lv)\xD7100\u3067\u3059\u3002")))), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-amber-400 font-black text-base mb-3 flex items-center gap-2"
@@ -10634,7 +10713,7 @@ function MonsterHeroGame() {
     className: "text-[11px] font-black text-white mb-1 uppercase"
   }, "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("div", {
     className: "text-[12px] text-slate-400 leading-relaxed"
-  }, "WAVE\u30AF\u30EA\u30A2\u3067\u7372\u5F97(Normal\u57FA\u6E96100\u30C0\u30A4\u30E4/WAVE\u3001\u96E3\u6613\u5EA6\u3067\u5909\u52D5)\u3002\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u300C\u5186\u76E4\u77F3\u300D\u300C\u30D6\u30EA\u30FC\u30C0\u30FC\u300D\u8CFC\u5165\u306B\u4F7F\u3044\u307E\u3059\u3002")))), /*#__PURE__*/React.createElement("section", {
+  }, "WAVE\u30AF\u30EA\u30A2\u3067\u7372\u5F97(Normal\u57FA\u6E96100\u30C0\u30A4\u30E4/WAVE\u3001\u96E3\u6613\u5EA6\u3067\u5909\u52D5)\u3002\u300C\u5186\u76E4\u77F3\u300D\u300C\u30D6\u30EA\u30FC\u30C0\u30FC\u300D\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u306E\u8CFC\u5165\u3068\u3001\u5408\u4F53\u306E\u8CBB\u7528\u306B\u4F7F\u3044\u307E\u3059\u3002")))), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-orange-400 font-black text-base mb-3 flex items-center gap-2"
@@ -10642,8 +10721,8 @@ function MonsterHeroGame() {
     size: 18
   }), " \u30DE\u30FC\u30B1\u30C3\u30C8"), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-200 leading-relaxed mb-3"
-  }, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u9762\u304B\u3089\u5165\u308C\u307E\u3059\u30023\u3064\u306E\u30AB\u30C6\u30B4\u30EA\u304C\u3042\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-3 gap-2"
+  }, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u9762\u304B\u3089\u5165\u308C\u307E\u3059\u30024\u3064\u306E\u30AB\u30C6\u30B4\u30EA\u304C\u3042\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-black/50 p-3 rounded-2xl text-center border border-white/5"
   }, /*#__PURE__*/React.createElement("div", {
@@ -10662,7 +10741,23 @@ function MonsterHeroGame() {
     className: "text-[10px] font-black text-white mb-1"
   }, "\u30D6\u30EA\u30FC\u30C0\u30FC"), /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] text-slate-400"
-  }, "\u30C0\u30A4\u30E4\u3067\u8CFC\u5165", /*#__PURE__*/React.createElement("br", null), "\u65B0\u30AB\u30FC\u30C9\u89E3\u653E")))), /*#__PURE__*/React.createElement("section", {
+  }, "\u30C0\u30A4\u30E4\u3067\u8CFC\u5165", /*#__PURE__*/React.createElement("br", null), "\u65B0\u30AB\u30FC\u30C9\u89E3\u653E")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/50 p-3 rounded-2xl text-center border border-white/5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-white mb-1"
+  }, "\u30A2\u30A4\u30C6\u30E0"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-400"
+  }, "\u30C0\u30A4\u30E4\u3067\u8CFC\u5165", /*#__PURE__*/React.createElement("br", null), "\u30DE\u30B9\u30E2\u30F3\u306B\u4F7F\u3046"))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/50 p-4 rounded-2xl border border-white/5 mt-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-black text-white mb-1"
+  }, "\u30A2\u30A4\u30C6\u30E0"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-slate-400 leading-relaxed"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-bold"
+  }, "\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8"), ": \u4F7F\u7528\u6E08\u307F\u306E\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3092\u3059\u3079\u3066\u672A\u4F7F\u7528\u306B\u623B\u3057\u307E\u3059(\u7D46\u30EC\u30D9\u30EB\u30FB\u7D46\u7D4C\u9A13\u5024\u306F\u305D\u306E\u307E\u307E)\u3002", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-bold"
+  }, "\u67D3\u8272\u3082\u3069\u304D"), ": \u898B\u305F\u76EE\u306E\u8272\u3092\u5909\u3048\u3089\u308C\u307E\u3059\u3002\u30E2\u30F3\u30B9\u30BF\u30FC\u306B\u3088\u3063\u3066\u306F\u4F53\u30FB\u76EE\u30FB\u53E3\u306A\u3069\u306E\u90E8\u4F4D\u3054\u3068\u306B\u5225\u3005\u306E\u8272\u3092\u9078\u3079\u3001\u30D7\u30EA\u30BB\u30C3\u30C827\u8272\u306B\u52A0\u3048\u3066\u30AB\u30B9\u30BF\u30E0\u30AB\u30E9\u30FC\u3082\u4F7F\u3048\u307E\u3059\u3002"))), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-indigo-400 font-black text-base mb-3 flex items-center gap-2"
@@ -10670,7 +10765,23 @@ function MonsterHeroGame() {
     size: 18
   }), " \u7DE8\u6210"), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u65B0\u3057\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u3084\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u3092\u89E3\u653E\u3057\u3066\u3082\u3001\u6B21\u306E\u5468\u56DE\u3067\u5019\u88DC\u306B\u306A\u308B\u306E\u306F\u7DE8\u6210\u3067\u9078\u3093\u3060\u3082\u306E\u3060\u3051\u3067\u3059\u3002\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u9762\u306E\u300C\u7DE8\u6210\u300D\u304B\u3089\u30E2\u30F3\u30B9\u30BF\u30FC8\u4F53\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C96\u679A\u3092\u3061\u3087\u3046\u3069\u9078\u3073\u3001\u300C\u6C7A\u5B9A\u300D\u30DC\u30BF\u30F3\u3067\u78BA\u5B9A\u3057\u307E\u3059(\u6700\u521D\u304B\u3089\u89E3\u653E\u6E08\u307F\u306E8\u4F53\u30FB6\u679A\u306F\u7DE8\u6210\u6E08\u307F\u3067\u3059)\u3002"))), helpTab === 'tips' && /*#__PURE__*/React.createElement("div", {
+  }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u65B0\u3057\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u3084\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u3092\u89E3\u653E\u3057\u3066\u3082\u3001\u6B21\u306E\u5468\u56DE\u3067\u5019\u88DC\u306B\u306A\u308B\u306E\u306F\u7DE8\u6210\u3067\u9078\u3093\u3060\u3082\u306E\u3060\u3051\u3067\u3059\u3002\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u9762\u306E\u300C\u7DE8\u6210\u300D\u304B\u3089\u30E2\u30F3\u30B9\u30BF\u30FC8\u4F53\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C96\u679A\u3092\u3061\u3087\u3046\u3069\u9078\u3073\u3001\u300C\u6C7A\u5B9A\u300D\u30DC\u30BF\u30F3\u3067\u78BA\u5B9A\u3057\u307E\u3059(\u6700\u521D\u304B\u3089\u89E3\u653E\u6E08\u307F\u306E8\u4F53\u30FB6\u679A\u306F\u7DE8\u6210\u6E08\u307F\u3067\u3059)\u3002")), /*#__PURE__*/React.createElement("section", {
+    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-indigo-300 font-black text-base mb-3 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Trophy, {
+    size: 18
+  }), " \u6700\u7D42\u30EA\u30B6\u30EB\u30C8"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-slate-200 leading-relaxed"
+  }, "\u512A\u52DD\u30FB\u6557\u5317\u30FB\u30EA\u30BF\u30A4\u30A2\u3044\u305A\u308C\u304B\u3067\u30D7\u30EC\u30A4\u304C\u7D42\u4E86\u3059\u308B\u3068\u3001\u7372\u5F97\u3057\u305F\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u30FB\u7D46\u7D4C\u9A13\u5024\u3068\u3001WAVE\u3054\u3068\u306E\u7372\u5F97\u30B9\u30B3\u30A2/\u7D4C\u9A13\u5024/\u30C0\u30A4\u30E4\u306E\u5185\u8A33\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002\u3053\u306E\u753B\u9762\u304B\u3089\u52C7\u8005\u30E2\u30F3\u3092\u30DE\u30B9\u30E2\u30F3\u3068\u3057\u3066\u767B\u9332\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-amber-300 font-black text-base mb-3 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 18
+  }), " \u66F4\u65B0\u5C65\u6B74"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-slate-200 leading-relaxed"
+  }, "\u30C8\u30C3\u30D7\u753B\u9762\u306E\u300C\u66F4\u65B0\u300D\u30DC\u30BF\u30F3\u304B\u3089\u3001\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u5185\u5BB9\u3068\u4E0D\u5177\u5408\u60C5\u5831\u3092\u30BF\u30D6\u3067\u5207\u308A\u66FF\u3048\u3066\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002\u672A\u8AAD\u306E\u66F4\u65B0\u304C\u3042\u308B\u3068\u304D\u306FNEW\u30DE\u30FC\u30AF\u304C\u4ED8\u304D\u307E\u3059\u3002"))), helpTab === 'tips' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-5"
   }, /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
