@@ -1,0 +1,134 @@
+{
+  "Mocchi": {
+    "width": 1162,
+    "height": 1162,
+    "opaque": 408035,
+    "regions": [
+      332816,
+      37973,
+      28814
+    ],
+    "uncolored": 8432
+  },
+  "Suezo": {
+    "width": 1159,
+    "height": 1159,
+    "opaque": 284224,
+    "regions": [
+      172902,
+      39349,
+      32513
+    ],
+    "uncolored": 39460
+  },
+  "Golem": {
+    "width": 1066,
+    "height": 1066,
+    "opaque": 456987,
+    "regions": [
+      252481,
+      168908,
+      30196
+    ],
+    "uncolored": 5402
+  },
+  "Tiger": {
+    "width": 160,
+    "height": 160,
+    "opaque": 8096,
+    "regions": [
+      4780,
+      2071,
+      336
+    ],
+    "uncolored": 909
+  },
+  "Ham": {
+    "width": 160,
+    "height": 160,
+    "opaque": 5866,
+    "regions": [
+      2934,
+      1641,
+      694
+    ],
+    "uncolored": 597
+  },
+  "Pixie": {
+    "width": 1174,
+    "height": 1174,
+    "opaque": 204079,
+    "regions": [
+      29484,
+      88382,
+      76918
+    ],
+    "uncolored": 9295
+  },
+  "Monol": {
+    "width": 160,
+    "height": 160,
+    "opaque": 13197,
+    "regions": [
+      4014,
+      4770,
+      3960
+    ],
+    "uncolored": 453
+  },
+  "Oboro": {
+    "width": 160,
+    "height": 160,
+    "opaque": 7135,
+    "regions": [
+      1757,
+      1830,
+      1787
+    ],
+    "uncolored": 1761
+  },
+  "Zan": {
+    "width": 160,
+    "height": 160,
+    "opaque": 7725,
+    "regions": [
+      3765,
+      12,
+      2398
+    ],
+    "uncolored": 1550
+  },
+  "Mitarashi": {
+    "width": 1000,
+    "height": 1000,
+    "opaque": 417928,
+    "regions": [
+      221105,
+      153701,
+      36707
+    ],
+    "uncolored": 6415
+  },
+  "Ark": {
+    "width": 160,
+    "height": 160,
+    "opaque": 9129,
+    "regions": [
+      5439,
+      1138,
+      1161
+    ],
+    "uncolored": 1391
+  },
+  "Iblis": {
+    "width": 570,
+    "height": 570,
+    "opaque": 102384,
+    "regions": [
+      41529,
+      25372,
+      13798
+    ],
+    "uncolored": 21685
+  }
+}
