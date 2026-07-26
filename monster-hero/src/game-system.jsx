@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-27 04:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-27 04:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -145,6 +145,11 @@ const Audio_ = (() => {
   let bgmGain = null;    // BGM専用のゲインノード(iOSでも効く音量調整はこれで行う)
   let bgmCtx = null;     // BGM専用のAudioContext(SEのTone.jsとは独立)
   const jingleEls = {}; // ジングル(1回だけ鳴らす短い音)の要素
+  // ジングル(敵撃破のファンファーレ)を鳴らしているあいだはBGMを止め、鳴り終わってから
+  // その時点の曲を流す。BGMと同時に鳴らすと混ざって聞き取れず、逆に曲の切り替えで
+  // ジングルを止めるとファンファーレがほとんど鳴らないまま切れてしまうため
+  let jinglePlaying = null; // 再生中のジングルのキー(なければ null)
+  let jingleTimer = null;   // ended が来なかったときにBGMを戻すための保険
   // 曲の切り替えは play() の完了を待つ非同期処理のため、素早く画面を移ると
   // 「前の曲の再生開始」が後から効いて2曲が重なることがあった。
   // 再生要求ごとに番号を振り、開始した時点で最新の要求でなければ止める
@@ -285,8 +290,11 @@ const Audio_ = (() => {
     }
   };
 
-  // 鳴っているジングルをすべて止める
+  // 鳴っているジングルをすべて止める。ジングル中はBGMを止めているので、
+  // 止めた時点で「ジングル再生中」の印も消しておく(BGMを鳴らし直せる状態に戻す)
   const stopJingles = () => {
+    jinglePlaying = null;
+    if (jingleTimer) { clearTimeout(jingleTimer); jingleTimer = null; }
     Object.values(jingleEls).forEach((el) => { try { el.pause(); el.currentTime = 0; } catch (e) {} });
   };
 
@@ -344,16 +352,15 @@ const Audio_ = (() => {
 
   const _playBGM = async (key) => {
     // 音がオフのあいだも「今どの曲であるべきか」は覚えておき、オンにした時点で鳴らす
-    const prevKey = currentKey;
     currentKey = key;
     preloadBGM(key);
     // 音がオフ・音量0・画面が見えていない、のいずれかなら鳴らさない。
     // 特に「画面が見えていないときは止める」ことで、他のアプリに切り替えたあとも
     // バックグラウンドで鳴り続けてしまう問題を防いでいる
     if (!enabled || bgmVolumePct <= 0 || pageHidden) { stopOthers(null); stopJingles(); return; }
-    // 曲が変わるタイミングでジングル(ファンファーレ)は止める。
-    // 敵撃破のファンファーレが鳴っている最中にリザルトへ移ると重なって聞こえるため
-    if (prevKey !== key) stopJingles();
+    // ファンファーレを鳴らしている最中は曲を始めない。どの曲を鳴らすべきかは currentKey に
+    // 覚えてあるので、ファンファーレが鳴り終わった時点でその曲を流す
+    if (jinglePlaying) { stopOthers(null); return; }
     const el = getBgmEl(key);
     if (!el) return;
     // 音を出す前に必ずAudioContextを動かす。停止したまま繋ぐと無音になるため、
@@ -386,7 +393,8 @@ const Audio_ = (() => {
     return bgmQueue;
   };
 
-  // ジングル(1回だけ鳴らす短い音)。BGMは止めずに重ねて鳴らす
+  // ジングル(1回だけ鳴らす短い音)。鳴っているあいだBGMは止めておき、鳴り終わってから
+  // その時点の曲(リザルトのBGMなど)を流す。ファンファーレを最後まで聞かせるための作り
   const playJingle = async (key) => {
     if (!enabled || bgmVolumePct <= 0 || pageHidden || !JINGLE_FILES[key]) return;
     try {
@@ -404,8 +412,25 @@ const Audio_ = (() => {
       connectJingleToGain(key);
       el.currentTime = 0;
       if (!bgmSources['jingle:' + key]) { try { el.volume = _bgmGain(bgmVolumePct); } catch (e) {} }
+      // 鳴り終わったらBGMへ戻す。ended が来ないことがあるので長さ(不明なら8秒)で保険をかける
+      const backToBGM = () => {
+        if (jinglePlaying !== key) return;
+        jinglePlaying = null;
+        if (jingleTimer) { clearTimeout(jingleTimer); jingleTimer = null; }
+        if (currentKey) playBGM(currentKey);
+      };
+      el.onended = backToBGM;
+      jinglePlaying = key;
+      stopOthers(null); // ファンファーレを聞かせるあいだBGMは止める
       await el.play();
-    } catch (e) {}
+      if (jingleTimer) clearTimeout(jingleTimer);
+      const lenMs = (el.duration && isFinite(el.duration)) ? el.duration * 1000 + 300 : 8000;
+      jingleTimer = setTimeout(backToBGM, lenMs);
+    } catch (e) {
+      // 鳴らせなかった場合はBGMを止めっぱなしにしない
+      jinglePlaying = null;
+      if (currentKey) playBGM(currentKey);
+    }
   };
   // ジングルもBGMと同じゲインノードに通す(iOSでvolumeが効かないため)
   const connectJingleToGain = (key) => {
@@ -426,15 +451,15 @@ const Audio_ = (() => {
   // 画面の表示/非表示が変わったときに呼ぶ。見えていないあいだはBGMを止める
   const setPageHidden = (hidden) => {
     pageHidden = hidden;
-    if (hidden) stopOthers(null);
+    if (hidden) { stopJingles(); stopOthers(null); }
     else if (currentKey) playBGM(currentKey);
   };
 
-  const stopBGM = () => { currentKey = null; stopOthers(null); };
+  const stopBGM = () => { currentKey = null; stopJingles(); stopOthers(null); };
 
   const setEnabled = async (on) => {
     enabled = on;
-    if (!on) { stopOthers(null); return; }
+    if (!on) { stopJingles(); stopOthers(null); return; }
     await ensure();
     if (currentKey) playBGM(currentKey);
   };
@@ -1579,6 +1604,9 @@ function MonsterHeroGame() {
   const [ownedUniques, setOwnedUniques] = useState([]);
   const [slotUniqueChoice, setSlotUniqueChoice] = useState({}); // スロットidx→選択中の固有技キー('own'または'inh0'等)。合体で引き継いだ固有技をバトル中に切り替えるための選択状態
   const [slotUniqueLevelChoice, setSlotUniqueLevelChoice] = useState({}); // スロットidx→選択中の固有技レベル(0〜評価上限)。未指定(undefined)ならそのモンスターの現在の強化到達レベル(最大)を使う
+  // 合体で引き継いだ固有技の、このランでの強化到達レベル。キーは「スロットidx:引き継ぎ技の番号」。
+  // 自分の固有技(ownedUniques)と同じく1ランかぎりで、強化フェーズのポイントで上げ下げする
+  const [inheritedUniqueEvo, setInheritedUniqueEvo] = useState({});
   const [ownedTeachings, setOwnedTeachings] = useState([]);
   const [teachingPool, setTeachingPool] = useState([]);
   const [popups, setPopups] = useState([]);
@@ -2764,8 +2792,23 @@ function MonsterHeroGame() {
   const masuRegisterButtonNode = () => {
     if (!finalRewardSummary?.heroBondGain || finalRewardSummary.heroBondGain.masuId) return null;
     if (masuRegisteredThisRun) return <div className="text-[10px] text-pink-300 font-black mt-1 flex items-center justify-center gap-1 shrink-0"><Heart size={11}/>マスモンとして登録しました！</div>;
+    // 見落とされやすいので、ただのボタンではなく枠つきの案内にして光らせる
     return (
-      <button onClick={()=>{setMasuNameInput(mainHero?.name||''); setShowMasuRegisterModal(true);}} className="w-full max-w-xs bg-pink-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 mt-1 shrink-0 active:scale-95"><Heart size={14}/>マスモンとして登録する</button>
+      <div
+        className="w-full max-w-xs mt-2 shrink-0 rounded-2xl border-2 p-2.5"
+        style={{ borderColor:'#ec4899', backgroundColor:'rgba(236,72,153,0.12)', animation:'masuCallout 1.6s ease-in-out infinite' }}
+      >
+        <div className="flex items-center justify-center gap-1.5 mb-1">
+          <span className="text-[8px] font-black text-white px-1.5 py-0.5 rounded-full" style={{ backgroundColor:'#ec4899', animation:'masuBadge 1.6s ease-in-out infinite' }}>登録できます</span>
+          <span className="text-[10px] font-black text-pink-200">{mainHero?.name||'このモンスター'}をマスモンに！</span>
+        </div>
+        <div className="text-[8px] text-pink-100/80 font-bold leading-snug mb-2 text-center">今回ためた絆経験値をそのまま引き継いで、次のランからも育てられます</div>
+        <button
+          onClick={()=>{setMasuNameInput(mainHero?.name||''); setShowMasuRegisterModal(true);}}
+          className="w-full text-white py-3 rounded-xl font-black text-xs uppercase shadow-lg flex items-center justify-center gap-2 active:scale-95"
+          style={{ backgroundColor:'#db2777' }}
+        ><Heart size={14}/>マスモンとして登録する</button>
+      </div>
     );
   };
   const registerMasuMon = (name) => {
@@ -2929,7 +2972,7 @@ function MonsterHeroGame() {
     score:0, wave:1, hp:500, maxHp:500, guts:50, maxGuts:100, atk:100, def:100,
     slots:[null,null,null,null], mainHero:null, hand:[], deck:[], graveyard:[],
     enemy:null, enemyDist:2, selectedCards:[], isBusy:false,
-    monSelection:getActiveMonsterList(), ownedUniques:[], slotUniqueChoice:{}, slotUniqueLevelChoice:{}, ownedTeachings:[],
+    monSelection:getActiveMonsterList(), ownedUniques:[], slotUniqueChoice:{}, slotUniqueLevelChoice:{}, inheritedUniqueEvo:{}, ownedTeachings:[],
     atkLevel:0, guardLevel:0, guardBonusCount:0, upgradePoints:0, turnCount:1,
     permaBuffs:{ autoHpRecovery:0.1 }, waveBuffs:{}, turnBuffs:{}, nextTurnBuffs:{},
     currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], distAptBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
@@ -2941,7 +2984,7 @@ function MonsterHeroGame() {
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
     setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
-    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{}); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice||{});
+    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{}); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice||{}); setInheritedUniqueEvo(s.inheritedUniqueEvo||{});
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
@@ -2977,7 +3020,7 @@ function MonsterHeroGame() {
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
     setGraveyard(s.graveyard); setEnemy(s.enemy); setEnemyDist(s.enemyDist); setSelectedCards(s.selectedCards); setCardAssignments({}); setPendingCard(null);
-    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{}); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice||{});
+    setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{}); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice||{}); setInheritedUniqueEvo(s.inheritedUniqueEvo||{});
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
@@ -3530,13 +3573,24 @@ function MonsterHeroGame() {
 
   // スロットで現在選べる固有技一覧(自分の固有技+合体で引き継いだ固有技)を返す。
   // 表示・選択UIとbuildDeckの両方から使う共通ロジック
-  const getAvailableUniquesForSlot = (mon, cUniques) => {
+  // 引き継いだ固有技の強化レベルを覚えておくキー。スロットの位置と何番目の引き継ぎ技かで決める
+  const inhEvoKey = (slotIdx, inhIdx) => `${slotIdx}:${inhIdx}`;
+  const getAvailableUniquesForSlot = (mon, cUniques, slotIdx, cInhEvo) => {
     if (!mon) return [];
     const own = (cUniques||ownedUniques).find(uq=>uq.monId===mon.id);
     const inherited = mon.inheritedUniques||[];
-    return [...(own?[{key:'own',unique:own}]:[]), ...inherited.map((iu,ii)=>({key:`inh${ii}`,unique:iu}))];
+    // 引き継いだ固有技も自分の固有技と同じく、このランでの強化到達レベルを持たせる
+    const evoMap = cInhEvo || inheritedUniqueEvo;
+    return [
+      ...(own?[{key:'own',unique:own}]:[]),
+      ...inherited.map((iu,ii)=>({
+        key:`inh${ii}`,
+        inhIdx:ii,
+        unique:{...iu, evoLevel: (slotIdx!=null && evoMap[inhEvoKey(slotIdx,ii)]!=null) ? evoMap[inhEvoKey(slotIdx,ii)] : (iu.evoLevel||0)},
+      })),
+    ];
   };
-  const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus, uChoice, uLevelChoice) => {
+  const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus, uChoice, uLevelChoice, cInhEvo) => {
     const atkNames=HERO_ATK_NAMES[mainHero?.id]||HERO_ATK_NAMES['Mocchi'];
     let pool=[];
     pool.push({...BASE_ATK_EVOLUTION[aLvl],name:atkNames[aLvl],type:'atk',uid:Math.random()},{...BASE_ATK_EVOLUTION[aLvl],name:atkNames[aLvl],type:'atk',uid:Math.random()});
@@ -3544,8 +3598,12 @@ function MonsterHeroGame() {
     currentSlots.forEach((s,idx)=>{
       if(s){
         const revo=RANGE_EVOLUTION[aLvl];
-        pool.push({name:`${RANGE_LABELS[idx]}${revo.name}`,type:'range_atk',rangeIdx:idx,guts:revo.guts,baseGuts:revo.baseGuts,mult:revo.mult,baseMult:revo.baseMult,crit:revo.crit,icon:RANGE_LABELS[idx],uid:Math.random(),evoLevel:aLvl});
-        const options=getAvailableUniquesForSlot(s,cUniques);
+        // 距離撃はターン終了時に敵を「その距離のひとつ隣」へ強制移動させる技。
+        // そのため、選んだ距離にモンスターを置いたら「その距離へ敵を動かせる距離撃」が手に入るようにする。
+        // (近距離を選んだら零撃、遠距離を選んだら中撃、というように rangeIdx はひとつ手前の距離になる)
+        const rIdx=(idx+RANGE_LABELS.length-1)%RANGE_LABELS.length;
+        pool.push({name:`${RANGE_LABELS[rIdx]}${revo.name}`,type:'range_atk',rangeIdx:rIdx,guts:revo.guts,baseGuts:revo.baseGuts,mult:revo.mult,baseMult:revo.baseMult,crit:revo.crit,icon:RANGE_LABELS[rIdx],uid:Math.random(),evoLevel:aLvl});
+        const options=getAvailableUniquesForSlot(s,cUniques,idx,cInhEvo);
         if(options.length>0){
           const chosenKey=(uChoice&&uChoice[idx])||'own';
           const u=(options.find(o=>o.key===chosenKey)||options[0]).unique;
@@ -3564,7 +3622,7 @@ function MonsterHeroGame() {
   // 選択が反映されるよう、控えているカードにも同じ内容を適用する)
   const applyUniqueChoiceForSlot = (slotIdx, key) => {
     const mon=slots[slotIdx]; if(!mon) return;
-    const options=getAvailableUniquesForSlot(mon,ownedUniques);
+    const options=getAvailableUniquesForSlot(mon,ownedUniques,slotIdx);
     const chosen=options.find(o=>o.key===key); if(!chosen) return;
     setSlotUniqueChoice(prev=>({...prev,[slotIdx]:chosen.key}));
     setSlotUniqueLevelChoice(prev=>{if(!(slotIdx in prev)) return prev; const n={...prev}; delete n[slotIdx]; return n;}); // 出典切替時はそのまま最大解放レベルへ戻す
@@ -3579,7 +3637,7 @@ function MonsterHeroGame() {
   // 直接指定して適用する。手札・山札・捨て札に既に配られているそのスロットの固有技カードも差し替える
   const applyUniqueLevelChoiceForSlot = (slotIdx, level) => {
     const mon=slots[slotIdx]; if(!mon) return;
-    const options=getAvailableUniquesForSlot(mon,ownedUniques);
+    const options=getAvailableUniquesForSlot(mon,ownedUniques,slotIdx);
     const activeKey=slotUniqueChoice[slotIdx]||'own';
     const chosen=options.find(o=>o.key===activeKey)||options[0]; if(!chosen) return;
     const u=chosen.unique;
@@ -3595,7 +3653,7 @@ function MonsterHeroGame() {
   // そのスロットで選択中の固有技を次の候補(自分の固有技⇔合体で引き継いだ固有技)へ切り替える
   const cycleActiveUniqueForSlot = (slotIdx) => {
     const mon=slots[slotIdx]; if(!mon) return;
-    const options=getAvailableUniquesForSlot(mon,ownedUniques);
+    const options=getAvailableUniquesForSlot(mon,ownedUniques,slotIdx);
     if(options.length<2) return;
     const curKey=slotUniqueChoice[slotIdx]||'own';
     const curIdx=Math.max(0,options.findIndex(o=>o.key===curKey));
@@ -3661,7 +3719,7 @@ function MonsterHeroGame() {
     const nGrdL = computeGuardLevel(defVal!==undefined?defVal:def);
     const nGB = nGrdL;
     setAtkLevel(nAtkL); setGuardLevel(nGrdL); setGuardBonusCount(nGB);
-    const pool=buildDeck(currentSlots,nAtkL,nGrdL,u||ownedUniques,t||ownedTeachings,nGB,slotUniqueChoice,slotUniqueLevelChoice);
+    const pool=buildDeck(currentSlots,nAtkL,nGrdL,u||ownedUniques,t||ownedTeachings,nGB,slotUniqueChoice,slotUniqueLevelChoice,inheritedUniqueEvo);
     setHand(pool.slice(0,5)); setDeck(pool.slice(5)); setGraveyard([]); setGameState('BATTLE'); setIsBusy(false);
     setTurnBuffs({}); setNextTurnBuffs({}); // WAVE毎リセットの一時バフ・デバフを全てクリア
   };
@@ -3750,6 +3808,64 @@ function MonsterHeroGame() {
         return{...u,evoLevel:nextEvo};
       } return u;
     }));
+  };
+  // 合体で引き継いだ固有技の強化。自分の固有技(upgradeUnique)と同じポイントを使い、
+  // 上げ下げの範囲・1回あたりの消費もまったく同じにしている
+  const upgradeInheritedUnique = (slotIdx, inhIdx, diff) => {
+    const key=inhEvoKey(slotIdx,inhIdx);
+    const cur=inheritedUniqueEvo[key]||0;
+    if(diff>0&&(upgradePoints<=0||cur>=8)) return;
+    if(diff<0&&cur<=0) return;
+    const nextEvo=Math.max(0,Math.min(8,cur+diff));
+    setInheritedUniqueEvo(prev=>({...prev,[key]:nextEvo}));
+    setUpgradePoints(p=>diff>0?p-1:p+1);
+  };
+  // 固有技の強化フェーズ(UPGRADE_SKILL)の1行分。自分の固有技と引き継いだ固有技で
+  // 同じ見た目・同じ操作にするため、描画をここにまとめている
+  const uniqueUpgradeRow = ({ rowKey, u, holderMon, inherited, onStep }) => {
+    const ownerMon=ALL_PLAYER_MONSTERS[u.monId];
+    const lvl=u.evoLevel||0;
+    const currentMult=u.baseMult+(lvl*0.5); const nextMult=u.baseMult+((lvl+1)*0.5);
+    const currentGuts=Math.floor(u.baseGuts*(currentMult/u.baseMult)); const nextGuts=Math.floor(u.baseGuts*(nextMult/u.baseMult));
+    const curCrit=Math.round((0.10+0.05*Math.min(lvl,8))*100); const nextCrit=Math.round((0.10+0.05*Math.min(lvl+1,8))*100);
+    // 引き継いだ技は「どのモンスターが使えるのか」と「元はどの血統の技か」の両方を出す
+    const heading=inherited ? `${holderMon?.name||'？'} ← ${ownerMon?.name||'？'}の技` : (ownerMon?.name||'');
+    return(
+      <div key={rowKey} className={`p-3 rounded-2xl border shrink-0 ${inherited?'bg-cyan-950/40 border-cyan-700/60':'bg-slate-900 border-slate-800'}`}>
+        <div className="flex items-center gap-3 mb-2">
+          {ownerMon?.iconUrl?(<img src={ownerMon.iconUrl} alt={ownerMon.name} className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0"/>):(<span style={{fontSize:'30px'}}>{cardIconNode(u.icon,40)}</span>)}
+          <div className="text-left flex-1">
+            <div className={`text-[8px] font-black uppercase tracking-wider flex items-center gap-1 ${inherited?'text-cyan-300':'text-indigo-400'}`}>
+              {inherited&&<span className="bg-cyan-600 text-white px-1 rounded-sm not-italic">引き継ぎ</span>}{heading}
+            </div>
+            <div className="font-black uppercase text-white" style={{fontSize:'13px'}}>{u.names[Math.min(lvl,u.names.length-1)]} <span className="text-slate-500">Lv.{lvl}{lvl<8&&<span className="text-amber-500"> → {lvl+1}</span>}</span></div>
+            {lvl<8?(
+              <div className="text-slate-400 font-mono flex flex-wrap gap-x-3 gap-y-0.5 mt-1" style={{fontSize:'9px'}}><div>技威力 {Math.floor(currentMult*100)} → <span className="text-red-400 font-bold">{Math.floor(nextMult*100)}</span></div><div>消費 {currentGuts} → <span className="text-amber-400 font-bold">{nextGuts}</span></div><div>会心 {curCrit}% → <span className="text-yellow-400 font-bold">{nextCrit}%</span></div></div>
+            ):(
+              <div className="text-slate-400 font-mono flex flex-wrap gap-x-3 gap-y-0.5 mt-1" style={{fontSize:'9px'}}><div>技威力 {Math.floor(currentMult*100)}</div><div>消費 {currentGuts}</div><div className="text-yellow-400">会心 {curCrit}%</div><div className="text-amber-500 font-black">MAX</div></div>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center justify-between bg-black/20 p-2 rounded-xl">
+          <span className="text-slate-500 font-black uppercase tracking-wider" style={{fontSize:'9px'}}>レベル調整</span>
+          <div className="flex items-center gap-3">
+            <button disabled={lvl<=0} onClick={()=>onStep(-1)} className="w-9 h-9 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90"><MinusCircle size={18}/></button>
+            <button disabled={upgradePoints<=0||lvl>=8} onClick={()=>onStep(1)} className={`w-9 h-9 flex items-center justify-center rounded-lg text-white disabled:opacity-20 active:scale-90 ${inherited?'bg-cyan-600':'bg-amber-600'}`}><PlusCircle size={18}/></button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  // 強化フェーズに並べる固有技の一覧。自分の固有技のあとに、合体で引き継いだ固有技を続ける
+  const uniqueUpgradeEntries = () => {
+    const rows=ownedUniques.map(u=>({ rowKey:`own:${u.monId}`, u, inherited:false, onStep:(d)=>upgradeUnique(u.monId,d) }));
+    slots.forEach((mon,idx)=>{
+      (mon?.inheritedUniques||[]).forEach((iu,ii)=>{
+        const lvl=inheritedUniqueEvo[inhEvoKey(idx,ii)]||0;
+        rows.push({ rowKey:`inh:${idx}:${ii}`, u:{...iu, evoLevel:lvl}, holderMon:mon, inherited:true, onStep:(d)=>upgradeInheritedUnique(idx,ii,d) });
+      });
+    });
+    return rows;
   };
 
   // ブリーダーカードの効果説明。表記は全カードで次のルールに統一している。
@@ -5530,7 +5646,7 @@ function MonsterHeroGame() {
                     }
                   }} disabled={isBusy} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':'specialLunge 500ms ease-in forwards'):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':'attackFly 450ms ease-in forwards'))))}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined)}>
                     <div className="h-[25%] bg-black/60 flex items-center justify-center px-1 border-b border-white/10 z-20"><span className="text-[7px] font-black text-white truncate uppercase leading-none">{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[7px] font-black text-indigo-300">×{assignedCount}</span>}</div>
-                    {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques); if(uOptions.length<2) return null; const curKey=slotUniqueChoice[i]||'own'; const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
+                    {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=slotUniqueChoice[i]||'own'; const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
                       return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy)return; cycleActiveUniqueForSlot(i);}} className="shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95">
                         <RefreshCcw size={7} className="text-white"/><span className="text-[6px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
                       </div>);
@@ -5715,9 +5831,7 @@ function MonsterHeroGame() {
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-8 text-center overflow-hidden">
           <div className="mb-2 shrink-0"><h2 className="text-xl font-black text-amber-400 italic uppercase">固有技の強化</h2><div className="text-[9px] text-slate-400 mt-1 uppercase tracking-widest flex items-center justify-center gap-2">Remaining Points: <span className="text-white bg-amber-600 px-2 rounded-full font-mono">{upgradePoints}</span></div></div>
           <div className="w-full max-w-sm space-y-3 mb-2 min-h-0 overflow-y-auto mh-scroll flex-1 p-1 flex flex-col justify-start pt-2">
-            {ownedUniques.map(u=>{const ownerMon=ALL_PLAYER_MONSTERS[u.monId]; const currentMult=u.baseMult+(u.evoLevel*0.5); const nextMult=u.baseMult+((u.evoLevel+1)*0.5); const currentGuts=Math.floor(u.baseGuts*(currentMult/u.baseMult)); const nextGuts=Math.floor(u.baseGuts*(nextMult/u.baseMult)); const curCrit=Math.round((0.10+0.05*Math.min(u.evoLevel,8))*100); const nextCrit=Math.round((0.10+0.05*Math.min(u.evoLevel+1,8))*100);
-              return(<div key={u.monId} className="bg-slate-900 p-3 rounded-2xl border border-slate-800 shrink-0"><div className="flex items-center gap-3 mb-2">{ownerMon?.iconUrl?(<img src={ownerMon.iconUrl} alt={ownerMon.name} className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0"/>):(<span style={{fontSize:'30px'}}>{cardIconNode(u.icon,40)}</span>)}<div className="text-left flex-1"><div className="text-[8px] font-black text-indigo-400 uppercase tracking-wider">{ownerMon?.name}</div><div className="font-black uppercase text-white" style={{fontSize:'13px'}}>{u.names[u.evoLevel]} <span className="text-slate-500">Lv.{u.evoLevel}{u.evoLevel<8&&<span className="text-amber-500"> → {u.evoLevel+1}</span>}</span></div>{u.evoLevel<8?(<div className="text-slate-400 font-mono flex flex-wrap gap-x-3 gap-y-0.5 mt-1" style={{fontSize:'9px'}}><div>技威力 {Math.floor(currentMult*100)} → <span className="text-red-400 font-bold">{Math.floor(nextMult*100)}</span></div><div>消費 {currentGuts} → <span className="text-amber-400 font-bold">{nextGuts}</span></div><div>会心 {curCrit}% → <span className="text-yellow-400 font-bold">{nextCrit}%</span></div></div>):(<div className="text-slate-400 font-mono flex flex-wrap gap-x-3 gap-y-0.5 mt-1" style={{fontSize:'9px'}}><div>技威力 {Math.floor(currentMult*100)}</div><div>消費 {currentGuts}</div><div className="text-yellow-400">会心 {curCrit}%</div><div className="text-amber-500 font-black">MAX</div></div>)}</div></div><div className="flex items-center justify-between bg-black/20 p-2 rounded-xl"><span className="text-slate-500 font-black uppercase tracking-wider" style={{fontSize:'9px'}}>レベル調整</span><div className="flex items-center gap-3"><button disabled={u.evoLevel<=0} onClick={()=>upgradeUnique(u.monId,-1)} className="w-9 h-9 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90"><MinusCircle size={18}/></button><button disabled={upgradePoints<=0||u.evoLevel>=8} onClick={()=>upgradeUnique(u.monId,1)} className="w-9 h-9 flex items-center justify-center bg-amber-600 rounded-lg text-white disabled:opacity-20 active:scale-90"><PlusCircle size={18}/></button></div></div></div>);
-            })}
+            {uniqueUpgradeEntries().map(e=>uniqueUpgradeRow(e))}
           </div>
           <button onClick={()=>{const availableTeachings=getActiveTeachingCards().filter(tc=>{const owned=ownedTeachings.find(ot=>ot.id===tc.id); return!owned||owned.evoLevel<2;}); setTeachingPool(availableTeachings.sort(()=>Math.random()-0.5).slice(0,4)); setGameState('PICK_TEACHING');}} className="w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform mt-auto shrink-0">ブリーダー継承へ</button>
         </div>
@@ -5843,7 +5957,7 @@ function MonsterHeroGame() {
           });
         } else if (card.type==='unique') {
           const mon = slots[card.ownerSlotIdx];
-          uniqueSources = getAvailableUniquesForSlot(mon, ownedUniques);
+          uniqueSources = getAvailableUniquesForSlot(mon, ownedUniques, card.ownerSlotIdx);
           const activeKey = slotUniqueChoice[card.ownerSlotIdx]||'own';
           const activeOpt = uniqueSources.find(o=>o.key===activeKey) || uniqueSources[0];
           if (activeOpt) {
@@ -6115,6 +6229,15 @@ const createAnimationStyle = () => {
     @keyframes setRing {
       0% { transform: scale(0.4); opacity: 0.9; }
       100% { transform: scale(2.4); opacity: 0; }
+    }
+    /* マスモン登録の誘導。見落とされやすいので枠がゆっくり光る */
+    @keyframes masuCallout {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(236,72,153,0.55), 0 0 14px rgba(236,72,153,0.25); }
+      50% { box-shadow: 0 0 0 6px rgba(236,72,153,0), 0 0 22px rgba(236,72,153,0.65); }
+    }
+    @keyframes masuBadge {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.12); }
     }
     @keyframes setPop {
       0% { transform: scale(0); opacity: 0; }

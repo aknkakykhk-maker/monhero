@@ -32,6 +32,7 @@ cd tools && npm install
 | `node bulk-enhance-check.js` | マスモンの「まとめて強化」が正しく動くか確認する。 |
 | `node bgm-check.js` | BGM(audio/のmp3)が画面に応じて切り替わるかを実ブラウザで確認する。 |
 | `node ranking-check.js` | ランキングの集計仕様(スコアは当時のまま固定/ブリーダーLv・絆Lvは最新)を確認する。通信はスタブ。 |
+| `node battle-check.js` | 実際にWAVEを自動で戦い、距離撃の取得・撃破ファンファーレ・引き継ぎ技の強化を確認する。 |
 | `node build.js` | **game-system.jsx を配信用JSへ変換し `monster-hero/game-system.compiled.js` を書き出す。改修したら必ず実行する。** |
 | `node build.js --check` | compiled が jsx と一致しているか確認する(古ければ終了コード1)。出荷前チェック用。 |
 | `node feature-check.js` | 実ブラウザでゲームを起動し、主要機能が動くかを確認する。 |
