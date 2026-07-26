@@ -85,7 +85,8 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
     await page.waitForTimeout(2500);
     const s2 = await state();
     const p2 = s2.filter((a) => !a.paused);
-    check('別ページでメニューBGMに切り替わる', p2.length === 1 && p2[0].src.startsWith('bgm-menu'), JSON.stringify(p2));
+    // プロフィールには専用BGMを割り当てている
+    check('プロフィールで専用BGMに切り替わる', p2.length === 1 && p2[0].src.startsWith('bgm-profile'), JSON.stringify(p2));
     check('前の曲は止まっている', s2.filter((a) => a.src.startsWith('bgm-title')).every((a) => a.paused));
   } else check('別ページでメニューBGMに切り替わる', false, 'プロフィールボタンが見つからない');
 
