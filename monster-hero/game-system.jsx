@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 16:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 17:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -590,8 +590,14 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             // 全域が境目になってしまい丸ごと消えるため、部位定義でnoEdgeGuard:trueを指定すれば
             // この除外をスキップできる。band/posBboxは色を見ずに位置だけで判定する部位なので、
             // 石材のようなノイズ質感がある絵だと隣接色相差の誤爆でごま塩状に穴が空きやすい。
-            // 位置だけで確定している以上そもそも色境界を気にする必要がないため、既定で除外をスキップする
-            const wantsEdgeGuard = !(def && typeof def === 'object' && (def.noEdgeGuard || def.posBbox || def.band));
+            // 位置だけで確定している以上そもそも色境界を気にする必要がないため、既定で除外をスキップする。
+            // 白バケツ(white:true)判定はそもそも彩度・明度だけで確定しており色相を見ていないため、
+            // 白に近いピクセル同士でもRGBのわずかなノイズで色相が大きく暴れる(例:彩度0.13の
+            // ほぼ白いピクセルが隣接ピクセルと色相が100°以上ズレる)性質があり、この色相差ベースの
+            // 境界除外をそのまま当てはめると白い毛並みのテクスチャ線が無差別にごま塩状に無染色化されて
+            // しまう(イブリースの羊毛でガビガビに見えていた主因)。白バケツ判定は自己のS/Vで既に
+            // 確定しているため、こちらも既定で除外をスキップする
+            const wantsEdgeGuard = !(def && typeof def === 'object' && (def.noEdgeGuard || def.posBbox || def.band || def.white));
             if (wantsEdgeGuard && ss >= 0.1 && vv >= 0.12) {
               let isColorEdge = false;
               for (const [nx, ny] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]) {
