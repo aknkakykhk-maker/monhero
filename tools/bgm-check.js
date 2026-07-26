@@ -77,7 +77,8 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   await page.waitForTimeout(500);
 
   // プロフィールへ移動してメニューBGMに切り替わるか
-  const profile = page.locator('button').filter({ hasText: 'Profile' }).first();
+  // タイトルのプロフィール入口(ブリーダーのアイコン+名前のボタン)
+  const profile = page.locator('button').filter({ hasText: 'プロフィール' }).first();
   if (await profile.count()) {
     await profile.click();
     await page.waitForTimeout(2500);
