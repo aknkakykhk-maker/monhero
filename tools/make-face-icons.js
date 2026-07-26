@@ -10,6 +10,20 @@
 const fs = require('fs');
 const path = require('path');
 const { REPO_ROOT, loadEmbeddedImages, decodeDataUrl, createCanvas, loadDyeModule } = require('./harness');
+const { loadImage } = require('canvas');
+
+// 顔アイコン用の高解像度の元画像を置く場所(art-sources/README.md 参照)。
+// ここに <名前>.png があれば、埋め込みの立ち絵より優先して使う
+const ART_SOURCES = path.join(__dirname, 'art-sources');
+async function loadSourceImage(name, dataUrl) {
+  const file = path.join(ART_SOURCES, `${name}.png`);
+  if (fs.existsSync(file)) {
+    const img = await loadImage(file);
+    console.log(`  art-sources/${name}.png を使用 (${img.width}x${img.height})`);
+    return img;
+  }
+  return decodeDataUrl(dataUrl);
+}
 
 // 出力する顔アイコンの一辺(px)。表示は最大でも60px程度だが、高DPI端末でも
 // にじまないよう余裕をもって256pxにしている(旧来の顔アイコンは128px)
@@ -49,10 +63,8 @@ const FACE_BOXES = {
   // 頭上に浮かぶ玉〜あご下。玉と輪はイブリースの意匠なので、中途半端に切れないよう
   // 玉の上端から範囲に含めている(背景の飾りはSTRIP_BACKGROUNDで消してから配置する)
   IBLIS: [0.245, 0.05, 0.735, 0.515, 0],
-  // 頭の角の先端〜あご。元絵が160pxしかないため拡大でやや眠くなるが、
-  // 全身がそのまま顔アイコンになっているよりは顔として判別しやすい
-  // (高解像度のイラストに差し替えられれば作り直したい)
-  ZAN: [0.355, 0.085, 0.645, 0.315, -0.01],
+  // 頭の角の先端〜あご。art-sources/ZAN.png(344px)から切り出す
+  ZAN: [0.34, 0.03, 0.66, 0.28, -0.01],
 };
 
 // MASU_COLOR_EXCLUDE に合致する画素(背景の飾り)を透明にした元画像を作る
@@ -107,7 +119,7 @@ function opaqueBoundsIn(img, x0, y0, x1, y1) {
 }
 
 async function makeFaceIcon(dataUrl, box, name, dye) {
-  let img = await decodeDataUrl(dataUrl);
+  let img = await loadSourceImage(name, dataUrl);
   if (STRIP_BACKGROUND[name]) {
     const { canvas, removed } = stripBackground(img, STRIP_BACKGROUND[name], dye);
     console.log(`  背景の飾りを ${removed}px 透明化しました`);
