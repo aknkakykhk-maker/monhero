@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 22:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 22:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -280,6 +280,27 @@ const Audio_ = (() => {
     try { if (el.preload !== 'auto') { el.preload = 'auto'; el.load(); } } catch (e) {}
   };
 
+  // 指定の曲が「鳴らせる状態」になるまで待つ。画面を出す前に呼ぶ想定。
+  // 読み込みが遅い回線でいつまでも待たされないよう、timeoutMsで必ず打ち切る
+  const prepareBGM = (key, timeoutMs = 2000) => new Promise((resolve) => {
+    const el = getBgmEl(key);
+    if (!el) { resolve(false); return; }
+    try { el.preload = 'auto'; el.load(); } catch (e) {}
+    if (el.readyState >= 3) { resolve(true); return; } // HAVE_FUTURE_DATA 以上なら再生できる
+    let done = false;
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      el.removeEventListener('canplaythrough', onReady);
+      el.removeEventListener('canplay', onReady);
+      resolve(ok);
+    };
+    const onReady = () => finish(true);
+    el.addEventListener('canplaythrough', onReady);
+    el.addEventListener('canplay', onReady);
+    setTimeout(() => finish(false), timeoutMs);
+  });
+
   const playBGM = async (key) => {
     // 音がオフのあいだも「今どの曲であるべきか」は覚えておき、オンにした時点で鳴らす
     currentKey = key;
@@ -445,7 +466,7 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, se };
+  return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, se };
 })();
 
 
@@ -1413,6 +1434,8 @@ function MonsterHeroGame() {
   const [rankingViewDiff, setRankingViewDiff] = useState('Normal');
   const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
+  // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
+  const [bulkPlan, setBulkPlan] = useState(null); // null=1ポイントずつのモード / {apt:[0,0,0,0], stat:{...}}
   const [wave, setWave] = useState(1);
   const [hp, setHp] = useState(500);
   const [maxHp, setMaxHp] = useState(500);
@@ -1678,8 +1701,14 @@ function MonsterHeroGame() {
     return [...byKey.values()].sort((a, b) => b.bondLevel - a.bondLevel);
   }, [localRankings]);
 
-  // 絆レベルランキングに登場するモンスター種の一覧(種類別フィルタの選択肢に使う)
-  const bondRankingMonNames = useMemo(() => [...new Set(bondRankingAll.map(x => x.monName))].sort(), [bondRankingAll]);
+  // 種類別フィルタの選択肢。まだ誰も記録を出していないモンスターもタブに出したいので、
+  // 記録から拾った名前ではなく、全モンスターの名前を並べる(記録が無い種は「まだいません」になる)
+  const bondRankingMonNames = useMemo(() => {
+    const all = Object.values(ALL_PLAYER_MONSTERS).map(m => m.name);
+    // 念のため、記録にしか出てこない名前(過去に居たモンスター等)も取りこぼさないよう足しておく
+    bondRankingAll.forEach(x => { if (!all.includes(x.monName)) all.push(x.monName); });
+    return [...new Set(all)];
+  }, [bondRankingAll]);
   const bondRanking = useMemo(() => (
     bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 20) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 20)
   ), [bondRankingAll, bondRankMonFilter]);
@@ -2364,8 +2393,51 @@ function MonsterHeroGame() {
     Audio_.se.tap();
     return updatedMasu;
   };
-  // マスモンの強化ポイントを1消費し、対象のステータスを1上げる(バランス調整前の暫定仕様: 1pt=+1)
   const STAT_POINT_KEYS = { hp: 'ライフ', atk: 'ちから', def: '丈夫さ', guts: 'ガッツ' };
+  // 強化ポイントをまとめて振る。1つずつタップするのが手間だったため、
+  // 「間合い適性を何段階」「どのステータスを何回」を一度に指定して確定できるようにしている。
+  // plan の形は { apt: [0,0,0,0], stat: { hp:0, atk:0, def:0, guts:0 } }。
+  // 実際に振れる分だけを反映し、更新後のマスモンを返す(足りない場合は何もしない)
+  const spendPointsBulk = (masuId, plan) => {
+    const masu = getMasuMon(masuId);
+    if (!masu) return null;
+    const available = masu.distAptPoints || 0;
+    const aptPlan = plan.apt || [0, 0, 0, 0];
+    const statPlan = plan.stat || {};
+    const total = aptPlan.reduce((a, b) => a + (b || 0), 0) + Object.values(statPlan).reduce((a, b) => a + (b || 0), 0);
+    if (total <= 0 || total > available) return null;
+
+    const distApt = [...(masu.distApt || ['C', 'C', 'C', 'C'])];
+    let used = 0;
+    aptPlan.forEach((n, idx) => {
+      for (let i = 0; i < (n || 0); i++) {
+        const cur = DIST_APTITUDE_GRADES.indexOf(distApt[idx] || 'C');
+        if (cur < 0 || cur >= DIST_APTITUDE_GRADES.length - 1) break; // 上限Mに達したらそこで止める
+        distApt[idx] = DIST_APTITUDE_GRADES[cur + 1];
+        used++;
+      }
+    });
+    const statPoints = { ...(masu.statPoints || {}) };
+    Object.entries(statPlan).forEach(([key, n]) => {
+      if (!STAT_POINT_KEYS[key]) return;
+      for (let i = 0; i < (n || 0); i++) {
+        statPoints[key] = (statPoints[key] || 0) + (STAT_POINT_GAIN[key] || 1);
+        used++;
+      }
+    });
+    if (used <= 0) return null;
+
+    const updatedMasu = { ...masu, distApt, statPoints, distAptPoints: available - used };
+    setMasuMons(prev => {
+      const next = prev.map(m => m.id === masuId ? updatedMasu : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    Audio_.se.levelUp();
+    return updatedMasu;
+  };
+
+  // マスモンの強化ポイントを1消費し、対象のステータスを1上げる(バランス調整前の暫定仕様: 1pt=+1)
   // spendAptPointと同様、更新後のマスモンを同期的に返す
   const spendStatPoint = (masuId, statKey) => {
     const masu = getMasuMon(masuId);
@@ -3579,8 +3651,17 @@ function MonsterHeroGame() {
                 </div>
               </div>
               <div className="shrink-0 w-full flex flex-col items-center mb-2">
-                <div className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mb-1">Breeder Profile</div>
-                <button onClick={()=>setGameState('PROFILE')} className="flex items-center gap-2 bg-slate-900/90 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group backdrop-blur-sm">{resolveIconUrl(breederIcon)?(<div className="w-4 h-4 rounded-full overflow-hidden shrink-0"><img src={resolveIconUrl(breederIcon)} alt="" className="w-full h-full object-cover"/></div>):(<User size={14} className="text-indigo-400"/>)}<span className="font-black text-sm text-white group-hover:text-indigo-300 transition-colors">{breederName}</span><ChevronRight size={12} className="text-slate-500 group-hover:text-white"/></button>
+                {/* ブリーダーのアイコンと名前を押すとプロフィールへ飛ぶ。以前は下のボタン列にも
+                    同じ行き先の「Profile」ボタンがあって重複していたため、こちらに一本化し、
+                    ここがプロフィールへの入口だと分かるようラベルとアイコンを添えている */}
+                <button onClick={()=>setGameState('PROFILE')} className="flex items-center gap-2.5 bg-slate-900/90 border border-violet-500/50 pl-3 pr-2.5 py-2 rounded-2xl active:scale-95 group backdrop-blur-sm shadow-lg">
+                  {resolveIconUrl(breederIcon)?(<div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/20"><img src={resolveIconUrl(breederIcon)} alt="" className="w-full h-full object-cover"/></div>):(<div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center shrink-0"><User size={16} className="text-indigo-400"/></div>)}
+                  <div className="text-left min-w-0">
+                    <div className="text-[7px] text-violet-300 font-black uppercase tracking-widest leading-none flex items-center gap-1"><User size={8}/>プロフィール</div>
+                    <div className="font-black text-sm text-white group-hover:text-indigo-300 transition-colors truncate leading-tight mt-0.5">{breederName}</div>
+                  </div>
+                  <ChevronRight size={14} className="text-violet-400 shrink-0"/>
+                </button>
               </div>
               <div className="shrink-0 flex flex-col gap-2 w-full">
                 <div className="grid grid-cols-3 gap-2 justify-center">
@@ -3592,11 +3673,11 @@ function MonsterHeroGame() {
               </div>
               <div className="shrink-0 flex flex-col gap-2 w-full mt-2">
                 <button onClick={()=>{setTestMooMode(false); setMonSelection(getActiveMonsterList()); setGameState('PICK_HERO');}} className="w-full bg-white text-black py-3 rounded-xl font-black text-lg active:scale-95 transition-transform uppercase shadow-[0_0_20px_rgba(255,255,255,0.2)]">召喚開始</button>
-                <div className="grid grid-cols-4 gap-2">
-                  <button onClick={()=>setGameState('PROFILE')} className="w-full bg-slate-900 border border-violet-500/50 text-violet-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><User size={14}/> Profile</button>
+                <div className="grid grid-cols-3 gap-2">
+                  
                   <button onClick={()=>{setRankingViewDiff(difficulty); setShowRanking(true); loadRankings();}} className="w-full bg-slate-900 border border-indigo-500/50 text-indigo-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><Users size={14}/> Ranking</button>
                   <button onClick={()=>setShowHelp(true)} className="w-full bg-slate-900 border border-emerald-500/50 text-emerald-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><HelpCircle size={14}/> Help</button>
-                  <button onClick={openChangelog} className="relative w-full bg-slate-900 border border-amber-500/50 text-amber-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-1"><Sparkles size={14}/>更新{hasUnreadChangelog&&<span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full border border-white/40 shadow">NEW</span>}</button>
+                  <button onClick={openChangelog} className="relative w-full bg-slate-900 border border-amber-500/50 text-amber-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-1"><Sparkles size={13}/>更新履歴{hasUnreadChangelog&&<span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full border border-white/40 shadow">NEW</span>}</button>
                 </div>
                 <button onClick={()=>setShowAudioSettings(true)} className={`w-full border py-2 rounded-xl font-black text-[11px] active:scale-95 uppercase flex items-center justify-center gap-2 ${audioMuted?'bg-slate-900 border-slate-600/50 text-slate-400':'bg-indigo-950/60 border-indigo-500/40 text-indigo-300'}`}>{audioMuted?'🔇':'🔊'} 音量設定</button>
               </div>
@@ -3716,7 +3797,7 @@ function MonsterHeroGame() {
                       ))}
                     </div>
                     <div className="flex-1 overflow-y-auto mh-scroll space-y-2 min-h-0">
-                      {bondRanking.length===0?(<div className="h-full flex items-center justify-center text-slate-600 font-black uppercase text-xs italic">No records yet</div>):(
+                      {bondRanking.length===0?(<div className="h-full flex items-center justify-center text-center text-slate-600 font-black text-[11px] px-6 leading-relaxed">{bondRankMonFilter==='all'?'まだ記録がありません':`「${bondRankMonFilter}」の絆レベルの記録はまだありません`}</div>):(
                         bondRanking.map((r,i)=>(
                           <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl border ${i===0?'bg-pink-500/10 border-pink-500/50':'bg-slate-900 border-white/5'}`}>
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${i===0?'bg-amber-500 text-black':i===1?'bg-slate-300 text-black':i===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{i+1}</div>
@@ -4527,7 +4608,30 @@ function MonsterHeroGame() {
           const points = masu.distAptPoints||0;
           const currentStatValue = (key) => ({hp:base.baseHp,atk:base.baseAtk,def:base.baseDef,guts:base.baseGuts}[key]||0) + (masu.statPoints?.[key]||0);
           const ps = mergeMasuIntoMon(masu)?.plusStats||{};
-          const backToList = () => { setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); };
+          const backToList = () => { setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); setBulkPlan(null); };
+          // --- まとめて振るモード ---
+          const plan = bulkPlan || { apt:[0,0,0,0], stat:{hp:0,atk:0,def:0,guts:0} };
+          const planUsed = plan.apt.reduce((a,b)=>a+b,0) + Object.values(plan.stat).reduce((a,b)=>a+b,0);
+          const planLeft = points - planUsed;
+          // 下書き段階での間合い適性(何段階上がるか)。上限Mを超えないようにする
+          const plannedGrade = (idx) => {
+            const cur = DIST_APTITUDE_GRADES.indexOf((masu.distApt&&masu.distApt[idx])||'C');
+            return DIST_APTITUDE_GRADES[Math.min(DIST_APTITUDE_GRADES.length-1, Math.max(0, cur + plan.apt[idx]))];
+          };
+          const canPlanApt = (idx) => planLeft>0 && DIST_APTITUDE_GRADES.indexOf(plannedGrade(idx)) < DIST_APTITUDE_GRADES.length-1;
+          const addPlanApt = (idx, d) => setBulkPlan(p=>{const q=p?{apt:[...p.apt],stat:{...p.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}}; q.apt[idx]=Math.max(0,q.apt[idx]+d); return q;});
+          const addPlanStat = (key, d) => setBulkPlan(p=>{const q=p?{apt:[...p.apt],stat:{...p.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}}; q.stat[key]=Math.max(0,(q.stat[key]||0)+d); return q;});
+          const applyPlan = () => {
+            const updated = spendPointsBulk(masu.id, plan);
+            if (!updated) return;
+            setMasuMonDetail(updated);
+            setBulkPlan(null);
+            const lines = [];
+            plan.apt.forEach((n,i)=>{ if(n>0) lines.push(`${RANGE_LABELS[i]}距離適性 +${n}`); });
+            Object.entries(plan.stat).forEach(([k,n])=>{ if(n>0) lines.push(`${STAT_POINT_KEYS[k]} +${n*(STAT_POINT_GAIN[k]||1)}`); });
+            setEffect({type:'enhance',label:'まとめて強化！',icon:'💪',monEmoji:base.emoji,imgUrl:base.iconUrl,baseId:masu.baseId,colors:getMasuColors(updated),subLabel:lines.join('\n')});
+            setTimeout(()=>setEffect(null),1200);
+          };
           return (
             <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col overflow-hidden">
               <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
@@ -4535,6 +4639,60 @@ function MonsterHeroGame() {
                 <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest flex-1">マスモン強化</h2>
               </div>
               <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full">
+
+                {/* まとめて強化: 1ポイントずつタップするのが手間なので、
+                    振り分けを下書きしてから一度に確定できるようにしている */}
+                {points>0&&(
+                  <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-4 shadow-xl">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={14}/>まとめて強化</div>
+                      <div className="text-[10px] font-black text-white">残り <span className={`font-mono text-[15px] ${planLeft>0?'text-amber-300':'text-slate-500'}`}>{planLeft}</span> / {points} pt</div>
+                    </div>
+                    <div className="text-[9px] text-slate-400 font-bold mb-2">間合い適性</div>
+                    <div className="grid grid-cols-4 gap-1.5 mb-3">
+                      {RANGE_LABELS.map((label,idx)=>{
+                        const g = plannedGrade(idx);
+                        const added = plan.apt[idx];
+                        return (
+                          <div key={idx} className="flex flex-col items-center gap-1">
+                            <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
+                            <span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[g]}`}>{g}</span>
+                            <div className="flex items-center gap-1 w-full">
+                              <button disabled={added<=0} onClick={()=>addPlanApt(idx,-1)} className="flex-1 text-[11px] font-black bg-slate-800 text-slate-300 rounded py-0.5 active:scale-90 disabled:opacity-20">−</button>
+                              <span className="text-[9px] font-mono font-black text-amber-300 w-4 text-center">{added>0?`+${added}`:'0'}</span>
+                              <button disabled={!canPlanApt(idx)} onClick={()=>addPlanApt(idx,1)} className="flex-1 text-[11px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-90 disabled:opacity-20 disabled:bg-slate-700">＋</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="text-[9px] text-slate-400 font-bold mb-2">ステータス</div>
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{
+                        const n = plan.stat[key]||0;
+                        const gain = n*(STAT_POINT_GAIN[key]||1);
+                        return (
+                          <div key={key} className="bg-black/40 border border-emerald-500/25 rounded-xl p-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[9px] text-emerald-300 font-black">{label}</span>
+                              <span className="text-[10px] font-mono font-black text-white">{currentStatValue(key)}{gain>0&&<span className="text-emerald-400"> → {currentStatValue(key)+gain}</span>}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button disabled={n<=0} onClick={()=>addPlanStat(key,-1)} className="flex-1 text-[11px] font-black bg-slate-800 text-slate-300 rounded py-0.5 active:scale-90 disabled:opacity-20">−</button>
+                              <span className="text-[9px] font-mono font-black text-amber-300 w-6 text-center">{n>0?`+${n}pt`:'0'}</span>
+                              <button disabled={planLeft<=0} onClick={()=>addPlanStat(key,1)} className="flex-1 text-[11px] font-black bg-emerald-700 text-white rounded py-0.5 active:scale-90 disabled:opacity-20 disabled:bg-slate-700">＋</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-2">
+                      <button disabled={planUsed<=0} onClick={()=>setBulkPlan(null)} className="px-4 py-2.5 rounded-xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30">リセット</button>
+                      <button disabled={planUsed<=0} onClick={applyPlan} className="flex-1 py-2.5 rounded-xl font-black text-[12px] bg-gradient-to-r from-amber-600 to-orange-600 text-white active:scale-95 disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700 shadow-lg">{planUsed>0?`${planUsed}pt を使って強化する`:'振り分けてください'}</button>
+                    </div>
+                    <div className="text-[8px] text-slate-500 mt-2 leading-relaxed">※ 確定するまでポイントは減りません。1つずつ振りたい場合は下の各項目からも操作できます。</div>
+                  </div>
+                )}
                 <div className="flex items-center gap-4 bg-slate-900 border border-amber-500/30 rounded-3xl p-4 shadow-xl">
                   <div className="relative w-20 h-20 shrink-0">
                     <div className={`w-20 h-20 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-2 ring-amber-400':'border-amber-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
@@ -5870,7 +6028,24 @@ const rootEl = document.getElementById('root');
 const _root = ReactDOM.createRoot(rootEl);
 _root.render(React.createElement(MonsterHeroGame));
 
-try {
-  const l=document.getElementById('loading'); if(l) l.style.display='none';
-  const b=document.getElementById('ver-banner'); if(b) b.style.display='none';
-} catch(e){ window.__mhErr && window.__mhErr('render tail: '+e.message); }
+// ==== 起動時: タイトルBGMを読み込んでから画面を出す ====
+// 「ゲームを開いた瞬間にBGMを鳴らしたい」という要望のため、ローディング表示のあいだに
+// タイトルの曲を読み込んでおく。読み込めたらすぐ鳴らし始める。
+// 回線が遅くても待たされないよう、最長2秒で打ち切って画面を出す(その場合も読み込みは続き、
+// 鳴らせるようになった時点で流れる)。
+// なお、ブラウザには「操作するまで音を鳴らしてはいけない」制限があるため、自動再生が
+// 弾かれた場合は最初のタップで鳴り始める(playBGM側で再試行する仕組みがある)。
+(function(){
+  const hideLoading = () => {
+    try {
+      const l=document.getElementById('loading'); if(l) l.style.display='none';
+      const b=document.getElementById('ver-banner'); if(b) b.style.display='none';
+    } catch(e){ window.__mhErr && window.__mhErr('render tail: '+e.message); }
+  };
+  try {
+    let shown = false;
+    const show = () => { if (shown) return; shown = true; hideLoading(); };
+    Audio_.prepareBGM('title', 2000).then(() => { Audio_.unlock(); show(); }).catch(show);
+    setTimeout(show, 2500); // 保険: 何かあっても画面は必ず出す
+  } catch(e){ hideLoading(); }
+})();
