@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 22:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 22:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -141,7 +141,10 @@ const Audio_ = (() => {
   // 一度に読み込まず、画面に応じて必要な曲だけを都度読み込んでストリーミング再生する。
   // bgmEls は一度読んだ曲を使い回すためのキャッシュ({キー: HTMLAudioElement})
   const bgmEls = {};
-  let currentKey = null, bgmVolumePct = 0, bgmPlayPending = false;
+  const bgmSources = {}; // Audio要素をWeb Audioへ繋いだソースノード(1要素につき1回だけ作れる)
+  let bgmGain = null;    // BGM専用のゲインノード(iOSでも効く音量調整はこれで行う)
+  let bgmCtx = null;     // BGM専用のAudioContext(SEのTone.jsとは独立)
+  let currentKey = null, bgmVolumePct = 0, bgmPlayPending = false, pageHidden = false;
   let enabled = false; // デフォルト無音
 
   const load = () => {
@@ -185,7 +188,13 @@ const Audio_ = (() => {
   // 0〜100(%)を実際の音量へ。SEと同じ耳あたりのカーブ(-40dB〜0dB)を使う
   const _gainFromPct = (pct) => pct <= 0 ? 0 : Math.pow(10, (-40 + (Math.min(100, pct) / 100) * 40) / 20);
 
-  // 指定キーのAudio要素を用意する(初回だけ読み込みが走る)
+  // 指定キーのAudio要素を用意する(初回だけ読み込みが走る)。
+  //
+  // 【重要】iOS(iPhone/iPad)では HTMLAudioElement.volume への代入が無視される。
+  // 音量はハードウェアのボタンでしか変えられない仕様のため、el.volume を下げても
+  // 常に最大音量で鳴ってしまい、「音量1なのに爆音」「ミュートにしても鳴り続ける」状態になっていた。
+  // そこで音声をWeb Audio(Tone.jsのAudioContext)に通し、ゲインノードで音量を制御する。
+  // ゲインノードはiOSでも効くため、これで音量調整とミュートが正しく効くようになる。
   const getBgmEl = (key) => {
     if (!BGM_FILES[key] || typeof Audio === 'undefined') return null;
     if (!bgmEls[key]) {
@@ -193,14 +202,51 @@ const Audio_ = (() => {
       el.src = BGM_FILES[key];
       el.loop = true;
       el.preload = 'none'; // 実際に再生するまで読み込まない(初期表示を重くしないため)
-      el.volume = _gainFromPct(bgmVolumePct);
+      el.crossOrigin = 'anonymous';
       el.dataset.bgmKey = key;
-      // 画面には出さないがDOMに入れておく(再生状態を開発者ツールやテストから確認できるようにするため。
-      // 挙動は new Audio() のままと変わらない)
+      // iOS以外では素のvolumeも効くので併せて設定しておく(Web Audioに繋げない場合の保険)
+      try { el.volume = _gainFromPct(bgmVolumePct); } catch (e) {}
       try { el.style.display = 'none'; document.body.appendChild(el); } catch (e) {}
       bgmEls[key] = el;
     }
+    connectBgmToGain(key);
     return bgmEls[key];
+  };
+
+  // BGM専用のAudioContext。SE(Tone.js)とは独立させている。
+  // Tone.jsはCDNから読み込んでいるため、通信が不調だと読めないことがある。
+  // BGMの音量制御をそれに依存させると「Tone.jsが読めない=音量が効かない(iOSでは爆音)」に
+  // なってしまうので、BGMは自前のAudioContextだけで完結させる
+  const getBgmCtx = () => {
+    if (bgmCtx) return bgmCtx;
+    if (typeof window === 'undefined') return null;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try { bgmCtx = new AC(); } catch (e) { bgmCtx = null; }
+    return bgmCtx;
+  };
+
+  // Audio要素をWeb Audioのゲインノードに繋ぐ。createMediaElementSourceは1要素につき
+  // 一度しか呼べないため、繋いだかどうかを覚えておく
+  const connectBgmToGain = (key) => {
+    const el = bgmEls[key];
+    if (!el || bgmSources[key]) return;
+    const ctx = getBgmCtx();
+    if (!ctx || !ctx.createMediaElementSource) return;
+    try {
+      if (!bgmGain) {
+        bgmGain = ctx.createGain();
+        bgmGain.gain.value = _gainFromPct(bgmVolumePct);
+        bgmGain.connect(ctx.destination);
+      }
+      const srcNode = ctx.createMediaElementSource(el);
+      srcNode.connect(bgmGain);
+      bgmSources[key] = srcNode;
+      // Web Audioに通したので、素のvolumeは最大に戻す(二重に絞らないため)
+      try { el.volume = 1; } catch (e) {}
+    } catch (e) {
+      // 繋げなかった場合は素のvolumeで制御を続ける(PCブラウザではこれでも効く)
+    }
   };
 
   // 現在の曲以外を止める
@@ -225,14 +271,27 @@ const Audio_ = (() => {
     document.addEventListener('touchend', retry);
   };
 
+  // その画面で使う曲を先に読み込んでおく(音がオフのあいだでも呼べる)。
+  // preload='none' のままだと最初のタップの直後に読み込みが始まり、鳴り出すまで間が空くため
+  const preloadBGM = (key) => {
+    if (!BGM_FILES[key]) return;
+    const el = getBgmEl(key);
+    if (!el) return;
+    try { if (el.preload !== 'auto') { el.preload = 'auto'; el.load(); } } catch (e) {}
+  };
+
   const playBGM = async (key) => {
     // 音がオフのあいだも「今どの曲であるべきか」は覚えておき、オンにした時点で鳴らす
     currentKey = key;
-    if (!enabled) { stopOthers(null); return; }
+    preloadBGM(key);
+    // 音がオフ・音量0・画面が見えていない、のいずれかなら鳴らさない。
+    // 特に「画面が見えていないときは止める」ことで、他のアプリに切り替えたあとも
+    // バックグラウンドで鳴り続けてしまう問題を防いでいる
+    if (!enabled || bgmVolumePct <= 0 || pageHidden) { stopOthers(null); return; }
     const el = getBgmEl(key);
     if (!el) return;
     stopOthers(key);
-    el.volume = _gainFromPct(bgmVolumePct);
+    applyBgmVolume();
     if (!el.paused) return; // 既に同じ曲が鳴っていれば頭出しし直さない
     try {
       await el.play();
@@ -240,6 +299,13 @@ const Audio_ = (() => {
       // 自動再生がブラウザに止められた場合は、次のタップで鳴らし直す
       retryPlayOnGesture();
     }
+  };
+
+  // 画面の表示/非表示が変わったときに呼ぶ。見えていないあいだはBGMを止める
+  const setPageHidden = (hidden) => {
+    pageHidden = hidden;
+    if (hidden) stopOthers(null);
+    else if (currentKey) playBGM(currentKey);
   };
 
   const stopBGM = () => { currentKey = null; stopOthers(null); };
@@ -265,6 +331,8 @@ const Audio_ = (() => {
   let pendingResume = false;
   const resumeIfNeeded = async () => {
     if (!enabled) return;
+    // BGM用のAudioContextもOSに止められることがあるので戻す
+    try { if (bgmCtx && bgmCtx.state !== 'running') await bgmCtx.resume(); } catch (e) {}
     // BGMはmp3(Audio要素)なのでTone.jsの読み込み状況に関わらず先に鳴らし直す
     if (currentKey) { const el = bgmEls[currentKey]; if (!el || el.paused) playBGM(currentKey); }
     if (!Tone) return;
@@ -302,10 +370,28 @@ const Audio_ = (() => {
     if (!Tone || !seBus) return;
     try { seBus.gain.rampTo(_gainFromPct(pct), 0.1); } catch (e) {}
   };
+  // 実際の音量をゲインノード(と、繋げていない場合は素のvolume)へ反映する
+  const applyBgmVolume = () => {
+    const v = _gainFromPct(bgmVolumePct);
+    if (bgmGain) {
+      try {
+        const ctx = bgmCtx;
+        if (ctx && bgmGain.gain.setTargetAtTime) bgmGain.gain.setTargetAtTime(v, ctx.currentTime, 0.03);
+        else bgmGain.gain.value = v;
+      } catch (e) { try { bgmGain.gain.value = v; } catch (e2) {} }
+    }
+    // Web Audioへ繋げた要素は素のvolumeを1のままにする(繋げていない要素だけvolumeで絞る)
+    Object.entries(bgmEls).forEach(([k, el]) => { if (!bgmSources[k]) { try { el.volume = v; } catch (e) {} } });
+  };
   const setBgmVolume = async (pct) => {
     bgmVolumePct = pct;
-    const v = _gainFromPct(pct);
-    Object.values(bgmEls).forEach((el) => { try { el.volume = v; } catch (e) {} });
+    applyBgmVolume();
+    // 音量0はミュートとして扱い、再生自体を止める(ゲインが効かない環境でも確実に無音にする)
+    if (pct <= 0) { stopOthers(null); return; }
+    if (enabled && currentKey && !pageHidden) {
+      const el = bgmEls[currentKey];
+      if (!el || el.paused) playBGM(currentKey);
+    }
   };
   // iOS等のブラウザ音声ロック解除: ユーザー操作(スライダー等)の直後に1回だけ呼ぶ
   // playTestTone: 音量スライダーを操作したときだけ、音が出ることが分かるよう短い音を鳴らす。
@@ -359,7 +445,7 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, se };
+  return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, se };
 })();
 
 
@@ -1629,8 +1715,13 @@ function MonsterHeroGame() {
     'PROFILE','ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_FUSION','BREEDER_MARKET','ITEM_INVENTORY'];
   // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
   useEffect(() => {
-    if (!audioOn) { Audio_.stopBGM(); return; }
     const isBoss = wave === 10 || enemy?.id === 'Moo';
+    // 音がオフでも、その画面で使う曲は先に読み込んでおく(タップした瞬間に鳴り始めるように)
+    const keyForState = gameState === 'TITLE' ? 'title'
+      : MENU_BGM_STATES.includes(gameState) ? 'prep'
+      : gameState === 'BATTLE' ? (isBoss ? 'boss' : 'battle') : null;
+    if (keyForState) Audio_.preloadBGM(keyForState);
+    if (!audioOn) { Audio_.stopBGM(); return; }
     if (gameState === 'TITLE') Audio_.playBGM('title');
     else if (MENU_BGM_STATES.includes(gameState)) Audio_.playBGM('prep');
     else if (gameState === 'BATTLE') Audio_.playBGM(isBoss ? 'boss' : 'battle');
@@ -1669,6 +1760,42 @@ function MonsterHeroGame() {
     return () => { document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
   }, []);
 
+  // 染色もどきのマスクは、染色済みモンスターを画面に出したときに初めて計算している。
+  // 高解像度の立ち絵は1枚あたり100万画素あり、その場で計算すると表示までに間が空く
+  // (マスモン一覧や合体画面を開いた瞬間にもたつく原因になっていた)。
+  // そこで、タイトル画面で手が空いているあいだに、持っているマスモンの分だけ先に計算しておく。
+  // 結果は getDyeRegionMasks の中でキャッシュされるので、実際に表示するときは待たずに済む。
+  useEffect(() => {
+    if (!masuMons.length) return;
+    // 染色している(色を設定してある)マスモンだけが対象。種が同じなら計算結果は共通なので重複は省く
+    const targets = [];
+    const seen = new Set();
+    masuMons.forEach((m) => {
+      if (!getMasuColors(m).some(Boolean)) return;
+      const base = ALL_PLAYER_MONSTERS[m.baseId];
+      if (!base) return;
+      [base.imgUrl, base.iconUrl].forEach((url) => {
+        if (!url) return;
+        const key = m.baseId + '::' + url;
+        if (seen.has(key)) return;
+        seen.add(key);
+        targets.push([m.baseId, url]);
+      });
+    });
+    if (!targets.length) return;
+    let cancelled = false;
+    // 1件ずつ、ブラウザが暇なタイミングで進める(操作の邪魔をしないため)
+    const idle = window.requestIdleCallback || ((cb) => setTimeout(() => cb({ timeRemaining: () => 8 }), 120));
+    let i = 0;
+    const step = () => {
+      if (cancelled || i >= targets.length) return;
+      const [baseId, url] = targets[i++];
+      Promise.resolve(getDyeRegionMasks(baseId, url)).catch(() => {}).then(() => { if (!cancelled) idle(step); });
+    };
+    idle(step);
+    return () => { cancelled = true; };
+  }, [masuMons]);
+
   // 音は初期状態でオンだが、ブラウザは「ユーザーが操作するまで音を鳴らしてはいけない」という
   // 制限があるため、ページを開いただけでは実際には鳴らない。最初のタップ(どこでもよい)を
   // 拾って一度だけ音声のロックを解除し、その時点のBGMを鳴らし始める。
@@ -1691,14 +1818,22 @@ function MonsterHeroGame() {
   // visibilitychangeだけだと、PWAをホーム画面から開き直した場合やアプリ切り替えで
   // 戻った場合に発火しないことがあるため、pageshow/focusでも復帰を試みる
   useEffect(() => {
-    const tryResume = () => { if (document.visibilityState !== 'hidden') Audio_.resumeIfNeeded(); };
-    document.addEventListener('visibilitychange', tryResume);
-    window.addEventListener('pageshow', tryResume);
-    window.addEventListener('focus', tryResume);
+    // 画面が見えなくなったらBGMを止める(他のアプリに切り替えたあとも鳴り続けないように)。
+    // 戻ってきたら、止まっているAudioContextを復帰させて鳴らし直す
+    const onHidden = () => Audio_.setPageHidden(true);
+    const onVisible = () => { Audio_.setPageHidden(false); Audio_.resumeIfNeeded(); };
+    const onVisibilityChange = () => (document.visibilityState === 'hidden' ? onHidden() : onVisible());
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pageshow', onVisible);
+    window.addEventListener('focus', onVisible);
+    window.addEventListener('pagehide', onHidden);
+    window.addEventListener('blur', onHidden);
     return () => {
-      document.removeEventListener('visibilitychange', tryResume);
-      window.removeEventListener('pageshow', tryResume);
-      window.removeEventListener('focus', tryResume);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pageshow', onVisible);
+      window.removeEventListener('focus', onVisible);
+      window.removeEventListener('pagehide', onHidden);
+      window.removeEventListener('blur', onHidden);
     };
   }, []);
 
@@ -3420,8 +3555,11 @@ function MonsterHeroGame() {
               <div className="shrink-0 w-full flex flex-col items-center mb-1">
                 <h1 className="text-4xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-purple-200 to-purple-500 leading-none uppercase drop-shadow-[0_4px_16px_rgba(0,0,0,1)] whitespace-nowrap">Monster Hero</h1>
                 <p className="text-purple-300 text-[9px] tracking-[0.4em] uppercase font-bold mt-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">Grand Champion Quest</p>
-                {/* バージョン表示。BUILD_DATE(JSTの日付+時刻)をそのまま出す */}
-                <div className="text-purple-400/70 text-[8px] font-mono tracking-widest mt-1 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">ver {BUILD_DATE}</div>
+                {/* バージョン表示。背景のムーの絵と重なって読めなかったため、
+                    半透明の黒帯を敷いて明るい文字色にしている */}
+                <div className="mt-1.5 px-2.5 py-0.5 rounded-full bg-black/70 border border-white/15 shadow-lg">
+                  <span className="text-slate-200 text-[9px] font-mono font-bold tracking-widest">ver {BUILD_DATE}</span>
+                </div>
               </div>
               <div className="shrink-0 w-full flex flex-col items-center mb-2 relative">
                 <div className="flex items-center gap-2 mb-1">
@@ -4073,6 +4211,11 @@ function MonsterHeroGame() {
             const cost = (mainLvl.level + subLvl.level) * 100;
             const canAfford = gold >= cost;
             const canChooseInherit = mainLvl.level>=10 && subLvl.level>=10 && !!subBase.unique;
+            // 合体後にどうなるかを先に計算して見せる(実行してみないと分からない状態だったため)
+            const afterXp = (main.bondXp||0) + (sub.bondXp||0);
+            const afterLvl = bondLevelInfo(afterXp);
+            const gainedLevels = afterLvl.level - mainLvl.level;
+            const mainPointsNow = main.distAptPoints || 0;
             return (
               <div className="flex-1 flex flex-col h-full min-h-0 p-4">
                 <div className="flex items-center gap-2 mb-2 shrink-0">
@@ -4092,6 +4235,28 @@ function MonsterHeroGame() {
                       <div className="text-[9px] font-black text-slate-300">{sub.name}</div>
                       <div className="text-[7px] text-slate-500 font-black">副(消える)</div>
                     </div>
+                  </div>
+                  {/* 合体後にどう変わるかの内訳。実行前に結果が分かるようにしている */}
+                  <div className="bg-black/40 p-3 rounded-xl border border-pink-500/30 mb-2">
+                    <div className="text-[9px] font-black text-pink-300 uppercase tracking-wider mb-2">合体後の「{main.name}」</div>
+                    <div className="grid grid-cols-3 items-center gap-1 mb-2">
+                      <div className="text-center">
+                        <div className="text-[7px] text-slate-500 font-bold">いま</div>
+                        <div className="text-[15px] font-mono font-black text-slate-300">絆Lv.{mainLvl.level}</div>
+                      </div>
+                      <div className="text-center text-slate-500 text-[14px] font-black">→</div>
+                      <div className="text-center">
+                        <div className="text-[7px] text-pink-400 font-bold">合体後</div>
+                        <div className="text-[15px] font-mono font-black text-pink-300">絆Lv.{afterLvl.level}</div>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">絆レベル</span><span className={`font-black ${gainedLevels>0?'text-pink-300':'text-slate-400'}`}>{gainedLevels>0?`+${gainedLevels}`:'変化なし'}</span></div>
+                      <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">絆経験値</span><span className="text-white font-black">{(main.bondXp||0).toLocaleString()} → {afterXp.toLocaleString()} XP</span></div>
+                      <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">次のレベルまで</span><span className="text-slate-300 font-black">{afterLvl.xpIntoLevel.toLocaleString()} / {afterLvl.xpForNext.toLocaleString()} XP</span></div>
+                      <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">強化ポイント</span><span className={`font-black ${gainedLevels>0?'text-amber-300':'text-slate-400'}`}>{mainPointsNow} → {mainPointsNow + gainedLevels}{gainedLevels>0&&<span className="text-amber-200"> (+{gainedLevels})</span>}</span></div>
+                    </div>
+                    {gainedLevels===0&&<div className="text-[8px] text-slate-500 leading-relaxed mt-2">※ 絆経験値は加算されますが、次のレベルには届きません(強化ポイントは増えません)</div>}
                   </div>
                   <div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-2 space-y-1.5">
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">受け継ぐ絆経験値</span><span className="text-pink-300 font-black">{(sub.bondXp||0).toLocaleString()} XP</span></div>
