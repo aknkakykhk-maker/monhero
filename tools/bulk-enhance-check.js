@@ -34,9 +34,9 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   await page.waitForFunction(() => document.getElementById('root') && document.getElementById('root').children.length > 0, { timeout: 60000 });
   await page.waitForTimeout(2500);
 
-  // 起動時の事前ロード画面が出るので、「タップしてはじめる」を押してゲーム本体へ進む
-  await page.waitForFunction(() => !!document.body && document.body.innerText.includes('タップしてはじめる'), { timeout: 30000 }).catch(() => {});
-  const startBtn = page.getByRole('button', { name: 'タップしてはじめる' });
+  // 起動時の事前ロード画面が出るので、「TAP TO START」を押してゲーム本体へ進む
+  await page.waitForFunction(() => !!document.body && document.body.innerText.includes('TAP TO START'), { timeout: 30000 }).catch(() => {});
+  const startBtn = page.getByRole('button', { name: 'TAP TO START' });
   if (await startBtn.count()) { await startBtn.click(); await page.waitForTimeout(1200); }
 
   // プロフィール → マスモン一覧 → 対象を開く → 強化する

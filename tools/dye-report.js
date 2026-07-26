@@ -15,17 +15,19 @@ const DIFF_TOLERANCE = 0.005;
 
 async function analyze(baseId, dataUrl, dye) {
   const img = await decodeDataUrl(dataUrl);
-  const w = img.width, h = img.height;
-  // 元画像の不透明画素数(=染めうる全体)を数え、被覆率の分母にする
+  const urls = await dye.getDyeRegionMasks(baseId, dataUrl);
+  if (!urls) return { baseId, width: img.width, height: img.height, opaque: 0, regions: null };
+  // マスクは表示サイズに合わせて縮小した解像度で作られるため、被覆率は
+  // 「元画像の画素数」ではなく「マスクと同じ解像度に縮めた元画像の不透明画素数」で割る。
+  // こうしておけば解析解像度を変えても被覆率は変わらず、部位分けの変化だけを検出できる
+  const first = await decodeDataUrl(urls[0]);
+  const w = first.width, h = first.height;
   const c = createCanvas(w, h);
   const ctx = c.getContext('2d');
-  ctx.drawImage(img, 0, 0);
+  ctx.drawImage(img, 0, 0, w, h);
   const src = ctx.getImageData(0, 0, w, h).data;
   let opaque = 0;
   for (let i = 0; i < w * h; i++) if (src[i * 4 + 3] >= 20) opaque++;
-
-  const urls = await dye.getDyeRegionMasks(baseId, dataUrl);
-  if (!urls) return { baseId, width: w, height: h, opaque, regions: null };
   const regions = [];
   for (const url of urls) {
     const mimg = await decodeDataUrl(url);

@@ -3,7 +3,7 @@
 //   python3 tools/serve.py   でリポジトリのルートを配信した状態で
 //   node boot-check.js
 //
-// 実機と同じく自動再生を禁止した状態で起動し、「タップしてはじめる」を押した時点で
+// 実機と同じく自動再生を禁止した状態で起動し、「TAP TO START」を押した時点で
 // BGMが鳴り始めること、素早く画面を移っても2曲が重ならないことを見る。
 const path = require('path');
 const { chromium } = require('playwright');
@@ -27,15 +27,15 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
 
   const t0 = Date.now();
   await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
-  await page.waitForFunction(() => !!document.body && document.body.innerText.includes('タップしてはじめる'), { timeout: 30000 });
+  await page.waitForFunction(() => !!document.body && document.body.innerText.includes('TAP TO START'), { timeout: 30000 });
   const readyAt = Date.now() - t0;
-  check('事前ロードが終わり「タップしてはじめる」が出る', true, `${readyAt} ms`);
+  check('事前ロードが終わり「TAP TO START」が出る', true, `${readyAt} ms`);
 
   // タップ前はBGMが鳴っていないこと(ブラウザの制限どおり)
   const before = await page.evaluate(() => [...document.querySelectorAll('audio')].filter((a) => !a.paused).length);
   check('タップ前は鳴っていない', before === 0, `${before}曲`);
 
-  await page.getByRole('button', { name: 'タップしてはじめる' }).click();
+  await page.getByRole('button', { name: 'TAP TO START' }).click();
   await page.waitForTimeout(1500);
 
   const state = () => page.evaluate(() => [...document.querySelectorAll('audio')].map((a) => ({
@@ -74,8 +74,8 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
 
   // プロフィールは専用BGMになるか(同じ曲が重なって鳴らないことも確認する)
   await page.reload();
-  await page.waitForFunction(() => !!document.body && document.body.innerText.includes('タップしてはじめる'), { timeout: 30000 });
-  await page.getByRole('button', { name: 'タップしてはじめる' }).click();
+  await page.waitForFunction(() => !!document.body && document.body.innerText.includes('TAP TO START'), { timeout: 30000 });
+  await page.getByRole('button', { name: 'TAP TO START' }).click();
   await page.waitForTimeout(1500);
   const t1 = (await state()).filter((a) => !a.paused);
   check('タイトルでBGMが鳴っている(ロード後すぐ)', t1.length === 1 && t1[0].src.startsWith('bgm-title'), JSON.stringify(t1));

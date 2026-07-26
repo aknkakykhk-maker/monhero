@@ -30,11 +30,18 @@ async function toImageData(dataUrl) {
   for (const baseId of ids) {
     const dataUrl = imageForBaseId(baseId, images);
     if (!dataUrl) { console.log(`${baseId}: 画像が見つかりません(スキップ)`); continue; }
-    const src = await toImageData(dataUrl);
     const urls = await dye.getDyeRegionMasks(baseId, dataUrl);
     if (!urls) { console.log(`${baseId}: 部位マスクが生成されませんでした`); continue; }
-
-    const { w, h } = src;
+    // マスクは表示サイズに合わせて縮小した解像度で作られるので、
+    // 元絵もその解像度に合わせて読み直してから重ねる
+    const maskSize = await decodeDataUrl(urls[0]);
+    const srcImg = await decodeDataUrl(dataUrl);
+    const w = maskSize.width, h = maskSize.height;
+    const sc = createCanvas(w, h);
+    const sctx = sc.getContext('2d');
+    sctx.imageSmoothingEnabled = true;
+    sctx.drawImage(srcImg, 0, 0, w, h);
+    const src = { w, h, data: sctx.getImageData(0, 0, w, h).data, img: sc };
     // 各部位のマスクを1枚のラベル画像に畳み込む
     const label = new Int8Array(w * h).fill(-1);
     for (let r = 0; r < urls.length; r++) {
