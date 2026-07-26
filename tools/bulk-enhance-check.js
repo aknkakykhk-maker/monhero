@@ -1,6 +1,6 @@
 // マスモンの「まとめて強化」が正しく動くかを実ブラウザで確認する。
 //
-//   python3 -m http.server 8899   などでリポジトリのルートを配信した状態で
+//   python3 tools/serve.py   でリポジトリのルートを配信した状態で
 //   node bulk-enhance-check.js
 //
 // 強化ポイントを持つマスモンをセーブデータとして流し込み、
@@ -34,6 +34,11 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   await page.waitForFunction(() => document.getElementById('root') && document.getElementById('root').children.length > 0, { timeout: 60000 });
   await page.waitForTimeout(2500);
 
+  // 起動時の事前ロード画面が出るので、「タップしてはじめる」を押してゲーム本体へ進む
+  await page.waitForFunction(() => !!document.body && document.body.innerText.includes('タップしてはじめる'), { timeout: 30000 }).catch(() => {});
+  const startBtn = page.getByRole('button', { name: 'タップしてはじめる' });
+  if (await startBtn.count()) { await startBtn.click(); await page.waitForTimeout(1200); }
+
   // プロフィール → マスモン一覧 → 対象を開く → 強化する
   const click = (text) => page.evaluate((t) => {
     const b = [...document.querySelectorAll('button')].find((x) => x.textContent.includes(t));
@@ -51,7 +56,7 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   await page.waitForTimeout(900);
   check('マスモン強化の画面を開ける', opened);
 
-  const text = () => page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
+  const text = () => page.evaluate(() => (document.body ? document.body.innerText : '').replace(/\s+/g, ' '));
   check('まとめて強化の枠が出ている', (await text()).includes('まとめて強化'));
 
   // 間合い適性を2段階、ライフを3ポイント振る

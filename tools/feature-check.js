@@ -1,6 +1,6 @@
 // 実ブラウザでゲームを起動し、主要な画面と今回追加した機能が動くかを確認する。
 //
-//   python3 -m http.server 8899   などでリポジトリのルートを配信した状態で
+//   python3 tools/serve.py   でリポジトリのルートを配信した状態で
 //   node feature-check.js
 //
 // React本体はリポジトリに同梱しているので実際に描画まで到達できる。
@@ -29,6 +29,11 @@ const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); c
   await page.waitForFunction(() => document.getElementById('root') && document.getElementById('root').children.length > 0, { timeout: 60000 });
   await page.waitForTimeout(1500);
 
+  // 起動時の事前ロード画面が出るので、「タップしてはじめる」を押してゲーム本体へ進む
+  await page.waitForFunction(() => !!document.body && document.body.innerText.includes('タップしてはじめる'), { timeout: 30000 }).catch(() => {});
+  const startBtn = page.getByRole('button', { name: 'タップしてはじめる' });
+  if (await startBtn.count()) { await startBtn.click(); await page.waitForTimeout(1200); }
+
   check('ゲームが描画される', true);
   check('起動時に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
 
@@ -46,7 +51,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); c
     if (await b.count()) { await b.click().catch(() => {}); await page.waitForTimeout(600); break; }
   }
 
-  const bodyText = () => page.evaluate(() => document.body.innerText);
+  const bodyText = () => page.evaluate(() => (document.body ? document.body.innerText : ''));
 
   // --- バージョン表示 ---
   const txt = await bodyText();

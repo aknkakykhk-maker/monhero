@@ -2,7 +2,7 @@
 // 特に「同じ絵を変数参照に置き換えた」箇所(images-ally.js の _ICON / _FACE_ICON など)が
 // load-order エラーで undefined になっていないかを検出するために使う。
 //
-//   python3 -m http.server 8899   などでリポジトリのルートを配信した状態で
+//   python3 tools/serve.py   でリポジトリのルートを配信した状態で
 //   node smoke.js
 //
 // 注: React / Tailwind / Babel はCDNから読むため、外部接続が塞がれた環境では
