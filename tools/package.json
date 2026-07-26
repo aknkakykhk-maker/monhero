@@ -1,0 +1,19 @@
+{
+  "name": "monhero-tools",
+  "private": true,
+  "version": "1.0.0",
+  "description": "モンスターヒーローの開発用検証スクリプト(本体には含まれない)",
+  "scripts": {
+    "check": "node check-syntax.js",
+    "dye": "node dye-report.js",
+    "map": "node region-map.js",
+    "smoke": "node smoke.js",
+    "images": "node image-report.js"
+  },
+  "dependencies": {
+    "@babel/core": "^7.28.4",
+    "@babel/preset-react": "^7.27.1",
+    "canvas": "^3.2.0",
+    "playwright": "^1.56.0"
+  }
+}
