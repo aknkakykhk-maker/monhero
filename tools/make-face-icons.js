@@ -34,8 +34,10 @@ const STRIP_BACKGROUND = { IBLIS: 'Iblis' };
 // 第5要素は縦位置の微調整(枠の一辺に対する割合。正で下へ)。頭の下に体が続く
 // モンスターは少し上に寄せたほうが、丸くトリミングしたときの収まりが良い。
 const FACE_BOXES = {
-  // 葉っぱの帽子の上端〜あご
-  MOCCHI: [0.145, 0.045, 0.675, 0.415, -0.02],
+  // 葉っぱの帽子の上端〜あご。頭の実際の左右端は0.297〜0.700なので、
+  // 切り落とさないよう少し広めに取る(以前は右端を0.675で切っていたため
+  // 測った中心が本来より左になり、結果として絵が右へずれていた)
+  MOCCHI: [0.25, 0.04, 0.75, 0.42, -0.02],
   // 全身がほぼ頭。球状の頭部そのもの
   SUEZO: [0.22, 0.205, 0.78, 0.705, 0],
   // 角の先端〜あご
@@ -93,7 +95,15 @@ function opaqueBoundsIn(img, x0, y0, x1, y1) {
   }
   // 不透明な画素が見つからなければ指定範囲をそのまま使う(想定外の保険)
   if (!found) return { w: ex - sx, h: ey - sy, cx: (sx + ex) / 2, cy: (sy + ey) / 2 };
-  return { w: maxX - minX + 1, h: maxY - minY + 1, cx: (minX + maxX + 1) / 2, cy: (minY + maxY + 1) / 2 };
+  // 指定範囲が被写体を左右どちらか片方だけで切っていると、測った中心が本来の中心から
+  // ずれ、その分だけ絵が反対側へ寄って見える(モッチーが横にずれていた原因がこれ)。
+  // 頭の下に体が続くモンスターでは上下や左右の両方が「切れて」いるのが普通なので、
+  // 中心がずれる原因になる「片側だけ切れている」場合にかぎって警告する。
+  const hitLeft = minX <= sx && sx > 0;
+  const hitRight = maxX >= ex - 1 && ex < img.width;
+  const clipped = [];
+  if (hitLeft !== hitRight) clipped.push(hitLeft ? '左' : '右');
+  return { w: maxX - minX + 1, h: maxY - minY + 1, cx: (minX + maxX + 1) / 2, cy: (minY + maxY + 1) / 2, clipped };
 }
 
 async function makeFaceIcon(dataUrl, box, name, dye) {
@@ -108,6 +118,9 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
   // 部分の中心はズレることがある(モッチーが横にずれて見えていた原因)。
   // 指定範囲の中で不透明な画素が実際に占める範囲を測り直し、そちらを中心として使う。
   const opaque = opaqueBoundsIn(img, x0, y0, x1, y1);
+  if (opaque.clipped && opaque.clipped.length) {
+    console.log(`  ⚠ ${name}: 指定範囲が絵の${opaque.clipped.join('・')}端を切っています。FACE_BOXESを広げてください`);
+  }
   const headW = opaque.w, headH = opaque.h;
   const headCx = opaque.cx, headCy = opaque.cy;
   // 頭の長辺が枠のFIT分を占めるように倍率を決める

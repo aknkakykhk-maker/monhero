@@ -27,6 +27,8 @@ cd tools && npm install
 | `node region-map.js [モンスターID...]` | 部位分けを色分けしたPNGを `out/` に書き出す。目視確認用。 |
 | `node image-report.js` | 埋め込み画像(base64)の一覧をサイズ順に出す。重複した実体も検出する。 |
 | `node dedupe-images.js [--dry-run]` | 同じ base64 が複数の変数に重複して埋め込まれている箇所を、先に定義した変数への参照に置き換える。画像は1バイトも変えない。 |
+| `node stamp-version.js` | BUILD_DATE と version.json を現在の日本時間に揃える。手で書くと未来の時刻が入るので必ずこれを使う。 |
+| `node bgm-check.js` | BGM(audio/のmp3)が画面に応じて切り替わるかを実ブラウザで確認する。 |
 | `node build.js` | **game-system.jsx を配信用JSへ変換し `monster-hero/game-system.compiled.js` を書き出す。改修したら必ず実行する。** |
 | `node build.js --check` | compiled が jsx と一致しているか確認する(古ければ終了コード1)。出荷前チェック用。 |
 | `node feature-check.js` | 実ブラウザでゲームを起動し、主要機能が動くかを確認する。 |
@@ -47,8 +49,8 @@ cd tools && npm install
 1. `game-system.jsx` などを改修する
 2. `node build.js` で `game-system.compiled.js` を作り直す(**忘れると変更が反映されない**)
 3. `node check-syntax.js` / `node dye-report.js` / `node feature-check.js` を通す
-4. `BUILD_DATE`(game-system.jsx 冒頭)と `monster-hero/version.json` の `build` を同じ値に更新する
-5. `data/changelog.js` の先頭に今回の更新内容を追記する(日時は BUILD_DATE と同じ)
+4. `node stamp-version.js` で `BUILD_DATE` と `monster-hero/version.json` を現在時刻(JST)に揃える
+5. `data/changelog.js` の先頭に今回の更新内容を追記する(日時は 4 で表示された値をそのまま使う)
 6. コミット → PR → squash マージ
 
 ## リポジトリの構成
@@ -67,6 +69,7 @@ monster-hero/
     skills.js                 技・ガード・カードの色定義
     changelog.js              更新履歴(更新のたびに先頭へ追記する)
   vendor/                     React / ReactDOM(CDNを使わず同梱している)
+  audio/                      BGMのmp3(タイトル/別ページ/通常戦/ボス戦の4曲)
   icons/ manifest.json version.json
 tools/                        開発用の検証スクリプト(配信されない)
 atsu-cup/                     別アプリ(モンヒロとは独立)
@@ -86,6 +89,8 @@ index.html                    2つのアプリへのハブページ
 - **ゲーム本体**: `tools/build.js` で事前変換した `game-system.compiled.js` を普通の `<script>` で読む
   (Babel本体(約2.8MB)のダウンロードも、端末上での変換(モバイルで数秒)も不要になる)
 - **Tailwind**: 現状はCDNのまま(実行時にCSSを生成する方式のため、静的CSS化は別途対応が必要)
+- **BGM**: `audio/` のmp3。合計17MBあるが `preload='none'` で画面に応じて必要な曲だけを
+  読み込むため、初期表示には影響しない(SEは引き続きTone.jsで生成している)
 
 ## 仕組み
 
