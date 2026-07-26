@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 573c0e706fed15d4
+// source-sha256: 1f717a996dddbaf5
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-27 03:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-27 04:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2768,17 +2768,16 @@ const SB_HEADERS = {
   'Content-Type': 'application/json'
 };
 
-// Fetch top scores for a difficulty (returns array sorted by score desc)
-const sbFetchRankings = async (diff, limit = 50) => {
-  const url = `${SUPABASE_URL}/rest/v1/rankings?difficulty=eq.${encodeURIComponent(diff)}&order=score.desc&limit=${limit}`;
+// 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
+const sbFetchRankings = async (diff, limit = 50, order = 'score.desc') => {
+  const url = `${SUPABASE_URL}/rest/v1/rankings?difficulty=eq.${encodeURIComponent(diff)}&order=${order}&limit=${limit}`;
   const res = await fetch(url, {
     headers: SB_HEADERS
   });
   if (!res.ok) throw new Error(`fetch ${res.status}`);
   return await res.json();
 };
-// Find this player's existing row for a difficulty (by user_name)
-// Insert a new score row
+// 記録を1件挿入する(1プレイ=1件)
 const sbInsertScore = async row => {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings`, {
     method: 'POST',
@@ -2790,7 +2789,6 @@ const sbInsertScore = async row => {
   });
   if (!res.ok) throw new Error(`insert ${res.status}`);
 };
-// Update an existing score row by id
 
 // 最終リザルト画面(CHAMPION/敗北)共通: レベルの経験値バーが直前の進捗から今回の獲得分まで伸びる演出。
 // レベルを跨ぐ場合は満タンまで伸ばしてからLEVEL UPを見せ、次レベルの進捗へ切り替える
@@ -2982,6 +2980,9 @@ function MonsterHeroGame() {
     label: 'システム起動中'
   });
   const [localRankings, setLocalRankings] = useState({});
+  // ブリーダーLv・絆Lvの集計に使う記録。スコア上位に入らなかった直近のプレイも含むので、
+  // スコアランキングの表示(localRankings)とは別に持つ
+  const [rankingPool, setRankingPool] = useState({});
   const [rankingSourceByDiff, setRankingSourceByDiff] = useState({}); // {[diff]: 'global'|'local'} 表示中データの取得元
   const [showRanking, setShowRanking] = useState(false);
   const [screenShake, setScreenShake] = useState(false);
@@ -3298,7 +3299,7 @@ function MonsterHeroGame() {
   // (専用の列を増やさず、スコア送信時に一緒に保存しているlevelから集計している)
   const breederRanking = useMemo(() => {
     const byName = new Map();
-    Object.values(localRankings).forEach(rows => (rows || []).forEach(r => {
+    Object.values(rankingPool).forEach(rows => (rows || []).forEach(r => {
       const name = r.userName || '名無しのブリーダー';
       const lv = r.level || 0;
       const cur = byName.get(name);
@@ -3310,13 +3311,13 @@ function MonsterHeroGame() {
       });
     }));
     return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 50);
-  }, [localRankings]);
+  }, [rankingPool]);
 
   // モンスターの絆レベルのランキング。スコア送信時に記録している編成(party)の中から
   // 絆レベルを持つマスモンを取り出して並べる。同じプレイヤーの同じモンスターは1件にまとめる
   const bondRankingAll = useMemo(() => {
     const byKey = new Map();
-    Object.values(localRankings).forEach(rows => (rows || []).forEach(r => {
+    Object.values(rankingPool).forEach(rows => (rows || []).forEach(r => {
       (r.party || []).forEach(pm => {
         if (!pm || !pm.bondLevel) return;
         const key = (r.userName || '') + '\u0000' + (pm.name || '');
@@ -3333,7 +3334,7 @@ function MonsterHeroGame() {
       });
     }));
     return [...byKey.values()].sort((a, b) => b.bondLevel - a.bondLevel);
-  }, [localRankings]);
+  }, [rankingPool]);
 
   // 種類別フィルタの選択肢。まだ誰も記録を出していないモンスターもタブに出したいので、
   // 記録から拾った名前ではなく、全モンスターの名前を並べる(記録が無い種は「まだいません」になる)
@@ -3347,20 +3348,44 @@ function MonsterHeroGame() {
   }, [bondRankingAll]);
   const bondRanking = useMemo(() => bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 50), [bondRankingAll, bondRankMonFilter]);
   const loadRankings = useCallback(async () => {
-    const byDiff = {};
+    const byDiff = {}; // スコアランキング表示用(スコア上位50件だけ)
+    const poolByDiff = {}; // ブリーダーLv・絆Lv集計用(スコア上位＋レベル上位をまとめたもの)
     const sourceByDiff = {};
+    const toEntry = r => ({
+      userName: r.user_name,
+      hero: r.hero,
+      party: r.party,
+      score: r.score,
+      level: r.level,
+      icon: r.icon
+    });
+    // 同じ行が両方の取得結果に入るので、id(無ければ内容)で重複を除く
+    const mergeRows = (a, b) => {
+      const seen = new Map();
+      [...(a || []), ...(b || [])].forEach(r => {
+        const key = r && r.id != null ? `id:${r.id}` : `v:${r.user_name}|${r.score}|${r.level}|${r.hero}`;
+        if (!seen.has(key)) seen.set(key, r);
+      });
+      return [...seen.values()];
+    };
     try {
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async d => {
         try {
           const rows = await sbFetchRankings(d, 50);
-          byDiff[d] = (rows || []).map(r => ({
-            userName: r.user_name,
-            hero: r.hero,
-            party: r.party,
-            score: r.score,
-            level: r.level,
-            icon: r.icon
-          }));
+          // スコアランキングはスコア順の取得結果だけで作る。
+          // 1行=1プレイなので、そのときのパーティ・絆レベル・ブリーダーレベルは記録した当時のまま固定される。
+          byDiff[d] = (rows || []).map(toEntry);
+          // ブリーダーLv/絆Lvは「最新(=最高)」を出したいので、レベル順の取得結果も足しておく。
+          // スコアが伸びなかった直近のプレイはスコア上位50件に入らず、
+          // そのままだとレベルが古いまま表示されてしまうため
+          let pool = rows || [];
+          try {
+            // level列が無い記録(旧形式)が先頭を埋めないよう nullslast を付ける
+            pool = mergeRows(pool, await sbFetchRankings(d, 50, 'level.desc.nullslast'));
+          } catch (eLv) {
+            console.error('[ranking] level order fetch failed for', d, eLv && eLv.message ? eLv.message : eLv);
+          }
+          poolByDiff[d] = pool.map(toEntry);
           sourceByDiff[d] = 'global';
         } catch (e) {
           console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
@@ -3368,6 +3393,7 @@ function MonsterHeroGame() {
           try {
             const rows = await storeGet(`mh_rank_${d}`, [], false);
             if (Array.isArray(rows) && rows.length) {
+              poolByDiff[d] = rows.slice();
               byDiff[d] = rows.slice().sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 50);
             }
           } catch {}
@@ -3375,6 +3401,7 @@ function MonsterHeroGame() {
       }));
       setRankingSourceByDiff(sourceByDiff);
       setLocalRankings(byDiff);
+      setRankingPool(poolByDiff);
     } catch {}
   }, []);
 
@@ -3840,15 +3867,27 @@ function MonsterHeroGame() {
         score: finalScore,
         diff,
         level,
-        icon
+        icon,
+        at: Date.now()
       };
       try {
         const rows = await storeGet(`mh_rank_${diff}`, [], false);
         const list = Array.isArray(rows) ? rows.slice() : [];
         // サーバー側と同じく、1プレイごとに1件として積む
         list.push(entry);
-        list.sort((a, b) => (b.score || 0) - (a.score || 0));
-        await storeSet(`mh_rank_${diff}`, list.slice(0, 50), false);
+        const kept = list.slice().sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 50);
+        // スコア上位50件に加えて、名前ごとの最新1件は必ず残しておく。
+        // ブリーダーLv・絆Lvのランキングはこの記録から集計するので、
+        // 直近のプレイがスコア上位に入らなくてもレベルだけは最新にできる
+        const latestByName = new Map();
+        list.forEach(r => {
+          const cur = latestByName.get(r.userName);
+          if (!cur || (r.at || 0) >= (cur.at || 0)) latestByName.set(r.userName, r);
+        });
+        latestByName.forEach(r => {
+          if (!kept.includes(r)) kept.push(r);
+        });
+        await storeSet(`mh_rank_${diff}`, kept, false);
       } catch (e2) {
         console.error('[ranking] local fallback also failed:', e2 && e2.message ? e2.message : e2);
       }
