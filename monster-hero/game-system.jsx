@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 16:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 16:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -409,12 +409,19 @@ const MASU_COLOR_REGION_HUES = {
 // 部位判定後の平滑化(ごま塩ノイズ除去)の強さをモンスターごとに調整するテーブル。
 // 既定は半径2の多数決を1回。細かい毛並みの陰影で判定が激しく入れ替わるモンスターは
 // radius/iterationsを上げて、小さな塊単位に均す(ただし小さな部位(目など)まで塗り潰さないよう
-// 既定は控えめにしてあり、必要なモンスターだけ個別に強めている)
+// 既定は控えめにしてあり、必要なモンスターだけ個別に強めている)。
+// radiusは160px幅の画像を基準にしたピクセル半径として定義し、実際の画像幅に比例させて
+// 換算する(高解像度画像に差し替えても毛並みノイズの見た目の粒の大きさに対して
+// 常に同じ強さの平滑化がかかるようにするため)
 const MASU_COLOR_SMOOTH = {
   Tiger: { radius: 3, iterations: 1 },
   Iblis: { radius: 3, iterations: 1 },
 };
-const _getSmoothParams = (baseId) => MASU_COLOR_SMOOTH[baseId] || { radius: 2, iterations: 1 };
+const _getSmoothParams = (baseId, w) => {
+  const base = MASU_COLOR_SMOOTH[baseId] || { radius: 2, iterations: 1 };
+  const scale = w ? w / 160 : 1;
+  return { radius: Math.max(1, Math.round(base.radius * scale)), iterations: base.iterations };
+};
 // モンスター種ごとに、ICON(128px)とIMG(160px)で構図(トリミング位置)が異なる場合の補正テーブル。
 // 2026年の新規イラスト差し替え以降、新イラストはprocess-new-art.jsで両サイズとも同じ正規化座標(0〜1)に
 // 統一して書き出しているため、現時点では補正が必要なモンスターは無い(空のまま維持)
@@ -598,7 +605,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
           // 2パス目: 毛並みなど細かい濃淡で判定がごま塩状に入れ替わる箇所を、
           // 周囲の多数決で均して滑らかな塊にする(境界のジグザグ自体は保つ)。
           // 強さ(半径・回数)はモンスターごとにMASU_COLOR_SMOOTHで調整
-          const { radius, iterations } = _getSmoothParams(baseId);
+          const { radius, iterations } = _getSmoothParams(baseId, w);
           let smoothed = grid;
           for (let iter = 0; iter < iterations; iter++) {
             const next = new Int8Array(smoothed);
