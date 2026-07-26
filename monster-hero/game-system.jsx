@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 18:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 19:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -399,12 +399,45 @@ const MASU_COLOR_REGION_HUES = {
   // 口全体(上唇・下唇とも)を一体で拾えるようにしている
   Mitarashi: [{ hue: 0, sMin: 0.3 }, { hue: 35, sMin: 0.3 }, { posBbox: [[0.42, 0.05, 0.57, 0.09], [0.434, 0.273, 0.563, 0.294], [0.319, 0.294, 0.680, 0.316], [0.314, 0.316, 0.686, 0.336], [0.319, 0.336, 0.680, 0.358], [0.352, 0.358, 0.650, 0.380]], noAAGuard: true, noEdgeGuard: true }],
   Ark: [219, 187, [60, { white: true, sMax: 0.15, vMin: 0.85, bbox: [0.30, 0.56, 0.70, 0.79] }]],
-  // 2026年に新規イラスト(羊の天使)へ差し替え。全身もふもふの白い毛(染色①)、顔・前足の紫(染色②)、
-  // 翼の黒(染色③)の3部位。新イラストはICON/IMGとも同じ構図で作成しているため部位分割はシンプルな
-  // 色相・彩度・位置範囲のみで足りている(旧イラストのような部位ごとのサイズ別補正は不要)。
-  // 翼のハイライト(明るいグラデーション部分)は彩度が低く染色①の白バケツ条件も満たしてしまうため、
-  // 染色①側にもbboxを付けて胴体の実測範囲(翼を除く)に絞り、翼側は常に染色③になるようにしている
-  Iblis: [{ white: true, sMax: 0.15, vMin: 0.75, bbox: [0.28, 0.0, 0.72, 1.0] }, { hue: 270, sMin: 0.14, vMin: 0.3, bbox: [0.2, 0.25, 0.8, 0.65] }, { white: true, sMax: 0.5, vMin: 0.05, bbox: [[0.02, 0.45, 0.32, 0.88], [0.65, 0.45, 0.98, 0.88]] }],
+  // 2026年に新規イラスト(羊の天使)へ差し替え。もふもふの白い毛(染色①)、紫のパーツ(染色②)、
+  // 翼の黒(染色③)の3部位。元絵の実測値(高解像度版570px)に基づいて次のように切り分けている。
+  //  ・白い毛: ほぼ白(彩度0.02)〜薄いピンク紫の影(色相295〜326・彩度0.06〜0.19・明度0.85以上)。
+  //    彩度の上限を0.20にしてあるのは、体の下側の毛先の影(彩度0.156〜0.19)まで拾いつつ、
+  //    お腹の模様の水色(彩度0.21)は拾わないようにするため。以前は0.15だったので毛先の影が
+  //    どの部位にも属さず、染色したとき体の下側だけ元の色が残っていた
+  //  ・紫のパーツ: 輪(色相281・彩度0.62)、耳と鼻(色相273・彩度0.49)、首元(色相278・彩度0.45)、
+  //    顔・前足・後ろ足(色相263〜271・彩度0.26〜0.34・明度0.42〜0.51)、顔の輪郭線(明度0.2前後)。
+  //    元絵では顔・前足・後ろ足はどれも同じ濃い紫で塗られているため、まとめて1部位にしている
+  //  ・翼: 同じ紫系でも明度が0.17〜0.33と明確に暗い。明度の上限0.34で前足(明度0.44以上)と分かれる
+  Iblis: [
+    { white: true, sMax: 0.20, vMin: 0.80, bbox: [0.24, 0.14, 0.76, 0.82] },
+    { hue: 272, sMin: 0.18, vMin: 0.15, bbox: [0.16, 0.13, 0.84, 0.82] },
+    { white: true, sMax: 0.55, vMin: 0.05, vMax: 0.34, bbox: [[0.02, 0.42, 0.34, 0.80], [0.64, 0.42, 0.98, 0.80]] },
+  ],
+};
+// 染色の対象外にする装飾(モンスター本体ではない背景の飾りなど)。ここに合致した画素はどの部位にも
+// 属さないものとして扱い、常に元の絵のまま残す。MASU_COLOR_REGION_HUESは「どの部位か」しか表現できず
+// 「そもそも染めない」を指定する手段が無かったため、背景の飾りが各部位のbboxの境目で矩形状に
+// 分断されて塗り分けられてしまう不具合があった(イブリースの背景にある淡い紫の円)
+const MASU_COLOR_EXCLUDE = {
+  // イブリース: 右上にある淡い紫の円は背景の飾りなので染色しない。体の白い毛の影は
+  // 色相295〜326のピンク寄りなのに対し、この円は色相245〜263の青寄りとはっきり分かれるため、
+  // 色相と彩度・明度の組み合わせで確実に区別できる(bboxで円のある範囲にも絞っている)
+  Iblis: [{ bbox: [0.63, 0.27, 0.88, 0.61], hue: [235, 278], sMin: 0.06, sMax: 0.24, vMin: 0.84 }],
+};
+// 画素(色相hh・彩度ss・明度vv・画像内の相対位置nx,ny)が染色対象外の装飾かどうかを判定する
+const _isExcludedDyePixel = (baseId, hh, ss, vv, nx, ny) => {
+  const rules = MASU_COLOR_EXCLUDE[baseId];
+  if (!rules) return false;
+  return rules.some((rule) => {
+    if (rule.bbox && !_bboxMatches(rule.bbox, nx, ny)) return false;
+    if (rule.hue && !(hh >= rule.hue[0] && hh <= rule.hue[1])) return false;
+    if (rule.sMin !== undefined && ss < rule.sMin) return false;
+    if (rule.sMax !== undefined && ss > rule.sMax) return false;
+    if (rule.vMin !== undefined && vv < rule.vMin) return false;
+    if (rule.vMax !== undefined && vv > rule.vMax) return false;
+    return true;
+  });
 };
 // 部位判定後の平滑化(ごま塩ノイズ除去)の強さをモンスターごとに調整するテーブル。
 // 既定は半径2の多数決を1回。細かい毛並みの陰影で判定が激しく入れ替わるモンスターは
@@ -413,9 +446,11 @@ const MASU_COLOR_REGION_HUES = {
 // radiusは160px幅の画像を基準にしたピクセル半径として定義し、実際の画像幅に比例させて
 // 換算する(高解像度画像に差し替えても毛並みノイズの見た目の粒の大きさに対して
 // 常に同じ強さの平滑化がかかるようにするため)
+// (イブリースは以前ここで半径3に強めていたが、羊毛のガビガビの原因は平滑化不足ではなく
+//  白バケツ判定への色相境界除外の誤爆だった。そちらを直したことで既定の半径2で十分きれいに
+//  なり、逆に半径3だとまつ毛のような小さな部位まで塗り潰されてしまうため個別指定を撤去した)
 const MASU_COLOR_SMOOTH = {
   Tiger: { radius: 3, iterations: 1 },
-  Iblis: { radius: 3, iterations: 1 },
 };
 const _getSmoothParams = (baseId, w) => {
   const base = MASU_COLOR_SMOOTH[baseId] || { radius: 2, iterations: 1 };
@@ -571,6 +606,8 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             if (a < 20) continue;
             const x = i % w, y = (i / w) | 0;
             const [hh, ss, vv] = _rgbToHsv(r, g, b);
+            // 背景の飾りなど、そもそも染色対象にしない画素はここで除外する
+            if (_isExcludedDyePixel(baseId, hh, ss, vv, x / w, y / h)) continue;
             const region = _classifyDyePixel(hh, ss, vv, x / w, y / h, regionDefs);
             if (region < 0) continue;
             const def = regionDefs[region];
