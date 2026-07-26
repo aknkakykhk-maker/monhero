@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 06:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 07:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -402,7 +402,11 @@ const MASU_COLOR_REGION_HUES = {
   // bboxで実際に紫がある範囲(頭上の輪+頭部の帯+左右の前足)に判定を絞り込んでいる。
   // 頭上の輪(y0.22〜0.30)は体を赤系に染めても紫のまま浮いて見えるという指摘を受け、
   // 頭部の帯のbboxを上に拡張して輪も同じ染色②に含めた(実測でx0.44〜0.55にしか紫が無いことを確認済み)
-  Iblis: [{ white: true, sMax: 0.15, vMin: 0.7 }, { hue: 264, sMin: 0.14, vMin: 0.35, vMax: 0.9, noEdgeGuard: true, noAAGuard: true, bbox: [[0.15,0.18,0.85,0.53],[0.10,0.58,0.32,0.75],[0.68,0.58,0.90,0.75]] }, { white: true, sMax: 0.3, vMin: 0.15, vMax: 0.32 }],
+  // 顔の下、胸元の白いもふもふ襟(顔と体の間のギザギザした毛)の影の部分も同じ紫系の色だが、
+  // 顔のbbox(y0.53まで)と前足のbbox(y0.58から)の間に隙間があり、その隙間にちょうど収まって
+  // いたため無染色のまま浮いて見えていた(斑点状のノイズに見える不具合)。襟の影の実測範囲
+  // (y0.53〜0.58)ぶんbboxを下に拡張して隙間を埋めた
+  Iblis: [{ white: true, sMax: 0.15, vMin: 0.7 }, { hue: 264, sMin: 0.14, vMin: 0.35, vMax: 0.9, noEdgeGuard: true, noAAGuard: true, bbox: [[0.15,0.18,0.85,0.58],[0.10,0.58,0.32,0.75],[0.68,0.58,0.90,0.75]] }, { white: true, sMax: 0.3, vMin: 0.15, vMax: 0.32 }],
 };
 // 部位判定後の平滑化(ごま塩ノイズ除去)の強さをモンスターごとに調整するテーブル。
 // 既定は半径2の多数決を1回。細かい毛並みの陰影で判定が激しく入れ替わるモンスターは
