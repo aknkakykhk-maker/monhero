@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 13:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 15:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -387,7 +387,7 @@ const MASU_COLOR_REGION_HUES = {
   // 口元(染色③、クレスト最上部の縁取りも同色にまとめている)の3部位。差し替え直後は
   // クレスト全体を染色③に独立させたが、旧イラストと比べて面積が大きくなりすぎたため縮小し、
   // 代わりに口(唇)を染色②(お腹と同じ金色)から染色③へ切り出して独立させている
-  Mitarashi: [{ hue: 0, sMin: 0.3 }, { hue: 35, sMin: 0.3 }, { posBbox: [[0.42, 0.05, 0.57, 0.09], [0.32, 0.29, 0.68, 0.35]], noAAGuard: true, noEdgeGuard: true }],
+  Mitarashi: [{ hue: 0, sMin: 0.3 }, { hue: 35, sMin: 0.3 }, { posBbox: [[0.42, 0.05, 0.57, 0.09], [0.31, 0.28, 0.69, 0.39]], noAAGuard: true, noEdgeGuard: true }],
   Ark: [219, 187, [60, { white: true, sMax: 0.15, vMin: 0.85, bbox: [0.30, 0.56, 0.70, 0.79] }]],
   // 2026年に新規イラスト(羊の天使)へ差し替え。全身もふもふの白い毛(染色①)、顔・前足の紫(染色②)、
   // 翼の黒(染色③)の3部位。新イラストはICON/IMGとも同じ構図で作成しているため部位分割はシンプルな
