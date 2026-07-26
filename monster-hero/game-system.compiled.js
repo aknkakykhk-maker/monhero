@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b3ed677336cb97ad
+// source-sha256: 59b5fe74b2ad2aa6
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-27 07:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-27 08:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3653,6 +3653,12 @@ function MonsterHeroGame() {
   const startGame = () => {
     // このタップが「音を鳴らしてよい」唯一の合図なので、まずここで音声のロックを解除する
     Audio_.unlock();
+    // 指を離したときのclickは、既に消えている起動画面ではなくトップ画面の要素に届く。
+    // そこにボタンがあると誤って押されてしまうので、続く1回のclickは捨てる
+    bootTapPending.current = true;
+    setTimeout(() => {
+      bootTapPending.current = false;
+    }, 3000); // 指を離さなかった場合の保険
     setBootPhase('done');
     // タイトルの曲は必ず鳴ってほしいので、少し時間を置いて本当に鳴っているか確かめ、
     // 鳴っていなければ鳴らし直す(読み込みが間に合わなかった場合の保険)
@@ -3763,6 +3769,48 @@ function MonsterHeroGame() {
       window.removeEventListener('pointercancel', onUp);
     };
   }, [dragState?.cardIndex]);
+
+  // 起動画面(TAP TO START)のタップが、その下のトップ画面まで届いてしまうのを防ぐ。
+  //
+  // 起動画面は「指を触れた瞬間(pointerdown)」に閉じる。音を鳴らす許可はこの操作でしか
+  // 得られないので、ここで閉じるのは変えられない。ところが指を離すころには起動画面は
+  // 既に消えているため、clickは「指の位置にあるトップ画面の要素」に対して発生する。
+  // そこにボタンがあると、そのボタンのタップ音が鳴ったり、難易度が切り替わったりしていた
+  // (「押した直後に一瞬違う音が鳴る」「押す位置によって挙動が変わる」の原因)。
+  // 起動タップに続く1回のclickだけを捨てることで、指の位置に左右されないようにする。
+  //
+  // ※この効果は下の共通タップSEより先に登録する必要がある(先に登録した方が先に呼ばれ、
+  //   stopImmediatePropagation で後続の登録を止められる)
+  const bootTapPending = useRef(false);
+  useEffect(() => {
+    const swallow = e => {
+      if (!bootTapPending.current) return;
+      bootTapPending.current = false;
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    };
+    // 起動タップのclickが来ないまま次の操作が始まったら、そこで捨てる予定は取り消す
+    // (そうしないと、次に押したボタンが効かなくなってしまう)
+    const cancel = () => {
+      bootTapPending.current = false;
+    };
+    // 指を離してもclickが来ないブラウザもあるので、離した少しあとに取り消す。
+    // 長押ししてから離した場合でも、離した直後のclickだけは確実に捨てられる
+    const armExpire = () => {
+      if (!bootTapPending.current) return;
+      setTimeout(() => {
+        bootTapPending.current = false;
+      }, 400);
+    };
+    document.addEventListener('click', swallow, true);
+    document.addEventListener('pointerdown', cancel, true);
+    document.addEventListener('pointerup', armExpire, true);
+    return () => {
+      document.removeEventListener('click', swallow, true);
+      document.removeEventListener('pointerdown', cancel, true);
+      document.removeEventListener('pointerup', armExpire, true);
+    };
+  }, []);
 
   // 全ボタンのタップに共通SE (音量ボタン自身は二重に鳴らさない)
   useEffect(() => {

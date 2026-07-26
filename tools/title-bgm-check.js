@@ -23,7 +23,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
 
 (async () => {
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const fatal = [];
   page.on('pageerror', (e) => fatal.push(e.message));
 
@@ -91,6 +91,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   const playing = () => page.evaluate(() => [...document.querySelectorAll('audio')]
     .filter(a => !a.paused).map(a => (a.src || '').split('/').pop()));
   const bodyText = () => page.evaluate(() => (document.body ? document.body.innerText.replace(/\s+/g, ' ') : ''));
+  // 画面の外に出ている要素でも押せるDOM側のクリック(Tailwindが無い環境では
+  // レイアウトが崩れて座標が当てにならないため、タイトル以外はこちらで操作する)
   const clickText = async (src) => page.evaluate((s) => {
     const rx = new RegExp(s);
     const b = [...document.querySelectorAll('button')].find(x => rx.test((x.innerText || '').replace(/\s+/g, ' ').trim()));
@@ -98,15 +100,40 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
     b.click();
     return true;
   }, src);
+  // 起動画面だけは実機と同じ「指でのタップ」で操作する。
+  // 指を離したときのclickがどこへ届くかを確かめたいので、本物の操作でなければ意味がない
+  const tapText = async (src) => {
+    const box = await page.evaluate((s) => {
+      const rx = new RegExp(s);
+      const b = [...document.querySelectorAll('button')].find(x => rx.test((x.innerText || '').replace(/\s+/g, ' ').trim()));
+      if (!b) return null;
+      const r = b.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }, src);
+    if (!box) return false;
+    await page.touchscreen.tap(box.x, box.y);
+    return true;
+  };
 
   await page.goto(URL, { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction(() => !!document.body && document.body.innerText.includes('TAP TO START'), { timeout: 40000 });
   check('事前ロードが終わり「TAP TO START」が出る', true);
   check('タップ前は鳴っていない', (await playing()).length === 0);
 
+  // 起動画面のタップが、その下のトップ画面まで届いていないか調べるための記録。
+  // 起動画面は指を触れた瞬間に閉じるので、指を離したときのclickは
+  // 「指の位置にあるトップ画面の要素」に対して発生する。
+  // 捨てられていれば、この window の listener までは届かない
+  await page.evaluate(() => {
+    window.__leaked = [];
+    window.addEventListener('click', (e) => {
+      const btn = e.target && e.target.closest && e.target.closest('button');
+      window.__leaked.push(btn ? (btn.innerText || '').replace(/\s+/g, ' ').slice(0, 20) : '(ボタン以外)');
+    });
+  });
+
   // 実際のタップ(信頼できるイベント)で開始する
-  const btn = page.getByRole('button', { name: 'TAP TO START' });
-  await btn.click({ force: true });
+  await tapText('TAP TO START');
 
   // タイトルBGMが鳴り出すまで待つ(最大6秒)
   let titleOk = false;
@@ -121,6 +148,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   }
   check('タップだけでタイトルBGMが鳴る(他ページへ移動しなくてよい)', titleOk, `拒否された再生 ${state.rejected}回`);
   check('タイトル画面が表示されている', (await bodyText()).includes('Monster Hero'));
+  const leaked = await page.evaluate(() => window.__leaked || []);
+  check('起動タップがトップ画面まで届かない(誤ってボタンを押さない)', leaked.length === 0, leaked.join(',') || 'なし');
 
   // 別ページへ行って戻ってきても、タイトルBGMに戻る
   if (await clickText('プロフィール')) {
