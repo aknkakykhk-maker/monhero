@@ -14,29 +14,39 @@ const { REPO_ROOT, loadEmbeddedImages, decodeDataUrl, createCanvas, loadDyeModul
 // 出力する顔アイコンの一辺(px)。表示は最大でも60px程度だが、高DPI端末でも
 // にじまないよう余裕をもって256pxにしている(旧来の顔アイコンは128px)
 const SIZE = 256;
-// 顔が枠にぴったり付かないよう左右上下に取る余白(一辺に対する割合)
-const PAD = 0.03;
+// 顔(FACE_BOXESの範囲)が枠の何割を占めるか。残りが余白になる。
+// プロフィールアイコンは丸(rounded-full)で表示されるため、四隅は切り落とされる。
+// 顔が丸の内側に収まるよう、正方形いっぱいには広げない
+const FIT = 0.86;
 // 顔アイコンを作るときに、MASU_COLOR_EXCLUDE(染色対象外の背景装飾)を透明にするモンスター。
 // イブリースは頭の右後ろに背景の飾り(淡い紫の円)があり、顔だけ切り出すと
 // 四角く途切れた薄い板のように写り込んでしまうため、切り出す前に消しておく
 const STRIP_BACKGROUND = { IBLIS: 'Iblis' };
 
-// 立ち絵に対する顔の範囲(正規化座標 [x0, y0, x1, y1])。
+// 立ち絵に対する「頭」の範囲(正規化座標 [x0, y0, x1, y1])。
 // tools/grid-overlay.js で目盛りを重ねた画像を出し、元絵から目視で実測した値。
+//
+// ここは「切り抜く矩形」ではなく「枠の中央に、この大きさで収めたい部分」を表す。
+// 描画は元絵全体をこの倍率・位置で置くので、頭の周りの体や翼は自然に枠外へ流れる。
+// 矩形で切り抜くと、体を横切ったところが直線で途切れて丸アイコンにしたとき
+// 板状に見えてしまうため、この方式にしている。
+//
+// 第5要素は縦位置の微調整(枠の一辺に対する割合。正で下へ)。頭の下に体が続く
+// モンスターは少し上に寄せたほうが、丸くトリミングしたときの収まりが良い。
 const FACE_BOXES = {
-  // 頭(葉っぱの帽子の上端)から胸元まで。頭だけだと横長すぎて正方形の枠が
-  // 上下スカスカになるため、少しだけ体を入れてバストアップにしている
-  MOCCHI: [0.14, 0.045, 0.685, 0.50],
-  // 全身がほぼ頭なので、球状の頭部だけを取り、下の柄(しっぽ)は落とす
-  SUEZO: [0.215, 0.20, 0.785, 0.715],
-  // 角の先端〜あご。翼・体は含めない
-  PIXIE: [0.35, 0.105, 0.63, 0.325],
-  // 頭の岩ブロック(上端〜あご下)。肩の上端が少し入る程度
-  GOLEM: [0.37, 0.02, 0.615, 0.285],
-  // 頭頂のクレスト〜あご下。ほおが枠に接しないよう左右に余裕をもたせる
-  MITARASHI: [0.225, 0.03, 0.76, 0.47],
-  // 頭上の輪から、角・もふもふの襟・顔まで(背景の飾りはSTRIP_BACKGROUNDで消してから切り出す)
-  IBLIS: [0.235, 0.16, 0.745, 0.535],
+  // 葉っぱの帽子の上端〜あご
+  MOCCHI: [0.145, 0.045, 0.675, 0.415, -0.02],
+  // 全身がほぼ頭。球状の頭部そのもの
+  SUEZO: [0.22, 0.205, 0.78, 0.705, 0],
+  // 角の先端〜あご
+  PIXIE: [0.355, 0.11, 0.625, 0.315, -0.02],
+  // 頭の岩ブロック(上端〜あご)
+  GOLEM: [0.375, 0.03, 0.61, 0.245, -0.02],
+  // 頭頂のクレスト〜あご下
+  MITARASHI: [0.245, 0.04, 0.74, 0.425, -0.02],
+  // 頭上に浮かぶ玉〜あご下。玉と輪はイブリースの意匠なので、中途半端に切れないよう
+  // 玉の上端から範囲に含めている(背景の飾りはSTRIP_BACKGROUNDで消してから配置する)
+  IBLIS: [0.245, 0.05, 0.735, 0.515, 0],
 };
 
 // MASU_COLOR_EXCLUDE に合致する画素(背景の飾り)を透明にした元画像を作る
@@ -65,19 +75,22 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
     console.log(`  背景の飾りを ${removed}px 透明化しました`);
     img = canvas;
   }
-  const [x0, y0, x1, y1] = box;
-  const sx = Math.round(x0 * img.width), sy = Math.round(y0 * img.height);
-  const sw = Math.round((x1 - x0) * img.width), sh = Math.round((y1 - y0) * img.height);
+  const [x0, y0, x1, y1, biasY = 0] = box;
+  // 頭の実サイズ(元絵のpx)と中心
+  const headW = (x1 - x0) * img.width, headH = (y1 - y0) * img.height;
+  const headCx = ((x0 + x1) / 2) * img.width, headCy = ((y0 + y1) / 2) * img.height;
+  // 頭の長辺が枠のFIT分を占めるように倍率を決める
+  const scale = (SIZE * FIT) / Math.max(headW, headH);
+  // 頭の中心が枠の中心(縦だけbiasYぶんずらす)に来るよう、元絵全体を配置する。
+  // 枠からはみ出た体や翼は自動的に切り落とされ、直線的な断面は残らない
+  const dx = SIZE / 2 - headCx * scale;
+  const dy = SIZE / 2 + biasY * SIZE - headCy * scale;
 
   const c = createCanvas(SIZE, SIZE);
   const ctx = c.getContext('2d');
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  // 縦横比を保ったまま、余白を除いた範囲に収まるよう縮小して中央に置く
-  const avail = SIZE * (1 - PAD * 2);
-  const scale = Math.min(avail / sw, avail / sh);
-  const dw = sw * scale, dh = sh * scale;
-  ctx.drawImage(img, sx, sy, sw, sh, (SIZE - dw) / 2, (SIZE - dh) / 2, dw, dh);
+  ctx.drawImage(img, dx, dy, img.width * scale, img.height * scale);
   return c;
 }
 

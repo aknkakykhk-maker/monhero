@@ -10,16 +10,23 @@ const BASE_ATK_EVOLUTION = [
   {mult:4.5,baseMult:1.0,crit:0.30,icon:"👁️‍🗨️",baseGuts:16}
 ];
 
+// ガードの軽減量は「flat(固定値) + 丈夫さ × mult(倍率)」で計算する。
+// 以前は「丈夫さ × power」だけだったため、丈夫さが低いうちはほとんど軽減されず、
+// 高くなると際限なく伸びて敵の攻撃を完全に無効化してしまっていた。
+// 固定値を持たせたことで序盤から確実に効き、倍率の伸びを抑えたことで終盤も壊れない。
+//
+// ガード=200+(丈夫さ×1.1)、ハイガード=300+(丈夫さ×1.2)を基準に、
+// 以降のレベルも同じ比率(固定値は1.5倍ずつ、倍率は約1.09倍ずつ)で上げている。
 const GUARD_EVOLUTION = [
-  {name:"ガード",       power:4.0, icon:"🛡️",guts:0},
-  {name:"ハイガード",   power:6.0, icon:"🔰",guts:0},
-  {name:"鉄壁ガード",   power:8.5, icon:"🏰",guts:0},
-  {name:"金剛不壊",     power:11.0,icon:"💎",guts:0},
-  {name:"絶対防御",     power:15.0,icon:"🌌",guts:0},
-  {name:"聖域展開",     power:22.0,icon:"⛪",guts:0},
-  {name:"因果遮断",     power:30.0,icon:"💠",guts:0},
-  {name:"不変の真理",   power:45.0,icon:"♾️",guts:0},
-  {name:"万象拒絶",     power:70.0,icon:"⛩️",guts:0}
+  {name:"ガード",       flat:200,  mult:1.10, icon:"🛡️",guts:0},
+  {name:"ハイガード",   flat:300,  mult:1.20, icon:"🔰",guts:0},
+  {name:"鉄壁ガード",   flat:450,  mult:1.31, icon:"🏰",guts:0},
+  {name:"金剛不壊",     flat:675,  mult:1.43, icon:"💎",guts:0},
+  {name:"絶対防御",     flat:1010, mult:1.56, icon:"🌌",guts:0},
+  {name:"聖域展開",     flat:1520, mult:1.70, icon:"⛪",guts:0},
+  {name:"因果遮断",     flat:2280, mult:1.85, icon:"💠",guts:0},
+  {name:"不変の真理",   flat:3420, mult:2.02, icon:"♾️",guts:0},
+  {name:"万象拒絶",     flat:5130, mult:2.21, icon:"⛩️",guts:0}
 ];
 
 const RANGE_EVOLUTION = [

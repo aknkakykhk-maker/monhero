@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 21:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-27 01:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -81,10 +81,27 @@ const goldForWavesCleared = (wavesCleared, mult) => {
   for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveGoldGain(w, mult);
   return sum;
 };
-const xpForLevel = (level) => Math.round(50 * Math.pow(level, 1.8)); // そのレベルから次レベルに必要なXP(基準値)
-// --- ブリーダーレベル: 上がり方を緩和するため、必要XPを基準値の1/4に割り引く
-// (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く)
-const BREEDER_XP_DISCOUNT = 0.25;
+// そのレベルから次レベルに必要なXP(基準値)。指数を上げるほど高レベルが急に重くなる。
+// 指数1.8では10WAVE完全クリアを1周=100XPとして、ブリーダーLv30到達に約580周・
+// 絆Lv30に約410周かかっており、いくら遊んでもレベルが上がらない状態だったため1.6へ緩和した
+// (Lv30到達がブリーダー約190周・絆約130周と、およそ1/3の周回数になる)
+const XP_CURVE_EXPONENT = 1.6;
+const xpForLevel = (level) => Math.round(50 * Math.pow(level, XP_CURVE_EXPONENT));
+// 緩和前(指数1.8)の必要XPで求めたレベル。今回の緩和で上がったレベル分の
+// ブリーダーポイントを一度だけ遡って配るための計算にのみ使う
+const legacyLevelBefore160 = (totalXp, discount) => {
+  let level = 1, xp = totalXp;
+  for (let i = 0; i < 200; i++) {
+    const need = Math.max(1, Math.round(50 * Math.pow(level, 1.8) * discount));
+    if (xp < need) break;
+    xp -= need; level++;
+  }
+  return level;
+};
+// --- ブリーダーレベル: 上がり方を緩和するため、必要XPを基準値から割り引く
+// (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く。
+// 従来の0.25から0.15へ緩和した)
+const BREEDER_XP_DISCOUNT = 0.15;
 const xpForBreederLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * BREEDER_XP_DISCOUNT));
 const levelInfo = (totalXp) => {
   let level = 1, xp = totalXp;
@@ -97,8 +114,10 @@ const levelInfo = (totalXp) => {
 };
 // --- マスモンの絆レベル: ブリーダーレベルより上げやすくするため、必要XPを基準値から大幅に割り引く
 // (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く。
-// 従来の0.35から半分の0.175へ緩和し、必要経験値を従来の1/2にした)
-const BOND_XP_DISCOUNT = 0.175;
+// 0.35 → 0.175 → 0.10 と緩和してきている。係数を下げると同じ絆経験値でも絆レベルが上がるため、
+// レベルアップ時に配る強化ポイントが後追いにならないよう、読み込み時にreconcileMasuPointsで
+// 必ず不足分を補填している)
+const BOND_XP_DISCOUNT = 0.10;
 const xpForBondLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * BOND_XP_DISCOUNT));
 const bondLevelInfo = (totalXp) => {
   let level = 1, xp = totalXp;
@@ -192,12 +211,45 @@ const Audio_ = (() => {
   };
   const isEnabled = () => enabled;
   // タブ切り替え/バックグラウンド化からの復帰時、iOS等のブラウザは AudioContext を自動的に
-  // サスペンドすることがあり、それを明示的に resume() しないと音が鳴らなくなったままになる。
+  // 止めることがあり、それを明示的に resume() しないと音が鳴らなくなったままになる。
   // ensure()内のTone.start()は初回アンロック用でstartedフラグにより一度しか呼ばれないため、
   // 復帰のたびに呼び直す必要がある(startedフラグ自体には触れないので初回アンロック挙動は変えない)
+  //
+  // 以前はここで「state === 'suspended' なら resume()」しか見ていなかったため、次の2点を
+  // 取りこぼして「アプリを切り替えて戻ると音が消えたまま」になっていた。
+  //  ① iOS SafariはWeb Audioが中断されると 'interrupted' という独自の状態になる。
+  //    'suspended' との比較では引っかからず、resume()が一度も呼ばれない
+  //  ② AudioContextが動き出しても、Tone.Transportは止まったままなのでBGMは無音のまま。
+  //    現在の曲を組み直して鳴らし直す必要がある(SEは都度生成なのでcontextさえ戻れば鳴る)
+  let pendingResume = false;
   const resumeIfNeeded = async () => {
     if (!Tone || !enabled) return;
-    try { if (Tone.context && Tone.context.state === 'suspended') await Tone.context.resume(); } catch (e) {}
+    try {
+      const ctx = Tone.context;
+      if (ctx && ctx.state !== 'running') {
+        try { await ctx.resume(); } catch (e) {}
+        // Toneのラッパーが状態を取りこぼす場合に備え、生のAudioContextにも直接かける
+        try { if (ctx.rawContext && ctx.rawContext.state !== 'running') await ctx.rawContext.resume(); } catch (e) {}
+      }
+      // ユーザー操作なしでは復帰を許さないブラウザ向けに、次のタップで1回だけ再試行する
+      if (ctx && ctx.state !== 'running' && !pendingResume && typeof document !== 'undefined') {
+        pendingResume = true;
+        const retry = () => {
+          document.removeEventListener('pointerdown', retry);
+          document.removeEventListener('touchend', retry);
+          pendingResume = false;
+          resumeIfNeeded();
+        };
+        document.addEventListener('pointerdown', retry);
+        document.addEventListener('touchend', retry);
+        return;
+      }
+      // BGMが止まっていれば現在の曲を組み直す
+      if (ready && currentKey && T[currentKey] && Tone.Transport.state !== 'started') {
+        clearParts();
+        buildLoop(T[currentKey]);
+      }
+    } catch (e) {}
   };
 
   // 0〜100(%)を-40dB〜0dB相当のゲイン(0=無音)へ線形マッピング。SEはseBus、BGMはbgmBusの
@@ -926,6 +978,51 @@ const VolumeSlider = ({ label, icon, value, onChange, onInteractStart, gradient,
 const DIST_APTITUDE_GRADES = ['G','F','E','D','C','B','A','S','S+','SS','SS+','M'];
 const DIST_APTITUDE_MULT = { G: 0.8, F: 0.85, E: 0.9, D: 0.95, C: 1.0, B: 1.05, A: 1.1, S: 1.15, 'S+': 1.175, SS: 1.2, 'SS+': 1.225, M: 1.25 };
 const DIST_APTITUDE_COLOR = { S: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", 'S+': "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", SS: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", 'SS+': "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", M: "text-fuchsia-300 bg-gradient-to-br from-purple-950/70 to-pink-950/70 border-fuchsia-400/60", A: "text-red-400 bg-red-950/60 border-red-400/50", B: "text-pink-300 bg-pink-950/60 border-pink-400/50", C: "text-green-300 bg-green-950/60 border-green-400/50", D: "text-teal-300 bg-teal-950/60 border-teal-400/50", E: "text-cyan-300 bg-cyan-950/60 border-cyan-400/50", F: "text-purple-300 bg-purple-950/60 border-purple-400/50", G: "text-slate-400 bg-slate-800/60 border-slate-500/50" };
+// 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
+// 更新履歴のうち一番新しいエントリの日時。未読(NEW)判定の基準にする。
+// data/changelog.js に追記すればこの値が自動的に新しくなり、NEWマークが復活する
+const CHANGELOG_LATEST = (typeof CHANGELOG !== 'undefined' && CHANGELOG.length) ? CHANGELOG[0].date : '';
+// 不具合情報タブに出す状態バッジの見た目
+const CHANGELOG_STATUS = {
+  fixed:         { label: '修正済み', cls: 'bg-emerald-900/70 text-emerald-300 border-emerald-500/50' },
+  investigating: { label: '調査中',   cls: 'bg-amber-900/70 text-amber-300 border-amber-500/50' },
+  known:         { label: '判明済み', cls: 'bg-slate-800 text-slate-300 border-slate-500/50' },
+};
+const STAT_POINT_GAIN = { hp: 10, atk: 3, def: 3, guts: 3 };
+// 間合い適性のグレードを「Cを±0とした段階数」に直す(A→+2、E→-2)。
+// 合流ボーナスでは、この段階数をプラスマイナス問わずそのまま勇者モンの適性に足す
+const APT_NEUTRAL_INDEX = DIST_APTITUDE_GRADES.indexOf('C');
+const aptGradeToDelta = (grade) => {
+  const idx = DIST_APTITUDE_GRADES.indexOf(grade);
+  return idx < 0 ? 0 : idx - APT_NEUTRAL_INDEX;
+};
+// モンスター(素の種・マスモン反映後のどちらでも可)の4距離分の適性段階数を返す
+// 合流ボーナス欄に出す間合い適性の加算表示(例: 「接近+2 中距離-1」)。加算が無ければ空文字
+const formatAptBonus = (mon) => getMonsterAptDelta(mon)
+  .map((d, i) => d !== 0 ? `${RANGE_LABELS[i]}${d > 0 ? '+' : ''}${d}` : null)
+  .filter(Boolean).join(' ');
+const getMonsterAptDelta = (mon) => {
+  const apt = (mon && mon.distAptitude) || ['C','C','C','C'];
+  return [0,1,2,3].map(i => aptGradeToDelta(apt[i] || 'C'));
+};
+// マスモンが「これまでに得たはずの強化ポイント総数」は絆レベル-1で決まる。
+// 使用済み(間合い適性・ステータス強化に振った分)と未使用の合計がこれを下回っていたら、
+// 不足分を未使用ポイントとして補填したマスモンを返す。
+//
+// 必要経験値の緩和(BOND_XP_DISCOUNTの引き下げ)を行うと、同じ絆経験値のまま絆レベルだけが
+// 上がるため、レベルアップ時に配っている強化ポイントが後追いで配られず
+// 「絆レベル8なのにポイントが4しかない」という食い違いが起きていた。
+// 読み込み時にここを通すことで、過去の緩和分も今後の調整分も自動的に辻褄が合う。
+const reconcileMasuPoints = (masu) => {
+  const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
+  if (!base) return masu;
+  const baseApt = base.distAptitude || ['C','C','C','C'];
+  const aptSpent = (masu.distApt || baseApt).reduce((sum, g, i) => sum + Math.max(0, DIST_APTITUDE_GRADES.indexOf(g) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])), 0);
+  const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, val]) => sum + Math.ceil((val || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
+  const earned = Math.max(0, bondLevelInfo(masu.bondXp || 0).level - 1);
+  const missing = earned - (aptSpent + statSpent + (masu.distAptPoints || 0));
+  return missing > 0 ? { ...masu, distAptPoints: (masu.distAptPoints || 0) + missing } : masu;
+};
 const RANGE_STYLES = {
   0: { bg: "bg-red-950/90", border: "border-red-500", text: "text-red-400", shadow: "shadow-red-500/50", glow: "drop-shadow-[0_0_15px_rgba(239,68,68,0.9)]", slotBg: "bg-red-900/50", labelBg: "bg-red-600 text-white" },
   1: { bg: "bg-yellow-950/90", border: "border-yellow-500", text: "text-yellow-400", shadow: "shadow-yellow-500/50", glow: "drop-shadow-[0_0_15px_rgba(234,179,8,0.9)]", slotBg: "bg-yellow-900/50", labelBg: "bg-yellow-600 text-black" },
@@ -1252,6 +1349,9 @@ function MonsterHeroGame() {
   const [currentWaveDamage, setCurrentWaveDamage] = useState(0);
   const [waveDistDamage, setWaveDistDamage] = useState([0,0,0,0]); // per-distance damage this wave
   const [distDmgBonus, setDistDmgBonus] = useState([0,0,0,0]); // permanent per-distance dmg multiplier bonus
+  // 合流ボーナスとして加算される間合い適性の段階数(距離ごと)。供モンが合流するたびに、
+  // そのモンスターの適性値(Cを±0とした段階数)をプラスマイナス問わずそのまま足し込む
+  const [distAptBonus, setDistAptBonus] = useState([0,0,0,0]);
   const [totalDistDamage, setTotalDistDamage] = useState([0,0,0,0]); // cumulative per-distance damage across all waves
   const [totalAllDamage, setTotalAllDamage] = useState(0); // cumulative damage across all waves
   const [totalRecoveryDelta, setTotalRecoveryDelta] = useState(0); // cumulative recovery-rate correction across all waves
@@ -1316,45 +1416,33 @@ function MonsterHeroGame() {
   const [restoreMsg, setRestoreMsg] = useState('');
   const [updateAvailable, setUpdateAvailable] = useState(false); // version.jsonが現在のBUILD_DATEと異なる場合true(新バージョン通知)
   const [showHelp, setShowHelp] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false); // 更新履歴モーダルの表示状態
+  const [changelogTab, setChangelogTab] = useState('update'); // 'update'=更新情報 / 'issue'=不具合情報
+  const [changelogSeen, setChangelogSeen] = useState(''); // 最後に更新履歴を開いたときの、最新エントリの日時(端末に保存)
+  // 履歴を開いた時点の既読日時。開くと同時に既読を更新するため、そのまま比較すると
+  // 表示中にNEWバッジが消えてしまう。開いている間はこちらを基準にバッジを出す
+  const [changelogSeenAtOpen, setChangelogSeenAtOpen] = useState('');
   const [seVolume, setSeVolumeState] = useState(70); // SE音量 0〜100(端末に保存、初期値は読み込み後に上書き)
   const [bgmVolume, setBgmVolumeState] = useState(70); // BGM音量 0〜100(同上)
   const [audioUnlocked, setAudioUnlocked] = useState(false); // ブラウザの自動再生制限解除のため、スライダー等の操作を1回行うまでfalse
   const [showAudioSettings, setShowAudioSettings] = useState(false); // 音量設定モーダルの表示状態
   const audioOn = audioUnlocked;
-  const seRampTokenRef = useRef(0); // ランプ処理の世代管理(古いランプの残りtickが後から新しい値を上書きしないようにする)
-  const bgmRampTokenRef = useRef(0);
   const setSeVolumeRaw = (nv) => { setSeVolumeState(nv); storeSet('mh_se_volume', nv, false); };
   const setBgmVolumeRaw = (nv) => { setBgmVolumeState(nv); storeSet('mh_bgm_volume', nv, false); };
   // 音量スライダー操作時に呼ぶ: 未解除ならブラウザの音声ロックを解除しつつ値を保存する
-  // (即時反映のため、進行中のランプがあればここで世代を進めて無効化してから値を確定する)
-  const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); seRampTokenRef.current++; setSeVolumeRaw(nv); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
-  const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); bgmRampTokenRef.current++; setBgmVolumeRaw(nv); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
-  const audioMutedPrevRef = useRef({ se: 70, bgm: 70 }); // クイックミュート解除時に戻す直前の音量を覚えておく
+  const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeRaw(nv); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
+  const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeRaw(nv); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
   const audioMuted = !audioOn || (seVolume === 0 && bgmVolume === 0);
+  // ミュート解除時に設定する音量。以前は「ミュート直前の音量」に戻していたが、
+  // いきなり大きな音が鳴って驚くため、必ず最小値の1から始めてスライダーで
+  // 好みの大きさまで上げてもらう方式にした(設定パネル・バトル画面どちらのボタンでも同じ)
+  const UNMUTE_VOLUME = 1;
   // バトル画面などスペースが限られる場所向けの1タップミュート切替(詳細な音量調整は設定パネルのスライダーで行う)
-  // ミュート解除時、目標音量まで瞬時に戻すと体感的に「急に音が大きくなって驚く」ため、
-  // 数百msかけて段階的に引き上げる(スライダーを直接ドラッグする通常操作は即時反映のまま変えたいので、
-  // changeSeVolume/changeBgmVolume自体はいじらず、ミュート解除の一括復帰パスだけここを通す)
-  const rampVolumeUp = (fromV, toV, setVolumeRaw, tokenRef) => {
-    const myToken = ++tokenRef.current;
-    const steps = 10, stepMs = 40;
-    let i = 0;
-    const tick = () => {
-      if (tokenRef.current !== myToken) return; // 途中で別の音量変更が入ったため打ち切る
-      i++;
-      setVolumeRaw(Math.round(fromV + (toV - fromV) * (i / steps)));
-      if (i < steps) setTimeout(tick, stepMs);
-    };
-    tick();
-  };
   const toggleQuickMute = () => {
     if (audioMuted) {
-      const prev = audioMutedPrevRef.current;
-      if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); }
-      rampVolumeUp(seVolume, prev.se || 70, setSeVolumeRaw, seRampTokenRef);
-      rampVolumeUp(bgmVolume, prev.bgm || 70, setBgmVolumeRaw, bgmRampTokenRef);
+      changeSeVolume(UNMUTE_VOLUME);
+      changeBgmVolume(UNMUTE_VOLUME);
     } else {
-      audioMutedPrevRef.current = { se: seVolume, bgm: bgmVolume };
       changeSeVolume(0);
       changeBgmVolume(0);
     }
@@ -1388,7 +1476,25 @@ function MonsterHeroGame() {
   // どちらの場合もmon.distAptitudeを見るだけでよい(マスモンの場合はresolve時にdistApt配列が既に反映されている)
   const getDistAptitude = (mon, slotIdx) => {
     if (!mon) return 'C';
-    return (mon.distAptitude && mon.distAptitude[slotIdx]) || 'C';
+    const grade = (mon.distAptitude && mon.distAptitude[slotIdx]) || 'C';
+    const shift = (distAptBonus && distAptBonus[slotIdx]) || 0;
+    if (!shift) return grade;
+    const idx = DIST_APTITUDE_GRADES.indexOf(grade);
+    if (idx < 0) return grade;
+    return DIST_APTITUDE_GRADES[Math.max(0, Math.min(DIST_APTITUDE_GRADES.length - 1, idx + shift))];
+  };
+  // 更新履歴に未読があるか。data/changelog.js に追記すると CHANGELOG_LATEST が新しくなるため、
+  // 既読日時と一致しなくなり自動的にNEWマークが復活する
+  const hasUnreadChangelog = !!CHANGELOG_LATEST && changelogSeen !== CHANGELOG_LATEST;
+  // 更新履歴を開く。開いた時点で最新エントリの日時を既読として保存する
+  const openChangelog = () => {
+    setChangelogTab('update');
+    setChangelogSeenAtOpen(changelogSeen);
+    setShowChangelog(true);
+    if (CHANGELOG_LATEST && changelogSeen !== CHANGELOG_LATEST) {
+      setChangelogSeen(CHANGELOG_LATEST);
+      storeSet('mh_changelog_seen', CHANGELOG_LATEST, false);
+    }
   };
   const [helpTab, setHelpTab] = useState('goal');
   const [pendingReward, setPendingReward] = useState(null);
@@ -1467,13 +1573,20 @@ function MonsterHeroGame() {
     return () => { document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
   }, []);
 
-  // タブ切り替え/バックグラウンド化から復帰した際、OSにより自動サスペンドされたAudioContextを
-  // 明示的に復帰させる(そのままだとBGM/SEが鳴らなくなったままになる不具合の対策)
+  // タブ切り替え/バックグラウンド化から復帰した際、OSにより自動停止されたAudioContextと
+  // BGMのTransportを復帰させる(そのままだとBGM/SEが鳴らなくなったままになる不具合の対策)。
+  // visibilitychangeだけだと、PWAをホーム画面から開き直した場合やアプリ切り替えで
+  // 戻った場合に発火しないことがあるため、pageshow/focusでも復帰を試みる
   useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === 'visible') Audio_.resumeIfNeeded(); };
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('pageshow', onVisible);
-    return () => { document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); };
+    const tryResume = () => { if (document.visibilityState !== 'hidden') Audio_.resumeIfNeeded(); };
+    document.addEventListener('visibilitychange', tryResume);
+    window.addEventListener('pageshow', tryResume);
+    window.addEventListener('focus', tryResume);
+    return () => {
+      document.removeEventListener('visibilitychange', tryResume);
+      window.removeEventListener('pageshow', tryResume);
+      window.removeEventListener('focus', tryResume);
+    };
   }, []);
 
   // カードドラッグ中のグローバル処理(タッチ/マウス両対応)
@@ -1594,15 +1707,39 @@ function MonsterHeroGame() {
         }
         await storeSet('mh_masu_migrated', true, false);
       }
+      // 絆レベルに対して強化ポイントが不足しているマスモンがあれば、ここで不足分を補填する
+      // (必要経験値を緩和した際、レベルだけ上がってポイントが配られないまま残っていた分の救済)
+      const reconciledMasuMons = savedMasuMons.map(reconcileMasuPoints);
+      if (reconciledMasuMons.some((m, i) => m !== savedMasuMons[i])) {
+        savedMasuMons = reconciledMasuMons;
+        await storeSet('mh_masu_mons', savedMasuMons, false);
+      }
       setMasuMons(savedMasuMons);
       let savedPoints = await storeGet('mh_breeder_points', 0, false);
-      // ブリーダーポイント導入前からのプレイヤーには、既存レベル分(Lv-1)を一度だけ遡って付与
+      // ブリーダーポイントは「これまでに配った総数」を別に保存しておき、
+      // 本来配られているはずの数(ブリーダーレベル-1)との差額を読み込みのたびに補填する。
+      // 必要経験値を緩和するとレベルだけが上がってポイントが後追いにならないため
+      // (絆レベル側で実際に起きていた食い違いと同じ問題)、この方式で自動的に辻褄を合わせる。
       const pointsMigrated = await storeGet('mh_points_migrated', false, false);
+      let grantedPoints = await storeGet('mh_breeder_points_granted', null, false);
+      const expectedPoints = Math.max(0, levelInfo(savedXp).level - 1);
       if (!pointsMigrated) {
-        const backfill = Math.max(0, levelInfo(savedXp).level - 1);
-        if (backfill > 0) savedPoints += backfill;
+        // ブリーダーポイント導入前からのプレイヤー: 既存レベル分(Lv-1)を一度だけ遡って付与
+        savedPoints += expectedPoints;
+        grantedPoints = expectedPoints;
         await storeSet('mh_points_migrated', true, false);
+      } else if (grantedPoints === null) {
+        // ポイント導入後・今回の必要経験値の緩和より前からのプレイヤー:
+        // 緩和前の計算式で求めたレベル分までは配布済みとみなす(差額は下で補填される)
+        grantedPoints = Math.max(0, legacyLevelBefore160(savedXp, 0.25) - 1);
       }
+      if (expectedPoints > grantedPoints) {
+        savedPoints += expectedPoints - grantedPoints;
+        grantedPoints = expectedPoints;
+      }
+      await storeSet('mh_breeder_points_granted', grantedPoints, false);
+      // 更新履歴の既読日時(未読があればトップの更新履歴ボタンにNEWマークを出す)
+      setChangelogSeen(await storeGet('mh_changelog_seen', '', false));
       // 全プレイヤー(新規・既存問わず)に初期ポイントを1回だけ付与
       const baseGranted = await storeGet('mh_points_base_granted', false, false);
       if (!baseGranted) {
@@ -1981,8 +2118,6 @@ function MonsterHeroGame() {
   };
   // マスモンの強化ポイントを1消費し、対象のステータスを1上げる(バランス調整前の暫定仕様: 1pt=+1)
   const STAT_POINT_KEYS = { hp: 'ライフ', atk: 'ちから', def: '丈夫さ', guts: 'ガッツ' };
-  // 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
-  const STAT_POINT_GAIN = { hp: 10, atk: 3, def: 3, guts: 3 };
   // spendAptPointと同様、更新後のマスモンを同期的に返す
   const spendStatPoint = (masuId, statKey) => {
     const masu = getMasuMon(masuId);
@@ -2161,6 +2296,8 @@ function MonsterHeroGame() {
     const gainedLevels = breederLevelAfter.level - breederLevelBefore.level;
     if (gainedLevels > 0) {
       setBreederPoints(prev => { const next = prev + gainedLevels; storeSet('mh_breeder_points', next, false); return next; });
+      // 配った総数も記録しておく(読み込み時の補填処理が二重に配らないようにするため)
+      storeSet('mh_breeder_points_granted', Math.max(0, breederLevelAfter.level - 1), false);
     }
 
     const goldGain = goldForWavesCleared(wavesCleared, goldMult);
@@ -2231,18 +2368,22 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (hp <= 0) {
       (async () => {
-        // スコア送信(全国ランキング等、通信を伴う)が失敗しても、経験値・ダイヤ付与(最終リザルト画面表示に必須)は
-        // 必ず実行されるよう、try/catchを分離する
-        try {
-          if (score > 0) await submitLocalScore(difficulty, score);
-          if (score > (highScores[difficulty] || 0)) {
-            await storeSet(`mh_hs_${difficulty}`, score, false);
-            setHighScores(prev => ({ ...prev, [difficulty]: score }));
-          }
-        } catch (e) { console.error('[result] score submit failed:', e && e.message ? e.message : e); }
+        // 経験値・ダイヤの付与は端末内で完結するので必ず先に行う。
+        // 以前はスコア送信(全国ランキングへの通信)の完了を待ってから付与していたため、
+        // 通信が遅い・不安定なときにリザルトの獲得内訳がなかなか表示されなかった。
         try {
           await awardRunRewards(Math.max(0, wave - 1));
         } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
+        // スコア送信はリザルトの表示に必要ないため、完了を待たず後追いで行う
+        (async () => {
+          try {
+            if (score > 0) await submitLocalScore(difficulty, score);
+            if (score > (highScores[difficulty] || 0)) {
+              await storeSet(`mh_hs_${difficulty}`, score, false);
+              setHighScores(prev => ({ ...prev, [difficulty]: score }));
+            }
+          } catch (e) { console.error('[result] score submit failed:', e && e.message ? e.message : e); }
+        })();
       })();
     }
   }, [hp, gameState]);
@@ -2282,7 +2423,7 @@ function MonsterHeroGame() {
     monSelection:getActiveMonsterList(), ownedUniques:[], slotUniqueChoice:{}, slotUniqueLevelChoice:{}, ownedTeachings:[],
     atkLevel:0, guardLevel:0, guardBonusCount:0, upgradePoints:0, turnCount:1,
     permaBuffs:{ autoHpRecovery:0.1 }, waveBuffs:{}, turnBuffs:{}, nextTurnBuffs:{},
-    currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
+    currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], distAptBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
     focusedCard:null, enemyIntent:null, effect:null, finalRewardSummary:null, waveHistory:[], gaveUp:false
   });
 
@@ -2295,7 +2436,7 @@ function MonsterHeroGame() {
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
-    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
+    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptBonus(s.distAptBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
     setPendingReward(null); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
@@ -2304,18 +2445,22 @@ function MonsterHeroGame() {
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
   const handleGiveUp = useCallback(async () => {
-    if (score > 0) {
-      try {
-        await submitLocalScore(difficulty, score);
-        if (score > (highScores[difficulty] || 0)) {
-          await storeSet(`mh_hs_${difficulty}`, score, false);
-          setHighScores(prev => ({ ...prev, [difficulty]: score }));
-        }
-      } catch {}
-    }
+    // 敗北時と同じく、端末内で完結する経験値・ダイヤの付与とリザルト表示を先に済ませ、
+    // 通信を伴うスコア送信は完了を待たず後追いで行う(通信待ちでリザルトが遅れないように)
     try { await awardRunRewards(Math.max(0, wave - 1)); } catch {}
     setShowQuitConfirm(false);
     setGaveUp(true);
+    if (score > 0) {
+      (async () => {
+        try {
+          await submitLocalScore(difficulty, score);
+          if (score > (highScores[difficulty] || 0)) {
+            await storeSet(`mh_hs_${difficulty}`, score, false);
+            setHighScores(prev => ({ ...prev, [difficulty]: score }));
+          }
+        } catch {}
+      })();
+    }
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
 
   const handleRetry = () => {
@@ -2327,7 +2472,7 @@ function MonsterHeroGame() {
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
-    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
+    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptBonus(s.distAptBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
     setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
@@ -2512,7 +2657,8 @@ function MonsterHeroGame() {
       } else if (intent.type==='WAIT') {
         addPopup("待機中...",'enemy','text-slate-400 text-lg'); await wait(500);
       } else if (intent.type==='ATTACK'||intent.type==='CHARGE') {
-        const guardValue = immediateEffects.guardPower>0 ? Math.floor(def*immediateEffects.guardPower) : 0;
+        // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」(GUARD_EVOLUTIONのflat/mult参照)
+        const guardValue = (immediateEffects.guardFlat>0||immediateEffects.guardMult>0) ? Math.floor(immediateEffects.guardFlat + def*immediateEffects.guardMult) : 0;
         const incomingDmg = getPredictedDamage(intent);
         if ((mainHero?.id==='Ark'||mainHero?.id==='Iblis') && getWaveBuff('chuuniDmgCutUses')<2) {
           addWaveBuff('chuuniDmgCutUses',1);
@@ -2602,7 +2748,7 @@ function MonsterHeroGame() {
     // Fallback slot for cards without assignment (buffs etc.)
     const defaultSlot=slots.findIndex(s=>s!==null);
     setIsBusy(true);
-    let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, localOryoAdd=0, localDmgModAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardPower=0;
+    let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, localOryoAdd=0, localDmgModAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardFlat=0, currentTurnGuardMult=0;
     let forcedMoveTarget=null; // range_atk forces enemy to move at turn end
     const attackHits=[]; // {dmg, isCrit, slotIdx}
 
@@ -2612,15 +2758,16 @@ function MonsterHeroGame() {
       const card=entry.card;
       const slotIdx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       lastType=card.type;
-      if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardPower+=GUARD_EVOLUTION[guardLevel].power; }
-      else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardPower+=(GUARD_EVOLUTION[guardLevel].power*0.5); }
+      if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat; currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult; }
+      else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5); }
       setGuts(p=>Math.max(0,p-getCardGuts(card)));
       if (card.type==='draw') continue;
       if (card.type==='buff'||card.type==='debuff') {
         fireTeachingFx(card.id);
         if (card.subType==='atk_buff') { addPopup(`攻撃UP!`,'hero','text-red-400 font-black text-2xl drop-shadow-md'); addPermaBuff('atkPct',card.baseValue); localOryoAdd+=card.baseValue; }
         else if (card.subType==='dmg_cut_buff') { addPopup(`防御UP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=level===0?0.03:(level===1?0.06:0.10); setPermaBuffs(p=>({...p, dmgCutPct:Math.min(0.9,(p.dmgCutPct||0)+cutValue)})); }
-        else if (card.subType==='guts_buff') { addPopup(`⚡ ガッツ上限UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let gutsRecoverAdd=level===0?0.02:(level===1?0.03:0.05); addPermaBuff('gutsRecoverPct',gutsRecoverAdd); let gutsLimitUp=level===1?0.05:(level>=2?0.07:0.05); addPermaBuff('muaGutsPct',gutsLimitUp); if(level>=1){let hpLimitUp=level===1?0.05:0.07; let autoHeal=level===1?0.02:0.05; addPermaBuff('muaHpPct',hpLimitUp); addPermaBuff('autoHpRecovery',autoHeal); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md');} }
+        // かどみうむ: 効果量はdata/breeder.jsのCADMIUM_TIERSに集約している(説明文の生成も同じ値を見る)
+        else if (card.subType==='guts_buff') { addPopup(`⚡ ガッツ上限UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const tier=CADMIUM_TIERS[Math.min(owned?owned.evoLevel:0,CADMIUM_TIERS.length-1)]; addPermaBuff('gutsRecoverPct',tier.autoGuts); addPermaBuff('muaGutsPct',tier.gutsLimit); if(tier.hpLimit>0) addPermaBuff('muaHpPct',tier.hpLimit); if(tier.autoHp>0){ addPermaBuff('autoHpRecovery',tier.autoHp); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md'); } }
         else if (card.subType==='stun_atsu') {
           immediateInvincible=true; setImmediateTurnBuff('invincible',true);
           const stunMon=slots[slotIdx];
@@ -2843,7 +2990,7 @@ function MonsterHeroGame() {
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     // 距離撃で強制移動させた場合は、敵自身のMOVE行動で上書きされないよう優先する(距離撃 > 敵の自発的な移動)
     const executedIntent=(forcedMoveHappened&&enemyIntent?.type==='MOVE')?{type:'WAIT',value:0,label:"様子を見ている",icon:"⏳"}:enemyIntent;
-    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardPower:currentTurnGuardPower},executedIntent);
+    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult},executedIntent);
     // 敵の行動が終わった後で、次ターンの予測を1回だけ抽選してセット
     // 敵が移動した場合は移動後の距離を基準にする
     const distForNextPredict=(executedIntent&&executedIntent.type==='MOVE')?executedIntent.targetDist:endTurnDist;
@@ -3024,9 +3171,14 @@ function MonsterHeroGame() {
       const bHp=maxHp, bAtk=atk, bDef=def, bGuts=maxGuts;
       const nMaxHp=maxHp+(bonus.hp||0), nAtk=atk+(bonus.atk||0), nDef=def+(bonus.def||0), nMaxGuts=maxGuts+(bonus.guts||0);
       setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts); setHp(p=>p+(nMaxHp-bHp));
+      // 合流ボーナスに間合い適性も加算する。合流したモンスターの適性値をCを±0とした
+      // 段階数に直し、プラスマイナス問わずそのまま足す(A(+2)なら+2段階、E(-2)なら-2段階)
+      const aptDelta=getMonsterAptDelta(m);
+      if (aptDelta.some(d=>d!==0)) setDistAptBonus(prev=>prev.map((v,i)=>v+aptDelta[i]));
+      const aptLabel=aptDelta.map((d,i)=>d!==0?`${RANGE_LABELS[i]}${d>0?'+':''}${d}`:null).filter(Boolean).join(' ');
       const newAllyUnique={...m.unique,evoLevel:0}; setOwnedUniques([...ownedUniques,newAllyUnique]);
       setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
-      setEffect({type:'mega',label:`${m.name}合流！`,icon:"🤝",monEmoji:m.emoji,imgUrl:m.imgUrl,subLabel:`HP:${bHp}→${nMaxHp}  ちから:${bAtk}→${nAtk}\n丈夫さ:${bDef}→${nDef}  ガッツ:${bGuts}→${nMaxGuts}`});
+      setEffect({type:'mega',label:`${m.name}合流！`,icon:"🤝",monEmoji:m.emoji,imgUrl:m.imgUrl,subLabel:`HP:${bHp}→${nMaxHp}  ちから:${bAtk}→${nAtk}\n丈夫さ:${bDef}→${nDef}  ガッツ:${bGuts}→${nMaxGuts}${aptLabel?`\n間合い適性:${aptLabel}`:''}`});
       setTimeout(()=>{setEffect(null); setGameState('UPGRADE_SKILL');},1400);
     }
     setCurrentPickingMon(null);
@@ -3091,14 +3243,28 @@ function MonsterHeroGame() {
     }));
   };
 
+  // ブリーダーカードの効果説明。表記は全カードで次のルールに統一している。
+  //  ・区切りは中黒「・」だけを使う(以前は「＆」「＋」「/」「()」が混在していた)
+  //  ・増減は「アップ」「ダウン」と書く(以前は「UP」「DOWN」「+」が混在していた)
+  //  ・ステータス名は画面表記に合わせて「ライフ」「ガッツ」「攻撃」に統一する
+  //    (以前は「HP」「G」「攻」など略称が混在していた)
+  //  ・数値と単位の間は詰め、項目名と数値の間は半角スペースを入れる
   const getDynamicDesc = (t, isOwned, level) => {
-    const formatVal=(v)=>Math.round(v*100);
-    if(t.id==='oryo') return `攻撃ステータス ${formatVal(0.1+level*0.1)}%アップ`;
+    const pct=(v)=>Math.round(v*100);
+    if(t.id==='oryo') return `攻撃 ${pct(0.1+level*0.1)}%アップ`;
     if(t.id==='dra') return `被ダメージ ${[3,6,10][level]}%ダウン`;
-    if(t.id==='cadmium') return level===0?`G自動回復+2%・ガッツ上限5%UP`:(level===1?`自動ライフ回復2%・G自動回復+3%・ライフ/G上限5%UP`:`自動ライフ回復5%・G自動回復+5%・ライフ/G上限7%UP`);
-    if(t.id==='mua') return level===0?"HP50%回復・HP/攻/ガッツ3%UP":(level===1?"HP&ガッツ70%回復・HP5%/攻3%/ガッツ3%UP":"HP&ガッツ90%回復・HP8%/攻5%/ガッツ5%UP");
-    if(t.id==='atsu') return `敵行動無効＋攻撃 (${(t.baseValue+level*t.step).toFixed(1)}倍)`;
-    if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=formatVal(Math.max(0.1,t.selfDmg-level*t.dmgStep)); return `次ターン攻撃${v.toFixed(1)}倍・自傷${d}%`;}
+    if(t.id==='cadmium'){
+      const tier=CADMIUM_TIERS[Math.min(level,CADMIUM_TIERS.length-1)];
+      const parts=[];
+      if(tier.autoHp>0) parts.push(`ライフ自動回復 ${pct(tier.autoHp)}%アップ`);
+      if(tier.autoGuts>0) parts.push(`ガッツ自動回復 ${pct(tier.autoGuts)}%アップ`);
+      if(tier.hpLimit>0&&tier.hpLimit===tier.gutsLimit) parts.push(`ライフ/ガッツ上限 ${pct(tier.gutsLimit)}%アップ`);
+      else { if(tier.hpLimit>0) parts.push(`ライフ上限 ${pct(tier.hpLimit)}%アップ`); if(tier.gutsLimit>0) parts.push(`ガッツ上限 ${pct(tier.gutsLimit)}%アップ`); }
+      return parts.join('・');
+    }
+    if(t.id==='mua') return level===0?"ライフ 50%回復・ライフ/攻撃/ガッツ上限 3%アップ":(level===1?"ライフ・ガッツ 70%回復・ライフ上限 5%アップ・攻撃 3%アップ・ガッツ上限 3%アップ":"ライフ・ガッツ 90%回復・ライフ上限 8%アップ・攻撃 5%アップ・ガッツ上限 5%アップ");
+    if(t.id==='atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue+level*t.step).toFixed(1)}倍`;
+    if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=pct(Math.max(0.1,t.selfDmg-level*t.dmgStep)); return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;}
     return t.desc;
   };
   const getFullEvolutionDetails = (t) => [0,1,2].map(lvl=>({lvl,name:BREEDER_EVO_NAMES[t.id][lvl],desc:getDynamicDesc(t,true,lvl)}));
@@ -3141,6 +3307,8 @@ function MonsterHeroGame() {
               <div className="shrink-0 w-full flex flex-col items-center mb-1">
                 <h1 className="text-4xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-purple-200 to-purple-500 leading-none uppercase drop-shadow-[0_4px_16px_rgba(0,0,0,1)] whitespace-nowrap">Monster Hero</h1>
                 <p className="text-purple-300 text-[9px] tracking-[0.4em] uppercase font-bold mt-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">Grand Champion Quest</p>
+                {/* バージョン表示。BUILD_DATE(JSTの日付+時刻)をそのまま出す */}
+                <div className="text-purple-400/70 text-[8px] font-mono tracking-widest mt-1 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">ver {BUILD_DATE}</div>
               </div>
               <div className="shrink-0 w-full flex flex-col items-center mb-2 relative">
                 <div className="flex items-center gap-2 mb-1">
@@ -3173,14 +3341,54 @@ function MonsterHeroGame() {
               </div>
               <div className="shrink-0 flex flex-col gap-2 w-full mt-2">
                 <button onClick={()=>{setTestMooMode(false); setMonSelection(getActiveMonsterList()); setGameState('PICK_HERO');}} className="w-full bg-white text-black py-3 rounded-xl font-black text-lg active:scale-95 transition-transform uppercase shadow-[0_0_20px_rgba(255,255,255,0.2)]">召喚開始</button>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <button onClick={()=>setGameState('PROFILE')} className="w-full bg-slate-900 border border-violet-500/50 text-violet-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><User size={14}/> Profile</button>
                   <button onClick={()=>{setRankingViewDiff(difficulty); setShowRanking(true); loadRankings();}} className="w-full bg-slate-900 border border-indigo-500/50 text-indigo-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><Users size={14}/> Ranking</button>
                   <button onClick={()=>setShowHelp(true)} className="w-full bg-slate-900 border border-emerald-500/50 text-emerald-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><HelpCircle size={14}/> Help</button>
+                  <button onClick={openChangelog} className="relative w-full bg-slate-900 border border-amber-500/50 text-amber-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-1"><Sparkles size={14}/>更新{hasUnreadChangelog&&<span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full border border-white/40 shadow">NEW</span>}</button>
                 </div>
                 <button onClick={()=>setShowAudioSettings(true)} className={`w-full border py-2 rounded-xl font-black text-[11px] active:scale-95 uppercase flex items-center justify-center gap-2 ${audioMuted?'bg-slate-900 border-slate-600/50 text-slate-400':'bg-indigo-950/60 border-indigo-500/40 text-indigo-300'}`}>{audioMuted?'🔇':'🔊'} 音量設定</button>
               </div>
             </div>
+            {/* 更新履歴: 更新情報と不具合情報をタブで切り替える。エントリはdata/changelog.jsに追記する */}
+            {showChangelog&&(
+              <div className="fixed inset-0 z-[9500] flex flex-col items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000}}>
+                <div className="bg-slate-900 border border-amber-500/50 rounded-3xl w-full max-w-sm shadow-2xl flex flex-col" style={{maxHeight:'85vh'}}>
+                  <div className="flex items-center justify-between p-4 pb-2 shrink-0">
+                    <h3 className="text-base font-black text-white uppercase flex items-center gap-2"><Sparkles size={18} className="text-amber-400"/>更新履歴</h3>
+                    <button onClick={()=>setShowChangelog(false)} className="p-2 text-slate-400 active:scale-90"><X size={18}/></button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 px-4 pb-3 shrink-0">
+                    {[{key:'update',label:'更新情報'},{key:'issue',label:'不具合情報'}].map(t=>(
+                      <button key={t.key} onClick={()=>setChangelogTab(t.key)} className={`py-2 rounded-xl font-black text-[11px] uppercase border active:scale-95 ${changelogTab===t.key?'bg-amber-600 border-amber-400 text-white':'bg-slate-800 border-white/10 text-slate-400'}`}>{t.label}</button>
+                    ))}
+                  </div>
+                  <div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-4 pb-4 space-y-2.5">
+                    {(()=>{
+                      const list=(typeof CHANGELOG!=='undefined'?CHANGELOG:[]).filter(c=>c.type===changelogTab);
+                      if(!list.length) return (<div className="text-center text-[11px] text-slate-500 py-8">まだ{changelogTab==='update'?'更新情報':'不具合情報'}はありません</div>);
+                      return list.map((c,idx)=>{
+                        const isNew=c.date>changelogSeenAtOpen;
+                        const st=c.status?CHANGELOG_STATUS[c.status]:null;
+                        return (
+                          <div key={idx} className="bg-black/40 border border-white/10 rounded-2xl p-3">
+                            <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                              <span className="text-[9px] font-mono text-slate-500">{c.date}</span>
+                              {isNew&&<span className="bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full">NEW</span>}
+                              {st&&<span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full border ${st.cls}`}>{st.label}</span>}
+                            </div>
+                            <div className="text-[12px] font-black text-white mb-1.5">{c.title}</div>
+                            <ul className="space-y-1">
+                              {(c.items||[]).map((it,i)=>(<li key={i} className="text-[10px] text-slate-300 leading-relaxed flex gap-1.5"><span className="text-amber-500 shrink-0">・</span><span>{it}</span></li>))}
+                            </ul>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
             {showAudioSettings&&(
               <div className="fixed inset-0 z-[9500] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:95000}}>
                 <div className="bg-slate-900 border border-indigo-500/50 rounded-3xl p-5 w-full max-w-sm shadow-2xl">
@@ -3503,7 +3711,7 @@ function MonsterHeroGame() {
                   <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">基本ステータス</div><div className="space-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{rosterDetailMon.baseHp}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{rosterDetailMon.baseAtk}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{rosterDetailMon.baseDef}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{rosterDetailMon.baseGuts}</span></div></div></div>
                   <div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{rosterDetailMon.traitDesc}</div></div>
                 </div>
-                <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{rosterDetailMon.plusStats.hp>0&&`HP+${rosterDetailMon.plusStats.hp} `}{rosterDetailMon.plusStats.atk>0&&`攻+${rosterDetailMon.plusStats.atk} `}{rosterDetailMon.plusStats.def>0&&`防+${rosterDetailMon.plusStats.def} `}{rosterDetailMon.plusStats.guts>0&&`G+${rosterDetailMon.plusStats.guts} `}</div></div>
+                <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{rosterDetailMon.plusStats.hp>0&&`HP+${rosterDetailMon.plusStats.hp} `}{rosterDetailMon.plusStats.atk>0&&`攻+${rosterDetailMon.plusStats.atk} `}{rosterDetailMon.plusStats.def>0&&`防+${rosterDetailMon.plusStats.def} `}{rosterDetailMon.plusStats.guts>0&&`G+${rosterDetailMon.plusStats.guts} `}</div>{formatAptBonus(rosterDetailMon)&&<div className="text-[8px] text-cyan-300 font-bold mt-0.5">間合い適性 {formatAptBonus(rosterDetailMon)}</div>}</div>
                 <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="text-[7px] text-cyan-400 uppercase font-bold mb-1">間合い適性</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(rosterDetailMon,idx); return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span></div>);})}</div></div>
                 {renderSkillSection(rosterDetailMon)}
               </div>
@@ -3609,6 +3817,18 @@ function MonsterHeroGame() {
         {gameState==='MASU_FUSION'&&(()=>{
           const closeFusion = () => { resetFusionFlow(); setGameState('PROFILE'); };
           const fusedBorder = (masu) => (masu.fusionHistory||[]).length>0 ? 'border-amber-400 ring-1 ring-amber-400' : 'border-violet-400/40';
+          // 合体の仕様説明。何が引き継がれて何が消えるのか、固有技の引き継ぎ条件は何かが
+          // 画面から読み取れず分かりにくかったため、選択画面の余白に常設で出す
+          const fusionGuide = (
+            <div className="shrink-0 mt-2 bg-black/40 border border-violet-500/30 rounded-2xl p-3 space-y-1.5">
+              <div className="text-[9px] font-black text-violet-300 uppercase tracking-wider">合体のルール</div>
+              <div className="text-[9px] text-slate-300 leading-relaxed">・<span className="text-white font-bold">主</span>が残り、<span className="text-white font-bold">副</span>は消滅します。副の絆経験値は累計のまま主に加算されます</div>
+              <div className="text-[9px] text-slate-300 leading-relaxed">・上がった絆レベルの数だけ、主が<span className="text-amber-300 font-bold">強化ポイント</span>を獲得します</div>
+              <div className="text-[9px] text-slate-300 leading-relaxed">・主の名前・見た目・間合い適性・ステータス強化は<span className="text-white font-bold">そのまま維持</span>されます(副の強化は引き継がれません)</div>
+              <div className="text-[9px] text-slate-300 leading-relaxed">・消費ダイヤは<span className="text-cyan-300 font-bold">(主の絆Lv＋副の絆Lv)×100</span>です</div>
+              <div className="text-[9px] text-amber-200 leading-relaxed border-t border-white/10 pt-1.5">・<span className="font-bold">固有技の引き継ぎ</span>は、<span className="font-bold">主と副が両方とも絆Lv.10以上</span>のときだけ選べます。条件を満たすと副の固有技が主に記録されます</div>
+            </div>
+          );
 
           if (fusionStep==='main') {
             return (
@@ -3618,6 +3838,7 @@ function MonsterHeroGame() {
                   <h2 className="text-xl font-black italic text-violet-400 uppercase tracking-widest">合体・主を選ぶ</h2>
                 </div>
                 <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">絆経験値を受け継いで残る「主」となるマスモンを選んでください</div>
+                {fusionGuide}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   <div className="grid grid-cols-3 gap-2.5 pb-4">
                     {masuMons.map(masu=>{
@@ -3652,6 +3873,7 @@ function MonsterHeroGame() {
                   <h2 className="text-xl font-black italic text-violet-400 uppercase tracking-widest">合体・副を選ぶ</h2>
                 </div>
                 <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">「{main.name}」に絆経験値を渡す「副」を選んでください。副は合体後にいなくなります</div>
+                {fusionGuide}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   {candidates.length===0?(
                     <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>💫</span><div className="text-[11px] text-slate-400 mt-2">合体できる他のマスモンがいません。</div></div>
@@ -3935,7 +4157,7 @@ function MonsterHeroGame() {
                 </div>
                 <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
                   <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">現在のステータス(強化分込み)</div><div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{base.baseHp+(masu.statPoints?.hp||0)}{(masu.statPoints?.hp||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.hp})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{base.baseAtk+(masu.statPoints?.atk||0)}{(masu.statPoints?.atk||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.atk})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{base.baseDef+(masu.statPoints?.def||0)}{(masu.statPoints?.def||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.def})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{base.baseGuts+(masu.statPoints?.guts||0)}{(masu.statPoints?.guts||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.guts})</span>}</span></div></div></div>
-                  {(()=>{const ps=mergeMasuIntoMon(masu)?.plusStats||{}; return(<div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{ps.hp>0&&`HP+${ps.hp} `}{ps.atk>0&&`攻+${ps.atk} `}{ps.def>0&&`防+${ps.def} `}{ps.guts>0&&`G+${ps.guts} `}</div></div>);})()}
+                  {(()=>{const ps=mergeMasuIntoMon(masu)?.plusStats||{}; return(<div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{ps.hp>0&&`HP+${ps.hp} `}{ps.atk>0&&`攻+${ps.atk} `}{ps.def>0&&`防+${ps.def} `}{ps.guts>0&&`G+${ps.guts} `}</div>{formatAptBonus(mergeMasuIntoMon(masu))&&<div className="text-[8px] text-cyan-300 font-bold mt-0.5">間合い適性 {formatAptBonus(mergeMasuIntoMon(masu))}</div>}</div>);})()}
                   <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=(masu.distApt&&masu.distApt[idx])||'C'; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span></div>);})}</div></div>
                   <button onClick={()=>{setMasuEnhanceFrom(gameState); setGameState('MASU_ENHANCE');}} className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white py-2.5 rounded-xl font-black text-[11px] uppercase active:scale-95 flex items-center justify-center gap-1.5 shadow-lg"><Sparkles size={13}/>強化する{(masu.distAptPoints||0)>0&&<span className="bg-white/25 px-1.5 rounded-full text-[9px]">強化P {masu.distAptPoints}</span>}</button>
                   {(masu.fusionHistory||[]).length>0&&(
@@ -4669,7 +4891,7 @@ function MonsterHeroGame() {
                 <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
                   <div className="grid grid-cols-2 gap-2 shrink-0">
                     <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">基本ステータス</div><div className="space-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseHp:`${maxHp} → ${maxHp+(currentPickingMon.plusStats?.hp||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseAtk:`${atk} → ${atk+(currentPickingMon.plusStats?.atk||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseDef:`${def} → ${def+(currentPickingMon.plusStats?.def||0)}`}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{gameState==='PICK_HERO'?currentPickingMon.baseGuts:`${maxGuts} → ${maxGuts+(currentPickingMon.plusStats?.guts||0)}`}</span></div></div></div>
-                    {gameState==='PICK_HERO'?(<div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{currentPickingMon.traitDesc}</div></div>):(<div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{currentPickingMon.plusStats.hp>0&&`HP+${currentPickingMon.plusStats.hp} `}{currentPickingMon.plusStats.atk>0&&`攻+${currentPickingMon.plusStats.atk} `}{currentPickingMon.plusStats.def>0&&`防+${currentPickingMon.plusStats.def} `}{currentPickingMon.plusStats.guts>0&&`G+${currentPickingMon.plusStats.guts} `}</div></div>)}
+                    {gameState==='PICK_HERO'?(<div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[9px] text-white font-bold leading-tight mt-1">{currentPickingMon.traitDesc}</div></div>):(<div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{currentPickingMon.plusStats.hp>0&&`HP+${currentPickingMon.plusStats.hp} `}{currentPickingMon.plusStats.atk>0&&`攻+${currentPickingMon.plusStats.atk} `}{currentPickingMon.plusStats.def>0&&`防+${currentPickingMon.plusStats.def} `}{currentPickingMon.plusStats.guts>0&&`G+${currentPickingMon.plusStats.guts} `}</div>{formatAptBonus(currentPickingMon)&&<div className="text-[8px] text-cyan-300 font-bold mt-0.5">間合い適性 {formatAptBonus(currentPickingMon)}</div>}</div>)}
                   </div>
                   <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div>{currentPickingMon.masuId&&<div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {getMasuMon(currentPickingMon.masuId)?.distAptPoints||0}</div>}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(currentPickingMon,idx); const pts=currentPickingMon.masuId?(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0):0; const canUp=pts>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{canUp&&<button onClick={()=>{const updated=spendAptPoint(currentPickingMon.masuId,idx); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>}</div>);})}</div></div>
                   {currentPickingMon.masuId&&(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0)>0&&(
@@ -4934,7 +5156,7 @@ function MonsterHeroGame() {
           <div className="text-[8px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1">
             {['atk','range_atk','unique'].includes(focusedCard.type)&&(<div className="flex justify-between items-center text-xs"><span>技威力:</span><span className="text-red-400 font-black">{focusedCard.type==='range_atk'?`${Math.floor(focusedCard.mult*100)} / ${Math.floor(focusedCard.mult*0.4*100)}`:Math.floor((focusedCard.type==='unique'?(focusedCard.baseMult+(focusedCard.evoLevel||0)*0.5+((focusedCard.monId==='Ark'||focusedCard.monId==='Iblis')?0.1*getPermaBuff('chuuniUniqueStack'):0)):(focusedCard.mult||focusedCard.baseMult||1.0))*100)}</span></div>)}
             {['atk','range_atk','unique'].includes(focusedCard.type)&&(<div className="flex justify-between items-center text-xs"><span>会心率:</span><span className="text-yellow-400 font-black">{Math.round(((focusedCard.crit||0.1)+getPermaBuff('critRatePct'))*100)}%{getPermaBuff('critRatePct')>0&&<span className="text-yellow-200 text-[8px]"> (+{Math.round(getPermaBuff('critRatePct')*100)})</span>} <span className="text-yellow-200/70 text-[8px]">×{(1.5+getPermaBuff('critDmgPct')).toFixed(2)}</span></span></div>)}
-            {focusedCard.type==='guard'&&<div className="text-center font-bold">敵の攻撃を最大 {Math.floor(def*(focusedCard.power||1))} 軽減</div>}
+            {focusedCard.type==='guard'&&<div className="text-center font-bold">敵の攻撃を最大 {Math.floor((focusedCard.flat||0)+def*(focusedCard.mult||0))} 軽減<span className="text-slate-400 font-normal">（{focusedCard.flat||0} ＋ 丈夫さ×{focusedCard.mult||0}）</span></div>}
             {focusedCard.type==='range_atk'&&focusedCard.rangeIdx!=null&&(<div className="border-t border-white/10 pt-1 mt-1 text-[7px] text-cyan-200 font-bold"><span className="text-cyan-400">強制移動:</span> ターン終了時、敵を{RANGE_LABELS[(focusedCard.rangeIdx+1)%4]}距離へ移動させる</div>)}
             {['buff','debuff','heal'].includes(focusedCard.type)&&(<div className="text-center italic text-amber-300 font-bold text-[7px] leading-tight">{getDynamicDesc(focusedCard,true,focusedCard.evoLevel||0)}</div>)}
             {focusedCard.effectDesc&&<div className="border-t border-white/10 pt-1 mt-1 text-[7px] text-amber-200 font-bold"><span className="text-indigo-400">特殊効果:</span> {focusedCard.effectDesc}</div>}
