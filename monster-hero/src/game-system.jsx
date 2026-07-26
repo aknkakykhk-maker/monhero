@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 22:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-27 02:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -144,6 +144,11 @@ const Audio_ = (() => {
   const bgmSources = {}; // Audio要素をWeb Audioへ繋いだソースノード(1要素につき1回だけ作れる)
   let bgmGain = null;    // BGM専用のゲインノード(iOSでも効く音量調整はこれで行う)
   let bgmCtx = null;     // BGM専用のAudioContext(SEのTone.jsとは独立)
+  const jingleEls = {}; // ジングル(1回だけ鳴らす短い音)の要素
+  // 曲の切り替えは play() の完了を待つ非同期処理のため、素早く画面を移ると
+  // 「前の曲の再生開始」が後から効いて2曲が重なることがあった。
+  // 再生要求ごとに番号を振り、開始した時点で最新の要求でなければ止める
+  let bgmToken = 0;
   let currentKey = null, bgmVolumePct = 0, bgmPlayPending = false, pageHidden = false;
   let enabled = false; // デフォルト無音
 
@@ -179,10 +184,18 @@ const Audio_ = (() => {
   //   battle … 通常の敵との戦闘
   //   boss   … ボス戦(ムー)
   const BGM_FILES = {
-    title: 'audio/bgm-title.mp3',
-    prep: 'audio/bgm-menu.mp3',
-    battle: 'audio/bgm-battle.mp3',
-    boss: 'audio/bgm-boss.mp3',
+    title: 'audio/bgm-title.mp3',      // タイトル画面
+    prep: 'audio/bgm-menu.mp3',        // プロフィール・編成・勇者モン選択などの別ページ
+    battle: 'audio/bgm-battle.mp3',    // 通常の敵との戦闘
+    boss: 'audio/bgm-boss.mp3',        // ボス戦(ムー)
+    fusion: 'audio/bgm-fusion.mp3',    // 合体ページ
+    enhance: 'audio/bgm-enhance.mp3',  // WAVE終了後の強化フェーズ
+    result: 'audio/bgm-result.mp3',    // リザルト画面
+    market: 'audio/bgm-market.mp3',    // マーケットページ
+  };
+  // 曲ではなく1回だけ鳴らす短い音(ループしない)。敵を倒したときのファンファーレなど
+  const JINGLE_FILES = {
+    victory: 'audio/jingle-victory.mp3',
   };
 
   // 0〜100(%)を実際の音量へ。SEと同じ耳あたりのカーブ(-40dB〜0dB)を使う
@@ -314,12 +327,51 @@ const Audio_ = (() => {
     stopOthers(key);
     applyBgmVolume();
     if (!el.paused) return; // 既に同じ曲が鳴っていれば頭出しし直さない
+    const myToken = ++bgmToken;
     try {
       await el.play();
+      // 鳴り始めるまでのあいだに別の曲へ切り替わっていたら、この曲は止める(2曲被り防止)
+      if (myToken !== bgmToken || currentKey !== key) { try { el.pause(); el.currentTime = 0; } catch (e2) {} return; }
+      stopOthers(key); // 念のため、この時点でも他が鳴っていないことを保証する
     } catch (e) {
       // 自動再生がブラウザに止められた場合は、次のタップで鳴らし直す
       retryPlayOnGesture();
     }
+  };
+
+  // ジングル(1回だけ鳴らす短い音)。BGMは止めずに重ねて鳴らす
+  const playJingle = async (key) => {
+    if (!enabled || bgmVolumePct <= 0 || pageHidden || !JINGLE_FILES[key]) return;
+    try {
+      let el = jingleEls[key];
+      if (!el) {
+        el = new Audio();
+        el.src = JINGLE_FILES[key];
+        el.preload = 'auto';
+        el.dataset.jingleKey = key;
+        try { el.style.display = 'none'; document.body.appendChild(el); } catch (e) {}
+        jingleEls[key] = el;
+        connectJingleToGain(key);
+      }
+      el.currentTime = 0;
+      if (!bgmSources['jingle:' + key]) { try { el.volume = _gainFromPct(bgmVolumePct); } catch (e) {} }
+      await el.play();
+    } catch (e) {}
+  };
+  // ジングルもBGMと同じゲインノードに通す(iOSでvolumeが効かないため)
+  const connectJingleToGain = (key) => {
+    const el = jingleEls[key];
+    const id = 'jingle:' + key;
+    if (!el || bgmSources[id]) return;
+    const ctx = getBgmCtx();
+    if (!ctx || !ctx.createMediaElementSource) return;
+    try {
+      if (!bgmGain) { bgmGain = ctx.createGain(); bgmGain.gain.value = _gainFromPct(bgmVolumePct); bgmGain.connect(ctx.destination); }
+      const srcNode = ctx.createMediaElementSource(el);
+      srcNode.connect(bgmGain);
+      bgmSources[id] = srcNode;
+      try { el.volume = 1; } catch (e) {}
+    } catch (e) {}
   };
 
   // 画面の表示/非表示が変わったときに呼ぶ。見えていないあいだはBGMを止める
@@ -466,7 +518,7 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, se };
+  return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, playJingle, se };
 })();
 
 
@@ -1416,6 +1468,13 @@ function MonsterHeroGame() {
   const [attemptCounts, setAttemptCounts] = useState({}); // 難易度別 挑戦回数(端末保存)
   const [clearCounts, setClearCounts] = useState({}); // 難易度別 クリア回数(端末保存)
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
+  // 起動時の事前ロード。'loading'=読み込み中 / 'ready'=読み込み完了・タップ待ち / 'done'=ゲーム表示
+  // ブラウザは「ユーザーが操作するまで音を鳴らしてはいけない」制限があるため、
+  // 読み込みが終わったところで1度タップしてもらい、その操作で音声のロックを解除する。
+  // これにより、タイトル画面が出たときには既にBGMが鳴っている状態にできる
+  const [bootPhase, setBootPhase] = useState('loading');
+  const [dataLoaded, setDataLoaded] = useState(false); // 端末に保存したセーブデータの読み込みが終わったか
+  const [bootProgress, setBootProgress] = useState({ done: 0, total: 1, label: '準備しています' });
   const [localRankings, setLocalRankings] = useState({});
   const [rankingSourceByDiff, setRankingSourceByDiff] = useState({}); // {[diff]: 'global'|'local'} 表示中データの取得元
   const [showRanking, setShowRanking] = useState(false);
@@ -1738,23 +1797,37 @@ function MonsterHeroGame() {
     } catch {}
   }, []);
 
-  // タイトルから飛べる別ページ(プロフィール・ランキング・編成・マーケット・勇者モン選択など)で
-  // 共通して流すBGMの対象画面。ここに含まれない画面はBGMを止めるか、専用の曲を鳴らす
-  const MENU_BGM_STATES = ['PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','REWARD_PICK','UPGRADE_SKILL',
-    'PROFILE','ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_FUSION','BREEDER_MARKET','ITEM_INVENTORY'];
+  // 画面ごとに流すBGM。専用の曲がある画面はそれを、無い画面は共通のメニュー曲を鳴らす
+  const BGM_STATE_MAP = {
+    MASU_FUSION: 'fusion',      // 合体ページ
+    BREEDER_MARKET: 'market',   // マーケットページ
+    MASU_ENHANCE: 'enhance',    // マスモン強化
+    PICK_TEACHING: 'enhance',   // WAVE終了後の強化フェーズ(ブリーダーカード選択)
+    REWARD_PICK: 'enhance',     // 同(能力覚醒の報酬選択)
+    UPGRADE_SKILL: 'enhance',   // 同(技の強化)
+    WAVE_RESULT: 'result',      // WAVEクリアのリザルト
+    CHAMPION: 'result',         // 最終リザルト
+  };
+  // 上記に無い、タイトルから飛べる別ページ(プロフィール・編成・勇者モン選択など)で共通して流す曲
+  const MENU_BGM_STATES = ['PICK_HERO','PICK_ALLY','PICK_SLOT',
+    'PROFILE','ROSTER','OWNED_MONSTERS','MASU_MONS','ITEM_INVENTORY'];
+  // 画面から鳴らすべき曲のキーを決める
+  const bgmKeyForState = (state, isBoss) => {
+    if (state === 'TITLE') return 'title';
+    if (BGM_STATE_MAP[state]) return BGM_STATE_MAP[state];
+    if (state === 'BATTLE') return isBoss ? 'boss' : 'battle';
+    if (MENU_BGM_STATES.includes(state)) return 'prep';
+    return null;
+  };
   // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
   useEffect(() => {
     const isBoss = wave === 10 || enemy?.id === 'Moo';
+    const key = bgmKeyForState(gameState, isBoss);
     // 音がオフでも、その画面で使う曲は先に読み込んでおく(タップした瞬間に鳴り始めるように)
-    const keyForState = gameState === 'TITLE' ? 'title'
-      : MENU_BGM_STATES.includes(gameState) ? 'prep'
-      : gameState === 'BATTLE' ? (isBoss ? 'boss' : 'battle') : null;
-    if (keyForState) Audio_.preloadBGM(keyForState);
+    if (key) Audio_.preloadBGM(key);
     if (!audioOn) { Audio_.stopBGM(); return; }
-    if (gameState === 'TITLE') Audio_.playBGM('title');
-    else if (MENU_BGM_STATES.includes(gameState)) Audio_.playBGM('prep');
-    else if (gameState === 'BATTLE') Audio_.playBGM(isBoss ? 'boss' : 'battle');
-    else if (gameState === 'WAVE_RESULT' || gameState === 'CHAMPION') Audio_.stopBGM();
+    if (key) Audio_.playBGM(key);
+    else Audio_.stopBGM();
   }, [gameState, wave, enemy?.id, audioOn]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
@@ -1789,41 +1862,60 @@ function MonsterHeroGame() {
     return () => { document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
   }, []);
 
-  // 染色もどきのマスクは、染色済みモンスターを画面に出したときに初めて計算している。
-  // 高解像度の立ち絵は1枚あたり100万画素あり、その場で計算すると表示までに間が空く
-  // (マスモン一覧や合体画面を開いた瞬間にもたつく原因になっていた)。
-  // そこで、タイトル画面で手が空いているあいだに、持っているマスモンの分だけ先に計算しておく。
-  // 結果は getDyeRegionMasks の中でキャッシュされるので、実際に表示するときは待たずに済む。
+  // 起動時の事前ロード。ゲームを表示する前に、最初に必要なものを一通り読み込んでおく。
+  //  ・タイトルのBGM(鳴らせる状態になるまで)
+  //  ・持っているマスモンの染色マスク(高解像度の立ち絵1枚あたり約100万画素あり、
+  //    表示時に計算すると一覧や合体画面を開いた瞬間にもたつくため)
+  // 通信や端末が遅くても待たせ続けないよう、全体で最長8秒で打ち切る。
   useEffect(() => {
-    if (!masuMons.length) return;
-    // 染色している(色を設定してある)マスモンだけが対象。種が同じなら計算結果は共通なので重複は省く
-    const targets = [];
-    const seen = new Set();
-    masuMons.forEach((m) => {
-      if (!getMasuColors(m).some(Boolean)) return;
-      const base = ALL_PLAYER_MONSTERS[m.baseId];
-      if (!base) return;
-      [base.imgUrl, base.iconUrl].forEach((url) => {
-        if (!url) return;
-        const key = m.baseId + '::' + url;
-        if (seen.has(key)) return;
-        seen.add(key);
-        targets.push([m.baseId, url]);
-      });
-    });
-    if (!targets.length) return;
+    if (bootPhase !== 'loading') return;
+    if (!dataLoaded) return; // セーブデータの読み込みが終わってから始める
     let cancelled = false;
-    // 1件ずつ、ブラウザが暇なタイミングで進める(操作の邪魔をしないため)
-    const idle = window.requestIdleCallback || ((cb) => setTimeout(() => cb({ timeRemaining: () => 8 }), 120));
-    let i = 0;
-    const step = () => {
-      if (cancelled || i >= targets.length) return;
-      const [baseId, url] = targets[i++];
-      Promise.resolve(getDyeRegionMasks(baseId, url)).catch(() => {}).then(() => { if (!cancelled) idle(step); });
-    };
-    idle(step);
-    return () => { cancelled = true; };
-  }, [masuMons]);
+    const finish = () => { if (!cancelled) setBootPhase('ready'); };
+    const hardStop = setTimeout(finish, 8000);
+
+    (async () => {
+      // 染色マスクを計算する対象(色を設定してあるマスモンのみ。種が同じなら結果は共通)
+      const targets = [];
+      const seen = new Set();
+      masuMons.forEach((m) => {
+        if (!getMasuColors(m).some(Boolean)) return;
+        const base = ALL_PLAYER_MONSTERS[m.baseId];
+        if (!base) return;
+        [base.imgUrl, base.iconUrl].forEach((url) => {
+          if (!url) return;
+          const key = m.baseId + '::' + url;
+          if (seen.has(key)) return;
+          seen.add(key);
+          targets.push([m.baseId, url]);
+        });
+      });
+      const total = targets.length + 1; // +1 はBGMの読み込み
+      let done = 0;
+      const step = (label) => { if (!cancelled) { done++; setBootProgress({ done, total, label }); } };
+      if (!cancelled) setBootProgress({ done: 0, total, label: '音楽を読み込んでいます' });
+
+      await Audio_.prepareBGM('title', 5000).catch(() => {});
+      step(targets.length ? 'モンスターの色を準備しています' : '準備が完了しました');
+
+      for (const [baseId, url] of targets) {
+        if (cancelled) return;
+        await Promise.resolve(getDyeRegionMasks(baseId, url)).catch(() => {});
+        step('モンスターの色を準備しています');
+      }
+      clearTimeout(hardStop);
+      finish();
+    })();
+
+    return () => { cancelled = true; clearTimeout(hardStop); };
+  }, [bootPhase, dataLoaded, masuMons]);
+
+  // 事前ロード後の「タップして開始」。この操作で音声のロックを解除し、BGMを鳴らし始める
+  const startGame = () => {
+    Audio_.unlock();
+    setBootPhase('done');
+  };
+
 
   // 音は初期状態でオンだが、ブラウザは「ユーザーが操作するまで音を鳴らしてはいけない」という
   // 制限があるため、ページを開いただけでは実際には鳴らない。最初のタップ(どこでもよい)を
@@ -2056,6 +2148,7 @@ function MonsterHeroGame() {
       }
       setOnboarded(wasOnboarded);
       if (!wasOnboarded) setGameState('PROFILE');
+      setDataLoaded(true); // ここまでで起動に必要なセーブデータは揃っている
       await loadRankings();
     })();
   }, [loadRankings]);
@@ -3270,7 +3363,7 @@ function MonsterHeroGame() {
     setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
 
     if (enemy&&(enemy.hp-totalDmg)<=0) {
-      Audio_.se.victory();
+      Audio_.playJingle('victory'); // 敵撃破のファンファーレ
       const totalWaveDamage=currentWaveDamage+totalDmg;
       const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);
       const turnMult=Math.max(1.0,2.0-((20-remainingTurns)*0.05));
@@ -3597,6 +3690,37 @@ function MonsterHeroGame() {
     <button onClick={()=>setRosterSkillDetail({mon,kind:'unique'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技: {mon.unique.name}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-4 text-[9px] font-mono mb-2"><span className="text-red-400 font-bold">技威力 {Math.floor(mon.unique.baseMult*100)}</span><span className="text-amber-400 font-bold">消費G {mon.unique.baseGuts}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic">"{mon.unique.effectDesc}"</div></button>
   </>);
 
+
+  // 起動時の事前ロード画面。読み込みが終わるまでゲーム本体は表示しない。
+  // 読み込み完了後の1タップで音声のロックを解除するので、タイトルが出た時点でBGMが鳴っている
+  if (bootPhase !== 'done') {
+    const pct = Math.round((bootProgress.done / Math.max(1, bootProgress.total)) * 100);
+    const ready = bootPhase === 'ready';
+    return (
+      <div onPointerDown={ready ? startGame : undefined} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans flex flex-col items-center justify-center p-8" style={{height:'100%'}}>
+        <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 35%, rgba(168,85,247,0.35) 0%, rgba(2,6,23,0) 60%)'}}></div>
+        <div className="relative z-10 flex flex-col items-center w-full max-w-xs">
+          <h1 className="text-4xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-purple-200 to-purple-500 leading-none uppercase whitespace-nowrap drop-shadow-[0_4px_16px_rgba(0,0,0,1)]">Monster Hero</h1>
+          <p className="text-purple-300 text-[9px] tracking-[0.4em] uppercase font-bold mt-2">Grand Champion Quest</p>
+          <div className="w-full mt-10">
+            <div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-indigo-400/30">
+              <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-400 to-pink-400 transition-all duration-300" style={{width:`${ready?100:pct}%`}}></div>
+            </div>
+            <div className="text-[10px] text-indigo-300 font-bold text-center mt-3 tracking-wider">
+              {ready ? '準備が完了しました' : bootProgress.label}
+            </div>
+          </div>
+          {ready&&(
+            <div className="mt-8 flex flex-col items-center gap-2">
+              <button onClick={startGame} className="px-8 py-3.5 rounded-2xl bg-white text-black font-black text-base uppercase tracking-wider shadow-2xl active:scale-95 animate-pulse">タップしてはじめる</button>
+              <div className="text-[9px] text-slate-500 font-bold">※ 音を鳴らすために1度タップが必要です</div>
+            </div>
+          )}
+        </div>
+        <div className="absolute bottom-4 text-[8px] text-slate-700 font-mono tracking-widest">ver {BUILD_DATE}</div>
+      </div>
+    );
+  }
   return (
     <div onPointerDown={(e)=>{const rect=e.currentTarget.getBoundingClientRect(); spawnRipple(e.clientX-rect.left, e.clientY-rect.top);}} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={{height:'100%'}}>
       <div className="absolute inset-0 bg-gradient-to-b from-slate-950 to-black z-0"></div>
@@ -6028,24 +6152,10 @@ const rootEl = document.getElementById('root');
 const _root = ReactDOM.createRoot(rootEl);
 _root.render(React.createElement(MonsterHeroGame));
 
-// ==== 起動時: タイトルBGMを読み込んでから画面を出す ====
-// 「ゲームを開いた瞬間にBGMを鳴らしたい」という要望のため、ローディング表示のあいだに
-// タイトルの曲を読み込んでおく。読み込めたらすぐ鳴らし始める。
-// 回線が遅くても待たされないよう、最長2秒で打ち切って画面を出す(その場合も読み込みは続き、
-// 鳴らせるようになった時点で流れる)。
-// なお、ブラウザには「操作するまで音を鳴らしてはいけない」制限があるため、自動再生が
-// 弾かれた場合は最初のタップで鳴り始める(playBGM側で再試行する仕組みがある)。
-(function(){
-  const hideLoading = () => {
-    try {
-      const l=document.getElementById('loading'); if(l) l.style.display='none';
-      const b=document.getElementById('ver-banner'); if(b) b.style.display='none';
-    } catch(e){ window.__mhErr && window.__mhErr('render tail: '+e.message); }
-  };
-  try {
-    let shown = false;
-    const show = () => { if (shown) return; shown = true; hideLoading(); };
-    Audio_.prepareBGM('title', 2000).then(() => { Audio_.unlock(); show(); }).catch(show);
-    setTimeout(show, 2500); // 保険: 何かあっても画面は必ず出す
-  } catch(e){ hideLoading(); }
-})();
+// ==== 起動時: HTMLのローディング表示を消す ====
+// 事前ロードの進捗表示はReact側の起動画面(bootPhase)が受け持つので、
+// ここではHTMLに置いてある簡易ローディングを消すだけにする
+try {
+  const l=document.getElementById('loading'); if(l) l.style.display='none';
+  const b=document.getElementById('ver-banner'); if(b) b.style.display='none';
+} catch(e){ window.__mhErr && window.__mhErr('render tail: '+e.message); }

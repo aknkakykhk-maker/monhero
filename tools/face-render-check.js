@@ -2,7 +2,7 @@
 // アイコン選択画面と同じレイアウト(4列・aspect-square・object-cover)を再現して
 // out/face-icons-in-browser.png に書き出すので、切り出し位置の目視確認にも使える。
 //
-//   python3 -m http.server 8899   などでリポジトリのルートを配信した状態で
+//   python3 tools/serve.py   でリポジトリのルートを配信した状態で
 //   node face-render-check.js
 const path = require('path');
 const { chromium } = require('playwright');

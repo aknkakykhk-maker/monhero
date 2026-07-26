@@ -28,12 +28,14 @@ cd tools && npm install
 | `node image-report.js` | 埋め込み画像(base64)の一覧をサイズ順に出す。重複した実体も検出する。 |
 | `node dedupe-images.js [--dry-run]` | 同じ base64 が複数の変数に重複して埋め込まれている箇所を、先に定義した変数への参照に置き換える。画像は1バイトも変えない。 |
 | `node stamp-version.js` | BUILD_DATE と version.json を現在の日本時間に揃える。手で書くと未来の時刻が入るので必ずこれを使う。 |
+| `node boot-check.js` | 起動時の事前ロード画面と、画面遷移でBGMが重ならないことを確認する。 |
+| `node bulk-enhance-check.js` | マスモンの「まとめて強化」が正しく動くか確認する。 |
 | `node bgm-check.js` | BGM(audio/のmp3)が画面に応じて切り替わるかを実ブラウザで確認する。 |
 | `node build.js` | **game-system.jsx を配信用JSへ変換し `monster-hero/game-system.compiled.js` を書き出す。改修したら必ず実行する。** |
 | `node build.js --check` | compiled が jsx と一致しているか確認する(古ければ終了コード1)。出荷前チェック用。 |
 | `node feature-check.js` | 実ブラウザでゲームを起動し、主要機能が動くかを確認する。 |
 | `node perf-check.js` | 読み込みにかかる時間と転送量を実ブラウザで計測する。 |
-| `node smoke.js` | 実ブラウザ(Chromium)で `data/*.js` を読み込み、画像の変数がすべて解決されるか確認する。事前にリポジトリのルートをHTTPで配信しておくこと(`python3 -m http.server 8899`)。 |
+| `node smoke.js` | 実ブラウザ(Chromium)で `data/*.js` を読み込み、画像の変数がすべて解決されるか確認する。事前にリポジトリのルートをHTTPで配信しておくこと(`python3 tools/serve.py`)。 |
 | `node grid-overlay.js 変数名...` | 立ち絵に0.1刻みの目盛りを重ねたPNGを出す。顔クロップや染色bboxの範囲を実測するときに使う。 |
 | `node make-face-icons.js [--preview]` | 立ち絵から顔部分を切り出して256pxの顔アイコンを作り、`_FACE_ICON` を差し替える。切り出し範囲はスクリプト内の `FACE_BOXES`。 |
 | `node face-render-check.js` | 顔アイコンが実ブラウザで正しく描画されるか確認し、アイコン選択画面と同じ見た目のスクリーンショットを出す。 |
@@ -43,6 +45,17 @@ cd tools && npm install
 
 モンスターIDは `MASU_COLOR_REGION_HUES` のキー(`Iblis` / `Suezo` / `Mocchi` / `Mitarashi` /
 `Golem` / `Pixie` / `Tiger` / `Ham` / `Oboro` / `Zan` / `Ark` / `Monol`)。省略すると全モンスター。
+
+## 検証用サーバー
+
+ブラウザを使う検証スクリプトは、リポジトリのルートがHTTPで配信されている必要がある。
+
+```
+python3 tools/serve.py     # http://localhost:8899
+```
+
+`python3 -m http.server` ではなくこれを使うこと。標準のものは1リクエストずつしか処理できず、
+BGMのmp3(合計約20MB)を読み込んでいるあいだ他のファイルが返せずページが止まってしまう。
 
 ## 出荷手順
 

@@ -1,7 +1,7 @@
 // 読み込みにかかる時間を実ブラウザで計測する。
 // 事前変換(tools/build.js)の効果を数値で確認するために使う。
 //
-//   python3 -m http.server 8899   などでリポジトリのルートを配信した状態で
+//   python3 tools/serve.py   でリポジトリのルートを配信した状態で
 //   node perf-check.js
 //
 // 注: React / Tailwind はCDNから読むため、外部接続が塞がれた環境では描画完了までは測れない。

@@ -1,6 +1,6 @@
 // BGM(audio/のmp3)が画面に応じて正しく切り替わるかを実ブラウザで確認する。
 //
-//   python3 -m http.server 8899   などでリポジトリのルートを配信した状態で
+//   python3 tools/serve.py   でリポジトリのルートを配信した状態で
 //   node bgm-check.js
 //
 // Chromiumは --autoplay-policy=no-user-gesture-required を付けると自動再生を許可するので、
@@ -34,9 +34,10 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
 
   await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction(() => document.getElementById('root') && document.getElementById('root').children.length > 0, { timeout: 60000 });
-  await page.waitForTimeout(1200);
-  // 最初のタップで音声ロックが解除される作りなので、それを再現する
-  await page.mouse.click(195, 700);
+  // 起動時の事前ロード画面で「タップしてはじめる」を押すと音声ロックが解除される
+  await page.waitForFunction(() => !!document.body && document.body.innerText.includes('タップしてはじめる'), { timeout: 30000 }).catch(() => {});
+  const startBtn = page.getByRole('button', { name: 'タップしてはじめる' });
+  if (await startBtn.count()) await startBtn.click();
   await page.waitForTimeout(2500);
 
   const state = () => page.evaluate(() => [...document.querySelectorAll('audio')].map((a) => ({
