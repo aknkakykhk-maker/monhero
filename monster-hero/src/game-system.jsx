@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-27 04:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-27 07:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -266,6 +266,25 @@ const Audio_ = (() => {
     return ctx;
   };
 
+  // AudioContextの再開を「待たずに」指示する版。
+  //
+  // 【重要】ブラウザが音の再生を許すのは「ユーザーが操作した直後」だけで、
+  // resume() の完了を待ってから play() を呼ぶと、待っているあいだに
+  // その「直後」ではなくなり再生を拒否される(iOSで顕著)。
+  // そこで再開の指示だけ出して即座に戻り、実際に動き出したところで
+  // ゲインノードへ繋ぎ直す(止まったまま繋ぐと無音になるため、繋ぐのは動いてから)。
+  const resumeBgmCtxNoWait = (keyToConnect) => {
+    const ctx = getBgmCtx();
+    if (!ctx) return null;
+    if (ctx.state !== 'running') {
+      try {
+        const p = ctx.resume();
+        if (p && p.then) p.then(() => { if (keyToConnect) connectBgmToGain(keyToConnect); applyBgmVolume(); }).catch(() => {});
+      } catch (e) {}
+    }
+    return ctx;
+  };
+
   // Audio要素をWeb Audioのゲインノードに繋ぐ。createMediaElementSourceは1要素につき
   // 一度しか呼べないため、繋いだかどうかを覚えておく。
   // AudioContextが動いていないうちは繋がない(繋ぐと無音になってしまうため)。
@@ -363,15 +382,23 @@ const Audio_ = (() => {
     if (jinglePlaying) { stopOthers(null); return; }
     const el = getBgmEl(key);
     if (!el) return;
-    // 音を出す前に必ずAudioContextを動かす。停止したまま繋ぐと無音になるため、
-    // 繋ぐのは動き出したあと(この順番が崩れると音が出なくなる)
-    const ctx = await ensureBgmCtxRunning();
+    // AudioContextを動かす。ここで await してはいけない。
+    //
+    // 【重要】ブラウザは「ユーザーが操作した直後」でないと音の再生を許さない。
+    // resume() の完了を待つと、その待ち時間のあいだに「操作の直後」ではなくなり、
+    // 続く play() が拒否されてしまう(iOSで顕著)。タイトル画面でBGMが鳴らず、
+    // 別のページへ移動して戻ってくるとようやく鳴っていたのはこれが原因。
+    // そのため resume() は投げっぱなしにして、動き出したところで繋ぎ直す。
+    const ctx = resumeBgmCtxNoWait(key);
     connectBgmToGain(key);
     stopOthers(key);
     applyBgmVolume();
-    // 既に鳴っているなら鳴らし直さない。ただしAudioContextが止まっていて
-    // 実際には無音になっている場合は、鳴っている扱いにせず作り直す
-    if (!el.paused && (!ctx || ctx.state === 'running')) return;
+    // 既に鳴っているなら鳴らし直さない。
+    // ただし「Web Audioに繋いであるのにAudioContextが止まっている」ときは実際には
+    // 無音なので、鳴っている扱いにせず作り直す。
+    // (繋いでいないうちは要素そのものから音が出るので、止まっていても鳴らし直さなくてよい)
+    const routedButSilent = !!bgmSources[key] && !!ctx && ctx.state !== 'running';
+    if (!el.paused && !routedButSilent) return;
     if (!el.paused) { try { el.pause(); } catch (e) {} }
     const myToken = ++bgmToken;
     try {
@@ -540,18 +567,46 @@ const Audio_ = (() => {
       if (!el || el.paused) playBGM(currentKey);
     }
   };
+  // ユーザー操作の直後に、待たずにその場でBGMを鳴らし始める。
+  // playBGM は直列化のためにPromiseを1つ挟むので、最初の1曲(タイトル)だけは
+  // この同期版で確実に鳴らす。既に鳴っていれば何もしない
+  const startCurrentBgmNow = () => {
+    if (!enabled || bgmVolumePct <= 0 || pageHidden || jinglePlaying || !currentKey) return;
+    const el = getBgmEl(currentKey);
+    if (!el || !el.paused) return;
+    connectBgmToGain(currentKey); // AudioContextが既に動いていればここで繋がる
+    applyBgmVolume();
+    try {
+      const p = el.play();
+      if (p && p.catch) p.catch(() => retryPlayOnGesture());
+    } catch (e) { retryPlayOnGesture(); }
+  };
+
+  // 指定の曲が本当に鳴っているか確かめ、鳴っていなければ鳴らし直す。
+  // タイトルのように「確実に鳴ってほしい」場面で、少し時間を置いてから呼ぶ
+  const ensurePlaying = (key) => {
+    if (!enabled || bgmVolumePct <= 0 || pageHidden || jinglePlaying) return;
+    if (currentKey !== key) return;
+    const el = bgmEls[key];
+    const ctx = bgmCtx;
+    if (!el || el.paused || (ctx && ctx.state !== 'running')) playBGM(key);
+  };
+
   // iOS等のブラウザ音声ロック解除: ユーザー操作(スライダー等)の直後に1回だけ呼ぶ
   // playTestTone: 音量スライダーを操作したときだけ、音が出ることが分かるよう短い音を鳴らす。
   // 画面のどこかを最初にタップしたときの自動解除では鳴らさない(不意に音が出て驚くため)
   const unlock = async (playTestTone = false) => {
     if (enabled) return;
     enabled = true;
-    // iOSはユーザー操作の最中に resume() を呼ばないと音が出せないため、
-    // タップで呼ばれるこの関数の中で真っ先にAudioContextを動かす
-    await ensureBgmCtxRunning();
-    // BGMはTone.js(SE用)に依存しないので先に鳴らす。
-    // 以前はTone.jsの読み込み完了を待ってから鳴らしていたため、CDNが遅いと
-    // タイトル画面でBGMがすぐ鳴らず、別の画面へ移った時点でようやく鳴っていた
+    // 【最重要】ここから下の2行は、await を1つも挟まずに実行しなければならない。
+    // ブラウザが音の再生を許すのは「ユーザーが操作した直後」だけで、
+    // await を挟むとその権利が切れて play() が拒否される。
+    // 拒否されると次のタップまで鳴らないため、「タイトルでは鳴らず、
+    // 別のページへ行って戻るとようやく鳴る」状態になっていた。
+    resumeBgmCtxNoWait(currentKey);
+    startCurrentBgmNow();
+    // 通常の経路も通して、ゲインノードへの接続・音量・重複再生の停止を整える
+    // (既に鳴っている場合は鳴らし直さないので、頭から鳴り直すことはない)
     if (currentKey) playBGM(currentKey);
     await load();
     if (Tone && playTestTone) {
@@ -600,7 +655,7 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, playJingle, se };
+  return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, playJingle, ensurePlaying, se };
 })();
 
 
@@ -2030,8 +2085,12 @@ function MonsterHeroGame() {
 
   // 事前ロード後の「タップして開始」。この操作で音声のロックを解除し、BGMを鳴らし始める
   const startGame = () => {
+    // このタップが「音を鳴らしてよい」唯一の合図なので、まずここで音声のロックを解除する
     Audio_.unlock();
     setBootPhase('done');
+    // タイトルの曲は必ず鳴ってほしいので、少し時間を置いて本当に鳴っているか確かめ、
+    // 鳴っていなければ鳴らし直す(読み込みが間に合わなかった場合の保険)
+    [300, 1000, 2500].forEach(ms => setTimeout(() => Audio_.ensurePlaying('title'), ms));
   };
 
 
