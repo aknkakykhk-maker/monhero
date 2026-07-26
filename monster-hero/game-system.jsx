@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-26 06:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 06:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -720,13 +720,20 @@ const getRecoloredImage = (imgUrl, colorId, baseId) => {
   _dyeRecolorCache[cacheKey] = promise;
   return promise;
 };
+// 部位間の既定色フォールバック: 指定した部位が「元の色」(未設定)のとき、別の部位の色をそのまま
+// 引き継いで表示する。ライガーは耳・尻尾の先端(染色③)が未設定なら本体(染色①)の色に自動で
+// 追従するようにし、「染色①だけで耳まで含めた全身が染まる」→染色③は耳・尻尾だけを別の
+// アクセント色にしたいときだけ使う任意スロット、という運用にする
+const MASU_COLOR_FALLBACK_REGION = { Tiger: { 2: 0 } };
 // マスモンの画像を、部位別の染色(masuColors配列)を反映して表示するコンポーネント。
 // 部位分割データが無いモンスターは画像全体を染め直した1枚を表示する。
 const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, draggable }) => {
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);
   const [recolored, setRecolored] = useState({});
-  const colors = masuColors || [];
+  const rawColors = masuColors || [];
+  const fallbackMap = MASU_COLOR_FALLBACK_REGION[baseId];
+  const colors = (fallbackMap && hues) ? hues.map((_, idx) => rawColors[idx] || (fallbackMap[idx] !== undefined ? rawColors[fallbackMap[idx]] : rawColors[idx])) : rawColors;
   const colorKey = colors.join('|');
   useEffect(() => {
     if (!hues || hues.length === 0 || !colors.some(Boolean)) { setMasks(null); return; }
