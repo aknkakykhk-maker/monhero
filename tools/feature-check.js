@@ -84,19 +84,28 @@ const check = (name, ok, detail = '') => { results.push({ name, ok, detail }); c
     check('開いたら既読として保存される', !!seen && seen.replace(/"/g, '') !== '', String(seen));
   }
 
-  // --- 音量: ミュート解除で1になる ---
+  // --- 音量: 初期状態がオン(SE/BGMとも1)で、オフ→オンでも1に戻る ---
   const audioBtn = page.locator('button').filter({ hasText: '音量設定' }).first();
   if (await audioBtn.count()) {
+    const label = (await audioBtn.innerText()).trim();
+    check('初期状態で音がオンになっている', !label.startsWith('🔇'), label);
     await audioBtn.click();
     await page.waitForTimeout(600);
-    const openTxt = await bodyText();
-    if (openTxt.includes('音がオフです')) {
-      await page.locator('button').filter({ hasText: '音がオフです' }).first().click();
-      await page.waitForTimeout(700);
-    }
-    const vols = await page.evaluate(() => ({ se: localStorage.getItem('mh_se_volume'), bgm: localStorage.getItem('mh_bgm_volume') }));
+    // 設定パネルのスライダー横に出ている数値を読む
+    const vols = () => page.evaluate(() => {
+      // VolumeSlider が値を出しているspan(右寄せ・等幅)だけを拾う
+      return [...document.querySelectorAll('span.w-6.text-right.font-mono')]
+        .map((e) => e.textContent.trim()).slice(0, 2);
+    });
+    check('初期音量がSE/BGMとも1', JSON.stringify(await vols()) === '["1","1"]', JSON.stringify(await vols()));
+    // 一度オフにしてから、もう一度オンにすると1に戻る
+    const toggle = page.locator('button').filter({ hasText: /音がオフです|音はオンです/ }).first();
+    await toggle.click(); await page.waitForTimeout(500);
+    await page.locator('button').filter({ hasText: '音がオフです' }).first().click();
+    await page.waitForTimeout(700);
+    const after = await page.evaluate(() => ({ se: localStorage.getItem('mh_se_volume'), bgm: localStorage.getItem('mh_bgm_volume') }));
     const norm = (v) => String(v).replace(/"/g, '');
-    check('ミュート解除でSE/BGMが1になる', norm(vols.se) === '1' && norm(vols.bgm) === '1', `SE=${norm(vols.se)} BGM=${norm(vols.bgm)}`);
+    check('オフ→オンでSE/BGMが1になる', norm(after.se) === '1' && norm(after.bgm) === '1', `SE=${norm(after.se)} BGM=${norm(after.bgm)}`);
   } else check('音量設定を開ける', false, 'ボタンが見つからない');
 
   await page.screenshot({ path: path.join(__dirname, 'out', 'feature-check.png'), fullPage: false });

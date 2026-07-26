@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-27 14:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-26 22:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -136,8 +136,12 @@ const bondLevelInfo = (totalXp) => {
 // =====================================================================
 const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
-  let reverb = null, lead = null, arp = null, bass = null, bgmBus = null, seBus = null;
-  let parts = [], currentKey = null;
+  let reverb = null, seBus = null;
+  // BGMはTone.jsで生成せず、audio/ に置いたmp3を再生する。曲が長い(最長23分)ため
+  // 一度に読み込まず、画面に応じて必要な曲だけを都度読み込んでストリーミング再生する。
+  // bgmEls は一度読んだ曲を使い回すためのキャッシュ({キー: HTMLAudioElement})
+  const bgmEls = {};
+  let currentKey = null, bgmVolumePct = 0, bgmPlayPending = false;
   let enabled = false; // デフォルト無音
 
   const load = () => {
@@ -154,12 +158,9 @@ const Audio_ = (() => {
     }).then(async () => {
       if (!Tone) return;
       try {
-      bgmBus = new Tone.Gain(0.04).toDestination(); // BGM専用バス
-      seBus = new Tone.Gain(1).toDestination(); // SE専用バス(BGMとは別ゲインなので互いの音量操作が影響しない)
+      // Tone.jsはSE専用。BGMはaudio/のmp3を鳴らすので合成器は持たない
+      seBus = new Tone.Gain(1).toDestination();
       reverb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).connect(seBus); // SE用リバーブ
-      lead = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.2 }, volume: -13 }).connect(bgmBus);
-      arp = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.1, release: 0.3 }, volume: -21 }).connect(bgmBus);
-      bass = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.4, release: 0.3 }, volume: -15 }).connect(bgmBus);
       try { await reverb.ready; } catch (e) {}
       ready = true;
       } catch(e){}
@@ -169,46 +170,85 @@ const Audio_ = (() => {
 
   const ensure = async () => { await load(); if (Tone && !started) { try { await Tone.start(); started = true; } catch (e) {} } };
 
-  const T = {
-    title: { bpm: 120, mel: [['C5','8n'],['C5','8n'],['C5','4n'],['G5','8n'],['C5','8n'],['E5','4n'],['F5','8n'],['G5','8n'],['A5','4n'],['G5','4n'],['E5','4n'],['D5','8n'],['E5','8n'],['F5','4n'],['A5','8n'],['G5','8n'],['F5','4n'],['E5','8n'],['D5','8n'],['C5','2n'],['G5','4n'],['C6','4n'],['B5','8n'],['A5','8n'],['G5','4n'],['A5','4n'],['F5','8n'],['G5','8n'],['A5','4n'],['C6','4n'],['B5','4n'],['A5','8n'],['G5','8n'],['F5','4n'],['E5','8n'],['D5','8n'],['E5','4n'],['G5','4n'],['F5','8n'],['E5','8n'],['C5','2n']], bass: ['C2','C2','F2','G2','C2','F2','G2','C2'], arp: [['C4','E4','G4'],['C4','E4','G4'],['F3','A3','C4'],['G3','B3','D4'],['C4','E4','G4'],['F3','A3','C4'],['G3','B3','D4'],['C4','E4','G4']] },
-    prep: { bpm: 124, mel: [['G4','8n'],['C5','8n'],['E5','8n'],['G5','8n'],['E5','8n'],['C5','8n'],['E5','4n'],['F4','8n'],['A4','8n'],['C5','8n'],['F5','8n'],['C5','8n'],['A4','8n'],['C5','4n'],['G4','8n'],['B4','8n'],['D5','8n'],['G5','8n'],['D5','8n'],['B4','8n'],['D5','4n'],['C5','8n'],['E5','8n'],['G5','8n'],['C6','8n'],['G5','4n'],['E5','4n'],['A4','8n'],['C5','8n'],['E5','8n'],['A5','8n'],['E5','8n'],['C5','8n'],['E5','4n'],['F4','8n'],['A4','8n'],['C5','8n'],['A4','8n'],['G4','8n'],['F4','8n'],['G4','4n'],['E4','8n'],['G4','8n'],['C5','8n'],['E5','8n'],['D5','8n'],['C5','8n'],['B4','4n'],['C5','8n'],['G4','8n'],['E4','8n'],['G4','8n'],['C5','2n']], bass: ['C3','F2','G2','C3','A2','F2','C3','G2'], arp: [['C4','E4','G4'],['F3','A3','C4'],['G3','B3','D4'],['C4','E4','G4'],['A3','C4','E4'],['F3','A3','C4'],['C4','E4','G4'],['G3','B3','D4']] },
-    battle: { bpm: 160, mel: [['A4','8n'],['A4','8n'],['A4','8n'],['B4','8n'],['C5','8n'],['B4','8n'],['A4','8n'],['G#4','8n'],['A4','4n'],['E5','4n'],['A4','8n'],['C5','8n'],['B4','8n'],['A4','8n'],['G4','8n'],['G4','8n'],['G4','8n'],['A4','8n'],['B4','8n'],['A4','8n'],['G4','8n'],['F#4','8n'],['G4','4n'],['D5','4n'],['G4','8n'],['B4','8n'],['A4','8n'],['G4','8n'],['E5','8n'],['F5','8n'],['F#5','8n'],['G5','8n'],['G#5','8n'],['A5','8n'],['G#5','8n'],['A5','8n'],['E5','4n'],['C5','4n'],['A4','4n'],['B4','4n'],['C5','8n'],['B4','8n'],['C5','8n'],['D5','8n'],['E5','8n'],['D5','8n'],['C5','8n'],['B4','8n'],['A4','2n'],['E5','4n'],['A5','4n']], bass: ['A2','A2','G2','G2','E2','F2','A2','E2'], arp: [['A3','C4','E4'],['A3','C4','E4'],['G3','B3','D4'],['G3','B3','D4'],['E3','G#3','B3'],['F3','A3','C4'],['A3','C4','E4'],['E3','G#3','B3']] },
-    boss: { bpm: 150, mel: [['D4','8n'],['D4','8n'],['Eb4','8n'],['D4','8n'],['A4','8n'],['G4','8n'],['F4','8n'],['E4','8n'],['D4','4n'],['A3','4n'],['D4','8n'],['F4','8n'],['E4','8n'],['D4','8n'],['Bb4','8n'],['A4','8n'],['Bb4','8n'],['A4','8n'],['G4','8n'],['F4','8n'],['E4','8n'],['D4','8n'],['C#4','4n'],['A4','4n'],['G4','8n'],['F4','8n'],['E4','8n'],['C#4','8n'],['D5','8n'],['C5','8n'],['Bb4','8n'],['A4','8n'],['G4','8n'],['F4','8n'],['E4','8n'],['D4','8n'],['A4','4n'],['F4','4n'],['D4','4n'],['E4','4n'],['F4','8n'],['G4','8n'],['A4','8n'],['Bb4','8n'],['A4','8n'],['G4','8n'],['F4','8n'],['E4','8n'],['D4','2n'],['A4','4n'],['D5','4n']], bass: ['D2','D2','Bb1','Bb1','G1','A1','D2','A1'], arp: [['D3','F3','A3'],['D3','F3','A3'],['Bb2','D3','F3'],['Bb2','D3','F3'],['G2','Bb2','D3'],['A2','C#3','E3'],['D3','F3','A3'],['A2','C#3','E3']] }
+  // 画面ごとのBGM。data/ ではなく audio/ に置いた実ファイルを鳴らす
+  //   title  … タイトル画面
+  //   prep   … タイトルから飛べる別ページ(プロフィール/ランキング/勇者モン選択/報酬など)
+  //   battle … 通常の敵との戦闘
+  //   boss   … ボス戦(ムー)
+  const BGM_FILES = {
+    title: 'audio/bgm-title.mp3',
+    prep: 'audio/bgm-menu.mp3',
+    battle: 'audio/bgm-battle.mp3',
+    boss: 'audio/bgm-boss.mp3',
   };
 
-  const clearParts = () => { parts.forEach(p => { try { p.dispose(); } catch (e) {} }); parts = []; if (Tone) { Tone.Transport.stop(); Tone.Transport.cancel(); } };
+  // 0〜100(%)を実際の音量へ。SEと同じ耳あたりのカーブ(-40dB〜0dB)を使う
+  const _gainFromPct = (pct) => pct <= 0 ? 0 : Math.pow(10, (-40 + (Math.min(100, pct) / 100) * 40) / 20);
 
-  const buildLoop = (def) => {
-    Tone.Transport.bpm.value = def.bpm;
-    let acc = 0; const melArr = [];
-    def.mel.forEach(([note, dur]) => { melArr.push({ time: acc, note, dur }); acc += Tone.Time(dur).toSeconds(); });
-    const melEnd = acc;
-    const leadSeq = new Tone.Part((time, ev) => lead.triggerAttackRelease(ev.note, ev.dur, time), melArr);
-    leadSeq.loop = true; leadSeq.loopEnd = melEnd; leadSeq.start(0); parts.push(leadSeq);
-    const barLen = Tone.Time('1m').toSeconds();
-    const bassSeq = new Tone.Part((time, ev) => { bass.triggerAttackRelease(ev.note, '2n', time); bass.triggerAttackRelease(ev.note, '2n', time + barLen / 2); }, def.bass.map((n, i) => ({ time: i * barLen, note: n })));
-    bassSeq.loop = true; bassSeq.loopEnd = def.bass.length * barLen; bassSeq.start(0); parts.push(bassSeq);
-    const arpSeq = new Tone.Part((time, ev) => { ev.notes.forEach((n, j) => { arp.triggerAttackRelease(n, '8n', time + j * (barLen / 6)); arp.triggerAttackRelease(n, '8n', time + (j + 3) * (barLen / 6)); }); }, def.arp.map((notes, i) => ({ time: i * barLen, notes })));
-    arpSeq.loop = true; arpSeq.loopEnd = def.arp.length * barLen; arpSeq.start(0); parts.push(arpSeq);
-    Tone.Transport.start();
+  // 指定キーのAudio要素を用意する(初回だけ読み込みが走る)
+  const getBgmEl = (key) => {
+    if (!BGM_FILES[key] || typeof Audio === 'undefined') return null;
+    if (!bgmEls[key]) {
+      const el = new Audio();
+      el.src = BGM_FILES[key];
+      el.loop = true;
+      el.preload = 'none'; // 実際に再生するまで読み込まない(初期表示を重くしないため)
+      el.volume = _gainFromPct(bgmVolumePct);
+      el.dataset.bgmKey = key;
+      // 画面には出さないがDOMに入れておく(再生状態を開発者ツールやテストから確認できるようにするため。
+      // 挙動は new Audio() のままと変わらない)
+      try { el.style.display = 'none'; document.body.appendChild(el); } catch (e) {}
+      bgmEls[key] = el;
+    }
+    return bgmEls[key];
+  };
+
+  // 現在の曲以外を止める
+  const stopOthers = (keepKey) => {
+    Object.entries(bgmEls).forEach(([k, el]) => {
+      if (k === keepKey) return;
+      try { el.pause(); el.currentTime = 0; } catch (e) {}
+    });
+  };
+
+  // ブラウザの自動再生制限で play() が弾かれた場合、次のタップで鳴らし直す
+  const retryPlayOnGesture = () => {
+    if (bgmPlayPending || typeof document === 'undefined') return;
+    bgmPlayPending = true;
+    const retry = () => {
+      document.removeEventListener('pointerdown', retry);
+      document.removeEventListener('touchend', retry);
+      bgmPlayPending = false;
+      if (currentKey) playBGM(currentKey);
+    };
+    document.addEventListener('pointerdown', retry);
+    document.addEventListener('touchend', retry);
   };
 
   const playBGM = async (key) => {
-    if (!enabled) { currentKey = key; return; }
-    if (key === currentKey && parts.length) return;
+    // 音がオフのあいだも「今どの曲であるべきか」は覚えておき、オンにした時点で鳴らす
     currentKey = key;
-    await ensure(); if (!Tone || !ready) return;
-    clearParts();
-    if (T[key]) buildLoop(T[key]);
+    if (!enabled) { stopOthers(null); return; }
+    const el = getBgmEl(key);
+    if (!el) return;
+    stopOthers(key);
+    el.volume = _gainFromPct(bgmVolumePct);
+    if (!el.paused) return; // 既に同じ曲が鳴っていれば頭出しし直さない
+    try {
+      await el.play();
+    } catch (e) {
+      // 自動再生がブラウザに止められた場合は、次のタップで鳴らし直す
+      retryPlayOnGesture();
+    }
   };
 
-  const stopBGM = () => { currentKey = null; clearParts(); };
+  const stopBGM = () => { currentKey = null; stopOthers(null); };
 
   const setEnabled = async (on) => {
     enabled = on;
-    if (!on) { clearParts(); return; }
+    if (!on) { stopOthers(null); return; }
     await ensure();
-    if (ready && currentKey && T[currentKey]) { clearParts(); buildLoop(T[currentKey]); }
+    if (currentKey) playBGM(currentKey);
   };
   const isEnabled = () => enabled;
   // タブ切り替え/バックグラウンド化からの復帰時、iOS等のブラウザは AudioContext を自動的に
@@ -224,7 +264,10 @@ const Audio_ = (() => {
   //    現在の曲を組み直して鳴らし直す必要がある(SEは都度生成なのでcontextさえ戻れば鳴る)
   let pendingResume = false;
   const resumeIfNeeded = async () => {
-    if (!Tone || !enabled) return;
+    if (!enabled) return;
+    // BGMはmp3(Audio要素)なのでTone.jsの読み込み状況に関わらず先に鳴らし直す
+    if (currentKey) { const el = bgmEls[currentKey]; if (!el || el.paused) playBGM(currentKey); }
+    if (!Tone) return;
     try {
       const ctx = Tone.context;
       if (ctx && ctx.state !== 'running') {
@@ -245,36 +288,32 @@ const Audio_ = (() => {
         document.addEventListener('touchend', retry);
         return;
       }
-      // BGMが止まっていれば現在の曲を組み直す
-      if (ready && currentKey && T[currentKey] && Tone.Transport.state !== 'started') {
-        clearParts();
-        buildLoop(T[currentKey]);
+      // BGM(mp3)が止まっていれば鳴らし直す
+      if (currentKey) {
+        const el = bgmEls[currentKey];
+        if (!el || el.paused) playBGM(currentKey);
       }
     } catch (e) {}
   };
 
-  // 0〜100(%)を-40dB〜0dB相当のゲイン(0=無音)へ線形マッピング。SEはseBus、BGMはbgmBusの
-  // ゲインをそれぞれ個別に操作するため、片方を変えてももう片方の音量には影響しない
-  // (以前はSE側をTone.Destination(全体マスター)で調整していたため、SEを変えるとBGMの
-  // 音量まで一緒に変わってしまう不具合があった)
-  const _gainFromPct = (pct) => pct <= 0 ? 0 : Math.pow(10, (-40 + (Math.min(100, pct) / 100) * 40) / 20);
+  // SEの音量。BGMはmp3(Audio要素)側で別に持っているため、片方を変えても互いに影響しない
   const setSeVolume = async (pct) => {
     await load();
     if (!Tone || !seBus) return;
     try { seBus.gain.rampTo(_gainFromPct(pct), 0.1); } catch (e) {}
   };
   const setBgmVolume = async (pct) => {
-    await load();
-    if (!Tone || !bgmBus) return;
-    // BGMバスの実ゲインはクリップ回避のため最大0.65に抑える
-    const gain = _gainFromPct(pct) * 0.65;
-    try { bgmBus.gain.rampTo(gain, 0.1); } catch (e) {}
+    bgmVolumePct = pct;
+    const v = _gainFromPct(pct);
+    Object.values(bgmEls).forEach((el) => { try { el.volume = v; } catch (e) {} });
   };
   // iOS等のブラウザ音声ロック解除: ユーザー操作(スライダー等)の直後に1回だけ呼ぶ
-  const unlock = async () => {
+  // playTestTone: 音量スライダーを操作したときだけ、音が出ることが分かるよう短い音を鳴らす。
+  // 画面のどこかを最初にタップしたときの自動解除では鳴らさない(不意に音が出て驚くため)
+  const unlock = async (playTestTone = false) => {
     if (enabled) return;
     await load();
-    if (Tone) {
+    if (Tone && playTestTone) {
       try {
         const tb = new Tone.Synth({ oscillator:{type:'triangle'}, envelope:{attack:0.005,decay:0.15,sustain:0.1,release:0.2}, volume: -6 }).connect(seBus);
         const now = Tone.now();
@@ -314,7 +353,7 @@ const Audio_ = (() => {
       setTimeout(() => { try { charge.dispose(); boom.dispose(); metal.dispose(); blast.dispose(); dread.dispose(); } catch (e) {} }, 2000); },
     enemyMove: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.05 }, volume: -14 }).connect(seBus); s.triggerAttackRelease('E4', '32n', t); s.triggerAttackRelease('B3', '16n', t + 0.06); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 400); },
     join: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.18, sustain: 0.3, release: 0.4 }, volume: -10 }).connect(reverb); const t = Tone.now(); const seq = [[0,'E5','8n'],[0.15,'G5','8n'],[0.3,'C6','8n'],[0.45,'E6','4n'],[0.45,'C6','4n'],[0.45,'G5','4n'],[0.8,'D6','8n'],[0.95,'E6','4n'],[0.95,'C6','4n'],[0.95,'G5','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); setTimeout(() => { try { v.dispose(); } catch (e) {} }, 1800); },
-    victory: async () => { if (!enabled) return; await ensure(); if (!Tone) return; clearParts(); currentKey = null; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.4 }, volume: -19 }).connect(reverb); const vb = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.4, release: 0.3 }, volume: -19 }).connect(seBus); const t = Tone.now(); const seq = [[0,'C5','8n'],[0,'E5','8n'],[0,'G5','8n'],[0.18,'C5','8n'],[0.18,'E5','8n'],[0.18,'G5','8n'],[0.36,'C5','8n'],[0.36,'E5','8n'],[0.36,'G5','8n'],[0.54,'G5','4n'],[0.54,'C6','4n'],[0.54,'E6','4n'],[0.9,'F5','8n'],[0.9,'A5','8n'],[1.08,'G5','8n'],[1.08,'B5','8n'],[1.26,'C6','2n'],[1.26,'E6','2n'],[1.26,'G6','2n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); [[0,'C3'],[0.54,'C3'],[0.9,'F2'],[1.08,'G2'],[1.26,'C3']].forEach(([tt, n]) => vb.triggerAttackRelease(n, '4n', t + tt)); setTimeout(() => { try { v.dispose(); vb.dispose(); } catch (e) {} }, 2600); },
+    victory: async () => { if (!enabled) return; await ensure(); if (!Tone) return; stopOthers(null); currentKey = null; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.4 }, volume: -19 }).connect(reverb); const vb = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.4, release: 0.3 }, volume: -19 }).connect(seBus); const t = Tone.now(); const seq = [[0,'C5','8n'],[0,'E5','8n'],[0,'G5','8n'],[0.18,'C5','8n'],[0.18,'E5','8n'],[0.18,'G5','8n'],[0.36,'C5','8n'],[0.36,'E5','8n'],[0.36,'G5','8n'],[0.54,'G5','4n'],[0.54,'C6','4n'],[0.54,'E6','4n'],[0.9,'F5','8n'],[0.9,'A5','8n'],[1.08,'G5','8n'],[1.08,'B5','8n'],[1.26,'C6','2n'],[1.26,'E6','2n'],[1.26,'G6','2n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); [[0,'C3'],[0.54,'C3'],[0.9,'F2'],[1.08,'G2'],[1.26,'C3']].forEach(([tt, n]) => vb.triggerAttackRelease(n, '4n', t + tt)); setTimeout(() => { try { v.dispose(); vb.dispose(); } catch (e) {} }, 2600); },
     levelUp: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.15, sustain: 0.2, release: 0.3 }, volume: -12 }).connect(reverb); const seq = [[0,'C5','16n'],[0.08,'E5','16n'],[0.16,'G5','16n'],[0.24,'C6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const sp = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 0.4 }, volume: -16 }).connect(reverb); sp.triggerAttackRelease('C6', '2n', t + 0.24); setTimeout(() => { try { v.dispose(); sp.dispose(); } catch (e) {} }, 1200); },
     // 合体演出用: 上昇アルペジオ→(両者が重なるタイミングで)ベルの一撃+きらめき和音の「ピカーン」
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
@@ -997,6 +1036,9 @@ const CHANGELOG_STATUS = {
   investigating: { label: '調査中',   cls: 'bg-amber-900/70 text-amber-300 border-amber-500/50' },
   known:         { label: '判明済み', cls: 'bg-slate-800 text-slate-300 border-slate-500/50' },
 };
+// 音量の既定値。初期状態は「音がオン」で、いきなり大きな音が鳴らないよう最小の1から始める
+// (ミュートを解除したときの音量もこの値に合わせている)
+const DEFAULT_VOLUME = 1;
 const STAT_POINT_GAIN = { hp: 10, atk: 3, def: 3, guts: 3 };
 // 間合い適性のグレードを「Cを±0とした段階数」に直す(A→+2、E→-2)。
 // 合流ボーナスでは、この段階数をプラスマイナス問わずそのまま勇者モンの適性に足す
@@ -1283,6 +1325,8 @@ function MonsterHeroGame() {
     setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 650);
   }, []);
   const [rankingViewDiff, setRankingViewDiff] = useState('Normal');
+  const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
+  const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
   const [wave, setWave] = useState(1);
   const [hp, setHp] = useState(500);
   const [maxHp, setMaxHp] = useState(500);
@@ -1431,21 +1475,23 @@ function MonsterHeroGame() {
   // 履歴を開いた時点の既読日時。開くと同時に既読を更新するため、そのまま比較すると
   // 表示中にNEWバッジが消えてしまう。開いている間はこちらを基準にバッジを出す
   const [changelogSeenAtOpen, setChangelogSeenAtOpen] = useState('');
-  const [seVolume, setSeVolumeState] = useState(70); // SE音量 0〜100(端末に保存、初期値は読み込み後に上書き)
-  const [bgmVolume, setBgmVolumeState] = useState(70); // BGM音量 0〜100(同上)
-  const [audioUnlocked, setAudioUnlocked] = useState(false); // ブラウザの自動再生制限解除のため、スライダー等の操作を1回行うまでfalse
+  const [seVolume, setSeVolumeState] = useState(DEFAULT_VOLUME); // SE音量 0〜100(端末に保存、初期値は読み込み後に上書き)
+  const [bgmVolume, setBgmVolumeState] = useState(DEFAULT_VOLUME); // BGM音量 0〜100(同上)
+  // 音は初期状態でオン(音量1)。ただしブラウザは操作なしに音を鳴らせないため、
+  // 実際に音が出るのは最初のタップ以降になる(下のuseEffectで自動的に解除する)
+  const [audioUnlocked, setAudioUnlocked] = useState(true);
   const [showAudioSettings, setShowAudioSettings] = useState(false); // 音量設定モーダルの表示状態
   const audioOn = audioUnlocked;
   const setSeVolumeRaw = (nv) => { setSeVolumeState(nv); storeSet('mh_se_volume', nv, false); };
   const setBgmVolumeRaw = (nv) => { setBgmVolumeState(nv); storeSet('mh_bgm_volume', nv, false); };
   // 音量スライダー操作時に呼ぶ: 未解除ならブラウザの音声ロックを解除しつつ値を保存する
-  const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeRaw(nv); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
-  const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeRaw(nv); if (!audioUnlocked) { setAudioUnlocked(true); Audio_.unlock(); } };
+  const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeRaw(nv); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
+  const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeRaw(nv); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
   const audioMuted = !audioOn || (seVolume === 0 && bgmVolume === 0);
   // ミュート解除時に設定する音量。以前は「ミュート直前の音量」に戻していたが、
   // いきなり大きな音が鳴って驚くため、必ず最小値の1から始めてスライダーで
   // 好みの大きさまで上げてもらう方式にした(設定パネル・バトル画面どちらのボタンでも同じ)
-  const UNMUTE_VOLUME = 1;
+  const UNMUTE_VOLUME = DEFAULT_VOLUME;
   // バトル画面などスペースが限られる場所向けの1タップミュート切替(詳細な音量調整は設定パネルのスライダーで行う)
   const toggleQuickMute = () => {
     if (audioMuted) {
@@ -1515,6 +1561,43 @@ function MonsterHeroGame() {
   const effectiveMaxGuts = useMemo(() => Math.floor(maxGuts * (1.0 + getPermaBuff('muaGutsPct'))), [maxGuts, permaBuffs]);
 
   // 全国ランキングをSupabaseから取得。失敗時は端末内保存の値にフォールバック
+  // ブリーダーレベルのランキング。ランキング行は難易度ごとに保存されているので、
+  // 同じプレイヤーが複数の難易度に現れる。名前で1件にまとめ、最も高いレベルを採用する。
+  // (専用の列を増やさず、スコア送信時に一緒に保存しているlevelから集計している)
+  const breederRanking = useMemo(() => {
+    const byName = new Map();
+    Object.values(localRankings).forEach(rows => (rows || []).forEach(r => {
+      const name = r.userName || '名無しのブリーダー';
+      const lv = r.level || 0;
+      const cur = byName.get(name);
+      if (!cur || lv > cur.level) byName.set(name, { userName: name, level: lv, icon: r.icon, hero: r.hero });
+    }));
+    return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 20);
+  }, [localRankings]);
+
+  // モンスターの絆レベルのランキング。スコア送信時に記録している編成(party)の中から
+  // 絆レベルを持つマスモンを取り出して並べる。同じプレイヤーの同じモンスターは1件にまとめる
+  const bondRankingAll = useMemo(() => {
+    const byKey = new Map();
+    Object.values(localRankings).forEach(rows => (rows || []).forEach(r => {
+      (r.party || []).forEach(pm => {
+        if (!pm || !pm.bondLevel) return;
+        const key = (r.userName || '') + '\u0000' + (pm.name || '');
+        const cur = byKey.get(key);
+        if (!cur || pm.bondLevel > cur.bondLevel) {
+          byKey.set(key, { userName: r.userName || '名無しのブリーダー', monName: pm.name || '?', bondLevel: pm.bondLevel, imgUrl: pm.imgUrl, emoji: pm.emoji });
+        }
+      });
+    }));
+    return [...byKey.values()].sort((a, b) => b.bondLevel - a.bondLevel);
+  }, [localRankings]);
+
+  // 絆レベルランキングに登場するモンスター種の一覧(種類別フィルタの選択肢に使う)
+  const bondRankingMonNames = useMemo(() => [...new Set(bondRankingAll.map(x => x.monName))].sort(), [bondRankingAll]);
+  const bondRanking = useMemo(() => (
+    bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 20) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 20)
+  ), [bondRankingAll, bondRankMonFilter]);
+
   const loadRankings = useCallback(async () => {
     const byDiff = {};
     const sourceByDiff = {};
@@ -1540,12 +1623,16 @@ function MonsterHeroGame() {
     } catch {}
   }, []);
 
-  // BGM: 画面遷移に応じて自動切替 (すべてオリジナル生成・デフォルト無音)
+  // タイトルから飛べる別ページ(プロフィール・ランキング・編成・マーケット・勇者モン選択など)で
+  // 共通して流すBGMの対象画面。ここに含まれない画面はBGMを止めるか、専用の曲を鳴らす
+  const MENU_BGM_STATES = ['PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','REWARD_PICK','UPGRADE_SKILL',
+    'PROFILE','ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_FUSION','BREEDER_MARKET','ITEM_INVENTORY'];
+  // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
   useEffect(() => {
     if (!audioOn) { Audio_.stopBGM(); return; }
     const isBoss = wave === 10 || enemy?.id === 'Moo';
     if (gameState === 'TITLE') Audio_.playBGM('title');
-    else if (['PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','REWARD_PICK','UPGRADE_SKILL'].includes(gameState)) Audio_.playBGM('prep');
+    else if (MENU_BGM_STATES.includes(gameState)) Audio_.playBGM('prep');
     else if (gameState === 'BATTLE') Audio_.playBGM(isBoss ? 'boss' : 'battle');
     else if (gameState === 'WAVE_RESULT' || gameState === 'CHAMPION') Audio_.stopBGM();
   }, [gameState, wave, enemy?.id, audioOn]);
@@ -1580,6 +1667,23 @@ function MonsterHeroGame() {
     window.addEventListener('pageshow', onVisible);
     const interval = setInterval(checkVersion, 2 * 60 * 1000);
     return () => { document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
+  }, []);
+
+  // 音は初期状態でオンだが、ブラウザは「ユーザーが操作するまで音を鳴らしてはいけない」という
+  // 制限があるため、ページを開いただけでは実際には鳴らない。最初のタップ(どこでもよい)を
+  // 拾って一度だけ音声のロックを解除し、その時点のBGMを鳴らし始める。
+  useEffect(() => {
+    const unlockOnce = () => {
+      document.removeEventListener('pointerdown', unlockOnce);
+      document.removeEventListener('touchend', unlockOnce);
+      Audio_.unlock();
+    };
+    document.addEventListener('pointerdown', unlockOnce);
+    document.addEventListener('touchend', unlockOnce);
+    return () => {
+      document.removeEventListener('pointerdown', unlockOnce);
+      document.removeEventListener('touchend', unlockOnce);
+    };
   }, []);
 
   // タブ切り替え/バックグラウンド化から復帰した際、OSにより自動停止されたAudioContextと
@@ -1671,9 +1775,9 @@ function MonsterHeroGame() {
   // Load saved data
   useEffect(() => {
     (async () => {
-      const savedSeVolume = await storeGet('mh_se_volume', 70, false);
+      const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
-      const savedBgmVolume = await storeGet('mh_bgm_volume', 70, false);
+      const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
       setBgmVolumeState(savedBgmVolume);
       const savedName = await storeGet('mh_breeder_name', '名無しのブリーダー', false);
       setBreederName(savedName);
@@ -2737,7 +2841,7 @@ function MonsterHeroGame() {
     if (isBusy||hp<=0) return; setIsBusy(true);
     Audio_.se.heal();
     const recoverHp=Math.floor(effectiveMaxHp*0.3);
-    setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl});
+    setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl,baseId:mainHero?.id,colors:mainHero?.colors});
     await wait(500); setEffect(null);
     const recoverGuts=Math.floor(effectiveMaxGuts*0.3);
     addPopup(`💚 ライフ +${recoverHp}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md');
@@ -3187,7 +3291,7 @@ function MonsterHeroGame() {
       const aptLabel=aptDelta.map((d,i)=>d!==0?`${RANGE_LABELS[i]}${d>0?'+':''}${d}`:null).filter(Boolean).join(' ');
       const newAllyUnique={...m.unique,evoLevel:0}; setOwnedUniques([...ownedUniques,newAllyUnique]);
       setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
-      setEffect({type:'mega',label:`${m.name}合流！`,icon:"🤝",monEmoji:m.emoji,imgUrl:m.imgUrl,subLabel:`HP:${bHp}→${nMaxHp}  ちから:${bAtk}→${nAtk}\n丈夫さ:${bDef}→${nDef}  ガッツ:${bGuts}→${nMaxGuts}${aptLabel?`\n間合い適性:${aptLabel}`:''}`});
+      setEffect({type:'mega',label:`${m.name}合流！`,icon:"🤝",monEmoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,subLabel:`HP:${bHp}→${nMaxHp}  ちから:${bAtk}→${nAtk}\n丈夫さ:${bDef}→${nDef}  ガッツ:${bGuts}→${nMaxGuts}${aptLabel?`\n間合い適性:${aptLabel}`:''}`});
       setTimeout(()=>{setEffect(null); setGameState('UPGRADE_SKILL');},1400);
     }
     setCurrentPickingMon(null);
@@ -3418,7 +3522,12 @@ function MonsterHeroGame() {
             {showRanking&&(
               <div className="fixed inset-0 z-[8000] flex flex-col p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.97)',zIndex:80000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}>
                 <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest flex items-center gap-2"><Trophy size={20}/> Ranking</h2><div className="flex items-center gap-2"><button onClick={()=>loadRankings()} className="p-2 bg-white/10 rounded-full active:scale-90"><RefreshCcw size={18}/></button><button onClick={()=>setShowRanking(false)} className="p-2 bg-white/10 rounded-full"><X size={20}/></button></div></div>
-                <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide px-1 shrink-0">{Object.keys(DIFFICULTY_SETTINGS).map(d=>(<button key={d} onClick={()=>setRankingViewDiff(d)} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase shrink-0 ${rankingViewDiff===d?'bg-indigo-600 text-white shadow-lg':'bg-slate-800 text-slate-500'}`}>{d}</button>))}</div>
+                <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">
+                  {[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=>(
+                    <button key={t.k} onClick={()=>setRankingKind(t.k)} className={`py-2 rounded-xl text-[10px] font-black uppercase border active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>
+                  ))}
+                </div>
+                {rankingKind==='score'&&(<><div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide px-1 shrink-0">{Object.keys(DIFFICULTY_SETTINGS).map(d=>(<button key={d} onClick={()=>setRankingViewDiff(d)} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase shrink-0 ${rankingViewDiff===d?'bg-indigo-600 text-white shadow-lg':'bg-slate-800 text-slate-500'}`}>{d}</button>))}</div>
                 <div className="flex-1 overflow-y-auto mh-scroll space-y-3 min-h-0">
                   {(localRankings[rankingViewDiff]||[]).length===0?(<div className="h-full flex items-center justify-center text-slate-600 font-black uppercase text-xs italic">No records yet</div>):(
                     (localRankings[rankingViewDiff]||[]).map((r,i)=>(
@@ -3443,7 +3552,49 @@ function MonsterHeroGame() {
                     ))
                   )}
                 </div>
-                <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">{rankingSourceByDiff[rankingViewDiff]==='local'?'※ サーバーに接続できず、この端末に保存されたトップ20記録を表示中':'※ 全国のブリーダーから集計したトップ20記録'}</div>
+                <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">{rankingSourceByDiff[rankingViewDiff]==='local'?'※ サーバーに接続できず、この端末に保存されたトップ20記録を表示中':'※ 全国のブリーダーから集計したトップ20記録'}</div></>)}
+                {rankingKind==='breeder'&&(
+                  <>
+                    <div className="flex-1 overflow-y-auto mh-scroll space-y-2 min-h-0">
+                      {breederRanking.length===0?(<div className="h-full flex items-center justify-center text-slate-600 font-black uppercase text-xs italic">No records yet</div>):(
+                        breederRanking.map((r,i)=>(
+                          <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl border ${i===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${i===0?'bg-amber-500 text-black':i===1?'bg-slate-300 text-black':i===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{i+1}</div>
+                            {resolveIconUrl(r.icon)?<img src={resolveIconUrl(r.icon)} alt="" className="w-8 h-8 rounded-full object-cover shrink-0"/>:<div className="w-8 h-8 rounded-full bg-slate-800 shrink-0"/>}
+                            <div className="flex-1 min-w-0"><div className="text-[12px] font-black text-white truncate">{r.userName}</div></div>
+                            <div className="text-[15px] font-mono font-black text-indigo-300 shrink-0">Lv.{r.level}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">※ 全国のブリーダーのスコア記録から集計しています</div>
+                  </>
+                )}
+                {rankingKind==='bond'&&(
+                  <>
+                    <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide px-1 shrink-0">
+                      {['all',...bondRankingMonNames].map(n=>(
+                        <button key={n} onClick={()=>setBondRankMonFilter(n)} className={`px-3 py-1.5 rounded-full text-[9px] font-black shrink-0 border active:scale-95 ${bondRankMonFilter===n?'bg-pink-600 border-pink-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{n==='all'?'すべて':n}</button>
+                      ))}
+                    </div>
+                    <div className="flex-1 overflow-y-auto mh-scroll space-y-2 min-h-0">
+                      {bondRanking.length===0?(<div className="h-full flex items-center justify-center text-slate-600 font-black uppercase text-xs italic">No records yet</div>):(
+                        bondRanking.map((r,i)=>(
+                          <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl border ${i===0?'bg-pink-500/10 border-pink-500/50':'bg-slate-900 border-white/5'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${i===0?'bg-amber-500 text-black':i===1?'bg-slate-300 text-black':i===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{i+1}</div>
+                            {r.imgUrl?<img src={r.imgUrl} alt="" className="w-9 h-9 object-contain shrink-0"/>:<span className="text-lg w-9 text-center shrink-0">{r.emoji||'❓'}</span>}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[12px] font-black text-white truncate">{r.monName}</div>
+                              <div className="text-[9px] text-slate-500 truncate">{r.userName}</div>
+                            </div>
+                            <div className="text-[15px] font-mono font-black text-pink-300 shrink-0">絆Lv.{r.bondLevel}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">※ スコアを送信した記録の編成から集計しているため、スコアを出していないマスモンは載りません</div>
+                  </>
+                )}
               </div>
             )}
             <div className="text-[7px] text-slate-600 font-mono tracking-widest uppercase shrink-0 pt-2">スコアはブラウザ内に保存されます</div>
@@ -4264,7 +4415,7 @@ function MonsterHeroGame() {
                             if(!updated) return;
                             setMasuMonDetail(updated);
                             const afterGrade=(updated.distApt&&updated.distApt[idx])||beforeGrade;
-                            setEffect({type:'enhance',label:`${label}距離適性 強化！`,icon:'📈',monEmoji:base.emoji,imgUrl:base.iconUrl,subLabel:`${label}距離適性 ${beforeGrade} → ${afterGrade}`});
+                            setEffect({type:'enhance',label:`${label}距離適性 強化！`,icon:'📈',monEmoji:base.emoji,imgUrl:base.iconUrl,baseId:masu.baseId,colors:getMasuColors(updated),subLabel:`${label}距離適性 ${beforeGrade} → ${afterGrade}`});
                             setTimeout(()=>setEffect(null),900);
                           }} className="w-full text-[9px] font-black bg-amber-600 text-white rounded-lg py-1 active:scale-95 disabled:opacity-20 disabled:bg-slate-700">+1</button>
                         </div>
@@ -4284,7 +4435,7 @@ function MonsterHeroGame() {
                           const updated=spendStatPoint(masu.id,key);
                           if(!updated) return;
                           setMasuMonDetail(updated);
-                          setEffect({type:'enhance',label:`${label}強化！`,icon:'💪',monEmoji:base.emoji,imgUrl:base.iconUrl,subLabel:`${label} ${before} → ${after}`});
+                          setEffect({type:'enhance',label:`${label}強化！`,icon:'💪',monEmoji:base.emoji,imgUrl:base.iconUrl,baseId:masu.baseId,colors:getMasuColors(updated),subLabel:`${label} ${before} → ${after}`});
                           setTimeout(()=>setEffect(null),900);
                         }} className="flex flex-col items-center gap-1 bg-emerald-950/50 border border-emerald-500/30 rounded-xl py-2.5 active:scale-95 disabled:opacity-20">
                           <span className="text-[9px] text-emerald-300 font-black">{label}</span>
@@ -4939,7 +5090,7 @@ function MonsterHeroGame() {
             {slots.map((s,i)=>{const grade=getDistAptitude(currentPickingMon,i); const pct=Math.round((DIST_APTITUDE_MULT[grade]-1)*100);
               return(<button key={i} disabled={s!==null} onClick={()=>setupMon(currentPickingMon,i)} className={`h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s?'opacity-100 shadow-xl':'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`}>
               <span className={`text-[10px] font-black mb-1 uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`}>{RANGE_LABELS[i]}距離</span>
-              {s?(s.imgUrl?<img src={s.imgUrl} alt={s.name} className="w-10 h-10 mt-1 object-contain drop-shadow-md scale-125"/>:<span className="text-xl mt-1 drop-shadow-md">{s.emoji}</span>):<PlusCircle className="text-white/50 mt-1" size={20}/>}
+              {s?(s.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="w-10 h-10 mt-1 object-contain drop-shadow-md scale-125"/>:<span className="text-xl mt-1 drop-shadow-md">{s.emoji}</span>):<PlusCircle className="text-white/50 mt-1" size={20}/>}
               {!s&&<span className={`text-[9px] font-black mt-1 px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {pct>=0?'+':''}{pct}%</span>}
             </button>);})}
           </div>
@@ -5175,7 +5326,7 @@ function MonsterHeroGame() {
 
       {/* ENEMY INFO */}
       {showEnemyInfo&&enemy&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3><button onClick={()=>setShowEnemyInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center">{enemy.imgUrl?(<img src={enemy.imgUrl} alt={enemy.name} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]">{enemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{enemy.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"><div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{enemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{enemy.atk}</div></div></div></div></div></div>)}
-      {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{mainHero.imgUrl?(<img src={mainHero.imgUrl} alt={mainHero.name} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"><div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{def}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(+{Math.round(getPermaBuff('dmgCutPct')*100)}%軽減)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div><div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div></div></div></div>)}
+      {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"><div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{def}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(+{Math.round(getPermaBuff('dmgCutPct')*100)}%軽減)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div><div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div></div></div></div>)}
 
       {/* QUIT CONFIRM */}
       {showQuitConfirm&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">現在のスコア {score.toLocaleString()} pt がランキングに記録されます</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>)}
@@ -5233,7 +5384,7 @@ function MonsterHeroGame() {
             </div>
           </>
         )}
-        {effect.imgUrl?(<img src={effect.imgUrl} alt="effect" style={{width:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),height:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':(effect.type==='enhance'?'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]')}`}/>):(<div style={{fontSize:effect.type==='unique'?'128px':(effect.type==='enhance'?'120px':'112px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className="mb-6 relative">{effect.monEmoji}</div>)}
+        {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),height:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':(effect.type==='enhance'?'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]')}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),height:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':(effect.type==='enhance'?'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]')}`}/>):(<div style={{fontSize:effect.type==='unique'?'128px':(effect.type==='enhance'?'120px':'112px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className="mb-6 relative">{effect.monEmoji}</div>)}
         <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effect.type==='unique'?'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]':(effect.type==='enhance'?'text-amber-100 bg-amber-600/30 border-amber-400/60 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]':'text-white bg-white/10 border-white/20')}`}>{effect.label}</h2>
         {effect.subLabel&&<p className={`font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effect.type==='enhance'?'text-amber-300':'text-indigo-400'}`}>{effect.subLabel}</p>}
         <div style={{fontSize:effect.type==='unique'?'60px':'48px'}} className="mt-8 animate-bounce relative">{effect.icon}</div>
