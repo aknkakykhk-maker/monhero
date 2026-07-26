@@ -74,7 +74,9 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
 
   await page.goto(URL, { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction(() => !!document.body && document.body.innerText.includes('TAP TO START'), { timeout: 40000 }).catch(() => {});
-  await clickText('TAP TO START');
+  // 起動画面は実機と同じ本物のクリックで押す(DOMのclick()だけだと pointerdown が起きず、
+  // 起動タップの取り扱いが実際の操作と変わってしまうため)
+  await page.getByRole('button', { name: 'TAP TO START' }).click({ force: true });
   await page.waitForTimeout(1600);
 
   // --- ランを開始して、近距離にマスモンを配置する ---
