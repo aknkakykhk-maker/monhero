@@ -34,9 +34,9 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
 
   await page.goto(PAGE_URL, { waitUntil: 'load', timeout: 60000 });
   await page.waitForFunction(() => document.getElementById('root') && document.getElementById('root').children.length > 0, { timeout: 60000 });
-  // 起動時の事前ロード画面で「タップしてはじめる」を押すと音声ロックが解除される
-  await page.waitForFunction(() => !!document.body && document.body.innerText.includes('タップしてはじめる'), { timeout: 30000 }).catch(() => {});
-  const startBtn = page.getByRole('button', { name: 'タップしてはじめる' });
+  // 起動時の事前ロード画面で「TAP TO START」を押すと音声ロックが解除される
+  await page.waitForFunction(() => !!document.body && document.body.innerText.includes('TAP TO START'), { timeout: 30000 }).catch(() => {});
+  const startBtn = page.getByRole('button', { name: 'TAP TO START' });
   if (await startBtn.count()) await startBtn.click();
   await page.waitForTimeout(2500);
 

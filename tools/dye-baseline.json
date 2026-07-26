@@ -1,36 +1,36 @@
 {
   "Mocchi": {
-    "width": 1162,
-    "height": 1162,
-    "opaque": 408035,
+    "width": 384,
+    "height": 384,
+    "opaque": 44812,
     "regions": [
-      332816,
-      37973,
-      28814
+      36061,
+      4041,
+      3142
     ],
-    "uncolored": 8432
+    "uncolored": 1568
   },
   "Suezo": {
-    "width": 1159,
-    "height": 1159,
-    "opaque": 284224,
+    "width": 384,
+    "height": 384,
+    "opaque": 31408,
     "regions": [
-      172902,
-      39349,
-      32513
+      18982,
+      4364,
+      3539
     ],
-    "uncolored": 39460
+    "uncolored": 4523
   },
   "Golem": {
-    "width": 1066,
-    "height": 1066,
-    "opaque": 456987,
+    "width": 384,
+    "height": 384,
+    "opaque": 59886,
     "regions": [
-      252481,
-      168908,
-      30196
+      32468,
+      21915,
+      3886
     ],
-    "uncolored": 5402
+    "uncolored": 1617
   },
   "Tiger": {
     "width": 160,
@@ -55,15 +55,15 @@
     "uncolored": 597
   },
   "Pixie": {
-    "width": 1174,
-    "height": 1174,
-    "opaque": 204079,
+    "width": 384,
+    "height": 384,
+    "opaque": 22348,
     "regions": [
-      29484,
-      88382,
-      76918
+      3145,
+      9176,
+      8107
     ],
-    "uncolored": 9295
+    "uncolored": 1920
   },
   "Monol": {
     "width": 160,
@@ -99,15 +99,15 @@
     "uncolored": 1550
   },
   "Mitarashi": {
-    "width": 1000,
-    "height": 1000,
-    "opaque": 417928,
+    "width": 384,
+    "height": 384,
+    "opaque": 62086,
     "regions": [
-      227160,
-      153577,
-      31348
+      33501,
+      22580,
+      4664
     ],
-    "uncolored": 5843
+    "uncolored": 1341
   },
   "Ark": {
     "width": 160,
@@ -121,14 +121,14 @@
     "uncolored": 1391
   },
   "Iblis": {
-    "width": 570,
-    "height": 570,
-    "opaque": 102384,
+    "width": 384,
+    "height": 384,
+    "opaque": 46729,
     "regions": [
-      41529,
-      25372,
-      13798
+      18822,
+      11402,
+      6220
     ],
-    "uncolored": 21685
+    "uncolored": 10285
   }
 }

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 78ebccde98c2fa61
+// source-sha256: 573c0e706fed15d4
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-27 03:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-27 03:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -308,8 +308,11 @@ const Audio_ = (() => {
     victory: 'audio/jingle-victory.mp3'
   };
 
-  // 0〜100(%)を実際の音量へ。SEと同じ耳あたりのカーブ(-40dB〜0dB)を使う
+  // 0〜100(%)を実際の音量へ。SEはこのカーブ(-40dB〜0dB)
   const _gainFromPct = pct => pct <= 0 ? 0 : Math.pow(10, (-40 + Math.min(100, pct) / 100 * 40) / 20);
+  // BGMはSEより控えめにする。曲は鳴りっぱなしになるぶん同じ音量だとうるさく感じるため、
+  // 下限を-55dBまで下げ、さらに全体を0.55倍している(音量1がごく小さな音になる)
+  const _bgmGain = pct => pct <= 0 ? 0 : Math.pow(10, (-55 + Math.min(100, pct) / 100 * 55) / 20) * 0.55;
 
   // 指定キーのAudio要素を用意する(初回だけ読み込みが走る)。
   //
@@ -329,7 +332,7 @@ const Audio_ = (() => {
       el.dataset.bgmKey = key;
       // iOS以外では素のvolumeも効くので併せて設定しておく(Web Audioに繋げない場合の保険)
       try {
-        el.volume = _gainFromPct(bgmVolumePct);
+        el.volume = _bgmGain(bgmVolumePct);
       } catch (e) {}
       try {
         el.style.display = 'none';
@@ -337,7 +340,6 @@ const Audio_ = (() => {
       } catch (e) {}
       bgmEls[key] = el;
     }
-    connectBgmToGain(key);
     return bgmEls[key];
   };
 
@@ -358,17 +360,39 @@ const Audio_ = (() => {
     return bgmCtx;
   };
 
+  // AudioContextを「動いている」状態にする。
+  //
+  // 【重要】createMediaElementSource で音声をWeb Audioに通すと、その音は
+  // AudioContext を経由してしか出なくなる。AudioContextは操作前だと必ず suspended
+  // (停止)状態で作られるため、停止したまま繋いでしまうと play() は成功するのに
+  // 音がまったく出ない、という状態になる。
+  // これが「タップしてもタイトルBGMが鳴らない/他のページへ行って戻ると鳴り出す」
+  // (別ページへの移動でfocusイベントが発生し、そこで初めてresumeされていた)
+  // 「プロフィールへ行くとBGMがおかしくなり、戻ってもおかしいまま」の原因だった。
+  // 再生のたびに必ずここを通して、動いている状態を保証する。
+  const ensureBgmCtxRunning = async () => {
+    const ctx = getBgmCtx();
+    if (!ctx) return null;
+    if (ctx.state !== 'running') {
+      try {
+        await ctx.resume();
+      } catch (e) {}
+    }
+    return ctx;
+  };
+
   // Audio要素をWeb Audioのゲインノードに繋ぐ。createMediaElementSourceは1要素につき
-  // 一度しか呼べないため、繋いだかどうかを覚えておく
+  // 一度しか呼べないため、繋いだかどうかを覚えておく。
+  // AudioContextが動いていないうちは繋がない(繋ぐと無音になってしまうため)。
   const connectBgmToGain = key => {
     const el = bgmEls[key];
     if (!el || bgmSources[key]) return;
-    const ctx = getBgmCtx();
-    if (!ctx || !ctx.createMediaElementSource) return;
+    const ctx = bgmCtx;
+    if (!ctx || ctx.state !== 'running' || !ctx.createMediaElementSource) return;
     try {
       if (!bgmGain) {
         bgmGain = ctx.createGain();
-        bgmGain.gain.value = _gainFromPct(bgmVolumePct);
+        bgmGain.gain.value = _bgmGain(bgmVolumePct);
         bgmGain.connect(ctx.destination);
       }
       const srcNode = ctx.createMediaElementSource(el);
@@ -479,9 +503,20 @@ const Audio_ = (() => {
     if (prevKey !== key) stopJingles();
     const el = getBgmEl(key);
     if (!el) return;
+    // 音を出す前に必ずAudioContextを動かす。停止したまま繋ぐと無音になるため、
+    // 繋ぐのは動き出したあと(この順番が崩れると音が出なくなる)
+    const ctx = await ensureBgmCtxRunning();
+    connectBgmToGain(key);
     stopOthers(key);
     applyBgmVolume();
-    if (!el.paused) return; // 既に同じ曲が鳴っていれば頭出しし直さない
+    // 既に鳴っているなら鳴らし直さない。ただしAudioContextが止まっていて
+    // 実際には無音になっている場合は、鳴っている扱いにせず作り直す
+    if (!el.paused && (!ctx || ctx.state === 'running')) return;
+    if (!el.paused) {
+      try {
+        el.pause();
+      } catch (e) {}
+    }
     const myToken = ++bgmToken;
     try {
       await el.play();
@@ -525,10 +560,12 @@ const Audio_ = (() => {
         jingleEls[key] = el;
         connectJingleToGain(key);
       }
+      await ensureBgmCtxRunning();
+      connectJingleToGain(key);
       el.currentTime = 0;
       if (!bgmSources['jingle:' + key]) {
         try {
-          el.volume = _gainFromPct(bgmVolumePct);
+          el.volume = _bgmGain(bgmVolumePct);
         } catch (e) {}
       }
       await el.play();
@@ -544,7 +581,7 @@ const Audio_ = (() => {
     try {
       if (!bgmGain) {
         bgmGain = ctx.createGain();
-        bgmGain.gain.value = _gainFromPct(bgmVolumePct);
+        bgmGain.gain.value = _bgmGain(bgmVolumePct);
         bgmGain.connect(ctx.destination);
       }
       const srcNode = ctx.createMediaElementSource(el);
@@ -590,9 +627,7 @@ const Audio_ = (() => {
   const resumeIfNeeded = async () => {
     if (!enabled) return;
     // BGM用のAudioContextもOSに止められることがあるので戻す
-    try {
-      if (bgmCtx && bgmCtx.state !== 'running') await bgmCtx.resume();
-    } catch (e) {}
+    await ensureBgmCtxRunning();
     // BGMはmp3(Audio要素)なのでTone.jsの読み込み状況に関わらず先に鳴らし直す
     if (currentKey) {
       const el = bgmEls[currentKey];
@@ -641,7 +676,7 @@ const Audio_ = (() => {
   };
   // 実際の音量をゲインノード(と、繋げていない場合は素のvolume)へ反映する
   const applyBgmVolume = () => {
-    const v = _gainFromPct(bgmVolumePct);
+    const v = _bgmGain(bgmVolumePct);
     if (bgmGain) {
       try {
         const ctx = bgmCtx;
@@ -680,6 +715,9 @@ const Audio_ = (() => {
   const unlock = async (playTestTone = false) => {
     if (enabled) return;
     enabled = true;
+    // iOSはユーザー操作の最中に resume() を呼ばないと音が出せないため、
+    // タップで呼ばれるこの関数の中で真っ先にAudioContextを動かす
+    await ensureBgmCtxRunning();
     // BGMはTone.js(SE用)に依存しないので先に鳴らす。
     // 以前はTone.jsの読み込み完了を待ってから鳴らしていたため、CDNが遅いと
     // タイトル画面でBGMがすぐ鳴らず、別の画面へ移った時点でようやく鳴っていた
@@ -1894,6 +1932,9 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
 };
 // baseIdの画像をCanvasで解析し、部位ごとのアルファマスク(dataURL)を作って返す(同じbaseIdでも
 // 画面によって表示に使う画像(iconUrl/imgUrl)が違うため、両方を含めたキーでキャッシュする)
+// 染色マスクを作るときに解析する画像の最大サイズ(px)。表示は大きくても250px程度なので、
+// これ以上の解像度で判定しても見た目は変わらず、時間だけがかかる
+const MASK_ANALYSIS_MAX_SIZE = 384;
 const _dyeRegionMaskCache = {};
 const getDyeRegionMasks = (baseId, imgUrl) => {
   const hues = MASU_COLOR_REGION_HUES[baseId];
@@ -1905,9 +1946,18 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
       const img = new window.Image();
       img.onload = () => {
         try {
-          const w = img.naturalWidth || img.width,
-            h = img.naturalHeight || img.height;
-          const regionDefs = _resolveRegionDefsForSize(baseId, hues, w);
+          const natW = img.naturalWidth || img.width,
+            natH = img.naturalHeight || img.height;
+          // 解析は元の解像度ではなく縮小した画像で行う。
+          // マスクはCSSのmask-imageとして表示サイズへ引き伸ばして使うため、立ち絵の表示は
+          // せいぜい250px程度。1000px超の元絵をそのまま1画素ずつ判定すると1体あたり
+          // 数秒かかり(実測3〜7秒)、起動時の読み込みが毎回長くなっていた。
+          // 判定は正規化座標で行っており、平滑化の半径も画像幅に比例させているため、
+          // 縮小しても部位の分かれ方は変わらない。
+          const scale = Math.min(1, MASK_ANALYSIS_MAX_SIZE / Math.max(natW, natH));
+          const w = Math.max(1, Math.round(natW * scale)),
+            h = Math.max(1, Math.round(natH * scale));
+          const regionDefs = _resolveRegionDefsForSize(baseId, hues, natW);
           const srcCanvas = document.createElement('canvas');
           srcCanvas.width = w;
           srcCanvas.height = h;
@@ -1916,6 +1966,8 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             resolve(null);
             return;
           }
+          srcCtx.imageSmoothingEnabled = true;
+          srcCtx.imageSmoothingQuality = 'high';
           srcCtx.drawImage(img, 0, 0, w, h);
           const src = srcCtx.getImageData(0, 0, w, h).data;
           const maskCanvases = regionDefs.map(() => {
@@ -2726,15 +2778,6 @@ const sbFetchRankings = async (diff, limit = 50) => {
   return await res.json();
 };
 // Find this player's existing row for a difficulty (by user_name)
-const sbFindPlayer = async (diff, name) => {
-  const url = `${SUPABASE_URL}/rest/v1/rankings?difficulty=eq.${encodeURIComponent(diff)}&user_name=eq.${encodeURIComponent(name)}&select=id,score&limit=1`;
-  const res = await fetch(url, {
-    headers: SB_HEADERS
-  });
-  if (!res.ok) throw new Error(`find ${res.status}`);
-  const rows = await res.json();
-  return rows && rows[0] ? rows[0] : null;
-};
 // Insert a new score row
 const sbInsertScore = async row => {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings`, {
@@ -2748,17 +2791,6 @@ const sbInsertScore = async row => {
   if (!res.ok) throw new Error(`insert ${res.status}`);
 };
 // Update an existing score row by id
-const sbUpdateScore = async (id, row) => {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings?id=eq.${id}`, {
-    method: 'PATCH',
-    headers: {
-      ...SB_HEADERS,
-      'Prefer': 'return=minimal'
-    },
-    body: JSON.stringify(row)
-  });
-  if (!res.ok) throw new Error(`update ${res.status}`);
-};
 
 // 最終リザルト画面(CHAMPION/敗北)共通: レベルの経験値バーが直前の進捗から今回の獲得分まで伸びる演出。
 // レベルを跨ぐ場合は満タンまで伸ばしてからLEVEL UPを見せ、次レベルの進捗へ切り替える
@@ -2947,7 +2979,7 @@ function MonsterHeroGame() {
   const [bootProgress, setBootProgress] = useState({
     done: 0,
     total: 1,
-    label: '準備しています'
+    label: 'システム起動中'
   });
   const [localRankings, setLocalRankings] = useState({});
   const [rankingSourceByDiff, setRankingSourceByDiff] = useState({}); // {[diff]: 'global'|'local'} 表示中データの取得元
@@ -3346,34 +3378,27 @@ function MonsterHeroGame() {
     } catch {}
   }, []);
 
-  // 画面ごとに流すBGM。専用の曲がある画面はそれを、無い画面は共通のメニュー曲を鳴らす
+  // 画面ごとに流すBGM
   const BGM_STATE_MAP = {
-    PROFILE: 'profile',
-    // プロフィールページ
     MASU_FUSION: 'fusion',
     // 合体ページ
-    BREEDER_MARKET: 'market',
-    // マーケットページ
-    MASU_ENHANCE: 'enhance',
-    // マスモン強化
-    WAVE_RESULT: 'result',
-    // WAVEクリアのリザルト
-    CHAMPION: 'result' // 最終リザルト
+    BREEDER_MARKET: 'market' // マーケットページ
   };
-  // WAVE終了後の強化フェーズで流す曲。ゲーム開始直後(まだ1度もWAVEを終えていない)の
-  // 勇者モン選択→ブリーダーカード選択の流れでは、曲が切り替わって流れが途切れてしまうため、
-  // 1WAVE以上終えたあとの強化フェーズでだけこの曲に変える
-  const ENHANCE_PHASE_STATES = ['PICK_TEACHING', 'REWARD_PICK', 'UPGRADE_SKILL'];
-  // 上記に無い、タイトルから飛べる別ページ(プロフィール・編成・勇者モン選択など)で共通して流す曲
-  const MENU_BGM_STATES = ['PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'ROSTER', 'OWNED_MONSTERS', 'MASU_MONS', 'ITEM_INVENTORY'];
+  // プロフィールから飛べるページは、マーケットと合体を除いてすべてプロフィールの曲にする。
+  // マスモン一覧・モンスター一覧・編成・アイテム欄・マスモン強化を行き来しても曲が変わらない
+  const PROFILE_BGM_STATES = ['PROFILE', 'ROSTER', 'OWNED_MONSTERS', 'MASU_MONS', 'ITEM_INVENTORY', 'MASU_ENHANCE'];
+  // 1回のプレイの中で流れる画面。「まだ1度も戦っていない準備中」か「WAVEを終えたあと」かで曲を分ける。
+  //  ・準備中(最初の勇者モン選択〜最初のバトルの直前) … 強化フェーズの曲
+  //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
+  // 敵撃破のファンファーレのあと、リザルトの曲が強化フェーズまで途切れず流れるようにするための切り分け
+  const RUN_PHASE_STATES = ['PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT', 'CHAMPION'];
   // 画面から鳴らすべき曲のキーを決める
   const bgmKeyForState = (state, isBoss, wavesDone) => {
     if (state === 'TITLE') return 'title';
     if (BGM_STATE_MAP[state]) return BGM_STATE_MAP[state];
+    if (PROFILE_BGM_STATES.includes(state)) return 'profile';
     if (state === 'BATTLE') return isBoss ? 'boss' : 'battle';
-    // 強化フェーズは、1WAVE以上終えたあとだけ専用の曲にする(ゲーム開始直後は流れを切らない)
-    if (ENHANCE_PHASE_STATES.includes(state)) return wavesDone ? 'enhance' : 'prep';
-    if (MENU_BGM_STATES.includes(state)) return 'prep';
+    if (RUN_PHASE_STATES.includes(state)) return wavesDone ? 'result' : 'enhance';
     return null;
   };
   // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
@@ -3444,7 +3469,7 @@ function MonsterHeroGame() {
     const finish = () => {
       if (!cancelled) setBootPhase('ready');
     };
-    const hardStop = setTimeout(finish, 8000);
+    const hardStop = setTimeout(finish, 6000);
     (async () => {
       // 染色マスクを計算する対象(色を設定してあるマスモンのみ。種が同じなら結果は共通)
       const targets = [];
@@ -3476,14 +3501,14 @@ function MonsterHeroGame() {
       if (!cancelled) setBootProgress({
         done: 0,
         total,
-        label: '音楽を読み込んでいます'
+        label: 'サウンドシステム 起動中'
       });
-      await Audio_.prepareBGM('title', 5000).catch(() => {});
-      step(targets.length ? 'モンスターの色を準備しています' : '準備が完了しました');
+      await Audio_.prepareBGM('title', 4000).catch(() => {});
+      step(targets.length ? 'モンスターデータ 展開中' : '起動完了');
       for (const [baseId, url] of targets) {
         if (cancelled) return;
         await Promise.resolve(getDyeRegionMasks(baseId, url)).catch(() => {});
-        step('モンスターの色を準備しています');
+        step('モンスターデータ 展開中');
       }
       clearTimeout(hardStop);
       finish();
@@ -3769,7 +3794,12 @@ function MonsterHeroGame() {
     const icon = breederIcon;
     // 全国ランキング(Supabase)への送信を優先。失敗時のみ端末内保存にフォールバック
     try {
-      const existing = await sbFindPlayer(diff, name);
+      // 同じ名前でも1プレイごとに1件として記録する(以前は名前ごとに1行しか持てず、
+      // 自己ベストを更新したときしか書き換わらないため、ブリーダーレベルや絆レベルの
+      // ランキングが古いままになっていた)。
+      // スコアランキングは同じ名前が並ぶことになるが、それぞれがそのプレイの記録
+      // (パーティの絆レベルもそのときの値)として意味を持つ。
+      // ブリーダーレベル・絆レベルのランキングは、表示時に名前ごとの最高値へまとめている。
       const rowCore = {
         difficulty: diff,
         user_name: name,
@@ -3793,18 +3823,7 @@ function MonsterHeroGame() {
       let saved = false;
       for (const row of variants) {
         try {
-          if (existing) {
-            // スコアが自己ベストを更新していなくても、ブリーダーレベルや編成(絆レベル)は
-            // 毎回書き換える。以前はスコア更新時しか保存しておらず、
-            // 「レベルランキングがプレイしても更新されない」状態になっていた。
-            // スコアだけは自己ベストを保つ
-            await sbUpdateScore(existing.id, {
-              ...row,
-              score: Math.max(existing.score || 0, finalScore)
-            });
-          } else {
-            await sbInsertScore(row);
-          }
+          await sbInsertScore(row);
           saved = true;
           break;
         } catch (eVariant) {
@@ -3826,16 +3845,8 @@ function MonsterHeroGame() {
       try {
         const rows = await storeGet(`mh_rank_${diff}`, [], false);
         const list = Array.isArray(rows) ? rows.slice() : [];
-        const idx = list.findIndex(r => r.userName === name);
-        if (idx >= 0) {
-          // サーバー側と同じく、スコアは自己ベストを保ちつつ他の情報は毎回更新する
-          list[idx] = {
-            ...entry,
-            score: Math.max(list[idx].score || 0, finalScore)
-          };
-        } else {
-          list.push(entry);
-        }
+        // サーバー側と同じく、1プレイごとに1件として積む
+        list.push(entry);
         list.sort((a, b) => (b.score || 0) - (a.score || 0));
         await storeSet(`mh_rank_${diff}`, list.slice(0, 50), false);
       } catch (e2) {
@@ -6506,14 +6517,14 @@ function MonsterHeroGame() {
       }
     })), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-indigo-300 font-bold text-center mt-3 tracking-wider"
-    }, ready ? '準備が完了しました' : bootProgress.label)), ready && /*#__PURE__*/React.createElement("div", {
+    }, ready ? 'ALL SYSTEMS READY' : bootProgress.label)), ready && /*#__PURE__*/React.createElement("div", {
       className: "mt-8 flex flex-col items-center gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: startGame,
       className: "px-8 py-3.5 rounded-2xl bg-white text-black font-black text-base uppercase tracking-wider shadow-2xl active:scale-95 animate-pulse"
-    }, "\u30BF\u30C3\u30D7\u3057\u3066\u306F\u3058\u3081\u308B"), /*#__PURE__*/React.createElement("div", {
+    }, "TAP TO START"), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold"
-    }, "\u203B \u97F3\u3092\u9CF4\u3089\u3059\u305F\u3081\u306B1\u5EA6\u30BF\u30C3\u30D7\u304C\u5FC5\u8981\u3067\u3059"))), /*#__PURE__*/React.createElement("div", {
+    }, "\u30BF\u30C3\u30D7\u3059\u308B\u3068BGM\u304C\u6D41\u308C\u307E\u3059"))), /*#__PURE__*/React.createElement("div", {
       className: "absolute bottom-4 text-[8px] text-slate-700 font-mono tracking-widest"
     }, "ver ", BUILD_DATE));
   }
