@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-27 02:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-27 03:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -192,6 +192,7 @@ const Audio_ = (() => {
     enhance: 'audio/bgm-enhance.mp3',  // WAVE終了後の強化フェーズ
     result: 'audio/bgm-result.mp3',    // リザルト画面
     market: 'audio/bgm-market.mp3',    // マーケットページ
+    profile: 'audio/bgm-profile.mp3',  // プロフィールページ
   };
   // 曲ではなく1回だけ鳴らす短い音(ループしない)。敵を倒したときのファンファーレなど
   const JINGLE_FILES = {
@@ -262,6 +263,11 @@ const Audio_ = (() => {
     }
   };
 
+  // 鳴っているジングルをすべて止める
+  const stopJingles = () => {
+    Object.values(jingleEls).forEach((el) => { try { el.pause(); el.currentTime = 0; } catch (e) {} });
+  };
+
   // 現在の曲以外を止める
   const stopOthers = (keepKey) => {
     Object.entries(bgmEls).forEach(([k, el]) => {
@@ -314,14 +320,18 @@ const Audio_ = (() => {
     setTimeout(() => finish(false), timeoutMs);
   });
 
-  const playBGM = async (key) => {
+  const _playBGM = async (key) => {
     // 音がオフのあいだも「今どの曲であるべきか」は覚えておき、オンにした時点で鳴らす
+    const prevKey = currentKey;
     currentKey = key;
     preloadBGM(key);
     // 音がオフ・音量0・画面が見えていない、のいずれかなら鳴らさない。
     // 特に「画面が見えていないときは止める」ことで、他のアプリに切り替えたあとも
     // バックグラウンドで鳴り続けてしまう問題を防いでいる
-    if (!enabled || bgmVolumePct <= 0 || pageHidden) { stopOthers(null); return; }
+    if (!enabled || bgmVolumePct <= 0 || pageHidden) { stopOthers(null); stopJingles(); return; }
+    // 曲が変わるタイミングでジングル(ファンファーレ)は止める。
+    // 敵撃破のファンファーレが鳴っている最中にリザルトへ移ると重なって聞こえるため
+    if (prevKey !== key) stopJingles();
     const el = getBgmEl(key);
     if (!el) return;
     stopOthers(key);
@@ -337,6 +347,14 @@ const Audio_ = (() => {
       // 自動再生がブラウザに止められた場合は、次のタップで鳴らし直す
       retryPlayOnGesture();
     }
+  };
+
+  // 曲の切り替えは play() の完了を待つ非同期処理なので、続けて呼ばれると処理が入り混じり
+  // 2曲が重なったり同じ曲が鳴り直したりする。要求を1件ずつ順番に処理して必ず直列化する
+  let bgmQueue = Promise.resolve();
+  const playBGM = (key) => {
+    bgmQueue = bgmQueue.then(() => _playBGM(key)).catch(() => {});
+    return bgmQueue;
   };
 
   // ジングル(1回だけ鳴らす短い音)。BGMは止めずに重ねて鳴らす
@@ -471,6 +489,11 @@ const Audio_ = (() => {
   // 画面のどこかを最初にタップしたときの自動解除では鳴らさない(不意に音が出て驚くため)
   const unlock = async (playTestTone = false) => {
     if (enabled) return;
+    enabled = true;
+    // BGMはTone.js(SE用)に依存しないので先に鳴らす。
+    // 以前はTone.jsの読み込み完了を待ってから鳴らしていたため、CDNが遅いと
+    // タイトル画面でBGMがすぐ鳴らず、別の画面へ移った時点でようやく鳴っていた
+    if (currentKey) playBGM(currentKey);
     await load();
     if (Tone && playTestTone) {
       try {
@@ -1320,7 +1343,7 @@ const SUPABASE_KEY = 'sb_publishable_D4WJBXJ1xE97amndZarEPw_0M4LAwOp';
 const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
 
 // Fetch top scores for a difficulty (returns array sorted by score desc)
-const sbFetchRankings = async (diff, limit=20) => {
+const sbFetchRankings = async (diff, limit=50) => {
   const url = `${SUPABASE_URL}/rest/v1/rankings?difficulty=eq.${encodeURIComponent(diff)}&order=score.desc&limit=${limit}`;
   const res = await fetch(url, { headers: SB_HEADERS });
   if (!res.ok) throw new Error(`fetch ${res.status}`);
@@ -1495,6 +1518,9 @@ function MonsterHeroGame() {
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
   const [bulkPlan, setBulkPlan] = useState(null); // null=1ポイントずつのモード / {apt:[0,0,0,0], stat:{...}}
+  // 合体画面の並べかえ。マスモンが増えると目的の個体を探しにくいため
+  const [fusionSortKey, setFusionSortKey] = useState('bond'); // 'bond'|'lineage'|'name'|'fused'
+  const [fusionSortDir, setFusionSortDir] = useState('desc');
   const [wave, setWave] = useState(1);
   const [hp, setHp] = useState(500);
   const [maxHp, setMaxHp] = useState(500);
@@ -1536,6 +1562,7 @@ function MonsterHeroGame() {
   const [turnCount, setTurnCount] = useState(1);
   const [focusedCard, setFocusedCard] = useState(null);
   const [skillPicker, setSkillPicker] = useState(null); // {handIndex} 技名タップで開く、通常技/距離技/固有技の選択タイル一覧
+  const [skillEffectDetail, setSkillEffectDetail] = useState(null); // 技の効果が枠に収まらないときに全文を出すモーダル
   const [selectedTeachingCard, setSelectedTeachingCard] = useState(null);
   // ==================== バフ・デバフ統合管理システム ====================
   // 新しいバフ・デバフ効果を追加する際は、専用のuseStateやターン切り替え/WAVE切り替え時の
@@ -1740,7 +1767,7 @@ function MonsterHeroGame() {
       const cur = byName.get(name);
       if (!cur || lv > cur.level) byName.set(name, { userName: name, level: lv, icon: r.icon, hero: r.hero });
     }));
-    return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 20);
+    return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 50);
   }, [localRankings]);
 
   // モンスターの絆レベルのランキング。スコア送信時に記録している編成(party)の中から
@@ -1769,7 +1796,7 @@ function MonsterHeroGame() {
     return [...new Set(all)];
   }, [bondRankingAll]);
   const bondRanking = useMemo(() => (
-    bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 20) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 20)
+    bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 50)
   ), [bondRankingAll, bondRankMonFilter]);
 
   const loadRankings = useCallback(async () => {
@@ -1778,7 +1805,7 @@ function MonsterHeroGame() {
     try {
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async (d) => {
         try {
-          const rows = await sbFetchRankings(d, 20);
+          const rows = await sbFetchRankings(d, 50);
           byDiff[d] = (rows || []).map(r => ({ userName: r.user_name, hero: r.hero, party: r.party, score: r.score, level: r.level, icon: r.icon }));
           sourceByDiff[d] = 'global';
         } catch (e) {
@@ -1787,7 +1814,7 @@ function MonsterHeroGame() {
           try {
             const rows = await storeGet(`mh_rank_${d}`, [], false);
             if (Array.isArray(rows) && rows.length) {
-              byDiff[d] = rows.slice().sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,20);
+              byDiff[d] = rows.slice().sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,50);
             }
           } catch {}
         }
@@ -1799,36 +1826,40 @@ function MonsterHeroGame() {
 
   // 画面ごとに流すBGM。専用の曲がある画面はそれを、無い画面は共通のメニュー曲を鳴らす
   const BGM_STATE_MAP = {
+    PROFILE: 'profile',         // プロフィールページ
     MASU_FUSION: 'fusion',      // 合体ページ
     BREEDER_MARKET: 'market',   // マーケットページ
     MASU_ENHANCE: 'enhance',    // マスモン強化
-    PICK_TEACHING: 'enhance',   // WAVE終了後の強化フェーズ(ブリーダーカード選択)
-    REWARD_PICK: 'enhance',     // 同(能力覚醒の報酬選択)
-    UPGRADE_SKILL: 'enhance',   // 同(技の強化)
     WAVE_RESULT: 'result',      // WAVEクリアのリザルト
     CHAMPION: 'result',         // 最終リザルト
   };
+  // WAVE終了後の強化フェーズで流す曲。ゲーム開始直後(まだ1度もWAVEを終えていない)の
+  // 勇者モン選択→ブリーダーカード選択の流れでは、曲が切り替わって流れが途切れてしまうため、
+  // 1WAVE以上終えたあとの強化フェーズでだけこの曲に変える
+  const ENHANCE_PHASE_STATES = ['PICK_TEACHING', 'REWARD_PICK', 'UPGRADE_SKILL'];
   // 上記に無い、タイトルから飛べる別ページ(プロフィール・編成・勇者モン選択など)で共通して流す曲
   const MENU_BGM_STATES = ['PICK_HERO','PICK_ALLY','PICK_SLOT',
-    'PROFILE','ROSTER','OWNED_MONSTERS','MASU_MONS','ITEM_INVENTORY'];
+    'ROSTER','OWNED_MONSTERS','MASU_MONS','ITEM_INVENTORY'];
   // 画面から鳴らすべき曲のキーを決める
-  const bgmKeyForState = (state, isBoss) => {
+  const bgmKeyForState = (state, isBoss, wavesDone) => {
     if (state === 'TITLE') return 'title';
     if (BGM_STATE_MAP[state]) return BGM_STATE_MAP[state];
     if (state === 'BATTLE') return isBoss ? 'boss' : 'battle';
+    // 強化フェーズは、1WAVE以上終えたあとだけ専用の曲にする(ゲーム開始直後は流れを切らない)
+    if (ENHANCE_PHASE_STATES.includes(state)) return wavesDone ? 'enhance' : 'prep';
     if (MENU_BGM_STATES.includes(state)) return 'prep';
     return null;
   };
   // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
   useEffect(() => {
     const isBoss = wave === 10 || enemy?.id === 'Moo';
-    const key = bgmKeyForState(gameState, isBoss);
+    const key = bgmKeyForState(gameState, isBoss, (waveHistory||[]).length > 0);
     // 音がオフでも、その画面で使う曲は先に読み込んでおく(タップした瞬間に鳴り始めるように)
     if (key) Audio_.preloadBGM(key);
     if (!audioOn) { Audio_.stopBGM(); return; }
     if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [gameState, wave, enemy?.id, audioOn]);
+  }, [gameState, wave, enemy?.id, audioOn, waveHistory.length]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   useEffect(() => { Audio_.setSeVolume(seVolume); }, [seVolume]);
@@ -2177,7 +2208,11 @@ function MonsterHeroGame() {
       for (const row of variants) {
         try {
           if (existing) {
-            if ((existing.score || 0) < finalScore) await sbUpdateScore(existing.id, row); // keep best
+            // スコアが自己ベストを更新していなくても、ブリーダーレベルや編成(絆レベル)は
+            // 毎回書き換える。以前はスコア更新時しか保存しておらず、
+            // 「レベルランキングがプレイしても更新されない」状態になっていた。
+            // スコアだけは自己ベストを保つ
+            await sbUpdateScore(existing.id, { ...row, score: Math.max(existing.score || 0, finalScore) });
           } else {
             await sbInsertScore(row);
           }
@@ -2196,7 +2231,8 @@ function MonsterHeroGame() {
         const list = Array.isArray(rows) ? rows.slice() : [];
         const idx = list.findIndex(r => r.userName === name);
         if (idx >= 0) {
-          if ((list[idx].score || 0) < finalScore) list[idx] = entry; // keep best
+          // サーバー側と同じく、スコアは自己ベストを保ちつつ他の情報は毎回更新する
+          list[idx] = { ...entry, score: Math.max(list[idx].score || 0, finalScore) };
         } else {
           list.push(entry);
         }
@@ -3895,7 +3931,7 @@ function MonsterHeroGame() {
                     ))
                   )}
                 </div>
-                <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">{rankingSourceByDiff[rankingViewDiff]==='local'?'※ サーバーに接続できず、この端末に保存されたトップ20記録を表示中':'※ 全国のブリーダーから集計したトップ20記録'}</div></>)}
+                <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">{rankingSourceByDiff[rankingViewDiff]==='local'?'※ サーバーに接続できず、この端末に保存されたトップ50記録を表示中':'※ 全国のブリーダーから集計したトップ50記録'}</div></>)}
                 {rankingKind==='breeder'&&(
                   <>
                     <div className="flex-1 overflow-y-auto mh-scroll space-y-2 min-h-0">
@@ -4322,6 +4358,40 @@ function MonsterHeroGame() {
           const fusedBorder = (masu) => (masu.fusionHistory||[]).length>0 ? 'border-amber-400 ring-1 ring-amber-400' : 'border-violet-400/40';
           // 合体の仕様説明。何が引き継がれて何が消えるのか、固有技の引き継ぎ条件は何かが
           // 画面から読み取れず分かりにくかったため、選択画面の余白に常設で出す
+          // 合体画面の一覧の並べかえ。押すたびに昇順/降順が入れ替わる
+          const FUSION_SORT_OPTIONS = [
+            { key: 'bond', label: '絆レベル' },
+            { key: 'lineage', label: '血統' },
+            { key: 'name', label: '名前' },
+            { key: 'fused', label: '合体回数' },
+          ];
+          const sortMasuList = (list) => {
+            const dir = fusionSortDir === 'asc' ? 1 : -1;
+            const val = (m) => {
+              if (fusionSortKey === 'bond') return bondLevelInfo(m.bondXp||0).level;
+              if (fusionSortKey === 'fused') return (m.fusionHistory||[]).length;
+              if (fusionSortKey === 'lineage') return (ALL_PLAYER_MONSTERS[m.baseId]||{}).name || '';
+              return m.name || '';
+            };
+            return [...list].sort((a,b)=>{
+              const va = val(a), vb = val(b);
+              if (typeof va === 'string') return va.localeCompare(vb, 'ja') * dir;
+              return (va - vb) * dir;
+            });
+          };
+          const fusionSortBar = (
+            <div className="flex gap-1.5 mb-2 shrink-0 overflow-x-auto scrollbar-hide">
+              {FUSION_SORT_OPTIONS.map(o=>{
+                const active = fusionSortKey === o.key;
+                return (
+                  <button key={o.key} onClick={()=>{ if(active) setFusionSortDir(d=>d==='asc'?'desc':'asc'); else { setFusionSortKey(o.key); setFusionSortDir('desc'); } }}
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-[9px] font-black border active:scale-95 ${active?'bg-violet-600 border-violet-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>
+                    {o.label}{active&&<span className="ml-0.5">{fusionSortDir==='asc'?'▲':'▼'}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          );
           const fusionGuide = (
             <div className="shrink-0 mt-2 bg-black/40 border border-violet-500/30 rounded-2xl p-3 space-y-1.5">
               <div className="text-[9px] font-black text-violet-300 uppercase tracking-wider">合体のルール</div>
@@ -4342,9 +4412,10 @@ function MonsterHeroGame() {
                 </div>
                 <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">絆経験値を受け継いで残る「主」となるマスモンを選んでください</div>
                 {fusionGuide}
+                {fusionSortBar}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   <div className="grid grid-cols-3 gap-2.5 pb-4">
-                    {masuMons.map(masu=>{
+                    {sortMasuList(masuMons).map(masu=>{
                       const base = ALL_PLAYER_MONSTERS[masu.baseId];
                       if (!base) return null;
                       const lvl = bondLevelInfo(masu.bondXp||0);
@@ -4368,7 +4439,7 @@ function MonsterHeroGame() {
           if (fusionStep==='sub') {
             const main = getMasuMon(fusionMainId);
             if (!main) { resetFusionFlow(); return null; }
-            const candidates = masuMons.filter(m=>m.id!==fusionMainId);
+            const candidates = sortMasuList(masuMons.filter(m=>m.id!==fusionMainId));
             return (
               <div className="flex-1 flex flex-col h-full min-h-0 p-4">
                 <div className="flex items-center gap-2 mb-2 shrink-0">
@@ -4377,6 +4448,7 @@ function MonsterHeroGame() {
                 </div>
                 <div className="text-[10px] text-slate-400 font-bold mb-2 px-1 shrink-0">「{main.name}」に絆経験値を渡す「副」を選んでください。副は合体後にいなくなります</div>
                 {fusionGuide}
+                {fusionSortBar}
                 <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
                   {candidates.length===0?(
                     <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>💫</span><div className="text-[11px] text-slate-400 mt-2">合体できる他のマスモンがいません。</div></div>
@@ -4688,6 +4760,9 @@ function MonsterHeroGame() {
                 <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
                   <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">現在のステータス(強化分込み)</div><div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1"><div className="flex justify-between text-[10px] font-mono"><span>ライフ:</span><span className="text-pink-400 font-bold">{base.baseHp+(masu.statPoints?.hp||0)}{(masu.statPoints?.hp||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.hp})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ちから:</span><span className="text-red-400 font-bold">{base.baseAtk+(masu.statPoints?.atk||0)}{(masu.statPoints?.atk||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.atk})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>丈夫さ:</span><span className="text-emerald-400 font-bold">{base.baseDef+(masu.statPoints?.def||0)}{(masu.statPoints?.def||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.def})</span>}</span></div><div className="flex justify-between text-[10px] font-mono"><span>ガッツ:</span><span className="text-amber-400 font-bold">{base.baseGuts+(masu.statPoints?.guts||0)}{(masu.statPoints?.guts||0)>0&&<span className="text-emerald-400 text-[8px]"> (+{masu.statPoints.guts})</span>}</span></div></div></div>
                   {(()=>{const ps=mergeMasuIntoMon(masu)?.plusStats||{}; return(<div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{ps.hp>0&&`HP+${ps.hp} `}{ps.atk>0&&`攻+${ps.atk} `}{ps.def>0&&`防+${ps.def} `}{ps.guts>0&&`G+${ps.guts} `}</div>{formatAptBonus(mergeMasuIntoMon(masu))&&<div className="text-[8px] text-cyan-300 font-bold mt-0.5">間合い適性 {formatAptBonus(mergeMasuIntoMon(masu))}</div>}</div>);})()}
+                  {/* マスモン詳細からも通常技・固有技のレベル別詳細を見られるようにする
+                      (マスモン一覧・合体画面の詳細でも同じものが出る) */}
+                  <div className="space-y-2">{renderSkillSection(mergeMasuIntoMon(masu))}</div>
                   <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=(masu.distApt&&masu.distApt[idx])||'C'; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span></div>);})}</div></div>
                   <button onClick={()=>{setMasuEnhanceFrom(gameState); setGameState('MASU_ENHANCE');}} className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white py-2.5 rounded-xl font-black text-[11px] uppercase active:scale-95 flex items-center justify-center gap-1.5 shadow-lg"><Sparkles size={13}/>強化する{(masu.distAptPoints||0)>0&&<span className="bg-white/25 px-1.5 rounded-full text-[9px]">強化P {masu.distAptPoints}</span>}</button>
                   {(masu.fusionHistory||[]).length>0&&(
@@ -5698,8 +5773,13 @@ function MonsterHeroGame() {
             const unlocked = lvl<=ceilingLvl;
             const isActive = lvl===atkLevel;
             const label = card.type==='atk' ? atkNames[lvl] : `${RANGE_LABELS[card.rangeIdx]}${RANGE_EVOLUTION[lvl].name}`;
-            const power = Math.floor((card.type==='atk'?BASE_ATK_EVOLUTION[lvl].mult:RANGE_EVOLUTION[lvl].mult)*100);
-            return {key:String(lvl), label, power, unlocked, isActive, onSelect:()=>applyAtkTierChoice(lvl)};
+            const e = card.type==='atk'?BASE_ATK_EVOLUTION[lvl]:RANGE_EVOLUTION[lvl];
+            const power = Math.floor(e.mult*100);
+            // 消費ガッツは「基礎ガッツ × 現在の倍率 ÷ 基礎倍率」(getCardGutsと同じ式)
+            const guts = Math.floor(e.baseGuts * (e.mult / (e.baseMult||1)));
+            const crit = Math.round(e.crit*100);
+            const effect = card.type==='atk' ? '敵1体を攻撃' : `${RANGE_LABELS[card.rangeIdx]}の敵に最大威力・他の距離には4割の威力`;
+            return {key:String(lvl), label, power, guts, crit, effect, unlocked, isActive, onSelect:()=>applyAtkTierChoice(lvl)};
           });
         } else if (card.type==='unique') {
           const mon = slots[card.ownerSlotIdx];
@@ -5717,8 +5797,11 @@ function MonsterHeroGame() {
               const unlocked = lvl<=maxLevel;
               const isActive = lvl===curLevel;
               const label = u.names[Math.min(lvl,u.names.length-1)];
-              const power = Math.floor((u.baseMult+lvl*0.5)*100);
-              return {key:String(lvl), label, power, unlocked, isActive, onSelect:()=>applyUniqueLevelChoiceForSlot(card.ownerSlotIdx, lvl)};
+              const mult = u.baseMult+lvl*0.5;
+              const power = Math.floor(mult*100);
+              const guts = Math.floor((u.baseGuts||0) * (mult / (u.baseMult||1)));
+              const crit = Math.round((0.10+0.05*Math.min(lvl,8))*100);
+              return {key:String(lvl), label, power, guts, crit, effect:u.effectDesc, unlocked, isActive, onSelect:()=>applyUniqueLevelChoiceForSlot(card.ownerSlotIdx, lvl)};
             });
           }
         }
@@ -5734,21 +5817,44 @@ function MonsterHeroGame() {
                 <div className="flex gap-1.5 pb-2 border-b border-white/10 shrink-0 overflow-x-auto">
                   {uniqueSources.map(opt=>{
                     const isActiveSource=(slotUniqueChoice[card.ownerSlotIdx]||'own')===opt.key;
-                    return(<button key={opt.key} onClick={()=>applyUniqueChoiceForSlot(card.ownerSlotIdx,opt.key)} className={`shrink-0 px-3 py-1.5 rounded-full text-[9px] font-black border-2 whitespace-nowrap active:scale-95 ${isActiveSource?'bg-indigo-600 border-indigo-400 text-white':'bg-slate-800 border-slate-700 text-slate-400'}`}>{opt.key==='own'?'自分の技':`${opt.unique.sourceMasuName}から継承`}</button>);
+                    // タブ名は「自分の技」「みゅあの技」ではなく血統名(ザン・ピクシー等)にする。
+                    // 引き継いだ技は出どころが分かるよう色を変え、印を付ける
+                    const isInherited = opt.key !== 'own';
+                    const lineage = (ALL_PLAYER_MONSTERS[opt.unique.monId]||{}).name || opt.unique.monId || '?';
+                    const activeCls = isInherited ? 'bg-amber-600 border-amber-300 text-white' : 'bg-indigo-600 border-indigo-300 text-white';
+                    const idleCls = isInherited ? 'bg-amber-950/50 border-amber-600/40 text-amber-300' : 'bg-slate-800 border-slate-700 text-slate-400';
+                    return(<button key={opt.key} onClick={()=>applyUniqueChoiceForSlot(card.ownerSlotIdx,opt.key)} className={`shrink-0 px-3 py-1.5 rounded-full text-[9px] font-black border-2 whitespace-nowrap active:scale-95 ${isActiveSource?activeCls:idleCls}`}>{isInherited&&'⇄ '}{lineage}</button>);
                   })}
                 </div>
               )}
               <div className="overflow-y-auto mh-scroll flex-1 grid grid-cols-1 gap-1.5 pt-1">
                 {tiles.map(t=>(
-                  <button key={t.key} disabled={!t.unlocked} onClick={()=>{t.onSelect(); setSkillPicker(null);}} className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border-2 text-left active:scale-95 transition-all ${t.unlocked?(t.isActive?'bg-indigo-600/40 border-indigo-400 ring-2 ring-indigo-300':'bg-slate-800/70 border-slate-600'):'bg-slate-950/60 border-slate-800 grayscale opacity-45'}`}>
-                    <div className="min-w-0">
-                      <div className={`text-[11px] font-black truncate ${t.unlocked?'text-white':'text-slate-500'}`}>{t.label}{t.isActive&&<span className="ml-1 text-[8px] text-indigo-300">(使用中)</span>}</div>
-                      {t.sub&&<div className="text-[8px] text-amber-400 font-bold truncate">{t.sub}</div>}
-                    </div>
-                    <div className="shrink-0 flex items-center gap-1">
-                      {t.unlocked?(<span className="text-[9px] font-mono text-red-400 font-bold">技威力{t.power}</span>):(<span className="text-[9px] text-slate-500">🔒未解放</span>)}
-                    </div>
-                  </button>
+                  <div key={t.key} className={`w-full rounded-xl border-2 transition-all ${t.unlocked?(t.isActive?'bg-indigo-600/40 border-indigo-400 ring-2 ring-indigo-300':'bg-slate-800/70 border-slate-600'):'bg-slate-950/60 border-slate-800 grayscale opacity-45'}`}>
+                    <button disabled={!t.unlocked} onClick={()=>{t.onSelect(); setSkillPicker(null);}} className="w-full px-3 pt-2 pb-1.5 text-left active:scale-95">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className={`text-[11px] font-black truncate ${t.unlocked?'text-white':'text-slate-500'}`}>{t.label}{t.isActive&&<span className="ml-1 text-[8px] text-indigo-300">(使用中)</span>}</div>
+                        {!t.unlocked&&<span className="text-[9px] text-slate-500 shrink-0">🔒未解放</span>}
+                      </div>
+                      {/* 技威力だけでは強さが分かりにくいため、消費ガッツと会心率も併記する */}
+                      {t.unlocked&&(
+                        <div className="flex items-center gap-2.5 mt-1">
+                          <span className="text-[9px] font-mono text-red-400 font-bold">威力 {t.power}</span>
+                          {t.guts>0&&<span className="text-[9px] font-mono text-amber-400 font-bold">消費G {t.guts}</span>}
+                          {t.crit>0&&<span className="text-[9px] font-mono text-yellow-300 font-bold">会心 {t.crit}%</span>}
+                        </div>
+                      )}
+                      {t.sub&&<div className="text-[8px] text-amber-400 font-bold truncate mt-0.5">{t.sub}</div>}
+                    </button>
+                    {/* 効果の説明。枠に収まらない長さなら「詳細」から全文を見られるようにする */}
+                    {t.unlocked&&t.effect&&(
+                      <div className="flex items-center gap-1.5 px-3 pb-2">
+                        <div className="text-[8px] text-slate-300 leading-tight flex-1 min-w-0 truncate">{t.effect}</div>
+                        {t.effect.length>18&&(
+                          <button onClick={(e)=>{e.stopPropagation(); setSkillEffectDetail({name:t.label, power:t.power, guts:t.guts, crit:t.crit, effect:t.effect});}} className="shrink-0 text-[8px] font-black text-indigo-300 bg-indigo-950/60 border border-indigo-500/40 rounded-full px-2 py-0.5 active:scale-90">詳細</button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
               {isAtkFamily&&<div className="text-[8px] text-slate-500 text-center pt-1 shrink-0">敵と同じ距離枠にいる味方の距離適性・距離ダメージ補正の合計値を上げると、上位レベルが解放されます</div>}
@@ -5772,6 +5878,27 @@ function MonsterHeroGame() {
       )}
 
       {/* ENEMY INFO */}
+      {/* 技の効果の全文表示。ピッカーの枠に収まらない説明を「詳細」から開く */}
+      {skillEffectDetail&&(
+        <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:70000}} onClick={()=>setSkillEffectDetail(null)}>
+          <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-xs shadow-2xl" onClick={e=>e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+              <h3 className="text-[13px] font-black text-white truncate">{skillEffectDetail.name}</h3>
+              <button onClick={()=>setSkillEffectDetail(null)} className="p-1.5 bg-white/10 rounded-full active:scale-90 shrink-0"><X size={14}/></button>
+            </div>
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-[10px] font-mono text-red-400 font-bold">威力 {skillEffectDetail.power}</span>
+              {skillEffectDetail.guts>0&&<span className="text-[10px] font-mono text-amber-400 font-bold">消費G {skillEffectDetail.guts}</span>}
+              {skillEffectDetail.crit>0&&<span className="text-[10px] font-mono text-yellow-300 font-bold">会心 {skillEffectDetail.crit}%</span>}
+            </div>
+            <div className="bg-black/40 border border-white/10 rounded-2xl p-3">
+              <div className="text-[9px] text-indigo-300 font-black uppercase tracking-wider mb-1">効果</div>
+              <div className="text-[11px] text-slate-200 leading-relaxed whitespace-pre-line">{skillEffectDetail.effect}</div>
+            </div>
+            <button onClick={()=>setSkillEffectDetail(null)} className="w-full bg-indigo-600 text-white py-2.5 rounded-2xl font-black text-[12px] mt-3 active:scale-95">閉じる</button>
+          </div>
+        </div>
+      )}
       {showEnemyInfo&&enemy&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3><button onClick={()=>setShowEnemyInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center">{enemy.imgUrl?(<img src={enemy.imgUrl} alt={enemy.name} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]">{enemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{enemy.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"><div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{enemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{enemy.atk}</div></div></div></div></div></div>)}
       {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"><div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{def}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(+{Math.round(getPermaBuff('dmgCutPct')*100)}%軽減)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div><div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div></div></div></div>)}
 

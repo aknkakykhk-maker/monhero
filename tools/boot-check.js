@@ -72,6 +72,18 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   const mk = (await state()).filter((a) => !a.paused);
   check('マーケットで専用BGMが流れる', mk.length === 1 && mk[0].src.startsWith('bgm-market'), JSON.stringify(mk));
 
+  // プロフィールは専用BGMになるか(同じ曲が重なって鳴らないことも確認する)
+  await page.reload();
+  await page.waitForFunction(() => !!document.body && document.body.innerText.includes('タップしてはじめる'), { timeout: 30000 });
+  await page.getByRole('button', { name: 'タップしてはじめる' }).click();
+  await page.waitForTimeout(1500);
+  const t1 = (await state()).filter((a) => !a.paused);
+  check('タイトルでBGMが鳴っている(ロード後すぐ)', t1.length === 1 && t1[0].src.startsWith('bgm-title'), JSON.stringify(t1));
+  await click('プロフィール');
+  await page.waitForTimeout(2200);
+  const pf = (await state()).filter((a) => !a.paused);
+  check('プロフィールで専用BGMが1曲だけ流れる', pf.length === 1 && pf[0].src.startsWith('bgm-profile'), JSON.stringify(pf));
+
   check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
   await page.screenshot({ path: path.join(__dirname, 'out', 'boot.png') });
 
