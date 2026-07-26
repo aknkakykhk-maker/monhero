@@ -24,10 +24,12 @@ window.__mhErr = function(msg){ try{ console.error(msg); }catch(_){} };
 window.addEventListener('error', function(ev){ window.__mhErr('[error] ' + (ev.message||'') + ' @ ' + (ev.filename||'') + ':' + (ev.lineno||'')); });
 window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[promise] ' + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason)); });
 </script>
-<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<!-- React本体はCDNから毎回取りに行かず、リポジトリに同梱したものを読む。
+     外部への往復が2回減り、CDNが不調でもゲームが起動しなくなることがなくなる
+     (差し替えは tools/ で npm install react@18 react-dom@18 して umd/ からコピーする) -->
+<script src="vendor/react.production.min.js?v=18"></script>
+<script src="vendor/react-dom.production.min.js?v=18"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
 <style>
   html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
   body { height:100dvh; box-sizing:border-box; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
@@ -43,38 +45,25 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 <div id="loading"><div class="ldspin"></div><div style="font-weight:900;letter-spacing:2px;">LOADING...</div></div>
 <div id="root"></div>
 <div style="position:fixed;bottom:2px;right:4px;font:900 9px monospace;color:rgba(255,255,255,0.35);z-index:99999;pointer-events:none;">LF</div>
-<script src="data/images-ally.js?v=20260726b"></script>
+<script src="data/images-ally.js?v=20260726c"></script>
 <script src="data/images-enemy.js?v=20260726"></script>
 <script src="data/ally-monsters.js?v=20260703b"></script>
-<script src="data/breeder.js?v=20260702x"></script>
+<script src="data/breeder.js?v=20260727"></script>
 <script src="data/enemy-monsters.js?v=20260701"></script>
-<script src="data/skills.js?v=20260701"></script>
+<script src="data/skills.js?v=20260727"></script>
+<script src="data/changelog.js?v=20260727"></script>
+<script src="game-system.compiled.js?v=20260727"></script>
 <script>
 (function(){
-  function fail(m){ if(window.__mhErr) window.__mhErr(m); else { document.body.innerHTML='<pre style="color:#f88;padding:16px;white-space:pre-wrap">'+m+'</pre>'; } }
-  function run(){
-    try {
-      if(!window.Babel){ fail('Babel not loaded (CDN blocked?)'); return; }
-      if(!window.React){ fail('React not loaded (CDN blocked?)'); return; }
-      if(!window.ReactDOM){ fail('ReactDOM not loaded (CDN blocked?)'); return; }
-      fetch('game-system.jsx?t=' + Date.now(), { cache: 'no-store' }).then(function(res){
-        if(!res.ok) throw new Error('game-system.jsx fetch failed: ' + res.status);
-        return res.text();
-      }).then(function(src){
-        var out;
-        try {
-          out = Babel.transform(src, { presets: [['react', { runtime: 'classic' }]], filename:'game-system.jsx' }).code;
-          // 安全策: 万一 import/export 文が残っていても実行できるよう除去
-          out = out.replace(/^\s*import\s+[^;]*;?\s*$/gm, '').replace(/^\s*export\s+default\s+/gm, '').replace(/^\s*export\s+/gm, '');
-        } catch(e){ fail('Babel transform error: ' + (e && e.message ? e.message : e)); return; }
-        try {
-          (0, eval)(out);
-        } catch(e){ fail('Runtime error: ' + (e && e.message ? e.message : e) + '\n' + (e && e.stack ? e.stack : '')); return; }
-      }).catch(function(e){ fail('game-system.jsx load error: ' + (e && e.message ? e.message : e)); });
-    } catch(e){ fail('Bootstrap error: ' + (e && e.message ? e.message : e)); }
+  // game-system.compiled.js は tools/build.js が game-system.jsx から生成した変換済みJS。
+  // 以前はここで @babel/standalone を読み込み、game-system.jsx を毎回取得しなおして
+  // ブラウザ上で変換していたが、それが読み込みの重さの主因だったため事前変換に切り替えた。
+  // 読み込みに失敗した場合だけ画面にエラーを出す(白画面のまま止まらないように)。
+  if (typeof MonsterHeroGame === 'undefined' && window.__mhErr) {
+    window.__mhErr('game-system.compiled.js load failed');
+    var l = document.getElementById('loading');
+    if (l) l.innerHTML = '<div style="color:#f88;padding:16px;text-align:center;font-weight:900">読み込みに失敗しました<br>通信環境を確認して再読み込みしてください</div>';
   }
-  if(document.readyState === 'complete' || document.readyState === 'interactive'){ setTimeout(run, 50); }
-  else { window.addEventListener('DOMContentLoaded', function(){ setTimeout(run, 50); }); }
 })();
 </script>
 </body>
