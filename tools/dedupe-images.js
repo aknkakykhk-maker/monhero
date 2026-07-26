@@ -12,7 +12,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { REPO_ROOT } = require('./harness');
 
-const FILES = ['images-ally.js', 'images-enemy.js', 'breeder.js'];
+const FILES = ['images/images-ally.js', 'images/images-enemy.js', 'breeder.js'];
 const dryRun = process.argv.includes('--dry-run');
 
 // `const NAME = "data:image/...;base64,...."` の宣言を、文字列リテラルの範囲込みで拾う

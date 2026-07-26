@@ -2,69 +2,13 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <title>モンスターヒーロー</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
-<link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png">
-<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
-<link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="モンスターヒーロー">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#000000">
-<script>
-window.__mhErr = function(msg){ try{ console.error(msg); }catch(_){} };
-window.addEventListener('error', function(ev){ window.__mhErr('[error] ' + (ev.message||'') + ' @ ' + (ev.filename||'') + ':' + (ev.lineno||'')); });
-window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[promise] ' + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason)); });
-</script>
-<!-- React本体はCDNから毎回取りに行かず、リポジトリに同梱したものを読む。
-     外部への往復が2回減り、CDNが不調でもゲームが起動しなくなることがなくなる
-     (差し替えは tools/ で npm install react@18 react-dom@18 して umd/ からコピーする) -->
-<script src="vendor/react.production.min.js?v=18"></script>
-<script src="vendor/react-dom.production.min.js?v=18"></script>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-  html, body { margin:0; padding:0; background:#000; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; height:100%; }
-  body { height:100dvh; box-sizing:border-box; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
-  #root { width:100%; height:100%; overflow:hidden; }
-  #root > div { width:100%; height:100%; max-width:600px; margin:0 auto; }
-  #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; background:#050510; color:#a5b4fc; font-family:sans-serif; z-index:99999; }
-  .ldspin { width:44px; height:44px; border:4px solid rgba(165,180,252,0.25); border-top-color:#a5b4fc; border-radius:50%; animation:ldrot 0.8s linear infinite; }
-  @keyframes ldrot { to { transform:rotate(360deg); } }
-</style>
+<!-- 旧URL。index.html と全く同じ内容を二重に持っていて更新のたびに両方直す必要があったため、
+     リダイレクトだけを残した。ブックマークからでも今までどおり遊べる -->
+<meta http-equiv="refresh" content="0; url=index.html">
+<link rel="canonical" href="index.html">
 </head>
-<body>
-<div id="ver-banner" style="position:fixed;top:0;left:0;right:0;background:#16a34a;color:#fff;font:900 13px sans-serif;padding:6px 10px;padding-top:calc(6px + env(safe-area-inset-top));z-index:100000;text-align:center;letter-spacing:1px;">GH-BUILD v56 / LOADING ENGINE...</div>
-<div id="loading"><div class="ldspin"></div><div style="font-weight:900;letter-spacing:2px;">LOADING...</div></div>
-<div id="root"></div>
-<div style="position:fixed;bottom:2px;right:4px;font:900 9px monospace;color:rgba(255,255,255,0.35);z-index:99999;pointer-events:none;">LF</div>
-<script src="data/images-ally.js?v=20260726c"></script>
-<script src="data/images-enemy.js?v=20260726"></script>
-<script src="data/ally-monsters.js?v=20260703b"></script>
-<script src="data/breeder.js?v=20260727"></script>
-<script src="data/enemy-monsters.js?v=20260701"></script>
-<script src="data/skills.js?v=20260727"></script>
-<script src="data/changelog.js?v=20260727"></script>
-<script src="game-system.compiled.js?v=20260727"></script>
-<script>
-(function(){
-  // game-system.compiled.js は tools/build.js が game-system.jsx から生成した変換済みJS。
-  // 以前はここで @babel/standalone を読み込み、game-system.jsx を毎回取得しなおして
-  // ブラウザ上で変換していたが、それが読み込みの重さの主因だったため事前変換に切り替えた。
-  // 読み込みに失敗した場合だけ画面にエラーを出す(白画面のまま止まらないように)。
-  if (typeof MonsterHeroGame === 'undefined' && window.__mhErr) {
-    window.__mhErr('game-system.compiled.js load failed');
-    var l = document.getElementById('loading');
-    if (l) l.innerHTML = '<div style="color:#f88;padding:16px;text-align:center;font-weight:900">読み込みに失敗しました<br>通信環境を確認して再読み込みしてください</div>';
-  }
-})();
-</script>
+<body style="margin:0;background:#050510;color:#a5b4fc;font-family:sans-serif">
+<p style="padding:16px">移動しています… <a href="index.html" style="color:#a5b4fc">開かない場合はこちら</a></p>
 </body>
 </html>

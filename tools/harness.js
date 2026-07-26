@@ -8,7 +8,7 @@ const babel = require('@babel/core');
 const { createCanvas, Image, loadImage } = require('canvas');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
-const GAME_SYSTEM = path.join(REPO_ROOT, 'monster-hero', 'game-system.jsx');
+const GAME_SYSTEM = path.join(REPO_ROOT, 'monster-hero', 'src', 'game-system.jsx');
 
 // game-system.jsx をBabelで変換する。構文エラーはここで例外になる(check-syntax.jsもこれを使う)
 function transformGameSystem() {
@@ -118,7 +118,7 @@ function loadDyeModule() {
 
 // data/images-*.js に埋め込まれた base64 画像を { 変数名: dataURL } で取り出す
 function loadEmbeddedImages() {
-  const files = ['images-ally.js', 'images-enemy.js', 'breeder.js'];
+  const files = ['images/images-ally.js', 'images/images-enemy.js', 'breeder.js'];
   const map = {};
   for (const f of files) {
     const p = path.join(REPO_ROOT, 'monster-hero', 'data', f);
