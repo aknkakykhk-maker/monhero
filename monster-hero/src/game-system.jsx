@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-27 08:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-27 10:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1390,14 +1390,24 @@ const RANGE_STYLES = {
   3: { bg: "bg-blue-950/90", border: "border-blue-500", text: "text-blue-400", shadow: "shadow-blue-500/50", glow: "drop-shadow-[0_0_15px_rgba(59,130,246,0.9)]", slotBg: "bg-blue-900/50", labelBg: "bg-blue-600 text-white" }
 };
 
+// 難易度。keyはランキングの記録やハイスコアの保存にも使うので、既存のものは変更しない。
+// bg=選んだときの背景色 / text=選んでいないときの文字色(難易度の雰囲気に合わせた色)。
+// Tailwindの動的なクラス生成は稀に失敗して色が出ないことがあるため、実際の色はinline styleで指定する
 const DIFFICULTY_SETTINGS = {
-  Beginner: { label: "Beginner", power: 0.25, score: 0.25, gold: 0.25, color: "bg-cyan-600", shadow: "shadow-cyan-600/50" },
-  Easy:     { label: "Easy",     power: 0.5,  score: 0.5,  gold: 0.5,  color: "bg-emerald-600", shadow: "shadow-emerald-600/50" },
-  Normal:   { label: "Normal",   power: 1.0,  score: 1.0,  gold: 1.0,  color: "bg-indigo-600", shadow: "shadow-indigo-600/50" },
-  Hard:     { label: "Hard",     power: 1.5,  score: 2.0,  gold: 1.2,  color: "bg-red-600", shadow: "shadow-red-600/50" },
-  Expert:   { label: "Expert",   power: 3.0,  score: 3.0,  gold: 1.5,  color: "bg-purple-600", shadow: "shadow-purple-600/50" },
-  Master:   { label: "Master",   power: 5.0,  score: 5.0,  gold: 2.0,  color: "bg-slate-200 text-black", shadow: "shadow-white/50" },
+  Beginner:    { label: "Beginner",     power: 0.25, score: 0.25, gold: 0.25, bg: '#0891b2', text: '#67e8f9', color: "bg-cyan-600", shadow: "shadow-cyan-600/50" },
+  Easy:        { label: "Easy",         power: 0.5,  score: 0.5,  gold: 0.5,  bg: '#059669', text: '#6ee7b7', color: "bg-emerald-600", shadow: "shadow-emerald-600/50" },
+  Normal:      { label: "Normal",       power: 1.0,  score: 1.0,  gold: 1.0,  bg: '#4f46e5', text: '#a5b4fc', color: "bg-indigo-600", shadow: "shadow-indigo-600/50" },
+  Hard:        { label: "Hard",         power: 1.5,  score: 2.0,  gold: 1.2,  bg: '#dc2626', text: '#fca5a5', color: "bg-red-600", shadow: "shadow-red-600/50" },
+  Expert:      { label: "Expert",       power: 3.0,  score: 3.0,  gold: 1.5,  bg: '#9333ea', text: '#d8b4fe', color: "bg-purple-600", shadow: "shadow-purple-600/50" },
+  Master:      { label: "Master",       power: 5.0,  score: 5.0,  gold: 2.0,  bg: '#e2e8f0', text: '#f1f5f9', color: "bg-slate-200 text-black", shadow: "shadow-white/50", darkText: true },
+  GrandMaster: { label: "Grand Master", power: 8.0,  score: 8.0,  gold: 2.5,  bg: '#d97706', text: '#fcd34d', color: "bg-amber-600", shadow: "shadow-amber-500/50" },
+  Hell:        { label: "Hell",         power: 12.0, score: 12.0, gold: 3.0,  bg: '#7f1d1d', text: '#f87171', color: "bg-red-900", shadow: "shadow-red-900/60" },
+  Legend:      { label: "Legend",       power: 18.0, score: 18.0, gold: 4.0,  bg: '#be185d', text: '#f9a8d4', color: "bg-pink-700", shadow: "shadow-pink-600/60" },
 };
+// 難易度の色をそのまま反映するためのinline style。選択中は背景色、未選択は文字色だけを難易度の色にする
+const difficultyStyle = (setting, selected) => (selected
+  ? { backgroundColor: setting.bg, color: setting.darkText ? '#0f172a' : '#ffffff' }
+  : { backgroundColor: 'rgba(15,23,42,0.9)', color: setting.text });
 
 // ブリーダー教えカード使用時の専用演出(色・アイコン・掛け声)
 const TEACHING_FX_STYLE = {
@@ -1733,6 +1743,7 @@ function MonsterHeroGame() {
   const [masuMons, setMasuMons] = useState([]);
   const [ownedItems, setOwnedItems] = useState({}); // マーケットで買った消耗アイテムの所持数 { itemId: count } (端末保存)
   const [pendingItemUse, setPendingItemUse] = useState(null); // アイテム欄で「使う」を押した後、対象のマスモンを選ぶ画面用(itemId)
+  const [xpTicketUse, setXpTicketUse] = useState(null); // 絆経験値チケットをまとめて使う画面用 {itemId, masuId, count}
   const [dyeTargetMasuId, setDyeTargetMasuId] = useState(null); // 染色もどき: 対象に選んだマスモンid(色選択モーダル表示のトリガー)
   const [dyePreviewColors, setDyePreviewColors] = useState([]); // 染色もどき: 確定前にプレビュー中の部位別色id配列(染色①②③)
   const [customColorPicker, setCustomColorPicker] = useState(null); // 染色もどき: カスタム色選択中の{idx,h,s,v}(nullなら非表示)
@@ -2792,6 +2803,25 @@ function MonsterHeroGame() {
     });
     setOwnedItems(prev => { const next = { ...prev, bond_reset_scroll: (prev.bond_reset_scroll || 0) - 1 }; storeSet('mh_owned_items', next, false); return next; });
     Audio_.se.tap();
+  };
+  // 絆経験値のチケット(トレーニング/修行)をまとめて使う。
+  // 1枚あたりの絆経験値はアイテム側(bondXp)が持つので、枚数ぶんをまとめて加算する
+  const useBondXpTickets = (itemId, masuId, count) => {
+    const item = BREEDER_MARKET_ITEMS.find(i => i.id === itemId);
+    if (!item || !item.bondXp) return;
+    const have = ownedItems[itemId] || 0;
+    const n = Math.max(0, Math.min(count | 0, have));
+    if (n <= 0) return;
+    const masu = getMasuMon(masuId);
+    if (!masu) return;
+    const gain = item.bondXp * n;
+    setMasuMons(prev => {
+      const next = prev.map(m => m.id === masuId ? { ...m, bondXp: (m.bondXp || 0) + gain } : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    setOwnedItems(prev => { const next = { ...prev, [itemId]: have - n }; storeSet('mh_owned_items', next, false); return next; });
+    Audio_.se.levelUp();
   };
   // 染色もどき: マスモンの見た目の色(部位ごとにCSSフィルターで簡易パレットスワップ)を変える。
   // colorsはモンスターの染色可能な部位数と同じ長さの配列(各要素は色idまたはnull=染色しない)
@@ -4101,9 +4131,11 @@ function MonsterHeroGame() {
                 </button>
               </div>
               <div className="shrink-0 flex flex-col gap-2 w-full">
-                <div className="grid grid-cols-3 gap-2 justify-center">
+                <div className="grid grid-cols-3 gap-1.5 justify-center">
                   {Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>(
-                    <button key={key} onClick={()=>setDifficulty(key)} className={`relative h-10 rounded-lg text-[8px] font-black uppercase transition-all flex flex-col items-center justify-center gap-0.5 ${difficulty===key?`${setting.color} text-white ${setting.shadow} shadow-lg scale-105 z-10 ring-1 ring-white/50`:'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700'}`}><span>{setting.label}</span></button>
+                    <button key={key} onClick={()=>setDifficulty(key)}
+                      className={`relative h-9 rounded-lg text-[8px] font-black uppercase transition-all flex items-center justify-center text-center px-1 leading-[1.05] ${difficulty===key?`${setting.shadow} shadow-lg scale-105 z-10 ring-1 ring-white/60`:'border border-white/10'}`}
+                      style={difficultyStyle(setting, difficulty===key)}>{setting.label}</button>
                   ))}
                 </div>
                 <div className="text-[9px] font-mono text-amber-500 font-bold bg-white/5 py-1.5 rounded-lg border border-white/10">HIGH SCORE ({difficulty}): {(highScores[difficulty]||0).toLocaleString()}</div>
@@ -4183,7 +4215,7 @@ function MonsterHeroGame() {
                     <button key={t.k} onClick={()=>setRankingKind(t.k)} className={`py-2 rounded-xl text-[10px] font-black uppercase border active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>
                   ))}
                 </div>
-                {rankingKind==='score'&&(<><div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide px-1 shrink-0">{Object.keys(DIFFICULTY_SETTINGS).map(d=>(<button key={d} onClick={()=>setRankingViewDiff(d)} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase shrink-0 ${rankingViewDiff===d?'bg-indigo-600 text-white shadow-lg':'bg-slate-800 text-slate-500'}`}>{d}</button>))}</div>
+                {rankingKind==='score'&&(<><div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide px-1 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=>(<button key={d} onClick={()=>setRankingViewDiff(d)} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase shrink-0 ${rankingViewDiff===d?'shadow-lg ring-1 ring-white/50':'border border-white/10'}`} style={difficultyStyle(st, rankingViewDiff===d)}>{st.label}</button>))}</div>
                 <div className="flex-1 overflow-y-auto mh-scroll space-y-3 min-h-0">
                   {(localRankings[rankingViewDiff]||[]).length===0?(<div className="h-full flex items-center justify-center text-slate-600 font-black uppercase text-xs italic">No records yet</div>):(
                     (localRankings[rankingViewDiff]||[]).map((r,i)=>(
@@ -4325,7 +4357,7 @@ function MonsterHeroGame() {
             <div className="flex flex-col gap-2 mb-4">
               {Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>(
                 <div key={key} className="bg-slate-900/60 border border-white/5 rounded-2xl p-3 flex items-center gap-3">
-                  <div className={`px-1 py-1 rounded-lg text-[9px] font-black uppercase shrink-0 w-20 text-center ${setting.color} ${key==='Master'?'':'text-white'}`}>{setting.label}</div>
+                  <div className="px-1 py-1 rounded-lg text-[9px] font-black uppercase shrink-0 w-20 text-center leading-[1.05]" style={difficultyStyle(setting, true)}>{setting.label}</div>
                   <div className="flex-1 grid grid-cols-3 gap-1">
                     <div className="text-center"><div className="text-[7px] text-slate-500 uppercase tracking-wide">挑戦</div><div className="text-xs font-black text-white">{attemptCounts[key]||0}</div></div>
                     <div className="text-center"><div className="text-[7px] text-slate-500 uppercase tracking-wide">クリア</div><div className="text-xs font-black text-emerald-400">{clearCounts[key]||0}</div></div>
@@ -4941,6 +4973,9 @@ function MonsterHeroGame() {
                             const n = dyeRegionCount(masu.baseId);
                             const cur = getMasuColors(masu);
                             setDyeTargetMasuId(masu.id); setDyePreviewColors(Array.from({length:n},(_,i)=>cur[i]||null)); setPendingItemUse(null);
+                          } else if (BREEDER_MARKET_ITEMS.find(i=>i.id===pendingItemUse)?.bondXp) {
+                            // 絆経験値のチケットは「何枚使うか」を決める画面へ進む
+                            setXpTicketUse({ itemId: pendingItemUse, masuId: masu.id, count: 1 }); setPendingItemUse(null);
                           } else if (pendingItemUse==='bond_reset_scroll') {
                             if (window.confirm(`「${masu.name}」の強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻しますか？絆Lvはそのままです。`)) { useBondResetScroll(masu.id); setPendingItemUse(null); }
                           }
@@ -4954,6 +4989,79 @@ function MonsterHeroGame() {
                     })}
                   </div>
                 )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* 絆経験値チケットをまとめて使う画面。枚数を動かすと、増える経験値と絆レベルの変化がその場で分かる */}
+        {xpTicketUse&&(()=>{
+          const item = BREEDER_MARKET_ITEMS.find(i=>i.id===xpTicketUse.itemId);
+          const masu = getMasuMon(xpTicketUse.masuId);
+          const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
+          if (!item || !masu || !base) return null;
+          const have = ownedItems[item.id]||0;
+          const count = Math.max(1, Math.min(xpTicketUse.count||1, Math.max(1, have)));
+          const gain = (item.bondXp||0) * count;
+          const before = bondLevelInfo(masu.bondXp||0);
+          const after = bondLevelInfo((masu.bondXp||0) + gain);
+          const gaugePct = (l)=>Math.max(0, Math.min(100, (l.xpIntoLevel/Math.max(1,l.xpForNext))*100));
+          const setCount = (n)=>setXpTicketUse(p=>({...p, count: Math.max(1, Math.min(have, n))}));
+          return (
+            <div className="fixed inset-0 flex flex-col p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.97)',zIndex:31500,paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
+              <div className="flex items-center gap-2 mb-2 shrink-0">
+                <button onClick={()=>setXpTicketUse(null)} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                <h2 className="text-lg font-black italic text-teal-400 uppercase tracking-widest truncate">{item.name}を使う</h2>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+                <div className="bg-slate-900 border border-teal-500/40 rounded-2xl p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-14 h-14 rounded-full overflow-hidden border border-teal-400/40 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-black text-white truncate">{masu.name}</div>
+                      <div className="text-[9px] text-slate-500 font-bold truncate">({base.name})</div>
+                      <div className="text-[10px] text-pink-300 font-black flex items-center gap-1 mt-0.5"><Heart size={10}/>絆Lv.{before.level}{after.level>before.level&&<span className="text-emerald-400"> → {after.level}</span>}</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-black/30 rounded-xl p-3 border border-white/5">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">使う枚数</span>
+                      <span className="text-[10px] font-mono font-black text-teal-300">所持 {have}枚</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button onClick={()=>setCount(count-1)} disabled={count<=1} className="w-10 h-10 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90 shrink-0"><MinusCircle size={20}/></button>
+                      <div className="flex-1 min-w-0">
+                        <input type="range" min="1" max={Math.max(1,have)} value={count} onChange={(e)=>setCount(Number(e.target.value))} className="w-full accent-teal-400" style={{accentColor:'#2dd4bf'}}/>
+                        <div className="text-center text-2xl font-mono font-black text-white leading-none mt-1">{count}<span className="text-[10px] text-slate-500 font-black"> 枚</span></div>
+                      </div>
+                      <button onClick={()=>setCount(count+1)} disabled={count>=have} className="w-10 h-10 flex items-center justify-center bg-teal-600 rounded-lg text-white disabled:opacity-20 active:scale-90 shrink-0"><PlusCircle size={20}/></button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5 mt-3">
+                      {[1,10,50].map(n=>(
+                        <button key={n} onClick={()=>setCount(n)} disabled={have<n} className="py-1.5 rounded-lg bg-slate-800 border border-white/10 text-[10px] font-black text-slate-300 disabled:opacity-25 active:scale-95">{n}枚</button>
+                      ))}
+                      <button onClick={()=>setCount(have)} className="py-1.5 rounded-lg bg-slate-800 border border-teal-500/40 text-[10px] font-black text-teal-300 active:scale-95">最大</button>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 bg-black/30 rounded-xl p-3 border border-white/5">
+                    <div className="flex justify-between items-center text-[11px] font-black mb-2">
+                      <span className="text-slate-400 uppercase tracking-wider">もらえる絆経験値</span>
+                      <span className="text-emerald-400 font-mono text-base">+{gain.toLocaleString()}</span>
+                    </div>
+                    <div className="text-[9px] text-slate-500 font-bold mb-1">絆Lv.{before.level} → <span className="text-white font-black">Lv.{after.level}</span>{after.level>before.level&&<span className="text-emerald-400 font-black"> (+{after.level-before.level})</span>}</div>
+                    <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 relative">
+                      <div className="h-full bg-slate-600 absolute inset-y-0 left-0" style={{width:`${gaugePct(before)}%`}}></div>
+                      <div className="h-full bg-gradient-to-r from-pink-500 to-rose-400 absolute inset-y-0 left-0" style={{width:`${gaugePct(after)}%`}}></div>
+                    </div>
+                    <div className="text-[8px] text-slate-500 font-mono mt-1 text-right">次のLvまで あと {Math.max(0, after.xpForNext-after.xpIntoLevel).toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0 mt-3">
+                <button onClick={()=>setXpTicketUse(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95">やめる</button>
+                <button onClick={()=>{ useBondXpTickets(item.id, masu.id, count); setXpTicketUse(null); }} disabled={have<=0} className="flex-[2] bg-teal-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95 disabled:opacity-30">{count}枚 使う</button>
               </div>
             </div>
           );
