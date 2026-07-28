@@ -41,7 +41,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 </style>
 </head>
 <body>
-<div id="ver-banner" style="position:fixed;top:0;left:0;right:0;background:#16a34a;color:#fff;font:900 13px sans-serif;padding:6px 10px;padding-top:calc(6px + env(safe-area-inset-top));z-index:100000;text-align:center;letter-spacing:1px;">GH-BUILD v56 / LOADING ENGINE...</div>
+<div id="ver-banner" style="position:fixed;top:0;left:0;right:0;background:#16a34a;color:#fff;font:900 13px sans-serif;padding:6px 10px;padding-top:calc(6px + env(safe-area-inset-top));z-index:100000;text-align:center;letter-spacing:1px;">GH-BUILD v57 / LOADING ENGINE...</div>
 <div id="loading"><div class="ldspin"></div><div style="font-weight:900;letter-spacing:2px;">LOADING...</div></div>
 <div id="root"></div>
 <div style="position:fixed;bottom:2px;right:4px;font:900 9px monospace;color:rgba(255,255,255,0.35);z-index:99999;pointer-events:none;">LF</div>
@@ -51,7 +51,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 <script src="data/breeder.js?v=20260727c"></script>
 <script src="data/enemy-monsters.js?v=20260727c"></script>
 <script src="data/skills.js?v=20260727c"></script>
-<script src="data/changelog.js?v=20260728h"></script>
+<script src="data/changelog.js?v=20260728j"></script>
 <script>
 (function(){
   // game-system.compiled.js は tools/build.js が game-system.jsx から生成した変換済みJS。
@@ -60,7 +60,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
   // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
   // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
   // 2回とも失敗した場合だけエラーを表示する。
-  var GAME_BUILD = '20260728i';
+  var GAME_BUILD = '20260728j';
   var attempts = 0;
   function showLoadError(){
     window.__mhErr && window.__mhErr('game-system.compiled.js load failed after retry');
