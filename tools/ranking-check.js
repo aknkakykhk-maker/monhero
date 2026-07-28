@@ -42,10 +42,11 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
       if (init && init.method && init.method !== 'GET') return new Response('', { status: 201 });
       const u = new URL(url);
       const order = u.searchParams.get('order') || '';
-      const difficulty = (u.searchParams.get('difficulty') || '').replace(/^eq\./, '');
+      const difficultyFilter = u.searchParams.get('difficulty') || '';
+      const difficulty = difficultyFilter.replace(/^(?:eq|ilike)\./, '');
       window.__rankOrders.push(order);
       const headers = new Headers((init && init.headers) || {});
-      window.__rankRequests.push({ difficulty, order, limit: Number(u.searchParams.get('limit')), offset: Number(u.searchParams.get('offset')), apikey: headers.get('apikey'), authorization: headers.get('authorization') });
+      window.__rankRequests.push({ difficulty, difficultyFilter, order, limit: Number(u.searchParams.get('limit')), offset: Number(u.searchParams.get('offset')), apikey: headers.get('apikey'), authorization: headers.get('authorization') });
       if (['Master', 'master', 'MASTER'].includes(difficulty) && order.startsWith('score.desc')) return new Response(JSON.stringify({ message: 'diagnostic failure' }), { status: 500 });
       if (difficulty === 'Master' && order.startsWith('id.desc')) return new Response(JSON.stringify([
         { id: 999, user_name: 'マスター復旧', hero: 'モッチー', party: party(5), score: 543210, level: 24, icon: null },
@@ -83,6 +84,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   const scoreRequests = await page.evaluate(() => window.__rankRequests || []);
   check('publishable keyをapikeyとして送信する', scoreRequests.length > 0 && scoreRequests.every(r => r.apikey && r.apikey.startsWith('sb_publishable_')));
   check('publishable keyをBearer JWTとして誤送信しない', scoreRequests.length > 0 && scoreRequests.every(r => !r.authorization));
+  check('難易度SELECTは大文字小文字を区別しない完全一致', scoreRequests.length > 0 && scoreRequests.every(r => r.difficultyFilter.startsWith('ilike.')));
   check('スコア画面を開いただけではレベル順を取得しない',
     orders.some(o => o.startsWith('score.desc')) && !orders.some(o => o.startsWith('level.desc')),
     [...new Set(orders)].join(', '));

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f0524653c699194f
+// source-sha256: 17e32ead80b605e5
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 21:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 23:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2925,6 +2925,15 @@ const SB_HEADERS = {
   'Content-Type': 'application/json'
 };
 
+// 画面表示名とDB識別子を分離し、ランキング通信では必ず既存の難易度keyへ正規化する。
+// 過去データには大文字小文字の揺れがあるため、SELECTだけはilikeの完全一致で両方を拾う。
+const normalizeRankingDifficulty = value => {
+  const compact = String(value ?? '').trim().replace(/\s+/g, '').toLowerCase();
+  const canonical = Object.keys(DIFFICULTY_SETTINGS).find(key => key.toLowerCase() === compact);
+  if (!canonical) throw new Error(`unknown ranking difficulty: ${String(value)}`);
+  return canonical;
+};
+
 // 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
 // 診断用: 50件取得後に発生した遅延・非表示を切り分けるため、一時的に20件へ戻す。
 const RANKING_DIAGNOSTIC_LIMIT = 20;
@@ -2935,12 +2944,14 @@ const rankingLog = (requestId, event, detail = {}) => console.info('[ranking][di
   ...detail
 });
 const sbFetchRankings = async (diff, limit = RANKING_DIAGNOSTIC_LIMIT, order = 'score.desc', offset = 0, requestId = 'untracked') => {
+  const normalizedDifficulty = normalizeRankingDifficulty(diff);
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
   const select = 'user_name,hero,party,score,level,icon';
-  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=eq.${encodeURIComponent(diff)}&order=${order}&limit=${limit}&offset=${offset}`;
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=ilike.${encodeURIComponent(normalizedDifficulty)}&order=${order}&limit=${limit}&offset=${offset}`;
   const startedAt = Date.now();
   rankingLog(requestId, 'request-start', {
-    difficulty: diff,
+    difficulty: normalizedDifficulty,
+    requestedDifficulty: diff,
     category: 'ranking',
     rankingType: order,
     table: 'rankings',
@@ -2962,7 +2973,7 @@ const sbFetchRankings = async (diff, limit = RANKING_DIAGNOSTIC_LIMIT, order = '
     });
     const body = await res.text();
     rankingLog(requestId, 'supabase-response', {
-      difficulty: diff,
+      difficulty: normalizedDifficulty,
       endedAt: new Date().toISOString(),
       elapsedMs: Date.now() - startedAt,
       status: res.status,
@@ -2987,7 +2998,7 @@ const sbFetchRankings = async (diff, limit = RANKING_DIAGNOSTIC_LIMIT, order = '
   } catch (error) {
     const normalized = error?.name === 'AbortError' ? new Error(`ranking request timed out after 8000ms; url=${url}`) : error;
     rankingLog(requestId, 'supabase-error', {
-      difficulty: diff,
+      difficulty: normalizedDifficulty,
       endedAt: new Date().toISOString(),
       elapsedMs: Date.now() - startedAt,
       timeout: error?.name === 'AbortError',
@@ -3008,6 +3019,11 @@ const sbInsertScore = async row => {
   if (typeof row?.clear_id !== 'string' || !row.clear_id.trim()) {
     throw new Error('ranking clear_id is required; unsafe insert skipped');
   }
+  const normalizedRow = {
+    ...row,
+    difficulty: normalizeRankingDifficulty(row?.difficulty)
+  };
+  const requestId = `insert-${normalizedRow.difficulty}-${Date.now()}`;
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
   // 結果画面はこのPOSTが確定するまで入力をロックするため、通信が切れかけた端末でも
@@ -3016,14 +3032,29 @@ const sbInsertScore = async row => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
+    rankingLog(requestId, 'insert-start', {
+      difficulty: normalizedRow.difficulty,
+      table: 'rankings',
+      clearId: normalizedRow.clear_id,
+      score: normalizedRow.score,
+      level: normalizedRow.level,
+      hasIcon: Boolean(normalizedRow.icon),
+      columns: Object.keys(normalizedRow)
+    });
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings${query}`, {
       method: 'POST',
       headers: {
         ...SB_HEADERS,
         'Prefer': prefer
       },
-      body: JSON.stringify(row),
+      body: JSON.stringify(normalizedRow),
       signal: controller.signal
+    });
+    rankingLog(requestId, 'insert-response', {
+      difficulty: normalizedRow.difficulty,
+      status: res.status,
+      statusText: res.statusText,
+      ok: res.ok
     });
     if (!res.ok) {
       const body = await res.text();
@@ -3240,6 +3271,7 @@ function MonsterHeroGame() {
   const [rankingPool, setRankingPool] = useState({});
   const [rankingSourceByDiff, setRankingSourceByDiff] = useState({}); // {[diff]: 'global'|'local'} 表示中データの取得元
   const [rankingLoadingByDiff, setRankingLoadingByDiff] = useState({});
+  const [rankingErrorByDiff, setRankingErrorByDiff] = useState({});
   // 起動時の先読みと画面を開いた時の取得を共有し、同じ難易度への二重通信を防ぐ。
   const rankingRequestsRef = useRef(new Map());
   const rankingFetchedAtRef = useRef(new Map());
@@ -3672,36 +3704,13 @@ function MonsterHeroGame() {
       }
       return rows.sort((a, b) => (b.score || 0) - (a.score || 0));
     };
-    // Masterだけは旧データの表記揺れと不正行を診断する。正常な1行まで巻き添えにせず、
+    // Masterだけは不正行を診断する。難易度の表記揺れは共通SELECTが吸収し、正常な1行まで巻き添えにせず、
     // 必須項目を満たす行だけを残す（他難易度の取得仕様には触れない）。
     const fetchMasterRows = async (order, requestId) => {
-      const variants = ['Master', 'master', 'MASTER'];
-      let rows = [];
-      let firstError = null;
-      let succeeded = false;
-      for (const sentDifficulty of variants) {
-        try {
-          console.info('[ranking][Master] 実際に送っているdifficulty値:', sentDifficulty, 'order:', order);
-          const responseRows = await sbFetchRankings(sentDifficulty, RANKING_DIAGNOSTIC_LIMIT, order, 0, requestId);
-          succeeded = true;
-          console.info('[ranking][Master] Supabase成功; difficulty:', sentDifficulty, '取得件数:', Array.isArray(responseRows) ? responseRows.length : '配列ではない');
-          if (!Array.isArray(responseRows)) throw new Error(`response is not an array: ${JSON.stringify(responseRows)}`);
-          responseRows.forEach((r, i) => console.info('[ranking][Master] 取得レコード必須項目:', i, {
-            user_name: r?.user_name,
-            score: r?.score,
-            hero: r?.hero,
-            party: r?.party,
-            level: r?.level,
-            icon: r?.icon
-          }));
-          rows = mergeRows(rows, responseRows);
-          // 正式表記で記録があれば、余分な通信と旧表記との重複混在を避ける。
-          if (sentDifficulty === 'Master' && responseRows.length) break;
-        } catch (e) {
-          if (!firstError) firstError = e;
-          console.error('[ranking][Master] Supabase失敗; difficulty:', sentDifficulty, 'エラー全文:', e);
-        }
-      }
+      console.info('[ranking][Master] 正規化したdifficulty値: Master', 'order:', order);
+      const rows = await sbFetchRankings('Master', RANKING_DIAGNOSTIC_LIMIT, order, 0, requestId);
+      console.info('[ranking][Master] Supabase成功; difficulty: Master', '取得件数:', Array.isArray(rows) ? rows.length : '配列ではない');
+      if (!Array.isArray(rows)) throw new Error(`response is not an array: ${JSON.stringify(rows)}`);
       const valid = rows.filter((r, i) => {
         const reasons = [];
         if (!r || typeof r !== 'object') reasons.push('レコードがobjectではない');
@@ -3715,7 +3724,6 @@ function MonsterHeroGame() {
         score: Number(r.score)
       }));
       console.info('[ranking][Master] 整形後件数:', valid.length, '除外件数:', rows.length - valid.length);
-      if (!succeeded && firstError) throw firstError;
       return valid;
     };
     // 起動時は利用者から不調報告のあるNormal/Masterを先に取得する。
@@ -3731,6 +3739,10 @@ function MonsterHeroGame() {
       const requestId = `${d}-${Date.now()}-${++rankingRequestSequenceRef.current}`;
       const concurrent = [...rankingRequestsRef.current.keys()];
       rankingLatestRequestRef.current.set(d, requestId);
+      setRankingErrorByDiff(prev => ({
+        ...prev,
+        [d]: null
+      }));
       rankingLog(requestId, 'fetch-start', {
         selectedDifficulty: d,
         includeLevels,
@@ -3775,6 +3787,11 @@ function MonsterHeroGame() {
           });
         } catch (e) {
           console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
+          const message = e?.message || String(e);
+          setRankingErrorByDiff(prev => ({
+            ...prev,
+            [d]: message
+          }));
           if (d === 'Master') console.error('[ranking][Master] フォールバックへ切り替わった理由: score.descとid.descの取得がともに失敗', e);
           try {
             const rows = await restoreLocalRows(d);
@@ -3784,7 +3801,7 @@ function MonsterHeroGame() {
               sourceByDiff[d] = 'local';
               rankingLog(requestId, 'fallback', {
                 difficulty: d,
-                reason: e?.message || String(e),
+                reason: message,
                 dataCount: rows.length
               });
             }
@@ -7678,8 +7695,8 @@ function MonsterHeroGame() {
   }, st.label))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll space-y-3 min-h-0"
   }, (localRankings[rankingViewDiff] || []).length === 0 ? /*#__PURE__*/React.createElement("div", {
-    className: "h-full flex items-center justify-center text-slate-600 font-black uppercase text-xs italic"
-  }, rankingLoadingByDiff[rankingViewDiff] ? 'Loading...' : 'No records yet') : (localRankings[rankingViewDiff] || []).map((r, i) => /*#__PURE__*/React.createElement("div", {
+    className: "h-full flex items-center justify-center text-center px-4 text-slate-600 font-black uppercase text-xs italic"
+  }, rankingLoadingByDiff[rankingViewDiff] ? 'Loading...' : rankingErrorByDiff[rankingViewDiff] ? `取得エラー: ${rankingErrorByDiff[rankingViewDiff]}` : 'No records yet') : (localRankings[rankingViewDiff] || []).map((r, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     className: `flex flex-col p-3 rounded-2xl border ${i === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`
   }, /*#__PURE__*/React.createElement("div", {

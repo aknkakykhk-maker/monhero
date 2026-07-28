@@ -83,7 +83,7 @@ HP、ガッツ、現在WAVE、手札、山札、バフ、技強化、スコア�
 
 ## 7. ランキングデータ
 
-Supabaseへ `{difficulty, user_name, hero, party, score, level, icon}` を送る。列互換のため level/iconを順に省いた4形式で再試行する。失敗時は `mh_rank_<難易度>` へ `{userName, hero, party, score, diff, level, icon, at}` を追加し、スコア上位50件と名前ごとの最新1件を保持する。
+Supabaseへ `{difficulty, user_name, hero, party, score, level, icon, clear_id}` を送る。`difficulty`は表示名ではなく既存の難易度keyへ正規化し、取得時は過去行の大文字小文字の揺れを含む完全一致で検索する。`clear_id`は送信の冪等化だけに使い、取得・表示のフィルターには使わないため、`clear_id=NULL`の旧記録も表示対象となる。列互換のため level/iconを順に省いた4形式で再試行する。失敗時は `mh_rank_<難易度>` へ `{userName, hero, party, score, diff, level, icon, clearId, at}` を追加し、スコア上位50件と名前ごとの最新1件を保持する。
 
 `party` は各枠の `{name, emoji, imgUrl, bondLevel}`。個体名ではなく種名を送る。全国側の保持期間、RLS、重複排除制約、削除方針はリポジトリからは**未確認**。
 
@@ -93,4 +93,3 @@ Supabaseへ `{difficulty, user_name, hero, party, score, level, icon}` を送る
 - 新形式導入時は既存値の既定値補完と一度限りの移行フラグを用意する。
 - `mh_masu_mons` は利用者の育成資産であり、破壊的再生成をしない。
 - 保存変更時はバックアップ往復、旧キー移行、起動、購入・報酬、ランキングフォールバックを確認する。
-
