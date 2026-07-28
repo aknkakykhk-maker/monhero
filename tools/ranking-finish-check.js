@@ -24,9 +24,13 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   const submit = code.slice(code.indexOf('const submitLocalScore'), code.indexOf('const handleSaveName'));
   check(`${label}: POST直後に全難易度を再取得しない`, !/await\s+loadRankings\(\)/.test(submit));
   check(`${label}: 過去の完全重複をプレイ内容で畳む`, code.includes('const rowKey =') && code.includes('uniqueScoreRows'));
-  check(`${label}: 通常スコア表示は選択難易度だけ取得`, code.includes('loadRankings(difficulty)') && code.includes('const diffs = includeLevels'));
-  check(`${label}: 起動後に全難易度をバックグラウンド先読み`, code.includes('Object.keys(DIFFICULTY_SETTINGS).map(d => loadRankings(d))'));
-  check(`${label}: ランキング先読みを起動完了条件にしない`, code.indexOf('setDataLoaded(true)') < code.indexOf('Object.keys(DIFFICULTY_SETTINGS).map(d => loadRankings(d))') && !code.includes('await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(d => loadRankings(d)))'));
+  check(`${label}: 通常スコア表示は選択難易度だけ取得`, code.includes('loadRankings(difficulty)') && code.includes('targetDiff') && code.includes('[targetDiff]'));
+  const preloadAt = code.indexOf('background preload failed');
+  check(`${label}: 起動後に全難易度をバックグラウンド先読み`, preloadAt > 0 && code.includes('!targetDiff') && code.includes('Object.keys(DIFFICULTY_SETTINGS)'));
+  check(`${label}: ランキング先読みを起動完了条件にしない`, code.indexOf('setDataLoaded(true)') < preloadAt && !code.includes('await loadRankings()'));
+  check(`${label}: 先読みと画面表示の通信を共有`, code.includes('rankingRequestsRef.current.has(requestKey)') && code.includes('rankingRequestsRef.current.set(requestKey, request)'));
+  check(`${label}: 30秒以内の取得済みデータを再利用`, code.includes('Date.now() - fetchedAt < 30000'));
+  check(`${label}: ランキング通信に8秒の上限`, code.includes('setTimeout(() => controller.abort(), 8000)'));
   check(`${label}: 重複時だけ次ページ取得`, code.includes('page.length === 50 && rows.length < 50') && code.includes("offset < 200"));
   check(`${label}: 端末内自己ベストから復旧`, code.includes('`mh_hs_${d}`') && code.includes("hero: '記録復旧'"));
   check(`${label}: score.desc失敗時はid.descを500件取得`, code.includes("sbFetchRankings(d, 500, 'id.desc', 0)"));

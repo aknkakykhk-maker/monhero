@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 94fcdfa6ce31bab6
+// source-sha256: 3427e6bf2e855568
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 15:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 16:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2926,11 +2926,19 @@ const SB_HEADERS = {
 // 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
 const sbFetchRankings = async (diff, limit = 50, order = 'score.desc', offset = 0) => {
   const url = `${SUPABASE_URL}/rest/v1/rankings?difficulty=eq.${encodeURIComponent(diff)}&order=${order}&limit=${limit}&offset=${offset}`;
-  const res = await fetch(url, {
-    headers: SB_HEADERS
-  });
-  if (!res.ok) throw new Error(`fetch ${res.status}`);
-  return await res.json();
+  // モバイル回線などで接続だけが残り続けても、ランキング画面を永久に待機させない。
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, {
+      headers: SB_HEADERS,
+      signal: controller.signal
+    });
+    if (!res.ok) throw new Error(`fetch ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 };
 // 記録を1件挿入する(1プレイ=1件)
 const sbInsertScore = async row => {
@@ -3143,6 +3151,10 @@ function MonsterHeroGame() {
   // スコアランキングの表示(localRankings)とは別に持つ
   const [rankingPool, setRankingPool] = useState({});
   const [rankingSourceByDiff, setRankingSourceByDiff] = useState({}); // {[diff]: 'global'|'local'} 表示中データの取得元
+  const [rankingLoadingByDiff, setRankingLoadingByDiff] = useState({});
+  // 起動時の先読みと画面を開いた時の取得を共有し、同じ難易度への二重通信を防ぐ。
+  const rankingRequestsRef = useRef(new Map());
+  const rankingFetchedAtRef = useRef(new Map());
   const [showRanking, setShowRanking] = useState(false);
   // ラン終了処理は通信中の連打や再レンダーがあっても、1周につき必ず1回だけ実行する。
   // stateでは更新前に次のイベントが入る余地があるため、同期的に書き換わるrefをロックに使う
@@ -3514,7 +3526,7 @@ function MonsterHeroGame() {
     return [...new Set(all)];
   }, [bondRankingAll]);
   const bondRanking = useMemo(() => bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 50), [bondRankingAll, bondRankMonFilter]);
-  const loadRankings = useCallback(async (targetDiff = null, includeLevels = false) => {
+  const loadRankings = useCallback(async (targetDiff = null, includeLevels = false, force = false) => {
     const byDiff = {};
     const poolByDiff = {};
     const sourceByDiff = {};
@@ -3561,67 +3573,87 @@ function MonsterHeroGame() {
       }
       return rows.sort((a, b) => (b.score || 0) - (a.score || 0));
     };
-    const diffs = includeLevels ? Object.keys(DIFFICULTY_SETTINGS) : targetDiff ? [targetDiff] : [];
+    // targetDiffなしは起動時の全難易度先読み。includeLevels時も全難易度を集計する。
+    const diffs = includeLevels || !targetDiff ? Object.keys(DIFFICULTY_SETTINGS) : [targetDiff];
     if (diffs.length === 0) return;
     await Promise.all(diffs.map(async d => {
-      try {
-        let rows;
+      const requestKey = `${d}:${includeLevels ? 'levels' : 'score'}`;
+      const fetchedAt = rankingFetchedAtRef.current.get(requestKey) || 0;
+      if (!force && Date.now() - fetchedAt < 30000) return;
+      if (rankingRequestsRef.current.has(requestKey)) return rankingRequestsRef.current.get(requestKey);
+      setRankingLoadingByDiff(prev => ({
+        ...prev,
+        [d]: true
+      }));
+      const request = (async () => {
         try {
-          let page = await sbFetchRankings(d, 50, 'score.desc', 0);
-          rows = mergeRows([], page);
-          // 50件が重複で埋まった時だけ次ページへ進み、最大200件まで調べる。
-          for (let offset = 50; page.length === 50 && rows.length < 50 && offset < 200; offset += 50) {
-            page = await sbFetchRankings(d, 50, 'score.desc', offset);
-            rows = mergeRows(rows, page);
+          let rows;
+          try {
+            let page = await sbFetchRankings(d, 50, 'score.desc', 0);
+            rows = mergeRows([], page);
+            // 50件が重複で埋まった時だけ次ページへ進み、最大200件まで調べる。
+            for (let offset = 50; page.length === 50 && rows.length < 50 && offset < 200; offset += 50) {
+              page = await sbFetchRankings(d, 50, 'score.desc', offset);
+              rows = mergeRows(rows, page);
+            }
+          } catch (scoreError) {
+            console.error('[ranking] score order fetch failed for', d, scoreError && scoreError.message ? scoreError.message : scoreError);
+            // score順の取得だけが壊れていても、直近500件を取得して全国データを復元する。
+            rows = await sbFetchRankings(d, 500, 'id.desc', 0);
+            rows = mergeRows([], rows).sort((a, b) => (b.score || 0) - (a.score || 0));
           }
-        } catch (scoreError) {
-          console.error('[ranking] score order fetch failed for', d, scoreError && scoreError.message ? scoreError.message : scoreError);
-          // score順の取得だけが壊れていても、直近500件を取得して全国データを復元する。
-          rows = await sbFetchRankings(d, 500, 'id.desc', 0);
-          rows = mergeRows([], rows).sort((a, b) => (b.score || 0) - (a.score || 0));
-        }
-        const uniqueScoreRows = mergeRows([], rows).slice(0, 50);
-        byDiff[d] = uniqueScoreRows.map(toEntry);
-        let pool = uniqueScoreRows;
-        if (includeLevels) try {
-          pool = mergeRows(pool, await sbFetchRankings(d, 50, 'level.desc.nullslast', 0));
-        } catch (eLv) {
-          console.error('[ranking] level order fetch failed for', d, eLv && eLv.message ? eLv.message : eLv);
-        }
-        poolByDiff[d] = pool.map(toEntry);
-        sourceByDiff[d] = 'global';
-        if (byDiff[d].length === 0) {
-          const localRows = await restoreLocalRows(d);
-          if (localRows.length) {
-            byDiff[d] = localRows.slice(0, 50);
-            poolByDiff[d] = localRows.slice();
-            sourceByDiff[d] = 'local';
+          const uniqueScoreRows = mergeRows([], rows).slice(0, 50);
+          byDiff[d] = uniqueScoreRows.map(toEntry);
+          let pool = uniqueScoreRows;
+          if (includeLevels) try {
+            pool = mergeRows(pool, await sbFetchRankings(d, 50, 'level.desc.nullslast', 0));
+          } catch (eLv) {
+            console.error('[ranking] level order fetch failed for', d, eLv && eLv.message ? eLv.message : eLv);
           }
-        }
-      } catch (e) {
-        console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
-        try {
-          const rows = await restoreLocalRows(d);
-          if (rows.length) {
-            byDiff[d] = rows.slice(0, 50);
-            poolByDiff[d] = rows.slice();
-            sourceByDiff[d] = 'local';
+          poolByDiff[d] = pool.map(toEntry);
+          sourceByDiff[d] = 'global';
+          if (byDiff[d].length === 0) {
+            const localRows = await restoreLocalRows(d);
+            if (localRows.length) {
+              byDiff[d] = localRows.slice(0, 50);
+              poolByDiff[d] = localRows.slice();
+              sourceByDiff[d] = 'local';
+            }
           }
-        } catch {}
-      }
-    }));
-    // 難易度単位の取得で、すでに読み込んだ別難易度を消さない。
-    setRankingSourceByDiff(prev => ({
-      ...prev,
-      ...sourceByDiff
-    }));
-    setLocalRankings(prev => ({
-      ...prev,
-      ...byDiff
-    }));
-    setRankingPool(prev => ({
-      ...prev,
-      ...poolByDiff
+        } catch (e) {
+          console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
+          try {
+            const rows = await restoreLocalRows(d);
+            if (rows.length) {
+              byDiff[d] = rows.slice(0, 50);
+              poolByDiff[d] = rows.slice();
+              sourceByDiff[d] = 'local';
+            }
+          } catch {}
+        }
+        // 1難易度ずつ反映し、遅い通信が残っていても取得済みのランキングはすぐ表示する。
+        setRankingSourceByDiff(prev => ({
+          ...prev,
+          ...sourceByDiff
+        }));
+        setLocalRankings(prev => ({
+          ...prev,
+          ...byDiff
+        }));
+        setRankingPool(prev => ({
+          ...prev,
+          ...poolByDiff
+        }));
+        rankingFetchedAtRef.current.set(requestKey, Date.now());
+      })().finally(() => {
+        rankingRequestsRef.current.delete(requestKey);
+        setRankingLoadingByDiff(prev => ({
+          ...prev,
+          [d]: false
+        }));
+      });
+      rankingRequestsRef.current.set(requestKey, request);
+      return request;
     }));
   }, []);
 
@@ -4062,6 +4094,7 @@ function MonsterHeroGame() {
         clears[d] = await storeGet(`mh_clears_${d}`, 0, false);
       }));
       setHighScores(scores);
+      highScoresRef.current = scores;
       setAttemptCounts(attempts);
       setClearCounts(clears);
       let wasOnboarded = await storeGet('mh_onboarded', null, false);
@@ -4075,6 +4108,11 @@ function MonsterHeroGame() {
       setOnboarded(wasOnboarded);
       if (!wasOnboarded) setGameState('PROFILE');
       setDataLoaded(true); // ここまでで起動に必要なセーブデータは揃っている
+      // タイトル表示を待たせず、起動直後から全難易度のスコアランキングを裏で取得する。
+      // 画面を先読み中に開いてもloadRankings内で同じ通信を共有するため、二重取得にならない。
+      setTimeout(() => loadRankings().catch(e => {
+        console.error('[ranking] background preload failed:', e && e.message ? e.message : e);
+      }), 0);
     })();
   }, [loadRankings]);
   const submitLocalScore = async (diff, finalScore) => {
@@ -7363,7 +7401,7 @@ function MonsterHeroGame() {
   }), " Ranking"), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => rankingKind === 'score' ? loadRankings(rankingViewDiff) : loadRankings(null, true),
+    onClick: () => rankingKind === 'score' ? loadRankings(rankingViewDiff, false, true) : loadRankings(null, true, true),
     className: "p-2 bg-white/10 rounded-full active:scale-90"
   }, /*#__PURE__*/React.createElement(RefreshCcw, {
     size: 18
@@ -7404,7 +7442,7 @@ function MonsterHeroGame() {
     className: "flex-1 overflow-y-auto mh-scroll space-y-3 min-h-0"
   }, (localRankings[rankingViewDiff] || []).length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "h-full flex items-center justify-center text-slate-600 font-black uppercase text-xs italic"
-  }, "No records yet") : (localRankings[rankingViewDiff] || []).map((r, i) => /*#__PURE__*/React.createElement("div", {
+  }, rankingLoadingByDiff[rankingViewDiff] ? 'Loading...' : 'No records yet') : (localRankings[rankingViewDiff] || []).map((r, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     className: `flex flex-col p-3 rounded-2xl border ${i === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`
   }, /*#__PURE__*/React.createElement("div", {
