@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b7273131b9d90cc1
+// source-sha256: 7808b9e06682b56e
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 12:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 14:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4135,6 +4135,13 @@ function MonsterHeroGame() {
         userName: name,
         hero: heroName,
         party,
+      // ゲーム起動は待たせず、全難易度のスコア上位50件をタイトル表示と同時に先読みする。
+      // loadRankings側に同一通信の共有と30秒キャッシュがあるため、取得中にRankingを開いても二重送信しない。
+      setTimeout(() => {
+        Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(d => loadRankings(d))).catch(e => {
+          console.error('[ranking] background preload failed:', e && e.message ? e.message : e);
+        });
+      }, 0);
         score: finalScore,
         diff,
         level,
