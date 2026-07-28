@@ -121,3 +121,8 @@ index.html                    2つのアプリへのハブページ
    (`document.createElement('canvas')` は node-canvas を返し、`window.Image` も node-canvas のものを使う)
 
 これにより `getDyeRegionMasks` などを本番と同じコードのまま Node 上で呼べる。
+
+## ランキング終了処理の回帰確認
+
+`node ranking-finish-check.js` で、最終リザルトがランキング通信を待たないこと、同じ周回を
+多重送信しないためのロックがあること、送信直後に全難易度を再取得しないことを確認できる。

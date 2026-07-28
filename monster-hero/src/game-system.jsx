@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-27 10:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 09:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1628,6 +1628,10 @@ function MonsterHeroGame() {
   const [rankingPool, setRankingPool] = useState({});
   const [rankingSourceByDiff, setRankingSourceByDiff] = useState({}); // {[diff]: 'global'|'local'} 表示中データの取得元
   const [showRanking, setShowRanking] = useState(false);
+  // ラン終了処理は通信中の連打や再レンダーがあっても、1周につき必ず1回だけ実行する。
+  // stateでは更新前に次のイベントが入る余地があるため、同期的に書き換わるrefをロックに使う
+  const runFinalizingRef = useRef(false);
+  const scoreSubmittedRef = useRef(false);
   const [screenShake, setScreenShake] = useState(false);
   const [bigShake, setBigShake] = useState(false);
   const triggerShake = useCallback((big=false) => {
@@ -1935,11 +1939,13 @@ function MonsterHeroGame() {
     const poolByDiff = {};    // ブリーダーLv・絆Lv集計用(スコア上位＋レベル上位をまとめたもの)
     const sourceByDiff = {};
     const toEntry = (r) => ({ userName: r.user_name, hero: r.hero, party: r.party, score: r.score, level: r.level, icon: r.icon });
-    // 同じ行が両方の取得結果に入るので、id(無ければ内容)で重複を除く
+    // 過去の多重送信で別idの完全に同じ記録が作られているため、idではなくプレイ内容で重複を除く。
+    // これにより重複行がトップ50を埋め、Masterなどの正常な記録が押し出される状態も表示側で復旧できる
+    const rowKey = (r) => `v:${r?.user_name}|${r?.score}|${r?.level}|${r?.hero}|${JSON.stringify(r?.party || null)}|${r?.icon || ''}`;
     const mergeRows = (a, b) => {
       const seen = new Map();
       [...(a || []), ...(b || [])].forEach(r => {
-        const key = r && r.id != null ? `id:${r.id}` : `v:${r.user_name}|${r.score}|${r.level}|${r.hero}`;
+        const key = rowKey(r);
         if (!seen.has(key)) seen.set(key, r);
       });
       return [...seen.values()];
@@ -1947,14 +1953,16 @@ function MonsterHeroGame() {
     try {
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async (d) => {
         try {
-          const rows = await sbFetchRankings(d, 50);
+          // 既存の重複が上位50件を埋めていても、その後ろの正常な記録まで救えるよう多めに取得してから畳む
+          const rows = await sbFetchRankings(d, 200);
           // スコアランキングはスコア順の取得結果だけで作る。
           // 1行=1プレイなので、そのときのパーティ・絆レベル・ブリーダーレベルは記録した当時のまま固定される。
-          byDiff[d] = (rows || []).map(toEntry);
+          const uniqueScoreRows = mergeRows([], rows).slice(0, 50);
+          byDiff[d] = uniqueScoreRows.map(toEntry);
           // ブリーダーLv/絆Lvは「最新(=最高)」を出したいので、レベル順の取得結果も足しておく。
           // スコアが伸びなかった直近のプレイはスコア上位50件に入らず、
           // そのままだとレベルが古いまま表示されてしまうため
-          let pool = rows || [];
+          let pool = uniqueScoreRows;
           try {
             // level列が無い記録(旧形式)が先頭を埋めないよう nullslast を付ける
             pool = mergeRows(pool, await sbFetchRankings(d, 50, 'level.desc.nullslast'));
@@ -1963,6 +1971,16 @@ function MonsterHeroGame() {
           }
           poolByDiff[d] = pool.map(toEntry);
           sourceByDiff[d] = 'global';
+          // 新難易度など、サーバー側がまだ記録を受け付けず端末保存へ退避した直後は、
+          // GET自体は成功しても空配列になる。その場合に退避済みスコアを消して見せないようにしない
+          if (byDiff[d].length === 0) {
+            const localRows = await storeGet(`mh_rank_${d}`, [], false);
+            if (Array.isArray(localRows) && localRows.length) {
+              poolByDiff[d] = localRows.slice();
+              byDiff[d] = localRows.slice().sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,50);
+              sourceByDiff[d] = 'local';
+            }
+          }
         } catch (e) {
           console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
           sourceByDiff[d] = 'local';
@@ -2442,7 +2460,23 @@ function MonsterHeroGame() {
         console.error('[ranking] local fallback also failed:', e2 && e2.message ? e2.message : e2);
       }
     }
-    await loadRankings();
+  };
+
+  // 敗北・降参・優勝のどの経路から呼ばれても、同じ周回のスコア送信は1回だけにする。
+  // ランキング再取得はランキング画面を開いた時に行うため、ここでは14本ものGETを発生させない
+  // (7難易度×スコア順/レベル順)。送信や再取得をリザルト遷移の待ち時間にしないことも重要。
+  const submitRunScoreOnce = async () => {
+    if (score <= 0 || scoreSubmittedRef.current) return;
+    scoreSubmittedRef.current = true;
+    try {
+      await submitLocalScore(difficulty, score);
+      if (score > (highScores[difficulty] || 0)) {
+        await storeSet(`mh_hs_${difficulty}`, score, false);
+        setHighScores(prev => ({ ...prev, [difficulty]: score }));
+      }
+    } catch (e) {
+      console.error('[result] score submit failed:', e && e.message ? e.message : e);
+    }
   };
 
   const handleSaveName = async () => {
@@ -3050,6 +3084,8 @@ function MonsterHeroGame() {
   // Save score on game end (CHAMPION is awarded synchronously in handleNextWave instead, so its result screen never renders before the summary is ready)
   useEffect(() => {
     if (hp <= 0) {
+      if (runFinalizingRef.current) return;
+      runFinalizingRef.current = true;
       (async () => {
         // 経験値・ダイヤの付与は端末内で完結するので必ず先に行う。
         // 以前はスコア送信(全国ランキングへの通信)の完了を待ってから付与していたため、
@@ -3058,15 +3094,7 @@ function MonsterHeroGame() {
           await awardRunRewards(Math.max(0, wave - 1));
         } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
         // スコア送信はリザルトの表示に必要ないため、完了を待たず後追いで行う
-        (async () => {
-          try {
-            if (score > 0) await submitLocalScore(difficulty, score);
-            if (score > (highScores[difficulty] || 0)) {
-              await storeSet(`mh_hs_${difficulty}`, score, false);
-              setHighScores(prev => ({ ...prev, [difficulty]: score }));
-            }
-          } catch (e) { console.error('[result] score submit failed:', e && e.message ? e.message : e); }
-        })();
+        submitRunScoreOnce();
       })();
     }
   }, [hp, gameState]);
@@ -3111,6 +3139,8 @@ function MonsterHeroGame() {
   });
 
   const handleGoToTitle = () => {
+    runFinalizingRef.current = false;
+    scoreSubmittedRef.current = false;
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
@@ -3128,25 +3158,19 @@ function MonsterHeroGame() {
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
   const handleGiveUp = useCallback(async () => {
+    if (runFinalizingRef.current) return;
+    runFinalizingRef.current = true;
     // 敗北時と同じく、端末内で完結する経験値・ダイヤの付与とリザルト表示を先に済ませ、
     // 通信を伴うスコア送信は完了を待たず後追いで行う(通信待ちでリザルトが遅れないように)
     try { await awardRunRewards(Math.max(0, wave - 1)); } catch {}
     setShowQuitConfirm(false);
     setGaveUp(true);
-    if (score > 0) {
-      (async () => {
-        try {
-          await submitLocalScore(difficulty, score);
-          if (score > (highScores[difficulty] || 0)) {
-            await storeSet(`mh_hs_${difficulty}`, score, false);
-            setHighScores(prev => ({ ...prev, [difficulty]: score }));
-          }
-        } catch {}
-      })();
-    }
+    submitRunScoreOnce();
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
 
   const handleRetry = () => {
+    runFinalizingRef.current = false;
+    scoreSubmittedRef.current = false;
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
@@ -3680,23 +3704,21 @@ function MonsterHeroGame() {
     setEnemyIntent(getNextEnemyAction(enemy,distForNextPredict));
   };
 
-  // WAVE 10のムーを撃破した場合はリザルト画面(CHAMPION)に切り替える前にスコア記録・獲得報酬の計算を完了させ、
-  // ギブアップ時と同様に画面が出た瞬間から獲得内訳が表示された状態にする
+  // WAVE 10のムー撃破後は端末内の報酬計算だけを終えてリザルトへ移る。
+  // ランキング通信は待たずに裏で1回だけ行い、通信遅延やボタン連打で画面遷移が重くなったり
+  // 同一スコアが複数登録されたりしないようにする
   const handleNextWave = async () => {
+    if (runFinalizingRef.current) return;
     setEffect(null);
     if (wave === 10) {
-      try {
-        if (score > 0) await submitLocalScore(difficulty, score);
-        if (score > (highScores[difficulty] || 0)) {
-          await storeSet(`mh_hs_${difficulty}`, score, false);
-          setHighScores(prev => ({ ...prev, [difficulty]: score }));
-        }
-      } catch (e) { console.error('[result] score submit failed:', e && e.message ? e.message : e); }
+      // awaitに入る前にロックし、通信中の連打を同一周回の別処理として通さない
+      runFinalizingRef.current = true;
       try {
         await awardRunRewards(10);
         setClearCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_clears_${difficulty}`, next[difficulty], false); return next; });
       } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
       setGameState('CHAMPION');
+      submitRunScoreOnce();
     } else {
       setGameState('REWARD_PICK');
     }
