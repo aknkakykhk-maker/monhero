@@ -17,6 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-29 00:42",
+    type: "issue",
+    status: "fixed",
+    title: "Normalランキングの全国保存判定を修正",
+    items: [
+      "Normal・Hard・Masterを同じ1回の送信経路へ統一しました",
+      "全国ランキングに保存できなかった場合、端末内保存だけで成功扱いにしないよう修正しました",
+    ],
+  },
+  {
     date: "2026-07-29 00:30",
     type: "issue",
     status: "fixed",

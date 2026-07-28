@@ -39,7 +39,11 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 最終画面の遷移ボタンを同期ロックする`, code.includes('resultActionRef.current') && code.includes('runResultActionOnce'));
   check(`${label}: 終了処理中は画面全体の入力を遮断する`, code.includes('resultProcessing') && code.includes('aria-label') && code.includes('touchAction'));
   check(`${label}: ランキングPOSTに8秒の上限`, code.includes("new Error('ranking insert timed out after 8000ms')") && code.includes('signal: controller.signal'));
-  check(`${label}: 通信失敗時にPOSTを4回繰り返さない`, code.includes("if (!/level|icon/i.test(responseBody)) throw eVariant"));
+  check(`${label}: 全難易度を全項目の単一payloadで1回だけPOST`,
+    /const row = \{\s*difficulty: diff,\s*user_name: name,\s*hero: heroName,\s*party,\s*score: finalScore,\s*level,\s*icon,\s*clear_id: clearId\s*\}/s.test(code)
+      && !code.includes('const variants = ['));
+  check(`${label}: 全国保存とローカル保存の成功判定を分離`,
+    /nationalSaved: false,\s*localSaved/s.test(code) && /if \(!result(?:\?\.nationalSaved|\.nationalSaved)\)/.test(code));
 
   const nextWave = code.slice(code.indexOf('const handleNextWave'), code.indexOf('// スロットで現在選べる固有技一覧'));
   check(`${label}: ムー撃破処理がランキングPOSTを直接待たない`, !/await\s+submitLocalScore/.test(nextWave));
