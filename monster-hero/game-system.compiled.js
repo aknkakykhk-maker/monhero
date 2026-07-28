@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 340516f851052daa
+// source-sha256: 0e0d3ce8b8fd1ee9
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -3806,14 +3806,25 @@ function MonsterHeroGame() {
       const requestKey = `${d}:${includeLevels ? 'levels' : 'score'}`;
       const fetchedAt = rankingFetchedAtRef.current.get(requestKey) || 0;
       if (!force && Date.now() - fetchedAt < 30000) return;
+      let requestId = null;
+      if (force) {
+        // POST成功（または更新操作）の時点で、それ以前のGETを即座に失効させる。
+        // pendingをawaitしてからlatestを更新すると、その待ち時間中に保存前の応答が
+        // localRankingsへ入り、Normal画面が古いまま描画される時間が生じる。
+        requestId = `${d}-${Date.now()}-${++rankingRequestSequenceRef.current}`;
+        rankingLatestRequestRef.current.set(d, requestId);
+      }
       // 保存直後の強制再取得は、保存前から走っている同難易度の通信が終わってから新しく開始する。
       // ここで古いPromiseを共有すると、POST済みなのに保存前の結果を再表示してしまう。
       if (rankingRequestsRef.current.has(requestKey)) {
         const pending = rankingRequestsRef.current.get(requestKey);
         if (!force) return pending;
         await pending;
+        // 待機中に、より新しい保存後再取得や更新操作が開始された場合は、
+        // その1本に取得を任せて重複GETと逆順反映を防ぐ。
+        if (rankingLatestRequestRef.current.get(d) !== requestId) return;
       }
-      const requestId = `${d}-${Date.now()}-${++rankingRequestSequenceRef.current}`;
+      if (!requestId) requestId = `${d}-${Date.now()}-${++rankingRequestSequenceRef.current}`;
       const concurrent = [...rankingRequestsRef.current.keys()];
       rankingLatestRequestRef.current.set(d, requestId);
       setRankingErrorByDiff(prev => ({
@@ -3916,7 +3927,8 @@ function MonsterHeroGame() {
           appliedRequestId: requestId
         });
       })().finally(() => {
-        rankingRequestsRef.current.delete(requestKey);
+        // 後発リクエストを先発のfinallyでMapから消さない。
+        if (rankingRequestsRef.current.get(requestKey) === request) rankingRequestsRef.current.delete(requestKey);
         if (rankingLatestRequestRef.current.get(d) === requestId) {
           setRankingLoadingByDiff(prev => ({
             ...prev,
