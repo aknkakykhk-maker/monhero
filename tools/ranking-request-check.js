@@ -1,5 +1,5 @@
 // ランキングのData APIリクエストを通信スタブで確認する。
-// Normal/Hard/Masterの保存値、旧表記・clear_id=NULLの取得、clear_id重複防止を対象にする。
+// Normal/Hard/Masterの保存値、正規表記・clear_id=NULLの取得、clear_id重複防止を対象にする。
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -13,9 +13,9 @@ if (start < 0 || end < 0) throw new Error('ランキング通信コードを抽�
 const requests = [];
 const storedClearIds = new Set();
 const rows = [
-  { difficulty: 'normal', user_name: '旧Normal', score: 100, clear_id: null },
+  { difficulty: 'Normal', user_name: '旧Normal', score: 100, clear_id: null },
   { difficulty: 'Hard', user_name: '旧Hard', score: 200, clear_id: null },
-  { difficulty: 'MASTER', user_name: '旧Master', score: 300, clear_id: null },
+  { difficulty: 'Master', user_name: '旧Master', score: 300, clear_id: null },
 ];
 const response = (body, status = 200) => ({
   ok: status >= 200 && status < 300,
@@ -40,8 +40,8 @@ const context = {
       return response('', 201);
     }
     const parsed = new URL(url);
-    const value = (parsed.searchParams.get('difficulty') || '').replace(/^ilike\./, '').toLowerCase();
-    return response(rows.filter(row => row.difficulty.toLowerCase() === value));
+    const value = (parsed.searchParams.get('difficulty') || '').replace(/^eq\./, '');
+    return response(rows.filter(row => row.difficulty === value));
   },
 };
 vm.createContext(context);
@@ -57,7 +57,7 @@ const check = (name, ok) => { checks.push(ok); console.log(`  ${ok ? 'OK' : 'NG'
     await context.api.sbInsertScore({ difficulty, user_name: '重複', score: 999, clear_id: clearId });
     const fetched = await context.api.sbFetchRankings(difficulty);
     check(`${difficulty}: INSERTは正規keyを保存`, rows.some(row => row.clear_id === clearId && row.difficulty === difficulty));
-    check(`${difficulty}: clear_id=NULLの旧データを取得`, fetched.some(row => row.clear_id === null));
+    check(`${difficulty}: 正規difficultyの旧データを取得`, fetched.some(row => row.clear_id === null && row.difficulty === difficulty));
     check(`${difficulty}: clear_id付きの新規データを取得`, fetched.some(row => row.clear_id === clearId));
     check(`${difficulty}: 同一clear_idを1件だけ保存`, rows.filter(row => row.clear_id === clearId).length === 1);
   }
@@ -98,7 +98,9 @@ const check = (name, ok) => { checks.push(ok); console.log(`  ${ok ? 'OK' : 'NG'
   check('全INSERTがignore-duplicatesを指定', posts.every(request => request.init.headers.Prefer.includes('resolution=ignore-duplicates')));
   const gets = requests.filter(request => !request.init.method);
   check('全SELECTがclear_idを表示フィルターに使用しない', gets.every(request => !new URL(request.url).searchParams.has('clear_id')));
-  check('全SELECTがdifficultyのilike完全一致', gets.every(request => /^ilike\.[^%*_]+$/i.test(new URL(request.url).searchParams.get('difficulty') || '')));
+  check('全SELECTが正規difficultyのeq完全一致', gets.every(request => /^eq\.(Normal|Hard|Master)$/.test(new URL(request.url).searchParams.get('difficulty') || '')));
+  const getFilter = difficulty => new URL(gets.find(request => new URL(request.url).searchParams.get('difficulty') === `eq.${difficulty}`)?.url || 'https://invalid/').search;
+  check('NormalとHardのSELECT条件差分はdifficulty値だけ', getFilter('Normal').replace('eq.Normal', 'eq.DIFFICULTY') === getFilter('Hard').replace('eq.Hard', 'eq.DIFFICULTY'));
   check('全SELECTがscore=NULLを有効記録より後ろにする', gets.every(request => new URL(request.url).searchParams.get('order') === 'score.desc.nullslast'));
 
   const failed = checks.filter(ok => !ok).length;

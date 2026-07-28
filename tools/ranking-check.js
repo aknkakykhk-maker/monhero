@@ -84,7 +84,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   const scoreRequests = await page.evaluate(() => window.__rankRequests || []);
   check('publishable keyをapikeyとして送信する', scoreRequests.length > 0 && scoreRequests.every(r => r.apikey && r.apikey.startsWith('sb_publishable_')));
   check('publishable keyをBearer JWTとして誤送信しない', scoreRequests.length > 0 && scoreRequests.every(r => !r.authorization));
-  check('難易度SELECTは大文字小文字を区別しない完全一致', scoreRequests.length > 0 && scoreRequests.every(r => r.difficultyFilter.startsWith('ilike.')));
+  check('難易度SELECTは正規keyのeq完全一致', scoreRequests.length > 0 && scoreRequests.every(r => r.difficultyFilter.startsWith('eq.')));
   check('スコア画面を開いただけではレベル順を取得しない',
     orders.some(o => o.startsWith('score.desc')) && !orders.some(o => o.startsWith('level.desc')),
     [...new Set(orders)].join(', '));

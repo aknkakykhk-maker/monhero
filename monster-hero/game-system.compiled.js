@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2fe3209111e00cab
+// source-sha256: 340516f851052daa
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 00:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 00:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2926,7 +2926,6 @@ const SB_HEADERS = {
 };
 
 // 画面表示名とDB識別子を分離し、ランキング通信では必ず既存の難易度keyへ正規化する。
-// 過去データには大文字小文字の揺れがあるため、SELECTだけはilikeの完全一致で両方を拾う。
 const normalizeRankingDifficulty = value => {
   const compact = String(value ?? '').trim().replace(/\s+/g, '').toLowerCase();
   const canonical = Object.keys(DIFFICULTY_SETTINGS).find(key => key.toLowerCase() === compact);
@@ -2947,7 +2946,9 @@ const sbFetchRankings = async (diff, limit = RANKING_DIAGNOSTIC_LIMIT, order = '
   const normalizedDifficulty = normalizeRankingDifficulty(diff);
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
   const select = 'user_name,hero,party,score,level,icon';
-  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=ilike.${encodeURIComponent(normalizedDifficulty)}&order=${order}&limit=${limit}&offset=${offset}`;
+  // DBに保存する正規keyと同じ値をeqで取得する。ilikeによる別系統の
+  // 取得条件を残さず、NormalもHardと完全に同じSELECT経路にする。
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=eq.${encodeURIComponent(normalizedDifficulty)}&order=${order}&limit=${limit}&offset=${offset}`;
   const startedAt = Date.now();
   rankingLog(requestId, 'request-start', {
     difficulty: normalizedDifficulty,
