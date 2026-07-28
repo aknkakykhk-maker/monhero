@@ -1520,9 +1520,14 @@ const sbFetchRankings = async (diff, limit=RANKING_DIAGNOSTIC_LIMIT, order='scor
   }
 };
 // 記録を1件挿入する(1プレイ=1件)
-const sbInsertScore = async (row, idempotent=false) => {
-  const query = idempotent ? '?on_conflict=clear_id' : '';
-  const prefer = idempotent ? 'resolution=ignore-duplicates,return=minimal' : 'return=minimal';
+const sbInsertScore = async (row) => {
+  // 全国ランキングの書き込みは常にclear_id必須とする。呼び出し側の指定漏れで通常POSTへ
+  // 戻る経路を残すと、タイムアウト後の再送などが同じクリアを別行として保存してしまう。
+  if (typeof row?.clear_id !== 'string' || !row.clear_id.trim()) {
+    throw new Error('ranking clear_id is required; unsafe insert skipped');
+  }
+  const query = '?on_conflict=clear_id';
+  const prefer = 'resolution=ignore-duplicates,return=minimal';
   // 結果画面はこのPOSTが確定するまで入力をロックするため、通信が切れかけた端末でも
   // 永久に「処理中」にならないようGETと同じ上限を設ける。タイムアウト後はclear_id付きの
   // ローカル記録へ退避し、同じクリアを非冪等なPOSTで再送しない。
@@ -2586,7 +2591,7 @@ function MonsterHeroGame() {
       let clearIdUnsupported = false;
       for (const row of variants) {
         try {
-          await sbInsertScore(row, true);
+          await sbInsertScore(row);
           saved = true;
           break;
         } catch (eVariant) {
