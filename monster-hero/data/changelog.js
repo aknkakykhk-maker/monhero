@@ -17,6 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-28 23:39",
+    type: "issue",
+    status: "fixed",
+    title: "Normal・Masterランキングを修正",
+    items: [
+      "難易度名の大文字小文字が異なる過去記録もランキングへ表示されるようにしました",
+      "Normal・Hard・Masterの新規記録を共通の難易度名で保存し、取得失敗時は原因を画面とログで確認できるようにしました",
+    ],
+  },
+  {
     date: "2026-07-28 21:54",
     type: "issue",
     status: "fixed",
