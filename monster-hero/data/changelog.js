@@ -17,6 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-29 00:30",
+    type: "issue",
+    status: "fixed",
+    title: "Normalランキングの周回ID更新と保存診断を反映",
+    items: [
+      "Normalランキングの周回IDをクリアごとに更新し、続けて遊んだ記録も正しく保存されるようにしました",
+      "ランキング保存時の重複判定と診断情報を配信用ゲームへ反映しました",
+    ],
+  },
+  {
     date: "2026-07-29 00:04",
     type: "issue",
     status: "fixed",
