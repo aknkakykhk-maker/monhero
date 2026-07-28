@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 18:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 18:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1482,22 +1482,31 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE
 // 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
 // 診断用: 50件取得後に発生した遅延・非表示を切り分けるため、一時的に20件へ戻す。
 const RANKING_DIAGNOSTIC_LIMIT = 20;
-const sbFetchRankings = async (diff, limit=RANKING_DIAGNOSTIC_LIMIT, order='score.desc', offset=0) => {
+const rankingLog = (requestId, event, detail={}) => console.info('[ranking][diagnostic]', { requestId, event, at: new Date().toISOString(), ...detail });
+const sbFetchRankings = async (diff, limit=RANKING_DIAGNOSTIC_LIMIT, order='score.desc', offset=0, requestId='untracked') => {
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
   const select = 'user_name,hero,party,score,level,icon';
   const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=eq.${encodeURIComponent(diff)}&order=${order}&limit=${limit}&offset=${offset}`;
+  rankingLog(requestId, 'query', { difficulty: diff, category: 'ranking', rankingType: order, limit, offset, url });
   // モバイル回線などで接続だけが残り続けても、ランキング画面を永久に待機させない。
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
     const body = await res.text();
+    rankingLog(requestId, 'supabase-response', { difficulty: diff, status: res.status, statusText: res.statusText, ok: res.ok, body });
     if (!res.ok) throw new Error(`fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
     try {
       return JSON.parse(body);
     } catch (e) {
       throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
     }
+  } catch (error) {
+    const normalized = error?.name === 'AbortError'
+      ? new Error(`ranking request timed out after 8000ms; url=${url}`)
+      : error;
+    rankingLog(requestId, 'supabase-error', { difficulty: diff, name: normalized?.name, message: normalized?.message, stack: normalized?.stack });
+    throw normalized;
   } finally {
     clearTimeout(timer);
   }
@@ -1649,6 +1658,8 @@ function MonsterHeroGame() {
   // 起動時の先読みと画面を開いた時の取得を共有し、同じ難易度への二重通信を防ぐ。
   const rankingRequestsRef = useRef(new Map());
   const rankingFetchedAtRef = useRef(new Map());
+  const rankingLatestRequestRef = useRef(new Map());
+  const rankingRequestSequenceRef = useRef(0);
   const [showRanking, setShowRanking] = useState(false);
   // ラン終了処理は通信中の連打や再レンダーがあっても、1周につき必ず1回だけ実行する。
   // stateでは更新前に次のイベントが入る余地があるため、同期的に書き換わるrefをロックに使う
@@ -1984,7 +1995,7 @@ function MonsterHeroGame() {
     };
     // Masterだけは旧データの表記揺れと不正行を診断する。正常な1行まで巻き添えにせず、
     // 必須項目を満たす行だけを残す（他難易度の取得仕様には触れない）。
-    const fetchMasterRows = async (order) => {
+    const fetchMasterRows = async (order, requestId) => {
       const variants = ['Master', 'master', 'MASTER'];
       let rows = [];
       let firstError = null;
@@ -1992,7 +2003,7 @@ function MonsterHeroGame() {
       for (const sentDifficulty of variants) {
         try {
           console.info('[ranking][Master] 実際に送っているdifficulty値:', sentDifficulty, 'order:', order);
-          const responseRows = await sbFetchRankings(sentDifficulty, RANKING_DIAGNOSTIC_LIMIT, order, 0);
+          const responseRows = await sbFetchRankings(sentDifficulty, RANKING_DIAGNOSTIC_LIMIT, order, 0, requestId);
           succeeded = true;
           console.info('[ranking][Master] Supabase成功; difficulty:', sentDifficulty, '取得件数:', Array.isArray(responseRows) ? responseRows.length : '配列ではない');
           if (!Array.isArray(responseRows)) throw new Error(`response is not an array: ${JSON.stringify(responseRows)}`);
@@ -2032,6 +2043,10 @@ function MonsterHeroGame() {
       const fetchedAt = rankingFetchedAtRef.current.get(requestKey) || 0;
       if (!force && Date.now() - fetchedAt < 30000) return;
       if (rankingRequestsRef.current.has(requestKey)) return rankingRequestsRef.current.get(requestKey);
+      const requestId = `${d}-${Date.now()}-${++rankingRequestSequenceRef.current}`;
+      const concurrent = [...rankingRequestsRef.current.keys()];
+      rankingLatestRequestRef.current.set(d, requestId);
+      rankingLog(requestId, 'fetch-start', { selectedDifficulty: d, includeLevels, force, concurrentRequests: concurrent });
       setRankingLoadingByDiff(prev => ({ ...prev, [d]: true }));
       const request = (async () => {
       try {
@@ -2039,32 +2054,25 @@ function MonsterHeroGame() {
         let rows;
         try {
           // 診断中は21件目以降を一切取得せず、20件と50件の差だけを比較できるようにする。
-          rows = mergeRows([], d === 'Master' ? await fetchMasterRows('score.desc') : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'score.desc', 0));
+          rows = mergeRows([], d === 'Master' ? await fetchMasterRows('score.desc', requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'score.desc', 0, requestId));
         } catch (scoreError) {
           console.error('[ranking] score order fetch failed for', d, scoreError && scoreError.message ? scoreError.message : scoreError);
           // 診断条件を変えないため、代替順の取得も20件に限定する。
-          rows = d === 'Master' ? await fetchMasterRows('id.desc') : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0);
+          rows = d === 'Master' ? await fetchMasterRows('id.desc', requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0, requestId);
           rows = mergeRows([], rows).sort((a,b)=>(b.score||0)-(a.score||0));
         }
+        rankingLog(requestId, 'format-start', { difficulty: d, dataCount: Array.isArray(rows) ? rows.length : null });
         const uniqueScoreRows = mergeRows([], rows).slice(0, RANKING_DIAGNOSTIC_LIMIT);
         byDiff[d] = uniqueScoreRows.map(toEntry);
         let pool = uniqueScoreRows;
         if (includeLevels) try {
-          pool = mergeRows(pool, d === 'Master' ? await fetchMasterRows('level.desc.nullslast') : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'level.desc.nullslast', 0));
+          pool = mergeRows(pool, d === 'Master' ? await fetchMasterRows('level.desc.nullslast', requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'level.desc.nullslast', 0, requestId));
         } catch (eLv) {
           console.error('[ranking] level order fetch failed for', d, eLv && eLv.message ? eLv.message : eLv);
         }
         poolByDiff[d] = pool.map(toEntry);
         sourceByDiff[d] = 'global';
-        if (byDiff[d].length === 0) {
-          const localRows = await restoreLocalRows(d);
-          if (localRows.length) {
-            if (d === 'Master') console.warn('[ranking][Master] フォールバックへ切り替わった理由: Supabase取得成功だが有効なMasterレコードが0件');
-            byDiff[d] = localRows.slice(0, RANKING_DIAGNOSTIC_LIMIT);
-            poolByDiff[d] = localRows.slice();
-            sourceByDiff[d] = 'local';
-          }
-        }
+        rankingLog(requestId, 'format-end', { difficulty: d, dataCount: byDiff[d].length, source: 'global' });
       } catch (e) {
         console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
         if (d === 'Master') console.error('[ranking][Master] フォールバックへ切り替わった理由: score.descとid.descの取得がともに失敗', e);
@@ -2074,17 +2082,26 @@ function MonsterHeroGame() {
             byDiff[d] = rows.slice(0, RANKING_DIAGNOSTIC_LIMIT);
             poolByDiff[d] = rows.slice();
             sourceByDiff[d] = 'local';
+            rankingLog(requestId, 'fallback', { difficulty: d, reason: e?.message || String(e), dataCount: rows.length });
           }
         } catch {}
       }
       // 1難易度ずつ反映し、遅い通信が残っていても取得済みのランキングはすぐ表示する。
+      if (rankingLatestRequestRef.current.get(d) !== requestId) {
+        rankingLog(requestId, 'stale-result-discarded', { difficulty: d, latestRequestId: rankingLatestRequestRef.current.get(d) });
+        return;
+      }
+      rankingLog(requestId, 'render-start', { difficulty: d, source: sourceByDiff[d], dataCount: byDiff[d]?.length || 0 });
       setRankingSourceByDiff(prev => ({ ...prev, ...sourceByDiff }));
       setLocalRankings(prev => ({ ...prev, ...byDiff }));
       setRankingPool(prev => ({ ...prev, ...poolByDiff }));
       rankingFetchedAtRef.current.set(requestKey, Date.now());
+      rankingLog(requestId, 'render-end', { difficulty: d, appliedRequestId: requestId });
       })().finally(() => {
         rankingRequestsRef.current.delete(requestKey);
-        setRankingLoadingByDiff(prev => ({ ...prev, [d]: false }));
+        if (rankingLatestRequestRef.current.get(d) === requestId) {
+          setRankingLoadingByDiff(prev => ({ ...prev, [d]: false }));
+        }
       });
       rankingRequestsRef.current.set(requestKey, request);
       return request;
