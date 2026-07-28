@@ -31,6 +31,11 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
       && code.includes('ranking clear_id is required; unsafe insert skipped')
       && !/sbInsertScore\s*=\s*async\s*\(row,\s*idempotent/.test(code));
   check(`${label}: clear_id未対応時に非冪等POSTへ退避しない`, code.includes('unsafe insert skipped') && !code.includes("if (!saved && clearIdUnsupported) await sbInsertScore"));
+  check(`${label}: Normalを含む全難易度で共通の周回IDリセットを使う`,
+    code.includes('const beginNewRankingRun') && (code.match(/beginNewRankingRun\(\{/g) || []).length === 2);
+  check(`${label}: UNIQUE違反のHTTP statusとPostgres codeを診断ログへ残す`,
+    code.includes("errorCode = JSON.parse(body)?.code") && code.includes('status: res.status')
+      && /errorCode,\s*error:/s.test(code));
   check(`${label}: 最終画面の遷移ボタンを同期ロックする`, code.includes('resultActionRef.current') && code.includes('runResultActionOnce'));
   check(`${label}: 終了処理中は画面全体の入力を遮断する`, code.includes('resultProcessing') && code.includes('aria-label') && code.includes('touchAction'));
   check(`${label}: ランキングPOSTに8秒の上限`, code.includes("new Error('ranking insert timed out after 8000ms')") && code.includes('signal: controller.signal'));

@@ -1548,16 +1548,25 @@ const sbInsertScore = async (row) => {
   try {
     rankingLog(requestId, 'insert-start', {
       difficulty: normalizedRow.difficulty, table: 'rankings', clearId: normalizedRow.clear_id,
-      score: normalizedRow.score, level: normalizedRow.level, hasIcon: Boolean(normalizedRow.icon),
-      columns: Object.keys(normalizedRow)
+      score: normalizedRow.score, userName: normalizedRow.user_name, level: normalizedRow.level,
+      hasIcon: Boolean(normalizedRow.icon), columns: Object.keys(normalizedRow), payload: normalizedRow
     });
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings${query}`, { method:'POST', headers:{...SB_HEADERS, 'Prefer':prefer}, body: JSON.stringify(normalizedRow), signal: controller.signal });
-    rankingLog(requestId, 'insert-response', { difficulty: normalizedRow.difficulty, status: res.status, statusText: res.statusText, ok: res.ok });
+    const body = res.ok ? '' : await res.text();
+    let errorCode = null;
+    if (body) {
+      try { errorCode = JSON.parse(body)?.code || null; } catch {}
+    }
+    rankingLog(requestId, 'insert-response', {
+      difficulty: normalizedRow.difficulty, clearId: normalizedRow.clear_id,
+      status: res.status, statusText: res.statusText, ok: res.ok,
+      errorCode, error: res.ok ? null : (body || res.statusText)
+    });
     if (!res.ok) {
-      const body = await res.text();
       const error = new Error(`insert ${res.status}: ${body || res.statusText}`);
       error.status = res.status;
       error.body = body;
+      error.code = errorCode;
       throw error;
     }
   } catch (error) {
@@ -1569,6 +1578,17 @@ const sbInsertScore = async (row) => {
 };
 
 const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+
+// 難易度に依存しない周回開始処理。Normalだけ前周のclear_idや送信ロックを引き継ぐ
+// 分岐が生まれないよう、タイトル復帰と再挑戦の両方からこの1か所を呼ぶ。
+const beginNewRankingRun = ({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef }) => {
+  runFinalizingRef.current = false;
+  scoreSubmittedRef.current = false;
+  rewardsAwardedRef.current = false;
+  clearRecordedRef.current = false;
+  runIdRef.current = createRunId();
+  return runIdRef.current;
+};
 
 // 最終リザルト画面(CHAMPION/敗北)共通: レベルの経験値バーが直前の進捗から今回の獲得分まで伸びる演出。
 // レベルを跨ぐ場合は満タンまで伸ばしてからLEVEL UPを見せ、次レベルの進捗へ切り替える
@@ -3349,11 +3369,7 @@ function MonsterHeroGame() {
   });
 
   const handleGoToTitle = () => {
-    runFinalizingRef.current = false;
-    scoreSubmittedRef.current = false;
-    rewardsAwardedRef.current = false;
-    clearRecordedRef.current = false;
-    runIdRef.current = createRunId();
+    beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
     setRunFinalizing(false);
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
@@ -3386,11 +3402,7 @@ function MonsterHeroGame() {
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
 
   const handleRetry = () => {
-    runFinalizingRef.current = false;
-    scoreSubmittedRef.current = false;
-    rewardsAwardedRef.current = false;
-    clearRecordedRef.current = false;
-    runIdRef.current = createRunId();
+    beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
     setRunFinalizing(false);
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
