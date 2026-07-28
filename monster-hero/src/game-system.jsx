@@ -1520,10 +1520,20 @@ const sbFetchRankings = async (diff, limit=RANKING_DIAGNOSTIC_LIMIT, order='scor
   }
 };
 // 記録を1件挿入する(1プレイ=1件)
-const sbInsertScore = async (row) => {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings`, { method:'POST', headers:{...SB_HEADERS, 'Prefer':'return=minimal'}, body: JSON.stringify(row) });
-  if (!res.ok) throw new Error(`insert ${res.status}`);
+const sbInsertScore = async (row, idempotent=false) => {
+  const query = idempotent ? '?on_conflict=clear_id' : '';
+  const prefer = idempotent ? 'resolution=ignore-duplicates,return=minimal' : 'return=minimal';
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings${query}`, { method:'POST', headers:{...SB_HEADERS, 'Prefer':prefer}, body: JSON.stringify(row) });
+  if (!res.ok) {
+    const body = await res.text();
+    const error = new Error(`insert ${res.status}: ${body || res.statusText}`);
+    error.status = res.status;
+    error.body = body;
+    throw error;
+  }
 };
+
+const createRunId = () => globalThis.crypto?.randomUUID?.() || `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 
 // 最終リザルト画面(CHAMPION/敗北)共通: レベルの経験値バーが直前の進捗から今回の獲得分まで伸びる演出。
 // レベルを跨ぐ場合は満タンまで伸ばしてからLEVEL UPを見せ、次レベルの進捗へ切り替える
@@ -1673,6 +1683,9 @@ function MonsterHeroGame() {
   // stateでは更新前に次のイベントが入る余地があるため、同期的に書き換わるrefをロックに使う
   const runFinalizingRef = useRef(false);
   const scoreSubmittedRef = useRef(false);
+  const rewardsAwardedRef = useRef(false);
+  const runIdRef = useRef(createRunId());
+  const [runFinalizing, setRunFinalizing] = useState(false);
   const [screenShake, setScreenShake] = useState(false);
   const [bigShake, setBigShake] = useState(false);
   const triggerShake = useCallback((big=false) => {
@@ -2526,7 +2539,7 @@ function MonsterHeroGame() {
     })();
   }, [loadRankings]);
 
-  const submitLocalScore = async (diff, finalScore) => {
+  const submitLocalScore = async (diff, finalScore, clearId) => {
     // マスモン(絆レベルを持つ育成済みインスタンス)で編成していた場合、ランキング表示にも絆レベルを出せるよう記録する。
     // 表示名はマスモンの個体名(ブリーダーが自由につけた名前)ではなく、血統(種族)の名前を使う
     const party = slots.map(s => s ? { name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji: s.emoji, imgUrl: s.imgUrl || null, bondLevel: s.masuId ? getMasuBondLevel(s.masuId).level : null } : null);
@@ -2546,30 +2559,34 @@ function MonsterHeroGame() {
       // level/icon列がテーブルに無い場合でも、片方だけでも保存できるよう段階的に試す
       // (level無し/icon無しどちらかだけが未対応でも、対応している方は失わない)
       const variants = [
-        { ...rowCore, level, icon },
-        { ...rowCore, level },
-        { ...rowCore, icon },
-        rowCore,
+        { ...rowCore, level, icon, clear_id: clearId },
+        { ...rowCore, level, clear_id: clearId },
+        { ...rowCore, icon, clear_id: clearId },
+        { ...rowCore, clear_id: clearId },
       ];
       let saved = false;
+      let clearIdUnsupported = false;
       for (const row of variants) {
         try {
-          await sbInsertScore(row);
+          await sbInsertScore(row, true);
           saved = true;
           break;
         } catch (eVariant) {
           console.error('[ranking] submit variant failed, trying next:', eVariant && eVariant.message ? eVariant.message : eVariant);
+          if (/clear_id|on_conflict/i.test(eVariant?.body || '')) clearIdUnsupported = true;
         }
       }
-      if (!saved) throw new Error('all submit variants failed');
+      // DBマイグレーション適用前だけの互換経路。適用後は必ずclear_idの一意制約で冪等化する。
+      if (!saved && clearIdUnsupported) await sbInsertScore({ ...rowCore, level, icon });
+      else if (!saved) throw new Error('all submit variants failed');
     } catch (e) {
       console.error('[ranking] supabase submit failed, falling back to local:', e && e.message ? e.message : e);
-      const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, at: Date.now() };
+      const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, clearId, at: Date.now() };
       try {
         const rows = await storeGet(`mh_rank_${diff}`, [], false);
         const list = Array.isArray(rows) ? rows.slice() : [];
         // サーバー側と同じく、1プレイごとに1件として積む
-        list.push(entry);
+        if (!list.some(r => r?.clearId === clearId)) list.push(entry);
         const kept = list.slice().sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,50);
         // スコア上位50件に加えて、名前ごとの最新1件は必ず残しておく。
         // ブリーダーLv・絆Lvのランキングはこの記録から集計するので、
@@ -2594,7 +2611,7 @@ function MonsterHeroGame() {
     if (score <= 0 || scoreSubmittedRef.current) return;
     scoreSubmittedRef.current = true;
     try {
-      await submitLocalScore(difficulty, score);
+      await submitLocalScore(difficulty, score, runIdRef.current);
       if (score > (highScores[difficulty] || 0)) {
         await storeSet(`mh_hs_${difficulty}`, score, false);
         setHighScores(prev => ({ ...prev, [difficulty]: score }));
@@ -3125,6 +3142,9 @@ function MonsterHeroGame() {
   // クリアしたWAVE数に応じてブリーダー経験値・ゴールド・勇者モンの絆経験値をまとめて加算(端末保存)。
   // 最終リザルト画面(CHAMPION/敗北)に出す獲得内訳もここで組み立てる
   const awardRunRewards = async (wavesCleared) => {
+    // awaitより前に同期ロックする。敗北effectとボタン連打が同時に到達しても報酬は一度だけ。
+    if (rewardsAwardedRef.current) return;
+    rewardsAwardedRef.current = true;
     if (wavesCleared <= 0) { setFinalRewardSummary({ breederXpGain: 0, breederLevelBefore: breederLevel, breederLevelAfter: breederLevel, goldBefore: gold, goldAfter: gold, heroBondGain: null, allyBondGains: [], waveHistory }); return; }
     const scoreMult = DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
     const goldMult = DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
@@ -3211,6 +3231,7 @@ function MonsterHeroGame() {
     if (hp <= 0) {
       if (runFinalizingRef.current) return;
       runFinalizingRef.current = true;
+      setRunFinalizing(true);
       (async () => {
         // 経験値・ダイヤの付与は端末内で完結するので必ず先に行う。
         // 以前はスコア送信(全国ランキングへの通信)の完了を待ってから付与していたため、
@@ -3266,6 +3287,9 @@ function MonsterHeroGame() {
   const handleGoToTitle = () => {
     runFinalizingRef.current = false;
     scoreSubmittedRef.current = false;
+    rewardsAwardedRef.current = false;
+    runIdRef.current = createRunId();
+    setRunFinalizing(false);
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
@@ -3285,6 +3309,7 @@ function MonsterHeroGame() {
   const handleGiveUp = useCallback(async () => {
     if (runFinalizingRef.current) return;
     runFinalizingRef.current = true;
+    setRunFinalizing(true);
     // 敗北時と同じく、端末内で完結する経験値・ダイヤの付与とリザルト表示を先に済ませ、
     // 通信を伴うスコア送信は完了を待たず後追いで行う(通信待ちでリザルトが遅れないように)
     try { await awardRunRewards(Math.max(0, wave - 1)); } catch {}
@@ -3296,6 +3321,9 @@ function MonsterHeroGame() {
   const handleRetry = () => {
     runFinalizingRef.current = false;
     scoreSubmittedRef.current = false;
+    rewardsAwardedRef.current = false;
+    runIdRef.current = createRunId();
+    setRunFinalizing(false);
     const s = resetAllState();
     setScore(s.score); setWave(s.wave); setHp(s.hp); setMaxHp(s.maxHp); setGuts(s.guts); setMaxGuts(s.maxGuts);
     setAtk(s.atk); setDef(s.def); setSlots(s.slots); setMainHero(s.mainHero); setHand(s.hand); setDeck(s.deck);
@@ -3838,6 +3866,7 @@ function MonsterHeroGame() {
     if (wave === 10) {
       // awaitに入る前にロックし、通信中の連打を同一周回の別処理として通さない
       runFinalizingRef.current = true;
+      setRunFinalizing(true);
       try {
         await awardRunRewards(10);
         setClearCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_clears_${difficulty}`, next[difficulty], false); return next; });
@@ -6220,7 +6249,7 @@ function MonsterHeroGame() {
             <div className="pt-1 flex flex-col gap-0.5 text-right"><div className="text-[9px] text-slate-500 font-bold uppercase italic">難易度ボーナス ({difficulty}): x{scoreMultiplier}</div><div className="flex justify-between items-end"><span className="text-indigo-400 text-xs font-black uppercase">獲得スコア</span><span className="text-white font-mono font-black text-xl">{waveResult.roundScore.toLocaleString()}</span></div></div>
             <div className="pt-1 flex justify-between items-end border-t border-white/20"><span className="text-amber-500 text-[11px] font-black uppercase">累計スコア</span><span className="text-amber-400 font-mono font-black text-lg">{waveResult.totalScore.toLocaleString()}</span></div>
           </div>
-          <button onClick={handleNextWave} className="w-full max-w-xs bg-white text-indigo-900 py-3 rounded-2xl font-black text-lg active:scale-95 uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0">次へ進む <ChevronRight className="inline" size={20}/></button>
+          <button onClick={handleNextWave} disabled={runFinalizing} aria-busy={runFinalizing} className={`w-full max-w-xs py-3 rounded-2xl font-black text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0 ${runFinalizing?'bg-slate-500 text-slate-300 cursor-not-allowed':'bg-white text-indigo-900 active:scale-95'}`}>{runFinalizing?'処理中…':<>次へ進む <ChevronRight className="inline" size={20}/></>}</button>
         </div>
       )}
 

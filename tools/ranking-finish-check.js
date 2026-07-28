@@ -15,7 +15,12 @@ const check = (name, ok) => {
 for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) {
   check(`${label}: 周回単位の送信ロックがある`, code.includes('scoreSubmittedRef.current'));
   check(`${label}: 終了処理の連打ロックがある`, code.includes('runFinalizingRef.current'));
+  check(`${label}: 報酬付与にも独立した一度だけロックがある`, code.includes('rewardsAwardedRef.current'));
+  check(`${label}: 最終リザルト遷移中は次へボタンを無効化`,
+    (code.includes('disabled={runFinalizing}') || code.includes('disabled: runFinalizing'))
+      && (code.includes('aria-busy={runFinalizing}') || code.includes('"aria-busy": runFinalizing')));
   check(`${label}: 共通の一度だけ送信する処理を使う`, code.includes('submitRunScoreOnce'));
+  check(`${label}: clear_idでランキングPOSTを冪等化`, code.includes("'?on_conflict=clear_id'") && code.includes('resolution=ignore-duplicates'));
 
   const nextWave = code.slice(code.indexOf('const handleNextWave'), code.indexOf('// スロットで現在選べる固有技一覧'));
   check(`${label}: ムー撃破処理がランキングPOSTを直接待たない`, !/await\s+submitLocalScore/.test(nextWave));
