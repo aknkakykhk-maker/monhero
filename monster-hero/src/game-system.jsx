@@ -1686,6 +1686,10 @@ function MonsterHeroGame() {
   const rewardsAwardedRef = useRef(false);
   const runIdRef = useRef(createRunId());
   const [runFinalizing, setRunFinalizing] = useState(false);
+  // 最終画面の遷移ボタンも、最初のpointer/clickを受けた瞬間に同期ロックする。
+  // Reactのstate反映前に「再挑戦」「トップへ」が続けて押されても、初回だけを通す。
+  const resultActionRef = useRef(false);
+  const [resultActionPending, setResultActionPending] = useState(false);
   const [screenShake, setScreenShake] = useState(false);
   const [bigShake, setBigShake] = useState(false);
   const triggerShake = useCallback((big=false) => {
@@ -2576,9 +2580,10 @@ function MonsterHeroGame() {
           if (/clear_id|on_conflict/i.test(eVariant?.body || '')) clearIdUnsupported = true;
         }
       }
-      // DBマイグレーション適用前だけの互換経路。適用後は必ずclear_idの一意制約で冪等化する。
-      if (!saved && clearIdUnsupported) await sbInsertScore({ ...rowCore, level, icon });
-      else if (!saved) throw new Error('all submit variants failed');
+      // clear_id無しの互換POSTは、同じクリアの再送をDB側で判別できず重複を作るため行わない。
+      // マイグレーション未適用環境ではローカル保存へ退避し、非冪等な全国ランキング送信を避ける。
+      if (!saved && clearIdUnsupported) throw new Error('rankings clear_id migration is required; unsafe insert skipped');
+      if (!saved) throw new Error('all submit variants failed');
     } catch (e) {
       console.error('[ranking] supabase submit failed, falling back to local:', e && e.message ? e.message : e);
       const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, clearId, at: Date.now() };
@@ -3337,6 +3342,18 @@ function MonsterHeroGame() {
     setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
     setGameState('PICK_HERO');
+  };
+
+  const runResultActionOnce = (action) => {
+    if (resultActionRef.current) return;
+    resultActionRef.current = true;
+    setResultActionPending(true);
+    action();
+    // 遷移先で次の周回を開始できるよう、現在の連打イベントが終わってから解除する。
+    setTimeout(() => {
+      resultActionRef.current = false;
+      setResultActionPending(false);
+    }, 0);
   };
 
   const getNextEnemyAction = useCallback((ent, currentDist) => {
@@ -6465,12 +6482,12 @@ function MonsterHeroGame() {
       {showQuitConfirm&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">現在のスコア {score.toLocaleString()} pt がランキングに記録されます</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>)}
 
       {/* CHAMPION */}
-      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1><div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><button onClick={handleGoToTitle} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2">タイトルへ</button></div>)}
+      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1><div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><button onClick={()=>runResultActionOnce(handleGoToTitle)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'タイトルへ'}</button></div>)}
 
       {/* GAME OVER */}
-      {hp<=0&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
+      {hp<=0&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(handleGoToTitle)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
 
-      {gaveUp&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Flag size={48} className="text-slate-400 mb-3"/><h2 className="text-2xl font-black italic text-white uppercase">リタイア</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={handleRetry} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"><RotateCcw size={20}/> 再挑戦</button><button onClick={handleGoToTitle} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase">トップへ</button></div></div>)}
+      {gaveUp&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Flag size={48} className="text-slate-400 mb-3"/><h2 className="text-2xl font-black italic text-white uppercase">リタイア</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(handleGoToTitle)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
 
       {/* マスモン登録: ラン終了画面(CHAMPION/敗北/リタイア)から名前を付けて登録するモーダル */}
       {showMasuRegisterModal&&(
