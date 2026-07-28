@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0e0d3ce8b8fd1ee9
+// source-sha256: 99354ab769e68eb0
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 00:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 01:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2932,6 +2932,9 @@ const normalizeRankingDifficulty = value => {
   if (!canonical) throw new Error(`unknown ranking difficulty: ${String(value)}`);
   return canonical;
 };
+// 通信、state、リクエスト管理、画面参照で共有する唯一のランキング内部キー。
+// 表示ラベルや大文字小文字の異なる入力を、そのままオブジェクトキーにしない。
+const rankingDifficultyKey = value => normalizeRankingDifficulty(value);
 
 // 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
 // 診断用: 50件取得後に発生した遅延・非表示を切り分けるため、一時的に20件へ戻す。
@@ -3387,6 +3390,7 @@ function MonsterHeroGame() {
     setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 650);
   }, []);
   const [rankingViewDiff, setRankingViewDiff] = useState('Normal');
+  const rankingViewKey = rankingDifficultyKey(rankingViewDiff);
   const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
@@ -3729,6 +3733,7 @@ function MonsterHeroGame() {
   }, [bondRankingAll]);
   const bondRanking = useMemo(() => bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 50), [bondRankingAll, bondRankMonFilter]);
   const loadRankings = useCallback(async (targetDiff = null, includeLevels = false, force = false) => {
+    const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
     const byDiff = {};
     const poolByDiff = {};
     const sourceByDiff = {};
@@ -3800,9 +3805,10 @@ function MonsterHeroGame() {
     // 起動時は利用者から不調報告のあるNormal/Masterを先に取得する。
     // 全難易度を一斉取得すると記録の多い難易度同士がSupabase側で競合するため、2件ずつに制限する。
     const allDiffs = Object.keys(DIFFICULTY_SETTINGS);
-    const diffs = includeLevels || !targetDiff ? ['Normal', 'Master', ...allDiffs.filter(d => d !== 'Normal' && d !== 'Master')] : [targetDiff];
+    const diffs = includeLevels || !normalizedTargetDiff ? ['Normal', 'Master', ...allDiffs.filter(d => d !== 'Normal' && d !== 'Master')] : [normalizedTargetDiff];
     if (diffs.length === 0) return;
-    const loadOne = async d => {
+    const loadOne = async requestedDiff => {
+      const d = rankingDifficultyKey(requestedDiff);
       const requestKey = `${d}:${includeLevels ? 'levels' : 'score'}`;
       const fetchedAt = rankingFetchedAtRef.current.get(requestKey) || 0;
       if (!force && Date.now() - fetchedAt < 30000) return;
@@ -7723,7 +7729,7 @@ function MonsterHeroGame() {
   }), " Ranking"), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => rankingKind === 'score' ? loadRankings(rankingViewDiff, false, true) : loadRankings(null, true, true),
+    onClick: () => rankingKind === 'score' ? loadRankings(rankingViewKey, false, true) : loadRankings(null, true, true),
     className: "p-2 bg-white/10 rounded-full active:scale-90"
   }, /*#__PURE__*/React.createElement(RefreshCcw, {
     size: 18
@@ -7747,7 +7753,7 @@ function MonsterHeroGame() {
     key: t.k,
     onClick: () => {
       setRankingKind(t.k);
-      if (t.k === 'score') loadRankings(rankingViewDiff);else loadRankings(null, true);
+      if (t.k === 'score') loadRankings(rankingViewKey);else loadRankings(null, true);
     },
     className: `py-2 rounded-xl text-[10px] font-black uppercase border active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`
   }, t.label))), rankingKind === 'score' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -7762,9 +7768,9 @@ function MonsterHeroGame() {
     style: difficultyStyle(st, rankingViewDiff === d)
   }, st.label))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll space-y-3 min-h-0"
-  }, (localRankings[rankingViewDiff] || []).length === 0 ? /*#__PURE__*/React.createElement("div", {
+  }, (localRankings[rankingViewKey] || []).length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "h-full flex items-center justify-center text-center px-4 text-slate-600 font-black uppercase text-xs italic"
-  }, rankingLoadingByDiff[rankingViewDiff] ? 'Loading...' : rankingErrorByDiff[rankingViewDiff] ? `取得エラー: ${rankingErrorByDiff[rankingViewDiff]}` : 'No records yet') : (localRankings[rankingViewDiff] || []).map((r, i) => /*#__PURE__*/React.createElement("div", {
+  }, rankingLoadingByDiff[rankingViewKey] ? 'Loading...' : rankingErrorByDiff[rankingViewKey] ? `取得エラー: ${rankingErrorByDiff[rankingViewKey]}` : 'No records yet') : (localRankings[rankingViewKey] || []).map((r, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     className: `flex flex-col p-3 rounded-2xl border ${i === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`
   }, /*#__PURE__*/React.createElement("div", {
@@ -7822,7 +7828,7 @@ function MonsterHeroGame() {
     className: "text-[7px] font-black text-pink-300 shrink-0"
   }, "Lv", p.bondLevel)))))))), /*#__PURE__*/React.createElement("div", {
     className: "text-center text-[9px] text-slate-600 pt-2 shrink-0 italic"
-  }, rankingSourceByDiff[rankingViewDiff] === 'local' ? '※ サーバーに接続できず、この端末に保存されたトップ20記録を表示中' : '※ 診断のため全国のトップ20記録を表示中')), rankingKind === 'breeder' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, rankingSourceByDiff[rankingViewKey] === 'local' ? '※ サーバーに接続できず、この端末に保存されたトップ20記録を表示中' : '※ 診断のため全国のトップ20記録を表示中')), rankingKind === 'breeder' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll space-y-2 min-h-0"
   }, breederRanking.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "h-full flex items-center justify-center text-slate-600 font-black uppercase text-xs italic"

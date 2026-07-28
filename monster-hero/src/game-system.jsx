@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 00:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 01:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1489,6 +1489,9 @@ const normalizeRankingDifficulty = (value) => {
   if (!canonical) throw new Error(`unknown ranking difficulty: ${String(value)}`);
   return canonical;
 };
+// 通信、state、リクエスト管理、画面参照で共有する唯一のランキング内部キー。
+// 表示ラベルや大文字小文字の異なる入力を、そのままオブジェクトキーにしない。
+const rankingDifficultyKey = (value) => normalizeRankingDifficulty(value);
 
 // 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
 // 診断用: 50件取得後に発生した遅延・非表示を切り分けるため、一時的に20件へ戻す。
@@ -1783,6 +1786,7 @@ function MonsterHeroGame() {
     setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 650);
   }, []);
   const [rankingViewDiff, setRankingViewDiff] = useState('Normal');
+  const rankingViewKey = rankingDifficultyKey(rankingViewDiff);
   const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
@@ -2073,6 +2077,7 @@ function MonsterHeroGame() {
   ), [bondRankingAll, bondRankMonFilter]);
 
   const loadRankings = useCallback(async (targetDiff=null, includeLevels=false, force=false) => {
+    const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
     const byDiff = {};
     const poolByDiff = {};
     const sourceByDiff = {};
@@ -2120,11 +2125,12 @@ function MonsterHeroGame() {
     // 起動時は利用者から不調報告のあるNormal/Masterを先に取得する。
     // 全難易度を一斉取得すると記録の多い難易度同士がSupabase側で競合するため、2件ずつに制限する。
     const allDiffs = Object.keys(DIFFICULTY_SETTINGS);
-    const diffs = (includeLevels || !targetDiff)
+    const diffs = (includeLevels || !normalizedTargetDiff)
       ? ['Normal', 'Master', ...allDiffs.filter(d => d !== 'Normal' && d !== 'Master')]
-      : [targetDiff];
+      : [normalizedTargetDiff];
     if (diffs.length === 0) return;
-    const loadOne = async (d) => {
+    const loadOne = async (requestedDiff) => {
+      const d = rankingDifficultyKey(requestedDiff);
       const requestKey = `${d}:${includeLevels ? 'levels' : 'score'}`;
       const fetchedAt = rankingFetchedAtRef.current.get(requestKey) || 0;
       if (!force && Date.now() - fetchedAt < 30000) return;
@@ -4478,16 +4484,16 @@ function MonsterHeroGame() {
             )}
             {showRanking&&(
               <div className="fixed inset-0 z-[8000] flex flex-col p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.97)',zIndex:80000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}>
-                <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest flex items-center gap-2"><Trophy size={20}/> Ranking</h2><div className="flex items-center gap-2"><button onClick={()=>rankingKind==='score'?loadRankings(rankingViewDiff,false,true):loadRankings(null,true,true)} className="p-2 bg-white/10 rounded-full active:scale-90"><RefreshCcw size={18}/></button><button onClick={()=>setShowRanking(false)} className="p-2 bg-white/10 rounded-full"><X size={20}/></button></div></div>
+                <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest flex items-center gap-2"><Trophy size={20}/> Ranking</h2><div className="flex items-center gap-2"><button onClick={()=>rankingKind==='score'?loadRankings(rankingViewKey,false,true):loadRankings(null,true,true)} className="p-2 bg-white/10 rounded-full active:scale-90"><RefreshCcw size={18}/></button><button onClick={()=>setShowRanking(false)} className="p-2 bg-white/10 rounded-full"><X size={20}/></button></div></div>
                 <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">
                   {[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=>(
-                    <button key={t.k} onClick={()=>{setRankingKind(t.k); if(t.k==='score') loadRankings(rankingViewDiff); else loadRankings(null,true);}} className={`py-2 rounded-xl text-[10px] font-black uppercase border active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>
+                    <button key={t.k} onClick={()=>{setRankingKind(t.k); if(t.k==='score') loadRankings(rankingViewKey); else loadRankings(null,true);}} className={`py-2 rounded-xl text-[10px] font-black uppercase border active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>
                   ))}
                 </div>
                 {rankingKind==='score'&&(<><div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide px-1 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=>(<button key={d} onClick={()=>{setRankingViewDiff(d); loadRankings(d);}} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase shrink-0 ${rankingViewDiff===d?'shadow-lg ring-1 ring-white/50':'border border-white/10'}`} style={difficultyStyle(st, rankingViewDiff===d)}>{st.label}</button>))}</div>
                 <div className="flex-1 overflow-y-auto mh-scroll space-y-3 min-h-0">
-                  {(localRankings[rankingViewDiff]||[]).length===0?(<div className="h-full flex items-center justify-center text-center px-4 text-slate-600 font-black uppercase text-xs italic">{rankingLoadingByDiff[rankingViewDiff]?'Loading...':rankingErrorByDiff[rankingViewDiff]?`取得エラー: ${rankingErrorByDiff[rankingViewDiff]}`:'No records yet'}</div>):(
-                    (localRankings[rankingViewDiff]||[]).map((r,i)=>(
+                  {(localRankings[rankingViewKey]||[]).length===0?(<div className="h-full flex items-center justify-center text-center px-4 text-slate-600 font-black uppercase text-xs italic">{rankingLoadingByDiff[rankingViewKey]?'Loading...':rankingErrorByDiff[rankingViewKey]?`取得エラー: ${rankingErrorByDiff[rankingViewKey]}`:'No records yet'}</div>):(
+                    (localRankings[rankingViewKey]||[]).map((r,i)=>(
                       <div key={i} className={`flex flex-col p-3 rounded-2xl border ${i===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`}>
                         <div className="flex items-center gap-4">
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${i===0?'bg-amber-500 text-black':i===1?'bg-slate-300 text-black':i===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{i+1}</div>
@@ -4509,7 +4515,7 @@ function MonsterHeroGame() {
                     ))
                   )}
                 </div>
-                <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">{rankingSourceByDiff[rankingViewDiff]==='local'?'※ サーバーに接続できず、この端末に保存されたトップ20記録を表示中':'※ 診断のため全国のトップ20記録を表示中'}</div></>)}
+                <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">{rankingSourceByDiff[rankingViewKey]==='local'?'※ サーバーに接続できず、この端末に保存されたトップ20記録を表示中':'※ 診断のため全国のトップ20記録を表示中'}</div></>)}
                 {rankingKind==='breeder'&&(
                   <>
                     <div className="flex-1 overflow-y-auto mh-scroll space-y-2 min-h-0">

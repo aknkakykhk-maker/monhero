@@ -56,9 +56,9 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: POST直後に全難易度を再取得しない`, !/await\s+loadRankings\(\)/.test(submit));
   check(`${label}: 強制再取得は保存前の同難易度通信完了後に開始`, code.includes('if (!force) return pending') && code.includes('await pending'));
   check(`${label}: 過去の完全重複をプレイ内容で畳む`, code.includes('const rowKey =') && code.includes('uniqueScoreRows'));
-  check(`${label}: 通常スコア表示は選択難易度だけ取得`, code.includes('loadRankings(difficulty)') && code.includes('targetDiff') && code.includes('[targetDiff]'));
+  check(`${label}: 通常スコア表示は選択難易度だけ取得`, code.includes('loadRankings(difficulty)') && code.includes('normalizedTargetDiff') && code.includes('[normalizedTargetDiff]'));
   const preloadAt = code.indexOf('background preload failed');
-  check(`${label}: 起動後に全難易度をバックグラウンド先読み`, preloadAt > 0 && code.includes('!targetDiff') && code.includes('Object.keys(DIFFICULTY_SETTINGS)'));
+  check(`${label}: 起動後に全難易度をバックグラウンド先読み`, preloadAt > 0 && code.includes('!normalizedTargetDiff') && code.includes('Object.keys(DIFFICULTY_SETTINGS)'));
   check(`${label}: ランキング先読みを起動完了条件にしない`, code.indexOf('setDataLoaded(true)') < preloadAt && !code.includes('await loadRankings()'));
   check(`${label}: 先読みと画面表示の通信を共有`, code.includes('rankingRequestsRef.current.has(requestKey)') && code.includes('rankingRequestsRef.current.set(requestKey, request)'));
   check(`${label}: 30秒以内の取得済みデータを再利用`, code.includes('Date.now() - fetchedAt < 30000'));
