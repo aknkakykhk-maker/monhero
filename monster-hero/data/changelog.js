@@ -17,6 +17,15 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-28 21:54",
+    type: "issue",
+    status: "fixed",
+    title: "クリア回数の多重記録を追加防止",
+    items: [
+      "最終WAVEのクリア回数にも専用の多重実行防止を追加し、結果確定中の再描画でも1回だけ保存するようにしました",
+    ],
+  },
+  {
     date: "2026-07-28 21:22",
     type: "issue",
     status: "fixed",

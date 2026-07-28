@@ -16,6 +16,10 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 周回単位の送信ロックがある`, code.includes('scoreSubmittedRef.current'));
   check(`${label}: 終了処理の連打ロックがある`, code.includes('runFinalizingRef.current'));
   check(`${label}: 報酬付与にも独立した一度だけロックがある`, code.includes('rewardsAwardedRef.current'));
+  check(`${label}: クリア回数にも独立した一度だけロックがある`, code.includes('clearRecordedRef.current') && code.includes('recordClearOnce'));
+  check(`${label}: クリア回数の永続化をReact state updaterの外で行う`,
+    code.includes('await storeSet(`mh_clears_${difficulty}`, nextCount, false)')
+      && !/setClearCounts\(prev\s*=>\s*\{[^}]*storeSet\(/s.test(code));
   check(`${label}: 最終リザルト遷移中は次へボタンを無効化`,
     (code.includes('disabled={runFinalizing}') || code.includes('disabled: runFinalizing'))
       && (code.includes('aria-busy={runFinalizing}') || code.includes('"aria-busy": runFinalizing')));

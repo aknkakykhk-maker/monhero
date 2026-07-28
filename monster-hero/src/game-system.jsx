@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 21:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 21:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1696,6 +1696,7 @@ function MonsterHeroGame() {
   const runFinalizingRef = useRef(false);
   const scoreSubmittedRef = useRef(false);
   const rewardsAwardedRef = useRef(false);
+  const clearRecordedRef = useRef(false);
   const runIdRef = useRef(createRunId());
   const [runFinalizing, setRunFinalizing] = useState(false);
   const [resultProcessing, setResultProcessing] = useState(false);
@@ -3251,6 +3252,17 @@ function MonsterHeroGame() {
     setFinalRewardSummary({ breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory });
   };
 
+  // Masterを含む最終WAVEのクリア回数も、報酬・ランキングとは独立した同期ロックで1回だけ記録する。
+  // Reactのstate updater内で永続化すると開発時のStrict Modeでupdaterが再評価され得るため、
+  // 保存する値をrefロック後に確定し、副作用をupdaterの外へ出す。
+  const recordClearOnce = async () => {
+    if (clearRecordedRef.current) return;
+    clearRecordedRef.current = true;
+    const nextCount = (clearCounts[difficulty] || 0) + 1;
+    setClearCounts(prev => ({ ...prev, [difficulty]: Math.max(prev[difficulty] || 0, nextCount) }));
+    await storeSet(`mh_clears_${difficulty}`, nextCount, false);
+  };
+
   // Save score on game end (CHAMPION is awarded synchronously in handleNextWave instead, so its result screen never renders before the summary is ready)
   useEffect(() => {
     if (hp <= 0) {
@@ -3316,6 +3328,7 @@ function MonsterHeroGame() {
     runFinalizingRef.current = false;
     scoreSubmittedRef.current = false;
     rewardsAwardedRef.current = false;
+    clearRecordedRef.current = false;
     runIdRef.current = createRunId();
     setRunFinalizing(false);
     const s = resetAllState();
@@ -3352,6 +3365,7 @@ function MonsterHeroGame() {
     runFinalizingRef.current = false;
     scoreSubmittedRef.current = false;
     rewardsAwardedRef.current = false;
+    clearRecordedRef.current = false;
     runIdRef.current = createRunId();
     setRunFinalizing(false);
     const s = resetAllState();
@@ -3911,7 +3925,7 @@ function MonsterHeroGame() {
       setResultProcessing(true);
       try {
         await awardRunRewards(10);
-        setClearCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_clears_${difficulty}`, next[difficulty], false); return next; });
+        await recordClearOnce();
       } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
       setGameState('CHAMPION');
       await submitRunScoreOnce();
