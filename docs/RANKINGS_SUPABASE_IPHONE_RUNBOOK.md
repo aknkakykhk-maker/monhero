@@ -31,3 +31,7 @@
 `rollback;` の試行中にエラーが出た場合は、そのまま停止する。トランザクションは保存されない。実適用後に異常が見つかった場合は、データを削除せず [`RANKINGS_CLEAR_ID_EMERGENCY.sql`](./RANKINGS_CLEAR_ID_EMERGENCY.sql) の読み取り専用確認を先に実行する。
 
 Supabase の管理者接続情報はリポジトリに保存しない。SQL Editor を操作できない場合は「未適用」と記録し、適用済みとは報告しない。
+
+## 既存重複の整理
+
+既存データは `clear_id` 適用時には削除しない。別作業として [`RANKINGS_DUPLICATE_CLEANUP.sql`](./RANKINGS_DUPLICATE_CLEANUP.sql) のセクションA・Bだけを実行し、結果をCSVへ保存する。削除候補の内容と件数について承認を得るまでは、セクションCを実行しない。承認後も最初は末尾が `rollback;` のまま試行し、永続バックアップの件数、削除件数、残存件数を確認してから実適用する。
