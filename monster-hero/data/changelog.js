@@ -17,6 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-29 02:24",
+    type: "issue",
+    status: "fixed",
+    title: "iPhoneの消音モードに音声を連動",
+    items: [
+      "iPhone本体が消音モードのとき、ゲームのBGMや効果音がスピーカーから流れないよう音声経路を修正しました",
+      "通常モード、ゲーム内ミュート、音量設定の動作はこれまでどおり維持しています",
+    ],
+  },
+  {
     date: "2026-07-29 01:16",
     type: "issue",
     status: "fixed",

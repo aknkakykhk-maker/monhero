@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 01:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 02:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -271,8 +271,8 @@ const Audio_ = (() => {
   // 【重要】ブラウザが音の再生を許すのは「ユーザーが操作した直後」だけで、
   // resume() の完了を待ってから play() を呼ぶと、待っているあいだに
   // その「直後」ではなくなり再生を拒否される(iOSで顕著)。
-  // そこで再開の指示だけ出して即座に戻り、実際に動き出したところで
-  // ゲインノードへ繋ぎ直す(止まったまま繋ぐと無音になるため、繋ぐのは動いてから)。
+  // そこで再開の指示だけ出して即座に戻る。音声要素はplay()より前にゲインノードへ繋ぎ、
+  // 実際に動き出すまではWeb Audio側で無音のまま待機させる。
   const resumeBgmCtxNoWait = (keyToConnect) => {
     const ctx = getBgmCtx();
     if (!ctx) return null;
@@ -287,12 +287,16 @@ const Audio_ = (() => {
 
   // Audio要素をWeb Audioのゲインノードに繋ぐ。createMediaElementSourceは1要素につき
   // 一度しか呼べないため、繋いだかどうかを覚えておく。
-  // AudioContextが動いていないうちは繋がない(繋ぐと無音になってしまうため)。
+  //
+  // iOSでは、Web Audioへ繋ぐ前にHTMLAudioElement.play()を呼ぶと、その短い間だけでも
+  // メディア再生経路から出力され、端末の消音モードを無視する。AudioContextがsuspendedでも
+  // グラフの作成自体はできるため、必ずplay()より先に接続する。コンテキストが再開するまでは
+  // Web Audio側で無音のまま待機し、再開後も同じ要素・同じノードを再利用する。
   const connectBgmToGain = (key) => {
     const el = bgmEls[key];
     if (!el || bgmSources[key]) return;
     const ctx = bgmCtx;
-    if (!ctx || ctx.state !== 'running' || !ctx.createMediaElementSource) return;
+    if (!ctx || !ctx.createMediaElementSource) return;
     try {
       if (!bgmGain) {
         bgmGain = ctx.createGain();
@@ -574,7 +578,7 @@ const Audio_ = (() => {
     if (!enabled || bgmVolumePct <= 0 || pageHidden || jinglePlaying || !currentKey) return;
     const el = getBgmEl(currentKey);
     if (!el || !el.paused) return;
-    connectBgmToGain(currentKey); // AudioContextが既に動いていればここで繋がる
+    connectBgmToGain(currentKey); // play()より先にWeb Audioへ繋ぎ、メディア経路へ漏らさない
     applyBgmVolume();
     try {
       const p = el.play();
