@@ -92,7 +92,8 @@ const check = (name, ok) => { checks.push(ok); console.log(`  ${ok ? 'OK' : 'NG'
     await context.api.sbInsertScore({ difficulty: 'Normal', user_name: '競合テスト', score: 1, clear_id: 'forced-unique-conflict' });
   } catch (error) { uniqueError = error; }
   check('Supabase 409/23505 UNIQUE違反をstatus・code・body付きで通知',
-    uniqueError?.status === 409 && uniqueError?.code === '23505' && /duplicate key/.test(uniqueError?.body || ''));
+    uniqueError?.status === 409 && uniqueError?.code === '23505' && uniqueError?.isUniqueViolation === true
+      && /duplicate key/.test(uniqueError?.body || ''));
   check('全INSERTがon_conflict=clear_idを指定', posts.every(request => request.url.includes('?on_conflict=clear_id')));
   check('全INSERTがignore-duplicatesを指定', posts.every(request => request.init.headers.Prefer.includes('resolution=ignore-duplicates')));
   const gets = requests.filter(request => !request.init.method);

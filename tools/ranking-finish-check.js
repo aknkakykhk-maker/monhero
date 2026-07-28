@@ -34,8 +34,8 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: Normalを含む全難易度で共通の周回IDリセットを使う`,
     code.includes('const beginNewRankingRun') && (code.match(/beginNewRankingRun\(\{/g) || []).length === 2);
   check(`${label}: UNIQUE違反のHTTP statusとPostgres codeを診断ログへ残す`,
-    code.includes("errorCode = JSON.parse(body)?.code") && code.includes('status: res.status')
-      && /errorCode,\s*error:/s.test(code));
+    code.includes("errorCode = JSON.parse(body)?.code") && code.includes("res.status === 409 && errorCode === '23505'")
+      && code.includes('status: res.status') && /errorCode,\s*isUniqueViolation,\s*error:/s.test(code));
   check(`${label}: 最終画面の遷移ボタンを同期ロックする`, code.includes('resultActionRef.current') && code.includes('runResultActionOnce'));
   check(`${label}: 終了処理中は画面全体の入力を遮断する`, code.includes('resultProcessing') && code.includes('aria-label') && code.includes('touchAction'));
   check(`${label}: ランキングPOSTに8秒の上限`, code.includes("new Error('ranking insert timed out after 8000ms')") && code.includes('signal: controller.signal'));
@@ -46,6 +46,8 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: リザルト表示後もランキング保存完了まで入力ロック`, nextWave.indexOf("setGameState('CHAMPION')") < nextWave.indexOf('await submitRunScoreOnce()') && nextWave.indexOf('await submitRunScoreOnce()') < nextWave.indexOf('setResultProcessing(false)'));
 
   const submit = code.slice(code.indexOf('const submitLocalScore'), code.indexOf('const handleSaveName'));
+  check(`${label}: ランキング保存を自己ベスト判定より先に完了`,
+    code.indexOf('await submitLocalScore(difficulty, score, runIdRef.current)') < code.indexOf('if (score > (highScores[difficulty] || 0))'));
   check(`${label}: POST直後に保存した難易度だけを強制再取得`, code.includes('await loadRankings(normalizeRankingDifficulty(diff), false, true)'));
   check(`${label}: POST直後に全難易度を再取得しない`, !/await\s+loadRankings\(\)/.test(submit));
   check(`${label}: 強制再取得は保存前の同難易度通信完了後に開始`, code.includes('if (!force) return pending') && code.includes('await pending'));
