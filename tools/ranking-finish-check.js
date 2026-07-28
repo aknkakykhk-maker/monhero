@@ -34,9 +34,9 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: ランキング取得列を必要項目に限定`, code.includes("const select = 'user_name,hero,party,score,level,icon'"));
   check(`${label}: 起動時はNormalとMasterを優先`, code.includes("['Normal', 'Master', ...allDiffs.filter"));
   check(`${label}: 起動時の同時取得を2難易度に制限`, code.includes('diffs.slice(i, i + 2).map(loadOne)'));
-  check(`${label}: 重複時だけ次ページ取得`, code.includes('page.length === 50 && rows.length < 50') && code.includes("offset < 200"));
+  check(`${label}: 診断用の取得上限は20件`, code.includes('const RANKING_DIAGNOSTIC_LIMIT = 20'));
   check(`${label}: 端末内自己ベストから復旧`, code.includes('`mh_hs_${d}`') && code.includes("hero: '記録復旧'"));
-  check(`${label}: score.desc失敗時はid.descを500件取得`, code.includes("sbFetchRankings(d, 500, 'id.desc', 0)"));
+  check(`${label}: score.desc失敗時も診断用上限を使う`, code.includes("sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0)"));
   check(`${label}: stateの最新ハイスコアも復旧元に使う`, code.includes('highScoresRef.current[d]'));
 }
 
