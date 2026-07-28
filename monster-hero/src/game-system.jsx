@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 23:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 23:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2086,7 +2086,9 @@ function MonsterHeroGame() {
       const requestKey = `${d}:${includeLevels ? 'levels' : 'score'}`;
       const fetchedAt = rankingFetchedAtRef.current.get(requestKey) || 0;
       if (!force && Date.now() - fetchedAt < 30000) return;
-      if (rankingRequestsRef.current.has(requestKey)) return rankingRequestsRef.current.get(requestKey);
+      // 手動更新と保存直後の再取得は、先読み中の古いリクエストも再利用しない。
+      // 新しいrequestIdをlatestにすることで、遅れて返った旧レスポンスはstateへ反映されない。
+      if (!force && rankingRequestsRef.current.has(requestKey)) return rankingRequestsRef.current.get(requestKey);
       const requestId = `${d}-${Date.now()}-${++rankingRequestSequenceRef.current}`;
       const concurrent = [...rankingRequestsRef.current.keys()];
       rankingLatestRequestRef.current.set(d, requestId);
@@ -2145,7 +2147,8 @@ function MonsterHeroGame() {
       rankingFetchedAtRef.current.set(requestKey, Date.now());
       rankingLog(requestId, 'render-end', { difficulty: d, appliedRequestId: requestId });
       })().finally(() => {
-        rankingRequestsRef.current.delete(requestKey);
+        // force更新と旧リクエストが並行した場合、旧側のfinallyで新しい通信をMapから消さない。
+        if (rankingLatestRequestRef.current.get(d) === requestId) rankingRequestsRef.current.delete(requestKey);
         if (rankingLatestRequestRef.current.get(d) === requestId) {
           setRankingLoadingByDiff(prev => ({ ...prev, [d]: false }));
         }
@@ -2613,6 +2616,7 @@ function MonsterHeroGame() {
       // マイグレーション未適用環境ではローカル保存へ退避し、非冪等な全国ランキング送信を避ける。
       if (!saved && clearIdUnsupported) throw new Error('rankings clear_id migration is required; unsafe insert skipped');
       if (!saved) throw new Error('all submit variants failed');
+      return true;
     } catch (e) {
       console.error('[ranking] supabase submit failed, falling back to local:', e && e.message ? e.message : e);
       const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, clearId, at: Date.now() };
@@ -2635,17 +2639,26 @@ function MonsterHeroGame() {
       } catch (e2) {
         console.error('[ranking] local fallback also failed:', e2 && e2.message ? e2.message : e2);
       }
+      return false;
     }
   };
 
   // 敗北・降参・優勝のどの経路から呼ばれても、同じ周回のスコア送信は1回だけにする。
-  // ランキング再取得はランキング画面を開いた時に行うため、ここでは14本ものGETを発生させない
-  // (7難易度×スコア順/レベル順)。送信や再取得をリザルト遷移の待ち時間にしないことも重要。
+  // Supabase保存に成功した難易度だけキャッシュを破棄して再取得する。
+  // GETはバックグラウンドで進め、リザルト遷移は待たせない。ランキング画面を先に開いた場合も
+  // 同じ通信とloading stateを共有するため、アプリ再起動なしで保存結果が反映される。
   const submitRunScoreOnce = async () => {
     if (score <= 0 || scoreSubmittedRef.current) return;
     scoreSubmittedRef.current = true;
     try {
-      await submitLocalScore(difficulty, score, runIdRef.current);
+      const savedGlobally = await submitLocalScore(difficulty, score, runIdRef.current);
+      if (savedGlobally) {
+        rankingFetchedAtRef.current.delete(`${difficulty}:score`);
+        rankingFetchedAtRef.current.delete(`${difficulty}:levels`);
+        loadRankings(difficulty, false, true).catch(e => {
+          console.error('[ranking] post-submit refresh failed:', e && e.message ? e.message : e);
+        });
+      }
       if (score > (highScores[difficulty] || 0)) {
         await storeSet(`mh_hs_${difficulty}`, score, false);
         setHighScores(prev => ({ ...prev, [difficulty]: score }));
@@ -4457,6 +4470,11 @@ function MonsterHeroGame() {
                   ))}
                 </div>
                 {rankingKind==='score'&&(<><div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide px-1 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=>(<button key={d} onClick={()=>{setRankingViewDiff(d); loadRankings(d);}} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase shrink-0 ${rankingViewDiff===d?'shadow-lg ring-1 ring-white/50':'border border-white/10'}`} style={difficultyStyle(st, rankingViewDiff===d)}>{st.label}</button>))}</div>
+                {(rankingLoadingByDiff[rankingViewDiff]||rankingErrorByDiff[rankingViewDiff])&&(
+                  <div role="status" className={`mb-2 shrink-0 rounded-xl border px-3 py-2 text-center text-[10px] font-black ${rankingErrorByDiff[rankingViewDiff]?'border-red-500/40 bg-red-950/50 text-red-300':'border-indigo-500/40 bg-indigo-950/50 text-indigo-300'}`}>
+                    {rankingLoadingByDiff[rankingViewDiff]?'ランキングを取得中...':`取得エラー: ${rankingErrorByDiff[rankingViewDiff]}`}
+                  </div>
+                )}
                 <div className="flex-1 overflow-y-auto mh-scroll space-y-3 min-h-0">
                   {(localRankings[rankingViewDiff]||[]).length===0?(<div className="h-full flex items-center justify-center text-center px-4 text-slate-600 font-black uppercase text-xs italic">{rankingLoadingByDiff[rankingViewDiff]?'Loading...':rankingErrorByDiff[rankingViewDiff]?`取得エラー: ${rankingErrorByDiff[rankingViewDiff]}`:'No records yet'}</div>):(
                     (localRankings[rankingViewDiff]||[]).map((r,i)=>(

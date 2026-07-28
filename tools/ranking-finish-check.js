@@ -41,7 +41,17 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: リザルト表示後もランキング保存完了まで入力ロック`, nextWave.indexOf("setGameState('CHAMPION')") < nextWave.indexOf('await submitRunScoreOnce()') && nextWave.indexOf('await submitRunScoreOnce()') < nextWave.indexOf('setResultProcessing(false)'));
 
   const submit = code.slice(code.indexOf('const submitLocalScore'), code.indexOf('const handleSaveName'));
-  check(`${label}: POST直後に全難易度を再取得しない`, !/await\s+loadRankings\(\)/.test(submit));
+  check(`${label}: POST成功直後に対象難易度だけを強制再取得`,
+    code.includes('const savedGlobally = await submitLocalScore')
+      && code.includes('loadRankings(difficulty, false, true)')
+      && !/await\s+loadRankings\(\)/.test(submit));
+  check(`${label}: POST成功直後に対象難易度のキャッシュを無効化`,
+    code.includes('rankingFetchedAtRef.current.delete(`${difficulty}:score`)')
+      && code.includes('rankingFetchedAtRef.current.delete(`${difficulty}:levels`)'));
+  check(`${label}: 強制更新は進行中の古い取得を再利用しない`,
+    code.includes('if (!force && rankingRequestsRef.current.has(requestKey))'));
+  check(`${label}: 取得中と取得エラーを既存行の有無にかかわらず表示`,
+    code.includes('ランキングを取得中...') && (code.includes('role="status"') || code.includes('role: "status"')));
   check(`${label}: 過去の完全重複をプレイ内容で畳む`, code.includes('const rowKey =') && code.includes('uniqueScoreRows'));
   check(`${label}: 通常スコア表示は選択難易度だけ取得`, code.includes('loadRankings(difficulty)') && code.includes('targetDiff') && code.includes('[targetDiff]'));
   const preloadAt = code.indexOf('background preload failed');
