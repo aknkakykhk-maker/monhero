@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4602fc8c36d1e841
+// source-sha256: 04a9cbad23fce9b9
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 02:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 08:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -201,7 +201,7 @@ const bondLevelInfo = totalXp => {
 };
 
 // =====================================================================
-// AUDIO: すべてオリジナル生成のBGM/SE (Tone.jsをCDNから動的読込)
+// AUDIO: BGM/ジングルはAudioBuffer、SEはTone.js(Web Audio)で再生
 // デフォルトは無音。ユーザーが音量ボタンを押すと有効化される。
 // =====================================================================
 const Audio_ = (() => {
@@ -211,29 +211,20 @@ const Audio_ = (() => {
     started = false;
   let reverb = null,
     seBus = null;
-  // BGMはTone.jsで生成せず、audio/ に置いたmp3を再生する。曲が長い(最長23分)ため
-  // 一度に読み込まず、画面に応じて必要な曲だけを都度読み込んでストリーミング再生する。
-  // bgmEls は一度読んだ曲を使い回すためのキャッシュ({キー: HTMLAudioElement})
-  const bgmEls = {};
-  const bgmSources = {}; // Audio要素をWeb Audioへ繋いだソースノード(1要素につき1回だけ作れる)
-  let bgmGain = null; // BGM専用のゲインノード(iOSでも効く音量調整はこれで行う)
-  let bgmCtx = null; // BGM専用のAudioContext(SEのTone.jsとは独立)
-  const jingleEls = {}; // ジングル(1回だけ鳴らす短い音)の要素
-  // ジングル(敵撃破のファンファーレ)を鳴らしているあいだはBGMを止め、鳴り終わってから
-  // その時点の曲を流す。BGMと同時に鳴らすと混ざって聞き取れず、逆に曲の切り替えで
-  // ジングルを止めるとファンファーレがほとんど鳴らないまま切れてしまうため
-  let jinglePlaying = null; // 再生中のジングルのキー(なければ null)
-  let jingleTimer = null; // ended が来なかったときにBGMを戻すための保険
-  // 曲の切り替えは play() の完了を待つ非同期処理のため、素早く画面を移ると
-  // 「前の曲の再生開始」が後から効いて2曲が重なることがあった。
-  // 再生要求ごとに番号を振り、開始した時点で最新の要求でなければ止める
-  let bgmToken = 0;
+  let audioCtx = null,
+    bgmGain = null;
+  const buffers = new Map();
+  const loadingBuffers = new Map();
+  let bgmSource = null,
+    bgmSourceKey = null,
+    bgmRequest = 0;
+  let jingleSource = null,
+    jingleTimer = null;
   let currentKey = null,
     bgmVolumePct = 0,
-    bgmPlayPending = false,
+    seVolumePct = 0,
     pageHidden = false;
-  let enabled = false; // デフォルト無音
-
+  let enabled = false;
   const load = () => {
     if (ready) return Promise.resolve();
     if (loading) return loading;
@@ -260,12 +251,11 @@ const Audio_ = (() => {
     }).then(async () => {
       if (!Tone) return;
       try {
-        // Tone.jsはSE専用。BGMはaudio/のmp3を鳴らすので合成器は持たない
-        seBus = new Tone.Gain(1).toDestination();
+        seBus = new Tone.Gain(_gainFromPct(seVolumePct)).toDestination();
         reverb = new Tone.Reverb({
           decay: 2.4,
           wet: 0.22
-        }).connect(seBus); // SE用リバーブ
+        }).connect(seBus);
         try {
           await reverb.ready;
         } catch (e) {}
@@ -283,547 +273,239 @@ const Audio_ = (() => {
       } catch (e) {}
     }
   };
-
-  // 画面ごとのBGM。data/ ではなく audio/ に置いた実ファイルを鳴らす
-  //   title  … タイトル画面
-  //   prep   … タイトルから飛べる別ページ(プロフィール/ランキング/勇者モン選択/報酬など)
-  //   battle … 通常の敵との戦闘
-  //   boss   … ボス戦(ムー)
   const BGM_FILES = {
     title: 'audio/bgm-title.mp3',
-    // タイトル画面
     prep: 'audio/bgm-menu.mp3',
-    // プロフィール・編成・勇者モン選択などの別ページ
     battle: 'audio/bgm-battle.mp3',
-    // 通常の敵との戦闘
     boss: 'audio/bgm-boss.mp3',
-    // ボス戦(ムー)
     fusion: 'audio/bgm-fusion.mp3',
-    // 合体ページ
     enhance: 'audio/bgm-enhance.mp3',
-    // WAVE終了後の強化フェーズ
     result: 'audio/bgm-result.mp3',
-    // リザルト画面
     market: 'audio/bgm-market.mp3',
-    // マーケットページ
-    profile: 'audio/bgm-profile.mp3' // プロフィールページ
+    profile: 'audio/bgm-profile.mp3'
   };
-  // 曲ではなく1回だけ鳴らす短い音(ループしない)。敵を倒したときのファンファーレなど
   const JINGLE_FILES = {
     victory: 'audio/jingle-victory.mp3'
   };
-
-  // 0〜100(%)を実際の音量へ。SEはこのカーブ(-40dB〜0dB)
   const _gainFromPct = pct => pct <= 0 ? 0 : Math.pow(10, (-40 + Math.min(100, pct) / 100 * 40) / 20);
-  // BGMはSEより控えめにする。曲は鳴りっぱなしになるぶん同じ音量だとうるさく感じるため、
-  // 下限を-55dBまで下げ、さらに全体を0.55倍している(音量1がごく小さな音になる)
   const _bgmGain = pct => pct <= 0 ? 0 : Math.pow(10, (-55 + Math.min(100, pct) / 100 * 55) / 20) * 0.55;
 
-  // 指定キーのAudio要素を用意する(初回だけ読み込みが走る)。
-  //
-  // 【重要】iOS(iPhone/iPad)では HTMLAudioElement.volume への代入が無視される。
-  // 音量はハードウェアのボタンでしか変えられない仕様のため、el.volume を下げても
-  // 常に最大音量で鳴ってしまい、「音量1なのに爆音」「ミュートにしても鳴り続ける」状態になっていた。
-  // そこで音声をWeb Audio(Tone.jsのAudioContext)に通し、ゲインノードで音量を制御する。
-  // ゲインノードはiOSでも効くため、これで音量調整とミュートが正しく効くようになる。
-  const getBgmEl = key => {
-    if (!BGM_FILES[key] || typeof Audio === 'undefined') return null;
-    if (!bgmEls[key]) {
-      const el = new Audio();
-      el.src = BGM_FILES[key];
-      el.loop = true;
-      el.preload = 'none'; // 実際に再生するまで読み込まない(初期表示を重くしないため)
-      el.crossOrigin = 'anonymous';
-      el.dataset.bgmKey = key;
-      // iOS以外では素のvolumeも効くので併せて設定しておく(Web Audioに繋げない場合の保険)
-      try {
-        el.volume = _bgmGain(bgmVolumePct);
-      } catch (e) {}
-      try {
-        el.style.display = 'none';
-        document.body.appendChild(el);
-      } catch (e) {}
-      bgmEls[key] = el;
-    }
-    return bgmEls[key];
-  };
-
-  // BGM専用のAudioContext。SE(Tone.js)とは独立させている。
-  // Tone.jsはCDNから読み込んでいるため、通信が不調だと読めないことがある。
-  // BGMの音量制御をそれに依存させると「Tone.jsが読めない=音量が効かない(iOSでは爆音)」に
-  // なってしまうので、BGMは自前のAudioContextだけで完結させる
-  const getBgmCtx = () => {
-    if (bgmCtx) return bgmCtx;
+  // HTMLAudioElementはiOSの消音スイッチを無視するため使用しない。mp3を取得・デコードし、
+  // BGMもジングルもAudioBufferSourceNodeだけで出力する。
+  const getAudioCtx = () => {
+    if (audioCtx) return audioCtx;
     if (typeof window === 'undefined') return null;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     try {
-      bgmCtx = new AC();
+      audioCtx = new AC();
+      bgmGain = audioCtx.createGain();
+      bgmGain.gain.value = _bgmGain(bgmVolumePct);
+      bgmGain.connect(audioCtx.destination);
     } catch (e) {
-      bgmCtx = null;
+      audioCtx = null;
+      bgmGain = null;
     }
-    return bgmCtx;
+    return audioCtx;
   };
-
-  // AudioContextを「動いている」状態にする。
-  //
-  // 【重要】createMediaElementSource で音声をWeb Audioに通すと、その音は
-  // AudioContext を経由してしか出なくなる。AudioContextは操作前だと必ず suspended
-  // (停止)状態で作られるため、停止したまま繋いでしまうと play() は成功するのに
-  // 音がまったく出ない、という状態になる。
-  // これが「タップしてもタイトルBGMが鳴らない/他のページへ行って戻ると鳴り出す」
-  // (別ページへの移動でfocusイベントが発生し、そこで初めてresumeされていた)
-  // 「プロフィールへ行くとBGMがおかしくなり、戻ってもおかしいまま」の原因だった。
-  // 再生のたびに必ずここを通して、動いている状態を保証する。
-  const ensureBgmCtxRunning = async () => {
-    const ctx = getBgmCtx();
-    if (!ctx) return null;
-    if (ctx.state !== 'running') {
+  const resumeAudioCtxNoWait = () => {
+    const ctx = getAudioCtx();
+    if (ctx && ctx.state !== 'running') {
+      try {
+        const p = ctx.resume();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
+    }
+    return ctx;
+  };
+  const ensureAudioCtxRunning = async () => {
+    const ctx = getAudioCtx();
+    if (ctx && ctx.state !== 'running') {
       try {
         await ctx.resume();
       } catch (e) {}
     }
     return ctx;
   };
-
-  // AudioContextの再開を「待たずに」指示する版。
-  //
-  // 【重要】ブラウザが音の再生を許すのは「ユーザーが操作した直後」だけで、
-  // resume() の完了を待ってから play() を呼ぶと、待っているあいだに
-  // その「直後」ではなくなり再生を拒否される(iOSで顕著)。
-  // そこで再開の指示だけ出して即座に戻る。音声要素はplay()より前にゲインノードへ繋ぎ、
-  // 実際に動き出すまではWeb Audio側で無音のまま待機させる。
-  const resumeBgmCtxNoWait = keyToConnect => {
-    const ctx = getBgmCtx();
-    if (!ctx) return null;
-    if (ctx.state !== 'running') {
-      try {
-        const p = ctx.resume();
-        if (p && p.then) p.then(() => {
-          if (keyToConnect) connectBgmToGain(keyToConnect);
-          applyBgmVolume();
-        }).catch(() => {});
-      } catch (e) {}
-    }
-    return ctx;
-  };
-
-  // Audio要素をWeb Audioのゲインノードに繋ぐ。createMediaElementSourceは1要素につき
-  // 一度しか呼べないため、繋いだかどうかを覚えておく。
-  //
-  // iOSでは、Web Audioへ繋ぐ前にHTMLAudioElement.play()を呼ぶと、その短い間だけでも
-  // メディア再生経路から出力され、端末の消音モードを無視する。AudioContextがsuspendedでも
-  // グラフの作成自体はできるため、必ずplay()より先に接続する。コンテキストが再開するまでは
-  // Web Audio側で無音のまま待機し、再開後も同じ要素・同じノードを再利用する。
-  const connectBgmToGain = key => {
-    const el = bgmEls[key];
-    if (!el || bgmSources[key]) return;
-    const ctx = bgmCtx;
-    if (!ctx || !ctx.createMediaElementSource) return;
-    try {
-      if (!bgmGain) {
-        bgmGain = ctx.createGain();
-        bgmGain.gain.value = _bgmGain(bgmVolumePct);
-        bgmGain.connect(ctx.destination);
+  const decode = (ctx, data) => new Promise((resolve, reject) => {
+    let settled = false;
+    const ok = value => {
+      if (!settled) {
+        settled = true;
+        resolve(value);
       }
-      const srcNode = ctx.createMediaElementSource(el);
-      srcNode.connect(bgmGain);
-      bgmSources[key] = srcNode;
-      // Web Audioに通したので、素のvolumeは最大に戻す(二重に絞らないため)
-      try {
-        el.volume = 1;
-      } catch (e) {}
+    };
+    const ng = error => {
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    };
+    try {
+      const p = ctx.decodeAudioData(data, ok, ng);
+      if (p && p.then) p.then(ok, ng);
     } catch (e) {
-      // 繋げなかった場合は素のvolumeで制御を続ける(PCブラウザではこれでも効く)
+      ng(e);
     }
-  };
-
-  // 鳴っているジングルをすべて止める。ジングル中はBGMを止めているので、
-  // 止めた時点で「ジングル再生中」の印も消しておく(BGMを鳴らし直せる状態に戻す)
-  const stopJingles = () => {
-    jinglePlaying = null;
-    if (jingleTimer) {
-      clearTimeout(jingleTimer);
-      jingleTimer = null;
-    }
-    Object.values(jingleEls).forEach(el => {
-      try {
-        el.pause();
-        el.currentTime = 0;
-      } catch (e) {}
-    });
-  };
-
-  // 現在の曲以外を止める
-  const stopOthers = keepKey => {
-    Object.entries(bgmEls).forEach(([k, el]) => {
-      if (k === keepKey) return;
-      try {
-        el.pause();
-        el.currentTime = 0;
-      } catch (e) {}
-    });
-  };
-
-  // ブラウザの自動再生制限で play() が弾かれた場合、次のタップで鳴らし直す
-  const retryPlayOnGesture = () => {
-    if (bgmPlayPending || typeof document === 'undefined') return;
-    bgmPlayPending = true;
-    const retry = () => {
-      document.removeEventListener('pointerdown', retry);
-      document.removeEventListener('touchend', retry);
-      bgmPlayPending = false;
-      if (currentKey) playBGM(currentKey);
-    };
-    document.addEventListener('pointerdown', retry);
-    document.addEventListener('touchend', retry);
-  };
-
-  // その画面で使う曲を先に読み込んでおく(音がオフのあいだでも呼べる)。
-  // preload='none' のままだと最初のタップの直後に読み込みが始まり、鳴り出すまで間が空くため
-  const preloadBGM = key => {
-    if (!BGM_FILES[key]) return;
-    const el = getBgmEl(key);
-    if (!el) return;
-    try {
-      if (el.preload !== 'auto') {
-        el.preload = 'auto';
-        el.load();
-      }
-    } catch (e) {}
-  };
-
-  // 指定の曲が「鳴らせる状態」になるまで待つ。画面を出す前に呼ぶ想定。
-  // 読み込みが遅い回線でいつまでも待たされないよう、timeoutMsで必ず打ち切る
-  const prepareBGM = (key, timeoutMs = 2000) => new Promise(resolve => {
-    const el = getBgmEl(key);
-    if (!el) {
-      resolve(false);
-      return;
-    }
-    try {
-      el.preload = 'auto';
-      el.load();
-    } catch (e) {}
-    if (el.readyState >= 3) {
-      resolve(true);
-      return;
-    } // HAVE_FUTURE_DATA 以上なら再生できる
-    let done = false;
-    const finish = ok => {
-      if (done) return;
-      done = true;
-      el.removeEventListener('canplaythrough', onReady);
-      el.removeEventListener('canplay', onReady);
-      resolve(ok);
-    };
-    const onReady = () => finish(true);
-    el.addEventListener('canplaythrough', onReady);
-    el.addEventListener('canplay', onReady);
-    setTimeout(() => finish(false), timeoutMs);
   });
-  const _playBGM = async key => {
-    // 音がオフのあいだも「今どの曲であるべきか」は覚えておき、オンにした時点で鳴らす
-    currentKey = key;
-    preloadBGM(key);
-    // 音がオフ・音量0・画面が見えていない、のいずれかなら鳴らさない。
-    // 特に「画面が見えていないときは止める」ことで、他のアプリに切り替えたあとも
-    // バックグラウンドで鳴り続けてしまう問題を防いでいる
-    if (!enabled || bgmVolumePct <= 0 || pageHidden) {
-      stopOthers(null);
-      stopJingles();
-      return;
-    }
-    // ファンファーレを鳴らしている最中は曲を始めない。どの曲を鳴らすべきかは currentKey に
-    // 覚えてあるので、ファンファーレが鳴り終わった時点でその曲を流す
-    if (jinglePlaying) {
-      stopOthers(null);
-      return;
-    }
-    const el = getBgmEl(key);
-    if (!el) return;
-    // AudioContextを動かす。ここで await してはいけない。
-    //
-    // 【重要】ブラウザは「ユーザーが操作した直後」でないと音の再生を許さない。
-    // resume() の完了を待つと、その待ち時間のあいだに「操作の直後」ではなくなり、
-    // 続く play() が拒否されてしまう(iOSで顕著)。タイトル画面でBGMが鳴らず、
-    // 別のページへ移動して戻ってくるとようやく鳴っていたのはこれが原因。
-    // そのため resume() は投げっぱなしにして、動き出したところで繋ぎ直す。
-    const ctx = resumeBgmCtxNoWait(key);
-    connectBgmToGain(key);
-    stopOthers(key);
-    applyBgmVolume();
-    // 既に鳴っているなら鳴らし直さない。
-    // ただし「Web Audioに繋いであるのにAudioContextが止まっている」ときは実際には
-    // 無音なので、鳴っている扱いにせず作り直す。
-    // (繋いでいないうちは要素そのものから音が出るので、止まっていても鳴らし直さなくてよい)
-    const routedButSilent = !!bgmSources[key] && !!ctx && ctx.state !== 'running';
-    if (!el.paused && !routedButSilent) return;
-    if (!el.paused) {
+  const loadBuffer = url => {
+    if (buffers.has(url)) return Promise.resolve(buffers.get(url));
+    if (loadingBuffers.has(url)) return loadingBuffers.get(url);
+    const ctx = getAudioCtx();
+    if (!ctx || typeof fetch !== 'function') return Promise.reject(new Error('Web Audio unavailable'));
+    const request = fetch(url, {
+      cache: 'force-cache'
+    }).then(res => {
+      if (!res.ok) throw new Error(`audio fetch failed: ${res.status}`);
+      return res.arrayBuffer();
+    }).then(data => decode(ctx, data)).then(buffer => {
+      buffers.set(url, buffer);
+      return buffer;
+    }).finally(() => loadingBuffers.delete(url));
+    loadingBuffers.set(url, request);
+    return request;
+  };
+  const stopSource = source => {
+    if (source) {
       try {
-        el.pause();
+        source.onended = null;
+        source.stop();
+      } catch (e) {}
+      try {
+        source.disconnect();
       } catch (e) {}
     }
-    const myToken = ++bgmToken;
-    try {
-      await el.play();
-      // 鳴り始めるまでのあいだに別の曲へ切り替わっていたら、この曲は止める(2曲被り防止)
-      if (myToken !== bgmToken || currentKey !== key) {
-        try {
-          el.pause();
-          el.currentTime = 0;
-        } catch (e2) {}
-        return;
+  };
+  const stopJingles = () => {
+    if (jingleTimer) clearTimeout(jingleTimer);
+    jingleTimer = null;
+    stopSource(jingleSource);
+    jingleSource = null;
+  };
+  const stopOthers = () => {
+    stopSource(bgmSource);
+    bgmSource = null;
+    bgmSourceKey = null;
+  };
+  const startBgmBuffer = (key, buffer, request) => {
+    const ctx = getAudioCtx();
+    if (!ctx || request !== bgmRequest || key !== currentKey || !enabled || bgmVolumePct <= 0 || pageHidden || jingleSource) return;
+    if (bgmSource && bgmSourceKey === key) return;
+    stopOthers();
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.connect(bgmGain);
+    bgmSource = source;
+    bgmSourceKey = key;
+    source.onended = () => {
+      if (bgmSource === source) {
+        bgmSource = null;
+        bgmSourceKey = null;
       }
-      stopOthers(key); // 念のため、この時点でも他が鳴っていないことを保証する
+    };
+    try {
+      source.start(0);
     } catch (e) {
-      // 自動再生がブラウザに止められた場合は、次のタップで鳴らし直す
-      retryPlayOnGesture();
+      stopOthers();
     }
   };
-
-  // 曲の切り替えは play() の完了を待つ非同期処理なので、続けて呼ばれると処理が入り混じり
-  // 2曲が重なったり同じ曲が鳴り直したりする。要求を1件ずつ順番に処理して必ず直列化する
-  let bgmQueue = Promise.resolve();
   const playBGM = key => {
-    bgmQueue = bgmQueue.then(() => _playBGM(key)).catch(() => {});
-    return bgmQueue;
-  };
-
-  // ジングル(1回だけ鳴らす短い音)。鳴っているあいだBGMは止めておき、鳴り終わってから
-  // その時点の曲(リザルトのBGMなど)を流す。ファンファーレを最後まで聞かせるための作り
-  const playJingle = async key => {
-    if (!enabled || bgmVolumePct <= 0 || pageHidden || !JINGLE_FILES[key]) return;
-    try {
-      let el = jingleEls[key];
-      if (!el) {
-        el = new Audio();
-        el.src = JINGLE_FILES[key];
-        el.preload = 'auto';
-        el.dataset.jingleKey = key;
-        try {
-          el.style.display = 'none';
-          document.body.appendChild(el);
-        } catch (e) {}
-        jingleEls[key] = el;
-        connectJingleToGain(key);
-      }
-      await ensureBgmCtxRunning();
-      connectJingleToGain(key);
-      el.currentTime = 0;
-      if (!bgmSources['jingle:' + key]) {
-        try {
-          el.volume = _bgmGain(bgmVolumePct);
-        } catch (e) {}
-      }
-      // 鳴り終わったらBGMへ戻す。ended が来ないことがあるので長さ(不明なら8秒)で保険をかける
-      const backToBGM = () => {
-        if (jinglePlaying !== key) return;
-        jinglePlaying = null;
-        if (jingleTimer) {
-          clearTimeout(jingleTimer);
-          jingleTimer = null;
-        }
-        if (currentKey) playBGM(currentKey);
-      };
-      el.onended = backToBGM;
-      jinglePlaying = key;
-      stopOthers(null); // ファンファーレを聞かせるあいだBGMは止める
-      await el.play();
-      if (jingleTimer) clearTimeout(jingleTimer);
-      const lenMs = el.duration && isFinite(el.duration) ? el.duration * 1000 + 300 : 8000;
-      jingleTimer = setTimeout(backToBGM, lenMs);
-    } catch (e) {
-      // 鳴らせなかった場合はBGMを止めっぱなしにしない
-      jinglePlaying = null;
-      if (currentKey) playBGM(currentKey);
-    }
-  };
-  // ジングルもBGMと同じゲインノードに通す(iOSでvolumeが効かないため)
-  const connectJingleToGain = key => {
-    const el = jingleEls[key];
-    const id = 'jingle:' + key;
-    if (!el || bgmSources[id]) return;
-    const ctx = getBgmCtx();
-    if (!ctx || !ctx.createMediaElementSource) return;
-    try {
-      if (!bgmGain) {
-        bgmGain = ctx.createGain();
-        bgmGain.gain.value = _bgmGain(bgmVolumePct);
-        bgmGain.connect(ctx.destination);
-      }
-      const srcNode = ctx.createMediaElementSource(el);
-      srcNode.connect(bgmGain);
-      bgmSources[id] = srcNode;
-      try {
-        el.volume = 1;
-      } catch (e) {}
-    } catch (e) {}
-  };
-
-  // 画面の表示/非表示が変わったときに呼ぶ。見えていないあいだはBGMを止める
-  const setPageHidden = hidden => {
-    pageHidden = hidden;
-    if (hidden) {
+    if (!BGM_FILES[key]) return Promise.resolve();
+    currentKey = key;
+    const request = ++bgmRequest;
+    if (bgmSourceKey && bgmSourceKey !== key) stopOthers();
+    if (!enabled || bgmVolumePct <= 0 || pageHidden) {
+      stopOthers();
       stopJingles();
-      stopOthers(null);
-    } else if (currentKey) playBGM(currentKey);
+      return Promise.resolve();
+    }
+    resumeAudioCtxNoWait();
+    return loadBuffer(BGM_FILES[key]).then(buffer => startBgmBuffer(key, buffer, request)).catch(() => {});
   };
   const stopBGM = () => {
     currentKey = null;
+    ++bgmRequest;
     stopJingles();
-    stopOthers(null);
+    stopOthers();
+  };
+  const preloadBGM = key => {
+    if (BGM_FILES[key]) loadBuffer(BGM_FILES[key]).catch(() => {});
+  };
+  const prepareBGM = (key, timeoutMs = 2000) => {
+    if (!BGM_FILES[key]) return Promise.resolve(false);
+    return Promise.race([loadBuffer(BGM_FILES[key]).then(() => true).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
+  };
+  const playJingle = async key => {
+    if (!enabled || bgmVolumePct <= 0 || pageHidden || !JINGLE_FILES[key]) return;
+    const request = ++bgmRequest;
+    try {
+      const buffer = await loadBuffer(JINGLE_FILES[key]);
+      if (request !== bgmRequest || !enabled || pageHidden) return;
+      stopJingles();
+      stopOthers();
+      const ctx = await ensureAudioCtxRunning();
+      if (!ctx) return;
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(bgmGain);
+      jingleSource = source;
+      const backToBGM = () => {
+        if (jingleSource !== source) return;
+        stopJingles();
+        if (currentKey) playBGM(currentKey);
+      };
+      source.onended = backToBGM;
+      source.start(0);
+      jingleTimer = setTimeout(backToBGM, Math.ceil(buffer.duration * 1000) + 250);
+    } catch (e) {
+      if (currentKey) playBGM(currentKey);
+    }
+  };
+  const setPageHidden = hidden => {
+    pageHidden = !!hidden;
+    if (pageHidden) {
+      ++bgmRequest;
+      stopOthers();
+      stopJingles();
+    } else if (currentKey) playBGM(currentKey);
   };
   const setEnabled = async on => {
-    enabled = on;
-    if (!on) {
+    enabled = !!on;
+    if (!enabled) {
+      ++bgmRequest;
+      stopOthers();
       stopJingles();
-      stopOthers(null);
-      return;
-    }
+    } else if (currentKey) playBGM(currentKey);
     await ensure();
-    if (currentKey) playBGM(currentKey);
   };
   const isEnabled = () => enabled;
-  // タブ切り替え/バックグラウンド化からの復帰時、iOS等のブラウザは AudioContext を自動的に
-  // 止めることがあり、それを明示的に resume() しないと音が鳴らなくなったままになる。
-  // ensure()内のTone.start()は初回アンロック用でstartedフラグにより一度しか呼ばれないため、
-  // 復帰のたびに呼び直す必要がある(startedフラグ自体には触れないので初回アンロック挙動は変えない)
-  //
-  // 以前はここで「state === 'suspended' なら resume()」しか見ていなかったため、次の2点を
-  // 取りこぼして「アプリを切り替えて戻ると音が消えたまま」になっていた。
-  //  ① iOS SafariはWeb Audioが中断されると 'interrupted' という独自の状態になる。
-  //    'suspended' との比較では引っかからず、resume()が一度も呼ばれない
-  //  ② AudioContextが動き出しても、Tone.Transportは止まったままなのでBGMは無音のまま。
-  //    現在の曲を組み直して鳴らし直す必要がある(SEは都度生成なのでcontextさえ戻れば鳴る)
-  let pendingResume = false;
-  const resumeIfNeeded = async () => {
-    if (!enabled) return;
-    // BGM用のAudioContextもOSに止められることがあるので戻す
-    await ensureBgmCtxRunning();
-    // BGMはmp3(Audio要素)なのでTone.jsの読み込み状況に関わらず先に鳴らし直す
-    if (currentKey) {
-      const el = bgmEls[currentKey];
-      if (!el || el.paused) playBGM(currentKey);
-    }
-    if (!Tone) return;
-    try {
-      const ctx = Tone.context;
-      if (ctx && ctx.state !== 'running') {
-        try {
-          await ctx.resume();
-        } catch (e) {}
-        // Toneのラッパーが状態を取りこぼす場合に備え、生のAudioContextにも直接かける
-        try {
-          if (ctx.rawContext && ctx.rawContext.state !== 'running') await ctx.rawContext.resume();
-        } catch (e) {}
-      }
-      // ユーザー操作なしでは復帰を許さないブラウザ向けに、次のタップで1回だけ再試行する
-      if (ctx && ctx.state !== 'running' && !pendingResume && typeof document !== 'undefined') {
-        pendingResume = true;
-        const retry = () => {
-          document.removeEventListener('pointerdown', retry);
-          document.removeEventListener('touchend', retry);
-          pendingResume = false;
-          resumeIfNeeded();
-        };
-        document.addEventListener('pointerdown', retry);
-        document.addEventListener('touchend', retry);
-        return;
-      }
-      // BGM(mp3)が止まっていれば鳴らし直す
-      if (currentKey) {
-        const el = bgmEls[currentKey];
-        if (!el || el.paused) playBGM(currentKey);
-      }
-    } catch (e) {}
-  };
-
-  // SEの音量。BGMはmp3(Audio要素)側で別に持っているため、片方を変えても互いに影響しない
-  const setSeVolume = async pct => {
-    await load();
-    if (!Tone || !seBus) return;
-    try {
-      seBus.gain.rampTo(_gainFromPct(pct), 0.1);
-    } catch (e) {}
-  };
-  // 実際の音量をゲインノード(と、繋げていない場合は素のvolume)へ反映する
-  const applyBgmVolume = () => {
-    const v = _bgmGain(bgmVolumePct);
-    if (bgmGain) {
+  const setSeVolume = pct => {
+    seVolumePct = pct;
+    if (seBus && Tone) {
       try {
-        const ctx = bgmCtx;
-        if (ctx && bgmGain.gain.setTargetAtTime) bgmGain.gain.setTargetAtTime(v, ctx.currentTime, 0.03);else bgmGain.gain.value = v;
-      } catch (e) {
-        try {
-          bgmGain.gain.value = v;
-        } catch (e2) {}
-      }
+        seBus.gain.rampTo(_gainFromPct(pct), 0.05);
+      } catch (e) {}
     }
-    // Web Audioへ繋げた要素は素のvolumeを1のままにする(繋げていない要素だけvolumeで絞る)
-    Object.entries(bgmEls).forEach(([k, el]) => {
-      if (!bgmSources[k]) {
-        try {
-          el.volume = v;
-        } catch (e) {}
-      }
-    });
   };
-  const setBgmVolume = async pct => {
+  const setBgmVolume = pct => {
     bgmVolumePct = pct;
-    applyBgmVolume();
-    // 音量0はミュートとして扱い、再生自体を止める(ゲインが効かない環境でも確実に無音にする)
-    if (pct <= 0) {
-      stopOthers(null);
-      return;
-    }
-    if (enabled && currentKey && !pageHidden) {
-      const el = bgmEls[currentKey];
-      if (!el || el.paused) playBGM(currentKey);
-    }
+    if (bgmGain) bgmGain.gain.value = _bgmGain(pct);
+    if (pct <= 0) stopOthers();else if (enabled && currentKey) playBGM(currentKey);
   };
-  // ユーザー操作の直後に、待たずにその場でBGMを鳴らし始める。
-  // playBGM は直列化のためにPromiseを1つ挟むので、最初の1曲(タイトル)だけは
-  // この同期版で確実に鳴らす。既に鳴っていれば何もしない
-  const startCurrentBgmNow = () => {
-    if (!enabled || bgmVolumePct <= 0 || pageHidden || jinglePlaying || !currentKey) return;
-    const el = getBgmEl(currentKey);
-    if (!el || !el.paused) return;
-    connectBgmToGain(currentKey); // play()より先にWeb Audioへ繋ぎ、メディア経路へ漏らさない
-    applyBgmVolume();
-    try {
-      const p = el.play();
-      if (p && p.catch) p.catch(() => retryPlayOnGesture());
-    } catch (e) {
-      retryPlayOnGesture();
+  const resumeIfNeeded = async () => {
+    await ensureAudioCtxRunning();
+    if (Tone) {
+      try {
+        await Tone.start();
+        started = true;
+      } catch (e) {}
     }
+    if (enabled && currentKey && !bgmSource) playBGM(currentKey);
   };
-
-  // 指定の曲が本当に鳴っているか確かめ、鳴っていなければ鳴らし直す。
-  // タイトルのように「確実に鳴ってほしい」場面で、少し時間を置いてから呼ぶ
-  const ensurePlaying = key => {
-    if (!enabled || bgmVolumePct <= 0 || pageHidden || jinglePlaying) return;
-    if (currentKey !== key) return;
-    const el = bgmEls[key];
-    const ctx = bgmCtx;
-    if (!el || el.paused || ctx && ctx.state !== 'running') playBGM(key);
-  };
-
-  // iOS等のブラウザ音声ロック解除: ユーザー操作(スライダー等)の直後に1回だけ呼ぶ
-  // playTestTone: 音量スライダーを操作したときだけ、音が出ることが分かるよう短い音を鳴らす。
-  // 画面のどこかを最初にタップしたときの自動解除では鳴らさない(不意に音が出て驚くため)
   const unlock = async (playTestTone = false) => {
-    if (enabled) return;
-    enabled = true;
-    // 【最重要】ここから下の2行は、await を1つも挟まずに実行しなければならない。
-    // ブラウザが音の再生を許すのは「ユーザーが操作した直後」だけで、
-    // await を挟むとその権利が切れて play() が拒否される。
-    // 拒否されると次のタップまで鳴らないため、「タイトルでは鳴らず、
-    // 別のページへ行って戻るとようやく鳴る」状態になっていた。
-    resumeBgmCtxNoWait(currentKey);
-    startCurrentBgmNow();
-    // 通常の経路も通して、ゲインノードへの接続・音量・重複再生の停止を整える
-    // (既に鳴っている場合は鳴らし直さないので、頭から鳴り直すことはない)
+    if (!enabled) enabled = true;
+    resumeAudioCtxNoWait();
     if (currentKey) playBGM(currentKey);
     await load();
     if (Tone && playTestTone) {
@@ -851,6 +533,9 @@ const Audio_ = (() => {
       } catch (e) {}
     }
     await setEnabled(true);
+  };
+  const ensurePlaying = key => {
+    if (enabled && key === currentKey && !bgmSource && !jingleSource) playBGM(key);
   };
   const se = {
     attack: async () => {
