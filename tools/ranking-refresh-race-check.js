@@ -4,7 +4,7 @@ const path = require('path');
 
 const sourcePath = process.env.RANKING_SOURCE || path.join(__dirname, '..', 'monster-hero/src/game-system.jsx');
 const source = fs.readFileSync(sourcePath, 'utf8');
-const start = source.indexOf('const loadOne = async (d) => {');
+const start = source.indexOf('const loadOne = async (requestedDiff) => {');
 const end = source.indexOf('\n    };\n    for (let i=0;', start);
 if (start < 0 || end < 0) throw new Error('loadRankings内のloadOneを抽出できません');
 const loadOneSource = source.slice(start, end);

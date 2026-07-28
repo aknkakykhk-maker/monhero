@@ -17,6 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-29 01:16",
+    type: "issue",
+    status: "fixed",
+    title: "Normalランキングの表示キーを統一",
+    items: [
+      "Normalランキングの取得結果と画面表示が同じ難易度キーを使うよう修正しました",
+      "更新時や保存直後も最新のNormal記録を表示できるようにしました",
+    ],
+  },
+  {
     date: "2026-07-29 00:54",
     type: "issue",
     status: "fixed",
