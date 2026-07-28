@@ -60,11 +60,16 @@ const check = (name, ok) => { checks.push(ok); console.log(`  ${ok ? 'OK' : 'NG'
     check(`${difficulty}: 同一clear_idを1件だけ保存`, rows.filter(row => row.clear_id === clearId).length === 1);
   }
   const posts = requests.filter(request => request.init.method === 'POST');
+  for (const difficulty of ['Normal', 'Hard', 'Master']) {
+    const payload = posts.map(request => JSON.parse(request.init.body)).find(row => row.clear_id === `check-${difficulty}`);
+    check(`${difficulty}: INSERT payloadのdifficultyが正規key`, payload?.difficulty === difficulty);
+  }
   check('全INSERTがon_conflict=clear_idを指定', posts.every(request => request.url.includes('?on_conflict=clear_id')));
   check('全INSERTがignore-duplicatesを指定', posts.every(request => request.init.headers.Prefer.includes('resolution=ignore-duplicates')));
   const gets = requests.filter(request => !request.init.method);
   check('全SELECTがclear_idを表示フィルターに使用しない', gets.every(request => !new URL(request.url).searchParams.has('clear_id')));
   check('全SELECTがdifficultyのilike完全一致', gets.every(request => /^ilike\.[^%*_]+$/i.test(new URL(request.url).searchParams.get('difficulty') || '')));
+  check('全SELECTがscore=NULLを有効記録より後ろにする', gets.every(request => new URL(request.url).searchParams.get('order') === 'score.desc.nullslast'));
 
   const failed = checks.filter(ok => !ok).length;
   console.log(`\n${checks.length - failed}/${checks.length} 項目OK`);

@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 23:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 23:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1495,7 +1495,7 @@ const normalizeRankingDifficulty = (value) => {
 // 診断用: 50件取得後に発生した遅延・非表示を切り分けるため、一時的に20件へ戻す。
 const RANKING_DIAGNOSTIC_LIMIT = 20;
 const rankingLog = (requestId, event, detail={}) => console.info('[ranking][diagnostic]', { requestId, event, at: new Date().toISOString(), ...detail });
-const sbFetchRankings = async (diff, limit=RANKING_DIAGNOSTIC_LIMIT, order='score.desc', offset=0, requestId='untracked') => {
+const sbFetchRankings = async (diff, limit=RANKING_DIAGNOSTIC_LIMIT, order='score.desc.nullslast', offset=0, requestId='untracked') => {
   const normalizedDifficulty = normalizeRankingDifficulty(diff);
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
   const select = 'user_name,hero,party,score,level,icon';
@@ -2099,7 +2099,8 @@ function MonsterHeroGame() {
         let rows;
         try {
           // 診断中は21件目以降を一切取得せず、20件と50件の差だけを比較できるようにする。
-          rows = mergeRows([], d === 'Master' ? await fetchMasterRows('score.desc', requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'score.desc', 0, requestId));
+          // 旧データのscore=NULLが上位枠を埋めて有効な記録を押し出さないよう、明示的にNULLを末尾へ送る。
+          rows = mergeRows([], d === 'Master' ? await fetchMasterRows('score.desc.nullslast', requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'score.desc.nullslast', 0, requestId));
         } catch (scoreError) {
           console.error('[ranking] score order fetch failed for', d, scoreError && scoreError.message ? scoreError.message : scoreError);
           // 診断条件を変えないため、代替順の取得も20件に限定する。
