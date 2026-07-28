@@ -84,6 +84,12 @@ AI と人間が、未解決の不具合・技術的負債・調査事項を共�
 
 ## 解決済み
 
+### KI-005: 全国ランキング失敗を端末内保存成功で隠していた（2026-07-28 解決）
+
+- 解決内容: 全国POST失敗と端末内フォールバックの結果を別々に返し、全難易度を全項目の単一payloadで送る共通経路へ統一した。失敗時はHTTP status・PostgREST code・response bodyを端末内記録へ残す。
+- 検証: `node tools/ranking-normal-integration-check.js`、`node tools/ranking-request-check.js`、`node tools/ranking-finish-check.js`
+- 関連: 本修正のPR
+
 解決した項目は削除せず、要約、解決日、PR、検証方法を残します。
 
 ```markdown

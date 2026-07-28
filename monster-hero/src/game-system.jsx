@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 00:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 00:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1552,7 +1552,7 @@ const sbInsertScore = async (row) => {
       hasIcon: Boolean(normalizedRow.icon), columns: Object.keys(normalizedRow), payload: normalizedRow
     });
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings${query}`, { method:'POST', headers:{...SB_HEADERS, 'Prefer':prefer}, body: JSON.stringify(normalizedRow), signal: controller.signal });
-    const body = res.ok ? '' : await res.text();
+    const body = await res.text();
     let errorCode = null;
     if (body) {
       try { errorCode = JSON.parse(body)?.code || null; } catch {}
@@ -1571,11 +1571,30 @@ const sbInsertScore = async (row) => {
       error.isUniqueViolation = isUniqueViolation;
       throw error;
     }
+    return { saved: true, status: res.status, body, row: normalizedRow };
   } catch (error) {
     if (error?.name === 'AbortError') throw new Error('ranking insert timed out after 8000ms');
     throw error;
   } finally {
     clearTimeout(timer);
+  }
+};
+
+// 全国保存と端末内フォールバックの成否を混同しない共通送信経路。
+// insertが失敗しても診断情報を端末側の行へ残すが、全国保存成功としては返さない。
+const persistRankingScore = async ({ row, insertScore=sbInsertScore, saveLocal }) => {
+  try {
+    const response = await insertScore(row);
+    return { nationalSaved: response?.saved === true, localSaved: false, response, error: null };
+  } catch (error) {
+    let localSaved = false;
+    try {
+      await saveLocal(error);
+      localSaved = true;
+    } catch (localError) {
+      console.error('[ranking] local fallback also failed:', localError && localError.message ? localError.message : localError);
+    }
+    return { nationalSaved: false, localSaved, response: null, error };
   }
 };
 
@@ -2602,50 +2621,12 @@ function MonsterHeroGame() {
     const heroName = (mainHero && (ALL_PLAYER_MONSTERS[mainHero.id]?.name || mainHero.name)) || 'Unknown';
     const level = breederLevel.level;
     const icon = breederIcon;
-    // 全国ランキング(Supabase)への送信を優先。失敗時のみ端末内保存にフォールバック
-    try {
-      // 同じ名前でも1プレイごとに1件として記録する(以前は名前ごとに1行しか持てず、
-      // 自己ベストを更新したときしか書き換わらないため、ブリーダーレベルや絆レベルの
-      // ランキングが古いままになっていた)。
-      // スコアランキングは同じ名前が並ぶことになるが、それぞれがそのプレイの記録
-      // (パーティの絆レベルもそのときの値)として意味を持つ。
-      // ブリーダーレベル・絆レベルのランキングは、表示時に名前ごとの最高値へまとめている。
-      const rowCore = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore };
-      // level/icon列がテーブルに無い場合でも、片方だけでも保存できるよう段階的に試す
-      // (level無し/icon無しどちらかだけが未対応でも、対応している方は失わない)
-      const variants = [
-        { ...rowCore, level, icon, clear_id: clearId },
-        { ...rowCore, level, clear_id: clearId },
-        { ...rowCore, icon, clear_id: clearId },
-        { ...rowCore, clear_id: clearId },
-      ];
-      let saved = false;
-      let clearIdUnsupported = false;
-      for (const row of variants) {
-        try {
-          await sbInsertScore(row);
-          saved = true;
-          break;
-        } catch (eVariant) {
-          console.error('[ranking] submit variant failed, trying next:', eVariant && eVariant.message ? eVariant.message : eVariant);
-          const responseBody = eVariant?.body || '';
-          if (/clear_id|on_conflict/i.test(responseBody)) {
-            clearIdUnsupported = true;
-            break;
-          }
-          // 後続variantが解決できるのは任意列のスキーマ差だけ。タイムアウト・回線断・5xxで
-          // 4回繰り返すと最大32秒ロックされるため、その場でローカル保存へ切り替える。
-          if (!/level|icon/i.test(responseBody)) throw eVariant;
-        }
-      }
-      // clear_id無しの互換POSTは、同じクリアの再送をDB側で判別できず重複を作るため行わない。
-      // マイグレーション未適用環境ではローカル保存へ退避し、非冪等な全国ランキング送信を避ける。
-      if (!saved && clearIdUnsupported) throw new Error('rankings clear_id migration is required; unsafe insert skipped');
-      if (!saved) throw new Error('all submit variants failed');
-    } catch (e) {
-      console.error('[ranking] supabase submit failed, falling back to local:', e && e.message ? e.message : e);
-      const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, clearId, at: Date.now() };
-      try {
+    const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level, icon, clear_id: clearId };
+    const result = await persistRankingScore({
+      row,
+      saveLocal: async (error) => {
+        console.error('[ranking] supabase submit failed, falling back to local:', error && error.message ? error.message : error);
+        const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, clearId, at: Date.now(), nationalSaved: false, nationalError: { message: error?.message || String(error), status: error?.status || null, code: error?.code || null, body: error?.body || null } };
         const rows = await storeGet(`mh_rank_${diff}`, [], false);
         const list = Array.isArray(rows) ? rows.slice() : [];
         // サーバー側と同じく、1プレイごとに1件として積む
@@ -2661,11 +2642,9 @@ function MonsterHeroGame() {
         });
         latestByName.forEach(r => { if (!kept.includes(r)) kept.push(r); });
         await storeSet(`mh_rank_${diff}`, kept, false);
-      } catch (e2) {
-        console.error('[ranking] local fallback also failed:', e2 && e2.message ? e2.message : e2);
       }
-      return;
-    }
+    });
+    if (!result.nationalSaved) return result;
     // POSTが確定した難易度だけを強制再取得する。保存前の先読みが残っている場合は
     // loadRankings側で完了を待ち、その後の新しい結果だけを画面へ反映する。
     // 再取得失敗をPOST失敗と誤判定してローカルへ二重保存しない。
@@ -2674,6 +2653,7 @@ function MonsterHeroGame() {
     } catch (e) {
       console.error('[ranking] post-submit refresh failed:', e && e.message ? e.message : e);
     }
+    return result;
   };
 
   // 敗北・降参・優勝のどの経路から呼ばれても、同じ周回のスコア送信は1回だけにする。
@@ -2683,11 +2663,16 @@ function MonsterHeroGame() {
     if (score <= 0 || scoreSubmittedRef.current) return;
     scoreSubmittedRef.current = true;
     try {
-      await submitLocalScore(difficulty, score, runIdRef.current);
+      const result = await submitLocalScore(difficulty, score, runIdRef.current);
+      if (!result?.nationalSaved) {
+        console.error('[result] national score save failed:', result?.error?.message || 'unknown ranking error');
+        return result;
+      }
       if (score > (highScores[difficulty] || 0)) {
         await storeSet(`mh_hs_${difficulty}`, score, false);
         setHighScores(prev => ({ ...prev, [difficulty]: score }));
       }
+      return result;
     } catch (e) {
       console.error('[result] score submit failed:', e && e.message ? e.message : e);
     }
