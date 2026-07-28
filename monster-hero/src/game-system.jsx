@@ -1686,6 +1686,7 @@ function MonsterHeroGame() {
   const rewardsAwardedRef = useRef(false);
   const runIdRef = useRef(createRunId());
   const [runFinalizing, setRunFinalizing] = useState(false);
+  const [resultProcessing, setResultProcessing] = useState(false);
   // 最終画面の遷移ボタンも、最初のpointer/clickを受けた瞬間に同期ロックする。
   // Reactのstate反映前に「再挑戦」「トップへ」が続けて押されても、初回だけを通す。
   const resultActionRef = useRef(false);
@@ -3237,6 +3238,7 @@ function MonsterHeroGame() {
       if (runFinalizingRef.current) return;
       runFinalizingRef.current = true;
       setRunFinalizing(true);
+      setResultProcessing(true);
       (async () => {
         // 経験値・ダイヤの付与は端末内で完結するので必ず先に行う。
         // 以前はスコア送信(全国ランキングへの通信)の完了を待ってから付与していたため、
@@ -3244,6 +3246,7 @@ function MonsterHeroGame() {
         try {
           await awardRunRewards(Math.max(0, wave - 1));
         } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
+        setResultProcessing(false);
         // スコア送信はリザルトの表示に必要ないため、完了を待たず後追いで行う
         submitRunScoreOnce();
       })();
@@ -3315,9 +3318,11 @@ function MonsterHeroGame() {
     if (runFinalizingRef.current) return;
     runFinalizingRef.current = true;
     setRunFinalizing(true);
+    setResultProcessing(true);
     // 敗北時と同じく、端末内で完結する経験値・ダイヤの付与とリザルト表示を先に済ませ、
     // 通信を伴うスコア送信は完了を待たず後追いで行う(通信待ちでリザルトが遅れないように)
     try { await awardRunRewards(Math.max(0, wave - 1)); } catch {}
+    setResultProcessing(false);
     setShowQuitConfirm(false);
     setGaveUp(true);
     submitRunScoreOnce();
@@ -3884,10 +3889,12 @@ function MonsterHeroGame() {
       // awaitに入る前にロックし、通信中の連打を同一周回の別処理として通さない
       runFinalizingRef.current = true;
       setRunFinalizing(true);
+      setResultProcessing(true);
       try {
         await awardRunRewards(10);
         setClearCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_clears_${difficulty}`, next[difficulty], false); return next; });
       } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
+      setResultProcessing(false);
       setGameState('CHAMPION');
       submitRunScoreOnce();
     } else {
@@ -6477,6 +6484,22 @@ function MonsterHeroGame() {
       )}
       {showEnemyInfo&&enemy&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3><button onClick={()=>setShowEnemyInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center">{enemy.imgUrl?(<img src={enemy.imgUrl} alt={enemy.name} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]">{enemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{enemy.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"><div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{enemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{enemy.atk}</div></div></div></div></div></div>)}
       {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"><div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{def}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(+{Math.round(getPermaBuff('dmgCutPct')*100)}%軽減)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div><div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div></div></div></div>)}
+
+      {/* ラン終了処理中は画面全体で入力を遮断する。ボタン自身のdisabledだけに頼らず、
+          state反映後は背面のカード・モーダル・ナビゲーションにもタップを通さない。 */}
+      {resultProcessing&&(
+        <div
+          role="status"
+          aria-live="polite"
+          aria-label="クリア結果を処理中"
+          className="fixed inset-0 flex items-center justify-center bg-black/55 backdrop-blur-sm"
+          style={{position:'fixed',inset:0,zIndex:120000,pointerEvents:'auto',touchAction:'none'}}
+          onPointerDown={e=>e.preventDefault()}
+          onClick={e=>e.preventDefault()}
+        >
+          <div className="rounded-2xl border border-white/20 bg-slate-950/90 px-6 py-4 text-sm font-black text-white shadow-2xl">処理中…</div>
+        </div>
+      )}
 
       {/* QUIT CONFIRM */}
       {showQuitConfirm&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">現在のスコア {score.toLocaleString()} pt がランキングに記録されます</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>)}

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c99726fe70733be3
+// source-sha256: 02526cfab3ecbf7d
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -3235,6 +3235,7 @@ function MonsterHeroGame() {
   const rewardsAwardedRef = useRef(false);
   const runIdRef = useRef(createRunId());
   const [runFinalizing, setRunFinalizing] = useState(false);
+  const [resultProcessing, setResultProcessing] = useState(false);
   // 最終画面の遷移ボタンも、最初のpointer/clickを受けた瞬間に同期ロックする。
   // Reactのstate反映前に「再挑戦」「トップへ」が続けて押されても、初回だけを通す。
   const resultActionRef = useRef(false);
@@ -5277,6 +5278,7 @@ function MonsterHeroGame() {
       if (runFinalizingRef.current) return;
       runFinalizingRef.current = true;
       setRunFinalizing(true);
+      setResultProcessing(true);
       (async () => {
         // 経験値・ダイヤの付与は端末内で完結するので必ず先に行う。
         // 以前はスコア送信(全国ランキングへの通信)の完了を待ってから付与していたため、
@@ -5286,6 +5288,7 @@ function MonsterHeroGame() {
         } catch (e) {
           console.error('[result] award rewards failed:', e && e.message ? e.message : e);
         }
+        setResultProcessing(false);
         // スコア送信はリザルトの表示に必要ないため、完了を待たず後追いで行う
         submitRunScoreOnce();
       })();
@@ -5447,11 +5450,13 @@ function MonsterHeroGame() {
     if (runFinalizingRef.current) return;
     runFinalizingRef.current = true;
     setRunFinalizing(true);
+    setResultProcessing(true);
     // 敗北時と同じく、端末内で完結する経験値・ダイヤの付与とリザルト表示を先に済ませ、
     // 通信を伴うスコア送信は完了を待たず後追いで行う(通信待ちでリザルトが遅れないように)
     try {
       await awardRunRewards(Math.max(0, wave - 1));
     } catch {}
+    setResultProcessing(false);
     setShowQuitConfirm(false);
     setGaveUp(true);
     submitRunScoreOnce();
@@ -6470,6 +6475,7 @@ function MonsterHeroGame() {
       // awaitに入る前にロックし、通信中の連打を同一周回の別処理として通さない
       runFinalizingRef.current = true;
       setRunFinalizing(true);
+      setResultProcessing(true);
       try {
         await awardRunRewards(10);
         setClearCounts(prev => {
@@ -6483,6 +6489,7 @@ function MonsterHeroGame() {
       } catch (e) {
         console.error('[result] award rewards failed:', e && e.message ? e.message : e);
       }
+      setResultProcessing(false);
       setGameState('CHAMPION');
       submitRunScoreOnce();
     } else {
@@ -12943,7 +12950,23 @@ function MonsterHeroGame() {
     className: "text-[9px] text-indigo-400 uppercase font-black"
   }, "\u52C7\u8005\u7279\u6027"), /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-white font-bold leading-relaxed mt-1"
-  }, mainHero.traitDesc))))), showQuitConfirm && /*#__PURE__*/React.createElement("div", {
+  }, mainHero.traitDesc))))), resultProcessing && /*#__PURE__*/React.createElement("div", {
+    role: "status",
+    "aria-live": "polite",
+    "aria-label": "\u30AF\u30EA\u30A2\u7D50\u679C\u3092\u51E6\u7406\u4E2D",
+    className: "fixed inset-0 flex items-center justify-center bg-black/55 backdrop-blur-sm",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 120000,
+      pointerEvents: 'auto',
+      touchAction: 'none'
+    },
+    onPointerDown: e => e.preventDefault(),
+    onClick: e => e.preventDefault()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "rounded-2xl border border-white/20 bg-slate-950/90 px-6 py-4 text-sm font-black text-white shadow-2xl"
+  }, "\u51E6\u7406\u4E2D\u2026")), showQuitConfirm && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 flex flex-col items-center justify-center p-8 text-center",
     style: {
       position: 'fixed',
