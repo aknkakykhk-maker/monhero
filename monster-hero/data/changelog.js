@@ -17,6 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-29 00:04",
+    type: "issue",
+    status: "fixed",
+    title: "ランキング保存直後の表示を修正",
+    items: [
+      "Normal・Hard・Masterの記録を同じ保存処理で送信し、保存後すぐ最新ランキングへ反映するようにしました",
+      "保存前の古い通信結果が、保存直後の表示を上書きしないようにしました",
+    ],
+  },
+  {
     date: "2026-07-28 23:51",
     type: "issue",
     status: "fixed",
