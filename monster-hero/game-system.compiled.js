@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 08406d4a8311f4c8
+// source-sha256: c99726fe70733be3
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -3235,6 +3235,10 @@ function MonsterHeroGame() {
   const rewardsAwardedRef = useRef(false);
   const runIdRef = useRef(createRunId());
   const [runFinalizing, setRunFinalizing] = useState(false);
+  // 最終画面の遷移ボタンも、最初のpointer/clickを受けた瞬間に同期ロックする。
+  // Reactのstate反映前に「再挑戦」「トップへ」が続けて押されても、初回だけを通す。
+  const resultActionRef = useRef(false);
+  const [resultActionPending, setResultActionPending] = useState(false);
   const [screenShake, setScreenShake] = useState(false);
   const [bigShake, setBigShake] = useState(false);
   const triggerShake = useCallback((big = false) => {
@@ -4330,12 +4334,10 @@ function MonsterHeroGame() {
           if (/clear_id|on_conflict/i.test(eVariant?.body || '')) clearIdUnsupported = true;
         }
       }
-      // DBマイグレーション適用前だけの互換経路。適用後は必ずclear_idの一意制約で冪等化する。
-      if (!saved && clearIdUnsupported) await sbInsertScore({
-        ...rowCore,
-        level,
-        icon
-      });else if (!saved) throw new Error('all submit variants failed');
+      // clear_id無しの互換POSTは、同じクリアの再送をDB側で判別できず重複を作るため行わない。
+      // マイグレーション未適用環境ではローカル保存へ退避し、非冪等な全国ランキング送信を避ける。
+      if (!saved && clearIdUnsupported) throw new Error('rankings clear_id migration is required; unsafe insert skipped');
+      if (!saved) throw new Error('all submit variants failed');
     } catch (e) {
       console.error('[ranking] supabase submit failed, falling back to local:', e && e.message ? e.message : e);
       const entry = {
@@ -5515,6 +5517,17 @@ function MonsterHeroGame() {
     setShowMasuRegisterModal(false);
     setMasuNameInput('');
     setGameState('PICK_HERO');
+  };
+  const runResultActionOnce = action => {
+    if (resultActionRef.current) return;
+    resultActionRef.current = true;
+    setResultActionPending(true);
+    action();
+    // 遷移先で次の周回を開始できるよう、現在の連打イベントが終わってから解除する。
+    setTimeout(() => {
+      resultActionRef.current = false;
+      setResultActionPending(false);
+    }, 0);
   };
   const getNextEnemyAction = useCallback((ent, currentDist) => {
     if (!ent) return null;
@@ -12994,9 +13007,11 @@ function MonsterHeroGame() {
   }, finalRewardSummary && /*#__PURE__*/React.createElement(RewardSummaryCard, {
     summary: finalRewardSummary
   }), masuRegisterButtonNode()), /*#__PURE__*/React.createElement("button", {
-    onClick: handleGoToTitle,
-    className: "w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2"
-  }, "\u30BF\u30A4\u30C8\u30EB\u3078")), hp <= 0 && /*#__PURE__*/React.createElement("div", {
+    onClick: () => runResultActionOnce(handleGoToTitle),
+    disabled: resultActionPending,
+    "aria-busy": resultActionPending,
+    className: "w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+  }, resultActionPending ? '処理中…' : 'タイトルへ')), hp <= 0 && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 flex flex-col items-center p-6 text-center",
     style: {
       position: 'fixed',
@@ -13022,13 +13037,15 @@ function MonsterHeroGame() {
   }), masuRegisterButtonNode()), /*#__PURE__*/React.createElement("div", {
     className: "flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: handleRetry,
-    className: "w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"
+    onClick: () => runResultActionOnce(handleRetry),
+    disabled: resultActionPending,
+    className: "w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
   }, /*#__PURE__*/React.createElement(RotateCcw, {
     size: 20
-  }), " \u518D\u6311\u6226"), /*#__PURE__*/React.createElement("button", {
-    onClick: handleGoToTitle,
-    className: "w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase"
+  }), " ", resultActionPending ? '処理中…' : '再挑戦'), /*#__PURE__*/React.createElement("button", {
+    onClick: () => runResultActionOnce(handleGoToTitle),
+    disabled: resultActionPending,
+    className: "w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed"
   }, "\u30C8\u30C3\u30D7\u3078"))), gaveUp && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 flex flex-col items-center p-6 text-center",
     style: {
@@ -13055,13 +13072,15 @@ function MonsterHeroGame() {
   }), masuRegisterButtonNode()), /*#__PURE__*/React.createElement("div", {
     className: "flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: handleRetry,
-    className: "w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2"
+    onClick: () => runResultActionOnce(handleRetry),
+    disabled: resultActionPending,
+    className: "w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
   }, /*#__PURE__*/React.createElement(RotateCcw, {
     size: 20
-  }), " \u518D\u6311\u6226"), /*#__PURE__*/React.createElement("button", {
-    onClick: handleGoToTitle,
-    className: "w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase"
+  }), " ", resultActionPending ? '処理中…' : '再挑戦'), /*#__PURE__*/React.createElement("button", {
+    onClick: () => runResultActionOnce(handleGoToTitle),
+    disabled: resultActionPending,
+    className: "w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed"
   }, "\u30C8\u30C3\u30D7\u3078"))), showMasuRegisterModal && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 flex items-center justify-center p-6",
     style: {

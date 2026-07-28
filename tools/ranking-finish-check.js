@@ -21,6 +21,8 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
       && (code.includes('aria-busy={runFinalizing}') || code.includes('"aria-busy": runFinalizing')));
   check(`${label}: 共通の一度だけ送信する処理を使う`, code.includes('submitRunScoreOnce'));
   check(`${label}: clear_idでランキングPOSTを冪等化`, code.includes("'?on_conflict=clear_id'") && code.includes('resolution=ignore-duplicates'));
+  check(`${label}: clear_id未対応時に非冪等POSTへ退避しない`, code.includes('unsafe insert skipped') && !code.includes("if (!saved && clearIdUnsupported) await sbInsertScore"));
+  check(`${label}: 最終画面の遷移ボタンを同期ロックする`, code.includes('resultActionRef.current') && code.includes('runResultActionOnce'));
 
   const nextWave = code.slice(code.indexOf('const handleNextWave'), code.indexOf('// スロットで現在選べる固有技一覧'));
   check(`${label}: ムー撃破処理がランキングPOSTを直接待たない`, !/await\s+submitLocalScore/.test(nextWave));
