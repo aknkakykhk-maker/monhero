@@ -1,3 +1,9 @@
+-- iPhoneでは、全選択や末尾の切り替えが不要な次の分割版を使用する。
+-- 調査: RANKINGS_AUDIT.sql / ROLLBACK試験: RANKINGS_APPLY_TEST.sql
+-- 実適用: RANKINGS_APPLY.sql / 適用後確認: RANKINGS_VERIFY.sql
+-- 短い実行順: RANKINGS_IPHONE_STEPS.md
+-- この統合版は履歴・一括確認用として残す。
+
 -- public.rankings の本番調査と clear_id UNIQUE の安全な適用手順。
 -- セクションAは読み取り専用。セクションBは既定でROLLBACKする。
 -- DROP TABLE、テーブル再作成、RLS/policy/GRANTの変更は行わない。
