@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 18:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 18:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1491,8 +1491,13 @@ const sbFetchRankings = async (diff, limit=RANKING_DIAGNOSTIC_LIMIT, order='scor
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
-    if (!res.ok) throw new Error(`fetch ${res.status}`);
-    return await res.json();
+    const body = await res.text();
+    if (!res.ok) throw new Error(`fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    try {
+      return JSON.parse(body);
+    } catch (e) {
+      throw new Error(`invalid JSON; url=${url}; response=${body || '(empty)'}; error=${e.message}`);
+    }
   } finally {
     clearTimeout(timer);
   }
@@ -1977,6 +1982,44 @@ function MonsterHeroGame() {
       }
       return rows.sort((a,b)=>(b.score||0)-(a.score||0));
     };
+    // Masterだけは旧データの表記揺れと不正行を診断する。正常な1行まで巻き添えにせず、
+    // 必須項目を満たす行だけを残す（他難易度の取得仕様には触れない）。
+    const fetchMasterRows = async (order) => {
+      const variants = ['Master', 'master', 'MASTER'];
+      let rows = [];
+      let firstError = null;
+      let succeeded = false;
+      for (const sentDifficulty of variants) {
+        try {
+          console.info('[ranking][Master] 実際に送っているdifficulty値:', sentDifficulty, 'order:', order);
+          const responseRows = await sbFetchRankings(sentDifficulty, RANKING_DIAGNOSTIC_LIMIT, order, 0);
+          succeeded = true;
+          console.info('[ranking][Master] Supabase成功; difficulty:', sentDifficulty, '取得件数:', Array.isArray(responseRows) ? responseRows.length : '配列ではない');
+          if (!Array.isArray(responseRows)) throw new Error(`response is not an array: ${JSON.stringify(responseRows)}`);
+          responseRows.forEach((r, i) => console.info('[ranking][Master] 取得レコード必須項目:', i, {
+            user_name: r?.user_name, score: r?.score, hero: r?.hero, party: r?.party, level: r?.level, icon: r?.icon
+          }));
+          rows = mergeRows(rows, responseRows);
+          // 正式表記で記録があれば、余分な通信と旧表記との重複混在を避ける。
+          if (sentDifficulty === 'Master' && responseRows.length) break;
+        } catch (e) {
+          if (!firstError) firstError = e;
+          console.error('[ranking][Master] Supabase失敗; difficulty:', sentDifficulty, 'エラー全文:', e);
+        }
+      }
+      const valid = rows.filter((r, i) => {
+        const reasons = [];
+        if (!r || typeof r !== 'object') reasons.push('レコードがobjectではない');
+        if (typeof r?.user_name !== 'string' || !r.user_name.trim()) reasons.push('user_nameが空または文字列ではない');
+        if (!Number.isFinite(Number(r?.score))) reasons.push('scoreが有限数ではない');
+        if (r?.party != null && !Array.isArray(r.party)) reasons.push('partyが配列ではない');
+        if (reasons.length) console.warn('[ranking][Master] 不正レコードを除外:', i, reasons.join(', '), r);
+        return reasons.length === 0;
+      }).map(r => ({ ...r, score: Number(r.score) }));
+      console.info('[ranking][Master] 整形後件数:', valid.length, '除外件数:', rows.length - valid.length);
+      if (!succeeded && firstError) throw firstError;
+      return valid;
+    };
     // 起動時は利用者から不調報告のあるNormal/Masterを先に取得する。
     // 全難易度を一斉取得すると記録の多い難易度同士がSupabase側で競合するため、2件ずつに制限する。
     const allDiffs = Object.keys(DIFFICULTY_SETTINGS);
@@ -1992,21 +2035,22 @@ function MonsterHeroGame() {
       setRankingLoadingByDiff(prev => ({ ...prev, [d]: true }));
       const request = (async () => {
       try {
+        if (d === 'Master') console.info('[ranking][Master] Master取得開始');
         let rows;
         try {
           // 診断中は21件目以降を一切取得せず、20件と50件の差だけを比較できるようにする。
-          rows = mergeRows([], await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'score.desc', 0));
+          rows = mergeRows([], d === 'Master' ? await fetchMasterRows('score.desc') : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'score.desc', 0));
         } catch (scoreError) {
           console.error('[ranking] score order fetch failed for', d, scoreError && scoreError.message ? scoreError.message : scoreError);
           // 診断条件を変えないため、代替順の取得も20件に限定する。
-          rows = await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0);
+          rows = d === 'Master' ? await fetchMasterRows('id.desc') : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0);
           rows = mergeRows([], rows).sort((a,b)=>(b.score||0)-(a.score||0));
         }
         const uniqueScoreRows = mergeRows([], rows).slice(0, RANKING_DIAGNOSTIC_LIMIT);
         byDiff[d] = uniqueScoreRows.map(toEntry);
         let pool = uniqueScoreRows;
         if (includeLevels) try {
-          pool = mergeRows(pool, await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'level.desc.nullslast', 0));
+          pool = mergeRows(pool, d === 'Master' ? await fetchMasterRows('level.desc.nullslast') : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'level.desc.nullslast', 0));
         } catch (eLv) {
           console.error('[ranking] level order fetch failed for', d, eLv && eLv.message ? eLv.message : eLv);
         }
@@ -2015,6 +2059,7 @@ function MonsterHeroGame() {
         if (byDiff[d].length === 0) {
           const localRows = await restoreLocalRows(d);
           if (localRows.length) {
+            if (d === 'Master') console.warn('[ranking][Master] フォールバックへ切り替わった理由: Supabase取得成功だが有効なMasterレコードが0件');
             byDiff[d] = localRows.slice(0, RANKING_DIAGNOSTIC_LIMIT);
             poolByDiff[d] = localRows.slice();
             sourceByDiff[d] = 'local';
@@ -2022,6 +2067,7 @@ function MonsterHeroGame() {
         }
       } catch (e) {
         console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
+        if (d === 'Master') console.error('[ranking][Master] フォールバックへ切り替わった理由: score.descとid.descの取得がともに失敗', e);
         try {
           const rows = await restoreLocalRows(d);
           if (rows.length) {

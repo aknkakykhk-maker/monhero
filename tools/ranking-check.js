@@ -45,10 +45,12 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
       const difficulty = (u.searchParams.get('difficulty') || '').replace(/^eq\./, '');
       window.__rankOrders.push(order);
       window.__rankRequests.push({ difficulty, order, limit: Number(u.searchParams.get('limit')), offset: Number(u.searchParams.get('offset')) });
-      if (difficulty === 'Master' && order.startsWith('score.desc')) return new Response('', { status: 500 });
+      if (['Master', 'master', 'MASTER'].includes(difficulty) && order.startsWith('score.desc')) return new Response(JSON.stringify({ message: 'diagnostic failure' }), { status: 500 });
       if (difficulty === 'Master' && order.startsWith('id.desc')) return new Response(JSON.stringify([
         { id: 999, user_name: 'マスター復旧', hero: 'モッチー', party: party(5), score: 543210, level: 24, icon: null },
+        { id: 998, user_name: '旧形式不正行', hero: 'モッチー', party: '{broken}', score: 'not-a-number', level: 1, icon: null },
       ]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      if (['master', 'MASTER'].includes(difficulty) && order.startsWith('id.desc')) return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
       const rows = [
         { id: 1, user_name: 'アルファ', hero: 'モッチー', party: party(5), score: 9000, level: 10, icon: null },
         { id: 2, user_name: 'アルファ', hero: 'モッチー', party: party(12), score: 100, level: 30, icon: null },
@@ -112,6 +114,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   const masterTxt = await bodyText();
   check('Masterの復旧スコア543,210が表示される', masterTxt.includes('543,210'));
   check('Masterの復旧ユーザー名が表示される', masterTxt.includes('マスター復旧'));
+  check('Masterの不正レコードだけが除外される', !masterTxt.includes('旧形式不正行'));
+  check('Masterが端末内復旧表示へ切り替わらない', !masterTxt.includes('サーバーに接続できず'));
   const masterRequests = await page.evaluate(() => window.__rankRequests.filter(r => r.difficulty === 'Master'));
   check('診断中はすべてのランキングGETが20件以下',
     masterRequests.length > 0 && masterRequests.every(r => r.limit <= 20 && r.offset === 0));
