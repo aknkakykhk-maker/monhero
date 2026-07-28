@@ -44,7 +44,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
       const order = u.searchParams.get('order') || '';
       const difficulty = (u.searchParams.get('difficulty') || '').replace(/^eq\./, '');
       window.__rankOrders.push(order);
-      window.__rankRequests.push({ difficulty, order, limit: Number(u.searchParams.get('limit')), offset: Number(u.searchParams.get('offset')) });
+      const headers = new Headers((init && init.headers) || {});
+      window.__rankRequests.push({ difficulty, order, limit: Number(u.searchParams.get('limit')), offset: Number(u.searchParams.get('offset')), apikey: headers.get('apikey'), authorization: headers.get('authorization') });
       if (['Master', 'master', 'MASTER'].includes(difficulty) && order.startsWith('score.desc')) return new Response(JSON.stringify({ message: 'diagnostic failure' }), { status: 500 });
       if (difficulty === 'Master' && order.startsWith('id.desc')) return new Response(JSON.stringify([
         { id: 999, user_name: 'マスター復旧', hero: 'モッチー', party: party(5), score: 543210, level: 24, icon: null },
@@ -79,6 +80,9 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   await page.waitForTimeout(1800);
 
   const orders = await page.evaluate(() => window.__rankOrders || []);
+  const scoreRequests = await page.evaluate(() => window.__rankRequests || []);
+  check('publishable keyをapikeyとして送信する', scoreRequests.length > 0 && scoreRequests.every(r => r.apikey && r.apikey.startsWith('sb_publishable_')));
+  check('publishable keyをBearer JWTとして誤送信しない', scoreRequests.length > 0 && scoreRequests.every(r => !r.authorization));
   check('スコア画面を開いただけではレベル順を取得しない',
     orders.some(o => o.startsWith('score.desc')) && !orders.some(o => o.startsWith('level.desc')),
     [...new Set(orders)].join(', '));

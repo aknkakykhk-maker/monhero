@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6fe833b3109dd79b
+// source-sha256: eda0dfa3dafec1a3
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -2917,9 +2917,11 @@ const storeList = async (prefix, shared = false) => {
 // ===== Supabase shared ranking (REST API via fetch) =====
 const SUPABASE_URL = 'https://zrzevudkbgtxlbvmuziy.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_D4WJBXJ1xE97amndZarEPw_0M4LAwOp';
+// sb_publishable_* は Data API の apikey 用であり、JWT ではない。Bearer にも設定すると
+// PostgREST が publishable key を JWT として検証して 401 (Invalid JWT) にするため送らない。
+// ログには秘密値そのものを出さず、公開設定を読み込めたことだけを記録する。
 const SB_HEADERS = {
   'apikey': SUPABASE_KEY,
-  'Authorization': `Bearer ${SUPABASE_KEY}`,
   'Content-Type': 'application/json'
 };
 
@@ -2936,13 +2938,19 @@ const sbFetchRankings = async (diff, limit = RANKING_DIAGNOSTIC_LIMIT, order = '
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
   const select = 'user_name,hero,party,score,level,icon';
   const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=eq.${encodeURIComponent(diff)}&order=${order}&limit=${limit}&offset=${offset}`;
-  rankingLog(requestId, 'query', {
+  const startedAt = Date.now();
+  rankingLog(requestId, 'request-start', {
     difficulty: diff,
     category: 'ranking',
     rankingType: order,
+    table: 'rankings',
+    columns: select,
     limit,
     offset,
-    url
+    url,
+    supabaseUrl: SUPABASE_URL,
+    keyLoaded: Boolean(SUPABASE_KEY),
+    keyType: SUPABASE_KEY.startsWith('sb_publishable_') ? 'publishable' : 'legacy'
   });
   // モバイル回線などで接続だけが残り続けても、ランキング画面を永久に待機させない。
   const controller = new AbortController();
@@ -2955,10 +2963,20 @@ const sbFetchRankings = async (diff, limit = RANKING_DIAGNOSTIC_LIMIT, order = '
     const body = await res.text();
     rankingLog(requestId, 'supabase-response', {
       difficulty: diff,
+      endedAt: new Date().toISOString(),
+      elapsedMs: Date.now() - startedAt,
       status: res.status,
       statusText: res.statusText,
       ok: res.ok,
-      body
+      dataCount: res.ok ? (() => {
+        try {
+          const parsed = JSON.parse(body);
+          return Array.isArray(parsed) ? parsed.length : null;
+        } catch {
+          return null;
+        }
+      })() : null,
+      error: res.ok ? null : body
     });
     if (!res.ok) throw new Error(`fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
     try {
@@ -2970,6 +2988,10 @@ const sbFetchRankings = async (diff, limit = RANKING_DIAGNOSTIC_LIMIT, order = '
     const normalized = error?.name === 'AbortError' ? new Error(`ranking request timed out after 8000ms; url=${url}`) : error;
     rankingLog(requestId, 'supabase-error', {
       difficulty: diff,
+      endedAt: new Date().toISOString(),
+      elapsedMs: Date.now() - startedAt,
+      timeout: error?.name === 'AbortError',
+      networkError: error instanceof TypeError,
       name: normalized?.name,
       message: normalized?.message,
       stack: normalized?.stack
