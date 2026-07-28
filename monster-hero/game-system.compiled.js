@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2998e4a73d1c8416
+// source-sha256: 807b3a437b51fce2
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 23:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 00:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3735,7 +3735,13 @@ function MonsterHeroGame() {
       const requestKey = `${d}:${includeLevels ? 'levels' : 'score'}`;
       const fetchedAt = rankingFetchedAtRef.current.get(requestKey) || 0;
       if (!force && Date.now() - fetchedAt < 30000) return;
-      if (rankingRequestsRef.current.has(requestKey)) return rankingRequestsRef.current.get(requestKey);
+      // 保存直後の強制再取得は、保存前から走っている同難易度の通信が終わってから新しく開始する。
+      // ここで古いPromiseを共有すると、POST済みなのに保存前の結果を再表示してしまう。
+      if (rankingRequestsRef.current.has(requestKey)) {
+        const pending = rankingRequestsRef.current.get(requestKey);
+        if (!force) return pending;
+        await pending;
+      }
       const requestId = `${d}-${Date.now()}-${++rankingRequestSequenceRef.current}`;
       const concurrent = [...rankingRequestsRef.current.keys()];
       rankingLatestRequestRef.current.set(d, requestId);
@@ -4417,12 +4423,21 @@ function MonsterHeroGame() {
       } catch (e2) {
         console.error('[ranking] local fallback also failed:', e2 && e2.message ? e2.message : e2);
       }
+      return;
+    }
+    // POSTが確定した難易度だけを強制再取得する。保存前の先読みが残っている場合は
+    // loadRankings側で完了を待ち、その後の新しい結果だけを画面へ反映する。
+    // 再取得失敗をPOST失敗と誤判定してローカルへ二重保存しない。
+    try {
+      await loadRankings(normalizeRankingDifficulty(diff), false, true);
+    } catch (e) {
+      console.error('[ranking] post-submit refresh failed:', e && e.message ? e.message : e);
     }
   };
 
   // 敗北・降参・優勝のどの経路から呼ばれても、同じ周回のスコア送信は1回だけにする。
-  // ランキング再取得はランキング画面を開いた時に行うため、ここでは14本ものGETを発生させない
-  // (7難易度×スコア順/レベル順)。送信や再取得をリザルト遷移の待ち時間にしないことも重要。
+  // 保存後は対象難易度だけを強制再取得する。全難易度・レベル順まで取得せず、
+  // Normal/Hard/Masterを同じ経路で保存・反映する。
   const submitRunScoreOnce = async () => {
     if (score <= 0 || scoreSubmittedRef.current) return;
     scoreSubmittedRef.current = true;

@@ -41,7 +41,9 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: リザルト表示後もランキング保存完了まで入力ロック`, nextWave.indexOf("setGameState('CHAMPION')") < nextWave.indexOf('await submitRunScoreOnce()') && nextWave.indexOf('await submitRunScoreOnce()') < nextWave.indexOf('setResultProcessing(false)'));
 
   const submit = code.slice(code.indexOf('const submitLocalScore'), code.indexOf('const handleSaveName'));
+  check(`${label}: POST直後に保存した難易度だけを強制再取得`, code.includes('await loadRankings(normalizeRankingDifficulty(diff), false, true)'));
   check(`${label}: POST直後に全難易度を再取得しない`, !/await\s+loadRankings\(\)/.test(submit));
+  check(`${label}: 強制再取得は保存前の同難易度通信完了後に開始`, code.includes('if (!force) return pending') && code.includes('await pending'));
   check(`${label}: 過去の完全重複をプレイ内容で畳む`, code.includes('const rowKey =') && code.includes('uniqueScoreRows'));
   check(`${label}: 通常スコア表示は選択難易度だけ取得`, code.includes('loadRankings(difficulty)') && code.includes('targetDiff') && code.includes('[targetDiff]'));
   const preloadAt = code.indexOf('background preload failed');
