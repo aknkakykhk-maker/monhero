@@ -17,6 +17,17 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-28 16:47",
+    type: "issue",
+    status: "fixed",
+    title: "Normal・Masterランキングの接続を改善",
+    items: [
+      "起動時はNormalとMasterのランキングを優先してバックグラウンドで読み込むようにしました",
+      "全難易度への同時通信を抑え、記録が多いランキングでも接続しやすくしました",
+      "ランキング取得時のデータ量を必要な項目だけに抑えました",
+    ],
+  },
+  {
     date: "2026-07-28 16:00",
     type: "issue",
     status: "fixed",
