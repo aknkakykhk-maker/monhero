@@ -24,10 +24,12 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: clear_id未対応時に非冪等POSTへ退避しない`, code.includes('unsafe insert skipped') && !code.includes("if (!saved && clearIdUnsupported) await sbInsertScore"));
   check(`${label}: 最終画面の遷移ボタンを同期ロックする`, code.includes('resultActionRef.current') && code.includes('runResultActionOnce'));
   check(`${label}: 終了処理中は画面全体の入力を遮断する`, code.includes('resultProcessing') && code.includes('aria-label') && code.includes('touchAction'));
+  check(`${label}: ランキングPOSTに8秒の上限`, code.includes("new Error('ranking insert timed out after 8000ms')") && code.includes('signal: controller.signal'));
+  check(`${label}: 通信失敗時にPOSTを4回繰り返さない`, code.includes("if (!/level|icon/i.test(responseBody)) throw eVariant"));
 
   const nextWave = code.slice(code.indexOf('const handleNextWave'), code.indexOf('// スロットで現在選べる固有技一覧'));
   check(`${label}: ムー撃破処理がランキングPOSTを直接待たない`, !/await\s+submitLocalScore/.test(nextWave));
-  check(`${label}: リザルト表示後にランキング送信を始める`, nextWave.indexOf("setGameState('CHAMPION')") < nextWave.lastIndexOf('submitRunScoreOnce()'));
+  check(`${label}: リザルト表示後もランキング保存完了まで入力ロック`, nextWave.indexOf("setGameState('CHAMPION')") < nextWave.indexOf('await submitRunScoreOnce()') && nextWave.indexOf('await submitRunScoreOnce()') < nextWave.indexOf('setResultProcessing(false)'));
 
   const submit = code.slice(code.indexOf('const submitLocalScore'), code.indexOf('const handleSaveName'));
   check(`${label}: POST直後に全難易度を再取得しない`, !/await\s+loadRankings\(\)/.test(submit));

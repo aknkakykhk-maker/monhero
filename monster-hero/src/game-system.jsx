@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 19:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 21:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1523,13 +1523,25 @@ const sbFetchRankings = async (diff, limit=RANKING_DIAGNOSTIC_LIMIT, order='scor
 const sbInsertScore = async (row, idempotent=false) => {
   const query = idempotent ? '?on_conflict=clear_id' : '';
   const prefer = idempotent ? 'resolution=ignore-duplicates,return=minimal' : 'return=minimal';
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings${query}`, { method:'POST', headers:{...SB_HEADERS, 'Prefer':prefer}, body: JSON.stringify(row) });
-  if (!res.ok) {
-    const body = await res.text();
-    const error = new Error(`insert ${res.status}: ${body || res.statusText}`);
-    error.status = res.status;
-    error.body = body;
+  // 結果画面はこのPOSTが確定するまで入力をロックするため、通信が切れかけた端末でも
+  // 永久に「処理中」にならないようGETと同じ上限を設ける。タイムアウト後はclear_id付きの
+  // ローカル記録へ退避し、同じクリアを非冪等なPOSTで再送しない。
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rankings${query}`, { method:'POST', headers:{...SB_HEADERS, 'Prefer':prefer}, body: JSON.stringify(row), signal: controller.signal });
+    if (!res.ok) {
+      const body = await res.text();
+      const error = new Error(`insert ${res.status}: ${body || res.statusText}`);
+      error.status = res.status;
+      error.body = body;
+      throw error;
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('ranking insert timed out after 8000ms');
     throw error;
+  } finally {
+    clearTimeout(timer);
   }
 };
 
@@ -2578,7 +2590,14 @@ function MonsterHeroGame() {
           break;
         } catch (eVariant) {
           console.error('[ranking] submit variant failed, trying next:', eVariant && eVariant.message ? eVariant.message : eVariant);
-          if (/clear_id|on_conflict/i.test(eVariant?.body || '')) clearIdUnsupported = true;
+          const responseBody = eVariant?.body || '';
+          if (/clear_id|on_conflict/i.test(responseBody)) {
+            clearIdUnsupported = true;
+            break;
+          }
+          // 後続variantが解決できるのは任意列のスキーマ差だけ。タイムアウト・回線断・5xxで
+          // 4回繰り返すと最大32秒ロックされるため、その場でローカル保存へ切り替える。
+          if (!/level|icon/i.test(responseBody)) throw eVariant;
         }
       }
       // clear_id無しの互換POSTは、同じクリアの再送をDB側で判別できず重複を作るため行わない。
@@ -3246,9 +3265,10 @@ function MonsterHeroGame() {
         try {
           await awardRunRewards(Math.max(0, wave - 1));
         } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
+        // リザルト自体は背面に表示するが、ランキング保存の成否が確定するまでは全面ロックを
+        // 維持する。タイトル遷移や再挑戦で周回IDを先に更新させない。
+        await submitRunScoreOnce();
         setResultProcessing(false);
-        // スコア送信はリザルトの表示に必要ないため、完了を待たず後追いで行う
-        submitRunScoreOnce();
       })();
     }
   }, [hp, gameState]);
@@ -3319,13 +3339,13 @@ function MonsterHeroGame() {
     runFinalizingRef.current = true;
     setRunFinalizing(true);
     setResultProcessing(true);
-    // 敗北時と同じく、端末内で完結する経験値・ダイヤの付与とリザルト表示を先に済ませ、
-    // 通信を伴うスコア送信は完了を待たず後追いで行う(通信待ちでリザルトが遅れないように)
+    // 敗北時と同じく、端末内で完結する経験値・ダイヤの付与とリザルト表示を先に済ませる。
+    // ランキング保存中は全面ロックを維持するが、POSTには8秒の上限がある。
     try { await awardRunRewards(Math.max(0, wave - 1)); } catch {}
-    setResultProcessing(false);
     setShowQuitConfirm(false);
     setGaveUp(true);
-    submitRunScoreOnce();
+    await submitRunScoreOnce();
+    setResultProcessing(false);
   }, [score, difficulty, highScores, breederName, mainHero, slots, wave]);
 
   const handleRetry = () => {
@@ -3879,9 +3899,8 @@ function MonsterHeroGame() {
     setEnemyIntent(getNextEnemyAction(enemy,distForNextPredict));
   };
 
-  // WAVE 10のムー撃破後は端末内の報酬計算だけを終えてリザルトへ移る。
-  // ランキング通信は待たずに裏で1回だけ行い、通信遅延やボタン連打で画面遷移が重くなったり
-  // 同一スコアが複数登録されたりしないようにする
+  // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
+  // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
   const handleNextWave = async () => {
     if (runFinalizingRef.current) return;
     setEffect(null);
@@ -3894,9 +3913,9 @@ function MonsterHeroGame() {
         await awardRunRewards(10);
         setClearCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_clears_${difficulty}`, next[difficulty], false); return next; });
       } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
-      setResultProcessing(false);
       setGameState('CHAMPION');
-      submitRunScoreOnce();
+      await submitRunScoreOnce();
+      setResultProcessing(false);
     } else {
       setGameState('REWARD_PICK');
     }
