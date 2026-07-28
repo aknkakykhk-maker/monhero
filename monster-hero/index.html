@@ -52,18 +52,37 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 <script src="data/enemy-monsters.js?v=20260727c"></script>
 <script src="data/skills.js?v=20260727c"></script>
 <script src="data/changelog.js?v=20260728f"></script>
-<script src="game-system.compiled.js?v=20260728f"></script>
 <script>
 (function(){
   // game-system.compiled.js は tools/build.js が game-system.jsx から生成した変換済みJS。
   // 以前はここで @babel/standalone を読み込み、game-system.jsx を毎回取得しなおして
   // ブラウザ上で変換していたが、それが読み込みの重さの主因だったため事前変換に切り替えた。
-  // 読み込みに失敗した場合だけ画面にエラーを出す(白画面のまま止まらないように)。
-  if (typeof MonsterHeroGame === 'undefined' && window.__mhErr) {
-    window.__mhErr('game-system.compiled.js load failed');
+  // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
+  // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
+  // 2回とも失敗した場合だけエラーを表示する。
+  var GAME_BUILD = '20260728g';
+  var attempts = 0;
+  function showLoadError(){
+    window.__mhErr && window.__mhErr('game-system.compiled.js load failed after retry');
     var l = document.getElementById('loading');
     if (l) l.innerHTML = '<div style="color:#f88;padding:16px;text-align:center;font-weight:900">読み込みに失敗しました<br>通信環境を確認して再読み込みしてください</div>';
   }
+  function loadGame(){
+    attempts++;
+    var script = document.createElement('script');
+    script.src = 'game-system.compiled.js?v=' + GAME_BUILD + (attempts > 1 ? '&retry=' + Date.now() : '');
+    script.onload = function(){
+      if (typeof MonsterHeroGame === 'undefined') {
+        if (attempts < 2) loadGame(); else showLoadError();
+      }
+    };
+    script.onerror = function(){
+      script.remove();
+      if (attempts < 2) loadGame(); else showLoadError();
+    };
+    document.body.appendChild(script);
+  }
+  loadGame();
 })();
 </script>
 </body>

@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 14:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 15:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2464,13 +2464,6 @@ function MonsterHeroGame() {
         list.push(entry);
         const kept = list.slice().sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,50);
         // スコア上位50件に加えて、名前ごとの最新1件は必ず残しておく。
-      // ゲーム起動は待たせず、全難易度のスコア上位50件をタイトル表示と同時に先読みする。
-      // loadRankings側に同一通信の共有と30秒キャッシュがあるため、取得中にRankingを開いても二重送信しない。
-      setTimeout(() => {
-        Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(d => loadRankings(d))).catch(e => {
-          console.error('[ranking] background preload failed:', e && e.message ? e.message : e);
-        });
-      }, 0);
         // ブリーダーLv・絆Lvのランキングはこの記録から集計するので、
         // 直近のプレイがスコア上位に入らなくてもレベルだけは最新にできる
         const latestByName = new Map();
