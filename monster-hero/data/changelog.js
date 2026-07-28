@@ -17,6 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-29 00:54",
+    type: "issue",
+    status: "fixed",
+    title: "Normalランキングの取得条件を修正",
+    items: [
+      "Normalの全国ランキングをHardと同じ完全一致条件で取得するよう修正しました",
+      "保存済みのNormal記録がランキング画面に表示されるようにしました",
+    ],
+  },
+  {
     date: "2026-07-29 00:42",
     type: "issue",
     status: "fixed",

@@ -74,7 +74,7 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 0件成功をローカル復旧へ誤分類しない`, !code.includes('if (byDiff[d].length === 0)'));
   check(`${label}: 古い同難易度リクエストを画面へ反映しない`, code.includes("'stale-result-discarded'") && code.includes('rankingLatestRequestRef.current.get(d) !== requestId'));
   check(`${label}: HTTP応答とフォールバック理由を診断ログへ残す`, code.includes("'supabase-response'") && code.includes("'fallback'"));
-  check(`${label}: 難易度を共通keyへ正規化して大文字小文字を区別せず取得`, code.includes('normalizeRankingDifficulty') && code.includes('difficulty=ilike.'));
+  check(`${label}: 難易度を共通keyへ正規化してeqで取得`, code.includes('normalizeRankingDifficulty') && code.includes('difficulty=eq.'));
   check(`${label}: 取得失敗を0件表示で隠さない`, code.includes('rankingErrorByDiff') && code.includes('取得エラー:'));
 }
 
