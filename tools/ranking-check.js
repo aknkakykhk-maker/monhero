@@ -34,6 +34,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   await page.addInitScript(() => {
     const orig = window.fetch.bind(window);
     window.__rankOrders = [];
+    window.__rankRequests = [];
     const party = (bond) => ([{ name: 'モッチー', emoji: '🍡', imgUrl: null, bondLevel: bond }, null, null]);
     window.fetch = async (input, init) => {
       const url = typeof input === 'string' ? input : (input && input.url) || '';
@@ -41,7 +42,13 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
       if (init && init.method && init.method !== 'GET') return new Response('', { status: 201 });
       const u = new URL(url);
       const order = u.searchParams.get('order') || '';
+      const difficulty = (u.searchParams.get('difficulty') || '').replace(/^eq\./, '');
       window.__rankOrders.push(order);
+      window.__rankRequests.push({ difficulty, order, limit: Number(u.searchParams.get('limit')), offset: Number(u.searchParams.get('offset')) });
+      if (difficulty === 'Master' && order.startsWith('score.desc')) return new Response('', { status: 500 });
+      if (difficulty === 'Master' && order.startsWith('id.desc')) return new Response(JSON.stringify([
+        { id: 999, user_name: 'マスター復旧', hero: 'モッチー', party: party(5), score: 543210, level: 24, icon: null },
+      ]), { status: 200, headers: { 'Content-Type': 'application/json' } });
       const rows = [
         { id: 1, user_name: 'アルファ', hero: 'モッチー', party: party(5), score: 9000, level: 10, icon: null },
         { id: 2, user_name: 'アルファ', hero: 'モッチー', party: party(12), score: 100, level: 30, icon: null },
@@ -51,7 +58,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
         ? rows.slice().sort((a, b) => b.level - a.level)
         : rows.slice().sort((a, b) => b.score - a.score);
       const limit = parseInt(u.searchParams.get('limit') || '50', 10);
-      return new Response(JSON.stringify(sorted.slice(0, limit)), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      const offset = parseInt(u.searchParams.get('offset') || '0', 10);
+      return new Response(JSON.stringify(sorted.slice(offset, offset + limit)), { status: 200, headers: { 'Content-Type': 'application/json' } });
     };
   });
 
@@ -69,8 +77,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   await page.waitForTimeout(1800);
 
   const orders = await page.evaluate(() => window.__rankOrders || []);
-  check('スコア順とレベル順の2通りで取得している',
-    orders.some(o => o.startsWith('score.desc')) && orders.some(o => o.startsWith('level.desc')),
+  check('スコア画面を開いただけではレベル順を取得しない',
+    orders.some(o => o.startsWith('score.desc')) && !orders.some(o => o.startsWith('level.desc')),
     [...new Set(orders)].join(', '));
 
   // --- スコアランキング ---
@@ -83,6 +91,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   // --- ブリーダーLvランキング ---
   const breederTab = page.getByRole('button', { name: 'ブリーダーLv', exact: true }).last();
   if (await breederTab.count()) { await breederTab.click({ force: true }); await page.waitForTimeout(700); }
+  const levelOrders = await page.evaluate(() => window.__rankOrders || []);
+  check('ブリーダーLvを開いた後にレベル順を取得する', levelOrders.some(o => o.startsWith('level.desc')));
   const breederTxt = await bodyText();
   check('ブリーダーLvランキングに最新のLv.30が出る', breederTxt.includes('Lv.30'));
   check('ブリーダーLvランキングにアルファが出る', breederTxt.includes('アルファ'));
@@ -93,6 +103,17 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   const bondTxt = await bodyText();
   check('絆Lvランキングに最新の絆Lv.12が出る', bondTxt.includes('絆Lv.12'));
   check('絆Lvランキングが古い絆Lv.5で止まっていない', !/絆Lv\.5(\D|$)/.test(bondTxt) || bondTxt.includes('絆Lv.12'));
+
+  // --- Master score.desc障害からid.descで復旧 ---
+  const scoreTab = page.getByRole('button', { name: 'スコア', exact: true }).last();
+  if (await scoreTab.count()) await scoreTab.click({ force: true });
+  const masterTab = page.getByRole('button', { name: 'MASTER', exact: true }).last();
+  if (await masterTab.count()) { await masterTab.click({ force: true }); await page.waitForTimeout(700); }
+  const masterTxt = await bodyText();
+  check('Masterの復旧スコア543,210が表示される', masterTxt.includes('543,210'));
+  check('Masterの復旧ユーザー名が表示される', masterTxt.includes('マスター復旧'));
+  const masterRequests = await page.evaluate(() => window.__rankRequests.filter(r => r.difficulty === 'Master'));
+  check('Masterはscore.desc失敗後にid.descを500件取得する', masterRequests.some(r => r.order.startsWith('id.desc') && r.limit === 500));
 
   check('致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
 

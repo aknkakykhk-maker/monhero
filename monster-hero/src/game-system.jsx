@@ -61,7 +61,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 09:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 12:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1480,8 +1480,8 @@ const SUPABASE_KEY = 'sb_publishable_D4WJBXJ1xE97amndZarEPw_0M4LAwOp';
 const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' };
 
 // 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
-const sbFetchRankings = async (diff, limit=50, order='score.desc') => {
-  const url = `${SUPABASE_URL}/rest/v1/rankings?difficulty=eq.${encodeURIComponent(diff)}&order=${order}&limit=${limit}`;
+const sbFetchRankings = async (diff, limit=50, order='score.desc', offset=0) => {
+  const url = `${SUPABASE_URL}/rest/v1/rankings?difficulty=eq.${encodeURIComponent(diff)}&order=${order}&limit=${limit}&offset=${offset}`;
   const res = await fetch(url, { headers: SB_HEADERS });
   if (!res.ok) throw new Error(`fetch ${res.status}`);
   return await res.json();
@@ -1612,6 +1612,8 @@ function MonsterHeroGame() {
   const [difficulty, setDifficulty] = useState('Normal');
   const [score, setScore] = useState(0);
   const [highScores, setHighScores] = useState({});
+  const highScoresRef = useRef({});
+  useEffect(() => { highScoresRef.current = highScores; }, [highScores]);
   const [attemptCounts, setAttemptCounts] = useState({}); // 難易度別 挑戦回数(端末保存)
   const [clearCounts, setClearCounts] = useState({}); // 難易度別 クリア回数(端末保存)
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
@@ -1934,69 +1936,85 @@ function MonsterHeroGame() {
     bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 50)
   ), [bondRankingAll, bondRankMonFilter]);
 
-  const loadRankings = useCallback(async () => {
-    const byDiff = {};        // スコアランキング表示用(スコア上位50件だけ)
-    const poolByDiff = {};    // ブリーダーLv・絆Lv集計用(スコア上位＋レベル上位をまとめたもの)
+  const loadRankings = useCallback(async (targetDiff=null, includeLevels=false) => {
+    const byDiff = {};
+    const poolByDiff = {};
     const sourceByDiff = {};
     const toEntry = (r) => ({ userName: r.user_name, hero: r.hero, party: r.party, score: r.score, level: r.level, icon: r.icon });
-    // 過去の多重送信で別idの完全に同じ記録が作られているため、idではなくプレイ内容で重複を除く。
-    // これにより重複行がトップ50を埋め、Masterなどの正常な記録が押し出される状態も表示側で復旧できる
+    // 過去の多重送信はidが異なるため、プレイ内容そのものをキーにして畳む。
     const rowKey = (r) => `v:${r?.user_name}|${r?.score}|${r?.level}|${r?.hero}|${JSON.stringify(r?.party || null)}|${r?.icon || ''}`;
     const mergeRows = (a, b) => {
       const seen = new Map();
-      [...(a || []), ...(b || [])].forEach(r => {
-        const key = rowKey(r);
-        if (!seen.has(key)) seen.set(key, r);
-      });
+      [...(a || []), ...(b || [])].forEach(r => { const key = rowKey(r); if (!seen.has(key)) seen.set(key, r); });
       return [...seen.values()];
     };
-    try {
-      await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async (d) => {
+    const restoreLocalRows = async (d) => {
+      let rows = [];
+      try { const saved = await storeGet(`mh_rank_${d}`, [], false); if (Array.isArray(saved)) rows = saved.slice(); } catch {}
+      const savedBest = Number(await storeGet(`mh_hs_${d}`, 0, false)) || 0;
+      const best = Math.max(savedBest, Number(highScoresRef.current[d]) || 0);
+      if (best > 0) {
+        const userName = await storeGet('mh_breeder_name', '名無しのブリーダー', false);
+        const xp = Number(await storeGet('mh_breeder_xp', 0, false)) || 0;
+        const icon = await storeGet('mh_breeder_icon', null, false);
+        const recovered = { userName: userName || '名無しのブリーダー', score: best, level: levelInfo(xp).level, icon, hero: '記録復旧', party: null, recovered: true };
+        if (!rows.some(r => Number(r?.score) === best && r?.userName === recovered.userName)) rows.push(recovered);
+      }
+      return rows.sort((a,b)=>(b.score||0)-(a.score||0));
+    };
+    const diffs = includeLevels ? Object.keys(DIFFICULTY_SETTINGS) : (targetDiff ? [targetDiff] : []);
+    if (diffs.length === 0) return;
+    await Promise.all(diffs.map(async (d) => {
+      try {
+        let rows;
         try {
-          // 既存の重複が上位50件を埋めていても、その後ろの正常な記録まで救えるよう多めに取得してから畳む
-          const rows = await sbFetchRankings(d, 200);
-          // スコアランキングはスコア順の取得結果だけで作る。
-          // 1行=1プレイなので、そのときのパーティ・絆レベル・ブリーダーレベルは記録した当時のまま固定される。
-          const uniqueScoreRows = mergeRows([], rows).slice(0, 50);
-          byDiff[d] = uniqueScoreRows.map(toEntry);
-          // ブリーダーLv/絆Lvは「最新(=最高)」を出したいので、レベル順の取得結果も足しておく。
-          // スコアが伸びなかった直近のプレイはスコア上位50件に入らず、
-          // そのままだとレベルが古いまま表示されてしまうため
-          let pool = uniqueScoreRows;
-          try {
-            // level列が無い記録(旧形式)が先頭を埋めないよう nullslast を付ける
-            pool = mergeRows(pool, await sbFetchRankings(d, 50, 'level.desc.nullslast'));
-          } catch (eLv) {
-            console.error('[ranking] level order fetch failed for', d, eLv && eLv.message ? eLv.message : eLv);
+          let page = await sbFetchRankings(d, 50, 'score.desc', 0);
+          rows = mergeRows([], page);
+          // 50件が重複で埋まった時だけ次ページへ進み、最大200件まで調べる。
+          for (let offset=50; page.length === 50 && rows.length < 50 && offset < 200; offset+=50) {
+            page = await sbFetchRankings(d, 50, 'score.desc', offset);
+            rows = mergeRows(rows, page);
           }
-          poolByDiff[d] = pool.map(toEntry);
-          sourceByDiff[d] = 'global';
-          // 新難易度など、サーバー側がまだ記録を受け付けず端末保存へ退避した直後は、
-          // GET自体は成功しても空配列になる。その場合に退避済みスコアを消して見せないようにしない
-          if (byDiff[d].length === 0) {
-            const localRows = await storeGet(`mh_rank_${d}`, [], false);
-            if (Array.isArray(localRows) && localRows.length) {
-              poolByDiff[d] = localRows.slice();
-              byDiff[d] = localRows.slice().sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,50);
-              sourceByDiff[d] = 'local';
-            }
-          }
-        } catch (e) {
-          console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
-          sourceByDiff[d] = 'local';
-          try {
-            const rows = await storeGet(`mh_rank_${d}`, [], false);
-            if (Array.isArray(rows) && rows.length) {
-              poolByDiff[d] = rows.slice();
-              byDiff[d] = rows.slice().sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,50);
-            }
-          } catch {}
+        } catch (scoreError) {
+          console.error('[ranking] score order fetch failed for', d, scoreError && scoreError.message ? scoreError.message : scoreError);
+          // score順の取得だけが壊れていても、直近500件を取得して全国データを復元する。
+          rows = await sbFetchRankings(d, 500, 'id.desc', 0);
+          rows = mergeRows([], rows).sort((a,b)=>(b.score||0)-(a.score||0));
         }
-      }));
-      setRankingSourceByDiff(sourceByDiff);
-      setLocalRankings(byDiff);
-      setRankingPool(poolByDiff);
-    } catch {}
+        const uniqueScoreRows = mergeRows([], rows).slice(0, 50);
+        byDiff[d] = uniqueScoreRows.map(toEntry);
+        let pool = uniqueScoreRows;
+        if (includeLevels) try {
+          pool = mergeRows(pool, await sbFetchRankings(d, 50, 'level.desc.nullslast', 0));
+        } catch (eLv) {
+          console.error('[ranking] level order fetch failed for', d, eLv && eLv.message ? eLv.message : eLv);
+        }
+        poolByDiff[d] = pool.map(toEntry);
+        sourceByDiff[d] = 'global';
+        if (byDiff[d].length === 0) {
+          const localRows = await restoreLocalRows(d);
+          if (localRows.length) {
+            byDiff[d] = localRows.slice(0, 50);
+            poolByDiff[d] = localRows.slice();
+            sourceByDiff[d] = 'local';
+          }
+        }
+      } catch (e) {
+        console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
+        try {
+          const rows = await restoreLocalRows(d);
+          if (rows.length) {
+            byDiff[d] = rows.slice(0, 50);
+            poolByDiff[d] = rows.slice();
+            sourceByDiff[d] = 'local';
+          }
+        } catch {}
+      }
+    }));
+    // 難易度単位の取得で、すでに読み込んだ別難易度を消さない。
+    setRankingSourceByDiff(prev => ({ ...prev, ...sourceByDiff }));
+    setLocalRankings(prev => ({ ...prev, ...byDiff }));
+    setRankingPool(prev => ({ ...prev, ...poolByDiff }));
   }, []);
 
   // 画面ごとに流すBGM
@@ -2397,7 +2415,6 @@ function MonsterHeroGame() {
       setOnboarded(wasOnboarded);
       if (!wasOnboarded) setGameState('PROFILE');
       setDataLoaded(true); // ここまでで起動に必要なセーブデータは揃っている
-      await loadRankings();
     })();
   }, [loadRankings]);
 
@@ -4166,7 +4183,7 @@ function MonsterHeroGame() {
                 <button onClick={()=>{setTestMooMode(false); setMonSelection(getActiveMonsterList()); setGameState('PICK_HERO');}} className="w-full bg-white text-black py-3 rounded-xl font-black text-lg active:scale-95 transition-transform uppercase shadow-[0_0_20px_rgba(255,255,255,0.2)]">召喚開始</button>
                 <div className="grid grid-cols-3 gap-2">
                   
-                  <button onClick={()=>{setRankingViewDiff(difficulty); setShowRanking(true); loadRankings();}} className="w-full bg-slate-900 border border-indigo-500/50 text-indigo-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><Users size={14}/> Ranking</button>
+                  <button onClick={()=>{setRankingKind('score'); setRankingViewDiff(difficulty); setShowRanking(true); loadRankings(difficulty);}} className="w-full bg-slate-900 border border-indigo-500/50 text-indigo-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><Users size={14}/> Ranking</button>
                   <button onClick={()=>setShowHelp(true)} className="w-full bg-slate-900 border border-emerald-500/50 text-emerald-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><HelpCircle size={14}/> Help</button>
                   <button onClick={openChangelog} className="relative w-full bg-slate-900 border border-amber-500/50 text-amber-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-1"><Sparkles size={13}/>更新履歴{hasUnreadChangelog&&<span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full border border-white/40 shadow">NEW</span>}</button>
                 </div>
@@ -4231,13 +4248,13 @@ function MonsterHeroGame() {
             )}
             {showRanking&&(
               <div className="fixed inset-0 z-[8000] flex flex-col p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.97)',zIndex:80000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}>
-                <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest flex items-center gap-2"><Trophy size={20}/> Ranking</h2><div className="flex items-center gap-2"><button onClick={()=>loadRankings()} className="p-2 bg-white/10 rounded-full active:scale-90"><RefreshCcw size={18}/></button><button onClick={()=>setShowRanking(false)} className="p-2 bg-white/10 rounded-full"><X size={20}/></button></div></div>
+                <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest flex items-center gap-2"><Trophy size={20}/> Ranking</h2><div className="flex items-center gap-2"><button onClick={()=>rankingKind==='score'?loadRankings(rankingViewDiff):loadRankings(null,true)} className="p-2 bg-white/10 rounded-full active:scale-90"><RefreshCcw size={18}/></button><button onClick={()=>setShowRanking(false)} className="p-2 bg-white/10 rounded-full"><X size={20}/></button></div></div>
                 <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">
                   {[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=>(
-                    <button key={t.k} onClick={()=>setRankingKind(t.k)} className={`py-2 rounded-xl text-[10px] font-black uppercase border active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>
+                    <button key={t.k} onClick={()=>{setRankingKind(t.k); if(t.k==='score') loadRankings(rankingViewDiff); else loadRankings(null,true);}} className={`py-2 rounded-xl text-[10px] font-black uppercase border active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>
                   ))}
                 </div>
-                {rankingKind==='score'&&(<><div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide px-1 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=>(<button key={d} onClick={()=>setRankingViewDiff(d)} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase shrink-0 ${rankingViewDiff===d?'shadow-lg ring-1 ring-white/50':'border border-white/10'}`} style={difficultyStyle(st, rankingViewDiff===d)}>{st.label}</button>))}</div>
+                {rankingKind==='score'&&(<><div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide px-1 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=>(<button key={d} onClick={()=>{setRankingViewDiff(d); loadRankings(d);}} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase shrink-0 ${rankingViewDiff===d?'shadow-lg ring-1 ring-white/50':'border border-white/10'}`} style={difficultyStyle(st, rankingViewDiff===d)}>{st.label}</button>))}</div>
                 <div className="flex-1 overflow-y-auto mh-scroll space-y-3 min-h-0">
                   {(localRankings[rankingViewDiff]||[]).length===0?(<div className="h-full flex items-center justify-center text-slate-600 font-black uppercase text-xs italic">No records yet</div>):(
                     (localRankings[rankingViewDiff]||[]).map((r,i)=>(
