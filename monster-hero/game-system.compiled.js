@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3427e6bf2e855568
+// source-sha256: cfe4d9dc5600afef
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-28 16:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-28 16:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2925,7 +2925,9 @@ const SB_HEADERS = {
 
 // 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
 const sbFetchRankings = async (diff, limit = 50, order = 'score.desc', offset = 0) => {
-  const url = `${SUPABASE_URL}/rest/v1/rankings?difficulty=eq.${encodeURIComponent(diff)}&order=${order}&limit=${limit}&offset=${offset}`;
+  // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
+  const select = 'user_name,hero,party,score,level,icon';
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=eq.${encodeURIComponent(diff)}&order=${order}&limit=${limit}&offset=${offset}`;
   // モバイル回線などで接続だけが残り続けても、ランキング画面を永久に待機させない。
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
@@ -3573,10 +3575,12 @@ function MonsterHeroGame() {
       }
       return rows.sort((a, b) => (b.score || 0) - (a.score || 0));
     };
-    // targetDiffなしは起動時の全難易度先読み。includeLevels時も全難易度を集計する。
-    const diffs = includeLevels || !targetDiff ? Object.keys(DIFFICULTY_SETTINGS) : [targetDiff];
+    // 起動時は利用者から不調報告のあるNormal/Masterを先に取得する。
+    // 全難易度を一斉取得すると記録の多い難易度同士がSupabase側で競合するため、2件ずつに制限する。
+    const allDiffs = Object.keys(DIFFICULTY_SETTINGS);
+    const diffs = includeLevels || !targetDiff ? ['Normal', 'Master', ...allDiffs.filter(d => d !== 'Normal' && d !== 'Master')] : [targetDiff];
     if (diffs.length === 0) return;
-    await Promise.all(diffs.map(async d => {
+    const loadOne = async d => {
       const requestKey = `${d}:${includeLevels ? 'levels' : 'score'}`;
       const fetchedAt = rankingFetchedAtRef.current.get(requestKey) || 0;
       if (!force && Date.now() - fetchedAt < 30000) return;
@@ -3654,7 +3658,10 @@ function MonsterHeroGame() {
       });
       rankingRequestsRef.current.set(requestKey, request);
       return request;
-    }));
+    };
+    for (let i = 0; i < diffs.length; i += 2) {
+      await Promise.all(diffs.slice(i, i + 2).map(loadOne));
+    }
   }, []);
 
   // 画面ごとに流すBGM
