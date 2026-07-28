@@ -26,6 +26,10 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
       && (code.includes('aria-busy={runFinalizing}') || code.includes('"aria-busy": runFinalizing')));
   check(`${label}: 共通の一度だけ送信する処理を使う`, code.includes('submitRunScoreOnce'));
   check(`${label}: clear_idでランキングPOSTを冪等化`, code.includes("'?on_conflict=clear_id'") && code.includes('resolution=ignore-duplicates'));
+  check(`${label}: ランキングPOSTはclear_idを必須にして非冪等経路を持たない`,
+    code.includes("typeof row?.clear_id !== 'string'")
+      && code.includes('ranking clear_id is required; unsafe insert skipped')
+      && !/sbInsertScore\s*=\s*async\s*\(row,\s*idempotent/.test(code));
   check(`${label}: clear_id未対応時に非冪等POSTへ退避しない`, code.includes('unsafe insert skipped') && !code.includes("if (!saved && clearIdUnsupported) await sbInsertScore"));
   check(`${label}: 最終画面の遷移ボタンを同期ロックする`, code.includes('resultActionRef.current') && code.includes('runResultActionOnce'));
   check(`${label}: 終了処理中は画面全体の入力を遮断する`, code.includes('resultProcessing') && code.includes('aria-label') && code.includes('touchAction'));
@@ -67,6 +71,15 @@ check('Migration: 既存ランキングを削除・再作成しない',
   !/\b(delete\s+from|truncate|drop\s+table)\s+(?:public\.)?rankings\b/i.test(migration));
 check('Migration: 再実行可能なDDLになっている',
   /add column if not exists/i.test(migration) && /create unique index if not exists/i.test(migration));
+check('Migration: 既存clear_idが重複していれば削除せず停止する',
+  /where clear_id is not null\s*group by clear_id\s*having count\(\*\) > 1/is.test(migration)
+    && /raise exception 'rankings\.clear_id has duplicate values; existing rows were not changed'/i.test(migration));
+check('Migration: 同名indexの定義・有効性まで検証する',
+  /index_state\.indisunique/i.test(migration)
+    && /index_state\.indisvalid/i.test(migration)
+    && /index_state\.indisready/i.test(migration)
+    && /index_state\.indnkeyatts = 1/i.test(migration)
+    && /attname = 'clear_id'/i.test(migration));
 
 const failed = checks.filter(ok => !ok).length;
 console.log(`\n${checks.length - failed}/${checks.length} 項目OK`);
