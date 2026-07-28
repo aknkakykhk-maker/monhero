@@ -84,6 +84,12 @@ AI と人間が、未解決の不具合・技術的負債・調査事項を共�
 
 ## 解決済み
 
+### KI-006: iPhoneの消音モード中にBGMが端末スピーカーから流れる（2026-07-29 解決）
+
+- 解決内容: BGMのHTMLAudioElementを、AudioContextの状態にかかわらずplay()より前にWeb Audioへ接続するよう変更した。消音モードを直接検出せず、iOSで消音モードを無視するメディア再生経路へ一瞬でも出力しない。
+- 検証: `node tools/audio-route-check.js`、`node tools/bgm-check.js`、iPhone実機の通常モード・消音モード（実機確認は要実施）
+- 関連: 本修正のPR
+
 ### KI-005: 全国ランキング失敗を端末内保存成功で隠していた（2026-07-28 解決）
 
 - 解決内容: 全国POST失敗と端末内フォールバックの結果を別々に返し、全難易度を全項目の単一payloadで送る共通経路へ統一した。失敗時はHTTP status・PostgREST code・response bodyを端末内記録へ残す。
