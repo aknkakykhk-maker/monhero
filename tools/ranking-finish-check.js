@@ -56,6 +56,7 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 診断用の取得上限は20件`, code.includes('const RANKING_DIAGNOSTIC_LIMIT = 20'));
   check(`${label}: 端末内自己ベストから復旧`, code.includes('`mh_hs_${d}`') && code.includes("hero: '記録復旧'"));
   check(`${label}: score.desc失敗時も診断用上限を使う`, code.includes("sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0"));
+  check(`${label}: score=NULLの旧データがMasterの取得枠を埋めない`, code.includes("fetchMasterRows('score.desc.nullslast'") && code.includes("sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'score.desc.nullslast'"));
   check(`${label}: stateの最新ハイスコアも復旧元に使う`, code.includes('highScoresRef.current[d]'));
   check(`${label}: 0件成功をローカル復旧へ誤分類しない`, !code.includes('if (byDiff[d].length === 0)'));
   check(`${label}: 古い同難易度リクエストを画面へ反映しない`, code.includes("'stale-result-discarded'") && code.includes('rankingLatestRequestRef.current.get(d) !== requestId'));

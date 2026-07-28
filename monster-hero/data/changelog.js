@@ -17,6 +17,15 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-28 23:51",
+    type: "issue",
+    status: "fixed",
+    title: "Masterランキングの旧記録表示を修正",
+    items: [
+      "スコアが未設定の旧記録が取得枠を埋めても、Masterの有効な記録を表示できるようにしました",
+    ],
+  },
+  {
     date: "2026-07-28 23:39",
     type: "issue",
     status: "fixed",
