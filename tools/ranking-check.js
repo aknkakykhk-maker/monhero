@@ -113,7 +113,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   check('Masterの復旧スコア543,210が表示される', masterTxt.includes('543,210'));
   check('Masterの復旧ユーザー名が表示される', masterTxt.includes('マスター復旧'));
   const masterRequests = await page.evaluate(() => window.__rankRequests.filter(r => r.difficulty === 'Master'));
-  check('Masterはscore.desc失敗後にid.descを500件取得する', masterRequests.some(r => r.order.startsWith('id.desc') && r.limit === 500));
+  check('診断中はすべてのランキングGETが20件以下',
+    masterRequests.length > 0 && masterRequests.every(r => r.limit <= 20 && r.offset === 0));
 
   check('致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
 

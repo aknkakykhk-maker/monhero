@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cfe4d9dc5600afef
+// source-sha256: 0cb466e415e0cb10
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -2924,7 +2924,9 @@ const SB_HEADERS = {
 };
 
 // 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
-const sbFetchRankings = async (diff, limit = 50, order = 'score.desc', offset = 0) => {
+// 診断用: 50件取得後に発生した遅延・非表示を切り分けるため、一時的に20件へ戻す。
+const RANKING_DIAGNOSTIC_LIMIT = 20;
+const sbFetchRankings = async (diff, limit = RANKING_DIAGNOSTIC_LIMIT, order = 'score.desc', offset = 0) => {
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
   const select = 'user_name,hero,party,score,level,icon';
   const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=eq.${encodeURIComponent(diff)}&order=${order}&limit=${limit}&offset=${offset}`;
@@ -3593,24 +3595,19 @@ function MonsterHeroGame() {
         try {
           let rows;
           try {
-            let page = await sbFetchRankings(d, 50, 'score.desc', 0);
-            rows = mergeRows([], page);
-            // 50件が重複で埋まった時だけ次ページへ進み、最大200件まで調べる。
-            for (let offset = 50; page.length === 50 && rows.length < 50 && offset < 200; offset += 50) {
-              page = await sbFetchRankings(d, 50, 'score.desc', offset);
-              rows = mergeRows(rows, page);
-            }
+            // 診断中は21件目以降を一切取得せず、20件と50件の差だけを比較できるようにする。
+            rows = mergeRows([], await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'score.desc', 0));
           } catch (scoreError) {
             console.error('[ranking] score order fetch failed for', d, scoreError && scoreError.message ? scoreError.message : scoreError);
-            // score順の取得だけが壊れていても、直近500件を取得して全国データを復元する。
-            rows = await sbFetchRankings(d, 500, 'id.desc', 0);
+            // 診断条件を変えないため、代替順の取得も20件に限定する。
+            rows = await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0);
             rows = mergeRows([], rows).sort((a, b) => (b.score || 0) - (a.score || 0));
           }
-          const uniqueScoreRows = mergeRows([], rows).slice(0, 50);
+          const uniqueScoreRows = mergeRows([], rows).slice(0, RANKING_DIAGNOSTIC_LIMIT);
           byDiff[d] = uniqueScoreRows.map(toEntry);
           let pool = uniqueScoreRows;
           if (includeLevels) try {
-            pool = mergeRows(pool, await sbFetchRankings(d, 50, 'level.desc.nullslast', 0));
+            pool = mergeRows(pool, await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'level.desc.nullslast', 0));
           } catch (eLv) {
             console.error('[ranking] level order fetch failed for', d, eLv && eLv.message ? eLv.message : eLv);
           }
@@ -3619,7 +3616,7 @@ function MonsterHeroGame() {
           if (byDiff[d].length === 0) {
             const localRows = await restoreLocalRows(d);
             if (localRows.length) {
-              byDiff[d] = localRows.slice(0, 50);
+              byDiff[d] = localRows.slice(0, RANKING_DIAGNOSTIC_LIMIT);
               poolByDiff[d] = localRows.slice();
               sourceByDiff[d] = 'local';
             }
@@ -3629,7 +3626,7 @@ function MonsterHeroGame() {
           try {
             const rows = await restoreLocalRows(d);
             if (rows.length) {
-              byDiff[d] = rows.slice(0, 50);
+              byDiff[d] = rows.slice(0, RANKING_DIAGNOSTIC_LIMIT);
               poolByDiff[d] = rows.slice();
               sourceByDiff[d] = 'local';
             }
@@ -7507,7 +7504,7 @@ function MonsterHeroGame() {
     className: "text-[7px] font-black text-pink-300 shrink-0"
   }, "Lv", p.bondLevel)))))))), /*#__PURE__*/React.createElement("div", {
     className: "text-center text-[9px] text-slate-600 pt-2 shrink-0 italic"
-  }, rankingSourceByDiff[rankingViewDiff] === 'local' ? '※ サーバーに接続できず、この端末に保存されたトップ50記録を表示中' : '※ 全国のブリーダーから集計したトップ50記録')), rankingKind === 'breeder' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, rankingSourceByDiff[rankingViewDiff] === 'local' ? '※ サーバーに接続できず、この端末に保存されたトップ20記録を表示中' : '※ 診断のため全国のトップ20記録を表示中')), rankingKind === 'breeder' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll space-y-2 min-h-0"
   }, breederRanking.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "h-full flex items-center justify-center text-slate-600 font-black uppercase text-xs italic"
