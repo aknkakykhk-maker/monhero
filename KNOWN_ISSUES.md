@@ -86,8 +86,9 @@ AI と人間が、未解決の不具合・技術的負債・調査事項を共�
 
 ### KI-006: iPhoneの消音モード中にBGMが端末スピーカーから流れる（2026-07-29 解決）
 
-- 解決内容: BGMのHTMLAudioElementを、AudioContextの状態にかかわらずplay()より前にWeb Audioへ接続するよう変更した。消音モードを直接検出せず、iOSで消音モードを無視するメディア再生経路へ一瞬でも出力しない。
-- 検証: `node tools/audio-route-check.js`、`node tools/bgm-check.js`、iPhone実機の通常モード・消音モード（実機確認は要実施）
+- 再調査結果: 前回はHTMLAudioElementを`createMediaElementSource`へ接続しただけで、音源そのものはiOSで消音モードを無視し得るメディア再生経路のままだった。BGMとジングルの`new Audio()`・`.play()`も配信コードに残っていた。
+- 解決内容: BGMとジングルを`fetch` / `decodeAudioData`でAudioBuffer化し、AudioBufferSourceNodeから再生する経路へ統一した。SEは従来どおりTone.jsのWeb Audio合成経路を使う。
+- 検証: `node tools/audio-route-check.js`、`node tools/build.js --check`、iPhone実機の通常モード・消音モード（実機確認は要実施）
 - 関連: 本修正のPR
 
 ### KI-005: 全国ランキング失敗を端末内保存成功で隠していた（2026-07-28 解決）

@@ -17,6 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-29 08:46",
+    type: "issue",
+    status: "fixed",
+    title: "iPhone消音モード向けの音声経路を再修正",
+    items: [
+      "BGMとクリア音をHTML AudioではなくWeb Audioでデコードして再生する方式へ変更しました",
+      "ゲーム内ミュートとBGM・効果音の音量設定はこれまでどおり利用できます",
+    ],
+  },
+  {
     date: "2026-07-29 02:24",
     type: "issue",
     status: "fixed",
