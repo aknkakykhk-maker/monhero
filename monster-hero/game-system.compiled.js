@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d86eab187ab21b5e
+// source-sha256: b7f961cb99051fd5
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -3059,6 +3059,7 @@ const sbInsertScore = async row => {
         errorCode = JSON.parse(body)?.code || null;
       } catch {}
     }
+    const isUniqueViolation = res.status === 409 && errorCode === '23505';
     rankingLog(requestId, 'insert-response', {
       difficulty: normalizedRow.difficulty,
       clearId: normalizedRow.clear_id,
@@ -3066,6 +3067,7 @@ const sbInsertScore = async row => {
       statusText: res.statusText,
       ok: res.ok,
       errorCode,
+      isUniqueViolation,
       error: res.ok ? null : body || res.statusText
     });
     if (!res.ok) {
@@ -3073,6 +3075,7 @@ const sbInsertScore = async row => {
       error.status = res.status;
       error.body = body;
       error.code = errorCode;
+      error.isUniqueViolation = isUniqueViolation;
       throw error;
     }
   } catch (error) {

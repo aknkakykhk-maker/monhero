@@ -1557,16 +1557,18 @@ const sbInsertScore = async (row) => {
     if (body) {
       try { errorCode = JSON.parse(body)?.code || null; } catch {}
     }
+    const isUniqueViolation = res.status === 409 && errorCode === '23505';
     rankingLog(requestId, 'insert-response', {
       difficulty: normalizedRow.difficulty, clearId: normalizedRow.clear_id,
       status: res.status, statusText: res.statusText, ok: res.ok,
-      errorCode, error: res.ok ? null : (body || res.statusText)
+      errorCode, isUniqueViolation, error: res.ok ? null : (body || res.statusText)
     });
     if (!res.ok) {
       const error = new Error(`insert ${res.status}: ${body || res.statusText}`);
       error.status = res.status;
       error.body = body;
       error.code = errorCode;
+      error.isUniqueViolation = isUniqueViolation;
       throw error;
     }
   } catch (error) {
