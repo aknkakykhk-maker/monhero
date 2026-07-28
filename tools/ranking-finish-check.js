@@ -6,6 +6,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
 const compiled = fs.readFileSync(path.join(root, 'monster-hero/game-system.compiled.js'), 'utf8');
+const migration = fs.readFileSync(path.join(root, 'supabase/migrations/202607280001_rankings_clear_id.sql'), 'utf8');
 const checks = [];
 const check = (name, ok) => {
   checks.push(ok);
@@ -56,6 +57,16 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 古い同難易度リクエストを画面へ反映しない`, code.includes("'stale-result-discarded'") && code.includes('rankingLatestRequestRef.current.get(d) !== requestId'));
   check(`${label}: HTTP応答とフォールバック理由を診断ログへ残す`, code.includes("'supabase-response'") && code.includes("'fallback'"));
 }
+
+check('Migration: clear_idを既存行互換のNULL許容列として追加する',
+  /add column if not exists clear_id text\s*;/i.test(migration)
+    && !/clear_id text\s+not null/i.test(migration));
+check('Migration: clear_idだけを対象にしたUNIQUE indexがある',
+  /create unique index if not exists rankings_clear_id_unique\s+on public\.rankings\s*\(clear_id\)/i.test(migration));
+check('Migration: 既存ランキングを削除・再作成しない',
+  !/\b(delete\s+from|truncate|drop\s+table)\s+(?:public\.)?rankings\b/i.test(migration));
+check('Migration: 再実行可能なDDLになっている',
+  /add column if not exists/i.test(migration) && /create unique index if not exists/i.test(migration));
 
 const failed = checks.filter(ok => !ok).length;
 console.log(`\n${checks.length - failed}/${checks.length} 項目OK`);
