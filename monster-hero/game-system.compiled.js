@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3e3df9b2217f36b3
+// source-sha256: 4b140c867982b17e
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 19:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 19:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -232,6 +232,47 @@ const normalizeMasuProgression = masu => ({
     ...masu.uniqueSkillLevels
   } : {}
 });
+// 転生では個体の識別情報・外見・固有技・履歴だけを残し、育成値は同種の未育成Lv1へ戻す。
+// オブジェクトスプレッドで旧育成値を残さないよう、維持対象を明示して新しい保存形を組み立てる。
+const resetMasuForRebirth = (masu, {
+  rebirthCount,
+  levelCap,
+  uniqueSkillLevels
+} = {}) => {
+  const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
+  const reset = {
+    id: masu?.id,
+    baseId: masu?.baseId,
+    name: masu?.name,
+    bondXp: totalBondXpForLevel(1),
+    distAptPoints: 5,
+    distApt: [...(base?.distAptitude || ['C', 'C', 'C', 'C'])],
+    statPoints: {
+      hp: 0,
+      atk: 0,
+      def: 0,
+      guts: 0
+    },
+    createdAt: masu?.createdAt,
+    rebirthCount: Math.max(0, Math.floor(Number(rebirthCount ?? masu?.rebirthCount) || 0)),
+    levelCap: Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP)),
+    uniqueSkillLevels: {
+      ...(uniqueSkillLevels ?? masu?.uniqueSkillLevels ?? {})
+    }
+  };
+  if (Array.isArray(masu?.colors)) reset.colors = [...masu.colors];else if (masu?.color != null) reset.color = masu.color;
+  if (Array.isArray(masu?.inheritedUniques)) reset.inheritedUniques = masu.inheritedUniques.map(unique => ({
+    ...unique
+  }));
+  if (Array.isArray(masu?.fusionHistory)) reset.fusionHistory = masu.fusionHistory.map(entry => ({
+    ...entry
+  }));
+  return reset;
+};
+const migrateRebornMasuToFullReset = masuMons => (Array.isArray(masuMons) ? masuMons : []).map(raw => {
+  const masu = normalizeMasuProgression(raw);
+  return masu.rebirthCount > 0 ? resetMasuForRebirth(masu) : masu;
+});
 const cappedBondXp = (masu, gain = 0) => {
   const normalized = normalizeMasuProgression(masu);
   return Math.min(totalBondXpForLevel(normalized.levelCap), donationDiamondValue(normalized.bondXp) + Math.max(0, Math.floor(Number(gain) || 0)));
@@ -285,23 +326,21 @@ const buildMasuRebirth = ({
     ok: false,
     reason: '強化できる固有技を選んでください。'
   };
+  const uniqueSkillLevels = {
+    ...normalized.uniqueSkillLevels,
+    [skillKey]: currentSkillLevel + 1
+  };
   return {
     ok: true,
     cost,
     skillKey,
     skillLevel: currentSkillLevel + 1,
     nextGold: donationDiamondValue(gold) - cost,
-    nextMasu: {
-      ...normalized,
-      bondXp: totalBondXpForLevel(1),
+    nextMasu: resetMasuForRebirth(normalized, {
       rebirthCount: normalized.rebirthCount + 1,
       levelCap: normalized.levelCap + REBIRTH_LEVEL_CAP_GAIN,
-      distAptPoints: donationDiamondValue(normalized.distAptPoints) + 5,
-      uniqueSkillLevels: {
-        ...normalized.uniqueSkillLevels,
-        [skillKey]: currentSkillLevel + 1
-      }
-    }
+      uniqueSkillLevels
+    })
   };
 };
 
@@ -2596,7 +2635,8 @@ const reconcileMasuPoints = masu => {
   const baseApt = base.distAptitude || ['C', 'C', 'C', 'C'];
   const aptSpent = (masu.distApt || baseApt).reduce((sum, g, i) => sum + Math.max(0, DIST_APTITUDE_GRADES.indexOf(g) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])), 0);
   const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, val]) => sum + Math.ceil((val || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
-  const earned = Math.max(0, masuBondLevelInfo(masu).level - 1);
+  // 合体XPで上がったレベルは強化ポイントの付与対象外。ロード時の不足補填でも復活させない。
+  const earned = Math.max(0, masuBondLevelInfo(masu).level - 1 - donationDiamondValue(masu.fusionBondLevels));
   const missing = earned - (aptSpent + statSpent + (masu.distAptPoints || 0));
   return missing > 0 ? {
     ...masu,
@@ -4482,6 +4522,13 @@ function MonsterHeroGame() {
           await storeSet('mh_masu_mons', savedMasuMons, false);
         }
       }
+      // 旧転生仕様で育成値や未使用ポイントを持ち越した個体を、一度だけ正しいLv1状態へ補正する。
+      const rebirthFullResetMigrated = await storeGet('mh_masu_rebirth_full_reset_migrated_v1', false, false);
+      if (!rebirthFullResetMigrated) {
+        savedMasuMons = migrateRebornMasuToFullReset(savedMasuMons);
+        await storeSet('mh_masu_mons', savedMasuMons, false);
+        await storeSet('mh_masu_rebirth_full_reset_migrated_v1', true, false);
+      }
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
       const compensationNoticeSeen = await storeGet('mh_masu_level_cap_compensation_notice_seen_v1', false, false);
       if (compensationNotice?.diamonds > 0 && !compensationNoticeSeen) setLevelCapCompensation(compensationNotice);
@@ -5306,8 +5353,8 @@ function MonsterHeroGame() {
   };
   // 合体: 副の絆経験値(累計bondXp)をまるごと主に加算し、副は消滅させる。
   // 消費ダイヤは(主の絆Lv+副の絆Lv)×100。両者とも絆Lv10以上でfusionInheritUniqueがtrueなら、
-  // 副の固有技を「継承した固有技」としてinheritedUniquesに記録する(現時点ではバトルでは未使用。
-  // 今後バトル中に複数の固有技から選べる仕様に対応した際に使う想定のデータ保持のみ)
+  // 副の固有技を「継承した固有技」としてinheritedUniquesに記録する。能力値・距離適性・
+  // 強化ポイントは合体では増減させず、合体XPによるレベル上昇もポイント補填から除外する。
   const executeMasuFusion = () => {
     const main = getMasuMon(fusionMainId);
     const sub = getMasuMon(fusionSubId);
@@ -5344,7 +5391,7 @@ function MonsterHeroGame() {
       const next = prev.filter(m => m.id !== sub.id).map(m => m.id === main.id ? {
         ...m,
         bondXp: afterXp,
-        distAptPoints: (m.distAptPoints || 0) + gainedLevels,
+        fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + gainedLevels,
         fusionHistory: [...(m.fusionHistory || []), historyEntry],
         ...(inheritedUnique ? {
           inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique]
@@ -13440,7 +13487,7 @@ function MonsterHeroGame() {
     className: "bg-black/50 p-4 rounded-2xl border border-white/5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[12px] text-slate-300 leading-relaxed"
-  }, "\u526F\u306E\u7D46\u7D4C\u9A13\u5024\u304C\u7D2F\u8A08\u306E\u307E\u307E\u4E3B\u306B\u52A0\u7B97\u3055\u308C\u3001\u4E0A\u304C\u3063\u305F\u30EC\u30D9\u30EB\u306E\u6570\u3060\u3051\u4E3B\u304C\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3092\u7372\u5F97\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+  }, "\u526F\u306E\u7D46\u7D4C\u9A13\u5024\u304C\u7D2F\u8A08\u306E\u307E\u307E\u4E3B\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002\u5408\u4F53\u3067\u306F\u80FD\u529B\u5024\u30FB\u9593\u5408\u3044\u9069\u6027\u30FB\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u306F\u5897\u6E1B\u3057\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
     className: "bg-black/50 p-4 rounded-2xl border border-white/5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[12px] text-slate-300 leading-relaxed"
