@@ -63,7 +63,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 17:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 17:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -214,7 +214,7 @@ const Audio_ = (() => {
 
   const BGM_FILES = {
     title: 'audio/bgm-title.mp3', prep: 'audio/bgm-menu.mp3', battle: 'audio/bgm-battle.mp3',
-    boss: 'audio/bgm-boss.mp3', fusion: 'audio/bgm-fusion.mp3', enhance: 'audio/bgm-enhance.mp3',
+    boss: 'audio/bgm-boss.mp3', dullahan: 'audio/bgm-dullahan.mp3', gameOver: 'audio/bgm-game-over.mp3', fusion: 'audio/bgm-fusion.mp3', enhance: 'audio/bgm-enhance.mp3',
     result: 'audio/bgm-result.mp3', market: 'audio/bgm-market.mp3', profile: 'audio/bgm-profile.mp3',
   };
   const JINGLE_FILES = { victory: 'audio/jingle-victory.mp3' };
@@ -1056,6 +1056,7 @@ const CHANGELOG_LATEST_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => 
 }));
 const DEFAULT_MONSTER_LIST_SETTINGS = { version: 1, modalTab: 'sort', sortKey: 'lineage', sortDir: 'asc', display: { base: true, masu: true, fused: true, active: true } };
 const DEFAULT_FUSION_SORT_SETTINGS = { version: 1, sortKey: 'bond', sortDir: 'desc' };
+const DEFAULT_DONATION_SORT_SETTINGS = { version: 1, sortKey: 'bondXp', sortDir: 'desc' };
 const normalizeMonsterListSettings = (value) => {
   const sortKeys = ['base', 'masu', 'lineage', 'bond', 'name', 'active', 'fused'];
   const displayKeys = ['base', 'masu', 'fused', 'active'];
@@ -1065,6 +1066,10 @@ const normalizeMonsterListSettings = (value) => {
 const normalizeFusionSortSettings = (value) => {
   if (!value || value.version !== 1 || !['bond', 'lineage', 'name', 'fused'].includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir)) return DEFAULT_FUSION_SORT_SETTINGS;
   return { version: 1, sortKey: value.sortKey, sortDir: value.sortDir };
+};
+const normalizeDonationSortSettings = (value) => {
+  if (!value || value.version !== 1 || !['bondXp', 'bond', 'name', 'lineage', 'newest', 'active'].includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir)) return DEFAULT_DONATION_SORT_SETTINGS;
+  return value;
 };
 // 不具合情報タブに出す状態バッジの見た目
 const CHANGELOG_STATUS = {
@@ -1555,6 +1560,8 @@ function MonsterHeroGame() {
   // 合体画面の並べかえ。マスモンが増えると目的の個体を探しにくいため
   const [fusionSortKey, setFusionSortKey] = useState('bond'); // 'bond'|'lineage'|'name'|'fused'
   const [fusionSortDir, setFusionSortDir] = useState('desc');
+  const [donationSortKey, setDonationSortKey] = useState('bondXp');
+  const [donationSortDir, setDonationSortDir] = useState('desc');
   const [wave, setWave] = useState(1);
   const [hp, setHp] = useState(500);
   const [maxHp, setMaxHp] = useState(500);
@@ -1672,6 +1679,7 @@ function MonsterHeroGame() {
   const [donationResult, setDonationResult] = useState(null);
   const [donationError, setDonationError] = useState('');
   const [donationProcessing, setDonationProcessing] = useState(false);
+  const [donationAnimation, setDonationAnimation] = useState(null);
   const donationProcessingRef = useRef(false);
   const masuMonsRef = useRef(masuMons);
   masuMonsRef.current = masuMons;
@@ -2010,24 +2018,25 @@ function MonsterHeroGame() {
   // 敵撃破のファンファーレのあと、リザルトの曲が強化フェーズまで途切れず流れるようにするための切り分け
   const RUN_PHASE_STATES = ['PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','REWARD_PICK','UPGRADE_SKILL','WAVE_RESULT','CHAMPION'];
   // 画面から鳴らすべき曲のキーを決める
-  const bgmKeyForState = (state, isBoss, wavesDone) => {
+  const bgmKeyForState = (state, isBoss, wavesDone, isDullahan, isGameOver) => {
+    if (isGameOver) return 'gameOver';
     if (state === 'HOME') return 'title';
     if (BGM_STATE_MAP[state]) return BGM_STATE_MAP[state];
     if (PROFILE_BGM_STATES.includes(state)) return 'profile';
-    if (state === 'BATTLE') return isBoss ? 'boss' : 'battle';
+    if (state === 'BATTLE') return isDullahan ? 'dullahan' : (isBoss ? 'boss' : 'battle');
     if (RUN_PHASE_STATES.includes(state)) return wavesDone ? 'result' : 'enhance';
     return null;
   };
   // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
   useEffect(() => {
     const isBoss = wave === 10 || enemy?.id === 'Moo';
-    const key = bootPhase === 'GAME' ? bgmKeyForState(gameState, isBoss, (waveHistory||[]).length > 0) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? 'title' : null);
+    const key = bootPhase === 'GAME' ? bgmKeyForState(gameState, isBoss, (waveHistory||[]).length > 0, enemy?.id === 'Durahan', hp <= 0 || gaveUp) : (bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? 'title' : null);
     // 音がオフでも、その画面で使う曲は先に読み込んでおく(タップした瞬間に鳴り始めるように)
     if (key) Audio_.preloadBGM(key);
     if (!audioOn) { Audio_.stopBGM(); return; }
     if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, audioOn, waveHistory.length]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   useEffect(() => { Audio_.setSeVolume(seVolume); }, [seVolume]);
@@ -2410,6 +2419,8 @@ function MonsterHeroGame() {
       setMonsterSortKey(listSettings.sortKey); setMonsterSortDir(listSettings.sortDir); setMonsterDisplayFlags(listSettings.display); setSortFilterModalTab(listSettings.modalTab);
       const fusionSettings = normalizeFusionSortSettings(await storeGet('mh_fusion_sort_settings', DEFAULT_FUSION_SORT_SETTINGS, false));
       setFusionSortKey(fusionSettings.sortKey); setFusionSortDir(fusionSettings.sortDir);
+      const donationSettings = normalizeDonationSortSettings(await storeGet('mh_donation_sort_settings', DEFAULT_DONATION_SORT_SETTINGS, false));
+      setDonationSortKey(donationSettings.sortKey); setDonationSortDir(donationSettings.sortDir);
       // 全プレイヤー(新規・既存問わず)に初期ポイントを1回だけ付与
       const baseGranted = await storeGet('mh_points_base_granted', false, false);
       if (!baseGranted) {
@@ -2468,6 +2479,10 @@ function MonsterHeroGame() {
     if (!dataLoaded) return;
     storeSet('mh_fusion_sort_settings', { version: 1, sortKey: fusionSortKey, sortDir: fusionSortDir }, false);
   }, [dataLoaded, fusionSortKey, fusionSortDir]);
+  useEffect(() => {
+    if (!dataLoaded) return;
+    storeSet('mh_donation_sort_settings', { version: 1, sortKey: donationSortKey, sortDir: donationSortDir }, false);
+  }, [dataLoaded, donationSortKey, donationSortDir]);
 
   const submitLocalScore = async (diff, finalScore, clearId) => {
     // マスモン(絆レベルを持つ育成済みインスタンス)で編成していた場合、ランキング表示にも絆レベルを出せるよう記録する。
@@ -3006,7 +3021,7 @@ function MonsterHeroGame() {
   const resetFusionFlow = () => {
     setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
   };
-  const resetDonationFlow = () => { setDonationSelectedId(null); setDonationResult(null); setDonationError(''); };
+  const resetDonationFlow = () => { if (donationProcessingRef.current) return; setDonationSelectedId(null); setDonationResult(null); setDonationAnimation(null); setDonationError(''); };
   const executeMasuDonation = async () => {
     if (donationProcessingRef.current || !donationSelectedId) return;
     donationProcessingRef.current = true;
@@ -3031,6 +3046,9 @@ function MonsterHeroGame() {
       if (fusionMainId === result.donated.id || fusionSubId === result.donated.id) resetFusionFlow();
       setMasuMonDetail(null);
       setDonationSelectedId(null);
+      setDonationAnimation({ name: result.donated.name, baseId: result.donated.baseId, src: ALL_PLAYER_MONSTERS[result.donated.baseId]?.iconUrl, colors: getMasuColors(result.donated), diamonds: result.diamonds });
+      await wait(1500);
+      setDonationAnimation(null);
       setDonationResult({ name: result.donated.name, diamonds: result.diamonds, gold: result.nextGold });
     } catch (error) {
       setDonationError('寄付データを保存できませんでした。もう一度お試しください。');
@@ -4280,19 +4298,23 @@ function MonsterHeroGame() {
           </div>
         )}
 
-        {gameState==='MASU_DONATION'&&(
-          <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-            <div className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>{resetDonationFlow();setGameState('TEMPLE');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">寄付</h2></div>
-            <p className="text-[11px] text-slate-300 leading-relaxed bg-violet-950/40 border border-violet-500/30 rounded-2xl p-3 mb-3 shrink-0">マスモンを寄付すると、累計絆経験値と同じ数のダイヤを受け取れます</p>
-            {donationError&&<div className="text-[10px] text-amber-200 bg-amber-950/40 border border-amber-500/40 rounded-xl p-3 mb-3 shrink-0"><AlertCircle size={14} className="inline mr-1"/>{donationError}</div>}
+        {gameState==='MASU_DONATION'&&(()=>{
+          const options=[{key:'bondXp',label:'絆経験値'},{key:'bond',label:'絆レベル'},{key:'name',label:'名前'},{key:'lineage',label:'血統'},{key:'newest',label:'新しい順'},{key:'active',label:'編成中'}];
+          const dir=donationSortDir==='asc'?1:-1;
+          const sorted=[...masuMons].sort((a,b)=>{const active=m=>monsterRosterIds.includes(`masu:${m.id}`)?1:0;const val=m=>donationSortKey==='bondXp'?donationDiamondValue(m.bondXp):donationSortKey==='bond'?bondLevelInfo(m.bondXp||0).level:donationSortKey==='name'?(m.name||''):donationSortKey==='lineage'?((ALL_PLAYER_MONSTERS[m.baseId]||{}).name||''):donationSortKey==='active'?active(m):(Number(m.createdAt)||Number(m.id)||0);const av=val(a),bv=val(b);return (typeof av==='string'?av.localeCompare(bv,'ja'):av-bv)*dir;});
+          return <div className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
+            <div className="flex items-center gap-2 mb-1 shrink-0"><button disabled={donationProcessing} onClick={()=>{resetDonationFlow();setGameState('TEMPLE');}} className="p-3 text-slate-400 active:scale-90 disabled:opacity-40"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">寄付</h2></div>
+            <p className="text-[10px] text-slate-300 leading-relaxed bg-violet-950/40 border border-violet-500/30 rounded-xl px-3 py-2 mb-2 shrink-0">累計絆経験値と同じ数のダイヤを受け取れます</p>
+            <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">{options.map(o=>{const active=donationSortKey===o.key;return <button key={o.key} onClick={()=>{if(active)setDonationSortDir(d=>d==='asc'?'desc':'asc');else{setDonationSortKey(o.key);setDonationSortDir(o.key==='name'||o.key==='lineage'?'asc':'desc');}}} className={`min-w-0 px-1 py-2 rounded-lg text-[8px] font-black border ${active?'bg-violet-600 border-violet-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{o.label}{active&&(donationSortDir==='asc'?' ▲':' ▼')}</button>})}</div>
+            {donationError&&<div className="text-[9px] text-amber-200 bg-amber-950/40 border border-amber-500/40 rounded-xl p-2 mb-2 shrink-0"><AlertCircle size={12} className="inline mr-1"/>{donationError}</div>}
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-              {masuMons.length===0?<div className="flex flex-col items-center justify-center h-full text-center text-slate-500"><Gem size={42}/><p className="text-[11px] mt-3 font-bold">寄付できるマスモンがいません</p></div>:<div className="grid grid-cols-1 gap-3 pb-4">{masuMons.map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const diamonds=donationDiamondValue(masu.bondXp);const lvl=bondLevelInfo(diamonds);const active=monsterRosterIds.includes(`masu:${masu.id}`);return <button key={masu.id} onClick={()=>{setDonationError('');setDonationSelectedId(masu.id);}} className="w-full text-left bg-slate-900 border border-violet-500/30 rounded-2xl p-3 flex items-center gap-3 active:scale-[.98]">
-                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-violet-400/50 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
-                <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><span className="font-black text-white truncate">{masu.name}</span>{active&&<span className="text-[8px] bg-pink-500 text-white rounded-full px-2 py-0.5 shrink-0">編成中</span>}</div><div className="text-[9px] text-slate-400 font-bold">ベースモン {base.name}</div><div className="text-[10px] text-pink-300 font-black mt-1">絆Lv.{lvl.level}</div><div className="text-[9px] text-slate-300">累計絆経験値 {diamonds.toLocaleString()} XP</div><div className="text-[10px] text-amber-300 font-black flex items-center gap-1"><Gem size={10}/>獲得ダイヤ {diamonds.toLocaleString()}</div></div>
+              {masuMons.length===0?<div className="flex flex-col items-center justify-center h-full text-center text-slate-500"><Gem size={42}/><p className="text-[11px] mt-3 font-bold">寄付できるマスモンがいません</p></div>:<div className="grid grid-cols-3 gap-1.5 pb-4">{sorted.map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const diamonds=donationDiamondValue(masu.bondXp);const lvl=bondLevelInfo(diamonds);const active=monsterRosterIds.includes(`masu:${masu.id}`);return <button key={masu.id} disabled={donationProcessing} onClick={()=>{setDonationError('');setDonationSelectedId(masu.id);}} className="min-w-0 overflow-hidden bg-slate-900 border border-violet-500/30 rounded-xl p-1.5 flex flex-col items-center text-center active:scale-[.97] disabled:opacity-50">
+                <div className="relative w-full aspect-square max-h-24 rounded-lg overflow-hidden bg-black/30"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-contain"/>{active&&<span className="absolute top-1 left-1 right-1 text-[7px] leading-4 bg-pink-600/95 text-white rounded-full font-black">編成中</span>}</div>
+                <div className="w-full mt-1 font-black text-[9px] leading-tight text-white truncate">{masu.name}</div><div className="text-[8px] leading-tight text-pink-300 font-black">絆Lv.{lvl.level}</div><div className="w-full text-[7px] leading-tight text-slate-300 truncate">累計 {diamonds.toLocaleString()} XP</div><div className="w-full text-[8px] leading-tight text-amber-300 font-black truncate"><Gem size={8} className="inline"/> {diamonds.toLocaleString()}</div>
               </button>})}</div>}
             </div>
-          </div>
-        )}
+          </div>;
+        })()}
 
         {gameState==='MASU_DONATION'&&donationSelectedId&&(()=>{const masu=masuMons.find(m=>String(m.id)===String(donationSelectedId));if(!masu)return null;const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const diamonds=donationDiamondValue(masu.bondXp);const after=donationDiamondValue(gold)+diamonds;const active=monsterRosterIds.includes(`masu:${masu.id}`);return <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.95)',zIndex:32000}}><div className="w-full max-w-sm bg-slate-900 border-2 border-violet-400 rounded-3xl p-5 shadow-2xl">
           <h3 className="text-lg font-black text-violet-200 text-center mb-4">寄付の最終確認</h3><div className="flex items-center gap-3 mb-4"><div className="w-20 h-20 rounded-full overflow-hidden border-2 border-amber-400/60 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div><div><div className="font-black text-white">{masu.name}</div><div className="text-[10px] text-slate-400">ベースモン {base.name}</div><div className="text-[10px] text-slate-300 mt-1">累計絆経験値 {diamonds.toLocaleString()} XP</div><div className="text-sm text-amber-300 font-black">獲得ダイヤ {diamonds.toLocaleString()}</div></div></div>
@@ -4300,6 +4322,8 @@ function MonsterHeroGame() {
           <div className="bg-amber-950/40 border border-amber-500/50 text-amber-100 text-[10px] leading-relaxed rounded-xl p-3 mb-3"><AlertCircle size={14} className="inline mr-1"/>寄付したマスモンはいなくなります。この操作は取り消せません。{active&&<div className="mt-2 font-black">このマスモンは編成中です。寄付すると編成から外れます。</div>}</div>
           <div className="flex gap-2"><button onClick={()=>setDonationSelectedId(null)} disabled={donationProcessing} className="flex-1 bg-slate-800 text-slate-300 py-3 rounded-2xl font-black text-xs disabled:opacity-40">キャンセル</button><button onClick={executeMasuDonation} disabled={donationProcessing} className="flex-[2] bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3 rounded-2xl font-black text-xs shadow-lg disabled:opacity-40">{donationProcessing?'処理中…':`寄付して${diamonds.toLocaleString()}ダイヤを受け取る`}</button></div>
         </div></div>})()}
+
+        {donationAnimation&&<div className="mh-donation-animation" role="status" aria-live="polite" aria-label="寄付を処理中"><div className="mh-donation-beam"></div><div className="mh-donation-monster"><DyedMonsterImage baseId={donationAnimation.baseId} src={donationAnimation.src} alt={donationAnimation.name} masuColors={donationAnimation.colors} className="w-full h-full object-contain"/></div><div className="mh-donation-gem"><Gem size={42}/></div><div className="mh-donation-particles">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div><div className="mh-donation-copy">神殿へ寄付中…</div></div>}
 
         {gameState==='MASU_DONATION'&&donationResult&&<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.name}を寄付しました</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm">寄付一覧へ戻る</button></div></div>}
 
@@ -6700,7 +6724,7 @@ const createAnimationStyle = () => {
     .mh-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 9999px; }
     .mh-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 9999px; }
     .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:24%;right:24%;top:35%;bottom:30%;pointer-events:none}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:5px;padding:7px 10px;border:1px solid #ffe6a7a8;border-radius:13px;background:#10211dcc;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:10px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:8%;top:39%}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:9%;top:37%}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:7%;top:42%}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update em{position:absolute;right:-4px;top:-7px;padding:1px 4px;border-radius:7px;background:#dc2626;color:#fff;font-size:6px;font-style:normal}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}}
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:24%;right:24%;top:35%;bottom:30%;pointer-events:none}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:1px solid #ffe6a7a8;border-radius:14px;background:#10211de6;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f999;box-shadow:0 3px 12px #0009,0 0 12px #22d3ee44,inset 0 0 12px #38bdf822}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4feaa;box-shadow:0 3px 12px #0009,0 0 12px #c084fc44,inset 0 0 12px #fbbf2422}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efac99;box-shadow:0 3px 12px #0009,0 0 12px #4ade8040,inset 0 0 12px #facc1522}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update em{position:absolute;right:-4px;top:-7px;padding:1px 4px;border-radius:7px;background:#dc2626;color:#fff;font-size:6px;font-style:normal}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:140px;height:140px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
     .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
