@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 81776578fda92bcf
+// source-sha256: a794c86293fd434d
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -458,6 +458,141 @@ const buildMasuDonation = ({
 // AUDIO: BGM/ジングルはAudioBuffer、SEはTone.js(Web Audio)で再生
 // デフォルトは無音。ユーザーが音量ボタンを押すと有効化される。
 // =====================================================================
+const BGM_TRACKS = [{
+  id: 'original_title',
+  name: 'タイトルテーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-title-theme.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'title'
+}, {
+  id: 'original_home',
+  name: 'HOMEテーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-title.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'home'
+}, {
+  id: 'original_prep',
+  name: '強化テーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-menu.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'prep'
+}, {
+  id: 'original_battle',
+  name: 'バトルテーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-battle.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'battle'
+}, {
+  id: 'original_boss',
+  name: 'ボステーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-boss.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'boss'
+}, {
+  id: 'original_dullahan',
+  name: 'デュラハンテーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-dullahan.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'dullahan'
+}, {
+  id: 'original_game_over',
+  name: 'ゲームオーバーテーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-game-over.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'gameOver'
+}, {
+  id: 'original_fusion',
+  name: '合体テーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-fusion.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'fusion'
+}, {
+  id: 'original_enhance',
+  name: '強化画面テーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-enhance.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'enhance'
+}, {
+  id: 'original_result',
+  name: 'リザルトテーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-result.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'result'
+}, {
+  id: 'original_market',
+  name: 'マーケットテーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-market.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'market'
+}, {
+  id: 'original_profile',
+  name: 'プロフィールテーマ',
+  creator: 'オリジナル',
+  src: 'audio/bgm-profile.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'profile'
+}, {
+  id: 'ichika_home',
+  name: 'ホームテーマ by いちか',
+  creator: 'いちか',
+  src: 'audio/bgm-home-ichika.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'ichika_battle',
+  name: 'バトルテーマ by いちか',
+  creator: 'いちか',
+  src: 'audio/bgm-battle-ichika.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'ichika_boss',
+  name: 'ボステーマ by いちか',
+  creator: 'いちか',
+  src: 'audio/bgm-boss-ichika.mp3',
+  gain: 1,
+  loop: true
+}, {
+  id: 'ichika_clear',
+  name: 'クリアテーマ by いちか',
+  creator: 'いちか',
+  src: 'audio/bgm-clear-ichika.mp3',
+  gain: 1,
+  loop: true,
+  legacyKey: 'clear'
+}];
+const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
+const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
+  home: 'original_home',
+  battle: 'original_battle',
+  boss: 'original_boss',
+  clear: 'ichika_clear'
+});
+const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => [scene, BGM_TRACK_BY_ID[value?.[scene]] ? value[scene] : fallback]));
 const Audio_ = (() => {
   let Tone = null,
     ready = false,
@@ -471,7 +606,9 @@ const Audio_ = (() => {
   const loadingBuffers = new Map();
   let bgmSource = null,
     bgmSourceKey = null,
-    bgmRequest = 0;
+    bgmRequest = 0,
+    previewSource = null,
+    previewKey = null;
   let jingleSource = null,
     jingleTimer = null;
   let currentKey = null,
@@ -526,20 +663,6 @@ const Audio_ = (() => {
         started = true;
       } catch (e) {}
     }
-  };
-  const BGM_FILES = {
-    title: 'audio/bgm-title-theme.mp3',
-    home: 'audio/bgm-title.mp3',
-    prep: 'audio/bgm-menu.mp3',
-    battle: 'audio/bgm-battle.mp3',
-    boss: 'audio/bgm-boss.mp3',
-    dullahan: 'audio/bgm-dullahan.mp3',
-    gameOver: 'audio/bgm-game-over.mp3',
-    fusion: 'audio/bgm-fusion.mp3',
-    enhance: 'audio/bgm-enhance.mp3',
-    result: 'audio/bgm-result.mp3',
-    market: 'audio/bgm-market.mp3',
-    profile: 'audio/bgm-profile.mp3'
   };
   const JINGLE_FILES = {
     victory: 'audio/jingle-victory.mp3'
@@ -644,14 +767,20 @@ const Audio_ = (() => {
     bgmSource = null;
     bgmSourceKey = null;
   };
-  const startBgmBuffer = (key, buffer, request) => {
+  const resolveTrack = key => BGM_TRACK_BY_ID[key] || BGM_TRACK_BY_KEY[key] || null;
+  const safeTrackGain = track => Math.max(0, Math.min(1.25, Number.isFinite(track?.gain) ? track.gain : 1));
+  const applyTrackGain = track => {
+    if (bgmGain) bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track));
+  };
+  const startBgmBuffer = (key, track, buffer, request) => {
     const ctx = getAudioCtx();
-    if (!ctx || request !== bgmRequest || key !== currentKey || !enabled || bgmVolumePct <= 0 || pageHidden || jingleSource) return;
+    if (!ctx || request !== bgmRequest || key !== currentKey || !enabled || bgmVolumePct <= 0 || pageHidden || jingleSource || previewSource) return;
     if (bgmSource && bgmSourceKey === key) return;
     stopOthers();
     const source = ctx.createBufferSource();
+    applyTrackGain(track);
     source.buffer = buffer;
-    source.loop = true;
+    source.loop = track.loop !== false;
     source.connect(bgmGain);
     bgmSource = source;
     bgmSourceKey = key;
@@ -668,30 +797,72 @@ const Audio_ = (() => {
     }
   };
   const playBGM = key => {
-    if (!BGM_FILES[key]) return Promise.resolve();
-    currentKey = key;
+    const track = resolveTrack(key);
+    if (!track) return Promise.resolve();
+    currentKey = track.id;
     const request = ++bgmRequest;
-    if (bgmSourceKey && bgmSourceKey !== key) stopOthers();
+    if (bgmSourceKey && bgmSourceKey !== track.id) stopOthers();
     if (!enabled || bgmVolumePct <= 0 || pageHidden) {
       stopOthers();
       stopJingles();
       return Promise.resolve();
     }
     resumeAudioCtxNoWait();
-    return loadBuffer(BGM_FILES[key]).then(buffer => startBgmBuffer(key, buffer, request)).catch(() => {});
+    return loadBuffer(track.src).then(buffer => startBgmBuffer(track.id, track, buffer, request)).catch(() => {});
+  };
+  const stopPreview = (resume = true) => {
+    stopSource(previewSource);
+    previewSource = null;
+    previewKey = null;
+    if (resume && currentKey) playBGM(currentKey);
+  };
+  const previewBGM = async key => {
+    const track = resolveTrack(key);
+    if (!track) return false;
+    if (previewKey === track.id) {
+      stopPreview(true);
+      return false;
+    }
+    stopPreview(false);
+    stopJingles();
+    stopOthers();
+    previewKey = track.id;
+    try {
+      const buffer = await loadBuffer(track.src);
+      if (previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
+      const ctx = await ensureAudioCtxRunning();
+      if (!ctx) return false;
+      applyTrackGain(track);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = track.loop !== false;
+      source.connect(bgmGain);
+      previewSource = source;
+      source.onended = () => {
+        if (previewSource === source) stopPreview(true);
+      };
+      source.start(0);
+      return true;
+    } catch (e) {
+      if (previewKey === track.id) stopPreview(true);
+      return false;
+    }
   };
   const stopBGM = () => {
     currentKey = null;
     ++bgmRequest;
+    stopPreview(false);
     stopJingles();
     stopOthers();
   };
   const preloadBGM = key => {
-    if (BGM_FILES[key]) loadBuffer(BGM_FILES[key]).catch(() => {});
+    const track = resolveTrack(key);
+    if (track) loadBuffer(track.src).catch(() => {});
   };
   const prepareBGM = (key, timeoutMs = 2000) => {
-    if (!BGM_FILES[key]) return Promise.resolve(false);
-    return Promise.race([loadBuffer(BGM_FILES[key]).then(() => true).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
+    const track = resolveTrack(key);
+    if (!track) return Promise.resolve(false);
+    return Promise.race([loadBuffer(track.src).then(() => true).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   };
   const playJingle = async key => {
     if (!enabled || bgmVolumePct <= 0 || pageHidden || !JINGLE_FILES[key]) return;
@@ -723,6 +894,7 @@ const Audio_ = (() => {
     pageHidden = !!hidden;
     if (pageHidden) {
       ++bgmRequest;
+      stopPreview(false);
       stopOthers();
       stopJingles();
     } else if (currentKey) playBGM(currentKey);
@@ -731,6 +903,7 @@ const Audio_ = (() => {
     enabled = !!on;
     if (!enabled) {
       ++bgmRequest;
+      stopPreview(false);
       stopOthers();
       stopJingles();
     } else if (currentKey) playBGM(currentKey);
@@ -747,8 +920,11 @@ const Audio_ = (() => {
   };
   const setBgmVolume = pct => {
     bgmVolumePct = pct;
-    if (bgmGain) bgmGain.gain.value = _bgmGain(pct);
-    if (pct <= 0) stopOthers();else if (enabled && currentKey) playBGM(currentKey);
+    applyTrackGain(resolveTrack(previewKey || currentKey));
+    if (pct <= 0) {
+      stopPreview(false);
+      stopOthers();
+    } else if (enabled && currentKey && !previewKey) playBGM(currentKey);
   };
   const resumeIfNeeded = async () => {
     await ensureAudioCtxRunning();
@@ -1382,6 +1558,8 @@ const Audio_ = (() => {
   return {
     playBGM,
     stopBGM,
+    previewBGM,
+    stopPreview,
     setEnabled,
     isEnabled,
     setSeVolume,
@@ -4002,6 +4180,9 @@ function MonsterHeroGame() {
   // 実際に音が出るのは最初のタップ以降になる(下のuseEffectで自動的に解除する)
   const [audioUnlocked, setAudioUnlocked] = useState(true);
   const [showAudioSettings, setShowAudioSettings] = useState(false); // 音量設定モーダルの表示状態
+  const [showBgmArrangement, setShowBgmArrangement] = useState(false);
+  const [bgmArrangement, setBgmArrangement] = useState(DEFAULT_BGM_ARRANGEMENT);
+  const [previewTrackId, setPreviewTrackId] = useState(null);
   const audioOn = audioUnlocked;
   const setSeVolumeRaw = nv => {
     setSeVolumeState(nv);
@@ -4038,6 +4219,23 @@ function MonsterHeroGame() {
       changeSeVolume(0);
       changeBgmVolume(0);
     }
+  };
+  const closeBgmArrangement = () => {
+    Audio_.stopPreview();
+    setPreviewTrackId(null);
+    setShowBgmArrangement(false);
+  };
+  const changeBgmArrangement = (scene, trackId) => {
+    if (!BGM_TRACK_BY_ID[trackId] || bgmArrangement[scene] === trackId) return;
+    setBgmArrangement(current => ({
+      ...current,
+      [scene]: trackId
+    }));
+  };
+  const toggleBgmPreview = async trackId => {
+    await Audio_.unlock();
+    const started = await Audio_.previewBGM(trackId);
+    setPreviewTrackId(started ? trackId : null);
   };
   const breederLevel = levelInfo(breederXp);
   // マスモン関連のヘルパー。絆レベル・間合い適性・ステータス強化ポイントは、すべてマスモン
@@ -4433,10 +4631,11 @@ function MonsterHeroGame() {
   // 画面から鳴らすべき曲のキーを決める
   const bgmKeyForState = (state, isBoss, wavesDone, isDullahan, isGameOver) => {
     if (isGameOver) return 'gameOver';
-    if (state === 'HOME' || state === 'PROFILE') return 'home';
-    if (BGM_STATE_MAP[state]) return BGM_STATE_MAP[state];
+    if (!debugBattleRef.current && wave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) return bgmArrangement.clear;
+    if (state === 'HOME' || state === 'PROFILE') return bgmArrangement.home;
+    if (BGM_STATE_MAP[state]) return BGM_STATE_MAP[state] === 'home' ? bgmArrangement.home : BGM_STATE_MAP[state];
     if (PROFILE_BGM_STATES.includes(state)) return 'profile';
-    if (state === 'BATTLE') return isDullahan ? 'dullahan' : isBoss ? 'boss' : 'battle';
+    if (state === 'BATTLE') return isDullahan ? 'dullahan' : isBoss ? bgmArrangement.boss : bgmArrangement.battle;
     if (RUN_PHASE_STATES.includes(state)) return wavesDone ? 'result' : 'enhance';
     return null;
   };
@@ -4451,7 +4650,7 @@ function MonsterHeroGame() {
       return;
     }
     if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   useEffect(() => {
@@ -4841,6 +5040,8 @@ function MonsterHeroGame() {
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
       setBgmVolumeState(savedBgmVolume);
+      const savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
+      setBgmArrangement(savedBgmArrangement);
       const savedName = await storeGet('mh_breeder_name', '名無しのブリーダー', false);
       setBreederName(savedName);
       const savedIcon = await storeGet('mh_breeder_icon', null, false);
@@ -5076,6 +5277,10 @@ function MonsterHeroGame() {
       sortDir: donationSortDir
     }, false);
   }, [dataLoaded, donationSortKey, donationSortDir]);
+  useEffect(() => {
+    if (!dataLoaded) return;
+    storeSet('mh_bgm_arrangement', normalizeBgmArrangement(bgmArrangement), false);
+  }, [dataLoaded, bgmArrangement]);
   const submitLocalScore = async (diff, finalScore, clearId) => {
     // マスモン(絆レベルを持つ育成済みインスタンス)で編成していた場合、ランキング表示にも絆レベルを出せるよう記録する。
     // 表示名はマスモンの個体名(ブリーダーが自由につけた名前)ではなく、血統(種族)の名前を使う
@@ -8463,6 +8668,14 @@ function MonsterHeroGame() {
     className: "mh-dialog-choice",
     onClick: () => {
       setShowTitleSettings(false);
+      setShowBgmArrangement(true);
+    }
+  }, "\uD83C\uDFBC BGM\u30A2\u30EC\u30F3\u30B8 ", /*#__PURE__*/React.createElement(ChevronRight, {
+    size: 18
+  })), /*#__PURE__*/React.createElement("button", {
+    className: "mh-dialog-choice",
+    onClick: () => {
+      setShowTitleSettings(false);
       setShowBackup(true);
     }
   }, "\uD83D\uDEE1\uFE0F \u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E ", /*#__PURE__*/React.createElement(ChevronRight, {
@@ -8494,7 +8707,48 @@ function MonsterHeroGame() {
     onChange: changeBgmVolume,
     gradient: "from-fuchsia-500 to-pink-500",
     thumbRing: "border-fuchsia-400"
-  }))) : showBackup ? /*#__PURE__*/React.createElement("div", {
+  }))) : showBgmArrangement ? /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-modal"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-dialog",
+    style: {
+      maxHeight: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',
+      overflowY: 'auto'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-dialog-head"
+  }, /*#__PURE__*/React.createElement("h3", null, "BGM\u30A2\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("button", {
+    onClick: closeBgmArrangement
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 18
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-4"
+  }, [['home', 'HOME BGM'], ['battle', '通常バトルBGM'], ['boss', 'ボスバトルBGM'], ['clear', 'ゲームクリアBGM']].map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
+    key: scene,
+    className: "block text-left"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-black text-slate-300"
+  }, label), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 mt-1"
+  }, /*#__PURE__*/React.createElement("select", {
+    "aria-label": label,
+    value: bgmArrangement[scene],
+    onChange: e => changeBgmArrangement(scene, e.target.value),
+    className: "min-w-0 flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"
+  }, BGM_TRACKS.map(track => /*#__PURE__*/React.createElement("option", {
+    key: track.id,
+    value: track.id
+  }, track.name))), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-label": `${label}を試聴`,
+    onClick: () => toggleBgmPreview(bgmArrangement[scene]),
+    className: "shrink-0 min-w-[58px] rounded-xl bg-indigo-700 px-2 text-xs font-black"
+  }, previewTrackId === bgmArrangement[scene] ? '停止' : '試聴'))))), /*#__PURE__*/React.createElement("button", {
+    className: "mh-dialog-choice mt-4",
+    onClick: () => setBgmArrangement({
+      ...DEFAULT_BGM_ARRANGEMENT
+    })
+  }, "\u30C7\u30D5\u30A9\u30EB\u30C8\u306B\u623B\u3059"))) : showBackup ? /*#__PURE__*/React.createElement("div", {
     className: "mh-title-modal"
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-title-dialog"
@@ -9620,6 +9874,9 @@ function MonsterHeroGame() {
     onClick: () => setShowAudioSettings(true),
     className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
   }, "\u97F3\u91CF\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowBgmArrangement(true),
+    className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
+  }, "BGM\u30A2\u30EC\u30F3\u30B8"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setShowBackup(true);
       setBackupTab('export');
