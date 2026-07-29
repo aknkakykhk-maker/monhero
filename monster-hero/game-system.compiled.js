@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4b140c867982b17e
+// source-sha256: 54ff03cd72c97e8e
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 19:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 20:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -219,6 +219,47 @@ const uniqueSkillAtLevel = (unique, level = 0) => {
     crit: 0.10 + 0.05 * lvl
   };
 };
+// 固有技の表示名は固有技Lvで変わるため、重複判定には技の出自を表す不変IDを使う。
+// lineageId は今後データ側で明示でき、既存データは従来から保存されている monId へ安全にフォールバックする。
+const uniqueLineageId = (unique, fallbackMonId = null) => unique?.lineageId || unique?.monId || fallbackMonId || null;
+const normalizeInheritedUniqueLineages = masuMons => (Array.isArray(masuMons) ? masuMons : []).map(raw => {
+  const masu = normalizeMasuProgression(raw);
+  const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
+  const ownedLineages = new Set([uniqueLineageId(base?.unique, masu.baseId)].filter(Boolean));
+  const kept = [];
+  const keptLevels = [];
+  (Array.isArray(masu.inheritedUniques) ? masu.inheritedUniques : []).forEach((unique, index) => {
+    const lineageId = uniqueLineageId(unique);
+    if (!lineageId || ownedLineages.has(lineageId)) return;
+    const level = Math.max(0, Math.floor(Math.max(Number(masu.uniqueSkillLevels?.[`inh:${index}`]) || 0, Number(unique?.evoLevel) || 0)));
+    const existingIndex = kept.findIndex(entry => uniqueLineageId(entry) === lineageId);
+    if (existingIndex < 0) {
+      kept.push({
+        ...unique,
+        lineageId
+      });
+      keptLevels.push(level);
+    } else if (level > keptLevels[existingIndex]) {
+      kept[existingIndex] = {
+        ...unique,
+        lineageId
+      };
+      keptLevels[existingIndex] = level;
+    }
+  });
+  const uniqueSkillLevels = {
+    ...masu.uniqueSkillLevels
+  };
+  Object.keys(uniqueSkillLevels).filter(key => key.startsWith('inh:')).forEach(key => delete uniqueSkillLevels[key]);
+  keptLevels.forEach((level, index) => {
+    uniqueSkillLevels[`inh:${index}`] = level;
+  });
+  return {
+    ...masu,
+    inheritedUniques: kept,
+    uniqueSkillLevels
+  };
+});
 const totalBondXpForLevel = level => {
   let total = 0;
   for (let current = 1; current < Math.max(1, level); current++) total += xpForBondLevel(current);
@@ -1360,6 +1401,10 @@ const MOO_IMG = "";
 
 // --- Game Data ---
 const RANGE_LABELS = ["零", "近", "中", "遠"];
+const rangeAttackDamageMultiplier = (card, attackStartDist) => {
+  if (!card || card.type !== 'range_atk') return card?.mult || card?.baseMult || 1.0;
+  return attackStartDist === card.rangeIdx ? card.mult : card.mult * 0.4;
+};
 // モンスターごとの間合い(距離)適性。距離ラベル配列と同じ並び([零,近,中,遠])のグレードを
 // distAptitude:['C','C','C','C'] の形でモンスターデータに持たせ、そのモンスターが
 // 該当スロットで攻撃した時のダメージに以下の倍率を掛ける。値は今後モンスターごとに調整予定。
@@ -4529,6 +4574,15 @@ function MonsterHeroGame() {
         await storeSet('mh_masu_mons', savedMasuMons, false);
         await storeSet('mh_masu_rebirth_full_reset_migrated_v1', true, false);
       }
+      // 表示名ではなく固有技系統IDで既存の重複継承を整理する。最高Lvだけを残す正規化は
+      // 冪等だが、過去の移行済みフラグに阻まれないよう今回専用のバージョンを持つ。
+      const uniqueLineageMigrated = await storeGet('mh_unique_lineage_dedupe_migrated_v1', false, false);
+      const normalizedUniqueLineages = normalizeInheritedUniqueLineages(savedMasuMons);
+      if (!uniqueLineageMigrated || JSON.stringify(normalizedUniqueLineages) !== JSON.stringify(savedMasuMons)) {
+        savedMasuMons = normalizedUniqueLineages;
+        await storeSet('mh_masu_mons', savedMasuMons, false);
+        await storeSet('mh_unique_lineage_dedupe_migrated_v1', true, false);
+      }
       const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
       const compensationNoticeSeen = await storeGet('mh_masu_level_cap_compensation_notice_seen_v1', false, false);
       if (compensationNotice?.diamonds > 0 && !compensationNoticeSeen) setLevelCapCompensation(compensationNotice);
@@ -5371,12 +5425,14 @@ function MonsterHeroGame() {
     const gainedLevels = after.level - before.level;
     const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
     const mainBase = ALL_PLAYER_MONSTERS[main.baseId];
-    const ownedUniqueIds = new Set([mainBase?.unique?.monId || mainBase?.id, ...(main.inheritedUniques || []).map(unique => unique.monId)].filter(Boolean));
-    const canInherit = mainLvl.level >= 10 && subLvl.level >= 10 && fusionInheritUnique && subBase?.unique && !ownedUniqueIds.has(subBase.unique.monId || subBase.id);
+    const ownedUniqueIds = new Set([uniqueLineageId(mainBase?.unique, mainBase?.id), ...(main.inheritedUniques || []).map(unique => uniqueLineageId(unique))].filter(Boolean));
+    const subUniqueLineageId = uniqueLineageId(subBase?.unique, subBase?.id);
+    const canInherit = mainLvl.level >= 10 && subLvl.level >= 10 && fusionInheritUnique && subBase?.unique && !ownedUniqueIds.has(subUniqueLineageId);
     const inheritedLevel = Math.max(0, Number(sub.uniqueSkillLevels?.own) || Number(subBase?.unique?.evoLevel) || 0);
     const inheritedUnique = canInherit ? {
       ...uniqueSkillAtLevel(subBase.unique, inheritedLevel),
       monId: subBase.id,
+      lineageId: subUniqueLineageId,
       sourceMasuName: sub.name
     } : null;
     const historyEntry = {
@@ -6301,9 +6357,9 @@ function MonsterHeroGame() {
       if (!selectedCards.includes(cardIndex)) selectCardAt(cardIndex);
     }
   };
-  const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false) => {
+  const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
-    const distDiff = Math.abs(slotIdx - enemyDist);
+    const distDiff = Math.abs(slotIdx - attackStartDist);
     const distMult = [1.5, 1.3, 1.1, 0.9][distDiff] || 1.0;
     let baseDmgMult = 1.0;
     if (card.subType === 'stun_atsu') {
@@ -6313,8 +6369,7 @@ function MonsterHeroGame() {
       const chuuniBonus = card.monId === 'Ark' || card.monId === 'Iblis' ? 0.1 * getPermaBuff('chuuniUniqueStack') : 0;
       baseDmgMult = card.baseMult + level * 0.5 + chuuniBonus;
     } else if (card.type === 'range_atk') {
-      const isTargetDist = enemyDist === card.rangeIdx;
-      baseDmgMult = isTargetDist ? card.mult : card.mult * 0.4;
+      baseDmgMult = rangeAttackDamageMultiplier(card, attackStartDist);
     } else {
       baseDmgMult = card.mult || card.baseMult || 1.0;
     }
@@ -6550,7 +6605,8 @@ function MonsterHeroGame() {
       immediateStun = false,
       currentTurnGuardFlat = 0,
       currentTurnGuardMult = 0;
-    let forcedMoveTarget = null; // range_atk forces enemy to move at turn end
+    let forcedMoveTarget = null; // 最後に使った距離撃の指定距離を、敵行動後にも最終距離として再適用する
+    let attackDistance = enemyDist; // 同一ターンの各攻撃開始時点の距離。距離撃後は指定距離へ進める
     const attackHits = []; // {dmg, isCrit, slotIdx}
 
     // カットイン廃止: 技名はスロット上にインライン表示する（実行ループ内で行う）
@@ -6687,7 +6743,8 @@ function MonsterHeroGame() {
             addPopup('連斬!', 'hero', 'text-cyan-400 text-lg font-bold');
           }
         }
-        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, attackCount > 0);
+        const attackStartDist = attackDistance;
+        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, attackCount > 0, attackStartDist);
         attackCount++;
         const critRateBonus = getPermaBuff('critRatePct'),
           critDmgBonus = getPermaBuff('critDmgPct');
@@ -6695,6 +6752,7 @@ function MonsterHeroGame() {
         const finalD = isCrit ? Math.floor(d * (1.5 + critDmgBonus)) : d;
         if (isCrit) hasCrit = true;
         totalDmg += finalD;
+        const rangeMoveTarget = card.type === 'range_atk' && card.rangeIdx != null ? card.rangeIdx : null;
         attackHits.push({
           dmg: finalD,
           isCrit,
@@ -6702,7 +6760,8 @@ function MonsterHeroGame() {
           isSpecial: card.type === 'unique' || card.type === 'range_atk',
           skillName: card.name || card.baseName,
           isUnique: card.type === 'unique',
-          monId: card.type === 'unique' ? card.monId : undefined
+          monId: card.type === 'unique' ? card.monId : undefined,
+          rangeMoveTarget
         });
         if (activeMon.id === 'Zan' || card.type === 'unique' && card.monId === 'Zan') {
           // 会心はメイン攻撃とは独立して判定する(元ダメージdを基準にすることで、メイン攻撃の会心を二重に乗せない)
@@ -6728,8 +6787,9 @@ function MonsterHeroGame() {
           // 固有技「連斬」自体の連撃: 技の出自(card.monId)がザンなら、誰が使っても発生する(合体で引き継いだ場合も含む)
           if (card.type === 'unique' && card.monId === 'Zan') rollCombo(0.2 + comboDmgBonus);
         }
-        if (card.type === 'range_atk' && card.rangeIdx != null) {
-          forcedMoveTarget = (card.rangeIdx + 1) % 4;
+        if (rangeMoveTarget != null) {
+          forcedMoveTarget = rangeMoveTarget;
+          attackDistance = rangeMoveTarget;
         }
         if (card.type === 'unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
@@ -6852,6 +6912,12 @@ function MonsterHeroGame() {
               }));
               await wait(140);
             }
+            if (hit.rangeMoveTarget != null) {
+              setEnemyDist(hit.rangeMoveTarget);
+              syncAtkTierForDist(hit.rangeMoveTarget);
+              addPopup(`${RANGE_LABELS[hit.rangeMoveTarget]}距離へ移動！`, 'enemy', 'text-cyan-400 font-black text-lg drop-shadow-md');
+              await wait(350);
+            }
             hitIdx = j;
             continue;
           }
@@ -6898,6 +6964,12 @@ function MonsterHeroGame() {
             hp: Math.max(0, prev.hp - hit.dmg)
           }));
           await wait(hit.noAnim ? 150 : 550);
+          if (hit.rangeMoveTarget != null) {
+            setEnemyDist(hit.rangeMoveTarget);
+            syncAtkTierForDist(hit.rangeMoveTarget);
+            addPopup(`${RANGE_LABELS[hit.rangeMoveTarget]}距離へ移動！`, 'enemy', 'text-cyan-400 font-black text-lg drop-shadow-md');
+            await wait(350);
+          }
           hitIdx++;
         }
         setCurrentWaveDamage(p => p + totalDmg);
@@ -7007,34 +7079,23 @@ function MonsterHeroGame() {
       setTimeout(() => setGameState('WAVE_RESULT'), 500);
       return;
     }
-    let endTurnDist = enemyDist;
-    let forcedMoveHappened = false;
-    if (forcedMoveTarget != null && forcedMoveTarget !== enemyDist) {
-      endTurnDist = forcedMoveTarget;
-      setEnemyDist(forcedMoveTarget);
-      syncAtkTierForDist(forcedMoveTarget);
-      addPopup(`強制移動！ ${RANGE_LABELS[forcedMoveTarget]}距離へ`, 'enemy', 'text-cyan-400 font-black text-lg drop-shadow-md');
-      await wait(700);
-      forcedMoveHappened = true;
-    }
     // 予測表示している enemyIntent をそのまま実行する（再抽選しない）
     const finalActionType = guardTypeInTurn !== 'none' ? guardTypeInTurn : lastType;
-    // 距離撃で強制移動させた場合は、敵自身のMOVE行動で上書きされないよう優先する(距離撃 > 敵の自発的な移動)
-    const executedIntent = forcedMoveHappened && enemyIntent?.type === 'MOVE' ? {
-      type: 'WAIT',
-      value: 0,
-      label: "様子を見ている",
-      icon: "⏳"
-    } : enemyIntent;
+    const executedIntent = enemyIntent;
     await handleEnemyTurn(finalActionType, {
       invincible: immediateInvincible,
       stun: immediateStun,
       guardFlat: currentTurnGuardFlat,
       guardMult: currentTurnGuardMult
     }, executedIntent);
+    // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
+    if (forcedMoveTarget != null) {
+      setEnemyDist(forcedMoveTarget);
+      syncAtkTierForDist(forcedMoveTarget);
+    }
     // 敵の行動が終わった後で、次ターンの予測を1回だけ抽選してセット
     // 敵が移動した場合は移動後の距離を基準にする
-    const distForNextPredict = executedIntent && executedIntent.type === 'MOVE' ? executedIntent.targetDist : endTurnDist;
+    const distForNextPredict = forcedMoveTarget != null ? forcedMoveTarget : executedIntent && executedIntent.type === 'MOVE' ? executedIntent.targetDist : enemyDist;
     setEnemyIntent(getNextEnemyAction(enemy, distForNextPredict));
   };
 
@@ -7112,9 +7173,8 @@ function MonsterHeroGame() {
     currentSlots.forEach((s, idx) => {
       if (s) {
         const revo = RANGE_EVOLUTION[aLvl];
-        // 距離撃はターン終了時に敵を「その距離のひとつ隣」へ強制移動させる技。
-        // そのため、選んだ距離にモンスターを置いたら「その距離へ敵を動かせる距離撃」が手に入るようにする。
-        // (近距離を選んだら零撃、遠距離を選んだら中撃、というように rangeIdx はひとつ手前の距離になる)
+        // 距離撃は攻撃開始時の指定距離で最大威力になり、ダメージ確定後にその指定距離へ移動する。
+        // カードの取得規則は従来どおり、配置スロットのひとつ手前の距離撃とする。
         const rIdx = (idx + RANGE_LABELS.length - 1) % RANGE_LABELS.length;
         pool.push({
           name: `${RANGE_LABELS[rIdx]}${revo.name}`,
@@ -9852,8 +9912,8 @@ function MonsterHeroGame() {
       const subLvl = bondLevelInfo(sub.bondXp || 0);
       const cost = (mainLvl.level + subLvl.level) * 100;
       const canAfford = gold >= cost;
-      const ownedUniqueIds = new Set([mainBase.unique?.monId || mainBase.id, ...(main.inheritedUniques || []).map(unique => unique.monId)].filter(Boolean));
-      const duplicateUnique = ownedUniqueIds.has(subBase.unique?.monId || subBase.id);
+      const ownedUniqueIds = new Set([uniqueLineageId(mainBase.unique, mainBase.id), ...(main.inheritedUniques || []).map(unique => uniqueLineageId(unique))].filter(Boolean));
+      const duplicateUnique = ownedUniqueIds.has(uniqueLineageId(subBase.unique, subBase.id));
       const canChooseInherit = mainLvl.level >= 10 && subLvl.level >= 10 && !!subBase.unique && !duplicateUnique;
       // 合体後にどうなるかを先に計算して見せる(実行してみないと分からない状態だったため)
       const afterXp = (main.bondXp || 0) + (sub.bondXp || 0);
@@ -13768,7 +13828,7 @@ function MonsterHeroGame() {
         // 消費ガッツは「基礎ガッツ × 現在の倍率 ÷ 基礎倍率」(getCardGutsと同じ式)
         const guts = Math.floor(e.baseGuts * (e.mult / (e.baseMult || 1)));
         const crit = Math.round(e.crit * 100);
-        const effect = card.type === 'atk' ? '敵1体を攻撃' : `${RANGE_LABELS[card.rangeIdx]}の敵に最大威力・他の距離には4割の威力`;
+        const effect = card.type === 'atk' ? '敵1体を攻撃' : `${RANGE_LABELS[card.rangeIdx]}距離で威力アップ。攻撃後、${RANGE_LABELS[card.rangeIdx]}距離へ移動する`;
         return {
           key: String(lvl),
           label,
@@ -13946,7 +14006,7 @@ function MonsterHeroGame() {
     className: "border-t border-white/10 pt-1 mt-1 text-[7px] text-cyan-200 font-bold"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-cyan-400"
-  }, "\u5F37\u5236\u79FB\u52D5:"), " \u30BF\u30FC\u30F3\u7D42\u4E86\u6642\u3001\u6575\u3092", RANGE_LABELS[(focusedCard.rangeIdx + 1) % 4], "\u8DDD\u96E2\u3078\u79FB\u52D5\u3055\u305B\u308B"), ['buff', 'debuff', 'heal'].includes(focusedCard.type) && /*#__PURE__*/React.createElement("div", {
+  }, "\u8DDD\u96E2\u52B9\u679C:"), " ", RANGE_LABELS[focusedCard.rangeIdx], "\u8DDD\u96E2\u3067\u5A01\u529B\u30A2\u30C3\u30D7\u3002\u653B\u6483\u5F8C\u3001", RANGE_LABELS[focusedCard.rangeIdx], "\u8DDD\u96E2\u3078\u79FB\u52D5\u3059\u308B"), ['buff', 'debuff', 'heal'].includes(focusedCard.type) && /*#__PURE__*/React.createElement("div", {
     className: "text-center italic text-amber-300 font-bold text-[7px] leading-tight"
   }, getDynamicDesc(focusedCard, true, focusedCard.evoLevel || 0)), focusedCard.effectDesc && /*#__PURE__*/React.createElement("div", {
     className: "border-t border-white/10 pt-1 mt-1 text-[7px] text-amber-200 font-bold"
