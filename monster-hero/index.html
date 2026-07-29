@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
 <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-<link rel="preload" as="image" href="data/images/title-screen.PNG">
+<link rel="preload" as="image" href="data/images/title-screen-clean.PNG">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="モンスターヒーロー">
@@ -36,17 +36,29 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
   body { height:100dvh; box-sizing:border-box; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
   #root { width:100%; height:100%; overflow:hidden; }
   #root > div { width:100%; height:100%; max-width:600px; margin:0 auto; }
-  #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; background:#050510; color:#a5b4fc; font-family:sans-serif; z-index:99999; }
-  .ldspin { width:44px; height:44px; border:4px solid rgba(165,180,252,0.25); border-top-color:#a5b4fc; border-radius:50%; animation:ldrot 0.8s linear infinite; }
-  @keyframes ldrot { to { transform:rotate(360deg); } }
+  #loading { position:fixed; inset:0; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; box-sizing:border-box; padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom)); color:#fff; text-align:center; font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif; background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%); }
+  #loading::before { content:""; position:absolute; inset:0; background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px); background-size:39px 41px; opacity:.28; }
+  .static-mocchi { position:relative; z-index:1; width:min(42vw,180px); height:min(42vw,180px); margin-bottom:clamp(8px,3vh,24px); }
+  .static-mocchi img { width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 8px 14px #000); transform-origin:50% 88%; animation:staticHop 1.2s ease-in-out infinite; }
+  .static-mocchi span { position:absolute; left:20%; bottom:-5px; width:60%; height:13px; border-radius:50%; background:#0008; filter:blur(3px); animation:staticShadow 1.2s ease-in-out infinite; }
+  .static-copy { position:relative; z-index:1; width:min(100%,340px); }
+  .static-copy h1 { margin:0 0 8px; color:#fff; font-size:clamp(20px,6vw,30px); font-weight:1000; letter-spacing:.22em; text-shadow:0 0 18px #c084fc; }
+  .static-copy h2 { margin:0 0 18px; color:#ddd6fe; font-size:12px; letter-spacing:.12em; }
+  .static-progress { height:10px; overflow:hidden; border:1px solid #c4b5fd88; border-radius:99px; background:#080617; }
+  .static-progress span { display:block; width:8%; height:100%; border-radius:inherit; background:linear-gradient(90deg,#7c3aed,#d8b4fe,#fbbf24); box-shadow:0 0 14px #c084fc; animation:staticProgress 1.5s ease-in-out infinite alternate; }
+  .static-copy strong { display:block; margin-top:7px; font:800 11px monospace; }.static-copy p{font-size:10px;color:#c4b5fd}
+  @keyframes staticHop { 0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)} }
+  @keyframes staticShadow { 0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3} }
+  @keyframes staticProgress { to{width:28%} }
+  @media(prefers-reduced-motion:reduce){.static-mocchi img,.static-mocchi span,.static-progress span{animation:none}}
 </style>
 </head>
 <body>
-<div id="ver-banner" style="position:fixed;top:0;left:0;right:0;background:#16a34a;color:#fff;font:900 13px sans-serif;padding:6px 10px;padding-top:calc(6px + env(safe-area-inset-top));z-index:100000;text-align:center;letter-spacing:1px;">GH-BUILD v58 / LOADING ENGINE...</div>
-<div id="loading"><div class="ldspin"></div><div style="font-weight:900;letter-spacing:2px;">LOADING...</div></div>
+<div id="loading"><div class="static-mocchi"><img id="static-mocchi-image" alt="モッチー"><span></span></div><section class="static-copy"><h1>NOW LOADING</h1><h2>冒険の準備をしています</h2><div class="static-progress"><span></span></div><strong>0%</strong><p>ゲームシステムを起動中</p></section></div>
 <div id="root"></div>
 <div style="position:fixed;bottom:2px;right:4px;font:900 9px monospace;color:rgba(255,255,255,0.35);z-index:99999;pointer-events:none;">LF</div>
 <script src="data/images/images-ally.js?v=20260727c"></script>
+<script>try{document.getElementById('static-mocchi-image').src=MOCCHI_IMG}catch(e){}</script>
 <script src="data/images/images-enemy.js?v=20260727c"></script>
 <script src="data/ally-monsters.js?v=20260727c"></script>
 <script src="data/breeder.js?v=20260727c"></script>
