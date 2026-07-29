@@ -16,7 +16,9 @@ assert.strictEqual(difficulties.length, 9, 'all existing difficulties must remai
 assert(source.includes('[...new Set(ENEMY_SEQUENCE)]'), 'debug enemies must derive from the normal enemy sequence');
 assert(source.includes('ENEMY_DATA[key]'), 'debug enemies must reuse existing enemy definitions');
 assert(enemySource.includes('Durahan:') && enemySource.includes('Moo:'), 'Dullahan and Moo must remain valid enemy definitions');
-assert(source.includes("enemy?.id === 'Durahan'"), 'Dullahan must use its dedicated BGM route');
+assert(/enemyId\s*===\s*['"]Durahan['"]\s*\?\s*['"]dullahan['"]/.test(source), 'Dullahan must use its dedicated BGM route');
+assert(/enemyId\s*===\s*['"]Moo['"]\s*\|\|\s*currentWave\s*===\s*10\s*\?\s*bgmArrangement\.boss/.test(source), 'debug Moo and normal WAVE 10 must use the selected boss BGM');
+assert(/!debugBattleRef\.current\s*&&\s*currentWave\s*===\s*10/.test(source), 'debug victory must remain excluded from the clear BGM route');
 assert(source.includes("hp <= 0 || gaveUp"), 'defeat and give-up must use the game-over BGM route');
 
 const startDebug = section('const startDebugBattle = () => {', '\n  };');
