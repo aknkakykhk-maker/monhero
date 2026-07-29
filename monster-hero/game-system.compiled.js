@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f51b0c06ad872d06
+// source-sha256: 965f68611c8e3815
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -3064,6 +3064,10 @@ function MonsterHeroGame() {
   // ブラウザの自動再生制限のため、タイトル画面内の最初の操作で音声を解除する。
   const [bootPhase, setBootPhase] = useState('loading');
   const [titleStarting, setTitleStarting] = useState(false);
+  // ハブ側の操作はこのDocumentのuser activationにならないため、起動画面内での解除だけを記録する。
+  // refも併用し、pointerdown直後のclickが同じ操作でトップ遷移を始めないよう同期的に判定する。
+  const [bootSoundUnlocked, setBootSoundUnlocked] = useState(false);
+  const bootSoundUnlockedRef = useRef(false);
   const [showTitleSettings, setShowTitleSettings] = useState(false);
   const [titlePlayerId] = useState(() => {
     try {
@@ -3809,7 +3813,7 @@ function MonsterHeroGame() {
           targets.push([m.baseId, url]);
         });
       });
-      const total = targets.length + 1; // +1 はBGMの読み込み
+      const total = targets.length + 2; // タイトル画像 + BGM
       let done = 0;
       const step = label => {
         if (!cancelled) {
@@ -3824,8 +3828,31 @@ function MonsterHeroGame() {
       if (!cancelled) setBootProgress({
         done: 0,
         total,
-        label: 'サウンドシステム 起動中'
+        label: 'タイトル画面 準備中'
       });
+
+      // 通信完了だけでなくデコード完了まで待つ。これにより正式タイトルへ切り替えた瞬間の
+      // 空白や旧画面の露出を防ぐ。decode非対応ブラウザはload完了を同等の準備完了とする。
+      await new Promise(resolve => {
+        const image = new Image();
+        let settled = false;
+        const finishImage = () => {
+          if (!settled) {
+            settled = true;
+            resolve();
+          }
+        };
+        image.onload = async () => {
+          try {
+            if (typeof image.decode === 'function') await image.decode();
+          } catch (e) {}
+          finishImage();
+        };
+        image.onerror = finishImage;
+        image.src = 'data/images/title-screen.PNG';
+        if (image.complete) image.onload();
+      });
+      step('タイトルBGM 準備中');
       await Audio_.prepareBGM('title', 4000).catch(() => {});
       step(targets.length ? 'モンスターデータ 展開中' : '起動完了');
       for (const [baseId, url] of targets) {
@@ -3841,14 +3868,26 @@ function MonsterHeroGame() {
       clearTimeout(hardStop);
     };
   }, [bootPhase, dataLoaded, masuMons]);
+  const unlockBootSound = () => {
+    if (bootSoundUnlockedRef.current) return;
+    bootSoundUnlockedRef.current = true;
+    setBootSoundUnlocked(true);
+    Audio_.unlock();
+  };
 
-  // 別ページのハブで行った操作の user activation はこの Document へ引き継げない。
-  // そのためタイトル表示と同時の自動再生は行わず、この画面での最初の操作で解除する。
-  // TAP TO START の主役割は音声解除ではなく、決定演出後のトップ画面への遷移とする。
+  // ロード画面で解除済みなら正式タイトルの表示開始時から曲を鳴らす。
+  useEffect(() => {
+    if (bootPhase === 'ready' && bootSoundUnlockedRef.current) Audio_.playBGM('title');
+  }, [bootPhase, bootSoundUnlocked]);
+
+  // 未解除時の正式タイトル最初のタップは解除とBGM開始だけに使い、遷移とは分離する。
   const startGame = () => {
     if (titleStarting) return;
-    // このタップが「音を鳴らしてよい」唯一の合図なので、まずここで音声のロックを解除する
-    Audio_.unlock();
+    if (!bootSoundUnlockedRef.current) {
+      unlockBootSound();
+      Audio_.playBGM('title');
+      return;
+    }
     // 指を離したときのclickは、既に消えている起動画面ではなくトップ画面の要素に届く。
     // そこにボタンがあると誤って押されてしまうので、続く1回のclickは捨てる
     bootTapPending.current = true;
@@ -3862,23 +3901,6 @@ function MonsterHeroGame() {
     // 鳴っていなければ鳴らし直す(読み込みが間に合わなかった場合の保険)
     [300, 1000, 2500].forEach(ms => setTimeout(() => Audio_.ensurePlaying('title'), ms));
   };
-
-  // 音は初期状態でオンだが、ブラウザは「ユーザーが操作するまで音を鳴らしてはいけない」という
-  // 制限があるため、ページを開いただけでは実際には鳴らない。最初のタップ(どこでもよい)を
-  // 拾って一度だけ音声のロックを解除し、その時点のBGMを鳴らし始める。
-  useEffect(() => {
-    const unlockOnce = () => {
-      document.removeEventListener('pointerdown', unlockOnce);
-      document.removeEventListener('touchend', unlockOnce);
-      Audio_.unlock();
-    };
-    document.addEventListener('pointerdown', unlockOnce);
-    document.addEventListener('touchend', unlockOnce);
-    return () => {
-      document.removeEventListener('pointerdown', unlockOnce);
-      document.removeEventListener('touchend', unlockOnce);
-    };
-  }, []);
 
   // タブ切り替え/バックグラウンド化から復帰した際、OSにより自動停止されたAudioContextと
   // BGMのTransportを復帰させる(そのままだとBGM/SEが鳴らなくなったままになる不具合の対策)。
@@ -7142,23 +7164,19 @@ function MonsterHeroGame() {
   if (bootPhase === 'loading') {
     const pct = Math.round(bootProgress.done / Math.max(1, bootProgress.total) * 100);
     return /*#__PURE__*/React.createElement("div", {
-      className: "h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans flex flex-col items-center justify-center p-8",
+      className: "mh-boot-screen h-full w-full text-white overflow-hidden relative select-none font-sans flex flex-col items-center justify-center p-8",
       style: {
         height: '100%'
       }
     }, /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0",
-      style: {
-        background: 'radial-gradient(circle at 50% 35%, rgba(168,85,247,0.35) 0%, rgba(2,6,23,0) 60%)'
-      }
-    }), /*#__PURE__*/React.createElement("div", {
       className: "relative z-10 flex flex-col items-center w-full max-w-xs"
-    }, /*#__PURE__*/React.createElement("h1", {
-      className: "text-4xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-purple-200 to-purple-500 leading-none uppercase whitespace-nowrap drop-shadow-[0_4px_16px_rgba(0,0,0,1)]"
-    }, "Monster Hero"), /*#__PURE__*/React.createElement("p", {
-      className: "text-purple-300 text-[9px] tracking-[0.4em] uppercase font-bold mt-2"
-    }, "Grand Champion Quest"), /*#__PURE__*/React.createElement("div", {
-      className: "w-full mt-10"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mh-boot-spinner",
+      "aria-hidden": "true"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black tracking-[.28em] text-slate-200 mt-5"
+    }, "\u30B2\u30FC\u30E0\u3092\u6E96\u5099\u3057\u3066\u3044\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+      className: "w-full mt-7"
     }, /*#__PURE__*/React.createElement("div", {
       className: "h-2 bg-slate-900 rounded-full overflow-hidden border border-indigo-400/30"
     }, /*#__PURE__*/React.createElement("div", {
@@ -7168,7 +7186,13 @@ function MonsterHeroGame() {
       }
     })), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-indigo-300 font-bold text-center mt-3 tracking-wider"
-    }, bootProgress.label))), /*#__PURE__*/React.createElement("div", {
+    }, bootProgress.label)), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onPointerDown: unlockBootSound,
+      className: `mh-boot-sound ${bootSoundUnlocked ? 'is-unlocked' : ''}`
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true"
+    }, bootSoundUnlocked ? '✓' : '🔊'), /*#__PURE__*/React.createElement("span", null, bootSoundUnlocked ? 'サウンドを有効化しました' : '画面をタップしてサウンドを有効化'))), /*#__PURE__*/React.createElement("div", {
       className: "absolute bottom-4 text-[8px] text-slate-700 font-mono tracking-widest"
     }, "ver ", BUILD_DATE));
   }
@@ -7250,9 +7274,9 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement(Settings, {
     size: 19
   }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("button", {
-    className: "mh-title-start",
+    className: `mh-title-start ${bootSoundUnlocked ? 'is-enabled' : ''}`,
     onClick: startGame,
-    "aria-label": "\u30B2\u30FC\u30E0\u3092\u958B\u59CB"
+    "aria-label": bootSoundUnlocked ? 'ゲームを開始' : 'サウンドを有効化'
   }), /*#__PURE__*/React.createElement("div", {
     className: "mh-title-flash"
   })), showTitleSettings && /*#__PURE__*/React.createElement("div", {
@@ -13596,6 +13620,11 @@ const createAnimationStyle = () => {
     .mh-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 9999px; }
     .mh-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 9999px; }
     .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
+    .mh-boot-screen{background:linear-gradient(160deg,#090d18 0%,#02040a 68%,#0b1020 100%)}
+    .mh-boot-spinner{width:40px;height:40px;border:3px solid rgba(148,163,184,.2);border-top-color:#cbd5e1;border-radius:50%;animation:mhBootSpin .85s linear infinite}
+    .mh-boot-sound{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:52px;margin-top:28px;padding:12px;border:1px solid rgba(148,163,184,.35);border-radius:14px;background:rgba(15,23,42,.86);color:#e2e8f0;font-size:12px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.3);touch-action:manipulation}
+    .mh-boot-sound.is-unlocked{border-color:rgba(52,211,153,.5);color:#a7f3d0;background:rgba(6,78,59,.22)}
+    @keyframes mhBootSpin{to{transform:rotate(360deg)}}
     .mh-title-gate { position:fixed; inset:0; z-index:70000; overflow:hidden; color:#fff; background:#05020e; isolation:isolate; animation:titleReveal 1.1s ease-out both; }
     .mh-title-visual { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:50% 50%; }
     .mh-title-header { position:absolute; z-index:20; top:0; left:50%; width:min(100%,calc(100vh * 941 / 1672)); transform:translateX(-50%); padding:calc(12px + env(safe-area-inset-top)) 13px 0; display:flex; justify-content:space-between; align-items:flex-start; text-shadow:0 2px 5px #000; }
