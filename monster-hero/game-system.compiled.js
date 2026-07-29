@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9038821b600a2797
+// source-sha256: f8a3781c29645690
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 23:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 00:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -588,6 +588,9 @@ const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, tr
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   home: 'original_home',
+  management: 'original_profile',
+  market: 'original_market',
+  temple: 'original_fusion',
   battle: 'original_battle',
   boss: 'original_boss',
   clear: 'ichika_clear'
@@ -4196,7 +4199,8 @@ function MonsterHeroGame() {
   const [showBgmArrangement, setShowBgmArrangement] = useState(false);
   const [bgmArrangement, setBgmArrangement] = useState(DEFAULT_BGM_ARRANGEMENT);
   const [previewTrackId, setPreviewTrackId] = useState(null);
-  const audioOn = audioUnlocked;
+  const [quickMuted, setQuickMuted] = useState(false);
+  const audioOn = audioUnlocked && !quickMuted;
   const setSeVolumeRaw = nv => {
     setSeVolumeState(nv);
     storeSet('mh_se_volume', nv, false);
@@ -4209,29 +4213,22 @@ function MonsterHeroGame() {
   const changeSeVolume = v => {
     const nv = Math.max(0, Math.min(100, v));
     setSeVolumeRaw(nv);
+    setQuickMuted(false);
     if (!audioUnlocked) setAudioUnlocked(true);
     Audio_.unlock(true);
   };
   const changeBgmVolume = v => {
     const nv = Math.max(0, Math.min(100, v));
     setBgmVolumeRaw(nv);
+    setQuickMuted(false);
     if (!audioUnlocked) setAudioUnlocked(true);
     Audio_.unlock(true);
   };
-  const audioMuted = !audioOn || seVolume === 0 && bgmVolume === 0;
-  // ミュート解除時に設定する音量。以前は「ミュート直前の音量」に戻していたが、
-  // いきなり大きな音が鳴って驚くため、必ず最小値の1から始めてスライダーで
-  // 好みの大きさまで上げてもらう方式にした(設定パネル・バトル画面どちらのボタンでも同じ)
-  const UNMUTE_VOLUME = DEFAULT_VOLUME;
+  const audioMuted = !audioOn;
   // バトル画面などスペースが限られる場所向けの1タップミュート切替(詳細な音量調整は設定パネルのスライダーで行う)
   const toggleQuickMute = () => {
-    if (audioMuted) {
-      changeSeVolume(UNMUTE_VOLUME);
-      changeBgmVolume(UNMUTE_VOLUME);
-    } else {
-      changeSeVolume(0);
-      changeBgmVolume(0);
-    }
+    if (quickMuted) Audio_.unlock();else Audio_.setEnabled(false);
+    setQuickMuted(current => !current);
   };
   const closeBgmArrangement = () => {
     Audio_.stopPreview();
@@ -4617,19 +4614,19 @@ function MonsterHeroGame() {
     // ミッション画面でもHOMEの曲を続ける
     BATTLE_MENU: 'enhance',
     // 難易度・ランキング(モンスター選択と同じ曲)
-    FORMATION_MENU: 'profile',
+    FORMATION_MENU: 'management',
     // 編成メニュー
-    MONSTER_LIST_MENU: 'profile',
+    MONSTER_LIST_MENU: 'management',
     // モンスター一覧メニュー
-    MB_MANAGEMENT: 'profile',
+    MB_MANAGEMENT: 'management',
     // M/B管理はモンスター一覧・編成と同じ曲を続ける
-    TEMPLE: 'fusion',
+    TEMPLE: 'temple',
     // 神殿は合体と同じ曲を続ける
-    MASU_FUSION: 'fusion',
+    MASU_FUSION: 'temple',
     // 合体ページ
-    MASU_DONATION: 'fusion',
+    MASU_DONATION: 'temple',
     // 寄付ページも神殿の曲を続ける
-    MASU_REBIRTH: 'fusion',
+    MASU_REBIRTH: 'temple',
     // 転生ページも神殿の曲を継続する
     BREEDER_MARKET: 'market' // マーケットページ
   };
@@ -4646,8 +4643,8 @@ function MonsterHeroGame() {
     if (isGameOver) return 'gameOver';
     if (!debugBattleRef.current && wave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) return bgmArrangement.clear;
     if (state === 'HOME' || state === 'PROFILE') return bgmArrangement.home;
-    if (BGM_STATE_MAP[state]) return BGM_STATE_MAP[state] === 'home' ? bgmArrangement.home : BGM_STATE_MAP[state];
-    if (PROFILE_BGM_STATES.includes(state)) return 'profile';
+    if (BGM_STATE_MAP[state]) return bgmArrangement[BGM_STATE_MAP[state]] || BGM_STATE_MAP[state];
+    if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;
     if (state === 'BATTLE') return isDullahan ? 'dullahan' : isBoss ? bgmArrangement.boss : bgmArrangement.battle;
     if (RUN_PHASE_STATES.includes(state)) return wavesDone ? 'result' : 'enhance';
     return null;
@@ -8736,7 +8733,7 @@ function MonsterHeroGame() {
     size: 18
   }))), /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
-  }, [['home', 'HOME BGM'], ['battle', '通常バトルBGM'], ['boss', 'ボスバトルBGM'], ['clear', 'ゲームクリアBGM']].map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
+  }, [['home', 'HOME BGM'], ['management', 'M/B管理 BGM'], ['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['battle', '通常バトル BGM'], ['boss', 'ボスバトル BGM'], ['clear', 'ゲームクリア BGM']].map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
     key: scene,
     className: "block text-left"
   }, /*#__PURE__*/React.createElement("span", {
