@@ -17,6 +17,14 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-29 18:24",
+    type: "update",
+    title: "ヘルプ内容を更新",
+    items: [
+      "現在のゲームシステムに合わせてヘルプ内容を更新しました",
+    ],
+  },
+  {
     date: "2026-07-29 18:12",
     type: "update",
     title: "HOME表示とタイトルBGMを調整",
