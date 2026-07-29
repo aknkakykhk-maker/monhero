@@ -10,6 +10,8 @@ check('現在地追従と全体マップ切替',/scrollIntoView/.test(source)&&/
 check('盤面上に選択マスモンのコマ',/mh-training-piece/.test(source)&&/trainingPieceRef/.test(source));
 check('全13種の停止効果', ['xp30','xp60','gem50','gem100','item','tool','forward','back','turnPlus','turnMinus','boost','again','happening','goal'].every(k=>source.includes(`${k}:`)));
 check('全7種の修行道具と上限処理', ['feather','gale','reroll','noReturn','sand','fixed','returnCharm'].every(k=>source.includes(`${k}:`))&&/所持上限（3個）/.test(source));
+check('振り直しは出目確定後・移動前に選択可能',/rollPending:false/.test(source)&&/acceptTrainingRoll/.test(source)&&/出目確定後、移動前のみ使用可能/.test(source)&&/この出目で進む/.test(source));
+check('道具の方式・使用不可理由・自動待機を表示',/mode:'消費型'/.test(source)&&/mode:'自動発動型'/.test(source)&&/今は使えません/.test(source)&&/待機中/.test(source));
 check('成功失敗計算は表示のみ',/settleTrainingRewards/.test(source)&&/所持データには反映されません/.test(source)&&!/storeSet\(TRAINING_SAVE_KEY/.test(source));
 check('BGM2場面とSE9種',/trainingMenu:'original_home'/.test(source)&&/trainingBoard:'original_home'/.test(source)&&['trainingDice','trainingMove','trainingDecide','trainingReward','trainingGood','trainingBad','trainingTool','trainingGoal','trainingFail'].every(k=>source.includes(`${k}: async`)));
 check('折りたたみDEBUG操作',/mh-training-debug/.test(source)&&/強制成功/.test(source)&&/強制失敗/.test(source)&&/seed:/.test(source));process.exit(failed?1:0);
