@@ -42,7 +42,8 @@ const _ICON_PATHS = {
   Coins: '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>',
   ShoppingBag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
   Gem: '<path d="M6 3h12l4 6-10 12L2 9Z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/>',
-  Package: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/>'
+  Package: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/>',
+  Settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.14.37.35.7.6 1 .3.28.68.42 1.1.4h.1v4h-.1A1.7 1.7 0 0 0 19.4 15Z"/>'
 };
 const _icon = (name) => (props) => {
   props = props || {};
@@ -56,12 +57,12 @@ const _icon = (name) => (props) => {
     dangerouslySetInnerHTML:{ __html: inner }
   });
 };
-const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag'), Gem=_icon('Gem'), Package=_icon('Package');
+const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon('Shield'), X=_icon('X'), Award=_icon('Award'), Skull=_icon('Skull'), PlusCircle=_icon('PlusCircle'), Target=_icon('Target'), ShieldCheck=_icon('ShieldCheck'), Trophy=_icon('Trophy'), Timer=_icon('Timer'), Play=_icon('Play'), Sparkles=_icon('Sparkles'), Activity=_icon('Activity'), ChevronRight=_icon('ChevronRight'), Crown=_icon('Crown'), Edit3=_icon('Edit3'), ArrowLeft=_icon('ArrowLeft'), Search=_icon('Search'), Layers=_icon('Layers'), AlertCircle=_icon('AlertCircle'), Flag=_icon('Flag'), RotateCcw=_icon('RotateCcw'), MinusCircle=_icon('MinusCircle'), Star=_icon('Star'), Users=_icon('Users'), User=_icon('User'), Check=_icon('Check'), HelpCircle=_icon('HelpCircle'), BookOpen=_icon('BookOpen'), Info=_icon('Info'), RefreshCcw=_icon('RefreshCcw'), ArrowDownCircle=_icon('ArrowDownCircle'), Coins=_icon('Coins'), ShoppingBag=_icon('ShoppingBag'), Gem=_icon('Gem'), Package=_icon('Package'), Settings=_icon('Settings');
 
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 09:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 09:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1421,11 +1422,20 @@ function MonsterHeroGame() {
   const [attemptCounts, setAttemptCounts] = useState({}); // 難易度別 挑戦回数(端末保存)
   const [clearCounts, setClearCounts] = useState({}); // 難易度別 クリア回数(端末保存)
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
-  // 起動時の事前ロード。'loading'=読み込み中 / 'ready'=読み込み完了・タップ待ち / 'done'=ゲーム表示
-  // ブラウザは「ユーザーが操作するまで音を鳴らしてはいけない」制限があるため、
-  // 読み込みが終わったところで1度タップしてもらい、その操作で音声のロックを解除する。
-  // これにより、タイトル画面が出たときには既にBGMが鳴っている状態にできる
+  // 起動時の事前ロード。'loading'=読み込み中 / 'ready'=タイトル / 'done'=トップ画面
+  // ブラウザの自動再生制限のため、タイトル画面内の最初の操作で音声を解除する。
   const [bootPhase, setBootPhase] = useState('loading');
+  const [titleStarting, setTitleStarting] = useState(false);
+  const [showTitleSettings, setShowTitleSettings] = useState(false);
+  const [titlePlayerId] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem('mh_player_id');
+      if (saved) return saved;
+      const id = `MH-${Math.random().toString(36).slice(2,6).toUpperCase()}-${Date.now().toString(36).slice(-4).toUpperCase()}`;
+      window.localStorage.setItem('mh_player_id', id);
+      return id;
+    } catch { return 'MH-LOCAL'; }
+  });
   const [dataLoaded, setDataLoaded] = useState(false); // 端末に保存したセーブデータの読み込みが終わったか
   const [bootProgress, setBootProgress] = useState({ done: 0, total: 1, label: 'システム起動中' });
   const [localRankings, setLocalRankings] = useState({});
@@ -2015,15 +2025,20 @@ function MonsterHeroGame() {
     return () => { cancelled = true; clearTimeout(hardStop); };
   }, [bootPhase, dataLoaded, masuMons]);
 
-  // 事前ロード後の「タップして開始」。この操作で音声のロックを解除し、BGMを鳴らし始める
+  // 別ページのハブで行った操作の user activation はこの Document へ引き継げない。
+  // そのためタイトル表示と同時の自動再生は行わず、この画面での最初の操作で解除する。
+  // TAP TO START の主役割は音声解除ではなく、決定演出後のトップ画面への遷移とする。
   const startGame = () => {
+    if (titleStarting) return;
     // このタップが「音を鳴らしてよい」唯一の合図なので、まずここで音声のロックを解除する
     Audio_.unlock();
     // 指を離したときのclickは、既に消えている起動画面ではなくトップ画面の要素に届く。
     // そこにボタンがあると誤って押されてしまうので、続く1回のclickは捨てる
     bootTapPending.current = true;
     setTimeout(() => { bootTapPending.current = false; }, 3000); // 指を離さなかった場合の保険
-    setBootPhase('done');
+    setTitleStarting(true);
+    Audio_.se.tap();
+    setTimeout(() => setBootPhase('done'), 620);
     // タイトルの曲は必ず鳴ってほしいので、少し時間を置いて本当に鳴っているか確かめ、
     // 鳴っていなければ鳴らし直す(読み込みが間に合わなかった場合の保険)
     [300, 1000, 2500].forEach(ms => setTimeout(() => Audio_.ensurePlaying('title'), ms));
@@ -4004,31 +4019,23 @@ function MonsterHeroGame() {
   </>);
 
 
-  // 起動時の事前ロード画面。読み込みが終わるまでゲーム本体は表示しない。
-  // 読み込み完了後の1タップで音声のロックを解除するので、タイトルが出た時点でBGMが鳴っている
-  if (bootPhase !== 'done') {
+  // 起動時の事前ロード画面。読み込みが終わるまでタイトルは表示しない。
+  if (bootPhase === 'loading') {
     const pct = Math.round((bootProgress.done / Math.max(1, bootProgress.total)) * 100);
-    const ready = bootPhase === 'ready';
     return (
-      <div onPointerDown={ready ? startGame : undefined} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans flex flex-col items-center justify-center p-8" style={{height:'100%'}}>
+      <div className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans flex flex-col items-center justify-center p-8" style={{height:'100%'}}>
         <div className="absolute inset-0" style={{background:'radial-gradient(circle at 50% 35%, rgba(168,85,247,0.35) 0%, rgba(2,6,23,0) 60%)'}}></div>
         <div className="relative z-10 flex flex-col items-center w-full max-w-xs">
           <h1 className="text-4xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-purple-200 to-purple-500 leading-none uppercase whitespace-nowrap drop-shadow-[0_4px_16px_rgba(0,0,0,1)]">Monster Hero</h1>
           <p className="text-purple-300 text-[9px] tracking-[0.4em] uppercase font-bold mt-2">Grand Champion Quest</p>
           <div className="w-full mt-10">
             <div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-indigo-400/30">
-              <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-400 to-pink-400 transition-all duration-300" style={{width:`${ready?100:pct}%`}}></div>
+              <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-400 to-pink-400 transition-all duration-300" style={{width:`${pct}%`}}></div>
             </div>
             <div className="text-[10px] text-indigo-300 font-bold text-center mt-3 tracking-wider">
-              {ready ? 'ALL SYSTEMS READY' : bootProgress.label}
+              {bootProgress.label}
             </div>
           </div>
-          {ready&&(
-            <div className="mt-8 flex flex-col items-center gap-2">
-              <button onClick={startGame} className="px-8 py-3.5 rounded-2xl bg-white text-black font-black text-base uppercase tracking-wider shadow-2xl active:scale-95 animate-pulse">TAP TO START</button>
-              <div className="text-[9px] text-slate-500 font-bold">タップするとBGMが流れます</div>
-            </div>
-          )}
         </div>
         <div className="absolute bottom-4 text-[8px] text-slate-700 font-mono tracking-widest">ver {BUILD_DATE}</div>
       </div>
@@ -4045,6 +4052,49 @@ function MonsterHeroGame() {
       {updateAvailable&&(
         <div className="fixed left-0 right-0 flex justify-center px-4" style={{position:'fixed',top:'calc(10px + env(safe-area-inset-top))',left:0,right:0,zIndex:2147483647,pointerEvents:'none'}}>
           <button onClick={()=>window.location.reload()} className="bg-emerald-500 text-black font-black text-[11px] px-4 py-2.5 rounded-full shadow-2xl active:scale-95 flex items-center gap-1.5 animate-pulse" style={{pointerEvents:'auto'}}><RefreshCcw size={12}/>新しいバージョンがあります。タップして更新</button>
+        </div>
+      )}
+      {bootPhase==='ready'&&(
+        <div className={`mh-title-gate ${titleStarting?'is-starting':''}`} aria-label="Monster Hero タイトル画面">
+          <div className="mh-title-sky"></div>
+          <div className="mh-title-light"></div>
+          <div className="mh-title-cloud mh-title-cloud-a"></div>
+          <div className="mh-title-cloud mh-title-cloud-b"></div>
+          <div className="mh-title-lightning mh-title-lightning-a"></div>
+          <div className="mh-title-lightning mh-title-lightning-b"></div>
+          <div className="mh-title-embers" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          <div className="mh-title-moo">
+            {MOO_FULL&&<img src={MOO_FULL} alt="ムー"/>}
+            <span className="mh-title-eye-glow"></span>
+          </div>
+          <header className="mh-title-header">
+            <div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div>
+            <div className="mh-title-actions">
+              <button onClick={openChangelog} aria-label="お知らせ" className="relative"><Sparkles size={19}/><span>お知らせ</span>{hasUnreadChangelog&&<em>NEW</em>}</button>
+              <button onClick={()=>setShowTitleSettings(true)} aria-label="設定"><Settings size={19}/><span>設定</span></button>
+            </div>
+          </header>
+          <div className="mh-title-logo" aria-label="MONSTER HERO GRAND CHAMPION QUEST">
+            <div className="mh-title-logo-main">MONSTER <strong>HERO</strong></div>
+            <div className="mh-title-logo-sub"><span>GRAND CHAMPION QUEST</span></div>
+          </div>
+          <div className="mh-title-heroes" aria-hidden="true">
+            {ALL_PLAYER_MONSTERS.Mocchi?.imgUrl&&<img className="mh-title-mocchi" src={ALL_PLAYER_MONSTERS.Mocchi.imgUrl} alt=""/>}
+            {ALL_PLAYER_MONSTERS.Suezo?.imgUrl&&<img className="mh-title-suezo" src={ALL_PLAYER_MONSTERS.Suezo.imgUrl} alt=""/>}
+          </div>
+          <button className="mh-title-start" onClick={startGame}>TAP TO START</button>
+          <div className="mh-title-flash"></div>
+        </div>
+      )}
+      {showTitleSettings&&(
+        <div className="fixed inset-0 flex items-center justify-center p-6" style={{zIndex:98000,background:'rgba(3,2,12,.9)'}}>
+          <div className="w-full max-w-sm rounded-3xl border border-violet-300/30 bg-slate-950/95 p-5 shadow-2xl">
+            <div className="flex items-center justify-between mb-5"><div><div className="text-[9px] tracking-[.3em] text-violet-300">SYSTEM</div><h3 className="text-xl font-black text-white">設定</h3></div><button onClick={()=>setShowTitleSettings(false)} className="p-2 rounded-full bg-white/10"><X size={18}/></button></div>
+            <div className="space-y-3">
+              <button onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true);}} className="w-full flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left active:scale-[.98]"><span className="text-2xl">🔊</span><span className="flex-1"><b className="block text-sm">音量設定</b><small className="text-slate-400">BGM・SEの音量</small></span><ChevronRight size={18}/></button>
+              <button onClick={()=>{setShowTitleSettings(false);setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}} className="w-full flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left active:scale-[.98]"><ShieldCheck size={24} className="text-emerald-300"/><span className="flex-1"><b className="block text-sm">データ引き継ぎ</b><small className="text-slate-400">バックアップ・復元</small></span><ChevronRight size={18}/></button>
+            </div>
+          </div>
         </div>
       )}
       <div className="relative z-10 h-full flex flex-col" style={screenShake?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
@@ -6646,7 +6696,36 @@ const createAnimationStyle = () => {
     .mh-scroll::-webkit-scrollbar { width: 6px; }
     .mh-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 9999px; }
     .mh-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 9999px; }
-    .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }`;
+    .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
+    .mh-title-gate { position:fixed; inset:0; z-index:70000; overflow:hidden; color:#fff; background:#080415; isolation:isolate; animation:titleReveal 1.1s ease-out both; }
+    .mh-title-sky { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 18%,#7135a8 0,#291349 34%,#10091f 63%,#03030a 100%); }
+    .mh-title-light { position:absolute; inset:-20%; opacity:.32; background:conic-gradient(from 190deg at 50% 18%,transparent 0 22%,#bd72ff 25%,transparent 29% 61%,#6d2ccc 64%,transparent 68%); filter:blur(22px); animation:titleLightFlow 14s ease-in-out infinite alternate; }
+    .mh-title-cloud { position:absolute; width:90%; height:18%; border-radius:50%; background:rgba(31,22,48,.68); filter:blur(18px); }
+    .mh-title-cloud-a { top:23%; left:-30%; transform:rotate(8deg); }
+    .mh-title-cloud-b { top:38%; right:-35%; transform:rotate(-10deg); opacity:.7; }
+    .mh-title-lightning { position:absolute; top:5%; width:3px; height:31%; opacity:0; background:#eadcff; box-shadow:0 0 8px #fff,0 0 25px #a855f7; clip-path:polygon(30% 0,100% 0,55% 42%,100% 42%,0 100%,35% 52%,0 52%); animation:titleLightning 7s steps(1,end) infinite; }
+    .mh-title-lightning-a { left:12%; transform:rotate(12deg); }.mh-title-lightning-b { right:13%; transform:rotate(-14deg); animation-delay:3.7s; }
+    .mh-title-moo { position:absolute; z-index:2; top:-6%; left:50%; width:min(150vw,720px); height:59%; transform:translateX(-50%); transform-origin:50% 25%; animation:titleMooBreath 6s ease-in-out infinite; }
+    .mh-title-moo img { width:100%; height:100%; object-fit:contain; object-position:50% 0; filter:drop-shadow(0 16px 28px #05020a) drop-shadow(0 0 20px rgba(192,100,255,.55)); }
+    .mh-title-eye-glow { position:absolute; left:50%; top:29%; width:22%; height:7%; transform:translateX(-50%); border-radius:50%; background:rgba(225,190,255,.22); filter:blur(10px); animation:titleEyes 3.4s ease-in-out infinite; }
+    .mh-title-header { position:absolute; z-index:20; top:0; left:0; right:0; padding:calc(12px + env(safe-area-inset-top)) 13px 0; display:flex; justify-content:space-between; align-items:flex-start; text-shadow:0 2px 5px #000; }
+    .mh-title-build { display:grid; grid-template-columns:auto; text-align:left; font-family:monospace; line-height:1.2; }.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#d8c6f2}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mh-title-actions { display:flex; gap:9px; }.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:48px;color:#fff;font-size:8px;font-weight:800;text-shadow:0 2px 5px #000}.mh-title-actions button svg{filter:drop-shadow(0 0 5px #b46cff)}.mh-title-actions em{position:absolute;right:-2px;top:-7px;background:#ef3340;border-radius:8px;padding:2px 4px;font-size:6px;font-style:normal}
+    .mh-title-logo { position:absolute; z-index:8; left:50%; top:43%; transform:translate(-50%,-50%); width:94%; text-align:center; animation:titleLogoIn 1.35s .25s cubic-bezier(.2,.8,.2,1) both; }
+    .mh-title-logo-main { display:inline-block; padding:4px 11px 7px; color:#d8c8f5; font-family:Impact,'Arial Black',sans-serif; font-style:italic; font-size:clamp(38px,11.5vw,63px); line-height:.9; letter-spacing:-.055em; -webkit-text-stroke:1px #120b1c; text-shadow:0 2px 0 #fff,0 5px 0 #30223d,0 8px 0 #b88724,0 12px 22px #000,0 0 18px #8a43d5; white-space:nowrap; }.mh-title-logo-main strong{color:#b177db;text-shadow:0 2px 0 #f4ddff,0 5px 0 #271631,0 8px 0 #c79b36,0 12px 22px #000,0 0 24px #ad55f5}
+    .mh-title-logo-sub { margin:10px auto 0; display:flex; align-items:center; gap:8px; max-width:280px; color:#f3d785; font-size:9px; font-weight:900; letter-spacing:.28em; text-shadow:0 2px 5px #000; white-space:nowrap; }.mh-title-logo-sub:before,.mh-title-logo-sub:after{content:'';height:1px;flex:1;background:linear-gradient(90deg,transparent,#ddbd58)}.mh-title-logo-sub:after{transform:scaleX(-1)}
+    .mh-title-heroes { position:absolute; z-index:6; inset:auto 0 7% 0; height:39%; pointer-events:none; }.mh-title-heroes img{position:absolute;bottom:0;object-fit:contain;filter:drop-shadow(0 10px 15px #000) drop-shadow(0 0 9px rgba(132,87,210,.4))}.mh-title-mocchi{left:-7%;width:64%;height:100%;transform:rotate(7deg)}.mh-title-suezo{right:-8%;width:59%;height:95%;transform:scaleX(-1) rotate(5deg)}
+    .mh-title-embers { position:absolute; z-index:7; inset:55% 0 0; pointer-events:none; }.mh-title-embers i{position:absolute;width:3px;height:3px;border-radius:50%;background:#ffbd59;box-shadow:0 0 8px #ff7028;animation:titleEmber 6s linear infinite}.mh-title-embers i:nth-child(1){left:10%;bottom:5%}.mh-title-embers i:nth-child(2){left:29%;bottom:-5%;animation-delay:-3s}.mh-title-embers i:nth-child(3){left:53%;bottom:2%;animation-delay:-1s}.mh-title-embers i:nth-child(4){left:75%;bottom:-8%;animation-delay:-4s}.mh-title-embers i:nth-child(5){left:91%;bottom:8%;animation-delay:-2s}
+    .mh-title-start { position:absolute; z-index:20; left:50%; bottom:calc(19px + env(safe-area-inset-bottom)); transform:translateX(-50%); color:#fff; font-size:14px; font-weight:900; letter-spacing:.34em; white-space:nowrap; text-shadow:0 0 8px #fff,0 0 18px #8a4ddb,0 3px 8px #000; animation:titleStartPulse 2.2s ease-in-out infinite; padding:12px 18px; }
+    .mh-title-flash { position:absolute; z-index:50; inset:0; pointer-events:none; background:#fff; opacity:0; }.mh-title-gate.is-starting{animation:titleGateOut .62s ease-in forwards}.mh-title-gate.is-starting .mh-title-flash{animation:titleFlash .62s ease-out forwards}
+    @keyframes titleReveal{from{opacity:0}to{opacity:1}}@keyframes titleLogoIn{from{opacity:0;transform:translate(-50%,-45%) scale(.9)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+    @keyframes titleMooBreath{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.025)}}@keyframes titleEyes{0%,100%{opacity:.28}50%{opacity:.8}}
+    @keyframes titleLightFlow{to{transform:translateX(7%) rotate(4deg)}}@keyframes titleLightning{0%,88%,91%,94%,100%{opacity:0}89%,92%{opacity:.85}90%,93%{opacity:.2}}
+    @keyframes titleStartPulse{0%,100%{opacity:.38}50%{opacity:1}}@keyframes titleEmber{from{transform:translateY(0);opacity:0}15%{opacity:.8}to{transform:translate(20px,-48vh);opacity:0}}
+    @keyframes titleFlash{0%{opacity:0}25%{opacity:.75}100%{opacity:0}}@keyframes titleGateOut{0%,30%{opacity:1}100%{opacity:0}}
+    @media (prefers-reduced-motion:reduce){.mh-title-gate *{animation-duration:.001ms!important;animation-iteration-count:1!important}.mh-title-start{opacity:1}}
+    @media (max-height:620px){.mh-title-moo{height:54%}.mh-title-logo{top:41%}.mh-title-heroes{height:37%;bottom:7%}.mh-title-logo-main{font-size:38px}}
+    `;
   document.head.appendChild(style);
 };
 createAnimationStyle();
