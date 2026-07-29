@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1fcb11cf2e336a1e
+// source-sha256: ae03475b6cc97514
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 20:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 22:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2646,6 +2646,138 @@ const CHANGELOG_STATUS = {
 // 音量の既定値。初期状態は「音がオン」で、いきなり大きな音が鳴らないよう最小の1から始める
 // (ミュートを解除したときの音量もこの値に合わせている)
 const DEFAULT_VOLUME = 1;
+const LOGIN_BONUS_REWARDS = [[{
+  type: 'diamond',
+  amount: 500
+}], [{
+  type: 'dyeMock',
+  amount: 1
+}], [{
+  type: 'diamond',
+  amount: 1000
+}], [{
+  type: 'breederPoint',
+  amount: 100
+}], [{
+  type: 'dyeMock',
+  amount: 1
+}], [{
+  type: 'diamond',
+  amount: 2000
+}], [{
+  type: 'bondPointReset',
+  amount: 1
+}]];
+const GIFT_REWARD_LABELS = {
+  diamond: 'ダイヤ',
+  breederPoint: 'ブリーダーポイント',
+  dyeMock: '染色もどき',
+  bondPointReset: '絆ポイントリセットアイテム'
+};
+const LOGIN_BONUS_DEFAULT = {
+  currentDay: 1,
+  lastGrantedPeriod: null,
+  totalLoginDays: 0
+};
+// 日本時間へ直した後に4時間戻した暦日を期間キーにする。03:59と04:00は別の日、
+// 04:00から翌03:59までは同じ日として扱える、比較・保存しやすい YYYY-MM-DD 形式。
+const loginBonusPeriodKey = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const normalizeLoginBonus = value => ({
+  currentDay: Number.isInteger(value?.currentDay) && value.currentDay >= 1 && value.currentDay <= 7 ? value.currentDay : 1,
+  lastGrantedPeriod: typeof value?.lastGrantedPeriod === 'string' ? value.lastGrantedPeriod : null,
+  totalLoginDays: Math.max(0, Math.floor(Number(value?.totalLoginDays) || 0))
+});
+const grantLoginBonus = (loginBonus, gifts, now = Date.now()) => {
+  const state = normalizeLoginBonus(loginBonus);
+  const period = loginBonusPeriodKey(now);
+  // 同一期間に加え、端末時計が前回より過去へ戻った場合も配布しない。
+  if (state.lastGrantedPeriod && period <= state.lastGrantedPeriod) return {
+    granted: false,
+    loginBonus: state,
+    gifts: Array.isArray(gifts) ? gifts : []
+  };
+  const day = state.currentDay;
+  const createdAt = new Date(now).toISOString();
+  const gift = {
+    id: `gift_login_${period}`,
+    source: 'loginBonus',
+    title: `ログインボーナス ${day}日目`,
+    description: 'ログインボーナスです。',
+    rewards: LOGIN_BONUS_REWARDS[day - 1].map(r => ({
+      ...r
+    })),
+    createdAt,
+    expiresAt: new Date(Number(now) + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    claimedAt: null
+  };
+  const list = Array.isArray(gifts) ? gifts : [];
+  // 期間由来の固定IDでも重複を防ぐ。既に存在する場合は進捗だけを勝手に進めない。
+  if (list.some(item => item?.id === gift.id)) return {
+    granted: false,
+    loginBonus: {
+      ...state,
+      lastGrantedPeriod: period
+    },
+    gifts: list
+  };
+  return {
+    granted: true,
+    day,
+    gift,
+    gifts: [gift, ...list],
+    loginBonus: {
+      currentDay: day === 7 ? 1 : day + 1,
+      lastGrantedPeriod: period,
+      totalLoginDays: state.totalLoginDays + 1
+    }
+  };
+};
+const normalizeGiftRewards = gift => {
+  if (!gift || !Array.isArray(gift.rewards) || gift.rewards.length === 0) return null;
+  const supported = Object.keys(GIFT_REWARD_LABELS);
+  const rewards = gift.rewards.map(r => ({
+    type: r?.type,
+    amount: Math.floor(Number(r?.amount))
+  }));
+  return rewards.every(r => supported.includes(r.type) && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
+};
+const giftIsExpired = (gift, now = Date.now()) => !gift?.expiresAt || !Number.isFinite(Date.parse(gift.expiresAt)) || Date.parse(gift.expiresAt) <= Number(now);
+const buildGiftClaim = (gift, balances, now = Date.now()) => {
+  if (!gift || gift.claimedAt || giftIsExpired(gift, now)) return {
+    ok: false,
+    reason: gift?.claimedAt ? 'claimed' : 'expired'
+  };
+  const rewards = normalizeGiftRewards(gift);
+  if (!rewards) return {
+    ok: false,
+    reason: 'invalidReward'
+  };
+  const next = {
+    gold: Math.max(0, Number(balances?.gold) || 0),
+    breederPoints: Math.max(0, Number(balances?.breederPoints) || 0),
+    ownedItems: {
+      ...(balances?.ownedItems || {})
+    }
+  };
+  rewards.forEach(({
+    type,
+    amount
+  }) => {
+    if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else {
+      const id = type === 'dyeMock' ? 'dye_mock' : 'bond_reset_scroll';
+      next.ownedItems[id] = (next.ownedItems[id] || 0) + amount;
+    }
+  });
+  return {
+    ok: true,
+    balances: next,
+    gift: {
+      ...gift,
+      claimedAt: new Date(now).toISOString()
+    }
+  };
+};
+const giftRewardText = reward => `${GIFT_REWARD_LABELS[reward.type] || reward.type} ×${Number(reward.amount).toLocaleString()}`;
 const STAT_POINT_GAIN = {
   hp: 10,
   atk: 3,
@@ -3581,6 +3713,10 @@ function MonsterHeroGame() {
   //   distApt:[g0,g1,g2,g3](このマスモン専用の間合い適性), statPoints:{hp,atk,def,guts}, color(染色もどきで変えた色id、無ければnull), createdAt }
   const [masuMons, setMasuMons] = useState([]);
   const [ownedItems, setOwnedItems] = useState({}); // マーケットで買った消耗アイテムの所持数 { itemId: count } (端末保存)
+  const [gifts, setGifts] = useState([]);
+  const [giftTab, setGiftTab] = useState('unclaimed');
+  const [loginBonusPopup, setLoginBonusPopup] = useState(null);
+  const giftClaimingRef = useRef(false);
   const [pendingItemUse, setPendingItemUse] = useState(null); // アイテム欄で「使う」を押した後、対象のマスモンを選ぶ画面用(itemId)
   const [xpTicketUse, setXpTicketUse] = useState(null); // 絆経験値チケットをまとめて使う画面用 {itemId, masuId, count}
   const [dyeTargetMasuId, setDyeTargetMasuId] = useState(null); // 染色もどき: 対象に選んだマスモンid(色選択モーダル表示のトリガー)
@@ -4649,6 +4785,18 @@ function MonsterHeroGame() {
       setOwnedMarketIcons(savedMarketIcons);
       const savedOwnedItems = await storeGet('mh_owned_items', {}, false);
       setOwnedItems(savedOwnedItems);
+      const savedGifts = await storeGet('mh_gifts', [], false);
+      const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
+      const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
+      setGifts(loginGrant.gifts);
+      await storeSet('mh_login_bonus', loginGrant.loginBonus, false);
+      if (loginGrant.granted) {
+        await storeSet('mh_gifts', loginGrant.gifts, false);
+        setLoginBonusPopup({
+          day: loginGrant.day,
+          rewards: loginGrant.gift.rewards
+        });
+      }
       const savedUnlockedMonsters = await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false);
       setUnlockedMonsterIds(savedUnlockedMonsters);
       const savedMonsterRoster = await storeGet('mh_monster_roster', savedUnlockedMonsters, false);
@@ -6029,6 +6177,44 @@ function MonsterHeroGame() {
     setShowMasuRegisterModal(false);
     setMasuNameInput('');
     setGameState('HOME');
+  };
+  const claimGiftIds = async ids => {
+    if (giftClaimingRef.current) return;
+    giftClaimingRef.current = true;
+    try {
+      const wanted = new Set(ids);
+      let balances = {
+        gold,
+        breederPoints,
+        ownedItems
+      };
+      let claimedCount = 0;
+      const now = Date.now();
+      const nextGifts = gifts.map(gift => {
+        if (!wanted.has(gift?.id)) return gift;
+        const result = buildGiftClaim(gift, balances, now);
+        if (!result.ok) return gift;
+        balances = result.balances;
+        claimedCount++;
+        return result.gift;
+      });
+      if (!claimedCount) return;
+      // 報酬検証を全件終えた確定値だけを保存し、画面stateも同じ値へ揃える。
+      await storeSet('mh_gold', balances.gold, false);
+      await storeSet('mh_breeder_points', balances.breederPoints, false);
+      await storeSet('mh_owned_items', balances.ownedItems, false);
+      await storeSet('mh_gifts', nextGifts, false);
+      setGold(balances.gold);
+      setBreederPoints(balances.breederPoints);
+      setOwnedItems(balances.ownedItems);
+      setGifts(nextGifts);
+    } finally {
+      giftClaimingRef.current = false;
+    }
+  };
+  const openGiftBox = () => {
+    setGiftTab('unclaimed');
+    setGameState('GIFT_BOX');
   };
   const returnToOfficialTitle = () => {
     returnToHome();
@@ -8303,6 +8489,11 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Sword, {
     size: 25
   }), "\u30D0\u30C8\u30EB", /*#__PURE__*/React.createElement("small", null, "\u95D8\u6280\u5834\u3078")))), /*#__PURE__*/React.createElement("button", {
+    onClick: openGiftBox,
+    className: "mh-home-gift"
+  }, /*#__PURE__*/React.createElement(Package, {
+    size: 16
+  }), "\u30AE\u30D5\u30C8", gifts.filter(g => !g?.claimedAt && !giftIsExpired(g)).length > 0 && /*#__PURE__*/React.createElement("em", null, gifts.filter(g => !g?.claimedAt && !giftIsExpired(g)).length)), /*#__PURE__*/React.createElement("button", {
     onClick: openChangelog,
     className: "mh-home-update"
   }, /*#__PURE__*/React.createElement(RefreshCcw, {
@@ -8310,7 +8501,115 @@ function MonsterHeroGame() {
   }), "\u66F4\u65B0\u5C65\u6B74", hasUnreadChangelog && /*#__PURE__*/React.createElement("em", {
     className: "mh-unread-badge",
     "aria-label": "\u672A\u8AAD\u3042\u308A"
-  }, "!"))), gameState === 'MB_MANAGEMENT' && /*#__PURE__*/React.createElement("div", {
+  }, "!"))), gameState === 'GIFT_BOX' && (() => {
+    const now = Date.now();
+    const unclaimed = gifts.filter(g => !g?.claimedAt);
+    const history = gifts.filter(g => g?.claimedAt);
+    const shown = giftTab === 'unclaimed' ? unclaimed : history;
+    const claimable = unclaimed.filter(g => !giftIsExpired(g, now) && normalizeGiftRewards(g));
+    return /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 flex flex-col h-full min-h-0 p-4",
+      style: {
+        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2 mb-3 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: returnToHome,
+      className: "p-3 text-slate-400 active:scale-90"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-xl font-black text-cyan-200 flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement(Package, {
+      size: 22
+    }), "\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9"), /*#__PURE__*/React.createElement("div", {
+      className: "w-11"
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2 mb-3 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setGiftTab('unclaimed'),
+      className: `min-h-[44px] rounded-xl font-black text-sm ${giftTab === 'unclaimed' ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-400'}`
+    }, "\u672A\u53D7\u53D6 (", unclaimed.filter(g => !giftIsExpired(g, now)).length, ")"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setGiftTab('history'),
+      className: `min-h-[44px] rounded-xl font-black text-sm ${giftTab === 'history' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400'}`
+    }, "\u53D7\u53D6\u6E08\u307F (", history.length, ")")), giftTab === 'unclaimed' && /*#__PURE__*/React.createElement("button", {
+      disabled: !claimable.length,
+      onClick: () => claimGiftIds(claimable.map(g => g.id)),
+      className: "shrink-0 mb-3 min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-black disabled:opacity-40"
+    }, "\u3059\u3079\u3066\u53D7\u3051\u53D6\u308B"), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-2"
+    }, shown.length === 0 ? /*#__PURE__*/React.createElement("div", {
+      className: "mt-16 text-center text-slate-500 font-bold"
+    }, giftTab === 'unclaimed' ? '未受取のギフトはありません' : '受取済みのギフトはありません') : shown.map(g => {
+      const expired = giftIsExpired(g, now);
+      const valid = !!normalizeGiftRewards(g);
+      return /*#__PURE__*/React.createElement("article", {
+        key: g.id,
+        className: `rounded-2xl border p-4 ${g.claimedAt ? 'bg-slate-900/70 border-slate-700' : expired ? 'bg-red-950/30 border-red-800/60' : 'bg-cyan-950/30 border-cyan-500/50'}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-start justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "font-black text-white break-words"
+      }, g.title || '名称なしギフト'), /*#__PURE__*/React.createElement("p", {
+        className: "text-[11px] text-slate-400 mt-1 break-words"
+      }, g.description || '')), /*#__PURE__*/React.createElement("span", {
+        className: `shrink-0 rounded-full px-2 py-1 text-[9px] font-black ${g.claimedAt ? 'bg-slate-700 text-slate-300' : expired ? 'bg-red-900 text-red-200' : valid ? 'bg-cyan-700 text-white' : 'bg-amber-900 text-amber-200'}`
+      }, g.claimedAt ? '受取済み' : expired ? '期限切れ' : valid ? '受取可能' : '確認が必要')), /*#__PURE__*/React.createElement("div", {
+        className: "my-3 space-y-1"
+      }, Array.isArray(g.rewards) && g.rewards.map((r, i) => /*#__PURE__*/React.createElement("div", {
+        key: i,
+        className: "rounded-lg bg-black/30 px-3 py-2 text-sm font-black text-amber-200 break-words"
+      }, giftRewardText(r)))), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-end justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] text-slate-500"
+      }, g.claimedAt ? `受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}` : `受取期限: ${g.expiresAt ? new Date(g.expiresAt).toLocaleString('ja-JP') : '期限情報なし'}`), !g.claimedAt && /*#__PURE__*/React.createElement("button", {
+        disabled: expired || !valid,
+        onClick: () => claimGiftIds([g.id]),
+        className: "shrink-0 min-h-[40px] px-5 rounded-xl bg-cyan-600 text-white text-sm font-black disabled:bg-slate-700 disabled:text-slate-500"
+      }, "\u53D7\u3051\u53D6\u308B")));
+    })));
+  })(), loginBonusPopup && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-center justify-center p-5",
+    style: {
+      zIndex: 60000,
+      backgroundColor: 'rgba(2,6,23,.88)'
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-sm rounded-3xl border-2 border-amber-300 bg-gradient-to-b from-indigo-950 to-slate-950 p-6 text-center shadow-2xl"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 46,
+    className: "mx-auto mb-3 text-amber-300"
+  }), /*#__PURE__*/React.createElement("h2", {
+    className: "text-2xl font-black text-amber-200"
+  }, "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("p", {
+    className: "mt-3 text-sm font-black text-white"
+  }, loginBonusPopup.day, "\u65E5\u76EE\u306E\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u3092\u7372\u5F97\u3057\u307E\u3057\u305F\uFF01"), /*#__PURE__*/React.createElement("div", {
+    className: "my-4 space-y-2"
+  }, loginBonusPopup.rewards.map((reward, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words"
+  }, giftRewardText(reward)))), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-300"
+  }, "\u5831\u916C\u306F\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9\u3078\u9001\u3089\u308C\u307E\u3057\u305F\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-5 grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setLoginBonusPopup(null);
+      openGiftBox();
+    },
+    className: "min-h-[48px] rounded-xl bg-cyan-600 px-2 text-sm font-black text-white"
+  }, "\u30AE\u30D5\u30C8\u3092\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setLoginBonusPopup(null),
+    className: "min-h-[48px] rounded-xl bg-slate-700 px-2 text-sm font-black text-white"
+  }, "\u9589\u3058\u308B")))), gameState === 'MB_MANAGEMENT' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full min-h-0 p-4",
     style: {
       paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -14920,7 +15219,7 @@ const createAnimationStyle = () => {
     .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:24%;right:24%;top:35%;bottom:30%;pointer-events:none}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:140px;height:140px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}}
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:24%;right:24%;top:35%;bottom:30%;pointer-events:none}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;left:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:140px;height:140px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
     .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
