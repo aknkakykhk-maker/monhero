@@ -47,6 +47,7 @@ cd tools && npm install
 | `node debug-battle-check.js` | 隠しデバッグ戦の敵データ再利用、通常記録からの分離、BGM・終了導線・フラグ解除を静的に確認する。 |
 | `node title-bgm-check.js` | iOS相当の自動再生制限を再現し、最初のタップだけでタイトルBGMが鳴るか、起動タップがトップ画面へ届いていないかを確認する。 |
 | `node difficulty-item-check.js` | 新難易度(Grand Master/Hell/Legend)の表示と色、絆経験値チケットのまとめ使いを確認する。 |
+| `node training-check.js` | 修行の難易度・参加券・24マスマップ・一時保存・道具・報酬・BGM/SE・二重確定防止を確認する。 |
 | `node tap-sound-trace.js` | 起動画面のタップからの出来事(イベント・再生・Web Audioの接続)を時系列で並べる。音まわりの調査用。 |
 | `node build.js` | **BUILD_DATE・version.json・更新履歴の最新日時を揃え、game-system.jsx を配信用JSへ変換して `monster-hero/game-system.compiled.js` を書き出す。改修したら必ず実行する。** |
 | `node build.js --check` | compiled が jsx と一致しているか確認する(古ければ終了コード1)。出荷前チェック用。 |

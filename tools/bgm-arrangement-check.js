@@ -11,9 +11,9 @@ for (const file of files) {
   const source = fs.readFileSync(path.join(ROOT, file), 'utf8');
   check(`${file}: 4曲のいちかトラックを登録`,
     ['ichika_home','ichika_battle','ichika_boss','ichika_clear'].every(id => source.includes(id)));
-  check(`${file}: 7場面のデフォルトを定義`,
+  check(`${file}: 9場面のデフォルトを定義`,
     /DEFAULT_BGM_ARRANGEMENT/.test(source) &&
-    [['home','original_home'],['management','original_profile'],['market','original_market'],['temple','original_fusion'],['battle','original_battle'],['boss','original_boss'],['clear','ichika_clear']]
+    [['home','original_home'],['management','original_profile'],['market','original_market'],['temple','original_fusion'],['trainingMenu','original_home'],['trainingBoard','original_home'],['battle','original_battle'],['boss','original_boss'],['clear','ichika_clear']]
       .every(([scene, track]) => new RegExp(`${scene}:\\s*['"]${track}`).test(source)));
   check(`${file}: 不正な保存IDを既定値へ正規化`, /normalizeBgmArrangement/.test(source) && /BGM_TRACK_BY_ID\[value/.test(source));
   check(`${file}: アレンジを専用キーへ保存`, /mh_bgm_arrangement/.test(source));

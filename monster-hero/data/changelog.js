@@ -17,7 +17,18 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-30 01:15",
+    date: "2026-07-30 01:50",
+    type: "update",
+    title: "新施設「修行」を追加",
+    items: [
+      "HOMEからマスモンを選び、10ターンのすごろくに挑むBEGINNER修行を追加しました",
+      "修行チケットを絆経験値アイテムから修行の参加券へ変更しました（価格・所持数は維持されます）",
+      "修行では分岐ルート、7種類の専用道具、成功・失敗に応じた絆経験値・ダイヤ・アイテム報酬を獲得できます",
+      "修行は途中状態を保存し、ページを再読み込みしても続きから再開できます",
+    ],
+  },
+  {
+    date: "2026-07-30 01:50",
     type: "update",
     title: "編成マスモンの絆経験値を緩和",
     items: [
@@ -25,7 +36,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 01:15",
+    date: "2026-07-30 01:50",
     type: "issue",
     status: "fixed",
     title: "敵ステータスのムー表示を修正",
@@ -34,7 +45,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 01:15",
+    date: "2026-07-30 01:50",
     type: "issue",
     status: "fixed",
     title: "デバッグのムー戦のBGMを修正",
@@ -43,7 +54,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 01:15",
+    date: "2026-07-30 01:50",
     type: "update",
     title: "HOMEの放牧設定を追加",
     items: [
@@ -54,7 +65,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 01:15",
+    date: "2026-07-30 01:50",
     type: "update",
     title: "HOMEとアイテム画面を調整",
     items: [
@@ -63,7 +74,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 01:15",
+    date: "2026-07-30 01:50",
     type: "update",
     title: "画面とBGMの使いやすさを改善",
     items: [
@@ -73,7 +84,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 01:15",
+    date: "2026-07-30 01:50",
     type: "issue",
     status: "fixed",
     title: "表示・音声・更新通知の不具合を修正",
