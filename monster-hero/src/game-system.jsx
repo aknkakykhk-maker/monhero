@@ -1700,6 +1700,9 @@ function MonsterHeroGame() {
   const [graveyard, setGraveyard] = useState([]);
   const [enemy, setEnemy] = useState(null);
   const [enemyDist, setEnemyDist] = useState(2);
+  // 勇者モンを配置した間合いを、最初のWAVE開始時の内部距離にも使用する。
+  // state更新直後にバトルへ進んでも取りこぼさないよう同期的なrefで保持する。
+  const initialBattleDistanceRef = useRef(2);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
   const [monSelection, setMonSelection] = useState([]);
@@ -1964,7 +1967,7 @@ function MonsterHeroGame() {
       const name = r.userName || '名無しのブリーダー';
       const lv = r.level || 0;
       const cur = byName.get(name);
-      if (!cur || lv > cur.level) byName.set(name, { userName: name, level: lv, icon: r.icon, hero: r.hero });
+      if (!cur || lv > cur.level) byName.set(name, { ...r, userName: name, level: lv });
     }));
     return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 50);
   }, [rankingPool]);
@@ -1979,7 +1982,7 @@ function MonsterHeroGame() {
         const key = (r.userName || '') + '\u0000' + (pm.name || '');
         const cur = byKey.get(key);
         if (!cur || pm.bondLevel > cur.bondLevel) {
-          byKey.set(key, { userName: r.userName || '名無しのブリーダー', monName: pm.name || '?', bondLevel: pm.bondLevel, imgUrl: pm.imgUrl, emoji: pm.emoji });
+          byKey.set(key, { ...r, userName: r.userName || '名無しのブリーダー', monName: pm.name || '?', bondLevel: pm.bondLevel, imgUrl: pm.imgUrl, emoji: pm.emoji });
         }
       });
     }));
@@ -4276,12 +4279,14 @@ function MonsterHeroGame() {
   // 100毎に自動で1段階上がる
   const computeGuardLevel = (defVal) => Math.max(0, Math.min(GUARD_EVOLUTION.length - 1, Math.floor((defVal || 0) / 100)));
 
-  const spawnEnemy = useCallback((w, forcedEnemyKey=null) => {
+  const spawnEnemy = useCallback((w, forcedEnemyKey=null, initialDistance=null) => {
     const enemyKey=forcedEnemyKey||ENEMY_SEQUENCE[w-1]; const base=ENEMY_DATA[enemyKey];
     if (!base) return null;
     let mod=DIFFICULTY_SETTINGS[difficulty]?.power||1.0;
     const newEnemy={...base,id:enemyKey,hp:Math.floor(base.baseHp*mod),maxHp:Math.floor(base.baseHp*mod),atk:Math.floor(base.baseAtk*mod)};
-    const dist=Math.floor(Math.random()*4);
+    const dist=Number.isInteger(initialDistance)&&initialDistance>=0&&initialDistance<RANGE_LABELS.length
+      ? initialDistance
+      : Math.floor(Math.random()*4);
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyIntent(getNextEnemyAction(newEnemy,dist));
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
@@ -4294,7 +4299,10 @@ function MonsterHeroGame() {
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey=null, heroForDeck=null) => {
     setWave(w);
     const currentSlots = s||slots;
-    const dist = spawnEnemy(w, forcedEnemyKey);
+    // 通常周回の初戦だけ、デッキ編成で勇者モンを置いた初期間合いから開始する。
+    // 敵の選択・以降のWAVEの距離決定は従来どおりランダムのまま維持する。
+    const selectedInitialDistance = w===1 && !forcedEnemyKey ? initialBattleDistanceRef.current : null;
+    const dist = spawnEnemy(w, forcedEnemyKey, selectedInitialDistance);
     if (dist === null) return;
     const nAtkL = computeAtkTier(currentSlots, dist);
     const nGrdL = computeGuardLevel(defVal!==undefined?defVal:def);
@@ -4343,6 +4351,7 @@ function MonsterHeroGame() {
     const isHero=!mainHero; const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; setSlots(nextSlots);
     if (!isHero) Audio_.se.join();
     if (isHero) {
+      initialBattleDistanceRef.current=slotIdx;
       const initialUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)};
       setOwnedUniques([initialUnique]); setMainHero(m); setMaxHp(m.baseHp); setHp(m.baseHp);
       setMaxGuts(m.baseGuts); setGuts(Math.floor(m.baseGuts*0.5)); setAtk(m.baseAtk); setDef(m.baseDef);
@@ -4545,6 +4554,42 @@ function MonsterHeroGame() {
       <footer>VERSION {BUILD_DATE}</footer><div className="mh-entry-flash"></div>
     </main>{updateNotice}</>
   );
+  // 3種類のランキングで共通の詳細カードを使い、画面再編前に表示していた
+  // 勇者モン・編成・各レベル・スコアを欠落させない。旧行は存在する列だけで安全に描画する。
+  const renderRankingEntry = (entry, index, kind) => {
+    const party = Array.isArray(entry?.party) ? entry.party.filter(Boolean) : [];
+    const heroName = entry?.hero || (kind==='bond' ? entry?.monName : null) || '勇者モン情報なし';
+    const heroMember = party.find(member => member?.name===entry?.hero) || party[0] || null;
+    const finiteNumber = value => value==null || value==='' ? null : (Number.isFinite(Number(value)) ? Number(value) : null);
+    const scoreValue = finiteNumber(entry?.score);
+    const breederLevelValue = finiteNumber(entry?.level);
+    const bondLevelValue = kind==='bond' ? finiteNumber(entry?.bondLevel) : finiteNumber(heroMember?.bondLevel);
+    const primaryValue = kind==='score'
+      ? (Number.isFinite(scoreValue) ? `${scoreValue.toLocaleString()} pt` : 'スコア情報なし')
+      : kind==='breeder'
+        ? (Number.isFinite(breederLevelValue) && breederLevelValue>0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLv情報なし')
+        : (Number.isFinite(bondLevelValue) && bondLevelValue>0 ? `絆Lv.${bondLevelValue}` : '絆Lv情報なし');
+    return (
+      <div key={`${kind}-${entry?.userName||'unknown'}-${index}`} className={`rounded-xl border p-2 ${index===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-[10px] shrink-0 ${index===0?'bg-amber-500 text-black':index===1?'bg-slate-300 text-black':index===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{index+1}</div>
+          {resolveIconUrl(entry?.icon)?<img src={resolveIconUrl(entry.icon)} alt="" className="w-7 h-7 rounded-full object-cover shrink-0"/>:<div className="w-7 h-7 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-[9px]">👤</div>}
+          <div className="flex-1 min-w-0"><div className="text-[11px] font-black text-white truncate">{entry?.userName||'名無しのブリーダー'}</div><div className="text-[8px] text-slate-400 truncate">{kind==='bond'&&entry?.monName ? `対象: ${entry.monName}` : heroName}</div></div>
+          <div className={`text-right text-[11px] font-black whitespace-nowrap ${kind==='bond'?'text-pink-300':'text-indigo-300'}`}>{primaryValue}</div>
+        </div>
+        <div className="mt-1.5 bg-black/40 rounded-lg p-1.5 border border-white/5">
+          <div className="flex items-center gap-1 min-w-0">
+            <Crown size={9} className="text-amber-400 shrink-0"/>
+            {heroMember?.imgUrl?<img src={heroMember.imgUrl} alt={heroName} className="w-7 h-7 object-contain shrink-0"/>:<span className="w-7 text-center shrink-0">{heroMember?.emoji||'❓'}</span>}
+            <span className="text-[10px] font-black text-white truncate">{heroName}</span>
+            <span className="ml-auto text-[8px] text-indigo-300 whitespace-nowrap">{Number.isFinite(breederLevelValue)&&breederLevelValue>0?`ブリーダーLv.${breederLevelValue}`:'ブリーダーLv情報なし'}</span>
+          </div>
+          {party.length>0?<div className="grid grid-cols-2 gap-x-1 gap-y-0.5 mt-1">{party.map((member, memberIndex)=><div key={memberIndex} className="flex items-center gap-0.5 min-w-0">{member?.imgUrl?<img src={member.imgUrl} alt="" className="w-5 h-5 object-contain shrink-0"/>:<span className="w-5 text-center text-[9px] shrink-0">{member?.emoji||'❓'}</span>}<span className="text-[8px] text-slate-300 truncate">{member?.name||'不明'}</span><span className="text-[7px] text-pink-300 shrink-0">{member?.bondLevel!=null?`絆Lv.${member.bondLevel}`:'絆Lv.-'}</span></div>)}</div>:<div className="mt-1 text-[8px] text-slate-500">編成情報なし（過去の記録）</div>}
+          <div className="mt-1 flex justify-between gap-2 text-[8px]"><span className="text-pink-300">{Number.isFinite(bondLevelValue)&&bondLevelValue>0?`モンスターの絆Lv.${bondLevelValue}`:'絆Lv情報なし'}</span><span className="text-slate-200 font-mono whitespace-nowrap">{Number.isFinite(scoreValue)?`スコア ${scoreValue.toLocaleString()} pt`:'スコア情報なし'}</span></div>
+        </div>
+      </div>
+    );
+  };
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
       <img className="mh-title-visual" src="data/images/title-screen-clean.PNG" alt="モンスターヒーロー グランドチャンピオンクエスト"/>
@@ -4643,17 +4688,17 @@ function MonsterHeroGame() {
         {gameState==='BATTLE_MENU'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-2 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
-            <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-4">
-            <div className="grid grid-cols-2 gap-3 mb-6 shrink-0 rounded-2xl bg-slate-900/60 p-1.5 border border-white/5">
-              <button onClick={()=>setBattleMenuTab('difficulty')} className={`min-h-[48px] rounded-xl font-black transition-all ${battleMenuTab==='difficulty'?'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]':'bg-slate-950/70 text-slate-400'}`}>難易度</button>
-              <button onClick={()=>{setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className={`min-h-[48px] rounded-xl font-black transition-all ${battleMenuTab==='ranking'?'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]':'bg-slate-950/70 text-slate-400'}`}>ランキング</button>
+            <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
+            <div className="grid grid-cols-2 gap-1.5 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-1 border border-white/5">
+              <button onClick={()=>setBattleMenuTab('difficulty')} className={`py-1.5 rounded-lg text-[11px] font-black transition-all ${battleMenuTab==='difficulty'?'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]':'bg-slate-950/70 text-slate-400'}`}>難易度</button>
+              <button onClick={()=>{setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className={`py-1.5 rounded-lg text-[11px] font-black transition-all ${battleMenuTab==='ranking'?'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]':'bg-slate-950/70 text-slate-400'}`}>ランキング</button>
             </div>
-            {battleMenuTab==='difficulty'&&<div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-1"><div className="grid grid-cols-3 gap-x-2.5 gap-y-3">{Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=><button key={key} onClick={()=>setDifficulty(key)} className={`min-h-[62px] rounded-2xl text-[10px] font-black uppercase transition-all ${difficulty===key?'ring-2 ring-white scale-[1.03] shadow-[0_0_20px_rgba(255,255,255,0.3)]':'border border-white/10 opacity-90'}`} style={difficultyStyle(setting,difficulty===key)}>{setting.label}</button>)}</div><button onClick={()=>{debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setGameState('PICK_HERO');}} className="w-full mt-7 min-h-[58px] bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500 text-white py-4 rounded-2xl font-black text-lg tracking-wide border border-indigo-300/60 shadow-[0_8px_28px_rgba(79,70,229,0.45)] active:scale-95">モンスター選択へ</button></div>}
+            {battleMenuTab==='difficulty'&&<div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-1"><div className="grid grid-cols-3 gap-1.5">{Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=><button key={key} onClick={()=>setDifficulty(key)} className={`py-2 rounded-xl text-[9px] font-black uppercase transition-all ${difficulty===key?'ring-2 ring-white scale-[1.02] shadow-[0_0_20px_rgba(255,255,255,0.3)]':'border border-white/10 opacity-90'}`} style={difficultyStyle(setting,difficulty===key)}>{setting.label}</button>)}</div><button onClick={()=>{debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setGameState('PICK_HERO');}} className="w-full mt-4 min-h-[48px] bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500 text-white py-3 rounded-2xl font-black text-base tracking-wide border border-indigo-300/60 shadow-[0_8px_28px_rgba(79,70,229,0.45)] active:scale-95">モンスター選択へ</button></div>}
             {battleMenuTab==='ranking'&&<div className="flex-1 min-h-0 flex flex-col">
-              <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else loadRankings(null,true);}} className={`py-2 rounded-xl text-[10px] font-black border ${rankingKind===t.k?'bg-indigo-600 border-indigo-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
-              {rankingKind==='score'&&<><div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=><button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(d);}} className={`px-3 py-2 rounded-full text-[9px] font-black shrink-0 ${rankingViewDiff===d?'ring-1 ring-white':'border border-white/10'}`} style={difficultyStyle(st,rankingViewDiff===d)}>{st.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-2">{(localRankings[rankingViewKey]||[]).map((r,i)=><div key={i} className="flex items-center gap-3 bg-slate-900 border border-white/5 rounded-2xl p-3"><span className="font-black text-indigo-300">{i+1}</span><span className="flex-1 truncate text-xs font-black">{r.userName}</span><span className="font-mono text-sm font-black">{r.score.toLocaleString()} pt</span></div>)}{(localRankings[rankingViewKey]||[]).length===0&&<div className="text-center text-slate-500 py-8">{rankingLoadingByDiff[rankingViewKey]?'Loading...':rankingErrorByDiff[rankingViewKey]?`取得エラー: ${rankingErrorByDiff[rankingViewKey]}`:'記録はまだありません'}</div>}</div></>}
-              {rankingKind==='breeder'&&<div className="flex-1 overflow-y-auto mh-scroll space-y-2">{breederRanking.map((r,i)=><div key={i} className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3"><span>{i+1}</span><span className="flex-1 truncate text-xs font-black">{r.userName}</span><span className="font-black text-indigo-300">Lv.{r.level}</span></div>)}</div>}
-              {rankingKind==='bond'&&<div className="flex-1 overflow-y-auto mh-scroll space-y-2">{bondRanking.map((r,i)=><div key={i} className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3"><span>{i+1}</span><span className="flex-1 truncate text-xs font-black">{r.monName}</span><span className="font-black text-pink-300">絆Lv.{r.bondLevel}</span></div>)}</div>}
+              <div className="grid grid-cols-3 gap-1 mb-1.5 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else loadRankings(null,true);}} className={`py-1.5 rounded-lg text-[9px] font-black border ${rankingKind===t.k?'bg-indigo-600 border-indigo-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
+              {rankingKind==='score'&&<><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=><button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(d);}} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 ${rankingViewDiff===d?'ring-1 ring-white':'border border-white/10'}`} style={difficultyStyle(st,rankingViewDiff===d)}>{st.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{(localRankings[rankingViewKey]||[]).map((r,i)=>renderRankingEntry(r,i,'score'))}{(localRankings[rankingViewKey]||[]).length===0&&<div className="text-center text-slate-500 py-8">{rankingLoadingByDiff[rankingViewKey]?'Loading...':rankingErrorByDiff[rankingViewKey]?`取得エラー: ${rankingErrorByDiff[rankingViewKey]}`:'記録はまだありません'}</div>}</div></>}
+              {rankingKind==='breeder'&&<div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{breederRanking.map((r,i)=>renderRankingEntry(r,i,'breeder'))}{breederRanking.length===0&&<div className="text-center text-slate-500 py-8">記録はまだありません</div>}</div>}
+              {rankingKind==='bond'&&<><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{['all',...bondRankingMonNames].map(n=><button key={n} onClick={()=>setBondRankMonFilter(n)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter===n?'bg-pink-600 border-pink-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{n==='all'?'すべて':n}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRanking.map((r,i)=>renderRankingEntry(r,i,'bond'))}{bondRanking.length===0&&<div className="text-center text-slate-500 py-8">記録はまだありません</div>}</div></>}
             </div>}
             </div>
           </div>

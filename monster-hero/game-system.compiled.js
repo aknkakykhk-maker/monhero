@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 54ff03cd72c97e8e
+// source-sha256: 1c87cf209dc44b94
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -3484,6 +3484,9 @@ function MonsterHeroGame() {
   const [graveyard, setGraveyard] = useState([]);
   const [enemy, setEnemy] = useState(null);
   const [enemyDist, setEnemyDist] = useState(2);
+  // 勇者モンを配置した間合いを、最初のWAVE開始時の内部距離にも使用する。
+  // state更新直後にバトルへ進んでも取りこぼさないよう同期的なrefで保持する。
+  const initialBattleDistanceRef = useRef(2);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
   const [monSelection, setMonSelection] = useState([]);
@@ -3793,10 +3796,9 @@ function MonsterHeroGame() {
       const lv = r.level || 0;
       const cur = byName.get(name);
       if (!cur || lv > cur.level) byName.set(name, {
+        ...r,
         userName: name,
-        level: lv,
-        icon: r.icon,
-        hero: r.hero
+        level: lv
       });
     }));
     return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 50);
@@ -3813,6 +3815,7 @@ function MonsterHeroGame() {
         const cur = byKey.get(key);
         if (!cur || pm.bondLevel > cur.bondLevel) {
           byKey.set(key, {
+            ...r,
             userName: r.userName || '名無しのブリーダー',
             monName: pm.name || '?',
             bondLevel: pm.bondLevel,
@@ -7381,7 +7384,7 @@ function MonsterHeroGame() {
   // 防御カードの上位レベル・追加枚数は、丈夫さ(バフ・デバフを含まない基礎ステ=defそのもの)が
   // 100毎に自動で1段階上がる
   const computeGuardLevel = defVal => Math.max(0, Math.min(GUARD_EVOLUTION.length - 1, Math.floor((defVal || 0) / 100)));
-  const spawnEnemy = useCallback((w, forcedEnemyKey = null) => {
+  const spawnEnemy = useCallback((w, forcedEnemyKey = null, initialDistance = null) => {
     const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[w - 1];
     const base = ENEMY_DATA[enemyKey];
     if (!base) return null;
@@ -7393,7 +7396,7 @@ function MonsterHeroGame() {
       maxHp: Math.floor(base.baseHp * mod),
       atk: Math.floor(base.baseAtk * mod)
     };
-    const dist = Math.floor(Math.random() * 4);
+    const dist = Number.isInteger(initialDistance) && initialDistance >= 0 && initialDistance < RANGE_LABELS.length ? initialDistance : Math.floor(Math.random() * 4);
     setEnemy(newEnemy);
     setEnemyDist(dist);
     setEnemyIntent(getNextEnemyAction(newEnemy, dist));
@@ -7415,7 +7418,10 @@ function MonsterHeroGame() {
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey = null, heroForDeck = null) => {
     setWave(w);
     const currentSlots = s || slots;
-    const dist = spawnEnemy(w, forcedEnemyKey);
+    // 通常周回の初戦だけ、デッキ編成で勇者モンを置いた初期間合いから開始する。
+    // 敵の選択・以降のWAVEの距離決定は従来どおりランダムのまま維持する。
+    const selectedInitialDistance = w === 1 && !forcedEnemyKey ? initialBattleDistanceRef.current : null;
+    const dist = spawnEnemy(w, forcedEnemyKey, selectedInitialDistance);
     if (dist === null) return;
     const nAtkL = computeAtkTier(currentSlots, dist);
     const nGrdL = computeGuardLevel(defVal !== undefined ? defVal : def);
@@ -7506,6 +7512,7 @@ function MonsterHeroGame() {
     setSlots(nextSlots);
     if (!isHero) Audio_.se.join();
     if (isHero) {
+      initialBattleDistanceRef.current = slotIdx;
       const initialUnique = {
         ...m.unique,
         evoLevel: Math.max(0, m.unique.evoLevel || 0)
@@ -8080,6 +8087,80 @@ function MonsterHeroGame() {
   }, "TOUCH TO ENTER"), /*#__PURE__*/React.createElement("h2", null, "\u2015 \u5192\u967A\u306E\u6249\u3092\u958B\u304F \u2015"), /*#__PURE__*/React.createElement("p", null, "\u8FFD\u52A0\u30C7\u30FC\u30BF\u306F\u30D0\u30C3\u30AF\u30B0\u30E9\u30A6\u30F3\u30C9\u3067\u8AAD\u307F\u8FBC\u307F\u3092\u7D9A\u3051\u307E\u3059"))), /*#__PURE__*/React.createElement("footer", null, "VERSION ", BUILD_DATE), /*#__PURE__*/React.createElement("div", {
     className: "mh-entry-flash"
   })), updateNotice);
+  // 3種類のランキングで共通の詳細カードを使い、画面再編前に表示していた
+  // 勇者モン・編成・各レベル・スコアを欠落させない。旧行は存在する列だけで安全に描画する。
+  const renderRankingEntry = (entry, index, kind) => {
+    const party = Array.isArray(entry?.party) ? entry.party.filter(Boolean) : [];
+    const heroName = entry?.hero || (kind === 'bond' ? entry?.monName : null) || '勇者モン情報なし';
+    const heroMember = party.find(member => member?.name === entry?.hero) || party[0] || null;
+    const finiteNumber = value => value == null || value === '' ? null : Number.isFinite(Number(value)) ? Number(value) : null;
+    const scoreValue = finiteNumber(entry?.score);
+    const breederLevelValue = finiteNumber(entry?.level);
+    const bondLevelValue = kind === 'bond' ? finiteNumber(entry?.bondLevel) : finiteNumber(heroMember?.bondLevel);
+    const primaryValue = kind === 'score' ? Number.isFinite(scoreValue) ? `${scoreValue.toLocaleString()} pt` : 'スコア情報なし' : kind === 'breeder' ? Number.isFinite(breederLevelValue) && breederLevelValue > 0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLv情報なし' : Number.isFinite(bondLevelValue) && bondLevelValue > 0 ? `絆Lv.${bondLevelValue}` : '絆Lv情報なし';
+    return /*#__PURE__*/React.createElement("div", {
+      key: `${kind}-${entry?.userName || 'unknown'}-${index}`,
+      className: `rounded-xl border p-2 ${index === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `w-7 h-7 rounded-full flex items-center justify-center font-black text-[10px] shrink-0 ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-slate-300 text-black' : index === 2 ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400'}`
+    }, index + 1), resolveIconUrl(entry?.icon) ? /*#__PURE__*/React.createElement("img", {
+      src: resolveIconUrl(entry.icon),
+      alt: "",
+      className: "w-7 h-7 rounded-full object-cover shrink-0"
+    }) : /*#__PURE__*/React.createElement("div", {
+      className: "w-7 h-7 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-[9px]"
+    }, "\uD83D\uDC64"), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black text-white truncate"
+    }, entry?.userName || '名無しのブリーダー'), /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-slate-400 truncate"
+    }, kind === 'bond' && entry?.monName ? `対象: ${entry.monName}` : heroName)), /*#__PURE__*/React.createElement("div", {
+      className: `text-right text-[11px] font-black whitespace-nowrap ${kind === 'bond' ? 'text-pink-300' : 'text-indigo-300'}`
+    }, primaryValue)), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1.5 bg-black/40 rounded-lg p-1.5 border border-white/5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-1 min-w-0"
+    }, /*#__PURE__*/React.createElement(Crown, {
+      size: 9,
+      className: "text-amber-400 shrink-0"
+    }), heroMember?.imgUrl ? /*#__PURE__*/React.createElement("img", {
+      src: heroMember.imgUrl,
+      alt: heroName,
+      className: "w-7 h-7 object-contain shrink-0"
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "w-7 text-center shrink-0"
+    }, heroMember?.emoji || '❓'), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black text-white truncate"
+    }, heroName), /*#__PURE__*/React.createElement("span", {
+      className: "ml-auto text-[8px] text-indigo-300 whitespace-nowrap"
+    }, Number.isFinite(breederLevelValue) && breederLevelValue > 0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLv情報なし')), party.length > 0 ? /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-x-1 gap-y-0.5 mt-1"
+    }, party.map((member, memberIndex) => /*#__PURE__*/React.createElement("div", {
+      key: memberIndex,
+      className: "flex items-center gap-0.5 min-w-0"
+    }, member?.imgUrl ? /*#__PURE__*/React.createElement("img", {
+      src: member.imgUrl,
+      alt: "",
+      className: "w-5 h-5 object-contain shrink-0"
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "w-5 text-center text-[9px] shrink-0"
+    }, member?.emoji || '❓'), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] text-slate-300 truncate"
+    }, member?.name || '不明'), /*#__PURE__*/React.createElement("span", {
+      className: "text-[7px] text-pink-300 shrink-0"
+    }, member?.bondLevel != null ? `絆Lv.${member.bondLevel}` : '絆Lv.-')))) : /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 text-[8px] text-slate-500"
+    }, "\u7DE8\u6210\u60C5\u5831\u306A\u3057\uFF08\u904E\u53BB\u306E\u8A18\u9332\uFF09"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 flex justify-between gap-2 text-[8px]"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-pink-300"
+    }, Number.isFinite(bondLevelValue) && bondLevelValue > 0 ? `モンスターの絆Lv.${bondLevelValue}` : '絆Lv情報なし'), /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-200 font-mono whitespace-nowrap"
+    }, Number.isFinite(scoreValue) ? `スコア ${scoreValue.toLocaleString()} pt` : 'スコア情報なし'))));
+  };
   if (bootPhase === 'TITLE') return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     className: "mh-title-gate",
     "aria-label": "Monster Hero \u30BF\u30A4\u30C8\u30EB\u753B\u9762"
@@ -8725,12 +8806,12 @@ function MonsterHeroGame() {
   })), /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
   }, "\u30D0\u30C8\u30EB")), /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-4"
+    className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-3 mb-6 shrink-0 rounded-2xl bg-slate-900/60 p-1.5 border border-white/5"
+    className: "grid grid-cols-2 gap-1.5 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-1 border border-white/5"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setBattleMenuTab('difficulty'),
-    className: `min-h-[48px] rounded-xl font-black transition-all ${battleMenuTab === 'difficulty' ? 'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]' : 'bg-slate-950/70 text-slate-400'}`
+    className: `py-1.5 rounded-lg text-[11px] font-black transition-all ${battleMenuTab === 'difficulty' ? 'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]' : 'bg-slate-950/70 text-slate-400'}`
   }, "\u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setBattleMenuTab('ranking');
@@ -8738,15 +8819,15 @@ function MonsterHeroGame() {
       setRankingViewDiff(difficulty);
       loadRankings(difficulty);
     },
-    className: `min-h-[48px] rounded-xl font-black transition-all ${battleMenuTab === 'ranking' ? 'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]' : 'bg-slate-950/70 text-slate-400'}`
+    className: `py-1.5 rounded-lg text-[11px] font-black transition-all ${battleMenuTab === 'ranking' ? 'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]' : 'bg-slate-950/70 text-slate-400'}`
   }, "\u30E9\u30F3\u30AD\u30F3\u30B0")), battleMenuTab === 'difficulty' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-3 gap-x-2.5 gap-y-3"
+    className: "grid grid-cols-3 gap-1.5"
   }, Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => /*#__PURE__*/React.createElement("button", {
     key: key,
     onClick: () => setDifficulty(key),
-    className: `min-h-[62px] rounded-2xl text-[10px] font-black uppercase transition-all ${difficulty === key ? 'ring-2 ring-white scale-[1.03] shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'border border-white/10 opacity-90'}`,
+    className: `py-2 rounded-xl text-[9px] font-black uppercase transition-all ${difficulty === key ? 'ring-2 ring-white scale-[1.02] shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'border border-white/10 opacity-90'}`,
     style: difficultyStyle(setting, difficulty === key)
   }, setting.label))), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
@@ -8756,11 +8837,11 @@ function MonsterHeroGame() {
       setMonSelection(getActiveMonsterList());
       setGameState('PICK_HERO');
     },
-    className: "w-full mt-7 min-h-[58px] bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500 text-white py-4 rounded-2xl font-black text-lg tracking-wide border border-indigo-300/60 shadow-[0_8px_28px_rgba(79,70,229,0.45)] active:scale-95"
+    className: "w-full mt-4 min-h-[48px] bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500 text-white py-3 rounded-2xl font-black text-base tracking-wide border border-indigo-300/60 shadow-[0_8px_28px_rgba(79,70,229,0.45)] active:scale-95"
   }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u9078\u629E\u3078")), battleMenuTab === 'ranking' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 flex flex-col"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-3 gap-1.5 mb-2 shrink-0"
+    className: "grid grid-cols-3 gap-1 mb-1.5 shrink-0"
   }, [{
     k: 'score',
     label: 'スコア'
@@ -8776,49 +8857,36 @@ function MonsterHeroGame() {
       setRankingKind(t.k);
       if (t.k === 'score') loadRankings(rankingViewKey);else loadRankings(null, true);
     },
-    className: `py-2 rounded-xl text-[10px] font-black border ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
+    className: `py-1.5 rounded-lg text-[9px] font-black border ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
   }, t.label))), rankingKind === 'score' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-1.5 overflow-x-auto pb-2 shrink-0"
+    className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0"
   }, Object.entries(DIFFICULTY_SETTINGS).map(([d, st]) => /*#__PURE__*/React.createElement("button", {
     key: d,
     onClick: () => {
       setRankingViewDiff(d);
       loadRankings(d);
     },
-    className: `px-3 py-2 rounded-full text-[9px] font-black shrink-0 ${rankingViewDiff === d ? 'ring-1 ring-white' : 'border border-white/10'}`,
+    className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 ${rankingViewDiff === d ? 'ring-1 ring-white' : 'border border-white/10'}`,
     style: difficultyStyle(st, rankingViewDiff === d)
   }, st.label))), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 overflow-y-auto mh-scroll space-y-2"
-  }, (localRankings[rankingViewKey] || []).map((r, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    className: "flex items-center gap-3 bg-slate-900 border border-white/5 rounded-2xl p-3"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-black text-indigo-300"
-  }, i + 1), /*#__PURE__*/React.createElement("span", {
-    className: "flex-1 truncate text-xs font-black"
-  }, r.userName), /*#__PURE__*/React.createElement("span", {
-    className: "font-mono text-sm font-black"
-  }, r.score.toLocaleString(), " pt"))), (localRankings[rankingViewKey] || []).length === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
+  }, (localRankings[rankingViewKey] || []).map((r, i) => renderRankingEntry(r, i, 'score')), (localRankings[rankingViewKey] || []).length === 0 && /*#__PURE__*/React.createElement("div", {
     className: "text-center text-slate-500 py-8"
   }, rankingLoadingByDiff[rankingViewKey] ? 'Loading...' : rankingErrorByDiff[rankingViewKey] ? `取得エラー: ${rankingErrorByDiff[rankingViewKey]}` : '記録はまだありません'))), rankingKind === 'breeder' && /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 overflow-y-auto mh-scroll space-y-2"
-  }, breederRanking.map((r, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    className: "flex items-center gap-3 bg-slate-900 rounded-2xl p-3"
-  }, /*#__PURE__*/React.createElement("span", null, i + 1), /*#__PURE__*/React.createElement("span", {
-    className: "flex-1 truncate text-xs font-black"
-  }, r.userName), /*#__PURE__*/React.createElement("span", {
-    className: "font-black text-indigo-300"
-  }, "Lv.", r.level)))), rankingKind === 'bond' && /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 overflow-y-auto mh-scroll space-y-2"
-  }, bondRanking.map((r, i) => /*#__PURE__*/React.createElement("div", {
-    key: i,
-    className: "flex items-center gap-3 bg-slate-900 rounded-2xl p-3"
-  }, /*#__PURE__*/React.createElement("span", null, i + 1), /*#__PURE__*/React.createElement("span", {
-    className: "flex-1 truncate text-xs font-black"
-  }, r.monName), /*#__PURE__*/React.createElement("span", {
-    className: "font-black text-pink-300"
-  }, "\u7D46Lv.", r.bondLevel))))))), gameState === 'FORMATION_MENU' && /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
+  }, breederRanking.map((r, i) => renderRankingEntry(r, i, 'breeder')), breederRanking.length === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-slate-500 py-8"
+  }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093")), rankingKind === 'bond' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0"
+  }, ['all', ...bondRankingMonNames].map(n => /*#__PURE__*/React.createElement("button", {
+    key: n,
+    onClick: () => setBondRankMonFilter(n),
+    className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter === n ? 'bg-pink-600 border-pink-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
+  }, n === 'all' ? 'すべて' : n))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
+  }, bondRanking.map((r, i) => renderRankingEntry(r, i, 'bond')), bondRanking.length === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-slate-500 py-8"
+  }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093")))))), gameState === 'FORMATION_MENU' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full p-4",
     style: {
       paddingTop: 'calc(1rem + env(safe-area-inset-top))',
