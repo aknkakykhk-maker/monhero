@@ -17,7 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-30 02:22",
+    date: "2026-07-30 02:32",
+    type: "update",
+    title: "修行道具の操作案内を改善",
+    items: [
+      "振り直しの石を、出目を確認してから移動前に使う本来の操作へ変更しました",
+      "修行道具の消費型・自動発動型、待機状態、今使えない理由を確認できるようにしました",
+    ],
+  },
+  {
+    date: "2026-07-30 02:32",
     type: "update",
     title: "修行のすごろく盤面を全面リニューアル",
     items: [
@@ -27,7 +36,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 02:22",
+    date: "2026-07-30 02:32",
     type: "update",
     title: "編成マスモンの絆経験値を緩和",
     items: [
@@ -35,7 +44,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 02:22",
+    date: "2026-07-30 02:32",
     type: "issue",
     status: "fixed",
     title: "敵ステータスのムー表示を修正",
@@ -44,7 +53,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 02:22",
+    date: "2026-07-30 02:32",
     type: "issue",
     status: "fixed",
     title: "デバッグのムー戦のBGMを修正",
@@ -53,7 +62,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 02:22",
+    date: "2026-07-30 02:32",
     type: "update",
     title: "HOMEの放牧設定を追加",
     items: [
@@ -64,7 +73,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 02:22",
+    date: "2026-07-30 02:32",
     type: "update",
     title: "HOMEとアイテム画面を調整",
     items: [
@@ -73,7 +82,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 02:22",
+    date: "2026-07-30 02:32",
     type: "update",
     title: "画面とBGMの使いやすさを改善",
     items: [
@@ -83,7 +92,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 02:22",
+    date: "2026-07-30 02:32",
     type: "issue",
     status: "fixed",
     title: "表示・音声・更新通知の不具合を修正",

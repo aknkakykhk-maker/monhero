@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0ddcb8ab3ce5f6fb
+// source-sha256: 6b7802e788004349
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 02:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 02:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -539,42 +539,49 @@ const TRAINING_TOOLS = Object.freeze({
     name: '加速の羽',
     emoji: '🪽',
     timing: 'サイコロを振る前',
+    mode: '消費型',
     desc: '次の出目に＋2'
   },
   gale: {
     name: '疾風の札',
     emoji: '🌪️',
     timing: 'サイコロを振る前',
+    mode: '消費型',
     desc: '2回振り、高い出目を採用'
   },
   reroll: {
     name: '振り直しの石',
     emoji: '🪨',
-    timing: '分岐で方向を選ぶ前',
-    desc: '分岐からの残り歩数を1～3に振り直す'
+    timing: '出目の確定後・移動前',
+    mode: '消費型',
+    desc: '確定した出目を1回だけ振り直す'
   },
   noReturn: {
     name: '戻らずのお守り',
     emoji: '🧿',
     timing: '取得後は自動待機',
+    mode: '自動発動型',
     desc: '次に受ける後退効果を1回無効化して消滅'
   },
   sand: {
     name: '時の砂',
     emoji: '⏳',
-    timing: '自分の手番中',
+    timing: '移動していない時',
+    mode: '消費型',
     desc: '残りターン＋1'
   },
   fixed: {
     name: '確定サイコロ',
     emoji: '🎲',
     timing: 'サイコロを振る前',
+    mode: '消費型',
     desc: '次の出目を1・2・3から選択'
   },
   returnCharm: {
     name: '帰還のお守り',
     emoji: '🏮',
     timing: '取得後は自動待機',
+    mode: '自動発動型',
     desc: 'ゴール失敗時、仮獲得した通常アイテムから1個選んで保護'
   }
 });
@@ -724,6 +731,7 @@ const createTrainingSession = (masuId, difficulty = 'BEGINNER') => ({
   tools: [],
   effects: {},
   lastRoll: null,
+  rollPending: false,
   branchOptions: [],
   movementRemaining: 0,
   forcedMoves: 0,
@@ -6747,14 +6755,14 @@ function MonsterHeroGame() {
     setTrainingSession(next);
     await applyTrainingSpace(next);
   };
-  const rollTrainingDice = (fixedValue = null) => {
-    if (!trainingSession || trainingSession.status !== 'playing' || trainingMovingRef.current || trainingSession.branchOptions.length) return;
+  const rollTrainingDice = (fixedValue = null, isReroll = false) => {
+    if (!trainingSession || trainingSession.status !== 'playing' || trainingMovingRef.current || trainingSession.branchOptions.length || !isReroll && trainingSession.rollPending) return;
     Audio_.se.trainingDice();
     const roll = () => 1 + Math.floor(Math.random() * 3);
     let value = fixedValue || trainingDebugRoll || roll();
-    if (trainingSession.effects.gale) value = Math.max(value, roll());
-    if (trainingSession.effects.boost) value++;
-    if (trainingSession.effects.feather) value += 2;
+    if (!isReroll && trainingSession.effects.gale) value = Math.max(value, roll());
+    if (!isReroll && trainingSession.effects.boost) value++;
+    if (!isReroll && trainingSession.effects.feather) value += 2;
     const effects = {
       ...trainingSession.effects
     };
@@ -6762,51 +6770,77 @@ function MonsterHeroGame() {
     delete effects.boost;
     delete effects.feather;
     delete effects.fixed;
+    const canReroll = !isReroll && trainingSession.tools.includes('reroll');
     const next = {
       ...trainingSession,
       lastRoll: value,
+      rollPending: canReroll,
       effects,
-      remainingTurns: trainingSession.remainingTurns - 1,
+      remainingTurns: trainingSession.remainingTurns - (isReroll ? 0 : 1),
       forcedMoves: 0,
-      message: `${value}が出ました。自動で進みます`,
-      eventLog: logTraining(trainingSession, `サイコロ ${value}`)
+      message: canReroll ? `${value}が出ました。振り直すか、この出目で進んでください` : `${value}が出ました。自動で進みます`,
+      eventLog: logTraining(trainingSession, `${isReroll ? '振り直し' : 'サイコロ'} ${value}`)
     };
     setTrainingSession(next);
-    advanceTraining(next, value);
+    if (!canReroll) advanceTraining({
+      ...next,
+      rollPending: false
+    }, value);
+  };
+  const acceptTrainingRoll = () => {
+    if (!trainingSession?.rollPending) return;
+    const next = {
+      ...trainingSession,
+      rollPending: false,
+      message: `${trainingSession.lastRoll}で自動前進します`
+    };
+    setTrainingSession(next);
+    advanceTraining(next, next.lastRoll);
   };
   const chooseTrainingBranch = id => {
     if (!trainingSession.branchOptions.includes(id)) return;
     Audio_.se.trainingDecide();
     advanceTraining(trainingSession, trainingSession.movementRemaining, id);
   };
+  const trainingToolAvailability = id => {
+    if (['noReturn', 'returnCharm'].includes(id)) return {
+      ok: false,
+      reason: '取得後に自動で待機し、条件を満たすと発動します'
+    };
+    if (id === 'reroll') return trainingSession?.rollPending ? {
+      ok: true
+    } : {
+      ok: false,
+      reason: 'サイコロの出目確定後、移動前のみ使用可能'
+    };
+    if (trainingMovingRef.current || trainingSession?.movementRemaining || trainingSession?.branchOptions.length || trainingSession?.rollPending) return {
+      ok: false,
+      reason: '移動していない時のみ使用可能'
+    };
+    return {
+      ok: true
+    };
+  };
   const useTrainingTool = id => {
-    const t = TRAINING_TOOLS[id];
-    setTrainingModal({
-      type: 'tool',
-      id
-    });
-    if (!t || ['noReturn', 'returnCharm'].includes(id)) return;
-    const beforeRoll = !trainingSession.movementRemaining && !trainingSession.branchOptions.length;
-    if (['feather', 'gale', 'fixed'].includes(id) && !beforeRoll) return;
-    if (id === 'reroll' && !trainingSession.branchOptions.length) return;
+    const t = TRAINING_TOOLS[id],
+      availability = trainingToolAvailability(id);
+    if (!t || !availability.ok) return;
     const tools = [...trainingSession.tools];
     tools.splice(tools.indexOf(id), 1);
     let effects = {
         ...trainingSession.effects
       },
-      remainingTurns = trainingSession.remainingTurns,
-      branchOptions = trainingSession.branchOptions,
-      lastRoll = trainingSession.lastRoll;
+      remainingTurns = trainingSession.remainingTurns;
     if (id === 'sand') remainingTurns++;else if (id === 'reroll') {
-      const value = 1 + Math.floor(Math.random() * 3);
-      const next = {
-        ...trainingSession,
-        tools,
-        branchOptions: [],
-        movementRemaining: value,
-        lastRoll: value,
-        message: `残り歩数を${value}に振り直しました`
-      };
+      const value = 1 + Math.floor(Math.random() * 3),
+        next = {
+          ...trainingSession,
+          tools,
+          lastRoll: value,
+          rollPending: false,
+          message: `${value}に振り直しました。自動で進みます`,
+          eventLog: logTraining(trainingSession, `振り直し ${value}`)
+        };
       Audio_.se.trainingTool();
       setTrainingSession(next);
       advanceTraining(next, value);
@@ -6817,8 +6851,6 @@ function MonsterHeroGame() {
       tools,
       effects,
       remainingTurns,
-      branchOptions,
-      lastRoll,
       eventLog: logTraining(trainingSession, `${t.name}使用`)
     });
   };
@@ -10109,11 +10141,16 @@ function MonsterHeroGame() {
       className: "mh-training-tools"
     }, /*#__PURE__*/React.createElement("strong", null, "\u4FEE\u884C\u9053\u5177"), trainingSession.tools.length ? trainingSession.tools.map((id, i) => /*#__PURE__*/React.createElement("button", {
       key: `${id}-${i}`,
+      className: trainingSession.effects[id] ? 'waiting' : '',
       onClick: () => setTrainingModal({
         type: 'tool',
         id
       })
-    }, /*#__PURE__*/React.createElement("span", null, TRAINING_TOOLS[id].emoji), /*#__PURE__*/React.createElement("small", null, TRAINING_TOOLS[id].name, /*#__PURE__*/React.createElement("br", null), TRAINING_TOOLS[id].timing))) : /*#__PURE__*/React.createElement("p", null, "\u6240\u6301\u306A\u3057\uFF08\u6700\u59273\u500B\uFF09")), /*#__PURE__*/React.createElement("footer", null, trainingSession.effects.fixed ? /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("span", null, TRAINING_TOOLS[id].emoji), /*#__PURE__*/React.createElement("small", null, TRAINING_TOOLS[id].name, /*#__PURE__*/React.createElement("br", null), trainingSession.effects[id] ? '待機中' : TRAINING_TOOLS[id].timing))) : /*#__PURE__*/React.createElement("p", null, "\u6240\u6301\u306A\u3057\uFF08\u6700\u59273\u500B\uFF09")), /*#__PURE__*/React.createElement("footer", null, trainingSession.rollPending ? /*#__PURE__*/React.createElement("div", {
+      className: "mh-roll-decision"
+    }, /*#__PURE__*/React.createElement("b", null, "\uD83C\uDFB2 \u51FA\u76EE ", trainingSession.lastRoll), /*#__PURE__*/React.createElement("button", {
+      onClick: acceptTrainingRoll
+    }, "\u3053\u306E\u51FA\u76EE\u3067\u9032\u3080")) : trainingSession.effects.fixed ? /*#__PURE__*/React.createElement("div", {
       className: "mh-fixed-dice"
     }, /*#__PURE__*/React.createElement("span", null, "\u78BA\u5B9A\u30B5\u30A4\u30B3\u30ED"), [1, 2, 3].map(n => /*#__PURE__*/React.createElement("button", {
       key: n,
@@ -10187,13 +10224,15 @@ function MonsterHeroGame() {
     className: "mh-rules-list"
   }, Object.values(TRAINING_SPACE_TYPES).map(s => /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, s.emoji, " ", s.label), /*#__PURE__*/React.createElement("span", null, s.desc)))), /*#__PURE__*/React.createElement("h3", null, "\u4FEE\u884C\u9053\u5177"), /*#__PURE__*/React.createElement("div", {
     className: "mh-rules-list"
-  }, Object.entries(TRAINING_TOOLS).map(([id, t]) => /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, t.emoji, " ", t.name), /*#__PURE__*/React.createElement("span", null, "\u4F7F\u7528\uFF1A", t.timing, /*#__PURE__*/React.createElement("br", null), "\u52B9\u679C\uFF1A", t.desc))))) : trainingModal.type === 'tool' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, TRAINING_TOOLS[trainingModal.id].emoji, " ", TRAINING_TOOLS[trainingModal.id].name), /*#__PURE__*/React.createElement("p", null, "\u4F7F\u7528\u53EF\u80FD\u306A\u30BF\u30A4\u30DF\u30F3\u30B0\uFF1A", TRAINING_TOOLS[trainingModal.id].timing), /*#__PURE__*/React.createElement("p", null, "\u6B63\u78BA\u306A\u52B9\u679C\uFF1A", TRAINING_TOOLS[trainingModal.id].desc), !['noReturn', 'returnCharm'].includes(trainingModal.id) && /*#__PURE__*/React.createElement("button", {
+  }, Object.entries(TRAINING_TOOLS).map(([id, t]) => /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, t.emoji, " ", t.name), /*#__PURE__*/React.createElement("span", null, "\u4F7F\u7528\uFF1A", t.timing, /*#__PURE__*/React.createElement("br", null), "\u52B9\u679C\uFF1A", t.desc))))) : trainingModal.type === 'tool' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, TRAINING_TOOLS[trainingModal.id].emoji, " ", TRAINING_TOOLS[trainingModal.id].name), /*#__PURE__*/React.createElement("p", null, "\u7A2E\u985E\uFF1A", TRAINING_TOOLS[trainingModal.id].mode, /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528\u53EF\u80FD\u306A\u30BF\u30A4\u30DF\u30F3\u30B0\uFF1A", TRAINING_TOOLS[trainingModal.id].timing), /*#__PURE__*/React.createElement("p", null, "\u6B63\u78BA\u306A\u52B9\u679C\uFF1A", TRAINING_TOOLS[trainingModal.id].desc), trainingToolAvailability(trainingModal.id).ok ? /*#__PURE__*/React.createElement("button", {
     className: "mh-route-choice",
     onClick: () => {
       useTrainingTool(trainingModal.id);
       setTrainingModal(null);
     }
-  }, "\u4F7F\u7528\u3059\u308B")) : trainingModal.type === 'discard' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, "\u9053\u5177\u306E\u6240\u6301\u4E0A\u9650\uFF083\u500B\uFF09"), /*#__PURE__*/React.createElement("p", null, "\u6368\u3066\u308B\u9053\u5177\u3092\u9078\u3076\u304B\u3001\u65B0\u3057\u3044\u9053\u5177\u3092\u8AE6\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), trainingSession.tools.map((id, i) => /*#__PURE__*/React.createElement("button", {
+  }, "\u4F7F\u7528\u3059\u308B") : /*#__PURE__*/React.createElement("p", {
+    className: "mh-tool-unavailable"
+  }, "\u4ECA\u306F\u4F7F\u3048\u307E\u305B\u3093\uFF1A", trainingToolAvailability(trainingModal.id).reason)) : trainingModal.type === 'discard' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, "\u9053\u5177\u306E\u6240\u6301\u4E0A\u9650\uFF083\u500B\uFF09"), /*#__PURE__*/React.createElement("p", null, "\u6368\u3066\u308B\u9053\u5177\u3092\u9078\u3076\u304B\u3001\u65B0\u3057\u3044\u9053\u5177\u3092\u8AE6\u3081\u3066\u304F\u3060\u3055\u3044\u3002"), trainingSession.tools.map((id, i) => /*#__PURE__*/React.createElement("button", {
     className: "mh-route-choice",
     onClick: () => {
       const tools = [...trainingSession.tools];
@@ -17149,7 +17188,7 @@ const createAnimationStyle = () => {
     .mh-home-facility.training{left:0;top:46%;width:38%;height:25%}.mh-home-facility.training>span{left:5%;top:37%;border-color:#f9a8d4dd;background:linear-gradient(135deg,#831843ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #ec489966}
     .mh-debug-banner{flex:none;text-align:center;background:#be123c;color:white;padding:5px;font-size:9px;font-weight:1000;letter-spacing:.04em}.mh-home-facility.training small{display:block;font-size:7px;color:#fde68a}.mh-rule-button{width:100%;margin-top:18px;padding:13px;border-radius:14px;background:#4338ca;font-weight:900}.mh-node-map{position:relative;flex:1;min-height:250px;overflow:hidden;border:1px solid #ffffff33;border-radius:15px;background:radial-gradient(circle,#164e63,#020617);transition:.4s}.mh-node-map>i{position:absolute;height:3px;background:#94a3b8;transform-origin:0 50%;z-index:0}.mh-node-map>button{position:absolute;z-index:2;width:52px;height:52px;margin:-26px;border:3px solid #ffffff88;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:.25s}.mh-node-map>button span{font-size:17px}.mh-node-map>button small{font-size:6px;font-weight:900}.mh-node-map>button.current{border-color:#fff700;box-shadow:0 0 18px #fff700}.mh-node-map>button.destination{animation:trainingGlow .7s infinite alternate;pointer-events:auto}.mh-node-map>button:not(.destination){pointer-events:auto}.mh-node-map img,.mh-node-map>button>div{position:absolute;width:48px;height:48px;object-fit:contain;z-index:3}.mh-board-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:5px}.mh-board-buttons button{min-height:34px;border-radius:8px;background:#334155;font-size:8px;font-weight:900}@keyframes trainingGlow{to{transform:scale(1.2);border-color:#fff;box-shadow:0 0 24px #fde047}}.mh-training-debug{position:absolute;right:8px;bottom:82px;z-index:30;width:min(270px,82vw);max-height:55vh;overflow:auto;padding:10px;border:2px solid #e879f9;border-radius:14px;background:#0f172ff5;font-size:8px}.mh-training-debug button,.mh-training-debug select{margin:3px;padding:6px;border-radius:6px;background:#334155}.mh-training-debug button.active{background:#db2777}.mh-training-debug pre{max-height:110px;overflow:auto;white-space:pre-wrap;background:#000;padding:5px}.mh-training-modal{position:fixed;z-index:50000;inset:0;display:flex;align-items:center;padding:16px;background:#020617e8}.mh-training-modal>div{width:100%;max-height:85vh;overflow:auto;padding:18px;border:1px solid #a78bfa;border-radius:20px;background:#111827}.mh-training-modal h3{margin:8px 0;font-size:17px;font-weight:1000}.mh-training-modal p{margin:7px 0;color:#cbd5e1;font-size:10px}.mh-rules-list p{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #ffffff22;padding:7px}.mh-rules-list b{font-size:10px}.mh-rules-list span{font-size:8px;text-align:right}.mh-route-choice,.mh-modal-close{display:block;width:100%;margin-top:8px;padding:12px;border-radius:10px;background:#4338ca;font-size:10px;font-weight:900}.mh-modal-close{background:#475569}.mh-training-result>div>button+button{margin-top:7px;background:#334155;color:white}
     .mh-training-screen{height:100%;display:flex;flex-direction:column;overflow:hidden;padding:calc(10px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom));background:radial-gradient(circle at top,#312e81,#07101f 60%)}.mh-training-head{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;flex:none}.mh-training-head>button{min-height:44px;display:flex;align-items:center;justify-content:center}.mh-training-head div{text-align:center}.mh-training-head small{display:block;color:#f9a8d4;font:900 8px monospace;letter-spacing:.25em}.mh-training-head h2{font-size:18px;font-weight:1000}.mh-training-selected{display:flex;align-items:center;gap:10px;margin:9px 0;padding:10px;border:1px solid #f9a8d477;border-radius:18px;background:#3b076455}.mh-training-selected>img,.mh-training-selected>div:first-child{width:56px;height:56px;object-fit:contain;flex:none}.mh-training-selected>div{display:flex;flex:1;min-width:0;flex-direction:column}.mh-training-selected b{font-size:14px}.mh-training-selected span{color:#fbcfe8;font-size:9px}.mh-training-selected button{padding:9px;border-radius:10px;background:#7e22ce;font-size:9px;font-weight:900}.mh-training-note{font-size:9px;color:#cbd5e1;padding:2px 3px 8px}.mh-training-mon-list{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;overflow-y:auto;padding:2px 1px 90px}.mh-training-mon-list>button{position:relative;min-width:0;padding:7px 4px;border:2px solid #334155;border-radius:16px;background:#0f172acc}.mh-training-mon-list>button.active{border-color:#f472b6;background:#83184377;box-shadow:0 0 13px #ec489966}.mh-training-mon-list img,.mh-training-mon-list>button>div:first-child{width:54px;height:54px;object-fit:contain;margin:auto}.mh-training-mon-list b,.mh-training-mon-list small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-training-mon-list b{font-size:10px}.mh-training-mon-list small{font-size:7px;color:#94a3b8}.mh-training-mon-list span{position:absolute;right:5px;top:4px;color:#fde68a;font-size:8px}.mh-training-empty{grid-column:1/-1;text-align:center;margin-top:50px;color:#64748b}.mh-training-footer{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));padding-top:20px;background:linear-gradient(transparent,#07101f 24%)}.mh-training-footer button{width:100%;min-height:52px;border-radius:18px;background:linear-gradient(90deg,#db2777,#7c3aed);font-weight:1000;box-shadow:0 6px 20px #0008}.mh-training-footer button:disabled{background:#334155;color:#64748b}.mh-training-difficulties{overflow:auto;padding:10px 1px 95px}.mh-training-difficulties>button{display:block;width:100%;margin-bottom:10px;padding:14px;text-align:left;border:2px solid #334155;border-radius:20px;background:#0f172acc}.mh-training-difficulties>button.active{border-color:#f472b6}.mh-training-difficulties>button.soon{opacity:.72}.mh-training-difficulties>button>div{display:flex;justify-content:space-between}.mh-training-difficulties b{font-size:18px}.mh-training-difficulties em{padding:4px 8px;border-radius:999px;background:#475569;font-size:8px;font-style:normal}.mh-training-difficulties p{margin:8px 0;color:#cbd5e1;font-size:10px}.mh-training-difficulties dl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mh-training-difficulties dl span{padding:5px;border-radius:7px;background:#02061788;text-align:center;font-size:8px}.mh-training-confirm{overflow:auto;padding:12px 2px 100px}.mh-training-confirm h3{margin:10px 0 2px;color:#f9a8d4;font-size:26px;font-weight:1000}.mh-training-confirm h4{margin-top:16px;color:#c4b5fd;font-size:11px;font-weight:1000}.mh-training-confirm p{color:#cbd5e1;font-size:10px}.mh-training-ticket{display:flex;flex-wrap:wrap;justify-content:space-between;margin-top:16px;padding:14px;border:1px solid #fbbf24aa;border-radius:16px;background:#78350f55}.mh-training-ticket b{color:#fde68a}.mh-training-ticket small{width:100%;margin-top:5px;color:#fef3c7;font-size:8px}
-    .mh-training-board{height:100%;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#0c4a6e,#082f49 44%,#052e16)}.mh-training-board>header{display:flex;align-items:center;justify-content:space-between}.mh-training-board>header div{display:flex;flex-direction:column}.mh-training-board>header b{font-size:14px}.mh-training-board>header span{font-size:8px;color:#bae6fd}.mh-training-board>header button{min-height:40px;padding:0 10px;border-radius:10px;background:#7f1d1d;font-size:9px;font-weight:900}.mh-training-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:7px 0}.mh-training-hud span{padding:6px 2px;border-radius:8px;background:#020617aa;text-align:center;font-size:8px;font-weight:900}.mh-training-map{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;flex:1;min-height:0;padding:7px;overflow:auto;border:1px solid #ffffff22;border-radius:16px;background:#0005}.mh-training-map>div{position:relative;aspect-ratio:1;border:2px solid #64748b;border-radius:10px;background:#334155;display:flex;align-items:center;justify-content:center}.mh-training-map>div.passed{opacity:.52}.mh-training-map>div.current{border-color:#fde047;background:#854d0e;box-shadow:0 0 14px #fde047}.mh-training-map span{font-size:17px}.mh-training-map small{position:absolute;left:3px;top:1px;font-size:6px}.mh-training-map img,.mh-training-map>div.current>div{position:absolute;width:45px;height:45px;object-fit:contain;filter:drop-shadow(0 3px 3px #000);z-index:2}.mh-training-message{min-height:28px;padding:7px;text-align:center;font-size:10px;font-weight:900}.mh-training-tools{display:flex;min-height:54px;gap:5px}.mh-training-tools button{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;padding:4px;border:1px solid #a78bfa;border-radius:10px;background:#312e81}.mh-training-tools button span{font-size:17px}.mh-training-tools button small{font-size:7px}.mh-training-tools p{margin:auto;color:#94a3b8;font-size:8px}.mh-training-board>footer{margin-top:7px}.mh-roll-button{width:100%;min-height:58px;border-radius:19px;background:linear-gradient(#fbbf24,#d97706);color:#451a03;font-size:17px;font-weight:1000}.mh-roll-button small{display:block;font-size:7px}.mh-fixed-dice{display:grid;grid-template-columns:1fr repeat(3,58px);gap:5px;align-items:center}.mh-fixed-dice button{height:54px;border-radius:14px;background:#fbbf24;color:#422006;font-size:20px;font-weight:1000}.mh-training-branch{position:fixed;z-index:40000;inset:0;display:flex;align-items:center;padding:20px;background:#020617dd}.mh-training-branch>div{width:100%;padding:18px;border:1px solid #c4b5fd;border-radius:22px;background:#111827}.mh-training-branch h3{text-align:center;font-size:18px;font-weight:1000}.mh-training-branch button{display:flex;justify-content:space-between;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:#312e81}.mh-training-branch span{font-size:9px;color:#cbd5e1}.mh-training-board{position:relative;background:linear-gradient(160deg,#082f49,#0f172a 52%,#14532d)}.mh-training-board>header{gap:8px}.mh-training-board>header b small{margin-left:5px;color:#facc15;font-size:7px}.mh-debug-toggle{background:#be185d!important;letter-spacing:.08em}.mh-training-hud{grid-template-columns:repeat(3,1fr)}.mh-training-hud span{display:flex;flex-direction:column;gap:2px}.mh-training-hud b{color:white;font-size:11px}.mh-tile-viewport{position:relative;flex:1;min-height:250px;overflow:auto;scroll-behavior:smooth;border:2px solid #67e8f966;border-radius:18px;background:linear-gradient(#0c4a6e99,#052e1699),repeating-linear-gradient(45deg,#ffffff08 0 8px,transparent 8px 16px);box-shadow:inset 0 0 30px #020617}.mh-tile-board{position:relative;width:720px;height:520px;transform-origin:center;transition:transform .3s}.mh-tile-viewport.overview{overflow:hidden}.mh-tile-viewport.overview .mh-tile-board{transform:scale(.46) translate(-58%,-58%)}.mh-tile-board>i{position:absolute;height:13px;border:2px solid #dbeafe99;background:#64748b;box-shadow:0 2px 0 #0f172a;transform-origin:0 50%;z-index:0}.mh-training-tile{position:absolute;z-index:2;width:68px;height:68px;margin:-34px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid #e2e8f0;border-radius:12px;color:white;background:var(--tile-color);box-shadow:0 5px 0 #0f172a,0 8px 14px #0008;transition:left .25s,top .25s,transform .2s}.mh-training-tile>span{font-size:23px;line-height:1}.mh-training-tile>small{max-width:62px;font-size:7px;font-weight:1000;text-shadow:0 1px 2px #000}.mh-training-tile.branch:after{content:'分岐';position:absolute;right:-9px;top:-10px;padding:2px 4px;border-radius:6px;background:#f97316;font-size:6px;font-weight:1000}.mh-training-tile.start{border-color:#86efac}.mh-training-tile.goal{border-color:#fde047;box-shadow:0 0 22px #facc15,0 5px 0 #713f12}.mh-training-tile.current{z-index:8;border-color:#fff;box-shadow:0 0 0 4px #facc15,0 8px 18px #000;transform:scale(1.05)}.mh-training-tile.branch-choice{z-index:9;animation:trainingGlow .55s infinite alternate;pointer-events:auto}.mh-training-piece{position:absolute;left:50%;bottom:34px;width:62px;height:73px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 5px 3px #000)}.mh-training-piece img,.mh-training-piece>div{width:58px!important;height:58px!important;object-fit:contain}.mh-training-piece b{position:absolute;bottom:0;left:50%;max-width:75px;transform:translateX(-50%);padding:2px 5px;border-radius:8px;background:#020617e8;white-space:nowrap;font-size:7px}.mh-training-message{color:#fef3c7}.mh-training-tools{align-items:stretch}.mh-training-tools>strong{display:flex;align-items:center;font-size:8px}.mh-training-tools button{min-width:0}.mh-training-tools button small{line-height:1.25}.mh-training-debug{right:8px;top:calc(52px + env(safe-area-inset-top));bottom:auto;box-shadow:0 14px 30px #000}.mh-debug-close{float:right;background:#be123c!important}.mh-training-board>footer{flex:none}.mh-roll-button:disabled{filter:grayscale(.7);opacity:.65}@media(max-width:380px){.mh-training-piece{transform:translateX(-50%) scale(.85)}.mh-training-tools{min-height:48px}.mh-training-message{min-height:24px;padding:4px}.mh-tile-viewport{min-height:220px}}
+    .mh-training-board{height:100%;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#0c4a6e,#082f49 44%,#052e16)}.mh-training-board>header{display:flex;align-items:center;justify-content:space-between}.mh-training-board>header div{display:flex;flex-direction:column}.mh-training-board>header b{font-size:14px}.mh-training-board>header span{font-size:8px;color:#bae6fd}.mh-training-board>header button{min-height:40px;padding:0 10px;border-radius:10px;background:#7f1d1d;font-size:9px;font-weight:900}.mh-training-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:7px 0}.mh-training-hud span{padding:6px 2px;border-radius:8px;background:#020617aa;text-align:center;font-size:8px;font-weight:900}.mh-training-map{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;flex:1;min-height:0;padding:7px;overflow:auto;border:1px solid #ffffff22;border-radius:16px;background:#0005}.mh-training-map>div{position:relative;aspect-ratio:1;border:2px solid #64748b;border-radius:10px;background:#334155;display:flex;align-items:center;justify-content:center}.mh-training-map>div.passed{opacity:.52}.mh-training-map>div.current{border-color:#fde047;background:#854d0e;box-shadow:0 0 14px #fde047}.mh-training-map span{font-size:17px}.mh-training-map small{position:absolute;left:3px;top:1px;font-size:6px}.mh-training-map img,.mh-training-map>div.current>div{position:absolute;width:45px;height:45px;object-fit:contain;filter:drop-shadow(0 3px 3px #000);z-index:2}.mh-training-message{min-height:28px;padding:7px;text-align:center;font-size:10px;font-weight:900}.mh-training-tools{display:flex;min-height:54px;gap:5px}.mh-training-tools button{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;padding:4px;border:1px solid #a78bfa;border-radius:10px;background:#312e81}.mh-training-tools button span{font-size:17px}.mh-training-tools button small{font-size:7px}.mh-training-tools p{margin:auto;color:#94a3b8;font-size:8px}.mh-training-board>footer{margin-top:7px}.mh-roll-button{width:100%;min-height:58px;border-radius:19px;background:linear-gradient(#fbbf24,#d97706);color:#451a03;font-size:17px;font-weight:1000}.mh-roll-button small{display:block;font-size:7px}.mh-fixed-dice{display:grid;grid-template-columns:1fr repeat(3,58px);gap:5px;align-items:center}.mh-fixed-dice button{height:54px;border-radius:14px;background:#fbbf24;color:#422006;font-size:20px;font-weight:1000}.mh-training-branch{position:fixed;z-index:40000;inset:0;display:flex;align-items:center;padding:20px;background:#020617dd}.mh-training-branch>div{width:100%;padding:18px;border:1px solid #c4b5fd;border-radius:22px;background:#111827}.mh-training-branch h3{text-align:center;font-size:18px;font-weight:1000}.mh-training-branch button{display:flex;justify-content:space-between;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:#312e81}.mh-training-branch span{font-size:9px;color:#cbd5e1}.mh-training-board{position:relative;background:linear-gradient(160deg,#082f49,#0f172a 52%,#14532d)}.mh-training-board>header{gap:8px}.mh-training-board>header b small{margin-left:5px;color:#facc15;font-size:7px}.mh-debug-toggle{background:#be185d!important;letter-spacing:.08em}.mh-training-hud{grid-template-columns:repeat(3,1fr)}.mh-training-hud span{display:flex;flex-direction:column;gap:2px}.mh-training-hud b{color:white;font-size:11px}.mh-tile-viewport{position:relative;flex:1;min-height:250px;overflow:auto;scroll-behavior:smooth;border:2px solid #67e8f966;border-radius:18px;background:linear-gradient(#0c4a6e99,#052e1699),repeating-linear-gradient(45deg,#ffffff08 0 8px,transparent 8px 16px);box-shadow:inset 0 0 30px #020617}.mh-tile-board{position:relative;width:720px;height:520px;transform-origin:center;transition:transform .3s}.mh-tile-viewport.overview{overflow:hidden}.mh-tile-viewport.overview .mh-tile-board{transform:scale(.46) translate(-58%,-58%)}.mh-tile-board>i{position:absolute;height:13px;border:2px solid #dbeafe99;background:#64748b;box-shadow:0 2px 0 #0f172a;transform-origin:0 50%;z-index:0}.mh-training-tile{position:absolute;z-index:2;width:68px;height:68px;margin:-34px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid #e2e8f0;border-radius:12px;color:white;background:var(--tile-color);box-shadow:0 5px 0 #0f172a,0 8px 14px #0008;transition:left .25s,top .25s,transform .2s}.mh-training-tile>span{font-size:23px;line-height:1}.mh-training-tile>small{max-width:62px;font-size:7px;font-weight:1000;text-shadow:0 1px 2px #000}.mh-training-tile.branch:after{content:'分岐';position:absolute;right:-9px;top:-10px;padding:2px 4px;border-radius:6px;background:#f97316;font-size:6px;font-weight:1000}.mh-training-tile.start{border-color:#86efac}.mh-training-tile.goal{border-color:#fde047;box-shadow:0 0 22px #facc15,0 5px 0 #713f12}.mh-training-tile.current{z-index:8;border-color:#fff;box-shadow:0 0 0 4px #facc15,0 8px 18px #000;transform:scale(1.05)}.mh-training-tile.branch-choice{z-index:9;animation:trainingGlow .55s infinite alternate;pointer-events:auto}.mh-training-piece{position:absolute;left:50%;bottom:34px;width:62px;height:73px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 5px 3px #000)}.mh-training-piece img,.mh-training-piece>div{width:58px!important;height:58px!important;object-fit:contain}.mh-training-piece b{position:absolute;bottom:0;left:50%;max-width:75px;transform:translateX(-50%);padding:2px 5px;border-radius:8px;background:#020617e8;white-space:nowrap;font-size:7px}.mh-training-message{color:#fef3c7}.mh-training-tools{align-items:stretch}.mh-training-tools>strong{display:flex;align-items:center;font-size:8px}.mh-training-tools button{min-width:0}.mh-training-tools button small{line-height:1.25}.mh-training-debug{right:8px;top:calc(52px + env(safe-area-inset-top));bottom:auto;box-shadow:0 14px 30px #000}.mh-debug-close{float:right;background:#be123c!important}.mh-training-board>footer{flex:none}.mh-roll-button:disabled{filter:grayscale(.7);opacity:.65}.mh-training-tools button.waiting{border-color:#fde047;box-shadow:inset 0 0 12px #facc1544}.mh-roll-decision{display:grid;grid-template-columns:1fr 2fr;gap:7px;align-items:center;min-height:58px;padding:6px 8px;border:2px solid #fbbf24;border-radius:19px;background:#451a03}.mh-roll-decision b{text-align:center;color:#fde68a}.mh-roll-decision button{height:44px;border-radius:13px;background:#fbbf24;color:#451a03;font-weight:1000}.mh-tool-unavailable{padding:9px;border:1px solid #f8717177;border-radius:10px;background:#450a0a;color:#fecaca!important}@media(max-width:380px){.mh-training-piece{transform:translateX(-50%) scale(.85)}.mh-training-tools{min-height:48px}.mh-training-message{min-height:24px;padding:4px}.mh-tile-viewport{min-height:220px}}
 .mh-training-result{height:100%;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));text-align:center;background:radial-gradient(circle,#14532d,#020617 65%)}.mh-training-result.failure{background:radial-gradient(circle,#3f3f46,#020617 65%)}.mh-training-result>div{width:100%;max-width:360px}.mh-result-mark{display:block;font-size:64px}.mh-training-result small{color:#f9a8d4;font:900 9px monospace;letter-spacing:.22em}.mh-training-result h2{font-size:28px;font-weight:1000}.mh-training-result>div>p{margin:7px;color:#cbd5e1;font-size:10px}.mh-training-result section{margin:18px 0;padding:13px;border:1px solid #ffffff22;border-radius:18px;background:#0007}.mh-training-result section div{display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #ffffff12}.mh-training-result section div:last-child{border:0}.mh-training-result section span{font-size:11px}.mh-training-result section b{color:#fde68a}.mh-training-result .mh-result-note{font-size:8px}.mh-training-result>div>button{width:100%;min-height:52px;margin-top:10px;border-radius:18px;background:#fff;color:#172554;font-weight:1000}
     `;
   document.head.appendChild(style);
