@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 755ca32a4cab805a
+// source-sha256: 97c4951354dd9d58
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 16:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 16:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3058,6 +3058,8 @@ const RewardSummaryCard = ({
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
+  const [managementTab, setManagementTab] = useState('monster');
+  const [homeBackgroundReady, setHomeBackgroundReady] = useState(false);
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
   const [difficulty, setDifficulty] = useState('Normal');
   const [score, setScore] = useState(0);
@@ -3078,6 +3080,25 @@ function MonsterHeroGame() {
   // refも併用し、pointerdown直後のclickが同じ操作でトップ遷移を始めないよう同期的に判定する。
   const [bootSoundUnlocked, setBootSoundUnlocked] = useState(false);
   const bootSoundUnlockedRef = useRef(false);
+  // タイトル表示を止めずにHOME背景を先読みする。decode非対応時もload完了で表示する。
+  useEffect(() => {
+    let active = true;
+    const image = new Image();
+    image.src = 'data/images/home-background.png';
+    const reveal = () => {
+      if (active) setHomeBackgroundReady(true);
+    };
+    image.onload = () => {
+      if (image.decode) image.decode().catch(() => {}).then(reveal);else reveal();
+    };
+    image.onerror = reveal;
+    if (image.complete) image.onload();
+    return () => {
+      active = false;
+      image.onload = null;
+      image.onerror = null;
+    };
+  }, []);
   const entryAnimatingRef = useRef(false);
   const titleStartingRef = useRef(false);
   const [showTitleSettings, setShowTitleSettings] = useState(false);
@@ -7501,18 +7522,16 @@ function MonsterHeroGame() {
   }, gameState === 'HOME' && /*#__PURE__*/React.createElement("main", {
     className: "mh-home-scene",
     "aria-label": "\u6751\u306E\u5E83\u5834"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "mh-home-background",
+  }, /*#__PURE__*/React.createElement("picture", {
+    className: `mh-home-background ${homeBackgroundReady ? 'is-ready' : ''}`,
     "aria-hidden": "true"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "mh-home-sky"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "mh-home-ridge"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "mh-home-plaza"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "mh-home-path"
-  })), /*#__PURE__*/React.createElement("header", {
+  }, /*#__PURE__*/React.createElement("img", {
+    src: "data/images/home-background.png",
+    alt: ""
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-masumon-layer",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("header", {
     className: "mh-home-status"
   }, /*#__PURE__*/React.createElement("section", {
     className: "mh-home-player"
@@ -7542,57 +7561,36 @@ function MonsterHeroGame() {
     "aria-label": "\u8A2D\u5B9A"
   }, /*#__PURE__*/React.createElement(Settings, {
     size: 20
-  }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("section", {
-    className: "mh-home-hub",
-    "aria-label": "\u62E0\u70B9\u306E\u4E2D\u592E\u5E83\u5834"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "mh-home-fountain",
-    "aria-hidden": "true"
-  }, /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("nav", {
+  }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("nav", {
     className: "mh-home-facilities",
-    "aria-label": "\u5468\u8FBA\u65BD\u8A2D"
+    "aria-label": "\u62E0\u70B9\u65BD\u8A2D"
   }, /*#__PURE__*/React.createElement("button", {
-    className: "facility roster",
-    onClick: () => setGameState('MONSTER_LIST_MENU')
-  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(List, {
-    size: 22
-  })), /*#__PURE__*/React.createElement("b", null, "\u30E2\u30F3\u30B9\u30BF\u30FC\u4E00\u89A7"), /*#__PURE__*/React.createElement("small", null, "\u4EF2\u9593\u306E\u8A18\u9332")), /*#__PURE__*/React.createElement("button", {
-    className: "facility fusion",
+    className: "mh-home-facility management",
     onClick: () => {
-      resetFusionFlow();
-      setGameState('MASU_FUSION');
+      setManagementTab('monster');
+      setGameState('MB_MANAGEMENT');
     }
-  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Gem, {
-    size: 22
-  })), /*#__PURE__*/React.createElement("b", null, "\u5408\u4F53"), /*#__PURE__*/React.createElement("small", null, "\u7D46\u3092\u53D7\u3051\u7D99\u3050")), /*#__PURE__*/React.createElement("button", {
-    className: "facility profile",
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Layers, {
+    size: 18
+  }), "M/B\u7BA1\u7406")), /*#__PURE__*/React.createElement("button", {
+    className: "mh-home-facility profile",
     onClick: () => setGameState('PROFILE')
   }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(User, {
-    size: 20
-  })), /*#__PURE__*/React.createElement("b", null, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB")), /*#__PURE__*/React.createElement("button", {
-    className: "facility market",
+    size: 17
+  }), "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB")), /*#__PURE__*/React.createElement("button", {
+    className: "mh-home-facility market",
     onClick: () => setGameState('BREEDER_MARKET')
   }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(ShoppingBag, {
-    size: 20
-  })), /*#__PURE__*/React.createElement("b", null, "\u30DE\u30FC\u30B1\u30C3\u30C8")))), /*#__PURE__*/React.createElement("nav", {
-    className: "mh-home-primary",
-    "aria-label": "\u4E3B\u8981\u30E1\u30CB\u30E5\u30FC"
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "mh-home-formation",
-    onClick: () => setGameState('FORMATION_MENU')
-  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Layers, {
-    size: 25
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "\u4EF2\u9593\u3068\u6559\u3048\u3092\u6574\u3048\u308B"), /*#__PURE__*/React.createElement("b", null, "\u7DE8\u6210"))), /*#__PURE__*/React.createElement("button", {
-    className: "mh-home-battle",
+    size: 17
+  }), "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
+    className: "mh-home-facility battle",
     onClick: () => {
       setBattleMenuTab('difficulty');
       setGameState('BATTLE_MENU');
     }
   }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Sword, {
-    size: 34
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "\u30B0\u30E9\u30F3\u30C9\u30C1\u30E3\u30F3\u30D4\u30AA\u30F3\u3092\u76EE\u6307\u305B"), /*#__PURE__*/React.createElement("b", null, "\u30D0\u30C8\u30EB")), /*#__PURE__*/React.createElement(ChevronRight, {
-    size: 24
-  }))), /*#__PURE__*/React.createElement("footer", {
+    size: 25
+  }), "\u30D0\u30C8\u30EB"), /*#__PURE__*/React.createElement("small", null, "\u95D8\u6280\u5834\u3078\u6311\u6226"))), /*#__PURE__*/React.createElement("footer", {
     className: "mh-home-tools"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowHelp(true)
@@ -7603,7 +7601,60 @@ function MonsterHeroGame() {
     className: "relative"
   }, /*#__PURE__*/React.createElement(RefreshCcw, {
     size: 15
-  }), "\u66F4\u65B0\u5C65\u6B74", hasUnreadChangelog && /*#__PURE__*/React.createElement("em", null, "NEW")))), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
+  }), "\u66F4\u65B0\u5C65\u6B74", hasUnreadChangelog && /*#__PURE__*/React.createElement("em", null, "NEW")))), gameState === 'MB_MANAGEMENT' && /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex flex-col h-full min-h-0 p-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-5 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: returnToHome,
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-indigo-300"
+  }, "M/B\u7BA1\u7406")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2 mb-5 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setManagementTab('monster'),
+    className: `min-h-[48px] rounded-xl font-black ${managementTab === 'monster' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400'}`
+  }, "\u30E2\u30F3\u30B9\u30BF\u30FC"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setManagementTab('breeder'),
+    className: `min-h-[48px] rounded-xl font-black ${managementTab === 'breeder' ? 'bg-purple-600 text-white' : 'bg-slate-900 text-slate-400'}`
+  }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9")), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md mx-auto space-y-3 overflow-y-auto mh-scroll"
+  }, managementTab === 'monster' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setGameState('OWNED_MONSTERS'),
+    className: "mh-management-link"
+  }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u4E00\u89A7"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setGameState('MASU_MONS'),
+    className: "mh-management-link"
+  }, "\u30DE\u30B9\u30E2\u30F3\u4E00\u89A7"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setDraftMonsterRoster(monsterRosterIds);
+      setDraftTeachingRoster(teachingRosterIds);
+      setRosterTab('monster');
+      setGameState('ROSTER');
+    },
+    className: "mh-management-link"
+  }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u7DE8\u6210"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      resetFusionFlow();
+      setGameState('MASU_FUSION');
+    },
+    className: "mh-management-link"
+  }, "\u5408\u4F53")) : /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setDraftMonsterRoster(monsterRosterIds);
+      setDraftTeachingRoster(teachingRosterIds);
+      setRosterTab('teaching');
+      setGameState('ROSTER');
+    },
+    className: "mh-management-link"
+  }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u7DE8\u6210"))), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full min-h-0 px-4",
     style: {
       paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -8024,7 +8075,7 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setGameState('FORMATION_MENU'),
+    onClick: () => setGameState('MB_MANAGEMENT'),
     className: "p-3 text-slate-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
@@ -8355,7 +8406,7 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setGameState('MONSTER_LIST_MENU'),
+    onClick: () => setGameState('MB_MANAGEMENT'),
     className: "p-3 text-slate-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
@@ -8412,7 +8463,7 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setGameState('MONSTER_LIST_MENU'),
+    onClick: () => setGameState('MB_MANAGEMENT'),
     className: "p-3 text-slate-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
@@ -8508,7 +8559,7 @@ function MonsterHeroGame() {
   })())), gameState === 'MASU_FUSION' && (() => {
     const closeFusion = () => {
       resetFusionFlow();
-      returnToHome();
+      setGameState('MB_MANAGEMENT');
     };
     const fusedBorder = masu => (masu.fusionHistory || []).length > 0 ? 'border-amber-400 ring-1 ring-amber-400' : 'border-violet-400/40';
     // 合体の仕様説明。何が引き継がれて何が消えるのか、固有技の引き継ぎ条件は何かが
@@ -13571,7 +13622,7 @@ const createAnimationStyle = () => {
     .mh-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 9999px; }
     .mh-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 9999px; }
     .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:#142d2d;color:#fff}.mh-home-background{position:absolute;z-index:-3;inset:0;overflow:hidden;pointer-events:none;background:linear-gradient(#142e39 0,#31554d 43%,#1c352f 100%)}.mh-home-sky{position:absolute;inset:0 0 56%;background:radial-gradient(circle at 74% 18%,#f5df9c88 0 4%,transparent 18%),linear-gradient(#183542,#527466 72%,#a88e5d)}.mh-home-sky:after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 20%,#d9f2ce17 44%,transparent 63%)}.mh-home-ridge{position:absolute;left:-8%;right:-8%;top:24%;height:27%;background:linear-gradient(145deg,#14281f 0 24%,#2c4b34 25% 45%,#182c22 46% 65%,#36543a 66%);clip-path:polygon(0 48%,12% 23%,24% 48%,39% 5%,56% 50%,72% 18%,87% 46%,100% 10%,100% 100%,0 100%);filter:drop-shadow(0 8px 9px #091b17)}.mh-home-plaza{position:absolute;left:-24%;right:-24%;top:38%;bottom:-13%;border-radius:50% 50% 0 0;background:radial-gradient(ellipse at 50% 34%,#b9a476 0 5%,#816f4e 6% 20%,#4f593d 21% 34%,#253d31 61%,#142720 100%);box-shadow:inset 0 10px 25px #d8cc9652}.mh-home-path{position:absolute;left:33%;right:33%;top:54%;bottom:-8%;background:linear-gradient(90deg,transparent,#b39d7055 18%,#cab78788 50%,#b39d7055 82%,transparent);clip-path:polygon(39% 0,61% 0,100% 100%,0 100%)}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a66;background:linear-gradient(145deg,#173532f2,#0b2021f2);box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-hub{position:absolute;z-index:1;inset:72px 10px calc(178px + env(safe-area-inset-bottom))}.mh-home-fountain{position:absolute;left:50%;top:47%;width:84px;height:40px;transform:translate(-50%,-50%);border:5px solid #b7b098;border-radius:50%;background:radial-gradient(ellipse,#60989b 0 36%,#374f4c 38% 54%,#a39b83 56%);box-shadow:0 8px 10px #071713aa,inset 0 0 10px #b8ffff88}.mh-home-fountain:before{content:"";position:absolute;left:50%;bottom:20px;width:25px;height:40px;transform:translateX(-50%);border-radius:50% 50% 20% 20%;background:linear-gradient(90deg,#827d6d,#d2c9aa,#777365);box-shadow:0 5px 6px #0007}.mh-home-fountain i{position:absolute;z-index:2;left:50%;bottom:48px;width:4px;height:27px;transform:translateX(-50%);border-radius:50%;background:#a7eff4aa;box-shadow:-9px 8px 0 -1px #9ae6ec99,9px 8px 0 -1px #9ae6ec99}.mh-home-facilities{position:absolute;inset:0}.mh-home-facilities button{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:67px;width:105px;padding:7px 5px;border:2px solid #cbb982;border-radius:17px 17px 12px 12px;background:linear-gradient(155deg,#315447f5,#102925f5);box-shadow:0 5px 0 #382b1d,0 10px 18px #071a15bb,inset 0 1px #fff3;text-shadow:0 2px 2px #000;touch-action:manipulation}.mh-home-facilities button:before{content:"";position:absolute;left:6px;right:6px;top:-12px;height:18px;background:#704a35;clip-path:polygon(50% 0,100% 100%,0 100%);z-index:-1}.mh-home-facilities button:active,.mh-home-primary button:active,.mh-home-tools button:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-facilities span{display:flex;align-items:center;justify-content:center;width:34px;height:30px;border-radius:10px;background:#071d1aaa;color:#f5db8a}.mh-home-facilities b{font-size:9px;margin-top:2px}.mh-home-facilities small{font-size:6px;color:#d8cfb2}.mh-home-facilities .roster{right:1px;top:10%}.mh-home-facilities .fusion{left:1px;top:18%}.mh-home-facilities .profile{left:5px;bottom:3%;width:92px;min-height:54px}.mh-home-facilities .market{right:5px;bottom:0;width:92px;min-height:54px}.mh-home-primary{position:absolute;z-index:4;left:10px;right:10px;bottom:calc(47px + env(safe-area-inset-bottom));display:grid;grid-template-columns:35% 1fr;gap:9px;align-items:stretch}.mh-home-primary button{min-height:91px;border-radius:20px;border:2px solid #e0ca85;box-shadow:0 6px 0 #352a20,0 11px 22px #061511cc,inset 0 1px #fff5;touch-action:manipulation;transition:transform .1s,filter .1s}.mh-home-formation{display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(150deg,#35584b,#162f2b);color:#fff}.mh-home-formation span{color:#f4df9a}.mh-home-formation div{display:flex;flex-direction:column-reverse}.mh-home-formation small{font-size:6px;color:#d8d1b8}.mh-home-formation b{font-size:14px}.mh-home-battle{position:relative;display:grid;grid-template-columns:52px 1fr 24px;align-items:center;text-align:left;padding:9px 10px;background:linear-gradient(135deg,#713333,#b95432 48%,#5b2627);color:#fff;border-color:#ffe1a0!important;box-shadow:0 7px 0 #482121,0 12px 28px #200b09dd,inset 0 1px #fff8,0 0 20px #e9a34d77!important;overflow:hidden}.mh-home-battle:before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,#fff2 46%,transparent 61%)}.mh-home-battle>span{position:relative;display:flex;width:47px;height:47px;align-items:center;justify-content:center;border-radius:50%;background:#250f13aa;color:#ffe29d;border:1px solid #ffd68788}.mh-home-battle div{position:relative;display:flex;flex-direction:column}.mh-home-battle b{font-size:21px;line-height:1;text-shadow:0 3px 3px #180509}.mh-home-battle small{font-size:6px;color:#ffe9bd;margin-bottom:4px}.mh-home-battle>svg{position:relative;color:#ffe3a0}.mh-home-tools{position:absolute;z-index:5;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;pointer-events:none}.mh-home-tools button{pointer-events:auto;position:relative;display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed99577;border-radius:13px;background:#102c29f2;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-tools em{position:absolute;right:-4px;top:-7px;padding:1px 4px;border-radius:7px;background:#dc2626;color:#fff;font-size:6px;font-style:normal}@media(max-width:350px){.mh-home-player-copy strong{max-width:90px}.mh-home-wallet{width:124px}.mh-home-facilities button{width:94px}.mh-home-primary{grid-template-columns:33% 1fr}.mh-home-battle{grid-template-columns:43px 1fr 18px;padding:8px 7px}.mh-home-battle>span{width:40px;height:40px}.mh-home-battle b{font-size:18px}}@media(max-height:620px){.mh-home-hub{inset:66px 10px calc(158px + env(safe-area-inset-bottom))}.mh-home-facilities button{min-height:55px}.mh-home-primary{bottom:calc(43px + env(safe-area-inset-bottom))}.mh-home-primary button{min-height:78px}.mh-home-fountain{top:45%;transform:translate(-50%,-50%) scale(.84)}}@media(prefers-reduced-motion:reduce){.mh-home-facilities button,.mh-home-primary button,.mh-home-tools button{transition:none}}
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:24%;right:24%;top:35%;bottom:30%;pointer-events:none}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px)}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:1px solid #ffe6a788;background:#10211da6;color:#fff;border-radius:18px;box-shadow:0 3px 12px #0009,inset 0 0 16px #ffe0981c;text-shadow:0 2px 4px #000;touch-action:manipulation;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility span{display:flex;align-items:center;justify-content:center;gap:5px;padding:7px 10px;font-size:10px;font-weight:1000;white-space:nowrap}.mh-home-facility:active{transform:scale(.94);filter:brightness(1.35);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:2%;top:20%;width:37%;height:23%;background:linear-gradient(90deg,#10211d99,#10211d55)}.mh-home-facility.profile{left:2%;top:52%;width:32%;height:20%}.mh-home-facility.market{right:1%;top:55%;width:35%;height:19%}.mh-home-facility.battle{left:20%;right:20%;bottom:calc(5% + env(safe-area-inset-bottom));height:25%;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:5%;border:2px solid #ffe3a8;background:radial-gradient(ellipse at 50% 75%,#8b301ab8,transparent 70%);box-shadow:0 0 23px #ffb13fbb,inset 0 0 25px #ffcb6266;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle span{font-size:22px;letter-spacing:.08em}.mh-home-facility.battle small{font-size:8px;font-weight:900;color:#ffe4b2}.mh-home-tools{position:absolute;z-index:5;left:9px;right:9px;bottom:calc(8px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;pointer-events:none}.mh-home-tools button{pointer-events:auto;position:relative;display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-tools button:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-tools em{position:absolute;right:-4px;top:-7px;padding:1px 4px;border-radius:7px;background:#dc2626;color:#fff;font-size:6px;font-style:normal}.mh-management-link{display:block;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #ffc45ddd,inset 0 0 30px #ffdc8377}}@media(max-width:350px){.mh-home-player-copy strong{max-width:90px}.mh-home-wallet{width:124px}.mh-home-facility span{font-size:9px;padding:6px}.mh-home-facility.battle span{font-size:19px}}@media(max-height:620px){.mh-home-facility.management{top:19%;height:22%}.mh-home-facility.profile{top:49%}.mh-home-facility.market{top:52%}.mh-home-facility.battle{height:24%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-facility{transition:none}.mh-home-facility.battle{animation:none}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
     .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
