@@ -35,5 +35,5 @@ check('転生済みソート・表示設定と旧設定の補完を追加',sourc
 check('同一固有技の継承を禁止',source.includes('duplicateUnique')&&source.includes('同じ固有技はすでに所持しているため引き継げません'));
 check('現在技・解放済み・未解放を固有技詳細に表示',source.includes("current?'現在の技':locked?'未解放':'解放済み'"));
 check('星4色・最大5個表示と約4秒演出がある',source.includes("['#fde047','#f472b6','#ef4444','#ffffff']")&&source.includes('Math.min(5, value)')&&source.includes('mh-rebirth-animation')&&source.includes('4100'));
-check('神殿BGMを転生画面でも継続',/MASU_REBIRTH:\s*'fusion'/.test(source));
+check('神殿BGMを転生画面でも継続',/MASU_REBIRTH:\s*'temple'/.test(source));
 process.exit(failed?1:0);
