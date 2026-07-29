@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ae03475b6cc97514
+// source-sha256: 2b229b1a00a177cd
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -4197,6 +4197,8 @@ function MonsterHeroGame() {
   const BGM_STATE_MAP = {
     SETTINGS: 'home',
     // 設定ページはHOMEの曲を続ける
+    GIFT_BOX: 'home',
+    // ギフトボックスはHOMEの曲を止めずに続ける
     BATTLE_MENU: 'enhance',
     // 難易度・ランキング(モンスター選択と同じ曲)
     FORMATION_MENU: 'profile',
@@ -8539,7 +8541,7 @@ function MonsterHeroGame() {
       onClick: () => claimGiftIds(claimable.map(g => g.id)),
       className: "shrink-0 mb-3 min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-black disabled:opacity-40"
     }, "\u3059\u3079\u3066\u53D7\u3051\u53D6\u308B"), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-2"
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 pb-2"
     }, shown.length === 0 ? /*#__PURE__*/React.createElement("div", {
       className: "mt-16 text-center text-slate-500 font-bold"
     }, giftTab === 'unclaimed' ? '未受取のギフトはありません' : '受取済みのギフトはありません') : shown.map(g => {
@@ -8547,30 +8549,30 @@ function MonsterHeroGame() {
       const valid = !!normalizeGiftRewards(g);
       return /*#__PURE__*/React.createElement("article", {
         key: g.id,
-        className: `rounded-2xl border p-4 ${g.claimedAt ? 'bg-slate-900/70 border-slate-700' : expired ? 'bg-red-950/30 border-red-800/60' : 'bg-cyan-950/30 border-cyan-500/50'}`
+        className: `rounded-2xl border p-3 ${g.claimedAt ? 'bg-slate-900/70 border-slate-700' : expired ? 'bg-red-950/30 border-red-800/60' : 'bg-cyan-950/30 border-cyan-500/50'}`
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-start justify-between gap-2"
+        className: "flex items-start justify-between gap-1.5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "min-w-0"
       }, /*#__PURE__*/React.createElement("h3", {
-        className: "font-black text-white break-words"
+        className: "font-black text-white break-words leading-tight"
       }, g.title || '名称なしギフト'), /*#__PURE__*/React.createElement("p", {
-        className: "text-[11px] text-slate-400 mt-1 break-words"
+        className: "text-[11px] leading-snug text-slate-400 mt-0.5 break-words"
       }, g.description || '')), /*#__PURE__*/React.createElement("span", {
-        className: `shrink-0 rounded-full px-2 py-1 text-[9px] font-black ${g.claimedAt ? 'bg-slate-700 text-slate-300' : expired ? 'bg-red-900 text-red-200' : valid ? 'bg-cyan-700 text-white' : 'bg-amber-900 text-amber-200'}`
+        className: `shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ${g.claimedAt ? 'bg-slate-700 text-slate-300' : expired ? 'bg-red-900 text-red-200' : valid ? 'bg-cyan-700 text-white' : 'bg-amber-900 text-amber-200'}`
       }, g.claimedAt ? '受取済み' : expired ? '期限切れ' : valid ? '受取可能' : '確認が必要')), /*#__PURE__*/React.createElement("div", {
-        className: "my-3 space-y-1"
+        className: "my-2 space-y-1"
       }, Array.isArray(g.rewards) && g.rewards.map((r, i) => /*#__PURE__*/React.createElement("div", {
         key: i,
-        className: "rounded-lg bg-black/30 px-3 py-2 text-sm font-black text-amber-200 break-words"
+        className: "rounded-lg bg-black/30 px-3 py-1.5 text-sm leading-snug font-black text-amber-200 break-words"
       }, giftRewardText(r)))), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-end justify-between gap-2"
+        className: "flex items-end justify-between gap-1.5"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-500"
+        className: "min-w-0 pb-0.5 text-[9px] leading-tight text-slate-500 break-words"
       }, g.claimedAt ? `受取日時: ${new Date(g.claimedAt).toLocaleString('ja-JP')}` : `受取期限: ${g.expiresAt ? new Date(g.expiresAt).toLocaleString('ja-JP') : '期限情報なし'}`), !g.claimedAt && /*#__PURE__*/React.createElement("button", {
         disabled: expired || !valid,
         onClick: () => claimGiftIds([g.id]),
-        className: "shrink-0 min-h-[40px] px-5 rounded-xl bg-cyan-600 text-white text-sm font-black disabled:bg-slate-700 disabled:text-slate-500"
+        className: "shrink-0 min-h-[40px] px-4 rounded-xl bg-cyan-600 text-white text-sm font-black disabled:bg-slate-700 disabled:text-slate-500"
       }, "\u53D7\u3051\u53D6\u308B")));
     })));
   })(), loginBonusPopup && /*#__PURE__*/React.createElement("div", {
