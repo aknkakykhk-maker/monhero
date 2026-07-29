@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2504acced5c29454
+// source-sha256: a80ba8b224ef48cd
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 15:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 16:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3719,6 +3719,12 @@ function MonsterHeroGame() {
 
   // 画面ごとに流すBGM
   const BGM_STATE_MAP = {
+    BATTLE_MENU: 'enhance',
+    // 難易度・ランキング(モンスター選択と同じ曲)
+    FORMATION_MENU: 'profile',
+    // 編成メニュー
+    MONSTER_LIST_MENU: 'profile',
+    // モンスター一覧メニュー
     MASU_FUSION: 'fusion',
     // 合体ページ
     BREEDER_MARKET: 'market' // マーケットページ
@@ -7474,7 +7480,17 @@ function MonsterHeroGame() {
     style: {
       height: '100%'
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, updateAvailable && /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-live": "assertive",
+    onClick: () => window.location.reload(),
+    className: "fixed z-[200] left-3 right-3 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]",
+    style: {
+      top: 'calc(8px + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement(RefreshCcw, {
+    size: 18
+  }), /*#__PURE__*/React.createElement("span", null, "\u65B0\u3057\u3044\u30D0\u30FC\u30B8\u30E7\u30F3\u304C\u3042\u308A\u307E\u3059\u3000\u66F4\u65B0\u3059\u308B")), /*#__PURE__*/React.createElement("div", {
     className: "relative z-10 h-full flex flex-col",
     style: screenShake ? {
       animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
