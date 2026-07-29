@@ -25,7 +25,8 @@
     text-decoration:none; -webkit-tap-highlight-color:transparent;
     transition:transform .12s ease;
   }
-  .hub-card:active { transform:scale(0.96); }
+  .hub-card:active,.hub-card.is-launching { transform:scale(0.96); }
+  .hub-card.is-launching { pointer-events:none; box-shadow:0 0 42px rgba(192,132,252,.75),inset 0 0 24px rgba(251,191,36,.24); border-color:rgba(251,191,36,.8); }
   .hub-card.mh { background:linear-gradient(135deg, rgba(22,163,74,0.25), rgba(15,23,42,0.9)); box-shadow:0 0 30px rgba(34,197,94,0.12); }
   .hub-icon { font-size:34px; line-height:1; flex-shrink:0; }
   .hub-text { flex:1; min-width:0; }
@@ -51,6 +52,12 @@
     transform-origin:center; animation:mhRipple 550ms ease-out forwards; pointer-events:none; z-index:2147483647;
   }
   @keyframes mhRipple { 0%{transform:scale(0.3);opacity:0.55;} 100%{transform:scale(1.8);opacity:0;} }
+  .mh-launch-screen { position:fixed; inset:0; z-index:2147483646; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; box-sizing:border-box; padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom)); color:#fff; text-align:center; background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%); opacity:0; animation:launchIn .12s ease-out forwards; }
+  .mh-launch-screen::before { content:""; position:absolute; inset:0; background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px); background-size:39px 41px; opacity:.28; }
+  .mh-launch-mark { position:relative; font-size:64px; filter:drop-shadow(0 0 18px #c084fc); animation:launchHop 1.2s ease-in-out infinite; }
+  .mh-launch-screen h2,.mh-launch-screen p { position:relative; margin:0; }.mh-launch-screen h2{font-size:clamp(20px,6vw,30px);letter-spacing:.22em;text-shadow:0 0 18px #c084fc}.mh-launch-screen p{font-size:12px;color:#ddd6fe}
+  @keyframes launchIn{to{opacity:1}}@keyframes launchHop{45%{transform:translateY(-10px) scale(1.04)}}
+  @media(prefers-reduced-motion:reduce){.mh-launch-mark{animation:none}}
 </style>
 </head>
 <body>
@@ -59,7 +66,7 @@
   </div>
   <div class="hub-title">LF Apps</div>
   <div class="hub-grid">
-    <a class="hub-card mh" href="monster-hero/index.html">
+    <a class="hub-card mh" id="monsterHeroCard" href="monster-hero/index.html">
       <div class="hub-icon">🐲</div>
       <div class="hub-text">
         <div class="hub-name">モンスターヒーロー</div>
@@ -85,6 +92,19 @@
       .catch(function(){});
   }
   document.getElementById('updateReloadBtn').addEventListener('click', function(){ location.reload(); });
+  var launching = false;
+  document.getElementById('monsterHeroCard').addEventListener('click', function(e){
+    e.preventDefault();
+    if (launching) return;
+    launching = true;
+    this.classList.add('is-launching');
+    this.setAttribute('aria-disabled', 'true');
+    var screen = document.createElement('div');
+    screen.className = 'mh-launch-screen';
+    screen.innerHTML = '<div class="mh-launch-mark">🐲</div><h2>NOW LOADING</h2><p>冒険の準備をしています</p>';
+    document.body.appendChild(screen);
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ location.assign('monster-hero/index.html'); }); });
+  });
   document.addEventListener('pointerdown', function(e){
     var el = document.createElement('span');
     el.className = 'mh-ripple';

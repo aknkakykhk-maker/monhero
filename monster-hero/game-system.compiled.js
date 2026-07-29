@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 24beb81cd4845eda
+// source-sha256: ed8510d500916bad
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -3087,8 +3087,8 @@ function MonsterHeroGame() {
   const [dataLoaded, setDataLoaded] = useState(false); // 端末に保存したセーブデータの読み込みが終わったか
   const [bootProgress, setBootProgress] = useState({
     done: 0,
-    total: 6,
-    label: 'タイトル画面を準備中'
+    total: 10,
+    label: 'ゲームシステムを起動中'
   });
   const [localRankings, setLocalRankings] = useState({});
   // ブリーダーLv・絆Lvの集計に使う記録。スコア上位に入らなかった直近のプレイも含むので、
@@ -3793,16 +3793,17 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (bootPhase !== 'LOADING' || !dataLoaded) return;
     let cancelled = false;
+    let retryTimer = null;
     const required = async () => {
       const step = (done, label) => {
         if (!cancelled) setBootProgress({
           done,
-          total: 6,
+          total: 10,
           label
         });
       };
-      step(0, 'タイトル画面を準備中');
-      await new Promise(resolve => {
+      step(0, 'ゲームシステムを起動中');
+      await new Promise((resolve, reject) => {
         const image = new Image();
         let settled = false;
         const finish = () => {
@@ -3814,42 +3815,62 @@ function MonsterHeroGame() {
         image.onload = async () => {
           try {
             if (image.decode) await image.decode();
-          } catch {}
-          finish();
+            finish();
+          } catch (error) {
+            if (!settled) {
+              settled = true;
+              reject(error);
+            }
+          }
         };
-        image.onerror = finish;
-        image.src = 'data/images/title-screen.PNG';
+        image.onerror = () => {
+          if (!settled) {
+            settled = true;
+            reject(new Error('title image unavailable'));
+          }
+        };
+        image.src = 'data/images/title-screen-clean.PNG';
         if (image.complete) image.onload();
       });
       step(1, 'タイトルBGMを準備中');
-      await Audio_.prepareBGM('title', 5000).catch(() => false);
+      if (!(await Audio_.prepareBGM('title', 5000).catch(() => false))) throw new Error('title BGM unavailable');
       step(2, 'セーブデータを確認中');
       await Promise.resolve();
-      step(3, '更新情報を確認中');
+      step(3, '音量設定を確認中');
+      await Promise.resolve({
+        bgmVolume,
+        seVolume,
+        audioOn
+      });
+      step(4, 'PLAYER IDを確認中');
+      await Promise.resolve(titlePlayerId);
+      step(5, 'ビルドバージョンを確認中');
+      await Promise.resolve(BUILD_DATE);
+      step(6, '更新情報を確認中');
       await Promise.resolve(typeof CHANGELOG !== 'undefined' ? CHANGELOG : []);
-      step(4, 'モンスターデータを展開中');
-      await Promise.resolve(ALL_PLAYER_MONSTERS.Mocchi);
-      step(5, '冒険の世界を構築中');
+      step(7, 'お知らせを準備中');
+      await Promise.resolve(changelogUnread);
+      step(8, 'タイトル画面を準備中');
       await new Promise(r => requestAnimationFrame(() => r()));
-      step(6, '準備完了');
+      step(9, 'モンスターデータを展開中');
+      await Promise.resolve(ALL_PLAYER_MONSTERS.Mocchi);
+      step(10, '準備完了');
       if (!cancelled) setBootPhase('ENTRY_READY');
     };
-    const timeout = setTimeout(() => {
-      if (!cancelled) {
-        setBootProgress({
-          done: 6,
-          total: 6,
-          label: '準備完了'
-        });
-        setBootPhase('ENTRY_READY');
-      }
-    }, 9000);
-    required().finally(() => clearTimeout(timeout));
+    const runRequired = () => required().catch(() => {
+      if (cancelled) return;
+      setBootProgress(prev => ({
+        ...prev,
+        label: '通信を確認して再試行しています'
+      }));
+      retryTimer = setTimeout(runRequired, 1500);
+    });
+    runRequired();
     return () => {
       cancelled = true;
-      clearTimeout(timeout);
+      if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [bootPhase, dataLoaded]);
+  }, [bootPhase, dataLoaded, bgmVolume, seVolume, audioOn, titlePlayerId, changelogUnread]);
 
   // 色マスクなど後続画面用の素材は、ブラウザが空いた時に1件ずつ処理する。
   useEffect(() => {
@@ -3898,10 +3919,12 @@ function MonsterHeroGame() {
       })();
       await Promise.race([attempt, new Promise(r => setTimeout(r, 1600))]);
     } catch {}
-    if (unlocked) {
-      bootSoundUnlockedRef.current = true;
-      setBootSoundUnlocked(true);
+    if (!unlocked) {
+      setEntryAnimating(false);
+      return;
     }
+    bootSoundUnlockedRef.current = true;
+    setBootSoundUnlocked(true);
     setTimeout(() => setBootPhase('TITLE'), 760);
   };
   const prepareGameEntry = async () => {
@@ -7327,12 +7350,8 @@ function MonsterHeroGame() {
     "aria-label": "Monster Hero \u30BF\u30A4\u30C8\u30EB\u753B\u9762"
   }, /*#__PURE__*/React.createElement("img", {
     className: "mh-title-visual",
-    src: "data/images/title-screen.PNG",
+    src: "data/images/title-screen-clean.PNG",
     alt: "\u30E2\u30F3\u30B9\u30BF\u30FC\u30D2\u30FC\u30ED\u30FC \u30B0\u30E9\u30F3\u30C9\u30C1\u30E3\u30F3\u30D4\u30AA\u30F3\u30AF\u30A8\u30B9\u30C8"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "mh-title-ui-mask-left"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "mh-title-ui-mask-right"
   }), /*#__PURE__*/React.createElement("header", {
     className: "mh-title-header"
   }, /*#__PURE__*/React.createElement("div", {
@@ -7364,7 +7383,7 @@ function MonsterHeroGame() {
   if (bootPhase === 'ENTERING_GAME') return /*#__PURE__*/React.createElement("main", {
     className: "mh-entering"
   }, /*#__PURE__*/React.createElement("img", {
-    src: "data/images/title-screen.PNG",
+    src: "data/images/title-screen-clean.PNG",
     alt: ""
   }), /*#__PURE__*/React.createElement("div", {
     className: "mh-gate-core"
@@ -13670,14 +13689,13 @@ const createAnimationStyle = () => {
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
     .mh-mocchi-wrap img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 14px #000);transform-origin:50% 88%;animation:mhMocchiHop 1.2s ease-in-out infinite}.mh-mocchi-wrap span{position:absolute;bottom:-5px;width:60%;height:13px;border-radius:50%;background:#0008;filter:blur(3px);animation:mhShadow 1.2s ease-in-out infinite}.mh-mocchi-wrap i{display:none;position:absolute;color:#ffeaa7;font-style:normal;font-size:22px;filter:drop-shadow(0 0 8px #fff)}
     .mh-boot-copy{position:relative;z-index:2;width:min(100%,340px)}.mh-boot-copy h1{font-size:clamp(20px,6vw,30px);font-weight:1000;letter-spacing:.22em;color:#fff;text-shadow:0 0 18px #c084fc;margin:0 0 8px}.mh-boot-copy h2{font-size:12px;color:#ddd6fe;letter-spacing:.12em;margin:0 0 18px}.mh-boot-copy p{min-height:18px;font-size:10px;color:#c4b5fd;margin-top:10px}.mh-progress{height:10px;border:1px solid #c4b5fd88;border-radius:99px;background:#080617;overflow:hidden}.mh-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#7c3aed,#d8b4fe,#fbbf24);box-shadow:0 0 14px #c084fc;transition:width .25s}.mh-boot-copy strong{display:block;margin-top:7px;font:800 11px monospace}.mh-boot-copy button{width:100%;min-height:56px;border:1px solid #f8d477;border-radius:18px;background:linear-gradient(135deg,#4c1d95dd,#7e22cedd);box-shadow:0 0 25px #a855f766;color:#fff;font-size:clamp(15px,5vw,20px);font-weight:1000;letter-spacing:.12em;touch-action:manipulation}.mh-boot-screen footer{position:absolute;z-index:2;bottom:calc(8px + env(safe-area-inset-bottom));font:8px monospace;color:#7773a0;letter-spacing:.15em}
-    .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation-duration:1.8s}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
+    .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
-    .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000}.mh-title-ui-mask-left,.mh-title-ui-mask-right{position:absolute;z-index:20;top:calc(7px + env(safe-area-inset-top));height:82px;background:#0a0613;border:1px solid #8b6aaf;border-radius:13px;box-shadow:0 2px 10px #000}.mh-title-ui-mask-left{left:7px;width:150px}.mh-title-ui-mask-right{right:7px;width:119px}
-    .mh-title-build{display:grid;padding:5px 7px;text-align:left;font-family:monospace;line-height:1.15}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#d8c6f2}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152e;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;left:50%;bottom:calc(5% + env(safe-area-inset-bottom));width:min(72vw,330px);height:12%;transform:translateX(-50%);touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
+    .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;left:50%;bottom:calc(5% + env(safe-area-inset-bottom));width:min(72vw,330px);height:12%;transform:translateX(-50%);touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
     .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:8px}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
-    @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}
-    @media(max-width:350px){.mh-title-ui-mask-left{width:136px}.mh-title-ui-mask-right{width:108px}.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
+    @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}
+    @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}.mh-title-start{bottom:2%}}
     @media(prefers-reduced-motion:reduce){.mh-mocchi-wrap img,.mh-mocchi-wrap span,.mh-mocchi-wrap i{animation:none!important}.mh-entering>img{animation:mhReducedFade .85s ease both}.mh-gate-core,.mh-gate-particles{display:none}.mh-gate-flash{animation:mhReducedFlash .85s ease both}}@keyframes mhReducedFade{to{opacity:.4}}@keyframes mhReducedFlash{0%,55%{opacity:0}100%{opacity:1}}
     `;
