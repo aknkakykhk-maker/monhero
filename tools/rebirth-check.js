@@ -1,0 +1,27 @@
+// Lv上限移行・転生・表示・保存経路を本番ソースから検証する。
+const fs = require('fs');
+const vm = require('vm');
+const path = require('path');
+const source = fs.readFileSync(path.join(__dirname, '..', 'monster-hero', 'src', 'game-system.jsx'), 'utf8');
+const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
+const context = { React: { createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} } };
+vm.createContext(context);
+vm.runInContext(`${prefix}\nglobalThis.__rebirth={totalBondXpForLevel,bondLevelInfo,migrateMasuLevelCaps,buildMasuRebirth,cappedBondXp};`, context);
+const {totalBondXpForLevel,bondLevelInfo,migrateMasuLevelCaps,buildMasuRebirth,cappedBondXp}=context.__rebirth;
+let failed=0; const check=(name,ok)=>{console.log(`${ok?'OK':'NG'}: ${name}`);if(!ok)failed++;};
+const capXp=totalBondXpForLevel(30), excess=777;
+const old={id:'old',baseId:'Mocchi',name:'旧',bondXp:capXp+excess,distAptPoints:50};
+const migrated=migrateMasuLevelCaps([old],100);
+check('Lv30超過XPを同数のダイヤへ補償',migrated.compensation===excess&&migrated.nextGold===100+excess&&migrated.nextMasuMons[0].bondXp===capXp&&bondLevelInfo(capXp).level===30);
+const second=migrateMasuLevelCaps(migrated.nextMasuMons,migrated.nextGold);
+check('移行済みデータは二重補償されない',second.compensation===0&&second.nextGold===migrated.nextGold);
+const ready={...migrated.nextMasuMons[0],rebirthCount:0,levelCap:30,distAptPoints:9,uniqueSkillLevels:{}};
+const rebirth=buildMasuRebirth({masu:ready,skillKey:'own',gold:4000});
+check('Lv30転生で費用3000・Lv1・上限+5・回数+1・強化P+5',rebirth.ok&&rebirth.cost===3000&&rebirth.nextGold===1000&&rebirth.nextMasu.bondXp===0&&rebirth.nextMasu.levelCap===35&&rebirth.nextMasu.rebirthCount===1&&rebirth.nextMasu.distAptPoints===14);
+check('選択した固有技だけLvUP',rebirth.nextMasu.uniqueSkillLevels.own===1&&Object.keys(rebirth.nextMasu.uniqueSkillLevels).length===1);
+check('上限到達後はXPを取得しない',cappedBondXp(ready,9999)===capXp);
+check('ダイヤ不足・未到達・最大Lv技は転生不可',!buildMasuRebirth({masu:ready,skillKey:'own',gold:2999}).ok&&!buildMasuRebirth({masu:{...ready,bondXp:0},skillKey:'own',gold:9999}).ok&&!buildMasuRebirth({masu:{...ready,uniqueSkillLevels:{own:8}},skillKey:'own',gold:9999}).ok);
+check('専用移行フラグとマスモン・ダイヤ保存がある',source.includes("mh_masu_level_cap_migrated_v1")&&source.includes("mh_masu_level_cap_migration_pending_v1")&&/storeSet\('mh_masu_mons', savedMasuMons/.test(source)&&/storeSet\('mh_gold', migratedCap.nextGold/.test(source));
+check('星4色・最大5個表示と約2秒演出がある',source.includes("['#fde047','#f472b6','#ef4444','#ffffff']")&&source.includes('Math.min(5, value)')&&source.includes('mh-rebirth-animation')&&source.includes('2100'));
+check('神殿BGMを転生画面でも継続',/MASU_REBIRTH:\s*'fusion'/.test(source));
+process.exit(failed?1:0);
