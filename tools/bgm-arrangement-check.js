@@ -21,7 +21,11 @@ for (const file of files) {
     /MB_MANAGEMENT:\s*['"]management/.test(source) && /BREEDER_MARKET:\s*['"]market/.test(source) &&
     /TEMPLE:\s*['"]temple/.test(source) && /bgmArrangement\[BGM_STATE_MAP\[state\]\]/.test(source));
   check(`${file}: 最終WAVEリザルトとCHAMPIONだけクリア曲へルーティング`,
-    /!debugBattleRef\.current\s*&&\s*wave\s*===\s*10/.test(source) && /WAVE_RESULT/.test(source) && /bgmArrangement\.clear/.test(source));
+    /!debugBattleRef\.current\s*&&\s*currentWave\s*===\s*10/.test(source) && /WAVE_RESULT/.test(source) && /bgmArrangement\.clear/.test(source));
+  check(`${file}: デバッグのムーと通常WAVE 10を選択中のボス曲へルーティング`,
+    /enemyId\s*===\s*['"]Moo['"]\s*\|\|\s*currentWave\s*===\s*10\s*\?\s*bgmArrangement\.boss/.test(source));
+  check(`${file}: デュラハン専用曲をボス曲より優先`,
+    /enemyId\s*===\s*['"]Durahan['"]\s*\?\s*['"]dullahan['"]/.test(source));
   check(`${file}: 曲別gainを上限付きで全体音量へ合成`,
     /Math\.min\(1\.25/.test(source) && /_bgmGain\(bgmVolumePct\)\s*\*\s*safeTrackGain/.test(source));
   check(`${file}: Web Audio試聴を単一ソースで管理`,

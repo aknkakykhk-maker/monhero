@@ -17,7 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-30 00:48",
+    date: "2026-07-30 00:56",
+    type: "issue",
+    status: "fixed",
+    title: "デバッグのムー戦のBGMを修正",
+    items: [
+      "デバッグのムー戦で、設定したボスバトルBGMと異なる曲が流れる不具合を修正しました",
+    ],
+  },
+  {
+    date: "2026-07-30 00:56",
     type: "update",
     title: "HOMEの放牧設定を追加",
     items: [
@@ -28,7 +37,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 00:48",
+    date: "2026-07-30 00:56",
     type: "update",
     title: "HOMEとアイテム画面を調整",
     items: [
@@ -37,7 +46,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 00:48",
+    date: "2026-07-30 00:56",
     type: "update",
     title: "画面とBGMの使いやすさを改善",
     items: [
@@ -47,7 +56,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 00:48",
+    date: "2026-07-30 00:56",
     type: "issue",
     status: "fixed",
     title: "表示・音声・更新通知の不具合を修正",
