@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2a0eaf757388d4fa
+// source-sha256: 3e3df9b2217f36b3
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 19:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 19:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -206,6 +206,19 @@ const bondLevelInfo = totalXp => {
 const INITIAL_MASU_LEVEL_CAP = 30;
 const REBIRTH_LEVEL_CAP_GAIN = 5;
 const MAX_UNIQUE_SKILL_LEVEL = 8;
+const uniqueSkillAtLevel = (unique, level = 0) => {
+  if (!unique) return null;
+  const lvl = Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.floor(Number(level) || 0)));
+  const mult = unique.baseMult + lvl * 0.5;
+  return {
+    ...unique,
+    name: unique.names?.[lvl] || unique.name,
+    evoLevel: lvl,
+    mult,
+    guts: Math.floor(unique.baseGuts * (mult / unique.baseMult)),
+    crit: 0.10 + 0.05 * lvl
+  };
+};
 const totalBondXpForLevel = level => {
   let total = 0;
   for (let current = 1; current < Math.max(1, level); current++) total += xpForBondLevel(current);
@@ -280,10 +293,10 @@ const buildMasuRebirth = ({
     nextGold: donationDiamondValue(gold) - cost,
     nextMasu: {
       ...normalized,
-      bondXp: 0,
+      bondXp: totalBondXpForLevel(1),
       rebirthCount: normalized.rebirthCount + 1,
       levelCap: normalized.levelCap + REBIRTH_LEVEL_CAP_GAIN,
-      distAptPoints: (normalized.distAptPoints || 0) + 5,
+      distAptPoints: donationDiamondValue(normalized.distAptPoints) + 5,
       uniqueSkillLevels: {
         ...normalized.uniqueSkillLevels,
         [skillKey]: currentSkillLevel + 1
@@ -2493,7 +2506,8 @@ const DEFAULT_MONSTER_LIST_SETTINGS = {
     base: true,
     masu: true,
     fused: true,
-    active: true
+    active: true,
+    reborn: true
   }
 };
 const DEFAULT_FUSION_SORT_SETTINGS = {
@@ -2507,15 +2521,15 @@ const DEFAULT_DONATION_SORT_SETTINGS = {
   sortDir: 'desc'
 };
 const normalizeMonsterListSettings = value => {
-  const sortKeys = ['base', 'masu', 'lineage', 'bond', 'name', 'active', 'fused'];
-  const displayKeys = ['base', 'masu', 'fused', 'active'];
-  if (!value || value.version !== 1 || !sortKeys.includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir) || !['sort', 'display'].includes(value.modalTab) || !value.display || displayKeys.some(key => typeof value.display[key] !== 'boolean')) return DEFAULT_MONSTER_LIST_SETTINGS;
+  const sortKeys = ['base', 'masu', 'lineage', 'bond', 'name', 'active', 'fused', 'reborn'];
+  const displayKeys = ['base', 'masu', 'fused', 'active', 'reborn'];
+  if (!value || value.version !== 1 || !sortKeys.includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir) || !['sort', 'display'].includes(value.modalTab) || !value.display) return DEFAULT_MONSTER_LIST_SETTINGS;
   return {
     version: 1,
     modalTab: value.modalTab,
     sortKey: value.sortKey,
     sortDir: value.sortDir,
-    display: Object.fromEntries(displayKeys.map(key => [key, value.display[key]]))
+    display: Object.fromEntries(displayKeys.map(key => [key, typeof value.display[key] === 'boolean' ? value.display[key] : DEFAULT_MONSTER_LIST_SETTINGS.display[key]]))
   };
 };
 const normalizeFusionSortSettings = value => {
@@ -3529,10 +3543,7 @@ function MonsterHeroGame() {
   const [monsterSortKey, setMonsterSortKey] = useState('lineage'); // 'base'|'masu'|'lineage'|'bond'|'name'|'active'
   const [monsterSortDir, setMonsterSortDir] = useState('asc'); // 'asc'|'desc'
   const [monsterDisplayFlags, setMonsterDisplayFlags] = useState({
-    base: true,
-    masu: true,
-    fused: true,
-    active: true
+    ...DEFAULT_MONSTER_LIST_SETTINGS.display
   }); // 各カードに出す情報(複数選択可、オフで非表示)
   const [showSortFilterModal, setShowSortFilterModal] = useState(false); // ならべかえ・表示設定モーダルの開閉
   const [sortFilterModalTab, setSortFilterModalTab] = useState('sort'); // モーダル内タブ: 'sort'|'display'
@@ -4782,14 +4793,8 @@ function MonsterHeroGame() {
       },
       distAptitude: masu.distApt || base.distAptitude,
       colors: getMasuColors(masu),
-      unique: {
-        ...base.unique,
-        evoLevel: Math.max(0, Number(masu.uniqueSkillLevels?.own) || 0)
-      },
-      inheritedUniques: (masu.inheritedUniques || []).map((unique, index) => ({
-        ...unique,
-        evoLevel: Math.max(Number(unique.evoLevel) || 0, Number(masu.uniqueSkillLevels?.[`inh:${index}`]) || 0)
-      }))
+      unique: uniqueSkillAtLevel(base.unique, masu.uniqueSkillLevels?.own),
+      inheritedUniques: (masu.inheritedUniques || []).map((unique, index) => uniqueSkillAtLevel(unique, Math.max(Number(unique.evoLevel) || 0, Number(masu.uniqueSkillLevels?.[`inh:${index}`]) || 0)))
     };
   };
   const resolveRosterEntryToMon = entry => {
@@ -4827,6 +4832,9 @@ function MonsterHeroGame() {
   }, {
     key: 'fused',
     label: '合体済み'
+  }, {
+    key: 'reborn',
+    label: '転生済み'
   }];
   const MONSTER_DISPLAY_OPTIONS = [{
     key: 'base',
@@ -4840,6 +4848,9 @@ function MonsterHeroGame() {
   }, {
     key: 'active',
     label: '編成中'
+  }, {
+    key: 'reborn',
+    label: '転生済み'
   }];
   // 「ベースモン(未マスモン化の種)」「マスモン(育成済み個体)」を1つの配列に統一して扱うための変換。
   // activeIdsには現在編成に入っている種id/'masu:'付きidの配列を渡す(画面によって draftMonsterRoster か
@@ -4859,7 +4870,8 @@ function MonsterHeroGame() {
         lineageName: base.name,
         bondLevel: null,
         active: activeIds.includes(id),
-        fusionCount: 0
+        fusionCount: 0,
+        rebirthCount: 0
       };
     }).filter(Boolean);
     const masuEntries = masuList.map(masu => {
@@ -4875,9 +4887,10 @@ function MonsterHeroGame() {
         masu,
         name: masu.name,
         lineageName: base.name,
-        bondLevel: bondLevelInfo(masu.bondXp || 0).level,
+        bondLevel: masuBondLevelInfo(masu).level,
         active: activeIds.includes(entryId),
-        fusionCount: (masu.fusionHistory || []).length
+        fusionCount: (masu.fusionHistory || []).length,
+        rebirthCount: donationDiamondValue(masu.rebirthCount)
       };
     }).filter(Boolean);
     return [...baseEntries, ...masuEntries];
@@ -4886,7 +4899,7 @@ function MonsterHeroGame() {
     const dirMul = monsterSortDir === 'desc' ? -1 : 1;
     const sorted = [...entries].sort((a, b) => {
       let cmp = 0;
-      if (monsterSortKey === 'base') cmp = (a.type === 'base' ? 0 : 1) - (b.type === 'base' ? 0 : 1);else if (monsterSortKey === 'masu') cmp = (a.type === 'masu' ? 0 : 1) - (b.type === 'masu' ? 0 : 1);else if (monsterSortKey === 'lineage') cmp = a.lineageName.localeCompare(b.lineageName, 'ja');else if (monsterSortKey === 'bond') cmp = (a.bondLevel ?? -1) - (b.bondLevel ?? -1);else if (monsterSortKey === 'name') cmp = a.name.localeCompare(b.name, 'ja');else if (monsterSortKey === 'active') cmp = (a.active ? 0 : 1) - (b.active ? 0 : 1);else if (monsterSortKey === 'fused') cmp = (a.fusionCount || 0) - (b.fusionCount || 0);
+      if (monsterSortKey === 'base') cmp = (a.type === 'base' ? 0 : 1) - (b.type === 'base' ? 0 : 1);else if (monsterSortKey === 'masu') cmp = (a.type === 'masu' ? 0 : 1) - (b.type === 'masu' ? 0 : 1);else if (monsterSortKey === 'lineage') cmp = a.lineageName.localeCompare(b.lineageName, 'ja');else if (monsterSortKey === 'bond') cmp = (a.bondLevel ?? -1) - (b.bondLevel ?? -1);else if (monsterSortKey === 'name') cmp = a.name.localeCompare(b.name, 'ja');else if (monsterSortKey === 'active') cmp = (a.active ? 0 : 1) - (b.active ? 0 : 1);else if (monsterSortKey === 'fused') cmp = (a.fusionCount || 0) - (b.fusionCount || 0);else if (monsterSortKey === 'reborn') cmp = (a.rebirthCount || 0) - (b.rebirthCount || 0);
       if (cmp === 0) cmp = a.lineageName.localeCompare(b.lineageName, 'ja');
       return cmp * dirMul;
     });
@@ -4897,7 +4910,11 @@ function MonsterHeroGame() {
   // オンにすると、種別に関わらず合体済みのモンスターだけが絞り込まれる)。
   // 以前は種別(base/masu)しか見ていなかったため、合体済み・編成中のチェックが実質無視され、
   // 種別を両方オフにすると何も表示されなくなる不具合があった
-  const monsterEntryMatchesDisplayFlags = (e, flags) => !!flags[e.type] || !!flags.fused && (e.fusionCount || 0) > 0 || !!flags.active && !!e.active;
+  const monsterEntryMatchesDisplayFlags = (e, flags) => {
+    const reborn = (e.rebirthCount || 0) > 0;
+    const categoryMatch = !!flags[e.type] || !!flags.fused && (e.fusionCount || 0) > 0 || !!flags.active && !!e.active || !!flags.reborn && reborn;
+    return categoryMatch && (!!flags.reborn || !reborn);
+  };
   // モンスター一覧・マスモン一覧・編成画面のソート/表示設定つき一覧は、画面を開くたび・
   // 無関係な状態更新のたびに毎回全件ソートし直すと重くなり(タップ反応が悪くなる原因の一つ)、
   // useMemoで実際に関係する値が変わった時だけ計算し直すようにする
@@ -5307,12 +5324,13 @@ function MonsterHeroGame() {
     const gainedLevels = after.level - before.level;
     const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
     const mainBase = ALL_PLAYER_MONSTERS[main.baseId];
-    const canInherit = mainLvl.level >= 10 && subLvl.level >= 10 && fusionInheritUnique;
-    const inheritedUnique = canInherit && subBase ? {
-      ...subBase.unique,
+    const ownedUniqueIds = new Set([mainBase?.unique?.monId || mainBase?.id, ...(main.inheritedUniques || []).map(unique => unique.monId)].filter(Boolean));
+    const canInherit = mainLvl.level >= 10 && subLvl.level >= 10 && fusionInheritUnique && subBase?.unique && !ownedUniqueIds.has(subBase.unique.monId || subBase.id);
+    const inheritedLevel = Math.max(0, Number(sub.uniqueSkillLevels?.own) || Number(subBase?.unique?.evoLevel) || 0);
+    const inheritedUnique = canInherit ? {
+      ...uniqueSkillAtLevel(subBase.unique, inheritedLevel),
       monId: subBase.id,
-      sourceMasuName: sub.name,
-      evoLevel: 0
+      sourceMasuName: sub.name
     } : null;
     const historyEntry = {
       subName: sub.name,
@@ -5429,7 +5447,7 @@ function MonsterHeroGame() {
         setRebirthSelectedId(null);
         setRebirthSkillKey('');
         rebirthProcessingRef.current = false;
-      }, 2100);
+      }, 4100);
     } catch {
       rebirthProcessingRef.current = false;
       setRebirthError('転生データを保存できませんでした。もう一度お試しください。');
@@ -7744,57 +7762,62 @@ function MonsterHeroGame() {
     };
   });
   // モンスター詳細系のポップアップ(編成画面/勇者選択画面など)で共通利用する、通常技・固有技セクション(タップでレベル別詳細)
-  const renderSkillSection = mon => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setRosterSkillDetail({
-      mon,
-      kind: 'atk'
-    }),
-    className: "w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between mb-2 border-b border-white/5 pb-1"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Sword, {
-    size: 12,
-    className: "text-red-400"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black uppercase"
-  }, "\u901A\u5E38\u6280: ", (HERO_ATK_NAMES[mon.id] || HERO_ATK_NAMES['Mocchi'])[0])), /*#__PURE__*/React.createElement(ChevronRight, {
-    size: 12,
-    className: "text-slate-500"
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-4 text-[9px] font-mono"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-red-400 font-bold"
-  }, "\u6280\u5A01\u529B ", Math.floor(BASE_ATK_EVOLUTION[0].mult * 100)), /*#__PURE__*/React.createElement("span", {
-    className: "text-amber-400 font-bold"
-  }, "\u6D88\u8CBBG ", BASE_ATK_EVOLUTION[0].baseGuts))), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setRosterSkillDetail({
-      mon,
-      kind: 'unique'
-    }),
-    className: "w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between mb-2 border-b border-white/5 pb-1"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 12,
-    className: "text-amber-400"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] font-black uppercase"
-  }, "\u56FA\u6709\u6280: ", mon.unique.name)), /*#__PURE__*/React.createElement(ChevronRight, {
-    size: 12,
-    className: "text-slate-500"
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-4 text-[9px] font-mono mb-2"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-red-400 font-bold"
-  }, "\u6280\u5A01\u529B ", Math.floor(mon.unique.baseMult * 100)), /*#__PURE__*/React.createElement("span", {
-    className: "text-amber-400 font-bold"
-  }, "\u6D88\u8CBBG ", mon.unique.baseGuts)), /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-300 leading-relaxed italic"
-  }, "\"", mon.unique.effectDesc, "\"")));
+  const renderSkillSection = mon => {
+    const currentUnique = uniqueSkillAtLevel(mon.unique, mon.unique?.evoLevel);
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setRosterSkillDetail({
+        mon,
+        kind: 'atk'
+      }),
+      className: "w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between mb-2 border-b border-white/5 pb-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement(Sword, {
+      size: 12,
+      className: "text-red-400"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black uppercase"
+    }, "\u901A\u5E38\u6280: ", (HERO_ATK_NAMES[mon.id] || HERO_ATK_NAMES['Mocchi'])[0])), /*#__PURE__*/React.createElement(ChevronRight, {
+      size: 12,
+      className: "text-slate-500"
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-4 text-[9px] font-mono"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-red-400 font-bold"
+    }, "\u6280\u5A01\u529B ", Math.floor(BASE_ATK_EVOLUTION[0].mult * 100)), /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-400 font-bold"
+    }, "\u6D88\u8CBBG ", BASE_ATK_EVOLUTION[0].baseGuts))), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setRosterSkillDetail({
+        mon,
+        kind: 'unique'
+      }),
+      className: "w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between mb-2 border-b border-white/5 pb-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement(Zap, {
+      size: 12,
+      className: "text-amber-400"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black uppercase"
+    }, "\u56FA\u6709\u6280 Lv.", currentUnique.evoLevel, ": ", currentUnique.name)), /*#__PURE__*/React.createElement(ChevronRight, {
+      size: 12,
+      className: "text-slate-500"
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-3 text-[9px] font-mono mb-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-red-400 font-bold"
+    }, "\u6280\u5A01\u529B ", Math.floor(currentUnique.mult * 100)), /*#__PURE__*/React.createElement("span", {
+      className: "text-yellow-400 font-bold"
+    }, "\u4F1A\u5FC3\u7387 ", Math.round(currentUnique.crit * 100), "%"), /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-400 font-bold"
+    }, "\u6D88\u8CBBG ", currentUnique.guts)), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-slate-300 leading-relaxed italic"
+    }, "\"", currentUnique.effectDesc, "\"")));
+  };
   const pct = Math.round(bootProgress.done / Math.max(1, bootProgress.total) * 100);
   // body直下へ描画し、各画面のoverflow・transform・モーダルの積層に隠されないようにする。
   const updateNotice = updateAvailable ? ReactDOM.createPortal(/*#__PURE__*/React.createElement("button", {
@@ -8193,51 +8216,58 @@ function MonsterHeroGame() {
     size: 18
   }), "\u8EE2\u751F"))), gameState === 'MASU_REBIRTH' && (() => {
     const selected = masuMons.find(m => String(m.id) === String(rebirthSelectedId));
-    if (!selected) return /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 flex flex-col h-full p-4"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 mb-3"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setGameState('TEMPLE'),
-      className: "p-3 text-slate-400"
-    }, /*#__PURE__*/React.createElement(ArrowLeft, {
-      size: 20
-    })), /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black italic text-violet-300"
-    }, "\u8EE2\u751F")), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] text-slate-400 mb-3"
-    }, "\u73FE\u5728\u306E\u30EC\u30D9\u30EB\u4E0A\u9650\u306B\u5230\u9054\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u8EE2\u751F\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
-    }, masuMons.map(masu => {
-      const base = ALL_PLAYER_MONSTERS[masu.baseId];
-      if (!base) return null;
-      const lvl = masuBondLevelInfo(masu);
-      const can = lvl.level === normalizeMasuProgression(masu).levelCap;
-      return /*#__PURE__*/React.createElement("button", {
-        key: masu.id,
-        disabled: !can,
-        onClick: () => {
-          setRebirthSelectedId(masu.id);
-          setRebirthSkillKey('');
-        },
-        className: "relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"
+    if (!selected) {
+      const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds)).filter(e => e.type === 'masu' && monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags));
+      return /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 flex flex-col h-full p-4"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "relative w-14 h-14 mx-auto rounded-full overflow-hidden"
-      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: masu.baseId,
-        src: base.iconUrl,
-        alt: masu.name,
-        masuColors: getMasuColors(masu),
-        className: "w-full h-full object-cover"
-      }), /*#__PURE__*/React.createElement(RebirthStars, {
-        count: masu.rebirthCount,
-        className: "absolute bottom-0 inset-x-0"
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black truncate"
-      }, masu.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-pink-300"
-      }, "Lv.", lvl.level, "/", masu.levelCap || 30));
-    })));
+        className: "flex items-center gap-2 mb-3"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setGameState('TEMPLE'),
+        className: "p-3 text-slate-400"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-xl font-black italic text-violet-300"
+      }, "\u8EE2\u751F")), /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] text-slate-400 mb-3"
+      }, "\u73FE\u5728\u306E\u30EC\u30D9\u30EB\u4E0A\u9650\u306B\u5230\u9054\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u8EE2\u751F\u3067\u304D\u307E\u3059\u3002"), renderMonsterSortFilterBar({
+        singleType: true
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
+      }, entries.map(({
+        masu
+      }) => {
+        const base = ALL_PLAYER_MONSTERS[masu.baseId];
+        if (!base) return null;
+        const lvl = masuBondLevelInfo(masu);
+        const can = lvl.level === normalizeMasuProgression(masu).levelCap;
+        return /*#__PURE__*/React.createElement("button", {
+          key: masu.id,
+          disabled: !can,
+          onClick: () => {
+            setRebirthSelectedId(masu.id);
+            setRebirthSkillKey('');
+          },
+          className: "relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "relative w-14 h-14 mx-auto rounded-full overflow-hidden"
+        }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+          baseId: masu.baseId,
+          src: base.iconUrl,
+          alt: masu.name,
+          masuColors: getMasuColors(masu),
+          className: "w-full h-full object-cover"
+        }), /*#__PURE__*/React.createElement(RebirthStars, {
+          count: masu.rebirthCount,
+          className: "absolute bottom-0 inset-x-0"
+        })), /*#__PURE__*/React.createElement("div", {
+          className: "text-[9px] font-black truncate"
+        }, masu.name), /*#__PURE__*/React.createElement("div", {
+          className: "text-[8px] text-pink-300"
+        }, "Lv.", lvl.level, "/", masu.levelCap || 30));
+      })));
+    }
     const normalized = normalizeMasuProgression(selected),
       base = ALL_PLAYER_MONSTERS[selected.baseId],
       lvl = masuBondLevelInfo(selected),
@@ -8518,7 +8548,7 @@ function MonsterHeroGame() {
     className: "absolute bottom-0 inset-x-0"
   })), /*#__PURE__*/React.createElement("div", {
     className: "mh-rebirth-copy"
-  }, /*#__PURE__*/React.createElement("b", null, "\u8EE2\u751F\u6210\u529F\uFF01"), /*#__PURE__*/React.createElement("span", null, "Lv\u4E0A\u9650UP \u2192 ", rebirthAnimation.masu.levelCap), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +5"), /*#__PURE__*/React.createElement("span", null, rebirthAnimation.skillName, " Lv.", rebirthAnimation.skillLevel))), donationAnimation && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", null, "\u8EE2\u751F\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("span", null, "\u2605 \u8EE2\u751F\u661F\u3092\u8FFD\u52A0"), /*#__PURE__*/React.createElement("span", null, "\u30EC\u30D9\u30EB\u4E0A\u9650UP \u2192 ", rebirthAnimation.masu.levelCap), /*#__PURE__*/React.createElement("span", null, rebirthAnimation.skillName, " Lv.", rebirthAnimation.skillLevel, "\u3078\u9032\u5316"), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +5"))), donationAnimation && /*#__PURE__*/React.createElement("div", {
     className: "mh-donation-animation",
     role: "status",
     "aria-live": "polite",
@@ -9775,7 +9805,9 @@ function MonsterHeroGame() {
       const subLvl = bondLevelInfo(sub.bondXp || 0);
       const cost = (mainLvl.level + subLvl.level) * 100;
       const canAfford = gold >= cost;
-      const canChooseInherit = mainLvl.level >= 10 && subLvl.level >= 10 && !!subBase.unique;
+      const ownedUniqueIds = new Set([mainBase.unique?.monId || mainBase.id, ...(main.inheritedUniques || []).map(unique => unique.monId)].filter(Boolean));
+      const duplicateUnique = ownedUniqueIds.has(subBase.unique?.monId || subBase.id);
+      const canChooseInherit = mainLvl.level >= 10 && subLvl.level >= 10 && !!subBase.unique && !duplicateUnique;
       // 合体後にどうなるかを先に計算して見せる(実行してみないと分からない状態だったため)
       const afterXp = (main.bondXp || 0) + (sub.bondXp || 0);
       const afterLvl = bondLevelInfo(afterXp);
@@ -9911,7 +9943,9 @@ function MonsterHeroGame() {
         className: `w-9 h-5 rounded-full shrink-0 relative ${fusionInheritUnique ? 'bg-amber-500' : 'bg-slate-700'}`
       }, /*#__PURE__*/React.createElement("div", {
         className: `absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${fusionInheritUnique ? 'left-4' : 'left-0.5'}`
-      }))), /*#__PURE__*/React.createElement("div", {
+      }))), duplicateUnique && /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] text-slate-400 font-bold bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 mb-2"
+      }, "\u540C\u3058\u56FA\u6709\u6280\u306F\u3059\u3067\u306B\u6240\u6301\u3057\u3066\u3044\u308B\u305F\u3081\u5F15\u304D\u7D99\u3052\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "bg-red-950/40 border border-red-500/40 rounded-xl p-3 mb-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-red-300 font-black flex items-center gap-1 mb-1"
@@ -10540,19 +10574,22 @@ function MonsterHeroGame() {
       className: "bg-black/40 p-2 rounded-xl border border-violet-500/30"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-violet-300 uppercase font-bold mb-1"
-    }, "\u6240\u6301\u56FA\u6709\u6280Lv"), getRebirthSkillChoices(masu).map(skill => /*#__PURE__*/React.createElement("button", {
-      key: skill.key,
-      onClick: () => setRosterSkillDetail({
-        mon: {
-          ...mergeMasuIntoMon(masu),
-          unique: skill.unique
-        },
-        kind: 'unique'
-      }),
-      className: "w-full flex justify-between text-[9px] py-1 text-left"
-    }, /*#__PURE__*/React.createElement("span", null, skill.name), /*#__PURE__*/React.createElement("span", {
-      className: "text-amber-300 font-black"
-    }, "Lv.", skill.level, " \u203A")))), /*#__PURE__*/React.createElement("div", {
+    }, "\u6240\u6301\u56FA\u6709\u6280Lv"), getRebirthSkillChoices(masu).map(skill => {
+      const current = uniqueSkillAtLevel(skill.unique, skill.level);
+      return /*#__PURE__*/React.createElement("button", {
+        key: skill.key,
+        onClick: () => setRosterSkillDetail({
+          mon: {
+            ...mergeMasuIntoMon(masu),
+            unique: current
+          },
+          kind: 'unique'
+        }),
+        className: "w-full flex justify-between text-[9px] py-1 text-left"
+      }, /*#__PURE__*/React.createElement("span", null, current.name), /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300 font-black"
+      }, "Lv.", skill.level, " \u203A"));
+    })), /*#__PURE__*/React.createElement("div", {
       className: "bg-black/40 p-2 rounded-xl border border-cyan-500/30"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center justify-between mb-0.5"
@@ -14356,7 +14393,8 @@ function MonsterHeroGame() {
     const mon = rosterSkillDetail.mon;
     const isUnique = rosterSkillDetail.kind === 'unique';
     const levels = isUnique ? getUniqueSkillLevels(mon) : getAtkSkillLevels(mon);
-    const title = isUnique ? `固有技: ${mon.unique.name}` : `通常技: ${(HERO_ATK_NAMES[mon.id] || HERO_ATK_NAMES['Mocchi'])[0]}`;
+    const currentLevel = isUnique ? Math.max(0, Number(mon.unique?.evoLevel) || 0) : 0;
+    const title = isUnique ? `固有技 Lv.${currentLevel}: ${mon.unique.names?.[currentLevel] || mon.unique.name}` : `通常技: ${(HERO_ATK_NAMES[mon.id] || HERO_ATK_NAMES['Mocchi'])[0]}`;
     return /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-4",
       style: {
@@ -14378,22 +14416,30 @@ function MonsterHeroGame() {
       size: 16
     }))), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5"
-    }, levels.map(info => /*#__PURE__*/React.createElement("div", {
-      key: info.lvl,
-      className: "p-2 rounded-xl border bg-black/30 border-white/5"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between items-center mb-1"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] font-black text-amber-300"
-    }, "Lv.", info.lvl, " ", info.name)), /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-4 text-[9px] font-mono"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-red-400 font-bold"
-    }, "\u6280\u5A01\u529B ", info.power), /*#__PURE__*/React.createElement("span", {
-      className: "text-yellow-400 font-bold"
-    }, "\u4F1A\u5FC3\u7387 ", info.crit, "%"), /*#__PURE__*/React.createElement("span", {
-      className: "text-amber-400 font-bold"
-    }, "\u6D88\u8CBBG ", info.guts))))), /*#__PURE__*/React.createElement("button", {
+    }, levels.map(info => {
+      const locked = isUnique && info.lvl > currentLevel;
+      const current = isUnique && info.lvl === currentLevel;
+      return /*#__PURE__*/React.createElement("div", {
+        key: info.lvl,
+        className: `p-2 rounded-xl border ${locked ? 'bg-slate-950/70 border-slate-800 opacity-45' : 'bg-black/30'} ${current ? 'border-amber-400 ring-1 ring-amber-400/40' : 'border-white/5'}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between items-center mb-1"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: `text-[9px] font-black ${locked ? 'text-slate-500' : 'text-amber-300'}`
+      }, locked ? '🔒 ' : '', "Lv.", info.lvl, " ", info.name), isUnique && /*#__PURE__*/React.createElement("span", {
+        className: `text-[8px] font-black ${current ? 'text-amber-300' : locked ? 'text-slate-600' : 'text-emerald-400'}`
+      }, current ? '現在の技' : locked ? '未解放' : '解放済み')), /*#__PURE__*/React.createElement("div", {
+        className: "flex gap-4 text-[9px] font-mono"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-red-400 font-bold"
+      }, "\u6280\u5A01\u529B ", info.power), /*#__PURE__*/React.createElement("span", {
+        className: "text-yellow-400 font-bold"
+      }, "\u4F1A\u5FC3\u7387 ", info.crit, "%"), /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-400 font-bold"
+      }, "\u6D88\u8CBBG ", info.guts)), isUnique && /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-slate-400 mt-1"
+      }, mon.unique.effectDesc));
+    })), /*#__PURE__*/React.createElement("button", {
       onClick: () => setRosterSkillDetail(null),
       className: "w-full bg-amber-600 text-white py-3 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95"
     }, "\u9589\u3058\u308B")));
@@ -14701,7 +14747,7 @@ const createAnimationStyle = () => {
     .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:24%;right:24%;top:35%;bottom:30%;pointer-events:none}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 2s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 2s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 2s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 2s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,62%{opacity:0;transform:translateY(20px)}75%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:140px;height:140px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}}
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:24%;right:24%;top:35%;bottom:30%;pointer-events:none}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:140px;height:140px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
     .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
