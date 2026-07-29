@@ -1,7 +1,6 @@
 // バトル周りの仕様を実ブラウザで確認する。
 //
-//  ① 距離撃の取得 … 選んだ距離「へ敵を動かせる」距離撃が手に入るか
-//                    (近距離に置いたら零距離撃。零→近→中→遠と押し出すため)
+//  ① 距離撃の取得 … 従来どおり配置した距離のひとつ手前の距離撃が手に入るか
 //  ② 敵撃破のファンファーレ … 鳴っているあいだBGMは止まり、鳴り終わるとBGMが戻るか
 //  ③ 固有技の強化フェーズ … 合体で引き継いだ固有技も強化できるか
 //
@@ -173,7 +172,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   }
 
   check('距離撃を手札で確認できた', seenRange.size > 0, [...seenRange].join(','));
-  check('近距離に置くと「零距離撃」になる(選んだ距離へ敵を動かせる技)', seenRange.size > 0 && [...seenRange].every(v => v === '零'), [...seenRange].join(','));
+  check('近距離に置くと従来どおり「零距離撃」になる', seenRange.size > 0 && [...seenRange].every(v => v === '零'), [...seenRange].join(','));
   check('WAVEをクリアできた', wave1Cleared);
   check('撃破後にファンファーレが鳴る(BGMは止まる)', jingleAlone);
   check('ファンファーレのあとBGMが戻る', bgmBack, (await audioSnapshot()).filter(a => !a.paused).map(a => a.src).join(',') || '(無音)');
