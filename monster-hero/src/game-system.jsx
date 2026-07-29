@@ -63,7 +63,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 18:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 19:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -130,6 +130,49 @@ const bondLevelInfo = (totalXp) => {
     xp -= need; level++;
   }
   return { level, xpIntoLevel: xp, xpForNext: xpForBondLevel(level) };
+};
+const INITIAL_MASU_LEVEL_CAP = 30;
+const REBIRTH_LEVEL_CAP_GAIN = 5;
+const MAX_UNIQUE_SKILL_LEVEL = 8;
+const totalBondXpForLevel = (level) => {
+  let total = 0;
+  for (let current = 1; current < Math.max(1, level); current++) total += xpForBondLevel(current);
+  return total;
+};
+const normalizeMasuProgression = (masu) => ({
+  ...masu,
+  rebirthCount: Math.max(0, Math.floor(Number(masu?.rebirthCount) || 0)),
+  levelCap: Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(masu?.levelCap) || INITIAL_MASU_LEVEL_CAP)),
+  uniqueSkillLevels: masu?.uniqueSkillLevels && typeof masu.uniqueSkillLevels === 'object' ? { ...masu.uniqueSkillLevels } : {},
+});
+const cappedBondXp = (masu, gain = 0) => {
+  const normalized = normalizeMasuProgression(masu);
+  return Math.min(totalBondXpForLevel(normalized.levelCap), donationDiamondValue(normalized.bondXp) + Math.max(0, Math.floor(Number(gain) || 0)));
+};
+const masuBondLevelInfo = (masu) => bondLevelInfo(cappedBondXp(masu));
+const migrateMasuLevelCaps = (masuMons, gold) => {
+  const capXp = totalBondXpForLevel(INITIAL_MASU_LEVEL_CAP);
+  let compensation = 0;
+  const nextMasuMons = (Array.isArray(masuMons) ? masuMons : []).map(raw => {
+    const masu = normalizeMasuProgression(raw);
+    if (masu.rebirthCount === 0 && donationDiamondValue(masu.bondXp) > capXp) {
+      compensation += donationDiamondValue(masu.bondXp) - capXp;
+      return { ...masu, bondXp: capXp };
+    }
+    return { ...masu, bondXp: cappedBondXp(masu) };
+  });
+  return { nextMasuMons, compensation, nextGold: donationDiamondValue(gold) + compensation };
+};
+const buildMasuRebirth = ({ masu, skillKey, gold }) => {
+  if (!masu) return { ok:false, reason:'対象のマスモンが見つかりません。' };
+  const normalized = normalizeMasuProgression(masu);
+  const level = masuBondLevelInfo(normalized).level;
+  if (level !== normalized.levelCap) return { ok:false, reason:`Lv.${normalized.levelCap}到達後に転生できます。` };
+  const cost = level * 100;
+  if (donationDiamondValue(gold) < cost) return { ok:false, reason:'ダイヤが不足しています。' };
+  const currentSkillLevel = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
+  if (!skillKey || currentSkillLevel >= MAX_UNIQUE_SKILL_LEVEL) return { ok:false, reason:'強化できる固有技を選んでください。' };
+  return { ok:true, cost, skillKey, skillLevel:currentSkillLevel + 1, nextGold:donationDiamondValue(gold) - cost, nextMasu:{ ...normalized, bondXp:0, rebirthCount:normalized.rebirthCount + 1, levelCap:normalized.levelCap + REBIRTH_LEVEL_CAP_GAIN, distAptPoints:(normalized.distAptPoints || 0) + 5, uniqueSkillLevels:{ ...normalized.uniqueSkillLevels, [skillKey]:currentSkillLevel + 1 } } };
 };
 
 // 神殿の寄付で受け取るダイヤ。保存データが古い・破損している場合も負数やNaNを返さない。
@@ -926,6 +969,14 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, drag
     </div>
   );
 };
+const RebirthStars = ({ count = 0, className = '' }) => {
+  const value = Math.max(0, Math.floor(Number(count) || 0));
+  if (!value) return null;
+  const tier = Math.floor((value - 1) / 5) % 4;
+  const colors = ['#fde047','#f472b6','#ef4444','#ffffff'];
+  const shadows = ['#ca8a04','#db2777','#991b1b','#22d3ee'];
+  return <span className={`mh-rebirth-stars ${className}`} aria-label={`転生${value}回`}>{Array.from({length:Math.min(5, value)},(_,i)=><span key={i} style={{color:colors[tier],textShadow:tier===3?`0 0 2px #f472b6,0 0 4px ${shadows[tier]}`:`0 0 3px ${shadows[tier]}`}}>★</span>)}</span>;
+};
 // 染色もどきの「カスタム」色選択: 色相バー(1本)+彩度・明度パッド(正方形)で任意の色を選べる
 // 自前のスペクトラムピッカー。端末のOS標準カラーピッカー(<input type="color">)はiOS/Android/PCで
 // 見た目も操作感もバラバラで、アプリのテーマにも合わせられず自動テストもできないため使わず、
@@ -1111,7 +1162,7 @@ const reconcileMasuPoints = (masu) => {
   const baseApt = base.distAptitude || ['C','C','C','C'];
   const aptSpent = (masu.distApt || baseApt).reduce((sum, g, i) => sum + Math.max(0, DIST_APTITUDE_GRADES.indexOf(g) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])), 0);
   const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, val]) => sum + Math.ceil((val || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
-  const earned = Math.max(0, bondLevelInfo(masu.bondXp || 0).level - 1);
+  const earned = Math.max(0, masuBondLevelInfo(masu).level - 1);
   const missing = earned - (aptSpent + statSpent + (masu.distAptPoints || 0));
   return missing > 0 ? { ...masu, distAptPoints: (masu.distAptPoints || 0) + missing } : masu;
 };
@@ -1681,6 +1732,12 @@ function MonsterHeroGame() {
   const [donationProcessing, setDonationProcessing] = useState(false);
   const [donationAnimation, setDonationAnimation] = useState(null);
   const donationProcessingRef = useRef(false);
+  const [rebirthSelectedId, setRebirthSelectedId] = useState(null);
+  const [rebirthSkillKey, setRebirthSkillKey] = useState('');
+  const [rebirthError, setRebirthError] = useState('');
+  const [rebirthAnimation, setRebirthAnimation] = useState(null);
+  const rebirthProcessingRef = useRef(false);
+  const [levelCapCompensation, setLevelCapCompensation] = useState(null);
   const masuMonsRef = useRef(masuMons);
   masuMonsRef.current = masuMons;
   const [finalRewardSummary, setFinalRewardSummary] = useState(null); // 最終リザルト画面に出す今回の獲得内訳
@@ -2027,6 +2084,7 @@ function MonsterHeroGame() {
     TEMPLE: 'fusion',           // 神殿は合体と同じ曲を続ける
     MASU_FUSION: 'fusion',      // 合体ページ
     MASU_DONATION: 'fusion',    // 寄付ページも神殿の曲を続ける
+    MASU_REBIRTH: 'fusion',     // 転生ページも神殿の曲を継続する
     BREEDER_MARKET: 'market',   // マーケットページ
   };
   // プロフィール本体はHOMEの曲を続ける。そこから飛べる詳細ページ群は従来のプロフィール曲を維持し、
@@ -2398,6 +2456,33 @@ function MonsterHeroGame() {
         }
         await storeSet('mh_masu_migrated', true, false);
       }
+      // Lv30上限導入時の一度限りの補償。計算結果をpendingへ先に保存してから、マスモンと
+      // ダイヤを保存し、最後に完了フラグを立てる。途中終了してもpendingから同じ結果を再開し、
+      // マスモンだけLv30になって補償ダイヤが失われる事故を防ぐ。
+      const levelCapMigrated = await storeGet('mh_masu_level_cap_migrated_v1', false, false);
+      if (!levelCapMigrated) {
+        let migratedCap = await storeGet('mh_masu_level_cap_migration_pending_v1', null, false);
+        if (!migratedCap || !Array.isArray(migratedCap.nextMasuMons)) {
+          migratedCap = migrateMasuLevelCaps(savedMasuMons, savedGold);
+          await storeSet('mh_masu_level_cap_migration_pending_v1', migratedCap, false);
+        }
+        savedMasuMons = migratedCap.nextMasuMons;
+        await storeSet('mh_masu_mons', savedMasuMons, false);
+        await storeSet('mh_gold', migratedCap.nextGold, false);
+        if (migratedCap.compensation > 0) await storeSet('mh_masu_level_cap_compensation_notice_v1', { diamonds:migratedCap.compensation }, false);
+        await storeSet('mh_masu_level_cap_migrated_v1', true, false);
+        await storeSet('mh_masu_level_cap_migration_pending_v1', null, false);
+        setGold(migratedCap.nextGold);
+      } else {
+        const normalized = savedMasuMons.map(normalizeMasuProgression);
+        if (normalized.some((m,i)=>JSON.stringify(m)!==JSON.stringify(savedMasuMons[i]))) {
+          savedMasuMons = normalized;
+          await storeSet('mh_masu_mons', savedMasuMons, false);
+        }
+      }
+      const compensationNotice = await storeGet('mh_masu_level_cap_compensation_notice_v1', null, false);
+      const compensationNoticeSeen = await storeGet('mh_masu_level_cap_compensation_notice_seen_v1', false, false);
+      if (compensationNotice?.diamonds > 0 && !compensationNoticeSeen) setLevelCapCompensation(compensationNotice);
       // 絆レベルに対して強化ポイントが不足しているマスモンがあれば、ここで不足分を補填する
       // (必要経験値を緩和した際、レベルだけ上がってポイントが配られないまま残っていた分の救済)
       const reconciledMasuMons = savedMasuMons.map(reconcileMasuPoints);
@@ -2637,7 +2722,8 @@ function MonsterHeroGame() {
       },
       distAptitude: masu.distApt || base.distAptitude,
       colors: getMasuColors(masu),
-      inheritedUniques: masu.inheritedUniques || [],
+      unique: { ...base.unique, evoLevel:Math.max(0, Number(masu.uniqueSkillLevels?.own) || 0) },
+      inheritedUniques: (masu.inheritedUniques || []).map((unique,index)=>({ ...unique, evoLevel:Math.max(Number(unique.evoLevel)||0, Number(masu.uniqueSkillLevels?.[`inh:${index}`])||0) })),
     };
   };
   const resolveRosterEntryToMon = (entry) => {
@@ -2940,7 +3026,7 @@ function MonsterHeroGame() {
     if (!masu) return;
     const gain = item.bondXp * n;
     setMasuMons(prev => {
-      const next = prev.map(m => m.id === masuId ? { ...m, bondXp: (m.bondXp || 0) + gain } : m);
+      const next = prev.map(m => m.id === masuId ? { ...m, bondXp: cappedBondXp(m, gain) } : m);
       storeSet('mh_masu_mons', next, false);
       return next;
     });
@@ -3000,7 +3086,7 @@ function MonsterHeroGame() {
     if (gold < cost) return null;
     const beforeXp = main.bondXp || 0;
     const gainedXp = sub.bondXp || 0;
-    const afterXp = beforeXp + gainedXp;
+    const afterXp = cappedBondXp(main, gainedXp);
     const before = bondLevelInfo(beforeXp);
     const after = bondLevelInfo(afterXp);
     const gainedLevels = after.level - before.level;
@@ -3042,6 +3128,34 @@ function MonsterHeroGame() {
     setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
   };
   const resetDonationFlow = () => { if (donationProcessingRef.current) return; setDonationSelectedId(null); setDonationResult(null); setDonationAnimation(null); setDonationError(''); };
+  const getRebirthSkillChoices = (masu) => {
+    const base = ALL_PLAYER_MONSTERS[masu.baseId];
+    const own = base?.unique ? [{ key:'own', name:base.unique.name, unique:base.unique }] : [];
+    return [...own, ...(masu.inheritedUniques || []).map((unique,index)=>({ key:`inh:${index}`, name:unique.name, unique }))]
+      .map(choice=>({ ...choice, level:Math.max(0, Math.floor(Number(masu.uniqueSkillLevels?.[choice.key]) || 0)) }));
+  };
+  const executeMasuRebirth = async () => {
+    if (rebirthProcessingRef.current || !rebirthSelectedId) return;
+    const masu = masuMonsRef.current.find(m=>String(m.id)===String(rebirthSelectedId));
+    const result = buildMasuRebirth({ masu, skillKey:rebirthSkillKey, gold });
+    if (!result.ok) { setRebirthError(result.reason); return; }
+    rebirthProcessingRef.current = true;
+    setRebirthError('');
+    const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?result.nextMasu:m);
+    try {
+      await storeSet('mh_masu_mons', next, false);
+      await storeSet('mh_gold', result.nextGold, false);
+      masuMonsRef.current = next;
+      setMasuMons(next); setGold(result.nextGold);
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      const skill = getRebirthSkillChoices(masu).find(choice=>choice.key===rebirthSkillKey);
+      setRebirthAnimation({ masu:result.nextMasu, base, skillName:skill?.name || '固有技', skillLevel:result.skillLevel });
+      setTimeout(()=>{ setRebirthAnimation(null); setRebirthSelectedId(null); setRebirthSkillKey(''); rebirthProcessingRef.current=false; }, 2100);
+    } catch {
+      rebirthProcessingRef.current=false;
+      setRebirthError('転生データを保存できませんでした。もう一度お試しください。');
+    }
+  };
   const executeMasuDonation = async () => {
     if (donationProcessingRef.current || !donationSelectedId) return;
     donationProcessingRef.current = true;
@@ -3106,13 +3220,16 @@ function MonsterHeroGame() {
     if (!mainHero || mainHero.masuId) return null; // 既にマスモンの勇者は登録不要(既存インスタンスに加算済み)
     const base = ALL_PLAYER_MONSTERS[mainHero.id];
     if (!base) return null;
-    const startXp = finalRewardSummary?.heroBondGain?.xpGain || 0;
+    const startXp = Math.min(finalRewardSummary?.heroBondGain?.xpGain || 0, totalBondXpForLevel(INITIAL_MASU_LEVEL_CAP));
     const startLevel = bondLevelInfo(startXp);
     const id = 'masu_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
     const masu = {
       id, baseId: mainHero.id,
       name: (name || base.name).trim().slice(0, 12) || base.name,
-      bondXp: startXp,
+      bondXp: Math.min(startXp, totalBondXpForLevel(INITIAL_MASU_LEVEL_CAP)),
+      rebirthCount: 0,
+      levelCap: INITIAL_MASU_LEVEL_CAP,
+      uniqueSkillLevels: {},
       distAptPoints: Math.max(0, startLevel.level - 1),
       distApt: [...(base.distAptitude || ['C','C','C','C'])],
       statPoints: { hp: 0, atk: 0, def: 0, guts: 0 },
@@ -3170,8 +3287,8 @@ function MonsterHeroGame() {
     if (mainHero?.masuId) {
       const masu = getMasuMon(mainHero.masuId);
       const before = bondLevelInfo(masu?.bondXp || 0);
-      const after = bondLevelInfo((masu?.bondXp || 0) + gain);
-      heroBondGain = { name: mainHero.masuName || mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after, masuId: mainHero.masuId };
+      const after = bondLevelInfo(cappedBondXp(masu || {}, gain));
+      heroBondGain = { name: mainHero.masuName || mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain:Math.max(0,cappedBondXp(masu || {}, gain)-(masu?.bondXp||0)), levelBefore: before, levelAfter: after, masuId: mainHero.masuId };
     } else if (mainHero) {
       const before = bondLevelInfo(0);
       const after = bondLevelInfo(gain);
@@ -3181,8 +3298,8 @@ function MonsterHeroGame() {
       const masu = getMasuMon(masuId);
       if (!masu) return null;
       const before = bondLevelInfo(masu.bondXp || 0);
-      const after = bondLevelInfo((masu.bondXp || 0) + allyGain);
-      return { name: masu.name, xpGain: allyGain, levelBefore: before, levelAfter: after, masuId };
+      const after = bondLevelInfo(cappedBondXp(masu, allyGain));
+      return { name: masu.name, xpGain:Math.max(0,cappedBondXp(masu, allyGain)-(masu.bondXp||0)), levelBefore: before, levelAfter: after, masuId };
     }).filter(Boolean);
 
     if (mainHero?.masuId || allyMasuIds.length > 0) {
@@ -3190,13 +3307,13 @@ function MonsterHeroGame() {
         const next = prev.map(m => {
           if (mainHero?.masuId && m.id === mainHero.masuId) {
             const before = bondLevelInfo(m.bondXp || 0);
-            const afterXp = (m.bondXp || 0) + gain;
+            const afterXp = cappedBondXp(m, gain);
             const after = bondLevelInfo(afterXp);
             return { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + (after.level - before.level) };
           }
           if (allyMasuIds.includes(m.id)) {
             const before = bondLevelInfo(m.bondXp || 0);
-            const afterXp = (m.bondXp || 0) + allyGain;
+            const afterXp = cappedBondXp(m, allyGain);
             const after = bondLevelInfo(afterXp);
             return { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + (after.level - before.level) };
           }
@@ -4120,7 +4237,7 @@ function MonsterHeroGame() {
     const isHero=!mainHero; const nextSlots=[...slots]; nextSlots[slotIdx]={...m}; setSlots(nextSlots);
     if (!isHero) Audio_.se.join();
     if (isHero) {
-      const initialUnique={...m.unique,evoLevel:0};
+      const initialUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)};
       setOwnedUniques([initialUnique]); setMainHero(m); setMaxHp(m.baseHp); setHp(m.baseHp);
       setMaxGuts(m.baseGuts); setGuts(Math.floor(m.baseGuts*0.5)); setAtk(m.baseAtk); setDef(m.baseDef);
       setTeachingPool([...getActiveTeachingCards()]); setGameState('PICK_TEACHING');
@@ -4134,7 +4251,7 @@ function MonsterHeroGame() {
       const aptDelta=getMonsterAptDelta(m);
       if (aptDelta.some(d=>d!==0)) setDistAptBonus(prev=>prev.map((v,i)=>v+aptDelta[i]));
       const aptLabel=aptDelta.map((d,i)=>d!==0?`${RANGE_LABELS[i]}${d>0?'+':''}${d}`:null).filter(Boolean).join(' ');
-      const newAllyUnique={...m.unique,evoLevel:0}; setOwnedUniques([...ownedUniques,newAllyUnique]);
+      const newAllyUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)}; setOwnedUniques([...ownedUniques,newAllyUnique]);
       setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
       setEffect({type:'mega',label:`${m.name}合流！`,icon:"🤝",monEmoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,subLabel:`HP:${bHp}→${nMaxHp}  ちから:${bAtk}→${nAtk}\n丈夫さ:${bDef}→${nDef}  ガッツ:${bGuts}→${nMaxGuts}${aptLabel?`\n間合い適性:${aptLabel}`:''}`});
       setTimeout(()=>{setEffect(null); setGameState('UPGRADE_SKILL');},1400);
@@ -4375,9 +4492,16 @@ function MonsterHeroGame() {
         {gameState==='TEMPLE'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-5 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">神殿</h2></div>
-            <div className="w-full max-w-md mx-auto space-y-3"><button onClick={()=>{resetFusionFlow();setGameState('MASU_FUSION');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>合体</button><button onClick={()=>{resetDonationFlow();setGameState('MASU_DONATION');}} className="mh-management-link mh-temple-link"><Gem size={18}/>寄付</button></div>
+            <div className="w-full max-w-md mx-auto space-y-3"><button onClick={()=>{resetFusionFlow();setGameState('MASU_FUSION');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>合体</button><button onClick={()=>{resetDonationFlow();setGameState('MASU_DONATION');}} className="mh-management-link mh-temple-link"><Gem size={18}/>寄付</button><button onClick={()=>{setRebirthSelectedId(null);setRebirthSkillKey('');setRebirthError('');setGameState('MASU_REBIRTH');}} className="mh-management-link mh-temple-link"><Star size={18}/>転生</button></div>
           </div>
         )}
+
+        {gameState==='MASU_REBIRTH'&&(()=>{
+          const selected=masuMons.find(m=>String(m.id)===String(rebirthSelectedId));
+          if (!selected) return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生</h2></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが転生できます。</div><div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{masuMons.map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const can=lvl.level===normalizeMasuProgression(masu).levelCap;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey('');}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="absolute bottom-0 inset-x-0"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div></button>})}</div></div>;
+          const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=lvl.level*100, skills=getRebirthSkillChoices(selected);
+          return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="absolute bottom-1 inset-x-0"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-amber-300 text-xs">必要 {cost.toLocaleString()}ダイヤ</div></div></div><div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選択してください（最大Lv.8）</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}</div>{rebirthError&&<div className="text-red-300 text-[10px] my-2">{rebirthError}</div>}<button disabled={!rebirthSkillKey||gold<cost||rebirthProcessingRef.current} onClick={executeMasuRebirth} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">転生する</button></div>;
+        })()}
 
         {gameState==='MASU_DONATION'&&(()=>{
           const options=[{key:'bondXp',label:'絆経験値'},{key:'bond',label:'絆レベル'},{key:'name',label:'名前'},{key:'lineage',label:'血統'},{key:'newest',label:'新しい順'},{key:'active',label:'編成中'}];
@@ -4390,7 +4514,7 @@ function MonsterHeroGame() {
             {donationError&&<div className="text-[9px] text-amber-200 bg-amber-950/40 border border-amber-500/40 rounded-xl p-2 mb-2 shrink-0"><AlertCircle size={12} className="inline mr-1"/>{donationError}</div>}
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               {masuMons.length===0?<div className="flex flex-col items-center justify-center h-full text-center text-slate-500"><Gem size={42}/><p className="text-[11px] mt-3 font-bold">寄付できるマスモンがいません</p></div>:<div className="grid grid-cols-3 gap-1.5 pb-4">{sorted.map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const diamonds=donationDiamondValue(masu.bondXp);const lvl=bondLevelInfo(diamonds);const active=monsterRosterIds.includes(`masu:${masu.id}`);return <button key={masu.id} disabled={donationProcessing} onClick={()=>{setDonationError('');setDonationSelectedId(masu.id);}} className="min-w-0 overflow-hidden bg-slate-900 border border-violet-500/30 rounded-xl p-1.5 flex flex-col items-center text-center active:scale-[.97] disabled:opacity-50">
-                <div className="relative w-full aspect-square max-h-24 rounded-lg overflow-hidden bg-black/30"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-contain"/>{active&&<span className="absolute top-1 left-1 right-1 text-[7px] leading-4 bg-pink-600/95 text-white rounded-full font-black">編成中</span>}</div>
+                <div className="relative w-full aspect-square max-h-24 rounded-lg overflow-hidden bg-black/30"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-contain"/><RebirthStars count={masu.rebirthCount} className="absolute bottom-1 inset-x-0"/>{active&&<span className="absolute top-1 left-1 right-1 text-[7px] leading-4 bg-pink-600/95 text-white rounded-full font-black">編成中</span>}</div>
                 <div className="w-full mt-1 font-black text-[9px] leading-tight text-white truncate">{masu.name}</div><div className="text-[8px] leading-tight text-pink-300 font-black">絆Lv.{lvl.level}</div><div className="w-full text-[7px] leading-tight text-slate-300 truncate">累計 {diamonds.toLocaleString()} XP</div><div className="w-full text-[8px] leading-tight text-amber-300 font-black truncate"><Gem size={8} className="inline"/> {diamonds.toLocaleString()}</div>
               </button>})}</div>}
             </div>
@@ -4404,6 +4528,8 @@ function MonsterHeroGame() {
           <div className="flex gap-2"><button onClick={()=>setDonationSelectedId(null)} disabled={donationProcessing} className="flex-1 bg-slate-800 text-slate-300 py-3 rounded-2xl font-black text-xs disabled:opacity-40">キャンセル</button><button onClick={executeMasuDonation} disabled={donationProcessing} className="flex-[2] bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3 rounded-2xl font-black text-xs shadow-lg disabled:opacity-40">{donationProcessing?'処理中…':`寄付して${diamonds.toLocaleString()}ダイヤを受け取る`}</button></div>
         </div></div>})()}
 
+        {levelCapCompensation&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50000,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center"><Gem size={38} className="text-amber-300 mx-auto mb-3"/><h2 className="font-black text-lg mb-2">Lv30上限補償</h2><p className="text-[11px] text-slate-300 leading-relaxed">Lv30を超えていた未転生マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。</p><div className="text-2xl text-amber-300 font-black my-4">+{levelCapCompensation.diamonds.toLocaleString()} ダイヤ</div><button onClick={()=>{setLevelCapCompensation(null);storeSet('mh_masu_level_cap_compensation_notice_seen_v1',true,false);}} className="w-full bg-amber-500 text-black py-3 rounded-2xl font-black">受け取る</button></div></div>}
+        {rebirthAnimation&&<div className="mh-rebirth-animation" role="status" aria-live="polite"><div className="mh-rebirth-circle">✧</div><div className="mh-rebirth-glow"></div><div className="mh-rebirth-mon"><DyedMonsterImage baseId={rebirthAnimation.masu.baseId} src={rebirthAnimation.base?.iconUrl} alt={rebirthAnimation.masu.name} masuColors={getMasuColors(rebirthAnimation.masu)} className="w-full h-full object-contain"/><RebirthStars count={rebirthAnimation.masu.rebirthCount} className="absolute bottom-0 inset-x-0"/></div><div className="mh-rebirth-copy"><b>転生成功！</b><span>Lv上限UP → {rebirthAnimation.masu.levelCap}</span><span>強化ポイント +5</span><span>{rebirthAnimation.skillName} Lv.{rebirthAnimation.skillLevel}</span></div></div>}
         {donationAnimation&&<div className="mh-donation-animation" role="status" aria-live="polite" aria-label="寄付を処理中"><div className="mh-donation-beam"></div><div className="mh-donation-monster"><DyedMonsterImage baseId={donationAnimation.baseId} src={donationAnimation.src} alt={donationAnimation.name} masuColors={donationAnimation.colors} className="w-full h-full object-contain"/></div><div className="mh-donation-gem"><Gem size={42}/></div><div className="mh-donation-particles">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div><div className="mh-donation-copy">神殿へ寄付中…</div></div>}
 
         {gameState==='MASU_DONATION'&&donationResult&&<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.name}を寄付しました</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm">寄付一覧へ戻る</button></div></div>}
@@ -4590,7 +4716,7 @@ function MonsterHeroGame() {
                       if (!base) return null;
                       return (
                         <button key={entryId} onClick={()=>toggleDraftMonster(entryId)} className="shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-400 active:scale-90 relative">
-                          {isMasu?(<DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/>):(<img src={base.iconUrl} alt={base.name} className="w-full h-full object-cover"/>)}
+                          {isMasu?(<><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="absolute bottom-0 inset-x-0"/></>):(<img src={base.iconUrl} alt={base.name} className="w-full h-full object-cover"/>)}
                         </button>
                       );
                     }))}
@@ -4774,7 +4900,7 @@ function MonsterHeroGame() {
                         <div key={e.key} className="relative">
                           <button onClick={()=>setMasuMonDetail(masu)} className="w-full rounded-2xl border-2 border-pink-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
                             <div className="relative w-12 h-12 shrink-0">
-                              <div className={`w-12 h-12 rounded-full overflow-hidden border ${fusionCount>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
+                              <div className={`w-12 h-12 rounded-full overflow-hidden border ${fusionCount>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div><RebirthStars count={masu.rebirthCount} className="absolute bottom-0 inset-x-0"/>
                               {monsterDisplayFlags.fused&&fusionCount>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1 text-[6px] font-black text-black leading-tight">+{fusionCount}</div>}
                             </div>
                             <div className="text-[9px] font-black text-pink-200 truncate w-full text-center">{masu.name}</div>
@@ -4866,7 +4992,7 @@ function MonsterHeroGame() {
                       return (
                         <div key={masu.id} className="relative">
                           <button onClick={()=>{setFusionMainId(masu.id); setFusionStep('sub');}} className="w-full rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
-                            <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${fusedBorder(masu)}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+                            <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${fusedBorder(masu)}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div><RebirthStars count={masu.rebirthCount}/>
                             <div className="text-[9px] font-black text-violet-200 truncate w-full text-center">{masu.name}</div>
                             <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
                           </button>
@@ -4905,7 +5031,7 @@ function MonsterHeroGame() {
                         return (
                           <div key={masu.id} className="relative">
                             <button onClick={()=>{setFusionSubId(masu.id); setFusionStep('confirm');}} className="w-full rounded-2xl border-2 border-violet-900/50 bg-slate-900 p-2 flex flex-col items-center gap-1 active:scale-95">
-                              <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${fusedBorder(masu)}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
+                              <div className={`w-12 h-12 rounded-full overflow-hidden border shrink-0 ${fusedBorder(masu)}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div><RebirthStars count={masu.rebirthCount}/>
                               <div className="text-[9px] font-black text-violet-200 truncate w-full text-center">{masu.name}</div>
                               <div className="text-[7px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={6}/>絆Lv.{lvl.level}</div>
                             </button>
@@ -5263,6 +5389,7 @@ function MonsterHeroGame() {
                   <div className="relative w-20 h-20 shrink-0">
                     <div className={`w-20 h-20 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-2 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
                     {(masu.fusionHistory||[]).length>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1.5 py-0.5 text-[8px] font-black text-black leading-tight">+{masu.fusionHistory.length}</div>}
+                    <RebirthStars count={masu.rebirthCount} className="absolute -top-1 inset-x-0"/>
                   </div>
                   <div className="flex-1 min-w-0">
                     <button onClick={()=>{setMasuRenameInput(masu.name); setShowMasuRenameModal(true);}} className="flex items-center gap-1.5 active:scale-95">
@@ -5271,6 +5398,7 @@ function MonsterHeroGame() {
                     <div className="text-[9px] text-pink-400 font-bold uppercase tracking-wider">マスモン・元は{base.name}</div>
                     <div className="mt-1">
                       <div className="text-[9px] text-pink-300 font-black flex items-center gap-1"><Heart size={9}/>絆Lv.{lvl.level}</div>
+                      <div className="flex items-center gap-2 text-[8px] font-black"><span className="text-violet-300">転生 {masu.rebirthCount||0}回</span><span className="text-cyan-300">上限 Lv.{masu.levelCap||INITIAL_MASU_LEVEL_CAP}</span></div>
                       <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
                       <div className="text-[7px] text-pink-400/70 font-mono mt-0.5">{lvl.xpIntoLevel.toLocaleString()} / {lvl.xpForNext.toLocaleString()} XP</div>
                     </div>
@@ -5283,6 +5411,7 @@ function MonsterHeroGame() {
                   {/* マスモン詳細からも通常技・固有技のレベル別詳細を見られるようにする
                       (マスモン一覧・合体画面の詳細でも同じものが出る) */}
                   <div className="space-y-2">{renderSkillSection(mergeMasuIntoMon(masu))}</div>
+                  <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30"><div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>{getRebirthSkillChoices(masu).map(skill=><button key={skill.key} onClick={()=>setRosterSkillDetail({mon:{...mergeMasuIntoMon(masu),unique:skill.unique},kind:'unique'})} className="w-full flex justify-between text-[9px] py-1 text-left"><span>{skill.name}</span><span className="text-amber-300 font-black">Lv.{skill.level} ›</span></button>)}</div>
                   <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div><div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</div></div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=(masu.distApt&&masu.distApt[idx])||'C'; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span></div>);})}</div></div>
                   <button onClick={()=>{setMasuEnhanceFrom(gameState); setGameState('MASU_ENHANCE');}} className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white py-2.5 rounded-xl font-black text-[11px] uppercase active:scale-95 flex items-center justify-center gap-1.5 shadow-lg"><Sparkles size={13}/>強化する{(masu.distAptPoints||0)>0&&<span className="bg-white/25 px-1.5 rounded-full text-[9px]">強化P {masu.distAptPoints}</span>}</button>
                   {(masu.fusionHistory||[]).length>0&&(
@@ -6828,7 +6957,7 @@ const createAnimationStyle = () => {
     .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:24%;right:24%;top:35%;bottom:30%;pointer-events:none}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:140px;height:140px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}}
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:24%;right:24%;top:35%;bottom:30%;pointer-events:none}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 2s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 2s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 2s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 2s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,62%{opacity:0;transform:translateY(20px)}75%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:140px;height:140px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
     .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
