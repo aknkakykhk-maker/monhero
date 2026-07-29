@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1474a246718aede9
+// source-sha256: 6ac93ad9dc61b08d
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -54,7 +54,8 @@ const _ICON_PATHS = {
   ShoppingBag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
   Gem: '<path d="M6 3h12l4 6-10 12L2 9Z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/>',
   Package: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/>',
-  Settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.14.37.35.7.6 1 .3.28.68.42 1.1.4h.1v4h-.1A1.7 1.7 0 0 0 19.4 15Z"/>'
+  Settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.14.37.35.7.6 1 .3.28.68.42 1.1.4h.1v4h-.1A1.7 1.7 0 0 0 19.4 15Z"/>',
+  List: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>'
 };
 const _icon = name => props => {
   props = props || {};
@@ -115,11 +116,12 @@ const Heart = _icon('Heart'),
   ShoppingBag = _icon('ShoppingBag'),
   Gem = _icon('Gem'),
   Package = _icon('Package'),
-  Settings = _icon('Settings');
+  Settings = _icon('Settings'),
+  List = _icon('List');
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 09:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 15:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7477,87 +7479,111 @@ function MonsterHeroGame() {
     style: screenShake ? {
       animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
     } : undefined
-  }, gameState === 'HOME' && /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 flex flex-col h-full min-h-0 p-4",
+  }, gameState === 'HOME' && /*#__PURE__*/React.createElement("main", {
+    className: "mh-home-scene",
+    "aria-label": "\u6751\u306E\u5E83\u5834"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-background",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-sky"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-buildings"
+  }, /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-plaza"
+  })), /*#__PURE__*/React.createElement("header", {
+    className: "mh-home-status"
+  }, /*#__PURE__*/React.createElement("section", {
+    className: "mh-home-player"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-avatar"
+  }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement("img", {
+    src: resolveIconUrl(breederIcon),
+    alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u50CF"
+  }) : /*#__PURE__*/React.createElement(User, {
+    size: 24
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-player-copy"
+  }, /*#__PURE__*/React.createElement("strong", null, breederName), /*#__PURE__*/React.createElement("span", null, "\u30D6\u30EA\u30FC\u30C0\u30FC Lv.", breederLevel.level), /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-xp"
+  }, /*#__PURE__*/React.createElement("i", {
     style: {
-      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      width: `${Math.min(100, breederLevel.xpIntoLevel / breederLevel.xpForNext * 100)}%`
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-center mb-4 shrink-0"
-  }, /*#__PURE__*/React.createElement("h1", {
-    className: "text-3xl font-black italic text-indigo-300 uppercase tracking-tight"
-  }, "Monster Hero"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-slate-500 font-black tracking-widest"
-  }, "HOME")), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-sm mx-auto"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-3"
+  })), /*#__PURE__*/React.createElement("small", null, breederLevel.xpIntoLevel.toLocaleString(), " / ", breederLevel.xpForNext.toLocaleString(), " XP"))), /*#__PURE__*/React.createElement("section", {
+    className: "mh-home-wallet"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Gem, {
+    size: 14
+  }), /*#__PURE__*/React.createElement("b", null, gold.toLocaleString()), /*#__PURE__*/React.createElement("small", null, "\u30C0\u30A4\u30E4")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Coins, {
+    size: 14
+  }), /*#__PURE__*/React.createElement("b", null, breederPoints), /*#__PURE__*/React.createElement("small", null, "pt")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setGameState('SETTINGS'),
+    "aria-label": "\u8A2D\u5B9A"
+  }, /*#__PURE__*/React.createElement(Settings, {
+    size: 20
+  }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-masumon-field",
+    "aria-label": "\u5C06\u6765\u306E\u30DE\u30B9\u30E2\u30F3\u8868\u793A\u30A8\u30EA\u30A2"
+  }), /*#__PURE__*/React.createElement("nav", {
+    className: "mh-home-menu-layer",
+    "aria-label": "\u30DB\u30FC\u30E0\u30E1\u30CB\u30E5\u30FC"
   }, [{
-    label: 'バトル',
-    icon: /*#__PURE__*/React.createElement(Sword, {
-      size: 18
-    }),
-    action: () => {
-      setBattleMenuTab('difficulty');
-      setGameState('BATTLE_MENU');
-    }
-  }, {
     label: '編成',
     icon: /*#__PURE__*/React.createElement(Layers, {
-      size: 18
+      size: 25
     }),
     action: () => setGameState('FORMATION_MENU')
   }, {
     label: 'モンスター一覧',
-    icon: /*#__PURE__*/React.createElement(User, {
-      size: 18
+    icon: /*#__PURE__*/React.createElement(List, {
+      size: 25
     }),
     action: () => setGameState('MONSTER_LIST_MENU')
   }, {
     label: '合体',
-    icon: /*#__PURE__*/React.createElement(Sparkles, {
-      size: 18
+    icon: /*#__PURE__*/React.createElement(Gem, {
+      size: 25
     }),
     action: () => {
       resetFusionFlow();
       setGameState('MASU_FUSION');
     }
   }, {
+    label: 'バトル',
+    icon: /*#__PURE__*/React.createElement(Sword, {
+      size: 25
+    }),
+    action: () => {
+      setBattleMenuTab('difficulty');
+      setGameState('BATTLE_MENU');
+    }
+  }, {
     label: 'プロフィール',
-    icon: /*#__PURE__*/React.createElement(Crown, {
-      size: 18
+    icon: /*#__PURE__*/React.createElement(User, {
+      size: 25
     }),
     action: () => setGameState('PROFILE')
   }, {
     label: 'マーケット',
     icon: /*#__PURE__*/React.createElement(ShoppingBag, {
-      size: 18
+      size: 25
     }),
     action: () => setGameState('BREEDER_MARKET')
-  }, {
-    label: 'ヘルプ',
-    icon: /*#__PURE__*/React.createElement(HelpCircle, {
-      size: 18
-    }),
-    action: () => setShowHelp(true)
-  }, {
-    label: '更新履歴',
-    icon: /*#__PURE__*/React.createElement(RefreshCcw, {
-      size: 18
-    }),
-    action: openChangelog
-  }, {
-    label: '設定',
-    icon: /*#__PURE__*/React.createElement(Settings, {
-      size: 18
-    }),
-    action: () => setGameState('SETTINGS')
   }].map(item => /*#__PURE__*/React.createElement("button", {
     key: item.label,
-    onClick: item.action,
-    className: "min-h-[64px] bg-slate-900 border border-indigo-500/30 rounded-2xl px-3 py-4 font-black text-sm active:scale-95 flex items-center justify-center gap-2"
-  }, item.icon, item.label))))), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
+    onClick: item.action
+  }, /*#__PURE__*/React.createElement("span", null, item.icon), /*#__PURE__*/React.createElement("b", null, item.label)))), /*#__PURE__*/React.createElement("footer", {
+    className: "mh-home-tools"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowHelp(true)
+  }, /*#__PURE__*/React.createElement(HelpCircle, {
+    size: 15
+  }), "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("button", {
+    onClick: openChangelog,
+    className: "relative"
+  }, /*#__PURE__*/React.createElement(RefreshCcw, {
+    size: 15
+  }), "\u66F4\u65B0\u5C65\u6B74", hasUnreadChangelog && /*#__PURE__*/React.createElement("em", null, "NEW")))), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full min-h-0 p-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-4 shrink-0"
@@ -13511,6 +13537,7 @@ const createAnimationStyle = () => {
     .mh-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 9999px; }
     .mh-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 9999px; }
     .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;padding:calc(10px + env(safe-area-inset-top)) 10px calc(8px + env(safe-area-inset-bottom));background:#86bada;color:#fff}.mh-home-background{position:absolute;z-index:-3;inset:0;overflow:hidden;pointer-events:none}.mh-home-sky{position:absolute;inset:0 0 42%;background:linear-gradient(#68b9e8 0,#bce5df 64%,#e9d6a2 100%)}.mh-home-sky:after{content:"";position:absolute;left:10%;top:13%;width:58px;height:22px;border-radius:50%;background:#fff9;box-shadow:44px 5px 0 4px #fff8,210px 28px 0 -2px #fff7}.mh-home-buildings{position:absolute;left:-3%;right:-3%;top:20%;height:35%;display:flex;align-items:flex-end;justify-content:space-between}.mh-home-buildings i{display:block;width:23%;height:68%;border:4px solid #694331;border-radius:8px 8px 2px 2px;background:linear-gradient(90deg,#d7a96e,#f0d19a 45%,#c58e58);box-shadow:0 9px 16px #35552c66}.mh-home-buildings i:before{content:"";display:block;width:118%;height:40%;margin:-21% -9% 0;background:linear-gradient(135deg,#71402f 0 48%,#9d6544 49%);clip-path:polygon(50% 0,100% 100%,0 100%);filter:drop-shadow(0 4px 0 #4e3227)}.mh-home-buildings i:nth-child(2),.mh-home-buildings i:nth-child(3){height:92%;width:27%}.mh-home-plaza{position:absolute;inset:43% -20% -20%;border-radius:50% 50% 0 0;background-color:#b8a174;background-image:radial-gradient(circle at 50% 0,#eadbb4 0,#c9b486 50%,#927a55 100%),repeating-linear-gradient(12deg,transparent 0 28px,#765f3d33 29px 31px);box-shadow:inset 0 12px 22px #fff7}.mh-home-status{position:relative;z-index:4;display:flex;gap:7px;justify-content:space-between}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:linear-gradient(145deg,#183b37e8,#102b2be8);box-shadow:0 4px 12px #13251e99,inset 0 1px #fff3}.mh-home-player{display:flex;align-items:center;gap:7px;min-width:0;flex:1;padding:6px;border-radius:16px}.mh-home-avatar{flex:0 0 43px;width:43px;height:43px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:8px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:5px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d);box-shadow:0 0 6px #9fffa9}.mh-home-wallet{display:grid;grid-template-columns:auto 46px;grid-template-rows:1fr 1fr;width:145px;padding:5px;border-radius:16px}.mh-home-wallet>div{display:grid;grid-template-columns:16px 1fr auto;align-items:center;gap:2px;padding:1px 4px;color:#ffe08a}.mh-home-wallet>div b{font-size:9px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900}.mh-home-masumon-field{position:absolute;z-index:0;left:25%;right:25%;top:24%;bottom:21%;pointer-events:none}.mh-home-menu-layer{position:absolute;z-index:2;inset:90px 10px calc(43px + env(safe-area-inset-bottom));display:grid;grid-template-columns:82px 82px;grid-template-rows:repeat(3,minmax(64px,1fr));justify-content:space-between;align-items:center;pointer-events:none}.mh-home-menu-layer button{pointer-events:auto;position:relative;min-height:62px;padding:5px 3px 7px;border:2px solid #f4d282;border-radius:18px;color:#fff;background:linear-gradient(160deg,#315847f2,#172e2af2);box-shadow:0 5px 0 #483421,0 8px 15px #19321daa,inset 0 1px #fff4;text-shadow:0 2px 2px #000;transition:transform .1s,filter .1s;touch-action:manipulation}.mh-home-menu-layer button:active{transform:scale(.92);filter:brightness(1.35) drop-shadow(0 0 8px #fff1a8)}.mh-home-menu-layer button span{display:flex;width:38px;height:34px;margin:0 auto 2px;align-items:center;justify-content:center;border-radius:12px;color:#ffe69b;background:#0c2524aa}.mh-home-menu-layer button b{display:block;font-size:9px;line-height:1.05}.mh-home-tools{position:absolute;z-index:3;left:10px;right:10px;bottom:calc(7px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;pointer-events:none}.mh-home-tools button{pointer-events:auto;position:relative;display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 10px;border:1px solid #eed99588;border-radius:13px;background:#173633e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007;transition:transform .1s}.mh-home-tools button:active{transform:scale(.92)}.mh-home-tools em{position:absolute;right:-4px;top:-7px;padding:1px 4px;border-radius:7px;background:#dc2626;color:#fff;font-size:6px;font-style:normal}@media(max-width:350px){.mh-home-player-copy strong{max-width:95px}.mh-home-wallet{width:125px}.mh-home-menu-layer{grid-template-columns:72px 72px}.mh-home-menu-layer button b{font-size:8px}}@media(max-height:620px){.mh-home-menu-layer{top:78px;grid-template-rows:repeat(3,minmax(56px,1fr))}.mh-home-menu-layer button{min-height:54px}.mh-home-menu-layer button span{height:28px}.mh-home-masumon-field{top:25%;bottom:19%}}@media(prefers-reduced-motion:reduce){.mh-home-menu-layer button,.mh-home-tools button{transition:none}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
     .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
