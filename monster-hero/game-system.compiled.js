@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 975b2b5a6c155802
+// source-sha256: 0ddcb8ab3ce5f6fb
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 02:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 02:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -550,8 +550,8 @@ const TRAINING_TOOLS = Object.freeze({
   reroll: {
     name: '振り直しの石',
     emoji: '🪨',
-    timing: '出目確定後、移動先選択前',
-    desc: '現在の出目を破棄して振り直す'
+    timing: '分岐で方向を選ぶ前',
+    desc: '分岐からの残り歩数を1～3に振り直す'
   },
   noReturn: {
     name: '戻らずのお守り',
@@ -591,7 +591,7 @@ const TRAINING_SPACE_TYPES = Object.freeze({
     value: 30,
     label: '絆EXP',
     emoji: '💗',
-    color: '#db2777',
+    color: '#16a34a',
     desc: '仮獲得絆経験値＋30'
   },
   xp60: {
@@ -599,7 +599,7 @@ const TRAINING_SPACE_TYPES = Object.freeze({
     value: 60,
     label: '大EXP',
     emoji: '💖',
-    color: '#be185d',
+    color: '#15803d',
     desc: '仮獲得絆経験値＋60'
   },
   gem50: {
@@ -623,14 +623,14 @@ const TRAINING_SPACE_TYPES = Object.freeze({
     value: 'training_ticket',
     label: 'アイテム',
     emoji: '🎁',
-    color: '#7c3aed',
+    color: '#ec4899',
     desc: '仮獲得通常アイテムを1個追加'
   },
   tool: {
     kind: 'tool',
     label: '修行道具',
     emoji: '🎒',
-    color: '#9333ea',
+    color: '#d946ef',
     desc: '修行専用アイテムをランダム取得'
   },
   forward: {
@@ -685,7 +685,7 @@ const TRAINING_SPACE_TYPES = Object.freeze({
     kind: 'happening',
     label: 'ハプニング',
     emoji: '⁉️',
-    color: '#ea580c',
+    color: '#9333ea',
     desc: '良い効果または悪い効果が発動'
   },
   goal: {
@@ -724,8 +724,8 @@ const createTrainingSession = (masuId, difficulty = 'BEGINNER') => ({
   tools: [],
   effects: {},
   lastRoll: null,
-  paths: [],
-  selectedPath: null,
+  branchOptions: [],
+  movementRemaining: 0,
   forcedMoves: 0,
   eventLog: ['修行テスト開始'],
   message: 'サイコロを振ってください'
@@ -736,22 +736,6 @@ const settleTrainingRewards = (session, success) => ({
   items: success ? [...session.rewards.items, 'ゴール報酬'] : session.effects.returnCharm && session.rewards.items.length ? [session.rewards.items[0]] : [],
   goalReward: success ? '通常アイテム抽選1個' : 'なし'
 });
-const trainingPaths = (start, steps) => {
-  const out = [];
-  const walk = (id, left, path) => {
-    if (id === 'n23') {
-      out.push(path);
-      return;
-    }
-    if (left === 0) {
-      out.push(path);
-      return;
-    }
-    for (const next of TRAINING_NODE_BY_ID[id].next) if (path.length < 2 || next !== path[path.length - 2]) walk(next, left - 1, [...path, next]);
-  };
-  walk(start, steps, [start]);
-  return out.filter(p => p.length === steps + 1 || p.at(-1) === 'n23');
-};
 const trainingDistanceToGoal = start => {
   const q = [[start, 0]],
     seen = new Set([start]);
@@ -4711,10 +4695,19 @@ function MonsterHeroGame() {
   const [trainingSession, setTrainingSession] = useState(null);
   const trainingFinalizingRef = useRef(false);
   const trainingMovingRef = useRef(false);
+  const trainingMapRef = useRef(null);
+  const trainingPieceRef = useRef(null);
   const [trainingModal, setTrainingModal] = useState(null);
   const [trainingDebugOpen, setTrainingDebugOpen] = useState(false);
   const [trainingDebugRoll, setTrainingDebugRoll] = useState(null);
   const [trainingMapOverview, setTrainingMapOverview] = useState(false);
+  useEffect(() => {
+    if (gameState === 'TRAINING_BOARD' && !trainingMapOverview) requestAnimationFrame(() => trainingPieceRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'center'
+    }));
+  }, [gameState, trainingSession?.position, trainingMapOverview]);
   const [gifts, setGifts] = useState([]);
   const [giftTab, setGiftTab] = useState('unclaimed');
   const [missions, setMissions] = useState(() => normalizeMissions(null));
@@ -6612,8 +6605,8 @@ function MonsterHeroGame() {
       status: 'result',
       success,
       finalRewards: settleTrainingRewards(base, success),
-      paths: [],
-      selectedPath: null,
+      branchOptions: [],
+      movementRemaining: 0,
       message: success ? '修行成功！' : '修行失敗…',
       eventLog: logTraining(base, success ? '強制/通常成功' : 'ターン切れ/強制失敗')
     };
@@ -6653,8 +6646,8 @@ function MonsterHeroGame() {
       effects: {
         ...base.effects
       },
-      paths: [],
-      selectedPath: null,
+      branchOptions: [],
+      movementRemaining: 0,
       message: space.desc,
       eventLog: logTraining(base, `${space.label}: ${space.desc}`)
     };
@@ -6709,8 +6702,53 @@ function MonsterHeroGame() {
     setTrainingSession(next);
     if (next.remainingTurns <= 0) setTimeout(() => finishTraining(false, next), 500);else Audio_.se.trainingReward();
   };
+  const trainingForwardOptions = id => TRAINING_NODE_BY_ID[id].next.filter(next => TRAINING_BEGINNER_NODES.findIndex(n => n.id === next) > TRAINING_BEGINNER_NODES.findIndex(n => n.id === id));
+  const advanceTraining = async (base, steps, chosenFirst = null) => {
+    if (trainingMovingRef.current) return;
+    trainingMovingRef.current = true;
+    let next = {
+        ...base,
+        branchOptions: [],
+        movementRemaining: steps
+      },
+      chosen = chosenFirst;
+    while (next.movementRemaining > 0) {
+      const options = trainingForwardOptions(next.position);
+      if (!options.length) break;
+      if (options.length > 1 && !chosen) {
+        trainingMovingRef.current = false;
+        setTrainingSession({
+          ...next,
+          branchOptions: options,
+          message: `分岐です。進む方向を選んでください（あと${next.movementRemaining}マス）`
+        });
+        return;
+      }
+      const id = chosen && options.includes(chosen) ? chosen : options[0];
+      chosen = null;
+      const previous = next.position;
+      next = {
+        ...next,
+        position: id,
+        previous,
+        movementRemaining: next.movementRemaining - 1,
+        branchOptions: [],
+        message: `あと ${next.movementRemaining - 1} マス`
+      };
+      Audio_.se.trainingMove();
+      setTrainingSession(next);
+      await new Promise(r => setTimeout(r, 320));
+      if (id === 'n23') {
+        trainingMovingRef.current = false;
+        return finishTraining(true, next);
+      }
+    }
+    trainingMovingRef.current = false;
+    setTrainingSession(next);
+    await applyTrainingSpace(next);
+  };
   const rollTrainingDice = (fixedValue = null) => {
-    if (!trainingSession || trainingSession.status !== 'playing' || trainingMovingRef.current || trainingSession.paths.length) return;
+    if (!trainingSession || trainingSession.status !== 'playing' || trainingMovingRef.current || trainingSession.branchOptions.length) return;
     Audio_.se.trainingDice();
     const roll = () => 1 + Math.floor(Math.random() * 3);
     let value = fixedValue || trainingDebugRoll || roll();
@@ -6724,58 +6762,22 @@ function MonsterHeroGame() {
     delete effects.boost;
     delete effects.feather;
     delete effects.fixed;
-    const paths = trainingPaths(trainingSession.position, value);
-    patchTraining({
+    const next = {
+      ...trainingSession,
       lastRoll: value,
-      paths,
-      selectedPath: null,
       effects,
       remainingTurns: trainingSession.remainingTurns - 1,
       forcedMoves: 0,
-      message: `${value}が出ました。発光する移動先を選択してください`,
+      message: `${value}が出ました。自動で進みます`,
       eventLog: logTraining(trainingSession, `サイコロ ${value}`)
-    });
-  };
-  const chooseTrainingDestination = id => {
-    const paths = trainingSession.paths.filter(p => p.at(-1) === id);
-    if (!paths.length) return;
-    if (paths.length === 1) setTrainingModal({
-      type: 'route',
-      paths
-    });else setTrainingModal({
-      type: 'route',
-      paths
-    });
-  };
-  const moveTrainingPath = async path => {
-    if (trainingMovingRef.current) return;
-    setTrainingModal(null);
-    trainingMovingRef.current = true;
-    Audio_.se.trainingDecide();
-    let prev = trainingSession.position;
-    for (const id of path.slice(1)) {
-      Audio_.se.trainingMove();
-      setTrainingSession(v => ({
-        ...v,
-        position: id,
-        previous: prev,
-        selectedPath: path,
-        message: `${id}へ移動中…`
-      }));
-      prev = id;
-      await new Promise(r => setTimeout(r, 240));
-      if (id === 'n23') break;
-    }
-    trainingMovingRef.current = false;
-    const next = {
-      ...trainingSession,
-      position: path.at(-1),
-      previous: path.at(-2),
-      paths: [],
-      selectedPath: null
     };
     setTrainingSession(next);
-    await applyTrainingSpace(next);
+    advanceTraining(next, value);
+  };
+  const chooseTrainingBranch = id => {
+    if (!trainingSession.branchOptions.includes(id)) return;
+    Audio_.se.trainingDecide();
+    advanceTraining(trainingSession, trainingSession.movementRemaining, id);
   };
   const useTrainingTool = id => {
     const t = TRAINING_TOOLS[id];
@@ -6784,28 +6786,38 @@ function MonsterHeroGame() {
       id
     });
     if (!t || ['noReturn', 'returnCharm'].includes(id)) return;
-    const beforeRoll = !trainingSession.lastRoll || !trainingSession.paths.length;
+    const beforeRoll = !trainingSession.movementRemaining && !trainingSession.branchOptions.length;
     if (['feather', 'gale', 'fixed'].includes(id) && !beforeRoll) return;
-    if (id === 'reroll' && !trainingSession.paths.length) return;
+    if (id === 'reroll' && !trainingSession.branchOptions.length) return;
     const tools = [...trainingSession.tools];
     tools.splice(tools.indexOf(id), 1);
     let effects = {
         ...trainingSession.effects
       },
       remainingTurns = trainingSession.remainingTurns,
-      paths = trainingSession.paths,
+      branchOptions = trainingSession.branchOptions,
       lastRoll = trainingSession.lastRoll;
     if (id === 'sand') remainingTurns++;else if (id === 'reroll') {
-      paths = [];
-      lastRoll = null;
-      setTimeout(rollTrainingDice, 0);
+      const value = 1 + Math.floor(Math.random() * 3);
+      const next = {
+        ...trainingSession,
+        tools,
+        branchOptions: [],
+        movementRemaining: value,
+        lastRoll: value,
+        message: `残り歩数を${value}に振り直しました`
+      };
+      Audio_.se.trainingTool();
+      setTrainingSession(next);
+      advanceTraining(next, value);
+      return;
     } else effects[id] = true;
     Audio_.se.trainingTool();
     patchTraining({
       tools,
       effects,
       remainingTurns,
-      paths,
+      branchOptions,
       lastRoll,
       eventLog: logTraining(trainingSession, `${t.name}使用`)
     });
@@ -10023,7 +10035,7 @@ function MonsterHeroGame() {
     onClick: () => setGameState('TRAINING_DIFFICULTY')
   }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "BEGINNER"), /*#__PURE__*/React.createElement("h2", null, "\u30DE\u30C3\u30D7\u3068\u30EB\u30FC\u30EB\u78BA\u8A8D")), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("section", {
     className: "mh-training-confirm"
-  }, /*#__PURE__*/React.createElement("h3", null, "BEGINNER \u8A66\u4F5C\u30DE\u30C3\u30D7"), /*#__PURE__*/React.createElement("p", null, "24\u30CE\u30FC\u30C9 / 10\u30BF\u30FC\u30F3 / \u30B5\u30A4\u30B3\u30ED1\uFF5E3\u30023\u304B\u6240\u306E\u5206\u5C90\u3067\u77ED\u3044\u5B89\u5168\u30EB\u30FC\u30C8\u3068\u9060\u56DE\u308A\u306E\u5831\u916C\u30EB\u30FC\u30C8\u3092\u9078\u3073\u3001\u518D\u5408\u6D41\u3057\u3066\u30B4\u30FC\u30EB\u3092\u76EE\u6307\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("h4", null, "\u79FB\u52D5\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("p", null, "\u51FA\u76EE\u3068\u540C\u3058\u6B69\u6570\u3067\u5230\u9054\u3067\u304D\u308B\u30DE\u30B9\u304C\u767A\u5149\u3057\u307E\u3059\u3002\u76EE\u7684\u5730\u3092\u9078\u3073\u3001\u540C\u3058\u76EE\u7684\u5730\u3078\u306E\u7D4C\u8DEF\u304C\u8907\u6570\u3042\u308B\u5834\u5408\u306F\u7D4C\u8DEF\u3082\u9078\u3073\u307E\u3059\u3002\u30B4\u30FC\u30EB\u306F\u5230\u9054\u307E\u305F\u306F\u901A\u904E\u3067\u6210\u529F\u3002\u524D\u9032\u30FB\u5F8C\u9000\u306F\u6700\u7D42\u505C\u6B62\u30DE\u30B9\u3060\u3051\u767A\u52D5\u3057\u3001\u5F37\u5236\u79FB\u52D5\u306F1\u30BF\u30FC\u30F33\u56DE\u307E\u3067\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("h3", null, "BEGINNER \u8A66\u4F5C\u30DE\u30C3\u30D7"), /*#__PURE__*/React.createElement("p", null, "24\u30DE\u30B9 / 10\u30BF\u30FC\u30F3 / \u30B5\u30A4\u30B3\u30ED1\uFF5E3\u30023\u304B\u6240\u306E\u5206\u5C90\u3067\u77ED\u3044\u5B89\u5168\u30EB\u30FC\u30C8\u3068\u9060\u56DE\u308A\u306E\u5831\u916C\u30EB\u30FC\u30C8\u3092\u9078\u3073\u3001\u518D\u5408\u6D41\u3057\u3066\u30B4\u30FC\u30EB\u3092\u76EE\u6307\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("h4", null, "\u79FB\u52D5\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("p", null, "\u30B5\u30A4\u30B3\u30ED\u5F8C\u306F\u51FA\u76EE\u3076\u30931\u30DE\u30B9\u305A\u3064\u81EA\u52D5\u3067\u9032\u307F\u307E\u3059\u3002\u64CD\u4F5C\u304C\u5FC5\u8981\u306A\u306E\u306F\u3001\u79FB\u52D5\u4E2D\u306B\u5206\u5C90\u3078\u7740\u3044\u305F\u6642\u306E\u9032\u884C\u65B9\u5411\u3060\u3051\u3067\u3059\u3002\u30B4\u30FC\u30EB\u306F\u5230\u9054\u307E\u305F\u306F\u901A\u904E\u3067\u6210\u529F\u3002\u524D\u9032\u30FB\u5F8C\u9000\u306F\u6700\u7D42\u505C\u6B62\u30DE\u30B9\u3060\u3051\u767A\u52D5\u3057\u3001\u5F37\u5236\u79FB\u52D5\u306F1\u30BF\u30FC\u30F33\u56DE\u307E\u3067\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
     className: "mh-rule-button",
     onClick: () => setTrainingModal({
       type: 'rules'
@@ -10036,24 +10048,19 @@ function MonsterHeroGame() {
     onClick: startTraining
   }, "BEGINNER \u4FEE\u884C\u958B\u59CB"))), gameState === 'TRAINING_BOARD' && trainingSession && (() => {
     const m = masuMons.find(x => String(x.id) === String(trainingSession.masuId));
-    const destinations = new Set(trainingSession.paths.map(p => p.at(-1)));
     const current = TRAINING_NODE_BY_ID[trainingSession.position];
     return /*#__PURE__*/React.createElement("main", {
       className: "mh-training-board"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-debug-banner"
-    }, "DEBUG\u30FB\u5831\u916C\u3084\u9032\u884C\u72B6\u6CC1\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, m?.name || 'マスモン', " / \u6B8B\u308A ", trainingSession.remainingTurns, "\u30BF\u30FC\u30F3"), /*#__PURE__*/React.createElement("span", null, "\u73FE\u5728 ", current.id, "\u3000\uD83C\uDFB2 ", trainingSession.lastRoll ?? '-', "\u3000\u30B4\u30FC\u30EB\u6700\u77ED ", trainingDistanceToGoal(current.id), "\u30DE\u30B9")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setTrainingModal({
-        type: 'rules'
-      })
-    }, "\u30DE\u30B9\u4E00\u89A7\uFF0F\u30EB\u30FC\u30EB")), /*#__PURE__*/React.createElement("section", {
+    }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, m?.name || 'マスモン', " ", /*#__PURE__*/React.createElement("small", null, "BEGINNER\u30FBDEBUG\u4FDD\u5B58\u306A\u3057")), /*#__PURE__*/React.createElement("span", null, "\u6B8B\u308A ", trainingSession.remainingTurns, "\u30BF\u30FC\u30F3\u3000\u30FB\u3000\u30B4\u30FC\u30EB\u307E\u3067\u3042\u3068 ", trainingDistanceToGoal(current.id), "\u30DE\u30B9")), /*#__PURE__*/React.createElement("button", {
+      className: "mh-debug-toggle",
+      onClick: () => setTrainingDebugOpen(v => !v)
+    }, "DEBUG")), /*#__PURE__*/React.createElement("section", {
       className: "mh-training-hud"
-    }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC97 ", trainingSession.rewards.bondXp, " XP"), /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC8E ", trainingSession.rewards.diamonds), /*#__PURE__*/React.createElement("span", null, "\uD83C\uDF81 ", trainingSession.rewards.items.length), /*#__PURE__*/React.createElement("span", null, "\u88DC\u52A9 ", Object.keys(trainingSession.effects).join('・') || 'なし')), /*#__PURE__*/React.createElement("div", {
-      className: `mh-node-map ${trainingMapOverview ? 'overview' : ''}`,
-      style: {
-        '--focus-x': current.x,
-        '--focus-y': current.y
-      }
+    }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC97 \u4EEEXP ", /*#__PURE__*/React.createElement("b", null, trainingSession.rewards.bondXp)), /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC8E \u4EEE\u30C0\u30A4\u30E4 ", /*#__PURE__*/React.createElement("b", null, trainingSession.rewards.diamonds)), /*#__PURE__*/React.createElement("span", null, "\uD83C\uDF81 \u4EEE\u30A2\u30A4\u30C6\u30E0 ", /*#__PURE__*/React.createElement("b", null, trainingSession.rewards.items.length))), /*#__PURE__*/React.createElement("div", {
+      ref: trainingMapRef,
+      className: `mh-tile-viewport ${trainingMapOverview ? 'overview' : ''}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mh-tile-board"
     }, TRAINING_BEGINNER_NODES.map(n => /*#__PURE__*/React.createElement(React.Fragment, {
       key: n.id
     }, n.next.filter(id => TRAINING_BEGINNER_NODES.findIndex(x => x.id === id) > TRAINING_BEGINNER_NODES.findIndex(x => x.id === n.id)).map(id => {
@@ -10070,53 +10077,58 @@ function MonsterHeroGame() {
         }
       });
     }), /*#__PURE__*/React.createElement("button", {
+      ref: n.id === current.id ? trainingPieceRef : null,
       style: {
         left: `${n.x}%`,
         top: `${n.y}%`,
-        background: TRAINING_SPACE_TYPES[n.type].color
+        '--tile-color': TRAINING_SPACE_TYPES[n.type].color
       },
-      className: `${n.id === current.id ? 'current' : ''} ${destinations.has(n.id) ? 'destination' : ''}`,
-      onClick: () => destinations.has(n.id) ? chooseTrainingDestination(n.id) : setTrainingModal({
+      className: `mh-training-tile ${n.id === current.id ? 'current' : ''} ${trainingSession.branchOptions.includes(n.id) ? 'branch-choice' : ''} ${trainingForwardOptions(n.id).length > 1 ? 'branch' : ''} ${n.type === 'goal' ? 'goal' : ''} ${n.type === 'start' ? 'start' : ''}`,
+      onClick: () => trainingSession.branchOptions.includes(n.id) ? chooseTrainingBranch(n.id) : setTrainingModal({
         type: 'space',
         space: TRAINING_SPACE_TYPES[n.type]
       })
-    }, /*#__PURE__*/React.createElement("span", null, TRAINING_SPACE_TYPES[n.type].emoji), /*#__PURE__*/React.createElement("small", null, TRAINING_SPACE_TYPES[n.type].label), n.id === current.id && m && /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    }, /*#__PURE__*/React.createElement("small", null, n.type === 'start' ? 'START' : n.type === 'goal' ? 'GOAL' : TRAINING_SPACE_TYPES[n.type].label), /*#__PURE__*/React.createElement("span", null, TRAINING_SPACE_TYPES[n.type].emoji), n.id === current.id && m && /*#__PURE__*/React.createElement("div", {
+      className: "mh-training-piece"
+    }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
       baseId: m.baseId,
       src: ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl,
       alt: m.name,
       masuColors: getMasuColors(m)
-    }))))), /*#__PURE__*/React.createElement("div", {
+    }), /*#__PURE__*/React.createElement("b", null, m.name))))))), /*#__PURE__*/React.createElement("div", {
       className: "mh-board-buttons"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setTrainingMapOverview(v => !v)
-    }, trainingMapOverview ? '現在地へ' : '全体マップ'), /*#__PURE__*/React.createElement("button", {
+    }, trainingMapOverview ? '📍 現在地へ' : '🗺️ 全体マップ'), /*#__PURE__*/React.createElement("button", {
       onClick: () => setTrainingModal({
-        type: 'rewards'
+        type: 'rules'
       })
-    }, "\u4EEE\u5831\u916C"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setTrainingDebugOpen(v => !v)
-    }, "DEBUG")), /*#__PURE__*/React.createElement("p", {
+    }, "\u30DE\u30B9\u8A73\u7D30")), /*#__PURE__*/React.createElement("p", {
       className: "mh-training-message"
     }, trainingSession.message), /*#__PURE__*/React.createElement("section", {
       className: "mh-training-tools"
-    }, trainingSession.tools.length ? trainingSession.tools.map((id, i) => /*#__PURE__*/React.createElement("button", {
+    }, /*#__PURE__*/React.createElement("strong", null, "\u4FEE\u884C\u9053\u5177"), trainingSession.tools.length ? trainingSession.tools.map((id, i) => /*#__PURE__*/React.createElement("button", {
       key: `${id}-${i}`,
       onClick: () => setTrainingModal({
         type: 'tool',
         id
       })
-    }, /*#__PURE__*/React.createElement("span", null, TRAINING_TOOLS[id].emoji), /*#__PURE__*/React.createElement("small", null, TRAINING_TOOLS[id].name))) : /*#__PURE__*/React.createElement("p", null, "\u4FEE\u884C\u9053\u5177 0 / 3\uFF08\u30A2\u30A4\u30B3\u30F3\u3092\u62BC\u3059\u3068\u8AAC\u660E\uFF09")), /*#__PURE__*/React.createElement("footer", null, trainingSession.effects.fixed ? /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("span", null, TRAINING_TOOLS[id].emoji), /*#__PURE__*/React.createElement("small", null, TRAINING_TOOLS[id].name, /*#__PURE__*/React.createElement("br", null), TRAINING_TOOLS[id].timing))) : /*#__PURE__*/React.createElement("p", null, "\u6240\u6301\u306A\u3057\uFF08\u6700\u59273\u500B\uFF09")), /*#__PURE__*/React.createElement("footer", null, trainingSession.effects.fixed ? /*#__PURE__*/React.createElement("div", {
       className: "mh-fixed-dice"
     }, /*#__PURE__*/React.createElement("span", null, "\u78BA\u5B9A\u30B5\u30A4\u30B3\u30ED"), [1, 2, 3].map(n => /*#__PURE__*/React.createElement("button", {
       key: n,
       onClick: () => rollTrainingDice(n)
     }, n))) : /*#__PURE__*/React.createElement("button", {
-      disabled: trainingSession.paths.length > 0 || trainingMovingRef.current,
-      onClick: rollTrainingDice,
+      disabled: trainingSession.movementRemaining > 0 || trainingSession.branchOptions.length > 0 || trainingMovingRef.current,
+      onClick: () => rollTrainingDice(),
       className: "mh-roll-button"
-    }, "\uD83C\uDFB2 \u30B5\u30A4\u30B3\u30ED\u3092\u632F\u308B")), trainingDebugOpen && /*#__PURE__*/React.createElement("aside", {
+    }, "\uD83C\uDFB2 \u30B5\u30A4\u30B3\u30ED\u3092\u632F\u308B", /*#__PURE__*/React.createElement("small", null, trainingSession.branchOptions.length ? '分岐方向を選んでください' : '出目ぶん自動で進みます'))), trainingDebugOpen && /*#__PURE__*/React.createElement("aside", {
       className: "mh-training-debug"
-    }, /*#__PURE__*/React.createElement("b", null, "DEBUG PANEL"), /*#__PURE__*/React.createElement("div", null, "\u6B21\u306E\u51FA\u76EE ", [1, 2, 3].map(n => /*#__PURE__*/React.createElement("button", {
+    }, /*#__PURE__*/React.createElement("b", null, "DEBUG PANEL"), /*#__PURE__*/React.createElement("button", {
+      className: "mh-debug-close",
+      onClick: () => setTrainingDebugOpen(false)
+    }, "\u9589\u3058\u308B"), /*#__PURE__*/React.createElement("div", null, "\u6B21\u306E\u51FA\u76EE ", [1, 2, 3].map(n => /*#__PURE__*/React.createElement("button", {
+      key: n,
       onClick: () => setTrainingDebugRoll(n),
       className: trainingDebugRoll === n ? 'active' : ''
     }, n)), /*#__PURE__*/React.createElement("button", {
@@ -10137,12 +10149,9 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("option", {
       value: ""
     }, "\u9053\u5177\u3092\u8FFD\u52A0"), Object.entries(TRAINING_TOOLS).map(([id, t]) => /*#__PURE__*/React.createElement("option", {
+      key: id,
       value: id
     }, t.name))), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setTrainingModal({
-        type: 'rewards'
-      })
-    }, "\u4EEE\u5831\u916C\u3092\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
       onClick: () => finishTraining(true)
     }, "\u5F37\u5236\u6210\u529F"), /*#__PURE__*/React.createElement("button", {
       onClick: () => finishTraining(false)
@@ -10178,10 +10187,7 @@ function MonsterHeroGame() {
     className: "mh-rules-list"
   }, Object.values(TRAINING_SPACE_TYPES).map(s => /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, s.emoji, " ", s.label), /*#__PURE__*/React.createElement("span", null, s.desc)))), /*#__PURE__*/React.createElement("h3", null, "\u4FEE\u884C\u9053\u5177"), /*#__PURE__*/React.createElement("div", {
     className: "mh-rules-list"
-  }, Object.entries(TRAINING_TOOLS).map(([id, t]) => /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, t.emoji, " ", t.name), /*#__PURE__*/React.createElement("span", null, "\u4F7F\u7528\uFF1A", t.timing, /*#__PURE__*/React.createElement("br", null), "\u52B9\u679C\uFF1A", t.desc))))) : trainingModal.type === 'route' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, "\u9078\u629E\u30EB\u30FC\u30C8\u78BA\u8A8D"), trainingModal.paths.map((p, i) => /*#__PURE__*/React.createElement("button", {
-    className: "mh-route-choice",
-    onClick: () => moveTrainingPath(p)
-  }, "\u7D4C\u8DEF ", i + 1, ": ", p.join(' → ')))) : trainingModal.type === 'tool' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, TRAINING_TOOLS[trainingModal.id].emoji, " ", TRAINING_TOOLS[trainingModal.id].name), /*#__PURE__*/React.createElement("p", null, "\u4F7F\u7528\u53EF\u80FD\u306A\u30BF\u30A4\u30DF\u30F3\u30B0\uFF1A", TRAINING_TOOLS[trainingModal.id].timing), /*#__PURE__*/React.createElement("p", null, "\u6B63\u78BA\u306A\u52B9\u679C\uFF1A", TRAINING_TOOLS[trainingModal.id].desc), !['noReturn', 'returnCharm'].includes(trainingModal.id) && /*#__PURE__*/React.createElement("button", {
+  }, Object.entries(TRAINING_TOOLS).map(([id, t]) => /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, t.emoji, " ", t.name), /*#__PURE__*/React.createElement("span", null, "\u4F7F\u7528\uFF1A", t.timing, /*#__PURE__*/React.createElement("br", null), "\u52B9\u679C\uFF1A", t.desc))))) : trainingModal.type === 'tool' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h3", null, TRAINING_TOOLS[trainingModal.id].emoji, " ", TRAINING_TOOLS[trainingModal.id].name), /*#__PURE__*/React.createElement("p", null, "\u4F7F\u7528\u53EF\u80FD\u306A\u30BF\u30A4\u30DF\u30F3\u30B0\uFF1A", TRAINING_TOOLS[trainingModal.id].timing), /*#__PURE__*/React.createElement("p", null, "\u6B63\u78BA\u306A\u52B9\u679C\uFF1A", TRAINING_TOOLS[trainingModal.id].desc), !['noReturn', 'returnCharm'].includes(trainingModal.id) && /*#__PURE__*/React.createElement("button", {
     className: "mh-route-choice",
     onClick: () => {
       useTrainingTool(trainingModal.id);
@@ -17143,7 +17149,8 @@ const createAnimationStyle = () => {
     .mh-home-facility.training{left:0;top:46%;width:38%;height:25%}.mh-home-facility.training>span{left:5%;top:37%;border-color:#f9a8d4dd;background:linear-gradient(135deg,#831843ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #ec489966}
     .mh-debug-banner{flex:none;text-align:center;background:#be123c;color:white;padding:5px;font-size:9px;font-weight:1000;letter-spacing:.04em}.mh-home-facility.training small{display:block;font-size:7px;color:#fde68a}.mh-rule-button{width:100%;margin-top:18px;padding:13px;border-radius:14px;background:#4338ca;font-weight:900}.mh-node-map{position:relative;flex:1;min-height:250px;overflow:hidden;border:1px solid #ffffff33;border-radius:15px;background:radial-gradient(circle,#164e63,#020617);transition:.4s}.mh-node-map>i{position:absolute;height:3px;background:#94a3b8;transform-origin:0 50%;z-index:0}.mh-node-map>button{position:absolute;z-index:2;width:52px;height:52px;margin:-26px;border:3px solid #ffffff88;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;transition:.25s}.mh-node-map>button span{font-size:17px}.mh-node-map>button small{font-size:6px;font-weight:900}.mh-node-map>button.current{border-color:#fff700;box-shadow:0 0 18px #fff700}.mh-node-map>button.destination{animation:trainingGlow .7s infinite alternate;pointer-events:auto}.mh-node-map>button:not(.destination){pointer-events:auto}.mh-node-map img,.mh-node-map>button>div{position:absolute;width:48px;height:48px;object-fit:contain;z-index:3}.mh-board-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:5px}.mh-board-buttons button{min-height:34px;border-radius:8px;background:#334155;font-size:8px;font-weight:900}@keyframes trainingGlow{to{transform:scale(1.2);border-color:#fff;box-shadow:0 0 24px #fde047}}.mh-training-debug{position:absolute;right:8px;bottom:82px;z-index:30;width:min(270px,82vw);max-height:55vh;overflow:auto;padding:10px;border:2px solid #e879f9;border-radius:14px;background:#0f172ff5;font-size:8px}.mh-training-debug button,.mh-training-debug select{margin:3px;padding:6px;border-radius:6px;background:#334155}.mh-training-debug button.active{background:#db2777}.mh-training-debug pre{max-height:110px;overflow:auto;white-space:pre-wrap;background:#000;padding:5px}.mh-training-modal{position:fixed;z-index:50000;inset:0;display:flex;align-items:center;padding:16px;background:#020617e8}.mh-training-modal>div{width:100%;max-height:85vh;overflow:auto;padding:18px;border:1px solid #a78bfa;border-radius:20px;background:#111827}.mh-training-modal h3{margin:8px 0;font-size:17px;font-weight:1000}.mh-training-modal p{margin:7px 0;color:#cbd5e1;font-size:10px}.mh-rules-list p{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #ffffff22;padding:7px}.mh-rules-list b{font-size:10px}.mh-rules-list span{font-size:8px;text-align:right}.mh-route-choice,.mh-modal-close{display:block;width:100%;margin-top:8px;padding:12px;border-radius:10px;background:#4338ca;font-size:10px;font-weight:900}.mh-modal-close{background:#475569}.mh-training-result>div>button+button{margin-top:7px;background:#334155;color:white}
     .mh-training-screen{height:100%;display:flex;flex-direction:column;overflow:hidden;padding:calc(10px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom));background:radial-gradient(circle at top,#312e81,#07101f 60%)}.mh-training-head{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;flex:none}.mh-training-head>button{min-height:44px;display:flex;align-items:center;justify-content:center}.mh-training-head div{text-align:center}.mh-training-head small{display:block;color:#f9a8d4;font:900 8px monospace;letter-spacing:.25em}.mh-training-head h2{font-size:18px;font-weight:1000}.mh-training-selected{display:flex;align-items:center;gap:10px;margin:9px 0;padding:10px;border:1px solid #f9a8d477;border-radius:18px;background:#3b076455}.mh-training-selected>img,.mh-training-selected>div:first-child{width:56px;height:56px;object-fit:contain;flex:none}.mh-training-selected>div{display:flex;flex:1;min-width:0;flex-direction:column}.mh-training-selected b{font-size:14px}.mh-training-selected span{color:#fbcfe8;font-size:9px}.mh-training-selected button{padding:9px;border-radius:10px;background:#7e22ce;font-size:9px;font-weight:900}.mh-training-note{font-size:9px;color:#cbd5e1;padding:2px 3px 8px}.mh-training-mon-list{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;overflow-y:auto;padding:2px 1px 90px}.mh-training-mon-list>button{position:relative;min-width:0;padding:7px 4px;border:2px solid #334155;border-radius:16px;background:#0f172acc}.mh-training-mon-list>button.active{border-color:#f472b6;background:#83184377;box-shadow:0 0 13px #ec489966}.mh-training-mon-list img,.mh-training-mon-list>button>div:first-child{width:54px;height:54px;object-fit:contain;margin:auto}.mh-training-mon-list b,.mh-training-mon-list small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-training-mon-list b{font-size:10px}.mh-training-mon-list small{font-size:7px;color:#94a3b8}.mh-training-mon-list span{position:absolute;right:5px;top:4px;color:#fde68a;font-size:8px}.mh-training-empty{grid-column:1/-1;text-align:center;margin-top:50px;color:#64748b}.mh-training-footer{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));padding-top:20px;background:linear-gradient(transparent,#07101f 24%)}.mh-training-footer button{width:100%;min-height:52px;border-radius:18px;background:linear-gradient(90deg,#db2777,#7c3aed);font-weight:1000;box-shadow:0 6px 20px #0008}.mh-training-footer button:disabled{background:#334155;color:#64748b}.mh-training-difficulties{overflow:auto;padding:10px 1px 95px}.mh-training-difficulties>button{display:block;width:100%;margin-bottom:10px;padding:14px;text-align:left;border:2px solid #334155;border-radius:20px;background:#0f172acc}.mh-training-difficulties>button.active{border-color:#f472b6}.mh-training-difficulties>button.soon{opacity:.72}.mh-training-difficulties>button>div{display:flex;justify-content:space-between}.mh-training-difficulties b{font-size:18px}.mh-training-difficulties em{padding:4px 8px;border-radius:999px;background:#475569;font-size:8px;font-style:normal}.mh-training-difficulties p{margin:8px 0;color:#cbd5e1;font-size:10px}.mh-training-difficulties dl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mh-training-difficulties dl span{padding:5px;border-radius:7px;background:#02061788;text-align:center;font-size:8px}.mh-training-confirm{overflow:auto;padding:12px 2px 100px}.mh-training-confirm h3{margin:10px 0 2px;color:#f9a8d4;font-size:26px;font-weight:1000}.mh-training-confirm h4{margin-top:16px;color:#c4b5fd;font-size:11px;font-weight:1000}.mh-training-confirm p{color:#cbd5e1;font-size:10px}.mh-training-ticket{display:flex;flex-wrap:wrap;justify-content:space-between;margin-top:16px;padding:14px;border:1px solid #fbbf24aa;border-radius:16px;background:#78350f55}.mh-training-ticket b{color:#fde68a}.mh-training-ticket small{width:100%;margin-top:5px;color:#fef3c7;font-size:8px}
-    .mh-training-board{height:100%;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#0c4a6e,#082f49 44%,#052e16)}.mh-training-board>header{display:flex;align-items:center;justify-content:space-between}.mh-training-board>header div{display:flex;flex-direction:column}.mh-training-board>header b{font-size:14px}.mh-training-board>header span{font-size:8px;color:#bae6fd}.mh-training-board>header button{min-height:40px;padding:0 10px;border-radius:10px;background:#7f1d1d;font-size:9px;font-weight:900}.mh-training-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:7px 0}.mh-training-hud span{padding:6px 2px;border-radius:8px;background:#020617aa;text-align:center;font-size:8px;font-weight:900}.mh-training-map{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;flex:1;min-height:0;padding:7px;overflow:auto;border:1px solid #ffffff22;border-radius:16px;background:#0005}.mh-training-map>div{position:relative;aspect-ratio:1;border:2px solid #64748b;border-radius:10px;background:#334155;display:flex;align-items:center;justify-content:center}.mh-training-map>div.passed{opacity:.52}.mh-training-map>div.current{border-color:#fde047;background:#854d0e;box-shadow:0 0 14px #fde047}.mh-training-map span{font-size:17px}.mh-training-map small{position:absolute;left:3px;top:1px;font-size:6px}.mh-training-map img,.mh-training-map>div.current>div{position:absolute;width:45px;height:45px;object-fit:contain;filter:drop-shadow(0 3px 3px #000);z-index:2}.mh-training-message{min-height:28px;padding:7px;text-align:center;font-size:10px;font-weight:900}.mh-training-tools{display:flex;min-height:54px;gap:5px}.mh-training-tools button{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;padding:4px;border:1px solid #a78bfa;border-radius:10px;background:#312e81}.mh-training-tools button span{font-size:17px}.mh-training-tools button small{font-size:7px}.mh-training-tools p{margin:auto;color:#94a3b8;font-size:8px}.mh-training-board>footer{margin-top:7px}.mh-roll-button{width:100%;min-height:58px;border-radius:19px;background:linear-gradient(#fbbf24,#d97706);color:#451a03;font-size:17px;font-weight:1000}.mh-roll-button small{display:block;font-size:7px}.mh-fixed-dice{display:grid;grid-template-columns:1fr repeat(3,58px);gap:5px;align-items:center}.mh-fixed-dice button{height:54px;border-radius:14px;background:#fbbf24;color:#422006;font-size:20px;font-weight:1000}.mh-training-branch{position:fixed;z-index:40000;inset:0;display:flex;align-items:center;padding:20px;background:#020617dd}.mh-training-branch>div{width:100%;padding:18px;border:1px solid #c4b5fd;border-radius:22px;background:#111827}.mh-training-branch h3{text-align:center;font-size:18px;font-weight:1000}.mh-training-branch button{display:flex;justify-content:space-between;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:#312e81}.mh-training-branch span{font-size:9px;color:#cbd5e1}.mh-training-result{height:100%;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));text-align:center;background:radial-gradient(circle,#14532d,#020617 65%)}.mh-training-result.failure{background:radial-gradient(circle,#3f3f46,#020617 65%)}.mh-training-result>div{width:100%;max-width:360px}.mh-result-mark{display:block;font-size:64px}.mh-training-result small{color:#f9a8d4;font:900 9px monospace;letter-spacing:.22em}.mh-training-result h2{font-size:28px;font-weight:1000}.mh-training-result>div>p{margin:7px;color:#cbd5e1;font-size:10px}.mh-training-result section{margin:18px 0;padding:13px;border:1px solid #ffffff22;border-radius:18px;background:#0007}.mh-training-result section div{display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #ffffff12}.mh-training-result section div:last-child{border:0}.mh-training-result section span{font-size:11px}.mh-training-result section b{color:#fde68a}.mh-training-result .mh-result-note{font-size:8px}.mh-training-result>div>button{width:100%;min-height:52px;margin-top:10px;border-radius:18px;background:#fff;color:#172554;font-weight:1000}
+    .mh-training-board{height:100%;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#0c4a6e,#082f49 44%,#052e16)}.mh-training-board>header{display:flex;align-items:center;justify-content:space-between}.mh-training-board>header div{display:flex;flex-direction:column}.mh-training-board>header b{font-size:14px}.mh-training-board>header span{font-size:8px;color:#bae6fd}.mh-training-board>header button{min-height:40px;padding:0 10px;border-radius:10px;background:#7f1d1d;font-size:9px;font-weight:900}.mh-training-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:7px 0}.mh-training-hud span{padding:6px 2px;border-radius:8px;background:#020617aa;text-align:center;font-size:8px;font-weight:900}.mh-training-map{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;flex:1;min-height:0;padding:7px;overflow:auto;border:1px solid #ffffff22;border-radius:16px;background:#0005}.mh-training-map>div{position:relative;aspect-ratio:1;border:2px solid #64748b;border-radius:10px;background:#334155;display:flex;align-items:center;justify-content:center}.mh-training-map>div.passed{opacity:.52}.mh-training-map>div.current{border-color:#fde047;background:#854d0e;box-shadow:0 0 14px #fde047}.mh-training-map span{font-size:17px}.mh-training-map small{position:absolute;left:3px;top:1px;font-size:6px}.mh-training-map img,.mh-training-map>div.current>div{position:absolute;width:45px;height:45px;object-fit:contain;filter:drop-shadow(0 3px 3px #000);z-index:2}.mh-training-message{min-height:28px;padding:7px;text-align:center;font-size:10px;font-weight:900}.mh-training-tools{display:flex;min-height:54px;gap:5px}.mh-training-tools button{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;padding:4px;border:1px solid #a78bfa;border-radius:10px;background:#312e81}.mh-training-tools button span{font-size:17px}.mh-training-tools button small{font-size:7px}.mh-training-tools p{margin:auto;color:#94a3b8;font-size:8px}.mh-training-board>footer{margin-top:7px}.mh-roll-button{width:100%;min-height:58px;border-radius:19px;background:linear-gradient(#fbbf24,#d97706);color:#451a03;font-size:17px;font-weight:1000}.mh-roll-button small{display:block;font-size:7px}.mh-fixed-dice{display:grid;grid-template-columns:1fr repeat(3,58px);gap:5px;align-items:center}.mh-fixed-dice button{height:54px;border-radius:14px;background:#fbbf24;color:#422006;font-size:20px;font-weight:1000}.mh-training-branch{position:fixed;z-index:40000;inset:0;display:flex;align-items:center;padding:20px;background:#020617dd}.mh-training-branch>div{width:100%;padding:18px;border:1px solid #c4b5fd;border-radius:22px;background:#111827}.mh-training-branch h3{text-align:center;font-size:18px;font-weight:1000}.mh-training-branch button{display:flex;justify-content:space-between;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:#312e81}.mh-training-branch span{font-size:9px;color:#cbd5e1}.mh-training-board{position:relative;background:linear-gradient(160deg,#082f49,#0f172a 52%,#14532d)}.mh-training-board>header{gap:8px}.mh-training-board>header b small{margin-left:5px;color:#facc15;font-size:7px}.mh-debug-toggle{background:#be185d!important;letter-spacing:.08em}.mh-training-hud{grid-template-columns:repeat(3,1fr)}.mh-training-hud span{display:flex;flex-direction:column;gap:2px}.mh-training-hud b{color:white;font-size:11px}.mh-tile-viewport{position:relative;flex:1;min-height:250px;overflow:auto;scroll-behavior:smooth;border:2px solid #67e8f966;border-radius:18px;background:linear-gradient(#0c4a6e99,#052e1699),repeating-linear-gradient(45deg,#ffffff08 0 8px,transparent 8px 16px);box-shadow:inset 0 0 30px #020617}.mh-tile-board{position:relative;width:720px;height:520px;transform-origin:center;transition:transform .3s}.mh-tile-viewport.overview{overflow:hidden}.mh-tile-viewport.overview .mh-tile-board{transform:scale(.46) translate(-58%,-58%)}.mh-tile-board>i{position:absolute;height:13px;border:2px solid #dbeafe99;background:#64748b;box-shadow:0 2px 0 #0f172a;transform-origin:0 50%;z-index:0}.mh-training-tile{position:absolute;z-index:2;width:68px;height:68px;margin:-34px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid #e2e8f0;border-radius:12px;color:white;background:var(--tile-color);box-shadow:0 5px 0 #0f172a,0 8px 14px #0008;transition:left .25s,top .25s,transform .2s}.mh-training-tile>span{font-size:23px;line-height:1}.mh-training-tile>small{max-width:62px;font-size:7px;font-weight:1000;text-shadow:0 1px 2px #000}.mh-training-tile.branch:after{content:'分岐';position:absolute;right:-9px;top:-10px;padding:2px 4px;border-radius:6px;background:#f97316;font-size:6px;font-weight:1000}.mh-training-tile.start{border-color:#86efac}.mh-training-tile.goal{border-color:#fde047;box-shadow:0 0 22px #facc15,0 5px 0 #713f12}.mh-training-tile.current{z-index:8;border-color:#fff;box-shadow:0 0 0 4px #facc15,0 8px 18px #000;transform:scale(1.05)}.mh-training-tile.branch-choice{z-index:9;animation:trainingGlow .55s infinite alternate;pointer-events:auto}.mh-training-piece{position:absolute;left:50%;bottom:34px;width:62px;height:73px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 5px 3px #000)}.mh-training-piece img,.mh-training-piece>div{width:58px!important;height:58px!important;object-fit:contain}.mh-training-piece b{position:absolute;bottom:0;left:50%;max-width:75px;transform:translateX(-50%);padding:2px 5px;border-radius:8px;background:#020617e8;white-space:nowrap;font-size:7px}.mh-training-message{color:#fef3c7}.mh-training-tools{align-items:stretch}.mh-training-tools>strong{display:flex;align-items:center;font-size:8px}.mh-training-tools button{min-width:0}.mh-training-tools button small{line-height:1.25}.mh-training-debug{right:8px;top:calc(52px + env(safe-area-inset-top));bottom:auto;box-shadow:0 14px 30px #000}.mh-debug-close{float:right;background:#be123c!important}.mh-training-board>footer{flex:none}.mh-roll-button:disabled{filter:grayscale(.7);opacity:.65}@media(max-width:380px){.mh-training-piece{transform:translateX(-50%) scale(.85)}.mh-training-tools{min-height:48px}.mh-training-message{min-height:24px;padding:4px}.mh-tile-viewport{min-height:220px}}
+.mh-training-result{height:100%;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));text-align:center;background:radial-gradient(circle,#14532d,#020617 65%)}.mh-training-result.failure{background:radial-gradient(circle,#3f3f46,#020617 65%)}.mh-training-result>div{width:100%;max-width:360px}.mh-result-mark{display:block;font-size:64px}.mh-training-result small{color:#f9a8d4;font:900 9px monospace;letter-spacing:.22em}.mh-training-result h2{font-size:28px;font-weight:1000}.mh-training-result>div>p{margin:7px;color:#cbd5e1;font-size:10px}.mh-training-result section{margin:18px 0;padding:13px;border:1px solid #ffffff22;border-radius:18px;background:#0007}.mh-training-result section div{display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #ffffff12}.mh-training-result section div:last-child{border:0}.mh-training-result section span{font-size:11px}.mh-training-result section b{color:#fde68a}.mh-training-result .mh-result-note{font-size:8px}.mh-training-result>div>button{width:100%;min-height:52px;margin-top:10px;border-radius:18px;background:#fff;color:#172554;font-weight:1000}
     `;
   document.head.appendChild(style);
 };
