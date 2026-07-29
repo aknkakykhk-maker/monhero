@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 68995df33be3f133
+// source-sha256: deb346b0c5c33a39
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 00:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 01:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15323,34 +15323,38 @@ function MonsterHeroGame() {
       inset: 0,
       backgroundColor: '#020617',
       zIndex: 40000,
-      paddingTop: 'calc(1.5rem + env(safe-area-inset-top))'
+      paddingTop: 'calc(1.5rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between items-center mb-6 border-b border-white/10 pb-4"
+    className: "flex justify-between items-center mb-6 border-b border-white/10 pb-4 shrink-0"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "font-black italic uppercase text-red-500 text-lg"
   }, "Enemy Scan"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowEnemyInfo(false),
     className: "px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90"
   }, "\u623B\u308B")), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 flex flex-col items-center justify-center text-center"
+    className: "flex-1 min-h-0 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll"
   }, enemy.imgUrl ? /*#__PURE__*/React.createElement("img", {
     src: enemy.imgUrl,
     alt: enemy.name,
-    style: {
+    style: enemy.id === 'Moo' ? {
+      width: 'clamp(252px,70vw,280px)',
+      height: 'clamp(252px,70vw,280px)'
+    } : {
       width: '140px',
       height: '140px'
     },
-    className: "mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]"
+    className: `mx-auto object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)] ${enemy.id === 'Moo' ? 'mb-2' : 'mb-6'}`
   }) : /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: '112px'
     },
     className: "mb-6 drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]"
   }, enemy.emoji), /*#__PURE__*/React.createElement("h4", {
-    className: "text-2xl font-black italic mb-6 uppercase"
+    className: "text-2xl font-black italic mb-6 uppercase shrink-0"
   }, enemy.name), /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"
+    className: "w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5 shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-6 text-left"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {

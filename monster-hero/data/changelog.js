@@ -17,7 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-30 00:56",
+    date: "2026-07-30 01:08",
+    type: "issue",
+    status: "fixed",
+    title: "敵ステータスのムー表示を修正",
+    items: [
+      "敵ステータス画面でムーが小さく表示されていたため、ラスボスらしい大きさに調整しました",
+    ],
+  },
+  {
+    date: "2026-07-30 01:08",
     type: "issue",
     status: "fixed",
     title: "デバッグのムー戦のBGMを修正",
@@ -26,7 +35,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 00:56",
+    date: "2026-07-30 01:08",
     type: "update",
     title: "HOMEの放牧設定を追加",
     items: [
@@ -37,7 +46,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 00:56",
+    date: "2026-07-30 01:08",
     type: "update",
     title: "HOMEとアイテム画面を調整",
     items: [
@@ -46,7 +55,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 00:56",
+    date: "2026-07-30 01:08",
     type: "update",
     title: "画面とBGMの使いやすさを改善",
     items: [
@@ -56,7 +65,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 00:56",
+    date: "2026-07-30 01:08",
     type: "issue",
     status: "fixed",
     title: "表示・音声・更新通知の不具合を修正",
