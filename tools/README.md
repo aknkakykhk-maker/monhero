@@ -29,6 +29,7 @@ cd tools && npm install
 | `node dedupe-images.js [--dry-run]` | 同じ base64 が複数の変数に重複して埋め込まれている箇所を、先に定義した変数への参照に置き換える。画像は1バイトも変えない。 |
 | `node stamp-version.js` | BUILD_DATE と version.json を現在の日本時間に揃える。手で書くと未来の時刻が入るので必ずこれを使う。 |
 | `node boot-check.js` | 起動時の事前ロード画面と、画面遷移でBGMが重ならないことを確認する。 |
+| `node boot-flow-check.js` | 音声失敗時のTITLE遷移、全画面タイトルタップ、同期的な多重実行防止、GAME準備と演出の並列化を静的に確認する。 |
 | `node bulk-enhance-check.js` | マスモンの「まとめて強化」が正しく動くか確認する。 |
 | `node bgm-check.js` | BGM(audio/のmp3)が画面に応じて切り替わるかを実ブラウザで確認する。 |
 | `node audio-route-check.js` | BGMのaudio要素が再生前にWeb Audioへ接続され、iOSのメディア再生経路へ漏れないことを確認する。 |
