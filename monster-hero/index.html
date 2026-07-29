@@ -73,7 +73,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
   // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
   // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
   // 2回とも失敗した場合だけエラーを表示する。
-  var GAME_BUILD = '202607300208';
+  var GAME_BUILD = '202607300222';
   var attempts = 0;
   function showLoadError(){
     window.__mhErr && window.__mhErr('game-system.compiled.js load failed after retry');
