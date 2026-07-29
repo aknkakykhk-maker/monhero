@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 95a3d83f7be15cd0
+// source-sha256: 92ffbf8fe037b8a6
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 17:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 17:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -201,6 +201,75 @@ const bondLevelInfo = totalXp => {
     level,
     xpIntoLevel: xp,
     xpForNext: xpForBondLevel(level)
+  };
+};
+
+// 神殿の寄付で受け取るダイヤ。保存データが古い・破損している場合も負数やNaNを返さない。
+const donationDiamondValue = bondXp => {
+  const value = Number(bondXp);
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+};
+const rosterBaseId = (entryId, masuMons) => {
+  if (typeof entryId !== 'string') return null;
+  if (!entryId.startsWith('masu:')) return entryId;
+  return masuMons.find(m => String(m.id) === entryId.slice(5))?.baseId || null;
+};
+const repairRosterAfterDonation = (roster, donated, remainingMasuMons, unlockedMonsterIds, validBaseIds, requiredCount) => {
+  const donatedEntry = `masu:${donated.id}`;
+  if (!roster.includes(donatedEntry)) return {
+    ok: true,
+    roster: [...roster]
+  };
+  const next = roster.filter(id => id !== donatedEntry);
+  const usedBases = new Set(next.map(id => rosterBaseId(id, remainingMasuMons)).filter(Boolean));
+  const candidates = [donated.baseId, ...unlockedMonsterIds];
+  for (const baseId of candidates) {
+    if (next.length >= requiredCount) break;
+    if (!validBaseIds.includes(baseId) || usedBases.has(baseId)) continue;
+    next.splice(Math.min(roster.indexOf(donatedEntry), next.length), 0, baseId);
+    usedBases.add(baseId);
+  }
+  const valid = next.length === requiredCount && next.every(id => {
+    const baseId = rosterBaseId(id, remainingMasuMons);
+    return baseId && validBaseIds.includes(baseId);
+  }) && new Set(next.map(id => rosterBaseId(id, remainingMasuMons))).size === next.length;
+  return valid ? {
+    ok: true,
+    roster: next
+  } : {
+    ok: false,
+    reason: '有効なモンスターを8体編成できないため、寄付を中止しました。'
+  };
+};
+const buildMasuDonation = ({
+  masuMons,
+  targetId,
+  gold,
+  monsterRosterIds,
+  draftMonsterRoster,
+  unlockedMonsterIds,
+  validBaseIds,
+  requiredCount
+}) => {
+  const donated = masuMons.find(m => String(m.id) === String(targetId));
+  if (!donated) return {
+    ok: false,
+    reason: '対象のマスモンはすでに所持していません。'
+  };
+  const nextMasuMons = masuMons.filter(m => String(m.id) !== String(targetId));
+  const active = repairRosterAfterDonation(monsterRosterIds, donated, nextMasuMons, unlockedMonsterIds, validBaseIds, requiredCount);
+  if (!active.ok) return active;
+  const draft = repairRosterAfterDonation(draftMonsterRoster, donated, nextMasuMons, unlockedMonsterIds, validBaseIds, requiredCount);
+  if (!draft.ok) return draft;
+  const diamonds = donationDiamondValue(donated.bondXp);
+  return {
+    ok: true,
+    donated,
+    diamonds,
+    nextGold: donationDiamondValue(gold) + diamonds,
+    nextMasuMons,
+    nextRoster: active.roster,
+    nextDraftRoster: draft.roster
   };
 };
 
@@ -3305,6 +3374,13 @@ function MonsterHeroGame() {
   const [fusionInheritUnique, setFusionInheritUnique] = useState(false); // 副の固有技を引き継ぐか(絆Lv10以上同士のみ選択可)
   const [fusionAnimPhase, setFusionAnimPhase] = useState(0); // 合体演出の進行段階(0=開始前,1=接近,2=フラッシュ)
   const [fusionResultData, setFusionResultData] = useState(null); // 演出後の結果画面表示用スナップショット
+  const [donationSelectedId, setDonationSelectedId] = useState(null);
+  const [donationResult, setDonationResult] = useState(null);
+  const [donationError, setDonationError] = useState('');
+  const [donationProcessing, setDonationProcessing] = useState(false);
+  const donationProcessingRef = useRef(false);
+  const masuMonsRef = useRef(masuMons);
+  masuMonsRef.current = masuMons;
   const [finalRewardSummary, setFinalRewardSummary] = useState(null); // 最終リザルト画面に出す今回の獲得内訳
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
@@ -3754,6 +3830,8 @@ function MonsterHeroGame() {
     // 神殿は合体と同じ曲を続ける
     MASU_FUSION: 'fusion',
     // 合体ページ
+    MASU_DONATION: 'fusion',
+    // 寄付ページも神殿の曲を続ける
     BREEDER_MARKET: 'market' // マーケットページ
   };
   // プロフィールから飛べるページは、マーケットと合体を除いてすべてプロフィールの曲にする。
@@ -5099,6 +5177,56 @@ function MonsterHeroGame() {
     setFusionInheritUnique(false);
     setFusionAnimPhase(0);
     setFusionResultData(null);
+  };
+  const resetDonationFlow = () => {
+    setDonationSelectedId(null);
+    setDonationResult(null);
+    setDonationError('');
+  };
+  const executeMasuDonation = async () => {
+    if (donationProcessingRef.current || !donationSelectedId) return;
+    donationProcessingRef.current = true;
+    setDonationProcessing(true);
+    setDonationError('');
+    try {
+      // state更新前の連打でも同じ個体を再利用できないよう、同期参照からIDで再取得する。
+      const result = buildMasuDonation({
+        masuMons: masuMonsRef.current,
+        targetId: donationSelectedId,
+        gold,
+        monsterRosterIds,
+        draftMonsterRoster,
+        unlockedMonsterIds,
+        validBaseIds: Object.keys(ALL_PLAYER_MONSTERS),
+        requiredCount: STARTER_MONSTER_IDS.length
+      });
+      if (!result.ok) {
+        setDonationError(result.reason);
+        setDonationSelectedId(null);
+        return;
+      }
+      masuMonsRef.current = result.nextMasuMons;
+      await storeSet('mh_masu_mons', result.nextMasuMons, false);
+      await storeSet('mh_gold', result.nextGold, false);
+      await storeSet('mh_monster_roster', result.nextRoster, false);
+      setMasuMons(result.nextMasuMons);
+      setGold(result.nextGold);
+      setMonsterRosterIds(result.nextRoster);
+      setDraftMonsterRoster(result.nextDraftRoster);
+      if (fusionMainId === result.donated.id || fusionSubId === result.donated.id) resetFusionFlow();
+      setMasuMonDetail(null);
+      setDonationSelectedId(null);
+      setDonationResult({
+        name: result.donated.name,
+        diamonds: result.diamonds,
+        gold: result.nextGold
+      });
+    } catch (error) {
+      setDonationError('寄付データを保存できませんでした。もう一度お試しください。');
+    } finally {
+      donationProcessingRef.current = false;
+      setDonationProcessing(false);
+    }
   };
   // ラン終了画面: 今回のランで勇者モンに選んでいた(まだマスモン化していない)モンスター種を、
   // 今回のランで得た絆経験値をそのまま初期値として、名前を付けてマスモンとして登録する
@@ -7683,7 +7811,176 @@ function MonsterHeroGame() {
     className: "mh-management-link mh-temple-link"
   }, /*#__PURE__*/React.createElement(Sparkles, {
     size: 18
-  }), "\u5408\u4F53"))), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
+  }), "\u5408\u4F53"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      resetDonationFlow();
+      setGameState('MASU_DONATION');
+    },
+    className: "mh-management-link mh-temple-link"
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 18
+  }), "\u5BC4\u4ED8"))), gameState === 'MASU_DONATION' && /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex flex-col h-full min-h-0 p-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-2 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      resetDonationFlow();
+      setGameState('TEMPLE');
+    },
+    className: "p-3 text-slate-400 active:scale-90"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xl font-black italic text-violet-300"
+  }, "\u5BC4\u4ED8")), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-slate-300 leading-relaxed bg-violet-950/40 border border-violet-500/30 rounded-2xl p-3 mb-3 shrink-0"
+  }, "\u30DE\u30B9\u30E2\u30F3\u3092\u5BC4\u4ED8\u3059\u308B\u3068\u3001\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024\u3068\u540C\u3058\u6570\u306E\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059"), donationError && /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-amber-200 bg-amber-950/40 border border-amber-500/40 rounded-xl p-3 mb-3 shrink-0"
+  }, /*#__PURE__*/React.createElement(AlertCircle, {
+    size: 14,
+    className: "inline mr-1"
+  }), donationError), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+  }, masuMons.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col items-center justify-center h-full text-center text-slate-500"
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 42
+  }), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] mt-3 font-bold"
+  }, "\u5BC4\u4ED8\u3067\u304D\u308B\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093")) : /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 gap-3 pb-4"
+  }, masuMons.map(masu => {
+    const base = ALL_PLAYER_MONSTERS[masu.baseId];
+    if (!base) return null;
+    const diamonds = donationDiamondValue(masu.bondXp);
+    const lvl = bondLevelInfo(diamonds);
+    const active = monsterRosterIds.includes(`masu:${masu.id}`);
+    return /*#__PURE__*/React.createElement("button", {
+      key: masu.id,
+      onClick: () => {
+        setDonationError('');
+        setDonationSelectedId(masu.id);
+      },
+      className: "w-full text-left bg-slate-900 border border-violet-500/30 rounded-2xl p-3 flex items-center gap-3 active:scale-[.98]"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-16 h-16 rounded-full overflow-hidden border-2 border-violet-400/50 shrink-0"
+    }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: masu.baseId,
+      src: base.iconUrl,
+      alt: masu.name,
+      masuColors: getMasuColors(masu),
+      className: "w-full h-full object-cover"
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-black text-white truncate"
+    }, masu.name), active && /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] bg-pink-500 text-white rounded-full px-2 py-0.5 shrink-0"
+    }, "\u7DE8\u6210\u4E2D")), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-slate-400 font-bold"
+    }, "\u30D9\u30FC\u30B9\u30E2\u30F3 ", base.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-pink-300 font-black mt-1"
+    }, "\u7D46Lv.", lvl.level), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-slate-300"
+    }, "\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024 ", diamonds.toLocaleString(), " XP"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-amber-300 font-black flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement(Gem, {
+      size: 10
+    }), "\u7372\u5F97\u30C0\u30A4\u30E4 ", diamonds.toLocaleString())));
+  })))), gameState === 'MASU_DONATION' && donationSelectedId && (() => {
+    const masu = masuMons.find(m => String(m.id) === String(donationSelectedId));
+    if (!masu) return null;
+    const base = ALL_PLAYER_MONSTERS[masu.baseId];
+    if (!base) return null;
+    const diamonds = donationDiamondValue(masu.bondXp);
+    const after = donationDiamondValue(gold) + diamonds;
+    const active = monsterRosterIds.includes(`masu:${masu.id}`);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 flex items-center justify-center p-4",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(2,6,23,.95)',
+        zIndex: 32000
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-sm bg-slate-900 border-2 border-violet-400 rounded-3xl p-5 shadow-2xl"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-lg font-black text-violet-200 text-center mb-4"
+    }, "\u5BC4\u4ED8\u306E\u6700\u7D42\u78BA\u8A8D"), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-3 mb-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-20 h-20 rounded-full overflow-hidden border-2 border-amber-400/60 shrink-0"
+    }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: masu.baseId,
+      src: base.iconUrl,
+      alt: masu.name,
+      masuColors: getMasuColors(masu),
+      className: "w-full h-full object-cover"
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "font-black text-white"
+    }, masu.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-slate-400"
+    }, "\u30D9\u30FC\u30B9\u30E2\u30F3 ", base.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-slate-300 mt-1"
+    }, "\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024 ", diamonds.toLocaleString(), " XP"), /*#__PURE__*/React.createElement("div", {
+      className: "text-sm text-amber-300 font-black"
+    }, "\u7372\u5F97\u30C0\u30A4\u30E4 ", diamonds.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+      className: "bg-black/40 rounded-2xl p-3 space-y-1 text-[11px] mb-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between"
+    }, /*#__PURE__*/React.createElement("span", null, "\u73FE\u5728\u306E\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", null, donationDiamondValue(gold).toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between text-amber-300"
+    }, /*#__PURE__*/React.createElement("span", null, "\u5BC4\u4ED8\u5F8C\u306E\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", null, after.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+      className: "bg-amber-950/40 border border-amber-500/50 text-amber-100 text-[10px] leading-relaxed rounded-xl p-3 mb-3"
+    }, /*#__PURE__*/React.createElement(AlertCircle, {
+      size: 14,
+      className: "inline mr-1"
+    }), "\u5BC4\u4ED8\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306F\u3044\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002", active && /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 font-black"
+    }, "\u3053\u306E\u30DE\u30B9\u30E2\u30F3\u306F\u7DE8\u6210\u4E2D\u3067\u3059\u3002\u5BC4\u4ED8\u3059\u308B\u3068\u7DE8\u6210\u304B\u3089\u5916\u308C\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setDonationSelectedId(null),
+      disabled: donationProcessing,
+      className: "flex-1 bg-slate-800 text-slate-300 py-3 rounded-2xl font-black text-xs disabled:opacity-40"
+    }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
+      onClick: executeMasuDonation,
+      disabled: donationProcessing,
+      className: "flex-[2] bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3 rounded-2xl font-black text-xs shadow-lg disabled:opacity-40"
+    }, donationProcessing ? '処理中…' : `寄付して${diamonds.toLocaleString()}ダイヤを受け取る`))));
+  })(), gameState === 'MASU_DONATION' && donationResult && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-center justify-center p-4",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(2,6,23,.96)',
+      zIndex: 32100
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 48,
+    className: "text-amber-300 mx-auto mb-3"
+  }), /*#__PURE__*/React.createElement("h3", {
+    className: "text-xl font-black text-white mb-3"
+  }, "\u5BC4\u4ED8\u5B8C\u4E86"), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-violet-200 font-bold"
+  }, donationResult.name, "\u3092\u5BC4\u4ED8\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("p", {
+    className: "text-lg text-amber-300 font-black mt-2"
+  }, donationResult.diamonds.toLocaleString(), "\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308A\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-slate-300 mt-2"
+  }, "\u6240\u6301\u30C0\u30A4\u30E4 ", donationResult.gold.toLocaleString()), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setDonationResult(null),
+    className: "w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm"
+  }, "\u5BC4\u4ED8\u4E00\u89A7\u3078\u623B\u308B"))), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full min-h-0 px-4",
     style: {
       paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -8444,7 +8741,7 @@ function MonsterHeroGame() {
     size: 20
   })), /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-black italic text-cyan-400 uppercase tracking-widest"
-  }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", {
+  }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0"
   }, "\u89E3\u653E\u6E08\u307F", unlockedMonsterIds.length, "\u4F53\u30FB\u30BF\u30C3\u30D7\u3067\u8A73\u7D30\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059"), renderMonsterSortFilterBar({
     singleType: true
@@ -8501,7 +8798,7 @@ function MonsterHeroGame() {
     size: 20
   })), /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-black italic text-pink-400 uppercase tracking-widest"
-  }, "\u30DE\u30B9\u30E2\u30F3")), /*#__PURE__*/React.createElement("div", {
+  }, "\u30DE\u30B9\u30E2\u30F3\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0"
   }, "\u52C7\u8005\u30E2\u30F3\u3092\u30E9\u30F3\u7D42\u4E86\u6642\u306B\u767B\u9332\u3059\u308B\u3068\u3001\u3053\u3053\u306B\u4E26\u3073\u307E\u3059\u3002\u7DE8\u6210\u753B\u9762\u3067\u9078\u3076\u3068\u6B21\u306E\u5468\u56DE\u3067\u4F7F\u3048\u307E\u3059(\u540C\u3058\u7A2E\u306F1\u4F53\u307E\u3067)\u3002"), renderMonsterSortFilterBar({
     singleType: true
@@ -12388,6 +12685,14 @@ function MonsterHeroGame() {
   }, "\u7D46\u30EC\u30D9\u30EB\u304C1\u4E0A\u304C\u308B\u3054\u3068\u306B1\u30DD\u30A4\u30F3\u30C8\u7372\u5F97\u3057\u307E\u3059\u30021\u30DD\u30A4\u30F3\u30C8\u6D88\u8CBB\u3057\u3066\u3001\u9593\u5408\u3044\u9069\u6027\u30921\u6BB5\u968E\u4E0A\u3052\u308B\u304B\u3001\u30E9\u30A4\u30D5\u30FB\u3061\u304B\u3089\u30FB\u4E08\u592B\u3055\u30FB\u30AC\u30C3\u30C4\u306E\u3044\u305A\u308C\u304B\u3092\u4E0A\u3052\u3089\u308C\u307E\u3059\u3002\u632F\u308A\u76F4\u3057\u305F\u3044\u3068\u304D\u306F\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u300C\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8\u300D\u3092\u4F7F\u3044\u307E\u3059\u3002"))), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-amber-300 font-black text-base mb-3 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Gem, {
+    size: 18
+  }), " \u5BC4\u4ED8"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-slate-200 leading-relaxed"
+  }, "\u795E\u6BBF\u306E\u300C\u5BC4\u4ED8\u300D\u3067\u306F\u3001\u6240\u6301\u3057\u3066\u3044\u308B\u30DE\u30B9\u30E2\u30F3\u3092\u624B\u653E\u3057\u3001\u305D\u306E\u30DE\u30B9\u30E2\u30F3\u306E\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024\u3068\u540C\u3058\u6570\u306E\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059\u3002\u5BC4\u4ED8\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("section", {
+    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
+  }, /*#__PURE__*/React.createElement("h3", {
     className: "text-pink-400 font-black text-base mb-3 flex items-center gap-2"
   }, /*#__PURE__*/React.createElement(Heart, {
     size: 18
@@ -12401,7 +12706,7 @@ function MonsterHeroGame() {
     size: 18
   }), " \u5408\u4F53"), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-200 leading-relaxed mb-3"
-  }, "HOME\u306E\u300C\u5408\u4F53\u300D\u304B\u3089\u3001\u30DE\u30B9\u30E2\u30F3\u540C\u58EB\u3092\u5408\u4F53\u3067\u304D\u307E\u3059\u3002\u6B8B\u3059\u5074\u3092", /*#__PURE__*/React.createElement("span", {
+  }, "HOME\u306E\u300C\u795E\u6BBF\u300D\u5185\u306B\u3042\u308B\u300C\u5408\u4F53\u300D\u304B\u3089\u3001\u30DE\u30B9\u30E2\u30F3\u540C\u58EB\u3092\u5408\u4F53\u3067\u304D\u307E\u3059\u3002\u6B8B\u3059\u5074\u3092", /*#__PURE__*/React.createElement("span", {
     className: "text-white font-bold"
   }, "\u4E3B"), "\u3001\u6D88\u3048\u308B\u5074\u3092", /*#__PURE__*/React.createElement("span", {
     className: "text-white font-bold"
@@ -12441,7 +12746,7 @@ function MonsterHeroGame() {
     className: "text-[11px] font-black text-white mb-1 uppercase"
   }, "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("div", {
     className: "text-[12px] text-slate-400 leading-relaxed"
-  }, "WAVE\u30AF\u30EA\u30A2\u3067\u7372\u5F97(Normal\u57FA\u6E96100\u30C0\u30A4\u30E4/WAVE\u3001\u96E3\u6613\u5EA6\u3067\u5909\u52D5)\u3002\u300C\u5186\u76E4\u77F3\u300D\u300C\u30D6\u30EA\u30FC\u30C0\u30FC\u300D\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u306E\u8CFC\u5165\u3068\u3001\u5408\u4F53\u306E\u8CBB\u7528\u306B\u4F7F\u3044\u307E\u3059\u3002")))), /*#__PURE__*/React.createElement("section", {
+  }, "WAVE\u30AF\u30EA\u30A2\u3067\u7372\u5F97(Normal\u57FA\u6E96100\u30C0\u30A4\u30E4/WAVE\u3001\u96E3\u6613\u5EA6\u3067\u5909\u52D5)\u3002\u300C\u5186\u76E4\u77F3\u300D\u300C\u30D6\u30EA\u30FC\u30C0\u30FC\u300D\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u306E\u8CFC\u5165\u3068\u3001\u5408\u4F53\u306E\u8CBB\u7528\u306B\u4F7F\u3044\u307E\u3059\u3002\u795E\u6BBF\u3067\u30DE\u30B9\u30E2\u30F3\u3092\u5BC4\u4ED8\u3059\u308B\u3053\u3068\u3067\u3082\u7372\u5F97\u3067\u304D\u307E\u3059\u3002")))), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-orange-400 font-black text-base mb-3 flex items-center gap-2"
@@ -12493,7 +12798,7 @@ function MonsterHeroGame() {
     size: 18
   }), " \u7DE8\u6210"), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u65B0\u3057\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u3084\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u3092\u89E3\u653E\u3057\u3066\u3082\u3001\u6B21\u306E\u5468\u56DE\u3067\u5019\u88DC\u306B\u306A\u308B\u306E\u306F\u7DE8\u6210\u3067\u9078\u3093\u3060\u3082\u306E\u3060\u3051\u3067\u3059\u3002HOME\u306E\u300C\u7DE8\u6210\u300D\u304B\u3089\u30E2\u30F3\u30B9\u30BF\u30FC8\u4F53\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C96\u679A\u3092\u3061\u3087\u3046\u3069\u9078\u3073\u3001\u300C\u6C7A\u5B9A\u300D\u30DC\u30BF\u30F3\u3067\u78BA\u5B9A\u3057\u307E\u3059(\u6700\u521D\u304B\u3089\u89E3\u653E\u6E08\u307F\u306E8\u4F53\u30FB6\u679A\u306F\u7DE8\u6210\u6E08\u307F\u3067\u3059)\u3002")), /*#__PURE__*/React.createElement("section", {
+  }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u65B0\u3057\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u3084\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u3092\u89E3\u653E\u3057\u3066\u3082\u3001\u6B21\u306E\u5468\u56DE\u3067\u5019\u88DC\u306B\u306A\u308B\u306E\u306F\u7DE8\u6210\u3067\u9078\u3093\u3060\u3082\u306E\u3060\u3051\u3067\u3059\u3002HOME\u306E\u300CM/B\u7BA1\u7406\u300D\u5185\u306B\u3042\u308B\u7DE8\u6210\u304B\u3089\u30E2\u30F3\u30B9\u30BF\u30FC8\u4F53\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C96\u679A\u3092\u3061\u3087\u3046\u3069\u9078\u3073\u3001\u300C\u6C7A\u5B9A\u300D\u30DC\u30BF\u30F3\u3067\u78BA\u5B9A\u3057\u307E\u3059(\u6700\u521D\u304B\u3089\u89E3\u653E\u6E08\u307F\u306E8\u4F53\u30FB6\u679A\u306F\u7DE8\u6210\u6E08\u307F\u3067\u3059)\u3002")), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-indigo-300 font-black text-base mb-3 flex items-center gap-2"
