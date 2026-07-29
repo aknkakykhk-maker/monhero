@@ -63,7 +63,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 23:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 00:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -307,7 +307,7 @@ const BGM_TRACKS = [
 ];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', battle:'original_battle', boss:'original_boss', clear:'ichika_clear' });
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', battle:'original_battle', boss:'original_boss', clear:'ichika_clear' });
 const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => [scene, BGM_TRACK_BY_ID[value?.[scene]] ? value[scene] : fallback]));
 
 const Audio_ = (() => {
@@ -1991,26 +1991,19 @@ function MonsterHeroGame() {
   const [showBgmArrangement, setShowBgmArrangement] = useState(false);
   const [bgmArrangement, setBgmArrangement] = useState(DEFAULT_BGM_ARRANGEMENT);
   const [previewTrackId, setPreviewTrackId] = useState(null);
-  const audioOn = audioUnlocked;
+  const [quickMuted, setQuickMuted] = useState(false);
+  const audioOn = audioUnlocked && !quickMuted;
   const setSeVolumeRaw = (nv) => { setSeVolumeState(nv); storeSet('mh_se_volume', nv, false); };
   const setBgmVolumeRaw = (nv) => { setBgmVolumeState(nv); storeSet('mh_bgm_volume', nv, false); };
   // 音量スライダー操作時に呼ぶ: 未解除ならブラウザの音声ロックを解除しつつ値を保存する
-  const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeRaw(nv); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
-  const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeRaw(nv); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
-  const audioMuted = !audioOn || (seVolume === 0 && bgmVolume === 0);
-  // ミュート解除時に設定する音量。以前は「ミュート直前の音量」に戻していたが、
-  // いきなり大きな音が鳴って驚くため、必ず最小値の1から始めてスライダーで
-  // 好みの大きさまで上げてもらう方式にした(設定パネル・バトル画面どちらのボタンでも同じ)
-  const UNMUTE_VOLUME = DEFAULT_VOLUME;
+  const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeRaw(nv); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
+  const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeRaw(nv); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
+  const audioMuted = !audioOn;
   // バトル画面などスペースが限られる場所向けの1タップミュート切替(詳細な音量調整は設定パネルのスライダーで行う)
   const toggleQuickMute = () => {
-    if (audioMuted) {
-      changeSeVolume(UNMUTE_VOLUME);
-      changeBgmVolume(UNMUTE_VOLUME);
-    } else {
-      changeSeVolume(0);
-      changeBgmVolume(0);
-    }
+    if (quickMuted) Audio_.unlock();
+    else Audio_.setEnabled(false);
+    setQuickMuted(current => !current);
   };
   const closeBgmArrangement = () => { Audio_.stopPreview(); setPreviewTrackId(null); setShowBgmArrangement(false); };
   const changeBgmArrangement = (scene, trackId) => {
@@ -2297,13 +2290,13 @@ function MonsterHeroGame() {
     GIFT_BOX: 'home',           // ギフトボックスはHOMEの曲を止めずに続ける
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
-    FORMATION_MENU: 'profile',   // 編成メニュー
-    MONSTER_LIST_MENU: 'profile', // モンスター一覧メニュー
-    MB_MANAGEMENT: 'profile',   // M/B管理はモンスター一覧・編成と同じ曲を続ける
-    TEMPLE: 'fusion',           // 神殿は合体と同じ曲を続ける
-    MASU_FUSION: 'fusion',      // 合体ページ
-    MASU_DONATION: 'fusion',    // 寄付ページも神殿の曲を続ける
-    MASU_REBIRTH: 'fusion',     // 転生ページも神殿の曲を継続する
+    FORMATION_MENU: 'management', // 編成メニュー
+    MONSTER_LIST_MENU: 'management', // モンスター一覧メニュー
+    MB_MANAGEMENT: 'management', // M/B管理はモンスター一覧・編成と同じ曲を続ける
+    TEMPLE: 'temple',           // 神殿は合体と同じ曲を続ける
+    MASU_FUSION: 'temple',      // 合体ページ
+    MASU_DONATION: 'temple',    // 寄付ページも神殿の曲を続ける
+    MASU_REBIRTH: 'temple',     // 転生ページも神殿の曲を継続する
     BREEDER_MARKET: 'market',   // マーケットページ
   };
   // プロフィール本体はHOMEの曲を続ける。そこから飛べる詳細ページ群は従来のプロフィール曲を維持し、
@@ -2319,8 +2312,8 @@ function MonsterHeroGame() {
     if (isGameOver) return 'gameOver';
     if (!debugBattleRef.current && wave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) return bgmArrangement.clear;
     if (state === 'HOME' || state === 'PROFILE') return bgmArrangement.home;
-    if (BGM_STATE_MAP[state]) return BGM_STATE_MAP[state] === 'home' ? bgmArrangement.home : BGM_STATE_MAP[state];
-    if (PROFILE_BGM_STATES.includes(state)) return 'profile';
+    if (BGM_STATE_MAP[state]) return bgmArrangement[BGM_STATE_MAP[state]] || BGM_STATE_MAP[state];
+    if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;
     if (state === 'BATTLE') return isDullahan ? 'dullahan' : (isBoss ? bgmArrangement.boss : bgmArrangement.battle);
     if (RUN_PHASE_STATES.includes(state)) return wavesDone ? 'result' : 'enhance';
     return null;
@@ -4770,7 +4763,7 @@ function MonsterHeroGame() {
     <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div></div>
   ) : showBgmArrangement ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div><div className="space-y-4">{[
-      ['home','HOME BGM'],['battle','通常バトルBGM'],['boss','ボスバトルBGM'],['clear','ゲームクリアBGM']
+      ['home','HOME BGM'],['management','M/B管理 BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['battle','通常バトル BGM'],['boss','ボスバトル BGM'],['clear','ゲームクリア BGM']
     ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="flex gap-2 mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="shrink-0 min-w-[58px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button></div></label>)}</div><button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
   ) : showBackup ? (
     <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3><button onClick={()=>setShowBackup(false)}><X size={18}/></button></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{backupTab==='export'?<>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice" onClick={generateBackupCode}>バックアップコードを作成</button></>:<><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice" onClick={restoreFromBackupCode}>このコードで復元する</button></>}{restoreMsg&&<p>{restoreMsg}</p>}</div></div>
