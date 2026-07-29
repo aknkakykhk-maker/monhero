@@ -63,7 +63,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 01:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 01:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -215,6 +215,32 @@ const migrateRebornMasuToFullReset = (masuMons) => (Array.isArray(masuMons) ? ma
 const cappedBondXp = (masu, gain = 0) => {
   const normalized = normalizeMasuProgression(masu);
   return Math.min(totalBondXpForLevel(normalized.levelCap), donationDiamondValue(normalized.bondXp) + Math.max(0, Math.floor(Number(gain) || 0)));
+};
+// 周回終了時の絆経験値配布先を、表示処理やReact state更新から独立して一度だけ決定する。
+// 優先順位は勇者モン(100%) > バトル参加マスモン(50%) > 編成内の控え(25%)。
+// 同じ個体が複数枠に現れてもSetでまとめ、上位区分と下位区分の重複付与を防ぐ。
+const buildRunBondAwards = ({ gain, heroMasuId, participantMasuIds, monsterRosterIds, masuMons }) => {
+  const fullGain = Math.max(0, Math.floor(Number(gain) || 0));
+  if (fullGain <= 0) return [];
+  const ownedBondIds = new Set((Array.isArray(masuMons) ? masuMons : [])
+    .filter(masu => masu && masu.id != null && Object.prototype.hasOwnProperty.call(masu, 'bondXp'))
+    .map(masu => String(masu.id)));
+  const heroId = heroMasuId != null && ownedBondIds.has(String(heroMasuId)) ? String(heroMasuId) : null;
+  const participantIds = new Set((Array.isArray(participantMasuIds) ? participantMasuIds : [])
+    .filter(id => id != null && ownedBondIds.has(String(id)) && String(id) !== heroId)
+    .map(String));
+  const rosterIds = new Set((Array.isArray(monsterRosterIds) ? monsterRosterIds : [])
+    .filter(entry => typeof entry === 'string' && entry.startsWith('masu:'))
+    .map(entry => entry.slice(5))
+    .filter(id => ownedBondIds.has(String(id))));
+  const awards = [];
+  if (heroId) awards.push({ masuId:heroId, gain:fullGain, rate:1, showInResult:true });
+  participantIds.forEach(masuId => awards.push({ masuId, gain:Math.max(1, Math.floor(fullGain / 2)), rate:0.5, showInResult:true }));
+  rosterIds.forEach(masuId => {
+    if (masuId === heroId || participantIds.has(masuId)) return;
+    awards.push({ masuId, gain:Math.max(1, Math.floor(fullGain / 4)), rate:0.25, showInResult:false });
+  });
+  return awards;
 };
 const masuBondLevelInfo = (masu) => bondLevelInfo(cappedBondXp(masu));
 const migrateMasuLevelCaps = (masuMons, gold) => {
@@ -3639,12 +3665,17 @@ function MonsterHeroGame() {
     // まだマスモン化していないプレーンな種のままなら、加算先が無いため保存はせず(=絆レベルの概念自体が
     // プレーン種には存在しない)、獲得量だけを計算してラン終了画面に表示する。そこで「マスモンとして
     // 登録する」を選んだ場合にのみ、この獲得量を初期値として新しいマスモンが作られる(registerMasuMon参照)
-    // 供モン(仲間として編成したマスモン)にも、勇者モンの1/4の絆経験値を加算する。勇者モン自身は
-    // slots内にも含まれるが、masuIdで比較して除外する(hero.masuIdが無い=プレーン種の場合は比較先が
-    // 無いので単純にtruthyなmasuIdを持つ全枠が対象になる)
+    // バトルへ参加した供モンには勇者モンの1/2、モンスター編成内で参加しなかった控えのマスモンには
+    // 1/4を加算する。勇者・参加・控えの区分と個体IDは先に一意化し、同じ個体へ重複付与しない。
     const gain = xpForWavesCleared(wavesCleared, scoreMult);
-    const allyGain = Math.max(1, Math.floor(gain / 4));
-    const allyMasuIds = slots.filter(s => s && s.masuId && s.masuId !== mainHero?.masuId).map(s => s.masuId);
+    const bondAwards = buildRunBondAwards({
+      gain,
+      heroMasuId: mainHero?.masuId,
+      participantMasuIds: slots.filter(s => s?.masuId).map(s => s.masuId),
+      monsterRosterIds,
+      masuMons,
+    });
+    const awardByMasuId = new Map(bondAwards.map(award => [String(award.masuId), award]));
     // 表示用の獲得内訳は、setMasuMonsの更新関数(Reactが後で非同期に呼び出すため、この関数の続きの
     // 行が実行される時点ではまだ実行されているとは限らない)の中で計算するのではなく、現在のmasuMons
     // (getMasuMon)を直接読んでこの場で同期的に計算する。以前はupdater内でのみ計算していたため、
@@ -3660,30 +3691,24 @@ function MonsterHeroGame() {
       const after = bondLevelInfo(gain);
       heroBondGain = { name: mainHero.name, emoji: mainHero.emoji, iconUrl: mainHero.iconUrl, xpGain: gain, levelBefore: before, levelAfter: after, masuId: null };
     }
-    const allyBondGains = allyMasuIds.map(masuId => {
+    const allyBondGains = bondAwards.filter(award => award.rate === 0.5 && award.showInResult).map(award => {
+      const masuId = award.masuId;
       const masu = getMasuMon(masuId);
       if (!masu) return null;
       const before = bondLevelInfo(masu.bondXp || 0);
-      const after = bondLevelInfo(cappedBondXp(masu, allyGain));
-      return { name: masu.name, xpGain:Math.max(0,cappedBondXp(masu, allyGain)-(masu.bondXp||0)), levelBefore: before, levelAfter: after, masuId };
+      const after = bondLevelInfo(cappedBondXp(masu, award.gain));
+      return { name: masu.name, xpGain:Math.max(0,cappedBondXp(masu, award.gain)-(masu.bondXp||0)), levelBefore: before, levelAfter: after, masuId };
     }).filter(Boolean);
 
-    if (mainHero?.masuId || allyMasuIds.length > 0) {
+    if (bondAwards.length > 0) {
       setMasuMons(prev => {
         const next = prev.map(m => {
-          if (mainHero?.masuId && m.id === mainHero.masuId) {
-            const before = bondLevelInfo(m.bondXp || 0);
-            const afterXp = cappedBondXp(m, gain);
-            const after = bondLevelInfo(afterXp);
-            return { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + (after.level - before.level) };
-          }
-          if (allyMasuIds.includes(m.id)) {
-            const before = bondLevelInfo(m.bondXp || 0);
-            const afterXp = cappedBondXp(m, allyGain);
-            const after = bondLevelInfo(afterXp);
-            return { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + (after.level - before.level) };
-          }
-          return m;
+          const award = awardByMasuId.get(String(m.id));
+          if (!award) return m;
+          const before = bondLevelInfo(m.bondXp || 0);
+          const afterXp = cappedBondXp(m, award.gain);
+          const after = bondLevelInfo(afterXp);
+          return { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + (after.level - before.level) };
         });
         storeSet('mh_masu_mons', next, false);
         return next;

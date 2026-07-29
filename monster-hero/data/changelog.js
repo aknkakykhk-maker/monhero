@@ -17,7 +17,15 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-30 01:08",
+    date: "2026-07-30 01:15",
+    type: "update",
+    title: "編成マスモンの絆経験値を緩和",
+    items: [
+      "周回終了時、バトルに参加したマスモンは勇者モンの50%、編成内で控えていたマスモンも25%の絆経験値を獲得するようになりました",
+    ],
+  },
+  {
+    date: "2026-07-30 01:15",
     type: "issue",
     status: "fixed",
     title: "敵ステータスのムー表示を修正",
@@ -26,7 +34,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 01:08",
+    date: "2026-07-30 01:15",
     type: "issue",
     status: "fixed",
     title: "デバッグのムー戦のBGMを修正",
@@ -35,7 +43,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 01:08",
+    date: "2026-07-30 01:15",
     type: "update",
     title: "HOMEの放牧設定を追加",
     items: [
@@ -46,7 +54,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 01:08",
+    date: "2026-07-30 01:15",
     type: "update",
     title: "HOMEとアイテム画面を調整",
     items: [
@@ -55,7 +63,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 01:08",
+    date: "2026-07-30 01:15",
     type: "update",
     title: "画面とBGMの使いやすさを改善",
     items: [
@@ -65,7 +73,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 01:08",
+    date: "2026-07-30 01:15",
     type: "issue",
     status: "fixed",
     title: "表示・音声・更新通知の不具合を修正",
