@@ -4056,17 +4056,7 @@ function MonsterHeroGame() {
       )}
       {bootPhase==='ready'&&(
         <div className={`mh-title-gate ${titleStarting?'is-starting':''}`} aria-label="Monster Hero タイトル画面">
-          <div className="mh-title-sky"></div>
-          <div className="mh-title-light"></div>
-          <div className="mh-title-cloud mh-title-cloud-a"></div>
-          <div className="mh-title-cloud mh-title-cloud-b"></div>
-          <div className="mh-title-lightning mh-title-lightning-a"></div>
-          <div className="mh-title-lightning mh-title-lightning-b"></div>
-          <div className="mh-title-embers" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-          <div className="mh-title-moo">
-            {MOO_FULL&&<img src={MOO_FULL} alt="ムー"/>}
-            <span className="mh-title-eye-glow"></span>
-          </div>
+          <img className="mh-title-visual" src="data/images/title-screen.PNG" alt="モンスターヒーロー グランドチャンピオンクエスト"/>
           <header className="mh-title-header">
             <div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div>
             <div className="mh-title-actions">
@@ -4074,15 +4064,7 @@ function MonsterHeroGame() {
               <button onClick={()=>setShowTitleSettings(true)} aria-label="設定"><Settings size={19}/><span>設定</span></button>
             </div>
           </header>
-          <div className="mh-title-logo" aria-label="MONSTER HERO GRAND CHAMPION QUEST">
-            <div className="mh-title-logo-main">MONSTER <strong>HERO</strong></div>
-            <div className="mh-title-logo-sub"><span>GRAND CHAMPION QUEST</span></div>
-          </div>
-          <div className="mh-title-heroes" aria-hidden="true">
-            {ALL_PLAYER_MONSTERS.Mocchi?.imgUrl&&<img className="mh-title-mocchi" src={ALL_PLAYER_MONSTERS.Mocchi.imgUrl} alt=""/>}
-            {ALL_PLAYER_MONSTERS.Suezo?.imgUrl&&<img className="mh-title-suezo" src={ALL_PLAYER_MONSTERS.Suezo.imgUrl} alt=""/>}
-          </div>
-          <button className="mh-title-start" onClick={startGame}>TAP TO START</button>
+          <button className="mh-title-start" onClick={startGame} aria-label="ゲームを開始"></button>
           <div className="mh-title-flash"></div>
         </div>
       )}
@@ -6697,34 +6679,17 @@ const createAnimationStyle = () => {
     .mh-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 9999px; }
     .mh-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 9999px; }
     .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
-    .mh-title-gate { position:fixed; inset:0; z-index:70000; overflow:hidden; color:#fff; background:#080415; isolation:isolate; animation:titleReveal 1.1s ease-out both; }
-    .mh-title-sky { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 18%,#7135a8 0,#291349 34%,#10091f 63%,#03030a 100%); }
-    .mh-title-light { position:absolute; inset:-20%; opacity:.32; background:conic-gradient(from 190deg at 50% 18%,transparent 0 22%,#bd72ff 25%,transparent 29% 61%,#6d2ccc 64%,transparent 68%); filter:blur(22px); animation:titleLightFlow 14s ease-in-out infinite alternate; }
-    .mh-title-cloud { position:absolute; width:90%; height:18%; border-radius:50%; background:rgba(31,22,48,.68); filter:blur(18px); }
-    .mh-title-cloud-a { top:23%; left:-30%; transform:rotate(8deg); }
-    .mh-title-cloud-b { top:38%; right:-35%; transform:rotate(-10deg); opacity:.7; }
-    .mh-title-lightning { position:absolute; top:5%; width:3px; height:31%; opacity:0; background:#eadcff; box-shadow:0 0 8px #fff,0 0 25px #a855f7; clip-path:polygon(30% 0,100% 0,55% 42%,100% 42%,0 100%,35% 52%,0 52%); animation:titleLightning 7s steps(1,end) infinite; }
-    .mh-title-lightning-a { left:12%; transform:rotate(12deg); }.mh-title-lightning-b { right:13%; transform:rotate(-14deg); animation-delay:3.7s; }
-    .mh-title-moo { position:absolute; z-index:2; top:-6%; left:50%; width:min(150vw,720px); height:59%; transform:translateX(-50%); transform-origin:50% 25%; animation:titleMooBreath 6s ease-in-out infinite; }
-    .mh-title-moo img { width:100%; height:100%; object-fit:contain; object-position:50% 0; filter:drop-shadow(0 16px 28px #05020a) drop-shadow(0 0 20px rgba(192,100,255,.55)); }
-    .mh-title-eye-glow { position:absolute; left:50%; top:29%; width:22%; height:7%; transform:translateX(-50%); border-radius:50%; background:rgba(225,190,255,.22); filter:blur(10px); animation:titleEyes 3.4s ease-in-out infinite; }
-    .mh-title-header { position:absolute; z-index:20; top:0; left:0; right:0; padding:calc(12px + env(safe-area-inset-top)) 13px 0; display:flex; justify-content:space-between; align-items:flex-start; text-shadow:0 2px 5px #000; }
-    .mh-title-build { display:grid; grid-template-columns:auto; text-align:left; font-family:monospace; line-height:1.2; }.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#d8c6f2}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .mh-title-actions { display:flex; gap:9px; }.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:48px;color:#fff;font-size:8px;font-weight:800;text-shadow:0 2px 5px #000}.mh-title-actions button svg{filter:drop-shadow(0 0 5px #b46cff)}.mh-title-actions em{position:absolute;right:-2px;top:-7px;background:#ef3340;border-radius:8px;padding:2px 4px;font-size:6px;font-style:normal}
-    .mh-title-logo { position:absolute; z-index:8; left:50%; top:43%; transform:translate(-50%,-50%); width:94%; text-align:center; animation:titleLogoIn 1.35s .25s cubic-bezier(.2,.8,.2,1) both; }
-    .mh-title-logo-main { display:inline-block; padding:4px 11px 7px; color:#d8c8f5; font-family:Impact,'Arial Black',sans-serif; font-style:italic; font-size:clamp(38px,11.5vw,63px); line-height:.9; letter-spacing:-.055em; -webkit-text-stroke:1px #120b1c; text-shadow:0 2px 0 #fff,0 5px 0 #30223d,0 8px 0 #b88724,0 12px 22px #000,0 0 18px #8a43d5; white-space:nowrap; }.mh-title-logo-main strong{color:#b177db;text-shadow:0 2px 0 #f4ddff,0 5px 0 #271631,0 8px 0 #c79b36,0 12px 22px #000,0 0 24px #ad55f5}
-    .mh-title-logo-sub { margin:10px auto 0; display:flex; align-items:center; gap:8px; max-width:280px; color:#f3d785; font-size:9px; font-weight:900; letter-spacing:.28em; text-shadow:0 2px 5px #000; white-space:nowrap; }.mh-title-logo-sub:before,.mh-title-logo-sub:after{content:'';height:1px;flex:1;background:linear-gradient(90deg,transparent,#ddbd58)}.mh-title-logo-sub:after{transform:scaleX(-1)}
-    .mh-title-heroes { position:absolute; z-index:6; inset:auto 0 7% 0; height:39%; pointer-events:none; }.mh-title-heroes img{position:absolute;bottom:0;object-fit:contain;filter:drop-shadow(0 10px 15px #000) drop-shadow(0 0 9px rgba(132,87,210,.4))}.mh-title-mocchi{left:-7%;width:64%;height:100%;transform:rotate(7deg)}.mh-title-suezo{right:-8%;width:59%;height:95%;transform:scaleX(-1) rotate(5deg)}
-    .mh-title-embers { position:absolute; z-index:7; inset:55% 0 0; pointer-events:none; }.mh-title-embers i{position:absolute;width:3px;height:3px;border-radius:50%;background:#ffbd59;box-shadow:0 0 8px #ff7028;animation:titleEmber 6s linear infinite}.mh-title-embers i:nth-child(1){left:10%;bottom:5%}.mh-title-embers i:nth-child(2){left:29%;bottom:-5%;animation-delay:-3s}.mh-title-embers i:nth-child(3){left:53%;bottom:2%;animation-delay:-1s}.mh-title-embers i:nth-child(4){left:75%;bottom:-8%;animation-delay:-4s}.mh-title-embers i:nth-child(5){left:91%;bottom:8%;animation-delay:-2s}
-    .mh-title-start { position:absolute; z-index:20; left:50%; bottom:calc(19px + env(safe-area-inset-bottom)); transform:translateX(-50%); color:#fff; font-size:14px; font-weight:900; letter-spacing:.34em; white-space:nowrap; text-shadow:0 0 8px #fff,0 0 18px #8a4ddb,0 3px 8px #000; animation:titleStartPulse 2.2s ease-in-out infinite; padding:12px 18px; }
+    .mh-title-gate { position:fixed; inset:0; z-index:70000; overflow:hidden; color:#fff; background:#05020e; isolation:isolate; animation:titleReveal 1.1s ease-out both; }
+    .mh-title-visual { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:50% 50%; }
+    .mh-title-header { position:absolute; z-index:20; top:0; left:50%; width:min(100%,calc(100vh * 941 / 1672)); transform:translateX(-50%); padding:calc(12px + env(safe-area-inset-top)) 13px 0; display:flex; justify-content:space-between; align-items:flex-start; text-shadow:0 2px 5px #000; }
+    .mh-title-build { display:grid; grid-template-columns:auto; padding:5px 7px; border-radius:8px; background:rgba(5,2,14,.76); text-align:left; font-family:monospace; line-height:1.2; }.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#d8c6f2}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mh-title-actions { display:flex; gap:9px; }.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:rgba(34,18,44,.9);border:1px solid rgba(255,216,122,.75);color:#fff;font-size:8px;font-weight:800;text-shadow:0 2px 5px #000;box-shadow:0 2px 8px #000}.mh-title-actions button svg{filter:drop-shadow(0 0 5px #b46cff)}.mh-title-actions em{position:absolute;right:-2px;top:-7px;background:#ef3340;border-radius:8px;padding:2px 4px;font-size:6px;font-style:normal}
+    .mh-title-start { position:absolute; z-index:20; left:50%; bottom:env(safe-area-inset-bottom); width:min(100%,calc(100vh * 941 / 1672)); height:18%; transform:translateX(-50%); }
     .mh-title-flash { position:absolute; z-index:50; inset:0; pointer-events:none; background:#fff; opacity:0; }.mh-title-gate.is-starting{animation:titleGateOut .62s ease-in forwards}.mh-title-gate.is-starting .mh-title-flash{animation:titleFlash .62s ease-out forwards}
-    @keyframes titleReveal{from{opacity:0}to{opacity:1}}@keyframes titleLogoIn{from{opacity:0;transform:translate(-50%,-45%) scale(.9)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
-    @keyframes titleMooBreath{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.025)}}@keyframes titleEyes{0%,100%{opacity:.28}50%{opacity:.8}}
-    @keyframes titleLightFlow{to{transform:translateX(7%) rotate(4deg)}}@keyframes titleLightning{0%,88%,91%,94%,100%{opacity:0}89%,92%{opacity:.85}90%,93%{opacity:.2}}
-    @keyframes titleStartPulse{0%,100%{opacity:.38}50%{opacity:1}}@keyframes titleEmber{from{transform:translateY(0);opacity:0}15%{opacity:.8}to{transform:translate(20px,-48vh);opacity:0}}
+    @keyframes titleReveal{from{opacity:0}to{opacity:1}}
     @keyframes titleFlash{0%{opacity:0}25%{opacity:.75}100%{opacity:0}}@keyframes titleGateOut{0%,30%{opacity:1}100%{opacity:0}}
-    @media (prefers-reduced-motion:reduce){.mh-title-gate *{animation-duration:.001ms!important;animation-iteration-count:1!important}.mh-title-start{opacity:1}}
-    @media (max-height:620px){.mh-title-moo{height:54%}.mh-title-logo{top:41%}.mh-title-heroes{height:37%;bottom:7%}.mh-title-logo-main{font-size:38px}}
+    @media (prefers-reduced-motion:reduce){.mh-title-gate *{animation-duration:.001ms!important;animation-iteration-count:1!important}}
+    @media (max-height:620px){.mh-title-header{padding-top:calc(7px + env(safe-area-inset-top))}.mh-title-actions button{width:44px;height:44px}}
     `;
   document.head.appendChild(style);
 };
