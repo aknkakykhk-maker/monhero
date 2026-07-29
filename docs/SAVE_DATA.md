@@ -46,6 +46,7 @@
 | `mh_points_migrated` | false時、現ブリーダーLv-1相当ポイントを遡及付与 |
 | `mh_points_base_granted` | false時、全プレイヤーへ初期1ポイントを一度付与 |
 | `mh_breeder_points_granted` | XPカーブ緩和後の不足ポイント補填と二重付与防止 |
+| `mh_masu_rebirth_full_reset_migrated_v1` | 旧仕様で転生済みの個体をLv1・未使用強化ポイント5へ一度だけ補正 |
 
 旧形式として `mh_bond_xp`（種ID→XP）、`mh_dist_apt_points`（種ID→未使用点）、`mh_dist_apt_overrides`（種ID→適性配列）を読み込む。XPが正の既知種だけ `masu_migrated_<種ID>` として追加する。旧キーは削除しない。
 
@@ -61,6 +62,7 @@
 - `colors`: 部位別色ID。旧 `color` は読み取り互換あり。
 - `fusionHistory[]`: `{subName, subBaseId, subBondLevel, xpGained, inherited, timestamp}`。
 - `inheritedUniques[]`: 副の固有技データと `sourceMasuName`。
+- `fusionBondLevels`: 合体XPによるレベル上昇数。ロード時の強化ポイント不足補填から除外するための累計値。
 
 明示的な `schemaVersion` は存在しない。未知フィールドはオブジェクトスプレッドにより多くの更新で維持されるが、全経路での保証は**未確認**。
 
