@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 965f68611c8e3815
+// source-sha256: 24beb81cd4845eda
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -507,7 +507,9 @@ const Audio_ = (() => {
   };
   const unlock = async (playTestTone = false) => {
     if (!enabled) enabled = true;
+    // iOSではユーザー操作中にresumeを開始したうえで、runningになるまで完了扱いにしない。
     resumeAudioCtxNoWait();
+    const ctx = await ensureAudioCtxRunning();
     if (currentKey) playBGM(currentKey);
     await load();
     if (Tone && playTestTone) {
@@ -535,6 +537,7 @@ const Audio_ = (() => {
       } catch (e) {}
     }
     await setEnabled(true);
+    return !ctx || ctx.state === 'running';
   };
   const ensurePlaying = key => {
     if (enabled && key === currentKey && !bgmSource && !jingleSource) playBGM(key);
@@ -3060,10 +3063,11 @@ function MonsterHeroGame() {
   const [attemptCounts, setAttemptCounts] = useState({}); // 難易度別 挑戦回数(端末保存)
   const [clearCounts, setClearCounts] = useState({}); // 難易度別 クリア回数(端末保存)
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
-  // 起動時の事前ロード。'loading'=読み込み中 / 'ready'=タイトル / 'done'=トップ画面
-  // ブラウザの自動再生制限のため、タイトル画面内の最初の操作で音声を解除する。
-  const [bootPhase, setBootPhase] = useState('loading');
+  // 起動UIはゲーム本体と別の明示的な状態機械で管理する。
+  const [bootPhase, setBootPhase] = useState('LOADING');
   const [titleStarting, setTitleStarting] = useState(false);
+  const [entryAnimating, setEntryAnimating] = useState(false);
+  const [enteringSlow, setEnteringSlow] = useState(false);
   // ハブ側の操作はこのDocumentのuser activationにならないため、起動画面内での解除だけを記録する。
   // refも併用し、pointerdown直後のclickが同じ操作でトップ遷移を始めないよう同期的に判定する。
   const [bootSoundUnlocked, setBootSoundUnlocked] = useState(false);
@@ -3083,8 +3087,8 @@ function MonsterHeroGame() {
   const [dataLoaded, setDataLoaded] = useState(false); // 端末に保存したセーブデータの読み込みが終わったか
   const [bootProgress, setBootProgress] = useState({
     done: 0,
-    total: 1,
-    label: 'システム起動中'
+    total: 6,
+    label: 'タイトル画面を準備中'
   });
   const [localRankings, setLocalRankings] = useState({});
   // ブリーダーLv・絆Lvの集計に使う記録。スコア上位に入らなかった直近のプレイも含むので、
@@ -3731,7 +3735,7 @@ function MonsterHeroGame() {
   // BGM: 画面遷移に応じて自動切替(曲はaudio/のmp3。画面に応じて必要な曲だけ読み込む)
   useEffect(() => {
     const isBoss = wave === 10 || enemy?.id === 'Moo';
-    const key = bgmKeyForState(gameState, isBoss, (waveHistory || []).length > 0);
+    const key = bootPhase === 'GAME' ? bgmKeyForState(gameState, isBoss, (waveHistory || []).length > 0) : bootPhase === 'TITLE' || bootPhase === 'ENTERING_GAME' ? 'title' : null;
     // 音がオフでも、その画面で使う曲は先に読み込んでおく(タップした瞬間に鳴り始めるように)
     if (key) Audio_.preloadBGM(key);
     if (!audioOn) {
@@ -3739,7 +3743,7 @@ function MonsterHeroGame() {
       return;
     }
     if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [gameState, wave, enemy?.id, audioOn, waveHistory.length]);
+  }, [bootPhase, gameState, wave, enemy?.id, audioOn, waveHistory.length]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   useEffect(() => {
@@ -3784,59 +3788,24 @@ function MonsterHeroGame() {
     };
   }, []);
 
-  // 起動時の事前ロード。ゲームを表示する前に、最初に必要なものを一通り読み込んでおく。
-  //  ・タイトルのBGM(鳴らせる状態になるまで)
-  //  ・持っているマスモンの染色マスク(高解像度の立ち絵1枚あたり約100万画素あり、
-  //    表示時に計算すると一覧や合体画面を開いた瞬間にもたつくため)
-  // 通信や端末が遅くても待たせ続けないよう、全体で最長8秒で打ち切る。
+  // 正式タイトルに必要なものだけを直列に確認する。重いゲーム素材はENTRY_READY後の
+  // idleキューへ分離し、タイトル操作と音声開始を妨げない。
   useEffect(() => {
-    if (bootPhase !== 'loading') return;
-    if (!dataLoaded) return; // セーブデータの読み込みが終わってから始める
+    if (bootPhase !== 'LOADING' || !dataLoaded) return;
     let cancelled = false;
-    const finish = () => {
-      if (!cancelled) setBootPhase('ready');
-    };
-    const hardStop = setTimeout(finish, 6000);
-    (async () => {
-      // 染色マスクを計算する対象(色を設定してあるマスモンのみ。種が同じなら結果は共通)
-      const targets = [];
-      const seen = new Set();
-      masuMons.forEach(m => {
-        if (!getMasuColors(m).some(Boolean)) return;
-        const base = ALL_PLAYER_MONSTERS[m.baseId];
-        if (!base) return;
-        [base.imgUrl, base.iconUrl].forEach(url => {
-          if (!url) return;
-          const key = m.baseId + '::' + url;
-          if (seen.has(key)) return;
-          seen.add(key);
-          targets.push([m.baseId, url]);
+    const required = async () => {
+      const step = (done, label) => {
+        if (!cancelled) setBootProgress({
+          done,
+          total: 6,
+          label
         });
-      });
-      const total = targets.length + 2; // タイトル画像 + BGM
-      let done = 0;
-      const step = label => {
-        if (!cancelled) {
-          done++;
-          setBootProgress({
-            done,
-            total,
-            label
-          });
-        }
       };
-      if (!cancelled) setBootProgress({
-        done: 0,
-        total,
-        label: 'タイトル画面 準備中'
-      });
-
-      // 通信完了だけでなくデコード完了まで待つ。これにより正式タイトルへ切り替えた瞬間の
-      // 空白や旧画面の露出を防ぐ。decode非対応ブラウザはload完了を同等の準備完了とする。
+      step(0, 'タイトル画面を準備中');
       await new Promise(resolve => {
         const image = new Image();
         let settled = false;
-        const finishImage = () => {
+        const finish = () => {
           if (!settled) {
             settled = true;
             resolve();
@@ -3844,62 +3813,116 @@ function MonsterHeroGame() {
         };
         image.onload = async () => {
           try {
-            if (typeof image.decode === 'function') await image.decode();
-          } catch (e) {}
-          finishImage();
+            if (image.decode) await image.decode();
+          } catch {}
+          finish();
         };
-        image.onerror = finishImage;
+        image.onerror = finish;
         image.src = 'data/images/title-screen.PNG';
         if (image.complete) image.onload();
       });
-      step('タイトルBGM 準備中');
-      await Audio_.prepareBGM('title', 4000).catch(() => {});
-      step(targets.length ? 'モンスターデータ 展開中' : '起動完了');
-      for (const [baseId, url] of targets) {
-        if (cancelled) return;
-        await Promise.resolve(getDyeRegionMasks(baseId, url)).catch(() => {});
-        step('モンスターデータ 展開中');
+      step(1, 'タイトルBGMを準備中');
+      await Audio_.prepareBGM('title', 5000).catch(() => false);
+      step(2, 'セーブデータを確認中');
+      await Promise.resolve();
+      step(3, '更新情報を確認中');
+      await Promise.resolve(typeof CHANGELOG !== 'undefined' ? CHANGELOG : []);
+      step(4, 'モンスターデータを展開中');
+      await Promise.resolve(ALL_PLAYER_MONSTERS.Mocchi);
+      step(5, '冒険の世界を構築中');
+      await new Promise(r => requestAnimationFrame(() => r()));
+      step(6, '準備完了');
+      if (!cancelled) setBootPhase('ENTRY_READY');
+    };
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        setBootProgress({
+          done: 6,
+          total: 6,
+          label: '準備完了'
+        });
+        setBootPhase('ENTRY_READY');
       }
-      clearTimeout(hardStop);
-      finish();
-    })();
+    }, 9000);
+    required().finally(() => clearTimeout(timeout));
     return () => {
       cancelled = true;
-      clearTimeout(hardStop);
+      clearTimeout(timeout);
     };
-  }, [bootPhase, dataLoaded, masuMons]);
-  const unlockBootSound = () => {
-    if (bootSoundUnlockedRef.current) return;
-    bootSoundUnlockedRef.current = true;
-    setBootSoundUnlocked(true);
-    Audio_.unlock();
-  };
+  }, [bootPhase, dataLoaded]);
 
-  // ロード画面で解除済みなら正式タイトルの表示開始時から曲を鳴らす。
+  // 色マスクなど後続画面用の素材は、ブラウザが空いた時に1件ずつ処理する。
   useEffect(() => {
-    if (bootPhase === 'ready' && bootSoundUnlockedRef.current) Audio_.playBGM('title');
-  }, [bootPhase, bootSoundUnlocked]);
-
-  // 未解除時の正式タイトル最初のタップは解除とBGM開始だけに使い、遷移とは分離する。
-  const startGame = () => {
-    if (titleStarting) return;
-    if (!bootSoundUnlockedRef.current) {
-      unlockBootSound();
-      Audio_.playBGM('title');
-      return;
+    if (bootPhase === 'LOADING') return;
+    let cancelled = false;
+    const jobs = [];
+    const seen = new Set();
+    masuMons.forEach(m => {
+      if (!getMasuColors(m).some(Boolean)) return;
+      const base = ALL_PLAYER_MONSTERS[m.baseId];
+      [base?.imgUrl, base?.iconUrl].forEach(url => {
+        const key = `${m.baseId}::${url}`;
+        if (url && !seen.has(key)) {
+          seen.add(key);
+          jobs.push(() => getDyeRegionMasks(m.baseId, url));
+        }
+      });
+    });
+    const schedule = window.requestIdleCallback || (cb => setTimeout(() => cb({
+      timeRemaining: () => 8
+    }), 24));
+    const run = () => schedule(async () => {
+      if (cancelled || !jobs.length) return;
+      try {
+        await jobs.shift()();
+      } catch {}
+      run();
+    }, {
+      timeout: 250
+    });
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [bootPhase, masuMons]);
+  const unlockBootSound = async () => {
+    if (bootSoundUnlockedRef.current || entryAnimating || bootPhase !== 'ENTRY_READY') return;
+    setEntryAnimating(true);
+    let unlocked = false;
+    try {
+      const attempt = (async () => {
+        const audioReady = await Audio_.unlock();
+        await Audio_.playBGM('title');
+        Audio_.ensurePlaying('title');
+        unlocked = audioReady;
+      })();
+      await Promise.race([attempt, new Promise(r => setTimeout(r, 1600))]);
+    } catch {}
+    if (unlocked) {
+      bootSoundUnlockedRef.current = true;
+      setBootSoundUnlocked(true);
     }
-    // 指を離したときのclickは、既に消えている起動画面ではなくトップ画面の要素に届く。
-    // そこにボタンがあると誤って押されてしまうので、続く1回のclickは捨てる
-    bootTapPending.current = true;
-    setTimeout(() => {
-      bootTapPending.current = false;
-    }, 3000); // 指を離さなかった場合の保険
+    setTimeout(() => setBootPhase('TITLE'), 760);
+  };
+  const prepareGameEntry = async () => {
+    try {
+      const image = new Image();
+      image.src = MOO_FULL;
+      if (image.decode) await Promise.race([image.decode().catch(() => {}), new Promise(r => setTimeout(r, 1800))]);
+    } catch {}
+  };
+  const startGame = async () => {
+    if (titleStarting || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showAudioSettings || showBackup) return;
     setTitleStarting(true);
-    Audio_.se.tap();
-    setTimeout(() => setBootPhase('done'), 620);
-    // タイトルの曲は必ず鳴ってほしいので、少し時間を置いて本当に鳴っているか確かめ、
-    // 鳴っていなければ鳴らし直す(読み込みが間に合わなかった場合の保険)
-    [300, 1000, 2500].forEach(ms => setTimeout(() => Audio_.ensurePlaying('title'), ms));
+    setShowChangelog(false);
+    setShowTitleSettings(false);
+    setBootPhase('ENTERING_GAME');
+    const slow = setTimeout(() => setEnteringSlow(true), 1200);
+    await Promise.race([prepareGameEntry(), new Promise(r => setTimeout(r, 5000))]);
+    await new Promise(r => setTimeout(r, 850));
+    clearTimeout(slow);
+    setEnteringSlow(false);
+    setBootPhase('GAME');
   };
 
   // タブ切り替え/バックグラウンド化から復帰した際、OSにより自動停止されたAudioContextと
@@ -7159,43 +7182,197 @@ function MonsterHeroGame() {
   }, "\u6D88\u8CBBG ", mon.unique.baseGuts)), /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] text-slate-300 leading-relaxed italic"
   }, "\"", mon.unique.effectDesc, "\"")));
-
-  // 起動時の事前ロード画面。読み込みが終わるまでタイトルは表示しない。
-  if (bootPhase === 'loading') {
-    const pct = Math.round(bootProgress.done / Math.max(1, bootProgress.total) * 100);
-    return /*#__PURE__*/React.createElement("div", {
-      className: "mh-boot-screen h-full w-full text-white overflow-hidden relative select-none font-sans flex flex-col items-center justify-center p-8",
-      style: {
-        height: '100%'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "relative z-10 flex flex-col items-center w-full max-w-xs"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-boot-spinner",
-      "aria-hidden": "true"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "text-[11px] font-black tracking-[.28em] text-slate-200 mt-5"
-    }, "\u30B2\u30FC\u30E0\u3092\u6E96\u5099\u3057\u3066\u3044\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
-      className: "w-full mt-7"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-2 bg-slate-900 rounded-full overflow-hidden border border-indigo-400/30"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "h-full bg-gradient-to-r from-indigo-500 via-purple-400 to-pink-400 transition-all duration-300",
-      style: {
-        width: `${pct}%`
-      }
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] text-indigo-300 font-bold text-center mt-3 tracking-wider"
-    }, bootProgress.label)), /*#__PURE__*/React.createElement("button", {
-      type: "button",
-      onPointerDown: unlockBootSound,
-      className: `mh-boot-sound ${bootSoundUnlocked ? 'is-unlocked' : ''}`
-    }, /*#__PURE__*/React.createElement("span", {
-      "aria-hidden": "true"
-    }, bootSoundUnlocked ? '✓' : '🔊'), /*#__PURE__*/React.createElement("span", null, bootSoundUnlocked ? 'サウンドを有効化しました' : '画面をタップしてサウンドを有効化'))), /*#__PURE__*/React.createElement("div", {
-      className: "absolute bottom-4 text-[8px] text-slate-700 font-mono tracking-widest"
-    }, "ver ", BUILD_DATE));
-  }
+  const pct = Math.round(bootProgress.done / Math.max(1, bootProgress.total) * 100);
+  const titleModal = showChangelog ? /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-modal",
+    onPointerDown: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-dialog"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-dialog-head"
+  }, /*#__PURE__*/React.createElement("h3", null, "\u2726 \u66F4\u65B0\u5C65\u6B74"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowChangelog(false)
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 18
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mh-changelog-tabs"
+  }, [{
+    key: 'update',
+    label: '更新情報'
+  }, {
+    key: 'issue',
+    label: '不具合情報'
+  }].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t.key,
+    onClick: () => selectChangelogTab(t.key),
+    className: changelogTab === t.key ? 'active' : ''
+  }, t.label, changelogUnread[t.key] && ' NEW'))), /*#__PURE__*/React.createElement("div", {
+    className: "mh-changelog-list"
+  }, (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(c => c.type === changelogTab).map((c, i) => /*#__PURE__*/React.createElement("article", {
+    key: i
+  }, /*#__PURE__*/React.createElement("time", null, c.date), /*#__PURE__*/React.createElement("b", null, c.title), (c.items || []).map((x, j) => /*#__PURE__*/React.createElement("p", {
+    key: j
+  }, "\u30FB", x))))))) : showTitleSettings ? /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-modal",
+    onPointerDown: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-dialog"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-dialog-head"
+  }, /*#__PURE__*/React.createElement("h3", null, "\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowTitleSettings(false)
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 18
+  }))), /*#__PURE__*/React.createElement("button", {
+    className: "mh-dialog-choice",
+    onClick: () => {
+      setShowTitleSettings(false);
+      setShowAudioSettings(true);
+    }
+  }, "\uD83D\uDD0A \u97F3\u91CF\u8A2D\u5B9A ", /*#__PURE__*/React.createElement(ChevronRight, {
+    size: 18
+  })), /*#__PURE__*/React.createElement("button", {
+    className: "mh-dialog-choice",
+    onClick: () => {
+      setShowTitleSettings(false);
+      setShowBackup(true);
+    }
+  }, "\uD83D\uDEE1\uFE0F \u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E ", /*#__PURE__*/React.createElement(ChevronRight, {
+    size: 18
+  })))) : showAudioSettings ? /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-modal"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-dialog"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-dialog-head"
+  }, /*#__PURE__*/React.createElement("h3", null, "\u97F3\u91CF\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowAudioSettings(false)
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 18
+  }))), /*#__PURE__*/React.createElement("button", {
+    className: "mh-dialog-choice",
+    onClick: toggleQuickMute
+  }, audioMuted ? '🔇 音がオフです' : '🔊 音はオンです'), /*#__PURE__*/React.createElement(VolumeSlider, {
+    label: "SE",
+    icon: "\uD83D\uDD14",
+    value: seVolume,
+    onChange: changeSeVolume,
+    gradient: "from-cyan-500 to-indigo-500",
+    thumbRing: "border-indigo-400"
+  }), /*#__PURE__*/React.createElement(VolumeSlider, {
+    label: "BGM",
+    icon: "\uD83C\uDFB5",
+    value: bgmVolume,
+    onChange: changeBgmVolume,
+    gradient: "from-fuchsia-500 to-pink-500",
+    thumbRing: "border-fuchsia-400"
+  }))) : showBackup ? /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-modal"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-dialog"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-dialog-head"
+  }, /*#__PURE__*/React.createElement("h3", null, "\u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowBackup(false)
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 18
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "mh-changelog-tabs"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: backupTab === 'export' ? 'active' : '',
+    onClick: () => setBackupTab('export')
+  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7"), /*#__PURE__*/React.createElement("button", {
+    className: backupTab === 'import' ? 'active' : '',
+    onClick: () => setBackupTab('import')
+  }, "\u5FA9\u5143")), backupTab === 'export' ? /*#__PURE__*/React.createElement(React.Fragment, null, backupCode && /*#__PURE__*/React.createElement("textarea", {
+    readOnly: true,
+    value: backupCode
+  }), /*#__PURE__*/React.createElement("button", {
+    className: "mh-dialog-choice",
+    onClick: generateBackupCode
+  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u4F5C\u6210")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("textarea", {
+    value: restoreInput,
+    onChange: e => setRestoreInput(e.target.value),
+    placeholder: "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30B3\u30FC\u30C9\u3092\u8CBC\u308A\u4ED8\u3051"
+  }), /*#__PURE__*/React.createElement("button", {
+    className: "mh-dialog-choice",
+    onClick: restoreFromBackupCode
+  }, "\u3053\u306E\u30B3\u30FC\u30C9\u3067\u5FA9\u5143\u3059\u308B")), restoreMsg && /*#__PURE__*/React.createElement("p", null, restoreMsg))) : null;
+  if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return /*#__PURE__*/React.createElement("main", {
+    className: `mh-boot-screen ${bootPhase === 'ENTRY_READY' ? 'is-ready' : ''} ${entryAnimating ? 'is-entering' : ''}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-boot-stars",
+    "aria-hidden": "true"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-mocchi-wrap"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: MOCCHI_IMG,
+    alt: "\u30E2\u30C3\u30C1\u30FC"
+  }), /*#__PURE__*/React.createElement("span", null), /*#__PURE__*/React.createElement("i", null, "\u2726"), /*#__PURE__*/React.createElement("i", null, "\u2727")), /*#__PURE__*/React.createElement("section", {
+    className: "mh-boot-copy"
+  }, bootPhase === 'LOADING' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h1", null, "NOW LOADING"), /*#__PURE__*/React.createElement("h2", null, "\u5192\u967A\u306E\u6E96\u5099\u3092\u3057\u3066\u3044\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "mh-progress"
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      width: `${pct}%`
+    }
+  })), /*#__PURE__*/React.createElement("strong", null, pct, "%"), /*#__PURE__*/React.createElement("p", null, bootProgress.label)) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h1", null, "READY"), /*#__PURE__*/React.createElement("button", {
+    disabled: entryAnimating,
+    onPointerDown: unlockBootSound
+  }, "TOUCH TO ENTER"), /*#__PURE__*/React.createElement("h2", null, "\u2015 \u5192\u967A\u306E\u6249\u3092\u958B\u304F \u2015"), /*#__PURE__*/React.createElement("p", null, "\u8FFD\u52A0\u30C7\u30FC\u30BF\u306F\u30D0\u30C3\u30AF\u30B0\u30E9\u30A6\u30F3\u30C9\u3067\u8AAD\u307F\u8FBC\u307F\u3092\u7D9A\u3051\u307E\u3059"))), /*#__PURE__*/React.createElement("footer", null, "VERSION ", BUILD_DATE), /*#__PURE__*/React.createElement("div", {
+    className: "mh-entry-flash"
+  }));
+  if (bootPhase === 'TITLE') return /*#__PURE__*/React.createElement("main", {
+    className: "mh-title-gate",
+    "aria-label": "Monster Hero \u30BF\u30A4\u30C8\u30EB\u753B\u9762"
+  }, /*#__PURE__*/React.createElement("img", {
+    className: "mh-title-visual",
+    src: "data/images/title-screen.PNG",
+    alt: "\u30E2\u30F3\u30B9\u30BF\u30FC\u30D2\u30FC\u30ED\u30FC \u30B0\u30E9\u30F3\u30C9\u30C1\u30E3\u30F3\u30D4\u30AA\u30F3\u30AF\u30A8\u30B9\u30C8"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-ui-mask-left"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-ui-mask-right"
+  }), /*#__PURE__*/React.createElement("header", {
+    className: "mh-title-header"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-build"
+  }, /*#__PURE__*/React.createElement("b", null, "VERSION"), /*#__PURE__*/React.createElement("span", null, BUILD_DATE), /*#__PURE__*/React.createElement("b", null, "PLAYER ID"), /*#__PURE__*/React.createElement("span", null, titlePlayerId)), /*#__PURE__*/React.createElement("div", {
+    className: "mh-title-actions"
+  }, /*#__PURE__*/React.createElement("button", {
+    onPointerDown: e => e.stopPropagation(),
+    onClick: e => {
+      e.stopPropagation();
+      openChangelog();
+    }
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 19
+  }), /*#__PURE__*/React.createElement("span", null, "\u304A\u77E5\u3089\u305B"), hasUnreadChangelog && /*#__PURE__*/React.createElement("em", null, "NEW")), /*#__PURE__*/React.createElement("button", {
+    onPointerDown: e => e.stopPropagation(),
+    onClick: e => {
+      e.stopPropagation();
+      setShowTitleSettings(true);
+    }
+  }, /*#__PURE__*/React.createElement(Settings, {
+    size: 19
+  }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("button", {
+    className: "mh-title-start",
+    disabled: !!titleModal,
+    onClick: startGame,
+    "aria-label": "\u30C8\u30C3\u30D7\u753B\u9762\u3078\u9032\u3080"
+  }), titleModal);
+  if (bootPhase === 'ENTERING_GAME') return /*#__PURE__*/React.createElement("main", {
+    className: "mh-entering"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: "data/images/title-screen.PNG",
+    alt: ""
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-gate-core"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-gate-particles"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-gate-flash"
+  }), enteringSlow && /*#__PURE__*/React.createElement("p", null, "\u4E16\u754C\u3092\u69CB\u7BC9\u3057\u3066\u3044\u307E\u3059\u2026"));
   return /*#__PURE__*/React.createElement("div", {
     onPointerDown: e => {
       const rect = e.currentTarget.getBoundingClientRect();
@@ -7206,138 +7383,6 @@ function MonsterHeroGame() {
       height: '100%'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "absolute inset-0 bg-gradient-to-b from-slate-950 to-black z-0"
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'absolute',
-      inset: 0,
-      pointerEvents: 'none',
-      zIndex: 2147483647,
-      overflow: 'hidden'
-    }
-  }, ripples.map(r => /*#__PURE__*/React.createElement("span", {
-    key: r.id,
-    style: {
-      position: 'absolute',
-      left: r.x,
-      top: r.y,
-      width: '48px',
-      height: '48px',
-      marginLeft: '-24px',
-      marginTop: '-24px',
-      borderRadius: '9999px',
-      border: '2px solid rgba(255,255,255,0.9)',
-      boxShadow: '0 0 10px rgba(255,255,255,0.6)',
-      transformOrigin: 'center',
-      animation: 'mhRipple 550ms ease-out forwards'
-    }
-  }))), updateAvailable && /*#__PURE__*/React.createElement("div", {
-    className: "fixed left-0 right-0 flex justify-center px-4",
-    style: {
-      position: 'fixed',
-      top: 'calc(10px + env(safe-area-inset-top))',
-      left: 0,
-      right: 0,
-      zIndex: 2147483647,
-      pointerEvents: 'none'
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => window.location.reload(),
-    className: "bg-emerald-500 text-black font-black text-[11px] px-4 py-2.5 rounded-full shadow-2xl active:scale-95 flex items-center gap-1.5 animate-pulse",
-    style: {
-      pointerEvents: 'auto'
-    }
-  }, /*#__PURE__*/React.createElement(RefreshCcw, {
-    size: 12
-  }), "\u65B0\u3057\u3044\u30D0\u30FC\u30B8\u30E7\u30F3\u304C\u3042\u308A\u307E\u3059\u3002\u30BF\u30C3\u30D7\u3057\u3066\u66F4\u65B0")), bootPhase === 'ready' && /*#__PURE__*/React.createElement("div", {
-    className: `mh-title-gate ${titleStarting ? 'is-starting' : ''}`,
-    "aria-label": "Monster Hero \u30BF\u30A4\u30C8\u30EB\u753B\u9762"
-  }, /*#__PURE__*/React.createElement("img", {
-    className: "mh-title-visual",
-    src: "data/images/title-screen.PNG",
-    alt: "\u30E2\u30F3\u30B9\u30BF\u30FC\u30D2\u30FC\u30ED\u30FC \u30B0\u30E9\u30F3\u30C9\u30C1\u30E3\u30F3\u30D4\u30AA\u30F3\u30AF\u30A8\u30B9\u30C8"
-  }), /*#__PURE__*/React.createElement("header", {
-    className: "mh-title-header"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "mh-title-build"
-  }, /*#__PURE__*/React.createElement("b", null, "VERSION"), /*#__PURE__*/React.createElement("span", null, BUILD_DATE), /*#__PURE__*/React.createElement("b", null, "PLAYER ID"), /*#__PURE__*/React.createElement("span", null, titlePlayerId)), /*#__PURE__*/React.createElement("div", {
-    className: "mh-title-actions"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: openChangelog,
-    "aria-label": "\u304A\u77E5\u3089\u305B",
-    className: "relative"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 19
-  }), /*#__PURE__*/React.createElement("span", null, "\u304A\u77E5\u3089\u305B"), hasUnreadChangelog && /*#__PURE__*/React.createElement("em", null, "NEW")), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowTitleSettings(true),
-    "aria-label": "\u8A2D\u5B9A"
-  }, /*#__PURE__*/React.createElement(Settings, {
-    size: 19
-  }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("button", {
-    className: `mh-title-start ${bootSoundUnlocked ? 'is-enabled' : ''}`,
-    onClick: startGame,
-    "aria-label": bootSoundUnlocked ? 'ゲームを開始' : 'サウンドを有効化'
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "mh-title-flash"
-  })), showTitleSettings && /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 flex items-center justify-center p-6",
-    style: {
-      zIndex: 98000,
-      background: 'rgba(3,2,12,.9)'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-sm rounded-3xl border border-violet-300/30 bg-slate-950/95 p-5 shadow-2xl"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between mb-5"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] tracking-[.3em] text-violet-300"
-  }, "SYSTEM"), /*#__PURE__*/React.createElement("h3", {
-    className: "text-xl font-black text-white"
-  }, "\u8A2D\u5B9A")), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowTitleSettings(false),
-    className: "p-2 rounded-full bg-white/10"
-  }, /*#__PURE__*/React.createElement(X, {
-    size: 18
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-3"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      setShowTitleSettings(false);
-      setShowAudioSettings(true);
-    },
-    className: "w-full flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left active:scale-[.98]"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-2xl"
-  }, "\uD83D\uDD0A"), /*#__PURE__*/React.createElement("span", {
-    className: "flex-1"
-  }, /*#__PURE__*/React.createElement("b", {
-    className: "block text-sm"
-  }, "\u97F3\u91CF\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("small", {
-    className: "text-slate-400"
-  }, "BGM\u30FBSE\u306E\u97F3\u91CF")), /*#__PURE__*/React.createElement(ChevronRight, {
-    size: 18
-  })), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      setShowTitleSettings(false);
-      setShowBackup(true);
-      setBackupTab('export');
-      setBackupCode('');
-      setRestoreInput('');
-      setRestoreMsg('');
-    },
-    className: "w-full flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-left active:scale-[.98]"
-  }, /*#__PURE__*/React.createElement(ShieldCheck, {
-    size: 24,
-    className: "text-emerald-300"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "flex-1"
-  }, /*#__PURE__*/React.createElement("b", {
-    className: "block text-sm"
-  }, "\u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("small", {
-    className: "text-slate-400"
-  }, "\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u30FB\u5FA9\u5143")), /*#__PURE__*/React.createElement(ChevronRight, {
-    size: 18
-  }))))), /*#__PURE__*/React.createElement("div", {
     className: "relative z-10 h-full flex flex-col",
     style: screenShake ? {
       animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
@@ -13620,22 +13665,21 @@ const createAnimationStyle = () => {
     .mh-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 9999px; }
     .mh-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 9999px; }
     .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
-    .mh-boot-screen{background:linear-gradient(160deg,#090d18 0%,#02040a 68%,#0b1020 100%)}
-    .mh-boot-spinner{width:40px;height:40px;border:3px solid rgba(148,163,184,.2);border-top-color:#cbd5e1;border-radius:50%;animation:mhBootSpin .85s linear infinite}
-    .mh-boot-sound{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:52px;margin-top:28px;padding:12px;border:1px solid rgba(148,163,184,.35);border-radius:14px;background:rgba(15,23,42,.86);color:#e2e8f0;font-size:12px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.3);touch-action:manipulation}
-    .mh-boot-sound.is-unlocked{border-color:rgba(52,211,153,.5);color:#a7f3d0;background:rgba(6,78,59,.22)}
-    @keyframes mhBootSpin{to{transform:rotate(360deg)}}
-    .mh-title-gate { position:fixed; inset:0; z-index:70000; overflow:hidden; color:#fff; background:#05020e; isolation:isolate; animation:titleReveal 1.1s ease-out both; }
-    .mh-title-visual { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:50% 50%; }
-    .mh-title-header { position:absolute; z-index:20; top:0; left:50%; width:min(100%,calc(100vh * 941 / 1672)); transform:translateX(-50%); padding:calc(12px + env(safe-area-inset-top)) 13px 0; display:flex; justify-content:space-between; align-items:flex-start; text-shadow:0 2px 5px #000; }
-    .mh-title-build { display:grid; grid-template-columns:auto; padding:5px 7px; border-radius:8px; background:rgba(5,2,14,.76); text-align:left; font-family:monospace; line-height:1.2; }.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#d8c6f2}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .mh-title-actions { display:flex; gap:9px; }.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:rgba(34,18,44,.9);border:1px solid rgba(255,216,122,.75);color:#fff;font-size:8px;font-weight:800;text-shadow:0 2px 5px #000;box-shadow:0 2px 8px #000}.mh-title-actions button svg{filter:drop-shadow(0 0 5px #b46cff)}.mh-title-actions em{position:absolute;right:-2px;top:-7px;background:#ef3340;border-radius:8px;padding:2px 4px;font-size:6px;font-style:normal}
-    .mh-title-start { position:absolute; z-index:20; left:50%; bottom:env(safe-area-inset-bottom); width:min(100%,calc(100vh * 941 / 1672)); height:18%; transform:translateX(-50%); }
-    .mh-title-flash { position:absolute; z-index:50; inset:0; pointer-events:none; background:#fff; opacity:0; }.mh-title-gate.is-starting{animation:titleGateOut .62s ease-in forwards}.mh-title-gate.is-starting .mh-title-flash{animation:titleFlash .62s ease-out forwards}
-    @keyframes titleReveal{from{opacity:0}to{opacity:1}}
-    @keyframes titleFlash{0%{opacity:0}25%{opacity:.75}100%{opacity:0}}@keyframes titleGateOut{0%,30%{opacity:1}100%{opacity:0}}
-    @media (prefers-reduced-motion:reduce){.mh-title-gate *{animation-duration:.001ms!important;animation-iteration-count:1!important}}
-    @media (max-height:620px){.mh-title-header{padding-top:calc(7px + env(safe-area-inset-top))}.mh-title-actions button{width:44px;height:44px}}
+    .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
+    .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
+    .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
+    .mh-mocchi-wrap img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 14px #000);transform-origin:50% 88%;animation:mhMocchiHop 1.2s ease-in-out infinite}.mh-mocchi-wrap span{position:absolute;bottom:-5px;width:60%;height:13px;border-radius:50%;background:#0008;filter:blur(3px);animation:mhShadow 1.2s ease-in-out infinite}.mh-mocchi-wrap i{display:none;position:absolute;color:#ffeaa7;font-style:normal;font-size:22px;filter:drop-shadow(0 0 8px #fff)}
+    .mh-boot-copy{position:relative;z-index:2;width:min(100%,340px)}.mh-boot-copy h1{font-size:clamp(20px,6vw,30px);font-weight:1000;letter-spacing:.22em;color:#fff;text-shadow:0 0 18px #c084fc;margin:0 0 8px}.mh-boot-copy h2{font-size:12px;color:#ddd6fe;letter-spacing:.12em;margin:0 0 18px}.mh-boot-copy p{min-height:18px;font-size:10px;color:#c4b5fd;margin-top:10px}.mh-progress{height:10px;border:1px solid #c4b5fd88;border-radius:99px;background:#080617;overflow:hidden}.mh-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#7c3aed,#d8b4fe,#fbbf24);box-shadow:0 0 14px #c084fc;transition:width .25s}.mh-boot-copy strong{display:block;margin-top:7px;font:800 11px monospace}.mh-boot-copy button{width:100%;min-height:56px;border:1px solid #f8d477;border-radius:18px;background:linear-gradient(135deg,#4c1d95dd,#7e22cedd);box-shadow:0 0 25px #a855f766;color:#fff;font-size:clamp(15px,5vw,20px);font-weight:1000;letter-spacing:.12em;touch-action:manipulation}.mh-boot-screen footer{position:absolute;z-index:2;bottom:calc(8px + env(safe-area-inset-bottom));font:8px monospace;color:#7773a0;letter-spacing:.15em}
+    .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation-duration:1.8s}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
+    .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
+    .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000}.mh-title-ui-mask-left,.mh-title-ui-mask-right{position:absolute;z-index:20;top:calc(7px + env(safe-area-inset-top));height:82px;background:#0a0613;border:1px solid #8b6aaf;border-radius:13px;box-shadow:0 2px 10px #000}.mh-title-ui-mask-left{left:7px;width:150px}.mh-title-ui-mask-right{right:7px;width:119px}
+    .mh-title-build{display:grid;padding:5px 7px;text-align:left;font-family:monospace;line-height:1.15}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#d8c6f2}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152e;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;left:50%;bottom:calc(5% + env(safe-area-inset-bottom));width:min(72vw,330px);height:12%;transform:translateX(-50%);touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
+    .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:8px}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
+    .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
+    @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}
+    @media(max-width:350px){.mh-title-ui-mask-left{width:136px}.mh-title-ui-mask-right{width:108px}.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
+    @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}.mh-title-start{bottom:2%}}
+    @media(prefers-reduced-motion:reduce){.mh-mocchi-wrap img,.mh-mocchi-wrap span,.mh-mocchi-wrap i{animation:none!important}.mh-entering>img{animation:mhReducedFade .85s ease both}.mh-gate-core,.mh-gate-particles{display:none}.mh-gate-flash{animation:mhReducedFlash .85s ease both}}@keyframes mhReducedFade{to{opacity:.4}}@keyframes mhReducedFlash{0%,55%{opacity:0}100%{opacity:1}}
     `;
   document.head.appendChild(style);
 };
