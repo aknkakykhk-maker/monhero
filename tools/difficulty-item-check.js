@@ -1,4 +1,4 @@
-// 新難易度(Grand Master / Hell / Legend)と、絆経験値チケットのまとめ使いを確認する。
+// 新難易度(Grand Master / Hell / Legend)と、トレーニングチケットのまとめ使いと修行チケットの参加券化を確認する。
 //
 //   python3 tools/serve.py   でリポジトリのルートを配信した状態で
 //   node difficulty-item-check.js
@@ -75,6 +75,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   const inv = await bodyText();
   check('アイテム欄にトレーニングチケットがある', inv.includes('トレーニングチケット'));
   check('アイテム欄に修行チケットがある', inv.includes('修行チケット'));
+  check('修行チケットは「修行へ」と表示される', inv.includes('修行へ'));
+  check('修行チケットの説明が参加券用途', inv.includes('修行へ参加するため'));
 
   const used = await clickText('使う');
   await page.waitForTimeout(800);

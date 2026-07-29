@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ebfdf90510f800d0
+// source-sha256: 8c14713e153499db
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 01:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 01:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -503,6 +503,250 @@ const buildMasuDonation = ({
   };
 };
 
+// 修行は通常アイテムとは分離した、再開可能な一時セッションとして保存する。
+const TRAINING_SAVE_KEY = 'mh_training_session_v1';
+const TRAINING_TICKET_ID = 'training_ticket_l';
+const TRAINING_DIFFICULTIES = Object.freeze({
+  BEGINNER: {
+    id: 'BEGINNER',
+    label: 'BEGINNER',
+    available: true,
+    ticketCost: 1,
+    turns: 10,
+    dice: [1, 3],
+    spaces: 24,
+    branches: 3,
+    multiplier: 1,
+    danger: '少なめ',
+    summary: '安全な近道と、遠回りの報酬ルートを選べる入門修行。Lv1なら絆Lv10前後が目安。'
+  },
+  EASY: {
+    id: 'EASY',
+    label: 'EASY',
+    available: false,
+    ticketCost: 1,
+    turns: 10,
+    dice: [1, 3],
+    spaces: 28,
+    branches: 4,
+    multiplier: 1.5,
+    danger: 'やや多い',
+    summary: '分岐・後退・ターン減少が増加。修行道具の活用が重要。'
+  },
+  NORMAL: {
+    id: 'NORMAL',
+    label: 'NORMAL',
+    available: false,
+    ticketCost: 1,
+    turns: 10,
+    dice: [1, 3],
+    spaces: 32,
+    branches: 5,
+    multiplier: 2,
+    danger: '多い',
+    summary: '最短ルートでも余裕が少なく、複雑な分岐と危険マスの先に大報酬を配置予定。'
+  }
+});
+const TRAINING_TOOLS = Object.freeze({
+  feather: {
+    name: '加速の羽',
+    emoji: '🪽',
+    desc: '次の出目＋2'
+  },
+  gale: {
+    name: '疾風の札',
+    emoji: '🌪️',
+    desc: '次は2回振って高い方'
+  },
+  reroll: {
+    name: '振り直しの石',
+    emoji: '🪨',
+    desc: '今の出目を1回振り直す'
+  },
+  noReturn: {
+    name: '戻らずのお守り',
+    emoji: '🧿',
+    desc: '次の後退を無効'
+  },
+  sand: {
+    name: '時の砂',
+    emoji: '⏳',
+    desc: '残りターン＋1'
+  },
+  fixed: {
+    name: '確定サイコロ',
+    emoji: '🎲',
+    desc: '次の出目を1～3から選択'
+  },
+  returnCharm: {
+    name: '帰還のお守り',
+    emoji: '🏮',
+    desc: '失敗時に通常アイテム1個を保護'
+  }
+});
+const TRAINING_SPACE_TYPES = Object.freeze({
+  xp30: {
+    kind: 'xp',
+    value: 30,
+    label: '絆XP +30',
+    emoji: '💗'
+  },
+  xp60: {
+    kind: 'xp',
+    value: 60,
+    label: '絆XP +60',
+    emoji: '💖'
+  },
+  xp100: {
+    kind: 'xp',
+    value: 100,
+    label: '絆XP +100',
+    emoji: '💝'
+  },
+  gem50: {
+    kind: 'diamond',
+    value: 50,
+    label: 'ダイヤ +50',
+    emoji: '💎'
+  },
+  gem100: {
+    kind: 'diamond',
+    value: 100,
+    label: 'ダイヤ +100',
+    emoji: '💎'
+  },
+  gem200: {
+    kind: 'diamond',
+    value: 200,
+    label: 'ダイヤ +200',
+    emoji: '💠'
+  },
+  item: {
+    kind: 'item',
+    value: 'training_ticket',
+    label: '通常アイテム',
+    emoji: '🎁'
+  },
+  tool: {
+    kind: 'tool',
+    label: '修行道具',
+    emoji: '🎒'
+  },
+  forward: {
+    kind: 'move',
+    value: 1,
+    label: '1～3マス前進',
+    emoji: '⏩'
+  },
+  back: {
+    kind: 'move',
+    value: -1,
+    label: '1～3マス後退',
+    emoji: '⏪'
+  },
+  turnPlus: {
+    kind: 'turn',
+    value: 1,
+    label: 'ターン＋1',
+    emoji: '⏱️'
+  },
+  turnMinus: {
+    kind: 'turn',
+    value: -1,
+    label: 'ターン－1',
+    emoji: '⚡'
+  },
+  boost: {
+    kind: 'effect',
+    value: 'boost',
+    label: '次のサイコロ強化',
+    emoji: '✨'
+  },
+  again: {
+    kind: 'effect',
+    value: 'again',
+    label: 'もう一度',
+    emoji: '🔁'
+  },
+  happening: {
+    kind: 'happening',
+    label: 'ハプニング',
+    emoji: '⁉️'
+  },
+  branch: {
+    kind: 'branch',
+    label: '分岐',
+    emoji: '↗️'
+  },
+  goal: {
+    kind: 'goal',
+    label: 'ゴール',
+    emoji: '🏁'
+  }
+});
+// 24マス。5・11・17で安全/標準/報酬の進み方を選び、停止マスだけを発動する。
+const TRAINING_BEGINNER_MAP = Object.freeze(['start', 'xp30', 'gem50', 'tool', 'again', 'branch', 'gem100', 'forward', 'xp60', 'item', 'gem50', 'branch', 'back', 'xp100', 'tool', 'gem200', 'turnPlus', 'branch', 'happening', 'xp60', 'gem100', 'boost', 'turnMinus', 'goal']);
+const trainingEmptyRewards = () => ({
+  bondXp: 0,
+  diamonds: 0,
+  items: []
+});
+const createTrainingSession = (masuId, difficulty = 'BEGINNER') => ({
+  version: 1,
+  runId: createRunId(),
+  status: 'playing',
+  finalized: false,
+  ticketConsumed: true,
+  masuId: String(masuId),
+  difficulty,
+  position: 0,
+  route: 'standard',
+  remainingTurns: TRAINING_DIFFICULTIES[difficulty].turns,
+  rewards: trainingEmptyRewards(),
+  tools: [],
+  effects: {},
+  pendingBranch: null,
+  lastRoll: null,
+  message: '修行を開始しました'
+});
+const normalizeTrainingSession = (value, masuMons) => {
+  if (!value || value.version !== 1 || !value.ticketConsumed || !['playing', 'result'].includes(value.status) || !TRAINING_DIFFICULTIES[value.difficulty] || !masuMons.some(m => String(m.id) === String(value.masuId))) return null;
+  const rewards = value.rewards || {};
+  const tools = Array.isArray(value.tools) ? value.tools.filter(id => TRAINING_TOOLS[id]).slice(0, 3) : [];
+  return {
+    ...value,
+    position: Math.max(0, Math.min(23, Math.floor(Number(value.position) || 0))),
+    remainingTurns: Math.max(0, Math.min(99, Math.floor(Number(value.remainingTurns) || 0))),
+    rewards: {
+      bondXp: Math.max(0, Math.floor(Number(rewards.bondXp) || 0)),
+      diamonds: Math.max(0, Math.floor(Number(rewards.diamonds) || 0)),
+      items: Array.isArray(rewards.items) ? rewards.items.filter(x => typeof x === 'string').slice(0, 20) : []
+    },
+    tools,
+    effects: value.effects && typeof value.effects === 'object' ? value.effects : {}
+  };
+};
+const settleTrainingRewards = (session, success) => {
+  let bondXp = Math.floor((session.rewards.bondXp + (success ? 100 : 0)) * (success ? 1 : .5));
+  let diamonds = Math.floor((session.rewards.diamonds + (success ? 100 : 0)) * (success ? 1 : .5));
+  if (success) {
+    const ranges = {
+      safe: [180, 220, 200, 250],
+      standard: [240, 270, 280, 330],
+      reward: [280, 350, 400, 600]
+    }[session.route] || [240, 270, 280, 330];
+    bondXp = Math.max(ranges[0], Math.min(ranges[1], bondXp));
+    diamonds = Math.max(ranges[2], Math.min(ranges[3], diamonds));
+  }
+  const normalPool = ['dye_mock', 'training_ticket', 'bond_reset_scroll'];
+  const fixedItem = normalPool[String(session.runId || '').length % normalPool.length];
+  return {
+    bondXp,
+    diamonds,
+    items: success ? [...session.rewards.items, fixedItem] : session.effects?.returnCharm && session.rewards.items.length ? [session.rewards.items[0]] : []
+  };
+};
+
 // =====================================================================
 // AUDIO: BGM/ジングルはAudioBuffer、SEはTone.js(Web Audio)で再生
 // デフォルトは無音。ユーザーが音量ボタンを押すと有効化される。
@@ -640,6 +884,8 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   management: 'original_profile',
   market: 'original_market',
   temple: 'original_fusion',
+  trainingMenu: 'original_home',
+  trainingBoard: 'original_home',
   battle: 'original_battle',
   boss: 'original_boss',
   clear: 'ichika_clear'
@@ -1027,6 +1273,158 @@ const Audio_ = (() => {
   };
   const isContextRunning = () => !!audioCtx && audioCtx.state === 'running';
   const se = {
+    trainingDice: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const n = new Tone.NoiseSynth({
+        noise: {
+          type: 'brown'
+        },
+        envelope: {
+          attack: .001,
+          decay: .22,
+          sustain: 0
+        },
+        volume: -15
+      }).connect(seBus);
+      n.triggerAttackRelease('8n', t);
+      setTimeout(() => {
+        try {
+          n.dispose();
+        } catch (e) {}
+      }, 500);
+    },
+    trainingMove: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'sine'
+        },
+        envelope: {
+          attack: .001,
+          decay: .05,
+          sustain: 0
+        },
+        volume: -16
+      }).connect(seBus);
+      s.triggerAttackRelease('G5', '32n');
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 250);
+    },
+    trainingReward: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'triangle'
+        },
+        envelope: {
+          attack: .003,
+          decay: .15,
+          sustain: 0
+        },
+        volume: -12
+      }).connect(reverb);
+      const t = Tone.now();
+      s.triggerAttackRelease('C6', '16n', t);
+      s.triggerAttackRelease('E6', '16n', t + .08);
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 500);
+    },
+    trainingBad: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'sawtooth'
+        },
+        envelope: {
+          attack: .003,
+          decay: .18,
+          sustain: 0
+        },
+        volume: -15
+      }).connect(seBus);
+      s.triggerAttackRelease('C3', '8n');
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 500);
+    },
+    trainingTool: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'sine'
+        },
+        envelope: {
+          attack: .003,
+          decay: .2,
+          sustain: 0
+        },
+        volume: -13
+      }).connect(reverb);
+      const t = Tone.now();
+      ['G5', 'B5', 'D6'].forEach((n, i) => s.triggerAttackRelease(n, '16n', t + i * .07));
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 600);
+    },
+    trainingGoal: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const s = new Tone.PolySynth(Tone.Synth, {
+        volume: -15
+      }).connect(reverb);
+      s.triggerAttackRelease(['C5', 'E5', 'G5', 'C6'], '2n');
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 1200);
+    },
+    trainingFail: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const s = new Tone.Synth({
+        oscillator: {
+          type: 'triangle'
+        },
+        envelope: {
+          attack: .01,
+          decay: .5,
+          sustain: 0
+        },
+        volume: -13
+      }).connect(reverb);
+      const t = Tone.now();
+      s.triggerAttackRelease('E4', '4n', t);
+      s.triggerAttackRelease('C4', '2n', t + .25);
+      setTimeout(() => {
+        try {
+          s.dispose();
+        } catch (e) {}
+      }, 1200);
+    },
     attack: async () => {
       if (!enabled) return;
       await ensure();
@@ -4262,6 +4660,11 @@ function MonsterHeroGame() {
   const [draftHomePastureIds, setDraftHomePastureIds] = useState([]);
   const [pastureLoaded, setPastureLoaded] = useState(false);
   const [ownedItems, setOwnedItems] = useState({}); // マーケットで買った消耗アイテムの所持数 { itemId: count } (端末保存)
+  const [trainingSelectedId, setTrainingSelectedId] = useState(null);
+  const [trainingDifficulty, setTrainingDifficulty] = useState('BEGINNER');
+  const [trainingSession, setTrainingSession] = useState(null);
+  const trainingFinalizingRef = useRef(false);
+  const trainingMovingRef = useRef(false);
   const [gifts, setGifts] = useState([]);
   const [giftTab, setGiftTab] = useState('unclaimed');
   const [missions, setMissions] = useState(() => normalizeMissions(null));
@@ -4816,7 +5219,13 @@ function MonsterHeroGame() {
     // 寄付ページも神殿の曲を続ける
     MASU_REBIRTH: 'temple',
     // 転生ページも神殿の曲を継続する
-    BREEDER_MARKET: 'market' // マーケットページ
+    BREEDER_MARKET: 'market',
+    // マーケットページ
+    TRAINING_SELECT: 'trainingMenu',
+    TRAINING_DIFFICULTY: 'trainingMenu',
+    TRAINING_CONFIRM: 'trainingMenu',
+    TRAINING_RESULT: 'trainingMenu',
+    TRAINING_BOARD: 'trainingBoard'
   };
   // プロフィール本体とアイテムはHOMEの曲を続ける。その他の詳細ページ群は従来のプロフィール曲を維持する。
   const PROFILE_BGM_STATES = ['ROSTER', 'OWNED_MONSTERS', 'MASU_MONS', 'MASU_ENHANCE'];
@@ -5399,6 +5808,28 @@ function MonsterHeroGame() {
       setOwnedMarketIcons(savedMarketIcons);
       const savedOwnedItems = await storeGet('mh_owned_items', {}, false);
       setOwnedItems(savedOwnedItems);
+      const rawTrainingSession = await storeGet(TRAINING_SAVE_KEY, null, false);
+      const restoredTraining = normalizeTrainingSession(rawTrainingSession, savedMasuMons);
+      if (rawTrainingSession && !restoredTraining) {
+        // 消費済みの異常セッションは報酬を付与せず、安全な失敗リザルトへ送る。
+        const failed = {
+          ...createTrainingSession(savedMasuMons[0]?.id || 'invalid'),
+          status: 'result',
+          finalized: true,
+          success: false,
+          error: true,
+          ticketConsumed: true,
+          finalRewards: trainingEmptyRewards(),
+          message: '修行データを復元できなかったため、失敗として終了しました。'
+        };
+        setTrainingSession(failed);
+        setGameState('TRAINING_RESULT');
+        await storeSet(TRAINING_SAVE_KEY, failed, false);
+      } else if (restoredTraining) {
+        setTrainingSession(restoredTraining);
+        setTrainingSelectedId(restoredTraining.masuId);
+        setGameState(restoredTraining.status === 'result' ? 'TRAINING_RESULT' : 'TRAINING_BOARD');
+      }
       const savedGifts = await storeGet('mh_gifts', [], false);
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
@@ -6127,6 +6558,201 @@ function MonsterHeroGame() {
       return next;
     });
     Audio_.se.levelUp();
+  };
+  const openTraining = () => {
+    setTrainingSelectedId(null);
+    setTrainingDifficulty('BEGINNER');
+    setGameState('TRAINING_SELECT');
+  };
+  const startTraining = async () => {
+    if (trainingFinalizingRef.current || !trainingSelectedId || !TRAINING_DIFFICULTIES[trainingDifficulty]?.available || (ownedItems[TRAINING_TICKET_ID] || 0) < 1) return;
+    trainingFinalizingRef.current = true;
+    const session = createTrainingSession(trainingSelectedId, trainingDifficulty);
+    // セッションを先に永続化し、成立後にチケット残数を書き込む。以後はticketConsumedで再消費を防ぐ。
+    await storeSet(TRAINING_SAVE_KEY, session, false);
+    const nextItems = {
+      ...ownedItems,
+      [TRAINING_TICKET_ID]: (ownedItems[TRAINING_TICKET_ID] || 0) - 1
+    };
+    await storeSet('mh_owned_items', nextItems, false);
+    setOwnedItems(nextItems);
+    setTrainingSession(session);
+    setGameState('TRAINING_BOARD');
+    trainingFinalizingRef.current = false;
+  };
+  const saveTraining = async next => {
+    setTrainingSession(next);
+    await storeSet(TRAINING_SAVE_KEY, next, false);
+  };
+  const finishTraining = async (success, baseSession = trainingSession) => {
+    if (!baseSession || baseSession.finalized || trainingFinalizingRef.current) return;
+    trainingFinalizingRef.current = true;
+    const finalRewards = settleTrainingRewards(baseSession, success);
+    const result = {
+      ...baseSession,
+      status: 'result',
+      finalized: true,
+      success,
+      finalRewards,
+      tools: [],
+      pendingBranch: null,
+      message: success ? '修行成功！' : '修行失敗…'
+    };
+    // finalizedを最初に保存し、StrictMode・連打・再読み込みによる二重付与を遮断する。
+    await storeSet(TRAINING_SAVE_KEY, result, false);
+    const nextMasu = masuMonsRef.current.map(m => String(m.id) === String(result.masuId) ? {
+      ...m,
+      bondXp: cappedBondXp(m, finalRewards.bondXp)
+    } : m);
+    const nextGold = gold + finalRewards.diamonds;
+    const nextItems = {
+      ...ownedItems
+    };
+    finalRewards.items.forEach(id => {
+      nextItems[id] = (nextItems[id] || 0) + 1;
+    });
+    await Promise.all([storeSet('mh_masu_mons', nextMasu, false), storeSet('mh_gold', nextGold, false), storeSet('mh_owned_items', nextItems, false)]);
+    setMasuMons(nextMasu);
+    setGold(nextGold);
+    setOwnedItems(nextItems);
+    setTrainingSession(result);
+    setGameState('TRAINING_RESULT');
+    if (success) Audio_.se.trainingGoal();else Audio_.se.trainingFail();
+    trainingFinalizingRef.current = false;
+  };
+  const applyTrainingSpace = async session => {
+    const space = TRAINING_SPACE_TYPES[TRAINING_BEGINNER_MAP[session.position]];
+    if (!space) return saveTraining(session);
+    let next = {
+      ...session,
+      rewards: {
+        ...session.rewards,
+        items: [...session.rewards.items]
+      },
+      tools: [...session.tools],
+      effects: {
+        ...session.effects
+      },
+      message: space.label
+    };
+    if (space.kind === 'goal') return finishTraining(true, next);
+    if (space.kind === 'xp') {
+      next.rewards.bondXp += space.value;
+      Audio_.se.trainingReward();
+    } else if (space.kind === 'diamond') {
+      next.rewards.diamonds += space.value;
+      Audio_.se.trainingReward();
+    } else if (space.kind === 'item') {
+      next.rewards.items.push(space.value);
+      Audio_.se.trainingReward();
+    } else if (space.kind === 'tool') {
+      if (next.tools.length < 3) {
+        const ids = Object.keys(TRAINING_TOOLS);
+        next.tools.push(ids[Math.floor(Math.random() * ids.length)]);
+        Audio_.se.trainingReward();
+      } else next.message = '道具袋がいっぱいです';
+    } else if (space.kind === 'turn') {
+      next.remainingTurns = Math.max(0, next.remainingTurns + space.value);
+      space.value < 0 ? Audio_.se.trainingBad() : Audio_.se.trainingReward();
+    } else if (space.kind === 'effect') {
+      if (space.value === 'again') next.remainingTurns++;else next.effects[space.value] = true;
+      Audio_.se.trainingReward();
+    } else if (space.kind === 'happening') {
+      if (Math.random() < .5) {
+        next.rewards.bondXp += 60;
+        next.message = '大成功！ 絆XP +60';
+        Audio_.se.trainingReward();
+      } else {
+        next.remainingTurns = Math.max(0, next.remainingTurns - 1);
+        next.message = '足止め！ ターン－1';
+        Audio_.se.trainingBad();
+      }
+    } else if (space.kind === 'branch') {
+      next.pendingBranch = session.position;
+      next.message = '進むルートを選んでください';
+    } else if (space.kind === 'move') {
+      let amount = (space.value < 0 ? -1 : 1) * (1 + Math.floor(Math.random() * 3));
+      if (amount < 0 && next.effects.noReturn) {
+        amount = 0;
+        delete next.effects.noReturn;
+        next.message = '戻らずのお守りが後退を防いだ';
+      } else next.message = space.label;
+      next.position = Math.max(0, Math.min(23, next.position + amount));
+      Audio_.se.trainingBad();
+    }
+    if (next.remainingTurns <= 0 && !next.pendingBranch) return finishTraining(false, next);
+    await saveTraining(next);
+  };
+  const rollTrainingDice = async fixedValue => {
+    if (!trainingSession || trainingSession.status !== 'playing' || trainingSession.pendingBranch || trainingMovingRef.current || trainingSession.remainingTurns <= 0) return;
+    trainingMovingRef.current = true;
+    Audio_.se.trainingDice();
+    const roll = () => 1 + Math.floor(Math.random() * 3);
+    let value = fixedValue || roll();
+    if (trainingSession.effects.reroll) value = roll();
+    if (trainingSession.effects.gale) value = Math.max(value, roll());
+    if (trainingSession.effects.boost) value += 1;
+    if (trainingSession.effects.feather) value += 2;
+    const effects = {
+      ...trainingSession.effects
+    };
+    delete effects.gale;
+    delete effects.reroll;
+    delete effects.boost;
+    delete effects.feather;
+    delete effects.fixed;
+    let next = {
+      ...trainingSession,
+      effects,
+      lastRoll: value,
+      remainingTurns: trainingSession.remainingTurns - 1,
+      message: `${value}が出た！`
+    };
+    for (let i = 0; i < value; i++) {
+      if (next.position >= 23) break;
+      next.position++;
+      Audio_.se.trainingMove();
+      await wait(140);
+    }
+    trainingMovingRef.current = false;
+    if (next.position >= 23) return finishTraining(true, next);
+    await applyTrainingSpace(next);
+  };
+  const chooseTrainingRoute = async route => {
+    if (!trainingSession?.pendingBranch) return;
+    const skip = route === 'safe' ? 2 : route === 'standard' ? 1 : 0;
+    const next = {
+      ...trainingSession,
+      route,
+      pendingBranch: null,
+      position: Math.min(23, trainingSession.position + skip),
+      message: route === 'safe' ? '安全な近道を選びました' : route === 'reward' ? '遠回りの報酬ルートを選びました' : '標準ルートを選びました'
+    };
+    await saveTraining(next);
+  };
+  const useTrainingTool = async id => {
+    if (!trainingSession || !trainingSession.tools.includes(id) || trainingMovingRef.current) return;
+    const tools = [...trainingSession.tools];
+    tools.splice(tools.indexOf(id), 1);
+    const effects = {
+      ...trainingSession.effects
+    };
+    let turns = trainingSession.remainingTurns;
+    if (id === 'sand') turns++;else if (id === 'returnCharm') effects.returnCharm = true;else effects[id] = true;
+    Audio_.se.trainingTool();
+    await saveTraining({
+      ...trainingSession,
+      tools,
+      effects,
+      remainingTurns: turns,
+      message: `${TRAINING_TOOLS[id].name}を使った`
+    });
+  };
+  const leaveTrainingResult = async () => {
+    await storeSet(TRAINING_SAVE_KEY, null, false);
+    setTrainingSession(null);
+    setTrainingSelectedId(null);
+    setGameState('HOME');
   };
   // 染色もどき: マスモンの見た目の色(部位ごとにCSSフィルターで簡易パレットスワップ)を変える。
   // colorsはモンスターの染色可能な部位数と同じ長さの配列(各要素は色idまたはnull=染色しない)
@@ -8924,7 +9550,7 @@ function MonsterHeroGame() {
     size: 18
   }))), /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
-  }, [['home', 'HOME BGM'], ['management', 'M/B管理 BGM'], ['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['battle', '通常バトル BGM'], ['boss', 'ボスバトル BGM'], ['clear', 'ゲームクリア BGM']].map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
+  }, [['home', 'HOME BGM'], ['management', 'M/B管理 BGM'], ['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM'], ['battle', '通常バトル BGM'], ['boss', 'ボスバトル BGM'], ['clear', 'ゲームクリア BGM']].map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
     key: scene,
     className: "block text-left"
   }, /*#__PURE__*/React.createElement("span", {
@@ -9219,6 +9845,10 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(ShoppingBag, {
     size: 17
   }), "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
+    className: "mh-home-facility training",
+    onClick: openTraining,
+    "aria-label": "\u4FEE\u884C"
+  }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB2 \u4FEE\u884C")), /*#__PURE__*/React.createElement("button", {
     className: "mh-home-facility battle",
     onClick: () => {
       setBattleMenuTab('difficulty');
@@ -9245,7 +9875,156 @@ function MonsterHeroGame() {
   }), "\u66F4\u65B0\u5C65\u6B74", hasUnreadChangelog && /*#__PURE__*/React.createElement("em", {
     className: "mh-unread-badge",
     "aria-label": "\u672A\u8AAD\u3042\u308A"
-  }, "!"))), gameState === 'GIFT_BOX' && (() => {
+  }, "!"))), gameState === 'TRAINING_SELECT' && (() => {
+    const selected = masuMons.find(m => String(m.id) === String(trainingSelectedId));
+    const ordered = [...masuMons].sort((a, b) => monsterSortKey === 'bond' ? bondLevelInfo(b.bondXp || 0).level - bondLevelInfo(a.bondXp || 0).level : monsterSortKey === 'name' ? a.name.localeCompare(b.name, 'ja') : String(a.baseId).localeCompare(String(b.baseId), 'ja'));
+    return /*#__PURE__*/React.createElement("main", {
+      className: "mh-training-screen"
+    }, /*#__PURE__*/React.createElement("header", {
+      className: "mh-training-head"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: returnToHome
+    }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "TRAINING"), /*#__PURE__*/React.createElement("h2", null, "\u4FEE\u884C\u3059\u308B\u30DE\u30B9\u30E2\u30F3")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowSortFilterModal(true),
+      "aria-label": "\u4E26\u3079\u66FF\u3048"
+    }, /*#__PURE__*/React.createElement(List, null))), selected && /*#__PURE__*/React.createElement("section", {
+      className: "mh-training-selected"
+    }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: selected.baseId,
+      src: ALL_PLAYER_MONSTERS[selected.baseId]?.iconUrl,
+      alt: selected.name,
+      masuColors: getMasuColors(selected)
+    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, selected.name), /*#__PURE__*/React.createElement("span", null, "\u7D46Lv.", bondLevelInfo(selected.bondXp || 0).level, "\u3000\u8EE2\u751F\u2605", selected.rebirthCount || 0)), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setMasuMonDetail(selected)
+    }, "\u8A73\u7D30")), /*#__PURE__*/React.createElement("p", {
+      className: "mh-training-note"
+    }, "\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u304B\u30891\u4F53\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002\u30D9\u30FC\u30B9\u30E2\u30F3\u306F\u53C2\u52A0\u3067\u304D\u307E\u305B\u3093\u3002\u30EC\u30D9\u30EB\u4E0A\u9650\u3067\u3082\u53C2\u52A0\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "mh-training-mon-list"
+    }, ordered.length ? ordered.map(m => {
+      const base = ALL_PLAYER_MONSTERS[m.baseId];
+      const active = String(m.id) === String(trainingSelectedId);
+      return /*#__PURE__*/React.createElement("button", {
+        key: m.id,
+        className: active ? 'active' : '',
+        onClick: () => setTrainingSelectedId(m.id)
+      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: m.baseId,
+        src: base?.iconUrl,
+        alt: m.name,
+        masuColors: getMasuColors(m)
+      }), /*#__PURE__*/React.createElement("b", null, m.name), /*#__PURE__*/React.createElement("small", null, base?.name, " / \u7D46Lv.", bondLevelInfo(m.bondXp || 0).level), /*#__PURE__*/React.createElement("span", null, "\u2605", m.rebirthCount || 0));
+    }) : /*#__PURE__*/React.createElement("p", {
+      className: "mh-training-empty"
+    }, "\u53C2\u52A0\u3067\u304D\u308B\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("footer", {
+      className: "mh-training-footer"
+    }, /*#__PURE__*/React.createElement("button", {
+      disabled: !selected,
+      onClick: () => setGameState('TRAINING_DIFFICULTY')
+    }, "\u96E3\u6613\u5EA6\u9078\u629E\u3078")));
+  })(), gameState === 'TRAINING_DIFFICULTY' && /*#__PURE__*/React.createElement("main", {
+    className: "mh-training-screen"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "mh-training-head"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setGameState('TRAINING_SELECT')
+  }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "TRAINING"), /*#__PURE__*/React.createElement("h2", null, "\u96E3\u6613\u5EA6\u9078\u629E")), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("div", {
+    className: "mh-training-difficulties"
+  }, Object.values(TRAINING_DIFFICULTIES).map(d => /*#__PURE__*/React.createElement("button", {
+    key: d.id,
+    className: `${trainingDifficulty === d.id ? 'active' : ''} ${d.available ? '' : 'soon'}`,
+    onClick: () => setTrainingDifficulty(d.id)
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, d.label), /*#__PURE__*/React.createElement("em", null, d.available ? '挑戦可能' : '準備中')), /*#__PURE__*/React.createElement("p", null, d.summary), /*#__PURE__*/React.createElement("dl", null, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDF9F\uFE0F ", d.ticketCost, "\u679A"), /*#__PURE__*/React.createElement("span", null, d.turns, "\u30BF\u30FC\u30F3"), /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB2 ", d.dice[0], "\uFF5E", d.dice[1]), /*#__PURE__*/React.createElement("span", null, "\u7D04", d.spaces, "\u30DE\u30B9"), /*#__PURE__*/React.createElement("span", null, "\u5206\u5C90 ", d.branches, "\u304B\u6240"), /*#__PURE__*/React.createElement("span", null, "\u5831\u916C \xD7", d.multiplier.toFixed(1)))))), /*#__PURE__*/React.createElement("footer", {
+    className: "mh-training-footer"
+  }, /*#__PURE__*/React.createElement("button", {
+    disabled: !TRAINING_DIFFICULTIES[trainingDifficulty].available,
+    onClick: () => setGameState('TRAINING_CONFIRM')
+  }, TRAINING_DIFFICULTIES[trainingDifficulty].available ? '内容確認へ' : '準備中です'))), gameState === 'TRAINING_CONFIRM' && (() => {
+    const m = masuMons.find(x => String(x.id) === String(trainingSelectedId));
+    const d = TRAINING_DIFFICULTIES[trainingDifficulty];
+    return /*#__PURE__*/React.createElement("main", {
+      className: "mh-training-screen"
+    }, /*#__PURE__*/React.createElement("header", {
+      className: "mh-training-head"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setGameState('TRAINING_DIFFICULTY')
+    }, /*#__PURE__*/React.createElement(ArrowLeft, null)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "TRAINING"), /*#__PURE__*/React.createElement("h2", null, "\u5185\u5BB9\u78BA\u8A8D")), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("section", {
+      className: "mh-training-confirm"
+    }, m && /*#__PURE__*/React.createElement("div", {
+      className: "mh-training-selected"
+    }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: m.baseId,
+      src: ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl,
+      alt: m.name,
+      masuColors: getMasuColors(m)
+    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, m.name), /*#__PURE__*/React.createElement("span", null, "\u7D46Lv.", bondLevelInfo(m.bondXp || 0).level, "\u3000\u8EE2\u751F\u2605", m.rebirthCount || 0))), /*#__PURE__*/React.createElement("h3", null, d.label), /*#__PURE__*/React.createElement("p", null, d.turns, "\u30BF\u30FC\u30F3 / \u30B5\u30A4\u30B3\u30ED", d.dice[0], "\uFF5E", d.dice[1], " / \u5831\u916C\u500D\u7387\xD7", d.multiplier.toFixed(1)), /*#__PURE__*/React.createElement("div", {
+      className: "mh-training-ticket"
+    }, "\uD83C\uDF9F\uFE0F \u4FEE\u884C\u30C1\u30B1\u30C3\u30C8 ", /*#__PURE__*/React.createElement("b", null, ownedItems[TRAINING_TICKET_ID] || 0, "\u679A"), /*#__PURE__*/React.createElement("small", null, "\u958B\u59CB\u6210\u7ACB\u6642\u306B1\u679A\u6D88\u8CBB\u3002\u3053\u3053\u3067\u623B\u3063\u3066\u3082\u6D88\u8CBB\u3057\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("h4", null, "\u30B4\u30FC\u30EB\u56FA\u5B9A\u5831\u916C"), /*#__PURE__*/React.createElement("p", null, "\u7D46\u7D4C\u9A13\u5024100XP\u30FB\u30C0\u30A4\u30E4100\u30FB\u901A\u5E38\u30A2\u30A4\u30C6\u30E0\u62BD\u90781\u500B"), /*#__PURE__*/React.createElement("h4", null, "\u5931\u6557\u6642"), /*#__PURE__*/React.createElement("p", null, "\u9053\u4E2DXP\u3068\u30C0\u30A4\u30E4\u306F50%\uFF08\u5207\u308A\u6368\u3066\uFF09\u3001\u901A\u5E38\u30A2\u30A4\u30C6\u30E0\u306F\u6CA1\u53CE\u3055\u308C\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("footer", {
+      className: "mh-training-footer"
+    }, /*#__PURE__*/React.createElement("button", {
+      disabled: (ownedItems[TRAINING_TICKET_ID] || 0) < d.ticketCost || trainingFinalizingRef.current,
+      onClick: startTraining
+    }, (ownedItems[TRAINING_TICKET_ID] || 0) < d.ticketCost ? 'チケットが足りません' : '修行開始')));
+  })(), gameState === 'TRAINING_BOARD' && trainingSession && (() => {
+    const m = masuMons.find(x => String(x.id) === String(trainingSession.masuId));
+    return /*#__PURE__*/React.createElement("main", {
+      className: "mh-training-board"
+    }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "\u6B8B\u308A ", trainingSession.remainingTurns, " \u30BF\u30FC\u30F3"), /*#__PURE__*/React.createElement("span", null, "\u73FE\u5728 ", trainingSession.position + 1, " / 24")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        if (window.confirm('途中終了して失敗リザルトへ進みますか？')) finishTraining(false);
+      }
+    }, "\u9014\u4E2D\u7D42\u4E86")), /*#__PURE__*/React.createElement("section", {
+      className: "mh-training-hud"
+    }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC97 ", trainingSession.rewards.bondXp, " XP"), /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC8E ", trainingSession.rewards.diamonds), /*#__PURE__*/React.createElement("span", null, "\uD83C\uDF81 ", trainingSession.rewards.items.length), /*#__PURE__*/React.createElement("span", null, "\uD83C\uDF92 ", trainingSession.tools.length, "/3")), /*#__PURE__*/React.createElement("div", {
+      className: "mh-training-map"
+    }, TRAINING_BEGINNER_MAP.map((key, i) => {
+      const s = TRAINING_SPACE_TYPES[key];
+      return /*#__PURE__*/React.createElement("div", {
+        key: i,
+        className: `${i === trainingSession.position ? 'current' : ''} ${i < trainingSession.position ? 'passed' : ''}`
+      }, /*#__PURE__*/React.createElement("span", null, s?.emoji || '・'), /*#__PURE__*/React.createElement("small", null, i + 1), i === trainingSession.position && m && /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: m.baseId,
+        src: ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl,
+        alt: m.name,
+        masuColors: getMasuColors(m)
+      }));
+    })), /*#__PURE__*/React.createElement("p", {
+      className: "mh-training-message"
+    }, trainingSession.message), /*#__PURE__*/React.createElement("section", {
+      className: "mh-training-tools"
+    }, trainingSession.tools.length ? trainingSession.tools.map((id, i) => /*#__PURE__*/React.createElement("button", {
+      key: `${id}-${i}`,
+      onClick: () => useTrainingTool(id),
+      title: TRAINING_TOOLS[id].desc
+    }, /*#__PURE__*/React.createElement("span", null, TRAINING_TOOLS[id].emoji), /*#__PURE__*/React.createElement("small", null, TRAINING_TOOLS[id].name))) : /*#__PURE__*/React.createElement("p", null, "\u4FEE\u884C\u9053\u5177\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("footer", null, trainingSession.effects.fixed ? /*#__PURE__*/React.createElement("div", {
+      className: "mh-fixed-dice"
+    }, /*#__PURE__*/React.createElement("span", null, "\u51FA\u76EE\u3092\u9078\u629E"), [1, 2, 3].map(n => /*#__PURE__*/React.createElement("button", {
+      key: n,
+      onClick: () => rollTrainingDice(n)
+    }, n))) : /*#__PURE__*/React.createElement("button", {
+      disabled: !!trainingSession.pendingBranch,
+      onClick: () => rollTrainingDice(),
+      className: "mh-roll-button"
+    }, "\uD83C\uDFB2 \u30B5\u30A4\u30B3\u30ED\u3092\u632F\u308B", trainingSession.lastRoll && /*#__PURE__*/React.createElement("small", null, "\u524D\u56DE ", trainingSession.lastRoll))), trainingSession.pendingBranch && /*#__PURE__*/React.createElement("div", {
+      className: "mh-training-branch"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", null, "\u30EB\u30FC\u30C8\u9078\u629E"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => chooseTrainingRoute('safe')
+    }, /*#__PURE__*/React.createElement("b", null, "\u5B89\u5168\u30EB\u30FC\u30C8"), /*#__PURE__*/React.createElement("span", null, "\u77ED\u3044\u30FB\u5831\u916C\u5C11\u306A\u3081")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => chooseTrainingRoute('standard')
+    }, /*#__PURE__*/React.createElement("b", null, "\u6A19\u6E96\u30EB\u30FC\u30C8"), /*#__PURE__*/React.createElement("span", null, "\u30D0\u30E9\u30F3\u30B9\u578B")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => chooseTrainingRoute('reward')
+    }, /*#__PURE__*/React.createElement("b", null, "\u5831\u916C\u30EB\u30FC\u30C8"), /*#__PURE__*/React.createElement("span", null, "\u9060\u56DE\u308A\u30FB\u5927\u5831\u916C")))));
+  })(), gameState === 'TRAINING_RESULT' && trainingSession && (() => {
+    const r = trainingSession.finalRewards || trainingEmptyRewards();
+    return /*#__PURE__*/React.createElement("main", {
+      className: `mh-training-result ${trainingSession.success ? 'success' : 'failure'}`
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+      className: "mh-result-mark"
+    }, trainingSession.success ? '🏁' : '🌧️'), /*#__PURE__*/React.createElement("small", null, "TRAINING RESULT"), /*#__PURE__*/React.createElement("h2", null, trainingSession.success ? '修行成功！' : '修行失敗…'), /*#__PURE__*/React.createElement("p", null, trainingSession.message), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "\u7D46\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("b", null, "+", r.bondXp, " XP")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", null, "+", r.diamonds)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "\u901A\u5E38\u30A2\u30A4\u30C6\u30E0"), /*#__PURE__*/React.createElement("b", null, r.items.length, "\u500B"))), /*#__PURE__*/React.createElement("p", {
+      className: "mh-result-note"
+    }, "\u5831\u916C\u306F\u7D42\u4E86\u6642\u306B\u4E00\u5EA6\u3060\u3051\u78BA\u5B9A\u6E08\u307F\u3067\u3059\u3002\u4FEE\u884C\u9053\u5177\u306F\u3059\u3079\u3066\u6D88\u6EC5\u3057\u307E\u3057\u305F\u3002"), /*#__PURE__*/React.createElement("button", {
+      onClick: leaveTrainingResult
+    }, "HOME\u3078")));
+  })(), gameState === 'GIFT_BOX' && (() => {
     const now = Date.now();
     const unclaimed = gifts.filter(g => !g?.claimedAt);
     const history = gifts.filter(g => g?.claimedAt);
@@ -11538,9 +12317,9 @@ function MonsterHeroGame() {
   }, item.desc), /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] font-black text-teal-300 mt-0.5"
   }, "\u6240\u6301\u6570: ", ownedItems[item.id])), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setPendingItemUse(item.id),
+    onClick: () => item.trainingEntry ? openTraining() : setPendingItemUse(item.id),
     className: "shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase"
-  }, "\u4F7F\u3046")))))), pendingItemUse && (() => {
+  }, item.trainingEntry ? '修行へ' : '使う')))))), pendingItemUse && (() => {
     const item = BREEDER_MARKET_ITEMS.find(i => i.id === pendingItemUse);
     return /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex flex-col p-4",
@@ -16177,6 +16956,9 @@ const createAnimationStyle = () => {
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
     @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
     @media(prefers-reduced-motion:reduce){.mh-mocchi-wrap img,.mh-mocchi-wrap span,.mh-mocchi-wrap i{animation:none!important}.mh-entering>img{animation:mhReducedFade .85s ease both}.mh-gate-core,.mh-gate-particles{display:none}.mh-gate-flash{animation:mhReducedFlash .85s ease both}}@keyframes mhReducedFade{to{opacity:.4}}@keyframes mhReducedFlash{0%,55%{opacity:0}100%{opacity:1}}
+    .mh-home-facility.training{left:0;top:46%;width:38%;height:25%}.mh-home-facility.training>span{left:5%;top:37%;border-color:#f9a8d4dd;background:linear-gradient(135deg,#831843ee,#4c1d95ee);box-shadow:0 3px 12px #0009,0 0 15px #ec489966}
+    .mh-training-screen{height:100%;display:flex;flex-direction:column;overflow:hidden;padding:calc(10px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom));background:radial-gradient(circle at top,#312e81,#07101f 60%)}.mh-training-head{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;flex:none}.mh-training-head>button{min-height:44px;display:flex;align-items:center;justify-content:center}.mh-training-head div{text-align:center}.mh-training-head small{display:block;color:#f9a8d4;font:900 8px monospace;letter-spacing:.25em}.mh-training-head h2{font-size:18px;font-weight:1000}.mh-training-selected{display:flex;align-items:center;gap:10px;margin:9px 0;padding:10px;border:1px solid #f9a8d477;border-radius:18px;background:#3b076455}.mh-training-selected>img,.mh-training-selected>div:first-child{width:56px;height:56px;object-fit:contain;flex:none}.mh-training-selected>div{display:flex;flex:1;min-width:0;flex-direction:column}.mh-training-selected b{font-size:14px}.mh-training-selected span{color:#fbcfe8;font-size:9px}.mh-training-selected button{padding:9px;border-radius:10px;background:#7e22ce;font-size:9px;font-weight:900}.mh-training-note{font-size:9px;color:#cbd5e1;padding:2px 3px 8px}.mh-training-mon-list{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;overflow-y:auto;padding:2px 1px 90px}.mh-training-mon-list>button{position:relative;min-width:0;padding:7px 4px;border:2px solid #334155;border-radius:16px;background:#0f172acc}.mh-training-mon-list>button.active{border-color:#f472b6;background:#83184377;box-shadow:0 0 13px #ec489966}.mh-training-mon-list img,.mh-training-mon-list>button>div:first-child{width:54px;height:54px;object-fit:contain;margin:auto}.mh-training-mon-list b,.mh-training-mon-list small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-training-mon-list b{font-size:10px}.mh-training-mon-list small{font-size:7px;color:#94a3b8}.mh-training-mon-list span{position:absolute;right:5px;top:4px;color:#fde68a;font-size:8px}.mh-training-empty{grid-column:1/-1;text-align:center;margin-top:50px;color:#64748b}.mh-training-footer{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));padding-top:20px;background:linear-gradient(transparent,#07101f 24%)}.mh-training-footer button{width:100%;min-height:52px;border-radius:18px;background:linear-gradient(90deg,#db2777,#7c3aed);font-weight:1000;box-shadow:0 6px 20px #0008}.mh-training-footer button:disabled{background:#334155;color:#64748b}.mh-training-difficulties{overflow:auto;padding:10px 1px 95px}.mh-training-difficulties>button{display:block;width:100%;margin-bottom:10px;padding:14px;text-align:left;border:2px solid #334155;border-radius:20px;background:#0f172acc}.mh-training-difficulties>button.active{border-color:#f472b6}.mh-training-difficulties>button.soon{opacity:.72}.mh-training-difficulties>button>div{display:flex;justify-content:space-between}.mh-training-difficulties b{font-size:18px}.mh-training-difficulties em{padding:4px 8px;border-radius:999px;background:#475569;font-size:8px;font-style:normal}.mh-training-difficulties p{margin:8px 0;color:#cbd5e1;font-size:10px}.mh-training-difficulties dl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mh-training-difficulties dl span{padding:5px;border-radius:7px;background:#02061788;text-align:center;font-size:8px}.mh-training-confirm{overflow:auto;padding:12px 2px 100px}.mh-training-confirm h3{margin:10px 0 2px;color:#f9a8d4;font-size:26px;font-weight:1000}.mh-training-confirm h4{margin-top:16px;color:#c4b5fd;font-size:11px;font-weight:1000}.mh-training-confirm p{color:#cbd5e1;font-size:10px}.mh-training-ticket{display:flex;flex-wrap:wrap;justify-content:space-between;margin-top:16px;padding:14px;border:1px solid #fbbf24aa;border-radius:16px;background:#78350f55}.mh-training-ticket b{color:#fde68a}.mh-training-ticket small{width:100%;margin-top:5px;color:#fef3c7;font-size:8px}
+    .mh-training-board{height:100%;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#0c4a6e,#082f49 44%,#052e16)}.mh-training-board>header{display:flex;align-items:center;justify-content:space-between}.mh-training-board>header div{display:flex;flex-direction:column}.mh-training-board>header b{font-size:14px}.mh-training-board>header span{font-size:8px;color:#bae6fd}.mh-training-board>header button{min-height:40px;padding:0 10px;border-radius:10px;background:#7f1d1d;font-size:9px;font-weight:900}.mh-training-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:7px 0}.mh-training-hud span{padding:6px 2px;border-radius:8px;background:#020617aa;text-align:center;font-size:8px;font-weight:900}.mh-training-map{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;flex:1;min-height:0;padding:7px;overflow:auto;border:1px solid #ffffff22;border-radius:16px;background:#0005}.mh-training-map>div{position:relative;aspect-ratio:1;border:2px solid #64748b;border-radius:10px;background:#334155;display:flex;align-items:center;justify-content:center}.mh-training-map>div.passed{opacity:.52}.mh-training-map>div.current{border-color:#fde047;background:#854d0e;box-shadow:0 0 14px #fde047}.mh-training-map span{font-size:17px}.mh-training-map small{position:absolute;left:3px;top:1px;font-size:6px}.mh-training-map img,.mh-training-map>div.current>div{position:absolute;width:45px;height:45px;object-fit:contain;filter:drop-shadow(0 3px 3px #000);z-index:2}.mh-training-message{min-height:28px;padding:7px;text-align:center;font-size:10px;font-weight:900}.mh-training-tools{display:flex;min-height:54px;gap:5px}.mh-training-tools button{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;padding:4px;border:1px solid #a78bfa;border-radius:10px;background:#312e81}.mh-training-tools button span{font-size:17px}.mh-training-tools button small{font-size:7px}.mh-training-tools p{margin:auto;color:#94a3b8;font-size:8px}.mh-training-board>footer{margin-top:7px}.mh-roll-button{width:100%;min-height:58px;border-radius:19px;background:linear-gradient(#fbbf24,#d97706);color:#451a03;font-size:17px;font-weight:1000}.mh-roll-button small{display:block;font-size:7px}.mh-fixed-dice{display:grid;grid-template-columns:1fr repeat(3,58px);gap:5px;align-items:center}.mh-fixed-dice button{height:54px;border-radius:14px;background:#fbbf24;color:#422006;font-size:20px;font-weight:1000}.mh-training-branch{position:fixed;z-index:40000;inset:0;display:flex;align-items:center;padding:20px;background:#020617dd}.mh-training-branch>div{width:100%;padding:18px;border:1px solid #c4b5fd;border-radius:22px;background:#111827}.mh-training-branch h3{text-align:center;font-size:18px;font-weight:1000}.mh-training-branch button{display:flex;justify-content:space-between;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:#312e81}.mh-training-branch span{font-size:9px;color:#cbd5e1}.mh-training-result{height:100%;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));text-align:center;background:radial-gradient(circle,#14532d,#020617 65%)}.mh-training-result.failure{background:radial-gradient(circle,#3f3f46,#020617 65%)}.mh-training-result>div{width:100%;max-width:360px}.mh-result-mark{display:block;font-size:64px}.mh-training-result small{color:#f9a8d4;font:900 9px monospace;letter-spacing:.22em}.mh-training-result h2{font-size:28px;font-weight:1000}.mh-training-result>div>p{margin:7px;color:#cbd5e1;font-size:10px}.mh-training-result section{margin:18px 0;padding:13px;border:1px solid #ffffff22;border-radius:18px;background:#0007}.mh-training-result section div{display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #ffffff12}.mh-training-result section div:last-child{border:0}.mh-training-result section span{font-size:11px}.mh-training-result section b{color:#fde68a}.mh-training-result .mh-result-note{font-size:8px}.mh-training-result>div>button{width:100%;min-height:52px;margin-top:10px;border-radius:18px;background:#fff;color:#172554;font-weight:1000}
     `;
   document.head.appendChild(style);
 };
