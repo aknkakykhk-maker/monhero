@@ -63,7 +63,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 16:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 16:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1968,31 +1968,31 @@ function MonsterHeroGame() {
 
   // 新バージョン検知: ホーム画面アプリ/背面タブ復帰時は自動再読み込みされず古いバージョンの
   // ままタップしても反応しないように見える不具合が繰り返し報告されたため、version.jsonを
-  // 頻繁に確認しBUILD_DATEと異なれば更新バナーを出す。さらに、ページを開いた直後(まだ
-  // ゲーム進行中でなく再読み込みしても損失が無いタイミング)に限っては、バナーのタップ待ちにせず
-  // 自動でリロードして常に最新版に揃える(タップし忘れて古いまま使い続けてしまう問題への対策)
+  // 頻繁に確認しBUILD_DATEと異なれば更新ボタンを出す。初回確認でも自動再読み込みはせず、
+  // プレイ中の進行を失わないよう必ず利用者のタップで更新する。
   useEffect(() => {
-    let isFirstCheck = true;
+    let cancelled = false;
     const checkVersion = async () => {
-      const wasFirstCheck = isFirstCheck;
-      isFirstCheck = false;
       try {
         const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
-        if (data && data.build && data.build !== BUILD_DATE) {
-          if (wasFirstCheck) window.location.reload();
-          else setUpdateAvailable(true);
-        }
+        if (!cancelled && data && data.build && data.build !== BUILD_DATE) setUpdateAvailable(true);
       } catch {}
     };
     checkVersion();
     const onVisible = () => { if (document.visibilityState === 'visible') checkVersion(); };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', onVisible);
-    const interval = setInterval(checkVersion, 2 * 60 * 1000);
-    return () => { document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
+    const interval = setInterval(checkVersion, 30 * 1000);
+    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible); window.removeEventListener('pageshow', onVisible); clearInterval(interval); };
   }, []);
+
+  const reloadLatestVersion = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('mh_refresh', Date.now().toString());
+    window.location.replace(url.toString());
+  };
 
   // 正式タイトルに必要なものだけを直列に確認する。重いゲーム素材はENTRY_READY後の
   // idleキューへ分離し、タイトル操作と音声開始を妨げない。
@@ -4096,6 +4096,11 @@ function MonsterHeroGame() {
 
 
   const pct = Math.round((bootProgress.done / Math.max(1, bootProgress.total)) * 100);
+  // body直下へ描画し、各画面のoverflow・transform・モーダルの積層に隠されないようにする。
+  const updateNotice = updateAvailable ? ReactDOM.createPortal(
+    <button type="button" aria-live="assertive" onClick={reloadLatestVersion} className="fixed z-[100000] left-3 right-3 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]" style={{top:'calc(8px + env(safe-area-inset-top))'}}><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>,
+    document.body
+  ) : null;
   const titleModal = showChangelog ? (
     <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}>
       <div className="mh-title-dialog"><div className="mh-dialog-head"><h3>✦ 更新履歴</h3><button onClick={()=>setShowChangelog(false)}><X size={18}/></button></div>
@@ -4112,24 +4117,24 @@ function MonsterHeroGame() {
   ) : null;
 
   if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return (
-    <main className={`mh-boot-screen ${bootPhase==='ENTRY_READY'?'is-ready':''} ${entryAnimating?'is-entering':''}`}>
+    <><main className={`mh-boot-screen ${bootPhase==='ENTRY_READY'?'is-ready':''} ${entryAnimating?'is-entering':''}`}>
       <div className="mh-boot-stars" aria-hidden="true"></div><div className="mh-mocchi-wrap"><img src={MOCCHI_IMG} alt="モッチー"/><span></span><i>✦</i><i>✧</i></div>
       <section className="mh-boot-copy">{bootPhase==='LOADING'?<><h1>NOW LOADING</h1><h2>冒険の準備をしています</h2><div className="mh-progress"><span style={{width:`${pct}%`}}></span></div><strong>{pct}%</strong><p>{bootProgress.label}</p></>:<><h1>READY</h1><button disabled={entryAnimating} onPointerDown={unlockBootSound}>TOUCH TO ENTER</button><h2>― 冒険の扉を開く ―</h2><p>追加データはバックグラウンドで読み込みを続けます</p></>}</section>
       <footer>VERSION {BUILD_DATE}</footer><div className="mh-entry-flash"></div>
-    </main>
+    </main>{updateNotice}</>
   );
   if (bootPhase === 'TITLE') return (
-    <main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
+    <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
       <img className="mh-title-visual" src="data/images/title-screen-clean.PNG" alt="モンスターヒーロー グランドチャンピオンクエスト"/>
       <header className="mh-title-header"><div className="mh-title-build"><b>VERSION</b><span>{BUILD_DATE}</span><b>PLAYER ID</b><span>{titlePlayerId}</span></div><div className="mh-title-actions"><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();openChangelog()}}><Sparkles size={19}/><span>お知らせ</span>{hasUnreadChangelog&&<em>NEW</em>}</button><button onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setShowTitleSettings(true)}}><Settings size={19}/><span>設定</span></button></div></header>
       <button type="button" className="mh-title-start" disabled={!!titleModal || titleStarting} onPointerDown={startGame} aria-label="トップ画面へ進む"></button>{titleModal}
-    </main>
+    </main>{updateNotice}</>
   );
-  if (bootPhase === 'ENTERING_GAME') return <main className="mh-entering"><img src="data/images/title-screen-clean.PNG" alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>;
+  if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src="data/images/title-screen-clean.PNG" alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}</>;
 
   return (
     <div onPointerDown={(e)=>{const rect=e.currentTarget.getBoundingClientRect(); spawnRipple(e.clientX-rect.left, e.clientY-rect.top);}} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={{height:'100%'}}>
-      {updateAvailable&&<button type="button" aria-live="assertive" onClick={()=>window.location.reload()} className="fixed z-[200] left-3 right-3 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]" style={{top:'calc(8px + env(safe-area-inset-top))'}}><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>}
+      {updateNotice}
       <div className="relative z-10 h-full flex flex-col" style={screenShake?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
         {/* HOME: 上部情報帯・中央広場・周辺施設・主役導線を拠点として一体化 */}
