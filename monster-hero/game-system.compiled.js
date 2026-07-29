@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 04a9cbad23fce9b9
+// source-sha256: 01b9067266164087
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -117,7 +117,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 08:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 09:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2288,7 +2288,48 @@ const DIST_APTITUDE_COLOR = {
 // 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
 // 更新履歴のうち一番新しいエントリの日時。未読(NEW)判定の基準にする。
 // data/changelog.js に追記すればこの値が自動的に新しくなり、NEWマークが復活する
-const CHANGELOG_LATEST = typeof CHANGELOG !== 'undefined' && CHANGELOG.length ? CHANGELOG[0].date : '';
+const CHANGELOG_TYPES = ['update', 'issue'];
+const CHANGELOG_LATEST_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => {
+  const latest = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).find(entry => entry.type === type);
+  return [type, latest ? latest.date : ''];
+}));
+const DEFAULT_MONSTER_LIST_SETTINGS = {
+  version: 1,
+  modalTab: 'sort',
+  sortKey: 'lineage',
+  sortDir: 'asc',
+  display: {
+    base: true,
+    masu: true,
+    fused: true,
+    active: true
+  }
+};
+const DEFAULT_FUSION_SORT_SETTINGS = {
+  version: 1,
+  sortKey: 'bond',
+  sortDir: 'desc'
+};
+const normalizeMonsterListSettings = value => {
+  const sortKeys = ['base', 'masu', 'lineage', 'bond', 'name', 'active', 'fused'];
+  const displayKeys = ['base', 'masu', 'fused', 'active'];
+  if (!value || value.version !== 1 || !sortKeys.includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir) || !['sort', 'display'].includes(value.modalTab) || !value.display || displayKeys.some(key => typeof value.display[key] !== 'boolean')) return DEFAULT_MONSTER_LIST_SETTINGS;
+  return {
+    version: 1,
+    modalTab: value.modalTab,
+    sortKey: value.sortKey,
+    sortDir: value.sortDir,
+    display: Object.fromEntries(displayKeys.map(key => [key, value.display[key]]))
+  };
+};
+const normalizeFusionSortSettings = value => {
+  if (!value || value.version !== 1 || !['bond', 'lineage', 'name', 'fused'].includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir)) return DEFAULT_FUSION_SORT_SETTINGS;
+  return {
+    version: 1,
+    sortKey: value.sortKey,
+    sortDir: value.sortDir
+  };
+};
 // 不具合情報タブに出す状態バッジの見た目
 const CHANGELOG_STATUS = {
   fixed: {
@@ -3255,10 +3296,10 @@ function MonsterHeroGame() {
   const [showHelp, setShowHelp] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false); // 更新履歴モーダルの表示状態
   const [changelogTab, setChangelogTab] = useState('update'); // 'update'=更新情報 / 'issue'=不具合情報
-  const [changelogSeen, setChangelogSeen] = useState(''); // 最後に更新履歴を開いたときの、最新エントリの日時(端末に保存)
-  // 履歴を開いた時点の既読日時。開くと同時に既読を更新するため、そのまま比較すると
-  // 表示中にNEWバッジが消えてしまう。開いている間はこちらを基準にバッジを出す
-  const [changelogSeenAtOpen, setChangelogSeenAtOpen] = useState('');
+  const [changelogSeen, setChangelogSeen] = useState({
+    update: '',
+    issue: ''
+  }); // タブごとの最新既読日時(端末に保存)
   const [seVolume, setSeVolumeState] = useState(DEFAULT_VOLUME); // SE音量 0〜100(端末に保存、初期値は読み込み後に上書き)
   const [bgmVolume, setBgmVolumeState] = useState(DEFAULT_VOLUME); // BGM音量 0〜100(同上)
   // 音は初期状態でオン(音量1)。ただしブラウザは操作なしに音を鳴らせないため、
@@ -3345,18 +3386,26 @@ function MonsterHeroGame() {
     if (idx < 0) return grade;
     return DIST_APTITUDE_GRADES[Math.max(0, Math.min(DIST_APTITUDE_GRADES.length - 1, idx + shift))];
   };
-  // 更新履歴に未読があるか。data/changelog.js に追記すると CHANGELOG_LATEST が新しくなるため、
-  // 既読日時と一致しなくなり自動的にNEWマークが復活する
-  const hasUnreadChangelog = !!CHANGELOG_LATEST && changelogSeen !== CHANGELOG_LATEST;
-  // 更新履歴を開く。開いた時点で最新エントリの日時を既読として保存する
+  // タブごとの最新項目日時と既読日時を比較するため、片方を確認してももう片方のNEWは残る。
+  const changelogUnread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, !!CHANGELOG_LATEST_BY_TYPE[type] && changelogSeen[type] !== CHANGELOG_LATEST_BY_TYPE[type]]));
+  const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue;
+  const markChangelogTabSeen = type => {
+    const latest = CHANGELOG_LATEST_BY_TYPE[type];
+    if (!latest || changelogSeen[type] === latest) return;
+    setChangelogSeen(prev => ({
+      ...prev,
+      [type]: latest
+    }));
+    storeSet(`mh_changelog_seen_${type}`, latest, false);
+  };
+  const selectChangelogTab = type => {
+    setChangelogTab(type);
+    markChangelogTabSeen(type);
+  };
+  // 初期表示する更新情報だけを既読にし、不具合情報は実際にタブを開くまで既読にしない。
   const openChangelog = () => {
-    setChangelogTab('update');
-    setChangelogSeenAtOpen(changelogSeen);
     setShowChangelog(true);
-    if (CHANGELOG_LATEST && changelogSeen !== CHANGELOG_LATEST) {
-      setChangelogSeen(CHANGELOG_LATEST);
-      storeSet('mh_changelog_seen', CHANGELOG_LATEST, false);
-    }
+    selectChangelogTab('update');
   };
   const [helpTab, setHelpTab] = useState('goal');
   const [pendingReward, setPendingReward] = useState(null);
@@ -4045,8 +4094,20 @@ function MonsterHeroGame() {
         grantedPoints = expectedPoints;
       }
       await storeSet('mh_breeder_points_granted', grantedPoints, false);
-      // 更新履歴の既読日時(未読があればトップの更新履歴ボタンにNEWマークを出す)
-      setChangelogSeen(await storeGet('mh_changelog_seen', '', false));
+      // 旧単一キーは移行元としてだけ読み、以後は更新情報・不具合情報を別キーで管理する。
+      const legacyChangelogSeen = await storeGet('mh_changelog_seen', '', false);
+      setChangelogSeen({
+        update: await storeGet('mh_changelog_seen_update', legacyChangelogSeen, false),
+        issue: await storeGet('mh_changelog_seen_issue', legacyChangelogSeen, false)
+      });
+      const listSettings = normalizeMonsterListSettings(await storeGet('mh_monster_list_settings', DEFAULT_MONSTER_LIST_SETTINGS, false));
+      setMonsterSortKey(listSettings.sortKey);
+      setMonsterSortDir(listSettings.sortDir);
+      setMonsterDisplayFlags(listSettings.display);
+      setSortFilterModalTab(listSettings.modalTab);
+      const fusionSettings = normalizeFusionSortSettings(await storeGet('mh_fusion_sort_settings', DEFAULT_FUSION_SORT_SETTINGS, false));
+      setFusionSortKey(fusionSettings.sortKey);
+      setFusionSortDir(fusionSettings.sortDir);
       // 全プレイヤー(新規・既存問わず)に初期ポイントを1回だけ付与
       const baseGranted = await storeGet('mh_points_base_granted', false, false);
       if (!baseGranted) {
@@ -4097,6 +4158,26 @@ function MonsterHeroGame() {
       }), 0);
     })();
   }, [loadRankings]);
+
+  // 起動時の復元が終わってからだけ保存し、初期値で既存設定を上書きしない。
+  useEffect(() => {
+    if (!dataLoaded) return;
+    storeSet('mh_monster_list_settings', {
+      version: 1,
+      modalTab: sortFilterModalTab,
+      sortKey: monsterSortKey,
+      sortDir: monsterSortDir,
+      display: monsterDisplayFlags
+    }, false);
+  }, [dataLoaded, sortFilterModalTab, monsterSortKey, monsterSortDir, monsterDisplayFlags]);
+  useEffect(() => {
+    if (!dataLoaded) return;
+    storeSet('mh_fusion_sort_settings', {
+      version: 1,
+      sortKey: fusionSortKey,
+      sortDir: fusionSortDir
+    }, false);
+  }, [dataLoaded, fusionSortKey, fusionSortDir]);
   const submitLocalScore = async (diff, finalScore, clearId) => {
     // マスモン(絆レベルを持つ育成済みインスタンス)で編成していた場合、ランキング表示にも絆レベルを出せるよう記録する。
     // 表示名はマスモンの個体名(ブリーダーが自由につけた名前)ではなく、血統(種族)の名前を使う
@@ -7323,9 +7404,11 @@ function MonsterHeroGame() {
     label: '不具合情報'
   }].map(t => /*#__PURE__*/React.createElement("button", {
     key: t.key,
-    onClick: () => setChangelogTab(t.key),
-    className: `py-2 rounded-xl font-black text-[11px] uppercase border active:scale-95 ${changelogTab === t.key ? 'bg-amber-600 border-amber-400 text-white' : 'bg-slate-800 border-white/10 text-slate-400'}`
-  }, t.label))), /*#__PURE__*/React.createElement("div", {
+    onClick: () => selectChangelogTab(t.key),
+    className: `relative py-2 rounded-xl font-black text-[11px] uppercase border active:scale-95 ${changelogTab === t.key ? 'bg-amber-600 border-amber-400 text-white' : 'bg-slate-800 border-white/10 text-slate-400'}`
+  }, t.label, changelogUnread[t.key] && /*#__PURE__*/React.createElement("span", {
+    className: "ml-1 inline-block bg-red-500 text-white text-[7px] leading-none font-black px-1 py-0.5 rounded-full align-top"
+  }, "NEW")))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll px-4 pb-4 space-y-2.5"
   }, (() => {
     const list = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(c => c.type === changelogTab);
@@ -7333,7 +7416,7 @@ function MonsterHeroGame() {
       className: "text-center text-[11px] text-slate-500 py-8"
     }, "\u307E\u3060", changelogTab === 'update' ? '更新情報' : '不具合情報', "\u306F\u3042\u308A\u307E\u305B\u3093");
     return list.map((c, idx) => {
-      const isNew = c.date > changelogSeenAtOpen;
+      const isNew = c.date > changelogSeen[changelogTab];
       const st = c.status ? CHANGELOG_STATUS[c.status] : null;
       return /*#__PURE__*/React.createElement("div", {
         key: idx,
