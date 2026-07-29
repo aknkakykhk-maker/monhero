@@ -287,13 +287,36 @@ const buildMasuDonation = ({ masuMons, targetId, gold, monsterRosterIds, draftMo
 // AUDIO: BGM/ジングルはAudioBuffer、SEはTone.js(Web Audio)で再生
 // デフォルトは無音。ユーザーが音量ボタンを押すと有効化される。
 // =====================================================================
+const BGM_TRACKS = [
+  { id:'original_title', name:'タイトルテーマ', creator:'オリジナル', src:'audio/bgm-title-theme.mp3', gain:1, loop:true, legacyKey:'title' },
+  { id:'original_home', name:'HOMEテーマ', creator:'オリジナル', src:'audio/bgm-title.mp3', gain:1, loop:true, legacyKey:'home' },
+  { id:'original_prep', name:'強化テーマ', creator:'オリジナル', src:'audio/bgm-menu.mp3', gain:1, loop:true, legacyKey:'prep' },
+  { id:'original_battle', name:'バトルテーマ', creator:'オリジナル', src:'audio/bgm-battle.mp3', gain:1, loop:true, legacyKey:'battle' },
+  { id:'original_boss', name:'ボステーマ', creator:'オリジナル', src:'audio/bgm-boss.mp3', gain:1, loop:true, legacyKey:'boss' },
+  { id:'original_dullahan', name:'デュラハンテーマ', creator:'オリジナル', src:'audio/bgm-dullahan.mp3', gain:1, loop:true, legacyKey:'dullahan' },
+  { id:'original_game_over', name:'ゲームオーバーテーマ', creator:'オリジナル', src:'audio/bgm-game-over.mp3', gain:1, loop:true, legacyKey:'gameOver' },
+  { id:'original_fusion', name:'合体テーマ', creator:'オリジナル', src:'audio/bgm-fusion.mp3', gain:1, loop:true, legacyKey:'fusion' },
+  { id:'original_enhance', name:'強化画面テーマ', creator:'オリジナル', src:'audio/bgm-enhance.mp3', gain:1, loop:true, legacyKey:'enhance' },
+  { id:'original_result', name:'リザルトテーマ', creator:'オリジナル', src:'audio/bgm-result.mp3', gain:1, loop:true, legacyKey:'result' },
+  { id:'original_market', name:'マーケットテーマ', creator:'オリジナル', src:'audio/bgm-market.mp3', gain:1, loop:true, legacyKey:'market' },
+  { id:'original_profile', name:'プロフィールテーマ', creator:'オリジナル', src:'audio/bgm-profile.mp3', gain:1, loop:true, legacyKey:'profile' },
+  { id:'ichika_home', name:'ホームテーマ by いちか', creator:'いちか', src:'audio/bgm-home-ichika.mp3', gain:1, loop:true },
+  { id:'ichika_battle', name:'バトルテーマ by いちか', creator:'いちか', src:'audio/bgm-battle-ichika.mp3', gain:1, loop:true },
+  { id:'ichika_boss', name:'ボステーマ by いちか', creator:'いちか', src:'audio/bgm-boss-ichika.mp3', gain:1, loop:true },
+  { id:'ichika_clear', name:'クリアテーマ by いちか', creator:'いちか', src:'audio/bgm-clear-ichika.mp3', gain:1, loop:true, legacyKey:'clear' },
+];
+const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
+const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', battle:'original_battle', boss:'original_boss', clear:'ichika_clear' });
+const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => [scene, BGM_TRACK_BY_ID[value?.[scene]] ? value[scene] : fallback]));
+
 const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
   let reverb = null, seBus = null;
   let audioCtx = null, bgmGain = null;
   const buffers = new Map();
   const loadingBuffers = new Map();
-  let bgmSource = null, bgmSourceKey = null, bgmRequest = 0;
+  let bgmSource = null, bgmSourceKey = null, bgmRequest = 0, previewSource = null, previewKey = null;
   let jingleSource = null, jingleTimer = null;
   let currentKey = null, bgmVolumePct = 0, seVolumePct = 0, pageHidden = false;
   let enabled = false;
@@ -323,11 +346,6 @@ const Audio_ = (() => {
 
   const ensure = async () => { await load(); if (Tone && !started) { try { await Tone.start(); started = true; } catch (e) {} } };
 
-  const BGM_FILES = {
-    title: 'audio/bgm-title-theme.mp3', home: 'audio/bgm-title.mp3', prep: 'audio/bgm-menu.mp3', battle: 'audio/bgm-battle.mp3',
-    boss: 'audio/bgm-boss.mp3', dullahan: 'audio/bgm-dullahan.mp3', gameOver: 'audio/bgm-game-over.mp3', fusion: 'audio/bgm-fusion.mp3', enhance: 'audio/bgm-enhance.mp3',
-    result: 'audio/bgm-result.mp3', market: 'audio/bgm-market.mp3', profile: 'audio/bgm-profile.mp3',
-  };
   const JINGLE_FILES = { victory: 'audio/jingle-victory.mp3' };
   const _gainFromPct = (pct) => pct <= 0 ? 0 : Math.pow(10, (-40 + (Math.min(100, pct) / 100) * 40) / 20);
   const _bgmGain = (pct) => pct <= 0 ? 0 : Math.pow(10, (-55 + (Math.min(100, pct) / 100) * 55) / 20) * 0.55;
@@ -379,32 +397,47 @@ const Audio_ = (() => {
   const stopSource = (source) => { if (source) { try { source.onended = null; source.stop(); } catch (e) {} try { source.disconnect(); } catch (e) {} } };
   const stopJingles = () => { if (jingleTimer) clearTimeout(jingleTimer); jingleTimer = null; stopSource(jingleSource); jingleSource = null; };
   const stopOthers = () => { stopSource(bgmSource); bgmSource = null; bgmSourceKey = null; };
+  const resolveTrack = key => BGM_TRACK_BY_ID[key] || BGM_TRACK_BY_KEY[key] || null;
+  const safeTrackGain = track => Math.max(0, Math.min(1.25, Number.isFinite(track?.gain) ? track.gain : 1));
+  const applyTrackGain = track => { if (bgmGain) bgmGain.gain.value = Math.min(1, _bgmGain(bgmVolumePct) * safeTrackGain(track)); };
 
-  const startBgmBuffer = (key, buffer, request) => {
+  const startBgmBuffer = (key, track, buffer, request) => {
     const ctx = getAudioCtx();
-    if (!ctx || request !== bgmRequest || key !== currentKey || !enabled || bgmVolumePct <= 0 || pageHidden || jingleSource) return;
+    if (!ctx || request !== bgmRequest || key !== currentKey || !enabled || bgmVolumePct <= 0 || pageHidden || jingleSource || previewSource) return;
     if (bgmSource && bgmSourceKey === key) return;
     stopOthers();
     const source = ctx.createBufferSource();
-    source.buffer = buffer; source.loop = true; source.connect(bgmGain);
+    applyTrackGain(track);
+    source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain);
     bgmSource = source; bgmSourceKey = key;
     source.onended = () => { if (bgmSource === source) { bgmSource = null; bgmSourceKey = null; } };
     try { source.start(0); } catch (e) { stopOthers(); }
   };
   const playBGM = (key) => {
-    if (!BGM_FILES[key]) return Promise.resolve();
-    currentKey = key;
+    const track = resolveTrack(key); if (!track) return Promise.resolve();
+    currentKey = track.id;
     const request = ++bgmRequest;
-    if (bgmSourceKey && bgmSourceKey !== key) stopOthers();
+    if (bgmSourceKey && bgmSourceKey !== track.id) stopOthers();
     if (!enabled || bgmVolumePct <= 0 || pageHidden) { stopOthers(); stopJingles(); return Promise.resolve(); }
     resumeAudioCtxNoWait();
-    return loadBuffer(BGM_FILES[key]).then((buffer) => startBgmBuffer(key, buffer, request)).catch(() => {});
+    return loadBuffer(track.src).then((buffer) => startBgmBuffer(track.id, track, buffer, request)).catch(() => {});
   };
-  const stopBGM = () => { currentKey = null; ++bgmRequest; stopJingles(); stopOthers(); };
-  const preloadBGM = (key) => { if (BGM_FILES[key]) loadBuffer(BGM_FILES[key]).catch(() => {}); };
+  const stopPreview = (resume = true) => { stopSource(previewSource); previewSource = null; previewKey = null; if (resume && currentKey) playBGM(currentKey); };
+  const previewBGM = async key => {
+    const track = resolveTrack(key); if (!track) return false;
+    if (previewKey === track.id) { stopPreview(true); return false; }
+    stopPreview(false); stopJingles(); stopOthers(); previewKey = track.id;
+    try { const buffer = await loadBuffer(track.src); if (previewKey !== track.id || !enabled || pageHidden || bgmVolumePct <= 0) return false;
+      const ctx = await ensureAudioCtxRunning(); if (!ctx) return false; applyTrackGain(track);
+      const source = ctx.createBufferSource(); source.buffer = buffer; source.loop = track.loop !== false; source.connect(bgmGain); previewSource = source;
+      source.onended = () => { if (previewSource === source) stopPreview(true); }; source.start(0); return true;
+    } catch (e) { if (previewKey === track.id) stopPreview(true); return false; }
+  };
+  const stopBGM = () => { currentKey = null; ++bgmRequest; stopPreview(false); stopJingles(); stopOthers(); };
+  const preloadBGM = (key) => { const track = resolveTrack(key); if (track) loadBuffer(track.src).catch(() => {}); };
   const prepareBGM = (key, timeoutMs = 2000) => {
-    if (!BGM_FILES[key]) return Promise.resolve(false);
-    return Promise.race([loadBuffer(BGM_FILES[key]).then(() => true).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
+    const track = resolveTrack(key); if (!track) return Promise.resolve(false);
+    return Promise.race([loadBuffer(track.src).then(() => true).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
   };
   const playJingle = async (key) => {
     if (!enabled || bgmVolumePct <= 0 || pageHidden || !JINGLE_FILES[key]) return;
@@ -421,11 +454,11 @@ const Audio_ = (() => {
       jingleTimer = setTimeout(backToBGM, Math.ceil(buffer.duration * 1000) + 250);
     } catch (e) { if (currentKey) playBGM(currentKey); }
   };
-  const setPageHidden = (hidden) => { pageHidden = !!hidden; if (pageHidden) { ++bgmRequest; stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
-  const setEnabled = async (on) => { enabled = !!on; if (!enabled) { ++bgmRequest; stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
+  const setPageHidden = (hidden) => { pageHidden = !!hidden; if (pageHidden) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); };
+  const setEnabled = async (on) => { enabled = !!on; if (!enabled) { ++bgmRequest; stopPreview(false); stopOthers(); stopJingles(); } else if (currentKey) playBGM(currentKey); await ensure(); };
   const isEnabled = () => enabled;
   const setSeVolume = (pct) => { seVolumePct = pct; if (seBus && Tone) { try { seBus.gain.rampTo(_gainFromPct(pct), 0.05); } catch (e) {} } };
-  const setBgmVolume = (pct) => { bgmVolumePct = pct; if (bgmGain) bgmGain.gain.value = _bgmGain(pct); if (pct <= 0) stopOthers(); else if (enabled && currentKey) playBGM(currentKey); };
+  const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
   const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); };
   const unlock = async (playTestTone = false) => {
     if (!enabled) enabled = true;
@@ -477,7 +510,7 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, playJingle, ensurePlaying, isContextRunning, se };
+  return { playBGM, stopBGM, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, playJingle, ensurePlaying, isContextRunning, se };
 })();
 
 
@@ -1948,6 +1981,9 @@ function MonsterHeroGame() {
   // 実際に音が出るのは最初のタップ以降になる(下のuseEffectで自動的に解除する)
   const [audioUnlocked, setAudioUnlocked] = useState(true);
   const [showAudioSettings, setShowAudioSettings] = useState(false); // 音量設定モーダルの表示状態
+  const [showBgmArrangement, setShowBgmArrangement] = useState(false);
+  const [bgmArrangement, setBgmArrangement] = useState(DEFAULT_BGM_ARRANGEMENT);
+  const [previewTrackId, setPreviewTrackId] = useState(null);
   const audioOn = audioUnlocked;
   const setSeVolumeRaw = (nv) => { setSeVolumeState(nv); storeSet('mh_se_volume', nv, false); };
   const setBgmVolumeRaw = (nv) => { setBgmVolumeState(nv); storeSet('mh_bgm_volume', nv, false); };
@@ -1968,6 +2004,16 @@ function MonsterHeroGame() {
       changeSeVolume(0);
       changeBgmVolume(0);
     }
+  };
+  const closeBgmArrangement = () => { Audio_.stopPreview(); setPreviewTrackId(null); setShowBgmArrangement(false); };
+  const changeBgmArrangement = (scene, trackId) => {
+    if (!BGM_TRACK_BY_ID[trackId] || bgmArrangement[scene] === trackId) return;
+    setBgmArrangement(current => ({ ...current, [scene]:trackId }));
+  };
+  const toggleBgmPreview = async trackId => {
+    await Audio_.unlock();
+    const started = await Audio_.previewBGM(trackId);
+    setPreviewTrackId(started ? trackId : null);
   };
   const breederLevel = levelInfo(breederXp);
   // マスモン関連のヘルパー。絆レベル・間合い適性・ステータス強化ポイントは、すべてマスモン
@@ -2264,10 +2310,11 @@ function MonsterHeroGame() {
   // 画面から鳴らすべき曲のキーを決める
   const bgmKeyForState = (state, isBoss, wavesDone, isDullahan, isGameOver) => {
     if (isGameOver) return 'gameOver';
-    if (state === 'HOME' || state === 'PROFILE') return 'home';
-    if (BGM_STATE_MAP[state]) return BGM_STATE_MAP[state];
+    if (!debugBattleRef.current && wave === 10 && (state === 'WAVE_RESULT' || state === 'CHAMPION')) return bgmArrangement.clear;
+    if (state === 'HOME' || state === 'PROFILE') return bgmArrangement.home;
+    if (BGM_STATE_MAP[state]) return BGM_STATE_MAP[state] === 'home' ? bgmArrangement.home : BGM_STATE_MAP[state];
     if (PROFILE_BGM_STATES.includes(state)) return 'profile';
-    if (state === 'BATTLE') return isDullahan ? 'dullahan' : (isBoss ? 'boss' : 'battle');
+    if (state === 'BATTLE') return isDullahan ? 'dullahan' : (isBoss ? bgmArrangement.boss : bgmArrangement.battle);
     if (RUN_PHASE_STATES.includes(state)) return wavesDone ? 'result' : 'enhance';
     return null;
   };
@@ -2280,7 +2327,7 @@ function MonsterHeroGame() {
     if (!audioOn) { Audio_.stopBGM(); return; }
     if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   useEffect(() => { Audio_.setSeVolume(seVolume); }, [seVolume]);
@@ -2581,6 +2628,8 @@ function MonsterHeroGame() {
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
       setBgmVolumeState(savedBgmVolume);
+      const savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
+      setBgmArrangement(savedBgmArrangement);
       const savedName = await storeGet('mh_breeder_name', '名無しのブリーダー', false);
       setBreederName(savedName);
       const savedIcon = await storeGet('mh_breeder_icon', null, false);
@@ -2785,6 +2834,10 @@ function MonsterHeroGame() {
     if (!dataLoaded) return;
     storeSet('mh_donation_sort_settings', { version: 1, sortKey: donationSortKey, sortDir: donationSortDir }, false);
   }, [dataLoaded, donationSortKey, donationSortDir]);
+  useEffect(() => {
+    if (!dataLoaded) return;
+    storeSet('mh_bgm_arrangement', normalizeBgmArrangement(bgmArrangement), false);
+  }, [dataLoaded, bgmArrangement]);
 
   const submitLocalScore = async (diff, finalScore, clearId) => {
     // マスモン(絆レベルを持つ育成済みインスタンス)で編成していた場合、ランキング表示にも絆レベルを出せるよう記録する。
@@ -4705,9 +4758,13 @@ function MonsterHeroGame() {
       </div>
     </div>
   ) : showTitleSettings ? (
-    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
+    <div className="mh-title-modal" onPointerDown={e=>e.stopPropagation()}><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>設定</h3><button onClick={()=>setShowTitleSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowAudioSettings(true)}}>🔊 音量設定 <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBgmArrangement(true)}}>🎼 BGMアレンジ <ChevronRight size={18}/></button><button className="mh-dialog-choice" onClick={()=>{setShowTitleSettings(false);setShowBackup(true)}}>🛡️ データ引き継ぎ <ChevronRight size={18}/></button></div></div>
   ) : showAudioSettings ? (
     <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div></div>
+  ) : showBgmArrangement ? (
+    <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div><div className="space-y-4">{[
+      ['home','HOME BGM'],['battle','通常バトルBGM'],['boss','ボスバトルBGM'],['clear','ゲームクリアBGM']
+    ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="flex gap-2 mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="shrink-0 min-w-[58px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button></div></label>)}</div><button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
   ) : showBackup ? (
     <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3><button onClick={()=>setShowBackup(false)}><X size={18}/></button></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{backupTab==='export'?<>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice" onClick={generateBackupCode}>バックアップコードを作成</button></>:<><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice" onClick={restoreFromBackupCode}>このコードで復元する</button></>}{restoreMsg&&<p>{restoreMsg}</p>}</div></div>
   ) : null;
@@ -4902,7 +4959,7 @@ function MonsterHeroGame() {
         )}
 
         {gameState==='SETTINGS'&&(
-          <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-5"><button onClick={returnToHome} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-slate-200">設定</h2></div><div className="space-y-3"><button onClick={()=>setShowAudioSettings(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">音量設定</button><button onClick={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">データ引き継ぎ</button><button onClick={()=>setShowHelp(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">ヘルプ</button><button onClick={()=>setShowOfficialTitleConfirm(true)} className="w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black">タイトルへ戻る</button></div></div>
+          <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-5"><button onClick={returnToHome} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-slate-200">設定</h2></div><div className="space-y-3"><button onClick={()=>setShowAudioSettings(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">音量設定</button><button onClick={()=>setShowBgmArrangement(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">BGMアレンジ</button><button onClick={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">データ引き継ぎ</button><button onClick={()=>setShowHelp(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">ヘルプ</button><button onClick={()=>setShowOfficialTitleConfirm(true)} className="w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black">タイトルへ戻る</button></div></div>
         )}
 
         {gameState==='DEBUG_SETTINGS'&&(

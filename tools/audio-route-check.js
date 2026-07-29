@@ -17,11 +17,11 @@ for (const file of files) {
   check(`${file}: navigator.audioSessionをplaybackへ変更しない`, !/audioSession[\s\S]{0,80}playback/.test(source));
   check(`${file}: 音源をfetchしてdecodeAudioDataする`, /fetch\s*\(url/.test(audioEngine) && /decodeAudioData/.test(audioEngine));
   check(`${file}: BGMをAudioBufferSourceNodeでループ再生する`,
-    /const startBgmBuffer/.test(audioEngine) && /createBufferSource\s*\(\)/.test(audioEngine) && /source\.loop\s*=\s*true/.test(audioEngine));
+    /const startBgmBuffer/.test(audioEngine) && /createBufferSource\s*\(\)/.test(audioEngine) && /source\.loop\s*=\s*track\.loop\s*!==\s*false/.test(audioEngine));
   check(`${file}: ジングルをAudioBufferSourceNodeで再生する`,
     /const playJingle/.test(audioEngine) && /source\.buffer\s*=\s*buffer/.test(audioEngine));
   check(`${file}: ミュートとBGM音量をゲインへ反映する`,
-    /!enabled\s*\|\|\s*bgmVolumePct\s*<=\s*0/.test(audioEngine) && /bgmGain\.gain\.value\s*=\s*_bgmGain\(pct\)/.test(audioEngine));
+    /!enabled\s*\|\|\s*bgmVolumePct\s*<=\s*0/.test(audioEngine) && /applyTrackGain\(resolveTrack\(previewKey\s*\|\|\s*currentKey\)\)/.test(audioEngine));
   check(`${file}: 同一BGMの重複ソースを作らない`, /bgmSource\s*&&\s*bgmSourceKey\s*===\s*key/.test(audioEngine));
 }
 process.exit(failed ? 1 : 0);
