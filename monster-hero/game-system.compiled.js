@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ed8510d500916bad
+// source-sha256: 57716bdeec7fa4b0
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -542,6 +542,7 @@ const Audio_ = (() => {
   const ensurePlaying = key => {
     if (enabled && key === currentKey && !bgmSource && !jingleSource) playBGM(key);
   };
+  const isContextRunning = () => !!audioCtx && audioCtx.state === 'running';
   const se = {
     attack: async () => {
       if (!enabled) return;
@@ -1137,6 +1138,7 @@ const Audio_ = (() => {
     prepareBGM,
     playJingle,
     ensurePlaying,
+    isContextRunning,
     se
   };
 })();
@@ -3072,6 +3074,8 @@ function MonsterHeroGame() {
   // refも併用し、pointerdown直後のclickが同じ操作でトップ遷移を始めないよう同期的に判定する。
   const [bootSoundUnlocked, setBootSoundUnlocked] = useState(false);
   const bootSoundUnlockedRef = useRef(false);
+  const entryAnimatingRef = useRef(false);
+  const titleStartingRef = useRef(false);
   const [showTitleSettings, setShowTitleSettings] = useState(false);
   const [titlePlayerId] = useState(() => {
     try {
@@ -3907,26 +3911,50 @@ function MonsterHeroGame() {
     };
   }, [bootPhase, masuMons]);
   const unlockBootSound = async () => {
-    if (bootSoundUnlockedRef.current || entryAnimating || bootPhase !== 'ENTRY_READY') return;
+    if (entryAnimatingRef.current || bootPhase !== 'ENTRY_READY') return;
+    entryAnimatingRef.current = true;
     setEntryAnimating(true);
-    let unlocked = false;
+    // iOSのuser activationが有効な同じイベント処理内で、解除とBGM開始を両方開始する。
+    let unlockAttempt;
+    let bgmAttempt;
     try {
-      const attempt = (async () => {
-        const audioReady = await Audio_.unlock();
-        await Audio_.playBGM('title');
-        Audio_.ensurePlaying('title');
-        unlocked = audioReady;
-      })();
-      await Promise.race([attempt, new Promise(r => setTimeout(r, 1600))]);
-    } catch {}
-    if (!unlocked) {
-      setEntryAnimating(false);
-      return;
+      unlockAttempt = Promise.resolve(Audio_.unlock()).catch(() => false);
+    } catch {
+      unlockAttempt = Promise.resolve(false);
     }
-    bootSoundUnlockedRef.current = true;
-    setBootSoundUnlocked(true);
-    setTimeout(() => setBootPhase('TITLE'), 760);
+    try {
+      bgmAttempt = Promise.resolve(Audio_.playBGM('title')).catch(() => false);
+    } catch {
+      bgmAttempt = Promise.resolve(false);
+    }
+    // ここでは完了を待たないが、拒否は上で処理し、同じタップ中に開始した試行を維持する。
+    void bgmAttempt;
+    try {
+      const [audioResult] = await Promise.all([Promise.race([unlockAttempt.then(value => ({
+        settled: true,
+        value
+      })), new Promise(r => setTimeout(() => r({
+        settled: false,
+        value: false
+      }), 1000))]), new Promise(r => setTimeout(r, 760))]);
+      // unlock()がvoidを返す実装でも、実際のAudioContext状態から成功を判定する。
+      if (audioResult.settled && (audioResult.value === true || Audio_.isContextRunning())) {
+        bootSoundUnlockedRef.current = true;
+        setBootSoundUnlocked(true);
+      }
+    } catch {}
+    // 音声の成否とは分離し、1回の操作から最大1秒で必ずタイトルへ進める。
+    setBootPhase('TITLE');
   };
+  useEffect(() => {
+    if (bootPhase !== 'TITLE') return;
+    const retryTimers = [0, 300, 1000].map(delay => setTimeout(() => {
+      try {
+        Audio_.ensurePlaying('title');
+      } catch {}
+    }, delay));
+    return () => retryTimers.forEach(clearTimeout);
+  }, [bootPhase]);
   const prepareGameEntry = async () => {
     try {
       const image = new Image();
@@ -3935,14 +3963,18 @@ function MonsterHeroGame() {
     } catch {}
   };
   const startGame = async () => {
-    if (titleStarting || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showAudioSettings || showBackup) return;
+    if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showAudioSettings || showBackup) return;
+    titleStartingRef.current = true;
     setTitleStarting(true);
     setShowChangelog(false);
     setShowTitleSettings(false);
+    setShowAudioSettings(false);
+    setShowBackup(false);
     setBootPhase('ENTERING_GAME');
     const slow = setTimeout(() => setEnteringSlow(true), 1200);
-    await Promise.race([prepareGameEntry(), new Promise(r => setTimeout(r, 5000))]);
-    await new Promise(r => setTimeout(r, 850));
+    try {
+      await Promise.all([Promise.race([Promise.resolve().then(prepareGameEntry).catch(() => {}), new Promise(r => setTimeout(r, 1900))]), new Promise(r => setTimeout(r, 850))]);
+    } catch {}
     clearTimeout(slow);
     setEnteringSlow(false);
     setBootPhase('GAME');
@@ -7375,9 +7407,10 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement(Settings, {
     size: 19
   }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("button", {
+    type: "button",
     className: "mh-title-start",
-    disabled: !!titleModal,
-    onClick: startGame,
+    disabled: !!titleModal || titleStarting,
+    onPointerDown: startGame,
     "aria-label": "\u30C8\u30C3\u30D7\u753B\u9762\u3078\u9032\u3080"
   }), titleModal);
   if (bootPhase === 'ENTERING_GAME') return /*#__PURE__*/React.createElement("main", {
@@ -13691,12 +13724,12 @@ const createAnimationStyle = () => {
     .mh-boot-copy{position:relative;z-index:2;width:min(100%,340px)}.mh-boot-copy h1{font-size:clamp(20px,6vw,30px);font-weight:1000;letter-spacing:.22em;color:#fff;text-shadow:0 0 18px #c084fc;margin:0 0 8px}.mh-boot-copy h2{font-size:12px;color:#ddd6fe;letter-spacing:.12em;margin:0 0 18px}.mh-boot-copy p{min-height:18px;font-size:10px;color:#c4b5fd;margin-top:10px}.mh-progress{height:10px;border:1px solid #c4b5fd88;border-radius:99px;background:#080617;overflow:hidden}.mh-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#7c3aed,#d8b4fe,#fbbf24);box-shadow:0 0 14px #c084fc;transition:width .25s}.mh-boot-copy strong{display:block;margin-top:7px;font:800 11px monospace}.mh-boot-copy button{width:100%;min-height:56px;border:1px solid #f8d477;border-radius:18px;background:linear-gradient(135deg,#4c1d95dd,#7e22cedd);box-shadow:0 0 25px #a855f766;color:#fff;font-size:clamp(15px,5vw,20px);font-weight:1000;letter-spacing:.12em;touch-action:manipulation}.mh-boot-screen footer{position:absolute;z-index:2;bottom:calc(8px + env(safe-area-inset-bottom));font:8px monospace;color:#7773a0;letter-spacing:.15em}
     .mh-boot-screen.is-ready .mh-mocchi-wrap img{animation:mhReadyHop .75s ease-out 1,mhMocchiHop 1.8s ease-in-out .75s infinite}.mh-boot-screen.is-ready .mh-boot-copy{animation:titleReveal .55s ease-out both}.mh-boot-screen.is-ready .mh-mocchi-wrap i{display:block;animation:mhSparkle 1.5s infinite}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(1){top:10%;left:4%}.mh-boot-screen.is-ready .mh-mocchi-wrap i:nth-of-type(2){top:24%;right:0;animation-delay:.55s}.mh-boot-screen.is-entering .mh-mocchi-wrap img{animation:mhBigHop .75s ease-in-out both}.mh-entry-flash{position:absolute;z-index:9;inset:0;pointer-events:none;background:radial-gradient(circle,#fff 0,#d8b4fe 18%,transparent 58%);opacity:0}.mh-boot-screen.is-entering .mh-entry-flash{animation:mhEntryFlash .76s ease-in both}
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
-    .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;left:50%;bottom:calc(5% + env(safe-area-inset-bottom));width:min(72vw,330px);height:12%;transform:translateX(-50%);touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
+    .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
     .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:8px}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
-    @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}.mh-title-start{bottom:2%}}
+    @media(max-height:620px){.mh-mocchi-wrap{width:105px;height:105px;margin-bottom:5px}.mh-boot-copy h2{margin-bottom:10px}.mh-boot-copy p{margin-top:5px}}
     @media(prefers-reduced-motion:reduce){.mh-mocchi-wrap img,.mh-mocchi-wrap span,.mh-mocchi-wrap i{animation:none!important}.mh-entering>img{animation:mhReducedFade .85s ease both}.mh-gate-core,.mh-gate-particles{display:none}.mh-gate-flash{animation:mhReducedFlash .85s ease both}}@keyframes mhReducedFade{to{opacity:.4}}@keyframes mhReducedFlash{0%,55%{opacity:0}100%{opacity:1}}
     `;
   document.head.appendChild(style);
