@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a80ba8b224ef48cd
+// source-sha256: 755ca32a4cab805a
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 16:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 16:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3769,23 +3769,18 @@ function MonsterHeroGame() {
 
   // 新バージョン検知: ホーム画面アプリ/背面タブ復帰時は自動再読み込みされず古いバージョンの
   // ままタップしても反応しないように見える不具合が繰り返し報告されたため、version.jsonを
-  // 頻繁に確認しBUILD_DATEと異なれば更新バナーを出す。さらに、ページを開いた直後(まだ
-  // ゲーム進行中でなく再読み込みしても損失が無いタイミング)に限っては、バナーのタップ待ちにせず
-  // 自動でリロードして常に最新版に揃える(タップし忘れて古いまま使い続けてしまう問題への対策)
+  // 頻繁に確認しBUILD_DATEと異なれば更新ボタンを出す。初回確認でも自動再読み込みはせず、
+  // プレイ中の進行を失わないよう必ず利用者のタップで更新する。
   useEffect(() => {
-    let isFirstCheck = true;
+    let cancelled = false;
     const checkVersion = async () => {
-      const wasFirstCheck = isFirstCheck;
-      isFirstCheck = false;
       try {
         const res = await fetch('version.json?t=' + Date.now(), {
           cache: 'no-store'
         });
         if (!res.ok) return;
         const data = await res.json();
-        if (data && data.build && data.build !== BUILD_DATE) {
-          if (wasFirstCheck) window.location.reload();else setUpdateAvailable(true);
-        }
+        if (!cancelled && data && data.build && data.build !== BUILD_DATE) setUpdateAvailable(true);
       } catch {}
     };
     checkVersion();
@@ -3794,13 +3789,19 @@ function MonsterHeroGame() {
     };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('pageshow', onVisible);
-    const interval = setInterval(checkVersion, 2 * 60 * 1000);
+    const interval = setInterval(checkVersion, 30 * 1000);
     return () => {
+      cancelled = true;
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('pageshow', onVisible);
       clearInterval(interval);
     };
   }, []);
+  const reloadLatestVersion = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('mh_refresh', Date.now().toString());
+    window.location.replace(url.toString());
+  };
 
   // 正式タイトルに必要なものだけを直列に確認する。重いゲーム素材はENTRY_READY後の
   // idleキューへ分離し、タイトル操作と音声開始を妨げない。
@@ -7284,6 +7285,18 @@ function MonsterHeroGame() {
     className: "text-[9px] text-slate-300 leading-relaxed italic"
   }, "\"", mon.unique.effectDesc, "\"")));
   const pct = Math.round(bootProgress.done / Math.max(1, bootProgress.total) * 100);
+  // body直下へ描画し、各画面のoverflow・transform・モーダルの積層に隠されないようにする。
+  const updateNotice = updateAvailable ? ReactDOM.createPortal(/*#__PURE__*/React.createElement("button", {
+    type: "button",
+    "aria-live": "assertive",
+    onClick: reloadLatestVersion,
+    className: "fixed z-[100000] left-3 right-3 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]",
+    style: {
+      top: 'calc(8px + env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement(RefreshCcw, {
+    size: 18
+  }), /*#__PURE__*/React.createElement("span", null, "\u65B0\u3057\u3044\u30D0\u30FC\u30B8\u30E7\u30F3\u304C\u3042\u308A\u307E\u3059\u3000\u66F4\u65B0\u3059\u308B")), document.body) : null;
   const titleModal = showChangelog ? /*#__PURE__*/React.createElement("div", {
     className: "mh-title-modal",
     onPointerDown: e => e.stopPropagation()
@@ -7399,7 +7412,7 @@ function MonsterHeroGame() {
     className: "mh-dialog-choice",
     onClick: restoreFromBackupCode
   }, "\u3053\u306E\u30B3\u30FC\u30C9\u3067\u5FA9\u5143\u3059\u308B")), restoreMsg && /*#__PURE__*/React.createElement("p", null, restoreMsg))) : null;
-  if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return /*#__PURE__*/React.createElement("main", {
+  if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     className: `mh-boot-screen ${bootPhase === 'ENTRY_READY' ? 'is-ready' : ''} ${entryAnimating ? 'is-entering' : ''}`
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-boot-stars",
@@ -7422,8 +7435,8 @@ function MonsterHeroGame() {
     onPointerDown: unlockBootSound
   }, "TOUCH TO ENTER"), /*#__PURE__*/React.createElement("h2", null, "\u2015 \u5192\u967A\u306E\u6249\u3092\u958B\u304F \u2015"), /*#__PURE__*/React.createElement("p", null, "\u8FFD\u52A0\u30C7\u30FC\u30BF\u306F\u30D0\u30C3\u30AF\u30B0\u30E9\u30A6\u30F3\u30C9\u3067\u8AAD\u307F\u8FBC\u307F\u3092\u7D9A\u3051\u307E\u3059"))), /*#__PURE__*/React.createElement("footer", null, "VERSION ", BUILD_DATE), /*#__PURE__*/React.createElement("div", {
     className: "mh-entry-flash"
-  }));
-  if (bootPhase === 'TITLE') return /*#__PURE__*/React.createElement("main", {
+  })), updateNotice);
+  if (bootPhase === 'TITLE') return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     className: "mh-title-gate",
     "aria-label": "Monster Hero \u30BF\u30A4\u30C8\u30EB\u753B\u9762"
   }, /*#__PURE__*/React.createElement("img", {
@@ -7458,8 +7471,8 @@ function MonsterHeroGame() {
     disabled: !!titleModal || titleStarting,
     onPointerDown: startGame,
     "aria-label": "\u30C8\u30C3\u30D7\u753B\u9762\u3078\u9032\u3080"
-  }), titleModal);
-  if (bootPhase === 'ENTERING_GAME') return /*#__PURE__*/React.createElement("main", {
+  }), titleModal), updateNotice);
+  if (bootPhase === 'ENTERING_GAME') return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     className: "mh-entering"
   }, /*#__PURE__*/React.createElement("img", {
     src: "data/images/title-screen-clean.PNG",
@@ -7470,7 +7483,7 @@ function MonsterHeroGame() {
     className: "mh-gate-particles"
   }), /*#__PURE__*/React.createElement("div", {
     className: "mh-gate-flash"
-  }), enteringSlow && /*#__PURE__*/React.createElement("p", null, "\u4E16\u754C\u3092\u69CB\u7BC9\u3057\u3066\u3044\u307E\u3059\u2026"));
+  }), enteringSlow && /*#__PURE__*/React.createElement("p", null, "\u4E16\u754C\u3092\u69CB\u7BC9\u3057\u3066\u3044\u307E\u3059\u2026")), updateNotice);
   return /*#__PURE__*/React.createElement("div", {
     onPointerDown: e => {
       const rect = e.currentTarget.getBoundingClientRect();
@@ -7480,17 +7493,7 @@ function MonsterHeroGame() {
     style: {
       height: '100%'
     }
-  }, updateAvailable && /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    "aria-live": "assertive",
-    onClick: () => window.location.reload(),
-    className: "fixed z-[200] left-3 right-3 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]",
-    style: {
-      top: 'calc(8px + env(safe-area-inset-top))'
-    }
-  }, /*#__PURE__*/React.createElement(RefreshCcw, {
-    size: 18
-  }), /*#__PURE__*/React.createElement("span", null, "\u65B0\u3057\u3044\u30D0\u30FC\u30B8\u30E7\u30F3\u304C\u3042\u308A\u307E\u3059\u3000\u66F4\u65B0\u3059\u308B")), /*#__PURE__*/React.createElement("div", {
+  }, updateNotice, /*#__PURE__*/React.createElement("div", {
     className: "relative z-10 h-full flex flex-col",
     style: screenShake ? {
       animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'

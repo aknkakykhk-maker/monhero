@@ -1,4 +1,4 @@
-// BUILD_DATE(src/game-system.jsx)と version.json を「今の日本時間」に揃える。
+// BUILD_DATE、version.json、index.htmlの本体JSキャッシュキーを「今の日本時間」に揃える。
 //
 //   node stamp-version.js            … 現在時刻(JST)で更新する
 //   node stamp-version.js --print    … 更新せず、いま打たれる値だけ表示する
@@ -32,8 +32,17 @@ if (replaced === src) {
   console.error('NG: BUILD_DATE の宣言が見つかりませんでした');
   process.exit(1);
 }
+const indexPath = path.join(REPO_ROOT, 'monster-hero', 'index.html');
+const index = fs.readFileSync(indexPath, 'utf8');
+const gameBuild = stamp.replace(/[- :]/g, '');
+const replacedIndex = index.replace(/var GAME_BUILD = '[^']*';/, `var GAME_BUILD = '${gameBuild}';`);
+if (replacedIndex === index) {
+  console.error('NG: index.html の GAME_BUILD 宣言が見つかりませんでした');
+  process.exit(1);
+}
 fs.writeFileSync(GAME_SYSTEM, replaced);
 fs.writeFileSync(path.join(REPO_ROOT, 'monster-hero', 'version.json'), `{"build": "${stamp}"}\n`);
+fs.writeFileSync(indexPath, replacedIndex);
 
-console.log(`BUILD_DATE と version.json を ${stamp} に更新しました`);
+console.log(`BUILD_DATE、version.json、GAME_BUILD を ${stamp} に更新しました`);
 console.log('※ data/changelog.js に追記する日時もこの値に合わせてください');
