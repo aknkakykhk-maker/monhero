@@ -20,4 +20,8 @@ check('HOMEだけで歩行コンポーネントを生成する', /gameState==='H
 check('画面離脱と非表示でタイマーを破棄する', /return \(\) => \{ mountedRef\.current = false; clearMotionTimer\(\); document\.removeEventListener\('visibilitychange'/.test(source));
 check('保存キーと選択上限を実装する', source.includes("storeSet('mh_home_pasture_ids',next,false)") && /prev\.length>=5 \? prev/.test(source));
 check('個体の下位置をz-indexへ反映する', source.includes('zIndex:Math.round(motion.y)'));
+check('M/B管理で放牧設定をモンスター編成の後に表示する', source.indexOf('>モンスター編成</button>') < source.indexOf('onClick={openPastureSettings}'));
+check('選択中の最大5体を上部から解除できる', source.includes('aria-label="選択中の放牧マスモン"') && source.includes('Array.from({length:5}') && source.includes('を放牧から外す'));
+check('放牧一覧で共通の並べ替え・表示設定・詳細を使う', /gameState==='PASTURE_SETTINGS'[\s\S]*renderMonsterSortFilterBar\(\{singleType:true\}\)[\s\S]*monsterEntryMatchesDisplayFlags[\s\S]*setMasuMonDetail/.test(source));
+check('転生星を画像下中央へ共通配置する', source.includes('.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}') && !source.includes('className="absolute -top-1 inset-x-0"'));
 process.exit(failed?1:0);
