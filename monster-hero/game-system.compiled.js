@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 67389853cb938f5a
+// source-sha256: 2504acced5c29454
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -7488,9 +7488,11 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "mh-home-sky"
   }), /*#__PURE__*/React.createElement("div", {
-    className: "mh-home-buildings"
-  }, /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-ridge"
+  }), /*#__PURE__*/React.createElement("div", {
     className: "mh-home-plaza"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-path"
   })), /*#__PURE__*/React.createElement("header", {
     className: "mh-home-status"
   }, /*#__PURE__*/React.createElement("section", {
@@ -7521,60 +7523,57 @@ function MonsterHeroGame() {
     "aria-label": "\u8A2D\u5B9A"
   }, /*#__PURE__*/React.createElement(Settings, {
     size: 20
-  }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("div", {
-    className: "mh-home-masumon-field",
-    "aria-label": "\u5C06\u6765\u306E\u30DE\u30B9\u30E2\u30F3\u8868\u793A\u30A8\u30EA\u30A2"
-  }), /*#__PURE__*/React.createElement("nav", {
-    className: "mh-home-menu-layer",
-    "aria-label": "\u30DB\u30FC\u30E0\u30E1\u30CB\u30E5\u30FC"
-  }, [{
-    label: '編成',
-    icon: /*#__PURE__*/React.createElement(Layers, {
-      size: 25
-    }),
-    action: () => setGameState('FORMATION_MENU')
-  }, {
-    label: 'モンスター一覧',
-    icon: /*#__PURE__*/React.createElement(List, {
-      size: 25
-    }),
-    action: () => setGameState('MONSTER_LIST_MENU')
-  }, {
-    label: '合体',
-    icon: /*#__PURE__*/React.createElement(Gem, {
-      size: 25
-    }),
-    action: () => {
+  }), /*#__PURE__*/React.createElement("span", null, "\u8A2D\u5B9A")))), /*#__PURE__*/React.createElement("section", {
+    className: "mh-home-hub",
+    "aria-label": "\u62E0\u70B9\u306E\u4E2D\u592E\u5E83\u5834"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mh-home-fountain",
+    "aria-hidden": "true"
+  }, /*#__PURE__*/React.createElement("i", null)), /*#__PURE__*/React.createElement("nav", {
+    className: "mh-home-facilities",
+    "aria-label": "\u5468\u8FBA\u65BD\u8A2D"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "facility roster",
+    onClick: () => setGameState('MONSTER_LIST_MENU')
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(List, {
+    size: 22
+  })), /*#__PURE__*/React.createElement("b", null, "\u30E2\u30F3\u30B9\u30BF\u30FC\u4E00\u89A7"), /*#__PURE__*/React.createElement("small", null, "\u4EF2\u9593\u306E\u8A18\u9332")), /*#__PURE__*/React.createElement("button", {
+    className: "facility fusion",
+    onClick: () => {
       resetFusionFlow();
       setGameState('MASU_FUSION');
     }
-  }, {
-    label: 'バトル',
-    icon: /*#__PURE__*/React.createElement(Sword, {
-      size: 29
-    }),
-    featured: true,
-    action: () => {
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Gem, {
+    size: 22
+  })), /*#__PURE__*/React.createElement("b", null, "\u5408\u4F53"), /*#__PURE__*/React.createElement("small", null, "\u7D46\u3092\u53D7\u3051\u7D99\u3050")), /*#__PURE__*/React.createElement("button", {
+    className: "facility profile",
+    onClick: () => setGameState('PROFILE')
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(User, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("b", null, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB")), /*#__PURE__*/React.createElement("button", {
+    className: "facility market",
+    onClick: () => setGameState('BREEDER_MARKET')
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(ShoppingBag, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("b", null, "\u30DE\u30FC\u30B1\u30C3\u30C8")))), /*#__PURE__*/React.createElement("nav", {
+    className: "mh-home-primary",
+    "aria-label": "\u4E3B\u8981\u30E1\u30CB\u30E5\u30FC"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "mh-home-formation",
+    onClick: () => setGameState('FORMATION_MENU')
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Layers, {
+    size: 25
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "\u4EF2\u9593\u3068\u6559\u3048\u3092\u6574\u3048\u308B"), /*#__PURE__*/React.createElement("b", null, "\u7DE8\u6210"))), /*#__PURE__*/React.createElement("button", {
+    className: "mh-home-battle",
+    onClick: () => {
       setBattleMenuTab('difficulty');
       setGameState('BATTLE_MENU');
     }
-  }, {
-    label: 'プロフィール',
-    icon: /*#__PURE__*/React.createElement(User, {
-      size: 25
-    }),
-    action: () => setGameState('PROFILE')
-  }, {
-    label: 'マーケット',
-    icon: /*#__PURE__*/React.createElement(ShoppingBag, {
-      size: 25
-    }),
-    action: () => setGameState('BREEDER_MARKET')
-  }].map(item => /*#__PURE__*/React.createElement("button", {
-    key: item.label,
-    onClick: item.action,
-    className: item.featured ? 'is-battle' : ''
-  }, /*#__PURE__*/React.createElement("span", null, item.icon), /*#__PURE__*/React.createElement("b", null, item.label)))), /*#__PURE__*/React.createElement("footer", {
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Sword, {
+    size: 34
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "\u30B0\u30E9\u30F3\u30C9\u30C1\u30E3\u30F3\u30D4\u30AA\u30F3\u3092\u76EE\u6307\u305B"), /*#__PURE__*/React.createElement("b", null, "\u30D0\u30C8\u30EB")), /*#__PURE__*/React.createElement(ChevronRight, {
+    size: 24
+  }))), /*#__PURE__*/React.createElement("footer", {
     className: "mh-home-tools"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowHelp(true)
@@ -13553,7 +13552,7 @@ const createAnimationStyle = () => {
     .mh-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 9999px; }
     .mh-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 9999px; }
     .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;padding:calc(10px + env(safe-area-inset-top)) 10px calc(8px + env(safe-area-inset-bottom));background:#86bada;color:#fff}.mh-home-background{position:absolute;z-index:-3;inset:0;overflow:hidden;pointer-events:none}.mh-home-sky{position:absolute;inset:0 0 42%;background:linear-gradient(#68b9e8 0,#bce5df 64%,#e9d6a2 100%)}.mh-home-sky:after{content:"";position:absolute;left:10%;top:13%;width:58px;height:22px;border-radius:50%;background:#fff9;box-shadow:44px 5px 0 4px #fff8,210px 28px 0 -2px #fff7}.mh-home-buildings{position:absolute;left:-3%;right:-3%;top:20%;height:35%;display:flex;align-items:flex-end;justify-content:space-between}.mh-home-buildings i{display:block;width:23%;height:68%;border:4px solid #694331;border-radius:8px 8px 2px 2px;background:linear-gradient(90deg,#d7a96e,#f0d19a 45%,#c58e58);box-shadow:0 9px 16px #35552c66}.mh-home-buildings i:before{content:"";display:block;width:118%;height:40%;margin:-21% -9% 0;background:linear-gradient(135deg,#71402f 0 48%,#9d6544 49%);clip-path:polygon(50% 0,100% 100%,0 100%);filter:drop-shadow(0 4px 0 #4e3227)}.mh-home-buildings i:nth-child(2),.mh-home-buildings i:nth-child(3){height:92%;width:27%}.mh-home-plaza{position:absolute;inset:43% -20% -20%;border-radius:50% 50% 0 0;background-color:#b8a174;background-image:radial-gradient(circle at 50% 0,#eadbb4 0,#c9b486 50%,#927a55 100%),repeating-linear-gradient(12deg,transparent 0 28px,#765f3d33 29px 31px);box-shadow:inset 0 12px 22px #fff7}.mh-home-status{position:relative;z-index:4;display:flex;gap:9px;justify-content:space-between;padding:1px 2px}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:linear-gradient(145deg,#183b37e8,#102b2be8);box-shadow:0 4px 12px #13251e99,inset 0 1px #fff3}.mh-home-player{display:flex;align-items:center;gap:7px;min-width:0;flex:1;padding:6px;border-radius:16px}.mh-home-avatar{flex:0 0 43px;width:43px;height:43px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:8px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:5px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d);box-shadow:0 0 6px #9fffa9}.mh-home-wallet{display:grid;grid-template-columns:auto 46px;grid-template-rows:1fr 1fr;width:145px;padding:5px;border-radius:16px}.mh-home-wallet>div{display:grid;grid-template-columns:16px 1fr auto;align-items:center;gap:2px;padding:1px 4px;color:#ffe08a}.mh-home-wallet>div b{font-size:9px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900}.mh-home-masumon-field{position:absolute;z-index:0;left:25%;right:25%;top:24%;bottom:21%;pointer-events:none}.mh-home-menu-layer{position:absolute;z-index:2;inset:94px 12px calc(49px + env(safe-area-inset-bottom));display:grid;grid-template-columns:82px 82px;grid-template-rows:repeat(3,minmax(64px,1fr));justify-content:space-between;align-items:center;pointer-events:none}.mh-home-menu-layer button{pointer-events:auto;position:relative;min-height:62px;padding:5px 3px 7px;border:2px solid #f4d282;border-radius:18px;color:#fff;background:linear-gradient(160deg,#315847f2,#172e2af2);box-shadow:0 5px 0 #483421,0 8px 15px #19321daa,inset 0 1px #fff4;text-shadow:0 2px 2px #000;transition:transform .1s,filter .1s;touch-action:manipulation}.mh-home-menu-layer button:active{transform:scale(.92);filter:brightness(1.35) drop-shadow(0 0 8px #fff1a8)}.mh-home-menu-layer button.is-battle{transform:scale(1.1);border-color:#fff0a6;background:linear-gradient(145deg,#5b3ec8f5,#2d236bf5);box-shadow:0 6px 0 #352464,0 10px 22px #392a8dcc,inset 0 1px #fff7,0 0 18px #ffe68199}.mh-home-menu-layer button.is-battle:before{content:"MAIN";position:absolute;right:-5px;top:-8px;padding:2px 6px;border-radius:8px;background:#f5d66f;color:#352464;font-size:6px;font-weight:1000;letter-spacing:.08em;text-shadow:none;box-shadow:0 2px 5px #0006}.mh-home-menu-layer button.is-battle span{color:#fff4a8;background:#211557cc}.mh-home-menu-layer button.is-battle b{font-size:11px}.mh-home-menu-layer button.is-battle:active{transform:scale(1.01)}.mh-home-menu-layer button span{display:flex;width:38px;height:34px;margin:0 auto 2px;align-items:center;justify-content:center;border-radius:12px;color:#ffe69b;background:#0c2524aa}.mh-home-menu-layer button b{display:block;font-size:9px;line-height:1.05}.mh-home-tools{position:absolute;z-index:3;left:10px;right:10px;bottom:calc(12px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;pointer-events:none}.mh-home-tools button{pointer-events:auto;position:relative;display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 10px;border:1px solid #eed99588;border-radius:13px;background:#173633e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007;transition:transform .1s}.mh-home-tools button:active{transform:scale(.92)}.mh-home-tools em{position:absolute;right:-4px;top:-7px;padding:1px 4px;border-radius:7px;background:#dc2626;color:#fff;font-size:6px;font-style:normal}@media(max-width:350px){.mh-home-player-copy strong{max-width:95px}.mh-home-wallet{width:125px}.mh-home-menu-layer{grid-template-columns:72px 72px}.mh-home-menu-layer button b{font-size:8px}}@media(max-height:620px){.mh-home-menu-layer{top:78px;grid-template-rows:repeat(3,minmax(56px,1fr))}.mh-home-menu-layer button{min-height:54px}.mh-home-menu-layer button span{height:28px}.mh-home-masumon-field{top:25%;bottom:19%}}@media(prefers-reduced-motion:reduce){.mh-home-menu-layer button,.mh-home-tools button{transition:none}}
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:#142d2d;color:#fff}.mh-home-background{position:absolute;z-index:-3;inset:0;overflow:hidden;pointer-events:none;background:linear-gradient(#142e39 0,#31554d 43%,#1c352f 100%)}.mh-home-sky{position:absolute;inset:0 0 56%;background:radial-gradient(circle at 74% 18%,#f5df9c88 0 4%,transparent 18%),linear-gradient(#183542,#527466 72%,#a88e5d)}.mh-home-sky:after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 20%,#d9f2ce17 44%,transparent 63%)}.mh-home-ridge{position:absolute;left:-8%;right:-8%;top:24%;height:27%;background:linear-gradient(145deg,#14281f 0 24%,#2c4b34 25% 45%,#182c22 46% 65%,#36543a 66%);clip-path:polygon(0 48%,12% 23%,24% 48%,39% 5%,56% 50%,72% 18%,87% 46%,100% 10%,100% 100%,0 100%);filter:drop-shadow(0 8px 9px #091b17)}.mh-home-plaza{position:absolute;left:-24%;right:-24%;top:38%;bottom:-13%;border-radius:50% 50% 0 0;background:radial-gradient(ellipse at 50% 34%,#b9a476 0 5%,#816f4e 6% 20%,#4f593d 21% 34%,#253d31 61%,#142720 100%);box-shadow:inset 0 10px 25px #d8cc9652}.mh-home-path{position:absolute;left:33%;right:33%;top:54%;bottom:-8%;background:linear-gradient(90deg,transparent,#b39d7055 18%,#cab78788 50%,#b39d7055 82%,transparent);clip-path:polygon(39% 0,61% 0,100% 100%,0 100%)}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a66;background:linear-gradient(145deg,#173532f2,#0b2021f2);box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-hub{position:absolute;z-index:1;inset:72px 10px calc(178px + env(safe-area-inset-bottom))}.mh-home-fountain{position:absolute;left:50%;top:47%;width:84px;height:40px;transform:translate(-50%,-50%);border:5px solid #b7b098;border-radius:50%;background:radial-gradient(ellipse,#60989b 0 36%,#374f4c 38% 54%,#a39b83 56%);box-shadow:0 8px 10px #071713aa,inset 0 0 10px #b8ffff88}.mh-home-fountain:before{content:"";position:absolute;left:50%;bottom:20px;width:25px;height:40px;transform:translateX(-50%);border-radius:50% 50% 20% 20%;background:linear-gradient(90deg,#827d6d,#d2c9aa,#777365);box-shadow:0 5px 6px #0007}.mh-home-fountain i{position:absolute;z-index:2;left:50%;bottom:48px;width:4px;height:27px;transform:translateX(-50%);border-radius:50%;background:#a7eff4aa;box-shadow:-9px 8px 0 -1px #9ae6ec99,9px 8px 0 -1px #9ae6ec99}.mh-home-facilities{position:absolute;inset:0}.mh-home-facilities button{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:67px;width:105px;padding:7px 5px;border:2px solid #cbb982;border-radius:17px 17px 12px 12px;background:linear-gradient(155deg,#315447f5,#102925f5);box-shadow:0 5px 0 #382b1d,0 10px 18px #071a15bb,inset 0 1px #fff3;text-shadow:0 2px 2px #000;touch-action:manipulation}.mh-home-facilities button:before{content:"";position:absolute;left:6px;right:6px;top:-12px;height:18px;background:#704a35;clip-path:polygon(50% 0,100% 100%,0 100%);z-index:-1}.mh-home-facilities button:active,.mh-home-primary button:active,.mh-home-tools button:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-facilities span{display:flex;align-items:center;justify-content:center;width:34px;height:30px;border-radius:10px;background:#071d1aaa;color:#f5db8a}.mh-home-facilities b{font-size:9px;margin-top:2px}.mh-home-facilities small{font-size:6px;color:#d8cfb2}.mh-home-facilities .roster{right:1px;top:10%}.mh-home-facilities .fusion{left:1px;top:18%}.mh-home-facilities .profile{left:5px;bottom:3%;width:92px;min-height:54px}.mh-home-facilities .market{right:5px;bottom:0;width:92px;min-height:54px}.mh-home-primary{position:absolute;z-index:4;left:10px;right:10px;bottom:calc(47px + env(safe-area-inset-bottom));display:grid;grid-template-columns:35% 1fr;gap:9px;align-items:stretch}.mh-home-primary button{min-height:91px;border-radius:20px;border:2px solid #e0ca85;box-shadow:0 6px 0 #352a20,0 11px 22px #061511cc,inset 0 1px #fff5;touch-action:manipulation;transition:transform .1s,filter .1s}.mh-home-formation{display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(150deg,#35584b,#162f2b);color:#fff}.mh-home-formation span{color:#f4df9a}.mh-home-formation div{display:flex;flex-direction:column-reverse}.mh-home-formation small{font-size:6px;color:#d8d1b8}.mh-home-formation b{font-size:14px}.mh-home-battle{position:relative;display:grid;grid-template-columns:52px 1fr 24px;align-items:center;text-align:left;padding:9px 10px;background:linear-gradient(135deg,#713333,#b95432 48%,#5b2627);color:#fff;border-color:#ffe1a0!important;box-shadow:0 7px 0 #482121,0 12px 28px #200b09dd,inset 0 1px #fff8,0 0 20px #e9a34d77!important;overflow:hidden}.mh-home-battle:before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,#fff2 46%,transparent 61%)}.mh-home-battle>span{position:relative;display:flex;width:47px;height:47px;align-items:center;justify-content:center;border-radius:50%;background:#250f13aa;color:#ffe29d;border:1px solid #ffd68788}.mh-home-battle div{position:relative;display:flex;flex-direction:column}.mh-home-battle b{font-size:21px;line-height:1;text-shadow:0 3px 3px #180509}.mh-home-battle small{font-size:6px;color:#ffe9bd;margin-bottom:4px}.mh-home-battle>svg{position:relative;color:#ffe3a0}.mh-home-tools{position:absolute;z-index:5;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;pointer-events:none}.mh-home-tools button{pointer-events:auto;position:relative;display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed99577;border-radius:13px;background:#102c29f2;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-tools em{position:absolute;right:-4px;top:-7px;padding:1px 4px;border-radius:7px;background:#dc2626;color:#fff;font-size:6px;font-style:normal}@media(max-width:350px){.mh-home-player-copy strong{max-width:90px}.mh-home-wallet{width:124px}.mh-home-facilities button{width:94px}.mh-home-primary{grid-template-columns:33% 1fr}.mh-home-battle{grid-template-columns:43px 1fr 18px;padding:8px 7px}.mh-home-battle>span{width:40px;height:40px}.mh-home-battle b{font-size:18px}}@media(max-height:620px){.mh-home-hub{inset:66px 10px calc(158px + env(safe-area-inset-bottom))}.mh-home-facilities button{min-height:55px}.mh-home-primary{bottom:calc(43px + env(safe-area-inset-bottom))}.mh-home-primary button{min-height:78px}.mh-home-fountain{top:45%;transform:translate(-50%,-50%) scale(.84)}}@media(prefers-reduced-motion:reduce){.mh-home-facilities button,.mh-home-primary button,.mh-home-tools button{transition:none}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}
     .mh-boot-stars{position:absolute;inset:0;background-image:radial-gradient(circle,#e9d5ff 0 1px,transparent 1.5px);background-size:39px 41px;opacity:.28}
     .mh-mocchi-wrap{position:relative;z-index:2;width:min(42vw,180px);height:min(42vw,180px);display:flex;align-items:flex-end;justify-content:center;margin-bottom:clamp(8px,3vh,24px)}
