@@ -1417,7 +1417,9 @@ const RewardSummaryCard = ({ summary }) => (
 );
 
 function MonsterHeroGame() {
-  const [gameState, setGameState] = useState('TITLE');
+  const [gameState, setGameState] = useState('HOME');
+  const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
+  const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
   const [difficulty, setDifficulty] = useState('Normal');
   const [score, setScore] = useState(0);
   const [highScores, setHighScores] = useState({});
@@ -1938,7 +1940,7 @@ function MonsterHeroGame() {
   const RUN_PHASE_STATES = ['PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','REWARD_PICK','UPGRADE_SKILL','WAVE_RESULT','CHAMPION'];
   // 画面から鳴らすべき曲のキーを決める
   const bgmKeyForState = (state, isBoss, wavesDone) => {
-    if (state === 'TITLE') return 'title';
+    if (state === 'HOME') return 'title';
     if (BGM_STATE_MAP[state]) return BGM_STATE_MAP[state];
     if (PROFILE_BGM_STATES.includes(state)) return 'profile';
     if (state === 'BATTLE') return isBoss ? 'boss' : 'battle';
@@ -2102,6 +2104,7 @@ function MonsterHeroGame() {
     if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showAudioSettings || showBackup) return;
     titleStartingRef.current = true;
     setTitleStarting(true);
+    setGameState('HOME');
     setShowChangelog(false); setShowTitleSettings(false); setShowAudioSettings(false); setShowBackup(false);
     setBootPhase('ENTERING_GAME');
     const slow = setTimeout(() => setEnteringSlow(true), 1200);
@@ -2706,13 +2709,13 @@ function MonsterHeroGame() {
     if (draftMonsterRoster.length !== STARTER_MONSTER_IDS.length) return;
     setMonsterRosterIds(draftMonsterRoster);
     storeSet('mh_monster_roster', draftMonsterRoster, false);
-    setGameState('PROFILE');
+    setGameState('FORMATION_MENU');
   };
   const confirmTeachingRoster = () => {
     if (draftTeachingRoster.length !== STARTER_TEACHING_IDS.length) return;
     setTeachingRosterIds(draftTeachingRoster);
     storeSet('mh_teaching_roster', draftTeachingRoster, false);
-    setGameState('PROFILE');
+    setGameState('FORMATION_MENU');
   };
 
   // マスモンの強化ポイントを1消費し、対象の距離の間合い適性を1段階上げる。
@@ -3137,7 +3140,7 @@ function MonsterHeroGame() {
     focusedCard:null, enemyIntent:null, effect:null, finalRewardSummary:null, waveHistory:[], gaveUp:false
   });
 
-  const handleGoToTitle = () => {
+  const returnToHome = () => {
     beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
     setRunFinalizing(false);
     const s = resetAllState();
@@ -3152,7 +3155,23 @@ function MonsterHeroGame() {
     setWaveResult(s.waveResult);
     setPendingReward(null); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
-    setGameState('TITLE');
+    setGameState('HOME');
+  };
+
+  const returnToOfficialTitle = () => {
+    returnToHome();
+    setShowOfficialTitleConfirm(false);
+    setShowRanking(false); setShowHelp(false); setShowChangelog(false);
+    setShowTitleSettings(false); setShowAudioSettings(false); setShowBackup(false);
+    setShowDeckInfo(false); setShowEnemyInfo(false); setShowHeroInfo(false); setShowQuitConfirm(false);
+    setShowMasuRegisterModal(false); setShowMasuRenameModal(false); setShowIconPicker(false);
+    setShowSortFilterModal(false); setShowNameEdit(false);
+    setPendingItemUse(null); setXpTicketUse(null); setDyeTargetMasuId(null); setCustomColorPicker(null); setMasuMonDetail(null);
+    setFocusedCard(null); setSkillPicker(null); setRosterDetailMon(null); setRosterDetailTeaching(null); setRosterSkillDetail(null);
+    titleStartingRef.current = false; setTitleStarting(false);
+    entryAnimatingRef.current = false; setEntryAnimating(false);
+    setEnteringSlow(false);
+    setBootPhase('TITLE');
   };
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
@@ -4108,222 +4127,65 @@ function MonsterHeroGame() {
     <div onPointerDown={(e)=>{const rect=e.currentTarget.getBoundingClientRect(); spawnRipple(e.clientX-rect.left, e.clientY-rect.top);}} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={{height:'100%'}}>
       <div className="relative z-10 h-full flex flex-col" style={screenShake?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
-        {/* TITLE */}
-        {gameState==='TITLE'&&(
-          <div className="flex-1 relative flex flex-col items-center justify-end p-4 pb-8 text-center overflow-hidden">
-            {/* Full-body Moo backdrop, allowed to bleed off-screen */}
-            <div className="absolute inset-0 flex items-start justify-center pointer-events-none overflow-hidden">
-              <div style={{width:'620px',height:'620px',background:'radial-gradient(circle at 50% 30%, rgba(168,85,247,0.55) 0%, rgba(2,6,23,0) 56%)'}} className="absolute top-0 animate-pulse"></div>
-              <div className="absolute top-0 left-0 right-0 overflow-hidden" style={{height:'62%'}}>
-                {MOO_FULL && <img src={MOO_FULL} alt="Moo" className="absolute object-contain object-top drop-shadow-[0_0_50px_rgba(168,85,247,0.6)]" style={{width:'250%',maxWidth:'none',top:'2%',left:'50%',transform:'translateX(-50%)'}}/>}
-              </div>
-              <div className="absolute inset-x-0 bottom-0 h-2/3" style={{background:'linear-gradient(to bottom, rgba(2,6,23,0) 0%, rgba(2,6,23,0.5) 32%, rgba(2,6,23,0.95) 58%, #020617 72%)'}}></div>
+        {/* HOME: 正式タイトル(bootPhase === 'TITLE')とは独立したゲーム内トップ */}
+        {gameState==='HOME'&&(
+          <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <div className="text-center mb-4 shrink-0">
+              <h1 className="text-3xl font-black italic text-indigo-300 uppercase tracking-tight">Monster Hero</h1>
+              <p className="text-[10px] text-slate-500 font-black tracking-widest">HOME</p>
             </div>
-            <div className="relative z-10 flex flex-col items-center justify-end w-full max-w-sm gap-2">
-              <div className="shrink-0 w-full flex flex-col items-center mb-1">
-                <h1 className="text-4xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-purple-200 to-purple-500 leading-none uppercase drop-shadow-[0_4px_16px_rgba(0,0,0,1)] whitespace-nowrap">Monster Hero</h1>
-                <p className="text-purple-300 text-[9px] tracking-[0.4em] uppercase font-bold mt-1.5 drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">Grand Champion Quest</p>
-                {/* バージョン表示。背景のムーの絵と重なって読めなかったため、
-                    半透明の黒帯を敷いて明るい文字色にしている */}
-                <div className="mt-1.5 px-2.5 py-0.5 rounded-full bg-black/70 border border-white/15 shadow-lg">
-                  <span className="text-slate-200 text-[9px] font-mono font-bold tracking-widest">ver {BUILD_DATE}</span>
-                </div>
-              </div>
-              <div className="shrink-0 w-full flex flex-col items-center mb-2 relative">
-                <div className="flex items-center gap-2 mb-1">
-                  <Crown size={16} className="text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]"/>
-                  <span className="text-3xl font-black italic text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-purple-200 to-indigo-200 drop-shadow-[0_2px_10px_rgba(129,140,248,0.8)]">LV.{breederLevel.level}</span>
-                </div>
-                <div className="w-full max-w-[240px]">
-                  <div className="h-2.5 bg-slate-900/80 rounded-full overflow-hidden border border-indigo-400/40 shadow-inner">
-                    <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-400 to-pink-400" style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></div>
-                  </div>
-                  <div className="text-[8px] text-indigo-300 font-mono font-bold text-center mt-1 tracking-wider">{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</div>
-                </div>
-                <div className="mt-1.5 flex items-center gap-1.5 bg-amber-950/60 border border-amber-500/30 px-3 py-1 rounded-full">
-                  <Gem size={11} className="text-amber-400"/>
-                  <span className="text-[11px] font-black text-amber-300 font-mono">{gold.toLocaleString()}</span>
-                  <span className="text-[8px] text-amber-500/70 font-bold">ダイヤ</span>
-                </div>
-              </div>
-              <div className="shrink-0 w-full flex flex-col items-center mb-2">
-                {/* ブリーダーのアイコンと名前を押すとプロフィールへ飛ぶ。以前は下のボタン列にも
-                    同じ行き先の「Profile」ボタンがあって重複していたため、こちらに一本化し、
-                    ここがプロフィールへの入口だと分かるようラベルとアイコンを添えている */}
-                <button onClick={()=>setGameState('PROFILE')} className="flex items-center gap-2.5 bg-slate-900/90 border border-violet-500/50 pl-3 pr-2.5 py-2 rounded-2xl active:scale-95 group backdrop-blur-sm shadow-lg">
-                  {resolveIconUrl(breederIcon)?(<div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/20"><img src={resolveIconUrl(breederIcon)} alt="" className="w-full h-full object-cover"/></div>):(<div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center shrink-0"><User size={16} className="text-indigo-400"/></div>)}
-                  <div className="text-left min-w-0">
-                    <div className="text-[7px] text-violet-300 font-black uppercase tracking-widest leading-none flex items-center gap-1"><User size={8}/>プロフィール</div>
-                    <div className="font-black text-sm text-white group-hover:text-indigo-300 transition-colors truncate leading-tight mt-0.5">{breederName}</div>
-                  </div>
-                  <ChevronRight size={14} className="text-violet-400 shrink-0"/>
-                </button>
-              </div>
-              <div className="shrink-0 flex flex-col gap-2 w-full">
-                <div className="grid grid-cols-3 gap-1.5 justify-center">
-                  {Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>(
-                    <button key={key} onClick={()=>setDifficulty(key)}
-                      className={`relative h-9 rounded-lg text-[8px] font-black uppercase transition-all flex items-center justify-center text-center px-1 leading-[1.05] ${difficulty===key?`${setting.shadow} shadow-lg scale-105 z-10 ring-1 ring-white/60`:'border border-white/10'}`}
-                      style={difficultyStyle(setting, difficulty===key)}>{setting.label}</button>
-                  ))}
-                </div>
-                <div className="text-[9px] font-mono text-amber-500 font-bold bg-white/5 py-1.5 rounded-lg border border-white/10">HIGH SCORE ({difficulty}): {(highScores[difficulty]||0).toLocaleString()}</div>
-              </div>
-              <div className="shrink-0 flex flex-col gap-2 w-full mt-2">
-                <button onClick={()=>{setTestMooMode(false); setMonSelection(getActiveMonsterList()); setGameState('PICK_HERO');}} className="w-full bg-white text-black py-3 rounded-xl font-black text-lg active:scale-95 transition-transform uppercase shadow-[0_0_20px_rgba(255,255,255,0.2)]">召喚開始</button>
-                <div className="grid grid-cols-3 gap-2">
-                  
-                  <button onClick={()=>{setRankingKind('score'); setRankingViewDiff(difficulty); setShowRanking(true); loadRankings(difficulty);}} className="w-full bg-slate-900 border border-indigo-500/50 text-indigo-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><Users size={14}/> Ranking</button>
-                  <button onClick={()=>setShowHelp(true)} className="w-full bg-slate-900 border border-emerald-500/50 text-emerald-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-2"><HelpCircle size={14}/> Help</button>
-                  <button onClick={openChangelog} className="relative w-full bg-slate-900 border border-amber-500/50 text-amber-400 py-2.5 rounded-xl font-black text-xs active:scale-95 uppercase flex items-center justify-center gap-1"><Sparkles size={13}/>更新履歴{hasUnreadChangelog&&<span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full border border-white/40 shadow">NEW</span>}</button>
-                </div>
-                <button onClick={()=>setShowAudioSettings(true)} className={`w-full border py-2 rounded-xl font-black text-[11px] active:scale-95 uppercase flex items-center justify-center gap-2 ${audioMuted?'bg-slate-900 border-slate-600/50 text-slate-400':'bg-indigo-950/60 border-indigo-500/40 text-indigo-300'}`}>{audioMuted?'🔇':'🔊'} 音量設定</button>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-sm mx-auto">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  {label:'バトル', icon:<Sword size={18}/>, action:()=>{setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');}},
+                  {label:'編成', icon:<Layers size={18}/>, action:()=>setGameState('FORMATION_MENU')},
+                  {label:'モンスター一覧', icon:<User size={18}/>, action:()=>setGameState('MONSTER_LIST_MENU')},
+                  {label:'合体', icon:<Sparkles size={18}/>, action:()=>{resetFusionFlow();setGameState('MASU_FUSION');}},
+                  {label:'プロフィール', icon:<Crown size={18}/>, action:()=>setGameState('PROFILE')},
+                  {label:'マーケット', icon:<ShoppingBag size={18}/>, action:()=>setGameState('BREEDER_MARKET')},
+                  {label:'ヘルプ', icon:<HelpCircle size={18}/>, action:()=>setShowHelp(true)},
+                  {label:'更新履歴', icon:<RefreshCcw size={18}/>, action:openChangelog},
+                  {label:'設定', icon:<Settings size={18}/>, action:()=>setGameState('SETTINGS')},
+                ].map(item=><button key={item.label} onClick={item.action} className="min-h-[64px] bg-slate-900 border border-indigo-500/30 rounded-2xl px-3 py-4 font-black text-sm active:scale-95 flex items-center justify-center gap-2">{item.icon}{item.label}</button>)}
               </div>
             </div>
-            {/* 更新履歴: 更新情報と不具合情報をタブで切り替える。エントリはdata/changelog.jsに追記する */}
-            {showChangelog&&(
-              <div className="fixed inset-0 z-[9500] flex flex-col items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000}}>
-                <div className="bg-slate-900 border border-amber-500/50 rounded-3xl w-full max-w-sm shadow-2xl flex flex-col" style={{maxHeight:'85vh'}}>
-                  <div className="flex items-center justify-between p-4 pb-2 shrink-0">
-                    <h3 className="text-base font-black text-white uppercase flex items-center gap-2"><Sparkles size={18} className="text-amber-400"/>更新履歴</h3>
-                    <button onClick={()=>setShowChangelog(false)} className="p-2 text-slate-400 active:scale-90"><X size={18}/></button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 px-4 pb-3 shrink-0">
-                    {[{key:'update',label:'更新情報'},{key:'issue',label:'不具合情報'}].map(t=>(
-                      <button key={t.key} onClick={()=>selectChangelogTab(t.key)} className={`relative py-2 rounded-xl font-black text-[11px] uppercase border active:scale-95 ${changelogTab===t.key?'bg-amber-600 border-amber-400 text-white':'bg-slate-800 border-white/10 text-slate-400'}`}>{t.label}{changelogUnread[t.key]&&<span className="ml-1 inline-block bg-red-500 text-white text-[7px] leading-none font-black px-1 py-0.5 rounded-full align-top">NEW</span>}</button>
-                    ))}
-                  </div>
-                  <div className="flex-1 min-h-0 overflow-y-auto mh-scroll px-4 pb-4 space-y-2.5">
-                    {(()=>{
-                      const list=(typeof CHANGELOG!=='undefined'?CHANGELOG:[]).filter(c=>c.type===changelogTab);
-                      if(!list.length) return (<div className="text-center text-[11px] text-slate-500 py-8">まだ{changelogTab==='update'?'更新情報':'不具合情報'}はありません</div>);
-                      return list.map((c,idx)=>{
-                        const isNew=c.date>changelogSeen[changelogTab];
-                        const st=c.status?CHANGELOG_STATUS[c.status]:null;
-                        return (
-                          <div key={idx} className="bg-black/40 border border-white/10 rounded-2xl p-3">
-                            <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
-                              <span className="text-[9px] font-mono text-slate-500">{c.date}</span>
-                              {isNew&&<span className="bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full">NEW</span>}
-                              {st&&<span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full border ${st.cls}`}>{st.label}</span>}
-                            </div>
-                            <div className="text-[12px] font-black text-white mb-1.5">{c.title}</div>
-                            <ul className="space-y-1">
-                              {(c.items||[]).map((it,i)=>(<li key={i} className="text-[10px] text-slate-300 leading-relaxed flex gap-1.5"><span className="text-amber-500 shrink-0">・</span><span>{it}</span></li>))}
-                            </ul>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                </div>
-              </div>
-            )}
-            {showAudioSettings&&(
-              <div className="fixed inset-0 z-[9500] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:95000}}>
-                <div className="bg-slate-900 border border-indigo-500/50 rounded-3xl p-5 w-full max-w-sm shadow-2xl">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-base font-black text-white flex items-center gap-2">{audioMuted?'🔇':'🔊'} 音量設定</h3>
-                    <button onClick={()=>setShowAudioSettings(false)} className="p-1.5 bg-white/10 rounded-full active:scale-90"><X size={16}/></button>
-                  </div>
-                  {!audioOn && <div className="text-[9px] text-slate-500 font-bold mb-3">操作すると音が有効になります</div>}
-                  <button onClick={toggleQuickMute} className={`w-full border py-2.5 rounded-xl font-black text-xs uppercase active:scale-95 mt-2 mb-4 flex items-center justify-center gap-2 ${audioMuted?'bg-slate-800 border-slate-600/50 text-slate-300':'bg-indigo-600 border-indigo-400 text-white'}`}>{audioMuted?'🔇 音がオフです（タップでオン）':'🔊 音はオンです（タップでオフ）'}</button>
-                  <div className="flex flex-col gap-3">
-                    <VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/>
-                    <VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/>
-                  </div>
-                  <button onClick={()=>setShowAudioSettings(false)} className="w-full bg-white text-black py-3 rounded-xl font-black text-xs uppercase active:scale-95 mt-5">閉じる</button>
-                </div>
-              </div>
-            )}
-            {showRanking&&(
-              <div className="fixed inset-0 z-[8000] flex flex-col p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.97)',zIndex:80000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}>
-                <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-4"><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest flex items-center gap-2"><Trophy size={20}/> Ranking</h2><div className="flex items-center gap-2"><button onClick={()=>rankingKind==='score'?loadRankings(rankingViewKey,false,true):loadRankings(null,true,true)} className="p-2 bg-white/10 rounded-full active:scale-90"><RefreshCcw size={18}/></button><button onClick={()=>setShowRanking(false)} className="p-2 bg-white/10 rounded-full"><X size={20}/></button></div></div>
-                <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">
-                  {[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=>(
-                    <button key={t.k} onClick={()=>{setRankingKind(t.k); if(t.k==='score') loadRankings(rankingViewKey); else loadRankings(null,true);}} className={`py-2 rounded-xl text-[10px] font-black uppercase border active:scale-95 ${rankingKind===t.k?'bg-indigo-600 border-indigo-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>
-                  ))}
-                </div>
-                {rankingKind==='score'&&(<><div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide px-1 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=>(<button key={d} onClick={()=>{setRankingViewDiff(d); loadRankings(d);}} className={`px-4 py-2 rounded-full text-[9px] font-black uppercase shrink-0 ${rankingViewDiff===d?'shadow-lg ring-1 ring-white/50':'border border-white/10'}`} style={difficultyStyle(st, rankingViewDiff===d)}>{st.label}</button>))}</div>
-                <div className="flex-1 overflow-y-auto mh-scroll space-y-3 min-h-0">
-                  {(localRankings[rankingViewKey]||[]).length===0?(<div className="h-full flex items-center justify-center text-center px-4 text-slate-600 font-black uppercase text-xs italic">{rankingLoadingByDiff[rankingViewKey]?'Loading...':rankingErrorByDiff[rankingViewKey]?`取得エラー: ${rankingErrorByDiff[rankingViewKey]}`:'No records yet'}</div>):(
-                    (localRankings[rankingViewKey]||[]).map((r,i)=>(
-                      <div key={i} className={`flex flex-col p-3 rounded-2xl border ${i===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`}>
-                        <div className="flex items-center gap-4">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${i===0?'bg-amber-500 text-black':i===1?'bg-slate-300 text-black':i===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{i+1}</div>
-                          {resolveIconUrl(r.icon)&&(<div className="w-7 h-7 rounded-full overflow-hidden border border-white/20 shrink-0"><img src={resolveIconUrl(r.icon)} alt="" className="w-full h-full object-cover"/></div>)}
-                          <div className="flex-1 min-w-0 flex items-center gap-1.5">{r.level!=null&&<span className="shrink-0 px-1.5 py-0.5 rounded-full bg-indigo-600/90 border border-indigo-400/50 text-[7px] font-black text-white">Lv.{r.level}</span>}<div className="text-[11px] font-black text-white truncate uppercase tracking-tighter">{r.userName}</div></div>
-                          <div className="text-right font-mono font-black text-indigo-400 text-sm whitespace-nowrap">{r.score.toLocaleString()} pt</div>
-                        </div>
-                        <div className="mt-2 bg-black/40 rounded-xl p-2 border border-white/5">
-                          {(()=>{ const heroMember = r.party&&r.party.find(p=>p?.name===r.hero); return (
-                            <div className="flex items-center gap-1 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/30 w-fit max-w-full"><Crown size={8} className="text-amber-400 shrink-0"/>{heroMember?.imgUrl?(<img src={heroMember.imgUrl} alt="hero" className="w-5 h-5 object-contain shrink-0"/>):(<span className="text-[10px] shrink-0">{heroMember?.emoji||'👑'}</span>)}<span className="text-[10px] font-black text-white ml-1 truncate">{r.hero}</span>{heroMember?.bondLevel!=null&&<span className="text-[7px] font-black text-pink-300 ml-0.5 shrink-0">Lv.{heroMember.bondLevel}</span>}</div>
-                          ); })()}
-                          {r.party&&r.party.some(p=>p&&p.name!==r.hero)&&(
-                            <div className="grid grid-cols-3 gap-x-1 gap-y-0.5 mt-1.5">
-                              {r.party.filter(p=>p&&p.name!==r.hero).map((p,idx)=>(<div key={idx} className="flex items-center gap-0.5 min-w-0">{p.imgUrl?<img src={p.imgUrl} alt="sub" className="w-5 h-5 object-contain shrink-0"/>:<span className="text-[9px] shrink-0">{p.emoji}</span>}<span className="text-[8px] font-bold text-slate-300 truncate">{p.name}</span>{p.bondLevel!=null&&<span className="text-[7px] font-black text-pink-300 shrink-0">Lv{p.bondLevel}</span>}</div>))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-                <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">{rankingSourceByDiff[rankingViewKey]==='local'?'※ サーバーに接続できず、この端末に保存されたトップ20記録を表示中':'※ 診断のため全国のトップ20記録を表示中'}</div></>)}
-                {rankingKind==='breeder'&&(
-                  <>
-                    <div className="flex-1 overflow-y-auto mh-scroll space-y-2 min-h-0">
-                      {breederRanking.length===0?(<div className="h-full flex items-center justify-center text-slate-600 font-black uppercase text-xs italic">No records yet</div>):(
-                        breederRanking.map((r,i)=>(
-                          <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl border ${i===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${i===0?'bg-amber-500 text-black':i===1?'bg-slate-300 text-black':i===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{i+1}</div>
-                            {resolveIconUrl(r.icon)?<img src={resolveIconUrl(r.icon)} alt="" className="w-8 h-8 rounded-full object-cover shrink-0"/>:<div className="w-8 h-8 rounded-full bg-slate-800 shrink-0"/>}
-                            <div className="flex-1 min-w-0"><div className="text-[12px] font-black text-white truncate">{r.userName}</div></div>
-                            <div className="text-[15px] font-mono font-black text-indigo-300 shrink-0">Lv.{r.level}</div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                    <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">※ 全国のブリーダーのスコア記録から集計しています</div>
-                  </>
-                )}
-                {rankingKind==='bond'&&(
-                  <>
-                    <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-hide px-1 shrink-0">
-                      {['all',...bondRankingMonNames].map(n=>(
-                        <button key={n} onClick={()=>setBondRankMonFilter(n)} className={`px-3 py-1.5 rounded-full text-[9px] font-black shrink-0 border active:scale-95 ${bondRankMonFilter===n?'bg-pink-600 border-pink-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{n==='all'?'すべて':n}</button>
-                      ))}
-                    </div>
-                    <div className="flex-1 overflow-y-auto mh-scroll space-y-2 min-h-0">
-                      {bondRanking.length===0?(<div className="h-full flex items-center justify-center text-center text-slate-600 font-black text-[11px] px-6 leading-relaxed">{bondRankMonFilter==='all'?'まだ記録がありません':`「${bondRankMonFilter}」の絆レベルの記録はまだありません`}</div>):(
-                        bondRanking.map((r,i)=>(
-                          <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl border ${i===0?'bg-pink-500/10 border-pink-500/50':'bg-slate-900 border-white/5'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 ${i===0?'bg-amber-500 text-black':i===1?'bg-slate-300 text-black':i===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{i+1}</div>
-                            {r.imgUrl?<img src={r.imgUrl} alt="" className="w-9 h-9 object-contain shrink-0"/>:<span className="text-lg w-9 text-center shrink-0">{r.emoji||'❓'}</span>}
-                            <div className="flex-1 min-w-0">
-                              <div className="text-[12px] font-black text-white truncate">{r.monName}</div>
-                              <div className="text-[9px] text-slate-500 truncate">{r.userName}</div>
-                            </div>
-                            <div className="text-[15px] font-mono font-black text-pink-300 shrink-0">絆Lv.{r.bondLevel}</div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                    <div className="text-center text-[9px] text-slate-600 pt-2 shrink-0 italic">※ スコアを送信した記録の編成から集計しているため、スコアを出していないマスモンは載りません</div>
-                  </>
-                )}
-              </div>
-            )}
-            <div className="text-[7px] text-slate-600 font-mono tracking-widest uppercase shrink-0 pt-2">スコアはブラウザ内に保存されます</div>
-            <div className="absolute bottom-1.5 left-2 text-[7px] text-slate-700 font-mono tracking-wide pointer-events-none select-none">Updated {BUILD_DATE}</div>
           </div>
+        )}
+
+        {gameState==='BATTLE_MENU'&&(
+          <div className="flex-1 flex flex-col h-full min-h-0 p-4">
+            <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase">バトル</h2></div>
+            <div className="grid grid-cols-2 gap-2 mb-4 shrink-0">
+              <button onClick={()=>setBattleMenuTab('difficulty')} className={`py-3 rounded-xl font-black ${battleMenuTab==='difficulty'?'bg-indigo-600 text-white':'bg-slate-900 text-slate-400'}`}>難易度</button>
+              <button onClick={()=>{setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className={`py-3 rounded-xl font-black ${battleMenuTab==='ranking'?'bg-indigo-600 text-white':'bg-slate-900 text-slate-400'}`}>ランキング</button>
+            </div>
+            {battleMenuTab==='difficulty'&&<div className="flex-1 overflow-y-auto mh-scroll"><div className="grid grid-cols-3 gap-2">{Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=><button key={key} onClick={()=>setDifficulty(key)} className={`min-h-[54px] rounded-xl text-[10px] font-black uppercase ${difficulty===key?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle(setting,difficulty===key)}>{setting.label}</button>)}</div><button onClick={()=>{setTestMooMode(false);setMonSelection(getActiveMonsterList());setGameState('PICK_HERO');}} className="w-full mt-5 bg-white text-black py-4 rounded-2xl font-black text-lg active:scale-95">モンスター選択へ</button></div>}
+            {battleMenuTab==='ranking'&&<div className="flex-1 min-h-0 flex flex-col">
+              <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else loadRankings(null,true);}} className={`py-2 rounded-xl text-[10px] font-black border ${rankingKind===t.k?'bg-indigo-600 border-indigo-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
+              {rankingKind==='score'&&<><div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=><button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(d);}} className={`px-3 py-2 rounded-full text-[9px] font-black shrink-0 ${rankingViewDiff===d?'ring-1 ring-white':'border border-white/10'}`} style={difficultyStyle(st,rankingViewDiff===d)}>{st.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-2">{(localRankings[rankingViewKey]||[]).map((r,i)=><div key={i} className="flex items-center gap-3 bg-slate-900 border border-white/5 rounded-2xl p-3"><span className="font-black text-indigo-300">{i+1}</span><span className="flex-1 truncate text-xs font-black">{r.userName}</span><span className="font-mono text-sm font-black">{r.score.toLocaleString()} pt</span></div>)}{(localRankings[rankingViewKey]||[]).length===0&&<div className="text-center text-slate-500 py-8">{rankingLoadingByDiff[rankingViewKey]?'Loading...':rankingErrorByDiff[rankingViewKey]?`取得エラー: ${rankingErrorByDiff[rankingViewKey]}`:'記録はまだありません'}</div>}</div></>}
+              {rankingKind==='breeder'&&<div className="flex-1 overflow-y-auto mh-scroll space-y-2">{breederRanking.map((r,i)=><div key={i} className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3"><span>{i+1}</span><span className="flex-1 truncate text-xs font-black">{r.userName}</span><span className="font-black text-indigo-300">Lv.{r.level}</span></div>)}</div>}
+              {rankingKind==='bond'&&<div className="flex-1 overflow-y-auto mh-scroll space-y-2">{bondRanking.map((r,i)=><div key={i} className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3"><span>{i+1}</span><span className="flex-1 truncate text-xs font-black">{r.monName}</span><span className="font-black text-pink-300">絆Lv.{r.bondLevel}</span></div>)}</div>}
+            </div>}
+          </div>
+        )}
+
+        {gameState==='FORMATION_MENU'&&(
+          <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-5"><button onClick={returnToHome} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400">編成</h2></div><div className="space-y-3"><button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('monster');setGameState('ROSTER');}} className="w-full bg-indigo-950/50 border border-indigo-500/40 py-5 rounded-2xl font-black">モンスター編成</button><button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('teaching');setGameState('ROSTER');}} className="w-full bg-purple-950/50 border border-purple-500/40 py-5 rounded-2xl font-black">ブリーダーカード編成</button></div></div>
+        )}
+
+        {gameState==='MONSTER_LIST_MENU'&&(
+          <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-5"><button onClick={returnToHome} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-cyan-400">モンスター一覧</h2></div><div className="space-y-3"><button onClick={()=>setGameState('OWNED_MONSTERS')} className="w-full bg-cyan-950/50 border border-cyan-500/40 py-5 rounded-2xl font-black">ベースモン</button><button onClick={()=>setGameState('MASU_MONS')} className="w-full bg-pink-950/50 border border-pink-500/40 py-5 rounded-2xl font-black">マスモン</button></div></div>
+        )}
+
+        {gameState==='SETTINGS'&&(
+          <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-5"><button onClick={returnToHome} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-slate-200">設定</h2></div><div className="space-y-3"><button onClick={()=>setShowAudioSettings(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">音量設定</button><button onClick={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">データ引き継ぎ</button><button onClick={()=>setShowOfficialTitleConfirm(true)} className="w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black">タイトルへ戻る</button></div></div>
         )}
 
         {/* PROFILE */}
         {gameState==='PROFILE'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-4 shrink-0">
-              <button onClick={()=>{ if(!onboarded){ setOnboarded(true); storeSet('mh_onboarded', true, false); } setGameState('TITLE'); }} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <button onClick={()=>{ if(!onboarded){ setOnboarded(true); storeSet('mh_onboarded', true, false); } returnToHome(); }} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">プロフィール</h2>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
@@ -4351,36 +4213,12 @@ function MonsterHeroGame() {
                 <span className="text-[11px] font-black text-amber-300 font-mono">{gold.toLocaleString()}</span>
                 <span className="text-[8px] text-amber-500/70 font-bold">ダイヤ</span>
               </div>
-              <button onClick={()=>setGameState('BREEDER_MARKET')} className="w-full flex items-center justify-between gap-2 bg-amber-950/40 border border-amber-500/40 px-4 py-2.5 rounded-xl active:scale-95 group">
-                <span className="flex items-center gap-1.5"><Coins size={14} className="text-amber-400"/><span className="text-[11px] font-black text-amber-200">{breederPoints} pt</span></span>
-                <span className="flex items-center gap-1 text-[10px] font-black text-amber-400 group-hover:text-amber-200"><ShoppingBag size={12}/>マーケット<ChevronRight size={11}/></span>
-              </button>
-              <div className="grid grid-cols-2 gap-2 w-full">
-                <button onClick={()=>{setDraftMonsterRoster(monsterRosterIds); setDraftTeachingRoster(teachingRosterIds); setRosterTab('monster'); setGameState('ROSTER');}} className="flex flex-col items-center justify-center gap-1 bg-indigo-950/40 border border-indigo-500/40 px-2 py-2.5 rounded-xl active:scale-95">
-                  <span className="flex items-center gap-1 text-[9px] font-black text-indigo-400 uppercase"><Layers size={11}/>モンスター編成</span>
-                  <span className="text-[12px] font-black text-indigo-200">{unlockedMonsterIds.length}体</span>
-                </button>
-                <button onClick={()=>{setDraftMonsterRoster(monsterRosterIds); setDraftTeachingRoster(teachingRosterIds); setRosterTab('teaching'); setGameState('ROSTER');}} className="flex flex-col items-center justify-center gap-1 bg-purple-950/40 border border-purple-500/40 px-2 py-2.5 rounded-xl active:scale-95">
-                  <span className="flex items-center gap-1 text-[9px] font-black text-purple-400 uppercase"><Layers size={11}/>ブリーダーカード編成</span>
-                  <span className="text-[12px] font-black text-purple-200">{unlockedTeachingIds.length}枚</span>
-                </button>
-                <button onClick={()=>setGameState('OWNED_MONSTERS')} className="flex flex-col items-center justify-center gap-1 bg-cyan-950/40 border border-cyan-500/40 px-2 py-2.5 rounded-xl active:scale-95">
-                  <span className="flex items-center gap-1 text-[9px] font-black text-cyan-400 uppercase"><User size={11}/>モンスター一覧</span>
-                  <span className="text-[12px] font-black text-cyan-200">{unlockedMonsterIds.length}体</span>
-                </button>
-                <button onClick={()=>setGameState('MASU_MONS')} className="flex flex-col items-center justify-center gap-1 bg-pink-950/40 border border-pink-500/40 px-2 py-2.5 rounded-xl active:scale-95">
-                  <span className="flex items-center gap-1 text-[9px] font-black text-pink-400 uppercase"><Heart size={11}/>マスモン</span>
-                  <span className="text-[12px] font-black text-pink-200">{masuMons.length}体</span>
-                </button>
-                <button onClick={()=>setGameState('ITEM_INVENTORY')} className="flex flex-col items-center justify-center gap-1 bg-teal-950/40 border border-teal-500/40 px-2 py-2.5 rounded-xl active:scale-95">
-                  <span className="flex items-center gap-1 text-[9px] font-black text-teal-400 uppercase"><Package size={11}/>アイテム欄</span>
-                  <span className="text-[12px] font-black text-teal-200">{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個</span>
-                </button>
-                <button onClick={()=>{ if(masuMons.length<2) return; resetFusionFlow(); setGameState('MASU_FUSION'); }} disabled={masuMons.length<2} className={`flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-xl ${masuMons.length<2?'bg-slate-900/60 border border-slate-800 opacity-50':'bg-violet-950/40 border border-violet-500/40 active:scale-95'}`}>
-                  <span className="flex items-center gap-1 text-[9px] font-black text-violet-400 uppercase"><Sparkles size={11}/>合体</span>
-                  <span className="text-[12px] font-black text-violet-200">{masuMons.length<2?'2体〜':'マスモン同士'}</span>
-                </button>
+              <div className="w-full flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 px-4 py-2.5 rounded-xl">
+                <Coins size={14} className="text-amber-400"/><span className="text-[11px] font-black text-amber-200">{breederPoints} pt</span>
               </div>
+              <button onClick={()=>setGameState('ITEM_INVENTORY')} className="w-full flex items-center justify-center gap-2 bg-teal-950/40 border border-teal-500/40 px-4 py-2.5 rounded-xl active:scale-95">
+                <Package size={12} className="text-teal-400"/><span className="text-[10px] font-black text-teal-200">アイテム欄（{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個）</span>
+              </button>
             </div>
             <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-2 px-1 shrink-0">難易度別 記録</div>
             <div className="flex flex-col gap-2 mb-4">
@@ -4395,7 +4233,6 @@ function MonsterHeroGame() {
                 </div>
               ))}
             </div>
-            <button onClick={()=>{setShowBackup(true); setBackupTab('export'); setBackupCode(''); setBackupCopied(false); setRestoreInput(''); setRestoreMsg('');}} className="shrink-0 w-full flex items-center justify-center gap-2 bg-slate-900/60 border border-white/10 text-slate-300 py-3 rounded-2xl font-black text-xs uppercase active:scale-95 mb-2"><ShieldCheck size={14} className="text-emerald-400"/>データのバックアップ・復元</button>
             </div>
           </div>
         )}
@@ -4404,7 +4241,7 @@ function MonsterHeroGame() {
         {gameState==='BREEDER_MARKET'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('PROFILE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">マーケット</h2>
             </div>
             <div className="flex gap-2 mb-4 shrink-0">
@@ -4466,7 +4303,7 @@ function MonsterHeroGame() {
         {gameState==='ROSTER'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('PROFILE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <button onClick={()=>setGameState('FORMATION_MENU')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{rosterTab==='monster'?'モンスター編成':'ブリーダーカード編成'}</h2>
             </div>
             {rosterTab==='monster'?(
@@ -4615,7 +4452,7 @@ function MonsterHeroGame() {
         {gameState==='OWNED_MONSTERS'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('PROFILE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <button onClick={()=>setGameState('MONSTER_LIST_MENU')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-cyan-400 uppercase tracking-widest">モンスター一覧</h2>
             </div>
             <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">解放済み{unlockedMonsterIds.length}体・タップで詳細を確認できます</div>
@@ -4646,7 +4483,7 @@ function MonsterHeroGame() {
         {gameState==='MASU_MONS'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('PROFILE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <button onClick={()=>setGameState('MONSTER_LIST_MENU')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-pink-400 uppercase tracking-widest">マスモン</h2>
             </div>
             <div className="text-[10px] text-slate-400 font-bold mb-1 px-1 shrink-0">勇者モンをラン終了時に登録すると、ここに並びます。編成画面で選ぶと次の周回で使えます(同じ種は1体まで)。</div>
@@ -4692,7 +4529,7 @@ function MonsterHeroGame() {
 
         {/* 合体: マスモン同士を合体させ、副の絆経験値を主に受け継ぐ。主選択→副選択→確認→演出→結果の5段階 */}
         {gameState==='MASU_FUSION'&&(()=>{
-          const closeFusion = () => { resetFusionFlow(); setGameState('PROFILE'); };
+          const closeFusion = () => { resetFusionFlow(); returnToHome(); };
           const fusedBorder = (masu) => (masu.fusionHistory||[]).length>0 ? 'border-amber-400 ring-1 ring-amber-400' : 'border-violet-400/40';
           // 合体の仕様説明。何が引き継がれて何が消えるのか、固有技の引き継ぎ条件は何かが
           // 画面から読み取れず分かりにくかったため、選択画面の余白に常設で出す
@@ -5959,7 +5796,7 @@ function MonsterHeroGame() {
       {/* PICK HERO / ALLY */}
       {(gameState==='PICK_HERO'||gameState==='PICK_ALLY')&&(
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden">
-          <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button onClick={handleGoToTitle} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{gameState==='PICK_HERO'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
+          <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{gameState==='PICK_HERO'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
           <div className={`flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col ${gameState==='PICK_ALLY'?'justify-center':''}`}>
             <div className="grid grid-cols-2 gap-2.5">
             {monSelection.map(m=>{const isSel=currentPickingMon?.id===m.id;
@@ -6146,17 +5983,21 @@ function MonsterHeroGame() {
             {helpTab==='goal'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-emerald-400 font-black text-base mb-3 flex items-center gap-2"><Trophy size={18}/> ゲームの目的</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-4">全10 WAVEのボスモンスターを撃破し、最高スコアを目指す戦略的カードバトルRPGです。</p><div className="grid grid-cols-2 gap-3"><div className="bg-black/50 p-3 rounded-2xl border border-white/5"><div className="text-[9px] text-slate-500 font-black uppercase mb-1">勝利条件</div><div className="text-[11px] text-white font-bold leading-tight">WAVE 10のラスボス「ムー」を撃破すること</div></div><div className="bg-black/50 p-3 rounded-2xl border border-white/5"><div className="text-[9px] text-slate-500 font-black uppercase mb-1">敗北条件</div><div className="text-[11px] text-white font-bold leading-tight">・ライフが0になる<br/>・20ターン経過</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-emerald-400 font-black text-base mb-3">基本的な流れ</h3><div className="space-y-3">{[{step:"1",text:"勇者モン（1体目）を選んでスタート"},{step:"2",text:"カードを選び、対象のモンスター枠をタップして決定"},{step:"3",text:"報酬を選んで強化（WAVE 2,4,6で仲間が合流）"},{step:"4",text:"10 WAVE目のチャンピオンを目指す！"}].map(item=>(<div key={item.step} className="flex items-center gap-4"><span className="shrink-0 w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center text-[11px] font-black">{item.step}</span><span className="text-[12px] text-slate-300">{item.text}</span></div>))}</div></section></div>)}
             {helpTab==='battle'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-blue-400 font-black text-base mb-3 flex items-center gap-2"><Target size={18}/> 距離システム</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-4">自分と敵の「距離」が威力を左右します。このゲーム最大の戦略要素です。</p><div className="space-y-3"><div className="bg-black/50 p-4 rounded-2xl border border-blue-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">距離の一致（超重要）</div><div className="text-[12px] text-slate-400 leading-relaxed">敵と同じ距離枠にいるモンスターで攻撃すると大ダメージ！距離がずれるほど威力は低下します。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-amber-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">解析と予測</div><div className="text-[12px] text-slate-400 leading-relaxed">敵は移動することがあります。「解析ボタン」で敵の行動を予測し、防御か攻撃か判断しましょう。</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-teal-400 font-black text-base mb-3 flex items-center gap-2"><Target size={18}/> 間合い適性</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">モンスターごとに4つの距離それぞれで得意・不得意があり、C(標準・±0%)を基準にG(-20%)〜M(+25%)のグレードでダメージが変動します。モンスター詳細画面のグレード表示で確認できます。</p><div className="text-[11px] text-slate-400 leading-relaxed">絆レベルが上がると貯まる「強化ポイント」を1つ消費すると、詳細画面からその距離の適性グレードを1段階アップできます(上限はM)。</div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-400 font-black text-base mb-3 flex items-center gap-2"><Zap size={18}/> GUTSの管理</h3><p className="text-[12px] text-slate-200 leading-relaxed">行動にはガッツを消費します。ガッツは毎ターン自動回復しますが、上限を増やすことで強力な技を安定して使えます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-cyan-400 font-black text-base mb-3 flex items-center gap-2"><Crown size={18}/> 勇者特性・固有技</h3><p className="text-[12px] text-slate-200 leading-relaxed">最初に選ぶ「勇者モン」ごとに専用の特性(勇者モン選択時のみ発動)と、進化する固有技(必殺技)を持ちます。編成する勇者モンによって戦い方が大きく変わります。詳しくは召喚時のモンスター詳細で確認できます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-blue-300 font-black text-base mb-3 flex items-center gap-2"><Activity size={18}/> 緊急回復</h3><p className="text-[12px] text-slate-200 leading-relaxed">画面左下の「緊急」ボタンでライフとガッツをそれぞれ最大値の30%回復できます。ただし使用すると自分のターンを消費し、敵の行動が発生します。回数制限はありません。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-pink-400 font-black text-base mb-3 flex items-center gap-2"><Heart size={18}/> 合流ボーナス</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">WAVE 2・4・6で仲間が合流すると、そのモンスターの合流ボーナス分だけライフ・ちから・丈夫さ・ガッツが上がります。</p><div className="bg-black/50 p-4 rounded-2xl border border-cyan-500/30"><div className="text-[12px] text-slate-400 leading-relaxed">さらに、合流したモンスターの<span className="text-white font-bold">間合い適性</span>も加算されます。Cを±0として、Aなら+2段階、Eなら-2段階というように、得意・不得意がそのまま反映されます。合流させる順番や組み合わせで、狙った距離を伸ばせます。</div></div></section></div>)}
             {helpTab==='growth'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-purple-400 font-black text-base mb-3 flex items-center gap-2"><Sparkles size={18}/> 能力覚醒（報酬）</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-4">WAVEクリア後、3つの能力から1つを選んで強化します。</p><div className="grid grid-cols-3 gap-2"><div className="bg-red-900/30 border border-red-500/40 p-3 rounded-2xl text-center"><Sword size={16} className="mx-auto text-red-400 mb-2"/><div className="text-[10px] font-black">攻撃覚醒</div></div><div className="bg-emerald-900/30 border border-emerald-500/40 p-3 rounded-2xl text-center"><Shield size={16} className="mx-auto text-emerald-400 mb-2"/><div className="text-[10px] font-black">防御覚醒</div></div><div className="bg-pink-900/30 border border-pink-500/40 p-3 rounded-2xl text-center"><Heart size={16} className="mx-auto text-pink-400 mb-2"/><div className="text-[10px] font-black">精神強化</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-400 font-black text-base mb-3 flex items-center gap-2"><BookOpen size={18}/> ブリーダー継承</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">WAVE 1,3,5,7,9で、ブリーダーの「教え」をカードとして加えられます。同じ教えを重ねると「進化」し、効果が飛躍的に高まります(最大Lv2)。編成したブリーダーカードの中から候補が出ます。</p><div className="grid grid-cols-2 gap-2">{[{n:"おりょうの力",d:"攻撃ステータスUP"},{n:"ドラの緑膝",d:"被ダメージDOWN"},{n:"かどみうむの計算",d:"自動ライフ/ガッツ回復UP"},{n:"みゅあの愛",d:"回復＆能力永続UP"},{n:"あつの挑発",d:"敵行動無効＆攻撃"},{n:"みゃるの薬",d:"次ターン攻撃2倍＆自傷"}].map(c=>(<div key={c.n} className="bg-black/50 p-2.5 rounded-xl border border-white/5"><div className="text-[10px] font-black text-white">{c.n}</div><div className="text-[9px] text-slate-400">{c.d}</div></div>))}</div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-cyan-400 font-black text-base mb-3 flex items-center gap-2"><Zap size={18}/> 技レベル</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">通常技・距離技・固有技にはそれぞれ9段階のレベルがあります。WAVEクリア時の報酬で解放ポイントを獲得し、技を1段階ずつ強化していきます。レベルが上がると威力と会心率が上がりますが、消費ガッツも増えます。</p><div className="bg-black/50 p-4 rounded-2xl border border-cyan-500/30"><div className="text-[12px] text-slate-400 leading-relaxed">バトル中はタイル選択式で、解放済みのレベルであれば下位の技に戻して使うこともできます(消費ガッツを節約したいときに便利です)。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-emerald-400 font-black text-base mb-3 flex items-center gap-2"><Sword size={18}/> ガード</h3><p className="text-[12px] text-slate-200 leading-relaxed">ガードカードの軽減量は<span className="text-white font-bold">固定値＋(丈夫さ×倍率)</span>で決まります(ガード=200＋丈夫さ×1.1、ハイガード=300＋丈夫さ×1.2)。丈夫さが100上がるごとに上位のガードが解放され、手札に入るガードの枚数も増えます。</p></section></div>)}
-            {helpTab==='meta'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-400 font-black text-base mb-3 flex items-center gap-2"><Crown size={18}/> ブリーダーレベル</h3><p className="text-[12px] text-slate-200 leading-relaxed">WAVEをクリアするとブリーダー経験値を獲得してレベルアップします。レベルが上がるたびにブリーダーポイント(pt)を1獲得できます。ptはマーケットのアイコン購入に使います。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-violet-400 font-black text-base mb-3 flex items-center gap-2"><Sparkles size={18}/> マスモン</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">プレイ終了後のリザルト画面で、そのとき勇者モンだったモンスターに名前を付けて登録できます。登録した個体を<span className="text-white font-bold">マスモン</span>と呼び、絆レベル・強化ポイント・見た目の色をその個体だけのものとして持ち続けます。同じ種類でも別々に育てられます。</p><div className="bg-black/50 p-4 rounded-2xl border border-violet-500/30"><div className="text-[11px] font-black text-white mb-1">強化ポイントの使い道</div><div className="text-[12px] text-slate-400 leading-relaxed">絆レベルが1上がるごとに1ポイント獲得します。1ポイント消費して、間合い適性を1段階上げるか、ライフ・ちから・丈夫さ・ガッツのいずれかを上げられます。振り直したいときはマーケットの「絆ポイントリセットの書」を使います。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-pink-400 font-black text-base mb-3 flex items-center gap-2"><Heart size={18}/> 絆レベル</h3><p className="text-[12px] text-slate-200 leading-relaxed">勇者モンに選んだモンスターは、WAVEクリアごとに絆経験値を獲得して絆レベルが上がります(WAVEが進むほど1回あたりの獲得量も増加)。供モンとして合流したマスモンにも経験値が入ります。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-violet-300 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> 合体</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">プロフィール画面の「合体」から、マスモン同士を合体できます。残す側を<span className="text-white font-bold">主</span>、消える側を<span className="text-white font-bold">副</span>として選びます。</p><div className="space-y-2"><div className="bg-black/50 p-4 rounded-2xl border border-white/5"><div className="text-[12px] text-slate-300 leading-relaxed">副の絆経験値が累計のまま主に加算され、上がったレベルの数だけ主が強化ポイントを獲得します。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-white/5"><div className="text-[12px] text-slate-300 leading-relaxed">主の名前・見た目・間合い適性・ステータス強化はそのまま維持されます(副の強化は引き継がれません)。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-amber-500/30"><div className="text-[12px] text-amber-200 leading-relaxed"><span className="font-bold">固有技の引き継ぎ</span>は、主と副が両方とも絆Lv.10以上のときだけ選べます。消費ダイヤは(主の絆Lv＋副の絆Lv)×100です。</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-400 font-black text-base mb-3 flex items-center gap-2"><Coins size={18}/> pt とダイヤ(2つの通貨)</h3><div className="space-y-3"><div className="bg-black/50 p-4 rounded-2xl border border-amber-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">pt（ポイント）</div><div className="text-[12px] text-slate-400 leading-relaxed">ブリーダーレベルアップで獲得。マーケットの「アイコン」購入に使います。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-cyan-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">ダイヤ</div><div className="text-[12px] text-slate-400 leading-relaxed">WAVEクリアで獲得(Normal基準100ダイヤ/WAVE、難易度で変動)。「円盤石」「ブリーダー」「アイテム」の購入と、合体の費用に使います。</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-orange-400 font-black text-base mb-3 flex items-center gap-2"><ShoppingBag size={18}/> マーケット</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">プロフィール画面から入れます。4つのカテゴリがあります。</p><div className="grid grid-cols-2 gap-2"><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">アイコン</div><div className="text-[9px] text-slate-400">ptで購入<br/>プロフィール画像に</div></div><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">円盤石</div><div className="text-[9px] text-slate-400">ダイヤで購入<br/>新モンスター解放</div></div><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">ブリーダー</div><div className="text-[9px] text-slate-400">ダイヤで購入<br/>新カード解放</div></div><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">アイテム</div><div className="text-[9px] text-slate-400">ダイヤで購入<br/>マスモンに使う</div></div></div><div className="bg-black/50 p-4 rounded-2xl border border-white/5 mt-3"><div className="text-[11px] font-black text-white mb-1">アイテム</div><div className="text-[12px] text-slate-400 leading-relaxed"><span className="text-white font-bold">絆ポイントリセットの書</span>: 使用済みの強化ポイントをすべて未使用に戻します(絆レベル・絆経験値はそのまま)。<br/><span className="text-white font-bold">染色もどき</span>: 見た目の色を変えられます。モンスターによっては体・目・口などの部位ごとに別々の色を選べ、プリセット27色に加えてカスタムカラーも使えます。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-400 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> 編成</h3><p className="text-[12px] text-slate-200 leading-relaxed">マーケットで新しいモンスターやブリーダーカードを解放しても、次の周回で候補になるのは編成で選んだものだけです。プロフィール画面の「編成」からモンスター8体・ブリーダーカード6枚をちょうど選び、「決定」ボタンで確定します(最初から解放済みの8体・6枚は編成済みです)。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-300 font-black text-base mb-3 flex items-center gap-2"><Trophy size={18}/> 最終リザルト</h3><p className="text-[12px] text-slate-200 leading-relaxed">優勝・敗北・リタイアいずれかでプレイが終了すると、獲得したブリーダー経験値・ダイヤ・絆経験値と、WAVEごとの獲得スコア/経験値/ダイヤの内訳を確認できます。この画面から勇者モンをマスモンとして登録できます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-300 font-black text-base mb-3 flex items-center gap-2"><Sparkles size={18}/> 更新履歴</h3><p className="text-[12px] text-slate-200 leading-relaxed">トップ画面の「更新」ボタンから、アップデート内容と不具合情報をタブで切り替えて確認できます。未読の更新があるときはNEWマークが付きます。</p></section></div>)}
-            {helpTab==='tips'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-orange-400 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> 複数枚同時使用の解放</h3><div className="bg-black/50 p-4 rounded-2xl space-y-2"><div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold">同時2枚:</span><span className="text-white font-black">最大ガッツ120 ＋ 味方2体</span></div><div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold">同時3枚:</span><span className="text-white font-black">最大ガッツ180 ＋ 味方3体</span></div><div className="text-[10px] text-amber-500 font-black italic pt-2 border-t border-white/5">※ハムは勇者時、常に上限＋1</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-400 font-black text-base mb-3 flex items-center gap-2"><Activity size={18}/> 攻略のヒント</h3><ul className="text-[12px] text-slate-300 space-y-3 list-disc pl-5"><li><span className="font-black text-white">防御は最大の攻撃</span>: 敵の必殺技は即死級。解析を使い確実に防御しましょう。</li><li><span className="font-black text-white">再生の強化</span>: 教えにより毎ターンの「再生ライフ」を増やすと後半が有利になります。</li><li><span className="font-black text-white">勇者特性を理解する</span>: 1体目に選んだモンスターの特性は最後まで影響します。</li><li><span className="font-black text-white">データのバックアップ</span>: ホーム画面のアイコンを作り直すと進行状況が引き継がれないことがあります。プロフィール画面の「データのバックアップ・復元」で定期的にコードを控えておくと安心です。</li></ul></section></div>)}
+            {helpTab==='meta'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-400 font-black text-base mb-3 flex items-center gap-2"><Crown size={18}/> ブリーダーレベル</h3><p className="text-[12px] text-slate-200 leading-relaxed">WAVEをクリアするとブリーダー経験値を獲得してレベルアップします。レベルが上がるたびにブリーダーポイント(pt)を1獲得できます。ptはマーケットのアイコン購入に使います。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-violet-400 font-black text-base mb-3 flex items-center gap-2"><Sparkles size={18}/> マスモン</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">プレイ終了後のリザルト画面で、そのとき勇者モンだったモンスターに名前を付けて登録できます。登録した個体を<span className="text-white font-bold">マスモン</span>と呼び、絆レベル・強化ポイント・見た目の色をその個体だけのものとして持ち続けます。同じ種類でも別々に育てられます。</p><div className="bg-black/50 p-4 rounded-2xl border border-violet-500/30"><div className="text-[11px] font-black text-white mb-1">強化ポイントの使い道</div><div className="text-[12px] text-slate-400 leading-relaxed">絆レベルが1上がるごとに1ポイント獲得します。1ポイント消費して、間合い適性を1段階上げるか、ライフ・ちから・丈夫さ・ガッツのいずれかを上げられます。振り直したいときはマーケットの「絆ポイントリセットの書」を使います。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-pink-400 font-black text-base mb-3 flex items-center gap-2"><Heart size={18}/> 絆レベル</h3><p className="text-[12px] text-slate-200 leading-relaxed">勇者モンに選んだモンスターは、WAVEクリアごとに絆経験値を獲得して絆レベルが上がります(WAVEが進むほど1回あたりの獲得量も増加)。供モンとして合流したマスモンにも経験値が入ります。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-violet-300 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> 合体</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">HOMEの「合体」から、マスモン同士を合体できます。残す側を<span className="text-white font-bold">主</span>、消える側を<span className="text-white font-bold">副</span>として選びます。</p><div className="space-y-2"><div className="bg-black/50 p-4 rounded-2xl border border-white/5"><div className="text-[12px] text-slate-300 leading-relaxed">副の絆経験値が累計のまま主に加算され、上がったレベルの数だけ主が強化ポイントを獲得します。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-white/5"><div className="text-[12px] text-slate-300 leading-relaxed">主の名前・見た目・間合い適性・ステータス強化はそのまま維持されます(副の強化は引き継がれません)。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-amber-500/30"><div className="text-[12px] text-amber-200 leading-relaxed"><span className="font-bold">固有技の引き継ぎ</span>は、主と副が両方とも絆Lv.10以上のときだけ選べます。消費ダイヤは(主の絆Lv＋副の絆Lv)×100です。</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-400 font-black text-base mb-3 flex items-center gap-2"><Coins size={18}/> pt とダイヤ(2つの通貨)</h3><div className="space-y-3"><div className="bg-black/50 p-4 rounded-2xl border border-amber-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">pt（ポイント）</div><div className="text-[12px] text-slate-400 leading-relaxed">ブリーダーレベルアップで獲得。マーケットの「アイコン」購入に使います。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-cyan-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">ダイヤ</div><div className="text-[12px] text-slate-400 leading-relaxed">WAVEクリアで獲得(Normal基準100ダイヤ/WAVE、難易度で変動)。「円盤石」「ブリーダー」「アイテム」の購入と、合体の費用に使います。</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-orange-400 font-black text-base mb-3 flex items-center gap-2"><ShoppingBag size={18}/> マーケット</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">HOMEの「マーケット」から入れます。4つのカテゴリがあります。</p><div className="grid grid-cols-2 gap-2"><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">アイコン</div><div className="text-[9px] text-slate-400">ptで購入<br/>プロフィール画像に</div></div><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">円盤石</div><div className="text-[9px] text-slate-400">ダイヤで購入<br/>新モンスター解放</div></div><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">ブリーダー</div><div className="text-[9px] text-slate-400">ダイヤで購入<br/>新カード解放</div></div><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">アイテム</div><div className="text-[9px] text-slate-400">ダイヤで購入<br/>マスモンに使う</div></div></div><div className="bg-black/50 p-4 rounded-2xl border border-white/5 mt-3"><div className="text-[11px] font-black text-white mb-1">アイテム</div><div className="text-[12px] text-slate-400 leading-relaxed"><span className="text-white font-bold">絆ポイントリセットの書</span>: 使用済みの強化ポイントをすべて未使用に戻します(絆レベル・絆経験値はそのまま)。<br/><span className="text-white font-bold">染色もどき</span>: 見た目の色を変えられます。モンスターによっては体・目・口などの部位ごとに別々の色を選べ、プリセット27色に加えてカスタムカラーも使えます。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-400 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> 編成</h3><p className="text-[12px] text-slate-200 leading-relaxed">マーケットで新しいモンスターやブリーダーカードを解放しても、次の周回で候補になるのは編成で選んだものだけです。HOMEの「編成」からモンスター8体・ブリーダーカード6枚をちょうど選び、「決定」ボタンで確定します(最初から解放済みの8体・6枚は編成済みです)。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-300 font-black text-base mb-3 flex items-center gap-2"><Trophy size={18}/> 最終リザルト</h3><p className="text-[12px] text-slate-200 leading-relaxed">優勝・敗北・リタイアいずれかでプレイが終了すると、獲得したブリーダー経験値・ダイヤ・絆経験値と、WAVEごとの獲得スコア/経験値/ダイヤの内訳を確認できます。この画面から勇者モンをマスモンとして登録できます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-300 font-black text-base mb-3 flex items-center gap-2"><Sparkles size={18}/> 更新履歴</h3><p className="text-[12px] text-slate-200 leading-relaxed">トップ画面の「更新」ボタンから、アップデート内容と不具合情報をタブで切り替えて確認できます。未読の更新があるときはNEWマークが付きます。</p></section></div>)}
+            {helpTab==='tips'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-orange-400 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> 複数枚同時使用の解放</h3><div className="bg-black/50 p-4 rounded-2xl space-y-2"><div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold">同時2枚:</span><span className="text-white font-black">最大ガッツ120 ＋ 味方2体</span></div><div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold">同時3枚:</span><span className="text-white font-black">最大ガッツ180 ＋ 味方3体</span></div><div className="text-[10px] text-amber-500 font-black italic pt-2 border-t border-white/5">※ハムは勇者時、常に上限＋1</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-400 font-black text-base mb-3 flex items-center gap-2"><Activity size={18}/> 攻略のヒント</h3><ul className="text-[12px] text-slate-300 space-y-3 list-disc pl-5"><li><span className="font-black text-white">防御は最大の攻撃</span>: 敵の必殺技は即死級。解析を使い確実に防御しましょう。</li><li><span className="font-black text-white">再生の強化</span>: 教えにより毎ターンの「再生ライフ」を増やすと後半が有利になります。</li><li><span className="font-black text-white">勇者特性を理解する</span>: 1体目に選んだモンスターの特性は最後まで影響します。</li><li><span className="font-black text-white">データのバックアップ</span>: ホーム画面のアイコンを作り直すと進行状況が引き継がれないことがあります。HOMEの「設定」内にある「データ引き継ぎ」で定期的にコードを控えておくと安心です。</li></ul></section></div>)}
           </div>
           <footer className="shrink-0 p-5 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a'}}>
             <button onClick={()=>setShowHelp(false)} className="w-full bg-white text-black py-4 rounded-2xl font-black text-sm uppercase shadow-2xl active:scale-95 transition-transform">わかった！冒険に戻る</button>
-            {gameState==='TITLE'&&(
+            {gameState==='HOME'&&(
               <button onClick={()=>{setShowHelp(false); setTestMooMode(true); setMonSelection(Object.values(ALL_PLAYER_MONSTERS)); setGameState('PICK_HERO');}} className="mt-3 mx-auto block text-[9px] text-slate-700 hover:text-slate-500 active:text-purple-500 tracking-widest">· · 🧪 · ·</button>
             )}
           </footer>
         </div>
       )}
+
+      {titleModal}
+
+      {showOfficialTitleConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}}><div className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 text-center"><h3 className="text-lg font-black mb-6">タイトル画面へ戻りますか？</h3><div className="space-y-3"><button onClick={()=>setShowOfficialTitleConfirm(false)} className="w-full bg-slate-800 py-3 rounded-xl font-black">キャンセル</button><button onClick={returnToOfficialTitle} className="w-full bg-red-600 py-3 rounded-xl font-black">タイトルへ戻る</button></div></div></div>)}
 
       {/* DECK INFO */}
       {showDeckInfo&&(<div className="fixed inset-0 z-[40000] p-4 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2"><h3 className="font-black italic uppercase text-indigo-400 text-base">Deck View</h3><button onClick={()=>setShowDeckInfo(false)} className="px-4 py-2 bg-white/10 rounded-full text-[11px] active:scale-90 text-white">閉じる</button></div><div className="flex-1 overflow-y-auto">{(()=>{
@@ -6334,12 +6175,12 @@ function MonsterHeroGame() {
       {showQuitConfirm&&(<div className="fixed inset-0 flex flex-col items-center justify-center p-8 text-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:95000,pointerEvents:'auto'}}><AlertCircle size={48} className="text-red-500 mb-4"/><h2 className="text-xl font-black text-white uppercase mb-2">降参しますか？</h2><p className="text-[11px] text-slate-400 mb-2">現在のスコア {score.toLocaleString()} pt がランキングに記録されます</p><div className="flex flex-col gap-3 w-full max-w-xs mt-4" style={{position:'relative',zIndex:95001}}><button type="button" onClick={handleGiveUp} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-red-600 text-white py-3 rounded-2xl font-black uppercase text-sm shadow-lg active:scale-95">降参する</button><button type="button" onClick={()=>setShowQuitConfirm(false)} style={{position:'relative',zIndex:95002,pointerEvents:'auto'}} className="w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95">戦いを続ける</button></div></div>)}
 
       {/* CHAMPION */}
-      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1><div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><button onClick={()=>runResultActionOnce(handleGoToTitle)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'タイトルへ'}</button></div>)}
+      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1><div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>)}
 
       {/* GAME OVER */}
-      {hp<=0&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(handleGoToTitle)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
+      {hp<=0&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
 
-      {gaveUp&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Flag size={48} className="text-slate-400 mb-3"/><h2 className="text-2xl font-black italic text-white uppercase">リタイア</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(handleGoToTitle)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
+      {gaveUp&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="shrink-0 flex flex-col items-center"><Flag size={48} className="text-slate-400 mb-3"/><h2 className="text-2xl font-black italic text-white uppercase">リタイア</h2><div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div></div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}</div><div className="flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
 
       {/* マスモン登録: ラン終了画面(CHAMPION/敗北/リタイア)から名前を付けて登録するモーダル */}
       {showMasuRegisterModal&&(
