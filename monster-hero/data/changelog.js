@@ -17,7 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-30 00:10",
+    date: "2026-07-30 00:22",
+    type: "update",
+    title: "HOMEとアイテム画面を調整",
+    items: [
+      "HOMEで所持しているマスモン1体が歩くようになりました",
+      "アイテム画面の表記を分かりやすくし、HOMEのBGMがそのまま流れるように調整しました",
+    ],
+  },
+  {
+    date: "2026-07-30 00:22",
     type: "update",
     title: "画面とBGMの使いやすさを改善",
     items: [
@@ -27,7 +36,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 00:10",
+    date: "2026-07-30 00:22",
     type: "issue",
     status: "fixed",
     title: "表示・音声・更新通知の不具合を修正",
