@@ -67,10 +67,10 @@ node tools/dye-report.js
 
 機能を公開する場合のみ、次の手順を行います。文書だけの変更ではバージョンや更新履歴を変更しません。
 
-1. `node tools/build.js` で配信用 JavaScript を生成する。
+1. `node tools/build.js` で日時を揃え、配信用 JavaScript を生成する。
 2. 関連テストと `node tools/build.js --check` を通す。
-3. `node tools/stamp-version.js` で日時を更新する（手入力しない）。
-4. 表示された日時で `monster-hero/data/changelog.js` の先頭へ利用者向け変更内容を追記する。
+3. `BUILD_DATE`、`version.json`、更新履歴の最新リリース日時が同じであることを確認する（`node tools/build.js` が自動更新するため手入力しない）。
+4. `monster-hero/data/changelog.js` の先頭へ利用者向け変更内容を追記してから再度ビルドする。
 5. 差分を再確認し、依頼された場合にコミット、プッシュ、PR 作成を行う。
 
 ## 6. Git / GitHub 運用
