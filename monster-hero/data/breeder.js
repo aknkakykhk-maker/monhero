@@ -93,5 +93,5 @@ const BREEDER_MARKET_ITEMS = [
   // bondXp を持つアイテムは「マスモンに絆経験値を与える」もの。まとめて使えるので、
   // 使う個数を決める画面(何個でレベルがいくつ上がるか)が出る
   { id:'training_ticket', name:"トレーニングチケット", type:'item', emoji:"🎫", cost:100, bondXp:10, desc:"マスモンに使うと絆経験値を10もらえる。まとめて使えるので、使う個数に応じて絆レベルがどこまで上がるかを確かめながら使える。" },
-  { id:'training_ticket_l', name:"修行チケット", type:'item', emoji:"🎟️", cost:1000, trainingEntry:true, desc:"マスモン1体が修行へ参加するためのチケット。修行開始が成立したときに1枚消費する。" }
+  { id:'training_ticket_l', name:"修行チケット", type:'item', emoji:"🎟️", cost:1000, bondXp:100, desc:"マスモンに使うと絆経験値を100もらえる。トレーニングチケット10枚ぶん。まとめて使えるので、使う個数に応じて絆レベルがどこまで上がるかを確かめながら使える。" }
 ];
