@@ -5,12 +5,20 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero', 'src', 'game-system.jsx'), 'utf8');
 const stampTool = fs.readFileSync(path.join(__dirname, 'stamp-version.js'), 'utf8');
+const version = JSON.parse(fs.readFileSync(path.join(root, 'monster-hero', 'version.json'), 'utf8'));
+const changelog = fs.readFileSync(path.join(root, 'monster-hero', 'data', 'changelog.js'), 'utf8');
+const buildDate = source.match(/const BUILD_DATE = "([^"]+)";/)?.[1];
+const latestChangelogDate = changelog.match(/date: "([^"]+)"/)?.[1];
 const checks = [
-  ['30秒間隔と画面復帰時にversion.jsonを再確認', source.includes('setInterval(checkVersion, 30 * 1000)') && source.includes("window.addEventListener('pageshow', onVisible)")],
+  ['BUILD_DATE・version.json・更新履歴の最新日時が一致', !!buildDate && buildDate === version.build && buildDate === latestChangelogDate],
+  ['30秒間隔・バックグラウンド復帰・ページ再表示時にversion.jsonを再確認', source.includes('setInterval(checkVersion, 30 * 1000)') && source.includes("document.addEventListener('visibilitychange', onVisible)") && source.includes("window.addEventListener('pageshow', onVisible)")],
+  ['version.jsonをキャッシュなしで取得', source.includes("fetch('version.json?t=' + Date.now(), { cache: 'no-store' })")],
   ['初回検知で自動再読み込みせず更新ボタンを表示', source.includes('setUpdateAvailable(true)') && !source.includes('if (wasFirstCheck) window.location.reload()')],
   ['更新ボタンをbody直下に表示', source.includes('ReactDOM.createPortal(') && source.includes('document.body') && source.includes('z-[100000]')],
   ['更新時にページURLのキャッシュを回避', source.includes("url.searchParams.set('mh_refresh', Date.now().toString())") && source.includes('window.location.replace(url.toString())')],
   ['出荷時に本体JSのキャッシュキーも更新', stampTool.includes("index.replace(/var GAME_BUILD = '[^']*';/") && stampTool.includes("stamp.replace(/[- :]/g, '')")],
+  ['出荷時に更新履歴の最新リリース日時も更新', stampTool.includes("changelog.match(/date:") && stampTool.includes('replacedChangelog')],
+  ['通常ビルドが日時更新を必ず実行', fs.readFileSync(path.join(__dirname, 'build.js'), 'utf8').includes("require('./stamp-version')")],
 ];
 
 let failed = 0;

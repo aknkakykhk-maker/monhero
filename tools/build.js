@@ -33,9 +33,8 @@ function readEmbeddedHash() {
   return m ? m[1] : null;
 }
 
-const hash = sourceHash();
-
 if (process.argv.includes('--check')) {
+  const hash = sourceHash();
   const embedded = readEmbeddedHash();
   if (!embedded) {
     console.error('NG: game-system.compiled.js がありません。node build.js を実行してください');
@@ -50,6 +49,11 @@ if (process.argv.includes('--check')) {
   process.exit(0);
 }
 
+// 公開用ビルドではバージョン3箇所を先に同一時刻へ揃える。機能変更後に古い日時の
+// compiled.jsを作れてしまわないよう、出荷工程を別コマンドの実行忘れに依存させない。
+require('./stamp-version');
+
+const hash = sourceHash();
 const code = transformGameSystem();
 const header = [
   '// ============================================================',
