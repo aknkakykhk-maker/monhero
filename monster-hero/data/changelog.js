@@ -17,6 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
+    date: "2026-07-29 18:12",
+    type: "update",
+    title: "HOME表示とタイトルBGMを調整",
+    items: [
+      "HOMEの施設ラベルを見やすく調整しました",
+      "リタイア画面の表示位置を修正しました",
+      "タイトル画面のBGMを変更しました",
+    ],
+  },
+  {
     date: "2026-07-29 17:57",
     type: "update",
     title: "寄付画面とバトルBGMを改善",
