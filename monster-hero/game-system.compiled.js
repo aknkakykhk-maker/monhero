@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ae33cf2be2bb8e78
+// source-sha256: 18d69dd5086c8de6
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-29 18:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-29 18:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3549,8 +3549,13 @@ function MonsterHeroGame() {
   };
   const [helpTab, setHelpTab] = useState('goal');
   const [pendingReward, setPendingReward] = useState(null);
-  const [testMooMode, setTestMooMode] = useState(false); // TEMP: ムー戦テストモード
-
+  // 隠しデバッグ戦は通常周回と結果処理を共有しない。stateに加えて同期的なrefを持ち、
+  // 敗北・諦め・勝利の非同期処理が通常の保存処理へ入る前に必ず判定できるようにする。
+  const [debugBattle, setDebugBattle] = useState(false);
+  const debugBattleRef = useRef(false);
+  const [debugEnemyKey, setDebugEnemyKey] = useState(null);
+  const [debugOutcome, setDebugOutcome] = useState(null);
+  const debugResultRef = useRef(false);
   const scoreMultiplier = useMemo(() => DIFFICULTY_SETTINGS[difficulty]?.score || 1.0, [difficulty]);
   const goldMultiplier = useMemo(() => DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0, [difficulty]);
   const effectiveMaxHp = useMemo(() => Math.floor(maxHp * (1.0 + getPermaBuff('muaHpPct'))), [maxHp, permaBuffs]);
@@ -5494,6 +5499,14 @@ function MonsterHeroGame() {
   // Save score on game end (CHAMPION is awarded synchronously in handleNextWave instead, so its result screen never renders before the summary is ready)
   useEffect(() => {
     if (hp <= 0) {
+      if (debugBattleRef.current) {
+        if (!debugResultRef.current) {
+          debugResultRef.current = true;
+          setResultProcessing(false);
+          setDebugOutcome('lose');
+        }
+        return;
+      }
       if (runFinalizingRef.current) return;
       runFinalizingRef.current = true;
       setRunFinalizing(true);
@@ -5602,6 +5615,10 @@ function MonsterHeroGame() {
     gaveUp: false
   });
   const returnToHome = () => {
+    debugBattleRef.current = false;
+    debugResultRef.current = false;
+    setDebugBattle(false);
+    setDebugOutcome(null);
     beginNewRankingRun({
       runIdRef,
       scoreSubmittedRef,
@@ -5705,6 +5722,14 @@ function MonsterHeroGame() {
 
   // Give up mid-run: record current score to ranking, award rewards, then show the final result screen (gaveUp)
   const handleGiveUp = useCallback(async () => {
+    if (debugBattleRef.current) {
+      if (debugResultRef.current) return;
+      debugResultRef.current = true;
+      setShowQuitConfirm(false);
+      setGaveUp(true);
+      setDebugOutcome('giveup');
+      return;
+    }
     if (runFinalizingRef.current) return;
     runFinalizingRef.current = true;
     setRunFinalizing(true);
@@ -6729,6 +6754,12 @@ function MonsterHeroGame() {
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
   const handleNextWave = async () => {
+    if (debugBattleRef.current) {
+      if (debugResultRef.current) return;
+      debugResultRef.current = true;
+      setDebugOutcome('win');
+      return;
+    }
     if (runFinalizingRef.current) return;
     setEffect(null);
     if (wave === 10) {
@@ -6772,8 +6803,8 @@ function MonsterHeroGame() {
       }
     }))];
   };
-  const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus, uChoice, uLevelChoice, cInhEvo) => {
-    const atkNames = HERO_ATK_NAMES[mainHero?.id] || HERO_ATK_NAMES['Mocchi'];
+  const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus, uChoice, uLevelChoice, cInhEvo, heroOverride = null) => {
+    const atkNames = HERO_ATK_NAMES[(heroOverride || mainHero)?.id] || HERO_ATK_NAMES['Mocchi'];
     let pool = [];
     pool.push({
       ...BASE_ATK_EVOLUTION[aLvl],
@@ -7003,9 +7034,10 @@ function MonsterHeroGame() {
   // 防御カードの上位レベル・追加枚数は、丈夫さ(バフ・デバフを含まない基礎ステ=defそのもの)が
   // 100毎に自動で1段階上がる
   const computeGuardLevel = defVal => Math.max(0, Math.min(GUARD_EVOLUTION.length - 1, Math.floor((defVal || 0) / 100)));
-  const spawnEnemy = useCallback(w => {
-    const enemyKey = ENEMY_SEQUENCE[w - 1];
+  const spawnEnemy = useCallback((w, forcedEnemyKey = null) => {
+    const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[w - 1];
     const base = ENEMY_DATA[enemyKey];
+    if (!base) return null;
     let mod = DIFFICULTY_SETTINGS[difficulty]?.power || 1.0;
     const newEnemy = {
       ...base,
@@ -7033,17 +7065,18 @@ function MonsterHeroGame() {
   // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
   // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
   // 必ず呼び出し元が保持している最新のローカル値を渡す
-  const initBattle = (w, s, u, t, defVal) => {
+  const initBattle = (w, s, u, t, defVal, forcedEnemyKey = null, heroForDeck = null) => {
     setWave(w);
     const currentSlots = s || slots;
-    const dist = spawnEnemy(w);
+    const dist = spawnEnemy(w, forcedEnemyKey);
+    if (dist === null) return;
     const nAtkL = computeAtkTier(currentSlots, dist);
     const nGrdL = computeGuardLevel(defVal !== undefined ? defVal : def);
     const nGB = nGrdL;
     setAtkLevel(nAtkL);
     setGuardLevel(nGrdL);
     setGuardBonusCount(nGB);
-    const pool = buildDeck(currentSlots, nAtkL, nGrdL, u || ownedUniques, t || ownedTeachings, nGB, slotUniqueChoice, slotUniqueLevelChoice, inheritedUniqueEvo);
+    const pool = buildDeck(currentSlots, nAtkL, nGrdL, u || ownedUniques, t || ownedTeachings, nGB, slotUniqueChoice, slotUniqueLevelChoice, inheritedUniqueEvo, heroForDeck);
     setHand(pool.slice(0, 5));
     setDeck(pool.slice(5));
     setGraveyard([]);
@@ -7051,6 +7084,70 @@ function MonsterHeroGame() {
     setIsBusy(false);
     setTurnBuffs({});
     setNextTurnBuffs({}); // WAVE毎リセットの一時バフ・デバフを全てクリア
+  };
+
+  // 通常の敵順と敵定義の両方に存在するものだけを候補にする。敵名・能力値を複製せず、
+  // 選択した難易度で通常生成に使う倍率もspawnEnemyへそのまま委ねる。
+  const getDebugEnemyOptions = diff => DIFFICULTY_SETTINGS[diff] ? [...new Set(ENEMY_SEQUENCE)].map(key => ({
+    key,
+    wave: ENEMY_SEQUENCE.indexOf(key) + 1,
+    enemy: ENEMY_DATA[key]
+  })).filter(item => item.enemy && item.enemy.name && item.enemy.baseHp > 0 && item.enemy.baseAtk >= 0) : [];
+  const startDebugBattle = () => {
+    const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
+    const party = getActiveMonsterList().slice(0, 4);
+    if (!option || party.length === 0) return;
+    const hero = party[0];
+    const debugSlots = [party[0] || null, party[1] || null, party[2] || null, party[3] || null];
+    const allies = debugSlots.slice(1).filter(Boolean);
+    const total = (key, base) => allies.reduce((value, mon) => value + (mon.plusStats?.[key] || 0), base);
+    const debugMaxHp = total('hp', hero.baseHp);
+    const debugAtk = total('atk', hero.baseAtk);
+    const debugDef = total('def', hero.baseDef);
+    const debugMaxGuts = total('guts', hero.baseGuts);
+    const uniques = debugSlots.filter(Boolean).map(mon => ({
+      ...mon.unique,
+      evoLevel: 0
+    }));
+    const teachings = getActiveTeachingCards().map(card => ({
+      ...card,
+      evoLevel: 0,
+      uid: Math.random()
+    }));
+    debugBattleRef.current = true;
+    debugResultRef.current = false;
+    setDebugBattle(true);
+    setDebugOutcome(null);
+    setGaveUp(false);
+    setScore(0);
+    setWaveHistory([]);
+    setPermaBuffs({
+      autoHpRecovery: 0.1
+    });
+    setWaveBuffs({});
+    setTurnBuffs({});
+    setNextTurnBuffs({});
+    setDistDmgBonus([0, 0, 0, 0]);
+    setTotalDistDamage([0, 0, 0, 0]);
+    setTotalAllDamage(0);
+    setTotalRecoveryDelta(0);
+    setUpgradePoints(0);
+    setAtkLevel(0);
+    setGuardLevel(0);
+    setGuardBonusCount(0);
+    setFinalRewardSummary(null);
+    setMainHero(hero);
+    setSlots(debugSlots);
+    setOwnedUniques(uniques);
+    setOwnedTeachings(teachings);
+    setMaxHp(debugMaxHp);
+    setHp(debugMaxHp);
+    setAtk(debugAtk);
+    setDef(debugDef);
+    setMaxGuts(debugMaxGuts);
+    setGuts(Math.floor(debugMaxGuts * 0.5));
+    setDistAptBonus(allies.reduce((sum, mon) => sum.map((v, i) => v + getMonsterAptDelta(mon)[i]), [0, 0, 0, 0]));
+    initBattle(option.wave, debugSlots, uniques, teachings, debugDef, option.key, hero);
   };
   const setupMon = (m, slotIdx) => {
     if (!m) return;
@@ -7158,7 +7255,7 @@ function MonsterHeroGame() {
     }
     setTimeout(() => {
       setOwnedTeachings(nextTeachings);
-      if (!enemy) initBattle(testMooMode ? ENEMY_SEQUENCE.length : 1, slots, ownedUniques, nextTeachings, def);else initBattle(wave + 1, slots, ownedUniques, nextTeachings, def);
+      if (!enemy) initBattle(1, slots, ownedUniques, nextTeachings, def);else initBattle(wave + 1, slots, ownedUniques, nextTeachings, def);
       setSelectedTeachingCard(null);
     }, 150);
   };
@@ -8128,7 +8225,9 @@ function MonsterHeroGame() {
     style: difficultyStyle(setting, difficulty === key)
   }, setting.label))), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
-      setTestMooMode(false);
+      debugBattleRef.current = false;
+      setDebugBattle(false);
+      setDebugOutcome(null);
       setMonSelection(getActiveMonsterList());
       setGameState('PICK_HERO');
     },
@@ -8281,7 +8380,55 @@ function MonsterHeroGame() {
   }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowOfficialTitleConfirm(true),
     className: "w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black"
-  }, "\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B"))), gameState === 'PROFILE' && /*#__PURE__*/React.createElement("div", {
+  }, "\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B"))), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 flex flex-col h-full p-4",
+    style: {
+      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-4 shrink-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setGameState('SETTINGS');
+      setShowHelp(true);
+    },
+    className: "p-3 text-slate-500"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-black text-slate-400 tracking-widest"
+  }, "BATTLE TEST")), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll space-y-5"
+  }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-500 font-black mb-2"
+  }, "1. \u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-2"
+  }, Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => /*#__PURE__*/React.createElement("button", {
+    key: key,
+    onClick: () => {
+      setDifficulty(key);
+      const options = getDebugEnemyOptions(key);
+      if (!options.some(o => o.key === debugEnemyKey)) setDebugEnemyKey(options[0]?.key || null);
+    },
+    className: `min-h-[48px] rounded-xl text-[9px] font-black ${difficulty === key ? 'ring-2 ring-white' : 'border border-white/10'}`,
+    style: difficultyStyle(setting, difficulty === key)
+  }, setting.label)))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-500 font-black mb-2"
+  }, "2. \u6575"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, getDebugEnemyOptions(difficulty).map(({
+    key,
+    enemy: debugEnemy
+  }) => /*#__PURE__*/React.createElement("button", {
+    key: key,
+    onClick: () => setDebugEnemyKey(key),
+    className: `min-h-[46px] px-3 rounded-xl text-[11px] font-black ${debugEnemyKey === key ? 'bg-purple-950 border-2 border-purple-400 text-purple-100' : 'bg-slate-900 border border-white/10 text-slate-400'}`
+  }, debugEnemy.emoji, " ", debugEnemy.name)))), /*#__PURE__*/React.createElement("button", {
+    disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || getActiveMonsterList().length === 0,
+    onClick: startDebugBattle,
+    className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
+  }, "3. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'PROFILE' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full min-h-0 p-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-4 shrink-0"
@@ -10780,8 +10927,10 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("header", {
     className: "h-[5%] shrink-0 bg-slate-900 px-4 flex items-center justify-between border-b border-white/5 z-[6500]"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-4"
-  }, /*#__PURE__*/React.createElement("span", {
+    className: "flex items-center gap-2"
+  }, debugBattle && /*#__PURE__*/React.createElement("span", {
+    className: "text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1.5 py-0.5 tracking-widest"
+  }, "DEBUG"), /*#__PURE__*/React.createElement("span", {
     className: `text-[8px] font-black bg-opacity-10 px-2 py-0.5 rounded border tracking-wider ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
   }, "WAVE ", wave, "/10"), /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] font-black text-blue-400 flex items-center gap-1 uppercase tracking-widest"
@@ -12562,7 +12711,7 @@ function MonsterHeroGame() {
     size: 18
   }), " \u30B2\u30FC\u30E0\u306E\u76EE\u7684"), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-200 leading-relaxed mb-4"
-  }, "\u516810 WAVE\u306E\u30DC\u30B9\u30E2\u30F3\u30B9\u30BF\u30FC\u3092\u6483\u7834\u3057\u3001\u6700\u9AD8\u30B9\u30B3\u30A2\u3092\u76EE\u6307\u3059\u6226\u7565\u7684\u30AB\u30FC\u30C9\u30D0\u30C8\u30EBRPG\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+  }, "\u52C7\u8005\u30E2\u30F3\u3092\u9078\u3073\u3001\u30AB\u30FC\u30C9\u3067\u6226\u3044\u306A\u304C\u3089\u516810 WAVE\u3092\u9032\u307F\u3001\u30E9\u30B9\u30DC\u30B9\u300C\u30E0\u30FC\u300D\u306E\u6483\u7834\u3068\u6700\u9AD8\u30B9\u30B3\u30A2\u3092\u76EE\u6307\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-black/50 p-3 rounded-2xl border border-white/5"
@@ -12593,7 +12742,7 @@ function MonsterHeroGame() {
     text: "報酬を選んで強化（WAVE 2,4,6で仲間が合流）"
   }, {
     step: "4",
-    text: "10 WAVE目のチャンピオンを目指す！"
+    text: "WAVEごとに強化し、10 WAVE目のムー撃破を目指す"
   }].map(item => /*#__PURE__*/React.createElement("div", {
     key: item.step,
     className: "flex items-center gap-4"
@@ -12601,7 +12750,15 @@ function MonsterHeroGame() {
     className: "shrink-0 w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center text-[11px] font-black"
   }, item.step), /*#__PURE__*/React.createElement("span", {
     className: "text-[12px] text-slate-300"
-  }, item.text)))))), helpTab === 'battle' && /*#__PURE__*/React.createElement("div", {
+  }, item.text))))), /*#__PURE__*/React.createElement("section", {
+    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-indigo-300 font-black text-base mb-3 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Trophy, {
+    size: 18
+  }), " \u96E3\u6613\u5EA6\u3068\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-slate-200 leading-relaxed"
+  }, "HOME\u306E\u300C\u30D0\u30C8\u30EB\u300D\u304B\u3089\u96E3\u6613\u5EA6\u3092\u9078\u3073\u307E\u3059\u3002\u96E3\u3057\u3044\u307B\u3069\u6575\u304C\u5F37\u304F\u306A\u308A\u3001\u30B9\u30B3\u30A2\u3068\u7372\u5F97\u30C0\u30A4\u30E4\u306E\u500D\u7387\u3082\u4E0A\u304C\u308A\u307E\u3059\u3002\u540C\u3058\u753B\u9762\u306E\u300C\u30E9\u30F3\u30AD\u30F3\u30B0\u300D\u3067\u3001\u96E3\u6613\u5EA6\u5225\u30B9\u30B3\u30A2\u30FB\u30D6\u30EA\u30FC\u30C0\u30FCLv\u30FB\u7D46Lv\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002"))), helpTab === 'battle' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-5"
   }, /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
@@ -12749,7 +12906,7 @@ function MonsterHeroGame() {
     size: 18
   }), " \u6280\u30EC\u30D9\u30EB"), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-200 leading-relaxed mb-3"
-  }, "\u901A\u5E38\u6280\u30FB\u8DDD\u96E2\u6280\u30FB\u56FA\u6709\u6280\u306B\u306F\u305D\u308C\u305E\u308C9\u6BB5\u968E\u306E\u30EC\u30D9\u30EB\u304C\u3042\u308A\u307E\u3059\u3002WAVE\u30AF\u30EA\u30A2\u6642\u306E\u5831\u916C\u3067\u89E3\u653E\u30DD\u30A4\u30F3\u30C8\u3092\u7372\u5F97\u3057\u3001\u6280\u30921\u6BB5\u968E\u305A\u3064\u5F37\u5316\u3057\u3066\u3044\u304D\u307E\u3059\u3002\u30EC\u30D9\u30EB\u304C\u4E0A\u304C\u308B\u3068\u5A01\u529B\u3068\u4F1A\u5FC3\u7387\u304C\u4E0A\u304C\u308A\u307E\u3059\u304C\u3001\u6D88\u8CBB\u30AC\u30C3\u30C4\u3082\u5897\u3048\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+  }, "\u901A\u5E38\u6280\u30FB\u8DDD\u96E2\u6280\u30FB\u56FA\u6709\u6280\u306B\u306F\u6BB5\u968E\u304C\u3042\u308A\u307E\u3059\u3002\u901A\u5E38\u6280\u30FB\u8DDD\u96E2\u6280\u306F\u3001\u305D\u306E\u8DDD\u96E2\u306B\u3044\u308B\u5473\u65B9\u306E\u9593\u5408\u3044\u9069\u6027\u3068\u8DDD\u96E2\u30C0\u30E1\u30FC\u30B8\u88DC\u6B63\u3067\u4E0A\u4F4D\u6BB5\u968E\u304C\u89E3\u653E\u3055\u308C\u307E\u3059\u3002\u56FA\u6709\u6280\u306F\u30D0\u30C8\u30EB\u4E2D\u306E\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3067\u5F37\u5316\u3057\u307E\u3059\u3002\u4E0A\u4F4D\u307B\u3069\u5F37\u529B\u3067\u3059\u304C\u3001\u6D88\u8CBB\u30AC\u30C3\u30C4\u3082\u5897\u3048\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
     className: "bg-black/50 p-4 rounded-2xl border border-cyan-500/30"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-[12px] text-slate-400 leading-relaxed"
@@ -12797,7 +12954,7 @@ function MonsterHeroGame() {
     size: 18
   }), " \u5BC4\u4ED8"), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u795E\u6BBF\u306E\u300C\u5BC4\u4ED8\u300D\u3067\u306F\u3001\u6240\u6301\u3057\u3066\u3044\u308B\u30DE\u30B9\u30E2\u30F3\u3092\u624B\u653E\u3057\u3001\u305D\u306E\u30DE\u30B9\u30E2\u30F3\u306E\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024\u3068\u540C\u3058\u6570\u306E\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059\u3002\u5BC4\u4ED8\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("section", {
+  }, "HOME\u306E\u300C\u795E\u6BBF\u300D\u5185\u306B\u3042\u308B\u300C\u5BC4\u4ED8\u300D\u306F\u3001\u30DE\u30B9\u30E2\u30F3\u3092\u624B\u653E\u3057\u3001\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024\u3068\u540C\u3058\u6570\u306E\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308B\u6A5F\u80FD\u3067\u3059\u3002\u5BC4\u4ED8\u306F\u53D6\u308A\u6D88\u305B\u305A\u3001\u624B\u653E\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-pink-400 font-black text-base mb-3 flex items-center gap-2"
@@ -12900,12 +13057,20 @@ function MonsterHeroGame() {
   }, "\u67D3\u8272\u3082\u3069\u304D"), ": \u898B\u305F\u76EE\u306E\u8272\u3092\u5909\u3048\u3089\u308C\u307E\u3059\u3002\u30E2\u30F3\u30B9\u30BF\u30FC\u306B\u3088\u3063\u3066\u306F\u4F53\u30FB\u76EE\u30FB\u53E3\u306A\u3069\u306E\u90E8\u4F4D\u3054\u3068\u306B\u5225\u3005\u306E\u8272\u3092\u9078\u3079\u3001\u30D7\u30EA\u30BB\u30C3\u30C827\u8272\u306B\u52A0\u3048\u3066\u30AB\u30B9\u30BF\u30E0\u30AB\u30E9\u30FC\u3082\u4F7F\u3048\u307E\u3059\u3002"))), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-cyan-300 font-black text-base mb-3 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Info, {
+    size: 18
+  }), " \u30D9\u30FC\u30B9\u30E2\u30F3\u3068\u30DE\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-slate-200 leading-relaxed"
+  }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u306F\u30E2\u30F3\u30B9\u30BF\u30FC\u7A2E\u306E\u57FA\u672C\u30C7\u30FC\u30BF\u3067\u3059\u3002\u30DE\u30B9\u30E2\u30F3\u306F\u30D7\u30EC\u30A4\u5F8C\u306B\u767B\u9332\u3057\u305F\u80B2\u6210\u500B\u4F53\u3067\u3001\u540D\u524D\u30FB\u7D46\u30FB\u5F37\u5316\u30FB\u8272\u30FB\u5408\u4F53\u5C65\u6B74\u3092\u500B\u5225\u306B\u6301\u3061\u307E\u3059\u3002\u3069\u3061\u3089\u306E\u4E00\u89A7\u3082HOME\u306E\u300CM/B\u7BA1\u7406\u300D\u304B\u3089\u958B\u3051\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
+    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
+  }, /*#__PURE__*/React.createElement("h3", {
     className: "text-indigo-400 font-black text-base mb-3 flex items-center gap-2"
   }, /*#__PURE__*/React.createElement(Layers, {
     size: 18
-  }), " \u7DE8\u6210"), /*#__PURE__*/React.createElement("p", {
+  }), " M/B\u7BA1\u7406\u3068\u7DE8\u6210"), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u65B0\u3057\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u3084\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u3092\u89E3\u653E\u3057\u3066\u3082\u3001\u6B21\u306E\u5468\u56DE\u3067\u5019\u88DC\u306B\u306A\u308B\u306E\u306F\u7DE8\u6210\u3067\u9078\u3093\u3060\u3082\u306E\u3060\u3051\u3067\u3059\u3002HOME\u306E\u300CM/B\u7BA1\u7406\u300D\u5185\u306B\u3042\u308B\u7DE8\u6210\u304B\u3089\u30E2\u30F3\u30B9\u30BF\u30FC8\u4F53\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C96\u679A\u3092\u3061\u3087\u3046\u3069\u9078\u3073\u3001\u300C\u6C7A\u5B9A\u300D\u30DC\u30BF\u30F3\u3067\u78BA\u5B9A\u3057\u307E\u3059(\u6700\u521D\u304B\u3089\u89E3\u653E\u6E08\u307F\u306E8\u4F53\u30FB6\u679A\u306F\u7DE8\u6210\u6E08\u307F\u3067\u3059)\u3002")), /*#__PURE__*/React.createElement("section", {
+  }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u65B0\u3057\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u3084\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u3092\u89E3\u653E\u3057\u3066\u3082\u3001\u6B21\u306E\u5468\u56DE\u3067\u5019\u88DC\u306B\u306A\u308B\u306E\u306F\u7DE8\u6210\u3067\u9078\u3093\u3060\u3082\u306E\u3060\u3051\u3067\u3059\u3002HOME\u306E\u300CM/B\u7BA1\u7406\u300D\u3067\u306F\u30D9\u30FC\u30B9\u30E2\u30F3\u4E00\u89A7\u3001\u30DE\u30B9\u30E2\u30F3\u4E00\u89A7\u3001\u30E2\u30F3\u30B9\u30BF\u30FC\u7DE8\u6210\u3001\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u7DE8\u6210\u3092\u5229\u7528\u3067\u304D\u307E\u3059\u3002\u7DE8\u6210\u3067\u306F\u30E2\u30F3\u30B9\u30BF\u30FC8\u4F53\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C96\u679A\u3092\u3061\u3087\u3046\u3069\u9078\u3073\u3001\u300C\u6C7A\u5B9A\u300D\u30DC\u30BF\u30F3\u3067\u78BA\u5B9A\u3057\u307E\u3059(\u6700\u521D\u304B\u3089\u89E3\u653E\u6E08\u307F\u306E8\u4F53\u30FB6\u679A\u306F\u7DE8\u6210\u6E08\u307F\u3067\u3059)\u3002")), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-indigo-300 font-black text-base mb-3 flex items-center gap-2"
@@ -12961,7 +13126,15 @@ function MonsterHeroGame() {
     className: "font-black text-white"
   }, "\u52C7\u8005\u7279\u6027\u3092\u7406\u89E3\u3059\u308B"), ": 1\u4F53\u76EE\u306B\u9078\u3093\u3060\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u7279\u6027\u306F\u6700\u5F8C\u307E\u3067\u5F71\u97FF\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("span", {
     className: "font-black text-white"
-  }, "\u30C7\u30FC\u30BF\u306E\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7"), ": \u30DB\u30FC\u30E0\u753B\u9762\u306E\u30A2\u30A4\u30B3\u30F3\u3092\u4F5C\u308A\u76F4\u3059\u3068\u9032\u884C\u72B6\u6CC1\u304C\u5F15\u304D\u7D99\u304C\u308C\u306A\u3044\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002HOME\u306E\u300C\u8A2D\u5B9A\u300D\u5185\u306B\u3042\u308B\u300C\u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E\u300D\u3067\u5B9A\u671F\u7684\u306B\u30B3\u30FC\u30C9\u3092\u63A7\u3048\u3066\u304A\u304F\u3068\u5B89\u5FC3\u3067\u3059\u3002"))))), /*#__PURE__*/React.createElement("footer", {
+  }, "\u30C7\u30FC\u30BF\u306E\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7"), ": \u30DB\u30FC\u30E0\u753B\u9762\u306E\u30A2\u30A4\u30B3\u30F3\u3092\u4F5C\u308A\u76F4\u3059\u3068\u9032\u884C\u72B6\u6CC1\u304C\u5F15\u304D\u7D99\u304C\u308C\u306A\u3044\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002HOME\u306E\u300C\u8A2D\u5B9A\u300D\u5185\u306B\u3042\u308B\u300C\u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E\u300D\u3067\u5B9A\u671F\u7684\u306B\u30B3\u30FC\u30C9\u3092\u63A7\u3048\u3066\u304A\u304F\u3068\u5B89\u5FC3\u3067\u3059\u3002"))), /*#__PURE__*/React.createElement("section", {
+    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-slate-200 font-black text-base mb-3 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Settings, {
+    size: 18
+  }), " \u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3068\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-slate-300 leading-relaxed space-y-2"
+  }, /*#__PURE__*/React.createElement("p", null, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u306FHOME\u4E0A\u90E8\u306E\u30D7\u30EC\u30A4\u30E4\u30FC\u60C5\u5831\u304B\u3089\u958B\u304D\u3001\u540D\u524D\u30FB\u30A2\u30A4\u30B3\u30F3\u30FB\u96E3\u6613\u5EA6\u5225\u8A18\u9332\u30FB\u6240\u6301\u30A2\u30A4\u30C6\u30E0\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u30D8\u30EB\u30D7\u3001\u97F3\u91CF\u8A2D\u5B9A\u3001\u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E\u3001\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B\u64CD\u4F5C\u306FHOME\u306E\u300C\u8A2D\u5B9A\u300D\u306B\u3042\u308A\u307E\u3059\u3002\u97F3\u91CF\u8A2D\u5B9A\u3067\u306FBGM\u3068SE\u3092\u500B\u5225\u306B\u8ABF\u6574\u3067\u304D\u3001\u5F15\u304D\u7D99\u304E\u30B3\u30FC\u30C9\u306F\u7AEF\u672B\u79FB\u884C\u3084\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u306B\u4F7F\u3048\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u66F4\u65B0\u5C65\u6B74\u306FHOME\u53F3\u4E0A\u306E\u72EC\u7ACB\u3057\u305F\u300C\u66F4\u65B0\u5C65\u6B74\u300D\u30DC\u30BF\u30F3\u304B\u3089\u78BA\u8A8D\u3057\u307E\u3059\u3002"))))), /*#__PURE__*/React.createElement("footer", {
     className: "shrink-0 p-5 bg-slate-900 border-t border-white/10 text-center",
     style: {
       backgroundColor: '#0f172a'
@@ -12969,15 +13142,19 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowHelp(false),
     className: "w-full bg-white text-black py-4 rounded-2xl font-black text-sm uppercase shadow-2xl active:scale-95 transition-transform"
-  }, "\u308F\u304B\u3063\u305F\uFF01\u5192\u967A\u306B\u623B\u308B"), gameState === 'HOME' && /*#__PURE__*/React.createElement("button", {
+  }, "\u308F\u304B\u3063\u305F\uFF01\u5192\u967A\u306B\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+    "aria-label": "",
     onClick: () => {
+      const options = getDebugEnemyOptions(difficulty);
+      setDebugEnemyKey(options[0]?.key || null);
+      debugBattleRef.current = false;
+      setDebugBattle(false);
+      setDebugOutcome(null);
       setShowHelp(false);
-      setTestMooMode(true);
-      setMonSelection(Object.values(ALL_PLAYER_MONSTERS));
-      setGameState('PICK_HERO');
+      setGameState('DEBUG_SETTINGS');
     },
-    className: "mt-3 mx-auto block text-[9px] text-slate-700 hover:text-slate-500 active:text-purple-500 tracking-widest"
-  }, "\xB7 \xB7 \uD83E\uDDEA \xB7 \xB7"))), titleModal, showOfficialTitleConfirm && /*#__PURE__*/React.createElement("div", {
+    className: "mt-7 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60"
+  }, "\uD83D\uDC8A"))), titleModal, showOfficialTitleConfirm && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 flex items-center justify-center p-6",
     style: {
       position: 'fixed',
@@ -13446,7 +13623,7 @@ function MonsterHeroGame() {
     className: "text-xl font-black text-white uppercase mb-2"
   }, "\u964D\u53C2\u3057\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-slate-400 mb-2"
-  }, "\u73FE\u5728\u306E\u30B9\u30B3\u30A2 ", score.toLocaleString(), " pt \u304C\u30E9\u30F3\u30AD\u30F3\u30B0\u306B\u8A18\u9332\u3055\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+  }, debugBattle ? 'このデバッグ戦を終了します' : /*#__PURE__*/React.createElement(React.Fragment, null, "\u73FE\u5728\u306E\u30B9\u30B3\u30A2 ", score.toLocaleString(), " pt \u304C\u30E9\u30F3\u30AD\u30F3\u30B0\u306B\u8A18\u9332\u3055\u308C\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
     className: "flex flex-col gap-3 w-full max-w-xs mt-4",
     style: {
       position: 'relative',
@@ -13470,7 +13647,40 @@ function MonsterHeroGame() {
       pointerEvents: 'auto'
     },
     className: "w-full bg-slate-800 text-slate-300 py-3 rounded-2xl font-black uppercase text-sm active:scale-95"
-  }, "\u6226\u3044\u3092\u7D9A\u3051\u308B"))), gameState === 'CHAMPION' && /*#__PURE__*/React.createElement("div", {
+  }, "\u6226\u3044\u3092\u7D9A\u3051\u308B"))), debugBattle && debugOutcome && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex flex-col items-center justify-center p-6 text-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      zIndex: 81000,
+      backgroundColor: 'rgba(2,6,23,.98)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-fuchsia-300 tracking-[.35em] mb-3"
+  }, "DEBUG"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-2xl font-black text-white mb-8"
+  }, debugOutcome === 'win' ? '勝利' : debugOutcome === 'lose' ? '敗北' : 'リタイア'), /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-xs space-y-3"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => runResultActionOnce(startDebugBattle),
+    disabled: resultActionPending,
+    className: "w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50"
+  }, "\u540C\u3058\u6761\u4EF6\u3067\u3082\u3046\u4E00\u5EA6"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => runResultActionOnce(() => {
+      returnToHome();
+      setGameState('DEBUG_SETTINGS');
+    }),
+    disabled: resultActionPending,
+    className: "w-full bg-slate-800 text-slate-200 py-3.5 rounded-2xl font-black disabled:opacity-50"
+  }, "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => runResultActionOnce(() => {
+      returnToHome();
+      setGameState('SETTINGS');
+      setShowHelp(true);
+    }),
+    disabled: resultActionPending,
+    className: "w-full bg-slate-900 border border-white/10 text-slate-400 py-3.5 rounded-2xl font-black disabled:opacity-50"
+  }, "\u30D8\u30EB\u30D7\u3078\u623B\u308B"))), gameState === 'CHAMPION' && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 flex flex-col items-center p-6 text-center",
     style: {
       position: 'fixed',
@@ -13498,7 +13708,7 @@ function MonsterHeroGame() {
     disabled: resultActionPending,
     "aria-busy": resultActionPending,
     className: "w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
-  }, resultActionPending ? '処理中…' : 'HOMEへ')), hp <= 0 && /*#__PURE__*/React.createElement("div", {
+  }, resultActionPending ? '処理中…' : 'HOMEへ')), hp <= 0 && !debugBattle && /*#__PURE__*/React.createElement("div", {
     className: "mh-game-over-screen fixed inset-0 flex flex-col items-center text-center",
     style: {
       position: 'fixed',
@@ -13533,7 +13743,7 @@ function MonsterHeroGame() {
     onClick: () => runResultActionOnce(returnToHome),
     disabled: resultActionPending,
     className: "w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-  }, "\u30C8\u30C3\u30D7\u3078"))), gaveUp && /*#__PURE__*/React.createElement("div", {
+  }, "\u30C8\u30C3\u30D7\u3078"))), gaveUp && !debugBattle && /*#__PURE__*/React.createElement("div", {
     className: "mh-game-over-screen fixed inset-0 flex flex-col items-center text-center",
     style: {
       position: 'fixed',
