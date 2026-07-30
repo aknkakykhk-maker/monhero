@@ -63,11 +63,11 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 先読みと画面表示の通信を共有`, code.includes('rankingRequestsRef.current.has(requestKey)') && code.includes('rankingRequestsRef.current.set(requestKey, request)'));
   check(`${label}: 30秒以内の取得済みデータを再利用`, code.includes('Date.now() - fetchedAt < 30000'));
   check(`${label}: ランキング通信に8秒の上限`, code.includes('setTimeout(() => controller.abort(), 8000)'));
-  check(`${label}: ランキング取得列を必要項目に限定`, code.includes("const select = 'user_name,hero,party,score,level,icon'"));
+  check(`${label}: ランキング取得列を必要項目に限定`, code.includes("RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon'") && code.includes("RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon'"));
   check(`${label}: 起動時はNormalとMasterを優先`, code.includes("['Normal', 'Master', ...allDiffs.filter"));
   check(`${label}: スコアは同時取得し一部失敗も完了扱い`, code.includes('Promise.allSettled(diffs.map(loadOne))'));
-  check(`${label}: レベル系は難易度で絞らず1回で取得`, code.includes("sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId)"));
-  check(`${label}: 取得上限は仕様どおり上位50件`, code.includes('const RANKING_DIAGNOSTIC_LIMIT = 50'));
+  check(`${label}: レベル系は難易度で絞らず1回で取得`, code.includes('sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId, columns)'));
+  check(`${label}: 取得上限は20件`, code.includes('const RANKING_DIAGNOSTIC_LIMIT = 20'));
   check(`${label}: 端末内自己ベストから復旧`, code.includes('`mh_hs_${d}`') && code.includes("hero: '記録復旧'"));
   check(`${label}: score.desc失敗時も診断用上限を使う`, code.includes("sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0"));
   // 取得順は primaryOrder に集約されている。score系は score.desc.nullslast、絆は id.desc。
