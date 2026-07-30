@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 22:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 22:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4627,7 +4627,13 @@ function MonsterHeroGame() {
     } else if (mainHero?.id==='Suezo'&&Math.random()<0.4) {
       addPopup("眼力！",'enemy','text-indigo-400 font-black text-xl drop-shadow-md'); await wait(1000);
     } else {
-      if (intent.type==='MOVE') {
+      if (intent.type==='MOVE' && immediateEffects.distLocked) {
+        // 距離撃を撃ったターンは最終的な間合いが距離撃側で確定する。
+        // それでも敵が移動モーションを見せると「動いたのに距離が変わらない」ように見えるため、
+        // 移動しようとしていた敵は行動しなかった扱いにする(モーションも距離変更も行わない)。
+        addPopup("距離撃！ 移動できない",'enemy','text-cyan-300 font-black text-xl drop-shadow-md');
+        await wait(800);
+      } else if (intent.type==='MOVE') {
         // 移動専用エフェクト: ダッシュマーク＋残像
         Audio_.se.enemyMove();
         setEnemyAttackFx({kind:'move'});
@@ -4989,7 +4995,8 @@ function MonsterHeroGame() {
     // 予測表示している enemyIntent をそのまま実行する（再抽選しない）
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
-    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult},executedIntent);
+    // distLocked: このターン距離撃を撃ったか。敵の移動は距離撃で上書きされるため、行動しなかった扱いにする
+    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,distLocked:forcedMoveTarget!=null},executedIntent);
     // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
     if (forcedMoveTarget!=null) {
       setEnemyDist(forcedMoveTarget);
