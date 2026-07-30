@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 04d75802a8dba884
+// source-sha256: 9ccc81db9a68587f
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 01:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 01:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3922,6 +3922,10 @@ const RANGE_STYLES = {
 // 難易度。keyはランキングの記録やハイスコアの保存にも使うので、既存のものは変更しない。
 // bg=選んだときの背景色 / text=選んでいないときの文字色(難易度の雰囲気に合わせた色)。
 // Tailwindの動的なクラス生成は稀に失敗して色が出ないことがあるため、実際の色はinline styleで指定する
+// data/breeder.js が古いキャッシュのまま読み込まれると、後から足した定義が未定義になり
+// 画面全体が真っ暗になってしまう。参照側で必ず既定値に落として、機能が出ないだけで済むようにする。
+// (キャッシュキー自体は tools/stamp-version.js が data/*.js の中身のハッシュへ揃えている)
+const SKIP_TICKETS = typeof SKIP_TICKET_BY_DIFFICULTY !== 'undefined' && SKIP_TICKET_BY_DIFFICULTY || {};
 const DIFFICULTY_SETTINGS = {
   Beginner: {
     label: "Beginner",
@@ -8286,7 +8290,7 @@ function MonsterHeroGame() {
     }
   };
   const openBattleSkip = difficultyKey => {
-    const itemId = SKIP_TICKET_BY_DIFFICULTY[difficultyKey];
+    const itemId = SKIP_TICKETS[difficultyKey];
     if (!itemId || (ownedItems[itemId] || 0) <= 0) return;
     setSkipFlow({
       difficulty: difficultyKey,
@@ -12474,8 +12478,8 @@ function MonsterHeroGame() {
         style: {
           backgroundColor: setting.bg
         }
-      }, "\u3053\u306E\u96E3\u6613\u5EA6\u3067\u6311\u6226"), SKIP_TICKET_BY_DIFFICULTY[key] && (() => {
-        const tid = SKIP_TICKET_BY_DIFFICULTY[key];
+      }, "\u3053\u306E\u96E3\u6613\u5EA6\u3067\u6311\u6226"), SKIP_TICKETS[key] && (() => {
+        const tid = SKIP_TICKETS[key];
         const have = ownedItems[tid] || 0;
         return /*#__PURE__*/React.createElement("div", {
           className: "flex gap-1.5"
