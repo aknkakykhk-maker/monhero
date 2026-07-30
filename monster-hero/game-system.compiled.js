@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1c12673585d06ffb
+// source-sha256: ca58f0144b1d7b38
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 06:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 06:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13090,43 +13090,61 @@ function MonsterHeroGame() {
     const canBuy = !comingSoon && !owned && balance >= item.cost;
     const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
     const detailTeaching = item.type === 'breeder' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
-    return /*#__PURE__*/React.createElement("div", {
-      key: item.id,
-      className: `rounded-2xl border-2 p-3 flex flex-col items-center gap-2 ${owned ? 'bg-emerald-900/30 border-emerald-500/50' : comingSoon ? 'bg-slate-900/60 border-slate-800/60' : 'bg-slate-900 border-slate-800'}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `w-16 h-16 rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${comingSoon ? 'grayscale opacity-50' : ''}`
-    }, item.icon ? /*#__PURE__*/React.createElement("img", {
-      src: item.icon,
-      alt: item.name,
-      className: "w-full h-full object-cover"
-    }) : /*#__PURE__*/React.createElement("span", {
-      className: "text-3xl"
-    }, item.emoji)), /*#__PURE__*/React.createElement("div", {
-      className: `text-xs font-black ${comingSoon ? 'text-slate-500' : 'text-white'}`
-    }, item.name), item.type === 'item' && item.desc && /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] text-slate-400 text-center leading-tight"
-    }, item.desc), item.type === 'item' && (ownedItems[item.id] || 0) > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] font-black text-cyan-300"
-    }, "\u6240\u6301\u6570: ", ownedItems[item.id]), (detailMon || detailTeaching) && !comingSoon && /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        if (detailMon) setRosterDetailMon(detailMon);else setRosterDetailTeaching(detailTeaching);
-      },
-      className: "text-[9px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-3 py-1 rounded-full active:scale-95 flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(BookOpen, {
-      size: 9
-    }), "\u8A73\u7D30\u3092\u898B\u308B"), comingSoon ? /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] font-black text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full"
-    }, "\u8FD1\u65E5\u8FFD\u52A0\u4E88\u5B9A") : owned ? /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] font-black text-emerald-400 bg-emerald-950/50 px-3 py-1.5 rounded-full"
-    }, "\u6240\u6301\u6E08\u307F") : /*#__PURE__*/React.createElement("button", {
-      onClick: () => buyMarketItem(item),
-      disabled: !canBuy,
-      className: `text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 ${canBuy ? 'bg-amber-500 text-black active:scale-95' : 'bg-slate-800 text-slate-500'}`
-    }, usesGold ? /*#__PURE__*/React.createElement(Gem, {
-      size: 10
-    }) : /*#__PURE__*/React.createElement(Coins, {
-      size: 10
-    }), item.cost, usesGold ? 'ダイヤ' : 'pt', " \u3067\u8CFC\u5165"));
+    return (
+      /*#__PURE__*/
+      // 名前・所持数・詳細ボタンは商品によって有無や行数が変わるため、
+      // 高さを決めた枠に入れて並びを崩さない。購入ボタンはmt-autoでカード下端に揃える
+      React.createElement("div", {
+        key: item.id,
+        className: `rounded-2xl border-2 p-3 flex flex-col items-center gap-2 ${owned ? 'bg-emerald-900/30 border-emerald-500/50' : comingSoon ? 'bg-slate-900/60 border-slate-800/60' : 'bg-slate-900 border-slate-800'}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `w-16 h-16 rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${comingSoon ? 'grayscale opacity-50' : ''}`
+      }, item.icon ? /*#__PURE__*/React.createElement("img", {
+        src: item.icon,
+        alt: item.name,
+        className: "w-full h-full object-cover"
+      }) : /*#__PURE__*/React.createElement("span", {
+        className: "text-3xl"
+      }, item.emoji)), /*#__PURE__*/React.createElement("div", {
+        className: `w-full flex items-center justify-center text-center text-xs font-black leading-tight ${comingSoon ? 'text-slate-500' : 'text-white'}`,
+        style: {
+          minHeight: '30px'
+        }
+      }, item.name), item.type === 'item' && /*#__PURE__*/React.createElement("div", {
+        className: "w-full text-[8px] text-slate-400 text-center leading-tight",
+        style: {
+          minHeight: '40px'
+        }
+      }, item.desc || null), /*#__PURE__*/React.createElement("div", {
+        className: "w-full flex items-center justify-center",
+        style: {
+          height: '24px'
+        }
+      }, item.type === 'item' ? /*#__PURE__*/React.createElement("span", {
+        className: `text-[9px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
+      }, "\u6240\u6301\u6570: ", ownedItems[item.id] || 0) : (detailMon || detailTeaching) && !comingSoon ? /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          if (detailMon) setRosterDetailMon(detailMon);else setRosterDetailTeaching(detailTeaching);
+        },
+        className: "text-[9px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-3 py-1 rounded-full active:scale-95 flex items-center gap-1"
+      }, /*#__PURE__*/React.createElement(BookOpen, {
+        size: 9
+      }), "\u8A73\u7D30\u3092\u898B\u308B") : null), /*#__PURE__*/React.createElement("div", {
+        className: "w-full flex items-center justify-center mt-auto"
+      }, comingSoon ? /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full"
+      }, "\u8FD1\u65E5\u8FFD\u52A0\u4E88\u5B9A") : owned ? /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-emerald-400 bg-emerald-950/50 px-3 py-1.5 rounded-full"
+      }, "\u6240\u6301\u6E08\u307F") : /*#__PURE__*/React.createElement("button", {
+        onClick: () => buyMarketItem(item),
+        disabled: !canBuy,
+        className: `text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 whitespace-nowrap ${canBuy ? 'bg-amber-500 text-black active:scale-95' : 'bg-slate-800 text-slate-500'}`
+      }, usesGold ? /*#__PURE__*/React.createElement(Gem, {
+        size: 10
+      }) : /*#__PURE__*/React.createElement(Coins, {
+        size: 10
+      }), item.cost, usesGold ? 'ダイヤ' : 'pt', " \u3067\u8CFC\u5165")))
+    );
   })))), gameState === 'ROSTER' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full min-h-0 p-4"
   }, /*#__PURE__*/React.createElement("div", {
