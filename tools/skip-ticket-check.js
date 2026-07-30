@@ -112,7 +112,7 @@ check('アイテム欄では使う対象を選ばせない', has("item.usage==='
 check('スキップ画面のBGMが決まっている', has("SKIP_PICK: 'enhance',") && has("SKIP_RESULT: 'result',"));
 // ヘルプの本文は data/help.js にデータとして持っている
 const helpSrc = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
-check('ヘルプにスキップチケットの説明がある', helpSrc.includes("['スキップチケット・序','Normal で使える']"));
+check('ヘルプにスキップチケットの説明がある', helpSrc.includes("{ t:'data', id:'skipTickets' }") && helpSrc.includes('まとめて使うと受け取る量も枚数ぶんになります'));
 // 所持数がどこでも分かるようにする
 check('確認画面で使う前後の所持数が分かる', has('所持数 {ownedItems[skipFlow.itemId]||0}枚 → {Math.max(0,(ownedItems[skipFlow.itemId]||0)-useCount)}枚'));
 check('リザルトで残り枚数が分かる', has('を{skipResult.count||1}枚使いました（残り {ownedItems[skipResult.itemId]||0}枚）') && has('itemId: item.id,'));

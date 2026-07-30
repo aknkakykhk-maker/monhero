@@ -15,6 +15,18 @@ const PRESET_REACT = require.resolve('@babel/preset-react');
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
 const helpData = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
+const breeder = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8');
+const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
+// t:'data' の表は本番の helpDataRows() が実データから作るので、その定義と材料もそのまま持ち込む
+const dataTablePrelude = [
+  breeder.slice(breeder.indexOf('const TEACHING_CARDS = [')).replace(/[A-Z_]+_ICON|DISC_STONE_BASE/g, "''"),
+  grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const LOGIN_BONUS_DEFAULT'),
+  grab(source, 'const giftRewardText = ', 'const giftTitleDisplay'),
+  grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),
+  grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
+  'const SKIP_TICKETS = SKIP_TICKET_BY_DIFFICULTY;',
+  grab(source, 'const helpDataRows = (id)', 'const difficultyStyle = '),
+].join('\n');
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -36,7 +48,7 @@ const helpJsx = source.slice(from, to + END.length);
 // 画面のアイコンは中身を見ないので、同じ形の差し替えで足りる
 const stubIcon = ({ size }) => React.createElement('i', { 'data-size': size });
 const transformed = babel.transformSync(
-  `${helpData}\n` +
+  `${helpData}\n${dataTablePrelude}\n` +
   // 本体側の「読み込めなかったときの守り」も同じ形で用意する
   "const HELP_GUIDE = (typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP_CATEGORIES)) ? HELP_CATEGORIES : [];\n" +
   "const HELP_GUIDE_INTRO = (typeof HELP_INTRO !== 'undefined' && HELP_INTRO) || '';\n" +
@@ -46,13 +58,13 @@ const transformed = babel.transformSync(
   'const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;\n' +
   'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
   '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState }) => (<>\n' +
-  helpJsx + '\n</>);\nmodule.exports = { HelpScreen, HELP_GUIDE };',
+  helpJsx + '\n</>);\nmodule.exports = { HelpScreen, HELP_GUIDE, dataRows: helpDataRows };',
   { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'help-render-check.jsx' }
 );
 
 const moduleScope = { exports: {} };
 new Function('module', 'exports', 'React', transformed.code)(moduleScope, moduleScope.exports, React);
-const { HelpScreen, HELP_GUIDE } = moduleScope.exports;
+const { HelpScreen, HELP_GUIDE, dataRows } = moduleScope.exports;
 
 const noop = () => {};
 const render = (state) => ReactDOMServer.renderToStaticMarkup(React.createElement(HelpScreen, {
@@ -88,6 +100,11 @@ for (const cat of HELP_GUIDE) {
       if (b.t === 'kv') return b.rows.some(r => !body.includes(r[0]) || !body.includes(r[1]));
       if (b.t === 'list' || b.t === 'steps') return b.items.some(x => !body.includes(x));
       if (b.t === 'note') return (b.title && !body.includes(b.title)) || !body.includes(b.text);
+      // 実データから作る表は、行が1つ残らず出ているかを見る
+      if (b.t === 'data') {
+        const rows = dataRows(b.id);
+        return rows.length === 0 || rows.some(r => !body.includes(r[0]) || !body.includes(r[1]));
+      }
       return !body.includes(b.text);
     });
     if (missing || !body.includes(topic.assistant)) bodyNg.push(`${cat.id}/${topic.id}`);
@@ -95,6 +112,10 @@ for (const cat of HELP_GUIDE) {
 }
 const topicCount = HELP_GUIDE.reduce((s, c) => s + c.topics.length, 0);
 check('全項目の本文が最後まで描ける', bodyNg.length === 0, bodyNg.length ? bodyNg.join(', ') : `${topicCount}項目`);
+
+// 以前「難易度が3つしか載っていない」状態だったので、実データの全件が描かれることを名指しで見る
+const diffBody = text(render({ helpCatId: 'basics', helpTopicId: 'difficulty' }));
+check('難易度は実データの全段階が本文に出る', dataRows('difficulties').every(r => diffBody.includes(r[0]) && diffBody.includes(r[1])), `${dataRows('difficulties').length}段階`);
 
 // --- 助手の開閉と、最後の項目 ---
 const closed = text(render({ helpCatId: 'battle', helpAssistantOpen: false }));
@@ -106,6 +127,7 @@ check('途中の項目では次の項目名を出す', text(render({ helpCatId: 
 
 // --- 読み込めなかったときも落ちない ---
 const emptyTransformed = babel.transformSync(
+  `${dataTablePrelude}\n` +
   'const HELP_GUIDE = [];\nconst HELP_GUIDE_INTRO = "";\nconst HELP_GUIDE_HELLO = "";\nconst HELP_GUIDE_ASSISTANT = { name:"助手", emoji:"🧑‍🏫", iconUrl:null };\n' +
   'const helpCategoryById = () => null;\nconst helpTopicById = () => null;\n' +
   'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +

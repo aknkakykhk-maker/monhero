@@ -39,12 +39,13 @@ check('カテゴリに必要な項目がそろっている',
 check('項目のidがカテゴリ内で重複していない', categories.every(c => new Set(c.topics.map(t => t.id)).size === c.topics.length));
 check('項目に必要な項目がそろっている', topics.every(t => t.id && t.emoji && t.title && Array.isArray(t.blocks) && t.blocks.length > 0));
 
-const BLOCK_TYPES = ['p', 'note', 'list', 'steps', 'kv'];
+const BLOCK_TYPES = ['p', 'note', 'list', 'steps', 'kv', 'data'];
 const blocks = topics.flatMap(t => t.blocks);
 check('ブロックの種類が想定内', blocks.every(b => BLOCK_TYPES.includes(b.t)), [...new Set(blocks.map(b => b.t))].join('/'));
 check('本文のブロックが空でない', blocks.every(b => {
   if (b.t === 'kv') return b.rows.length > 0 && b.rows.every(r => r.length === 2 && r[0] && r[1]);
   if (b.t === 'list' || b.t === 'steps') return b.items.length > 0 && b.items.every(Boolean);
+  if (b.t === 'data') return !!b.id;  // 中身は helpDataRows() が作る(tools/help-coverage-check.js で件数を照合)
   return !!b.text;
 }));
 
@@ -69,7 +70,7 @@ check('ヘルプを開くと必ずカテゴリ一覧から始まる',
 check('戻るは1階層ずつ戻る', has('const goBack = () => { if(topic) setHelpTopicId(null); else if(cat) setHelpCatId(null); else setShowHelp(false); };'));
 check('カテゴリの色をそのまま使う(Tailwindの動的クラスに頼らない)', has('style={{borderColor:c.color,backgroundColor:\'rgba(15,23,42,0.85)\'}}'));
 check('画面はデータから作る(本文をJSXに直書きしていない)', has('{HELP_GUIDE.map(c=>(') && has('{cat.topics.map(t=>(') && has('{topic.blocks.map((b,i)=>{'));
-check('ブロックの種類ごとに描き分ける', ['b.t===\'note\'', 'b.t===\'list\'', 'b.t===\'steps\'', 'b.t===\'kv\''].every(has));
+check('ブロックの種類ごとに描き分ける', ['b.t===\'note\'', 'b.t===\'list\'', 'b.t===\'steps\'', 'b.t===\'kv\'', 'b.t===\'data\''].every(has));
 check('助手ボタンと吹き出しがある', has('aria-label="助手のひとことを開く"') && has('{assistantLine}') && has('{HELP_GUIDE_ASSISTANT.name}'));
 check('助手は開いている階層に応じて話す', has('const assistantLine = topic ? topic.assistant : cat ? cat.assistant : HELP_GUIDE_HELLO;'));
 check('助手の絵は画像へ差し替えられる', has('{HELP_GUIDE_ASSISTANT.iconUrl?<img src={HELP_GUIDE_ASSISTANT.iconUrl}'));
@@ -89,29 +90,32 @@ vm.runInContext([
 const c = calcCtx.__c;
 const textOf = (catId, topicId) => h.helpPlainText(h.helpFindTopic(catId, topicId));
 
-check('合体の消費ダイヤがコードと一致', textOf('growth', 'fusion').includes(`×${c.FUSION_COST_PER_LEVEL}`), `×${c.FUSION_COST_PER_LEVEL}`);
-check('転生の消費ダイヤがコードと一致', textOf('growth', 'rebirth').includes(`上限Lv × ${c.REBIRTH_COST_PER_LEVEL}`), `上限Lv × ${c.REBIRTH_COST_PER_LEVEL}`);
-check('難易度倍率の説明がDIFFICULTY_SETTINGSと一致', (() => {
-  const t = textOf('basics', 'difficulty');
-  const s = c.DIFFICULTY_SETTINGS;
-  return t.includes(`敵${s.Hard.power}倍／スコア${s.Hard.score.toFixed(1)}倍／ダイヤ${s.Hard.gold}倍`)
-    && t.includes(`敵${s.Expert.power.toFixed(1)}倍／スコア${s.Expert.score.toFixed(1)}倍／ダイヤ${s.Expert.gold}倍`);
-})());
+check('合体の消費ダイヤがコードと一致', textOf('masu', 'fusion').includes(`×${c.FUSION_COST_PER_LEVEL}`), `×${c.FUSION_COST_PER_LEVEL}`);
+check('転生の消費ダイヤがコードと一致', textOf('masu', 'rebirth').includes(`上限Lv × ${c.REBIRTH_COST_PER_LEVEL}`), `上限Lv × ${c.REBIRTH_COST_PER_LEVEL}`);
 check('1WAVEあたりのダイヤの説明が実際の合計と合う',
   textOf('home', 'currency').includes('Normal基準100ダイヤ/WAVE') && c.goldForWavesCleared(10, 1.0) === 1000);
-check('スキップチケットの対応難易度がアイテム定義と一致', (() => {
-  const t = textOf('items', 'skip-ticket');
-  return /skip_ticket_jo[\s\S]*?skipDifficulty:'Normal'/.test(breeder) && t.includes('スキップチケット・序: Normal で使える')
-    && t.includes('スキップチケット・破: Hard で使える') && t.includes('スキップチケット・急: Expert で使える');
-})());
 check('絆レベルの上限の説明が実際の初期上限と一致',
-  textOf('growth', 'masumon').includes(`Lv.${source.match(/const INITIAL_MASU_LEVEL_CAP = (\d+);/)[1]}`));
+  textOf('masu', 'masumon').includes(`Lv.${source.match(/const INITIAL_MASU_LEVEL_CAP = (\d+);/)[1]}`));
 check('転生の上限アップ量が実際の値と一致',
-  textOf('growth', 'rebirth').includes(`上限が+${source.match(/const REBIRTH_LEVEL_CAP_GAIN = (\d+);/)[1]}`));
+  textOf('masu', 'rebirth').includes(`上限が+${source.match(/const REBIRTH_LEVEL_CAP_GAIN = (\d+);/)[1]}`));
 check('固有技の最大レベルが実際の値と一致',
-  textOf('growth', 'rebirth').includes(`上限はLv.${source.match(/const MAX_UNIQUE_SKILL_LEVEL = (\d+);/)[1]}`));
+  textOf('masu', 'rebirth').includes(`上限はLv.${source.match(/const MAX_UNIQUE_SKILL_LEVEL = (\d+);/)[1]}`));
 check('絆経験値の配分(勇者=満額/供モン1/2/控え1/4)を説明している',
-  textOf('growth', 'masumon').includes('半分') && textOf('growth', 'masumon').includes('4分の1'));
+  textOf('masu', 'masumon').includes('半分') && textOf('masu', 'masumon').includes('4分の1'));
+check('会心の説明が実際の倍率と一致', textOf('battle', 'crit').includes('1.5倍') && source.includes('*(1.5+critDmgBonus)'));
+check('固有技の会心率の説明が実際の式と一致',
+  textOf('battle', 'crit').includes('10% ＋ 固有技レベル×5%') && source.includes('crit: 0.10 + 0.05 * lvl,'));
+check('放牧の上限が実際の値と一致',
+  textOf('home', 'pasture').includes('最大5体') && source.includes('draftHomePastureIds.length>=5;'));
+// 一覧になるものは手書きせず t:'data' を使う(一部しか載らない状態を防ぐ)
+const dataIdsIn = (catId, topicId) => (h.helpFindTopic(catId, topicId)?.blocks || []).filter(b => b.t === 'data').map(b => b.id);
+check('難易度は実データの表を使う', dataIdsIn('basics', 'difficulty').includes('difficulties'));
+check('スキップチケットは実データの表を使う', dataIdsIn('items', 'skip-ticket').includes('skipTickets'));
+check('ブリーダーの教えは実データの表を使う', dataIdsIn('growth', 'teaching').includes('teachings'));
+check('ログインボーナスとミッションは実データの表を使う',
+  dataIdsIn('items', 'login-bonus').includes('loginBonus')
+    && dataIdsIn('items', 'missions').includes('missionsDaily')
+    && dataIdsIn('items', 'missions').includes('missionsWeekly'));
 
 // --- ⑤ 読み込めなかったときの守り ---
 check('data/help.jsが読めなくてもヘルプで落ちない',
