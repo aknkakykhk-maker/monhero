@@ -29,6 +29,15 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
   };
   await openBattleMenu();
 
+  const activeCard = page.locator('.snap-mandatory > article').filter({ hasText:'Normal' });
+  const cardLayout = await activeCard.evaluate(card => {
+    const rect = card.getBoundingClientRect();
+    const challenge = [...card.querySelectorAll('button')].find(button => button.textContent.includes('この難易度で挑戦')).getBoundingClientRect();
+    const title = card.querySelector('h3').getBoundingClientRect();
+    return { scrollable:card.scrollHeight > card.clientHeight, inside:rect.top >= 0 && challenge.bottom <= innerHeight, titleVisible:title.height > 0 && title.top >= 0, pageY:scrollY, right:rect.right };
+  });
+  if (cardLayout.scrollable || !cardLayout.inside || !cardLayout.titleVisible || cardLayout.pageY !== 0 || cardLayout.right > 390) throw new Error(`難易度カードが1画面に収まりません: ${JSON.stringify(cardLayout)}`);
+
   const next = page.getByRole('button', { name:'次の難易度' });
   await next.click();
   await page.waitForTimeout(500);
@@ -42,6 +51,20 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
   const dialog = page.getByRole('dialog');
   await dialog.waitFor();
   if (await dialog.getByText(/^W\d+$/).count() !== 10) throw new Error('全10 WAVEが表示されません');
+  for (let wave=1; wave<=10; wave++) {
+    const card = dialog.locator(`[data-wave="${wave}"]`);
+    const expected = await card.evaluate(node => ({ name:node.querySelector('[data-wave-art]').nextElementSibling.querySelector('b').textContent.trim(), hp:node.querySelector('[data-wave-stats] b').textContent.trim() }));
+    await card.scrollIntoViewIfNeeded();
+    await card.click();
+    const scan = page.getByRole('dialog', { name:'敵行動詳細' });
+    await scan.waitFor();
+    await scan.getByText(`WAVE ${wave}・戦闘開始前`).waitFor();
+    await scan.getByRole('heading', { name:expected.name }).waitFor();
+    if (!await scan.getByText(expected.hp, { exact:true }).count()) throw new Error(`W${wave}のHPがSCANへ渡っていません`);
+    await scan.getByRole('button', { name:'戻る' }).click();
+    await scan.waitFor({ state:'hidden' });
+    await dialog.waitFor();
+  }
   const wave10 = dialog.locator('[data-wave="10"]');
   await wave10.scrollIntoViewIfNeeded();
   const layout = await dialog.evaluate(node => {
