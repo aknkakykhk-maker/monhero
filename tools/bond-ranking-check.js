@@ -2,7 +2,8 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const src=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
 const a=src.indexOf('const collectBondRankingEntries'),b=src.indexOf('\nconst ',a+10);
 const context={ALL_PLAYER_MONSTERS:{Mocchi:{name:'モッチー',emoji:'🍡'},Suezo:{name:'スエゾー',emoji:'👁️'}}};vm.createContext(context);
-vm.runInContext(`${src.slice(a,b)};globalThis.collect=collectBondRankingEntries;`,context);
+// 切り出した末尾が // コメントの場合、続けて書くと同じ行になって無効化されるため改行を挟む
+vm.runInContext(`${src.slice(a,b)}\n;globalThis.collect=collectBondRankingEntries;`,context);
 const pool={Normal:[{userName:'A',level:'10',party:[{masuId:'1',baseId:'Mocchi',name:'モッチー',bondLevel:4,role:'hero'},{masuId:'2',baseId:'Suezo',name:'スエゾー',bondLevel:7,role:'ally'},null]}],Hard:[{userName:'A',level:12,party:[{masuId:'1',monsterId:'Mocchi',name:'モッチー',bondLevel:9}]},{userName:'A',level:15,party:[{masuId:'1',monsterId:'Mocchi',name:'モッチー',bondLevel:8}]},{userName:'B',level:-1,party:[{name:'モッチー',bondLevel:5,bondRankingTarget:false}]}],Master:[{userName:'B',level:'invalid',party:[{id:'Mocchi',name:'モッチー',bondLevel:8}]}]};
 const out=context.collect(pool);assert.strictEqual(out.length,3);assert.strictEqual(out[0].bondLevel,9);assert(out.some(x=>x.userName==='A'&&x.monName==='スエゾー'&&x.bondLevel===7));assert(out.some(x=>x.userName==='B'&&x.bondLevel===8));
 assert(out.every(x=>!Object.prototype.hasOwnProperty.call(x,'breederLevel')));
