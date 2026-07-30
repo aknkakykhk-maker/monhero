@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 21:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 21:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1652,6 +1652,13 @@ const rankingMonsterIdOf = (member) => {
   if (recorded && ALL_PLAYER_MONSTERS[recorded]) return recorded;
   // 古い記録は種類のIDを持たず名前しか無いことがあるので、名前からも引く
   return Object.keys(ALL_PLAYER_MONSTERS).find(id=>ALL_PLAYER_MONSTERS[id]?.name===member.name) || null;
+};
+// 編成の各モンスターに、そのプレイ時点の絆Lvを添える。
+// bondLevel は記録にもとから入っているので、表示するだけで通信は増えない。
+// マスモンでない(絆Lvを持たない)モンスターは何も出さない。
+const rankingMemberLevel = (member) => {
+  const level = Number(member?.bondLevel);
+  return Number.isFinite(level) && level > 0 ? level : null;
 };
 const rankingMemberImage = (member) => {
   if (!member) return null;
@@ -5425,8 +5432,9 @@ function MonsterHeroGame() {
             <Crown size={9} className="text-amber-400 shrink-0"/><span className="text-[8px] text-amber-300 shrink-0">勇者モン:</span>
             {rankingMemberImage(heroMember)?<img src={rankingMemberImage(heroMember)} alt={heroName} className="w-5 h-5 object-contain shrink-0"/>:<span className="w-5 text-center text-[9px] shrink-0">{heroMember?.emoji||'❓'}</span>}
             <span className="text-[9px] font-black text-white truncate">{heroName}</span>
+            {rankingMemberLevel(heroMember)!=null&&<span className="text-[7px] font-black text-pink-300 whitespace-nowrap shrink-0">Lv.{rankingMemberLevel(heroMember)}</span>}
           </div>
-          {allies===null?<div className="mt-0.5 text-[7px] text-slate-500">編成情報なし（過去の記録）</div>:allies.length===0?<div className="mt-0.5 text-[7px] text-slate-500">供モンなし</div>:<div className="flex items-center gap-1 mt-0.5 min-w-0"><span className="text-[7px] text-slate-500 shrink-0">供モン:</span>{allies.slice(0,3).map((member, memberIndex)=><div key={member?.masuId||`${member?.id||'ally'}-${memberIndex}`} className="flex flex-1 items-center justify-center gap-0.5 min-w-0">{rankingMemberImage(member)?<img src={rankingMemberImage(member)} alt="" className="w-4 h-4 object-contain shrink-0"/>:<span className="w-4 text-center text-[8px] shrink-0">{member?.emoji||'❓'}</span>}<span className="text-[7px] text-slate-300 truncate">{member?.name||'不明'}</span></div>)}</div>}
+          {allies===null?<div className="mt-0.5 text-[7px] text-slate-500">編成情報なし（過去の記録）</div>:allies.length===0?<div className="mt-0.5 text-[7px] text-slate-500">供モンなし</div>:<div className="flex items-center gap-1 mt-0.5 min-w-0"><span className="text-[7px] text-slate-500 shrink-0">供モン:</span>{allies.slice(0,3).map((member, memberIndex)=><div key={member?.masuId||`${member?.id||'ally'}-${memberIndex}`} className="flex flex-1 items-center justify-center gap-0.5 min-w-0">{rankingMemberImage(member)?<img src={rankingMemberImage(member)} alt="" className="w-4 h-4 object-contain shrink-0"/>:<span className="w-4 text-center text-[8px] shrink-0">{member?.emoji||'❓'}</span>}<span className="text-[7px] text-slate-300 truncate">{member?.name||'不明'}</span>{rankingMemberLevel(member)!=null&&<span className="text-[7px] font-black text-pink-300 whitespace-nowrap shrink-0">Lv.{rankingMemberLevel(member)}</span>}</div>)}</div>}
         </div>
       </article>
     );

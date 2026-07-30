@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 90fcdfef1a574c94
+// source-sha256: bc719b888d52a035
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 21:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 21:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4182,6 +4182,13 @@ const rankingMonsterIdOf = member => {
   if (recorded && ALL_PLAYER_MONSTERS[recorded]) return recorded;
   // 古い記録は種類のIDを持たず名前しか無いことがあるので、名前からも引く
   return Object.keys(ALL_PLAYER_MONSTERS).find(id => ALL_PLAYER_MONSTERS[id]?.name === member.name) || null;
+};
+// 編成の各モンスターに、そのプレイ時点の絆Lvを添える。
+// bondLevel は記録にもとから入っているので、表示するだけで通信は増えない。
+// マスモンでない(絆Lvを持たない)モンスターは何も出さない。
+const rankingMemberLevel = member => {
+  const level = Number(member?.bondLevel);
+  return Number.isFinite(level) && level > 0 ? level : null;
 };
 const rankingMemberImage = member => {
   if (!member) return null;
@@ -10543,7 +10550,9 @@ function MonsterHeroGame() {
       className: "w-5 text-center text-[9px] shrink-0"
     }, heroMember?.emoji || '❓'), /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-black text-white truncate"
-    }, heroName)), allies === null ? /*#__PURE__*/React.createElement("div", {
+    }, heroName), rankingMemberLevel(heroMember) != null && /*#__PURE__*/React.createElement("span", {
+      className: "text-[7px] font-black text-pink-300 whitespace-nowrap shrink-0"
+    }, "Lv.", rankingMemberLevel(heroMember))), allies === null ? /*#__PURE__*/React.createElement("div", {
       className: "mt-0.5 text-[7px] text-slate-500"
     }, "\u7DE8\u6210\u60C5\u5831\u306A\u3057\uFF08\u904E\u53BB\u306E\u8A18\u9332\uFF09") : allies.length === 0 ? /*#__PURE__*/React.createElement("div", {
       className: "mt-0.5 text-[7px] text-slate-500"
@@ -10562,7 +10571,9 @@ function MonsterHeroGame() {
       className: "w-4 text-center text-[8px] shrink-0"
     }, member?.emoji || '❓'), /*#__PURE__*/React.createElement("span", {
       className: "text-[7px] text-slate-300 truncate"
-    }, member?.name || '不明'))))));
+    }, member?.name || '不明'), rankingMemberLevel(member) != null && /*#__PURE__*/React.createElement("span", {
+      className: "text-[7px] font-black text-pink-300 whitespace-nowrap shrink-0"
+    }, "Lv.", rankingMemberLevel(member)))))));
   };
   // ブリーダーLv専用カード。編成・スコア・絆情報をDOMへ一切出さず、1行でコンパクトに表示する。
   const renderBreederRankingEntry = (entry, index) => {
