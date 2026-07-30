@@ -6,7 +6,8 @@ check('デバッグ設定に修行テスト導線',/gameState==='DEBUG_SETTINGS'
 check('保存禁止バナーを常時表示',(source.match(/DEBUG・報酬や進行状況は保存されません/g)||[]).length>=4&&/DEBUG保存なし/.test(source));
 check('24マスの分岐タイルマップ',/TRAINING_BEGINNER_NODES/.test(source)&&(source.match(/\['n\d+'/g)||[]).length>=24&&/mh-tile-board/.test(source)&&/mh-training-tile/.test(source));
 check('出目ぶん自動移動し分岐時だけ方向選択',/advanceTraining/.test(source)&&/chooseTrainingBranch/.test(source)&&/branchOptions/.test(source)&&/出目ぶん自動で進みます/.test(source)&&!/chooseTrainingDestination/.test(source));
-check('現在地追従と全体マップ切替',/scrollIntoView/.test(source)&&/全体マップ/.test(source)&&/trainingMapOverview/.test(source));
+check('進路を先読みするカメラ追従と全体マップ切替',/viewport\.scrollTo/.test(source)&&/next\.x-current\.x/.test(source)&&/全体マップ/.test(source)&&/trainingMapOverview/.test(source));
+check('進行経路・停止予定・分岐候補を強調',/previewTrainingRoute/.test(source)&&/routePreview/.test(source)&&/stopPreview/.test(source)&&/mh-branch-arrow/.test(source)&&/あと \{trainingSession\.movementRemaining\} マス/.test(source));
 check('盤面上に選択マスモンのコマ',/mh-training-piece/.test(source)&&/trainingPieceRef/.test(source));
 check('全13種の停止効果', ['xp30','xp60','gem50','gem100','item','tool','forward','back','turnPlus','turnMinus','boost','again','happening','goal'].every(k=>source.includes(`${k}:`)));
 check('全7種の修行道具と上限処理', ['feather','gale','reroll','noReturn','sand','fixed','returnCharm'].every(k=>source.includes(`${k}:`))&&/所持上限（3個）/.test(source));

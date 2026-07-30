@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 32099da690ec9022
+// source-sha256: e851dad2095c61c5
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 02:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 10:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -735,6 +735,8 @@ const createTrainingSession = (masuId, difficulty = 'BEGINNER') => ({
   rollPending: false,
   branchOptions: [],
   movementRemaining: 0,
+  routePreview: [],
+  stopPreview: null,
   forcedMoves: 0,
   eventLog: ['修行テスト開始'],
   message: 'サイコロを振ってください'
@@ -4719,12 +4721,23 @@ function MonsterHeroGame() {
     if (trainingRollTimerRef.current) clearInterval(trainingRollTimerRef.current);
   }, []);
   useEffect(() => {
-    if (gameState === 'TRAINING_BOARD' && !trainingMapOverview) requestAnimationFrame(() => trainingPieceRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-      inline: 'center'
-    }));
-  }, [gameState, trainingSession?.position, trainingMapOverview]);
+    if (gameState !== 'TRAINING_BOARD' || trainingMapOverview) return;
+    requestAnimationFrame(() => {
+      const viewport = trainingMapRef.current,
+        current = TRAINING_NODE_BY_ID[trainingSession?.position],
+        next = TRAINING_NODE_BY_ID[trainingSession?.routePreview?.[0]];
+      if (!viewport || !current) return;
+      const focus = next ? {
+        x: current.x + (next.x - current.x) * .7,
+        y: current.y + (next.y - current.y) * .7
+      } : current;
+      viewport.scrollTo({
+        left: 720 * focus.x / 100 - viewport.clientWidth * .42,
+        top: 520 * focus.y / 100 - viewport.clientHeight * .5,
+        behavior: 'smooth'
+      });
+    });
+  }, [gameState, trainingSession?.position, trainingSession?.routePreview?.[0], trainingMapOverview]);
   const [gifts, setGifts] = useState([]);
   const [giftTab, setGiftTab] = useState('unclaimed');
   const [missions, setMissions] = useState(() => normalizeMissions(null));
@@ -6720,36 +6733,68 @@ function MonsterHeroGame() {
     if (next.remainingTurns <= 0) setTimeout(() => finishTraining(false, next), 500);else Audio_.se.trainingReward();
   };
   const trainingForwardOptions = id => TRAINING_NODE_BY_ID[id].next.filter(next => TRAINING_BEGINNER_NODES.findIndex(n => n.id === next) > TRAINING_BEGINNER_NODES.findIndex(n => n.id === id));
+  const previewTrainingRoute = (position, steps, chosenFirst = null) => {
+    const path = [];
+    let id = position,
+      chosen = chosenFirst;
+    for (let left = steps; left > 0; left--) {
+      const options = trainingForwardOptions(id);
+      if (!options.length) break;
+      if (options.length > 1 && !chosen) return {
+        path,
+        branches: options,
+        stop: null
+      };
+      id = chosen && options.includes(chosen) ? chosen : options[0];
+      chosen = null;
+      path.push(id);
+      if (id === 'n23') break;
+    }
+    return {
+      path,
+      branches: [],
+      stop: path[path.length - 1] || null
+    };
+  };
   const advanceTraining = async (base, steps, chosenFirst = null) => {
     if (trainingMovingRef.current) return;
     trainingMovingRef.current = true;
+    const initialPreview = previewTrainingRoute(base.position, steps, chosenFirst);
     let next = {
         ...base,
         branchOptions: [],
-        movementRemaining: steps
+        movementRemaining: steps,
+        routePreview: initialPreview.path,
+        stopPreview: initialPreview.stop
       },
       chosen = chosenFirst;
     while (next.movementRemaining > 0) {
       const options = trainingForwardOptions(next.position);
       if (!options.length) break;
       if (options.length > 1 && !chosen) {
+        const preview = previewTrainingRoute(next.position, next.movementRemaining);
         trainingMovingRef.current = false;
         setTrainingSession({
           ...next,
           branchOptions: options,
-          message: `分岐です。進む方向を選んでください（あと${next.movementRemaining}マス）`
+          routePreview: preview.path,
+          stopPreview: null,
+          message: `分岐です。光る矢印から進む方向を選んでください（あと${next.movementRemaining}マス）`
         });
         return;
       }
       const id = chosen && options.includes(chosen) ? chosen : options[0];
       chosen = null;
       const previous = next.position;
+      const routePreview = next.routePreview[0] === id ? next.routePreview.slice(1) : previewTrainingRoute(id, next.movementRemaining - 1).path;
       next = {
         ...next,
         position: id,
         previous,
         movementRemaining: next.movementRemaining - 1,
         branchOptions: [],
+        routePreview,
+        stopPreview: routePreview[routePreview.length - 1] || null,
         message: `あと ${next.movementRemaining - 1} マス`
       };
       Audio_.se.trainingMove();
@@ -6761,6 +6806,11 @@ function MonsterHeroGame() {
       }
     }
     trainingMovingRef.current = false;
+    next = {
+      ...next,
+      routePreview: [],
+      stopPreview: null
+    };
     setTrainingSession(next);
     await applyTrainingSpace(next);
   };
@@ -6810,9 +6860,12 @@ function MonsterHeroGame() {
   };
   const acceptTrainingRoll = () => {
     if (!trainingSession?.rollPending) return;
+    const preview = previewTrainingRoute(trainingSession.position, trainingSession.lastRoll);
     const next = {
       ...trainingSession,
       rollPending: false,
+      routePreview: preview.path,
+      stopPreview: preview.stop,
       message: `${trainingSession.lastRoll}で自動前進します`
     };
     setTrainingSession(next);
@@ -10098,6 +10151,7 @@ function MonsterHeroGame() {
   }, "BEGINNER \u4FEE\u884C\u958B\u59CB"))), gameState === 'TRAINING_BOARD' && trainingSession && (() => {
     const m = masuMons.find(x => String(x.id) === String(trainingSession.masuId));
     const current = TRAINING_NODE_BY_ID[trainingSession.position];
+    const highlighted = new Set([current.id, ...trainingSession.routePreview, ...trainingSession.branchOptions]);
     return /*#__PURE__*/React.createElement("main", {
       className: "mh-training-board"
     }, trainingDiceStage !== 'idle' && /*#__PURE__*/React.createElement("div", {
@@ -10114,14 +10168,20 @@ function MonsterHeroGame() {
       ref: trainingMapRef,
       className: `mh-tile-viewport ${trainingMapOverview ? 'overview' : ''}`
     }, /*#__PURE__*/React.createElement("div", {
+      className: "mh-map-legend"
+    }, /*#__PURE__*/React.createElement("b", null, "\uD83D\uDEA9 START"), /*#__PURE__*/React.createElement("b", null, "\uD83D\uDCCD \u73FE\u5728\u5730"), /*#__PURE__*/React.createElement("b", null, "\u26A1 \u5B89\u5168\u30EB\u30FC\u30C8"), /*#__PURE__*/React.createElement("b", null, "\uD83C\uDF81 \u5831\u916C\u30EB\u30FC\u30C8"), /*#__PURE__*/React.createElement("b", null, "\uD83C\uDFC1 GOAL")), /*#__PURE__*/React.createElement("div", {
+      className: "mh-goal-guide"
+    }, "GOAL ", /*#__PURE__*/React.createElement("span", null, "\u279C")), /*#__PURE__*/React.createElement("div", {
       className: "mh-tile-board"
     }, TRAINING_BEGINNER_NODES.map(n => /*#__PURE__*/React.createElement(React.Fragment, {
       key: n.id
     }, n.next.filter(id => TRAINING_BEGINNER_NODES.findIndex(x => x.id === id) > TRAINING_BEGINNER_NODES.findIndex(x => x.id === n.id)).map(id => {
       const to = TRAINING_NODE_BY_ID[id],
         dx = to.x - n.x,
-        dy = to.y - n.y;
+        dy = to.y - n.y,
+        isRoute = highlighted.has(n.id) && highlighted.has(id);
       return /*#__PURE__*/React.createElement("i", {
+        className: isRoute ? 'route' : '',
         key: id,
         style: {
           left: `${n.x}%`,
@@ -10137,12 +10197,14 @@ function MonsterHeroGame() {
         top: `${n.y}%`,
         '--tile-color': TRAINING_SPACE_TYPES[n.type].color
       },
-      className: `mh-training-tile ${n.id === current.id ? 'current' : ''} ${trainingSession.branchOptions.includes(n.id) ? 'branch-choice' : ''} ${trainingForwardOptions(n.id).length > 1 ? 'branch' : ''} ${n.type === 'goal' ? 'goal' : ''} ${n.type === 'start' ? 'start' : ''}`,
+      className: `mh-training-tile ${n.id === current.id ? 'current' : ''} ${trainingSession.routePreview.includes(n.id) ? 'route-preview' : ''} ${trainingSession.stopPreview === n.id ? 'stop-preview' : ''} ${trainingSession.branchOptions.includes(n.id) ? 'branch-choice' : ''} ${trainingForwardOptions(n.id).length > 1 ? 'branch' : ''} ${n.type === 'goal' ? 'goal' : ''} ${n.type === 'start' ? 'start' : ''}`,
       onClick: () => trainingSession.branchOptions.includes(n.id) ? chooseTrainingBranch(n.id) : setTrainingModal({
         type: 'space',
         space: TRAINING_SPACE_TYPES[n.type]
       })
-    }, /*#__PURE__*/React.createElement("small", null, n.type === 'start' ? 'START' : n.type === 'goal' ? 'GOAL' : TRAINING_SPACE_TYPES[n.type].label), /*#__PURE__*/React.createElement("span", null, TRAINING_SPACE_TYPES[n.type].emoji), n.id === current.id && m && /*#__PURE__*/React.createElement("div", {
+    }, trainingSession.branchOptions.includes(n.id) && /*#__PURE__*/React.createElement("em", {
+      className: "mh-branch-arrow"
+    }, "\u279C \u9078\u3076"), /*#__PURE__*/React.createElement("small", null, n.type === 'start' ? 'START' : n.type === 'goal' ? 'GOAL' : TRAINING_SPACE_TYPES[n.type].label), /*#__PURE__*/React.createElement("span", null, TRAINING_SPACE_TYPES[n.type].emoji), n.id === current.id && m && /*#__PURE__*/React.createElement("div", {
       className: "mh-training-piece"
     }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
       baseId: m.baseId,
@@ -10157,9 +10219,9 @@ function MonsterHeroGame() {
       onClick: () => setTrainingModal({
         type: 'rules'
       })
-    }, "\u30DE\u30B9\u8A73\u7D30")), /*#__PURE__*/React.createElement("p", {
+    }, "\u30DE\u30B9\u8A73\u7D30\u30FB\u30EB\u30FC\u30EB")), /*#__PURE__*/React.createElement("p", {
       className: "mh-training-message"
-    }, trainingSession.lastRoll && /*#__PURE__*/React.createElement("strong", null, "\u51FA\u76EE ", trainingSession.lastRoll), trainingSession.message, trainingSession.previousRoll && /*#__PURE__*/React.createElement("small", null, "\u524D\u56DE\u306E\u51FA\u76EE ", trainingSession.previousRoll)), /*#__PURE__*/React.createElement("section", {
+    }, trainingSession.lastRoll && /*#__PURE__*/React.createElement("strong", null, "\u51FA\u76EE ", trainingSession.lastRoll), trainingSession.movementRemaining > 0 && /*#__PURE__*/React.createElement("strong", null, "\u3042\u3068 ", trainingSession.movementRemaining, " \u30DE\u30B9"), trainingSession.message, trainingSession.previousRoll && /*#__PURE__*/React.createElement("small", null, "\u524D\u56DE\u306E\u51FA\u76EE ", trainingSession.previousRoll)), /*#__PURE__*/React.createElement("section", {
       className: "mh-training-tools"
     }, /*#__PURE__*/React.createElement("strong", null, "\u4FEE\u884C\u9053\u5177"), trainingSession.tools.length ? trainingSession.tools.map((id, i) => /*#__PURE__*/React.createElement("button", {
       key: `${id}-${i}`,
@@ -17218,6 +17280,7 @@ const createAnimationStyle = () => {
     .mh-training-screen{height:100%;display:flex;flex-direction:column;overflow:hidden;padding:calc(10px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom));background:radial-gradient(circle at top,#312e81,#07101f 60%)}.mh-training-head{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;flex:none}.mh-training-head>button{min-height:44px;display:flex;align-items:center;justify-content:center}.mh-training-head div{text-align:center}.mh-training-head small{display:block;color:#f9a8d4;font:900 8px monospace;letter-spacing:.25em}.mh-training-head h2{font-size:18px;font-weight:1000}.mh-training-selected{display:flex;align-items:center;gap:10px;margin:9px 0;padding:10px;border:1px solid #f9a8d477;border-radius:18px;background:#3b076455}.mh-training-selected>img,.mh-training-selected>div:first-child{width:56px;height:56px;object-fit:contain;flex:none}.mh-training-selected>div{display:flex;flex:1;min-width:0;flex-direction:column}.mh-training-selected b{font-size:14px}.mh-training-selected span{color:#fbcfe8;font-size:9px}.mh-training-selected button{padding:9px;border-radius:10px;background:#7e22ce;font-size:9px;font-weight:900}.mh-training-note{font-size:9px;color:#cbd5e1;padding:2px 3px 8px}.mh-training-mon-list{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;overflow-y:auto;padding:2px 1px 90px}.mh-training-mon-list>button{position:relative;min-width:0;padding:7px 4px;border:2px solid #334155;border-radius:16px;background:#0f172acc}.mh-training-mon-list>button.active{border-color:#f472b6;background:#83184377;box-shadow:0 0 13px #ec489966}.mh-training-mon-list img,.mh-training-mon-list>button>div:first-child{width:54px;height:54px;object-fit:contain;margin:auto}.mh-training-mon-list b,.mh-training-mon-list small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-training-mon-list b{font-size:10px}.mh-training-mon-list small{font-size:7px;color:#94a3b8}.mh-training-mon-list span{position:absolute;right:5px;top:4px;color:#fde68a;font-size:8px}.mh-training-empty{grid-column:1/-1;text-align:center;margin-top:50px;color:#64748b}.mh-training-footer{position:absolute;z-index:6;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));padding-top:20px;background:linear-gradient(transparent,#07101f 24%)}.mh-training-footer button{width:100%;min-height:52px;border-radius:18px;background:linear-gradient(90deg,#db2777,#7c3aed);font-weight:1000;box-shadow:0 6px 20px #0008}.mh-training-footer button:disabled{background:#334155;color:#64748b}.mh-training-difficulties{overflow:auto;padding:10px 1px 95px}.mh-training-difficulties>button{display:block;width:100%;margin-bottom:10px;padding:14px;text-align:left;border:2px solid #334155;border-radius:20px;background:#0f172acc}.mh-training-difficulties>button.active{border-color:#f472b6}.mh-training-difficulties>button.soon{opacity:.72}.mh-training-difficulties>button>div{display:flex;justify-content:space-between}.mh-training-difficulties b{font-size:18px}.mh-training-difficulties em{padding:4px 8px;border-radius:999px;background:#475569;font-size:8px;font-style:normal}.mh-training-difficulties p{margin:8px 0;color:#cbd5e1;font-size:10px}.mh-training-difficulties dl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mh-training-difficulties dl span{padding:5px;border-radius:7px;background:#02061788;text-align:center;font-size:8px}.mh-training-confirm{overflow:auto;padding:12px 2px 100px}.mh-training-confirm h3{margin:10px 0 2px;color:#f9a8d4;font-size:26px;font-weight:1000}.mh-training-confirm h4{margin-top:16px;color:#c4b5fd;font-size:11px;font-weight:1000}.mh-training-confirm p{color:#cbd5e1;font-size:10px}.mh-training-ticket{display:flex;flex-wrap:wrap;justify-content:space-between;margin-top:16px;padding:14px;border:1px solid #fbbf24aa;border-radius:16px;background:#78350f55}.mh-training-ticket b{color:#fde68a}.mh-training-ticket small{width:100%;margin-top:5px;color:#fef3c7;font-size:8px}
     .mh-training-board{height:100%;display:flex;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 9px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#0c4a6e,#082f49 44%,#052e16)}.mh-training-board>header{display:flex;align-items:center;justify-content:space-between}.mh-training-board>header div{display:flex;flex-direction:column}.mh-training-board>header b{font-size:14px}.mh-training-board>header span{font-size:8px;color:#bae6fd}.mh-training-board>header button{min-height:40px;padding:0 10px;border-radius:10px;background:#7f1d1d;font-size:9px;font-weight:900}.mh-training-hud{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:7px 0}.mh-training-hud span{padding:6px 2px;border-radius:8px;background:#020617aa;text-align:center;font-size:8px;font-weight:900}.mh-training-map{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;flex:1;min-height:0;padding:7px;overflow:auto;border:1px solid #ffffff22;border-radius:16px;background:#0005}.mh-training-map>div{position:relative;aspect-ratio:1;border:2px solid #64748b;border-radius:10px;background:#334155;display:flex;align-items:center;justify-content:center}.mh-training-map>div.passed{opacity:.52}.mh-training-map>div.current{border-color:#fde047;background:#854d0e;box-shadow:0 0 14px #fde047}.mh-training-map span{font-size:17px}.mh-training-map small{position:absolute;left:3px;top:1px;font-size:6px}.mh-training-map img,.mh-training-map>div.current>div{position:absolute;width:45px;height:45px;object-fit:contain;filter:drop-shadow(0 3px 3px #000);z-index:2}.mh-training-message{min-height:28px;padding:7px;text-align:center;font-size:10px;font-weight:900}.mh-training-tools{display:flex;min-height:54px;gap:5px}.mh-training-tools button{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;padding:4px;border:1px solid #a78bfa;border-radius:10px;background:#312e81}.mh-training-tools button span{font-size:17px}.mh-training-tools button small{font-size:7px}.mh-training-tools p{margin:auto;color:#94a3b8;font-size:8px}.mh-training-board>footer{margin-top:7px}.mh-roll-button{width:100%;min-height:58px;border-radius:19px;background:linear-gradient(#fbbf24,#d97706);color:#451a03;font-size:17px;font-weight:1000}.mh-roll-button small{display:block;font-size:7px}.mh-fixed-dice{display:grid;grid-template-columns:1fr repeat(3,58px);gap:5px;align-items:center}.mh-fixed-dice button{height:54px;border-radius:14px;background:#fbbf24;color:#422006;font-size:20px;font-weight:1000}.mh-training-branch{position:fixed;z-index:40000;inset:0;display:flex;align-items:center;padding:20px;background:#020617dd}.mh-training-branch>div{width:100%;padding:18px;border:1px solid #c4b5fd;border-radius:22px;background:#111827}.mh-training-branch h3{text-align:center;font-size:18px;font-weight:1000}.mh-training-branch button{display:flex;justify-content:space-between;width:100%;margin-top:8px;padding:14px;border-radius:12px;background:#312e81}.mh-training-branch span{font-size:9px;color:#cbd5e1}.mh-training-board{position:relative;background:linear-gradient(160deg,#082f49,#0f172a 52%,#14532d)}.mh-training-board>header{gap:8px}.mh-training-board>header b small{margin-left:5px;color:#facc15;font-size:7px}.mh-debug-toggle{background:#be185d!important;letter-spacing:.08em}.mh-training-hud{grid-template-columns:repeat(3,1fr)}.mh-training-hud span{display:flex;flex-direction:column;gap:2px}.mh-training-hud b{color:white;font-size:11px}.mh-tile-viewport{position:relative;flex:1;min-height:250px;overflow:auto;scroll-behavior:smooth;border:2px solid #67e8f966;border-radius:18px;background:linear-gradient(#0c4a6e99,#052e1699),repeating-linear-gradient(45deg,#ffffff08 0 8px,transparent 8px 16px);box-shadow:inset 0 0 30px #020617}.mh-tile-board{position:relative;width:720px;height:520px;transform-origin:center;transition:transform .3s}.mh-tile-viewport.overview{overflow:hidden}.mh-tile-viewport.overview .mh-tile-board{transform:scale(.46) translate(-58%,-58%)}.mh-tile-board>i{position:absolute;height:13px;border:2px solid #dbeafe99;background:#64748b;box-shadow:0 2px 0 #0f172a;transform-origin:0 50%;z-index:0}.mh-training-tile{position:absolute;z-index:2;width:68px;height:68px;margin:-34px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:4px solid #e2e8f0;border-radius:12px;color:white;background:var(--tile-color);box-shadow:0 5px 0 #0f172a,0 8px 14px #0008;transition:left .25s,top .25s,transform .2s}.mh-training-tile>span{font-size:23px;line-height:1}.mh-training-tile>small{max-width:62px;font-size:7px;font-weight:1000;text-shadow:0 1px 2px #000}.mh-training-tile.branch:after{content:'分岐';position:absolute;right:-9px;top:-10px;padding:2px 4px;border-radius:6px;background:#f97316;font-size:6px;font-weight:1000}.mh-training-tile.start{border-color:#86efac}.mh-training-tile.goal{border-color:#fde047;box-shadow:0 0 22px #facc15,0 5px 0 #713f12}.mh-training-tile.current{z-index:8;border-color:#fff;box-shadow:0 0 0 4px #facc15,0 8px 18px #000;transform:scale(1.05)}.mh-training-tile.branch-choice{z-index:9;animation:trainingGlow .55s infinite alternate;pointer-events:auto}.mh-training-piece{position:absolute;left:50%;bottom:34px;width:62px;height:73px;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 5px 3px #000)}.mh-training-piece img,.mh-training-piece>div{width:58px!important;height:58px!important;object-fit:contain}.mh-training-piece b{position:absolute;bottom:0;left:50%;max-width:75px;transform:translateX(-50%);padding:2px 5px;border-radius:8px;background:#020617e8;white-space:nowrap;font-size:7px}.mh-training-message{color:#fef3c7}.mh-training-tools{align-items:stretch}.mh-training-tools>strong{display:flex;align-items:center;font-size:8px}.mh-training-tools button{min-width:0}.mh-training-tools button small{line-height:1.25}.mh-training-debug{right:8px;top:calc(52px + env(safe-area-inset-top));bottom:auto;box-shadow:0 14px 30px #000}.mh-debug-close{float:right;background:#be123c!important}.mh-training-board>footer{flex:none}.mh-roll-button:disabled{filter:grayscale(.7);opacity:.65}.mh-training-tools button.waiting{border-color:#fde047;box-shadow:inset 0 0 12px #facc1544}.mh-roll-decision{display:grid;grid-template-columns:1fr 2fr;gap:7px;align-items:center;min-height:58px;padding:6px 8px;border:2px solid #fbbf24;border-radius:19px;background:#451a03}.mh-roll-decision b{text-align:center;color:#fde68a}.mh-roll-decision button{height:44px;border-radius:13px;background:#fbbf24;color:#451a03;font-weight:1000}.mh-tool-unavailable{padding:9px;border:1px solid #f8717177;border-radius:10px;background:#450a0a;color:#fecaca!important}@media(max-width:380px){.mh-training-piece{transform:translateX(-50%) scale(.85)}.mh-training-tools{min-height:48px}.mh-training-message{min-height:24px;padding:4px}.mh-tile-viewport{min-height:220px}}
 .mh-dice-overlay{position:absolute;z-index:200;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#020617c9;pointer-events:none}.mh-dice-overlay b{font-size:24px;color:#fef3c7;text-shadow:0 3px 8px #000}.mh-dice-cube{display:grid;place-items:center;width:112px;height:112px;border:7px solid #f8fafc;border-radius:25px;background:linear-gradient(145deg,#fff,#cbd5e1);color:#172554;font-size:62px;font-weight:1000;box-shadow:0 18px 35px #000b,inset -8px -8px 12px #64748b55}.mh-dice-overlay.rolling .mh-dice-cube{animation:trainingDiceRoll .22s linear infinite}.mh-dice-overlay.result .mh-dice-cube{animation:trainingDiceResult .5s cubic-bezier(.2,1.7,.4,1)}@keyframes trainingDiceRoll{25%{transform:translate(-18px,-8px) rotate(-18deg) scale(.92)}50%{transform:translate(12px,-22px) rotate(22deg) scale(1.08)}75%{transform:translate(20px,4px) rotate(8deg)}}@keyframes trainingDiceResult{0%{transform:scale(.35) rotate(-90deg)}70%{transform:scale(1.18) rotate(8deg)}100%{transform:scale(1)}}.mh-training-message{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}.mh-training-message strong{padding:3px 7px;border-radius:7px;background:#fbbf24;color:#451a03;font-size:11px}.mh-training-message small{color:#94a3b8;font-size:7px}.mh-space-detail div{padding:8px 0;border-bottom:1px solid #ffffff1f}.mh-space-detail dt{color:#a5b4fc;font-size:8px;font-weight:1000}.mh-space-detail dd{margin-top:2px;color:#e2e8f0;font-size:10px}
+.mh-tile-viewport{background:radial-gradient(circle at 55% 45%,#365314aa,#0f2940 55%,#061521),repeating-linear-gradient(135deg,#fff4 0 2px,transparent 2px 14px)}.mh-tile-board>i{height:18px;border:3px solid #f8fafccc;background:linear-gradient(#94a3b8,#475569);box-shadow:0 4px 0 #020617,0 0 8px #000;transition:.2s}.mh-tile-board>i.route{z-index:1;border-color:#fef9c3;background:#facc15;box-shadow:0 0 14px #fde047,0 4px 0 #713f12}.mh-training-tile{width:64px;height:64px;margin:-32px;border-radius:9px}.mh-training-tile.route-preview{box-shadow:0 0 0 4px #fef08a99,0 0 20px #fde047,0 5px 0 #0f172a}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 6px #fb923c,0 0 28px #f97316,0 5px 0 #7c2d12;animation:trainingStop  .65s infinite alternate}.mh-branch-arrow{position:absolute;z-index:12;top:-27px;left:50%;transform:translateX(-50%);min-width:52px;padding:4px 6px;border-radius:999px;background:#f97316;color:#fff;font-size:8px;font-style:normal;font-weight:1000;white-space:nowrap;box-shadow:0 0 14px #fb923c}.mh-map-legend{position:sticky;z-index:20;left:7px;top:7px;display:flex;width:max-content;gap:4px;padding:5px;border:1px solid #ffffff55;border-radius:9px;background:#020617df;pointer-events:none}.mh-map-legend b{padding:2px 4px;border-radius:5px;background:#ffffff12;font-size:6px}.mh-goal-guide{position:sticky;z-index:20;float:right;right:7px;top:7px;padding:5px 8px;border-radius:8px;background:#713f12e8;color:#fef08a;font-size:8px;font-weight:1000;pointer-events:none}.mh-goal-guide span{display:inline-block;animation:goalPoint .7s infinite alternate}.mh-tile-viewport.overview .mh-map-legend{position:absolute;left:6px;top:6px}.mh-tile-viewport.overview .mh-goal-guide{display:none}@keyframes trainingStop{to{transform:scale(1.1)}}@keyframes goalPoint{to{transform:translateX(4px)}}
 .mh-training-result{height:100%;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));text-align:center;background:radial-gradient(circle,#14532d,#020617 65%)}.mh-training-result.failure{background:radial-gradient(circle,#3f3f46,#020617 65%)}.mh-training-result>div{width:100%;max-width:360px}.mh-result-mark{display:block;font-size:64px}.mh-training-result small{color:#f9a8d4;font:900 9px monospace;letter-spacing:.22em}.mh-training-result h2{font-size:28px;font-weight:1000}.mh-training-result>div>p{margin:7px;color:#cbd5e1;font-size:10px}.mh-training-result section{margin:18px 0;padding:13px;border:1px solid #ffffff22;border-radius:18px;background:#0007}.mh-training-result section div{display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #ffffff12}.mh-training-result section div:last-child{border:0}.mh-training-result section span{font-size:11px}.mh-training-result section b{color:#fde68a}.mh-training-result .mh-result-note{font-size:8px}.mh-training-result>div>button{width:100%;min-height:52px;margin-top:10px;border-radius:18px;background:#fff;color:#172554;font-weight:1000}
     `;
   document.head.appendChild(style);
