@@ -38,6 +38,7 @@ cd tools && npm install
 | `node rebirth-check.js` | Lv30上限移行の補償、二重補償防止、転生条件・費用・効果、固有技Lv、星表示、演出、保存キー、神殿BGMを確認する。 |
 | `node bgm-check.js` | BGM(audio/のmp3)が画面に応じて切り替わるかを実ブラウザで確認する。 |
 | `node audio-route-check.js` | BGMのaudio要素が再生前にWeb Audioへ接続され、iOSのメディア再生経路へ漏れないことを確認する。 |
+| `node emergency-audio-breeder-check.js` | 起動タップ内の音声有効化、保存ミュート保護、ブリーダーLvランキングの独立取得と表示状態を確認する。 |
 | `node bgm-arrangement-check.js` | BGMトラック登録、場面別アレンジ保存、最終ボス後のクリア曲、試聴、曲別音量補正を確認する。 |
 | `node ranking-check.js` | ランキングの集計仕様(スコアは当時のまま固定/ブリーダーLv・絆Lvは最新)を確認する。通信はスタブ。 |
 | `node ranking-request-check.js` | Normal/Hard/MasterのData APIリクエスト、難易度正規化と`eq`取得、旧`clear_id=NULL`表示、`clear_id`重複防止を通信スタブで確認する。 |

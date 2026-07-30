@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6330f23c6f1d9ae2
+// source-sha256: bc87286b77401a88
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 12:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 12:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1258,6 +1258,7 @@ const Audio_ = (() => {
     if (enabled && currentKey && !bgmSource) playBGM(currentKey);
   };
   const unlock = async (playTestTone = false) => {
+    if (!enabled) enabled = true;
     // resume・決定SEはuser activationが残るイベント処理内で開始し、最初の再生前に待たない。
     const ctx = resumeAudioCtxNoWait();
     let toneStart = null;
@@ -4760,6 +4761,8 @@ function MonsterHeroGame() {
   const [rankingSourceByDiff, setRankingSourceByDiff] = useState({}); // {[diff]: 'global'|'local'} 表示中データの取得元
   const [rankingLoadingByDiff, setRankingLoadingByDiff] = useState({});
   const [rankingErrorByDiff, setRankingErrorByDiff] = useState({});
+  const [breederRankingLoading, setBreederRankingLoading] = useState(false);
+  const [breederRankingFailed, setBreederRankingFailed] = useState(false);
   // 起動時の先読みと画面を開いた時の取得を共有し、同じ難易度への二重通信を防ぐ。
   const rankingRequestsRef = useRef(new Map());
   const rankingFetchedAtRef = useRef(new Map());
@@ -5099,6 +5102,7 @@ function MonsterHeroGame() {
   const audioMuted = !audioOn;
   // バトル画面などスペースが限られる場所向けの1タップミュート切替(詳細な音量調整は設定パネルのスライダーで行う)
   const toggleQuickMute = () => {
+    storeSet('mh_audio_muted', !quickMuted, false);
     if (quickMuted) Audio_.unlock();else Audio_.setEnabled(false);
     setQuickMuted(current => !current);
   };
@@ -5244,7 +5248,7 @@ function MonsterHeroGame() {
   // エラーとし、成功した0件と区別する。
   const bondRankingLoading = bondRankingPending && !bondRankingSettled && bondRanking.length === 0;
   const bondRankingFailed = !bondRankingPending && bondRankingAll.length === 0 && Object.keys(DIFFICULTY_SETTINGS).every(d => rankingErrorByDiff[d]);
-  const loadRankings = useCallback(async (targetDiff = null, includeLevels = false, force = false) => {
+  const loadRankings = useCallback(async (targetDiff = null, includeLevels = false, force = false, levelKind = 'bond') => {
     const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
     const byDiff = {};
     const poolByDiff = {};
@@ -5321,7 +5325,9 @@ function MonsterHeroGame() {
     if (diffs.length === 0) return;
     const loadOne = async requestedDiff => {
       const d = rankingDifficultyKey(requestedDiff);
-      const requestKey = `${d}:${includeLevels ? 'levels' : 'score'}`;
+      // 2種類のLvランキングでキャッシュと進行中Promiseを共有しない。
+      const requestKey = `${d}:${includeLevels ? levelKind : 'score'}`;
+      const latestKey = includeLevels ? requestKey : d;
       const fetchedAt = rankingFetchedAtRef.current.get(requestKey) || 0;
       if (!force && Date.now() - fetchedAt < 30000) return;
       let requestId = null;
@@ -5330,7 +5336,7 @@ function MonsterHeroGame() {
         // pendingをawaitしてからlatestを更新すると、その待ち時間中に保存前の応答が
         // localRankingsへ入り、Normal画面が古いまま描画される時間が生じる。
         requestId = `${d}-${Date.now()}-${++rankingRequestSequenceRef.current}`;
-        rankingLatestRequestRef.current.set(d, requestId);
+        rankingLatestRequestRef.current.set(latestKey, requestId);
       }
       // 保存直後の強制再取得は、保存前から走っている同難易度の通信が終わってから新しく開始する。
       // ここで古いPromiseを共有すると、POST済みなのに保存前の結果を再表示してしまう。
@@ -5340,11 +5346,11 @@ function MonsterHeroGame() {
         await pending;
         // 待機中に、より新しい保存後再取得や更新操作が開始された場合は、
         // その1本に取得を任せて重複GETと逆順反映を防ぐ。
-        if (rankingLatestRequestRef.current.get(d) !== requestId) return;
+        if (rankingLatestRequestRef.current.get(latestKey) !== requestId) return;
       }
       if (!requestId) requestId = `${d}-${Date.now()}-${++rankingRequestSequenceRef.current}`;
       const concurrent = [...rankingRequestsRef.current.keys()];
-      rankingLatestRequestRef.current.set(d, requestId);
+      rankingLatestRequestRef.current.set(latestKey, requestId);
       setRankingErrorByDiff(prev => ({
         ...prev,
         [d]: null
@@ -5360,6 +5366,7 @@ function MonsterHeroGame() {
         [d]: true
       }));
       const request = (async () => {
+        let succeeded = true;
         try {
           if (d === 'Master') console.info('[ranking][Master] Master取得開始');
           let rows;
@@ -5413,12 +5420,13 @@ function MonsterHeroGame() {
               });
             }
           } catch {}
+          succeeded = false;
         }
         // 1難易度ずつ反映し、遅い通信が残っていても取得済みのランキングはすぐ表示する。
-        if (rankingLatestRequestRef.current.get(d) !== requestId) {
+        if (rankingLatestRequestRef.current.get(latestKey) !== requestId) {
           rankingLog(requestId, 'stale-result-discarded', {
             difficulty: d,
-            latestRequestId: rankingLatestRequestRef.current.get(d)
+            latestRequestId: rankingLatestRequestRef.current.get(latestKey)
           });
           return;
         }
@@ -5444,10 +5452,11 @@ function MonsterHeroGame() {
           difficulty: d,
           appliedRequestId: requestId
         });
+        return succeeded;
       })().finally(() => {
         // 後発リクエストを先発のfinallyでMapから消さない。
         if (rankingRequestsRef.current.get(requestKey) === request) rankingRequestsRef.current.delete(requestKey);
-        if (rankingLatestRequestRef.current.get(d) === requestId) {
+        if (rankingLatestRequestRef.current.get(latestKey) === requestId) {
           setRankingLoadingByDiff(prev => ({
             ...prev,
             [d]: false
@@ -5459,7 +5468,15 @@ function MonsterHeroGame() {
     };
     // 絆タブは全難易度を同時に開始し、各loadOneのfinallyで個別に完了させる。
     // 遅い難易度や失敗した難易度が、取得済みデータの描画を止めない。
-    await Promise.all(diffs.map(loadOne));
+    if (includeLevels && levelKind === 'breeder') {
+      setBreederRankingLoading(true);
+      setBreederRankingFailed(false);
+    }
+    const results = await Promise.all(diffs.map(loadOne));
+    if (includeLevels && levelKind === 'breeder') {
+      setBreederRankingLoading(false);
+      setBreederRankingFailed(results.every(result => result === false));
+    }
   }, []);
 
   // 寄付・合体・削除で所持しなくなった個体は、保存済みの放牧設定からも自動除外する。
@@ -5725,15 +5742,17 @@ function MonsterHeroGame() {
     entryAnimatingRef.current = true;
     setEntryAnimating(true);
     // iOSのuser activationが有効な同じイベント処理内で、解除とBGM開始を両方開始する。
+    // 保存済みミュート中は有効化しない。オンの場合だけ、最初のawaitより前に有効化・resume・SE・BGMを開始する。
     let unlockAttempt;
     let bgmAttempt;
+    if (!audioMuted) Audio_.setEnabled(true);
     try {
-      unlockAttempt = Promise.resolve(Audio_.unlock(true)).catch(() => false);
+      unlockAttempt = audioMuted ? Promise.resolve(false) : Promise.resolve(Audio_.unlock(true)).catch(() => false);
     } catch {
       unlockAttempt = Promise.resolve(false);
     }
     try {
-      bgmAttempt = Promise.resolve(Audio_.playBGM('title')).catch(() => false);
+      bgmAttempt = audioMuted ? Promise.resolve(false) : Promise.resolve(Audio_.playBGM('title')).catch(() => false);
     } catch {
       bgmAttempt = Promise.resolve(false);
     }
@@ -5946,6 +5965,9 @@ function MonsterHeroGame() {
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
       setBgmVolumeState(savedBgmVolume);
+      const savedAudioMuted = !!(await storeGet('mh_audio_muted', false, false));
+      setQuickMuted(savedAudioMuted);
+      if (savedAudioMuted) Audio_.setEnabled(false);
       const savedBgmArrangement = normalizeBgmArrangement(await storeGet('mh_bgm_arrangement', DEFAULT_BGM_ARRANGEMENT, false));
       setBgmArrangement(savedBgmArrangement);
       const savedName = await storeGet('mh_breeder_name', '名無しのブリーダー', false);
@@ -11745,7 +11767,7 @@ function MonsterHeroGame() {
       setRankingKind(t.k);
       if (t.k === 'score') loadRankings(rankingViewKey);else {
         if (t.k === 'bond') setBondRankMonFilter('all');
-        loadRankings(null, true, t.k === 'bond');
+        loadRankings(null, true, false, t.k);
       }
     },
     className: `py-1.5 rounded-lg text-[9px] font-black border ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
@@ -11765,9 +11787,16 @@ function MonsterHeroGame() {
     className: "text-center text-slate-500 py-8"
   }, rankingLoadingByDiff[rankingViewKey] ? 'Loading...' : rankingErrorByDiff[rankingViewKey] ? `取得エラー: ${rankingErrorByDiff[rankingViewKey]}` : '記録はまだありません'))), rankingKind === 'breeder' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
-  }, breederRanking.map(renderBreederRankingEntry), breederRanking.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, breederRankingLoading && breederRanking.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-slate-400 py-8"
+  }, "Loading...") : breederRankingFailed && breederRanking.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-red-300 py-8"
+  }, /*#__PURE__*/React.createElement("p", null, "\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => loadRankings(null, true, true, 'breeder'),
+    className: "mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black"
+  }, "\u518D\u8AAD\u8FBC")) : /*#__PURE__*/React.createElement(React.Fragment, null, breederRanking.map(renderBreederRankingEntry), breederRanking.length === 0 && /*#__PURE__*/React.createElement("div", {
     className: "text-center text-slate-500 py-8"
-  }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093")), rankingKind === 'bond' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093"))), rankingKind === 'bond' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0"
   }, ['all', ...bondRankingMonNames].map(n => /*#__PURE__*/React.createElement("button", {
     key: n,
