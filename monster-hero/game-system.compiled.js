@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0c13e8c8c8f4c4ca
+// source-sha256: 6330f23c6f1d9ae2
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 12:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 12:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1123,6 +1123,11 @@ const Audio_ = (() => {
       return Promise.resolve();
     }
     resumeAudioCtxNoWait();
+    // 起動タップ前にdecode済みなら、user activation中に同期的に再生開始する。
+    if (buffers.has(track.src)) {
+      startBgmBuffer(track.id, track, buffers.get(track.src), request);
+      return Promise.resolve();
+    }
     return loadBuffer(track.src).then(buffer => startBgmBuffer(track.id, track, buffer, request)).catch(() => {});
   };
   const stopPreview = (resume = true) => {
@@ -1179,6 +1184,7 @@ const Audio_ = (() => {
     if (!track) return Promise.resolve(false);
     return Promise.race([loadBuffer(track.src).then(() => true).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   };
+  const prepareSE = (timeoutMs = 5000) => Promise.race([load().then(() => true).catch(() => false), new Promise(r => setTimeout(() => r(false), timeoutMs))]);
   const playJingle = async key => {
     if (!enabled || bgmVolumePct <= 0 || pageHidden || !JINGLE_FILES[key]) return;
     const request = ++bgmRequest;
@@ -1252,37 +1258,42 @@ const Audio_ = (() => {
     if (enabled && currentKey && !bgmSource) playBGM(currentKey);
   };
   const unlock = async (playTestTone = false) => {
-    if (!enabled) enabled = true;
-    // iOSではユーザー操作中にresumeを開始したうえで、runningになるまで完了扱いにしない。
-    resumeAudioCtxNoWait();
-    const ctx = await ensureAudioCtxRunning();
-    if (currentKey) playBGM(currentKey);
-    await load();
-    if (Tone && playTestTone) {
+    // resume・決定SEはuser activationが残るイベント処理内で開始し、最初の再生前に待たない。
+    const ctx = resumeAudioCtxNoWait();
+    let toneStart = null;
+    if (Tone) {
       try {
-        const tb = new Tone.Synth({
-          oscillator: {
-            type: 'triangle'
-          },
-          envelope: {
-            attack: 0.005,
-            decay: 0.15,
-            sustain: 0.1,
-            release: 0.2
-          },
-          volume: -6
-        }).connect(seBus);
-        const now = Tone.now();
-        tb.triggerAttackRelease('C5', '8n', now);
-        tb.triggerAttackRelease('G5', '8n', now + 0.12);
-        setTimeout(() => {
-          try {
-            tb.dispose();
-          } catch (e) {}
-        }, 800);
+        toneStart = Tone.start();
+        if (toneStart?.catch) toneStart.catch(() => {});
       } catch (e) {}
+      if (playTestTone && ready && enabled && seVolumePct > 0) {
+        try {
+          const tb = new Tone.Synth({
+            oscillator: {
+              type: 'triangle'
+            },
+            envelope: {
+              attack: 0.005,
+              decay: 0.15,
+              sustain: 0.1,
+              release: 0.2
+            },
+            volume: -6
+          }).connect(seBus);
+          const now = Tone.now();
+          tb.triggerAttackRelease('C5', '8n', now);
+          tb.triggerAttackRelease('G5', '8n', now + 0.12);
+          setTimeout(() => {
+            try {
+              tb.dispose();
+            } catch (e) {}
+          }, 800);
+        } catch (e) {}
+      }
     }
-    await setEnabled(true);
+    await Promise.all([ensureAudioCtxRunning(), toneStart || Promise.resolve(), load()]);
+    started = !!Tone;
+    if (currentKey) playBGM(currentKey);
     return !ctx || ctx.state === 'running';
   };
   const ensurePlaying = key => {
@@ -2064,6 +2075,7 @@ const Audio_ = (() => {
     setPageHidden,
     preloadBGM,
     prepareBGM,
+    prepareSE,
     playJingle,
     ensurePlaying,
     isContextRunning,
@@ -5226,8 +5238,12 @@ function MonsterHeroGame() {
     return [...new Set(all)];
   }, [bondRankingAll]);
   const bondRanking = useMemo(() => bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 50), [bondRankingAll, bondRankMonFilter]);
-  const bondRankingLoading = Object.keys(DIFFICULTY_SETTINGS).some(d => rankingLoadingByDiff[d]);
-  const bondRankingFailed = !bondRankingLoading && Object.keys(DIFFICULTY_SETTINGS).every(d => rankingErrorByDiff[d]);
+  const bondRankingPending = Object.keys(DIFFICULTY_SETTINGS).some(d => rankingLoadingByDiff[d]);
+  const bondRankingSettled = Object.keys(DIFFICULTY_SETTINGS).some(d => Object.prototype.hasOwnProperty.call(rankingPool, d) || !!rankingErrorByDiff[d]);
+  // 取得済みの記録は、別難易度の通信を待たずに表示する。全難易度が失敗した場合だけ
+  // エラーとし、成功した0件と区別する。
+  const bondRankingLoading = bondRankingPending && !bondRankingSettled && bondRanking.length === 0;
+  const bondRankingFailed = !bondRankingPending && bondRankingAll.length === 0 && Object.keys(DIFFICULTY_SETTINGS).every(d => rankingErrorByDiff[d]);
   const loadRankings = useCallback(async (targetDiff = null, includeLevels = false, force = false) => {
     const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
     const byDiff = {};
@@ -5441,9 +5457,9 @@ function MonsterHeroGame() {
       rankingRequestsRef.current.set(requestKey, request);
       return request;
     };
-    for (let i = 0; i < diffs.length; i += 2) {
-      await Promise.all(diffs.slice(i, i + 2).map(loadOne));
-    }
+    // 絆タブは全難易度を同時に開始し、各loadOneのfinallyで個別に完了させる。
+    // 遅い難易度や失敗した難易度が、取得済みデータの描画を止めない。
+    await Promise.all(diffs.map(loadOne));
   }, []);
 
   // 寄付・合体・削除で所持しなくなった個体は、保存済みの放牧設定からも自動除外する。
@@ -5631,6 +5647,7 @@ function MonsterHeroGame() {
       });
       step(1, 'タイトルBGMを準備中');
       if (!(await Audio_.prepareBGM('title', 5000).catch(() => false))) throw new Error('title BGM unavailable');
+      await Audio_.prepareSE(5000).catch(() => false);
       step(2, 'セーブデータを確認中');
       await Promise.resolve();
       step(3, '音量設定を確認中');
@@ -5711,7 +5728,7 @@ function MonsterHeroGame() {
     let unlockAttempt;
     let bgmAttempt;
     try {
-      unlockAttempt = Promise.resolve(Audio_.unlock()).catch(() => false);
+      unlockAttempt = Promise.resolve(Audio_.unlock(true)).catch(() => false);
     } catch {
       unlockAttempt = Promise.resolve(false);
     }
@@ -10122,7 +10139,7 @@ function MonsterHeroGame() {
   })), /*#__PURE__*/React.createElement("strong", null, pct, "%"), /*#__PURE__*/React.createElement("p", null, bootProgress.label)) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h1", null, "READY"), /*#__PURE__*/React.createElement("button", {
     disabled: entryAnimating,
     onPointerDown: unlockBootSound
-  }, "TOUCH TO ENTER"), /*#__PURE__*/React.createElement("h2", null, "\u2015 \u5192\u967A\u306E\u6249\u3092\u958B\u304F \u2015"), /*#__PURE__*/React.createElement("p", null, "\u8FFD\u52A0\u30C7\u30FC\u30BF\u306F\u30D0\u30C3\u30AF\u30B0\u30E9\u30A6\u30F3\u30C9\u3067\u8AAD\u307F\u8FBC\u307F\u3092\u7D9A\u3051\u307E\u3059"))), /*#__PURE__*/React.createElement("footer", null, "VERSION ", BUILD_DATE), /*#__PURE__*/React.createElement("div", {
+  }, "TAP TO START"), /*#__PURE__*/React.createElement("h2", null, "\u2015 \u5192\u967A\u306E\u6249\u3092\u958B\u304F \u2015"), /*#__PURE__*/React.createElement("p", null, "\u8FFD\u52A0\u30C7\u30FC\u30BF\u306F\u30D0\u30C3\u30AF\u30B0\u30E9\u30A6\u30F3\u30C9\u3067\u8AAD\u307F\u8FBC\u307F\u3092\u7D9A\u3051\u307E\u3059"))), /*#__PURE__*/React.createElement("footer", null, "VERSION ", BUILD_DATE), /*#__PURE__*/React.createElement("div", {
     className: "mh-entry-flash"
   })), updateNotice);
   const rankingPlace = index => /*#__PURE__*/React.createElement("div", {
