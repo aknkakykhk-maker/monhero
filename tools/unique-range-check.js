@@ -59,4 +59,16 @@ check('敵行動後に距離撃の最終距離を再適用する', source.indexO
 check('各配置スロット自身の距離撃を取得する', source.includes('const rIdx=idx;') && !source.includes('const rIdx=(idx+RANGE_LABELS.length-1)%RANGE_LABELS.length;'));
 check('旧「次の距離」説明が残っていない', !source.includes('次の距離へ移動') && !source.includes('(focusedCard.rangeIdx+1)%4'));
 
+// 距離撃を撃ったターンは最終的な間合いが距離撃側で確定する。敵が移動モーションだけ見せて
+// 距離は変わらない、という見た目のズレを無くすため、移動しようとした敵は行動なし扱いにする。
+check('距離撃を撃ったターンかどうかを敵の行動処理へ渡す', source.includes('distLocked:forcedMoveTarget!=null'));
+check('距離撃のターンは敵の移動を行動なし扱いにする',
+  source.includes("if (intent.type==='MOVE' && immediateEffects.distLocked) {")
+    && source.includes('距離撃！ 移動できない'));
+const lockedBlock = source.slice(source.indexOf("if (intent.type==='MOVE' && immediateEffects.distLocked) {"), source.indexOf("} else if (intent.type==='MOVE') {"));
+check('行動なし扱いのときは移動モーションも距離変更もしない',
+  !lockedBlock.includes('setEnemyAttackAnim(true)') && !lockedBlock.includes('setEnemyDist(') && !lockedBlock.includes('enemyMove()'));
+check('距離撃が無いターンは今までどおり移動する',
+  source.includes("} else if (intent.type==='MOVE') {") && source.includes('setEnemyDist(intent.targetDist);'));
+
 if (failed) process.exit(1);
