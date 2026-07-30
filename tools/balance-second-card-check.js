@@ -79,7 +79,7 @@ vm.runInContext(`${tiersSrc}\nglobalThis.__t = CADMIUM_TIERS;`, cadCtx);
 const tiers = cadCtx.__t;
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-check('計算: ガッツ自動回復0.5%のみ', same(tiers[0], { autoHp: 0, autoGuts: 0.005, hpLimit: 0, gutsLimit: 0 }), JSON.stringify(tiers[0]));
+check('計算: ガッツ自動回復0.5%・ガッツ上限3%', same(tiers[0], { autoHp: 0, autoGuts: 0.005, hpLimit: 0, gutsLimit: 0.03 }), JSON.stringify(tiers[0]));
 check('理論: ライフ/ガッツ自動回復0.5%・上限5%', same(tiers[1], { autoHp: 0.005, autoGuts: 0.005, hpLimit: 0.05, gutsLimit: 0.05 }), JSON.stringify(tiers[1]));
 check('叡智: ライフ/ガッツ自動回復1%・上限7%', same(tiers[2], { autoHp: 0.01, autoGuts: 0.01, hpLimit: 0.07, gutsLimit: 0.07 }), JSON.stringify(tiers[2]));
 
@@ -91,7 +91,7 @@ const descEnd = source.indexOf('const getFullEvolutionDetails');
 vm.runInContext(`${source.slice(descStart, descEnd)}\nglobalThis.__d = getDynamicDesc;`, descCtx);
 const desc = (level) => descCtx.__d({ id: 'cadmium' }, true, level);
 
-check('計算の説明文', desc(0) === 'ガッツ自動回復 0.5%アップ', desc(0));
+check('計算の説明文', desc(0) === 'ガッツ自動回復 0.5%アップ・ガッツ上限 3%アップ', desc(0));
 check('理論の説明文', desc(1) === 'ライフ自動回復 0.5%アップ・ガッツ自動回復 0.5%アップ・ライフ/ガッツ上限 5%アップ', desc(1));
 check('叡智の説明文', desc(2) === 'ライフ自動回復 1%アップ・ガッツ自動回復 1%アップ・ライフ/ガッツ上限 7%アップ', desc(2));
 check('0.5%が四捨五入で1%にならない', !desc(0).includes('1%'));
@@ -101,9 +101,10 @@ const otherDesc = (id, level, extra = {}) => descCtx.__d({ id, ...extra }, true,
 check('おりょうの説明文は整数のまま', otherDesc('oryo', 0) === '攻撃 10%アップ' && otherDesc('oryo', 2) === '攻撃 30%アップ');
 check('みゃるの説明文は整数のまま', otherDesc('myaru', 0, { baseValue: 2.0, step: 0.5, selfDmg: 0.5, dmgStep: 0.1 }) === '次ターン攻撃 2.0倍・自傷 50%');
 
-// Lv0は上限アップが無くなったので、上限バフを積まないこと
-check('計算では上限バフを積まない', has('if(tier.gutsLimit>0) addPermaBuff(\'muaGutsPct\',tier.gutsLimit)'));
-check('計算のポップアップは回復アップ表記', has('tier.gutsLimit>0?`⚡ ガッツ上限UP!`:`⚡ ガッツ回復UP!`'));
+// 効果が0の項目はバフを積まず、ポップアップの文言も実際の効果に合わせる
+check('効果が0の上限アップはバフを積まない', has('if(tier.gutsLimit>0) addPermaBuff(\'muaGutsPct\',tier.gutsLimit)'));
+check('ポップアップは上限アップの有無で出し分ける', has('tier.gutsLimit>0?`⚡ ガッツ上限UP!`:`⚡ ガッツ回復UP!`'));
+check('計算にもガッツ上限アップがある', tiers[0].gutsLimit === 0.03 && desc(0).includes('ガッツ上限 3%アップ'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
