@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 22:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 22:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4574,6 +4574,10 @@ function MonsterHeroGame() {
   // ブリーダーカード(教えカード)だけは対象外で、何枚目に使っても効果は変わらない。
   // 「何枚目か」の数え方をここに集約し、画面のダメージ予測とprocessTurnの実処理がずれないようにする。
   const isBreederCard = (card) => !!card && TEACHING_CARDS.some(t => t.id === card.id);
+  // ガードカードの重み(弱ガードは半分)。軽減量の合計表示と実処理で同じ式を使う。
+  const guardCardWeight = (card) => card?.type === 'guard' ? 1 : (card?.type === 'weak_guard' ? 0.5 : 0);
+  // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」。handleEnemyTurnの計算と同じ式にする。
+  const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + def * mult) : 0;
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx-attackStartDist);
@@ -7170,16 +7174,29 @@ function MonsterHeroGame() {
                 // Existing total = sum of already-assigned attack cards.
                 // If a card is pending and validly assignable somewhere, also compute the projected new total.
                 // committed (already assigned) attack cards in selection order
-                // 2枚目以降のカードは効果半減。processTurnと同じく「ブリーダーカード以外の枚数」で数える
-                let committedTotal=0; let committedPenaltyCnt=0;
+                // 2枚目以降のカードは効果半減。processTurnと同じく「ブリーダーカード以外の枚数」で数える。
+                // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので枚数に数えない。
+                // ここを数えてしまうと、1枚目なのに自分自身を2枚目とみなして半減表示になる。
+                const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);
+                const pendingIdx=pendingCard!=null?pendingCard:((dragState&&dragState.active)?dragState.cardIndex:null);
+                let committedTotal=0; let committedPenaltyCnt=0; let guardFlat=0; let guardMult=0;
                 selectedCards.forEach(idx=>{
+                  if(idx===pendingIdx) return;
                   const card=hand[idx]; const slotIdx=cardAssignments[idx];
                   const isPenalty=!isBreederCard(card);
                   const halved=isPenalty&&committedPenaltyCnt>0;
                   if(slotIdx!=null&&isAttackCard(card)) committedTotal+=getDmg(card,slotIdx,slots[slotIdx],0,0,halved);
+                  const gw=guardCardWeight(card);
+                  if(gw>0){ const e=halved?0.5:1; guardFlat+=GUARD_EVOLUTION[guardLevel].flat*gw*e; guardMult+=GUARD_EVOLUTION[guardLevel].mult*gw*e; }
                   if(isPenalty) committedPenaltyCnt++;
                 });
-                const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);
+                const committedGuard=guardValueOf(guardFlat,guardMult);
+                // 保留カードがガードなら、置いたあとの合計軽減も出す
+                const pendingGuardWeight=guardCardWeight(pendingCardObj);
+                const pendingGuardHalved=pendingGuardWeight>0&&committedPenaltyCnt>0;
+                const projectedGuard=pendingGuardWeight>0
+                  ? guardValueOf(guardFlat+GUARD_EVOLUTION[guardLevel].flat*pendingGuardWeight*(pendingGuardHalved?0.5:1), guardMult+GUARD_EVOLUTION[guardLevel].mult*pendingGuardWeight*(pendingGuardHalved?0.5:1))
+                  : committedGuard;
                 const pendingIsAtk=isAttackCard(pendingCardObj);
                 // projected damage the pending card would add (as the next attack in order)
                 let pendingAdd=0; let pendingValidSlot=null;
@@ -7195,9 +7212,14 @@ function MonsterHeroGame() {
                 }
                 const projectedTotal=committedTotal+pendingAdd;
                 const showProjected=pendingIsAtk&&pendingValidSlot!=null&&pendingAdd>0;
-                if(committedTotal<=0&&!showProjected) return null;
+                // 合計軽減は、ガードを置いたぶんの合計。2枚目以降のガードは半分で計算される。
+                const showGuardProjected=pendingGuardWeight>0&&projectedGuard>committedGuard;
+                const showDmg=committedTotal>0||showProjected;
+                const showGuard=committedGuard>0||showGuardProjected;
+                if(!showDmg&&!showGuard) return null;
                 return(
-                  <div className="absolute left-1/2 -translate-x-1/2 z-[50] flex items-center justify-center pointer-events-none" style={{bottom:'calc(78% + 2px)'}}>
+                  <div className="absolute left-1/2 -translate-x-1/2 z-[50] flex flex-col items-center justify-center gap-1 pointer-events-none" style={{bottom:'calc(78% + 2px)'}}>
+                    {showDmg&&(
                     <div className={`flex items-center gap-2 px-3 py-0.5 rounded-full border shadow-lg ${showProjected?'bg-yellow-950/90 border-yellow-500/70':'bg-red-950/90 border-red-500/50'} backdrop-blur-sm`}>
                       <Sword size={11} className={showProjected?'text-yellow-400':'text-red-400'}/>
                       <span className="text-[8px] font-black uppercase tracking-widest text-slate-300">合計DMG</span>
@@ -7212,6 +7234,23 @@ function MonsterHeroGame() {
                         <span className="text-[11px] font-black font-mono text-red-300 drop-shadow-[0_0_6px_rgba(248,113,113,0.5)]">{committedTotal}</span>
                       )}
                     </div>
+                    )}
+                    {showGuard&&(
+                    <div className={`flex items-center gap-2 px-3 py-0.5 rounded-full border shadow-lg ${showGuardProjected?'bg-yellow-950/90 border-yellow-500/70':'bg-emerald-950/90 border-emerald-500/50'} backdrop-blur-sm`}>
+                      <Shield size={11} className={showGuardProjected?'text-yellow-400':'text-emerald-400'}/>
+                      <span className="text-[8px] font-black uppercase tracking-widest text-slate-300">合計軽減</span>
+                      {showGuardProjected?(
+                        <span className="text-[11px] font-black font-mono flex items-center gap-1">
+                          <span className="text-slate-400">{committedGuard}</span>
+                          <span className="text-yellow-400">+{projectedGuard-committedGuard}</span>
+                          <ChevronRight size={10} className="text-slate-500"/>
+                          <span className="text-yellow-300 drop-shadow-[0_0_6px_rgba(250,204,21,0.6)]">{projectedGuard}</span>
+                        </span>
+                      ):(
+                        <span className="text-[11px] font-black font-mono text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]">{committedGuard}</span>
+                      )}
+                    </div>
+                    )}
                   </div>
                 );
               })()}
@@ -7222,31 +7261,36 @@ function MonsterHeroGame() {
                   // 通常は1枠1枚。ハム勇者モンが居る『ハムのスロット』のみ連続攻撃で複数枚OK
                   const maxUses=(mainHero?.id==='Ham'&&s?.id==='Ham')?cardLimit:1;
                   const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);
+                  // 保留中のカードはまだ使っていないので、「何枚目か」の枚数には数えない
+                  const pendingIdx=pendingCard!=null?pendingCard:((dragState&&dragState.active)?dragState.cardIndex:null);
                   // Can this slot accept the pending card?
                   let canAssign=false;
                   if(s && pendingCardObj){
                     canAssign = assignedCount<maxUses;
                     if(pendingCardObj.type==='unique') canAssign = canAssign && (pendingCardObj.ownerSlotIdx===i);
                   }
-                  // Count how many attack cards are already assigned (across all slots) to determine attack order
-                  const assignedAttackCount=selectedCards.filter(idx=>{const c=hand[idx]; return cardAssignments[idx]!=null && isAttackCard(c);}).length;
+                  // 選択順に「ブリーダーカード以外」を数え、どのカードが2枚目以降(効果半減)かを出す。
+                  // 保留中のカードはまだ使っていないので数えない。
+                  const halvedByIdx={};
+                  {let n=0; selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; const c=hand[idx]; const p=!isBreederCard(c); halvedByIdx[idx]=p&&n>0; if(p) n++; });}
                   // Preview damage:
                   // - if a card is pending assignment, show what THIS card would do on this monster
                   // - otherwise show the sum of damage from cards already assigned to this slot,
                   //   using the GLOBAL attack order (2nd+ attack = half damage), matching processTurn
-                  let previewDmg=0; let isPendingPreview=false;
+                  let previewDmg=0; let isPendingPreview=false; let isPendingHalved=false;
                   if(s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)){
                     // 既に選んだ「ブリーダーカード以外」の枚数を数え、保留カードはその次の1枚として扱う
                     let committedPenalty=0;
-                    selectedCards.forEach(idx=>{if(!isBreederCard(hand[idx]))committedPenalty++;});
+                    selectedCards.forEach(idx=>{if(idx!==pendingIdx&&!isBreederCard(hand[idx]))committedPenalty++;});
                     const isSecondOrLater = committedPenalty>=1 && !isBreederCard(pendingCardObj);
                     const baseDmg=getDmg(pendingCardObj,i,s,0,0,isSecondOrLater);
                     previewDmg=baseDmg+getComboBonusDmg(pendingCardObj,s,baseDmg);
-                    isPendingPreview=true;
+                    isPendingPreview=true; isPendingHalved=isSecondOrLater;
                   } else if(s){
                     // 選択順で「ブリーダーカード以外」を数え、2枚目以降は半減として予測する
                     let globalPenaltyCnt=0;
                     selectedCards.forEach(idx=>{
+                      if(idx===pendingIdx) return;
                       const card=hand[idx];
                       const isPenalty=!isBreederCard(card);
                       const halved=isPenalty&&globalPenaltyCnt>0;
@@ -7294,12 +7338,18 @@ function MonsterHeroGame() {
                       <div className={`absolute inset-0 rounded-xl ${RANGE_STYLES[i].slotBg} opacity-20 pointer-events-none`}></div>
                       {slotAssignedCards.length>0&&(
                         <div className="absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[55] pointer-events-none px-0.5">
-                          {slotAssignedCards.map(({idx,card})=>(
+                          {slotAssignedCards.map(({idx,card})=>{
+                            // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
+                            const gw=guardCardWeight(card), ge=halvedByIdx[idx]?0.5:1;
+                            const gv=gw>0?guardValueOf(GUARD_EVOLUTION[guardLevel].flat*gw*ge,GUARD_EVOLUTION[guardLevel].mult*gw*ge):0;
+                            return(
                             <div key={idx} className={`flex items-center gap-0.5 px-1 rounded w-full justify-center min-w-0 ${cardNeedsMonster(card)?'bg-red-600/85':'bg-emerald-600/85'}`}>
                               <span style={{fontSize:'7px'}} className="leading-none shrink-0">{cardIconNode(card.icon,9)}</span>
-                              <span style={{fontSize:'7px'}} className="font-black text-white leading-none truncate min-w-0">{card.name}</span>
+                              <span style={{fontSize:'7px'}} className="font-black text-white leading-none truncate min-w-0">{halvedByIdx[idx]?'½':''}{card.name}</span>
+                              {gv>0&&<span style={{fontSize:'7px'}} className="font-black text-emerald-100 leading-none shrink-0">-{gv}</span>}
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                       {hasUniqueSet&&(
@@ -7312,7 +7362,7 @@ function MonsterHeroGame() {
                         </div>
                       )}
                       {(()=>{const totalBonus=(distDmgBonus[i]||0)+(DIST_APTITUDE_MULT[getDistAptitude(s,i)]-1.0); return totalBonus!==0&&(<div className={`absolute bottom-0.5 right-0.5 text-[6px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':'text-red-300 border-red-400/30'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
-                      {previewDmg>0&&(<div className={`absolute ${slotAssignedCards.length>0?'top-[18px]':'top-0'} ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'} text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`}>{isPendingPreview&&assignedAttackCount>=1?'½ ':''}DMG:{previewDmg}</div>)}
+                      {previewDmg>0&&(<div className={`absolute ${slotAssignedCards.length>0?'top-[18px]':'top-0'} ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'} text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`}>{isPendingPreview&&isPendingHalved?'½ ':''}DMG:{previewDmg}</div>)}
                       {s?.imgUrl?(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                     </div>
                     <div className={`h-[28%] ${RANGE_STYLES[i].labelBg} flex items-center justify-center border-t border-white/20 z-20`}><span className="text-[9px] font-black uppercase tracking-tighter leading-none">{RANGE_LABELS[i]}距離</span></div>
@@ -7686,7 +7736,15 @@ function MonsterHeroGame() {
           <div className="text-[8px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1">
             {['atk','range_atk','unique'].includes(focusedCard.type)&&(<div className="flex justify-between items-center text-xs"><span>技威力:</span><span className="text-red-400 font-black">{focusedCard.type==='range_atk'?`${Math.floor(focusedCard.mult*100)} / ${Math.floor(focusedCard.mult*0.4*100)}`:Math.floor((focusedCard.type==='unique'?(focusedCard.baseMult+(focusedCard.evoLevel||0)*0.5+((focusedCard.monId==='Ark'||focusedCard.monId==='Iblis')?0.1*getPermaBuff('chuuniUniqueStack'):0)):(focusedCard.mult||focusedCard.baseMult||1.0))*100)}</span></div>)}
             {['atk','range_atk','unique'].includes(focusedCard.type)&&(<div className="flex justify-between items-center text-xs"><span>会心率:</span><span className="text-yellow-400 font-black">{Math.round(((focusedCard.crit||0.1)+getPermaBuff('critRatePct'))*100)}%{getPermaBuff('critRatePct')>0&&<span className="text-yellow-200 text-[8px]"> (+{Math.round(getPermaBuff('critRatePct')*100)})</span>} <span className="text-yellow-200/70 text-[8px]">×{(1.5+getPermaBuff('critDmgPct')).toFixed(2)}</span></span></div>)}
-            {focusedCard.type==='guard'&&<div className="text-center font-bold">敵の攻撃を最大 {Math.floor((focusedCard.flat||0)+def*(focusedCard.mult||0))} 軽減<span className="text-slate-400 font-normal">（{focusedCard.flat||0} ＋ 丈夫さ×{focusedCard.mult||0}）</span></div>}
+            {focusedCard.type==='guard'&&(()=>{
+              // 2枚目以降で使うガードは軽減量が半分になる。実際に効く値をそのまま出す。
+              const raw=(focusedCard.flat||0)+def*(focusedCard.mult||0);
+              const fIdx=hand.findIndex(c=>c&&c.uid===focusedCard.uid);
+              let n=0, halved=false, found=false;
+              selectedCards.forEach(idx=>{ if(idx===pendingCard) return; const c=hand[idx]; const p=!isBreederCard(c); if(idx===fIdx){ halved=p&&n>0; found=true; } if(p) n++; });
+              if(!found) halved=n>0; // まだ置いていないカードは「次に使う1枚」として判定する
+              return(<div className="text-center font-bold">敵の攻撃を最大 {Math.floor(halved?raw*0.5:raw)} 軽減{halved&&<span className="text-amber-300 font-black">（2枚目以降のため半減）</span>}<span className="text-slate-400 font-normal">（{focusedCard.flat||0} ＋ 丈夫さ×{focusedCard.mult||0}{halved?' の半分':''}）</span></div>);
+            })()}
             {focusedCard.type==='range_atk'&&focusedCard.rangeIdx!=null&&(<div className="border-t border-white/10 pt-1 mt-1 text-[7px] text-cyan-200 font-bold"><span className="text-cyan-400">距離効果:</span> {RANGE_LABELS[focusedCard.rangeIdx]}距離で威力アップ。攻撃後、{RANGE_LABELS[focusedCard.rangeIdx]}距離へ移動する</div>)}
             {['buff','debuff','heal'].includes(focusedCard.type)&&(<div className="text-center italic text-amber-300 font-bold text-[7px] leading-tight">{getDynamicDesc(focusedCard,true,focusedCard.evoLevel||0)}</div>)}
             {focusedCard.effectDesc&&<div className="border-t border-white/10 pt-1 mt-1 text-[7px] text-amber-200 font-bold"><span className="text-indigo-400">特殊効果:</span> {focusedCard.effectDesc}</div>}
