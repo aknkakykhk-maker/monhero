@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fe3d26093c2b2023
+// source-sha256: 567f313d828bd071
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 06:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 06:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3565,6 +3565,52 @@ const grantLoginBonus = (loginBonus, gifts, now = Date.now()) => {
     }
   };
 };
+// 不具合のお詫びとして、起動時に1度だけギフトボックスへ送る配布物。
+// 受け取り方は通常のギフトと同じ(期限内に「受け取る」を押す)。
+// idが既にギフト一覧にあれば配らないので、受取済み・未受取のどちらでも二重には届かない。
+// 追加するときは新しいidで足す。過去の項目は消さない(消すと再配布されてしまうため)。
+const COMPENSATION_GIFTS = [{
+  id: 'gift_compensation_20260731_battle',
+  title: 'お詫びのしるし',
+  description: 'バトルが進行できなくなる不具合のお詫びです。ご迷惑をおかけしました。',
+  rewards: [{
+    type: 'diamond',
+    amount: 1000
+  }, {
+    type: 'skipTicketJo',
+    amount: 1
+  }, {
+    type: 'skipTicketHa',
+    amount: 1
+  }, {
+    type: 'skipTicketKyu',
+    amount: 1
+  }]
+}];
+const grantCompensationGifts = (gifts, now = Date.now()) => {
+  const list = Array.isArray(gifts) ? gifts : [];
+  const missing = COMPENSATION_GIFTS.filter(def => !list.some(item => item?.id === def.id));
+  if (missing.length === 0) return {
+    granted: false,
+    gifts: list
+  };
+  const createdAt = new Date(now).toISOString();
+  const expiresAt = new Date(Number(now) + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const added = missing.map(def => ({
+    ...def,
+    source: 'compensation',
+    rewards: def.rewards.map(r => ({
+      ...r
+    })),
+    createdAt,
+    expiresAt,
+    claimedAt: null
+  }));
+  return {
+    granted: true,
+    gifts: [...added, ...list]
+  };
+};
 const normalizeGiftRewards = gift => {
   if (!gift || !Array.isArray(gift.rewards) || gift.rewards.length === 0) return null;
   const supported = Object.keys(GIFT_REWARD_LABELS);
@@ -3627,6 +3673,10 @@ const giftRewardText = reward => `${GIFT_REWARD_LABELS[reward.type] || reward.ty
 const giftTitleDisplay = gift => {
   const fallback = '名称なしギフト';
   const title = typeof gift?.title === 'string' && gift.title.trim() ? gift.title.trim() : fallback;
+  if (gift?.source === 'compensation') return {
+    label: 'お詫び',
+    title
+  };
   if (gift?.source !== 'mission') return {
     label: null,
     title
@@ -6487,16 +6537,18 @@ function MonsterHeroGame() {
       const savedGifts = await storeGet('mh_gifts', [], false);
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
-      setGifts(loginGrant.gifts);
+      // 不具合のお詫びも同じギフトボックスへ入れる。既に届いていれば何もしない
+      const compensationGrant = grantCompensationGifts(loginGrant.gifts);
+      setGifts(compensationGrant.gifts);
       await storeSet('mh_login_bonus', loginGrant.loginBonus, false);
       setLoginBonusState(loginGrant.loginBonus);
-      if (loginGrant.granted) {
-        await storeSet('mh_gifts', loginGrant.gifts, false);
-        setLoginBonusPopup({
-          day: loginGrant.day,
-          rewards: loginGrant.gift.rewards
-        });
+      if (loginGrant.granted || compensationGrant.granted) {
+        await storeSet('mh_gifts', compensationGrant.gifts, false);
       }
+      if (loginGrant.granted) setLoginBonusPopup({
+        day: loginGrant.day,
+        rewards: loginGrant.gift.rewards
+      });
       const missionState = normalizeMissions(await storeGet('mh_missions', null, false));
       const loginDay = missionDailyPeriod();
       missionState.daily.login = 1;

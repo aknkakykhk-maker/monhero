@@ -3,8 +3,8 @@ const fs=require('fs'),vm=require('vm'),path=require('path');
 const source=fs.readFileSync(path.join(__dirname,'..','monster-hero','src','game-system.jsx'),'utf8');
 const prefix=source.slice(source.indexOf('const LOGIN_BONUS_REWARDS'),source.indexOf('const STAT_POINT_GAIN'));
 const context={React:{createElement(){},useState(){},useEffect(){},useCallback(){},useMemo(){},useRef(){}}};vm.createContext(context);
-vm.runInContext(`${prefix}\nglobalThis.x={loginBonusPeriodKey,grantLoginBonus,buildGiftClaim,giftIsExpired};`,context);
-const {loginBonusPeriodKey,grantLoginBonus,buildGiftClaim,giftIsExpired}=context.x;let failed=0;
+vm.runInContext(`${prefix}\nglobalThis.x={loginBonusPeriodKey,grantLoginBonus,buildGiftClaim,giftIsExpired,grantCompensationGifts,COMPENSATION_GIFTS,giftTitleDisplay,normalizeGiftRewards};`,context);
+const {loginBonusPeriodKey,grantLoginBonus,buildGiftClaim,giftIsExpired,grantCompensationGifts,COMPENSATION_GIFTS,giftTitleDisplay,normalizeGiftRewards}=context.x;let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'OK':'NG'}: ${name}`);if(!ok)failed++;};
 const at=s=>Date.parse(s);
 check('JST 03:59と04:00で期間が切り替わる',loginBonusPeriodKey(at('2026-07-28T18:59:00Z'))==='2026-07-28'&&loginBonusPeriodKey(at('2026-07-28T19:00:00Z'))==='2026-07-29');
@@ -30,5 +30,20 @@ check('獲得ポップアップにも一覧を出す',source.includes('{renderLo
 check('ギフトボックスからいつでも開ける',source.includes('setShowLoginBonusList(true)')&&source.includes('ログインボーナス一覧を見る')&&source.includes('{renderLoginBonusList(loginBonusTodayDay)}'));
 check('今日ぶん受取済みなら1日戻して今日を出す',source.includes("if (state.lastGrantedPeriod === loginBonusPeriodKey()) return state.currentDay === 1 ? 7 : state.currentDay - 1;"));
 check('起動時に進み具合を画面へ渡す',source.includes('setLoginBonusState(loginGrant.loginBonus);'));
+
+// 不具合のお詫び配布(1度だけギフトボックスへ届く)
+const comp=grantCompensationGifts([],at('2026-07-31T00:00:00Z'));
+check('お詫びギフトが届く',comp.granted&&comp.gifts.length===COMPENSATION_GIFTS.length);
+const compReward=(id,type)=>comp.gifts.find(g=>g.id===id).rewards.filter(r=>r.type===type).reduce((a,r)=>a+r.amount,0);
+const compId='gift_compensation_20260731_battle';
+check('ダイヤ1000が入っている',compReward(compId,'diamond')===1000);
+check('スキップチケットが3種とも1枚ずつ',compReward(compId,'skipTicketJo')===1&&compReward(compId,'skipTicketHa')===1&&compReward(compId,'skipTicketKyu')===1);
+check('報酬が受取可能な形式になっている',!!normalizeGiftRewards(comp.gifts[0]));
+check('受取期限が30日先',Date.parse(comp.gifts[0].expiresAt)-at('2026-07-31T00:00:00Z')===30*24*60*60*1000);
+check('2回目は配らない',grantCompensationGifts(comp.gifts,at('2026-08-01T00:00:00Z')).granted===false);
+check('受取済みでも再配布しない',grantCompensationGifts(comp.gifts.map(g=>({...g,claimedAt:'2026-08-01T00:00:00.000Z'})),at('2026-08-02T00:00:00Z')).granted===false);
+check('既存のギフトは消さない',grantCompensationGifts([{id:'other'}],at('2026-07-31T00:00:00Z')).gifts.some(g=>g.id==='other'));
+check('お詫びのラベルが付く',giftTitleDisplay(comp.gifts[0]).label==='お詫び');
+check('起動時にお詫びも配る',source.includes('const compensationGrant = grantCompensationGifts(loginGrant.gifts);')&&source.includes('if (loginGrant.granted || compensationGrant.granted)'));
 
 process.exit(failed?1:0);
