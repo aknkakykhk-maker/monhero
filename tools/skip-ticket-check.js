@@ -26,22 +26,24 @@ vm.runInContext(
 const { BREEDER_MARKET_ITEMS: items, SKIP_TICKET_BY_DIFFICULTY: byDiff } = itemCtx.__i;
 const ticket = (id) => items.find(i => i.id === id);
 
-// 価格は「その難易度を10WAVEクリアしたときに受け取れるダイヤ × 1.5」。
-// 数字を直に書かず、本番の獲得ダイヤの式と難易度倍率から計算して照合する
+// 価格は「その難易度を10WAVEクリアしたときに受け取れるダイヤ × 1.5 ＋ 同じくもらえる経験値」。
+// 数字を直に書かず、本番の獲得ダイヤ・獲得経験値の式と難易度倍率から計算して照合する
 const goldCtx = {};
 vm.createContext(goldCtx);
 vm.runInContext([
   grab(source, 'const WAVE_XP_TABLE =', 'const xpForLevel ='),
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
-  'globalThis.__g={goldForWavesCleared,DIFFICULTY_SETTINGS};',
+  'globalThis.__g={goldForWavesCleared,xpForWavesCleared,DIFFICULTY_SETTINGS};',
 ].join('\n'), goldCtx);
-const { goldForWavesCleared, DIFFICULTY_SETTINGS } = goldCtx.__g;
+const { goldForWavesCleared, xpForWavesCleared, DIFFICULTY_SETTINGS } = goldCtx.__g;
 const skipClearGold = (diff) => goldForWavesCleared(10, DIFFICULTY_SETTINGS[diff].gold);
-const expectedCost = (diff) => skipClearGold(diff) * 1.5;
+const skipClearXp = (diff) => xpForWavesCleared(10, DIFFICULTY_SETTINGS[diff].score);
+const expectedCost = (diff) => skipClearGold(diff) * 1.5 + skipClearXp(diff);
+const costDetail = (diff, id) => `${skipClearGold(diff)}×1.5+${skipClearXp(diff)}=${expectedCost(diff)} / 実際${ticket(id)?.cost}`;
 
-check('スキップチケット・序はNormalの獲得ダイヤ×1.5', ticket('skip_ticket_jo')?.cost === expectedCost('Normal') && ticket('skip_ticket_jo')?.skipDifficulty === 'Normal', `${skipClearGold('Normal')}×1.5=${expectedCost('Normal')} / 実際${ticket('skip_ticket_jo')?.cost}`);
-check('スキップチケット・破はHardの獲得ダイヤ×1.5', ticket('skip_ticket_ha')?.cost === expectedCost('Hard') && ticket('skip_ticket_ha')?.skipDifficulty === 'Hard', `${skipClearGold('Hard')}×1.5=${expectedCost('Hard')} / 実際${ticket('skip_ticket_ha')?.cost}`);
-check('スキップチケット・急はExpertの獲得ダイヤ×1.5', ticket('skip_ticket_kyu')?.cost === expectedCost('Expert') && ticket('skip_ticket_kyu')?.skipDifficulty === 'Expert', `${skipClearGold('Expert')}×1.5=${expectedCost('Expert')} / 実際${ticket('skip_ticket_kyu')?.cost}`);
+check('スキップチケット・序はNormalの獲得ダイヤ×1.5＋獲得経験値', ticket('skip_ticket_jo')?.cost === expectedCost('Normal') && ticket('skip_ticket_jo')?.skipDifficulty === 'Normal', costDetail('Normal', 'skip_ticket_jo'));
+check('スキップチケット・破はHardの獲得ダイヤ×1.5＋獲得経験値', ticket('skip_ticket_ha')?.cost === expectedCost('Hard') && ticket('skip_ticket_ha')?.skipDifficulty === 'Hard', costDetail('Hard', 'skip_ticket_ha'));
+check('スキップチケット・急はExpertの獲得ダイヤ×1.5＋獲得経験値', ticket('skip_ticket_kyu')?.cost === expectedCost('Expert') && ticket('skip_ticket_kyu')?.skipDifficulty === 'Expert', costDetail('Expert', 'skip_ticket_kyu'));
 check('価格は難易度が上がるほど高い', ticket('skip_ticket_jo').cost < ticket('skip_ticket_ha').cost && ticket('skip_ticket_ha').cost < ticket('skip_ticket_kyu').cost);
 check('3種ともマーケットで買える消耗アイテム', ['skip_ticket_jo', 'skip_ticket_ha', 'skip_ticket_kyu'].every(id => ticket(id)?.type === 'item' && ticket(id)?.usage === 'battleSkip'));
 check('難易度→チケットの対応表がある', byDiff.Normal === 'skip_ticket_jo' && byDiff.Hard === 'skip_ticket_ha' && byDiff.Expert === 'skip_ticket_kyu');
@@ -108,7 +110,9 @@ check('リザルトに簡単な演出がある', has('setSkipAnimPhase(1)') && h
 check('リザルトに記録されない旨を出す', has('スコア・ランキング・クリア回数には記録されません'));
 check('アイテム欄では使う対象を選ばせない', has("item.usage==='battleSkip'") && has('スキップで使用'));
 check('スキップ画面のBGMが決まっている', has("SKIP_PICK: 'enhance',") && has("SKIP_RESULT: 'result',"));
-check('ヘルプにスキップチケットの説明がある', has('スキップチケット・序:'));
+// ヘルプの本文は data/help.js にデータとして持っている
+const helpSrc = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
+check('ヘルプにスキップチケットの説明がある', helpSrc.includes("['スキップチケット・序','Normal で使える']"));
 // 所持数がどこでも分かるようにする
 check('確認画面で使う前後の所持数が分かる', has('所持数 {ownedItems[skipFlow.itemId]||0}枚 → {Math.max(0,(ownedItems[skipFlow.itemId]||0)-1)}枚'));
 check('リザルトで残り枚数が分かる', has('を1枚使いました（残り {ownedItems[skipResult.itemId]||0}枚）') && has('itemId: item.id,'));

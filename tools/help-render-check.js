@@ -1,0 +1,128 @@
+// ヘルプ画面を実際にReactでレンダリングして、3階層それぞれが描けることを確認する。
+//
+// このサンドボックスは外部CDN(Tailwind)へ出られず、アプリを起動して目で見る確認ができない。
+// そこで game-system.jsx からヘルプ部分のJSXだけを切り出し、状態と外部の関数を差し替えて
+// react-dom/server で文字列に描き、期待する内容が出ているかを見る。
+// 未定義の変数を参照していればここで例外になるため、開いた瞬間に落ちる不具合を防げる。
+const fs = require('fs');
+const path = require('path');
+const React = require('react');
+const ReactDOMServer = require('react-dom/server');
+const babel = require('@babel/core');
+// どこから実行してもプリセットを見つけられるよう、絶対パスで解決する
+const PRESET_REACT = require.resolve('@babel/preset-react');
+
+const root = path.resolve(__dirname, '..');
+const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
+const helpData = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
+
+let failed = 0;
+const check = (name, ok, detail = '') => {
+  console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`);
+  if (!ok) failed++;
+};
+
+// --- ヘルプのJSXを切り出す ---
+const START = '      {showHelp&&(()=>{';
+const END = '      })()}';
+const from = source.indexOf(START);
+const to = source.indexOf(END, from);
+if (from < 0 || to < 0) {
+  console.log('NG: ヘルプのJSXを切り出せませんでした');
+  process.exit(1);
+}
+const helpJsx = source.slice(from, to + END.length);
+
+// 画面のアイコンは中身を見ないので、同じ形の差し替えで足りる
+const stubIcon = ({ size }) => React.createElement('i', { 'data-size': size });
+const transformed = babel.transformSync(
+  `${helpData}\n` +
+  // 本体側の「読み込めなかったときの守り」も同じ形で用意する
+  "const HELP_GUIDE = (typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP_CATEGORIES)) ? HELP_CATEGORIES : [];\n" +
+  "const HELP_GUIDE_INTRO = (typeof HELP_INTRO !== 'undefined' && HELP_INTRO) || '';\n" +
+  "const HELP_GUIDE_HELLO = (typeof HELP_ASSISTANT_INTRO !== 'undefined' && HELP_ASSISTANT_INTRO) || '';\n" +
+  "const HELP_GUIDE_ASSISTANT = (typeof HELP_ASSISTANT !== 'undefined' && HELP_ASSISTANT) || {};\n" +
+  'const helpCategoryById = (id) => HELP_GUIDE.find(c => c.id === id) || null;\n' +
+  'const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;\n' +
+  'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
+  '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState }) => (<>\n' +
+  helpJsx + '\n</>);\nmodule.exports = { HelpScreen, HELP_GUIDE };',
+  { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'help-render-check.jsx' }
+);
+
+const moduleScope = { exports: {} };
+new Function('module', 'exports', 'React', transformed.code)(moduleScope, moduleScope.exports, React);
+const { HelpScreen, HELP_GUIDE } = moduleScope.exports;
+
+const noop = () => {};
+const render = (state) => ReactDOMServer.renderToStaticMarkup(React.createElement(HelpScreen, {
+  showHelp: true, helpCatId: null, helpTopicId: null, helpAssistantOpen: true,
+  setShowHelp: noop, setHelpCatId: noop, setHelpTopicId: noop, setHelpAssistantOpen: noop,
+  ArrowLeft: stubIcon, ChevronRight: stubIcon,
+  getDebugEnemyOptions: () => [], difficulty: 'Normal',
+  setDebugEnemyKey: noop, debugBattleRef: { current:false }, setDebugBattle: noop, setDebugOutcome: noop, setGameState: noop,
+  ...state,
+}));
+const text = (html) => html.replace(/<[^>]*>/g, '');
+
+// --- ① カテゴリ一覧 ---
+const hub = render({});
+check('カテゴリ一覧が描ける', hub.length > 0);
+check('カテゴリ一覧に全カテゴリが出る', HELP_GUIDE.every(c => text(hub).includes(c.title)), `${HELP_GUIDE.length}件`);
+check('カテゴリ一覧に導入文と助手のひとことが出る', text(hub).includes('まずはここをチェック') && text(hub).includes('知りたいことのカテゴリを選んでね'));
+check('カテゴリの色がそのまま使われる', HELP_GUIDE.every(c => hub.includes(c.color)));
+
+// --- ② 項目一覧 ---
+for (const cat of HELP_GUIDE) {
+  const list = render({ helpCatId: cat.id });
+  const t = text(list);
+  check(`「${cat.title}」の項目一覧が描ける`, cat.topics.every(x => t.includes(x.title)) && t.includes(cat.assistant), `${cat.topics.length}項目`);
+}
+
+// --- ③ 本文(全項目) ---
+let bodyNg = [];
+for (const cat of HELP_GUIDE) {
+  for (const topic of cat.topics) {
+    const body = text(render({ helpCatId: cat.id, helpTopicId: topic.id }));
+    const missing = topic.blocks.some(b => {
+      if (b.t === 'kv') return b.rows.some(r => !body.includes(r[0]) || !body.includes(r[1]));
+      if (b.t === 'list' || b.t === 'steps') return b.items.some(x => !body.includes(x));
+      if (b.t === 'note') return (b.title && !body.includes(b.title)) || !body.includes(b.text);
+      return !body.includes(b.text);
+    });
+    if (missing || !body.includes(topic.assistant)) bodyNg.push(`${cat.id}/${topic.id}`);
+  }
+}
+const topicCount = HELP_GUIDE.reduce((s, c) => s + c.topics.length, 0);
+check('全項目の本文が最後まで描ける', bodyNg.length === 0, bodyNg.length ? bodyNg.join(', ') : `${topicCount}項目`);
+
+// --- 助手の開閉と、最後の項目 ---
+const closed = text(render({ helpCatId: 'battle', helpAssistantOpen: false }));
+check('助手を閉じるとひとことが消える', !closed.includes(HELP_GUIDE[1].assistant) && closed.includes(HELP_GUIDE[1].topics[0].title));
+const lastCat = HELP_GUIDE[0];
+const lastTopic = lastCat.topics[lastCat.topics.length - 1];
+check('最後の項目では「次:」を出さない', !text(render({ helpCatId: lastCat.id, helpTopicId: lastTopic.id })).includes('次: '));
+check('途中の項目では次の項目名を出す', text(render({ helpCatId: lastCat.id, helpTopicId: lastCat.topics[0].id })).includes(`次: ${lastCat.topics[1].title}`));
+
+// --- 読み込めなかったときも落ちない ---
+const emptyTransformed = babel.transformSync(
+  'const HELP_GUIDE = [];\nconst HELP_GUIDE_INTRO = "";\nconst HELP_GUIDE_HELLO = "";\nconst HELP_GUIDE_ASSISTANT = { name:"助手", emoji:"🧑‍🏫", iconUrl:null };\n' +
+  'const helpCategoryById = () => null;\nconst helpTopicById = () => null;\n' +
+  'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
+  '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState }) => (<>\n' +
+  helpJsx + '\n</>);\nmodule.exports = { HelpScreen };',
+  { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'help-empty-check.jsx' }
+);
+const emptyScope = { exports: {} };
+new Function('module', 'exports', 'React', emptyTransformed.code)(emptyScope, emptyScope.exports, React);
+const emptyHtml = ReactDOMServer.renderToStaticMarkup(React.createElement(emptyScope.exports.HelpScreen, {
+  showHelp: true, helpCatId: null, helpTopicId: null, helpAssistantOpen: true,
+  setShowHelp: noop, setHelpCatId: noop, setHelpTopicId: noop, setHelpAssistantOpen: noop,
+  ArrowLeft: stubIcon, ChevronRight: stubIcon,
+  getDebugEnemyOptions: () => [], difficulty: 'Normal',
+  setDebugEnemyKey: noop, debugBattleRef: { current:false }, setDebugBattle: noop, setDebugOutcome: noop, setGameState: noop,
+}));
+check('ヘルプの中身が読めなくても落ちず、案内を出す', text(emptyHtml).includes('ヘルプの内容を読み込めませんでした'));
+
+console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
+process.exit(failed ? 1 : 0);
