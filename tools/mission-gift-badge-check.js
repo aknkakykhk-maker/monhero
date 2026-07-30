@@ -78,8 +78,9 @@ check('古いFORMATION_MENUが残っていない', !source.includes('FORMATION_M
 check('取得件数が上位50件に戻っている', has('const RANKING_DIAGNOSTIC_LIMIT = 50;'));
 check('ブリーダーLvの取得がスコア一覧を上書きしない',
   has("} else if (includeLevels && levelKind === 'breeder') {\n        setBreederRankingPool(prev => ({ ...prev, ...poolByDiff }));"));
-check('全難易度の取得を2件ずつに絞る', has('const runInBatches = async (list, size, worker)') && has('runInBatches(diffs, 2, loadOne)'));
-check('一覧を消さずに部分更新する', has('setLocalRankings(prev => ({ ...prev, ...byDiff }))'));
+check('レベル系ランキングは1回の取得にまとめる', has('const cacheKey = `levels:${levelKind}`;') && has('sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId)'));
+check('起動時の先読みは1難易度だけ', has("loadRankings('Normal')"));
+check('一覧を消さずに部分更新する', has('const next = { ...prev };') && has("if (sourceByDiff[key] === 'local' && Array.isArray(prev[key]) && prev[key].length) return;"));
 check('取得中でも表示済みは残す(更新中表示)', has('status.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>'));
 check('永久Loadingにしないタイムアウトがある', has('setTimeout(() => controller.abort(), 8000)'));
 check('詳細ログは既定で出さない', has('const rankingDebugEnabled = ()'));
