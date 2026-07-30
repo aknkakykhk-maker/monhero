@@ -71,7 +71,11 @@ node tools/dye-report.js
 2. 関連テストと `node tools/build.js --check` を通す。
 3. `BUILD_DATE`、`version.json`、更新履歴の最新リリース日時が同じであることを確認する（`node tools/build.js` が自動更新するため手入力しない）。
 4. `monster-hero/data/changelog.js` の先頭へ利用者向け変更内容を追記してから再度ビルドする。
-5. 差分を再確認し、依頼された場合にコミット、プッシュ、PR 作成を行う。
+5. **`monster-hero/data/help.js` のヘルプにも同じ変更を反映する**（更新履歴だけ書いてヘルプが古いままにしない）。
+   一覧になるものは手書きせず `{ t:'data', id:'...' }` で実データから表を作り、画面を増やした場合は
+   `HELP_SCREEN_COVERAGE` にも追加する。`node tools/help-coverage-check.js` /
+   `node tools/help-guide-check.js` / `node tools/help-render-check.js` で更新漏れを検出できる。
+6. 差分を再確認し、依頼された場合にコミット、プッシュ、PR 作成を行う。
 
 ## 6. Git / GitHub 運用
 

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1b8982edd34fff74
+// source-sha256: 8f5a6f304232d251
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 07:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 07:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4085,6 +4085,44 @@ const DIFFICULTY_SETTINGS = {
   }
 };
 const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
+// ヘルプの中に出す「実データから作る表」。data/help.js の { t:'data', id } がこれを呼ぶ。
+// 難易度の倍率やアイテムの値段をヘルプへ手で書き写すと、値を変えたときに片方だけ古くなる。
+// (実際「難易度が3つしか載っていない」状態になっていた)。ここを通せば取りこぼしが起きない。
+// 表を1つ足したいときは、ここに case を足して data/help.js から呼ぶ。
+const helpDataRows = id => {
+  const marketItems = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
+  const skipIds = new Set(Object.values(SKIP_TICKETS));
+  switch (id) {
+    case 'difficulties':
+      return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label, `敵×${s.power} ／ スコア×${s.score} ／ ダイヤ×${s.gold}`]);
+    case 'teachings':
+      return (typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS || []).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
+    case 'skipTickets':
+      return marketItems.filter(item => skipIds.has(item.id)).map(item => [item.name, `${DIFFICULTY_SETTINGS[item.skipDifficulty]?.label || item.skipDifficulty} で使える ／ マーケット ${item.cost.toLocaleString()}ダイヤ`]);
+    case 'items':
+      return marketItems.filter(item => item.type === 'item' && !skipIds.has(item.id)).map(item => [item.name, `${item.cost.toLocaleString()}ダイヤ ／ ${item.desc || ''}`]);
+    case 'loginBonus':
+      return (typeof LOGIN_BONUS_REWARDS !== 'undefined' && LOGIN_BONUS_REWARDS || []).map((rewards, i) => [`${i + 1}日目`, rewards.map(giftRewardText).join(' ／ ')]);
+    case 'missionsDaily':
+    case 'missionsWeekly':
+      {
+        const defs = (typeof MISSION_DEFS !== 'undefined' && MISSION_DEFS || {})[id === 'missionsDaily' ? 'daily' : 'weekly'] || [];
+        return defs.map(m => [m.name, `${m.condition} → ${m.rewards.map(giftRewardText).join(' ／ ')}`]);
+      }
+    default:
+      return [];
+  }
+};
+// 表の上に出す見出し(何の表かを分かるようにする)
+const HELP_DATA_TITLES = {
+  difficulties: '難易度と倍率',
+  teachings: 'ブリーダーの教え',
+  skipTickets: 'スキップチケットの種類',
+  items: 'アイテム一覧',
+  loginBonus: '7日間のログインボーナス',
+  missionsDaily: 'デイリーミッション',
+  missionsWeekly: 'ウィークリーミッション'
+};
 // 難易度の色をそのまま反映するためのinline style。選択中は背景色、未選択は文字色だけを難易度の色にする
 const difficultyStyle = (setting, selected) => selected ? {
   backgroundColor: setting.bg,
@@ -17737,6 +17775,28 @@ function MonsterHeroGame() {
       }, r[0]), /*#__PURE__*/React.createElement("span", {
         className: "flex-1 text-[11px] text-white leading-relaxed"
       }, r[1]))));
+      // 実データから作る表。難易度・アイテム・ログボ・ミッションはここで全件出るので取りこぼさない
+      if (b.t === 'data') {
+        const rows = helpDataRows(b.id);
+        if (rows.length === 0) return null;
+        return /*#__PURE__*/React.createElement("div", {
+          key: i
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "text-[10px] font-black mb-1 tracking-wider",
+          style: {
+            color: cat.color
+          }
+        }, HELP_DATA_TITLES[b.id] || ''), /*#__PURE__*/React.createElement("div", {
+          className: "rounded-2xl bg-black/50 border border-white/5 overflow-hidden"
+        }, rows.map((r, j) => /*#__PURE__*/React.createElement("div", {
+          key: j,
+          className: `flex gap-3 px-4 py-2.5 ${j > 0 ? 'border-t border-white/5' : ''}`
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight"
+        }, r[0]), /*#__PURE__*/React.createElement("span", {
+          className: "flex-1 text-[11px] text-white leading-relaxed"
+        }, r[1])))));
+      }
       return /*#__PURE__*/React.createElement("p", {
         key: i,
         className: "text-[12px] text-slate-200 leading-relaxed"
