@@ -1,6 +1,6 @@
 // 修行デバッグ試作版が通常データから隔離され、タイル盤面・自動移動・全効果・道具を備えることを静的確認する。
 const fs=require('fs');const source=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');const breeder=fs.readFileSync('monster-hero/data/breeder.js','utf8');let failed=false;const check=(n,v)=>{console.log(`${v?'OK':'NG'}: ${n}`);failed||=!v;};
-check('HOMEは実装予定の紹介画面のみ',/修行（実装予定）/.test(source)&&/gameState==='TRAINING_INFO'/.test(source)&&/通常プレイから修行本編は開始できません/.test(source));
+check('HOMEは実装予定の紹介画面のみ',/修行（準備中）/.test(source)&&/gameState==='TRAINING_INFO'/.test(source)&&/通常プレイから修行本編は開始できません/.test(source));
 check('修行チケットの価格・絆XP効果を維持',/id:'training_ticket_l'[^\n]*cost:1000[^\n]*bondXp:100/.test(breeder));
 check('デバッグ設定に修行テスト導線',/gameState==='DEBUG_SETTINGS'[\s\S]{0,1200}修行テスト/.test(source));
 check('保存禁止バナーを常時表示',(source.match(/DEBUG・報酬や進行状況は保存されません/g)||[]).length>=4&&/DEBUG保存なし/.test(source));
@@ -14,4 +14,8 @@ check('振り直しは出目確定後・移動前に選択可能',/rollPending:f
 check('道具の方式・使用不可理由・自動待機を表示',/mode:'消費型'/.test(source)&&/mode:'自動発動型'/.test(source)&&/今は使えません/.test(source)&&/待機中/.test(source));
 check('成功失敗計算は表示のみ',/settleTrainingRewards/.test(source)&&/所持データには反映されません/.test(source)&&!/storeSet\(TRAINING_SAVE_KEY/.test(source));
 check('BGM2場面とSE9種',/trainingMenu:'original_home'/.test(source)&&/trainingBoard:'original_home'/.test(source)&&['trainingDice','trainingMove','trainingDecide','trainingReward','trainingGood','trainingBad','trainingTool','trainingGoal','trainingFail'].every(k=>source.includes(`${k}: async`)));
+check('サイコロの振動・出目確定演出と前回出目',/trainingDiceStage/.test(source)&&/mh-dice-overlay/.test(source)&&/が出た！/.test(source)&&/前回の出目/.test(source));
+check('マス詳細に数値・発動タイミング・補足',/trainingSpaceValue/.test(source)&&/発動タイミング/.test(source)&&/mh-space-detail/.test(source));
+check('修行を更新履歴へ掲載しない',!require('fs').readFileSync('monster-hero/data/changelog.js','utf8').includes('修行'));
+check('不具合通知を種類別キーで既読管理',/mh_changelog_seen_\$\{type\}/.test(source)&&/CHANGELOG_LATEST_BY_TYPE/.test(source)&&/changelogUnread\.issue/.test(source));
 check('折りたたみDEBUG操作',/mh-training-debug/.test(source)&&/強制成功/.test(source)&&/強制失敗/.test(source)&&/seed:/.test(source));process.exit(failed?1:0);
