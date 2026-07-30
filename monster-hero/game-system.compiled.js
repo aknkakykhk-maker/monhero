@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e8529c88f3f9c216
+// source-sha256: 703610872d99f173
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 21:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 21:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4156,9 +4156,16 @@ const collectBondRankingEntries = rankingPool => {
 
 // ランキングに出すモンスターの絵。記録にはIDだけが入っているので、同梱の絵を引いて使う。
 // 画像を埋め込んでいた頃の古い記録は、そのimgUrlをそのまま使って表示できるようにしておく。
+const rankingMonsterIdOf = member => {
+  if (!member) return null;
+  const recorded = member.baseId || member.monsterId || member.id;
+  if (recorded && ALL_PLAYER_MONSTERS[recorded]) return recorded;
+  // 古い記録は種類のIDを持たず名前しか無いことがあるので、名前からも引く
+  return Object.keys(ALL_PLAYER_MONSTERS).find(id => ALL_PLAYER_MONSTERS[id]?.name === member.name) || null;
+};
 const rankingMemberImage = member => {
   if (!member) return null;
-  const base = ALL_PLAYER_MONSTERS[member.baseId || member.monsterId || member.id];
+  const base = ALL_PLAYER_MONSTERS[rankingMonsterIdOf(member)];
   return base?.iconUrl || member.imgUrl || null;
 };
 const splitRankingParty = entry => {
@@ -5405,7 +5412,9 @@ function MonsterHeroGame() {
     const sourceByDiff = {};
     // 古い記録には編成に画像が埋め込まれている。表示には使わないので、
     // 画面のstateへ持ち込む前に落として、端末側のメモリと再描画の負担を減らす
-    const stripPartyImages = party => Array.isArray(party) ? party.map(m => m && m.imgUrl ? {
+    // 同梱の絵で置き換えられる相手だけ落とす。どのモンスターか分からない古い記録は、
+    // 埋め込まれた絵をそのまま残す(消すと絵文字表示に落ちてしまうため)
+    const stripPartyImages = party => Array.isArray(party) ? party.map(m => m && m.imgUrl && rankingMonsterIdOf(m) ? {
       ...m,
       imgUrl: undefined
     } : m) : party;

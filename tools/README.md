@@ -43,6 +43,7 @@ cd tools && npm install
 | `node emergency-audio-breeder-check.js` | 起動タップ内の音声有効化、保存ミュート保護、ブリーダーLvランキングの独立取得と表示状態を確認する。 |
 | `node breeder-ranking-browser-check.js` | Supabaseをスタブした実ブラウザで、全難易度のブリーダーLv集約、重複排除、複数件のDOM表示、タブ往復後の保持を確認する。 |
 | `node bgm-arrangement-check.js` | BGMトラック登録、場面別アレンジ保存、最終ボス後のクリア曲、試聴、曲別音量補正を確認する。 |
+| `node ranking-monster-icon-check.js` | ランキングのモンスターアイコンがID・名前・旧記録から解決できるか確認する。 |
 | `node ranking-check.js` | ランキングの集計仕様(スコアは当時のまま固定/ブリーダーLv・絆Lvは最新)を確認する。通信はスタブ。 |
 | `node ranking-request-check.js` | Normal/Hard/MasterのData APIリクエスト、難易度正規化と`eq`取得、旧`clear_id=NULL`表示、`clear_id`重複防止を通信スタブで確認する。 |
 | `node ranking-normal-display-check.js` | NormalのGET 3件が変換・絞り込み・並べ替え・重複排除を経て、正規化済みの同一stateキーで画面へ3件表示されることを確認する。 |
