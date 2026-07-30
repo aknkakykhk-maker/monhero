@@ -2,7 +2,7 @@ const fs=require('fs'),assert=require('assert');
 const src=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
 const order=['Beginner','Easy','Normal','Hard','Expert','Master','GrandMaster','Hell','Legend'];
 let last=-1;for(const key of order){const i=src.indexOf(`${key}:`,src.indexOf('const DIFFICULTY_SETTINGS'));assert(i>last,`${key} の順序`);last=i;}
-for(const token of ['snap-mandatory','touchAction:\'pan-y pinch-zoom\'','前の難易度','次の難易度','MY HIGH SCORE','highestWaves[key]','全WAVE詳細','この難易度で挑戦','ENEMY_SEQUENCE.map'])assert(src.includes(token),token);
+for(const token of ['snap-mandatory','touchAction:\'pan-x pinch-zoom\'','flex items-start gap-3 overflow-x-auto overflow-y-hidden','relative shrink-0','前の難易度','次の難易度','MY HIGH SCORE','highestWaves[key]','全WAVE詳細','この難易度で挑戦','ENEMY_SEQUENCE.map'])assert(src.includes(token),token);
 assert(src.includes('const createBattleEnemy ='));assert(src.includes('const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey)'));assert(src.includes('createBattleEnemy(1,key)'));
 assert(src.includes("ChevronLeft: '<polyline"),'ChevronLeft のSVGパス');
 assert(src.includes("ChevronLeft=_icon('ChevronLeft')"),'ChevronLeft のコンポーネント定義');
