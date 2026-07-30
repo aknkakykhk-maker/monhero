@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: df9d17de5b5f9ac7
+// source-sha256: 24213581b51286db
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 20:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 20:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4331,13 +4331,17 @@ const rankingLog = (requestId, event, detail = {}) => {
     ...detail
   });
 };
+// レベル系ランキングは難易度で絞らず1回で取るので、少し多めに取っておく
+const RANKING_LEVEL_FETCH_LIMIT = 200;
 const sbFetchRankings = async (diff, limit = RANKING_DIAGNOSTIC_LIMIT, order = 'score.desc.nullslast', offset = 0, requestId = 'untracked') => {
-  const normalizedDifficulty = normalizeRankingDifficulty(diff);
+  // diff を省略(null)すると難易度で絞らず、全難易度をまとめて取る
+  const normalizedDifficulty = diff == null ? null : normalizeRankingDifficulty(diff);
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
   const select = 'user_name,hero,party,score,level,icon';
   // DBに保存する正規keyと同じ値をeqで取得する。ilikeによる別系統の
   // 取得条件を残さず、NormalもHardと完全に同じSELECT経路にする。
-  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}&difficulty=eq.${encodeURIComponent(normalizedDifficulty)}&order=${order}&limit=${limit}&offset=${offset}`;
+  const difficultyFilter = normalizedDifficulty == null ? '' : `&difficulty=eq.${encodeURIComponent(normalizedDifficulty)}`;
+  const url = `${SUPABASE_URL}/rest/v1/rankings?select=${select}${difficultyFilter}&order=${order}&limit=${limit}&offset=${offset}`;
   const startedAt = Date.now();
   rankingLog(requestId, 'request-start', {
     difficulty: normalizedDifficulty,
@@ -5379,6 +5383,62 @@ function MonsterHeroGame() {
       if (rankingDebugEnabled()) console.info('[ranking][Master] 整形後件数:', valid.length, '除外件数:', rows.length - valid.length);
       return valid;
     };
+    // ブリーダーLv・絆Lvは難易度をまたいで名前ごとにまとめるので、難易度で絞る必要がない。
+    // 以前は難易度ごとに取得していたため、ブリーダーLvは18回(9難易度×2種の並び)、
+    // 絆Lvは9回の通信が走り、1件でも遅い通信があると表示までとても待たされていた。
+    // ここを「絞り込み無しの1回」にまとめる。
+    if (includeLevels) {
+      const statusKey = levelKind === 'bond' ? null : `${levelKind}:all`;
+      const generation = statusKey ? beginRankingStatus(statusKey) : null;
+      if (levelKind === 'bond') {
+        setBondRankingLoading(true);
+        setBondRankingError(null);
+      }
+      const cacheKey = `levels:${levelKind}`;
+      const fetchedAt = rankingFetchedAtRef.current.get(cacheKey) || 0;
+      // 直前に取得済みなら通信しない(タブを往復するだけで取り直さない)
+      if (!force && Date.now() - fetchedAt < 30000) {
+        if (statusKey) finishRankingStatus(statusKey, generation, null, true);
+        if (levelKind === 'bond') setBondRankingLoading(false);
+        return;
+      }
+      // 進行中の同じ取得があれば相乗りする
+      if (!force && rankingRequestsRef.current.has(cacheKey)) return rankingRequestsRef.current.get(cacheKey);
+      const requestId = `levels-${levelKind}-${Date.now()}-${++rankingRequestSequenceRef.current}`;
+      rankingLatestRequestRef.current.set(cacheKey, requestId);
+      const request = (async () => {
+        let error = null,
+          rows = [];
+        try {
+          // ブリーダーLvはレベル上位、絆Lvは編成(party)を見るので新しい記録から取る
+          const order = levelKind === 'bond' ? 'id.desc' : 'level.desc.nullslast';
+          rows = await sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId);
+        } catch (e) {
+          error = e?.message || String(e);
+          console.error('[ranking] level fetch failed:', error);
+        }
+        // 取得中に新しい要求が始まっていたら、そちらに任せて古い結果は捨てる
+        if (rankingLatestRequestRef.current.get(cacheKey) !== requestId) return;
+        const entries = mergeRows([], Array.isArray(rows) ? rows : []).map(toEntry);
+        if (entries.length) {
+          if (levelKind === 'bond') setBondRankingData({
+            all: entries
+          });else setBreederRankingPool({
+            all: entries
+          });
+          rankingFetchedAtRef.current.set(cacheKey, Date.now());
+        }
+        if (statusKey) finishRankingStatus(statusKey, generation, entries.length ? null : error, entries.length > 0);
+        if (levelKind === 'bond') {
+          setBondRankingLoading(false);
+          setBondRankingError(entries.length ? null : error);
+        }
+      })().finally(() => {
+        if (rankingRequestsRef.current.get(cacheKey) === request) rankingRequestsRef.current.delete(cacheKey);
+      });
+      rankingRequestsRef.current.set(cacheKey, request);
+      return request;
+    }
     // 起動時は利用者から不調報告のあるNormal/Masterを先に取得する。
     // 全難易度を一斉取得すると記録の多い難易度同士がSupabase側で競合するため、2件ずつに制限する。
     const allDiffs = Object.keys(DIFFICULTY_SETTINGS);
@@ -5516,10 +5576,18 @@ function MonsterHeroGame() {
             ...prev,
             ...sourceByDiff
           }));
-          setLocalRankings(prev => ({
-            ...prev,
-            ...byDiff
-          }));
+          // 通信に失敗して端末内の復旧値しか無いときは、既に表示できている一覧を置き換えない。
+          // (一度出たランキングが、あとから来た失敗の結果で消えてしまうのを防ぐ)
+          setLocalRankings(prev => {
+            const next = {
+              ...prev
+            };
+            Object.keys(byDiff).forEach(key => {
+              if (sourceByDiff[key] === 'local' && Array.isArray(prev[key]) && prev[key].length) return;
+              next[key] = byDiff[key];
+            });
+            return next;
+          });
         }
         rankingFetchedAtRef.current.set(requestKey, Date.now());
         rankingLog(requestId, 'render-end', {
@@ -5541,17 +5609,10 @@ function MonsterHeroGame() {
       rankingRequestsRef.current.set(requestKey, request);
       return request;
     };
-    // 全難易度を一斉に取得するとSupabase側で競合し、遅延や一部失敗の原因になる。
-    // 2件ずつ順に進め、終わった難易度から即座に画面へ反映する
-    // (遅い難易度や失敗した難易度が、取得済みデータの描画を止めない)。
-    const runInBatches = async (list, size, worker) => {
-      const out = [];
-      for (let i = 0; i < list.length; i += size) {
-        out.push(...(await Promise.allSettled(list.slice(i, i + size).map(worker))));
-      }
-      return out;
-    };
-    const settled = diffs.length > 2 ? await runInBatches(diffs, 2, loadOne) : await Promise.allSettled(diffs.map(loadOne));
+    // 取得は同時に開始し、終わった難易度から即座に画面へ反映する。
+    // (遅い難易度や失敗した難易度が、取得済みデータの描画を止めない)
+    // 順番待ちにすると1件の遅延がそのまま全体の待ち時間になるため、まとめて走らせる。
+    const settled = await Promise.allSettled(diffs.map(loadOne));
     const results = settled.map(result => result.status === 'fulfilled' ? result.value : false);
     if (levelStatusKey) {
       const failures = results.filter(result => result === false).length;
@@ -6277,9 +6338,11 @@ function MonsterHeroGame() {
         setGameState('ONBOARDING');
       }
       setDataLoaded(true); // ここまでで起動に必要なセーブデータは揃っている
-      // タイトル表示を待たせず、起動直後から全難易度のスコアランキングを裏で取得する。
+      // タイトル表示を待たせず、選んでいる難易度のスコアランキングだけを裏で取得する。
+      // 以前は全難易度(9件)をまとめて取りに行っていたため、起動直後の通信が混み合い、
+      // どのランキングも表示までとても待たされていた。他の難易度は開いたときに取る。
       // 画面を先読み中に開いてもloadRankings内で同じ通信を共有するため、二重取得にならない。
-      setTimeout(() => loadRankings().catch(e => {
+      setTimeout(() => loadRankings('Normal').catch(e => {
         console.error('[ranking] background preload failed:', e && e.message ? e.message : e);
       }), 0);
     })();

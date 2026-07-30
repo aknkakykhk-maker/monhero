@@ -65,7 +65,8 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: ランキング通信に8秒の上限`, code.includes('setTimeout(() => controller.abort(), 8000)'));
   check(`${label}: ランキング取得列を必要項目に限定`, code.includes("const select = 'user_name,hero,party,score,level,icon'"));
   check(`${label}: 起動時はNormalとMasterを優先`, code.includes("['Normal', 'Master', ...allDiffs.filter"));
-  check(`${label}: 全難易度は2件ずつ取得し一部失敗も完了扱い`, code.includes('runInBatches(diffs, 2, loadOne)') && code.includes('Promise.allSettled'));
+  check(`${label}: スコアは同時取得し一部失敗も完了扱い`, code.includes('Promise.allSettled(diffs.map(loadOne))'));
+  check(`${label}: レベル系は難易度で絞らず1回で取得`, code.includes("sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId)"));
   check(`${label}: 取得上限は仕様どおり上位50件`, code.includes('const RANKING_DIAGNOSTIC_LIMIT = 50'));
   check(`${label}: 端末内自己ベストから復旧`, code.includes('`mh_hs_${d}`') && code.includes("hero: '記録復旧'"));
   check(`${label}: score.desc失敗時も診断用上限を使う`, code.includes("sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0"));

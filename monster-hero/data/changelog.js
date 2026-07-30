@@ -17,7 +17,18 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-30 20:21",
+    date: "2026-07-30 20:31",
+    type: "issue",
+    status: "fixed",
+    title: "ランキングの読み込みが遅く、表示が消える不具合を修正",
+    items: [
+      "ブリーダーLv・絆Lvが表示されるまでとても待たされていた不具合を修正しました",
+      "一度表示されたランキングが、あとから消えてしまう不具合を修正しました",
+      "起動直後の読み込みを軽くし、ランキング全体の表示を速くしました",
+    ],
+  },
+  {
+    date: "2026-07-30 20:31",
     type: "update",
     title: "ミッション・ギフト・編成の使い勝手を改善",
     items: [
@@ -28,7 +39,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 20:21",
+    date: "2026-07-30 20:31",
     type: "issue",
     status: "fixed",
     title: "ランキングの読み込みを安定化",
@@ -39,7 +50,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 20:21",
+    date: "2026-07-30 20:31",
     type: "issue",
     status: "fixed",
     title: "絆Lvランキングの表示を修正",
@@ -48,7 +59,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 20:21",
+    date: "2026-07-30 20:31",
     type: "issue",
     status: "fixed",
     title: "ランキング表示を安定化",
@@ -57,7 +68,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 20:21",
+    date: "2026-07-30 20:31",
     type: "issue",
     status: "fixed",
     title: "難易度選択と絆Lvランキングを修正",
