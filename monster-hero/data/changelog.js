@@ -17,7 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-30 11:22",
+    date: "2026-07-30 11:37",
+    type: "update",
+    title: "高難易度とムーの表示を調整",
+    items: [
+      "Grand Master・Hell・Legendの敵強度を遊びやすく調整しました",
+      "全WAVE詳細でラスボスのムーが最も大きく見えるよう調整しました",
+    ],
+  },
+  {
+    date: "2026-07-30 11:37",
     type: "issue",
     status: "fixed",
     title: "バトル難易度画面の黒画面を修正",
@@ -26,7 +35,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 11:22",
+    date: "2026-07-30 11:37",
     type: "update",
     title: "バトル難易度選択画面を改修",
     items: [
@@ -34,7 +43,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 11:22",
+    date: "2026-07-30 11:37",
     type: "issue",
     status: "fixed",
     title: "ランキング編成表示を修正",
@@ -43,7 +52,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 11:22",
+    date: "2026-07-30 11:37",
     type: "issue",
     status: "fixed",
     title: "新規プレイヤー初期設定導線を修正",

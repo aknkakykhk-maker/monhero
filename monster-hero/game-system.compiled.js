@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 52b997952c3ff48e
+// source-sha256: afdb51227613e0c6
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 11:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 11:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3925,7 +3925,7 @@ const DIFFICULTY_SETTINGS = {
   },
   GrandMaster: {
     label: "Grand Master",
-    power: 8.0,
+    power: 6.5,
     score: 8.0,
     gold: 2.5,
     bg: '#d97706',
@@ -3935,7 +3935,7 @@ const DIFFICULTY_SETTINGS = {
   },
   Hell: {
     label: "Hell",
-    power: 12.0,
+    power: 8.0,
     score: 12.0,
     gold: 3.0,
     bg: '#7f1d1d',
@@ -3945,7 +3945,7 @@ const DIFFICULTY_SETTINGS = {
   },
   Legend: {
     label: "Legend",
-    power: 18.0,
+    power: 10.0,
     score: 18.0,
     gold: 4.0,
     bg: '#be185d',
@@ -3963,6 +3963,16 @@ const difficultyStyle = (setting, selected) => selected ? {
   backgroundColor: 'rgba(15,23,42,0.9)',
   color: setting.text
 };
+
+// 透明余白が大きいムーの立ち絵は、表示枠を広げるだけでなく本体が十分大きく見えるよう拡大する。
+// ENEMY SCANと全WAVE詳細で同じ倍率を使い、各画面では重なりを防ぐための表示枠だけを変える。
+const ENEMY_ART_SCALE = {
+  Moo: 2
+};
+const enemyArtStyle = enemyId => ({
+  transform: `scale(${ENEMY_ART_SCALE[enemyId] || 1})`,
+  transformOrigin: 'center'
+});
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
 const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null) => {
@@ -11387,24 +11397,28 @@ function MonsterHeroGame() {
     const boss = index === ENEMY_SEQUENCE.length - 1;
     return /*#__PURE__*/React.createElement("article", {
       key: `${enemyKey}-${index}`,
-      className: "grid grid-cols-[48px_58px_1fr_auto] items-center gap-2 rounded-2xl border border-white/10 bg-slate-900 p-2"
+      "data-wave": index + 1,
+      className: `grid items-center gap-2 rounded-2xl border bg-slate-900 p-2 ${boss ? 'grid-cols-[32px_112px_minmax(0,1fr)] border-amber-400/40 min-h-[128px]' : 'grid-cols-[48px_58px_1fr_auto] border-white/10'}`
     }, /*#__PURE__*/React.createElement("b", {
       className: boss ? 'text-amber-300' : 'text-indigo-300'
     }, "W", index + 1), /*#__PURE__*/React.createElement("div", {
-      className: "w-14 h-14 flex items-center justify-center overflow-hidden"
+      className: `${boss ? 'w-28 h-28' : 'w-14 h-14'} flex items-center justify-center overflow-hidden`
     }, enemy.imgUrl ? /*#__PURE__*/React.createElement("img", {
       src: enemy.imgUrl,
       alt: enemy.name,
-      className: "w-full h-full object-contain"
+      style: enemyArtStyle(enemy.id),
+      className: `${boss ? 'w-14 h-14' : 'w-full h-full'} object-contain`
     }) : /*#__PURE__*/React.createElement("span", {
       className: "text-3xl"
     }, enemy.emoji)), /*#__PURE__*/React.createElement("div", {
-      className: "min-w-0"
-    }, /*#__PURE__*/React.createElement("b", {
+      className: `min-w-0 ${boss ? 'grid grid-cols-[1fr_auto] items-center gap-2' : ''}`
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
       className: `block truncate ${boss ? 'text-amber-300' : ''}`
     }, enemy.name), boss && /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-black text-amber-400"
-    }, "BOSS")), /*#__PURE__*/React.createElement("div", {
+    }, "BOSS")), boss && /*#__PURE__*/React.createElement("div", {
+      className: "text-right text-[10px] whitespace-nowrap"
+    }, /*#__PURE__*/React.createElement("div", null, "HP ", /*#__PURE__*/React.createElement("b", null, enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "\u653B\u6483 ", /*#__PURE__*/React.createElement("b", null, enemy.atk.toLocaleString())))), !boss && /*#__PURE__*/React.createElement("div", {
       className: "text-right text-[10px]"
     }, /*#__PURE__*/React.createElement("div", null, "HP ", /*#__PURE__*/React.createElement("b", null, enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "\u653B\u6483 ", /*#__PURE__*/React.createElement("b", null, enemy.atk.toLocaleString()))));
   })))), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
@@ -16980,18 +16994,14 @@ function MonsterHeroGame() {
     className: "px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90"
   }, "\u623B\u308B")), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll"
-  }, enemy.imgUrl ? /*#__PURE__*/React.createElement("img", {
+  }, enemy.imgUrl ? /*#__PURE__*/React.createElement("div", {
+    className: `${enemy.id === 'Moo' ? 'w-[280px] h-[280px]' : 'w-[140px] h-[140px]'} flex shrink-0 items-center justify-center overflow-hidden ${enemy.id === 'Moo' ? 'mb-2' : 'mb-6'}`
+  }, /*#__PURE__*/React.createElement("img", {
     src: enemy.imgUrl,
     alt: enemy.name,
-    style: enemy.id === 'Moo' ? {
-      width: 'clamp(252px,70vw,280px)',
-      height: 'clamp(252px,70vw,280px)'
-    } : {
-      width: '140px',
-      height: '140px'
-    },
-    className: `mx-auto object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)] ${enemy.id === 'Moo' ? 'mb-2' : 'mb-6'}`
-  }) : /*#__PURE__*/React.createElement("div", {
+    style: enemyArtStyle(enemy.id),
+    className: "w-[140px] h-[140px] object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]"
+  })) : /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: '112px'
     },
