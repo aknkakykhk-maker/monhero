@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2382a5cc2fac2ef0
+// source-sha256: 52b997952c3ff48e
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -33,6 +33,7 @@ const _ICON_PATHS = {
   Play: '<polygon points="5 3 19 12 5 21 5 3"/>',
   Sparkles: '<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>',
   Activity: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  ChevronLeft: '<polyline points="15 18 9 12 15 6"/>',
   ChevronRight: '<polyline points="9 18 15 12 9 6"/>',
   Crown: '<path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 20h14"/>',
   Edit3: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
@@ -93,6 +94,7 @@ const Heart = _icon('Heart'),
   Play = _icon('Play'),
   Sparkles = _icon('Sparkles'),
   Activity = _icon('Activity'),
+  ChevronLeft = _icon('ChevronLeft'),
   ChevronRight = _icon('ChevronRight'),
   Crown = _icon('Crown'),
   Edit3 = _icon('Edit3'),
@@ -121,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 11:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 11:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3952,6 +3954,7 @@ const DIFFICULTY_SETTINGS = {
     shadow: "shadow-pink-600/60"
   }
 };
+const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
 // 難易度の色をそのまま反映するためのinline style。選択中は背景色、未選択は文字色だけを難易度の色にする
 const difficultyStyle = (setting, selected) => selected ? {
   backgroundColor: setting.bg,
@@ -3965,14 +3968,19 @@ const difficultyStyle = (setting, selected) => selected ? {
 const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null) => {
   const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
   const base = ENEMY_DATA[enemyKey];
-  if (!base) return null;
-  const mod = DIFFICULTY_SETTINGS[difficulty]?.power || 1;
+  const safeDifficulty = normalizeBattleDifficulty(difficulty);
+  const mod = DIFFICULTY_SETTINGS[safeDifficulty].power;
+  const baseHp = Number.isFinite(Number(base?.baseHp)) ? Math.max(1, Number(base.baseHp)) : 1;
+  const baseAtk = Number.isFinite(Number(base?.baseAtk)) ? Math.max(0, Number(base.baseAtk)) : 0;
   return {
-    ...base,
-    id: enemyKey,
-    hp: Math.floor(base.baseHp * mod),
-    maxHp: Math.floor(base.baseHp * mod),
-    atk: Math.floor(base.baseAtk * mod)
+    ...(base || {}),
+    id: enemyKey || `missing-wave-${wave}`,
+    name: base?.name || '敵データ未設定',
+    imgUrl: base?.imgUrl || '',
+    emoji: base?.emoji || '❓',
+    hp: Math.floor(baseHp * mod),
+    maxHp: Math.floor(baseHp * mod),
+    atk: Math.floor(baseAtk * mod)
   };
 };
 const splitRankingParty = entry => {
@@ -4519,6 +4527,10 @@ function MonsterHeroGame() {
   const [homeBackgroundReady, setHomeBackgroundReady] = useState(false);
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
   const [difficulty, setDifficulty] = useState('Normal');
+  const safeDifficulty = normalizeBattleDifficulty(difficulty);
+  useEffect(() => {
+    if (difficulty !== safeDifficulty) setDifficulty(safeDifficulty);
+  }, [difficulty, safeDifficulty]);
   const [score, setScore] = useState(0);
   const [highScores, setHighScores] = useState({});
   const highScoresRef = useRef({});
@@ -5029,8 +5041,8 @@ function MonsterHeroGame() {
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
-  const scoreMultiplier = useMemo(() => DIFFICULTY_SETTINGS[difficulty]?.score || 1.0, [difficulty]);
-  const goldMultiplier = useMemo(() => DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0, [difficulty]);
+  const scoreMultiplier = useMemo(() => DIFFICULTY_SETTINGS[safeDifficulty].score, [safeDifficulty]);
+  const goldMultiplier = useMemo(() => DIFFICULTY_SETTINGS[safeDifficulty].gold, [safeDifficulty]);
   const effectiveMaxHp = useMemo(() => Math.floor(maxHp * (1.0 + getPermaBuff('muaHpPct'))), [maxHp, permaBuffs]);
   const effectiveMaxGuts = useMemo(() => Math.floor(maxGuts * (1.0 + getPermaBuff('muaGutsPct'))), [maxGuts, permaBuffs]);
 
@@ -11362,7 +11374,7 @@ function MonsterHeroGame() {
     className: "flex items-center justify-between mb-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
     className: "text-indigo-300 font-black"
-  }, DIFFICULTY_SETTINGS[difficulty].label), /*#__PURE__*/React.createElement("h2", {
+  }, DIFFICULTY_SETTINGS[safeDifficulty].label), /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-black"
   }, "\u5168WAVE\u8A73\u7D30")), /*#__PURE__*/React.createElement("button", {
     "aria-label": "\u9589\u3058\u308B",
@@ -11371,7 +11383,7 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement(X, null))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2"
   }, ENEMY_SEQUENCE.map((enemyKey, index) => {
-    const enemy = createBattleEnemy(index + 1, difficulty);
+    const enemy = createBattleEnemy(index + 1, safeDifficulty);
     const boss = index === ENEMY_SEQUENCE.length - 1;
     return /*#__PURE__*/React.createElement("article", {
       key: `${enemyKey}-${index}`,
@@ -11427,7 +11439,7 @@ function MonsterHeroGame() {
     className: `py-1.5 rounded-lg text-[11px] font-black transition-all ${battleMenuTab === 'ranking' ? 'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]' : 'bg-slate-950/70 text-slate-400'}`
   }, "\u30E9\u30F3\u30AD\u30F3\u30B0")), battleMenuTab === 'difficulty' && (() => {
     const difficulties = Object.entries(DIFFICULTY_SETTINGS),
-      selectedIndex = difficulties.findIndex(([key]) => key === difficulty);
+      selectedIndex = difficulties.findIndex(([key]) => key === safeDifficulty);
     const selectDifficultyIndex = (index, behavior = 'smooth') => {
       const safe = Math.max(0, Math.min(difficulties.length - 1, index));
       setDifficulty(difficulties[safe][0]);
@@ -11437,7 +11449,7 @@ function MonsterHeroGame() {
         block: 'nearest'
       });
     };
-    const preview = createBattleEnemy(1, difficulty);
+    const preview = createBattleEnemy(1, safeDifficulty);
     return /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 flex flex-col overflow-hidden"
     }, /*#__PURE__*/React.createElement("div", {
@@ -11463,7 +11475,7 @@ function MonsterHeroGame() {
             best = i;
           }
         });
-        if (difficulties[best]?.[0] !== difficulty) setDifficulty(difficulties[best][0]);
+        if (difficulties[best]?.[0] !== safeDifficulty) setDifficulty(difficulties[best][0]);
       },
       className: "h-full flex gap-3 overflow-x-auto snap-x snap-mandatory overscroll-x-contain py-2 mh-scroll",
       style: {
@@ -11472,7 +11484,7 @@ function MonsterHeroGame() {
         touchAction: 'pan-y pinch-zoom'
       }
     }, difficulties.map(([key, setting]) => {
-      const active = key === difficulty,
+      const active = key === safeDifficulty,
         enemy = createBattleEnemy(1, key);
       return /*#__PURE__*/React.createElement("article", {
         key: key,
@@ -11555,7 +11567,7 @@ function MonsterHeroGame() {
       key: key,
       "aria-label": `${i + 1}ページ目`,
       onClick: () => selectDifficultyIndex(i),
-      className: `w-2 h-2 rounded-full ${key === difficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+      className: `w-2 h-2 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
     }))));
   })(), battleMenuTab === 'ranking' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 flex flex-col"
