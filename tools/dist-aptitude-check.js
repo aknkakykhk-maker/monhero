@@ -85,6 +85,8 @@ check('詳細に「現在 → 合流後」を出す', has('現在 {formatAptPct(
 check('勇者モン選択・供モン合流でいまの補正値を渡す', has('aptCurrentPct: [0,1,2,3].map(i=>distTotalBonus(i)),'));
 check('全距離にかかることを詳細で説明する', has('置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます'));
 check('スロットのバッジも合計補正を出す', has('const totalBonus=distTotalBonus(i);'));
+// 補正0%も「補正が無い」という情報なので、枠ごとに常に出す
+check('補正0%でもバッジを出す', has('const totalBonus=distTotalBonus(i); return(<div') && !has('return totalBonus!==0&&'));
 check('WAVEリザルトの適性込み合計も編成合計を使う', has('const aptPct=(distAptPct[i]||0)*100;'));
 check('マスモン強化でも補正値(%)を出す', (source.match(/formatAptPct\(aptGradeToPct\(/g) || []).length >= 3);
 check('ヘルプが新しい仕様を説明している',

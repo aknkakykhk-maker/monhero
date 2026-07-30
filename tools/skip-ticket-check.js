@@ -79,6 +79,7 @@ check('マスモン登録はしない', !skipBlock.includes('registerMasuMon'));
 // --- 画面 ---
 check('難易度カードにスキップと説明ボタンがある', has('openBattleSkip(key)') && has('setSkipInfoItemId(tid)'));
 check('チケットが無ければスキップは押せない', has('disabled={have<=0}') && has("'bg-slate-800 text-slate-500'"));
+check('スキップの文字は1行に収まる形にする', has('whitespace-nowrap') && has('<span>スキップ</span>') && has('{have}枚'));
 // 説明ボタンには disabled を付けない(チケットが無くても読める)
 const infoButton = source.slice(source.indexOf('<button onClick={()=>setSkipInfoItemId(tid)}'), source.indexOf('？</button>'));
 check('説明ボタンはチケットが無くても押せる', infoButton.length > 0 && !infoButton.includes('disabled'));

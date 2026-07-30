@@ -22,4 +22,13 @@ check('期限切れは受取不可',giftIsExpired({...multi,expiresAt:'2025-01-0
 const unknown=buildGiftClaim({...multi,rewards:[{type:'diamond',amount:10},{type:'unknown',amount:1}]},{gold:5},at('2026-01-01T00:00:00Z'));
 check('不明報酬を含むギフトは全体を受取不可',!unknown.ok&&unknown.reason==='invalidReward');
 check('保存キーが実装されている',source.includes("storeSet('mh_gifts'")&&source.includes("storeSet('mh_login_bonus'"));
+
+// 7日ぶんの一覧表示(今日がどこか・明日以降に何がもらえるか)
+check('7日ぶんの一覧を出す共通描画がある',source.includes('const renderLoginBonusList = (todayDay)')&&source.includes('7日間のログインボーナス'));
+check('受取済み・今日・これからで出し分ける',source.includes("day < todayDay ? 'done' : day === todayDay ? 'today' : 'next'")&&source.includes("phase==='today'?'今日':phase==='done'?'受取済み':'これから'"));
+check('獲得ポップアップにも一覧を出す',source.includes('{renderLoginBonusList(loginBonusPopup.day)}'));
+check('ギフトボックスからいつでも開ける',source.includes('setShowLoginBonusList(true)')&&source.includes('ログインボーナス一覧を見る')&&source.includes('{renderLoginBonusList(loginBonusTodayDay)}'));
+check('今日ぶん受取済みなら1日戻して今日を出す',source.includes("if (state.lastGrantedPeriod === loginBonusPeriodKey()) return state.currentDay === 1 ? 7 : state.currentDay - 1;"));
+check('起動時に進み具合を画面へ渡す',source.includes('setLoginBonusState(loginGrant.loginBonus);'));
+
 process.exit(failed?1:0);
