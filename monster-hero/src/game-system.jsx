@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 22:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 01:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1477,22 +1477,22 @@ const missionClaimableList = (state,type) => MISSION_DEFS[type].filter(m=>missio
 const missionClaimableCount = state => ['daily','weekly'].reduce((sum,type)=>sum+missionClaimableList(state,type).length,0);
 const missionNextReset = (type,now=Date.now()) => { const shifted=new Date(Number(now)+5*60*60*1000); shifted.setUTCHours(0,0,0,0); shifted.setUTCDate(shifted.getUTCDate()+(type==='daily'?1:7-((shifted.getUTCDay()+6)%7))); return shifted.getTime()-5*60*60*1000; };
 const STAT_POINT_GAIN = { hp: 10, atk: 3, def: 3, guts: 3 };
-// 間合い適性のグレードを「Cを±0とした段階数」に直す(A→+2、E→-2)。
-// 合流ボーナスでは、この段階数をプラスマイナス問わずそのまま勇者モンの適性に足す
-const APT_NEUTRAL_INDEX = DIST_APTITUDE_GRADES.indexOf('C');
-const aptGradeToDelta = (grade) => {
-  const idx = DIST_APTITUDE_GRADES.indexOf(grade);
-  return idx < 0 ? 0 : idx - APT_NEUTRAL_INDEX;
-};
-// モンスター(素の種・マスモン反映後のどちらでも可)の4距離分の適性段階数を返す
-// 合流ボーナス欄に出す間合い適性の加算表示(例: 「接近+2 中距離-1」)。加算が無ければ空文字
-const formatAptBonus = (mon) => getMonsterAptDelta(mon)
-  .map((d, i) => d !== 0 ? `${RANGE_LABELS[i]}${d > 0 ? '+' : ''}${d}` : null)
-  .filter(Boolean).join(' ');
-const getMonsterAptDelta = (mon) => {
+// 間合い適性は「距離ごとの与ダメージ補正(%)」として扱う。
+// Cが±0、Mなら+25%、Gなら-20%。編成した勇者モン・供モンの補正は、そのモンスターを
+// どの距離に置いたかに関係なく、4距離すべての補正値へ加算されていく。
+// 例) 零距離の補正が+6%のところへ、零距離M(+25%)のモンスターが合流すると+31%になる。
+const aptGradeToPct = (grade) => (DIST_APTITUDE_MULT[grade] ?? 1.0) - 1.0;
+// モンスター(素の種・マスモン反映後のどちらでも可)の4距離分の補正値(小数)を返す
+const getMonsterAptPct = (mon) => {
   const apt = (mon && mon.distAptitude) || ['C','C','C','C'];
-  return [0,1,2,3].map(i => aptGradeToDelta(apt[i] || 'C'));
+  return [0,1,2,3].map(i => aptGradeToPct(apt[i] || 'C'));
 };
+// 補正値の表示用文字列(小数第1位まで。整数のときは小数を出さない)
+const formatAptPct = (v) => `${v > 0 ? '+' : v < 0 ? '-' : ''}${Math.round(Math.abs(v) * 1000) / 10}%`;
+// 合流ボーナス欄に出す間合い適性の加算表示(例: 「零+25% 中-5%」)。加算が無ければ空文字
+const formatAptBonus = (mon) => getMonsterAptPct(mon)
+  .map((d, i) => d !== 0 ? `${RANGE_LABELS[i]}${formatAptPct(d)}` : null)
+  .filter(Boolean).join(' ');
 // マスモンが「これまでに得たはずの強化ポイント総数」は絆レベル-1で決まる。
 // 使用済み(間合い適性・ステータス強化に振った分)と未使用の合計がこれを下回っていたら、
 // 不足分を未使用ポイントとして補填したマスモンを返す。
@@ -2217,9 +2217,11 @@ function MonsterHeroGame() {
   const [currentWaveDamage, setCurrentWaveDamage] = useState(0);
   const [waveDistDamage, setWaveDistDamage] = useState([0,0,0,0]); // per-distance damage this wave
   const [distDmgBonus, setDistDmgBonus] = useState([0,0,0,0]); // permanent per-distance dmg multiplier bonus
-  // 合流ボーナスとして加算される間合い適性の段階数(距離ごと)。供モンが合流するたびに、
-  // そのモンスターの適性値(Cを±0とした段階数)をプラスマイナス問わずそのまま足し込む
-  const [distAptBonus, setDistAptBonus] = useState([0,0,0,0]);
+  // 編成しているモンスター全員(勇者モン＋合流した供モン)の間合い適性を距離ごとに合計した
+  // 与ダメージ補正(小数)。置いた距離に関係なく、全員のぶんが4距離すべてに加算される。
+  const [distAptPct, setDistAptPct] = useState([0,0,0,0]);
+  // 距離ごとの合計補正 = ウェーブ報酬で伸びるdistDmgBonus + 編成全員の間合い適性
+  const distTotalBonus = (dist, aptOverride=null) => ((distDmgBonus[dist]||0) + ((aptOverride||distAptPct)[dist]||0));
   const [totalDistDamage, setTotalDistDamage] = useState([0,0,0,0]); // cumulative per-distance damage across all waves
   const [totalAllDamage, setTotalAllDamage] = useState(0); // cumulative damage across all waves
   const [totalRecoveryDelta, setTotalRecoveryDelta] = useState(0); // cumulative recovery-rate correction across all waves
@@ -2404,15 +2406,8 @@ function MonsterHeroGame() {
   };
   // mon引数は素のモンスター種、またはresolveRosterEntryToMonで解決済みのマスモン反映後オブジェクトのどちらもあり得る。
   // どちらの場合もmon.distAptitudeを見るだけでよい(マスモンの場合はresolve時にdistApt配列が既に反映されている)
-  const getDistAptitude = (mon, slotIdx) => {
-    if (!mon) return 'C';
-    const grade = (mon.distAptitude && mon.distAptitude[slotIdx]) || 'C';
-    const shift = (distAptBonus && distAptBonus[slotIdx]) || 0;
-    if (!shift) return grade;
-    const idx = DIST_APTITUDE_GRADES.indexOf(grade);
-    if (idx < 0) return grade;
-    return DIST_APTITUDE_GRADES[Math.max(0, Math.min(DIST_APTITUDE_GRADES.length - 1, idx + shift))];
-  };
+  // そのモンスター自身のグレード。編成全員の合計はdistAptPctが持つので、ここでは加算しない
+  const getDistAptitude = (mon, slotIdx) => (mon && mon.distAptitude && mon.distAptitude[slotIdx]) || 'C';
   // タブ別の既読ID集合を比較するため、再ビルドやBUILD_DATE変更で過去項目は復活しない。
   const changelogUnreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!(changelogSeen[type]||[]).includes(id))]));
   const changelogUnread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogUnreadIds[type].length>0]));
@@ -4287,7 +4282,7 @@ function MonsterHeroGame() {
     monSelection:getActiveMonsterList(), ownedUniques:[], slotUniqueChoice:{}, slotUniqueLevelChoice:{}, inheritedUniqueEvo:{}, ownedTeachings:[],
     atkLevel:0, guardLevel:0, guardBonusCount:0, upgradePoints:0, turnCount:1,
     permaBuffs:{ autoHpRecovery:0.1 }, waveBuffs:{}, turnBuffs:{}, nextTurnBuffs:{},
-    currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], distAptBonus:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
+    currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], distAptPct:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
     focusedCard:null, enemyIntent:null, effect:null, finalRewardSummary:null, waveHistory:[], gaveUp:false
   });
 
@@ -4306,7 +4301,7 @@ function MonsterHeroGame() {
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
-    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptBonus(s.distAptBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
+    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
     setPendingReward(null); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
@@ -4440,7 +4435,7 @@ function MonsterHeroGame() {
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount);
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
-    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptBonus(s.distAptBonus||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
+    setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
     setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
@@ -4593,13 +4588,14 @@ function MonsterHeroGame() {
     else if (card.type==='range_atk') { baseDmgMult=rangeAttackDamageMultiplier(card,attackStartDist); }
     else { baseDmgMult=card.mult||card.baseMult||1.0; }
     let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0);
-    const aptBonus=DIST_APTITUDE_MULT[getDistAptitude(mon,slotIdx)]-1.0;
-    const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+aptBonus;
+    // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
+    // 攻撃したモンスター自身のグレードだけを見るのではない
+    const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(distAptPct[slotIdx]||0);
     const totalBuffMult=traitMult*getTurnBuff('atkMult',1.0)*(1.0+getPermaBuff('atkPct')+getPermaBuff('muaAtkPct')+additionalOryo)*distBonusMult;
     let finalDmg=Math.floor(atk*distMult*baseDmgMult*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     return finalDmg;
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus]);
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct]);
 
   // ザンの勇者特性「連撃」による追加ヒット分の合計(プレビュー用)。実際のバトルログはprocessTurn内で別枠ヒットとして計算する
   const getComboBonusDmg = useCallback((card, mon, baseDmg) => {
@@ -5144,15 +5140,15 @@ function MonsterHeroGame() {
     applyAtkTierChoice(nAtkL);
   };
 
-  // 通常攻撃・距離攻撃カードの上位レベルは、敵と同じ距離枠にいる味方の距離適性(%)と、
-  // その距離枠で永続蓄積している距離ダメージ補正(distDmgBonus、ウェーブ報酬で上昇・上限なし)
-  // を合算した値(誰もいなければ0%扱い)で決まる。この合算値はWAVE_RESULT画面の合計表示や
-  // 実際のダメージ計算(4502行付近のtotalBonus)と同じ考え方
+  // 通常攻撃・距離攻撃カードの上位レベルは、その距離枠の合計補正値(編成全員の間合い適性 +
+  // ウェーブ報酬で伸びるdistDmgBonus)で決まる。その枠に味方がいなければ0%扱い。
+  // この合算値はスロットのバッジ表示・実際のダメージ計算(getDmgのdistBonusMult)と同じ値。
+  // aptOverrideは、setDistAptPctの反映前に計算したいとき(デバッグ戦の開始時)に渡す。
   const ATK_TIER_THRESHOLDS = [0, 15, 20, 25, 30, 40, 50, 75, 100]; // Lv0〜8の解放に必要な合算%
-  const computeAtkTier = (currentSlots, dist) => {
+  const computeAtkTier = (currentSlots, dist, aptOverride=null) => {
     const mon = currentSlots?.[dist];
     if (!mon) return 0;
-    const pct = ((distDmgBonus[dist] || 0) + (DIST_APTITUDE_MULT[getDistAptitude(mon, dist)] - 1.0)) * 100;
+    const pct = distTotalBonus(dist, aptOverride) * 100;
     let lvl = 0;
     for (let i = ATK_TIER_THRESHOLDS.length - 1; i >= 0; i--) { if (pct >= ATK_TIER_THRESHOLDS[i]) { lvl = i; break; } }
     return Math.max(0, Math.min(BASE_ATK_EVOLUTION.length - 1, lvl));
@@ -5180,7 +5176,7 @@ function MonsterHeroGame() {
   // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
   // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
   // 必ず呼び出し元が保持している最新のローカル値を渡す
-  const initBattle = (w, s, u, t, defVal, forcedEnemyKey=null, heroForDeck=null) => {
+  const initBattle = (w, s, u, t, defVal, forcedEnemyKey=null, heroForDeck=null, aptPctOverride=null) => {
     setWave(w);
     const currentSlots = s||slots;
     // 通常周回の初戦だけ、デッキ編成で勇者モンを置いた初期間合いから開始する。
@@ -5188,7 +5184,7 @@ function MonsterHeroGame() {
     const selectedInitialDistance = w===1 && !forcedEnemyKey ? initialBattleDistanceRef.current : null;
     const dist = spawnEnemy(w, forcedEnemyKey, selectedInitialDistance);
     if (dist === null) return;
-    const nAtkL = computeAtkTier(currentSlots, dist);
+    const nAtkL = computeAtkTier(currentSlots, dist, aptPctOverride);
     const nGrdL = computeGuardLevel(defVal!==undefined?defVal:def);
     const nGB = nGrdL;
     setAtkLevel(nAtkL); setGuardLevel(nGrdL); setGuardBonusCount(nGB);
@@ -5226,8 +5222,11 @@ function MonsterHeroGame() {
     setMainHero(hero); setSlots(debugSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
     setMaxHp(debugMaxHp); setHp(debugMaxHp); setAtk(debugAtk); setDef(debugDef);
     setMaxGuts(debugMaxGuts); setGuts(Math.floor(debugMaxGuts*0.5));
-    setDistAptBonus(allies.reduce((sum, mon) => sum.map((v,i)=>v+getMonsterAptDelta(mon)[i]), [0,0,0,0]));
-    initBattle(option.wave, debugSlots, uniques, teachings, debugDef, option.key, hero);
+    // 間合い適性は編成全員分(勇者モンを含む)を距離ごとに合計する。
+    // setDistAptPctの反映はこの関数の後になるため、initBattleへ計算済みの値を渡す
+    const debugAptPct = debugSlots.filter(Boolean).reduce((sum, mon) => sum.map((v,i)=>v+getMonsterAptPct(mon)[i]), [0,0,0,0]);
+    setDistAptPct(debugAptPct);
+    initBattle(option.wave, debugSlots, uniques, teachings, debugDef, option.key, hero, debugAptPct);
   };
 
   const setupMon = (m, slotIdx) => {
@@ -5236,6 +5235,8 @@ function MonsterHeroGame() {
     if (!isHero) Audio_.se.join();
     if (isHero) {
       initialBattleDistanceRef.current=slotIdx;
+      // 勇者モンの間合い適性も、置いた距離だけでなく4距離すべての補正値になる
+      setDistAptPct(getMonsterAptPct(m));
       const initialUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)};
       setOwnedUniques([initialUnique]); setMainHero(m); setMaxHp(m.baseHp); setHp(m.baseHp);
       setMaxGuts(m.baseGuts); setGuts(Math.floor(m.baseGuts*0.5)); setAtk(m.baseAtk); setDef(m.baseDef);
@@ -5245,11 +5246,11 @@ function MonsterHeroGame() {
       const bHp=maxHp, bAtk=atk, bDef=def, bGuts=maxGuts;
       const nMaxHp=maxHp+(bonus.hp||0), nAtk=atk+(bonus.atk||0), nDef=def+(bonus.def||0), nMaxGuts=maxGuts+(bonus.guts||0);
       setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts); setHp(p=>p+(nMaxHp-bHp));
-      // 合流ボーナスに間合い適性も加算する。合流したモンスターの適性値をCを±0とした
-      // 段階数に直し、プラスマイナス問わずそのまま足す(A(+2)なら+2段階、E(-2)なら-2段階)
-      const aptDelta=getMonsterAptDelta(m);
-      if (aptDelta.some(d=>d!==0)) setDistAptBonus(prev=>prev.map((v,i)=>v+aptDelta[i]));
-      const aptLabel=aptDelta.map((d,i)=>d!==0?`${RANGE_LABELS[i]}${d>0?'+':''}${d}`:null).filter(Boolean).join(' ');
+      // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
+      // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
+      const aptDelta=getMonsterAptPct(m);
+      if (aptDelta.some(d=>d!==0)) setDistAptPct(prev=>prev.map((v,i)=>v+aptDelta[i]));
+      const aptLabel=aptDelta.map((d,i)=>d!==0?`${RANGE_LABELS[i]}${formatAptPct(d)}`:null).filter(Boolean).join(' ');
       const newAllyUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)}; setOwnedUniques([...ownedUniques,newAllyUnique]);
       setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
       setEffect({type:'mega',label:`${m.name}合流！`,icon:"🤝",monEmoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,subLabel:`HP:${bHp}→${nMaxHp}  ちから:${bAtk}→${nAtk}\n丈夫さ:${bDef}→${nDef}  ガッツ:${bGuts}→${nMaxGuts}${aptLabel?`\n間合い適性:${aptLabel}`:''}`});
@@ -5411,7 +5412,7 @@ function MonsterHeroGame() {
   // 画面ごとの操作(強化ポイントの割り振りなど)は、呼び出し側が statValues / aptExtra / aptPointsLabel で足す。
   const renderMonsterDetailInfo = (mon, opts = {}) => {
     if (!mon) return null;
-    const { statTitle = '基本ステータス', statValues = null, aptExtra = null, aptPointsLabel = null, extraAfterApt = null } = opts;
+    const { statTitle = '基本ステータス', statValues = null, aptExtra = null, aptPointsLabel = null, extraAfterApt = null, aptCurrentPct = null } = opts;
     const plus = mon.plusStats || {};
     const rows = statValues || [
       ['ライフ', mon.baseHp, 'text-pink-400'],
@@ -5427,7 +5428,9 @@ function MonsterHeroGame() {
         <div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div>{mon.trait&&<div className="text-[8px] text-indigo-300 font-black mt-0.5">{mon.trait}</div>}<div className="text-[9px] text-white font-bold leading-tight mt-1">{mon.traitDesc||'特性なし'}</div></div>
       </div>
       <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{joinBonus||'なし'}</div>{aptBonus&&<div className="text-[8px] text-cyan-300 font-bold mt-0.5">間合い適性 {aptBonus}</div>}</div>
-      <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性</div>{aptPointsLabel}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(mon,idx); return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>{aptExtra?aptExtra(idx,grade):null}</div>);})}</div></div>
+      {/* 間合い適性は「距離ごとの与ダメージ補正(%)」。グレードは目安で、実際に効くのは%のほう。
+          aptCurrentPctを渡すと、いまの距離補正値からこのモンスターを加えた後の値まで出す。 */}
+      <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性（距離補正）</div>{aptPointsLabel}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(mon,idx); const pct=aptGradeToPct(grade); const cur=aptCurrentPct?(aptCurrentPct[idx]||0):null; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span><span className={`text-[9px] font-mono font-black leading-none ${pct>0?'text-cyan-300':pct<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(pct)}</span>{cur!=null&&(<span className="w-full text-center leading-tight mt-0.5"><span className="block text-[7px] text-slate-400 font-mono">現在 {formatAptPct(cur)}</span><span className={`block text-[10px] font-mono font-black ${pct>0?'text-emerald-300':pct<0?'text-red-300':'text-slate-400'}`}>→ {formatAptPct(cur+pct)}</span></span>)}{aptExtra?aptExtra(idx,grade):null}</div>);})}</div><div className="text-[7px] text-slate-500 font-bold mt-1 leading-tight">置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます</div></div>
       {extraAfterApt}
       {renderSkillSection(mon)}
     </>);
@@ -6675,6 +6678,7 @@ function MonsterHeroGame() {
                           <div key={idx} className="flex flex-col items-center gap-1">
                             <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
                             <span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[g]}`}>{g}</span>
+                            <span className={`text-[8px] font-mono font-black leading-none ${aptGradeToPct(g)>0?'text-cyan-300':aptGradeToPct(g)<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(aptGradeToPct(g))}</span>
                             <div className="flex items-center gap-1 w-full">
                               <button disabled={added<=0} onClick={()=>addPlanApt(idx,-1)} className="flex-1 text-[11px] font-black bg-slate-800 text-slate-300 rounded py-0.5 active:scale-90 disabled:opacity-20">−</button>
                               <span className="text-[9px] font-mono font-black text-amber-300 w-4 text-center">{added>0?`+${added}`:'0'}</span>
@@ -6749,7 +6753,8 @@ function MonsterHeroGame() {
                         <div key={idx} className="flex flex-col items-center gap-1">
                           <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
                           <span className={`w-full text-center py-1 rounded-lg border text-base font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>
-                          <span className="text-[7px] text-slate-500 font-mono h-3">{nextGrade?`次: ${nextGrade}`:'MAX'}</span>
+                          <span className={`text-[9px] font-mono font-black leading-none ${aptGradeToPct(grade)>0?'text-cyan-300':aptGradeToPct(grade)<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(aptGradeToPct(grade))}</span>
+                          <span className="text-[7px] text-slate-500 font-mono h-3">{nextGrade?`次: ${nextGrade} ${formatAptPct(aptGradeToPct(nextGrade))}`:'MAX'}</span>
                           <button disabled={!canUp} onClick={()=>{
                             const beforeGrade=grade;
                             const updated=spendAptPoint(masu.id,idx);
@@ -7377,7 +7382,7 @@ function MonsterHeroGame() {
                           ))}
                         </div>
                       )}
-                      {(()=>{const totalBonus=(distDmgBonus[i]||0)+(DIST_APTITUDE_MULT[getDistAptitude(s,i)]-1.0); return totalBonus!==0&&(<div className={`absolute bottom-0.5 right-0.5 text-[6px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':'text-red-300 border-red-400/30'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
+                      {(()=>{const totalBonus=distTotalBonus(i); return totalBonus!==0&&(<div className={`absolute bottom-0.5 right-0.5 text-[6px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus>0?'text-cyan-300 border-cyan-400/30':'text-red-300 border-red-400/30'}`}><Sword size={5}/>{totalBonus>0?'+':''}{(totalBonus*100).toFixed(1)}%</div>);})()}
                       {previewDmg>0&&(<div className={`absolute ${slotAssignedCards.length>0?'top-[18px]':'top-0'} ${isPendingPreview?'bg-yellow-500 text-black ring-yellow-200':'bg-red-600 text-white ring-white/50'} text-[8px] font-black px-1.5 py-0.5 rounded shadow-lg z-50 animate-bounce ring-1`}>{isPendingPreview&&isPendingHalved?'½ ':''}DMG:{previewDmg}</div>)}
                       {s?.imgUrl?(<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} style={{width:'64px',height:'64px'}} className="z-10 object-contain drop-shadow-md"/>):(<span style={{fontSize:'40px'}} className="z-10 drop-shadow-md">{s?.emoji||''}</span>)}
                     </div>
@@ -7455,6 +7460,8 @@ function MonsterHeroGame() {
                       ['ガッツ', `${maxGuts} → ${maxGuts+(currentPickingMon.plusStats?.guts||0)}`, 'text-amber-400'],
                     ],
                     statTitle: gameState==='PICK_HERO' ? '基本ステータス' : '基本ステータス(現在 → 合流後)',
+                    // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる
+                    aptCurrentPct: [0,1,2,3].map(i=>distTotalBonus(i)),
                     aptPointsLabel: currentPickingMon.masuId?<div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {getMasuMon(currentPickingMon.masuId)?.distAptPoints||0}</div>:null,
                     aptExtra: (idx,grade)=>{const pts=currentPickingMon.masuId?(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0):0; const canUp=pts>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return canUp?<button onClick={()=>{const updated=spendAptPoint(currentPickingMon.masuId,idx); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>:null;},
                     extraAfterApt: (<>
@@ -7490,13 +7497,15 @@ function MonsterHeroGame() {
       {gameState==='PICK_SLOT'&&(
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
           {currentPickingMon?.imgUrl?(<DyedMonsterImage baseId={currentPickingMon.id} src={currentPickingMon.imgUrl} alt="mon" masuColors={currentPickingMon.colors} className="w-28 h-28 mb-4 object-contain animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)] scale-110"/>):(<div className="text-7xl mb-4 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]">{currentPickingMon?.emoji}</div>)}
-          <h2 className="text-lg font-black mb-6 italic uppercase tracking-widest text-indigo-400">配置場所を決定せよ</h2>
+          <h2 className="text-lg font-black mb-1 italic uppercase tracking-widest text-indigo-400">配置場所を決定せよ</h2>
+          {/* 間合い適性はどこに置いても4距離すべてに入る。ここの%は「このモンスターを加えた後の各距離の補正値」 */}
+          <div className="text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2">間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</div>
           <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
-            {slots.map((s,i)=>{const grade=getDistAptitude(currentPickingMon,i); const pct=Math.round((DIST_APTITUDE_MULT[grade]-1)*100);
+            {slots.map((s,i)=>{const grade=getDistAptitude(currentPickingMon,i); const after=distTotalBonus(i)+aptGradeToPct(grade);
               return(<button key={i} disabled={s!==null} onClick={()=>setupMon(currentPickingMon,i)} className={`h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s?'opacity-100 shadow-xl':'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`}>
               <span className={`text-[10px] font-black mb-1 uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`}>{RANGE_LABELS[i]}距離</span>
               {s?(s.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="w-10 h-10 mt-1 object-contain drop-shadow-md scale-125"/>:<span className="text-xl mt-1 drop-shadow-md">{s.emoji}</span>):<PlusCircle className="text-white/50 mt-1" size={20}/>}
-              {!s&&<span className={`text-[9px] font-black mt-1 px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} {pct>=0?'+':''}{pct}%</span>}
+              {!s&&<span className={`text-[9px] font-black mt-1 px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} 合流後 {formatAptPct(after)}</span>}
             </button>);})}
           </div>
           <button onClick={()=>setGameState(mainHero?'PICK_ALLY':'PICK_HERO')} className="mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90"><ArrowLeft size={14}/> モンスターを選び直す</button>
@@ -7554,7 +7563,7 @@ function MonsterHeroGame() {
             {waveResult.distDamage&&(<div className="border-b border-white/10 pb-1.5">
               <div className="text-cyan-400 font-black uppercase tracking-widest mb-1 text-left" style={{fontSize:'9px'}}>距離別ダメージ（味方位置）& 補正値(永続)</div>
               <div className="grid grid-cols-4 gap-1">
-                {['零','近','中','遠'].map((lbl,i)=>{const dmg=waveResult.distDamage[i]||0; const cumDmg=waveResult.totalDistDamage?.[i]||0; const gained=(waveResult.gainedDistBonus?.[i]||0)*100; const total=(waveResult.newDistBonus?.[i]||0)*100; const mon=slots[i]; const aptPct=mon?(DIST_APTITUDE_MULT[getDistAptitude(mon,i)]-1.0)*100:0; const combinedTotal=total+aptPct;
+                {['零','近','中','遠'].map((lbl,i)=>{const dmg=waveResult.distDamage[i]||0; const cumDmg=waveResult.totalDistDamage?.[i]||0; const gained=(waveResult.gainedDistBonus?.[i]||0)*100; const total=(waveResult.newDistBonus?.[i]||0)*100; const mon=slots[i]; const aptPct=(distAptPct[i]||0)*100; const combinedTotal=total+aptPct;
                   return(<div key={i} className="bg-black/40 rounded-lg border border-white/5 flex flex-col items-center justify-center" style={{padding:'4px 2px',gap:'2px'}}>
                     <div className="flex items-center" style={{gap:'3px'}}><div className="rounded-full bg-indigo-600/40 border border-indigo-400/50 flex items-center justify-center overflow-hidden shrink-0" style={{width:'26px',height:'26px'}}>{mon?(mon.imgUrl?<img src={mon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span style={{fontSize:'13px'}}>{mon.emoji}</span>):<span className="text-slate-600" style={{fontSize:'9px'}}>-</span>}</div><div className="font-black text-slate-300" style={{fontSize:'10px'}}>{lbl}</div></div>
                     <div className="font-mono font-black text-red-400 leading-none" style={{fontSize:'11px'}}>{dmg.toLocaleString()}</div>
@@ -7613,7 +7622,7 @@ function MonsterHeroGame() {
           </nav>
           <div className="flex-1 overflow-y-auto mh-scroll p-5 space-y-6 bg-black" style={{backgroundColor:'#000000'}}>
             {helpTab==='goal'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-emerald-400 font-black text-base mb-3 flex items-center gap-2"><Trophy size={18}/> ゲームの目的</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-4">勇者モンを選び、カードで戦いながら全10 WAVEを進み、ラスボス「ムー」の撃破と最高スコアを目指します。</p><div className="grid grid-cols-2 gap-3"><div className="bg-black/50 p-3 rounded-2xl border border-white/5"><div className="text-[9px] text-slate-500 font-black uppercase mb-1">勝利条件</div><div className="text-[11px] text-white font-bold leading-tight">WAVE 10のラスボス「ムー」を撃破すること</div></div><div className="bg-black/50 p-3 rounded-2xl border border-white/5"><div className="text-[9px] text-slate-500 font-black uppercase mb-1">敗北条件</div><div className="text-[11px] text-white font-bold leading-tight">・ライフが0になる<br/>・20ターン経過</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-emerald-400 font-black text-base mb-3">基本的な流れ</h3><div className="space-y-3">{[{step:"1",text:"勇者モン（1体目）を選んでスタート"},{step:"2",text:"カードを選び、対象のモンスター枠をタップして決定"},{step:"3",text:"報酬を選んで強化（WAVE 2,4,6で仲間が合流）"},{step:"4",text:"WAVEごとに強化し、10 WAVE目のムー撃破を目指す"}].map(item=>(<div key={item.step} className="flex items-center gap-4"><span className="shrink-0 w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center text-[11px] font-black">{item.step}</span><span className="text-[12px] text-slate-300">{item.text}</span></div>))}</div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-300 font-black text-base mb-3 flex items-center gap-2"><Trophy size={18}/> 難易度とランキング</h3><p className="text-[12px] text-slate-200 leading-relaxed">HOMEの「バトル」から難易度を選びます。難しいほど敵が強くなり、スコアと獲得ダイヤの倍率も上がります。同じ画面の「ランキング」で、難易度別スコア・ブリーダーLv・絆Lvを確認できます。</p></section></div>)}
-            {helpTab==='battle' &&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-blue-400 font-black text-base mb-3 flex items-center gap-2"><Target size={18}/> 距離システム</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-4">自分と敵の「距離」が威力を左右します。このゲーム最大の戦略要素です。</p><div className="space-y-3"><div className="bg-black/50 p-4 rounded-2xl border border-blue-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">距離の一致（超重要）</div><div className="text-[12px] text-slate-400 leading-relaxed">敵と同じ距離枠にいるモンスターで攻撃すると大ダメージ！距離がずれるほど威力は低下します。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-amber-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">解析と予測</div><div className="text-[12px] text-slate-400 leading-relaxed">敵は移動することがあります。「解析ボタン」で敵の行動を予測し、防御か攻撃か判断しましょう。</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-teal-400 font-black text-base mb-3 flex items-center gap-2"><Target size={18}/> 間合い適性</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">モンスターごとに4つの距離それぞれで得意・不得意があり、C(標準・±0%)を基準にG(-20%)〜M(+25%)のグレードでダメージが変動します。モンスター詳細画面のグレード表示で確認できます。</p><div className="text-[11px] text-slate-400 leading-relaxed">絆レベルが上がると貯まる「強化ポイント」を1つ消費すると、詳細画面からその距離の適性グレードを1段階アップできます(上限はM)。</div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-400 font-black text-base mb-3 flex items-center gap-2"><Zap size={18}/> GUTSの管理</h3><p className="text-[12px] text-slate-200 leading-relaxed">行動にはガッツを消費します。ガッツは毎ターン自動回復しますが、上限を増やすことで強力な技を安定して使えます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-cyan-400 font-black text-base mb-3 flex items-center gap-2"><Crown size={18}/> 勇者特性・固有技</h3><p className="text-[12px] text-slate-200 leading-relaxed">最初に選ぶ「勇者モン」ごとに専用の特性(勇者モン選択時のみ発動)と、進化する固有技(必殺技)を持ちます。編成する勇者モンによって戦い方が大きく変わります。詳しくは召喚時のモンスター詳細で確認できます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-blue-300 font-black text-base mb-3 flex items-center gap-2"><Activity size={18}/> 緊急回復</h3><p className="text-[12px] text-slate-200 leading-relaxed">画面左下の「緊急」ボタンでライフとガッツをそれぞれ最大値の30%回復できます。ただし使用すると自分のターンを消費し、敵の行動が発生します。回数制限はありません。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-pink-400 font-black text-base mb-3 flex items-center gap-2"><Heart size={18}/> 合流ボーナス</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">WAVE 2・4・6で仲間が合流すると、そのモンスターの合流ボーナス分だけライフ・ちから・丈夫さ・ガッツが上がります。</p><div className="bg-black/50 p-4 rounded-2xl border border-cyan-500/30"><div className="text-[12px] text-slate-400 leading-relaxed">さらに、合流したモンスターの<span className="text-white font-bold">間合い適性</span>も加算されます。Cを±0として、Aなら+2段階、Eなら-2段階というように、得意・不得意がそのまま反映されます。合流させる順番や組み合わせで、狙った距離を伸ばせます。</div></div></section></div>)}
+            {helpTab==='battle' &&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-blue-400 font-black text-base mb-3 flex items-center gap-2"><Target size={18}/> 距離システム</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-4">自分と敵の「距離」が威力を左右します。このゲーム最大の戦略要素です。</p><div className="space-y-3"><div className="bg-black/50 p-4 rounded-2xl border border-blue-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">距離の一致（超重要）</div><div className="text-[12px] text-slate-400 leading-relaxed">敵と同じ距離枠にいるモンスターで攻撃すると大ダメージ！距離がずれるほど威力は低下します。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-amber-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">解析と予測</div><div className="text-[12px] text-slate-400 leading-relaxed">敵は移動することがあります。「解析ボタン」で敵の行動を予測し、防御か攻撃か判断しましょう。</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-teal-400 font-black text-base mb-3 flex items-center gap-2"><Target size={18}/> 間合い適性</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">モンスターごとに4つの距離それぞれで得意・不得意があり、C(標準・±0%)を基準にG(-20%)〜M(+25%)の補正を持ちます。モンスター詳細画面でグレードと補正値(%)を確認できます。</p><div className="bg-black/50 p-4 rounded-2xl border border-teal-500/30 mb-3"><div className="text-[12px] text-slate-300 leading-relaxed">この補正は<span className="text-white font-bold">置いた距離だけでなく4つの距離すべて</span>にかかり、編成した勇者モン・供モン全員ぶんが距離ごとに合算されます。例えば零距離の補正が+6%のところへ零距離M(+25%)のモンスターが合流すると、零距離の補正は+31%になります。</div></div><div className="text-[11px] text-slate-400 leading-relaxed">絆レベルが上がると貯まる「強化ポイント」を1つ消費すると、詳細画面からその距離の適性グレードを1段階アップできます(上限はM)。</div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-400 font-black text-base mb-3 flex items-center gap-2"><Zap size={18}/> GUTSの管理</h3><p className="text-[12px] text-slate-200 leading-relaxed">行動にはガッツを消費します。ガッツは毎ターン自動回復しますが、上限を増やすことで強力な技を安定して使えます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-cyan-400 font-black text-base mb-3 flex items-center gap-2"><Crown size={18}/> 勇者特性・固有技</h3><p className="text-[12px] text-slate-200 leading-relaxed">最初に選ぶ「勇者モン」ごとに専用の特性(勇者モン選択時のみ発動)と、進化する固有技(必殺技)を持ちます。編成する勇者モンによって戦い方が大きく変わります。詳しくは召喚時のモンスター詳細で確認できます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-blue-300 font-black text-base mb-3 flex items-center gap-2"><Activity size={18}/> 緊急回復</h3><p className="text-[12px] text-slate-200 leading-relaxed">画面左下の「緊急」ボタンでライフとガッツをそれぞれ最大値の30%回復できます。ただし使用すると自分のターンを消費し、敵の行動が発生します。回数制限はありません。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-pink-400 font-black text-base mb-3 flex items-center gap-2"><Heart size={18}/> 合流ボーナス</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">WAVE 2・4・6で仲間が合流すると、そのモンスターの合流ボーナス分だけライフ・ちから・丈夫さ・ガッツが上がります。</p><div className="bg-black/50 p-4 rounded-2xl border border-cyan-500/30"><div className="text-[12px] text-slate-400 leading-relaxed">さらに、合流したモンスターの<span className="text-white font-bold">間合い適性</span>も4距離すべての補正値へ加算されます。Cを±0%として、M(+25%)なら+25%、G(-20%)なら-20%がそのまま足されます。どの距離に置いても効果は同じなので、組み合わせで狙った距離を伸ばせます。</div></div></section></div>)}
             {helpTab==='growth'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-purple-400 font-black text-base mb-3 flex items-center gap-2"><Sparkles size={18}/> 能力覚醒（報酬）</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-4">WAVEクリア後、3つの能力から1つを選んで強化します。</p><div className="grid grid-cols-3 gap-2"><div className="bg-red-900/30 border border-red-500/40 p-3 rounded-2xl text-center"><Sword size={16} className="mx-auto text-red-400 mb-2"/><div className="text-[10px] font-black">攻撃覚醒</div></div><div className="bg-emerald-900/30 border border-emerald-500/40 p-3 rounded-2xl text-center"><Shield size={16} className="mx-auto text-emerald-400 mb-2"/><div className="text-[10px] font-black">防御覚醒</div></div><div className="bg-pink-900/30 border border-pink-500/40 p-3 rounded-2xl text-center"><Heart size={16} className="mx-auto text-pink-400 mb-2"/><div className="text-[10px] font-black">精神強化</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-400 font-black text-base mb-3 flex items-center gap-2"><BookOpen size={18}/> ブリーダー継承</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">WAVE 1,3,5,7,9で、ブリーダーの「教え」をカードとして加えられます。同じ教えを重ねると「進化」し、効果が飛躍的に高まります(最大Lv2)。編成したブリーダーカードの中から候補が出ます。</p><div className="grid grid-cols-2 gap-2">{[{n:"おりょうの力",d:"攻撃ステータスUP"},{n:"ドラの緑膝",d:"被ダメージDOWN"},{n:"かどみうむの計算",d:"自動ライフ/ガッツ回復UP"},{n:"みゅあの愛",d:"回復＆能力永続UP"},{n:"あつの挑発",d:"敵行動無効＆攻撃"},{n:"みゃるの薬",d:"次ターン攻撃2倍＆自傷"}].map(c=>(<div key={c.n} className="bg-black/50 p-2.5 rounded-xl border border-white/5"><div className="text-[10px] font-black text-white">{c.n}</div><div className="text-[9px] text-slate-400">{c.d}</div></div>))}</div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-cyan-400 font-black text-base mb-3 flex items-center gap-2"><Zap size={18}/> 技レベル</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">通常技・距離技・固有技には段階があります。通常技・距離技は、その距離にいる味方の間合い適性と距離ダメージ補正で上位段階が解放されます。固有技はバトル中の強化ポイントで強化します。上位ほど強力ですが、消費ガッツも増えます。</p><div className="bg-black/50 p-4 rounded-2xl border border-cyan-500/30"><div className="text-[12px] text-slate-400 leading-relaxed">バトル中はタイル選択式で、解放済みのレベルであれば下位の技に戻して使うこともできます(消費ガッツを節約したいときに便利です)。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-emerald-400 font-black text-base mb-3 flex items-center gap-2"><Sword size={18}/> ガード</h3><p className="text-[12px] text-slate-200 leading-relaxed">ガードカードの軽減量は<span className="text-white font-bold">固定値＋(丈夫さ×倍率)</span>で決まります(ガード=200＋丈夫さ×1.1、ハイガード=300＋丈夫さ×1.2)。丈夫さが100上がるごとに上位のガードが解放され、手札に入るガードの枚数も増えます。</p></section></div>)}
             {helpTab==='meta'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-400 font-black text-base mb-3 flex items-center gap-2"><Crown size={18}/> ブリーダーレベル</h3><p className="text-[12px] text-slate-200 leading-relaxed">WAVEをクリアするとブリーダー経験値を獲得してレベルアップします。レベルが上がるたびにブリーダーポイント(pt)を1獲得できます。ptはマーケットのアイコン購入に使います。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-violet-400 font-black text-base mb-3 flex items-center gap-2"><Sparkles size={18}/> マスモン</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">プレイ終了後のリザルト画面で、そのとき勇者モンだったモンスターに名前を付けて登録できます。登録した個体を<span className="text-white font-bold">マスモン</span>と呼び、絆レベル・強化ポイント・見た目の色をその個体だけのものとして持ち続けます。同じ種類でも別々に育てられます。</p><div className="bg-black/50 p-4 rounded-2xl border border-violet-500/30"><div className="text-[11px] font-black text-white mb-1">強化ポイントの使い道</div><div className="text-[12px] text-slate-400 leading-relaxed">絆レベルが1上がるごとに1ポイント獲得します。1ポイント消費して、間合い適性を1段階上げるか、ライフ・ちから・丈夫さ・ガッツのいずれかを上げられます。振り直したいときはマーケットの「絆ポイントリセットの書」を使います。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-300 font-black text-base mb-3 flex items-center gap-2"><Gem size={18}/> 寄付</h3><p className="text-[12px] text-slate-200 leading-relaxed">HOMEの「神殿」内にある「寄付」は、マスモンを手放し、累計絆経験値と同じ数のダイヤを受け取る機能です。寄付は取り消せず、手放したマスモンは元に戻せません。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-pink-400 font-black text-base mb-3 flex items-center gap-2"><Heart size={18}/> 絆レベル</h3><p className="text-[12px] text-slate-200 leading-relaxed">勇者モンに選んだモンスターは、WAVEクリアごとに絆経験値を獲得して絆レベルが上がります(WAVEが進むほど1回あたりの獲得量も増加)。供モンとして合流したマスモンにも経験値が入ります。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-violet-300 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> 合体</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">HOMEの「神殿」内にある「合体」から、マスモン同士を合体できます。残す側を<span className="text-white font-bold">主</span>、消える側を<span className="text-white font-bold">副</span>として選びます。</p><div className="space-y-2"><div className="bg-black/50 p-4 rounded-2xl border border-white/5"><div className="text-[12px] text-slate-300 leading-relaxed">副の絆経験値が累計のまま主に加算されます。合体では能力値・間合い適性・強化ポイントは増減しません。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-white/5"><div className="text-[12px] text-slate-300 leading-relaxed">主の名前・見た目・間合い適性・ステータス強化はそのまま維持されます(副の強化は引き継がれません)。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-amber-500/30"><div className="text-[12px] text-amber-200 leading-relaxed"><span className="font-bold">固有技の引き継ぎ</span>は、主と副が両方とも絆Lv.10以上のときだけ選べます。消費ダイヤは(主の絆Lv＋副の絆Lv)×100です。</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-400 font-black text-base mb-3 flex items-center gap-2"><Coins size={18}/> pt とダイヤ(2つの通貨)</h3><div className="space-y-3"><div className="bg-black/50 p-4 rounded-2xl border border-amber-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">pt（ポイント）</div><div className="text-[12px] text-slate-400 leading-relaxed">ブリーダーレベルアップで獲得。マーケットの「アイコン」購入に使います。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-cyan-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">ダイヤ</div><div className="text-[12px] text-slate-400 leading-relaxed">WAVEクリアで獲得(Normal基準100ダイヤ/WAVE、難易度で変動)。「円盤石」「ブリーダー」「アイテム」の購入と、合体の費用に使います。神殿でマスモンを寄付することでも獲得できます。</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-orange-400 font-black text-base mb-3 flex items-center gap-2"><ShoppingBag size={18}/> マーケット</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">HOMEの「マーケット」から入れます。4つのカテゴリがあります。</p><div className="grid grid-cols-2 gap-2"><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">アイコン</div><div className="text-[9px] text-slate-400">ptで購入<br/>プロフィール画像に</div></div><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">円盤石</div><div className="text-[9px] text-slate-400">ダイヤで購入<br/>新モンスター解放</div></div><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">ブリーダー</div><div className="text-[9px] text-slate-400">ダイヤで購入<br/>新カード解放</div></div><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">アイテム</div><div className="text-[9px] text-slate-400">ダイヤで購入<br/>マスモンに使う</div></div></div><div className="bg-black/50 p-4 rounded-2xl border border-white/5 mt-3"><div className="text-[11px] font-black text-white mb-1">アイテム</div><div className="text-[12px] text-slate-400 leading-relaxed"><span className="text-white font-bold">絆ポイントリセットの書</span>: 使用済みの強化ポイントをすべて未使用に戻します(絆レベル・絆経験値はそのまま)。<br/><span className="text-white font-bold">染色もどき</span>: 見た目の色を変えられます。モンスターによっては体・目・口などの部位ごとに別々の色を選べ、プリセット27色に加えてカスタムカラーも使えます。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-cyan-300 font-black text-base mb-3 flex items-center gap-2"><Info size={18}/> ベースモンとマスモン</h3><p className="text-[12px] text-slate-200 leading-relaxed">ベースモンはモンスター種の基本データです。マスモンはプレイ後に登録した育成個体で、名前・絆・強化・色・合体履歴を個別に持ちます。どちらの一覧もHOMEの「M/B管理」から開けます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-400 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> M/B管理と編成</h3><p className="text-[12px] text-slate-200 leading-relaxed">マーケットで新しいモンスターやブリーダーカードを解放しても、次の周回で候補になるのは編成で選んだものだけです。HOMEの「M/B管理」ではベースモン一覧、マスモン一覧、モンスター編成、ブリーダーカード編成を利用できます。編成ではモンスター8体・ブリーダーカード6枚をちょうど選び、「決定」ボタンで確定します(最初から解放済みの8体・6枚は編成済みです)。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-300 font-black text-base mb-3 flex items-center gap-2"><Trophy size={18}/> 最終リザルト</h3><p className="text-[12px] text-slate-200 leading-relaxed">優勝・敗北・リタイアいずれかでプレイが終了すると、獲得したブリーダー経験値・ダイヤ・絆経験値と、WAVEごとの獲得スコア/経験値/ダイヤの内訳を確認できます。この画面から勇者モンをマスモンとして登録できます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-300 font-black text-base mb-3 flex items-center gap-2"><Sparkles size={18}/> 更新履歴</h3><p className="text-[12px] text-slate-200 leading-relaxed">HOME画面右上の「更新履歴」ボタンから、アップデート内容と不具合情報をタブで切り替えて確認できます。未読の更新があるときはNEWマークが付きます。</p></section></div>)}
             {helpTab==='tips'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-orange-400 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> 複数枚同時使用の解放</h3><div className="bg-black/50 p-4 rounded-2xl space-y-2"><div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold">同時2枚:</span><span className="text-white font-black">最大ガッツ120 ＋ 味方2体</span></div><div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold">同時3枚:</span><span className="text-white font-black">最大ガッツ180 ＋ 味方3体</span></div><div className="text-[10px] text-amber-500 font-black italic pt-2 border-t border-white/5">※ハムは勇者時、常に上限＋1</div><div className="text-[10px] text-slate-400 font-bold pt-2 border-t border-white/5 leading-relaxed">※同じターンに2枚目以降で使ったカードは、ダメージもガードも効果が半分になります。ブリーダーカードは対象外で、何枚目に使っても効果は変わりません。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-400 font-black text-base mb-3 flex items-center gap-2"><Activity size={18}/> 攻略のヒント</h3><ul className="text-[12px] text-slate-300 space-y-3 list-disc pl-5"><li><span className="font-black text-white">防御は最大の攻撃</span>: 敵の必殺技は即死級。解析を使い確実に防御しましょう。</li><li><span className="font-black text-white">再生の強化</span>: 教えにより毎ターンの「再生ライフ」を増やすと後半が有利になります。</li><li><span className="font-black text-white">勇者特性を理解する</span>: 1体目に選んだモンスターの特性は最後まで影響します。</li><li><span className="font-black text-white">データのバックアップ</span>: ホーム画面のアイコンを作り直すと進行状況が引き継がれないことがあります。HOMEの「設定」内にある「データ引き継ぎ」で定期的にコードを控えておくと安心です。</li></ul></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-slate-200 font-black text-base mb-3 flex items-center gap-2"><Settings size={18}/> プロフィールと設定</h3><div className="text-[12px] text-slate-300 leading-relaxed space-y-2"><p>プロフィールはHOME上部のプレイヤー情報から開き、名前・アイコン・難易度別記録・所持アイテムを確認できます。</p><p>ヘルプ、音量設定、データ引き継ぎ、タイトルへ戻る操作はHOMEの「設定」にあります。音量設定ではBGMとSEを個別に調整でき、引き継ぎコードは端末移行やバックアップに使えます。</p><p>更新履歴はHOME右上の独立した「更新履歴」ボタンから確認します。</p></div></section></div>)}

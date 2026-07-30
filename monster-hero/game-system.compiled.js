@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 42c57c0a5354b0e5
+// source-sha256: c736ba9549f59240
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 22:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 01:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3803,20 +3803,20 @@ const STAT_POINT_GAIN = {
   def: 3,
   guts: 3
 };
-// 間合い適性のグレードを「Cを±0とした段階数」に直す(A→+2、E→-2)。
-// 合流ボーナスでは、この段階数をプラスマイナス問わずそのまま勇者モンの適性に足す
-const APT_NEUTRAL_INDEX = DIST_APTITUDE_GRADES.indexOf('C');
-const aptGradeToDelta = grade => {
-  const idx = DIST_APTITUDE_GRADES.indexOf(grade);
-  return idx < 0 ? 0 : idx - APT_NEUTRAL_INDEX;
-};
-// モンスター(素の種・マスモン反映後のどちらでも可)の4距離分の適性段階数を返す
-// 合流ボーナス欄に出す間合い適性の加算表示(例: 「接近+2 中距離-1」)。加算が無ければ空文字
-const formatAptBonus = mon => getMonsterAptDelta(mon).map((d, i) => d !== 0 ? `${RANGE_LABELS[i]}${d > 0 ? '+' : ''}${d}` : null).filter(Boolean).join(' ');
-const getMonsterAptDelta = mon => {
+// 間合い適性は「距離ごとの与ダメージ補正(%)」として扱う。
+// Cが±0、Mなら+25%、Gなら-20%。編成した勇者モン・供モンの補正は、そのモンスターを
+// どの距離に置いたかに関係なく、4距離すべての補正値へ加算されていく。
+// 例) 零距離の補正が+6%のところへ、零距離M(+25%)のモンスターが合流すると+31%になる。
+const aptGradeToPct = grade => (DIST_APTITUDE_MULT[grade] ?? 1.0) - 1.0;
+// モンスター(素の種・マスモン反映後のどちらでも可)の4距離分の補正値(小数)を返す
+const getMonsterAptPct = mon => {
   const apt = mon && mon.distAptitude || ['C', 'C', 'C', 'C'];
-  return [0, 1, 2, 3].map(i => aptGradeToDelta(apt[i] || 'C'));
+  return [0, 1, 2, 3].map(i => aptGradeToPct(apt[i] || 'C'));
 };
+// 補正値の表示用文字列(小数第1位まで。整数のときは小数を出さない)
+const formatAptPct = v => `${v > 0 ? '+' : v < 0 ? '-' : ''}${Math.round(Math.abs(v) * 1000) / 10}%`;
+// 合流ボーナス欄に出す間合い適性の加算表示(例: 「零+25% 中-5%」)。加算が無ければ空文字
+const formatAptBonus = mon => getMonsterAptPct(mon).map((d, i) => d !== 0 ? `${RANGE_LABELS[i]}${formatAptPct(d)}` : null).filter(Boolean).join(' ');
 // マスモンが「これまでに得たはずの強化ポイント総数」は絆レベル-1で決まる。
 // 使用済み(間合い適性・ステータス強化に振った分)と未使用の合計がこれを下回っていたら、
 // 不足分を未使用ポイントとして補填したマスモンを返す。
@@ -5001,9 +5001,11 @@ function MonsterHeroGame() {
   const [currentWaveDamage, setCurrentWaveDamage] = useState(0);
   const [waveDistDamage, setWaveDistDamage] = useState([0, 0, 0, 0]); // per-distance damage this wave
   const [distDmgBonus, setDistDmgBonus] = useState([0, 0, 0, 0]); // permanent per-distance dmg multiplier bonus
-  // 合流ボーナスとして加算される間合い適性の段階数(距離ごと)。供モンが合流するたびに、
-  // そのモンスターの適性値(Cを±0とした段階数)をプラスマイナス問わずそのまま足し込む
-  const [distAptBonus, setDistAptBonus] = useState([0, 0, 0, 0]);
+  // 編成しているモンスター全員(勇者モン＋合流した供モン)の間合い適性を距離ごとに合計した
+  // 与ダメージ補正(小数)。置いた距離に関係なく、全員のぶんが4距離すべてに加算される。
+  const [distAptPct, setDistAptPct] = useState([0, 0, 0, 0]);
+  // 距離ごとの合計補正 = ウェーブ報酬で伸びるdistDmgBonus + 編成全員の間合い適性
+  const distTotalBonus = (dist, aptOverride = null) => (distDmgBonus[dist] || 0) + ((aptOverride || distAptPct)[dist] || 0);
   const [totalDistDamage, setTotalDistDamage] = useState([0, 0, 0, 0]); // cumulative per-distance damage across all waves
   const [totalAllDamage, setTotalAllDamage] = useState(0); // cumulative damage across all waves
   const [totalRecoveryDelta, setTotalRecoveryDelta] = useState(0); // cumulative recovery-rate correction across all waves
@@ -5250,15 +5252,8 @@ function MonsterHeroGame() {
   };
   // mon引数は素のモンスター種、またはresolveRosterEntryToMonで解決済みのマスモン反映後オブジェクトのどちらもあり得る。
   // どちらの場合もmon.distAptitudeを見るだけでよい(マスモンの場合はresolve時にdistApt配列が既に反映されている)
-  const getDistAptitude = (mon, slotIdx) => {
-    if (!mon) return 'C';
-    const grade = mon.distAptitude && mon.distAptitude[slotIdx] || 'C';
-    const shift = distAptBonus && distAptBonus[slotIdx] || 0;
-    if (!shift) return grade;
-    const idx = DIST_APTITUDE_GRADES.indexOf(grade);
-    if (idx < 0) return grade;
-    return DIST_APTITUDE_GRADES[Math.max(0, Math.min(DIST_APTITUDE_GRADES.length - 1, idx + shift))];
-  };
+  // そのモンスター自身のグレード。編成全員の合計はdistAptPctが持つので、ここでは加算しない
+  const getDistAptitude = (mon, slotIdx) => mon && mon.distAptitude && mon.distAptitude[slotIdx] || 'C';
   // タブ別の既読ID集合を比較するため、再ビルドやBUILD_DATE変更で過去項目は復活しない。
   const changelogUnreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id => !(changelogSeen[type] || []).includes(id))]));
   const changelogUnread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogUnreadIds[type].length > 0]));
@@ -8231,7 +8226,7 @@ function MonsterHeroGame() {
     currentWaveDamage: 0,
     waveDistDamage: [0, 0, 0, 0],
     distDmgBonus: [0, 0, 0, 0],
-    distAptBonus: [0, 0, 0, 0],
+    distAptPct: [0, 0, 0, 0],
     totalDistDamage: [0, 0, 0, 0],
     totalAllDamage: 0,
     totalRecoveryDelta: 0,
@@ -8294,7 +8289,7 @@ function MonsterHeroGame() {
     setCurrentWaveDamage(s.currentWaveDamage);
     setWaveDistDamage(s.waveDistDamage || [0, 0, 0, 0]);
     setDistDmgBonus(s.distDmgBonus || [0, 0, 0, 0]);
-    setDistAptBonus(s.distAptBonus || [0, 0, 0, 0]);
+    setDistAptPct(s.distAptPct || [0, 0, 0, 0]);
     setTotalDistDamage(s.totalDistDamage || [0, 0, 0, 0]);
     setTotalAllDamage(s.totalAllDamage || 0);
     setTotalRecoveryDelta(s.totalRecoveryDelta || 0);
@@ -8544,7 +8539,7 @@ function MonsterHeroGame() {
     setCurrentWaveDamage(s.currentWaveDamage);
     setWaveDistDamage(s.waveDistDamage || [0, 0, 0, 0]);
     setDistDmgBonus(s.distDmgBonus || [0, 0, 0, 0]);
-    setDistAptBonus(s.distAptBonus || [0, 0, 0, 0]);
+    setDistAptPct(s.distAptPct || [0, 0, 0, 0]);
     setTotalDistDamage(s.totalDistDamage || [0, 0, 0, 0]);
     setTotalAllDamage(s.totalAllDamage || 0);
     setTotalRecoveryDelta(s.totalRecoveryDelta || 0);
@@ -8767,13 +8762,14 @@ function MonsterHeroGame() {
       baseDmgMult = card.mult || card.baseMult || 1.0;
     }
     let traitMult = (mainHero?.id === 'Golem' ? 1.2 : 1.0) * (mainHero?.id === 'Pixie' && card.type === 'unique' ? 2.0 : 1.0);
-    const aptBonus = DIST_APTITUDE_MULT[getDistAptitude(mon, slotIdx)] - 1.0;
-    const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + aptBonus;
+    // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
+    // 攻撃したモンスター自身のグレードだけを見るのではない
+    const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (distAptPct[slotIdx] || 0);
     const totalBuffMult = traitMult * getTurnBuff('atkMult', 1.0) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult;
     let finalDmg = Math.floor(atk * distMult * baseDmgMult * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
     return finalDmg;
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus]);
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct]);
 
   // ザンの勇者特性「連撃」による追加ヒット分の合計(プレビュー用)。実際のバトルログはprocessTurn内で別枠ヒットとして計算する
   const getComboBonusDmg = useCallback((card, mon, baseDmg) => {
@@ -9770,15 +9766,15 @@ function MonsterHeroGame() {
     applyAtkTierChoice(nAtkL);
   };
 
-  // 通常攻撃・距離攻撃カードの上位レベルは、敵と同じ距離枠にいる味方の距離適性(%)と、
-  // その距離枠で永続蓄積している距離ダメージ補正(distDmgBonus、ウェーブ報酬で上昇・上限なし)
-  // を合算した値(誰もいなければ0%扱い)で決まる。この合算値はWAVE_RESULT画面の合計表示や
-  // 実際のダメージ計算(4502行付近のtotalBonus)と同じ考え方
+  // 通常攻撃・距離攻撃カードの上位レベルは、その距離枠の合計補正値(編成全員の間合い適性 +
+  // ウェーブ報酬で伸びるdistDmgBonus)で決まる。その枠に味方がいなければ0%扱い。
+  // この合算値はスロットのバッジ表示・実際のダメージ計算(getDmgのdistBonusMult)と同じ値。
+  // aptOverrideは、setDistAptPctの反映前に計算したいとき(デバッグ戦の開始時)に渡す。
   const ATK_TIER_THRESHOLDS = [0, 15, 20, 25, 30, 40, 50, 75, 100]; // Lv0〜8の解放に必要な合算%
-  const computeAtkTier = (currentSlots, dist) => {
+  const computeAtkTier = (currentSlots, dist, aptOverride = null) => {
     const mon = currentSlots?.[dist];
     if (!mon) return 0;
-    const pct = ((distDmgBonus[dist] || 0) + (DIST_APTITUDE_MULT[getDistAptitude(mon, dist)] - 1.0)) * 100;
+    const pct = distTotalBonus(dist, aptOverride) * 100;
     let lvl = 0;
     for (let i = ATK_TIER_THRESHOLDS.length - 1; i >= 0; i--) {
       if (pct >= ATK_TIER_THRESHOLDS[i]) {
@@ -9820,7 +9816,7 @@ function MonsterHeroGame() {
   // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
   // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
   // 必ず呼び出し元が保持している最新のローカル値を渡す
-  const initBattle = (w, s, u, t, defVal, forcedEnemyKey = null, heroForDeck = null) => {
+  const initBattle = (w, s, u, t, defVal, forcedEnemyKey = null, heroForDeck = null, aptPctOverride = null) => {
     setWave(w);
     const currentSlots = s || slots;
     // 通常周回の初戦だけ、デッキ編成で勇者モンを置いた初期間合いから開始する。
@@ -9828,7 +9824,7 @@ function MonsterHeroGame() {
     const selectedInitialDistance = w === 1 && !forcedEnemyKey ? initialBattleDistanceRef.current : null;
     const dist = spawnEnemy(w, forcedEnemyKey, selectedInitialDistance);
     if (dist === null) return;
-    const nAtkL = computeAtkTier(currentSlots, dist);
+    const nAtkL = computeAtkTier(currentSlots, dist, aptPctOverride);
     const nGrdL = computeGuardLevel(defVal !== undefined ? defVal : def);
     const nGB = nGrdL;
     setAtkLevel(nAtkL);
@@ -9904,8 +9900,11 @@ function MonsterHeroGame() {
     setDef(debugDef);
     setMaxGuts(debugMaxGuts);
     setGuts(Math.floor(debugMaxGuts * 0.5));
-    setDistAptBonus(allies.reduce((sum, mon) => sum.map((v, i) => v + getMonsterAptDelta(mon)[i]), [0, 0, 0, 0]));
-    initBattle(option.wave, debugSlots, uniques, teachings, debugDef, option.key, hero);
+    // 間合い適性は編成全員分(勇者モンを含む)を距離ごとに合計する。
+    // setDistAptPctの反映はこの関数の後になるため、initBattleへ計算済みの値を渡す
+    const debugAptPct = debugSlots.filter(Boolean).reduce((sum, mon) => sum.map((v, i) => v + getMonsterAptPct(mon)[i]), [0, 0, 0, 0]);
+    setDistAptPct(debugAptPct);
+    initBattle(option.wave, debugSlots, uniques, teachings, debugDef, option.key, hero, debugAptPct);
   };
   const setupMon = (m, slotIdx) => {
     if (!m) return;
@@ -9918,6 +9917,8 @@ function MonsterHeroGame() {
     if (!isHero) Audio_.se.join();
     if (isHero) {
       initialBattleDistanceRef.current = slotIdx;
+      // 勇者モンの間合い適性も、置いた距離だけでなく4距離すべての補正値になる
+      setDistAptPct(getMonsterAptPct(m));
       const initialUnique = {
         ...m.unique,
         evoLevel: Math.max(0, m.unique.evoLevel || 0)
@@ -9947,11 +9948,11 @@ function MonsterHeroGame() {
       setDef(nDef);
       setMaxGuts(nMaxGuts);
       setHp(p => p + (nMaxHp - bHp));
-      // 合流ボーナスに間合い適性も加算する。合流したモンスターの適性値をCを±0とした
-      // 段階数に直し、プラスマイナス問わずそのまま足す(A(+2)なら+2段階、E(-2)なら-2段階)
-      const aptDelta = getMonsterAptDelta(m);
-      if (aptDelta.some(d => d !== 0)) setDistAptBonus(prev => prev.map((v, i) => v + aptDelta[i]));
-      const aptLabel = aptDelta.map((d, i) => d !== 0 ? `${RANGE_LABELS[i]}${d > 0 ? '+' : ''}${d}` : null).filter(Boolean).join(' ');
+      // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
+      // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
+      const aptDelta = getMonsterAptPct(m);
+      if (aptDelta.some(d => d !== 0)) setDistAptPct(prev => prev.map((v, i) => v + aptDelta[i]));
+      const aptLabel = aptDelta.map((d, i) => d !== 0 ? `${RANGE_LABELS[i]}${formatAptPct(d)}` : null).filter(Boolean).join(' ');
       const newAllyUnique = {
         ...m.unique,
         evoLevel: Math.max(0, m.unique.evoLevel || 0)
@@ -10293,7 +10294,8 @@ function MonsterHeroGame() {
       statValues = null,
       aptExtra = null,
       aptPointsLabel = null,
-      extraAfterApt = null
+      extraAfterApt = null,
+      aptCurrentPct = null
     } = opts;
     const plus = mon.plusStats || {};
     const rows = statValues || [['ライフ', mon.baseHp, 'text-pink-400'], ['ちから', mon.baseAtk, 'text-red-400'], ['丈夫さ', mon.baseDef, 'text-emerald-400'], ['ガッツ', mon.baseGuts, 'text-amber-400']];
@@ -10334,10 +10336,12 @@ function MonsterHeroGame() {
       className: "flex items-center justify-between mb-0.5"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-cyan-400 uppercase font-bold"
-    }, "\u9593\u5408\u3044\u9069\u6027"), aptPointsLabel), /*#__PURE__*/React.createElement("div", {
+    }, "\u9593\u5408\u3044\u9069\u6027\uFF08\u8DDD\u96E2\u88DC\u6B63\uFF09"), aptPointsLabel), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-1 mt-1"
     }, RANGE_LABELS.map((label, idx) => {
       const grade = getDistAptitude(mon, idx);
+      const pct = aptGradeToPct(grade);
+      const cur = aptCurrentPct ? aptCurrentPct[idx] || 0 : null;
       return /*#__PURE__*/React.createElement("div", {
         key: idx,
         className: "flex flex-col items-center gap-0.5"
@@ -10345,8 +10349,18 @@ function MonsterHeroGame() {
         className: `text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`
       }, label), /*#__PURE__*/React.createElement("span", {
         className: `w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`
-      }, grade), aptExtra ? aptExtra(idx, grade) : null);
-    }))), extraAfterApt, renderSkillSection(mon));
+      }, grade), /*#__PURE__*/React.createElement("span", {
+        className: `text-[9px] font-mono font-black leading-none ${pct > 0 ? 'text-cyan-300' : pct < 0 ? 'text-red-300' : 'text-slate-500'}`
+      }, formatAptPct(pct)), cur != null && /*#__PURE__*/React.createElement("span", {
+        className: "w-full text-center leading-tight mt-0.5"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block text-[7px] text-slate-400 font-mono"
+      }, "\u73FE\u5728 ", formatAptPct(cur)), /*#__PURE__*/React.createElement("span", {
+        className: `block text-[10px] font-mono font-black ${pct > 0 ? 'text-emerald-300' : pct < 0 ? 'text-red-300' : 'text-slate-400'}`
+      }, "\u2192 ", formatAptPct(cur + pct))), aptExtra ? aptExtra(idx, grade) : null);
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] text-slate-500 font-bold mt-1 leading-tight"
+    }, "\u7F6E\u304F\u8DDD\u96E2\u306B\u95A2\u4FC2\u306A\u304F\u3001\u3053\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u88DC\u6B63\u304C4\u8DDD\u96E2\u3059\u3079\u3066\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059")), extraAfterApt, renderSkillSection(mon));
   };
   const renderSkillSection = mon => {
     const currentUnique = uniqueSkillAtLevel(mon.unique, mon.unique?.evoLevel);
@@ -14407,7 +14421,9 @@ function MonsterHeroGame() {
         className: `text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`
       }, label), /*#__PURE__*/React.createElement("span", {
         className: `w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[g]}`
-      }, g), /*#__PURE__*/React.createElement("div", {
+      }, g), /*#__PURE__*/React.createElement("span", {
+        className: `text-[8px] font-mono font-black leading-none ${aptGradeToPct(g) > 0 ? 'text-cyan-300' : aptGradeToPct(g) < 0 ? 'text-red-300' : 'text-slate-500'}`
+      }, formatAptPct(aptGradeToPct(g))), /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-1 w-full"
       }, /*#__PURE__*/React.createElement("button", {
         disabled: added <= 0,
@@ -14559,8 +14575,10 @@ function MonsterHeroGame() {
       }, label), /*#__PURE__*/React.createElement("span", {
         className: `w-full text-center py-1 rounded-lg border text-base font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`
       }, grade), /*#__PURE__*/React.createElement("span", {
+        className: `text-[9px] font-mono font-black leading-none ${aptGradeToPct(grade) > 0 ? 'text-cyan-300' : aptGradeToPct(grade) < 0 ? 'text-red-300' : 'text-slate-500'}`
+      }, formatAptPct(aptGradeToPct(grade))), /*#__PURE__*/React.createElement("span", {
         className: "text-[7px] text-slate-500 font-mono h-3"
-      }, nextGrade ? `次: ${nextGrade}` : 'MAX'), /*#__PURE__*/React.createElement("button", {
+      }, nextGrade ? `次: ${nextGrade} ${formatAptPct(aptGradeToPct(nextGrade))}` : 'MAX'), /*#__PURE__*/React.createElement("button", {
         disabled: !canUp,
         onClick: () => {
           const beforeGrade = grade;
@@ -15946,7 +15964,7 @@ function MonsterHeroGame() {
         animationDelay: `${deg * 2}ms`
       }
     }, "\u26A1"))), (() => {
-      const totalBonus = (distDmgBonus[i] || 0) + (DIST_APTITUDE_MULT[getDistAptitude(s, i)] - 1.0);
+      const totalBonus = distTotalBonus(i);
       return totalBonus !== 0 && /*#__PURE__*/React.createElement("div", {
         className: `absolute bottom-0.5 right-0.5 text-[6px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : 'text-red-300 border-red-400/30'}`
       }, /*#__PURE__*/React.createElement(Sword, {
@@ -16222,6 +16240,8 @@ function MonsterHeroGame() {
   }, renderMonsterDetailInfo(currentPickingMon, {
     statValues: gameState === 'PICK_HERO' ? null : [['ライフ', `${maxHp} → ${maxHp + (currentPickingMon.plusStats?.hp || 0)}`, 'text-pink-400'], ['ちから', `${atk} → ${atk + (currentPickingMon.plusStats?.atk || 0)}`, 'text-red-400'], ['丈夫さ', `${def} → ${def + (currentPickingMon.plusStats?.def || 0)}`, 'text-emerald-400'], ['ガッツ', `${maxGuts} → ${maxGuts + (currentPickingMon.plusStats?.guts || 0)}`, 'text-amber-400']],
     statTitle: gameState === 'PICK_HERO' ? '基本ステータス' : '基本ステータス(現在 → 合流後)',
+    // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる
+    aptCurrentPct: [0, 1, 2, 3].map(i => distTotalBonus(i)),
     aptPointsLabel: currentPickingMon.masuId ? /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Sparkles, {
@@ -16283,12 +16303,14 @@ function MonsterHeroGame() {
   }) : /*#__PURE__*/React.createElement("div", {
     className: "text-7xl mb-4 animate-bounce drop-shadow-[0_0_40px_rgba(99,102,241,0.4)]"
   }, currentPickingMon?.emoji), /*#__PURE__*/React.createElement("h2", {
-    className: "text-lg font-black mb-6 italic uppercase tracking-widest text-indigo-400"
+    className: "text-lg font-black mb-1 italic uppercase tracking-widest text-indigo-400"
   }, "\u914D\u7F6E\u5834\u6240\u3092\u6C7A\u5B9A\u305B\u3088"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2"
+  }, "\u9593\u5408\u3044\u9069\u6027\u306F\u3069\u3053\u306B\u7F6E\u3044\u3066\u30824\u8DDD\u96E2\u3059\u3079\u3066\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u914D\u7F6E\u306F\u300C\u6575\u3068\u540C\u3058\u8DDD\u96E2\u3067\u653B\u6483\u3059\u308B\u300D\u3053\u3068\u3068\u3001\u899A\u3048\u308B\u8DDD\u96E2\u6483\u306B\u5F71\u97FF\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-4 w-full max-w-xs"
   }, slots.map((s, i) => {
     const grade = getDistAptitude(currentPickingMon, i);
-    const pct = Math.round((DIST_APTITUDE_MULT[grade] - 1) * 100);
+    const after = distTotalBonus(i) + aptGradeToPct(grade);
     return /*#__PURE__*/React.createElement("button", {
       key: i,
       disabled: s !== null,
@@ -16309,7 +16331,7 @@ function MonsterHeroGame() {
       size: 20
     }), !s && /*#__PURE__*/React.createElement("span", {
       className: `text-[9px] font-black mt-1 px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`
-    }, grade, " ", pct >= 0 ? '+' : '', pct, "%"));
+    }, grade, " \u5408\u6D41\u5F8C ", formatAptPct(after)));
   })), /*#__PURE__*/React.createElement("button", {
     onClick: () => setGameState(mainHero ? 'PICK_ALLY' : 'PICK_HERO'),
     className: "mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90"
@@ -16471,7 +16493,7 @@ function MonsterHeroGame() {
     const gained = (waveResult.gainedDistBonus?.[i] || 0) * 100;
     const total = (waveResult.newDistBonus?.[i] || 0) * 100;
     const mon = slots[i];
-    const aptPct = mon ? (DIST_APTITUDE_MULT[getDistAptitude(mon, i)] - 1.0) * 100 : 0;
+    const aptPct = (distAptPct[i] || 0) * 100;
     const combinedTotal = total + aptPct;
     return /*#__PURE__*/React.createElement("div", {
       key: i,
@@ -16865,7 +16887,13 @@ function MonsterHeroGame() {
     size: 18
   }), " \u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-200 leading-relaxed mb-3"
-  }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u3054\u3068\u306B4\u3064\u306E\u8DDD\u96E2\u305D\u308C\u305E\u308C\u3067\u5F97\u610F\u30FB\u4E0D\u5F97\u610F\u304C\u3042\u308A\u3001C(\u6A19\u6E96\u30FB\xB10%)\u3092\u57FA\u6E96\u306BG(-20%)\u301CM(+25%)\u306E\u30B0\u30EC\u30FC\u30C9\u3067\u30C0\u30E1\u30FC\u30B8\u304C\u5909\u52D5\u3057\u307E\u3059\u3002\u30E2\u30F3\u30B9\u30BF\u30FC\u8A73\u7D30\u753B\u9762\u306E\u30B0\u30EC\u30FC\u30C9\u8868\u793A\u3067\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+  }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u3054\u3068\u306B4\u3064\u306E\u8DDD\u96E2\u305D\u308C\u305E\u308C\u3067\u5F97\u610F\u30FB\u4E0D\u5F97\u610F\u304C\u3042\u308A\u3001C(\u6A19\u6E96\u30FB\xB10%)\u3092\u57FA\u6E96\u306BG(-20%)\u301CM(+25%)\u306E\u88DC\u6B63\u3092\u6301\u3061\u307E\u3059\u3002\u30E2\u30F3\u30B9\u30BF\u30FC\u8A73\u7D30\u753B\u9762\u3067\u30B0\u30EC\u30FC\u30C9\u3068\u88DC\u6B63\u5024(%)\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/50 p-4 rounded-2xl border border-teal-500/30 mb-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-slate-300 leading-relaxed"
+  }, "\u3053\u306E\u88DC\u6B63\u306F", /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-bold"
+  }, "\u7F6E\u3044\u305F\u8DDD\u96E2\u3060\u3051\u3067\u306A\u304F4\u3064\u306E\u8DDD\u96E2\u3059\u3079\u3066"), "\u306B\u304B\u304B\u308A\u3001\u7DE8\u6210\u3057\u305F\u52C7\u8005\u30E2\u30F3\u30FB\u4F9B\u30E2\u30F3\u5168\u54E1\u3076\u3093\u304C\u8DDD\u96E2\u3054\u3068\u306B\u5408\u7B97\u3055\u308C\u307E\u3059\u3002\u4F8B\u3048\u3070\u96F6\u8DDD\u96E2\u306E\u88DC\u6B63\u304C+6%\u306E\u3068\u3053\u308D\u3078\u96F6\u8DDD\u96E2M(+25%)\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u304C\u5408\u6D41\u3059\u308B\u3068\u3001\u96F6\u8DDD\u96E2\u306E\u88DC\u6B63\u306F+31%\u306B\u306A\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
     className: "text-[11px] text-slate-400 leading-relaxed"
   }, "\u7D46\u30EC\u30D9\u30EB\u304C\u4E0A\u304C\u308B\u3068\u8CAF\u307E\u308B\u300C\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u300D\u30921\u3064\u6D88\u8CBB\u3059\u308B\u3068\u3001\u8A73\u7D30\u753B\u9762\u304B\u3089\u305D\u306E\u8DDD\u96E2\u306E\u9069\u6027\u30B0\u30EC\u30FC\u30C9\u30921\u6BB5\u968E\u30A2\u30C3\u30D7\u3067\u304D\u307E\u3059(\u4E0A\u9650\u306FM)\u3002")), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
@@ -16905,7 +16933,7 @@ function MonsterHeroGame() {
     className: "text-[12px] text-slate-400 leading-relaxed"
   }, "\u3055\u3089\u306B\u3001\u5408\u6D41\u3057\u305F\u30E2\u30F3\u30B9\u30BF\u30FC\u306E", /*#__PURE__*/React.createElement("span", {
     className: "text-white font-bold"
-  }, "\u9593\u5408\u3044\u9069\u6027"), "\u3082\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002C\u3092\xB10\u3068\u3057\u3066\u3001A\u306A\u3089+2\u6BB5\u968E\u3001E\u306A\u3089-2\u6BB5\u968E\u3068\u3044\u3046\u3088\u3046\u306B\u3001\u5F97\u610F\u30FB\u4E0D\u5F97\u610F\u304C\u305D\u306E\u307E\u307E\u53CD\u6620\u3055\u308C\u307E\u3059\u3002\u5408\u6D41\u3055\u305B\u308B\u9806\u756A\u3084\u7D44\u307F\u5408\u308F\u305B\u3067\u3001\u72D9\u3063\u305F\u8DDD\u96E2\u3092\u4F38\u3070\u305B\u307E\u3059\u3002")))), helpTab === 'growth' && /*#__PURE__*/React.createElement("div", {
+  }, "\u9593\u5408\u3044\u9069\u6027"), "\u30824\u8DDD\u96E2\u3059\u3079\u3066\u306E\u88DC\u6B63\u5024\u3078\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002C\u3092\xB10%\u3068\u3057\u3066\u3001M(+25%)\u306A\u3089+25%\u3001G(-20%)\u306A\u3089-20%\u304C\u305D\u306E\u307E\u307E\u8DB3\u3055\u308C\u307E\u3059\u3002\u3069\u306E\u8DDD\u96E2\u306B\u7F6E\u3044\u3066\u3082\u52B9\u679C\u306F\u540C\u3058\u306A\u306E\u3067\u3001\u7D44\u307F\u5408\u308F\u305B\u3067\u72D9\u3063\u305F\u8DDD\u96E2\u3092\u4F38\u3070\u305B\u307E\u3059\u3002")))), helpTab === 'growth' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-5"
   }, /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
