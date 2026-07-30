@@ -67,6 +67,7 @@ cd tools && npm install
 | `node build.js` | **BUILD_DATE・version.json・更新履歴の最新日時を揃え、game-system.jsx を配信用JSへ変換して `monster-hero/game-system.compiled.js` を書き出す。改修したら必ず実行する。** |
 | `node build.js --check` | compiled が jsx と一致しているか確認する(古ければ終了コード1)。出荷前チェック用。 |
 | `node monster-list-filter-check.js` | ベースモン一覧・マスモン一覧が種別チェックの影響で空にならないか確認する。 |
+| `node monster-detail-unified-check.js` | モンスター詳細(編成・ベースモン一覧・マスモン一覧・勇者モン選択)が共通実装を使い、どこから開いても勇者特性まで見られるか確認する。 |
 | `node pasture-check.js` | HOME放牧設定の0体・1体・5体保存、旧セーブ互換、削除済みID除外、歩行タイマーの停止を確認する。 |
 | `node feature-check.js` | 実ブラウザでゲームを起動し、主要機能が動くかを確認する。 |
 | `node perf-check.js` | 読み込みにかかる時間と転送量を実ブラウザで計測する。 |
