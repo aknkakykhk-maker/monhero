@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 24d969f683065210
+// source-sha256: 04d75802a8dba884
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 01:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 01:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3452,26 +3452,48 @@ const CHANGELOG_STATUS = {
 // 音量の既定値。初期状態は「音がオン」で、いきなり大きな音が鳴らないよう最小の1から始める
 // (ミュートを解除したときの音量もこの値に合わせている)
 const DEFAULT_VOLUME = 1;
+// ログインボーナスは毎日、既存の報酬に加えてスキップチケット・序を1枚配る
 const LOGIN_BONUS_REWARDS = [[{
   type: 'diamond',
   amount: 500
+}, {
+  type: 'skipTicketJo',
+  amount: 1
 }], [{
   type: 'dyeMock',
+  amount: 1
+}, {
+  type: 'skipTicketJo',
   amount: 1
 }], [{
   type: 'diamond',
   amount: 1000
+}, {
+  type: 'skipTicketJo',
+  amount: 1
 }], [{
   type: 'breederPoint',
   amount: 100
+}, {
+  type: 'skipTicketJo',
+  amount: 1
 }], [{
   type: 'dyeMock',
+  amount: 1
+}, {
+  type: 'skipTicketJo',
   amount: 1
 }], [{
   type: 'diamond',
   amount: 2000
+}, {
+  type: 'skipTicketJo',
+  amount: 1
 }], [{
   type: 'bondPointReset',
+  amount: 1
+}, {
+  type: 'skipTicketJo',
   amount: 1
 }]];
 const GIFT_REWARD_LABELS = {
@@ -3480,7 +3502,10 @@ const GIFT_REWARD_LABELS = {
   dyeMock: '染色もどき',
   bondPointReset: '絆ポイントリセットアイテム',
   trainingTicket: 'トレーニングチケット',
-  trainingTicketLarge: '修行チケット'
+  trainingTicketLarge: '修行チケット',
+  skipTicketJo: 'スキップチケット・序',
+  skipTicketHa: 'スキップチケット・破',
+  skipTicketKyu: 'スキップチケット・急'
 };
 const LOGIN_BONUS_DEFAULT = {
   currentDay: 1,
@@ -3575,7 +3600,10 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
     dyeMock: 'dye_mock',
     bondPointReset: 'bond_reset_scroll',
     trainingTicket: 'training_ticket',
-    trainingTicketLarge: 'training_ticket_l'
+    trainingTicketLarge: 'training_ticket_l',
+    skipTicketJo: 'skip_ticket_jo',
+    skipTicketHa: 'skip_ticket_ha',
+    skipTicketKyu: 'skip_ticket_kyu'
   };
   rewards.forEach(({
     type,
@@ -3659,6 +3687,9 @@ const MISSION_DEFS = {
     rewards: [{
       type: 'diamond',
       amount: 500
+    }, {
+      type: 'skipTicketHa',
+      amount: 1
     }],
     complete: true
   }],
@@ -3741,6 +3772,9 @@ const MISSION_DEFS = {
     rewards: [{
       type: 'diamond',
       amount: 2000
+    }, {
+      type: 'skipTicketKyu',
+      amount: 1
     }],
     complete: true
   }]
@@ -4932,6 +4966,15 @@ function MonsterHeroGame() {
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
   const [monSelection, setMonSelection] = useState([]);
+  const [heroPickTab, setHeroPickTab] = useState('roster'); // 勇者モン選択のタブ: 'roster'(編成) / 'base'(ベースモン)
+  // スキップ(チケットを1枚使って、ボス撃破まで到達したのと同じ経験値・ダイヤを受け取る)
+  const [skipFlow, setSkipFlow] = useState(null); // { difficulty, itemId, hero, allies:[] }
+  const [skipPickTab, setSkipPickTab] = useState('roster');
+  const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
+  const [skipInfoItemId, setSkipInfoItemId] = useState(null); // 説明ボタンで開くモーダル
+  const [skipResult, setSkipResult] = useState(null); // スキップ専用リザルトの内容
+  const [skipAnimPhase, setSkipAnimPhase] = useState(0);
+  const skipProcessingRef = useRef(false);
   const [currentPickingMon, setCurrentPickingMon] = useState(null);
   const [ownedUniques, setOwnedUniques] = useState([]);
   const [slotUniqueChoice, setSlotUniqueChoice] = useState({}); // スロットidx→選択中の固有技キー('own'または'inh0'等)。合体で引き継いだ固有技をバトル中に切り替えるための選択状態
@@ -5815,6 +5858,10 @@ function MonsterHeroGame() {
     // ミッション画面でもHOMEの曲を続ける
     BATTLE_MENU: 'enhance',
     // 難易度・ランキング(モンスター選択と同じ曲)
+    SKIP_PICK: 'enhance',
+    // スキップの編成選択(勇者モン選択と同じ曲)
+    SKIP_RESULT: 'result',
+    // スキップのリザルト(通常のリザルトと同じ曲)
     MONSTER_LIST_MENU: 'management',
     // モンスター一覧メニュー
     MB_MANAGEMENT: 'management',
@@ -6950,6 +6997,9 @@ function MonsterHeroGame() {
     const list = monsterRosterIds.map(resolveRosterEntryToMon).filter(Boolean);
     return list.length > 0 ? list : Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
   };
+  // 勇者モン選択の「ベースモン」タブ用。解放済みの種は編成に入れていなくても選べる。
+  // マスモン登録のためだけに編成を入れ替える手間を無くすためのもの。
+  const getUnlockedBaseMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
   const getActiveTeachingCards = () => {
     const list = TEACHING_CARDS.filter(t => teachingRosterIds.includes(t.id));
     return list.length > 0 ? list : TEACHING_CARDS.filter(t => unlockedTeachingIds.includes(t.id));
@@ -8116,6 +8166,178 @@ function MonsterHeroGame() {
     });
   };
 
+  // スキップ: チケットを1枚使い、その難易度をボスまで倒したのと同じ経験値・ダイヤを受け取る。
+  // 経験値の計算は通常クリア(awardRunRewardsのWAVE10到達)とまったく同じ式を使う。
+  // スコア・ランキング・クリア回数・ミッション進捗・マスモン登録は対象外(通常のクリアとは別扱い)。
+  const SKIP_WAVES = 10;
+  const executeBattleSkip = async () => {
+    // 連打でチケットが2枚消える・報酬が二重に入ることが無いよう、awaitより前に同期ロックする
+    if (skipProcessingRef.current) return;
+    const flow = skipFlow;
+    const item = BREEDER_MARKET_ITEMS.find(i => i.id === flow?.itemId);
+    if (!flow || !item || !flow.hero) return;
+    if ((ownedItems[item.id] || 0) <= 0) return;
+    skipProcessingRef.current = true;
+    try {
+      const nextItems = {
+        ...ownedItems,
+        [item.id]: (ownedItems[item.id] || 0) - 1
+      };
+      setOwnedItems(nextItems);
+      await storeSet('mh_owned_items', nextItems, false);
+      const scoreMult = DIFFICULTY_SETTINGS[flow.difficulty]?.score || 1.0;
+      const goldMult = DIFFICULTY_SETTINGS[flow.difficulty]?.gold || 1.0;
+
+      // ブリーダー経験値・ブリーダーポイント
+      const breederXpGain = xpForWavesCleared(SKIP_WAVES, scoreMult);
+      const breederLevelBefore = levelInfo(breederXp);
+      const nextBreederXp = breederXp + breederXpGain;
+      const breederLevelAfter = levelInfo(nextBreederXp);
+      setBreederXp(nextBreederXp);
+      await storeSet('mh_breeder_xp', nextBreederXp, false);
+      const gainedBreederLevels = breederLevelAfter.level - breederLevelBefore.level;
+      if (gainedBreederLevels > 0) {
+        setBreederPoints(prev => {
+          const next = prev + gainedBreederLevels;
+          storeSet('mh_breeder_points', next, false);
+          return next;
+        });
+        storeSet('mh_breeder_points_granted', Math.max(0, breederLevelAfter.level - 1), false);
+      }
+
+      // ダイヤ
+      const goldGain = goldForWavesCleared(SKIP_WAVES, goldMult);
+      const goldBefore = gold;
+      const goldAfter = gold + goldGain;
+      setGold(goldAfter);
+      await storeSet('mh_gold', goldAfter, false);
+
+      // 絆経験値。勇者モン=満額、選んだ供モン=1/2、編成内で選ばなかったマスモン=1/4 も通常と同じ
+      const gain = xpForWavesCleared(SKIP_WAVES, scoreMult);
+      const allies = (flow.allies || []).filter(Boolean);
+      const bondAwards = buildRunBondAwards({
+        gain,
+        heroMasuId: flow.hero.masuId,
+        participantMasuIds: allies.map(a => a.masuId).filter(Boolean),
+        monsterRosterIds,
+        masuMons
+      });
+      const awardByMasuId = new Map(bondAwards.map(a => [String(a.masuId), a]));
+      const bondGainOf = masuId => {
+        const masu = getMasuMon(masuId);
+        const award = awardByMasuId.get(String(masuId));
+        if (!masu || !award) return null;
+        const before = bondLevelInfo(masu.bondXp || 0);
+        const afterXp = cappedBondXp(masu, award.gain);
+        return {
+          name: masu.name,
+          xpGain: Math.max(0, afterXp - (masu.bondXp || 0)),
+          levelBefore: before,
+          levelAfter: bondLevelInfo(afterXp),
+          masuId
+        };
+      };
+      const heroBondGain = flow.hero.masuId ? bondGainOf(flow.hero.masuId) : null;
+      const allyBondGains = allies.map(a => a.masuId ? bondGainOf(a.masuId) : null).filter(Boolean);
+      if (bondAwards.length > 0) {
+        setMasuMons(prev => {
+          const next = prev.map(mon => {
+            const award = awardByMasuId.get(String(mon.id));
+            if (!award) return mon;
+            const before = bondLevelInfo(mon.bondXp || 0);
+            const afterXp = cappedBondXp(mon, award.gain);
+            const after = bondLevelInfo(afterXp);
+            return {
+              ...mon,
+              bondXp: afterXp,
+              distAptPoints: (mon.distAptPoints || 0) + (after.level - before.level)
+            };
+          });
+          storeSet('mh_masu_mons', next, false);
+          return next;
+        });
+      }
+      setSkipResult({
+        difficulty: flow.difficulty,
+        itemName: item.name,
+        itemEmoji: item.emoji,
+        heroName: flow.hero.masuName || flow.hero.name,
+        heroImgUrl: flow.hero.imgUrl,
+        heroEmoji: flow.hero.emoji,
+        heroBaseId: flow.hero.id,
+        heroColors: flow.hero.colors,
+        heroIsMasu: !!flow.hero.masuId,
+        breederXpGain,
+        breederLevelBefore,
+        breederLevelAfter,
+        goldGain,
+        goldBefore,
+        goldAfter,
+        heroBondGain,
+        allyBondGains
+      });
+      setSkipConfirmOpen(false);
+      setSkipAnimPhase(0);
+      setGameState('SKIP_RESULT');
+      Audio_.se.levelUp();
+      setTimeout(() => setSkipAnimPhase(1), 700);
+    } finally {
+      skipProcessingRef.current = false;
+    }
+  };
+  const openBattleSkip = difficultyKey => {
+    const itemId = SKIP_TICKET_BY_DIFFICULTY[difficultyKey];
+    if (!itemId || (ownedItems[itemId] || 0) <= 0) return;
+    setSkipFlow({
+      difficulty: difficultyKey,
+      itemId,
+      hero: null,
+      allies: []
+    });
+    setSkipPickTab('roster');
+    setSkipConfirmOpen(false);
+    setGameState('SKIP_PICK');
+  };
+  const closeBattleSkip = () => {
+    setSkipFlow(null);
+    setSkipConfirmOpen(false);
+    setGameState('BATTLE_MENU');
+  };
+  // 同じ種を二重に選ばないための鍵(編成タブとベースモンタブで同じ種が並ぶため、種idで見る)
+  const skipMonKey = mon => mon ? String(mon.id) : '';
+  const skipPickMon = mon => {
+    setSkipFlow(prev => {
+      if (!prev) return prev;
+      const chosen = [prev.hero, ...(prev.allies || [])].filter(Boolean);
+      if (chosen.some(c => skipMonKey(c) === skipMonKey(mon))) return prev;
+      if (!prev.hero) return {
+        ...prev,
+        hero: mon
+      };
+      if ((prev.allies || []).length >= 3) return prev;
+      return {
+        ...prev,
+        allies: [...(prev.allies || []), mon]
+      };
+    });
+  };
+  const skipClearSlot = index => {
+    setSkipFlow(prev => {
+      if (!prev) return prev;
+      if (index === 0) return {
+        ...prev,
+        hero: null,
+        allies: []
+      }; // 勇者モンを外すと供モンも外す
+      const allies = [...(prev.allies || [])];
+      allies.splice(index - 1, 1);
+      return {
+        ...prev,
+        allies
+      };
+    });
+  };
+
   // Masterを含む最終WAVEのクリア回数も、報酬・ランキングとは独立した同期ロックで1回だけ記録する。
   // Reactのstate updater内で永続化すると開発時のStrict Modeでupdaterが再評価され得るため、
   // 保存する値をrefロック後に確定し、副作用をupdaterの外へ出す。
@@ -8316,6 +8538,10 @@ function MonsterHeroGame() {
     setMasuRegisteredThisRun(false);
     setShowMasuRegisterModal(false);
     setMasuNameInput('');
+    setSkipFlow(null);
+    setSkipConfirmOpen(false);
+    setSkipResult(null);
+    setSkipInfoItemId(null);
     setGameState('HOME');
   };
   const claimGiftIds = async ids => {
@@ -12241,13 +12467,31 @@ function MonsterHeroGame() {
           setDebugBattle(false);
           setDebugOutcome(null);
           setMonSelection(getActiveMonsterList());
+          setHeroPickTab('roster');
           setGameState('PICK_HERO');
         },
         className: "min-h-[44px] rounded-xl font-black text-sm text-white",
         style: {
           backgroundColor: setting.bg
         }
-      }, "\u3053\u306E\u96E3\u6613\u5EA6\u3067\u6311\u6226")));
+      }, "\u3053\u306E\u96E3\u6613\u5EA6\u3067\u6311\u6226"), SKIP_TICKET_BY_DIFFICULTY[key] && (() => {
+        const tid = SKIP_TICKET_BY_DIFFICULTY[key];
+        const have = ownedItems[tid] || 0;
+        return /*#__PURE__*/React.createElement("div", {
+          className: "flex gap-1.5"
+        }, /*#__PURE__*/React.createElement("button", {
+          disabled: have <= 0,
+          onClick: () => {
+            setDifficulty(key);
+            openBattleSkip(key);
+          },
+          className: `flex-1 min-h-[44px] rounded-xl font-black text-sm ${have > 0 ? 'bg-teal-600 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
+        }, "\u30B9\u30AD\u30C3\u30D7", have > 0 ? `（残り${have}）` : '（チケットなし）'), /*#__PURE__*/React.createElement("button", {
+          onClick: () => setSkipInfoItemId(tid),
+          "aria-label": "\u30B9\u30AD\u30C3\u30D7\u306E\u8AAC\u660E",
+          className: "shrink-0 w-12 min-h-[44px] rounded-xl bg-slate-700 text-white font-black active:scale-95"
+        }, "\uFF1F"));
+      })()));
     })), /*#__PURE__*/React.createElement("button", {
       "aria-label": "\u6B21\u306E\u96E3\u6613\u5EA6",
       disabled: selectedIndex === difficulties.length - 1,
@@ -13800,7 +14044,9 @@ function MonsterHeroGame() {
     className: "text-[8px] text-slate-400 leading-tight mt-0.5"
   }, item.desc), /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] font-black text-teal-300 mt-0.5"
-  }, "\u6240\u6301\u6570: ", ownedItems[item.id])), /*#__PURE__*/React.createElement("button", {
+  }, "\u6240\u6301\u6570: ", ownedItems[item.id])), item.usage === 'battleSkip' ? /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2"
+  }, "\u30D0\u30C8\u30EB\u306E", /*#__PURE__*/React.createElement("br", null), DIFFICULTY_SETTINGS[item.skipDifficulty]?.label, /*#__PURE__*/React.createElement("br", null), "\u30B9\u30AD\u30C3\u30D7\u3067\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
     onClick: () => setPendingItemUse(item.id),
     className: "shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase"
   }, "\u4F7F\u3046")))))), pendingItemUse && (() => {
@@ -16109,7 +16355,293 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 9
     }), curGuts))));
-  }))))), (gameState === 'PICK_HERO' || gameState === 'PICK_ALLY') && /*#__PURE__*/React.createElement("div", {
+  }))))), skipInfoItemId && (() => {
+    const item = BREEDER_MARKET_ITEMS.find(i => i.id === skipInfoItemId);
+    if (!item) return null;
+    const label = DIFFICULTY_SETTINGS[item.skipDifficulty]?.label || item.skipDifficulty;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 flex items-center justify-center p-4",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.92)',
+        zIndex: 41000
+      },
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-label": "\u30B9\u30AD\u30C3\u30D7\u306E\u8AAC\u660E"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-3"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-3xl"
+    }, item.emoji), /*#__PURE__*/React.createElement("h3", {
+      className: "text-base font-black text-teal-300"
+    }, item.name)), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 text-[11px] text-slate-200 leading-relaxed"
+    }, /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, item.name), "\u30921\u679A\u4F7F\u3046\u3068\u3001", label, "\u3092", /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, "\u30DC\u30B9\u307E\u3067\u5012\u3057\u305F\u3068\u304D"), "\u3068\u540C\u3058\u7D46\u7D4C\u9A13\u5024\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u30B9\u30AD\u30C3\u30D7\u3092\u62BC\u3059\u3068\u3001\u52C7\u8005\u30E2\u30F3\u3068\u4F9B\u30E2\u30F33\u4F53\u3092\u9078\u3076\u753B\u9762\u306B\u9032\u307F\u307E\u3059\u3002\u6C7A\u3081\u305F\u3042\u3068\u306B\u78BA\u8A8D\u304C\u51FA\u3066\u3001\u300C\u306F\u3044\u300D\u3067\u30C1\u30B1\u30C3\u30C8\u30921\u679A\u4F7F\u3044\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "bg-black/40 rounded-xl border border-teal-500/30 p-3 text-[10px] leading-relaxed"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-teal-300 font-black mb-1"
+    }, "\u53D7\u3051\u53D6\u308C\u308B\u3082\u306E"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u52C7\u8005\u30E2\u30F3\u306E\u7D46\u7D4C\u9A13\u5024\uFF08\u30DE\u30B9\u30E2\u30F3\u306E\u307F\uFF09"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u9078\u3093\u3060\u4F9B\u30E2\u30F3\u306F1/2\u3001\u7DE8\u6210\u5185\u3067\u9078\u3070\u306A\u304B\u3063\u305F\u30DE\u30B9\u30E2\u30F3\u306F1/4"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u3068\u30D6\u30EA\u30FC\u30C0\u30FC\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u30C0\u30A4\u30E4")), /*#__PURE__*/React.createElement("div", {
+      className: "bg-black/40 rounded-xl border border-white/10 p-3 text-[10px] leading-relaxed text-slate-400"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-slate-300 font-black mb-1"
+    }, "\u53D7\u3051\u53D6\u308C\u306A\u3044\u3082\u306E"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u30B9\u30B3\u30A2\u3068\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u306E\u8A18\u9332"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u30AF\u30EA\u30A2\u56DE\u6570\u30FB\u30DF\u30C3\u30B7\u30E7\u30F3\u306E\u9032\u6357"), /*#__PURE__*/React.createElement("div", null, "\u30FB\u30DE\u30B9\u30E2\u30F3\u767B\u9332\uFF08\u30DE\u30B9\u30E2\u30F3\u3067\u306A\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u306B\u306F\u7D46\u7D4C\u9A13\u5024\u304C\u5165\u308A\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("p", {
+      className: "text-slate-400"
+    }, "\u6240\u6301\u6570: ", /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, ownedItems[item.id] || 0), " \u679A\uFF08\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u3082\u8CFC\u5165\u3067\u304D\u307E\u3059\uFF09")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setSkipInfoItemId(null),
+      className: "w-full mt-4 bg-teal-600 text-white py-3 rounded-2xl font-black text-sm uppercase active:scale-95"
+    }, "\u9589\u3058\u308B")));
+  })(), gameState === 'SKIP_PICK' && skipFlow && (() => {
+    const item = BREEDER_MARKET_ITEMS.find(i => i.id === skipFlow.itemId);
+    const label = DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label || skipFlow.difficulty;
+    const list = skipPickTab === 'base' ? getUnlockedBaseMonsterList() : getActiveMonsterList();
+    const chosen = [skipFlow.hero, ...(skipFlow.allies || [])].filter(Boolean);
+    const chosenKeys = new Set(chosen.map(skipMonKey));
+    const slotLabels = ['勇者モン', '供モン1', '供モン2', '供モン3'];
+    const slotMons = [skipFlow.hero, ...(skipFlow.allies || [])];
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: 'absolute',
+        inset: 0,
+        backgroundColor: '#020617',
+        zIndex: 30000
+      },
+      className: "absolute inset-0 p-4 pt-6 flex flex-col overflow-hidden"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mb-2 flex items-center justify-between px-2 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: closeBattleSkip,
+      className: "p-3 text-slate-400 active:scale-90"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-lg font-black italic text-teal-400 uppercase tracking-widest"
+    }, "\u30B9\u30AD\u30C3\u30D7\u30FB", label), /*#__PURE__*/React.createElement("div", {
+      className: "w-10"
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-md mx-auto shrink-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-4 gap-1.5"
+    }, slotLabels.map((sl, idx) => {
+      const mon = slotMons[idx];
+      return /*#__PURE__*/React.createElement("button", {
+        key: sl,
+        disabled: !mon,
+        onClick: () => skipClearSlot(idx),
+        className: `rounded-2xl border-2 p-1.5 flex flex-col items-center gap-1 ${mon ? 'border-teal-400 bg-teal-950/50 active:scale-95' : 'border-dashed border-slate-700 bg-slate-900/50'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: `text-[7px] font-black uppercase ${idx === 0 ? 'text-amber-300' : 'text-slate-400'}`
+      }, sl), /*#__PURE__*/React.createElement("div", {
+        className: "w-10 h-10 rounded-full overflow-hidden border border-white/10 flex items-center justify-center bg-black/30"
+      }, mon ? mon.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: mon.id,
+        src: mon.imgUrl,
+        alt: mon.name,
+        masuColors: mon.colors,
+        className: "w-full h-full object-contain"
+      }) : /*#__PURE__*/React.createElement("span", {
+        className: "text-lg"
+      }, mon.emoji) : /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-600 text-lg"
+      }, "\uFF0B")), /*#__PURE__*/React.createElement("span", {
+        className: "text-[8px] font-black text-white truncate w-full text-center"
+      }, mon ? mon.name : '未選択'));
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
+    }, "\u4E0A\u306E\u308F\u304F\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u5916\u305B\u307E\u3059\u3002\u7D46\u7D4C\u9A13\u5024\u304C\u5165\u308B\u306E\u306F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u3067\u3059"), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-1.5 mt-2"
+    }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, tabLabel]) => /*#__PURE__*/React.createElement("button", {
+      key: key,
+      onClick: () => setSkipPickTab(key),
+      "aria-pressed": skipPickTab === key,
+      className: `flex-1 min-h-[38px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${skipPickTab === key ? 'bg-teal-600 border-teal-300 text-white' : 'bg-slate-900 border-slate-700 text-slate-400'}`
+    }, tabLabel)))), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto min-h-0 mt-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-3 gap-2 pb-4"
+    }, list.map(mon => {
+      const used = chosenKeys.has(skipMonKey(mon));
+      const full = chosen.length >= 4;
+      return /*#__PURE__*/React.createElement("button", {
+        key: skipMonKey(mon),
+        disabled: used || full,
+        onClick: () => skipPickMon(mon),
+        className: `rounded-2xl border-2 p-2 flex flex-col items-center gap-1 ${used ? 'border-teal-500 bg-teal-950/40 opacity-50' : 'border-slate-800 bg-slate-900 active:scale-95'} disabled:opacity-40`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "w-12 h-12 rounded-full overflow-hidden border border-white/10 flex items-center justify-center bg-black/30"
+      }, mon.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: mon.id,
+        src: mon.imgUrl,
+        alt: mon.name,
+        masuColors: mon.colors,
+        className: "w-full h-full object-contain"
+      }) : /*#__PURE__*/React.createElement("span", {
+        className: "text-2xl"
+      }, mon.emoji)), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-white truncate w-full text-center"
+      }, mon.name), /*#__PURE__*/React.createElement("div", {
+        className: "text-[7px] font-black"
+      }, mon.masuId ? /*#__PURE__*/React.createElement("span", {
+        className: "text-pink-300"
+      }, "\u7D46Lv.", getMasuBondLevel(mon.masuId).level) : /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500"
+      }, "\u30DE\u30B9\u30E2\u30F3\u672A\u767B\u9332")));
+    }))), /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-md mx-auto shrink-0 pt-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-slate-400 font-bold text-center mb-1"
+    }, item?.name, " \u6240\u6301\u6570 ", ownedItems[skipFlow.itemId] || 0, " \u679A"), /*#__PURE__*/React.createElement("button", {
+      disabled: !skipFlow.hero,
+      onClick: () => setSkipConfirmOpen(true),
+      className: "w-full min-h-[52px] rounded-2xl bg-teal-600 text-white font-black text-sm uppercase shadow-lg active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500"
+    }, "\u6C7A\u5B9A")));
+  })(), skipConfirmOpen && skipFlow && (() => {
+    const item = BREEDER_MARKET_ITEMS.find(i => i.id === skipFlow.itemId);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 flex items-center justify-center p-4",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.92)',
+        zIndex: 41000
+      },
+      role: "dialog",
+      "aria-modal": "true"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl text-center"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-4xl mb-2"
+    }, item?.emoji), /*#__PURE__*/React.createElement("h3", {
+      className: "text-base font-black text-white mb-1"
+    }, item?.name, "\u3092\u4F7F\u3044\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-slate-400 font-bold mb-4"
+    }, DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label, " \u3092\u6700\u5F8C\u307E\u3067\u9032\u3081\u305F\u6271\u3044\u3067\u3001\u7D4C\u9A13\u5024\u3068\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setSkipConfirmOpen(false),
+      className: "w-2/5 bg-slate-800 text-slate-300 py-3.5 rounded-2xl font-black text-sm"
+    }, "\u3044\u3044\u3048"), /*#__PURE__*/React.createElement("button", {
+      onClick: executeBattleSkip,
+      className: "w-3/5 bg-teal-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg active:scale-95"
+    }, "\u306F\u3044"))));
+  })(), gameState === 'SKIP_RESULT' && skipResult && /*#__PURE__*/React.createElement("div", {
+    style: {
+      position: 'absolute',
+      inset: 0,
+      backgroundColor: '#020617',
+      zIndex: 30000
+    },
+    className: "absolute inset-0 p-4 pt-6 flex flex-col overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-sm mx-auto"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-center py-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-5xl mb-1",
+    style: {
+      animation: 'idleSpark 900ms ease-in-out infinite'
+    }
+  }, skipResult.itemEmoji), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black tracking-[.3em] text-teal-400 uppercase"
+  }, "Skip Complete"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-2xl font-black italic text-white mt-1"
+  }, DIFFICULTY_SETTINGS[skipResult.difficulty]?.label, " \u7A81\u7834\uFF01"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400 font-bold mt-1"
+  }, skipResult.itemName, " \u30921\u679A\u4F7F\u3044\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 flex items-center justify-center gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-16 h-16 rounded-full overflow-hidden border-2 border-teal-400 flex items-center justify-center bg-black/40"
+  }, skipResult.heroImgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: skipResult.heroBaseId,
+    src: skipResult.heroImgUrl,
+    alt: skipResult.heroName,
+    masuColors: skipResult.heroColors,
+    className: "w-full h-full object-contain"
+  }) : /*#__PURE__*/React.createElement("span", {
+    className: "text-3xl"
+  }, skipResult.heroEmoji)), /*#__PURE__*/React.createElement("div", {
+    className: "text-left"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-500 font-black uppercase"
+  }, "\u52C7\u8005\u30E2\u30F3"), /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-black text-white"
+  }, skipResult.heroName)))), /*#__PURE__*/React.createElement("div", {
+    className: `space-y-2 transition-all duration-500 ${skipAnimPhase > 0 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/40 rounded-2xl border border-amber-500/30 p-3 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-black text-amber-300 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 13
+  }), "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-black text-white text-sm"
+  }, skipResult.goldBefore.toLocaleString(), " \u2192 ", skipResult.goldAfter.toLocaleString(), " ", /*#__PURE__*/React.createElement("span", {
+    className: "text-amber-300"
+  }, "(+", skipResult.goldGain.toLocaleString(), ")"))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/40 rounded-2xl border border-indigo-500/30 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-black text-indigo-300"
+  }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-black text-white text-sm"
+  }, "+", skipResult.breederXpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
+    levelBefore: skipResult.breederLevelBefore,
+    levelAfter: skipResult.breederLevelAfter
+  }), skipResult.breederLevelAfter.level > skipResult.breederLevelBefore.level && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 9
+  }), "\u30D6\u30EA\u30FC\u30C0\u30FC\u30DD\u30A4\u30F3\u30C8 +", skipResult.breederLevelAfter.level - skipResult.breederLevelBefore.level)), skipResult.heroBondGain ? /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/40 rounded-2xl border border-pink-500/30 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] font-black text-pink-300 flex items-center gap-1 truncate"
+  }, /*#__PURE__*/React.createElement(Heart, {
+    size: 13
+  }), "\u7D46\u30EC\u30D9\u30EB\uFF1A", skipResult.heroBondGain.name), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-black text-white text-sm shrink-0"
+  }, "+", skipResult.heroBondGain.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
+    levelBefore: skipResult.heroBondGain.levelBefore,
+    levelAfter: skipResult.heroBondGain.levelAfter
+  }), skipResult.heroBondGain.levelAfter.level > skipResult.heroBondGain.levelBefore.level && /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 9
+  }), "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", skipResult.heroBondGain.levelAfter.level - skipResult.heroBondGain.levelBefore.level)) : /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/30 rounded-2xl border border-white/10 p-3 text-[10px] text-slate-400 font-bold leading-relaxed"
+  }, "\u52C7\u8005\u30E2\u30F3\u304C\u30DE\u30B9\u30E2\u30F3\u3067\u306F\u306A\u3044\u305F\u3081\u3001\u7D46\u7D4C\u9A13\u5024\u306F\u5165\u308A\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u30B9\u30AD\u30C3\u30D7\u3067\u306F\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u306F\u3067\u304D\u307E\u305B\u3093\u3002"), skipResult.allyBondGains.map(a => /*#__PURE__*/React.createElement("div", {
+    key: a.masuId,
+    className: "bg-black/40 rounded-2xl border border-pink-500/20 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-1"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[10px] font-black text-pink-200 truncate"
+  }, "\u4F9B\u30E2\u30F3\uFF1A", a.name), /*#__PURE__*/React.createElement("span", {
+    className: "font-mono font-black text-white text-xs shrink-0"
+  }, "+", a.xpGain.toLocaleString())), /*#__PURE__*/React.createElement(LevelGrowthBar, {
+    levelBefore: a.levelBefore,
+    levelAfter: a.levelAfter
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-500 font-bold text-center px-2 leading-relaxed"
+  }, "\u30B9\u30B3\u30A2\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u30FB\u30AF\u30EA\u30A2\u56DE\u6570\u306B\u306F\u8A18\u9332\u3055\u308C\u307E\u305B\u3093"))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setSkipResult(null);
+      setSkipFlow(null);
+      setGameState('BATTLE_MENU');
+    },
+    className: "w-full max-w-sm mx-auto shrink-0 mt-2 min-h-[52px] rounded-2xl bg-teal-600 text-white font-black text-sm uppercase shadow-lg active:scale-[.98]"
+  }, "\u30D0\u30C8\u30EB\u30E1\u30CB\u30E5\u30FC\u3078\u623B\u308B")), (gameState === 'PICK_HERO' || gameState === 'PICK_ALLY') && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "absolute",
       inset: 0,
@@ -16128,11 +16660,25 @@ function MonsterHeroGame() {
     className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
   }, gameState === 'PICK_HERO' ? '勇者モンを選択' : '供モンを選択'), /*#__PURE__*/React.createElement("div", {
     className: "w-10"
-  })), /*#__PURE__*/React.createElement("div", {
+  })), gameState === 'PICK_HERO' && /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1.5"
+  }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, label]) => /*#__PURE__*/React.createElement("button", {
+    key: key,
+    onClick: () => {
+      setHeroPickTab(key);
+      setCurrentPickingMon(null);
+    },
+    "aria-pressed": heroPickTab === key,
+    className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
+  }, label))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
+  }, heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), /*#__PURE__*/React.createElement("div", {
     className: `flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col ${gameState === 'PICK_ALLY' ? 'justify-center' : ''}`
   }, /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2.5"
-  }, monSelection.map(m => {
+  }, (gameState === 'PICK_HERO' && heroPickTab === 'base' ? getUnlockedBaseMonsterList() : monSelection).map(m => {
     const isSel = currentPickingMon?.id === m.id;
     return /*#__PURE__*/React.createElement("button", {
       key: m.id,
@@ -17202,6 +17748,36 @@ function MonsterHeroGame() {
   }, "HOME\u753B\u9762\u53F3\u4E0A\u306E\u300C\u66F4\u65B0\u5C65\u6B74\u300D\u30DC\u30BF\u30F3\u304B\u3089\u3001\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u5185\u5BB9\u3068\u4E0D\u5177\u5408\u60C5\u5831\u3092\u30BF\u30D6\u3067\u5207\u308A\u66FF\u3048\u3066\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002\u672A\u8AAD\u306E\u66F4\u65B0\u304C\u3042\u308B\u3068\u304D\u306FNEW\u30DE\u30FC\u30AF\u304C\u4ED8\u304D\u307E\u3059\u3002"))), helpTab === 'tips' && /*#__PURE__*/React.createElement("div", {
     className: "space-y-5"
   }, /*#__PURE__*/React.createElement("section", {
+    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-teal-400 font-black text-base mb-3 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement(Package, {
+    size: 18
+  }), " \u30B9\u30AD\u30C3\u30D7\u30C1\u30B1\u30C3\u30C8"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
+  }, "\u30D0\u30C8\u30EB\u306E\u96E3\u6613\u5EA6\u9078\u629E\u306B\u3042\u308B\u300C\u30B9\u30AD\u30C3\u30D7\u300D\u3067\u4F7F\u3044\u307E\u3059\u30021\u679A\u6D88\u8CBB\u3059\u308B\u3068\u3001\u305D\u306E\u96E3\u6613\u5EA6\u3092\u30DC\u30B9\u307E\u3067\u5012\u3057\u305F\u3068\u304D\u3068\u540C\u3058\u7D46\u7D4C\u9A13\u5024\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "bg-black/50 p-4 rounded-2xl space-y-2 mb-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[11px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400 font-bold"
+  }, "\u30B9\u30AD\u30C3\u30D7\u30C1\u30B1\u30C3\u30C8\u30FB\u5E8F:"), /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-black"
+  }, "Normal")), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[11px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400 font-bold"
+  }, "\u30B9\u30AD\u30C3\u30D7\u30C1\u30B1\u30C3\u30C8\u30FB\u7834:"), /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-black"
+  }, "Hard")), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-[11px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-400 font-bold"
+  }, "\u30B9\u30AD\u30C3\u30D7\u30C1\u30B1\u30C3\u30C8\u30FB\u6025:"), /*#__PURE__*/React.createElement("span", {
+    className: "text-white font-black"
+  }, "Expert"))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-slate-400 leading-relaxed"
+  }, "\u30B9\u30B3\u30A2\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u30FB\u30AF\u30EA\u30A2\u56DE\u6570\u30FB\u30DF\u30C3\u30B7\u30E7\u30F3\u306E\u9032\u6357\u306B\u306F\u8A18\u9332\u3055\u308C\u307E\u305B\u3093\u3002\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u3082\u3067\u304D\u306A\u3044\u305F\u3081\u3001\u7D46\u7D4C\u9A13\u5024\u304C\u5165\u308B\u306E\u306F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u3067\u3059\u3002\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u30FB\u30DF\u30C3\u30B7\u30E7\u30F3\u306E\u30B3\u30F3\u30D7\u30EA\u30FC\u30C8\u5831\u916C\u30FB\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u624B\u306B\u5165\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-orange-400 font-black text-base mb-3 flex items-center gap-2"

@@ -93,5 +93,16 @@ const BREEDER_MARKET_ITEMS = [
   // bondXp を持つアイテムは「マスモンに絆経験値を与える」もの。まとめて使えるので、
   // 使う個数を決める画面(何個でレベルがいくつ上がるか)が出る
   { id:'training_ticket', name:"トレーニングチケット", type:'item', emoji:"🎫", cost:100, bondXp:10, desc:"マスモンに使うと絆経験値を10もらえる。まとめて使えるので、使う個数に応じて絆レベルがどこまで上がるかを確かめながら使える。" },
-  { id:'training_ticket_l', name:"修行チケット", type:'item', emoji:"🎟️", cost:1000, bondXp:100, desc:"マスモンに使うと絆経験値を100もらえる。トレーニングチケット10枚ぶん。まとめて使えるので、使う個数に応じて絆レベルがどこまで上がるかを確かめながら使える。" }
+  { id:'training_ticket_l', name:"修行チケット", type:'item', emoji:"🎟️", cost:1000, bondXp:100, desc:"マスモンに使うと絆経験値を100もらえる。トレーニングチケット10枚ぶん。まとめて使えるので、使う個数に応じて絆レベルがどこまで上がるかを確かめながら使える。" },
+  // usage:'battleSkip' はマスモンに使うアイテムではなく、バトルの難易度選択から使う消耗アイテム。
+  // skipDifficulty はそのチケットで飛ばせる難易度(DIFFICULTY_SETTINGSのキー)。
+  // 1枚消費してボス撃破まで到達したのと同じ絆経験値・ブリーダー経験値・ダイヤを受け取る。
+  // スコア・ランキング・クリア回数・マスモン登録は対象外(通常のクリアとは別扱い)。
+  { id:'skip_ticket_jo',  name:"スキップチケット・序", type:'item', emoji:"⏩", cost:1000, usage:'battleSkip', skipDifficulty:'Normal', desc:"バトルのNormalで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。スコアとランキングには記録されない。" },
+  { id:'skip_ticket_ha',  name:"スキップチケット・破", type:'item', emoji:"⏭️", cost:1500, usage:'battleSkip', skipDifficulty:'Hard',   desc:"バトルのHardで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。スコアとランキングには記録されない。" },
+  { id:'skip_ticket_kyu', name:"スキップチケット・急", type:'item', emoji:"⚡", cost:3000, usage:'battleSkip', skipDifficulty:'Expert', desc:"バトルのExpertで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。スコアとランキングには記録されない。" }
 ];
+// 難易度キー → その難易度で使えるスキップチケットのid
+const SKIP_TICKET_BY_DIFFICULTY = Object.freeze(Object.fromEntries(
+  BREEDER_MARKET_ITEMS.filter(item => item.usage === 'battleSkip').map(item => [item.skipDifficulty, item.id])
+));
