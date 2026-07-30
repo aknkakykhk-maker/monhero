@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 12:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 12:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -487,6 +487,11 @@ const Audio_ = (() => {
     if (bgmSourceKey && bgmSourceKey !== track.id) stopOthers();
     if (!enabled || bgmVolumePct <= 0 || pageHidden) { stopOthers(); stopJingles(); return Promise.resolve(); }
     resumeAudioCtxNoWait();
+    // 起動タップ前にdecode済みなら、user activation中に同期的に再生開始する。
+    if (buffers.has(track.src)) {
+      startBgmBuffer(track.id, track, buffers.get(track.src), request);
+      return Promise.resolve();
+    }
     return loadBuffer(track.src).then((buffer) => startBgmBuffer(track.id, track, buffer, request)).catch(() => {});
   };
   const stopPreview = (resume = true) => { stopSource(previewSource); previewSource = null; previewKey = null; if (resume && currentKey) playBGM(currentKey); };
@@ -506,6 +511,10 @@ const Audio_ = (() => {
     const track = resolveTrack(key); if (!track) return Promise.resolve(false);
     return Promise.race([loadBuffer(track.src).then(() => true).catch(() => false), new Promise((r) => setTimeout(() => r(false), timeoutMs))]);
   };
+  const prepareSE = (timeoutMs = 5000) => Promise.race([
+    load().then(() => true).catch(() => false),
+    new Promise((r) => setTimeout(() => r(false), timeoutMs)),
+  ]);
   const playJingle = async (key) => {
     if (!enabled || bgmVolumePct <= 0 || pageHidden || !JINGLE_FILES[key]) return;
     const request = ++bgmRequest;
@@ -528,16 +537,18 @@ const Audio_ = (() => {
   const setBgmVolume = (pct) => { bgmVolumePct = pct; applyTrackGain(resolveTrack(previewKey || currentKey)); if (pct <= 0) { stopPreview(false); stopOthers(); } else if (enabled && currentKey && !previewKey) playBGM(currentKey); };
   const resumeIfNeeded = async () => { await ensureAudioCtxRunning(); if (Tone) { try { await Tone.start(); started = true; } catch (e) {} } if (enabled && currentKey && !bgmSource) playBGM(currentKey); };
   const unlock = async (playTestTone = false) => {
-    if (!enabled) enabled = true;
-    // iOSではユーザー操作中にresumeを開始したうえで、runningになるまで完了扱いにしない。
-    resumeAudioCtxNoWait();
-    const ctx = await ensureAudioCtxRunning();
-    if (currentKey) playBGM(currentKey);
-    await load();
-    if (Tone && playTestTone) {
-      try { const tb = new Tone.Synth({ oscillator:{type:'triangle'}, envelope:{attack:0.005,decay:0.15,sustain:0.1,release:0.2}, volume: -6 }).connect(seBus); const now = Tone.now(); tb.triggerAttackRelease('C5','8n', now); tb.triggerAttackRelease('G5','8n', now+0.12); setTimeout(()=>{ try{tb.dispose();}catch(e){} }, 800); } catch(e){}
+    // resume・決定SEはuser activationが残るイベント処理内で開始し、最初の再生前に待たない。
+    const ctx = resumeAudioCtxNoWait();
+    let toneStart = null;
+    if (Tone) {
+      try { toneStart = Tone.start(); if (toneStart?.catch) toneStart.catch(() => {}); } catch (e) {}
+      if (playTestTone && ready && enabled && seVolumePct > 0) {
+        try { const tb = new Tone.Synth({ oscillator:{type:'triangle'}, envelope:{attack:0.005,decay:0.15,sustain:0.1,release:0.2}, volume: -6 }).connect(seBus); const now = Tone.now(); tb.triggerAttackRelease('C5','8n', now); tb.triggerAttackRelease('G5','8n', now+0.12); setTimeout(()=>{ try{tb.dispose();}catch(e){} }, 800); } catch(e){}
+      }
     }
-    await setEnabled(true);
+    await Promise.all([ensureAudioCtxRunning(), toneStart || Promise.resolve(), load()]);
+    started = !!Tone;
+    if (currentKey) playBGM(currentKey);
     return !ctx || ctx.state === 'running';
   };
   const ensurePlaying = (key) => { if (enabled && key === currentKey && !bgmSource && !jingleSource) playBGM(key); };
@@ -586,7 +597,7 @@ const Audio_ = (() => {
     fusion: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.25, release: 0.5 }, volume: -10 }).connect(reverb); const seq = [[0,'C5','8n'],[0.12,'E5','8n'],[0.24,'G5','8n'],[0.36,'C6','8n'],[0.48,'E6','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); const bt = t + 0.6; const bell = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.6, release: 0.3 }, harmonicity: 8, modulationIndex: 20, resonance: 5000, octaves: 1.5, volume: -14 }).connect(reverb); bell.triggerAttackRelease('16n', bt); const sparkle = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 }, volume: -12 }).connect(reverb); ['C6','E6','G6','C7'].forEach((n, i) => sparkle.triggerAttackRelease(n, '8n', bt + i * 0.03)); setTimeout(() => { try { v.dispose(); bell.dispose(); sparkle.dispose(); } catch (e) {} }, 2200); }
   };
 
-  return { playBGM, stopBGM, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, playJingle, ensurePlaying, isContextRunning, se };
+  return { playBGM, stopBGM, previewBGM, stopPreview, setEnabled, isEnabled, setSeVolume, setBgmVolume, unlock, resumeIfNeeded, setPageHidden, preloadBGM, prepareBGM, prepareSE, playJingle, ensurePlaying, isContextRunning, se };
 })();
 
 
@@ -2389,8 +2400,15 @@ function MonsterHeroGame() {
   const bondRanking = useMemo(() => (
     bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 50)
   ), [bondRankingAll, bondRankMonFilter]);
-  const bondRankingLoading = Object.keys(DIFFICULTY_SETTINGS).some(d=>rankingLoadingByDiff[d]);
-  const bondRankingFailed = !bondRankingLoading && Object.keys(DIFFICULTY_SETTINGS).every(d=>rankingErrorByDiff[d]);
+  const bondRankingPending = Object.keys(DIFFICULTY_SETTINGS).some(d=>rankingLoadingByDiff[d]);
+  const bondRankingSettled = Object.keys(DIFFICULTY_SETTINGS).some(d =>
+    Object.prototype.hasOwnProperty.call(rankingPool, d) || !!rankingErrorByDiff[d]
+  );
+  // 取得済みの記録は、別難易度の通信を待たずに表示する。全難易度が失敗した場合だけ
+  // エラーとし、成功した0件と区別する。
+  const bondRankingLoading = bondRankingPending && !bondRankingSettled && bondRanking.length === 0;
+  const bondRankingFailed = !bondRankingPending && bondRankingAll.length === 0
+    && Object.keys(DIFFICULTY_SETTINGS).every(d=>rankingErrorByDiff[d]);
 
   const loadRankings = useCallback(async (targetDiff=null, includeLevels=false, force=false) => {
     const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
@@ -2536,9 +2554,9 @@ function MonsterHeroGame() {
       rankingRequestsRef.current.set(requestKey, request);
       return request;
     };
-    for (let i=0; i<diffs.length; i+=2) {
-      await Promise.all(diffs.slice(i, i + 2).map(loadOne));
-    }
+    // 絆タブは全難易度を同時に開始し、各loadOneのfinallyで個別に完了させる。
+    // 遅い難易度や失敗した難易度が、取得済みデータの描画を止めない。
+    await Promise.all(diffs.map(loadOne));
   }, []);
 
   // 寄付・合体・削除で所持しなくなった個体は、保存済みの放牧設定からも自動除外する。
@@ -2665,6 +2683,7 @@ function MonsterHeroGame() {
       });
       step(1, 'タイトルBGMを準備中');
       if (!await Audio_.prepareBGM('title', 5000).catch(() => false)) throw new Error('title BGM unavailable');
+      await Audio_.prepareSE(5000).catch(() => false);
       step(2, 'セーブデータを確認中');
       await Promise.resolve();
       step(3, '音量設定を確認中');
@@ -2720,7 +2739,7 @@ function MonsterHeroGame() {
     // iOSのuser activationが有効な同じイベント処理内で、解除とBGM開始を両方開始する。
     let unlockAttempt;
     let bgmAttempt;
-    try { unlockAttempt = Promise.resolve(Audio_.unlock()).catch(() => false); } catch { unlockAttempt = Promise.resolve(false); }
+    try { unlockAttempt = Promise.resolve(Audio_.unlock(true)).catch(() => false); } catch { unlockAttempt = Promise.resolve(false); }
     try { bgmAttempt = Promise.resolve(Audio_.playBGM('title')).catch(() => false); } catch { bgmAttempt = Promise.resolve(false); }
     // ここでは完了を待たないが、拒否は上で処理し、同じタップ中に開始した試行を維持する。
     void bgmAttempt;
@@ -5122,7 +5141,7 @@ function MonsterHeroGame() {
   if (bootPhase === 'LOADING' || bootPhase === 'ENTRY_READY') return (
     <><main className={`mh-boot-screen ${bootPhase==='ENTRY_READY'?'is-ready':''} ${entryAnimating?'is-entering':''}`}>
       <div className="mh-boot-stars" aria-hidden="true"></div><div className="mh-mocchi-wrap"><img src={MOCCHI_IMG} alt="モッチー"/><span></span><i>✦</i><i>✧</i></div>
-      <section className="mh-boot-copy">{bootPhase==='LOADING'?<><h1>NOW LOADING</h1><h2>冒険の準備をしています</h2><div className="mh-progress"><span style={{width:`${pct}%`}}></span></div><strong>{pct}%</strong><p>{bootProgress.label}</p></>:<><h1>READY</h1><button disabled={entryAnimating} onPointerDown={unlockBootSound}>TOUCH TO ENTER</button><h2>― 冒険の扉を開く ―</h2><p>追加データはバックグラウンドで読み込みを続けます</p></>}</section>
+      <section className="mh-boot-copy">{bootPhase==='LOADING'?<><h1>NOW LOADING</h1><h2>冒険の準備をしています</h2><div className="mh-progress"><span style={{width:`${pct}%`}}></span></div><strong>{pct}%</strong><p>{bootProgress.label}</p></>:<><h1>READY</h1><button disabled={entryAnimating} onPointerDown={unlockBootSound}>TAP TO START</button><h2>― 冒険の扉を開く ―</h2><p>追加データはバックグラウンドで読み込みを続けます</p></>}</section>
       <footer>VERSION {BUILD_DATE}</footer><div className="mh-entry-flash"></div>
     </main>{updateNotice}</>
   );
