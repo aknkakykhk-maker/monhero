@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: afdb51227613e0c6
+// source-sha256: 9f52955be06a3fac
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 11:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 11:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5075,28 +5075,36 @@ function MonsterHeroGame() {
     return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 50);
   }, [rankingPool]);
 
-  // モンスターの絆レベルのランキング。スコア送信時に記録している編成(party)の中から
-  // 絆レベルを持つマスモンを取り出して並べる。同じプレイヤーの同じモンスターは1件にまとめる
+  // モンスターの絆レベルのランキング。新しい記録で明示した絆ランキング対象個体だけを使い、
+  // 対象情報を持たない旧記録のpartyからは推測しない。同じプレイヤーの同じモンスターは1件にまとめる。
   const bondRankingAll = useMemo(() => {
     const byKey = new Map();
     Object.values(rankingPool).forEach(rows => (rows || []).forEach(r => {
-      (r.party || []).forEach(pm => {
-        if (!pm || !pm.bondLevel) return;
-        const key = (r.userName || '') + '\u0000' + (pm.name || '');
-        const cur = byKey.get(key);
-        if (!cur || pm.bondLevel > cur.bondLevel) {
-          byKey.set(key, {
-            ...r,
-            userName: r.userName || '名無しのブリーダー',
-            monName: pm.name || '?',
-            bondLevel: pm.bondLevel,
-            imgUrl: pm.imgUrl,
-            emoji: pm.emoji
-          });
-        }
-      });
+      const target = Array.isArray(r.party) ? r.party.find(pm => pm?.bondRankingTarget === true) : null;
+      const userName = r.userName || '名無しのブリーダー';
+      const key = userName + '\u0000' + (target?.masuId || target?.name || 'missing');
+      const cur = byKey.get(key);
+      if (!target?.bondLevel) {
+        if (!cur) byKey.set(key, {
+          userName,
+          icon: r.icon,
+          monName: null,
+          bondLevel: null
+        });
+      } else if (!cur || target.bondLevel > cur.bondLevel) {
+        byKey.set(key, {
+          userName,
+          icon: r.icon,
+          monName: target.name || '絆情報なし',
+          bondLevel: target.bondLevel,
+          imgUrl: target.imgUrl,
+          emoji: target.emoji
+        });
+      }
     }));
-    return [...byKey.values()].sort((a, b) => b.bondLevel - a.bondLevel);
+    const values = [...byKey.values()];
+    const usersWithTarget = new Set(values.filter(x => x.bondLevel).map(x => x.userName));
+    return values.filter(x => x.bondLevel || !usersWithTarget.has(x.userName)).sort((a, b) => (b.bondLevel || 0) - (a.bondLevel || 0));
   }, [rankingPool]);
 
   // 種類別フィルタの選択肢。まだ誰も記録を出していないモンスターもタブに出したいので、
@@ -5105,7 +5113,7 @@ function MonsterHeroGame() {
     const all = Object.values(ALL_PLAYER_MONSTERS).map(m => m.name);
     // 念のため、記録にしか出てこない名前(過去に居たモンスター等)も取りこぼさないよう足しておく
     bondRankingAll.forEach(x => {
-      if (!all.includes(x.monName)) all.push(x.monName);
+      if (x.monName && !all.includes(x.monName)) all.push(x.monName);
     });
     return [...new Set(all)];
   }, [bondRankingAll]);
@@ -6081,6 +6089,11 @@ function MonsterHeroGame() {
     let heroSlotIndex = slots.findIndex(s => s === mainHero);
     if (heroSlotIndex < 0 && mainHero?.masuId != null) heroSlotIndex = slots.findIndex(s => s?.masuId != null && String(s.masuId) === String(mainHero.masuId));
     if (heroSlotIndex < 0) heroSlotIndex = slots.findIndex(s => s?.id === mainHero?.id);
+    const bondRankingTargetIndex = slots.reduce((bestIndex, s, index) => {
+      if (!s?.masuId) return bestIndex;
+      if (bestIndex < 0) return index;
+      return getMasuBondLevel(s.masuId).level > getMasuBondLevel(slots[bestIndex].masuId).level ? index : bestIndex;
+    }, -1);
     const party = slots.map((s, index) => s ? {
       role: index === heroSlotIndex ? 'hero' : 'ally',
       id: s.id,
@@ -6088,7 +6101,8 @@ function MonsterHeroGame() {
       name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name,
       emoji: s.emoji,
       imgUrl: s.imgUrl || null,
-      bondLevel: s.masuId ? getMasuBondLevel(s.masuId).level : null
+      bondLevel: s.masuId ? getMasuBondLevel(s.masuId).level : null,
+      bondRankingTarget: index === bondRankingTargetIndex
     } : null);
     const name = breederName || '名無しのブリーダー';
     const heroName = mainHero && (ALL_PLAYER_MONSTERS[mainHero.id]?.name || mainHero.name) || 'Unknown';
@@ -10036,35 +10050,35 @@ function MonsterHeroGame() {
   }, "TOUCH TO ENTER"), /*#__PURE__*/React.createElement("h2", null, "\u2015 \u5192\u967A\u306E\u6249\u3092\u958B\u304F \u2015"), /*#__PURE__*/React.createElement("p", null, "\u8FFD\u52A0\u30C7\u30FC\u30BF\u306F\u30D0\u30C3\u30AF\u30B0\u30E9\u30A6\u30F3\u30C9\u3067\u8AAD\u307F\u8FBC\u307F\u3092\u7D9A\u3051\u307E\u3059"))), /*#__PURE__*/React.createElement("footer", null, "VERSION ", BUILD_DATE), /*#__PURE__*/React.createElement("div", {
     className: "mh-entry-flash"
   })), updateNotice);
-  // 3種類のランキングで共通のコンパクトカードを使う。
-  // 旧行は存在する列だけで安全に描画し、画像がない場合は絵文字へフォールバックする。
-  const renderRankingEntry = (entry, index, kind) => {
-    const party = Array.isArray(entry?.party) ? entry.party.filter(Boolean) : [];
-    const heroName = entry?.hero || (kind === 'bond' ? entry?.monName : null) || '勇者モン情報なし';
+  const rankingPlace = index => /*#__PURE__*/React.createElement("div", {
+    className: `w-7 h-7 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-slate-300 text-black' : index === 2 ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400'}`
+  }, index + 1);
+  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon) ? /*#__PURE__*/React.createElement("img", {
+    src: resolveIconUrl(entry.icon),
+    alt: "",
+    className: "w-8 h-8 rounded-full object-cover shrink-0"
+  }) : /*#__PURE__*/React.createElement("div", {
+    className: "w-8 h-8 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-xs"
+  }, "\uD83D\uDC64");
+  const rankingCardClass = index => `rounded-xl border ${index === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`;
+  // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
+  const renderScoreRankingEntry = (entry, index) => {
     const separatedParty = splitRankingParty(entry);
     const heroMember = separatedParty.hero;
     const allies = separatedParty.allies;
     const finiteNumber = value => value == null || value === '' ? null : Number.isFinite(Number(value)) ? Number(value) : null;
     const scoreValue = finiteNumber(entry?.score);
     const breederLevelValue = finiteNumber(entry?.level);
-    const bondLevelValue = kind === 'bond' ? finiteNumber(entry?.bondLevel) : finiteNumber(heroMember?.bondLevel);
     const scoreLabel = Number.isFinite(scoreValue) ? `${scoreValue.toLocaleString()} pt` : 'スコア情報なし';
     const breederLevelLabel = Number.isFinite(breederLevelValue) && breederLevelValue > 0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLv情報なし';
-    const bondLevelLabel = Number.isFinite(bondLevelValue) && bondLevelValue > 0 ? `絆Lv.${bondLevelValue}` : '絆Lv情報なし';
-    return /*#__PURE__*/React.createElement("div", {
-      key: `${kind}-${entry?.userName || 'unknown'}-${index}`,
-      className: `rounded-xl border px-2 py-1.5 ${index === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`
+    const heroName = entry?.hero || heroMember?.name || '勇者モン情報なし';
+    return /*#__PURE__*/React.createElement("article", {
+      key: `score-${entry?.userName || 'unknown'}-${index}`,
+      "data-ranking-kind": "score",
+      className: `${rankingCardClass(index)} px-2 py-1.5`
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-1.5 min-w-0"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: `w-6 h-6 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-slate-300 text-black' : index === 2 ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400'}`
-    }, index + 1), resolveIconUrl(entry?.icon) ? /*#__PURE__*/React.createElement("img", {
-      src: resolveIconUrl(entry.icon),
-      alt: "",
-      className: "w-6 h-6 rounded-full object-cover shrink-0"
-    }) : /*#__PURE__*/React.createElement("div", {
-      className: "w-6 h-6 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-[8px]"
-    }, "\uD83D\uDC64"), /*#__PURE__*/React.createElement("div", {
+    }, rankingPlace(index), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("div", {
       className: "flex flex-1 items-baseline gap-1 min-w-0"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black text-white truncate"
@@ -10089,9 +10103,7 @@ function MonsterHeroGame() {
       className: "w-5 text-center text-[9px] shrink-0"
     }, heroMember?.emoji || '❓'), /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-black text-white truncate"
-    }, heroName), /*#__PURE__*/React.createElement("span", {
-      className: "text-[7px] text-pink-300 whitespace-nowrap shrink-0"
-    }, bondLevelLabel)), allies === null ? /*#__PURE__*/React.createElement("div", {
+    }, heroName)), allies === null ? /*#__PURE__*/React.createElement("div", {
       className: "mt-0.5 text-[7px] text-slate-500"
     }, "\u7DE8\u6210\u60C5\u5831\u306A\u3057\uFF08\u904E\u53BB\u306E\u8A18\u9332\uFF09") : allies.length === 0 ? /*#__PURE__*/React.createElement("div", {
       className: "mt-0.5 text-[7px] text-slate-500"
@@ -10111,6 +10123,51 @@ function MonsterHeroGame() {
     }, member?.emoji || '❓'), /*#__PURE__*/React.createElement("span", {
       className: "text-[7px] text-slate-300 truncate"
     }, member?.name || '不明'))))));
+  };
+  // ブリーダーLv専用カード。編成・スコア・絆情報をDOMへ一切出さず、1行でコンパクトに表示する。
+  const renderBreederRankingEntry = (entry, index) => {
+    const level = Number(entry?.level);
+    return /*#__PURE__*/React.createElement("article", {
+      key: `breeder-${entry?.userName || 'unknown'}-${index}`,
+      "data-ranking-kind": "breeder",
+      className: `${rankingCardClass(index)} px-2 py-2 flex items-center gap-2 min-w-0`
+    }, rankingPlace(index), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("b", {
+      className: "flex-1 min-w-0 truncate text-[11px]"
+    }, entry?.userName || '名無しのブリーダー'), /*#__PURE__*/React.createElement("strong", {
+      className: "shrink-0 text-xs text-indigo-300"
+    }, Number.isFinite(level) && level > 0 ? `ブリーダーLv.${level}` : 'Lv情報なし'));
+  };
+  // 絆Lv専用カード。ランキング対象として明示された個体以外のpartyは表示しない。
+  const renderBondRankingEntry = (entry, index) => {
+    const level = Number(entry?.bondLevel);
+    const hasBond = Number.isFinite(level) && level > 0 && entry?.monName;
+    return /*#__PURE__*/React.createElement("article", {
+      key: `bond-${entry?.userName || 'unknown'}-${entry?.monName || 'none'}-${index}`,
+      "data-ranking-kind": "bond",
+      className: `${rankingCardClass(index)} p-2`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0"
+    }, rankingPlace(index), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block truncate text-[10px]"
+    }, entry?.userName || '名無しのブリーダー'), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] text-slate-500"
+    }, "\u30D6\u30EA\u30FC\u30C0\u30FC")), /*#__PURE__*/React.createElement("strong", {
+      className: "text-xs text-pink-300 whitespace-nowrap"
+    }, hasBond ? `絆Lv.${level}` : '絆情報なし')), /*#__PURE__*/React.createElement("div", {
+      className: "ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-pink-300 text-[9px] shrink-0"
+    }, "\u21B3"), hasBond && entry?.imgUrl ? /*#__PURE__*/React.createElement("img", {
+      src: entry.imgUrl,
+      alt: "",
+      className: "w-7 h-7 object-contain shrink-0"
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "w-7 text-center shrink-0"
+    }, hasBond ? entry?.emoji || '❓' : '❓'), /*#__PURE__*/React.createElement("b", {
+      className: "truncate text-[10px]"
+    }, hasBond ? entry.monName : '絆情報なし')));
   };
   if (bootPhase === 'TITLE') return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     className: "mh-title-gate",
@@ -11398,28 +11455,29 @@ function MonsterHeroGame() {
     return /*#__PURE__*/React.createElement("article", {
       key: `${enemyKey}-${index}`,
       "data-wave": index + 1,
-      className: `grid items-center gap-2 rounded-2xl border bg-slate-900 p-2 ${boss ? 'grid-cols-[32px_112px_minmax(0,1fr)] border-amber-400/40 min-h-[128px]' : 'grid-cols-[48px_58px_1fr_auto] border-white/10'}`
+      className: `grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 ${boss ? 'border-amber-400/40 min-h-[120px]' : 'border-white/10 min-h-[64px]'}`
     }, /*#__PURE__*/React.createElement("b", {
-      className: boss ? 'text-amber-300' : 'text-indigo-300'
+      className: `${boss ? 'text-amber-300' : 'text-indigo-300'} whitespace-nowrap`
     }, "W", index + 1), /*#__PURE__*/React.createElement("div", {
-      className: `${boss ? 'w-28 h-28' : 'w-14 h-14'} flex items-center justify-center overflow-hidden`
+      "data-wave-art": true,
+      className: "relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden"
     }, enemy.imgUrl ? /*#__PURE__*/React.createElement("img", {
       src: enemy.imgUrl,
       alt: enemy.name,
       style: enemyArtStyle(enemy.id),
-      className: `${boss ? 'w-14 h-14' : 'w-full h-full'} object-contain`
+      className: "w-14 h-14 object-contain"
     }) : /*#__PURE__*/React.createElement("span", {
       className: "text-3xl"
     }, enemy.emoji)), /*#__PURE__*/React.createElement("div", {
-      className: `min-w-0 ${boss ? 'grid grid-cols-[1fr_auto] items-center gap-2' : ''}`
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", {
-      className: `block truncate ${boss ? 'text-amber-300' : ''}`
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: `block truncate whitespace-nowrap ${boss ? 'text-amber-300' : ''}`,
+      title: enemy.name
     }, enemy.name), boss && /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] font-black text-amber-400"
-    }, "BOSS")), boss && /*#__PURE__*/React.createElement("div", {
-      className: "text-right text-[10px] whitespace-nowrap"
-    }, /*#__PURE__*/React.createElement("div", null, "HP ", /*#__PURE__*/React.createElement("b", null, enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "\u653B\u6483 ", /*#__PURE__*/React.createElement("b", null, enemy.atk.toLocaleString())))), !boss && /*#__PURE__*/React.createElement("div", {
-      className: "text-right text-[10px]"
+      className: "block text-[9px] leading-tight font-black text-amber-400"
+    }, "BOSS")), /*#__PURE__*/React.createElement("div", {
+      "data-wave-stats": true,
+      className: "w-[72px] text-right text-[10px] whitespace-nowrap"
     }, /*#__PURE__*/React.createElement("div", null, "HP ", /*#__PURE__*/React.createElement("b", null, enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "\u653B\u6483 ", /*#__PURE__*/React.createElement("b", null, enemy.atk.toLocaleString()))));
   })))), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full min-h-0 px-4",
@@ -11615,11 +11673,11 @@ function MonsterHeroGame() {
     style: difficultyStyle(st, rankingViewDiff === d)
   }, st.label))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
-  }, (localRankings[rankingViewKey] || []).map((r, i) => renderRankingEntry(r, i, 'score')), (localRankings[rankingViewKey] || []).length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, (localRankings[rankingViewKey] || []).map(renderScoreRankingEntry), (localRankings[rankingViewKey] || []).length === 0 && /*#__PURE__*/React.createElement("div", {
     className: "text-center text-slate-500 py-8"
   }, rankingLoadingByDiff[rankingViewKey] ? 'Loading...' : rankingErrorByDiff[rankingViewKey] ? `取得エラー: ${rankingErrorByDiff[rankingViewKey]}` : '記録はまだありません'))), rankingKind === 'breeder' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
-  }, breederRanking.map((r, i) => renderRankingEntry(r, i, 'breeder')), breederRanking.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, breederRanking.map(renderBreederRankingEntry), breederRanking.length === 0 && /*#__PURE__*/React.createElement("div", {
     className: "text-center text-slate-500 py-8"
   }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093")), rankingKind === 'bond' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0"
@@ -11629,9 +11687,9 @@ function MonsterHeroGame() {
     className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter === n ? 'bg-pink-600 border-pink-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
   }, n === 'all' ? 'すべて' : n))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
-  }, bondRanking.map((r, i) => renderRankingEntry(r, i, 'bond')), bondRanking.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, bondRanking.map(renderBondRankingEntry), bondRanking.length === 0 && /*#__PURE__*/React.createElement("div", {
     className: "text-center text-slate-500 py-8"
-  }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093")))))), gameState === 'FORMATION_MENU' && /*#__PURE__*/React.createElement("div", {
+  }, "\u7D46\u60C5\u5831\u306A\u3057")))))), gameState === 'FORMATION_MENU' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full p-4",
     style: {
       paddingTop: 'calc(1rem + env(safe-area-inset-top))',

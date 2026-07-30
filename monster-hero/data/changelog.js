@@ -17,7 +17,17 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-30 11:37",
+    date: "2026-07-30 11:52",
+    type: "issue",
+    status: "fixed",
+    title: "全WAVE詳細とランキング表示を修正",
+    items: [
+      "全WAVE詳細で敵名と能力値を揃え、ムーを大きく保ったまま表示崩れを修正しました",
+      "ブリーダーLv・絆Lvランキングにスコアや編成が表示される不具合を修正しました",
+    ],
+  },
+  {
+    date: "2026-07-30 11:52",
     type: "update",
     title: "高難易度とムーの表示を調整",
     items: [
@@ -26,7 +36,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 11:37",
+    date: "2026-07-30 11:52",
     type: "issue",
     status: "fixed",
     title: "バトル難易度画面の黒画面を修正",
@@ -35,7 +45,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 11:37",
+    date: "2026-07-30 11:52",
     type: "update",
     title: "バトル難易度選択画面を改修",
     items: [
@@ -43,7 +53,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 11:37",
+    date: "2026-07-30 11:52",
     type: "issue",
     status: "fixed",
     title: "ランキング編成表示を修正",
@@ -52,7 +62,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 11:37",
+    date: "2026-07-30 11:52",
     type: "issue",
     status: "fixed",
     title: "新規プレイヤー初期設定導線を修正",

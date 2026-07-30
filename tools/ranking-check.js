@@ -35,7 +35,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
     const orig = window.fetch.bind(window);
     window.__rankOrders = [];
     window.__rankRequests = [];
-    const party = (bond) => ([{ name: 'モッチー', emoji: '🍡', imgUrl: null, bondLevel: bond }, null, null]);
+    const party = (bond, explicit = true) => ([{ role:'hero', name: 'モッチー', emoji: '🍡', imgUrl: null, bondLevel: bond, bondRankingTarget:explicit }, null, null]);
     window.fetch = async (input, init) => {
       const url = typeof input === 'string' ? input : (input && input.url) || '';
       if (!url.includes('/rest/v1/rankings')) return orig(input, init);
@@ -104,6 +104,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   const breederTxt = await bodyText();
   check('ブリーダーLvランキングに最新のLv.30が出る', breederTxt.includes('Lv.30'));
   check('ブリーダーLvランキングにアルファが出る', breederTxt.includes('アルファ'));
+  check('ブリーダーLvカードにpt・編成・絆Lvが出ない', !breederTxt.includes(' pt') && !breederTxt.includes('勇者モン:') && !breederTxt.includes('供モン:') && !breederTxt.includes('絆Lv.'));
 
   // --- 絆Lvランキング ---
   const bondTab = page.getByRole('button', { name: '絆Lv', exact: true }).last();
@@ -111,6 +112,8 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   const bondTxt = await bodyText();
   check('絆Lvランキングに最新の絆Lv.12が出る', bondTxt.includes('絆Lv.12'));
   check('絆Lvランキングが古い絆Lv.5で止まっていない', !/絆Lv\.5(\D|$)/.test(bondTxt) || bondTxt.includes('絆Lv.12'));
+  check('絆Lvカードにpt・パーティ・ブリーダーLvが出ない', !bondTxt.includes(' pt') && !bondTxt.includes('勇者モン:') && !bondTxt.includes('供モン:') && !bondTxt.includes('ブリーダーLv.'));
+  check('タブ切替後は現在種別のカードだけが残る', await page.locator('[data-ranking-kind="bond"]').count() > 0 && await page.locator('[data-ranking-kind="score"], [data-ranking-kind="breeder"]').count() === 0);
 
   // --- Master score.desc障害からid.descで復旧 ---
   const scoreTab = page.getByRole('button', { name: 'スコア', exact: true }).last();
