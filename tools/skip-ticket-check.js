@@ -26,9 +26,23 @@ vm.runInContext(
 const { BREEDER_MARKET_ITEMS: items, SKIP_TICKET_BY_DIFFICULTY: byDiff } = itemCtx.__i;
 const ticket = (id) => items.find(i => i.id === id);
 
-check('スキップチケット・序は2000ダイヤ・Normal', ticket('skip_ticket_jo')?.cost === 2000 && ticket('skip_ticket_jo')?.skipDifficulty === 'Normal');
-check('スキップチケット・破は3000ダイヤ・Hard', ticket('skip_ticket_ha')?.cost === 3000 && ticket('skip_ticket_ha')?.skipDifficulty === 'Hard');
-check('スキップチケット・急は6000ダイヤ・Expert', ticket('skip_ticket_kyu')?.cost === 6000 && ticket('skip_ticket_kyu')?.skipDifficulty === 'Expert');
+// 価格は「その難易度を10WAVEクリアしたときに受け取れるダイヤ × 1.5」。
+// 数字を直に書かず、本番の獲得ダイヤの式と難易度倍率から計算して照合する
+const goldCtx = {};
+vm.createContext(goldCtx);
+vm.runInContext([
+  grab(source, 'const WAVE_XP_TABLE =', 'const xpForLevel ='),
+  grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
+  'globalThis.__g={goldForWavesCleared,DIFFICULTY_SETTINGS};',
+].join('\n'), goldCtx);
+const { goldForWavesCleared, DIFFICULTY_SETTINGS } = goldCtx.__g;
+const skipClearGold = (diff) => goldForWavesCleared(10, DIFFICULTY_SETTINGS[diff].gold);
+const expectedCost = (diff) => skipClearGold(diff) * 1.5;
+
+check('スキップチケット・序はNormalの獲得ダイヤ×1.5', ticket('skip_ticket_jo')?.cost === expectedCost('Normal') && ticket('skip_ticket_jo')?.skipDifficulty === 'Normal', `${skipClearGold('Normal')}×1.5=${expectedCost('Normal')} / 実際${ticket('skip_ticket_jo')?.cost}`);
+check('スキップチケット・破はHardの獲得ダイヤ×1.5', ticket('skip_ticket_ha')?.cost === expectedCost('Hard') && ticket('skip_ticket_ha')?.skipDifficulty === 'Hard', `${skipClearGold('Hard')}×1.5=${expectedCost('Hard')} / 実際${ticket('skip_ticket_ha')?.cost}`);
+check('スキップチケット・急はExpertの獲得ダイヤ×1.5', ticket('skip_ticket_kyu')?.cost === expectedCost('Expert') && ticket('skip_ticket_kyu')?.skipDifficulty === 'Expert', `${skipClearGold('Expert')}×1.5=${expectedCost('Expert')} / 実際${ticket('skip_ticket_kyu')?.cost}`);
+check('価格は難易度が上がるほど高い', ticket('skip_ticket_jo').cost < ticket('skip_ticket_ha').cost && ticket('skip_ticket_ha').cost < ticket('skip_ticket_kyu').cost);
 check('3種ともマーケットで買える消耗アイテム', ['skip_ticket_jo', 'skip_ticket_ha', 'skip_ticket_kyu'].every(id => ticket(id)?.type === 'item' && ticket(id)?.usage === 'battleSkip'));
 check('難易度→チケットの対応表がある', byDiff.Normal === 'skip_ticket_jo' && byDiff.Hard === 'skip_ticket_ha' && byDiff.Expert === 'skip_ticket_kyu');
 check('スキップできる難易度は3つだけ', Object.keys(byDiff).length === 3, Object.keys(byDiff).join('/'));

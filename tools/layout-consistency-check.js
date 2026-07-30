@@ -40,6 +40,16 @@ check('スキップが無い難易度でも同じ高さの行を出す',
   has("if(!tid)return(<div className=\"min-h-[46px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500\">この難易度はスキップできません</div>);"));
 check('スキップ行を条件付きで丸ごと消していない', !has('{SKIP_TICKETS[key]&&(()=>{'));
 
+// --- ②' マーケットの商品カード ---
+// 名前の行数・説明の有無・所持数の有無・詳細ボタンの有無で、
+// 「〜で購入」ボタンの位置がカードごとにずれていた
+check('商品名は行数が変わっても同じ高さの枠に入れる', has("style={{minHeight:'30px'}}>{item.name}</div>"));
+check('アイテムの説明は説明が無くても同じ高さを取る', has("style={{minHeight:'40px'}}>{item.desc||null}</div>"));
+check('所持数と詳細ボタンは同じ高さの1行にまとめる', has("<div className=\"w-full flex items-center justify-center\" style={{height:'24px'}}>"));
+check('所持数は0でも消さずに出す', has('所持数: {ownedItems[item.id]||0}') && !has('{item.type===\'item\'&&(ownedItems[item.id]||0)>0&&('));
+check('購入ボタンはカードの下端に揃える', has('<div className="w-full flex items-center justify-center mt-auto">'));
+check('購入ボタンの文字は折り返さない', has("{usesGold?'ダイヤ':'pt'} で購入</button>") && has('rounded-full flex items-center gap-1 whitespace-nowrap'));
+
 // --- ③ Masterの色 ---
 check('挑戦ボタンは明るい難易度で文字を暗くする', has("color:setting.darkText?'#0f172a':'#ffffff'"));
 check('タブなどの共通スタイルも同じ扱い', has("color: setting.darkText ? '#0f172a' : '#ffffff'"));
