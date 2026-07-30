@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 22:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 22:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4505,11 +4505,14 @@ function MonsterHeroGame() {
     return item ? item.icon : null;
   };
 
-  // カード選択(タップ/ドラッグ共通)
-  const selectCardAt = (i) => {
+  // カード選択(タップ/ドラッグ共通)。
+  // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
+  // 合計DMG・合計軽減の表示が隠れてしまうため、スワイプではパネルを出さない。
+  const selectCardAt = (i, showDetail = true) => {
     if(isBusy) return;
     const c=hand[i]; if(!c) return;
-    if(pendingCard!==null && pendingCard!==i){ setFocusedCard(c); return; }
+    const focus=(card)=>setFocusedCard(showDetail?card:null);
+    if(pendingCard!==null && pendingCard!==i){ focus(c); return; }
     const isSel=selectedCards.includes(i);
     if(isSel){
       setSelectedCards(p=>p.filter(x=>x!==i));
@@ -4523,23 +4526,25 @@ function MonsterHeroGame() {
       if(isSelectable){
         Audio_.se.card();
         setSelectedCards(p=>[...p,i]);
-        setFocusedCard(c);
+        focus(c);
         if(cardNeedsMonster(c)){ setPendingCard(i); }
-      } else { setFocusedCard(c); }
+      } else { focus(c); }
     }
   };
 
-  // ドラッグでカードをスロットに割り当て
+  // ドラッグでカードをスロットに割り当て。
+  // スワイプ操作ではカード効果のパネルを出さない(出したままだと合計DMG・合計軽減が隠れるため)。
+  // 効果を見たいときはカードをタップする。
   const dragAssignToSlot = (cardIndex, slotIdx) => {
     if(isBusy) return;
     const c=hand[cardIndex]; if(!c) return;
     const targetMon=slots[slotIdx];
     // 攻撃カード: モンスターのいるスロットに割り当て
     if(cardNeedsMonster(c)){
-      if(!targetMon) { setFocusedCard(c); return; }
+      if(!targetMon) { setFocusedCard(null); return; }
       // uniqueは自分のモンスターのスロットのみ(合体で引き継いだ固有技はownerSlotIdxで判定する。
       // monIdは技の出自(元モンスター)を表すため、継承技だとtargetMon.idとは一致しない)
-      if(c.type==='unique' && c.ownerSlotIdx!==slotIdx){ setFocusedCard(c); return; }
+      if(c.type==='unique' && c.ownerSlotIdx!==slotIdx){ setFocusedCard(null); return; }
       // 既存の割当数チェック(ハム勇者時は複数可)
       const assignedCount=Object.values(cardAssignments).filter(v=>v===slotIdx).length;
       const maxUses=(mainHero?.id==='Ham'&&targetMon?.id==='Ham')?cardLimit:1;
@@ -4548,25 +4553,25 @@ function MonsterHeroGame() {
       if(!alreadySelected){
         const curGuts=getCardGuts(c);
         const remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+getCardGuts(hand[idx]),0);
-        if(remainingGuts<curGuts || selectedCards.length>=cardLimit){ setFocusedCard(c); return; }
-        if(assignedCount>=maxUses){ setFocusedCard(c); return; }
+        if(remainingGuts<curGuts || selectedCards.length>=cardLimit){ setFocusedCard(null); return; }
+        if(assignedCount>=maxUses){ setFocusedCard(null); return; }
         Audio_.se.card();
         setSelectedCards(p=>[...p,cardIndex]);
         setCardAssignments(p=>({...p,[cardIndex]:slotIdx}));
         setPendingCard(null);
-        setFocusedCard(c);
+        setFocusedCard(null);
       } else {
         // 既に選択済み: 割当先を変更(別カードの占有を超えない範囲で)
         const otherCount=Object.entries(cardAssignments).filter(([k,v])=>v===slotIdx&&Number(k)!==cardIndex).length;
-        if(otherCount>=maxUses){ setFocusedCard(c); return; }
+        if(otherCount>=maxUses){ setFocusedCard(null); return; }
         Audio_.se.card();
         setCardAssignments(p=>({...p,[cardIndex]:slotIdx}));
         if(pendingCard===cardIndex) setPendingCard(null);
-        setFocusedCard(c);
+        setFocusedCard(null);
       }
     } else {
       // モン不要カード: ドラッグでも単に選択扱い
-      if(!selectedCards.includes(cardIndex)) selectCardAt(cardIndex);
+      if(!selectedCards.includes(cardIndex)) selectCardAt(cardIndex, false);
     }
   };
 
@@ -7271,8 +7276,12 @@ function MonsterHeroGame() {
                   }
                   // 選択順に「ブリーダーカード以外」を数え、どのカードが2枚目以降(効果半減)かを出す。
                   // 保留中のカードはまだ使っていないので数えない。
+                  // 保留中のカードは自分を数えず、「次に使う1枚」として半減かどうかを決める。
+                  // (数えてしまうと1枚目でも半減、除外しっぱなしだと2枚目でも全開の表示になる)
                   const halvedByIdx={};
-                  {let n=0; selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; const c=hand[idx]; const p=!isBreederCard(c); halvedByIdx[idx]=p&&n>0; if(p) n++; });}
+                  {let n=0;
+                    selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; const c=hand[idx]; const p=!isBreederCard(c); halvedByIdx[idx]=p&&n>0; if(p) n++; });
+                    if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=!isBreederCard(hand[pendingIdx])&&n>0;}
                   // Preview damage:
                   // - if a card is pending assignment, show what THIS card would do on this monster
                   // - otherwise show the sum of damage from cards already assigned to this slot,

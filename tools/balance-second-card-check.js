@@ -87,6 +87,14 @@ check('弱ガードの重みも合計に反映する', has("card?.type === 'weak
 check('スロットのガード表示に軽減量を出す', has('{gv>0&&<span'));
 check('半減するカードには½を付ける', has("{halvedByIdx[idx]?'½':''}{card.name}"));
 check('ガードのカード詳細も半減後の値を出す', has('（2枚目以降のため半減）') && has('Math.floor(halved?raw*0.5:raw)'));
+check('ドラッグ中のカードも「次の1枚」として半減判定する',
+  has('if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=!isBreederCard(hand[pendingIdx])&&n>0;'));
+
+// スワイプではカード効果のパネルを出さない(出したままだと合計表示が隠れる)
+check('タップとスワイプでカード効果の表示を切り替えられる', has('const selectCardAt = (i, showDetail = true)') && has('const focus=(card)=>setFocusedCard(showDetail?card:null);'));
+check('スワイプ経由の選択はパネルを出さない', has('selectCardAt(cardIndex, false);'));
+const dragBlock = source.slice(source.indexOf('const dragAssignToSlot'), source.indexOf('const isBreederCard'));
+check('スワイプで置いたときにパネルを出さない', !dragBlock.includes('setFocusedCard(c)'), `${(dragBlock.match(/setFocusedCard\(null\)/g)||[]).length}か所でパネルを閉じる`);
 check('ヘルプに2枚目以降の説明がある', has('2枚目以降で使ったカードは、ダメージもガードも効果が半分'));
 
 // --- ② かどみうむ ---
