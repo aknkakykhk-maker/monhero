@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ced93ec396771081
+// source-sha256: aa1c99d1e484361b
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 21:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 21:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10252,6 +10252,72 @@ function MonsterHeroGame() {
     };
   });
   // モンスター詳細系のポップアップ(編成画面/勇者選択画面など)で共通利用する、通常技・固有技セクション(タップでレベル別詳細)
+  // モンスター詳細の情報部分。編成・ベースモン一覧・マスモン一覧・勇者モン選択のどこから開いても
+  // 同じ内容(基本ステータス・勇者特性・合流ボーナス・間合い適性・技)が見られるよう1か所へまとめる。
+  // 以前は画面ごとに別々のJSXで組んでいたため、勇者特性が勇者モン選択でしか見られない等の差があった。
+  // 画面ごとの操作(強化ポイントの割り振りなど)は、呼び出し側が statValues / aptExtra / aptPointsLabel で足す。
+  const renderMonsterDetailInfo = (mon, opts = {}) => {
+    if (!mon) return null;
+    const {
+      statTitle = '基本ステータス',
+      statValues = null,
+      aptExtra = null,
+      aptPointsLabel = null,
+      extraAfterApt = null
+    } = opts;
+    const plus = mon.plusStats || {};
+    const rows = statValues || [['ライフ', mon.baseHp, 'text-pink-400'], ['ちから', mon.baseAtk, 'text-red-400'], ['丈夫さ', mon.baseDef, 'text-emerald-400'], ['ガッツ', mon.baseGuts, 'text-amber-400']];
+    const joinBonus = [plus.hp > 0 && `HP+${plus.hp}`, plus.atk > 0 && `攻+${plus.atk}`, plus.def > 0 && `防+${plus.def}`, plus.guts > 0 && `G+${plus.guts}`].filter(Boolean).join(' ');
+    const aptBonus = formatAptBonus(mon);
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2 shrink-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "bg-black/40 p-2 rounded-xl border border-white/5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] text-slate-500 uppercase font-bold"
+    }, statTitle), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-1 mt-1"
+    }, rows.map(([label, value, color]) => /*#__PURE__*/React.createElement("div", {
+      key: label,
+      className: "flex justify-between text-[10px] font-mono"
+    }, /*#__PURE__*/React.createElement("span", null, label, ":"), /*#__PURE__*/React.createElement("span", {
+      className: `${color} font-bold`
+    }, value))))), /*#__PURE__*/React.createElement("div", {
+      className: "bg-black/40 p-2 rounded-xl border border-indigo-500/30"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] text-indigo-400 uppercase font-bold"
+    }, "\u52C7\u8005\u7279\u6027"), mon.trait && /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-indigo-300 font-black mt-0.5"
+    }, mon.trait), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-white font-bold leading-tight mt-1"
+    }, mon.traitDesc || '特性なし'))), /*#__PURE__*/React.createElement("div", {
+      className: "bg-black/40 p-2 rounded-xl border border-pink-500/30"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] text-pink-400 uppercase font-bold"
+    }, "\u5408\u6D41\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-white font-bold mt-1"
+    }, joinBonus || 'なし'), aptBonus && /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-cyan-300 font-bold mt-0.5"
+    }, "\u9593\u5408\u3044\u9069\u6027 ", aptBonus)), /*#__PURE__*/React.createElement("div", {
+      className: "bg-black/40 p-2 rounded-xl border border-cyan-500/30"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between mb-0.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] text-cyan-400 uppercase font-bold"
+    }, "\u9593\u5408\u3044\u9069\u6027"), aptPointsLabel), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-4 gap-1 mt-1"
+    }, RANGE_LABELS.map((label, idx) => {
+      const grade = getDistAptitude(mon, idx);
+      return /*#__PURE__*/React.createElement("div", {
+        key: idx,
+        className: "flex flex-col items-center gap-0.5"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: `text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`
+      }, label), /*#__PURE__*/React.createElement("span", {
+        className: `w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`
+      }, grade), aptExtra ? aptExtra(idx, grade) : null);
+    }))), extraAfterApt, renderSkillSection(mon));
+  };
   const renderSkillSection = mon => {
     const currentUnique = uniqueSkillAtLevel(mon.unique, mon.unique?.evoLevel);
     return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
@@ -12792,7 +12858,9 @@ function MonsterHeroGame() {
     className: "text-xl font-black text-white"
   }, rosterDetailMon.name), /*#__PURE__*/React.createElement("div", {
     className: "text-[9px] text-indigo-400 font-bold uppercase tracking-wider"
-  }, "Monster Profile"), /*#__PURE__*/React.createElement("div", {
+  }, "Monster Profile", rosterDetailMon.masuId && /*#__PURE__*/React.createElement("span", {
+    className: "ml-1 text-pink-400"
+  }, "\u30FB\u30DE\u30B9\u30E2\u30F3(", ALL_PLAYER_MONSTERS[rosterDetailMon.id]?.name, ")")), rosterDetailMon.masuId ? bondGaugeNode(rosterDetailMon.masuId) : /*#__PURE__*/React.createElement("div", {
     className: "text-[8px] text-slate-500 font-bold mt-1"
   }, "\u52C7\u8005\u30E2\u30F3\u3068\u3057\u3066\u9078\u3093\u3067\u30E9\u30F3\u7D42\u4E86\u6642\u306B\u767B\u9332\u3059\u308B\u3068\u300C\u30DE\u30B9\u30E2\u30F3\u300D\u5316\u3067\u304D\u307E\u3059")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setRosterDetailMon(null),
@@ -12801,61 +12869,7 @@ function MonsterHeroGame() {
     size: 16
   }))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-2 shrink-0"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/40 p-2 rounded-xl border border-white/5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] text-slate-500 uppercase font-bold"
-  }, "\u57FA\u672C\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-1 mt-1"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[10px] font-mono"
-  }, /*#__PURE__*/React.createElement("span", null, "\u30E9\u30A4\u30D5:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-pink-400 font-bold"
-  }, rosterDetailMon.baseHp)), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[10px] font-mono"
-  }, /*#__PURE__*/React.createElement("span", null, "\u3061\u304B\u3089:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-red-400 font-bold"
-  }, rosterDetailMon.baseAtk)), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[10px] font-mono"
-  }, /*#__PURE__*/React.createElement("span", null, "\u4E08\u592B\u3055:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-emerald-400 font-bold"
-  }, rosterDetailMon.baseDef)), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[10px] font-mono"
-  }, /*#__PURE__*/React.createElement("span", null, "\u30AC\u30C3\u30C4:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-amber-400 font-bold"
-  }, rosterDetailMon.baseGuts)))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/40 p-2 rounded-xl border border-indigo-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] text-indigo-400 uppercase font-bold"
-  }, "\u52C7\u8005\u7279\u6027"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-white font-bold leading-tight mt-1"
-  }, rosterDetailMon.traitDesc))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/40 p-2 rounded-xl border border-pink-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] text-pink-400 uppercase font-bold"
-  }, "\u5408\u6D41\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[8px] text-white font-bold mt-1"
-  }, rosterDetailMon.plusStats.hp > 0 && `HP+${rosterDetailMon.plusStats.hp} `, rosterDetailMon.plusStats.atk > 0 && `攻+${rosterDetailMon.plusStats.atk} `, rosterDetailMon.plusStats.def > 0 && `防+${rosterDetailMon.plusStats.def} `, rosterDetailMon.plusStats.guts > 0 && `G+${rosterDetailMon.plusStats.guts} `), formatAptBonus(rosterDetailMon) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[8px] text-cyan-300 font-bold mt-0.5"
-  }, "\u9593\u5408\u3044\u9069\u6027 ", formatAptBonus(rosterDetailMon))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/40 p-2 rounded-xl border border-cyan-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] text-cyan-400 uppercase font-bold mb-1"
-  }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-4 gap-1 mt-1"
-  }, RANGE_LABELS.map((label, idx) => {
-    const grade = getDistAptitude(rosterDetailMon, idx);
-    return /*#__PURE__*/React.createElement("div", {
-      key: idx,
-      className: "flex flex-col items-center gap-0.5"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`
-    }, label), /*#__PURE__*/React.createElement("span", {
-      className: `w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`
-    }, grade));
-  }))), renderSkillSection(rosterDetailMon)), /*#__PURE__*/React.createElement("button", {
+  }, renderMonsterDetailInfo(rosterDetailMon)), /*#__PURE__*/React.createElement("button", {
     onClick: () => setRosterDetailMon(null),
     className: "w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95"
   }, "\u9589\u3058\u308B"))), rosterDetailTeaching && (() => {
@@ -14057,6 +14071,12 @@ function MonsterHeroGame() {
     const lvl = bondLevelInfo(masu.bondXp || 0);
     const pct = Math.max(0, Math.min(100, lvl.xpIntoLevel / Math.max(1, lvl.xpForNext) * 100));
     const inRoster = monsterRosterIds.includes('masu:' + masu.id);
+    // 詳細の表示内容は他のモンスター詳細と同じ共通実装を使う(勇者特性などの見落としを無くす)
+    const mergedMasu = mergeMasuIntoMon(masu);
+    const sp = masu.statPoints || {};
+    const masuStatRow = (label, value, plus, color) => [label, /*#__PURE__*/React.createElement(React.Fragment, null, value, plus > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "text-emerald-400 text-[8px]"
+    }, " (+", plus, ")")), color];
     return /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-4",
       style: {
@@ -14127,50 +14147,15 @@ function MonsterHeroGame() {
       size: 16
     }))), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-black/40 p-2 rounded-xl border border-white/5"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] text-slate-500 uppercase font-bold"
-    }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9(\u5F37\u5316\u5206\u8FBC\u307F)"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-x-3 gap-y-1 mt-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between text-[10px] font-mono"
-    }, /*#__PURE__*/React.createElement("span", null, "\u30E9\u30A4\u30D5:"), /*#__PURE__*/React.createElement("span", {
-      className: "text-pink-400 font-bold"
-    }, base.baseHp + (masu.statPoints?.hp || 0), (masu.statPoints?.hp || 0) > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "text-emerald-400 text-[8px]"
-    }, " (+", masu.statPoints.hp, ")"))), /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between text-[10px] font-mono"
-    }, /*#__PURE__*/React.createElement("span", null, "\u3061\u304B\u3089:"), /*#__PURE__*/React.createElement("span", {
-      className: "text-red-400 font-bold"
-    }, base.baseAtk + (masu.statPoints?.atk || 0), (masu.statPoints?.atk || 0) > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "text-emerald-400 text-[8px]"
-    }, " (+", masu.statPoints.atk, ")"))), /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between text-[10px] font-mono"
-    }, /*#__PURE__*/React.createElement("span", null, "\u4E08\u592B\u3055:"), /*#__PURE__*/React.createElement("span", {
-      className: "text-emerald-400 font-bold"
-    }, base.baseDef + (masu.statPoints?.def || 0), (masu.statPoints?.def || 0) > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "text-emerald-400 text-[8px]"
-    }, " (+", masu.statPoints.def, ")"))), /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-between text-[10px] font-mono"
-    }, /*#__PURE__*/React.createElement("span", null, "\u30AC\u30C3\u30C4:"), /*#__PURE__*/React.createElement("span", {
-      className: "text-amber-400 font-bold"
-    }, base.baseGuts + (masu.statPoints?.guts || 0), (masu.statPoints?.guts || 0) > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "text-emerald-400 text-[8px]"
-    }, " (+", masu.statPoints.guts, ")"))))), (() => {
-      const ps = mergeMasuIntoMon(masu)?.plusStats || {};
-      return /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 p-2 rounded-xl border border-pink-500/30"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[7px] text-pink-400 uppercase font-bold"
-      }, "\u5408\u6D41\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-white font-bold mt-1"
-      }, ps.hp > 0 && `HP+${ps.hp} `, ps.atk > 0 && `攻+${ps.atk} `, ps.def > 0 && `防+${ps.def} `, ps.guts > 0 && `G+${ps.guts} `), formatAptBonus(mergeMasuIntoMon(masu)) && /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-cyan-300 font-bold mt-0.5"
-      }, "\u9593\u5408\u3044\u9069\u6027 ", formatAptBonus(mergeMasuIntoMon(masu))));
-    })(), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-2"
-    }, renderSkillSection(mergeMasuIntoMon(masu))), /*#__PURE__*/React.createElement("div", {
+    }, renderMonsterDetailInfo(mergedMasu, {
+      statTitle: '現在のステータス(強化分込み)',
+      statValues: [masuStatRow('ライフ', base.baseHp + (sp.hp || 0), sp.hp || 0, 'text-pink-400'), masuStatRow('ちから', base.baseAtk + (sp.atk || 0), sp.atk || 0, 'text-red-400'), masuStatRow('丈夫さ', base.baseDef + (sp.def || 0), sp.def || 0, 'text-emerald-400'), masuStatRow('ガッツ', base.baseGuts + (sp.guts || 0), sp.guts || 0, 'text-amber-400')],
+      aptPointsLabel: /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
+      }, /*#__PURE__*/React.createElement(Sparkles, {
+        size: 9
+      }), "\u5F37\u5316P: ", masu.distAptPoints || 0)
+    }), /*#__PURE__*/React.createElement("div", {
       className: "bg-black/40 p-2 rounded-xl border border-violet-500/30"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] text-violet-300 uppercase font-bold mb-1"
@@ -14180,7 +14165,7 @@ function MonsterHeroGame() {
         key: skill.key,
         onClick: () => setRosterSkillDetail({
           mon: {
-            ...mergeMasuIntoMon(masu),
+            ...mergedMasu,
             unique: current
           },
           kind: 'unique'
@@ -14189,29 +14174,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("span", null, current.name), /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300 font-black"
       }, "Lv.", skill.level, " \u203A"));
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "bg-black/40 p-2 rounded-xl border border-cyan-500/30"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between mb-0.5"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] text-cyan-400 uppercase font-bold"
-    }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
-    }, /*#__PURE__*/React.createElement(Sparkles, {
-      size: 9
-    }), "\u5F37\u5316P: ", masu.distAptPoints || 0)), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-4 gap-1 mt-1"
-    }, RANGE_LABELS.map((label, idx) => {
-      const grade = masu.distApt && masu.distApt[idx] || 'C';
-      return /*#__PURE__*/React.createElement("div", {
-        key: idx,
-        className: "flex flex-col items-center gap-0.5"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: `text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`
-      }, label), /*#__PURE__*/React.createElement("span", {
-        className: `w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`
-      }, grade));
-    }))), /*#__PURE__*/React.createElement("button", {
+    })), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setMasuEnhanceFrom(gameState);
         setGameState('MASU_ENHANCE');
@@ -16159,94 +16122,46 @@ function MonsterHeroGame() {
     size: 16
   }))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-2 shrink-0"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/40 p-2 rounded-xl border border-white/5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] text-slate-500 uppercase font-bold"
-  }, "\u57FA\u672C\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-1 mt-1"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[10px] font-mono"
-  }, /*#__PURE__*/React.createElement("span", null, "\u30E9\u30A4\u30D5:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-pink-400 font-bold"
-  }, gameState === 'PICK_HERO' ? currentPickingMon.baseHp : `${maxHp} → ${maxHp + (currentPickingMon.plusStats?.hp || 0)}`)), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[10px] font-mono"
-  }, /*#__PURE__*/React.createElement("span", null, "\u3061\u304B\u3089:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-red-400 font-bold"
-  }, gameState === 'PICK_HERO' ? currentPickingMon.baseAtk : `${atk} → ${atk + (currentPickingMon.plusStats?.atk || 0)}`)), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[10px] font-mono"
-  }, /*#__PURE__*/React.createElement("span", null, "\u4E08\u592B\u3055:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-emerald-400 font-bold"
-  }, gameState === 'PICK_HERO' ? currentPickingMon.baseDef : `${def} → ${def + (currentPickingMon.plusStats?.def || 0)}`)), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[10px] font-mono"
-  }, /*#__PURE__*/React.createElement("span", null, "\u30AC\u30C3\u30C4:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-amber-400 font-bold"
-  }, gameState === 'PICK_HERO' ? currentPickingMon.baseGuts : `${maxGuts} → ${maxGuts + (currentPickingMon.plusStats?.guts || 0)}`)))), gameState === 'PICK_HERO' ? /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/40 p-2 rounded-xl border border-indigo-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] text-indigo-400 uppercase font-bold"
-  }, "\u52C7\u8005\u7279\u6027"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-white font-bold leading-tight mt-1"
-  }, currentPickingMon.traitDesc)) : /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/40 p-2 rounded-xl border border-pink-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] text-pink-400 uppercase font-bold"
-  }, "\u5408\u6D41\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[8px] text-white font-bold mt-1"
-  }, currentPickingMon.plusStats.hp > 0 && `HP+${currentPickingMon.plusStats.hp} `, currentPickingMon.plusStats.atk > 0 && `攻+${currentPickingMon.plusStats.atk} `, currentPickingMon.plusStats.def > 0 && `防+${currentPickingMon.plusStats.def} `, currentPickingMon.plusStats.guts > 0 && `G+${currentPickingMon.plusStats.guts} `), formatAptBonus(currentPickingMon) && /*#__PURE__*/React.createElement("div", {
-    className: "text-[8px] text-cyan-300 font-bold mt-0.5"
-  }, "\u9593\u5408\u3044\u9069\u6027 ", formatAptBonus(currentPickingMon)))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/40 p-2 rounded-xl border border-cyan-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center justify-between mb-0.5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] text-cyan-400 uppercase font-bold"
-  }, "\u9593\u5408\u3044\u9069\u6027"), currentPickingMon.masuId && /*#__PURE__*/React.createElement("div", {
-    className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 9
-  }), "\u5F37\u5316P: ", getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0)), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-4 gap-1 mt-1"
-  }, RANGE_LABELS.map((label, idx) => {
-    const grade = getDistAptitude(currentPickingMon, idx);
-    const pts = currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0 : 0;
-    const canUp = pts > 0 && DIST_APTITUDE_GRADES.indexOf(grade) < DIST_APTITUDE_GRADES.length - 1;
-    return /*#__PURE__*/React.createElement("div", {
-      key: idx,
-      className: "flex flex-col items-center gap-0.5"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: `text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`
-    }, label), /*#__PURE__*/React.createElement("span", {
-      className: `w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`
-    }, grade), canUp && /*#__PURE__*/React.createElement("button", {
+  }, renderMonsterDetailInfo(currentPickingMon, {
+    statValues: gameState === 'PICK_HERO' ? null : [['ライフ', `${maxHp} → ${maxHp + (currentPickingMon.plusStats?.hp || 0)}`, 'text-pink-400'], ['ちから', `${atk} → ${atk + (currentPickingMon.plusStats?.atk || 0)}`, 'text-red-400'], ['丈夫さ', `${def} → ${def + (currentPickingMon.plusStats?.def || 0)}`, 'text-emerald-400'], ['ガッツ', `${maxGuts} → ${maxGuts + (currentPickingMon.plusStats?.guts || 0)}`, 'text-amber-400']],
+    statTitle: gameState === 'PICK_HERO' ? '基本ステータス' : '基本ステータス(現在 → 合流後)',
+    aptPointsLabel: currentPickingMon.masuId ? /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement(Sparkles, {
+      size: 9
+    }), "\u5F37\u5316P: ", getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) : null,
+    aptExtra: (idx, grade) => {
+      const pts = currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0 : 0;
+      const canUp = pts > 0 && DIST_APTITUDE_GRADES.indexOf(grade) < DIST_APTITUDE_GRADES.length - 1;
+      return canUp ? /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          const updated = spendAptPoint(currentPickingMon.masuId, idx);
+          if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
+        },
+        className: "w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95"
+      }, "+1") : null;
+    },
+    extraAfterApt: /*#__PURE__*/React.createElement(React.Fragment, null, currentPickingMon.masuId && (getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "bg-black/40 p-2 rounded-xl border border-emerald-500/30"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] text-emerald-400 uppercase font-bold mb-1"
+    }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316(\u5F37\u5316P 1\u3064\u306B\u3064\u304D\u4F7F\u7528\u30FB\u8ABF\u6574\u4E2D)"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-4 gap-1"
+    }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => /*#__PURE__*/React.createElement("button", {
+      key: key,
       onClick: () => {
-        const updated = spendAptPoint(currentPickingMon.masuId, idx);
+        const updated = spendStatPoint(currentPickingMon.masuId, key);
         if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
       },
-      className: "w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95"
-    }, "+1"));
-  }))), currentPickingMon.masuId && (getMasuMon(currentPickingMon.masuId)?.distAptPoints || 0) > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/40 p-2 rounded-xl border border-emerald-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[7px] text-emerald-400 uppercase font-bold mb-1"
-  }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316(\u5F37\u5316P 1\u3064\u306B\u3064\u304D\u4F7F\u7528\u30FB\u8ABF\u6574\u4E2D)"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-4 gap-1"
-  }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => /*#__PURE__*/React.createElement("button", {
-    key: key,
-    onClick: () => {
-      const updated = spendStatPoint(currentPickingMon.masuId, key);
-      if (updated) setCurrentPickingMon(mergeMasuIntoMon(updated));
-    },
-    className: "flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-[7px] text-emerald-300 font-black"
-  }, label), /*#__PURE__*/React.createElement("span", {
-    className: "text-[10px] text-white font-black"
-  }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center"
-  }, gameState === 'PICK_HERO' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'), renderSkillSection(currentPickingMon)), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[7px] text-emerald-300 font-black"
+    }, label), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] text-white font-black"
+    }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && /*#__PURE__*/React.createElement("div", {
+      className: "bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center"
+    }, gameState === 'PICK_HERO' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'))
+  })), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 mt-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setCurrentPickingMon(null),
