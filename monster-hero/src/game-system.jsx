@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 17:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 20:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1422,6 +1422,10 @@ const normalizeGiftRewards = (gift) => {
   return rewards.every(r=>supported.includes(r.type) && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
 };
 const giftIsExpired = (gift, now=Date.now()) => !gift?.expiresAt || !Number.isFinite(Date.parse(gift.expiresAt)) || Date.parse(gift.expiresAt) <= Number(now);
+// 「今すぐ受け取れるギフト」。未受取・期限内・報酬が有効、の3つを満たすもの。
+// HOMEの通知バッジ・ギフト画面のバッジ・「すべて受け取る」が同じ判定を使う
+const giftIsClaimable = (gift, now=Date.now()) => !!gift && !gift.claimedAt && !giftIsExpired(gift, now) && !!normalizeGiftRewards(gift);
+const giftClaimableCount = (gifts, now=Date.now()) => (Array.isArray(gifts) ? gifts : []).filter(g => giftIsClaimable(g, now)).length;
 const buildGiftClaim = (gift, balances, now=Date.now()) => {
   if (!gift || gift.claimedAt || giftIsExpired(gift, now)) return { ok:false, reason:gift?.claimedAt?'claimed':'expired' };
   const rewards = normalizeGiftRewards(gift);
@@ -1467,7 +1471,10 @@ const normalizeMissions = (value,now=Date.now()) => {
   return {version:1,dailyPeriod,weeklyPeriod,daily:dailySame?{...emptyMissionCounts(),...(old.daily||{})}:emptyMissionCounts(),weekly:weeklySame?{...emptyMissionCounts(),...(old.weekly||{})}:emptyMissionCounts(),sentDaily:dailySame&&Array.isArray(old.sentDaily)?old.sentDaily:[],sentWeekly:weeklySame&&Array.isArray(old.sentWeekly)?old.sentWeekly:[],weeklyLoginDays:weeklySame&&Array.isArray(old.weeklyLoginDays)?old.weeklyLoginDays:[]};
 };
 const missionValue = (state,type,mission) => { if(mission.complete){ const normal=MISSION_DEFS[type].filter(m=>!m.complete); return normal.filter(m=>missionValue(state,type,m)>=m.target).length; } if(mission.key==='loginDays') return state.weeklyLoginDays.length; return Number(state[type]?.[mission.key])||0; };
-const missionClaimableCount = state => ['daily','weekly'].reduce((sum,type)=>sum+MISSION_DEFS[type].filter(m=>missionValue(state,type,m)>=m.target && !(type==='daily'?state.sentDaily:state.sentWeekly).includes(m.id)).length,0);
+// 「達成済みかつ未受取(ギフト未送付)」のミッション。HOMEの通知バッジ・タブのバッジ・一括受取が
+// すべてこの判定を共有するので、どこか1か所だけ数え方がずれることがない
+const missionClaimableList = (state,type) => MISSION_DEFS[type].filter(m=>missionValue(state,type,m)>=m.target && !(type==='daily'?state.sentDaily:state.sentWeekly).includes(m.id));
+const missionClaimableCount = state => ['daily','weekly'].reduce((sum,type)=>sum+missionClaimableList(state,type).length,0);
 const missionNextReset = (type,now=Date.now()) => { const shifted=new Date(Number(now)+5*60*60*1000); shifted.setUTCHours(0,0,0,0); shifted.setUTCDate(shifted.getUTCDate()+(type==='daily'?1:7-((shifted.getUTCDay()+6)%7))); return shifted.getTime()-5*60*60*1000; };
 const STAT_POINT_GAIN = { hp: 10, atk: 3, def: 3, guts: 3 };
 // 間合い適性のグレードを「Cを±0とした段階数」に直す(A→+2、E→-2)。
@@ -1714,9 +1721,13 @@ const normalizeRankingDifficulty = (value) => {
 const rankingDifficultyKey = (value) => normalizeRankingDifficulty(value);
 
 // 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
-// 診断用: 50件取得後に発生した遅延・非表示を切り分けるため、一時的に20件へ戻す。
-const RANKING_DIAGNOSTIC_LIMIT = 20;
-const rankingLog = (requestId, event, detail={}) => console.info('[ranking][diagnostic]', { requestId, event, at: new Date().toISOString(), ...detail });
+// 表示件数は仕様どおり上位50件。以前は不具合の切り分けのため一時的に20件へ絞っていたが、
+// そのままだと21位以降が「取得できない記録」に見えてしまうため戻した。
+const RANKING_DIAGNOSTIC_LIMIT = 50;
+// 取得ごとの詳細ログは切り分け用。常時出すと件数ぶんの文字列生成が毎回走るので、
+// 必要なときだけ localStorage の mh_ranking_debug='1' で有効にする(エラーは常に出す)。
+const rankingDebugEnabled = () => { try { return window.localStorage.getItem('mh_ranking_debug') === '1'; } catch { return false; } };
+const rankingLog = (requestId, event, detail={}) => { if (rankingDebugEnabled()) console.info('[ranking][diagnostic]', { requestId, event, at: new Date().toISOString(), ...detail }); };
 const sbFetchRankings = async (diff, limit=RANKING_DIAGNOSTIC_LIMIT, order='score.desc.nullslast', offset=0, requestId='untracked') => {
   const normalizedDifficulty = normalizeRankingDifficulty(diff);
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
@@ -2459,9 +2470,9 @@ function MonsterHeroGame() {
     // Masterだけは不正行を診断する。難易度の表記揺れは共通SELECTが吸収し、正常な1行まで巻き添えにせず、
     // 必須項目を満たす行だけを残す（他難易度の取得仕様には触れない）。
     const fetchMasterRows = async (order, requestId) => {
-      console.info('[ranking][Master] 正規化したdifficulty値: Master', 'order:', order);
+      if (rankingDebugEnabled()) console.info('[ranking][Master] 正規化したdifficulty値: Master', 'order:', order);
       const rows = await sbFetchRankings('Master', RANKING_DIAGNOSTIC_LIMIT, order, 0, requestId);
-      console.info('[ranking][Master] Supabase成功; difficulty: Master', '取得件数:', Array.isArray(rows) ? rows.length : '配列ではない');
+      if (rankingDebugEnabled()) console.info('[ranking][Master] Supabase成功; difficulty: Master', '取得件数:', Array.isArray(rows) ? rows.length : '配列ではない');
       if (!Array.isArray(rows)) throw new Error(`response is not an array: ${JSON.stringify(rows)}`);
       const valid = rows.filter((r, i) => {
         const reasons = [];
@@ -2472,7 +2483,7 @@ function MonsterHeroGame() {
         if (reasons.length) console.warn('[ranking][Master] 不正レコードを除外:', i, reasons.join(', '), r);
         return reasons.length === 0;
       }).map(r => ({ ...r, score: Number(r.score) }));
-      console.info('[ranking][Master] 整形後件数:', valid.length, '除外件数:', rows.length - valid.length);
+      if (rankingDebugEnabled()) console.info('[ranking][Master] 整形後件数:', valid.length, '除外件数:', rows.length - valid.length);
       return valid;
     };
     // 起動時は利用者から不調報告のあるNormal/Masterを先に取得する。
@@ -2524,7 +2535,7 @@ function MonsterHeroGame() {
       let succeeded = true;
       let requestError = null;
       try {
-        if (d === 'Master') console.info('[ranking][Master] Master取得開始');
+        if (d === 'Master' && rankingDebugEnabled()) console.info('[ranking][Master] Master取得開始');
         let rows;
         try {
           // 診断中は21件目以降を一切取得せず、20件と50件の差だけを比較できるようにする。
@@ -2572,12 +2583,17 @@ function MonsterHeroGame() {
         return;
       }
       rankingLog(requestId, 'render-start', { difficulty: d, source: sourceByDiff[d], dataCount: byDiff[d]?.length || 0 });
+      // 反映先はタブごとに完全に分ける。
+      // 以前はブリーダーLvの取得結果もスコアランキング(localRankings)へ書き込んでいたため、
+      // ブリーダーLvタブを開いただけでスコア一覧が別の取得結果に置き換わり、
+      // タブを行き来すると表示が安定しなかった。
       if (includeLevels && levelKind === 'bond') {
         setBondRankingData(prev => ({ ...(prev || {}), ...poolByDiff }));
+      } else if (includeLevels && levelKind === 'breeder') {
+        setBreederRankingPool(prev => ({ ...prev, ...poolByDiff }));
       } else {
         setRankingSourceByDiff(prev => ({ ...prev, ...sourceByDiff }));
         setLocalRankings(prev => ({ ...prev, ...byDiff }));
-        if (includeLevels && levelKind === 'breeder') setBreederRankingPool(prev => ({ ...prev, ...poolByDiff }));
       }
       rankingFetchedAtRef.current.set(requestKey, Date.now());
       rankingLog(requestId, 'render-end', { difficulty: d, appliedRequestId: requestId });
@@ -2596,9 +2612,17 @@ function MonsterHeroGame() {
       rankingRequestsRef.current.set(requestKey, request);
       return request;
     };
-    // 絆タブは全難易度を同時に開始し、各loadOneのfinallyで個別に完了させる。
-    // 遅い難易度や失敗した難易度が、取得済みデータの描画を止めない。
-    const settled = await Promise.allSettled(diffs.map(loadOne));
+    // 全難易度を一斉に取得するとSupabase側で競合し、遅延や一部失敗の原因になる。
+    // 2件ずつ順に進め、終わった難易度から即座に画面へ反映する
+    // (遅い難易度や失敗した難易度が、取得済みデータの描画を止めない)。
+    const runInBatches = async (list, size, worker) => {
+      const out = [];
+      for (let i = 0; i < list.length; i += size) {
+        out.push(...await Promise.allSettled(list.slice(i, i + size).map(worker)));
+      }
+      return out;
+    };
+    const settled = diffs.length > 2 ? await runInBatches(diffs, 2, loadOne) : await Promise.allSettled(diffs.map(loadOne));
     const results = settled.map(result => result.status === 'fulfilled' ? result.value : false);
     if (levelStatusKey) {
       const failures = results.filter(result => result === false).length;
@@ -2644,7 +2668,6 @@ function MonsterHeroGame() {
     GIFT_BOX: 'home',           // ギフトボックスはHOMEの曲を止めずに続ける
     MISSIONS: 'home',           // ミッション画面でもHOMEの曲を続ける
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
-    FORMATION_MENU: 'management', // 編成メニュー
     MONSTER_LIST_MENU: 'management', // モンスター一覧メニュー
     MB_MANAGEMENT: 'management', // M/B管理はモンスター一覧・編成と同じ曲を続ける
     PASTURE_SETTINGS: 'management', // 放牧設定もM/B管理の曲を続ける
@@ -3564,13 +3587,17 @@ function MonsterHeroGame() {
     if (draftMonsterRoster.length !== STARTER_MONSTER_IDS.length) return;
     setMonsterRosterIds(draftMonsterRoster);
     storeSet('mh_monster_roster', draftMonsterRoster, false);
-    setGameState('FORMATION_MENU');
+    // 決定したらM/B管理のモンスタータブへ戻る(古い編成メニューは経由しない)
+    setManagementTab('monster');
+    setGameState('MB_MANAGEMENT');
   };
   const confirmTeachingRoster = () => {
     if (draftTeachingRoster.length !== STARTER_TEACHING_IDS.length) return;
     setTeachingRosterIds(draftTeachingRoster);
     storeSet('mh_teaching_roster', draftTeachingRoster, false);
-    setGameState('FORMATION_MENU');
+    // 決定したらM/B管理のブリーダーカードタブへ戻る(古い編成メニューは経由しない)
+    setManagementTab('breeder');
+    setGameState('MB_MANAGEMENT');
   };
 
   // マスモンの強化ポイントを1消費し、対象の距離の間合い適性を1段階上げる。
@@ -4148,6 +4175,15 @@ function MonsterHeroGame() {
       setGold(balances.gold); setBreederPoints(balances.breederPoints); setOwnedItems(balances.ownedItems); setGifts(nextGifts);
     } finally { giftClaimingRef.current = false; }
   };
+  // タブに出す赤い丸バッジ。0件なら何も出さない。
+  // Tailwindの動的クラス生成に頼らず色と形はinline styleで指定する(生成に失敗して透明になるのを避ける)
+  const tabCountBadge = (count) => (count > 0 ? (
+    <span
+      className="absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-[10px] font-black leading-none"
+      style={{ minWidth: '20px', height: '20px', padding: '0 5px', backgroundColor: '#dc2626', color: '#ffffff', border: '2px solid #0f172a' }}
+      aria-label={`未受取 ${count}件`}
+    >{count > 99 ? '99+' : count}</span>
+  ) : null);
   const openGiftBox = () => { setGiftTab('unclaimed'); setGameState('GIFT_BOX'); };
   const saveMissionProgress = async (event,amount=1) => {
     const next=normalizeMissions(missionsRef.current);
@@ -4157,25 +4193,39 @@ function MonsterHeroGame() {
     next.weekly[key]=(Number(next.weekly[key])||0)+amount;
     missionsRef.current=next; setMissions(next); await storeSet('mh_missions',next,false);
   };
-  const claimMission = async (type,mission) => {
-    if(missionClaimingRef.current)return;
+  // ミッション報酬のギフト。IDは「種別+期間+ミッションID」で固定なので、
+  // 何度実行しても同じミッションのギフトが二重に増えることはない
+  const buildMissionGift = (type,period,mission) => ({id:`gift_mission_${type}_${period}_${mission.id}`,source:'mission',missionId:mission.id,missionType:type,periodId:period,title:`ミッション報酬「${mission.name}」`,description:`${mission.condition}の達成報酬です。`,rewards:mission.rewards.map(r=>({...r})),createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+30*24*60*60*1000).toISOString(),claimedAt:null});
+  // 達成済み・未受取のミッションをまとめてギフトへ送る共通処理。
+  // 個別受取(1件)も一括受取(複数件)も、同じ保存の流れ(ギフト→ミッションの順)を通す
+  const sendMissionsToGiftBox = async (type,missionList) => {
+    if(missionClaimingRef.current)return 0;
     missionClaimingRef.current=true;
     try{
       const state=normalizeMissions(missionsRef.current), sentKey=type==='daily'?'sentDaily':'sentWeekly';
-      if(state[sentKey].includes(mission.id)||missionValue(state,type,mission)<mission.target)return;
+      // 進捗と送付済みは保存されている値で判定し直す(画面の表示が古くても二重送付しない)
+      const targets=(missionList||[]).filter(m=>m&&!state[sentKey].includes(m.id)&&missionValue(state,type,m)>=m.target);
+      if(!targets.length)return 0;
       const period=type==='daily'?state.dailyPeriod:state.weeklyPeriod;
-      const giftId=`gift_mission_${type}_${period}_${mission.id}`;
-      const gift={id:giftId,source:'mission',missionId:mission.id,missionType:type,periodId:period,title:`ミッション報酬「${mission.name}」`,description:`${mission.condition}の達成報酬です。`,rewards:mission.rewards.map(r=>({...r})),createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+30*24*60*60*1000).toISOString(),claimedAt:null};
-      const currentGifts=Array.isArray(gifts)?gifts:[];
-      const nextGifts=currentGifts.some(g=>g?.id===giftId)?currentGifts:[gift,...currentGifts];
-      state[sentKey]=[...state[sentKey],mission.id];
-      if(type==='daily'&&!mission.complete) state.weekly.dailyClaims=(Number(state.weekly.dailyClaims)||0)+1;
+      let nextGifts=Array.isArray(gifts)?[...gifts]:[];
+      const sent=[...state[sentKey]];
+      targets.forEach(mission=>{
+        const gift=buildMissionGift(type,period,mission);
+        if(!nextGifts.some(g=>g?.id===gift.id)) nextGifts=[gift,...nextGifts];
+        if(!sent.includes(mission.id)) sent.push(mission.id);
+        if(type==='daily'&&!mission.complete) state.weekly.dailyClaims=(Number(state.weekly.dailyClaims)||0)+1;
+      });
+      state[sentKey]=sent;
       // 固定IDと同期ロックに加え、ギフトを先に保存する。途中終了時も再操作では同じIDを再利用する。
       await storeSet('mh_gifts',nextGifts,false);
       await storeSet('mh_missions',state,false);
       missionsRef.current=state; setGifts(nextGifts); setMissions(state);
+      return targets.length;
     }finally{missionClaimingRef.current=false;}
   };
+  const claimMission = (type,mission) => sendMissionsToGiftBox(type,[mission]);
+  // 選択中のタブで、達成済み・未受取のものをまとめてギフトへ送る
+  const claimMissionsBulk = (type) => sendMissionsToGiftBox(type,missionClaimableList(normalizeMissions(missionsRef.current),type));
   const openMissions = () => { setMissionTab('daily'); setGameState('MISSIONS'); };
 
   const returnToOfficialTitle = () => {
@@ -5288,7 +5338,7 @@ function MonsterHeroGame() {
               {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
             </button>
             <button onClick={openGiftBox} className="mh-home-gift"><Package size={16}/>ギフト
-              {gifts.filter(g=>!g?.claimedAt&&!giftIsExpired(g)).length>0&&<em>{gifts.filter(g=>!g?.claimedAt&&!giftIsExpired(g)).length}</em>}
+              {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
             </button>
             <button onClick={openChangelog} className="mh-home-update"><RefreshCcw size={15}/>更新履歴{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
           </main>
@@ -5308,9 +5358,9 @@ function MonsterHeroGame() {
 
         {trainingModal&&<div className="mh-training-modal" onClick={()=>setTrainingModal(null)}><div onClick={e=>e.stopPropagation()}>{trainingModal.type==='rules'?<><h3>マス一覧／ルール</h3><div className="mh-rules-list">{Object.values(TRAINING_SPACE_TYPES).map(s=><p><b>{s.emoji} {s.label}</b><span>{s.desc}</span></p>)}</div><h3>修行道具</h3><div className="mh-rules-list">{Object.entries(TRAINING_TOOLS).map(([id,t])=><p><b>{t.emoji} {t.name}</b><span>使用：{t.timing}<br/>効果：{t.desc}</span></p>)}</div></>:trainingModal.type==='tool'?<><h3>{TRAINING_TOOLS[trainingModal.id].emoji} {TRAINING_TOOLS[trainingModal.id].name}</h3><p>種類：{TRAINING_TOOLS[trainingModal.id].mode}<br/>使用可能なタイミング：{TRAINING_TOOLS[trainingModal.id].timing}</p><p>正確な効果：{TRAINING_TOOLS[trainingModal.id].desc}</p>{trainingToolAvailability(trainingModal.id).ok?<button className="mh-route-choice" onClick={()=>{useTrainingTool(trainingModal.id);setTrainingModal(null)}}>使用する</button>:<p className="mh-tool-unavailable">今は使えません：{trainingToolAvailability(trainingModal.id).reason}</p>}</>:trainingModal.type==='discard'?<><h3>道具の所持上限（3個）</h3><p>捨てる道具を選ぶか、新しい道具を諦めてください。</p>{trainingSession.tools.map((id,i)=><button className="mh-route-choice" onClick={()=>{const tools=[...trainingSession.tools];tools.splice(i,1,trainingModal.newTool);patchTraining({tools});setTrainingModal(null)}}>{TRAINING_TOOLS[id].name}を捨てる</button>)}<button className="mh-route-choice" onClick={()=>setTrainingModal(null)}>新しい道具を諦める</button></>:trainingModal.type==='rewards'?<><h3>仮報酬</h3><p>絆経験値：{trainingSession?.rewards.bondXp||0}<br/>ダイヤ：{trainingSession?.rewards.diamonds||0}<br/>通常アイテム：{trainingSession?.rewards.items.length||0}個</p></>:<><h3>{trainingModal.space?.emoji} {trainingModal.space?.label}</h3><dl className="mh-space-detail"><div><dt>効果内容</dt><dd>{trainingModal.space?.desc}</dd></div><div><dt>数値</dt><dd>{trainingSpaceValue(trainingModal.space)}</dd></div><div><dt>発動タイミング</dt><dd>{trainingSpaceTiming(trainingModal.space)}</dd></div><div><dt>補足</dt><dd>仮報酬・効果はデバッグ修行中だけ有効で、通常データには保存されません。</dd></div></dl></>}<button className="mh-modal-close" onClick={()=>setTrainingModal(null)}>閉じる</button></div></div>}
 
-        {gameState==='GIFT_BOX'&&(()=>{const now=Date.now();const unclaimed=gifts.filter(g=>!g?.claimedAt);const history=gifts.filter(g=>g?.claimedAt);const shown=giftTab==='unclaimed'?unclaimed:history;const claimable=unclaimed.filter(g=>!giftIsExpired(g,now)&&normalizeGiftRewards(g));return <div className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
+        {gameState==='GIFT_BOX'&&(()=>{const now=Date.now();const unclaimed=gifts.filter(g=>!g?.claimedAt);const history=gifts.filter(g=>g?.claimedAt);const shown=giftTab==='unclaimed'?unclaimed:history;const claimable=unclaimed.filter(g=>giftIsClaimable(g,now));return <div className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
           <div className="flex items-center justify-between gap-2 mb-2 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black text-cyan-200 flex items-center gap-2"><Package size={22}/>ギフトボックス</h2><div className="w-11"></div></div>
-          <div className="grid grid-cols-2 gap-2 mb-2 shrink-0"><button onClick={()=>setGiftTab('unclaimed')} className={`min-h-[44px] rounded-xl font-black text-sm ${giftTab==='unclaimed'?'bg-cyan-600 text-white':'bg-slate-900 text-slate-400'}`}>未受取 ({unclaimed.filter(g=>!giftIsExpired(g,now)).length})</button><button onClick={()=>setGiftTab('history')} className={`min-h-[44px] rounded-xl font-black text-sm ${giftTab==='history'?'bg-indigo-600 text-white':'bg-slate-900 text-slate-400'}`}>受取済み ({history.length})</button></div>
+          <div className="grid grid-cols-2 gap-2 mb-2 shrink-0"><button onClick={()=>setGiftTab('unclaimed')} className={`relative min-h-[44px] rounded-xl font-black text-sm ${giftTab==='unclaimed'?'bg-cyan-600 text-white':'bg-slate-900 text-slate-400'}`}>未受取 ({unclaimed.filter(g=>!giftIsExpired(g,now)).length}){tabCountBadge(claimable.length)}</button><button onClick={()=>setGiftTab('history')} className={`min-h-[44px] rounded-xl font-black text-sm ${giftTab==='history'?'bg-indigo-600 text-white':'bg-slate-900 text-slate-400'}`}>受取済み ({history.length})</button></div>
           {giftTab==='unclaimed'&&<button disabled={!claimable.length} onClick={()=>claimGiftIds(claimable.map(g=>g.id))} className="shrink-0 mb-2 min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-black disabled:opacity-40">すべて受け取る</button>}
           <div className="mh-gift-list flex-1 min-h-0 overflow-y-auto mh-scroll pb-1">{shown.length===0?<div className="mt-16 text-center text-slate-500 font-bold">{giftTab==='unclaimed'?'未受取のギフトはありません':'受取済みのギフトはありません'}</div>:shown.map(g=>{const expired=giftIsExpired(g,now);const valid=!!normalizeGiftRewards(g);const display=giftTitleDisplay(g);return <article key={g.id} title={g.description||g.title||undefined} className={`mh-gift-card rounded-xl border ${g.claimedAt?'bg-slate-900/70 border-slate-700':expired?'bg-red-950/30 border-red-800/60':'bg-cyan-950/30 border-cyan-500/50'}`}>
             <div className="mh-gift-heading"><h3>{display.label&&<span>{display.label}</span>}<b>{display.title}</b></h3><em className={`${g.claimedAt?'bg-slate-700 text-slate-300':expired?'bg-red-900 text-red-200':valid?'bg-cyan-700 text-white':'bg-amber-900 text-amber-200'}`}>{g.claimedAt?'受取済み':expired?'期限切れ':valid?'受取可':'要確認'}</em></div>
@@ -5320,7 +5370,8 @@ function MonsterHeroGame() {
         </div>})()}
         {gameState==='MISSIONS'&&(()=>{const state=normalizeMissions(missions),defs=MISSION_DEFS[missionTab],sent=missionTab==='daily'?state.sentDaily:state.sentWeekly;const resetAt=missionNextReset(missionTab);return <div className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
           <div className="flex items-center justify-between gap-2 mb-2 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black text-amber-200 flex items-center gap-2"><List size={21}/>ミッション</h2><div className="w-11"></div></div>
-          <div className="grid grid-cols-2 gap-2 mb-2 shrink-0"><button onClick={()=>setMissionTab('daily')} className={`min-h-[44px] rounded-xl font-black text-sm ${missionTab==='daily'?'bg-amber-600 text-white':'bg-slate-900 text-slate-400'}`}>デイリー</button><button onClick={()=>setMissionTab('weekly')} className={`min-h-[44px] rounded-xl font-black text-sm ${missionTab==='weekly'?'bg-violet-600 text-white':'bg-slate-900 text-slate-400'}`}>ウィークリー</button></div>
+          <div className="grid grid-cols-2 gap-2 mb-2 shrink-0"><button onClick={()=>setMissionTab('daily')} className={`relative min-h-[44px] rounded-xl font-black text-sm ${missionTab==='daily'?'bg-amber-600 text-white':'bg-slate-900 text-slate-400'}`}>デイリー{tabCountBadge(missionClaimableList(state,'daily').length)}</button><button onClick={()=>setMissionTab('weekly')} className={`relative min-h-[44px] rounded-xl font-black text-sm ${missionTab==='weekly'?'bg-violet-600 text-white':'bg-slate-900 text-slate-400'}`}>ウィークリー{tabCountBadge(missionClaimableList(state,'weekly').length)}</button></div>
+          {(()=>{const bulk=missionClaimableList(state,missionTab);return <button disabled={!bulk.length} onClick={()=>claimMissionsBulk(missionTab)} className="shrink-0 mb-2 min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black disabled:opacity-40">一括受け取り{bulk.length>0&&` (${bulk.length})`}</button>;})()}
           <div className="mb-2 text-center text-[10px] font-bold text-slate-400 shrink-0">次回更新: {new Date(resetAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit'})}</div>
           <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 pb-2">{defs.map(m=>{const value=missionValue(state,missionTab,m),done=value>=m.target,isSent=sent.includes(m.id),pct=Math.min(100,Math.floor(value/m.target*100));return <article key={m.id} className={`rounded-2xl border p-3 ${isSent?'bg-slate-900/70 border-slate-700':done?'bg-amber-950/40 border-amber-400/70':'bg-slate-900 border-white/10'}`}>
             <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="font-black text-sm text-white break-words">{m.name}</h3><p className="text-[10px] text-slate-400 break-words">{m.condition}</p></div><b className="shrink-0 text-xs text-amber-200">{Math.min(value,m.target)} / {m.target}</b></div>
@@ -5410,9 +5461,6 @@ function MonsterHeroGame() {
           </div>
         )}
 
-        {gameState==='FORMATION_MENU'&&(
-          <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><div className="flex items-center gap-2"><button onClick={returnToHome} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400">編成</h2></div><div className="w-full max-w-md mx-auto space-y-4 mt-[clamp(3.5rem,14vh,8rem)]"><button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('monster');setGameState('ROSTER');}} className="w-full min-h-[72px] bg-indigo-950/50 border border-indigo-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]">モンスター編成</button><button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('teaching');setGameState('ROSTER');}} className="w-full min-h-[72px] bg-purple-950/50 border border-purple-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]">ブリーダーカード編成</button></div></div>
-        )}
 
         {gameState==='MONSTER_LIST_MENU'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><div className="flex items-center gap-2"><button onClick={returnToHome} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-cyan-400">モンスター一覧</h2></div><div className="w-full max-w-md mx-auto space-y-4 mt-[clamp(3.5rem,14vh,8rem)]"><button onClick={()=>setGameState('OWNED_MONSTERS')} className="w-full min-h-[72px] bg-cyan-950/50 border border-cyan-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]">ベースモン</button><button onClick={()=>setGameState('MASU_MONS')} className="w-full min-h-[72px] bg-pink-950/50 border border-pink-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]">マスモン</button></div></div>
@@ -5555,7 +5603,7 @@ function MonsterHeroGame() {
         {gameState==='ROSTER'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>setGameState('MB_MANAGEMENT')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <button onClick={()=>{setManagementTab(rosterTab==='monster'?'monster':'breeder');setGameState('MB_MANAGEMENT');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{rosterTab==='monster'?'モンスター編成':'ブリーダーカード編成'}</h2>
             </div>
             {rosterTab==='monster'?(

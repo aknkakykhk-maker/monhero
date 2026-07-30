@@ -34,6 +34,7 @@ cd tools && npm install
 | `node root-redirect-check.js` | ルートURLがLF APPSを描画せず、`location.replace`でゲームへ直接遷移することを確認する。 |
 | `node boot-flow-check.js` | 音声失敗時のTITLE遷移、全画面タイトルタップ、同期的な多重実行防止、GAME準備と演出の並列化を静的に確認する。 |
 | `node bulk-enhance-check.js` | マスモンの「まとめて強化」が正しく動くか確認する。 |
+| `node mission-gift-badge-check.js` | ミッション・ギフトの未受取バッジ、ミッション一括受取、編成決定後の戻り先、ランキングのタブ分離を確認する。 |
 | `node mission-check.js` | デイリー・ウィークリーのJST期間、達成条件、バッジ、ギフト報酬と重複防止を確認する。 |
 | `node donation-check.js` | 神殿の寄付額、マスモン削除、8体編成の補正、二重実行防止、保存キー、BGM・戻り先・一覧タイトルを確認する。 |
 | `node rebirth-check.js` | Lv30上限移行の補償、二重補償防止、転生条件・費用・効果、固有技Lv、星表示、演出、保存キー、神殿BGMを確認する。 |

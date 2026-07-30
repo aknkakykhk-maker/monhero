@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b9abe75e182614ea
+// source-sha256: df9d17de5b5f9ac7
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 17:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 20:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3545,6 +3545,10 @@ const normalizeGiftRewards = gift => {
   return rewards.every(r => supported.includes(r.type) && Number.isFinite(r.amount) && r.amount > 0) ? rewards : null;
 };
 const giftIsExpired = (gift, now = Date.now()) => !gift?.expiresAt || !Number.isFinite(Date.parse(gift.expiresAt)) || Date.parse(gift.expiresAt) <= Number(now);
+// 「今すぐ受け取れるギフト」。未受取・期限内・報酬が有効、の3つを満たすもの。
+// HOMEの通知バッジ・ギフト画面のバッジ・「すべて受け取る」が同じ判定を使う
+const giftIsClaimable = (gift, now = Date.now()) => !!gift && !gift.claimedAt && !giftIsExpired(gift, now) && !!normalizeGiftRewards(gift);
+const giftClaimableCount = (gifts, now = Date.now()) => (Array.isArray(gifts) ? gifts : []).filter(g => giftIsClaimable(g, now)).length;
 const buildGiftClaim = (gift, balances, now = Date.now()) => {
   if (!gift || gift.claimedAt || giftIsExpired(gift, now)) return {
     ok: false,
@@ -3783,7 +3787,10 @@ const missionValue = (state, type, mission) => {
   if (mission.key === 'loginDays') return state.weeklyLoginDays.length;
   return Number(state[type]?.[mission.key]) || 0;
 };
-const missionClaimableCount = state => ['daily', 'weekly'].reduce((sum, type) => sum + MISSION_DEFS[type].filter(m => missionValue(state, type, m) >= m.target && !(type === 'daily' ? state.sentDaily : state.sentWeekly).includes(m.id)).length, 0);
+// 「達成済みかつ未受取(ギフト未送付)」のミッション。HOMEの通知バッジ・タブのバッジ・一括受取が
+// すべてこの判定を共有するので、どこか1か所だけ数え方がずれることがない
+const missionClaimableList = (state, type) => MISSION_DEFS[type].filter(m => missionValue(state, type, m) >= m.target && !(type === 'daily' ? state.sentDaily : state.sentWeekly).includes(m.id));
+const missionClaimableCount = state => ['daily', 'weekly'].reduce((sum, type) => sum + missionClaimableList(state, type).length, 0);
 const missionNextReset = (type, now = Date.now()) => {
   const shifted = new Date(Number(now) + 5 * 60 * 60 * 1000);
   shifted.setUTCHours(0, 0, 0, 0);
@@ -4304,14 +4311,26 @@ const normalizeRankingDifficulty = value => {
 const rankingDifficultyKey = value => normalizeRankingDifficulty(value);
 
 // 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
-// 診断用: 50件取得後に発生した遅延・非表示を切り分けるため、一時的に20件へ戻す。
-const RANKING_DIAGNOSTIC_LIMIT = 20;
-const rankingLog = (requestId, event, detail = {}) => console.info('[ranking][diagnostic]', {
-  requestId,
-  event,
-  at: new Date().toISOString(),
-  ...detail
-});
+// 表示件数は仕様どおり上位50件。以前は不具合の切り分けのため一時的に20件へ絞っていたが、
+// そのままだと21位以降が「取得できない記録」に見えてしまうため戻した。
+const RANKING_DIAGNOSTIC_LIMIT = 50;
+// 取得ごとの詳細ログは切り分け用。常時出すと件数ぶんの文字列生成が毎回走るので、
+// 必要なときだけ localStorage の mh_ranking_debug='1' で有効にする(エラーは常に出す)。
+const rankingDebugEnabled = () => {
+  try {
+    return window.localStorage.getItem('mh_ranking_debug') === '1';
+  } catch {
+    return false;
+  }
+};
+const rankingLog = (requestId, event, detail = {}) => {
+  if (rankingDebugEnabled()) console.info('[ranking][diagnostic]', {
+    requestId,
+    event,
+    at: new Date().toISOString(),
+    ...detail
+  });
+};
 const sbFetchRankings = async (diff, limit = RANKING_DIAGNOSTIC_LIMIT, order = 'score.desc.nullslast', offset = 0, requestId = 'untracked') => {
   const normalizedDifficulty = normalizeRankingDifficulty(diff);
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
@@ -5341,9 +5360,9 @@ function MonsterHeroGame() {
     // Masterだけは不正行を診断する。難易度の表記揺れは共通SELECTが吸収し、正常な1行まで巻き添えにせず、
     // 必須項目を満たす行だけを残す（他難易度の取得仕様には触れない）。
     const fetchMasterRows = async (order, requestId) => {
-      console.info('[ranking][Master] 正規化したdifficulty値: Master', 'order:', order);
+      if (rankingDebugEnabled()) console.info('[ranking][Master] 正規化したdifficulty値: Master', 'order:', order);
       const rows = await sbFetchRankings('Master', RANKING_DIAGNOSTIC_LIMIT, order, 0, requestId);
-      console.info('[ranking][Master] Supabase成功; difficulty: Master', '取得件数:', Array.isArray(rows) ? rows.length : '配列ではない');
+      if (rankingDebugEnabled()) console.info('[ranking][Master] Supabase成功; difficulty: Master', '取得件数:', Array.isArray(rows) ? rows.length : '配列ではない');
       if (!Array.isArray(rows)) throw new Error(`response is not an array: ${JSON.stringify(rows)}`);
       const valid = rows.filter((r, i) => {
         const reasons = [];
@@ -5357,7 +5376,7 @@ function MonsterHeroGame() {
         ...r,
         score: Number(r.score)
       }));
-      console.info('[ranking][Master] 整形後件数:', valid.length, '除外件数:', rows.length - valid.length);
+      if (rankingDebugEnabled()) console.info('[ranking][Master] 整形後件数:', valid.length, '除外件数:', rows.length - valid.length);
       return valid;
     };
     // 起動時は利用者から不調報告のあるNormal/Masterを先に取得する。
@@ -5412,7 +5431,7 @@ function MonsterHeroGame() {
         let succeeded = true;
         let requestError = null;
         try {
-          if (d === 'Master') console.info('[ranking][Master] Master取得開始');
+          if (d === 'Master' && rankingDebugEnabled()) console.info('[ranking][Master] Master取得開始');
           let rows;
           try {
             // 診断中は21件目以降を一切取得せず、20件と50件の差だけを比較できるようにする。
@@ -5478,9 +5497,18 @@ function MonsterHeroGame() {
           source: sourceByDiff[d],
           dataCount: byDiff[d]?.length || 0
         });
+        // 反映先はタブごとに完全に分ける。
+        // 以前はブリーダーLvの取得結果もスコアランキング(localRankings)へ書き込んでいたため、
+        // ブリーダーLvタブを開いただけでスコア一覧が別の取得結果に置き換わり、
+        // タブを行き来すると表示が安定しなかった。
         if (includeLevels && levelKind === 'bond') {
           setBondRankingData(prev => ({
             ...(prev || {}),
+            ...poolByDiff
+          }));
+        } else if (includeLevels && levelKind === 'breeder') {
+          setBreederRankingPool(prev => ({
+            ...prev,
             ...poolByDiff
           }));
         } else {
@@ -5491,10 +5519,6 @@ function MonsterHeroGame() {
           setLocalRankings(prev => ({
             ...prev,
             ...byDiff
-          }));
-          if (includeLevels && levelKind === 'breeder') setBreederRankingPool(prev => ({
-            ...prev,
-            ...poolByDiff
           }));
         }
         rankingFetchedAtRef.current.set(requestKey, Date.now());
@@ -5517,9 +5541,17 @@ function MonsterHeroGame() {
       rankingRequestsRef.current.set(requestKey, request);
       return request;
     };
-    // 絆タブは全難易度を同時に開始し、各loadOneのfinallyで個別に完了させる。
-    // 遅い難易度や失敗した難易度が、取得済みデータの描画を止めない。
-    const settled = await Promise.allSettled(diffs.map(loadOne));
+    // 全難易度を一斉に取得するとSupabase側で競合し、遅延や一部失敗の原因になる。
+    // 2件ずつ順に進め、終わった難易度から即座に画面へ反映する
+    // (遅い難易度や失敗した難易度が、取得済みデータの描画を止めない)。
+    const runInBatches = async (list, size, worker) => {
+      const out = [];
+      for (let i = 0; i < list.length; i += size) {
+        out.push(...(await Promise.allSettled(list.slice(i, i + size).map(worker))));
+      }
+      return out;
+    };
+    const settled = diffs.length > 2 ? await runInBatches(diffs, 2, loadOne) : await Promise.allSettled(diffs.map(loadOne));
     const results = settled.map(result => result.status === 'fulfilled' ? result.value : false);
     if (levelStatusKey) {
       const failures = results.filter(result => result === false).length;
@@ -5572,8 +5604,6 @@ function MonsterHeroGame() {
     // ミッション画面でもHOMEの曲を続ける
     BATTLE_MENU: 'enhance',
     // 難易度・ランキング(モンスター選択と同じ曲)
-    FORMATION_MENU: 'management',
-    // 編成メニュー
     MONSTER_LIST_MENU: 'management',
     // モンスター一覧メニュー
     MB_MANAGEMENT: 'management',
@@ -6784,13 +6814,17 @@ function MonsterHeroGame() {
     if (draftMonsterRoster.length !== STARTER_MONSTER_IDS.length) return;
     setMonsterRosterIds(draftMonsterRoster);
     storeSet('mh_monster_roster', draftMonsterRoster, false);
-    setGameState('FORMATION_MENU');
+    // 決定したらM/B管理のモンスタータブへ戻る(古い編成メニューは経由しない)
+    setManagementTab('monster');
+    setGameState('MB_MANAGEMENT');
   };
   const confirmTeachingRoster = () => {
     if (draftTeachingRoster.length !== STARTER_TEACHING_IDS.length) return;
     setTeachingRosterIds(draftTeachingRoster);
     storeSet('mh_teaching_roster', draftTeachingRoster, false);
-    setGameState('FORMATION_MENU');
+    // 決定したらM/B管理のブリーダーカードタブへ戻る(古い編成メニューは経由しない)
+    setManagementTab('breeder');
+    setGameState('MB_MANAGEMENT');
   };
 
   // マスモンの強化ポイントを1消費し、対象の距離の間合い適性を1段階上げる。
@@ -8080,6 +8114,20 @@ function MonsterHeroGame() {
       giftClaimingRef.current = false;
     }
   };
+  // タブに出す赤い丸バッジ。0件なら何も出さない。
+  // Tailwindの動的クラス生成に頼らず色と形はinline styleで指定する(生成に失敗して透明になるのを避ける)
+  const tabCountBadge = count => count > 0 ? /*#__PURE__*/React.createElement("span", {
+    className: "absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-[10px] font-black leading-none",
+    style: {
+      minWidth: '20px',
+      height: '20px',
+      padding: '0 5px',
+      backgroundColor: '#dc2626',
+      color: '#ffffff',
+      border: '2px solid #0f172a'
+    },
+    "aria-label": `未受取 ${count}件`
+  }, count > 99 ? '99+' : count) : null;
   const openGiftBox = () => {
     setGiftTab('unclaimed');
     setGameState('GIFT_BOX');
@@ -8100,44 +8148,58 @@ function MonsterHeroGame() {
     setMissions(next);
     await storeSet('mh_missions', next, false);
   };
-  const claimMission = async (type, mission) => {
-    if (missionClaimingRef.current) return;
+  // ミッション報酬のギフト。IDは「種別+期間+ミッションID」で固定なので、
+  // 何度実行しても同じミッションのギフトが二重に増えることはない
+  const buildMissionGift = (type, period, mission) => ({
+    id: `gift_mission_${type}_${period}_${mission.id}`,
+    source: 'mission',
+    missionId: mission.id,
+    missionType: type,
+    periodId: period,
+    title: `ミッション報酬「${mission.name}」`,
+    description: `${mission.condition}の達成報酬です。`,
+    rewards: mission.rewards.map(r => ({
+      ...r
+    })),
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    claimedAt: null
+  });
+  // 達成済み・未受取のミッションをまとめてギフトへ送る共通処理。
+  // 個別受取(1件)も一括受取(複数件)も、同じ保存の流れ(ギフト→ミッションの順)を通す
+  const sendMissionsToGiftBox = async (type, missionList) => {
+    if (missionClaimingRef.current) return 0;
     missionClaimingRef.current = true;
     try {
       const state = normalizeMissions(missionsRef.current),
         sentKey = type === 'daily' ? 'sentDaily' : 'sentWeekly';
-      if (state[sentKey].includes(mission.id) || missionValue(state, type, mission) < mission.target) return;
+      // 進捗と送付済みは保存されている値で判定し直す(画面の表示が古くても二重送付しない)
+      const targets = (missionList || []).filter(m => m && !state[sentKey].includes(m.id) && missionValue(state, type, m) >= m.target);
+      if (!targets.length) return 0;
       const period = type === 'daily' ? state.dailyPeriod : state.weeklyPeriod;
-      const giftId = `gift_mission_${type}_${period}_${mission.id}`;
-      const gift = {
-        id: giftId,
-        source: 'mission',
-        missionId: mission.id,
-        missionType: type,
-        periodId: period,
-        title: `ミッション報酬「${mission.name}」`,
-        description: `${mission.condition}の達成報酬です。`,
-        rewards: mission.rewards.map(r => ({
-          ...r
-        })),
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        claimedAt: null
-      };
-      const currentGifts = Array.isArray(gifts) ? gifts : [];
-      const nextGifts = currentGifts.some(g => g?.id === giftId) ? currentGifts : [gift, ...currentGifts];
-      state[sentKey] = [...state[sentKey], mission.id];
-      if (type === 'daily' && !mission.complete) state.weekly.dailyClaims = (Number(state.weekly.dailyClaims) || 0) + 1;
+      let nextGifts = Array.isArray(gifts) ? [...gifts] : [];
+      const sent = [...state[sentKey]];
+      targets.forEach(mission => {
+        const gift = buildMissionGift(type, period, mission);
+        if (!nextGifts.some(g => g?.id === gift.id)) nextGifts = [gift, ...nextGifts];
+        if (!sent.includes(mission.id)) sent.push(mission.id);
+        if (type === 'daily' && !mission.complete) state.weekly.dailyClaims = (Number(state.weekly.dailyClaims) || 0) + 1;
+      });
+      state[sentKey] = sent;
       // 固定IDと同期ロックに加え、ギフトを先に保存する。途中終了時も再操作では同じIDを再利用する。
       await storeSet('mh_gifts', nextGifts, false);
       await storeSet('mh_missions', state, false);
       missionsRef.current = state;
       setGifts(nextGifts);
       setMissions(state);
+      return targets.length;
     } finally {
       missionClaimingRef.current = false;
     }
   };
+  const claimMission = (type, mission) => sendMissionsToGiftBox(type, [mission]);
+  // 選択中のタブで、達成済み・未受取のものをまとめてギフトへ送る
+  const claimMissionsBulk = type => sendMissionsToGiftBox(type, missionClaimableList(normalizeMissions(missionsRef.current), type));
   const openMissions = () => {
     setMissionTab('daily');
     setGameState('MISSIONS');
@@ -10605,7 +10667,7 @@ function MonsterHeroGame() {
     className: "mh-home-gift"
   }, /*#__PURE__*/React.createElement(Package, {
     size: 16
-  }), "\u30AE\u30D5\u30C8", gifts.filter(g => !g?.claimedAt && !giftIsExpired(g)).length > 0 && /*#__PURE__*/React.createElement("em", null, gifts.filter(g => !g?.claimedAt && !giftIsExpired(g)).length)), /*#__PURE__*/React.createElement("button", {
+  }), "\u30AE\u30D5\u30C8", giftClaimableCount(gifts) > 0 && /*#__PURE__*/React.createElement("em", null, giftClaimableCount(gifts))), /*#__PURE__*/React.createElement("button", {
     onClick: openChangelog,
     className: "mh-home-update"
   }, /*#__PURE__*/React.createElement(RefreshCcw, {
@@ -10926,7 +10988,7 @@ function MonsterHeroGame() {
     const unclaimed = gifts.filter(g => !g?.claimedAt);
     const history = gifts.filter(g => g?.claimedAt);
     const shown = giftTab === 'unclaimed' ? unclaimed : history;
-    const claimable = unclaimed.filter(g => !giftIsExpired(g, now) && normalizeGiftRewards(g));
+    const claimable = unclaimed.filter(g => giftIsClaimable(g, now));
     return /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-3",
       style: {
@@ -10950,8 +11012,8 @@ function MonsterHeroGame() {
       className: "grid grid-cols-2 gap-2 mb-2 shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setGiftTab('unclaimed'),
-      className: `min-h-[44px] rounded-xl font-black text-sm ${giftTab === 'unclaimed' ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-400'}`
-    }, "\u672A\u53D7\u53D6 (", unclaimed.filter(g => !giftIsExpired(g, now)).length, ")"), /*#__PURE__*/React.createElement("button", {
+      className: `relative min-h-[44px] rounded-xl font-black text-sm ${giftTab === 'unclaimed' ? 'bg-cyan-600 text-white' : 'bg-slate-900 text-slate-400'}`
+    }, "\u672A\u53D7\u53D6 (", unclaimed.filter(g => !giftIsExpired(g, now)).length, ")", tabCountBadge(claimable.length)), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGiftTab('history'),
       className: `min-h-[44px] rounded-xl font-black text-sm ${giftTab === 'history' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400'}`
     }, "\u53D7\u53D6\u6E08\u307F (", history.length, ")")), giftTab === 'unclaimed' && /*#__PURE__*/React.createElement("button", {
@@ -11015,11 +11077,18 @@ function MonsterHeroGame() {
       className: "grid grid-cols-2 gap-2 mb-2 shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setMissionTab('daily'),
-      className: `min-h-[44px] rounded-xl font-black text-sm ${missionTab === 'daily' ? 'bg-amber-600 text-white' : 'bg-slate-900 text-slate-400'}`
-    }, "\u30C7\u30A4\u30EA\u30FC"), /*#__PURE__*/React.createElement("button", {
+      className: `relative min-h-[44px] rounded-xl font-black text-sm ${missionTab === 'daily' ? 'bg-amber-600 text-white' : 'bg-slate-900 text-slate-400'}`
+    }, "\u30C7\u30A4\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'daily').length)), /*#__PURE__*/React.createElement("button", {
       onClick: () => setMissionTab('weekly'),
-      className: `min-h-[44px] rounded-xl font-black text-sm ${missionTab === 'weekly' ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-400'}`
-    }, "\u30A6\u30A3\u30FC\u30AF\u30EA\u30FC")), /*#__PURE__*/React.createElement("div", {
+      className: `relative min-h-[44px] rounded-xl font-black text-sm ${missionTab === 'weekly' ? 'bg-violet-600 text-white' : 'bg-slate-900 text-slate-400'}`
+    }, "\u30A6\u30A3\u30FC\u30AF\u30EA\u30FC", tabCountBadge(missionClaimableList(state, 'weekly').length))), (() => {
+      const bulk = missionClaimableList(state, missionTab);
+      return /*#__PURE__*/React.createElement("button", {
+        disabled: !bulk.length,
+        onClick: () => claimMissionsBulk(missionTab),
+        className: "shrink-0 mb-2 min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black disabled:opacity-40"
+      }, "\u4E00\u62EC\u53D7\u3051\u53D6\u308A", bulk.length > 0 && ` (${bulk.length})`);
+    })(), /*#__PURE__*/React.createElement("div", {
       className: "mb-2 text-center text-[10px] font-bold text-slate-400 shrink-0"
     }, "\u6B21\u56DE\u66F4\u65B0: ", new Date(resetAt).toLocaleString('ja-JP', {
       timeZone: 'Asia/Tokyo',
@@ -11914,40 +11983,7 @@ function MonsterHeroGame() {
     className: "mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black"
   }, "\u518D\u8AAD\u8FBC")) : /*#__PURE__*/React.createElement("div", {
     className: "text-center text-slate-500 py-8"
-  }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093"))))))), gameState === 'FORMATION_MENU' && /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 flex flex-col h-full p-4",
-    style: {
-      paddingTop: 'calc(1rem + env(safe-area-inset-top))',
-      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: returnToHome,
-    className: "p-3 text-slate-400"
-  }, /*#__PURE__*/React.createElement(ArrowLeft, {
-    size: 20
-  })), /*#__PURE__*/React.createElement("h2", {
-    className: "text-xl font-black italic text-indigo-400"
-  }, "\u7DE8\u6210")), /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-md mx-auto space-y-4 mt-[clamp(3.5rem,14vh,8rem)]"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      setDraftMonsterRoster(monsterRosterIds);
-      setDraftTeachingRoster(teachingRosterIds);
-      setRosterTab('monster');
-      setGameState('ROSTER');
-    },
-    className: "w-full min-h-[72px] bg-indigo-950/50 border border-indigo-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]"
-  }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u7DE8\u6210"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      setDraftMonsterRoster(monsterRosterIds);
-      setDraftTeachingRoster(teachingRosterIds);
-      setRosterTab('teaching');
-      setGameState('ROSTER');
-    },
-    className: "w-full min-h-[72px] bg-purple-950/50 border border-purple-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]"
-  }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u7DE8\u6210"))), gameState === 'MONSTER_LIST_MENU' && /*#__PURE__*/React.createElement("div", {
+  }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093"))))))), gameState === 'MONSTER_LIST_MENU' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full p-4",
     style: {
       paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -12281,7 +12317,10 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-2 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setGameState('MB_MANAGEMENT'),
+    onClick: () => {
+      setManagementTab(rosterTab === 'monster' ? 'monster' : 'breeder');
+      setGameState('MB_MANAGEMENT');
+    },
     className: "p-3 text-slate-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
