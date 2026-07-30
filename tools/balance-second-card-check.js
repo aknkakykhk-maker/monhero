@@ -68,7 +68,25 @@ check('ダメージ予測も同じ数え方を使う',
   has('let committedTotal=0; let committedPenaltyCnt=0;') && has('const isPenalty=!isBreederCard(card);')
     && has('let globalPenaltyCnt=0;'));
 check('攻撃だけを数える古い判定が残っていない',
-  !has('committedAtkCnt') && !has('globalAtkCnt') && !has('let committedAtk=0;'));
+  !has('committedAtkCnt') && !has('globalAtkCnt') && !has('let committedAtk=0;') && !has('assignedAttackCount'));
+
+// 保留中(タップしただけでまだ置いていない)カードを自分自身で数えると、1枚目なのに半減表示になる
+const pendingGuards = (source.match(/if\(idx===pendingIdx\) return;/g) || []).length;
+check('予測は保留中のカードを枚数に数えない', pendingGuards >= 2, `${pendingGuards}か所`);
+check('スロット予測も保留中のカードを除く', has('selectedCards.forEach(idx=>{if(idx!==pendingIdx&&!isBreederCard(hand[idx]))committedPenalty++;});'));
+check('保留カードの判定にドラッグ中の手札位置も使う', has('dragState.cardIndex:null'));
+check('半減マークは保留カード自身の判定で出す', has("{isPendingPreview&&isPendingHalved?'½ ':''}DMG:"));
+
+// ガードの見え方
+check('ガードの合計軽減を表示する', has('合計軽減') && has('const committedGuard=guardValueOf(guardFlat,guardMult);'));
+check('合計軽減も置く前の予測を出す', has('const projectedGuard=') && has('showGuardProjected'));
+check('合計軽減は実処理と同じ式で出す',
+  has('const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + def * mult) : 0;')
+    && has('const guardCardWeight = (card) =>'));
+check('弱ガードの重みも合計に反映する', has("card?.type === 'weak_guard' ? 0.5 : 0"));
+check('スロットのガード表示に軽減量を出す', has('{gv>0&&<span'));
+check('半減するカードには½を付ける', has("{halvedByIdx[idx]?'½':''}{card.name}"));
+check('ガードのカード詳細も半減後の値を出す', has('（2枚目以降のため半減）') && has('Math.floor(halved?raw*0.5:raw)'));
 check('ヘルプに2枚目以降の説明がある', has('2枚目以降で使ったカードは、ダメージもガードも効果が半分'));
 
 // --- ② かどみうむ ---
