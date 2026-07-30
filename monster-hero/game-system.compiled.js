@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e851dad2095c61c5
+// source-sha256: ec4bd9c82c2a0e6b
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -121,7 +121,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 10:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 10:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3350,13 +3350,23 @@ const DIST_APTITUDE_COLOR = {
   G: "text-slate-400 bg-slate-800/60 border-slate-500/50"
 };
 // 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
-// 更新履歴のうち一番新しいエントリの日時。未読(NEW)判定の基準にする。
-// data/changelog.js に追記すればこの値が自動的に新しくなり、NEWマークが復活する
 const CHANGELOG_TYPES = ['update', 'issue'];
-const CHANGELOG_LATEST_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => {
-  const latest = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).find(entry => entry.type === type);
-  return [type, latest ? latest.date : ''];
+// 日付やBUILD_DATEではなく、内容から作った安定IDでお知らせを識別する。同じID・同じ本文は
+// ビルドし直しても未読へ戻らず、本文を変更した場合だけ新しい項目として扱う。
+const changelogEntryId = entry => {
+  const source = entry.id || [entry.type, entry.title, ...(entry.items || [])].join('\u001f');
+  let hash = 2166136261;
+  for (let i = 0; i < source.length; i++) {
+    hash ^= source.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${entry.type || 'notice'}-${(hash >>> 0).toString(36)}`;
+};
+const CHANGELOG_ENTRIES = (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).map(entry => Object.freeze({
+  ...entry,
+  id: changelogEntryId(entry)
 }));
+const CHANGELOG_IDS_BY_TYPE = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_ENTRIES.filter(entry => entry.type === type).map(entry => entry.id)]));
 const DEFAULT_MONSTER_LIST_SETTINGS = {
   version: 1,
   modalTab: 'sort',
@@ -4717,8 +4727,22 @@ function MonsterHeroGame() {
   const [trainingMapOverview, setTrainingMapOverview] = useState(false);
   const [trainingDiceStage, setTrainingDiceStage] = useState('idle');
   const [trainingDiceFace, setTrainingDiceFace] = useState(1);
+  const [trainingMapScale, setTrainingMapScale] = useState(1);
+  const trainingPointersRef = useRef(new Map());
+  const trainingGestureRef = useRef({
+    distance: 0,
+    scale: 1,
+    last: null,
+    moved: false
+  });
+  const trainingSuppressTapRef = useRef(0);
+  const [trainingEffect, setTrainingEffect] = useState(null);
+  const trainingEffectTimerRef = useRef(null);
   useEffect(() => () => {
     if (trainingRollTimerRef.current) clearInterval(trainingRollTimerRef.current);
+  }, []);
+  useEffect(() => () => {
+    if (trainingEffectTimerRef.current) clearTimeout(trainingEffectTimerRef.current);
   }, []);
   useEffect(() => {
     if (gameState !== 'TRAINING_BOARD' || trainingMapOverview) return;
@@ -4819,9 +4843,9 @@ function MonsterHeroGame() {
   const [showChangelog, setShowChangelog] = useState(false); // 更新履歴モーダルの表示状態
   const [changelogTab, setChangelogTab] = useState('update'); // 'update'=更新情報 / 'issue'=不具合情報
   const [changelogSeen, setChangelogSeen] = useState({
-    update: '',
-    issue: ''
-  }); // タブごとの最新既読日時(端末に保存)
+    update: [],
+    issue: []
+  }); // タブごとの既読ID一覧(端末に保存)
   const displayedChangelogTabRef = useRef(null); // 表示中のタブは、そこから離れるまで未読のまま保つ
   const [seVolume, setSeVolumeState] = useState(DEFAULT_VOLUME); // SE音量 0〜100(端末に保存、初期値は読み込み後に上書き)
   const [bgmVolume, setBgmVolumeState] = useState(DEFAULT_VOLUME); // BGM音量 0〜100(同上)
@@ -4923,17 +4947,18 @@ function MonsterHeroGame() {
     if (idx < 0) return grade;
     return DIST_APTITUDE_GRADES[Math.max(0, Math.min(DIST_APTITUDE_GRADES.length - 1, idx + shift))];
   };
-  // タブごとの最新項目日時と既読日時を比較するため、片方を確認してももう片方のNEWは残る。
-  const changelogUnread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, !!CHANGELOG_LATEST_BY_TYPE[type] && changelogSeen[type] !== CHANGELOG_LATEST_BY_TYPE[type]]));
+  // タブ別の既読ID集合を比較するため、再ビルドやBUILD_DATE変更で過去項目は復活しない。
+  const changelogUnreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id => !(changelogSeen[type] || []).includes(id))]));
+  const changelogUnread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogUnreadIds[type].length > 0]));
   const hasUnreadChangelog = changelogUnread.update || changelogUnread.issue;
   const markChangelogTabSeen = type => {
-    const latest = CHANGELOG_LATEST_BY_TYPE[type];
-    if (!latest || changelogSeen[type] === latest) return;
+    const ids = CHANGELOG_IDS_BY_TYPE[type];
+    if (!ids.length || !changelogUnreadIds[type].length) return;
     setChangelogSeen(prev => ({
       ...prev,
-      [type]: latest
+      [type]: ids
     }));
-    storeSet(`mh_changelog_seen_${type}`, latest, false);
+    storeSet(`mh_changelog_seen_ids_${type}`, ids, false);
   };
   const selectChangelogTab = type => {
     if (displayedChangelogTabRef.current === type) return;
@@ -5852,12 +5877,16 @@ function MonsterHeroGame() {
         grantedPoints = expectedPoints;
       }
       await storeSet('mh_breeder_points_granted', grantedPoints, false);
-      // 旧単一キーは移行元としてだけ読み、以後は更新情報・不具合情報を別キーで管理する。
+      // 旧日時キーは一度だけID一覧へ移行する。旧日時以前の項目は既読のまま維持する。
       const legacyChangelogSeen = await storeGet('mh_changelog_seen', '', false);
-      setChangelogSeen({
-        update: await storeGet('mh_changelog_seen_update', legacyChangelogSeen, false),
-        issue: await storeGet('mh_changelog_seen_issue', legacyChangelogSeen, false)
-      });
+      const migratedSeen = {};
+      for (const type of CHANGELOG_TYPES) {
+        const savedIds = await storeGet(`mh_changelog_seen_ids_${type}`, null, false);
+        const legacyDate = await storeGet(`mh_changelog_seen_${type}`, legacyChangelogSeen, false);
+        migratedSeen[type] = Array.isArray(savedIds) ? savedIds.filter(id => CHANGELOG_IDS_BY_TYPE[type].includes(id)) : CHANGELOG_ENTRIES.filter(entry => entry.type === type && legacyDate && entry.date <= legacyDate).map(entry => entry.id);
+        if (!Array.isArray(savedIds)) await storeSet(`mh_changelog_seen_ids_${type}`, migratedSeen[type], false);
+      }
+      setChangelogSeen(migratedSeen);
       const listSettings = normalizeMonsterListSettings(await storeGet('mh_monster_list_settings', DEFAULT_MONSTER_LIST_SETTINGS, false));
       setMonsterSortKey(listSettings.sortKey);
       setMonsterSortDir(listSettings.sortDir);
@@ -6619,6 +6648,8 @@ function MonsterHeroGame() {
   };
   const startTraining = () => {
     if (!trainingSelectedId || trainingDifficulty !== 'BEGINNER') return;
+    setTrainingMapScale(1);
+    setTrainingMapOverview(false);
     setTrainingSession(createTrainingSession(trainingSelectedId));
     setTrainingDebugRoll(null);
     setGameState('TRAINING_BOARD');
@@ -6627,6 +6658,86 @@ function MonsterHeroGame() {
     ...prev,
     ...patch
   }));
+  const showTrainingEffect = (space, text = space?.desc) => {
+    if (!space) return;
+    if (trainingEffectTimerRef.current) clearTimeout(trainingEffectTimerRef.current);
+    setTrainingEffect({
+      kind: space.kind,
+      emoji: space.emoji,
+      text
+    });
+    trainingEffectTimerRef.current = setTimeout(() => setTrainingEffect(null), 1250);
+  };
+  const focusTrainingCurrent = () => {
+    setTrainingMapOverview(false);
+    setTrainingMapScale(1);
+    requestAnimationFrame(() => {
+      const viewport = trainingMapRef.current,
+        node = TRAINING_NODE_BY_ID[trainingSession?.position];
+      if (viewport && node) viewport.scrollTo({
+        left: 720 * node.x / 100 - viewport.clientWidth / 2,
+        top: 520 * node.y / 100 - viewport.clientHeight / 2,
+        behavior: 'smooth'
+      });
+    });
+  };
+  const trainingPointerDown = e => {
+    const viewport = trainingMapRef.current;
+    if (!viewport) return;
+    viewport.setPointerCapture?.(e.pointerId);
+    trainingPointersRef.current.set(e.pointerId, {
+      x: e.clientX,
+      y: e.clientY
+    });
+    const points = [...trainingPointersRef.current.values()];
+    trainingGestureRef.current = {
+      distance: points.length === 2 ? Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y) : 0,
+      scale: trainingMapScale,
+      last: points[0],
+      moved: false
+    };
+  };
+  const trainingPointerMove = e => {
+    const viewport = trainingMapRef.current,
+      pointers = trainingPointersRef.current;
+    if (!viewport || !pointers.has(e.pointerId)) return;
+    e.preventDefault();
+    const old = pointers.get(e.pointerId);
+    pointers.set(e.pointerId, {
+      x: e.clientX,
+      y: e.clientY
+    });
+    const points = [...pointers.values()],
+      gesture = trainingGestureRef.current;
+    if (points.length >= 2) {
+      const distance = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+      if (gesture.distance) {
+        const scale = Math.max(.48, Math.min(2.15, gesture.scale * distance / gesture.distance));
+        setTrainingMapScale(scale);
+        setTrainingMapOverview(false);
+      }
+      gesture.moved = true;
+    } else if (old) {
+      const dx = e.clientX - old.x,
+        dy = e.clientY - old.y;
+      if (Math.abs(dx) + Math.abs(dy) > 1) {
+        viewport.scrollLeft -= dx;
+        viewport.scrollTop -= dy;
+        gesture.moved = true;
+      }
+    }
+  };
+  const trainingPointerUp = e => {
+    trainingPointersRef.current.delete(e.pointerId);
+    if (trainingGestureRef.current.moved) trainingSuppressTapRef.current = Date.now() + 350;
+    trainingGestureRef.current.last = null;
+  };
+  const trainingWheel = e => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    setTrainingMapScale(scale => Math.max(.48, Math.min(2.15, scale - e.deltaY * .002)));
+    setTrainingMapOverview(false);
+  };
   const logTraining = (session, text) => [...(session.eventLog || []), text].slice(-80);
   const finishTraining = (success, base = trainingSession) => {
     if (!base || base.status === 'result') return;
@@ -6666,6 +6777,7 @@ function MonsterHeroGame() {
   const applyTrainingSpace = async base => {
     const node = TRAINING_NODE_BY_ID[base.position],
       space = TRAINING_SPACE_TYPES[node.type];
+    showTrainingEffect(space);
     let next = {
       ...base,
       rewards: {
@@ -6926,6 +7038,8 @@ function MonsterHeroGame() {
   };
   const restartTraining = () => {
     if (trainingSelectedId) {
+      setTrainingMapScale(1);
+      setTrainingMapOverview(false);
       setTrainingSession(createTrainingSession(trainingSelectedId));
       setGameState('TRAINING_BOARD');
     }
@@ -9649,9 +9763,10 @@ function MonsterHeroGame() {
     "aria-label": "\u672A\u8AAD\u3042\u308A"
   }, "!")))), /*#__PURE__*/React.createElement("div", {
     className: "mh-changelog-list"
-  }, (typeof CHANGELOG !== 'undefined' ? CHANGELOG : []).filter(c => c.type === changelogTab).map((c, i) => /*#__PURE__*/React.createElement("article", {
-    key: i
-  }, /*#__PURE__*/React.createElement("time", null, c.date), /*#__PURE__*/React.createElement("b", null, c.title), (c.items || []).map((x, j) => /*#__PURE__*/React.createElement("p", {
+  }, CHANGELOG_ENTRIES.filter(c => c.type === changelogTab).map(c => /*#__PURE__*/React.createElement("article", {
+    key: c.id,
+    className: changelogUnreadIds[changelogTab].includes(c.id) ? 'unread' : ''
+  }, /*#__PURE__*/React.createElement("time", null, c.date, changelogUnreadIds[changelogTab].includes(c.id) && /*#__PURE__*/React.createElement("em", null, "NEW")), /*#__PURE__*/React.createElement("b", null, c.title), (c.items || []).map((x, j) => /*#__PURE__*/React.createElement("p", {
     key: j
   }, "\u30FB", x))))))) : showTitleSettings ? /*#__PURE__*/React.createElement("div", {
     className: "mh-title-modal",
@@ -10154,7 +10269,10 @@ function MonsterHeroGame() {
     const highlighted = new Set([current.id, ...trainingSession.routePreview, ...trainingSession.branchOptions]);
     return /*#__PURE__*/React.createElement("main", {
       className: "mh-training-board"
-    }, trainingDiceStage !== 'idle' && /*#__PURE__*/React.createElement("div", {
+    }, trainingEffect && /*#__PURE__*/React.createElement("div", {
+      className: `mh-training-effect ${trainingEffect.kind}`,
+      "aria-live": "polite"
+    }, /*#__PURE__*/React.createElement("span", null, trainingEffect.emoji), /*#__PURE__*/React.createElement("b", null, trainingEffect.text), /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null), /*#__PURE__*/React.createElement("i", null)), trainingDiceStage !== 'idle' && /*#__PURE__*/React.createElement("div", {
       className: `mh-dice-overlay ${trainingDiceStage}`,
       "aria-live": "assertive"
     }, /*#__PURE__*/React.createElement("div", {
@@ -10166,13 +10284,23 @@ function MonsterHeroGame() {
       className: "mh-training-hud"
     }, /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC97 \u4EEEXP ", /*#__PURE__*/React.createElement("b", null, trainingSession.rewards.bondXp)), /*#__PURE__*/React.createElement("span", null, "\uD83D\uDC8E \u4EEE\u30C0\u30A4\u30E4 ", /*#__PURE__*/React.createElement("b", null, trainingSession.rewards.diamonds)), /*#__PURE__*/React.createElement("span", null, "\uD83C\uDF81 \u4EEE\u30A2\u30A4\u30C6\u30E0 ", /*#__PURE__*/React.createElement("b", null, trainingSession.rewards.items.length))), /*#__PURE__*/React.createElement("div", {
       ref: trainingMapRef,
-      className: `mh-tile-viewport ${trainingMapOverview ? 'overview' : ''}`
+      className: `mh-tile-viewport ${trainingMapOverview ? 'overview' : ''}`,
+      onPointerDown: trainingPointerDown,
+      onPointerMove: trainingPointerMove,
+      onPointerUp: trainingPointerUp,
+      onPointerCancel: trainingPointerUp,
+      onWheel: trainingWheel
     }, /*#__PURE__*/React.createElement("div", {
       className: "mh-map-legend"
     }, /*#__PURE__*/React.createElement("b", null, "\uD83D\uDEA9 START"), /*#__PURE__*/React.createElement("b", null, "\uD83D\uDCCD \u73FE\u5728\u5730"), /*#__PURE__*/React.createElement("b", null, "\u26A1 \u5B89\u5168\u30EB\u30FC\u30C8"), /*#__PURE__*/React.createElement("b", null, "\uD83C\uDF81 \u5831\u916C\u30EB\u30FC\u30C8"), /*#__PURE__*/React.createElement("b", null, "\uD83C\uDFC1 GOAL")), /*#__PURE__*/React.createElement("div", {
       className: "mh-goal-guide"
     }, "GOAL ", /*#__PURE__*/React.createElement("span", null, "\u279C")), /*#__PURE__*/React.createElement("div", {
-      className: "mh-tile-board"
+      className: "mh-tile-board",
+      style: {
+        width: `${720 * trainingMapScale}px`,
+        height: `${520 * trainingMapScale}px`,
+        '--map-scale': trainingMapScale
+      }
     }, TRAINING_BEGINNER_NODES.map(n => /*#__PURE__*/React.createElement(React.Fragment, {
       key: n.id
     }, n.next.filter(id => TRAINING_BEGINNER_NODES.findIndex(x => x.id === id) > TRAINING_BEGINNER_NODES.findIndex(x => x.id === n.id)).map(id => {
@@ -10198,10 +10326,13 @@ function MonsterHeroGame() {
         '--tile-color': TRAINING_SPACE_TYPES[n.type].color
       },
       className: `mh-training-tile ${n.id === current.id ? 'current' : ''} ${trainingSession.routePreview.includes(n.id) ? 'route-preview' : ''} ${trainingSession.stopPreview === n.id ? 'stop-preview' : ''} ${trainingSession.branchOptions.includes(n.id) ? 'branch-choice' : ''} ${trainingForwardOptions(n.id).length > 1 ? 'branch' : ''} ${n.type === 'goal' ? 'goal' : ''} ${n.type === 'start' ? 'start' : ''}`,
-      onClick: () => trainingSession.branchOptions.includes(n.id) ? chooseTrainingBranch(n.id) : setTrainingModal({
-        type: 'space',
-        space: TRAINING_SPACE_TYPES[n.type]
-      })
+      onClick: () => {
+        if (Date.now() < trainingSuppressTapRef.current) return;
+        trainingSession.branchOptions.includes(n.id) ? chooseTrainingBranch(n.id) : setTrainingModal({
+          type: 'space',
+          space: TRAINING_SPACE_TYPES[n.type]
+        });
+      }
     }, trainingSession.branchOptions.includes(n.id) && /*#__PURE__*/React.createElement("em", {
       className: "mh-branch-arrow"
     }, "\u279C \u9078\u3076"), /*#__PURE__*/React.createElement("small", null, n.type === 'start' ? 'START' : n.type === 'goal' ? 'GOAL' : TRAINING_SPACE_TYPES[n.type].label), /*#__PURE__*/React.createElement("span", null, TRAINING_SPACE_TYPES[n.type].emoji), n.id === current.id && m && /*#__PURE__*/React.createElement("div", {
@@ -10214,8 +10345,18 @@ function MonsterHeroGame() {
     }), /*#__PURE__*/React.createElement("b", null, m.name))))))), /*#__PURE__*/React.createElement("div", {
       className: "mh-board-buttons"
     }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => setTrainingMapOverview(v => !v)
-    }, trainingMapOverview ? '📍 現在地へ' : '🗺️ 全体マップ'), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setTrainingMapOverview(true);
+        setTrainingMapScale(.48);
+        trainingMapRef.current?.scrollTo({
+          left: 0,
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
+    }, "\uD83D\uDDFA\uFE0F \u5168\u4F53"), /*#__PURE__*/React.createElement("button", {
+      onClick: focusTrainingCurrent
+    }, "\uD83D\uDCCD \u73FE\u5728\u5730"), /*#__PURE__*/React.createElement("span", null, Math.round(trainingMapScale * 100), "%"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setTrainingModal({
         type: 'rules'
       })
@@ -17270,6 +17411,7 @@ const createAnimationStyle = () => {
     .mh-title-gate,.mh-entering{position:fixed;inset:0;overflow:hidden;color:#fff;background:#05020e;isolation:isolate}.mh-title-gate{animation:titleReveal .65s ease-out both}.mh-title-visual,.mh-entering>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%}
     .mh-title-header{position:absolute;z-index:22;top:0;left:0;right:0;padding:calc(11px + env(safe-area-inset-top)) 12px 0;display:flex;justify-content:space-between;align-items:flex-start;text-shadow:0 2px 5px #000;pointer-events:none}.mh-title-build{display:grid;padding:6px 8px;text-align:left;font-family:monospace;line-height:1.15;border:1px solid #ffffff30;border-radius:10px;background:#160d2588;backdrop-filter:blur(3px)}.mh-title-build b{font-size:7px;letter-spacing:.18em;color:#eadcff}.mh-title-build span{font-size:8px;margin-bottom:5px;color:#fff;max-width:130px;overflow:hidden;text-overflow:ellipsis}.mh-title-actions{display:flex;gap:7px;pointer-events:auto}.mh-title-actions button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:50px;height:50px;border-radius:50%;background:#26152ecc;border:1px solid #ffd87a;color:#fff;font-size:8px;font-weight:800;box-shadow:0 2px 8px #000}.mh-title-actions em{position:absolute;right:-3px;top:-6px;background:#e33;padding:2px 4px;border-radius:8px;font-size:6px;font-style:normal}.mh-title-start{position:absolute;z-index:21;inset:0;width:100%;height:100%;border:0;background:transparent;touch-action:manipulation}.mh-title-start:disabled{pointer-events:none}
     .mh-title-modal{position:fixed;z-index:100;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));background:#03020eef}.mh-title-dialog{display:flex;flex-direction:column;gap:12px;width:min(100%,380px);max-height:86vh;padding:18px;border:1px solid #a78bfa77;border-radius:22px;background:#0f172a;color:#fff;overflow:auto}.mh-dialog-head{display:flex;align-items:center;justify-content:space-between}.mh-dialog-head h3{font-weight:900}.mh-dialog-head button{padding:8px}.mh-dialog-choice{display:flex;justify-content:space-between;align-items:center;padding:14px;border:1px solid #ffffff22;border-radius:14px;background:#ffffff0c;font-weight:800}.mh-changelog-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mh-changelog-tabs button{position:relative;padding:9px;border-radius:10px;background:#1e293b;font-size:11px;font-weight:800}.mh-changelog-tabs button.active{background:#b45309}.mh-unread-badge{position:absolute;right:-5px;top:-6px;display:flex;align-items:center;justify-content:center;width:17px;height:17px;border:2px solid #fff;border-radius:50%;background:#dc2626;color:#fff;font:900 11px/1 sans-serif;font-style:normal;box-shadow:0 2px 5px #0008;pointer-events:none}.mh-changelog-list{overflow:auto}.mh-changelog-list article{padding:11px;margin-bottom:8px;border:1px solid #ffffff18;border-radius:13px;background:#0005}.mh-changelog-list time,.mh-changelog-list b{display:block}.mh-changelog-list time{font:9px monospace;color:#94a3b8}.mh-changelog-list b{font-size:12px;margin:4px 0}.mh-changelog-list p{font-size:10px;color:#cbd5e1}.mh-title-dialog textarea{min-height:90px;padding:8px;border-radius:10px;background:#0008;font:9px monospace}
+    .mh-tile-viewport{touch-action:none;overscroll-behavior:contain;cursor:grab}.mh-tile-viewport:active{cursor:grabbing}.mh-tile-viewport.overview{overflow:auto}.mh-tile-viewport.overview .mh-tile-board{transform:none}.mh-training-tile{transform:scale(var(--map-scale,1))}.mh-training-tile.current{transform:scale(calc(var(--map-scale,1)*1.08))}.mh-tile-board>i.route{height:17px;border-color:#fef08a;background:#facc15;box-shadow:0 0 14px #fde047;animation:trainingRoutePulse .7s infinite alternate}.mh-training-tile.route-preview{border-color:#fde047;box-shadow:0 0 16px #fde047,0 5px 0 #713f12}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 5px #f97316,0 0 25px #fb923c}.mh-board-buttons{display:flex;align-items:center;gap:4px}.mh-board-buttons button{min-height:34px;padding:0 8px;border-radius:9px;background:#164e63;font-size:8px;font-weight:900}.mh-board-buttons span{padding:3px 5px;border-radius:7px;background:#020617;color:#bae6fd;font:8px monospace}.mh-changelog-list article.unread{border-color:#f59e0b88}.mh-changelog-list time em{float:right;padding:2px 5px;border-radius:6px;background:#dc2626;color:#fff;font:900 7px sans-serif;font-style:normal}.mh-training-effect{position:fixed;z-index:45000;left:50%;top:43%;width:min(78vw,300px);min-height:150px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border:3px solid #fff;border-radius:28px;background:radial-gradient(circle,#0ea5e9dd,#020617ee 72%);box-shadow:0 0 55px #38bdf8;pointer-events:none;animation:trainingEffectPop 1.25s ease-out both}.mh-training-effect>span{font-size:58px;filter:drop-shadow(0 0 15px #fff)}.mh-training-effect>b{z-index:2;max-width:90%;text-align:center;color:#fff;font-size:16px;text-shadow:0 2px 5px #000}.mh-training-effect.xp,.mh-training-effect.effect,.mh-training-effect.turn{background:radial-gradient(circle,#22c55edd,#052e16ee 72%);box-shadow:0 0 55px #4ade80}.mh-training-effect.diamond{background:radial-gradient(circle,#38bdf8ee,#172554ee 72%)}.mh-training-effect.item,.mh-training-effect.tool,.mh-training-effect.goal{background:radial-gradient(circle,#fbbf24ee,#581c87ee 72%);box-shadow:0 0 70px #fde047}.mh-training-effect.move,.mh-training-effect.happening{background:radial-gradient(circle,#ef4444dd,#450a0aee 72%);box-shadow:0 0 55px #fb7185}.mh-training-effect i{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 12px #fff;animation:trainingParticle 1s ease-out both}.mh-training-effect i:nth-of-type(1){--a:0deg}.mh-training-effect i:nth-of-type(2){--a:60deg}.mh-training-effect i:nth-of-type(3){--a:120deg}.mh-training-effect i:nth-of-type(4){--a:180deg}.mh-training-effect i:nth-of-type(5){--a:240deg}.mh-training-effect i:nth-of-type(6){--a:300deg}@keyframes trainingEffectPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-58%) scale(.96)}}@keyframes trainingParticle{from{transform:rotate(var(--a)) translateX(18px);opacity:1}to{transform:rotate(var(--a)) translateX(115px) scale(.2);opacity:0}}@keyframes trainingRoutePulse{to{filter:brightness(1.6)}}
     .mh-entering>img{animation:mhGateZoom 1.15s ease-in both}.mh-gate-core{position:absolute;z-index:3;left:50%;top:44%;width:12vmin;height:12vmin;border-radius:50%;background:#fff;box-shadow:0 0 25px 12px #d8b4fe,0 0 90px 40px #7e22ce;transform:translate(-50%,-50%);animation:mhCoreGrow 1.15s ease-in both}.mh-gate-particles{position:absolute;z-index:2;inset:-30%;background:repeating-conic-gradient(from 0deg,transparent 0 8deg,#fbbf2444 9deg,#a855f766 10deg,transparent 11deg 19deg);animation:mhParticles 1.1s ease-in both}.mh-gate-flash{position:absolute;z-index:4;inset:0;background:#f5f0ff;animation:mhGateFlash 1.15s ease-in both}.mh-entering p{position:absolute;z-index:6;left:0;right:0;bottom:calc(9% + env(safe-area-inset-bottom));text-align:center;font-size:11px;font-weight:800;text-shadow:0 2px 6px #000}
     @keyframes mhMocchiHop{0%,100%{transform:translateY(0) scale(1.05,.95)}45%{transform:translateY(-14px) rotate(-2deg) scale(.98,1.02)}70%{transform:translateY(0) scale(1.08,.9)}}@keyframes mhReadyHop{45%{transform:translateY(-25px) scale(1.1)}100%{transform:translateY(0)}}@keyframes mhShadow{0%,100%{transform:scaleX(1);opacity:.6}45%{transform:scaleX(.65);opacity:.3}}@keyframes mhSparkle{50%{transform:scale(1.5) rotate(90deg);opacity:.35}}@keyframes mhBigHop{45%{transform:translateY(-34px) scale(.95,1.08)}100%{transform:translateY(5px) scale(1.12,.88)}}@keyframes mhEntryFlash{45%{opacity:0}80%{opacity:1}100%{opacity:0}}@keyframes titleReveal{from{opacity:0;filter:brightness(2)}to{opacity:1;filter:none}}@keyframes mhGateZoom{to{transform:scale(1.16);filter:blur(2px) brightness(1.5)}}@keyframes mhCoreGrow{0%{transform:translate(-50%,-50%) scale(.15);opacity:0}70%{opacity:1}100%{transform:translate(-50%,-50%) scale(18)}}@keyframes mhParticles{to{transform:rotate(35deg) scale(.2);opacity:0}}@keyframes mhGateFlash{0%,68%{opacity:0}85%{opacity:.95}100%{opacity:1}}
     @media(max-width:350px){.mh-title-actions button{width:46px;height:46px}.mh-mocchi-wrap{width:130px;height:130px}.mh-title-header{padding-left:9px;padding-right:9px}}
