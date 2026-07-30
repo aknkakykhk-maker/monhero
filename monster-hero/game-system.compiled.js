@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 541895bd58bb4971
+// source-sha256: bc6cfb3519e1a568
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 20:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 20:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4139,7 +4139,7 @@ const collectBondRankingEntries = rankingPool => {
         icon: record.icon,
         monName,
         bondLevel,
-        imgUrl: member.imgUrl || ALL_PLAYER_MONSTERS[monsterId]?.iconUrl || null,
+        imgUrl: ALL_PLAYER_MONSTERS[monsterId]?.iconUrl || member.imgUrl || null,
         emoji: member.emoji || ALL_PLAYER_MONSTERS[monsterId]?.emoji || null,
         masuId: member.masuId ?? null,
         monsterId
@@ -4152,6 +4152,14 @@ const collectBondRankingEntries = rankingPool => {
     });
   }));
   return [...byIndividual.values()].sort((a, b) => b.bondLevel - a.bondLevel || a.userName.localeCompare(b.userName, 'ja'));
+};
+
+// ランキングに出すモンスターの絵。記録にはIDだけが入っているので、同梱の絵を引いて使う。
+// 画像を埋め込んでいた頃の古い記録は、そのimgUrlをそのまま使って表示できるようにしておく。
+const rankingMemberImage = member => {
+  if (!member) return null;
+  const base = ALL_PLAYER_MONSTERS[member.baseId || member.monsterId || member.id];
+  return base?.iconUrl || member.imgUrl || null;
 };
 const splitRankingParty = entry => {
   if (!Array.isArray(entry?.party)) return {
@@ -5325,10 +5333,16 @@ function MonsterHeroGame() {
     const byDiff = {};
     const poolByDiff = {};
     const sourceByDiff = {};
+    // 古い記録には編成に画像が埋め込まれている。表示には使わないので、
+    // 画面のstateへ持ち込む前に落として、端末側のメモリと再描画の負担を減らす
+    const stripPartyImages = party => Array.isArray(party) ? party.map(m => m && m.imgUrl ? {
+      ...m,
+      imgUrl: undefined
+    } : m) : party;
     const toEntry = r => ({
       userName: r.user_name,
       hero: r.hero,
-      party: r.party,
+      party: stripPartyImages(r.party),
       score: r.score,
       level: r.level,
       icon: r.icon
@@ -6395,6 +6409,11 @@ function MonsterHeroGame() {
     let heroSlotIndex = slots.findIndex(s => s === mainHero);
     if (heroSlotIndex < 0 && mainHero?.masuId != null) heroSlotIndex = slots.findIndex(s => s?.masuId != null && String(s.masuId) === String(mainHero.masuId));
     if (heroSlotIndex < 0) heroSlotIndex = slots.findIndex(s => s?.id === mainHero?.id);
+    // 【重要】記録に画像(imgUrl)を入れない。
+    // モンスターの絵は1枚で約120KBのbase64で、以前はこれを編成の人数分そのまま保存し、
+    // ランキングを開くたびに全員ぶん再ダウンロードしていた(20件×最大4体で数MB)。
+    // これが「読み込みが終わらない」「取得が8秒で打ち切られる」直接の原因だった。
+    // 絵はアプリに同梱しているので、記録にはIDだけ残して表示時にIDから引く。
     const party = slots.map((s, index) => s ? {
       role: index === heroSlotIndex ? 'hero' : 'ally',
       id: s.id,
@@ -6403,7 +6422,6 @@ function MonsterHeroGame() {
       masuId: s.masuId || null,
       name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name,
       emoji: s.emoji || ALL_PLAYER_MONSTERS[s.id]?.emoji || null,
-      imgUrl: s.imgUrl || ALL_PLAYER_MONSTERS[s.id]?.iconUrl || null,
       bondLevel: s.masuId ? getMasuBondLevel(s.masuId).level : null
     } : null);
     const name = breederName || '名無しのブリーダー';
@@ -10398,8 +10416,8 @@ function MonsterHeroGame() {
       className: "text-amber-400 shrink-0"
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[8px] text-amber-300 shrink-0"
-    }, "\u52C7\u8005\u30E2\u30F3:"), heroMember?.imgUrl ? /*#__PURE__*/React.createElement("img", {
-      src: heroMember.imgUrl,
+    }, "\u52C7\u8005\u30E2\u30F3:"), rankingMemberImage(heroMember) ? /*#__PURE__*/React.createElement("img", {
+      src: rankingMemberImage(heroMember),
       alt: heroName,
       className: "w-5 h-5 object-contain shrink-0"
     }) : /*#__PURE__*/React.createElement("span", {
@@ -10417,8 +10435,8 @@ function MonsterHeroGame() {
     }, "\u4F9B\u30E2\u30F3:"), allies.slice(0, 3).map((member, memberIndex) => /*#__PURE__*/React.createElement("div", {
       key: member?.masuId || `${member?.id || 'ally'}-${memberIndex}`,
       className: "flex flex-1 items-center justify-center gap-0.5 min-w-0"
-    }, member?.imgUrl ? /*#__PURE__*/React.createElement("img", {
-      src: member.imgUrl,
+    }, rankingMemberImage(member) ? /*#__PURE__*/React.createElement("img", {
+      src: rankingMemberImage(member),
       alt: "",
       className: "w-4 h-4 object-contain shrink-0"
     }) : /*#__PURE__*/React.createElement("span", {

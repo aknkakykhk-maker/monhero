@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 20:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 20:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1615,13 +1615,21 @@ const collectBondRankingEntries = (rankingPool) => {
         ? `masu:${String(member.masuId)}`
         : `legacy:${monsterId||monName}`;
       const key=`${userName}\u0000${individualId}`;
-      const entry={userName,icon:record.icon,monName,bondLevel,imgUrl:member.imgUrl||ALL_PLAYER_MONSTERS[monsterId]?.iconUrl||null,emoji:member.emoji||ALL_PLAYER_MONSTERS[monsterId]?.emoji||null,masuId:member.masuId??null,monsterId};
+      const entry={userName,icon:record.icon,monName,bondLevel,imgUrl:ALL_PLAYER_MONSTERS[monsterId]?.iconUrl||member.imgUrl||null,emoji:member.emoji||ALL_PLAYER_MONSTERS[monsterId]?.emoji||null,masuId:member.masuId??null,monsterId};
       const current=byIndividual.get(key);
       if(!current)byIndividual.set(key,entry);
       else byIndividual.set(key,{...(bondLevel>current.bondLevel?entry:current),bondLevel:Math.max(current.bondLevel,bondLevel)});
     });
   }));
   return [...byIndividual.values()].sort((a,b)=>b.bondLevel-a.bondLevel||a.userName.localeCompare(b.userName,'ja'));
+};
+
+// ランキングに出すモンスターの絵。記録にはIDだけが入っているので、同梱の絵を引いて使う。
+// 画像を埋め込んでいた頃の古い記録は、そのimgUrlをそのまま使って表示できるようにしておく。
+const rankingMemberImage = (member) => {
+  if (!member) return null;
+  const base = ALL_PLAYER_MONSTERS[member.baseId||member.monsterId||member.id];
+  return base?.iconUrl || member.imgUrl || null;
 };
 
 const splitRankingParty = (entry) => {
@@ -2456,7 +2464,10 @@ function MonsterHeroGame() {
     const byDiff = {};
     const poolByDiff = {};
     const sourceByDiff = {};
-    const toEntry = (r) => ({ userName: r.user_name, hero: r.hero, party: r.party, score: r.score, level: r.level, icon: r.icon });
+    // 古い記録には編成に画像が埋め込まれている。表示には使わないので、
+    // 画面のstateへ持ち込む前に落として、端末側のメモリと再描画の負担を減らす
+    const stripPartyImages = (party) => (Array.isArray(party) ? party.map(m => (m && m.imgUrl) ? { ...m, imgUrl: undefined } : m) : party);
+    const toEntry = (r) => ({ userName: r.user_name, hero: r.hero, party: stripPartyImages(r.party), score: r.score, level: r.level, icon: r.icon });
     // 過去の多重送信はidが異なるため、プレイ内容そのものをキーにして畳む。
     const rowKey = (r) => `v:${r?.user_name}|${r?.score}|${r?.level}|${r?.hero}|${JSON.stringify(r?.party || null)}|${r?.icon || ''}`;
     const mergeRows = (a, b) => {
@@ -3317,7 +3328,12 @@ function MonsterHeroGame() {
     let heroSlotIndex = slots.findIndex(s=>s===mainHero);
     if (heroSlotIndex<0 && mainHero?.masuId!=null) heroSlotIndex=slots.findIndex(s=>s?.masuId!=null&&String(s.masuId)===String(mainHero.masuId));
     if (heroSlotIndex<0) heroSlotIndex=slots.findIndex(s=>s?.id===mainHero?.id);
-    const party = slots.map((s,index) => s ? { role:index===heroSlotIndex?'hero':'ally', id:s.id, baseId:s.id, monsterId:s.id, masuId:s.masuId||null, name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji:s.emoji||ALL_PLAYER_MONSTERS[s.id]?.emoji||null, imgUrl:s.imgUrl||ALL_PLAYER_MONSTERS[s.id]?.iconUrl||null, bondLevel:s.masuId?getMasuBondLevel(s.masuId).level:null } : null);
+    // 【重要】記録に画像(imgUrl)を入れない。
+    // モンスターの絵は1枚で約120KBのbase64で、以前はこれを編成の人数分そのまま保存し、
+    // ランキングを開くたびに全員ぶん再ダウンロードしていた(20件×最大4体で数MB)。
+    // これが「読み込みが終わらない」「取得が8秒で打ち切られる」直接の原因だった。
+    // 絵はアプリに同梱しているので、記録にはIDだけ残して表示時にIDから引く。
+    const party = slots.map((s,index) => s ? { role:index===heroSlotIndex?'hero':'ally', id:s.id, baseId:s.id, monsterId:s.id, masuId:s.masuId||null, name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji:s.emoji||ALL_PLAYER_MONSTERS[s.id]?.emoji||null, bondLevel:s.masuId?getMasuBondLevel(s.masuId).level:null } : null);
     const name = breederName || '名無しのブリーダー';
     const heroName = (mainHero && (ALL_PLAYER_MONSTERS[mainHero.id]?.name || mainHero.name)) || 'Unknown';
     const level = breederLevel.level;
@@ -5341,10 +5357,10 @@ function MonsterHeroGame() {
         <div className="mt-1 bg-black/40 rounded-lg px-1.5 py-1 border border-white/5">
           <div className="flex items-center gap-1 min-w-0 leading-none">
             <Crown size={9} className="text-amber-400 shrink-0"/><span className="text-[8px] text-amber-300 shrink-0">勇者モン:</span>
-            {heroMember?.imgUrl?<img src={heroMember.imgUrl} alt={heroName} className="w-5 h-5 object-contain shrink-0"/>:<span className="w-5 text-center text-[9px] shrink-0">{heroMember?.emoji||'❓'}</span>}
+            {rankingMemberImage(heroMember)?<img src={rankingMemberImage(heroMember)} alt={heroName} className="w-5 h-5 object-contain shrink-0"/>:<span className="w-5 text-center text-[9px] shrink-0">{heroMember?.emoji||'❓'}</span>}
             <span className="text-[9px] font-black text-white truncate">{heroName}</span>
           </div>
-          {allies===null?<div className="mt-0.5 text-[7px] text-slate-500">編成情報なし（過去の記録）</div>:allies.length===0?<div className="mt-0.5 text-[7px] text-slate-500">供モンなし</div>:<div className="flex items-center gap-1 mt-0.5 min-w-0"><span className="text-[7px] text-slate-500 shrink-0">供モン:</span>{allies.slice(0,3).map((member, memberIndex)=><div key={member?.masuId||`${member?.id||'ally'}-${memberIndex}`} className="flex flex-1 items-center justify-center gap-0.5 min-w-0">{member?.imgUrl?<img src={member.imgUrl} alt="" className="w-4 h-4 object-contain shrink-0"/>:<span className="w-4 text-center text-[8px] shrink-0">{member?.emoji||'❓'}</span>}<span className="text-[7px] text-slate-300 truncate">{member?.name||'不明'}</span></div>)}</div>}
+          {allies===null?<div className="mt-0.5 text-[7px] text-slate-500">編成情報なし（過去の記録）</div>:allies.length===0?<div className="mt-0.5 text-[7px] text-slate-500">供モンなし</div>:<div className="flex items-center gap-1 mt-0.5 min-w-0"><span className="text-[7px] text-slate-500 shrink-0">供モン:</span>{allies.slice(0,3).map((member, memberIndex)=><div key={member?.masuId||`${member?.id||'ally'}-${memberIndex}`} className="flex flex-1 items-center justify-center gap-0.5 min-w-0">{rankingMemberImage(member)?<img src={rankingMemberImage(member)} alt="" className="w-4 h-4 object-contain shrink-0"/>:<span className="w-4 text-center text-[8px] shrink-0">{member?.emoji||'❓'}</span>}<span className="text-[7px] text-slate-300 truncate">{member?.name||'不明'}</span></div>)}</div>}
         </div>
       </article>
     );
