@@ -5,10 +5,11 @@ const context={ALL_PLAYER_MONSTERS:{Mocchi:{name:'モッチー',emoji:'🍡'},Su
 vm.runInContext(`${src.slice(a,b)};globalThis.collect=collectBondRankingEntries;`,context);
 const pool={Normal:[{userName:'A',level:'10',party:[{masuId:'1',baseId:'Mocchi',name:'モッチー',bondLevel:4,role:'hero'},{masuId:'2',baseId:'Suezo',name:'スエゾー',bondLevel:7,role:'ally'},null]}],Hard:[{userName:'A',level:12,party:[{masuId:'1',monsterId:'Mocchi',name:'モッチー',bondLevel:9}]},{userName:'A',level:15,party:[{masuId:'1',monsterId:'Mocchi',name:'モッチー',bondLevel:8}]},{userName:'B',level:-1,party:[{name:'モッチー',bondLevel:5,bondRankingTarget:false}]}],Master:[{userName:'B',level:'invalid',party:[{id:'Mocchi',name:'モッチー',bondLevel:8}]}]};
 const out=context.collect(pool);assert.strictEqual(out.length,3);assert.strictEqual(out[0].bondLevel,9);assert(out.some(x=>x.userName==='A'&&x.monName==='スエゾー'&&x.bondLevel===7));assert(out.some(x=>x.userName==='B'&&x.bondLevel===8));
-assert.strictEqual(out.find(x=>x.userName==='A'&&x.monName==='モッチー').breederLevel,15);assert.strictEqual(out.find(x=>x.userName==='B').breederLevel,null);
-assert(src.includes('ブリーダーLv.{breederLevel}'));assert(src.includes('entry?.breederLevel!=null&&Number.isFinite(breederLevel)&&breederLevel>=0&&'));
+assert(out.every(x=>!Object.prototype.hasOwnProperty.call(x,'breederLevel')));
+assert(!src.slice(src.indexOf('const renderBondRankingEntry'),src.indexOf('if (bootPhase === \'TITLE\')')).includes('breederLevel'));assert(!src.slice(src.indexOf('const collectBondRankingEntries'),src.indexOf('const splitRankingParty')).includes('record?.level'));
 assert(!src.includes('bondRankingTarget:index==='));assert(src.includes('取得に失敗しました')&&src.includes('記録はまだありません'));
-assert(src.includes("rankingStatus('bond:all')") && src.includes('status.refreshing'));
+assert(src.includes('const [bondRankingData, setBondRankingData]')&&src.includes('const [bondRankingLoading, setBondRankingLoading]')&&src.includes('const [bondRankingError, setBondRankingError]'));
+assert(src.includes("levelKind === 'bond' ? 'id.desc' : 'score.desc.nullslast'"));
 assert(src.includes('await Promise.allSettled(diffs.map(loadOne))'));
 assert(src.includes('finishRankingStatus(levelStatusKey, levelGeneration'));
 assert(src.includes('rankingRequestsRef.current.get(requestKey) === request'));

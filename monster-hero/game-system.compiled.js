@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 308f8554b95112fe
+// source-sha256: b9abe75e182614ea
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 15:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 17:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4118,8 +4118,6 @@ const collectBondRankingEntries = rankingPool => {
   const byIndividual = new Map();
   Object.values(rankingPool || {}).forEach(rows => (rows || []).forEach(record => {
     const userName = record?.userName || '名無しのブリーダー';
-    const recordedBreederLevel = Number(record?.level);
-    const breederLevel = Number.isFinite(recordedBreederLevel) && recordedBreederLevel >= 0 ? recordedBreederLevel : null;
     (Array.isArray(record?.party) ? record.party : []).forEach(member => {
       const bondLevel = Number(member?.bondLevel);
       if (!member || !Number.isFinite(bondLevel) || bondLevel <= 0) return;
@@ -4134,7 +4132,6 @@ const collectBondRankingEntries = rankingPool => {
         icon: record.icon,
         monName,
         bondLevel,
-        breederLevel,
         imgUrl: member.imgUrl || ALL_PLAYER_MONSTERS[monsterId]?.iconUrl || null,
         emoji: member.emoji || ALL_PLAYER_MONSTERS[monsterId]?.emoji || null,
         masuId: member.masuId ?? null,
@@ -4143,8 +4140,7 @@ const collectBondRankingEntries = rankingPool => {
       const current = byIndividual.get(key);
       if (!current) byIndividual.set(key, entry);else byIndividual.set(key, {
         ...(bondLevel > current.bondLevel ? entry : current),
-        bondLevel: Math.max(current.bondLevel, bondLevel),
-        breederLevel: current.breederLevel == null ? breederLevel : breederLevel == null ? current.breederLevel : Math.max(current.breederLevel, breederLevel)
+        bondLevel: Math.max(current.bondLevel, bondLevel)
       });
     });
   }));
@@ -4765,7 +4761,9 @@ function MonsterHeroGame() {
   const [localRankings, setLocalRankings] = useState({});
   // ブリーダーLv・絆Lvの集計に使う記録。スコア上位に入らなかった直近のプレイも含むので、
   // スコアランキングの表示(localRankings)とは別に持つ
-  const [rankingPool, setRankingPool] = useState({});
+  const [bondRankingData, setBondRankingData] = useState(null);
+  const [bondRankingLoading, setBondRankingLoading] = useState(false);
+  const [bondRankingError, setBondRankingError] = useState(null);
   const [rankingSourceByDiff, setRankingSourceByDiff] = useState({}); // {[diff]: 'global'|'local'} 表示中データの取得元
   // 表示状態はランキング単位で独立させる。取得済み（0件を含む）なら再取得中も
   // loadingへ戻さず、キャッシュを表示したままrefreshingだけを立てる。
@@ -5239,7 +5237,7 @@ function MonsterHeroGame() {
   }, [breederRankingPool]);
 
   // party内の全マスモンを対象にし、新形式はmasuId、旧形式は種族ID/名前で個体を互換集計する。
-  const bondRankingAll = useMemo(() => collectBondRankingEntries(rankingPool), [rankingPool]);
+  const bondRankingAll = useMemo(() => collectBondRankingEntries(bondRankingData || {}), [bondRankingData]);
 
   // 種類別フィルタの選択肢。まだ誰も記録を出していないモンスターもタブに出したいので、
   // 記録から拾った名前ではなく、全モンスターの名前を並べる(記録が無い種は「まだいません」になる)
@@ -5367,8 +5365,12 @@ function MonsterHeroGame() {
     const allDiffs = Object.keys(DIFFICULTY_SETTINGS);
     const diffs = includeLevels || !normalizedTargetDiff ? ['Normal', 'Master', ...allDiffs.filter(d => d !== 'Normal' && d !== 'Master')] : [normalizedTargetDiff];
     if (diffs.length === 0) return;
-    const levelStatusKey = includeLevels ? `${levelKind}:all` : null;
+    const levelStatusKey = includeLevels && levelKind !== 'bond' ? `${levelKind}:all` : null;
     const levelGeneration = levelStatusKey ? beginRankingStatus(levelStatusKey) : null;
+    if (includeLevels && levelKind === 'bond') {
+      setBondRankingLoading(true);
+      setBondRankingError(null);
+    }
     const loadOne = async requestedDiff => {
       const d = rankingDifficultyKey(requestedDiff);
       // 2種類のLvランキングでキャッシュと進行中Promiseを共有しない。
@@ -5415,7 +5417,8 @@ function MonsterHeroGame() {
           try {
             // 診断中は21件目以降を一切取得せず、20件と50件の差だけを比較できるようにする。
             // 旧データのscore=NULLが上位枠を埋めて有効な記録を押し出さないよう、明示的にNULLを末尾へ送る。
-            rows = mergeRows([], d === 'Master' ? await fetchMasterRows('score.desc.nullslast', requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'score.desc.nullslast', 0, requestId));
+            const primaryOrder = includeLevels && levelKind === 'bond' ? 'id.desc' : 'score.desc.nullslast';
+            rows = mergeRows([], d === 'Master' ? await fetchMasterRows(primaryOrder, requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, primaryOrder, 0, requestId));
           } catch (scoreError) {
             console.error('[ranking] score order fetch failed for', d, scoreError && scoreError.message ? scoreError.message : scoreError);
             // 診断条件を変えないため、代替順の取得も20件に限定する。
@@ -5429,8 +5432,9 @@ function MonsterHeroGame() {
           const uniqueScoreRows = mergeRows([], rows).slice(0, RANKING_DIAGNOSTIC_LIMIT);
           byDiff[d] = uniqueScoreRows.map(toEntry);
           let pool = uniqueScoreRows;
-          if (includeLevels) try {
-            pool = mergeRows(pool, d === 'Master' ? await fetchMasterRows('level.desc.nullslast', requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'level.desc.nullslast', 0, requestId));
+          if (includeLevels && levelKind !== 'bond') try {
+            const order = 'level.desc.nullslast';
+            pool = mergeRows(pool, d === 'Master' ? await fetchMasterRows(order, requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, order, 0, requestId));
           } catch (eLv) {
             console.error('[ranking] level order fetch failed for', d, eLv && eLv.message ? eLv.message : eLv);
           }
@@ -5474,21 +5478,25 @@ function MonsterHeroGame() {
           source: sourceByDiff[d],
           dataCount: byDiff[d]?.length || 0
         });
-        setRankingSourceByDiff(prev => ({
-          ...prev,
-          ...sourceByDiff
-        }));
-        setLocalRankings(prev => ({
-          ...prev,
-          ...byDiff
-        }));
-        if (includeLevels && levelKind === 'breeder') setBreederRankingPool(prev => ({
-          ...prev,
-          ...poolByDiff
-        }));else setRankingPool(prev => ({
-          ...prev,
-          ...poolByDiff
-        }));
+        if (includeLevels && levelKind === 'bond') {
+          setBondRankingData(prev => ({
+            ...(prev || {}),
+            ...poolByDiff
+          }));
+        } else {
+          setRankingSourceByDiff(prev => ({
+            ...prev,
+            ...sourceByDiff
+          }));
+          setLocalRankings(prev => ({
+            ...prev,
+            ...byDiff
+          }));
+          if (includeLevels && levelKind === 'breeder') setBreederRankingPool(prev => ({
+            ...prev,
+            ...poolByDiff
+          }));
+        }
         rankingFetchedAtRef.current.set(requestKey, Date.now());
         rankingLog(requestId, 'render-end', {
           difficulty: d,
@@ -5517,6 +5525,11 @@ function MonsterHeroGame() {
       const failures = results.filter(result => result === false).length;
       const successes = results.length - failures;
       finishRankingStatus(levelStatusKey, levelGeneration, failures ? '一部の記録を取得できませんでした' : null, successes > 0 || Object.keys(poolByDiff).length > 0);
+    }
+    if (includeLevels && levelKind === 'bond') {
+      const failures = results.filter(result => result === false).length;
+      setBondRankingLoading(false);
+      setBondRankingError(failures ? failures === results.length ? '取得に失敗しました' : '一部の記録を取得できませんでした' : null);
     }
   }, []);
 
@@ -10295,20 +10308,15 @@ function MonsterHeroGame() {
   // 絆Lv専用カード。スコアや編成・役割は表示せず、ブリーダーと個体だけを表示する。
   const renderBondRankingEntry = (entry, index) => {
     const level = Number(entry?.bondLevel);
-    const breederLevel = Number(entry?.breederLevel);
     return /*#__PURE__*/React.createElement("article", {
       key: `bond-${entry?.userName || 'unknown'}-${entry?.masuId || entry?.monsterId || entry?.monName}-${index}`,
       "data-ranking-kind": "bond",
       className: `${rankingCardClass(index)} p-2`
     }, /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0"
-    }, rankingPlace(index), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("div", {
-      className: "min-w-0"
-    }, /*#__PURE__*/React.createElement("b", {
-      className: "block truncate text-[10px]"
-    }, entry?.userName || '名無しのブリーダー'), entry?.breederLevel != null && Number.isFinite(breederLevel) && breederLevel >= 0 && /*#__PURE__*/React.createElement("span", {
-      className: "block truncate text-[7px] text-indigo-300"
-    }, "\u30D6\u30EA\u30FC\u30C0\u30FCLv.", breederLevel)), /*#__PURE__*/React.createElement("strong", {
+    }, rankingPlace(index), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("b", {
+      className: "truncate text-[10px]"
+    }, entry?.userName || '名無しのブリーダー'), /*#__PURE__*/React.createElement("strong", {
       className: "text-xs text-pink-300 whitespace-nowrap"
     }, "\u7D46Lv.", level)), /*#__PURE__*/React.createElement("div", {
       className: "ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"
@@ -11885,31 +11893,28 @@ function MonsterHeroGame() {
     }, "\u518D\u8AAD\u8FBC")) : /*#__PURE__*/React.createElement("div", {
       className: "text-center text-slate-500 py-8"
     }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093")));
-  })(), rankingKind === 'bond' && (() => {
-    const status = rankingStatus('bond:all');
-    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0"
-    }, ['all', ...bondRankingMonNames].map(n => /*#__PURE__*/React.createElement("button", {
-      key: n,
-      onClick: () => setBondRankMonFilter(n),
-      className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter === n ? 'bg-pink-600 border-pink-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
-    }, n === 'all' ? 'すべて' : n))), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
-    }, status.refreshing && /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-[9px] text-indigo-300"
-    }, "\u66F4\u65B0\u4E2D\u2026"), status.error && status.fetched && /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-[9px] text-amber-300"
-    }, status.error), bondRanking.map(renderBondRankingEntry), bondRanking.length === 0 && (status.loading ? /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-slate-400 py-8"
-    }, "Loading...") : status.error && !status.fetched ? /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-red-300 py-8"
-    }, /*#__PURE__*/React.createElement("p", null, "\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => loadRankings(null, true, true, 'bond'),
-      className: "mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black"
-    }, "\u518D\u8AAD\u8FBC")) : /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-slate-500 py-8"
-    }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093"))));
-  })()))), gameState === 'FORMATION_MENU' && /*#__PURE__*/React.createElement("div", {
+  })(), rankingKind === 'bond' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0"
+  }, ['all', ...bondRankingMonNames].map(n => /*#__PURE__*/React.createElement("button", {
+    key: n,
+    onClick: () => setBondRankMonFilter(n),
+    className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter === n ? 'bg-pink-600 border-pink-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
+  }, n === 'all' ? 'すべて' : n))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
+  }, bondRankingLoading && bondRankingData && /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[9px] text-indigo-300"
+  }, "\u66F4\u65B0\u4E2D\u2026"), bondRankingError && bondRankingData && /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[9px] text-amber-300"
+  }, bondRankingError), bondRanking.map(renderBondRankingEntry), bondRanking.length === 0 && (bondRankingLoading && !bondRankingData ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-slate-400 py-8"
+  }, "Loading...") : bondRankingError && !bondRankingData ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-red-300 py-8"
+  }, /*#__PURE__*/React.createElement("p", null, "\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => loadRankings(null, true, true, 'bond'),
+    className: "mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black"
+  }, "\u518D\u8AAD\u8FBC")) : /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-slate-500 py-8"
+  }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093"))))))), gameState === 'FORMATION_MENU' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full p-4",
     style: {
       paddingTop: 'calc(1rem + env(safe-area-inset-top))',
