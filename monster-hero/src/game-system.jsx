@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 21:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 21:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1626,9 +1626,16 @@ const collectBondRankingEntries = (rankingPool) => {
 
 // ランキングに出すモンスターの絵。記録にはIDだけが入っているので、同梱の絵を引いて使う。
 // 画像を埋め込んでいた頃の古い記録は、そのimgUrlをそのまま使って表示できるようにしておく。
+const rankingMonsterIdOf = (member) => {
+  if (!member) return null;
+  const recorded = member.baseId||member.monsterId||member.id;
+  if (recorded && ALL_PLAYER_MONSTERS[recorded]) return recorded;
+  // 古い記録は種類のIDを持たず名前しか無いことがあるので、名前からも引く
+  return Object.keys(ALL_PLAYER_MONSTERS).find(id=>ALL_PLAYER_MONSTERS[id]?.name===member.name) || null;
+};
 const rankingMemberImage = (member) => {
   if (!member) return null;
-  const base = ALL_PLAYER_MONSTERS[member.baseId||member.monsterId||member.id];
+  const base = ALL_PLAYER_MONSTERS[rankingMonsterIdOf(member)];
   return base?.iconUrl || member.imgUrl || null;
 };
 
@@ -2493,7 +2500,9 @@ function MonsterHeroGame() {
     const sourceByDiff = {};
     // 古い記録には編成に画像が埋め込まれている。表示には使わないので、
     // 画面のstateへ持ち込む前に落として、端末側のメモリと再描画の負担を減らす
-    const stripPartyImages = (party) => (Array.isArray(party) ? party.map(m => (m && m.imgUrl) ? { ...m, imgUrl: undefined } : m) : party);
+    // 同梱の絵で置き換えられる相手だけ落とす。どのモンスターか分からない古い記録は、
+    // 埋め込まれた絵をそのまま残す(消すと絵文字表示に落ちてしまうため)
+    const stripPartyImages = (party) => (Array.isArray(party) ? party.map(m => (m && m.imgUrl && rankingMonsterIdOf(m)) ? { ...m, imgUrl: undefined } : m) : party);
     const toEntry = (r) => ({ userName: r.user_name, hero: r.hero, party: stripPartyImages(r.party), score: r.score, level: r.level, icon: r.icon });
     // 過去の多重送信はidが異なるため、プレイ内容そのものをキーにして畳む。
     const rowKey = (r) => `v:${r?.user_name}|${r?.score}|${r?.level}|${r?.hero}|${JSON.stringify(r?.party || null)}|${r?.icon || ''}`;
