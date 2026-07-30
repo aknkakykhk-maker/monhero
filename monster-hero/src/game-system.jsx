@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 21:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 21:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2333,6 +2333,11 @@ function MonsterHeroGame() {
   const [restoreInput, setRestoreInput] = useState('');
   const [restoreMsg, setRestoreMsg] = useState('');
   const [updateAvailable, setUpdateAvailable] = useState(false); // version.jsonが現在のBUILD_DATEと異なる場合true(新バージョン通知)
+  const [latestBuild, setLatestBuild] = useState(null); // 見つかった新しいバージョン
+  // 「あとで更新する」で閉じたバージョン。バトル中など今すぐ更新したくない場面で
+  // 画面から消せるようにする。閉じても更新は行わず、次に開き直したときや
+  // さらに新しいバージョンが出たときはまた表示する
+  const [dismissedUpdateBuild, setDismissedUpdateBuild] = useState(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false); // 更新履歴モーダルの表示状態
   const [changelogTab, setChangelogTab] = useState('update'); // 'update'=更新情報 / 'issue'=不具合情報
@@ -2865,7 +2870,7 @@ function MonsterHeroGame() {
         const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled && data && data.build && data.build !== BUILD_DATE) setUpdateAvailable(true);
+        if (!cancelled && data && data.build && data.build !== BUILD_DATE) { setLatestBuild(data.build); setUpdateAvailable(true); }
       } catch {}
     };
     checkVersion();
@@ -5376,8 +5381,14 @@ function MonsterHeroGame() {
 
   const pct = Math.round((bootProgress.done / Math.max(1, bootProgress.total)) * 100);
   // body直下へ描画し、各画面のoverflow・transform・モーダルの積層に隠されないようにする。
-  const updateNotice = updateAvailable ? ReactDOM.createPortal(
-    <button type="button" aria-live="assertive" onClick={reloadLatestVersion} className="fixed z-[100000] left-3 right-3 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]" style={{top:'calc(8px + env(safe-area-inset-top))'}}><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>,
+  // 新しいバージョンの通知。本体を押すと更新、×を押すと今回は閉じる(更新はしない)。
+  // 閉じたバージョンを覚えておき、同じバージョンのあいだは出さない。
+  const updateNoticeVisible = updateAvailable && (!latestBuild || latestBuild !== dismissedUpdateBuild);
+  const updateNotice = updateNoticeVisible ? ReactDOM.createPortal(
+    <div aria-live="assertive" className="fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5" style={{top:'calc(8px + env(safe-area-inset-top))'}}>
+      <button type="button" onClick={reloadLatestVersion} className="flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>
+      <button type="button" aria-label="あとで更新する（この通知を閉じる）" onClick={()=>setDismissedUpdateBuild(latestBuild||BUILD_DATE)} className="shrink-0 w-12 min-h-[48px] flex items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-500/90 text-slate-950 shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><X size={18}/></button>
+    </div>,
     document.body
   ) : null;
   const titleModal = showChangelog ? (

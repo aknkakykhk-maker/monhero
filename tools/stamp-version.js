@@ -28,7 +28,10 @@ if (process.argv.includes('--print')) {
 
 const src = fs.readFileSync(GAME_SYSTEM, 'utf8');
 const replaced = src.replace(/const BUILD_DATE = "[^"]*";/, `const BUILD_DATE = "${stamp}";`);
-if (replaced === src) {
+// 同じ分に2回実行すると置換後の内容が元と同じになる。これを「宣言が無い」と誤判定して
+// 中断すると、build.js の変換まで走らず compiled が古いまま出荷されてしまう。
+// 宣言が実在するかどうかで判定する。
+if (!/const BUILD_DATE = "[^"]*";/.test(src)) {
   console.error('NG: BUILD_DATE の宣言が見つかりませんでした');
   process.exit(1);
 }
@@ -36,7 +39,7 @@ const indexPath = path.join(REPO_ROOT, 'monster-hero', 'index.html');
 const index = fs.readFileSync(indexPath, 'utf8');
 const gameBuild = stamp.replace(/[- :]/g, '');
 const replacedIndex = index.replace(/var GAME_BUILD = '[^']*';/, `var GAME_BUILD = '${gameBuild}';`);
-if (replacedIndex === index) {
+if (!/var GAME_BUILD = '[^']*';/.test(index)) {
   console.error('NG: index.html の GAME_BUILD 宣言が見つかりませんでした');
   process.exit(1);
 }
