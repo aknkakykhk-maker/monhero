@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 11:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 11:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2316,21 +2316,24 @@ function MonsterHeroGame() {
     return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 50);
   }, [rankingPool]);
 
-  // モンスターの絆レベルのランキング。スコア送信時に記録している編成(party)の中から
-  // 絆レベルを持つマスモンを取り出して並べる。同じプレイヤーの同じモンスターは1件にまとめる
+  // モンスターの絆レベルのランキング。新しい記録で明示した絆ランキング対象個体だけを使い、
+  // 対象情報を持たない旧記録のpartyからは推測しない。同じプレイヤーの同じモンスターは1件にまとめる。
   const bondRankingAll = useMemo(() => {
     const byKey = new Map();
     Object.values(rankingPool).forEach(rows => (rows || []).forEach(r => {
-      (r.party || []).forEach(pm => {
-        if (!pm || !pm.bondLevel) return;
-        const key = (r.userName || '') + '\u0000' + (pm.name || '');
-        const cur = byKey.get(key);
-        if (!cur || pm.bondLevel > cur.bondLevel) {
-          byKey.set(key, { ...r, userName: r.userName || '名無しのブリーダー', monName: pm.name || '?', bondLevel: pm.bondLevel, imgUrl: pm.imgUrl, emoji: pm.emoji });
-        }
-      });
+      const target = Array.isArray(r.party) ? r.party.find(pm => pm?.bondRankingTarget === true) : null;
+      const userName = r.userName || '名無しのブリーダー';
+      const key = userName + '\u0000' + (target?.masuId || target?.name || 'missing');
+      const cur = byKey.get(key);
+      if (!target?.bondLevel) {
+        if (!cur) byKey.set(key, { userName, icon:r.icon, monName:null, bondLevel:null });
+      } else if (!cur || target.bondLevel > cur.bondLevel) {
+        byKey.set(key, { userName, icon:r.icon, monName: target.name || '絆情報なし', bondLevel: target.bondLevel, imgUrl: target.imgUrl, emoji: target.emoji });
+      }
     }));
-    return [...byKey.values()].sort((a, b) => b.bondLevel - a.bondLevel);
+    const values = [...byKey.values()];
+    const usersWithTarget = new Set(values.filter(x=>x.bondLevel).map(x=>x.userName));
+    return values.filter(x=>x.bondLevel || !usersWithTarget.has(x.userName)).sort((a, b) => (b.bondLevel||0) - (a.bondLevel||0));
   }, [rankingPool]);
 
   // 種類別フィルタの選択肢。まだ誰も記録を出していないモンスターもタブに出したいので、
@@ -2338,7 +2341,7 @@ function MonsterHeroGame() {
   const bondRankingMonNames = useMemo(() => {
     const all = Object.values(ALL_PLAYER_MONSTERS).map(m => m.name);
     // 念のため、記録にしか出てこない名前(過去に居たモンスター等)も取りこぼさないよう足しておく
-    bondRankingAll.forEach(x => { if (!all.includes(x.monName)) all.push(x.monName); });
+    bondRankingAll.forEach(x => { if (x.monName && !all.includes(x.monName)) all.push(x.monName); });
     return [...new Set(all)];
   }, [bondRankingAll]);
   const bondRanking = useMemo(() => (
@@ -3106,7 +3109,12 @@ function MonsterHeroGame() {
     let heroSlotIndex = slots.findIndex(s=>s===mainHero);
     if (heroSlotIndex<0 && mainHero?.masuId!=null) heroSlotIndex=slots.findIndex(s=>s?.masuId!=null&&String(s.masuId)===String(mainHero.masuId));
     if (heroSlotIndex<0) heroSlotIndex=slots.findIndex(s=>s?.id===mainHero?.id);
-    const party = slots.map((s,index) => s ? { role:index===heroSlotIndex?'hero':'ally', id:s.id, masuId:s.masuId||null, name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji: s.emoji, imgUrl: s.imgUrl || null, bondLevel: s.masuId ? getMasuBondLevel(s.masuId).level : null } : null);
+    const bondRankingTargetIndex = slots.reduce((bestIndex, s, index) => {
+      if (!s?.masuId) return bestIndex;
+      if (bestIndex < 0) return index;
+      return getMasuBondLevel(s.masuId).level > getMasuBondLevel(slots[bestIndex].masuId).level ? index : bestIndex;
+    }, -1);
+    const party = slots.map((s,index) => s ? { role:index===heroSlotIndex?'hero':'ally', id:s.id, masuId:s.masuId||null, name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji: s.emoji, imgUrl: s.imgUrl || null, bondLevel: s.masuId ? getMasuBondLevel(s.masuId).level : null, bondRankingTarget:index===bondRankingTargetIndex } : null);
     const name = breederName || '名無しのブリーダー';
     const heroName = (mainHero && (ALL_PLAYER_MONSTERS[mainHero.id]?.name || mainHero.name)) || 'Unknown';
     const level = breederLevel.level;
@@ -5086,26 +5094,24 @@ function MonsterHeroGame() {
       <footer>VERSION {BUILD_DATE}</footer><div className="mh-entry-flash"></div>
     </main>{updateNotice}</>
   );
-  // 3種類のランキングで共通のコンパクトカードを使う。
-  // 旧行は存在する列だけで安全に描画し、画像がない場合は絵文字へフォールバックする。
-  const renderRankingEntry = (entry, index, kind) => {
-    const party = Array.isArray(entry?.party) ? entry.party.filter(Boolean) : [];
-    const heroName = entry?.hero || (kind==='bond' ? entry?.monName : null) || '勇者モン情報なし';
+  const rankingPlace = index => <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index===0?'bg-amber-500 text-black':index===1?'bg-slate-300 text-black':index===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{index+1}</div>;
+  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon)?<img src={resolveIconUrl(entry.icon)} alt="" className="w-8 h-8 rounded-full object-cover shrink-0"/>:<div className="w-8 h-8 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-xs">👤</div>;
+  const rankingCardClass = index => `rounded-xl border ${index===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`;
+  // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
+  const renderScoreRankingEntry = (entry, index) => {
     const separatedParty = splitRankingParty(entry);
     const heroMember = separatedParty.hero;
     const allies = separatedParty.allies;
     const finiteNumber = value => value==null || value==='' ? null : (Number.isFinite(Number(value)) ? Number(value) : null);
     const scoreValue = finiteNumber(entry?.score);
     const breederLevelValue = finiteNumber(entry?.level);
-    const bondLevelValue = kind==='bond' ? finiteNumber(entry?.bondLevel) : finiteNumber(heroMember?.bondLevel);
     const scoreLabel = Number.isFinite(scoreValue) ? `${scoreValue.toLocaleString()} pt` : 'スコア情報なし';
     const breederLevelLabel = Number.isFinite(breederLevelValue) && breederLevelValue>0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLv情報なし';
-    const bondLevelLabel = Number.isFinite(bondLevelValue) && bondLevelValue>0 ? `絆Lv.${bondLevelValue}` : '絆Lv情報なし';
+    const heroName = entry?.hero || heroMember?.name || '勇者モン情報なし';
     return (
-      <div key={`${kind}-${entry?.userName||'unknown'}-${index}`} className={`rounded-xl border px-2 py-1.5 ${index===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`}>
+      <article key={`score-${entry?.userName||'unknown'}-${index}`} data-ranking-kind="score" className={`${rankingCardClass(index)} px-2 py-1.5`}>
         <div className="flex items-center gap-1.5 min-w-0">
-          <div className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index===0?'bg-amber-500 text-black':index===1?'bg-slate-300 text-black':index===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{index+1}</div>
-          {resolveIconUrl(entry?.icon)?<img src={resolveIconUrl(entry.icon)} alt="" className="w-6 h-6 rounded-full object-cover shrink-0"/>:<div className="w-6 h-6 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-[8px]">👤</div>}
+          {rankingPlace(index)}{rankingBreederIcon(entry)}
           <div className="flex flex-1 items-baseline gap-1 min-w-0"><span className="text-[10px] font-black text-white truncate">{entry?.userName||'名無しのブリーダー'}</span><span className="text-[7px] text-indigo-300 whitespace-nowrap shrink-0">{breederLevelLabel}</span></div>
           <div className="text-right text-[10px] font-black whitespace-nowrap text-indigo-300">{scoreLabel}</div>
         </div>
@@ -5113,12 +5119,23 @@ function MonsterHeroGame() {
           <div className="flex items-center gap-1 min-w-0 leading-none">
             <Crown size={9} className="text-amber-400 shrink-0"/><span className="text-[8px] text-amber-300 shrink-0">勇者モン:</span>
             {heroMember?.imgUrl?<img src={heroMember.imgUrl} alt={heroName} className="w-5 h-5 object-contain shrink-0"/>:<span className="w-5 text-center text-[9px] shrink-0">{heroMember?.emoji||'❓'}</span>}
-            <span className="text-[9px] font-black text-white truncate">{heroName}</span><span className="text-[7px] text-pink-300 whitespace-nowrap shrink-0">{bondLevelLabel}</span>
+            <span className="text-[9px] font-black text-white truncate">{heroName}</span>
           </div>
           {allies===null?<div className="mt-0.5 text-[7px] text-slate-500">編成情報なし（過去の記録）</div>:allies.length===0?<div className="mt-0.5 text-[7px] text-slate-500">供モンなし</div>:<div className="flex items-center gap-1 mt-0.5 min-w-0"><span className="text-[7px] text-slate-500 shrink-0">供モン:</span>{allies.slice(0,3).map((member, memberIndex)=><div key={member?.masuId||`${member?.id||'ally'}-${memberIndex}`} className="flex flex-1 items-center justify-center gap-0.5 min-w-0">{member?.imgUrl?<img src={member.imgUrl} alt="" className="w-4 h-4 object-contain shrink-0"/>:<span className="w-4 text-center text-[8px] shrink-0">{member?.emoji||'❓'}</span>}<span className="text-[7px] text-slate-300 truncate">{member?.name||'不明'}</span></div>)}</div>}
         </div>
-      </div>
+      </article>
     );
+  };
+  // ブリーダーLv専用カード。編成・スコア・絆情報をDOMへ一切出さず、1行でコンパクトに表示する。
+  const renderBreederRankingEntry = (entry, index) => {
+    const level = Number(entry?.level);
+    return <article key={`breeder-${entry?.userName||'unknown'}-${index}`} data-ranking-kind="breeder" className={`${rankingCardClass(index)} px-2 py-2 flex items-center gap-2 min-w-0`}>{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="flex-1 min-w-0 truncate text-[11px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="shrink-0 text-xs text-indigo-300">{Number.isFinite(level)&&level>0?`ブリーダーLv.${level}`:'Lv情報なし'}</strong></article>;
+  };
+  // 絆Lv専用カード。ランキング対象として明示された個体以外のpartyは表示しない。
+  const renderBondRankingEntry = (entry, index) => {
+    const level = Number(entry?.bondLevel);
+    const hasBond = Number.isFinite(level)&&level>0&&entry?.monName;
+    return <article key={`bond-${entry?.userName||'unknown'}-${entry?.monName||'none'}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<div className="min-w-0"><b className="block truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><span className="text-[8px] text-slate-500">ブリーダー</span></div><strong className="text-xs text-pink-300 whitespace-nowrap">{hasBond?`絆Lv.${level}`:'絆情報なし'}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span className="text-pink-300 text-[9px] shrink-0">↳</span>{hasBond&&entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain shrink-0"/>:<span className="w-7 text-center shrink-0">{hasBond?(entry?.emoji||'❓'):'❓'}</span>}<b className="truncate text-[10px]">{hasBond?entry.monName:'絆情報なし'}</b></div></article>;
   };
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
@@ -5260,7 +5277,7 @@ function MonsterHeroGame() {
 
         {gameState==='MASU_DONATION'&&donationResult&&<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.name}を寄付しました</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm">寄付一覧へ戻る</button></div></div>}
 
-        {showWaveDetails&&<div className="fixed inset-0 flex items-center justify-center p-3" style={{zIndex:70000,backgroundColor:'rgba(2,6,23,.96)',paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true"><section className="w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"><header className="flex items-center justify-between mb-3"><div><small className="text-indigo-300 font-black">{DIFFICULTY_SETTINGS[safeDifficulty].label}</small><h2 className="text-xl font-black">全WAVE詳細</h2></div><button aria-label="閉じる" onClick={()=>setShowWaveDetails(false)} className="p-3 rounded-full bg-white/10"><X/></button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{ENEMY_SEQUENCE.map((enemyKey,index)=>{const enemy=createBattleEnemy(index+1,safeDifficulty);const boss=index===ENEMY_SEQUENCE.length-1;return <article key={`${enemyKey}-${index}`} data-wave={index+1} className={`grid items-center gap-2 rounded-2xl border bg-slate-900 p-2 ${boss?'grid-cols-[32px_112px_minmax(0,1fr)] border-amber-400/40 min-h-[128px]':'grid-cols-[48px_58px_1fr_auto] border-white/10'}`}><b className={boss?'text-amber-300':'text-indigo-300'}>W{index+1}</b><div className={`${boss?'w-28 h-28':'w-14 h-14'} flex items-center justify-center overflow-hidden`}>{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id)} className={`${boss?'w-14 h-14':'w-full h-full'} object-contain`}/>:<span className="text-3xl">{enemy.emoji}</span>}</div><div className={`min-w-0 ${boss?'grid grid-cols-[1fr_auto] items-center gap-2':''}`}><div><b className={`block truncate ${boss?'text-amber-300':''}`}>{enemy.name}</b>{boss&&<span className="text-[9px] font-black text-amber-400">BOSS</span>}</div>{boss&&<div className="text-right text-[10px] whitespace-nowrap"><div>HP <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃 <b>{enemy.atk.toLocaleString()}</b></div></div>}</div>{!boss&&<div className="text-right text-[10px]"><div>HP <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃 <b>{enemy.atk.toLocaleString()}</b></div></div>}</article>})}</div></section></div>}
+        {showWaveDetails&&<div className="fixed inset-0 flex items-center justify-center p-3" style={{zIndex:70000,backgroundColor:'rgba(2,6,23,.96)',paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true"><section className="w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"><header className="flex items-center justify-between mb-3"><div><small className="text-indigo-300 font-black">{DIFFICULTY_SETTINGS[safeDifficulty].label}</small><h2 className="text-xl font-black">全WAVE詳細</h2></div><button aria-label="閉じる" onClick={()=>setShowWaveDetails(false)} className="p-3 rounded-full bg-white/10"><X/></button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{ENEMY_SEQUENCE.map((enemyKey,index)=>{const enemy=createBattleEnemy(index+1,safeDifficulty);const boss=index===ENEMY_SEQUENCE.length-1;return <article key={`${enemyKey}-${index}`} data-wave={index+1} className={`grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 ${boss?'border-amber-400/40 min-h-[120px]':'border-white/10 min-h-[64px]'}`}><b className={`${boss?'text-amber-300':'text-indigo-300'} whitespace-nowrap`}>W{index+1}</b><div data-wave-art className="relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id)} className="w-14 h-14 object-contain"/>:<span className="text-3xl">{enemy.emoji}</span>}</div><div className="min-w-0"><b className={`block truncate whitespace-nowrap ${boss?'text-amber-300':''}`} title={enemy.name}>{enemy.name}</b>{boss&&<span className="block text-[9px] leading-tight font-black text-amber-400">BOSS</span>}</div><div data-wave-stats className="w-[72px] text-right text-[10px] whitespace-nowrap"><div>HP <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃 <b>{enemy.atk.toLocaleString()}</b></div></div></article>})}</div></section></div>}
         {gameState==='BATTLE_MENU'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(clamp(1.5rem, 4vh, 2.5rem) + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-2 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
@@ -5277,9 +5294,9 @@ function MonsterHeroGame() {
               {difficulties.map(([key,setting])=>{const active=key===safeDifficulty,enemy=createBattleEnemy(1,key);return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[28px] border-2 p-4 overflow-y-auto mh-scroll transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className="text-center text-[8px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div><h3 className="text-center text-2xl font-black mt-1" style={{color:setting.text}}>{setting.label}</h3><div className="mt-3 rounded-2xl bg-black/45 p-3"><small className="text-[8px] text-slate-400 font-black">MY HIGH SCORE</small><b className="block text-right text-xl text-indigo-200">{(highScores[key]||0).toLocaleString()} pt</b>{highestWaves[key]>0&&<span className="block text-right text-[9px] text-amber-300">最高到達 WAVE {highestWaves[key]}</span>}</div><div className="grid grid-cols-[92px_1fr] items-center gap-3 my-3 rounded-2xl border border-white/10 bg-black/25 p-3"><div className="h-24 rounded-xl bg-slate-900 flex items-center justify-center overflow-hidden">{enemy?.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} className="w-full h-full object-contain"/>:<span className="text-5xl">{enemy?.emoji}</span>}</div><div><small className="text-amber-300 font-black">WAVE 1</small><h4 className="font-black">{enemy?.name}</h4><div className="flex justify-between text-xs mt-2"><span>HP</span><b>{enemy?.maxHp.toLocaleString()}</b></div><div className="flex justify-between text-xs mt-1"><span>攻撃力</span><b>{enemy?.atk.toLocaleString()}</b></div></div></div><div className="grid grid-cols-3 gap-1">{[['敵強度',setting.power],['スコア',setting.score],['ダイヤ',setting.gold]].map(([label,value])=><div key={label} className="rounded-xl bg-black/35 p-2 text-center text-[8px] text-slate-400">{label}<b className="block text-sm text-white">×{value}</b></div>)}</div><div className="grid gap-2 mt-3"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[44px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button><button onClick={()=>{setDifficulty(key);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setGameState('PICK_HERO');}} className="min-h-[48px] rounded-xl font-black text-sm text-white" style={{backgroundColor:setting.bg}}>この難易度で挑戦</button></div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1.5 py-2">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-2 h-2 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div></div>;})()}
             {battleMenuTab==='ranking'&&<div className="flex-1 min-h-0 flex flex-col">
               <div className="grid grid-cols-3 gap-1 mb-1.5 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else loadRankings(null,true);}} className={`py-1.5 rounded-lg text-[9px] font-black border ${rankingKind===t.k?'bg-indigo-600 border-indigo-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
-              {rankingKind==='score'&&<><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=><button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(d);}} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 ${rankingViewDiff===d?'ring-1 ring-white':'border border-white/10'}`} style={difficultyStyle(st,rankingViewDiff===d)}>{st.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{(localRankings[rankingViewKey]||[]).map((r,i)=>renderRankingEntry(r,i,'score'))}{(localRankings[rankingViewKey]||[]).length===0&&<div className="text-center text-slate-500 py-8">{rankingLoadingByDiff[rankingViewKey]?'Loading...':rankingErrorByDiff[rankingViewKey]?`取得エラー: ${rankingErrorByDiff[rankingViewKey]}`:'記録はまだありません'}</div>}</div></>}
-              {rankingKind==='breeder'&&<div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{breederRanking.map((r,i)=>renderRankingEntry(r,i,'breeder'))}{breederRanking.length===0&&<div className="text-center text-slate-500 py-8">記録はまだありません</div>}</div>}
-              {rankingKind==='bond'&&<><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{['all',...bondRankingMonNames].map(n=><button key={n} onClick={()=>setBondRankMonFilter(n)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter===n?'bg-pink-600 border-pink-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{n==='all'?'すべて':n}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRanking.map((r,i)=>renderRankingEntry(r,i,'bond'))}{bondRanking.length===0&&<div className="text-center text-slate-500 py-8">記録はまだありません</div>}</div></>}
+              {rankingKind==='score'&&<><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=><button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(d);}} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 ${rankingViewDiff===d?'ring-1 ring-white':'border border-white/10'}`} style={difficultyStyle(st,rankingViewDiff===d)}>{st.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{(localRankings[rankingViewKey]||[]).map(renderScoreRankingEntry)}{(localRankings[rankingViewKey]||[]).length===0&&<div className="text-center text-slate-500 py-8">{rankingLoadingByDiff[rankingViewKey]?'Loading...':rankingErrorByDiff[rankingViewKey]?`取得エラー: ${rankingErrorByDiff[rankingViewKey]}`:'記録はまだありません'}</div>}</div></>}
+              {rankingKind==='breeder'&&<div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{breederRanking.map(renderBreederRankingEntry)}{breederRanking.length===0&&<div className="text-center text-slate-500 py-8">記録はまだありません</div>}</div>}
+              {rankingKind==='bond'&&<><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{['all',...bondRankingMonNames].map(n=><button key={n} onClick={()=>setBondRankMonFilter(n)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter===n?'bg-pink-600 border-pink-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{n==='all'?'すべて':n}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRanking.map(renderBondRankingEntry)}{bondRanking.length===0&&<div className="text-center text-slate-500 py-8">絆情報なし</div>}</div></>}
             </div>}
             </div>
           </div>
