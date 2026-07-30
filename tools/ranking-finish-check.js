@@ -65,14 +65,14 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: ランキング通信に8秒の上限`, code.includes('setTimeout(() => controller.abort(), 8000)'));
   check(`${label}: ランキング取得列を必要項目に限定`, code.includes("const select = 'user_name,hero,party,score,level,icon'"));
   check(`${label}: 起動時はNormalとMasterを優先`, code.includes("['Normal', 'Master', ...allDiffs.filter"));
-  check(`${label}: 起動時の同時取得を2難易度に制限`, code.includes('diffs.slice(i, i + 2).map(loadOne)'));
+  check(`${label}: 全難易度の取得を同時に開始`, code.includes('Promise.all(diffs.map(loadOne))'));
   check(`${label}: 診断用の取得上限は20件`, code.includes('const RANKING_DIAGNOSTIC_LIMIT = 20'));
   check(`${label}: 端末内自己ベストから復旧`, code.includes('`mh_hs_${d}`') && code.includes("hero: '記録復旧'"));
   check(`${label}: score.desc失敗時も診断用上限を使う`, code.includes("sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0"));
   check(`${label}: score=NULLの旧データがMasterの取得枠を埋めない`, code.includes("fetchMasterRows('score.desc.nullslast'") && code.includes("sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'score.desc.nullslast'"));
   check(`${label}: stateの最新ハイスコアも復旧元に使う`, code.includes('highScoresRef.current[d]'));
   check(`${label}: 0件成功をローカル復旧へ誤分類しない`, !code.includes('if (byDiff[d].length === 0)'));
-  check(`${label}: 古い同難易度リクエストを画面へ反映しない`, code.includes("'stale-result-discarded'") && code.includes('rankingLatestRequestRef.current.get(d) !== requestId'));
+  check(`${label}: 古い同一取得単位のリクエストを画面へ反映しない`, code.includes("'stale-result-discarded'") && code.includes('rankingLatestRequestRef.current.get(latestKey) !== requestId'));
   check(`${label}: HTTP応答とフォールバック理由を診断ログへ残す`, code.includes("'supabase-response'") && code.includes("'fallback'"));
   check(`${label}: 難易度を共通keyへ正規化してeqで取得`, code.includes('normalizeRankingDifficulty') && code.includes('difficulty=eq.'));
   check(`${label}: 取得失敗を0件表示で隠さない`, code.includes('rankingErrorByDiff') && code.includes('取得エラー:'));

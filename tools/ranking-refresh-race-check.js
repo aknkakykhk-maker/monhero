@@ -5,7 +5,7 @@ const path = require('path');
 const sourcePath = process.env.RANKING_SOURCE || path.join(__dirname, '..', 'monster-hero/src/game-system.jsx');
 const source = fs.readFileSync(sourcePath, 'utf8');
 const start = source.indexOf('const loadOne = async (requestedDiff) => {');
-const end = source.indexOf('\n    };\n    for (let i=0;', start);
+const end = source.indexOf('\n    };\n    // 絆タブ', start);
 if (start < 0 || end < 0) throw new Error('loadRankings内のloadOneを抽出できません');
 const loadOneSource = source.slice(start, end);
 
@@ -14,11 +14,11 @@ const check = (name, ok) => {
   checks.push(ok);
   console.log(`${ok ? 'OK' : 'NG'}: ${name}`);
 };
-const invalidateAt = loadOneSource.indexOf('rankingLatestRequestRef.current.set(d, requestId)');
+const invalidateAt = loadOneSource.indexOf('rankingLatestRequestRef.current.set(latestKey, requestId)');
 const awaitPendingAt = loadOneSource.indexOf('await pending');
 check('forceは30秒キャッシュ判定を通過する', /if \(!force && Date\.now\(\) - fetchedAt < 30000\) return/.test(loadOneSource));
 check('保存前GETを待つ前に失効させる', invalidateAt >= 0 && awaitPendingAt >= 0 && invalidateAt < awaitPendingAt);
-check('待機中に後発forceが来たら重複GETしない', loadOneSource.includes('rankingLatestRequestRef.current.get(d) !== requestId) return;'));
+check('待機中に後発forceが来たら重複GETしない', loadOneSource.includes('rankingLatestRequestRef.current.get(latestKey) !== requestId) return;'));
 check('先発finallyが後発GETをMapから消さない', loadOneSource.includes('rankingRequestsRef.current.get(requestKey) === request'));
 
 // 上の本番制御条件を使った通信/stateモデル。POST成功時点から、旧応答、新応答、描画までを追う。

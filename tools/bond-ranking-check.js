@@ -10,5 +10,5 @@ assert(src.includes('const bondRankingLoading = bondRankingPending && !bondRanki
 assert(src.includes('await Promise.all(diffs.map(loadOne))'));
 assert(/\.finally\(\(\) => \{[\s\S]{0,500}setRankingLoadingByDiff/.test(src));
 assert(src.includes('rankingRequestsRef.current.get(requestKey) === request'));
-assert(src.includes('rankingLatestRequestRef.current.get(d) === requestId'));
+assert(src.includes('rankingLatestRequestRef.current.get(latestKey) === requestId'));
 console.log('OK: all-party bond aggregation, new/legacy identity, highest-level dedupe and UI states');
