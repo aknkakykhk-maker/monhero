@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 21:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 21:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3633,16 +3633,20 @@ function MonsterHeroGame() {
   // オンにすると、種別に関わらず合体済みのモンスターだけが絞り込まれる)。
   // 以前は種別(base/masu)しか見ていなかったため、合体済み・編成中のチェックが実質無視され、
   // 種別を両方オフにすると何も表示されなくなる不具合があった
-  const monsterEntryMatchesDisplayFlags = (e, flags) => {
+  // ignoreTypeFlags: ベースモン一覧・マスモン一覧のように種別が画面で固定されている場合に使う。
+  // これらの画面はモーダルに「ベースモン」「マスモン」の選択肢を出していないため、種別のチェックまで
+  // 見てしまうと、編成画面でそのチェックを外していた場合に一覧が空のまま元に戻せなくなる。
+  const monsterEntryMatchesDisplayFlags = (e, flags, { ignoreTypeFlags = false } = {}) => {
     const reborn = (e.rebirthCount || 0) > 0;
-    const categoryMatch = !!flags[e.type] || (!!flags.fused && (e.fusionCount || 0) > 0) || (!!flags.active && !!e.active) || (!!flags.reborn && reborn);
+    const categoryMatch = ignoreTypeFlags || !!flags[e.type] || (!!flags.fused && (e.fusionCount || 0) > 0) || (!!flags.active && !!e.active) || (!!flags.reborn && reborn);
     return categoryMatch && (!!flags.reborn || !reborn);
   };
   // モンスター一覧・マスモン一覧・編成画面のソート/表示設定つき一覧は、画面を開くたび・
   // 無関係な状態更新のたびに毎回全件ソートし直すと重くなり(タップ反応が悪くなる原因の一つ)、
   // useMemoで実際に関係する値が変わった時だけ計算し直すようにする
-  const unifiedMonsterEntriesActive = useMemo(
-    () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, monsterRosterIds)).filter(e => monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags)),
+  // 種別が画面で固定されている一覧(ベースモン一覧・マスモン一覧)用。種別のチェックは見ない
+  const unifiedMonsterEntriesSingleType = useMemo(
+    () => sortMonsterEntries(buildUnifiedMonsterEntries(unlockedMonsterIds, masuMons, monsterRosterIds)).filter(e => monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags, { ignoreTypeFlags: true })),
     [unlockedMonsterIds, masuMons, monsterRosterIds, monsterSortKey, monsterSortDir, monsterDisplayFlags]
   );
   const unifiedMonsterEntriesDraft = useMemo(
@@ -5924,7 +5928,7 @@ function MonsterHeroGame() {
             {renderMonsterSortFilterBar({ singleType: true })}
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               <div className="grid grid-cols-3 gap-2.5 pb-4">
-                {unifiedMonsterEntriesActive.filter(e=>e.type==='base').map(e=>{
+                {unifiedMonsterEntriesSingleType.filter(e=>e.type==='base').map(e=>{
                   const m = e.base;
                   const masuCount = masuMons.filter(ms=>ms.baseId===m.id).length;
                   return (
@@ -5990,7 +5994,7 @@ function MonsterHeroGame() {
             {renderMonsterSortFilterBar({ singleType: true })}
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               {(()=>{
-                const entries = unifiedMonsterEntriesActive.filter(e=>e.type==='masu');
+                const entries = unifiedMonsterEntriesSingleType.filter(e=>e.type==='masu');
                 if (entries.length===0) return (
                   <div className="empty-state" style={{padding:'32px 16px', textAlign:'center'}}><span className="big" style={{fontSize:'40px'}}>🐾</span><div className="text-[11px] text-slate-400 mt-2">{masuMons.length===0?<>まだマスモンがいません。<br/>勇者モンでランを終えると登録できます。</>:'表示設定で対象がすべてオフになっています。'}</div></div>
                 );
