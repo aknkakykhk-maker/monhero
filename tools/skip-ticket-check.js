@@ -99,6 +99,13 @@ check('ヘルプにスキップチケットの説明がある', has('スキッ�
 check('確認画面で使う前後の所持数が分かる', has('所持数 {ownedItems[skipFlow.itemId]||0}枚 → {Math.max(0,(ownedItems[skipFlow.itemId]||0)-1)}枚'));
 check('リザルトで残り枚数が分かる', has('を1枚使いました（残り {ownedItems[skipResult.itemId]||0}枚）') && has('itemId: item.id,'));
 check('説明モーダルにも所持数を出す', has('所持数: <b className="text-white">{ownedItems[item.id]||0}</b> 枚'));
+// 難易度カードのバッジは中央に来ている1難易度ぶんしか見えないため、
+// 難易度タブの上に3種の所持数をまとめて常時出す
+const ticketRow = grab(source, '<span className="text-[8px] font-black text-slate-500 tracking-[.12em]">所持スキップチケット</span>', '</div>\n              )}<div className="relative shrink-0">');
+check('難易度タブに3種の所持数をまとめて出す', ticketRow.length > 0 && ticketRow.includes('Object.entries(SKIP_TICKETS).map(([diff,tid])=>'));
+check('まとめ表示は序/破/急の短い名前と枚数を出す', ticketRow.includes("(item?.name||'').split('・')[1]") && ticketRow.includes('<span className="font-mono">{have}枚</span>'));
+check('まとめ表示は0枚でも消さずに灰色で出す', ticketRow.includes("have>0?'bg-teal-950/70 border-teal-500/40 text-teal-200':'bg-black/30 border-white/5 text-slate-500'"));
+check('まとめ表示から説明を開ける', ticketRow.includes('onClick={()=>setSkipInfoItemId(tid)}'));
 
 // --- 勇者モン選択のタブ ---
 check('勇者モン選択にタブがある', has("setHeroPickTab(key); setCurrentPickingMon(null);") && has("[['roster','編成'],['base','ベースモン']]"));

@@ -7,11 +7,11 @@ const source = fs.readFileSync(sourcePath, 'utf8');
 const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
 const context = { React: { createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} } };
 vm.createContext(context);
-vm.runInContext(`${prefix}\nglobalThis.__bondRewards = { buildRunBondAwards, bondLevelInfo, levelInfo, cappedBondXp, totalBondXpForLevel };`, context);
-const { buildRunBondAwards, bondLevelInfo, levelInfo, cappedBondXp, totalBondXpForLevel } = context.__bondRewards;
+vm.runInContext(`${prefix}\nglobalThis.__bondRewards = { buildRunBondAwards, bondLevelInfo, levelInfo, cappedBondXp, totalBondXpForLevel, xpForLevel, xpForBondLevel, BOND_XP_DISCOUNT };`, context);
+const { buildRunBondAwards, bondLevelInfo, levelInfo, cappedBondXp, totalBondXpForLevel, xpForLevel, xpForBondLevel, BOND_XP_DISCOUNT } = context.__bondRewards;
 
 let failed = 0;
-const check = (name, ok) => { console.log(`${ok ? 'OK' : 'NG'}: ${name}`); if (!ok) failed++; };
+const check = (name, ok, detail = '') => { console.log(`${ok ? 'OK' : 'NG'}: ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failed++; };
 const masuMons = [
   { id:'hero', bondXp:0, levelCap:30 },
   { id:'joined', bondXp:0, levelCap:30 },
@@ -45,6 +45,23 @@ const pointsAfter = 3 + (after.level - before.level);
 check('レベル上昇数ぶん強化ポイントを加算できる', after.level - before.level === 1 && pointsAfter === 4);
 const cappedMasu = { id:'capped', bondXp:totalBondXpForLevel(30) - 1, levelCap:30 };
 check('既存のレベル上限で絆経験値を打ち止める', cappedBondXp(cappedMasu, 999999) === totalBondXpForLevel(30));
+
+// --- 必要経験値の緩和(0.05 → 0.025) ---
+// 1レベルぶんの必要XP = round(50 × Lv^1.4 × BOND_XP_DISCOUNT)。係数を下げると必要XPが下がる
+check('絆の必要経験値の係数が0.025になっている', BOND_XP_DISCOUNT === 0.025);
+check('必要経験値の式が基準値×係数のまま', xpForBondLevel(10) === Math.max(1, Math.round(xpForLevel(10) * BOND_XP_DISCOUNT)));
+const prevXpForBondLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * 0.05));
+const prevTotalForLevel = (level) => { let total = 0; for (let i = 1; i < level; i++) total += prevXpForBondLevel(i); return total; };
+check('各レベルの必要経験値が緩和前の半分ぶん(端数は切り上がる)',
+  [2, 5, 10, 20, 29].every(lv => xpForBondLevel(lv) <= Math.ceil(prevXpForBondLevel(lv) / 2)));
+// 1レベルごとに四捨五入するため厳密な1/2にはならない。ほぼ半分(誤差1%以内)であればよい
+check('Lv30到達までの累計がほぼ半分',
+  Math.abs(totalBondXpForLevel(30) / prevTotalForLevel(30) - 0.5) < 0.01,
+  `${prevTotalForLevel(30)} → ${totalBondXpForLevel(30)}`);
+const prevBondLevel = (totalXp) => { let level = 1, xp = totalXp; for (let i = 0; i < 200; i++) { const need = prevXpForBondLevel(level); if (xp < need) break; xp -= need; level++; } return level; };
+check('同じ絆経験値なら緩和後のレベルが必ず緩和前以上',
+  [0, 100, 500, 1500, 3000].every(xp => bondLevelInfo(xp).level >= prevBondLevel(xp)));
+check('緩和で既存の絆経験値のレベルが実際に上がる', bondLevelInfo(prevTotalForLevel(10)).level > 10);
 
 check('敗北・リタイアは共通の報酬関数を呼ぶ', /await awardRunRewards\(Math\.max\(0, wave - 1\)\)/.test(source) && /setGaveUp\(true\)/.test(source));
 check('通常クリアと最終クリアの報酬経路が存在する', /await awardRunRewards\(10\)/.test(source) && /waveHistory/.test(source));

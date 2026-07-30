@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2eb3d38c882bebb2
+// source-sha256: 1c12673585d06ffb
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 06:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 06:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -148,6 +148,7 @@ const goldForWavesCleared = (wavesCleared, mult) => {
 //   指数1.8(当初)  … ブリーダー約580周 / 絆約410周
 //   指数1.6         … ブリーダー約190周 / 絆約130周
 //   指数1.4(現在)  … ブリーダー約56周  / 絆約35周
+// さらに絆側はBOND_XP_DISCOUNTを0.05→0.025へ引き下げたため、Lv30到達は約18周ぶんになっている。
 const XP_CURVE_EXPONENT = 1.4;
 const xpForLevel = level => Math.round(50 * Math.pow(level, XP_CURVE_EXPONENT));
 // 緩和前(指数1.8)の必要XPで求めたレベル。今回の緩和で上がったレベル分の
@@ -186,10 +187,10 @@ const levelInfo = totalXp => {
 };
 // --- マスモンの絆レベル: ブリーダーレベルより上げやすくするため、必要XPを基準値から大幅に割り引く
 // (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く。
-// 0.35 → 0.175 → 0.10 → 0.05 と緩和してきている。係数を下げると同じ絆経験値でも絆レベルが上がるため、
+// 0.35 → 0.175 → 0.10 → 0.05 → 0.025 と緩和してきている。係数を下げると同じ絆経験値でも絆レベルが上がるため、
 // レベルアップ時に配る強化ポイントが後追いにならないよう、読み込み時にreconcileMasuPointsで
 // 必ず不足分を補填している)
-const BOND_XP_DISCOUNT = 0.05;
+const BOND_XP_DISCOUNT = 0.025;
 const xpForBondLevel = level => Math.max(1, Math.round(xpForLevel(level) * BOND_XP_DISCOUNT));
 const bondLevelInfo = totalXp => {
   let level = 1,
@@ -12551,7 +12552,23 @@ function MonsterHeroGame() {
       className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[9px] tracking-[.18em] text-slate-400 font-black mb-1 shrink-0"
-    }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
+    }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), Object.keys(SKIP_TICKETS).length > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 flex flex-wrap items-center justify-center gap-1 mb-1.5 px-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black text-slate-500 tracking-[.12em]"
+    }, "\u6240\u6301\u30B9\u30AD\u30C3\u30D7\u30C1\u30B1\u30C3\u30C8"), Object.entries(SKIP_TICKETS).map(([diff, tid]) => {
+      const item = BREEDER_MARKET_ITEMS.find(i => i.id === tid);
+      const short = (item?.name || '').split('・')[1] || DIFFICULTY_SETTINGS[diff]?.label || diff;
+      const have = ownedItems[tid] || 0;
+      return /*#__PURE__*/React.createElement("button", {
+        key: diff,
+        onClick: () => setSkipInfoItemId(tid),
+        "aria-label": `${item?.name || short}の説明`,
+        className: `flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border text-[9px] font-black active:scale-95 ${have > 0 ? 'bg-teal-950/70 border-teal-500/40 text-teal-200' : 'bg-black/30 border-white/5 text-slate-500'}`
+      }, /*#__PURE__*/React.createElement("span", null, item?.emoji || '⏩'), /*#__PURE__*/React.createElement("span", null, short), /*#__PURE__*/React.createElement("span", {
+        className: "font-mono"
+      }, have, "\u679A"));
+    })), /*#__PURE__*/React.createElement("div", {
       className: "relative shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       "aria-label": "\u524D\u306E\u96E3\u6613\u5EA6",
@@ -13708,7 +13725,7 @@ function MonsterHeroGame() {
       className: "text-[9px] text-slate-300 leading-relaxed"
     }, "\u30FB\u6D88\u8CBB\u30C0\u30A4\u30E4\u306F", /*#__PURE__*/React.createElement("span", {
       className: "text-cyan-300 font-bold"
-    }, "(\u4E3B\u306E\u7D46Lv\uFF0B\u526F\u306E\u7D46Lv)\xD7100"), "\u3067\u3059"), /*#__PURE__*/React.createElement("div", {
+    }, "(\u4E3B\u306E\u7D46Lv\uFF0B\u526F\u306E\u7D46Lv)\xD750"), "\u3067\u3059"), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-amber-200 leading-relaxed border-t border-white/10 pt-1.5"
     }, "\u30FB", /*#__PURE__*/React.createElement("span", {
       className: "font-bold"
@@ -17814,7 +17831,7 @@ function MonsterHeroGame() {
     className: "text-[12px] text-amber-200 leading-relaxed"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, "\u56FA\u6709\u6280\u306E\u5F15\u304D\u7D99\u304E"), "\u306F\u3001\u4E3B\u3068\u526F\u304C\u4E21\u65B9\u3068\u3082\u7D46Lv.10\u4EE5\u4E0A\u306E\u3068\u304D\u3060\u3051\u9078\u3079\u307E\u3059\u3002\u6D88\u8CBB\u30C0\u30A4\u30E4\u306F(\u4E3B\u306E\u7D46Lv\uFF0B\u526F\u306E\u7D46Lv)\xD7100\u3067\u3059\u3002")))), /*#__PURE__*/React.createElement("section", {
+  }, "\u56FA\u6709\u6280\u306E\u5F15\u304D\u7D99\u304E"), "\u306F\u3001\u4E3B\u3068\u526F\u304C\u4E21\u65B9\u3068\u3082\u7D46Lv.10\u4EE5\u4E0A\u306E\u3068\u304D\u3060\u3051\u9078\u3079\u307E\u3059\u3002\u6D88\u8CBB\u30C0\u30A4\u30E4\u306F(\u4E3B\u306E\u7D46Lv\uFF0B\u526F\u306E\u7D46Lv)\xD750\u3067\u3059\u3002")))), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-amber-400 font-black text-base mb-3 flex items-center gap-2"
