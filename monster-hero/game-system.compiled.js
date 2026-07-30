@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 23cb3f3c431a4775
+// source-sha256: 4414c70d4bfb15ed
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 13:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 14:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4118,6 +4118,8 @@ const collectBondRankingEntries = rankingPool => {
   const byIndividual = new Map();
   Object.values(rankingPool || {}).forEach(rows => (rows || []).forEach(record => {
     const userName = record?.userName || '名無しのブリーダー';
+    const recordedBreederLevel = Number(record?.level);
+    const breederLevel = Number.isFinite(recordedBreederLevel) && recordedBreederLevel >= 0 ? recordedBreederLevel : null;
     (Array.isArray(record?.party) ? record.party : []).forEach(member => {
       const bondLevel = Number(member?.bondLevel);
       if (!member || !Number.isFinite(bondLevel) || bondLevel <= 0) return;
@@ -4132,13 +4134,18 @@ const collectBondRankingEntries = rankingPool => {
         icon: record.icon,
         monName,
         bondLevel,
+        breederLevel,
         imgUrl: member.imgUrl || ALL_PLAYER_MONSTERS[monsterId]?.iconUrl || null,
         emoji: member.emoji || ALL_PLAYER_MONSTERS[monsterId]?.emoji || null,
         masuId: member.masuId ?? null,
         monsterId
       };
       const current = byIndividual.get(key);
-      if (!current || bondLevel > current.bondLevel) byIndividual.set(key, entry);
+      if (!current) byIndividual.set(key, entry);else byIndividual.set(key, {
+        ...(bondLevel > current.bondLevel ? entry : current),
+        bondLevel: Math.max(current.bondLevel, bondLevel),
+        breederLevel: current.breederLevel == null ? breederLevel : breederLevel == null ? current.breederLevel : Math.max(current.breederLevel, breederLevel)
+      });
     });
   }));
   return [...byIndividual.values()].sort((a, b) => b.bondLevel - a.bondLevel || a.userName.localeCompare(b.userName, 'ja'));
@@ -10260,15 +10267,20 @@ function MonsterHeroGame() {
   // 絆Lv専用カード。スコアや編成・役割は表示せず、ブリーダーと個体だけを表示する。
   const renderBondRankingEntry = (entry, index) => {
     const level = Number(entry?.bondLevel);
+    const breederLevel = Number(entry?.breederLevel);
     return /*#__PURE__*/React.createElement("article", {
       key: `bond-${entry?.userName || 'unknown'}-${entry?.masuId || entry?.monsterId || entry?.monName}-${index}`,
       "data-ranking-kind": "bond",
       className: `${rankingCardClass(index)} p-2`
     }, /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0"
-    }, rankingPlace(index), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("b", {
-      className: "min-w-0 truncate text-[10px]"
-    }, entry?.userName || '名無しのブリーダー'), /*#__PURE__*/React.createElement("strong", {
+    }, rankingPlace(index), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block truncate text-[10px]"
+    }, entry?.userName || '名無しのブリーダー'), entry?.breederLevel != null && Number.isFinite(breederLevel) && breederLevel >= 0 && /*#__PURE__*/React.createElement("span", {
+      className: "block truncate text-[7px] text-indigo-300"
+    }, "\u30D6\u30EA\u30FC\u30C0\u30FCLv.", breederLevel)), /*#__PURE__*/React.createElement("strong", {
       className: "text-xs text-pink-300 whitespace-nowrap"
     }, "\u7D46Lv.", level)), /*#__PURE__*/React.createElement("div", {
       className: "ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"
@@ -11661,7 +11673,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[9px] tracking-[.18em] text-slate-400 font-black mb-1"
     }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
-      className: "relative flex-1 min-h-0"
+      className: "relative shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       "aria-label": "\u524D\u306E\u96E3\u6613\u5EA6",
       disabled: selectedIndex === 0,
@@ -11683,11 +11695,11 @@ function MonsterHeroGame() {
         });
         if (difficulties[best]?.[0] !== safeDifficulty) setDifficulty(difficulties[best][0]);
       },
-      className: "h-full flex gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll",
+      className: "flex items-start gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll",
       style: {
         paddingLeft: '11%',
         paddingRight: '11%',
-        touchAction: 'pan-y pinch-zoom'
+        touchAction: 'pan-x pinch-zoom'
       }
     }, difficulties.map(([key, setting]) => {
       const active = key === safeDifficulty,
