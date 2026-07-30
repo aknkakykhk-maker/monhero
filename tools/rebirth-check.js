@@ -17,17 +17,19 @@ const second=migrateMasuLevelCaps(migrated.nextMasuMons,migrated.nextGold);
 check('移行済みデータは二重補償されない',second.compensation===0&&second.nextGold===migrated.nextGold);
 const ready={...migrated.nextMasuMons[0],rebirthCount:0,levelCap:30,distAptPoints:9,distApt:['S','A','B','C'],statPoints:{hp:30,atk:9,def:6,guts:3},colors:['red'],inheritedUniques:[{monId:'Suezo',name:'熱視線'}],fusionHistory:[{subName:'副'}],uniqueSkillLevels:{'inh:0':2}};
 const rebirth=buildMasuRebirth({masu:ready,skillKey:'own',gold:4000});
-check('新規転生はLv1能力・距離適性・使用済み0・未使用5へ完全初期化',rebirth.ok&&rebirth.cost===3000&&rebirth.nextGold===1000&&rebirth.nextMasu.bondXp===0&&rebirth.nextMasu.distAptPoints===5&&JSON.stringify(rebirth.nextMasu.distApt)===JSON.stringify(['C','C','C','C'])&&Object.values(rebirth.nextMasu.statPoints).every(v=>v===0));
+check('新規転生はLv1能力・距離適性・使用済み0・未使用5へ完全初期化',rebirth.ok&&rebirth.cost===1500&&rebirth.nextGold===2500&&rebirth.nextMasu.bondXp===0&&rebirth.nextMasu.distAptPoints===5&&JSON.stringify(rebirth.nextMasu.distApt)===JSON.stringify(['C','C','C','C'])&&Object.values(rebirth.nextMasu.statPoints).every(v=>v===0));
 check('新規転生は固有技・継承技・上限・回数・名前・染色・合体履歴を維持',rebirth.nextMasu.uniqueSkillLevels.own===1&&rebirth.nextMasu.uniqueSkillLevels['inh:0']===2&&rebirth.nextMasu.inheritedUniques.length===1&&rebirth.nextMasu.levelCap===35&&rebirth.nextMasu.rebirthCount===1&&rebirth.nextMasu.name===ready.name&&rebirth.nextMasu.colors[0]==='red'&&rebirth.nextMasu.fusionHistory.length===1);
 const legacyReborn={...ready,rebirthCount:2,levelCap:40,bondXp:999,distAptPoints:17};
 const corrected=migrateRebornMasuToFullReset([legacyReborn])[0];
 check('以前転生した個体もLv1能力・距離適性・使用済み0・未使用5へ移行',corrected.bondXp===0&&corrected.distAptPoints===5&&JSON.stringify(corrected.distApt)===JSON.stringify(['C','C','C','C'])&&Object.values(corrected.statPoints).every(v=>v===0));
 check('既存個体移行でも固有技・継承技・上限・回数を維持',corrected.uniqueSkillLevels['inh:0']===2&&corrected.inheritedUniques.length===1&&corrected.levelCap===40&&corrected.rebirthCount===2);
 check('上限到達後はXPを取得しない',cappedBondXp(ready,9999)===capXp);
-check('ダイヤ不足・未到達・最大Lv技は転生不可',!buildMasuRebirth({masu:ready,skillKey:'own',gold:2999}).ok&&!buildMasuRebirth({masu:{...ready,bondXp:0},skillKey:'own',gold:9999}).ok&&!buildMasuRebirth({masu:{...ready,uniqueSkillLevels:{own:8}},skillKey:'own',gold:9999}).ok);
+check('ダイヤ不足・未到達・最大Lv技は転生不可',!buildMasuRebirth({masu:ready,skillKey:'own',gold:1499}).ok&&!buildMasuRebirth({masu:{...ready,bondXp:0},skillKey:'own',gold:9999}).ok&&!buildMasuRebirth({masu:{...ready,uniqueSkillLevels:{own:8}},skillKey:'own',gold:9999}).ok);
 check('専用移行フラグとマスモン・ダイヤ保存がある',source.includes("mh_masu_level_cap_migrated_v1")&&source.includes("mh_masu_level_cap_migration_pending_v1")&&/storeSet\('mh_masu_mons', savedMasuMons/.test(source)&&/storeSet\('mh_gold', migratedCap.nextGold/.test(source));
 const fusionSource=source.slice(source.indexOf('const executeMasuFusion'),source.indexOf('const resetFusionFlow'));
-check('完全初期化移行フラグがあり合体で強化ポイントを加算しない',source.includes("mh_masu_rebirth_full_reset_migrated_v1")&&!/distAptPoints:/.test(fusionSource)&&fusionSource.includes('fusionBondLevels'));
+// 合体は能力値・距離適性・副の強化ポイントを引き継がないが、上がった絆レベルぶんの
+// 強化ポイントは通常のレベルアップと同じように主へ配る(確認画面の表示と揃える)。
+check('完全初期化移行フラグがあり合体でレベルぶんの強化ポイントを配る',source.includes("mh_masu_rebirth_full_reset_migrated_v1")&&fusionSource.includes('distAptPoints: (m.distAptPoints || 0) + gainedLevels,')&&fusionSource.includes('fusionBondLevels'));
 const golemUnique={name:'合掌',names:['合掌','フライングプレス','竜巻アタック'],baseMult:3.2,baseGuts:68,effectDesc:'闘志'};
 const evolved=uniqueSkillAtLevel(golemUnique,2);
 check('固有技Lv2で技名・威力・会心率・消費Gを現在技へ切替',evolved.name==='竜巻アタック'&&evolved.mult===4.2&&evolved.crit===0.2&&evolved.guts===89&&evolved.effectDesc==='闘志');

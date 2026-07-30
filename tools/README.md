@@ -69,6 +69,7 @@ cd tools && npm install
 | `node monster-list-filter-check.js` | ベースモン一覧・マスモン一覧が種別チェックの影響で空にならないか確認する。 |
 | `node monster-detail-unified-check.js` | モンスター詳細(編成・ベースモン一覧・マスモン一覧・勇者モン選択)が共通実装を使い、どこから開いても勇者特性まで見られるか確認する。 |
 | `node dist-aptitude-check.js` | 間合い適性が距離ごとの補正値(%)として扱われ、編成全員ぶんが置いた距離に関係なく4距離すべてへ加算されるか確認する。 |
+| `node fusion-rebirth-check.js` | 合体で上がったレベルぶんの強化ポイントが配られるか、合体・転生の消費ダイヤ単価(絆レベル1あたり50)を確認する。 |
 | `node balance-second-card-check.js` | 同じターンの2枚目以降のカードが効果半減になるか(ブリーダーカードは対象外)と、かどみうむの効果量・説明文を確認する。 |
 | `node pasture-check.js` | HOME放牧設定の0体・1体・5体保存、旧セーブ互換、削除済みID除外、歩行タイマーの停止を確認する。 |
 | `node feature-check.js` | 実ブラウザでゲームを起動し、主要機能が動くかを確認する。 |
