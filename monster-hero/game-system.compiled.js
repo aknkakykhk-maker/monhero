@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 703610872d99f173
+// source-sha256: 90fcdfef1a574c94
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 21:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 21:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4151,7 +4151,27 @@ const collectBondRankingEntries = rankingPool => {
       });
     });
   }));
-  return [...byIndividual.values()].sort((a, b) => b.bondLevel - a.bondLevel || a.userName.localeCompare(b.userName, 'ja'));
+  // 同じ人・同じ種類で「個体ID(masuId)付きの記録」と「個体IDの無い古い記録」が両方あると、
+  // 同じマスモンが2件に分かれて並んでしまう。古い記録はどの個体かを特定できないので、
+  // 個体ID付きの記録がある種類では古い記録を出さない。
+  // ただし古い記録の方が高い絆Lvを持っている場合は、その値だけ個体側へ引き継ぐ。
+  const entries = [...byIndividual.values()];
+  const speciesKey = e => `${e.userName}\u0000${e.monsterId || e.monName}`;
+  const bestMasuOfSpecies = new Map();
+  entries.forEach(e => {
+    if (e.masuId == null || String(e.masuId) === '') return;
+    const key = speciesKey(e);
+    const current = bestMasuOfSpecies.get(key);
+    if (!current || e.bondLevel > current.bondLevel) bestMasuOfSpecies.set(key, e);
+  });
+  const deduped = entries.filter(e => {
+    if (e.masuId != null && String(e.masuId) !== '') return true;
+    const owner = bestMasuOfSpecies.get(speciesKey(e));
+    if (!owner) return true; // 個体IDの記録が無ければ、古い記録をそのまま出す
+    if (e.bondLevel > owner.bondLevel) owner.bondLevel = e.bondLevel;
+    return false;
+  });
+  return deduped.sort((a, b) => b.bondLevel - a.bondLevel || a.userName.localeCompare(b.userName, 'ja'));
 };
 
 // ランキングに出すモンスターの絵。記録にはIDだけが入っているので、同梱の絵を引いて使う。
