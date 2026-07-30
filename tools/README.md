@@ -48,6 +48,7 @@ cd tools && npm install
 | `node title-bgm-check.js` | iOS相当の自動再生制限を再現し、最初のタップだけでタイトルBGMが鳴るか、起動タップがトップ画面へ届いていないかを確認する。 |
 | `node difficulty-item-check.js` | 新難易度(Grand Master/Hell/Legend)の表示と色、絆経験値チケットのまとめ使いを確認する。 |
 | `node battle-carousel-check.js` | 難易度カードの順序・スワイプ/矢印・敵生成共通化・全WAVE詳細・挑戦導線を確認する。 |
+| `node battle-menu-browser-check.js` | 390×844の実ブラウザでHOMEから難易度画面へ入り、例外ゼロ・矢印/スワイプ・全WAVE詳細・戻る/再入場・勇者選択を確認する。 |
 | `node ranking-party-check.js` | ランキングpartyの役割保存、旧記録互換、供モン人数と勇者重複防止を確認する。 |
 | `node new-player-onboarding-check.js` | 空の保存領域から始まる新規プレイヤー専用の説明・プロフィール設定・途中再開導線を確認する。 |
 | `node training-check.js` | 修行の難易度・参加券・24マスマップ・一時保存・道具・報酬・BGM/SE・二重確定防止を確認する。 |
