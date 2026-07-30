@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Monster Hero 難易度選択UI 参考モック</title>
+<style>
+:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;background:#050918;color:#fff}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0,#172253 0,#080d20 46%,#040712 100%)}
+.app{width:min(430px,100%);min-height:100vh;margin:auto;padding:22px 16px 28px;overflow:hidden}
+.top{display:flex;align-items:center;gap:16px;margin:64px 0 26px}.back{font-size:34px;color:#91a0c6}.title{font-size:32px;font-weight:900;color:#818cf8}
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:#0b1228;border:2px solid #1d2744;border-radius:20px;padding:5px;margin-bottom:18px}.tab{padding:15px;text-align:center;border-radius:15px;font-size:18px;font-weight:900;color:#7f8baa}.tab.active{background:linear-gradient(135deg,#5b4df3,#6d4df7);color:white}
+.label{text-align:center;font-size:13px;letter-spacing:.18em;color:#8c98bd;margin:8px 0 12px;font-weight:800}
+.carousel{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:8px 36px 18px;scrollbar-width:none;overscroll-behavior-x:contain}.carousel::-webkit-scrollbar{display:none}
+.card{scroll-snap-align:center;flex:0 0 82%;min-height:500px;border-radius:28px;padding:22px 18px;background:linear-gradient(180deg,#152044,#0d142b);border:2px solid #4d59a8;box-shadow:0 18px 42px rgba(0,0,0,.44);transform:scale(.92);opacity:.62;transition:.25s}
+.card.active{transform:scale(1);opacity:1;border-color:#8b8cff;box-shadow:0 0 0 2px rgba(139,140,255,.15),0 20px 50px rgba(0,0,0,.55),0 0 40px rgba(93,76,255,.25)}
+.diff{text-align:center;font-size:13px;letter-spacing:.22em;font-weight:900;color:#cbd1ff}.diffname{text-align:center;font-size:34px;font-weight:1000;margin:4px 0 6px}.stars{text-align:center;color:#ffd54a;font-size:20px;letter-spacing:4px}
+.score{margin:18px 0;background:#070b18;border-radius:18px;padding:14px 16px;border:1px solid #2a345c}.score small{display:block;color:#8994bb;font-weight:800;letter-spacing:.08em}.score strong{display:block;text-align:right;font-size:27px;color:#aeb8ff;margin-top:4px}
+.enemy{display:grid;grid-template-columns:110px 1fr;gap:15px;align-items:center;margin:16px 0;padding:14px;border-radius:20px;background:linear-gradient(135deg,#111a37,#0c1125);border:1px solid #303b68}.portrait{height:120px;border-radius:18px;background:radial-gradient(circle,#394ab1,#151b3c 68%);display:grid;place-items:center;font-size:72px}.enemy h3{margin:0 0 8px;font-size:22px}.wave{font-size:11px;color:#f8cf46;font-weight:900;letter-spacing:.12em}.stat{display:flex;justify-content:space-between;padding:5px 0;color:#bbc5e4}.stat b{color:#fff}
+.multis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:15px 0}.multi{background:#090e20;border-radius:13px;padding:10px 4px;text-align:center;color:#9da8cb;font-size:10px}.multi b{display:block;color:#fff;font-size:16px;margin-top:3px}
+.actions{display:grid;gap:10px;margin-top:16px}.btn{border:0;border-radius:17px;padding:15px;font-size:16px;font-weight:1000;color:#fff;background:#202b4c}.btn.primary{background:linear-gradient(135deg,#6253f5,#8a51ee);box-shadow:0 10px 22px rgba(98,83,245,.25)}
+.dots{text-align:center;color:#536082;letter-spacing:7px;font-size:19px}.dots .on{color:#8b8cff}.note{margin-top:18px;padding:14px;border-radius:15px;background:#0a1022;color:#98a4c8;font-size:12px;line-height:1.7}
+.modal{margin-top:24px;background:#0b1124;border:2px solid #343f6c;border-radius:23px;padding:18px}.modal h2{margin:0 0 14px}.waves{display:grid;gap:8px}.wavecard{display:grid;grid-template-columns:48px 42px 1fr auto;align-items:center;gap:9px;background:#070b17;border-radius:14px;padding:10px}.wavecard .n{font-weight:1000;color:#8e99c7}.wavecard .ico{font-size:28px}.wavecard .name{font-weight:900}.wavecard .values{text-align:right;font-size:11px;color:#aeb8d5}.boss{color:#ffb446;font-weight:1000}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top"><span class="back">‹</span><h1 class="title">バトル</h1></header>
+  <div class="tabs"><div class="tab active">難易度</div><div class="tab">ランキング</div></div>
+  <div class="label">左右にスワイプして難易度を選択</div>
+  <section class="carousel" id="carousel" aria-label="難易度選択">
+    <article class="card"><div class="diff">BATTLE DIFFICULTY</div><div class="diffname" style="color:#52dfaa">Easy</div><div class="stars">★★☆☆☆</div><div class="score"><small>MY HIGH SCORE</small><strong>86,240 pt</strong></div><div class="enemy"><div class="portrait">🐰</div><div><span class="wave">WAVE 1</span><h3>ハム</h3><div class="stat"><span>HP</span><b>560</b></div><div class="stat"><span>攻撃</span><b>42</b></div></div></div><div class="multis"><div class="multi">敵強度<b>×0.8</b></div><div class="multi">スコア<b>×0.8</b></div><div class="multi">ダイヤ<b>×0.8</b></div></div><div class="actions"><button class="btn">全WAVE詳細</button><button class="btn primary">この難易度で挑戦</button></div></article>
+    <article class="card active"><div class="diff">BATTLE DIFFICULTY</div><div class="diffname" style="color:#8d8cff">Normal</div><div class="stars">★★★☆☆</div><div class="score"><small>MY HIGH SCORE</small><strong>495,652 pt</strong></div><div class="enemy"><div class="portrait">🐰</div><div><span class="wave">WAVE 1</span><h3>ハム</h3><div class="stat"><span>HP</span><b>700</b></div><div class="stat"><span>攻撃</span><b>52</b></div></div></div><div class="multis"><div class="multi">敵強度<b>×1.0</b></div><div class="multi">スコア<b>×1.0</b></div><div class="multi">ダイヤ<b>×1.0</b></div></div><div class="actions"><button class="btn">全WAVE詳細</button><button class="btn primary">この難易度で挑戦</button></div></article>
+    <article class="card"><div class="diff">BATTLE DIFFICULTY</div><div class="diffname" style="color:#ff9e9e">Hard</div><div class="stars">★★★★☆</div><div class="score"><small>MY HIGH SCORE</small><strong>1,820,300 pt</strong></div><div class="enemy"><div class="portrait">🐰</div><div><span class="wave">WAVE 1</span><h3>ハム</h3><div class="stat"><span>HP</span><b>980</b></div><div class="stat"><span>攻撃</span><b>73</b></div></div></div><div class="multis"><div class="multi">敵強度<b>×1.4</b></div><div class="multi">スコア<b>×1.5</b></div><div class="multi">ダイヤ<b>×1.3</b></div></div><div class="actions"><button class="btn">全WAVE詳細</button><button class="btn primary">この難易度で挑戦</button></div></article>
+  </section>
+  <div class="dots">● <span class="on">●</span> ● ○ ○ ○ ○ ○ ○</div>
+  <div class="note">参考動作：中央カードを大きく表示し、左右カードを少し見切れさせる。スワイプ終了時に中央へ吸着し、選択中のハイスコア・WAVE1敵情報・各倍率が同時に切り替わる。</div>
+
+  <section class="modal">
+    <h2>Normal・全WAVE詳細</h2>
+    <div class="waves">
+      <div class="wavecard"><span class="n">W1</span><span class="ico">🐰</span><span class="name">ハム</span><span class="values">HP 700<br>ATK 52</span></div>
+      <div class="wavecard"><span class="n">W2</span><span class="ico">👁️</span><span class="name">スエゾー</span><span class="values">HP 860<br>ATK 61</span></div>
+      <div class="wavecard"><span class="n">W3</span><span class="ico">🗿</span><span class="name">ゴーレム</span><span class="values">HP 1,200<br>ATK 88</span></div>
+      <div class="wavecard"><span class="n">…</span><span class="ico">⋯</span><span class="name">WAVE 4〜9</span><span class="values">縦スクロール</span></div>
+      <div class="wavecard"><span class="n boss">W10</span><span class="ico">🐉</span><span class="name boss">ムー・BOSS</span><span class="values">HP 8,500<br>ATK 240</span></div>
+    </div>
+  </section>
+</main>
+<script>
+const cards=[...document.querySelectorAll('.card')];const root=document.getElementById('carousel');
+root.addEventListener('scroll',()=>{const c=root.getBoundingClientRect().left+root.clientWidth/2;let best=null,d=Infinity;cards.forEach(x=>{const r=x.getBoundingClientRect();const n=Math.abs(r.left+r.width/2-c);if(n<d){d=n;best=x}});cards.forEach(x=>x.classList.toggle('active',x===best))},{passive:true});
+setTimeout(()=>cards[1].scrollIntoView({inline:'center'}),50);
+</script>
+</body>
+</html>
