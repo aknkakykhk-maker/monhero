@@ -17,7 +17,7 @@ assert(ranking.includes("includeLevels ? levelKind : 'score'"));
 assert(ranking.includes('const latestKey = includeLevels ? requestKey : d'));
 assert(source.includes("loadRankings(null,true,false,t.k)"));
 assert(source.includes("loadRankings(null,true,true,'breeder')"));
-assert(source.includes('breederRankingLoading') && source.includes('breederRankingFailed'));
+assert(source.includes("rankingStatus('breeder:all')") && source.includes("`${levelKind}:all`"));
 assert(source.includes('breederRankingPool') && source.includes("levelKind === 'breeder') setBreederRankingPool"));
 
 console.log('OK: 起動タップの音声有効化・保存ミュート保護・ブリーダーLv独立取得/UI状態');

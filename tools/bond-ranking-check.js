@@ -8,9 +8,9 @@ const out=context.collect(pool);assert.strictEqual(out.length,3);assert.strictEq
 assert.strictEqual(out.find(x=>x.userName==='A'&&x.monName==='モッチー').breederLevel,15);assert.strictEqual(out.find(x=>x.userName==='B').breederLevel,null);
 assert(src.includes('ブリーダーLv.{breederLevel}'));assert(src.includes('entry?.breederLevel!=null&&Number.isFinite(breederLevel)&&breederLevel>=0&&'));
 assert(!src.includes('bondRankingTarget:index==='));assert(src.includes('取得に失敗しました')&&src.includes('記録はまだありません'));
-assert(src.includes('const bondRankingLoading = bondRankingPending && !bondRankingSettled'));
-assert(src.includes('await Promise.all(diffs.map(loadOne))'));
-assert(/\.finally\(\(\) => \{[\s\S]{0,500}setRankingLoadingByDiff/.test(src));
+assert(src.includes("rankingStatus('bond:all')") && src.includes('status.refreshing'));
+assert(src.includes('await Promise.allSettled(diffs.map(loadOne))'));
+assert(src.includes('finishRankingStatus(levelStatusKey, levelGeneration'));
 assert(src.includes('rankingRequestsRef.current.get(requestKey) === request'));
 assert(src.includes('rankingLatestRequestRef.current.get(latestKey) === requestId'));
 console.log('OK: all-party bond aggregation, new/legacy identity, highest-level dedupe and UI states');

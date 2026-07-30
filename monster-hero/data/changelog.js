@@ -17,7 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-30 14:15",
+    date: "2026-07-30 15:45",
+    type: "issue",
+    status: "fixed",
+    title: "ランキング表示を安定化",
+    items: [
+      "ランキング表示が再読み込み中も消えないよう安定化",
+    ],
+  },
+  {
+    date: "2026-07-30 15:45",
     type: "issue",
     status: "fixed",
     title: "難易度選択と絆Lvランキングを修正",
