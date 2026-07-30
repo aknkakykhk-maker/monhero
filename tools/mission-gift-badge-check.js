@@ -83,6 +83,11 @@ check('ブリーダーLvの取得がスコア一覧を上書きしない',
   has("} else if (includeLevels && levelKind === 'breeder') {\n        setBreederRankingPool(prev => ({ ...prev, ...poolByDiff }));"));
 check('レベル系ランキングは1回の取得にまとめる', has('const cacheKey = `levels:${levelKind}`;') && has('sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId, columns)'));
 check('起動時の先読みは1難易度だけ', has("loadRankings('Normal')"));
+check('前回のランキングを端末に残す', has("const RANKING_CACHE_KEY = 'mh_ranking_cache';") && has('const saveRankingCache = (patch)'));
+check('起動時に前回の内容をそのまま出す', has('hydrateRankingCache(await storeGet(RANKING_CACHE_KEY, null, false))'));
+check('キャッシュ表示はLoadingにしない', has("const cachedStatus = { loading:false, refreshing:false, error:null, fetched:true };"));
+check('起動時にブリーダーLv・絆Lvも裏で先読みする', has("preload('breeder', () => loadRankings(null, true, false, 'breeder'))") && has("preload('bond', () => loadRankings(null, true, false, 'bond'))"));
+check('取得できた内容だけをキャッシュする', has("if (sourceByDiff[key] === 'global' && byDiff[key]?.length) cachedScore[key] = byDiff[key];"));
 check('一覧を消さずに部分更新する', has('const next = { ...prev };') && has("if (sourceByDiff[key] === 'local' && Array.isArray(prev[key]) && prev[key].length) return;"));
 check('取得中でも表示済みは残す(更新中表示)', has('status.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>'));
 check('永久Loadingにしないタイムアウトがある', has('controller.abort(), 15000'));
