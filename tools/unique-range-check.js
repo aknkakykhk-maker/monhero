@@ -52,7 +52,8 @@ for (let distance=0; distance<4; distance++) {
   const card = {type:'range_atk',rangeIdx:distance,mult:2};
   check(`${['零','近','中','遠'][distance]}撃は攻撃開始時の指定距離だけ威力アップ`, multiplier(card,distance) === 2 && multiplier(card,(distance+1)%4) === 0.8);
 }
-check('距離撃はダメージ計算へ攻撃開始時距離を渡す', source.includes('getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,attackCount>0,attackStartDist)'));
+// 第6引数は「2枚目以降で効果半減か」。攻撃枚数ではなくカード枚数で数えるようになった(halved)。
+check('距離撃はダメージ計算へ攻撃開始時距離を渡す', source.includes('getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist)'));
 check('距離撃は指定距離そのものを移動先にする', source.includes("rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null"));
 check('敵行動後に距離撃の最終距離を再適用する', source.indexOf('await handleEnemyTurn(finalActionType') < source.indexOf('if (forcedMoveTarget!=null) {', source.indexOf('await handleEnemyTurn(finalActionType')));
 check('各配置スロット自身の距離撃を取得する', source.includes('const rIdx=idx;') && !source.includes('const rIdx=(idx+RANGE_LABELS.length-1)%RANGE_LABELS.length;'));

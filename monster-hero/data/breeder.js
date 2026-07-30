@@ -31,13 +31,13 @@ const BREEDER_EVO_NAMES = {
 // 効果が「自動回復」と「上限アップ」の2系統×ライフ/ガッツの4項目あり、
 // 実装側に条件分岐で散らばっていると表示との食い違いが起きやすいため、
 // ここに1か所でまとめて持たせ、効果の適用も説明文の生成もこの値を参照する。
-//   計算: 自動ガッツ回復1%・ガッツ上限5%
-//   理論: 自動ライフ回復1%・自動ガッツ回復2%・ライフ/ガッツ上限5%
-//   叡智: 自動ライフ回復3%・自動ガッツ回復3%・ライフ/ガッツ上限7%
+//   計算: 自動ガッツ回復0.5%
+//   理論: 自動ライフ/ガッツ回復0.5%・ライフ/ガッツ上限5%
+//   叡智: 自動ライフ/ガッツ回復1%・ライフ/ガッツ上限7%
 const CADMIUM_TIERS = [
-  { autoHp:0,    autoGuts:0.01, hpLimit:0,    gutsLimit:0.05 },
-  { autoHp:0.01, autoGuts:0.02, hpLimit:0.05, gutsLimit:0.05 },
-  { autoHp:0.03, autoGuts:0.03, hpLimit:0.07, gutsLimit:0.07 },
+  { autoHp:0,     autoGuts:0.005, hpLimit:0,    gutsLimit:0    },
+  { autoHp:0.005, autoGuts:0.005, hpLimit:0.05, gutsLimit:0.05 },
+  { autoHp:0.01,  autoGuts:0.01,  hpLimit:0.07, gutsLimit:0.07 },
 ];
 
 const TEACHING_CARDS = [

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aa1c99d1e484361b
+// source-sha256: 8466028110eef783
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 21:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 22:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8736,6 +8736,11 @@ function MonsterHeroGame() {
       if (!selectedCards.includes(cardIndex)) selectCardAt(cardIndex);
     }
   };
+
+  // 同じターンに2枚目以降で使ったカードは効果が半減する(ハムの連続攻撃で複数枚使うときの調整)。
+  // ブリーダーカード(教えカード)だけは対象外で、何枚目に使っても効果は変わらない。
+  // 「何枚目か」の数え方をここに集約し、画面のダメージ予測とprocessTurnの実処理がずれないようにする。
+  const isBreederCard = card => !!card && TEACHING_CARDS.some(t => t.id === card.id);
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx - attackStartDist);
@@ -8990,19 +8995,26 @@ function MonsterHeroGame() {
 
     // カットイン廃止: 技名はスロット上にインライン表示する（実行ループ内で行う）
 
+    let penaltyCardCount = 0; // ブリーダーカード以外を何枚使ったか(2枚目以降は効果半減)
     for (const entry of usedCardEntries) {
       const card = entry.card;
+      // 2枚目以降のカードは効果が半減する。ブリーダーカードは対象外で、枚数にも数えない。
+      const isBreeder = isBreederCard(card);
+      const halved = !isBreeder && penaltyCardCount > 0;
+      const effMul = halved ? 0.5 : 1;
+      if (!isBreeder) penaltyCardCount++;
+      if (halved) addPopup('2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
       const slotIdx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
       lastType = card.type;
       if (card.type === 'guard') {
         Audio_.se.guard();
         guardTypeInTurn = 'guard';
-        currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat;
-        currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult;
+        currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * effMul;
+        currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * effMul;
       } else if (card.type === 'weak_guard') {
         if (guardTypeInTurn !== 'guard') guardTypeInTurn = 'weak_guard';
-        currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * 0.5;
-        currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * 0.5;
+        currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * 0.5 * effMul;
+        currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul;
       }
       setGuts(p => Math.max(0, p - getCardGuts(card)));
       if (card.type === 'draw') continue;
@@ -9024,11 +9036,11 @@ function MonsterHeroGame() {
         }
         // かどみうむ: 効果量はdata/breeder.jsのCADMIUM_TIERSに集約している(説明文の生成も同じ値を見る)
         else if (card.subType === 'guts_buff') {
-          addPopup(`⚡ ガッツ上限UP!`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const tier = CADMIUM_TIERS[Math.min(owned ? owned.evoLevel : 0, CADMIUM_TIERS.length - 1)];
-          addPermaBuff('gutsRecoverPct', tier.autoGuts);
-          addPermaBuff('muaGutsPct', tier.gutsLimit);
+          addPopup(tier.gutsLimit > 0 ? `⚡ ガッツ上限UP!` : `⚡ ガッツ回復UP!`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
+          if (tier.autoGuts > 0) addPermaBuff('gutsRecoverPct', tier.autoGuts);
+          if (tier.gutsLimit > 0) addPermaBuff('muaGutsPct', tier.gutsLimit);
           if (tier.hpLimit > 0) addPermaBuff('muaHpPct', tier.hpLimit);
           if (tier.autoHp > 0) {
             addPermaBuff('autoHpRecovery', tier.autoHp);
@@ -9038,7 +9050,7 @@ function MonsterHeroGame() {
           immediateInvincible = true;
           setImmediateTurnBuff('invincible', true);
           const stunMon = slots[slotIdx];
-          const d = getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, attackCount > 0);
+          const d = getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false);
           totalDmg += d;
           attackCount++;
           attackHits.push({
@@ -9109,21 +9121,21 @@ function MonsterHeroGame() {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。合体で引き継いだ
           // 固有技を別のモンスターが使う場合でも、元モンスターの固有技効果を正しく再現するため
           if (card.monId === 'Mocchi' || card.monId === 'Mitarashi') {
-            addPermaBuff('dmgCutPct', 0.03);
-            addWaveBuff('enemyTakenDmgBonus', 0.1);
-            localDmgModAdd += 0.1;
+            addPermaBuff('dmgCutPct', 0.03 * effMul);
+            addWaveBuff('enemyTakenDmgBonus', 0.1 * effMul);
+            localDmgModAdd += 0.1 * effMul;
             addPopup('丈夫さUP!', 'hero', 'text-emerald-400 text-lg font-bold');
           } else if (card.monId === 'Golem') {
-            addPermaBuff('atkPct', 0.1);
-            localOryoAdd += 0.1;
+            addPermaBuff('atkPct', 0.1 * effMul);
+            localOryoAdd += 0.1 * effMul;
             addPopup('闘志UP!', 'hero', 'text-red-600 text-lg font-bold');
           } else if (card.monId === 'Zan') {
-            addPermaBuff('comboDmgPct', 0.03);
+            addPermaBuff('comboDmgPct', 0.03 * effMul);
             addPopup('連斬!', 'hero', 'text-cyan-400 text-lg font-bold');
           }
         }
         const attackStartDist = attackDistance;
-        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, attackCount > 0, attackStartDist);
+        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist);
         attackCount++;
         const critRateBonus = getPermaBuff('critRatePct'),
           critDmgBonus = getPermaBuff('critDmgPct');
@@ -9177,7 +9189,7 @@ function MonsterHeroGame() {
             setImmediateTurnBuff('stunEnemy', true);
             addPopup('スタン!', 'enemy', 'text-yellow-400 text-lg font-bold');
           } else if (card.monId === 'Suezo') {
-            const gRec = Math.floor(effectiveMaxGuts * 0.5);
+            const gRec = Math.floor(effectiveMaxGuts * 0.5 * effMul);
             setGuts(p => Math.min(effectiveMaxGuts, p + gRec));
             addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-xl font-black drop-shadow-md');
           } else if (card.monId === 'Pixie') {
@@ -9185,13 +9197,13 @@ function MonsterHeroGame() {
             addPopup('次ターン消費0!', 'hero', 'text-blue-400 text-lg font-bold');
           } else if (card.monId === 'Tiger') {
             setNextTurnBuff('guaranteedCrit', true);
-            addPermaBuff('critRatePct', 0.02);
-            addPermaBuff('critDmgPct', 0.02);
+            addPermaBuff('critRatePct', 0.02 * effMul);
+            addPermaBuff('critDmgPct', 0.02 * effMul);
             addPopup('次ターン会心確定!', 'hero', 'text-red-400 text-lg font-bold');
-            addPopup('会心率+2% 会心ダメ+2%', 'hero', 'text-yellow-400 text-sm font-bold');
+            addPopup(`会心率+${(2 * effMul).toFixed(effMul === 1 ? 0 : 1)}% 会心ダメ+${(2 * effMul).toFixed(effMul === 1 ? 0 : 1)}%`, 'hero', 'text-yellow-400 text-sm font-bold');
           } else if (card.monId === 'Monol') {
-            addPermaBuff('dmgCutPct', 0.03);
-            addWaveBuff('enemyAtkDebuffPct', 0.10);
+            addPermaBuff('dmgCutPct', 0.03 * effMul);
+            addWaveBuff('enemyAtkDebuffPct', 0.10 * effMul);
             setNextTurnBuff('reflect', true);
             addPopup('次ターン反射！', 'hero', 'text-purple-400 text-lg font-bold');
           } else if (card.monId === 'Oboro') {
@@ -10199,7 +10211,8 @@ function MonsterHeroGame() {
   //    (以前は「HP」「G」「攻」など略称が混在していた)
   //  ・数値と単位の間は詰め、項目名と数値の間は半角スペースを入れる
   const getDynamicDesc = (t, isOwned, level) => {
-    const pct = v => Math.round(v * 100);
+    // 0.5%のような小数の効果量があるため、小数第1位まで残す(整数のときは「1」「10」と表示する)
+    const pct = v => String(Math.round(v * 1000) / 10);
     if (t.id === 'oryo') return `攻撃 ${pct(0.1 + level * 0.1)}%アップ`;
     if (t.id === 'dra') return `被ダメージ ${[3, 6, 10][level]}%ダウン`;
     if (t.id === 'cadmium') {
@@ -15603,17 +15616,16 @@ function MonsterHeroGame() {
     // Existing total = sum of already-assigned attack cards.
     // If a card is pending and validly assignable somewhere, also compute the projected new total.
     // committed (already assigned) attack cards in selection order
+    // 2枚目以降のカードは効果半減。processTurnと同じく「ブリーダーカード以外の枚数」で数える
     let committedTotal = 0;
-    let committedAtkCnt = 0;
+    let committedPenaltyCnt = 0;
     selectedCards.forEach(idx => {
       const card = hand[idx];
       const slotIdx = cardAssignments[idx];
-      if (slotIdx == null) return;
-      const isAtk = isAttackCard(card);
-      if (isAtk) {
-        committedTotal += getDmg(card, slotIdx, slots[slotIdx], 0, 0, committedAtkCnt > 0);
-        committedAtkCnt++;
-      }
+      const isPenalty = !isBreederCard(card);
+      const halved = isPenalty && committedPenaltyCnt > 0;
+      if (slotIdx != null && isAttackCard(card)) committedTotal += getDmg(card, slotIdx, slots[slotIdx], 0, 0, halved);
+      if (isPenalty) committedPenaltyCnt++;
     });
     const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
     const pendingIsAtk = isAttackCard(pendingCardObj);
@@ -15630,7 +15642,7 @@ function MonsterHeroGame() {
         if (assignedCount >= maxUses) continue;
         if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
         pendingValidSlot = i;
-        pendingAdd = getDmg(pendingCardObj, i, s, 0, 0, committedAtkCnt > 0);
+        pendingAdd = getDmg(pendingCardObj, i, s, 0, 0, !isBreederCard(pendingCardObj) && committedPenaltyCnt > 0);
         break;
       }
     }
@@ -15692,27 +15704,27 @@ function MonsterHeroGame() {
     let previewDmg = 0;
     let isPendingPreview = false;
     if (s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)) {
-      // 既に割り当て済みの攻撃カード枚数を選択順で正確に数え、保留カードはその次の攻撃として扱う
-      let committedAtk = 0;
+      // 既に選んだ「ブリーダーカード以外」の枚数を数え、保留カードはその次の1枚として扱う
+      let committedPenalty = 0;
       selectedCards.forEach(idx => {
-        const card = hand[idx];
-        if (isAttackCard(card) && cardAssignments[idx] != null) committedAtk++;
+        if (!isBreederCard(hand[idx])) committedPenalty++;
       });
-      const isSecondOrLater = committedAtk >= 1;
+      const isSecondOrLater = committedPenalty >= 1 && !isBreederCard(pendingCardObj);
       const baseDmg = getDmg(pendingCardObj, i, s, 0, 0, isSecondOrLater);
       previewDmg = baseDmg + getComboBonusDmg(pendingCardObj, s, baseDmg);
       isPendingPreview = true;
     } else if (s) {
-      // global attack counter across all selected cards in selection order
-      let globalAtkCnt = 0;
+      // 選択順で「ブリーダーカード以外」を数え、2枚目以降は半減として予測する
+      let globalPenaltyCnt = 0;
       selectedCards.forEach(idx => {
         const card = hand[idx];
-        const isAtk = isAttackCard(card);
+        const isPenalty = !isBreederCard(card);
+        const halved = isPenalty && globalPenaltyCnt > 0;
         if (cardAssignments[idx] === i) {
-          const baseDmg = getDmg(card, i, s, 0, 0, isAtk && globalAtkCnt > 0);
+          const baseDmg = getDmg(card, i, s, 0, 0, halved);
           previewDmg += baseDmg + getComboBonusDmg(card, s, baseDmg);
         }
-        if (isAtk && cardAssignments[idx] != null) globalAtkCnt++;
+        if (isPenalty) globalPenaltyCnt++;
       });
     }
     const isAnimating = attackAnim && attackAnim.slotIndex === i;
@@ -17088,7 +17100,9 @@ function MonsterHeroGame() {
     className: "text-white font-black"
   }, "\u6700\u5927\u30AC\u30C3\u30C4180 \uFF0B \u5473\u65B93\u4F53")), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-amber-500 font-black italic pt-2 border-t border-white/5"
-  }, "\u203B\u30CF\u30E0\u306F\u52C7\u8005\u6642\u3001\u5E38\u306B\u4E0A\u9650\uFF0B1"))), /*#__PURE__*/React.createElement("section", {
+  }, "\u203B\u30CF\u30E0\u306F\u52C7\u8005\u6642\u3001\u5E38\u306B\u4E0A\u9650\uFF0B1"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-slate-400 font-bold pt-2 border-t border-white/5 leading-relaxed"
+  }, "\u203B\u540C\u3058\u30BF\u30FC\u30F3\u306B2\u679A\u76EE\u4EE5\u964D\u3067\u4F7F\u3063\u305F\u30AB\u30FC\u30C9\u306F\u3001\u30C0\u30E1\u30FC\u30B8\u3082\u30AC\u30FC\u30C9\u3082\u52B9\u679C\u304C\u534A\u5206\u306B\u306A\u308A\u307E\u3059\u3002\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u306F\u5BFE\u8C61\u5916\u3067\u3001\u4F55\u679A\u76EE\u306B\u4F7F\u3063\u3066\u3082\u52B9\u679C\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("section", {
     className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
   }, /*#__PURE__*/React.createElement("h3", {
     className: "text-indigo-400 font-black text-base mb-3 flex items-center gap-2"
