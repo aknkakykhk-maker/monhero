@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a82a92f0bb095e12
+// source-sha256: 1b8982edd34fff74
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 07:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 07:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8317,6 +8317,15 @@ function MonsterHeroGame() {
   // 経験値の計算は通常クリア(awardRunRewardsのWAVE10到達)とまったく同じ式を使う。
   // スコア・ランキング・クリア回数・ミッション進捗・マスモン登録は対象外(通常のクリアとは別扱い)。
   const SKIP_WAVES = 10;
+  // スキップチケットはまとめて使える。使う枚数は必ず1〜所持数の範囲へ丸め、
+  // 所持数を超えて消費したり0枚で実行したりしないようにする
+  const skipMaxCount = itemId => Math.max(1, ownedItems[itemId] || 0);
+  const clampSkipCount = (value, itemId) => Math.max(1, Math.min(skipMaxCount(itemId), Math.floor(Number(value) || 1)));
+  const skipFlowCount = () => skipFlow ? clampSkipCount(skipFlow.count, skipFlow.itemId) : 1;
+  const changeSkipCount = value => setSkipFlow(prev => prev ? {
+    ...prev,
+    count: clampSkipCount(value, prev.itemId)
+  } : prev);
   const executeBattleSkip = async () => {
     // 連打でチケットが2枚消える・報酬が二重に入ることが無いよう、awaitより前に同期ロックする
     if (skipProcessingRef.current) return;
@@ -8324,19 +8333,21 @@ function MonsterHeroGame() {
     const item = BREEDER_MARKET_ITEMS.find(i => i.id === flow?.itemId);
     if (!flow || !item || !flow.hero) return;
     if ((ownedItems[item.id] || 0) <= 0) return;
+    // まとめて使う枚数。画面の値が壊れていても所持数を超えて消費しないよう、ここでも必ず丸める
+    const count = clampSkipCount(flow.count, item.id);
     skipProcessingRef.current = true;
     try {
       const nextItems = {
         ...ownedItems,
-        [item.id]: (ownedItems[item.id] || 0) - 1
+        [item.id]: (ownedItems[item.id] || 0) - count
       };
       setOwnedItems(nextItems);
       await storeSet('mh_owned_items', nextItems, false);
       const scoreMult = DIFFICULTY_SETTINGS[flow.difficulty]?.score || 1.0;
       const goldMult = DIFFICULTY_SETTINGS[flow.difficulty]?.gold || 1.0;
 
-      // ブリーダー経験値・ブリーダーポイント
-      const breederXpGain = xpForWavesCleared(SKIP_WAVES, scoreMult);
+      // ブリーダー経験値・ブリーダーポイント(枚数ぶんまとめて受け取る)
+      const breederXpGain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;
       const breederLevelBefore = levelInfo(breederXp);
       const nextBreederXp = breederXp + breederXpGain;
       const breederLevelAfter = levelInfo(nextBreederXp);
@@ -8353,14 +8364,14 @@ function MonsterHeroGame() {
       }
 
       // ダイヤ
-      const goldGain = goldForWavesCleared(SKIP_WAVES, goldMult);
+      const goldGain = goldForWavesCleared(SKIP_WAVES, goldMult) * count;
       const goldBefore = gold;
       const goldAfter = gold + goldGain;
       setGold(goldAfter);
       await storeSet('mh_gold', goldAfter, false);
 
       // 絆経験値。勇者モン=満額、選んだ供モン=1/2、編成内で選ばなかったマスモン=1/4 も通常と同じ
-      const gain = xpForWavesCleared(SKIP_WAVES, scoreMult);
+      const gain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;
       const allies = (flow.allies || []).filter(Boolean);
       const bondAwards = buildRunBondAwards({
         gain,
@@ -8409,6 +8420,7 @@ function MonsterHeroGame() {
         itemId: item.id,
         itemName: item.name,
         itemEmoji: item.emoji,
+        count,
         heroName: flow.hero.masuName || flow.hero.name,
         heroImgUrl: flow.hero.imgUrl,
         heroEmoji: flow.hero.emoji,
@@ -8440,7 +8452,8 @@ function MonsterHeroGame() {
       difficulty: difficultyKey,
       itemId,
       hero: null,
-      allies: []
+      allies: [],
+      count: 1
     });
     setSkipPickTab('roster');
     setSkipConfirmOpen(false);
@@ -16606,7 +16619,9 @@ function MonsterHeroGame() {
       className: "text-white"
     }, item.name), "\u30921\u679A\u4F7F\u3046\u3068\u3001", label, "\u3092", /*#__PURE__*/React.createElement("b", {
       className: "text-white"
-    }, "\u30DC\u30B9\u307E\u3067\u5012\u3057\u305F\u3068\u304D"), "\u3068\u540C\u3058\u7D46\u7D4C\u9A13\u5024\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u30B9\u30AD\u30C3\u30D7\u3092\u62BC\u3059\u3068\u3001\u52C7\u8005\u30E2\u30F3\u3068\u4F9B\u30E2\u30F33\u4F53\u3092\u9078\u3076\u753B\u9762\u306B\u9032\u307F\u307E\u3059\u3002\u6C7A\u3081\u305F\u3042\u3068\u306B\u78BA\u8A8D\u304C\u51FA\u3066\u3001\u300C\u306F\u3044\u300D\u3067\u30C1\u30B1\u30C3\u30C8\u30921\u679A\u4F7F\u3044\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    }, "\u30DC\u30B9\u307E\u3067\u5012\u3057\u305F\u3068\u304D"), "\u3068\u540C\u3058\u7D46\u7D4C\u9A13\u5024\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u30B9\u30AD\u30C3\u30D7\u3092\u62BC\u3059\u3068\u3001\u52C7\u8005\u30E2\u30F3\u3068\u4F9B\u30E2\u30F33\u4F53\u3092\u9078\u3076\u753B\u9762\u306B\u9032\u307F\u307E\u3059\u3002\u540C\u3058\u753B\u9762\u3067", /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, "\u4F7F\u3046\u679A\u6570"), "\u3092\u6C7A\u3081\u3089\u308C\u3001\u307E\u3068\u3081\u3066\u4F7F\u3046\u3068\u53D7\u3051\u53D6\u308B\u91CF\u3082\u679A\u6570\u3076\u3093\u306B\u306A\u308A\u307E\u3059\u3002\u6C7A\u3081\u305F\u3042\u3068\u306B\u78BA\u8A8D\u304C\u51FA\u3066\u3001\u300C\u306F\u3044\u300D\u3067\u30C1\u30B1\u30C3\u30C8\u3092\u4F7F\u3044\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
       className: "bg-black/40 rounded-xl border border-teal-500/30 p-3 text-[10px] leading-relaxed"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-teal-300 font-black mb-1"
@@ -16721,13 +16736,42 @@ function MonsterHeroGame() {
       className: "w-full max-w-md mx-auto shrink-0 pt-2"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-slate-400 font-bold text-center mb-1"
-    }, item?.name, " \u6240\u6301\u6570 ", ownedItems[skipFlow.itemId] || 0, " \u679A"), /*#__PURE__*/React.createElement("button", {
+    }, item?.name, " \u6240\u6301\u6570 ", ownedItems[skipFlow.itemId] || 0, " \u679A"), (() => {
+      const max = skipMaxCount(skipFlow.itemId);
+      const n = skipFlowCount();
+      return /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2 mb-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black text-slate-400 shrink-0"
+      }, "\u4F7F\u3046\u679A\u6570"), /*#__PURE__*/React.createElement("button", {
+        disabled: n <= 1,
+        onClick: () => changeSkipCount(n - 1),
+        "aria-label": "\u4F7F\u3046\u679A\u6570\u30921\u679A\u6E1B\u3089\u3059",
+        className: "shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30"
+      }, "\u2212"), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 text-center"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "font-mono font-black text-white text-lg"
+      }, n), /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black text-slate-400"
+      }, " / ", max, "\u679A")), /*#__PURE__*/React.createElement("button", {
+        disabled: n >= max,
+        onClick: () => changeSkipCount(n + 1),
+        "aria-label": "\u4F7F\u3046\u679A\u6570\u30921\u679A\u5897\u3084\u3059",
+        className: "shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30"
+      }, "\uFF0B"), /*#__PURE__*/React.createElement("button", {
+        disabled: n >= max,
+        onClick: () => changeSkipCount(max),
+        className: "shrink-0 h-11 px-3 rounded-xl bg-slate-700 text-white font-black text-[11px] active:scale-95 disabled:opacity-30"
+      }, "\u5168\u90E8"));
+    })(), /*#__PURE__*/React.createElement("button", {
       disabled: !skipFlow.hero,
       onClick: () => setSkipConfirmOpen(true),
       className: "w-full min-h-[52px] rounded-2xl bg-teal-600 text-white font-black text-sm uppercase shadow-lg active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500"
     }, "\u6C7A\u5B9A")));
   })(), skipConfirmOpen && skipFlow && (() => {
     const item = BREEDER_MARKET_ITEMS.find(i => i.id === skipFlow.itemId);
+    const useCount = skipFlowCount();
     return /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-4",
       style: {
@@ -16744,11 +16788,11 @@ function MonsterHeroGame() {
       className: "text-4xl mb-2"
     }, item?.emoji), /*#__PURE__*/React.createElement("h3", {
       className: "text-base font-black text-white mb-1"
-    }, item?.name, "\u3092\u4F7F\u3044\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
+    }, item?.name, "\u3092", useCount, "\u679A\u4F7F\u3044\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] text-slate-400 font-bold mb-2"
-    }, DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label, " \u3092\u6700\u5F8C\u307E\u3067\u9032\u3081\u305F\u6271\u3044\u3067\u3001\u7D4C\u9A13\u5024\u3068\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    }, DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label, " \u3092\u6700\u5F8C\u307E\u3067\u9032\u3081\u305F\u6271\u3044\u3067\u3001\u7D4C\u9A13\u5024\u3068\u30C0\u30A4\u30E4\u3092", useCount, "\u5468\u3076\u3093\u53D7\u3051\u53D6\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] font-black text-teal-200 bg-black/40 border border-teal-500/30 rounded-xl py-2 mb-4"
-    }, "\u6240\u6301\u6570 ", ownedItems[skipFlow.itemId] || 0, "\u679A \u2192 ", Math.max(0, (ownedItems[skipFlow.itemId] || 0) - 1), "\u679A"), /*#__PURE__*/React.createElement("div", {
+    }, "\u6240\u6301\u6570 ", ownedItems[skipFlow.itemId] || 0, "\u679A \u2192 ", Math.max(0, (ownedItems[skipFlow.itemId] || 0) - useCount), "\u679A"), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setSkipConfirmOpen(false),
@@ -16780,7 +16824,7 @@ function MonsterHeroGame() {
     className: "text-2xl font-black italic text-white mt-1"
   }, DIFFICULTY_SETTINGS[skipResult.difficulty]?.label, " \u7A81\u7834\uFF01"), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-400 font-bold mt-1"
-  }, skipResult.itemName, " \u30921\u679A\u4F7F\u3044\u307E\u3057\u305F\uFF08\u6B8B\u308A ", ownedItems[skipResult.itemId] || 0, "\u679A\uFF09"), /*#__PURE__*/React.createElement("div", {
+  }, skipResult.itemName, " \u3092", skipResult.count || 1, "\u679A\u4F7F\u3044\u307E\u3057\u305F\uFF08\u6B8B\u308A ", ownedItems[skipResult.itemId] || 0, "\u679A\uFF09"), /*#__PURE__*/React.createElement("div", {
     className: "mt-3 flex items-center justify-center gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-16 h-16 rounded-full overflow-hidden border-2 border-teal-400 flex items-center justify-center bg-black/40"

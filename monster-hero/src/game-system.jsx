@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 07:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 07:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4312,6 +4312,12 @@ function MonsterHeroGame() {
   // 経験値の計算は通常クリア(awardRunRewardsのWAVE10到達)とまったく同じ式を使う。
   // スコア・ランキング・クリア回数・ミッション進捗・マスモン登録は対象外(通常のクリアとは別扱い)。
   const SKIP_WAVES = 10;
+  // スキップチケットはまとめて使える。使う枚数は必ず1〜所持数の範囲へ丸め、
+  // 所持数を超えて消費したり0枚で実行したりしないようにする
+  const skipMaxCount = (itemId) => Math.max(1, ownedItems[itemId] || 0);
+  const clampSkipCount = (value, itemId) => Math.max(1, Math.min(skipMaxCount(itemId), Math.floor(Number(value) || 1)));
+  const skipFlowCount = () => skipFlow ? clampSkipCount(skipFlow.count, skipFlow.itemId) : 1;
+  const changeSkipCount = (value) => setSkipFlow(prev => prev ? { ...prev, count: clampSkipCount(value, prev.itemId) } : prev);
   const executeBattleSkip = async () => {
     // 連打でチケットが2枚消える・報酬が二重に入ることが無いよう、awaitより前に同期ロックする
     if (skipProcessingRef.current) return;
@@ -4319,17 +4325,19 @@ function MonsterHeroGame() {
     const item = BREEDER_MARKET_ITEMS.find(i => i.id === flow?.itemId);
     if (!flow || !item || !flow.hero) return;
     if ((ownedItems[item.id] || 0) <= 0) return;
+    // まとめて使う枚数。画面の値が壊れていても所持数を超えて消費しないよう、ここでも必ず丸める
+    const count = clampSkipCount(flow.count, item.id);
     skipProcessingRef.current = true;
     try {
-      const nextItems = { ...ownedItems, [item.id]: (ownedItems[item.id] || 0) - 1 };
+      const nextItems = { ...ownedItems, [item.id]: (ownedItems[item.id] || 0) - count };
       setOwnedItems(nextItems);
       await storeSet('mh_owned_items', nextItems, false);
 
       const scoreMult = DIFFICULTY_SETTINGS[flow.difficulty]?.score || 1.0;
       const goldMult = DIFFICULTY_SETTINGS[flow.difficulty]?.gold || 1.0;
 
-      // ブリーダー経験値・ブリーダーポイント
-      const breederXpGain = xpForWavesCleared(SKIP_WAVES, scoreMult);
+      // ブリーダー経験値・ブリーダーポイント(枚数ぶんまとめて受け取る)
+      const breederXpGain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;
       const breederLevelBefore = levelInfo(breederXp);
       const nextBreederXp = breederXp + breederXpGain;
       const breederLevelAfter = levelInfo(nextBreederXp);
@@ -4342,14 +4350,14 @@ function MonsterHeroGame() {
       }
 
       // ダイヤ
-      const goldGain = goldForWavesCleared(SKIP_WAVES, goldMult);
+      const goldGain = goldForWavesCleared(SKIP_WAVES, goldMult) * count;
       const goldBefore = gold;
       const goldAfter = gold + goldGain;
       setGold(goldAfter);
       await storeSet('mh_gold', goldAfter, false);
 
       // 絆経験値。勇者モン=満額、選んだ供モン=1/2、編成内で選ばなかったマスモン=1/4 も通常と同じ
-      const gain = xpForWavesCleared(SKIP_WAVES, scoreMult);
+      const gain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;
       const allies = (flow.allies || []).filter(Boolean);
       const bondAwards = buildRunBondAwards({
         gain,
@@ -4385,7 +4393,7 @@ function MonsterHeroGame() {
       }
 
       setSkipResult({
-        difficulty: flow.difficulty, itemId: item.id, itemName: item.name, itemEmoji: item.emoji,
+        difficulty: flow.difficulty, itemId: item.id, itemName: item.name, itemEmoji: item.emoji, count,
         heroName: flow.hero.masuName || flow.hero.name, heroImgUrl: flow.hero.imgUrl, heroEmoji: flow.hero.emoji,
         heroBaseId: flow.hero.id, heroColors: flow.hero.colors,
         heroIsMasu: !!flow.hero.masuId,
@@ -4404,7 +4412,7 @@ function MonsterHeroGame() {
   const openBattleSkip = (difficultyKey) => {
     const itemId = SKIP_TICKETS[difficultyKey];
     if (!itemId || (ownedItems[itemId] || 0) <= 0) return;
-    setSkipFlow({ difficulty: difficultyKey, itemId, hero: null, allies: [] });
+    setSkipFlow({ difficulty: difficultyKey, itemId, hero: null, allies: [], count: 1 });
     setSkipPickTab('roster');
     setSkipConfirmOpen(false);
     setGameState('SKIP_PICK');
@@ -7702,7 +7710,7 @@ function MonsterHeroGame() {
             <div className="flex items-center gap-2 mb-3"><span className="text-3xl">{item.emoji}</span><h3 className="text-base font-black text-teal-300">{item.name}</h3></div>
             <div className="space-y-2 text-[11px] text-slate-200 leading-relaxed">
               <p><b className="text-white">{item.name}</b>を1枚使うと、{label}を<b className="text-white">ボスまで倒したとき</b>と同じ絆経験値・ブリーダー経験値・ダイヤを受け取れます。</p>
-              <p>スキップを押すと、勇者モンと供モン3体を選ぶ画面に進みます。決めたあとに確認が出て、「はい」でチケットを1枚使います。</p>
+              <p>スキップを押すと、勇者モンと供モン3体を選ぶ画面に進みます。同じ画面で<b className="text-white">使う枚数</b>を決められ、まとめて使うと受け取る量も枚数ぶんになります。決めたあとに確認が出て、「はい」でチケットを使います。</p>
               <div className="bg-black/40 rounded-xl border border-teal-500/30 p-3 text-[10px] leading-relaxed">
                 <div className="text-teal-300 font-black mb-1">受け取れるもの</div>
                 <div>・勇者モンの絆経験値（マスモンのみ）</div>
@@ -7762,18 +7770,28 @@ function MonsterHeroGame() {
           </div>
           <div className="w-full max-w-md mx-auto shrink-0 pt-2">
             <div className="text-[10px] text-slate-400 font-bold text-center mb-1">{item?.name} 所持数 {ownedItems[skipFlow.itemId]||0} 枚</div>
+            {/* まとめて使う枚数。1周ぶんの報酬×枚数をまとめて受け取れる */}
+            {(()=>{const max=skipMaxCount(skipFlow.itemId);const n=skipFlowCount();return(
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-black text-slate-400 shrink-0">使う枚数</span>
+                <button disabled={n<=1} onClick={()=>changeSkipCount(n-1)} aria-label="使う枚数を1枚減らす" className="shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30">−</button>
+                <div className="flex-1 text-center"><span className="font-mono font-black text-white text-lg">{n}</span><span className="text-[10px] font-black text-slate-400"> / {max}枚</span></div>
+                <button disabled={n>=max} onClick={()=>changeSkipCount(n+1)} aria-label="使う枚数を1枚増やす" className="shrink-0 w-11 h-11 rounded-xl bg-slate-800 text-white font-black text-lg active:scale-95 disabled:opacity-30">＋</button>
+                <button disabled={n>=max} onClick={()=>changeSkipCount(max)} className="shrink-0 h-11 px-3 rounded-xl bg-slate-700 text-white font-black text-[11px] active:scale-95 disabled:opacity-30">全部</button>
+              </div>
+            );})()}
             <button disabled={!skipFlow.hero} onClick={()=>setSkipConfirmOpen(true)} className="w-full min-h-[52px] rounded-2xl bg-teal-600 text-white font-black text-sm uppercase shadow-lg active:scale-[.98] disabled:bg-slate-800 disabled:text-slate-500">決定</button>
           </div>
         </div>);})()}
 
       {/* スキップの最終確認 */}
-      {skipConfirmOpen&&skipFlow&&(()=>{const item=BREEDER_MARKET_ITEMS.find(i=>i.id===skipFlow.itemId); return(
+      {skipConfirmOpen&&skipFlow&&(()=>{const item=BREEDER_MARKET_ITEMS.find(i=>i.id===skipFlow.itemId); const useCount=skipFlowCount(); return(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:41000}} role="dialog" aria-modal="true">
           <div className="bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl text-center">
             <div className="text-4xl mb-2">{item?.emoji}</div>
-            <h3 className="text-base font-black text-white mb-1">{item?.name}を使いますか？</h3>
-            <div className="text-[11px] text-slate-400 font-bold mb-2">{DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label} を最後まで進めた扱いで、経験値とダイヤを受け取ります</div>
-            <div className="text-[11px] font-black text-teal-200 bg-black/40 border border-teal-500/30 rounded-xl py-2 mb-4">所持数 {ownedItems[skipFlow.itemId]||0}枚 → {Math.max(0,(ownedItems[skipFlow.itemId]||0)-1)}枚</div>
+            <h3 className="text-base font-black text-white mb-1">{item?.name}を{useCount}枚使いますか？</h3>
+            <div className="text-[11px] text-slate-400 font-bold mb-2">{DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label} を最後まで進めた扱いで、経験値とダイヤを{useCount}周ぶん受け取ります</div>
+            <div className="text-[11px] font-black text-teal-200 bg-black/40 border border-teal-500/30 rounded-xl py-2 mb-4">所持数 {ownedItems[skipFlow.itemId]||0}枚 → {Math.max(0,(ownedItems[skipFlow.itemId]||0)-useCount)}枚</div>
             <div className="flex gap-2">
               <button onClick={()=>setSkipConfirmOpen(false)} className="w-2/5 bg-slate-800 text-slate-300 py-3.5 rounded-2xl font-black text-sm">いいえ</button>
               <button onClick={executeBattleSkip} className="w-3/5 bg-teal-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg active:scale-95">はい</button>
@@ -7789,7 +7807,7 @@ function MonsterHeroGame() {
               <div className="text-5xl mb-1" style={{animation:'idleSpark 900ms ease-in-out infinite'}}>{skipResult.itemEmoji}</div>
               <div className="text-[10px] font-black tracking-[.3em] text-teal-400 uppercase">Skip Complete</div>
               <h2 className="text-2xl font-black italic text-white mt-1">{DIFFICULTY_SETTINGS[skipResult.difficulty]?.label} 突破！</h2>
-              <div className="text-[10px] text-slate-400 font-bold mt-1">{skipResult.itemName} を1枚使いました（残り {ownedItems[skipResult.itemId]||0}枚）</div>
+              <div className="text-[10px] text-slate-400 font-bold mt-1">{skipResult.itemName} を{skipResult.count||1}枚使いました（残り {ownedItems[skipResult.itemId]||0}枚）</div>
               <div className="mt-3 flex items-center justify-center gap-2">
                 <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-teal-400 flex items-center justify-center bg-black/40">{skipResult.heroImgUrl?<DyedMonsterImage baseId={skipResult.heroBaseId} src={skipResult.heroImgUrl} alt={skipResult.heroName} masuColors={skipResult.heroColors} className="w-full h-full object-contain"/>:<span className="text-3xl">{skipResult.heroEmoji}</span>}</div>
                 <div className="text-left"><div className="text-[9px] text-slate-500 font-black uppercase">勇者モン</div><div className="text-sm font-black text-white">{skipResult.heroName}</div></div>

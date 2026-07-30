@@ -78,7 +78,7 @@ check('ギフト受取で正しいアイテムidへ変換する',
 const skipBlock = grab(source, 'const executeBattleSkip', 'const openBattleSkip');
 check('チケットが無ければ実行しない', skipBlock.includes("if ((ownedItems[item.id] || 0) <= 0) return;"));
 check('連打しても1枚しか消費しない', skipBlock.includes('if (skipProcessingRef.current) return;') && skipBlock.includes('skipProcessingRef.current = true;'));
-check('チケットを1枚減らして保存する', skipBlock.includes("[item.id]: (ownedItems[item.id] || 0) - 1") && skipBlock.includes("storeSet('mh_owned_items', nextItems, false)"));
+check('使った枚数だけチケットを減らして保存する', skipBlock.includes("[item.id]: (ownedItems[item.id] || 0) - count") && skipBlock.includes("storeSet('mh_owned_items', nextItems, false)"));
 check('経験値の計算は通常クリアと同じ式', skipBlock.includes('xpForWavesCleared(SKIP_WAVES, scoreMult)') && skipBlock.includes('goldForWavesCleared(SKIP_WAVES, goldMult)'));
 check('WAVE10まで到達した扱いにする', has('const SKIP_WAVES = 10;'));
 check('絆経験値の配り方も通常と同じ(勇者=満額・供モン1/2・控え1/4)', skipBlock.includes('buildRunBondAwards({'));
@@ -104,7 +104,7 @@ check('編成を決める画面がある', has("gameState==='SKIP_PICK'") && has
 check('編成/ベースモンのタブがある', has('setSkipPickTab(key)') && has('getUnlockedBaseMonsterList()'));
 check('同じ種を二重に選べない', has('const skipMonKey = (mon) => mon ? String(mon.id)') && has('chosenKeys.has(skipMonKey(mon))'));
 check('勇者モンを選ぶまで決定できない', has('disabled={!skipFlow.hero}'));
-check('使う前に確認が出る', has('を使いますか？') && has('executeBattleSkip'));
+check('使う前に確認が出る', has('枚使いますか？') && has('executeBattleSkip'));
 check('専用リザルトがある', has("gameState==='SKIP_RESULT'") && has('Skip Complete'));
 check('リザルトに簡単な演出がある', has('setSkipAnimPhase(1)') && has('skipAnimPhase>0'));
 check('リザルトに記録されない旨を出す', has('スコア・ランキング・クリア回数には記録されません'));
@@ -114,8 +114,27 @@ check('スキップ画面のBGMが決まっている', has("SKIP_PICK: 'enhance'
 const helpSrc = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
 check('ヘルプにスキップチケットの説明がある', helpSrc.includes("['スキップチケット・序','Normal で使える']"));
 // 所持数がどこでも分かるようにする
-check('確認画面で使う前後の所持数が分かる', has('所持数 {ownedItems[skipFlow.itemId]||0}枚 → {Math.max(0,(ownedItems[skipFlow.itemId]||0)-1)}枚'));
-check('リザルトで残り枚数が分かる', has('を1枚使いました（残り {ownedItems[skipResult.itemId]||0}枚）') && has('itemId: item.id,'));
+check('確認画面で使う前後の所持数が分かる', has('所持数 {ownedItems[skipFlow.itemId]||0}枚 → {Math.max(0,(ownedItems[skipFlow.itemId]||0)-useCount)}枚'));
+check('リザルトで残り枚数が分かる', has('を{skipResult.count||1}枚使いました（残り {ownedItems[skipResult.itemId]||0}枚）') && has('itemId: item.id,'));
+
+// --- 複数枚をまとめて使う ---
+check('使う枚数を1〜所持数に必ず丸める',
+  has('const clampSkipCount = (value, itemId) => Math.max(1, Math.min(skipMaxCount(itemId), Math.floor(Number(value) || 1)));')
+    && has('const skipMaxCount = (itemId) => Math.max(1, ownedItems[itemId] || 0);'));
+check('スキップを始めるときは1枚から', has("setSkipFlow({ difficulty: difficultyKey, itemId, hero: null, allies: [], count: 1 });"));
+check('実行時にも枚数を丸めてから消費する',
+  skipBlock.includes('const count = clampSkipCount(flow.count, item.id);')
+    && skipBlock.includes('[item.id]: (ownedItems[item.id] || 0) - count'));
+check('経験値・ダイヤ・絆経験値がすべて枚数ぶんになる',
+  skipBlock.includes('xpForWavesCleared(SKIP_WAVES, scoreMult) * count;\n      const breederLevelBefore')
+    && skipBlock.includes('goldForWavesCleared(SKIP_WAVES, goldMult) * count;')
+    && skipBlock.includes('const gain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;'));
+check('枚数を選ぶボタンがある',
+  has('aria-label="使う枚数を1枚減らす"') && has('aria-label="使う枚数を1枚増やす"') && has('changeSkipCount(max)'));
+check('所持数を超える枚数は選べない', has('disabled={n>=max}') && has('disabled={n<=1}'));
+check('確認画面とリザルトに使った枚数が出る',
+  has('{item?.name}を{useCount}枚使いますか？') && has('経験値とダイヤを{useCount}周ぶん受け取ります') && has('count,'));
+check('リザルトに使った枚数を残す', skipBlock.includes('itemEmoji: item.emoji, count,'));
 check('説明モーダルにも所持数を出す', has('所持数: <b className="text-white">{ownedItems[item.id]||0}</b> 枚'));
 // 難易度カードのバッジは中央に来ている1難易度ぶんしか見えないため、
 // 難易度タブの上に3種の所持数をまとめて常時出す
