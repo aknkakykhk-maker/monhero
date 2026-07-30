@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 21:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 22:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4570,6 +4570,10 @@ function MonsterHeroGame() {
     }
   };
 
+  // 同じターンに2枚目以降で使ったカードは効果が半減する(ハムの連続攻撃で複数枚使うときの調整)。
+  // ブリーダーカード(教えカード)だけは対象外で、何枚目に使っても効果は変わらない。
+  // 「何枚目か」の数え方をここに集約し、画面のダメージ予測とprocessTurnの実処理がずれないようにする。
+  const isBreederCard = (card) => !!card && TEACHING_CARDS.some(t => t.id === card.id);
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx-attackStartDist);
@@ -4728,12 +4732,19 @@ function MonsterHeroGame() {
 
     // カットイン廃止: 技名はスロット上にインライン表示する（実行ループ内で行う）
 
+    let penaltyCardCount=0; // ブリーダーカード以外を何枚使ったか(2枚目以降は効果半減)
     for (const entry of usedCardEntries) {
       const card=entry.card;
+      // 2枚目以降のカードは効果が半減する。ブリーダーカードは対象外で、枚数にも数えない。
+      const isBreeder=isBreederCard(card);
+      const halved=!isBreeder&&penaltyCardCount>0;
+      const effMul=halved?0.5:1;
+      if(!isBreeder) penaltyCardCount++;
+      if(halved) addPopup('2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
       const slotIdx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
       lastType=card.type;
-      if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat; currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult; }
-      else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5); }
+      if (card.type==='guard') { Audio_.se.guard(); guardTypeInTurn='guard'; currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul; currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul; }
+      else if (card.type==='weak_guard') { if(guardTypeInTurn!=='guard') guardTypeInTurn='weak_guard'; currentTurnGuardFlat+=(GUARD_EVOLUTION[guardLevel].flat*0.5*effMul); currentTurnGuardMult+=(GUARD_EVOLUTION[guardLevel].mult*0.5*effMul); }
       setGuts(p=>Math.max(0,p-getCardGuts(card)));
       if (card.type==='draw') continue;
       if (card.type==='buff'||card.type==='debuff') {
@@ -4741,11 +4752,11 @@ function MonsterHeroGame() {
         if (card.subType==='atk_buff') { addPopup(`攻撃UP!`,'hero','text-red-400 font-black text-2xl drop-shadow-md'); addPermaBuff('atkPct',card.baseValue); localOryoAdd+=card.baseValue; }
         else if (card.subType==='dmg_cut_buff') { addPopup(`防御UP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=level===0?0.03:(level===1?0.06:0.10); setPermaBuffs(p=>({...p, dmgCutPct:Math.min(0.9,(p.dmgCutPct||0)+cutValue)})); }
         // かどみうむ: 効果量はdata/breeder.jsのCADMIUM_TIERSに集約している(説明文の生成も同じ値を見る)
-        else if (card.subType==='guts_buff') { addPopup(`⚡ ガッツ上限UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const tier=CADMIUM_TIERS[Math.min(owned?owned.evoLevel:0,CADMIUM_TIERS.length-1)]; addPermaBuff('gutsRecoverPct',tier.autoGuts); addPermaBuff('muaGutsPct',tier.gutsLimit); if(tier.hpLimit>0) addPermaBuff('muaHpPct',tier.hpLimit); if(tier.autoHp>0){ addPermaBuff('autoHpRecovery',tier.autoHp); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md'); } }
+        else if (card.subType==='guts_buff') { const owned=ownedTeachings.find(ot=>ot.id===card.id); const tier=CADMIUM_TIERS[Math.min(owned?owned.evoLevel:0,CADMIUM_TIERS.length-1)]; addPopup(tier.gutsLimit>0?`⚡ ガッツ上限UP!`:`⚡ ガッツ回復UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); if(tier.autoGuts>0) addPermaBuff('gutsRecoverPct',tier.autoGuts); if(tier.gutsLimit>0) addPermaBuff('muaGutsPct',tier.gutsLimit); if(tier.hpLimit>0) addPermaBuff('muaHpPct',tier.hpLimit); if(tier.autoHp>0){ addPermaBuff('autoHpRecovery',tier.autoHp); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md'); } }
         else if (card.subType==='stun_atsu') {
           immediateInvincible=true; setImmediateTurnBuff('invincible',true);
           const stunMon=slots[slotIdx];
-          const d=getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,attackCount>0); totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
+          const d=getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false); totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           // 勇者特性「連撃」: ザンが勇者モンの時、ザンの攻撃(あつの挑発シリーズ含む)に連撃ヒットを追加
           if (stunMon?.id==='Zan' && mainHero?.id==='Zan') {
             const comboBase=Math.floor(d*(0.3+getPermaBuff('comboDmgPct')));
@@ -4780,12 +4791,12 @@ function MonsterHeroGame() {
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。合体で引き継いだ
           // 固有技を別のモンスターが使う場合でも、元モンスターの固有技効果を正しく再現するため
-          if(card.monId==='Mocchi'||card.monId==='Mitarashi'){addPermaBuff('dmgCutPct',0.03); addWaveBuff('enemyTakenDmgBonus',0.1); localDmgModAdd+=0.1; addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold');}
-          else if(card.monId==='Golem'){addPermaBuff('atkPct',0.1); localOryoAdd+=0.1; addPopup('闘志UP!','hero','text-red-600 text-lg font-bold');}
-          else if(card.monId==='Zan'){addPermaBuff('comboDmgPct',0.03); addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
+          if(card.monId==='Mocchi'||card.monId==='Mitarashi'){addPermaBuff('dmgCutPct',0.03*effMul); addWaveBuff('enemyTakenDmgBonus',0.1*effMul); localDmgModAdd+=0.1*effMul; addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold');}
+          else if(card.monId==='Golem'){addPermaBuff('atkPct',0.1*effMul); localOryoAdd+=0.1*effMul; addPopup('闘志UP!','hero','text-red-600 text-lg font-bold');}
+          else if(card.monId==='Zan'){addPermaBuff('comboDmgPct',0.03*effMul); addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
         }
         const attackStartDist=attackDistance;
-        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,attackCount>0,attackStartDist); attackCount++;
+        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist); attackCount++;
         const critRateBonus=getPermaBuff('critRatePct'), critDmgBonus=getPermaBuff('critDmgPct');
         const isCrit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+critRateBonus));
         const finalD=isCrit?Math.floor(d*(1.5+critDmgBonus)):d; if(isCrit) hasCrit=true; totalDmg+=finalD;
@@ -4811,10 +4822,10 @@ function MonsterHeroGame() {
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
-          else if(card.monId==='Suezo'){const gRec=Math.floor(effectiveMaxGuts*0.5); setGuts(p=>Math.min(effectiveMaxGuts,p+gRec)); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
+          else if(card.monId==='Suezo'){const gRec=Math.floor(effectiveMaxGuts*0.5*effMul); setGuts(p=>Math.min(effectiveMaxGuts,p+gRec)); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
           else if(card.monId==='Pixie'){setNextTurnBuff('zeroGuts',true); addPopup('次ターン消費0!','hero','text-blue-400 text-lg font-bold');}
-          else if(card.monId==='Tiger'){setNextTurnBuff('guaranteedCrit',true); addPermaBuff('critRatePct',0.02); addPermaBuff('critDmgPct',0.02); addPopup('次ターン会心確定!','hero','text-red-400 text-lg font-bold'); addPopup('会心率+2% 会心ダメ+2%','hero','text-yellow-400 text-sm font-bold');}
-          else if(card.monId==='Monol'){addPermaBuff('dmgCutPct',0.03); addWaveBuff('enemyAtkDebuffPct',0.10); setNextTurnBuff('reflect',true); addPopup('次ターン反射！','hero','text-purple-400 text-lg font-bold');}
+          else if(card.monId==='Tiger'){setNextTurnBuff('guaranteedCrit',true); addPermaBuff('critRatePct',0.02*effMul); addPermaBuff('critDmgPct',0.02*effMul); addPopup('次ターン会心確定!','hero','text-red-400 text-lg font-bold'); addPopup(`会心率+${(2*effMul).toFixed(effMul===1?0:1)}% 会心ダメ+${(2*effMul).toFixed(effMul===1?0:1)}%`,'hero','text-yellow-400 text-sm font-bold');}
+          else if(card.monId==='Monol'){addPermaBuff('dmgCutPct',0.03*effMul); addWaveBuff('enemyAtkDebuffPct',0.10*effMul); setNextTurnBuff('reflect',true); addPopup('次ターン反射！','hero','text-purple-400 text-lg font-bold');}
           else if(card.monId==='Oboro'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05); setHp(p=>Math.min(effectiveMaxHp,p+hRec)); setGuts(p=>Math.min(effectiveMaxGuts,p+gRec)); addPopup(`💚 ドレイン +${hRec}`,'life','text-emerald-400 text-xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');}
           else if(card.monId==='Ark'||card.monId==='Iblis'){
             // 贖罪: 与ダメの20%で追撃(ザンの「連撃」とは別名にして、ザン専用の連撃モーション判定と衝突しないようにする)
@@ -5355,7 +5366,8 @@ function MonsterHeroGame() {
   //    (以前は「HP」「G」「攻」など略称が混在していた)
   //  ・数値と単位の間は詰め、項目名と数値の間は半角スペースを入れる
   const getDynamicDesc = (t, isOwned, level) => {
-    const pct=(v)=>Math.round(v*100);
+    // 0.5%のような小数の効果量があるため、小数第1位まで残す(整数のときは「1」「10」と表示する)
+    const pct=(v)=>String(Math.round(v*1000)/10);
     if(t.id==='oryo') return `攻撃 ${pct(0.1+level*0.1)}%アップ`;
     if(t.id==='dra') return `被ダメージ ${[3,6,10][level]}%ダウン`;
     if(t.id==='cadmium'){
@@ -7158,12 +7170,14 @@ function MonsterHeroGame() {
                 // Existing total = sum of already-assigned attack cards.
                 // If a card is pending and validly assignable somewhere, also compute the projected new total.
                 // committed (already assigned) attack cards in selection order
-                let committedTotal=0; let committedAtkCnt=0;
+                // 2枚目以降のカードは効果半減。processTurnと同じく「ブリーダーカード以外の枚数」で数える
+                let committedTotal=0; let committedPenaltyCnt=0;
                 selectedCards.forEach(idx=>{
                   const card=hand[idx]; const slotIdx=cardAssignments[idx];
-                  if(slotIdx==null) return;
-                  const isAtk=isAttackCard(card);
-                  if(isAtk){ committedTotal+=getDmg(card,slotIdx,slots[slotIdx],0,0,committedAtkCnt>0); committedAtkCnt++; }
+                  const isPenalty=!isBreederCard(card);
+                  const halved=isPenalty&&committedPenaltyCnt>0;
+                  if(slotIdx!=null&&isAttackCard(card)) committedTotal+=getDmg(card,slotIdx,slots[slotIdx],0,0,halved);
+                  if(isPenalty) committedPenaltyCnt++;
                 });
                 const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);
                 const pendingIsAtk=isAttackCard(pendingCardObj);
@@ -7176,7 +7190,7 @@ function MonsterHeroGame() {
                     const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
                     const maxUses=(mainHero?.id==='Ham'&&s?.id==='Ham')?cardLimit:1; if(assignedCount>=maxUses) continue;
                     if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                    pendingValidSlot=i; pendingAdd=getDmg(pendingCardObj,i,s,0,0,committedAtkCnt>0); break;
+                    pendingValidSlot=i; pendingAdd=getDmg(pendingCardObj,i,s,0,0,!isBreederCard(pendingCardObj)&&committedPenaltyCnt>0); break;
                   }
                 }
                 const projectedTotal=committedTotal+pendingAdd;
@@ -7222,24 +7236,25 @@ function MonsterHeroGame() {
                   //   using the GLOBAL attack order (2nd+ attack = half damage), matching processTurn
                   let previewDmg=0; let isPendingPreview=false;
                   if(s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)){
-                    // 既に割り当て済みの攻撃カード枚数を選択順で正確に数え、保留カードはその次の攻撃として扱う
-                    let committedAtk=0;
-                    selectedCards.forEach(idx=>{const card=hand[idx]; if(isAttackCard(card)&&cardAssignments[idx]!=null)committedAtk++;});
-                    const isSecondOrLater = committedAtk>=1;
+                    // 既に選んだ「ブリーダーカード以外」の枚数を数え、保留カードはその次の1枚として扱う
+                    let committedPenalty=0;
+                    selectedCards.forEach(idx=>{if(!isBreederCard(hand[idx]))committedPenalty++;});
+                    const isSecondOrLater = committedPenalty>=1 && !isBreederCard(pendingCardObj);
                     const baseDmg=getDmg(pendingCardObj,i,s,0,0,isSecondOrLater);
                     previewDmg=baseDmg+getComboBonusDmg(pendingCardObj,s,baseDmg);
                     isPendingPreview=true;
                   } else if(s){
-                    // global attack counter across all selected cards in selection order
-                    let globalAtkCnt=0;
+                    // 選択順で「ブリーダーカード以外」を数え、2枚目以降は半減として予測する
+                    let globalPenaltyCnt=0;
                     selectedCards.forEach(idx=>{
                       const card=hand[idx];
-                      const isAtk=isAttackCard(card);
+                      const isPenalty=!isBreederCard(card);
+                      const halved=isPenalty&&globalPenaltyCnt>0;
                       if(cardAssignments[idx]===i){
-                        const baseDmg=getDmg(card,i,s,0,0,isAtk&&globalAtkCnt>0);
+                        const baseDmg=getDmg(card,i,s,0,0,halved);
                         previewDmg+=baseDmg+getComboBonusDmg(card,s,baseDmg);
                       }
-                      if(isAtk&&cardAssignments[idx]!=null)globalAtkCnt++;
+                      if(isPenalty)globalPenaltyCnt++;
                     });
                   }
                   const isAnimating = attackAnim && attackAnim.slotIndex === i;
@@ -7535,7 +7550,7 @@ function MonsterHeroGame() {
             {helpTab==='battle' &&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-blue-400 font-black text-base mb-3 flex items-center gap-2"><Target size={18}/> 距離システム</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-4">自分と敵の「距離」が威力を左右します。このゲーム最大の戦略要素です。</p><div className="space-y-3"><div className="bg-black/50 p-4 rounded-2xl border border-blue-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">距離の一致（超重要）</div><div className="text-[12px] text-slate-400 leading-relaxed">敵と同じ距離枠にいるモンスターで攻撃すると大ダメージ！距離がずれるほど威力は低下します。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-amber-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">解析と予測</div><div className="text-[12px] text-slate-400 leading-relaxed">敵は移動することがあります。「解析ボタン」で敵の行動を予測し、防御か攻撃か判断しましょう。</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-teal-400 font-black text-base mb-3 flex items-center gap-2"><Target size={18}/> 間合い適性</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">モンスターごとに4つの距離それぞれで得意・不得意があり、C(標準・±0%)を基準にG(-20%)〜M(+25%)のグレードでダメージが変動します。モンスター詳細画面のグレード表示で確認できます。</p><div className="text-[11px] text-slate-400 leading-relaxed">絆レベルが上がると貯まる「強化ポイント」を1つ消費すると、詳細画面からその距離の適性グレードを1段階アップできます(上限はM)。</div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-400 font-black text-base mb-3 flex items-center gap-2"><Zap size={18}/> GUTSの管理</h3><p className="text-[12px] text-slate-200 leading-relaxed">行動にはガッツを消費します。ガッツは毎ターン自動回復しますが、上限を増やすことで強力な技を安定して使えます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-cyan-400 font-black text-base mb-3 flex items-center gap-2"><Crown size={18}/> 勇者特性・固有技</h3><p className="text-[12px] text-slate-200 leading-relaxed">最初に選ぶ「勇者モン」ごとに専用の特性(勇者モン選択時のみ発動)と、進化する固有技(必殺技)を持ちます。編成する勇者モンによって戦い方が大きく変わります。詳しくは召喚時のモンスター詳細で確認できます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-blue-300 font-black text-base mb-3 flex items-center gap-2"><Activity size={18}/> 緊急回復</h3><p className="text-[12px] text-slate-200 leading-relaxed">画面左下の「緊急」ボタンでライフとガッツをそれぞれ最大値の30%回復できます。ただし使用すると自分のターンを消費し、敵の行動が発生します。回数制限はありません。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-pink-400 font-black text-base mb-3 flex items-center gap-2"><Heart size={18}/> 合流ボーナス</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">WAVE 2・4・6で仲間が合流すると、そのモンスターの合流ボーナス分だけライフ・ちから・丈夫さ・ガッツが上がります。</p><div className="bg-black/50 p-4 rounded-2xl border border-cyan-500/30"><div className="text-[12px] text-slate-400 leading-relaxed">さらに、合流したモンスターの<span className="text-white font-bold">間合い適性</span>も加算されます。Cを±0として、Aなら+2段階、Eなら-2段階というように、得意・不得意がそのまま反映されます。合流させる順番や組み合わせで、狙った距離を伸ばせます。</div></div></section></div>)}
             {helpTab==='growth'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-purple-400 font-black text-base mb-3 flex items-center gap-2"><Sparkles size={18}/> 能力覚醒（報酬）</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-4">WAVEクリア後、3つの能力から1つを選んで強化します。</p><div className="grid grid-cols-3 gap-2"><div className="bg-red-900/30 border border-red-500/40 p-3 rounded-2xl text-center"><Sword size={16} className="mx-auto text-red-400 mb-2"/><div className="text-[10px] font-black">攻撃覚醒</div></div><div className="bg-emerald-900/30 border border-emerald-500/40 p-3 rounded-2xl text-center"><Shield size={16} className="mx-auto text-emerald-400 mb-2"/><div className="text-[10px] font-black">防御覚醒</div></div><div className="bg-pink-900/30 border border-pink-500/40 p-3 rounded-2xl text-center"><Heart size={16} className="mx-auto text-pink-400 mb-2"/><div className="text-[10px] font-black">精神強化</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-400 font-black text-base mb-3 flex items-center gap-2"><BookOpen size={18}/> ブリーダー継承</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">WAVE 1,3,5,7,9で、ブリーダーの「教え」をカードとして加えられます。同じ教えを重ねると「進化」し、効果が飛躍的に高まります(最大Lv2)。編成したブリーダーカードの中から候補が出ます。</p><div className="grid grid-cols-2 gap-2">{[{n:"おりょうの力",d:"攻撃ステータスUP"},{n:"ドラの緑膝",d:"被ダメージDOWN"},{n:"かどみうむの計算",d:"自動ライフ/ガッツ回復UP"},{n:"みゅあの愛",d:"回復＆能力永続UP"},{n:"あつの挑発",d:"敵行動無効＆攻撃"},{n:"みゃるの薬",d:"次ターン攻撃2倍＆自傷"}].map(c=>(<div key={c.n} className="bg-black/50 p-2.5 rounded-xl border border-white/5"><div className="text-[10px] font-black text-white">{c.n}</div><div className="text-[9px] text-slate-400">{c.d}</div></div>))}</div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-cyan-400 font-black text-base mb-3 flex items-center gap-2"><Zap size={18}/> 技レベル</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">通常技・距離技・固有技には段階があります。通常技・距離技は、その距離にいる味方の間合い適性と距離ダメージ補正で上位段階が解放されます。固有技はバトル中の強化ポイントで強化します。上位ほど強力ですが、消費ガッツも増えます。</p><div className="bg-black/50 p-4 rounded-2xl border border-cyan-500/30"><div className="text-[12px] text-slate-400 leading-relaxed">バトル中はタイル選択式で、解放済みのレベルであれば下位の技に戻して使うこともできます(消費ガッツを節約したいときに便利です)。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-emerald-400 font-black text-base mb-3 flex items-center gap-2"><Sword size={18}/> ガード</h3><p className="text-[12px] text-slate-200 leading-relaxed">ガードカードの軽減量は<span className="text-white font-bold">固定値＋(丈夫さ×倍率)</span>で決まります(ガード=200＋丈夫さ×1.1、ハイガード=300＋丈夫さ×1.2)。丈夫さが100上がるごとに上位のガードが解放され、手札に入るガードの枚数も増えます。</p></section></div>)}
             {helpTab==='meta'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-400 font-black text-base mb-3 flex items-center gap-2"><Crown size={18}/> ブリーダーレベル</h3><p className="text-[12px] text-slate-200 leading-relaxed">WAVEをクリアするとブリーダー経験値を獲得してレベルアップします。レベルが上がるたびにブリーダーポイント(pt)を1獲得できます。ptはマーケットのアイコン購入に使います。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-violet-400 font-black text-base mb-3 flex items-center gap-2"><Sparkles size={18}/> マスモン</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">プレイ終了後のリザルト画面で、そのとき勇者モンだったモンスターに名前を付けて登録できます。登録した個体を<span className="text-white font-bold">マスモン</span>と呼び、絆レベル・強化ポイント・見た目の色をその個体だけのものとして持ち続けます。同じ種類でも別々に育てられます。</p><div className="bg-black/50 p-4 rounded-2xl border border-violet-500/30"><div className="text-[11px] font-black text-white mb-1">強化ポイントの使い道</div><div className="text-[12px] text-slate-400 leading-relaxed">絆レベルが1上がるごとに1ポイント獲得します。1ポイント消費して、間合い適性を1段階上げるか、ライフ・ちから・丈夫さ・ガッツのいずれかを上げられます。振り直したいときはマーケットの「絆ポイントリセットの書」を使います。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-300 font-black text-base mb-3 flex items-center gap-2"><Gem size={18}/> 寄付</h3><p className="text-[12px] text-slate-200 leading-relaxed">HOMEの「神殿」内にある「寄付」は、マスモンを手放し、累計絆経験値と同じ数のダイヤを受け取る機能です。寄付は取り消せず、手放したマスモンは元に戻せません。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-pink-400 font-black text-base mb-3 flex items-center gap-2"><Heart size={18}/> 絆レベル</h3><p className="text-[12px] text-slate-200 leading-relaxed">勇者モンに選んだモンスターは、WAVEクリアごとに絆経験値を獲得して絆レベルが上がります(WAVEが進むほど1回あたりの獲得量も増加)。供モンとして合流したマスモンにも経験値が入ります。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-violet-300 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> 合体</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">HOMEの「神殿」内にある「合体」から、マスモン同士を合体できます。残す側を<span className="text-white font-bold">主</span>、消える側を<span className="text-white font-bold">副</span>として選びます。</p><div className="space-y-2"><div className="bg-black/50 p-4 rounded-2xl border border-white/5"><div className="text-[12px] text-slate-300 leading-relaxed">副の絆経験値が累計のまま主に加算されます。合体では能力値・間合い適性・強化ポイントは増減しません。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-white/5"><div className="text-[12px] text-slate-300 leading-relaxed">主の名前・見た目・間合い適性・ステータス強化はそのまま維持されます(副の強化は引き継がれません)。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-amber-500/30"><div className="text-[12px] text-amber-200 leading-relaxed"><span className="font-bold">固有技の引き継ぎ</span>は、主と副が両方とも絆Lv.10以上のときだけ選べます。消費ダイヤは(主の絆Lv＋副の絆Lv)×100です。</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-400 font-black text-base mb-3 flex items-center gap-2"><Coins size={18}/> pt とダイヤ(2つの通貨)</h3><div className="space-y-3"><div className="bg-black/50 p-4 rounded-2xl border border-amber-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">pt（ポイント）</div><div className="text-[12px] text-slate-400 leading-relaxed">ブリーダーレベルアップで獲得。マーケットの「アイコン」購入に使います。</div></div><div className="bg-black/50 p-4 rounded-2xl border border-cyan-500/30"><div className="text-[11px] font-black text-white mb-1 uppercase">ダイヤ</div><div className="text-[12px] text-slate-400 leading-relaxed">WAVEクリアで獲得(Normal基準100ダイヤ/WAVE、難易度で変動)。「円盤石」「ブリーダー」「アイテム」の購入と、合体の費用に使います。神殿でマスモンを寄付することでも獲得できます。</div></div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-orange-400 font-black text-base mb-3 flex items-center gap-2"><ShoppingBag size={18}/> マーケット</h3><p className="text-[12px] text-slate-200 leading-relaxed mb-3">HOMEの「マーケット」から入れます。4つのカテゴリがあります。</p><div className="grid grid-cols-2 gap-2"><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">アイコン</div><div className="text-[9px] text-slate-400">ptで購入<br/>プロフィール画像に</div></div><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">円盤石</div><div className="text-[9px] text-slate-400">ダイヤで購入<br/>新モンスター解放</div></div><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">ブリーダー</div><div className="text-[9px] text-slate-400">ダイヤで購入<br/>新カード解放</div></div><div className="bg-black/50 p-3 rounded-2xl text-center border border-white/5"><div className="text-[10px] font-black text-white mb-1">アイテム</div><div className="text-[9px] text-slate-400">ダイヤで購入<br/>マスモンに使う</div></div></div><div className="bg-black/50 p-4 rounded-2xl border border-white/5 mt-3"><div className="text-[11px] font-black text-white mb-1">アイテム</div><div className="text-[12px] text-slate-400 leading-relaxed"><span className="text-white font-bold">絆ポイントリセットの書</span>: 使用済みの強化ポイントをすべて未使用に戻します(絆レベル・絆経験値はそのまま)。<br/><span className="text-white font-bold">染色もどき</span>: 見た目の色を変えられます。モンスターによっては体・目・口などの部位ごとに別々の色を選べ、プリセット27色に加えてカスタムカラーも使えます。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-cyan-300 font-black text-base mb-3 flex items-center gap-2"><Info size={18}/> ベースモンとマスモン</h3><p className="text-[12px] text-slate-200 leading-relaxed">ベースモンはモンスター種の基本データです。マスモンはプレイ後に登録した育成個体で、名前・絆・強化・色・合体履歴を個別に持ちます。どちらの一覧もHOMEの「M/B管理」から開けます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-400 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> M/B管理と編成</h3><p className="text-[12px] text-slate-200 leading-relaxed">マーケットで新しいモンスターやブリーダーカードを解放しても、次の周回で候補になるのは編成で選んだものだけです。HOMEの「M/B管理」ではベースモン一覧、マスモン一覧、モンスター編成、ブリーダーカード編成を利用できます。編成ではモンスター8体・ブリーダーカード6枚をちょうど選び、「決定」ボタンで確定します(最初から解放済みの8体・6枚は編成済みです)。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-300 font-black text-base mb-3 flex items-center gap-2"><Trophy size={18}/> 最終リザルト</h3><p className="text-[12px] text-slate-200 leading-relaxed">優勝・敗北・リタイアいずれかでプレイが終了すると、獲得したブリーダー経験値・ダイヤ・絆経験値と、WAVEごとの獲得スコア/経験値/ダイヤの内訳を確認できます。この画面から勇者モンをマスモンとして登録できます。</p></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-amber-300 font-black text-base mb-3 flex items-center gap-2"><Sparkles size={18}/> 更新履歴</h3><p className="text-[12px] text-slate-200 leading-relaxed">HOME画面右上の「更新履歴」ボタンから、アップデート内容と不具合情報をタブで切り替えて確認できます。未読の更新があるときはNEWマークが付きます。</p></section></div>)}
-            {helpTab==='tips'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-orange-400 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> 複数枚同時使用の解放</h3><div className="bg-black/50 p-4 rounded-2xl space-y-2"><div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold">同時2枚:</span><span className="text-white font-black">最大ガッツ120 ＋ 味方2体</span></div><div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold">同時3枚:</span><span className="text-white font-black">最大ガッツ180 ＋ 味方3体</span></div><div className="text-[10px] text-amber-500 font-black italic pt-2 border-t border-white/5">※ハムは勇者時、常に上限＋1</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-400 font-black text-base mb-3 flex items-center gap-2"><Activity size={18}/> 攻略のヒント</h3><ul className="text-[12px] text-slate-300 space-y-3 list-disc pl-5"><li><span className="font-black text-white">防御は最大の攻撃</span>: 敵の必殺技は即死級。解析を使い確実に防御しましょう。</li><li><span className="font-black text-white">再生の強化</span>: 教えにより毎ターンの「再生ライフ」を増やすと後半が有利になります。</li><li><span className="font-black text-white">勇者特性を理解する</span>: 1体目に選んだモンスターの特性は最後まで影響します。</li><li><span className="font-black text-white">データのバックアップ</span>: ホーム画面のアイコンを作り直すと進行状況が引き継がれないことがあります。HOMEの「設定」内にある「データ引き継ぎ」で定期的にコードを控えておくと安心です。</li></ul></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-slate-200 font-black text-base mb-3 flex items-center gap-2"><Settings size={18}/> プロフィールと設定</h3><div className="text-[12px] text-slate-300 leading-relaxed space-y-2"><p>プロフィールはHOME上部のプレイヤー情報から開き、名前・アイコン・難易度別記録・所持アイテムを確認できます。</p><p>ヘルプ、音量設定、データ引き継ぎ、タイトルへ戻る操作はHOMEの「設定」にあります。音量設定ではBGMとSEを個別に調整でき、引き継ぎコードは端末移行やバックアップに使えます。</p><p>更新履歴はHOME右上の独立した「更新履歴」ボタンから確認します。</p></div></section></div>)}
+            {helpTab==='tips'&&(<div className="space-y-5"><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-orange-400 font-black text-base mb-3 flex items-center gap-2"><Layers size={18}/> 複数枚同時使用の解放</h3><div className="bg-black/50 p-4 rounded-2xl space-y-2"><div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold">同時2枚:</span><span className="text-white font-black">最大ガッツ120 ＋ 味方2体</span></div><div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold">同時3枚:</span><span className="text-white font-black">最大ガッツ180 ＋ 味方3体</span></div><div className="text-[10px] text-amber-500 font-black italic pt-2 border-t border-white/5">※ハムは勇者時、常に上限＋1</div><div className="text-[10px] text-slate-400 font-bold pt-2 border-t border-white/5 leading-relaxed">※同じターンに2枚目以降で使ったカードは、ダメージもガードも効果が半分になります。ブリーダーカードは対象外で、何枚目に使っても効果は変わりません。</div></div></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-indigo-400 font-black text-base mb-3 flex items-center gap-2"><Activity size={18}/> 攻略のヒント</h3><ul className="text-[12px] text-slate-300 space-y-3 list-disc pl-5"><li><span className="font-black text-white">防御は最大の攻撃</span>: 敵の必殺技は即死級。解析を使い確実に防御しましょう。</li><li><span className="font-black text-white">再生の強化</span>: 教えにより毎ターンの「再生ライフ」を増やすと後半が有利になります。</li><li><span className="font-black text-white">勇者特性を理解する</span>: 1体目に選んだモンスターの特性は最後まで影響します。</li><li><span className="font-black text-white">データのバックアップ</span>: ホーム画面のアイコンを作り直すと進行状況が引き継がれないことがあります。HOMEの「設定」内にある「データ引き継ぎ」で定期的にコードを控えておくと安心です。</li></ul></section><section className="bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"><h3 className="text-slate-200 font-black text-base mb-3 flex items-center gap-2"><Settings size={18}/> プロフィールと設定</h3><div className="text-[12px] text-slate-300 leading-relaxed space-y-2"><p>プロフィールはHOME上部のプレイヤー情報から開き、名前・アイコン・難易度別記録・所持アイテムを確認できます。</p><p>ヘルプ、音量設定、データ引き継ぎ、タイトルへ戻る操作はHOMEの「設定」にあります。音量設定ではBGMとSEを個別に調整でき、引き継ぎコードは端末移行やバックアップに使えます。</p><p>更新履歴はHOME右上の独立した「更新履歴」ボタンから確認します。</p></div></section></div>)}
           </div>
           <footer className="shrink-0 p-5 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a'}}>
             <button onClick={()=>setShowHelp(false)} className="w-full bg-white text-black py-4 rounded-2xl font-black text-sm uppercase shadow-2xl active:scale-95 transition-transform">わかった！冒険に戻る</button>
