@@ -1,5 +1,6 @@
 // 390x844 の実ブラウザで HOME → 難易度画面の主要導線と例外ゼロを確認する。
 // 実行前に `python3 tools/serve.py` でリポジトリルートを配信する。
+const path = require('path');
 const { chromium } = require('playwright');
 
 const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.html';
@@ -41,6 +42,24 @@ const URL = process.env.SMOKE_URL || 'http://localhost:8899/monster-hero/index.h
   const dialog = page.getByRole('dialog');
   await dialog.waitFor();
   if (await dialog.getByText(/^W\d+$/).count() !== 10) throw new Error('全10 WAVEが表示されません');
+  const wave10 = dialog.locator('[data-wave="10"]');
+  await wave10.scrollIntoViewIfNeeded();
+  const layout = await dialog.evaluate(node => {
+    const cards = [...node.querySelectorAll('[data-wave]')];
+    const boss = node.querySelector('[data-wave="10"]');
+    const bossImage = boss.querySelector('img').getBoundingClientRect();
+    const bossRect = boss.getBoundingClientRect();
+    const textRects = [...boss.querySelectorAll('b, span')].map(el => el.getBoundingClientRect());
+    return {
+      bossImageWidth:bossImage.width,
+      otherImageWidths:cards.slice(0, -1).map(card => card.querySelector('img')?.getBoundingClientRect().width || 0),
+      inside:bossImage.left >= bossRect.left && bossImage.right <= bossRect.right && bossImage.top >= bossRect.top && bossImage.bottom <= bossRect.bottom,
+      overlapsText:textRects.some(rect => bossImage.left < rect.right && bossImage.right > rect.left && bossImage.top < rect.bottom && bossImage.bottom > rect.top),
+    };
+  });
+  if (layout.bossImageWidth <= Math.max(...layout.otherImageWidths)) throw new Error('ムーが一覧内で最大表示ではありません');
+  if (!layout.inside || layout.overlapsText) throw new Error('ムー画像がカード外または文字へ重なっています');
+  await dialog.screenshot({ path:path.join(__dirname, 'out', 'battle-wave-details-390x844.png') });
   await dialog.getByRole('button', { name:'閉じる' }).click();
   await dialog.waitFor({ state:'hidden' });
 
