@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 20:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 20:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1721,20 +1721,25 @@ const normalizeRankingDifficulty = (value) => {
 const rankingDifficultyKey = (value) => normalizeRankingDifficulty(value);
 
 // 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
-// 表示件数は仕様どおり上位50件。以前は不具合の切り分けのため一時的に20件へ絞っていたが、
-// そのままだと21位以降が「取得できない記録」に見えてしまうため戻した。
-const RANKING_DIAGNOSTIC_LIMIT = 50;
+// 表示件数。rankingsテーブルにdifficulty+scoreの索引が無く、取得のたびに全行を走査して
+// 並べ替えているため、件数を増やすとそのまま待ち時間になる。索引を追加するまでは20件にする。
+const RANKING_DIAGNOSTIC_LIMIT = 20;
 // 取得ごとの詳細ログは切り分け用。常時出すと件数ぶんの文字列生成が毎回走るので、
 // 必要なときだけ localStorage の mh_ranking_debug='1' で有効にする(エラーは常に出す)。
 const rankingDebugEnabled = () => { try { return window.localStorage.getItem('mh_ranking_debug') === '1'; } catch { return false; } };
 const rankingLog = (requestId, event, detail={}) => { if (rankingDebugEnabled()) console.info('[ranking][diagnostic]', { requestId, event, at: new Date().toISOString(), ...detail }); };
-// レベル系ランキングは難易度で絞らず1回で取るので、少し多めに取っておく
-const RANKING_LEVEL_FETCH_LIMIT = 200;
-const sbFetchRankings = async (diff, limit=RANKING_DIAGNOSTIC_LIMIT, order='score.desc.nullslast', offset=0, requestId='untracked') => {
+// レベル系ランキングは難易度で絞らず1回で取る。件数が多いほど並べ替えと転送に時間がかかるため、
+// 表示に必要な範囲にとどめる
+const RANKING_LEVEL_FETCH_LIMIT = 60;
+// ブリーダーLvは編成(party)を使わない。partyはJSONで1行あたりが大きいため、
+// 使わない場面では取得しないだけで転送量と待ち時間がはっきり減る
+const RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon';
+const RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon';
+const sbFetchRankings = async (diff, limit=RANKING_DIAGNOSTIC_LIMIT, order='score.desc.nullslast', offset=0, requestId='untracked', selectColumns=RANKING_SELECT_FULL) => {
   // diff を省略(null)すると難易度で絞らず、全難易度をまとめて取る
   const normalizedDifficulty = diff == null ? null : normalizeRankingDifficulty(diff);
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
-  const select = 'user_name,hero,party,score,level,icon';
+  const select = selectColumns || RANKING_SELECT_FULL;
   // DBに保存する正規keyと同じ値をeqで取得する。ilikeによる別系統の
   // 取得条件を残さず、NormalもHardと完全に同じSELECT経路にする。
   const difficultyFilter = normalizedDifficulty == null ? '' : `&difficulty=eq.${encodeURIComponent(normalizedDifficulty)}`;
@@ -1747,7 +1752,9 @@ const sbFetchRankings = async (diff, limit=RANKING_DIAGNOSTIC_LIMIT, order='scor
   });
   // モバイル回線などで接続だけが残り続けても、ランキング画面を永久に待機させない。
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
+  // 8秒では「遅いだけで成功する取得」まで失敗扱いになり、そのたびに端末内の復旧表示へ
+  // 落ちていた。回線が細くても待てる範囲まで伸ばす(それでも返らなければ打ち切る)
+  const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
     const body = await res.text();
@@ -2515,10 +2522,12 @@ function MonsterHeroGame() {
         try {
           // ブリーダーLvはレベル上位、絆Lvは編成(party)を見るので新しい記録から取る
           const order = levelKind === 'bond' ? 'id.desc' : 'level.desc.nullslast';
-          rows = await sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId);
+          const columns = levelKind === 'bond' ? RANKING_SELECT_FULL : RANKING_SELECT_NO_PARTY;
+          rows = await sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId, columns);
         } catch (e) {
-          error = e?.message || String(e);
-          console.error('[ranking] level fetch failed:', error);
+          const message = e?.message || String(e);
+          console.error('[ranking] level fetch failed:', message);
+          error = /timed out|abort/i.test(message) ? '通信が混み合っています。少し待って再読込してください' : '取得に失敗しました';
         }
         // 取得中に新しい要求が始まっていたら、そちらに任せて古い結果は捨てる
         if (rankingLatestRequestRef.current.get(cacheKey) !== requestId) return;
@@ -2614,7 +2623,8 @@ function MonsterHeroGame() {
       } catch (e) {
         console.error('[ranking] supabase fetch failed for', d, e && e.message ? e.message : e);
         const message = e?.message || String(e);
-        requestError = message;
+        // 画面にはURLを含む長い技術的な文言を出さない(詳細はコンソールに残す)
+        requestError = /timed out|abort/i.test(message) ? '通信が混み合っています。少し待って再読込してください' : '取得に失敗しました';
         if (d === 'Master') console.error('[ranking][Master] フォールバックへ切り替わった理由: score.descとid.descの取得がともに失敗', e);
         try {
           const rows = await restoreLocalRows(d);

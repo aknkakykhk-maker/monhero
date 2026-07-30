@@ -75,14 +75,17 @@ check('編成画面の戻るボタンも同じ導線', has("onClick={()=>{setMan
 check('古いFORMATION_MENUが残っていない', !source.includes('FORMATION_MENU'));
 
 // ランキング
-check('取得件数が上位50件に戻っている', has('const RANKING_DIAGNOSTIC_LIMIT = 50;'));
+check('取得件数は20件', has('const RANKING_DIAGNOSTIC_LIMIT = 20;'));
+check('ブリーダーLvは編成(party)を取得しない', has('RANKING_SELECT_NO_PARTY') && has("levelKind === 'bond' ? RANKING_SELECT_FULL : RANKING_SELECT_NO_PARTY"));
+check('遅い取得を失敗にしないタイムアウト', has('controller.abort(), 15000'));
+check('画面のエラー文は短い日本語', has('通信が混み合っています。少し待って再読込してください'));
 check('ブリーダーLvの取得がスコア一覧を上書きしない',
   has("} else if (includeLevels && levelKind === 'breeder') {\n        setBreederRankingPool(prev => ({ ...prev, ...poolByDiff }));"));
-check('レベル系ランキングは1回の取得にまとめる', has('const cacheKey = `levels:${levelKind}`;') && has('sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId)'));
+check('レベル系ランキングは1回の取得にまとめる', has('const cacheKey = `levels:${levelKind}`;') && has('sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId, columns)'));
 check('起動時の先読みは1難易度だけ', has("loadRankings('Normal')"));
 check('一覧を消さずに部分更新する', has('const next = { ...prev };') && has("if (sourceByDiff[key] === 'local' && Array.isArray(prev[key]) && prev[key].length) return;"));
 check('取得中でも表示済みは残す(更新中表示)', has('status.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>'));
-check('永久Loadingにしないタイムアウトがある', has('setTimeout(() => controller.abort(), 8000)'));
+check('永久Loadingにしないタイムアウトがある', has('controller.abort(), 15000'));
 check('詳細ログは既定で出さない', has('const rankingDebugEnabled = ()'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

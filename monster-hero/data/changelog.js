@@ -17,7 +17,18 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-30 20:31",
+    date: "2026-07-30 20:41",
+    type: "issue",
+    status: "fixed",
+    title: "ランキングが読み込めない不具合を修正",
+    items: [
+      "ランキングの取得が途中で打ち切られ、読み込みが終わらない・一覧が消える不具合を修正しました",
+      "表示件数を20件に戻し、ブリーダーLvでは編成情報を取得しないようにして読み込みを軽くしました",
+      "通信が混み合ったときの表示を分かりやすい文言にしました",
+    ],
+  },
+  {
+    date: "2026-07-30 20:40",
     type: "issue",
     status: "fixed",
     title: "ランキングの読み込みが遅く、表示が消える不具合を修正",
@@ -28,7 +39,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 20:31",
+    date: "2026-07-30 20:40",
     type: "update",
     title: "ミッション・ギフト・編成の使い勝手を改善",
     items: [
@@ -39,7 +50,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 20:31",
+    date: "2026-07-30 20:40",
     type: "issue",
     status: "fixed",
     title: "ランキングの読み込みを安定化",
@@ -50,7 +61,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 20:31",
+    date: "2026-07-30 20:40",
     type: "issue",
     status: "fixed",
     title: "絆Lvランキングの表示を修正",
@@ -59,7 +70,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 20:31",
+    date: "2026-07-30 20:40",
     type: "issue",
     status: "fixed",
     title: "ランキング表示を安定化",
@@ -68,7 +79,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 20:31",
+    date: "2026-07-30 20:40",
     type: "issue",
     status: "fixed",
     title: "難易度選択と絆Lvランキングを修正",
