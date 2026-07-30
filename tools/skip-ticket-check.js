@@ -26,9 +26,9 @@ vm.runInContext(
 const { BREEDER_MARKET_ITEMS: items, SKIP_TICKET_BY_DIFFICULTY: byDiff } = itemCtx.__i;
 const ticket = (id) => items.find(i => i.id === id);
 
-check('スキップチケット・序は1000ダイヤ・Normal', ticket('skip_ticket_jo')?.cost === 1000 && ticket('skip_ticket_jo')?.skipDifficulty === 'Normal');
-check('スキップチケット・破は1500ダイヤ・Hard', ticket('skip_ticket_ha')?.cost === 1500 && ticket('skip_ticket_ha')?.skipDifficulty === 'Hard');
-check('スキップチケット・急は3000ダイヤ・Expert', ticket('skip_ticket_kyu')?.cost === 3000 && ticket('skip_ticket_kyu')?.skipDifficulty === 'Expert');
+check('スキップチケット・序は2000ダイヤ・Normal', ticket('skip_ticket_jo')?.cost === 2000 && ticket('skip_ticket_jo')?.skipDifficulty === 'Normal');
+check('スキップチケット・破は3000ダイヤ・Hard', ticket('skip_ticket_ha')?.cost === 3000 && ticket('skip_ticket_ha')?.skipDifficulty === 'Hard');
+check('スキップチケット・急は6000ダイヤ・Expert', ticket('skip_ticket_kyu')?.cost === 6000 && ticket('skip_ticket_kyu')?.skipDifficulty === 'Expert');
 check('3種ともマーケットで買える消耗アイテム', ['skip_ticket_jo', 'skip_ticket_ha', 'skip_ticket_kyu'].every(id => ticket(id)?.type === 'item' && ticket(id)?.usage === 'battleSkip'));
 check('難易度→チケットの対応表がある', byDiff.Normal === 'skip_ticket_jo' && byDiff.Hard === 'skip_ticket_ha' && byDiff.Expert === 'skip_ticket_kyu');
 check('スキップできる難易度は3つだけ', Object.keys(byDiff).length === 3, Object.keys(byDiff).join('/'));
@@ -95,6 +95,10 @@ check('リザルトに記録されない旨を出す', has('スコア・ラン�
 check('アイテム欄では使う対象を選ばせない', has("item.usage==='battleSkip'") && has('スキップで使用'));
 check('スキップ画面のBGMが決まっている', has("SKIP_PICK: 'enhance',") && has("SKIP_RESULT: 'result',"));
 check('ヘルプにスキップチケットの説明がある', has('スキップチケット・序:'));
+// 所持数がどこでも分かるようにする
+check('確認画面で使う前後の所持数が分かる', has('所持数 {ownedItems[skipFlow.itemId]||0}枚 → {Math.max(0,(ownedItems[skipFlow.itemId]||0)-1)}枚'));
+check('リザルトで残り枚数が分かる', has('を1枚使いました（残り {ownedItems[skipResult.itemId]||0}枚）') && has('itemId: item.id,'));
+check('説明モーダルにも所持数を出す', has('所持数: <b className="text-white">{ownedItems[item.id]||0}</b> 枚'));
 
 // --- 勇者モン選択のタブ ---
 check('勇者モン選択にタブがある', has("setHeroPickTab(key); setCurrentPickingMon(null);") && has("[['roster','編成'],['base','ベースモン']]"));

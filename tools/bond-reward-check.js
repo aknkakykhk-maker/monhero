@@ -7,8 +7,8 @@ const source = fs.readFileSync(sourcePath, 'utf8');
 const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
 const context = { React: { createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} } };
 vm.createContext(context);
-vm.runInContext(`${prefix}\nglobalThis.__bondRewards = { buildRunBondAwards, bondLevelInfo, cappedBondXp, totalBondXpForLevel };`, context);
-const { buildRunBondAwards, bondLevelInfo, cappedBondXp, totalBondXpForLevel } = context.__bondRewards;
+vm.runInContext(`${prefix}\nglobalThis.__bondRewards = { buildRunBondAwards, bondLevelInfo, levelInfo, cappedBondXp, totalBondXpForLevel };`, context);
+const { buildRunBondAwards, bondLevelInfo, levelInfo, cappedBondXp, totalBondXpForLevel } = context.__bondRewards;
 
 let failed = 0;
 const check = (name, ok) => { console.log(`${ok ? 'OK' : 'NG'}: ${name}`); if (!ok) failed++; };
@@ -50,5 +50,12 @@ check('敗北・リタイアは共通の報酬関数を呼ぶ', /await awardRunR
 check('通常クリアと最終クリアの報酬経路が存在する', /await awardRunRewards\(10\)/.test(source) && /waveHistory/.test(source));
 check('同期ロックで終了経路からの重複付与を防ぐ', /if \(rewardsAwardedRef\.current\) return;\s*rewardsAwardedRef\.current = true;/.test(source));
 check('控えを既存リザルト配列へ追加していない', /bondAwards\.filter\(award => award\.rate === 0\.5 && award\.showInResult\)/.test(source));
+
+// リザルトで「Lv.いくつ → いくつ」「累計経験値の変化」を出すための材料
+check('レベル情報が累計経験値も持つ', bondLevelInfo(1234).totalXp === 1234 && levelInfo(5678).totalXp === 5678);
+check('リザルトのバーがLv変化と累計を出す',
+  source.includes('Lv.{levelBefore.level} → Lv.{levelAfter.level}')
+    && source.includes('累計 {totalBefore.toLocaleString()} → {totalAfter.toLocaleString()}'));
+check('リザルトのダイヤが増えた分も出す', source.includes('(+{(summary.goldAfter-summary.goldBefore).toLocaleString()})'));
 
 process.exit(failed ? 1 : 0);

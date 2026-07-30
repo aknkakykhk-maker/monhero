@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5d3fcc6765445a5b
+// source-sha256: 2eb3d38c882bebb2
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 06:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 06:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -180,7 +180,8 @@ const levelInfo = totalXp => {
   return {
     level,
     xpIntoLevel: xp,
-    xpForNext: xpForBreederLevel(level)
+    xpForNext: xpForBreederLevel(level),
+    totalXp
   };
 };
 // --- マスモンの絆レベル: ブリーダーレベルより上げやすくするため、必要XPを基準値から大幅に割り引く
@@ -202,7 +203,8 @@ const bondLevelInfo = totalXp => {
   return {
     level,
     xpIntoLevel: xp,
-    xpForNext: xpForBondLevel(level)
+    xpForNext: xpForBondLevel(level),
+    totalXp
   };
 };
 const INITIAL_MASU_LEVEL_CAP = 30;
@@ -4687,6 +4689,11 @@ const LevelGrowthBar = ({
   levelAfter
 }) => {
   const leveledUp = levelAfter.level > levelBefore.level;
+  // 累計経験値。levelInfo/bondLevelInfoが返すtotalXpをそのまま出すだけなので計算は増えない
+  const totalBefore = Number(levelBefore?.totalXp);
+  const totalAfter = Number(levelAfter?.totalXp);
+  const hasTotals = Number.isFinite(totalBefore) && Number.isFinite(totalAfter);
+  const gainedXp = hasTotals ? Math.max(0, totalAfter - totalBefore) : 0;
   const [curLevel, setCurLevel] = useState(levelBefore.level);
   const [pct, setPct] = useState(Math.max(0, Math.min(100, levelBefore.xpIntoLevel / Math.max(1, levelBefore.xpForNext) * 100)));
   // 次のレベルまで残り何XPかの表示。バーの伸び(pct)と同じタイミングで切り替える
@@ -4733,7 +4740,13 @@ const LevelGrowthBar = ({
     style: {
       width: `${pct}%`
     }
-  })));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between text-[8px] font-mono mt-0.5 gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: leveledUp ? 'text-amber-300 font-black shrink-0' : 'text-slate-500 shrink-0'
+  }, "Lv.", levelBefore.level, " \u2192 Lv.", levelAfter.level), hasTotals && /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500 truncate"
+  }, "\u7D2F\u8A08 ", totalBefore.toLocaleString(), " \u2192 ", totalAfter.toLocaleString(), gainedXp > 0 ? ` (+${gainedXp.toLocaleString()})` : '')));
 };
 
 // 数値がfrom→toへカウントアップする演出(ダイヤ表示用、バー無し)
@@ -4788,11 +4801,15 @@ const RewardSummaryCard = ({
 }, /*#__PURE__*/React.createElement(Gem, {
   size: 12
 }), "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
-  className: "text-white font-mono font-bold"
-}, /*#__PURE__*/React.createElement(CountUpNumber, {
+  className: "text-white font-mono font-bold flex items-baseline gap-1"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "text-slate-500 text-[10px]"
+}, summary.goldBefore.toLocaleString(), " \u2192"), /*#__PURE__*/React.createElement(CountUpNumber, {
   from: summary.goldBefore,
   to: summary.goldAfter
-}))), summary.heroBondGain && /*#__PURE__*/React.createElement("div", {
+}), summary.goldAfter > summary.goldBefore && /*#__PURE__*/React.createElement("span", {
+  className: "text-amber-300 text-[10px]"
+}, "(+", (summary.goldAfter - summary.goldBefore).toLocaleString(), ")"))), summary.heroBondGain && /*#__PURE__*/React.createElement("div", {
   className: "pt-2 border-t border-white/10"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between text-[11px] mb-1"
@@ -8364,6 +8381,7 @@ function MonsterHeroGame() {
       }
       setSkipResult({
         difficulty: flow.difficulty,
+        itemId: item.id,
         itemName: item.name,
         itemEmoji: item.emoji,
         heroName: flow.hero.masuName || flow.hero.name,
@@ -16668,8 +16686,10 @@ function MonsterHeroGame() {
     }, item?.emoji), /*#__PURE__*/React.createElement("h3", {
       className: "text-base font-black text-white mb-1"
     }, item?.name, "\u3092\u4F7F\u3044\u307E\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[11px] text-slate-400 font-bold mb-4"
+      className: "text-[11px] text-slate-400 font-bold mb-2"
     }, DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label, " \u3092\u6700\u5F8C\u307E\u3067\u9032\u3081\u305F\u6271\u3044\u3067\u3001\u7D4C\u9A13\u5024\u3068\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black text-teal-200 bg-black/40 border border-teal-500/30 rounded-xl py-2 mb-4"
+    }, "\u6240\u6301\u6570 ", ownedItems[skipFlow.itemId] || 0, "\u679A \u2192 ", Math.max(0, (ownedItems[skipFlow.itemId] || 0) - 1), "\u679A"), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setSkipConfirmOpen(false),
@@ -16701,7 +16721,7 @@ function MonsterHeroGame() {
     className: "text-2xl font-black italic text-white mt-1"
   }, DIFFICULTY_SETTINGS[skipResult.difficulty]?.label, " \u7A81\u7834\uFF01"), /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-400 font-bold mt-1"
-  }, skipResult.itemName, " \u30921\u679A\u4F7F\u3044\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("div", {
+  }, skipResult.itemName, " \u30921\u679A\u4F7F\u3044\u307E\u3057\u305F\uFF08\u6B8B\u308A ", ownedItems[skipResult.itemId] || 0, "\u679A\uFF09"), /*#__PURE__*/React.createElement("div", {
     className: "mt-3 flex items-center justify-center gap-2"
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-16 h-16 rounded-full overflow-hidden border-2 border-teal-400 flex items-center justify-center bg-black/40"
