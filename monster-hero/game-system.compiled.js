@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9ccc81db9a68587f
+// source-sha256: fe3d26093c2b2023
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 01:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 06:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5132,6 +5132,8 @@ function MonsterHeroGame() {
   const [missionTab, setMissionTab] = useState('daily');
   const missionClaimingRef = useRef(false);
   const [loginBonusPopup, setLoginBonusPopup] = useState(null);
+  const [loginBonusState, setLoginBonusState] = useState(LOGIN_BONUS_DEFAULT); // 7日周期の進み具合(一覧表示用)
+  const [showLoginBonusList, setShowLoginBonusList] = useState(false);
   const giftClaimingRef = useRef(false);
   const [pendingItemUse, setPendingItemUse] = useState(null); // アイテム欄で「使う」を押した後、対象のマスモンを選ぶ画面用(itemId)
   const [xpTicketUse, setXpTicketUse] = useState(null); // 絆経験値チケットをまとめて使う画面用 {itemId, masuId, count}
@@ -6487,6 +6489,7 @@ function MonsterHeroGame() {
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
       setGifts(loginGrant.gifts);
       await storeSet('mh_login_bonus', loginGrant.loginBonus, false);
+      setLoginBonusState(loginGrant.loginBonus);
       if (loginGrant.granted) {
         await storeSet('mh_gifts', loginGrant.gifts, false);
         setLoginBonusPopup({
@@ -8584,6 +8587,38 @@ function MonsterHeroGame() {
   };
   // タブに出す赤い丸バッジ。0件なら何も出さない。
   // Tailwindの動的クラス生成に頼らず色と形はinline styleで指定する(生成に失敗して透明になるのを避ける)
+  // ログインボーナスの7日ぶん一覧。今日がどこで、明日以降に何がもらえるかを見せる。
+  // 受け取り済み(今日より前)・今日・これから、の3状態で色分けする。
+  const loginBonusTodayDay = (() => {
+    const state = normalizeLoginBonus(loginBonusState);
+    // 今日ぶんを受け取り済みなら currentDay は「明日の分」を指しているので1つ戻す
+    if (state.lastGrantedPeriod === loginBonusPeriodKey()) return state.currentDay === 1 ? 7 : state.currentDay - 1;
+    return state.currentDay;
+  })();
+  const renderLoginBonusList = todayDay => /*#__PURE__*/React.createElement("div", {
+    className: "text-left"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black text-slate-400 mb-1 tracking-wider"
+  }, "7\u65E5\u9593\u306E\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("div", {
+    className: "max-h-[34vh] overflow-y-auto mh-scroll space-y-1 pr-0.5"
+  }, LOGIN_BONUS_REWARDS.map((rewards, idx) => {
+    const day = idx + 1;
+    const phase = day < todayDay ? 'done' : day === todayDay ? 'today' : 'next';
+    return /*#__PURE__*/React.createElement("div", {
+      key: day,
+      className: `rounded-xl border px-2.5 py-1.5 flex items-start gap-2 ${phase === 'today' ? 'bg-amber-500/15 border-amber-300' : phase === 'done' ? 'bg-black/30 border-white/10 opacity-60' : 'bg-black/25 border-white/10'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 w-12 text-center"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `text-[11px] font-black leading-tight ${phase === 'today' ? 'text-amber-200' : 'text-slate-300'}`
+    }, day, "\u65E5\u76EE"), /*#__PURE__*/React.createElement("div", {
+      className: `text-[7px] font-black leading-tight ${phase === 'today' ? 'text-amber-300' : phase === 'done' ? 'text-emerald-400' : 'text-slate-500'}`
+    }, phase === 'today' ? '今日' : phase === 'done' ? '受取済み' : 'これから')), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-w-0 text-[10px] font-bold text-cyan-200 leading-tight break-words"
+    }, rewards.map(r => giftRewardText(r)).join('　/　')));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "text-[8px] text-slate-500 font-bold mt-1 leading-relaxed"
+  }, "7\u65E5\u76EE\u307E\u3067\u53D7\u3051\u53D6\u308B\u30681\u65E5\u76EE\u306B\u623B\u308A\u307E\u3059\u3002\u5831\u916C\u306F\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9\u3078\u5C4A\u304D\u307E\u3059\u3002"));
   const tabCountBadge = count => count > 0 ? /*#__PURE__*/React.createElement("span", {
     className: "absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-[10px] font-black leading-none",
     style: {
@@ -11619,7 +11654,10 @@ function MonsterHeroGame() {
       disabled: !claimable.length,
       onClick: () => claimGiftIds(claimable.map(g => g.id)),
       className: "shrink-0 mb-2 min-h-[44px] rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 text-white font-black disabled:opacity-40"
-    }, "\u3059\u3079\u3066\u53D7\u3051\u53D6\u308B"), /*#__PURE__*/React.createElement("div", {
+    }, "\u3059\u3079\u3066\u53D7\u3051\u53D6\u308B"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowLoginBonusList(true),
+      className: "shrink-0 mb-2 min-h-[40px] rounded-xl bg-slate-800 border border-amber-400/40 text-amber-200 font-black text-[12px] active:scale-[.98]"
+    }, "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u4E00\u89A7\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("div", {
       className: "mh-gift-list flex-1 min-h-0 overflow-y-auto mh-scroll pb-1"
     }, shown.length === 0 ? /*#__PURE__*/React.createElement("div", {
       className: "mt-16 text-center text-slate-500 font-bold"
@@ -11737,7 +11775,28 @@ function MonsterHeroGame() {
         className: "shrink-0 text-[10px] font-black text-slate-500"
       }, "\u9032\u884C\u4E2D ", pct, "%")));
     })));
-  })(), loginBonusPopup && /*#__PURE__*/React.createElement("div", {
+  })(), showLoginBonusList && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-center justify-center p-5",
+    style: {
+      zIndex: 60000,
+      backgroundColor: 'rgba(2,6,23,.9)'
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u4E00\u89A7"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-sm rounded-3xl border-2 border-amber-300/70 bg-gradient-to-b from-indigo-950 to-slate-950 p-5 shadow-2xl"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-3"
+  }, /*#__PURE__*/React.createElement(Sparkles, {
+    size: 20,
+    className: "text-amber-300"
+  }), /*#__PURE__*/React.createElement("h2", {
+    className: "text-base font-black text-amber-200"
+  }, "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9")), renderLoginBonusList(loginBonusTodayDay), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setShowLoginBonusList(false),
+    className: "w-full mt-4 min-h-[48px] rounded-xl bg-slate-700 text-white font-black text-sm active:scale-[.98]"
+  }, "\u9589\u3058\u308B"))), loginBonusPopup && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 flex items-center justify-center p-5",
     style: {
       zIndex: 60000,
@@ -11756,12 +11815,12 @@ function MonsterHeroGame() {
   }, "\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("p", {
     className: "mt-3 text-sm font-black text-white"
   }, loginBonusPopup.day, "\u65E5\u76EE\u306E\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u3092\u7372\u5F97\u3057\u307E\u3057\u305F\uFF01"), /*#__PURE__*/React.createElement("div", {
-    className: "my-4 space-y-2"
+    className: "my-3 space-y-1.5"
   }, loginBonusPopup.rewards.map((reward, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     className: "rounded-xl bg-black/35 px-3 py-2 font-black text-cyan-200 break-words"
-  }, giftRewardText(reward)))), /*#__PURE__*/React.createElement("p", {
-    className: "text-xs text-slate-300"
+  }, giftRewardText(reward)))), renderLoginBonusList(loginBonusPopup.day), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-slate-300 mt-3"
   }, "\u5831\u916C\u306F\u30AE\u30D5\u30C8\u30DC\u30C3\u30AF\u30B9\u3078\u9001\u3089\u308C\u307E\u3057\u305F\u3002"), /*#__PURE__*/React.createElement("div", {
     className: "mt-5 grid grid-cols-2 gap-2"
   }, /*#__PURE__*/React.createElement("button", {
@@ -12410,7 +12469,7 @@ function MonsterHeroGame() {
         enemy = createBattleEnemy(1, key);
       return /*#__PURE__*/React.createElement("article", {
         key: key,
-        className: `snap-center shrink-0 w-[82%] rounded-[28px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+        className: `snap-center shrink-0 w-[82%] rounded-[28px] border-2 px-3.5 py-3 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
         style: {
           borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
           background: 'linear-gradient(180deg,#152044,#0d142b)',
@@ -12419,12 +12478,12 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[8px] tracking-[.2em] text-slate-400 font-black"
       }, "BATTLE DIFFICULTY"), /*#__PURE__*/React.createElement("h3", {
-        className: "text-center text-xl font-black mt-0.5",
+        className: "text-center text-xl font-black mt-1",
         style: {
           color: setting.text
         }
       }, setting.label), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
+        className: "mt-2.5 rounded-xl bg-black/45 px-2.5 py-2"
       }, /*#__PURE__*/React.createElement("small", {
         className: "text-[8px] text-slate-400 font-black"
       }, "MY HIGH SCORE"), /*#__PURE__*/React.createElement("b", {
@@ -12432,7 +12491,7 @@ function MonsterHeroGame() {
       }, (highScores[key] || 0).toLocaleString(), " pt"), /*#__PURE__*/React.createElement("span", {
         className: "block text-right text-[9px] text-amber-300"
       }, "\u6700\u9AD8\u5230\u9054 WAVE ", highestWaves[key] || 0)), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-[80px_1fr] items-center gap-2 my-1.5 rounded-xl border border-white/10 bg-black/25 p-2"
+        className: "grid grid-cols-[80px_1fr] items-center gap-2 my-2.5 rounded-xl border border-white/10 bg-black/25 p-2.5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "h-20 rounded-xl bg-slate-900 flex items-center justify-center overflow-hidden"
       }, enemy?.imgUrl ? /*#__PURE__*/React.createElement("img", {
@@ -12450,20 +12509,20 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("span", null, "HP"), /*#__PURE__*/React.createElement("b", null, enemy?.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-xs mt-1"
       }, /*#__PURE__*/React.createElement("span", null, "\u653B\u6483\u529B"), /*#__PURE__*/React.createElement("b", null, enemy?.atk.toLocaleString())))), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-1"
+        className: "grid grid-cols-3 gap-1.5"
       }, [['敵強度', setting.power], ['スコア', setting.score], ['ダイヤ', setting.gold]].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
         key: label,
-        className: "rounded-xl bg-black/35 p-1 text-center text-[8px] text-slate-400"
+        className: "rounded-xl bg-black/35 p-1.5 text-center text-[8px] text-slate-400"
       }, label, /*#__PURE__*/React.createElement("b", {
         className: "block text-sm text-white"
       }, "\xD7", value)))), /*#__PURE__*/React.createElement("div", {
-        className: "grid gap-1.5 mt-1.5"
+        className: "grid gap-2 mt-2.5"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setDifficulty(key);
           setShowWaveDetails(true);
         },
-        className: "min-h-[44px] rounded-xl bg-slate-700 font-black text-xs"
+        className: "min-h-[46px] rounded-xl bg-slate-700 font-black text-xs"
       }, "\u5168WAVE\u8A73\u7D30"), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setDifficulty(key);
@@ -12474,7 +12533,7 @@ function MonsterHeroGame() {
           setHeroPickTab('roster');
           setGameState('PICK_HERO');
         },
-        className: "min-h-[44px] rounded-xl font-black text-sm text-white",
+        className: "min-h-[50px] rounded-xl font-black text-sm text-white",
         style: {
           backgroundColor: setting.bg
         }
@@ -12489,11 +12548,13 @@ function MonsterHeroGame() {
             setDifficulty(key);
             openBattleSkip(key);
           },
-          className: `flex-1 min-h-[44px] rounded-xl font-black text-sm ${have > 0 ? 'bg-teal-600 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
-        }, "\u30B9\u30AD\u30C3\u30D7", have > 0 ? `（残り${have}）` : '（チケットなし）'), /*#__PURE__*/React.createElement("button", {
+          className: `flex-1 min-h-[46px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have > 0 ? 'bg-teal-600 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
+        }, /*#__PURE__*/React.createElement("span", null, "\u30B9\u30AD\u30C3\u30D7"), /*#__PURE__*/React.createElement("span", {
+          className: `text-[10px] font-black px-1.5 py-0.5 rounded-full ${have > 0 ? 'bg-black/30 text-teal-100' : 'bg-black/40 text-slate-500'}`
+        }, have, "\u679A")), /*#__PURE__*/React.createElement("button", {
           onClick: () => setSkipInfoItemId(tid),
           "aria-label": "\u30B9\u30AD\u30C3\u30D7\u306E\u8AAC\u660E",
-          className: "shrink-0 w-12 min-h-[44px] rounded-xl bg-slate-700 text-white font-black active:scale-95"
+          className: "shrink-0 w-12 min-h-[46px] rounded-xl bg-slate-700 text-white font-black active:scale-95"
         }, "\uFF1F"));
       })()));
     })), /*#__PURE__*/React.createElement("button", {
@@ -16225,8 +16286,8 @@ function MonsterHeroGame() {
       }
     }, "\u26A1"))), (() => {
       const totalBonus = distTotalBonus(i);
-      return totalBonus !== 0 && /*#__PURE__*/React.createElement("div", {
-        className: `absolute bottom-0.5 right-0.5 text-[6px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : 'text-red-300 border-red-400/30'}`
+      return /*#__PURE__*/React.createElement("div", {
+        className: `absolute bottom-0.5 right-0.5 text-[6px] font-black leading-none flex items-center gap-0.5 bg-black/50 px-1 py-0.5 rounded border z-30 ${totalBonus > 0 ? 'text-cyan-300 border-cyan-400/30' : totalBonus < 0 ? 'text-red-300 border-red-400/30' : 'text-slate-300 border-white/20'}`
       }, /*#__PURE__*/React.createElement(Sword, {
         size: 5
       }), totalBonus > 0 ? '+' : '', (totalBonus * 100).toFixed(1), "%");
