@@ -8,6 +8,7 @@
 // 出荷手順ではこれを実行して、changelog.js に追記する日時もこの値に合わせる。
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { REPO_ROOT, GAME_SYSTEM } = require('./harness');
 
 // JSTの「YYYY-MM-DD HH:MM」を作る(実行環境のタイムゾーンに依存しないよう明示的に変換する)
@@ -38,7 +39,7 @@ if (!/const BUILD_DATE = "[^"]*";/.test(src)) {
 const indexPath = path.join(REPO_ROOT, 'monster-hero', 'index.html');
 const index = fs.readFileSync(indexPath, 'utf8');
 const gameBuild = stamp.replace(/[- :]/g, '');
-const replacedIndex = index.replace(/var GAME_BUILD = '[^']*';/, `var GAME_BUILD = '${gameBuild}';`);
+let replacedIndex = index.replace(/var GAME_BUILD = '[^']*';/, `var GAME_BUILD = '${gameBuild}';`);
 if (!/var GAME_BUILD = '[^']*';/.test(index)) {
   console.error('NG: index.html の GAME_BUILD 宣言が見つかりませんでした');
   process.exit(1);
@@ -62,7 +63,30 @@ const replacedChangelog = changelog.replace(/date: "([^"]+)"/g, (match, date) =>
 });
 fs.writeFileSync(GAME_SYSTEM, replaced);
 fs.writeFileSync(path.join(REPO_ROOT, 'monster-hero', 'version.json'), `{"build": "${stamp}"}\n`);
-fs.writeFileSync(indexPath, replacedIndex);
 fs.writeFileSync(changelogPath, replacedChangelog);
 
+// data/*.js のキャッシュキー(?v=)を中身のハッシュに合わせる。
+// 本体(game-system.compiled.js)はGAME_BUILDで毎回更新されるが、データ側は手書きの固定値だったため、
+// data/breeder.js だけ古いままブラウザに残り「本体は新しいのにデータが古い」状態で
+// 参照エラー → 画面が真っ暗、という不具合が起きた。
+// 中身が変わったファイルだけキーが変わるので、変えていないファイルは再ダウンロードされない。
+const dataKeys = [];
+replacedIndex = replacedIndex.replace(/(<script src="(data\/[^"?]+\.js)\?v=)[^"]*(")/g, (match, head, relPath, tail) => {
+  const filePath = path.join(REPO_ROOT, 'monster-hero', relPath);
+  if (!fs.existsSync(filePath)) {
+    console.error(`NG: index.html が参照している ${relPath} が見つかりませんでした`);
+    process.exit(1);
+  }
+  const hash = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex').slice(0, 12);
+  dataKeys.push(`${relPath}=${hash}`);
+  return `${head}${hash}${tail}`;
+});
+if (dataKeys.length === 0) {
+  console.error('NG: index.html に data/*.js の読み込みが見つかりませんでした');
+  process.exit(1);
+}
+
+fs.writeFileSync(indexPath, replacedIndex);
+
 console.log(`BUILD_DATE、version.json、更新履歴、GAME_BUILD を ${stamp} に更新しました`);
+console.log(`data/*.js のキャッシュキー: ${dataKeys.join(' / ')}`);
