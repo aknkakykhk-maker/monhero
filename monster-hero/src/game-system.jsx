@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 06:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 06:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -114,7 +114,7 @@ const levelInfo = (totalXp) => {
     if (xp < need) break;
     xp -= need; level++;
   }
-  return { level, xpIntoLevel: xp, xpForNext: xpForBreederLevel(level) };
+  return { level, xpIntoLevel: xp, xpForNext: xpForBreederLevel(level), totalXp };
 };
 // --- マスモンの絆レベル: ブリーダーレベルより上げやすくするため、必要XPを基準値から大幅に割り引く
 // (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く。
@@ -130,7 +130,7 @@ const bondLevelInfo = (totalXp) => {
     if (xp < need) break;
     xp -= need; level++;
   }
-  return { level, xpIntoLevel: xp, xpForNext: xpForBondLevel(level) };
+  return { level, xpIntoLevel: xp, xpForNext: xpForBondLevel(level), totalXp };
 };
 const INITIAL_MASU_LEVEL_CAP = 30;
 const REBIRTH_LEVEL_CAP_GAIN = 5;
@@ -1942,6 +1942,11 @@ const beginNewRankingRun = ({ runIdRef, scoreSubmittedRef, runFinalizingRef, rew
 // レベルを跨ぐ場合は満タンまで伸ばしてからLEVEL UPを見せ、次レベルの進捗へ切り替える
 const LevelGrowthBar = ({ levelBefore, levelAfter }) => {
   const leveledUp = levelAfter.level > levelBefore.level;
+  // 累計経験値。levelInfo/bondLevelInfoが返すtotalXpをそのまま出すだけなので計算は増えない
+  const totalBefore = Number(levelBefore?.totalXp);
+  const totalAfter = Number(levelAfter?.totalXp);
+  const hasTotals = Number.isFinite(totalBefore) && Number.isFinite(totalAfter);
+  const gainedXp = hasTotals ? Math.max(0, totalAfter - totalBefore) : 0;
   const [curLevel, setCurLevel] = useState(levelBefore.level);
   const [pct, setPct] = useState(Math.max(0, Math.min(100, (levelBefore.xpIntoLevel / Math.max(1, levelBefore.xpForNext)) * 100)));
   // 次のレベルまで残り何XPかの表示。バーの伸び(pct)と同じタイミングで切り替える
@@ -1967,6 +1972,10 @@ const LevelGrowthBar = ({ levelBefore, levelAfter }) => {
       </div>
       <div className="h-2 bg-slate-800 rounded-full overflow-hidden border border-white/10">
         <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-400 transition-all duration-700 ease-out" style={{width:`${pct}%`}}></div>
+      </div>
+      <div className="flex items-center justify-between text-[8px] font-mono mt-0.5 gap-2">
+        <span className={leveledUp?'text-amber-300 font-black shrink-0':'text-slate-500 shrink-0'}>Lv.{levelBefore.level} → Lv.{levelAfter.level}</span>
+        {hasTotals&&<span className="text-slate-500 truncate">累計 {totalBefore.toLocaleString()} → {totalAfter.toLocaleString()}{gainedXp>0?` (+${gainedXp.toLocaleString()})`:''}</span>}
       </div>
     </div>
   );
@@ -2003,7 +2012,7 @@ const RewardSummaryCard = ({ summary }) => (
       </div>
       <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
         <span className="text-amber-300 font-black flex items-center gap-1"><Gem size={12}/>ダイヤ</span>
-        <span className="text-white font-mono font-bold"><CountUpNumber from={summary.goldBefore} to={summary.goldAfter}/></span>
+        <span className="text-white font-mono font-bold flex items-baseline gap-1"><span className="text-slate-500 text-[10px]">{summary.goldBefore.toLocaleString()} →</span><CountUpNumber from={summary.goldBefore} to={summary.goldAfter}/>{summary.goldAfter>summary.goldBefore&&<span className="text-amber-300 text-[10px]">(+{(summary.goldAfter-summary.goldBefore).toLocaleString()})</span>}</span>
       </div>
       {summary.heroBondGain && (
         <div className="pt-2 border-t border-white/10">
@@ -4360,7 +4369,7 @@ function MonsterHeroGame() {
       }
 
       setSkipResult({
-        difficulty: flow.difficulty, itemName: item.name, itemEmoji: item.emoji,
+        difficulty: flow.difficulty, itemId: item.id, itemName: item.name, itemEmoji: item.emoji,
         heroName: flow.hero.masuName || flow.hero.name, heroImgUrl: flow.hero.imgUrl, heroEmoji: flow.hero.emoji,
         heroBaseId: flow.hero.id, heroColors: flow.hero.colors,
         heroIsMasu: !!flow.hero.masuId,
@@ -7734,7 +7743,8 @@ function MonsterHeroGame() {
           <div className="bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl text-center">
             <div className="text-4xl mb-2">{item?.emoji}</div>
             <h3 className="text-base font-black text-white mb-1">{item?.name}を使いますか？</h3>
-            <div className="text-[11px] text-slate-400 font-bold mb-4">{DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label} を最後まで進めた扱いで、経験値とダイヤを受け取ります</div>
+            <div className="text-[11px] text-slate-400 font-bold mb-2">{DIFFICULTY_SETTINGS[skipFlow.difficulty]?.label} を最後まで進めた扱いで、経験値とダイヤを受け取ります</div>
+            <div className="text-[11px] font-black text-teal-200 bg-black/40 border border-teal-500/30 rounded-xl py-2 mb-4">所持数 {ownedItems[skipFlow.itemId]||0}枚 → {Math.max(0,(ownedItems[skipFlow.itemId]||0)-1)}枚</div>
             <div className="flex gap-2">
               <button onClick={()=>setSkipConfirmOpen(false)} className="w-2/5 bg-slate-800 text-slate-300 py-3.5 rounded-2xl font-black text-sm">いいえ</button>
               <button onClick={executeBattleSkip} className="w-3/5 bg-teal-600 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg active:scale-95">はい</button>
@@ -7750,7 +7760,7 @@ function MonsterHeroGame() {
               <div className="text-5xl mb-1" style={{animation:'idleSpark 900ms ease-in-out infinite'}}>{skipResult.itemEmoji}</div>
               <div className="text-[10px] font-black tracking-[.3em] text-teal-400 uppercase">Skip Complete</div>
               <h2 className="text-2xl font-black italic text-white mt-1">{DIFFICULTY_SETTINGS[skipResult.difficulty]?.label} 突破！</h2>
-              <div className="text-[10px] text-slate-400 font-bold mt-1">{skipResult.itemName} を1枚使いました</div>
+              <div className="text-[10px] text-slate-400 font-bold mt-1">{skipResult.itemName} を1枚使いました（残り {ownedItems[skipResult.itemId]||0}枚）</div>
               <div className="mt-3 flex items-center justify-center gap-2">
                 <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-teal-400 flex items-center justify-center bg-black/40">{skipResult.heroImgUrl?<DyedMonsterImage baseId={skipResult.heroBaseId} src={skipResult.heroImgUrl} alt={skipResult.heroName} masuColors={skipResult.heroColors} className="w-full h-full object-contain"/>:<span className="text-3xl">{skipResult.heroEmoji}</span>}</div>
                 <div className="text-left"><div className="text-[9px] text-slate-500 font-black uppercase">勇者モン</div><div className="text-sm font-black text-white">{skipResult.heroName}</div></div>
