@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9f52955be06a3fac
+// source-sha256: 0c13e8c8c8f4c4ca
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 11:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 12:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3964,15 +3964,123 @@ const difficultyStyle = (setting, selected) => selected ? {
   color: setting.text
 };
 
-// 透明余白が大きいムーの立ち絵は、表示枠を広げるだけでなく本体が十分大きく見えるよう拡大する。
-// ENEMY SCANと全WAVE詳細で同じ倍率を使い、各画面では重なりを防ぐための表示枠だけを変える。
-const ENEMY_ART_SCALE = {
-  Moo: 2
+// 透明余白を含む画像キャンバスではなく、画面ごとの見た目を基準に調整する。
+// contextを必須にすることで、SCANの調整が全WAVE詳細へ波及しないようにする。
+const ENEMY_ART_LAYOUT = {
+  default: {
+    scanScale: 1,
+    waveDetailScale: 1,
+    objectPosition: 'center'
+  },
+  Moo: {
+    scanScale: 2.75,
+    waveDetailScale: 2,
+    objectPosition: 'center 48%'
+  }
 };
-const enemyArtStyle = enemyId => ({
-  transform: `scale(${ENEMY_ART_SCALE[enemyId] || 1})`,
-  transformOrigin: 'center'
+const enemyArtStyle = (enemyId, context = 'scan') => {
+  const layout = ENEMY_ART_LAYOUT[enemyId] || ENEMY_ART_LAYOUT.default;
+  const scale = context === 'waveDetail' ? layout.waveDetailScale : layout.scanScale;
+  return {
+    transform: `scale(${scale})`,
+    transformOrigin: layout.objectPosition,
+    objectPosition: layout.objectPosition
+  };
+};
+
+// 実戦の抽選とSCANは同じ定義・使用可否評価を参照する。SCAN側は候補を評価するだけで乱数を使わない。
+const ENEMY_ACTION_DEFINITIONS = [{
+  id: 'normal',
+  type: 'ATTACK',
+  category: '通常攻撃',
+  weight: 45,
+  multiplier: 1,
+  hits: 1,
+  range: '全間合い',
+  condition: '常時',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'special',
+  type: 'CHARGE',
+  category: '特殊攻撃',
+  weight: 15,
+  multiplier: 2.5,
+  hits: 1,
+  range: '全間合い',
+  condition: '常時',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'wait',
+  type: 'WAIT',
+  category: '特殊行動',
+  weight: 20,
+  multiplier: 0,
+  hits: 0,
+  range: '全間合い',
+  condition: '常時',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'move',
+  type: 'MOVE',
+  category: '移動',
+  weight: 20,
+  multiplier: 0,
+  hits: 0,
+  range: '現在以外の3間合い',
+  condition: '移動先がある',
+  cooldown: 0,
+  useLimit: null
+}];
+const evaluateEnemyActions = (ent, currentDist) => ENEMY_ACTION_DEFINITIONS.map(def => {
+  const available = !!ent && (def.type !== 'MOVE' || RANGE_LABELS.some((_, i) => i !== currentDist));
+  return {
+    ...def,
+    available,
+    unavailableReason: available ? '' : !ent ? '敵情報がありません' : '移動先がありません'
+  };
 });
+const enemyActionProbabilities = (ent, currentDist) => {
+  const actions = evaluateEnemyActions(ent, currentDist),
+    total = actions.reduce((sum, a) => sum + (a.available ? a.weight : 0), 0);
+  return actions.map(a => ({
+    ...a,
+    probability: a.available && total > 0 ? a.weight / total : 0
+  }));
+};
+const chooseEnemyAction = (ent, currentDist, random = Math.random) => {
+  const actions = enemyActionProbabilities(ent, currentDist),
+    roll = random(),
+    available = actions.filter(a => a.available);
+  let cursor = roll;
+  const selected = available.find(a => {
+    cursor -= a.probability;
+    return cursor < 0;
+  }) || available[available.length - 1];
+  if (!selected) return null;
+  if (selected.type === 'MOVE') {
+    const targets = RANGE_LABELS.map((_, i) => i).filter(i => i !== currentDist);
+    const targetDist = targets[Math.min(targets.length - 1, Math.floor(random() * targets.length))];
+    return {
+      type: selected.type,
+      value: 0,
+      label: `移動: ${RANGE_LABELS[targetDist]}`,
+      targetDist,
+      icon: '🏃',
+      actionId: selected.id
+    };
+  }
+  const label = selected.type === 'ATTACK' ? ent.normal || '通常攻撃' : selected.type === 'CHARGE' ? ent.special || '必殺技！' : '様子を見ている';
+  return {
+    type: selected.type,
+    value: Math.floor(ent.atk * selected.multiplier),
+    label,
+    icon: selected.type === 'ATTACK' ? '👊' : selected.type === 'CHARGE' ? '🔥' : '⏳',
+    actionId: selected.id
+  };
+};
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
 const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null) => {
@@ -3992,6 +4100,35 @@ const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null) => {
     maxHp: Math.floor(baseHp * mod),
     atk: Math.floor(baseAtk * mod)
   };
+};
+const collectBondRankingEntries = rankingPool => {
+  const byIndividual = new Map();
+  Object.values(rankingPool || {}).forEach(rows => (rows || []).forEach(record => {
+    const userName = record?.userName || '名無しのブリーダー';
+    (Array.isArray(record?.party) ? record.party : []).forEach(member => {
+      const bondLevel = Number(member?.bondLevel);
+      if (!member || !Number.isFinite(bondLevel) || bondLevel <= 0) return;
+      const recordedMonsterId = member.baseId || member.monsterId || member.id || null;
+      const monsterId = recordedMonsterId || Object.keys(ALL_PLAYER_MONSTERS).find(id => ALL_PLAYER_MONSTERS[id]?.name === member.name) || null;
+      const monName = ALL_PLAYER_MONSTERS[monsterId]?.name || member.name || null;
+      if (!monName) return;
+      const individualId = member.masuId != null && String(member.masuId) !== '' ? `masu:${String(member.masuId)}` : `legacy:${monsterId || monName}`;
+      const key = `${userName}\u0000${individualId}`;
+      const entry = {
+        userName,
+        icon: record.icon,
+        monName,
+        bondLevel,
+        imgUrl: member.imgUrl || ALL_PLAYER_MONSTERS[monsterId]?.iconUrl || null,
+        emoji: member.emoji || ALL_PLAYER_MONSTERS[monsterId]?.emoji || null,
+        masuId: member.masuId ?? null,
+        monsterId
+      };
+      const current = byIndividual.get(key);
+      if (!current || bondLevel > current.bondLevel) byIndividual.set(key, entry);
+    });
+  }));
+  return [...byIndividual.values()].sort((a, b) => b.bondLevel - a.bondLevel || a.userName.localeCompare(b.userName, 'ja'));
 };
 const splitRankingParty = entry => {
   if (!Array.isArray(entry?.party)) return {
@@ -5075,37 +5212,8 @@ function MonsterHeroGame() {
     return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 50);
   }, [rankingPool]);
 
-  // モンスターの絆レベルのランキング。新しい記録で明示した絆ランキング対象個体だけを使い、
-  // 対象情報を持たない旧記録のpartyからは推測しない。同じプレイヤーの同じモンスターは1件にまとめる。
-  const bondRankingAll = useMemo(() => {
-    const byKey = new Map();
-    Object.values(rankingPool).forEach(rows => (rows || []).forEach(r => {
-      const target = Array.isArray(r.party) ? r.party.find(pm => pm?.bondRankingTarget === true) : null;
-      const userName = r.userName || '名無しのブリーダー';
-      const key = userName + '\u0000' + (target?.masuId || target?.name || 'missing');
-      const cur = byKey.get(key);
-      if (!target?.bondLevel) {
-        if (!cur) byKey.set(key, {
-          userName,
-          icon: r.icon,
-          monName: null,
-          bondLevel: null
-        });
-      } else if (!cur || target.bondLevel > cur.bondLevel) {
-        byKey.set(key, {
-          userName,
-          icon: r.icon,
-          monName: target.name || '絆情報なし',
-          bondLevel: target.bondLevel,
-          imgUrl: target.imgUrl,
-          emoji: target.emoji
-        });
-      }
-    }));
-    const values = [...byKey.values()];
-    const usersWithTarget = new Set(values.filter(x => x.bondLevel).map(x => x.userName));
-    return values.filter(x => x.bondLevel || !usersWithTarget.has(x.userName)).sort((a, b) => (b.bondLevel || 0) - (a.bondLevel || 0));
-  }, [rankingPool]);
+  // party内の全マスモンを対象にし、新形式はmasuId、旧形式は種族ID/名前で個体を互換集計する。
+  const bondRankingAll = useMemo(() => collectBondRankingEntries(rankingPool), [rankingPool]);
 
   // 種類別フィルタの選択肢。まだ誰も記録を出していないモンスターもタブに出したいので、
   // 記録から拾った名前ではなく、全モンスターの名前を並べる(記録が無い種は「まだいません」になる)
@@ -5118,6 +5226,8 @@ function MonsterHeroGame() {
     return [...new Set(all)];
   }, [bondRankingAll]);
   const bondRanking = useMemo(() => bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 50), [bondRankingAll, bondRankMonFilter]);
+  const bondRankingLoading = Object.keys(DIFFICULTY_SETTINGS).some(d => rankingLoadingByDiff[d]);
+  const bondRankingFailed = !bondRankingLoading && Object.keys(DIFFICULTY_SETTINGS).every(d => rankingErrorByDiff[d]);
   const loadRankings = useCallback(async (targetDiff = null, includeLevels = false, force = false) => {
     const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
     const byDiff = {};
@@ -6089,20 +6199,16 @@ function MonsterHeroGame() {
     let heroSlotIndex = slots.findIndex(s => s === mainHero);
     if (heroSlotIndex < 0 && mainHero?.masuId != null) heroSlotIndex = slots.findIndex(s => s?.masuId != null && String(s.masuId) === String(mainHero.masuId));
     if (heroSlotIndex < 0) heroSlotIndex = slots.findIndex(s => s?.id === mainHero?.id);
-    const bondRankingTargetIndex = slots.reduce((bestIndex, s, index) => {
-      if (!s?.masuId) return bestIndex;
-      if (bestIndex < 0) return index;
-      return getMasuBondLevel(s.masuId).level > getMasuBondLevel(slots[bestIndex].masuId).level ? index : bestIndex;
-    }, -1);
     const party = slots.map((s, index) => s ? {
       role: index === heroSlotIndex ? 'hero' : 'ally',
       id: s.id,
+      baseId: s.id,
+      monsterId: s.id,
       masuId: s.masuId || null,
       name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name,
-      emoji: s.emoji,
-      imgUrl: s.imgUrl || null,
-      bondLevel: s.masuId ? getMasuBondLevel(s.masuId).level : null,
-      bondRankingTarget: index === bondRankingTargetIndex
+      emoji: s.emoji || ALL_PLAYER_MONSTERS[s.id]?.emoji || null,
+      imgUrl: s.imgUrl || ALL_PLAYER_MONSTERS[s.id]?.iconUrl || null,
+      bondLevel: s.masuId ? getMasuBondLevel(s.masuId).level : null
     } : null);
     const name = breederName || '名無しのブリーダー';
     const heroName = mainHero && (ALL_PLAYER_MONSTERS[mainHero.id]?.name || mainHero.name) || 'Unknown';
@@ -8079,38 +8185,7 @@ function MonsterHeroGame() {
       setResultActionPending(false);
     }, 0);
   };
-  const getNextEnemyAction = useCallback((ent, currentDist) => {
-    if (!ent) return null;
-    const roll = Math.random() * 100;
-    if (roll < 45) return {
-      type: 'ATTACK',
-      value: ent.atk,
-      label: ent.normal || "通常攻撃",
-      icon: "👊"
-    };else if (roll < 60) return {
-      type: 'CHARGE',
-      value: Math.floor(ent.atk * 2.5),
-      label: ent.special || "必殺技！",
-      icon: "🔥"
-    };else if (roll < 80) return {
-      type: 'WAIT',
-      value: 0,
-      label: "様子を見ている",
-      icon: "⏳"
-    };else {
-      let nextDist = currentDist;
-      while (nextDist === currentDist) {
-        nextDist = Math.floor(Math.random() * 4);
-      }
-      return {
-        type: 'MOVE',
-        value: 0,
-        label: `移動: ${RANGE_LABELS[nextDist]}`,
-        targetDist: nextDist,
-        icon: "🏃"
-      };
-    }
-  }, []);
+  const getNextEnemyAction = useCallback((ent, currentDist) => chooseEnemyAction(ent, currentDist), []);
   const getPredictedDamage = useCallback(intent => {
     if (!intent || intent.type !== 'ATTACK' && intent.type !== 'CHARGE') return 0;
     const atkVal = Math.floor(intent.value * (1.0 - getWaveBuff('enemyAtkDebuffPct')));
@@ -9092,8 +9167,8 @@ function MonsterHeroGame() {
       if (s) {
         const revo = RANGE_EVOLUTION[aLvl];
         // 距離撃は攻撃開始時の指定距離で最大威力になり、ダメージ確定後にその指定距離へ移動する。
-        // カードの取得規則は従来どおり、配置スロットのひとつ手前の距離撃とする。
-        const rIdx = (idx + RANGE_LABELS.length - 1) % RANGE_LABELS.length;
+        // 各モンスター自身が配置されたスロットの距離撃を取得する。適性は威力計算だけに使う。
+        const rIdx = idx;
         pool.push({
           name: `${RANGE_LABELS[rIdx]}${revo.name}`,
           type: 'range_atk',
@@ -10137,37 +10212,30 @@ function MonsterHeroGame() {
       className: "shrink-0 text-xs text-indigo-300"
     }, Number.isFinite(level) && level > 0 ? `ブリーダーLv.${level}` : 'Lv情報なし'));
   };
-  // 絆Lv専用カード。ランキング対象として明示された個体以外のpartyは表示しない。
+  // 絆Lv専用カード。スコアや編成・役割は表示せず、ブリーダーと個体だけを表示する。
   const renderBondRankingEntry = (entry, index) => {
     const level = Number(entry?.bondLevel);
-    const hasBond = Number.isFinite(level) && level > 0 && entry?.monName;
     return /*#__PURE__*/React.createElement("article", {
-      key: `bond-${entry?.userName || 'unknown'}-${entry?.monName || 'none'}-${index}`,
+      key: `bond-${entry?.userName || 'unknown'}-${entry?.masuId || entry?.monsterId || entry?.monName}-${index}`,
       "data-ranking-kind": "bond",
       className: `${rankingCardClass(index)} p-2`
     }, /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0"
-    }, rankingPlace(index), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("div", {
-      className: "min-w-0"
-    }, /*#__PURE__*/React.createElement("b", {
-      className: "block truncate text-[10px]"
-    }, entry?.userName || '名無しのブリーダー'), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] text-slate-500"
-    }, "\u30D6\u30EA\u30FC\u30C0\u30FC")), /*#__PURE__*/React.createElement("strong", {
+    }, rankingPlace(index), rankingBreederIcon(entry), /*#__PURE__*/React.createElement("b", {
+      className: "min-w-0 truncate text-[10px]"
+    }, entry?.userName || '名無しのブリーダー'), /*#__PURE__*/React.createElement("strong", {
       className: "text-xs text-pink-300 whitespace-nowrap"
-    }, hasBond ? `絆Lv.${level}` : '絆情報なし')), /*#__PURE__*/React.createElement("div", {
+    }, "\u7D46Lv.", level)), /*#__PURE__*/React.createElement("div", {
       className: "ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-pink-300 text-[9px] shrink-0"
-    }, "\u21B3"), hasBond && entry?.imgUrl ? /*#__PURE__*/React.createElement("img", {
+    }, entry?.imgUrl ? /*#__PURE__*/React.createElement("img", {
       src: entry.imgUrl,
       alt: "",
       className: "w-7 h-7 object-contain shrink-0"
     }) : /*#__PURE__*/React.createElement("span", {
       className: "w-7 text-center shrink-0"
-    }, hasBond ? entry?.emoji || '❓' : '❓'), /*#__PURE__*/React.createElement("b", {
+    }, entry?.emoji || '❓'), /*#__PURE__*/React.createElement("b", {
       className: "truncate text-[10px]"
-    }, hasBond ? entry.monName : '絆情報なし')));
+    }, entry.monName)));
   };
   if (bootPhase === 'TITLE') return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     className: "mh-title-gate",
@@ -11464,7 +11532,7 @@ function MonsterHeroGame() {
     }, enemy.imgUrl ? /*#__PURE__*/React.createElement("img", {
       src: enemy.imgUrl,
       alt: enemy.name,
-      style: enemyArtStyle(enemy.id),
+      style: enemyArtStyle(enemy.id, 'waveDetail'),
       className: "w-14 h-14 object-contain"
     }) : /*#__PURE__*/React.createElement("span", {
       className: "text-3xl"
@@ -11658,7 +11726,10 @@ function MonsterHeroGame() {
     key: t.k,
     onClick: () => {
       setRankingKind(t.k);
-      if (t.k === 'score') loadRankings(rankingViewKey);else loadRankings(null, true);
+      if (t.k === 'score') loadRankings(rankingViewKey);else {
+        if (t.k === 'bond') setBondRankMonFilter('all');
+        loadRankings(null, true, t.k === 'bond');
+      }
     },
     className: `py-1.5 rounded-lg text-[9px] font-black border ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
   }, t.label))), rankingKind === 'score' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
@@ -11687,9 +11758,16 @@ function MonsterHeroGame() {
     className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter === n ? 'bg-pink-600 border-pink-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
   }, n === 'all' ? 'すべて' : n))), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
-  }, bondRanking.map(renderBondRankingEntry), bondRanking.length === 0 && /*#__PURE__*/React.createElement("div", {
+  }, bondRankingLoading ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-slate-400 py-8"
+  }, "Loading...") : bondRankingFailed ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-red-300 py-8"
+  }, /*#__PURE__*/React.createElement("p", null, "\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => loadRankings(null, true, true),
+    className: "mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black"
+  }, "\u518D\u8AAD\u8FBC")) : /*#__PURE__*/React.createElement(React.Fragment, null, bondRanking.map(renderBondRankingEntry), bondRanking.length === 0 && /*#__PURE__*/React.createElement("div", {
     className: "text-center text-slate-500 py-8"
-  }, "\u7D46\u60C5\u5831\u306A\u3057")))))), gameState === 'FORMATION_MENU' && /*#__PURE__*/React.createElement("div", {
+  }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093"))))))), gameState === 'FORMATION_MENU' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full p-4",
     style: {
       paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -17033,52 +17111,100 @@ function MonsterHeroGame() {
   }, skillEffectDetail.effect)), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSkillEffectDetail(null),
     className: "w-full bg-indigo-600 text-white py-2.5 rounded-2xl font-black text-[12px] mt-3 active:scale-95"
-  }, "\u9589\u3058\u308B"))), showEnemyInfo && enemy && /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 p-6 flex flex-col",
-    style: {
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: '#020617',
-      zIndex: 40000,
-      paddingTop: 'calc(1.5rem + env(safe-area-inset-top))',
-      paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between items-center mb-6 border-b border-white/10 pb-4 shrink-0"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "font-black italic uppercase text-red-500 text-lg"
-  }, "Enemy Scan"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowEnemyInfo(false),
-    className: "px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90"
-  }, "\u623B\u308B")), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 min-h-0 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll"
-  }, enemy.imgUrl ? /*#__PURE__*/React.createElement("div", {
-    className: `${enemy.id === 'Moo' ? 'w-[280px] h-[280px]' : 'w-[140px] h-[140px]'} flex shrink-0 items-center justify-center overflow-hidden ${enemy.id === 'Moo' ? 'mb-2' : 'mb-6'}`
-  }, /*#__PURE__*/React.createElement("img", {
-    src: enemy.imgUrl,
-    alt: enemy.name,
-    style: enemyArtStyle(enemy.id),
-    className: "w-[140px] h-[140px] object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]"
-  })) : /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: '112px'
-    },
-    className: "mb-6 drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]"
-  }, enemy.emoji), /*#__PURE__*/React.createElement("h4", {
-    className: "text-2xl font-black italic mb-6 uppercase shrink-0"
-  }, enemy.name), /*#__PURE__*/React.createElement("div", {
-    className: "w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5 shrink-0"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-6 text-left"
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-pink-400 font-black uppercase"
-  }, "\u30E9\u30A4\u30D5"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xl font-mono font-black"
-  }, enemy.hp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-red-400 font-black uppercase"
-  }, "\u653B\u6483\u529B"), /*#__PURE__*/React.createElement("div", {
-    className: "text-xl font-mono font-black"
-  }, enemy.atk)))))), showHeroInfo && mainHero && /*#__PURE__*/React.createElement("div", {
+  }, "\u9589\u3058\u308B"))), showEnemyInfo && enemy && (() => {
+    const actions = enemyActionProbabilities(enemy, enemyDist);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 flex flex-col",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: '#020617',
+        zIndex: 40000,
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)'
+      },
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-label": "\u6575\u884C\u52D5\u8A73\u7D30"
+    }, /*#__PURE__*/React.createElement("header", {
+      className: "flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "font-black italic uppercase text-red-500 text-lg"
+    }, "Enemy Scan"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowEnemyInfo(false),
+      className: "min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90"
+    }, "\u623B\u308B")), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8"
+    }, enemy.imgUrl ? /*#__PURE__*/React.createElement("div", {
+      className: `${enemy.id === 'Moo' ? 'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]' : 'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`
+    }, /*#__PURE__*/React.createElement("img", {
+      src: enemy.imgUrl,
+      alt: enemy.name,
+      style: enemyArtStyle(enemy.id, 'scan'),
+      className: `${enemy.id === 'Moo' ? 'w-[140px] h-[140px]' : 'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`
+    })) : /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: '112px'
+      },
+      className: "my-4"
+    }, enemy.emoji), /*#__PURE__*/React.createElement("h4", {
+      className: "text-2xl font-black italic mb-4 uppercase shrink-0"
+    }, enemy.name), /*#__PURE__*/React.createElement("section", {
+      className: "w-full space-y-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-pink-400 font-black"
+    }, "\u30E9\u30A4\u30D5"), /*#__PURE__*/React.createElement("div", {
+      className: "text-xl font-mono font-black"
+    }, enemy.hp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-red-400 font-black"
+    }, "\u653B\u6483\u529B"), /*#__PURE__*/React.createElement("div", {
+      className: "text-xl font-mono font-black"
+    }, enemy.atk.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+      className: "text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-cyan-400 font-black"
+    }, "\u73FE\u5728\u306E\u9593\u5408\u3044"), /*#__PURE__*/React.createElement("b", null, RANGE_LABELS[enemyDist], "\u8DDD\u96E2")), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 text-left"
+    }, actions.map((action, index) => {
+      const actionName = action.type === 'ATTACK' ? enemy.normal || '通常攻撃' : action.type === 'CHARGE' ? enemy.special || '必殺技！' : action.type === 'MOVE' ? '間合い移動' : '様子を見る';
+      const power = Math.floor(enemy.atk * action.multiplier);
+      return /*#__PURE__*/React.createElement("details", {
+        key: action.id,
+        open: index < 2,
+        className: `rounded-2xl border p-3 ${action.available ? 'bg-slate-900/80 border-white/10' : 'bg-slate-950 border-red-500/30'}`
+      }, /*#__PURE__*/React.createElement("summary", {
+        className: "cursor-pointer list-none flex items-center justify-between gap-2"
+      }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", {
+        className: "block"
+      }, actionName), /*#__PURE__*/React.createElement("small", {
+        className: "text-slate-400"
+      }, action.category)), /*#__PURE__*/React.createElement("span", {
+        className: "text-right"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "text-amber-300"
+      }, (action.probability * 100).toFixed(action.probability * 100 % 1 ? 1 : 0), "%"), enemyIntent?.actionId === action.id && /*#__PURE__*/React.createElement("small", {
+        className: "block text-cyan-300"
+      }, "\u4E88\u544A\u4E2D"))), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"
+      }, /*#__PURE__*/React.createElement("span", null, "\u5A01\u529B\u500D\u7387 ", /*#__PURE__*/React.createElement("b", null, "\xD7", action.multiplier)), /*#__PURE__*/React.createElement("span", null, "\u57FA\u6E96\u5A01\u529B ", /*#__PURE__*/React.createElement("b", null, power.toLocaleString())), /*#__PURE__*/React.createElement("span", null, "\u653B\u6483\u56DE\u6570 ", /*#__PURE__*/React.createElement("b", null, action.hits, "\u56DE")), /*#__PURE__*/React.createElement("span", null, "\u4F7F\u7528\u9593\u5408\u3044 ", /*#__PURE__*/React.createElement("b", null, action.range)), /*#__PURE__*/React.createElement("span", {
+        className: "col-span-2"
+      }, "\u767A\u52D5\u6761\u4EF6 ", /*#__PURE__*/React.createElement("b", null, action.condition)), /*#__PURE__*/React.createElement("span", {
+        className: "col-span-2"
+      }, "\u79FB\u52D5\u52B9\u679C ", /*#__PURE__*/React.createElement("b", null, action.type === 'MOVE' ? `${RANGE_LABELS.filter((_, i) => i !== enemyDist).join('・')}距離のいずれかへ移動` : 'なし')), /*#__PURE__*/React.createElement("span", {
+        className: "col-span-2"
+      }, "\u30D0\u30D5\u30FB\u30C7\u30D0\u30D5\u30FB\u72B6\u614B\u7570\u5E38 ", /*#__PURE__*/React.createElement("b", null, "\u306A\u3057")), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30FC\u30EB\u30C0\u30A6\u30F3 ", /*#__PURE__*/React.createElement("b", null, action.cooldown ? `${action.cooldown}ターン` : 'なし')), /*#__PURE__*/React.createElement("span", null, "\u56DE\u6570\u5236\u9650 ", /*#__PURE__*/React.createElement("b", null, action.useLimit ?? 'なし'))), !action.available && /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 text-[10px] text-red-300"
+      }, "\u73FE\u5728\u306F\u4F7F\u7528\u4E0D\u53EF\uFF1A", action.unavailableReason));
+    })), /*#__PURE__*/React.createElement("aside", {
+      className: "text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "block text-slate-200 mb-1"
+    }, "\u884C\u52D5\u30EB\u30FC\u30EB"), "\u4F7F\u7528\u53EF\u80FD\u306A\u884C\u52D5\u306E\u91CD\u307F\u3092\u5408\u8A08100%\u306B\u6B63\u898F\u5316\u3057\u3066\u62BD\u9078\u3057\u307E\u3059\u3002\u79FB\u52D5\u304C\u9078\u3070\u308C\u305F\u5834\u5408\u306F\u3001\u73FE\u5728\u4EE5\u5916\u306E3\u9593\u5408\u3044\u304B\u3089\u540C\u7387\u3067\u79FB\u52D5\u5148\u3092\u9078\u3073\u307E\u3059\u3002\u8868\u793A\u4E2D\u306E\u4E88\u544A\u884C\u52D5\u306F\u518D\u62BD\u9078\u3057\u307E\u305B\u3093\u3002")))));
+  })(), showHeroInfo && mainHero && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 p-6 flex flex-col",
     style: {
       position: 'fixed',
