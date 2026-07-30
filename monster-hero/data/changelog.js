@@ -17,7 +17,16 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-30 15:45",
+    date: "2026-07-30 17:45",
+    type: "issue",
+    status: "fixed",
+    title: "絆Lvランキングの表示を修正",
+    items: [
+      "絆LvランキングからブリーダーLv表示を削除し、絆データを取得できた時点で表示するようにしました",
+    ],
+  },
+  {
+    date: "2026-07-30 17:45",
     type: "issue",
     status: "fixed",
     title: "ランキング表示を安定化",
@@ -26,7 +35,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-07-30 15:45",
+    date: "2026-07-30 17:45",
     type: "issue",
     status: "fixed",
     title: "難易度選択と絆Lvランキングを修正",

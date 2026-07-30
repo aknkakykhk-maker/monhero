@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 15:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 17:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1597,8 +1597,6 @@ const collectBondRankingEntries = (rankingPool) => {
   const byIndividual=new Map();
   Object.values(rankingPool||{}).forEach(rows=>(rows||[]).forEach(record=>{
     const userName=record?.userName||'名無しのブリーダー';
-    const recordedBreederLevel=Number(record?.level);
-    const breederLevel=Number.isFinite(recordedBreederLevel)&&recordedBreederLevel>=0?recordedBreederLevel:null;
     (Array.isArray(record?.party)?record.party:[]).forEach(member=>{
       const bondLevel=Number(member?.bondLevel);
       if(!member||!Number.isFinite(bondLevel)||bondLevel<=0)return;
@@ -1610,10 +1608,10 @@ const collectBondRankingEntries = (rankingPool) => {
         ? `masu:${String(member.masuId)}`
         : `legacy:${monsterId||monName}`;
       const key=`${userName}\u0000${individualId}`;
-      const entry={userName,icon:record.icon,monName,bondLevel,breederLevel,imgUrl:member.imgUrl||ALL_PLAYER_MONSTERS[monsterId]?.iconUrl||null,emoji:member.emoji||ALL_PLAYER_MONSTERS[monsterId]?.emoji||null,masuId:member.masuId??null,monsterId};
+      const entry={userName,icon:record.icon,monName,bondLevel,imgUrl:member.imgUrl||ALL_PLAYER_MONSTERS[monsterId]?.iconUrl||null,emoji:member.emoji||ALL_PLAYER_MONSTERS[monsterId]?.emoji||null,masuId:member.masuId??null,monsterId};
       const current=byIndividual.get(key);
       if(!current)byIndividual.set(key,entry);
-      else byIndividual.set(key,{...(bondLevel>current.bondLevel?entry:current),bondLevel:Math.max(current.bondLevel,bondLevel),breederLevel:current.breederLevel==null?breederLevel:breederLevel==null?current.breederLevel:Math.max(current.breederLevel,breederLevel)});
+      else byIndividual.set(key,{...(bondLevel>current.bondLevel?entry:current),bondLevel:Math.max(current.bondLevel,bondLevel)});
     });
   }));
   return [...byIndividual.values()].sort((a,b)=>b.bondLevel-a.bondLevel||a.userName.localeCompare(b.userName,'ja'));
@@ -2017,7 +2015,9 @@ function MonsterHeroGame() {
   const [localRankings, setLocalRankings] = useState({});
   // ブリーダーLv・絆Lvの集計に使う記録。スコア上位に入らなかった直近のプレイも含むので、
   // スコアランキングの表示(localRankings)とは別に持つ
-  const [rankingPool, setRankingPool] = useState({});
+  const [bondRankingData, setBondRankingData] = useState(null);
+  const [bondRankingLoading, setBondRankingLoading] = useState(false);
+  const [bondRankingError, setBondRankingError] = useState(null);
   const [rankingSourceByDiff, setRankingSourceByDiff] = useState({}); // {[diff]: 'global'|'local'} 表示中データの取得元
   // 表示状態はランキング単位で独立させる。取得済み（0件を含む）なら再取得中も
   // loadingへ戻さず、キャッシュを表示したままrefreshingだけを立てる。
@@ -2397,7 +2397,7 @@ function MonsterHeroGame() {
   }, [breederRankingPool]);
 
   // party内の全マスモンを対象にし、新形式はmasuId、旧形式は種族ID/名前で個体を互換集計する。
-  const bondRankingAll = useMemo(() => collectBondRankingEntries(rankingPool), [rankingPool]);
+  const bondRankingAll = useMemo(() => collectBondRankingEntries(bondRankingData || {}), [bondRankingData]);
 
   // 種類別フィルタの選択肢。まだ誰も記録を出していないモンスターもタブに出したいので、
   // 記録から拾った名前ではなく、全モンスターの名前を並べる(記録が無い種は「まだいません」になる)
@@ -2482,8 +2482,12 @@ function MonsterHeroGame() {
       ? ['Normal', 'Master', ...allDiffs.filter(d => d !== 'Normal' && d !== 'Master')]
       : [normalizedTargetDiff];
     if (diffs.length === 0) return;
-    const levelStatusKey = includeLevels ? `${levelKind}:all` : null;
+    const levelStatusKey = includeLevels && levelKind !== 'bond' ? `${levelKind}:all` : null;
     const levelGeneration = levelStatusKey ? beginRankingStatus(levelStatusKey) : null;
+    if (includeLevels && levelKind === 'bond') {
+      setBondRankingLoading(true);
+      setBondRankingError(null);
+    }
     const loadOne = async (requestedDiff) => {
       const d = rankingDifficultyKey(requestedDiff);
       // 2種類のLvランキングでキャッシュと進行中Promiseを共有しない。
@@ -2525,7 +2529,8 @@ function MonsterHeroGame() {
         try {
           // 診断中は21件目以降を一切取得せず、20件と50件の差だけを比較できるようにする。
           // 旧データのscore=NULLが上位枠を埋めて有効な記録を押し出さないよう、明示的にNULLを末尾へ送る。
-          rows = mergeRows([], d === 'Master' ? await fetchMasterRows('score.desc.nullslast', requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'score.desc.nullslast', 0, requestId));
+          const primaryOrder = includeLevels && levelKind === 'bond' ? 'id.desc' : 'score.desc.nullslast';
+          rows = mergeRows([], d === 'Master' ? await fetchMasterRows(primaryOrder, requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, primaryOrder, 0, requestId));
         } catch (scoreError) {
           console.error('[ranking] score order fetch failed for', d, scoreError && scoreError.message ? scoreError.message : scoreError);
           // 診断条件を変えないため、代替順の取得も20件に限定する。
@@ -2536,8 +2541,9 @@ function MonsterHeroGame() {
         const uniqueScoreRows = mergeRows([], rows).slice(0, RANKING_DIAGNOSTIC_LIMIT);
         byDiff[d] = uniqueScoreRows.map(toEntry);
         let pool = uniqueScoreRows;
-        if (includeLevels) try {
-          pool = mergeRows(pool, d === 'Master' ? await fetchMasterRows('level.desc.nullslast', requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'level.desc.nullslast', 0, requestId));
+        if (includeLevels && levelKind !== 'bond') try {
+          const order = 'level.desc.nullslast';
+          pool = mergeRows(pool, d === 'Master' ? await fetchMasterRows(order, requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, order, 0, requestId));
         } catch (eLv) {
           console.error('[ranking] level order fetch failed for', d, eLv && eLv.message ? eLv.message : eLv);
         }
@@ -2566,10 +2572,13 @@ function MonsterHeroGame() {
         return;
       }
       rankingLog(requestId, 'render-start', { difficulty: d, source: sourceByDiff[d], dataCount: byDiff[d]?.length || 0 });
-      setRankingSourceByDiff(prev => ({ ...prev, ...sourceByDiff }));
-      setLocalRankings(prev => ({ ...prev, ...byDiff }));
-      if (includeLevels && levelKind === 'breeder') setBreederRankingPool(prev => ({ ...prev, ...poolByDiff }));
-      else setRankingPool(prev => ({ ...prev, ...poolByDiff }));
+      if (includeLevels && levelKind === 'bond') {
+        setBondRankingData(prev => ({ ...(prev || {}), ...poolByDiff }));
+      } else {
+        setRankingSourceByDiff(prev => ({ ...prev, ...sourceByDiff }));
+        setLocalRankings(prev => ({ ...prev, ...byDiff }));
+        if (includeLevels && levelKind === 'breeder') setBreederRankingPool(prev => ({ ...prev, ...poolByDiff }));
+      }
       rankingFetchedAtRef.current.set(requestKey, Date.now());
       rankingLog(requestId, 'render-end', { difficulty: d, appliedRequestId: requestId });
       if (scoreStatusKey) {
@@ -2595,6 +2604,11 @@ function MonsterHeroGame() {
       const failures = results.filter(result => result === false).length;
       const successes = results.length - failures;
       finishRankingStatus(levelStatusKey, levelGeneration, failures ? '一部の記録を取得できませんでした' : null, successes > 0 || Object.keys(poolByDiff).length > 0);
+    }
+    if (includeLevels && levelKind === 'bond') {
+      const failures = results.filter(result => result === false).length;
+      setBondRankingLoading(false);
+      setBondRankingError(failures ? (failures === results.length ? '取得に失敗しました' : '一部の記録を取得できませんでした') : null);
     }
   }, []);
 
@@ -5229,8 +5243,7 @@ function MonsterHeroGame() {
   // 絆Lv専用カード。スコアや編成・役割は表示せず、ブリーダーと個体だけを表示する。
   const renderBondRankingEntry = (entry, index) => {
     const level = Number(entry?.bondLevel);
-    const breederLevel = Number(entry?.breederLevel);
-    return <article key={`bond-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<div className="min-w-0"><b className="block truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b>{entry?.breederLevel!=null&&Number.isFinite(breederLevel)&&breederLevel>=0&&<span className="block truncate text-[7px] text-indigo-300">ブリーダーLv.{breederLevel}</span>}</div><strong className="text-xs text-pink-300 whitespace-nowrap">絆Lv.{level}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain shrink-0"/>:<span className="w-7 text-center shrink-0">{entry?.emoji||'❓'}</span>}<b className="truncate text-[10px]">{entry.monName}</b></div></article>;
+    return <article key={`bond-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="text-xs text-pink-300 whitespace-nowrap">絆Lv.{level}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain shrink-0"/>:<span className="w-7 text-center shrink-0">{entry?.emoji||'❓'}</span>}<b className="truncate text-[10px]">{entry.monName}</b></div></article>;
   };
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
@@ -5391,7 +5404,7 @@ function MonsterHeroGame() {
               <div className="grid grid-cols-3 gap-1 mb-1.5 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else {if(t.k==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,t.k);}}} className={`py-1.5 rounded-lg text-[9px] font-black border ${rankingKind===t.k?'bg-indigo-600 border-indigo-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
               {rankingKind==='score'&&(()=>{const rows=localRankings[rankingViewKey]||[],status=rankingStatus(`score:${rankingViewKey}`);return <><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=><button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(d);}} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 ${rankingViewDiff===d?'ring-1 ring-white':'border border-white/10'}`} style={difficultyStyle(st,rankingViewDiff===d)}>{st.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{status.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{status.error&&status.fetched&&<div className="text-center text-[9px] text-amber-300">{status.error}</div>}{rows.map(renderScoreRankingEntry)}{rows.length===0&&(status.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:status.error&&!status.fetched?<div className="text-center text-red-300 py-8"><p>取得に失敗しました</p><button onClick={()=>loadRankings(rankingViewKey,false,true)} className="mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black">再読込</button></div>:<div className="text-center text-slate-500 py-8">記録はまだありません</div>)}</div></>;})()}
               {rankingKind==='breeder'&&(()=>{const status=rankingStatus('breeder:all');return <div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{status.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{status.error&&status.fetched&&<div className="text-center text-[9px] text-amber-300">{status.error}</div>}{breederRanking.map(renderBreederRankingEntry)}{breederRanking.length===0&&(status.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:status.error&&!status.fetched?<div className="text-center text-red-300 py-8"><p>取得に失敗しました</p><button onClick={()=>loadRankings(null,true,true,'breeder')} className="mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black">再読込</button></div>:<div className="text-center text-slate-500 py-8">記録はまだありません</div>)}</div>;})()}
-              {rankingKind==='bond'&&(()=>{const status=rankingStatus('bond:all');return <><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{['all',...bondRankingMonNames].map(n=><button key={n} onClick={()=>setBondRankMonFilter(n)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter===n?'bg-pink-600 border-pink-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{n==='all'?'すべて':n}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{status.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{status.error&&status.fetched&&<div className="text-center text-[9px] text-amber-300">{status.error}</div>}{bondRanking.map(renderBondRankingEntry)}{bondRanking.length===0&&(status.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:status.error&&!status.fetched?<div className="text-center text-red-300 py-8"><p>取得に失敗しました</p><button onClick={()=>loadRankings(null,true,true,'bond')} className="mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black">再読込</button></div>:<div className="text-center text-slate-500 py-8">記録はまだありません</div>)}</div></>;})()}
+              {rankingKind==='bond'&&<><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{['all',...bondRankingMonNames].map(n=><button key={n} onClick={()=>setBondRankMonFilter(n)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter===n?'bg-pink-600 border-pink-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{n==='all'?'すべて':n}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRankingLoading&&bondRankingData&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{bondRankingError&&bondRankingData&&<div className="text-center text-[9px] text-amber-300">{bondRankingError}</div>}{bondRanking.map(renderBondRankingEntry)}{bondRanking.length===0&&(bondRankingLoading&&!bondRankingData?<div className="text-center text-slate-400 py-8">Loading...</div>:bondRankingError&&!bondRankingData?<div className="text-center text-red-300 py-8"><p>取得に失敗しました</p><button onClick={()=>loadRankings(null,true,true,'bond')} className="mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black">再読込</button></div>:<div className="text-center text-slate-500 py-8">記録はまだありません</div>)}</div></>}
             </div>}
             </div>
           </div>
