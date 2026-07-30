@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 01:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 01:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -257,12 +257,17 @@ const migrateMasuLevelCaps = (masuMons, gold) => {
   });
   return { nextMasuMons, compensation, nextGold: donationDiamondValue(gold) + compensation };
 };
+// 合体・転生の消費ダイヤ単価(絆レベル1あたり)。以前はどちらも100だったが、
+// 周回で貯まるダイヤに対して重すぎたため半額にした。表示と実処理で同じ値を使う。
+const FUSION_COST_PER_LEVEL = 50;
+const REBIRTH_COST_PER_LEVEL = 50;
+const masuFusionCost = (mainLevel, subLevel) => (mainLevel + subLevel) * FUSION_COST_PER_LEVEL;
 const buildMasuRebirth = ({ masu, skillKey, gold }) => {
   if (!masu) return { ok:false, reason:'対象のマスモンが見つかりません。' };
   const normalized = normalizeMasuProgression(masu);
   const level = masuBondLevelInfo(normalized).level;
   if (level !== normalized.levelCap) return { ok:false, reason:`Lv.${normalized.levelCap}到達後に転生できます。` };
-  const cost = level * 100;
+  const cost = level * REBIRTH_COST_PER_LEVEL;
   if (donationDiamondValue(gold) < cost) return { ok:false, reason:'ダイヤが不足しています。' };
   const currentSkillLevel = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
   if (!skillKey || currentSkillLevel >= MAX_UNIQUE_SKILL_LEVEL) return { ok:false, reason:'強化できる固有技を選んでください。' };
@@ -1507,8 +1512,10 @@ const reconcileMasuPoints = (masu) => {
   const baseApt = base.distAptitude || ['C','C','C','C'];
   const aptSpent = (masu.distApt || baseApt).reduce((sum, g, i) => sum + Math.max(0, DIST_APTITUDE_GRADES.indexOf(g) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])), 0);
   const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, val]) => sum + Math.ceil((val || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
-  // 合体XPで上がったレベルは強化ポイントの付与対象外。ロード時の不足補填でも復活させない。
-  const earned = Math.max(0, masuBondLevelInfo(masu).level - 1 - donationDiamondValue(masu.fusionBondLevels));
+  // 合体で上がったレベルも「絆レベルが上がった」ことに変わりはないので、強化ポイントの
+  // 付与対象に含める(合体の確認画面も「強化ポイント +N」と出しており、実際に増えていなかった)。
+  // 過去に合体でレベルを上げた分も、ここの不足補填でまとめて受け取れる。
+  const earned = Math.max(0, masuBondLevelInfo(masu).level - 1);
   const missing = earned - (aptSpent + statSpent + (masu.distAptPoints || 0));
   return missing > 0 ? { ...masu, distAptPoints: (masu.distAptPoints || 0) + missing } : masu;
 };
@@ -3947,16 +3954,17 @@ function MonsterHeroGame() {
     });
   };
   // 合体: 副の絆経験値(累計bondXp)をまるごと主に加算し、副は消滅させる。
-  // 消費ダイヤは(主の絆Lv+副の絆Lv)×100。両者とも絆Lv10以上でfusionInheritUniqueがtrueなら、
-  // 副の固有技を「継承した固有技」としてinheritedUniquesに記録する。能力値・距離適性・
-  // 強化ポイントは合体では増減させず、合体XPによるレベル上昇もポイント補填から除外する。
+  // 消費ダイヤは(主の絆Lv+副の絆Lv)×FUSION_COST_PER_LEVEL。両者とも絆Lv10以上で
+  // fusionInheritUniqueがtrueなら、副の固有技を「継承した固有技」としてinheritedUniquesに記録する。
+  // 能力値・距離適性・副の強化ポイントは引き継がないが、絆レベルが上がったぶんの
+  // 強化ポイントは通常のレベルアップと同じように主へ配る。
   const executeMasuFusion = () => {
     const main = getMasuMon(fusionMainId);
     const sub = getMasuMon(fusionSubId);
     if (!main || !sub || main.id === sub.id) return null;
     const mainLvl = bondLevelInfo(main.bondXp || 0);
     const subLvl = bondLevelInfo(sub.bondXp || 0);
-    const cost = (mainLvl.level + subLvl.level) * 100;
+    const cost = masuFusionCost(mainLvl.level, subLvl.level);
     if (gold < cost) return null;
     const beforeXp = main.bondXp || 0;
     const gainedXp = sub.bondXp || 0;
@@ -3978,6 +3986,8 @@ function MonsterHeroGame() {
         .map(m => m.id === main.id ? {
           ...m,
           bondXp: afterXp,
+          // 上がったレベルぶんの強化ポイントを配る(確認画面に出している「強化ポイント +N」と同じ)
+          distAptPoints: (m.distAptPoints || 0) + gainedLevels,
           fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + gainedLevels,
           fusionHistory: [...(m.fusionHistory || []), historyEntry],
           ...(inheritedUnique ? { inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique] } : {}),
@@ -6216,7 +6226,7 @@ function MonsterHeroGame() {
             if (!mainBase || !subBase) { resetFusionFlow(); return null; }
             const mainLvl = bondLevelInfo(main.bondXp||0);
             const subLvl = bondLevelInfo(sub.bondXp||0);
-            const cost = (mainLvl.level + subLvl.level) * 100;
+            const cost = masuFusionCost(mainLvl.level, subLvl.level);
             const canAfford = gold >= cost;
           const ownedUniqueIds = new Set([uniqueLineageId(mainBase.unique, mainBase.id), ...(main.inheritedUniques || []).map(unique=>uniqueLineageId(unique))].filter(Boolean));
           const duplicateUnique = ownedUniqueIds.has(uniqueLineageId(subBase.unique, subBase.id));
