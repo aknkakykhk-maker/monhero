@@ -28,8 +28,9 @@ for (const difficulty of ['GrandMaster', 'Hell', 'Legend']) {
 assert(source.includes('const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey)'), 'battle must use shared enemy creation');
 assert(source.includes('createBattleEnemy(1,key)'), 'WAVE 1 preview must use shared enemy creation');
 assert(source.includes('createBattleEnemy(index+1,safeDifficulty)'), 'all-wave preview must use shared enemy creation');
-assert(source.includes('const ENEMY_ART_SCALE = { Moo: 2 }'), 'Moo scale must have one shared definition');
-assert.strictEqual((source.match(/enemyArtStyle\(enemy\.id\)/g) || []).length, 2, 'scan and all-wave view must reuse shared art style');
-assert(!source.includes("clamp(252px,70vw,280px)"), 'scan-only Moo sizing must be removed');
+assert(source.includes("Moo: { scanScale:2.75, waveDetailScale:2"), 'Moo must have context-specific scan and wave scales');
+assert(source.includes("enemyArtStyle(enemy.id,'scan')"), 'scan must request scan art context');
+assert(source.includes("enemyArtStyle(enemy.id,'waveDetail')"), 'wave detail must request its own art context');
+assert(source.includes("w-[min(92vw,380px)]"), 'Moo scan container must be responsive');
 
-console.log('OK: difficulty powers, WAVE 1/10 calculations, shared battle generation, and shared Moo art scale');
+console.log('OK: difficulty powers, WAVE 1/10 calculations, shared battle generation, and context-specific Moo art layout');

@@ -1,0 +1,16 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const src=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
+const chunk=src.slice(src.indexOf('const ENEMY_ACTION_DEFINITIONS'),src.indexOf('// 難易度選択プレビュー'));
+const context={RANGE_LABELS:['零','近','中','遠'],Math}; vm.createContext(context);
+vm.runInContext(`${chunk};globalThis.api={enemyActionProbabilities,chooseEnemyAction};`,context);
+const enemy={atk:100,normal:'パンチ',special:'必殺'};
+const actions=context.api.enemyActionProbabilities(enemy,1);
+assert.deepStrictEqual(Array.from(actions,a=>Number((a.probability*100).toFixed(5))),[45,15,20,20]);
+assert.deepStrictEqual(Array.from(actions,a=>a.multiplier),[1,2.5,0,0]);
+assert.strictEqual(context.api.chooseEnemyAction(enemy,1,()=>0).type,'ATTACK');
+assert.strictEqual(context.api.chooseEnemyAction(enemy,1,()=>0.46).type,'CHARGE');
+let seq=[0.9,0]; const move=context.api.chooseEnemyAction(enemy,1,()=>seq.shift());
+assert.strictEqual(move.type,'MOVE'); assert.strictEqual(move.targetDist,0);
+assert(src.includes('enemyActionProbabilities(enemy,enemyDist)'), 'SCAN shares action definitions');
+assert(!src.slice(src.indexOf('showEnemyInfo&&enemy'),src.indexOf('showHeroInfo',src.indexOf('showEnemyInfo&&enemy'))).includes('Math.random'), 'SCAN consumes no randomness');
+console.log('OK: enemy action weights, multipliers, movement and random-free SCAN');

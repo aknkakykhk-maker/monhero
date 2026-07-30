@@ -1,0 +1,9 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const src=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
+const a=src.indexOf('const collectBondRankingEntries'),b=src.indexOf('\nconst ',a+10);
+const context={ALL_PLAYER_MONSTERS:{Mocchi:{name:'モッチー',emoji:'🍡'},Suezo:{name:'スエゾー',emoji:'👁️'}}};vm.createContext(context);
+vm.runInContext(`${src.slice(a,b)};globalThis.collect=collectBondRankingEntries;`,context);
+const pool={Normal:[{userName:'A',party:[{masuId:'1',baseId:'Mocchi',name:'モッチー',bondLevel:4,role:'hero'},{masuId:'2',baseId:'Suezo',name:'スエゾー',bondLevel:7,role:'ally'},null]}],Hard:[{userName:'A',party:[{masuId:'1',monsterId:'Mocchi',name:'モッチー',bondLevel:9}]},{userName:'B',party:[{name:'モッチー',bondLevel:5,bondRankingTarget:false}]}],Master:[{userName:'B',party:[{id:'Mocchi',name:'モッチー',bondLevel:8}]}]};
+const out=context.collect(pool);assert.strictEqual(out.length,3);assert.strictEqual(out[0].bondLevel,9);assert(out.some(x=>x.userName==='A'&&x.monName==='スエゾー'&&x.bondLevel===7));assert(out.some(x=>x.userName==='B'&&x.bondLevel===8));
+assert(!src.includes('bondRankingTarget:index==='));assert(src.includes('取得に失敗しました')&&src.includes('記録はまだありません'));
+console.log('OK: all-party bond aggregation, new/legacy identity, highest-level dedupe and UI states');

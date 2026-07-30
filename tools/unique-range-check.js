@@ -55,6 +55,7 @@ for (let distance=0; distance<4; distance++) {
 check('距離撃はダメージ計算へ攻撃開始時距離を渡す', source.includes('getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,attackCount>0,attackStartDist)'));
 check('距離撃は指定距離そのものを移動先にする', source.includes("rangeMoveTarget=card.type==='range_atk' && card.rangeIdx!=null ? card.rangeIdx : null"));
 check('敵行動後に距離撃の最終距離を再適用する', source.indexOf('await handleEnemyTurn(finalActionType') < source.indexOf('if (forcedMoveTarget!=null) {', source.indexOf('await handleEnemyTurn(finalActionType')));
+check('各配置スロット自身の距離撃を取得する', source.includes('const rIdx=idx;') && !source.includes('const rIdx=(idx+RANGE_LABELS.length-1)%RANGE_LABELS.length;'));
 check('旧「次の距離」説明が残っていない', !source.includes('次の距離へ移動') && !source.includes('(focusedCard.rangeIdx+1)%4'));
 
 if (failed) process.exit(1);

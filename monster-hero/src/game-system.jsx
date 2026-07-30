@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 11:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 12:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1520,10 +1520,46 @@ const difficultyStyle = (setting, selected) => (selected
   ? { backgroundColor: setting.bg, color: setting.darkText ? '#0f172a' : '#ffffff' }
   : { backgroundColor: 'rgba(15,23,42,0.9)', color: setting.text });
 
-// 透明余白が大きいムーの立ち絵は、表示枠を広げるだけでなく本体が十分大きく見えるよう拡大する。
-// ENEMY SCANと全WAVE詳細で同じ倍率を使い、各画面では重なりを防ぐための表示枠だけを変える。
-const ENEMY_ART_SCALE = { Moo: 2 };
-const enemyArtStyle = (enemyId) => ({ transform:`scale(${ENEMY_ART_SCALE[enemyId] || 1})`, transformOrigin:'center' });
+// 透明余白を含む画像キャンバスではなく、画面ごとの見た目を基準に調整する。
+// contextを必須にすることで、SCANの調整が全WAVE詳細へ波及しないようにする。
+const ENEMY_ART_LAYOUT = {
+  default: { scanScale:1, waveDetailScale:1, objectPosition:'center' },
+  Moo: { scanScale:2.75, waveDetailScale:2, objectPosition:'center 48%' },
+};
+const enemyArtStyle = (enemyId, context='scan') => {
+  const layout=ENEMY_ART_LAYOUT[enemyId]||ENEMY_ART_LAYOUT.default;
+  const scale=context==='waveDetail'?layout.waveDetailScale:layout.scanScale;
+  return {transform:`scale(${scale})`,transformOrigin:layout.objectPosition,objectPosition:layout.objectPosition};
+};
+
+// 実戦の抽選とSCANは同じ定義・使用可否評価を参照する。SCAN側は候補を評価するだけで乱数を使わない。
+const ENEMY_ACTION_DEFINITIONS = [
+  {id:'normal',type:'ATTACK',category:'通常攻撃',weight:45,multiplier:1,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'special',type:'CHARGE',category:'特殊攻撃',weight:15,multiplier:2.5,hits:1,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'wait',type:'WAIT',category:'特殊行動',weight:20,multiplier:0,hits:0,range:'全間合い',condition:'常時',cooldown:0,useLimit:null},
+  {id:'move',type:'MOVE',category:'移動',weight:20,multiplier:0,hits:0,range:'現在以外の3間合い',condition:'移動先がある',cooldown:0,useLimit:null},
+];
+const evaluateEnemyActions = (ent,currentDist) => ENEMY_ACTION_DEFINITIONS.map(def => {
+  const available=!!ent && (def.type!=='MOVE'||RANGE_LABELS.some((_,i)=>i!==currentDist));
+  return {...def,available,unavailableReason:available?'':(!ent?'敵情報がありません':'移動先がありません')};
+});
+const enemyActionProbabilities = (ent,currentDist) => {
+  const actions=evaluateEnemyActions(ent,currentDist),total=actions.reduce((sum,a)=>sum+(a.available?a.weight:0),0);
+  return actions.map(a=>({...a,probability:a.available&&total>0?a.weight/total:0}));
+};
+const chooseEnemyAction = (ent,currentDist,random=Math.random) => {
+  const actions=enemyActionProbabilities(ent,currentDist),roll=random(),available=actions.filter(a=>a.available);
+  let cursor=roll;
+  const selected=available.find(a=>{cursor-=a.probability;return cursor<0;})||available[available.length-1];
+  if(!selected)return null;
+  if(selected.type==='MOVE'){
+    const targets=RANGE_LABELS.map((_,i)=>i).filter(i=>i!==currentDist);
+    const targetDist=targets[Math.min(targets.length-1,Math.floor(random()*targets.length))];
+    return {type:selected.type,value:0,label:`移動: ${RANGE_LABELS[targetDist]}`,targetDist,icon:'🏃',actionId:selected.id};
+  }
+  const label=selected.type==='ATTACK'?(ent.normal||'通常攻撃'):selected.type==='CHARGE'?(ent.special||'必殺技！'):'様子を見ている';
+  return {type:selected.type,value:Math.floor(ent.atk*selected.multiplier),label,icon:selected.type==='ATTACK'?'👊':selected.type==='CHARGE'?'🔥':'⏳',actionId:selected.id};
+};
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
 const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null) => {
@@ -1543,6 +1579,29 @@ const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null) => {
     maxHp:Math.floor(baseHp*mod),
     atk:Math.floor(baseAtk*mod),
   };
+};
+
+const collectBondRankingEntries = (rankingPool) => {
+  const byIndividual=new Map();
+  Object.values(rankingPool||{}).forEach(rows=>(rows||[]).forEach(record=>{
+    const userName=record?.userName||'名無しのブリーダー';
+    (Array.isArray(record?.party)?record.party:[]).forEach(member=>{
+      const bondLevel=Number(member?.bondLevel);
+      if(!member||!Number.isFinite(bondLevel)||bondLevel<=0)return;
+      const recordedMonsterId=member.baseId||member.monsterId||member.id||null;
+      const monsterId=recordedMonsterId||Object.keys(ALL_PLAYER_MONSTERS).find(id=>ALL_PLAYER_MONSTERS[id]?.name===member.name)||null;
+      const monName=ALL_PLAYER_MONSTERS[monsterId]?.name||member.name||null;
+      if(!monName)return;
+      const individualId=member.masuId!=null&&String(member.masuId)!==''
+        ? `masu:${String(member.masuId)}`
+        : `legacy:${monsterId||monName}`;
+      const key=`${userName}\u0000${individualId}`;
+      const entry={userName,icon:record.icon,monName,bondLevel,imgUrl:member.imgUrl||ALL_PLAYER_MONSTERS[monsterId]?.iconUrl||null,emoji:member.emoji||ALL_PLAYER_MONSTERS[monsterId]?.emoji||null,masuId:member.masuId??null,monsterId};
+      const current=byIndividual.get(key);
+      if(!current||bondLevel>current.bondLevel)byIndividual.set(key,entry);
+    });
+  }));
+  return [...byIndividual.values()].sort((a,b)=>b.bondLevel-a.bondLevel||a.userName.localeCompare(b.userName,'ja'));
 };
 
 const splitRankingParty = (entry) => {
@@ -2316,25 +2375,8 @@ function MonsterHeroGame() {
     return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 50);
   }, [rankingPool]);
 
-  // モンスターの絆レベルのランキング。新しい記録で明示した絆ランキング対象個体だけを使い、
-  // 対象情報を持たない旧記録のpartyからは推測しない。同じプレイヤーの同じモンスターは1件にまとめる。
-  const bondRankingAll = useMemo(() => {
-    const byKey = new Map();
-    Object.values(rankingPool).forEach(rows => (rows || []).forEach(r => {
-      const target = Array.isArray(r.party) ? r.party.find(pm => pm?.bondRankingTarget === true) : null;
-      const userName = r.userName || '名無しのブリーダー';
-      const key = userName + '\u0000' + (target?.masuId || target?.name || 'missing');
-      const cur = byKey.get(key);
-      if (!target?.bondLevel) {
-        if (!cur) byKey.set(key, { userName, icon:r.icon, monName:null, bondLevel:null });
-      } else if (!cur || target.bondLevel > cur.bondLevel) {
-        byKey.set(key, { userName, icon:r.icon, monName: target.name || '絆情報なし', bondLevel: target.bondLevel, imgUrl: target.imgUrl, emoji: target.emoji });
-      }
-    }));
-    const values = [...byKey.values()];
-    const usersWithTarget = new Set(values.filter(x=>x.bondLevel).map(x=>x.userName));
-    return values.filter(x=>x.bondLevel || !usersWithTarget.has(x.userName)).sort((a, b) => (b.bondLevel||0) - (a.bondLevel||0));
-  }, [rankingPool]);
+  // party内の全マスモンを対象にし、新形式はmasuId、旧形式は種族ID/名前で個体を互換集計する。
+  const bondRankingAll = useMemo(() => collectBondRankingEntries(rankingPool), [rankingPool]);
 
   // 種類別フィルタの選択肢。まだ誰も記録を出していないモンスターもタブに出したいので、
   // 記録から拾った名前ではなく、全モンスターの名前を並べる(記録が無い種は「まだいません」になる)
@@ -2347,6 +2389,8 @@ function MonsterHeroGame() {
   const bondRanking = useMemo(() => (
     bondRankMonFilter === 'all' ? bondRankingAll.slice(0, 50) : bondRankingAll.filter(x => x.monName === bondRankMonFilter).slice(0, 50)
   ), [bondRankingAll, bondRankMonFilter]);
+  const bondRankingLoading = Object.keys(DIFFICULTY_SETTINGS).some(d=>rankingLoadingByDiff[d]);
+  const bondRankingFailed = !bondRankingLoading && Object.keys(DIFFICULTY_SETTINGS).every(d=>rankingErrorByDiff[d]);
 
   const loadRankings = useCallback(async (targetDiff=null, includeLevels=false, force=false) => {
     const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff);
@@ -3109,12 +3153,7 @@ function MonsterHeroGame() {
     let heroSlotIndex = slots.findIndex(s=>s===mainHero);
     if (heroSlotIndex<0 && mainHero?.masuId!=null) heroSlotIndex=slots.findIndex(s=>s?.masuId!=null&&String(s.masuId)===String(mainHero.masuId));
     if (heroSlotIndex<0) heroSlotIndex=slots.findIndex(s=>s?.id===mainHero?.id);
-    const bondRankingTargetIndex = slots.reduce((bestIndex, s, index) => {
-      if (!s?.masuId) return bestIndex;
-      if (bestIndex < 0) return index;
-      return getMasuBondLevel(s.masuId).level > getMasuBondLevel(slots[bestIndex].masuId).level ? index : bestIndex;
-    }, -1);
-    const party = slots.map((s,index) => s ? { role:index===heroSlotIndex?'hero':'ally', id:s.id, masuId:s.masuId||null, name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji: s.emoji, imgUrl: s.imgUrl || null, bondLevel: s.masuId ? getMasuBondLevel(s.masuId).level : null, bondRankingTarget:index===bondRankingTargetIndex } : null);
+    const party = slots.map((s,index) => s ? { role:index===heroSlotIndex?'hero':'ally', id:s.id, baseId:s.id, monsterId:s.id, masuId:s.masuId||null, name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji:s.emoji||ALL_PLAYER_MONSTERS[s.id]?.emoji||null, imgUrl:s.imgUrl||ALL_PLAYER_MONSTERS[s.id]?.iconUrl||null, bondLevel:s.masuId?getMasuBondLevel(s.masuId).level:null } : null);
     const name = breederName || '名無しのブリーダー';
     const heroName = (mainHero && (ALL_PLAYER_MONSTERS[mainHero.id]?.name || mainHero.name)) || 'Unknown';
     const level = breederLevel.level;
@@ -4131,14 +4170,7 @@ function MonsterHeroGame() {
     }, 0);
   };
 
-  const getNextEnemyAction = useCallback((ent, currentDist) => {
-    if (!ent) return null;
-    const roll = Math.random() * 100;
-    if (roll < 45) return { type:'ATTACK', value:ent.atk, label:ent.normal||"通常攻撃", icon:"👊" };
-    else if (roll < 60) return { type:'CHARGE', value:Math.floor(ent.atk*2.5), label:ent.special||"必殺技！", icon:"🔥" };
-    else if (roll < 80) return { type:'WAIT', value:0, label:"様子を見ている", icon:"⏳" };
-    else { let nextDist=currentDist; while(nextDist===currentDist){nextDist=Math.floor(Math.random()*4);} return {type:'MOVE',value:0,label:`移動: ${RANGE_LABELS[nextDist]}`,targetDist:nextDist,icon:"🏃"}; }
-  }, []);
+  const getNextEnemyAction = useCallback((ent, currentDist) => chooseEnemyAction(ent,currentDist), []);
 
   const getPredictedDamage = useCallback((intent) => {
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='CHARGE')) return 0;
@@ -4716,8 +4748,8 @@ function MonsterHeroGame() {
       if(s){
         const revo=RANGE_EVOLUTION[aLvl];
         // 距離撃は攻撃開始時の指定距離で最大威力になり、ダメージ確定後にその指定距離へ移動する。
-        // カードの取得規則は従来どおり、配置スロットのひとつ手前の距離撃とする。
-        const rIdx=(idx+RANGE_LABELS.length-1)%RANGE_LABELS.length;
+        // 各モンスター自身が配置されたスロットの距離撃を取得する。適性は威力計算だけに使う。
+        const rIdx=idx;
         pool.push({name:`${RANGE_LABELS[rIdx]}${revo.name}`,type:'range_atk',rangeIdx:rIdx,guts:revo.guts,baseGuts:revo.baseGuts,mult:revo.mult,baseMult:revo.baseMult,crit:revo.crit,icon:RANGE_LABELS[rIdx],uid:Math.random(),evoLevel:aLvl});
         const options=getAvailableUniquesForSlot(s,cUniques,idx,cInhEvo);
         if(options.length>0){
@@ -5131,11 +5163,10 @@ function MonsterHeroGame() {
     const level = Number(entry?.level);
     return <article key={`breeder-${entry?.userName||'unknown'}-${index}`} data-ranking-kind="breeder" className={`${rankingCardClass(index)} px-2 py-2 flex items-center gap-2 min-w-0`}>{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="flex-1 min-w-0 truncate text-[11px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="shrink-0 text-xs text-indigo-300">{Number.isFinite(level)&&level>0?`ブリーダーLv.${level}`:'Lv情報なし'}</strong></article>;
   };
-  // 絆Lv専用カード。ランキング対象として明示された個体以外のpartyは表示しない。
+  // 絆Lv専用カード。スコアや編成・役割は表示せず、ブリーダーと個体だけを表示する。
   const renderBondRankingEntry = (entry, index) => {
     const level = Number(entry?.bondLevel);
-    const hasBond = Number.isFinite(level)&&level>0&&entry?.monName;
-    return <article key={`bond-${entry?.userName||'unknown'}-${entry?.monName||'none'}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<div className="min-w-0"><b className="block truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><span className="text-[8px] text-slate-500">ブリーダー</span></div><strong className="text-xs text-pink-300 whitespace-nowrap">{hasBond?`絆Lv.${level}`:'絆情報なし'}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1"><span className="text-pink-300 text-[9px] shrink-0">↳</span>{hasBond&&entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain shrink-0"/>:<span className="w-7 text-center shrink-0">{hasBond?(entry?.emoji||'❓'):'❓'}</span>}<b className="truncate text-[10px]">{hasBond?entry.monName:'絆情報なし'}</b></div></article>;
+    return <article key={`bond-${entry?.userName||'unknown'}-${entry?.masuId||entry?.monsterId||entry?.monName}-${index}`} data-ranking-kind="bond" className={`${rankingCardClass(index)} p-2`}><div className="grid grid-cols-[28px_32px_minmax(0,1fr)_auto] items-center gap-2 min-w-0">{rankingPlace(index)}{rankingBreederIcon(entry)}<b className="min-w-0 truncate text-[10px]">{entry?.userName||'名無しのブリーダー'}</b><strong className="text-xs text-pink-300 whitespace-nowrap">絆Lv.{level}</strong></div><div className="ml-[76px] mt-1 flex items-center gap-2 min-w-0 rounded-lg bg-black/35 px-2 py-1">{entry?.imgUrl?<img src={entry.imgUrl} alt="" className="w-7 h-7 object-contain shrink-0"/>:<span className="w-7 text-center shrink-0">{entry?.emoji||'❓'}</span>}<b className="truncate text-[10px]">{entry.monName}</b></div></article>;
   };
   if (bootPhase === 'TITLE') return (
     <><main className="mh-title-gate" aria-label="Monster Hero タイトル画面">
@@ -5277,7 +5308,7 @@ function MonsterHeroGame() {
 
         {gameState==='MASU_DONATION'&&donationResult&&<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.name}を寄付しました</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm">寄付一覧へ戻る</button></div></div>}
 
-        {showWaveDetails&&<div className="fixed inset-0 flex items-center justify-center p-3" style={{zIndex:70000,backgroundColor:'rgba(2,6,23,.96)',paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true"><section className="w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"><header className="flex items-center justify-between mb-3"><div><small className="text-indigo-300 font-black">{DIFFICULTY_SETTINGS[safeDifficulty].label}</small><h2 className="text-xl font-black">全WAVE詳細</h2></div><button aria-label="閉じる" onClick={()=>setShowWaveDetails(false)} className="p-3 rounded-full bg-white/10"><X/></button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{ENEMY_SEQUENCE.map((enemyKey,index)=>{const enemy=createBattleEnemy(index+1,safeDifficulty);const boss=index===ENEMY_SEQUENCE.length-1;return <article key={`${enemyKey}-${index}`} data-wave={index+1} className={`grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 ${boss?'border-amber-400/40 min-h-[120px]':'border-white/10 min-h-[64px]'}`}><b className={`${boss?'text-amber-300':'text-indigo-300'} whitespace-nowrap`}>W{index+1}</b><div data-wave-art className="relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id)} className="w-14 h-14 object-contain"/>:<span className="text-3xl">{enemy.emoji}</span>}</div><div className="min-w-0"><b className={`block truncate whitespace-nowrap ${boss?'text-amber-300':''}`} title={enemy.name}>{enemy.name}</b>{boss&&<span className="block text-[9px] leading-tight font-black text-amber-400">BOSS</span>}</div><div data-wave-stats className="w-[72px] text-right text-[10px] whitespace-nowrap"><div>HP <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃 <b>{enemy.atk.toLocaleString()}</b></div></div></article>})}</div></section></div>}
+        {showWaveDetails&&<div className="fixed inset-0 flex items-center justify-center p-3" style={{zIndex:70000,backgroundColor:'rgba(2,6,23,.96)',paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true"><section className="w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"><header className="flex items-center justify-between mb-3"><div><small className="text-indigo-300 font-black">{DIFFICULTY_SETTINGS[safeDifficulty].label}</small><h2 className="text-xl font-black">全WAVE詳細</h2></div><button aria-label="閉じる" onClick={()=>setShowWaveDetails(false)} className="p-3 rounded-full bg-white/10"><X/></button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{ENEMY_SEQUENCE.map((enemyKey,index)=>{const enemy=createBattleEnemy(index+1,safeDifficulty);const boss=index===ENEMY_SEQUENCE.length-1;return <article key={`${enemyKey}-${index}`} data-wave={index+1} className={`grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 ${boss?'border-amber-400/40 min-h-[120px]':'border-white/10 min-h-[64px]'}`}><b className={`${boss?'text-amber-300':'text-indigo-300'} whitespace-nowrap`}>W{index+1}</b><div data-wave-art className="relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id,'waveDetail')} className="w-14 h-14 object-contain"/>:<span className="text-3xl">{enemy.emoji}</span>}</div><div className="min-w-0"><b className={`block truncate whitespace-nowrap ${boss?'text-amber-300':''}`} title={enemy.name}>{enemy.name}</b>{boss&&<span className="block text-[9px] leading-tight font-black text-amber-400">BOSS</span>}</div><div data-wave-stats className="w-[72px] text-right text-[10px] whitespace-nowrap"><div>HP <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃 <b>{enemy.atk.toLocaleString()}</b></div></div></article>})}</div></section></div>}
         {gameState==='BATTLE_MENU'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(clamp(1.5rem, 4vh, 2.5rem) + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-2 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
@@ -5293,10 +5324,10 @@ function MonsterHeroGame() {
               return <div className="flex-1 min-h-0 flex flex-col overflow-hidden"><div className="text-center text-[9px] tracking-[.18em] text-slate-400 font-black mb-1">左右にスワイプして難易度を選択</div><div className="relative flex-1 min-h-0"><button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button><div ref={difficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==safeDifficulty)setDifficulty(difficulties[best][0]);}} className="h-full flex gap-3 overflow-x-auto snap-x snap-mandatory overscroll-x-contain py-2 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-y pinch-zoom'}}>
               {difficulties.map(([key,setting])=>{const active=key===safeDifficulty,enemy=createBattleEnemy(1,key);return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[28px] border-2 p-4 overflow-y-auto mh-scroll transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className="text-center text-[8px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div><h3 className="text-center text-2xl font-black mt-1" style={{color:setting.text}}>{setting.label}</h3><div className="mt-3 rounded-2xl bg-black/45 p-3"><small className="text-[8px] text-slate-400 font-black">MY HIGH SCORE</small><b className="block text-right text-xl text-indigo-200">{(highScores[key]||0).toLocaleString()} pt</b>{highestWaves[key]>0&&<span className="block text-right text-[9px] text-amber-300">最高到達 WAVE {highestWaves[key]}</span>}</div><div className="grid grid-cols-[92px_1fr] items-center gap-3 my-3 rounded-2xl border border-white/10 bg-black/25 p-3"><div className="h-24 rounded-xl bg-slate-900 flex items-center justify-center overflow-hidden">{enemy?.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} className="w-full h-full object-contain"/>:<span className="text-5xl">{enemy?.emoji}</span>}</div><div><small className="text-amber-300 font-black">WAVE 1</small><h4 className="font-black">{enemy?.name}</h4><div className="flex justify-between text-xs mt-2"><span>HP</span><b>{enemy?.maxHp.toLocaleString()}</b></div><div className="flex justify-between text-xs mt-1"><span>攻撃力</span><b>{enemy?.atk.toLocaleString()}</b></div></div></div><div className="grid grid-cols-3 gap-1">{[['敵強度',setting.power],['スコア',setting.score],['ダイヤ',setting.gold]].map(([label,value])=><div key={label} className="rounded-xl bg-black/35 p-2 text-center text-[8px] text-slate-400">{label}<b className="block text-sm text-white">×{value}</b></div>)}</div><div className="grid gap-2 mt-3"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[44px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button><button onClick={()=>{setDifficulty(key);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setGameState('PICK_HERO');}} className="min-h-[48px] rounded-xl font-black text-sm text-white" style={{backgroundColor:setting.bg}}>この難易度で挑戦</button></div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1.5 py-2">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-2 h-2 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div></div>;})()}
             {battleMenuTab==='ranking'&&<div className="flex-1 min-h-0 flex flex-col">
-              <div className="grid grid-cols-3 gap-1 mb-1.5 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else loadRankings(null,true);}} className={`py-1.5 rounded-lg text-[9px] font-black border ${rankingKind===t.k?'bg-indigo-600 border-indigo-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
+              <div className="grid grid-cols-3 gap-1 mb-1.5 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else {if(t.k==='bond')setBondRankMonFilter('all');loadRankings(null,true,t.k==='bond');}}} className={`py-1.5 rounded-lg text-[9px] font-black border ${rankingKind===t.k?'bg-indigo-600 border-indigo-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
               {rankingKind==='score'&&<><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=><button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(d);}} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 ${rankingViewDiff===d?'ring-1 ring-white':'border border-white/10'}`} style={difficultyStyle(st,rankingViewDiff===d)}>{st.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{(localRankings[rankingViewKey]||[]).map(renderScoreRankingEntry)}{(localRankings[rankingViewKey]||[]).length===0&&<div className="text-center text-slate-500 py-8">{rankingLoadingByDiff[rankingViewKey]?'Loading...':rankingErrorByDiff[rankingViewKey]?`取得エラー: ${rankingErrorByDiff[rankingViewKey]}`:'記録はまだありません'}</div>}</div></>}
               {rankingKind==='breeder'&&<div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{breederRanking.map(renderBreederRankingEntry)}{breederRanking.length===0&&<div className="text-center text-slate-500 py-8">記録はまだありません</div>}</div>}
-              {rankingKind==='bond'&&<><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{['all',...bondRankingMonNames].map(n=><button key={n} onClick={()=>setBondRankMonFilter(n)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter===n?'bg-pink-600 border-pink-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{n==='all'?'すべて':n}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRanking.map(renderBondRankingEntry)}{bondRanking.length===0&&<div className="text-center text-slate-500 py-8">絆情報なし</div>}</div></>}
+              {rankingKind==='bond'&&<><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{['all',...bondRankingMonNames].map(n=><button key={n} onClick={()=>setBondRankMonFilter(n)} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter===n?'bg-pink-600 border-pink-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{n==='all'?'すべて':n}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{bondRankingLoading?<div className="text-center text-slate-400 py-8">Loading...</div>:bondRankingFailed?<div className="text-center text-red-300 py-8"><p>取得に失敗しました</p><button onClick={()=>loadRankings(null,true,true)} className="mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black">再読込</button></div>:<>{bondRanking.map(renderBondRankingEntry)}{bondRanking.length===0&&<div className="text-center text-slate-500 py-8">記録はまだありません</div>}</>}</div></>}
             </div>}
             </div>
           </div>
@@ -7338,7 +7369,7 @@ function MonsterHeroGame() {
           </div>
         </div>
       )}
-      {showEnemyInfo&&enemy&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))',paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4 shrink-0"><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3><button onClick={()=>setShowEnemyInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{enemy.imgUrl?(<div className={`${enemy.id==='Moo'?'w-[280px] h-[280px]':'w-[140px] h-[140px]'} flex shrink-0 items-center justify-center overflow-hidden ${enemy.id==='Moo'?'mb-2':'mb-6'}`}><img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id)} className="w-[140px] h-[140px] object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]"/></div>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]">{enemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase shrink-0">{enemy.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5 shrink-0"><div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{enemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{enemy.atk}</div></div></div></div></div></div>)}
+      {showEnemyInfo&&enemy&&(()=>{const actions=enemyActionProbabilities(enemy,enemyDist);return (<div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}} role="dialog" aria-modal="true" aria-label="敵行動詳細"><header className="flex justify-between items-center px-5 py-3 border-b border-white/10 shrink-0 bg-slate-950/95 z-10"><h3 className="font-black italic uppercase text-red-500 text-lg">Enemy Scan</h3><button onClick={()=>setShowEnemyInfo(false)} className="min-h-[44px] px-6 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll"><div className="w-full max-w-md mx-auto flex flex-col items-center text-center px-4 pb-8">{enemy.imgUrl?(<div className={`${enemy.id==='Moo'?'w-[min(92vw,380px)] h-[clamp(250px,38vh,310px)]':'w-[140px] h-[160px]'} flex shrink-0 items-center justify-center overflow-hidden`}><img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id,'scan')} className={`${enemy.id==='Moo'?'w-[140px] h-[140px]':'w-[140px] h-[140px]'} object-contain drop-shadow-[0_0_50px_rgba(239,68,68,0.4)]`}/></div>):(<div style={{fontSize:'112px'}} className="my-4">{enemy.emoji}</div>)}<h4 className="text-2xl font-black italic mb-4 uppercase shrink-0">{enemy.name}</h4><section className="w-full space-y-3"><div className="grid grid-cols-2 gap-4 text-left bg-slate-900/60 p-4 rounded-2xl border border-white/5"><div><div className="text-[9px] text-pink-400 font-black">ライフ</div><div className="text-xl font-mono font-black">{enemy.hp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black">攻撃力</div><div className="text-xl font-mono font-black">{enemy.atk.toLocaleString()}</div></div></div><div className="text-left bg-slate-900/60 p-4 rounded-2xl border border-cyan-500/20"><div className="text-[9px] text-cyan-400 font-black">現在の間合い</div><b>{RANGE_LABELS[enemyDist]}距離</b></div><div className="space-y-2 text-left">{actions.map((action,index)=>{const actionName=action.type==='ATTACK'?(enemy.normal||'通常攻撃'):action.type==='CHARGE'?(enemy.special||'必殺技！'):action.type==='MOVE'?'間合い移動':'様子を見る';const power=Math.floor(enemy.atk*action.multiplier);return <details key={action.id} open={index<2} className={`rounded-2xl border p-3 ${action.available?'bg-slate-900/80 border-white/10':'bg-slate-950 border-red-500/30'}`}><summary className="cursor-pointer list-none flex items-center justify-between gap-2"><span><b className="block">{actionName}</b><small className="text-slate-400">{action.category}</small></span><span className="text-right"><b className="text-amber-300">{(action.probability*100).toFixed(action.probability*100%1?1:0)}%</b>{enemyIntent?.actionId===action.id&&<small className="block text-cyan-300">予告中</small>}</span></summary><div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/10 text-[10px]"><span>威力倍率 <b>×{action.multiplier}</b></span><span>基準威力 <b>{power.toLocaleString()}</b></span><span>攻撃回数 <b>{action.hits}回</b></span><span>使用間合い <b>{action.range}</b></span><span className="col-span-2">発動条件 <b>{action.condition}</b></span><span className="col-span-2">移動効果 <b>{action.type==='MOVE'?`${RANGE_LABELS.filter((_,i)=>i!==enemyDist).join('・')}距離のいずれかへ移動`:'なし'}</b></span><span className="col-span-2">バフ・デバフ・状態異常 <b>なし</b></span><span>クールダウン <b>{action.cooldown?`${action.cooldown}ターン`:'なし'}</b></span><span>回数制限 <b>{action.useLimit??'なし'}</b></span></div>{!action.available&&<div className="mt-2 text-[10px] text-red-300">現在は使用不可：{action.unavailableReason}</div>}</details>})}</div><aside className="text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"><b className="block text-slate-200 mb-1">行動ルール</b>使用可能な行動の重みを合計100%に正規化して抽選します。移動が選ばれた場合は、現在以外の3間合いから同率で移動先を選びます。表示中の予告行動は再抽選しません。</aside></section></div></div></div>);})()}
       {showHeroInfo&&mainHero&&(<div className="fixed inset-0 p-6 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1.5rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h3 className="font-black italic uppercase text-indigo-400 text-lg">Hero Scan</h3><button onClick={()=>setShowHeroInfo(false)} className="px-6 py-2 bg-white/10 rounded-full text-[11px] text-white active:scale-90">戻る</button></div><div className="flex-1 flex flex-col items-center justify-center text-center overflow-y-auto mh-scroll">{mainHero.imgUrl?(<DyedMonsterImage baseId={mainHero.id} src={mainHero.imgUrl} alt={mainHero.name} masuColors={mainHero.colors} style={{width:'140px',height:'140px'}} className="mx-auto mb-6 object-contain drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]"/>):(<div style={{fontSize:'112px'}} className="mb-6 drop-shadow-[0_0_50px_rgba(99,102,241,0.4)]">{mainHero.emoji}</div>)}<h4 className="text-2xl font-black italic mb-6 uppercase">{mainHero.name}</h4><div className="w-full max-w-sm space-y-4 bg-slate-900/50 p-6 rounded-3xl border border-white/5"><div className="grid grid-cols-2 gap-6 text-left"><div><div className="text-[9px] text-pink-400 font-black uppercase">ライフ</div><div className="text-xl font-mono font-black">{hp.toLocaleString()} / {effectiveMaxHp.toLocaleString()}</div></div><div><div className="text-[9px] text-red-400 font-black uppercase">攻撃力</div><div className="text-xl font-mono font-black">{atk}</div></div><div><div className="text-[9px] text-emerald-400 font-black uppercase">丈夫さ</div><div className="text-xl font-mono font-black">{def}{getPermaBuff('dmgCutPct')>0&&<span className="text-[10px] text-emerald-400 ml-1">(+{Math.round(getPermaBuff('dmgCutPct')*100)}%軽減)</span>}</div></div><div><div className="text-[9px] text-amber-400 font-black uppercase">ガッツ</div><div className="text-xl font-mono font-black">{guts} / {effectiveMaxGuts}</div></div></div><div className="bg-black/40 p-3 rounded-xl border border-indigo-500/30 text-left"><div className="text-[9px] text-indigo-400 uppercase font-black">勇者特性</div><div className="text-[11px] text-white font-bold leading-relaxed mt-1">{mainHero.traitDesc}</div></div></div></div></div>)}
 
       {/* ラン終了処理中は画面全体で入力を遮断する。ボタン自身のdisabledだけに頼らず、
