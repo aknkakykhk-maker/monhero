@@ -89,9 +89,11 @@ check('スロットのバッジも合計補正を出す', has('const totalBonus=
 check('補正0%でもバッジを出す', has('const totalBonus=distTotalBonus(i); return(<div') && !has('return totalBonus!==0&&'));
 check('WAVEリザルトの適性込み合計も編成合計を使う', has('const aptPct=(distAptPct[i]||0)*100;'));
 check('マスモン強化でも補正値(%)を出す', (source.match(/formatAptPct\(aptGradeToPct\(/g) || []).length >= 3);
+// ヘルプの本文は data/help.js にデータとして持っている
+const helpSrc = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
 check('ヘルプが新しい仕様を説明している',
-  has('置いた距離だけでなく4つの距離すべて') && has('零距離の補正は+31%になります'));
-check('ヘルプから旧仕様の段階表記を消した', !has('Aなら+2段階、Eなら-2段階'));
+  helpSrc.includes('置いた距離だけでなく4つの距離すべて') && helpSrc.includes('零距離の補正は+31%になります'));
+check('ヘルプから旧仕様の段階表記を消した', !helpSrc.includes('Aなら+2段階、Eなら-2段階') && !has('Aなら+2段階、Eなら-2段階'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

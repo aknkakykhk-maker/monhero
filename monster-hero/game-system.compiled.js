@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ca58f0144b1d7b38
+// source-sha256: a82a92f0bb095e12
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 06:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 07:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3979,6 +3979,18 @@ const RANGE_STYLES = {
 // 画面全体が真っ暗になってしまう。参照側で必ず既定値に落として、機能が出ないだけで済むようにする。
 // (キャッシュキー自体は tools/stamp-version.js が data/*.js の中身のハッシュへ揃えている)
 const SKIP_TICKETS = typeof SKIP_TICKET_BY_DIFFICULTY !== 'undefined' && SKIP_TICKET_BY_DIFFICULTY || {};
+// ヘルプの中身(data/help.js)も同じ理由で必ず既定値に落とす。
+// 読めなかった場合はヘルプが空になるだけで、ゲーム自体は動く
+const HELP_GUIDE = typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP_CATEGORIES) ? HELP_CATEGORIES : [];
+const HELP_GUIDE_INTRO = typeof HELP_INTRO !== 'undefined' && HELP_INTRO || '';
+const HELP_GUIDE_HELLO = typeof HELP_ASSISTANT_INTRO !== 'undefined' && HELP_ASSISTANT_INTRO || '';
+const HELP_GUIDE_ASSISTANT = typeof HELP_ASSISTANT !== 'undefined' && HELP_ASSISTANT || {
+  name: '助手',
+  emoji: '🧑‍🏫',
+  iconUrl: null
+};
+const helpCategoryById = id => HELP_GUIDE.find(c => c.id === id) || null;
+const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;
 const DIFFICULTY_SETTINGS = {
   Beginner: {
     label: "Beginner",
@@ -5453,7 +5465,19 @@ function MonsterHeroGame() {
     displayedChangelogTabRef.current = null;
     setShowChangelog(false);
   };
-  const [helpTab, setHelpTab] = useState('goal');
+  // ヘルプは「カテゴリ一覧 → 項目一覧 → 本文」の3階層。中身は data/help.js に置いている。
+  // helpCatId が null ならカテゴリ一覧、topicId も入っていれば本文を出す
+  const [helpCatId, setHelpCatId] = useState(null);
+  const [helpTopicId, setHelpTopicId] = useState(null);
+  // 助手の吹き出しの開閉。今は絵文字と一言だけだが、助手キャラを実装したら
+  // HELP_ASSISTANT(data/help.js)に絵や音声を足すだけでここはそのまま使える
+  const [helpAssistantOpen, setHelpAssistantOpen] = useState(true);
+  const openHelp = () => {
+    setHelpCatId(null);
+    setHelpTopicId(null);
+    setHelpAssistantOpen(true);
+    setShowHelp(true);
+  };
   const [pendingReward, setPendingReward] = useState(null);
   // 隠しデバッグ戦は通常周回と結果処理を共有しない。stateに加えて同期的なrefを持ち、
   // 敗北・諦め・勝利の非同期処理が通常の保存処理へ入る前に必ず判定できるようにする。
@@ -12850,7 +12874,7 @@ function MonsterHeroGame() {
     },
     className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
   }, "\u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowHelp(true),
+    onClick: () => openHelp(),
     className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
   }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowOfficialTitleConfirm(true),
@@ -12866,7 +12890,7 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       setGameState('SETTINGS');
-      setShowHelp(true);
+      openHelp();
     },
     className: "p-3 text-slate-500"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
@@ -15474,7 +15498,7 @@ function MonsterHeroGame() {
     onClick: toggleQuickMute,
     className: "p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[26px] h-[26px] flex items-center justify-center"
   }, audioMuted ? '🔇' : '🔊'), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowHelp(true),
+    onClick: () => openHelp(),
     className: "p-1.5 bg-slate-800 rounded text-emerald-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(HelpCircle, {
     size: 14
@@ -17487,565 +17511,226 @@ function MonsterHeroGame() {
       handleReward(r);
     },
     className: `w-full max-w-sm py-4 rounded-2xl font-black text-lg uppercase shadow-lg active:scale-95 transition-all shrink-0 mt-auto ${pendingReward && !effect ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'bg-slate-800 text-slate-600'}`
-  }, pendingReward ? '決定する' : '強化を選択')), showHelp && /*#__PURE__*/React.createElement("div", {
-    className: "fixed inset-0 z-[99999] flex flex-col",
-    style: {
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: '#000000',
-      zIndex: 99999
-    }
-  }, /*#__PURE__*/React.createElement("header", {
-    className: "shrink-0 p-4 border-b border-white/10 flex justify-between items-center bg-slate-900 shadow-xl",
-    style: {
-      backgroundColor: '#0f172a',
-      paddingTop: 'calc(1rem + env(safe-area-inset-top))'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(HelpCircle, {
-    className: "text-emerald-400",
-    size: 24
-  }), /*#__PURE__*/React.createElement("h2", {
-    className: "text-xl font-black italic text-white uppercase tracking-widest leading-none"
-  }, "Help Guide")), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowHelp(false),
-    className: "p-2 bg-white/10 rounded-full active:scale-90 shadow-inner"
-  }, /*#__PURE__*/React.createElement(X, {
-    size: 24
-  }))), /*#__PURE__*/React.createElement("nav", {
-    className: "shrink-0 flex bg-slate-900 border-b border-white/5"
-  }, [{
-    id: 'goal',
-    label: '目的',
-    icon: /*#__PURE__*/React.createElement(Trophy, {
-      size: 14
-    })
-  }, {
-    id: 'battle',
-    label: '戦闘',
-    icon: /*#__PURE__*/React.createElement(Sword, {
-      size: 14
-    })
-  }, {
-    id: 'growth',
-    label: '成長',
-    icon: /*#__PURE__*/React.createElement(Sparkles, {
-      size: 14
-    })
-  }, {
-    id: 'meta',
-    label: '育成',
-    icon: /*#__PURE__*/React.createElement(Crown, {
-      size: 14
-    })
-  }, {
-    id: 'tips',
-    label: 'コツ',
-    icon: /*#__PURE__*/React.createElement(Info, {
-      size: 14
-    })
-  }].map(tab => /*#__PURE__*/React.createElement("button", {
-    key: tab.id,
-    onClick: () => setHelpTab(tab.id),
-    className: `flex-1 py-3 text-[10px] font-black uppercase flex flex-col items-center gap-1 transition-all ${helpTab === tab.id ? 'text-emerald-400 bg-emerald-500/20 border-b-4 border-emerald-400' : 'text-slate-500'}`
-  }, tab.icon, tab.label))), /*#__PURE__*/React.createElement("div", {
-    className: "flex-1 overflow-y-auto mh-scroll p-5 space-y-6 bg-black",
-    style: {
-      backgroundColor: '#000000'
-    }
-  }, helpTab === 'goal' && /*#__PURE__*/React.createElement("div", {
-    className: "space-y-5"
-  }, /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-emerald-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Trophy, {
-    size: 18
-  }), " \u30B2\u30FC\u30E0\u306E\u76EE\u7684"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed mb-4"
-  }, "\u52C7\u8005\u30E2\u30F3\u3092\u9078\u3073\u3001\u30AB\u30FC\u30C9\u3067\u6226\u3044\u306A\u304C\u3089\u516810 WAVE\u3092\u9032\u307F\u3001\u30E9\u30B9\u30DC\u30B9\u300C\u30E0\u30FC\u300D\u306E\u6483\u7834\u3068\u6700\u9AD8\u30B9\u30B3\u30A2\u3092\u76EE\u6307\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-3 rounded-2xl border border-white/5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-500 font-black uppercase mb-1"
-  }, "\u52DD\u5229\u6761\u4EF6"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-white font-bold leading-tight"
-  }, "WAVE 10\u306E\u30E9\u30B9\u30DC\u30B9\u300C\u30E0\u30FC\u300D\u3092\u6483\u7834\u3059\u308B\u3053\u3068")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-3 rounded-2xl border border-white/5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-500 font-black uppercase mb-1"
-  }, "\u6557\u5317\u6761\u4EF6"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-white font-bold leading-tight"
-  }, "\u30FB\u30E9\u30A4\u30D5\u304C0\u306B\u306A\u308B", /*#__PURE__*/React.createElement("br", null), "\u30FB20\u30BF\u30FC\u30F3\u7D4C\u904E")))), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-emerald-400 font-black text-base mb-3"
-  }, "\u57FA\u672C\u7684\u306A\u6D41\u308C"), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-3"
-  }, [{
-    step: "1",
-    text: "勇者モン（1体目）を選んでスタート"
-  }, {
-    step: "2",
-    text: "カードを選び、対象のモンスター枠をタップして決定"
-  }, {
-    step: "3",
-    text: "報酬を選んで強化（WAVE 2,4,6で仲間が合流）"
-  }, {
-    step: "4",
-    text: "WAVEごとに強化し、10 WAVE目のムー撃破を目指す"
-  }].map(item => /*#__PURE__*/React.createElement("div", {
-    key: item.step,
-    className: "flex items-center gap-4"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "shrink-0 w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center text-[11px] font-black"
-  }, item.step), /*#__PURE__*/React.createElement("span", {
-    className: "text-[12px] text-slate-300"
-  }, item.text))))), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-indigo-300 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Trophy, {
-    size: 18
-  }), " \u96E3\u6613\u5EA6\u3068\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "HOME\u306E\u300C\u30D0\u30C8\u30EB\u300D\u304B\u3089\u96E3\u6613\u5EA6\u3092\u9078\u3073\u307E\u3059\u3002\u96E3\u3057\u3044\u307B\u3069\u6575\u304C\u5F37\u304F\u306A\u308A\u3001\u30B9\u30B3\u30A2\u3068\u7372\u5F97\u30C0\u30A4\u30E4\u306E\u500D\u7387\u3082\u4E0A\u304C\u308A\u307E\u3059\u3002\u540C\u3058\u753B\u9762\u306E\u300C\u30E9\u30F3\u30AD\u30F3\u30B0\u300D\u3067\u3001\u96E3\u6613\u5EA6\u5225\u30B9\u30B3\u30A2\u30FB\u30D6\u30EA\u30FC\u30C0\u30FCLv\u30FB\u7D46Lv\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002"))), helpTab === 'battle' && /*#__PURE__*/React.createElement("div", {
-    className: "space-y-5"
-  }, /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-blue-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Target, {
-    size: 18
-  }), " \u8DDD\u96E2\u30B7\u30B9\u30C6\u30E0"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed mb-4"
-  }, "\u81EA\u5206\u3068\u6575\u306E\u300C\u8DDD\u96E2\u300D\u304C\u5A01\u529B\u3092\u5DE6\u53F3\u3057\u307E\u3059\u3002\u3053\u306E\u30B2\u30FC\u30E0\u6700\u5927\u306E\u6226\u7565\u8981\u7D20\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl border border-blue-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-white mb-1 uppercase"
-  }, "\u8DDD\u96E2\u306E\u4E00\u81F4\uFF08\u8D85\u91CD\u8981\uFF09"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-slate-400 leading-relaxed"
-  }, "\u6575\u3068\u540C\u3058\u8DDD\u96E2\u67A0\u306B\u3044\u308B\u30E2\u30F3\u30B9\u30BF\u30FC\u3067\u653B\u6483\u3059\u308B\u3068\u5927\u30C0\u30E1\u30FC\u30B8\uFF01\u8DDD\u96E2\u304C\u305A\u308C\u308B\u307B\u3069\u5A01\u529B\u306F\u4F4E\u4E0B\u3057\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl border border-amber-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-white mb-1 uppercase"
-  }, "\u89E3\u6790\u3068\u4E88\u6E2C"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-slate-400 leading-relaxed"
-  }, "\u6575\u306F\u79FB\u52D5\u3059\u308B\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002\u300C\u89E3\u6790\u30DC\u30BF\u30F3\u300D\u3067\u6575\u306E\u884C\u52D5\u3092\u4E88\u6E2C\u3057\u3001\u9632\u5FA1\u304B\u653B\u6483\u304B\u5224\u65AD\u3057\u307E\u3057\u3087\u3046\u3002")))), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-teal-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Target, {
-    size: 18
-  }), " \u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
-  }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u3054\u3068\u306B4\u3064\u306E\u8DDD\u96E2\u305D\u308C\u305E\u308C\u3067\u5F97\u610F\u30FB\u4E0D\u5F97\u610F\u304C\u3042\u308A\u3001C(\u6A19\u6E96\u30FB\xB10%)\u3092\u57FA\u6E96\u306BG(-20%)\u301CM(+25%)\u306E\u88DC\u6B63\u3092\u6301\u3061\u307E\u3059\u3002\u30E2\u30F3\u30B9\u30BF\u30FC\u8A73\u7D30\u753B\u9762\u3067\u30B0\u30EC\u30FC\u30C9\u3068\u88DC\u6B63\u5024(%)\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl border border-teal-500/30 mb-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-slate-300 leading-relaxed"
-  }, "\u3053\u306E\u88DC\u6B63\u306F", /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-bold"
-  }, "\u7F6E\u3044\u305F\u8DDD\u96E2\u3060\u3051\u3067\u306A\u304F4\u3064\u306E\u8DDD\u96E2\u3059\u3079\u3066"), "\u306B\u304B\u304B\u308A\u3001\u7DE8\u6210\u3057\u305F\u52C7\u8005\u30E2\u30F3\u30FB\u4F9B\u30E2\u30F3\u5168\u54E1\u3076\u3093\u304C\u8DDD\u96E2\u3054\u3068\u306B\u5408\u7B97\u3055\u308C\u307E\u3059\u3002\u4F8B\u3048\u3070\u96F6\u8DDD\u96E2\u306E\u88DC\u6B63\u304C+6%\u306E\u3068\u3053\u308D\u3078\u96F6\u8DDD\u96E2M(+25%)\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u304C\u5408\u6D41\u3059\u308B\u3068\u3001\u96F6\u8DDD\u96E2\u306E\u88DC\u6B63\u306F+31%\u306B\u306A\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-400 leading-relaxed"
-  }, "\u7D46\u30EC\u30D9\u30EB\u304C\u4E0A\u304C\u308B\u3068\u8CAF\u307E\u308B\u300C\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u300D\u30921\u3064\u6D88\u8CBB\u3059\u308B\u3068\u3001\u8A73\u7D30\u753B\u9762\u304B\u3089\u305D\u306E\u8DDD\u96E2\u306E\u9069\u6027\u30B0\u30EC\u30FC\u30C9\u30921\u6BB5\u968E\u30A2\u30C3\u30D7\u3067\u304D\u307E\u3059(\u4E0A\u9650\u306FM)\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-amber-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 18
-  }), " GUTS\u306E\u7BA1\u7406"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u884C\u52D5\u306B\u306F\u30AC\u30C3\u30C4\u3092\u6D88\u8CBB\u3057\u307E\u3059\u3002\u30AC\u30C3\u30C4\u306F\u6BCE\u30BF\u30FC\u30F3\u81EA\u52D5\u56DE\u5FA9\u3057\u307E\u3059\u304C\u3001\u4E0A\u9650\u3092\u5897\u3084\u3059\u3053\u3068\u3067\u5F37\u529B\u306A\u6280\u3092\u5B89\u5B9A\u3057\u3066\u4F7F\u3048\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-cyan-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Crown, {
-    size: 18
-  }), " \u52C7\u8005\u7279\u6027\u30FB\u56FA\u6709\u6280"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u6700\u521D\u306B\u9078\u3076\u300C\u52C7\u8005\u30E2\u30F3\u300D\u3054\u3068\u306B\u5C02\u7528\u306E\u7279\u6027(\u52C7\u8005\u30E2\u30F3\u9078\u629E\u6642\u306E\u307F\u767A\u52D5)\u3068\u3001\u9032\u5316\u3059\u308B\u56FA\u6709\u6280(\u5FC5\u6BBA\u6280)\u3092\u6301\u3061\u307E\u3059\u3002\u7DE8\u6210\u3059\u308B\u52C7\u8005\u30E2\u30F3\u306B\u3088\u3063\u3066\u6226\u3044\u65B9\u304C\u5927\u304D\u304F\u5909\u308F\u308A\u307E\u3059\u3002\u8A73\u3057\u304F\u306F\u53EC\u559A\u6642\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u8A73\u7D30\u3067\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-blue-300 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Activity, {
-    size: 18
-  }), " \u7DCA\u6025\u56DE\u5FA9"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u753B\u9762\u5DE6\u4E0B\u306E\u300C\u7DCA\u6025\u300D\u30DC\u30BF\u30F3\u3067\u30E9\u30A4\u30D5\u3068\u30AC\u30C3\u30C4\u3092\u305D\u308C\u305E\u308C\u6700\u5927\u5024\u306E30%\u56DE\u5FA9\u3067\u304D\u307E\u3059\u3002\u305F\u3060\u3057\u4F7F\u7528\u3059\u308B\u3068\u81EA\u5206\u306E\u30BF\u30FC\u30F3\u3092\u6D88\u8CBB\u3057\u3001\u6575\u306E\u884C\u52D5\u304C\u767A\u751F\u3057\u307E\u3059\u3002\u56DE\u6570\u5236\u9650\u306F\u3042\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-pink-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Heart, {
-    size: 18
-  }), " \u5408\u6D41\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
-  }, "WAVE 2\u30FB4\u30FB6\u3067\u4EF2\u9593\u304C\u5408\u6D41\u3059\u308B\u3068\u3001\u305D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u5408\u6D41\u30DC\u30FC\u30CA\u30B9\u5206\u3060\u3051\u30E9\u30A4\u30D5\u30FB\u3061\u304B\u3089\u30FB\u4E08\u592B\u3055\u30FB\u30AC\u30C3\u30C4\u304C\u4E0A\u304C\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl border border-cyan-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-slate-400 leading-relaxed"
-  }, "\u3055\u3089\u306B\u3001\u5408\u6D41\u3057\u305F\u30E2\u30F3\u30B9\u30BF\u30FC\u306E", /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-bold"
-  }, "\u9593\u5408\u3044\u9069\u6027"), "\u30824\u8DDD\u96E2\u3059\u3079\u3066\u306E\u88DC\u6B63\u5024\u3078\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002C\u3092\xB10%\u3068\u3057\u3066\u3001M(+25%)\u306A\u3089+25%\u3001G(-20%)\u306A\u3089-20%\u304C\u305D\u306E\u307E\u307E\u8DB3\u3055\u308C\u307E\u3059\u3002\u3069\u306E\u8DDD\u96E2\u306B\u7F6E\u3044\u3066\u3082\u52B9\u679C\u306F\u540C\u3058\u306A\u306E\u3067\u3001\u7D44\u307F\u5408\u308F\u305B\u3067\u72D9\u3063\u305F\u8DDD\u96E2\u3092\u4F38\u3070\u305B\u307E\u3059\u3002")))), helpTab === 'growth' && /*#__PURE__*/React.createElement("div", {
-    className: "space-y-5"
-  }, /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-purple-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 18
-  }), " \u80FD\u529B\u899A\u9192\uFF08\u5831\u916C\uFF09"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed mb-4"
-  }, "WAVE\u30AF\u30EA\u30A2\u5F8C\u30013\u3064\u306E\u80FD\u529B\u304B\u30891\u3064\u3092\u9078\u3093\u3067\u5F37\u5316\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-3 gap-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-red-900/30 border border-red-500/40 p-3 rounded-2xl text-center"
-  }, /*#__PURE__*/React.createElement(Sword, {
-    size: 16,
-    className: "mx-auto text-red-400 mb-2"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black"
-  }, "\u653B\u6483\u899A\u9192")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-emerald-900/30 border border-emerald-500/40 p-3 rounded-2xl text-center"
-  }, /*#__PURE__*/React.createElement(Shield, {
-    size: 16,
-    className: "mx-auto text-emerald-400 mb-2"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black"
-  }, "\u9632\u5FA1\u899A\u9192")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-pink-900/30 border border-pink-500/40 p-3 rounded-2xl text-center"
-  }, /*#__PURE__*/React.createElement(Heart, {
-    size: 16,
-    className: "mx-auto text-pink-400 mb-2"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black"
-  }, "\u7CBE\u795E\u5F37\u5316")))), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-indigo-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(BookOpen, {
-    size: 18
-  }), " \u30D6\u30EA\u30FC\u30C0\u30FC\u7D99\u627F"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
-  }, "WAVE 1,3,5,7,9\u3067\u3001\u30D6\u30EA\u30FC\u30C0\u30FC\u306E\u300C\u6559\u3048\u300D\u3092\u30AB\u30FC\u30C9\u3068\u3057\u3066\u52A0\u3048\u3089\u308C\u307E\u3059\u3002\u540C\u3058\u6559\u3048\u3092\u91CD\u306D\u308B\u3068\u300C\u9032\u5316\u300D\u3057\u3001\u52B9\u679C\u304C\u98DB\u8E8D\u7684\u306B\u9AD8\u307E\u308A\u307E\u3059(\u6700\u5927Lv2)\u3002\u7DE8\u6210\u3057\u305F\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u306E\u4E2D\u304B\u3089\u5019\u88DC\u304C\u51FA\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-2"
-  }, [{
-    n: "おりょうの力",
-    d: "攻撃ステータスUP"
-  }, {
-    n: "ドラの緑膝",
-    d: "被ダメージDOWN"
-  }, {
-    n: "かどみうむの計算",
-    d: "自動ライフ/ガッツ回復UP"
-  }, {
-    n: "みゅあの愛",
-    d: "回復＆能力永続UP"
-  }, {
-    n: "あつの挑発",
-    d: "敵行動無効＆攻撃"
-  }, {
-    n: "みゃるの薬",
-    d: "次ターン攻撃2倍＆自傷"
-  }].map(c => /*#__PURE__*/React.createElement("div", {
-    key: c.n,
-    className: "bg-black/50 p-2.5 rounded-xl border border-white/5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-white"
-  }, c.n), /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-400"
-  }, c.d))))), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-cyan-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Zap, {
-    size: 18
-  }), " \u6280\u30EC\u30D9\u30EB"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
-  }, "\u901A\u5E38\u6280\u30FB\u8DDD\u96E2\u6280\u30FB\u56FA\u6709\u6280\u306B\u306F\u6BB5\u968E\u304C\u3042\u308A\u307E\u3059\u3002\u901A\u5E38\u6280\u30FB\u8DDD\u96E2\u6280\u306F\u3001\u305D\u306E\u8DDD\u96E2\u306B\u3044\u308B\u5473\u65B9\u306E\u9593\u5408\u3044\u9069\u6027\u3068\u8DDD\u96E2\u30C0\u30E1\u30FC\u30B8\u88DC\u6B63\u3067\u4E0A\u4F4D\u6BB5\u968E\u304C\u89E3\u653E\u3055\u308C\u307E\u3059\u3002\u56FA\u6709\u6280\u306F\u30D0\u30C8\u30EB\u4E2D\u306E\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3067\u5F37\u5316\u3057\u307E\u3059\u3002\u4E0A\u4F4D\u307B\u3069\u5F37\u529B\u3067\u3059\u304C\u3001\u6D88\u8CBB\u30AC\u30C3\u30C4\u3082\u5897\u3048\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl border border-cyan-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-slate-400 leading-relaxed"
-  }, "\u30D0\u30C8\u30EB\u4E2D\u306F\u30BF\u30A4\u30EB\u9078\u629E\u5F0F\u3067\u3001\u89E3\u653E\u6E08\u307F\u306E\u30EC\u30D9\u30EB\u3067\u3042\u308C\u3070\u4E0B\u4F4D\u306E\u6280\u306B\u623B\u3057\u3066\u4F7F\u3046\u3053\u3068\u3082\u3067\u304D\u307E\u3059(\u6D88\u8CBB\u30AC\u30C3\u30C4\u3092\u7BC0\u7D04\u3057\u305F\u3044\u3068\u304D\u306B\u4FBF\u5229\u3067\u3059)\u3002"))), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-emerald-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Sword, {
-    size: 18
-  }), " \u30AC\u30FC\u30C9"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u30AC\u30FC\u30C9\u30AB\u30FC\u30C9\u306E\u8EFD\u6E1B\u91CF\u306F", /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-bold"
-  }, "\u56FA\u5B9A\u5024\uFF0B(\u4E08\u592B\u3055\xD7\u500D\u7387)"), "\u3067\u6C7A\u307E\u308A\u307E\u3059(\u30AC\u30FC\u30C9=200\uFF0B\u4E08\u592B\u3055\xD71.1\u3001\u30CF\u30A4\u30AC\u30FC\u30C9=300\uFF0B\u4E08\u592B\u3055\xD71.2)\u3002\u4E08\u592B\u3055\u304C100\u4E0A\u304C\u308B\u3054\u3068\u306B\u4E0A\u4F4D\u306E\u30AC\u30FC\u30C9\u304C\u89E3\u653E\u3055\u308C\u3001\u624B\u672D\u306B\u5165\u308B\u30AC\u30FC\u30C9\u306E\u679A\u6570\u3082\u5897\u3048\u307E\u3059\u3002"))), helpTab === 'meta' && /*#__PURE__*/React.createElement("div", {
-    className: "space-y-5"
-  }, /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-amber-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Crown, {
-    size: 18
-  }), " \u30D6\u30EA\u30FC\u30C0\u30FC\u30EC\u30D9\u30EB"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "WAVE\u3092\u30AF\u30EA\u30A2\u3059\u308B\u3068\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u3092\u7372\u5F97\u3057\u3066\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3057\u307E\u3059\u3002\u30EC\u30D9\u30EB\u304C\u4E0A\u304C\u308B\u305F\u3073\u306B\u30D6\u30EA\u30FC\u30C0\u30FC\u30DD\u30A4\u30F3\u30C8(pt)\u30921\u7372\u5F97\u3067\u304D\u307E\u3059\u3002pt\u306F\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u30A2\u30A4\u30B3\u30F3\u8CFC\u5165\u306B\u4F7F\u3044\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-violet-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 18
-  }), " \u30DE\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
-  }, "\u30D7\u30EC\u30A4\u7D42\u4E86\u5F8C\u306E\u30EA\u30B6\u30EB\u30C8\u753B\u9762\u3067\u3001\u305D\u306E\u3068\u304D\u52C7\u8005\u30E2\u30F3\u3060\u3063\u305F\u30E2\u30F3\u30B9\u30BF\u30FC\u306B\u540D\u524D\u3092\u4ED8\u3051\u3066\u767B\u9332\u3067\u304D\u307E\u3059\u3002\u767B\u9332\u3057\u305F\u500B\u4F53\u3092", /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-bold"
-  }, "\u30DE\u30B9\u30E2\u30F3"), "\u3068\u547C\u3073\u3001\u7D46\u30EC\u30D9\u30EB\u30FB\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u30FB\u898B\u305F\u76EE\u306E\u8272\u3092\u305D\u306E\u500B\u4F53\u3060\u3051\u306E\u3082\u306E\u3068\u3057\u3066\u6301\u3061\u7D9A\u3051\u307E\u3059\u3002\u540C\u3058\u7A2E\u985E\u3067\u3082\u5225\u3005\u306B\u80B2\u3066\u3089\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl border border-violet-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-white mb-1"
-  }, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u306E\u4F7F\u3044\u9053"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-slate-400 leading-relaxed"
-  }, "\u7D46\u30EC\u30D9\u30EB\u304C1\u4E0A\u304C\u308B\u3054\u3068\u306B1\u30DD\u30A4\u30F3\u30C8\u7372\u5F97\u3057\u307E\u3059\u30021\u30DD\u30A4\u30F3\u30C8\u6D88\u8CBB\u3057\u3066\u3001\u9593\u5408\u3044\u9069\u6027\u30921\u6BB5\u968E\u4E0A\u3052\u308B\u304B\u3001\u30E9\u30A4\u30D5\u30FB\u3061\u304B\u3089\u30FB\u4E08\u592B\u3055\u30FB\u30AC\u30C3\u30C4\u306E\u3044\u305A\u308C\u304B\u3092\u4E0A\u3052\u3089\u308C\u307E\u3059\u3002\u632F\u308A\u76F4\u3057\u305F\u3044\u3068\u304D\u306F\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u300C\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8\u300D\u3092\u4F7F\u3044\u307E\u3059\u3002"))), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-amber-300 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Gem, {
-    size: 18
-  }), " \u5BC4\u4ED8"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "HOME\u306E\u300C\u795E\u6BBF\u300D\u5185\u306B\u3042\u308B\u300C\u5BC4\u4ED8\u300D\u306F\u3001\u30DE\u30B9\u30E2\u30F3\u3092\u624B\u653E\u3057\u3001\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024\u3068\u540C\u3058\u6570\u306E\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308B\u6A5F\u80FD\u3067\u3059\u3002\u5BC4\u4ED8\u306F\u53D6\u308A\u6D88\u305B\u305A\u3001\u624B\u653E\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-pink-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Heart, {
-    size: 18
-  }), " \u7D46\u30EC\u30D9\u30EB"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u52C7\u8005\u30E2\u30F3\u306B\u9078\u3093\u3060\u30E2\u30F3\u30B9\u30BF\u30FC\u306F\u3001WAVE\u30AF\u30EA\u30A2\u3054\u3068\u306B\u7D46\u7D4C\u9A13\u5024\u3092\u7372\u5F97\u3057\u3066\u7D46\u30EC\u30D9\u30EB\u304C\u4E0A\u304C\u308A\u307E\u3059(WAVE\u304C\u9032\u3080\u307B\u30691\u56DE\u3042\u305F\u308A\u306E\u7372\u5F97\u91CF\u3082\u5897\u52A0)\u3002\u4F9B\u30E2\u30F3\u3068\u3057\u3066\u5408\u6D41\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306B\u3082\u7D4C\u9A13\u5024\u304C\u5165\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-violet-300 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Layers, {
-    size: 18
-  }), " \u5408\u4F53"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
-  }, "HOME\u306E\u300C\u795E\u6BBF\u300D\u5185\u306B\u3042\u308B\u300C\u5408\u4F53\u300D\u304B\u3089\u3001\u30DE\u30B9\u30E2\u30F3\u540C\u58EB\u3092\u5408\u4F53\u3067\u304D\u307E\u3059\u3002\u6B8B\u3059\u5074\u3092", /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-bold"
-  }, "\u4E3B"), "\u3001\u6D88\u3048\u308B\u5074\u3092", /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-bold"
-  }, "\u526F"), "\u3068\u3057\u3066\u9078\u3073\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl border border-white/5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-slate-300 leading-relaxed"
-  }, "\u526F\u306E\u7D46\u7D4C\u9A13\u5024\u304C\u7D2F\u8A08\u306E\u307E\u307E\u4E3B\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002\u5408\u4F53\u3067\u306F\u80FD\u529B\u5024\u30FB\u9593\u5408\u3044\u9069\u6027\u30FB\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u306F\u5897\u6E1B\u3057\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl border border-white/5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-slate-300 leading-relaxed"
-  }, "\u4E3B\u306E\u540D\u524D\u30FB\u898B\u305F\u76EE\u30FB\u9593\u5408\u3044\u9069\u6027\u30FB\u30B9\u30C6\u30FC\u30BF\u30B9\u5F37\u5316\u306F\u305D\u306E\u307E\u307E\u7DAD\u6301\u3055\u308C\u307E\u3059(\u526F\u306E\u5F37\u5316\u306F\u5F15\u304D\u7D99\u304C\u308C\u307E\u305B\u3093)\u3002")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl border border-amber-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-amber-200 leading-relaxed"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "font-bold"
-  }, "\u56FA\u6709\u6280\u306E\u5F15\u304D\u7D99\u304E"), "\u306F\u3001\u4E3B\u3068\u526F\u304C\u4E21\u65B9\u3068\u3082\u7D46Lv.10\u4EE5\u4E0A\u306E\u3068\u304D\u3060\u3051\u9078\u3079\u307E\u3059\u3002\u6D88\u8CBB\u30C0\u30A4\u30E4\u306F(\u4E3B\u306E\u7D46Lv\uFF0B\u526F\u306E\u7D46Lv)\xD750\u3067\u3059\u3002")))), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-amber-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Coins, {
-    size: 18
-  }), " pt \u3068\u30C0\u30A4\u30E4(2\u3064\u306E\u901A\u8CA8)"), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl border border-amber-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-white mb-1 uppercase"
-  }, "pt\uFF08\u30DD\u30A4\u30F3\u30C8\uFF09"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-slate-400 leading-relaxed"
-  }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\u3067\u7372\u5F97\u3002\u30DE\u30FC\u30B1\u30C3\u30C8\u306E\u300C\u30A2\u30A4\u30B3\u30F3\u300D\u8CFC\u5165\u306B\u4F7F\u3044\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl border border-cyan-500/30"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-white mb-1 uppercase"
-  }, "\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-slate-400 leading-relaxed"
-  }, "WAVE\u30AF\u30EA\u30A2\u3067\u7372\u5F97(Normal\u57FA\u6E96100\u30C0\u30A4\u30E4/WAVE\u3001\u96E3\u6613\u5EA6\u3067\u5909\u52D5)\u3002\u300C\u5186\u76E4\u77F3\u300D\u300C\u30D6\u30EA\u30FC\u30C0\u30FC\u300D\u300C\u30A2\u30A4\u30C6\u30E0\u300D\u306E\u8CFC\u5165\u3068\u3001\u5408\u4F53\u306E\u8CBB\u7528\u306B\u4F7F\u3044\u307E\u3059\u3002\u795E\u6BBF\u3067\u30DE\u30B9\u30E2\u30F3\u3092\u5BC4\u4ED8\u3059\u308B\u3053\u3068\u3067\u3082\u7372\u5F97\u3067\u304D\u307E\u3059\u3002")))), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-orange-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(ShoppingBag, {
-    size: 18
-  }), " \u30DE\u30FC\u30B1\u30C3\u30C8"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
-  }, "HOME\u306E\u300C\u30DE\u30FC\u30B1\u30C3\u30C8\u300D\u304B\u3089\u5165\u308C\u307E\u3059\u30024\u3064\u306E\u30AB\u30C6\u30B4\u30EA\u304C\u3042\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-3 rounded-2xl text-center border border-white/5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-white mb-1"
-  }, "\u30A2\u30A4\u30B3\u30F3"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-400"
-  }, "pt\u3067\u8CFC\u5165", /*#__PURE__*/React.createElement("br", null), "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u50CF\u306B")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-3 rounded-2xl text-center border border-white/5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-white mb-1"
-  }, "\u5186\u76E4\u77F3"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-400"
-  }, "\u30C0\u30A4\u30E4\u3067\u8CFC\u5165", /*#__PURE__*/React.createElement("br", null), "\u65B0\u30E2\u30F3\u30B9\u30BF\u30FC\u89E3\u653E")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-3 rounded-2xl text-center border border-white/5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-white mb-1"
-  }, "\u30D6\u30EA\u30FC\u30C0\u30FC"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-400"
-  }, "\u30C0\u30A4\u30E4\u3067\u8CFC\u5165", /*#__PURE__*/React.createElement("br", null), "\u65B0\u30AB\u30FC\u30C9\u89E3\u653E")), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-3 rounded-2xl text-center border border-white/5"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] font-black text-white mb-1"
-  }, "\u30A2\u30A4\u30C6\u30E0"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[9px] text-slate-400"
-  }, "\u30C0\u30A4\u30E4\u3067\u8CFC\u5165", /*#__PURE__*/React.createElement("br", null), "\u30DE\u30B9\u30E2\u30F3\u306B\u4F7F\u3046"))), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl border border-white/5 mt-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] font-black text-white mb-1"
-  }, "\u30A2\u30A4\u30C6\u30E0"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-slate-400 leading-relaxed"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-bold"
-  }, "\u7D46\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u306E\u66F8"), ": \u4F7F\u7528\u6E08\u307F\u306E\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u3092\u3059\u3079\u3066\u672A\u4F7F\u7528\u306B\u623B\u3057\u307E\u3059(\u7D46\u30EC\u30D9\u30EB\u30FB\u7D46\u7D4C\u9A13\u5024\u306F\u305D\u306E\u307E\u307E)\u3002", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-bold"
-  }, "\u67D3\u8272\u3082\u3069\u304D"), ": \u898B\u305F\u76EE\u306E\u8272\u3092\u5909\u3048\u3089\u308C\u307E\u3059\u3002\u30E2\u30F3\u30B9\u30BF\u30FC\u306B\u3088\u3063\u3066\u306F\u4F53\u30FB\u76EE\u30FB\u53E3\u306A\u3069\u306E\u90E8\u4F4D\u3054\u3068\u306B\u5225\u3005\u306E\u8272\u3092\u9078\u3079\u3001\u30D7\u30EA\u30BB\u30C3\u30C827\u8272\u306B\u52A0\u3048\u3066\u30AB\u30B9\u30BF\u30E0\u30AB\u30E9\u30FC\u3082\u4F7F\u3048\u307E\u3059\u3002"))), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-cyan-300 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Info, {
-    size: 18
-  }), " \u30D9\u30FC\u30B9\u30E2\u30F3\u3068\u30DE\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u306F\u30E2\u30F3\u30B9\u30BF\u30FC\u7A2E\u306E\u57FA\u672C\u30C7\u30FC\u30BF\u3067\u3059\u3002\u30DE\u30B9\u30E2\u30F3\u306F\u30D7\u30EC\u30A4\u5F8C\u306B\u767B\u9332\u3057\u305F\u80B2\u6210\u500B\u4F53\u3067\u3001\u540D\u524D\u30FB\u7D46\u30FB\u5F37\u5316\u30FB\u8272\u30FB\u5408\u4F53\u5C65\u6B74\u3092\u500B\u5225\u306B\u6301\u3061\u307E\u3059\u3002\u3069\u3061\u3089\u306E\u4E00\u89A7\u3082HOME\u306E\u300CM/B\u7BA1\u7406\u300D\u304B\u3089\u958B\u3051\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-indigo-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Layers, {
-    size: 18
-  }), " M/B\u7BA1\u7406\u3068\u7DE8\u6210"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u65B0\u3057\u3044\u30E2\u30F3\u30B9\u30BF\u30FC\u3084\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u3092\u89E3\u653E\u3057\u3066\u3082\u3001\u6B21\u306E\u5468\u56DE\u3067\u5019\u88DC\u306B\u306A\u308B\u306E\u306F\u7DE8\u6210\u3067\u9078\u3093\u3060\u3082\u306E\u3060\u3051\u3067\u3059\u3002HOME\u306E\u300CM/B\u7BA1\u7406\u300D\u3067\u306F\u30D9\u30FC\u30B9\u30E2\u30F3\u4E00\u89A7\u3001\u30DE\u30B9\u30E2\u30F3\u4E00\u89A7\u3001\u30E2\u30F3\u30B9\u30BF\u30FC\u7DE8\u6210\u3001\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u7DE8\u6210\u3092\u5229\u7528\u3067\u304D\u307E\u3059\u3002\u7DE8\u6210\u3067\u306F\u30E2\u30F3\u30B9\u30BF\u30FC8\u4F53\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C96\u679A\u3092\u3061\u3087\u3046\u3069\u9078\u3073\u3001\u300C\u6C7A\u5B9A\u300D\u30DC\u30BF\u30F3\u3067\u78BA\u5B9A\u3057\u307E\u3059(\u6700\u521D\u304B\u3089\u89E3\u653E\u6E08\u307F\u306E8\u4F53\u30FB6\u679A\u306F\u7DE8\u6210\u6E08\u307F\u3067\u3059)\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-indigo-300 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Trophy, {
-    size: 18
-  }), " \u6700\u7D42\u30EA\u30B6\u30EB\u30C8"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "\u512A\u52DD\u30FB\u6557\u5317\u30FB\u30EA\u30BF\u30A4\u30A2\u3044\u305A\u308C\u304B\u3067\u30D7\u30EC\u30A4\u304C\u7D42\u4E86\u3059\u308B\u3068\u3001\u7372\u5F97\u3057\u305F\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u30FB\u7D46\u7D4C\u9A13\u5024\u3068\u3001WAVE\u3054\u3068\u306E\u7372\u5F97\u30B9\u30B3\u30A2/\u7D4C\u9A13\u5024/\u30C0\u30A4\u30E4\u306E\u5185\u8A33\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002\u3053\u306E\u753B\u9762\u304B\u3089\u52C7\u8005\u30E2\u30F3\u3092\u30DE\u30B9\u30E2\u30F3\u3068\u3057\u3066\u767B\u9332\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-amber-300 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Sparkles, {
-    size: 18
-  }), " \u66F4\u65B0\u5C65\u6B74"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed"
-  }, "HOME\u753B\u9762\u53F3\u4E0A\u306E\u300C\u66F4\u65B0\u5C65\u6B74\u300D\u30DC\u30BF\u30F3\u304B\u3089\u3001\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u5185\u5BB9\u3068\u4E0D\u5177\u5408\u60C5\u5831\u3092\u30BF\u30D6\u3067\u5207\u308A\u66FF\u3048\u3066\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002\u672A\u8AAD\u306E\u66F4\u65B0\u304C\u3042\u308B\u3068\u304D\u306FNEW\u30DE\u30FC\u30AF\u304C\u4ED8\u304D\u307E\u3059\u3002"))), helpTab === 'tips' && /*#__PURE__*/React.createElement("div", {
-    className: "space-y-5"
-  }, /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-teal-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Package, {
-    size: 18
-  }), " \u30B9\u30AD\u30C3\u30D7\u30C1\u30B1\u30C3\u30C8"), /*#__PURE__*/React.createElement("p", {
-    className: "text-[12px] text-slate-200 leading-relaxed mb-3"
-  }, "\u30D0\u30C8\u30EB\u306E\u96E3\u6613\u5EA6\u9078\u629E\u306B\u3042\u308B\u300C\u30B9\u30AD\u30C3\u30D7\u300D\u3067\u4F7F\u3044\u307E\u3059\u30021\u679A\u6D88\u8CBB\u3059\u308B\u3068\u3001\u305D\u306E\u96E3\u6613\u5EA6\u3092\u30DC\u30B9\u307E\u3067\u5012\u3057\u305F\u3068\u304D\u3068\u540C\u3058\u7D46\u7D4C\u9A13\u5024\u30FB\u30D6\u30EA\u30FC\u30C0\u30FC\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl space-y-2 mb-3"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[11px]"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400 font-bold"
-  }, "\u30B9\u30AD\u30C3\u30D7\u30C1\u30B1\u30C3\u30C8\u30FB\u5E8F:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-black"
-  }, "Normal")), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[11px]"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400 font-bold"
-  }, "\u30B9\u30AD\u30C3\u30D7\u30C1\u30B1\u30C3\u30C8\u30FB\u7834:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-black"
-  }, "Hard")), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[11px]"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400 font-bold"
-  }, "\u30B9\u30AD\u30C3\u30D7\u30C1\u30B1\u30C3\u30C8\u30FB\u6025:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-black"
-  }, "Expert"))), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-slate-400 leading-relaxed"
-  }, "\u30B9\u30B3\u30A2\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u30FB\u30AF\u30EA\u30A2\u56DE\u6570\u30FB\u30DF\u30C3\u30B7\u30E7\u30F3\u306E\u9032\u6357\u306B\u306F\u8A18\u9332\u3055\u308C\u307E\u305B\u3093\u3002\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u3082\u3067\u304D\u306A\u3044\u305F\u3081\u3001\u7D46\u7D4C\u9A13\u5024\u304C\u5165\u308B\u306E\u306F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u3067\u3059\u3002\u30ED\u30B0\u30A4\u30F3\u30DC\u30FC\u30CA\u30B9\u30FB\u30DF\u30C3\u30B7\u30E7\u30F3\u306E\u30B3\u30F3\u30D7\u30EA\u30FC\u30C8\u5831\u916C\u30FB\u30DE\u30FC\u30B1\u30C3\u30C8\u3067\u624B\u306B\u5165\u308A\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-orange-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Layers, {
-    size: 18
-  }), " \u8907\u6570\u679A\u540C\u6642\u4F7F\u7528\u306E\u89E3\u653E"), /*#__PURE__*/React.createElement("div", {
-    className: "bg-black/50 p-4 rounded-2xl space-y-2"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[11px]"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400 font-bold"
-  }, "\u540C\u66422\u679A:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-black"
-  }, "\u6700\u5927\u30AC\u30C3\u30C4120 \uFF0B \u5473\u65B92\u4F53")), /*#__PURE__*/React.createElement("div", {
-    className: "flex justify-between text-[11px]"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-slate-400 font-bold"
-  }, "\u540C\u66423\u679A:"), /*#__PURE__*/React.createElement("span", {
-    className: "text-white font-black"
-  }, "\u6700\u5927\u30AC\u30C3\u30C4180 \uFF0B \u5473\u65B93\u4F53")), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-amber-500 font-black italic pt-2 border-t border-white/5"
-  }, "\u203B\u30CF\u30E0\u306F\u52C7\u8005\u6642\u3001\u5E38\u306B\u4E0A\u9650\uFF0B1"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[10px] text-slate-400 font-bold pt-2 border-t border-white/5 leading-relaxed"
-  }, "\u203B\u540C\u3058\u30BF\u30FC\u30F3\u306B2\u679A\u76EE\u4EE5\u964D\u3067\u4F7F\u3063\u305F\u30AB\u30FC\u30C9\u306F\u3001\u30C0\u30E1\u30FC\u30B8\u3082\u30AC\u30FC\u30C9\u3082\u52B9\u679C\u304C\u534A\u5206\u306B\u306A\u308A\u307E\u3059\u3002\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u306F\u5BFE\u8C61\u5916\u3067\u3001\u4F55\u679A\u76EE\u306B\u4F7F\u3063\u3066\u3082\u52B9\u679C\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-indigo-400 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Activity, {
-    size: 18
-  }), " \u653B\u7565\u306E\u30D2\u30F3\u30C8"), /*#__PURE__*/React.createElement("ul", {
-    className: "text-[12px] text-slate-300 space-y-3 list-disc pl-5"
-  }, /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("span", {
-    className: "font-black text-white"
-  }, "\u9632\u5FA1\u306F\u6700\u5927\u306E\u653B\u6483"), ": \u6575\u306E\u5FC5\u6BBA\u6280\u306F\u5373\u6B7B\u7D1A\u3002\u89E3\u6790\u3092\u4F7F\u3044\u78BA\u5B9F\u306B\u9632\u5FA1\u3057\u307E\u3057\u3087\u3046\u3002"), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("span", {
-    className: "font-black text-white"
-  }, "\u518D\u751F\u306E\u5F37\u5316"), ": \u6559\u3048\u306B\u3088\u308A\u6BCE\u30BF\u30FC\u30F3\u306E\u300C\u518D\u751F\u30E9\u30A4\u30D5\u300D\u3092\u5897\u3084\u3059\u3068\u5F8C\u534A\u304C\u6709\u5229\u306B\u306A\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("span", {
-    className: "font-black text-white"
-  }, "\u52C7\u8005\u7279\u6027\u3092\u7406\u89E3\u3059\u308B"), ": 1\u4F53\u76EE\u306B\u9078\u3093\u3060\u30E2\u30F3\u30B9\u30BF\u30FC\u306E\u7279\u6027\u306F\u6700\u5F8C\u307E\u3067\u5F71\u97FF\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("span", {
-    className: "font-black text-white"
-  }, "\u30C7\u30FC\u30BF\u306E\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7"), ": \u30DB\u30FC\u30E0\u753B\u9762\u306E\u30A2\u30A4\u30B3\u30F3\u3092\u4F5C\u308A\u76F4\u3059\u3068\u9032\u884C\u72B6\u6CC1\u304C\u5F15\u304D\u7D99\u304C\u308C\u306A\u3044\u3053\u3068\u304C\u3042\u308A\u307E\u3059\u3002HOME\u306E\u300C\u8A2D\u5B9A\u300D\u5185\u306B\u3042\u308B\u300C\u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E\u300D\u3067\u5B9A\u671F\u7684\u306B\u30B3\u30FC\u30C9\u3092\u63A7\u3048\u3066\u304A\u304F\u3068\u5B89\u5FC3\u3067\u3059\u3002"))), /*#__PURE__*/React.createElement("section", {
-    className: "bg-slate-900/60 p-5 rounded-3xl border border-white/10 shadow-lg"
-  }, /*#__PURE__*/React.createElement("h3", {
-    className: "text-slate-200 font-black text-base mb-3 flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement(Settings, {
-    size: 18
-  }), " \u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3068\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[12px] text-slate-300 leading-relaxed space-y-2"
-  }, /*#__PURE__*/React.createElement("p", null, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u306FHOME\u4E0A\u90E8\u306E\u30D7\u30EC\u30A4\u30E4\u30FC\u60C5\u5831\u304B\u3089\u958B\u304D\u3001\u540D\u524D\u30FB\u30A2\u30A4\u30B3\u30F3\u30FB\u96E3\u6613\u5EA6\u5225\u8A18\u9332\u30FB\u6240\u6301\u30A2\u30A4\u30C6\u30E0\u3092\u78BA\u8A8D\u3067\u304D\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u30D8\u30EB\u30D7\u3001\u97F3\u91CF\u8A2D\u5B9A\u3001\u30C7\u30FC\u30BF\u5F15\u304D\u7D99\u304E\u3001\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B\u64CD\u4F5C\u306FHOME\u306E\u300C\u8A2D\u5B9A\u300D\u306B\u3042\u308A\u307E\u3059\u3002\u97F3\u91CF\u8A2D\u5B9A\u3067\u306FBGM\u3068SE\u3092\u500B\u5225\u306B\u8ABF\u6574\u3067\u304D\u3001\u5F15\u304D\u7D99\u304E\u30B3\u30FC\u30C9\u306F\u7AEF\u672B\u79FB\u884C\u3084\u30D0\u30C3\u30AF\u30A2\u30C3\u30D7\u306B\u4F7F\u3048\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("p", null, "\u66F4\u65B0\u5C65\u6B74\u306FHOME\u53F3\u4E0A\u306E\u72EC\u7ACB\u3057\u305F\u300C\u66F4\u65B0\u5C65\u6B74\u300D\u30DC\u30BF\u30F3\u304B\u3089\u78BA\u8A8D\u3057\u307E\u3059\u3002"))))), /*#__PURE__*/React.createElement("footer", {
-    className: "shrink-0 p-5 bg-slate-900 border-t border-white/10 text-center",
-    style: {
-      backgroundColor: '#0f172a'
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowHelp(false),
-    className: "w-full bg-white text-black py-4 rounded-2xl font-black text-sm uppercase shadow-2xl active:scale-95 transition-transform"
-  }, "\u308F\u304B\u3063\u305F\uFF01\u5192\u967A\u306B\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-    "aria-label": "",
-    onClick: () => {
-      const options = getDebugEnemyOptions(difficulty);
-      setDebugEnemyKey(options[0]?.key || null);
-      debugBattleRef.current = false;
-      setDebugBattle(false);
-      setDebugOutcome(null);
-      setShowHelp(false);
-      setGameState('DEBUG_SETTINGS');
-    },
-    className: "mt-7 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60"
-  }, "\uD83D\uDC8A"))), titleModal, showOfficialTitleConfirm && /*#__PURE__*/React.createElement("div", {
+  }, pendingReward ? '決定する' : '強化を選択')), showHelp && (() => {
+    const cat = helpCatId ? helpCategoryById(helpCatId) : null;
+    const topic = cat && helpTopicId ? helpTopicById(cat.id, helpTopicId) : null;
+    const accent = cat ? cat.color : '#34d399';
+    const assistantLine = topic ? topic.assistant : cat ? cat.assistant : HELP_GUIDE_HELLO;
+    const goBack = () => {
+      if (topic) setHelpTopicId(null);else if (cat) setHelpCatId(null);else setShowHelp(false);
+    };
+    const backLabel = topic ? cat.title : cat ? 'ヘルプへ' : '閉じる';
+    const headEmoji = topic ? topic.emoji : cat ? cat.emoji : '📚';
+    const headTitle = topic ? topic.title : cat ? cat.title : 'ヘルプ（攻略情報局）';
+    const topicIndex = topic ? cat.topics.findIndex(t => t.id === topic.id) : -1;
+    const nextTopic = topicIndex >= 0 ? cat.topics[topicIndex + 1] : null;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 z-[99999] flex flex-col",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: '#000000',
+        zIndex: 99999
+      }
+    }, /*#__PURE__*/React.createElement("header", {
+      className: "shrink-0 px-3 py-3 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl",
+      style: {
+        backgroundColor: '#0f172a',
+        paddingTop: 'calc(0.75rem + env(safe-area-inset-top))'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: goBack,
+      className: "shrink-0 max-w-[34%] flex items-center gap-0.5 text-[11px] font-black text-sky-300 active:scale-95"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 16
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "truncate"
+    }, backLabel)), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-w-0 flex items-center justify-center gap-1.5"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-base shrink-0"
+    }, headEmoji), /*#__PURE__*/React.createElement("h2", {
+      className: "text-[13px] font-black truncate",
+      style: {
+        color: accent
+      }
+    }, headTitle)), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setHelpAssistantOpen(v => !v),
+      "aria-label": "\u52A9\u624B\u306E\u3072\u3068\u3053\u3068\u3092\u958B\u304F",
+      className: `shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center active:scale-90 ${helpAssistantOpen ? '' : 'opacity-50'}`,
+      style: {
+        borderColor: accent,
+        backgroundColor: 'rgba(0,0,0,0.4)'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-lg leading-none"
+    }, HELP_GUIDE_ASSISTANT.emoji))), helpAssistantOpen && /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 px-3 py-2.5 border-b border-white/5 flex items-start gap-2.5",
+      style: {
+        backgroundColor: 'rgba(15,23,42,0.75)'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 w-8 h-8 rounded-full border flex items-center justify-center overflow-hidden",
+      style: {
+        borderColor: accent,
+        backgroundColor: 'rgba(0,0,0,0.5)'
+      }
+    }, HELP_GUIDE_ASSISTANT.iconUrl ? /*#__PURE__*/React.createElement("img", {
+      src: HELP_GUIDE_ASSISTANT.iconUrl,
+      alt: HELP_GUIDE_ASSISTANT.name,
+      className: "w-full h-full object-cover"
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "text-base leading-none"
+    }, HELP_GUIDE_ASSISTANT.emoji)), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-black tracking-widest",
+      style: {
+        color: accent
+      }
+    }, HELP_GUIDE_ASSISTANT.name), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-slate-200 leading-relaxed"
+    }, assistantLine))), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black",
+      style: {
+        backgroundColor: '#000000'
+      }
+    }, !cat && /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2.5"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-[11px] text-slate-400 leading-relaxed mb-3"
+    }, HELP_GUIDE_INTRO), HELP_GUIDE.length === 0 && /*#__PURE__*/React.createElement("div", {
+      className: "text-center text-[11px] text-slate-500 font-bold py-10 leading-relaxed"
+    }, "\u30D8\u30EB\u30D7\u306E\u5185\u5BB9\u3092\u8AAD\u307F\u8FBC\u3081\u307E\u305B\u3093\u3067\u3057\u305F\u3002", /*#__PURE__*/React.createElement("br", null), "\u901A\u4FE1\u74B0\u5883\u3092\u78BA\u8A8D\u3057\u3066\u3001\u30DA\u30FC\u30B8\u3092\u518D\u8AAD\u307F\u8FBC\u307F\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), HELP_GUIDE.map(c => /*#__PURE__*/React.createElement("button", {
+      key: c.id,
+      onClick: () => {
+        setHelpCatId(c.id);
+        setHelpTopicId(null);
+      },
+      className: "w-full rounded-2xl border-2 px-4 py-3.5 flex items-center gap-3 text-left active:scale-95",
+      style: {
+        borderColor: c.color,
+        backgroundColor: 'rgba(15,23,42,0.85)'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 text-base leading-none"
+    }, c.emoji, c.subEmoji), /*#__PURE__*/React.createElement("span", {
+      className: "flex-1 min-w-0"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[13px] font-black leading-tight",
+      style: {
+        color: c.color
+      }
+    }, c.title), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[10px] text-slate-400 leading-tight mt-0.5"
+    }, c.summary)), /*#__PURE__*/React.createElement(ChevronRight, {
+      size: 16,
+      className: "shrink-0 text-slate-500"
+    })))), cat && !topic && /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-[11px] text-slate-400 leading-relaxed mb-3"
+    }, cat.summary), cat.topics.map(t => /*#__PURE__*/React.createElement("button", {
+      key: t.id,
+      onClick: () => {
+        setHelpTopicId(t.id);
+      },
+      className: "w-full rounded-2xl border px-4 py-3 flex items-center gap-3 text-left active:scale-95",
+      style: {
+        borderColor: `${cat.color}55`,
+        backgroundColor: 'rgba(15,23,42,0.7)'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 text-base leading-none"
+    }, t.emoji), /*#__PURE__*/React.createElement("span", {
+      className: "flex-1 min-w-0 text-[12px] font-black text-white leading-tight"
+    }, t.title), /*#__PURE__*/React.createElement(ChevronRight, {
+      size: 16,
+      className: "shrink-0 text-slate-500"
+    })))), cat && topic && /*#__PURE__*/React.createElement("div", {
+      className: "space-y-3.5 pb-2"
+    }, topic.blocks.map((b, i) => {
+      if (b.t === 'note') return /*#__PURE__*/React.createElement("div", {
+        key: i,
+        className: "rounded-2xl p-4 border",
+        style: {
+          borderColor: `${cat.color}55`,
+          backgroundColor: 'rgba(0,0,0,0.5)'
+        }
+      }, b.title && /*#__PURE__*/React.createElement("div", {
+        className: "text-[11px] font-black text-white mb-1"
+      }, b.title), /*#__PURE__*/React.createElement("div", {
+        className: "text-[12px] text-slate-300 leading-relaxed"
+      }, b.text));
+      if (b.t === 'list') return /*#__PURE__*/React.createElement("ul", {
+        key: i,
+        className: "text-[12px] text-slate-300 leading-relaxed space-y-2 list-disc pl-5"
+      }, b.items.map((x, j) => /*#__PURE__*/React.createElement("li", {
+        key: j
+      }, x)));
+      if (b.t === 'steps') return /*#__PURE__*/React.createElement("div", {
+        key: i,
+        className: "space-y-2.5"
+      }, b.items.map((x, j) => /*#__PURE__*/React.createElement("div", {
+        key: j,
+        className: "flex items-start gap-3"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black text-black",
+        style: {
+          backgroundColor: cat.color
+        }
+      }, j + 1), /*#__PURE__*/React.createElement("span", {
+        className: "text-[12px] text-slate-300 leading-relaxed pt-0.5"
+      }, x))));
+      if (b.t === 'kv') return /*#__PURE__*/React.createElement("div", {
+        key: i,
+        className: "rounded-2xl bg-black/50 border border-white/5 overflow-hidden"
+      }, b.rows.map((r, j) => /*#__PURE__*/React.createElement("div", {
+        key: j,
+        className: `flex gap-3 px-4 py-2.5 ${j > 0 ? 'border-t border-white/5' : ''}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight"
+      }, r[0]), /*#__PURE__*/React.createElement("span", {
+        className: "flex-1 text-[11px] text-white leading-relaxed"
+      }, r[1]))));
+      return /*#__PURE__*/React.createElement("p", {
+        key: i,
+        className: "text-[12px] text-slate-200 leading-relaxed"
+      }, b.text);
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "pt-1 flex gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setHelpTopicId(null),
+      className: "flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95"
+    }, "\u9805\u76EE\u4E00\u89A7\u3078"), nextTopic && /*#__PURE__*/React.createElement("button", {
+      onClick: () => setHelpTopicId(nextTopic.id),
+      className: "flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2",
+      style: {
+        backgroundColor: cat.color
+      }
+    }, "\u6B21: ", nextTopic.title)))), /*#__PURE__*/React.createElement("footer", {
+      className: "shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center",
+      style: {
+        backgroundColor: '#0f172a',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowHelp(false),
+      className: "w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm shadow-2xl active:scale-95"
+    }, "\u308F\u304B\u3063\u305F\uFF01\u5192\u967A\u306B\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+      "aria-label": "",
+      onClick: () => {
+        const options = getDebugEnemyOptions(difficulty);
+        setDebugEnemyKey(options[0]?.key || null);
+        debugBattleRef.current = false;
+        setDebugBattle(false);
+        setDebugOutcome(null);
+        setShowHelp(false);
+        setGameState('DEBUG_SETTINGS');
+      },
+      className: "mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60"
+    }, "\uD83D\uDC8A")));
+  })(), titleModal, showOfficialTitleConfirm && /*#__PURE__*/React.createElement("div", {
     className: "fixed inset-0 flex items-center justify-center p-6",
     style: {
       position: 'fixed',
@@ -18643,7 +18328,7 @@ function MonsterHeroGame() {
     onClick: () => runResultActionOnce(() => {
       returnToHome();
       setGameState('SETTINGS');
-      setShowHelp(true);
+      openHelp();
     }),
     disabled: resultActionPending,
     className: "w-full bg-slate-900 border border-white/10 text-slate-400 py-3.5 rounded-2xl font-black disabled:opacity-50"

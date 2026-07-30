@@ -95,7 +95,9 @@ check('タップとスワイプでカード効果の表示を切り替えられ�
 check('スワイプ経由の選択はパネルを出さない', has('selectCardAt(cardIndex, false);'));
 const dragBlock = source.slice(source.indexOf('const dragAssignToSlot'), source.indexOf('const isBreederCard'));
 check('スワイプで置いたときにパネルを出さない', !dragBlock.includes('setFocusedCard(c)'), `${(dragBlock.match(/setFocusedCard\(null\)/g)||[]).length}か所でパネルを閉じる`);
-check('ヘルプに2枚目以降の説明がある', has('2枚目以降で使ったカードは、ダメージもガードも効果が半分'));
+// ヘルプの本文は data/help.js にデータとして持っている
+const helpSrc = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
+check('ヘルプに2枚目以降の説明がある', helpSrc.includes('2枚目以降で使ったカードは、ダメージもガードの軽減量も固有技の効果も半分になります'));
 
 // --- ② かどみうむ ---
 const cadCtx = {};
