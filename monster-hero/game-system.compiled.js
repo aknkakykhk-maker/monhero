@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bc6cfb3519e1a568
+// source-sha256: e8529c88f3f9c216
 // ============================================================
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
@@ -123,7 +123,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-30 20:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-30 21:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4810,6 +4810,14 @@ function MonsterHeroGame() {
   const [breederRankingPool, setBreederRankingPool] = useState({});
   // 起動時の先読みと画面を開いた時の取得を共有し、同じ難易度への二重通信を防ぐ。
   const rankingRequestsRef = useRef(new Map());
+  // 前回表示したランキングを端末に残しておき、次に開いたときは通信を待たずにそのまま出す。
+  // (取得は裏で走らせ、返ってきたら差し替える)
+  const RANKING_CACHE_KEY = 'mh_ranking_cache';
+  const rankingCacheRef = useRef({
+    score: {},
+    breeder: null,
+    bond: null
+  });
   const rankingFetchedAtRef = useRef(new Map());
   const rankingLatestRequestRef = useRef(new Map());
   const rankingRequestSequenceRef = useRef(0);
@@ -5295,6 +5303,68 @@ function MonsterHeroGame() {
     fetched: false
   };
   const rankingStatus = key => rankingStatusByKey[key] || emptyRankingStatus;
+  const saveRankingCache = patch => {
+    const current = rankingCacheRef.current || {
+      score: {},
+      breeder: null,
+      bond: null
+    };
+    const next = {
+      ...current,
+      ...patch
+    };
+    if (patch.score) next.score = {
+      ...(current.score || {}),
+      ...patch.score
+    };
+    rankingCacheRef.current = next;
+    // 保存の失敗(容量超過など)は表示に影響しないので握りつぶす
+    try {
+      storeSet(RANKING_CACHE_KEY, {
+        ...next,
+        at: Date.now()
+      }, false);
+    } catch {}
+  };
+  // 端末に残っている前回の内容を、通信を待たずに画面へ出す
+  const hydrateRankingCache = cached => {
+    if (!cached || typeof cached !== 'object') return;
+    const score = cached.score && typeof cached.score === 'object' ? cached.score : {};
+    const breeder = Array.isArray(cached.breeder) ? cached.breeder : null;
+    const bond = Array.isArray(cached.bond) ? cached.bond : null;
+    rankingCacheRef.current = {
+      score,
+      breeder,
+      bond
+    };
+    const cachedStatus = {
+      loading: false,
+      refreshing: false,
+      error: null,
+      fetched: true
+    };
+    const statusPatch = {};
+    Object.entries(score).forEach(([diff, rows]) => {
+      if (Array.isArray(rows) && rows.length) statusPatch[`score:${diff}`] = cachedStatus;
+    });
+    if (Object.keys(score).length) setLocalRankings(prev => ({
+      ...score,
+      ...prev
+    }));
+    if (breeder && breeder.length) {
+      setBreederRankingPool(prev => Object.keys(prev || {}).length ? prev : {
+        all: breeder
+      });
+      statusPatch['breeder:all'] = cachedStatus;
+    }
+    if (bond && bond.length) setBondRankingData(prev => prev ? prev : {
+      all: bond
+    });
+    if (Object.keys(statusPatch).length) setRankingStatusByKey(prev => ({
+      ...statusPatch,
+      ...prev
+    }));
+  };
   const beginRankingStatus = key => {
     const generation = (rankingStatusGenerationRef.current.get(key) || 0) + 1;
     rankingStatusGenerationRef.current.set(key, generation);
@@ -5450,6 +5520,11 @@ function MonsterHeroGame() {
             all: entries
           });
           rankingFetchedAtRef.current.set(cacheKey, Date.now());
+          saveRankingCache(levelKind === 'bond' ? {
+            bond: entries
+          } : {
+            breeder: entries
+          });
         }
         if (statusKey) finishRankingStatus(statusKey, generation, entries.length ? null : error, entries.length > 0);
         if (levelKind === 'bond') {
@@ -5611,6 +5686,14 @@ function MonsterHeroGame() {
               next[key] = byDiff[key];
             });
             return next;
+          });
+          // 次に開いたとき通信を待たずに出せるよう、取得できた内容を端末へ残す
+          const cachedScore = {};
+          Object.keys(byDiff).forEach(key => {
+            if (sourceByDiff[key] === 'global' && byDiff[key]?.length) cachedScore[key] = byDiff[key];
+          });
+          if (Object.keys(cachedScore).length) saveRankingCache({
+            score: cachedScore
           });
         }
         rankingFetchedAtRef.current.set(requestKey, Date.now());
@@ -6366,9 +6449,16 @@ function MonsterHeroGame() {
       // 以前は全難易度(9件)をまとめて取りに行っていたため、起動直後の通信が混み合い、
       // どのランキングも表示までとても待たされていた。他の難易度は開いたときに取る。
       // 画面を先読み中に開いてもloadRankings内で同じ通信を共有するため、二重取得にならない。
-      setTimeout(() => loadRankings('Normal').catch(e => {
-        console.error('[ranking] background preload failed:', e && e.message ? e.message : e);
-      }), 0);
+      // まず前回の内容をそのまま画面へ入れておく。これで開いた瞬間から一覧が出る
+      try {
+        hydrateRankingCache(await storeGet(RANKING_CACHE_KEY, null, false));
+      } catch {}
+      // そのうえで最新を裏で取り直す。スコア→ブリーダーLv→絆Lvの順に少しずつ始めて、
+      // 起動直後の通信が一度に混み合わないようにする
+      const preload = (label, run) => run().catch(e => console.error(`[ranking] background preload failed (${label}):`, e && e.message ? e.message : e));
+      setTimeout(() => preload('score', () => loadRankings('Normal')), 0);
+      setTimeout(() => preload('breeder', () => loadRankings(null, true, false, 'breeder')), 1200);
+      setTimeout(() => preload('bond', () => loadRankings(null, true, false, 'bond')), 2400);
     })();
   }, [loadRankings]);
 
