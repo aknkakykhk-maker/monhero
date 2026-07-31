@@ -132,8 +132,8 @@ check('カードに自己ベスト・到達WAVE・倍率・全WAVE詳細が残�
 // クイックはスコアを競わないので、自己ベストスコアもスコア倍率も出さない
 check('クイックはスコア関連を出さない',
   has("const rateCells=(setting)=>quick") && has("? [['敵強度',`×${setting.power}`,false],['経験値',bonusLabel(setting.score),true],['ダイヤ',bonusLabel(setting.gold),true]]")
-    && has(': <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5" style={recordBoxStyle}><small className="text-[8px] text-slate-400 font-black">自己ベストスコア</small>'));
-check('クイックでも最高到達WAVEは出す', has('<small className="text-[9px] text-slate-400 font-black">最高到達</small>'));
+    && has("{ label:'自己ベストスコア', value:`${(highScores[key]||0).toLocaleString()} pt`"));
+check('クイックでも最高到達WAVEは出す', has("{ label:'最高到達WAVE', value:`WAVE ${waveOf(key)}`"));
 // クイックはスコアを競わないので、バトル中もリザルトもスコアを出さない
 check('バトル中もクイックはスコアを出さない', has('{!isQuickMode(runMode)&&<div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter mr-1"><Award size={10}/> {score.toLocaleString()}</div>}'));
 check('最終リザルト3画面のスコア枠をクイックでは出さない',
@@ -153,12 +153,21 @@ check('倍率の枠は3つで1行に収める', has('<div className="grid grid-c
 check('ランキングボタンはチャレンジのときだけ出す', has("{!quick&&<button onClick={()=>{setBattleMenuTab('ranking')") && has('🏆 ランキングを見る（チャレンジモード）'));
 // 横に長すぎたので難易度カードと同じ幅に揃える。クイックでも同じ高さの場所を空け、
 // ランキングボタンの有無で助手コメントの位置がずれないようにする
-check('ランキングボタンは難易度カードと同じ幅', has('className="w-[82%] min-h-[40px] rounded-2xl bg-slate-800 border border-indigo-400/40'));
-check('助手コメントの位置がモードでずれない', has('<div className="shrink-0 flex justify-center min-h-[40px] mb-1.5">'));
+check('ランキングボタンは難易度カードと同じ幅', has('className="w-[82%] h-10 rounded-2xl bg-slate-800 border border-indigo-400/40'));
+// 最低の高さ(min-h)ではなく決め打ちの高さ(h-10)にする。ボタンの中身によっては
+// min-hを超えて伸びてしまい、クイック側の空き場所とずれるため
+check('助手コメントの位置がモードでずれない', has('<div className="shrink-0 flex justify-center h-10 mb-1.5">'));
 // 難易度カード自体の高さもモードでそろえる。記録の枠(チャレンジ3行/クイック1行)と
 // 倍率の下の補足行が、モードによって高さを変える原因だった
-check('記録の枠はモードによらず同じ高さ',
-  has('const recordBoxStyle={minHeight:\'58px\'};') && count('style={recordBoxStyle}') === 2, `${count('style={recordBoxStyle}')}か所`);
+// 高さを数値で指定してそろえる方法は、端末のフォントで1行の高さが変わるため合いきらなかった。
+// 「見出し・大きい値・補足」の3行構成をモードで共通にして、構造から同じ高さになるようにする
+check('記録の枠はモードによらず同じ行構成',
+  has('const recordBox=(key)=>quick') && count('<b className={`block text-right text-base leading-tight ${rec.valueColor}`}>') === 1
+    && !has('recordBoxStyle') && !has('minHeight:\'58px\''));
+check('記録の枠の見出し・値・補足がすべて1行ずつある',
+  has('<small className="block text-[8px] text-slate-400 font-black">{rec.label}</small>')
+    && has('<b className={`block text-right text-base leading-tight ${rec.valueColor}`}>{rec.value}</b>')
+    && has('<span className="block text-right text-[9px] text-amber-300">{rec.sub}</span>'));
 check('倍率の下の補足行はどちらのモードでも出す',
   has("const noteText=quick?'経験値・ダイヤのみ1.5倍':'スコアがランキングに登録される';")
     && has('style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div>')

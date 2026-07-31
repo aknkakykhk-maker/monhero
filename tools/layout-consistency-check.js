@@ -40,8 +40,11 @@ check('スキップが無い難易度でも同じ高さの行を出す',
   has("if(!tid)return(<div className=\"min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap\">この難易度はスキップできません</div>);"));
 check('スキップ行を条件付きで丸ごと消していない', !has('{SKIP_TICKETS[key]&&(()=>{'));
 // モード(チャレンジ／クイック)を切り替えてもカードの高さが変わらないようにする
-check('記録の枠は行数が違ってもモードで同じ高さ',
-  has("const recordBoxStyle={minHeight:'58px'};") && count('style={recordBoxStyle}') === 2, `${count('style={recordBoxStyle}')}か所`);
+// 高さを数値で指定するのではなく、モードで同じ行構成にして高さをそろえる
+// (端末のフォントによって1行の高さが変わるため、数値指定では合いきらなかった)
+check('記録の枠はモードで同じ行構成', has('const recordBox=(key)=>quick') && !has('recordBoxStyle'));
+check('ランキングボタンの場所は決め打ちの高さにする',
+  has('<div className="shrink-0 flex justify-center h-10 mb-1.5">') && has('className="w-[82%] h-10 rounded-2xl'));
 check('倍率の下の補足行はクイック限定にしない',
   has('>{noteText}</div>') && !has('{quick&&<div className="mt-1 rounded-xl border'));
 
