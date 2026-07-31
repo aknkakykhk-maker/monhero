@@ -106,17 +106,19 @@ check('演出はタップで送れて一定時間で自動終了する',
 check('自動送りとタップが重なっても1回だけ進む', has('if (doneRef.current) return; doneRef.current = true; onDone();') && has("if (quickAdvanceRef.current === 'growth') return;"));
 check('モードのタブがある', has('{BATTLE_MODES.map(mode=>{') && has('setBattleMode(mode.id);setBattleMenuTab(\'difficulty\');'));
 check('タブの横に説明の「？」がある', has('aria-label={`${mode.label}の説明`}') && has('setModeInfoId(mode.id)'));
+// 説明の各項目は [アイコン, 見出し, 本文] の3つ組
 check('モード説明に必要な項目がそろっている',
-  m.BATTLE_MODES.every(mode => mode.points.length >= 6 && mode.points.every(p => p.length === 2 && p[0] && p[1])));
+  m.BATTLE_MODES.every(mode => mode.points.length >= 6 && mode.points.every(p => p.length === 3 && p[0] && p[1] && p[2])));
 check('クイックの説明に自動成長と1.5倍がある',
-  m.battleModeInfo('quick').points.some(p => p[1].includes('10%')) && m.battleModeInfo('quick').points.some(p => p[0].includes('1.5倍')));
-check('チャレンジの説明にランキング対象と書いてある', m.battleModeInfo('challenge').points[0][0] === 'ランキング対象');
+  m.battleModeInfo('quick').points.some(p => p[2].includes('10%')) && m.battleModeInfo('quick').points.some(p => p[1].includes('1.5倍')));
+check('チャレンジの説明にランキング対象と書いてある', m.battleModeInfo('challenge').points[0][1] === 'ランキング対象');
+check('説明の見出しにアイコンが付く', has('{mode.points.map(([icon,title,text])=>(') && has('{mode.label}とは？'));
 check('モードを変えても選択中の難易度は変えない', !/setBattleMode\(mode\.id\);[^}]*setDifficulty/.test(source));
 check('横スライドの難易度選択を維持している', has('snap-x snap-mandatory') && has("touchAction:'pan-x pinch-zoom'") && has('前の難易度') && has('次の難易度'));
 check('難易度カードからWAVE1の敵情報を外した', !has('createBattleEnemy(1,key)') && !has('<small className="text-amber-300 font-black">WAVE 1</small>'));
 check('カードに自己ベスト・到達WAVE・倍率・全WAVE詳細が残っている',
-  has('MY HIGH SCORE') && has('最高到達 WAVE') && has("['敵強度',`×${setting.power}`,false]") && has('全WAVE詳細') && has('この難易度で挑戦'));
-check('クイックは経験値・ダイヤだけ1.5倍と分かる表示', has('経験値とダイヤだけ1.5倍（スコア倍率は難易度どおり）') && has("['スコア',`×${setting.score}`,false]"));
+  has('自己ベストスコア') && has('最高到達 WAVE') && has("['敵強度',`×${setting.power}`,false]") && has('全WAVE詳細') && has('この難易度で挑戦'));
+check('クイックは経験値・ダイヤだけ1.5倍と分かる表示', has('経験値とダイヤだけ1.5倍（スコア倍率は難易度どおり）') && has("['スコア倍率',`×${setting.score}`,false]"));
 check('ランキングボタンはチャレンジのときだけ出す', has('{!quick&&<button onClick={()=>{setBattleMenuTab(\'ranking\')') && has('🏆 ランキングを見る（チャレンジモード）'));
 check('カードの下はランキング→助手コメントの順', source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf("scene={quick?'battleQuick':'battleChallenge'}"));
 check('助手コメントは既存の共通UIを使う', has("<AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'}") && assistantsSrc.includes('battleChallenge:') && assistantsSrc.includes('battleQuick:'));

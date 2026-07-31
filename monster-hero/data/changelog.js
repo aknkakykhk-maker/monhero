@@ -17,7 +17,7 @@
 //   'known'          … 判明済み(未修正)
 const CHANGELOG = [
   {
-    date: "2026-07-31 11:45",
+    date: "2026-07-31 11:49",
     type: "update",
     title: "新モード「クイックモード」を追加しました",
     items: [

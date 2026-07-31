@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 11:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 11:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -124,26 +124,26 @@ const BATTLE_MODES = [
     id: BATTLE_MODE_CHALLENGE, label: 'チャレンジモード', short: 'チャレンジ', emoji: '🏆', color: '#818cf8',
     tagline: 'じっくり攻略してランキングを狙う',
     points: [
-      ['ランキング対象', 'このモードのスコアはランキングに反映されます'],
-      ['強化フェーズあり', '通常どおり強化フェーズが発生し、強化内容を選びながら戦えます'],
-      ['育成と攻略の両立', '戦略的に強くなりながら、最後までの到達を目指します'],
-      ['伴モン加入・マスモン登録あり', '伴モンの加入やマスモンの登録ができます'],
-      ['通常報酬', '経験値・ダイヤ・スコアの倍率は難易度の設定どおりです'],
-      ['おすすめのプレイスタイル', 'じっくり攻略しながら、ランキング上位や自己ベスト更新を目指したい人向けです'],
+      ['🏆', 'ランキング対象', 'このモードのスコアはランキングに反映されます'],
+      ['📈', '強化フェーズあり', '通常どおり強化フェーズが発生し、強化内容を選びながら戦えます'],
+      ['🛡️', '育成と攻略の両立', '戦略的に強くなりながら、最後までの到達を目指します'],
+      ['🤝', '供モン加入・マスモン登録あり', '供モンの加入やマスモンの登録ができます'],
+      ['💎', '通常報酬', '経験値・ダイヤ・スコアの倍率は難易度の設定どおりです'],
+      ['🎯', 'おすすめのプレイスタイル', 'じっくり攻略しながら、ランキング上位や自己ベスト更新を目指したい人向けです'],
     ],
   },
   {
     id: BATTLE_MODE_QUICK, label: 'クイックモード', short: 'クイック', emoji: '⚡', color: '#2dd4bf',
     tagline: 'テンポ重視。WAVEごとに自動で強くなる',
     points: [
-      ['ランキング対象外', 'このモードのスコアはランキングに反映されません'],
-      ['強化フェーズなし', '通常の強化選択を行わず、テンポよく進行します'],
-      ['WAVEごとに自動成長', '味方全員の全ステータスが10%上昇し、ライフとガッツが全回復します'],
-      ['難易度は高め', '強化内容を選べないため、チャレンジモードとは異なる難しさがあります'],
-      ['伴モン加入あり', '伴モン加入時は、味方の誰かの固有技がランダムで1上昇します'],
-      ['マスモン登録あり', 'クイックモードで完成したモンスターも登録できます'],
-      ['経験値・ダイヤ1.5倍', '獲得できる経験値とダイヤが1.5倍になります（スコア倍率は難易度どおりです）'],
-      ['おすすめのプレイスタイル', 'テンポよく育成したいときや、自動成長だけでどこまで進めるか腕試ししたい人向けです'],
+      ['🚫', 'ランキング対象外', 'このモードのスコアはランキングに反映されません'],
+      ['⚔️', '強化フェーズなし', '通常の強化選択を行わず、テンポよく進行します'],
+      ['📈', 'WAVEごとに自動成長', '味方全員の全ステータスが10%上昇し、ライフとガッツが全回復します'],
+      ['👹', '難易度は高め', '強化内容を選べないため、チャレンジモードとは異なる難しさがあります'],
+      ['🤝', '供モン加入あり', '供モン加入時は、味方の誰かの固有技がランダムで1上昇します'],
+      ['⭐', 'マスモン登録あり', 'クイックモードで完成したモンスターも登録できます'],
+      ['💎', '経験値・ダイヤ1.5倍', '獲得できる経験値とダイヤが1.5倍になります（スコア倍率は難易度どおりです）'],
+      ['🎯', 'おすすめのプレイスタイル', 'テンポよく育成したいときや、自動成長だけでどこまで進めるか腕試ししたい人向けです'],
     ],
   },
 ];
@@ -2515,7 +2515,7 @@ function MonsterHeroGame() {
   const [totalAllDamage, setTotalAllDamage] = useState(0); // cumulative damage across all waves
   const [totalRecoveryDelta, setTotalRecoveryDelta] = useState(0); // cumulative recovery-rate correction across all waves
   const [waveResult, setWaveResult] = useState(null);
-  // クイックモードの自動成長・伴モン加入の簡易表示。どちらもタップか一定時間で次へ進む
+  // クイックモードの自動成長・供モン加入の簡易表示。どちらもタップか一定時間で次へ進む
   const [quickGrowth, setQuickGrowth] = useState(null); // { stats:[{label,before,after}], nextWave }
   const [quickJoin, setQuickJoin] = useState(null);     // { name, stats:[...], unique:{monName,skillName,before,after} }
   const quickAdvanceRef = useRef(null); // 連打・自動送りの二重実行を防ぐ
@@ -5581,7 +5581,7 @@ function MonsterHeroGame() {
     Audio_.se.levelUp();
     setGameState('QUICK_GROWTH');
   };
-  // 自動成長の表示を閉じて次へ進む。伴モンが合流するWAVEなら選択画面へ、それ以外は次のWAVEへ
+  // 自動成長の表示を閉じて次へ進む。供モンが合流するWAVEなら選択画面へ、それ以外は次のWAVEへ
   const finishQuickGrowth = () => {
     if (quickAdvanceRef.current === 'growth') return;
     quickAdvanceRef.current = 'growth';
@@ -5598,7 +5598,7 @@ function MonsterHeroGame() {
     }
   };
 
-  // ===== クイックモード: 伴モン加入時の固有技アップ =====
+  // ===== クイックモード: 供モン加入時の固有技アップ =====
   // 味方の誰か1体をランダムに選び、その固有技レベルを1上げる。
   // 上限(MAX_UNIQUE_SKILL_LEVEL)に達している技は抽選から外し、上げられる技が無ければ何もしない。
   const rollQuickUniqueUpgrade = (uniques) => {
@@ -5616,7 +5616,7 @@ function MonsterHeroGame() {
       before, after,
     };
   };
-  // 伴モン加入の簡易表示を閉じて次のWAVEへ進む
+  // 供モン加入の簡易表示を閉じて次のWAVEへ進む
   const finishQuickJoin = () => {
     if (quickAdvanceRef.current === 'join') return;
     quickAdvanceRef.current = 'join';
@@ -6299,9 +6299,11 @@ function MonsterHeroGame() {
             {/* モードのタブ。各モード名の横の「？」で説明を開く */}
             <div className="grid grid-cols-2 gap-1.5 mb-1 shrink-0 rounded-xl bg-slate-900/60 p-1 border border-white/5">
               {BATTLE_MODES.map(mode=>{const on=battleMode===mode.id&&battleMenuTab==='difficulty';return(
-                <div key={mode.id} className="flex items-center gap-1">
-                  <button onClick={()=>{setBattleMode(mode.id);setBattleMenuTab('difficulty');}} className={`flex-1 min-w-0 py-1.5 rounded-lg text-[11px] font-black transition-all truncate ${on?'text-white':'bg-slate-950/70 text-slate-400'}`} style={on?{backgroundColor:mode.color,color:'#0f172a',boxShadow:`0 0 18px ${mode.color}66`}:undefined}>{mode.emoji} {mode.label}</button>
-                  <button onClick={()=>setModeInfoId(mode.id)} aria-label={`${mode.label}の説明`} className="shrink-0 w-7 h-7 rounded-lg bg-slate-800 text-slate-200 text-[11px] font-black active:scale-90">？</button>
+                <div key={mode.id} onClick={()=>{setBattleMode(mode.id);setBattleMenuTab('difficulty');}} role="button" tabIndex={0} aria-label={`${mode.label}に切り替え`}
+                     className={`flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-lg transition-all min-w-0 ${on?'':'bg-slate-950/70'}`}
+                     style={on?{backgroundColor:mode.color,boxShadow:`0 0 18px ${mode.color}66`}:undefined}>
+                  <span className={`min-w-0 truncate text-[11px] font-black ${on?'':'text-slate-400'}`} style={on?{color:'#0f172a'}:undefined}>{mode.label}</span>
+                  <button onClick={e=>{e.stopPropagation();setModeInfoId(mode.id);}} aria-label={`${mode.label}の説明`} className={`shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black active:scale-90 ${on?'':'border-slate-500 text-slate-300'}`} style={on?{borderColor:'#0f172a',color:'#0f172a'}:undefined}>？</button>
                 </div>
               );})}
             </div>
@@ -6323,10 +6325,10 @@ function MonsterHeroGame() {
               )}<div className="relative shrink-0"><button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button><div ref={difficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==safeDifficulty)setDifficulty(difficulties[best][0]);}} className="flex items-start gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
               {/* 難易度カード。WAVE1の敵情報は「全WAVE詳細」で見られるためカードには出さず、
                   そのぶんカードを縦に縮めて下のランキングボタンと助手コメントの場所を空けている */}
-              {difficulties.map(([key,setting])=>{const active=key===safeDifficulty;return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[28px] border-2 px-3.5 py-3 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className="text-center text-[8px] tracking-[.2em] font-black" style={{color:mode.color}}>{mode.emoji} {mode.label}</div><h3 className="text-center text-xl font-black mt-0.5" style={{color:setting.text}}>{setting.label}</h3><div className="mt-2 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="text-[8px] text-slate-400 font-black">MY HIGH SCORE</small><b className="block text-right text-lg leading-tight text-indigo-200">{bestOf(key).toLocaleString()} pt</b><span className="block text-right text-[9px] text-amber-300">最高到達 WAVE {waveOf(key)}</span></div><div className="grid grid-cols-4 gap-1 mt-2">{[['敵強度',`×${setting.power}`,false],['スコア',`×${setting.score}`,false],['経験値',bonusLabel(setting.score),quick],['ダイヤ',bonusLabel(setting.gold),quick]].map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 p-1.5 text-center text-[8px] text-slate-400">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div>{quick&&<div className="mt-1.5 rounded-xl border px-2 py-1 text-center text-[8px] font-black leading-relaxed" style={{borderColor:`${mode.color}55`,color:mode.color}}>経験値とダイヤだけ1.5倍（スコア倍率は難易度どおり）</div>}<div className="grid gap-2 mt-2.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[44px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button><button onClick={()=>{setDifficulty(key);setRunMode(battleMode);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[48px] rounded-xl font-black text-sm" style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す */}{(()=>{const tid=SKIP_TICKETS[key];if(!tid)return(<div className="min-h-[46px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500">この難易度はスキップできません</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[46px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-12 min-h-[46px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1.5 py-1">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-2 h-2 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
+              {difficulties.map(([key,setting])=>{const active=key===safeDifficulty;return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[28px] border-2 px-3.5 py-3 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className="text-center text-[8px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div><h3 className="text-center text-xl font-black mt-0.5" style={{color:setting.text}}>{setting.label}</h3><div className="mt-2 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="text-[8px] text-slate-400 font-black">自己ベストスコア</small><b className="block text-right text-lg leading-tight text-indigo-200">{bestOf(key).toLocaleString()} pt</b><span className="block text-right text-[9px] text-amber-300">最高到達 WAVE {waveOf(key)}</span></div><div className="grid grid-cols-4 gap-1 mt-2">{[['敵強度',`×${setting.power}`,false],['スコア倍率',`×${setting.score}`,false],['経験値倍率',bonusLabel(setting.score),quick],['ダイヤ倍率',bonusLabel(setting.gold),quick]].map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 p-1.5 text-center text-[8px] text-slate-400">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div>{quick&&<div className="mt-1.5 rounded-xl border px-2 py-1 text-center text-[8px] font-black leading-relaxed" style={{borderColor:`${mode.color}55`,color:mode.color}}>経験値とダイヤだけ1.5倍（スコア倍率は難易度どおり）</div>}<div className="grid gap-2 mt-2.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[44px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button><button onClick={()=>{setDifficulty(key);setRunMode(battleMode);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[48px] rounded-xl font-black text-sm" style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す */}{(()=>{const tid=SKIP_TICKETS[key];if(!tid)return(<div className="min-h-[46px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500">この難易度はスキップできません</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[46px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-12 min-h-[46px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1.5 py-1">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-2 h-2 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
               {/* カードの下: ランキング(チャレンジのみ) → 助手コメント の順に置く */}
-              {!quick&&<button onClick={()=>{setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className="shrink-0 w-full min-h-[46px] rounded-2xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[12px] active:scale-[.98] mb-2">🏆 ランキングを見る（チャレンジモード）</button>}
-              <div className="shrink-0 pb-1"><AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'} accent={mode.color} faceSize={56}/></div>
+              {!quick&&<button onClick={()=>{setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className="shrink-0 w-full min-h-[46px] rounded-2xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[12px] active:scale-[.98] mb-2 flex items-center justify-center gap-1 px-3"><span className="flex-1 text-center">🏆 ランキングを見る（チャレンジモード）</span><ChevronRight size={16} className="shrink-0"/></button>}
+              <div className="shrink-0 pb-1"><AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'} accent={mode.color} faceSize={64}/></div>
               </div>;})()}
             {battleMenuTab==='ranking'&&<div className="flex-1 min-h-0 flex flex-col">
               <div className="grid grid-cols-3 gap-1 mb-1.5 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else {if(t.k==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,t.k);}}} className={`py-1.5 rounded-lg text-[9px] font-black border ${rankingKind===t.k?'bg-indigo-600 border-indigo-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
@@ -8373,10 +8375,10 @@ function MonsterHeroGame() {
         </QuickStepScreen>
       )}
 
-      {/* クイックモード: 伴モン加入。加入ステータスと固有技アップを1画面でまとめて出す */}
+      {/* クイックモード: 供モン加入。加入ステータスと固有技アップを1画面でまとめて出す */}
       {gameState==='QUICK_JOIN'&&quickJoin&&(
         <QuickStepScreen onDone={finishQuickJoin} ms={2200} accent="#2dd4bf" label="タップで次へ">
-          <h2 className="text-2xl font-black italic" style={{color:'#2dd4bf'}}>伴モン加入！</h2>
+          <h2 className="text-2xl font-black italic" style={{color:'#2dd4bf'}}>供モン加入！</h2>
           <div className="mt-3 flex items-center justify-center gap-2">
             <div className="w-16 h-16 rounded-full overflow-hidden border-2 flex items-center justify-center bg-black/40" style={{borderColor:'#2dd4bf'}}>
               {quickJoin.imgUrl?<DyedMonsterImage baseId={quickJoin.baseId} src={quickJoin.imgUrl} alt={quickJoin.name} masuColors={quickJoin.colors} className="w-full h-full object-contain"/>:<span className="text-3xl">{quickJoin.emoji}</span>}
@@ -8414,19 +8416,22 @@ function MonsterHeroGame() {
           <div className="w-full max-w-sm rounded-3xl border-2 bg-slate-950 flex flex-col" style={{borderColor:mode.color,maxHeight:'86vh'}}>
             <div className="shrink-0 flex items-center gap-2 p-4 border-b border-white/10">
               <span className="text-2xl">{mode.emoji}</span>
-              <div className="flex-1 min-w-0"><h3 className="text-base font-black truncate" style={{color:mode.color}}>{mode.label}</h3><p className="text-[10px] text-slate-400">{mode.tagline}</p></div>
+              <div className="flex-1 min-w-0"><h3 className="text-base font-black truncate" style={{color:mode.color}}>{mode.label}とは？</h3><p className="text-[10px] text-slate-400">{mode.tagline}</p></div>
               <button onClick={()=>setModeInfoId(null)} aria-label="説明を閉じる" className="shrink-0 p-2 bg-white/10 rounded-full active:scale-90"><X size={18}/></button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-2.5">
-              {mode.points.map(([title,text])=>(
-                <div key={title} className="rounded-2xl bg-black/50 border px-3 py-2" style={{borderColor:`${mode.color}44`}}>
-                  <div className="text-[11px] font-black" style={{color:mode.color}}>{title}</div>
-                  <div className="text-[11px] text-slate-300 leading-relaxed mt-0.5">{text}</div>
+              {mode.points.map(([icon,title,text])=>(
+                <div key={title} className="rounded-2xl bg-black/50 border px-3 py-2 flex items-start gap-2.5" style={{borderColor:`${mode.color}44`}}>
+                  <span className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-base" style={{backgroundColor:`${mode.color}22`}}>{icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-black" style={{color:mode.color}}>{title}</div>
+                    <div className="text-[11px] text-slate-300 leading-relaxed mt-0.5">{text}</div>
+                  </div>
                 </div>
               ))}
             </div>
             <div className="shrink-0 p-4 pt-2" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
-              <button onClick={()=>setModeInfoId(null)} className="w-full min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:mode.color}}>とじる</button>
+              <button onClick={()=>setModeInfoId(null)} className="w-full min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:mode.color}}>閉じる</button>
             </div>
           </div>
         </div>);})()}
