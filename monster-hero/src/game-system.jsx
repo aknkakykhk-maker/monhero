@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 08:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 08:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1456,12 +1456,15 @@ const CHANGELOG_STATUS = {
 // 音量の既定値。初期状態は「音がオン」で、いきなり大きな音が鳴らないよう最小の1から始める
 // (ミュートを解除したときの音量もこの値に合わせている)
 const DEFAULT_VOLUME = 1;
-// ログインボーナスは毎日、既存の報酬に加えてスキップチケット・序を1枚配る
+// ログインボーナスは毎日、既存の報酬に加えてスキップチケット・序を1枚配る。
+// ptはマーケットのアイコン(1個1pt)にしか使わない。アイコンは全部で20種ほどしかないので、
+// 100ptや200ptを一度に配ると、もらった時点で使い道が無くなってしまう。
+// 数個ぶんに抑えて、そのぶんダイヤで補っている
 const LOGIN_BONUS_REWARDS = [
   [{ type:'diamond', amount:500 },      { type:'skipTicketJo', amount:1 }],
   [{ type:'dyeMock', amount:1 },        { type:'skipTicketJo', amount:1 }],
   [{ type:'diamond', amount:1000 },     { type:'skipTicketJo', amount:1 }],
-  [{ type:'breederPoint', amount:100 }, { type:'skipTicketJo', amount:1 }],
+  [{ type:'breederPoint', amount:3 },   { type:'diamond', amount:500 }, { type:'skipTicketJo', amount:1 }],
   [{ type:'dyeMock', amount:1 },        { type:'skipTicketJo', amount:1 }],
   [{ type:'diamond', amount:2000 },     { type:'skipTicketJo', amount:1 }],
   [{ type:'bondPointReset', amount:1 }, { type:'skipTicketJo', amount:1 }],
@@ -1609,7 +1612,7 @@ const MISSION_DEFS = {
     {id:'weekly_enhance',name:'育成週間',condition:'モンスターを10回強化する',key:'enhances',target:10,rewards:[{type:'trainingTicketLarge',amount:2}]},
     {id:'weekly_daily_claims',name:'デイリー挑戦者',condition:'デイリー個別報酬を15回ギフトへ送る',key:'dailyClaims',target:15,rewards:[{type:'diamond',amount:1000}]},
     {id:'weekly_market',name:'マーケット常連',condition:'マーケットで3回取引を正常完了する',key:'marketTrades',target:3,rewards:[{type:'dyeMock',amount:1}]},
-    {id:'weekly_donations',name:'神殿への貢献',condition:'神殿で3回寄付を正常完了する',key:'donations',target:3,rewards:[{type:'breederPoint',amount:200}]},
+    {id:'weekly_donations',name:'神殿への貢献',condition:'神殿で3回寄付を正常完了する',key:'donations',target:3,rewards:[{type:'breederPoint',amount:5},{type:'diamond',amount:500}]},
     {id:'weekly_complete',name:'ウィークリーコンプリート',condition:'通常ウィークリー7個のうち6個を達成する',key:'complete',target:6,rewards:[{type:'diamond',amount:2000},{type:'skipTicketKyu',amount:1}],complete:true},
   ],
 };

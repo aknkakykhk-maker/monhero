@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f680a3ba0e0cb8c8
+// source-sha256: 9caeee01e810abf2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 08:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 08:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3516,7 +3516,10 @@ const CHANGELOG_STATUS = {
 // 音量の既定値。初期状態は「音がオン」で、いきなり大きな音が鳴らないよう最小の1から始める
 // (ミュートを解除したときの音量もこの値に合わせている)
 const DEFAULT_VOLUME = 1;
-// ログインボーナスは毎日、既存の報酬に加えてスキップチケット・序を1枚配る
+// ログインボーナスは毎日、既存の報酬に加えてスキップチケット・序を1枚配る。
+// ptはマーケットのアイコン(1個1pt)にしか使わない。アイコンは全部で20種ほどしかないので、
+// 100ptや200ptを一度に配ると、もらった時点で使い道が無くなってしまう。
+// 数個ぶんに抑えて、そのぶんダイヤで補っている
 const LOGIN_BONUS_REWARDS = [[{
   type: 'diamond',
   amount: 500
@@ -3537,7 +3540,10 @@ const LOGIN_BONUS_REWARDS = [[{
   amount: 1
 }], [{
   type: 'breederPoint',
-  amount: 100
+  amount: 3
+}, {
+  type: 'diamond',
+  amount: 500
 }, {
   type: 'skipTicketJo',
   amount: 1
@@ -3954,7 +3960,10 @@ const MISSION_DEFS = {
     target: 3,
     rewards: [{
       type: 'breederPoint',
-      amount: 200
+      amount: 5
+    }, {
+      type: 'diamond',
+      amount: 500
     }]
   }, {
     id: 'weekly_complete',

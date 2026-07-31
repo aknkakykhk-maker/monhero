@@ -7,7 +7,7 @@ const start = source.indexOf('const LOGIN_BONUS_REWARDS');
 const end = source.indexOf('const STAT_POINT_GAIN');
 const context = {};
 vm.createContext(context);
-vm.runInContext(`${source.slice(start,end)}\nglobalThis.__m={MISSION_DEFS,missionDailyPeriod,missionWeeklyPeriod,normalizeMissions,missionValue,missionClaimableCount,missionNextReset,buildGiftClaim};`,context);
+vm.runInContext(`${source.slice(start,end)}\nglobalThis.__m={LOGIN_BONUS_REWARDS,MISSION_DEFS,missionDailyPeriod,missionWeeklyPeriod,normalizeMissions,missionValue,missionClaimableCount,missionNextReset,buildGiftClaim};`,context);
 const m=context.__m;
 let failed=0;
 const check=(name,ok)=>{console.log(`${ok?'OK':'NG'}: ${name}`);if(!ok)failed++;};
@@ -28,4 +28,35 @@ const invalid=m.buildGiftClaim({...gift,rewards:[{type:'diamond',amount:1},{type
 check('不明報酬を含むギフトは全体を拒否',!invalid.ok&&base.gold===0);
 check('ミッション画面はHOME BGMを継続',/MISSIONS:\s*'home'/.test(source));
 check('固定ギフトIDと同期ロックで重複送付を防止',/gift_mission_\$\{type\}_\$\{period\}_\$\{mission\.id\}/.test(source)&&/missionClaimingRef\.current/.test(source));
+
+// --- ブリーダーポイント(pt)の配りすぎを防ぐ ---
+// ptはマーケットのアイコン(1個1pt)にしか使わない。1回の報酬で大量に配ると、
+// もらった時点で使い道が無くなってしまう(ログインボーナスで100pt配っていた)。
+// アイコンを全部買うのに必要な総額を基準に、1回あたりの上限を決める
+const breederSrc = fs.readFileSync(path.join(__dirname,'..','monster-hero','data','breeder.js'),'utf8');
+const bctx = {}; vm.createContext(bctx);
+vm.runInContext(breederSrc.slice(breederSrc.indexOf('const TEACHING_CARDS = ['))
+  .replace(/\b[A-Z_]+_ICON\b|\bDISC_STONE_BASE\b/g, "''") + '\nglobalThis.__b=BREEDER_MARKET_ITEMS;', bctx);
+const iconTotalCost = bctx.__b.filter(i => i.type === 'icon').reduce((a, i) => a + i.cost, 0);
+const ptOf = (rewards) => (rewards || []).filter(r => r.type === 'breederPoint').reduce((a, r) => a + r.amount, 0);
+const ptLimit = Math.max(1, Math.floor(iconTotalCost / 2));
+const ptRewards = [
+  ...m.LOGIN_BONUS_REWARDS.map((r, i) => [`ログインボーナス${i+1}日目`, ptOf(r)]),
+  ...m.MISSION_DEFS.daily.map(x => [`デイリー:${x.name}`, ptOf(x.rewards)]),
+  ...m.MISSION_DEFS.weekly.map(x => [`ウィークリー:${x.name}`, ptOf(x.rewards)]),
+];
+const ptOver = ptRewards.filter(([, v]) => v > ptLimit);
+check(`1回に配るptがアイコン総額(${iconTotalCost}pt)の半分を超えない` + (ptOver.length ? ` — ${ptOver.map(([k,v])=>`${k}=${v}`).join(', ')}` : ''), ptOver.length === 0);
+check('ptを配る報酬が残っている', ptRewards.some(([, v]) => v > 0));
+// レベルアップでもらえるptは「上がったレベルの数」だけ。まとめて何十ptも入らない
+check('レベルアップで増えるptは上がったレベル数ぶんだけ',
+  (source.match(/const next = prev \+ gainedLevels;/g) || []).length === 1
+    && (source.match(/const next = prev \+ gainedBreederLevels;/g) || []).length === 1);
+// 読み込みのたびに配り直さないよう、補填は「本来の数との差額」だけにして、配った総数を保存する
+check('読み込み時の補填は本来の数との差額だけ',
+  source.includes('if (expectedPoints > grantedPoints) {')
+    && source.includes('savedPoints += expectedPoints - grantedPoints;')
+    && source.includes("await storeSet('mh_breeder_points_granted', grantedPoints, false);")
+    && source.includes('const expectedPoints = Math.max(0, levelInfo(savedXp).level - 1);'));
+
 process.exit(failed?1:0);
