@@ -181,6 +181,9 @@ check('ランキングの導線は助手コメントより前にある', source.
 // ランキングを見ているときの戻るは、ホームではなく難易度の画面へ戻す
 check('ランキングからの戻るはバトルの画面へ',
   has("onClick={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}}"));
+// 勇者モン選択はバトルを始める前なので、戻るときは来た場所(難易度の画面)へ返す
+check('勇者モン選択からの戻るは難易度の画面へ',
+  has("onClick={()=>{if(gameState==='PICK_HERO'){setCurrentPickingMon(null);setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');return;}returnToHome();}}"));
 check('助手コメントは既存の共通UIを使う', has("<AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'}") && assistantsSrc.includes('battleChallenge:') && assistantsSrc.includes('battleQuick:'));
 check('挑戦を始めるときにモードを固定する', has('setDifficulty(key);setRunMode(battleMode);'));
 check('バトル中にモード名と難易度を出す', has('{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}'));
