@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 18:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 18:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2385,6 +2385,10 @@ function MonsterHeroGame() {
   const [tutorialStep, setTutorialStep] = useState(null);
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
+  // デバッグ: はじめての設定を「見るだけ」で通しで確認する。
+  // 名前・アイコン・完了フラグのどれも保存しないので、いま遊んでいるデータは変わらない
+  const [onboardingPreview, setOnboardingPreview] = useState(false);
+  const onboardingPreviewBackupRef = useRef(null);
   const tutorialShownRef = useRef(false);
   const highScoresRef = useRef({});
   useEffect(() => { highScoresRef.current = highScores; }, [highScores]);
@@ -3902,10 +3906,20 @@ function MonsterHeroGame() {
     await storeSet('mh_breeder_name', n, false);
     setShowNameEdit(false);
   };
-  const moveOnboarding = async step => { setOnboardingStep(step); await storeSet('mh_onboarding_step',step,false); };
+  const moveOnboarding = async step => { setOnboardingStep(step); if (onboardingPreview) return; await storeSet('mh_onboarding_step',step,false); };
   const finishOnboarding = async () => {
     const name=onboardingName.trim().slice(0,10);
     if(!name||!onboardingIcon)return;
+    // デバッグの「見るだけ」表示。何も保存せず、元の名前とアイコンへ戻してから案内だけ出す
+    if (onboardingPreview) {
+      const backup = onboardingPreviewBackupRef.current;
+      if (backup) { setBreederName(backup.name); setBreederIcon(backup.icon); }
+      setOnboardingPreview(false);
+      onboardingPreviewBackupRef.current = null;
+      setGameState('HOME');
+      setTutorialStep(0);
+      return;
+    }
     // プロフィールの両方を保存し終えた後でのみ完了フラグを立てる。
     await storeSet('mh_breeder_name',name,false);
     await storeSet('mh_breeder_icon',onboardingIcon,false);
@@ -4883,6 +4897,18 @@ function MonsterHeroGame() {
 
   // 初回チュートリアル。HOMEを最初に開いたときだけ自動で始める。
   // デバッグから何度でも呼べるよう、開始と終了を関数に分けている
+  // デバッグ: 名前入力のところから、はじめての案内を通しで見る(保存はしない)
+  const startOnboardingPreview = () => {
+    onboardingPreviewBackupRef.current = { name: breederName, icon: breederIcon };
+    setOnboardingPreview(true);
+    setOnboardingName(breederName || '');
+    setOnboardingIcon(breederIcon || null);
+    setOnboardingStep('intro-0');
+    setTutorialStep(null);
+    setAssistantDebug(null);
+    setShowHelp(false);
+    setGameState('ONBOARDING');
+  };
   const startTutorial = (fromDebug = false) => { tutorialShownRef.current = true; if (fromDebug) setShowTitleSettings(false); setTutorialStep(0); };
   const finishTutorial = async (remember = true) => {
     setTutorialStep(null);
@@ -6290,7 +6316,8 @@ function MonsterHeroGame() {
       {updateNotice}
       <div className="relative z-10 h-full flex flex-col" style={screenShake?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 
-        {gameState==='ONBOARDING'&&(()=>{const introPages=[{title:'はじめまして',icon:'💖',text:'この村の助手「みゅあ」です。名前とアイコンを決めたら、村の中を案内するね！'},{title:'ゲームの目的',icon:'🏆',text:'勇者モンと全10 WAVEを進み、ラスボス「ムー」の撃破と最高スコアを目指します。'},{title:'バトルの基本',icon:'⚔️',text:'カードを選び、モンスターへ割り当てて攻撃・防御します。間合いとガッツが勝負の鍵です。'},{title:'育成・編成',icon:'✨',text:'勇者モンを育て、供モンやブリーダーカードを編成して自分だけのチームを作れます。'}];const introIndex=Number(onboardingStep.split('-')[1]||0);return <main className="flex-1 min-h-0 flex flex-col p-5 text-center overflow-y-auto mh-scroll" style={{paddingTop:'calc(2rem + env(safe-area-inset-top))',paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}><div className="text-[10px] tracking-[.25em] text-indigo-300 font-black">WELCOME TO MONSTER HERO</div>{/* はじめての設定では、みゅあが段階ごとに決まった内容を話す(話が前へ進む形にするため)。
+        {gameState==='ONBOARDING'&&(()=>{const introPages=[{title:'はじめまして',icon:'💖',text:'この村の助手「みゅあ」です。名前とアイコンを決めたら、村の中を案内するね！'},{title:'ゲームの目的',icon:'🏆',text:'勇者モンと全10 WAVEを進み、ラスボス「ムー」の撃破と最高スコアを目指します。'},{title:'バトルの基本',icon:'⚔️',text:'カードを選び、モンスターへ割り当てて攻撃・防御します。間合いとガッツが勝負の鍵です。'},{title:'育成・編成',icon:'✨',text:'勇者モンを育て、供モンやブリーダーカードを編成して自分だけのチームを作れます。'}];const introIndex=Number(onboardingStep.split('-')[1]||0);return <main className="flex-1 min-h-0 flex flex-col p-5 text-center overflow-y-auto mh-scroll" style={{paddingTop:'calc(2rem + env(safe-area-inset-top))',paddingBottom:'calc(1.5rem + env(safe-area-inset-bottom))'}}>{onboardingPreview&&<div className="shrink-0 -mx-5 -mt-5 mb-3 px-3 py-1.5 bg-fuchsia-700 text-white text-[10px] font-black tracking-widest">DEBUG・見るだけの表示です。名前もアイコンも保存されません</div>}
+            <div className="text-[10px] tracking-[.25em] text-indigo-300 font-black">WELCOME TO MONSTER HERO</div>{/* はじめての設定では、みゅあが段階ごとに決まった内容を話す(話が前へ進む形にするため)。
               セリフは data/assistants.js の ASSISTANT_ONBOARDING が持つ */}
             {(()=>{const say=(typeof findAssistantOnboarding==='function'&&findAssistantOnboarding(onboardingStep))||null;return(
               <div className="shrink-0 w-full max-w-md mx-auto my-3 text-left"><AssistantBubble scene="onboarding" line={say?.t||null} expression={say?.e||null}/></div>
@@ -6520,6 +6547,7 @@ function MonsterHeroGame() {
               <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
                 <div className="text-[10px] text-pink-300 font-black mb-2">💖 みゅあデバッグ</div>
                 <div className="grid grid-cols-2 gap-2">
+                  <button onClick={startOnboardingPreview} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">名前入力から通しで見る（保存されません）</button>
                   <button onClick={()=>{returnToHome();startTutorial(true);}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">初回チュートリアル再生</button>
                   <button onClick={()=>setTutorialStep(0)} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">チュートリアルだけ再生</button>
                   <button onClick={()=>setAssistantDebug('lines')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全助手コメント確認</button>

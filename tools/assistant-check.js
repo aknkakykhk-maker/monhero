@@ -197,8 +197,23 @@ check('チュートリアルの既読は新しい保存キーへ分ける',
   has("const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';") && !/mh_onboarded[^\n]*tutorial/.test(source));
 check('デバッグはデバッグ設定からだけ開ける',
   has('💖 みゅあデバッグ') && source.indexOf('💖 みゅあデバッグ') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
+// デバッグから「名前入力のところ」を含めて通しで見られること。
+// 見るだけなので、名前・アイコン・完了フラグのどれも保存しない
+check('名前入力から通しで見られる',
+  has('const startOnboardingPreview = () => {') && has('名前入力から通しで見る（保存されません）')
+    && has("setOnboardingStep('intro-0');") && has("setGameState('ONBOARDING');"));
+check('見るだけの表示では何も保存しない', (() => {
+  const start = source.indexOf('  const finishOnboarding = async () => {');
+  const end = source.indexOf('\n  };', source.indexOf('if (seenTutorial !== true)', start));
+  const body = source.slice(start, end);
+  const preview = body.slice(body.indexOf('if (onboardingPreview)'), body.indexOf('return;\n    }') + 12);
+  return preview.includes('setBreederName(backup.name)') && preview.includes('setTutorialStep(0)') && !preview.includes('storeSet');
+})());
+check('見るだけでは途中経過も保存しない',
+  has('const moveOnboarding = async step => { setOnboardingStep(step); if (onboardingPreview) return;'));
+check('見るだけと分かる表示を出す', has('DEBUG・見るだけの表示です。名前もアイコンも保存されません'));
 check('デバッグに必要な項目がそろっている',
-  ['初回チュートリアル再生','チュートリアルだけ再生','全助手コメント確認','全表情確認','条件コメント確認','連打リアクション確認','初回状態へ戻す']
+  ['名前入力から通しで見る','初回チュートリアル再生','チュートリアルだけ再生','全助手コメント確認','全表情確認','条件コメント確認','連打リアクション確認','初回状態へ戻す']
     .every(label => source.includes(label)));
 check('初回状態へ戻してもセーブデータは消さない',
   has('モンスターやダイヤなどのセーブデータは消えません') && has('await storeSet(TUTORIAL_SEEN_KEY,false,false);'));

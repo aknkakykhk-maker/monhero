@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 66d3b858a104f499
+// source-sha256: faa44d6e3fd3acad
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 18:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 18:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5389,6 +5389,10 @@ function MonsterHeroGame() {
   const [tutorialStep, setTutorialStep] = useState(null);
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
+  // デバッグ: はじめての設定を「見るだけ」で通しで確認する。
+  // 名前・アイコン・完了フラグのどれも保存しないので、いま遊んでいるデータは変わらない
+  const [onboardingPreview, setOnboardingPreview] = useState(false);
+  const onboardingPreviewBackupRef = useRef(null);
   const tutorialShownRef = useRef(false);
   const highScoresRef = useRef({});
   useEffect(() => {
@@ -7391,11 +7395,25 @@ function MonsterHeroGame() {
   };
   const moveOnboarding = async step => {
     setOnboardingStep(step);
+    if (onboardingPreview) return;
     await storeSet('mh_onboarding_step', step, false);
   };
   const finishOnboarding = async () => {
     const name = onboardingName.trim().slice(0, 10);
     if (!name || !onboardingIcon) return;
+    // デバッグの「見るだけ」表示。何も保存せず、元の名前とアイコンへ戻してから案内だけ出す
+    if (onboardingPreview) {
+      const backup = onboardingPreviewBackupRef.current;
+      if (backup) {
+        setBreederName(backup.name);
+        setBreederIcon(backup.icon);
+      }
+      setOnboardingPreview(false);
+      onboardingPreviewBackupRef.current = null;
+      setGameState('HOME');
+      setTutorialStep(0);
+      return;
+    }
     // プロフィールの両方を保存し終えた後でのみ完了フラグを立てる。
     await storeSet('mh_breeder_name', name, false);
     await storeSet('mh_breeder_icon', onboardingIcon, false);
@@ -9220,6 +9238,21 @@ function MonsterHeroGame() {
 
   // 初回チュートリアル。HOMEを最初に開いたときだけ自動で始める。
   // デバッグから何度でも呼べるよう、開始と終了を関数に分けている
+  // デバッグ: 名前入力のところから、はじめての案内を通しで見る(保存はしない)
+  const startOnboardingPreview = () => {
+    onboardingPreviewBackupRef.current = {
+      name: breederName,
+      icon: breederIcon
+    };
+    setOnboardingPreview(true);
+    setOnboardingName(breederName || '');
+    setOnboardingIcon(breederIcon || null);
+    setOnboardingStep('intro-0');
+    setTutorialStep(null);
+    setAssistantDebug(null);
+    setShowHelp(false);
+    setGameState('ONBOARDING');
+  };
   const startTutorial = (fromDebug = false) => {
     tutorialShownRef.current = true;
     if (fromDebug) setShowTitleSettings(false);
@@ -12052,7 +12085,9 @@ function MonsterHeroGame() {
         paddingTop: 'calc(2rem + env(safe-area-inset-top))',
         paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
       }
-    }, /*#__PURE__*/React.createElement("div", {
+    }, onboardingPreview && /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 -mx-5 -mt-5 mb-3 px-3 py-1.5 bg-fuchsia-700 text-white text-[10px] font-black tracking-widest"
+    }, "DEBUG\u30FB\u898B\u308B\u3060\u3051\u306E\u8868\u793A\u3067\u3059\u3002\u540D\u524D\u3082\u30A2\u30A4\u30B3\u30F3\u3082\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] tracking-[.25em] text-indigo-300 font-black"
     }, "WELCOME TO MONSTER HERO"), (() => {
       const say = typeof findAssistantOnboarding === 'function' && findAssistantOnboarding(onboardingStep) || null;
@@ -13844,6 +13879,9 @@ function MonsterHeroGame() {
   }, "\uD83D\uDC96 \u307F\u3085\u3042\u30C7\u30D0\u30C3\u30B0"), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, /*#__PURE__*/React.createElement("button", {
+    onClick: startOnboardingPreview,
+    className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
+  }, "\u540D\u524D\u5165\u529B\u304B\u3089\u901A\u3057\u3067\u898B\u308B\uFF08\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       returnToHome();
       startTutorial(true);
