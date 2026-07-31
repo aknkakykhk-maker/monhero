@@ -97,7 +97,9 @@ check('難易度カードにスキップと説明ボタンがある', has('openB
 check('チケットが無ければスキップは押せない', has('disabled={have<=0}') && has("'bg-slate-800 text-slate-500'"));
 check('スキップの文字は1行に収まる形にする', has('whitespace-nowrap') && has('<span>スキップ</span>') && has('{have}枚'));
 // 説明ボタンには disabled を付けない(チケットが無くても読める)
-const infoButton = source.slice(source.indexOf('<button onClick={()=>setSkipInfoItemId(tid)}'), source.indexOf('？</button>'));
+// 終端は開始位置より後ろから探す(モードのタブにも「？」ボタンがあるため)
+const infoButtonAt = source.indexOf('<button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明"');
+const infoButton = source.slice(infoButtonAt, source.indexOf('？</button>', infoButtonAt));
 check('説明ボタンはチケットが無くても押せる', infoButton.length > 0 && !infoButton.includes('disabled'));
 check('説明に何がもらえて何がもらえないかを書く', has('受け取れるもの') && has('受け取れないもの') && has('スコアとランキングへの記録'));
 check('編成を決める画面がある', has("gameState==='SKIP_PICK'") && has('勇者モン') && has('供モン1'));

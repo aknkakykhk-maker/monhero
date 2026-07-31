@@ -26,7 +26,9 @@ for (const difficulty of ['GrandMaster', 'Hell', 'Legend']) {
 }
 
 assert(source.includes('const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey)'), 'battle must use shared enemy creation');
-assert(source.includes('createBattleEnemy(1,key)'), 'WAVE 1 preview must use shared enemy creation');
+// 難易度カードのWAVE1プレビューは廃止し、敵の情報は「全WAVE詳細」だけで見せる
+assert(!source.includes('createBattleEnemy(1,key)'), '難易度カードにWAVE1の敵情報を戻していないこと');
+assert(source.includes('createBattleEnemy(index+1,safeDifficulty)'), '全WAVE詳細が共通の敵生成を使う');
 assert(source.includes('createBattleEnemy(index+1,safeDifficulty)'), 'all-wave preview must use shared enemy creation');
 assert(source.includes("Moo: { scanScale:2.75, waveDetailScale:2"), 'Moo must have context-specific scan and wave scales');
 assert(source.includes("enemyArtStyle(enemy.id,'scan')"), 'scan must request scan art context');

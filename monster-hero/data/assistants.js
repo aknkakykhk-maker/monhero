@@ -44,6 +44,16 @@ const DEFAULT_ASSISTANT_ID = 'mua';
 //   detail      … タップで開く詳しい説明(文字列の配列)
 //   help        … 'カテゴリid/項目id'。detail の代わりに、ヘルプ本文をそのまま詳細として開く
 const ASSISTANT_SCENES = {
+  // バトルメニュー: チャレンジモードを選んでいるとき
+  battleChallenge: {
+    short: 'ランキングを狙うならチャレンジモード！強化フェーズを活かしながら、自己ベスト更新を目指そう♪',
+    help: 'basics/battle-modes',
+  },
+  // バトルメニュー: クイックモードを選んでいるとき
+  battleQuick: {
+    short: 'テンポよく育成したいならクイックモードがおすすめ！WAVEごとに自動で強くなるけど、強化内容は選べないから気をつけてね♪',
+    help: 'basics/battle-modes',
+  },
   // ヘルプのカテゴリ一覧で話す内容
   helpTop: {
     short: 'ようこそ！知りたいことのカテゴリを選んでね。',
