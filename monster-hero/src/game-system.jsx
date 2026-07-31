@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 11:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 12:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1776,21 +1776,17 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
     </>
   );
 };
-// クイックモードの短い演出画面。タップで即送りでき、一定時間で自動的に次へ進む。
-// 自動送りとタップが重なっても onDone は1回しか呼ばない
-const QuickStepScreen = ({ onDone, ms = 1800, accent = '#2dd4bf', label = 'タップで次へ', children }) => {
+// クイックモードの短い演出画面。プレイヤーがタップするまで待つ(自動では進めない)。
+// 連打しても onDone は1回しか呼ばない
+const QuickStepScreen = ({ onDone, accent = '#2dd4bf', label = 'タップして次へ', children }) => {
   const doneRef = useRef(false);
   const finish = () => { if (doneRef.current) return; doneRef.current = true; onDone(); };
-  useEffect(() => {
-    const timer = setTimeout(finish, ms);
-    return () => clearTimeout(timer);
-  }, []);
   return (
     <div onClick={finish} role="button" tabIndex={0} aria-label={label}
          className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center"
          style={{ position:'absolute', inset:0, backgroundColor:'#020617', zIndex:30000 }}>
       <div className="w-full max-w-sm flex flex-col items-center">{children}</div>
-      <div className="mt-5 text-[10px] font-black tracking-widest" style={{ color:accent }}>{label}</div>
+      <div className="mt-5 text-[11px] font-black tracking-widest animate-pulse" style={{ color:accent }}>{label}</div>
     </div>
   );
 };
@@ -6297,10 +6293,10 @@ function MonsterHeroGame() {
             <div className="flex items-center gap-1 mb-1 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
             {/* モードのタブ。各モード名の横の「？」で説明を開く */}
-            <div className="grid grid-cols-2 gap-1.5 mb-1 shrink-0 rounded-xl bg-slate-900/60 p-1 border border-white/5">
+            <div className="grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5">
               {BATTLE_MODES.map(mode=>{const on=battleMode===mode.id&&battleMenuTab==='difficulty';return(
                 <div key={mode.id} onClick={()=>{setBattleMode(mode.id);setBattleMenuTab('difficulty');}} role="button" tabIndex={0} aria-label={`${mode.label}に切り替え`}
-                     className={`flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-lg transition-all min-w-0 ${on?'':'bg-slate-950/70'}`}
+                     className={`flex items-center justify-center gap-1 py-1.5 px-1 rounded-lg transition-all min-w-0 ${on?'':'bg-slate-950/70'}`}
                      style={on?{backgroundColor:mode.color,boxShadow:`0 0 18px ${mode.color}66`}:undefined}>
                   <span className={`min-w-0 truncate text-[11px] font-black ${on?'':'text-slate-400'}`} style={on?{color:'#0f172a'}:undefined}>{mode.label}</span>
                   <button onClick={e=>{e.stopPropagation();setModeInfoId(mode.id);}} aria-label={`${mode.label}の説明`} className={`shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black active:scale-90 ${on?'':'border-slate-500 text-slate-300'}`} style={on?{borderColor:'#0f172a',color:'#0f172a'}:undefined}>？</button>
@@ -6311,24 +6307,29 @@ function MonsterHeroGame() {
               const difficulties=Object.entries(DIFFICULTY_SETTINGS),selectedIndex=difficulties.findIndex(([key])=>key===safeDifficulty);
               const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));setDifficulty(difficulties[safe][0]);difficultyCarouselRef.current?.children[safe]?.scrollIntoView({behavior,inline:'center',block:'nearest'});};
               const mode=battleModeInfo(battleMode), quick=isQuickMode(battleMode);
-              // クイックモードは経験値とダイヤだけ1.5倍。スコア倍率は難易度のままなので分けて出す
-              const bonusLabel=(value)=>quick?`×${Math.round(value*QUICK_REWARD_MULT*100)/100}`:`×${value}`;
-              const bestOf=(key)=>quick?(quickHighScores[key]||0):(highScores[key]||0);
+              // 倍率の枠は3つまで。4つ並べると見出しが2行に折り返して読みにくくなる。
+              // クイックモードはスコアを競わないのでスコア倍率は出さず、代わりに経験値倍率を出す
+              const bonusLabel=(value)=>`×${Math.round(value*QUICK_REWARD_MULT*100)/100}`;
+              const rateCells=(setting)=>quick
+                ? [['敵強度',`×${setting.power}`,false],['経験値',bonusLabel(setting.score),true],['ダイヤ',bonusLabel(setting.gold),true]]
+                : [['敵強度',`×${setting.power}`,false],['スコア',`×${setting.score}`,false],['ダイヤ',`×${setting.gold}`,false]];
               const waveOf=(key)=>quick?(quickHighestWaves[key]||0):(highestWaves[key]||0);
-              return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[9px] tracking-[.18em] text-slate-400 font-black mb-1 shrink-0">左右にスワイプして難易度を選択</div>{Object.keys(SKIP_TICKETS).length>0&&(
-                <div className="shrink-0 flex flex-wrap items-center justify-center gap-1 mb-1.5 px-2">
+              return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>{Object.keys(SKIP_TICKETS).length>0&&(
+                <div className="shrink-0 flex flex-wrap items-center justify-center gap-1 mb-1 px-2">
                   <span className="text-[8px] font-black text-slate-500 tracking-[.12em]">所持スキップチケット</span>
                   {Object.entries(SKIP_TICKETS).map(([diff,tid])=>{const item=BREEDER_MARKET_ITEMS.find(i=>i.id===tid);const short=(item?.name||'').split('・')[1]||DIFFICULTY_SETTINGS[diff]?.label||diff;const have=ownedItems[tid]||0;return(
                     <button key={diff} onClick={()=>setSkipInfoItemId(tid)} aria-label={`${item?.name||short}の説明`} className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border text-[9px] font-black active:scale-95 ${have>0?'bg-teal-950/70 border-teal-500/40 text-teal-200':'bg-black/30 border-white/5 text-slate-500'}`}><span>{item?.emoji||'⏩'}</span><span>{short}</span><span className="font-mono">{have}枚</span></button>
                   );})}
                 </div>
-              )}<div className="relative shrink-0"><button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button><div ref={difficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==safeDifficulty)setDifficulty(difficulties[best][0]);}} className="flex items-start gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
+              )}<div className="relative shrink-0"><button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button><div ref={difficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==safeDifficulty)setDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
               {/* 難易度カード。WAVE1の敵情報は「全WAVE詳細」で見られるためカードには出さず、
                   そのぶんカードを縦に縮めて下のランキングボタンと助手コメントの場所を空けている */}
-              {difficulties.map(([key,setting])=>{const active=key===safeDifficulty;return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[28px] border-2 px-3.5 py-3 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className="text-center text-[8px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div><h3 className="text-center text-xl font-black mt-0.5" style={{color:setting.text}}>{setting.label}</h3><div className="mt-2 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="text-[8px] text-slate-400 font-black">自己ベストスコア</small><b className="block text-right text-lg leading-tight text-indigo-200">{bestOf(key).toLocaleString()} pt</b><span className="block text-right text-[9px] text-amber-300">最高到達 WAVE {waveOf(key)}</span></div><div className="grid grid-cols-4 gap-1 mt-2">{[['敵強度',`×${setting.power}`,false],['スコア倍率',`×${setting.score}`,false],['経験値倍率',bonusLabel(setting.score),quick],['ダイヤ倍率',bonusLabel(setting.gold),quick]].map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 p-1.5 text-center text-[8px] text-slate-400">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div>{quick&&<div className="mt-1.5 rounded-xl border px-2 py-1 text-center text-[8px] font-black leading-relaxed" style={{borderColor:`${mode.color}55`,color:mode.color}}>経験値とダイヤだけ1.5倍（スコア倍率は難易度どおり）</div>}<div className="grid gap-2 mt-2.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[44px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button><button onClick={()=>{setDifficulty(key);setRunMode(battleMode);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[48px] rounded-xl font-black text-sm" style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す */}{(()=>{const tid=SKIP_TICKETS[key];if(!tid)return(<div className="min-h-[46px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500">この難易度はスキップできません</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[46px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-12 min-h-[46px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1.5 py-1">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-2 h-2 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
+              {difficulties.map(([key,setting])=>{const active=key===safeDifficulty;return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div><h3 className="text-center text-lg font-black leading-tight" style={{color:setting.text}}>{setting.label}</h3>{quick
+                ? <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5 flex items-center justify-between"><small className="text-[9px] text-slate-400 font-black">最高到達</small><b className="text-base leading-tight text-amber-300">WAVE {waveOf(key)}</b></div>
+                : <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="text-[8px] text-slate-400 font-black">自己ベストスコア</small><b className="block text-right text-base leading-tight text-indigo-200">{(highScores[key]||0).toLocaleString()} pt</b><span className="block text-right text-[9px] text-amber-300">最高到達 WAVE {waveOf(key)}</span></div>}<div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div>{quick&&<div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>経験値・ダイヤのみ1.5倍</div>}<div className="grid gap-1.5 mt-1.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button><button onClick={()=>{setDifficulty(key);setRunMode(battleMode);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[44px] rounded-xl font-black text-sm" style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す */}{(()=>{const tid=SKIP_TICKETS[key];if(!tid)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">この難易度はスキップできません</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1 py-0.5">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
               {/* カードの下: ランキング(チャレンジのみ) → 助手コメント の順に置く */}
-              {!quick&&<button onClick={()=>{setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className="shrink-0 w-full min-h-[46px] rounded-2xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[12px] active:scale-[.98] mb-2 flex items-center justify-center gap-1 px-3"><span className="flex-1 text-center">🏆 ランキングを見る（チャレンジモード）</span><ChevronRight size={16} className="shrink-0"/></button>}
-              <div className="shrink-0 pb-1"><AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'} accent={mode.color} faceSize={64}/></div>
+              {!quick&&<button onClick={()=>{setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className="shrink-0 w-full min-h-[40px] rounded-2xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] mb-1.5 flex items-center justify-center gap-1 px-2"><span className="flex-1 text-center">🏆 ランキングを見る（チャレンジモード）</span><ChevronRight size={16} className="shrink-0"/></button>}
+              <div className="shrink-0 pb-1"><AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'} accent={mode.color} faceSize={48}/></div>
               </div>;})()}
             {battleMenuTab==='ranking'&&<div className="flex-1 min-h-0 flex flex-col">
               <div className="grid grid-cols-3 gap-1 mb-1.5 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else {if(t.k==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,t.k);}}} className={`py-1.5 rounded-lg text-[9px] font-black border ${rankingKind===t.k?'bg-indigo-600 border-indigo-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
@@ -8358,7 +8359,7 @@ function MonsterHeroGame() {
       {/* UPGRADE SKILL */}
       {/* クイックモード: WAVEごとの自動成長。タップで即送り、一定時間で自動的に次へ進む */}
       {gameState==='QUICK_GROWTH'&&quickGrowth&&(
-        <QuickStepScreen onDone={finishQuickGrowth} ms={1800} accent="#2dd4bf" label="タップで次へ">
+        <QuickStepScreen onDone={finishQuickGrowth} accent="#2dd4bf" label="タップして次へ">
           <h2 className="text-2xl font-black italic" style={{color:'#2dd4bf'}}>ステータスアップ！</h2>
           <p className="text-[10px] font-black text-slate-400 mt-1">WAVE {quickGrowth.nextWave-1} クリア／全ステータス +10%</p>
           <div className="mt-4 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden">
@@ -8377,7 +8378,7 @@ function MonsterHeroGame() {
 
       {/* クイックモード: 供モン加入。加入ステータスと固有技アップを1画面でまとめて出す */}
       {gameState==='QUICK_JOIN'&&quickJoin&&(
-        <QuickStepScreen onDone={finishQuickJoin} ms={2200} accent="#2dd4bf" label="タップで次へ">
+        <QuickStepScreen onDone={finishQuickJoin} accent="#2dd4bf" label="タップして次へ">
           <h2 className="text-2xl font-black italic" style={{color:'#2dd4bf'}}>供モン加入！</h2>
           <div className="mt-3 flex items-center justify-center gap-2">
             <div className="w-16 h-16 rounded-full overflow-hidden border-2 flex items-center justify-center bg-black/40" style={{borderColor:'#2dd4bf'}}>

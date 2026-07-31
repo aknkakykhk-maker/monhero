@@ -101,9 +101,10 @@ check('加入のステータス変化と固有技上昇を1画面で出す',
   has("{quickJoin.name}が仲間になった！") && has('固有技アップ！') && has('Lv.{quickJoin.unique.before} → '));
 
 // --- ⑤ 画面 ---
-check('演出はタップで送れて一定時間で自動終了する',
-  has('const QuickStepScreen = ({ onDone, ms = 1800') && has('const timer = setTimeout(finish, ms);') && has("onClick={finish}"));
-check('自動送りとタップが重なっても1回だけ進む', has('if (doneRef.current) return; doneRef.current = true; onDone();') && has("if (quickAdvanceRef.current === 'growth') return;"));
+// 演出は自動で進めず、必ずタップを待つ
+check('演出はタップするまで進まない',
+  has('const QuickStepScreen = ({ onDone, accent =') && !has('setTimeout(finish') && has("onClick={finish}") && has('タップして次へ'));
+check('連打しても1回だけ進む', has('if (doneRef.current) return; doneRef.current = true; onDone();') && has("if (quickAdvanceRef.current === 'growth') return;"));
 check('モードのタブがある', has('{BATTLE_MODES.map(mode=>{') && has('setBattleMode(mode.id);setBattleMenuTab(\'difficulty\');'));
 check('タブの横に説明の「？」がある', has('aria-label={`${mode.label}の説明`}') && has('setModeInfoId(mode.id)'));
 // 説明の各項目は [アイコン, 見出し, 本文] の3つ組
@@ -117,8 +118,16 @@ check('モードを変えても選択中の難易度は変えない', !/setBattl
 check('横スライドの難易度選択を維持している', has('snap-x snap-mandatory') && has("touchAction:'pan-x pinch-zoom'") && has('前の難易度') && has('次の難易度'));
 check('難易度カードからWAVE1の敵情報を外した', !has('createBattleEnemy(1,key)') && !has('<small className="text-amber-300 font-black">WAVE 1</small>'));
 check('カードに自己ベスト・到達WAVE・倍率・全WAVE詳細が残っている',
-  has('自己ベストスコア') && has('最高到達 WAVE') && has("['敵強度',`×${setting.power}`,false]") && has('全WAVE詳細') && has('この難易度で挑戦'));
-check('クイックは経験値・ダイヤだけ1.5倍と分かる表示', has('経験値とダイヤだけ1.5倍（スコア倍率は難易度どおり）') && has("['スコア倍率',`×${setting.score}`,false]"));
+  has('自己ベストスコア') && has('最高到達 WAVE') && has('全WAVE詳細') && has('この難易度で挑戦'));
+// クイックはスコアを競わないので、自己ベストスコアもスコア倍率も出さない
+check('クイックはスコア関連を出さない',
+  has("const rateCells=(setting)=>quick") && has("? [['敵強度',`×${setting.power}`,false],['経験値',bonusLabel(setting.score),true],['ダイヤ',bonusLabel(setting.gold),true]]")
+    && has(': <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="text-[8px] text-slate-400 font-black">自己ベストスコア</small>'));
+check('クイックでも最高到達WAVEは出す', has('<small className="text-[9px] text-slate-400 font-black">最高到達</small>'));
+check('チャレンジはスコア倍率を出す', has(": [['敵強度',`×${setting.power}`,false],['スコア',`×${setting.score}`,false],['ダイヤ',`×${setting.gold}`,false]]"));
+check('クイックは経験値・ダイヤだけ1.5倍と分かる表示', has('経験値・ダイヤのみ1.5倍'));
+// 見出しが2行に折り返さないよう、倍率は3枠までにして折り返しも禁じる
+check('倍率の枠は3つで1行に収める', has('<div className="grid grid-cols-3 gap-1 mt-1.5">') && has('text-center text-[8px] text-slate-400 whitespace-nowrap'));
 check('ランキングボタンはチャレンジのときだけ出す', has('{!quick&&<button onClick={()=>{setBattleMenuTab(\'ranking\')') && has('🏆 ランキングを見る（チャレンジモード）'));
 check('カードの下はランキング→助手コメントの順', source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf("scene={quick?'battleQuick':'battleChallenge'}"));
 check('助手コメントは既存の共通UIを使う', has("<AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'}") && assistantsSrc.includes('battleChallenge:') && assistantsSrc.includes('battleQuick:'));

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 19a7ec4906ed0dc6
+// source-sha256: c31efbc0b8c7b803
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 11:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 12:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4422,13 +4422,12 @@ const AssistantBubble = ({
     }
   }, "\u3068\u3058\u308B")))));
 };
-// クイックモードの短い演出画面。タップで即送りでき、一定時間で自動的に次へ進む。
-// 自動送りとタップが重なっても onDone は1回しか呼ばない
+// クイックモードの短い演出画面。プレイヤーがタップするまで待つ(自動では進めない)。
+// 連打しても onDone は1回しか呼ばない
 const QuickStepScreen = ({
   onDone,
-  ms = 1800,
   accent = '#2dd4bf',
-  label = 'タップで次へ',
+  label = 'タップして次へ',
   children
 }) => {
   const doneRef = useRef(false);
@@ -4437,10 +4436,6 @@ const QuickStepScreen = ({
     doneRef.current = true;
     onDone();
   };
-  useEffect(() => {
-    const timer = setTimeout(finish, ms);
-    return () => clearTimeout(timer);
-  }, []);
   return /*#__PURE__*/React.createElement("div", {
     onClick: finish,
     role: "button",
@@ -4456,7 +4451,7 @@ const QuickStepScreen = ({
   }, /*#__PURE__*/React.createElement("div", {
     className: "w-full max-w-sm flex flex-col items-center"
   }, children), /*#__PURE__*/React.createElement("div", {
-    className: "mt-5 text-[10px] font-black tracking-widest",
+    className: "mt-5 text-[11px] font-black tracking-widest animate-pulse",
     style: {
       color: accent
     }
@@ -13144,7 +13139,7 @@ function MonsterHeroGame() {
   }, "\u30D0\u30C8\u30EB")), /*#__PURE__*/React.createElement("div", {
     className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-1.5 mb-1 shrink-0 rounded-xl bg-slate-900/60 p-1 border border-white/5"
+    className: "grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5"
   }, BATTLE_MODES.map(mode => {
     const on = battleMode === mode.id && battleMenuTab === 'difficulty';
     return /*#__PURE__*/React.createElement("div", {
@@ -13156,7 +13151,7 @@ function MonsterHeroGame() {
       role: "button",
       tabIndex: 0,
       "aria-label": `${mode.label}に切り替え`,
-      className: `flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-lg transition-all min-w-0 ${on ? '' : 'bg-slate-950/70'}`,
+      className: `flex items-center justify-center gap-1 py-1.5 px-1 rounded-lg transition-all min-w-0 ${on ? '' : 'bg-slate-950/70'}`,
       style: on ? {
         backgroundColor: mode.color,
         boxShadow: `0 0 18px ${mode.color}66`
@@ -13192,16 +13187,17 @@ function MonsterHeroGame() {
     };
     const mode = battleModeInfo(battleMode),
       quick = isQuickMode(battleMode);
-    // クイックモードは経験値とダイヤだけ1.5倍。スコア倍率は難易度のままなので分けて出す
-    const bonusLabel = value => quick ? `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}` : `×${value}`;
-    const bestOf = key => quick ? quickHighScores[key] || 0 : highScores[key] || 0;
+    // 倍率の枠は3つまで。4つ並べると見出しが2行に折り返して読みにくくなる。
+    // クイックモードはスコアを競わないのでスコア倍率は出さず、代わりに経験値倍率を出す
+    const bonusLabel = value => `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}`;
+    const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false], ['経験値', bonusLabel(setting.score), true], ['ダイヤ', bonusLabel(setting.gold), true]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
     const waveOf = key => quick ? quickHighestWaves[key] || 0 : highestWaves[key] || 0;
     return /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-[9px] tracking-[.18em] text-slate-400 font-black mb-1 shrink-0"
+      className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
     }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), Object.keys(SKIP_TICKETS).length > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 flex flex-wrap items-center justify-center gap-1 mb-1.5 px-2"
+      className: "shrink-0 flex flex-wrap items-center justify-center gap-1 mb-1 px-2"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[8px] font-black text-slate-500 tracking-[.12em]"
     }, "\u6240\u6301\u30B9\u30AD\u30C3\u30D7\u30C1\u30B1\u30C3\u30C8"), Object.entries(SKIP_TICKETS).map(([diff, tid]) => {
@@ -13239,7 +13235,7 @@ function MonsterHeroGame() {
         });
         if (difficulties[best]?.[0] !== safeDifficulty) setDifficulty(difficulties[best][0]);
       },
-      className: "flex items-start gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll",
+      className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll",
       style: {
         paddingLeft: '11%',
         paddingRight: '11%',
@@ -13249,51 +13245,57 @@ function MonsterHeroGame() {
       const active = key === safeDifficulty;
       return /*#__PURE__*/React.createElement("article", {
         key: key,
-        className: `snap-center shrink-0 w-[82%] rounded-[28px] border-2 px-3.5 py-3 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+        className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
         style: {
           borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
           background: 'linear-gradient(180deg,#152044,#0d142b)',
           boxShadow: active ? `0 0 30px ${setting.bg}55` : 'none'
         }
       }, /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[8px] tracking-[.2em] text-slate-400 font-black"
+        className: "text-center text-[7px] tracking-[.2em] text-slate-400 font-black"
       }, "BATTLE DIFFICULTY"), /*#__PURE__*/React.createElement("h3", {
-        className: "text-center text-xl font-black mt-0.5",
+        className: "text-center text-lg font-black leading-tight",
         style: {
           color: setting.text
         }
-      }, setting.label), /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 rounded-xl bg-black/45 px-2.5 py-1.5"
+      }, setting.label), quick ? /*#__PURE__*/React.createElement("div", {
+        className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5 flex items-center justify-between"
+      }, /*#__PURE__*/React.createElement("small", {
+        className: "text-[9px] text-slate-400 font-black"
+      }, "\u6700\u9AD8\u5230\u9054"), /*#__PURE__*/React.createElement("b", {
+        className: "text-base leading-tight text-amber-300"
+      }, "WAVE ", waveOf(key))) : /*#__PURE__*/React.createElement("div", {
+        className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
       }, /*#__PURE__*/React.createElement("small", {
         className: "text-[8px] text-slate-400 font-black"
       }, "\u81EA\u5DF1\u30D9\u30B9\u30C8\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("b", {
-        className: "block text-right text-lg leading-tight text-indigo-200"
-      }, bestOf(key).toLocaleString(), " pt"), /*#__PURE__*/React.createElement("span", {
+        className: "block text-right text-base leading-tight text-indigo-200"
+      }, (highScores[key] || 0).toLocaleString(), " pt"), /*#__PURE__*/React.createElement("span", {
         className: "block text-right text-[9px] text-amber-300"
       }, "\u6700\u9AD8\u5230\u9054 WAVE ", waveOf(key))), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-1 mt-2"
-      }, [['敵強度', `×${setting.power}`, false], ['スコア倍率', `×${setting.score}`, false], ['経験値倍率', bonusLabel(setting.score), quick], ['ダイヤ倍率', bonusLabel(setting.gold), quick]].map(([label, value, boosted]) => /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-1 mt-1.5"
+      }, rateCells(setting).map(([label, value, boosted]) => /*#__PURE__*/React.createElement("div", {
         key: label,
-        className: "rounded-xl bg-black/35 p-1.5 text-center text-[8px] text-slate-400"
+        className: "rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap"
       }, label, /*#__PURE__*/React.createElement("b", {
         className: "block text-xs",
         style: {
           color: boosted ? mode.color : '#ffffff'
         }
       }, value)))), quick && /*#__PURE__*/React.createElement("div", {
-        className: "mt-1.5 rounded-xl border px-2 py-1 text-center text-[8px] font-black leading-relaxed",
+        className: "mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden",
         style: {
           borderColor: `${mode.color}55`,
           color: mode.color
         }
-      }, "\u7D4C\u9A13\u5024\u3068\u30C0\u30A4\u30E4\u3060\u30511.5\u500D\uFF08\u30B9\u30B3\u30A2\u500D\u7387\u306F\u96E3\u6613\u5EA6\u3069\u304A\u308A\uFF09"), /*#__PURE__*/React.createElement("div", {
-        className: "grid gap-2 mt-2.5"
+      }, "\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u306E\u307F1.5\u500D"), /*#__PURE__*/React.createElement("div", {
+        className: "grid gap-1.5 mt-1.5"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setDifficulty(key);
           setShowWaveDetails(true);
         },
-        className: "min-h-[44px] rounded-xl bg-slate-700 font-black text-xs"
+        className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs"
       }, "\u5168WAVE\u8A73\u7D30"), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setDifficulty(key);
@@ -13305,7 +13307,7 @@ function MonsterHeroGame() {
           setHeroPickTab('roster');
           setGameState('PICK_HERO');
         },
-        className: "min-h-[48px] rounded-xl font-black text-sm",
+        className: "min-h-[44px] rounded-xl font-black text-sm",
         style: {
           backgroundColor: setting.bg,
           color: setting.darkText ? '#0f172a' : '#ffffff'
@@ -13313,7 +13315,7 @@ function MonsterHeroGame() {
       }, "\u3053\u306E\u96E3\u6613\u5EA6\u3067\u6311\u6226"), (() => {
         const tid = SKIP_TICKETS[key];
         if (!tid) return /*#__PURE__*/React.createElement("div", {
-          className: "min-h-[46px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500"
+          className: "min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap"
         }, "\u3053\u306E\u96E3\u6613\u5EA6\u306F\u30B9\u30AD\u30C3\u30D7\u3067\u304D\u307E\u305B\u3093");
         const have = ownedItems[tid] || 0;
         return /*#__PURE__*/React.createElement("div", {
@@ -13324,13 +13326,13 @@ function MonsterHeroGame() {
             setDifficulty(key);
             openBattleSkip(key);
           },
-          className: `flex-1 min-h-[46px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have > 0 ? 'bg-teal-600 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
+          className: `flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have > 0 ? 'bg-teal-600 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
         }, /*#__PURE__*/React.createElement("span", null, "\u30B9\u30AD\u30C3\u30D7"), /*#__PURE__*/React.createElement("span", {
           className: `text-[10px] font-black px-1.5 py-0.5 rounded-full ${have > 0 ? 'bg-black/30 text-teal-100' : 'bg-black/40 text-slate-500'}`
         }, have, "\u679A")), /*#__PURE__*/React.createElement("button", {
           onClick: () => setSkipInfoItemId(tid),
           "aria-label": "\u30B9\u30AD\u30C3\u30D7\u306E\u8AAC\u660E",
-          className: "shrink-0 w-12 min-h-[46px] rounded-xl bg-slate-700 text-white font-black active:scale-95"
+          className: "shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95"
         }, "\uFF1F"));
       })()));
     })), /*#__PURE__*/React.createElement("button", {
@@ -13339,12 +13341,12 @@ function MonsterHeroGame() {
       onClick: () => selectDifficultyIndex(selectedIndex + 1),
       className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
     }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
-      className: "flex justify-center gap-1.5 py-1"
+      className: "flex justify-center gap-1 py-0.5"
     }, difficulties.map(([key], i) => /*#__PURE__*/React.createElement("button", {
       key: key,
       "aria-label": `${i + 1}ページ目`,
       onClick: () => selectDifficultyIndex(i),
-      className: `w-2 h-2 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+      className: `w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
     }))), !quick && /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setBattleMenuTab('ranking');
@@ -13352,7 +13354,7 @@ function MonsterHeroGame() {
         setRankingViewDiff(difficulty);
         loadRankings(difficulty);
       },
-      className: "shrink-0 w-full min-h-[46px] rounded-2xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[12px] active:scale-[.98] mb-2 flex items-center justify-center gap-1 px-3"
+      className: "shrink-0 w-full min-h-[40px] rounded-2xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] mb-1.5 flex items-center justify-center gap-1 px-2"
     }, /*#__PURE__*/React.createElement("span", {
       className: "flex-1 text-center"
     }, "\uD83C\uDFC6 \u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u898B\u308B\uFF08\u30C1\u30E3\u30EC\u30F3\u30B8\u30E2\u30FC\u30C9\uFF09"), /*#__PURE__*/React.createElement(ChevronRight, {
@@ -13364,7 +13366,7 @@ function MonsterHeroGame() {
       key: battleMode,
       scene: quick ? 'battleQuick' : 'battleChallenge',
       accent: mode.color,
-      faceSize: 64
+      faceSize: 48
     })));
   })(), battleMenuTab === 'ranking' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 flex flex-col"
@@ -17876,9 +17878,8 @@ function MonsterHeroGame() {
     className: "flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs"
   }, ownedTeachings.find(ot => ot.id === selectedTeachingCard.id) ? "強化する" : "習得する"))))), gameState === 'QUICK_GROWTH' && quickGrowth && /*#__PURE__*/React.createElement(QuickStepScreen, {
     onDone: finishQuickGrowth,
-    ms: 1800,
     accent: "#2dd4bf",
-    label: "\u30BF\u30C3\u30D7\u3067\u6B21\u3078"
+    label: "\u30BF\u30C3\u30D7\u3057\u3066\u6B21\u3078"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-2xl font-black italic",
     style: {
@@ -17910,9 +17911,8 @@ function MonsterHeroGame() {
     }
   }, "\u30E9\u30A4\u30D5\u30FB\u30AC\u30C3\u30C4\u5168\u56DE\u5FA9\uFF01")), gameState === 'QUICK_JOIN' && quickJoin && /*#__PURE__*/React.createElement(QuickStepScreen, {
     onDone: finishQuickJoin,
-    ms: 2200,
     accent: "#2dd4bf",
-    label: "\u30BF\u30C3\u30D7\u3067\u6B21\u3078"
+    label: "\u30BF\u30C3\u30D7\u3057\u3066\u6B21\u3078"
   }, /*#__PURE__*/React.createElement("h2", {
     className: "text-2xl font-black italic",
     style: {

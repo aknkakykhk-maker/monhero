@@ -37,7 +37,7 @@ check('種別ごとにバラバラだった旧サイズが残っていない',
 
 // --- ② 難易度カードの高さ ---
 check('スキップが無い難易度でも同じ高さの行を出す',
-  has("if(!tid)return(<div className=\"min-h-[46px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500\">この難易度はスキップできません</div>);"));
+  has("if(!tid)return(<div className=\"min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap\">この難易度はスキップできません</div>);"));
 check('スキップ行を条件付きで丸ごと消していない', !has('{SKIP_TICKETS[key]&&(()=>{'));
 
 // --- ②' マーケットの商品カード ---
@@ -70,7 +70,7 @@ const noScroll = screens.filter(name => {
 check('各画面に縦スクロールできる場所がある', noScroll.length === 0, noScroll.join(', '));
 check('HOMEは小さい端末向けの調整がある', has('@media(max-width:350px)') && has('@media(max-height:620px)'));
 check('難易度タブは背の低い端末で縦スクロールできる',
-  has('return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[9px] tracking-[.18em] text-slate-400 font-black mb-1 shrink-0">左右にスワイプして難易度を選択</div>'));
+  has('return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
