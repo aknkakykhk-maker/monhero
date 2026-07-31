@@ -150,13 +150,18 @@ check('チャレンジはスコア倍率を出す', has(": [['敵強度',`×${se
 check('クイックは経験値・ダイヤだけ1.5倍と分かる表示', has('経験値・ダイヤのみ1.5倍'));
 // 見出しが2行に折り返さないよう、倍率は3枠までにして折り返しも禁じる
 check('倍率の枠は3つで1行に収める', has('<div className="grid grid-cols-3 gap-1 mt-1.5">') && has('text-center text-[8px] text-slate-400 whitespace-nowrap'));
-check('ランキングボタンはチャレンジのときだけ出す', has("{!quick&&<button onClick={()=>{setBattleMenuTab('ranking')") && has('🏆 ランキングを見る（チャレンジモード）'));
-// 横に長すぎたので難易度カードと同じ幅に揃える。クイックでも同じ高さの場所を空け、
-// ランキングボタンの有無で助手コメントの位置がずれないようにする
-check('ランキングボタンは難易度カードと同じ幅', has('className="w-[82%] h-10 rounded-2xl bg-slate-800 border border-indigo-400/40'));
+check('ランキングボタンはチャレンジのときだけ出す',
+  has("? <div className=\"w-full h-10 rounded-xl bg-slate-900/60") && has(": <button onClick={()=>{setBattleMenuTab('ranking')")
+    && has('🏆 ランキングを見る（チャレンジモード）'));
+// モードのタブのすぐ下へ移し、タブ2つを合わせたのと同じ幅にする。
+// クイックでも同じ高さの案内を出し、下に続く表示の位置がモードでずれないようにする
+check('ランキングボタンはモードのタブと同じ幅', has('className="w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40'));
+check('ランキングボタンはモードのタブのすぐ下にある',
+  source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf('左右にスワイプして難易度を選択'));
+check('クイックでも同じ高さの案内を出す', has('クイックモードはランキング対象外です') && count('w-full h-10 rounded-xl') === 2, `${count('w-full h-10 rounded-xl')}か所`);
 // 最低の高さ(min-h)ではなく決め打ちの高さ(h-10)にする。ボタンの中身によっては
 // min-hを超えて伸びてしまい、クイック側の空き場所とずれるため
-check('助手コメントの位置がモードでずれない', has('<div className="shrink-0 flex justify-center h-10 mb-1.5">'));
+check('助手コメントの位置がモードでずれない', has('<div className="shrink-0 w-full h-10 mb-1">'));
 // 難易度カード自体の高さもモードでそろえる。記録の枠(チャレンジ3行/クイック1行)と
 // 倍率の下の補足行が、モードによって高さを変える原因だった
 // 高さを数値で指定してそろえる方法は、端末のフォントで1行の高さが変わるため合いきらなかった。
@@ -172,7 +177,10 @@ check('倍率の下の補足行はどちらのモードでも出す',
   has("const noteText=quick?'経験値・ダイヤのみ1.5倍':'スコアがランキングに登録される';")
     && has('style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div>')
     && !has('{quick&&<div className="mt-1 rounded-xl border'));
-check('カードの下はランキング→助手コメントの順', source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf("scene={quick?'battleQuick':'battleChallenge'}"));
+check('ランキングの導線は助手コメントより前にある', source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf("scene={quick?'battleQuick':'battleChallenge'}"));
+// ランキングを見ているときの戻るは、ホームではなく難易度の画面へ戻す
+check('ランキングからの戻るはバトルの画面へ',
+  has("onClick={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}}"));
 check('助手コメントは既存の共通UIを使う', has("<AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'}") && assistantsSrc.includes('battleChallenge:') && assistantsSrc.includes('battleQuick:'));
 check('挑戦を始めるときにモードを固定する', has('setDifficulty(key);setRunMode(battleMode);'));
 check('バトル中にモード名と難易度を出す', has('{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}'));
