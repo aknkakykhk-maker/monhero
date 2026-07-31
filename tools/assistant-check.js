@@ -119,6 +119,12 @@ check('セリフをJSXへ直接書いていない', (() => {
   return lines.every(line => !source.includes(line));
 })());
 check('画像のパスをJSXへ直接書いていない', !/images\/assistant\//.test(source));
+// HOMEは絶対配置なので、置き場所をCSSで決める。施設のボタンやマスモンに
+// かぶらないよう、プレイヤー情報と更新履歴の下の空きへ置く
+check('HOMEの吹き出しは施設の上に重ならない場所へ置く',
+  has('.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(54px + env(safe-area-inset-top));pointer-events:auto}')
+    && has('@media(max-width:350px){.mh-home-assistant{width:62%}}')
+    && has('<div className="mh-home-assistant"><AssistantBubble scene="home" compact/></div>'));
 check('画面側は scene を渡すだけ', (() => {
   const calls = source.match(/<AssistantBubble[^/]*\/>/g) || [];
   // ヘルプ画面だけは項目ごとの文面を渡すので line/detail を使う
