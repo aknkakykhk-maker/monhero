@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 17:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 17:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1653,6 +1653,11 @@ const normalizeBattleDifficulty = (value) => Object.prototype.hasOwnProperty.cal
 // 表を1つ足したいときは、ここに case を足して data/help.js から呼ぶ。
 const helpDataRows = (id) => {
   const marketItems = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS) || [];
+  // ダイヤで買う商品のうち、いちばん安いものの値段。助手が「ダイヤが心もとない」と
+  // 声をかけるかどうかの判定にだけ使う(購入の可否は各商品ごとに別途見ている)
+  const cheapestGoldItemCost = marketItems
+    .filter(i => i.type === 'disc' || i.type === 'breeder' || i.type === 'item')
+    .reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
   const skipIds = new Set(Object.values(SKIP_TICKETS));
   switch (id) {
     case 'difficulties':
@@ -1739,13 +1744,22 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
 //   accent      … 画面のテーマ色に合わせたいとき(省略すると助手ごとの色)
 //   compact     … 縦の場所が取れない画面(選択画面・リザルト)向けの小さい表示
 //   defaultOpen … 最初から詳細を開いた状態にする(チュートリアルなどで使う)
-const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false }) => {
+const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false }) => {
   const [open, setOpen] = useState(defaultOpen);
   const sceneDef = assistantSceneById(scene);
   const who = assistantById(assistantId || sceneDef?.assistantId);
   const color = accent || who.accent || ASSISTANT_FALLBACK.accent;
-  const text = line || sceneDef?.short || who.greeting || '';
-  const face = expression || sceneDef?.expression || null;
+  // 場面ごとに用意した複数のセリフから1つ選ぶ。同じ画面でも毎回ちがうことを話す。
+  // 選び直すのは「場面」か「条件」が変わったときだけ。ほかの理由で再描画されるたびに
+  // セリフが入れ替わると、読んでいる途中で文が変わってしまう
+  const pickedRef = useRef(null);
+  const pickKey = `${scene || ''}|${condition || ''}`;
+  if (pickedRef.current?.key !== pickKey) {
+    pickedRef.current = { key: pickKey, value: (typeof pickAssistantLine === 'function') ? pickAssistantLine(scene, condition) : null };
+  }
+  const picked = pickedRef.current.value;
+  const text = line || picked?.t || who.greeting || '';
+  const face = expression || picked?.e || null;
   const paragraphs = detail || sceneDef?.detail || null;
   const ref = helpRef || sceneDef?.help || null;
   const topic = ref && ref.includes('/') ? helpTopicById(ref.split('/')[0], ref.split('/')[1]) : null;
@@ -2320,6 +2334,9 @@ function MonsterHeroGame() {
   const [quickHighScores, setQuickHighScores] = useState({});
   const [quickHighestWaves, setQuickHighestWaves] = useState({});
   const [quickClearCounts, setQuickClearCounts] = useState({});
+  // このランで「自己ベストを更新したか」「その難易度を初めてクリアしたか」。
+  // リザルトで助手に特別なセリフを言わせるためだけに使う(保存はしない)
+  const [runHighlights, setRunHighlights] = useState({ newRecord: false, firstClear: false });
   const highScoresRef = useRef({});
   useEffect(() => { highScoresRef.current = highScores; }, [highScores]);
   const [attemptCounts, setAttemptCounts] = useState({}); // 難易度別 挑戦回数(端末保存)
@@ -3808,6 +3825,7 @@ function MonsterHeroGame() {
       if (score > (quickHighScores[difficulty] || 0)) {
         await storeSet(bestScoreKey(BATTLE_MODE_QUICK, difficulty), score, false);
         setQuickHighScores(prev => ({ ...prev, [difficulty]: score }));
+        setRunHighlights(prev => ({ ...prev, newRecord: true }));
       }
       return;
     }
@@ -3820,6 +3838,7 @@ function MonsterHeroGame() {
       if (score > (highScores[difficulty] || 0)) {
         await storeSet(`mh_hs_${difficulty}`, score, false);
         setHighScores(prev => ({ ...prev, [difficulty]: score }));
+        setRunHighlights(prev => ({ ...prev, newRecord: true }));
       }
       return result;
     } catch (e) {
@@ -4718,6 +4737,7 @@ function MonsterHeroGame() {
     }
     const nextCount = (clearCounts[difficulty] || 0) + 1;
     setClearCounts(prev => ({ ...prev, [difficulty]: Math.max(prev[difficulty] || 0, nextCount) }));
+    if (nextCount === 1) setRunHighlights(prev => ({ ...prev, firstClear: true }));
     await storeSet(`mh_clears_${difficulty}`, nextCount, false);
   };
 
@@ -4817,6 +4837,7 @@ function MonsterHeroGame() {
     setWaveResult(s.waveResult);
     setPendingReward(null); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
+    setRunHighlights({ newRecord: false, firstClear: false });
     setSkipFlow(null); setSkipConfirmOpen(false); setSkipResult(null); setSkipInfoItemId(null);
     setGameState('HOME');
   };
@@ -4981,6 +5002,7 @@ function MonsterHeroGame() {
     setWaveResult(s.waveResult);
     setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
+    setRunHighlights({ newRecord: false, firstClear: false });
     setGameState('PICK_HERO');
   };
 
@@ -6219,7 +6241,7 @@ function MonsterHeroGame() {
               {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
             </button>
             <button onClick={openChangelog} className="mh-home-update"><RefreshCcw size={15}/>更新履歴{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
-            <div className="mh-home-assistant"><AssistantBubble scene="home" compact/></div>
+            <div className="mh-home-assistant"><AssistantBubble scene="home" condition={masuMons.length===0?'firstRun':null} compact/></div>
           </main>
         )}
 
@@ -6252,7 +6274,7 @@ function MonsterHeroGame() {
         {gameState==='MISSIONS'&&(()=>{const state=normalizeMissions(missions),defs=MISSION_DEFS[missionTab],sent=missionTab==='daily'?state.sentDaily:state.sentWeekly;const resetAt=missionNextReset(missionTab);return <div className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
           <div className="flex items-center justify-between gap-2 mb-2 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black text-amber-200 flex items-center gap-2"><List size={21}/>ミッション</h2><div className="w-11"></div></div>
           {/* 受け取れる報酬があるかどうかでセリフを切り替える */}
-          {(()=>{const claimable=missionClaimableCount(state)>0;return <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} compact/></div>;})()}
+          {(()=>{const claimable=missionClaimableCount(state)>0;const allDone=['daily','weekly'].every(t=>MISSION_DEFS[t].every(m=>missionValue(state,t,m)>=m.target));return <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble key={claimable?'claim':'normal'} scene={claimable?'missionsClaimable':'missionsNormal'} condition={claimable&&allDone?'allDone':null} compact/></div>;})()}
           <div className="grid grid-cols-2 gap-2 mb-2 shrink-0"><button onClick={()=>setMissionTab('daily')} className={`relative min-h-[44px] rounded-xl font-black text-sm ${missionTab==='daily'?'bg-amber-600 text-white':'bg-slate-900 text-slate-400'}`}>デイリー{tabCountBadge(missionClaimableList(state,'daily').length)}</button><button onClick={()=>setMissionTab('weekly')} className={`relative min-h-[44px] rounded-xl font-black text-sm ${missionTab==='weekly'?'bg-violet-600 text-white':'bg-slate-900 text-slate-400'}`}>ウィークリー{tabCountBadge(missionClaimableList(state,'weekly').length)}</button></div>
           {(()=>{const bulk=missionClaimableList(state,missionTab);return <button disabled={!bulk.length} onClick={()=>claimMissionsBulk(missionTab)} className="shrink-0 mb-2 min-h-[44px] rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black disabled:opacity-40">一括受け取り{bulk.length>0&&` (${bulk.length})`}</button>;})()}
           <div className="mb-2 text-center text-[10px] font-bold text-slate-400 shrink-0">次回更新: {new Date(resetAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo',month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit'})}</div>
@@ -6480,7 +6502,7 @@ function MonsterHeroGame() {
               <button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">マーケット</h2>
             </div>
-            <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market"/></div>
+            <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market" condition={Number.isFinite(cheapestGoldItemCost)&&gold<cheapestGoldItemCost?'lowGold':null}/></div>
             <div className="flex gap-2 mb-4 shrink-0">
               <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
                 <Coins size={16} className="text-amber-400"/>
@@ -8864,7 +8886,7 @@ function MonsterHeroGame() {
       )}
 
       {/* CHAMPION */}
-      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" compact/></div></div><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>)}
+      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>)}
 
       {/* GAME OVER */}
       {hp<=0&&!debugBattle&&(<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" compact/></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}

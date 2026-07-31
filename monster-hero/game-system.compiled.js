@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 419126689469ef54
+// source-sha256: dd4dabd9fdf10fc1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 17:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 17:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4145,6 +4145,9 @@ const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(
 // 表を1つ足したいときは、ここに case を足して data/help.js から呼ぶ。
 const helpDataRows = id => {
   const marketItems = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
+  // ダイヤで買う商品のうち、いちばん安いものの値段。助手が「ダイヤが心もとない」と
+  // 声をかけるかどうかの判定にだけ使う(購入の可否は各商品ごとに別途見ている)
+  const cheapestGoldItemCost = marketItems.filter(i => i.type === 'disc' || i.type === 'breeder' || i.type === 'item').reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
   const skipIds = new Set(Object.values(SKIP_TICKETS));
   switch (id) {
     case 'difficulties':
@@ -4317,6 +4320,7 @@ const AssistantBubble = ({
   line = null,
   detail = null,
   helpRef = null,
+  condition = null,
   expression = null,
   accent = null,
   faceSize = null,
@@ -4327,8 +4331,20 @@ const AssistantBubble = ({
   const sceneDef = assistantSceneById(scene);
   const who = assistantById(assistantId || sceneDef?.assistantId);
   const color = accent || who.accent || ASSISTANT_FALLBACK.accent;
-  const text = line || sceneDef?.short || who.greeting || '';
-  const face = expression || sceneDef?.expression || null;
+  // 場面ごとに用意した複数のセリフから1つ選ぶ。同じ画面でも毎回ちがうことを話す。
+  // 選び直すのは「場面」か「条件」が変わったときだけ。ほかの理由で再描画されるたびに
+  // セリフが入れ替わると、読んでいる途中で文が変わってしまう
+  const pickedRef = useRef(null);
+  const pickKey = `${scene || ''}|${condition || ''}`;
+  if (pickedRef.current?.key !== pickKey) {
+    pickedRef.current = {
+      key: pickKey,
+      value: typeof pickAssistantLine === 'function' ? pickAssistantLine(scene, condition) : null
+    };
+  }
+  const picked = pickedRef.current.value;
+  const text = line || picked?.t || who.greeting || '';
+  const face = expression || picked?.e || null;
   const paragraphs = detail || sceneDef?.detail || null;
   const ref = helpRef || sceneDef?.help || null;
   const topic = ref && ref.includes('/') ? helpTopicById(ref.split('/')[0], ref.split('/')[1]) : null;
@@ -5298,6 +5314,12 @@ function MonsterHeroGame() {
   const [quickHighScores, setQuickHighScores] = useState({});
   const [quickHighestWaves, setQuickHighestWaves] = useState({});
   const [quickClearCounts, setQuickClearCounts] = useState({});
+  // このランで「自己ベストを更新したか」「その難易度を初めてクリアしたか」。
+  // リザルトで助手に特別なセリフを言わせるためだけに使う(保存はしない)
+  const [runHighlights, setRunHighlights] = useState({
+    newRecord: false,
+    firstClear: false
+  });
   const highScoresRef = useRef({});
   useEffect(() => {
     highScoresRef.current = highScores;
@@ -7261,6 +7283,10 @@ function MonsterHeroGame() {
           ...prev,
           [difficulty]: score
         }));
+        setRunHighlights(prev => ({
+          ...prev,
+          newRecord: true
+        }));
       }
       return;
     }
@@ -7275,6 +7301,10 @@ function MonsterHeroGame() {
         setHighScores(prev => ({
           ...prev,
           [difficulty]: score
+        }));
+        setRunHighlights(prev => ({
+          ...prev,
+          newRecord: true
         }));
       }
       return result;
@@ -8960,6 +8990,10 @@ function MonsterHeroGame() {
       ...prev,
       [difficulty]: Math.max(prev[difficulty] || 0, nextCount)
     }));
+    if (nextCount === 1) setRunHighlights(prev => ({
+      ...prev,
+      firstClear: true
+    }));
     await storeSet(`mh_clears_${difficulty}`, nextCount, false);
   };
 
@@ -9158,6 +9192,10 @@ function MonsterHeroGame() {
     setMasuRegisteredThisRun(false);
     setShowMasuRegisterModal(false);
     setMasuNameInput('');
+    setRunHighlights({
+      newRecord: false,
+      firstClear: false
+    });
     setSkipFlow(null);
     setSkipConfirmOpen(false);
     setSkipResult(null);
@@ -9443,6 +9481,10 @@ function MonsterHeroGame() {
     setMasuRegisteredThisRun(false);
     setShowMasuRegisterModal(false);
     setMasuNameInput('');
+    setRunHighlights({
+      newRecord: false,
+      firstClear: false
+    });
     setGameState('PICK_HERO');
   };
   const runResultActionOnce = action => {
@@ -12089,6 +12131,7 @@ function MonsterHeroGame() {
     className: "mh-home-assistant"
   }, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "home",
+    condition: masuMons.length === 0 ? 'firstRun' : null,
     compact: true
   }))), gameState === 'TRAINING_INFO' && /*#__PURE__*/React.createElement("main", {
     className: "mh-training-screen"
@@ -12499,11 +12542,13 @@ function MonsterHeroGame() {
       className: "w-11"
     })), (() => {
       const claimable = missionClaimableCount(state) > 0;
+      const allDone = ['daily', 'weekly'].every(t => MISSION_DEFS[t].every(m => missionValue(state, t, m) >= m.target));
       return /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 w-full max-w-md mx-auto mb-2"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         key: claimable ? 'claim' : 'normal',
         scene: claimable ? 'missionsClaimable' : 'missionsNormal',
+        condition: claimable && allDone ? 'allDone' : null,
         compact: true
       }));
     })(), /*#__PURE__*/React.createElement("div", {
@@ -13823,7 +13868,8 @@ function MonsterHeroGame() {
   }, "\u30DE\u30FC\u30B1\u30C3\u30C8")), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-3"
   }, /*#__PURE__*/React.createElement(AssistantBubble, {
-    scene: "market"
+    scene: "market",
+    condition: Number.isFinite(cheapestGoldItemCost) && gold < cheapestGoldItemCost ? 'lowGold' : null
   })), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 mb-4 shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
@@ -19349,6 +19395,7 @@ function MonsterHeroGame() {
     className: "w-full max-w-xs mx-auto mt-3 text-left"
   }, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "resultWin",
+    condition: runHighlights.newRecord ? 'newRecord' : runHighlights.firstClear ? 'firstClear' : null,
     compact: true
   }))), /*#__PURE__*/React.createElement("button", {
     onClick: () => runResultActionOnce(returnToHome),

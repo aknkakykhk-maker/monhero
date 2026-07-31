@@ -8,17 +8,30 @@
 // 助手を増やす・画像を差し替える・セリフを直す、のどれもこのファイルだけで完結する。
 // セリフや画像のパスを各画面のJSXへ直接書かないこと(直すときに探し回ることになる)。
 //
+// 【セリフは1画面につき複数持つ】★重要
+// 同じ画面でいつも同じことを言うと、遊ぶほどキャラクターが死んでいく。
+// 場面ごとに lines を5つ以上持たせ、画面を開くたびにランダムで1つ選ぶ。
+// 直前に出したものは続けて出さない(pickAssistantLine が覚えている)。
+//
 // 【助手を増やすとき】
 //   ASSISTANTS に1件足す。表情画像は images/assistant/<prefix>_<表情>.PNG の形で置き、
 //   imagePrefix にその接頭辞を書く。画面側の変更は要らない。
 //
 // 【場面を増やすとき】
-//   ① ASSISTANT_SCENES に場面を1つ足す
-//        home: { short:'…', expression:'happy', help:'home/roster' }
+//   ① ASSISTANT_SCENES に場面を1つ足す(lines は5つ以上)
+//        home: { help:'home/roster', lines:[ { e:'happy', t:'…' }, ... ] }
 //   ② その画面のJSXに1行置く
 //        <AssistantBubble scene="home"/>
-//   これだけで、吹き出し・表情・タップで開く詳細がすべて同じ見た目で動く。
-//   詳細は help(ヘルプの項目をそのまま出す)か detail(自前の文章)のどちらでも書ける。
+//   これだけで、吹き出し・表情・ランダム表示・タップで開く詳細がすべて同じ見た目で動く。
+
+// ---------- みゅあの話し方(セリフを足すときの決まりごと) ----------
+// ・一人称は「あたし」。役割は「助手」
+// ・明るく元気で、少しギャルっぽい。ゲーム好きで面倒見がよく、一緒に遊んでいる感じ
+// ・上から目線にしない。説明書のような言い回し(「〜してください」「〜しましょう」)にしない
+// ・語尾は「〜だよ♪」「〜しよ！」「〜じゃん♪」「〜かも！」「〜だね！」「〜いこ！」などを
+//   場面ごとに散らす。同じ場面のセリフで語尾がそろわないようにする
+// ・1〜2文で、スマホでも一目で読める長さにする
+// ・ギャル語を使いすぎない。子供っぽくしすぎない
 
 // ---------- 表情 ----------
 // 画像は monster-hero/images/assistant/ に <prefix>_<表情>.PNG の名前で置く。
@@ -65,205 +78,425 @@ const assistantFullImage = (who, expression) => (who && who.imagePrefix)
 // ---------- 場面(scene) → 助手のセリフ ----------
 // 画面側は <AssistantBubble scene="キー"/> で呼ぶ。
 //   assistantId … だれが話すか(省略すると DEFAULT_ASSISTANT_ID)
-//   short       … 吹き出しに出す短いひとこと(スマホで読みやすいよう1〜2文)
-//   expression  … 表情。省略すると normal
+//   lines       … セリフの候補。{ e:表情, t:セリフ } を5つ以上。開くたびに1つ選ぶ
+//   when        … 条件つきのセリフ。画面から condition を渡したときは lines より優先する
 //   detail      … タップで開く詳しい説明(文字列の配列)
 //   help        … 'カテゴリid/項目id'。detail の代わりに、ヘルプ本文をそのまま詳細として開く
 //
 // バトル中・クイックの成長演出・供モンの加入演出には常設しない(テンポを止めないため)。
 // バトル中の案内は「ステータス」やヘルプを開いたときだけ出す。
 const ASSISTANT_SCENES = {
-  // ---- はじめて／ホーム ----
+  // ---- はじめて ----
   onboarding: {
-    short: 'はじめまして、あたしはみゅあ！ まずは名前とアイコンを決めよ♪ あとから変えられるから気楽でOK！',
-    expression: 'normal',
     help: 'basics/onboarding',
+    lines: [
+      { e:'happy',   t:'はじめまして、あたしはみゅあ！ これから一緒にモンスター育てていこ♪' },
+      { e:'normal',  t:'まずは名前とアイコンを決めよ！ あとから変えられるから気楽でOK。' },
+      { e:'excited', t:'どんな名前にする？ ランキングにも出るから、気に入ったやつがいいよ！' },
+      { e:'wink',    t:'分かんないことがあったら、いつでもあたしに聞いてね♪' },
+      { e:'happy',   t:'準備できたら冒険スタート！ あたしがちゃんと案内するから安心して。' },
+    ],
   },
+
+  // ---- ホーム ----
   home: {
-    short: '今日も育成いこ〜♪ 編成を整えるか、神殿で育てるか、バトルに挑むか決めよ！',
-    expression: 'happy',
     help: 'home/roster',
+    lines: [
+      { e:'happy',   t:'今日も育成いこー♪' },
+      { e:'wink',    t:'何から始める？ あたしは神殿がおすすめかな！' },
+      { e:'normal',  t:'マスモンのチェックも忘れずにね！' },
+      { e:'happy',   t:'今日はどんな勇者モンが育つかな〜♪' },
+      { e:'excited', t:'自己ベスト更新しちゃお！' },
+      { e:'normal',  t:'編成を見直すだけでも、けっこう変わるよ。' },
+      { e:'happy',   t:'ミッションとギフトも覗いてみよ！' },
+    ],
+    when: {
+      // 始めたばかりの人へ。マスモンがまだ1体もいないとき
+      firstRun: [
+        { e:'excited', t:'いよいよ冒険スタート！ まずはバトルに挑んでみよ♪' },
+        { e:'happy',   t:'最初は難易度Beginnerでじゅうぶん！ 気楽にいこ〜。' },
+        { e:'wink',    t:'1回遊ぶとマスモンを登録できるよ。そこからが本番だね！' },
+        { e:'normal',  t:'迷ったらバトル！ やってみるのが一番わかるよ。' },
+        { e:'happy',   t:'あたしがついてるから大丈夫♪ いってらっしゃい！' },
+      ],
+    },
   },
 
   // ---- バトルメニュー ----
-  // battleChallenge と battleQuick は同じ場所で入れ替わるので、行数が変わって
-  // 吹き出しの大きさがモードごとに違って見えないよう、文字数をおおよそそろえておく
   battleChallenge: {
-    short: 'ランキング狙いならチャレンジ！ 強化の選び方で差がつくから、自己ベスト更新いこ♪',
-    expression: 'happy',
     help: 'basics/battle-modes',
+    lines: [
+      { e:'happy',   t:'ランキング狙うならここ！' },
+      { e:'wink',    t:'強化の選び方でかなり変わるよ♪' },
+      { e:'happy',   t:'終盤まで考えて強化しよ！' },
+      { e:'excited', t:'自己ベスト更新いけそう！' },
+      { e:'normal',  t:'焦らずじっくり育てよ♪' },
+      { e:'wink',    t:'迷ったら弱いところを埋めるのがおすすめかな！' },
+    ],
   },
   battleQuick: {
-    short: 'サクッと育てるならクイック！ 自動成長はあるけど強化を選べないから、油断禁物ね♪',
-    expression: 'wink',
     help: 'basics/battle-modes',
+    lines: [
+      { e:'wink',    t:'テンポ重視ならこれ！' },
+      { e:'happy',   t:'サクサク育成しちゃお♪' },
+      { e:'normal',  t:'自動成長をうまく活かそう！' },
+      { e:'wink',    t:'強化は選べないから、編成で勝負だね！' },
+      { e:'happy',   t:'短時間でも結構強くなるよ♪' },
+      { e:'excited', t:'経験値もダイヤも1.5倍！ おいしいじゃん♪' },
+    ],
   },
   ranking: {
-    short: '上位の編成はマジで参考になるよ！ 難易度や種類を切り替えて、次の目標を決めよ♪',
-    expression: 'excited',
     help: 'basics/ranking',
+    lines: [
+      { e:'excited', t:'上位目指しちゃお！' },
+      { e:'happy',   t:'みんな強いなぁ〜！' },
+      { e:'wink',    t:'編成を見るだけでも勉強になるよ！' },
+      { e:'normal',  t:'次はこの人を超えよう！' },
+      { e:'happy',   t:'あと少しで順位アップかも！' },
+      { e:'normal',  t:'難易度を切り替えると、狙い目が見えてくるよ。' },
+    ],
   },
 
   // ---- ランの準備・進行(選択画面はコンパクト表示で使う) ----
   pickHero: {
-    short: '最初の1体は超大事！ 勇者特性と固有技を見て、今回の戦い方を決めよ♪',
-    expression: 'normal',
     help: 'battle/hero-trait',
+    lines: [
+      { e:'normal',  t:'最初の1体は超大事！ 勇者特性を見て決めよ♪' },
+      { e:'happy',   t:'今日はどの子でいく？ あたしはワクワクしてる！' },
+      { e:'wink',    t:'固有技もチェックしてね。戦い方がガラッと変わるよ！' },
+      { e:'excited', t:'育ってる子で挑むと、けっこう楽しいよ♪' },
+      { e:'normal',  t:'迷ったら詳細を開いてみて。特性が決め手だね！' },
+    ],
   },
   pickSlot: {
-    short: '敵と同じ距離から攻撃すると強いよ！ 得意距離と今の補正を見て置いてね♪',
-    expression: 'wink',
     help: 'battle/distance',
+    lines: [
+      { e:'wink',    t:'敵と同じ距離から殴ると強いよ！' },
+      { e:'normal',  t:'得意な距離と、今の補正を見て置いてね。' },
+      { e:'happy',   t:'ここ、地味に勝敗を分けるとこ！' },
+      { e:'excited', t:'補正が高い距離に寄せると気持ちいいよ♪' },
+      { e:'normal',  t:'置いた距離以外にも補正はかかるから、安心して選ぼ！' },
+    ],
   },
   pickAlly: {
-    short: '仲間が増えるよ♪ ステータスだけじゃなく、4距離の補正変化も見て選ぼ！',
-    expression: 'happy',
     help: 'battle/join-bonus',
+    lines: [
+      { e:'happy',   t:'仲間が増えるよ♪ どの子にする？' },
+      { e:'wink',    t:'ステータスだけじゃなく、距離の補正も見てみて！' },
+      { e:'excited', t:'ここで一気に強くなるチャンス！' },
+      { e:'normal',  t:'足りない距離を埋めると安定するよ。' },
+      { e:'happy',   t:'心強い仲間がきたら、あと半分いけそうじゃん♪' },
+    ],
   },
   pickTeaching: {
-    short: '同じ教えを重ねるとLv2に進化！ 今の強さか完成形か、作戦に合わせて選んでね♪',
-    expression: 'wink',
     help: 'growth/teaching',
+    lines: [
+      { e:'wink',    t:'同じ教えを重ねるとLv2に進化するよ！' },
+      { e:'normal',  t:'今の強さを取るか、完成形を狙うか…作戦しだいだね。' },
+      { e:'happy',   t:'あたしはとりあえず重ねる派♪' },
+      { e:'excited', t:'進化するとけっこう跳ね上がるよ！' },
+      { e:'normal',  t:'ブリーダーカードは効果が半減しないのが強いとこ！' },
+    ],
   },
   rewardPick: {
-    short: 'WAVEクリアおつかれ♪ 弱点を埋めるか、強みを伸ばすかで選ぼ！',
-    expression: 'happy',
     help: 'growth/awaken',
+    lines: [
+      { e:'happy',   t:'WAVEクリアおつかれ♪ どれ伸ばす？' },
+      { e:'wink',    t:'弱点を埋めるか、強みを伸ばすか…悩むとこだね！' },
+      { e:'excited', t:'いい感じじゃーん♪ この調子でいこ！' },
+      { e:'normal',  t:'ライフが心もとないなら、先に固くするのもアリかも。' },
+      { e:'happy',   t:'ここの積み重ねで終盤がラクになるよ！' },
+    ],
   },
   // バトル中の案内。「ステータス」を開いたときだけ出す
   battleHelp: {
-    short: '迷ったらまず解析！ いちばん効かせたいカードは、最初に置くのがコツだよ♪',
-    expression: 'wink',
     help: 'battle/cards',
+    lines: [
+      { e:'wink',    t:'迷ったらまず解析！ 敵の必殺技が読めるよ。' },
+      { e:'normal',  t:'いちばん効かせたいカードは、最初に置くのがコツ！' },
+      { e:'happy',   t:'落ち着いていこ♪ ガードも立派な一手だよ。' },
+      { e:'excited', t:'あと少しで勝てそう！ ここ踏ん張って！' },
+      { e:'normal',  t:'ガッツが足りないときは、無理せず1枚だけでもOK。' },
+    ],
   },
 
   // ---- リザルト(優勝・敗北・リタイアで切り替える) ----
   resultWin: {
-    short: '優勝おめでとー！ マジで最高♪ 育った勇者モンは、マスモン登録も忘れずにね！',
-    expression: 'excited',
     help: 'home/result',
+    lines: [
+      { e:'excited', t:'優勝おめでとー！ マジで最高♪' },
+      { e:'happy',   t:'ナイス！ 育った勇者モンはマスモン登録しとこ！' },
+      { e:'excited', t:'完璧じゃん♪ このまま上の難易度いっちゃう？' },
+      { e:'happy',   t:'お疲れさま！ 報酬もしっかりもらっといてね。' },
+      { e:'wink',    t:'今の編成、けっこう強かったね！ 覚えとこ♪' },
+    ],
+    when: {
+      newRecord: [
+        { e:'excited', t:'自己ベスト更新おめでとー！ やるじゃん♪' },
+        { e:'excited', t:'記録更新きた〜！ ランキングもチェックしてみて！' },
+        { e:'happy',   t:'新記録だよ！ この編成、当たりだったね♪' },
+        { e:'excited', t:'すごっ！ 次はどこまで伸びるかな〜。' },
+        { e:'happy',   t:'ベスト更新おめでと！ あたしも嬉しい♪' },
+      ],
+      firstClear: [
+        { e:'excited', t:'この難易度、初クリアだね！ おめでとー♪' },
+        { e:'happy',   t:'初制覇きた〜！ 大きな一歩じゃん！' },
+        { e:'excited', t:'やったね！ 次の難易度も見えてきたかも♪' },
+        { e:'happy',   t:'はじめてのクリアおめでと！ ちゃんと強くなってるよ。' },
+        { e:'wink',    t:'初クリア記念だね！ この勇者モン、大事にしよ♪' },
+      ],
+    },
   },
   resultLose: {
-    short: '今回はここまで…でも報酬はちゃんともらえるよ。育て直してリベンジしよ！',
-    expression: 'crying',
     help: 'home/result',
+    lines: [
+      { e:'crying',   t:'今回はここまで…でも報酬はちゃんともらえるよ。' },
+      { e:'troubled', t:'惜しかったね〜。次はいけそうな気がする！' },
+      { e:'normal',   t:'負けても経験値は入るから、育て直してリベンジしよ！' },
+      { e:'crying',   t:'うぅ、悔しい…！ でもここまで来たのはすごいよ。' },
+      { e:'happy',    t:'切り替えていこ♪ 編成を変えると景色が変わるかも！' },
+    ],
   },
   resultRetire: {
-    short: 'おつかれさま！ クリア済みWAVEぶんの報酬は入るから、結果を確認してね。',
-    expression: 'troubled',
     help: 'home/result',
+    lines: [
+      { e:'troubled', t:'おつかれさま！ クリア済みWAVEぶんの報酬は入るよ。' },
+      { e:'normal',   t:'休憩も大事だね。結果だけ確認しとこ！' },
+      { e:'happy',    t:'また遊ぼ♪ 続きはいつでも待ってるよ。' },
+      { e:'troubled', t:'今回はここまでだね。もらえるものはもらっとこ！' },
+      { e:'wink',     t:'仕切り直しもアリだよ。次いってみよ！' },
+    ],
   },
 
   // ---- スキップチケット ----
   skipPick: {
-    short: 'スキップで一気に育成♪ 勇者モン・供モン・使う枚数を確認してから決定してね！',
-    expression: 'wink',
     help: 'items/skip-ticket',
+    lines: [
+      { e:'wink',    t:'スキップで一気に育成♪ 使う枚数も選べるよ！' },
+      { e:'happy',   t:'時間ないときの味方だね！' },
+      { e:'normal',  t:'勇者モンと供モンを決めたら、あとはおまかせ！' },
+      { e:'excited', t:'まとめて使うと、もらえる量もどーんと増えるよ♪' },
+      { e:'normal',  t:'ランキングには残らないから、そこだけ覚えといてね。' },
+    ],
   },
   skipResult: {
-    short: '受け取り完了♪ スキップ分はランキングやクリア回数には入らないから、そこだけ注意ね。',
-    expression: 'happy',
     help: 'items/skip-ticket',
+    lines: [
+      { e:'happy',   t:'受け取り完了♪ 一気に育ったね！' },
+      { e:'excited', t:'おおっ、ごっそり入ったじゃん！' },
+      { e:'normal',  t:'スキップ分はランキングとクリア回数には入らないよ。' },
+      { e:'wink',    t:'育成が進んだね！ 次のバトルが楽しみ♪' },
+      { e:'happy',   t:'お疲れさま！ 増えたぶん、確認してみて。' },
+    ],
   },
 
   // ---- M/B管理・モンスター一覧 ----
   mbManagement: {
-    short: '解放しただけじゃバトル候補には出ないよ！ 編成に入れて、最後に「決定」まで押してね♪',
-    expression: 'normal',
     help: 'home/roster',
+    lines: [
+      { e:'normal',  t:'編成を整えるとこだよ。どこ見る？' },
+      { e:'wink',    t:'解放しただけじゃ出てこないから、編成に入れてね！' },
+      { e:'happy',   t:'最後に「決定」まで押すのを忘れずに♪' },
+      { e:'normal',  t:'ブリーダーカードの編成もここからだよ。' },
+      { e:'excited', t:'編成を変えるだけで戦い方がガラッと変わるよ！' },
+    ],
   },
   monsterList: {
-    short: 'ベースモンは種類の基本、マスモンは育てた個体だよ。見たい方を選んでね♪',
-    expression: 'normal',
     help: 'home/roster',
+    lines: [
+      { e:'normal',  t:'ベースモンは種類の基本、マスモンは育てた個体だよ。' },
+      { e:'happy',   t:'見たい方を選んでね♪' },
+      { e:'wink',    t:'気になる子は詳細を開いてみて。特性が面白いよ！' },
+      { e:'normal',  t:'間合い適性は、ここからでも確認できるよ。' },
+      { e:'excited', t:'新しい子が増えると、編成の幅が広がるね！' },
+    ],
   },
   masuList: {
-    short: '育てたマスモンが並んでるよ♪ 絆Lvと未使用ポイントもチェックしてみてね！',
-    expression: 'happy',
     help: 'masu/masumon',
+    lines: [
+      { e:'happy',   t:'育てたマスモンが並んでるよ♪' },
+      { e:'wink',    t:'未使用の強化ポイント、余ってない？' },
+      { e:'excited', t:'その勇者モン、結構育ってきたね！' },
+      { e:'normal',  t:'絆Lvが上がるとポイントがもらえるよ。' },
+      { e:'happy',   t:'お気に入りの子、見つかった？' },
+    ],
   },
   masuEnhance: {
-    short: '強化ポイントは適性か能力値に使えるよ。得意な戦い方に合わせて伸ばそ♪',
-    expression: 'wink',
     help: 'masu/enhance',
+    lines: [
+      { e:'wink',    t:'ポイントは適性か能力値に使えるよ♪' },
+      { e:'normal',  t:'得意な戦い方に合わせて伸ばそ！' },
+      { e:'happy',   t:'まとめて強化もできるから、ラクだよ〜。' },
+      { e:'excited', t:'一気に振ると強くなった感すごいよ♪' },
+      { e:'normal',  t:'迷ったら、よく使う距離の適性から上げるのがおすすめかな！' },
+    ],
   },
 
   // ---- 神殿 ----
   temple: {
-    short: '神殿では合体・転生・寄付ができるよ。消えるマスモンがいる操作は、確認してから進めてね！',
-    expression: 'normal',
+    lines: [
+      { e:'normal',  t:'今日は何する？' },
+      { e:'happy',   t:'合体かな？ 転生かな？' },
+      { e:'wink',    t:'取り返せない操作もあるから、よく確認してね♪' },
+      { e:'normal',  t:'じっくり考えて決めよ！' },
+      { e:'happy',   t:'育成の土台づくりだね！' },
+    ],
   },
   fusion: {
-    short: '「主」が残って「副」は消えるよ。絆経験値と固有技の条件をちゃんと確認してね！',
-    expression: 'troubled',
     help: 'masu/fusion',
+    lines: [
+      { e:'troubled', t:'「主」が残って「副」は消えるよ。確認してね！' },
+      { e:'normal',   t:'副の絆経験値が、まるごと主に足されるよ。' },
+      { e:'wink',     t:'固有技を引き継げるのは、両方Lv.10以上のときだけ！' },
+      { e:'troubled', t:'消える子は戻せないから、ゆっくり選ぼ。' },
+      { e:'happy',    t:'うまくいくと一気に育つよ♪ でも確認は大事！' },
+    ],
   },
   rebirth: {
-    short: '上限まで育てたごほうび♪ Lvは戻るけど、上限＋5と固有技アップが狙えるよ！',
-    expression: 'excited',
     help: 'masu/rebirth',
+    lines: [
+      { e:'excited', t:'上限まで育てたごほうびだね♪' },
+      { e:'happy',   t:'Lvは戻るけど、上限＋5と固有技アップが狙えるよ！' },
+      { e:'wink',    t:'長い目で見ると、転生したほうが断然強いよ！' },
+      { e:'excited', t:'星が増えるのもテンション上がるじゃん♪' },
+      { e:'normal',  t:'コストを確認したら、いってみよ！' },
+    ],
   },
   donation: {
-    short: '寄付したマスモンは戻せないよ。ほんとに手放していい子か、もう一回だけ確認してね。',
-    expression: 'troubled',
     help: 'masu/donation',
+    lines: [
+      { e:'troubled', t:'寄付したマスモンは戻せないよ…。' },
+      { e:'troubled', t:'ほんとに手放していい子か、もう一回だけ確認してね。' },
+      { e:'normal',   t:'累計絆経験値と同じ数のダイヤになるよ。' },
+      { e:'troubled', t:'編成に入ってる子だと外れちゃうから気をつけて！' },
+      { e:'normal',   t:'迷ったら、今日は見送るのもアリだと思うな。' },
+    ],
   },
 
   // ---- ホームの各機能 ----
   pasture: {
-    short: 'お気に入りを最大5体までHOMEに出せるよ♪ 強さには影響しないから、見た目で選んでOK！',
-    expression: 'happy',
     help: 'home/pasture',
+    lines: [
+      { e:'happy',   t:'お気に入りを最大5体までHOMEに出せるよ♪' },
+      { e:'wink',    t:'強さには影響しないから、見た目で選んでOK！' },
+      { e:'excited', t:'みんな歩いてるとこ見るの、かわいくない？' },
+      { e:'normal',  t:'気分で入れ替えても大丈夫だよ。' },
+      { e:'happy',   t:'今日の推しメン、誰にする？' },
+    ],
   },
   market: {
-    short: 'お買い物タイム♪ アイコンはpt、ほかはダイヤ。買ったモンやカードは編成も忘れずにね！',
-    expression: 'excited',
     help: 'home/market',
+    lines: [
+      { e:'excited', t:'お買い物タイム♪ 何にする？' },
+      { e:'normal',  t:'アイコンはpt、ほかはダイヤだよ。' },
+      { e:'wink',    t:'買ったモンやカードは、編成に入れるのも忘れずに！' },
+      { e:'happy',   t:'ダイヤは大事に使ってね♪' },
+      { e:'excited', t:'新しい仲間、増やしちゃう？' },
+    ],
+    when: {
+      // 一番安い商品にも手が届かないとき
+      lowGold: [
+        { e:'troubled', t:'ダイヤがちょっと心もとないかも…！' },
+        { e:'normal',   t:'バトルで稼いでからまた来よ！ 逃げないから大丈夫。' },
+        { e:'troubled', t:'今日は見るだけにしとく？ next timeってことで♪' },
+        { e:'wink',     t:'寄付でもダイヤになるよ。無理はしないでね！' },
+        { e:'happy',    t:'欲しいものメモっといて、貯まったら来よ〜。' },
+      ],
+    },
   },
   inventory: {
-    short: '持ってるアイテムはここ！ 効果と使う相手を見て、ベストなタイミングで使ってね♪',
-    expression: 'normal',
     help: 'items/items',
+    lines: [
+      { e:'normal',  t:'持ってるアイテムはここ！' },
+      { e:'wink',    t:'効果と使う相手を見て、ベストなタイミングで使ってね♪' },
+      { e:'happy',   t:'貯めすぎても意味ないから、使っちゃお！' },
+      { e:'normal',  t:'絆ポイントリセットの書は、振り直したいときに便利だよ。' },
+      { e:'excited', t:'使いどころがハマると気持ちいいよね♪' },
+    ],
   },
 
   // ---- ギフト(未受取の有無で切り替える) ----
   giftClaimable: {
-    short: 'ギフト届いてるよ！ 30日で期限切れになるから、今のうちに受け取っちゃお♪',
-    expression: 'surprise',
     help: 'items/gift',
+    lines: [
+      { e:'surprise', t:'ギフト届いてるよ！ 受け取っちゃお♪' },
+      { e:'excited',  t:'おっ、なんか来てる！ 中身みてみて！' },
+      { e:'happy',    t:'30日で期限切れになるから、今のうちにね！' },
+      { e:'surprise', t:'未受取があるよ〜！ もったいないよ！' },
+      { e:'wink',     t:'まとめて受け取っちゃお♪' },
+    ],
   },
   giftEmpty: {
-    short: '今は未受取なし！ ログボやミッション報酬が届いたら、ここに入るよ。',
-    expression: 'normal',
     help: 'items/gift',
+    lines: [
+      { e:'normal',  t:'今は未受取なし！ きれいさっぱりだね。' },
+      { e:'happy',   t:'ログボやミッション報酬が届いたら、ここに入るよ♪' },
+      { e:'normal',  t:'受け取り済みの履歴もここで見られるよ。' },
+      { e:'wink',    t:'明日また覗いてみて！ 何か届いてるかも♪' },
+      { e:'happy',   t:'からっぽってことは、ちゃんと受け取れてる証拠だね！' },
+    ],
   },
 
   // ---- ミッション(受取可能な報酬の有無で切り替える) ----
   missionsClaimable: {
-    short: '達成報酬あるよ〜！ まとめて受け取って、ギフトボックスもチェックしてね♪',
-    expression: 'excited',
     help: 'items/missions',
+    lines: [
+      { e:'excited', t:'達成報酬あるよ〜！ 受け取っちゃお♪' },
+      { e:'happy',   t:'ナイス達成！ まとめて受け取れるよ。' },
+      { e:'surprise', t:'受け取り忘れてない？ ここにあるよ！' },
+      { e:'excited', t:'いい感じじゃーん♪ ギフトボックスもチェックしてね！' },
+      { e:'wink',    t:'受け取ったらギフトに届くよ。忘れずにね！' },
+    ],
+    when: {
+      allDone: [
+        { e:'excited', t:'ぜんぶ達成！ コンプリート報酬もゲットしちゃお♪' },
+        { e:'excited', t:'パーフェクトじゃん！ すごすぎ！' },
+        { e:'happy',   t:'全達成おめでと〜！ 今日はよく頑張ったね♪' },
+        { e:'wink',    t:'コンプリート報酬、忘れずに受け取ってね！' },
+        { e:'excited', t:'完璧！ あたしも鼻が高いよ〜♪' },
+      ],
+    },
   },
   missionsNormal: {
-    short: 'デイリーとウィークリーを進めよ♪ 全部達成でコンプリート報酬もあるよ！',
-    expression: 'happy',
     help: 'items/missions',
+    lines: [
+      { e:'happy',   t:'デイリーとウィークリーを進めよ♪' },
+      { e:'normal',  t:'全部達成でコンプリート報酬もあるよ！' },
+      { e:'wink',    t:'バトルするだけで進むやつも多いよ。気楽にね！' },
+      { e:'excited', t:'あと少しで達成のやつ、ない？' },
+      { e:'normal',  t:'デイリーは毎日、ウィークリーは毎週リセットだよ。' },
+    ],
   },
 
   // ---- プロフィール・設定・ヘルプ ----
   profile: {
-    short: '名前・アイコン・これまでの記録はここ！ 自分らしいプロフィールにしよ♪',
-    expression: 'normal',
     help: 'home/profile',
+    lines: [
+      { e:'normal',  t:'名前・アイコン・これまでの記録はここ！' },
+      { e:'happy',   t:'自分らしいプロフィールにしよ♪' },
+      { e:'wink',    t:'アイコンはptで買えるよ。集めるの楽しいよね！' },
+      { e:'excited', t:'記録を見返すと、成長がわかって面白いよ♪' },
+      { e:'normal',  t:'名前はいつでも変えられるから安心して。' },
+    ],
   },
   settings: {
-    short: '音量やBGMはここで調整できるよ。引き継ぎコードも、ときどき控えておくと安心！',
-    expression: 'normal',
     help: 'tips/settings',
+    lines: [
+      { e:'normal',  t:'音量やBGMはここで調整できるよ。' },
+      { e:'wink',    t:'BGMアレンジで曲の雰囲気も変えられるよ♪' },
+      { e:'troubled', t:'引き継ぎコード、ときどき控えておくと安心だよ！' },
+      { e:'happy',   t:'好みの音量にして、快適に遊ぼ♪' },
+      { e:'normal',  t:'バックアップは大事。取っておいて損はないよ。' },
+    ],
   },
   helpTop: {
-    short: '分からないことはあたしに任せて♪ 気になるカテゴリを選んで、吹き出しもタップしてね！',
-    expression: 'happy',
+    lines: [
+      { e:'happy',   t:'分からないことはあたしに任せて♪' },
+      { e:'wink',    t:'気になるカテゴリを選んで、吹き出しもタップしてみて！' },
+      { e:'normal',  t:'困ったらここ！ だいたいのことは書いてあるよ。' },
+      { e:'excited', t:'攻略のコツもまとめてあるよ〜♪' },
+      { e:'happy',   t:'一緒に強くなろ！ 分からないとこ、つぶしていこ！' },
+    ],
     detail: [
       'このヘルプは「カテゴリ → 項目 → 説明」の3段階になってるよ。',
       'まずは下のカテゴリから、気になるものをタップしてね。次に項目を選ぶと、詳しい説明が出るよ。',
@@ -271,6 +504,32 @@ const ASSISTANT_SCENES = {
       '右上のあたしのボタンで、吹き出しを閉じたり出したりできるよ。',
     ],
   },
+};
+
+// ---------- セリフの抽選 ----------
+// 場面(と条件)ごとに、直前に出した番号を覚えておく。同じセリフが2回続かないようにするため。
+// 端末には保存しない(その場かぎりの見た目の話なので、セーブデータには触らない)。
+const ASSISTANT_LAST_LINE = {};
+
+// その場面で使うセリフの候補を返す。条件つきのセリフがあればそちらを優先する
+const assistantSceneLines = (scene, condition) => {
+  const def = (scene && ASSISTANT_SCENES[scene]) || null;
+  if (!def) return [];
+  const conditional = (condition && def.when && Array.isArray(def.when[condition])) ? def.when[condition] : null;
+  const list = (conditional && conditional.length) ? conditional : def.lines;
+  return Array.isArray(list) ? list : [];
+};
+
+// 候補から1つ選ぶ。直前と同じものは避ける(候補が1つしかないときはそのまま)
+const pickAssistantLine = (scene, condition) => {
+  const list = assistantSceneLines(scene, condition);
+  if (list.length === 0) return null;
+  const key = `${scene || ''}|${condition || ''}`;
+  const last = ASSISTANT_LAST_LINE[key];
+  let index = Math.floor(Math.random() * list.length);
+  if (list.length > 1 && index === last) index = (index + 1 + Math.floor(Math.random() * (list.length - 1))) % list.length;
+  ASSISTANT_LAST_LINE[key] = index;
+  return list[index];
 };
 
 const findAssistant = (id) => ASSISTANTS.find(a => a.id === id)
