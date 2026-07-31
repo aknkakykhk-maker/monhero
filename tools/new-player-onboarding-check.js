@@ -17,7 +17,10 @@ const check = (name, ok, detail = '') => {
 const has = (needle) => source.includes(needle);
 
 // --- 入口 ---
-check('初回はプロフィール画面から始まる', has("setGameState(onboarded ? 'HOME' : 'PROFILE');"));
+check('初回はみゅあのあいさつ→プロフィール画面の順に進む',
+  has("setGameState(onboarded ? 'HOME' : 'PROFILE');")
+    && has("if (!onboarded) { setTutorialKind('intro'); setTutorialStep(0); }")
+    && has("if (kind === 'intro') { setGameState('PROFILE'); return; }"));
 check('専用のオンボーディング画面は残っていない',
   !has("gameState==='ONBOARDING'") && !has('moveOnboarding') && !has('onboardingStep'));
 check('決め終わるまで戻るボタンを出さない',
@@ -60,7 +63,7 @@ check('見るだけでは名前もアイコンも保存しない',
 // --- 決定したあと ---
 check('決定するとそのまま村の案内へ続く',
   has('const seenTutorial = await storeGet(TUTORIAL_SEEN_KEY, false, false);')
-    && has('if (seenTutorial !== true) { tutorialShownRef.current = true; setTutorialStep(0); }'));
+    && has("if (seenTutorial !== true) { tutorialShownRef.current = true; setTutorialKind('tour'); setTutorialStep(0); }"));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

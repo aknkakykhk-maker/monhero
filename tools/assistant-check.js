@@ -195,11 +195,38 @@ check('名前とアイコンを決めたことを覚える',
     && has("setBreederIcon(m.id); setOnboardingIcon(m.id);"));
 check('名前・アイコンを決めたらそのまま案内へ続く',
   has('const seenTutorial = await storeGet(TUTORIAL_SEEN_KEY, false, false);')
-    && has('if (seenTutorial !== true) { tutorialShownRef.current = true; setTutorialStep(0); }'));
+    && has("if (seenTutorial !== true) { tutorialShownRef.current = true; setTutorialKind('tour'); setTutorialStep(0); }"));
 check('案内の最初で決めた名前を呼ぶ', (() => {
   const c = {}; require('vm').createContext(c);
   require('vm').runInContext(assistantsSrc + ';globalThis.__t=ASSISTANT_TUTORIAL;', c);
   return /\{name\}/.test(c.__t[0].t) && has("String(page.t).replace('{name}', breederName || 'あなた')");
+})());
+// 名前を決めるより前に、みゅあのあいさつを出す
+check('あいさつの台本をデータで持つ', (() => {
+  const c = {}; require('vm').createContext(c);
+  require('vm').runInContext(assistantsSrc + ';globalThis.__i=ASSISTANT_INTRO;', c);
+  const i = c.__i;
+  return Array.isArray(i) && i.length >= 3 && i.every(p => p.t && p.e) && /はじめまして/.test(i[0].t);
+})());
+check('初回はあいさつから始まる',
+  has("if (!onboarded) { setTutorialKind('intro'); setTutorialStep(0); }"));
+check('あいさつを読み終えるとプロフィールへ進む',
+  has("if (kind === 'intro') { setGameState('PROFILE'); return; }")
+    && has("{last?(intro?'名前を決める！':'はじめる！'):'つぎへ'}"));
+check('あいさつと村の案内は同じ吹き出しで台本だけ切り替える',
+  has("const intro=tutorialKind==='intro';") && has('const pages=(intro'));
+// 村の案内では、説明している施設だけをHOMEで明るく強調する
+check('説明中の施設を光らせる',
+  has("const spotClass = (name) => (tutorialSpot === name ? ' is-tutorial-spot' : '');")
+    && ['management','temple','market','battle'].every(n => has(`spotClass('${n}')`))
+    && has('.mh-home-facility.is-tutorial-spot{z-index:90001}'));
+check('施設を指すページでは暗幕を薄くする',
+  has("backgroundColor:page.spot?'rgba(2,6,23,0.74)':'rgba(2,6,23,0.92)'"));
+check('光らせる施設もデータで持つ', (() => {
+  const c = {}; require('vm').createContext(c);
+  require('vm').runInContext(assistantsSrc + ';globalThis.__t=ASSISTANT_TUTORIAL;', c);
+  const spots = c.__t.map(p => p.spot).filter(Boolean);
+  return spots.length >= 4 && spots.every(x => ['management','temple','market','battle'].includes(x));
 })());
 check('初回だけ出し、スキップもできる',
   has("const seen = await storeGet(TUTORIAL_SEEN_KEY, false, false);") && has('スキップ</button>')
@@ -223,7 +250,7 @@ check('見るだけの表示では何も保存しない', (() => {
 check('見るだけでは段階を保存する仕組みごと残していない', !has('moveOnboarding') && !has('onboardingStep'));
 check('見るだけと分かる表示を出す', has('DEBUG・見るだけの表示です。名前もアイコンも保存されません'));
 check('デバッグに必要な項目がそろっている',
-  ['名前入力から通しで見る','初回チュートリアル再生','チュートリアルだけ再生','全助手コメント確認','全表情確認','条件コメント確認','連打リアクション確認','初回状態へ戻す']
+  ['名前入力から通しで見る','みゅあのあいさつだけ再生','村の案内だけ再生','全助手コメント確認','全表情確認','条件コメント確認','連打リアクション確認','初回状態へ戻す']
     .every(label => source.includes(label)));
 check('初回状態へ戻してもセーブデータは消さない',
   has('モンスターやダイヤなどのセーブデータは消えません') && has('await storeSet(TUTORIAL_SEEN_KEY,false,false);'));
