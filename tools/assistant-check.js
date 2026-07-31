@@ -104,15 +104,20 @@ check('セリフは短く保つ(スマホで読める長さ)', (() => {
   return long.length === 0;
 })(), SCENES.flatMap(([k, s]) => allLines(s).filter(l => l.t.length > 45).map(l => `${k}:${l.t.length}字`)).join(', '));
 // 実際に何度も引いて、直前と同じものが出ないこと・全種類がいつか出ることを確かめる
+// セリフは親密度Lvで候補が変わるので、Lvごとに「そのLvで出るはずの全部が出るか」を見る
 check('引くたびに変わり、直前と同じものは出ない', (() => {
-  for (const [key, def] of SCENES) {
-    const seen = new Set(); let prev = null;
-    for (let i = 0; i < 300; i++) {
-      const l = a.pickAssistantLine(key, null);
-      if (prev && l.t === prev) return false;
-      prev = l.t; seen.add(l.t);
+  for (const [key] of SCENES) {
+    for (let lv = 1; lv <= 5; lv++) {
+      const usable = a.assistantSceneLines(key, null, lv);
+      const seen = new Set(); let prev = null;
+      // 「たまにしか出ない」セリフ(w が小さいもの)も拾えるよう、多めに引く
+      for (let i = 0; i < 3000; i++) {
+        const l = a.pickAssistantLine(key, null, lv);
+        if (prev && l.t === prev) return false;
+        prev = l.t; seen.add(l.t);
+      }
+      if (seen.size !== usable.length) return false;
     }
-    if (seen.size !== (def.lines || []).length) return false;
   }
   return true;
 })());
@@ -285,11 +290,11 @@ check('吹き出しは1つの共通コンポーネント', has('const AssistantB
 check('選んだセリフの表情がそのまま顔に渡る', has('const face = expression || shown?.e || null;') && has('<AssistantFace who={who} size={size} accent={color} expression={face}/>'));
 // 場面や条件が変わったときだけ選び直す。ほかの再描画でセリフが入れ替わると読めない
 check('セリフは場面と条件が変わったときだけ選び直す',
-  has('const pickKey = `${scene || \'\'}|${condition || \'\'}`;') && has("if (pickedRef.current?.key !== pickKey) {"));
+  has('const pickKey = `${scene || \'\'}|${condition || \'\'}|${bond.level}`;') && has("if (pickedRef.current?.key !== pickKey) {"));
 check('画面から条件を渡せる', has('condition=null') && /condition=\{[^}]+\}/.test(source));
 // 顔をタップすると次のセリフへ。詳細は吹き出し側なので、操作が分かれている
 check('顔をタップすると次のセリフへ送れる',
-  has('const onFaceTap = () => {') && has("aria-label={`${who.name}にはなしかける`}") && has('if (typeof pickAssistantLine === \'function\') setTapped(pickAssistantLine(scene, condition));'));
+  has('const onFaceTap = () => {') && has("aria-label={`${who.name}にはなしかける`}") && has('if (typeof pickAssistantLine === \'function\') setTapped(pickAssistantLine(scene, condition, bond.level));'));
 check('詳細は吹き出し側の操作のまま', has("onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く`"));
 check('連打には専用のリアクションを出す',
   has('const spamLine = spam ? (spam.recovering ? spamRecover : spamLines[spam.step]) : null;')
@@ -303,7 +308,7 @@ check('連打のあとは笑って元に戻す',
 check('場面が変わったら送ったセリフも連打もリセットする',
   has('useEffect(() => { setTapped(null); setSpam(null); tapTimesRef.current = []; }, [pickKey]);'));
 check('場面キーだけでも、直接指定でも呼べる',
-  has('const sceneDef = assistantSceneById(scene);') && has("const text = line || shown?.t || who.greeting || '';") && has('const paragraphs = detail || sceneDef?.detail || null;'));
+  has('const sceneDef = assistantSceneById(scene);') && has("const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level);") && has('const paragraphs = detail || sceneDef?.detail || null;'));
 check('詳細はヘルプ本文をそのまま出せる', has('const ref = helpRef || sceneDef?.help || null;') && has('renderHelpBlocks(topic.blocks, color)'));
 check('吹き出し風の見た目(しっぽ付き)', has('{/* 吹き出しのしっぽ(左向き) */}') && has("borderRight:`9px solid ${color}`"));
 check('タップで詳細が開く', has('onClick:()=>setOpen(true)') && has('タップで詳しく'));
@@ -326,7 +331,7 @@ check('画像のパスをJSXへ直接書いていない', !/images\/assistant\//
 check('HOMEの吹き出しは施設の上に重ならない場所へ置く',
   has('.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(54px + env(safe-area-inset-top));pointer-events:auto}')
     && has('@media(max-width:350px){.mh-home-assistant{width:62%}}')
-    && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={masuMons.length===0?\'firstRun\':null} compact/></div>'));
+    && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={assistantBondUp?\'bondUp\':(masuMons.length===0?\'firstRun\':null)} compact/></div>'));
 check('画面側は scene を渡すだけ', (() => {
   const calls = source.match(/<AssistantBubble[^/]*\/>/g) || [];
   // ヘルプ画面だけは項目ごとの文面を渡すので line/detail を使う

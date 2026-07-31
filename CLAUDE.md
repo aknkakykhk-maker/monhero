@@ -68,7 +68,14 @@ Claudeは改修内容を実装したら、ユーザーが検証しやすいよ�
    助手(みゅあ)の名前・画像・場面ごとのセリフは `monster-hero/data/assistants.js` にまとめてあるので、
    ヘルプ以外の画面へ案内を出すときも、そこへ場面を1つ足して `<AssistantBubble scene="..."/>` を置く
 5. `node tools/help-coverage-check.js` と `node tools/help-guide-check.js`、
-   `node tools/help-render-check.js`、`node tools/assistant-check.js` を通す
+   `node tools/help-render-check.js`、`node tools/assistant-check.js`、
+   `node tools/assistant-bond-check.js` を通す
+
+助手(みゅあ)のセリフを足すときは、`ASSISTANT_SCENES` を直接書き換えるのではなく
+`addAssistantLinePack({ id, lines })` で束にして足す。イベント・季節限定のセリフも
+同じ形で足せる(`when` を書くとその条件のときだけ合流する)。
+セリフには親密度の条件(`bond`)と出やすさ(`w`)を付けられ、本文の `{name}` は
+そのときの呼び方(さん付け・呼び捨て・ちん付け)に置き換わる。
 
 これらのチェックは「ヘルプの更新漏れ」を検出するためのものなので、
 落ちた場合はチェック側を緩めるのではなく、ヘルプを更新して直す。
