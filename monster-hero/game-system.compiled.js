@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 64bb22b39671c595
+// source-sha256: c95a6fa8ece30bbe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 12:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 12:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10465,17 +10465,20 @@ function MonsterHeroGame() {
   // ===== クイックモード: 供モン加入時の固有技アップ =====
   // 味方の誰か1体をランダムに選び、その固有技レベルを1上げる。
   // 上限(MAX_UNIQUE_SKILL_LEVEL)に達している技は抽選から外し、上げられる技が無ければ何もしない。
-  const rollQuickUniqueUpgrade = uniques => {
+  // currentSlots には「加入後の編成」を渡す。いま加入したモンスターの固有技が当たったとき、
+  // 加入前のslotsから探すと持ち主が見つからず、内部id(Ham など)がそのまま名前として出てしまう
+  const rollQuickUniqueUpgrade = (uniques, currentSlots) => {
     const candidates = (uniques || []).filter(u => (u.evoLevel || 0) < MAX_UNIQUE_SKILL_LEVEL);
     if (candidates.length === 0) return null;
     const picked = candidates[Math.floor(Math.random() * candidates.length)];
     const before = picked.evoLevel || 0;
     const after = Math.min(MAX_UNIQUE_SKILL_LEVEL, before + 1);
     if (after === before) return null;
-    const owner = slots.find(sl => sl && sl.id === picked.monId);
+    const owner = (currentSlots || slots).find(sl => sl && sl.id === picked.monId);
     return {
       monId: picked.monId,
-      monName: owner?.masuName || owner?.name || picked.monId,
+      // 持ち主が万一見つからなくても内部idは出さず、種の名前まで落として表示する
+      monName: owner?.masuName || owner?.name || ALL_PLAYER_MONSTERS[picked.monId]?.name || picked.monId,
       skillName: uniqueSkillAtLevel(picked, after)?.name || picked.name,
       before,
       after
@@ -10927,7 +10930,7 @@ function MonsterHeroGame() {
       setOwnedUniques(nextUniques);
       if (isQuickMode(runMode)) {
         // クイックモードは固有技の選択画面を出さず、味方の誰かの固有技をランダムで1上げる
-        const rolled = rollQuickUniqueUpgrade(nextUniques);
+        const rolled = rollQuickUniqueUpgrade(nextUniques, nextSlots);
         const appliedUniques = rolled ? nextUniques.map(u => u.monId === rolled.monId ? {
           ...u,
           evoLevel: rolled.after
@@ -11133,8 +11136,10 @@ function MonsterHeroGame() {
     const nextGuts = Math.floor(u.baseGuts * (nextMult / u.baseMult));
     const curCrit = Math.round((0.10 + 0.05 * Math.min(lvl, 8)) * 100);
     const nextCrit = Math.round((0.10 + 0.05 * Math.min(lvl + 1, 8)) * 100);
-    // 引き継いだ技は「どのモンスターが使えるのか」と「元はどの血統の技か」の両方を出す
-    const heading = inherited ? `${holderMon?.name || '？'} ← ${ownerMon?.name || '？'}の技` : ownerMon?.name || '';
+    // 引き継いだ技は「どのモンスターが使えるのか」と「元はどの血統の技か」の両方を出す。
+    // 自分の固有技は、編成に入っているマスモンの名前を優先して出す
+    // (マスモン名を付けていても種の名前しか出ないと、どの子の技か分からないため)
+    const heading = inherited ? `${holderMon?.name || '？'} ← ${ownerMon?.name || '？'}の技` : holderMon?.masuName || holderMon?.name || ownerMon?.name || '';
     return /*#__PURE__*/React.createElement("div", {
       key: rowKey,
       className: `p-3 rounded-2xl border shrink-0 ${inherited ? 'bg-cyan-950/40 border-cyan-700/60' : 'bg-slate-900 border-slate-800'}`
@@ -11211,6 +11216,7 @@ function MonsterHeroGame() {
     const rows = ownedUniques.map(u => ({
       rowKey: `own:${u.monId}`,
       u,
+      holderMon: slots.find(sl => sl && sl.id === u.monId) || null,
       inherited: false,
       onStep: d => upgradeUnique(u.monId, d)
     }));
