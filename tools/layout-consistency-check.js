@@ -39,6 +39,11 @@ check('種別ごとにバラバラだった旧サイズが残っていない',
 check('スキップが無い難易度でも同じ高さの行を出す',
   has("if(!tid)return(<div className=\"min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap\">この難易度はスキップできません</div>);"));
 check('スキップ行を条件付きで丸ごと消していない', !has('{SKIP_TICKETS[key]&&(()=>{'));
+// モード(チャレンジ／クイック)を切り替えてもカードの高さが変わらないようにする
+check('記録の枠は行数が違ってもモードで同じ高さ',
+  has("const recordBoxStyle={minHeight:'58px'};") && count('style={recordBoxStyle}') === 2, `${count('style={recordBoxStyle}')}か所`);
+check('倍率の下の補足行はクイック限定にしない',
+  has('>{noteText}</div>') && !has('{quick&&<div className="mt-1 rounded-xl border'));
 
 // --- ②' マーケットの商品カード ---
 // 名前の行数・説明の有無・所持数の有無・詳細ボタンの有無で、

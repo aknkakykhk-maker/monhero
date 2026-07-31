@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ab53e82cb916efae
+// source-sha256: 64bb22b39671c595
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 12:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 12:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13194,6 +13194,14 @@ function MonsterHeroGame() {
     const bonusLabel = value => `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}`;
     const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false], ['経験値', bonusLabel(setting.score), true], ['ダイヤ', bonusLabel(setting.gold), true]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
     const waveOf = key => quick ? quickHighestWaves[key] || 0 : highestWaves[key] || 0;
+    // 記録の枠はチャレンジが3行(見出し・スコア・到達WAVE)、クイックが1行(到達WAVE)で
+    // 中身の行数が違う。モードを切り替えたときにカードの高さが変わらないよう、
+    // どちらのモードでも同じ高さを確保する
+    const recordBoxStyle = {
+      minHeight: '58px'
+    };
+    // 倍率の下の補足行も、クイックだけに出すとカードの高さが変わるため両モードで出す
+    const noteText = quick ? '経験値・ダイヤのみ1.5倍' : 'スコアがランキングに登録される';
     return /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
@@ -13261,13 +13269,15 @@ function MonsterHeroGame() {
           color: setting.text
         }
       }, setting.label), quick ? /*#__PURE__*/React.createElement("div", {
-        className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5 flex items-center justify-between"
+        className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5 flex items-center justify-between",
+        style: recordBoxStyle
       }, /*#__PURE__*/React.createElement("small", {
         className: "text-[9px] text-slate-400 font-black"
       }, "\u6700\u9AD8\u5230\u9054"), /*#__PURE__*/React.createElement("b", {
         className: "text-base leading-tight text-amber-300"
       }, "WAVE ", waveOf(key))) : /*#__PURE__*/React.createElement("div", {
-        className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
+        className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5",
+        style: recordBoxStyle
       }, /*#__PURE__*/React.createElement("small", {
         className: "text-[8px] text-slate-400 font-black"
       }, "\u81EA\u5DF1\u30D9\u30B9\u30C8\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("b", {
@@ -13284,13 +13294,13 @@ function MonsterHeroGame() {
         style: {
           color: boosted ? mode.color : '#ffffff'
         }
-      }, value)))), quick && /*#__PURE__*/React.createElement("div", {
+      }, value)))), /*#__PURE__*/React.createElement("div", {
         className: "mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden",
         style: {
           borderColor: `${mode.color}55`,
           color: mode.color
         }
-      }, "\u7D4C\u9A13\u5024\u30FB\u30C0\u30A4\u30E4\u306E\u307F1.5\u500D"), /*#__PURE__*/React.createElement("div", {
+      }, noteText), /*#__PURE__*/React.createElement("div", {
         className: "grid gap-1.5 mt-1.5"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => {

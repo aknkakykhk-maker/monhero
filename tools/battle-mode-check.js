@@ -23,6 +23,7 @@ const check = (name, ok, detail = '') => {
   if (!ok) failed++;
 };
 const has = (needle) => source.includes(needle);
+const count = (needle) => source.split(needle).length - 1;
 const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
 
 // --- 計算は本番の定義をそのまま動かして確かめる ---
@@ -122,7 +123,7 @@ check('カードに自己ベスト・到達WAVE・倍率・全WAVE詳細が残�
 // クイックはスコアを競わないので、自己ベストスコアもスコア倍率も出さない
 check('クイックはスコア関連を出さない',
   has("const rateCells=(setting)=>quick") && has("? [['敵強度',`×${setting.power}`,false],['経験値',bonusLabel(setting.score),true],['ダイヤ',bonusLabel(setting.gold),true]]")
-    && has(': <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="text-[8px] text-slate-400 font-black">自己ベストスコア</small>'));
+    && has(': <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5" style={recordBoxStyle}><small className="text-[8px] text-slate-400 font-black">自己ベストスコア</small>'));
 check('クイックでも最高到達WAVEは出す', has('<small className="text-[9px] text-slate-400 font-black">最高到達</small>'));
 // クイックはスコアを競わないので、バトル中もリザルトもスコアを出さない
 check('バトル中もクイックはスコアを出さない', has('{!isQuickMode(runMode)&&<div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter mr-1"><Award size={10}/> {score.toLocaleString()}</div>}'));
@@ -145,6 +146,14 @@ check('ランキングボタンはチャレンジのときだけ出す', has("{!
 // ランキングボタンの有無で助手コメントの位置がずれないようにする
 check('ランキングボタンは難易度カードと同じ幅', has('className="w-[82%] min-h-[40px] rounded-2xl bg-slate-800 border border-indigo-400/40'));
 check('助手コメントの位置がモードでずれない', has('<div className="shrink-0 flex justify-center min-h-[40px] mb-1.5">'));
+// 難易度カード自体の高さもモードでそろえる。記録の枠(チャレンジ3行/クイック1行)と
+// 倍率の下の補足行が、モードによって高さを変える原因だった
+check('記録の枠はモードによらず同じ高さ',
+  has('const recordBoxStyle={minHeight:\'58px\'};') && count('style={recordBoxStyle}') === 2, `${count('style={recordBoxStyle}')}か所`);
+check('倍率の下の補足行はどちらのモードでも出す',
+  has("const noteText=quick?'経験値・ダイヤのみ1.5倍':'スコアがランキングに登録される';")
+    && has('style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div>')
+    && !has('{quick&&<div className="mt-1 rounded-xl border'));
 check('カードの下はランキング→助手コメントの順', source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf("scene={quick?'battleQuick':'battleChallenge'}"));
 check('助手コメントは既存の共通UIを使う', has("<AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'}") && assistantsSrc.includes('battleChallenge:') && assistantsSrc.includes('battleQuick:'));
 check('挑戦を始めるときにモードを固定する', has('setDifficulty(key);setRunMode(battleMode);'));
