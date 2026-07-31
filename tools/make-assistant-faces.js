@@ -20,6 +20,10 @@ const outDir = path.join(srcDir, 'face');
 const OUT_SIZE = 256;      // 書き出す顔アイコンの一辺(px)。表示は最大72pxなので余裕がある
 const ALPHA_MIN = 24;      // これ以上の不透明度をキャラの一部とみなす
 const HEAD_RATIO = 0.46;   // キャラ全体の高さに対する「顔まわり」の一辺の比率
+// キャラの上端から、この比率だけ下げた位置を切り出しの上端にする。
+// みゅあはうさ耳が高く伸びているため、上端から切ると耳が枠の真ん中に来て顔が下へ押し出され、
+// 丸く切ったときに顔が中心から外れてしまう。少し下げて顔が真ん中に来るようにする
+const HEAD_TOP_SKIP = 0.09;
 
 // 透明でない画素の範囲(左右上下)を返す
 const opaqueBounds = (ctx, w, h) => {
@@ -37,10 +41,12 @@ const opaqueBounds = (ctx, w, h) => {
   return right < 0 ? null : { left, right, top, bottom };
 };
 
-// 頭の中心の横位置。上のほうだけを見て重心を取る(髪やスカートに引っ張られないようにする)
-const headCenterX = (ctx, w, bounds) => {
-  const band = Math.max(1, Math.round((bounds.bottom - bounds.top + 1) * 0.18));
-  const data = ctx.getImageData(0, bounds.top, w, band).data;
+// 顔の中心の横位置。切り出す枠のうち「顔がある高さ」だけを見て重心を取る。
+// 頭のてっぺんだけを見ると、片側へ倒れた耳やアホ毛に引っ張られて中心がずれる
+const headCenterX = (ctx, w, top, side) => {
+  const y0 = Math.round(top + side * 0.30);
+  const band = Math.max(1, Math.round(side * 0.50));
+  const data = ctx.getImageData(0, y0, w, band).data;
   let sum = 0, count = 0;
   for (let y = 0; y < band; y++) {
     for (let x = 0; x < w; x++) {
@@ -48,7 +54,7 @@ const headCenterX = (ctx, w, bounds) => {
       sum += x; count++;
     }
   }
-  return count ? sum / count : (bounds.left + bounds.right) / 2;
+  return count ? sum / count : w / 2;
 };
 
 const run = async () => {
@@ -62,10 +68,11 @@ const run = async () => {
     sctx.drawImage(img, 0, 0);
     const bounds = opaqueBounds(sctx, img.width, img.height);
     if (!bounds) { console.log(`NG: ${file} は全部透明です`); continue; }
-    const side = Math.round((bounds.bottom - bounds.top + 1) * HEAD_RATIO);
-    const cx = headCenterX(sctx, img.width, bounds);
+    const height = bounds.bottom - bounds.top + 1;
+    const side = Math.round(height * HEAD_RATIO);
+    let sy = Math.round(bounds.top + height * HEAD_TOP_SKIP);
+    const cx = headCenterX(sctx, img.width, sy, side);
     let sx = Math.round(cx - side / 2);
-    let sy = bounds.top;
     sx = Math.max(0, Math.min(img.width - side, sx));
     sy = Math.max(0, Math.min(img.height - side, sy));
     const out = createCanvas(OUT_SIZE, OUT_SIZE);
