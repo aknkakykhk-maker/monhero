@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 11:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 11:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -84,6 +84,70 @@ const goldForWavesCleared = (wavesCleared, mult) => {
   for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveGoldGain(w, mult);
   return sum;
 };
+
+// ===== バトルモード =====
+// チャレンジモード … これまでの通常バトル(強化フェーズあり・ランキング対象)
+// クイックモード   … 強化フェーズなし。WAVEごとに味方が自動成長し、経験値とダイヤだけ1.5倍
+//
+// 増える値はここだけで決まる。バトル本体は複製せず、この定義とモードの分岐で振る舞いを変える。
+const BATTLE_MODE_CHALLENGE = 'challenge';
+const BATTLE_MODE_QUICK = 'quick';
+const normalizeBattleMode = (value) => value === BATTLE_MODE_QUICK ? BATTLE_MODE_QUICK : BATTLE_MODE_CHALLENGE;
+// クイックモードで経験値・ダイヤにかかる倍率(スコアにはかけない)
+const QUICK_REWARD_MULT = 1.5;
+// クイックモードでWAVEごとに味方の全ステータスへかける倍率
+const QUICK_GROWTH_MULT = 1.10;
+const isQuickMode = (mode) => normalizeBattleMode(mode) === BATTLE_MODE_QUICK;
+// 難易度倍率をかけたあとの獲得量へ、さらにモードの倍率をかける。
+// WAVEごとの内訳と合計がずれないよう、内訳と同じ「WAVE単位で丸めてから合計」に揃える
+const applyModeReward = (value, mode) => isQuickMode(mode) ? Math.floor(value * QUICK_REWARD_MULT) : value;
+const waveXpGainInMode = (waveNum, mult, mode) => applyModeReward(waveXpGain(waveNum, mult), mode);
+const waveGoldGainInMode = (waveNum, mult, mode) => applyModeReward(waveGoldGain(waveNum, mult), mode);
+const xpForWavesClearedInMode = (wavesCleared, mult, mode) => {
+  let sum = 0;
+  for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveXpGainInMode(w, mult, mode);
+  return sum;
+};
+const goldForWavesClearedInMode = (wavesCleared, mult, mode) => {
+  let sum = 0;
+  for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveGoldGainInMode(w, mult, mode);
+  return sum;
+};
+// 自己ベスト・最高到達WAVE・クリア回数の保存キー。チャレンジは従来のキーをそのまま使い、
+// クイックは別のキーへ保存して、チャレンジの記録を上書きしないようにする
+const bestScoreKey = (mode, diff) => isQuickMode(mode) ? `mh_quick_hs_${diff}` : `mh_hs_${diff}`;
+const bestWaveKey = (mode, diff) => isQuickMode(mode) ? `mh_quick_highest_wave_${diff}` : `mh_highest_wave_${diff}`;
+const clearCountKey = (mode, diff) => isQuickMode(mode) ? `mh_quick_clears_${diff}` : `mh_clears_${diff}`;
+// モードの表示情報と「？」で出す説明。文言を1か所にまとめ、タブ・カード・説明の食い違いを防ぐ
+const BATTLE_MODES = [
+  {
+    id: BATTLE_MODE_CHALLENGE, label: 'チャレンジモード', short: 'チャレンジ', emoji: '🏆', color: '#818cf8',
+    tagline: 'じっくり攻略してランキングを狙う',
+    points: [
+      ['🏆', 'ランキング対象', 'このモードのスコアはランキングに反映されます'],
+      ['📈', '強化フェーズあり', '通常どおり強化フェーズが発生し、強化内容を選びながら戦えます'],
+      ['🛡️', '育成と攻略の両立', '戦略的に強くなりながら、最後までの到達を目指します'],
+      ['🤝', '供モン加入・マスモン登録あり', '供モンの加入やマスモンの登録ができます'],
+      ['💎', '通常報酬', '経験値・ダイヤ・スコアの倍率は難易度の設定どおりです'],
+      ['🎯', 'おすすめのプレイスタイル', 'じっくり攻略しながら、ランキング上位や自己ベスト更新を目指したい人向けです'],
+    ],
+  },
+  {
+    id: BATTLE_MODE_QUICK, label: 'クイックモード', short: 'クイック', emoji: '⚡', color: '#2dd4bf',
+    tagline: 'テンポ重視。WAVEごとに自動で強くなる',
+    points: [
+      ['🚫', 'ランキング対象外', 'このモードのスコアはランキングに反映されません'],
+      ['⚔️', '強化フェーズなし', '通常の強化選択を行わず、テンポよく進行します'],
+      ['📈', 'WAVEごとに自動成長', '味方全員の全ステータスが10%上昇し、ライフとガッツが全回復します'],
+      ['👹', '難易度は高め', '強化内容を選べないため、チャレンジモードとは異なる難しさがあります'],
+      ['🤝', '供モン加入あり', '供モン加入時は、味方の誰かの固有技がランダムで1上昇します'],
+      ['⭐', 'マスモン登録あり', 'クイックモードで完成したモンスターも登録できます'],
+      ['💎', '経験値・ダイヤ1.5倍', '獲得できる経験値とダイヤが1.5倍になります（スコア倍率は難易度どおりです）'],
+      ['🎯', 'おすすめのプレイスタイル', 'テンポよく育成したいときや、自動成長だけでどこまで進めるか腕試ししたい人向けです'],
+    ],
+  },
+];
+const battleModeInfo = (mode) => BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
 // そのレベルから次レベルに必要なXP(基準値)。指数を上げるほど高レベルが急に重くなる。
 // 10WAVE完全クリアを1周=100XPとして、Lv30到達までの周回数は次のように緩和してきている。
 //   指数1.8(当初)  … ブリーダー約580周 / 絆約410周
@@ -380,7 +444,10 @@ const BGM_TRACKS = [
 ];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', boss:'original_boss', clear:'ichika_clear' });
+// battle/dullahan はチャレンジモード用、quickBattle/quickDullahan はクイックモード用。
+// クイックのデュラハン戦は専用曲が無いため、チャレンジと同じデュラハン曲を既定にする。
+// 新しいキーを足しても normalizeBgmArrangement が既定値で補うので、既存ユーザーの設定は壊れない
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', quickBattle:'ichika_battle', dullahan:'original_dullahan', quickDullahan:'original_dullahan', boss:'original_boss', clear:'ichika_clear' });
 const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => [scene, BGM_TRACK_BY_ID[value?.[scene]] ? value[scene] : fallback]));
 
 const Audio_ = (() => {
@@ -1709,6 +1776,24 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
     </>
   );
 };
+// クイックモードの短い演出画面。タップで即送りでき、一定時間で自動的に次へ進む。
+// 自動送りとタップが重なっても onDone は1回しか呼ばない
+const QuickStepScreen = ({ onDone, ms = 1800, accent = '#2dd4bf', label = 'タップで次へ', children }) => {
+  const doneRef = useRef(false);
+  const finish = () => { if (doneRef.current) return; doneRef.current = true; onDone(); };
+  useEffect(() => {
+    const timer = setTimeout(finish, ms);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <div onClick={finish} role="button" tabIndex={0} aria-label={label}
+         className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center"
+         style={{ position:'absolute', inset:0, backgroundColor:'#020617', zIndex:30000 }}>
+      <div className="w-full max-w-sm flex flex-col items-center">{children}</div>
+      <div className="mt-5 text-[10px] font-black tracking-widest" style={{ color:accent }}>{label}</div>
+    </div>
+  );
+};
 // ===== 助手(ナビゲーター) ここまで =====
 // 難易度の色をそのまま反映するためのinline style。選択中は背景色、未選択は文字色だけを難易度の色にする
 const difficultyStyle = (setting, selected) => (selected
@@ -2202,6 +2287,12 @@ const RewardSummaryCard = ({ summary }) => (
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
+  // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
+  const [battleMode, setBattleMode] = useState(BATTLE_MODE_CHALLENGE);
+  const [modeInfoId, setModeInfoId] = useState(null); // 「？」で開くモード説明
+  // 進行中の周回のモード。バトル中の表示・報酬・BGM・記録の保存先がこれで決まる。
+  // 周回の途中で変わらないよう、挑戦を始めるときにだけ書き換える
+  const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
   const [managementTab, setManagementTab] = useState('monster');
   const [homeBackgroundReady, setHomeBackgroundReady] = useState(false);
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
@@ -2212,6 +2303,10 @@ function MonsterHeroGame() {
   }, [difficulty, safeDifficulty]);
   const [score, setScore] = useState(0);
   const [highScores, setHighScores] = useState({});
+  // クイックモードの記録はチャレンジと別枠で持つ(チャレンジの自己ベストを上書きしない)
+  const [quickHighScores, setQuickHighScores] = useState({});
+  const [quickHighestWaves, setQuickHighestWaves] = useState({});
+  const [quickClearCounts, setQuickClearCounts] = useState({});
   const highScoresRef = useRef({});
   useEffect(() => { highScoresRef.current = highScores; }, [highScores]);
   const [attemptCounts, setAttemptCounts] = useState({}); // 難易度別 挑戦回数(端末保存)
@@ -2420,6 +2515,10 @@ function MonsterHeroGame() {
   const [totalAllDamage, setTotalAllDamage] = useState(0); // cumulative damage across all waves
   const [totalRecoveryDelta, setTotalRecoveryDelta] = useState(0); // cumulative recovery-rate correction across all waves
   const [waveResult, setWaveResult] = useState(null);
+  // クイックモードの自動成長・供モン加入の簡易表示。どちらもタップか一定時間で次へ進む
+  const [quickGrowth, setQuickGrowth] = useState(null); // { stats:[{label,before,after}], nextWave }
+  const [quickJoin, setQuickJoin] = useState(null);     // { name, stats:[...], unique:{monName,skillName,before,after} }
+  const quickAdvanceRef = useRef(null); // 連打・自動送りの二重実行を防ぐ
   const [breederName, setBreederName] = useState('名無しのブリーダー');
   const [breederXp, setBreederXp] = useState(0); // 累計経験値(WAVEクリア数ベース・端末保存)
   const [gold, setGold] = useState(0); // 累計ゴールド(WAVEクリア数ベース・端末保存)
@@ -3047,7 +3146,7 @@ function MonsterHeroGame() {
   //  ・準備中(最初の勇者モン選択〜最初のバトルの直前) … 強化フェーズの曲
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
   // 敵撃破のファンファーレのあと、リザルトの曲が強化フェーズまで途切れず流れるようにするための切り分け
-  const RUN_PHASE_STATES = ['PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','REWARD_PICK','UPGRADE_SKILL','WAVE_RESULT','CHAMPION'];
+  const RUN_PHASE_STATES = ['PICK_HERO','PICK_ALLY','PICK_SLOT','PICK_TEACHING','REWARD_PICK','UPGRADE_SKILL','WAVE_RESULT','CHAMPION','QUICK_GROWTH','QUICK_JOIN'];
   // 画面から鳴らすべき曲のキーを決める
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver) => {
     if (isGameOver) return 'gameOver';
@@ -3057,7 +3156,13 @@ function MonsterHeroGame() {
     if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;
     // デバッグ戦は選択した敵を直接生成するため、WAVE番号だけに頼らず敵IDでもムーを判定する。
     // デュラハン専用曲はアレンジ設定より優先する既存仕様を維持する。
-    if (state === 'BATTLE') return enemyId === 'Durahan' ? 'dullahan' : (enemyId === 'Moo' || currentWave === 10 ? bgmArrangement.boss : bgmArrangement.battle);
+    if (state === 'BATTLE') {
+      // 曲はモードごとに分けて設定できる。ボス(ムー)戦だけは両モード共通
+      const quick = isQuickMode(runMode);
+      if (enemyId === 'Durahan') return quick ? bgmArrangement.quickDullahan : bgmArrangement.dullahan;
+      if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement.boss;
+      return quick ? bgmArrangement.quickBattle : bgmArrangement.battle;
+    }
     if (RUN_PHASE_STATES.includes(state)) return wavesDone ? 'result' : 'enhance';
     return null;
   };
@@ -3069,7 +3174,7 @@ function MonsterHeroGame() {
     if (!audioOn) { Audio_.stopBGM(); return; }
     if (key) Audio_.playBGM(key);
     else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   useEffect(() => { Audio_.setSeVolume(seVolume); }, [seVolume]);
@@ -3556,17 +3661,25 @@ function MonsterHeroGame() {
       const savedTeachingRoster = await storeGet('mh_teaching_roster', savedUnlockedTeachings, false);
       setTeachingRosterIds(savedTeachingRoster);
       const scores = {}; const attempts = {}; const clears = {}; const reachedWaves = {};
+      // クイックモードはチャレンジと別のキーへ保存しているので、まとめて読み込む
+      const quickScores = {}; const quickClears = {}; const quickWaves = {};
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async d => {
         scores[d] = await storeGet(`mh_hs_${d}`, 0, false);
         attempts[d] = await storeGet(`mh_attempts_${d}`, 0, false);
         clears[d] = await storeGet(`mh_clears_${d}`, 0, false);
         reachedWaves[d] = await storeGet(`mh_highest_wave_${d}`, 0, false);
+        quickScores[d] = await storeGet(bestScoreKey(BATTLE_MODE_QUICK, d), 0, false);
+        quickClears[d] = await storeGet(clearCountKey(BATTLE_MODE_QUICK, d), 0, false);
+        quickWaves[d] = await storeGet(bestWaveKey(BATTLE_MODE_QUICK, d), 0, false);
       }));
       setHighScores(scores);
       highScoresRef.current = scores;
       setAttemptCounts(attempts);
       setClearCounts(clears);
       setHighestWaves(reachedWaves);
+      setQuickHighScores(quickScores);
+      setQuickClearCounts(quickClears);
+      setQuickHighestWaves(quickWaves);
       let wasOnboarded = await storeGet('mh_onboarded', null, false);
       const hasSavedName = typeof savedName==='string' && savedName.trim() && savedName!=='名無しのブリーダー';
       const hasSavedIcon = typeof savedIcon==='string' && savedIcon.length>0;
@@ -3676,6 +3789,15 @@ function MonsterHeroGame() {
   const submitRunScoreOnce = async () => {
     if (score <= 0 || scoreSubmittedRef.current) return;
     scoreSubmittedRef.current = true;
+    // クイックモードはランキング対象外。送信も、チャレンジの自己ベスト更新も行わず、
+    // 記録は専用のキーへだけ残す
+    if (isQuickMode(runMode)) {
+      if (score > (quickHighScores[difficulty] || 0)) {
+        await storeSet(bestScoreKey(BATTLE_MODE_QUICK, difficulty), score, false);
+        setQuickHighScores(prev => ({ ...prev, [difficulty]: score }));
+      }
+      return;
+    }
     try {
       const result = await submitLocalScore(difficulty, score, runIdRef.current);
       if (!result?.nationalSaved) {
@@ -4360,7 +4482,8 @@ function MonsterHeroGame() {
     const scoreMult = DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
     const goldMult = DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
 
-    const breederXpGain = xpForWavesCleared(wavesCleared, scoreMult);
+    // クイックモードは経験値とダイヤだけ1.5倍(スコア倍率は難易度のまま)
+    const breederXpGain = xpForWavesClearedInMode(wavesCleared, scoreMult, runMode);
     const breederLevelBefore = levelInfo(breederXp);
     const nextXp = breederXp + breederXpGain;
     const breederLevelAfter = levelInfo(nextXp);
@@ -4373,7 +4496,7 @@ function MonsterHeroGame() {
       storeSet('mh_breeder_points_granted', Math.max(0, breederLevelAfter.level - 1), false);
     }
 
-    const goldGain = goldForWavesCleared(wavesCleared, goldMult);
+    const goldGain = goldForWavesClearedInMode(wavesCleared, goldMult, runMode);
     const goldBefore = gold;
     const goldAfter = gold + goldGain;
     setGold(goldAfter);
@@ -4385,7 +4508,7 @@ function MonsterHeroGame() {
     // 登録する」を選んだ場合にのみ、この獲得量を初期値として新しいマスモンが作られる(registerMasuMon参照)
     // バトルへ参加した供モンには勇者モンの1/2、モンスター編成内で参加しなかった控えのマスモンには
     // 1/4を加算する。勇者・参加・控えの区分と個体IDは先に一意化し、同じ個体へ重複付与しない。
-    const gain = xpForWavesCleared(wavesCleared, scoreMult);
+    const gain = xpForWavesClearedInMode(wavesCleared, scoreMult, runMode);
     const bondAwards = buildRunBondAwards({
       gain,
       heroMasuId: mainHero?.masuId,
@@ -4574,6 +4697,12 @@ function MonsterHeroGame() {
   const recordClearOnce = async () => {
     if (clearRecordedRef.current) return;
     clearRecordedRef.current = true;
+    if (isQuickMode(runMode)) {
+      const nextQuick = (quickClearCounts[difficulty] || 0) + 1;
+      setQuickClearCounts(prev => ({ ...prev, [difficulty]: Math.max(prev[difficulty] || 0, nextQuick) }));
+      await storeSet(clearCountKey(BATTLE_MODE_QUICK, difficulty), nextQuick, false);
+      return;
+    }
     const nextCount = (clearCounts[difficulty] || 0) + 1;
     setClearCounts(prev => ({ ...prev, [difficulty]: Math.max(prev[difficulty] || 0, nextCount) }));
     await storeSet(`mh_clears_${difficulty}`, nextCount, false);
@@ -5377,7 +5506,7 @@ function MonsterHeroGame() {
       setWaveResult({wave,waveMult,turn:turnCount,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,gainedDistBonus,newDistBonus,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
       await saveMissionProgress('battle');
       await saveMissionProgress('win');
-      setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, xpGain: waveXpGain(wave, scoreMultiplier), goldGain: waveGoldGain(wave, goldMultiplier) }]);
+      setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
       setTimeout(()=>setGameState('WAVE_RESULT'),500); return;
     }
     // 予測表示している enemyIntent をそのまま実行する（再抽選しない）
@@ -5419,9 +5548,81 @@ function MonsterHeroGame() {
       setGameState('CHAMPION');
       await submitRunScoreOnce();
       setResultProcessing(false);
+    } else if (isQuickMode(runMode)) {
+      // クイックモードは強化フェーズを行わず、味方を自動成長させてから次のWAVEへ進む
+      beginQuickGrowth();
     } else {
       setGameState('REWARD_PICK');
     }
+  };
+
+  // ===== クイックモード: WAVEごとの自動成長 =====
+  // 味方の全ステータスをそのWAVE終了時点の値から10%上げ、ライフとガッツを全回復する。
+  // 敵側には何もしない(敵の強さは難易度・WAVEの既存設定のまま)。
+  // 端数は既存の強化処理と同じくMath.floorで落とす。
+  const quickGrowStat = (value) => Math.floor((Number(value) || 0) * QUICK_GROWTH_MULT);
+  const beginQuickGrowth = () => {
+    const before = { hp: maxHp, atk, def, guts: maxGuts };
+    const after = { hp: quickGrowStat(before.hp), atk: quickGrowStat(before.atk), def: quickGrowStat(before.def), guts: quickGrowStat(before.guts) };
+    // 画面に出す値と実際に反映する値がずれないよう、同じ after をそのまま state へ入れる
+    setMaxHp(after.hp); setAtk(after.atk); setDef(after.def); setMaxGuts(after.guts);
+    setHp(after.hp); setGuts(after.guts); // 全回復
+    setQuickGrowth({
+      nextWave: wave + 1,
+      stats: [
+        { label: 'ライフ', before: before.hp, after: after.hp },
+        { label: 'ちから', before: before.atk, after: after.atk },
+        { label: '丈夫さ', before: before.def, after: after.def },
+        { label: 'ガッツ', before: before.guts, after: after.guts },
+      ],
+      nextDef: after.def,
+    });
+    quickAdvanceRef.current = null;
+    Audio_.se.levelUp();
+    setGameState('QUICK_GROWTH');
+  };
+  // 自動成長の表示を閉じて次へ進む。供モンが合流するWAVEなら選択画面へ、それ以外は次のWAVEへ
+  const finishQuickGrowth = () => {
+    if (quickAdvanceRef.current === 'growth') return;
+    quickAdvanceRef.current = 'growth';
+    const nextDef = quickGrowth?.nextDef;
+    setQuickGrowth(null);
+    const joinWaves = [2, 4, 6];
+    const activeIds = slots.filter(s => s).map(s => s.id);
+    const avail = getActiveMonsterList().filter(m => !activeIds.includes(m.id));
+    if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
+      setMonSelection(avail.sort(() => Math.random() - 0.5).slice(0, 4));
+      setGameState('PICK_ALLY');
+    } else {
+      initBattle(wave + 1, slots, ownedUniques, ownedTeachings, nextDef !== undefined ? nextDef : def);
+    }
+  };
+
+  // ===== クイックモード: 供モン加入時の固有技アップ =====
+  // 味方の誰か1体をランダムに選び、その固有技レベルを1上げる。
+  // 上限(MAX_UNIQUE_SKILL_LEVEL)に達している技は抽選から外し、上げられる技が無ければ何もしない。
+  const rollQuickUniqueUpgrade = (uniques) => {
+    const candidates = (uniques || []).filter(u => (u.evoLevel || 0) < MAX_UNIQUE_SKILL_LEVEL);
+    if (candidates.length === 0) return null;
+    const picked = candidates[Math.floor(Math.random() * candidates.length)];
+    const before = picked.evoLevel || 0;
+    const after = Math.min(MAX_UNIQUE_SKILL_LEVEL, before + 1);
+    if (after === before) return null;
+    const owner = slots.find(sl => sl && sl.id === picked.monId);
+    return {
+      monId: picked.monId,
+      monName: owner?.masuName || owner?.name || picked.monId,
+      skillName: uniqueSkillAtLevel(picked, after)?.name || picked.name,
+      before, after,
+    };
+  };
+  // 供モン加入の簡易表示を閉じて次のWAVEへ進む
+  const finishQuickJoin = () => {
+    if (quickAdvanceRef.current === 'join') return;
+    quickAdvanceRef.current = 'join';
+    const info = quickJoin;
+    setQuickJoin(null);
+    initBattle(wave + 1, info?.nextSlots || slots, info?.nextUniques || ownedUniques, ownedTeachings, info?.nextDef !== undefined ? info.nextDef : def);
   };
 
   // スロットで現在選べる固有技一覧(自分の固有技+合体で引き継いだ固有技)を返す。
@@ -5552,9 +5753,17 @@ function MonsterHeroGame() {
   const spawnEnemy = useCallback((w, forcedEnemyKey=null, initialDistance=null) => {
     const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey);
     if (!newEnemy) return null;
-    if (!forcedEnemyKey && w>(highestWaves[difficulty]||0)) {
-      setHighestWaves(prev=>({...prev,[difficulty]:w}));
-      storeSet(`mh_highest_wave_${difficulty}`,w,false);
+    // 最高到達WAVEもモードごとに別々に記録する
+    if (!forcedEnemyKey) {
+      if (isQuickMode(runMode)) {
+        if (w>(quickHighestWaves[difficulty]||0)) {
+          setQuickHighestWaves(prev=>({...prev,[difficulty]:w}));
+          storeSet(bestWaveKey(BATTLE_MODE_QUICK,difficulty),w,false);
+        }
+      } else if (w>(highestWaves[difficulty]||0)) {
+        setHighestWaves(prev=>({...prev,[difficulty]:w}));
+        storeSet(bestWaveKey(BATTLE_MODE_CHALLENGE,difficulty),w,false);
+      }
     }
     const dist=Number.isInteger(initialDistance)&&initialDistance>=0&&initialDistance<RANGE_LABELS.length
       ? initialDistance
@@ -5562,7 +5771,7 @@ function MonsterHeroGame() {
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyIntent(getNextEnemyAction(newEnemy,dist));
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
-  }, [getNextEnemyAction, difficulty, highestWaves]);
+  }, [getNextEnemyAction, difficulty, highestWaves, quickHighestWaves, runMode]);
 
   // defValは呼び出し元が直前に算出したばかりの丈夫さ(setDefで更新中の値)を明示的に渡すための引数。
   // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
@@ -5643,7 +5852,31 @@ function MonsterHeroGame() {
       const aptDelta=getMonsterAptPct(m);
       if (aptDelta.some(d=>d!==0)) setDistAptPct(prev=>prev.map((v,i)=>v+aptDelta[i]));
       const aptLabel=aptDelta.map((d,i)=>d!==0?`${RANGE_LABELS[i]}${formatAptPct(d)}`:null).filter(Boolean).join(' ');
-      const newAllyUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)}; setOwnedUniques([...ownedUniques,newAllyUnique]);
+      const newAllyUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)};
+      const nextUniques=[...ownedUniques,newAllyUnique];
+      setOwnedUniques(nextUniques);
+      if (isQuickMode(runMode)) {
+        // クイックモードは固有技の選択画面を出さず、味方の誰かの固有技をランダムで1上げる
+        const rolled=rollQuickUniqueUpgrade(nextUniques);
+        const appliedUniques=rolled?nextUniques.map(u=>u.monId===rolled.monId?{...u,evoLevel:rolled.after}:u):nextUniques;
+        if (rolled) setOwnedUniques(appliedUniques);
+        setQuickJoin({
+          name:m.masuName||m.name, emoji:m.emoji, imgUrl:m.imgUrl, baseId:m.id, colors:m.colors,
+          stats:[
+            {label:'ライフ',before:bHp,after:nMaxHp},
+            {label:'ちから',before:bAtk,after:nAtk},
+            {label:'丈夫さ',before:bDef,after:nDef},
+            {label:'ガッツ',before:bGuts,after:nMaxGuts},
+          ].filter(x=>x.after!==x.before),
+          aptLabel, unique:rolled,
+          nextSlots, nextUniques:appliedUniques, nextDef:nDef,
+        });
+        quickAdvanceRef.current=null;
+        Audio_.se.levelUp();
+        setGameState('QUICK_JOIN');
+        setCurrentPickingMon(null);
+        return;
+      }
       setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
       setEffect({type:'mega',label:`${m.name}合流！`,icon:"🤝",monEmoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,subLabel:`HP:${bHp}→${nMaxHp}  ちから:${bAtk}→${nAtk}\n丈夫さ:${bDef}→${nDef}  ガッツ:${bGuts}→${nMaxGuts}${aptLabel?`\n間合い適性:${aptLabel}`:''}`});
       setTimeout(()=>{setEffect(null); setGameState('UPGRADE_SKILL');},1400);
@@ -5858,7 +6091,7 @@ function MonsterHeroGame() {
     <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>音量設定</h3><button onClick={()=>setShowAudioSettings(false)}><X size={18}/></button></div><button className="mh-dialog-choice" onClick={toggleQuickMute}>{audioMuted?'🔇 音がオフです':'🔊 音はオンです'}</button><VolumeSlider label="SE" icon="🔔" value={seVolume} onChange={changeSeVolume} gradient="from-cyan-500 to-indigo-500" thumbRing="border-indigo-400"/><VolumeSlider label="BGM" icon="🎵" value={bgmVolume} onChange={changeBgmVolume} gradient="from-fuchsia-500 to-pink-500" thumbRing="border-fuchsia-400"/></div></div>
   ) : showBgmArrangement ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div><div className="space-y-4">{[
-      ['home','HOME BGM'],['management','M/B管理 BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM'],['battle','通常バトル BGM'],['boss','ボスバトル BGM'],['clear','ゲームクリア BGM']
+      ['home','HOME BGM'],['management','M/B管理 BGM'],['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM'],['battle','チャレンジモード BGM'],['quickBattle','クイックモード BGM'],['dullahan','チャレンジ デュラハン戦 BGM'],['quickDullahan','クイック デュラハン戦 BGM'],['boss','ボスバトル BGM'],['clear','ゲームクリア BGM']
     ].map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="flex gap-2 mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="shrink-0 min-w-[58px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button></div></label>)}</div><button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
   ) : showBackup ? (
     <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3><button onClick={()=>setShowBackup(false)}><X size={18}/></button></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{backupTab==='export'?<>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice" onClick={generateBackupCode}>バックアップコードを作成</button></>:<><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice" onClick={restoreFromBackupCode}>このコードで復元する</button></>}{restoreMsg&&<p>{restoreMsg}</p>}</div></div>
@@ -6063,14 +6296,25 @@ function MonsterHeroGame() {
           <div className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-1 mb-1 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
+            {/* モードのタブ。各モード名の横の「？」で説明を開く */}
             <div className="grid grid-cols-2 gap-1.5 mb-1 shrink-0 rounded-xl bg-slate-900/60 p-1 border border-white/5">
-              <button onClick={()=>setBattleMenuTab('difficulty')} className={`py-1.5 rounded-lg text-[11px] font-black transition-all ${battleMenuTab==='difficulty'?'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]':'bg-slate-950/70 text-slate-400'}`}>難易度</button>
-              <button onClick={()=>{setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className={`py-1.5 rounded-lg text-[11px] font-black transition-all ${battleMenuTab==='ranking'?'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]':'bg-slate-950/70 text-slate-400'}`}>ランキング</button>
+              {BATTLE_MODES.map(mode=>{const on=battleMode===mode.id&&battleMenuTab==='difficulty';return(
+                <div key={mode.id} onClick={()=>{setBattleMode(mode.id);setBattleMenuTab('difficulty');}} role="button" tabIndex={0} aria-label={`${mode.label}に切り替え`}
+                     className={`flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-lg transition-all min-w-0 ${on?'':'bg-slate-950/70'}`}
+                     style={on?{backgroundColor:mode.color,boxShadow:`0 0 18px ${mode.color}66`}:undefined}>
+                  <span className={`min-w-0 truncate text-[11px] font-black ${on?'':'text-slate-400'}`} style={on?{color:'#0f172a'}:undefined}>{mode.label}</span>
+                  <button onClick={e=>{e.stopPropagation();setModeInfoId(mode.id);}} aria-label={`${mode.label}の説明`} className={`shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black active:scale-90 ${on?'':'border-slate-500 text-slate-300'}`} style={on?{borderColor:'#0f172a',color:'#0f172a'}:undefined}>？</button>
+                </div>
+              );})}
             </div>
             {battleMenuTab==='difficulty'&&(()=>{
               const difficulties=Object.entries(DIFFICULTY_SETTINGS),selectedIndex=difficulties.findIndex(([key])=>key===safeDifficulty);
               const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));setDifficulty(difficulties[safe][0]);difficultyCarouselRef.current?.children[safe]?.scrollIntoView({behavior,inline:'center',block:'nearest'});};
-              const preview=createBattleEnemy(1,safeDifficulty);
+              const mode=battleModeInfo(battleMode), quick=isQuickMode(battleMode);
+              // クイックモードは経験値とダイヤだけ1.5倍。スコア倍率は難易度のままなので分けて出す
+              const bonusLabel=(value)=>quick?`×${Math.round(value*QUICK_REWARD_MULT*100)/100}`:`×${value}`;
+              const bestOf=(key)=>quick?(quickHighScores[key]||0):(highScores[key]||0);
+              const waveOf=(key)=>quick?(quickHighestWaves[key]||0):(highestWaves[key]||0);
               return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[9px] tracking-[.18em] text-slate-400 font-black mb-1 shrink-0">左右にスワイプして難易度を選択</div>{Object.keys(SKIP_TICKETS).length>0&&(
                 <div className="shrink-0 flex flex-wrap items-center justify-center gap-1 mb-1.5 px-2">
                   <span className="text-[8px] font-black text-slate-500 tracking-[.12em]">所持スキップチケット</span>
@@ -6079,7 +6323,13 @@ function MonsterHeroGame() {
                   );})}
                 </div>
               )}<div className="relative shrink-0"><button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button><div ref={difficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==safeDifficulty)setDifficulty(difficulties[best][0]);}} className="flex items-start gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-              {difficulties.map(([key,setting])=>{const active=key===safeDifficulty,enemy=createBattleEnemy(1,key);return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[28px] border-2 px-3.5 py-3 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className="text-center text-[8px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div><h3 className="text-center text-xl font-black mt-1" style={{color:setting.text}}>{setting.label}</h3><div className="mt-2.5 rounded-xl bg-black/45 px-2.5 py-2"><small className="text-[8px] text-slate-400 font-black">MY HIGH SCORE</small><b className="block text-right text-lg leading-tight text-indigo-200">{(highScores[key]||0).toLocaleString()} pt</b><span className="block text-right text-[9px] text-amber-300">最高到達 WAVE {highestWaves[key]||0}</span></div><div className="grid grid-cols-[80px_1fr] items-center gap-2 my-2.5 rounded-xl border border-white/10 bg-black/25 p-2.5"><div className="h-20 rounded-xl bg-slate-900 flex items-center justify-center overflow-hidden">{enemy?.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} className="w-full h-full object-contain"/>:<span className="text-5xl">{enemy?.emoji}</span>}</div><div><small className="text-amber-300 font-black">WAVE 1</small><h4 className="font-black">{enemy?.name}</h4><div className="flex justify-between text-xs mt-2"><span>HP</span><b>{enemy?.maxHp.toLocaleString()}</b></div><div className="flex justify-between text-xs mt-1"><span>攻撃力</span><b>{enemy?.atk.toLocaleString()}</b></div></div></div><div className="grid grid-cols-3 gap-1.5">{[['敵強度',setting.power],['スコア',setting.score],['ダイヤ',setting.gold]].map(([label,value])=><div key={label} className="rounded-xl bg-black/35 p-1.5 text-center text-[8px] text-slate-400">{label}<b className="block text-sm text-white">×{value}</b></div>)}</div><div className="grid gap-2 mt-2.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[46px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button><button onClick={()=>{setDifficulty(key);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[50px] rounded-xl font-black text-sm" style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す */}{(()=>{const tid=SKIP_TICKETS[key];if(!tid)return(<div className="min-h-[46px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500">この難易度はスキップできません</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[46px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-12 min-h-[46px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1.5 py-1">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-2 h-2 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div></div>;})()}
+              {/* 難易度カード。WAVE1の敵情報は「全WAVE詳細」で見られるためカードには出さず、
+                  そのぶんカードを縦に縮めて下のランキングボタンと助手コメントの場所を空けている */}
+              {difficulties.map(([key,setting])=>{const active=key===safeDifficulty;return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[28px] border-2 px-3.5 py-3 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className="text-center text-[8px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div><h3 className="text-center text-xl font-black mt-0.5" style={{color:setting.text}}>{setting.label}</h3><div className="mt-2 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="text-[8px] text-slate-400 font-black">自己ベストスコア</small><b className="block text-right text-lg leading-tight text-indigo-200">{bestOf(key).toLocaleString()} pt</b><span className="block text-right text-[9px] text-amber-300">最高到達 WAVE {waveOf(key)}</span></div><div className="grid grid-cols-4 gap-1 mt-2">{[['敵強度',`×${setting.power}`,false],['スコア倍率',`×${setting.score}`,false],['経験値倍率',bonusLabel(setting.score),quick],['ダイヤ倍率',bonusLabel(setting.gold),quick]].map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 p-1.5 text-center text-[8px] text-slate-400">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div>{quick&&<div className="mt-1.5 rounded-xl border px-2 py-1 text-center text-[8px] font-black leading-relaxed" style={{borderColor:`${mode.color}55`,color:mode.color}}>経験値とダイヤだけ1.5倍（スコア倍率は難易度どおり）</div>}<div className="grid gap-2 mt-2.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[44px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button><button onClick={()=>{setDifficulty(key);setRunMode(battleMode);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[48px] rounded-xl font-black text-sm" style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す */}{(()=>{const tid=SKIP_TICKETS[key];if(!tid)return(<div className="min-h-[46px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500">この難易度はスキップできません</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[46px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-12 min-h-[46px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1.5 py-1">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-2 h-2 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
+              {/* カードの下: ランキング(チャレンジのみ) → 助手コメント の順に置く */}
+              {!quick&&<button onClick={()=>{setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className="shrink-0 w-full min-h-[46px] rounded-2xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[12px] active:scale-[.98] mb-2 flex items-center justify-center gap-1 px-3"><span className="flex-1 text-center">🏆 ランキングを見る（チャレンジモード）</span><ChevronRight size={16} className="shrink-0"/></button>}
+              <div className="shrink-0 pb-1"><AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'} accent={mode.color} faceSize={64}/></div>
+              </div>;})()}
             {battleMenuTab==='ranking'&&<div className="flex-1 min-h-0 flex flex-col">
               <div className="grid grid-cols-3 gap-1 mb-1.5 shrink-0">{[{k:'score',label:'スコア'},{k:'breeder',label:'ブリーダーLv'},{k:'bond',label:'絆Lv'}].map(t=><button key={t.k} onClick={()=>{setRankingKind(t.k);if(t.k==='score')loadRankings(rankingViewKey);else {if(t.k==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,t.k);}}} className={`py-1.5 rounded-lg text-[9px] font-black border ${rankingKind===t.k?'bg-indigo-600 border-indigo-400':'bg-slate-900 border-white/10 text-slate-400'}`}>{t.label}</button>)}</div>
               {rankingKind==='score'&&(()=>{const rows=localRankings[rankingViewKey]||[],status=rankingStatus(`score:${rankingViewKey}`);return <><div className="flex gap-1 overflow-x-auto pb-1.5 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=><button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(d);}} className={`px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 ${rankingViewDiff===d?'ring-1 ring-white':'border border-white/10'}`} style={difficultyStyle(st,rankingViewDiff===d)}>{st.label}</button>)}</div><div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{status.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{status.error&&status.fetched&&<div className="text-center text-[9px] text-amber-300">{status.error}</div>}{rows.map(renderScoreRankingEntry)}{rows.length===0&&(status.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:status.error&&!status.fetched?<div className="text-center text-red-300 py-8"><p>取得に失敗しました</p><button onClick={()=>loadRankings(rankingViewKey,false,true)} className="mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black">再読込</button></div>:<div className="text-center text-slate-500 py-8">記録はまだありません</div>)}</div></>;})()}
@@ -7385,7 +7635,7 @@ function MonsterHeroGame() {
         {gameState==='BATTLE'&&(
           <div className="flex-1 flex flex-col h-full">
             <header className="h-[5%] shrink-0 bg-slate-900 px-4 flex items-center justify-between border-b border-white/5 z-[6500]">
-              <div className="flex items-center gap-2">{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1.5 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-2 py-0.5 rounded border tracking-wider ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span><span className="text-[8px] font-black text-blue-400 flex items-center gap-1 uppercase tracking-widest"><Timer size={8}/> TURN {turnCount}/20</span></div>
+              <div className="flex items-center gap-2">{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1.5 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-2 py-0.5 rounded border tracking-wider ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* いま遊んでいるモードと難易度。既存の表示を邪魔しないよう1行に収める */}<span className="text-[7px] font-black px-1.5 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</span><span className="text-[8px] font-black text-blue-400 flex items-center gap-1 uppercase tracking-widest"><Timer size={8}/> TURN {turnCount}/20</span></div>
               <div className="flex items-center gap-2"><div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter mr-1"><Award size={10}/> {score.toLocaleString()}</div><button onClick={toggleQuickMute} className="p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[26px] h-[26px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} className="p-1.5 bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button onClick={()=>setShowQuitConfirm(true)} className="p-1.5 bg-slate-800 rounded text-slate-400 active:scale-90"><Flag size={14}/></button></div>
             </header>
             {enemy&&(
@@ -8106,6 +8356,85 @@ function MonsterHeroGame() {
       )}
 
       {/* UPGRADE SKILL */}
+      {/* クイックモード: WAVEごとの自動成長。タップで即送り、一定時間で自動的に次へ進む */}
+      {gameState==='QUICK_GROWTH'&&quickGrowth&&(
+        <QuickStepScreen onDone={finishQuickGrowth} ms={1800} accent="#2dd4bf" label="タップで次へ">
+          <h2 className="text-2xl font-black italic" style={{color:'#2dd4bf'}}>ステータスアップ！</h2>
+          <p className="text-[10px] font-black text-slate-400 mt-1">WAVE {quickGrowth.nextWave-1} クリア／全ステータス +10%</p>
+          <div className="mt-4 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden">
+            {quickGrowth.stats.map((st,i)=>(
+              <div key={st.label} className={`flex items-center gap-2 px-4 py-2 ${i>0?'border-t border-white/5':''}`}>
+                <span className="w-16 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
+                <span className="flex-1 text-right font-mono text-[13px] text-slate-300">{st.before.toLocaleString()}</span>
+                <span className="shrink-0 text-[11px]" style={{color:'#2dd4bf'}}>→</span>
+                <span className="flex-1 text-left font-mono text-[13px] font-black text-white">{st.after.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 rounded-2xl px-3 py-2 text-[11px] font-black" style={{backgroundColor:'rgba(45,212,191,.12)',color:'#5eead4'}}>ライフ・ガッツ全回復！</div>
+        </QuickStepScreen>
+      )}
+
+      {/* クイックモード: 供モン加入。加入ステータスと固有技アップを1画面でまとめて出す */}
+      {gameState==='QUICK_JOIN'&&quickJoin&&(
+        <QuickStepScreen onDone={finishQuickJoin} ms={2200} accent="#2dd4bf" label="タップで次へ">
+          <h2 className="text-2xl font-black italic" style={{color:'#2dd4bf'}}>供モン加入！</h2>
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <div className="w-16 h-16 rounded-full overflow-hidden border-2 flex items-center justify-center bg-black/40" style={{borderColor:'#2dd4bf'}}>
+              {quickJoin.imgUrl?<DyedMonsterImage baseId={quickJoin.baseId} src={quickJoin.imgUrl} alt={quickJoin.name} masuColors={quickJoin.colors} className="w-full h-full object-contain"/>:<span className="text-3xl">{quickJoin.emoji}</span>}
+            </div>
+            <p className="text-sm font-black text-white">{quickJoin.name}が仲間になった！</p>
+          </div>
+          {quickJoin.stats.length>0&&(
+            <div className="mt-3 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden">
+              {quickJoin.stats.map((st,i)=>(
+                <div key={st.label} className={`flex items-center gap-2 px-4 py-2 ${i>0?'border-t border-white/5':''}`}>
+                  <span className="w-16 shrink-0 text-left text-[11px] font-black text-slate-400">{st.label}</span>
+                  <span className="flex-1 text-right font-mono text-[13px] text-slate-300">{st.before.toLocaleString()}</span>
+                  <span className="shrink-0 text-[11px]" style={{color:'#2dd4bf'}}>→</span>
+                  <span className="flex-1 text-left font-mono text-[13px] font-black text-white">{st.after.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {quickJoin.aptLabel&&<div className="mt-2 text-[10px] font-black text-cyan-300">間合い適性 {quickJoin.aptLabel}</div>}
+          {quickJoin.unique?(
+            <div className="mt-3 w-full rounded-2xl border px-3 py-2.5" style={{borderColor:'rgba(251,191,36,.5)',backgroundColor:'rgba(0,0,0,.5)'}}>
+              <div className="text-[11px] font-black text-amber-300">固有技アップ！</div>
+              <div className="text-[12px] font-black text-white mt-0.5">{quickJoin.unique.monName}</div>
+              <div className="text-[11px] text-slate-300 mt-0.5">「{quickJoin.unique.skillName}」 Lv.{quickJoin.unique.before} → <b className="text-amber-300">Lv.{quickJoin.unique.after}</b></div>
+            </div>
+          ):(
+            <div className="mt-3 text-[10px] font-black text-slate-500">上げられる固有技はもうありません</div>
+          )}
+        </QuickStepScreen>
+      )}
+
+      {/* モードの説明(タブ横の「？」) */}
+      {modeInfoId&&(()=>{const mode=battleModeInfo(modeInfoId);return(
+        <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:60000}} role="dialog" aria-modal="true" aria-label={`${mode.label}の説明`}>
+          <div className="w-full max-w-sm rounded-3xl border-2 bg-slate-950 flex flex-col" style={{borderColor:mode.color,maxHeight:'86vh'}}>
+            <div className="shrink-0 flex items-center gap-2 p-4 border-b border-white/10">
+              <span className="text-2xl">{mode.emoji}</span>
+              <div className="flex-1 min-w-0"><h3 className="text-base font-black truncate" style={{color:mode.color}}>{mode.label}とは？</h3><p className="text-[10px] text-slate-400">{mode.tagline}</p></div>
+              <button onClick={()=>setModeInfoId(null)} aria-label="説明を閉じる" className="shrink-0 p-2 bg-white/10 rounded-full active:scale-90"><X size={18}/></button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-2.5">
+              {mode.points.map(([icon,title,text])=>(
+                <div key={title} className="rounded-2xl bg-black/50 border px-3 py-2 flex items-start gap-2.5" style={{borderColor:`${mode.color}44`}}>
+                  <span className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-base" style={{backgroundColor:`${mode.color}22`}}>{icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-black" style={{color:mode.color}}>{title}</div>
+                    <div className="text-[11px] text-slate-300 leading-relaxed mt-0.5">{text}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="shrink-0 p-4 pt-2" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+              <button onClick={()=>setModeInfoId(null)} className="w-full min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:mode.color}}>閉じる</button>
+            </div>
+          </div>
+        </div>);})()}
       {gameState==='UPGRADE_SKILL'&&(
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-8 text-center overflow-hidden">
           <div className="mb-2 shrink-0"><h2 className="text-xl font-black text-amber-400 italic uppercase">固有技の強化</h2><div className="text-[9px] text-slate-400 mt-1 uppercase tracking-widest flex items-center justify-center gap-2">Remaining Points: <span className="text-white bg-amber-600 px-2 rounded-full font-mono">{upgradePoints}</span></div></div>

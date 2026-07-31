@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f24b5c35e386f682
+// source-sha256: 19a7ec4906ed0dc6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 11:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 11:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -144,6 +144,59 @@ const goldForWavesCleared = (wavesCleared, mult) => {
   for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveGoldGain(w, mult);
   return sum;
 };
+
+// ===== バトルモード =====
+// チャレンジモード … これまでの通常バトル(強化フェーズあり・ランキング対象)
+// クイックモード   … 強化フェーズなし。WAVEごとに味方が自動成長し、経験値とダイヤだけ1.5倍
+//
+// 増える値はここだけで決まる。バトル本体は複製せず、この定義とモードの分岐で振る舞いを変える。
+const BATTLE_MODE_CHALLENGE = 'challenge';
+const BATTLE_MODE_QUICK = 'quick';
+const normalizeBattleMode = value => value === BATTLE_MODE_QUICK ? BATTLE_MODE_QUICK : BATTLE_MODE_CHALLENGE;
+// クイックモードで経験値・ダイヤにかかる倍率(スコアにはかけない)
+const QUICK_REWARD_MULT = 1.5;
+// クイックモードでWAVEごとに味方の全ステータスへかける倍率
+const QUICK_GROWTH_MULT = 1.10;
+const isQuickMode = mode => normalizeBattleMode(mode) === BATTLE_MODE_QUICK;
+// 難易度倍率をかけたあとの獲得量へ、さらにモードの倍率をかける。
+// WAVEごとの内訳と合計がずれないよう、内訳と同じ「WAVE単位で丸めてから合計」に揃える
+const applyModeReward = (value, mode) => isQuickMode(mode) ? Math.floor(value * QUICK_REWARD_MULT) : value;
+const waveXpGainInMode = (waveNum, mult, mode) => applyModeReward(waveXpGain(waveNum, mult), mode);
+const waveGoldGainInMode = (waveNum, mult, mode) => applyModeReward(waveGoldGain(waveNum, mult), mode);
+const xpForWavesClearedInMode = (wavesCleared, mult, mode) => {
+  let sum = 0;
+  for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveXpGainInMode(w, mult, mode);
+  return sum;
+};
+const goldForWavesClearedInMode = (wavesCleared, mult, mode) => {
+  let sum = 0;
+  for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveGoldGainInMode(w, mult, mode);
+  return sum;
+};
+// 自己ベスト・最高到達WAVE・クリア回数の保存キー。チャレンジは従来のキーをそのまま使い、
+// クイックは別のキーへ保存して、チャレンジの記録を上書きしないようにする
+const bestScoreKey = (mode, diff) => isQuickMode(mode) ? `mh_quick_hs_${diff}` : `mh_hs_${diff}`;
+const bestWaveKey = (mode, diff) => isQuickMode(mode) ? `mh_quick_highest_wave_${diff}` : `mh_highest_wave_${diff}`;
+const clearCountKey = (mode, diff) => isQuickMode(mode) ? `mh_quick_clears_${diff}` : `mh_clears_${diff}`;
+// モードの表示情報と「？」で出す説明。文言を1か所にまとめ、タブ・カード・説明の食い違いを防ぐ
+const BATTLE_MODES = [{
+  id: BATTLE_MODE_CHALLENGE,
+  label: 'チャレンジモード',
+  short: 'チャレンジ',
+  emoji: '🏆',
+  color: '#818cf8',
+  tagline: 'じっくり攻略してランキングを狙う',
+  points: [['🏆', 'ランキング対象', 'このモードのスコアはランキングに反映されます'], ['📈', '強化フェーズあり', '通常どおり強化フェーズが発生し、強化内容を選びながら戦えます'], ['🛡️', '育成と攻略の両立', '戦略的に強くなりながら、最後までの到達を目指します'], ['🤝', '供モン加入・マスモン登録あり', '供モンの加入やマスモンの登録ができます'], ['💎', '通常報酬', '経験値・ダイヤ・スコアの倍率は難易度の設定どおりです'], ['🎯', 'おすすめのプレイスタイル', 'じっくり攻略しながら、ランキング上位や自己ベスト更新を目指したい人向けです']]
+}, {
+  id: BATTLE_MODE_QUICK,
+  label: 'クイックモード',
+  short: 'クイック',
+  emoji: '⚡',
+  color: '#2dd4bf',
+  tagline: 'テンポ重視。WAVEごとに自動で強くなる',
+  points: [['🚫', 'ランキング対象外', 'このモードのスコアはランキングに反映されません'], ['⚔️', '強化フェーズなし', '通常の強化選択を行わず、テンポよく進行します'], ['📈', 'WAVEごとに自動成長', '味方全員の全ステータスが10%上昇し、ライフとガッツが全回復します'], ['👹', '難易度は高め', '強化内容を選べないため、チャレンジモードとは異なる難しさがあります'], ['🤝', '供モン加入あり', '供モン加入時は、味方の誰かの固有技がランダムで1上昇します'], ['⭐', 'マスモン登録あり', 'クイックモードで完成したモンスターも登録できます'], ['💎', '経験値・ダイヤ1.5倍', '獲得できる経験値とダイヤが1.5倍になります（スコア倍率は難易度どおりです）'], ['🎯', 'おすすめのプレイスタイル', 'テンポよく育成したいときや、自動成長だけでどこまで進めるか腕試ししたい人向けです']]
+}];
+const battleModeInfo = mode => BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
 // そのレベルから次レベルに必要なXP(基準値)。指数を上げるほど高レベルが急に重くなる。
 // 10WAVE完全クリアを1周=100XPとして、Lv30到達までの周回数は次のように緩和してきている。
 //   指数1.8(当初)  … ブリーダー約580周 / 絆約410周
@@ -905,6 +958,9 @@ const BGM_TRACKS = [{
 }];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
+// battle/dullahan はチャレンジモード用、quickBattle/quickDullahan はクイックモード用。
+// クイックのデュラハン戦は専用曲が無いため、チャレンジと同じデュラハン曲を既定にする。
+// 新しいキーを足しても normalizeBgmArrangement が既定値で補うので、既存ユーザーの設定は壊れない
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   home: 'original_home',
   management: 'original_profile',
@@ -913,6 +969,9 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   trainingMenu: 'original_home',
   trainingBoard: 'original_home',
   battle: 'original_battle',
+  quickBattle: 'ichika_battle',
+  dullahan: 'original_dullahan',
+  quickDullahan: 'original_dullahan',
   boss: 'original_boss',
   clear: 'ichika_clear'
 });
@@ -4363,6 +4422,46 @@ const AssistantBubble = ({
     }
   }, "\u3068\u3058\u308B")))));
 };
+// クイックモードの短い演出画面。タップで即送りでき、一定時間で自動的に次へ進む。
+// 自動送りとタップが重なっても onDone は1回しか呼ばない
+const QuickStepScreen = ({
+  onDone,
+  ms = 1800,
+  accent = '#2dd4bf',
+  label = 'タップで次へ',
+  children
+}) => {
+  const doneRef = useRef(false);
+  const finish = () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onDone();
+  };
+  useEffect(() => {
+    const timer = setTimeout(finish, ms);
+    return () => clearTimeout(timer);
+  }, []);
+  return /*#__PURE__*/React.createElement("div", {
+    onClick: finish,
+    role: "button",
+    tabIndex: 0,
+    "aria-label": label,
+    className: "absolute inset-0 flex flex-col items-center justify-center p-6 text-center",
+    style: {
+      position: 'absolute',
+      inset: 0,
+      backgroundColor: '#020617',
+      zIndex: 30000
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-sm flex flex-col items-center"
+  }, children), /*#__PURE__*/React.createElement("div", {
+    className: "mt-5 text-[10px] font-black tracking-widest",
+    style: {
+      color: accent
+    }
+  }, label));
+};
 // ===== 助手(ナビゲーター) ここまで =====
 // 難易度の色をそのまま反映するためのinline style。選択中は背景色、未選択は文字色だけを難易度の色にする
 const difficultyStyle = (setting, selected) => selected ? {
@@ -5162,6 +5261,12 @@ const RewardSummaryCard = ({
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
+  // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
+  const [battleMode, setBattleMode] = useState(BATTLE_MODE_CHALLENGE);
+  const [modeInfoId, setModeInfoId] = useState(null); // 「？」で開くモード説明
+  // 進行中の周回のモード。バトル中の表示・報酬・BGM・記録の保存先がこれで決まる。
+  // 周回の途中で変わらないよう、挑戦を始めるときにだけ書き換える
+  const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
   const [managementTab, setManagementTab] = useState('monster');
   const [homeBackgroundReady, setHomeBackgroundReady] = useState(false);
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
@@ -5172,6 +5277,10 @@ function MonsterHeroGame() {
   }, [difficulty, safeDifficulty]);
   const [score, setScore] = useState(0);
   const [highScores, setHighScores] = useState({});
+  // クイックモードの記録はチャレンジと別枠で持つ(チャレンジの自己ベストを上書きしない)
+  const [quickHighScores, setQuickHighScores] = useState({});
+  const [quickHighestWaves, setQuickHighestWaves] = useState({});
+  const [quickClearCounts, setQuickClearCounts] = useState({});
   const highScoresRef = useRef({});
   useEffect(() => {
     highScoresRef.current = highScores;
@@ -5423,6 +5532,10 @@ function MonsterHeroGame() {
   const [totalAllDamage, setTotalAllDamage] = useState(0); // cumulative damage across all waves
   const [totalRecoveryDelta, setTotalRecoveryDelta] = useState(0); // cumulative recovery-rate correction across all waves
   const [waveResult, setWaveResult] = useState(null);
+  // クイックモードの自動成長・供モン加入の簡易表示。どちらもタップか一定時間で次へ進む
+  const [quickGrowth, setQuickGrowth] = useState(null); // { stats:[{label,before,after}], nextWave }
+  const [quickJoin, setQuickJoin] = useState(null); // { name, stats:[...], unique:{monName,skillName,before,after} }
+  const quickAdvanceRef = useRef(null); // 連打・自動送りの二重実行を防ぐ
   const [breederName, setBreederName] = useState('名無しのブリーダー');
   const [breederXp, setBreederXp] = useState(0); // 累計経験値(WAVEクリア数ベース・端末保存)
   const [gold, setGold] = useState(0); // 累計ゴールド(WAVEクリア数ベース・端末保存)
@@ -6313,7 +6426,7 @@ function MonsterHeroGame() {
   //  ・準備中(最初の勇者モン選択〜最初のバトルの直前) … 強化フェーズの曲
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
   // 敵撃破のファンファーレのあと、リザルトの曲が強化フェーズまで途切れず流れるようにするための切り分け
-  const RUN_PHASE_STATES = ['PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT', 'CHAMPION'];
+  const RUN_PHASE_STATES = ['PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT', 'CHAMPION', 'QUICK_GROWTH', 'QUICK_JOIN'];
   // 画面から鳴らすべき曲のキーを決める
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver) => {
     if (isGameOver) return 'gameOver';
@@ -6323,7 +6436,13 @@ function MonsterHeroGame() {
     if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;
     // デバッグ戦は選択した敵を直接生成するため、WAVE番号だけに頼らず敵IDでもムーを判定する。
     // デュラハン専用曲はアレンジ設定より優先する既存仕様を維持する。
-    if (state === 'BATTLE') return enemyId === 'Durahan' ? 'dullahan' : enemyId === 'Moo' || currentWave === 10 ? bgmArrangement.boss : bgmArrangement.battle;
+    if (state === 'BATTLE') {
+      // 曲はモードごとに分けて設定できる。ボス(ムー)戦だけは両モード共通
+      const quick = isQuickMode(runMode);
+      if (enemyId === 'Durahan') return quick ? bgmArrangement.quickDullahan : bgmArrangement.dullahan;
+      if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement.boss;
+      return quick ? bgmArrangement.quickBattle : bgmArrangement.battle;
+    }
     if (RUN_PHASE_STATES.includes(state)) return wavesDone ? 'result' : 'enhance';
     return null;
   };
@@ -6337,7 +6456,7 @@ function MonsterHeroGame() {
       return;
     }
     if (key) Audio_.playBGM(key);else Audio_.stopBGM();
-  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement]);
+  }, [bootPhase, gameState, wave, enemy?.id, hp, gaveUp, audioOn, waveHistory.length, bgmArrangement, runMode]);
 
   // SE/BGMそれぞれの音量をAudioエンジンへ反映
   useEffect(() => {
@@ -6934,17 +7053,27 @@ function MonsterHeroGame() {
       const attempts = {};
       const clears = {};
       const reachedWaves = {};
+      // クイックモードはチャレンジと別のキーへ保存しているので、まとめて読み込む
+      const quickScores = {};
+      const quickClears = {};
+      const quickWaves = {};
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async d => {
         scores[d] = await storeGet(`mh_hs_${d}`, 0, false);
         attempts[d] = await storeGet(`mh_attempts_${d}`, 0, false);
         clears[d] = await storeGet(`mh_clears_${d}`, 0, false);
         reachedWaves[d] = await storeGet(`mh_highest_wave_${d}`, 0, false);
+        quickScores[d] = await storeGet(bestScoreKey(BATTLE_MODE_QUICK, d), 0, false);
+        quickClears[d] = await storeGet(clearCountKey(BATTLE_MODE_QUICK, d), 0, false);
+        quickWaves[d] = await storeGet(bestWaveKey(BATTLE_MODE_QUICK, d), 0, false);
       }));
       setHighScores(scores);
       highScoresRef.current = scores;
       setAttemptCounts(attempts);
       setClearCounts(clears);
       setHighestWaves(reachedWaves);
+      setQuickHighScores(quickScores);
+      setQuickClearCounts(quickClears);
+      setQuickHighestWaves(quickWaves);
       let wasOnboarded = await storeGet('mh_onboarded', null, false);
       const hasSavedName = typeof savedName === 'string' && savedName.trim() && savedName !== '名無しのブリーダー';
       const hasSavedIcon = typeof savedIcon === 'string' && savedIcon.length > 0;
@@ -7106,6 +7235,18 @@ function MonsterHeroGame() {
   const submitRunScoreOnce = async () => {
     if (score <= 0 || scoreSubmittedRef.current) return;
     scoreSubmittedRef.current = true;
+    // クイックモードはランキング対象外。送信も、チャレンジの自己ベスト更新も行わず、
+    // 記録は専用のキーへだけ残す
+    if (isQuickMode(runMode)) {
+      if (score > (quickHighScores[difficulty] || 0)) {
+        await storeSet(bestScoreKey(BATTLE_MODE_QUICK, difficulty), score, false);
+        setQuickHighScores(prev => ({
+          ...prev,
+          [difficulty]: score
+        }));
+      }
+      return;
+    }
     try {
       const result = await submitLocalScore(difficulty, score, runIdRef.current);
       if (!result?.nationalSaved) {
@@ -8480,7 +8621,9 @@ function MonsterHeroGame() {
     }
     const scoreMult = DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
     const goldMult = DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
-    const breederXpGain = xpForWavesCleared(wavesCleared, scoreMult);
+
+    // クイックモードは経験値とダイヤだけ1.5倍(スコア倍率は難易度のまま)
+    const breederXpGain = xpForWavesClearedInMode(wavesCleared, scoreMult, runMode);
     const breederLevelBefore = levelInfo(breederXp);
     const nextXp = breederXp + breederXpGain;
     const breederLevelAfter = levelInfo(nextXp);
@@ -8496,7 +8639,7 @@ function MonsterHeroGame() {
       // 配った総数も記録しておく(読み込み時の補填処理が二重に配らないようにするため)
       storeSet('mh_breeder_points_granted', Math.max(0, breederLevelAfter.level - 1), false);
     }
-    const goldGain = goldForWavesCleared(wavesCleared, goldMult);
+    const goldGain = goldForWavesClearedInMode(wavesCleared, goldMult, runMode);
     const goldBefore = gold;
     const goldAfter = gold + goldGain;
     setGold(goldAfter);
@@ -8508,7 +8651,7 @@ function MonsterHeroGame() {
     // 登録する」を選んだ場合にのみ、この獲得量を初期値として新しいマスモンが作られる(registerMasuMon参照)
     // バトルへ参加した供モンには勇者モンの1/2、モンスター編成内で参加しなかった控えのマスモンには
     // 1/4を加算する。勇者・参加・控えの区分と個体IDは先に一意化し、同じ個体へ重複付与しない。
-    const gain = xpForWavesCleared(wavesCleared, scoreMult);
+    const gain = xpForWavesClearedInMode(wavesCleared, scoreMult, runMode);
     const bondAwards = buildRunBondAwards({
       gain,
       heroMasuId: mainHero?.masuId,
@@ -8784,6 +8927,15 @@ function MonsterHeroGame() {
   const recordClearOnce = async () => {
     if (clearRecordedRef.current) return;
     clearRecordedRef.current = true;
+    if (isQuickMode(runMode)) {
+      const nextQuick = (quickClearCounts[difficulty] || 0) + 1;
+      setQuickClearCounts(prev => ({
+        ...prev,
+        [difficulty]: Math.max(prev[difficulty] || 0, nextQuick)
+      }));
+      await storeSet(clearCountKey(BATTLE_MODE_QUICK, difficulty), nextQuick, false);
+      return;
+    }
     const nextCount = (clearCounts[difficulty] || 0) + 1;
     setClearCounts(prev => ({
       ...prev,
@@ -10185,8 +10337,8 @@ function MonsterHeroGame() {
         wave,
         roundScore: finalRoundScore,
         totalScore: score + finalRoundScore,
-        xpGain: waveXpGain(wave, scoreMultiplier),
-        goldGain: waveGoldGain(wave, goldMultiplier)
+        xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode),
+        goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode)
       }]);
       setTimeout(() => setGameState('WAVE_RESULT'), 500);
       return;
@@ -10238,9 +10390,107 @@ function MonsterHeroGame() {
       setGameState('CHAMPION');
       await submitRunScoreOnce();
       setResultProcessing(false);
+    } else if (isQuickMode(runMode)) {
+      // クイックモードは強化フェーズを行わず、味方を自動成長させてから次のWAVEへ進む
+      beginQuickGrowth();
     } else {
       setGameState('REWARD_PICK');
     }
+  };
+
+  // ===== クイックモード: WAVEごとの自動成長 =====
+  // 味方の全ステータスをそのWAVE終了時点の値から10%上げ、ライフとガッツを全回復する。
+  // 敵側には何もしない(敵の強さは難易度・WAVEの既存設定のまま)。
+  // 端数は既存の強化処理と同じくMath.floorで落とす。
+  const quickGrowStat = value => Math.floor((Number(value) || 0) * QUICK_GROWTH_MULT);
+  const beginQuickGrowth = () => {
+    const before = {
+      hp: maxHp,
+      atk,
+      def,
+      guts: maxGuts
+    };
+    const after = {
+      hp: quickGrowStat(before.hp),
+      atk: quickGrowStat(before.atk),
+      def: quickGrowStat(before.def),
+      guts: quickGrowStat(before.guts)
+    };
+    // 画面に出す値と実際に反映する値がずれないよう、同じ after をそのまま state へ入れる
+    setMaxHp(after.hp);
+    setAtk(after.atk);
+    setDef(after.def);
+    setMaxGuts(after.guts);
+    setHp(after.hp);
+    setGuts(after.guts); // 全回復
+    setQuickGrowth({
+      nextWave: wave + 1,
+      stats: [{
+        label: 'ライフ',
+        before: before.hp,
+        after: after.hp
+      }, {
+        label: 'ちから',
+        before: before.atk,
+        after: after.atk
+      }, {
+        label: '丈夫さ',
+        before: before.def,
+        after: after.def
+      }, {
+        label: 'ガッツ',
+        before: before.guts,
+        after: after.guts
+      }],
+      nextDef: after.def
+    });
+    quickAdvanceRef.current = null;
+    Audio_.se.levelUp();
+    setGameState('QUICK_GROWTH');
+  };
+  // 自動成長の表示を閉じて次へ進む。供モンが合流するWAVEなら選択画面へ、それ以外は次のWAVEへ
+  const finishQuickGrowth = () => {
+    if (quickAdvanceRef.current === 'growth') return;
+    quickAdvanceRef.current = 'growth';
+    const nextDef = quickGrowth?.nextDef;
+    setQuickGrowth(null);
+    const joinWaves = [2, 4, 6];
+    const activeIds = slots.filter(s => s).map(s => s.id);
+    const avail = getActiveMonsterList().filter(m => !activeIds.includes(m.id));
+    if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
+      setMonSelection(avail.sort(() => Math.random() - 0.5).slice(0, 4));
+      setGameState('PICK_ALLY');
+    } else {
+      initBattle(wave + 1, slots, ownedUniques, ownedTeachings, nextDef !== undefined ? nextDef : def);
+    }
+  };
+
+  // ===== クイックモード: 供モン加入時の固有技アップ =====
+  // 味方の誰か1体をランダムに選び、その固有技レベルを1上げる。
+  // 上限(MAX_UNIQUE_SKILL_LEVEL)に達している技は抽選から外し、上げられる技が無ければ何もしない。
+  const rollQuickUniqueUpgrade = uniques => {
+    const candidates = (uniques || []).filter(u => (u.evoLevel || 0) < MAX_UNIQUE_SKILL_LEVEL);
+    if (candidates.length === 0) return null;
+    const picked = candidates[Math.floor(Math.random() * candidates.length)];
+    const before = picked.evoLevel || 0;
+    const after = Math.min(MAX_UNIQUE_SKILL_LEVEL, before + 1);
+    if (after === before) return null;
+    const owner = slots.find(sl => sl && sl.id === picked.monId);
+    return {
+      monId: picked.monId,
+      monName: owner?.masuName || owner?.name || picked.monId,
+      skillName: uniqueSkillAtLevel(picked, after)?.name || picked.name,
+      before,
+      after
+    };
+  };
+  // 供モン加入の簡易表示を閉じて次のWAVEへ進む
+  const finishQuickJoin = () => {
+    if (quickAdvanceRef.current === 'join') return;
+    quickAdvanceRef.current = 'join';
+    const info = quickJoin;
+    setQuickJoin(null);
+    initBattle(wave + 1, info?.nextSlots || slots, info?.nextUniques || ownedUniques, ownedTeachings, info?.nextDef !== undefined ? info.nextDef : def);
   };
 
   // スロットで現在選べる固有技一覧(自分の固有技+合体で引き継いだ固有技)を返す。
@@ -10498,12 +10748,23 @@ function MonsterHeroGame() {
   const spawnEnemy = useCallback((w, forcedEnemyKey = null, initialDistance = null) => {
     const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey);
     if (!newEnemy) return null;
-    if (!forcedEnemyKey && w > (highestWaves[difficulty] || 0)) {
-      setHighestWaves(prev => ({
-        ...prev,
-        [difficulty]: w
-      }));
-      storeSet(`mh_highest_wave_${difficulty}`, w, false);
+    // 最高到達WAVEもモードごとに別々に記録する
+    if (!forcedEnemyKey) {
+      if (isQuickMode(runMode)) {
+        if (w > (quickHighestWaves[difficulty] || 0)) {
+          setQuickHighestWaves(prev => ({
+            ...prev,
+            [difficulty]: w
+          }));
+          storeSet(bestWaveKey(BATTLE_MODE_QUICK, difficulty), w, false);
+        }
+      } else if (w > (highestWaves[difficulty] || 0)) {
+        setHighestWaves(prev => ({
+          ...prev,
+          [difficulty]: w
+        }));
+        storeSet(bestWaveKey(BATTLE_MODE_CHALLENGE, difficulty), w, false);
+      }
     }
     const dist = Number.isInteger(initialDistance) && initialDistance >= 0 && initialDistance < RANGE_LABELS.length ? initialDistance : Math.floor(Math.random() * 4);
     setEnemy(newEnemy);
@@ -10518,7 +10779,7 @@ function MonsterHeroGame() {
     setWaveDistDamage([0, 0, 0, 0]);
     setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
-  }, [getNextEnemyAction, difficulty, highestWaves]);
+  }, [getNextEnemyAction, difficulty, highestWaves, quickHighestWaves, runMode]);
 
   // defValは呼び出し元が直前に算出したばかりの丈夫さ(setDefで更新中の値)を明示的に渡すための引数。
   // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
@@ -10665,7 +10926,51 @@ function MonsterHeroGame() {
         ...m.unique,
         evoLevel: Math.max(0, m.unique.evoLevel || 0)
       };
-      setOwnedUniques([...ownedUniques, newAllyUnique]);
+      const nextUniques = [...ownedUniques, newAllyUnique];
+      setOwnedUniques(nextUniques);
+      if (isQuickMode(runMode)) {
+        // クイックモードは固有技の選択画面を出さず、味方の誰かの固有技をランダムで1上げる
+        const rolled = rollQuickUniqueUpgrade(nextUniques);
+        const appliedUniques = rolled ? nextUniques.map(u => u.monId === rolled.monId ? {
+          ...u,
+          evoLevel: rolled.after
+        } : u) : nextUniques;
+        if (rolled) setOwnedUniques(appliedUniques);
+        setQuickJoin({
+          name: m.masuName || m.name,
+          emoji: m.emoji,
+          imgUrl: m.imgUrl,
+          baseId: m.id,
+          colors: m.colors,
+          stats: [{
+            label: 'ライフ',
+            before: bHp,
+            after: nMaxHp
+          }, {
+            label: 'ちから',
+            before: bAtk,
+            after: nAtk
+          }, {
+            label: '丈夫さ',
+            before: bDef,
+            after: nDef
+          }, {
+            label: 'ガッツ',
+            before: bGuts,
+            after: nMaxGuts
+          }].filter(x => x.after !== x.before),
+          aptLabel,
+          unique: rolled,
+          nextSlots,
+          nextUniques: appliedUniques,
+          nextDef: nDef
+        });
+        quickAdvanceRef.current = null;
+        Audio_.se.levelUp();
+        setGameState('QUICK_JOIN');
+        setCurrentPickingMon(null);
+        return;
+      }
       setUpgradePoints(prev => prev + (Math.floor(Math.random() * 4) + 1));
       setEffect({
         type: 'mega',
@@ -11262,7 +11567,7 @@ function MonsterHeroGame() {
     size: 18
   }))), /*#__PURE__*/React.createElement("div", {
     className: "space-y-4"
-  }, [['home', 'HOME BGM'], ['management', 'M/B管理 BGM'], ['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM'], ['battle', '通常バトル BGM'], ['boss', 'ボスバトル BGM'], ['clear', 'ゲームクリア BGM']].map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
+  }, [['home', 'HOME BGM'], ['management', 'M/B管理 BGM'], ['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM'], ['battle', 'チャレンジモード BGM'], ['quickBattle', 'クイックモード BGM'], ['dullahan', 'チャレンジ デュラハン戦 BGM'], ['quickDullahan', 'クイック デュラハン戦 BGM'], ['boss', 'ボスバトル BGM'], ['clear', 'ゲームクリア BGM']].map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
     key: scene,
     className: "block text-left"
   }, /*#__PURE__*/React.createElement("span", {
@@ -12840,18 +13145,40 @@ function MonsterHeroGame() {
     className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
   }, /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-1.5 mb-1 shrink-0 rounded-xl bg-slate-900/60 p-1 border border-white/5"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => setBattleMenuTab('difficulty'),
-    className: `py-1.5 rounded-lg text-[11px] font-black transition-all ${battleMenuTab === 'difficulty' ? 'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]' : 'bg-slate-950/70 text-slate-400'}`
-  }, "\u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      setBattleMenuTab('ranking');
-      setRankingKind('score');
-      setRankingViewDiff(difficulty);
-      loadRankings(difficulty);
-    },
-    className: `py-1.5 rounded-lg text-[11px] font-black transition-all ${battleMenuTab === 'ranking' ? 'bg-indigo-600 text-white shadow-[0_0_18px_rgba(99,102,241,0.4)]' : 'bg-slate-950/70 text-slate-400'}`
-  }, "\u30E9\u30F3\u30AD\u30F3\u30B0")), battleMenuTab === 'difficulty' && (() => {
+  }, BATTLE_MODES.map(mode => {
+    const on = battleMode === mode.id && battleMenuTab === 'difficulty';
+    return /*#__PURE__*/React.createElement("div", {
+      key: mode.id,
+      onClick: () => {
+        setBattleMode(mode.id);
+        setBattleMenuTab('difficulty');
+      },
+      role: "button",
+      tabIndex: 0,
+      "aria-label": `${mode.label}に切り替え`,
+      className: `flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-lg transition-all min-w-0 ${on ? '' : 'bg-slate-950/70'}`,
+      style: on ? {
+        backgroundColor: mode.color,
+        boxShadow: `0 0 18px ${mode.color}66`
+      } : undefined
+    }, /*#__PURE__*/React.createElement("span", {
+      className: `min-w-0 truncate text-[11px] font-black ${on ? '' : 'text-slate-400'}`,
+      style: on ? {
+        color: '#0f172a'
+      } : undefined
+    }, mode.label), /*#__PURE__*/React.createElement("button", {
+      onClick: e => {
+        e.stopPropagation();
+        setModeInfoId(mode.id);
+      },
+      "aria-label": `${mode.label}の説明`,
+      className: `shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-[9px] font-black active:scale-90 ${on ? '' : 'border-slate-500 text-slate-300'}`,
+      style: on ? {
+        borderColor: '#0f172a',
+        color: '#0f172a'
+      } : undefined
+    }, "\uFF1F"));
+  })), battleMenuTab === 'difficulty' && (() => {
     const difficulties = Object.entries(DIFFICULTY_SETTINGS),
       selectedIndex = difficulties.findIndex(([key]) => key === safeDifficulty);
     const selectDifficultyIndex = (index, behavior = 'smooth') => {
@@ -12863,7 +13190,12 @@ function MonsterHeroGame() {
         block: 'nearest'
       });
     };
-    const preview = createBattleEnemy(1, safeDifficulty);
+    const mode = battleModeInfo(battleMode),
+      quick = isQuickMode(battleMode);
+    // クイックモードは経験値とダイヤだけ1.5倍。スコア倍率は難易度のままなので分けて出す
+    const bonusLabel = value => quick ? `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}` : `×${value}`;
+    const bestOf = key => quick ? quickHighScores[key] || 0 : highScores[key] || 0;
+    const waveOf = key => quick ? quickHighestWaves[key] || 0 : highestWaves[key] || 0;
     return /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
@@ -12914,8 +13246,7 @@ function MonsterHeroGame() {
         touchAction: 'pan-x pinch-zoom'
       }
     }, difficulties.map(([key, setting]) => {
-      const active = key === safeDifficulty,
-        enemy = createBattleEnemy(1, key);
+      const active = key === safeDifficulty;
       return /*#__PURE__*/React.createElement("article", {
         key: key,
         className: `snap-center shrink-0 w-[82%] rounded-[28px] border-2 px-3.5 py-3 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
@@ -12927,54 +13258,46 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[8px] tracking-[.2em] text-slate-400 font-black"
       }, "BATTLE DIFFICULTY"), /*#__PURE__*/React.createElement("h3", {
-        className: "text-center text-xl font-black mt-1",
+        className: "text-center text-xl font-black mt-0.5",
         style: {
           color: setting.text
         }
       }, setting.label), /*#__PURE__*/React.createElement("div", {
-        className: "mt-2.5 rounded-xl bg-black/45 px-2.5 py-2"
+        className: "mt-2 rounded-xl bg-black/45 px-2.5 py-1.5"
       }, /*#__PURE__*/React.createElement("small", {
         className: "text-[8px] text-slate-400 font-black"
-      }, "MY HIGH SCORE"), /*#__PURE__*/React.createElement("b", {
+      }, "\u81EA\u5DF1\u30D9\u30B9\u30C8\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("b", {
         className: "block text-right text-lg leading-tight text-indigo-200"
-      }, (highScores[key] || 0).toLocaleString(), " pt"), /*#__PURE__*/React.createElement("span", {
+      }, bestOf(key).toLocaleString(), " pt"), /*#__PURE__*/React.createElement("span", {
         className: "block text-right text-[9px] text-amber-300"
-      }, "\u6700\u9AD8\u5230\u9054 WAVE ", highestWaves[key] || 0)), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-[80px_1fr] items-center gap-2 my-2.5 rounded-xl border border-white/10 bg-black/25 p-2.5"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "h-20 rounded-xl bg-slate-900 flex items-center justify-center overflow-hidden"
-      }, enemy?.imgUrl ? /*#__PURE__*/React.createElement("img", {
-        src: enemy.imgUrl,
-        alt: enemy.name,
-        className: "w-full h-full object-contain"
-      }) : /*#__PURE__*/React.createElement("span", {
-        className: "text-5xl"
-      }, enemy?.emoji)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-        className: "text-amber-300 font-black"
-      }, "WAVE 1"), /*#__PURE__*/React.createElement("h4", {
-        className: "font-black"
-      }, enemy?.name), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-xs mt-2"
-      }, /*#__PURE__*/React.createElement("span", null, "HP"), /*#__PURE__*/React.createElement("b", null, enemy?.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-between text-xs mt-1"
-      }, /*#__PURE__*/React.createElement("span", null, "\u653B\u6483\u529B"), /*#__PURE__*/React.createElement("b", null, enemy?.atk.toLocaleString())))), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-1.5"
-      }, [['敵強度', setting.power], ['スコア', setting.score], ['ダイヤ', setting.gold]].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+      }, "\u6700\u9AD8\u5230\u9054 WAVE ", waveOf(key))), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-4 gap-1 mt-2"
+      }, [['敵強度', `×${setting.power}`, false], ['スコア倍率', `×${setting.score}`, false], ['経験値倍率', bonusLabel(setting.score), quick], ['ダイヤ倍率', bonusLabel(setting.gold), quick]].map(([label, value, boosted]) => /*#__PURE__*/React.createElement("div", {
         key: label,
         className: "rounded-xl bg-black/35 p-1.5 text-center text-[8px] text-slate-400"
       }, label, /*#__PURE__*/React.createElement("b", {
-        className: "block text-sm text-white"
-      }, "\xD7", value)))), /*#__PURE__*/React.createElement("div", {
+        className: "block text-xs",
+        style: {
+          color: boosted ? mode.color : '#ffffff'
+        }
+      }, value)))), quick && /*#__PURE__*/React.createElement("div", {
+        className: "mt-1.5 rounded-xl border px-2 py-1 text-center text-[8px] font-black leading-relaxed",
+        style: {
+          borderColor: `${mode.color}55`,
+          color: mode.color
+        }
+      }, "\u7D4C\u9A13\u5024\u3068\u30C0\u30A4\u30E4\u3060\u30511.5\u500D\uFF08\u30B9\u30B3\u30A2\u500D\u7387\u306F\u96E3\u6613\u5EA6\u3069\u304A\u308A\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "grid gap-2 mt-2.5"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setDifficulty(key);
           setShowWaveDetails(true);
         },
-        className: "min-h-[46px] rounded-xl bg-slate-700 font-black text-xs"
+        className: "min-h-[44px] rounded-xl bg-slate-700 font-black text-xs"
       }, "\u5168WAVE\u8A73\u7D30"), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           setDifficulty(key);
+          setRunMode(battleMode);
           debugBattleRef.current = false;
           setDebugBattle(false);
           setDebugOutcome(null);
@@ -12982,7 +13305,7 @@ function MonsterHeroGame() {
           setHeroPickTab('roster');
           setGameState('PICK_HERO');
         },
-        className: "min-h-[50px] rounded-xl font-black text-sm",
+        className: "min-h-[48px] rounded-xl font-black text-sm",
         style: {
           backgroundColor: setting.bg,
           color: setting.darkText ? '#0f172a' : '#ffffff'
@@ -13022,7 +13345,27 @@ function MonsterHeroGame() {
       "aria-label": `${i + 1}ページ目`,
       onClick: () => selectDifficultyIndex(i),
       className: `w-2 h-2 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
-    }))));
+    }))), !quick && /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setBattleMenuTab('ranking');
+        setRankingKind('score');
+        setRankingViewDiff(difficulty);
+        loadRankings(difficulty);
+      },
+      className: "shrink-0 w-full min-h-[46px] rounded-2xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[12px] active:scale-[.98] mb-2 flex items-center justify-center gap-1 px-3"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "flex-1 text-center"
+    }, "\uD83C\uDFC6 \u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u898B\u308B\uFF08\u30C1\u30E3\u30EC\u30F3\u30B8\u30E2\u30FC\u30C9\uFF09"), /*#__PURE__*/React.createElement(ChevronRight, {
+      size: 16,
+      className: "shrink-0"
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 pb-1"
+    }, /*#__PURE__*/React.createElement(AssistantBubble, {
+      key: battleMode,
+      scene: quick ? 'battleQuick' : 'battleChallenge',
+      accent: mode.color,
+      faceSize: 64
+    })));
   })(), battleMenuTab === 'ranking' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 flex flex-col"
   }, /*#__PURE__*/React.createElement("div", {
@@ -15777,6 +16120,13 @@ function MonsterHeroGame() {
   }, "DEBUG"), /*#__PURE__*/React.createElement("span", {
     className: `text-[8px] font-black bg-opacity-10 px-2 py-0.5 rounded border tracking-wider ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
   }, "WAVE ", wave, "/10"), /*#__PURE__*/React.createElement("span", {
+    className: "text-[7px] font-black px-1.5 py-0.5 rounded border whitespace-nowrap",
+    style: {
+      color: battleModeInfo(runMode).color,
+      borderColor: `${battleModeInfo(runMode).color}66`,
+      backgroundColor: 'rgba(0,0,0,.35)'
+    }
+  }, battleModeInfo(runMode).short, " / ", DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty), /*#__PURE__*/React.createElement("span", {
     className: "text-[8px] font-black text-blue-400 flex items-center gap-1 uppercase tracking-widest"
   }, /*#__PURE__*/React.createElement(Timer, {
     size: 8
@@ -17524,7 +17874,174 @@ function MonsterHeroGame() {
   }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
     onClick: confirmPickTeaching,
     className: "flex-1 bg-purple-600 text-white py-3 rounded-xl font-black shadow-lg text-xs"
-  }, ownedTeachings.find(ot => ot.id === selectedTeachingCard.id) ? "強化する" : "習得する"))))), gameState === 'UPGRADE_SKILL' && /*#__PURE__*/React.createElement("div", {
+  }, ownedTeachings.find(ot => ot.id === selectedTeachingCard.id) ? "強化する" : "習得する"))))), gameState === 'QUICK_GROWTH' && quickGrowth && /*#__PURE__*/React.createElement(QuickStepScreen, {
+    onDone: finishQuickGrowth,
+    ms: 1800,
+    accent: "#2dd4bf",
+    label: "\u30BF\u30C3\u30D7\u3067\u6B21\u3078"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-2xl font-black italic",
+    style: {
+      color: '#2dd4bf'
+    }
+  }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u30A2\u30C3\u30D7\uFF01"), /*#__PURE__*/React.createElement("p", {
+    className: "text-[10px] font-black text-slate-400 mt-1"
+  }, "WAVE ", quickGrowth.nextWave - 1, " \u30AF\u30EA\u30A2\uFF0F\u5168\u30B9\u30C6\u30FC\u30BF\u30B9 +10%"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-4 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden"
+  }, quickGrowth.stats.map((st, i) => /*#__PURE__*/React.createElement("div", {
+    key: st.label,
+    className: `flex items-center gap-2 px-4 py-2 ${i > 0 ? 'border-t border-white/5' : ''}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-16 shrink-0 text-left text-[11px] font-black text-slate-400"
+  }, st.label), /*#__PURE__*/React.createElement("span", {
+    className: "flex-1 text-right font-mono text-[13px] text-slate-300"
+  }, st.before.toLocaleString()), /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-[11px]",
+    style: {
+      color: '#2dd4bf'
+    }
+  }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+    className: "flex-1 text-left font-mono text-[13px] font-black text-white"
+  }, st.after.toLocaleString())))), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 rounded-2xl px-3 py-2 text-[11px] font-black",
+    style: {
+      backgroundColor: 'rgba(45,212,191,.12)',
+      color: '#5eead4'
+    }
+  }, "\u30E9\u30A4\u30D5\u30FB\u30AC\u30C3\u30C4\u5168\u56DE\u5FA9\uFF01")), gameState === 'QUICK_JOIN' && quickJoin && /*#__PURE__*/React.createElement(QuickStepScreen, {
+    onDone: finishQuickJoin,
+    ms: 2200,
+    accent: "#2dd4bf",
+    label: "\u30BF\u30C3\u30D7\u3067\u6B21\u3078"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-2xl font-black italic",
+    style: {
+      color: '#2dd4bf'
+    }
+  }, "\u4F9B\u30E2\u30F3\u52A0\u5165\uFF01"), /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 flex items-center justify-center gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-16 h-16 rounded-full overflow-hidden border-2 flex items-center justify-center bg-black/40",
+    style: {
+      borderColor: '#2dd4bf'
+    }
+  }, quickJoin.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: quickJoin.baseId,
+    src: quickJoin.imgUrl,
+    alt: quickJoin.name,
+    masuColors: quickJoin.colors,
+    className: "w-full h-full object-contain"
+  }) : /*#__PURE__*/React.createElement("span", {
+    className: "text-3xl"
+  }, quickJoin.emoji)), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm font-black text-white"
+  }, quickJoin.name, "\u304C\u4EF2\u9593\u306B\u306A\u3063\u305F\uFF01")), quickJoin.stats.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 w-full rounded-2xl bg-black/50 border border-white/10 overflow-hidden"
+  }, quickJoin.stats.map((st, i) => /*#__PURE__*/React.createElement("div", {
+    key: st.label,
+    className: `flex items-center gap-2 px-4 py-2 ${i > 0 ? 'border-t border-white/5' : ''}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "w-16 shrink-0 text-left text-[11px] font-black text-slate-400"
+  }, st.label), /*#__PURE__*/React.createElement("span", {
+    className: "flex-1 text-right font-mono text-[13px] text-slate-300"
+  }, st.before.toLocaleString()), /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 text-[11px]",
+    style: {
+      color: '#2dd4bf'
+    }
+  }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+    className: "flex-1 text-left font-mono text-[13px] font-black text-white"
+  }, st.after.toLocaleString())))), quickJoin.aptLabel && /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 text-[10px] font-black text-cyan-300"
+  }, "\u9593\u5408\u3044\u9069\u6027 ", quickJoin.aptLabel), quickJoin.unique ? /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 w-full rounded-2xl border px-3 py-2.5",
+    style: {
+      borderColor: 'rgba(251,191,36,.5)',
+      backgroundColor: 'rgba(0,0,0,.5)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-black text-amber-300"
+  }, "\u56FA\u6709\u6280\u30A2\u30C3\u30D7\uFF01"), /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] font-black text-white mt-0.5"
+  }, quickJoin.unique.monName), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-slate-300 mt-0.5"
+  }, "\u300C", quickJoin.unique.skillName, "\u300D Lv.", quickJoin.unique.before, " \u2192 ", /*#__PURE__*/React.createElement("b", {
+    className: "text-amber-300"
+  }, "Lv.", quickJoin.unique.after))) : /*#__PURE__*/React.createElement("div", {
+    className: "mt-3 text-[10px] font-black text-slate-500"
+  }, "\u4E0A\u3052\u3089\u308C\u308B\u56FA\u6709\u6280\u306F\u3082\u3046\u3042\u308A\u307E\u305B\u3093")), modeInfoId && (() => {
+    const mode = battleModeInfo(modeInfoId);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 flex items-center justify-center p-4",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(2,6,23,0.94)',
+        zIndex: 60000
+      },
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-label": `${mode.label}の説明`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-sm rounded-3xl border-2 bg-slate-950 flex flex-col",
+      style: {
+        borderColor: mode.color,
+        maxHeight: '86vh'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 flex items-center gap-2 p-4 border-b border-white/10"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-2xl"
+    }, mode.emoji), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-w-0"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-base font-black truncate",
+      style: {
+        color: mode.color
+      }
+    }, mode.label, "\u3068\u306F\uFF1F"), /*#__PURE__*/React.createElement("p", {
+      className: "text-[10px] text-slate-400"
+    }, mode.tagline)), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setModeInfoId(null),
+      "aria-label": "\u8AAC\u660E\u3092\u9589\u3058\u308B",
+      className: "shrink-0 p-2 bg-white/10 rounded-full active:scale-90"
+    }, /*#__PURE__*/React.createElement(X, {
+      size: 18
+    }))), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-2.5"
+    }, mode.points.map(([icon, title, text]) => /*#__PURE__*/React.createElement("div", {
+      key: title,
+      className: "rounded-2xl bg-black/50 border px-3 py-2 flex items-start gap-2.5",
+      style: {
+        borderColor: `${mode.color}44`
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-base",
+      style: {
+        backgroundColor: `${mode.color}22`
+      }
+    }, icon), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black",
+      style: {
+        color: mode.color
+      }
+    }, title), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-slate-300 leading-relaxed mt-0.5"
+    }, text))))), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 p-4 pt-2",
+      style: {
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setModeInfoId(null),
+      className: "w-full min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
+      style: {
+        backgroundColor: mode.color
+      }
+    }, "\u9589\u3058\u308B"))));
+  })(), gameState === 'UPGRADE_SKILL' && /*#__PURE__*/React.createElement("div", {
     style: {
       position: "absolute",
       inset: 0,

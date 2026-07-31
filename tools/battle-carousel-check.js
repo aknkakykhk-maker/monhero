@@ -2,8 +2,12 @@ const fs=require('fs'),assert=require('assert');
 const src=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
 const order=['Beginner','Easy','Normal','Hard','Expert','Master','GrandMaster','Hell','Legend'];
 let last=-1;for(const key of order){const i=src.indexOf(`${key}:`,src.indexOf('const DIFFICULTY_SETTINGS'));assert(i>last,`${key} の順序`);last=i;}
-for(const token of ['snap-mandatory','touchAction:\'pan-x pinch-zoom\'','flex items-start gap-3 overflow-x-auto overflow-y-hidden','relative shrink-0','前の難易度','次の難易度','MY HIGH SCORE','highestWaves[key]','全WAVE詳細','この難易度で挑戦','ENEMY_SEQUENCE.map'])assert(src.includes(token),token);
-assert(src.includes('const createBattleEnemy ='));assert(src.includes('const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey)'));assert(src.includes('createBattleEnemy(1,key)'));
+for(const token of ['snap-mandatory','touchAction:\'pan-x pinch-zoom\'','flex items-start gap-3 overflow-x-auto overflow-y-hidden','relative shrink-0','前の難易度','次の難易度','自己ベストスコア','最高到達 WAVE','全WAVE詳細','この難易度で挑戦','ENEMY_SEQUENCE.map'])assert(src.includes(token),token);
+assert(src.includes('const createBattleEnemy ='));assert(src.includes('const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey)'));
+// WAVE1の敵情報は難易度カードから外し、「全WAVE詳細」でだけ見せる(カードを縦に縮めるため)
+assert(!src.includes('createBattleEnemy(1,key)'),'難易度カードにWAVE1の敵情報を戻していないこと');
+// モードのタブと、チャレンジのときだけ出るランキングボタン
+for(const token of ['const BATTLE_MODES = [','setBattleMode(mode.id)','🏆 ランキングを見る（チャレンジモード）','battleModeInfo(runMode)'])assert(src.includes(token),token);
 assert(src.includes("ChevronLeft: '<polyline"),'ChevronLeft のSVGパス');
 assert(src.includes("ChevronLeft=_icon('ChevronLeft')"),'ChevronLeft のコンポーネント定義');
 assert(src.includes("const normalizeBattleDifficulty ="),'難易度の正規化');

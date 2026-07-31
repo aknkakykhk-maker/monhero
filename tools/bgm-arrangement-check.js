@@ -23,9 +23,14 @@ for (const file of files) {
   check(`${file}: 最終WAVEリザルトとCHAMPIONだけクリア曲へルーティング`,
     /!debugBattleRef\.current\s*&&\s*currentWave\s*===\s*10/.test(source) && /WAVE_RESULT/.test(source) && /bgmArrangement\.clear/.test(source));
   check(`${file}: デバッグのムーと通常WAVE 10を選択中のボス曲へルーティング`,
-    /enemyId\s*===\s*['"]Moo['"]\s*\|\|\s*currentWave\s*===\s*10\s*\?\s*bgmArrangement\.boss/.test(source));
+    /enemyId\s*===\s*['"]Moo['"]\s*\|\|\s*currentWave\s*===\s*10\)\s*return\s+bgmArrangement\.boss/.test(source));
+  // デュラハン戦はボス曲より優先し、さらにモードごとに別の曲を選べる
   check(`${file}: デュラハン専用曲をボス曲より優先`,
-    /enemyId\s*===\s*['"]Durahan['"]\s*\?\s*['"]dullahan['"]/.test(source));
+    /enemyId\s*===\s*['"]Durahan['"]\)\s*return\s+quick\s*\?\s*bgmArrangement\.quickDullahan\s*:\s*bgmArrangement\.dullahan/.test(source));
+  check(`${file}: 通常バトルの曲をモードごとに切り替える`,
+    /return\s+quick\s*\?\s*bgmArrangement\.quickBattle\s*:\s*bgmArrangement\.battle/.test(source));
+  check(`${file}: モード別BGMの既定値がある`,
+    /quickBattle:\s*'ichika_battle'/.test(source) && /[^k]dullahan:\s*'original_dullahan'/.test(source) && /quickDullahan:\s*'original_dullahan'/.test(source));
   check(`${file}: 曲別gainを上限付きで全体音量へ合成`,
     /Math\.min\(1\.25/.test(source) && /_bgmGain\(bgmVolumePct\)\s*\*\s*safeTrackGain/.test(source));
   check(`${file}: Web Audio試聴を単一ソースで管理`,
