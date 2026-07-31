@@ -171,6 +171,25 @@ check('チュートリアルの本文をJSXへ直接書いていない', (() => 
   require('vm').runInContext(assistantsSrc + ';globalThis.__t=ASSISTANT_TUTORIAL;', c);
   return c.__t.every(p => !source.includes(p.t));
 })());
+// はじめての設定(名前・アイコン)から、そのまま村の案内へ続く1本の流れにする
+check('はじめての設定のセリフもデータで持つ', (() => {
+  const c = {}; require('vm').createContext(c);
+  require('vm').runInContext(assistantsSrc + ';globalThis.__o=ASSISTANT_ONBOARDING;', c);
+  const o = c.__o;
+  return o && ['intro-0','name','icon','confirm'].every(k => o[k] && o[k].t && o[k].e)
+    && /はじめまして/.test(o['intro-0'].t);
+})());
+check('はじめての設定では話が順に進む(ランダムにしない)',
+  has("findAssistantOnboarding(onboardingStep)") && has('<AssistantBubble scene="onboarding" line={say?.t||null} expression={say?.e||null}/>'));
+check('導入の1ページ目がみゅあの自己紹介', has("{title:'はじめまして',icon:'💖'"));
+check('名前・アイコンを決めたらそのまま案内へ続く',
+  has('const seenTutorial = await storeGet(TUTORIAL_SEEN_KEY, false, false);')
+    && has('if (seenTutorial !== true) { tutorialShownRef.current = true; setTutorialStep(0); }'));
+check('案内の最初で決めた名前を呼ぶ', (() => {
+  const c = {}; require('vm').createContext(c);
+  require('vm').runInContext(assistantsSrc + ';globalThis.__t=ASSISTANT_TUTORIAL;', c);
+  return /\{name\}/.test(c.__t[0].t) && has("String(page.t).replace('{name}', breederName || 'あなた')");
+})());
 check('初回だけ出し、スキップもできる',
   has("const seen = await storeGet(TUTORIAL_SEEN_KEY, false, false);") && has('スキップ</button>')
     && has('const finishTutorial = async (remember = true)'));
