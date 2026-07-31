@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e67b4c2fab70b880
+// source-sha256: ab53e82cb916efae
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 12:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13349,20 +13349,22 @@ function MonsterHeroGame() {
       "aria-label": `${i + 1}ページ目`,
       onClick: () => selectDifficultyIndex(i),
       className: `w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
-    }))), !quick && /*#__PURE__*/React.createElement("button", {
+    }))), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 flex justify-center min-h-[40px] mb-1.5"
+    }, !quick && /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setBattleMenuTab('ranking');
         setRankingKind('score');
         setRankingViewDiff(difficulty);
         loadRankings(difficulty);
       },
-      className: "shrink-0 w-full min-h-[40px] rounded-2xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] mb-1.5 flex items-center justify-center gap-1 px-2"
+      className: "w-[82%] min-h-[40px] rounded-2xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "flex-1 text-center"
+      className: "flex-1 text-center whitespace-nowrap"
     }, "\uD83C\uDFC6 \u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u898B\u308B\uFF08\u30C1\u30E3\u30EC\u30F3\u30B8\u30E2\u30FC\u30C9\uFF09"), /*#__PURE__*/React.createElement(ChevronRight, {
       size: 16,
       className: "shrink-0"
-    })), /*#__PURE__*/React.createElement("div", {
+    }))), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 pb-1"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       key: battleMode,
