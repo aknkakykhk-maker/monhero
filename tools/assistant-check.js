@@ -329,9 +329,33 @@ check('画像のパスをJSXへ直接書いていない', !/images\/assistant\//
 // HOMEは絶対配置なので、置き場所をCSSで決める。施設のボタンやマスモンに
 // かぶらないよう、プレイヤー情報と更新履歴の下の空きへ置く
 check('HOMEの吹き出しは施設の上に重ならない場所へ置く',
-  has('.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(54px + env(safe-area-inset-top));pointer-events:auto}')
+  has('.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}')
     && has('@media(max-width:350px){.mh-home-assistant{width:62%}}')
     && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={assistantBondUp?\'bondUp\':(masuMons.length===0?\'firstRun\':null)} compact/></div>'));
+// 上のプロフィールカードに重ならないことを、CSSの数値から計算して確かめる。
+// safe-area は帯にも吹き出しにも同じだけ効くので、比べるのは固定の px だけでよい
+check('HOMEの吹き出しはプロフィールカードの下に来る', (() => {
+  const num = (re) => { const m = source.match(re); return m ? Number(m[1]) : null; };
+  const headerPad = num(/\.mh-home-status\{[^}]*padding:calc\((\d+)px \+ env\(safe-area-inset-top\)\)/);
+  const avatar = num(/\.mh-home-avatar\{flex:0 0 (\d+)px/);
+  const playerPad = num(/\.mh-home-player\{[^}]*padding:(\d+)px/);
+  const assistantTop = num(/\.mh-home-assistant\{[^}]*top:calc\((\d+)px \+ env\(safe-area-inset-top\)\)/);
+  if ([headerPad, avatar, playerPad, assistantTop].some(v => v == null)) return false;
+  // プロフィールカードの下端 = 帯の上余白 + (アイコン + 上下の内側余白 + 枠線)
+  const cardBottom = headerPad + avatar + playerPad * 2 + 2;
+  return assistantTop >= cardBottom + 6;
+})(), (() => {
+  const num = (re) => { const m = source.match(re); return m ? Number(m[1]) : 0; };
+  const cardBottom = num(/\.mh-home-status\{[^}]*padding:calc\((\d+)px \+ env/) + num(/\.mh-home-avatar\{flex:0 0 (\d+)px/) + num(/\.mh-home-player\{[^}]*padding:(\d+)px/) * 2 + 2;
+  return `カード下端 ${cardBottom}px / 吹き出し ${num(/\.mh-home-assistant\{[^}]*top:calc\((\d+)px \+ env/)}px`;
+})());
+// はじめての案内で、光らせた場所が画面の下のほうにあるときは説明を上へ寄せる。
+// バトルやミッションを説明しているときに、説明の吹き出しがその上に重なっていた
+check('案内の吹き出しは光らせた場所と重ならない位置へ動く',
+  has('const [tutorialPanelAtTop, setTutorialPanelAtTop] = useState(false);')
+    && has("document.querySelectorAll('.is-tutorial-spot')")
+    && has('setTutorialPanelAtTop(height > 0 && bottom > height * 0.5);')
+    && has("${tutorialPanelAtTop?'justify-start':'justify-end'}"));
 check('画面側は scene を渡すだけ', (() => {
   const calls = source.match(/<AssistantBubble[^/]*\/>/g) || [];
   // ヘルプ画面だけは項目ごとの文面を渡すので line/detail を使う
