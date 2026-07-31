@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: faa44d6e3fd3acad
+// source-sha256: a09a877fcd973036
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 18:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 18:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5402,7 +5402,6 @@ function MonsterHeroGame() {
   const [clearCounts, setClearCounts] = useState({}); // 難易度別 クリア回数(端末保存)
   const [highestWaves, setHighestWaves] = useState({});
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
-  const [onboardingStep, setOnboardingStep] = useState('intro-0');
   const [onboardingName, setOnboardingName] = useState('');
   const [onboardingIcon, setOnboardingIcon] = useState(null);
   const [showWaveDetails, setShowWaveDetails] = useState(false);
@@ -6795,7 +6794,8 @@ function MonsterHeroGame() {
     if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showAudioSettings || showBackup) return;
     titleStartingRef.current = true;
     setTitleStarting(true);
-    setGameState(onboarded ? 'HOME' : 'ONBOARDING');
+    // 初回は名前とアイコンを決めてもらうため、プロフィール画面から始める
+    setGameState(onboarded ? 'HOME' : 'PROFILE');
     setShowChangelog(false);
     setShowTitleSettings(false);
     setShowAudioSettings(false);
@@ -7198,12 +7198,10 @@ function MonsterHeroGame() {
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
       if (!wasOnboarded) {
-        const savedStep = await storeGet('mh_onboarding_step', null, false);
-        const nextStep = hasSavedName ? hasSavedIcon ? 'confirm' : 'icon' : savedStep || 'intro-0';
+        // 決め終わっていない項目はプロフィール画面で続きから設定してもらう
         setOnboardingName(hasSavedName ? savedName.trim().slice(0, 10) : '');
         setOnboardingIcon(hasSavedIcon ? savedIcon : null);
-        setOnboardingStep(nextStep);
-        setGameState('ONBOARDING');
+        setGameState('PROFILE');
       }
       setDataLoaded(true); // ここまでで起動に必要なセーブデータは揃っている
       // タイトル表示を待たせず、選んでいる難易度のスコアランキングだけを裏で取得する。
@@ -7390,16 +7388,14 @@ function MonsterHeroGame() {
     if (!tempName.trim()) return;
     const n = tempName.trim().substring(0, 10);
     setBreederName(n);
+    setOnboardingName(n); // はじめての設定で「名前が決まった」判定に使う
     await storeSet('mh_breeder_name', n, false);
     setShowNameEdit(false);
   };
-  const moveOnboarding = async step => {
-    setOnboardingStep(step);
-    if (onboardingPreview) return;
-    await storeSet('mh_onboarding_step', step, false);
-  };
+  // はじめての設定の完了。プロフィール画面で名前とアイコンが決まったら押せる。
+  // 名前とアイコンはその場で保存済みなので、ここでは完了フラグを立てて村の案内へ進めるだけ
   const finishOnboarding = async () => {
-    const name = onboardingName.trim().slice(0, 10);
+    const name = (onboardingName || '').trim().slice(0, 10);
     if (!name || !onboardingIcon) return;
     // デバッグの「見るだけ」表示。何も保存せず、元の名前とアイコンへ戻してから案内だけ出す
     if (onboardingPreview) {
@@ -9245,13 +9241,13 @@ function MonsterHeroGame() {
       icon: breederIcon
     };
     setOnboardingPreview(true);
-    setOnboardingName(breederName || '');
-    setOnboardingIcon(breederIcon || null);
-    setOnboardingStep('intro-0');
+    // 名前もアイコンもまだ決まっていない状態から見られるようにする
+    setOnboardingName('');
+    setOnboardingIcon(null);
     setTutorialStep(null);
     setAssistantDebug(null);
     setShowHelp(false);
-    setGameState('ONBOARDING');
+    setGameState('PROFILE');
   };
   const startTutorial = (fromDebug = false) => {
     tutorialShownRef.current = true;
@@ -12060,133 +12056,7 @@ function MonsterHeroGame() {
     style: screenShake ? {
       animation: bigShake ? 'mooQuake 750ms ease-in-out' : 'screenShake 450ms ease-in-out'
     } : undefined
-  }, gameState === 'ONBOARDING' && (() => {
-    const introPages = [{
-      title: 'はじめまして',
-      icon: '💖',
-      text: 'この村の助手「みゅあ」です。名前とアイコンを決めたら、村の中を案内するね！'
-    }, {
-      title: 'ゲームの目的',
-      icon: '🏆',
-      text: '勇者モンと全10 WAVEを進み、ラスボス「ムー」の撃破と最高スコアを目指します。'
-    }, {
-      title: 'バトルの基本',
-      icon: '⚔️',
-      text: 'カードを選び、モンスターへ割り当てて攻撃・防御します。間合いとガッツが勝負の鍵です。'
-    }, {
-      title: '育成・編成',
-      icon: '✨',
-      text: '勇者モンを育て、供モンやブリーダーカードを編成して自分だけのチームを作れます。'
-    }];
-    const introIndex = Number(onboardingStep.split('-')[1] || 0);
-    return /*#__PURE__*/React.createElement("main", {
-      className: "flex-1 min-h-0 flex flex-col p-5 text-center overflow-y-auto mh-scroll",
-      style: {
-        paddingTop: 'calc(2rem + env(safe-area-inset-top))',
-        paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))'
-      }
-    }, onboardingPreview && /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 -mx-5 -mt-5 mb-3 px-3 py-1.5 bg-fuchsia-700 text-white text-[10px] font-black tracking-widest"
-    }, "DEBUG\u30FB\u898B\u308B\u3060\u3051\u306E\u8868\u793A\u3067\u3059\u3002\u540D\u524D\u3082\u30A2\u30A4\u30B3\u30F3\u3082\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] tracking-[.25em] text-indigo-300 font-black"
-    }, "WELCOME TO MONSTER HERO"), (() => {
-      const say = typeof findAssistantOnboarding === 'function' && findAssistantOnboarding(onboardingStep) || null;
-      return /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-md mx-auto my-3 text-left"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "onboarding",
-        line: say?.t || null,
-        expression: say?.e || null
-      }));
-    })(), onboardingStep.startsWith('intro-') && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("section", {
-      className: "flex-1 flex flex-col items-center justify-center"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-7xl mb-6"
-    }, introPages[introIndex].icon), /*#__PURE__*/React.createElement("h1", {
-      className: "text-2xl font-black text-indigo-200"
-    }, introPages[introIndex].title), /*#__PURE__*/React.createElement("p", {
-      className: "mt-4 max-w-xs text-sm leading-7 text-slate-300"
-    }, introPages[introIndex].text), /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-2 mt-8"
-    }, introPages.map((_, i) => /*#__PURE__*/React.createElement("i", {
-      key: i,
-      className: `w-2 h-2 rounded-full ${i === introIndex ? 'bg-indigo-300' : 'bg-slate-700'}`
-    })))), /*#__PURE__*/React.createElement("footer", {
-      className: "grid grid-cols-2 gap-3"
-    }, /*#__PURE__*/React.createElement("button", {
-      disabled: introIndex === 0,
-      onClick: () => moveOnboarding(`intro-${introIndex - 1}`),
-      className: "min-h-[50px] rounded-2xl bg-slate-800 font-black disabled:opacity-30"
-    }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => moveOnboarding(introIndex === introPages.length - 1 ? 'name' : `intro-${introIndex + 1}`),
-      className: "min-h-[50px] rounded-2xl bg-indigo-600 font-black"
-    }, "\u6B21\u3078"))), onboardingStep === 'name' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("section", {
-      className: "flex-1 flex flex-col justify-center"
-    }, /*#__PURE__*/React.createElement("h1", {
-      className: "text-2xl font-black"
-    }, "\u30D7\u30EC\u30A4\u30E4\u30FC\u30CD\u30FC\u30E0"), /*#__PURE__*/React.createElement("p", {
-      className: "text-xs text-slate-400 mt-2"
-    }, "10\u6587\u5B57\u307E\u3067\u30FB\u524D\u5F8C\u306E\u7A7A\u767D\u306F\u4FDD\u5B58\u6642\u306B\u9664\u53BB\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("input", {
-      autoFocus: true,
-      maxLength: 10,
-      value: onboardingName,
-      onChange: e => setOnboardingName(e.target.value),
-      className: "mt-8 w-full rounded-2xl border-2 border-indigo-500 bg-black/50 p-4 text-center text-lg font-black"
-    })), /*#__PURE__*/React.createElement("footer", {
-      className: "grid grid-cols-2 gap-3"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => moveOnboarding('intro-2'),
-      className: "min-h-[50px] rounded-2xl bg-slate-800 font-black"
-    }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-      disabled: !onboardingName.trim(),
-      onClick: () => moveOnboarding('icon'),
-      className: "min-h-[50px] rounded-2xl bg-indigo-600 font-black disabled:opacity-30"
-    }, "\u6B21\u3078"))), onboardingStep === 'icon' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("section", {
-      className: "flex-1 min-h-0 flex flex-col justify-center"
-    }, /*#__PURE__*/React.createElement("h1", {
-      className: "text-2xl font-black"
-    }, "\u30D7\u30EC\u30A4\u30E4\u30FC\u30A2\u30A4\u30B3\u30F3"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-4 gap-3 mt-7"
-    }, STARTER_MONSTER_IDS.map(id => ALL_PLAYER_MONSTERS[id]).map(m => /*#__PURE__*/React.createElement("button", {
-      key: m.id,
-      onClick: () => setOnboardingIcon(m.id),
-      className: `aspect-square rounded-2xl overflow-hidden border-2 ${onboardingIcon === m.id ? 'border-amber-300 ring-4 ring-amber-300/30 scale-105' : 'border-slate-700'}`
-    }, /*#__PURE__*/React.createElement("img", {
-      src: m.faceIconUrl || m.iconUrl,
-      alt: m.name,
-      className: "w-full h-full object-cover"
-    }))))), /*#__PURE__*/React.createElement("footer", {
-      className: "grid grid-cols-2 gap-3"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => moveOnboarding('name'),
-      className: "min-h-[50px] rounded-2xl bg-slate-800 font-black"
-    }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-      disabled: !onboardingIcon,
-      onClick: () => moveOnboarding('confirm'),
-      className: "min-h-[50px] rounded-2xl bg-indigo-600 font-black disabled:opacity-30"
-    }, "\u78BA\u8A8D\u3078"))), onboardingStep === 'confirm' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("section", {
-      className: "flex-1 flex flex-col items-center justify-center"
-    }, /*#__PURE__*/React.createElement("h1", {
-      className: "text-2xl font-black"
-    }, "\u8A2D\u5B9A\u5185\u5BB9\u78BA\u8A8D"), resolveIconUrl(onboardingIcon) && /*#__PURE__*/React.createElement("img", {
-      src: resolveIconUrl(onboardingIcon),
-      alt: "\u9078\u629E\u30A2\u30A4\u30B3\u30F3",
-      className: "w-28 h-28 object-cover rounded-full border-4 border-amber-300 mt-7"
-    }), /*#__PURE__*/React.createElement("b", {
-      className: "text-xl mt-4"
-    }, onboardingName.trim()), /*#__PURE__*/React.createElement("p", {
-      className: "text-xs text-slate-400 mt-3"
-    }, "\u4FDD\u5B58\u5F8C\u3001\u30B2\u30FC\u30E0\u3092\u958B\u59CB\u3057\u307E\u3059")), /*#__PURE__*/React.createElement("footer", {
-      className: "grid grid-cols-2 gap-3"
-    }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => moveOnboarding('icon'),
-      className: "min-h-[50px] rounded-2xl bg-slate-800 font-black"
-    }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-      disabled: !onboardingName.trim() || !onboardingIcon,
-      onClick: finishOnboarding,
-      className: "min-h-[50px] rounded-2xl bg-emerald-600 font-black disabled:opacity-30"
-    }, "\u4FDD\u5B58\u3057\u3066\u958B\u59CB"))));
-  })(), gameState === 'HOME' && /*#__PURE__*/React.createElement("main", {
+  }, gameState === 'HOME' && /*#__PURE__*/React.createElement("main", {
     className: "mh-home-scene",
     "aria-label": "\u6751\u306E\u5E83\u5834"
   }, /*#__PURE__*/React.createElement("picture", {
@@ -13944,12 +13814,14 @@ function MonsterHeroGame() {
     className: "flex-1 flex flex-col h-full min-h-0 p-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-4 shrink-0"
-  }, /*#__PURE__*/React.createElement("button", {
+  }, onboarded ? /*#__PURE__*/React.createElement("button", {
     onClick: returnToHome,
     className: "p-3 text-slate-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
-  })), /*#__PURE__*/React.createElement("h2", {
+  })) : /*#__PURE__*/React.createElement("span", {
+    className: "w-11"
+  }), /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
   }, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB")), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 w-full max-w-md mx-auto mb-3"
@@ -13957,13 +13829,44 @@ function MonsterHeroGame() {
     scene: "profile"
   })), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-  }, !onboarded && /*#__PURE__*/React.createElement("div", {
-    className: "mb-4 bg-indigo-950/60 border border-indigo-500/40 rounded-2xl p-4 text-center shrink-0"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "text-sm font-black text-white mb-1"
-  }, "\u3088\u3046\u3053\u305D\u3001\u30D6\u30EA\u30FC\u30C0\u30FC\u3055\u3093\uFF01"), /*#__PURE__*/React.createElement("div", {
-    className: "text-[11px] text-indigo-300"
-  }, "\u307E\u305A\u306F\u540D\u524D\u3092\u8A2D\u5B9A\u3057\u307E\u3057\u3087\u3046")), /*#__PURE__*/React.createElement("div", {
+  }, !onboarded && (() => {
+    const hasName = !!(onboardingName || '').trim();
+    const hasIcon = !!onboardingIcon;
+    const ready = hasName && hasIcon;
+    const step = typeof findAssistantOnboarding === 'function' ? findAssistantOnboarding(hasName, hasIcon) : null;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "mb-4 rounded-2xl border-2 border-indigo-400/60 bg-indigo-950/50 p-3 shrink-0"
+    }, onboardingPreview && /*#__PURE__*/React.createElement("div", {
+      className: "-mx-3 -mt-3 mb-2 px-3 py-1.5 rounded-t-xl bg-fuchsia-700 text-white text-[10px] font-black tracking-widest"
+    }, "DEBUG\u30FB\u898B\u308B\u3060\u3051\u306E\u8868\u793A\u3067\u3059\u3002\u540D\u524D\u3082\u30A2\u30A4\u30B3\u30F3\u3082\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-black text-indigo-300 tracking-widest mb-2"
+    }, "\u306F\u3058\u3081\u3066\u306E\u8A2D\u5B9A"), /*#__PURE__*/React.createElement(AssistantBubble, {
+      line: step?.t || null,
+      expression: step?.e || null,
+      helpRef: "basics/onboarding",
+      compact: true
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2 mt-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setTempName(hasName ? breederName : '');
+        setShowNameEdit(true);
+      },
+      className: `min-h-[46px] rounded-xl border-2 text-[11px] font-black active:scale-95 ${hasName ? 'bg-emerald-950/60 border-emerald-400/60 text-emerald-200' : 'bg-slate-900 border-indigo-400/60 text-white'}`
+    }, hasName ? '✓ なまえ' : 'なまえを決める'), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowIconPicker(true),
+      className: `min-h-[46px] rounded-xl border-2 text-[11px] font-black active:scale-95 ${hasIcon ? 'bg-emerald-950/60 border-emerald-400/60 text-emerald-200' : 'bg-slate-900 border-indigo-400/60 text-white'}`
+    }, hasIcon ? '✓ アイコン' : 'アイコンを選ぶ')), /*#__PURE__*/React.createElement("button", {
+      disabled: !ready,
+      onClick: finishOnboarding,
+      className: "w-full mt-2 min-h-[52px] rounded-2xl font-black text-sm text-black disabled:opacity-30 active:scale-[.98]",
+      style: {
+        backgroundColor: '#f472b6'
+      }
+    }, "\u3051\u3063\u3066\u3044\uFF01"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] text-slate-400 text-center mt-1.5"
+    }, "\u540D\u524D\u3082\u30A2\u30A4\u30B3\u30F3\u3082\u3001\u3042\u3068\u304B\u3089\u3053\u306E\u753B\u9762\u3067\u3044\u3064\u3067\u3082\u5909\u3048\u3089\u308C\u307E\u3059"));
+  })(), /*#__PURE__*/React.createElement("div", {
     className: "shrink-0 bg-slate-900/80 border border-white/10 rounded-3xl p-5 flex flex-col items-center gap-3 mb-4"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => setShowIconPicker(true),
@@ -16441,6 +16344,7 @@ function MonsterHeroGame() {
     key: m.id,
     onClick: () => {
       setBreederIcon(m.id);
+      setOnboardingIcon(m.id);
       storeSet('mh_breeder_icon', m.id, false);
       setShowIconPicker(false);
     },
@@ -16459,6 +16363,7 @@ function MonsterHeroGame() {
     key: m.id,
     onClick: () => {
       setBreederIcon(m.id);
+      setOnboardingIcon(m.id);
       storeSet('mh_breeder_icon', m.id, false);
       setShowIconPicker(false);
     },

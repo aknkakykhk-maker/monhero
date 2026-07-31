@@ -555,26 +555,34 @@ const ASSISTANT_SPAM_THRESHOLD = 3;
 // 「…………」のあと、笑って戻るまでの待ち時間(ミリ秒)
 const ASSISTANT_SPAM_RECOVER_MS = 2600;
 
-// ---------- はじめての設定(オンボーディング) ----------
-// 名前とアイコンを決める画面で、みゅあが段階ごとに話す内容。
-// ここはランダムにせず、自己紹介 → 説明 → 名前 → アイコン → 確認 と話が進む形にする。
-// このあと ASSISTANT_TUTORIAL へそのまま続くので、ひと続きの流れになる。
+// ---------- はじめての設定(プロフィール画面) ----------
+// 初回はプロフィール画面へ入り、そこで名前とアイコンを決める。
+// 決まっているものに応じて、みゅあが次にやることを教える。
+// ここはランダムにせず話が前へ進む形にし、決定するとそのまま ASSISTANT_TUTORIAL へ続く。
 const ASSISTANT_ONBOARDING = {
-  'intro-0': { e:'happy',   t:'はじめまして！ あたしはみゅあ。このゲームの助手だよ♪ よろしくね！' },
-  'intro-1': { e:'normal',  t:'まずはどんなゲームか、かんたんに話すね。' },
-  'intro-2': { e:'excited', t:'モンスターを育てて、自分だけのチームを作るのが楽しいんだ〜♪' },
-  'intro-3': { e:'wink',    t:'だいたい分かった？ じゃあ次は、あなたのことを教えて！' },
-  name:      { e:'happy',   t:'なんて呼べばいい？ ランキングにも出る名前だよ！' },
-  icon:      { e:'excited', t:'アイコンも選ぼ♪ あとからいつでも変えられるからね！' },
-  confirm:   { e:'wink',    t:'これでいい？ よければ決定して、村へ行こ！' },
+  // 名前もアイコンもまだ
+  intro: { e:'happy',   t:'はじめまして！ あたしはみゅあ、このゲームの助手だよ♪ まずはあなたの名前を教えて！' },
+  // 名前だけ決まった
+  name:  { e:'excited', t:'いい名前じゃーん♪ 次はアイコンを選ぼ！' },
+  // アイコンだけ決まった
+  icon:  { e:'normal',  t:'アイコンいい感じ！ あとは名前を決めるだけだね。' },
+  // 両方そろった
+  ready: { e:'wink',    t:'バッチリ！ 「けってい」を押したら、村を案内するよ♪' },
 };
-const findAssistantOnboarding = (step) => (step && ASSISTANT_ONBOARDING[step]) || null;
+// 決まっているものから、いま話す内容を選ぶ
+const findAssistantOnboarding = (hasName, hasIcon) => {
+  if (hasName && hasIcon) return ASSISTANT_ONBOARDING.ready;
+  if (hasName) return ASSISTANT_ONBOARDING.name;
+  if (hasIcon) return ASSISTANT_ONBOARDING.icon;
+  return ASSISTANT_ONBOARDING.intro;
+};
 
 // ---------- 初回チュートリアル ----------
 // 初めて遊ぶ人だけに出す短い案内。1〜2分で終わる分量にする。
 // 各ページは { e:表情, t:本文, help?:'カテゴリid/項目id' }。helpがあれば「詳しく見る」を出せる。
 const ASSISTANT_TUTORIAL = [
   { e:'excited', t:'{name}だね、よろしく！ さっそく村を案内するよ♪', title:'あらためて、よろしくね' },
+  { e:'normal',  t:'目標はWAVE10のラスボス「ムー」を倒すこと！ カードで戦っていくよ。', title:'このゲームの目的', help:'basics/goal' },
   { e:'normal',  t:'ここがHOME。建物をタップするといろんなことができるよ！', title:'HOMEのこと', help:'home/roster' },
   { e:'wink',    t:'神殿では合体・転生・寄付ができるんだ。育成の土台になるとこだね！', title:'神殿', help:'masu/fusion' },
   { e:'excited', t:'バトルで活躍した子は「マスモン」として登録できるよ。育てるほど強くなる♪', title:'勇者モンを育てる', help:'masu/masumon' },

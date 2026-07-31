@@ -174,14 +174,25 @@ check('チュートリアルの本文をJSXへ直接書いていない', (() => 
 // はじめての設定(名前・アイコン)から、そのまま村の案内へ続く1本の流れにする
 check('はじめての設定のセリフもデータで持つ', (() => {
   const c = {}; require('vm').createContext(c);
-  require('vm').runInContext(assistantsSrc + ';globalThis.__o=ASSISTANT_ONBOARDING;', c);
-  const o = c.__o;
-  return o && ['intro-0','name','icon','confirm'].every(k => o[k] && o[k].t && o[k].e)
-    && /はじめまして/.test(o['intro-0'].t);
+  require('vm').runInContext(assistantsSrc + ';globalThis.__o={map:ASSISTANT_ONBOARDING,find:findAssistantOnboarding};', c);
+  const { map, find } = c.__o;
+  return map && ['intro','name','icon','ready'].every(k => map[k] && map[k].t && map[k].e)
+    && /はじめまして/.test(map.intro.t)
+    // 決まっているものに応じて、次にやることを教える
+    && find(false, false) === map.intro && find(true, false) === map.name
+    && find(false, true) === map.icon && find(true, true) === map.ready;
 })());
-check('はじめての設定では話が順に進む(ランダムにしない)',
-  has("findAssistantOnboarding(onboardingStep)") && has('<AssistantBubble scene="onboarding" line={say?.t||null} expression={say?.e||null}/>'));
-check('導入の1ページ目がみゅあの自己紹介', has("{title:'はじめまして',icon:'💖'"));
+// 初回はプロフィール画面で名前とアイコンを決める(専用画面は作らない)
+check('初回はプロフィール画面から始まる',
+  has("setGameState(onboarded ? 'HOME' : 'PROFILE');") && !has("gameState==='ONBOARDING'"));
+check('プロフィールで名前・アイコン・決定がそろっている',
+  has('findAssistantOnboarding(hasName,hasIcon)') && has('なまえを決める') && has('アイコンを選ぶ')
+    && has('けってい！</button>') && has('disabled={!ready} onClick={finishOnboarding}'));
+check('決め終わるまでは戻るボタンを出さない',
+  has('{/* はじめての設定が終わるまでは、まだ帰る場所(HOME)が無いので戻るボタンを出さない */}'));
+check('名前とアイコンを決めたことを覚える',
+  has('setOnboardingName(n); // はじめての設定で「名前が決まった」判定に使う')
+    && has("setBreederIcon(m.id); setOnboardingIcon(m.id);"));
 check('名前・アイコンを決めたらそのまま案内へ続く',
   has('const seenTutorial = await storeGet(TUTORIAL_SEEN_KEY, false, false);')
     && has('if (seenTutorial !== true) { tutorialShownRef.current = true; setTutorialStep(0); }'));
@@ -201,7 +212,7 @@ check('デバッグはデバッグ設定からだけ開ける',
 // 見るだけなので、名前・アイコン・完了フラグのどれも保存しない
 check('名前入力から通しで見られる',
   has('const startOnboardingPreview = () => {') && has('名前入力から通しで見る（保存されません）')
-    && has("setOnboardingStep('intro-0');") && has("setGameState('ONBOARDING');"));
+    && has("setOnboardingName('');") && has("setOnboardingIcon(null);") && has("setGameState('PROFILE');"));
 check('見るだけの表示では何も保存しない', (() => {
   const start = source.indexOf('  const finishOnboarding = async () => {');
   const end = source.indexOf('\n  };', source.indexOf('if (seenTutorial !== true)', start));
@@ -209,8 +220,7 @@ check('見るだけの表示では何も保存しない', (() => {
   const preview = body.slice(body.indexOf('if (onboardingPreview)'), body.indexOf('return;\n    }') + 12);
   return preview.includes('setBreederName(backup.name)') && preview.includes('setTutorialStep(0)') && !preview.includes('storeSet');
 })());
-check('見るだけでは途中経過も保存しない',
-  has('const moveOnboarding = async step => { setOnboardingStep(step); if (onboardingPreview) return;'));
+check('見るだけでは段階を保存する仕組みごと残していない', !has('moveOnboarding') && !has('onboardingStep'));
 check('見るだけと分かる表示を出す', has('DEBUG・見るだけの表示です。名前もアイコンも保存されません'));
 check('デバッグに必要な項目がそろっている',
   ['名前入力から通しで見る','初回チュートリアル再生','チュートリアルだけ再生','全助手コメント確認','全表情確認','条件コメント確認','連打リアクション確認','初回状態へ戻す']
