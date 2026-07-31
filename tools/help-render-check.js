@@ -28,7 +28,7 @@ const dataTablePrelude = [
   'const SKIP_TICKETS = SKIP_TICKET_BY_DIFFICULTY;',
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む
-  "const { useState } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"
+  "const { useState, useEffect } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"
   + "const ChevronRight = ({size}) => React.createElement('i', { 'data-size': size });\nconst X = ChevronRight;",
   assistantsData,
   grab(source, '// ===== 助手(ナビゲーター) ここから =====', '// ===== 助手(ナビゲーター) ここまで ====='),
@@ -85,7 +85,7 @@ const text = (html) => html.replace(/<[^>]*>/g, '');
 const hub = render({});
 check('カテゴリ一覧が描ける', hub.length > 0);
 check('カテゴリ一覧に全カテゴリが出る', HELP_GUIDE.every(c => text(hub).includes(c.title)), `${HELP_GUIDE.length}件`);
-check('カテゴリ一覧に導入文と助手のひとことが出る', text(hub).includes('まずはここをチェック') && text(hub).includes('知りたいことのカテゴリを選んでね'));
+check('カテゴリ一覧に導入文と助手のひとことが出る', text(hub).includes('まずはここをチェック') && text(hub).includes('気になるカテゴリを選んで'));
 check('カテゴリの色がそのまま使われる', HELP_GUIDE.every(c => hub.includes(c.color)));
 
 // --- ② 項目一覧 ---
@@ -125,10 +125,11 @@ check('難易度は実データの全段階が本文に出る', dataRows('diffic
 const withBubble = render({ helpCatId: 'battle', helpTopicId: 'distance' });
 check('助手の名前が吹き出しに出る', text(withBubble).includes('みゅあ'));
 check('助手のセリフが出る', text(withBubble).includes(helpTopicById('battle','distance').assistant));
-check('助手の画像が出る(用意されていれば)', withBubble.includes('data:image/png;base64,TEST'));
+// 表情ごとの顔アイコン(images/assistant/face/myua_<表情>.PNG)が使われる
+check('助手の画像が表情つきで出る', /images\/assistant\/face\/myua_[a-z]+\.PNG/.test(withBubble), (withBubble.match(/images\/assistant\/face\/myua_[a-z]+\.PNG/)||['見つからず'])[0]);
 check('吹き出しは詳細を開けることが分かる', text(withBubble).includes('タップで詳しく') && withBubble.includes('aria-label="みゅあの説明を開く"'));
 const hubBubble = text(render({}));
-check('カテゴリ一覧では場面(helpTop)のセリフを話す', hubBubble.includes('知りたいことのカテゴリを選んでね'));
+check('カテゴリ一覧では場面(helpTop)のセリフを話す', hubBubble.includes('気になるカテゴリを選んで'));
 const catBubble = text(render({ helpCatId: 'battle' }));
 check('カテゴリでは中身の案内を詳細に出せる', catBubble.includes('タップで詳しく'));
 
