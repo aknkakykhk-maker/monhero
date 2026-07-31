@@ -92,11 +92,20 @@ check('クイックでは教えの選択画面へ進まない', !grab(source, 'c
 check('成長のあとに伴モン合流のWAVEなら選択画面へ', grab(source, 'const finishQuickGrowth', 'const rollQuickUniqueUpgrade').includes("setGameState('PICK_ALLY')"));
 
 // --- ④ 伴モンと固有技 ---
-const rollBlock = grab(source, 'const rollQuickUniqueUpgrade = (uniques)', 'const finishQuickJoin');
+const rollBlock = grab(source, 'const rollQuickUniqueUpgrade = (uniques', 'const finishQuickJoin');
 check('上限に達した固有技は抽選から外す', rollBlock.includes('(u.evoLevel || 0) < MAX_UNIQUE_SKILL_LEVEL'));
 check('上げられる技が無ければ何もしない', rollBlock.includes('if (candidates.length === 0) return null;'));
 check('上限を超えない', rollBlock.includes('Math.min(MAX_UNIQUE_SKILL_LEVEL, before + 1)'));
 check('ランダムで1体選ぶ', rollBlock.includes('candidates[Math.floor(Math.random() * candidates.length)]'));
+// 固有技を上げたモンスターの名前は、加入後の編成から探さないと
+// 「いま加入した子」が当たったときに持ち主が見つからず、内部id(Ham など)が出てしまう
+check('持ち主は加入後の編成から探す',
+  has('const rolled=rollQuickUniqueUpgrade(nextUniques,nextSlots);') && rollBlock.includes('(currentSlots || slots).find(sl => sl && sl.id === picked.monId)'));
+check('名前に内部idをそのまま出さない',
+  rollBlock.includes("owner?.masuName || owner?.name || ALL_PLAYER_MONSTERS[picked.monId]?.name || picked.monId"));
+check('強化フェーズの固有技もマスモン名を出す',
+  has("const heading=inherited ? `${holderMon?.name||'？'} ← ${ownerMon?.name||'？'}の技` : (holderMon?.masuName||holderMon?.name||ownerMon?.name||'');")
+    && has('holderMon:slots.find(sl=>sl&&sl.id===u.monId)||null'));
 check('クイックは固有技の選択画面を出さない', has('setGameState(\'QUICK_JOIN\');') && !grab(source, 'if (isQuickMode(runMode)) {\n        // クイックモードは固有技', 'setGameState(\'QUICK_JOIN\')').includes('UPGRADE_SKILL'));
 check('加入のステータス変化と固有技上昇を1画面で出す',
   has("{quickJoin.name}が仲間になった！") && has('固有技アップ！') && has('Lv.{quickJoin.unique.before} → '));
