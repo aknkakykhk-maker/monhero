@@ -59,9 +59,11 @@ Claudeは改修内容を実装したら、ユーザーが検証しやすいよ�
 3. 難易度・アイテム・ログインボーナス・ミッション・ブリーダーの教えのような**一覧になるものは
    ヘルプへ手で書き写さず、`{ t:'data', id:'...' }` を使って実データから表を作る**
    (一部しか載っていない、値が古い、といった状態を構造的に防ぐため)
-4. 新しいトピックには助手のひとこと(`assistant`)を必ず付ける
+4. 新しいトピックには助手のひとこと(`assistant`)を必ず付ける。
+   助手(みゅあ)の名前・画像・場面ごとのセリフは `monster-hero/data/assistants.js` にまとめてあるので、
+   ヘルプ以外の画面へ案内を出すときも、そこへ場面を1つ足して `<AssistantBubble scene="..."/>` を置く
 5. `node tools/help-coverage-check.js` と `node tools/help-guide-check.js`、
-   `node tools/help-render-check.js` を通す
+   `node tools/help-render-check.js`、`node tools/assistant-check.js` を通す
 
-この3つのチェックは「ヘルプの更新漏れ」を検出するためのものなので、
+これらのチェックは「ヘルプの更新漏れ」を検出するためのものなので、
 落ちた場合はチェック側を緩めるのではなく、ヘルプを更新して直す。
