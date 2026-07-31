@@ -150,7 +150,10 @@ check('自前の文章も詳細として開ける', openedDetail.includes('詳�
 const openedScene = text(ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.AssistantBubble, { scene:'helpTop', defaultOpen:true })));
 check('場面キーだけで吹き出しと詳細が出せる', openedScene.includes('みゅあ') && openedScene.includes('3段階'));
 const noDetail = ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.AssistantBubble, { line:'ひとことだけ' }));
-check('詳細が無いときはタップできる見た目にしない', !text(noDetail).includes('タップで詳しく') && !noDetail.includes('<button'));
+// 顔は常にタップできる(次のセリフへ送るため)ので、見るのは吹き出し側だけ
+check('詳細が無いときは吹き出しをタップできる見た目にしない',
+  !text(noDetail).includes('タップで詳しく') && !noDetail.includes('の説明を開く'));
+check('顔はいつでもタップして話しかけられる', noDetail.includes('にはなしかける'));
 
 // --- 助手の開閉と、最後の項目 ---
 const closed = text(render({ helpCatId: 'battle', helpAssistantOpen: false }));

@@ -67,7 +67,10 @@ check('知らない表情は既定(normal)へ落ちる',
 check('画像が読めなかったときも既定の表情へ落とす',
   has('onError={()=>setSrc(src === fallback ? null : fallback)}'));
 check('それでも駄目なら絵文字で出る', has('{who.emoji}</span>}'));
-check('助手の顔は大きさと表情を指定して使い回せる', has('const AssistantFace = ({ who, size = 72, accent, expression = null })'));
+// 表情が分かるよう、顔は以前(72px)より2割ほど大きくしている
+check('助手の顔は大きさと表情を指定して使い回せる', has('const AssistantFace = ({ who, size = 88, accent, expression = null })'));
+check('顔は以前より大きい(既定88px・コンパクト48px)',
+  has('const size = faceSize != null ? faceSize : (compact ? 48 : 88);'));
 check('場面が変わったら表情を読み直す', has('useEffect(() => { setSrc(assistantFaceSrc(who, expression)); }, [who.id, expression]);'));
 check('index.htmlがdata/assistants.jsを読み込んでいる', /<script src="data\/assistants\.js\?v=[0-9a-f]{12}"><\/script>/.test(indexHtml));
 check('助手は画像を持つbreeder.jsより後に読み込む',
@@ -139,7 +142,47 @@ check('同じ場面で語尾が偏っていない', (() => {
   }
   return true;
 })());
+check('直近に出したセリフは候補から外す',
+  assistantsSrc.includes('const ASSISTANT_RECENT = {}') && assistantsSrc.includes('const assistantRecentLimit ='));
+check('直近3件が続けて出ない', (() => {
+  for (const [key, def] of SCENES) {
+    if ((def.lines || []).length < 5) continue;
+    const history = [];
+    for (let i = 0; i < 200; i++) {
+      const t = a.pickAssistantLine(key, null).t;
+      if (history.slice(0, 3).includes(t)) return false;
+      history.unshift(t);
+    }
+  }
+  return true;
+})());
 check('一人称は「あたし」でそろえる', !/わたし|私は/.test(assistantsSrc));
+
+// --- ⑦ 初回チュートリアルとデバッグ ---
+check('チュートリアルの台本はデータで持つ', (() => {
+  const c = {}; require('vm').createContext(c);
+  require('vm').runInContext(assistantsSrc + ';globalThis.__t=ASSISTANT_TUTORIAL;', c);
+  const t = c.__t;
+  return Array.isArray(t) && t.length >= 6 && t.every(p => p.t && p.e)
+    && /困ったらいつでもあたしをタップしてね/.test(t[t.length - 1].t);
+})());
+check('チュートリアルの本文をJSXへ直接書いていない', (() => {
+  const c = {}; require('vm').createContext(c);
+  require('vm').runInContext(assistantsSrc + ';globalThis.__t=ASSISTANT_TUTORIAL;', c);
+  return c.__t.every(p => !source.includes(p.t));
+})());
+check('初回だけ出し、スキップもできる',
+  has("const seen = await storeGet(TUTORIAL_SEEN_KEY, false, false);") && has('スキップ</button>')
+    && has('const finishTutorial = async (remember = true)'));
+check('チュートリアルの既読は新しい保存キーへ分ける',
+  has("const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';") && !/mh_onboarded[^\n]*tutorial/.test(source));
+check('デバッグはデバッグ設定からだけ開ける',
+  has('💖 みゅあデバッグ') && source.indexOf('💖 みゅあデバッグ') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
+check('デバッグに必要な項目がそろっている',
+  ['初回チュートリアル再生','チュートリアルだけ再生','全助手コメント確認','全表情確認','条件コメント確認','連打リアクション確認','初回状態へ戻す']
+    .every(label => source.includes(label)));
+check('初回状態へ戻してもセーブデータは消さない',
+  has('モンスターやダイヤなどのセーブデータは消えません') && has('await storeSet(TUTORIAL_SEEN_KEY,false,false);'));
 check('話し方の決まりごとが書いてある',
   assistantsSrc.includes('一人称は「あたし」') && assistantsSrc.includes('語尾は'));
 check('場面が指すヘルプ項目は実在する', (() => {
@@ -154,14 +197,28 @@ check('場面の足しかたが手順として書いてある',
 
 // --- ④ 共通コンポーネント ---
 check('吹き出しは1つの共通コンポーネント', has('const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false })'));
-check('選んだセリフの表情がそのまま顔に渡る', has('const face = expression || picked?.e || null;') && has('<AssistantFace who={who} size={size} accent={color} expression={face}/>'));
+check('選んだセリフの表情がそのまま顔に渡る', has('const face = expression || shown?.e || null;') && has('<AssistantFace who={who} size={size} accent={color} expression={face}/>'));
 // 場面や条件が変わったときだけ選び直す。ほかの再描画でセリフが入れ替わると読めない
 check('セリフは場面と条件が変わったときだけ選び直す',
   has('const pickKey = `${scene || \'\'}|${condition || \'\'}`;') && has("if (pickedRef.current?.key !== pickKey) {"));
 check('画面から条件を渡せる', has('condition=null') && /condition=\{[^}]+\}/.test(source));
-check('縦の場所が取れない画面向けの小さい表示がある', has('const size = faceSize != null ? faceSize : (compact ? 40 : 72);'));
+// 顔をタップすると次のセリフへ。詳細は吹き出し側なので、操作が分かれている
+check('顔をタップすると次のセリフへ送れる',
+  has('const onFaceTap = () => {') && has("aria-label={`${who.name}にはなしかける`}") && has('if (typeof pickAssistantLine === \'function\') setTapped(pickAssistantLine(scene, condition));'));
+check('詳細は吹き出し側の操作のまま', has("onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く`"));
+check('連打には専用のリアクションを出す',
+  has('const spamLine = spam ? (spam.recovering ? spamRecover : spamLines[spam.step]) : null;')
+    && assistantsSrc.includes('ASSISTANT_SPAM_LINES') && assistantsSrc.includes('ASSISTANT_SPAM_RECOVER'));
+check('連打のあとは笑って元に戻す',
+  (() => { const c = {}; require('vm').createContext(c);
+    require('vm').runInContext(assistantsSrc + ';globalThis.__s={ASSISTANT_SPAM_LINES,ASSISTANT_SPAM_RECOVER};', c);
+    const last = c.__s.ASSISTANT_SPAM_LINES[c.__s.ASSISTANT_SPAM_LINES.length - 1];
+    return c.__s.ASSISTANT_SPAM_LINES.length >= 5 && last.last === true && /うそだよ/.test(c.__s.ASSISTANT_SPAM_RECOVER.t);
+  })());
+check('場面が変わったら送ったセリフも連打もリセットする',
+  has('useEffect(() => { setTapped(null); setSpam(null); tapTimesRef.current = []; }, [pickKey]);'));
 check('場面キーだけでも、直接指定でも呼べる',
-  has('const sceneDef = assistantSceneById(scene);') && has("const text = line || picked?.t || who.greeting || '';") && has('const paragraphs = detail || sceneDef?.detail || null;'));
+  has('const sceneDef = assistantSceneById(scene);') && has("const text = line || shown?.t || who.greeting || '';") && has('const paragraphs = detail || sceneDef?.detail || null;'));
 check('詳細はヘルプ本文をそのまま出せる', has('const ref = helpRef || sceneDef?.help || null;') && has('renderHelpBlocks(topic.blocks, color)'));
 check('吹き出し風の見た目(しっぽ付き)', has('{/* 吹き出しのしっぽ(左向き) */}') && has("borderRight:`9px solid ${color}`"));
 check('タップで詳細が開く', has('onClick:()=>setOpen(true)') && has('タップで詳しく'));
