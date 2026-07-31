@@ -52,8 +52,15 @@ check('倍率の下の補足行はクイック限定にしない',
 // 名前の行数・説明の有無・所持数の有無・詳細ボタンの有無で、
 // 「〜で購入」ボタンの位置がカードごとにずれていた
 check('商品名は行数が変わっても同じ高さの枠に入れる', has("style={{minHeight:'30px'}}>{item.name}</div>"));
-check('アイテムの説明は説明が無くても同じ高さを取る', has("style={{minHeight:'40px'}}>{item.desc||null}</div>"));
-check('所持数と詳細ボタンは同じ高さの1行にまとめる', has("<div className=\"w-full flex items-center justify-center\" style={{height:'24px'}}>"));
+// アイテムの効果は詳細ボタンから出す(カードに長い説明を載せると縦に伸びるため)
+check('アイテムの効果は詳細ボタンから出す',
+  has('onClick={()=>setMarketItemDetail(item)}') && !has("style={{minHeight:'40px'}}>{item.desc||null}</div>"));
+check('所持数と詳細ボタンは同じ高さの1行にまとめる',
+  has("<div className=\"w-full flex items-center justify-center gap-1.5\" style={{height:'26px'}}>"));
+// アイコンの大きさはカテゴリごとに1か所で決める(円盤石だけ大きいまま)
+check('商品アイコンの大きさを1か所で決めている',
+  has("const MARKET_ICON_SIZE = { disc: 'w-16 h-16', breeder: 'w-12 h-12', icon: 'w-11 h-11', item: 'w-10 h-10' };")
+    && has("${MARKET_ICON_SIZE[item.type]||'w-14 h-14'}"));
 check('所持数は0でも消さずに出す', has('所持数: {ownedItems[item.id]||0}') && !has('{item.type===\'item\'&&(ownedItems[item.id]||0)>0&&('));
 check('購入ボタンはカードの下端に揃える', has('<div className="w-full flex items-center justify-center mt-auto">'));
 check('購入ボタンの文字は折り返さない', has("{usesGold?'ダイヤ':'pt'} で購入</button>") && has('rounded-full flex items-center gap-1 whitespace-nowrap'));

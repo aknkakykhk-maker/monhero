@@ -81,7 +81,11 @@ check('遅い取得を失敗にしないタイムアウト', has('controller.abo
 check('画面のエラー文は短い日本語', has('通信が混み合っています。少し待って再読込してください'));
 check('ブリーダーLvの取得がスコア一覧を上書きしない',
   has("} else if (includeLevels && levelKind === 'breeder') {\n        setBreederRankingPool(prev => ({ ...prev, ...poolByDiff }));"));
-check('レベル系ランキングは1回の取得にまとめる', has('const cacheKey = `levels:${levelKind}`;') && has('sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId, columns)'));
+check('レベル系ランキングは1回の取得にまとめる', has('const cacheKey = `levels:${levelKind}`;') && has('sbFetchRankings(null, levelLimit, order, 0, requestId, columns)'));
+// ブリーダーLvは名前ごとにまとめて出すため、取得件数が少ないと下位の人が一覧から消える
+check('ブリーダーLvは取得件数を多くする',
+  has('const RANKING_BREEDER_FETCH_LIMIT = 400;')
+    && has("const levelLimit = levelKind === 'bond' ? RANKING_LEVEL_FETCH_LIMIT : RANKING_BREEDER_FETCH_LIMIT;"));
 check('起動時の先読みは1難易度だけ', has("loadRankings('Normal')"));
 check('前回のランキングを端末に残す', has("const RANKING_CACHE_KEY = 'mh_ranking_cache';") && has('const saveRankingCache = (patch)'));
 check('起動時に前回の内容をそのまま出す', has('hydrateRankingCache(await storeGet(RANKING_CACHE_KEY, null, false))'));
