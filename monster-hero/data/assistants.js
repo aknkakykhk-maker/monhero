@@ -75,6 +75,91 @@ const assistantFullImage = (who, expression) => (who && who.imagePrefix)
   ? `${who.imageDir}/${who.imagePrefix}_${assistantExpressionName(who, expression)}.PNG`
   : ASSISTANT_NO_IMAGE;
 
+// ---------- 親密度(みゅあとの仲良し度) ----------
+// 遊ぶほどみゅあと打ち解けていく。呼び方・話し方・出るセリフが少しずつ変わる。
+// 恋愛ものではなく「一緒にモンスターヒーローを遊ぶ相棒」の距離感にする。
+//
+// 【Lvを増やしたいとき】
+//   ASSISTANT_BOND_LEVELS に1件足すだけ。必要な仲良し度(need)は昇順に並べること。
+//   呼び方(call)は '{name}' がプレイヤー名に置き換わる。話し方(tone)はセリフを
+//   書くときの目安で、画面には出さない。
+//
+// 【セリフをLvで出し分けたいとき】
+//   セリフに bond を書く。書かなければどのLvでも出る。
+//     bond:3      … Lv3以上で出る
+//     bond:[1,2]  … Lv1〜Lv2のあいだだけ出る
+const ASSISTANT_BOND_LEVELS = [
+  { level:1, need:0,   title:'はじめまして',   call:'{name}さん', tone:'少していねい。初対面の距離感' },
+  { level:2, need:60,  title:'顔なじみ',       call:'{name}さん', tone:'笑顔が増えて、少しフレンドリー' },
+  { level:3, need:180, title:'なかよし',       call:'{name}',     tone:'呼び捨てになって、雑談も増える' },
+  { level:4, need:400, title:'相棒',           call:'{name}',     tone:'かなり打ち解けた話し方' },
+  { level:5, need:800, title:'ベストバディ',   call:'{name}ちん', tone:'特別な距離感。ただし馴れ馴れしくはしない' },
+];
+const ASSISTANT_BOND_MIN_LEVEL = ASSISTANT_BOND_LEVELS[0].level;
+const ASSISTANT_BOND_MAX_LEVEL = ASSISTANT_BOND_LEVELS[ASSISTANT_BOND_LEVELS.length - 1].level;
+
+// 仲良し度(数値) → その段階の定義。壊れた値でも必ず最初の段階へ落ちる
+const assistantBondStage = (points) => {
+  const p = Number.isFinite(points) ? points : 0;
+  let stage = ASSISTANT_BOND_LEVELS[0];
+  for (const s of ASSISTANT_BOND_LEVELS) { if (p >= s.need) stage = s; }
+  return stage;
+};
+const assistantBondLevel = (points) => assistantBondStage(points).level;
+// 次の段階までの残り。最大なら null
+const assistantBondNext = (points) => {
+  const p = Number.isFinite(points) ? points : 0;
+  const next = ASSISTANT_BOND_LEVELS.find(s => p < s.need);
+  return next ? { level: next.level, need: next.need, remain: next.need - p } : null;
+};
+const assistantBondStageByLevel = (level) =>
+  ASSISTANT_BOND_LEVELS.find(s => s.level === level) || ASSISTANT_BOND_LEVELS[0];
+
+// プレイヤーをなんと呼ぶか。名前が無いときは呼びかけを省いても文が成り立つ言葉にする
+const ASSISTANT_NO_NAME = 'キミ';
+const assistantCallName = (name, level) => {
+  const stage = assistantBondStageByLevel(level);
+  const raw = String(name || '').trim();
+  if (!raw) return ASSISTANT_NO_NAME;
+  return String(stage.call || '{name}').replace('{name}', raw);
+};
+// セリフの中の {name} を、そのときの呼び方へ置き換える
+const assistantSpeak = (text, name, level) =>
+  String(text == null ? '' : text).replace(/\{name\}/g, assistantCallName(name, level));
+
+// 仲良し度が増える行動。1日に増える量は行動ごとと合計の両方で頭打ちにする。
+// 放置しても減らない(久しぶりに開いた人が冷たくされないため)。
+//   amount   … 1回で増える量
+//   dailyMax … その行動で1日に増やせる上限
+const ASSISTANT_BOND_ACTIONS = {
+  login:     { amount:5, dailyMax:5,  label:'ログイン' },
+  battle:    { amount:3, dailyMax:15, label:'バトルを遊ぶ' },
+  challenge: { amount:2, dailyMax:10, label:'チャレンジモード' },
+  quick:     { amount:1, dailyMax:6,  label:'クイックモード' },
+  ranking:   { amount:1, dailyMax:3,  label:'ランキングを見る' },
+  temple:    { amount:1, dailyMax:4,  label:'神殿を使う' },
+  mission:   { amount:2, dailyMax:8,  label:'ミッション達成' },
+  gift:      { amount:1, dailyMax:4,  label:'ギフトを受け取る' },
+  market:    { amount:1, dailyMax:3,  label:'マーケットを見る' },
+  talk:      { amount:1, dailyMax:5,  label:'みゅあと話す' },
+};
+// 1日に増やせる合計。上の dailyMax を全部足すと 63 になるが、
+// ここで頭打ちにして「1日で一気に仲良くなる」ことがないようにしている
+const ASSISTANT_BOND_DAILY_MAX = 30;
+
+// そのセリフが、いまの仲良し度で出せるか。bond を書いていなければどのLvでも出る
+const assistantLineMatchesBond = (line, level) => {
+  const b = line && line.bond;
+  if (b == null) return true;
+  const lv = Number.isFinite(level) ? level : ASSISTANT_BOND_MIN_LEVEL;
+  if (Array.isArray(b)) {
+    const lo = Number.isFinite(b[0]) ? b[0] : ASSISTANT_BOND_MIN_LEVEL;
+    const hi = Number.isFinite(b[1]) ? b[1] : ASSISTANT_BOND_MAX_LEVEL;
+    return lv >= lo && lv <= hi;
+  }
+  return Number.isFinite(b) ? lv >= b : true;
+};
+
 // ---------- 場面(scene) → 助手のセリフ ----------
 // 画面側は <AssistantBubble scene="キー"/> で呼ぶ。
 //   assistantId … だれが話すか(省略すると DEFAULT_ASSISTANT_ID)
@@ -118,6 +203,16 @@ const ASSISTANT_SCENES = {
         { e:'wink',    t:'1回遊ぶとマスモンを登録できるよ。そこからが本番だね！' },
         { e:'normal',  t:'迷ったらバトル！ やってみるのが一番わかるよ。' },
         { e:'happy',   t:'あたしがついてるから大丈夫♪ いってらっしゃい！' },
+      ],
+      // 親密度Lvが上がった直後。次にHOMEを開いたときに1回だけ出る。
+      // 呼び方が変わったことに、みゅあ自身が触れる
+      bondUp: [
+        { e:'excited', t:'ねえ、なんか前より話しやすくなったと思わない？ …これからは{name}って呼ぶね！', bond:3 },
+        { e:'happy',   t:'{name}、これからもよろしくね♪ ちょっと距離が縮まった気がする！', bond:2 },
+        { e:'wink',    t:'{name}、いっぱい遊んでくれてありがとう。あたし嬉しいよ〜♪' },
+        { e:'excited', t:'{name}！ …うん、この呼び方しっくりくる♪', bond:5 },
+        { e:'happy',   t:'{name}とだいぶ仲良くなれた気がする！ これからもよろしく♪', bond:4 },
+        { e:'normal',  t:'{name}、いつもありがとう。あたし、ちゃんと見てるからね。' },
       ],
     },
   },
@@ -535,6 +630,408 @@ const ASSISTANT_SCENES = {
   },
 };
 
+// ---------- あとから足すセリフ束 ----------
+// ASSISTANT_SCENES の lines へ、読み込み時に合流させるセリフのまとまり。
+// 場面の定義そのものを書き換えずにセリフだけ増やせるので、
+// 親密度ぶんのセリフも、あとで足すイベント・季節限定のセリフも、ここへ1束足すだけで済む。
+//
+// 【束の書き方】
+//   { id:'一意な名前', label:'画面には出ない説明', when:()=>真偽(省略可), lines:{ 場面キー:[ …セリフ… ] } }
+//   when を書くと、その束は条件を満たすときだけ合流する(例: お正月・誕生日)。
+//   when は読み込み時に1回だけ見るので、日付のような「起動中は変わらないもの」に使う。
+//
+// 【セリフの書き方】
+//   { e:表情, t:'本文', bond:親密度条件, w:出やすさ }
+//     bond … 3 なら Lv3以上、[1,2] なら Lv1〜2のあいだだけ。書かなければどのLvでも出る
+//     w    … 省略すると1。0.25 のように小さくすると「たまにしか出ない」セリフになる
+//     t の中の {name} は、そのときの呼び方(さん付け・呼び捨て・ちん付け)に置き換わる
+const ASSISTANT_LINE_PACKS = [];
+
+// 束を1つ足す。読み込み順は問わない(合流は下の applyAssistantLinePacks でまとめて行う)
+const addAssistantLinePack = (pack) => { if (pack && pack.id && pack.lines) ASSISTANT_LINE_PACKS.push(pack); };
+
+// ===== 親密度ぶんのセリフ(HOME) =====
+addAssistantLinePack({
+  id: 'bondHome',
+  label: '親密度・HOME',
+  lines: {
+    home: [
+      // Lv1〜2: さん付け。少していねいで、初対面の距離感
+      { e:'happy',    t:'{name}、今日もよろしくお願いします♪', bond:[1,2] },
+      { e:'normal',   t:'{name}、まずは編成の確認からいきましょ！', bond:[1,2] },
+      { e:'wink',     t:'分からないことがあったら、いつでも聞いてくださいね♪', bond:[1,2] },
+      { e:'happy',    t:'{name}のペースで大丈夫だよ！ ゆっくりいこ。', bond:[1,2] },
+      { e:'excited',  t:'今日はどこから行きます？ あたしは神殿がおすすめ！', bond:[1,2] },
+      { e:'normal',   t:'HOMEの建物、ぜんぶ触ってみると発見があるかも。', bond:[1,2] },
+      { e:'happy',    t:'{name}、いい感じに育ってきてますね♪', bond:[1,2] },
+      { e:'wink',     t:'{name}、いい感じじゃん♪ その調子！', bond:2 },
+      // Lv3〜4: 呼び捨て。雑談が増える
+      { e:'happy',    t:'{name}、今日はどこ行く？', bond:[3,4] },
+      { e:'excited',  t:'{name}、その育成いい感じ！ センスあるね〜', bond:[3,4] },
+      { e:'normal',   t:'なんか今日、いつもより調子よさそう。気のせい？', bond:[3,4] },
+      { e:'normal',   t:'ねえ{name}、そろそろ編成いじってみない？', bond:[3,4] },
+      { e:'happy',    t:'おかえり！ 今日は何する？', bond:[3,4] },
+      { e:'happy',    t:'{name}なら大丈夫だって！ いってらっしゃい♪', bond:4 },
+      { e:'wink',     t:'今日も楽しもう！ 難しく考えなくていいよ。', bond:4 },
+      { e:'excited',  t:'あたし、{name}の作るチーム見るの好きなんだよね〜', bond:4 },
+      // Lv5: 特別感。ただし馴れ馴れしくはしない
+      { e:'excited',  t:'{name}、おかえり〜♪ 待ってたよ！', bond:5 },
+      { e:'happy',    t:'{name}、今日も一緒に頑張ろ！', bond:5 },
+      { e:'wink',     t:'{name}が来ると、なんか安心するんだよね〜', bond:5 },
+      { e:'happy',    t:'今日はどうする？ {name}が決めていいよ！', bond:5 },
+      { e:'excited',  t:'{name}とここまで来たんだなぁって、たまに思う♪', bond:5, w:0.4 },
+      { e:'normal',   t:'{name}、無理はしないでね。あたしはずっとここにいるから。', bond:5, w:0.4 },
+      // どのLvでも出る、村のようすや案内
+      { e:'normal',   t:'マスモンの絆レベル、こまめに見てあげてね。' },
+      { e:'happy',    t:'ギフト届いてないかな？ たまに覗いてみて！' },
+      { e:'wink',     t:'ミッションの達成状況もチェックしとこ♪' },
+      { e:'excited',  t:'新しい円盤石、マーケットに来てるかも！' },
+      { e:'normal',   t:'放牧に出したマスモン、村を歩いてるよ。見た？' },
+      { e:'happy',    t:'更新履歴、たまに読むと新しい発見があるかも！' },
+      { e:'normal',   t:'今日のぶんのログインボーナス、受け取った？' },
+      { e:'troubled', t:'ダイヤ、使いどころ迷うよね〜。あたしも迷う。', w:0.5 },
+      { e:'happy',    t:'ちょっと休憩するのも大事だよ。ゲームは逃げないからね！', w:0.5 },
+      // たまにしか出ない、ひとりごとみたいなセリフ
+      { e:'surprise', t:'あ、いま向こうでマスモンが転んだ気がする…気のせいかな？', w:0.25 },
+      { e:'wink',     t:'ひみつだけど、あたし雨の日の村がいちばん好きなんだよね♪', w:0.25 },
+    ],
+  },
+});
+
+// ===== 親密度ぶんのセリフ(バトル・ランキング) =====
+addAssistantLinePack({
+  id: 'bondBattle',
+  label: '親密度・バトルとランキング',
+  lines: {
+    battleChallenge: [
+      { e:'happy',    t:'{name}、無理のない難易度から行きましょ♪', bond:[1,2] },
+      { e:'normal',   t:'チャレンジはスコアが残ります。落ち着いていきましょ！', bond:[1,2] },
+      { e:'wink',     t:'負けても失うものは無いので、気楽にどうぞ♪', bond:[1,2] },
+      { e:'excited',  t:'{name}の初めての記録、楽しみにしてますね！', bond:[1,2] },
+      { e:'normal',   t:'{name}、まずは自己ベストの更新を狙いましょ！', bond:[1,2] },
+      { e:'happy',    t:'{name}、いい編成できてるじゃん♪ いけると思う！', bond:2 },
+      { e:'excited',  t:'{name}、今日は上の難易度いってみない？', bond:[3,4] },
+      { e:'happy',    t:'{name}のスコア、そろそろ伸びどきだと思うんだよね〜', bond:[3,4] },
+      { e:'normal',   t:'距離の合わせ方さえハマれば、一気に伸びるよ。', bond:[3,4] },
+      { e:'wink',     t:'あたし、{name}が本気出すとこ見たいな♪', bond:4 },
+      { e:'happy',    t:'{name}なら大丈夫。いつもどおりでいこ！', bond:4 },
+      { e:'excited',  t:'{name}、いってらっしゃい！ ここで見てるからね♪', bond:5 },
+      { e:'happy',    t:'{name}、今日も一緒に記録更新しよ！', bond:5 },
+      { e:'wink',     t:'{name}のスコア、あたしが誰よりも覚えてるからね♪', bond:5, w:0.5 },
+      { e:'normal',   t:'難易度が上がるほど、敵もスコアも大きくなるよ。' },
+      { e:'happy',    t:'自己ベストは難易度ごとに別々に記録されるんだ。' },
+      { e:'normal',   t:'倒しきれなくても、進んだWAVEぶんの報酬はもらえるよ。' },
+      { e:'wink',     t:'ガッツの残しかたで、終盤の粘りが変わるからね！' },
+      { e:'excited',  t:'ブリーダーの教え、拾いどきを間違えないようにね♪' },
+      { e:'normal',   t:'勇者モンの固有技、レベル上げると化けるよ。' },
+      { e:'troubled', t:'ムーは強いよ…。でも倒せない相手じゃないから！' },
+      { e:'happy',    t:'編成が決まらないときは、間合いのバランスから見てみて。' },
+      { e:'surprise', t:'会心が続くときって、なんか気持ちいいよね〜', w:0.3 },
+      { e:'normal',   t:'負けたときこそ、次に何を変えるかが大事だと思うんだ。', w:0.5 },
+    ],
+    battleQuick: [
+      { e:'happy',    t:'{name}、サクッと回したいときはこっちですね♪', bond:[1,2] },
+      { e:'normal',   t:'クイックはランキングに乗らないので、気楽にどうぞ！', bond:[1,2] },
+      { e:'wink',     t:'{name}、育成したい子を連れていきましょ♪', bond:[1,2] },
+      { e:'excited',  t:'{name}、今日はどの子を育てる？', bond:[3,4] },
+      { e:'happy',    t:'{name}、周回はほどほどにね。疲れちゃうから！', bond:[3,4] },
+      { e:'wink',     t:'{name}、あたしも一緒に数えててあげる♪', bond:4 },
+      { e:'excited',  t:'{name}、いってらっしゃい！ 何周でも付き合うよ〜', bond:5 },
+      { e:'happy',    t:'{name}、無理して回さなくていいからね。', bond:5, w:0.5 },
+      { e:'normal',   t:'クイックはWAVEごとに味方が自動で強くなるよ。' },
+      { e:'happy',    t:'経験値とダイヤは1.5倍！ 育成にはぴったりだね♪' },
+      { e:'normal',   t:'スキップチケットはこっちのモードでだけ使えるよ。' },
+      { e:'wink',     t:'固有技もひとりでに伸びるから、放っておいても育つよ♪' },
+      { e:'normal',   t:'チャレンジの自己ベストは、こっちでは動かないから安心して。' },
+      { e:'happy',    t:'まとめて育てたいときは、絆を伸ばしたい子を勇者モンに！' },
+    ],
+    ranking: [
+      { e:'happy',    t:'{name}、まずは上位の編成を見てみましょ♪', bond:[1,2] },
+      { e:'normal',   t:'順位は気にしすぎなくて大丈夫ですよ！', bond:[1,2] },
+      { e:'excited',  t:'{name}の名前、そのうちここに載りますよ♪', bond:[1,2] },
+      { e:'happy',    t:'{name}、上の人の編成けっこう参考になるよ！', bond:[3,4] },
+      { e:'wink',     t:'{name}なら、あの辺までいけると思うけどな〜', bond:[3,4] },
+      { e:'excited',  t:'{name}の名前、探しちゃった♪', bond:4 },
+      { e:'happy',    t:'{name}が上に行くの、あたしが一番楽しみにしてるからね！', bond:5 },
+      { e:'wink',     t:'{name}の記録、ぜんぶ覚えてるよ♪', bond:5, w:0.5 },
+      { e:'normal',   t:'スコアは難易度ごとに分かれてるよ。' },
+      { e:'happy',    t:'ブリーダーLvは、同じ名前でいちばん高い記録がまとまって出るよ。' },
+      { e:'normal',   t:'絆Lvはモンスターの種類ごとに切り替えられるんだ。' },
+      { e:'wink',     t:'上位の人の編成、タップすると詳しく見られるよ♪' },
+      { e:'normal',   t:'記録が送られるのはチャレンジモードだけだよ。' },
+      { e:'surprise', t:'このスコア、どうやって出したんだろ…気になるね！', w:0.3 },
+    ],
+  },
+});
+
+// ===== 親密度ぶんのセリフ(神殿・育成・マーケット) =====
+addAssistantLinePack({
+  id: 'bondGrow',
+  label: '親密度・神殿と育成',
+  lines: {
+    temple: [
+      { e:'happy',    t:'{name}、神殿へようこそ♪ ここは育成の土台になる場所です。', bond:[1,2] },
+      { e:'normal',   t:'合体・転生・寄付ができますよ。ゆっくり選んでくださいね。', bond:[1,2] },
+      { e:'wink',     t:'{name}、迷ったら合体から試してみましょ♪', bond:[1,2] },
+      { e:'troubled', t:'寄付だけは取り消せないので、そこだけ気をつけて…！', bond:[1,2] },
+      { e:'excited',  t:'{name}、そろそろ転生も見えてきたんじゃない？', bond:2 },
+      { e:'happy',    t:'{name}、今日は誰を合体させる？', bond:[3,4] },
+      { e:'normal',   t:'{name}のこだわり編成、けっこう好きなんだよね〜', bond:[3,4] },
+      { e:'excited',  t:'{name}、思いきって転生しちゃお！ あたしが見ててあげる♪', bond:[3,4] },
+      { e:'wink',     t:'{name}、そのマスモン大事にしてるでしょ。分かるよ〜', bond:4 },
+      { e:'happy',    t:'{name}、この子とはずいぶん長いよね。', bond:5, w:0.5 },
+      { e:'excited',  t:'{name}、今日はどんな子ができるかな♪ わくわくする！', bond:5 },
+      { e:'normal',   t:'{name}が悩んでるとき、あたしは黙って待ってるからね。', bond:5, w:0.4 },
+      { e:'normal',   t:'合体は主と副を選ぶよ。主の見た目と名前が残るんだ。' },
+      { e:'happy',    t:'副にした子の絆レベルは、経験値になって主へ引き継がれるよ。' },
+      { e:'normal',   t:'固有技の引き継ぎは、両方が絆Lv.10以上のときだけできるよ。' },
+      { e:'wink',     t:'転生すると星が1つ増えて、レベル上限も上がるんだ♪' },
+      { e:'normal',   t:'転生してもマスモンの名前と見た目はそのまま残るよ。' },
+      { e:'happy',    t:'寄付するとダイヤがもらえるけど、その子とはお別れになるよ。' },
+      { e:'normal',   t:'染色は神殿じゃなくてM/B管理からだよ、念のため！' },
+      { e:'excited',  t:'強い子を作るなら、まずは絆レベルを伸ばすのが近道♪' },
+      { e:'wink',     t:'合体前に、消える技を確認しておくと後悔しないよ！' },
+      { e:'normal',   t:'ここの空気、なんだか落ち着くと思わない？' },
+      { e:'surprise', t:'この神殿、誰が建てたか知らないんだよね…気になる。', w:0.3 },
+      { e:'troubled', t:'手放す判断ってむずかしいよね。あたしも苦手…', w:0.4 },
+      { e:'happy',    t:'ダイヤに余裕があるときは、合体を試してみるのもアリだよ♪' },
+    ],
+    roster: [
+      { e:'happy',    t:'{name}、編成は4体まで入れられますよ♪', bond:[1,2] },
+      { e:'normal',   t:'勇者モンと供モンで役割が変わりますからね。', bond:[1,2] },
+      { e:'wink',     t:'{name}、迷ったら間合いのバランスを見てみましょ！', bond:[1,2] },
+      { e:'excited',  t:'{name}、いい並びになってきましたね♪', bond:[1,2] },
+      { e:'happy',    t:'{name}、その編成いいじゃん！ バランス取れてる。', bond:[3,4] },
+      { e:'normal',   t:'{name}って、けっこう近距離が好きだよね？', bond:[3,4] },
+      { e:'excited',  t:'{name}の編成、見てるだけで楽しい♪', bond:4 },
+      { e:'wink',     t:'{name}ちの主力、そろそろ入れ替えどきかも？', bond:4 },
+      { e:'excited',  t:'{name}、その編成めっちゃ好き！ あたし好みだ〜♪', bond:5 },
+      { e:'happy',    t:'{name}が選ぶ子って、なんか味があるんだよね。', bond:5, w:0.5 },
+      { e:'normal',   t:'間合い適性は4つの距離ぜんぶにかかるよ。' },
+      { e:'happy',    t:'合流ボーナスは供モンの絆レベルで決まるんだ♪' },
+      { e:'normal',   t:'ベースモンからも勇者モンを選べるよ。' },
+      { e:'wink',     t:'同じ種類ばかりだと、間合いが偏っちゃうから注意ね！' },
+      { e:'excited',  t:'育てたい子を勇者モンにすると、絆経験値がいっぱい入るよ♪' },
+      { e:'normal',   t:'編成を変えても、マスモンの記録は消えないから安心して。' },
+      { e:'happy',    t:'ブリーダーカードも忘れずに入れてね！' },
+      { e:'normal',   t:'カードの枚数は勇者モンの特性で増えることがあるよ。' },
+      { e:'surprise', t:'この並び、なんか強そうな気がする…！', w:0.3 },
+      { e:'wink',     t:'正解はひとつじゃないから、好きな子を入れていいと思うよ♪' },
+    ],
+    masuList: [
+      { e:'happy',    t:'{name}、育てた子はここに並びますよ♪', bond:[1,2] },
+      { e:'normal',   t:'絆レベルが上がると、強化ポイントがもらえます。', bond:[1,2] },
+      { e:'excited',  t:'{name}、ずいぶん増えましたね♪', bond:[1,2] },
+      { e:'happy',    t:'{name}、この子たちみんな{name}が育てたんだよね。', bond:[3,4] },
+      { e:'wink',     t:'{name}、名前つけるセンスあると思う♪', bond:[3,4] },
+      { e:'excited',  t:'{name}のマスモン、見てるだけで時間溶ける〜', bond:4 },
+      { e:'happy',    t:'{name}、この子たちと一緒にここまで来たんだね♪', bond:5 },
+      { e:'normal',   t:'{name}のいちばんのお気に入り、あたし当てられる気がする。', bond:5, w:0.4 },
+      { e:'normal',   t:'強化ポイントは間合い適性とステータスに振れるよ。' },
+      { e:'happy',    t:'振り直したいときは、絆ポイントリセットの書を使ってね♪' },
+      { e:'normal',   t:'名前は何度でも変えられるよ。' },
+      { e:'wink',     t:'染色で見た目を変えると、愛着わくよ〜♪' },
+      { e:'normal',   t:'並び順は絞り込みと並べ替えで変えられるよ。' },
+      { e:'excited',  t:'星の数は転生した回数だよ。増やすと上限も上がる！' },
+      { e:'happy',    t:'まとめて強化すると、一気に振れて楽だよ♪' },
+    ],
+    market: [
+      { e:'happy',    t:'{name}、アイコンはpt、ほかはダイヤで買えますよ♪', bond:[1,2] },
+      { e:'normal',   t:'買ったものは次の周回から使えます。', bond:[1,2] },
+      { e:'wink',     t:'{name}、ダイヤは大事に使いましょうね♪', bond:[1,2] },
+      { e:'excited',  t:'{name}、気になるものありました？', bond:[1,2] },
+      { e:'happy',    t:'{name}、なに買うか決めた？', bond:[3,4] },
+      { e:'wink',     t:'{name}って、こういうとき悩むタイプでしょ〜', bond:[3,4] },
+      { e:'excited',  t:'{name}、あたしのアイコンも売ってるよ！ …どう？', bond:4 },
+      { e:'happy',    t:'{name}、あたしのアイコン使ってくれてたら嬉しいな♪', bond:5, w:0.6 },
+      { e:'excited',  t:'{name}、たまには自分にご褒美あげよ！', bond:5 },
+      { e:'normal',   t:'円盤石を買うと新しいモンスターが解放されるよ。' },
+      { e:'happy',    t:'ブリーダーカードはバトル中に使える強い味方だよ♪' },
+      { e:'normal',   t:'アイテムの効果は「詳細」から見られるよ。' },
+      { e:'wink',     t:'ptはブリーダーレベルが上がるともらえるよ！' },
+      { e:'normal',   t:'買っただけだと使えないよ。M/B管理から編成に入れてね。' },
+      { e:'surprise', t:'この値段…ちょっとだけ強気だと思わない？笑', w:0.3 },
+    ],
+  },
+});
+
+// ===== 親密度ぶんのセリフ(報酬・プロフィール・設定・ヘルプ) =====
+addAssistantLinePack({
+  id: 'bondDaily',
+  label: '親密度・ミッションとギフト、設定まわり',
+  lines: {
+    missionsClaimable: [
+      { e:'excited',  t:'{name}、受け取れるものがありますよ♪', bond:[1,2] },
+      { e:'happy',    t:'{name}、ちゃんと進めてますね！ えらい♪', bond:[1,2] },
+      { e:'excited',  t:'{name}、報酬たまってるよ！ もらっちゃお♪', bond:[3,4] },
+      { e:'wink',     t:'{name}、受け取り忘れないでよ〜？', bond:4 },
+      { e:'happy',    t:'{name}、こういうのマメだよね。あたし尊敬してる♪', bond:5 },
+    ],
+    missionsNormal: [
+      { e:'normal',   t:'{name}、デイリーは毎日リセットされますよ。', bond:[1,2] },
+      { e:'happy',    t:'{name}、ちょっとずつでいいと思いますよ♪', bond:[1,2] },
+      { e:'normal',   t:'{name}、今日のぶんもう少しで終わりそう？', bond:[3,4] },
+      { e:'wink',     t:'{name}、全部やらなくても大丈夫だからね！', bond:4 },
+      { e:'happy',    t:'{name}のペースでいいよ。あたしが急かすことじゃないし♪', bond:5 },
+    ],
+    giftClaimable: [
+      { e:'excited',  t:'{name}、ギフトが届いてますよ♪', bond:[1,2] },
+      { e:'happy',    t:'{name}、なにが入ってるか楽しみですね！', bond:[1,2] },
+      { e:'excited',  t:'{name}、ギフト来てる！ 開けてみよ♪', bond:[3,4] },
+      { e:'wink',     t:'{name}、期限あるからね。忘れないうちに！', bond:4 },
+      { e:'happy',    t:'{name}、いいもの入ってるといいね♪', bond:5 },
+    ],
+    giftEmpty: [
+      { e:'normal',   t:'{name}、いまは届いていないみたいです。', bond:[1,2] },
+      { e:'happy',    t:'{name}、また届いたらお知らせしますね♪', bond:[1,2] },
+      { e:'normal',   t:'{name}、いまは空っぽだね。またあとで覗こ！', bond:[3,4] },
+      { e:'wink',     t:'{name}、ここが空だとちょっと寂しいよね〜', bond:4 },
+      { e:'happy',    t:'{name}、そのうち何か来るよ。気長にいこ♪', bond:5 },
+    ],
+    profile: [
+      { e:'happy',    t:'{name}、名前もアイコンもいつでも変えられますよ♪', bond:[1,2] },
+      { e:'normal',   t:'ここで決めた名前がランキングに出ます。', bond:[1,2] },
+      { e:'excited',  t:'{name}、そのアイコン似合ってますよ♪', bond:[1,2] },
+      { e:'happy',    t:'{name}、そのアイコン気に入ってる？', bond:[3,4] },
+      { e:'wink',     t:'{name}って名前、呼びやすくて好きだな〜', bond:[3,4] },
+      { e:'excited',  t:'{name}、たまには気分でアイコン変えてみたら？', bond:4 },
+      { e:'happy',    t:'{name}って呼ぶの、けっこう気に入ってるんだよね♪', bond:5 },
+      { e:'wink',     t:'{name}、あたしのアイコンにしてくれてもいいんだよ？笑', bond:5, w:0.6 },
+      { e:'normal',   t:'ブリーダーレベルはここで確認できるよ。' },
+      { e:'happy',    t:'持ってるアイテムもここから見られるよ♪' },
+    ],
+    settings: [
+      { e:'happy',    t:'{name}、音量はここで調整できますよ♪', bond:[1,2] },
+      { e:'normal',   t:'データ引き継ぎは、たまに控えておくと安心です。', bond:[1,2] },
+      { e:'wink',     t:'{name}、BGMアレンジも試してみてくださいね♪', bond:[1,2] },
+      { e:'normal',   t:'{name}、音まわりは好みでいじっていいと思うよ。', bond:[3,4] },
+      { e:'happy',    t:'{name}、バックアップだけは取っておこ？ 心配だから。', bond:[3,4] },
+      { e:'troubled', t:'{name}、データ消えたらあたし泣いちゃうからね…！', bond:4 },
+      { e:'happy',    t:'{name}、引き継ぎコード控えた？ しつこくてごめんね♪', bond:5 },
+      { e:'wink',     t:'{name}が快適に遊べるのがいちばんだからね！', bond:5 },
+      { e:'normal',   t:'ヘルプもここから開けるよ。' },
+      { e:'happy',    t:'BGMは4曲あるよ。好きなアレンジで遊んでね♪' },
+    ],
+    helpTop: [
+      { e:'happy',    t:'{name}、気になるところから読んでくださいね♪', bond:[1,2] },
+      { e:'normal',   t:'分からないことは、たいていここに書いてありますよ。', bond:[1,2] },
+      { e:'wink',     t:'{name}、読むのが面倒なら聞いてくれてもいいですよ♪', bond:[1,2] },
+      { e:'normal',   t:'{name}、どこが気になる？', bond:[3,4] },
+      { e:'happy',    t:'{name}、距離のところは一回読んどくと強いよ！', bond:[3,4] },
+      { e:'excited',  t:'{name}、ここ書いたのあたしなんだよ？ …ってことにして！', bond:4, w:0.6 },
+      { e:'happy',    t:'{name}、分かんないとこあったら遠慮なく言ってね♪', bond:5 },
+      { e:'wink',     t:'{name}のためなら、何回でも説明するよ！', bond:5, w:0.6 },
+      { e:'normal',   t:'距離と間合い適性は、いちばん大事なところだよ。' },
+      { e:'happy',    t:'カードの半減ルール、意外と見落としがちだよ♪' },
+      { e:'normal',   t:'難易度の倍率は実際の値をそのまま出してるよ。' },
+      { e:'wink',     t:'アイテムやログインボーナスの一覧も載ってるよ！' },
+      { e:'normal',   t:'項目の下に「次：」って出てるところから読み進められるよ。' },
+      { e:'excited',  t:'攻略のヒントのページ、けっこう自信あるんだ♪' },
+      { e:'normal',   t:'更新履歴とヘルプ、どっちも見ておくと迷わないよ。' },
+    ],
+  },
+});
+
+// ===== 親密度ぶんのセリフ(そのほかの画面) =====
+addAssistantLinePack({
+  id: 'bondMisc',
+  label: '親密度・そのほかの画面',
+  lines: {
+    pickHero: [
+      { e:'happy',    t:'{name}、主役になる子を選びましょ♪', bond:[1,2] },
+      { e:'normal',   t:'{name}、育てたい子を選ぶと絆がよく伸びるよ。', bond:[3,4] },
+      { e:'excited',  t:'{name}、今日の主役は誰にする？', bond:5 },
+      { e:'normal',   t:'勇者モンだけが固有技と勇者特性を使えるよ。' },
+      { e:'wink',     t:'編成タブとベースモンタブ、どっちからでも選べるよ♪' },
+    ],
+    mbManagement: [
+      { e:'happy',    t:'{name}、ここから編成もマスモンも見られますよ♪', bond:[1,2] },
+      { e:'normal',   t:'{name}、整理しておくとバトル前が楽だよ。', bond:[3,4] },
+      { e:'wink',     t:'{name}、あたしも一緒に見てあげる♪', bond:5 },
+      { e:'normal',   t:'ベースモンは種の基本データ、マスモンは育てた個体だよ。' },
+    ],
+    masuEnhance: [
+      { e:'happy',    t:'{name}、強化ポイントの振り先を選びましょ♪', bond:[1,2] },
+      { e:'normal',   t:'{name}、迷ったら得意な距離を伸ばすのが無難だよ。', bond:[3,4] },
+      { e:'excited',  t:'{name}、その振り方、攻めてていいね♪', bond:5 },
+      { e:'normal',   t:'振り直したいときはリセットの書が使えるよ。' },
+      { e:'wink',     t:'まとめて振ると一気に強くなるよ♪' },
+    ],
+    fusion: [
+      { e:'happy',    t:'{name}、主に残したい子を選んでくださいね♪', bond:[1,2] },
+      { e:'normal',   t:'{name}、副の子の絆は経験値になって引き継がれるよ。', bond:[3,4] },
+      { e:'troubled', t:'{name}、決める前にもう一回だけ確認しよ？', bond:5 },
+      { e:'normal',   t:'合体後のレベル変化は、確認画面で見られるよ。' },
+      { e:'wink',     t:'固有技を引き継ぐには両方が絆Lv.10以上ね！' },
+    ],
+    rebirth: [
+      { e:'excited',  t:'{name}、転生すると星が増えますよ♪', bond:[1,2] },
+      { e:'happy',    t:'{name}、思いきっていこ！ 見た目は変わらないから。', bond:[3,4] },
+      { e:'excited',  t:'{name}、この瞬間いつ見てもいいよね〜♪', bond:5 },
+      { e:'normal',   t:'レベルは1に戻るけど、上限が上がるよ。' },
+    ],
+    donation: [
+      { e:'troubled', t:'{name}、寄付は取り消せないので慎重に…！', bond:[1,2] },
+      { e:'troubled', t:'{name}、ほんとにこの子でいい？', bond:[3,4] },
+      { e:'crying',   t:'{name}、あたしはちょっと寂しいけど…{name}が決めていいよ。', bond:5 },
+    ],
+    pasture: [
+      { e:'happy',    t:'{name}、村に出す子を選べますよ♪', bond:[1,2] },
+      { e:'excited',  t:'{name}、みんな楽しそうに歩いてるよ〜♪', bond:[3,4] },
+      { e:'happy',    t:'{name}、この景色見てると和むよね♪', bond:5 },
+      { e:'normal',   t:'放牧しても強さには影響しないよ。見た目だけ！' },
+    ],
+    inventory: [
+      { e:'happy',    t:'{name}、持ってるアイテムはここですよ♪', bond:[1,2] },
+      { e:'normal',   t:'{name}、使いどきを逃さないようにね。', bond:[3,4] },
+      { e:'wink',     t:'{name}、ためこむタイプでしょ〜？ 分かるけど♪', bond:5 },
+      { e:'normal',   t:'絆経験値のアイテムは、まとめて使えるよ。' },
+    ],
+    resultWin: [
+      { e:'excited',  t:'{name}、おめでとうございます♪ すごいです！', bond:[1,2] },
+      { e:'happy',    t:'{name}、やったね！ ナイスバトル♪', bond:[3,4] },
+      { e:'excited',  t:'{name}、さすが！ あたしの相棒は違うね〜♪', bond:5 },
+      { e:'happy',    t:'活躍した子はマスモンに登録できるよ！' },
+      { e:'wink',     t:'この勢いでもう1回いっちゃう？' },
+    ],
+    resultLose: [
+      { e:'troubled', t:'{name}、惜しかったですね…次はいけますよ！', bond:[1,2] },
+      { e:'normal',   t:'{name}、ドンマイ！ 次があるって。', bond:[3,4] },
+      { e:'happy',    t:'{name}、気にしないで。あたしはずっと味方だからね♪', bond:5 },
+      { e:'normal',   t:'負けても、進んだWAVEぶんの報酬はもらえるよ。' },
+    ],
+    resultRetire: [
+      { e:'normal',   t:'{name}、休むのも大事ですよ♪', bond:[1,2] },
+      { e:'happy',    t:'{name}、また気が向いたらいこ！', bond:[3,4] },
+      { e:'wink',     t:'{name}、無理しないのがいちばん♪', bond:5 },
+    ],
+    monsterList: [
+      { e:'happy',    t:'{name}、解放済みの種はここで見られますよ♪', bond:[1,2] },
+      { e:'normal',   t:'{name}、まだ持ってない子はマーケットにいるかも。', bond:[3,4] },
+      { e:'excited',  t:'{name}、コンプリート目指しちゃう？', bond:5 },
+      { e:'normal',   t:'絞り込みと並べ替えで探しやすくなるよ。' },
+    ],
+  },
+});
+
+// 束を ASSISTANT_SCENES へ合流させる。二重に合流しないよう、済んだ束は覚えておく
+const ASSISTANT_PACKS_APPLIED = {};
+const applyAssistantLinePacks = () => {
+  for (const pack of ASSISTANT_LINE_PACKS) {
+    if (ASSISTANT_PACKS_APPLIED[pack.id]) continue;
+    if (typeof pack.when === 'function') { try { if (!pack.when()) continue; } catch { continue; } }
+    for (const [sceneKey, lines] of Object.entries(pack.lines)) {
+      const def = ASSISTANT_SCENES[sceneKey];
+      if (!def || !Array.isArray(lines)) continue;
+      if (!Array.isArray(def.lines)) def.lines = [];
+      def.lines = def.lines.concat(lines.map(line => ({ ...line, pack: pack.id })));
+    }
+    ASSISTANT_PACKS_APPLIED[pack.id] = true;
+  }
+};
+// 読み込み時に1回だけ合流させる(以降は ASSISTANT_SCENES を見るだけで済む)
+applyAssistantLinePacks();
+
 // ---------- タップの連打リアクション ----------
 // みゅあをタップするたびに次のセリフへ切り替わるが、短い間に何度も押されたときは
 // こちらへ切り替える。怒りっぱなしにはせず、最後は笑って元に戻す。
@@ -612,25 +1109,47 @@ const ASSISTANT_RECENT = {};
 // 直近いくつを候補から外すか。候補が少ないときに全部外れてしまわないよう上限を決める
 const assistantRecentLimit = (total) => Math.max(1, Math.min(3, total - 2));
 
-// その場面で使うセリフの候補を返す。条件つきのセリフがあればそちらを優先する
-const assistantSceneLines = (scene, condition) => {
+// その場面で使うセリフの候補を返す。
+//   ① 条件つきのセリフ(when)があればそちらを優先する
+//   ② そこから、いまの仲良し度で出せるものだけに絞る
+// 仲良し度で絞った結果が空になったときは、絞る前の一覧をそのまま使う
+// (Lvを増やしたときに「話すことが無い」画面ができないようにするための安全弁)
+const assistantSceneLines = (scene, condition, bondLevel) => {
   const def = (scene && ASSISTANT_SCENES[scene]) || null;
   if (!def) return [];
   const conditional = (condition && def.when && Array.isArray(def.when[condition])) ? def.when[condition] : null;
   const list = (conditional && conditional.length) ? conditional : def.lines;
-  return Array.isArray(list) ? list : [];
+  if (!Array.isArray(list)) return [];
+  const lv = Number.isFinite(bondLevel) ? bondLevel : ASSISTANT_BOND_MIN_LEVEL;
+  const matched = list.filter(line => assistantLineMatchesBond(line, lv));
+  return matched.length > 0 ? matched : list;
+};
+
+// セリフの出やすさ。w を書かなければ 1。小さくすると「たまにしか出ないセリフ」になる
+const assistantLineWeight = (line) => {
+  const w = line && line.w;
+  return (Number.isFinite(w) && w > 0) ? w : 1;
+};
+// 出やすさを考えて1つ選ぶ
+const pickWeighted = (pool) => {
+  const total = pool.reduce((a, x) => a + assistantLineWeight(x), 0);
+  let r = Math.random() * total;
+  for (const line of pool) { r -= assistantLineWeight(line); if (r <= 0) return line; }
+  return pool[pool.length - 1];
 };
 
 // 候補から1つ選ぶ。直近に出したものは候補から外す(候補が少ないときは可能な範囲で)
-const pickAssistantLine = (scene, condition) => {
-  const list = assistantSceneLines(scene, condition);
+const pickAssistantLine = (scene, condition, bondLevel) => {
+  const list = assistantSceneLines(scene, condition, bondLevel);
   if (list.length === 0) return null;
   if (list.length === 1) return list[0];
-  const key = `${scene || ''}|${condition || ''}`;
+  // 仲良し度で候補が変わるので、覚えておく履歴もLvごとに分ける
+  const lv = Number.isFinite(bondLevel) ? bondLevel : ASSISTANT_BOND_MIN_LEVEL;
+  const key = `${scene || ''}|${condition || ''}|${lv}`;
   const recent = ASSISTANT_RECENT[key] || [];
   const fresh = list.filter((_, i) => !recent.includes(i));
   const pool = fresh.length > 0 ? fresh : list;
-  const picked = pool[Math.floor(Math.random() * pool.length)];
+  const picked = pickWeighted(pool);
   const index = list.indexOf(picked);
   ASSISTANT_RECENT[key] = [index, ...recent].slice(0, assistantRecentLimit(list.length));
   return picked;

@@ -1,6 +1,6 @@
 
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
-const { useState, useEffect, useCallback, useMemo, useRef } = React;
+const { useState, useEffect, useCallback, useMemo, useRef, useContext } = React;
 // ==== アイコン: lucide-react UMDが不安定なため、インラインSVGで自己完結 ====
 const _LI = {};
 // lucide公式のSVGパス(strokeベース)。無いものは汎用ドットにフォールバック
@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 22:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 23:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1471,6 +1471,56 @@ const LOGIN_BONUS_DEFAULT = { currentDay:1, lastGrantedPeriod:null, totalLoginDa
 // 日本時間へ直した後に4時間戻した暦日を期間キーにする。03:59と04:00は別の日、
 // 04:00から翌03:59までは同じ日として扱える、比較・保存しやすい YYYY-MM-DD 形式。
 const loginBonusPeriodKey = (now=Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+// ---------- みゅあとの仲良し度(親密度) ----------
+// 遊ぶほどみゅあと打ち解けていく。段階と呼び方・セリフは data/assistants.js が持ち、
+// ここは「どれだけ貯まったか」を数えて端末に残すだけ。
+//
+// 既存の保存キーには一切触れず、新しいキーへ分けて持つ。読み込みは必ず normalize を
+// 通すので、値が無い・壊れている場合もLv1から始まるだけで、ほかのデータには影響しない。
+// 放置しても減らない(久しぶりに開いた人が冷たくされないようにするため)。
+const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
+const ASSISTANT_BOND_EMPTY = { points: 0, day: null, daily: {}, dailyTotal: 0 };
+const normalizeAssistantBond = (value) => {
+  const raw = (value && typeof value === 'object') ? value : {};
+  const daily = {};
+  if (raw.daily && typeof raw.daily === 'object') {
+    for (const [k, v] of Object.entries(raw.daily)) {
+      const n = Math.floor(Number(v));
+      if (Number.isFinite(n) && n > 0) daily[k] = n;
+    }
+  }
+  return {
+    points: Math.max(0, Math.floor(Number(raw.points) || 0)),
+    day: typeof raw.day === 'string' ? raw.day : null,
+    daily,
+    dailyTotal: Math.max(0, Math.floor(Number(raw.dailyTotal) || 0)),
+  };
+};
+// 行動に応じて仲良し度を増やした結果を返す(渡された値は変えない)。
+// 日付が変わっていれば、その日の集計だけをリセットする(貯まった量はそのまま)
+const gainAssistantBond = (state, actionKey, now = Date.now()) => {
+  const cur = normalizeAssistantBond(state);
+  const actions = (typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS) || {};
+  const action = actions[actionKey];
+  const day = loginBonusPeriodKey(now);
+  const sameDay = cur.day === day;
+  const daily = sameDay ? { ...cur.daily } : {};
+  const dailyTotal = sameDay ? cur.dailyTotal : 0;
+  if (!action) return { changed: false, state: { ...cur, day, daily, dailyTotal }, gained: 0 };
+  const used = Math.max(0, Math.floor(Number(daily[actionKey]) || 0));
+  const totalMax = (typeof ASSISTANT_BOND_DAILY_MAX !== 'undefined' && ASSISTANT_BOND_DAILY_MAX) || 30;
+  // 「1回ぶん」「その行動の1日ぶん」「1日の合計」の3つのうち、いちばん小さいところで止める
+  const gain = Math.min(
+    Math.max(0, Math.floor(Number(action.amount) || 0)),
+    Math.max(0, Math.floor(Number(action.dailyMax) || 0) - used),
+    Math.max(0, totalMax - dailyTotal),
+  );
+  if (gain <= 0) return { changed: !sameDay, state: { ...cur, day, daily, dailyTotal }, gained: 0 };
+  daily[actionKey] = used + gain;
+  return { changed: true, state: { points: cur.points + gain, day, daily, dailyTotal: dailyTotal + gain }, gained: gain };
+};
+const assistantBondLevelOf = (points) => (typeof assistantBondLevel === 'function') ? assistantBondLevel(points) : 1;
+
 const normalizeLoginBonus = (value) => ({
   currentDay: Number.isInteger(value?.currentDay) && value.currentDay >= 1 && value.currentDay <= 7 ? value.currentDay : 1,
   lastGrantedPeriod: typeof value?.lastGrantedPeriod === 'string' ? value.lastGrantedPeriod : null,
@@ -1684,6 +1734,14 @@ const helpDataRows = (id) => {
     case 'loginBonus':
       return ((typeof LOGIN_BONUS_REWARDS !== 'undefined' && LOGIN_BONUS_REWARDS) || [])
         .map((rewards, i) => [`${i + 1}日目`, rewards.map(giftRewardText).join(' ／ ')]);
+    // みゅあとの仲良し度。段階も増える行動も data/assistants.js の実データから作るので、
+    // 値を変えたときにヘルプだけ古くなることがない
+    case 'assistantBond':
+      return ((typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || [])
+        .map(s => [`Lv.${s.level} ${s.title}`, `${s.need} から ／ 呼び方「${String(s.call).replace('{name}', 'あなたの名前')}」 ／ ${s.tone}`]);
+    case 'assistantBondActions':
+      return Object.values((typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS) || {})
+        .map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
     case 'missionsDaily':
     case 'missionsWeekly': {
       const defs = ((typeof MISSION_DEFS !== 'undefined' && MISSION_DEFS) || {})[id === 'missionsDaily' ? 'daily' : 'weekly'] || [];
@@ -1702,6 +1760,8 @@ const HELP_DATA_TITLES = {
   loginBonus: '7日間のログインボーナス',
   missionsDaily: 'デイリーミッション',
   missionsWeekly: 'ウィークリーミッション',
+  assistantBond: 'みゅあとの仲良し度の段階',
+  assistantBondActions: '仲良し度が増える行動',
 };
 // ===== 助手(ナビゲーター) ここから =====
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。
@@ -1715,6 +1775,20 @@ const assistantById = (id) => ASSISTANT_LIST.find(a => a.id === id)
   || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : ''))
   || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
 const assistantSceneById = (key) => (key && ASSISTANT_SCENE_MAP[key]) || null;
+// ---- 親密度(みゅあとの仲良し度)を各画面へ配る ----
+// 吹き出しはどの画面にも置くので、画面ごとに props を渡さずに済むよう Context で配る。
+// 画面側はこれまでどおり <AssistantBubble scene="…"/> の1行だけでよい。
+//   level  … いまの親密度Lv(呼び方と、出るセリフが変わる)
+//   name   … プレイヤー名。セリフの中の {name} が呼び方に置き換わる
+//   onTalk … 顔をタップして話しかけたときに呼ぶ(仲良し度が少し増える)
+const ASSISTANT_BOND_FALLBACK = { points: 0, level: 1, name: '', onTalk: null };
+const AssistantBondContext = React.createContext(ASSISTANT_BOND_FALLBACK);
+const useAssistantBond = () => useContext(AssistantBondContext) || ASSISTANT_BOND_FALLBACK;
+// セリフの中の {name} を、そのときの呼び方へ置き換える。
+// data/assistants.js が読めなかった場合でも、文が壊れないように {name} だけは消す
+const assistantSpeakText = (text, name, level) => (typeof assistantSpeak === 'function')
+  ? assistantSpeak(text, name, level)
+  : String(text == null ? '' : text).replace(/\{name\}/g, String(name || 'キミ'));
 // 表情ごとの顔画像のパスを決める。用意されていない表情は data/assistants.js 側で
 // 既定の表情(normal)へ落ちる。この関数が無い(古いデータの)ときは画像なし扱いにする
 const assistantFaceSrc = (who, expression) => (typeof assistantFaceImage === 'function')
@@ -1760,13 +1834,15 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   const sceneDef = assistantSceneById(scene);
   const who = assistantById(assistantId || sceneDef?.assistantId);
   const color = accent || who.accent || ASSISTANT_FALLBACK.accent;
+  // 親密度。呼び方と、候補に入るセリフがこれで変わる
+  const bond = useAssistantBond();
   // 場面ごとに用意した複数のセリフから1つ選ぶ。同じ画面でも毎回ちがうことを話す。
-  // 選び直すのは「場面」か「条件」が変わったときだけ。ほかの理由で再描画されるたびに
-  // セリフが入れ替わると、読んでいる途中で文が変わってしまう
+  // 選び直すのは「場面」「条件」「親密度Lv」が変わったときだけ。ほかの理由で再描画される
+  // たびにセリフが入れ替わると、読んでいる途中で文が変わってしまう
   const pickedRef = useRef(null);
-  const pickKey = `${scene || ''}|${condition || ''}`;
+  const pickKey = `${scene || ''}|${condition || ''}|${bond.level}`;
   if (pickedRef.current?.key !== pickKey) {
-    pickedRef.current = { key: pickKey, value: (typeof pickAssistantLine === 'function') ? pickAssistantLine(scene, condition) : null };
+    pickedRef.current = { key: pickKey, value: (typeof pickAssistantLine === 'function') ? pickAssistantLine(scene, condition, bond.level) : null };
   }
   // 顔をタップすると次のセリフへ送る。短い間に何度も押されたら連打リアクションに入る。
   // spam は { step, recovering } で、null のときは通常のセリフを話している
@@ -1780,6 +1856,8 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   const spamLines = (typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES) || [];
   const spamRecover = (typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER) || null;
   const onFaceTap = () => {
+    // 話しかけると少しだけ仲良くなる(1日に増える量は data/assistants.js 側で頭打ち)
+    if (typeof bond.onTalk === 'function') bond.onTalk();
     const now = Date.now();
     const windowMs = (typeof ASSISTANT_SPAM_WINDOW_MS !== 'undefined' && ASSISTANT_SPAM_WINDOW_MS) || 1200;
     const threshold = (typeof ASSISTANT_SPAM_THRESHOLD !== 'undefined' && ASSISTANT_SPAM_THRESHOLD) || 3;
@@ -1799,12 +1877,13 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
       return;
     }
     // ふつうのタップ: 次のセリフへ切り替える(表情も変わる)
-    if (typeof pickAssistantLine === 'function') setTapped(pickAssistantLine(scene, condition));
+    if (typeof pickAssistantLine === 'function') setTapped(pickAssistantLine(scene, condition, bond.level));
   };
   const spamLine = spam ? (spam.recovering ? spamRecover : spamLines[spam.step]) : null;
   const shown = spamLine || tapped || pickedRef.current.value;
   const picked = pickedRef.current.value;
-  const text = line || shown?.t || who.greeting || '';
+  // セリフの中の {name} は、そのときの呼び方(さん付け・呼び捨て・ちん付け)になる
+  const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level);
   const face = expression || shown?.e || null;
   const paragraphs = detail || sceneDef?.detail || null;
   const ref = helpRef || sceneDef?.help || null;
@@ -2400,6 +2479,11 @@ function MonsterHeroGame() {
   const [assistantDebug, setAssistantDebug] = useState(null);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
+  // デバッグ表示のときだけ使う「このLvだとどう見えるか」。null なら実際のLv
+  const [assistantDebugLevel, setAssistantDebugLevel] = useState(null);
+  // デバッグのランダムテストで、どの場面を引くか
+  const [assistantDebugScene, setAssistantDebugScene] = useState('home');
+  const [assistantDebugRolls, setAssistantDebugRolls] = useState([]);
   // デバッグ: はじめての設定を「見るだけ」で通しで確認する。
   // 名前・アイコン・完了フラグのどれも保存しないので、いま遊んでいるデータは変わらない
   const [onboardingPreview, setOnboardingPreview] = useState(false);
@@ -2657,6 +2741,11 @@ function MonsterHeroGame() {
   missionsRef.current = missions;
   const [missionTab, setMissionTab] = useState('daily');
   const missionClaimingRef = useRef(false);
+  // みゅあとの仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる
+  const [assistantBond, setAssistantBond] = useState(ASSISTANT_BOND_EMPTY);
+  const assistantBondRef = useRef(ASSISTANT_BOND_EMPTY);
+  // 親密度Lvが上がった直後かどうか。次にHOMEを開いたときだけ、みゅあがそのことに触れる
+  const [assistantBondUp, setAssistantBondUp] = useState(false);
   const [loginBonusPopup, setLoginBonusPopup] = useState(null);
   const [loginBonusState, setLoginBonusState] = useState(LOGIN_BONUS_DEFAULT); // 7日周期の進み具合(一覧表示用)
   const [showLoginBonusList, setShowLoginBonusList] = useState(false);
@@ -3735,6 +3824,12 @@ function MonsterHeroGame() {
       const savedOwnedItems = await storeGet('mh_owned_items', {}, false);
       setOwnedItems(savedOwnedItems);
       const savedGifts = await storeGet('mh_gifts', [], false);
+      // みゅあとの仲良し度。開いた日のぶんをここで1回だけ足す
+      const savedBond = normalizeAssistantBond(await storeGet(ASSISTANT_BOND_KEY, null, false));
+      const bondLogin = gainAssistantBond(savedBond, 'login');
+      assistantBondRef.current = bondLogin.state;
+      setAssistantBond(bondLogin.state);
+      if (bondLogin.changed) await storeSet(ASSISTANT_BOND_KEY, bondLogin.state, false);
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
       // 不具合のお詫びも同じギフトボックスへ入れる。既に届いていれば何もしない
@@ -4156,6 +4251,42 @@ function MonsterHeroGame() {
 
   // マーケットアイテムが購入済み(=解放済み)かどうか。typeによって参照する解放リストが異なる。
   // type:'item'の消耗品は何度でも買えるため、常にfalse(所持数はownedItemsで別途表示)
+  // 行動に応じてみゅあとの仲良し度を増やす。上限に達していれば何も起きない。
+  // 続けて呼ばれても取りこぼさないよう、いまの値は ref から読む
+  const addAssistantBond = useCallback((actionKey) => {
+    const before = assistantBondLevelOf(assistantBondRef.current.points);
+    const result = gainAssistantBond(assistantBondRef.current, actionKey);
+    if (!result.changed) return;
+    assistantBondRef.current = result.state;
+    setAssistantBond(result.state);
+    // Lvが上がったら、次にHOMEを開いたときにみゅあがそのことに触れる
+    if (assistantBondLevelOf(result.state.points) > before) setAssistantBondUp(true);
+    try { storeSet(ASSISTANT_BOND_KEY, result.state, false); } catch {}
+  }, []);
+  const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
+  // 「Lvが上がった」お知らせは、HOMEで1回見せたら終わりにする。
+  // HOME以外で上がったときも、次にHOMEへ帰ってきたときに出るようにしている
+  const assistantBondUpShownRef = useRef(false);
+  useEffect(() => {
+    if (gameState === 'HOME') { if (assistantBondUp) assistantBondUpShownRef.current = true; return; }
+    if (assistantBondUpShownRef.current) { assistantBondUpShownRef.current = false; setAssistantBondUp(false); }
+  }, [gameState, assistantBondUp]);
+  // デバッグ専用。仲良し度を直接書き換える(セーブデータのほかの項目には触らない)
+  const debugSetAssistantBond = useCallback((points) => {
+    const cur = normalizeAssistantBond(assistantBondRef.current);
+    const next = { ...cur, points: Math.max(0, Math.floor(Number(points) || 0)) };
+    assistantBondRef.current = next;
+    setAssistantBond(next);
+    try { storeSet(ASSISTANT_BOND_KEY, next, false); } catch {}
+  }, []);
+  // 吹き出しへ配る値。画面側は <AssistantBubble scene="…"/> のままでよい
+  const assistantBondValue = useMemo(() => ({
+    points: assistantBond.points,
+    level: assistantBondLevelNow,
+    name: breederName,
+    onTalk: () => addAssistantBond('talk'),
+  }), [assistantBond.points, assistantBondLevelNow, breederName, addAssistantBond]);
+
   const isMarketItemOwned = (item) => {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
     if (item.type === 'breeder') return unlockedTeachingIds.includes(item.id);
@@ -4998,6 +5129,7 @@ function MonsterHeroGame() {
         return result.gift;
       });
       if (!claimedCount) return;
+      for (let i = 0; i < claimedCount; i++) addAssistantBond('gift');
       // 報酬検証を全件終えた確定値だけを保存し、画面stateも同じ値へ揃える。
       await storeSet('mh_gold', balances.gold, false);
       await storeSet('mh_breeder_points', balances.breederPoints, false);
@@ -5080,6 +5212,7 @@ function MonsterHeroGame() {
       await storeSet('mh_gifts',nextGifts,false);
       await storeSet('mh_missions',state,false);
       missionsRef.current=state; setGifts(nextGifts); setMissions(state);
+      targets.forEach(()=>addAssistantBond('mission'));
       return targets.length;
     }finally{missionClaimingRef.current=false;}
   };
@@ -5964,6 +6097,8 @@ function MonsterHeroGame() {
   // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
   // 必ず呼び出し元が保持している最新のローカル値を渡す
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey=null, heroForDeck=null, aptPctOverride=null) => {
+    // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
+    if (w === 1 && !forcedEnemyKey) { addAssistantBond('battle'); addAssistantBond(isQuickMode(runMode) ? 'quick' : 'challenge'); }
     setWave(w);
     const currentSlots = s||slots;
     // 通常周回の初戦だけ、デッキ編成で勇者モンを置いた初期間合いから開始する。
@@ -6345,6 +6480,8 @@ function MonsterHeroGame() {
   if (bootPhase === 'ENTERING_GAME') return <><main className="mh-entering"><img src="data/images/title-screen-clean.PNG" alt=""/><div className="mh-gate-core"></div><div className="mh-gate-particles"></div><div className="mh-gate-flash"></div>{enteringSlow&&<p>世界を構築しています…</p>}</main>{updateNotice}</>;
 
   return (
+    // みゅあとの仲良し度をここから配る。各画面は <AssistantBubble scene="…"/> を置くだけでよい
+    <AssistantBondContext.Provider value={assistantBondValue}>
     <div onPointerDown={(e)=>{const rect=e.currentTarget.getBoundingClientRect(); spawnRipple(e.clientX-rect.left, e.clientY-rect.top);}} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={{height:'100%'}}>
       {updateNotice}
       <div className="relative z-10 h-full flex flex-col" style={screenShake?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
@@ -6368,8 +6505,8 @@ function MonsterHeroGame() {
             </header>
             <nav className="mh-home-facilities" aria-label="拠点施設">
               <button className={`mh-home-facility management${spotClass('management')}`} onClick={()=>{setManagementTab('monster');setGameState('MB_MANAGEMENT');}} aria-label="M/B管理"><span><Layers size={18}/>M/B管理</span></button>
-              <button className={`mh-home-facility temple${spotClass('temple')}`} onClick={()=>setGameState('TEMPLE')} aria-label="神殿"><span><Sparkles size={18}/>神殿</span></button>
-              <button className={`mh-home-facility market${spotClass('market')}`} onClick={()=>setGameState('BREEDER_MARKET')} aria-label="マーケット"><span><ShoppingBag size={17}/>マーケット</span></button>
+              <button className={`mh-home-facility temple${spotClass('temple')}`} onClick={()=>{addAssistantBond('temple');setGameState('TEMPLE');}} aria-label="神殿"><span><Sparkles size={18}/>神殿</span></button>
+              <button className={`mh-home-facility market${spotClass('market')}`} onClick={()=>{addAssistantBond('market');setGameState('BREEDER_MARKET');}} aria-label="マーケット"><span><ShoppingBag size={17}/>マーケット</span></button>
               <button className="mh-home-facility training" onClick={openTrainingInfo} aria-label="修行（準備中）"><span>🎲 修行<small>準備中</small></span></button>
               <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={()=>{setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');}} aria-label="バトル"><span><Sword size={25}/>バトル</span></button>
             </nav>
@@ -6380,7 +6517,8 @@ function MonsterHeroGame() {
               {giftClaimableCount(gifts)>0&&<em>{giftClaimableCount(gifts)}</em>}
             </button>
             <button onClick={openChangelog} className="mh-home-update"><RefreshCcw size={15}/>更新履歴{hasUnreadChangelog&&<em className="mh-unread-badge" aria-label="未読あり">!</em>}</button>
-            <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={masuMons.length===0?'firstRun':null} compact/></div>
+            {/* 仲良し度が上がった直後だけ、みゅあがそのことに触れる(HOMEを離れると元に戻る) */}
+            <div className={`mh-home-assistant${spotClass('assistant')}`}><AssistantBubble scene="home" condition={assistantBondUp?'bondUp':(masuMons.length===0?'firstRun':null)} compact/></div>
           </main>
         )}
 
@@ -6508,7 +6646,7 @@ function MonsterHeroGame() {
               <div className="shrink-0 w-full h-10 mb-1">
                 {quick
                   ? <div className="w-full h-10 rounded-xl bg-slate-900/60 border border-white/5 text-slate-500 font-black text-[10px] flex items-center justify-center px-2 whitespace-nowrap">クイックモードはランキング対象外です</div>
-                  : <button onClick={()=>{setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className="w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2"><span className="flex-1 text-center whitespace-nowrap">🏆 ランキングを見る（チャレンジモード）</span><ChevronRight size={16} className="shrink-0"/></button>}
+                  : <button onClick={()=>{addAssistantBond('ranking');setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className="w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2"><span className="flex-1 text-center whitespace-nowrap">🏆 ランキングを見る（チャレンジモード）</span><ChevronRight size={16} className="shrink-0"/></button>}
               </div>
             );})()}
             {battleMenuTab==='difficulty'&&(()=>{
@@ -6588,6 +6726,8 @@ function MonsterHeroGame() {
                   <button onClick={()=>setAssistantDebug('expressions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全表情確認</button>
                   <button onClick={()=>setAssistantDebug('conditions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">条件コメント確認</button>
                   <button onClick={()=>setAssistantDebug('spam')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">連打リアクション確認</button>
+                  <button onClick={()=>setAssistantDebug('bond')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">親密度・呼び方確認</button>
+                  <button onClick={()=>setAssistantDebug('random')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">ランダムテスト</button>
                 </div>
                 {/* 初回状態へ戻すのは、はじめての案内をもう一度見るためのもの。
                     セーブデータ(モンスター・ダイヤ・記録)には一切触らない */}
@@ -6657,6 +6797,27 @@ function MonsterHeroGame() {
                 <Package size={12} className="text-teal-400"/><span className="text-[10px] font-black text-teal-200">アイテム（{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個）</span>
               </button>
             </div>
+            {/* みゅあとの仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる */}
+            {onboarded&&!onboardingPreview&&(()=>{
+              const stage=(typeof assistantBondStageByLevel==='function')?assistantBondStageByLevel(assistantBondLevelNow):null;
+              const next=(typeof assistantBondNext==='function')?assistantBondNext(assistantBond.points):null;
+              const from=stage?stage.need:0;
+              const width=next?Math.max(0,Math.min(100,((assistantBond.points-from)/Math.max(1,next.need-from))*100)):100;
+              return(
+                <div className="bg-slate-900/60 border border-pink-500/30 rounded-2xl p-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <AssistantFace who={assistantById()} size={40} accent="#f472b6" expression={assistantBondLevelNow>=4?'excited':assistantBondLevelNow>=2?'happy':'normal'}/>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[9px] font-black text-pink-300 tracking-widest">みゅあとの仲良し度</div>
+                      <div className="text-[11px] font-black text-white">Lv.{assistantBondLevelNow}　{stage?stage.title:''}</div>
+                    </div>
+                    <div className="shrink-0 text-right"><div className="text-[8px] text-slate-500">呼び方</div><div className="text-[11px] font-black text-pink-200">{assistantSpeakText('{name}',breederName,assistantBondLevelNow)}</div></div>
+                  </div>
+                  <div className="h-1.5 mt-2 rounded-full bg-black/50 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:'linear-gradient(90deg,#f472b6,#fbbf24)'}}/></div>
+                  <div className="text-[8px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'いちばん仲良し！'}</div>
+                </div>
+              );
+            })()}
             <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-2 px-1 shrink-0">難易度別 記録</div>
             <div className="flex flex-col gap-2 mb-4">
               {Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>(
@@ -8721,11 +8882,33 @@ function MonsterHeroGame() {
         const exprs=(typeof ASSISTANT_EXPRESSIONS!=='undefined'&&ASSISTANT_EXPRESSIONS)||[];
         const spam=[...((typeof ASSISTANT_SPAM_LINES!=='undefined'&&ASSISTANT_SPAM_LINES)||[]),
                     ...((typeof ASSISTANT_SPAM_RECOVER!=='undefined'&&ASSISTANT_SPAM_RECOVER)?[ASSISTANT_SPAM_RECOVER]:[])];
-        const titles={lines:'全助手コメント',expressions:'全表情',conditions:'条件コメント',spam:'連打リアクション'};
-        const row=(l,i)=>(
-          <div key={i} className="flex items-start gap-2 px-3 py-2 border-t border-white/5">
+        const titles={lines:'全助手コメント',expressions:'全表情',conditions:'条件コメント',spam:'連打リアクション',bond:'親密度と呼び方',random:'ランダムテスト'};
+        const stages=(typeof ASSISTANT_BOND_LEVELS!=='undefined'&&ASSISTANT_BOND_LEVELS)||[];
+        // 見ているLv。切り替えるとセリフの絞り込みも呼び方も、そのLvのものになる
+        const viewLevel=assistantDebugLevel!=null?assistantDebugLevel:assistantBondLevelNow;
+        const speak=(t)=>assistantSpeakText(t,breederName,viewLevel);
+        const matches=(l)=>(typeof assistantLineMatchesBond==='function')?assistantLineMatchesBond(l,viewLevel):true;
+        const bondText=(l)=>Array.isArray(l.bond)?`Lv${l.bond[0]}〜${l.bond[1]}`:(l.bond!=null?`Lv${l.bond}以上`:'全Lv');
+        const row=(l,i)=>{
+          const on=matches(l);
+          return (
+          <div key={i} className={`flex items-start gap-2 px-3 py-2 border-t border-white/5 ${on?'':'opacity-35'}`}>
             <div className="shrink-0"><AssistantFace who={who} size={40} accent={who.accent} expression={l.e}/></div>
-            <div className="min-w-0"><div className="text-[8px] font-black text-slate-500">{l.e}</div><div className="text-[11px] text-white leading-relaxed">{l.t}</div></div>
+            <div className="min-w-0">
+              <div className="text-[8px] font-black text-slate-500">{l.e} ／ {bondText(l)}{l.w!=null?` ／ 出やすさ${l.w}`:''}{l.pack?` ／ ${l.pack}`:''}</div>
+              <div className="text-[11px] text-white leading-relaxed">{speak(l.t)}</div>
+            </div>
+          </div>);
+        };
+        // Lvの切替チップ。どの表示でも上に出しておく
+        const levelChips=(
+          <div className="shrink-0 flex flex-wrap items-center gap-1 px-3 py-2 border-b border-white/10">
+            <span className="text-[8px] font-black text-slate-500">見るLv</span>
+            <button onClick={()=>setAssistantDebugLevel(null)} className={`px-2 min-h-[26px] rounded-full text-[9px] font-black ${assistantDebugLevel==null?'bg-pink-600 text-white':'bg-slate-900 border border-white/10 text-slate-400'}`}>いま(Lv{assistantBondLevelNow})</button>
+            {stages.map(s=>(
+              <button key={s.level} onClick={()=>setAssistantDebugLevel(s.level)} className={`px-2 min-h-[26px] rounded-full text-[9px] font-black ${assistantDebugLevel===s.level?'bg-pink-600 text-white':'bg-slate-900 border border-white/10 text-slate-400'}`}>Lv{s.level}</button>
+            ))}
+            <span className="text-[9px] font-black text-pink-200 ml-auto">呼び方: {assistantSpeakText('{name}',breederName,viewLevel)}</span>
           </div>);
         return(
         <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:95000,paddingTop:'calc(.75rem + env(safe-area-inset-top))'}} role="dialog" aria-modal="true">
@@ -8733,6 +8916,7 @@ function MonsterHeroGame() {
             <button onClick={()=>setAssistantDebug(null)} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
             <h2 className="text-sm font-black text-pink-300">💖 {titles[assistantDebug]}</h2>
           </div>
+          {assistantDebug!=='expressions'&&assistantDebug!=='spam'&&levelChips}
           <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
             {assistantDebug==='expressions'&&(
               <div className="grid grid-cols-4 gap-2 p-3">{exprs.map(e=>(
@@ -8748,9 +8932,81 @@ function MonsterHeroGame() {
                   ? Object.entries(def.when||{}).flatMap(([c,ls])=>ls.map(l=>({...l,t:`[${c}] ${l.t}`})))
                   : (def.lines||[]);
                 if(list.length===0) return null;
-                return(<section key={key}><div className="px-3 py-1.5 bg-slate-900 text-[10px] font-black text-pink-300 sticky top-0">{key}（{list.length}件）</div>{list.map((l,i)=>row(l,i))}</section>);
+                const usable=list.filter(matches).length;
+                return(<section key={key}><div className="px-3 py-1.5 bg-slate-900 text-[10px] font-black text-pink-300 sticky top-0">{key}（{list.length}件 ／ このLvで{usable}件）</div>{list.map((l,i)=>row(l,i))}</section>);
               })}</div>
             )}
+            {/* 親密度そのものの確認と変更。セーブデータのほかの項目には触らない */}
+            {assistantDebug==='bond'&&(()=>{
+              const points=assistantBond.points;
+              const next=(typeof assistantBondNext==='function')?assistantBondNext(points):null;
+              return(<div className="p-3 space-y-3">
+                <div className="rounded-2xl border border-pink-500/40 bg-slate-900 p-3">
+                  <div className="text-[10px] font-black text-pink-300 mb-1">いまの仲良し度</div>
+                  <div className="text-[12px] text-white font-black">{points} ポイント ／ Lv{assistantBondLevelNow}（{(typeof assistantBondStageByLevel==='function'?assistantBondStageByLevel(assistantBondLevelNow):{}).title||''}）</div>
+                  <div className="text-[9px] text-slate-400 mt-1">{next?`次のLv${next.level}まで あと${next.remain}`:'いちばん上まで来ています'}</div>
+                  <div className="text-[9px] text-slate-400">今日ぶん: {assistantBond.dailyTotal} / {(typeof ASSISTANT_BOND_DAILY_MAX!=='undefined'&&ASSISTANT_BOND_DAILY_MAX)||0}（{assistantBond.day||'未記録'}）</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 mb-1">Lvを直接変える</div>
+                  <div className="grid grid-cols-3 gap-2">{stages.map(s=>(
+                    <button key={s.level} onClick={()=>debugSetAssistantBond(s.need)} className={`min-h-[46px] rounded-xl text-[10px] font-black ${assistantBondLevelNow===s.level?'bg-pink-600 text-white':'bg-slate-900 border border-white/10 text-slate-300'}`}>Lv{s.level}<br/><span className="text-[8px] font-bold">{s.title}</span></button>
+                  ))}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 mb-1">Lvごとの呼び方と話し方</div>
+                  <div className="rounded-2xl bg-black/40 border border-white/5 overflow-hidden">{stages.map(s=>(
+                    <div key={s.level} className="flex gap-2 px-3 py-2 border-t border-white/5 first:border-t-0">
+                      <span className="shrink-0 w-8 text-[10px] font-black text-pink-300">Lv{s.level}</span>
+                      <span className="flex-1 min-w-0"><b className="text-[11px] text-white">{assistantSpeakText('{name}',breederName,s.level)}</b><span className="block text-[9px] text-slate-400">{s.tone}</span></span>
+                      <span className="shrink-0 text-[9px] text-slate-500">{s.need}〜</span>
+                    </div>
+                  ))}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 mb-1">増える行動と1日の上限</div>
+                  <div className="rounded-2xl bg-black/40 border border-white/5 overflow-hidden">{Object.entries((typeof ASSISTANT_BOND_ACTIONS!=='undefined'&&ASSISTANT_BOND_ACTIONS)||{}).map(([k,a])=>(
+                    <div key={k} className="flex gap-2 px-3 py-1.5 border-t border-white/5 first:border-t-0">
+                      <span className="flex-1 text-[10px] text-white">{a.label}</span>
+                      <span className="shrink-0 text-[9px] text-slate-400">1回+{a.amount} ／ 1日{a.dailyMax}まで（今日 {assistantBond.daily[k]||0}）</span>
+                    </div>
+                  ))}</div>
+                </div>
+                <button onClick={()=>{ if(!window.confirm('みゅあとの仲良し度を0に戻します。ほかのセーブデータは消えません。よろしいですか？')) return; debugSetAssistantBond(0); }} className="w-full min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">親密度をリセット（セーブは消えません）</button>
+              </div>);
+            })()}
+            {/* ランダムテスト。同じ場面を何度も引いて、続けて同じセリフが出ないかを見る */}
+            {assistantDebug==='random'&&(()=>{
+              const keys=Object.keys(scenes);
+              const roll=()=>{
+                const out=[];
+                for(let i=0;i<20;i++){
+                  const l=(typeof pickAssistantLine==='function')?pickAssistantLine(assistantDebugScene,null,viewLevel):null;
+                  if(l) out.push(l);
+                }
+                setAssistantDebugRolls(out);
+              };
+              return(<div className="p-3 space-y-3">
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 mb-1">場面を選ぶ</div>
+                  <div className="flex flex-wrap gap-1">{keys.map(k=>(
+                    <button key={k} onClick={()=>{setAssistantDebugScene(k);setAssistantDebugRolls([]);}} className={`px-2 min-h-[28px] rounded-full text-[9px] font-black ${assistantDebugScene===k?'bg-pink-600 text-white':'bg-slate-900 border border-white/10 text-slate-400'}`}>{k}</button>
+                  ))}</div>
+                </div>
+                <button onClick={roll} className="w-full min-h-[46px] rounded-xl bg-pink-700 text-white text-[11px] font-black active:scale-95">20回引いてみる</button>
+                {assistantDebugRolls.length>0&&(
+                  <div className="rounded-2xl bg-black/40 border border-white/5 overflow-hidden">
+                    {assistantDebugRolls.map((l,i)=>(
+                      <div key={i} className={`flex gap-2 px-3 py-1.5 border-t border-white/5 first:border-t-0 ${i>0&&assistantDebugRolls[i-1].t===l.t?'bg-red-950/50':''}`}>
+                        <span className="shrink-0 w-5 text-[9px] font-black text-slate-500">{i+1}</span>
+                        <span className="flex-1 text-[10px] text-white leading-relaxed">{speak(l.t)}</span>
+                      </div>
+                    ))}
+                    <div className="px-3 py-2 text-[9px] text-slate-500 leading-relaxed">続けて同じセリフが出た行は赤くなります（ここが赤くならないのが正しい状態です）。</div>
+                  </div>
+                )}
+              </div>);
+            })()}
           </div>
         </div>);
       })()}
@@ -9242,6 +9498,7 @@ function MonsterHeroGame() {
           </div>
         );})()}
     </div>
+    </AssistantBondContext.Provider>
   );
 }
 

@@ -28,7 +28,7 @@ const dataTablePrelude = [
   'const SKIP_TICKETS = SKIP_TICKET_BY_DIFFICULTY;',
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む
-  "const { useState, useEffect, useRef } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"
+  "const { useState, useEffect, useRef, useContext } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"
   + "const ChevronRight = ({size}) => React.createElement('i', { 'data-size': size });\nconst X = ChevronRight;",
   assistantsData,
   grab(source, '// ===== 助手(ナビゲーター) ここから =====', '// ===== 助手(ナビゲーター) ここまで ====='),

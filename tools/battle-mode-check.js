@@ -151,7 +151,7 @@ check('クイックは経験値・ダイヤだけ1.5倍と分かる表示', has(
 // 見出しが2行に折り返さないよう、倍率は3枠までにして折り返しも禁じる
 check('倍率の枠は3つで1行に収める', has('<div className="grid grid-cols-3 gap-1 mt-1.5">') && has('text-center text-[8px] text-slate-400 whitespace-nowrap'));
 check('ランキングボタンはチャレンジのときだけ出す',
-  has("? <div className=\"w-full h-10 rounded-xl bg-slate-900/60") && has(": <button onClick={()=>{setBattleMenuTab('ranking')")
+  has("? <div className=\"w-full h-10 rounded-xl bg-slate-900/60") && has(": <button onClick={()=>{addAssistantBond('ranking');setBattleMenuTab('ranking')")
     && has('🏆 ランキングを見る（チャレンジモード）'));
 // モードのタブのすぐ下へ移し、タブ2つを合わせたのと同じ幅にする。
 // クイックでも同じ高さの案内を出し、下に続く表示の位置がモードでずれないようにする
