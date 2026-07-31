@@ -68,6 +68,32 @@ const STARTER_TEACHING_IDS = ['oryo','dra','cadmium','mua','atsu','myaru'];
 // (2)OKが出たら円盤石(DISC_STONE_BASEに全身を重ねたもの)を作ってユーザーに提示、OKが出るまで確定しない→
 // (3)OKが出たらBREEDER_MARKET_ITEMSに追加。
 // 本体(ALL_PLAYER_MONSTERS)の実装は別途行う。
+
+// 助手みゅあの顔アイコンを、プロフィール画像としても選べるようにする。
+// 画像は data/assistants.js が吹き出しに使っているものと同じ(images/assistant/face/)。
+// ただし index.html では breeder.js のほうが先に読み込まれるため、assistants.js の
+// 関数は使えない。ファイル名を変えるときは両方を直すこと。
+//
+// 既存の「みゅあのアイコン」(id:'mua') は別の絵で、購入済みの人がいるのでそのまま残す。
+// こちらは id を myua_* に分けているので、既存の保存データには影響しない。
+const MYUA_ICON_EXPRESSIONS = [
+  ['normal',   'ふつう'],
+  ['happy',    '笑顔'],
+  ['wink',     'ウィンク'],
+  ['excited',  'ごきげん'],
+  ['surprise', 'びっくり'],
+  ['troubled', '困り顔'],
+  ['angry',    'おこ'],
+  ['crying',   'なみだ'],
+];
+const MYUA_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `myua_${key}`,
+  name: `みゅあ（${label}）のアイコン`,
+  type: 'icon',
+  icon: `images/assistant/face/myua_${key}.PNG`,
+  cost: 1,
+}));
+
 const BREEDER_MARKET_ITEMS = [
   { id:'oryo',    name:"おりょうのアイコン",     type:'icon', icon:ORYO_FACE_ICON,    cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
@@ -107,7 +133,9 @@ const BREEDER_MARKET_ITEMS = [
   // (tools/skip-ticket-check.js が実際の獲得ダイヤ・経験値から計算して照合している)。
   { id:'skip_ticket_jo',  name:"スキップチケット・序", type:'item', emoji:"⏩", cost:1600, usage:'battleSkip', skipDifficulty:'Normal', desc:"バトルのNormalで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
   { id:'skip_ticket_ha',  name:"スキップチケット・破", type:'item', emoji:"⏭️", cost:2000, usage:'battleSkip', skipDifficulty:'Hard',   desc:"バトルのHardで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
-  { id:'skip_ticket_kyu', name:"スキップチケット・急", type:'item', emoji:"⚡", cost:2550, usage:'battleSkip', skipDifficulty:'Expert', desc:"バトルのExpertで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" }
+  { id:'skip_ticket_kyu', name:"スキップチケット・急", type:'item', emoji:"⚡", cost:2550, usage:'battleSkip', skipDifficulty:'Expert', desc:"バトルのExpertで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
+  // 助手みゅあの表情アイコン(8種)。アイコンタブの最後に並ぶ
+  ...MYUA_MARKET_ICONS
 ];
 // 難易度キー → その難易度で使えるスキップチケットのid
 const SKIP_TICKET_BY_DIFFICULTY = Object.freeze(Object.fromEntries(

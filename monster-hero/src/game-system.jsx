@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 22:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 22:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6717,7 +6717,9 @@ function MonsterHeroGame() {
                     // 高さを決めた枠に入れて並びを崩さない。購入ボタンはmt-autoでカード下端に揃える
                     <div key={item.id} className={`rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
                       <div className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>:<span className="text-xl">{item.emoji}</span>}</div>
-                      <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'26px'}}>{item.name}</div>
+                      {/* 名前の枠は3行ぶん。細い端末で長い名前が3行になっても、
+                          カードの高さが商品ごとにばらつかないようにしている */}
+                      <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'36px'}}>{item.name}</div>
                       <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>
                         {item.type==='item'?(<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>)
                           :(detailMon||detailTeaching)&&!comingSoon?(

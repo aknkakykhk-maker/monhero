@@ -20,7 +20,7 @@ const assistantsData = fs.readFileSync(path.join(root, 'monster-hero/data/assist
 const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
 // t:'data' の表は本番の helpDataRows() が実データから作るので、その定義と材料もそのまま持ち込む
 const dataTablePrelude = [
-  breeder.slice(breeder.indexOf('const TEACHING_CARDS = [')).replace(/[A-Z_]+_ICON|DISC_STONE_BASE/g, "''"),
+  breeder.slice(breeder.indexOf('const TEACHING_CARDS = [')).replace(/\b[A-Z_]+_ICON\b|\bDISC_STONE_BASE\b/g, "''"),
   grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const LOGIN_BONUS_DEFAULT'),
   grab(source, 'const giftRewardText = ', 'const giftTitleDisplay'),
   grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),

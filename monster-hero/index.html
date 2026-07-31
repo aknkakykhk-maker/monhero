@@ -61,11 +61,11 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 <script>try{document.getElementById('static-mocchi-image').src=MOCCHI_IMG}catch(e){}</script>
 <script src="data/images/images-enemy.js?v=a183a333923b"></script>
 <script src="data/ally-monsters.js?v=edf9de0facea"></script>
-<script src="data/breeder.js?v=b71b0b4d47f1"></script>
+<script src="data/breeder.js?v=d5eb7eb8381c"></script>
 <script src="data/enemy-monsters.js?v=756038184df4"></script>
 <script src="data/skills.js?v=2d4c31c548dd"></script>
-<script src="data/changelog.js?v=1a402421da61"></script>
-<script src="data/help.js?v=33e81ac43c60"></script>
+<script src="data/changelog.js?v=ac287a3caf54"></script>
+<script src="data/help.js?v=04418d4a1abb"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
 <script src="data/assistants.js?v=6ce9c7641943"></script>
 <script>
@@ -76,7 +76,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
   // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
   // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
   // 2回とも失敗した場合だけエラーを表示する。
-  var GAME_BUILD = '202607312214';
+  var GAME_BUILD = '202607312232';
   var attempts = 0;
   function showLoadError(){
     window.__mhErr && window.__mhErr('game-system.compiled.js load failed after retry');

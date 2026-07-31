@@ -20,8 +20,10 @@ const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
 const itemCtx = {};
 vm.createContext(itemCtx);
 vm.runInContext(
-  breeder.slice(breeder.indexOf('const BREEDER_MARKET_ITEMS = ['))
-    .replace(/[A-Z_]+_ICON|DISC_STONE_BASE/g, "''")
+  // BREEDER_MARKET_ITEMS はその手前で作った一覧(みゅあの表情アイコンなど)を取り込むため、
+  // TEACHING_CARDS から後ろを丸ごと読み込む。顔アイコンの画像定数は空文字に置き換える
+  breeder.slice(breeder.indexOf('const TEACHING_CARDS = ['))
+    .replace(/\b[A-Z_]+_ICON\b|\bDISC_STONE_BASE\b/g, "''")
   + '\nglobalThis.__i={BREEDER_MARKET_ITEMS,SKIP_TICKET_BY_DIFFICULTY};', itemCtx);
 const { BREEDER_MARKET_ITEMS: items, SKIP_TICKET_BY_DIFFICULTY: byDiff } = itemCtx.__i;
 const ticket = (id) => items.find(i => i.id === id);
