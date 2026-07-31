@@ -2,8 +2,9 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8f5a6f304232d251
+// source-sha256: f24b5c35e386f682
 // ============================================================
+function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
 const {
   useState,
@@ -123,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 07:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 11:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3983,12 +3984,6 @@ const SKIP_TICKETS = typeof SKIP_TICKET_BY_DIFFICULTY !== 'undefined' && SKIP_TI
 // 読めなかった場合はヘルプが空になるだけで、ゲーム自体は動く
 const HELP_GUIDE = typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP_CATEGORIES) ? HELP_CATEGORIES : [];
 const HELP_GUIDE_INTRO = typeof HELP_INTRO !== 'undefined' && HELP_INTRO || '';
-const HELP_GUIDE_HELLO = typeof HELP_ASSISTANT_INTRO !== 'undefined' && HELP_ASSISTANT_INTRO || '';
-const HELP_GUIDE_ASSISTANT = typeof HELP_ASSISTANT !== 'undefined' && HELP_ASSISTANT || {
-  name: '助手',
-  emoji: '🧑‍🏫',
-  iconUrl: null
-};
 const helpCategoryById = id => HELP_GUIDE.find(c => c.id === id) || null;
 const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;
 const DIFFICULTY_SETTINGS = {
@@ -4123,6 +4118,252 @@ const HELP_DATA_TITLES = {
   missionsDaily: 'デイリーミッション',
   missionsWeekly: 'ウィークリーミッション'
 };
+// ===== 助手(ナビゲーター) ここから =====
+// 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。
+// どの画面でも <AssistantBubble scene="キー"/> の1行で同じ見た目の吹き出しを出せる。
+// (今後 HOME・神殿・マーケット・M/B管理・バトル・設定・ランキング・イベント案内・
+//  ギフト・ミッション・チュートリアルへ広げる想定)
+const ASSISTANT_LIST = typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS) ? ASSISTANTS : [];
+const ASSISTANT_SCENE_MAP = typeof ASSISTANT_SCENES !== 'undefined' && ASSISTANT_SCENES || {};
+const ASSISTANT_FALLBACK = {
+  id: '',
+  name: '助手',
+  image: null,
+  emoji: '💬',
+  accent: '#f472b6',
+  greeting: ''
+};
+const assistantById = id => ASSISTANT_LIST.find(a => a.id === id) || ASSISTANT_LIST.find(a => a.id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' ? DEFAULT_ASSISTANT_ID : '')) || ASSISTANT_LIST[0] || ASSISTANT_FALLBACK;
+const assistantSceneById = key => key && ASSISTANT_SCENE_MAP[key] || null;
+// 助手の顔。画像が無い助手は絵文字で代用する。size は px
+const AssistantFace = ({
+  who,
+  size = 72,
+  accent
+}) => /*#__PURE__*/React.createElement("div", {
+  className: "shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center bg-black/50",
+  style: {
+    width: `${size}px`,
+    height: `${size}px`,
+    borderColor: accent,
+    boxShadow: `0 0 12px ${accent}55`
+  }
+}, who.image ? /*#__PURE__*/React.createElement("img", {
+  src: who.image,
+  alt: who.name,
+  className: "w-full h-full object-cover"
+}) : /*#__PURE__*/React.createElement("span", {
+  style: {
+    fontSize: `${Math.round(size * 0.5)}px`,
+    lineHeight: 1
+  }
+}, who.emoji));
+// ヘルプ本文のブロックを描く。ヘルプ画面と助手の詳細で同じ見た目にするため1か所にまとめる
+const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
+  if (b.t === 'note') return /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "rounded-2xl p-4 border",
+    style: {
+      borderColor: `${accent}55`,
+      backgroundColor: 'rgba(0,0,0,0.5)'
+    }
+  }, b.title && /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] font-black text-white mb-1"
+  }, b.title), /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-slate-300 leading-relaxed"
+  }, b.text));
+  if (b.t === 'list') return /*#__PURE__*/React.createElement("ul", {
+    key: i,
+    className: "text-[12px] text-slate-300 leading-relaxed space-y-2 list-disc pl-5"
+  }, b.items.map((x, j) => /*#__PURE__*/React.createElement("li", {
+    key: j
+  }, x)));
+  if (b.t === 'steps') return /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "space-y-2.5"
+  }, b.items.map((x, j) => /*#__PURE__*/React.createElement("div", {
+    key: j,
+    className: "flex items-start gap-3"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black text-black",
+    style: {
+      backgroundColor: accent
+    }
+  }, j + 1), /*#__PURE__*/React.createElement("span", {
+    className: "text-[12px] text-slate-300 leading-relaxed pt-0.5"
+  }, x))));
+  if (b.t === 'kv') return /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "rounded-2xl bg-black/50 border border-white/5 overflow-hidden"
+  }, b.rows.map((r, j) => /*#__PURE__*/React.createElement("div", {
+    key: j,
+    className: `flex gap-3 px-4 py-2.5 ${j > 0 ? 'border-t border-white/5' : ''}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight"
+  }, r[0]), /*#__PURE__*/React.createElement("span", {
+    className: "flex-1 text-[11px] text-white leading-relaxed"
+  }, r[1]))));
+  // 実データから作る表。難易度・アイテム・ログボ・ミッションはここで全件出るので取りこぼさない
+  if (b.t === 'data') {
+    const rows = helpDataRows(b.id);
+    if (rows.length === 0) return null;
+    return /*#__PURE__*/React.createElement("div", {
+      key: i
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-black mb-1 tracking-wider",
+      style: {
+        color: accent
+      }
+    }, HELP_DATA_TITLES[b.id] || ''), /*#__PURE__*/React.createElement("div", {
+      className: "rounded-2xl bg-black/50 border border-white/5 overflow-hidden"
+    }, rows.map((r, j) => /*#__PURE__*/React.createElement("div", {
+      key: j,
+      className: `flex gap-3 px-4 py-2.5 ${j > 0 ? 'border-t border-white/5' : ''}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight"
+    }, r[0]), /*#__PURE__*/React.createElement("span", {
+      className: "flex-1 text-[11px] text-white leading-relaxed"
+    }, r[1])))));
+  }
+  return /*#__PURE__*/React.createElement("p", {
+    key: i,
+    className: "text-[12px] text-slate-200 leading-relaxed"
+  }, b.text);
+});
+// 助手の吹き出し。どの画面でもこれ1つ置けばよい。
+//   scene       … data/assistants.js の ASSISTANT_SCENES のキー(これだけで完結する)
+//   line/detail … sceneを使わず直接セリフと詳細を渡したいとき
+//   helpRef     … 'カテゴリid/項目id'。詳細としてヘルプ本文をそのまま開く
+//   accent      … 画面のテーマ色に合わせたいとき(省略すると助手ごとの色)
+//   defaultOpen … 最初から詳細を開いた状態にする(チュートリアルなどで使う)
+const AssistantBubble = ({
+  scene = null,
+  assistantId = null,
+  line = null,
+  detail = null,
+  helpRef = null,
+  accent = null,
+  faceSize = 72,
+  defaultOpen = false
+}) => {
+  const [open, setOpen] = useState(defaultOpen);
+  const sceneDef = assistantSceneById(scene);
+  const who = assistantById(assistantId || sceneDef?.assistantId);
+  const color = accent || who.accent || ASSISTANT_FALLBACK.accent;
+  const text = line || sceneDef?.short || who.greeting || '';
+  const paragraphs = detail || sceneDef?.detail || null;
+  const ref = helpRef || sceneDef?.help || null;
+  const topic = ref && ref.includes('/') ? helpTopicById(ref.split('/')[0], ref.split('/')[1]) : null;
+  const hasDetail = !!(paragraphs && paragraphs.length || topic);
+  const Wrapper = hasDetail ? 'button' : 'div';
+  return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "w-full flex items-end gap-2"
+  }, /*#__PURE__*/React.createElement(AssistantFace, {
+    who: who,
+    size: faceSize,
+    accent: color
+  }), /*#__PURE__*/React.createElement(Wrapper, _extends({}, hasDetail ? {
+    onClick: () => setOpen(true),
+    'aria-label': `${who.name}の説明を開く`
+  } : {}, {
+    className: `relative flex-1 min-w-0 text-left rounded-2xl border-2 px-3 py-2 ${hasDetail ? 'active:scale-[.99]' : ''}`,
+    style: {
+      borderColor: color,
+      backgroundColor: 'rgba(15,23,42,0.92)'
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "absolute",
+    style: {
+      left: '-9px',
+      bottom: '14px',
+      width: 0,
+      height: 0,
+      borderTop: '7px solid transparent',
+      borderBottom: '7px solid transparent',
+      borderRight: `9px solid ${color}`
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "absolute",
+    style: {
+      left: '-6px',
+      bottom: '14px',
+      width: 0,
+      height: 0,
+      borderTop: '7px solid transparent',
+      borderBottom: '7px solid transparent',
+      borderRight: '9px solid rgba(15,23,42,0.92)'
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "block text-[10px] font-black tracking-widest",
+    style: {
+      color
+    }
+  }, who.name), /*#__PURE__*/React.createElement("span", {
+    className: "block text-[12px] text-white leading-relaxed"
+  }, text), hasDetail && /*#__PURE__*/React.createElement("span", {
+    className: "mt-0.5 flex items-center justify-end gap-0.5 text-[9px] font-black",
+    style: {
+      color
+    }
+  }, "\u30BF\u30C3\u30D7\u3067\u8A73\u3057\u304F", /*#__PURE__*/React.createElement(ChevronRight, {
+    size: 11
+  })))), open && /*#__PURE__*/React.createElement("div", {
+    className: "fixed inset-0 flex items-end justify-center",
+    style: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(2,6,23,0.94)',
+      zIndex: 70000
+    },
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": `${who.name}の説明`
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col",
+    style: {
+      borderColor: color,
+      maxHeight: '88vh'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 flex items-center gap-3 p-4 border-b border-white/10"
+  }, /*#__PURE__*/React.createElement(AssistantFace, {
+    who: who,
+    size: 56,
+    accent: color
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] font-black tracking-widest",
+    style: {
+      color
+    }
+  }, who.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-[12px] text-white leading-relaxed"
+  }, text)), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(false),
+    "aria-label": "\u8AAC\u660E\u3092\u9589\u3058\u308B",
+    className: "shrink-0 p-2 bg-white/10 rounded-full active:scale-90"
+  }, /*#__PURE__*/React.createElement(X, {
+    size: 18
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4 space-y-3.5"
+  }, topic ? renderHelpBlocks(topic.blocks, color) : (paragraphs || []).map((x, i) => /*#__PURE__*/React.createElement("p", {
+    key: i,
+    className: "text-[12px] text-slate-200 leading-relaxed"
+  }, x))), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 p-4 pt-2",
+    style: {
+      paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(false),
+    className: "w-full min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
+    style: {
+      backgroundColor: color
+    }
+  }, "\u3068\u3058\u308B")))));
+};
+// ===== 助手(ナビゲーター) ここまで =====
 // 難易度の色をそのまま反映するためのinline style。選択中は背景色、未選択は文字色だけを難易度の色にする
 const difficultyStyle = (setting, selected) => selected ? {
   backgroundColor: setting.bg,
@@ -17597,7 +17838,13 @@ function MonsterHeroGame() {
     const cat = helpCatId ? helpCategoryById(helpCatId) : null;
     const topic = cat && helpTopicId ? helpTopicById(cat.id, helpTopicId) : null;
     const accent = cat ? cat.color : '#34d399';
-    const assistantLine = topic ? topic.assistant : cat ? cat.assistant : HELP_GUIDE_HELLO;
+    // 助手のセリフと、吹き出しをタップしたときに開く詳しい説明。
+    // 項目を開いているときはその本文を、カテゴリのときは中身の案内を、
+    // 一覧のときは data/assistants.js の helpTop を出す
+    const assistantLine = topic ? topic.assistant : cat ? cat.assistant : null;
+    const assistantScene = !cat && !topic ? 'helpTop' : null;
+    const assistantHelpRef = topic ? `${cat.id}/${topic.id}` : null;
+    const assistantDetail = cat && !topic ? [cat.summary + 'について説明するよ。', `この中には「${cat.topics.map(t => t.title).join('」「')}」があるよ。気になるものをタップしてね。`] : null;
     const goBack = () => {
       if (topic) setHelpTopicId(null);else if (cat) setHelpCatId(null);else setShowHelp(false);
     };
@@ -17639,40 +17886,24 @@ function MonsterHeroGame() {
     }, headTitle)), /*#__PURE__*/React.createElement("button", {
       onClick: () => setHelpAssistantOpen(v => !v),
       "aria-label": "\u52A9\u624B\u306E\u3072\u3068\u3053\u3068\u3092\u958B\u304F",
-      className: `shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center active:scale-90 ${helpAssistantOpen ? '' : 'opacity-50'}`,
-      style: {
-        borderColor: accent,
-        backgroundColor: 'rgba(0,0,0,0.4)'
-      }
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-lg leading-none"
-    }, HELP_GUIDE_ASSISTANT.emoji))), helpAssistantOpen && /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 px-3 py-2.5 border-b border-white/5 flex items-start gap-2.5",
+      className: `shrink-0 active:scale-90 ${helpAssistantOpen ? '' : 'opacity-40'}`
+    }, /*#__PURE__*/React.createElement(AssistantFace, {
+      who: assistantById(),
+      size: 40,
+      accent: accent
+    }))), helpAssistantOpen && /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 px-3 py-3 border-b border-white/5",
       style: {
         backgroundColor: 'rgba(15,23,42,0.75)'
       }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-8 h-8 rounded-full border flex items-center justify-center overflow-hidden",
-      style: {
-        borderColor: accent,
-        backgroundColor: 'rgba(0,0,0,0.5)'
-      }
-    }, HELP_GUIDE_ASSISTANT.iconUrl ? /*#__PURE__*/React.createElement("img", {
-      src: HELP_GUIDE_ASSISTANT.iconUrl,
-      alt: HELP_GUIDE_ASSISTANT.name,
-      className: "w-full h-full object-cover"
-    }) : /*#__PURE__*/React.createElement("span", {
-      className: "text-base leading-none"
-    }, HELP_GUIDE_ASSISTANT.emoji)), /*#__PURE__*/React.createElement("div", {
-      className: "min-w-0 flex-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] font-black tracking-widest",
-      style: {
-        color: accent
-      }
-    }, HELP_GUIDE_ASSISTANT.name), /*#__PURE__*/React.createElement("div", {
-      className: "text-[11px] text-slate-200 leading-relaxed"
-    }, assistantLine))), /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement(AssistantBubble, {
+      key: `${helpCatId || ''}/${helpTopicId || ''}`,
+      scene: assistantScene,
+      line: assistantLine,
+      detail: assistantDetail,
+      helpRef: assistantHelpRef,
+      accent: accent
+    })), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black",
       style: {
         backgroundColor: '#000000'
@@ -17731,77 +17962,7 @@ function MonsterHeroGame() {
       className: "shrink-0 text-slate-500"
     })))), cat && topic && /*#__PURE__*/React.createElement("div", {
       className: "space-y-3.5 pb-2"
-    }, topic.blocks.map((b, i) => {
-      if (b.t === 'note') return /*#__PURE__*/React.createElement("div", {
-        key: i,
-        className: "rounded-2xl p-4 border",
-        style: {
-          borderColor: `${cat.color}55`,
-          backgroundColor: 'rgba(0,0,0,0.5)'
-        }
-      }, b.title && /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black text-white mb-1"
-      }, b.title), /*#__PURE__*/React.createElement("div", {
-        className: "text-[12px] text-slate-300 leading-relaxed"
-      }, b.text));
-      if (b.t === 'list') return /*#__PURE__*/React.createElement("ul", {
-        key: i,
-        className: "text-[12px] text-slate-300 leading-relaxed space-y-2 list-disc pl-5"
-      }, b.items.map((x, j) => /*#__PURE__*/React.createElement("li", {
-        key: j
-      }, x)));
-      if (b.t === 'steps') return /*#__PURE__*/React.createElement("div", {
-        key: i,
-        className: "space-y-2.5"
-      }, b.items.map((x, j) => /*#__PURE__*/React.createElement("div", {
-        key: j,
-        className: "flex items-start gap-3"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black text-black",
-        style: {
-          backgroundColor: cat.color
-        }
-      }, j + 1), /*#__PURE__*/React.createElement("span", {
-        className: "text-[12px] text-slate-300 leading-relaxed pt-0.5"
-      }, x))));
-      if (b.t === 'kv') return /*#__PURE__*/React.createElement("div", {
-        key: i,
-        className: "rounded-2xl bg-black/50 border border-white/5 overflow-hidden"
-      }, b.rows.map((r, j) => /*#__PURE__*/React.createElement("div", {
-        key: j,
-        className: `flex gap-3 px-4 py-2.5 ${j > 0 ? 'border-t border-white/5' : ''}`
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight"
-      }, r[0]), /*#__PURE__*/React.createElement("span", {
-        className: "flex-1 text-[11px] text-white leading-relaxed"
-      }, r[1]))));
-      // 実データから作る表。難易度・アイテム・ログボ・ミッションはここで全件出るので取りこぼさない
-      if (b.t === 'data') {
-        const rows = helpDataRows(b.id);
-        if (rows.length === 0) return null;
-        return /*#__PURE__*/React.createElement("div", {
-          key: i
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "text-[10px] font-black mb-1 tracking-wider",
-          style: {
-            color: cat.color
-          }
-        }, HELP_DATA_TITLES[b.id] || ''), /*#__PURE__*/React.createElement("div", {
-          className: "rounded-2xl bg-black/50 border border-white/5 overflow-hidden"
-        }, rows.map((r, j) => /*#__PURE__*/React.createElement("div", {
-          key: j,
-          className: `flex gap-3 px-4 py-2.5 ${j > 0 ? 'border-t border-white/5' : ''}`
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "shrink-0 w-24 text-[11px] font-black text-slate-400 leading-tight"
-        }, r[0]), /*#__PURE__*/React.createElement("span", {
-          className: "flex-1 text-[11px] text-white leading-relaxed"
-        }, r[1])))));
-      }
-      return /*#__PURE__*/React.createElement("p", {
-        key: i,
-        className: "text-[12px] text-slate-200 leading-relaxed"
-      }, b.text);
-    }), /*#__PURE__*/React.createElement("div", {
+    }, renderHelpBlocks(topic.blocks, cat.color), /*#__PURE__*/React.createElement("div", {
       className: "pt-1 flex gap-2"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setHelpTopicId(null),

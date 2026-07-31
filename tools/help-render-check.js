@@ -16,6 +16,7 @@ const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
 const helpData = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
 const breeder = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8');
+const assistantsData = fs.readFileSync(path.join(root, 'monster-hero/data/assistants.js'), 'utf8');
 const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
 // t:'data' の表は本番の helpDataRows() が実データから作るので、その定義と材料もそのまま持ち込む
 const dataTablePrelude = [
@@ -25,7 +26,12 @@ const dataTablePrelude = [
   grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
   'const SKIP_TICKETS = SKIP_TICKET_BY_DIFFICULTY;',
-  grab(source, 'const helpDataRows = (id)', 'const difficultyStyle = '),
+  grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
+  // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む
+  "const { useState } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"
+  + "const ChevronRight = ({size}) => React.createElement('i', { 'data-size': size });\nconst X = ChevronRight;",
+  assistantsData,
+  grab(source, '// ===== 助手(ナビゲーター) ここから =====', '// ===== 助手(ナビゲーター) ここまで ====='),
 ].join('\n');
 
 let failed = 0;
@@ -52,19 +58,17 @@ const transformed = babel.transformSync(
   // 本体側の「読み込めなかったときの守り」も同じ形で用意する
   "const HELP_GUIDE = (typeof HELP_CATEGORIES !== 'undefined' && Array.isArray(HELP_CATEGORIES)) ? HELP_CATEGORIES : [];\n" +
   "const HELP_GUIDE_INTRO = (typeof HELP_INTRO !== 'undefined' && HELP_INTRO) || '';\n" +
-  "const HELP_GUIDE_HELLO = (typeof HELP_ASSISTANT_INTRO !== 'undefined' && HELP_ASSISTANT_INTRO) || '';\n" +
-  "const HELP_GUIDE_ASSISTANT = (typeof HELP_ASSISTANT !== 'undefined' && HELP_ASSISTANT) || {};\n" +
   'const helpCategoryById = (id) => HELP_GUIDE.find(c => c.id === id) || null;\n' +
   'const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;\n' +
   'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
   '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState }) => (<>\n' +
-  helpJsx + '\n</>);\nmodule.exports = { HelpScreen, HELP_GUIDE, dataRows: helpDataRows };',
+  helpJsx + '\n</>);\nmodule.exports = { HelpScreen, HELP_GUIDE, dataRows: helpDataRows, helpTopicById, AssistantBubble };',
   { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'help-render-check.jsx' }
 );
 
 const moduleScope = { exports: {} };
 new Function('module', 'exports', 'React', transformed.code)(moduleScope, moduleScope.exports, React);
-const { HelpScreen, HELP_GUIDE, dataRows } = moduleScope.exports;
+const { HelpScreen, HELP_GUIDE, dataRows, helpTopicById } = moduleScope.exports;
 
 const noop = () => {};
 const render = (state) => ReactDOMServer.renderToStaticMarkup(React.createElement(HelpScreen, {
@@ -117,6 +121,29 @@ check('全項目の本文が最後まで描ける', bodyNg.length === 0, bodyNg.
 const diffBody = text(render({ helpCatId: 'basics', helpTopicId: 'difficulty' }));
 check('難易度は実データの全段階が本文に出る', dataRows('difficulties').every(r => diffBody.includes(r[0]) && diffBody.includes(r[1])), `${dataRows('difficulties').length}段階`);
 
+// --- 助手(ナビゲーター) ---
+const withBubble = render({ helpCatId: 'battle', helpTopicId: 'distance' });
+check('助手の名前が吹き出しに出る', text(withBubble).includes('みゅあ'));
+check('助手のセリフが出る', text(withBubble).includes(helpTopicById('battle','distance').assistant));
+check('助手の画像が出る(用意されていれば)', withBubble.includes('data:image/png;base64,TEST'));
+check('吹き出しは詳細を開けることが分かる', text(withBubble).includes('タップで詳しく') && withBubble.includes('aria-label="みゅあの説明を開く"'));
+const hubBubble = text(render({}));
+check('カテゴリ一覧では場面(helpTop)のセリフを話す', hubBubble.includes('知りたいことのカテゴリを選んでね'));
+const catBubble = text(render({ helpCatId: 'battle' }));
+check('カテゴリでは中身の案内を詳細に出せる', catBubble.includes('タップで詳しく'));
+
+// タップで開く詳細。defaultOpen で開いた状態を作って中身を確かめる
+const openedTopic = text(ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.AssistantBubble, { helpRef:'battle/distance', line:'テスト', defaultOpen:true })));
+const distance = helpTopicById('battle','distance');
+check('吹き出しをタップするとヘルプ本文が詳細として開く',
+  distance.blocks.every(b => b.t !== 'p' || openedTopic.includes(b.text)) && openedTopic.includes('とじる'));
+const openedDetail = text(ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.AssistantBubble, { line:'テスト', detail:['詳しい説明1','詳しい説明2'], defaultOpen:true })));
+check('自前の文章も詳細として開ける', openedDetail.includes('詳しい説明1') && openedDetail.includes('詳しい説明2'));
+const openedScene = text(ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.AssistantBubble, { scene:'helpTop', defaultOpen:true })));
+check('場面キーだけで吹き出しと詳細が出せる', openedScene.includes('みゅあ') && openedScene.includes('3段階'));
+const noDetail = ReactDOMServer.renderToStaticMarkup(React.createElement(moduleScope.exports.AssistantBubble, { line:'ひとことだけ' }));
+check('詳細が無いときはタップできる見た目にしない', !text(noDetail).includes('タップで詳しく') && !noDetail.includes('<button'));
+
 // --- 助手の開閉と、最後の項目 ---
 const closed = text(render({ helpCatId: 'battle', helpAssistantOpen: false }));
 check('助手を閉じるとひとことが消える', !closed.includes(HELP_GUIDE[1].assistant) && closed.includes(HELP_GUIDE[1].topics[0].title));
@@ -128,7 +155,7 @@ check('途中の項目では次の項目名を出す', text(render({ helpCatId: 
 // --- 読み込めなかったときも落ちない ---
 const emptyTransformed = babel.transformSync(
   `${dataTablePrelude}\n` +
-  'const HELP_GUIDE = [];\nconst HELP_GUIDE_INTRO = "";\nconst HELP_GUIDE_HELLO = "";\nconst HELP_GUIDE_ASSISTANT = { name:"助手", emoji:"🧑‍🏫", iconUrl:null };\n' +
+  'const HELP_GUIDE = [];\nconst HELP_GUIDE_INTRO = "";\n' +
   'const helpCategoryById = () => null;\nconst helpTopicById = () => null;\n' +
   'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
   '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState }) => (<>\n' +

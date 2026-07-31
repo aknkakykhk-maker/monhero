@@ -26,7 +26,7 @@ const grab = (text, a, b) => text.slice(text.indexOf(a), text.indexOf(b));
 // --- ① データを実際に読み込む ---
 const helpCtx = {};
 vm.createContext(helpCtx);
-vm.runInContext(`${helpSrc}\nglobalThis.__h={HELP_CATEGORIES,HELP_ASSISTANT,HELP_INTRO,HELP_ASSISTANT_INTRO,helpPlainText,helpBlockPlainText,helpFindCategory,helpFindTopic};`, helpCtx);
+vm.runInContext(`${helpSrc}\nglobalThis.__h={HELP_CATEGORIES,HELP_INTRO,helpPlainText,helpBlockPlainText,helpFindCategory,helpFindTopic};`, helpCtx);
 const h = helpCtx.__h;
 const categories = h.HELP_CATEGORIES;
 const topics = categories.flatMap(c => c.topics.map(t => ({ ...t, catId: c.id })));
@@ -51,8 +51,7 @@ check('本文のブロックが空でない', blocks.every(b => {
 
 // --- ② 助手が使える形になっているか ---
 check('全カテゴリ・全項目に助手のひとことがある', categories.every(c => c.assistant) && topics.every(t => t.assistant));
-check('カテゴリ一覧でも助手が話す内容がある', !!h.HELP_INTRO && !!h.HELP_ASSISTANT_INTRO);
-check('助手の名前と見た目を1か所で決めている', !!h.HELP_ASSISTANT.name && !!h.HELP_ASSISTANT.emoji && 'iconUrl' in h.HELP_ASSISTANT);
+check('カテゴリ一覧に導入文がある', !!h.HELP_INTRO);
 check('どの項目もプレーンテキストを取り出せる', topics.every(t => h.helpPlainText(t).length > 20));
 check('表・箇条書きもプレーンテキストになる',
   h.helpBlockPlainText({ t:'kv', rows:[['A','B']] }) === 'A: B'
@@ -69,11 +68,12 @@ check('ヘルプを開くと必ずカテゴリ一覧から始まる',
     && !/onClick=\{\(\)=>setShowHelp\(true\)\}/.test(source));
 check('戻るは1階層ずつ戻る', has('const goBack = () => { if(topic) setHelpTopicId(null); else if(cat) setHelpCatId(null); else setShowHelp(false); };'));
 check('カテゴリの色をそのまま使う(Tailwindの動的クラスに頼らない)', has('style={{borderColor:c.color,backgroundColor:\'rgba(15,23,42,0.85)\'}}'));
-check('画面はデータから作る(本文をJSXに直書きしていない)', has('{HELP_GUIDE.map(c=>(') && has('{cat.topics.map(t=>(') && has('{topic.blocks.map((b,i)=>{'));
+check('画面はデータから作る(本文をJSXに直書きしていない)', has('{HELP_GUIDE.map(c=>(') && has('{cat.topics.map(t=>(') && has('(blocks || []).map((b, i) => {'));
 check('ブロックの種類ごとに描き分ける', ['b.t===\'note\'', 'b.t===\'list\'', 'b.t===\'steps\'', 'b.t===\'kv\'', 'b.t===\'data\''].every(has));
-check('助手ボタンと吹き出しがある', has('aria-label="助手のひとことを開く"') && has('{assistantLine}') && has('{HELP_GUIDE_ASSISTANT.name}'));
-check('助手は開いている階層に応じて話す', has('const assistantLine = topic ? topic.assistant : cat ? cat.assistant : HELP_GUIDE_HELLO;'));
-check('助手の絵は画像へ差し替えられる', has('{HELP_GUIDE_ASSISTANT.iconUrl?<img src={HELP_GUIDE_ASSISTANT.iconUrl}'));
+check('助手ボタンと吹き出しがある', has('aria-label="助手のひとことを開く"') && has('<AssistantBubble key={`${helpCatId||\'\'}/${helpTopicId||\'\'}`}'));
+check('助手は開いている階層に応じて話す', has("const assistantLine = topic ? topic.assistant : cat ? cat.assistant : null;") && has("const assistantScene = (!cat && !topic) ? 'helpTop' : null;"));
+check('項目を開いているときは本文を詳細として渡す', has('const assistantHelpRef = topic ? `${cat.id}/${topic.id}` : null;'));
+check('本文の描き方は助手の詳細と共通', has('{renderHelpBlocks(topic.blocks, cat.color)}') && has('const renderHelpBlocks = (blocks, accent)'));
 check('本文から次の項目へ進める', has('const nextTopic = topicIndex>=0 ? cat.topics[topicIndex+1] : null;') && has('次: {nextTopic.title}'));
 check('ヘルプは縦スクロールできる', has('<div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black"'));
 check('古いタブ形式のヘルプが残っていない', !source.includes('helpTab') && !source.includes('Help Guide'));

@@ -39,7 +39,7 @@ vm.runInContext([
   grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
   grab(source, 'const giftRewardText = ', 'const giftTitleDisplay'),
-  grab(source, 'const helpDataRows = (id)', 'const difficultyStyle = '),
+  grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   "const SKIP_TICKETS = SKIP_TICKET_BY_DIFFICULTY;",
   'globalThis.__g={helpDataRows,HELP_DATA_TITLES,DIFFICULTY_SETTINGS,LOGIN_BONUS_REWARDS,MISSION_DEFS,TEACHING_CARDS,BREEDER_MARKET_ITEMS,SKIP_TICKET_BY_DIFFICULTY};',
 ].join('\n'), gameCtx);
