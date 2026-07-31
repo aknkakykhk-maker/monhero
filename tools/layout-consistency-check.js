@@ -91,7 +91,11 @@ check('商品アイコンの大きさを1か所で決めている',
   has("const MARKET_ICON_SIZE = { disc: 'w-12 h-12', breeder: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };")
     && has("${MARKET_ICON_SIZE[item.type]||'w-10 h-10'}"));
 check('所持数は0でも消さずに出す', has('×{ownedItems[item.id]||0}') && !has('{item.type===\'item\'&&(ownedItems[item.id]||0)>0&&('));
-check('購入ボタンはカードの下端に揃える', has('<div className="w-full flex items-center justify-center mt-auto">'));
+// 「詳細」のすぐ下に買うボタンがあると、押し間違えて買ってしまう。
+// 間に余白を入れ、買うボタン自体も指で押せる高さにしておく
+check('購入ボタンはカードの下端に揃える', has('<div className="w-full flex items-center justify-center mt-auto pt-2">'));
+check('詳細と購入ボタンを押し間違えない間隔がある',
+  has('mt-auto pt-2') && has("px-2.5 min-h-[30px] rounded-full flex items-center gap-0.5 whitespace-nowrap"));
 // 細いカードに収めるためボタンの文字は値段だけにし、意味は読み上げ用の説明で補う
 check('購入ボタンの文字は折り返さない',
   has("aria-label={`${item.name}を${item.cost}${usesGold?'ダイヤ':'pt'}で購入`}") && has('rounded-full flex items-center gap-0.5 whitespace-nowrap'));
