@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 18:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 19:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2383,6 +2383,8 @@ function MonsterHeroGame() {
   // 初回チュートリアル。null=出さない、0以上=そのページを表示中。
   // 見たかどうかは新しい保存キーへ分けて持つ(既存のキーには一切触らない)
   const [tutorialStep, setTutorialStep] = useState(null);
+  // 'intro'=最初のあいさつ / 'tour'=村の案内。同じ吹き出しで台本だけ切り替える
+  const [tutorialKind, setTutorialKind] = useState('tour');
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
   // デバッグ: はじめての設定を「見るだけ」で通しで確認する。
@@ -3407,8 +3409,9 @@ function MonsterHeroGame() {
     if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showAudioSettings || showBackup) return;
     titleStartingRef.current = true;
     setTitleStarting(true);
-    // 初回は名前とアイコンを決めてもらうため、プロフィール画面から始める
+    // 初回はみゅあのあいさつから始め、読み終えるとプロフィール画面(名前とアイコン)へ進む
     setGameState(onboarded ? 'HOME' : 'PROFILE');
+    if (!onboarded) { setTutorialKind('intro'); setTutorialStep(0); }
     setShowChangelog(false); setShowTitleSettings(false); setShowAudioSettings(false); setShowBackup(false);
     setBootPhase('ENTERING_GAME');
     const slow = setTimeout(() => setEnteringSlow(true), 1200);
@@ -3918,6 +3921,7 @@ function MonsterHeroGame() {
       setOnboardingPreview(false);
       onboardingPreviewBackupRef.current = null;
       setGameState('HOME');
+      setTutorialKind('tour');
       setTutorialStep(0);
       return;
     }
@@ -3931,7 +3935,7 @@ function MonsterHeroGame() {
     // 名前とアイコンが決まったら、そのままみゅあの村案内へ続ける。
     // HOMEを開いたときの自動起動と重ならないよう、ここで見たことにしてから開く
     const seenTutorial = await storeGet(TUTORIAL_SEEN_KEY, false, false);
-    if (seenTutorial !== true) { tutorialShownRef.current = true; setTutorialStep(0); }
+    if (seenTutorial !== true) { tutorialShownRef.current = true; setTutorialKind('tour'); setTutorialStep(0); }
   };
 
   useEffect(()=>{
@@ -4905,14 +4909,25 @@ function MonsterHeroGame() {
     // 名前もアイコンもまだ決まっていない状態から見られるようにする
     setOnboardingName('');
     setOnboardingIcon(null);
-    setTutorialStep(null);
     setAssistantDebug(null);
     setShowHelp(false);
     setGameState('PROFILE');
+    setTutorialKind('intro');
+    setTutorialStep(0);
   };
-  const startTutorial = (fromDebug = false) => { tutorialShownRef.current = true; if (fromDebug) setShowTitleSettings(false); setTutorialStep(0); };
+  // いま案内しているページが指している施設。HOMEでその建物だけを明るく強調する
+  const tutorialSpot = (() => {
+    if (tutorialStep == null || tutorialKind !== 'tour') return null;
+    const pages = (typeof ASSISTANT_TUTORIAL !== 'undefined' && ASSISTANT_TUTORIAL) || [];
+    return pages[tutorialStep]?.spot || null;
+  })();
+  const spotClass = (name) => (tutorialSpot === name ? ' is-tutorial-spot' : '');
+  const startTutorial = (kind = 'tour') => { tutorialShownRef.current = true; setShowTitleSettings(false); setTutorialKind(kind); setTutorialStep(0); };
   const finishTutorial = async (remember = true) => {
+    const kind = tutorialKind;
     setTutorialStep(null);
+    // 最初のあいさつを読み終えたら、名前とアイコンを決めるプロフィール画面へ進む
+    if (kind === 'intro') { setGameState('PROFILE'); return; }
     if (remember) { try { await storeSet(TUTORIAL_SEEN_KEY, true, false); } catch {} }
   };
   useEffect(() => {
@@ -4921,7 +4936,7 @@ function MonsterHeroGame() {
     let cancelled = false;
     (async () => {
       const seen = await storeGet(TUTORIAL_SEEN_KEY, false, false);
-      if (!cancelled && seen !== true) setTutorialStep(0);
+      if (!cancelled && seen !== true) { setTutorialKind('tour'); setTutorialStep(0); }
     })();
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded]);
@@ -6334,11 +6349,11 @@ function MonsterHeroGame() {
               </section>
             </header>
             <nav className="mh-home-facilities" aria-label="拠点施設">
-              <button className="mh-home-facility management" onClick={()=>{setManagementTab('monster');setGameState('MB_MANAGEMENT');}} aria-label="M/B管理"><span><Layers size={18}/>M/B管理</span></button>
-              <button className="mh-home-facility temple" onClick={()=>setGameState('TEMPLE')} aria-label="神殿"><span><Sparkles size={18}/>神殿</span></button>
-              <button className="mh-home-facility market" onClick={()=>setGameState('BREEDER_MARKET')} aria-label="マーケット"><span><ShoppingBag size={17}/>マーケット</span></button>
+              <button className={`mh-home-facility management${spotClass('management')}`} onClick={()=>{setManagementTab('monster');setGameState('MB_MANAGEMENT');}} aria-label="M/B管理"><span><Layers size={18}/>M/B管理</span></button>
+              <button className={`mh-home-facility temple${spotClass('temple')}`} onClick={()=>setGameState('TEMPLE')} aria-label="神殿"><span><Sparkles size={18}/>神殿</span></button>
+              <button className={`mh-home-facility market${spotClass('market')}`} onClick={()=>setGameState('BREEDER_MARKET')} aria-label="マーケット"><span><ShoppingBag size={17}/>マーケット</span></button>
               <button className="mh-home-facility training" onClick={openTrainingInfo} aria-label="修行（準備中）"><span>🎲 修行<small>準備中</small></span></button>
-              <button className="mh-home-facility battle" onClick={()=>{setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');}} aria-label="バトル"><span><Sword size={25}/>バトル</span></button>
+              <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={()=>{setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');}} aria-label="バトル"><span><Sword size={25}/>バトル</span></button>
             </nav>
             <button onClick={openMissions} className="mh-home-mission"><List size={16}/>ミッション
               {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
@@ -6542,8 +6557,8 @@ function MonsterHeroGame() {
                 <div className="text-[10px] text-pink-300 font-black mb-2">💖 みゅあデバッグ</div>
                 <div className="grid grid-cols-2 gap-2">
                   <button onClick={startOnboardingPreview} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">名前入力から通しで見る（保存されません）</button>
-                  <button onClick={()=>{returnToHome();startTutorial(true);}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">初回チュートリアル再生</button>
-                  <button onClick={()=>setTutorialStep(0)} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">チュートリアルだけ再生</button>
+                  <button onClick={()=>{returnToHome();startTutorial('intro');}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">みゅあのあいさつだけ再生</button>
+                  <button onClick={()=>{returnToHome();startTutorial('tour');}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">村の案内だけ再生</button>
                   <button onClick={()=>setAssistantDebug('lines')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全助手コメント確認</button>
                   <button onClick={()=>setAssistantDebug('expressions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全表情確認</button>
                   <button onClick={()=>setAssistantDebug('conditions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">条件コメント確認</button>
@@ -8691,14 +8706,17 @@ function MonsterHeroGame() {
       {/* 初回チュートリアル。みゅあが1〜2分で村のことを案内する。
           セリフと表情は data/assistants.js の ASSISTANT_TUTORIAL が持つ(画面には書かない) */}
       {tutorialStep!=null&&(()=>{
-        const pages=(typeof ASSISTANT_TUTORIAL!=='undefined'&&ASSISTANT_TUTORIAL)||[];
+        const intro=tutorialKind==='intro';
+        const pages=(intro
+          ? ((typeof ASSISTANT_INTRO!=='undefined'&&ASSISTANT_INTRO)||[])
+          : ((typeof ASSISTANT_TUTORIAL!=='undefined'&&ASSISTANT_TUTORIAL)||[]));
         const page=pages[Math.max(0,Math.min(tutorialStep,pages.length-1))];
         if(!page) return null;
         const who=assistantById();
         const last=tutorialStep>=pages.length-1;
         const topicRef=page.help&&page.help.includes('/')?helpTopicById(page.help.split('/')[0],page.help.split('/')[1]):null;
         return(
-        <div className="fixed inset-0 flex flex-col items-center justify-end p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.92)',zIndex:90000,paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true" aria-label="はじめての案内">
+        <div className="fixed inset-0 flex flex-col items-center justify-end p-4" style={{position:'fixed',inset:0,backgroundColor:page.spot?'rgba(2,6,23,0.74)':'rgba(2,6,23,0.92)',zIndex:90000,paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true" aria-label="はじめての案内">
           <div className="w-full max-w-md flex flex-col items-center">
             <div className="w-full flex justify-between items-center mb-2">
               <span className="text-[10px] font-black tracking-widest" style={{color:who.accent}}>{tutorialStep+1} / {pages.length}</span>
@@ -8718,7 +8736,7 @@ function MonsterHeroGame() {
             )}
             <div className="w-full grid grid-cols-2 gap-2 mt-3">
               <button disabled={tutorialStep<=0} onClick={()=>setTutorialStep(v=>Math.max(0,v-1))} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]">もどる</button>
-              <button onClick={()=>{ if(last) finishTutorial(true); else setTutorialStep(v=>v+1); }} className="min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'はじめる！':'つぎへ'}</button>
+              <button onClick={()=>{ if(last) finishTutorial(true); else setTutorialStep(v=>v+1); }} className="min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?(intro?'名前を決める！':'はじめる！'):'つぎへ'}</button>
             </div>
           </div>
         </div>);
@@ -9478,7 +9496,7 @@ const createAnimationStyle = () => {
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
     .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}.mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:140px;height:140px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
-    .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(54px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:62%}}
+    .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の施設だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す */.mh-home-facility.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span{border-color:#f9a8d4;filter:brightness(1.35);box-shadow:0 0 0 3px #f472b6,0 0 32px #f472b6cc;animation:mhTutorialSpot 1.5s ease-in-out infinite}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 5px #f472b6,0 0 46px #f472b6}}@media(prefers-reduced-motion:reduce){.mh-home-facility.is-tutorial-spot>span{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(54px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:62%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:5px}.mh-gift-card{display:flex;flex-direction:column;min-height:80px;padding:5px 8px}.mh-gift-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;height:18px}.mh-gift-heading h3{display:flex;align-items:center;gap:4px;min-width:0;font-size:12px;line-height:18px;color:#fff}.mh-gift-heading h3 span{flex:none;padding:1px 4px;border-radius:5px;background:#78350f;color:#fde68a;font-size:8px;line-height:14px}.mh-gift-heading h3 b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-gift-heading>em{flex:none;padding:1px 6px;border-radius:999px;font-size:8px;line-height:15px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:37px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:76px;height:36px;padding:0 10px;border-radius:10px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap}.mh-gift-main>button:disabled{background:#334155;color:#64748b}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:8px;line-height:12px}
     @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}

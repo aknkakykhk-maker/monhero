@@ -577,6 +577,15 @@ const findAssistantOnboarding = (hasName, hasIcon) => {
   return ASSISTANT_ONBOARDING.intro;
 };
 
+// ---------- 最初のあいさつ ----------
+// 名前を決めるより前に、みゅあが自己紹介する。読み終えるとプロフィール画面へ進む。
+// 表示はチュートリアルと同じ吹き出しを使う(kind で台本を切り替える)。
+const ASSISTANT_INTRO = [
+  { e:'happy',   t:'はじめまして！ あたしはみゅあ。このゲームの助手だよ♪', title:'はじめまして' },
+  { e:'excited', t:'これから一緒にモンスターを育てて、最強のチームを作っていこ！', title:'よろしくね' },
+  { e:'wink',    t:'まずはあなたのことを教えて！ 名前とアイコンを決めるよ♪', title:'まずは自己紹介から' },
+];
+
 // ---------- 初回チュートリアル ----------
 // 初めて遊ぶ人だけに出す短い案内。1〜2分で終わる分量にする。
 // 各ページは { e:表情, t:本文, help?:'カテゴリid/項目id' }。helpがあれば「詳しく見る」を出せる。
@@ -584,10 +593,11 @@ const ASSISTANT_TUTORIAL = [
   { e:'excited', t:'{name}だね、よろしく！ さっそく村を案内するよ♪', title:'あらためて、よろしくね' },
   { e:'normal',  t:'目標はWAVE10のラスボス「ムー」を倒すこと！ カードで戦っていくよ。', title:'このゲームの目的', help:'basics/goal' },
   { e:'normal',  t:'ここがHOME。建物をタップするといろんなことができるよ！', title:'HOMEのこと', help:'home/roster' },
-  { e:'wink',    t:'神殿では合体・転生・寄付ができるんだ。育成の土台になるとこだね！', title:'神殿', help:'masu/fusion' },
-  { e:'excited', t:'バトルで活躍した子は「マスモン」として登録できるよ。育てるほど強くなる♪', title:'勇者モンを育てる', help:'masu/masumon' },
-  { e:'happy',   t:'バトルは勇者モンを選んで、カードで戦うよ。距離がすっごく大事！', title:'バトル', help:'battle/distance' },
-  { e:'excited', t:'スコアはランキングに載るよ。上位、狙っちゃう？', title:'ランキング', help:'basics/ranking' },
+  { e:'wink',    t:'神殿では合体・転生・寄付ができるんだ。育成の土台になるとこだね！', title:'神殿', help:'masu/fusion', spot:'temple' },
+  { e:'excited', t:'バトルで活躍した子は「マスモン」として登録できるよ。育てるほど強くなる♪', title:'勇者モンを育てる', help:'masu/masumon', spot:'management' },
+  { e:'happy',   t:'バトルは勇者モンを選んで、カードで戦うよ。距離がすっごく大事！', title:'バトル', help:'battle/distance', spot:'battle' },
+  { e:'excited', t:'スコアはランキングに載るよ。上位、狙っちゃう？', title:'ランキング', help:'basics/ranking', spot:'battle' },
+  { e:'happy',   t:'マーケットではモンスターやカードを買えるよ。ダイヤは大事に使ってね♪', title:'マーケット', help:'home/market', spot:'market' },
   { e:'normal',  t:'細かいことはヘルプにぜんぶ書いてあるから、迷ったら覗いてみてね。', title:'ヘルプ', help:'tips/assistant' },
   { e:'happy',   t:'困ったらいつでもあたしをタップしてね♪', title:'それじゃあ、いってらっしゃい！' },
 ];
