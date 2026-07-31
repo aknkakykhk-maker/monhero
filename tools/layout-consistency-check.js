@@ -47,23 +47,48 @@ check('ランキングボタンの場所は決め打ちの高さにする',
   has('<div className="shrink-0 w-full h-10 mb-1">') && has('className="w-full h-10 rounded-xl'));
 check('倍率の下の補足行はクイック限定にしない',
   has('>{noteText}</div>') && !has('{quick&&<div className="mt-1 rounded-xl border'));
+// カードの外にある「所持スキップチケット」の帯も、片方のモードだけ消すと
+// 難易度カード全体が上下にずれる。文言を変えて同じ高さの帯を両モードで出す
+check('スキップチケットの帯をモードで消さない',
+  has('{Object.keys(SKIP_TICKETS).length>0&&(')
+    && !has('{quick&&Object.keys(SKIP_TICKETS).length>0&&(')
+    && has("{quick?'所持スキップチケット':'スキップチケットはクイックモード専用'}")
+    && has('gap-1 mb-1 px-2 min-h-[24px]'));
+check('モードのタブはランキングでは出さない',
+  has("{battleMenuTab==='difficulty'&&<div className=\"grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl"));
+// モードで枠の位置がずれる不具合を何度も出しているので、原因になる書き方そのものを数える。
+// 「クイックのときだけ要素を出す」書き方(`{quick&&`)は、高さを固定した枠の中でしか使わない。
+// いま許しているのはスキップチケットの枚数バッジ1か所だけ(親に min-h-[24px] がある)。
+// 増やしたくなったら、まず親に高さを持たせてからこの本数を見直すこと
+{
+  const start = source.indexOf("{battleMenuTab==='difficulty'&&(()=>{\n              const difficulties=");
+  const end = source.indexOf("{battleMenuTab==='ranking'&&", start);
+  const tab = start >= 0 && end > start ? source.slice(start, end) : '';
+  const onlyQuick = (tab.match(/\{quick&&/g) || []).length;
+  check('難易度タブでモード限定の要素を増やしていない', tab.length > 0 && onlyQuick === 1, `{quick&&…} が${onlyQuick}か所`);
+}
 
 // --- ②' マーケットの商品カード ---
 // 名前の行数・説明の有無・所持数の有無・詳細ボタンの有無で、
 // 「〜で購入」ボタンの位置がカードごとにずれていた
-check('商品名は行数が変わっても同じ高さの枠に入れる', has("style={{minHeight:'30px'}}>{item.name}</div>"));
+check('商品名は行数が変わっても同じ高さの枠に入れる', has("style={{minHeight:'26px'}}>{item.name}</div>"));
 // アイテムの効果は詳細ボタンから出す(カードに長い説明を載せると縦に伸びるため)
 check('アイテムの効果は詳細ボタンから出す',
   has('onClick={()=>setMarketItemDetail(item)}') && !has("style={{minHeight:'40px'}}>{item.desc||null}</div>"));
 check('所持数と詳細ボタンは同じ高さの1行にまとめる',
-  has("<div className=\"w-full flex items-center justify-center gap-1.5\" style={{height:'26px'}}>"));
-// アイコンの大きさはカテゴリごとに1か所で決める(円盤石だけ大きいまま)
+  has("<div className=\"w-full flex items-center justify-center gap-1\" style={{height:'22px'}}>"));
+// 1行に4商品。カードが細くなるので、アイコンの大きさもそれに合わせて1か所で決める
+check('1行に4商品ずつ並べる',
+  has("const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';") && has('<div className={MARKET_GRID_CLASS}>'));
 check('商品アイコンの大きさを1か所で決めている',
-  has("const MARKET_ICON_SIZE = { disc: 'w-16 h-16', breeder: 'w-12 h-12', icon: 'w-11 h-11', item: 'w-10 h-10' };")
-    && has("${MARKET_ICON_SIZE[item.type]||'w-14 h-14'}"));
-check('所持数は0でも消さずに出す', has('所持数: {ownedItems[item.id]||0}') && !has('{item.type===\'item\'&&(ownedItems[item.id]||0)>0&&('));
+  has("const MARKET_ICON_SIZE = { disc: 'w-12 h-12', breeder: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };")
+    && has("${MARKET_ICON_SIZE[item.type]||'w-10 h-10'}"));
+check('所持数は0でも消さずに出す', has('×{ownedItems[item.id]||0}') && !has('{item.type===\'item\'&&(ownedItems[item.id]||0)>0&&('));
 check('購入ボタンはカードの下端に揃える', has('<div className="w-full flex items-center justify-center mt-auto">'));
-check('購入ボタンの文字は折り返さない', has("{usesGold?'ダイヤ':'pt'} で購入</button>") && has('rounded-full flex items-center gap-1 whitespace-nowrap'));
+// 細いカードに収めるためボタンの文字は値段だけにし、意味は読み上げ用の説明で補う
+check('購入ボタンの文字は折り返さない',
+  has("aria-label={`${item.name}を${item.cost}${usesGold?'ダイヤ':'pt'}で購入`}") && has('rounded-full flex items-center gap-0.5 whitespace-nowrap'));
+check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">近日追加</div>') && has('rounded-full whitespace-nowrap">所持済み</div>'));
 
 // --- ③ Masterの色 ---
 check('挑戦ボタンは明るい難易度で文字を暗くする', has("color:setting.darkText?'#0f172a':'#ffffff'"));

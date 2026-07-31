@@ -140,8 +140,13 @@ check('リザルトに使った枚数を残す', skipBlock.includes('itemEmoji: 
 check('説明モーダルにも所持数を出す', has('所持数: <b className="text-white">{ownedItems[item.id]||0}</b> 枚'));
 // 難易度カードのバッジは中央に来ている1難易度ぶんしか見えないため、
 // 難易度タブの上に3種の所持数をまとめて常時出す
-const ticketRow = grab(source, '<span className="text-[8px] font-black text-slate-500 tracking-[.12em]">所持スキップチケット</span>', '</div>\n              )}<div className="relative shrink-0">');
+const ticketRow = grab(source, "tracking-[.12em]\">{quick?'所持スキップチケット'", '</div>\n              )}<div className="relative shrink-0">');
 check('難易度タブに3種の所持数をまとめて出す', ticketRow.length > 0 && ticketRow.includes('Object.entries(SKIP_TICKETS).map(([diff,tid])=>'));
+// 帯そのものは両モードで出す(片方だけ消すと難易度カードの位置がずれるため)。
+// 枚数のバッジはクイックのときだけ出し、チャレンジでは専用である旨だけ書く
+check('枚数のバッジはクイックのときだけ出す',
+  ticketRow.includes('{quick&&Object.entries(SKIP_TICKETS).map(([diff,tid])=>')
+    && ticketRow.includes("'スキップチケットはクイックモード専用'"));
 check('まとめ表示は序/破/急の短い名前と枚数を出す', ticketRow.includes("(item?.name||'').split('・')[1]") && ticketRow.includes('<span className="font-mono">{have}枚</span>'));
 check('まとめ表示は0枚でも消さずに灰色で出す', ticketRow.includes("have>0?'bg-teal-950/70 border-teal-500/40 text-teal-200':'bg-black/30 border-white/5 text-slate-500'"));
 check('まとめ表示から説明を開ける', ticketRow.includes('onClick={()=>setSkipInfoItemId(tid)}'));
