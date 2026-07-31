@@ -22,6 +22,7 @@ cd tools && npm install
 | コマンド | 内容 |
 | --- | --- |
 | `node check-syntax.js` | `monster-hero/game-system.jsx` をBabelで変換して構文エラーが無いか確認する。**改修後は必ず実行する。** |
+| `node undefined-reference-check.js` | `game-system.jsx` が「その場所からは見えない変数」を参照していないか、Babelでスコープをたどって確認する。構文としては正しいので `check-syntax.js` では見つからず、その画面を開いた瞬間だけ真っ白になる類の不具合を防ぐ。**改修後は必ず実行する。** |
 | `node dye-report.js [モンスターID...]` | 染色もどきの部位マスクを実画像で生成し、部位ごとの画素数・被覆率を出力する。回帰テスト用。 |
 | `node dye-report.js --save-baseline` | 現在の結果を `dye-baseline.json` に保存する。以降は実行のたびに差分が表示される。 |
 | `node region-map.js [モンスターID...]` | 部位分けを色分けしたPNGを `out/` に書き出す。目視確認用。 |
@@ -110,7 +111,7 @@ BGMのmp3(合計約20MB)を読み込んでいるあいだ他のファイルが�
 
 1. `game-system.jsx` などを改修する
 2. `node build.js` で `game-system.compiled.js` を作り直す(**忘れると変更が反映されない**)
-3. `node check-syntax.js` / `node dye-report.js` / `node feature-check.js` を通す
+3. `node check-syntax.js` / `node undefined-reference-check.js` / `node dye-report.js` / `node feature-check.js` を通す
 4. `data/changelog.js` の先頭に今回の更新内容を追記する
 5. `node build.js` で `BUILD_DATE`・`version.json`・更新履歴の最新日時を現在時刻(JST)に揃え、生成物を更新する
 6. コミット → PR → squash マージ
