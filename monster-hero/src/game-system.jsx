@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 17:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 17:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1651,13 +1651,15 @@ const normalizeBattleDifficulty = (value) => Object.prototype.hasOwnProperty.cal
 // 難易度の倍率やアイテムの値段をヘルプへ手で書き写すと、値を変えたときに片方だけ古くなる。
 // (実際「難易度が3つしか載っていない」状態になっていた)。ここを通せば取りこぼしが起きない。
 // 表を1つ足したいときは、ここに case を足して data/help.js から呼ぶ。
+// ダイヤで買う商品のうち、いちばん安いものの値段。助手が「ダイヤが心もとない」と
+// 声をかけるかどうかの判定にだけ使う(購入の可否は各商品ごとに別途見ている)。
+// マーケットの画面から参照するので、必ず一番外側に置くこと
+const CHEAPEST_GOLD_ITEM_COST = ((typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS) || [])
+  .filter(i => i.type === 'disc' || i.type === 'breeder' || i.type === 'item')
+  .reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
+
 const helpDataRows = (id) => {
   const marketItems = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS) || [];
-  // ダイヤで買う商品のうち、いちばん安いものの値段。助手が「ダイヤが心もとない」と
-  // 声をかけるかどうかの判定にだけ使う(購入の可否は各商品ごとに別途見ている)
-  const cheapestGoldItemCost = marketItems
-    .filter(i => i.type === 'disc' || i.type === 'breeder' || i.type === 'item')
-    .reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
   const skipIds = new Set(Object.values(SKIP_TICKETS));
   switch (id) {
     case 'difficulties':
@@ -6502,7 +6504,7 @@ function MonsterHeroGame() {
               <button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest">マーケット</h2>
             </div>
-            <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market" condition={Number.isFinite(cheapestGoldItemCost)&&gold<cheapestGoldItemCost?'lowGold':null}/></div>
+            <div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="market" condition={Number.isFinite(CHEAPEST_GOLD_ITEM_COST)&&gold<CHEAPEST_GOLD_ITEM_COST?'lowGold':null}/></div>
             <div className="flex gap-2 mb-4 shrink-0">
               <div className="flex-1 flex items-center justify-center gap-2 bg-amber-950/40 border border-amber-500/30 rounded-2xl py-3">
                 <Coins size={16} className="text-amber-400"/>

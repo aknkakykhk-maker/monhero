@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dd4dabd9fdf10fc1
+// source-sha256: 4e63a8006add3ed5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 17:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 17:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4143,11 +4143,12 @@ const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(
 // 難易度の倍率やアイテムの値段をヘルプへ手で書き写すと、値を変えたときに片方だけ古くなる。
 // (実際「難易度が3つしか載っていない」状態になっていた)。ここを通せば取りこぼしが起きない。
 // 表を1つ足したいときは、ここに case を足して data/help.js から呼ぶ。
+// ダイヤで買う商品のうち、いちばん安いものの値段。助手が「ダイヤが心もとない」と
+// 声をかけるかどうかの判定にだけ使う(購入の可否は各商品ごとに別途見ている)。
+// マーケットの画面から参照するので、必ず一番外側に置くこと
+const CHEAPEST_GOLD_ITEM_COST = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || []).filter(i => i.type === 'disc' || i.type === 'breeder' || i.type === 'item').reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
 const helpDataRows = id => {
   const marketItems = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
-  // ダイヤで買う商品のうち、いちばん安いものの値段。助手が「ダイヤが心もとない」と
-  // 声をかけるかどうかの判定にだけ使う(購入の可否は各商品ごとに別途見ている)
-  const cheapestGoldItemCost = marketItems.filter(i => i.type === 'disc' || i.type === 'breeder' || i.type === 'item').reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
   const skipIds = new Set(Object.values(SKIP_TICKETS));
   switch (id) {
     case 'difficulties':
@@ -13869,7 +13870,7 @@ function MonsterHeroGame() {
     className: "shrink-0 w-full max-w-md mx-auto mb-3"
   }, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "market",
-    condition: Number.isFinite(cheapestGoldItemCost) && gold < cheapestGoldItemCost ? 'lowGold' : null
+    condition: Number.isFinite(CHEAPEST_GOLD_ITEM_COST) && gold < CHEAPEST_GOLD_ITEM_COST ? 'lowGold' : null
   })), /*#__PURE__*/React.createElement("div", {
     className: "flex gap-2 mb-4 shrink-0"
   }, /*#__PURE__*/React.createElement("div", {
