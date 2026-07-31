@@ -47,7 +47,55 @@ const ptRewards = [
 ];
 const ptOver = ptRewards.filter(([, v]) => v > ptLimit);
 check(`1回に配るptがアイコン総額(${iconTotalCost}pt)の半分を超えない` + (ptOver.length ? ` — ${ptOver.map(([k,v])=>`${k}=${v}`).join(', ')}` : ''), ptOver.length === 0);
-check('ptを配る報酬が残っている', ptRewards.some(([, v]) => v > 0));
+// ptはレベルアップでしか増えないのが本来の形。報酬として配る場合も上のしきい値までに収める
+check('ptはレベルアップで増える形になっている',
+  source.includes("const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1"));
+// ブリーダー経験値の報酬(ログインボーナス4日目・ウィークリー神殿)が正しく扱えること
+const xpOf = (rewards) => (rewards || []).filter(r => r.type === 'breederXp').reduce((a, r) => a + r.amount, 0);
+check('ブリーダー経験値を報酬として配れる',
+  m.LOGIN_BONUS_REWARDS.some(r => xpOf(r) > 0) && m.MISSION_DEFS.weekly.some(x => xpOf(x.rewards) > 0));
+const xpClaim = m.buildGiftClaim(
+  { rewards:[{type:'breederXp',amount:100}], expiresAt:new Date(Date.now()+100000).toISOString(), claimedAt:null },
+  { gold:0, breederPoints:0, breederXp:50, ownedItems:{} });
+check('ギフトのブリーダー経験値が加算される', xpClaim.ok && xpClaim.balances.breederXp === 150);
+check('経験値の報酬でレベルアップぶんのptも配る',
+  source.includes('if (balances.breederXp !== breederXp) {')
+    && source.includes('balances.breederPoints += gainedLevels;'));
+
+// --- ログインボーナスでptとして配ってしまったぶんの付け替え(一度きり) ---
+const fixCtx = {}; vm.createContext(fixCtx);
+vm.runInContext(source.slice(source.indexOf("const LOGIN_PT_TO_XP_KEY"), source.indexOf('const grantCompensationGifts'))
+  + '\nglobalThis.__f={LOGIN_PT_TO_XP_KEY,mistakenLoginPoints,applyLoginPointFix};', fixCtx);
+const F = fixCtx.__f;
+const loginGift = (amount, claimed) => ({ source:'loginBonus', claimedAt: claimed ? '2026-08-01T00:00:00.000Z' : null, rewards:[{type:'breederPoint',amount}] });
+check('付け替えは新しい保存キーで一度だけ', F.LOGIN_PT_TO_XP_KEY === 'mh_login_pt_to_xp_v1'
+  && source.includes("const ptFixDone = await storeGet(LOGIN_PT_TO_XP_KEY, false, false);")
+  && source.includes("await storeSet(LOGIN_PT_TO_XP_KEY, true, false);"));
+check('受け取り済みのぶんだけ数える',
+  F.mistakenLoginPoints([loginGift(100, true), loginGift(100, false), loginGift(3, true)]) === 100);
+check('ptを減らして同じだけ経験値を足す', (() => {
+  const r = F.applyLoginPointFix(138, 1000, [loginGift(100, true)]);
+  return r.changed && r.points === 38 && r.xp === 1100 && r.moved === 100;
+})());
+check('使ってしまっていてもptはマイナスにしない', (() => {
+  const r = F.applyLoginPointFix(20, 0, [loginGift(100, true)]);
+  return r.points === 0 && r.xp === 100 && r.moved === 20;
+})());
+check('対象が無ければ何もしない', F.applyLoginPointFix(50, 500, []).changed === false);
+check('壊れた値でも落ちない', F.applyLoginPointFix(null, undefined, null).points === 0);
+
+// --- お詫びのギフト ---
+const compCtx = {}; vm.createContext(compCtx);
+vm.runInContext(source.slice(source.indexOf('const COMPENSATION_GIFTS = ['), source.indexOf('const LOGIN_PT_TO_XP_KEY'))
+  + '\nglobalThis.__c=COMPENSATION_GIFTS;', compCtx);
+const comps = compCtx.__c;
+check('お詫びのギフトidが重複していない', new Set(comps.map(c => c.id)).size === comps.length);
+check('今回のお詫びでスキップチケット3種を配る', (() => {
+  const g = comps.find(c => c.id === 'gift_compensation_20260801_points');
+  if (!g) return false;
+  const has = (t) => g.rewards.some(r => r.type === t && r.amount >= 1);
+  return has('skipTicketJo') && has('skipTicketHa') && has('skipTicketKyu');
+})());
 // レベルアップでもらえるptは「上がったレベルの数」だけ。まとめて何十ptも入らない
 check('レベルアップで増えるptは上がったレベル数ぶんだけ',
   (source.match(/const next = prev \+ gainedLevels;/g) || []).length === 1
