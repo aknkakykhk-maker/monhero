@@ -47,6 +47,16 @@ check('保存済みかどうかを起動時に見て、続きから設定でき�
     && has('setOnboardingIcon(hasSavedIcon ? savedIcon : null);')
     && has('if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;'));
 
+// --- デバッグの「見るだけ」表示 ---
+// onboarded が true のままだと初回のまとまりが出ず、ふつうのプロフィールが開くだけになる
+check('見るだけの表示でも「はじめての設定」を出す',
+  has('{(!onboarded||onboardingPreview)&&(()=>{'));
+check('見るだけの表示でも戻るボタンを出さない',
+  has('{(onboarded&&!onboardingPreview)'));
+check('見るだけでは名前もアイコンも保存しない',
+  has("if (!onboardingPreview) await storeSet('mh_breeder_name', n, false);")
+    && has("if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false);"));
+
 // --- 決定したあと ---
 check('決定するとそのまま村の案内へ続く',
   has('const seenTutorial = await storeGet(TUTORIAL_SEEN_KEY, false, false);')
