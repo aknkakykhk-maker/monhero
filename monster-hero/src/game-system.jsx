@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 21:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 22:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1658,9 +1658,11 @@ const CHEAPEST_GOLD_ITEM_COST = ((typeof BREEDER_MARKET_ITEMS !== 'undefined' &&
   .filter(i => i.type === 'disc' || i.type === 'breeder' || i.type === 'item')
   .reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
 
-// マーケットの商品アイコンの大きさ。円盤石は絵を見せたいので大きいまま、
-// ブリーダーアイコンやカード・アイテムは名前と説明のほうが大事なので小さくする
-const MARKET_ICON_SIZE = { disc: 'w-16 h-16', breeder: 'w-12 h-12', icon: 'w-11 h-11', item: 'w-10 h-10' };
+// マーケットは1行に4商品ずつ並べる。カードが細くなるので中身も小さくそろえる
+const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';
+// 商品アイコンの大きさ。円盤石は絵を見せたいのでいちばん大きく、
+// ブリーダーアイコンやカード・アイテムは名前のほうが大事なので小さくする
+const MARKET_ICON_SIZE = { disc: 'w-12 h-12', breeder: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };
 
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
 const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
@@ -6487,8 +6489,9 @@ function MonsterHeroGame() {
                 まず難易度の画面(バトル)へ戻す。ホームへはもう一度押せば戻れる */}
             <div className="flex items-center gap-1 mb-1 shrink-0"><button onClick={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
-            {/* モードのタブ。各モード名の横の「？」で説明を開く */}
-            <div className="grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5">
+            {/* モードのタブ。各モード名の横の「？」で説明を開く。
+                ランキングを見ているあいだは出さない(戻れば選べるので、そのぶん一覧を広く使う) */}
+            {battleMenuTab==='difficulty'&&<div className="grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5">
               {BATTLE_MODES.map(mode=>{const on=battleMode===mode.id&&battleMenuTab==='difficulty';return(
                 <div key={mode.id} onClick={()=>{setBattleMode(mode.id);setBattleMenuTab('difficulty');}} role="button" tabIndex={0} aria-label={`${mode.label}に切り替え`}
                      className={`flex items-center justify-center gap-1 py-1.5 px-1 rounded-lg transition-all min-w-0 ${on?'':'bg-slate-950/70'}`}
@@ -6528,10 +6531,12 @@ function MonsterHeroGame() {
                 : { label:'自己ベストスコア', value:`${(highScores[key]||0).toLocaleString()} pt`, valueColor:'text-indigo-200', sub:`最高到達 WAVE ${waveOf(key)}` };
               // 倍率の下の補足行も、クイックだけに出すとカードの高さが変わるため両モードで出す
               const noteText=quick?'経験値・ダイヤのみ1.5倍':'スコアがランキングに登録される';
-              return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>{quick&&Object.keys(SKIP_TICKETS).length>0&&(
-                <div className="shrink-0 flex flex-wrap items-center justify-center gap-1 mb-1 px-2">
-                  <span className="text-[8px] font-black text-slate-500 tracking-[.12em]">所持スキップチケット</span>
-                  {Object.entries(SKIP_TICKETS).map(([diff,tid])=>{const item=BREEDER_MARKET_ITEMS.find(i=>i.id===tid);const short=(item?.name||'').split('・')[1]||DIFFICULTY_SETTINGS[diff]?.label||diff;const have=ownedItems[tid]||0;return(
+              return <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"><div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>{Object.keys(SKIP_TICKETS).length>0&&(
+                /* スキップチケットの所持数。使えるのはクイックだけだが、チャレンジでも同じ高さの行を出す。
+                   ここを片方だけ消すと、下に続く難易度カードの位置がモードでずれてしまうため */
+                <div className="shrink-0 flex flex-wrap items-center justify-center gap-1 mb-1 px-2 min-h-[24px]">
+                  <span className="text-[8px] font-black text-slate-500 tracking-[.12em]">{quick?'所持スキップチケット':'スキップチケットはクイックモード専用'}</span>
+                  {quick&&Object.entries(SKIP_TICKETS).map(([diff,tid])=>{const item=BREEDER_MARKET_ITEMS.find(i=>i.id===tid);const short=(item?.name||'').split('・')[1]||DIFFICULTY_SETTINGS[diff]?.label||diff;const have=ownedItems[tid]||0;return(
                     <button key={diff} onClick={()=>setSkipInfoItemId(tid)} aria-label={`${item?.name||short}の説明`} className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border text-[9px] font-black active:scale-95 ${have>0?'bg-teal-950/70 border-teal-500/40 text-teal-200':'bg-black/30 border-white/5 text-slate-500'}`}><span>{item?.emoji||'⏩'}</span><span>{short}</span><span className="font-mono">{have}枚</span></button>
                   );})}
                 </div>
@@ -6698,7 +6703,7 @@ function MonsterHeroGame() {
             {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab).length===0?(
               <div className="text-center text-[11px] text-slate-600 font-bold py-10">まだ商品がありません</div>
             ):(
-              <div className="grid grid-cols-2 gap-3 pb-4">
+              <div className={MARKET_GRID_CLASS}>
                 {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab).map(item=>{
                   const comingSoon = item.available === false;
                   const owned = !comingSoon && isMarketItemOwned(item);
@@ -6710,22 +6715,24 @@ function MonsterHeroGame() {
                   return (
                     // 名前・所持数・詳細ボタンは商品によって有無や行数が変わるため、
                     // 高さを決めた枠に入れて並びを崩さない。購入ボタンはmt-autoでカード下端に揃える
-                    <div key={item.id} className={`rounded-2xl border-2 p-3 flex flex-col items-center gap-2 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
-                      <div className={`${MARKET_ICON_SIZE[item.type]||'w-14 h-14'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>:<span className="text-3xl">{item.emoji}</span>}</div>
-                      <div className={`w-full flex items-center justify-center text-center text-xs font-black leading-tight ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'30px'}}>{item.name}</div>
-                      <div className="w-full flex items-center justify-center gap-1.5" style={{height:'26px'}}>
-                        {item.type==='item'?(<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>所持数: {ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果`} className="text-[9px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-2 py-0.5 rounded-full active:scale-95 flex items-center gap-1"><BookOpen size={9}/>詳細</button>}</>)
+                    <div key={item.id} className={`rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
+                      <div className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>:<span className="text-xl">{item.emoji}</span>}</div>
+                      <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'26px'}}>{item.name}</div>
+                      <div className="w-full flex items-center justify-center gap-1" style={{height:'22px'}}>
+                        {item.type==='item'?(<><span className={`text-[9px] font-black ${(ownedItems[item.id]||0)>0?'text-cyan-300':'text-slate-600'}`}>×{ownedItems[item.id]||0}</span>{item.desc&&<button onClick={()=>setMarketItemDetail(item)} aria-label={`${item.name}の効果を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>}</>)
                           :(detailMon||detailTeaching)&&!comingSoon?(
-                            <button onClick={()=>{if(detailMon) setRosterDetailMon(detailMon); else setRosterDetailTeaching(detailTeaching);}} className="text-[9px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-3 py-1 rounded-full active:scale-95 flex items-center gap-1"><BookOpen size={9}/>詳細を見る</button>
+                            <button onClick={()=>{if(detailMon) setRosterDetailMon(detailMon); else setRosterDetailTeaching(detailTeaching);}} aria-label={`${item.name}の詳細を見る`} className="text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"><BookOpen size={8}/>詳細</button>
                           ):null}
                       </div>
+                      {/* 4列に並べるとボタンが細くなるので、文字は「💎120」のように短くし、
+                          読み上げ用の説明(aria-label)で意味を補っている */}
                       <div className="w-full flex items-center justify-center mt-auto">
                         {comingSoon?(
-                          <div className="text-[9px] font-black text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full">近日追加予定</div>
+                          <div className="text-[8px] font-black text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap">近日追加</div>
                         ):owned?(
-                          <div className="text-[9px] font-black text-emerald-400 bg-emerald-950/50 px-3 py-1.5 rounded-full">所持済み</div>
+                          <div className="text-[8px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap">所持済み</div>
                         ):(
-                          <button onClick={()=>buyMarketItem(item)} disabled={!canBuy} className={`text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 whitespace-nowrap ${canBuy?'bg-amber-500 text-black active:scale-95':'bg-slate-800 text-slate-500'}`}>{usesGold?<Gem size={10}/>:<Coins size={10}/>}{item.cost}{usesGold?'ダイヤ':'pt'} で購入</button>
+                          <button onClick={()=>buyMarketItem(item)} disabled={!canBuy} aria-label={`${item.name}を${item.cost}${usesGold?'ダイヤ':'pt'}で購入`} className={`text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-0.5 whitespace-nowrap ${canBuy?'bg-amber-500 text-black active:scale-95':'bg-slate-800 text-slate-500'}`}>{usesGold?<Gem size={9}/>:<Coins size={9}/>}{item.cost}</button>
                         )}
                       </div>
                     </div>

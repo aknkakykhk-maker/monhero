@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 40cfcf71c90e4437
+// source-sha256: 5122fe648a3d75a4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 21:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 22:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4148,13 +4148,15 @@ const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(
 // マーケットの画面から参照するので、必ず一番外側に置くこと
 const CHEAPEST_GOLD_ITEM_COST = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || []).filter(i => i.type === 'disc' || i.type === 'breeder' || i.type === 'item').reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
 
-// マーケットの商品アイコンの大きさ。円盤石は絵を見せたいので大きいまま、
-// ブリーダーアイコンやカード・アイテムは名前と説明のほうが大事なので小さくする
+// マーケットは1行に4商品ずつ並べる。カードが細くなるので中身も小さくそろえる
+const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';
+// 商品アイコンの大きさ。円盤石は絵を見せたいのでいちばん大きく、
+// ブリーダーアイコンやカード・アイテムは名前のほうが大事なので小さくする
 const MARKET_ICON_SIZE = {
-  disc: 'w-16 h-16',
-  breeder: 'w-12 h-12',
-  icon: 'w-11 h-11',
-  item: 'w-10 h-10'
+  disc: 'w-12 h-12',
+  breeder: 'w-10 h-10',
+  icon: 'w-10 h-10',
+  item: 'w-9 h-9'
 };
 
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
@@ -13357,7 +13359,7 @@ function MonsterHeroGame() {
     className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
   }, "\u30D0\u30C8\u30EB")), /*#__PURE__*/React.createElement("div", {
     className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, battleMenuTab === 'difficulty' && /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5"
   }, BATTLE_MODES.map(mode => {
     const on = battleMode === mode.id && battleMenuTab === 'difficulty';
@@ -13392,7 +13394,7 @@ function MonsterHeroGame() {
         color: '#0f172a'
       } : undefined
     }, "\uFF1F"));
-  })), "}", battleMenuTab === 'difficulty' && (() => {
+  })), battleMenuTab === 'difficulty' && (() => {
     const quick = isQuickMode(battleMode);
     return /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full h-10 mb-1"
@@ -13452,11 +13454,15 @@ function MonsterHeroGame() {
       className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
-    }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), quick && Object.keys(SKIP_TICKETS).length > 0 && /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 flex flex-wrap items-center justify-center gap-1 mb-1 px-2"
+    }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), Object.keys(SKIP_TICKETS).length > 0 &&
+    /*#__PURE__*/
+    /* スキップチケットの所持数。使えるのはクイックだけだが、チャレンジでも同じ高さの行を出す。
+       ここを片方だけ消すと、下に続く難易度カードの位置がモードでずれてしまうため */
+    React.createElement("div", {
+      className: "shrink-0 flex flex-wrap items-center justify-center gap-1 mb-1 px-2 min-h-[24px]"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[8px] font-black text-slate-500 tracking-[.12em]"
-    }, "\u6240\u6301\u30B9\u30AD\u30C3\u30D7\u30C1\u30B1\u30C3\u30C8"), Object.entries(SKIP_TICKETS).map(([diff, tid]) => {
+    }, quick ? '所持スキップチケット' : 'スキップチケットはクイックモード専用'), quick && Object.entries(SKIP_TICKETS).map(([diff, tid]) => {
       const item = BREEDER_MARKET_ITEMS.find(i => i.id === tid);
       const short = (item?.name || '').split('・')[1] || DIFFICULTY_SETTINGS[diff]?.label || diff;
       const have = ownedItems[tid] || 0;
@@ -14079,7 +14085,7 @@ function MonsterHeroGame() {
   }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab).length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "text-center text-[11px] text-slate-600 font-bold py-10"
   }, "\u307E\u3060\u5546\u54C1\u304C\u3042\u308A\u307E\u305B\u3093") : /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-2 gap-3 pb-4"
+    className: MARKET_GRID_CLASS
   }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab).map(item => {
     const comingSoon = item.available === false;
     const owned = !comingSoon && isMarketItemOwned(item);
@@ -14094,55 +14100,57 @@ function MonsterHeroGame() {
       // 高さを決めた枠に入れて並びを崩さない。購入ボタンはmt-autoでカード下端に揃える
       React.createElement("div", {
         key: item.id,
-        className: `rounded-2xl border-2 p-3 flex flex-col items-center gap-2 ${owned ? 'bg-emerald-900/30 border-emerald-500/50' : comingSoon ? 'bg-slate-900/60 border-slate-800/60' : 'bg-slate-900 border-slate-800'}`
+        className: `rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned ? 'bg-emerald-900/30 border-emerald-500/50' : comingSoon ? 'bg-slate-900/60 border-slate-800/60' : 'bg-slate-900 border-slate-800'}`
       }, /*#__PURE__*/React.createElement("div", {
-        className: `${MARKET_ICON_SIZE[item.type] || 'w-14 h-14'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${comingSoon ? 'grayscale opacity-50' : ''}`
+        className: `${MARKET_ICON_SIZE[item.type] || 'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${comingSoon ? 'grayscale opacity-50' : ''}`
       }, item.icon ? /*#__PURE__*/React.createElement("img", {
         src: item.icon,
         alt: item.name,
         className: "w-full h-full object-cover"
       }) : /*#__PURE__*/React.createElement("span", {
-        className: "text-3xl"
+        className: "text-xl"
       }, item.emoji)), /*#__PURE__*/React.createElement("div", {
-        className: `w-full flex items-center justify-center text-center text-xs font-black leading-tight ${comingSoon ? 'text-slate-500' : 'text-white'}`,
+        className: `w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon ? 'text-slate-500' : 'text-white'}`,
         style: {
-          minHeight: '30px'
+          minHeight: '26px'
         }
       }, item.name), /*#__PURE__*/React.createElement("div", {
-        className: "w-full flex items-center justify-center gap-1.5",
+        className: "w-full flex items-center justify-center gap-1",
         style: {
-          height: '26px'
+          height: '22px'
         }
       }, item.type === 'item' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
         className: `text-[9px] font-black ${(ownedItems[item.id] || 0) > 0 ? 'text-cyan-300' : 'text-slate-600'}`
-      }, "\u6240\u6301\u6570: ", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
+      }, "\xD7", ownedItems[item.id] || 0), item.desc && /*#__PURE__*/React.createElement("button", {
         onClick: () => setMarketItemDetail(item),
-        "aria-label": `${item.name}の効果`,
-        className: "text-[9px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-2 py-0.5 rounded-full active:scale-95 flex items-center gap-1"
+        "aria-label": `${item.name}の効果を見る`,
+        className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
       }, /*#__PURE__*/React.createElement(BookOpen, {
-        size: 9
+        size: 8
       }), "\u8A73\u7D30")) : (detailMon || detailTeaching) && !comingSoon ? /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           if (detailMon) setRosterDetailMon(detailMon);else setRosterDetailTeaching(detailTeaching);
         },
-        className: "text-[9px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-3 py-1 rounded-full active:scale-95 flex items-center gap-1"
+        "aria-label": `${item.name}の詳細を見る`,
+        className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
       }, /*#__PURE__*/React.createElement(BookOpen, {
-        size: 9
-      }), "\u8A73\u7D30\u3092\u898B\u308B") : null), /*#__PURE__*/React.createElement("div", {
+        size: 8
+      }), "\u8A73\u7D30") : null), /*#__PURE__*/React.createElement("div", {
         className: "w-full flex items-center justify-center mt-auto"
       }, comingSoon ? /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-slate-500 bg-slate-800/60 px-3 py-1.5 rounded-full"
-      }, "\u8FD1\u65E5\u8FFD\u52A0\u4E88\u5B9A") : owned ? /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-emerald-400 bg-emerald-950/50 px-3 py-1.5 rounded-full"
+        className: "text-[8px] font-black text-slate-500 bg-slate-800/60 px-2 py-1 rounded-full whitespace-nowrap"
+      }, "\u8FD1\u65E5\u8FFD\u52A0") : owned ? /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-emerald-400 bg-emerald-950/50 px-2 py-1 rounded-full whitespace-nowrap"
       }, "\u6240\u6301\u6E08\u307F") : /*#__PURE__*/React.createElement("button", {
         onClick: () => buyMarketItem(item),
         disabled: !canBuy,
-        className: `text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1 whitespace-nowrap ${canBuy ? 'bg-amber-500 text-black active:scale-95' : 'bg-slate-800 text-slate-500'}`
+        "aria-label": `${item.name}を${item.cost}${usesGold ? 'ダイヤ' : 'pt'}で購入`,
+        className: `text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-0.5 whitespace-nowrap ${canBuy ? 'bg-amber-500 text-black active:scale-95' : 'bg-slate-800 text-slate-500'}`
       }, usesGold ? /*#__PURE__*/React.createElement(Gem, {
-        size: 10
+        size: 9
       }) : /*#__PURE__*/React.createElement(Coins, {
-        size: 10
-      }), item.cost, usesGold ? 'ダイヤ' : 'pt', " \u3067\u8CFC\u5165")))
+        size: 9
+      }), item.cost)))
     );
   })))), gameState === 'ROSTER' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 flex flex-col h-full min-h-0 p-4"
