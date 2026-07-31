@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c31efbc0b8c7b803
+// source-sha256: e67b4c2fab70b880
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 12:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5246,7 +5246,7 @@ const RewardSummaryCard = ({
   className: "flex items-center justify-between gap-1 text-[9px] bg-white/5 rounded-lg px-2 py-1"
 }, /*#__PURE__*/React.createElement("span", {
   className: "text-slate-400 font-bold shrink-0"
-}, "WAVE ", w.wave), /*#__PURE__*/React.createElement("span", {
+}, "WAVE ", w.wave), !summary.quickMode && /*#__PURE__*/React.createElement("span", {
   className: "text-white font-mono font-bold truncate"
 }, "\u30B9\u30B3\u30A2 +", w.roundScore.toLocaleString()), /*#__PURE__*/React.createElement("span", {
   className: "text-indigo-300 font-mono font-bold shrink-0"
@@ -8603,6 +8603,7 @@ function MonsterHeroGame() {
     if (wavesCleared < wave) await saveMissionProgress('battle');
     if (wavesCleared <= 0) {
       setFinalRewardSummary({
+        quickMode: isQuickMode(runMode),
         breederXpGain: 0,
         breederLevelBefore: breederLevel,
         breederLevelAfter: breederLevel,
@@ -8719,6 +8720,7 @@ function MonsterHeroGame() {
       });
     }
     setFinalRewardSummary({
+      quickMode: isQuickMode(runMode),
       breederXpGain,
       breederLevelBefore,
       breederLevelAfter,
@@ -16134,7 +16136,7 @@ function MonsterHeroGame() {
     size: 8
   }), " TURN ", turnCount, "/20")), /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter mr-1"
   }, /*#__PURE__*/React.createElement(Award, {
     size: 10
@@ -18189,7 +18191,7 @@ function MonsterHeroGame() {
     className: "text-[8px] text-slate-500 font-mono"
   }, "\u7D2F\u8A08 ", /*#__PURE__*/React.createElement("span", {
     className: `${waveResult.totalRecoveryDelta >= 0 ? 'text-emerald-300' : 'text-red-300'}`
-  }, waveResult.totalRecoveryDelta >= 0 ? '+' : '', (waveResult.totalRecoveryDelta * 100).toFixed(1), "%")))), /*#__PURE__*/React.createElement("div", {
+  }, waveResult.totalRecoveryDelta >= 0 ? '+' : '', (waveResult.totalRecoveryDelta * 100).toFixed(1), "%")))), !isQuickMode(runMode) && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center border-b border-white/10 pb-0.5"
   }, /*#__PURE__*/React.createElement("span", {
     className: "text-slate-400 text-[11px] font-bold uppercase"
@@ -18217,7 +18219,7 @@ function MonsterHeroGame() {
     className: "text-amber-500 text-[11px] font-black uppercase"
   }, "\u7D2F\u8A08\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("span", {
     className: "text-amber-400 font-mono font-black text-lg"
-  }, waveResult.totalScore.toLocaleString()))), /*#__PURE__*/React.createElement("button", {
+  }, waveResult.totalScore.toLocaleString())))), /*#__PURE__*/React.createElement("button", {
     onClick: handleNextWave,
     disabled: runFinalizing,
     "aria-busy": runFinalizing,
@@ -19129,7 +19131,7 @@ function MonsterHeroGame() {
     className: "text-white animate-bounce mb-3"
   }), /*#__PURE__*/React.createElement("h1", {
     className: "text-3xl font-black italic text-white uppercase"
-  }, "CHAMPION"), /*#__PURE__*/React.createElement("div", {
+  }, "CHAMPION"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
     className: "w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-5xl font-mono font-black text-white"
@@ -19157,7 +19159,7 @@ function MonsterHeroGame() {
     className: "text-red-700 mb-3 animate-pulse"
   }), /*#__PURE__*/React.createElement("h2", {
     className: "text-2xl font-black italic text-white uppercase"
-  }, "\u6557 \u5317"), /*#__PURE__*/React.createElement("div", {
+  }, "\u6557 \u5317"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
     className: "bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-3xl font-mono font-black text-white"
@@ -19192,7 +19194,7 @@ function MonsterHeroGame() {
     className: "text-slate-400 mb-3"
   }), /*#__PURE__*/React.createElement("h2", {
     className: "text-2xl font-black italic text-white uppercase"
-  }, "\u30EA\u30BF\u30A4\u30A2"), /*#__PURE__*/React.createElement("div", {
+  }, "\u30EA\u30BF\u30A4\u30A2"), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
     className: "bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"
   }, /*#__PURE__*/React.createElement("div", {
     className: "text-3xl font-mono font-black text-white"

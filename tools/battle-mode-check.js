@@ -124,6 +124,18 @@ check('クイックはスコア関連を出さない',
   has("const rateCells=(setting)=>quick") && has("? [['敵強度',`×${setting.power}`,false],['経験値',bonusLabel(setting.score),true],['ダイヤ',bonusLabel(setting.gold),true]]")
     && has(': <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="text-[8px] text-slate-400 font-black">自己ベストスコア</small>'));
 check('クイックでも最高到達WAVEは出す', has('<small className="text-[9px] text-slate-400 font-black">最高到達</small>'));
+// クイックはスコアを競わないので、バトル中もリザルトもスコアを出さない
+check('バトル中もクイックはスコアを出さない', has('{!isQuickMode(runMode)&&<div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter mr-1"><Award size={10}/> {score.toLocaleString()}</div>}'));
+check('最終リザルト3画面のスコア枠をクイックでは出さない',
+  (source.match(/\{!isQuickMode\(runMode\)&&<div className="[^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white">\{score\.toLocaleString\(\)\}<\/div><\/div>\}/g) || []).length === 3,
+  `${(source.match(/\{!isQuickMode\(runMode\)&&<div className="[^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white">\{score\.toLocaleString\(\)\}<\/div><\/div>\}/g) || []).length}か所`);
+check('WAVEリザルトのスコア内訳をクイックでは出さない',
+  has('{/* スコアの内訳。クイックモードはスコアを競わないので出さない */}') && has('{!isQuickMode(runMode)&&(<>'));
+check('WAVE別ログのスコア列もクイックでは出さない',
+  has('{!summary.quickMode&&<span className="text-white font-mono font-bold truncate">スコア +{w.roundScore.toLocaleString()}</span>}')
+    && has('setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain, breederLevelBefore'));
+check('スコア以外(経験値・ダイヤ・絆)はクイックでも出す',
+  has('WAVE別ログ') && has('XP+{w.xpGain.toLocaleString()}') && has('💎+{w.goldGain.toLocaleString()}'));
 check('チャレンジはスコア倍率を出す', has(": [['敵強度',`×${setting.power}`,false],['スコア',`×${setting.score}`,false],['ダイヤ',`×${setting.gold}`,false]]"));
 check('クイックは経験値・ダイヤだけ1.5倍と分かる表示', has('経験値・ダイヤのみ1.5倍'));
 // 見出しが2行に折り返さないよう、倍率は3枠までにして折り返しも禁じる
