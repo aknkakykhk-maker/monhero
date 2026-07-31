@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9caeee01e810abf2
+// source-sha256: 65d482c7ae44fd23
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 08:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 08:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3517,9 +3517,9 @@ const CHANGELOG_STATUS = {
 // (ミュートを解除したときの音量もこの値に合わせている)
 const DEFAULT_VOLUME = 1;
 // ログインボーナスは毎日、既存の報酬に加えてスキップチケット・序を1枚配る。
-// ptはマーケットのアイコン(1個1pt)にしか使わない。アイコンは全部で20種ほどしかないので、
-// 100ptや200ptを一度に配ると、もらった時点で使い道が無くなってしまう。
-// 数個ぶんに抑えて、そのぶんダイヤで補っている
+// 4日目の「100」はもともとブリーダー経験値のつもりだったが、
+// 報酬の種類をブリーダーポイント(pt)にしていたため、使い道のないptが大量に配られていた。
+// ptはマーケットのアイコン(1個1pt・全部で20種ほど)にしか使わないので、まとめて配らない
 const LOGIN_BONUS_REWARDS = [[{
   type: 'diamond',
   amount: 500
@@ -3539,11 +3539,8 @@ const LOGIN_BONUS_REWARDS = [[{
   type: 'skipTicketJo',
   amount: 1
 }], [{
-  type: 'breederPoint',
-  amount: 3
-}, {
-  type: 'diamond',
-  amount: 500
+  type: 'breederXp',
+  amount: 100
 }, {
   type: 'skipTicketJo',
   amount: 1
@@ -3569,6 +3566,7 @@ const LOGIN_BONUS_REWARDS = [[{
 const GIFT_REWARD_LABELS = {
   diamond: 'ダイヤ',
   breederPoint: 'ブリーダーポイント',
+  breederXp: 'ブリーダー経験値',
   dyeMock: '染色もどき',
   bondPointReset: '絆ポイントリセットアイテム',
   trainingTicket: 'トレーニングチケット',
@@ -3735,7 +3733,52 @@ const COMPENSATION_GIFTS = [{
     type: 'skipTicketKyu',
     amount: 1
   }]
+}, {
+  id: 'gift_compensation_20260801_points',
+  title: 'お詫びのしるし',
+  description: 'ログインボーナスの報酬が、ブリーダー経験値ではなくブリーダーポイントになっていた不具合のお詫びです。ご迷惑をおかけしました。',
+  rewards: [{
+    type: 'skipTicketJo',
+    amount: 1
+  }, {
+    type: 'skipTicketHa',
+    amount: 1
+  }, {
+    type: 'skipTicketKyu',
+    amount: 1
+  }]
 }];
+// 【一度きりの付け替え】ログインボーナス4日目の「100」は、もともとブリーダー経験値の
+// つもりだったのに、報酬の種類をブリーダーポイント(pt)にしていたため使い道のないptが
+// 大量に配られていた。すでに受け取ってしまったぶんを「経験値が入っていた」形へ寄せる。
+//
+//   ・受け取り済みのログインボーナスのギフトから、ptで配ってしまった量を数える
+//   ・その量だけptを減らし(持っている以上には減らさない)、同じ量の経験値を足す
+//   ・専用のフラグ(mh_login_pt_to_xp_v1)を持たせ、二度は行わない
+const LOGIN_PT_TO_XP_KEY = 'mh_login_pt_to_xp_v1';
+const MISTAKEN_LOGIN_PT = 100; // ログインボーナス4日目で配ってしまっていた量
+const mistakenLoginPoints = gifts => (Array.isArray(gifts) ? gifts : []).filter(g => g?.source === 'loginBonus' && g.claimedAt && Array.isArray(g.rewards)).reduce((sum, g) => sum + g.rewards.filter(r => r?.type === 'breederPoint' && Math.floor(Number(r.amount)) === MISTAKEN_LOGIN_PT).reduce((a, r) => a + Math.floor(Number(r.amount)), 0), 0);
+// 付け替えた結果を返す(渡された値は変えない)。
+// ptは持っている以上には減らさず、経験値は配られるはずだった量をそのまま足す
+const applyLoginPointFix = (points, xp, gifts) => {
+  const wrong = mistakenLoginPoints(gifts);
+  const nowPoints = Math.max(0, Math.floor(Number(points) || 0));
+  const nowXp = Math.max(0, Math.floor(Number(xp) || 0));
+  if (wrong <= 0) return {
+    changed: false,
+    points: nowPoints,
+    xp: nowXp,
+    moved: 0
+  };
+  const moved = Math.min(wrong, nowPoints);
+  return {
+    changed: true,
+    points: nowPoints - moved,
+    xp: nowXp + wrong,
+    moved,
+    granted: wrong
+  };
+};
 const grantCompensationGifts = (gifts, now = Date.now()) => {
   const list = Array.isArray(gifts) ? gifts : [];
   const missing = COMPENSATION_GIFTS.filter(def => !list.some(item => item?.id === def.id));
@@ -3787,6 +3830,7 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
   const next = {
     gold: Math.max(0, Number(balances?.gold) || 0),
     breederPoints: Math.max(0, Number(balances?.breederPoints) || 0),
+    breederXp: Math.max(0, Number(balances?.breederXp) || 0),
     ownedItems: {
       ...(balances?.ownedItems || {})
     }
@@ -3804,7 +3848,7 @@ const buildGiftClaim = (gift, balances, now = Date.now()) => {
     type,
     amount
   }) => {
-    if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else {
+    if (type === 'diamond') next.gold += amount;else if (type === 'breederPoint') next.breederPoints += amount;else if (type === 'breederXp') next.breederXp += amount;else {
       const id = itemIds[type];
       next.ownedItems[id] = (next.ownedItems[id] || 0) + amount;
     }
@@ -3959,11 +4003,8 @@ const MISSION_DEFS = {
     key: 'donations',
     target: 3,
     rewards: [{
-      type: 'breederPoint',
-      amount: 5
-    }, {
-      type: 'diamond',
-      amount: 500
+      type: 'breederXp',
+      amount: 200
     }]
   }, {
     id: 'weekly_complete',
@@ -7310,6 +7351,22 @@ function MonsterHeroGame() {
         day: loginGrant.day,
         rewards: loginGrant.gift.rewards
       });
+      // ログインボーナスでptとして配ってしまったぶんを、経験値へ付け替える(一度きり)。
+      // 経験値が増えてレベルが上がったぶんのポイントもここで配る
+      const ptFixDone = await storeGet(LOGIN_PT_TO_XP_KEY, false, false);
+      if (ptFixDone !== true) {
+        const fixed = applyLoginPointFix(savedPoints, savedXp, compensationGrant.gifts);
+        if (fixed.changed) {
+          const gainedLevels = Math.max(0, levelInfo(fixed.xp).level - levelInfo(savedXp).level);
+          savedPoints = fixed.points + gainedLevels;
+          await storeSet('mh_breeder_xp', fixed.xp, false);
+          setBreederXp(fixed.xp);
+          await storeSet('mh_breeder_points', savedPoints, false);
+          setBreederPoints(savedPoints);
+          await storeSet('mh_breeder_points_granted', Math.max(0, levelInfo(fixed.xp).level - 1), false);
+        }
+        await storeSet(LOGIN_PT_TO_XP_KEY, true, false);
+      }
       const missionState = normalizeMissions(await storeGet('mh_missions', null, false));
       const loginDay = missionDailyPeriod();
       missionState.daily.login = 1;
@@ -9620,10 +9677,12 @@ function MonsterHeroGame() {
     giftClaimingRef.current = true;
     try {
       const wanted = new Set(ids);
+      // ブリーダー経験値の報酬もあるので、経験値も一緒に持って回る
       let balances = {
         gold,
         breederPoints,
-        ownedItems
+        ownedItems,
+        breederXp
       };
       let claimedCount = 0;
       const now = Date.now();
@@ -9637,6 +9696,18 @@ function MonsterHeroGame() {
       });
       if (!claimedCount) return;
       for (let i = 0; i < claimedCount; i++) addAssistantBond('gift');
+      // ブリーダー経験値が入ったときは、レベルが上がったぶんのポイントも配る。
+      // 配った総数も更新しておく(読み込み時の補填が二重に配らないようにするため)
+      if (balances.breederXp !== breederXp) {
+        const after = levelInfo(balances.breederXp);
+        const gainedLevels = Math.max(0, after.level - levelInfo(breederXp).level);
+        if (gainedLevels > 0) {
+          balances.breederPoints += gainedLevels;
+          await storeSet('mh_breeder_points_granted', Math.max(0, after.level - 1), false);
+        }
+        await storeSet('mh_breeder_xp', balances.breederXp, false);
+        setBreederXp(balances.breederXp);
+      }
       // 報酬検証を全件終えた確定値だけを保存し、画面stateも同じ値へ揃える。
       await storeSet('mh_gold', balances.gold, false);
       await storeSet('mh_breeder_points', balances.breederPoints, false);

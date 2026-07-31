@@ -64,8 +64,8 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 <script src="data/breeder.js?v=d5eb7eb8381c"></script>
 <script src="data/enemy-monsters.js?v=756038184df4"></script>
 <script src="data/skills.js?v=2d4c31c548dd"></script>
-<script src="data/changelog.js?v=b1751c554230"></script>
-<script src="data/help.js?v=e3008bccbfd3"></script>
+<script src="data/changelog.js?v=3234d196b87a"></script>
+<script src="data/help.js?v=22765e2ee867"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
 <script src="data/assistants.js?v=3e60d6c3efd5"></script>
 <script>
@@ -76,7 +76,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
   // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
   // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
   // 2回とも失敗した場合だけエラーを表示する。
-  var GAME_BUILD = '202608010843';
+  var GAME_BUILD = '202608010857';
   var attempts = 0;
   function showLoadError(){
     window.__mhErr && window.__mhErr('game-system.compiled.js load failed after retry');
