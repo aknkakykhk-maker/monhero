@@ -66,7 +66,9 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: ランキング取得列を必要項目に限定`, code.includes("RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon'") && code.includes("RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon'"));
   check(`${label}: 起動時はNormalとMasterを優先`, code.includes("['Normal', 'Master', ...allDiffs.filter"));
   check(`${label}: スコアは同時取得し一部失敗も完了扱い`, code.includes('Promise.allSettled(diffs.map(loadOne))'));
-  check(`${label}: レベル系は難易度で絞らず1回で取得`, code.includes('sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId, columns)'));
+  check(`${label}: レベル系は難易度で絞らず1回で取得`, code.includes('sbFetchRankings(null, levelLimit, order, 0, requestId, columns)'));
+  // ブリーダーLvは1人が何行も持つので、絆と同じ件数だと下位の人が1行も取れず一覧から消えていた
+  check(`${label}: ブリーダーLvは多めに取る`, code.includes("const levelLimit = levelKind === 'bond' ? RANKING_LEVEL_FETCH_LIMIT : RANKING_BREEDER_FETCH_LIMIT;"));
   check(`${label}: 取得上限は20件`, code.includes('const RANKING_DIAGNOSTIC_LIMIT = 20'));
   check(`${label}: 端末内自己ベストから復旧`, code.includes('`mh_hs_${d}`') && code.includes("hero: '記録復旧'"));
   check(`${label}: score.desc失敗時も診断用上限を使う`, code.includes("sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0"));

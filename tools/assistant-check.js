@@ -164,7 +164,7 @@ check('チュートリアルの台本はデータで持つ', (() => {
   require('vm').runInContext(assistantsSrc + ';globalThis.__t=ASSISTANT_TUTORIAL;', c);
   const t = c.__t;
   return Array.isArray(t) && t.length >= 6 && t.every(p => p.t && p.e)
-    && /困ったらいつでもあたしをタップしてね/.test(t[t.length - 1].t);
+    && /困ったらいつでもタップしてね/.test(t[t.length - 1].t);
 })());
 check('チュートリアルの本文をJSXへ直接書いていない', (() => {
   const c = {}; require('vm').createContext(c);
@@ -215,18 +215,32 @@ check('あいさつを読み終えるとプロフィールへ進む',
     && has("{last?(intro?'名前を決める！':'はじめる！'):'つぎへ'}"));
 check('あいさつと村の案内は同じ吹き出しで台本だけ切り替える',
   has("const intro=tutorialKind==='intro';") && has('const pages=(intro'));
-// 村の案内では、説明している施設だけをHOMEで明るく強調する
-check('説明中の施設を光らせる',
+// 村の案内では、説明している場所だけをHOMEで明るく強調する。
+// 施設だけでなく、ミッション/ギフト(reward)とみゅあの吹き出し(assistant)も指せるようにしている
+const TUTORIAL_SPOTS = ['management', 'temple', 'market', 'battle', 'reward', 'settings', 'assistant'];
+check('説明中の場所を光らせる',
   has("const spotClass = (name) => (tutorialSpot === name ? ' is-tutorial-spot' : '');")
-    && ['management','temple','market','battle'].every(n => has(`spotClass('${n}')`))
-    && has('.mh-home-facility.is-tutorial-spot{z-index:90001}'));
-check('施設を指すページでは暗幕を薄くする',
+    && TUTORIAL_SPOTS.every(n => has(`spotClass('${n}')`))
+    && has('.is-tutorial-spot{z-index:90001}'));
+check('どこを指しているかが分かるように矢印を出す',
+  has("content:'▼'") && has('@keyframes mhTutorialArrow'));
+check('施設以外(ミッション・ギフト・みゅあ・設定)も光る',
+  has('.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{')
+    && has('className={`mh-home-settings${spotClass(\'settings\')}`}'));
+check('場所を指すページでは暗幕を薄くする',
   has("backgroundColor:page.spot?'rgba(2,6,23,0.74)':'rgba(2,6,23,0.92)'"));
-check('光らせる施設もデータで持つ', (() => {
+check('光らせる場所もデータで持つ', (() => {
   const c = {}; require('vm').createContext(c);
   require('vm').runInContext(assistantsSrc + ';globalThis.__t=ASSISTANT_TUTORIAL;', c);
   const spots = c.__t.map(p => p.spot).filter(Boolean);
-  return spots.length >= 4 && spots.every(x => ['management','temple','market','battle'].includes(x));
+  return spots.length >= 6 && spots.every(x => TUTORIAL_SPOTS.includes(x));
+})());
+// 「そのページに無いもの(ランキング・ヘルプ)は、どこにあるかを言葉でも伝える」
+check('ランキングとヘルプの場所を案内している', (() => {
+  const c = {}; require('vm').createContext(c);
+  require('vm').runInContext(assistantsSrc + ';globalThis.__t=ASSISTANT_TUTORIAL;', c);
+  const text = c.__t.map(p => `${p.title || ''}${p.t || ''}`).join('\n');
+  return /ランキング/.test(text) && /ヘルプ/.test(text);
 })());
 check('初回だけ出し、スキップもできる',
   has("const seen = await storeGet(TUTORIAL_SEEN_KEY, false, false);") && has('スキップ</button>')
@@ -312,7 +326,7 @@ check('画像のパスをJSXへ直接書いていない', !/images\/assistant\//
 check('HOMEの吹き出しは施設の上に重ならない場所へ置く',
   has('.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(54px + env(safe-area-inset-top));pointer-events:auto}')
     && has('@media(max-width:350px){.mh-home-assistant{width:62%}}')
-    && has('<div className="mh-home-assistant"><AssistantBubble scene="home" condition={masuMons.length===0?\'firstRun\':null} compact/></div>'));
+    && has('<div className={`mh-home-assistant${spotClass(\'assistant\')}`}><AssistantBubble scene="home" condition={masuMons.length===0?\'firstRun\':null} compact/></div>'));
 check('画面側は scene を渡すだけ', (() => {
   const calls = source.match(/<AssistantBubble[^/]*\/>/g) || [];
   // ヘルプ画面だけは項目ごとの文面を渡すので line/detail を使う

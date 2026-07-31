@@ -596,10 +596,11 @@ const ASSISTANT_TUTORIAL = [
   { e:'wink',    t:'神殿では合体・転生・寄付ができるんだ。育成の土台になるとこだね！', title:'神殿', help:'masu/fusion', spot:'temple' },
   { e:'excited', t:'バトルで活躍した子は「マスモン」として登録できるよ。育てるほど強くなる♪', title:'勇者モンを育てる', help:'masu/masumon', spot:'management' },
   { e:'happy',   t:'バトルは勇者モンを選んで、カードで戦うよ。距離がすっごく大事！', title:'バトル', help:'battle/distance', spot:'battle' },
-  { e:'excited', t:'スコアはランキングに載るよ。上位、狙っちゃう？', title:'ランキング', help:'basics/ranking', spot:'battle' },
+  { e:'excited', t:'ランキングは「バトル」の中！ モード切替のすぐ下のボタンから見られるよ♪', title:'ランキングはバトルの中', help:'basics/ranking', spot:'battle' },
   { e:'happy',   t:'マーケットではモンスターやカードを買えるよ。ダイヤは大事に使ってね♪', title:'マーケット', help:'home/market', spot:'market' },
-  { e:'normal',  t:'細かいことはヘルプにぜんぶ書いてあるから、迷ったら覗いてみてね。', title:'ヘルプ', help:'tips/assistant' },
-  { e:'happy',   t:'困ったらいつでもあたしをタップしてね♪', title:'それじゃあ、いってらっしゃい！' },
+  { e:'surprise', t:'ミッションとギフトはこの辺！ 報酬の受け取り忘れに気をつけてね♪', title:'ミッションとギフト', help:'items/missions', spot:'reward' },
+  { e:'normal',  t:'ヘルプは右上の「設定」の中！ 遊び方に迷ったら、ここを開いてね。', title:'ヘルプは設定の中', help:'tips/assistant', spot:'settings' },
+  { e:'happy',   t:'あたしはここにいるよ。困ったらいつでもタップしてね♪', title:'それじゃあ、いってらっしゃい！', spot:'assistant' },
 ];
 
 // ---------- セリフの抽選 ----------
