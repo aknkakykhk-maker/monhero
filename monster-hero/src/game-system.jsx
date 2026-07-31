@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 17:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 18:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1658,6 +1658,9 @@ const CHEAPEST_GOLD_ITEM_COST = ((typeof BREEDER_MARKET_ITEMS !== 'undefined' &&
   .filter(i => i.type === 'disc' || i.type === 'breeder' || i.type === 'item')
   .reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
 
+// 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
+const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
+
 const helpDataRows = (id) => {
   const marketItems = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS) || [];
   const skipIds = new Set(Object.values(SKIP_TICKETS));
@@ -1713,7 +1716,7 @@ const assistantFaceSrc = (who, expression) => (typeof assistantFaceImage === 'fu
   : (who.image || null);
 // 助手の顔。表情の画像が読めなかったときは既定の表情へ、それも駄目なら絵文字で代用する。
 // size は px
-const AssistantFace = ({ who, size = 72, accent, expression = null }) => {
+const AssistantFace = ({ who, size = 88, accent, expression = null }) => {
   const wanted = assistantFaceSrc(who, expression);
   const fallback = assistantFaceSrc(who, null);
   const [src, setSrc] = useState(wanted);
@@ -1759,19 +1762,57 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   if (pickedRef.current?.key !== pickKey) {
     pickedRef.current = { key: pickKey, value: (typeof pickAssistantLine === 'function') ? pickAssistantLine(scene, condition) : null };
   }
+  // 顔をタップすると次のセリフへ送る。短い間に何度も押されたら連打リアクションに入る。
+  // spam は { step, recovering } で、null のときは通常のセリフを話している
+  const [tapped, setTapped] = useState(null);   // 顔タップで差し替えたセリフ
+  const [spam, setSpam] = useState(null);
+  const tapTimesRef = useRef([]);
+  const spamTimerRef = useRef(null);
+  useEffect(() => () => { if (spamTimerRef.current) clearTimeout(spamTimerRef.current); }, []);
+  // 場面が変われば、送ったセリフも連打の状態もリセットする
+  useEffect(() => { setTapped(null); setSpam(null); tapTimesRef.current = []; }, [pickKey]);
+  const spamLines = (typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES) || [];
+  const spamRecover = (typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER) || null;
+  const onFaceTap = () => {
+    const now = Date.now();
+    const windowMs = (typeof ASSISTANT_SPAM_WINDOW_MS !== 'undefined' && ASSISTANT_SPAM_WINDOW_MS) || 1200;
+    const threshold = (typeof ASSISTANT_SPAM_THRESHOLD !== 'undefined' && ASSISTANT_SPAM_THRESHOLD) || 3;
+    tapTimesRef.current = [...tapTimesRef.current, now].filter(t => now - t <= windowMs);
+    if (spamTimerRef.current) { clearTimeout(spamTimerRef.current); spamTimerRef.current = null; }
+    // 連打中: 次の段階へ。最後まで行ったら少し黙ってから笑って戻る
+    if (spam || (spamLines.length > 0 && tapTimesRef.current.length >= threshold)) {
+      const step = spam ? Math.min(spam.step + 1, spamLines.length - 1) : 0;
+      setSpam({ step, recovering: false });
+      if (spamLines[step]?.last) {
+        const wait = (typeof ASSISTANT_SPAM_RECOVER_MS !== 'undefined' && ASSISTANT_SPAM_RECOVER_MS) || 2600;
+        spamTimerRef.current = setTimeout(() => {
+          setSpam({ step, recovering: true });
+          spamTimerRef.current = setTimeout(() => { setSpam(null); tapTimesRef.current = []; }, 2600);
+        }, wait);
+      }
+      return;
+    }
+    // ふつうのタップ: 次のセリフへ切り替える(表情も変わる)
+    if (typeof pickAssistantLine === 'function') setTapped(pickAssistantLine(scene, condition));
+  };
+  const spamLine = spam ? (spam.recovering ? spamRecover : spamLines[spam.step]) : null;
+  const shown = spamLine || tapped || pickedRef.current.value;
   const picked = pickedRef.current.value;
-  const text = line || picked?.t || who.greeting || '';
-  const face = expression || picked?.e || null;
+  const text = line || shown?.t || who.greeting || '';
+  const face = expression || shown?.e || null;
   const paragraphs = detail || sceneDef?.detail || null;
   const ref = helpRef || sceneDef?.help || null;
   const topic = ref && ref.includes('/') ? helpTopicById(ref.split('/')[0], ref.split('/')[1]) : null;
   const hasDetail = !!((paragraphs && paragraphs.length) || topic);
   const Wrapper = hasDetail ? 'button' : 'div';
-  const size = faceSize != null ? faceSize : (compact ? 40 : 72);
+  const size = faceSize != null ? faceSize : (compact ? 48 : 88);
   return (
     <>
       <div className="w-full flex items-end gap-2">
-        <AssistantFace who={who} size={size} accent={color} expression={face}/>
+        {/* 顔をタップすると次のセリフへ。詳細は吹き出し側をタップする(操作を分けている) */}
+        <button type="button" onClick={onFaceTap} aria-label={`${who.name}にはなしかける`} className="shrink-0 active:scale-90 transition-transform">
+          <AssistantFace who={who} size={size} accent={color} expression={face}/>
+        </button>
         <Wrapper
           {...(hasDetail ? { onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く` } : {})}
           className={`relative flex-1 min-w-0 text-left rounded-2xl border-2 ${compact?'px-2.5 py-1.5':'px-3 py-2'} ${hasDetail?'active:scale-[.99]':''}`}
@@ -1788,7 +1829,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:70000}} role="dialog" aria-modal="true" aria-label={`${who.name}の説明`}>
           <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 bg-slate-950 flex flex-col" style={{ borderColor:color, maxHeight:'88vh' }}>
             <div className="shrink-0 flex items-center gap-3 p-4 border-b border-white/10">
-              <AssistantFace who={who} size={56} accent={color} expression={face}/>
+              <AssistantFace who={who} size={68} accent={color} expression={face}/>
               <div className="flex-1 min-w-0">
                 <div className="text-[10px] font-black tracking-widest" style={{ color }}>{who.name}</div>
                 <div className="text-[12px] text-white leading-relaxed">{text}</div>
@@ -2338,7 +2379,13 @@ function MonsterHeroGame() {
   const [quickClearCounts, setQuickClearCounts] = useState({});
   // このランで「自己ベストを更新したか」「その難易度を初めてクリアしたか」。
   // リザルトで助手に特別なセリフを言わせるためだけに使う(保存はしない)
-  const [runHighlights, setRunHighlights] = useState({ newRecord: false, firstClear: false });
+  const [runHighlights, setRunHighlights] = useState({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
+  // 初回チュートリアル。null=出さない、0以上=そのページを表示中。
+  // 見たかどうかは新しい保存キーへ分けて持つ(既存のキーには一切触らない)
+  const [tutorialStep, setTutorialStep] = useState(null);
+  // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
+  const [assistantDebug, setAssistantDebug] = useState(null);
+  const tutorialShownRef = useRef(false);
   const highScoresRef = useRef({});
   useEffect(() => { highScoresRef.current = highScores; }, [highScores]);
   const [attemptCounts, setAttemptCounts] = useState({}); // 難易度別 挑戦回数(端末保存)
@@ -4737,11 +4784,21 @@ function MonsterHeroGame() {
       await storeSet(clearCountKey(BATTLE_MODE_QUICK, difficulty), nextQuick, false);
       return;
     }
+    // 通算ではじめての優勝かどうか(どの難易度も1度もクリアしていない状態からの1勝目)
+    const clearedBefore = Object.values(clearCounts).reduce((sum, n) => sum + (Number(n) || 0), 0);
+    if (clearedBefore === 0) setRunHighlights(prev => ({ ...prev, firstWin: true }));
     const nextCount = (clearCounts[difficulty] || 0) + 1;
     setClearCounts(prev => ({ ...prev, [difficulty]: Math.max(prev[difficulty] || 0, nextCount) }));
     if (nextCount === 1) setRunHighlights(prev => ({ ...prev, firstClear: true }));
     await storeSet(`mh_clears_${difficulty}`, nextCount, false);
   };
+
+  // はじめての敗北かどうか。どの難易度も1度もクリアしていなければ「まだ勝ったことがない」
+  useEffect(() => {
+    if (hp > 0 || debugBattle) return;
+    const clearedEver = Object.values(clearCounts).reduce((sum, n) => sum + (Number(n) || 0), 0) > 0;
+    if (!clearedEver) setRunHighlights(prev => (prev.firstLose ? prev : { ...prev, firstLose: true }));
+  }, [hp, debugBattle, clearCounts]);
 
   // Save score on game end (CHAMPION is awarded synchronously in handleNextWave instead, so its result screen never renders before the summary is ready)
   useEffect(() => {
@@ -4820,6 +4877,24 @@ function MonsterHeroGame() {
     focusedCard:null, enemyIntent:null, effect:null, finalRewardSummary:null, waveHistory:[], gaveUp:false
   });
 
+  // 初回チュートリアル。HOMEを最初に開いたときだけ自動で始める。
+  // デバッグから何度でも呼べるよう、開始と終了を関数に分けている
+  const startTutorial = (fromDebug = false) => { tutorialShownRef.current = true; if (fromDebug) setShowTitleSettings(false); setTutorialStep(0); };
+  const finishTutorial = async (remember = true) => {
+    setTutorialStep(null);
+    if (remember) { try { await storeSet(TUTORIAL_SEEN_KEY, true, false); } catch {} }
+  };
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || tutorialShownRef.current || !dataLoaded) return;
+    tutorialShownRef.current = true;
+    let cancelled = false;
+    (async () => {
+      const seen = await storeGet(TUTORIAL_SEEN_KEY, false, false);
+      if (!cancelled && seen !== true) setTutorialStep(0);
+    })();
+    return () => { cancelled = true; };
+  }, [bootPhase, gameState, dataLoaded]);
+
   const returnToHome = () => {
     debugBattleRef.current = false;
     debugResultRef.current = false;
@@ -4839,7 +4914,7 @@ function MonsterHeroGame() {
     setWaveResult(s.waveResult);
     setPendingReward(null); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
-    setRunHighlights({ newRecord: false, firstClear: false });
+    setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
     setSkipFlow(null); setSkipConfirmOpen(false); setSkipResult(null); setSkipInfoItemId(null);
     setGameState('HOME');
   };
@@ -5004,7 +5079,7 @@ function MonsterHeroGame() {
     setWaveResult(s.waveResult);
     setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
-    setRunHighlights({ newRecord: false, firstClear: false });
+    setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
     setGameState('PICK_HERO');
   };
 
@@ -6407,7 +6482,7 @@ function MonsterHeroGame() {
                 <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="block text-[8px] text-slate-400 font-black">{rec.label}</small><b className={`block text-right text-base leading-tight ${rec.valueColor}`}>{rec.value}</b><span className="block text-right text-[9px] text-amber-300">{rec.sub}</span></div>
               );})()}<div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div><div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div><div className="grid gap-1.5 mt-1.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button><button onClick={()=>{setDifficulty(key);setRunMode(battleMode);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[44px] rounded-xl font-black text-sm" style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す */}{(()=>{const tid=SKIP_TICKETS[key];if(!tid)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">この難易度はスキップできません</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1 py-0.5">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
               {/* ランキングへの導線はモードのタブのすぐ下へ移したので、ここには助手コメントだけを置く */}
-              <div className="shrink-0 pt-1.5 pb-1"><AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'} accent={mode.color} faceSize={48}/></div>
+              <div className="shrink-0 pt-1.5 pb-1"><AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'} accent={mode.color} faceSize={56}/></div>
               </div>;})()}
             {battleMenuTab==='ranking'&&<div className="flex-1 min-h-0 flex flex-col">
               <div className="shrink-0 w-full mb-2"><AssistantBubble scene="ranking" compact/></div>
@@ -6433,6 +6508,21 @@ function MonsterHeroGame() {
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
             <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button>
+              {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
+              <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
+                <div className="text-[10px] text-pink-300 font-black mb-2">💖 みゅあデバッグ</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={()=>{returnToHome();startTutorial(true);}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">初回チュートリアル再生</button>
+                  <button onClick={()=>setTutorialStep(0)} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">チュートリアルだけ再生</button>
+                  <button onClick={()=>setAssistantDebug('lines')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全助手コメント確認</button>
+                  <button onClick={()=>setAssistantDebug('expressions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全表情確認</button>
+                  <button onClick={()=>setAssistantDebug('conditions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">条件コメント確認</button>
+                  <button onClick={()=>setAssistantDebug('spam')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">連打リアクション確認</button>
+                </div>
+                {/* 初回状態へ戻すのは、はじめての案内をもう一度見るためのもの。
+                    セーブデータ(モンスター・ダイヤ・記録)には一切触らない */}
+                <button onClick={async()=>{ if(!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return; try{ await storeSet(TUTORIAL_SEEN_KEY,false,false); }catch{} tutorialShownRef.current=false; window.alert('初回状態へ戻しました。HOMEを開くと案内が始まります。'); }} className="w-full mt-2 min-h-[42px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">初回状態へ戻す（セーブは消えません）</button>
+              </section>
               <section><div className="text-[10px] text-slate-500 font-black mb-2">1. 難易度</div><div className="grid grid-cols-3 gap-2">{Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=><button key={key} onClick={()=>{setDifficulty(key);const options=getDebugEnemyOptions(key);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);}} className={`min-h-[48px] rounded-xl text-[9px] font-black ${difficulty===key?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle(setting,difficulty===key)}>{setting.label}</button>)}</div></section>
               <section><div className="text-[10px] text-slate-500 font-black mb-2">2. 敵</div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(difficulty).map(({key,enemy:debugEnemy})=><button key={key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
               <button disabled={!getDebugEnemyOptions(difficulty).some(o=>o.key===debugEnemyKey)||getActiveMonsterList().length===0} onClick={startDebugBattle} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">3. デバッグ戦開始</button>
@@ -6573,6 +6663,7 @@ function MonsterHeroGame() {
               <button onClick={()=>{setManagementTab(rosterTab==='monster'?'monster':'breeder');setGameState('MB_MANAGEMENT');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
               <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{rosterTab==='monster'?'モンスター編成':'ブリーダーカード編成'}</h2>
             </div>
+            <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="roster" compact/></div>
             {rosterTab==='monster'?(
               <div className="flex-1 min-h-0 flex flex-col">
                 {/* 編成中のモンスターを小さいアイコンで並べ、タップで編成から外せる */}
@@ -8509,6 +8600,83 @@ function MonsterHeroGame() {
         </QuickStepScreen>
       )}
 
+      {/* 助手(みゅあ)のデバッグ表示。デバッグ設定からだけ開ける。通常のプレイでは出ない */}
+      {assistantDebug&&(()=>{
+        const who=assistantById();
+        const scenes=(typeof ASSISTANT_SCENES!=='undefined'&&ASSISTANT_SCENES)||{};
+        const exprs=(typeof ASSISTANT_EXPRESSIONS!=='undefined'&&ASSISTANT_EXPRESSIONS)||[];
+        const spam=[...((typeof ASSISTANT_SPAM_LINES!=='undefined'&&ASSISTANT_SPAM_LINES)||[]),
+                    ...((typeof ASSISTANT_SPAM_RECOVER!=='undefined'&&ASSISTANT_SPAM_RECOVER)?[ASSISTANT_SPAM_RECOVER]:[])];
+        const titles={lines:'全助手コメント',expressions:'全表情',conditions:'条件コメント',spam:'連打リアクション'};
+        const row=(l,i)=>(
+          <div key={i} className="flex items-start gap-2 px-3 py-2 border-t border-white/5">
+            <div className="shrink-0"><AssistantFace who={who} size={40} accent={who.accent} expression={l.e}/></div>
+            <div className="min-w-0"><div className="text-[8px] font-black text-slate-500">{l.e}</div><div className="text-[11px] text-white leading-relaxed">{l.t}</div></div>
+          </div>);
+        return(
+        <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:95000,paddingTop:'calc(.75rem + env(safe-area-inset-top))'}} role="dialog" aria-modal="true">
+          <div className="shrink-0 flex items-center gap-2 px-3 pb-2 border-b border-white/10">
+            <button onClick={()=>setAssistantDebug(null)} className="p-2 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+            <h2 className="text-sm font-black text-pink-300">💖 {titles[assistantDebug]}</h2>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+            {assistantDebug==='expressions'&&(
+              <div className="grid grid-cols-4 gap-2 p-3">{exprs.map(e=>(
+                <div key={e} className="flex flex-col items-center gap-1"><AssistantFace who={who} size={64} accent={who.accent} expression={e}/><span className="text-[8px] text-slate-400 font-black">{e}</span></div>
+              ))}</div>
+            )}
+            {assistantDebug==='spam'&&(
+              <div>{spam.map((l,i)=>row(l,i))}<div className="p-3 text-[10px] text-slate-500 leading-relaxed">上から順に切り替わります。最後の「…………」のあと、少し待つと最後の行を話して通常へ戻ります。</div></div>
+            )}
+            {(assistantDebug==='lines'||assistantDebug==='conditions')&&(
+              <div>{Object.entries(scenes).map(([key,def])=>{
+                const list=assistantDebug==='conditions'
+                  ? Object.entries(def.when||{}).flatMap(([c,ls])=>ls.map(l=>({...l,t:`[${c}] ${l.t}`})))
+                  : (def.lines||[]);
+                if(list.length===0) return null;
+                return(<section key={key}><div className="px-3 py-1.5 bg-slate-900 text-[10px] font-black text-pink-300 sticky top-0">{key}（{list.length}件）</div>{list.map((l,i)=>row(l,i))}</section>);
+              })}</div>
+            )}
+          </div>
+        </div>);
+      })()}
+
+      {/* 初回チュートリアル。みゅあが1〜2分で村のことを案内する。
+          セリフと表情は data/assistants.js の ASSISTANT_TUTORIAL が持つ(画面には書かない) */}
+      {tutorialStep!=null&&(()=>{
+        const pages=(typeof ASSISTANT_TUTORIAL!=='undefined'&&ASSISTANT_TUTORIAL)||[];
+        const page=pages[Math.max(0,Math.min(tutorialStep,pages.length-1))];
+        if(!page) return null;
+        const who=assistantById();
+        const last=tutorialStep>=pages.length-1;
+        const topicRef=page.help&&page.help.includes('/')?helpTopicById(page.help.split('/')[0],page.help.split('/')[1]):null;
+        return(
+        <div className="fixed inset-0 flex flex-col items-center justify-end p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.92)',zIndex:90000,paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true" aria-label="はじめての案内">
+          <div className="w-full max-w-md flex flex-col items-center">
+            <div className="w-full flex justify-between items-center mb-2">
+              <span className="text-[10px] font-black tracking-widest" style={{color:who.accent}}>{tutorialStep+1} / {pages.length}</span>
+              <button onClick={()=>finishTutorial(true)} className="px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">スキップ</button>
+            </div>
+            <div className="w-full flex items-end gap-3">
+              <AssistantFace who={who} size={104} accent={who.accent} expression={page.e}/>
+              <div className="relative flex-1 min-w-0 rounded-2xl border-2 px-3.5 py-3" style={{borderColor:who.accent,backgroundColor:'rgba(15,23,42,0.96)'}}>
+                <span className="absolute" style={{left:'-9px',bottom:'18px',width:0,height:0,borderTop:'7px solid transparent',borderBottom:'7px solid transparent',borderRight:`9px solid ${who.accent}`}}/>
+                <span className="block text-[10px] font-black tracking-widest" style={{color:who.accent}}>{who.name}</span>
+                {page.title&&<span className="block text-[11px] font-black text-white mt-0.5">{page.title}</span>}
+                <span className="block text-[13px] text-white leading-relaxed mt-1">{page.t}</span>
+              </div>
+            </div>
+            {topicRef&&(
+              <button onClick={()=>{setHelpCatId(page.help.split('/')[0]);setHelpTopicId(page.help.split('/')[1]);setShowHelp(true);}} className="w-full mt-2 min-h-[38px] rounded-xl bg-slate-800 border border-white/10 text-slate-200 text-[11px] font-black active:scale-[.98]">この話をヘルプで詳しく見る</button>
+            )}
+            <div className="w-full grid grid-cols-2 gap-2 mt-3">
+              <button disabled={tutorialStep<=0} onClick={()=>setTutorialStep(v=>Math.max(0,v-1))} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]">もどる</button>
+              <button onClick={()=>{ if(last) finishTutorial(true); else setTutorialStep(v=>v+1); }} className="min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'はじめる！':'つぎへ'}</button>
+            </div>
+          </div>
+        </div>);
+      })()}
+
       {/* モードの説明(タブ横の「？」) */}
       {modeInfoId&&(()=>{const mode=battleModeInfo(modeInfoId);return(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:60000}} role="dialog" aria-modal="true" aria-label={`${mode.label}の説明`}>
@@ -8634,7 +8802,7 @@ function MonsterHeroGame() {
           <header className="shrink-0 px-3 py-3 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
             <button onClick={goBack} className="shrink-0 max-w-[34%] flex items-center gap-0.5 text-[11px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
-            <button onClick={()=>setHelpAssistantOpen(v=>!v)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={assistantById()} size={40} accent={accent} expression={assistantExpression}/></button>
+            <button onClick={()=>setHelpAssistantOpen(v=>!v)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={assistantById()} size={48} accent={accent} expression={assistantExpression}/></button>
           </header>
           {helpAssistantOpen&&(
             <div className="shrink-0 px-3 py-3 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>
@@ -8888,10 +9056,10 @@ function MonsterHeroGame() {
       )}
 
       {/* CHAMPION */}
-      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>)}
+      {gameState==='CHAMPION'&&(<div className="fixed inset-0 flex flex-col items-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:80000,background:'linear-gradient(to bottom right,#fbbf24,#78350f)'}}><div className="shrink-0 flex flex-col items-center"><Crown size={64} className="text-white animate-bounce mb-3"/><h1 className="text-3xl font-black italic text-white uppercase">CHAMPION</h1>{!isQuickMode(runMode)&&<div className="w-full max-w-xs bg-black/40 border border-white/20 rounded-3xl p-6 mb-3 mt-3 shadow-2xl"><div className="text-5xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultWin" condition={runHighlights.firstWin?'firstWin':runHighlights.newRecord?'newRecord':runHighlights.firstClear?'firstClear':null} compact/></div></div><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} aria-busy={resultActionPending} className="w-full max-w-xs bg-white text-amber-900 py-4 rounded-3xl font-black text-xl uppercase shadow-2xl active:scale-95 transition-transform shrink-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">{resultActionPending?'処理中…':'HOMEへ'}</button></div>)}
 
       {/* GAME OVER */}
-      {hp<=0&&!debugBattle&&(<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" compact/></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
+      {hp<=0&&!debugBattle&&(<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Skull size={48} className="text-red-700 mb-3 animate-pulse"/><h2 className="text-2xl font-black italic text-white uppercase">敗 北</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultLose" condition={runHighlights.firstLose?'firstLose':null} compact/></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
 
       {gaveUp&&!debugBattle&&(<div className="mh-game-over-screen fixed inset-0 flex flex-col items-center text-center" style={{position:'fixed',inset:0,zIndex:80000,backgroundColor:'rgba(0,0,0,0.97)'}}><div className="mh-game-over-head shrink-0 flex flex-col items-center"><Flag size={48} className="text-slate-400 mb-3"/><h2 className="text-2xl font-black italic text-white uppercase">リタイア</h2>{!isQuickMode(runMode)&&<div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-3 mt-3 w-full max-w-xs"><div className="text-3xl font-mono font-black text-white">{score.toLocaleString()}</div></div>}</div><div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center overflow-y-auto mh-scroll">{finalRewardSummary&&<RewardSummaryCard summary={finalRewardSummary}/>}{masuRegisterButtonNode()}<div className="w-full max-w-xs mx-auto mt-3 text-left"><AssistantBubble scene="resultRetire" compact/></div></div><div className="mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"><button onClick={()=>runResultActionOnce(handleRetry)} disabled={resultActionPending} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg uppercase shadow-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><RotateCcw size={20}/> {resultActionPending?'処理中…':'再挑戦'}</button><button onClick={()=>runResultActionOnce(returnToHome)} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-sm uppercase disabled:opacity-50 disabled:cursor-not-allowed">トップへ</button></div></div>)}
 

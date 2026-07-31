@@ -238,6 +238,14 @@ const ASSISTANT_SCENES = {
         { e:'excited', t:'すごっ！ 次はどこまで伸びるかな〜。' },
         { e:'happy',   t:'ベスト更新おめでと！ あたしも嬉しい♪' },
       ],
+      // 通算ではじめての優勝
+      firstWin: [
+        { e:'excited', t:'はじめての優勝おめでとー！！ めちゃくちゃ嬉しい♪' },
+        { e:'excited', t:'やった〜！ 記念すべき1勝目だね！' },
+        { e:'happy',   t:'ついにクリアだね！ ここまでよく頑張ったよ♪' },
+        { e:'surprise', t:'えっ、もう勝っちゃった！？ すごいじゃん！' },
+        { e:'excited', t:'初優勝！ この子のこと、ちゃんと登録しとこ♪' },
+      ],
       firstClear: [
         { e:'excited', t:'この難易度、初クリアだね！ おめでとー♪' },
         { e:'happy',   t:'初制覇きた〜！ 大きな一歩じゃん！' },
@@ -249,6 +257,16 @@ const ASSISTANT_SCENES = {
   },
   resultLose: {
     help: 'home/result',
+    when: {
+      // 通算ではじめての敗北。落ち込ませないように
+      firstLose: [
+        { e:'troubled', t:'はじめての負けだね…。でも大丈夫、みんな通る道だよ！' },
+        { e:'happy',    t:'負けても経験値は入るよ♪ ここからが本番！' },
+        { e:'crying',   t:'くやしいね…。でもあたし、けっこう惜しかったと思う！' },
+        { e:'normal',   t:'次はどこを直そっか？ 一緒に考えよ！' },
+        { e:'wink',     t:'一回負けたくらいで終わらないよね？ リベンジいこ！' },
+      ],
+    },
     lines: [
       { e:'crying',   t:'今回はここまで…でも報酬はちゃんともらえるよ。' },
       { e:'troubled', t:'惜しかったね〜。次はいけそうな気がする！' },
@@ -299,6 +317,17 @@ const ASSISTANT_SCENES = {
       { e:'happy',   t:'最後に「決定」まで押すのを忘れずに♪' },
       { e:'normal',  t:'ブリーダーカードの編成もここからだよ。' },
       { e:'excited', t:'編成を変えるだけで戦い方がガラッと変わるよ！' },
+    ],
+  },
+  // 編成(モンスター編成・ブリーダーカード編成)
+  roster: {
+    help: 'home/roster',
+    lines: [
+      { e:'happy',   t:'編成タイム♪ 誰を連れていく？' },
+      { e:'wink',    t:'最後に「決定」まで押さないと反映されないよ！' },
+      { e:'normal',  t:'距離のバランスを見ると、けっこう安定するよ。' },
+      { e:'excited', t:'この編成、いい感じじゃーん♪' },
+      { e:'normal',  t:'ブリーダーカードのほうも忘れずにね！' },
     ],
   },
   monsterList: {
@@ -506,10 +535,48 @@ const ASSISTANT_SCENES = {
   },
 };
 
+// ---------- タップの連打リアクション ----------
+// みゅあをタップするたびに次のセリフへ切り替わるが、短い間に何度も押されたときは
+// こちらへ切り替える。怒りっぱなしにはせず、最後は笑って元に戻す。
+// last:true の行を出したあと ASSISTANT_SPAM_RECOVER_MS 待つと、下の RECOVER を話して通常へ戻る。
+const ASSISTANT_SPAM_LINES = [
+  { e:'happy',    t:'まだあるよ〜♪' },
+  { e:'wink',     t:'そんなに押すの？笑' },
+  { e:'surprise', t:'ちゃんと話聞いてる？笑' },
+  { e:'angry',    t:'もう〜！押しすぎー！' },
+  { e:'troubled', t:'少し休ませてよ〜' },
+  { e:'normal',   t:'…………', last:true },
+];
+const ASSISTANT_SPAM_RECOVER = { e:'happy', t:'……うそだよ♪ いつでも呼んでね！' };
+// これ以内に続けてタップされたら「連打」とみなす(ミリ秒)
+const ASSISTANT_SPAM_WINDOW_MS = 1200;
+// 連打を始めてから、この回数で専用のセリフへ入る
+const ASSISTANT_SPAM_THRESHOLD = 3;
+// 「…………」のあと、笑って戻るまでの待ち時間(ミリ秒)
+const ASSISTANT_SPAM_RECOVER_MS = 2600;
+
+// ---------- 初回チュートリアル ----------
+// 初めて遊ぶ人だけに出す短い案内。1〜2分で終わる分量にする。
+// 各ページは { e:表情, t:本文, help?:'カテゴリid/項目id' }。helpがあれば「詳しく見る」を出せる。
+const ASSISTANT_TUTORIAL = [
+  { e:'happy',   t:'あらためて、はじめまして！ あたしはみゅあ。この村の助手だよ♪', title:'はじめまして' },
+  { e:'normal',  t:'ここがHOME。建物をタップするといろんなことができるよ！', title:'HOMEのこと', help:'home/roster' },
+  { e:'wink',    t:'神殿では合体・転生・寄付ができるんだ。育成の土台になるとこだね！', title:'神殿', help:'masu/fusion' },
+  { e:'excited', t:'バトルで活躍した子は「マスモン」として登録できるよ。育てるほど強くなる♪', title:'勇者モンを育てる', help:'masu/masumon' },
+  { e:'happy',   t:'バトルは勇者モンを選んで、カードで戦うよ。距離がすっごく大事！', title:'バトル', help:'battle/distance' },
+  { e:'excited', t:'スコアはランキングに載るよ。上位、狙っちゃう？', title:'ランキング', help:'basics/ranking' },
+  { e:'normal',  t:'細かいことはヘルプにぜんぶ書いてあるから、迷ったら覗いてみてね。', title:'ヘルプ', help:'tips/assistant' },
+  { e:'happy',   t:'困ったらいつでもあたしをタップしてね♪', title:'それじゃあ、いってらっしゃい！' },
+];
+
 // ---------- セリフの抽選 ----------
-// 場面(と条件)ごとに、直前に出した番号を覚えておく。同じセリフが2回続かないようにするため。
-// 端末には保存しない(その場かぎりの見た目の話なので、セーブデータには触らない)。
-const ASSISTANT_LAST_LINE = {};
+// 場面(と条件)ごとに、直近に出したセリフを覚えておく。
+// 直前の1件だけを避けると3〜4回で一巡した感じになってしまうので、
+// 候補数に応じて直近数件をまとめて外す。端末には保存しない(見た目だけの話なので
+// セーブデータには触らない)。
+const ASSISTANT_RECENT = {};
+// 直近いくつを候補から外すか。候補が少ないときに全部外れてしまわないよう上限を決める
+const assistantRecentLimit = (total) => Math.max(1, Math.min(3, total - 2));
 
 // その場面で使うセリフの候補を返す。条件つきのセリフがあればそちらを優先する
 const assistantSceneLines = (scene, condition) => {
@@ -520,16 +587,19 @@ const assistantSceneLines = (scene, condition) => {
   return Array.isArray(list) ? list : [];
 };
 
-// 候補から1つ選ぶ。直前と同じものは避ける(候補が1つしかないときはそのまま)
+// 候補から1つ選ぶ。直近に出したものは候補から外す(候補が少ないときは可能な範囲で)
 const pickAssistantLine = (scene, condition) => {
   const list = assistantSceneLines(scene, condition);
   if (list.length === 0) return null;
+  if (list.length === 1) return list[0];
   const key = `${scene || ''}|${condition || ''}`;
-  const last = ASSISTANT_LAST_LINE[key];
-  let index = Math.floor(Math.random() * list.length);
-  if (list.length > 1 && index === last) index = (index + 1 + Math.floor(Math.random() * (list.length - 1))) % list.length;
-  ASSISTANT_LAST_LINE[key] = index;
-  return list[index];
+  const recent = ASSISTANT_RECENT[key] || [];
+  const fresh = list.filter((_, i) => !recent.includes(i));
+  const pool = fresh.length > 0 ? fresh : list;
+  const picked = pool[Math.floor(Math.random() * pool.length)];
+  const index = list.indexOf(picked);
+  ASSISTANT_RECENT[key] = [index, ...recent].slice(0, assistantRecentLimit(list.length));
+  return picked;
 };
 
 const findAssistant = (id) => ASSISTANTS.find(a => a.id === id)

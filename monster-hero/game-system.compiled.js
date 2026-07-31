@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4e63a8006add3ed5
+// source-sha256: befa5c010d3cdfd5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 17:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 18:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4147,6 +4147,9 @@ const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(
 // 声をかけるかどうかの判定にだけ使う(購入の可否は各商品ごとに別途見ている)。
 // マーケットの画面から参照するので、必ず一番外側に置くこと
 const CHEAPEST_GOLD_ITEM_COST = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || []).filter(i => i.type === 'disc' || i.type === 'breeder' || i.type === 'item').reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
+
+// 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
+const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
 const helpDataRows = id => {
   const marketItems = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
   const skipIds = new Set(Object.values(SKIP_TICKETS));
@@ -4205,7 +4208,7 @@ const assistantFaceSrc = (who, expression) => typeof assistantFaceImage === 'fun
 // size は px
 const AssistantFace = ({
   who,
-  size = 72,
+  size = 88,
   accent,
   expression = null
 }) => {
@@ -4343,23 +4346,81 @@ const AssistantBubble = ({
       value: typeof pickAssistantLine === 'function' ? pickAssistantLine(scene, condition) : null
     };
   }
+  // 顔をタップすると次のセリフへ送る。短い間に何度も押されたら連打リアクションに入る。
+  // spam は { step, recovering } で、null のときは通常のセリフを話している
+  const [tapped, setTapped] = useState(null); // 顔タップで差し替えたセリフ
+  const [spam, setSpam] = useState(null);
+  const tapTimesRef = useRef([]);
+  const spamTimerRef = useRef(null);
+  useEffect(() => () => {
+    if (spamTimerRef.current) clearTimeout(spamTimerRef.current);
+  }, []);
+  // 場面が変われば、送ったセリフも連打の状態もリセットする
+  useEffect(() => {
+    setTapped(null);
+    setSpam(null);
+    tapTimesRef.current = [];
+  }, [pickKey]);
+  const spamLines = typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES || [];
+  const spamRecover = typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER || null;
+  const onFaceTap = () => {
+    const now = Date.now();
+    const windowMs = typeof ASSISTANT_SPAM_WINDOW_MS !== 'undefined' && ASSISTANT_SPAM_WINDOW_MS || 1200;
+    const threshold = typeof ASSISTANT_SPAM_THRESHOLD !== 'undefined' && ASSISTANT_SPAM_THRESHOLD || 3;
+    tapTimesRef.current = [...tapTimesRef.current, now].filter(t => now - t <= windowMs);
+    if (spamTimerRef.current) {
+      clearTimeout(spamTimerRef.current);
+      spamTimerRef.current = null;
+    }
+    // 連打中: 次の段階へ。最後まで行ったら少し黙ってから笑って戻る
+    if (spam || spamLines.length > 0 && tapTimesRef.current.length >= threshold) {
+      const step = spam ? Math.min(spam.step + 1, spamLines.length - 1) : 0;
+      setSpam({
+        step,
+        recovering: false
+      });
+      if (spamLines[step]?.last) {
+        const wait = typeof ASSISTANT_SPAM_RECOVER_MS !== 'undefined' && ASSISTANT_SPAM_RECOVER_MS || 2600;
+        spamTimerRef.current = setTimeout(() => {
+          setSpam({
+            step,
+            recovering: true
+          });
+          spamTimerRef.current = setTimeout(() => {
+            setSpam(null);
+            tapTimesRef.current = [];
+          }, 2600);
+        }, wait);
+      }
+      return;
+    }
+    // ふつうのタップ: 次のセリフへ切り替える(表情も変わる)
+    if (typeof pickAssistantLine === 'function') setTapped(pickAssistantLine(scene, condition));
+  };
+  const spamLine = spam ? spam.recovering ? spamRecover : spamLines[spam.step] : null;
+  const shown = spamLine || tapped || pickedRef.current.value;
   const picked = pickedRef.current.value;
-  const text = line || picked?.t || who.greeting || '';
-  const face = expression || picked?.e || null;
+  const text = line || shown?.t || who.greeting || '';
+  const face = expression || shown?.e || null;
   const paragraphs = detail || sceneDef?.detail || null;
   const ref = helpRef || sceneDef?.help || null;
   const topic = ref && ref.includes('/') ? helpTopicById(ref.split('/')[0], ref.split('/')[1]) : null;
   const hasDetail = !!(paragraphs && paragraphs.length || topic);
   const Wrapper = hasDetail ? 'button' : 'div';
-  const size = faceSize != null ? faceSize : compact ? 40 : 72;
+  const size = faceSize != null ? faceSize : compact ? 48 : 88;
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "w-full flex items-end gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: onFaceTap,
+    "aria-label": `${who.name}にはなしかける`,
+    className: "shrink-0 active:scale-90 transition-transform"
   }, /*#__PURE__*/React.createElement(AssistantFace, {
     who: who,
     size: size,
     accent: color,
     expression: face
-  }), /*#__PURE__*/React.createElement(Wrapper, _extends({}, hasDetail ? {
+  })), /*#__PURE__*/React.createElement(Wrapper, _extends({}, hasDetail ? {
     onClick: () => setOpen(true),
     'aria-label': `${who.name}の説明を開く`
   } : {}, {
@@ -4425,7 +4486,7 @@ const AssistantBubble = ({
     className: "shrink-0 flex items-center gap-3 p-4 border-b border-white/10"
   }, /*#__PURE__*/React.createElement(AssistantFace, {
     who: who,
-    size: 56,
+    size: 68,
     accent: color,
     expression: face
   }), /*#__PURE__*/React.createElement("div", {
@@ -5319,8 +5380,16 @@ function MonsterHeroGame() {
   // リザルトで助手に特別なセリフを言わせるためだけに使う(保存はしない)
   const [runHighlights, setRunHighlights] = useState({
     newRecord: false,
-    firstClear: false
+    firstClear: false,
+    firstWin: false,
+    firstLose: false
   });
+  // 初回チュートリアル。null=出さない、0以上=そのページを表示中。
+  // 見たかどうかは新しい保存キーへ分けて持つ(既存のキーには一切触らない)
+  const [tutorialStep, setTutorialStep] = useState(null);
+  // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
+  const [assistantDebug, setAssistantDebug] = useState(null);
+  const tutorialShownRef = useRef(false);
   const highScoresRef = useRef({});
   useEffect(() => {
     highScoresRef.current = highScores;
@@ -8986,6 +9055,12 @@ function MonsterHeroGame() {
       await storeSet(clearCountKey(BATTLE_MODE_QUICK, difficulty), nextQuick, false);
       return;
     }
+    // 通算ではじめての優勝かどうか(どの難易度も1度もクリアしていない状態からの1勝目)
+    const clearedBefore = Object.values(clearCounts).reduce((sum, n) => sum + (Number(n) || 0), 0);
+    if (clearedBefore === 0) setRunHighlights(prev => ({
+      ...prev,
+      firstWin: true
+    }));
     const nextCount = (clearCounts[difficulty] || 0) + 1;
     setClearCounts(prev => ({
       ...prev,
@@ -8997,6 +9072,16 @@ function MonsterHeroGame() {
     }));
     await storeSet(`mh_clears_${difficulty}`, nextCount, false);
   };
+
+  // はじめての敗北かどうか。どの難易度も1度もクリアしていなければ「まだ勝ったことがない」
+  useEffect(() => {
+    if (hp > 0 || debugBattle) return;
+    const clearedEver = Object.values(clearCounts).reduce((sum, n) => sum + (Number(n) || 0), 0) > 0;
+    if (!clearedEver) setRunHighlights(prev => prev.firstLose ? prev : {
+      ...prev,
+      firstLose: true
+    });
+  }, [hp, debugBattle, clearCounts]);
 
   // Save score on game end (CHAMPION is awarded synchronously in handleNextWave instead, so its result screen never renders before the summary is ready)
   useEffect(() => {
@@ -9125,6 +9210,34 @@ function MonsterHeroGame() {
     waveHistory: [],
     gaveUp: false
   });
+
+  // 初回チュートリアル。HOMEを最初に開いたときだけ自動で始める。
+  // デバッグから何度でも呼べるよう、開始と終了を関数に分けている
+  const startTutorial = (fromDebug = false) => {
+    tutorialShownRef.current = true;
+    if (fromDebug) setShowTitleSettings(false);
+    setTutorialStep(0);
+  };
+  const finishTutorial = async (remember = true) => {
+    setTutorialStep(null);
+    if (remember) {
+      try {
+        await storeSet(TUTORIAL_SEEN_KEY, true, false);
+      } catch {}
+    }
+  };
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || tutorialShownRef.current || !dataLoaded) return;
+    tutorialShownRef.current = true;
+    let cancelled = false;
+    (async () => {
+      const seen = await storeGet(TUTORIAL_SEEN_KEY, false, false);
+      if (!cancelled && seen !== true) setTutorialStep(0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bootPhase, gameState, dataLoaded]);
   const returnToHome = () => {
     debugBattleRef.current = false;
     debugResultRef.current = false;
@@ -9195,7 +9308,9 @@ function MonsterHeroGame() {
     setMasuNameInput('');
     setRunHighlights({
       newRecord: false,
-      firstClear: false
+      firstClear: false,
+      firstWin: false,
+      firstLose: false
     });
     setSkipFlow(null);
     setSkipConfirmOpen(false);
@@ -9484,7 +9599,9 @@ function MonsterHeroGame() {
     setMasuNameInput('');
     setRunHighlights({
       newRecord: false,
-      firstClear: false
+      firstClear: false,
+      firstWin: false,
+      firstLose: false
     });
     setGameState('PICK_HERO');
   };
@@ -13520,7 +13637,7 @@ function MonsterHeroGame() {
       key: battleMode,
       scene: quick ? 'battleQuick' : 'battleChallenge',
       accent: mode.color,
-      faceSize: 48
+      faceSize: 56
     })));
   })(), battleMenuTab === 'ranking' && /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 flex flex-col"
@@ -13704,7 +13821,44 @@ function MonsterHeroGame() {
     className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
   }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
     className: "block text-[8px] text-fuchsia-300"
-  }, "\u5831\u916C\u30FB\u9032\u884C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+  }, "\u5831\u916C\u30FB\u9032\u884C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("section", {
+    className: "rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-[10px] text-pink-300 font-black mb-2"
+  }, "\uD83D\uDC96 \u307F\u3085\u3042\u30C7\u30D0\u30C3\u30B0"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      returnToHome();
+      startTutorial(true);
+    },
+    className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
+  }, "\u521D\u56DE\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTutorialStep(0),
+    className: "min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95"
+  }, "\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3060\u3051\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAssistantDebug('lines'),
+    className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+  }, "\u5168\u52A9\u624B\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAssistantDebug('expressions'),
+    className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+  }, "\u5168\u8868\u60C5\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAssistantDebug('conditions'),
+    className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+  }, "\u6761\u4EF6\u30B3\u30E1\u30F3\u30C8\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setAssistantDebug('spam'),
+    className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+  }, "\u9023\u6253\u30EA\u30A2\u30AF\u30B7\u30E7\u30F3\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
+    onClick: async () => {
+      if (!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return;
+      try {
+        await storeSet(TUTORIAL_SEEN_KEY, false, false);
+      } catch {}
+      tutorialShownRef.current = false;
+      window.alert('初回状態へ戻しました。HOMEを開くと案内が始まります。');
+    },
+    className: "w-full mt-2 min-h-[42px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
+  }, "\u521D\u56DE\u72B6\u614B\u3078\u623B\u3059\uFF08\u30BB\u30FC\u30D6\u306F\u6D88\u3048\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
     className: "text-[10px] text-slate-500 font-black mb-2"
   }, "1. \u96E3\u6613\u5EA6"), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-3 gap-2"
@@ -13992,7 +14146,12 @@ function MonsterHeroGame() {
     size: 20
   })), /*#__PURE__*/React.createElement("h2", {
     className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
-  }, rosterTab === 'monster' ? 'モンスター編成' : 'ブリーダーカード編成')), rosterTab === 'monster' ? /*#__PURE__*/React.createElement("div", {
+  }, rosterTab === 'monster' ? 'モンスター編成' : 'ブリーダーカード編成')), /*#__PURE__*/React.createElement("div", {
+    className: "shrink-0 w-full max-w-md mx-auto mb-2"
+  }, /*#__PURE__*/React.createElement(AssistantBubble, {
+    scene: "roster",
+    compact: true
+  })), rosterTab === 'monster' ? /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 flex flex-col"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-2 shrink-0 bg-indigo-950/30 border border-indigo-500/30 rounded-2xl px-2 py-2"
@@ -18210,7 +18369,169 @@ function MonsterHeroGame() {
     className: "text-amber-300"
   }, "Lv.", quickJoin.unique.after))) : /*#__PURE__*/React.createElement("div", {
     className: "mt-3 text-[10px] font-black text-slate-500"
-  }, "\u4E0A\u3052\u3089\u308C\u308B\u56FA\u6709\u6280\u306F\u3082\u3046\u3042\u308A\u307E\u305B\u3093")), modeInfoId && (() => {
+  }, "\u4E0A\u3052\u3089\u308C\u308B\u56FA\u6709\u6280\u306F\u3082\u3046\u3042\u308A\u307E\u305B\u3093")), assistantDebug && (() => {
+    const who = assistantById();
+    const scenes = typeof ASSISTANT_SCENES !== 'undefined' && ASSISTANT_SCENES || {};
+    const exprs = typeof ASSISTANT_EXPRESSIONS !== 'undefined' && ASSISTANT_EXPRESSIONS || [];
+    const spam = [...(typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES || []), ...(typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER ? [ASSISTANT_SPAM_RECOVER] : [])];
+    const titles = {
+      lines: '全助手コメント',
+      expressions: '全表情',
+      conditions: '条件コメント',
+      spam: '連打リアクション'
+    };
+    const row = (l, i) => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      className: "flex items-start gap-2 px-3 py-2 border-t border-white/5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0"
+    }, /*#__PURE__*/React.createElement(AssistantFace, {
+      who: who,
+      size: 40,
+      accent: who.accent,
+      expression: l.e
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] font-black text-slate-500"
+    }, l.e), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] text-white leading-relaxed"
+    }, l.t)));
+    return /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 flex flex-col",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: '#020617',
+        zIndex: 95000,
+        paddingTop: 'calc(.75rem + env(safe-area-inset-top))'
+      },
+      role: "dialog",
+      "aria-modal": "true"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 flex items-center gap-2 px-3 pb-2 border-b border-white/10"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAssistantDebug(null),
+      className: "p-2 text-slate-400 active:scale-90"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-sm font-black text-pink-300"
+    }, "\uD83D\uDC96 ", titles[assistantDebug])), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+    }, assistantDebug === 'expressions' && /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-4 gap-2 p-3"
+    }, exprs.map(e => /*#__PURE__*/React.createElement("div", {
+      key: e,
+      className: "flex flex-col items-center gap-1"
+    }, /*#__PURE__*/React.createElement(AssistantFace, {
+      who: who,
+      size: 64,
+      accent: who.accent,
+      expression: e
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] text-slate-400 font-black"
+    }, e)))), assistantDebug === 'spam' && /*#__PURE__*/React.createElement("div", null, spam.map((l, i) => row(l, i)), /*#__PURE__*/React.createElement("div", {
+      className: "p-3 text-[10px] text-slate-500 leading-relaxed"
+    }, "\u4E0A\u304B\u3089\u9806\u306B\u5207\u308A\u66FF\u308F\u308A\u307E\u3059\u3002\u6700\u5F8C\u306E\u300C\u2026\u2026\u2026\u2026\u300D\u306E\u3042\u3068\u3001\u5C11\u3057\u5F85\u3064\u3068\u6700\u5F8C\u306E\u884C\u3092\u8A71\u3057\u3066\u901A\u5E38\u3078\u623B\u308A\u307E\u3059\u3002")), (assistantDebug === 'lines' || assistantDebug === 'conditions') && /*#__PURE__*/React.createElement("div", null, Object.entries(scenes).map(([key, def]) => {
+      const list = assistantDebug === 'conditions' ? Object.entries(def.when || {}).flatMap(([c, ls]) => ls.map(l => ({
+        ...l,
+        t: `[${c}] ${l.t}`
+      }))) : def.lines || [];
+      if (list.length === 0) return null;
+      return /*#__PURE__*/React.createElement("section", {
+        key: key
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "px-3 py-1.5 bg-slate-900 text-[10px] font-black text-pink-300 sticky top-0"
+      }, key, "\uFF08", list.length, "\u4EF6\uFF09"), list.map((l, i) => row(l, i)));
+    }))));
+  })(), tutorialStep != null && (() => {
+    const pages = typeof ASSISTANT_TUTORIAL !== 'undefined' && ASSISTANT_TUTORIAL || [];
+    const page = pages[Math.max(0, Math.min(tutorialStep, pages.length - 1))];
+    if (!page) return null;
+    const who = assistantById();
+    const last = tutorialStep >= pages.length - 1;
+    const topicRef = page.help && page.help.includes('/') ? helpTopicById(page.help.split('/')[0], page.help.split('/')[1]) : null;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 flex flex-col items-center justify-end p-4",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(2,6,23,0.92)',
+        zIndex: 90000,
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      },
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-label": "\u306F\u3058\u3081\u3066\u306E\u6848\u5185"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-md flex flex-col items-center"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full flex justify-between items-center mb-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black tracking-widest",
+      style: {
+        color: who.accent
+      }
+    }, tutorialStep + 1, " / ", pages.length), /*#__PURE__*/React.createElement("button", {
+      onClick: () => finishTutorial(true),
+      className: "px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95"
+    }, "\u30B9\u30AD\u30C3\u30D7")), /*#__PURE__*/React.createElement("div", {
+      className: "w-full flex items-end gap-3"
+    }, /*#__PURE__*/React.createElement(AssistantFace, {
+      who: who,
+      size: 104,
+      accent: who.accent,
+      expression: page.e
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "relative flex-1 min-w-0 rounded-2xl border-2 px-3.5 py-3",
+      style: {
+        borderColor: who.accent,
+        backgroundColor: 'rgba(15,23,42,0.96)'
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "absolute",
+      style: {
+        left: '-9px',
+        bottom: '18px',
+        width: 0,
+        height: 0,
+        borderTop: '7px solid transparent',
+        borderBottom: '7px solid transparent',
+        borderRight: `9px solid ${who.accent}`
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[10px] font-black tracking-widest",
+      style: {
+        color: who.accent
+      }
+    }, who.name), page.title && /*#__PURE__*/React.createElement("span", {
+      className: "block text-[11px] font-black text-white mt-0.5"
+    }, page.title), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[13px] text-white leading-relaxed mt-1"
+    }, page.t))), topicRef && /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setHelpCatId(page.help.split('/')[0]);
+        setHelpTopicId(page.help.split('/')[1]);
+        setShowHelp(true);
+      },
+      className: "w-full mt-2 min-h-[38px] rounded-xl bg-slate-800 border border-white/10 text-slate-200 text-[11px] font-black active:scale-[.98]"
+    }, "\u3053\u306E\u8A71\u3092\u30D8\u30EB\u30D7\u3067\u8A73\u3057\u304F\u898B\u308B"), /*#__PURE__*/React.createElement("div", {
+      className: "w-full grid grid-cols-2 gap-2 mt-3"
+    }, /*#__PURE__*/React.createElement("button", {
+      disabled: tutorialStep <= 0,
+      onClick: () => setTutorialStep(v => Math.max(0, v - 1)),
+      className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]"
+    }, "\u3082\u3069\u308B"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        if (last) finishTutorial(true);else setTutorialStep(v => v + 1);
+      },
+      className: "min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
+      style: {
+        backgroundColor: who.accent
+      }
+    }, last ? 'はじめる！' : 'つぎへ'))));
+  })(), modeInfoId && (() => {
     const mode = battleModeInfo(modeInfoId);
     return /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-4",
@@ -18654,7 +18975,7 @@ function MonsterHeroGame() {
       className: `shrink-0 active:scale-90 ${helpAssistantOpen ? '' : 'opacity-40'}`
     }, /*#__PURE__*/React.createElement(AssistantFace, {
       who: assistantById(),
-      size: 40,
+      size: 48,
       accent: accent,
       expression: assistantExpression
     }))), helpAssistantOpen && /*#__PURE__*/React.createElement("div", {
@@ -19396,7 +19717,7 @@ function MonsterHeroGame() {
     className: "w-full max-w-xs mx-auto mt-3 text-left"
   }, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "resultWin",
-    condition: runHighlights.newRecord ? 'newRecord' : runHighlights.firstClear ? 'firstClear' : null,
+    condition: runHighlights.firstWin ? 'firstWin' : runHighlights.newRecord ? 'newRecord' : runHighlights.firstClear ? 'firstClear' : null,
     compact: true
   }))), /*#__PURE__*/React.createElement("button", {
     onClick: () => runResultActionOnce(returnToHome),
@@ -19430,6 +19751,7 @@ function MonsterHeroGame() {
     className: "w-full max-w-xs mx-auto mt-3 text-left"
   }, /*#__PURE__*/React.createElement(AssistantBubble, {
     scene: "resultLose",
+    condition: runHighlights.firstLose ? 'firstLose' : null,
     compact: true
   }))), /*#__PURE__*/React.createElement("div", {
     className: "mh-game-over-actions flex flex-col gap-3 w-full max-w-xs shrink-0 mt-2"
