@@ -140,7 +140,11 @@ check('チャレンジはスコア倍率を出す', has(": [['敵強度',`×${se
 check('クイックは経験値・ダイヤだけ1.5倍と分かる表示', has('経験値・ダイヤのみ1.5倍'));
 // 見出しが2行に折り返さないよう、倍率は3枠までにして折り返しも禁じる
 check('倍率の枠は3つで1行に収める', has('<div className="grid grid-cols-3 gap-1 mt-1.5">') && has('text-center text-[8px] text-slate-400 whitespace-nowrap'));
-check('ランキングボタンはチャレンジのときだけ出す', has('{!quick&&<button onClick={()=>{setBattleMenuTab(\'ranking\')') && has('🏆 ランキングを見る（チャレンジモード）'));
+check('ランキングボタンはチャレンジのときだけ出す', has("{!quick&&<button onClick={()=>{setBattleMenuTab('ranking')") && has('🏆 ランキングを見る（チャレンジモード）'));
+// 横に長すぎたので難易度カードと同じ幅に揃える。クイックでも同じ高さの場所を空け、
+// ランキングボタンの有無で助手コメントの位置がずれないようにする
+check('ランキングボタンは難易度カードと同じ幅', has('className="w-[82%] min-h-[40px] rounded-2xl bg-slate-800 border border-indigo-400/40'));
+check('助手コメントの位置がモードでずれない', has('<div className="shrink-0 flex justify-center min-h-[40px] mb-1.5">'));
 check('カードの下はランキング→助手コメントの順', source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf("scene={quick?'battleQuick':'battleChallenge'}"));
 check('助手コメントは既存の共通UIを使う', has("<AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'}") && assistantsSrc.includes('battleChallenge:') && assistantsSrc.includes('battleQuick:'));
 check('挑戦を始めるときにモードを固定する', has('setDifficulty(key);setRunMode(battleMode);'));
