@@ -69,7 +69,9 @@ Claudeは改修内容を実装したら、ユーザーが検証しやすいよ�
    ヘルプ以外の画面へ案内を出すときも、そこへ場面を1つ足して `<AssistantBubble scene="..."/>` を置く
 5. `node tools/help-coverage-check.js` と `node tools/help-guide-check.js`、
    `node tools/help-render-check.js`、`node tools/assistant-check.js`、
-   `node tools/assistant-bond-check.js` を通す
+   `node tools/assistant-bond-check.js` を通す。
+   助手の表情画像を差し替えたら `node tools/make-assistant-faces.js` で顔アイコンを作り直し、
+   `node tools/assistant-face-check.js` で顔が中央に切れているかも確かめる
 
 助手(みゅあ)のセリフを足すときは、`ASSISTANT_SCENES` を直接書き換えるのではなく
 `addAssistantLinePack({ id, lines })` で束にして足す。イベント・季節限定のセリフも

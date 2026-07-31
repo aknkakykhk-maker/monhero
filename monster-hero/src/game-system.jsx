@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 23:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 08:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2479,6 +2479,8 @@ function MonsterHeroGame() {
   const [assistantDebug, setAssistantDebug] = useState(null);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
+  // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
+  const [marketIconZoom, setMarketIconZoom] = useState(null);
   // デバッグ表示のときだけ使う「このLvだとどう見えるか」。null なら実際のLv
   const [assistantDebugLevel, setAssistantDebugLevel] = useState(null);
   // デバッグのランダムテストで、どの場面を引くか
@@ -6877,7 +6879,8 @@ function MonsterHeroGame() {
                     // 名前・所持数・詳細ボタンは商品によって有無や行数が変わるため、
                     // 高さを決めた枠に入れて並びを崩さない。購入ボタンはmt-autoでカード下端に揃える
                     <div key={item.id} className={`rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
-                      <div className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>:<span className="text-xl">{item.emoji}</span>}</div>
+                      {/* 1行に4つ並べているぶん小さいので、タップすると大きく見られるようにしている */}
+                      <button type="button" onClick={()=>setMarketIconZoom(item)} aria-label={`${item.name}を大きく見る`} className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>:<span className="text-xl">{item.emoji}</span>}</button>
                       {/* 名前の枠は3行ぶん。細い端末で長い名前が3行になっても、
                           カードの高さが商品ごとにばらつかないようにしている */}
                       <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'36px'}}>{item.name}</div>
@@ -8517,6 +8520,21 @@ function MonsterHeroGame() {
 
       {/* スキップの説明(チケットが無くても読める) */}
       {/* マーケットのアイテムの効果説明。カードを小さくしたぶん、ここで詳しく出す */}
+      {/* マーケットの商品アイコンを大きく見る。カードの中では小さいので、絵を確かめたいとき用。
+          アイコンはプロフィール画像になるので、実際に使われるのと同じ丸い形で出す */}
+      {marketIconZoom&&(()=>{const item=marketIconZoom;const round=item.type==='icon'||item.type==='breeder';return(
+        <div onClick={()=>setMarketIconZoom(null)} className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:41500}} role="dialog" aria-modal="true" aria-label={`${item.name}の拡大表示`}>
+          <div onClick={e=>e.stopPropagation()} className="w-full max-w-[280px] rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col items-center gap-3">
+            <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`}>
+              {item.icon
+                ? <img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>
+                : <span style={{fontSize:'96px'}}>{item.emoji}</span>}
+            </div>
+            <div className="text-center text-sm font-black text-white leading-tight">{item.name}</div>
+            <button onClick={()=>setMarketIconZoom(null)} className="w-full min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98]">とじる</button>
+          </div>
+        </div>
+      );})()}
       {marketItemDetail&&(
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:41000}} role="dialog" aria-modal="true" aria-label={`${marketItemDetail.name}の効果`}>
           <div className="bg-slate-900 border-2 border-teal-500 rounded-3xl p-5 w-full max-w-sm shadow-2xl">

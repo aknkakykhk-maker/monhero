@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 661b587ba7e22339
+// source-sha256: 79503151771a0ebb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 23:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 08:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5519,6 +5519,8 @@ function MonsterHeroGame() {
   const [assistantDebug, setAssistantDebug] = useState(null);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
+  // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
+  const [marketIconZoom, setMarketIconZoom] = useState(null);
   // デバッグ表示のときだけ使う「このLvだとどう見えるか」。null なら実際のLv
   const [assistantDebugLevel, setAssistantDebugLevel] = useState(null);
   // デバッグのランダムテストで、どの場面を引くか
@@ -14337,8 +14339,11 @@ function MonsterHeroGame() {
         React.createElement("div", {
           key: item.id,
           className: `rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned ? 'bg-emerald-900/30 border-emerald-500/50' : comingSoon ? 'bg-slate-900/60 border-slate-800/60' : 'bg-slate-900 border-slate-800'}`
-        }, /*#__PURE__*/React.createElement("div", {
-          className: `${MARKET_ICON_SIZE[item.type] || 'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 ${comingSoon ? 'grayscale opacity-50' : ''}`
+        }, /*#__PURE__*/React.createElement("button", {
+          type: "button",
+          onClick: () => setMarketIconZoom(item),
+          "aria-label": `${item.name}を大きく見る`,
+          className: `${MARKET_ICON_SIZE[item.type] || 'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon ? 'grayscale opacity-50' : ''}`
         }, item.icon ? /*#__PURE__*/React.createElement("img", {
           src: item.icon,
           alt: item.name,
@@ -17845,7 +17850,41 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement(Zap, {
         size: 9
       }), curGuts))));
-    }))))), marketItemDetail && /*#__PURE__*/React.createElement("div", {
+    }))))), marketIconZoom && (() => {
+      const item = marketIconZoom;
+      const round = item.type === 'icon' || item.type === 'breeder';
+      return /*#__PURE__*/React.createElement("div", {
+        onClick: () => setMarketIconZoom(null),
+        className: "fixed inset-0 flex items-center justify-center p-6",
+        style: {
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(2,6,23,0.94)',
+          zIndex: 41500
+        },
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": `${item.name}の拡大表示`
+      }, /*#__PURE__*/React.createElement("div", {
+        onClick: e => e.stopPropagation(),
+        className: "w-full max-w-[280px] rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col items-center gap-3"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round ? 'rounded-full' : 'rounded-2xl'}`
+      }, item.icon ? /*#__PURE__*/React.createElement("img", {
+        src: item.icon,
+        alt: item.name,
+        className: `w-full h-full ${round ? 'object-cover' : 'object-contain'}`
+      }) : /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: '96px'
+        }
+      }, item.emoji)), /*#__PURE__*/React.createElement("div", {
+        className: "text-center text-sm font-black text-white leading-tight"
+      }, item.name), /*#__PURE__*/React.createElement("button", {
+        onClick: () => setMarketIconZoom(null),
+        className: "w-full min-h-[48px] rounded-2xl bg-amber-500 text-black font-black active:scale-[.98]"
+      }, "\u3068\u3058\u308B")));
+    })(), marketItemDetail && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-4",
       style: {
         position: 'fixed',

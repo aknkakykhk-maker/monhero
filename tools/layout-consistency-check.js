@@ -81,6 +81,12 @@ check('所持数と詳細ボタンは同じ高さの1行にまとめる',
 // 1行に4商品。カードが細くなるので、アイコンの大きさもそれに合わせて1か所で決める
 check('1行に4商品ずつ並べる',
   has("const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';") && has('<div className={MARKET_GRID_CLASS}>'));
+// 4つ並べるとアイコンが小さいので、タップで大きく見られるようにしている
+check('商品アイコンはタップで拡大できる',
+  has('onClick={()=>setMarketIconZoom(item)}') && has('aria-label={`${item.name}を大きく見る`}')
+    && has('{marketIconZoom&&(()=>{const item=marketIconZoom;'));
+check('拡大表示は実際に使われる形(丸／角丸)で出す',
+  has("const round=item.type==='icon'||item.type==='breeder';"));
 check('商品アイコンの大きさを1か所で決めている',
   has("const MARKET_ICON_SIZE = { disc: 'w-12 h-12', breeder: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };")
     && has("${MARKET_ICON_SIZE[item.type]||'w-10 h-10'}"));
