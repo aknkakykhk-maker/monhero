@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 18:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 18:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3902,7 +3902,8 @@ function MonsterHeroGame() {
     const n = tempName.trim().substring(0, 10);
     setBreederName(n);
     setOnboardingName(n); // はじめての設定で「名前が決まった」判定に使う
-    await storeSet('mh_breeder_name', n, false);
+    // デバッグの「見るだけ」表示では保存しない(いま遊んでいるデータを変えないため)
+    if (!onboardingPreview) await storeSet('mh_breeder_name', n, false);
     setShowNameEdit(false);
   };
   // はじめての設定の完了。プロフィール画面で名前とアイコンが決まったら押せる。
@@ -6564,7 +6565,7 @@ function MonsterHeroGame() {
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-4 shrink-0">
               {/* はじめての設定が終わるまでは、まだ帰る場所(HOME)が無いので戻るボタンを出さない */}
-              {onboarded
+              {(onboarded&&!onboardingPreview)
                 ? <button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
                 : <span className="w-11"/>}
               <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">プロフィール</h2>
@@ -6573,7 +6574,7 @@ function MonsterHeroGame() {
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
             {/* はじめての設定。ここで名前とアイコンを決めてもらい、そのまま村の案内へ続ける。
                 進み具合(どちらが決まっているか)に応じて、みゅあが次にやることを教える */}
-            {!onboarded&&(()=>{
+            {(!onboarded||onboardingPreview)&&(()=>{
               const hasName=!!(onboardingName||'').trim();
               const hasIcon=!!onboardingIcon;
               const ready=hasName&&hasIcon;
@@ -7804,7 +7805,7 @@ function MonsterHeroGame() {
               <h3 className="text-lg font-black text-white mb-4 text-center">アイコンを選択</h3>
               <div className="grid grid-cols-4 gap-3 mb-4">
                 {STARTER_MONSTER_IDS.map(id=>ALL_PLAYER_MONSTERS[id]).map(m=>(
-                  <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
+                  <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
                     <img src={m.faceIconUrl||m.iconUrl} alt={m.name} className="w-full h-full object-cover"/>
                   </button>
                 ))}
@@ -7813,7 +7814,7 @@ function MonsterHeroGame() {
                 <h4 className="text-[10px] font-black text-amber-400 mb-2 text-center uppercase tracking-widest flex items-center justify-center gap-1"><ShoppingBag size={10}/>マーケット購入アイコン</h4>
                 <div className="grid grid-cols-4 gap-3 mb-4">
                   {BREEDER_MARKET_ITEMS.filter(m=>m.type==='icon'&&ownedMarketIcons.includes(m.id)).map(m=>(
-                    <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-amber-400 ring-2 ring-amber-400':'border-slate-700'}`}>
+                    <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-amber-400 ring-2 ring-amber-400':'border-slate-700'}`}>
                       <img src={m.icon} alt={m.name} className="w-full h-full object-cover"/>
                     </button>
                   ))}

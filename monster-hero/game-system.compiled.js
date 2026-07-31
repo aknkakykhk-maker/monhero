@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a09a877fcd973036
+// source-sha256: d18f3aff5c922347
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 18:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 18:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7389,7 +7389,8 @@ function MonsterHeroGame() {
     const n = tempName.trim().substring(0, 10);
     setBreederName(n);
     setOnboardingName(n); // はじめての設定で「名前が決まった」判定に使う
-    await storeSet('mh_breeder_name', n, false);
+    // デバッグの「見るだけ」表示では保存しない(いま遊んでいるデータを変えないため)
+    if (!onboardingPreview) await storeSet('mh_breeder_name', n, false);
     setShowNameEdit(false);
   };
   // はじめての設定の完了。プロフィール画面で名前とアイコンが決まったら押せる。
@@ -13814,7 +13815,7 @@ function MonsterHeroGame() {
     className: "flex-1 flex flex-col h-full min-h-0 p-4"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2 mb-4 shrink-0"
-  }, onboarded ? /*#__PURE__*/React.createElement("button", {
+  }, onboarded && !onboardingPreview ? /*#__PURE__*/React.createElement("button", {
     onClick: returnToHome,
     className: "p-3 text-slate-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
@@ -13829,7 +13830,7 @@ function MonsterHeroGame() {
     scene: "profile"
   })), /*#__PURE__*/React.createElement("div", {
     className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-  }, !onboarded && (() => {
+  }, (!onboarded || onboardingPreview) && (() => {
     const hasName = !!(onboardingName || '').trim();
     const hasIcon = !!onboardingIcon;
     const ready = hasName && hasIcon;
@@ -16345,7 +16346,7 @@ function MonsterHeroGame() {
     onClick: () => {
       setBreederIcon(m.id);
       setOnboardingIcon(m.id);
-      storeSet('mh_breeder_icon', m.id, false);
+      if (!onboardingPreview) storeSet('mh_breeder_icon', m.id, false);
       setShowIconPicker(false);
     },
     className: `aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon === m.id ? 'border-indigo-400 ring-2 ring-indigo-400' : 'border-slate-700'}`
@@ -16364,7 +16365,7 @@ function MonsterHeroGame() {
     onClick: () => {
       setBreederIcon(m.id);
       setOnboardingIcon(m.id);
-      storeSet('mh_breeder_icon', m.id, false);
+      if (!onboardingPreview) storeSet('mh_breeder_icon', m.id, false);
       setShowIconPicker(false);
     },
     className: `aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon === m.id ? 'border-amber-400 ring-2 ring-amber-400' : 'border-slate-700'}`
