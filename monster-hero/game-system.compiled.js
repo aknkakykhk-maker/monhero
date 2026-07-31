@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 37ca3acb657a8daf
+// source-sha256: 79557812ec78183d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 16:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 16:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13147,7 +13147,13 @@ function MonsterHeroGame() {
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-1 mb-1 shrink-0"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: returnToHome,
+    onClick: () => {
+      if (battleMenuTab !== 'difficulty') {
+        setBattleMenuTab('difficulty');
+        return;
+      }
+      returnToHome();
+    },
     className: "p-3 text-slate-400 active:scale-90"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
@@ -13191,6 +13197,26 @@ function MonsterHeroGame() {
       } : undefined
     }, "\uFF1F"));
   })), battleMenuTab === 'difficulty' && (() => {
+    const quick = isQuickMode(battleMode);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 w-full h-10 mb-1"
+    }, quick ? /*#__PURE__*/React.createElement("div", {
+      className: "w-full h-10 rounded-xl bg-slate-900/60 border border-white/5 text-slate-500 font-black text-[10px] flex items-center justify-center px-2 whitespace-nowrap"
+    }, "\u30AF\u30A4\u30C3\u30AF\u30E2\u30FC\u30C9\u306F\u30E9\u30F3\u30AD\u30F3\u30B0\u5BFE\u8C61\u5916\u3067\u3059") : /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setBattleMenuTab('ranking');
+        setRankingKind('score');
+        setRankingViewDiff(difficulty);
+        loadRankings(difficulty);
+      },
+      className: "w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "flex-1 text-center whitespace-nowrap"
+    }, "\uD83C\uDFC6 \u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u898B\u308B\uFF08\u30C1\u30E3\u30EC\u30F3\u30B8\u30E2\u30FC\u30C9\uFF09"), /*#__PURE__*/React.createElement(ChevronRight, {
+      size: 16,
+      className: "shrink-0"
+    })));
+  })(), battleMenuTab === 'difficulty' && (() => {
     const difficulties = Object.entries(DIFFICULTY_SETTINGS),
       selectedIndex = difficulties.findIndex(([key]) => key === safeDifficulty);
     const selectDifficultyIndex = (index, behavior = 'smooth') => {
@@ -13379,22 +13405,7 @@ function MonsterHeroGame() {
       onClick: () => selectDifficultyIndex(i),
       className: `w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
     }))), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 flex justify-center h-10 mb-1.5"
-    }, !quick && /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setBattleMenuTab('ranking');
-        setRankingKind('score');
-        setRankingViewDiff(difficulty);
-        loadRankings(difficulty);
-      },
-      className: "w-[82%] h-10 rounded-2xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "flex-1 text-center whitespace-nowrap"
-    }, "\uD83C\uDFC6 \u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u898B\u308B\uFF08\u30C1\u30E3\u30EC\u30F3\u30B8\u30E2\u30FC\u30C9\uFF09"), /*#__PURE__*/React.createElement(ChevronRight, {
-      size: 16,
-      className: "shrink-0"
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 pb-1"
+      className: "shrink-0 pt-1.5 pb-1"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       key: battleMode,
       scene: quick ? 'battleQuick' : 'battleChallenge',

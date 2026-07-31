@@ -44,7 +44,7 @@ check('スキップ行を条件付きで丸ごと消していない', !has('{SKI
 // (端末のフォントによって1行の高さが変わるため、数値指定では合いきらなかった)
 check('記録の枠はモードで同じ行構成', has('const recordBox=(key)=>quick') && !has('recordBoxStyle'));
 check('ランキングボタンの場所は決め打ちの高さにする',
-  has('<div className="shrink-0 flex justify-center h-10 mb-1.5">') && has('className="w-[82%] h-10 rounded-2xl'));
+  has('<div className="shrink-0 w-full h-10 mb-1">') && has('className="w-full h-10 rounded-xl'));
 check('倍率の下の補足行はクイック限定にしない',
   has('>{noteText}</div>') && !has('{quick&&<div className="mt-1 rounded-xl border'));
 
