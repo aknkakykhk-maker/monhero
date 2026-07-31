@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: befa5c010d3cdfd5
+// source-sha256: 66d3b858a104f499
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -124,7 +124,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-07-31 18:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-07-31 18:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7405,6 +7405,13 @@ function MonsterHeroGame() {
     await storeSet('mh_onboarding_step', null, false);
     setOnboarded(true);
     setGameState('HOME');
+    // 名前とアイコンが決まったら、そのままみゅあの村案内へ続ける。
+    // HOMEを開いたときの自動起動と重ならないよう、ここで見たことにしてから開く
+    const seenTutorial = await storeGet(TUTORIAL_SEEN_KEY, false, false);
+    if (seenTutorial !== true) {
+      tutorialShownRef.current = true;
+      setTutorialStep(0);
+    }
   };
   useEffect(() => {
     if (gameState !== 'BATTLE_MENU' || battleMenuTab !== 'difficulty') return;
@@ -12022,6 +12029,10 @@ function MonsterHeroGame() {
     } : undefined
   }, gameState === 'ONBOARDING' && (() => {
     const introPages = [{
+      title: 'はじめまして',
+      icon: '💖',
+      text: 'この村の助手「みゅあ」です。名前とアイコンを決めたら、村の中を案内するね！'
+    }, {
       title: 'ゲームの目的',
       icon: '🏆',
       text: '勇者モンと全10 WAVEを進み、ラスボス「ムー」の撃破と最高スコアを目指します。'
@@ -12043,11 +12054,16 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] tracking-[.25em] text-indigo-300 font-black"
-    }, "WELCOME TO MONSTER HERO"), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-full max-w-md mx-auto my-3 text-left"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "onboarding"
-    })), onboardingStep.startsWith('intro-') && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("section", {
+    }, "WELCOME TO MONSTER HERO"), (() => {
+      const say = typeof findAssistantOnboarding === 'function' && findAssistantOnboarding(onboardingStep) || null;
+      return /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full max-w-md mx-auto my-3 text-left"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "onboarding",
+        line: say?.t || null,
+        expression: say?.e || null
+      }));
+    })(), onboardingStep.startsWith('intro-') && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("section", {
       className: "flex-1 flex flex-col items-center justify-center"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-7xl mb-6"
@@ -12067,7 +12083,7 @@ function MonsterHeroGame() {
       onClick: () => moveOnboarding(`intro-${introIndex - 1}`),
       className: "min-h-[50px] rounded-2xl bg-slate-800 font-black disabled:opacity-30"
     }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => moveOnboarding(introIndex === 2 ? 'name' : `intro-${introIndex + 1}`),
+      onClick: () => moveOnboarding(introIndex === introPages.length - 1 ? 'name' : `intro-${introIndex + 1}`),
       className: "min-h-[50px] rounded-2xl bg-indigo-600 font-black"
     }, "\u6B21\u3078"))), onboardingStep === 'name' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("section", {
       className: "flex-1 flex flex-col justify-center"
@@ -18509,7 +18525,7 @@ function MonsterHeroGame() {
       className: "block text-[11px] font-black text-white mt-0.5"
     }, page.title), /*#__PURE__*/React.createElement("span", {
       className: "block text-[13px] text-white leading-relaxed mt-1"
-    }, page.t))), topicRef && /*#__PURE__*/React.createElement("button", {
+    }, String(page.t).replace('{name}', breederName || 'あなた')))), topicRef && /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setHelpCatId(page.help.split('/')[0]);
         setHelpTopicId(page.help.split('/')[1]);
