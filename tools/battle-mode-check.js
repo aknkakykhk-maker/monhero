@@ -151,7 +151,7 @@ check('クイックは経験値・ダイヤだけ1.5倍と分かる表示', has(
 // 見出しが2行に折り返さないよう、倍率は3枠までにして折り返しも禁じる
 check('倍率の枠は3つで1行に収める', has('<div className="grid grid-cols-3 gap-1 mt-1.5">') && has('text-center text-[8px] text-slate-400 whitespace-nowrap'));
 check('ランキングボタンはチャレンジのときだけ出す',
-  has("? <div className=\"w-full h-10 rounded-xl bg-slate-900/60") && has(": <button onClick={()=>{addAssistantBond('ranking');setBattleMenuTab('ranking')")
+  has("? <div className=\"w-full h-10 rounded-xl bg-slate-900/60") && /: <button [^>]*onClick=\{\(\)=>\{addAssistantBond\('ranking'\);setBattleMenuTab\('ranking'\)/.test(source)
     && has('🏆 ランキングを見る（チャレンジモード）'));
 // モードのタブのすぐ下へ移し、タブ2つを合わせたのと同じ幅にする。
 // クイックでも同じ高さの案内を出し、下に続く表示の位置がモードでずれないようにする
@@ -161,7 +161,7 @@ check('ランキングボタンはモードのタブのすぐ下にある',
 check('クイックでも同じ高さの案内を出す', has('クイックモードはランキング対象外です') && count('w-full h-10 rounded-xl') === 2, `${count('w-full h-10 rounded-xl')}か所`);
 // 最低の高さ(min-h)ではなく決め打ちの高さ(h-10)にする。ボタンの中身によっては
 // min-hを超えて伸びてしまい、クイック側の空き場所とずれるため
-check('助手コメントの位置がモードでずれない', has('<div className="shrink-0 w-full h-10 mb-1">'));
+check('助手コメントの位置がモードでずれない', /className=[{`"]*shrink-0 w-full h-10 mb-1/.test(source));
 // 難易度カード自体の高さもモードでそろえる。記録の枠(チャレンジ3行/クイック1行)と
 // 倍率の下の補足行が、モードによって高さを変える原因だった
 // 高さを数値で指定してそろえる方法は、端末のフォントで1行の高さが変わるため合いきらなかった。

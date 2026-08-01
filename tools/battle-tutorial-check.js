@@ -1,12 +1,11 @@
 // バトルチュートリアル(操作しながら覚える練習)を確認する。
 //
-// いまはデバッグ設定からだけ開始できる「お試し」の状態。あとから
-// 「初回起動で自動」「ヘルプからいつでも」へ移せる形になっているかも合わせて見る。
+// 入口は3つ。デバッグ設定・はじめての案内の最後・ヘルプの「バトルのれんしゅう」。
 //
 //   ① 台本が data/assistants.js のデータで、画面のJSXへ直接書かれていない
-//   ② 仕様どおりの流れ(勇者モン → 距離 → 教え → バトル → クリア → 強化 → 終わり)になっている
-//   ③ 通常のセーブデータに影響しない(記録しない状態で始める)
-//   ④ 通常プレイからは始められない(デバッグ設定からだけ)
+//   ② 仕様どおりの流れ(モード/難易度 → 勇者モン → 距離 → 教え → バトル → クリア → 強化 → 終わり)
+//   ③ 通常のセーブデータに影響しない(記録しない状態で始める・始めたあとも保つ)
+//   ④ 入口が3つそろっていて、終わったら始めた場所へ帰る
 //   ⑤ 押してほしい場所を光らせ、途中で抜ける操作は止めている
 const fs = require('fs');
 const vm = require('vm');
@@ -15,6 +14,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
 const assistantsSrc = fs.readFileSync(path.join(root, 'monster-hero/data/assistants.js'), 'utf8');
+const helpSrc = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -43,14 +43,21 @@ check('セリフを画面のJSXへ直接書いていない',
 // --- ② 流れ ---
 const order = steps.map(s => s.at);
 const idx = (id) => steps.findIndex(s => s.id === id);
-check('勇者モン選択から始まる', steps[0].at === 'PICK_HERO');
+check('バトルの入口(モード・難易度)から始まる', steps[0].at === 'BATTLE_MENU');
 check('仕様どおりの画面をこの順で通る',
-  idx('hero') < idx('slot') && idx('slot') < idx('teaching') && idx('teaching') < idx('battle')
-    && idx('battle') < idx('clear') && idx('clear') < idx('reward'),
+  idx('start') < idx('hero') && idx('hero') < idx('slot') && idx('slot') < idx('teaching')
+    && idx('teaching') < idx('battle') && idx('battle') < idx('clear') && idx('clear') < idx('reward'),
   order.join(' → '));
 check('自己紹介から入る', /よろしく|見てるからね|覚えよ/.test(steps[0].t));
 check('供モンの合流と固有技にも触れる',
   steps.some(s => s.t.includes('供モン')) && steps.some(s => s.t.includes('固有技')));
+// モード・ランキング・難易度も練習の中で説明する(バトル画面の手前でつまずかないように)
+check('チャレンジとクイックの違いに触れる',
+  steps.some(s => s.t.includes('チャレンジ') && s.t.includes('クイック')));
+check('ランキングの場所に触れる', steps.some(s => s.t.includes('ランキング')));
+check('難易度の選び方に触れる', steps.some(s => s.t.includes('スワイプ') || s.t.includes('難易度')));
+check('練習はビギナーのチャレンジで行うと伝える',
+  steps.some(s => s.t.includes('ビギナー')));
 check('最後は「ヘルプからいつでも見られる」で終わる',
   steps[steps.length - 1].wait === 'end' && steps[steps.length - 1].t.includes('ヘルプ'));
 check('操作して進むステップがある', steps.filter(s => s.wait === 'act').length >= 4,
@@ -65,13 +72,14 @@ const actWithoutTalk = steps.filter((s, i) => {
 check('操作の手前に必ず同じ画面の説明がある', actWithoutTalk.length === 0,
   actWithoutTalk.map(s => `${s.id}(${s.at})`).join(', '));
 // 操作させたい場所は、読んでいる間から光らせて場所が分かるようにする
-const talkWithoutSpot = steps.filter((s, i) => s.wait === 'act' && steps[i - 1] && steps[i - 1].spot !== s.spot);
+const spotKey = (s) => JSON.stringify(s && s.spot !== undefined ? s.spot : null);
+const talkWithoutSpot = steps.filter((s, i) => s.wait === 'act' && steps[i - 1] && spotKey(steps[i - 1]) !== spotKey(s));
 check('説明と操作で同じ場所を光らせている', talkWithoutSpot.length === 0,
   talkWithoutSpot.map(s => s.id).join(', '));
 // 操作させる画面が説明だけで終わっていないか(逆向きの取りこぼし)
 const actScreens = new Set(steps.filter(s => s.wait === 'act').map(s => s.at));
 check('操作が要る画面がすべて説明つきで並んでいる',
-  ['PICK_HERO', 'PICK_SLOT', 'PICK_TEACHING', 'BATTLE', 'WAVE_RESULT', 'REWARD_PICK'].every(at => actScreens.has(at)),
+  ['BATTLE_MENU', 'PICK_HERO', 'PICK_SLOT', 'PICK_TEACHING', 'BATTLE', 'WAVE_RESULT', 'REWARD_PICK'].every(at => actScreens.has(at)),
   [...actScreens].join('/'));
 check('画面が変わったら次のステップへ進める',
   findBattleTutorialStep(0, 'PICK_SLOT') === idx('slotTalk')
@@ -82,7 +90,7 @@ check('画面が変わったときの受け皿が画面側にある',
   has("const next = (typeof findBattleTutorialStep === 'function')") && has('}, [gameState, battleTutorialStep]);'));
 
 // --- ③ 通常のデータに影響しない ---
-const startBlock = source.slice(source.indexOf('const startBattleTutorial = () => {'), source.indexOf('const endBattleTutorial'));
+const startBlock = source.slice(source.indexOf('const startBattleTutorial = ('), source.indexOf('const beginBattleTutorialRun'));
 check('記録しない状態で始める', startBlock.includes('debugBattleRef.current = true;'));
 check('保存しないことはデバッグ戦と同じ仕組み',
   source.includes('if (debugBattleRef.current) {') && source.includes("setDebugOutcome('win');"));
@@ -92,13 +100,34 @@ const endBlock = source.slice(source.indexOf('const endBattleTutorial = () => {'
 check('終わるときも保存しない', !/storeSet\(/.test(endBlock));
 check('やさしい難易度で固定する', startBlock.includes("setDifficulty('Beginner');"));
 check('編成が空でも始められる', startBlock.includes('setMonSelection(getUnlockedBaseMonsterList());'));
+// ふだんの「この難易度で挑戦」は debugBattleRef を false へ戻すので、
+// そのまま通すと練習の結果が記録されてしまう。練習用の開始処理を必ず通す
+const runBlock = source.slice(source.indexOf('const beginBattleTutorialRun = () => {'), source.indexOf('const endBattleTutorial'));
+check('練習の開始は専用の処理を通る',
+  has('const beginBattleTutorialRun = () => {') && runBlock.includes('debugBattleRef.current = true;'));
+check('ふだんの開始ボタンは練習中そちらへ回す',
+  has('onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}setDifficulty(key);'));
+check('練習中はビギナー以外で始められない',
+  has("disabled={!!battleTutorial&&key!=='Beginner'}"));
+check('練習中はモードを切り替えられない',
+  has('onClick={()=>{if(battleTutorial)return;setBattleMode(mode.id);'));
+check('練習の中で保存していない(開始処理)', !/storeSet\(/.test(runBlock));
 
-// --- ④ 入口はデバッグだけ ---
-check('デバッグ設定から開始できる', has('<button onClick={startBattleTutorial}') && has('バトルチュートリアル開始'));
-check('デバッグ設定より外に入口が無い',
-  (source.match(/startBattleTutorial/g) || []).length === 2, `${(source.match(/startBattleTutorial/g) || []).length}か所`);
-check('入口はデバッグ設定の中にある',
+// --- ④ 入口は3つ・戻り先を覚える ---
+check('デバッグ設定から開始できる', has('<button onClick={()=>startBattleTutorial()}') && has('バトルチュートリアル開始'));
+check('はじめての案内の最後から開始できる',
+  has("startBattleTutorial('HOME')") && assistantsSrc.includes("offer:'battle'"));
+check('ヘルプの項目から開始できる',
+  has("topic.launch==='battleTutorial'") && has('バトルのれんしゅうを始める'));
+check('ヘルプ側に項目がある', helpSrc.includes("launch: 'battleTutorial'"));
+check('入口は3つだけ',
+  (source.match(/startBattleTutorial\(/g) || []).length === 3,
+  `${(source.match(/startBattleTutorial\(/g) || []).length}か所`);
+check('デバッグ設定の入口はデバッグ設定の中にある',
   source.indexOf('バトルチュートリアル開始') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
+check('終わったら始めた場所へ帰る',
+  startBlock.includes('setBattleTutorialReturn(returnTo);')
+    && endBlock.includes("if (back === 'HOME') { returnToHome(); return; }"));
 check('何度でも始められる(既読フラグを持たない)',
   !/battleTutorial[A-Za-z]*(Seen|Done)/.test(source) && !source.includes('mh_battle_tutorial'));
 
@@ -126,13 +155,22 @@ check('みゅあの顔と吹き出しは共通のものを使う',
 check('つぎへとスキップ(やめる)がある',
   has("{last?'おわる':'つぎへ'}") && has('<button onClick={endBattleTutorial}') && has('やめる</button>'));
 // 押してほしい場所を光らせる
-const SPOTS = ['monList', 'slots', 'teachings', 'cards', 'action', 'rewards', 'waveNext'];
+const SPOTS = ['modeTabs', 'rankingBtn', 'difficulty', 'battleStart',
+  'monCards', 'monDecide', 'slots', 'teachings', 'cards', 'action', 'rewards', 'waveNext'];
 check('光らせる場所が画面側と結びついている',
   SPOTS.every(name => has(`battleTutorialSpotClass('${name}')`)),
   SPOTS.filter(name => !has(`battleTutorialSpotClass('${name}')`)).join(', '));
+const spotNames = steps.flatMap(s => (Array.isArray(s.spot) ? s.spot : s.spot ? [s.spot] : []));
 check('台本のspotは画面側に用意されているものだけ',
-  steps.filter(s => s.spot).every(s => SPOTS.includes(s.spot)),
-  steps.filter(s => s.spot && !SPOTS.includes(s.spot)).map(s => s.spot).join(', '));
+  spotNames.every(name => SPOTS.includes(name)),
+  spotNames.filter(name => !SPOTS.includes(name)).join(', '));
+// 一覧の外枠だけを光らせると画面からはみ出して「どこを押すのか」が分からない。
+// 勇者モン選択はカード1枚ずつを光らせる
+check('勇者モンはカード1枚ずつを光らせる',
+  has("active:scale-95${battleTutorialSpotClass('monCards')}") && !has("battleTutorialSpotClass('monList')"));
+// 詳細を開くと画面いっぱいのモーダルが出るので、上のみゅあの帯と名前が重ならないようにする
+check('詳細と吹き出しが重ならない',
+  has("paddingTop:battleTutorial?'calc(4.25rem + env(safe-area-inset-top))':undefined"));
 check('光らせる見た目がCSSにある',
   has('.is-battle-tutorial-spot{') && has('@keyframes mhBattleSpot'));
 check('動きを減らす設定にも配慮する', has('@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}'));
@@ -143,9 +181,9 @@ check('練習中は戻る・リタイアを止める',
 
 // --- 将来の移行 ---
 check('開始と終了が1つの関数にまとまっている',
-  has('const startBattleTutorial = () => {') && has('const endBattleTutorial = () => {'));
-check('あとから別の場所へ移せることを書いてある',
-  source.includes('「初回起動で自動」「ヘルプからいつでも」へそのまま移せる')
+  has('const startBattleTutorial = (') && has('const endBattleTutorial = () => {'));
+check('入口を増やしても同じ関数を呼ぶだけで済むと書いてある',
+  source.includes('入口は3つ。デバッグ設定・はじめての案内の最後・ヘルプの「バトルのれんしゅう」')
     && assistantsSrc.includes('呼び出し口(いまはデバッグ設定)を変えるだけで'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

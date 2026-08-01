@@ -44,7 +44,7 @@ check('スキップ行を条件付きで丸ごと消していない', !has('{SKI
 // (端末のフォントによって1行の高さが変わるため、数値指定では合いきらなかった)
 check('記録の枠はモードで同じ行構成', has('const recordBox=(key)=>quick') && !has('recordBoxStyle'));
 check('ランキングボタンの場所は決め打ちの高さにする',
-  has('<div className="shrink-0 w-full h-10 mb-1">') && has('className="w-full h-10 rounded-xl'));
+  /className=[{`"]*shrink-0 w-full h-10 mb-1/.test(source) && has('className="w-full h-10 rounded-xl'));
 check('倍率の下の補足行はクイック限定にしない',
   has('>{noteText}</div>') && !has('{quick&&<div className="mt-1 rounded-xl border'));
 // カードの外にある「所持スキップチケット」の帯も、片方のモードだけ消すと
@@ -55,7 +55,7 @@ check('スキップチケットの帯をモードで消さない',
     && has("{quick?'所持スキップチケット':'スキップチケットはクイックモード専用'}")
     && has('gap-1 mb-1 px-2 min-h-[24px]'));
 check('モードのタブはランキングでは出さない',
-  has("{battleMenuTab==='difficulty'&&<div className=\"grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl"));
+  /\{battleMenuTab==='difficulty'&&<div className=[{`"]*grid grid-cols-2 gap-1 mb-0\.5 shrink-0 rounded-xl/.test(source));
 // モードで枠の位置がずれる不具合を何度も出しているので、原因になる書き方そのものを数える。
 // 「クイックのときだけ要素を出す」書き方(`{quick&&`)は、高さを固定した枠の中でしか使わない。
 // いま許しているのはスキップチケットの枚数バッジ1か所だけ(親に min-h-[24px] がある)。
