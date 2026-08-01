@@ -1098,6 +1098,9 @@ const ASSISTANT_TUTORIAL = [
   { e:'surprise', t:'ミッションとギフトはこの辺！ 報酬の受け取り忘れに気をつけてね♪', title:'ミッションとギフト', help:'items/missions', spot:'reward' },
   { e:'normal',  t:'ヘルプは右上の「設定」の中！ 遊び方に迷ったら、ここを開いてね。', title:'ヘルプは設定の中', help:'tips/assistant', spot:'settings' },
   { e:'happy',   t:'あたしはここにいるよ。困ったらいつでもタップしてね♪', title:'それじゃあ、いってらっしゃい！', spot:'assistant' },
+  // 最後のページ。offer:'battle' が付いたページでは「やってみる／あとで」を選べる。
+  // 断ってもヘルプの「バトルのれんしゅう」からいつでも始められる
+  { e:'excited', t:'さっそくバトルを1回いっしょにやってみる？ 練習だから記録は残らないよ♪', title:'バトルもやってみる？', offer:'battle' },
 ];
 
 // ---------- バトルチュートリアル(操作しながら覚える) ----------
@@ -1107,7 +1110,8 @@ const ASSISTANT_TUTORIAL = [
 //
 // 【1ステップの書き方】
 //   at    … その画面(gameState)にいるときに出す。'*' はどの画面でも出す
-//   spot  … 光らせる場所のキー。画面側が battleTutorialSpot と見比べて光らせる
+//   spot  … 光らせる場所のキー。画面側が battleTutorialSpot と見比べて光らせる。
+//            1つの操作で2か所を光らせたいときは配列で書ける(例: 一覧とその決定ボタン)
 //   wait  … 'next' つぎへボタンで進む / 'act' プレイヤーが操作して画面が変わるのを待つ /
 //            'end' ここで終わり
 //   e,t   … 表情とセリフ。t の {name} はそのときの呼び方に置き換わる
@@ -1123,10 +1127,16 @@ const ASSISTANT_TUTORIAL = [
 //   操作させたい画面には必ずその手前に説明のステップ(同じ at・同じ spot)を置く。
 //   説明のステップにも spot を書いておくと、読んでいる間から光って場所が分かる。
 const ASSISTANT_BATTLE_TUTORIAL = [
+  // バトルの入口。モード・ランキング・難易度をここで一度に説明する
+  { id:'intro',        at:'BATTLE_MENU',   e:'excited', title:'バトルのれんしゅう', t:'{name}、ここからは実際に動かして覚えよ！ あたしが横で見てるからね♪', wait:'next' },
+  { id:'modeTalk',     at:'BATTLE_MENU',   e:'normal',  title:'2つのモード', t:'チャレンジは記録が残る本番。クイックは気軽に遊ぶモードだよ。', spot:'modeTabs', wait:'next' },
+  { id:'rankTalk',     at:'BATTLE_MENU',   e:'happy',   title:'ランキング', t:'チャレンジのスコアは、ここのランキングに載るんだ♪', spot:'rankingBtn', wait:'next' },
+  { id:'diffTalk',     at:'BATTLE_MENU',   e:'normal',  title:'難易度を選ぶ', t:'左右にスワイプして選ぶよ。難しいほど報酬の倍率も上がるの。', spot:'difficulty', wait:'next' },
+  { id:'startTalk',    at:'BATTLE_MENU',   e:'wink',    title:'ビギナーで挑戦', t:'今回は練習だから、ビギナーのチャレンジをやってみよ！', spot:'battleStart', wait:'next' },
+  { id:'start',        at:'BATTLE_MENU',   e:'excited', title:'押してみて！', t:'「この難易度で挑戦」を押すとバトルが始まるよ♪', spot:'battleStart', wait:'act' },
   // 勇者モンを選ぶ
-  { id:'intro',        at:'PICK_HERO',     e:'excited', title:'バトルのれんしゅう', t:'{name}、ここからは実際に動かして覚えよ！ あたしが横で見てるからね♪', wait:'next' },
-  { id:'heroTalk',     at:'PICK_HERO',     e:'happy',   title:'まずは勇者モン', t:'主役になる子が勇者モン。手持ちから1体えらぶよ！', spot:'monList', wait:'next' },
-  { id:'hero',         at:'PICK_HERO',     e:'wink',    title:'えらんでみよう', t:'光ってる中から好きな子を押して、「決定」だよ♪', spot:'monList', wait:'act' },
+  { id:'heroTalk',     at:'PICK_HERO',     e:'happy',   title:'まずは勇者モン', t:'主役になる子が勇者モン。この中から1体えらぶよ！', spot:['monCards','monDecide'], wait:'next' },
+  { id:'hero',         at:'PICK_HERO',     e:'wink',    title:'えらんでみよう', t:'好きな子を押して、出てきた画面で「決定」だよ♪', spot:['monCards','monDecide'], wait:'act' },
   // 置く距離を決める
   { id:'slotTalk',     at:'PICK_SLOT',     e:'normal',  title:'置く距離を決めよう', t:'次は立ち位置。敵と同じ距離だと大ダメージなんだ！', spot:'slots', wait:'next' },
   { id:'slot',         at:'PICK_SLOT',     e:'wink',    title:'枠を押してね', t:'好きな距離の枠をタップしてみて♪', spot:'slots', wait:'act' },
@@ -1147,6 +1157,7 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   // 覚えておいてほしいこと
   { id:'ally',         at:'*',             e:'normal',  title:'このあとは', t:'WAVE2・4・6では供モンが合流するよ。ステータスがそのまま足されるんだ！', wait:'next' },
   { id:'unique',       at:'*',             e:'happy',   title:'固有技のこと', t:'勇者モンの固有技は、レベルが上がるほど強くなるよ。育てるほど頼りになる♪', wait:'next' },
+  { id:'modeAfter',    at:'*',             e:'normal',  title:'モードの使い分け', t:'記録に挑むならチャレンジ、育成を回すならクイックだよ♪', wait:'next' },
   { id:'end',          at:'*',             e:'happy',   title:'これでバッチリ！', t:'困ったらヘルプからいつでもチュートリアルを見られるよ♪', wait:'end' },
 ];
 // いまの画面に合うステップを探す(画面が変わったときに呼ぶ)

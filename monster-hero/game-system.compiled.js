@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: abd0224faaedd941
+// source-sha256: f2fe895aa91b7094
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 15:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 15:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5583,6 +5583,8 @@ function MonsterHeroGame() {
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
+  // 練習を始めた場所。終わったらここへ帰す(デバッグ設定 / HOME)
+  const [battleTutorialReturn, setBattleTutorialReturn] = useState('DEBUG_SETTINGS');
   // デバッグ表示のときだけ使う「このLvだとどう見えるか」。null なら実際のLv
   const [assistantDebugLevel, setAssistantDebugLevel] = useState(null);
   // デバッグのランダムテストで、どの場面を引くか
@@ -11401,9 +11403,9 @@ function MonsterHeroGame() {
   // ふだんのバトル画面をそのまま使い、上にみゅあの吹き出しとハイライトを重ねて進める。
   // 記録を残さないよう、デバッグ戦と同じ「保存しない」状態で始める(経験値・ダイヤ・
   // ランキング・クリア回数・ミッションのどれにも影響しない)。
-  // いまはデバッグ設定からだけ呼ぶが、この関数を呼ぶ場所を変えれば
-  // 「初回起動で自動」「ヘルプからいつでも」へそのまま移せる。
-  const startBattleTutorial = () => {
+  // 入口は3つ。デバッグ設定・はじめての案内の最後・ヘルプの「バトルのれんしゅう」。
+  // どこから始めても終わったら元の場所へ帰れるよう、戻り先を覚えておく。
+  const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS') => {
     debugBattleRef.current = true;
     debugResultRef.current = false;
     setDebugBattle(true);
@@ -11439,24 +11441,56 @@ function MonsterHeroGame() {
     setMonSelection(getUnlockedBaseMonsterList());
     setHeroPickTab('base');
     setCurrentPickingMon(null);
+    setShowHelp(false);
+    setBattleMenuTab('difficulty');
+    setBattleTutorialReturn(returnTo);
     setBattleTutorialStep(0);
+    // モード・ランキング・難易度もここで説明したいので、バトルの入口から始める
+    setGameState('BATTLE_MENU');
+  };
+  // 「この難易度で挑戦」を練習として押したとき。ふだんのボタンは記録を残す状態(debugBattleRef=false)に
+  // 戻してしまうので、練習中は必ずこちらを通してビギナー・チャレンジ・保存なしを保つ
+  const beginBattleTutorialRun = () => {
+    debugBattleRef.current = true;
+    debugResultRef.current = false;
+    setDebugBattle(true);
+    setDebugOutcome(null);
+    setDifficulty('Beginner');
+    setRunMode(BATTLE_MODE_CHALLENGE);
+    setBattleMode(BATTLE_MODE_CHALLENGE);
+    setMonSelection(getUnlockedBaseMonsterList());
+    setHeroPickTab('base');
+    setCurrentPickingMon(null);
     setGameState('PICK_HERO');
   };
-  // 終わる・やめる。記録は残していないので、デバッグ設定へ戻すだけでよい
+  // 終わる・やめる。記録は残していないので、始めた場所へ戻すだけでよい
   const endBattleTutorial = () => {
+    const back = battleTutorialReturn;
     setBattleTutorialStep(null);
+    setBattleTutorialReturn('DEBUG_SETTINGS');
     debugBattleRef.current = false;
     debugResultRef.current = false;
     setDebugBattle(false);
     setDebugOutcome(null);
     setGaveUp(false);
     setCurrentPickingMon(null);
-    setGameState('DEBUG_SETTINGS');
+    // HOMEへ帰るときは走らせかけたバトルの状態も片付ける
+    if (back === 'HOME') {
+      returnToHome();
+      return;
+    }
+    setGameState(back || 'DEBUG_SETTINGS');
   };
   const battleTutorialSteps = typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL || [];
   const battleTutorial = battleTutorialStep != null ? battleTutorialSteps[battleTutorialStep] || null : null;
-  // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく
-  const battleTutorialSpotClass = name => battleTutorial && battleTutorial.spot === name ? ' is-battle-tutorial-spot' : '';
+  // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく。
+  // spot は配列でも書けるので、1つの操作で「一覧」と「その決定ボタン」を同時に光らせられる
+  const battleTutorialSpotClass = name => {
+    if (!battleTutorial) return '';
+    const spot = battleTutorial.spot;
+    const hit = Array.isArray(spot) ? spot.includes(name) : spot === name;
+    return hit ? ' is-battle-tutorial-spot' : '';
+  };
   // 画面が変わったら、その画面に合うステップへ進める(操作で進むステップの受け皿)
   useEffect(() => {
     if (battleTutorialStep == null) return;
@@ -13750,6 +13784,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-1 mb-1 shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
+      disabled: !!battleTutorial,
       onClick: () => {
         if (battleMenuTab !== 'difficulty') {
           setBattleMenuTab('difficulty');
@@ -13757,7 +13792,7 @@ function MonsterHeroGame() {
         }
         returnToHome();
       },
-      className: "p-3 text-slate-400 active:scale-90"
+      className: "p-3 text-slate-400 active:scale-90 disabled:opacity-25"
     }, /*#__PURE__*/React.createElement(ArrowLeft, {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
@@ -13765,12 +13800,13 @@ function MonsterHeroGame() {
     }, "\u30D0\u30C8\u30EB")), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
     }, battleMenuTab === 'difficulty' && /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5"
+      className: `grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeTabs')}`
     }, BATTLE_MODES.map(mode => {
       const on = battleMode === mode.id && battleMenuTab === 'difficulty';
       return /*#__PURE__*/React.createElement("div", {
         key: mode.id,
         onClick: () => {
+          if (battleTutorial) return;
           setBattleMode(mode.id);
           setBattleMenuTab('difficulty');
         },
@@ -13802,10 +13838,12 @@ function MonsterHeroGame() {
     })), battleMenuTab === 'difficulty' && (() => {
       const quick = isQuickMode(battleMode);
       return /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full h-10 mb-1"
+        className: `shrink-0 w-full h-10 mb-1${battleTutorialSpotClass('rankingBtn')}`
       }, quick ? /*#__PURE__*/React.createElement("div", {
         className: "w-full h-10 rounded-xl bg-slate-900/60 border border-white/5 text-slate-500 font-black text-[10px] flex items-center justify-center px-2 whitespace-nowrap"
-      }, "\u30AF\u30A4\u30C3\u30AF\u30E2\u30FC\u30C9\u306F\u30E9\u30F3\u30AD\u30F3\u30B0\u5BFE\u8C61\u5916\u3067\u3059") : /*#__PURE__*/React.createElement("button", {
+      }, "\u30AF\u30A4\u30C3\u30AF\u30E2\u30FC\u30C9\u306F\u30E9\u30F3\u30AD\u30F3\u30B0\u5BFE\u8C61\u5916\u3067\u3059")
+      /* 練習中はランキング一覧へ移らせない(台本が難易度の画面のまま進むため) */ : /*#__PURE__*/React.createElement("button", {
+        disabled: !!battleTutorial,
         onClick: () => {
           addAssistantBond('ranking');
           setBattleMenuTab('ranking');
@@ -13813,7 +13851,7 @@ function MonsterHeroGame() {
           setRankingViewDiff(difficulty);
           loadRankings(difficulty);
         },
-        className: "w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2"
+        className: "w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-60"
       }, /*#__PURE__*/React.createElement("span", {
         className: "flex-1 text-center whitespace-nowrap"
       }, "\uD83C\uDFC6 \u30E9\u30F3\u30AD\u30F3\u30B0\u3092\u898B\u308B\uFF08\u30C1\u30E3\u30EC\u30F3\u30B8\u30E2\u30FC\u30C9\uFF09"), /*#__PURE__*/React.createElement(ChevronRight, {
@@ -13881,7 +13919,7 @@ function MonsterHeroGame() {
           className: "font-mono"
         }, have, "\u679A"));
       })), /*#__PURE__*/React.createElement("div", {
-        className: "relative shrink-0"
+        className: `relative shrink-0${battleTutorialSpotClass('difficulty')}`
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u524D\u306E\u96E3\u6613\u5EA6",
         disabled: selectedIndex === 0,
@@ -13962,7 +14000,12 @@ function MonsterHeroGame() {
           },
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs"
         }, "\u5168WAVE\u8A73\u7D30"), /*#__PURE__*/React.createElement("button", {
+          disabled: !!battleTutorial && key !== 'Beginner',
           onClick: () => {
+            if (battleTutorial) {
+              beginBattleTutorialRun();
+              return;
+            }
             setDifficulty(key);
             setRunMode(battleMode);
             debugBattleRef.current = false;
@@ -13972,7 +14015,7 @@ function MonsterHeroGame() {
             setHeroPickTab('roster');
             setGameState('PICK_HERO');
           },
-          className: "min-h-[44px] rounded-xl font-black text-sm",
+          className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key === 'Beginner' ? battleTutorialSpotClass('battleStart') : ''}`,
           style: {
             backgroundColor: setting.bg,
             color: setting.darkText ? '#0f172a' : '#ffffff'
@@ -14245,7 +14288,7 @@ function MonsterHeroGame() {
       onClick: () => setAssistantDebug('random'),
       className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
     }, "\u30E9\u30F3\u30C0\u30E0\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
-      onClick: startBattleTutorial,
+      onClick: () => startBattleTutorial(),
       className: "col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95"
     }, "\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u958B\u59CB\uFF08\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("button", {
       onClick: async () => {
@@ -18532,13 +18575,13 @@ function MonsterHeroGame() {
     }, heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), /*#__PURE__*/React.createElement("div", {
       className: `flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col ${gameState === 'PICK_ALLY' ? 'justify-center' : ''}`
     }, /*#__PURE__*/React.createElement("div", {
-      className: `grid grid-cols-2 gap-2.5${battleTutorialSpotClass('monList')}`
+      className: "grid grid-cols-2 gap-2.5"
     }, (gameState === 'PICK_HERO' && heroPickTab === 'base' ? getUnlockedBaseMonsterList() : monSelection).map(m => {
       const isSel = currentPickingMon?.id === m.id;
       return /*#__PURE__*/React.createElement("button", {
         key: m.id,
         onClick: () => setCurrentPickingMon(m),
-        className: `bg-slate-900 border-2 rounded-2xl flex flex-col items-center transition-all active:scale-95 ${isSel ? 'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]' : 'border-slate-800'}`,
+        className: `bg-slate-900 border-2 rounded-2xl flex flex-col items-center transition-all active:scale-95${battleTutorialSpotClass('monCards')} ${isSel ? 'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]' : 'border-slate-800'}`,
         style: {
           padding: '12px 8px'
         }
@@ -18613,13 +18656,17 @@ function MonsterHeroGame() {
       }, "\u8A73\u7D30\u3092\u898B\u308B ", /*#__PURE__*/React.createElement(ChevronRight, {
         size: 9
       })));
-    }))), currentPickingMon && /*#__PURE__*/React.createElement("div", {
+    }))), currentPickingMon &&
+    /*#__PURE__*/
+    /* 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする */
+    React.createElement("div", {
       className: "fixed inset-0 z-[3100] flex items-center justify-center p-4",
       style: {
         position: 'fixed',
         inset: 0,
         backgroundColor: 'rgba(0,0,0,0.92)',
-        zIndex: 31000
+        zIndex: 31000,
+        paddingTop: battleTutorial ? 'calc(4.25rem + env(safe-area-inset-top))' : undefined
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden"
@@ -18696,7 +18743,7 @@ function MonsterHeroGame() {
       className: "w-2/5 bg-slate-800 text-slate-400 py-3.5 rounded-2xl font-black text-sm uppercase"
     }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('PICK_SLOT'),
-      className: `w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg${battleTutorialSpotClass('monList')}`
+      className: `w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg${battleTutorialSpotClass('monDecide')}`
     }, "\u6C7A\u5B9A"))))), gameState === 'PICK_SLOT' && /*#__PURE__*/React.createElement("div", {
       style: {
         position: "absolute",
@@ -19321,7 +19368,16 @@ function MonsterHeroGame() {
           setShowHelp(true);
         },
         className: "w-full mt-2 min-h-[38px] rounded-xl bg-slate-800 border border-white/10 text-slate-200 text-[11px] font-black active:scale-[.98]"
-      }, "\u3053\u306E\u8A71\u3092\u30D8\u30EB\u30D7\u3067\u8A73\u3057\u304F\u898B\u308B"), /*#__PURE__*/React.createElement("div", {
+      }, "\u3053\u306E\u8A71\u3092\u30D8\u30EB\u30D7\u3067\u8A73\u3057\u304F\u898B\u308B"), page.offer === 'battle' && /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          finishTutorial(true);
+          startBattleTutorial('HOME');
+        },
+        className: "w-full mt-3 min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
+        style: {
+          backgroundColor: who.accent
+        }
+      }, "\u30D0\u30C8\u30EB\u306E\u308C\u3093\u3057\u3085\u3046\u3092\u3084\u3063\u3066\u307F\u308B\uFF01"), /*#__PURE__*/React.createElement("div", {
         className: "w-full grid grid-cols-2 gap-2 mt-3"
       }, /*#__PURE__*/React.createElement("button", {
         disabled: tutorialStep <= 0,
@@ -19331,11 +19387,11 @@ function MonsterHeroGame() {
         onClick: () => {
           if (last) finishTutorial(true);else setTutorialStep(v => v + 1);
         },
-        className: "min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
-        style: {
+        className: `min-h-[48px] rounded-2xl font-black text-sm active:scale-[.98] ${page.offer === 'battle' ? 'bg-slate-800 text-slate-300' : 'text-black'}`,
+        style: page.offer === 'battle' ? undefined : {
           backgroundColor: who.accent
         }
-      }, last ? intro ? '名前を決める！' : 'はじめる！' : 'つぎへ'))));
+      }, last ? intro ? '名前を決める！' : page.offer === 'battle' ? 'あとでやる' : 'はじめる！' : 'つぎへ'))));
     })(), modeInfoId && (() => {
       const mode = battleModeInfo(modeInfoId);
       return /*#__PURE__*/React.createElement("div", {
@@ -19855,7 +19911,13 @@ function MonsterHeroGame() {
         className: "shrink-0 text-slate-500"
       })))), cat && topic && /*#__PURE__*/React.createElement("div", {
         className: "space-y-3.5 pb-2"
-      }, renderHelpBlocks(topic.blocks, cat.color), /*#__PURE__*/React.createElement("div", {
+      }, renderHelpBlocks(topic.blocks, cat.color), topic.launch === 'battleTutorial' && /*#__PURE__*/React.createElement("button", {
+        onClick: () => startBattleTutorial('HOME'),
+        className: "w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95",
+        style: {
+          backgroundColor: cat.color
+        }
+      }, "\uD83C\uDF93 \u30D0\u30C8\u30EB\u306E\u308C\u3093\u3057\u3085\u3046\u3092\u59CB\u3081\u308B"), /*#__PURE__*/React.createElement("div", {
         className: "pt-1 flex gap-2"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setHelpTopicId(null),

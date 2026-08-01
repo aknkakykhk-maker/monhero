@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 15:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 15:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2535,6 +2535,8 @@ function MonsterHeroGame() {
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
+  // 練習を始めた場所。終わったらここへ帰す(デバッグ設定 / HOME)
+  const [battleTutorialReturn, setBattleTutorialReturn] = useState('DEBUG_SETTINGS');
   // デバッグ表示のときだけ使う「このLvだとどう見えるか」。null なら実際のLv
   const [assistantDebugLevel, setAssistantDebugLevel] = useState(null);
   // デバッグのランダムテストで、どの場面を引くか
@@ -6234,9 +6236,9 @@ function MonsterHeroGame() {
   // ふだんのバトル画面をそのまま使い、上にみゅあの吹き出しとハイライトを重ねて進める。
   // 記録を残さないよう、デバッグ戦と同じ「保存しない」状態で始める(経験値・ダイヤ・
   // ランキング・クリア回数・ミッションのどれにも影響しない)。
-  // いまはデバッグ設定からだけ呼ぶが、この関数を呼ぶ場所を変えれば
-  // 「初回起動で自動」「ヘルプからいつでも」へそのまま移せる。
-  const startBattleTutorial = () => {
+  // 入口は3つ。デバッグ設定・はじめての案内の最後・ヘルプの「バトルのれんしゅう」。
+  // どこから始めても終わったら元の場所へ帰れるよう、戻り先を覚えておく。
+  const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS') => {
     debugBattleRef.current = true;
     debugResultRef.current = false;
     setDebugBattle(true); setDebugOutcome(null); setGaveUp(false);
@@ -6251,22 +6253,46 @@ function MonsterHeroGame() {
     // 編成が空でも始められるよう、解放済みのベースモンから選んでもらう
     setMonSelection(getUnlockedBaseMonsterList());
     setHeroPickTab('base'); setCurrentPickingMon(null);
+    setShowHelp(false); setBattleMenuTab('difficulty');
+    setBattleTutorialReturn(returnTo);
     setBattleTutorialStep(0);
+    // モード・ランキング・難易度もここで説明したいので、バトルの入口から始める
+    setGameState('BATTLE_MENU');
+  };
+  // 「この難易度で挑戦」を練習として押したとき。ふだんのボタンは記録を残す状態(debugBattleRef=false)に
+  // 戻してしまうので、練習中は必ずこちらを通してビギナー・チャレンジ・保存なしを保つ
+  const beginBattleTutorialRun = () => {
+    debugBattleRef.current = true;
+    debugResultRef.current = false;
+    setDebugBattle(true); setDebugOutcome(null);
+    setDifficulty('Beginner'); setRunMode(BATTLE_MODE_CHALLENGE); setBattleMode(BATTLE_MODE_CHALLENGE);
+    setMonSelection(getUnlockedBaseMonsterList());
+    setHeroPickTab('base'); setCurrentPickingMon(null);
     setGameState('PICK_HERO');
   };
-  // 終わる・やめる。記録は残していないので、デバッグ設定へ戻すだけでよい
+  // 終わる・やめる。記録は残していないので、始めた場所へ戻すだけでよい
   const endBattleTutorial = () => {
+    const back = battleTutorialReturn;
     setBattleTutorialStep(null);
+    setBattleTutorialReturn('DEBUG_SETTINGS');
     debugBattleRef.current = false;
     debugResultRef.current = false;
     setDebugBattle(false); setDebugOutcome(null); setGaveUp(false);
     setCurrentPickingMon(null);
-    setGameState('DEBUG_SETTINGS');
+    // HOMEへ帰るときは走らせかけたバトルの状態も片付ける
+    if (back === 'HOME') { returnToHome(); return; }
+    setGameState(back || 'DEBUG_SETTINGS');
   };
   const battleTutorialSteps = (typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL) || [];
   const battleTutorial = battleTutorialStep != null ? (battleTutorialSteps[battleTutorialStep] || null) : null;
-  // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく
-  const battleTutorialSpotClass = (name) => (battleTutorial && battleTutorial.spot === name ? ' is-battle-tutorial-spot' : '');
+  // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく。
+  // spot は配列でも書けるので、1つの操作で「一覧」と「その決定ボタン」を同時に光らせられる
+  const battleTutorialSpotClass = (name) => {
+    if (!battleTutorial) return '';
+    const spot = battleTutorial.spot;
+    const hit = Array.isArray(spot) ? spot.includes(name) : spot === name;
+    return hit ? ' is-battle-tutorial-spot' : '';
+  };
   // 画面が変わったら、その画面に合うステップへ進める(操作で進むステップの受け皿)
   useEffect(() => {
     if (battleTutorialStep == null) return;
@@ -6782,13 +6808,15 @@ function MonsterHeroGame() {
           <div className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             {/* 戻るボタン。ランキングを見ているときは、いきなりホームへ帰らず
                 まず難易度の画面(バトル)へ戻す。ホームへはもう一度押せば戻れる */}
-            <div className="flex items-center gap-1 mb-1 shrink-0"><button onClick={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
+            <div className="flex items-center gap-1 mb-1 shrink-0"><button disabled={!!battleTutorial} onClick={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
             {/* モードのタブ。各モード名の横の「？」で説明を開く。
                 ランキングを見ているあいだは出さない(戻れば選べるので、そのぶん一覧を広く使う) */}
-            {battleMenuTab==='difficulty'&&<div className="grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5">
+            {/* 練習中はモードを切り替えられないようにする。台本は「ビギナーのチャレンジ」で
+                進むので、途中でクイックへ移ると説明と画面が食い違ってしまう */}
+            {battleMenuTab==='difficulty'&&<div className={`grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeTabs')}`}>
               {BATTLE_MODES.map(mode=>{const on=battleMode===mode.id&&battleMenuTab==='difficulty';return(
-                <div key={mode.id} onClick={()=>{setBattleMode(mode.id);setBattleMenuTab('difficulty');}} role="button" tabIndex={0} aria-label={`${mode.label}に切り替え`}
+                <div key={mode.id} onClick={()=>{if(battleTutorial)return;setBattleMode(mode.id);setBattleMenuTab('difficulty');}} role="button" tabIndex={0} aria-label={`${mode.label}に切り替え`}
                      className={`flex items-center justify-center gap-1 py-1.5 px-1 rounded-lg transition-all min-w-0 ${on?'':'bg-slate-950/70'}`}
                      style={on?{backgroundColor:mode.color,boxShadow:`0 0 18px ${mode.color}66`}:undefined}>
                   <span className={`min-w-0 truncate text-[11px] font-black ${on?'':'text-slate-400'}`} style={on?{color:'#0f172a'}:undefined}>{mode.label}</span>
@@ -6800,10 +6828,11 @@ function MonsterHeroGame() {
                 クイックはランキング対象外なので押せる導線は出さないが、同じ高さの案内を出して
                 下に続く難易度カード・助手コメントの位置がモードでずれないようにしている */}
             {battleMenuTab==='difficulty'&&(()=>{const quick=isQuickMode(battleMode);return(
-              <div className="shrink-0 w-full h-10 mb-1">
+              <div className={`shrink-0 w-full h-10 mb-1${battleTutorialSpotClass('rankingBtn')}`}>
                 {quick
                   ? <div className="w-full h-10 rounded-xl bg-slate-900/60 border border-white/5 text-slate-500 font-black text-[10px] flex items-center justify-center px-2 whitespace-nowrap">クイックモードはランキング対象外です</div>
-                  : <button onClick={()=>{addAssistantBond('ranking');setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className="w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2"><span className="flex-1 text-center whitespace-nowrap">🏆 ランキングを見る（チャレンジモード）</span><ChevronRight size={16} className="shrink-0"/></button>}
+                  /* 練習中はランキング一覧へ移らせない(台本が難易度の画面のまま進むため) */
+                  : <button disabled={!!battleTutorial} onClick={()=>{addAssistantBond('ranking');setBattleMenuTab('ranking');setRankingKind('score');setRankingViewDiff(difficulty);loadRankings(difficulty);}} className="w-full h-10 rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-60"><span className="flex-1 text-center whitespace-nowrap">🏆 ランキングを見る（チャレンジモード）</span><ChevronRight size={16} className="shrink-0"/></button>}
               </div>
             );})()}
             {battleMenuTab==='difficulty'&&(()=>{
@@ -6835,12 +6864,13 @@ function MonsterHeroGame() {
                     <button key={diff} onClick={()=>setSkipInfoItemId(tid)} aria-label={`${item?.name||short}の説明`} className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border text-[9px] font-black active:scale-95 ${have>0?'bg-teal-950/70 border-teal-500/40 text-teal-200':'bg-black/30 border-white/5 text-slate-500'}`}><span>{item?.emoji||'⏩'}</span><span>{short}</span><span className="font-mono">{have}枚</span></button>
                   );})}
                 </div>
-              )}<div className="relative shrink-0"><button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button><div ref={difficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==safeDifficulty)setDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
+              )}<div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}><button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button><div ref={difficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==safeDifficulty)setDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
               {/* 難易度カード。WAVE1の敵情報は「全WAVE詳細」で見られるためカードには出さず、
                   そのぶんカードを縦に縮めて下のランキングボタンと助手コメントの場所を空けている */}
               {difficulties.map(([key,setting])=>{const active=key===safeDifficulty;return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div><h3 className="text-center text-lg font-black leading-tight" style={{color:setting.text}}>{setting.label}</h3>{(()=>{const rec=recordBox(key);return(
                 <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="block text-[8px] text-slate-400 font-black">{rec.label}</small><b className={`block text-right text-base leading-tight ${rec.valueColor}`}>{rec.value}</b><span className="block text-right text-[9px] text-amber-300">{rec.sub}</span></div>
-              );})()}<div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div><div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div><div className="grid gap-1.5 mt-1.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button><button onClick={()=>{setDifficulty(key);setRunMode(battleMode);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[44px] rounded-xl font-black text-sm" style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す。
+              );})()}<div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div><div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div><div className="grid gap-1.5 mt-1.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button>{/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
+                ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}<button disabled={!!battleTutorial&&key!=='Beginner'} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}setDifficulty(key);setRunMode(battleMode);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す。
                 スキップはクイックモード専用。チャレンジで使えるとスコアを出さずに報酬だけ取れてしまい、
                 ランキングを競う意味が薄れるため */}{(()=>{const tid=SKIP_TICKETS[key];if(!quick)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">スキップはクイックモード専用</div>);if(!tid)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">この難易度はスキップできません</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1 py-0.5">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
               {/* ランキングへの導線はモードのタブのすぐ下へ移したので、ここには助手コメントだけを置く */}
@@ -6886,7 +6916,7 @@ function MonsterHeroGame() {
                   <button onClick={()=>setAssistantDebug('bond')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">親密度・呼び方確認</button>
                   <button onClick={()=>setAssistantDebug('random')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">ランダムテスト</button>
                   {/* バトルチュートリアル(お試し)。記録は一切残らないので何度でも遊べる */}
-                  <button onClick={startBattleTutorial} className="col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95">バトルチュートリアル開始（記録は残りません）</button>
+                  <button onClick={()=>startBattleTutorial()} className="col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95">バトルチュートリアル開始（記録は残りません）</button>
                 </div>
                 {/* 初回状態へ戻すのは、はじめての案内をもう一度見るためのもの。
                     セーブデータ(モンスター・ダイヤ・記録)には一切触らない */}
@@ -8891,10 +8921,11 @@ function MonsterHeroGame() {
             </div>
           )}
           <div className={`flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col ${gameState==='PICK_ALLY'?'justify-center':''}`}>
-            {/* バトルチュートリアル中はここを光らせて「選ぶ場所」を示す */}
-            <div className={`grid grid-cols-2 gap-2.5${battleTutorialSpotClass('monList')}`}>
+            {/* バトルチュートリアル中は一覧の外枠ではなくカード1枚ずつを光らせる。
+                外枠だと画面からはみ出して「どこを押すのか」が分からなかった */}
+            <div className="grid grid-cols-2 gap-2.5">
             {(gameState==='PICK_HERO'&&heroPickTab==='base'?getUnlockedBaseMonsterList():monSelection).map(m=>{const isSel=currentPickingMon?.id===m.id;
-              return(<button key={m.id} onClick={()=>setCurrentPickingMon(m)} className={`bg-slate-900 border-2 rounded-2xl flex flex-col items-center transition-all active:scale-95 ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`} style={{padding:'12px 8px'}}>
+              return(<button key={m.id} onClick={()=>setCurrentPickingMon(m)} className={`bg-slate-900 border-2 rounded-2xl flex flex-col items-center transition-all active:scale-95${battleTutorialSpotClass('monCards')} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`} style={{padding:'12px 8px'}}>
               <div className="relative">{m.imgUrl?(<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt={m.name} masuColors={m.colors} className="object-contain transition-transform" style={{width:'68px',height:'68px',transform:isSel?'scale(1.12)':'scale(1)'}}/>):(<span style={{fontSize:'52px'}}>{m.emoji}</span>)}{isSel&&<div className="absolute -top-1 -right-1 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>}</div>
               <span className="font-black text-white mt-1" style={{fontSize:'14px'}}>{m.name}</span>
               <div className="text-amber-400 font-black flex items-center gap-1 leading-tight mt-0.5" style={{fontSize:'9px'}}><Zap size={9}/> {m.unique.name}</div>
@@ -8909,7 +8940,8 @@ function MonsterHeroGame() {
             </div>
           </div>
           {currentPickingMon&&(
-            <div className="fixed inset-0 z-[3100] flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000}}>
+            /* 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする */
+            <div className="fixed inset-0 z-[3100] flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000,paddingTop:battleTutorial?'calc(4.25rem + env(safe-area-inset-top))':undefined}}>
               <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
                 <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
                   {currentPickingMon.imgUrl?(<DyedMonsterImage baseId={currentPickingMon.id} src={currentPickingMon.imgUrl} alt={currentPickingMon.name} masuColors={currentPickingMon.colors} className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-110"/>):(<div className="text-6xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{currentPickingMon.emoji}</div>)}
@@ -8952,7 +8984,7 @@ function MonsterHeroGame() {
                     </>),
                   })}
                 </div>
-                <div className="flex gap-2 mt-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 bg-slate-800 text-slate-400 py-3.5 rounded-2xl font-black text-sm uppercase">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className={`w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg${battleTutorialSpotClass('monList')}`}>決定</button></div>
+                <div className="flex gap-2 mt-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 bg-slate-800 text-slate-400 py-3.5 rounded-2xl font-black text-sm uppercase">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className={`w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg${battleTutorialSpotClass('monDecide')}`}>決定</button></div>
               </div>
             </div>
           )}
@@ -9276,9 +9308,14 @@ function MonsterHeroGame() {
             {topicRef&&(
               <button onClick={()=>{setHelpCatId(page.help.split('/')[0]);setHelpTopicId(page.help.split('/')[1]);setShowHelp(true);}} className="w-full mt-2 min-h-[38px] rounded-xl bg-slate-800 border border-white/10 text-slate-200 text-[11px] font-black active:scale-[.98]">この話をヘルプで詳しく見る</button>
             )}
+            {/* 案内の最後のページ(offer:'battle')では、そのままバトルの練習へ入れる。
+                断ってもヘルプの「バトルのれんしゅう」からいつでも始められる */}
+            {page.offer==='battle'&&(
+              <button onClick={()=>{ finishTutorial(true); startBattleTutorial('HOME'); }} className="w-full mt-3 min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>バトルのれんしゅうをやってみる！</button>
+            )}
             <div className="w-full grid grid-cols-2 gap-2 mt-3">
               <button disabled={tutorialStep<=0} onClick={()=>setTutorialStep(v=>Math.max(0,v-1))} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]">もどる</button>
-              <button onClick={()=>{ if(last) finishTutorial(true); else setTutorialStep(v=>v+1); }} className="min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?(intro?'名前を決める！':'はじめる！'):'つぎへ'}</button>
+              <button onClick={()=>{ if(last) finishTutorial(true); else setTutorialStep(v=>v+1); }} className={`min-h-[48px] rounded-2xl font-black text-sm active:scale-[.98] ${page.offer==='battle'?'bg-slate-800 text-slate-300':'text-black'}`} style={page.offer==='battle'?undefined:{backgroundColor:who.accent}}>{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'つぎへ'}</button>
             </div>
           </div>
         </div>);
@@ -9449,6 +9486,10 @@ function MonsterHeroGame() {
               <div className="space-y-3.5 pb-2">
                 {/* 本文の描き方は助手の詳細と共通(renderHelpBlocks) */}
                 {renderHelpBlocks(topic.blocks, cat.color)}
+                {/* 読むだけでなくその場で始められる項目(いまはバトルのれんしゅう) */}
+                {topic.launch==='battleTutorial'&&(
+                  <button onClick={()=>startBattleTutorial('HOME')} className="w-full rounded-2xl py-3.5 text-[12px] font-black text-black active:scale-95" style={{backgroundColor:cat.color}}>🎓 バトルのれんしゅうを始める</button>
+                )}
                 <div className="pt-1 flex gap-2">
                   <button onClick={()=>setHelpTopicId(null)} className="flex-1 rounded-2xl border border-white/10 bg-slate-900 py-3 text-[11px] font-black text-slate-300 active:scale-95">項目一覧へ</button>
                   {nextTopic&&<button onClick={()=>setHelpTopicId(nextTopic.id)} className="flex-1 rounded-2xl py-3 text-[11px] font-black text-black active:scale-95 truncate px-2" style={{backgroundColor:cat.color}}>次: {nextTopic.title}</button>}

@@ -168,8 +168,10 @@ check('チュートリアルの台本はデータで持つ', (() => {
   const c = {}; require('vm').createContext(c);
   require('vm').runInContext(assistantsSrc + ';globalThis.__t=ASSISTANT_TUTORIAL;', c);
   const t = c.__t;
+  // 最後は「バトルもやってみる？」の選択ページ。その1つ手前で村の案内が終わる
   return Array.isArray(t) && t.length >= 6 && t.every(p => p.t && p.e)
-    && /困ったらいつでもタップしてね/.test(t[t.length - 1].t);
+    && t[t.length - 1].offer === 'battle'
+    && /困ったらいつでもタップしてね/.test(t[t.length - 2].t);
 })());
 check('チュートリアルの本文をJSXへ直接書いていない', (() => {
   const c = {}; require('vm').createContext(c);
@@ -217,7 +219,11 @@ check('初回はあいさつから始まる',
   has("if (!onboarded) { setTutorialKind('intro'); setTutorialStep(0); }"));
 check('あいさつを読み終えるとプロフィールへ進む',
   has("if (kind === 'intro') { setGameState('PROFILE'); return; }")
-    && has("{last?(intro?'名前を決める！':'はじめる！'):'つぎへ'}"));
+    && has("{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'つぎへ'}"));
+// 村の案内の最後で、そのままバトルの練習へ入れる(断ってもヘルプから始められる)
+check('案内の最後からバトルの練習へ入れる',
+  has("{page.offer==='battle'&&(") && has("startBattleTutorial('HOME')")
+    && has('バトルのれんしゅうをやってみる！'));
 check('あいさつと村の案内は同じ吹き出しで台本だけ切り替える',
   has("const intro=tutorialKind==='intro';") && has('const pages=(intro'));
 // 村の案内では、説明している場所だけをHOMEで明るく強調する。
