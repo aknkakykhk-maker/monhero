@@ -40,6 +40,34 @@ const page = `<!doctype html><meta charset="utf-8"><body style="margin:0;backgro
 ${dyeSource}
 const COLORS = Object.keys(MASU_COLOR_SWATCH);
 const MONS = Object.keys(ALL_PLAYER_MONSTERS).filter(id => (MASU_COLOR_REGION_HUES[id]||[]).length > 0);
+// 一覧の現状(素のアイコンを並べる)と、アイコンを外した場合を測る
+window.__runPlain = async (TOTAL, withIcons) => {
+  const kinds = MONS.slice(0, 12);
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const t = performance.now();
+  const frag = document.createDocumentFragment();
+  let nodes = 0;
+  for (let i = 0; i < TOTAL; i++) {
+    const baseId = kinds[i % kinds.length];
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:4px;height:18px';
+    if (withIcons) {
+      const img = document.createElement('img');
+      img.src = ALL_PLAYER_MONSTERS[baseId].iconUrl;
+      img.style.cssText = 'width:18px;height:18px;object-fit:contain';
+      row.appendChild(img); nodes++;
+    }
+    const label = document.createElement('span');
+    label.textContent = ALL_PLAYER_MONSTERS[baseId].name + ' Lv.10';
+    label.style.cssText = 'font-size:8px;color:#cbd5e1';
+    row.appendChild(label); nodes++;
+    frag.appendChild(row);
+  }
+  list.appendChild(frag);
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  return { ms: Math.round(performance.now() - t), nodes };
+};
 window.__run = async (TOTAL) => {
   const out = { monsters: MONS.length, total: TOTAL };
   // ランキング1画面ぶんの顔ぶれを作る。上位は同じ強いモンスターが並びやすいので
@@ -143,6 +171,19 @@ const server = http.createServer((req, res) => {
       console.log(`  ② 再着色       ${String(r.recolorMs).padStart(5)} ms`);
       console.log(`  ③ 組み立て・描画 ${String(r.renderMs).padStart(3)} ms`);
       console.log(`  初回合計       ${String(first).padStart(5)} ms   /   2回目 ${r.cachedMs} ms`);
+      console.log('');
+      await page_.close();
+    }
+    // 一覧から使用モンスターの絵を外すとどれだけ軽くなるか
+    {
+      const page_ = await browser.newPage();
+      await page_.goto('http://localhost:8978/harness.html', { waitUntil: 'load' });
+      const withIcons = await page_.evaluate(() => window.__runPlain(200, true));
+      const noIcons = await page_.evaluate(() => window.__runPlain(200, false));
+      console.log('【一覧(染色なし・いまの見た目)】');
+      console.log(`  素のアイコンを200個並べる : ${withIcons.ms} ms (DOM ${withIcons.nodes}個)`);
+      console.log(`  アイコンを外して文字だけ  : ${noIcons.ms} ms (DOM ${noIcons.nodes}個)`);
+      console.log(`  → 外したときの差         : ${withIcons.ms - noIcons.ms} ms`);
       console.log('');
       await page_.close();
     }
