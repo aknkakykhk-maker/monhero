@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-02 01:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 01:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1758,11 +1758,15 @@ const MARKET_ICON_SIZE = { disc: 'w-12 h-12', breeder: 'w-10 h-10', icon: 'w-10 
 // ききは元画像の余白がほかの顔アイコンより広いため、画像自体には手を加えず表示時だけ寄せる。
 // 上端をほぼ動かさずに拡大することで、うさ耳を残したまま顔を大きく見せる。
 const marketProfileIconStyle = (id) => id === 'kiki_icon'
-  ? { transform: 'scale(1.3) translateY(11.5%)' }
+  ? { transform: 'scale(1.58) translateY(12%)' }
   : undefined;
 
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
 const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
+// バトルの練習を完了した状態と、初回案内を一度表示した状態は別々に保存する。
+// 未定義の既存セーブはどちらも false として扱うため、後方互換性を保てる。
+const BATTLE_TUTORIAL_SEEN_KEY = 'mh_battle_tutorial_seen_v1';
+const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
 
 const helpDataRows = (id) => {
   const marketItems = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS) || [];
@@ -2529,7 +2533,7 @@ function MonsterHeroGame() {
   // 初回チュートリアル。null=出さない、0以上=そのページを表示中。
   // 見たかどうかは新しい保存キーへ分けて持つ(既存のキーには一切触らない)
   const [tutorialStep, setTutorialStep] = useState(null);
-  // 'intro'=最初のあいさつ / 'tour'=村の案内。同じ吹き出しで台本だけ切り替える
+  // 'intro'=最初のあいさつ / 'tour'=村の案内 / 'battleGuide'=バトル練習の初回案内
   const [tutorialKind, setTutorialKind] = useState('tour');
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
@@ -2561,6 +2565,7 @@ function MonsterHeroGame() {
   const [onboardingPreview, setOnboardingPreview] = useState(false);
   const onboardingPreviewBackupRef = useRef(null);
   const tutorialShownRef = useRef(false);
+  const battleTutorialGuideCheckedRef = useRef(false);
   const highScoresRef = useRef({});
   useEffect(() => { highScoresRef.current = highScores; }, [highScores]);
   const [attemptCounts, setAttemptCounts] = useState({}); // 難易度別 挑戦回数(端末保存)
@@ -5221,6 +5226,7 @@ function MonsterHeroGame() {
     setTutorialStep(null);
     // 最初のあいさつを読み終えたら、名前とアイコンを決めるプロフィール画面へ進む
     if (kind === 'intro') { setGameState('PROFILE'); return; }
+    if (kind === 'battleGuide') return;
     if (remember) { try { await storeSet(TUTORIAL_SEEN_KEY, true, false); } catch {} }
   };
   useEffect(() => {
@@ -5233,6 +5239,27 @@ function MonsterHeroGame() {
     })();
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded]);
+
+  // 既存の村案内とは別に、バトルチュートリアルをまだ完了していない人へ一度だけ案内する。
+  // 初回プロフィール設定や村案内と重ならないよう、それらが閉じたHOMEで判定する。
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || tutorialStep != null || battleTutorialGuideCheckedRef.current) return;
+    battleTutorialGuideCheckedRef.current = true;
+    let cancelled = false;
+    (async () => {
+      const [tourSeen, seen, shown] = await Promise.all([
+        storeGet(TUTORIAL_SEEN_KEY, false, false),
+        storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false),
+        storeGet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false),
+      ]);
+      if (tourSeen !== true) { battleTutorialGuideCheckedRef.current = false; return; }
+      if (cancelled || seen === true || shown === true) return;
+      // 表示を決めた時点で記録し、「今は見ない」や再読込でも繰り返さない。
+      await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, true, false);
+      if (!cancelled) { setTutorialKind('battleGuide'); setTutorialStep(0); }
+    })();
+    return () => { cancelled = true; };
+  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep]);
 
   const returnToHome = () => {
     debugBattleRef.current = false;
@@ -6375,7 +6402,7 @@ function MonsterHeroGame() {
   const scenarioPicksSlot = (idx) => !battleScenario || !Number.isInteger(battleScenario.slotIndex) || battleScenario.slotIndex === idx;
   const scenarioPicksTeaching = (id) => !battleScenario || !battleScenario.teachingId || battleScenario.teachingId === id;
   // 終わる・やめる。記録は残していないので、始めた場所へ戻すだけでよい
-  const endBattleTutorial = () => {
+  const endBattleTutorial = async (completed = false) => {
     const back = battleTutorialReturn;
     // 台本を外す。以降のバトルはふだんどおりの抽選に戻る
     battleScenarioRef.current = null;
@@ -6387,6 +6414,7 @@ function MonsterHeroGame() {
     debugResultRef.current = false;
     setDebugBattle(false); setDebugOutcome(null); setGaveUp(false);
     setCurrentPickingMon(null);
+    if (completed) { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }
     // HOMEへ帰るときは走らせかけたバトルの状態も片付ける
     if (back === 'HOME') { returnToHome(); return; }
     setGameState(back || 'DEBUG_SETTINGS');
@@ -7082,6 +7110,9 @@ function MonsterHeroGame() {
                   <button onClick={()=>setAssistantDebug('random')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">ランダムテスト</button>
                   {/* バトルチュートリアル(お試し)。記録は一切残らないので何度でも遊べる */}
                   <button onClick={()=>startBattleTutorial()} className="col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95">バトルチュートリアル開始（記録は残りません）</button>
+                  <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_SEEN_KEY,false,false);window.alert('バトルチュートリアルを未視聴に戻しました。');}} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">バトル練習を未視聴へ戻す</button>
+                  <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY,false,false);battleTutorialGuideCheckedRef.current=false;window.alert('初回案内を未表示に戻しました。');}} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">初回案内を未表示へ戻す</button>
+                  <button onClick={()=>{returnToHome();startTutorial('battleGuide');}} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">バトル初回案内を再生</button>
                 </div>
                 {/* 初回状態へ戻すのは、はじめての案内をもう一度見るためのもの。
                     セーブデータ(モンスター・ダイヤ・記録)には一切触らない */}
@@ -9432,13 +9463,13 @@ function MonsterHeroGame() {
               <div className="flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-full border-2" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.9)',pointerEvents:'auto'}}>
                 <AssistantFace who={who} size={26} accent={who.accent} expression={battleTutorial.e}/>
                 <span className="text-[10px] font-black whitespace-nowrap" style={{color:who.accent}}>{battleTutorial.title||'光っているところを操作してね'}</span>
-                <button onClick={endBattleTutorial} className="px-2.5 min-h-[26px] rounded-full bg-white/10 text-slate-300 text-[9px] font-black active:scale-95">やめる</button>
+                <button onClick={()=>endBattleTutorial(false)} className="px-2.5 min-h-[26px] rounded-full bg-white/10 text-slate-300 text-[9px] font-black active:scale-95">やめる</button>
               </div>
             ):(
               <div className="w-full max-w-md rounded-3xl border-2 p-3" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.98)',pointerEvents:'auto',boxShadow:'0 6px 30px rgba(2,6,23,.9)'}}>
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <span className="text-[9px] font-black tracking-widest" style={{color:who.accent}}>れんしゅう {battleTutorialStep+1} / {total}</span>
-                  <button onClick={endBattleTutorial} className="px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">やめる</button>
+                  <button onClick={()=>endBattleTutorial(false)} className="px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">やめる</button>
                 </div>
                 <div className="flex items-end gap-2">
                   <AssistantFace who={who} size={64} accent={who.accent} expression={battleTutorial.e}/>
@@ -9449,7 +9480,7 @@ function MonsterHeroGame() {
                     <span className="block text-[12px] text-white leading-relaxed mt-0.5">{assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow)}</span>
                   </div>
                 </div>
-                <button onClick={()=>{ if(last) endBattleTutorial(); else setBattleTutorialStep(v=>Math.min(total-1,(v||0)+1)); }} className="w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'おわる':'つぎへ'}</button>
+                <button onClick={()=>{ if(last) endBattleTutorial(true); else setBattleTutorialStep(v=>Math.min(total-1,(v||0)+1)); }} className="w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'おわる':'つぎへ'}</button>
               </div>
             )}
           </div>
@@ -9458,7 +9489,10 @@ function MonsterHeroGame() {
 
       {tutorialStep!=null&&(()=>{
         const intro=tutorialKind==='intro';
-        const pages=(intro
+        const battleGuide=tutorialKind==='battleGuide';
+        const pages=(battleGuide
+          ? ((typeof ASSISTANT_BATTLE_TUTORIAL_GUIDE!=='undefined'&&ASSISTANT_BATTLE_TUTORIAL_GUIDE)||[])
+          : intro
           ? ((typeof ASSISTANT_INTRO!=='undefined'&&ASSISTANT_INTRO)||[])
           : ((typeof ASSISTANT_TUTORIAL!=='undefined'&&ASSISTANT_TUTORIAL)||[]));
         const page=pages[Math.max(0,Math.min(tutorialStep,pages.length-1))];
@@ -9471,7 +9505,7 @@ function MonsterHeroGame() {
           <div className="w-full max-w-md flex flex-col items-center">
             <div className="w-full flex justify-between items-center mb-2">
               <span className="text-[10px] font-black tracking-widest" style={{color:who.accent}}>{tutorialStep+1} / {pages.length}</span>
-              <button onClick={()=>finishTutorial(true)} className="px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">スキップ</button>
+              {!battleGuide&&<button onClick={()=>finishTutorial(true)} className="px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">スキップ</button>}
             </div>
             <div className="w-full flex items-end gap-3">
               <AssistantFace who={who} size={104} accent={who.accent} expression={page.e}/>
@@ -9490,10 +9524,20 @@ function MonsterHeroGame() {
             {page.offer==='battle'&&(
               <button onClick={()=>{ finishTutorial(true); startBattleTutorial('HOME'); }} className="w-full mt-3 min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>バトルのれんしゅうをやってみる！</button>
             )}
-            <div className="w-full grid grid-cols-2 gap-2 mt-3">
+            {page.offer==='battleGuide'&&(
+              <div className="w-full grid grid-cols-1 gap-2 mt-3">
+                <button onClick={()=>{ finishTutorial(false); startBattleTutorial('HOME'); }} className="min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>チュートリアルを見る</button>
+                <button onClick={()=>setTutorialStep(v=>v+1)} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-sm active:scale-[.98]">今は見ない</button>
+              </div>
+            )}
+            {page.declined&&(
+              <button onClick={()=>finishTutorial(false)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>わかった！</button>
+            )}
+            {!battleGuide&&<div className="w-full grid grid-cols-2 gap-2 mt-3">
               <button disabled={tutorialStep<=0} onClick={()=>setTutorialStep(v=>Math.max(0,v-1))} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm disabled:opacity-30 active:scale-[.98]">もどる</button>
               <button onClick={()=>{ if(last) finishTutorial(true); else setTutorialStep(v=>v+1); }} className={`min-h-[48px] rounded-2xl font-black text-sm active:scale-[.98] ${page.offer==='battle'?'bg-slate-800 text-slate-300':'text-black'}`} style={page.offer==='battle'?undefined:{backgroundColor:who.accent}}>{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'つぎへ'}</button>
-            </div>
+            </div>}
+            {battleGuide&&!page.offer&&!page.declined&&<button onClick={()=>setTutorialStep(v=>v+1)} className="w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>つぎへ</button>}
           </div>
         </div>);
       })()}

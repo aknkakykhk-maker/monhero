@@ -166,12 +166,13 @@ check('一人称は「あたし」でそろえる', !/わたし|私は/.test(ass
 // --- ⑦ 初回チュートリアルとデバッグ ---
 check('チュートリアルの台本はデータで持つ', (() => {
   const c = {}; require('vm').createContext(c);
-  require('vm').runInContext(assistantsSrc + ';globalThis.__t=ASSISTANT_TUTORIAL;', c);
-  const t = c.__t;
-  // 最後は「バトルもやってみる？」の選択ページ。その1つ手前で村の案内が終わる
+  require('vm').runInContext(assistantsSrc + ';globalThis.__t={tour:ASSISTANT_TUTORIAL,battle:ASSISTANT_BATTLE_TUTORIAL_GUIDE};', c);
+  const t = c.__t.tour;
+  const battle = c.__t.battle;
   return Array.isArray(t) && t.length >= 6 && t.every(p => p.t && p.e)
-    && t[t.length - 1].offer === 'battle'
-    && /困ったらいつでもタップしてね/.test(t[t.length - 2].t);
+    && /困ったらいつでもタップしてね/.test(t[t.length - 1].t)
+    && Array.isArray(battle) && battle.length >= 4 && battle.every(p => p.t && p.e)
+    && battle.some(p => p.offer === 'battleGuide') && battle.some(p => p.declined === true);
 })());
 check('チュートリアルの本文をJSXへ直接書いていない', (() => {
   const c = {}; require('vm').createContext(c);
@@ -220,12 +221,12 @@ check('初回はあいさつから始まる',
 check('あいさつを読み終えるとプロフィールへ進む',
   has("if (kind === 'intro') { setGameState('PROFILE'); return; }")
     && has("{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'つぎへ'}"));
-// 村の案内の最後で、そのままバトルの練習へ入れる(断ってもヘルプから始められる)
+// 独立した初回案内から同じバトル練習へ入れる(断ってもヘルプから始められる)
 check('案内の最後からバトルの練習へ入れる',
-  has("{page.offer==='battle'&&(") && has("startBattleTutorial('HOME')")
-    && has('バトルのれんしゅうをやってみる！'));
+  has("{page.offer==='battleGuide'&&(") && has("startBattleTutorial('HOME')")
+    && has('チュートリアルを見る') && has('今は見ない'));
 check('あいさつと村の案内は同じ吹き出しで台本だけ切り替える',
-  has("const intro=tutorialKind==='intro';") && has('const pages=(intro'));
+  has("const intro=tutorialKind==='intro';") && has("const battleGuide=tutorialKind==='battleGuide';") && has('const pages=(battleGuide'));
 // 村の案内では、説明している場所だけをHOMEで明るく強調する。
 // 施設だけでなく、ミッション/ギフト(reward)とみゅあの吹き出し(assistant)も指せるようにしている
 const TUTORIAL_SPOTS = ['management', 'temple', 'market', 'battle', 'reward', 'settings', 'assistant'];
@@ -258,6 +259,15 @@ check('初回だけ出し、スキップもできる',
     && has('const finishTutorial = async (remember = true)'));
 check('チュートリアルの既読は新しい保存キーへ分ける',
   has("const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';") && !/mh_onboarded[^\n]*tutorial/.test(source));
+check('バトル練習の視聴済みと初回案内表示済みを分ける',
+  has("const BATTLE_TUTORIAL_SEEN_KEY = 'mh_battle_tutorial_seen_v1';")
+    && has("const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';")
+    && has('storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false)')
+    && has('storeGet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false)'));
+check('バトル初回案内は表示時に記録し、完了時だけ練習を視聴済みにする',
+  has('storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, true, false)')
+    && has('if (completed) { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }')
+    && has('if(last) endBattleTutorial(true)') && has('endBattleTutorial(false)'));
 check('デバッグはデバッグ設定からだけ開ける',
   has('💖 みゅあデバッグ') && source.indexOf('💖 みゅあデバッグ') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
 // デバッグから「名前入力のところ」を含めて通しで見られること。
@@ -275,7 +285,7 @@ check('見るだけの表示では何も保存しない', (() => {
 check('見るだけでは段階を保存する仕組みごと残していない', !has('moveOnboarding') && !has('onboardingStep'));
 check('見るだけと分かる表示を出す', has('DEBUG・見るだけの表示です。名前もアイコンも保存されません'));
 check('デバッグに必要な項目がそろっている',
-  ['名前入力から通しで見る','みゅあのあいさつだけ再生','村の案内だけ再生','全助手コメント確認','全表情確認','条件コメント確認','連打リアクション確認','初回状態へ戻す']
+  ['名前入力から通しで見る','みゅあのあいさつだけ再生','村の案内だけ再生','全助手コメント確認','全表情確認','条件コメント確認','連打リアクション確認','初回状態へ戻す','バトル練習を未視聴へ戻す','初回案内を未表示へ戻す','バトル初回案内を再生']
     .every(label => source.includes(label)));
 check('初回状態へ戻してもセーブデータは消さない',
   has('モンスターやダイヤなどのセーブデータは消えません') && has('await storeSet(TUTORIAL_SEEN_KEY,false,false);'));
