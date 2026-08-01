@@ -161,8 +161,13 @@ check('吹き出しは画面の端に固定で出す',
   has("{position:'fixed',left:0,right:0,top:0,zIndex:92000") && has("{position:'fixed',left:0,right:0,bottom:0,zIndex:92000"));
 check('光っている場所を測って吹き出しを逃がす',
   has("document.querySelectorAll('.is-battle-tutorial-spot')")
-    && has('setBattleTutorialAtBottom(Number.isFinite(top) && top < h * 0.5);')
     && has('battleTutorialAtBottom'));
+// 光る場所が2か所(一覧とその決定ボタン)のとき、上端だけで決めると
+// 下にある決定ボタンを吹き出しが隠してしまう。全部を囲む枠の上下の空きで決める
+check('光る場所が複数あっても隠さない側へ出す',
+  has('bottom = Math.max(bottom, r.bottom);')
+    && has('setBattleTutorialAtBottom((h - bottom) > top);'));
+check('詳細を開き閉じしても測り直す', has('}, [battleTutorialStep, gameState, currentPickingMon]);'));
 // 説明中と操作中をはっきり分ける。
 // 説明中は暗くして操作を止め、操作の番になったら暗幕も吹き出しも消す
 check('説明中と操作中を分けている', has("const acting=battleTutorial.wait==='act';"));

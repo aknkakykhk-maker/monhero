@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 16:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 16:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6305,9 +6305,10 @@ function MonsterHeroGame() {
       ? findBattleTutorialStep(battleTutorialStep + 1, gameState) : -1;
     if (next >= 0) setBattleTutorialStep(next);
   }, [gameState, battleTutorialStep]);
-  // 吹き出しを上下どちらに出すか。画面の上のほう(モードのタブ・敵のHPバーなど)を
-  // 光らせているときに吹き出しを上へ出すと、説明したい場所をそのまま隠してしまう。
-  // 実際に光っている要素の位置を測って、反対側へ逃がす
+  // 吹き出しを上下どちらに出すか。光らせている場所を隠してしまわない側へ逃がす。
+  // 光る場所が1か所とは限らない(一覧とその決定ボタンなど)ので、全部を囲む枠を出し、
+  // その上下に残る空きの広いほうへ寄せる。上端だけを見て決めると、
+  // 「一覧は上・決定ボタンは下」のときに決定ボタンを隠してしまう
   useEffect(() => {
     if (!battleTutorial) { setBattleTutorialAtBottom(false); return; }
     let cancelled = false;
@@ -6315,15 +6316,22 @@ function MonsterHeroGame() {
       if (cancelled) return;
       const nodes = document.querySelectorAll('.is-battle-tutorial-spot');
       if (!nodes.length) { setBattleTutorialAtBottom(false); return; }
-      let top = Infinity;
-      nodes.forEach((n) => { const r = n.getBoundingClientRect(); if (r.height > 0) top = Math.min(top, r.top); });
+      let top = Infinity, bottom = -Infinity;
+      nodes.forEach((n) => {
+        const r = n.getBoundingClientRect();
+        if (r.height <= 0) return;
+        top = Math.min(top, r.top);
+        bottom = Math.max(bottom, r.bottom);
+      });
+      if (!Number.isFinite(top) || !Number.isFinite(bottom)) { setBattleTutorialAtBottom(false); return; }
       const h = window.innerHeight || 1;
-      setBattleTutorialAtBottom(Number.isFinite(top) && top < h * 0.5);
+      // 上に残る空き(top) と 下に残る空き(h - bottom) を比べて、広いほうへ出す
+      setBattleTutorialAtBottom((h - bottom) > top);
     };
     // 画面が切り替わった直後は位置が確定していないので、描画が落ち着いてから測る
     const timer = setTimeout(measure, 80);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [battleTutorialStep, gameState]);
+  }, [battleTutorialStep, gameState, currentPickingMon]);
 
   const startDebugBattle = () => {
     const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
