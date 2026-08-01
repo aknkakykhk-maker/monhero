@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 09:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 13:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2532,6 +2532,9 @@ function MonsterHeroGame() {
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
+  // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
+  // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
+  const [battleTutorialStep, setBattleTutorialStep] = useState(null);
   // デバッグ表示のときだけ使う「このLvだとどう見えるか」。null なら実際のLv
   const [assistantDebugLevel, setAssistantDebugLevel] = useState(null);
   // デバッグのランダムテストで、どの場面を引くか
@@ -6227,6 +6230,54 @@ function MonsterHeroGame() {
     ? [...new Set(ENEMY_SEQUENCE)].map((key) => ({ key, wave: ENEMY_SEQUENCE.indexOf(key)+1, enemy: ENEMY_DATA[key] })).filter(item => item.enemy && item.enemy.name && item.enemy.baseHp > 0 && item.enemy.baseAtk >= 0)
     : [];
 
+  // ---- バトルチュートリアル ----
+  // ふだんのバトル画面をそのまま使い、上にみゅあの吹き出しとハイライトを重ねて進める。
+  // 記録を残さないよう、デバッグ戦と同じ「保存しない」状態で始める(経験値・ダイヤ・
+  // ランキング・クリア回数・ミッションのどれにも影響しない)。
+  // いまはデバッグ設定からだけ呼ぶが、この関数を呼ぶ場所を変えれば
+  // 「初回起動で自動」「ヘルプからいつでも」へそのまま移せる。
+  const startBattleTutorial = () => {
+    debugBattleRef.current = true;
+    debugResultRef.current = false;
+    setDebugBattle(true); setDebugOutcome(null); setGaveUp(false);
+    setScore(0); setWaveHistory([]); setFinalRewardSummary(null);
+    setPermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); setNextTurnBuffs({});
+    setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
+    setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
+    setMainHero(null); setSlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
+    setDistAptPct([0,0,0,0]);
+    // いちばんやさしい難易度・チャレンジモードで固定する(練習なので勝ちやすくする)
+    setDifficulty('Beginner'); setRunMode(BATTLE_MODE_CHALLENGE); setBattleMode(BATTLE_MODE_CHALLENGE);
+    // 編成が空でも始められるよう、解放済みのベースモンから選んでもらう
+    setMonSelection(getUnlockedBaseMonsterList());
+    setHeroPickTab('base'); setCurrentPickingMon(null);
+    setBattleTutorialStep(0);
+    setGameState('PICK_HERO');
+  };
+  // 終わる・やめる。記録は残していないので、デバッグ設定へ戻すだけでよい
+  const endBattleTutorial = () => {
+    setBattleTutorialStep(null);
+    debugBattleRef.current = false;
+    debugResultRef.current = false;
+    setDebugBattle(false); setDebugOutcome(null); setGaveUp(false);
+    setCurrentPickingMon(null);
+    setGameState('DEBUG_SETTINGS');
+  };
+  const battleTutorialSteps = (typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL) || [];
+  const battleTutorial = battleTutorialStep != null ? (battleTutorialSteps[battleTutorialStep] || null) : null;
+  // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく
+  const battleTutorialSpotClass = (name) => (battleTutorial && battleTutorial.spot === name ? ' is-battle-tutorial-spot' : '');
+  // 画面が変わったら、その画面に合うステップへ進める(操作で進むステップの受け皿)
+  useEffect(() => {
+    if (battleTutorialStep == null) return;
+    const cur = battleTutorialSteps[battleTutorialStep];
+    if (!cur) return;
+    if (cur.at === '*' || cur.at === gameState) return;
+    const next = (typeof findBattleTutorialStep === 'function')
+      ? findBattleTutorialStep(battleTutorialStep + 1, gameState) : -1;
+    if (next >= 0) setBattleTutorialStep(next);
+  }, [gameState, battleTutorialStep]);
+
   const startDebugBattle = () => {
     const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
     const party = getActiveMonsterList().slice(0, 4);
@@ -6834,6 +6885,8 @@ function MonsterHeroGame() {
                   <button onClick={()=>setAssistantDebug('spam')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">連打リアクション確認</button>
                   <button onClick={()=>setAssistantDebug('bond')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">親密度・呼び方確認</button>
                   <button onClick={()=>setAssistantDebug('random')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">ランダムテスト</button>
+                  {/* バトルチュートリアル(お試し)。記録は一切残らないので何度でも遊べる */}
+                  <button onClick={startBattleTutorial} className="col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95">バトルチュートリアル開始（記録は残りません）</button>
                 </div>
                 {/* 初回状態へ戻すのは、はじめての案内をもう一度見るためのもの。
                     セーブデータ(モンスター・ダイヤ・記録)には一切触らない */}
@@ -8187,7 +8240,7 @@ function MonsterHeroGame() {
           <div className="flex-1 flex flex-col h-full">
             <header className="h-[5%] shrink-0 bg-slate-900 px-4 flex items-center justify-between border-b border-white/5 z-[6500]">
               <div className="flex items-center gap-2">{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1.5 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-2 py-0.5 rounded border tracking-wider ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* いま遊んでいるモードと難易度。既存の表示を邪魔しないよう1行に収める */}<span className="text-[7px] font-black px-1.5 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</span><span className="text-[8px] font-black text-blue-400 flex items-center gap-1 uppercase tracking-widest"><Timer size={8}/> TURN {turnCount}/20</span></div>
-              <div className="flex items-center gap-2">{!isQuickMode(runMode)&&<div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter mr-1"><Award size={10}/> {score.toLocaleString()}</div>}<button onClick={toggleQuickMute} className="p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[26px] h-[26px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} className="p-1.5 bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button onClick={()=>setShowQuitConfirm(true)} className="p-1.5 bg-slate-800 rounded text-slate-400 active:scale-90"><Flag size={14}/></button></div>
+              <div className="flex items-center gap-2">{!isQuickMode(runMode)&&<div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter mr-1"><Award size={10}/> {score.toLocaleString()}</div>}<button onClick={toggleQuickMute} className="p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[26px] h-[26px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} className="p-1.5 bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} className="p-1.5 bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
             </header>
             {enemy&&(
               <div className="shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
@@ -8611,10 +8664,10 @@ function MonsterHeroGame() {
                 <span className="shrink-0 flex items-center gap-1">Action Cards <span className="bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}</span>
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={()=>setShowDeckInfo(true)} className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95"><Layers size={10}/><span className="text-[7px]">VIEW</span></button>
-                  {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned; return(<button onClick={processTurn} disabled={!canAct} className={`h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={13}/> Action</button>);})()}
+                  {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned; return(<button onClick={processTurn} disabled={!canAct} className={`h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={13}/> Action</button>);})()}
                 </div>
               </div>
-              <div className="flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center">
+              <div className={`flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialSpotClass('cards')}`}>
                 {hand.map((c,i)=>{
                   const isSel=selectedCards.includes(i), curGuts=getCardGuts(c), remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+(idx===i?0:getCardGuts(hand[idx])),0), isSelectable=isSel||(remainingGuts>=curGuts&&selectedCards.length<cardLimit);
                   const isPending=pendingCard===i;
@@ -8824,7 +8877,7 @@ function MonsterHeroGame() {
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] p-4 pt-6 flex flex-col justify-start overflow-hidden">
           {/* 戻るボタン。勇者モン選択はバトルを始める前なので、来た場所(難易度の画面)へ戻す。
               供モン選択はバトルの途中なので、これまでどおりHOMEへ戻る(挑戦をやめる)扱いにする */}
-          <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button onClick={()=>{if(gameState==='PICK_HERO'){setCurrentPickingMon(null);setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');return;}returnToHome();}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{gameState==='PICK_HERO'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
+          <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button disabled={!!battleTutorial} onClick={()=>{if(gameState==='PICK_HERO'){setCurrentPickingMon(null);setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');return;}returnToHome();}} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{gameState==='PICK_HERO'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
           {/* 勇者モンは編成に入れていないベースモンからも選べる(マスモン登録のためだけに編成を入れ替えなくてよい) */}
           <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble key={gameState} scene={gameState==='PICK_HERO'?'pickHero':'pickAlly'} compact/></div>
           {gameState==='PICK_HERO'&&(
@@ -8838,7 +8891,8 @@ function MonsterHeroGame() {
             </div>
           )}
           <div className={`flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col ${gameState==='PICK_ALLY'?'justify-center':''}`}>
-            <div className="grid grid-cols-2 gap-2.5">
+            {/* バトルチュートリアル中はここを光らせて「選ぶ場所」を示す */}
+            <div className={`grid grid-cols-2 gap-2.5${battleTutorialSpotClass('monList')}`}>
             {(gameState==='PICK_HERO'&&heroPickTab==='base'?getUnlockedBaseMonsterList():monSelection).map(m=>{const isSel=currentPickingMon?.id===m.id;
               return(<button key={m.id} onClick={()=>setCurrentPickingMon(m)} className={`bg-slate-900 border-2 rounded-2xl flex flex-col items-center transition-all active:scale-95 ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`} style={{padding:'12px 8px'}}>
               <div className="relative">{m.imgUrl?(<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt={m.name} masuColors={m.colors} className="object-contain transition-transform" style={{width:'68px',height:'68px',transform:isSel?'scale(1.12)':'scale(1)'}}/>):(<span style={{fontSize:'52px'}}>{m.emoji}</span>)}{isSel&&<div className="absolute -top-1 -right-1 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>}</div>
@@ -8913,7 +8967,7 @@ function MonsterHeroGame() {
           <div className="w-full max-w-xs mb-2"><AssistantBubble scene="pickSlot" compact/></div>
           {/* 間合い適性はどこに置いても4距離すべてに入る。ここの%は「このモンスターを加えた後の各距離の補正値」 */}
           <div className="text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2">間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</div>
-          <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
+          <div className={`grid grid-cols-2 gap-4 w-full max-w-xs${battleTutorialSpotClass('slots')}`}>
             {slots.map((s,i)=>{const grade=getDistAptitude(currentPickingMon,i); const after=distTotalBonus(i)+aptGradeToPct(grade);
               return(<button key={i} disabled={s!==null} onClick={()=>setupMon(currentPickingMon,i)} className={`h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s?'opacity-100 shadow-xl':'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`}>
               <span className={`text-[10px] font-black mb-1 uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`}>{RANGE_LABELS[i]}距離</span>
@@ -8921,7 +8975,7 @@ function MonsterHeroGame() {
               {!s&&<span className={`text-[9px] font-black mt-1 px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} 合流後 {formatAptPct(after)}</span>}
             </button>);})}
           </div>
-          <button onClick={()=>setGameState(mainHero?'PICK_ALLY':'PICK_HERO')} className="mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90"><ArrowLeft size={14}/> モンスターを選び直す</button>
+          <button disabled={!!battleTutorial} onClick={()=>setGameState(mainHero?'PICK_ALLY':'PICK_HERO')} className="mt-8 text-slate-400 flex items-center gap-2 font-black uppercase text-[10px] active:scale-90 disabled:opacity-25"><ArrowLeft size={14}/> モンスターを選び直す</button>
         </div>
       )}
 
@@ -8930,7 +8984,7 @@ function MonsterHeroGame() {
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] p-4 flex flex-col items-center justify-center overflow-hidden">
           <div className="mb-4 text-center shrink-0"><h2 className="text-xl font-black text-purple-400 italic">ブリーダーカードの継承・強化</h2><p className="text-[9px] text-slate-400 uppercase mt-1 tracking-widest">Select Breeder Card</p></div>
           <div className="shrink-0 w-full max-w-sm mb-2"><AssistantBubble scene="pickTeaching" compact/></div>
-          <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto overflow-y-auto min-h-0 p-1 flex-1 content-center">
+          <div className={`grid grid-cols-2 gap-3 w-full max-w-sm mx-auto overflow-y-auto min-h-0 p-1 flex-1 content-center${battleTutorialSpotClass('teachings')}`}>
             {teachingPool.map(t=>{const owned=ownedTeachings.find(ot=>ot.id===t.id); const level=owned?owned.evoLevel:0; const isMax=level>=2;
               return(<button key={t.id} onClick={()=>setSelectedTeachingCard(t)} className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 transition-all aspect-square ${owned?'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]':'bg-slate-900 border-slate-800 active:scale-95'}`}>
                 <span style={{fontSize:'44px'}}>{cardIconNode(t.icon,52)}</span>
@@ -9149,6 +9203,36 @@ function MonsterHeroGame() {
 
       {/* 初回チュートリアル。みゅあが1〜2分で村のことを案内する。
           セリフと表情は data/assistants.js の ASSISTANT_TUTORIAL が持つ(画面には書かない) */}
+      {/* バトルチュートリアル。専用画面は作らず、ふだんのバトル画面の上に
+          みゅあの吹き出しと「つぎへ」「スキップ」を重ねるだけにしている。
+          光らせる場所は各画面の battleTutorialSpotClass('キー') が受け持つ */}
+      {battleTutorial&&(()=>{
+        const who=assistantById();
+        const last=battleTutorial.wait==='end';
+        const total=battleTutorialSteps.length;
+        return(
+        <div className="fixed inset-x-0 bottom-0 flex justify-center px-3" style={{position:'fixed',left:0,right:0,bottom:0,zIndex:92000,paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))',pointerEvents:'none'}} role="dialog" aria-modal="false" aria-label="バトルチュートリアル">
+          <div className="w-full max-w-md rounded-3xl border-2 p-3" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.96)',pointerEvents:'auto',boxShadow:'0 -6px 30px rgba(2,6,23,.9)'}}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[9px] font-black tracking-widest" style={{color:who.accent}}>れんしゅう {battleTutorialStep+1} / {total}</span>
+              <button onClick={endBattleTutorial} className="px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">やめる</button>
+            </div>
+            <div className="flex items-end gap-2">
+              <AssistantFace who={who} size={64} accent={who.accent} expression={battleTutorial.e}/>
+              <div className="relative flex-1 min-w-0 rounded-2xl border-2 px-3 py-2" style={{borderColor:who.accent,backgroundColor:'rgba(15,23,42,0.96)'}}>
+                <span className="absolute" style={{left:'-9px',bottom:'14px',width:0,height:0,borderTop:'7px solid transparent',borderBottom:'7px solid transparent',borderRight:`9px solid ${who.accent}`}}/>
+                <span className="block text-[9px] font-black tracking-widest" style={{color:who.accent}}>{who.name}</span>
+                {battleTutorial.title&&<span className="block text-[11px] font-black text-white mt-0.5">{battleTutorial.title}</span>}
+                <span className="block text-[12px] text-white leading-relaxed mt-0.5">{assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow)}</span>
+              </div>
+            </div>
+            {battleTutorial.wait==='act'
+              ? <div className="mt-2 text-center text-[10px] font-black" style={{color:who.accent}}>▼ 光っているところを操作してね</div>
+              : <button onClick={()=>{ if(last) endBattleTutorial(); else setBattleTutorialStep(v=>Math.min(total-1,(v||0)+1)); }} className="w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'おわる':'つぎへ'}</button>}
+          </div>
+        </div>);
+      })()}
+
       {tutorialStep!=null&&(()=>{
         const intro=tutorialKind==='intro';
         const pages=(intro
@@ -9260,7 +9344,7 @@ function MonsterHeroGame() {
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-8 text-center overflow-hidden">
           <div className="mb-2 shrink-0"><Trophy className="text-amber-400 mx-auto mb-1" size={32}/><h2 className="text-xl font-black italic uppercase tracking-tighter text-white leading-none">能力覚醒</h2><p className="text-[9px] text-slate-400 uppercase mt-1 tracking-widest">強化を1つ選んで決定</p></div>
           <div className="shrink-0 w-full max-w-sm mb-2 text-left"><AssistantBubble scene="rewardPick" compact/></div>
-          <div className="w-full max-w-sm space-y-3 mb-3 shrink-0 flex-1 min-h-0 overflow-y-auto mh-scroll flex flex-col justify-center">
+          <div className={`w-full max-w-sm space-y-3 mb-3 shrink-0 flex-1 min-h-0 overflow-y-auto mh-scroll flex flex-col justify-center${battleTutorialSpotClass('rewards')}`}>
             <button disabled={!!effect} onClick={()=>setPendingReward('atk')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='atk'?'bg-red-900/40 border-red-400 scale-[1.03] ring-4 ring-red-500/50 shadow-[0_0_25px_rgba(248,113,113,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
               <div className="p-2 bg-red-600/20 rounded-xl text-red-500 relative"><Sword size={18}/>{pendingReward==='atk'&&<div className="absolute -top-1.5 -right-1.5 bg-red-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
               <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>攻撃覚醒</div><div className="flex flex-wrap justify-between gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ちから {atk} → <span className="text-red-400 font-bold">{Math.floor(atk*1.10)}</span></div></div><div className="text-slate-500 mt-1" style={{fontSize:'8px'}}>※技レベルは距離適性、防御カードは丈夫さに応じて自動で決まります</div></div>
@@ -9942,7 +10026,7 @@ const createAnimationStyle = () => {
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
     .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar img{width:100%;height:100%;object-fit:cover}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}.mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:140px;height:140px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management>span,.mh-home-facility.temple>span{top:45%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
     .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
-   施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:62%}}
+   施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{position:relative;border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:62%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:5px}.mh-gift-card{display:flex;flex-direction:column;min-height:80px;padding:5px 8px}.mh-gift-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;height:18px}.mh-gift-heading h3{display:flex;align-items:center;gap:4px;min-width:0;font-size:12px;line-height:18px;color:#fff}.mh-gift-heading h3 span{flex:none;padding:1px 4px;border-radius:5px;background:#78350f;color:#fde68a;font-size:8px;line-height:14px}.mh-gift-heading h3 b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-gift-heading>em{flex:none;padding:1px 6px;border-radius:999px;font-size:8px;line-height:15px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:37px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:76px;height:36px;padding:0 10px;border-radius:10px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap}.mh-gift-main>button:disabled{background:#334155;color:#64748b}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:8px;line-height:12px}
     @media(max-height:620px){.mh-home-mission{top:64%}.mh-home-gift{top:73%}}
     .mh-boot-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:calc(12px + env(safe-area-inset-top)) 24px calc(16px + env(safe-area-inset-bottom));color:#fff;text-align:center;background:radial-gradient(circle at 50% 35%,#34205c 0,#100c29 38%,#040511 76%);isolation:isolate}

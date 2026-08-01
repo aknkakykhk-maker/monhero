@@ -1100,6 +1100,45 @@ const ASSISTANT_TUTORIAL = [
   { e:'happy',   t:'あたしはここにいるよ。困ったらいつでもタップしてね♪', title:'それじゃあ、いってらっしゃい！', spot:'assistant' },
 ];
 
+// ---------- バトルチュートリアル(操作しながら覚える) ----------
+// 専用の画面は作らず、ふだんのバトル画面の上にみゅあの吹き出しとハイライトを重ねて進める。
+// 台本をここに置いてあるので、呼び出し口(いまはデバッグ設定)を変えるだけで
+// 「初回起動で自動」「ヘルプからいつでも」へ移せる。
+//
+// 【1ステップの書き方】
+//   at    … その画面(gameState)にいるときに出す。'*' はどの画面でも出す
+//   spot  … 光らせる場所のキー。画面側が battleTutorialSpot と見比べて光らせる
+//   wait  … 'next' つぎへボタンで進む / 'act' プレイヤーが操作して画面が変わるのを待つ /
+//            'end' ここで終わり
+//   e,t   … 表情とセリフ。t の {name} はそのときの呼び方に置き換わる
+//   title … 吹き出しの小見出し(省略可)
+//
+// 【ステップを足すとき】
+//   この配列へ1件足すだけ。画面側は spot のキーに合わせて
+//   battleTutorialSpotClass('キー') を付けておく。
+const ASSISTANT_BATTLE_TUTORIAL = [
+  { id:'intro',    at:'PICK_HERO',     e:'excited', title:'バトルのれんしゅう', t:'{name}、ここからは実際に動かして覚えよ！ あたしが横で見てるからね♪', wait:'next' },
+  { id:'hero',     at:'PICK_HERO',     e:'happy',   title:'まずは勇者モン', t:'主役になる子を1体えらんで、「この子で挑戦」を押してみて！', spot:'monList', wait:'act' },
+  { id:'slot',     at:'PICK_SLOT',     e:'wink',    title:'置く距離を決めよう', t:'敵と同じ距離だと大ダメージ！ 好きな枠を押してみて♪', spot:'slots', wait:'act' },
+  { id:'teaching', at:'PICK_TEACHING', e:'normal',  title:'ブリーダーの教え', t:'バトル中に使えるカードだよ。1つ選ぼ！', spot:'teachings', wait:'act' },
+  { id:'battle',   at:'BATTLE',        e:'excited', title:'バトル開始！', t:'いよいよ本番！ カードで戦っていくよ〜♪', wait:'next' },
+  { id:'cards',    at:'BATTLE',        e:'normal',  title:'手札のカード', t:'下にあるのが今つかえるカード。ガッツが足りるものだけ光ってるよ。', spot:'cards', wait:'next' },
+  { id:'act',      at:'BATTLE',        e:'wink',    title:'カードを使ってみよう', t:'カードを選んで、使いたい子の枠をタップ！ そのあと「ACTION」で実行だよ。', spot:'action', wait:'act' },
+  { id:'clear',    at:'WAVE_RESULT',   e:'excited', title:'WAVEクリア！', t:'ナイス{name}！ WAVEをクリアすると強化フェーズに入るよ♪', wait:'next' },
+  { id:'reward',   at:'REWARD_PICK',   e:'happy',   title:'能力アップ', t:'クリアするたびに強くなれる！ 好きな強化を1つ選んでね。', spot:'rewards', wait:'act' },
+  { id:'ally',     at:'*',             e:'normal',  title:'このあとは', t:'WAVE2・4・6では供モンが合流するよ。ステータスがそのまま足されるんだ！', wait:'next' },
+  { id:'unique',   at:'*',             e:'happy',   title:'固有技のこと', t:'勇者モンの固有技は、レベルが上がるほど強くなるよ。育てるほど頼りになる♪', wait:'next' },
+  { id:'end',      at:'*',             e:'happy',   title:'これでバッチリ！', t:'困ったらヘルプからいつでもチュートリアルを見られるよ♪', wait:'end' },
+];
+// いまの画面に合うステップを探す(画面が変わったときに呼ぶ)
+const findBattleTutorialStep = (fromIndex, screen) => {
+  for (let i = Math.max(0, fromIndex); i < ASSISTANT_BATTLE_TUTORIAL.length; i++) {
+    const step = ASSISTANT_BATTLE_TUTORIAL[i];
+    if (step.at === '*' || step.at === screen) return i;
+  }
+  return -1;
+};
+
 // ---------- セリフの抽選 ----------
 // 場面(と条件)ごとに、直近に出したセリフを覚えておく。
 // 直前の1件だけを避けると3〜4回で一巡した感じになってしまうので、
