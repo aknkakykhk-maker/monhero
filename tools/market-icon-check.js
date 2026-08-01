@@ -58,5 +58,10 @@ check('アイコンはすべてptで買える安さにそろえる', icons.every
 const longName = icons.filter(i => (i.name || '').length > 14);
 check('名前は14文字まで(カードの枠に収まる長さ)', longName.length === 0, longName.map(i => `${i.name}(${i.name.length})`).join(', '));
 
+// ききは助手画像ではなく、ブリーダーアイコン専用フォルダの正式画像を使う。
+const kiki = icons.find(i => i.id === 'kiki_icon');
+check('ききのアイコンが正式名称・価格で並ぶ', kiki?.name === 'ききのアイコン' && kiki?.cost === 1);
+check('ききの画像はブリーダーアイコン専用フォルダにある', kiki?.icon === 'images/breeder-icons/kiki.PNG');
+
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
