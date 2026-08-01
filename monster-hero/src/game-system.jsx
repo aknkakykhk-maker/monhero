@@ -64,7 +64,10 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-02 02:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BATTLE_SPEEDS = [1, 1.5, 2];
+const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
+const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
+const BUILD_DATE = "2026-08-02 03:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2737,6 +2740,20 @@ function MonsterHeroGame() {
   const [pendingCard, setPendingCard] = useState(null); // cardHandIndex awaiting monster assignment
   const [upgradePoints, setUpgradePoints] = useState(0);
   const [turnCount, setTurnCount] = useState(1);
+  // バトル速度は演出待機だけに使い、ダメージ計算・抽選・報酬には渡さない。
+  // refを参照することで、演出途中の変更も次の待機から即時に反映される。
+  const [battleSpeed, setBattleSpeed] = useState(1);
+  const battleSpeedRef = useRef(1);
+  const battleMs = useCallback((baseMs) => Math.max(0, Math.round(baseMs / normalizeBattleSpeed(battleSpeedRef.current))), []);
+  const battleWait = useCallback((baseMs) => new Promise(resolve => setTimeout(resolve, battleMs(baseMs))), [battleMs]);
+  const cycleBattleSpeed = () => {
+    if (battleScenarioRef.current) return;
+    const current = normalizeBattleSpeed(battleSpeedRef.current);
+    const next = BATTLE_SPEEDS[(BATTLE_SPEEDS.indexOf(current) + 1) % BATTLE_SPEEDS.length];
+    battleSpeedRef.current = next;
+    setBattleSpeed(next);
+    storeSet(BATTLE_SPEED_KEY, next, false);
+  };
   const [focusedCard, setFocusedCard] = useState(null);
   const [skillPicker, setSkillPicker] = useState(null); // {handIndex} 技名タップで開く、通常技/距離技/固有技の選択タイル一覧
   // ランキングの行をタップして開く編成の詳細。一覧は軽さ優先で素の絵のままにして、
@@ -3776,6 +3793,9 @@ function MonsterHeroGame() {
   // Load saved data
   useEffect(() => {
     (async () => {
+      const savedBattleSpeed = normalizeBattleSpeed(await storeGet(BATTLE_SPEED_KEY, 1, false));
+      battleSpeedRef.current = savedBattleSpeed;
+      setBattleSpeed(savedBattleSpeed);
       const savedSeVolume = await storeGet('mh_se_volume', DEFAULT_VOLUME, false);
       setSeVolumeState(savedSeVolume);
       const savedBgmVolume = await storeGet('mh_bgm_volume', DEFAULT_VOLUME, false);
@@ -5554,7 +5574,7 @@ function MonsterHeroGame() {
   const addPopup = (text, side, color) => {
     const id = Date.now()+Math.random();
     setPopups(prev=>[...prev,{id,text,side,color}]);
-    setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),2500);
+    setTimeout(()=>setPopups(p=>p.filter(x=>x.id!==id)),battleMs(2500));
   };
 
   // ブリーダー教えカード使用時の専用演出を発火
@@ -5562,7 +5582,7 @@ function MonsterHeroGame() {
     if (!TEACHING_FX_STYLE[id]) return;
     const fxId = Date.now()+Math.random();
     setTeachingFx({id, fxId});
-    setTimeout(()=>setTeachingFx(p=>(p&&p.fxId===fxId?null:p)), 900);
+    setTimeout(()=>setTeachingFx(p=>(p&&p.fxId===fxId?null:p)), battleMs(900));
   };
 
   // Whether a card needs to be assigned to a monster (attack-type cards)
@@ -5722,7 +5742,7 @@ function MonsterHeroGame() {
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
-    setTimeout(()=>setGameState('WAVE_RESULT'),500);
+    setTimeout(()=>setGameState('WAVE_RESULT'),battleMs(500));
     return true;
   };
 
@@ -5730,39 +5750,39 @@ function MonsterHeroGame() {
     if (!enemy) return;
     const intent = overrideIntent||enemyIntent;
     setEnemySkillName({label:intent.label, icon:intent.icon});
-    await wait(600);
+    await battleWait(600);
     let currentHp = hp;
 
     if (getTurnBuff('invincible',false)||immediateEffects.invincible) {
       addPopup("無効化！",'hero','text-blue-400 font-black text-xl drop-shadow-md');
-      setImmediateTurnBuff('invincible',false); await wait(1000);
+      setImmediateTurnBuff('invincible',false); await battleWait(1000);
     } else if (getTurnBuff('stunEnemy',false)||immediateEffects.stun) {
       addPopup("スタン！",'enemy','text-indigo-400 font-black text-xl drop-shadow-md');
-      setImmediateTurnBuff('stunEnemy',false); await wait(1000);
+      setImmediateTurnBuff('stunEnemy',false); await battleWait(1000);
     } else if (mainHero?.id==='Suezo'&&Math.random()<0.4) {
-      addPopup("眼力！",'enemy','text-indigo-400 font-black text-xl drop-shadow-md'); await wait(1000);
+      addPopup("眼力！",'enemy','text-indigo-400 font-black text-xl drop-shadow-md'); await battleWait(1000);
     } else {
       if (intent.type==='MOVE' && immediateEffects.distLocked) {
         // 距離撃を撃ったターンは最終的な間合いが距離撃側で確定する。
         // それでも敵が移動モーションを見せると「動いたのに距離が変わらない」ように見えるため、
         // 移動しようとしていた敵は行動しなかった扱いにする(モーションも距離変更も行わない)。
         addPopup("距離撃！ 移動できない",'enemy','text-cyan-300 font-black text-xl drop-shadow-md');
-        await wait(800);
+        await battleWait(800);
       } else if (intent.type==='MOVE') {
         // 移動専用エフェクト: ダッシュマーク＋残像
         Audio_.se.enemyMove();
         setEnemyAttackFx({kind:'move'});
         setEnemyAttackAnim(true);
         addPopup(`${RANGE_LABELS[intent.targetDist]}へ移動！`,'enemy','text-cyan-300 font-black text-xl drop-shadow-md');
-        await wait(450);
+        await battleWait(450);
         setEnemyDist(intent.targetDist);
         syncAtkTierForDist(intent.targetDist);
-        await wait(350);
+        await battleWait(350);
         setEnemyAttackAnim(false);
         setEnemyAttackFx(null);
-        await wait(200);
+        await battleWait(200);
       } else if (intent.type==='WAIT') {
-        addPopup("待機中...",'enemy','text-slate-400 text-lg'); await wait(500);
+        addPopup("待機中...",'enemy','text-slate-400 text-lg'); await battleWait(500);
       } else if (intent.type==='ATTACK'||intent.type==='CHARGE') {
         // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」(GUARD_EVOLUTIONのflat/mult参照)
         const guardValue = (immediateEffects.guardFlat>0||immediateEffects.guardMult>0) ? Math.floor(immediateEffects.guardFlat + def*immediateEffects.guardMult) : 0;
@@ -5780,38 +5800,38 @@ function MonsterHeroGame() {
         if(intent.type==='CHARGE') Audio_.se.enemySpecial(); else Audio_.se.enemyAttack();
         setEnemyAttackAnim(true);
         if(fxKind==='moo') triggerShake(true);
-        await wait(fxKind==='moo' ? 900 : (intent.type==='CHARGE' ? 1100 : 450));
+        await battleWait(fxKind==='moo' ? 900 : (intent.type==='CHARGE' ? 1100 : 450));
         setEnemyAttackAnim(false);
-        await wait(fxKind==='moo' ? 250 : (intent.type==='CHARGE' ? 300 : 100));
+        await battleWait(fxKind==='moo' ? 250 : (intent.type==='CHARGE' ? 300 : 100));
         setEnemyAttackFx(null);
 
         if (isReflect) {
-          addPopup("反射！",'hero','text-purple-400 font-black text-2xl drop-shadow-lg'); await wait(600);
+          addPopup("反射！",'hero','text-purple-400 font-black text-2xl drop-shadow-lg'); await battleWait(600);
           addPopup(`反射 ${incomingDmg}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
           const reflectedHp=Math.max(0,enemy.hp-incomingDmg);
           setCurrentWaveDamage(p=>p+incomingDmg);
-          setEnemy(prev=>({...prev,hp:reflectedHp})); await wait(1000);
+          setEnemy(prev=>({...prev,hp:reflectedHp})); await battleWait(1000);
           // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
           if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:incomingDmg})) return;
         } else if (isAbsorb) {
-          addPopup("吸収！",'hero','text-emerald-400 font-black text-2xl drop-shadow-lg'); await wait(600);
+          addPopup("吸収！",'hero','text-emerald-400 font-black text-2xl drop-shadow-lg'); await battleWait(600);
           const hpGain=incomingDmg; const gutsGain=Math.floor(incomingDmg*0.1);
           addPopup(`💚 ライフ +${hpGain}`,'life','text-emerald-400 font-black text-2xl drop-shadow-md');
           addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
           currentHp=Math.min(effectiveMaxHp,currentHp+hpGain); setHp(currentHp);
-          setGuts(p=>Math.min(effectiveMaxGuts,p+gutsGain)); await wait(1000);
+          setGuts(p=>Math.min(effectiveMaxGuts,p+gutsGain)); await battleWait(1000);
         } else if (mainHero?.id==='Tiger'&&Math.random()<0.5) {
-          addPopup("回避！",'hero','text-blue-400 font-black text-xl drop-shadow-lg'); await wait(1000);
+          addPopup("回避！",'hero','text-blue-400 font-black text-xl drop-shadow-lg'); await battleWait(1000);
         } else if (guardValue>0) {
           const diff=guardValue-incomingDmg;
           // キーンと弾くガード演出
           setGuardFx(true); Audio_.se.guard(); triggerShake();
-          await wait(550); setGuardFx(false);
-          if (diff<0) { const fd=Math.abs(diff); addPopup(`貫通! -${fd}`,'hero','text-pink-600 text-3xl font-black drop-shadow-lg'); await wait(1000); currentHp=Math.max(0,currentHp-fd); setHp(currentHp); await wait(1000); }
-          else { const gGain=Math.floor(diff*0.1); addPopup(`🛡 ガード成功`,'hero','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`💚 ライフ +${diff}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gGain}`,'guts','text-amber-400 text-xl font-bold drop-shadow-md'); await wait(1000); currentHp=Math.min(effectiveMaxHp,currentHp+diff); setHp(currentHp); setGuts(p=>Math.min(effectiveMaxGuts,p+gGain)); await wait(1000); }
+          await battleWait(550); setGuardFx(false);
+          if (diff<0) { const fd=Math.abs(diff); addPopup(`貫通! -${fd}`,'hero','text-pink-600 text-3xl font-black drop-shadow-lg'); await battleWait(1000); currentHp=Math.max(0,currentHp-fd); setHp(currentHp); await battleWait(1000); }
+          else { const gGain=Math.floor(diff*0.1); addPopup(`🛡 ガード成功`,'hero','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`💚 ライフ +${diff}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gGain}`,'guts','text-amber-400 text-xl font-bold drop-shadow-md'); await battleWait(1000); currentHp=Math.min(effectiveMaxHp,currentHp+diff); setHp(currentHp); setGuts(p=>Math.min(effectiveMaxGuts,p+gGain)); await battleWait(1000); }
         } else {
-          addPopup(`-${incomingDmg}`,'hero','text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce'); triggerShake(); await wait(1000);
-          currentHp=Math.max(0,currentHp-incomingDmg); setHp(currentHp); await wait(1000);
+          addPopup(`-${incomingDmg}`,'hero','text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce'); triggerShake(); await battleWait(1000);
+          currentHp=Math.max(0,currentHp-incomingDmg); setHp(currentHp); await battleWait(1000);
         }
       }
     }
@@ -5827,7 +5847,7 @@ function MonsterHeroGame() {
       if (autoHealVal>0) { setHp(p=>Math.min(effectiveMaxHp,p+autoHealVal)); addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     }
     if (gutsRegen>0) { addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
-    if (didRegen) { await wait(500); }
+    if (didRegen) { await battleWait(500); }
     // 次ターン予約分(nextTurnBuffs)をそのまま今ターンの一時バフ(turnBuffs)へ入れ替える(新しい一時効果を追加してもここは変更不要)
     // 関数更新式で読むことで、このターン中に予約された最新のnextTurnBuffsを確実に反映する(古いクロージャ値を使わない)
     setNextTurnBuffs(latestNextTurnBuffs => { setTurnBuffs(latestNextTurnBuffs); return {}; });
@@ -5839,11 +5859,11 @@ function MonsterHeroGame() {
     Audio_.se.heal();
     const recoverHp=Math.floor(effectiveMaxHp*0.3);
     setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl,baseId:mainHero?.id,colors:mainHero?.colors});
-    await wait(500); setEffect(null);
+    await battleWait(500); setEffect(null);
     const recoverGuts=Math.floor(effectiveMaxGuts*0.3);
     addPopup(`💚 ライフ +${recoverHp}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md');
-    addPopup(`⚡ ガッツ +${recoverGuts}`,'guts','text-amber-400 text-2xl font-black drop-shadow-md'); await wait(1000);
-    setHp(p=>Math.min(effectiveMaxHp,p+recoverHp)); setGuts(p=>Math.min(effectiveMaxGuts,p+recoverGuts)); await wait(1000);
+    addPopup(`⚡ ガッツ +${recoverGuts}`,'guts','text-amber-400 text-2xl font-black drop-shadow-md'); await battleWait(1000);
+    setHp(p=>Math.min(effectiveMaxHp,p+recoverHp)); setGuts(p=>Math.min(effectiveMaxGuts,p+recoverGuts)); await battleWait(1000);
     // 練習の台本があるときは、予告を引き直すと画面と食い違うので出ている行動をそのまま実行する
     const scenario=battleScenarioRef.current;
     const acting=scenario&&enemyIntent?enemyIntent:getNextEnemyAction(enemy,enemyDist);
@@ -5985,7 +6005,7 @@ function MonsterHeroGame() {
     }
 
     if (totalDmg>0||totalHeal>0) {
-      if(totalHeal>0){addPopup(`💚 回復 +${totalHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg'); await wait(600); setHp(p=>Math.min(effectiveMaxHp,p+totalHeal)); await wait(400);}
+      if(totalHeal>0){addPopup(`💚 回復 +${totalHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg'); await battleWait(600); setHp(p=>Math.min(effectiveMaxHp,p+totalHeal)); await battleWait(400);}
       if(totalDmg>0){
         const fallbackSlot = lastActionSlot !== null ? lastActionSlot : slots.findIndex(s => s !== null);
         const multiHit = attackHits.length > 1;
@@ -6010,27 +6030,27 @@ function MonsterHeroGame() {
                 // 固有技は他のモンスターと同じタメ(charge)を先に見せてから、連撃らしい残像ダッシュへ移る
                 Audio_.se.special();
                 setAttackAnim({slotIndex: animSlot, charge:true});
-                await wait(650);
+                await battleWait(650);
               }
               setAttackAnim({slotIndex: animSlot, zanCombo:true});
               Audio_.se.zanSlash(); // ザン専用の高めなシュシュ音
-              await wait(320);
+              await battleWait(320);
               setAttackAnim(null);
               setSlotSkill(null);
-              await wait(100);
+              await battleWait(100);
             }
             for (const h of group) {
               const hitColor=h.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
               if(h.isCrit) triggerShake();
               addPopup(h.isCrit?`${h.dmg}!!`:`${h.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
               setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-h.dmg)}));
-              await wait(140);
+              await battleWait(140);
             }
             if (hit.rangeMoveTarget!=null) {
               setEnemyDist(hit.rangeMoveTarget);
               syncAtkTierForDist(hit.rangeMoveTarget);
               addPopup(`${RANGE_LABELS[hit.rangeMoveTarget]}距離へ移動！`,'enemy','text-cyan-400 font-black text-lg drop-shadow-md');
-              await wait(350);
+              await battleWait(350);
             }
             hitIdx=j;
             continue;
@@ -6045,13 +6065,13 @@ function MonsterHeroGame() {
               // 固有技: タメ(下に沈む)は全モンスター共通→その後は専用モーションがあればそちらへ、なければ敵に向かって突進
               setAttackAnim({slotIndex: animSlot, charge:true});
               Audio_.se.special();
-              await wait(650);
+              await battleWait(650);
               setAttackAnim({slotIndex: animSlot, charge:false, motion});
-              await wait(motion==='floatStab'?700:500);
+              await battleWait(motion==='floatStab'?700:500);
             } else {
               setAttackAnim({slotIndex: animSlot, motion});
               if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-              await wait(motion==='floatStab'?650:450);
+              await battleWait(motion==='floatStab'?650:450);
             }
             setAttackAnim(null);
             setSlotSkill(null);
@@ -6059,12 +6079,12 @@ function MonsterHeroGame() {
           const hitColor=hit.isCrit?'text-yellow-400 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] scale-110':'text-red-600 drop-shadow-[0_0_20px_rgba(220,38,38,0.8)]';
           if(hit.isCrit) triggerShake();
           addPopup(hit.isCrit?`${hit.dmg}!!`:`${hit.dmg}`,'enemy',`${hitColor} text-5xl font-black animate-bounce`);
-          setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-hit.dmg)})); await wait(hit.noAnim?150:550);
+          setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-hit.dmg)})); await battleWait(hit.noAnim?150:550);
           if (hit.rangeMoveTarget!=null) {
             setEnemyDist(hit.rangeMoveTarget);
             syncAtkTierForDist(hit.rangeMoveTarget);
             addPopup(`${RANGE_LABELS[hit.rangeMoveTarget]}距離へ移動！`,'enemy','text-cyan-400 font-black text-lg drop-shadow-md');
-            await wait(350);
+            await battleWait(350);
           }
           hitIdx++;
         }
@@ -6074,12 +6094,12 @@ function MonsterHeroGame() {
         setWaveDistDamage(prev=>{const n=[...prev]; for(let k=0;k<4;k++) n[k]=(n[k]||0)+turnDistDmg[k]; return n;});
         // Show combined total for multi-hit
         if(multiHit){
-          await wait(150);
+          await battleWait(150);
           addPopup(`合計 ${totalDmg}`,'enemy',`text-white text-3xl font-black drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]`);
-          await wait(600);
+          await battleWait(600);
         }
       }
-    } else { await wait(100); }
+    } else { await battleWait(100); }
 
     const drawCount=usedCards.filter(c=>c.type==='draw').length;
     let nextHand=hand.filter((_,i)=>!selectedCards.includes(i));
@@ -6413,6 +6433,9 @@ function MonsterHeroGame() {
   // 入口は3つ。デバッグ設定・はじめての案内の最後・ヘルプの「バトルのれんしゅう」。
   // どこから始めても終わったら元の場所へ帰れるよう、戻り先を覚えておく。
   const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS') => {
+    // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
+    battleSpeedRef.current = 1;
+    setBattleSpeed(1);
     debugBattleRef.current = true;
     debugResultRef.current = false;
     setDebugBattle(true); setDebugOutcome(null); setGaveUp(false);
@@ -6468,6 +6491,9 @@ function MonsterHeroGame() {
     debugResultRef.current = false;
     setDebugBattle(false); setDebugOutcome(null); setGaveUp(false);
     setCurrentPickingMon(null);
+    const savedSpeed = normalizeBattleSpeed(await storeGet(BATTLE_SPEED_KEY, 1, false));
+    battleSpeedRef.current = savedSpeed;
+    setBattleSpeed(savedSpeed);
     if (completed) { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }
     // HOMEへ帰るときは走らせかけたバトルの状態も片付ける
     if (back === 'HOME') { returnToHome(); return; }
@@ -6637,7 +6663,7 @@ function MonsterHeroGame() {
       }
       setUpgradePoints(prev=>prev+(Math.floor(Math.random()*4)+1));
       setEffect({type:'mega',label:`${m.name}合流！`,icon:"🤝",monEmoji:m.emoji,imgUrl:m.imgUrl,baseId:m.id,colors:m.colors,subLabel:`HP:${bHp}→${nMaxHp}  ちから:${bAtk}→${nAtk}\n丈夫さ:${bDef}→${nDef}  ガッツ:${bGuts}→${nMaxGuts}${aptLabel?`\n間合い適性:${aptLabel}`:''}`});
-      setTimeout(()=>{setEffect(null); setGameState('UPGRADE_SKILL');},1400);
+      setTimeout(()=>{setEffect(null); setGameState('UPGRADE_SKILL');},battleMs(1400));
     }
     setCurrentPickingMon(null);
   };
@@ -6653,7 +6679,7 @@ function MonsterHeroGame() {
     if (!enemy) { // このWAVE1開始が今回の挑戦のスタート地点
       setAttemptCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_attempts_${difficulty}`, next[difficulty], false); return next; });
     }
-    setTimeout(()=>{setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},150);
+    setTimeout(()=>{setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},battleMs(150));
   };
 
   const handleReward = (type) => {
@@ -6687,7 +6713,7 @@ function MonsterHeroGame() {
         while(pool.length<4&&activeCards.length>=4){const random=activeCards[Math.floor(Math.random()*activeCards.length)]; if(!pool.find(p=>p.id===random.id)) pool.push(random);}
         setTeachingPool(pool); setGameState('PICK_TEACHING');
       } else { initBattle(wave+1,slots,ownedUniques,ownedTeachings,nDef); }
-    },900);
+    },battleMs(900));
   };
 
   const upgradeUnique = (monId, diff) => {
@@ -8519,10 +8545,10 @@ function MonsterHeroGame() {
 
         {/* BATTLE */}
         {gameState==='BATTLE'&&(
-          <div className="flex-1 flex flex-col h-full">
+          <div className="flex-1 flex flex-col h-full" data-battle-speed={battleSpeed}>
             <header className="h-[5%] shrink-0 bg-slate-900 px-4 flex items-center justify-between border-b border-white/5 z-[6500]">
               <div className={`flex items-center gap-2${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1.5 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-2 py-0.5 rounded border tracking-wider ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* いま遊んでいるモードと難易度。既存の表示を邪魔しないよう1行に収める */}<span className="text-[7px] font-black px-1.5 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</span><span className="text-[8px] font-black text-blue-400 flex items-center gap-1 uppercase tracking-widest"><Timer size={8}/> TURN {turnCount}/20</span></div>
-              <div className="flex items-center gap-2">{!isQuickMode(runMode)&&<div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter mr-1"><Award size={10}/> {score.toLocaleString()}</div>}<button onClick={toggleQuickMute} className="p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[26px] h-[26px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} className="p-1.5 bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} className="p-1.5 bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
+              <div className="flex items-center gap-1.5">{!isQuickMode(runMode)&&<div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter"><Award size={10}/> {score.toLocaleString()}</div>}<button type="button" disabled={!!battleTutorial} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} className="min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:opacity-50" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}</button><button onClick={toggleQuickMute} className="p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[28px] h-[28px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} className="p-1.5 bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} className="p-1.5 bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
             </header>
             {enemy&&(
               <div className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
