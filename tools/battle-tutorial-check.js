@@ -90,19 +90,23 @@ check('専用画面を作らず、いまの画面へ重ねる',
 // 操作するボタンは画面の下にあることが多いので、説明は上へ出す。
 // それでも邪魔なときのために小さく畳めるようにしてある
 check('吹き出しは画面の上に固定で出す', has("style={{position:'fixed',left:0,right:0,top:0,zIndex:92000"));
-check('説明を小さく畳める',
-  has('const [battleTutorialMini, setBattleTutorialMini] = useState(false);')
-    && has('<button onClick={()=>setBattleTutorialMini(true)}') && has('小さくする</button>')
-    && has('aria-label="みゅあの説明をひらく"'));
-check('ステップが変わったら畳んだ表示を戻す',
-  has('useEffect(() => { setBattleTutorialMini(false); }, [battleTutorialStep]);'));
+// 説明中と操作中をはっきり分ける。
+// 説明中は暗くして操作を止め、操作の番になったら暗幕も吹き出しも消す
+check('説明中と操作中を分けている', has("const acting=battleTutorial.wait==='act';"));
+check('説明中は画面を暗くする',
+  has("{!acting&&<div aria-hidden=\"true\"") && has("zIndex:91000") && has("'rgba(2,6,23,0.55)':'rgba(2,6,23,0.75)'"));
+check('説明中はタップを暗幕で受け止める(先に進めない)', has('onClick={(e)=>e.stopPropagation()}'));
+check('光らせる場所があるときは暗幕を薄くする', has("battleTutorial.spot?'rgba(2,6,23,0.55)'"));
+check('操作の番では吹き出しを消す', has('{acting?(') && has('光っているところを操作してね</span>'));
+check('操作の番でも「やめる」は残す',
+  (source.match(/onClick=\{endBattleTutorial\}/g) || []).length >= 2,
+  `${(source.match(/onClick=\{endBattleTutorial\}/g) || []).length}か所`);
 check('吹き出し以外は操作を邪魔しない', has("pointerEvents:'none'") && has("pointerEvents:'auto'"));
 check('みゅあの顔と吹き出しは共通のものを使う',
   has('<AssistantFace who={who} size={64} accent={who.accent} expression={battleTutorial.e}/>')
     && has('assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow)'));
 check('つぎへとスキップ(やめる)がある',
   has("{last?'おわる':'つぎへ'}") && has('<button onClick={endBattleTutorial}') && has('やめる</button>'));
-check('操作待ちのステップでは案内だけ出す', has('光っているところを操作してね'));
 // 押してほしい場所を光らせる
 const SPOTS = ['monList', 'slots', 'teachings', 'cards', 'action', 'rewards'];
 check('光らせる場所が画面側と結びついている',
