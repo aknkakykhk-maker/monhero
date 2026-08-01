@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f2fe895aa91b7094
+// source-sha256: a89e88e4305e5227
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 15:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 16:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5585,6 +5585,8 @@ function MonsterHeroGame() {
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
   // 練習を始めた場所。終わったらここへ帰す(デバッグ設定 / HOME)
   const [battleTutorialReturn, setBattleTutorialReturn] = useState('DEBUG_SETTINGS');
+  // 光らせている場所が画面の上半分にあるとき、吹き出しを下へ逃がす
+  const [battleTutorialAtBottom, setBattleTutorialAtBottom] = useState(false);
   // デバッグ表示のときだけ使う「このLvだとどう見えるか」。null なら実際のLv
   const [assistantDebugLevel, setAssistantDebugLevel] = useState(null);
   // デバッグのランダムテストで、どの場面を引くか
@@ -11500,6 +11502,37 @@ function MonsterHeroGame() {
     const next = typeof findBattleTutorialStep === 'function' ? findBattleTutorialStep(battleTutorialStep + 1, gameState) : -1;
     if (next >= 0) setBattleTutorialStep(next);
   }, [gameState, battleTutorialStep]);
+  // 吹き出しを上下どちらに出すか。画面の上のほう(モードのタブ・敵のHPバーなど)を
+  // 光らせているときに吹き出しを上へ出すと、説明したい場所をそのまま隠してしまう。
+  // 実際に光っている要素の位置を測って、反対側へ逃がす
+  useEffect(() => {
+    if (!battleTutorial) {
+      setBattleTutorialAtBottom(false);
+      return;
+    }
+    let cancelled = false;
+    const measure = () => {
+      if (cancelled) return;
+      const nodes = document.querySelectorAll('.is-battle-tutorial-spot');
+      if (!nodes.length) {
+        setBattleTutorialAtBottom(false);
+        return;
+      }
+      let top = Infinity;
+      nodes.forEach(n => {
+        const r = n.getBoundingClientRect();
+        if (r.height > 0) top = Math.min(top, r.top);
+      });
+      const h = window.innerHeight || 1;
+      setBattleTutorialAtBottom(Number.isFinite(top) && top < h * 0.5);
+    };
+    // 画面が切り替わった直後は位置が確定していないので、描画が落ち着いてから測る
+    const timer = setTimeout(measure, 80);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [battleTutorialStep, gameState]);
   const startDebugBattle = () => {
     const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
     const party = getActiveMonsterList().slice(0, 4);
@@ -17008,7 +17041,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("header", {
       className: "h-[5%] shrink-0 bg-slate-900 px-4 flex items-center justify-between border-b border-white/5 z-[6500]"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2"
+      className: `flex items-center gap-2${battleTutorialSpotClass('waveInfo')}`
     }, debugBattle && /*#__PURE__*/React.createElement("span", {
       className: "text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1.5 py-0.5 tracking-widest"
     }, "DEBUG"), /*#__PURE__*/React.createElement("span", {
@@ -17045,7 +17078,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement(Flag, {
       size: 14
     })))), enemy && /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]"
+      className: `shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1"
     }, /*#__PURE__*/React.createElement("span", {
@@ -17076,7 +17109,7 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-white"
     }, "\u89E3\u6790")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowHeroInfo(true),
-      className: "absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg"
+      className: `absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`
     }, /*#__PURE__*/React.createElement(Crown, {
       className: "text-indigo-400 mb-0.5",
       size: 14
@@ -17085,7 +17118,7 @@ function MonsterHeroGame() {
     }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), /*#__PURE__*/React.createElement("button", {
       onClick: useEmergency,
       disabled: isBusy,
-      className: "absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg"
+      className: `absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`
     }, /*#__PURE__*/React.createElement(Activity, {
       className: "text-blue-400 mb-0.5",
       size: 16
@@ -17767,7 +17800,7 @@ function MonsterHeroGame() {
         className: "text-[11px] font-black font-mono text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]"
       }, committedGuard)));
     })(), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-4 gap-2 w-full relative shrink-0",
+      className: `grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`,
       style: {
         height: '100px'
       }
@@ -18015,7 +18048,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-2"
     }, /*#__PURE__*/React.createElement("span", {
-      className: "shrink-0 flex items-center gap-1"
+      className: `shrink-0 flex items-center gap-1${battleTutorialSpotClass('cardCount')}`
     }, "Action Cards ", /*#__PURE__*/React.createElement("span", {
       className: "bg-white/10 text-white px-2 py-0.5 rounded-full font-mono"
     }, selectedCards.length, "/", cardLimit), heroCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
@@ -18026,7 +18059,7 @@ function MonsterHeroGame() {
       className: "flex items-center gap-2 shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowDeckInfo(true),
-      className: "flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95"
+      className: `flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`
     }, /*#__PURE__*/React.createElement(Layers, {
       size: 10
     }), /*#__PURE__*/React.createElement("span", {
@@ -19199,8 +19232,16 @@ function MonsterHeroGame() {
           backgroundColor: battleTutorial.spot ? 'rgba(2,6,23,0.55)' : 'rgba(2,6,23,0.75)'
         }
       }), /*#__PURE__*/React.createElement("div", {
-        className: "fixed inset-x-0 top-0 flex justify-center px-3",
-        style: {
+        className: "fixed inset-x-0 flex justify-center px-3",
+        style: battleTutorialAtBottom ? {
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 92000,
+          paddingBottom: 'calc(.5rem + env(safe-area-inset-bottom))',
+          pointerEvents: 'none'
+        } : {
           position: 'fixed',
           left: 0,
           right: 0,

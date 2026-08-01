@@ -1143,10 +1143,21 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   // ブリーダーの教えを持ち込む
   { id:'teachingTalk', at:'PICK_TEACHING', e:'normal',  title:'ブリーダーの教え', t:'バトル中に使える助っ人カードだよ。ここで持ち込むの。', spot:'teachings', wait:'next' },
   { id:'teaching',     at:'PICK_TEACHING', e:'happy',   title:'1つ選ぼう', t:'好きな教えを1つ押してね♪', spot:'teachings', wait:'act' },
-  // バトル
-  { id:'battle',       at:'BATTLE',        e:'excited', title:'バトル開始！', t:'いよいよ本番！ カードで戦っていくよ〜♪', wait:'next' },
-  { id:'cards',        at:'BATTLE',        e:'normal',  title:'手札のカード', t:'下にあるのが今つかえるカード。ガッツが足りる子だけ光るよ。', spot:'cards', wait:'next' },
-  { id:'actTalk',      at:'BATTLE',        e:'normal',  title:'使いかた', t:'カードを選ぶ→使いたい子の枠をタップ→ACTIONの順だよ。', spot:'action', wait:'next' },
+  // バトル。画面の見かたを上から順に、そのあと1ターンの流れを説明する
+  { id:'battle',       at:'BATTLE',        e:'excited', title:'バトル開始！', t:'いよいよ本番！ 画面の見かたから順番に教えるね♪', wait:'next' },
+  { id:'waveTalk',     at:'BATTLE',        e:'normal',  title:'上のバー', t:'今のWAVEとターン数だよ。20ターン以内に敵を倒せないと負けちゃう。', spot:'waveInfo', wait:'next' },
+  { id:'enemyTalk',    at:'BATTLE',        e:'normal',  title:'相手の情報', t:'敵の名前・いる距離・HPバー。距離はこまめに変わるから要チェック！', spot:'enemyBar', wait:'next' },
+  { id:'scanTalk',     at:'BATTLE',        e:'happy',   title:'敵をくわしく', t:'右上の「解析」を押すと、敵の技や次に何をしてくるかまで見られるよ。', spot:'enemyBar', wait:'next' },
+  { id:'heroTalk2',    at:'BATTLE',        e:'normal',  title:'自分の情報', t:'左上の「ステータス」で、自分のHP・力・丈夫さ・ガッツを確認できるよ。', spot:'heroStatus', wait:'next' },
+  { id:'slotTalk2',    at:'BATTLE',        e:'wink',    title:'4つの距離枠', t:'仲間が並んでる枠が距離。敵と同じ距離の子ほど大ダメージを出せるよ！', spot:'battleSlots', wait:'next' },
+  { id:'cards',        at:'BATTLE',        e:'normal',  title:'手札のカード', t:'下にあるのが今つかえるカード。ガッツが足りる子だけ光ってるよ。', spot:'cards', wait:'next' },
+  { id:'cardKinds',    at:'BATTLE',        e:'normal',  title:'カードの種類', t:'攻めの攻撃カード、ダメージを減らすガードカード、力を底上げするブリーダーカードがあるよ。', spot:'cards', wait:'next' },
+  { id:'cardOrder',    at:'BATTLE',        e:'surprise',title:'2枚目からは半減', t:'同じターンに攻撃やガードを重ねると2枚目から効果が半分。ブリーダーカードは半減しないよ。', spot:'cards', wait:'next' },
+  { id:'limitTalk',    at:'BATTLE',        e:'normal',  title:'使える枚数', t:'1ターンに出せる枚数はここ。勇者モンの特性で増えることもあるんだ♪', spot:'cardCount', wait:'next' },
+  { id:'deckTalk',     at:'BATTLE',        e:'happy',   title:'山札のこと', t:'「VIEW」で山札と使い終わったカードを確認できるよ。無くなったら混ぜ直すの。', spot:'deckView', wait:'next' },
+  { id:'uniqueTalk',   at:'BATTLE',        e:'excited', title:'固有技', t:'枠の上の紫の帯で固有技を切り替えられるよ。技を2つ以上持ってるときだけ出るの♪', spot:'battleSlots', wait:'next' },
+  { id:'emergencyTalk',at:'BATTLE',        e:'surprise',title:'緊急回復', t:'ピンチなら左の「緊急」！ ライフとガッツが3割もどるけど、そのターンは攻撃できないよ。', spot:'emergency', wait:'next' },
+  { id:'actTalk',      at:'BATTLE',        e:'normal',  title:'1ターンの流れ', t:'カードを選ぶ→使いたい子の枠をタップ→ACTIONで実行。そのあと敵の番だよ。', spot:'action', wait:'next' },
   { id:'act',          at:'BATTLE',        e:'wink',    title:'やってみよう！', t:'まずは1枚つかって、敵を倒してみて♪', spot:'action', wait:'act' },
   // WAVEクリア
   { id:'clear',        at:'WAVE_RESULT',   e:'excited', title:'WAVEクリア！', t:'ナイス{name}！ 敵を倒しきるとWAVEクリアだよ♪', spot:'waveNext', wait:'next' },
