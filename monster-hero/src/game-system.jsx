@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 22:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 22:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2765,6 +2765,8 @@ function MonsterHeroGame() {
   const [totalAllDamage, setTotalAllDamage] = useState(0); // cumulative damage across all waves
   const [totalRecoveryDelta, setTotalRecoveryDelta] = useState(0); // cumulative recovery-rate correction across all waves
   const [waveResult, setWaveResult] = useState(null);
+  // 敵撃破に伴うスコア・報酬・画面遷移を、同じWAVEで二重に確定しないための同期ロック。
+  const enemyDefeatResolvedRef = useRef(false);
   // クイックモードの自動成長・供モン加入の簡易表示。どちらもタップか一定時間で次へ進む
   const [quickGrowth, setQuickGrowth] = useState(null); // { stats:[{label,before,after}], nextWave }
   const [quickJoin, setQuickJoin] = useState(null);     // { name, stats:[...], unique:{monName,skillName,before,after} }
@@ -5595,6 +5597,38 @@ function MonsterHeroGame() {
     return bonus;
   }, [mainHero, permaBuffs]);
 
+  // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
+  // ダメージ前HPから算出した確定remainingHpと、今回加算済みのダメージを渡す。
+  // distDamageは攻撃カードだけが距離別へ加算し、反射などは空配列のままにする。
+  const resolveEnemyDefeat = async ({remainingHp, damage, distDamage=[0,0,0,0]}) => {
+    if (remainingHp > 0 || enemyDefeatResolvedRef.current) return false;
+    enemyDefeatResolvedRef.current = true;
+    setEnemySkillName(null);
+    Audio_.playJingle('victory');
+    const totalWaveDamage=currentWaveDamage+damage;
+    const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);
+    const turnMult=Math.max(1.0,2.0-((20-remainingTurns)*0.05));
+    const finalRoundScore=Math.floor(((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier);
+    setScore(s=>s+finalRoundScore);
+    const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
+    const gainedDistBonus=finalDistDamage.map(d=>d*0.001/100);
+    const newDistBonus=distDmgBonus.map((b,i)=>b+gainedDistBonus[i]);
+    setDistDmgBonus(newDistBonus);
+    const newTotalDistDamage=totalDistDamage.map((d,i)=>d+finalDistDamage[i]);
+    const newTotalAllDamage=totalAllDamage+totalWaveDamage;
+    setTotalDistDamage(newTotalDistDamage); setTotalAllDamage(newTotalAllDamage);
+    const recoveryDelta=Math.max(-0.05,Math.min(0.05,(remainingTurns-10)*0.005));
+    const newTotalRecoveryDelta=totalRecoveryDelta+recoveryDelta;
+    setPermaBuffs(p=>({...p, autoHpRecovery:Math.max(0,(p.autoHpRecovery??0.1)+recoveryDelta)}));
+    setTotalRecoveryDelta(newTotalRecoveryDelta);
+    setWaveResult({wave,waveMult,turn:turnCount,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,gainedDistBonus,newDistBonus,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
+    await saveMissionProgress('battle');
+    await saveMissionProgress('win');
+    setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
+    setTimeout(()=>setGameState('WAVE_RESULT'),500);
+    return true;
+  };
+
   const handleEnemyTurn = async (lastActionType, immediateEffects={}, overrideIntent=null) => {
     if (!enemy) return;
     const intent = overrideIntent||enemyIntent;
@@ -5657,8 +5691,11 @@ function MonsterHeroGame() {
         if (isReflect) {
           addPopup("反射！",'hero','text-purple-400 font-black text-2xl drop-shadow-lg'); await wait(600);
           addPopup(`反射 ${incomingDmg}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
+          const reflectedHp=Math.max(0,enemy.hp-incomingDmg);
           setCurrentWaveDamage(p=>p+incomingDmg);
-          setEnemy(prev=>({...prev,hp:Math.max(0,prev.hp-incomingDmg)})); await wait(1000);
+          setEnemy(prev=>({...prev,hp:reflectedHp})); await wait(1000);
+          // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
+          if (await resolveEnemyDefeat({remainingHp:reflectedHp,damage:incomingDmg})) return;
         } else if (isAbsorb) {
           addPopup("吸収！",'hero','text-emerald-400 font-black text-2xl drop-shadow-lg'); await wait(600);
           const hpGain=incomingDmg; const gutsGain=Math.floor(incomingDmg*0.1);
@@ -5956,35 +5993,9 @@ function MonsterHeroGame() {
     if(getTurnBuff('zeroGuts',false)) setImmediateTurnBuff('zeroGuts',false);
     setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
 
-    if (enemy&&(enemy.hp-totalDmg)<=0) {
-      Audio_.playJingle('victory'); // 敵撃破のファンファーレ
-      const totalWaveDamage=currentWaveDamage+totalDmg;
-      const waveMult=1.0+(wave*0.1); const remainingTurns=Math.max(0,21-turnCount);
-      const turnMult=Math.max(1.0,2.0-((20-remainingTurns)*0.05));
-      const finalRoundScore=Math.floor(((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier);
-      setScore(s=>s+finalRoundScore);
-      // Final per-distance damage for this wave (include the killing turn's damage, by ally slot distance)
-      const finalDistDamage=[...waveDistDamage];
-      { const fbSlot = lastActionSlot!==null?lastActionSlot:slots.findIndex(s=>s!==null); for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fbSlot; if(si>=0&&si<4) finalDistDamage[si]+=h.dmg; } }
-      // 1. Permanent per-distance damage bonus: +0.1% of damage dealt at each distance
-      const gainedDistBonus=finalDistDamage.map(d=>d*0.001/100); // damage*0.1% as a multiplier fraction (10000 dmg => +0.10 = +10%)
-      const newDistBonus=distDmgBonus.map((b,i)=>b+gainedDistBonus[i]);
-      setDistDmgBonus(newDistBonus);
-      // Cumulative totals across all waves
-      const newTotalDistDamage=totalDistDamage.map((d,i)=>d+finalDistDamage[i]);
-      const newTotalAllDamage=totalAllDamage+totalWaveDamage;
-      setTotalDistDamage(newTotalDistDamage); setTotalAllDamage(newTotalAllDamage);
-      // 2. Permanent recovery-rate correction based on speed (remaining turns). +0.5%/turn above 10, -0.5%/turn below 10, cap ±5%.
-      const recoveryDelta=Math.max(-0.05,Math.min(0.05,(remainingTurns-10)*0.005));
-      const newTotalRecoveryDelta=totalRecoveryDelta+recoveryDelta;
-      setPermaBuffs(p=>({...p, autoHpRecovery:Math.max(0,(p.autoHpRecovery??0.1)+recoveryDelta)}));
-      setTotalRecoveryDelta(newTotalRecoveryDelta);
-      setWaveResult({wave,waveMult,turn:turnCount,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,gainedDistBonus,newDistBonus,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
-      await saveMissionProgress('battle');
-      await saveMissionProgress('win');
-      setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
-      setTimeout(()=>setGameState('WAVE_RESULT'),500); return;
-    }
+    const attackDistDamage=[0,0,0,0];
+    { const fbSlot = lastActionSlot!==null?lastActionSlot:slots.findIndex(s=>s!==null); for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fbSlot; if(si>=0&&si<4) attackDistDamage[si]+=h.dmg; } }
+    if (enemy && await resolveEnemyDefeat({remainingHp:Math.max(0,enemy.hp-totalDmg),damage:totalDmg,distDamage:attackDistDamage})) return;
     // 予測表示している enemyIntent をそのまま実行する（再抽選しない）
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
@@ -6263,6 +6274,7 @@ function MonsterHeroGame() {
       if (Number.isFinite(Number(scenario.enemyAtk))) { newEnemy.atk=Math.max(0,Math.floor(scenario.enemyAtk)); }
       battleScenarioIntentIndexRef.current=0;
     }
+    enemyDefeatResolvedRef.current=false;
     setEnemy(newEnemy); setEnemyDist(dist); setEnemyIntent(getNextEnemyAction(newEnemy,dist));
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
