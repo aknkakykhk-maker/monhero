@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-02 01:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 02:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1767,6 +1767,14 @@ const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
 // 未定義の既存セーブはどちらも false として扱うため、後方互換性を保てる。
 const BATTLE_TUTORIAL_SEEN_KEY = 'mh_battle_tutorial_seen_v1';
 const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
+// マスモンが少ないプレイヤー向けの日次案内。端末の暦日を値として保存し、
+// 既存セーブにキーが無い場合は未表示として安全に扱う。
+const DAILY_MASU_ADVICE_KEY = 'mh_daily_masu_advice_date_v1';
+const localCalendarDate = (now = new Date()) => {
+  const d = now instanceof Date ? now : new Date(now);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+};
 
 const helpDataRows = (id) => {
   const marketItems = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS) || [];
@@ -2537,6 +2545,8 @@ function MonsterHeroGame() {
   const [tutorialKind, setTutorialKind] = useState('tour');
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
+  const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|7 }
+  const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
@@ -5176,6 +5186,9 @@ function MonsterHeroGame() {
     focusedCard:null, enemyIntent:null, effect:null, finalRewardSummary:null, waveHistory:[], gaveUp:false
   });
 
+  // 自動案内の優先順位判定でも使うため、描画部より前で確定する。
+  const updateNoticeVisible = updateAvailable && (!latestBuild || latestBuild !== dismissedUpdateBuild);
+
   // 初回チュートリアル。HOMEを最初に開いたときだけ自動で始める。
   // デバッグから何度でも呼べるよう、開始と終了を関数に分けている
   // デバッグ: 名前入力のところから、はじめての案内を通しで見る(保存はしない)
@@ -5260,6 +5273,48 @@ function MonsterHeroGame() {
     })();
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep]);
+
+  // 初回案内・重要通知・ログインボーナスのすべてが閉じた後にだけ、日次アドバイスを出す。
+  // 表示を決めた時点で日付を保存するため、閉じる・再読込でも同日に繰り返さない。
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded ||
+        tutorialStep != null || updateNoticeVisible || loginBonusPopup || levelCapCompensation ||
+        dailyMasuAdvice || dailyMasuAdviceCheckedRef.current) return;
+    dailyMasuAdviceCheckedRef.current = true;
+    let cancelled = false;
+    (async () => {
+      const [tourSeen, battleTrainingSeen, battleGuideShown] = await Promise.all([
+        storeGet(TUTORIAL_SEEN_KEY, false, false),
+        storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false),
+        storeGet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false),
+      ]);
+      // 先に出すべき案内が未処理なら、その案内のeffectへ譲って閉じた後に再判定する。
+      if (tourSeen !== true || (battleTrainingSeen !== true && battleGuideShown !== true)) {
+        dailyMasuAdviceCheckedRef.current = false;
+        return;
+      }
+      const today = localCalendarDate();
+      const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
+      if (cancelled || masuMons.length >= 8 || shownDate === today) return;
+      await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
+      if (!cancelled) setDailyMasuAdvice({ debugCount:null });
+    })();
+    return () => { cancelled = true; };
+  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateNoticeVisible, loginBonusPopup, levelCapCompensation, dailyMasuAdvice, masuMons.length]);
+
+  const closeDailyMasuAdvice = () => setDailyMasuAdvice(null);
+  const tryDailyMasuAdvice = () => {
+    setDailyMasuAdvice(null);
+    setBattleMode(BATTLE_MODE_QUICK);
+    setRunMode(BATTLE_MODE_QUICK);
+    setDifficulty('Beginner');
+    setBattleMenuTab('difficulty');
+    setGameState('BATTLE_MENU');
+  };
+  const debugDailyMasuAdviceAt = count => {
+    if (count >= 8) { window.alert(`登録数${count}体：表示条件の対象外です。`); return; }
+    setDailyMasuAdvice({ debugCount:count });
+  };
 
   const returnToHome = () => {
     debugBattleRef.current = false;
@@ -6776,7 +6831,6 @@ function MonsterHeroGame() {
   // body直下へ描画し、各画面のoverflow・transform・モーダルの積層に隠されないようにする。
   // 新しいバージョンの通知。本体を押すと更新、×を押すと今回は閉じる(更新はしない)。
   // 閉じたバージョンを覚えておき、同じバージョンのあいだは出さない。
-  const updateNoticeVisible = updateAvailable && (!latestBuild || latestBuild !== dismissedUpdateBuild);
   const updateNotice = updateNoticeVisible ? ReactDOM.createPortal(
     <div aria-live="assertive" className="fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5" style={{top:'calc(8px + env(safe-area-inset-top))'}}>
       <button type="button" onClick={reloadLatestVersion} className="flex-1 flex items-center justify-center gap-2 min-h-[48px] px-4 py-3 rounded-2xl border border-amber-200/80 bg-amber-500 text-slate-950 font-black text-sm shadow-[0_8px_28px_rgba(0,0,0,0.55)] active:scale-[.98]"><RefreshCcw size={18}/><span>新しいバージョンがあります　更新する</span></button>
@@ -7113,6 +7167,9 @@ function MonsterHeroGame() {
                   <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_SEEN_KEY,false,false);window.alert('バトルチュートリアルを未視聴に戻しました。');}} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">バトル練習を未視聴へ戻す</button>
                   <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY,false,false);battleTutorialGuideCheckedRef.current=false;window.alert('初回案内を未表示に戻しました。');}} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">初回案内を未表示へ戻す</button>
                   <button onClick={()=>{returnToHome();startTutorial('battleGuide');}} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">バトル初回案内を再生</button>
+                  <button onClick={()=>debugDailyMasuAdviceAt(7)} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">ワンポイント案内を再生（登録数7体）</button>
+                  <button onClick={()=>debugDailyMasuAdviceAt(8)} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">登録数8体の条件確認</button>
+                  <button onClick={async()=>{await storeSet(DAILY_MASU_ADVICE_KEY,'',false);dailyMasuAdviceCheckedRef.current=false;window.alert('本日のワンポイント表示済みフラグをリセットしました。');}} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">本日の表示済みをリセット</button>
                 </div>
                 {/* 初回状態へ戻すのは、はじめての案内をもう一度見るためのもの。
                     セーブデータ(モンスター・ダイヤ・記録)には一切触らない */}
@@ -9302,6 +9359,16 @@ function MonsterHeroGame() {
       )}
 
       {/* 助手(みゅあ)のデバッグ表示。デバッグ設定からだけ開ける。通常のプレイでは出ない */}
+      {dailyMasuAdvice&&(()=>{const who=assistantById();const lines=assistantSceneById('dailyMasuAdvice')?.lines||[];return(
+        <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="みゅあのワンポイントアドバイス">
+          <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            {dailyMasuAdvice.debugCount!=null&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・登録数{dailyMasuAdvice.debugCount}体を想定</div>}
+            <h2 className="mb-3 text-center text-base font-black text-pink-200">みゅあのワンポイントアドバイス</h2>
+            <div className="flex items-end gap-2"><AssistantFace who={who} size={72} accent={who.accent} expression="wink"/><div className="flex-1 space-y-2">{lines.slice(0,3).map((line,i)=><div key={i} className="relative rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-2 text-[12px] font-bold leading-relaxed text-white whitespace-pre-line">{line.t}</div>)}</div></div>
+            <div className="mt-4 grid grid-cols-2 gap-2"><button onClick={tryDailyMasuAdvice} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]">やってみる</button><button onClick={closeDailyMasuAdvice} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">閉じる</button></div>
+          </div>
+        </div>);})()}
+
       {assistantDebug&&(()=>{
         const who=assistantById();
         const scenes=(typeof ASSISTANT_SCENES!=='undefined'&&ASSISTANT_SCENES)||{};
