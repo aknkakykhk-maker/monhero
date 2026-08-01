@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 830283030eedc35f
+// source-sha256: 5d7f91ba0037370d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 22:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9816,6 +9816,9 @@ function MonsterHeroGame() {
     setGameState('GIFT_BOX');
   };
   const saveMissionProgress = async (event, amount = 1) => {
+    // 記録を残さない戦い(バトルのれんしゅう・デバッグ戦)ではミッションも進めない。
+    // WAVEクリア時の battle/win がここを通っていたため、練習でも進んでしまっていた
+    if (debugBattleRef.current) return;
     const next = normalizeMissions(missionsRef.current);
     const key = {
       battle: 'battles',
@@ -10994,7 +10997,9 @@ function MonsterHeroGame() {
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
   const handleNextWave = async () => {
-    if (debugBattleRef.current) {
+    // 練習の台本があるときは、強化フェーズまで通して見せたいので
+    // デバッグ戦の打ち切り(勝ち表示を出して止まる)を通さない
+    if (debugBattleRef.current && !battleScenarioRef.current) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setDebugOutcome('win');
@@ -20034,7 +20039,36 @@ function MonsterHeroGame() {
         }
       }, !cat && /*#__PURE__*/React.createElement("div", {
         className: "space-y-2.5"
-      }, /*#__PURE__*/React.createElement("p", {
+      }, (() => {
+        const c = helpCategoryById('battle');
+        const t = c && helpTopicById('battle', 'tutorial');
+        if (!t) return null;
+        return /*#__PURE__*/React.createElement("button", {
+          onClick: () => {
+            setHelpCatId('battle');
+            setHelpTopicId('tutorial');
+          },
+          className: "w-full rounded-2xl border-2 px-4 py-3.5 flex items-center gap-3 text-left active:scale-95 mb-1",
+          style: {
+            borderColor: c.color,
+            backgroundColor: 'rgba(56,189,248,0.12)'
+          }
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "shrink-0 text-lg leading-none"
+        }, t.emoji), /*#__PURE__*/React.createElement("span", {
+          className: "flex-1 min-w-0"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "block text-[13px] font-black leading-tight",
+          style: {
+            color: c.color
+          }
+        }, t.title), /*#__PURE__*/React.createElement("span", {
+          className: "block text-[10px] text-slate-300 leading-tight mt-0.5"
+        }, "\u307F\u3085\u3042\u3068\u4E00\u7DD2\u306B\u3001\u5B9F\u969B\u306B\u52D5\u304B\u3057\u3066\u904A\u3073\u65B9\u3092\u899A\u3048\u3089\u308C\u307E\u3059")), /*#__PURE__*/React.createElement(ChevronRight, {
+          size: 16,
+          className: "shrink-0 text-slate-400"
+        }));
+      })(), /*#__PURE__*/React.createElement("p", {
         className: "text-[11px] text-slate-400 leading-relaxed mb-3"
       }, HELP_GUIDE_INTRO), HELP_GUIDE.length === 0 && /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[11px] text-slate-500 font-bold py-10 leading-relaxed"

@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 22:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5318,6 +5318,9 @@ function MonsterHeroGame() {
   ) : null);
   const openGiftBox = () => { setGiftTab('unclaimed'); setGameState('GIFT_BOX'); };
   const saveMissionProgress = async (event,amount=1) => {
+    // 記録を残さない戦い(バトルのれんしゅう・デバッグ戦)ではミッションも進めない。
+    // WAVEクリア時の battle/win がここを通っていたため、練習でも進んでしまっていた
+    if (debugBattleRef.current) return;
     const next=normalizeMissions(missionsRef.current);
     const key={battle:'battles',win:'wins',enhance:'enhances',market:'marketTrades',donation:'donations'}[event];
     if(!key)return;
@@ -6003,7 +6006,9 @@ function MonsterHeroGame() {
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
   const handleNextWave = async () => {
-    if (debugBattleRef.current) {
+    // 練習の台本があるときは、強化フェーズまで通して見せたいので
+    // デバッグ戦の打ち切り(勝ち表示を出して止まる)を通さない
+    if (debugBattleRef.current && !battleScenarioRef.current) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setDebugOutcome('win');
@@ -9607,6 +9612,18 @@ function MonsterHeroGame() {
           <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4 bg-black" style={{backgroundColor:'#000000'}}>
             {!cat&&(
               <div className="space-y-2.5">
+                {/* ヘルプを開いてすぐ目に入る場所に、バトルのれんしゅうへの導線を置く。
+                    押すと説明の項目が開き、そこの「始める」から何度でも遊べる */}
+                {(()=>{const c=helpCategoryById('battle');const t=c&&helpTopicById('battle','tutorial');if(!t)return null;return(
+                  <button onClick={()=>{setHelpCatId('battle');setHelpTopicId('tutorial');}} className="w-full rounded-2xl border-2 px-4 py-3.5 flex items-center gap-3 text-left active:scale-95 mb-1" style={{borderColor:c.color,backgroundColor:'rgba(56,189,248,0.12)'}}>
+                    <span className="shrink-0 text-lg leading-none">{t.emoji}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[13px] font-black leading-tight" style={{color:c.color}}>{t.title}</span>
+                      <span className="block text-[10px] text-slate-300 leading-tight mt-0.5">みゅあと一緒に、実際に動かして遊び方を覚えられます</span>
+                    </span>
+                    <ChevronRight size={16} className="shrink-0 text-slate-400"/>
+                  </button>
+                );})()}
                 <p className="text-[11px] text-slate-400 leading-relaxed mb-3">{HELP_GUIDE_INTRO}</p>
                 {HELP_GUIDE.length===0&&<div className="text-center text-[11px] text-slate-500 font-bold py-10 leading-relaxed">ヘルプの内容を読み込めませんでした。<br/>通信環境を確認して、ページを再読み込みしてください。</div>}
                 {HELP_GUIDE.map(c=>(
