@@ -209,11 +209,20 @@ check('ブリーダーカードは押せるカードだけ光らせる',
 check('手札は使わせたい種類だけ押せる',
   has('const battleTutorialCardAllowed = (card) => {')
     && has('if(isBusy||!tutorialAllowed)return;')
-    && has("${battleTutorialNeed&&!tutorialAllowed?' grayscale opacity-25':''}"));
+    && has('return !battleTutorialCardTarget || battleTutorialCardKind(card) === battleTutorialCardTarget;'));
 check('手札は使わせたい種類だけ光らせる',
-  has("${battleTutorialNeed&&tutorialAllowed&&battleTutorialNeed!=='skillPicker'?' is-battle-tutorial-spot':''}"));
-check('技変更の番は手札ぜんぶ押せる(名前をタップさせるため)',
-  has("if (!battleTutorialNeed || battleTutorialNeed === 'skillPicker' || !card) return true;"));
+  has("${tutorialTargeted?' is-battle-tutorial-spot':''}")
+    && has("${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}"));
+// 「どこを押すのか分からない」を防ぐため、技変更は押す1枚と、そのカードの
+// 名前のところまで光らせる。ほかのカードは触れない
+check('技変更は押すカードと名前まで光らせる',
+  has('const battleTutorialNeedCard = battleTutorial ? (battleTutorial.needCard || null) : null;')
+    && has("${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}"));
+check('技変更の番はACTIONを押せない',
+  has("&&battleTutorialNeed!=='skillPicker';"));
+// 説明を読んでいる間から光らせておけるよう、needCard は next のステップでも効く
+check('押す場所は説明中から光っている',
+  steps.some(s => s.wait === 'next' && s.needCard));
 check('緊急回復はその番だけ押せる',
   has('const battleTutorialAllowsEmergency = !battleTutorialNeed') && has('disabled={isBusy||!battleTutorialAllowsEmergency}'));
 // 押してほしい場所を光らせる
