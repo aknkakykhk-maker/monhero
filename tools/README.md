@@ -54,6 +54,7 @@ cd tools && npm install
 | `node bond-ranking-dedupe-check.js` | 同じ人・同じ種類のマスモンが、個体ID付きの記録と古い記録に分かれて二重に並ばないことを確認する。 |
 | `node bond-ranking-check.js` | 絆ランキングの全party集計、新旧個体識別、最高Lv重複排除、空・失敗表示を確認する。 |
 | `node battle-check.js` | 実際にWAVEを自動で戦い、距離撃の取得・撃破ファンファーレ・引き継ぎ技の強化を確認する。 |
+| `node battle-card-gesture-check.js` | カード名を含むカード全体から約10pxでスワイプへ切り替わり、終了後のclickを無効化しつつ通常タップと技変更を維持することを確認する。 |
 | `node bond-reward-check.js` | 周回終了時の勇者・参加・控えマスモンへの絆経験値配分、重複防止、上限・強化ポイント計算を確認する。 |
 | `node unique-range-check.js` | 固有技系統IDによる重複補正と、距離撃の威力判定・移動先・優先順を確認する。 |
 | `node debug-battle-check.js` | 隠しデバッグ戦の敵データ再利用、通常記録からの分離、BGM・終了導線・フラグ解除を静的に確認する。 |
