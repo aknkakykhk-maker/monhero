@@ -57,15 +57,15 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
 <div id="loading"><div class="static-mocchi"><img id="static-mocchi-image" alt="モッチー"><span></span></div><section class="static-copy"><h1>NOW LOADING</h1><h2>冒険の準備をしています</h2><div class="static-progress"><span></span></div><strong>0%</strong><p>ゲームシステムを起動中</p></section></div>
 <div id="root"></div>
 <div style="position:fixed;bottom:2px;right:4px;font:900 9px monospace;color:rgba(255,255,255,0.35);z-index:99999;pointer-events:none;">LF</div>
-<script src="data/images/images-ally.js?v=9bf8ae9b77fd"></script>
+<script src="data/images/images-ally.js?v=abbe73642277"></script>
 <script>try{document.getElementById('static-mocchi-image').src=MOCCHI_IMG}catch(e){}</script>
-<script src="data/images/images-enemy.js?v=a183a333923b"></script>
+<script src="data/images/images-enemy.js?v=890656bfb924"></script>
 <script src="data/ally-monsters.js?v=edf9de0facea"></script>
 <script src="data/breeder.js?v=d5eb7eb8381c"></script>
 <script src="data/enemy-monsters.js?v=756038184df4"></script>
 <script src="data/skills.js?v=2d4c31c548dd"></script>
-<script src="data/changelog.js?v=3c92197bdefb"></script>
-<script src="data/help.js?v=70744280fb0c"></script>
+<script src="data/changelog.js?v=1b48b773b0ba"></script>
+<script src="data/help.js?v=2a2560c82a2f"></script>
 <!-- 助手はbreeder.jsの顔アイコンを画像に使うため、必ずその後に読み込む -->
 <script src="data/assistants.js?v=b2c05079e2de"></script>
 <script>
@@ -76,7 +76,7 @@ window.addEventListener('unhandledrejection', function(ev){ window.__mhErr('[pro
   // モバイル回線やブラウザキャッシュの一時的な不整合で本体JSだけ取得に失敗しても、
   // 直ちにエラー画面へ進めず、キャッシュを使わないURLで自動的に再取得する。
   // 2回とも失敗した場合だけエラーを表示する。
-  var GAME_BUILD = '202608012128';
+  var GAME_BUILD = '202608012130';
   var attempts = 0;
   function showLoadError(){
     window.__mhErr && window.__mhErr('game-system.compiled.js load failed after retry');

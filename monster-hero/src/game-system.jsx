@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 21:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 21:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2744,6 +2744,8 @@ function MonsterHeroGame() {
   const [attackAnim, setAttackAnim] = useState(null); // {slotIndex}
   const [slotSkill, setSlotSkill] = useState(null); // {slotIndex, name, type} スロット上の技名インライン表示
   const [dragState, setDragState] = useState(null); // {cardIndex, x, y, active, card} カードドラッグ
+  const cardDragActiveRef = useRef(false); // 閾値を越えたあと始点へ戻っても、スワイプ成立を保持する
+  const suppressCardClickRef = useRef(0); // pointerup後にブラウザが合成するclickを捕捉して捨てる期限
   const [dragOverSlot, setDragOverSlot] = useState(null); // ドラッグ中にホバーしているスロット
   const [slotSettle, setSlotSettle] = useState(null); // はめ込み成功したスロットindex
   const [enemySkillName, setEnemySkillName] = useState(null); // 敵アクションの技名インライン表示
@@ -3621,8 +3623,22 @@ function MonsterHeroGame() {
 
   // カードドラッグ中のグローバル処理(タッチ/マウス両対応)
   useEffect(() => {
+    // スワイプ終了後のclickは、指を離したスロット等へ送られる場合もあるため、カード内だけでなく
+    // windowのcapture段階で1回だけ止める。通常タップでは期限を設定しないので従来どおり動く。
+    const suppressSwipeClick = (e) => {
+      if(Date.now()>suppressCardClickRef.current) return;
+      suppressCardClickRef.current=0;
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    };
+    window.addEventListener('click',suppressSwipeClick,true);
+    return ()=>window.removeEventListener('click',suppressSwipeClick,true);
+  }, []);
+
+  useEffect(() => {
     if(!dragState) return;
-    const DRAG_THRESHOLD=8;
+    const DRAG_THRESHOLD=10;
     const startX=dragState.x, startY=dragState.y;
     const findSlot=(x,y)=>{
       const el=document.elementFromPoint(x,y);
@@ -3634,17 +3650,20 @@ function MonsterHeroGame() {
       const pt=e.touches?e.touches[0]:e;
       const x=pt.clientX, y=pt.clientY;
       const moved=Math.hypot(x-startX,y-startY);
-      const active=(dragState.active)||moved>DRAG_THRESHOLD;
+      if(moved>=DRAG_THRESHOLD) cardDragActiveRef.current=true;
+      const active=cardDragActiveRef.current;
       setDragState(prev=>prev?{...prev,x,y,active}:null);
       if(active){ setDragOverSlot(findSlot(x,y)); }
-      if(moved>DRAG_THRESHOLD&&e.cancelable) e.preventDefault();
+      if(active&&e.cancelable) e.preventDefault();
     };
     const onUp=(e)=>{
       const pt=e.changedTouches?e.changedTouches[0]:e;
       const moved=Math.hypot(pt.clientX-startX,pt.clientY-startY);
-      const wasActive=dragState.active||moved>DRAG_THRESHOLD;
+      const wasActive=cardDragActiveRef.current||moved>=DRAG_THRESHOLD;
       const cardIndex=dragState.cardIndex;
       if(wasActive){
+        // iOS Safariを含むブラウザがpointerup後に生成するclickを、配置先に届く前に捨てる。
+        suppressCardClickRef.current=Date.now()+500;
         const si=findSlot(pt.clientX,pt.clientY);
         if(si!=null){
           dragAssignToSlot(cardIndex, si);
@@ -3655,6 +3674,7 @@ function MonsterHeroGame() {
         selectCardAt(cardIndex);
       }
       setDragState(null);
+      cardDragActiveRef.current=false;
       setDragOverSlot(null);
     };
     window.addEventListener('pointermove',onMove,{passive:false});
@@ -8823,11 +8843,12 @@ function MonsterHeroGame() {
                   return(<div key={c.uid} className="flex-1 min-w-0 max-w-[20%] flex"><button onPointerDown={(e)=>{
                     if(isBusy||!tutorialAllowed)return;
                     const pt=e.touches?e.touches[0]:e;
+                    cardDragActiveRef.current=false;
                     setDragState({cardIndex:i, x:pt.clientX, y:pt.clientY, active:false, card:c});
                   }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none'}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${battleTutorialNeed&&tutorialAllowed&&battleTutorialNeed!=='skillPicker'?' is-battle-tutorial-spot':''}${battleTutorialNeed&&!tutorialAllowed?' grayscale opacity-25':''}`}>
                     {isSel&&!assignedMon&&(<div className="absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                     {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[9px]">{assignedMon.emoji}</span>}</div>)}
-                    <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onPointerDown={(ev)=>ev.stopPropagation()} onClick={(ev)=>{ev.stopPropagation(); if(isBusy)return; setSkillPicker({handIndex:i});}} className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60">{c.name}</div>):(<div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div>)}<div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button></div>);
+                    <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60">{c.name}</div>):(<div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div>)}<div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button></div>);
                 })}
               </div>
             </div>

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f9ea624954aea957
+// source-sha256: a726181bc318119e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 21:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 21:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5835,6 +5835,8 @@ function MonsterHeroGame() {
   const [attackAnim, setAttackAnim] = useState(null); // {slotIndex}
   const [slotSkill, setSlotSkill] = useState(null); // {slotIndex, name, type} スロット上の技名インライン表示
   const [dragState, setDragState] = useState(null); // {cardIndex, x, y, active, card} カードドラッグ
+  const cardDragActiveRef = useRef(false); // 閾値を越えたあと始点へ戻っても、スワイプ成立を保持する
+  const suppressCardClickRef = useRef(0); // pointerup後にブラウザが合成するclickを捕捉して捨てる期限
   const [dragOverSlot, setDragOverSlot] = useState(null); // ドラッグ中にホバーしているスロット
   const [slotSettle, setSlotSettle] = useState(null); // はめ込み成功したスロットindex
   const [enemySkillName, setEnemySkillName] = useState(null); // 敵アクションの技名インライン表示
@@ -7059,8 +7061,21 @@ function MonsterHeroGame() {
 
   // カードドラッグ中のグローバル処理(タッチ/マウス両対応)
   useEffect(() => {
+    // スワイプ終了後のclickは、指を離したスロット等へ送られる場合もあるため、カード内だけでなく
+    // windowのcapture段階で1回だけ止める。通常タップでは期限を設定しないので従来どおり動く。
+    const suppressSwipeClick = e => {
+      if (Date.now() > suppressCardClickRef.current) return;
+      suppressCardClickRef.current = 0;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    };
+    window.addEventListener('click', suppressSwipeClick, true);
+    return () => window.removeEventListener('click', suppressSwipeClick, true);
+  }, []);
+  useEffect(() => {
     if (!dragState) return;
-    const DRAG_THRESHOLD = 8;
+    const DRAG_THRESHOLD = 10;
     const startX = dragState.x,
       startY = dragState.y;
     const findSlot = (x, y) => {
@@ -7074,7 +7089,8 @@ function MonsterHeroGame() {
       const x = pt.clientX,
         y = pt.clientY;
       const moved = Math.hypot(x - startX, y - startY);
-      const active = dragState.active || moved > DRAG_THRESHOLD;
+      if (moved >= DRAG_THRESHOLD) cardDragActiveRef.current = true;
+      const active = cardDragActiveRef.current;
       setDragState(prev => prev ? {
         ...prev,
         x,
@@ -7084,14 +7100,16 @@ function MonsterHeroGame() {
       if (active) {
         setDragOverSlot(findSlot(x, y));
       }
-      if (moved > DRAG_THRESHOLD && e.cancelable) e.preventDefault();
+      if (active && e.cancelable) e.preventDefault();
     };
     const onUp = e => {
       const pt = e.changedTouches ? e.changedTouches[0] : e;
       const moved = Math.hypot(pt.clientX - startX, pt.clientY - startY);
-      const wasActive = dragState.active || moved > DRAG_THRESHOLD;
+      const wasActive = cardDragActiveRef.current || moved >= DRAG_THRESHOLD;
       const cardIndex = dragState.cardIndex;
       if (wasActive) {
+        // iOS Safariを含むブラウザがpointerup後に生成するclickを、配置先に届く前に捨てる。
+        suppressCardClickRef.current = Date.now() + 500;
         const si = findSlot(pt.clientX, pt.clientY);
         if (si != null) {
           dragAssignToSlot(cardIndex, si);
@@ -7104,6 +7122,7 @@ function MonsterHeroGame() {
         selectCardAt(cardIndex);
       }
       setDragState(null);
+      cardDragActiveRef.current = false;
       setDragOverSlot(null);
     };
     window.addEventListener('pointermove', onMove, {
@@ -18197,6 +18216,7 @@ function MonsterHeroGame() {
         onPointerDown: e => {
           if (isBusy || !tutorialAllowed) return;
           const pt = e.touches ? e.touches[0] : e;
+          cardDragActiveRef.current = false;
           setDragState({
             cardIndex: i,
             x: pt.clientX,
@@ -18242,10 +18262,9 @@ function MonsterHeroGame() {
       }, cardIconNode(c.icon, 32)), /*#__PURE__*/React.createElement("div", {
         className: "w-full text-center flex flex-col justify-end gap-0.5"
       }, ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
-        onPointerDown: ev => ev.stopPropagation(),
         onClick: ev => {
           ev.stopPropagation();
-          if (isBusy) return;
+          if (isBusy || Date.now() <= suppressCardClickRef.current) return;
           setSkillPicker({
             handIndex: i
           });
