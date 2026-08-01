@@ -1186,8 +1186,9 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   { id:'atkSeen',      at:'BATTLE',        e:'happy',   title:'よく入った！', t:'敵のHPがぐっと減ったね。距離がそろってると威力が全然ちがうんだ♪', spot:'enemyBar', wait:'next' },
   // ⑦ 技変更
   { id:'skillTalk',    at:'BATTLE',        e:'normal',  title:'技は変えられる', t:'カードの名前は点線になってるでしょ？ そこをタップすると技を選び直せるの。', spot:'cards', wait:'next' },
-  { id:'skillPoint',   at:'BATTLE',        e:'wink',    title:'ここが技の名前', t:'光ってる攻撃カードの、絵の下にある名前のところ。そこが押せるよ♪', spot:'cards', wait:'next', needCard:'atk' },
-  { id:'skillDo',      at:'BATTLE',        e:'excited', title:'名前を押してみて', t:'光ってるところをタップ！ 使える技が一覧で出てくるよ。', spot:'cards', wait:'do', need:'skillPicker', needCard:'atk' },
+  { id:'skillPoint',   at:'BATTLE',        e:'wink',    title:'ここが技の名前', t:'光ってる攻撃カードの、絵の下・ガッツの上にある文字のところだよ♪', spot:'cards', wait:'next', needCard:'atk' },
+  { id:'skillTwice',   at:'BATTLE',        e:'normal',  title:'2回タップするよ', t:'1回目でカードを選んで、もう1回おなじ名前を押すと一覧が開くの。', spot:'cards', wait:'next', needCard:'atk' },
+  { id:'skillDo',      at:'BATTLE',        e:'excited', title:'名前を2回タップ', t:'光ってる名前をトントンって押してみて！ 技の一覧が出てくるよ。', spot:'cards', wait:'do', need:'skillPicker', needCard:'atk' },
   { id:'skillSeen',    at:'BATTLE',        e:'happy',   title:'これが技の一覧', t:'威力・消費ガッツ・会心率が並んでたでしょ？ 使う技はここで選び直せるよ♪', wait:'next' },
   { id:'skillLock',    at:'BATTLE',        e:'normal',  title:'暗い技があったよね', t:'通常技と距離技は、その距離の補正値が高いほど強いものまで使えるようになるの。', wait:'next' },
   { id:'skillNow',     at:'BATTLE',        e:'surprise',title:'今は補正が0%', t:'だから今は下のほうの技しか選べないんだ。育てて補正を上げると解放されるよ！', spot:'battleSlots', wait:'next' },
