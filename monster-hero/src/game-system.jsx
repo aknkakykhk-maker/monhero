@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 14:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 14:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2535,8 +2535,6 @@ function MonsterHeroGame() {
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
-  // 説明が操作の邪魔になったときに小さく畳んでおくため
-  const [battleTutorialMini, setBattleTutorialMini] = useState(false);
   // デバッグ表示のときだけ使う「このLvだとどう見えるか」。null なら実際のLv
   const [assistantDebugLevel, setAssistantDebugLevel] = useState(null);
   // デバッグのランダムテストで、どの場面を引くか
@@ -6270,8 +6268,6 @@ function MonsterHeroGame() {
   // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく
   const battleTutorialSpotClass = (name) => (battleTutorial && battleTutorial.spot === name ? ' is-battle-tutorial-spot' : '');
   // 画面が変わったら、その画面に合うステップへ進める(操作で進むステップの受け皿)
-  // 新しい説明は必ず見せたいので、ステップが変わったら畳んだ状態は解除する
-  useEffect(() => { setBattleTutorialMini(false); }, [battleTutorialStep]);
   useEffect(() => {
     if (battleTutorialStep == null) return;
     const cur = battleTutorialSteps[battleTutorialStep];
@@ -9207,44 +9203,48 @@ function MonsterHeroGame() {
 
       {/* 初回チュートリアル。みゅあが1〜2分で村のことを案内する。
           セリフと表情は data/assistants.js の ASSISTANT_TUTORIAL が持つ(画面には書かない) */}
-      {/* バトルチュートリアル。専用画面は作らず、ふだんのバトル画面の上に
-          みゅあの吹き出しと「つぎへ」「スキップ」を重ねるだけにしている。
+      {/* バトルチュートリアル。専用画面は作らず、ふだんのバトル画面の上に重ねる。
+          進み方は2つの状態をはっきり分けている。
+            説明中(wait:'next'/'end') … 画面を暗くして操作を止め、みゅあの吹き出しを出す
+            操作中(wait:'act')        … 暗幕も吹き出しも消し、光っているところを自由に操作できる
           光らせる場所は各画面の battleTutorialSpotClass('キー') が受け持つ */}
       {battleTutorial&&(()=>{
         const who=assistantById();
+        const acting=battleTutorial.wait==='act';
         const last=battleTutorial.wait==='end';
         const total=battleTutorialSteps.length;
-        return(
-        <div className="fixed inset-x-0 top-0 flex justify-center px-3" style={{position:'fixed',left:0,right:0,top:0,zIndex:92000,paddingTop:'calc(.5rem + env(safe-area-inset-top))',pointerEvents:'none'}} role="dialog" aria-modal="false" aria-label="バトルチュートリアル">
-          {/* 説明が操作の邪魔になったときのために、小さく畳めるようにしている */}
-          {battleTutorialMini?(
-            <button onClick={()=>setBattleTutorialMini(false)} aria-label="みゅあの説明をひらく" className="flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full border-2 active:scale-95" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.96)',pointerEvents:'auto'}}>
-              <AssistantFace who={who} size={30} accent={who.accent} expression={battleTutorial.e}/>
-              <span className="text-[10px] font-black" style={{color:who.accent}}>れんしゅう {battleTutorialStep+1} / {total}・ひらく</span>
-            </button>
-          ):(
-          <div className="w-full max-w-md rounded-3xl border-2 p-3" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.96)',pointerEvents:'auto',boxShadow:'0 6px 30px rgba(2,6,23,.9)'}}>
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              <span className="text-[9px] font-black tracking-widest" style={{color:who.accent}}>れんしゅう {battleTutorialStep+1} / {total}</span>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button onClick={()=>setBattleTutorialMini(true)} className="px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">小さくする</button>
-                <button onClick={endBattleTutorial} className="px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">やめる</button>
+        return(<>
+          {/* 説明中の暗幕。ここでタップを受け止めるので、読んでいる間は先に進めない。
+              光らせる場所があるときは、その光が透けるよう少し薄くする */}
+          {!acting&&<div aria-hidden="true" onClick={(e)=>e.stopPropagation()} style={{position:'fixed',inset:0,zIndex:91000,backgroundColor:battleTutorial.spot?'rgba(2,6,23,0.55)':'rgba(2,6,23,0.75)'}}/>}
+          <div className="fixed inset-x-0 top-0 flex justify-center px-3" style={{position:'fixed',left:0,right:0,top:0,zIndex:92000,paddingTop:'calc(.5rem + env(safe-area-inset-top))',pointerEvents:'none'}} role="dialog" aria-modal={!acting} aria-label="バトルチュートリアル">
+            {acting?(
+              /* 操作の番。読むものは出さず、何をすればよいかだけを細いバーで伝える */
+              <div className="flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-full border-2" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.9)',pointerEvents:'auto'}}>
+                <AssistantFace who={who} size={26} accent={who.accent} expression={battleTutorial.e}/>
+                <span className="text-[10px] font-black whitespace-nowrap" style={{color:who.accent}}>光っているところを操作してね</span>
+                <button onClick={endBattleTutorial} className="px-2.5 min-h-[26px] rounded-full bg-white/10 text-slate-300 text-[9px] font-black active:scale-95">やめる</button>
               </div>
-            </div>
-            <div className="flex items-end gap-2">
-              <AssistantFace who={who} size={64} accent={who.accent} expression={battleTutorial.e}/>
-              <div className="relative flex-1 min-w-0 rounded-2xl border-2 px-3 py-2" style={{borderColor:who.accent,backgroundColor:'rgba(15,23,42,0.96)'}}>
-                <span className="absolute" style={{left:'-9px',bottom:'14px',width:0,height:0,borderTop:'7px solid transparent',borderBottom:'7px solid transparent',borderRight:`9px solid ${who.accent}`}}/>
-                <span className="block text-[9px] font-black tracking-widest" style={{color:who.accent}}>{who.name}</span>
-                {battleTutorial.title&&<span className="block text-[11px] font-black text-white mt-0.5">{battleTutorial.title}</span>}
-                <span className="block text-[12px] text-white leading-relaxed mt-0.5">{assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow)}</span>
+            ):(
+              <div className="w-full max-w-md rounded-3xl border-2 p-3" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.98)',pointerEvents:'auto',boxShadow:'0 6px 30px rgba(2,6,23,.9)'}}>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="text-[9px] font-black tracking-widest" style={{color:who.accent}}>れんしゅう {battleTutorialStep+1} / {total}</span>
+                  <button onClick={endBattleTutorial} className="px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">やめる</button>
+                </div>
+                <div className="flex items-end gap-2">
+                  <AssistantFace who={who} size={64} accent={who.accent} expression={battleTutorial.e}/>
+                  <div className="relative flex-1 min-w-0 rounded-2xl border-2 px-3 py-2" style={{borderColor:who.accent,backgroundColor:'rgba(15,23,42,0.96)'}}>
+                    <span className="absolute" style={{left:'-9px',bottom:'14px',width:0,height:0,borderTop:'7px solid transparent',borderBottom:'7px solid transparent',borderRight:`9px solid ${who.accent}`}}/>
+                    <span className="block text-[9px] font-black tracking-widest" style={{color:who.accent}}>{who.name}</span>
+                    {battleTutorial.title&&<span className="block text-[11px] font-black text-white mt-0.5">{battleTutorial.title}</span>}
+                    <span className="block text-[12px] text-white leading-relaxed mt-0.5">{assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow)}</span>
+                  </div>
+                </div>
+                <button onClick={()=>{ if(last) endBattleTutorial(); else setBattleTutorialStep(v=>Math.min(total-1,(v||0)+1)); }} className="w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'おわる':'つぎへ'}</button>
               </div>
-            </div>
-            {battleTutorial.wait==='act'
-              ? <div className="mt-2 text-center text-[10px] font-black" style={{color:who.accent}}>▼ 光っているところを操作してね</div>
-              : <button onClick={()=>{ if(last) endBattleTutorial(); else setBattleTutorialStep(v=>Math.min(total-1,(v||0)+1)); }} className="w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'おわる':'つぎへ'}</button>}
-          </div>)}
-        </div>);
+            )}
+          </div>
+        </>);
       })()}
 
       {tutorialStep!=null&&(()=>{
