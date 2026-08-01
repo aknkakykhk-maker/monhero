@@ -1116,19 +1116,38 @@ const ASSISTANT_TUTORIAL = [
 // 【ステップを足すとき】
 //   この配列へ1件足すだけ。画面側は spot のキーに合わせて
 //   battleTutorialSpotClass('キー') を付けておく。
+//
+// 【並べ方のきまり】
+//   「説明(next) → 操作(act) → 画面が変わる → 説明(next) → …」の順に並べる。
+//   いきなり act から始めるとその画面の説明が出ないまま操作モードになってしまうので、
+//   操作させたい画面には必ずその手前に説明のステップ(同じ at・同じ spot)を置く。
+//   説明のステップにも spot を書いておくと、読んでいる間から光って場所が分かる。
 const ASSISTANT_BATTLE_TUTORIAL = [
-  { id:'intro',    at:'PICK_HERO',     e:'excited', title:'バトルのれんしゅう', t:'{name}、ここからは実際に動かして覚えよ！ あたしが横で見てるからね♪', wait:'next' },
-  { id:'hero',     at:'PICK_HERO',     e:'happy',   title:'まずは勇者モン', t:'主役になる子を1体えらんで、「この子で挑戦」を押してみて！', spot:'monList', wait:'act' },
-  { id:'slot',     at:'PICK_SLOT',     e:'wink',    title:'置く距離を決めよう', t:'敵と同じ距離だと大ダメージ！ 好きな枠を押してみて♪', spot:'slots', wait:'act' },
-  { id:'teaching', at:'PICK_TEACHING', e:'normal',  title:'ブリーダーの教え', t:'バトル中に使えるカードだよ。1つ選ぼ！', spot:'teachings', wait:'act' },
-  { id:'battle',   at:'BATTLE',        e:'excited', title:'バトル開始！', t:'いよいよ本番！ カードで戦っていくよ〜♪', wait:'next' },
-  { id:'cards',    at:'BATTLE',        e:'normal',  title:'手札のカード', t:'下にあるのが今つかえるカード。ガッツが足りるものだけ光ってるよ。', spot:'cards', wait:'next' },
-  { id:'act',      at:'BATTLE',        e:'wink',    title:'カードを使ってみよう', t:'カードを選んで、使いたい子の枠をタップ！ そのあと「ACTION」で実行だよ。', spot:'action', wait:'act' },
-  { id:'clear',    at:'WAVE_RESULT',   e:'excited', title:'WAVEクリア！', t:'ナイス{name}！ WAVEをクリアすると強化フェーズに入るよ♪', wait:'next' },
-  { id:'reward',   at:'REWARD_PICK',   e:'happy',   title:'能力アップ', t:'クリアするたびに強くなれる！ 好きな強化を1つ選んでね。', spot:'rewards', wait:'act' },
-  { id:'ally',     at:'*',             e:'normal',  title:'このあとは', t:'WAVE2・4・6では供モンが合流するよ。ステータスがそのまま足されるんだ！', wait:'next' },
-  { id:'unique',   at:'*',             e:'happy',   title:'固有技のこと', t:'勇者モンの固有技は、レベルが上がるほど強くなるよ。育てるほど頼りになる♪', wait:'next' },
-  { id:'end',      at:'*',             e:'happy',   title:'これでバッチリ！', t:'困ったらヘルプからいつでもチュートリアルを見られるよ♪', wait:'end' },
+  // 勇者モンを選ぶ
+  { id:'intro',        at:'PICK_HERO',     e:'excited', title:'バトルのれんしゅう', t:'{name}、ここからは実際に動かして覚えよ！ あたしが横で見てるからね♪', wait:'next' },
+  { id:'heroTalk',     at:'PICK_HERO',     e:'happy',   title:'まずは勇者モン', t:'主役になる子が勇者モン。手持ちから1体えらぶよ！', spot:'monList', wait:'next' },
+  { id:'hero',         at:'PICK_HERO',     e:'wink',    title:'えらんでみよう', t:'光ってる中から好きな子を押して、「決定」だよ♪', spot:'monList', wait:'act' },
+  // 置く距離を決める
+  { id:'slotTalk',     at:'PICK_SLOT',     e:'normal',  title:'置く距離を決めよう', t:'次は立ち位置。敵と同じ距離だと大ダメージなんだ！', spot:'slots', wait:'next' },
+  { id:'slot',         at:'PICK_SLOT',     e:'wink',    title:'枠を押してね', t:'好きな距離の枠をタップしてみて♪', spot:'slots', wait:'act' },
+  // ブリーダーの教えを持ち込む
+  { id:'teachingTalk', at:'PICK_TEACHING', e:'normal',  title:'ブリーダーの教え', t:'バトル中に使える助っ人カードだよ。ここで持ち込むの。', spot:'teachings', wait:'next' },
+  { id:'teaching',     at:'PICK_TEACHING', e:'happy',   title:'1つ選ぼう', t:'好きな教えを1つ押してね♪', spot:'teachings', wait:'act' },
+  // バトル
+  { id:'battle',       at:'BATTLE',        e:'excited', title:'バトル開始！', t:'いよいよ本番！ カードで戦っていくよ〜♪', wait:'next' },
+  { id:'cards',        at:'BATTLE',        e:'normal',  title:'手札のカード', t:'下にあるのが今つかえるカード。ガッツが足りる子だけ光るよ。', spot:'cards', wait:'next' },
+  { id:'actTalk',      at:'BATTLE',        e:'normal',  title:'使いかた', t:'カードを選ぶ→使いたい子の枠をタップ→ACTIONの順だよ。', spot:'action', wait:'next' },
+  { id:'act',          at:'BATTLE',        e:'wink',    title:'やってみよう！', t:'まずは1枚つかって、敵を倒してみて♪', spot:'action', wait:'act' },
+  // WAVEクリア
+  { id:'clear',        at:'WAVE_RESULT',   e:'excited', title:'WAVEクリア！', t:'ナイス{name}！ 敵を倒しきるとWAVEクリアだよ♪', spot:'waveNext', wait:'next' },
+  { id:'clearNext',    at:'WAVE_RESULT',   e:'happy',   title:'次へ進もう', t:'「次へ進む」を押すと強化フェーズだよ！', spot:'waveNext', wait:'act' },
+  // 強化フェーズ
+  { id:'rewardTalk',   at:'REWARD_PICK',   e:'happy',   title:'能力アップ', t:'クリアのたびに強くなれる！ 3つから1つ選べるんだ。', spot:'rewards', wait:'next' },
+  { id:'reward',       at:'REWARD_PICK',   e:'wink',    title:'選んでみて', t:'好きな強化を1つ押してね♪', spot:'rewards', wait:'act' },
+  // 覚えておいてほしいこと
+  { id:'ally',         at:'*',             e:'normal',  title:'このあとは', t:'WAVE2・4・6では供モンが合流するよ。ステータスがそのまま足されるんだ！', wait:'next' },
+  { id:'unique',       at:'*',             e:'happy',   title:'固有技のこと', t:'勇者モンの固有技は、レベルが上がるほど強くなるよ。育てるほど頼りになる♪', wait:'next' },
+  { id:'end',          at:'*',             e:'happy',   title:'これでバッチリ！', t:'困ったらヘルプからいつでもチュートリアルを見られるよ♪', wait:'end' },
 ];
 // いまの画面に合うステップを探す(画面が変わったときに呼ぶ)
 const findBattleTutorialStep = (fromIndex, screen) => {
