@@ -148,6 +148,14 @@ check('練習中はビギナー以外で始められない',
 check('練習中はモードを切り替えられない',
   has('onClick={()=>{if(battleTutorial)return;setBattleMode(mode.id);'));
 check('練習の中で保存していない(開始処理)', !/storeSet\(/.test(runBlock));
+// WAVEクリアのミッション進捗が、記録を残さないはずの戦いでも保存されていた
+check('記録を残さない戦いではミッションも進めない',
+  has('const saveMissionProgress = async (event,amount=1) => {\n    // 記録を残さない戦い')
+    && has('if (debugBattleRef.current) return;'));
+// 練習は強化フェーズまで通して見せる。デバッグ戦の打ち切りに吸われると
+// 「次へ進む」を押しても画面が変わらず、そこから先のステップに進めない
+check('練習は強化フェーズまで進める',
+  has('if (debugBattleRef.current && !battleScenarioRef.current) {'));
 
 // --- ④ 入口は3つ・戻り先を覚える ---
 check('デバッグ設定から開始できる', has('<button onClick={()=>startBattleTutorial()}') && has('バトルチュートリアル開始'));
@@ -155,6 +163,10 @@ check('はじめての案内の最後から開始できる',
   has("startBattleTutorial('HOME')") && assistantsSrc.includes("offer:'battle'"));
 check('ヘルプの項目から開始できる',
   has("topic.launch==='battleTutorial'") && has('バトルのれんしゅうを始める'));
+// ヘルプを開いてすぐ目に入る場所にも導線を置く(いつでも見返せるように)
+check('ヘルプのいちばん上に導線がある',
+  has("onClick={()=>{setHelpCatId('battle');setHelpTopicId('tutorial');}}")
+    && has('みゅあと一緒に、実際に動かして遊び方を覚えられます'));
 check('ヘルプ側に項目がある', helpSrc.includes("launch: 'battleTutorial'"));
 check('入口は3つだけ',
   (source.match(/startBattleTutorial\(/g) || []).length === 3,
