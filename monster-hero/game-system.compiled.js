@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e597524604ce68f
+// source-sha256: a5d25e11f74b4740
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-02 00:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 01:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4292,6 +4292,11 @@ const MARKET_ICON_SIZE = {
   icon: 'w-10 h-10',
   item: 'w-9 h-9'
 };
+// ききは元画像の余白がほかの顔アイコンより広いため、画像自体には手を加えず表示時だけ寄せる。
+// 上端をほぼ動かさずに拡大することで、うさ耳を残したまま顔を大きく見せる。
+const marketProfileIconStyle = id => id === 'kiki_icon' ? {
+  transform: 'scale(1.3) translateY(11.5%)'
+} : undefined;
 
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
 const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
@@ -12540,11 +12545,14 @@ function MonsterHeroGame() {
   const rankingPlace = index => /*#__PURE__*/React.createElement("div", {
     className: `w-7 h-7 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-slate-300 text-black' : index === 2 ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400'}`
   }, index + 1);
-  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon) ? /*#__PURE__*/React.createElement("img", {
+  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon) ? /*#__PURE__*/React.createElement("span", {
+    className: "w-8 h-8 rounded-full overflow-hidden shrink-0"
+  }, /*#__PURE__*/React.createElement("img", {
     src: resolveIconUrl(entry.icon),
     alt: "",
-    className: "w-8 h-8 rounded-full object-cover shrink-0"
-  }) : /*#__PURE__*/React.createElement("div", {
+    style: marketProfileIconStyle(entry.icon),
+    className: "w-full h-full object-cover"
+  })) : /*#__PURE__*/React.createElement("div", {
     className: "w-8 h-8 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-xs"
   }, "\uD83D\uDC64");
   const rankingCardClass = index => `rounded-xl border ${index === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`;
@@ -12714,7 +12722,8 @@ function MonsterHeroGame() {
       className: "mh-home-avatar"
     }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement("img", {
       src: resolveIconUrl(breederIcon),
-      alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u50CF"
+      alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u50CF",
+      style: marketProfileIconStyle(breederIcon)
     }) : /*#__PURE__*/React.createElement(User, {
       size: 24
     })), /*#__PURE__*/React.createElement("div", {
@@ -14558,6 +14567,7 @@ function MonsterHeroGame() {
     }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement("img", {
       src: resolveIconUrl(breederIcon),
       alt: "icon",
+      style: marketProfileIconStyle(breederIcon),
       className: "w-full h-full object-cover"
     }) : /*#__PURE__*/React.createElement(User, {
       size: 36,
@@ -14770,6 +14780,7 @@ function MonsterHeroGame() {
         }, item.icon ? /*#__PURE__*/React.createElement("img", {
           src: item.icon,
           alt: item.name,
+          style: marketProfileIconStyle(item.id),
           className: "w-full h-full object-cover"
         }) : /*#__PURE__*/React.createElement("span", {
           className: "text-xl"
@@ -17111,6 +17122,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("img", {
       src: m.icon,
       alt: m.name,
+      style: marketProfileIconStyle(m.id),
       className: "w-full h-full object-cover"
     }))))), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowIconPicker(false),
@@ -18314,6 +18326,7 @@ function MonsterHeroGame() {
       }, item.icon ? /*#__PURE__*/React.createElement("img", {
         src: item.icon,
         alt: item.name,
+        style: marketProfileIconStyle(item.id),
         className: `w-full h-full ${round ? 'object-cover' : 'object-contain'}`
       }) : /*#__PURE__*/React.createElement("span", {
         style: {
