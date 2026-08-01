@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a5d25e11f74b4740
+// source-sha256: 6427a0bd57b63853
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-02 01:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 01:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4295,11 +4295,15 @@ const MARKET_ICON_SIZE = {
 // ききは元画像の余白がほかの顔アイコンより広いため、画像自体には手を加えず表示時だけ寄せる。
 // 上端をほぼ動かさずに拡大することで、うさ耳を残したまま顔を大きく見せる。
 const marketProfileIconStyle = id => id === 'kiki_icon' ? {
-  transform: 'scale(1.3) translateY(11.5%)'
+  transform: 'scale(1.58) translateY(12%)'
 } : undefined;
 
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
 const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
+// バトルの練習を完了した状態と、初回案内を一度表示した状態は別々に保存する。
+// 未定義の既存セーブはどちらも false として扱うため、後方互換性を保てる。
+const BATTLE_TUTORIAL_SEEN_KEY = 'mh_battle_tutorial_seen_v1';
+const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
 const helpDataRows = id => {
   const marketItems = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
   const skipIds = new Set(Object.values(SKIP_TICKETS));
@@ -5577,7 +5581,7 @@ function MonsterHeroGame() {
   // 初回チュートリアル。null=出さない、0以上=そのページを表示中。
   // 見たかどうかは新しい保存キーへ分けて持つ(既存のキーには一切触らない)
   const [tutorialStep, setTutorialStep] = useState(null);
-  // 'intro'=最初のあいさつ / 'tour'=村の案内。同じ吹き出しで台本だけ切り替える
+  // 'intro'=最初のあいさつ / 'tour'=村の案内 / 'battleGuide'=バトル練習の初回案内
   const [tutorialKind, setTutorialKind] = useState('tour');
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
@@ -5609,6 +5613,7 @@ function MonsterHeroGame() {
   const [onboardingPreview, setOnboardingPreview] = useState(false);
   const onboardingPreviewBackupRef = useRef(null);
   const tutorialShownRef = useRef(false);
+  const battleTutorialGuideCheckedRef = useRef(false);
   const highScoresRef = useRef({});
   useEffect(() => {
     highScoresRef.current = highScores;
@@ -9636,6 +9641,7 @@ function MonsterHeroGame() {
       setGameState('PROFILE');
       return;
     }
+    if (kind === 'battleGuide') return;
     if (remember) {
       try {
         await storeSet(TUTORIAL_SEEN_KEY, true, false);
@@ -9657,6 +9663,31 @@ function MonsterHeroGame() {
       cancelled = true;
     };
   }, [bootPhase, gameState, dataLoaded]);
+
+  // 既存の村案内とは別に、バトルチュートリアルをまだ完了していない人へ一度だけ案内する。
+  // 初回プロフィール設定や村案内と重ならないよう、それらが閉じたHOMEで判定する。
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || tutorialStep != null || battleTutorialGuideCheckedRef.current) return;
+    battleTutorialGuideCheckedRef.current = true;
+    let cancelled = false;
+    (async () => {
+      const [tourSeen, seen, shown] = await Promise.all([storeGet(TUTORIAL_SEEN_KEY, false, false), storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false), storeGet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false)]);
+      if (tourSeen !== true) {
+        battleTutorialGuideCheckedRef.current = false;
+        return;
+      }
+      if (cancelled || seen === true || shown === true) return;
+      // 表示を決めた時点で記録し、「今は見ない」や再読込でも繰り返さない。
+      await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, true, false);
+      if (!cancelled) {
+        setTutorialKind('battleGuide');
+        setTutorialStep(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep]);
   const returnToHome = () => {
     debugBattleRef.current = false;
     debugResultRef.current = false;
@@ -11589,7 +11620,7 @@ function MonsterHeroGame() {
   const scenarioPicksSlot = idx => !battleScenario || !Number.isInteger(battleScenario.slotIndex) || battleScenario.slotIndex === idx;
   const scenarioPicksTeaching = id => !battleScenario || !battleScenario.teachingId || battleScenario.teachingId === id;
   // 終わる・やめる。記録は残していないので、始めた場所へ戻すだけでよい
-  const endBattleTutorial = () => {
+  const endBattleTutorial = async (completed = false) => {
     const back = battleTutorialReturn;
     // 台本を外す。以降のバトルはふだんどおりの抽選に戻る
     battleScenarioRef.current = null;
@@ -11603,6 +11634,11 @@ function MonsterHeroGame() {
     setDebugOutcome(null);
     setGaveUp(false);
     setCurrentPickingMon(null);
+    if (completed) {
+      try {
+        await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false);
+      } catch {}
+    }
     // HOMEへ帰るときは走らせかけたバトルの状態も片付ける
     if (back === 'HOME') {
       returnToHome();
@@ -14465,7 +14501,26 @@ function MonsterHeroGame() {
     }, "\u30E9\u30F3\u30C0\u30E0\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
       onClick: () => startBattleTutorial(),
       className: "col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u958B\u59CB\uFF08\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09")), /*#__PURE__*/React.createElement("button", {
+    }, "\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u958B\u59CB\uFF08\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        await storeSet(BATTLE_TUTORIAL_SEEN_KEY, false, false);
+        window.alert('バトルチュートリアルを未視聴に戻しました。');
+      },
+      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
+    }, "\u30D0\u30C8\u30EB\u7DF4\u7FD2\u3092\u672A\u8996\u8074\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false);
+        battleTutorialGuideCheckedRef.current = false;
+        window.alert('初回案内を未表示に戻しました。');
+      },
+      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
+    }, "\u521D\u56DE\u6848\u5185\u3092\u672A\u8868\u793A\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        returnToHome();
+        startTutorial('battleGuide');
+      },
+      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
+    }, "\u30D0\u30C8\u30EB\u521D\u56DE\u6848\u5185\u3092\u518D\u751F")), /*#__PURE__*/React.createElement("button", {
       onClick: async () => {
         if (!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return;
         try {
@@ -19426,7 +19481,7 @@ function MonsterHeroGame() {
           color: who.accent
         }
       }, battleTutorial.title || '光っているところを操作してね'), /*#__PURE__*/React.createElement("button", {
-        onClick: endBattleTutorial,
+        onClick: () => endBattleTutorial(false),
         className: "px-2.5 min-h-[26px] rounded-full bg-white/10 text-slate-300 text-[9px] font-black active:scale-95"
       }, "\u3084\u3081\u308B")) : /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md rounded-3xl border-2 p-3",
@@ -19444,7 +19499,7 @@ function MonsterHeroGame() {
           color: who.accent
         }
       }, "\u308C\u3093\u3057\u3085\u3046 ", battleTutorialStep + 1, " / ", total), /*#__PURE__*/React.createElement("button", {
-        onClick: endBattleTutorial,
+        onClick: () => endBattleTutorial(false),
         className: "px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95"
       }, "\u3084\u3081\u308B")), /*#__PURE__*/React.createElement("div", {
         className: "flex items-end gap-2"
@@ -19481,7 +19536,7 @@ function MonsterHeroGame() {
         className: "block text-[12px] text-white leading-relaxed mt-0.5"
       }, assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow)))), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
-          if (last) endBattleTutorial();else setBattleTutorialStep(v => Math.min(total - 1, (v || 0) + 1));
+          if (last) endBattleTutorial(true);else setBattleTutorialStep(v => Math.min(total - 1, (v || 0) + 1));
         },
         className: "w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
         style: {
@@ -19490,7 +19545,8 @@ function MonsterHeroGame() {
       }, last ? 'おわる' : 'つぎへ'))));
     })(), tutorialStep != null && (() => {
       const intro = tutorialKind === 'intro';
-      const pages = intro ? typeof ASSISTANT_INTRO !== 'undefined' && ASSISTANT_INTRO || [] : typeof ASSISTANT_TUTORIAL !== 'undefined' && ASSISTANT_TUTORIAL || [];
+      const battleGuide = tutorialKind === 'battleGuide';
+      const pages = battleGuide ? typeof ASSISTANT_BATTLE_TUTORIAL_GUIDE !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_GUIDE || [] : intro ? typeof ASSISTANT_INTRO !== 'undefined' && ASSISTANT_INTRO || [] : typeof ASSISTANT_TUTORIAL !== 'undefined' && ASSISTANT_TUTORIAL || [];
       const page = pages[Math.max(0, Math.min(tutorialStep, pages.length - 1))];
       if (!page) return null;
       const who = assistantById();
@@ -19518,7 +19574,7 @@ function MonsterHeroGame() {
         style: {
           color: who.accent
         }
-      }, tutorialStep + 1, " / ", pages.length), /*#__PURE__*/React.createElement("button", {
+      }, tutorialStep + 1, " / ", pages.length), !battleGuide && /*#__PURE__*/React.createElement("button", {
         onClick: () => finishTutorial(true),
         className: "px-3 py-1.5 rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95"
       }, "\u30B9\u30AD\u30C3\u30D7")), /*#__PURE__*/React.createElement("div", {
@@ -19570,7 +19626,27 @@ function MonsterHeroGame() {
         style: {
           backgroundColor: who.accent
         }
-      }, "\u30D0\u30C8\u30EB\u306E\u308C\u3093\u3057\u3085\u3046\u3092\u3084\u3063\u3066\u307F\u308B\uFF01"), /*#__PURE__*/React.createElement("div", {
+      }, "\u30D0\u30C8\u30EB\u306E\u308C\u3093\u3057\u3085\u3046\u3092\u3084\u3063\u3066\u307F\u308B\uFF01"), page.offer === 'battleGuide' && /*#__PURE__*/React.createElement("div", {
+        className: "w-full grid grid-cols-1 gap-2 mt-3"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          finishTutorial(false);
+          startBattleTutorial('HOME');
+        },
+        className: "min-h-[52px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
+        style: {
+          backgroundColor: who.accent
+        }
+      }, "\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B"), /*#__PURE__*/React.createElement("button", {
+        onClick: () => setTutorialStep(v => v + 1),
+        className: "min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-sm active:scale-[.98]"
+      }, "\u4ECA\u306F\u898B\u306A\u3044")), page.declined && /*#__PURE__*/React.createElement("button", {
+        onClick: () => finishTutorial(false),
+        className: "w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
+        style: {
+          backgroundColor: who.accent
+        }
+      }, "\u308F\u304B\u3063\u305F\uFF01"), !battleGuide && /*#__PURE__*/React.createElement("div", {
         className: "w-full grid grid-cols-2 gap-2 mt-3"
       }, /*#__PURE__*/React.createElement("button", {
         disabled: tutorialStep <= 0,
@@ -19584,7 +19660,13 @@ function MonsterHeroGame() {
         style: page.offer === 'battle' ? undefined : {
           backgroundColor: who.accent
         }
-      }, last ? intro ? '名前を決める！' : page.offer === 'battle' ? 'あとでやる' : 'はじめる！' : 'つぎへ'))));
+      }, last ? intro ? '名前を決める！' : page.offer === 'battle' ? 'あとでやる' : 'はじめる！' : 'つぎへ')), battleGuide && !page.offer && !page.declined && /*#__PURE__*/React.createElement("button", {
+        onClick: () => setTutorialStep(v => v + 1),
+        className: "w-full mt-3 min-h-[48px] rounded-2xl font-black text-sm text-black active:scale-[.98]",
+        style: {
+          backgroundColor: who.accent
+        }
+      }, "\u3064\u304E\u3078")));
     })(), modeInfoId && (() => {
       const mode = battleModeInfo(modeInfoId);
       return /*#__PURE__*/React.createElement("div", {

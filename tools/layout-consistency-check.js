@@ -100,6 +100,11 @@ check('詳細と購入ボタンを押し間違えない間隔がある',
 check('購入ボタンの文字は折り返さない',
   has("aria-label={`${item.name}を${item.cost}${usesGold?'ダイヤ':'pt'}で購入`}") && has('rounded-full flex items-center gap-0.5 whitespace-nowrap'));
 check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">近日追加</div>') && has('rounded-full whitespace-nowrap">所持済み</div>'));
+check('ききだけを約22%追加拡大し、縦横比と円形クリップを保つ',
+  has("const marketProfileIconStyle = (id) => id === 'kiki_icon'")
+    && has("transform: 'scale(1.58) translateY(12%)'")
+    && count('style={marketProfileIconStyle(') >= 6
+    && !has('images/breeder-icons/kiki.PNG') /* 画像パス判定を表示コードへ重複させない */);
 
 // --- ③ Masterの色 ---
 check('挑戦ボタンは明るい難易度で文字を暗くする', has("color:setting.darkText?'#0f172a':'#ffffff'"));
