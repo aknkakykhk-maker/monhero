@@ -35,8 +35,9 @@ check('ステップに必要な項目がそろっている',
   steps.every(s => s.id && s.at && s.t && s.e && ['next', 'act', 'end'].includes(s.wait)));
 check('idが重複していない', new Set(steps.map(s => s.id)).size === steps.length);
 check('表情はすべて用意されているもの', steps.every(s => ASSISTANT_EXPRESSIONS.includes(s.e)), steps.map(s => s.e).join('/'));
+// 吹き出しは3行までなら収まる(実機で1行およそ17〜20字)
 check('セリフは短く保つ(スマホで読める長さ)',
-  steps.every(s => s.t.length <= 45), steps.filter(s => s.t.length > 45).map(s => `${s.id}:${s.t.length}字`).join(', '));
+  steps.every(s => s.t.length <= 60), steps.filter(s => s.t.length > 60).map(s => `${s.id}:${s.t.length}字`).join(', '));
 check('セリフを画面のJSXへ直接書いていない',
   steps.every(s => !source.includes(s.t.replace('{name}', ''))) && has('const battleTutorialSteps = (typeof ASSISTANT_BATTLE_TUTORIAL'));
 
@@ -56,6 +57,24 @@ check('チャレンジとクイックの違いに触れる',
   steps.some(s => s.t.includes('チャレンジ') && s.t.includes('クイック')));
 check('ランキングの場所に触れる', steps.some(s => s.t.includes('ランキング')));
 check('難易度の選び方に触れる', steps.some(s => s.t.includes('スワイプ') || s.t.includes('難易度')));
+// バトル画面は覚えることが多いので、要素をひととおり説明したか数える
+const BATTLE_TOPICS = [
+  ['ターン数', /ターン/],
+  ['敵のHPと距離', /HPバー|いる距離/],
+  ['敵の解析', /解析/],
+  ['自分のステータス', /ステータス/],
+  ['距離の枠', /距離枠|同じ距離/],
+  ['攻撃・ガード・ブリーダーカード', /ガードカード/],
+  ['2枚目からの半減', /半減|半分/],
+  ['使える枚数', /枚数/],
+  ['山札', /山札/],
+  ['固有技', /固有技/],
+  ['緊急回復', /緊急/],
+  ['1ターンの流れ', /ACTION/],
+];
+const missingTopics = BATTLE_TOPICS.filter(([, re]) => !steps.some(s => re.test(s.t)));
+check('バトル画面の要素をひととおり説明している', missingTopics.length === 0,
+  missingTopics.map(([name]) => name).join(', '));
 check('練習はビギナーのチャレンジで行うと伝える',
   steps.some(s => s.t.includes('ビギナー')));
 check('最後は「ヘルプからいつでも見られる」で終わる',
@@ -136,7 +155,14 @@ check('専用画面を作らず、いまの画面へ重ねる',
   !source.includes("gameState==='BATTLE_TUTORIAL'") && has("aria-label=\"バトルチュートリアル\""));
 // 操作するボタンは画面の下にあることが多いので、説明は上へ出す。
 // それでも邪魔なときのために小さく畳めるようにしてある
-check('吹き出しは画面の上に固定で出す', has("style={{position:'fixed',left:0,right:0,top:0,zIndex:92000"));
+// 上に出しっぱなしだと、モードのタブや敵のHPバーを吹き出しが隠してしまう。
+// 光っている場所を実際に測って、上半分なら下へ逃がす
+check('吹き出しは画面の端に固定で出す',
+  has("{position:'fixed',left:0,right:0,top:0,zIndex:92000") && has("{position:'fixed',left:0,right:0,bottom:0,zIndex:92000"));
+check('光っている場所を測って吹き出しを逃がす',
+  has("document.querySelectorAll('.is-battle-tutorial-spot')")
+    && has('setBattleTutorialAtBottom(Number.isFinite(top) && top < h * 0.5);')
+    && has('battleTutorialAtBottom'));
 // 説明中と操作中をはっきり分ける。
 // 説明中は暗くして操作を止め、操作の番になったら暗幕も吹き出しも消す
 check('説明中と操作中を分けている', has("const acting=battleTutorial.wait==='act';"));
@@ -156,7 +182,9 @@ check('つぎへとスキップ(やめる)がある',
   has("{last?'おわる':'つぎへ'}") && has('<button onClick={endBattleTutorial}') && has('やめる</button>'));
 // 押してほしい場所を光らせる
 const SPOTS = ['modeTabs', 'rankingBtn', 'difficulty', 'battleStart',
-  'monCards', 'monDecide', 'slots', 'teachings', 'cards', 'action', 'rewards', 'waveNext'];
+  'monCards', 'monDecide', 'slots', 'teachings',
+  'waveInfo', 'enemyBar', 'heroStatus', 'emergency', 'battleSlots',
+  'cards', 'cardCount', 'deckView', 'action', 'rewards', 'waveNext'];
 check('光らせる場所が画面側と結びついている',
   SPOTS.every(name => has(`battleTutorialSpotClass('${name}')`)),
   SPOTS.filter(name => !has(`battleTutorialSpotClass('${name}')`)).join(', '));

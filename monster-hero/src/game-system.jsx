@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 15:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 16:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2537,6 +2537,8 @@ function MonsterHeroGame() {
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
   // 練習を始めた場所。終わったらここへ帰す(デバッグ設定 / HOME)
   const [battleTutorialReturn, setBattleTutorialReturn] = useState('DEBUG_SETTINGS');
+  // 光らせている場所が画面の上半分にあるとき、吹き出しを下へ逃がす
+  const [battleTutorialAtBottom, setBattleTutorialAtBottom] = useState(false);
   // デバッグ表示のときだけ使う「このLvだとどう見えるか」。null なら実際のLv
   const [assistantDebugLevel, setAssistantDebugLevel] = useState(null);
   // デバッグのランダムテストで、どの場面を引くか
@@ -6303,6 +6305,25 @@ function MonsterHeroGame() {
       ? findBattleTutorialStep(battleTutorialStep + 1, gameState) : -1;
     if (next >= 0) setBattleTutorialStep(next);
   }, [gameState, battleTutorialStep]);
+  // 吹き出しを上下どちらに出すか。画面の上のほう(モードのタブ・敵のHPバーなど)を
+  // 光らせているときに吹き出しを上へ出すと、説明したい場所をそのまま隠してしまう。
+  // 実際に光っている要素の位置を測って、反対側へ逃がす
+  useEffect(() => {
+    if (!battleTutorial) { setBattleTutorialAtBottom(false); return; }
+    let cancelled = false;
+    const measure = () => {
+      if (cancelled) return;
+      const nodes = document.querySelectorAll('.is-battle-tutorial-spot');
+      if (!nodes.length) { setBattleTutorialAtBottom(false); return; }
+      let top = Infinity;
+      nodes.forEach((n) => { const r = n.getBoundingClientRect(); if (r.height > 0) top = Math.min(top, r.top); });
+      const h = window.innerHeight || 1;
+      setBattleTutorialAtBottom(Number.isFinite(top) && top < h * 0.5);
+    };
+    // 画面が切り替わった直後は位置が確定していないので、描画が落ち着いてから測る
+    const timer = setTimeout(measure, 80);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [battleTutorialStep, gameState]);
 
   const startDebugBattle = () => {
     const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
@@ -8269,11 +8290,11 @@ function MonsterHeroGame() {
         {gameState==='BATTLE'&&(
           <div className="flex-1 flex flex-col h-full">
             <header className="h-[5%] shrink-0 bg-slate-900 px-4 flex items-center justify-between border-b border-white/5 z-[6500]">
-              <div className="flex items-center gap-2">{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1.5 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-2 py-0.5 rounded border tracking-wider ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* いま遊んでいるモードと難易度。既存の表示を邪魔しないよう1行に収める */}<span className="text-[7px] font-black px-1.5 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</span><span className="text-[8px] font-black text-blue-400 flex items-center gap-1 uppercase tracking-widest"><Timer size={8}/> TURN {turnCount}/20</span></div>
+              <div className={`flex items-center gap-2${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1.5 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-2 py-0.5 rounded border tracking-wider ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* いま遊んでいるモードと難易度。既存の表示を邪魔しないよう1行に収める */}<span className="text-[7px] font-black px-1.5 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</span><span className="text-[8px] font-black text-blue-400 flex items-center gap-1 uppercase tracking-widest"><Timer size={8}/> TURN {turnCount}/20</span></div>
               <div className="flex items-center gap-2">{!isQuickMode(runMode)&&<div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter mr-1"><Award size={10}/> {score.toLocaleString()}</div>}<button onClick={toggleQuickMute} className="p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[26px] h-[26px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} className="p-1.5 bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} className="p-1.5 bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
             </header>
             {enemy&&(
-              <div className="shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
+              <div className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
                 <div className="flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1">
                   <span className={`flex items-center gap-1 ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11}/> {enemy.name} <span className={`ml-1 px-2 py-0.5 rounded-full text-[8px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span></span>
                   <span className="text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span>
@@ -8285,8 +8306,8 @@ function MonsterHeroGame() {
             )}
             <main className="flex-1 relative flex flex-col items-center justify-between pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0">
               <button onClick={()=>setShowEnemyInfo(true)} className="absolute right-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">解析</span></button>
-              <button onClick={()=>setShowHeroInfo(true)} className="absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg"><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">ステータス</span></button>
-              <button onClick={useEmergency} disabled={isBusy} className="absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg"><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[7px] font-black text-white">緊急</span></button>
+              <button onClick={()=>setShowHeroInfo(true)} className={`absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">ステータス</span></button>
+              <button onClick={useEmergency} disabled={isBusy} className={`absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[7px] font-black text-white">緊急</span></button>
               <div className="mt-1 relative flex flex-col items-center">
                 {enemySkillName&&(
                   <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:'skillNamePop 350ms ease-out forwards'}}>
@@ -8564,7 +8585,7 @@ function MonsterHeroGame() {
                   </div>
                 );
               })()}
-              <div className="grid grid-cols-4 gap-2 w-full relative shrink-0" style={{height:'100px'}}>
+              <div className={`grid grid-cols-4 gap-2 w-full relative shrink-0${battleTutorialSpotClass('battleSlots')}`} style={{height:'100px'}}>
                 {slots.map((s,i)=>{
                   // Count how many cards already assigned to this slot
                   const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
@@ -8691,9 +8712,9 @@ function MonsterHeroGame() {
               <div className="text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-2">
                 {/* 勇者モンの特性で枚数が増えているときは、その分を王冠付きで出す。
                     「勇者モンに選んだときだけ効く特性」が今効いていることを確かめられるようにする */}
-                <span className="shrink-0 flex items-center gap-1">Action Cards <span className="bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}</span>
+                <span className={`shrink-0 flex items-center gap-1${battleTutorialSpotClass('cardCount')}`}>Action Cards <span className="bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}</span>
                 <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={()=>setShowDeckInfo(true)} className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95"><Layers size={10}/><span className="text-[7px]">VIEW</span></button>
+                  <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={10}/><span className="text-[7px]">VIEW</span></button>
                   {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned; return(<button onClick={processTurn} disabled={!canAct} className={`h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={13}/> Action</button>);})()}
                 </div>
               </div>
@@ -9249,7 +9270,11 @@ function MonsterHeroGame() {
           {/* 説明中の暗幕。ここでタップを受け止めるので、読んでいる間は先に進めない。
               光らせる場所があるときは、その光が透けるよう少し薄くする */}
           {!acting&&<div aria-hidden="true" onClick={(e)=>e.stopPropagation()} style={{position:'fixed',inset:0,zIndex:91000,backgroundColor:battleTutorial.spot?'rgba(2,6,23,0.55)':'rgba(2,6,23,0.75)'}}/>}
-          <div className="fixed inset-x-0 top-0 flex justify-center px-3" style={{position:'fixed',left:0,right:0,top:0,zIndex:92000,paddingTop:'calc(.5rem + env(safe-area-inset-top))',pointerEvents:'none'}} role="dialog" aria-modal={!acting} aria-label="バトルチュートリアル">
+          {/* 光らせている場所が画面の上半分にあるときは下へ、そうでなければ上へ。
+              上に出しっぱなしだとモードのタブや敵のHPバーを吹き出しが隠してしまう */}
+          <div className="fixed inset-x-0 flex justify-center px-3" style={battleTutorialAtBottom
+            ?{position:'fixed',left:0,right:0,bottom:0,zIndex:92000,paddingBottom:'calc(.5rem + env(safe-area-inset-bottom))',pointerEvents:'none'}
+            :{position:'fixed',left:0,right:0,top:0,zIndex:92000,paddingTop:'calc(.5rem + env(safe-area-inset-top))',pointerEvents:'none'}} role="dialog" aria-modal={!acting} aria-label="バトルチュートリアル">
             {acting?(
               /* 操作の番。読むものは出さず、何をすればよいかだけを細いバーで伝える */
               <div className="flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-full border-2" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.9)',pointerEvents:'auto'}}>
