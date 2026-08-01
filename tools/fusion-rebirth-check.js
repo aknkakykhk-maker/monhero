@@ -68,13 +68,65 @@ check('確認画面と実処理が同じ費用計算を使う', (source.match(/m
 check('古い×100の計算が残っていない', !has('(mainLvl.level + subLvl.level) * 100') && !has('const cost = level * 100;'));
 check('確認画面は強化ポイントの増分を出したまま', has('{mainPointsNow} → {mainPointsNow + gainedLevels}'));
 
+// --- レベル上限(levelCap)をどこでも通しているか ---
+// 転生していないマスモンの上限は30、1回転生で35。上限を超えた絆経験値をそのまま
+// レベルとして扱うと、合体の確認画面が「絆Lv.41になる(実際は上限35で止まる)」と
+// 出したり、上がらないレベルぶんの強化ポイントを見せたりしてしまう
+const capCtx = {};
+vm.createContext(capCtx);
+vm.runInContext([
+  grab('const donationDiamondValue =', 'const rosterBaseId ='),
+  grab('const XP_CURVE_EXPONENT', 'const masuFusionCost'),
+  'globalThis.__c={bondLevelInfo,cappedBondXp,masuBondLevelInfo,normalizeMasuProgression,totalBondXpForLevel,INITIAL_MASU_LEVEL_CAP,REBIRTH_LEVEL_CAP_GAIN};',
+].join('\n'), capCtx);
+const C = capCtx.__c;
+const capOf = (rebirthCount) => C.INITIAL_MASU_LEVEL_CAP + rebirthCount * C.REBIRTH_LEVEL_CAP_GAIN;
+check('転生していないマスモンの上限は初期値', capOf(0) === C.INITIAL_MASU_LEVEL_CAP, `Lv.${capOf(0)}`);
+check('1回転生すると上限が上がる', capOf(1) === C.INITIAL_MASU_LEVEL_CAP + C.REBIRTH_LEVEL_CAP_GAIN, `Lv.${capOf(1)}`);
+// 実際に起きていたケース(転生1回・上限35の主に、副の1324XPを足す)
+{
+  const main = { id:1, bondXp:2529, rebirthCount:1, levelCap:capOf(1) };
+  const sub = { id:2, bondXp:1324, rebirthCount:0, levelCap:capOf(0) };
+  const after = C.cappedBondXp(main, C.cappedBondXp(sub));
+  const afterLevel = C.bondLevelInfo(after).level;
+  check('合体後のレベルが上限を超えない', afterLevel <= main.levelCap, `絆Lv.${afterLevel} / 上限Lv.${main.levelCap}`);
+  check('上限を無視した計算とは違う値になる', C.bondLevelInfo(2529 + 1324).level > afterLevel,
+    `上限なし Lv.${C.bondLevelInfo(2529 + 1324).level} → 上限あり Lv.${afterLevel}`);
+  check('上限までの強化ポイントしか増えない',
+    afterLevel - C.masuBondLevelInfo(main).level === 1, `+${afterLevel - C.masuBondLevelInfo(main).level}`);
+}
+check('上限を超えて絆経験値を持っていてもレベルは上限で止まる', (() => {
+  const masu = { id:1, bondXp:999999, rebirthCount:0, levelCap:capOf(0) };
+  return C.masuBondLevelInfo(masu).level === capOf(0);
+})());
+// 画面・実処理のどこでも、マスモンのレベルは上限つきの関数から取る
+{
+  const lines = source.split('\n');
+  const bad = [];
+  lines.forEach((line, i) => {
+    // 修行(TRAINING_*)は別担当のため対象外
+    if (line.includes("gameState==='TRAINING_")) return;
+    if (/bondLevelInfo\((masu|m|mon|sub|main)\.bondXp/.test(line) && !/masuBondLevelInfo/.test(line)) bad.push(i + 1);
+  });
+  check('マスモンのレベルは上限つきの関数から取る', bad.length === 0, bad.join(', '));
+}
+check('合体の費用も上限つきのレベルで計算する',
+  has('const mainLvl = masuBondLevelInfo(main);') && has('const subLvl = masuBondLevelInfo(sub);')
+    && (source.match(/const mainLvl = masuBondLevelInfo\(main\);/g) || []).length === 2);
+check('確認画面と実処理が同じ「合体後」を出す',
+  has('const afterXp = cappedBondXp(main, gainedXp);') && has('const afterXp = cappedBondXp(main, subXp);'));
+check('上限で入らない絆経験値を事前に知らせる',
+  has('const wastedXp = Math.max(0, (beforeXp + subXp) - afterXp);')
+    && has('上限 Lv.{mainCap} で止まります') && has('XP は入りません'));
+check('確認画面に上限を出す', has('上限 Lv.{mainCap}</div>'));
+
 // --- 転生の消費ダイヤ ---
 // 画面だけが「レベル×100」で計算していて、実際に引かれる額の倍が表示され、
 // そのぶんダイヤを持っていないと転生ボタンを押せない状態になっていた
 const rebirthCtx = {};
 vm.createContext(rebirthCtx);
 vm.runInContext([
-  source.slice(source.indexOf('const FUSION_COST_PER_LEVEL ='), source.indexOf('const buildMasuRebirth =')),
+  grab('const FUSION_COST_PER_LEVEL =', 'const buildMasuRebirth ='),
   'globalThis.__r={FUSION_COST_PER_LEVEL,REBIRTH_COST_PER_LEVEL,masuFusionCost,masuRebirthCost};',
 ].join('\n'), rebirthCtx);
 const R = rebirthCtx.__r;
