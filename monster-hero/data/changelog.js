@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-01 22:21",
+    date: "2026-08-01 22:40",
     type: "update",
     title: "「バトルのれんしゅう」を追加しました",
     items: [
