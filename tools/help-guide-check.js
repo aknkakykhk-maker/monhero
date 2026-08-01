@@ -90,8 +90,14 @@ vm.runInContext([
 const c = calcCtx.__c;
 const textOf = (catId, topicId) => h.helpPlainText(h.helpFindTopic(catId, topicId));
 
-check('合体の消費ダイヤがコードと一致', textOf('masu', 'fusion').includes(`×${c.FUSION_COST_PER_LEVEL}`), `×${c.FUSION_COST_PER_LEVEL}`);
-check('転生の消費ダイヤがコードと一致', textOf('masu', 'rebirth').includes(`上限Lv × ${c.REBIRTH_COST_PER_LEVEL}`), `上限Lv × ${c.REBIRTH_COST_PER_LEVEL}`);
+// 合体・転生の消費ダイヤは、単価を変えてもヘルプが古くならないよう実データの表から出す。
+// (以前は本文へ手で書いていて、画面側の説明と食い違ったことがある)
+const usesDataTable = (catId, topicId, id) =>
+  (h.helpFindTopic(catId, topicId)?.blocks || []).some(b => b.t === 'data' && b.id === id);
+check('合体の消費ダイヤは実データの表から出す', usesDataTable('masu', 'fusion', 'masuCosts'));
+check('転生の消費ダイヤは実データの表から出す', usesDataTable('masu', 'rebirth', 'masuCosts'));
+check('消費ダイヤを本文へ手で書いていない',
+  !/[×x]\s*\d+\s*ダイヤ/.test(textOf('masu', 'fusion') + textOf('masu', 'rebirth')));
 check('1WAVEあたりのダイヤの説明が実際の合計と合う',
   textOf('home', 'currency').includes('Normal基準100ダイヤ/WAVE') && c.goldForWavesCleared(10, 1.0) === 1000);
 check('絆レベルの上限の説明が実際の初期上限と一致',

@@ -68,5 +68,35 @@ check('確認画面と実処理が同じ費用計算を使う', (source.match(/m
 check('古い×100の計算が残っていない', !has('(mainLvl.level + subLvl.level) * 100') && !has('const cost = level * 100;'));
 check('確認画面は強化ポイントの増分を出したまま', has('{mainPointsNow} → {mainPointsNow + gainedLevels}'));
 
+// --- 転生の消費ダイヤ ---
+// 画面だけが「レベル×100」で計算していて、実際に引かれる額の倍が表示され、
+// そのぶんダイヤを持っていないと転生ボタンを押せない状態になっていた
+const rebirthCtx = {};
+vm.createContext(rebirthCtx);
+vm.runInContext([
+  source.slice(source.indexOf('const FUSION_COST_PER_LEVEL ='), source.indexOf('const buildMasuRebirth =')),
+  'globalThis.__r={FUSION_COST_PER_LEVEL,REBIRTH_COST_PER_LEVEL,masuFusionCost,masuRebirthCost};',
+].join('\n'), rebirthCtx);
+const R = rebirthCtx.__r;
+check('転生の費用は「絆レベル × 単価」', R.masuRebirthCost(30) === 30 * R.REBIRTH_COST_PER_LEVEL, `Lv30 → ${R.masuRebirthCost(30)}ダイヤ`);
+check('転生の費用は「レベル×100の半額」', R.masuRebirthCost(30) === 30 * 100 / 2, `${R.masuRebirthCost(30)} / ${30 * 100 / 2}`);
+check('転生の費用は壊れた値でも0以上', R.masuRebirthCost(null) === 0 && R.masuRebirthCost(-5) === 0 && R.masuRebirthCost(undefined) === 0);
+check('転生も確認画面と実処理で同じ費用計算を使う',
+  has('const masuRebirthCost = (level) =>')
+    && (source.match(/masuRebirthCost\(/g) || []).length === 2
+    && has('const cost = masuRebirthCost(level);')
+    && has('cost=masuRebirthCost(lvl.level)'));
+check('転生の画面に古い×100の計算が残っていない', !has('cost=lvl.level*100'));
+// 必要ダイヤは、押す前に気づける場所へ出す
+check('転生の必要ダイヤを独立した枠で出す',
+  has('<span className="text-slate-400">必要ダイヤ</span>') && has('<span className="text-slate-500">所持ダイヤ</span>')
+    && has('ダイヤが足りません（あと '));
+check('費用の内訳は単価をそのまま出す',
+  has('（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}')
+    && has('× {FUSION_COST_PER_LEVEL}'));
+// 説明に書いた倍率と、実際に使う単価がずれていないか(合体の説明が「×100」のままだった)
+check('合体の説明に書いた倍率が実際の単価と合っている', !/[×x]\s*100(?!\d)/.test(
+  source.slice(source.indexOf('必要ダイヤ</span>'), source.indexOf('ダイヤが足りません(所持'))));
+
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
