@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6427a0bd57b63853
+// source-sha256: 7b1a471e9efd8850
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-02 01:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 02:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4304,6 +4304,14 @@ const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
 // 未定義の既存セーブはどちらも false として扱うため、後方互換性を保てる。
 const BATTLE_TUTORIAL_SEEN_KEY = 'mh_battle_tutorial_seen_v1';
 const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
+// マスモンが少ないプレイヤー向けの日次案内。端末の暦日を値として保存し、
+// 既存セーブにキーが無い場合は未表示として安全に扱う。
+const DAILY_MASU_ADVICE_KEY = 'mh_daily_masu_advice_date_v1';
+const localCalendarDate = (now = new Date()) => {
+  const d = now instanceof Date ? now : new Date(now);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 const helpDataRows = id => {
   const marketItems = typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || [];
   const skipIds = new Set(Object.values(SKIP_TICKETS));
@@ -5585,6 +5593,8 @@ function MonsterHeroGame() {
   const [tutorialKind, setTutorialKind] = useState('tour');
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
+  const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|7 }
+  const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
@@ -9575,6 +9585,9 @@ function MonsterHeroGame() {
     gaveUp: false
   });
 
+  // 自動案内の優先順位判定でも使うため、描画部より前で確定する。
+  const updateNoticeVisible = updateAvailable && (!latestBuild || latestBuild !== dismissedUpdateBuild);
+
   // 初回チュートリアル。HOMEを最初に開いたときだけ自動で始める。
   // デバッグから何度でも呼べるよう、開始と終了を関数に分けている
   // デバッグ: 名前入力のところから、はじめての案内を通しで見る(保存はしない)
@@ -9688,6 +9701,50 @@ function MonsterHeroGame() {
       cancelled = true;
     };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep]);
+
+  // 初回案内・重要通知・ログインボーナスのすべてが閉じた後にだけ、日次アドバイスを出す。
+  // 表示を決めた時点で日付を保存するため、閉じる・再読込でも同日に繰り返さない。
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || tutorialStep != null || updateNoticeVisible || loginBonusPopup || levelCapCompensation || dailyMasuAdvice || dailyMasuAdviceCheckedRef.current) return;
+    dailyMasuAdviceCheckedRef.current = true;
+    let cancelled = false;
+    (async () => {
+      const [tourSeen, battleTrainingSeen, battleGuideShown] = await Promise.all([storeGet(TUTORIAL_SEEN_KEY, false, false), storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false), storeGet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false)]);
+      // 先に出すべき案内が未処理なら、その案内のeffectへ譲って閉じた後に再判定する。
+      if (tourSeen !== true || battleTrainingSeen !== true && battleGuideShown !== true) {
+        dailyMasuAdviceCheckedRef.current = false;
+        return;
+      }
+      const today = localCalendarDate();
+      const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
+      if (cancelled || masuMons.length >= 8 || shownDate === today) return;
+      await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
+      if (!cancelled) setDailyMasuAdvice({
+        debugCount: null
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateNoticeVisible, loginBonusPopup, levelCapCompensation, dailyMasuAdvice, masuMons.length]);
+  const closeDailyMasuAdvice = () => setDailyMasuAdvice(null);
+  const tryDailyMasuAdvice = () => {
+    setDailyMasuAdvice(null);
+    setBattleMode(BATTLE_MODE_QUICK);
+    setRunMode(BATTLE_MODE_QUICK);
+    setDifficulty('Beginner');
+    setBattleMenuTab('difficulty');
+    setGameState('BATTLE_MENU');
+  };
+  const debugDailyMasuAdviceAt = count => {
+    if (count >= 8) {
+      window.alert(`登録数${count}体：表示条件の対象外です。`);
+      return;
+    }
+    setDailyMasuAdvice({
+      debugCount: count
+    });
+  };
   const returnToHome = () => {
     debugBattleRef.current = false;
     debugResultRef.current = false;
@@ -12365,7 +12422,6 @@ function MonsterHeroGame() {
   // body直下へ描画し、各画面のoverflow・transform・モーダルの積層に隠されないようにする。
   // 新しいバージョンの通知。本体を押すと更新、×を押すと今回は閉じる(更新はしない)。
   // 閉じたバージョンを覚えておき、同じバージョンのあいだは出さない。
-  const updateNoticeVisible = updateAvailable && (!latestBuild || latestBuild !== dismissedUpdateBuild);
   const updateNotice = updateNoticeVisible ? ReactDOM.createPortal(/*#__PURE__*/React.createElement("div", {
     "aria-live": "assertive",
     className: "fixed z-[100000] left-3 right-3 flex items-stretch gap-1.5",
@@ -14520,7 +14576,20 @@ function MonsterHeroGame() {
         startTutorial('battleGuide');
       },
       className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u30D0\u30C8\u30EB\u521D\u56DE\u6848\u5185\u3092\u518D\u751F")), /*#__PURE__*/React.createElement("button", {
+    }, "\u30D0\u30C8\u30EB\u521D\u56DE\u6848\u5185\u3092\u518D\u751F"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => debugDailyMasuAdviceAt(7),
+      className: "col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
+    }, "\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u6848\u5185\u3092\u518D\u751F\uFF08\u767B\u9332\u65707\u4F53\uFF09"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => debugDailyMasuAdviceAt(8),
+      className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
+    }, "\u767B\u9332\u65708\u4F53\u306E\u6761\u4EF6\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+      onClick: async () => {
+        await storeSet(DAILY_MASU_ADVICE_KEY, '', false);
+        dailyMasuAdviceCheckedRef.current = false;
+        window.alert('本日のワンポイント表示済みフラグをリセットしました。');
+      },
+      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
+    }, "\u672C\u65E5\u306E\u8868\u793A\u6E08\u307F\u3092\u30EA\u30BB\u30C3\u30C8")), /*#__PURE__*/React.createElement("button", {
       onClick: async () => {
         if (!window.confirm('「はじめての案内」を見ていない状態に戻します。モンスターやダイヤなどのセーブデータは消えません。よろしいですか？')) return;
         try {
@@ -19223,7 +19292,51 @@ function MonsterHeroGame() {
       className: "text-amber-300"
     }, "Lv.", quickJoin.unique.after))) : /*#__PURE__*/React.createElement("div", {
       className: "mt-3 text-[10px] font-black text-slate-500"
-    }, "\u4E0A\u3052\u3089\u308C\u308B\u56FA\u6709\u6280\u306F\u3082\u3046\u3042\u308A\u307E\u305B\u3093")), assistantDebug && (() => {
+    }, "\u4E0A\u3052\u3089\u308C\u308B\u56FA\u6709\u6280\u306F\u3082\u3046\u3042\u308A\u307E\u305B\u3093")), dailyMasuAdvice && (() => {
+      const who = assistantById();
+      const lines = assistantSceneById('dailyMasuAdvice')?.lines || [];
+      return /*#__PURE__*/React.createElement("div", {
+        className: "fixed inset-0 flex items-end justify-center",
+        style: {
+          position: 'fixed',
+          inset: 0,
+          zIndex: 75000,
+          backgroundColor: 'rgba(2,6,23,.94)'
+        },
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": "\u307F\u3085\u3042\u306E\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u30A2\u30C9\u30D0\u30A4\u30B9"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+        style: {
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        }
+      }, dailyMasuAdvice.debugCount != null && /*#__PURE__*/React.createElement("div", {
+        className: "mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white"
+      }, "DEBUG\u30FB\u767B\u9332\u6570", dailyMasuAdvice.debugCount, "\u4F53\u3092\u60F3\u5B9A"), /*#__PURE__*/React.createElement("h2", {
+        className: "mb-3 text-center text-base font-black text-pink-200"
+      }, "\u307F\u3085\u3042\u306E\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u30A2\u30C9\u30D0\u30A4\u30B9"), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-end gap-2"
+      }, /*#__PURE__*/React.createElement(AssistantFace, {
+        who: who,
+        size: 72,
+        accent: who.accent,
+        expression: "wink"
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 space-y-2"
+      }, lines.slice(0, 3).map((line, i) => /*#__PURE__*/React.createElement("div", {
+        key: i,
+        className: "relative rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-2 text-[12px] font-bold leading-relaxed text-white whitespace-pre-line"
+      }, line.t)))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-4 grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: tryDailyMasuAdvice,
+        className: "min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]"
+      }, "\u3084\u3063\u3066\u307F\u308B"), /*#__PURE__*/React.createElement("button", {
+        onClick: closeDailyMasuAdvice,
+        className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]"
+      }, "\u9589\u3058\u308B"))));
+    })(), assistantDebug && (() => {
       const who = assistantById();
       const scenes = typeof ASSISTANT_SCENES !== 'undefined' && ASSISTANT_SCENES || {};
       const exprs = typeof ASSISTANT_EXPRESSIONS !== 'undefined' && ASSISTANT_EXPRESSIONS || [];

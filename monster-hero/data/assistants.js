@@ -665,6 +665,18 @@ const addAssistantLinePack = (pack) => { if (pack && pack.id && pack.lines) ASSI
 
 // ===== 親密度ぶんのセリフ(HOME) =====
 addAssistantLinePack({
+  id: 'dailyMasuAdvice',
+  label: '日次・マスモン登録アドバイス',
+  lines: {
+    dailyMasuAdvice: [
+      { e:'wink', t:'マスモンを早く増やしたいなら、いい方法があるよ♪' },
+      { e:'happy', t:'クイックモードのBeginnerを選んで、\nWAVE2まで進んだら「あきらめる」を選んでみて！' },
+      { e:'excited', t:'これが今のところ、マスモンを一番早く登録できる方法だよ♪' },
+    ],
+  },
+});
+
+addAssistantLinePack({
   id: 'bondHome',
   label: '親密度・HOME',
   lines: {
