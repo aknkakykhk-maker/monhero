@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 13:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 14:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2535,6 +2535,8 @@ function MonsterHeroGame() {
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
+  // 説明が操作の邪魔になったときに小さく畳んでおくため
+  const [battleTutorialMini, setBattleTutorialMini] = useState(false);
   // デバッグ表示のときだけ使う「このLvだとどう見えるか」。null なら実際のLv
   const [assistantDebugLevel, setAssistantDebugLevel] = useState(null);
   // デバッグのランダムテストで、どの場面を引くか
@@ -6268,6 +6270,8 @@ function MonsterHeroGame() {
   // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく
   const battleTutorialSpotClass = (name) => (battleTutorial && battleTutorial.spot === name ? ' is-battle-tutorial-spot' : '');
   // 画面が変わったら、その画面に合うステップへ進める(操作で進むステップの受け皿)
+  // 新しい説明は必ず見せたいので、ステップが変わったら畳んだ状態は解除する
+  useEffect(() => { setBattleTutorialMini(false); }, [battleTutorialStep]);
   useEffect(() => {
     if (battleTutorialStep == null) return;
     const cur = battleTutorialSteps[battleTutorialStep];
@@ -8952,7 +8956,7 @@ function MonsterHeroGame() {
                     </>),
                   })}
                 </div>
-                <div className="flex gap-2 mt-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 bg-slate-800 text-slate-400 py-3.5 rounded-2xl font-black text-sm uppercase">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className="w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg">決定</button></div>
+                <div className="flex gap-2 mt-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 bg-slate-800 text-slate-400 py-3.5 rounded-2xl font-black text-sm uppercase">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className={`w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg${battleTutorialSpotClass('monList')}`}>決定</button></div>
               </div>
             </div>
           )}
@@ -9211,11 +9215,21 @@ function MonsterHeroGame() {
         const last=battleTutorial.wait==='end';
         const total=battleTutorialSteps.length;
         return(
-        <div className="fixed inset-x-0 bottom-0 flex justify-center px-3" style={{position:'fixed',left:0,right:0,bottom:0,zIndex:92000,paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))',pointerEvents:'none'}} role="dialog" aria-modal="false" aria-label="バトルチュートリアル">
-          <div className="w-full max-w-md rounded-3xl border-2 p-3" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.96)',pointerEvents:'auto',boxShadow:'0 -6px 30px rgba(2,6,23,.9)'}}>
-            <div className="flex items-center justify-between mb-1.5">
+        <div className="fixed inset-x-0 top-0 flex justify-center px-3" style={{position:'fixed',left:0,right:0,top:0,zIndex:92000,paddingTop:'calc(.5rem + env(safe-area-inset-top))',pointerEvents:'none'}} role="dialog" aria-modal="false" aria-label="バトルチュートリアル">
+          {/* 説明が操作の邪魔になったときのために、小さく畳めるようにしている */}
+          {battleTutorialMini?(
+            <button onClick={()=>setBattleTutorialMini(false)} aria-label="みゅあの説明をひらく" className="flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full border-2 active:scale-95" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.96)',pointerEvents:'auto'}}>
+              <AssistantFace who={who} size={30} accent={who.accent} expression={battleTutorial.e}/>
+              <span className="text-[10px] font-black" style={{color:who.accent}}>れんしゅう {battleTutorialStep+1} / {total}・ひらく</span>
+            </button>
+          ):(
+          <div className="w-full max-w-md rounded-3xl border-2 p-3" style={{borderColor:who.accent,backgroundColor:'rgba(2,6,23,0.96)',pointerEvents:'auto',boxShadow:'0 6px 30px rgba(2,6,23,.9)'}}>
+            <div className="flex items-center justify-between gap-2 mb-1.5">
               <span className="text-[9px] font-black tracking-widest" style={{color:who.accent}}>れんしゅう {battleTutorialStep+1} / {total}</span>
-              <button onClick={endBattleTutorial} className="px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">やめる</button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button onClick={()=>setBattleTutorialMini(true)} className="px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">小さくする</button>
+                <button onClick={endBattleTutorial} className="px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95">やめる</button>
+              </div>
             </div>
             <div className="flex items-end gap-2">
               <AssistantFace who={who} size={64} accent={who.accent} expression={battleTutorial.e}/>
@@ -9229,7 +9243,7 @@ function MonsterHeroGame() {
             {battleTutorial.wait==='act'
               ? <div className="mt-2 text-center text-[10px] font-black" style={{color:who.accent}}>▼ 光っているところを操作してね</div>
               : <button onClick={()=>{ if(last) endBattleTutorial(); else setBattleTutorialStep(v=>Math.min(total-1,(v||0)+1)); }} className="w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'おわる':'つぎへ'}</button>}
-          </div>
+          </div>)}
         </div>);
       })()}
 

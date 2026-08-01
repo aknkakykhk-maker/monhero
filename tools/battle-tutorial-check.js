@@ -87,7 +87,15 @@ check('何度でも始められる(既読フラグを持たない)',
 // --- ⑤ 画面の重ね方 ---
 check('専用画面を作らず、いまの画面へ重ねる',
   !source.includes("gameState==='BATTLE_TUTORIAL'") && has("aria-label=\"バトルチュートリアル\""));
-check('吹き出しは画面の下に固定で出す', has("style={{position:'fixed',left:0,right:0,bottom:0,zIndex:92000"));
+// 操作するボタンは画面の下にあることが多いので、説明は上へ出す。
+// それでも邪魔なときのために小さく畳めるようにしてある
+check('吹き出しは画面の上に固定で出す', has("style={{position:'fixed',left:0,right:0,top:0,zIndex:92000"));
+check('説明を小さく畳める',
+  has('const [battleTutorialMini, setBattleTutorialMini] = useState(false);')
+    && has('<button onClick={()=>setBattleTutorialMini(true)}') && has('小さくする</button>')
+    && has('aria-label="みゅあの説明をひらく"'));
+check('ステップが変わったら畳んだ表示を戻す',
+  has('useEffect(() => { setBattleTutorialMini(false); }, [battleTutorialStep]);'));
 check('吹き出し以外は操作を邪魔しない', has("pointerEvents:'none'") && has("pointerEvents:'auto'"));
 check('みゅあの顔と吹き出しは共通のものを使う',
   has('<AssistantFace who={who} size={64} accent={who.accent} expression={battleTutorial.e}/>')

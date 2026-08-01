@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b4b1996d2a2c4ab8
+// source-sha256: 57bdaf977a9bf314
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 13:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 14:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5583,6 +5583,8 @@ function MonsterHeroGame() {
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
+  // 説明が操作の邪魔になったときに小さく畳んでおくため
+  const [battleTutorialMini, setBattleTutorialMini] = useState(false);
   // デバッグ表示のときだけ使う「このLvだとどう見えるか」。null なら実際のLv
   const [assistantDebugLevel, setAssistantDebugLevel] = useState(null);
   // デバッグのランダムテストで、どの場面を引くか
@@ -11458,6 +11460,10 @@ function MonsterHeroGame() {
   // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく
   const battleTutorialSpotClass = name => battleTutorial && battleTutorial.spot === name ? ' is-battle-tutorial-spot' : '';
   // 画面が変わったら、その画面に合うステップへ進める(操作で進むステップの受け皿)
+  // 新しい説明は必ず見せたいので、ステップが変わったら畳んだ状態は解除する
+  useEffect(() => {
+    setBattleTutorialMini(false);
+  }, [battleTutorialStep]);
   useEffect(() => {
     if (battleTutorialStep == null) return;
     const cur = battleTutorialSteps[battleTutorialStep];
@@ -18696,7 +18702,7 @@ function MonsterHeroGame() {
       className: "w-2/5 bg-slate-800 text-slate-400 py-3.5 rounded-2xl font-black text-sm uppercase"
     }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('PICK_SLOT'),
-      className: "w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg"
+      className: `w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg${battleTutorialSpotClass('monList')}`
     }, "\u6C7A\u5B9A"))))), gameState === 'PICK_SLOT' && /*#__PURE__*/React.createElement("div", {
       style: {
         position: "absolute",
@@ -19142,38 +19148,62 @@ function MonsterHeroGame() {
       const last = battleTutorial.wait === 'end';
       const total = battleTutorialSteps.length;
       return /*#__PURE__*/React.createElement("div", {
-        className: "fixed inset-x-0 bottom-0 flex justify-center px-3",
+        className: "fixed inset-x-0 top-0 flex justify-center px-3",
         style: {
           position: 'fixed',
           left: 0,
           right: 0,
-          bottom: 0,
+          top: 0,
           zIndex: 92000,
-          paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))',
+          paddingTop: 'calc(.5rem + env(safe-area-inset-top))',
           pointerEvents: 'none'
         },
         role: "dialog",
         "aria-modal": "false",
         "aria-label": "\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB"
-      }, /*#__PURE__*/React.createElement("div", {
+      }, battleTutorialMini ? /*#__PURE__*/React.createElement("button", {
+        onClick: () => setBattleTutorialMini(false),
+        "aria-label": "\u307F\u3085\u3042\u306E\u8AAC\u660E\u3092\u3072\u3089\u304F",
+        className: "flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full border-2 active:scale-95",
+        style: {
+          borderColor: who.accent,
+          backgroundColor: 'rgba(2,6,23,0.96)',
+          pointerEvents: 'auto'
+        }
+      }, /*#__PURE__*/React.createElement(AssistantFace, {
+        who: who,
+        size: 30,
+        accent: who.accent,
+        expression: battleTutorial.e
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black",
+        style: {
+          color: who.accent
+        }
+      }, "\u308C\u3093\u3057\u3085\u3046 ", battleTutorialStep + 1, " / ", total, "\u30FB\u3072\u3089\u304F")) : /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-md rounded-3xl border-2 p-3",
         style: {
           borderColor: who.accent,
           backgroundColor: 'rgba(2,6,23,0.96)',
           pointerEvents: 'auto',
-          boxShadow: '0 -6px 30px rgba(2,6,23,.9)'
+          boxShadow: '0 6px 30px rgba(2,6,23,.9)'
         }
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between mb-1.5"
+        className: "flex items-center justify-between gap-2 mb-1.5"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-black tracking-widest",
         style: {
           color: who.accent
         }
-      }, "\u308C\u3093\u3057\u3085\u3046 ", battleTutorialStep + 1, " / ", total), /*#__PURE__*/React.createElement("button", {
+      }, "\u308C\u3093\u3057\u3085\u3046 ", battleTutorialStep + 1, " / ", total), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-1.5 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setBattleTutorialMini(true),
+        className: "px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95"
+      }, "\u5C0F\u3055\u304F\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
         onClick: endBattleTutorial,
         className: "px-3 min-h-[30px] rounded-full bg-white/10 text-slate-300 text-[10px] font-black active:scale-95"
-      }, "\u3084\u3081\u308B")), /*#__PURE__*/React.createElement("div", {
+      }, "\u3084\u3081\u308B"))), /*#__PURE__*/React.createElement("div", {
         className: "flex items-end gap-2"
       }, /*#__PURE__*/React.createElement(AssistantFace, {
         who: who,
