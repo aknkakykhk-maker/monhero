@@ -83,6 +83,15 @@ check('練習はビギナーのチャレンジで行うと伝える',
   steps.some(s => s.t.includes('ビギナー')));
 check('最後は「ヘルプからいつでも見られる」で終わる',
   steps[steps.length - 1].wait === 'end' && steps[steps.length - 1].t.includes('ヘルプ'));
+// 終わりはちゃんと締める(いつのまにか終わっていた、にならないように)
+check('終わりをはっきり締めている',
+  steps.some(s => /れんしゅうは終わり|チュートリアル.*終わ|おつかれ/.test(s.t) || /おつかれ/.test(s.title || '')));
+// 敵の行動予告は敵の絵の「下」に出る。台本の言い回しと光らせる場所を合わせる
+check('攻撃予告の場所を正しく伝える',
+  steps.some(s => s.spot === 'enemyIntent') && !steps.some(s => /敵の上に次の行動/.test(s.t)));
+// 技の一覧で暗くなっている技の理由(距離補正・供モン加入)まで説明する
+check('技が解放される条件にも触れる',
+  steps.some(s => s.t.includes('補正')) && steps.some(s => s.t.includes('供モンが合流')));
 check('操作して進むステップがある', steps.filter(s => s.wait === 'act').length >= 4,
   `${steps.filter(s => s.wait === 'act').length}ステップ`);
 // 「説明 → 操作 → 説明 → …」の流れ。いきなり操作モードに入る画面があると
@@ -228,7 +237,7 @@ check('緊急回復はその番だけ押せる',
 // 押してほしい場所を光らせる
 const SPOTS = ['modeTabs', 'rankingBtn', 'difficulty', 'battleStart',
   'monCards', 'monDecide', 'slots', 'teachings',
-  'waveInfo', 'enemyBar', 'heroStatus', 'emergency', 'battleSlots',
+  'waveInfo', 'enemyBar', 'enemyIntent', 'heroStatus', 'emergency', 'battleSlots',
   'cards', 'cardCount', 'deckView', 'action', 'rewards', 'waveNext'];
 check('光らせる場所が画面側と結びついている',
   SPOTS.every(name => has(`battleTutorialSpotClass('${name}')`)),
