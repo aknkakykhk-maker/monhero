@@ -1161,13 +1161,16 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   { id:'intentTalk',   at:'BATTLE',        e:'surprise',title:'敵の攻撃予告！', t:'敵の上に次の行動が出てるでしょ？ 今ターンは殴ってくるよ！', spot:'enemyBar', wait:'next' },
   { id:'guardTalk',    at:'BATTLE',        e:'normal',  title:'ガードで受けよう', t:'ガードカードを選んで、ACTIONを押してみて。ダメージがぐっと減るよ！', spot:'cards', wait:'next' },
   { id:'guardDo',      at:'BATTLE',        e:'wink',    title:'ガードを使ってみて', t:'ガードカード → ACTION の順だよ♪', spot:'cards', wait:'do', need:'guard' },
+  { id:'guardSeen',    at:'BATTLE',        e:'happy',   title:'ほぼ無傷！', t:'見て、ライフがほとんど減ってないでしょ？ これがガードの力だよ♪', wait:'next' },
   // ② 必殺技を魅せる
   { id:'chargeTalk',   at:'BATTLE',        e:'surprise',title:'必殺技が来る！', t:'「☠️ 必殺技」の予告が出た！ ふつうの攻撃よりずっと痛いよ。', spot:'enemyBar', wait:'next' },
   { id:'chargeReady',  at:'BATTLE',        e:'normal',  title:'もう一度ガード', t:'必殺技もガードで受け止められるよ。手札のガードを見て！', spot:'cards', wait:'next' },
   { id:'chargeDo',     at:'BATTLE',        e:'excited', title:'受け止めよう！', t:'ガードカードを選んでACTIONだよ♪', spot:'cards', wait:'do', need:'guard' },
+  { id:'chargeSeen',   at:'BATTLE',        e:'surprise',title:'さすがに痛い！', t:'ガードしてもこれだけ減るんだ。必殺技の予告が出たら気をつけてね。', wait:'next' },
   // ③ ブリーダーカードでバフ
   { id:'breederTalk',  at:'BATTLE',        e:'happy',   title:'ブリーダーカード', t:'次はブリーダーカード。おりょうの力で、こっちの攻撃力が上がるよ！', spot:'cards', wait:'next' },
   { id:'breederDo',    at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'ブリーダーカードを選んでACTION！ 攻撃UPの表示が出るよ♪', spot:'cards', wait:'do', need:'teaching' },
+  { id:'breederSeen',  at:'BATTLE',        e:'happy',   title:'攻撃アップ！', t:'「攻撃UP!」って出たでしょ？ この効果はバトルの最後まで続くよ♪', wait:'next' },
   // ④ 緊急回復と敵の移動
   { id:'emergTalk',    at:'BATTLE',        e:'normal',  title:'緊急回復', t:'左の「緊急」はライフとガッツが3割もどるよ。そのターンは攻撃できないの。', spot:'emergency', wait:'next' },
   { id:'emergDo',      at:'BATTLE',        e:'wink',    title:'押してみて', t:'「緊急」を押してみて！ 敵も動くから、そこも見ててね♪', spot:'emergency', wait:'do', need:'emergency' },
@@ -1175,13 +1178,17 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   // ⑤ 距離技で引き戻す
   { id:'rangeTalk',    at:'BATTLE',        e:'excited', title:'距離技で引き戻す', t:'距離技は、当てたあと敵をその距離まで引っぱってこられるんだ！', spot:'cards', wait:'next' },
   { id:'rangeDo',      at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'距離技を選んで、モッチーの枠をタップ → ACTION だよ♪', spot:'cards', wait:'do', need:'range_atk' },
+  { id:'rangeSeen',    at:'BATTLE',        e:'excited', title:'引き戻せた！', t:'敵の距離が変わったでしょ？ 離されても距離技で連れ戻せるんだ♪', spot:'enemyBar', wait:'next' },
   // ⑥ 通常攻撃
   { id:'atkTalk',      at:'BATTLE',        e:'happy',   title:'距離がそろった！', t:'敵と同じ距離になったね。この状態の攻撃がいちばん強いよ！', spot:'battleSlots', wait:'next' },
   { id:'atkReady',     at:'BATTLE',        e:'normal',  title:'攻撃カード', t:'手札の攻撃カードを使ってみよう。距離が合ってるとよく効くよ！', spot:'cards', wait:'next' },
   { id:'atkDo',        at:'BATTLE',        e:'wink',    title:'攻撃してみて', t:'攻撃カード → 枠をタップ → ACTION！', spot:'cards', wait:'do', need:'atk' },
+  { id:'atkSeen',      at:'BATTLE',        e:'happy',   title:'よく入った！', t:'敵のHPがぐっと減ったね。距離がそろってると威力が全然ちがうんだ♪', spot:'enemyBar', wait:'next' },
   // ⑦ 技変更
-  { id:'skillTalk',    at:'BATTLE',        e:'normal',  title:'技は変えられる', t:'カードの名前は点線になってるでしょ？ タップすると使う技を選び直せるよ。', spot:'cards', wait:'next' },
-  { id:'skillDo',      at:'BATTLE',        e:'wink',    title:'名前をタップ', t:'どれでもいいからカードの名前をタップしてみて♪', spot:'cards', wait:'do', need:'skillPicker' },
+  { id:'skillTalk',    at:'BATTLE',        e:'normal',  title:'技は変えられる', t:'カードの名前は点線になってるでしょ？ そこをタップすると技を選び直せるの。', spot:'cards', wait:'next' },
+  { id:'skillPoint',   at:'BATTLE',        e:'wink',    title:'ここが技の名前', t:'光ってる攻撃カードの、絵の下にある名前のところ。そこが押せるよ♪', spot:'cards', wait:'next', needCard:'atk' },
+  { id:'skillDo',      at:'BATTLE',        e:'excited', title:'名前を押してみて', t:'光ってるところをタップ！ 使える技が一覧で出てくるよ。', spot:'cards', wait:'do', need:'skillPicker', needCard:'atk' },
+  { id:'skillSeen',    at:'BATTLE',        e:'happy',   title:'これが技の一覧', t:'威力・消費ガッツ・会心率が並んでたでしょ？ 使う技はここで選び直せるよ♪', wait:'next' },
   // ⑧ 固有技でトドメ
   { id:'uniqueTalk',   at:'BATTLE',        e:'excited', title:'最後は固有技！', t:'固有技はその子だけの必殺技。ガッツは重いけど、とにかく強いよ！', spot:'cards', wait:'next' },
   { id:'act',          at:'BATTLE',        e:'excited', title:'トドメだ！', t:'固有技を選んで枠をタップ → ACTIONで倒しちゃお♪', spot:'cards', wait:'act', need:'unique' },

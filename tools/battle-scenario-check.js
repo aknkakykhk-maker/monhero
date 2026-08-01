@@ -177,7 +177,18 @@ check('選択肢を絞るのは台本があるときだけ',
     && has('const scenarioPicksTeaching = (id) => !battleScenario || !battleScenario.teachingId'));
 check('緊急回復の予告差し替えも台本があるときだけ',
   has('const acting=scenario&&enemyIntent?enemyIntent:getNextEnemyAction(enemy,enemyDist);'));
-check('操作の記録も台本があるときだけ', has('if (battleScenarioRef.current) {\n      const kinds=usedCards.map'));
+check('操作の記録も台本があるときだけ',
+  has('const tutorialKinds=battleScenarioRef.current'));
+// カードを出した瞬間ではなく、敵の行動まで終わってから次の説明へ進める。
+// 早すぎると攻撃の演出中に説明が始まり、何が起きたのか分からなくなる
+check('次へ進めるのは1ターンぶんを見せ終わってから',
+  has('if (tutorialKinds.length) setBattleTutorialLastAction(tutorialKinds.join(\',\'));')
+    && has("{ setEnemyIntent(getNextEnemyAction(enemy,enemyDist)); setBattleTutorialLastAction('emergency'); }"));
+// 光る枠に position を当てると、absolute で置いている「ステータス」「緊急」が
+// 本来の場所から外れて画面の中央へ落ちてしまう
+check('光る枠が配置を壊さない',
+  has('.is-battle-tutorial-spot{border-radius:18px;outline:3px solid')
+    && !has('.is-battle-tutorial-spot{position:relative'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
