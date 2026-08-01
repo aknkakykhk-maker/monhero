@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d5b42e5e5da2180a
+// source-sha256: 6ebbf3f50c3fa5b7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 09:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 09:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6067,7 +6067,7 @@ function MonsterHeroGame() {
   // マスモンの染色データを部位別配列で返す。旧仕様(単一色のcolorフィールド)しか無いデータは
   // 染色①に割り当てて読み替える(染色もどきの部位別対応より前に染色していた分を引き継ぐ)
   const getMasuColors = masu => masu && masu.colors || (masu && masu.color ? [masu.color] : []);
-  const getMasuBondLevel = masuId => bondLevelInfo(getMasuMon(masuId)?.bondXp || 0);
+  const getMasuBondLevel = masuId => masuBondLevelInfo(getMasuMon(masuId) || {});
   // モンスターを並べるカード(編成・ベースモン一覧・マスモン一覧)の共通サイズ。
   // 以前は種別(ベースモン/マスモン)や、強化ポイント・編成中バッジの有無で高さが変わり、
   // 同じ画面の中で段差ができていた。行ごとに高さを固定して、中身に関わらず同じ枠にする。
@@ -8738,14 +8738,16 @@ function MonsterHeroGame() {
     const main = getMasuMon(fusionMainId);
     const sub = getMasuMon(fusionSubId);
     if (!main || !sub || main.id === sub.id) return null;
-    const mainLvl = bondLevelInfo(main.bondXp || 0);
-    const subLvl = bondLevelInfo(sub.bondXp || 0);
+    // レベルは必ず上限(levelCap)を通したものを使う。上限を超えた絆経験値がそのまま
+    // レベルとして扱われると、費用が高くなったり上がらないレベルぶんの強化ポイントを
+    // 配ってしまう(確認画面が「Lv.41になる」と出ていたのがこれ)
+    const mainLvl = masuBondLevelInfo(main);
+    const subLvl = masuBondLevelInfo(sub);
     const cost = masuFusionCost(mainLvl.level, subLvl.level);
     if (gold < cost) return null;
-    const beforeXp = main.bondXp || 0;
-    const gainedXp = sub.bondXp || 0;
+    const gainedXp = cappedBondXp(sub);
     const afterXp = cappedBondXp(main, gainedXp);
-    const before = bondLevelInfo(beforeXp);
+    const before = mainLvl;
     const after = bondLevelInfo(afterXp);
     const gainedLevels = after.level - before.level;
     const subBase = ALL_PLAYER_MONSTERS[sub.baseId];
@@ -9113,7 +9115,7 @@ function MonsterHeroGame() {
       const masuId = award.masuId;
       const masu = getMasuMon(masuId);
       if (!masu) return null;
-      const before = bondLevelInfo(masu.bondXp || 0);
+      const before = masuBondLevelInfo(masu);
       const after = bondLevelInfo(cappedBondXp(masu, award.gain));
       return {
         name: masu.name,
@@ -9128,7 +9130,7 @@ function MonsterHeroGame() {
         const next = prev.map(m => {
           const award = awardByMasuId.get(String(m.id));
           if (!award) return m;
-          const before = bondLevelInfo(m.bondXp || 0);
+          const before = masuBondLevelInfo(m);
           const afterXp = cappedBondXp(m, award.gain);
           const after = bondLevelInfo(afterXp);
           return {
@@ -9226,7 +9228,7 @@ function MonsterHeroGame() {
         const masu = getMasuMon(masuId);
         const award = awardByMasuId.get(String(masuId));
         if (!masu || !award) return null;
-        const before = bondLevelInfo(masu.bondXp || 0);
+        const before = masuBondLevelInfo(masu);
         const afterXp = cappedBondXp(masu, award.gain);
         return {
           name: masu.name,
@@ -9243,7 +9245,7 @@ function MonsterHeroGame() {
           const next = prev.map(mon => {
             const award = awardByMasuId.get(String(mon.id));
             if (!award) return mon;
-            const before = bondLevelInfo(mon.bondXp || 0);
+            const before = masuBondLevelInfo(mon);
             const afterXp = cappedBondXp(mon, award.gain);
             const after = bondLevelInfo(afterXp);
             return {
@@ -13329,7 +13331,7 @@ function MonsterHeroGame() {
       const dir = donationSortDir === 'asc' ? 1 : -1;
       const sorted = [...masuMons].sort((a, b) => {
         const active = m => monsterRosterIds.includes(`masu:${m.id}`) ? 1 : 0;
-        const val = m => donationSortKey === 'bondXp' ? donationDiamondValue(m.bondXp) : donationSortKey === 'bond' ? bondLevelInfo(m.bondXp || 0).level : donationSortKey === 'name' ? m.name || '' : donationSortKey === 'lineage' ? (ALL_PLAYER_MONSTERS[m.baseId] || {}).name || '' : donationSortKey === 'active' ? active(m) : Number(m.createdAt) || Number(m.id) || 0;
+        const val = m => donationSortKey === 'bondXp' ? donationDiamondValue(m.bondXp) : donationSortKey === 'bond' ? masuBondLevelInfo(m).level : donationSortKey === 'name' ? m.name || '' : donationSortKey === 'lineage' ? (ALL_PLAYER_MONSTERS[m.baseId] || {}).name || '' : donationSortKey === 'active' ? active(m) : Number(m.createdAt) || Number(m.id) || 0;
         const av = val(a),
           bv = val(b);
         return (typeof av === 'string' ? av.localeCompare(bv, 'ja') : av - bv) * dir;
@@ -14629,7 +14631,7 @@ function MonsterHeroGame() {
       const masu = e.masu,
         base = e.base,
         selected = e.active;
-      const lvl = bondLevelInfo(masu.bondXp || 0);
+      const lvl = masuBondLevelInfo(masu);
       return /*#__PURE__*/React.createElement("div", {
         key: e.key,
         className: "relative"
@@ -15021,7 +15023,7 @@ function MonsterHeroGame() {
       }, entries.map(e => {
         const masu = e.masu,
           base = e.base;
-        const lvl = bondLevelInfo(masu.bondXp || 0);
+        const lvl = masuBondLevelInfo(masu);
         const fusionCount = (masu.fusionHistory || []).length;
         return /*#__PURE__*/React.createElement("div", {
           key: e.key,
@@ -15094,7 +15096,7 @@ function MonsterHeroGame() {
       const sortMasuList = list => {
         const dir = fusionSortDir === 'asc' ? 1 : -1;
         const val = m => {
-          if (fusionSortKey === 'bond') return bondLevelInfo(m.bondXp || 0).level;
+          if (fusionSortKey === 'bond') return masuBondLevelInfo(m).level;
           if (fusionSortKey === 'fused') return (m.fusionHistory || []).length;
           if (fusionSortKey === 'lineage') return (ALL_PLAYER_MONSTERS[m.baseId] || {}).name || '';
           return m.name || '';
@@ -15178,7 +15180,7 @@ function MonsterHeroGame() {
         }, sortMasuList(masuMons).map(masu => {
           const base = ALL_PLAYER_MONSTERS[masu.baseId];
           if (!base) return null;
-          const lvl = bondLevelInfo(masu.bondXp || 0);
+          const lvl = masuBondLevelInfo(masu);
           return /*#__PURE__*/React.createElement("div", {
             key: masu.id,
             className: "relative"
@@ -15263,7 +15265,7 @@ function MonsterHeroGame() {
         }, candidates.map(masu => {
           const base = ALL_PLAYER_MONSTERS[masu.baseId];
           if (!base) return null;
-          const lvl = bondLevelInfo(masu.bondXp || 0);
+          const lvl = masuBondLevelInfo(masu);
           return /*#__PURE__*/React.createElement("div", {
             key: masu.id,
             className: "relative"
@@ -15318,17 +15320,24 @@ function MonsterHeroGame() {
           resetFusionFlow();
           return null;
         }
-        const mainLvl = bondLevelInfo(main.bondXp || 0);
-        const subLvl = bondLevelInfo(sub.bondXp || 0);
+        const mainLvl = masuBondLevelInfo(main);
+        const subLvl = masuBondLevelInfo(sub);
         const cost = masuFusionCost(mainLvl.level, subLvl.level);
         const canAfford = gold >= cost;
         const ownedUniqueIds = new Set([uniqueLineageId(mainBase.unique, mainBase.id), ...(main.inheritedUniques || []).map(unique => uniqueLineageId(unique))].filter(Boolean));
         const duplicateUnique = ownedUniqueIds.has(uniqueLineageId(subBase.unique, subBase.id));
         const canChooseInherit = mainLvl.level >= 10 && subLvl.level >= 10 && !!subBase.unique && !duplicateUnique;
         // 合体後にどうなるかを先に計算して見せる(実行してみないと分からない状態だったため)
-        const afterXp = (main.bondXp || 0) + (sub.bondXp || 0);
+        // 実処理と同じ計算にする。主のレベル上限を超えるぶんは入らないので、
+        // ここで上限まで切ったうえで「合体後」を出す(以前は上限を無視して出していた)
+        const mainCap = normalizeMasuProgression(main).levelCap;
+        const subXp = cappedBondXp(sub);
+        const beforeXp = cappedBondXp(main);
+        const afterXp = cappedBondXp(main, subXp);
         const afterLvl = bondLevelInfo(afterXp);
         const gainedLevels = afterLvl.level - mainLvl.level;
+        // 上限で切り捨てられる絆経験値。あるときは事前に知らせる
+        const wastedXp = Math.max(0, beforeXp + subXp - afterXp);
         const mainPointsNow = main.distAptPoints || 0;
         return /*#__PURE__*/React.createElement("div", {
           className: "flex-1 flex flex-col h-full min-h-0 p-4"
@@ -15399,7 +15408,9 @@ function MonsterHeroGame() {
           className: "text-[7px] text-pink-400 font-bold"
         }, "\u5408\u4F53\u5F8C"), /*#__PURE__*/React.createElement("div", {
           className: "text-[15px] font-mono font-black text-pink-300"
-        }, "\u7D46Lv.", afterLvl.level))), /*#__PURE__*/React.createElement("div", {
+        }, "\u7D46Lv.", afterLvl.level), /*#__PURE__*/React.createElement("div", {
+          className: "text-[7px] text-slate-500 font-bold"
+        }, "\u4E0A\u9650 Lv.", mainCap))), /*#__PURE__*/React.createElement("div", {
           className: "space-y-1"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
@@ -15427,9 +15438,13 @@ function MonsterHeroGame() {
           className: `font-black ${gainedLevels > 0 ? 'text-amber-300' : 'text-slate-400'}`
         }, mainPointsNow, " \u2192 ", mainPointsNow + gainedLevels, gainedLevels > 0 && /*#__PURE__*/React.createElement("span", {
           className: "text-amber-200"
-        }, " (+", gainedLevels, ")")))), gainedLevels === 0 && /*#__PURE__*/React.createElement("div", {
+        }, " (+", gainedLevels, ")")))), gainedLevels === 0 && wastedXp === 0 && /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-slate-500 leading-relaxed mt-2"
-        }, "\u203B \u7D46\u7D4C\u9A13\u5024\u306F\u52A0\u7B97\u3055\u308C\u307E\u3059\u304C\u3001\u6B21\u306E\u30EC\u30D9\u30EB\u306B\u306F\u5C4A\u304D\u307E\u305B\u3093(\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u306F\u5897\u3048\u307E\u305B\u3093)")), /*#__PURE__*/React.createElement("div", {
+        }, "\u203B \u7D46\u7D4C\u9A13\u5024\u306F\u52A0\u7B97\u3055\u308C\u307E\u3059\u304C\u3001\u6B21\u306E\u30EC\u30D9\u30EB\u306B\u306F\u5C4A\u304D\u307E\u305B\u3093(\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u306F\u5897\u3048\u307E\u305B\u3093)"), wastedXp > 0 && /*#__PURE__*/React.createElement("div", {
+          className: "text-[9px] text-amber-200 leading-relaxed mt-2 bg-amber-950/40 border border-amber-500/40 rounded-xl px-2.5 py-2"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: "text-amber-300"
+        }, "\u4E0A\u9650 Lv.", mainCap, " \u3067\u6B62\u307E\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("br", null), afterLvl.level >= mainCap ? 'すでに上限に届くため、' : '', wastedXp.toLocaleString(), " XP \u306F\u5165\u308A\u307E\u305B\u3093\u3002\u8EE2\u751F\u3067\u30EC\u30D9\u30EB\u4E0A\u9650\u3092\u4E0A\u3052\u3066\u304B\u3089\u306E\u307B\u3046\u304C\u7121\u99C4\u306B\u306A\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
           className: "bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-2 space-y-1.5"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
@@ -15701,7 +15716,7 @@ function MonsterHeroGame() {
       }, masuMons.map(masu => {
         const base = ALL_PLAYER_MONSTERS[masu.baseId];
         if (!base) return null;
-        const lvl = bondLevelInfo(masu.bondXp || 0);
+        const lvl = masuBondLevelInfo(masu);
         return /*#__PURE__*/React.createElement("button", {
           key: masu.id,
           onClick: () => {
@@ -15755,7 +15770,7 @@ function MonsterHeroGame() {
       const have = ownedItems[item.id] || 0;
       const count = Math.max(1, Math.min(xpTicketUse.count || 1, Math.max(1, have)));
       const gain = (item.bondXp || 0) * count;
-      const before = bondLevelInfo(masu.bondXp || 0);
+      const before = masuBondLevelInfo(masu);
       const after = bondLevelInfo((masu.bondXp || 0) + gain);
       const gaugePct = l => Math.max(0, Math.min(100, l.xpIntoLevel / Math.max(1, l.xpForNext) * 100));
       const setCount = n => setXpTicketUse(p => ({
@@ -15978,7 +15993,7 @@ function MonsterHeroGame() {
         setMasuMonDetail(null);
         return null;
       }
-      const lvl = bondLevelInfo(masu.bondXp || 0);
+      const lvl = masuBondLevelInfo(masu);
       const pct = Math.max(0, Math.min(100, lvl.xpIntoLevel / Math.max(1, lvl.xpForNext) * 100));
       const inRoster = monsterRosterIds.includes('masu:' + masu.id);
       // 詳細の表示内容は他のモンスター詳細と同じ共通実装を使う(勇者特性などの見落としを無くす)
@@ -16144,7 +16159,7 @@ function MonsterHeroGame() {
         setMasuEnhanceFrom(null);
         return null;
       }
-      const lvl = bondLevelInfo(masu.bondXp || 0);
+      const lvl = masuBondLevelInfo(masu);
       const pct = Math.max(0, Math.min(100, lvl.xpIntoLevel / Math.max(1, lvl.xpForNext) * 100));
       const points = masu.distAptPoints || 0;
       const currentStatValue = key => ({
