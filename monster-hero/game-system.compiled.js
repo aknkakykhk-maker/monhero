@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ced1ca6ff71b4d60
+// source-sha256: 5b268489333b7361
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 23:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 23:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12550,21 +12550,17 @@ function MonsterHeroGame() {
   const rankingCardClass = index => `rounded-xl border ${index === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`;
   // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
   const renderScoreRankingEntry = (entry, index) => {
-    const separatedParty = splitRankingParty(entry);
-    const heroMember = separatedParty.hero;
-    const allies = separatedParty.allies;
     const finiteNumber = value => value == null || value === '' ? null : Number.isFinite(Number(value)) ? Number(value) : null;
     const scoreValue = finiteNumber(entry?.score);
     const breederLevelValue = finiteNumber(entry?.level);
     const scoreLabel = Number.isFinite(scoreValue) ? `${scoreValue.toLocaleString()} pt` : 'スコア情報なし';
     const breederLevelLabel = Number.isFinite(breederLevelValue) && breederLevelValue > 0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLv情報なし';
-    const heroName = entry?.hero || heroMember?.name || '勇者モン情報なし';
     return /*#__PURE__*/React.createElement("article", {
       key: `score-${entry?.userName || 'unknown'}-${index}`,
       "data-ranking-kind": "score",
       role: "button",
       tabIndex: 0,
-      "aria-label": `${entry?.userName || '名無しのブリーダー'}の編成をくわしく見る`,
+      "aria-label": `${entry?.userName || '名無しのブリーダー'}のパーティー詳細を見る`,
       onClick: () => setRankingPartyDetail(entry),
       className: `${rankingCardClass(index)} px-2 py-1.5 active:scale-[.99] cursor-pointer`
     }, /*#__PURE__*/React.createElement("div", {
@@ -12577,50 +12573,11 @@ function MonsterHeroGame() {
       className: "text-[7px] text-indigo-300 whitespace-nowrap shrink-0"
     }, breederLevelLabel)), /*#__PURE__*/React.createElement("div", {
       className: "text-right text-[10px] font-black whitespace-nowrap text-indigo-300"
-    }, scoreLabel), /*#__PURE__*/React.createElement(ChevronRight, {
-      size: 12,
-      className: "shrink-0 text-slate-500"
-    })), /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 bg-black/40 rounded-lg px-1.5 py-1 border border-white/5"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-1 min-w-0 leading-none"
-    }, /*#__PURE__*/React.createElement(Crown, {
-      size: 9,
-      className: "text-amber-400 shrink-0"
-    }), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] text-amber-300 shrink-0"
-    }, "\u52C7\u8005\u30E2\u30F3:"), rankingMemberImage(heroMember) ? /*#__PURE__*/React.createElement("img", {
-      src: rankingMemberImage(heroMember),
-      alt: heroName,
-      className: "w-5 h-5 object-contain shrink-0"
-    }) : /*#__PURE__*/React.createElement("span", {
-      className: "w-5 text-center text-[9px] shrink-0"
-    }, heroMember?.emoji || '❓'), /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] font-black text-white truncate"
-    }, heroName), rankingMemberLevel(heroMember) != null && /*#__PURE__*/React.createElement("span", {
-      className: "text-[7px] font-black text-pink-300 whitespace-nowrap shrink-0"
-    }, "Lv.", rankingMemberLevel(heroMember))), allies === null ? /*#__PURE__*/React.createElement("div", {
-      className: "mt-0.5 text-[7px] text-slate-500"
-    }, "\u7DE8\u6210\u60C5\u5831\u306A\u3057\uFF08\u904E\u53BB\u306E\u8A18\u9332\uFF09") : allies.length === 0 ? /*#__PURE__*/React.createElement("div", {
-      className: "mt-0.5 text-[7px] text-slate-500"
-    }, "\u4F9B\u30E2\u30F3\u306A\u3057") : /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-1 mt-0.5 min-w-0"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "text-[7px] text-slate-500 shrink-0"
-    }, "\u4F9B\u30E2\u30F3:"), allies.slice(0, 3).map((member, memberIndex) => /*#__PURE__*/React.createElement("div", {
-      key: member?.masuId || `${member?.id || 'ally'}-${memberIndex}`,
-      className: "flex flex-1 items-center justify-center gap-0.5 min-w-0"
-    }, rankingMemberImage(member) ? /*#__PURE__*/React.createElement("img", {
-      src: rankingMemberImage(member),
-      alt: "",
-      className: "w-4 h-4 object-contain shrink-0"
-    }) : /*#__PURE__*/React.createElement("span", {
-      className: "w-4 text-center text-[8px] shrink-0"
-    }, member?.emoji || '❓'), /*#__PURE__*/React.createElement("span", {
-      className: "text-[7px] text-slate-300 truncate"
-    }, member?.name || '不明'), rankingMemberLevel(member) != null && /*#__PURE__*/React.createElement("span", {
-      className: "text-[7px] font-black text-pink-300 whitespace-nowrap shrink-0"
-    }, "Lv.", rankingMemberLevel(member)))))));
+    }, scoreLabel)), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 flex items-center justify-center gap-0.5 rounded-lg border border-indigo-400/40 bg-indigo-500/10 py-1 text-[9px] font-black text-indigo-200"
+    }, "\u30D1\u30FC\u30C6\u30A3\u30FC\u8A73\u7D30", /*#__PURE__*/React.createElement(ChevronRight, {
+      size: 11
+    })));
   };
   // ブリーダーLv専用カード。編成・スコア・絆情報をDOMへ一切出さず、1行でコンパクトに表示する。
   const renderBreederRankingEntry = (entry, index) => {
@@ -20255,7 +20212,14 @@ function MonsterHeroGame() {
         "aria-label": "\u7DE8\u6210\u306E\u304F\u308F\u3057\u3044\u60C5\u5831"
       }, /*#__PURE__*/React.createElement("div", {
         onClick: e => e.stopPropagation(),
-        className: "w-full max-w-sm max-h-full overflow-y-auto mh-scroll rounded-3xl border-2 border-indigo-500 bg-slate-900 p-4 flex flex-col gap-3"
+        className: "w-full max-w-sm max-h-full flex flex-col gap-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "rankingParty",
+        compact: true
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll rounded-3xl border-2 border-indigo-500 bg-slate-900 p-4 flex flex-col gap-3"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-2 shrink-0"
       }, rankingBreederIcon(entry), /*#__PURE__*/React.createElement("div", {
@@ -20271,12 +20235,24 @@ function MonsterHeroGame() {
       }, "Score"), /*#__PURE__*/React.createElement("div", {
         className: "text-[13px] font-black text-indigo-200"
       }, score != null ? `${score.toLocaleString()} pt` : 'スコア情報なし'))), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 border-t border-white/10 pt-2 shrink-0"
-      }, "\u3053\u306E\u4EBA\u304C\u4F7F\u3063\u3066\u3044\u305F\u7DE8\u6210\u3060\u3088\u3002\u8272\u306F\u305D\u306E\u30D6\u30EA\u30FC\u30C0\u30FC\u304C\u67D3\u3081\u305F\u3068\u304A\u308A\u306B\u51FA\u3066\u308B\u306E\u266A"), members === null ? /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[11px] text-slate-500 py-8"
-      }, "\u7DE8\u6210\u60C5\u5831\u306A\u3057\uFF08\u904E\u53BB\u306E\u8A18\u9332\uFF09") : members.length === 0 ? /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[11px] text-slate-500 py-8"
-      }, "\u7DE8\u6210\u60C5\u5831\u306A\u3057\uFF08\u904E\u53BB\u306E\u8A18\u9332\uFF09") : /*#__PURE__*/React.createElement("div", {
+        className: "border-t border-white/10 shrink-0"
+      }), members === null || members.length === 0 ?
+      /*#__PURE__*/
+      /* 編成が残っていない古い記録でも、勇者モンの名前だけは残っていることがある */
+      React.createElement("div", {
+        className: "text-center py-6"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[11px] text-slate-500"
+      }, "\u7DE8\u6210\u60C5\u5831\u306A\u3057\uFF08\u904E\u53BB\u306E\u8A18\u9332\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 flex items-center justify-center gap-1"
+      }, /*#__PURE__*/React.createElement(Crown, {
+        size: 11,
+        className: "text-amber-400 shrink-0"
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "text-[8px] text-amber-300"
+      }, "\u52C7\u8005\u30E2\u30F3:"), /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black text-white"
+      }, entry?.hero || '勇者モン情報なし'))) : /*#__PURE__*/React.createElement("div", {
         className: "space-y-2"
       }, members.map((m, i) => {
         const art = monArt(m);
@@ -20329,7 +20305,7 @@ function MonsterHeroGame() {
       })), /*#__PURE__*/React.createElement("button", {
         onClick: () => setRankingPartyDetail(null),
         className: "w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0"
-      }, "\u3068\u3058\u308B")));
+      }, "\u3068\u3058\u308B"))));
     })(), showDeckInfo && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[40000] p-4 flex flex-col",
       style: {

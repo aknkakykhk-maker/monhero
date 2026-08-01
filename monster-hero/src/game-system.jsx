@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 23:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 23:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6782,31 +6782,23 @@ function MonsterHeroGame() {
   const rankingCardClass = index => `rounded-xl border ${index===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`;
   // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
   const renderScoreRankingEntry = (entry, index) => {
-    const separatedParty = splitRankingParty(entry);
-    const heroMember = separatedParty.hero;
-    const allies = separatedParty.allies;
     const finiteNumber = value => value==null || value==='' ? null : (Number.isFinite(Number(value)) ? Number(value) : null);
     const scoreValue = finiteNumber(entry?.score);
     const breederLevelValue = finiteNumber(entry?.level);
     const scoreLabel = Number.isFinite(scoreValue) ? `${scoreValue.toLocaleString()} pt` : 'スコア情報なし';
     const breederLevelLabel = Number.isFinite(breederLevelValue) && breederLevelValue>0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLv情報なし';
-    const heroName = entry?.hero || heroMember?.name || '勇者モン情報なし';
     return (
-      <article key={`score-${entry?.userName||'unknown'}-${index}`} data-ranking-kind="score" role="button" tabIndex={0} aria-label={`${entry?.userName||'名無しのブリーダー'}の編成をくわしく見る`} onClick={()=>setRankingPartyDetail(entry)} className={`${rankingCardClass(index)} px-2 py-1.5 active:scale-[.99] cursor-pointer`}>
+      <article key={`score-${entry?.userName||'unknown'}-${index}`} data-ranking-kind="score" role="button" tabIndex={0} aria-label={`${entry?.userName||'名無しのブリーダー'}のパーティー詳細を見る`} onClick={()=>setRankingPartyDetail(entry)} className={`${rankingCardClass(index)} px-2 py-1.5 active:scale-[.99] cursor-pointer`}>
         <div className="flex items-center gap-1.5 min-w-0">
           {rankingPlace(index)}{rankingBreederIcon(entry)}
           <div className="flex flex-1 items-baseline gap-1 min-w-0"><span className="text-[10px] font-black text-white truncate">{entry?.userName||'名無しのブリーダー'}</span><span className="text-[7px] text-indigo-300 whitespace-nowrap shrink-0">{breederLevelLabel}</span></div>
           <div className="text-right text-[10px] font-black whitespace-nowrap text-indigo-300">{scoreLabel}</div>
-          <ChevronRight size={12} className="shrink-0 text-slate-500"/>
         </div>
-        <div className="mt-1 bg-black/40 rounded-lg px-1.5 py-1 border border-white/5">
-          <div className="flex items-center gap-1 min-w-0 leading-none">
-            <Crown size={9} className="text-amber-400 shrink-0"/><span className="text-[8px] text-amber-300 shrink-0">勇者モン:</span>
-            {rankingMemberImage(heroMember)?<img src={rankingMemberImage(heroMember)} alt={heroName} className="w-5 h-5 object-contain shrink-0"/>:<span className="w-5 text-center text-[9px] shrink-0">{heroMember?.emoji||'❓'}</span>}
-            <span className="text-[9px] font-black text-white truncate">{heroName}</span>
-            {rankingMemberLevel(heroMember)!=null&&<span className="text-[7px] font-black text-pink-300 whitespace-nowrap shrink-0">Lv.{rankingMemberLevel(heroMember)}</span>}
-          </div>
-          {allies===null?<div className="mt-0.5 text-[7px] text-slate-500">編成情報なし（過去の記録）</div>:allies.length===0?<div className="mt-0.5 text-[7px] text-slate-500">供モンなし</div>:<div className="flex items-center gap-1 mt-0.5 min-w-0"><span className="text-[7px] text-slate-500 shrink-0">供モン:</span>{allies.slice(0,3).map((member, memberIndex)=><div key={member?.masuId||`${member?.id||'ally'}-${memberIndex}`} className="flex flex-1 items-center justify-center gap-0.5 min-w-0">{rankingMemberImage(member)?<img src={rankingMemberImage(member)} alt="" className="w-4 h-4 object-contain shrink-0"/>:<span className="w-4 text-center text-[8px] shrink-0">{member?.emoji||'❓'}</span>}<span className="text-[7px] text-slate-300 truncate">{member?.name||'不明'}</span>{rankingMemberLevel(member)!=null&&<span className="text-[7px] font-black text-pink-300 whitespace-nowrap shrink-0">Lv.{rankingMemberLevel(member)}</span>}</div>)}</div>}
+        {/* 使っていたモンスターは詳細でだけ見せる。一覧に絵を並べると、
+            50件ぶんで200枚になり開いた瞬間に引っかかる(実測 tools/ranking-dye-cost-check.js)。
+            何が開くのかが分かるよう、記号ではなく言葉で出す */}
+        <div className="mt-1 flex items-center justify-center gap-0.5 rounded-lg border border-indigo-400/40 bg-indigo-500/10 py-1 text-[9px] font-black text-indigo-200">
+          パーティー詳細<ChevronRight size={11}/>
         </div>
       </article>
     );
@@ -9717,7 +9709,10 @@ function MonsterHeroGame() {
         const monArt=(m)=>{const base=ALL_PLAYER_MONSTERS[rankingMonsterIdOf(m)];return base?.imgUrl||base?.iconUrl||null;};
         return(
         <div onClick={()=>setRankingPartyDetail(null)} className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:41800}} role="dialog" aria-modal="true" aria-label="編成のくわしい情報">
-          <div onClick={e=>e.stopPropagation()} className="w-full max-w-sm max-h-full overflow-y-auto mh-scroll rounded-3xl border-2 border-indigo-500 bg-slate-900 p-4 flex flex-col gap-3">
+          <div onClick={e=>e.stopPropagation()} className="w-full max-w-sm max-h-full flex flex-col gap-2">
+          {/* 説明を地の文で置くと味気ないので、みゅあに喋ってもらう(枠はそのぶん下げる) */}
+          <div className="shrink-0"><AssistantBubble scene="rankingParty" compact/></div>
+          <div className="flex-1 min-h-0 overflow-y-auto mh-scroll rounded-3xl border-2 border-indigo-500 bg-slate-900 p-4 flex flex-col gap-3">
             <div className="flex items-center gap-2 shrink-0">
               {rankingBreederIcon(entry)}
               <div className="flex-1 min-w-0">
@@ -9729,11 +9724,17 @@ function MonsterHeroGame() {
                 <div className="text-[13px] font-black text-indigo-200">{score!=null?`${score.toLocaleString()} pt`:'スコア情報なし'}</div>
               </div>
             </div>
-            <div className="text-[9px] text-slate-400 border-t border-white/10 pt-2 shrink-0">この人が使っていた編成だよ。色はそのブリーダーが染めたとおりに出てるの♪</div>
-            {members===null?(
-              <div className="text-center text-[11px] text-slate-500 py-8">編成情報なし（過去の記録）</div>
-            ):members.length===0?(
-              <div className="text-center text-[11px] text-slate-500 py-8">編成情報なし（過去の記録）</div>
+            <div className="border-t border-white/10 shrink-0"></div>
+            {(members===null||members.length===0)?(
+              /* 編成が残っていない古い記録でも、勇者モンの名前だけは残っていることがある */
+              <div className="text-center py-6">
+                <div className="text-[11px] text-slate-500">編成情報なし（過去の記録）</div>
+                <div className="mt-2 flex items-center justify-center gap-1">
+                  <Crown size={11} className="text-amber-400 shrink-0"/>
+                  <span className="text-[8px] text-amber-300">勇者モン:</span>
+                  <span className="text-[11px] font-black text-white">{entry?.hero||'勇者モン情報なし'}</span>
+                </div>
+              </div>
             ):(
               <div className="space-y-2">
                 {members.map((m,i)=>{
@@ -9767,6 +9768,7 @@ function MonsterHeroGame() {
               </div>
             )}
             <button onClick={()=>setRankingPartyDetail(null)} className="w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0">とじる</button>
+          </div>
           </div>
         </div>);
       })()}
