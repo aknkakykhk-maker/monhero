@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 21:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 22:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8585,7 +8585,7 @@ function MonsterHeroGame() {
                 <div className="h-2"></div>
               </div>
               {/* 技詳細パネルはmain外(画面直下)に移動して、ムー画像と同階層でz-index勝負させる */}
-              {enemy&&enemyIntent&&!isBusy&&(<div className={`mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0 ${focusedCard?'invisible':'visible'} ${enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400':'bg-red-950 border-red-600/50 text-red-400'}`}><Target size={12}/><div className="text-[9px] font-black uppercase tracking-tight">{enemyIntent.label} (予測: {getPredictedDamage(enemyIntent)})</div></div>)}
+              {enemy&&enemyIntent&&!isBusy&&(<div className={`mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400':'bg-red-950 border-red-600/50 text-red-400'}`}><Target size={12}/><div className="text-[9px] font-black uppercase tracking-tight">{enemyIntent.label} (予測: {getPredictedDamage(enemyIntent)})</div></div>)}
               <div className={`flex flex-wrap justify-center gap-1 max-w-[340px] mt-auto mb-1 shrink-0 relative z-[40] ${focusedCard?'invisible':'visible'}`}>
                 {/* === 永続バフ（常時表示・数値が増減） === */}
                 <div className="text-[7px] font-black text-red-500 bg-black/60 px-2 py-0.5 rounded border border-red-500/50 flex items-center gap-1 shadow-lg uppercase"><Sword size={7}/> ATK +{Math.floor((getPermaBuff('atkPct')+getPermaBuff('muaAtkPct'))*100)}%</div>

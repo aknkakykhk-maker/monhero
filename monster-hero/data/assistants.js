@@ -1158,12 +1158,12 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   { id:'cardOrder',    at:'BATTLE',        e:'surprise',title:'2枚目からは半減', t:'同じターンに攻撃やガードを重ねると2枚目から効果が半分。ブリーダーカードは半減しないよ。', spot:'cards', wait:'next' },
   { id:'deckTalk',     at:'BATTLE',        e:'happy',   title:'山札のこと', t:'「VIEW」で山札と使い終わったカードを確認できるよ。無くなったら混ぜ直すの。', spot:'deckView', wait:'next' },
   // ① 敵の攻撃予告 → ガードで受ける
-  { id:'intentTalk',   at:'BATTLE',        e:'surprise',title:'敵の攻撃予告！', t:'敵の上に次の行動が出てるでしょ？ 今ターンは殴ってくるよ！', spot:'enemyBar', wait:'next' },
+  { id:'intentTalk',   at:'BATTLE',        e:'surprise',title:'敵の攻撃予告！', t:'敵の下に次の行動と予測ダメージが出てるよ。今ターンは殴ってくる！', spot:'enemyIntent', wait:'next' },
   { id:'guardTalk',    at:'BATTLE',        e:'normal',  title:'ガードで受けよう', t:'ガードカードを選んで、ACTIONを押してみて。ダメージがぐっと減るよ！', spot:'cards', wait:'next' },
   { id:'guardDo',      at:'BATTLE',        e:'wink',    title:'ガードを使ってみて', t:'ガードカード → ACTION の順だよ♪', spot:'cards', wait:'do', need:'guard' },
   { id:'guardSeen',    at:'BATTLE',        e:'happy',   title:'ほぼ無傷！', t:'見て、ライフがほとんど減ってないでしょ？ これがガードの力だよ♪', wait:'next' },
   // ② 必殺技を魅せる
-  { id:'chargeTalk',   at:'BATTLE',        e:'surprise',title:'必殺技が来る！', t:'「☠️ 必殺技」の予告が出た！ ふつうの攻撃よりずっと痛いよ。', spot:'enemyBar', wait:'next' },
+  { id:'chargeTalk',   at:'BATTLE',        e:'surprise',title:'必殺技が来る！', t:'敵の下の予告を見て！ 必殺技はふつうの攻撃よりずっと痛いよ。', spot:'enemyIntent', wait:'next' },
   { id:'chargeReady',  at:'BATTLE',        e:'normal',  title:'もう一度ガード', t:'必殺技もガードで受け止められるよ。手札のガードを見て！', spot:'cards', wait:'next' },
   { id:'chargeDo',     at:'BATTLE',        e:'excited', title:'受け止めよう！', t:'ガードカードを選んでACTIONだよ♪', spot:'cards', wait:'do', need:'guard' },
   { id:'chargeSeen',   at:'BATTLE',        e:'surprise',title:'さすがに痛い！', t:'ガードしてもこれだけ減るんだ。必殺技の予告が出たら気をつけてね。', wait:'next' },
@@ -1189,8 +1189,11 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   { id:'skillPoint',   at:'BATTLE',        e:'wink',    title:'ここが技の名前', t:'光ってる攻撃カードの、絵の下にある名前のところ。そこが押せるよ♪', spot:'cards', wait:'next', needCard:'atk' },
   { id:'skillDo',      at:'BATTLE',        e:'excited', title:'名前を押してみて', t:'光ってるところをタップ！ 使える技が一覧で出てくるよ。', spot:'cards', wait:'do', need:'skillPicker', needCard:'atk' },
   { id:'skillSeen',    at:'BATTLE',        e:'happy',   title:'これが技の一覧', t:'威力・消費ガッツ・会心率が並んでたでしょ？ 使う技はここで選び直せるよ♪', wait:'next' },
+  { id:'skillLock',    at:'BATTLE',        e:'normal',  title:'暗い技があったよね', t:'通常技と距離技は、その距離の補正値が高いほど強いものまで使えるようになるの。', wait:'next' },
+  { id:'skillNow',     at:'BATTLE',        e:'surprise',title:'今は補正が0%', t:'だから今は下のほうの技しか選べないんだ。育てて補正を上げると解放されるよ！', spot:'battleSlots', wait:'next' },
   // ⑧ 固有技でトドメ
   { id:'uniqueTalk',   at:'BATTLE',        e:'excited', title:'最後は固有技！', t:'固有技はその子だけの必殺技。ガッツは重いけど、とにかく強いよ！', spot:'cards', wait:'next' },
+  { id:'uniqueLevel',  at:'BATTLE',        e:'happy',   title:'固有技は育つ', t:'バトルを進めて供モンが合流するとき、固有技のレベルを上げられるんだ♪', spot:'cards', wait:'next' },
   { id:'act',          at:'BATTLE',        e:'excited', title:'トドメだ！', t:'固有技を選んで枠をタップ → ACTIONで倒しちゃお♪', spot:'cards', wait:'act', need:'unique' },
   // WAVEクリア
   { id:'clear',        at:'WAVE_RESULT',   e:'excited', title:'WAVEクリア！', t:'ナイス{name}！ 敵を倒しきるとWAVEクリアだよ♪', spot:'waveNext', wait:'next' },
@@ -1202,7 +1205,8 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   { id:'ally',         at:'*',             e:'normal',  title:'このあとは', t:'WAVE2・4・6では供モンが合流するよ。ステータスがそのまま足されるんだ！', wait:'next' },
   { id:'unique',       at:'*',             e:'happy',   title:'固有技のこと', t:'勇者モンの固有技は、レベルが上がるほど強くなるよ。育てるほど頼りになる♪', wait:'next' },
   { id:'modeAfter',    at:'*',             e:'normal',  title:'モードの使い分け', t:'記録に挑むならチャレンジ、育成を回すならクイックだよ♪', wait:'next' },
-  { id:'end',          at:'*',             e:'happy',   title:'これでバッチリ！', t:'困ったらヘルプからいつでもチュートリアルを見られるよ♪', wait:'end' },
+  { id:'wrapUp',       at:'*',             e:'excited', title:'おつかれさま！', t:'これでバトルのれんしゅうは終わり！ 一連の流れはバッチリだね♪', wait:'next' },
+  { id:'end',          at:'*',             e:'happy',   title:'いってらっしゃい！', t:'困ったらヘルプからいつでもこの練習をやり直せるよ。がんばってね{name}！', wait:'end' },
 ];
 // いまの画面に合うステップを探す(画面が変わったときに呼ぶ)
 const findBattleTutorialStep = (fromIndex, screen) => {
