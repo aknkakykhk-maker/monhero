@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 08:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 09:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -327,12 +327,16 @@ const migrateMasuLevelCaps = (masuMons, gold) => {
 const FUSION_COST_PER_LEVEL = 50;
 const REBIRTH_COST_PER_LEVEL = 50;
 const masuFusionCost = (mainLevel, subLevel) => (mainLevel + subLevel) * FUSION_COST_PER_LEVEL;
+// 転生の消費ダイヤ。画面の表示と実処理で必ずこの関数を使う。
+// (以前は画面だけが「レベル×100」で計算しており、実際に引かれる額の倍が表示され、
+//  そのぶんダイヤを持っていないと転生ボタンを押せない状態になっていた)
+const masuRebirthCost = (level) => Math.max(0, Math.floor(Number(level) || 0)) * REBIRTH_COST_PER_LEVEL;
 const buildMasuRebirth = ({ masu, skillKey, gold }) => {
   if (!masu) return { ok:false, reason:'対象のマスモンが見つかりません。' };
   const normalized = normalizeMasuProgression(masu);
   const level = masuBondLevelInfo(normalized).level;
   if (level !== normalized.levelCap) return { ok:false, reason:`Lv.${normalized.levelCap}到達後に転生できます。` };
-  const cost = level * REBIRTH_COST_PER_LEVEL;
+  const cost = masuRebirthCost(level);
   if (donationDiamondValue(gold) < cost) return { ok:false, reason:'ダイヤが不足しています。' };
   const currentSkillLevel = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
   if (!skillKey || currentSkillLevel >= MAX_UNIQUE_SKILL_LEVEL) return { ok:false, reason:'強化できる固有技を選んでください。' };
@@ -1772,6 +1776,14 @@ const helpDataRows = (id) => {
     case 'loginBonus':
       return ((typeof LOGIN_BONUS_REWARDS !== 'undefined' && LOGIN_BONUS_REWARDS) || [])
         .map((rewards, i) => [`${i + 1}日目`, rewards.map(giftRewardText).join(' ／ ')]);
+    // 合体・転生の消費ダイヤ。単価を変えたときにヘルプだけ古くなることがないよう、
+    // 実際に使っている定数からそのまま表を作る
+    case 'masuCosts':
+      return [
+        ['合体', `（主の絆Lv ＋ 副の絆Lv）× ${FUSION_COST_PER_LEVEL} ダイヤ`],
+        ['転生', `絆Lv × ${REBIRTH_COST_PER_LEVEL} ダイヤ`],
+        ['寄付', 'かからない（逆に累計絆経験値と同じ数のダイヤを受け取れる）'],
+      ];
     // みゅあとの仲良し度。段階も増える行動も data/assistants.js の実データから作るので、
     // 値を変えたときにヘルプだけ古くなることがない
     case 'assistantBond':
@@ -1798,6 +1810,7 @@ const HELP_DATA_TITLES = {
   loginBonus: '7日間のログインボーナス',
   missionsDaily: 'デイリーミッション',
   missionsWeekly: 'ウィークリーミッション',
+  masuCosts: '神殿でかかるダイヤ',
   assistantBond: 'みゅあとの仲良し度の段階',
   assistantBondActions: '仲良し度が増える行動',
 };
@@ -6676,8 +6689,8 @@ function MonsterHeroGame() {
         {gameState==='MASU_REBIRTH'&&(()=>{
           const selected=masuMons.find(m=>String(m.id)===String(rebirthSelectedId));
           if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが転生できます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const can=lvl.level===normalizeMasuProgression(masu).levelCap;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey('');}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div></button>})}</div></div>; }
-          const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=lvl.level*100, skills=getRebirthSkillChoices(selected);
-          return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-amber-300 text-xs">必要 {cost.toLocaleString()}ダイヤ</div></div></div><div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選択してください（最大Lv.8）</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}</div>{rebirthError&&<div className="text-red-300 text-[10px] my-2">{rebirthError}</div>}<button disabled={!rebirthSkillKey||gold<cost||rebirthProcessingRef.current} onClick={executeMasuRebirth} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">転生する</button></div>;
+          const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=masuRebirthCost(lvl.level), skills=getRebirthSkillChoices(selected);
+          return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">星が1つ増えて、上限が+{REBIRTH_LEVEL_CAP_GAIN}になります</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div><div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選択してください（最大Lv.8）</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}</div>{rebirthError&&<div className="text-red-300 text-[10px] my-2">{rebirthError}</div>}<button disabled={!rebirthSkillKey||gold<cost||rebirthProcessingRef.current} onClick={executeMasuRebirth} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">転生する</button></div>;
         })()}
 
         {gameState==='MASU_DONATION'&&(()=>{
@@ -7448,7 +7461,7 @@ function MonsterHeroGame() {
                   <div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-2 space-y-1.5">
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">受け継ぐ絆経験値</span><span className="text-pink-300 font-black">{(sub.bondXp||0).toLocaleString()} XP</span></div>
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${canAfford?'text-amber-300':'text-red-400'}`}><Gem size={10}/>{cost.toLocaleString()}</span></div>
-                    <div className="text-[7px] text-slate-500">({main.name}絆Lv.{mainLvl.level} + {sub.name}絆Lv.{subLvl.level}) × 100</div>
+                    <div className="text-[8px] text-slate-400">（{main.name}絆Lv.{mainLvl.level} ＋ {sub.name}絆Lv.{subLvl.level}）× {FUSION_COST_PER_LEVEL}</div>
                     {!canAfford&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません(所持: {gold.toLocaleString()})</div>}
                   </div>
                   {canChooseInherit && (

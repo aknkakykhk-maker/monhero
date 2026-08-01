@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 65d482c7ae44fd23
+// source-sha256: d5b42e5e5da2180a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 08:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 09:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -447,6 +447,10 @@ const migrateMasuLevelCaps = (masuMons, gold) => {
 const FUSION_COST_PER_LEVEL = 50;
 const REBIRTH_COST_PER_LEVEL = 50;
 const masuFusionCost = (mainLevel, subLevel) => (mainLevel + subLevel) * FUSION_COST_PER_LEVEL;
+// 転生の消費ダイヤ。画面の表示と実処理で必ずこの関数を使う。
+// (以前は画面だけが「レベル×100」で計算しており、実際に引かれる額の倍が表示され、
+//  そのぶんダイヤを持っていないと転生ボタンを押せない状態になっていた)
+const masuRebirthCost = level => Math.max(0, Math.floor(Number(level) || 0)) * REBIRTH_COST_PER_LEVEL;
 const buildMasuRebirth = ({
   masu,
   skillKey,
@@ -462,7 +466,7 @@ const buildMasuRebirth = ({
     ok: false,
     reason: `Lv.${normalized.levelCap}到達後に転生できます。`
   };
-  const cost = level * REBIRTH_COST_PER_LEVEL;
+  const cost = masuRebirthCost(level);
   if (donationDiamondValue(gold) < cost) return {
     ok: false,
     reason: 'ダイヤが不足しています。'
@@ -4305,6 +4309,10 @@ const helpDataRows = id => {
       return marketItems.filter(item => item.type === 'item' && !skipIds.has(item.id)).map(item => [item.name, `${item.cost.toLocaleString()}ダイヤ ／ ${item.desc || ''}`]);
     case 'loginBonus':
       return (typeof LOGIN_BONUS_REWARDS !== 'undefined' && LOGIN_BONUS_REWARDS || []).map((rewards, i) => [`${i + 1}日目`, rewards.map(giftRewardText).join(' ／ ')]);
+    // 合体・転生の消費ダイヤ。単価を変えたときにヘルプだけ古くなることがないよう、
+    // 実際に使っている定数からそのまま表を作る
+    case 'masuCosts':
+      return [['合体', `（主の絆Lv ＋ 副の絆Lv）× ${FUSION_COST_PER_LEVEL} ダイヤ`], ['転生', `絆Lv × ${REBIRTH_COST_PER_LEVEL} ダイヤ`], ['寄付', 'かからない（逆に累計絆経験値と同じ数のダイヤを受け取れる）']];
     // みゅあとの仲良し度。段階も増える行動も data/assistants.js の実データから作るので、
     // 値を変えたときにヘルプだけ古くなることがない
     case 'assistantBond':
@@ -4330,6 +4338,7 @@ const HELP_DATA_TITLES = {
   loginBonus: '7日間のログインボーナス',
   missionsDaily: 'デイリーミッション',
   missionsWeekly: 'ウィークリーミッション',
+  masuCosts: '神殿でかかるダイヤ',
   assistantBond: 'みゅあとの仲良し度の段階',
   assistantBondActions: '仲良し度が増える行動'
 };
@@ -13226,7 +13235,7 @@ function MonsterHeroGame() {
       const normalized = normalizeMasuProgression(selected),
         base = ALL_PLAYER_MONSTERS[selected.baseId],
         lvl = masuBondLevelInfo(selected),
-        cost = lvl.level * 100,
+        cost = masuRebirthCost(lvl.level),
         skills = getRebirthSkillChoices(selected);
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full p-4"
@@ -13256,8 +13265,28 @@ function MonsterHeroGame() {
       })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, selected.name), /*#__PURE__*/React.createElement("div", {
         className: "text-pink-300 text-xs"
       }, "Lv.", lvl.level, " / \u4E0A\u9650Lv.", normalized.levelCap), /*#__PURE__*/React.createElement("div", {
-        className: "text-amber-300 text-xs"
-      }, "\u5FC5\u8981 ", cost.toLocaleString(), "\u30C0\u30A4\u30E4"))), /*#__PURE__*/React.createElement("div", {
+        className: "text-slate-400 text-[10px]"
+      }, "\u661F\u304C1\u3064\u5897\u3048\u3066\u3001\u4E0A\u9650\u304C+", REBIRTH_LEVEL_CAP_GAIN, "\u306B\u306A\u308A\u307E\u3059"))), /*#__PURE__*/React.createElement("div", {
+        className: "bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between text-[10px] font-bold"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+        className: `font-black flex items-center gap-1 ${gold >= cost ? 'text-amber-300' : 'text-red-400'}`
+      }, /*#__PURE__*/React.createElement(Gem, {
+        size: 12
+      }), cost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-slate-400"
+      }, "\uFF08\u7D46Lv.", lvl.level, "\uFF09\xD7 ", REBIRTH_COST_PER_LEVEL), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between text-[9px] font-bold"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500"
+      }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-300 font-black"
+      }, gold.toLocaleString())), gold < cost && /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-red-400 font-black"
+      }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (cost - gold).toLocaleString(), "\uFF09")), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-slate-300 mb-2"
       }, "LvUP\u3059\u308B\u56FA\u6709\u6280\u30921\u3064\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\uFF08\u6700\u5927Lv.8\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "space-y-2 flex-1 overflow-y-auto mh-scroll"
@@ -15417,8 +15446,8 @@ function MonsterHeroGame() {
         }, /*#__PURE__*/React.createElement(Gem, {
           size: 10
         }), cost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-          className: "text-[7px] text-slate-500"
-        }, "(", main.name, "\u7D46Lv.", mainLvl.level, " + ", sub.name, "\u7D46Lv.", subLvl.level, ") \xD7 100"), !canAfford && /*#__PURE__*/React.createElement("div", {
+          className: "text-[8px] text-slate-400"
+        }, "\uFF08", main.name, "\u7D46Lv.", mainLvl.level, " \uFF0B ", sub.name, "\u7D46Lv.", subLvl.level, "\uFF09\xD7 ", FUSION_COST_PER_LEVEL), !canAfford && /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-red-400 font-black"
         }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093(\u6240\u6301: ", gold.toLocaleString(), ")")), canChooseInherit && /*#__PURE__*/React.createElement("button", {
           onClick: () => setFusionInheritUnique(v => !v),

@@ -25,6 +25,8 @@ const dataTablePrelude = [
   grab(source, 'const giftRewardText = ', 'const giftTitleDisplay'),
   grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
+  // 神殿でかかるダイヤの表は、合体・転生の単価をそのまま使う
+  grab(source, 'const FUSION_COST_PER_LEVEL =', 'const buildMasuRebirth ='),
   'const SKIP_TICKETS = SKIP_TICKET_BY_DIFFICULTY;',
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む
@@ -88,7 +90,8 @@ check('カテゴリ一覧に全カテゴリが出る', HELP_GUIDE.every(c => tex
 // 助手のセリフは毎回ランダムなので、helpTopの候補のどれかが出ていればよい
 const HELP_TOP_LINES = (() => {
   const c = {}; require('vm').createContext(c);
-  require('vm').runInContext(assistantsData + ';globalThis.__t=ASSISTANT_SCENES.helpTop.lines.map(l=>l.t);', c);
+  // セリフの {name} は呼び方に置き換わってから表示されるので、同じ形にしてから比べる
+  require('vm').runInContext(assistantsData + ";globalThis.__t=ASSISTANT_SCENES.helpTop.lines.map(l=>assistantSpeak(l.t,'',1));", c);
   return c.__t;
 })();
 check('カテゴリ一覧に導入文と助手のひとことが出る',
