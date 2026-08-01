@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6c7fac33439f6d99
+// source-sha256: a726181bc318119e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 21:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 21:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11572,6 +11572,16 @@ function MonsterHeroGame() {
     const hit = Array.isArray(spot) ? spot.includes(name) : spot === name;
     return hit ? ' is-battle-tutorial-spot' : '';
   };
+  // いま使わせたいカードの種類。操作の番(do/act)だけ効く。
+  // 技変更は「カードの名前をタップする」操作なので、カードそのものは押せるままにする
+  const battleTutorialNeed = battleTutorial && (battleTutorial.wait === 'do' || battleTutorial.wait === 'act') ? battleTutorial.need || null : null;
+  const battleTutorialCardAllowed = card => {
+    if (!battleTutorialNeed || battleTutorialNeed === 'skillPicker' || !card) return true;
+    if (battleTutorialNeed === 'emergency') return false; // 緊急回復の番はカードを使わせない
+    return (isBreederCard(card) ? 'teaching' : card.type) === battleTutorialNeed;
+  };
+  // 緊急回復は、その番のときだけ押せるようにする
+  const battleTutorialAllowsEmergency = !battleTutorialNeed || battleTutorialNeed === 'emergency';
   // 画面が変わったら、その画面に合うステップへ進める(操作で進むステップの受け皿)
   useEffect(() => {
     if (battleTutorialStep == null) return;
@@ -17228,7 +17238,7 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-white"
     }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), /*#__PURE__*/React.createElement("button", {
       onClick: useEmergency,
-      disabled: isBusy,
+      disabled: isBusy || !battleTutorialAllowsEmergency,
       className: `absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`
     }, /*#__PURE__*/React.createElement(Activity, {
       className: "text-blue-400 mb-0.5",
@@ -18187,7 +18197,7 @@ function MonsterHeroGame() {
         size: 13
       }), " Action");
     })())), /*#__PURE__*/React.createElement("div", {
-      className: `flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialSpotClass('cards')}`
+      className: `flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialNeed && battleTutorialNeed !== 'skillPicker' ? '' : battleTutorialSpotClass('cards')}`
     }, hand.map((c, i) => {
       const isSel = selectedCards.includes(i),
         curGuts = getCardGuts(c),
@@ -18197,12 +18207,14 @@ function MonsterHeroGame() {
       const assignedSlot = cardAssignments[i];
       const assignedMon = assignedSlot != null ? slots[assignedSlot] : null;
       const isDragging = dragState?.active && dragState?.cardIndex === i;
+      // 練習で使わせたい種類以外は、つかむこと自体をさせない(選択も割り当ても起きない)
+      const tutorialAllowed = battleTutorialCardAllowed(c);
       return /*#__PURE__*/React.createElement("div", {
         key: c.uid,
         className: "flex-1 min-w-0 max-w-[20%] flex"
       }, /*#__PURE__*/React.createElement("button", {
         onPointerDown: e => {
-          if (isBusy) return;
+          if (isBusy || !tutorialAllowed) return;
           const pt = e.touches ? e.touches[0] : e;
           cardDragActiveRef.current = false;
           setDragState({
@@ -18230,7 +18242,7 @@ function MonsterHeroGame() {
           }),
           ...(TYPE_INLINE_STYLE[c.type] || {})
         },
-        className: `relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging ? 'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]' : isSel ? 'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]' : 'transition-all opacity-90'} ${isPending ? 'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]' : ''} ${!isSelectable && !isSel && !isDragging ? 'grayscale opacity-50' : ''}`
+        className: `relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging ? 'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]' : isSel ? 'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]' : 'transition-all opacity-90'} ${isPending ? 'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]' : ''} ${!isSelectable && !isSel && !isDragging ? 'grayscale opacity-50' : ''}${battleTutorialNeed && tutorialAllowed && battleTutorialNeed !== 'skillPicker' ? ' is-battle-tutorial-spot' : ''}${battleTutorialNeed && !tutorialAllowed ? ' grayscale opacity-25' : ''}`
       }, isSel && !assignedMon && /*#__PURE__*/React.createElement("div", {
         className: "absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"
       }, /*#__PURE__*/React.createElement(Check, {
@@ -18915,7 +18927,7 @@ function MonsterHeroGame() {
     })), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2"
     }, "\u9593\u5408\u3044\u9069\u6027\u306F\u3069\u3053\u306B\u7F6E\u3044\u3066\u30824\u8DDD\u96E2\u3059\u3079\u3066\u306B\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u914D\u7F6E\u306F\u300C\u6575\u3068\u540C\u3058\u8DDD\u96E2\u3067\u653B\u6483\u3059\u308B\u300D\u3053\u3068\u3068\u3001\u899A\u3048\u308B\u8DDD\u96E2\u6483\u306B\u5F71\u97FF\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-      className: `grid grid-cols-2 gap-4 w-full max-w-xs${battleTutorialSpotClass('slots')}`
+      className: "grid grid-cols-2 gap-4 w-full max-w-xs"
     }, slots.map((s, i) => {
       const grade = getDistAptitude(currentPickingMon, i);
       const after = distTotalBonus(i) + aptGradeToPct(grade);
@@ -18923,7 +18935,7 @@ function MonsterHeroGame() {
         key: i,
         disabled: s !== null || !scenarioPicksSlot(i),
         onClick: () => setupMon(currentPickingMon, i),
-        className: `h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s ? 'opacity-100 shadow-xl' : 'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`
+        className: `h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all disabled:opacity-20${scenarioPicksSlot(i) ? battleTutorialSpotClass('slots') : ''} ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s ? 'opacity-100 shadow-xl' : 'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`
       }, /*#__PURE__*/React.createElement("span", {
         className: `text-[10px] font-black mb-1 uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`
       }, RANGE_LABELS[i], "\u8DDD\u96E2"), s ? s.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
@@ -18966,7 +18978,7 @@ function MonsterHeroGame() {
       scene: "pickTeaching",
       compact: true
     })), /*#__PURE__*/React.createElement("div", {
-      className: `grid grid-cols-2 gap-3 w-full max-w-sm mx-auto overflow-y-auto min-h-0 p-1 flex-1 content-center${battleTutorialSpotClass('teachings')}`
+      className: "grid grid-cols-2 gap-3 w-full max-w-sm mx-auto overflow-y-auto min-h-0 p-1 flex-1 content-center"
     }, teachingPool.map(t => {
       const owned = ownedTeachings.find(ot => ot.id === t.id);
       const level = owned ? owned.evoLevel : 0;
@@ -18975,7 +18987,7 @@ function MonsterHeroGame() {
         key: t.id,
         disabled: !scenarioPicksTeaching(t.id),
         onClick: () => setSelectedTeachingCard(t),
-        className: `p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 transition-all aspect-square disabled:opacity-25 ${owned ? 'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]' : 'bg-slate-900 border-slate-800 active:scale-95'}`
+        className: `p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 transition-all aspect-square disabled:opacity-20${scenarioPicksTeaching(t.id) ? battleTutorialSpotClass('teachings') : ''} ${owned ? 'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]' : 'bg-slate-900 border-slate-800 active:scale-95'}`
       }, /*#__PURE__*/React.createElement("span", {
         style: {
           fontSize: '44px'

@@ -1184,7 +1184,7 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   { id:'skillDo',      at:'BATTLE',        e:'wink',    title:'名前をタップ', t:'どれでもいいからカードの名前をタップしてみて♪', spot:'cards', wait:'do', need:'skillPicker' },
   // ⑧ 固有技でトドメ
   { id:'uniqueTalk',   at:'BATTLE',        e:'excited', title:'最後は固有技！', t:'固有技はその子だけの必殺技。ガッツは重いけど、とにかく強いよ！', spot:'cards', wait:'next' },
-  { id:'act',          at:'BATTLE',        e:'excited', title:'トドメだ！', t:'固有技を選んで枠をタップ → ACTIONで倒しちゃお♪', spot:'cards', wait:'act' },
+  { id:'act',          at:'BATTLE',        e:'excited', title:'トドメだ！', t:'固有技を選んで枠をタップ → ACTIONで倒しちゃお♪', spot:'cards', wait:'act', need:'unique' },
   // WAVEクリア
   { id:'clear',        at:'WAVE_RESULT',   e:'excited', title:'WAVEクリア！', t:'ナイス{name}！ 敵を倒しきるとWAVEクリアだよ♪', spot:'waveNext', wait:'next' },
   { id:'clearNext',    at:'WAVE_RESULT',   e:'happy',   title:'次へ進もう', t:'「次へ進む」を押すと強化フェーズだよ！', spot:'waveNext', wait:'act' },

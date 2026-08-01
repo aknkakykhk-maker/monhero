@@ -91,6 +91,7 @@ node tools/build.js                      # 配信用JSを作り直す(忘れる�
 node tools/check-syntax.js               # 構文エラーが無いか
 node tools/undefined-reference-check.js  # その場所からは見えない変数を使っていないか
 node tools/jsx-text-brace-check.js       # 「{」「}」が画面に文字として出ていないか
+node tools/render-error-check.js         # 実際に開いて真っ白にならないか
 ```
 
 とくに3つめは、**構文としては正しいのに特定の画面を開いた瞬間だけ真っ白になる**類の不具合を防ぐためのもの。
@@ -100,6 +101,13 @@ node tools/jsx-text-brace-check.js       # 「{」「}」が画面に文字と�
 4つめも同じ理由で足したもの。`{cond&&<div>…</div>}` の**閉じ `}` だけを書いて開き `{cond&&` を
 書き忘れる**と、余った `}` はJSXの本文(ただの文字)として扱われるため構文エラーにならない。
 実際に「バトル画面に `}` が表示され、しかも足したはずの条件が効いていない」という不具合を出した。
+5つめは、構文も参照先も正しいのに**描画した瞬間だけ落ちる**類を拾うためのもの。
+実際に「`const A = B && ...` を `const B = ...` より前に書いてしまい、
+`Cannot access 'B' before initialization` で画面が真っ白になる」という不具合を出した。
+`check-syntax.js` も `undefined-reference-check.js` もこれは検出できない。
+実際にブラウザで開いてJSの実行時エラーを拾うので、Tailwindが読めないこの
+サンドボックスでも「真っ白になるかどうか」だけは確実に分かる。
+
 表示が絡む改修をしたら、**画面ごとの見た目チェック(`layout-consistency-check.js` など)も併せて通す**。
 HOMEの配置(みゅあの吹き出し・施設・はじめての案内)を触ったら
 `node tools/home-layout-check.js` を通す。HOMEのCSSだけを取り出して実際のブラウザで
