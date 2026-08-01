@@ -32,7 +32,11 @@ const { ASSISTANT_BATTLE_TUTORIAL: steps, findBattleTutorialStep, ASSISTANT_EXPR
 // --- ① 台本はデータで持つ ---
 check('台本が data/assistants.js のデータになっている', Array.isArray(steps) && steps.length >= 8, `${steps.length}ステップ`);
 check('ステップに必要な項目がそろっている',
-  steps.every(s => s.id && s.at && s.t && s.e && ['next', 'act', 'end'].includes(s.wait)));
+  steps.every(s => s.id && s.at && s.t && s.e && ['next', 'act', 'do', 'end'].includes(s.wait)));
+// wait:'do' は「画面は変わらないが、この操作をしたら次へ」。必ず何を待つか(need)を書く
+check("操作待ち(do)には待つ内容が書いてある",
+  steps.filter(s => s.wait === 'do').every(s => !!s.need),
+  steps.filter(s => s.wait === 'do' && !s.need).map(s => s.id).join(', '));
 check('idが重複していない', new Set(steps.map(s => s.id)).size === steps.length);
 check('表情はすべて用意されているもの', steps.every(s => ASSISTANT_EXPRESSIONS.includes(s.e)), steps.map(s => s.e).join('/'));
 // 吹き出しは3行までなら収まる(実機で1行およそ17〜20字)
@@ -84,7 +88,7 @@ check('操作して進むステップがある', steps.filter(s => s.wait === 'a
 // 「説明 → 操作 → 説明 → …」の流れ。いきなり操作モードに入る画面があると
 // その画面の説明が出ないまま放り出されてしまう
 const actWithoutTalk = steps.filter((s, i) => {
-  if (s.wait !== 'act') return false;
+  if (s.wait !== 'act' && s.wait !== 'do') return false;
   const prev = steps[i - 1];
   return !(prev && prev.wait === 'next' && prev.at === s.at);
 });
@@ -92,11 +96,11 @@ check('操作の手前に必ず同じ画面の説明がある', actWithoutTalk.l
   actWithoutTalk.map(s => `${s.id}(${s.at})`).join(', '));
 // 操作させたい場所は、読んでいる間から光らせて場所が分かるようにする
 const spotKey = (s) => JSON.stringify(s && s.spot !== undefined ? s.spot : null);
-const talkWithoutSpot = steps.filter((s, i) => s.wait === 'act' && steps[i - 1] && spotKey(steps[i - 1]) !== spotKey(s));
+const talkWithoutSpot = steps.filter((s, i) => (s.wait === 'act' || s.wait === 'do') && steps[i - 1] && spotKey(steps[i - 1]) !== spotKey(s));
 check('説明と操作で同じ場所を光らせている', talkWithoutSpot.length === 0,
   talkWithoutSpot.map(s => s.id).join(', '));
 // 操作させる画面が説明だけで終わっていないか(逆向きの取りこぼし)
-const actScreens = new Set(steps.filter(s => s.wait === 'act').map(s => s.at));
+const actScreens = new Set(steps.filter(s => s.wait === 'act' || s.wait === 'do').map(s => s.at));
 check('操作が要る画面がすべて説明つきで並んでいる',
   ['BATTLE_MENU', 'PICK_HERO', 'PICK_SLOT', 'PICK_TEACHING', 'BATTLE', 'WAVE_RESULT', 'REWARD_PICK'].every(at => actScreens.has(at)),
   [...actScreens].join('/'));
@@ -170,12 +174,21 @@ check('光る場所が複数あっても隠さない側へ出す',
 check('詳細を開き閉じしても測り直す', has('}, [battleTutorialStep, gameState, currentPickingMon]);'));
 // 説明中と操作中をはっきり分ける。
 // 説明中は暗くして操作を止め、操作の番になったら暗幕も吹き出しも消す
-check('説明中と操作中を分けている', has("const acting=battleTutorial.wait==='act';"));
+check('説明中と操作中を分けている', has("const acting=battleTutorial.wait==='act'||battleTutorial.wait==='do';"));
+// 操作の中身で進むステップ(カードを使う・緊急回復・技変更)の受け皿
+check('操作の中身でも次へ進める',
+  has("if (!cur || cur.wait !== 'do' || !cur.need) return;")
+    && has('}, [battleTutorialLastAction, battleTutorialStep]);'));
 check('説明中は画面を暗くする',
   has("{!acting&&<div aria-hidden=\"true\"") && has("zIndex:91000") && has("'rgba(2,6,23,0.55)':'rgba(2,6,23,0.75)'"));
 check('説明中はタップを暗幕で受け止める(先に進めない)', has('onClick={(e)=>e.stopPropagation()}'));
 check('光らせる場所があるときは暗幕を薄くする', has("battleTutorial.spot?'rgba(2,6,23,0.55)'"));
-check('操作の番では吹き出しを消す', has('{acting?(') && has('光っているところを操作してね</span>'));
+check('操作の番では吹き出しを消す', has('{acting?(') && has("{battleTutorial.title||'光っているところを操作してね'}"));
+// 技ピッカー(z:60000)は説明中の暗幕(z:91000)より下にあるので、
+// 開いた時点で次の説明へ進むと閉じられなくなる。閉じたときに数える
+check('技変更は閉じたときに数える',
+  has('const skillPickerOpenRef = useRef(false);') && has('}, [skillPicker]);')
+    && !has("if(battleScenarioRef.current)setBattleTutorialLastAction('skillPicker'); setSkillPicker("));
 check('操作の番でも「やめる」は残す',
   (source.match(/onClick=\{endBattleTutorial\}/g) || []).length >= 2,
   `${(source.match(/onClick=\{endBattleTutorial\}/g) || []).length}か所`);
@@ -200,7 +213,7 @@ check('台本のspotは画面側に用意されているものだけ',
 // 一覧の外枠だけを光らせると画面からはみ出して「どこを押すのか」が分からない。
 // 勇者モン選択はカード1枚ずつを光らせる
 check('勇者モンはカード1枚ずつを光らせる',
-  has("active:scale-95${battleTutorialSpotClass('monCards')}") && !has("battleTutorialSpotClass('monList')"));
+  has("${scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}") && !has("battleTutorialSpotClass('monList')"));
 // 詳細を開くと画面いっぱいのモーダルが出るので、上のみゅあの帯と名前が重ならないようにする
 check('詳細と吹き出しが重ならない',
   has("paddingTop:battleTutorial?'calc(4.25rem + env(safe-area-inset-top))':undefined"));

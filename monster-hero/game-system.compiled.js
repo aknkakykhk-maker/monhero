@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b4a1616ce0d60cbf
+// source-sha256: 9e0b1c41766453d3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 16:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 16:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5587,6 +5587,13 @@ function MonsterHeroGame() {
   const [battleTutorialReturn, setBattleTutorialReturn] = useState('DEBUG_SETTINGS');
   // 光らせている場所が画面の上半分にあるとき、吹き出しを下へ逃がす
   const [battleTutorialAtBottom, setBattleTutorialAtBottom] = useState(false);
+  // 練習の台本(シナリオ)。ここに値が入っているあいだだけ、敵の行動・手札・敵の強さを
+  // 台本どおりに固定する。ふだんのバトルの抽選には一切触れない
+  const battleScenarioRef = useRef(null);
+  const battleScenarioIntentIndexRef = useRef(0);
+  // 直前に行った操作(カードの種類 / emergency / skillPicker)。
+  // 「ガードを使ったら次へ」のように、操作の中身でチュートリアルを進めるために使う
+  const [battleTutorialLastAction, setBattleTutorialLastAction] = useState(null);
   // デバッグ表示のときだけ使う「このLvだとどう見えるか」。null なら実際のLv
   const [assistantDebugLevel, setAssistantDebugLevel] = useState(null);
   // デバッグのランダムテストで、どの場面を引くか
@@ -10004,7 +10011,19 @@ function MonsterHeroGame() {
       setResultActionPending(false);
     }, 0);
   };
-  const getNextEnemyAction = useCallback((ent, currentDist) => chooseEnemyAction(ent, currentDist), []);
+
+  // ふだんは抽選。練習の台本があるあいだだけ、決まった順番の行動を返す
+  const getNextEnemyAction = useCallback((ent, currentDist) => {
+    const scenario = battleScenarioRef.current;
+    if (scenario && typeof battleScenarioIntent === 'function') {
+      const scripted = battleScenarioIntent(scenario, battleScenarioIntentIndexRef.current, ent, currentDist);
+      if (scripted) {
+        battleScenarioIntentIndexRef.current += 1;
+        return scripted;
+      }
+    }
+    return chooseEnemyAction(ent, currentDist);
+  }, []);
   const getPredictedDamage = useCallback(intent => {
     if (!intent || intent.type !== 'ATTACK' && intent.type !== 'CHARGE') return 0;
     const atkVal = Math.floor(intent.value * (1.0 - getWaveBuff('enemyAtkDebuffPct')));
@@ -10405,8 +10424,13 @@ function MonsterHeroGame() {
     setHp(p => Math.min(effectiveMaxHp, p + recoverHp));
     setGuts(p => Math.min(effectiveMaxGuts, p + recoverGuts));
     await wait(1000);
-    setEnemyIntent(getNextEnemyAction(enemy, enemyDist));
-    await handleEnemyTurn('none');
+    // 練習の台本があるときは、予告を引き直すと画面と食い違うので出ている行動をそのまま実行する
+    const scenario = battleScenarioRef.current;
+    const acting = scenario && enemyIntent ? enemyIntent : getNextEnemyAction(enemy, enemyDist);
+    setEnemyIntent(acting);
+    if (scenario) setBattleTutorialLastAction('emergency');
+    await handleEnemyTurn('none', {}, acting);
+    if (scenario) setEnemyIntent(getNextEnemyAction(enemy, enemyDist));
   };
   const processTurn = async () => {
     if (isBusy || !enemy || selectedCards.length === 0) return;
@@ -10419,6 +10443,11 @@ function MonsterHeroGame() {
       slotIdx: cardAssignments[i] != null ? cardAssignments[i] : null
     }));
     const usedCards = usedCardEntries.map(e => e.card);
+    // 練習中は「何をしたか」を覚えておく。ガードを使ったら次へ、のように操作で進めるために使う
+    if (battleScenarioRef.current) {
+      const kinds = usedCards.map(c => isBreederCard(c) ? 'teaching' : c.type);
+      setBattleTutorialLastAction(kinds.length ? kinds.join(',') : null);
+    }
     const totalGuts = usedCards.reduce((a, c) => a + getCardGuts(c), 0);
     if (guts < totalGuts) return;
     // Fallback slot for cards without assignment (buffs etc.)
@@ -11166,6 +11195,9 @@ function MonsterHeroGame() {
         uid: Math.random()
       });
     });
+    // 練習の台本があるときだけ、配る順を固定する(ふだんはこれまでどおり混ぜる)
+    const scenario = battleScenarioRef.current;
+    if (scenario && typeof orderDeckForScenario === 'function') return orderDeckForScenario(scenario, pool);
     return pool.sort(() => Math.random() - 0.5);
   };
   // 指定スロットの固有技の選択(key)を直接適用する共通処理。手札・山札・捨て札に既に配られている
@@ -11345,7 +11377,20 @@ function MonsterHeroGame() {
         storeSet(bestWaveKey(BATTLE_MODE_CHALLENGE, difficulty), w, false);
       }
     }
-    const dist = Number.isInteger(initialDistance) && initialDistance >= 0 && initialDistance < RANGE_LABELS.length ? initialDistance : Math.floor(Math.random() * 4);
+    const scenario = battleScenarioRef.current;
+    // 練習の台本があるときは、距離・ライフ・攻撃力まで決め打ちにして毎回同じ流れにする
+    const scriptedDist = scenario && Number.isInteger(scenario.enemyDist) ? scenario.enemyDist : null;
+    const dist = Number.isInteger(scriptedDist) ? scriptedDist : Number.isInteger(initialDistance) && initialDistance >= 0 && initialDistance < RANGE_LABELS.length ? initialDistance : Math.floor(Math.random() * 4);
+    if (scenario) {
+      if (Number.isFinite(Number(scenario.enemyHp))) {
+        newEnemy.hp = Math.max(1, Math.floor(scenario.enemyHp));
+        newEnemy.maxHp = newEnemy.hp;
+      }
+      if (Number.isFinite(Number(scenario.enemyAtk))) {
+        newEnemy.atk = Math.max(0, Math.floor(scenario.enemyAtk));
+      }
+      battleScenarioIntentIndexRef.current = 0;
+    }
     setEnemy(newEnemy);
     setEnemyDist(dist);
     setEnemyIntent(getNextEnemyAction(newEnemy, dist));
@@ -11445,6 +11490,10 @@ function MonsterHeroGame() {
     setCurrentPickingMon(null);
     setShowHelp(false);
     setBattleMenuTab('difficulty');
+    // 台本を有効にする。ここから終わるまで、敵の行動・手札・敵の強さが台本どおりになる
+    battleScenarioRef.current = typeof BATTLE_TUTORIAL_SCENARIO !== 'undefined' && BATTLE_TUTORIAL_SCENARIO || null;
+    battleScenarioIntentIndexRef.current = 0;
+    setBattleTutorialLastAction(null);
     setBattleTutorialReturn(returnTo);
     setBattleTutorialStep(0);
     // モード・ランキング・難易度もここで説明したいので、バトルの入口から始める
@@ -11463,11 +11512,22 @@ function MonsterHeroGame() {
     setMonSelection(getUnlockedBaseMonsterList());
     setHeroPickTab('base');
     setCurrentPickingMon(null);
+    battleScenarioIntentIndexRef.current = 0;
+    setBattleTutorialLastAction(null);
     setGameState('PICK_HERO');
   };
+  // 台本で「これを選ぶ」と決めているもの。決めていないものは押せなくする(選択肢を1つに絞る)
+  const battleScenario = battleScenarioRef.current;
+  const scenarioPicksHero = id => !battleScenario || !battleScenario.heroId || battleScenario.heroId === id;
+  const scenarioPicksSlot = idx => !battleScenario || !Number.isInteger(battleScenario.slotIndex) || battleScenario.slotIndex === idx;
+  const scenarioPicksTeaching = id => !battleScenario || !battleScenario.teachingId || battleScenario.teachingId === id;
   // 終わる・やめる。記録は残していないので、始めた場所へ戻すだけでよい
   const endBattleTutorial = () => {
     const back = battleTutorialReturn;
+    // 台本を外す。以降のバトルはふだんどおりの抽選に戻る
+    battleScenarioRef.current = null;
+    battleScenarioIntentIndexRef.current = 0;
+    setBattleTutorialLastAction(null);
     setBattleTutorialStep(null);
     setBattleTutorialReturn('DEBUG_SETTINGS');
     debugBattleRef.current = false;
@@ -11502,6 +11562,29 @@ function MonsterHeroGame() {
     const next = typeof findBattleTutorialStep === 'function' ? findBattleTutorialStep(battleTutorialStep + 1, gameState) : -1;
     if (next >= 0) setBattleTutorialStep(next);
   }, [gameState, battleTutorialStep]);
+  // 技ピッカーは閉じたときに「見た」と数える。開いた時点で次の説明へ進むと、
+  // 説明中の暗幕がピッカーの上に乗って閉じられなくなるため
+  const skillPickerOpenRef = useRef(false);
+  useEffect(() => {
+    if (skillPicker) {
+      skillPickerOpenRef.current = true;
+      return;
+    }
+    if (!skillPickerOpenRef.current) return;
+    skillPickerOpenRef.current = false;
+    if (battleScenarioRef.current) setBattleTutorialLastAction('skillPicker');
+  }, [skillPicker]);
+  // 「ガードを使ったら次へ」のように、操作の中身で進むステップ(wait:'do')の受け皿。
+  // 画面が変わらない操作(カードを使う・緊急回復・技変更)はこちらで待つ
+  useEffect(() => {
+    if (battleTutorialStep == null || !battleTutorialLastAction) return;
+    const cur = battleTutorialSteps[battleTutorialStep];
+    if (!cur || cur.wait !== 'do' || !cur.need) return;
+    const done = String(battleTutorialLastAction).split(',');
+    if (!done.includes(cur.need)) return;
+    setBattleTutorialLastAction(null);
+    setBattleTutorialStep(v => Math.min(battleTutorialSteps.length - 1, (v || 0) + 1));
+  }, [battleTutorialLastAction, battleTutorialStep]);
   // 吹き出しを上下どちらに出すか。光らせている場所を隠してしまわない側へ逃がす。
   // 光る場所が1か所とは限らない(一覧とその決定ボタンなど)ので、全部を囲む枠を出し、
   // その上下に残る空きの広いほうへ寄せる。上端だけを見て決めると、
@@ -18622,8 +18705,9 @@ function MonsterHeroGame() {
       const isSel = currentPickingMon?.id === m.id;
       return /*#__PURE__*/React.createElement("button", {
         key: m.id,
+        disabled: !scenarioPicksHero(m.id),
         onClick: () => setCurrentPickingMon(m),
-        className: `bg-slate-900 border-2 rounded-2xl flex flex-col items-center transition-all active:scale-95${battleTutorialSpotClass('monCards')} ${isSel ? 'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]' : 'border-slate-800'}`,
+        className: `bg-slate-900 border-2 rounded-2xl flex flex-col items-center transition-all active:scale-95 disabled:opacity-25${scenarioPicksHero(m.id) ? battleTutorialSpotClass('monCards') : ''} ${isSel ? 'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]' : 'border-slate-800'}`,
         style: {
           padding: '12px 8px'
         }
@@ -18818,7 +18902,7 @@ function MonsterHeroGame() {
       const after = distTotalBonus(i) + aptGradeToPct(grade);
       return /*#__PURE__*/React.createElement("button", {
         key: i,
-        disabled: s !== null,
+        disabled: s !== null || !scenarioPicksSlot(i),
         onClick: () => setupMon(currentPickingMon, i),
         className: `h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s ? 'opacity-100 shadow-xl' : 'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`
       }, /*#__PURE__*/React.createElement("span", {
@@ -18870,8 +18954,9 @@ function MonsterHeroGame() {
       const isMax = level >= 2;
       return /*#__PURE__*/React.createElement("button", {
         key: t.id,
+        disabled: !scenarioPicksTeaching(t.id),
         onClick: () => setSelectedTeachingCard(t),
-        className: `p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 transition-all aspect-square ${owned ? 'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]' : 'bg-slate-900 border-slate-800 active:scale-95'}`
+        className: `p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 transition-all aspect-square disabled:opacity-25 ${owned ? 'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]' : 'bg-slate-900 border-slate-800 active:scale-95'}`
       }, /*#__PURE__*/React.createElement("span", {
         style: {
           fontSize: '44px'
@@ -19228,7 +19313,7 @@ function MonsterHeroGame() {
       })()));
     })(), battleTutorial && (() => {
       const who = assistantById();
-      const acting = battleTutorial.wait === 'act';
+      const acting = battleTutorial.wait === 'act' || battleTutorial.wait === 'do';
       const last = battleTutorial.wait === 'end';
       const total = battleTutorialSteps.length;
       return /*#__PURE__*/React.createElement(React.Fragment, null, !acting && /*#__PURE__*/React.createElement("div", {
@@ -19282,7 +19367,7 @@ function MonsterHeroGame() {
         style: {
           color: who.accent
         }
-      }, "\u5149\u3063\u3066\u3044\u308B\u3068\u3053\u308D\u3092\u64CD\u4F5C\u3057\u3066\u306D"), /*#__PURE__*/React.createElement("button", {
+      }, battleTutorial.title || '光っているところを操作してね'), /*#__PURE__*/React.createElement("button", {
         onClick: endBattleTutorial,
         className: "px-2.5 min-h-[26px] rounded-full bg-white/10 text-slate-300 text-[9px] font-black active:scale-95"
       }, "\u3084\u3081\u308B")) : /*#__PURE__*/React.createElement("div", {

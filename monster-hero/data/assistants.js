@@ -1143,7 +1143,9 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   // ブリーダーの教えを持ち込む
   { id:'teachingTalk', at:'PICK_TEACHING', e:'normal',  title:'ブリーダーの教え', t:'バトル中に使える助っ人カードだよ。ここで持ち込むの。', spot:'teachings', wait:'next' },
   { id:'teaching',     at:'PICK_TEACHING', e:'happy',   title:'1つ選ぼう', t:'好きな教えを1つ押してね♪', spot:'teachings', wait:'act' },
-  // バトル。画面の見かたを上から順に、そのあと1ターンの流れを説明する
+  // バトル。まず画面の見かたを上から順に、そのあとは台本どおりの敵と戦いながら
+  // ガード → 必殺技 → ブリーダーカード → 緊急回復と敵の移動 → 距離技 → 攻撃 →
+  // 技変更 → 固有技、を1つずつ操作してもらう
   { id:'battle',       at:'BATTLE',        e:'excited', title:'バトル開始！', t:'いよいよ本番！ 画面の見かたから順番に教えるね♪', wait:'next' },
   { id:'waveTalk',     at:'BATTLE',        e:'normal',  title:'上のバー', t:'今のWAVEとターン数だよ。20ターン以内に敵を倒せないと負けちゃう。', spot:'waveInfo', wait:'next' },
   { id:'enemyTalk',    at:'BATTLE',        e:'normal',  title:'相手の情報', t:'敵の名前・いる距離・HPバー。距離はこまめに変わるから要チェック！', spot:'enemyBar', wait:'next' },
@@ -1152,13 +1154,37 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   { id:'slotTalk2',    at:'BATTLE',        e:'wink',    title:'4つの距離枠', t:'仲間が並んでる枠が距離。敵と同じ距離の子ほど大ダメージを出せるよ！', spot:'battleSlots', wait:'next' },
   { id:'cards',        at:'BATTLE',        e:'normal',  title:'手札のカード', t:'下にあるのが今つかえるカード。ガッツが足りる子だけ光ってるよ。', spot:'cards', wait:'next' },
   { id:'cardKinds',    at:'BATTLE',        e:'normal',  title:'カードの種類', t:'攻めの攻撃カード、ダメージを減らすガードカード、力を底上げするブリーダーカードがあるよ。', spot:'cards', wait:'next' },
-  { id:'cardOrder',    at:'BATTLE',        e:'surprise',title:'2枚目からは半減', t:'同じターンに攻撃やガードを重ねると2枚目から効果が半分。ブリーダーカードは半減しないよ。', spot:'cards', wait:'next' },
   { id:'limitTalk',    at:'BATTLE',        e:'normal',  title:'使える枚数', t:'1ターンに出せる枚数はここ。勇者モンの特性で増えることもあるんだ♪', spot:'cardCount', wait:'next' },
+  { id:'cardOrder',    at:'BATTLE',        e:'surprise',title:'2枚目からは半減', t:'同じターンに攻撃やガードを重ねると2枚目から効果が半分。ブリーダーカードは半減しないよ。', spot:'cards', wait:'next' },
   { id:'deckTalk',     at:'BATTLE',        e:'happy',   title:'山札のこと', t:'「VIEW」で山札と使い終わったカードを確認できるよ。無くなったら混ぜ直すの。', spot:'deckView', wait:'next' },
-  { id:'uniqueTalk',   at:'BATTLE',        e:'excited', title:'固有技', t:'枠の上の紫の帯で固有技を切り替えられるよ。技を2つ以上持ってるときだけ出るの♪', spot:'battleSlots', wait:'next' },
-  { id:'emergencyTalk',at:'BATTLE',        e:'surprise',title:'緊急回復', t:'ピンチなら左の「緊急」！ ライフとガッツが3割もどるけど、そのターンは攻撃できないよ。', spot:'emergency', wait:'next' },
-  { id:'actTalk',      at:'BATTLE',        e:'normal',  title:'1ターンの流れ', t:'カードを選ぶ→使いたい子の枠をタップ→ACTIONで実行。そのあと敵の番だよ。', spot:'action', wait:'next' },
-  { id:'act',          at:'BATTLE',        e:'wink',    title:'やってみよう！', t:'まずは1枚つかって、敵を倒してみて♪', spot:'action', wait:'act' },
+  // ① 敵の攻撃予告 → ガードで受ける
+  { id:'intentTalk',   at:'BATTLE',        e:'surprise',title:'敵の攻撃予告！', t:'敵の上に次の行動が出てるでしょ？ 今ターンは殴ってくるよ！', spot:'enemyBar', wait:'next' },
+  { id:'guardTalk',    at:'BATTLE',        e:'normal',  title:'ガードで受けよう', t:'ガードカードを選んで、ACTIONを押してみて。ダメージがぐっと減るよ！', spot:'cards', wait:'next' },
+  { id:'guardDo',      at:'BATTLE',        e:'wink',    title:'ガードを使ってみて', t:'ガードカード → ACTION の順だよ♪', spot:'cards', wait:'do', need:'guard' },
+  // ② 必殺技を魅せる
+  { id:'chargeTalk',   at:'BATTLE',        e:'surprise',title:'必殺技が来る！', t:'「☠️ 必殺技」の予告が出た！ ふつうの攻撃よりずっと痛いよ。', spot:'enemyBar', wait:'next' },
+  { id:'chargeReady',  at:'BATTLE',        e:'normal',  title:'もう一度ガード', t:'必殺技もガードで受け止められるよ。手札のガードを見て！', spot:'cards', wait:'next' },
+  { id:'chargeDo',     at:'BATTLE',        e:'excited', title:'受け止めよう！', t:'ガードカードを選んでACTIONだよ♪', spot:'cards', wait:'do', need:'guard' },
+  // ③ ブリーダーカードでバフ
+  { id:'breederTalk',  at:'BATTLE',        e:'happy',   title:'ブリーダーカード', t:'次はブリーダーカード。おりょうの力で、こっちの攻撃力が上がるよ！', spot:'cards', wait:'next' },
+  { id:'breederDo',    at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'ブリーダーカードを選んでACTION！ 攻撃UPの表示が出るよ♪', spot:'cards', wait:'do', need:'teaching' },
+  // ④ 緊急回復と敵の移動
+  { id:'emergTalk',    at:'BATTLE',        e:'normal',  title:'緊急回復', t:'左の「緊急」はライフとガッツが3割もどるよ。そのターンは攻撃できないの。', spot:'emergency', wait:'next' },
+  { id:'emergDo',      at:'BATTLE',        e:'wink',    title:'押してみて', t:'「緊急」を押してみて！ 敵も動くから、そこも見ててね♪', spot:'emergency', wait:'do', need:'emergency' },
+  { id:'moveTalk',     at:'BATTLE',        e:'surprise',title:'敵が動いた！', t:'敵は距離を変えてくるよ。離れられると攻撃が当たりにくくなるの。', spot:'enemyBar', wait:'next' },
+  // ⑤ 距離技で引き戻す
+  { id:'rangeTalk',    at:'BATTLE',        e:'excited', title:'距離技で引き戻す', t:'距離技は、当てたあと敵をその距離まで引っぱってこられるんだ！', spot:'cards', wait:'next' },
+  { id:'rangeDo',      at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'距離技を選んで、モッチーの枠をタップ → ACTION だよ♪', spot:'cards', wait:'do', need:'range_atk' },
+  // ⑥ 通常攻撃
+  { id:'atkTalk',      at:'BATTLE',        e:'happy',   title:'距離がそろった！', t:'敵と同じ距離になったね。この状態の攻撃がいちばん強いよ！', spot:'battleSlots', wait:'next' },
+  { id:'atkReady',     at:'BATTLE',        e:'normal',  title:'攻撃カード', t:'手札の攻撃カードを使ってみよう。距離が合ってるとよく効くよ！', spot:'cards', wait:'next' },
+  { id:'atkDo',        at:'BATTLE',        e:'wink',    title:'攻撃してみて', t:'攻撃カード → 枠をタップ → ACTION！', spot:'cards', wait:'do', need:'atk' },
+  // ⑦ 技変更
+  { id:'skillTalk',    at:'BATTLE',        e:'normal',  title:'技は変えられる', t:'カードの名前は点線になってるでしょ？ タップすると使う技を選び直せるよ。', spot:'cards', wait:'next' },
+  { id:'skillDo',      at:'BATTLE',        e:'wink',    title:'名前をタップ', t:'どれでもいいからカードの名前をタップしてみて♪', spot:'cards', wait:'do', need:'skillPicker' },
+  // ⑧ 固有技でトドメ
+  { id:'uniqueTalk',   at:'BATTLE',        e:'excited', title:'最後は固有技！', t:'固有技はその子だけの必殺技。ガッツは重いけど、とにかく強いよ！', spot:'cards', wait:'next' },
+  { id:'act',          at:'BATTLE',        e:'excited', title:'トドメだ！', t:'固有技を選んで枠をタップ → ACTIONで倒しちゃお♪', spot:'cards', wait:'act' },
   // WAVEクリア
   { id:'clear',        at:'WAVE_RESULT',   e:'excited', title:'WAVEクリア！', t:'ナイス{name}！ 敵を倒しきるとWAVEクリアだよ♪', spot:'waveNext', wait:'next' },
   { id:'clearNext',    at:'WAVE_RESULT',   e:'happy',   title:'次へ進もう', t:'「次へ進む」を押すと強化フェーズだよ！', spot:'waveNext', wait:'act' },
@@ -1240,3 +1266,69 @@ const findAssistant = (id) => ASSISTANTS.find(a => a.id === id)
   || ASSISTANTS[0]
   || null;
 const findAssistantScene = (key) => (key && ASSISTANT_SCENES[key]) || null;
+
+// ---------- バトルのれんしゅう: シナリオ(台本どおりに動くバトル) ----------
+// ふだんのバトルは敵の行動も手札も抽選だが、練習のときだけこの台本どおりに固定して、
+// ガード → 必殺技 → ブリーダーカード → 緊急回復と敵の移動 → 距離技 → 攻撃 →
+// 技変更 → 固有技でトドメ、という一連の流れを必ず同じ順で見せられるようにする。
+//
+// 画面側は「台本があるときだけ」この値を使い、ふだんのバトルの抽選には一切触れない。
+//
+//   hero/slot/teaching … 選ばせるものを1つに絞る(他は押せなくする)
+//   enemy…             … 敵・初期距離・ライフ・攻撃力を固定する
+//   hand/draw          … 最初の5枚と、そのあと引く順を固定する
+//   intents            … 敵の行動を上から順に消費する
+//
+// ライフと攻撃力の数値は tools/battle-scenario-check.js が実際の計算式で検算している。
+// 「途中で倒れない」「固有技で必ず倒せる」「こちらは倒れない」を数値で満たすこと。
+const BATTLE_TUTORIAL_SCENARIO = {
+  heroId: 'Mocchi',
+  slotIndex: 1,          // 近距離。敵の初期位置と同じにして距離補正の効きを見せる
+  teachingId: 'oryo',    // おりょうの力(攻撃アップ)。バフの変化が数値で見える
+  enemyKey: 'Dino',
+  enemyDist: 1,
+  enemyHp: 500,          // 距離技＋攻撃では落ちず、固有技で必ず落ちる量
+  enemyAtk: 300,         // ガードの有り難みと必殺技の迫力が出る量(こちらは倒れない)
+  hand: ['guard', 'guard', 'teaching', 'range_atk', 'atk'],
+  draw: ['unique', 'guard', 'atk'],
+  intents: [
+    { type:'ATTACK' },              // 1ターン目 … 攻撃予告 → ガードで受ける
+    { type:'CHARGE' },              // 2ターン目 … 必殺技を魅せる
+    { type:'WAIT' },                // 3ターン目 … ブリーダーカードでバフ
+    { type:'MOVE', targetDist:3 },  // 4ターン目 … 緊急回復のあいだに遠距離へ移動
+    { type:'WAIT' },                // 5ターン目 … 距離技で引き戻す
+    { type:'WAIT' },                // 6ターン目 … 通常攻撃
+    { type:'WAIT' },                // 7ターン目以降 … 技変更 → 固有技でトドメ
+  ],
+};
+// 台本の敵の行動を順に返す。呼ばれるたびに1つ進む(画面側がindexを持つ)
+const battleScenarioIntent = (scenario, index, enemy, currentDist) => {
+  if (!scenario || !Array.isArray(scenario.intents) || !enemy) return null;
+  const list = scenario.intents;
+  const step = list[Math.min(Math.max(0, index), list.length - 1)];
+  if (!step) return null;
+  const labels = (typeof RANGE_LABELS !== 'undefined' ? RANGE_LABELS : ['零','近','中','遠']);
+  if (step.type === 'MOVE') {
+    const target = Number.isInteger(step.targetDist) ? step.targetDist : currentDist;
+    return { type:'MOVE', value:0, label:`移動: ${labels[target]}`, targetDist:target, icon:'🏃', actionId:'move' };
+  }
+  const def = (typeof ENEMY_ACTION_DEFINITIONS !== 'undefined' ? ENEMY_ACTION_DEFINITIONS : [])
+    .find(d => d.type === step.type) || { multiplier: 0, id:'wait' };
+  const label = step.type === 'ATTACK' ? (enemy.normal || '通常攻撃')
+    : step.type === 'CHARGE' ? (enemy.special || '必殺技！') : '様子を見ている';
+  const icon = step.type === 'ATTACK' ? '👊' : step.type === 'CHARGE' ? '🔥' : '⏳';
+  return { type:step.type, value:Math.floor(enemy.atk * def.multiplier), label, icon, actionId:def.id };
+};
+// 台本どおりの並びに手札を組み直す。引く順は山札の末尾から取り出されるので逆に並べる
+const orderDeckForScenario = (scenario, pool) => {
+  if (!scenario || !Array.isArray(pool) || pool.length === 0) return pool;
+  const rest = [...pool];
+  const take = (want) => {
+    const at = rest.findIndex(c => (want === 'teaching' ? (c.type === 'buff' || c.type === 'heal' || c.type === 'debuff') : c.type === want));
+    return at >= 0 ? rest.splice(at, 1)[0] : null;
+  };
+  const hand = (scenario.hand || []).map(take).filter(Boolean);
+  const draw = (scenario.draw || []).map(take).filter(Boolean);
+  // 山札は pop() で末尾から引かれるため、引かせたい順の逆に積む
+  return [...hand, ...rest, ...draw.reverse()];
+};
