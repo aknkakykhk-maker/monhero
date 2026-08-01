@@ -171,6 +171,13 @@ const assistantLineMatchesBond = (line, level) => {
 // バトル中・クイックの成長演出・供モンの加入演出には常設しない(テンポを止めないため)。
 // バトル中の案内は「ステータス」やヘルプを開いたときだけ出す。
 const ASSISTANT_SCENES = {
+  // 日次案内は通常ログインとデバッグ再生で同じ scene を参照する。
+  // 本文は下の addAssistantLinePack から合流するため、ここでは受け皿だけを定義する。
+  dailyMasuAdvice: {
+    help: 'basics/battle-modes',
+    lines: [],
+  },
+
   // ---- はじめて ----
   onboarding: {
     help: 'basics/onboarding',
@@ -670,8 +677,10 @@ addAssistantLinePack({
   lines: {
     dailyMasuAdvice: [
       { e:'wink', t:'マスモンを早く増やしたいなら、いい方法があるよ♪' },
-      { e:'happy', t:'クイックモードのBeginnerを選んで、\nWAVE2まで進んだら「あきらめる」を選んでみて！' },
+      { e:'happy', t:'クイックのBeginnerでWAVE2まで進んだら、\n「あきらめる」を選んでみて！' },
       { e:'excited', t:'これが今のところ、マスモンを一番早く登録できる方法だよ♪' },
+      { e:'normal', t:'WAVE2まで進むのがポイント！ そこから登録できるよ。' },
+      { e:'wink', t:'短い時間で仲間を増やしたいときに試してみてね♪' },
     ],
   },
 });
