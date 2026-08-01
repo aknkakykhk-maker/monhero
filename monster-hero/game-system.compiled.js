@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7b1a471e9efd8850
+// source-sha256: a1117bc2456e2dd2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-02 02:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 02:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5593,7 +5593,7 @@ function MonsterHeroGame() {
   const [tutorialKind, setTutorialKind] = useState('tour');
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
-  const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|7 }
+  const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|number, eligible:boolean }
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
@@ -9720,7 +9720,8 @@ function MonsterHeroGame() {
       if (cancelled || masuMons.length >= 8 || shownDate === today) return;
       await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
       if (!cancelled) setDailyMasuAdvice({
-        debugCount: null
+        debugCount: null,
+        eligible: true
       });
     })();
     return () => {
@@ -9737,12 +9738,9 @@ function MonsterHeroGame() {
     setGameState('BATTLE_MENU');
   };
   const debugDailyMasuAdviceAt = count => {
-    if (count >= 8) {
-      window.alert(`登録数${count}体：表示条件の対象外です。`);
-      return;
-    }
     setDailyMasuAdvice({
-      debugCount: count
+      debugCount: count,
+      eligible: count < 8
     });
   };
   const returnToHome = () => {
@@ -19295,6 +19293,7 @@ function MonsterHeroGame() {
     }, "\u4E0A\u3052\u3089\u308C\u308B\u56FA\u6709\u6280\u306F\u3082\u3046\u3042\u308A\u307E\u305B\u3093")), dailyMasuAdvice && (() => {
       const who = assistantById();
       const lines = assistantSceneById('dailyMasuAdvice')?.lines || [];
+      const eligible = dailyMasuAdvice.eligible !== false;
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-end justify-center",
         style: {
@@ -19315,21 +19314,39 @@ function MonsterHeroGame() {
         className: "mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white"
       }, "DEBUG\u30FB\u767B\u9332\u6570", dailyMasuAdvice.debugCount, "\u4F53\u3092\u60F3\u5B9A"), /*#__PURE__*/React.createElement("h2", {
         className: "mb-3 text-center text-base font-black text-pink-200"
-      }, "\u307F\u3085\u3042\u306E\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u30A2\u30C9\u30D0\u30A4\u30B9"), /*#__PURE__*/React.createElement("div", {
+      }, "\u307F\u3085\u3042\u306E\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u30A2\u30C9\u30D0\u30A4\u30B9"), eligible ? /*#__PURE__*/React.createElement("div", {
         className: "flex items-end gap-2"
       }, /*#__PURE__*/React.createElement(AssistantFace, {
         who: who,
         size: 72,
         accent: who.accent,
-        expression: "wink"
+        expression: lines[0]?.e || 'wink'
       }), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 space-y-2"
+        className: "flex-1 space-y-2",
+        style: {
+          minHeight: '44px',
+          color: '#ffffff',
+          visibility: 'visible'
+        }
       }, lines.slice(0, 3).map((line, i) => /*#__PURE__*/React.createElement("div", {
         key: i,
-        className: "relative rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-2 text-[12px] font-bold leading-relaxed text-white whitespace-pre-line"
-      }, line.t)))), /*#__PURE__*/React.createElement("div", {
-        className: "mt-4 grid grid-cols-2 gap-2"
-      }, /*#__PURE__*/React.createElement("button", {
+        className: "relative rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-2 text-[12px] font-bold leading-relaxed text-white whitespace-pre-line",
+        style: {
+          minHeight: '36px',
+          color: '#ffffff',
+          backgroundColor: '#0f172a',
+          display: 'block'
+        }
+      }, assistantSpeakText(line.t, breederName, assistantBondLevelNow))))) : /*#__PURE__*/React.createElement("div", {
+        className: "rounded-2xl border-2 border-slate-600 bg-slate-900 px-4 py-5 text-center text-sm font-black text-slate-100",
+        style: {
+          minHeight: '64px',
+          color: '#f1f5f9',
+          backgroundColor: '#0f172a'
+        }
+      }, "\u8868\u793A\u6761\u4EF6\u306E\u5BFE\u8C61\u5916\u3067\u3059\u3002", /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("small", null, "\u767B\u9332\u65708\u4F53\u4EE5\u4E0A\u3067\u306F\u3001\u901A\u5E38\u30D7\u30EC\u30A4\u4E2D\u306B\u3053\u306E\u6848\u5185\u306F\u8868\u793A\u3055\u308C\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
+        className: `mt-4 grid ${eligible ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
+      }, eligible && /*#__PURE__*/React.createElement("button", {
         onClick: tryDailyMasuAdvice,
         className: "min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]"
       }, "\u3084\u3063\u3066\u307F\u308B"), /*#__PURE__*/React.createElement("button", {

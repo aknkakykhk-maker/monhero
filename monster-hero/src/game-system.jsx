@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-02 02:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 02:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2545,7 +2545,7 @@ function MonsterHeroGame() {
   const [tutorialKind, setTutorialKind] = useState('tour');
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
-  const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|7 }
+  const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|number, eligible:boolean }
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
@@ -5297,7 +5297,7 @@ function MonsterHeroGame() {
       const shownDate = await storeGet(DAILY_MASU_ADVICE_KEY, '', false);
       if (cancelled || masuMons.length >= 8 || shownDate === today) return;
       await storeSet(DAILY_MASU_ADVICE_KEY, today, false);
-      if (!cancelled) setDailyMasuAdvice({ debugCount:null });
+      if (!cancelled) setDailyMasuAdvice({ debugCount:null, eligible:true });
     })();
     return () => { cancelled = true; };
   }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateNoticeVisible, loginBonusPopup, levelCapCompensation, dailyMasuAdvice, masuMons.length]);
@@ -5312,8 +5312,7 @@ function MonsterHeroGame() {
     setGameState('BATTLE_MENU');
   };
   const debugDailyMasuAdviceAt = count => {
-    if (count >= 8) { window.alert(`登録数${count}体：表示条件の対象外です。`); return; }
-    setDailyMasuAdvice({ debugCount:count });
+    setDailyMasuAdvice({ debugCount:count, eligible:count < 8 });
   };
 
   const returnToHome = () => {
@@ -9359,13 +9358,14 @@ function MonsterHeroGame() {
       )}
 
       {/* 助手(みゅあ)のデバッグ表示。デバッグ設定からだけ開ける。通常のプレイでは出ない */}
-      {dailyMasuAdvice&&(()=>{const who=assistantById();const lines=assistantSceneById('dailyMasuAdvice')?.lines||[];return(
+      {dailyMasuAdvice&&(()=>{const who=assistantById();const lines=assistantSceneById('dailyMasuAdvice')?.lines||[];const eligible=dailyMasuAdvice.eligible!==false;return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="みゅあのワンポイントアドバイス">
           <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             {dailyMasuAdvice.debugCount!=null&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・登録数{dailyMasuAdvice.debugCount}体を想定</div>}
             <h2 className="mb-3 text-center text-base font-black text-pink-200">みゅあのワンポイントアドバイス</h2>
-            <div className="flex items-end gap-2"><AssistantFace who={who} size={72} accent={who.accent} expression="wink"/><div className="flex-1 space-y-2">{lines.slice(0,3).map((line,i)=><div key={i} className="relative rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-2 text-[12px] font-bold leading-relaxed text-white whitespace-pre-line">{line.t}</div>)}</div></div>
-            <div className="mt-4 grid grid-cols-2 gap-2"><button onClick={tryDailyMasuAdvice} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]">やってみる</button><button onClick={closeDailyMasuAdvice} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">閉じる</button></div>
+            {eligible?<div className="flex items-end gap-2"><AssistantFace who={who} size={72} accent={who.accent} expression={lines[0]?.e||'wink'}/><div className="flex-1 space-y-2" style={{minHeight:'44px',color:'#ffffff',visibility:'visible'}}>{lines.slice(0,3).map((line,i)=><div key={i} className="relative rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-2 text-[12px] font-bold leading-relaxed text-white whitespace-pre-line" style={{minHeight:'36px',color:'#ffffff',backgroundColor:'#0f172a',display:'block'}}>{assistantSpeakText(line.t,breederName,assistantBondLevelNow)}</div>)}</div></div>
+            :<div className="rounded-2xl border-2 border-slate-600 bg-slate-900 px-4 py-5 text-center text-sm font-black text-slate-100" style={{minHeight:'64px',color:'#f1f5f9',backgroundColor:'#0f172a'}}>表示条件の対象外です。<br/><small>登録数8体以上では、通常プレイ中にこの案内は表示されません。</small></div>}
+            <div className={`mt-4 grid ${eligible?'grid-cols-2':'grid-cols-1'} gap-2`}>{eligible&&<button onClick={tryDailyMasuAdvice} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]">やってみる</button>}<button onClick={closeDailyMasuAdvice} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">閉じる</button></div>
           </div>
         </div>);})()}
 
