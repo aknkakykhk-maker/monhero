@@ -10,6 +10,7 @@ const vm = require('vm');
 const root = path.resolve(__dirname, '..');
 const web = path.join(root, 'monster-hero');
 const read = (p) => fs.readFileSync(path.join(web, p), 'utf8');
+const source = read('src/game-system.jsx');
 
 const ctx = {};
 vm.createContext(ctx);
@@ -62,6 +63,10 @@ check('名前は14文字まで(カードの枠に収まる長さ)', longName.len
 const kiki = icons.find(i => i.id === 'kiki_icon');
 check('ききのアイコンが正式名称・価格で並ぶ', kiki?.name === 'ききのアイコン' && kiki?.cost === 1);
 check('ききの画像はブリーダーアイコン専用フォルダにある', kiki?.icon === 'images/breeder-icons/kiki.PNG');
+check('ききだけに拡大・位置調整を適用する',
+  source.includes("const marketProfileIconStyle = (id) => id === 'kiki_icon'")
+    && source.includes("transform: 'scale(1.3) translateY(11.5%)'")
+    && (source.match(/style=\{marketProfileIconStyle\(/g) || []).length >= 6);
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
