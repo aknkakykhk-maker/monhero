@@ -55,8 +55,26 @@ check('最後は「ヘルプからいつでも見られる」で終わる',
   steps[steps.length - 1].wait === 'end' && steps[steps.length - 1].t.includes('ヘルプ'));
 check('操作して進むステップがある', steps.filter(s => s.wait === 'act').length >= 4,
   `${steps.filter(s => s.wait === 'act').length}ステップ`);
+// 「説明 → 操作 → 説明 → …」の流れ。いきなり操作モードに入る画面があると
+// その画面の説明が出ないまま放り出されてしまう
+const actWithoutTalk = steps.filter((s, i) => {
+  if (s.wait !== 'act') return false;
+  const prev = steps[i - 1];
+  return !(prev && prev.wait === 'next' && prev.at === s.at);
+});
+check('操作の手前に必ず同じ画面の説明がある', actWithoutTalk.length === 0,
+  actWithoutTalk.map(s => `${s.id}(${s.at})`).join(', '));
+// 操作させたい場所は、読んでいる間から光らせて場所が分かるようにする
+const talkWithoutSpot = steps.filter((s, i) => s.wait === 'act' && steps[i - 1] && steps[i - 1].spot !== s.spot);
+check('説明と操作で同じ場所を光らせている', talkWithoutSpot.length === 0,
+  talkWithoutSpot.map(s => s.id).join(', '));
+// 操作させる画面が説明だけで終わっていないか(逆向きの取りこぼし)
+const actScreens = new Set(steps.filter(s => s.wait === 'act').map(s => s.at));
+check('操作が要る画面がすべて説明つきで並んでいる',
+  ['PICK_HERO', 'PICK_SLOT', 'PICK_TEACHING', 'BATTLE', 'WAVE_RESULT', 'REWARD_PICK'].every(at => actScreens.has(at)),
+  [...actScreens].join('/'));
 check('画面が変わったら次のステップへ進める',
-  findBattleTutorialStep(0, 'PICK_SLOT') === idx('slot')
+  findBattleTutorialStep(0, 'PICK_SLOT') === idx('slotTalk')
     && findBattleTutorialStep(idx('slot') + 1, 'BATTLE') === idx('battle')
     && findBattleTutorialStep(0, 'NOPE') === idx('ally'),   // '*' はどの画面でも出る
   );
@@ -108,7 +126,7 @@ check('みゅあの顔と吹き出しは共通のものを使う',
 check('つぎへとスキップ(やめる)がある',
   has("{last?'おわる':'つぎへ'}") && has('<button onClick={endBattleTutorial}') && has('やめる</button>'));
 // 押してほしい場所を光らせる
-const SPOTS = ['monList', 'slots', 'teachings', 'cards', 'action', 'rewards'];
+const SPOTS = ['monList', 'slots', 'teachings', 'cards', 'action', 'rewards', 'waveNext'];
 check('光らせる場所が画面側と結びついている',
   SPOTS.every(name => has(`battleTutorialSpotClass('${name}')`)),
   SPOTS.filter(name => !has(`battleTutorialSpotClass('${name}')`)).join(', '));

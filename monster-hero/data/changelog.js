@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-01 14:20",
+    date: "2026-08-01 15:15",
     type: "update",
     title: "バトルの練習（お試し）を開発用に追加しました",
     items: [
