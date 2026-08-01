@@ -198,6 +198,24 @@ check('みゅあの顔と吹き出しは共通のものを使う',
     && has('assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow)'));
 check('つぎへとスキップ(やめる)がある',
   has("{last?'おわる':'つぎへ'}") && has('<button onClick={endBattleTutorial}') && has('やめる</button>'));
+// 押してほしいものだけを押せるようにする。枠全体を光らせると
+// 「どれを押すのか」が分からず、他が押せると台本から外れてしまう
+check('置く距離は押せる枠だけ光らせる',
+  has("disabled:opacity-20${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''}")
+    && !has("max-w-xs${battleTutorialSpotClass('slots')}"));
+check('ブリーダーカードは押せるカードだけ光らせる',
+  has("disabled:opacity-20${scenarioPicksTeaching(t.id)?battleTutorialSpotClass('teachings'):''}")
+    && !has("content-center${battleTutorialSpotClass('teachings')}"));
+check('手札は使わせたい種類だけ押せる',
+  has('const battleTutorialCardAllowed = (card) => {')
+    && has('if(isBusy||!tutorialAllowed)return;')
+    && has("${battleTutorialNeed&&!tutorialAllowed?' grayscale opacity-25':''}"));
+check('手札は使わせたい種類だけ光らせる',
+  has("${battleTutorialNeed&&tutorialAllowed&&battleTutorialNeed!=='skillPicker'?' is-battle-tutorial-spot':''}"));
+check('技変更の番は手札ぜんぶ押せる(名前をタップさせるため)',
+  has("if (!battleTutorialNeed || battleTutorialNeed === 'skillPicker' || !card) return true;"));
+check('緊急回復はその番だけ押せる',
+  has('const battleTutorialAllowsEmergency = !battleTutorialNeed') && has('disabled={isBusy||!battleTutorialAllowsEmergency}'));
 // 押してほしい場所を光らせる
 const SPOTS = ['modeTabs', 'rankingBtn', 'difficulty', 'battleStart',
   'monCards', 'monDecide', 'slots', 'teachings',

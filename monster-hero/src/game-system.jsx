@@ -64,7 +64,7 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 16:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-01 21:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6348,6 +6348,17 @@ function MonsterHeroGame() {
     const hit = Array.isArray(spot) ? spot.includes(name) : spot === name;
     return hit ? ' is-battle-tutorial-spot' : '';
   };
+  // いま使わせたいカードの種類。操作の番(do/act)だけ効く。
+  // 技変更は「カードの名前をタップする」操作なので、カードそのものは押せるままにする
+  const battleTutorialNeed = (battleTutorial && (battleTutorial.wait === 'do' || battleTutorial.wait === 'act'))
+    ? (battleTutorial.need || null) : null;
+  const battleTutorialCardAllowed = (card) => {
+    if (!battleTutorialNeed || battleTutorialNeed === 'skillPicker' || !card) return true;
+    if (battleTutorialNeed === 'emergency') return false;   // 緊急回復の番はカードを使わせない
+    return (isBreederCard(card) ? 'teaching' : card.type) === battleTutorialNeed;
+  };
+  // 緊急回復は、その番のときだけ押せるようにする
+  const battleTutorialAllowsEmergency = !battleTutorialNeed || battleTutorialNeed === 'emergency';
   // 画面が変わったら、その画面に合うステップへ進める(操作で進むステップの受け皿)
   useEffect(() => {
     if (battleTutorialStep == null) return;
@@ -8388,7 +8399,7 @@ function MonsterHeroGame() {
             <main className="flex-1 relative flex flex-col items-center justify-between pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0">
               <button onClick={()=>setShowEnemyInfo(true)} className="absolute right-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">解析</span></button>
               <button onClick={()=>setShowHeroInfo(true)} className={`absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">ステータス</span></button>
-              <button onClick={useEmergency} disabled={isBusy} className={`absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[7px] font-black text-white">緊急</span></button>
+              <button onClick={useEmergency} disabled={isBusy||!battleTutorialAllowsEmergency} className={`absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[7px] font-black text-white">緊急</span></button>
               <div className="mt-1 relative flex flex-col items-center">
                 {enemySkillName&&(
                   <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:'skillNamePop 350ms ease-out forwards'}}>
@@ -8799,18 +8810,21 @@ function MonsterHeroGame() {
                   {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned; return(<button onClick={processTurn} disabled={!canAct} className={`h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={13}/> Action</button>);})()}
                 </div>
               </div>
-              <div className={`flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialSpotClass('cards')}`}>
+              {/* 使うカードが決まっている番は、その種類だけを光らせる(枠全体は光らせない) */}
+              <div className={`flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialNeed&&battleTutorialNeed!=='skillPicker'?'':battleTutorialSpotClass('cards')}`}>
                 {hand.map((c,i)=>{
                   const isSel=selectedCards.includes(i), curGuts=getCardGuts(c), remainingGuts=guts-selectedCards.reduce((acc,idx)=>acc+(idx===i?0:getCardGuts(hand[idx])),0), isSelectable=isSel||(remainingGuts>=curGuts&&selectedCards.length<cardLimit);
                   const isPending=pendingCard===i;
                   const assignedSlot=cardAssignments[i];
                   const assignedMon=assignedSlot!=null?slots[assignedSlot]:null;
                   const isDragging=dragState?.active&&dragState?.cardIndex===i;
+                  // 練習で使わせたい種類以外は、つかむこと自体をさせない(選択も割り当ても起きない)
+                  const tutorialAllowed=battleTutorialCardAllowed(c);
                   return(<div key={c.uid} className="flex-1 min-w-0 max-w-[20%] flex"><button onPointerDown={(e)=>{
-                    if(isBusy)return;
+                    if(isBusy||!tutorialAllowed)return;
                     const pt=e.touches?e.touches[0]:e;
                     setDragState({cardIndex:i, x:pt.clientX, y:pt.clientY, active:false, card:c});
-                  }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none'}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}`}>
+                  }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none'}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${battleTutorialNeed&&tutorialAllowed&&battleTutorialNeed!=='skillPicker'?' is-battle-tutorial-spot':''}${battleTutorialNeed&&!tutorialAllowed?' grayscale opacity-25':''}`}>
                     {isSel&&!assignedMon&&(<div className="absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                     {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[9px]">{assignedMon.emoji}</span>}</div>)}
                     <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onPointerDown={(ev)=>ev.stopPropagation()} onClick={(ev)=>{ev.stopPropagation(); if(isBusy)return; setSkillPicker({handIndex:i});}} className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60">{c.name}</div>):(<div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div>)}<div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button></div>);
@@ -9101,9 +9115,10 @@ function MonsterHeroGame() {
           <div className="w-full max-w-xs mb-2"><AssistantBubble scene="pickSlot" compact/></div>
           {/* 間合い適性はどこに置いても4距離すべてに入る。ここの%は「このモンスターを加えた後の各距離の補正値」 */}
           <div className="text-[9px] text-slate-400 font-bold mb-5 leading-relaxed px-2">間合い適性はどこに置いても4距離すべてに加算されます。<br/>配置は「敵と同じ距離で攻撃する」ことと、覚える距離撃に影響します。</div>
-          <div className={`grid grid-cols-2 gap-4 w-full max-w-xs${battleTutorialSpotClass('slots')}`}>
+          {/* 練習中は押せる枠だけを光らせる。枠全体を囲むと「どれを押すのか」が分からなかった */}
+          <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
             {slots.map((s,i)=>{const grade=getDistAptitude(currentPickingMon,i); const after=distTotalBonus(i)+aptGradeToPct(grade);
-              return(<button key={i} disabled={s!==null||!scenarioPicksSlot(i)} onClick={()=>setupMon(currentPickingMon,i)} className={`h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s?'opacity-100 shadow-xl':'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`}>
+              return(<button key={i} disabled={s!==null||!scenarioPicksSlot(i)} onClick={()=>setupMon(currentPickingMon,i)} className={`h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all disabled:opacity-20${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''} ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${s?'opacity-100 shadow-xl':'opacity-90 ring-2 ring-white/20 animate-pulse'} active:scale-90`}>
               <span className={`text-[10px] font-black mb-1 uppercase px-3 py-0.5 rounded-full ${RANGE_STYLES[i].labelBg} ${RANGE_STYLES[i].text} border border-white/10 shadow-md`}>{RANGE_LABELS[i]}距離</span>
               {s?(s.imgUrl?<DyedMonsterImage baseId={s.id} src={s.imgUrl} alt={s.name} masuColors={s.colors} className="w-10 h-10 mt-1 object-contain drop-shadow-md scale-125"/>:<span className="text-xl mt-1 drop-shadow-md">{s.emoji}</span>):<PlusCircle className="text-white/50 mt-1" size={20}/>}
               {!s&&<span className={`text-[9px] font-black mt-1 px-2 py-0.5 rounded-full border ${DIST_APTITUDE_COLOR[grade]}`}>{grade} 合流後 {formatAptPct(after)}</span>}
@@ -9118,9 +9133,10 @@ function MonsterHeroGame() {
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] p-4 flex flex-col items-center justify-center overflow-hidden">
           <div className="mb-4 text-center shrink-0"><h2 className="text-xl font-black text-purple-400 italic">ブリーダーカードの継承・強化</h2><p className="text-[9px] text-slate-400 uppercase mt-1 tracking-widest">Select Breeder Card</p></div>
           <div className="shrink-0 w-full max-w-sm mb-2"><AssistantBubble scene="pickTeaching" compact/></div>
-          <div className={`grid grid-cols-2 gap-3 w-full max-w-sm mx-auto overflow-y-auto min-h-0 p-1 flex-1 content-center${battleTutorialSpotClass('teachings')}`}>
+          {/* 練習中は押せるカードだけを光らせる */}
+          <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto overflow-y-auto min-h-0 p-1 flex-1 content-center">
             {teachingPool.map(t=>{const owned=ownedTeachings.find(ot=>ot.id===t.id); const level=owned?owned.evoLevel:0; const isMax=level>=2;
-              return(<button key={t.id} disabled={!scenarioPicksTeaching(t.id)} onClick={()=>setSelectedTeachingCard(t)} className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 transition-all aspect-square disabled:opacity-25 ${owned?'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]':'bg-slate-900 border-slate-800 active:scale-95'}`}>
+              return(<button key={t.id} disabled={!scenarioPicksTeaching(t.id)} onClick={()=>setSelectedTeachingCard(t)} className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 transition-all aspect-square disabled:opacity-20${scenarioPicksTeaching(t.id)?battleTutorialSpotClass('teachings'):''} ${owned?'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]':'bg-slate-900 border-slate-800 active:scale-95'}`}>
                 <span style={{fontSize:'44px'}}>{cardIconNode(t.icon,52)}</span>
                 <div className="text-[11px] font-black leading-tight flex flex-col items-center justify-center">{owned&&!isMax&&<div className="text-[8px] text-amber-400 mb-0.5 line-through">{BREEDER_EVO_NAMES[t.id][level]}</div>}<div className={owned?"text-white":""}>{owned?(isMax?BREEDER_EVO_NAMES[t.id][level]:BREEDER_EVO_NAMES[t.id][level+1]):BREEDER_EVO_NAMES[t.id][0]}</div></div>
                 <div className="text-[8px] text-slate-200 bg-black/20 px-2 py-1 rounded-full">{owned?(isMax?"MAXレベル":"進化：効果上昇"):"新規習得"}</div>
