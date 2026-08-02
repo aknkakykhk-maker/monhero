@@ -17,7 +17,9 @@
 // パスの綴り間違い・置き忘れは tools/image-asset-check.js が拾う。
 const MOCCHI_IMG = "images/monsters/mocchi.png?v=f8d4f69ac32c";
 const HAM_IMG = "images/monsters/ham.png?v=513e9b26e67a";
-const TIGER_IMG = "images/monsters/tiger.png?v=7066f58deafb";
+const TIGER_ROLLBACK_IMG = "images/monsters/tiger.png?v=7066f58deafb";
+const TIGER_ROLLBACK_ICON = "images/monster-icons/tiger.png?v=d45553b8bd12";
+const TIGER_IMG = "images/monsters/tiger.PNG?v=c5e09bb1f395";
 const PIXIE_IMG = "images/monsters/pixie.png?v=a8b45bbc0312";
 const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
 const GOLEM_IMG = "images/monsters/golem.png?v=497d87ab23d5";
@@ -30,7 +32,7 @@ const IBLIS_IMG = "images/monsters/iblis.png?v=9b2efa1e0744";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = "images/monster-icons/ham.png?v=b8e74464588e";
-const TIGER_ICON = "images/monster-icons/tiger.png?v=d45553b8bd12";
+const TIGER_ICON = TIGER_IMG;
 const PIXIE_ICON = PIXIE_IMG;
 const SUEZO_ICON = SUEZO_IMG;
 const GOLEM_ICON = GOLEM_IMG;
