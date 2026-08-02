@@ -40,6 +40,8 @@ const EXPORTED_NAMES = [
   '_rgbToHsv',
   '_hsvToRgb',
   '_hueDist',
+  'isImageIconValue',
+  'cardIconNode',
 ];
 
 // ブラウザAPIの最小スタブ。canvasだけは node-canvas で本物と同じように動かす
