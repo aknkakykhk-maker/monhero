@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ab83e02422bbf96d
+// source-sha256: a863970fcd81e400
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 21:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 21:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16116,17 +16116,17 @@ function MonsterHeroGame() {
         length: regionCount
       }, (_, i) => monsterImageDebugColors === null ? getMasuColors(selected)[i] || null : monsterImageDebugColors[i] || null);
       const isTiger = selected.baseId === 'Tiger';
-      const testUrl = 'images/monsters/tiger.PNG';
-      const oldSources = {
+      const productionSources = {
         imgUrl: base.imgUrl,
         iconUrl: base.iconUrl,
         faceIconUrl: base.faceIconUrl
       };
-      const newSources = {
-        imgUrl: testUrl,
-        iconUrl: testUrl,
-        faceIconUrl: testUrl
-      };
+      const oldSources = isTiger ? {
+        imgUrl: TIGER_ROLLBACK_IMG,
+        iconUrl: TIGER_ROLLBACK_ICON,
+        faceIconUrl: TIGER_ROLLBACK_ICON
+      } : productionSources;
+      const newSources = productionSources;
       const variants = isTiger && monsterImageDebugTigerMode === 'compare' ? [['旧', oldSources], ['新', newSources]] : [[isTiger && monsterImageDebugTigerMode === 'new' ? '新' : '本番', isTiger && monsterImageDebugTigerMode === 'new' ? newSources : oldSources]];
       const bgStyle = monsterImageDebugBg === 'white' ? {
         background: '#fff'
@@ -16222,7 +16222,7 @@ function MonsterHeroGame() {
         }, m.name, "\uFF0F", b.name, "\uFF0F", m.baseId, "\uFF0F\u2460", colorText(getMasuColors(m)[0]), " \u2461", colorText(getMasuColors(m)[1]), " \u2462", colorText(getMasuColors(m)[2]));
       })), isTiger && /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-1"
-      }, [['old', '旧画像／現在の本番構成'], ['new', '新画像で全差し替えテスト'], ['compare', '旧画像と新画像の比較表示']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+      }, [['old', '旧画像／ロールバック用'], ['new', '高画質版／現在の本番構成'], ['compare', '旧画像と高画質版の比較表示']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
         key: id,
         onClick: () => setMonsterImageDebugTigerMode(id),
         className: `min-h-[54px] rounded-xl px-1 text-[8px] font-black border ${monsterImageDebugTigerMode === id ? 'bg-amber-700 border-amber-300' : 'bg-slate-900 border-white/10'}`
