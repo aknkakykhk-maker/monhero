@@ -90,7 +90,7 @@ cd tools && npm install
 | `node perf-check.js` | 読み込みにかかる時間と転送量を実ブラウザで計測する。 |
 | `node smoke.js` | 実ブラウザ(Chromium)で `data/*.js` を読み込み、画像の変数がすべて解決されるか確認する。事前にリポジトリのルートをHTTPで配信しておくこと(`python3 tools/serve.py`)。 |
 | `node grid-overlay.js 変数名...` | 立ち絵に0.1刻みの目盛りを重ねたPNGを出す。顔クロップや染色bboxの範囲を実測するときに使う。 |
-| `node make-face-icons.js [--preview]` | 立ち絵から顔部分を切り出して256pxの顔アイコンを作り、`_FACE_ICON` を差し替える。切り出し範囲はスクリプト内の `FACE_BOXES`。 |
+| `node make-face-icons.js [--preview] [MOCCHI ...]` | 立ち絵から顔部分を切り出して256pxの顔アイコンを作り、`_FACE_ICON` を差し替える。モンスターIDを指定すると対象だけを更新する。切り出し範囲はスクリプト内の `FACE_BOXES`。 |
 | `node face-render-check.js` | 顔アイコンが実ブラウザで正しく描画されるか確認し、アイコン選択画面と同じ見た目のスクリーンショットを出す。 |
 
 `dye-baseline.json` は「現在正しいとされている染色結果」の記録なので、

@@ -3,6 +3,7 @@
 //
 //   node make-face-icons.js --preview   … out/ にプレビューPNGを書くだけ(データは変更しない)
 //   node make-face-icons.js             … images-ally.js に書き戻す
+//   node make-face-icons.js MOCCHI      … 指定したモンスターだけを書き戻す
 //
 // 2026年に高解像度イラストへ差し替えた6体は、顔クロップを別途用意しておらず
 // faceIconUrl に立ち絵をそのまま入れていた(プロフィールアイコン選択画面で全身が
@@ -16,10 +17,18 @@ const { loadImage } = require('canvas');
 // ここに <名前>.png があれば、埋め込みの立ち絵より優先して使う
 const ART_SOURCES = path.join(__dirname, 'art-sources');
 async function loadSourceImage(name, dataUrl) {
-  const file = path.join(ART_SOURCES, `${name}.png`);
-  if (fs.existsSync(file)) {
+  // 現行のモンスター原本置き場を優先し、過去の顔アイコン専用原本にも対応する。
+  // GitHub 経由で保存されたファイルは拡張子が大文字になる場合があるため、双方を探す。
+  const candidates = [
+    path.join(ART_SOURCES, 'monsters', `${name}.png`),
+    path.join(ART_SOURCES, 'monsters', `${name}.PNG`),
+    path.join(ART_SOURCES, `${name}.png`),
+    path.join(ART_SOURCES, `${name}.PNG`),
+  ];
+  const file = candidates.find(candidate => fs.existsSync(candidate));
+  if (file) {
     const img = await loadImage(file);
-    console.log(`  art-sources/${name}.png を使用 (${img.width}x${img.height})`);
+    console.log(`  ${path.relative(__dirname, file)} を使用 (${img.width}x${img.height})`);
     return img;
   }
   return decodeDataUrl(dataUrl);
@@ -152,6 +161,7 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
 
 (async () => {
   const preview = process.argv.includes('--preview');
+  const requested = new Set(process.argv.slice(2).filter(arg => arg !== '--preview').map(arg => arg.toUpperCase()));
   const images = loadEmbeddedImages();
   const dye = loadDyeModule();
   fs.mkdirSync(path.join(__dirname, 'out'), { recursive: true });
@@ -161,6 +171,7 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
   let changed = 0;
 
   for (const [name, box] of Object.entries(FACE_BOXES)) {
+    if (requested.size && !requested.has(name)) continue;
     const srcKey = `${name}_IMG`;
     if (!images[srcKey]) { console.log(`${srcKey}: 見つかりません(スキップ)`); continue; }
     const canvas = await makeFaceIcon(images[srcKey], box, name, dye);
