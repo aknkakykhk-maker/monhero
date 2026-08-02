@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5b268489333b7361
+// source-sha256: d0ca5bc0826f9657
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -125,7 +125,7 @@ const Heart = _icon('Heart'),
 
 // --- Helpers ---
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const BUILD_DATE = "2026-08-01 23:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 09:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5118,7 +5118,15 @@ const rankingDifficultyKey = value => normalizeRankingDifficulty(value);
 // 難易度ごとの記録を取得する。order を変えることで「スコア上位」と「レベル上位」を出し分ける
 // 表示件数。rankingsテーブルにdifficulty+scoreの索引が無く、取得のたびに全行を走査して
 // 並べ替えているため、件数を増やすとそのまま待ち時間になる。索引を追加するまでは20件にする。
-const RANKING_DIAGNOSTIC_LIMIT = 20;
+// 一覧に見せる件数(難易度タブを選んだときは、その1難易度だけを取りにいく)。
+// 20件→50件にしても、通信は1難易度ぶんで +24KB、描画は +14ms しか増えない
+// (実測 tools/ranking-dye-cost-check.js)
+const RANKING_SCORE_LIMIT = 50;
+// 難易度を指定せずにまとめて取りにいくとき(いまは呼ぶ場所が無い)の1難易度あたりの件数。
+// ここで50件にすると9難易度ぶん=450行(約367KB)になるので、控えめにしておく。
+// ブリーダーLv・絆Lvは難易度で絞らない専用の1回取得(RANKING_LEVEL_FETCH_LIMIT /
+// RANKING_BREEDER_FETCH_LIMIT)なので、この値の影響は受けない
+const RANKING_BULK_LIMIT = 20;
 // 取得ごとの詳細ログは切り分け用。常時出すと件数ぶんの文字列生成が毎回走るので、
 // 必要なときだけ localStorage の mh_ranking_debug='1' で有効にする(エラーは常に出す)。
 const rankingDebugEnabled = () => {
@@ -5148,7 +5156,7 @@ const RANKING_BREEDER_FETCH_LIMIT = 400;
 // 使わない場面では取得しないだけで転送量と待ち時間がはっきり減る
 const RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon';
 const RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon';
-const sbFetchRankings = async (diff, limit = RANKING_DIAGNOSTIC_LIMIT, order = 'score.desc.nullslast', offset = 0, requestId = 'untracked', selectColumns = RANKING_SELECT_FULL) => {
+const sbFetchRankings = async (diff, limit = RANKING_SCORE_LIMIT, order = 'score.desc.nullslast', offset = 0, requestId = 'untracked', selectColumns = RANKING_SELECT_FULL) => {
   // diff を省略(null)すると難易度で絞らず、全難易度をまとめて取る
   const normalizedDifficulty = diff == null ? null : normalizeRankingDifficulty(diff);
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
@@ -6411,9 +6419,9 @@ function MonsterHeroGame() {
     };
     // Masterだけは不正行を診断する。難易度の表記揺れは共通SELECTが吸収し、正常な1行まで巻き添えにせず、
     // 必須項目を満たす行だけを残す（他難易度の取得仕様には触れない）。
-    const fetchMasterRows = async (order, requestId) => {
+    const fetchMasterRows = async (order, requestId, limit = RANKING_SCORE_LIMIT) => {
       if (rankingDebugEnabled()) console.info('[ranking][Master] 正規化したdifficulty値: Master', 'order:', order);
-      const rows = await sbFetchRankings('Master', RANKING_DIAGNOSTIC_LIMIT, order, 0, requestId);
+      const rows = await sbFetchRankings('Master', limit, order, 0, requestId);
       if (rankingDebugEnabled()) console.info('[ranking][Master] Supabase成功; difficulty: Master', '取得件数:', Array.isArray(rows) ? rows.length : '配列ではない');
       if (!Array.isArray(rows)) throw new Error(`response is not an array: ${JSON.stringify(rows)}`);
       const valid = rows.filter((r, i) => {
@@ -6546,30 +6554,33 @@ function MonsterHeroGame() {
       const request = (async () => {
         let succeeded = true;
         let requestError = null;
+        // いまの呼び出しはすべて難易度を1つ指定しているので、実際にはここは常に50件。
+        // 1難易度ぶんなので、20件から50件へ増やしても通信は +25KB 程度で済む。
+        // 取得に失敗したときの受け皿(catch)からも使うので、tryの外で決めておく
+        const fetchLimit = normalizedTargetDiff ? RANKING_SCORE_LIMIT : RANKING_BULK_LIMIT;
         try {
           if (d === 'Master' && rankingDebugEnabled()) console.info('[ranking][Master] Master取得開始');
           let rows;
           try {
-            // 診断中は21件目以降を一切取得せず、20件と50件の差だけを比較できるようにする。
             // 旧データのscore=NULLが上位枠を埋めて有効な記録を押し出さないよう、明示的にNULLを末尾へ送る。
             const primaryOrder = includeLevels && levelKind === 'bond' ? 'id.desc' : 'score.desc.nullslast';
-            rows = mergeRows([], d === 'Master' ? await fetchMasterRows(primaryOrder, requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, primaryOrder, 0, requestId));
+            rows = mergeRows([], d === 'Master' ? await fetchMasterRows(primaryOrder, requestId, fetchLimit) : await sbFetchRankings(d, fetchLimit, primaryOrder, 0, requestId));
           } catch (scoreError) {
             console.error('[ranking] score order fetch failed for', d, scoreError && scoreError.message ? scoreError.message : scoreError);
-            // 診断条件を変えないため、代替順の取得も20件に限定する。
-            rows = d === 'Master' ? await fetchMasterRows('id.desc', requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0, requestId);
+            // 代替順でも取る件数は同じにそろえる。
+            rows = d === 'Master' ? await fetchMasterRows('id.desc', requestId, fetchLimit) : await sbFetchRankings(d, fetchLimit, 'id.desc', 0, requestId);
             rows = mergeRows([], rows).sort((a, b) => (b.score || 0) - (a.score || 0));
           }
           rankingLog(requestId, 'format-start', {
             difficulty: d,
             dataCount: Array.isArray(rows) ? rows.length : null
           });
-          const uniqueScoreRows = mergeRows([], rows).slice(0, RANKING_DIAGNOSTIC_LIMIT);
+          const uniqueScoreRows = mergeRows([], rows).slice(0, fetchLimit);
           byDiff[d] = uniqueScoreRows.map(toEntry);
           let pool = uniqueScoreRows;
           if (includeLevels && levelKind !== 'bond') try {
             const order = 'level.desc.nullslast';
-            pool = mergeRows(pool, d === 'Master' ? await fetchMasterRows(order, requestId) : await sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, order, 0, requestId));
+            pool = mergeRows(pool, d === 'Master' ? await fetchMasterRows(order, requestId, fetchLimit) : await sbFetchRankings(d, fetchLimit, order, 0, requestId));
           } catch (eLv) {
             console.error('[ranking] level order fetch failed for', d, eLv && eLv.message ? eLv.message : eLv);
           }
@@ -6589,7 +6600,7 @@ function MonsterHeroGame() {
           try {
             const rows = await restoreLocalRows(d);
             if (rows.length) {
-              byDiff[d] = rows.slice(0, RANKING_DIAGNOSTIC_LIMIT);
+              byDiff[d] = rows.slice(0, fetchLimit);
               poolByDiff[d] = rows.slice();
               sourceByDiff[d] = 'local';
               rankingLog(requestId, 'fallback', {

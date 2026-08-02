@@ -69,11 +69,15 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: レベル系は難易度で絞らず1回で取得`, code.includes('sbFetchRankings(null, levelLimit, order, 0, requestId, columns)'));
   // ブリーダーLvは1人が何行も持つので、絆と同じ件数だと下位の人が1行も取れず一覧から消えていた
   check(`${label}: ブリーダーLvは多めに取る`, code.includes("const levelLimit = levelKind === 'bond' ? RANKING_LEVEL_FETCH_LIMIT : RANKING_BREEDER_FETCH_LIMIT;"));
-  check(`${label}: 取得上限は20件`, code.includes('const RANKING_DIAGNOSTIC_LIMIT = 20'));
+  // 一覧は50件まで見せる。1難易度ぶんの取得なので、20件から増やしても通信は +25KB 程度
+  // (実測 tools/ranking-dye-cost-check.js。描画も 31ms → 45ms でほぼ変わらない)
+  check(`${label}: 一覧の取得上限は50件`, code.includes('const RANKING_SCORE_LIMIT = 50;'));
+  check(`${label}: 難易度を指定しない一括取得は控えめ`, code.includes('const RANKING_BULK_LIMIT = 20;')
+    && code.includes('const fetchLimit = normalizedTargetDiff ? RANKING_SCORE_LIMIT : RANKING_BULK_LIMIT;'));
   check(`${label}: 端末内自己ベストから復旧`, code.includes('`mh_hs_${d}`') && code.includes("hero: '記録復旧'"));
-  check(`${label}: score.desc失敗時も診断用上限を使う`, code.includes("sbFetchRankings(d, RANKING_DIAGNOSTIC_LIMIT, 'id.desc', 0"));
+  check(`${label}: score.desc失敗時も同じ件数で取る`, code.includes("sbFetchRankings(d, fetchLimit, 'id.desc', 0"));
   // 取得順は primaryOrder に集約されている。score系は score.desc.nullslast、絆は id.desc。
-  check(`${label}: score=NULLの旧データが取得枠を埋めない`, code.includes("const primaryOrder = includeLevels && levelKind === 'bond' ? 'id.desc' : 'score.desc.nullslast'") && code.includes('fetchMasterRows(primaryOrder, requestId)'));
+  check(`${label}: score=NULLの旧データが取得枠を埋めない`, code.includes("const primaryOrder = includeLevels && levelKind === 'bond' ? 'id.desc' : 'score.desc.nullslast'") && code.includes('fetchMasterRows(primaryOrder, requestId, fetchLimit)'));
   check(`${label}: stateの最新ハイスコアも復旧元に使う`, code.includes('highScoresRef.current[d]'));
   check(`${label}: 0件成功をローカル復旧へ誤分類しない`, !code.includes('if (byDiff[d].length === 0)'));
   check(`${label}: 古い同一取得単位のリクエストを画面へ反映しない`, code.includes("'stale-result-discarded'") && code.includes('rankingLatestRequestRef.current.get(latestKey) !== requestId'));

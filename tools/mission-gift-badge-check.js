@@ -75,7 +75,7 @@ check('編成画面の戻るボタンも同じ導線', has("onClick={()=>{setMan
 check('古いFORMATION_MENUが残っていない', !source.includes('FORMATION_MENU'));
 
 // ランキング
-check('取得件数は20件', has('const RANKING_DIAGNOSTIC_LIMIT = 20;'));
+check('一覧の取得件数は50件', has('const RANKING_SCORE_LIMIT = 50;'));
 check('ブリーダーLvは編成(party)を取得しない', has('RANKING_SELECT_NO_PARTY') && has("levelKind === 'bond' ? RANKING_SELECT_FULL : RANKING_SELECT_NO_PARTY"));
 check('遅い取得を失敗にしないタイムアウト', has('controller.abort(), 15000'));
 check('画面のエラー文は短い日本語', has('通信が混み合っています。少し待って再読込してください'));
