@@ -12,7 +12,8 @@
 //                    入っていない画素の割合。輪郭から3px以内に限って数える。
 //                    大きいほど「染めたのに元の色の縁が残る」状態になる。
 //
-// 高解像度書き出しを外すとモッチーは30%台まで戻るため、しきい値は20%にしてある。
+// ギザギザそのものは数値にしづらいため、ここではマスクが解析サイズのまま
+// 書き出されていないか(=高解像度書き出しが外れていないか)を主に見張る。
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
@@ -26,7 +27,7 @@ const dyeSource = source.slice(from, to);
 
 // 染めた色が元の色とはっきり違うほど塗り残しが見つけやすいので、寒色で染めて測る
 const COLORS = ['blue', 'blue', 'blue'];
-const RIM_BARE_LIMIT = 20; // %
+const RIM_BARE_LIMIT = 5; // %
 // 高解像度マスクが必ず効いていてほしいモンスター(元絵が解析サイズより大幅に大きいもの)。
 // MASK_HIRES_BASE_IDSからうっかり外れたときに気付けるよう、ここにも明示しておく
 const EXPECTED = ['Mocchi'];
