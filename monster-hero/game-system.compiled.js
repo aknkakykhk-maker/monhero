@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bdf6b5991aa91fca
+// source-sha256: e145f82a48348377
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 19:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 19:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4943,16 +4943,29 @@ const MARKET_ICON_SIZE = {
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
   kiki_icon: {
-    transform: 'scale(1.58) translateY(12%)'
+    scale: 1.58,
+    x: 0,
+    y: 12
   },
   snegurochka_icon: {
-    transform: 'scale(2.85) translate(3%, 35%)'
+    scale: 2.85,
+    x: 4,
+    y: 39
   },
   snegurochka_awakened_icon: {
-    transform: 'scale(2.85) translate(3%, 35%)'
+    scale: 2.85,
+    x: 3,
+    y: 35
   }
 };
-const marketProfileIconStyle = id => MARKET_PROFILE_ICON_STYLES[id];
+const profileIconTransformStyle = ({
+  scale = 1,
+  x = 0,
+  y = 0
+} = {}) => ({
+  transform: `scale(${scale}) translate(${x}%, ${y}%)`
+});
+const marketProfileIconStyle = id => profileIconTransformStyle(MARKET_PROFILE_ICON_STYLES[id]);
 
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
 const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
@@ -6263,6 +6276,16 @@ function MonsterHeroGame() {
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
+  // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
+  const marketIconItems = BREEDER_MARKET_ITEMS.filter(item => item.type === 'icon');
+  const [iconAdjustId, setIconAdjustId] = useState(marketIconItems[0]?.id || '');
+  const [iconAdjustments, setIconAdjustments] = useState(() => Object.fromEntries(marketIconItems.map(item => [item.id, {
+    ...(MARKET_PROFILE_ICON_STYLES[item.id] || {
+      scale: 1,
+      x: 0,
+      y: 0
+    })
+  }])));
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
@@ -15690,6 +15713,109 @@ function MonsterHeroGame() {
           className: "w-11 h-11 mx-auto"
         }), /*#__PURE__*/React.createElement("small", null, "\u5C0F\u578B\u30A2\u30A4\u30B3\u30F3"))))));
       })());
+    })(), gameState === 'BREEDER_ICON_DEBUG' && (() => {
+      const item = marketIconItems.find(entry => entry.id === iconAdjustId) || marketIconItems[0];
+      if (!item) return /*#__PURE__*/React.createElement("div", {
+        className: "p-4 text-slate-400"
+      }, "\u8ABF\u6574\u3067\u304D\u308B\u30A2\u30A4\u30B3\u30F3\u304C\u3042\u308A\u307E\u305B\u3093\u3002");
+      const initial = {
+        ...(MARKET_PROFILE_ICON_STYLES[item.id] || {
+          scale: 1,
+          x: 0,
+          y: 0
+        })
+      };
+      const values = iconAdjustments[item.id] || initial;
+      const previewStyle = profileIconTransformStyle(values);
+      const patchValue = (key, value) => setIconAdjustments(current => ({
+        ...current,
+        [item.id]: {
+          ...values,
+          [key]: Number(value)
+        }
+      }));
+      const slider = (key, label, min, max, step) => /*#__PURE__*/React.createElement("label", {
+        className: "block rounded-xl bg-slate-900 p-3"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "mb-2 flex justify-between text-[10px] font-black text-slate-300"
+      }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("output", null, values[key])), /*#__PURE__*/React.createElement("input", {
+        className: "w-full accent-fuchsia-500",
+        type: "range",
+        min: min,
+        max: max,
+        step: step,
+        value: values[key],
+        onChange: e => patchValue(key, e.target.value)
+      }));
+      const copyText = `${item.id}: { scale: ${values.scale}, x: ${values.x}, y: ${values.y} }`;
+      return /*#__PURE__*/React.createElement("main", {
+        className: "flex-1 flex flex-col h-full min-h-0 p-4",
+        style: {
+          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("header", {
+        className: "flex items-center gap-2 mb-3 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setGameState('DEBUG_SETTINGS'),
+        className: "p-3 text-slate-400"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        className: "text-[8px] font-black text-fuchsia-400"
+      }, "DEBUG\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
+        className: "text-sm font-black"
+      }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30A2\u30A4\u30B3\u30F3\u8ABF\u6574"))), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3"
+      }, /*#__PURE__*/React.createElement("select", {
+        value: item.id,
+        onChange: e => setIconAdjustId(e.target.value),
+        className: "w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black"
+      }, marketIconItems.map(entry => /*#__PURE__*/React.createElement("option", {
+        key: entry.id,
+        value: entry.id
+      }, entry.name, "\uFF08", entry.id, "\uFF09"))), /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-end justify-around gap-3 text-center text-[8px] font-black text-slate-400"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "w-10 h-10 mx-auto rounded-full overflow-hidden border-2 border-white/20 bg-black/30"
+      }, /*#__PURE__*/React.createElement("img", {
+        src: item.icon,
+        alt: "\u30DE\u30FC\u30B1\u30C3\u30C8\u4E00\u89A7",
+        style: previewStyle,
+        className: "w-full h-full object-cover"
+      })), /*#__PURE__*/React.createElement("span", null, "\u30DE\u30FC\u30B1\u30C3\u30C8\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "w-28 h-28 mx-auto rounded-full overflow-hidden border-4 border-white/20 bg-black/30"
+      }, /*#__PURE__*/React.createElement("img", {
+        src: item.icon,
+        alt: "\u5546\u54C1\u8A73\u7D30",
+        style: previewStyle,
+        className: "w-full h-full object-cover"
+      })), /*#__PURE__*/React.createElement("span", null, "\u5546\u54C1\u8A73\u7D30")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "w-16 h-16 mx-auto rounded-2xl overflow-hidden border-2 border-amber-400 bg-black/30"
+      }, /*#__PURE__*/React.createElement("img", {
+        src: item.icon,
+        alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u9078\u629E",
+        style: previewStyle,
+        className: "w-full h-full object-cover"
+      })), /*#__PURE__*/React.createElement("span", null, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u9078\u629E")))), slider('scale', '拡大率 scale', .5, 4, .01), slider('x', '左右位置 X', -50, 50, 1), slider('y', '上下位置 Y', -50, 70, 1), /*#__PURE__*/React.createElement("pre", {
+        className: "whitespace-pre-wrap break-all rounded-xl bg-black/40 p-3 text-[10px] text-cyan-200"
+      }, copyText), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setIconAdjustments(current => ({
+          ...current,
+          [item.id]: initial
+        })),
+        className: "min-h-[46px] rounded-xl bg-slate-800 text-[10px] font-black"
+      }, "\u521D\u671F\u5024\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+        onClick: async () => {
+          await navigator.clipboard.writeText(copyText);
+          window.alert('設定値をコピーしました。');
+        },
+        className: "min-h-[46px] rounded-xl bg-fuchsia-700 text-[10px] font-black"
+      }, "\u8A2D\u5B9A\u5024\u3092\u30B3\u30D4\u30FC"))));
     })(), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
@@ -15716,6 +15842,11 @@ function MonsterHeroGame() {
     }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-fuchsia-300"
     }, "\u5831\u916C\u30FB\u9032\u884C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setGameState('BREEDER_ICON_DEBUG'),
+      className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
+    }, "\uD83D\uDE42 \u30D6\u30EA\u30FC\u30C0\u30FC\u30A2\u30A4\u30B3\u30F3\u8ABF\u6574", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-fuchsia-300"
+    }, "\u8868\u793A\u5024\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setPatternMasuId(null);
         setPatternSettings(makePatternSettings());
