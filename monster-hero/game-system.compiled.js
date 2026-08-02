@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 66bea6ff7866fb18
+// source-sha256: d0fc33369e371004
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 12:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 13:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3121,8 +3121,7 @@ const DyedMonsterImage = ({
 const masuDisplayImageUrl = base => base?.imgUrl || base?.iconUrl || '';
 // 位置・大きさ・間隔は元画像全体を基準にした0〜1の正規化値だけを持つ。
 // 表示先のCanvas寸法へ換算するのは描画時だけなので、透明余白を含む立ち絵でも各プレビューの同じ部位に重なる。
-const MASU_PATTERN_DEFAULTS = Object.freeze({
-  mode: 'all',
+const makePatternLayer = (patch = {}) => ({
   pattern: 'stripe',
   target: 'all',
   color: '#38bdf8',
@@ -3132,7 +3131,26 @@ const MASU_PATTERN_DEFAULTS = Object.freeze({
   rotation: 0,
   x: 0.5,
   y: 0.5,
-  placed: false
+  placed: true,
+  visible: true,
+  ...patch
+});
+const makePatternSettings = () => ({
+  mode: 'all',
+  fullPattern: makePatternLayer(),
+  regionPatterns: {
+    0: makePatternLayer({
+      target: '1'
+    }),
+    1: makePatternLayer({
+      target: '2'
+    }),
+    2: makePatternLayer({
+      target: '3'
+    })
+  },
+  decals: [],
+  selectedLayer: 'full'
 });
 const MASU_PATTERN_REPEAT_OPTIONS = [['stripe', '縞模様'], ['dot', '水玉'], ['leopard', 'ヒョウ柄'], ['camouflage', '迷彩'], ['check', 'チェック柄'], ['scale', '鱗'], ['honeycomb', 'ハニカム'], ['lightning_repeat', '雷模様'], ['flame_repeat', '炎模様'], ['wave', '波模様'], ['crack', 'ひび割れ'], ['star_repeat', '星柄'], ['heart_repeat', 'ハート柄'], ['paw_repeat', '肉球柄'], ['rune_repeat', '魔法文字'], ['digital', 'デジタル柄']];
 const MASU_PATTERN_POINT_OPTIONS = [['star', '星'], ['heart', 'ハート'], ['scar', '傷跡'], ['paw', '肉球'], ['crown', '王冠'], ['flame', '炎'], ['lightning', '雷'], ['moon', '月'], ['sun', '太陽'], ['magic_circle', '魔法陣'], ['skull', 'ドクロ'], ['wing', '羽'], ['number', '数字'], ['alphabet', 'アルファベット']];
@@ -3402,6 +3420,19 @@ const MasuPatternLayer = ({
     }
   });
 };
+const patternLayers = settings => [settings.fullPattern && {
+  ...settings.fullPattern,
+  _key: 'full'
+}, ...Object.entries(settings.regionPatterns || {}).map(([key, value]) => value && {
+  ...value,
+  _key: `region:${key}`
+}), ...(settings.decals || []).map(value => ({
+  ...value,
+  mode: 'point',
+  target: 'all',
+  placed: true,
+  _key: `decal:${value.id}`
+}))].filter(layer => layer && layer.visible !== false);
 const PatternedMasuImage = ({
   masu,
   base,
@@ -3420,17 +3451,21 @@ const PatternedMasuImage = ({
   alt: masu.name,
   masuColors: colors,
   className: "w-full h-full object-contain"
-}), /*#__PURE__*/React.createElement(MasuPatternLayer, {
+}), patternLayers(settings).map(layer => /*#__PURE__*/React.createElement(MasuPatternLayer, {
+  key: layer._key,
   baseId: masu.baseId,
   src: masuDisplayImageUrl(base),
-  settings: settings
-}));
+  settings: layer
+})));
 const PatternPlacementPreview = ({
   masu,
   base,
   colors,
   settings,
-  onChange,
+  selectedDecal,
+  onSelectDecal,
+  onChangeDecal,
+  onAddDecal,
   className = ''
 }) => {
   const pointers = useRef(new Map()),
@@ -3445,23 +3480,33 @@ const PatternPlacementPreview = ({
   const down = e => {
     if (settings.mode !== 'point') return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    pointers.current.set(e.pointerId, point(e));
+    const p = point(e);
+    pointers.current.set(e.pointerId, p);
     const ps = [...pointers.current.values()];
     if (ps.length === 1) {
-      gesture.current = {
-        x: settings.x,
-        y: settings.y,
-        start: ps[0]
-      };
-      onChange({
-        placed: true,
-        x: ps[0].x,
-        y: ps[0].y
+      const hit = [...(settings.decals || [])].reverse().find(d => d.visible !== false && Math.hypot(d.x - p.x, d.y - p.y) < Math.max(.055, d.size * 2.8));
+      const decal = hit || selectedDecal;
+      if (hit) onSelectDecal(hit.id);
+      if (!decal) {
+        onAddDecal(p);
+        return;
+      }
+      if (!hit) onChangeDecal(decal.id, {
+        x: p.x,
+        y: p.y
       });
-    } else if (ps.length === 2) {
       gesture.current = {
-        size: settings.size,
-        rotation: settings.rotation,
+        id: decal.id,
+        x: hit ? decal.x : p.x,
+        y: hit ? decal.y : p.y,
+        start: p,
+        moved: false
+      };
+    } else if (ps.length === 2 && selectedDecal) {
+      gesture.current = {
+        id: selectedDecal.id,
+        size: selectedDecal.size,
+        rotation: selectedDecal.rotation,
         distance: Math.hypot(ps[1].x - ps[0].x, ps[1].y - ps[0].y),
         angle: Math.atan2(ps[1].y - ps[0].y, ps[1].x - ps[0].x)
       };
@@ -3473,13 +3518,18 @@ const PatternPlacementPreview = ({
     const ps = [...pointers.current.values()],
       g = gesture.current;
     if (!g) return;
-    if (ps.length === 1 && g.start) onChange({
-      x: Math.max(0, Math.min(1, g.x + ps[0].x - g.start.x)),
-      y: Math.max(0, Math.min(1, g.y + ps[0].y - g.start.y))
-    });else if (ps.length === 2 && g.distance) {
+    if (ps.length === 1 && g.start) {
+      const dx = ps[0].x - g.start.x,
+        dy = ps[0].y - g.start.y;
+      g.moved = g.moved || Math.hypot(dx, dy) > .005;
+      onChangeDecal(g.id, {
+        x: Math.max(0, Math.min(1, g.x + dx)),
+        y: Math.max(0, Math.min(1, g.y + dy))
+      });
+    } else if (ps.length === 2 && g.distance) {
       const distance = Math.hypot(ps[1].x - ps[0].x, ps[1].y - ps[0].y),
         angle = Math.atan2(ps[1].y - ps[0].y, ps[1].x - ps[0].x);
-      onChange({
+      onChangeDecal(g.id, {
         size: Math.max(.02, Math.min(.25, g.size * distance / g.distance)),
         rotation: g.rotation + (angle - g.angle) * 180 / Math.PI
       });
@@ -3501,16 +3551,25 @@ const PatternPlacementPreview = ({
       touchAction: settings.mode === 'point' ? 'none' : 'auto',
       cursor: settings.mode === 'point' ? 'crosshair' : 'default'
     }
-  }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-    baseId: masu.baseId,
-    src: masuDisplayImageUrl(base),
-    alt: masu.name,
-    masuColors: colors,
-    className: "w-full h-full object-contain"
-  }), /*#__PURE__*/React.createElement(MasuPatternLayer, {
-    baseId: masu.baseId,
-    src: masuDisplayImageUrl(base),
-    settings: settings
+  }, /*#__PURE__*/React.createElement(PatternedMasuImage, {
+    masu: masu,
+    base: base,
+    colors: colors,
+    settings: settings,
+    className: "w-full h-full"
+  }), selectedDecal && settings.mode === 'point' && /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true",
+    style: {
+      position: 'absolute',
+      left: `${selectedDecal.x * 100}%`,
+      top: `${selectedDecal.y * 100}%`,
+      width: `${Math.max(24, selectedDecal.size * 520)}px`,
+      height: `${Math.max(24, selectedDecal.size * 520)}px`,
+      transform: 'translate(-50%,-50%)',
+      border: '2px dashed #67e8f9',
+      borderRadius: '50%',
+      pointerEvents: 'none'
+    }
   }));
 };
 const RebirthStars = ({
@@ -6321,16 +6380,15 @@ function MonsterHeroGame() {
   //   distApt:[g0,g1,g2,g3](このマスモン専用の間合い適性), statPoints:{hp,atk,def,guts}, color(染色もどきで変えた色id、無ければnull), createdAt }
   const [masuMons, setMasuMons] = useState([]);
   const [patternMasuId, setPatternMasuId] = useState(null);
-  const [patternSettings, setPatternSettings] = useState({
-    ...MASU_PATTERN_DEFAULTS
-  });
-  const [patternStep, setPatternStep] = useState(1);
+  const [patternSettings, setPatternSettings] = useState(makePatternSettings);
+  const [patternStep, setPatternStep] = useState('attach');
   const [patternCustomColor, setPatternCustomColor] = useState({
     open: false,
     h: 198,
     s: 0.77,
     v: 0.97
   });
+  const [patternSizePreview, setPatternSizePreview] = useState(false);
   const [homePastureIds, setHomePastureIds] = useState([]);
   const [draftHomePastureIds, setDraftHomePastureIds] = useState([]);
   const [pastureLoaded, setPastureLoaded] = useState(false);
@@ -14964,40 +15022,17 @@ function MonsterHeroGame() {
     }, "\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B"))), gameState === 'MASU_PATTERN_DEBUG' && (() => {
       const eligible = masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId]);
       const selected = eligible.find(m => String(m.id) === String(patternMasuId));
-      const updatePattern = (key, value) => setPatternSettings(prev => ({
-        ...prev,
-        [key]: value
-      }));
-      const patchPattern = patch => setPatternSettings(prev => ({
-        ...prev,
-        ...patch
-      }));
       const resetPattern = () => {
-        setPatternStep(1);
-        setPatternSettings({
-          ...MASU_PATTERN_DEFAULTS
-        });
+        setPatternStep('attach');
+        setPatternSettings(makePatternSettings());
         setPatternCustomColor({
           open: false,
           h: 198,
           s: .77,
           v: .97
         });
+        setPatternSizePreview(false);
       };
-      const slider = (key, label, min, max, step = 1, format = v => v) => /*#__PURE__*/React.createElement("label", {
-        className: "block rounded-xl bg-slate-900/80 px-3 py-2"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "flex justify-between text-[10px] font-black text-slate-300"
-      }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("output", null, format(patternSettings[key]))), /*#__PURE__*/React.createElement("input", {
-        "aria-label": label,
-        type: "range",
-        min: min,
-        max: max,
-        step: step,
-        value: patternSettings[key],
-        onChange: e => updatePattern(key, Number(e.target.value)),
-        className: "w-full min-h-[42px] accent-fuchsia-500 touch-none"
-      }));
       return /*#__PURE__*/React.createElement("main", {
         className: "flex-1 min-h-0 flex flex-col bg-slate-950",
         style: {
@@ -15007,21 +15042,25 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("div", {
         className: "mh-debug-banner"
       }, "DEBUG\u30FB\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("header", {
-        className: "flex items-center gap-2 px-3 py-2 shrink-0 border-b border-white/10"
+        className: "flex items-center gap-2 px-2 py-1 shrink-0 border-b border-white/10"
       }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u623B\u308B",
         onClick: () => setGameState('DEBUG_SETTINGS'),
-        className: "p-3 text-slate-400"
+        className: "p-3 text-slate-300"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
-      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-        className: "text-[8px] font-black text-fuchsia-400"
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0"
+      }, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] font-black text-fuchsia-400"
       }, "PATTERN CUSTOM TEST"), /*#__PURE__*/React.createElement("h2", {
-        className: "text-sm font-black"
-      }, "\u30DE\u30B9\u30E2\u30F3\u6A21\u69D8\u30AB\u30B9\u30BF\u30E0\u30C6\u30B9\u30C8"))), eligible.length === 0 ? /*#__PURE__*/React.createElement("section", {
-        className: "flex-1 flex flex-col items-center justify-center p-6 text-center"
-      }, /*#__PURE__*/React.createElement("p", {
-        className: "font-black text-slate-300"
-      }, "\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA\u3067\u304D\u308B\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093")) : !selected ? /*#__PURE__*/React.createElement("section", {
+        className: "truncate text-xs font-black"
+      }, selected ? selected.name : 'マスモン模様カスタム')), selected && /*#__PURE__*/React.createElement("button", {
+        onClick: () => setPatternMasuId(null),
+        className: "ml-auto min-h-[40px] px-3 rounded-xl bg-slate-800 text-[9px] font-black"
+      }, "\u5909\u66F4")), eligible.length === 0 ? /*#__PURE__*/React.createElement("section", {
+        className: "flex-1 flex items-center justify-center p-6 text-center font-black text-slate-300"
+      }, "\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA\u3067\u304D\u308B\u6240\u6301\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093") : !selected ? /*#__PURE__*/React.createElement("section", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-4"
       }, /*#__PURE__*/React.createElement("p", {
         className: "mb-3 text-[11px] font-bold text-slate-400"
@@ -15048,111 +15087,330 @@ function MonsterHeroGame() {
       }))) : (() => {
         const base = ALL_PLAYER_MONSTERS[selected.baseId],
           regions = dyeRegionCount(selected.baseId),
-          colors = getMasuColors(selected),
-          options = patternSettings.mode === 'point' ? MASU_PATTERN_POINT_OPTIONS : MASU_PATTERN_REPEAT_OPTIONS;
+          colors = getMasuColors(selected);
+        const mode = patternSettings.mode,
+          selectedKey = patternSettings.selectedLayer;
+        const selectedDecal = patternSettings.decals.find(d => `decal:${d.id}` === selectedKey) || null;
+        const regionIndex = selectedKey.startsWith('region:') ? Number(selectedKey.split(':')[1]) : 0;
+        const active = mode === 'all' ? patternSettings.fullPattern : mode === 'region' ? patternSettings.regionPatterns[regionIndex] : selectedDecal;
+        const patchActive = patch => setPatternSettings(prev => {
+          if (prev.mode === 'all') return {
+            ...prev,
+            fullPattern: {
+              ...prev.fullPattern,
+              ...patch
+            }
+          };
+          if (prev.mode === 'region') {
+            const i = prev.selectedLayer.startsWith('region:') ? Number(prev.selectedLayer.split(':')[1]) : 0;
+            return {
+              ...prev,
+              regionPatterns: {
+                ...prev.regionPatterns,
+                [i]: {
+                  ...(prev.regionPatterns[i] || makePatternLayer({
+                    target: String(i + 1)
+                  })),
+                  ...patch
+                }
+              }
+            };
+          }
+          const id = prev.selectedLayer.split(':')[1];
+          return {
+            ...prev,
+            decals: prev.decals.map(d => String(d.id) === id ? {
+              ...d,
+              ...patch
+            } : d)
+          };
+        });
+        const selectMode = next => setPatternSettings(prev => ({
+          ...prev,
+          mode: next,
+          selectedLayer: next === 'all' ? 'full' : next === 'region' ? `region:${Math.min(regionIndex, Math.max(0, regions - 1))}` : prev.decals.length ? `decal:${prev.decals[prev.decals.length - 1].id}` : ''
+        }));
+        const addDecal = (position = {
+          x: .5,
+          y: .5
+        }) => setPatternSettings(prev => {
+          const id = `point-${Date.now()}-${prev.decals.length + 1}`,
+            decal = makePatternLayer({
+              id,
+              pattern: 'star',
+              target: 'all',
+              x: position.x,
+              y: position.y,
+              size: .08,
+              opacity: 100
+            });
+          return {
+            ...prev,
+            mode: 'point',
+            decals: [...prev.decals, decal],
+            selectedLayer: `decal:${id}`
+          };
+        });
+        const patchDecal = (id, patch) => setPatternSettings(prev => ({
+          ...prev,
+          decals: prev.decals.map(d => d.id === id ? {
+            ...d,
+            ...patch
+          } : d)
+        }));
+        const deleteDecal = id => setPatternSettings(prev => {
+          const decals = prev.decals.filter(d => d.id !== id),
+            fallback = decals[decals.length - 1];
+          return {
+            ...prev,
+            decals,
+            selectedLayer: fallback ? `decal:${fallback.id}` : ''
+          };
+        });
+        const moveDecal = (id, delta) => setPatternSettings(prev => {
+          const decals = [...prev.decals],
+            from = decals.findIndex(d => d.id === id),
+            to = Math.max(0, Math.min(decals.length - 1, from + delta));
+          if (from < 0 || from === to) return prev;
+          const [item] = decals.splice(from, 1);
+          decals.splice(to, 0, item);
+          return {
+            ...prev,
+            decals
+          };
+        });
+        const duplicateDecal = d => setPatternSettings(prev => {
+          const copy = {
+            ...d,
+            id: `point-${Date.now()}-${prev.decals.length + 1}`,
+            x: Math.min(1, d.x + .05),
+            y: Math.min(1, d.y + .05)
+          };
+          return {
+            ...prev,
+            decals: [...prev.decals, copy],
+            selectedLayer: `decal:${copy.id}`
+          };
+        });
+        const toggleLayer = row => setPatternSettings(prev => {
+          if (row.mode === 'all') return {
+            ...prev,
+            fullPattern: {
+              ...prev.fullPattern,
+              visible: prev.fullPattern.visible === false
+            }
+          };
+          if (row.mode === 'region') {
+            const i = Number(row.key.split(':')[1]);
+            return {
+              ...prev,
+              regionPatterns: {
+                ...prev.regionPatterns,
+                [i]: {
+                  ...prev.regionPatterns[i],
+                  visible: prev.regionPatterns[i]?.visible === false
+                }
+              }
+            };
+          }
+          return {
+            ...prev,
+            decals: prev.decals.map(d => d.id === row.decal.id ? {
+              ...d,
+              visible: d.visible === false
+            } : d)
+          };
+        });
+        const slider = (key, label, min, max, step = 1, format = v => v) => /*#__PURE__*/React.createElement("label", {
+          className: "block rounded-xl bg-slate-900 px-3 py-1"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "flex justify-between text-[9px] font-black text-slate-300"
+        }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("output", null, format(active?.[key] ?? 0))), /*#__PURE__*/React.createElement("input", {
+          "aria-label": label,
+          type: "range",
+          min: min,
+          max: max,
+          step: step,
+          value: active?.[key] ?? 0,
+          onChange: e => patchActive({
+            [key]: Number(e.target.value)
+          }),
+          className: "w-full min-h-[36px] accent-fuchsia-500 touch-none"
+        }));
+        const swatch = (id, label, point) => {
+          const glyph = {
+            stripe: '▥',
+            dot: '⠿',
+            leopard: '◉',
+            camouflage: '⬟',
+            check: '▦',
+            scale: '◡',
+            honeycomb: '⬡',
+            lightning_repeat: 'ϟ',
+            flame_repeat: '♨',
+            wave: '≋',
+            crack: '⌁',
+            star_repeat: '★',
+            heart_repeat: '♥',
+            paw_repeat: '🐾',
+            rune_repeat: 'ᚱ',
+            digital: '▦',
+            star: '★',
+            heart: '♥',
+            scar: '╱',
+            paw: '🐾',
+            crown: '♛',
+            flame: '♨',
+            lightning: 'ϟ',
+            moon: '☾',
+            sun: '☀',
+            magic_circle: '✡',
+            skull: '☠',
+            wing: '𓆩',
+            number: '7',
+            alphabet: 'M'
+          }[id] || '◆';
+          return /*#__PURE__*/React.createElement("button", {
+            key: id,
+            onClick: () => patchActive({
+              pattern: id
+            }),
+            className: `min-w-[76px] h-[68px] rounded-xl border p-1 ${active?.pattern === id ? 'bg-fuchsia-800 border-fuchsia-300 ring-1 ring-fuchsia-300' : 'bg-slate-900 border-white/10'}`
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "block text-2xl leading-7",
+            style: {
+              color: active?.color
+            }
+          }, glyph), /*#__PURE__*/React.createElement("b", {
+            className: "block text-[8px]"
+          }, label));
+        };
+        const layerRows = [{
+          key: 'full',
+          label: '全身模様',
+          value: patternSettings.fullPattern,
+          mode: 'all'
+        }, ...Array.from({
+          length: regions
+        }, (_, i) => ({
+          key: `region:${i}`,
+          label: `染色${'①②③'[i]}`,
+          value: patternSettings.regionPatterns[i],
+          mode: 'region'
+        })), ...patternSettings.decals.map((d, i) => ({
+          key: `decal:${d.id}`,
+          label: `ワンポイント${i + 1}`,
+          value: d,
+          mode: 'point',
+          decal: d
+        }))];
         return /*#__PURE__*/React.createElement("div", {
-          className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-3 space-y-3 scroll-smooth"
+          className: "flex-1 min-h-0 flex flex-col overflow-hidden"
         }, /*#__PURE__*/React.createElement("nav", {
-          className: "grid grid-cols-3 gap-1 sticky top-0 z-30 bg-slate-950/95 py-2 backdrop-blur"
-        }, [1, 2, 3].map(n => /*#__PURE__*/React.createElement("button", {
-          key: n,
-          onClick: () => setPatternStep(n),
-          className: `min-h-[38px] rounded-lg text-[9px] font-black ${patternStep === n ? 'bg-fuchsia-700 ring-2 ring-fuchsia-300' : 'bg-slate-800 text-slate-400'}`
-        }, "STEP", n, /*#__PURE__*/React.createElement("small", {
-          className: "block text-[7px]"
-        }, n === 1 ? '付け方' : n === 2 ? '模様・配置' : '色設定')))), /*#__PURE__*/React.createElement("section", {
+          "aria-label": "\u4ED8\u3051\u65B9",
+          className: "grid grid-cols-3 gap-1 px-3 py-1 shrink-0"
+        }, [['all', '全身模様'], ['region', '部位ごと'], ['point', 'ワンポイント']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+          key: id,
+          onClick: () => selectMode(id),
+          className: `min-h-[38px] rounded-xl text-[9px] font-black ${mode === id ? 'bg-fuchsia-700 ring-2 ring-fuchsia-300' : 'bg-slate-800 text-slate-400'}`
+        }, label))), /*#__PURE__*/React.createElement("section", {
           id: "masu-pattern-large-preview",
-          className: "rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-2 text-center"
+          className: "relative shrink-0 w-[92%] max-w-[390px] h-[min(40vh,390px)] min-h-[230px] mx-auto rounded-3xl border border-fuchsia-500/40 bg-[radial-gradient(circle,#1e293b,#020617)] shadow-xl overflow-hidden"
         }, /*#__PURE__*/React.createElement(PatternPlacementPreview, {
           masu: selected,
           base: base,
           colors: colors,
           settings: patternSettings,
-          onChange: patchPattern,
-          className: "w-[min(68vw,280px)] aspect-square mx-auto"
-        }), /*#__PURE__*/React.createElement("b", {
-          className: "text-xs"
-        }, selected.name), patternSettings.mode === 'point' && /*#__PURE__*/React.createElement("small", {
-          className: "block text-[8px] text-cyan-300"
-        }, "\u30BF\u30C3\u30D7\u3067\u914D\u7F6E\u30FB\u30C9\u30E9\u30C3\u30B0\u3067\u79FB\u52D5\u30FB2\u672C\u6307\u3067\u62E1\u5927\u7E2E\u5C0F\uFF0F\u56DE\u8EE2")), /*#__PURE__*/React.createElement("aside", {
-          className: "sticky top-[54px] z-20 rounded-xl border border-fuchsia-400/50 bg-slate-950/95 p-2 flex items-center gap-3 shadow-xl"
-        }, /*#__PURE__*/React.createElement(PatternedMasuImage, {
-          masu: selected,
-          base: base,
-          colors: colors,
-          settings: patternSettings,
-          className: "w-14 h-14 shrink-0"
-        }), /*#__PURE__*/React.createElement("div", {
-          className: "text-[9px] font-black text-fuchsia-200"
-        }, "\u8FFD\u5F93\u30D7\u30EC\u30D3\u30E5\u30FC", /*#__PURE__*/React.createElement("small", {
-          className: "block text-[7px] text-slate-400"
-        }, "\u5168\u30B5\u30A4\u30BA\u5171\u901A\u306E\u6B63\u898F\u5316\u5EA7\u6A19"))), patternStep === 1 && /*#__PURE__*/React.createElement("section", {
-          className: "space-y-3 rounded-2xl bg-slate-900/60 p-3"
+          selectedDecal: selectedDecal,
+          onSelectDecal: id => setPatternSettings(p => ({
+            ...p,
+            selectedLayer: `decal:${id}`
+          })),
+          onChangeDecal: patchDecal,
+          onAddDecal: addDecal,
+          className: "w-full h-full"
+        }), /*#__PURE__*/React.createElement("span", {
+          className: "absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[8px] font-black"
+        }, mode === 'all' ? '全身模様' : mode === 'region' ? `染色${'①②③'[regionIndex]}` : selectedDecal ? '選択中' : 'タップで追加'), mode === 'point' && /*#__PURE__*/React.createElement("span", {
+          className: "absolute inset-x-2 bottom-1 text-center text-[8px] text-cyan-200 bg-black/50 rounded-full"
+        }, "\u30BF\u30C3\u30D7\u9078\u629E\u30FB\u30C9\u30E9\u30C3\u30B0\u79FB\u52D5\u30FB\u30D4\u30F3\u30C1\u62E1\u7E2E\uFF0F\u56DE\u8EE2")), /*#__PURE__*/React.createElement("section", {
+          className: "flex-1 min-h-0 mt-2 rounded-t-3xl border-t border-fuchsia-500/30 bg-slate-900/95 flex flex-col overflow-hidden"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-3 pb-2"
+        }, patternStep === 'attach' && /*#__PURE__*/React.createElement("div", {
+          className: "space-y-3"
         }, /*#__PURE__*/React.createElement("h3", {
-          className: "font-black text-fuchsia-300"
-        }, "STEP1\uFF1A\u6A21\u69D8\u306E\u4ED8\u3051\u65B9"), [['all', '全身'], ['region', '部位ごと'], ['point', 'ワンポイントで貼る']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
-          key: id,
-          onClick: () => patchPattern({
-            mode: id,
-            target: id === 'region' ? '1' : 'all',
-            pattern: id === 'point' ? 'star' : 'stripe',
-            placed: false
-          }),
-          className: `w-full min-h-[48px] rounded-xl font-black ${patternSettings.mode === id ? 'bg-fuchsia-700 ring-2 ring-fuchsia-300' : 'bg-slate-800'}`
-        }, label)), patternSettings.mode === 'region' && /*#__PURE__*/React.createElement("div", {
+          className: "text-xs font-black text-fuchsia-300"
+        }, "STEP1\uFF1A\u4ED8\u3051\u65B9\u9078\u629E"), /*#__PURE__*/React.createElement("p", {
+          className: "text-[9px] text-slate-400"
+        }, "\u4E0A\u306E3\u65B9\u5F0F\u306F\u3044\u3064\u3067\u3082\u5207\u308A\u66FF\u3048\u3089\u308C\u3001\u8A2D\u5B9A\u306F\u65B9\u5F0F\u3054\u3068\u306B\u4FDD\u6301\u3055\u308C\u307E\u3059\u3002"), mode === 'region' && /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-2"
         }, Array.from({
           length: regions
-        }, (_, i) => String(i + 1)).map(id => /*#__PURE__*/React.createElement("button", {
-          key: id,
-          onClick: () => updatePattern('target', id),
-          className: `min-h-[44px] rounded-xl font-black ${patternSettings.target === id ? 'bg-cyan-700 ring-2 ring-cyan-300' : 'bg-slate-800'}`
-        }, "\u67D3\u8272", '①②③'[Number(id) - 1])))), patternStep === 2 && /*#__PURE__*/React.createElement("section", {
-          className: "space-y-3 rounded-2xl bg-slate-900/60 p-3"
-        }, /*#__PURE__*/React.createElement("h3", {
-          className: "font-black text-fuchsia-300"
-        }, "STEP2\uFF1A\u6A21\u69D8\u9078\u629E\u30FB\u914D\u7F6E\u8ABF\u6574"), /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-3 gap-2"
-        }, options.map(([id, label]) => /*#__PURE__*/React.createElement("button", {
-          key: id,
-          onClick: () => patchPattern({
-            pattern: id,
-            placed: patternSettings.mode === 'point' ? patternSettings.placed : true
-          }),
-          className: `min-h-[44px] rounded-xl text-[9px] font-black ${patternSettings.pattern === id ? 'bg-fuchsia-700 ring-2 ring-fuchsia-300' : 'bg-slate-800'}`
-        }, label))), slider('size', '模様の大きさ', .02, .25, .005, v => `${Math.round(v * 100)}%`), slider('rotation', '回転', -180, 180, 1, v => `${Math.round(v)}°`), slider('x', '横位置', 0, 1, .01, v => `${Math.round(v * 100)}%`), slider('y', '縦位置', 0, 1, .01, v => `${Math.round(v * 100)}%`), slider('opacity', '透明度', 0, 100, 1, v => `${v}%`), patternSettings.mode === 'point' && /*#__PURE__*/React.createElement("div", {
+        }, (_, i) => /*#__PURE__*/React.createElement("button", {
+          key: i,
+          onClick: () => setPatternSettings(p => ({
+            ...p,
+            selectedLayer: `region:${i}`
+          })),
+          className: `min-h-[44px] rounded-xl font-black ${regionIndex === i ? 'bg-cyan-700 ring-2 ring-cyan-300' : 'bg-slate-800'}`
+        }, "\u67D3\u8272", '①②③'[i]))), mode === 'point' && /*#__PURE__*/React.createElement("button", {
+          onClick: () => addDecal(),
+          className: "w-full min-h-[48px] rounded-xl bg-cyan-700 font-black"
+        }, "\uFF0B \u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u3092\u8FFD\u52A0"), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-2 gap-2"
         }, /*#__PURE__*/React.createElement("button", {
-          onClick: () => patchPattern({
-            placed: false
+          onClick: () => setPatternSizePreview(true),
+          className: "min-h-[44px] rounded-xl bg-slate-800 font-black"
+        }, "\u30B5\u30A4\u30BA\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+          onClick: resetPattern,
+          className: "min-h-[44px] rounded-xl bg-red-950 font-black"
+        }, "\u3059\u3079\u3066\u521D\u671F\u5316"))), patternStep === 'pattern' && /*#__PURE__*/React.createElement("div", {
+          className: "space-y-2"
+        }, !active && mode === 'point' ? /*#__PURE__*/React.createElement("button", {
+          onClick: () => addDecal(),
+          className: "w-full min-h-[48px] rounded-xl bg-cyan-700 font-black"
+        }, "\uFF0B \u6700\u521D\u306E\u30EF\u30F3\u30DD\u30A4\u30F3\u30C8\u3092\u8FFD\u52A0") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+          className: "flex gap-2 overflow-x-auto mh-scroll pb-2"
+        }, (mode === 'point' ? MASU_PATTERN_POINT_OPTIONS : MASU_PATTERN_REPEAT_OPTIONS).map(([id, label]) => swatch(id, label, mode === 'point'))), slider('size', '大きさ', .02, .25, .005, v => `${Math.round(v * 100)}%`), slider('rotation', '回転', -180, 180, 1, v => `${Math.round(v)}°`), slider('x', '横位置', 0, 1, .01, v => `${Math.round(v * 100)}%`), slider('y', '縦位置', 0, 1, .01, v => `${Math.round(v * 100)}%`), slider('opacity', '透明度', 0, 100, 1, v => `${v}%`), mode === 'region' && /*#__PURE__*/React.createElement("button", {
+          onClick: () => patchActive({
+            ...makePatternLayer({
+              target: String(regionIndex + 1)
+            })
           }),
-          className: "min-h-[46px] rounded-xl bg-red-900 font-black"
-        }, "\u524A\u9664"), /*#__PURE__*/React.createElement("button", {
-          onClick: () => patchPattern({
-            placed: false,
-            x: .5,
-            y: .5
-          }),
-          className: "min-h-[46px] rounded-xl bg-cyan-900 font-black"
-        }, "\u5225\u306E\u4F4D\u7F6E\u3078\u8CBC\u308A\u76F4\u3059"))), patternStep === 3 && /*#__PURE__*/React.createElement("section", {
-          className: "space-y-3 rounded-2xl bg-slate-900/60 p-3"
-        }, /*#__PURE__*/React.createElement("h3", {
-          className: "font-black text-fuchsia-300"
-        }, "STEP3\uFF1A\u8272\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("div", {
-          className: "flex justify-between items-center"
-        }, /*#__PURE__*/React.createElement("b", {
-          className: "text-[10px]"
-        }, "\u30D7\u30EA\u30BB\u30C3\u30C8\u8272\u30FB\u30AB\u30B9\u30BF\u30E0\u8272"), /*#__PURE__*/React.createElement("span", {
-          className: "w-9 h-9 rounded-full border-2 border-white/30",
+          className: "w-full min-h-[42px] rounded-xl bg-slate-800 font-black"
+        }, "\u3053\u306E\u90E8\u4F4D\u3092\u521D\u671F\u5024\u3078\u623B\u3059"), mode === 'point' && selectedDecal && /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-3 gap-2"
+        }, /*#__PURE__*/React.createElement("button", {
+          onClick: () => duplicateDecal(selectedDecal),
+          className: "min-h-[42px] rounded-xl bg-cyan-900 font-black"
+        }, "\u8907\u88FD"), /*#__PURE__*/React.createElement("button", {
+          onClick: () => moveDecal(selectedDecal.id, 1),
+          className: "min-h-[42px] rounded-xl bg-slate-800 font-black"
+        }, "\u524D\u9762\u3078"), /*#__PURE__*/React.createElement("button", {
+          onClick: () => deleteDecal(selectedDecal.id),
+          className: "min-h-[42px] rounded-xl bg-red-900 font-black"
+        }, "\u524A\u9664")))), patternStep === 'color' && /*#__PURE__*/React.createElement("div", {
+          className: "space-y-3"
+        }, !active ? /*#__PURE__*/React.createElement("p", {
+          className: "text-center text-sm text-slate-400"
+        }, "\u30EC\u30A4\u30E4\u30FC\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+          className: "flex gap-2 items-center"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "w-10 h-10 rounded-full border-2 border-white/30",
           style: {
-            backgroundColor: patternSettings.color
+            backgroundColor: active.color
           }
-        })), /*#__PURE__*/React.createElement("div", {
+        }), /*#__PURE__*/React.createElement("b", {
+          className: "text-xs"
+        }, "\u30D7\u30EA\u30BB\u30C3\u30C8\u8272\u30FB\u30AB\u30B9\u30BF\u30E0\u8272")), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-9 gap-1"
         }, MASU_PATTERN_PRESET_COLORS.map(color => /*#__PURE__*/React.createElement("button", {
           key: color,
           "aria-label": `模様色 ${color}`,
-          onClick: () => updatePattern('color', color),
+          onClick: () => patchActive({
+            color
+          }),
           className: "aspect-square rounded-full border border-white/30",
           style: {
             backgroundColor: color
@@ -15179,51 +15437,76 @@ function MonsterHeroGame() {
               s,
               v
             });
-            updatePattern('color', `#${[r, g, b].map(n => n.toString(16).padStart(2, '0')).join('')}`);
+            patchActive({
+              color: `#${[r, g, b].map(n => n.toString(16).padStart(2, '0')).join('')}`
+            });
           }
         }), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 text-center text-[8px] text-slate-400"
-        }, /*#__PURE__*/React.createElement("span", null, "\u8272\u76F8 ", Math.round(patternCustomColor.h), "\xB0"), /*#__PURE__*/React.createElement("span", null, "\u5F69\u5EA6 ", Math.round(patternCustomColor.s * 100), "%"), /*#__PURE__*/React.createElement("span", null, "\u660E\u5EA6 ", Math.round(patternCustomColor.v * 100), "%")))), /*#__PURE__*/React.createElement("section", {
-          className: "rounded-2xl border border-white/10 bg-slate-900/60 p-3"
+        }, /*#__PURE__*/React.createElement("span", null, "\u8272\u76F8 ", Math.round(patternCustomColor.h), "\xB0"), /*#__PURE__*/React.createElement("span", null, "\u5F69\u5EA6 ", Math.round(patternCustomColor.s * 100), "%"), /*#__PURE__*/React.createElement("span", null, "\u660E\u5EA6 ", Math.round(patternCustomColor.v * 100), "%"))))), patternStep === 'layers' && /*#__PURE__*/React.createElement("div", {
+          className: "space-y-2"
+        }, layerRows.map(row => /*#__PURE__*/React.createElement("div", {
+          key: row.key,
+          className: `flex items-center gap-2 min-h-[48px] rounded-xl border p-2 ${selectedKey === row.key ? 'border-cyan-300 bg-cyan-950' : 'border-white/10 bg-slate-950'}`
+        }, /*#__PURE__*/React.createElement("button", {
+          onClick: () => setPatternSettings(p => ({
+            ...p,
+            mode: row.mode,
+            selectedLayer: row.key
+          })),
+          className: "flex-1 text-left text-[10px] font-black"
+        }, row.label, /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px] text-slate-400"
+        }, row.value?.pattern || '未設定')), row.value && /*#__PURE__*/React.createElement("button", {
+          "aria-label": `${row.label} 表示切替`,
+          onClick: () => toggleLayer(row),
+          className: "w-10 h-10 rounded-lg bg-slate-800"
+        }, row.value.visible === false ? '○' : '●'), row.decal && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+          onClick: () => moveDecal(row.decal.id, -1),
+          className: "w-9 h-10 rounded-lg bg-slate-800"
+        }, "\u2193"), /*#__PURE__*/React.createElement("button", {
+          onClick: () => moveDecal(row.decal.id, 1),
+          className: "w-9 h-10 rounded-lg bg-slate-800"
+        }, "\u2191"), /*#__PURE__*/React.createElement("button", {
+          onClick: () => deleteDecal(row.decal.id),
+          className: "w-9 h-10 rounded-lg bg-red-900"
+        }, "\xD7")))))), /*#__PURE__*/React.createElement("nav", {
+          className: "grid grid-cols-4 gap-1 px-2 pt-1 border-t border-white/10 shrink-0",
+          style: {
+            paddingBottom: 'max(.4rem,env(safe-area-inset-bottom))'
+          }
+        }, [['attach', '付け方'], ['pattern', '模様'], ['color', '色'], ['layers', 'レイヤー']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+          key: id,
+          onClick: () => setPatternStep(id),
+          className: `min-h-[48px] rounded-xl text-[9px] font-black ${patternStep === id ? 'bg-fuchsia-700 text-white' : 'bg-slate-800 text-slate-400'}`
+        }, label)))), patternSizePreview && /*#__PURE__*/React.createElement("div", {
+          className: "fixed inset-0 z-[100] bg-black/80 flex items-end justify-center",
+          onClick: () => setPatternSizePreview(false)
+        }, /*#__PURE__*/React.createElement("section", {
+          onClick: e => e.stopPropagation(),
+          className: "w-full max-w-md rounded-t-3xl bg-slate-900 border-t border-fuchsia-400 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
         }, /*#__PURE__*/React.createElement("div", {
-          className: "text-[10px] font-black text-fuchsia-300"
-        }, "3\u30B5\u30A4\u30BA\u6BD4\u8F03"), /*#__PURE__*/React.createElement("div", {
-          className: "flex items-end justify-around"
+          className: "flex justify-between"
+        }, /*#__PURE__*/React.createElement("h3", {
+          className: "font-black"
+        }, "\u30B5\u30A4\u30BA\u78BA\u8A8D"), /*#__PURE__*/React.createElement("button", {
+          onClick: () => setPatternSizePreview(false),
+          className: "px-4 py-2 rounded-xl bg-slate-700"
+        }, "\u9589\u3058\u308B")), /*#__PURE__*/React.createElement("div", {
+          className: "flex items-end justify-around text-center mt-3"
         }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PatternedMasuImage, {
           masu: selected,
           base: base,
           colors: colors,
           settings: patternSettings,
-          className: "w-36 h-36"
-        }), /*#__PURE__*/React.createElement("small", null, "\u7DE8\u96C6\u7528\u5927\u8868\u793A")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PatternedMasuImage, {
-          masu: selected,
-          base: base,
-          colors: colors,
-          settings: patternSettings,
-          className: "w-20 h-20"
+          className: "w-24 h-24"
         }), /*#__PURE__*/React.createElement("small", null, "\u901A\u5E38\u30AB\u30FC\u30C9")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(PatternedMasuImage, {
           masu: selected,
           base: base,
           colors: colors,
           settings: patternSettings,
-          className: "w-10 h-10"
-        }), /*#__PURE__*/React.createElement("small", null, "\u5C0F\u578B")))), /*#__PURE__*/React.createElement("footer", {
-          className: "grid grid-cols-3 gap-2 pb-2"
-        }, /*#__PURE__*/React.createElement("button", {
-          disabled: patternStep === 1,
-          onClick: () => setPatternStep(s => Math.max(1, s - 1)),
-          className: "min-h-[48px] rounded-xl bg-slate-800 disabled:opacity-30 font-black"
-        }, "\u524D\u3078"), /*#__PURE__*/React.createElement("button", {
-          onClick: () => setPatternStep(s => Math.min(3, s + 1)),
-          disabled: patternStep === 3,
-          className: "min-h-[48px] rounded-xl bg-fuchsia-700 disabled:opacity-30 font-black"
-        }, "\u6B21\u3078"), /*#__PURE__*/React.createElement("button", {
-          onClick: resetPattern,
-          className: "min-h-[48px] rounded-xl bg-red-950 text-[9px] font-black"
-        }, "\u6700\u521D\u304B\u3089\u3084\u308A\u76F4\u3059")), /*#__PURE__*/React.createElement("button", {
-          onClick: () => setPatternMasuId(null),
-          className: "min-h-[48px] rounded-xl border border-fuchsia-500/50 font-black"
-        }, "\u5225\u306E\u30DE\u30B9\u30E2\u30F3\u3092\u9078\u3076"));
+          className: "w-11 h-11 mx-auto"
+        }), /*#__PURE__*/React.createElement("small", null, "\u5C0F\u578B\u30A2\u30A4\u30B3\u30F3"))))));
       })());
     })(), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
@@ -15253,9 +15536,7 @@ function MonsterHeroGame() {
     }, "\u5831\u916C\u30FB\u9032\u884C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setPatternMasuId(null);
-        setPatternSettings({
-          ...MASU_PATTERN_DEFAULTS
-        });
+        setPatternSettings(makePatternSettings());
         setGameState('MASU_PATTERN_DEBUG');
       },
       className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
