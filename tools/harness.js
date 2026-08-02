@@ -47,6 +47,9 @@ const EXPORTED_NAMES = [
   'rankingDetailToMasu',
   'masuBondLevelInfo',
   'uniqueSkillAtLevel',
+  'getMonsterAptPct',
+  'formatAptBonus',
+  'DIST_APTITUDE_GRADES',
 ];
 
 // ブラウザAPIの最小スタブ。canvasだけは node-canvas で本物と同じように動かす

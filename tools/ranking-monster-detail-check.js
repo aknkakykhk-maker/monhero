@@ -27,7 +27,7 @@ vm.runInContext([
 ].join('\n'), ctx);
 const { ALL_PLAYER_MONSTERS } = ctx.__x;
 
-const { rankingMasuDetail, rankingDetailToMasu, masuBondLevelInfo } = loadDyeModule();
+const { rankingMasuDetail, rankingDetailToMasu, masuBondLevelInfo, getMonsterAptPct, formatAptBonus, DIST_APTITUDE_GRADES } = loadDyeModule();
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -55,7 +55,14 @@ for (let i = 0; i < ids.length; i++) {
     rebirthCount: i % 4,
     levelCap: 30 + (i % 4) * 10,
     statPoints: { hp: 10 + i, atk: 5, def: 15, guts: 0 },
-    distApt: [0, 25, 5, 0],
+    // 間合い適性はグレードの文字の配列。数値ではない(ここを数値で書いていたために
+    // 「文字を数に直すと全部0になる」不具合を取り逃していた)
+    distApt: (() => {
+      const grades = [...(ALL_PLAYER_MONSTERS[baseId].distAptitude || ['C','C','C','C'])];
+      grades[i % 4] = 'M';
+      grades[(i + 1) % 4] = 'B';
+      return grades;
+    })(),
     distAptPoints: 3,
     uniqueSkillLevels: { own: 2, 'inh:0': 4 },
     inheritedUniques: [{ ...other, monId: otherId, evoLevel: 4 }],
@@ -74,6 +81,10 @@ for (let i = 0; i < ids.length; i++) {
   same('レベル上限', masu.levelCap, back.levelCap);
   same('強化ステータス', masu.statPoints, back.statPoints);
   same('間合い適性', masu.distApt, back.distApt);
+  // 画面に出るのはグレードそのものではなく、そこから引いた距離補正(%)。
+  // 送り方を間違えると例外は出ず、静かに「全距離0%」になるのでここで直接見る
+  same('距離補正(%)', getMonsterAptPct({ distAptitude: masu.distApt }), getMonsterAptPct({ distAptitude: back.distApt }));
+  same('合流ボーナスの間合い表示', formatAptBonus({ distAptitude: masu.distApt }), formatAptBonus({ distAptitude: back.distApt }));
   same('強化ポイント', masu.distAptPoints, back.distAptPoints);
   same('固有技Lv', masu.uniqueSkillLevels, back.uniqueSkillLevels);
   same('染色', masu.colors, back.colors);
@@ -102,6 +113,14 @@ for (const [label, run] of robust) { try { run(); } catch (e) { threw.push(`${la
 check('壊れた記録でも落ちない', threw.length === 0, threw.join(' / '));
 const unknownInherit = rankingDetailToMasu(ids[0], { v: 1, inherited: [{ monId: '__unknown__', level: 3 }] }, []);
 check('知らない継承技は出さない', unknownInherit && unknownInherit.inheritedUniques.length === 0);
+
+// 間合い適性がグレードとして読めない記録(数値に潰してしまった初期の記録など)は、
+// 「全距離C」という実在しない姿を作らず、血統本来の適性で出す(distAptをnullにする)
+const brokenApt = rankingDetailToMasu(ids[0], { v: 1, distApt: [0, 0, 0, 0] }, []);
+check('読めない間合い適性は血統本来の値に任せる', brokenApt && brokenApt.distApt === null,
+  brokenApt ? JSON.stringify(brokenApt.distApt) : '組み立て直せない');
+const goodApt = rankingDetailToMasu(ids[0], { v: 1, distApt: ['M', 'C', 'C', 'C'] }, []);
+check('読める間合い適性はそのまま残す', goodApt && JSON.stringify(goodApt.distApt) === JSON.stringify(['M','C','C','C']));
 
 // --- 画面側 ---
 const source = read('src/game-system.jsx');
