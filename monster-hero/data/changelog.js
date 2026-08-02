@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-02 19:14",
+    date: "2026-08-02 19:24",
     type: "fix",
     title: "スネグーラチカのアイコン表示を調整しました",
     items: [
@@ -9,7 +9,7 @@ const CHANGELOG = [
   },
 
   {
-    date: "2026-08-02 19:14",
+    date: "2026-08-02 19:24",
     type: "update",
     title: "ブリーダーアイコンを追加しました",
     items: [
