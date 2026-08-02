@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: aa52b5f835cd8419
+// source-sha256: 48fffacafcb48277
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 13:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 13:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3137,15 +3137,22 @@ const makePatternLayer = (patch = {}) => ({
 });
 const makePatternSettings = () => ({
   mode: 'all',
-  fullPattern: makePatternLayer(),
+  // デバッグ画面へ入った直後と初期化後は、素の立ち絵から始める。
+  // レイヤー自体は残すことで、模様を選んだ瞬間から各方式を編集できるようにする。
+  fullPattern: makePatternLayer({
+    pattern: 'none'
+  }),
   regionPatterns: {
     0: makePatternLayer({
+      pattern: 'none',
       target: '1'
     }),
     1: makePatternLayer({
+      pattern: 'none',
       target: '2'
     }),
     2: makePatternLayer({
+      pattern: 'none',
       target: '3'
     })
   },
@@ -3155,6 +3162,9 @@ const makePatternSettings = () => ({
 const MASU_PATTERN_REPEAT_OPTIONS = [['stripe', '縞模様'], ['dot', '水玉'], ['leopard', 'ヒョウ柄'], ['camouflage', '迷彩'], ['check', 'チェック柄'], ['scale', '鱗'], ['honeycomb', 'ハニカム'], ['lightning_repeat', '雷模様'], ['flame_repeat', '炎模様'], ['wave', '波模様'], ['crack', 'ひび割れ'], ['star_repeat', '星柄'], ['heart_repeat', 'ハート柄'], ['paw_repeat', '肉球柄'], ['rune_repeat', '魔法文字'], ['digital', 'デジタル柄']];
 const MASU_PATTERN_POINT_OPTIONS = [['star', '星'], ['heart', 'ハート'], ['scar', '傷跡'], ['paw', '肉球'], ['crown', '王冠'], ['flame', '炎'], ['lightning', '雷'], ['moon', '月'], ['sun', '太陽'], ['magic_circle', '魔法陣'], ['skull', 'ドクロ'], ['wing', '羽'], ['number', '数字'], ['alphabet', 'アルファベット']];
 const MASU_PATTERN_PRESET_COLORS = ['#38bdf8', '#ef4444', '#f59e0b', '#22c55e', '#a855f7', '#ec4899', '#f8fafc', '#1f2937'];
+// 模様Canvasは解析用マスクの384pxへ縮小しない。立ち絵の元解像度（現行最大1174px）を
+// 保って描画することで、通常カードだけでなく拡大プレビューでも輪郭と模様を荒らさない。
+const MASU_PATTERN_RENDER_MAX_SIZE = 1200;
 // デバッグ画面だけで使う模様レイヤー。Canvasへ描き、保存データや元画像には触れない。
 const MasuPatternLayer = ({
   baseId,
@@ -3182,13 +3192,15 @@ const MasuPatternLayer = ({
       const maskUrl = masks?.[Math.max(0, Number(settings.target) - 1)];
       const mask = maskUrl ? await loadImage(maskUrl) : body;
       if (cancelled || !body || !mask) return;
-      const scale = Math.min(1, MASK_ANALYSIS_MAX_SIZE / Math.max(body.naturalWidth || body.width, body.naturalHeight || body.height));
+      const scale = Math.min(1, MASU_PATTERN_RENDER_MAX_SIZE / Math.max(body.naturalWidth || body.width, body.naturalHeight || body.height));
       const w = Math.max(1, Math.round((body.naturalWidth || body.width) * scale)),
         h = Math.max(1, Math.round((body.naturalHeight || body.height) * scale));
       canvas.width = w;
       canvas.height = h;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.clearRect(0, 0, w, h);
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, settings.opacity / 100));
@@ -15317,7 +15329,7 @@ function MonsterHeroGame() {
           id: "masu-pattern-large-preview",
           className: "relative shrink-0 w-[calc(100%_-_1.5rem)] max-w-[430px] mx-auto rounded-3xl border border-fuchsia-500/40 bg-[radial-gradient(circle,#1e293b,#020617)] shadow-xl overflow-hidden",
           style: {
-            height: 'clamp(280px,34vh,360px)'
+            height: 'clamp(220px,28vh,260px)'
           }
         }, /*#__PURE__*/React.createElement(PatternPlacementPreview, {
           masu: selected,
@@ -15378,6 +15390,7 @@ function MonsterHeroGame() {
         }, (mode === 'point' ? MASU_PATTERN_POINT_OPTIONS : MASU_PATTERN_REPEAT_OPTIONS).map(([id, label]) => swatch(id, label, mode === 'point'))), slider('size', '大きさ', .02, .25, .005, v => `${Math.round(v * 100)}%`), slider('rotation', '回転', -180, 180, 1, v => `${Math.round(v)}°`), slider('x', '横位置', 0, 1, .01, v => `${Math.round(v * 100)}%`), slider('y', '縦位置', 0, 1, .01, v => `${Math.round(v * 100)}%`), slider('opacity', '透明度', 0, 100, 1, v => `${v}%`), mode === 'region' && /*#__PURE__*/React.createElement("button", {
           onClick: () => patchActive({
             ...makePatternLayer({
+              pattern: 'none',
               target: String(regionIndex + 1)
             })
           }),
@@ -15460,7 +15473,7 @@ function MonsterHeroGame() {
           className: "flex-1 text-left text-[10px] font-black"
         }, row.label, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400"
-        }, row.value?.pattern || '未設定')), row.value && /*#__PURE__*/React.createElement("button", {
+        }, row.value?.pattern === 'none' ? '未設定' : row.value?.pattern || '未設定')), row.value && /*#__PURE__*/React.createElement("button", {
           "aria-label": `${row.label} 表示切替`,
           onClick: () => toggleLayer(row),
           className: "w-10 h-10 rounded-lg bg-slate-800"

@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-02 12:54",
+    date: "2026-08-02 13:49",
     type: "update",
     title: "設定画面からゲームを更新できるようになりました",
     items: [
@@ -10,7 +10,7 @@ const CHANGELOG = [
   },
 
   {
-    date: "2026-08-02 12:54",
+    date: "2026-08-02 13:49",
     type: "update",
     title: "ウィークリーミッションを変更しました",
     items: [
@@ -19,7 +19,7 @@ const CHANGELOG = [
   },
 
   {
-    date: "2026-08-02 12:54",
+    date: "2026-08-02 13:49",
     type: "fix",
     title: "寄付画面のマスモン表示を修正しました",
     items: [
