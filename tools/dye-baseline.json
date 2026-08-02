@@ -2,13 +2,13 @@
   "Mocchi": {
     "width": 384,
     "height": 384,
-    "opaque": 44812,
+    "opaque": 57292,
     "regions": [
-      36061,
-      4041,
-      3142
+      46434,
+      5296,
+      3514
     ],
-    "uncolored": 1568
+    "uncolored": 2048
   },
   "Suezo": {
     "width": 384,
