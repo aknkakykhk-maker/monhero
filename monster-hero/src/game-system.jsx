@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 22:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 22:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1492,7 +1492,9 @@ const rankingMasuDetail = (masu) => {
     rebirthCount: num(masu.rebirthCount),
     levelCap: num(masu.levelCap) || null,
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
-    distApt: Array.isArray(masu.distApt) ? masu.distApt.slice(0, 4).map(v => Math.round(Number(v) || 0)) : null,
+    // 間合い適性は「グレードの文字」の配列(['C','M','C','C'] など)。数値ではないので
+    // 数に直そうとすると全部0になり、ランキング側だけ全距離Cに見えてしまう
+    distApt: Array.isArray(masu.distApt) ? masu.distApt.slice(0, 4).map(g => DIST_APTITUDE_GRADES.includes(g) ? g : 'C') : null,
     distAptPoints: num(masu.distAptPoints),
     uniqueLevel: num(masu.uniqueSkillLevels?.own),
     inherited,
@@ -1521,7 +1523,10 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     rebirthCount: num(detail.rebirthCount),
     levelCap: num(detail.levelCap) || INITIAL_MASU_LEVEL_CAP,
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
-    distApt: Array.isArray(detail.distApt) && detail.distApt.length === 4 ? detail.distApt.map(v => Math.round(Number(v) || 0)) : null,
+    // グレード以外(数値へ潰してしまった古い記録など)が入っていたら、その記録には
+    // 間合い適性が残っていないものとして扱う。nullにしておけば血統本来の適性が出るので、
+    // 「全距離C」という実際には存在しない姿を作り出さずに済む
+    distApt: (Array.isArray(detail.distApt) && detail.distApt.length === 4 && detail.distApt.every(g => DIST_APTITUDE_GRADES.includes(g))) ? [...detail.distApt] : null,
     distAptPoints: num(detail.distAptPoints),
     uniqueSkillLevels,
     inheritedUniques,
