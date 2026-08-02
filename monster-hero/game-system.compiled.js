@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: cbe7e79245939b59
+// source-sha256: f6ac7410b38dbfc4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 12:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 12:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3119,17 +3119,21 @@ const DyedMonsterImage = ({
 // マスモンの全身表示は画面ごとにiconUrlへ切り替えず、通常表示と同じ立ち絵を使う。
 // iconUrlしか持たない旧データも従来どおり表示できるようフォールバックは残す。
 const masuDisplayImageUrl = base => base?.imgUrl || base?.iconUrl || '';
+// 位置・大きさ・間隔は元画像全体を基準にした0〜1の正規化値だけを持つ。
+// 表示先のCanvas寸法へ換算するのは描画時だけなので、透明余白を含む立ち絵でも各プレビューの同じ部位に重なる。
 const MASU_PATTERN_DEFAULTS = Object.freeze({
   pattern: 'stripe',
   target: 'all',
   color: '#38bdf8',
   opacity: 55,
-  size: 50,
+  size: 0.045,
+  spacing: 0.14,
   rotation: 0,
-  x: 0,
-  y: 0
+  x: 0.5,
+  y: 0.5
 });
 const MASU_PATTERN_OPTIONS = [['stripe', '縞模様'], ['dot', '水玉'], ['leopard', 'ヒョウ柄'], ['crack', 'ひび割れ'], ['star', '星柄'], ['none', '模様なし']];
+const MASU_PATTERN_PRESET_COLORS = ['#38bdf8', '#ef4444', '#f59e0b', '#22c55e', '#a855f7', '#ec4899', '#f8fafc', '#1f2937'];
 // デバッグ画面だけで使う模様レイヤー。Canvasへ描き、保存データや元画像には触れない。
 const MasuPatternLayer = ({
   baseId,
@@ -3169,12 +3173,14 @@ const MasuPatternLayer = ({
       ctx.globalAlpha = Math.max(0, Math.min(1, settings.opacity / 100));
       ctx.fillStyle = settings.color;
       ctx.strokeStyle = settings.color;
-      ctx.translate(w / 2 + settings.x * w / 200, h / 2 + settings.y * h / 200);
+      ctx.translate(settings.x * w, settings.y * h);
       ctx.rotate(settings.rotation * Math.PI / 180);
-      const unit = Math.max(8, settings.size * .7),
+      const basis = Math.min(w, h),
+        unit = Math.max(1, basis * settings.spacing),
+        motif = Math.max(1, basis * settings.size),
         extent = Math.hypot(w, h) * 1.5;
       if (settings.pattern === 'stripe') {
-        ctx.lineWidth = Math.max(3, unit * .28);
+        ctx.lineWidth = motif;
         for (let x = -extent; x <= extent; x += unit) {
           ctx.beginPath();
           ctx.moveTo(x, -extent);
@@ -3184,7 +3190,8 @@ const MasuPatternLayer = ({
       } else if (settings.pattern === 'dot' || settings.pattern === 'leopard') {
         for (let y = -extent; y <= extent; y += unit) for (let x = -extent; x <= extent; x += unit) {
           const offset = (Math.round(y / unit) & 1) * unit * .5,
-            r = unit * (settings.pattern === 'dot' ? .22 : .3);
+            r = motif * (settings.pattern === 'dot' ? 0.5 : 0.65);
+          ctx.lineWidth = Math.max(1, motif * .18);
           ctx.beginPath();
           ctx.arc(x + offset, y, r, 0, Math.PI * 2);
           settings.pattern === 'dot' ? ctx.fill() : ctx.stroke();
@@ -3200,7 +3207,7 @@ const MasuPatternLayer = ({
           ctx.beginPath();
           for (let i = 0; i < 10; i++) {
             const a = -Math.PI / 2 + i * Math.PI / 5,
-              r = i % 2 ? unit * .18 : unit * .42,
+              r = i % 2 ? motif * .22 : motif * .5,
               px = ox + Math.cos(a) * r,
               py = y + Math.sin(a) * r;
             i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
@@ -3209,17 +3216,17 @@ const MasuPatternLayer = ({
           ctx.fill();
         }
       } else if (settings.pattern === 'crack') {
-        ctx.lineWidth = Math.max(1, unit * .08);
+        ctx.lineWidth = Math.max(1, motif * .18);
         for (let y = -extent; y <= extent; y += unit) for (let x = -extent; x <= extent; x += unit) {
           ctx.beginPath();
           ctx.moveTo(x, y);
-          ctx.lineTo(x + unit * .23, y + unit * .33);
-          ctx.lineTo(x - unit * .12, y + unit * .61);
-          ctx.lineTo(x + unit * .3, y + unit);
+          ctx.lineTo(x + motif * .45, y + motif * .65);
+          ctx.lineTo(x - motif * .25, y + motif * 1.2);
+          ctx.lineTo(x + motif * .6, y + motif * 2);
           ctx.stroke();
           ctx.beginPath();
-          ctx.moveTo(x + unit * .23, y + unit * .33);
-          ctx.lineTo(x + unit * .55, y + unit * .48);
+          ctx.moveTo(x + motif * .45, y + motif * .65);
+          ctx.lineTo(x + motif * 1.1, y + motif);
           ctx.stroke();
         }
       }
@@ -3232,19 +3239,16 @@ const MasuPatternLayer = ({
     return () => {
       cancelled = true;
     };
-  }, [baseId, src, settings.pattern, settings.target, settings.color, settings.opacity, settings.size, settings.rotation, settings.x, settings.y]);
+  }, [baseId, src, settings.pattern, settings.target, settings.color, settings.opacity, settings.size, settings.spacing, settings.rotation, settings.x, settings.y]);
   return /*#__PURE__*/React.createElement("canvas", {
     ref: canvasRef,
     "aria-hidden": "true",
     style: {
       position: 'absolute',
-      left: '50%',
-      top: '50%',
-      width: 'auto',
-      height: 'auto',
-      maxWidth: '100%',
-      maxHeight: '100%',
-      transform: 'translate(-50%,-50%)',
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain',
       pointerEvents: 'none'
     }
   });
@@ -6082,6 +6086,12 @@ function MonsterHeroGame() {
   const [patternMasuId, setPatternMasuId] = useState(null);
   const [patternSettings, setPatternSettings] = useState({
     ...MASU_PATTERN_DEFAULTS
+  });
+  const [patternCustomColor, setPatternCustomColor] = useState({
+    open: false,
+    h: 198,
+    s: 0.77,
+    v: 0.97
   });
   const [homePastureIds, setHomePastureIds] = useState([]);
   const [draftHomePastureIds, setDraftHomePastureIds] = useState([]);
@@ -14720,15 +14730,16 @@ function MonsterHeroGame() {
         ...prev,
         [key]: value
       }));
-      const slider = (key, label, min, max, unit = '') => /*#__PURE__*/React.createElement("label", {
+      const slider = (key, label, min, max, step = 1, format = v => v) => /*#__PURE__*/React.createElement("label", {
         className: "block rounded-xl bg-slate-900/80 px-3 py-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "flex justify-between text-[10px] font-black text-slate-300"
-      }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("output", null, patternSettings[key], unit)), /*#__PURE__*/React.createElement("input", {
+      }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("output", null, format(patternSettings[key]))), /*#__PURE__*/React.createElement("input", {
         "aria-label": label,
         type: "range",
         min: min,
         max: max,
+        step: step,
         value: patternSettings[key],
         onChange: e => updatePattern(key, Number(e.target.value)),
         className: "w-full min-h-[42px] accent-fuchsia-500 touch-none"
@@ -14776,6 +14787,12 @@ function MonsterHeroGame() {
             setPatternSettings({
               ...MASU_PATTERN_DEFAULTS
             });
+            setPatternCustomColor({
+              open: false,
+              h: 198,
+              s: 0.77,
+              v: 0.97
+            });
           },
           className: "min-h-[116px] rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-2 active:scale-[.97]"
         }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
@@ -14791,22 +14808,24 @@ function MonsterHeroGame() {
         }, Number(m.rebirthCount) > 0 ? `転生 ${m.rebirthCount}回` : '未転生'));
       }))) : (() => {
         const base = ALL_PLAYER_MONSTERS[selected.baseId],
-          regions = dyeRegionCount(selected.baseId);
+          regions = dyeRegionCount(selected.baseId),
+          colors = getMasuColors(selected);
         return /*#__PURE__*/React.createElement("div", {
-          className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-3 space-y-3"
+          className: "flex-1 min-h-0 overflow-y-auto mh-scroll p-3 space-y-3 scroll-smooth"
         }, /*#__PURE__*/React.createElement("section", {
-          className: "rounded-2xl border border-fuchsia-500/30 bg-gradient-to-b from-slate-900 to-slate-950 p-3 text-center"
+          id: "masu-pattern-large-preview",
+          className: "scroll-mt-3 rounded-2xl border border-fuchsia-500/30 bg-gradient-to-b from-slate-900 to-slate-950 p-3 text-center"
         }, /*#__PURE__*/React.createElement(PatternedMasuImage, {
           masu: selected,
           base: base,
-          colors: getMasuColors(selected),
+          colors: colors,
           settings: patternSettings,
           className: "w-[min(68vw,280px)] aspect-square mx-auto"
         }), /*#__PURE__*/React.createElement("div", {
           className: "font-black"
         }, selected.name), /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-amber-300"
-        }, Number(selected.rebirthCount) > 0 ? `転生 ${selected.rebirthCount}回` : '未転生', "\u3000\u30FB\u3000", getMasuColors(selected).some(Boolean) ? '染色反映中' : '染色なし')), /*#__PURE__*/React.createElement("section", {
+        }, Number(selected.rebirthCount) > 0 ? `転生 ${selected.rebirthCount}回` : '未転生', "\u3000\u30FB\u3000", colors.some(Boolean) ? '染色反映中' : '染色なし')), /*#__PURE__*/React.createElement("section", {
           className: "rounded-2xl border border-white/10 bg-slate-900/60 p-3"
         }, /*#__PURE__*/React.createElement("div", {
           className: "mb-2 text-[10px] font-black text-fuchsia-300"
@@ -14828,7 +14847,27 @@ function MonsterHeroGame() {
           className: "w-12 h-12"
         }), /*#__PURE__*/React.createElement("small", {
           className: "block text-center text-[8px] text-slate-400"
-        }, "\u5C0F\u578B\u30A2\u30A4\u30B3\u30F3\u76F8\u5F53")))), /*#__PURE__*/React.createElement("section", {
+        }, "\u5C0F\u578B\u30A2\u30A4\u30B3\u30F3\u76F8\u5F53")))), /*#__PURE__*/React.createElement("aside", {
+          className: "sticky top-0 z-20 min-h-[76px] rounded-2xl border border-fuchsia-400/50 bg-slate-950/95 px-3 py-2 shadow-xl backdrop-blur flex items-center gap-3"
+        }, /*#__PURE__*/React.createElement(PatternedMasuImage, {
+          masu: selected,
+          base: base,
+          colors: colors,
+          settings: patternSettings,
+          className: "w-14 h-14 shrink-0"
+        }), /*#__PURE__*/React.createElement("div", {
+          className: "min-w-0 flex-1"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: "block truncate text-[10px] text-fuchsia-200"
+        }, "\u8FFD\u5F93\u30D7\u30EC\u30D3\u30E5\u30FC"), /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px] text-slate-400"
+        }, "\u5168\u30B5\u30A4\u30BA\u5171\u901A\u306E\u753B\u50CF\u5EA7\u6A19")), /*#__PURE__*/React.createElement("button", {
+          onClick: () => document.getElementById('masu-pattern-large-preview')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          }),
+          className: "min-h-[40px] px-3 rounded-xl bg-fuchsia-800 text-[9px] font-black"
+        }, "\u30D7\u30EC\u30D3\u30E5\u30FC\u3092\u62E1\u5927")), /*#__PURE__*/React.createElement("section", {
           className: "space-y-3 rounded-2xl border border-white/10 bg-slate-900/50 p-3"
         }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
           className: "mb-2 text-[10px] font-black text-slate-300"
@@ -14850,15 +14889,55 @@ function MonsterHeroGame() {
             onClick: () => updatePattern('target', id),
             className: `min-h-[44px] rounded-xl text-[9px] font-black disabled:opacity-25 ${patternSettings.target === id ? 'bg-cyan-700 ring-2 ring-cyan-300' : 'bg-slate-800'}`
           }, id === 'all' ? '全身' : `染色${'①②③'[i - 1]}`);
-        }))), /*#__PURE__*/React.createElement("label", {
-          className: "flex items-center justify-between rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black"
-        }, /*#__PURE__*/React.createElement("span", null, "\u6A21\u69D8\u306E\u8272"), /*#__PURE__*/React.createElement("input", {
-          "aria-label": "\u6A21\u69D8\u306E\u8272",
-          type: "color",
-          value: patternSettings.color,
-          onChange: e => updatePattern('color', e.target.value),
-          className: "w-16 h-11 rounded-lg bg-transparent"
-        })), slider('opacity', '透明度', 0, 100, '%'), slider('size', '大きさ', 12, 120), slider('rotation', '回転', -180, 180, '°'), slider('x', '横位置', -100, 100), slider('y', '縦位置', -100, 100), /*#__PURE__*/React.createElement("button", {
+        }))), /*#__PURE__*/React.createElement("div", {
+          className: "rounded-xl bg-slate-900 px-3 py-3"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center justify-between mb-2 text-[10px] font-black"
+        }, /*#__PURE__*/React.createElement("span", null, "\u6A21\u69D8\u306E\u8272"), /*#__PURE__*/React.createElement("span", {
+          className: "w-8 h-8 rounded-full border-2 border-white/30",
+          style: {
+            backgroundColor: patternSettings.color
+          }
+        })), /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-9 gap-1"
+        }, MASU_PATTERN_PRESET_COLORS.map(color => /*#__PURE__*/React.createElement("button", {
+          key: color,
+          "aria-label": `模様色 ${color}`,
+          onClick: () => updatePattern('color', color),
+          className: `aspect-square rounded-full border ${patternSettings.color === color ? 'ring-2 ring-fuchsia-300 border-white' : 'border-white/20'}`,
+          style: {
+            backgroundColor: color
+          }
+        })), /*#__PURE__*/React.createElement("button", {
+          "aria-label": "\u30AB\u30B9\u30BF\u30E0\u8272",
+          onClick: () => setPatternCustomColor(prev => ({
+            ...prev,
+            open: !prev.open
+          })),
+          className: `aspect-square rounded-full border border-white/30 ${patternCustomColor.open ? 'ring-2 ring-fuchsia-300' : ''}`,
+          style: {
+            background: 'conic-gradient(#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#d946ef,#ef4444)'
+          }
+        })), patternCustomColor.open && /*#__PURE__*/React.createElement("div", {
+          className: "mt-3"
+        }, /*#__PURE__*/React.createElement(CustomColorPicker, {
+          h: patternCustomColor.h,
+          s: patternCustomColor.s,
+          v: patternCustomColor.v,
+          onChange: (h, s, v) => {
+            const [r, g, b] = _hsvToRgb(h, s, v),
+              hex = `#${[r, g, b].map(n => n.toString(16).padStart(2, '0')).join('')}`;
+            setPatternCustomColor({
+              open: true,
+              h,
+              s,
+              v
+            });
+            updatePattern('color', hex);
+          }
+        }), /*#__PURE__*/React.createElement("div", {
+          className: "mt-2 grid grid-cols-3 text-center text-[8px] font-bold text-slate-400"
+        }, /*#__PURE__*/React.createElement("span", null, "\u8272\u76F8 ", Math.round(patternCustomColor.h), "\xB0"), /*#__PURE__*/React.createElement("span", null, "\u5F69\u5EA6 ", Math.round(patternCustomColor.s * 100), "%"), /*#__PURE__*/React.createElement("span", null, "\u660E\u5EA6 ", Math.round(patternCustomColor.v * 100), "%")))), slider('opacity', '透明度', 0, 100, 1, v => `${v}%`), slider('size', '模様サイズ', 0.01, 0.12, 0.005, v => `${Math.round(v * 100)}%`), slider('spacing', '模様の間隔', 0.04, 0.3, 0.005, v => `${Math.round(v * 100)}%`), slider('rotation', '回転', -180, 180, 1, v => `${v}°`), slider('x', '横位置', 0, 1, 0.01, v => `${Math.round(v * 100)}%`), slider('y', '縦位置', 0, 1, 0.01, v => `${Math.round(v * 100)}%`), /*#__PURE__*/React.createElement("button", {
           onClick: () => setPatternSettings({
             ...MASU_PATTERN_DEFAULTS
           }),
