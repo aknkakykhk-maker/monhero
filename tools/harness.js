@@ -42,6 +42,7 @@ const EXPORTED_NAMES = [
   '_hueDist',
   'isImageIconValue',
   'cardIconNode',
+  'rankingPartyColors',
 ];
 
 // ブラウザAPIの最小スタブ。canvasだけは node-canvas で本物と同じように動かす
