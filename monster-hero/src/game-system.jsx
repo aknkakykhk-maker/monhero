@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 19:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 19:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1964,11 +1964,12 @@ const MARKET_ICON_SIZE = { disc: 'w-12 h-12', breeder: 'w-10 h-10', icon: 'w-10 
 // 全身画像を使う一部のアイコンは、画像自体には手を加えず表示時だけ顔まわりへ寄せる。
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
-  kiki_icon: { transform: 'scale(1.58) translateY(12%)' },
-  snegurochka_icon: { transform: 'scale(2.85) translate(3%, 35%)' },
-  snegurochka_awakened_icon: { transform: 'scale(2.85) translate(3%, 35%)' },
+  kiki_icon: { scale: 1.58, x: 0, y: 12 },
+  snegurochka_icon: { scale: 2.85, x: 4, y: 39 },
+  snegurochka_awakened_icon: { scale: 2.85, x: 3, y: 35 },
 };
-const marketProfileIconStyle = (id) => MARKET_PROFILE_ICON_STYLES[id];
+const profileIconTransformStyle = ({ scale=1, x=0, y=0 }={}) => ({ transform: `scale(${scale}) translate(${x}%, ${y}%)` });
+const marketProfileIconStyle = (id) => profileIconTransformStyle(MARKET_PROFILE_ICON_STYLES[id]);
 
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
 const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
@@ -2768,6 +2769,10 @@ function MonsterHeroGame() {
   const [marketItemDetail, setMarketItemDetail] = useState(null);
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
+  // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
+  const marketIconItems = BREEDER_MARKET_ITEMS.filter(item=>item.type==='icon');
+  const [iconAdjustId, setIconAdjustId] = useState(marketIconItems[0]?.id||'');
+  const [iconAdjustments, setIconAdjustments] = useState(()=>Object.fromEntries(marketIconItems.map(item=>[item.id,{...(MARKET_PROFILE_ICON_STYLES[item.id]||{scale:1,x:0,y:0})}])));
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
@@ -7447,10 +7452,31 @@ function MonsterHeroGame() {
           </main>;
         })()}
 
+        {gameState==='BREEDER_ICON_DEBUG'&&(()=>{
+          const item=marketIconItems.find(entry=>entry.id===iconAdjustId)||marketIconItems[0];
+          if(!item)return <div className="p-4 text-slate-400">調整できるアイコンがありません。</div>;
+          const initial={...(MARKET_PROFILE_ICON_STYLES[item.id]||{scale:1,x:0,y:0})};
+          const values=iconAdjustments[item.id]||initial;
+          const previewStyle=profileIconTransformStyle(values);
+          const patchValue=(key,value)=>setIconAdjustments(current=>({...current,[item.id]:{...values,[key]:Number(value)}}));
+          const slider=(key,label,min,max,step)=><label className="block rounded-xl bg-slate-900 p-3"><span className="mb-2 flex justify-between text-[10px] font-black text-slate-300"><b>{label}</b><output>{values[key]}</output></span><input className="w-full accent-fuchsia-500" type="range" min={min} max={max} step={step} value={values[key]} onChange={e=>patchValue(key,e.target.value)}/></label>;
+          const copyText=`${item.id}: { scale: ${values.scale}, x: ${values.x}, y: ${values.y} }`;
+          return <main className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG・保存されません</small><h2 className="text-sm font-black">ブリーダーアイコン調整</h2></div></header>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3">
+              <select value={item.id} onChange={e=>setIconAdjustId(e.target.value)} className="w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black">{marketIconItems.map(entry=><option key={entry.id} value={entry.id}>{entry.name}（{entry.id}）</option>)}</select>
+              <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"><div className="flex items-end justify-around gap-3 text-center text-[8px] font-black text-slate-400"><div><div className="w-10 h-10 mx-auto rounded-full overflow-hidden border-2 border-white/20 bg-black/30"><img src={item.icon} alt="マーケット一覧" style={previewStyle} className="w-full h-full object-cover"/></div><span>マーケット一覧</span></div><div><div className="w-28 h-28 mx-auto rounded-full overflow-hidden border-4 border-white/20 bg-black/30"><img src={item.icon} alt="商品詳細" style={previewStyle} className="w-full h-full object-cover"/></div><span>商品詳細</span></div><div><div className="w-16 h-16 mx-auto rounded-2xl overflow-hidden border-2 border-amber-400 bg-black/30"><img src={item.icon} alt="プロフィール選択" style={previewStyle} className="w-full h-full object-cover"/></div><span>プロフィール選択</span></div></div></section>
+              {slider('scale','拡大率 scale',.5,4,.01)}{slider('x','左右位置 X',-50,50,1)}{slider('y','上下位置 Y',-50,70,1)}
+              <pre className="whitespace-pre-wrap break-all rounded-xl bg-black/40 p-3 text-[10px] text-cyan-200">{copyText}</pre>
+              <div className="grid grid-cols-2 gap-2"><button onClick={()=>setIconAdjustments(current=>({...current,[item.id]:initial}))} className="min-h-[46px] rounded-xl bg-slate-800 text-[10px] font-black">初期値へ戻す</button><button onClick={async()=>{await navigator.clipboard.writeText(copyText);window.alert('設定値をコピーしました。');}} className="min-h-[46px] rounded-xl bg-fuchsia-700 text-[10px] font-black">設定値をコピー</button></div>
+            </div>
+          </main>;
+        })()}
+
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
-            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
+            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
               {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
               <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
                 <div className="text-[10px] text-pink-300 font-black mb-2">💖 みゅあデバッグ</div>

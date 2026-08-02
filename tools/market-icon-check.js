@@ -66,11 +66,22 @@ check('ききのアイコンが正式名称・価格で並ぶ', kiki?.name === '
 check('ききの画像はブリーダーアイコン専用フォルダにある', stripCacheKey(kiki?.icon || '') === 'images/breeder-icons/kiki.PNG');
 check('対象の3アイコンだけに拡大・位置調整を適用する',
   source.includes('const MARKET_PROFILE_ICON_STYLES = {')
-    && source.includes("kiki_icon: { transform: 'scale(")
-    && source.includes("snegurochka_icon: { transform: 'scale(2.85) translate(3%, 35%)' }")
-    && source.includes("snegurochka_awakened_icon: { transform: 'scale(2.85) translate(3%, 35%)' }")
-    && source.includes('const marketProfileIconStyle = (id) => MARKET_PROFILE_ICON_STYLES[id];')
+    && source.includes('kiki_icon: { scale: 1.58, x: 0, y: 12 }')
+    && source.includes('snegurochka_icon: { scale: 2.85, x: 4, y: 39 }')
+    && source.includes('snegurochka_awakened_icon: { scale: 2.85, x: 3, y: 35 }')
+    && source.includes('const profileIconTransformStyle = ({ scale=1, x=0, y=0 }={})')
     && (source.match(/style=\{marketProfileIconStyle\(/g) || []).length >= 6);
+
+check('デバッグ画面で全アイコンの数値と3サイズを調整・コピーできる',
+  source.includes("gameState==='BREEDER_ICON_DEBUG'")
+    && source.includes("BREEDER_MARKET_ITEMS.filter(item=>item.type==='icon')")
+    && source.includes("slider('scale','拡大率 scale'")
+    && source.includes("slider('x','左右位置 X'")
+    && source.includes("slider('y','上下位置 Y'")
+    && source.includes('マーケット一覧')
+    && source.includes('商品詳細')
+    && source.includes('プロフィール選択')
+    && source.includes("navigator.clipboard.writeText(copyText)"));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
