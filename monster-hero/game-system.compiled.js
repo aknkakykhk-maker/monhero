@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 492277c5c2ed0280
+// source-sha256: eb1187bc73d015a8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 22:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 23:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19053,33 +19053,46 @@ function MonsterHeroGame() {
       "data-battle-speed": battleSpeed
     }, /*#__PURE__*/React.createElement("header", {
       "data-battle-header": true,
-      className: "h-[5%] shrink-0 bg-slate-900 px-2 flex items-center border-b border-white/5 z-[6500] overflow-hidden"
+      className: "h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden"
     }, /*#__PURE__*/React.createElement("div", {
-      className: `flex flex-1 min-w-0 items-center gap-0.5${battleTutorialSpotClass('waveInfo')}`
+      className: `flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`
     }, debugBattle && /*#__PURE__*/React.createElement("span", {
       className: "text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest"
     }, "DEBUG"), /*#__PURE__*/React.createElement("span", {
       className: `text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty === 'Hard' ? 'text-red-400 bg-red-500 border-red-500' : 'text-indigo-400 bg-indigo-500 border-indigo-500'}`
     }, "WAVE ", wave, "/10"), /*#__PURE__*/React.createElement("span", {
-      className: "text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap",
+      className: "min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap",
       style: {
         color: battleModeInfo(runMode).color,
         borderColor: `${battleModeInfo(runMode).color}66`,
         backgroundColor: 'rgba(0,0,0,.35)'
       }
-    }, battleModeInfo(runMode).short, " / ", DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty), /*#__PURE__*/React.createElement("span", {
-      className: "text-[8px] font-black text-blue-400 flex items-center gap-0.5 uppercase tracking-tight whitespace-nowrap"
+    }, battleModeInfo(runMode).short, " / ", DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty)), /*#__PURE__*/React.createElement("div", {
+      "data-battle-metrics": true,
+      className: "shrink-0 flex items-center gap-1 px-1 leading-none"
+    }, /*#__PURE__*/React.createElement("div", {
+      "data-battle-turn": true,
+      className: "flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "flex items-center gap-0.5 text-[7px] tracking-wide"
     }, /*#__PURE__*/React.createElement(Timer, {
-      size: 8
-    }), " TURN ", turnCount, "/20")), /*#__PURE__*/React.createElement("div", {
-      className: "flex min-w-0 shrink-0 items-center gap-0.5"
-    }, !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
+      size: 7
+    }), "TURN"), /*#__PURE__*/React.createElement("span", {
+      className: "mt-0.5 text-[10px] font-mono"
+    }, turnCount, "/20")), !isQuickMode(runMode) && /*#__PURE__*/React.createElement("div", {
       "data-battle-score": true,
-      className: "min-w-0 max-w-[54px] shrink text-[clamp(6px,2.3vw,10px)] font-mono font-black text-amber-500 flex items-center gap-0.5 uppercase tracking-tighter whitespace-nowrap"
+      className: "flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "flex items-center gap-0.5 text-[7px] tracking-wide"
     }, /*#__PURE__*/React.createElement(Award, {
-      size: 9,
-      className: "shrink-0"
-    }), " ", score.toLocaleString()), /*#__PURE__*/React.createElement("button", {
+      size: 7
+    }), "SCORE"), /*#__PURE__*/React.createElement("span", {
+      "data-battle-score-value": true,
+      className: "mt-0.5 text-[10px] tabular-nums"
+    }, score.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+      "data-battle-controls": true,
+      className: "flex shrink-0 items-center gap-0.5"
+    }, /*#__PURE__*/React.createElement("button", {
       type: "button",
       disabled: !!battleTutorial,
       onClick: cycleBattleSpeed,

@@ -183,7 +183,9 @@ check('緊急回復後は敵行動を終えてから次ターンを1回だけ予
   has("const distForNextPredict=acting&&acting.type==='MOVE'?acting.targetDist:enemyDist;")
     && has('setEnemyIntent(getNextEnemyAction(enemy,distForNextPredict));'));
 check('大きなスコアでも諦める領域を縮めない',
-  has('data-battle-score className="min-w-0 max-w-[54px] shrink')
+  has('data-battle-metrics className="shrink-0')
+    && has('data-battle-score className="flex min-w-[64px]')
+    && has('data-battle-controls className="flex shrink-0')
     && has('data-battle-quit disabled={!!battleTutorial}')
     && has('aria-label="諦める" className="shrink-0 w-[28px] h-[28px]'));
 check('操作の記録も台本があるときだけ',
