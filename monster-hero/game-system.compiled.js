@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 93d47cb9ca0915e5
+// source-sha256: 7d4f5147d34df5a2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 20:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 20:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4959,9 +4959,45 @@ const MARKET_PROFILE_ICON_STYLES = {
   },
   iblis_icon: {
     scale: 1.42,
-    x: 3,
-    y: -14
+    x: 2,
+    y: -10
   }
+};
+const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({
+  scale: 1,
+  x: 0,
+  y: 0
+});
+// 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。
+// 同じid、またはキャッシュキーだけが異なる同じ画像は先に現れた1件へまとめる。
+const breederIconOptions = ({
+  includeUnowned = false,
+  ownedMarketIconIds = []
+} = {}) => {
+  const owned = new Set(ownedMarketIconIds);
+  const candidates = [...STARTER_MONSTER_IDS.map(id => {
+    const monster = ALL_PLAYER_MONSTERS[id];
+    return monster && {
+      id: monster.id,
+      name: monster.name,
+      src: monster.faceIconUrl || monster.iconUrl,
+      source: 'starter'
+    };
+  }), ...BREEDER_MARKET_ITEMS.filter(item => item.type === 'icon' && (includeUnowned || owned.has(item.id))).map(item => ({
+    id: item.id,
+    name: item.name,
+    src: item.icon,
+    source: 'market'
+  }))].filter(Boolean);
+  const ids = new Set(),
+    images = new Set();
+  return candidates.filter(item => {
+    const image = String(item.src || '').split('?')[0];
+    if (ids.has(item.id) || images.has(image)) return false;
+    ids.add(item.id);
+    images.add(image);
+    return true;
+  });
 };
 const profileIconTransformStyle = ({
   scale = 1,
@@ -6300,14 +6336,13 @@ function MonsterHeroGame() {
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
-  const marketIconItems = BREEDER_MARKET_ITEMS.filter(item => item.type === 'icon');
-  const [iconAdjustId, setIconAdjustId] = useState(marketIconItems[0]?.id || '');
-  const [iconAdjustments, setIconAdjustments] = useState(() => Object.fromEntries(marketIconItems.map(item => [item.id, {
-    ...(MARKET_PROFILE_ICON_STYLES[item.id] || {
-      scale: 1,
-      x: 0,
-      y: 0
-    })
+  const debugIconItems = breederIconOptions({
+    includeUnowned: true
+  });
+  const [iconAdjustId, setIconAdjustId] = useState(debugIconItems[0]?.id || '');
+  const [iconAdjustQuery, setIconAdjustQuery] = useState('');
+  const [iconAdjustments, setIconAdjustments] = useState(() => Object.fromEntries(debugIconItems.map(item => [item.id, {
+    ...(MARKET_PROFILE_ICON_STYLES[item.id] || DEFAULT_PROFILE_ICON_STYLE)
   }])));
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
@@ -15735,18 +15770,16 @@ function MonsterHeroGame() {
         }), /*#__PURE__*/React.createElement("small", null, "\u5C0F\u578B\u30A2\u30A4\u30B3\u30F3"))))));
       })());
     })(), gameState === 'BREEDER_ICON_DEBUG' && (() => {
-      const item = marketIconItems.find(entry => entry.id === iconAdjustId) || marketIconItems[0];
+      const item = debugIconItems.find(entry => entry.id === iconAdjustId) || debugIconItems[0];
       if (!item) return /*#__PURE__*/React.createElement("div", {
         className: "p-4 text-slate-400"
       }, "\u8ABF\u6574\u3067\u304D\u308B\u30A2\u30A4\u30B3\u30F3\u304C\u3042\u308A\u307E\u305B\u3093\u3002");
       const initial = {
-        ...(MARKET_PROFILE_ICON_STYLES[item.id] || {
-          scale: 1,
-          x: 0,
-          y: 0
-        })
+        ...(MARKET_PROFILE_ICON_STYLES[item.id] || DEFAULT_PROFILE_ICON_STYLE)
       };
       const values = iconAdjustments[item.id] || initial;
+      const normalizedQuery = iconAdjustQuery.trim().toLocaleLowerCase('ja');
+      const filteredItems = debugIconItems.filter(entry => !normalizedQuery || `${entry.name} ${entry.id}`.toLocaleLowerCase('ja').includes(normalizedQuery));
       const patchValue = (key, value) => setIconAdjustments(current => ({
         ...current,
         [item.id]: {
@@ -15787,31 +15820,42 @@ function MonsterHeroGame() {
         className: "text-sm font-black"
       }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30A2\u30A4\u30B3\u30F3\u8ABF\u6574"))), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3"
-      }, /*#__PURE__*/React.createElement("select", {
-        value: item.id,
-        onChange: e => setIconAdjustId(e.target.value),
+      }, /*#__PURE__*/React.createElement("input", {
+        type: "search",
+        value: iconAdjustQuery,
+        onChange: e => setIconAdjustQuery(e.target.value),
+        placeholder: "\u540D\u524D\u30FB\u5185\u90E8ID\u3067\u691C\u7D22",
         className: "w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black"
-      }, marketIconItems.map(entry => /*#__PURE__*/React.createElement("option", {
+      }), /*#__PURE__*/React.createElement("select", {
+        value: filteredItems.some(entry => entry.id === item.id) ? item.id : '',
+        onChange: e => e.target.value && setIconAdjustId(e.target.value),
+        size: Math.min(6, Math.max(2, filteredItems.length)),
+        className: "w-full rounded-xl bg-slate-900 border border-white/10 p-2 text-xs font-black"
+      }, !filteredItems.length && /*#__PURE__*/React.createElement("option", {
+        value: ""
+      }, "\u4E00\u81F4\u3059\u308B\u30A2\u30A4\u30B3\u30F3\u306F\u3042\u308A\u307E\u305B\u3093"), filteredItems.map(entry => /*#__PURE__*/React.createElement("option", {
         key: entry.id,
         value: entry.id
-      }, entry.name, "\uFF08", entry.id, "\uFF09"))), /*#__PURE__*/React.createElement("section", {
+      }, entry.name, "\uFF08", entry.id, "\uFF09"))), /*#__PURE__*/React.createElement("small", {
+        className: "block text-right text-[8px] text-slate-500"
+      }, "\u5168", debugIconItems.length, "\u4EF6\u30FB\u8868\u793A", filteredItems.length, "\u4EF6"), /*#__PURE__*/React.createElement("section", {
         className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-end justify-around gap-3 text-center text-[8px] font-black text-slate-400"
       }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
-        src: item.icon,
+        src: item.src,
         id: item.id,
         adjustment: values,
         alt: "\u30DE\u30FC\u30B1\u30C3\u30C8\u4E00\u89A7",
         className: "w-10 h-10 mx-auto border-2 border-white/20 bg-black/30"
       }), /*#__PURE__*/React.createElement("span", null, "\u30DE\u30FC\u30B1\u30C3\u30C8\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
-        src: item.icon,
+        src: item.src,
         id: item.id,
         adjustment: values,
         alt: "\u5546\u54C1\u8A73\u7D30",
         className: "w-28 h-28 mx-auto border-4 border-white/20 bg-black/30"
       }), /*#__PURE__*/React.createElement("span", null, "\u5546\u54C1\u8A73\u7D30")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
-        src: item.icon,
+        src: item.src,
         id: item.id,
         adjustment: values,
         alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u9078\u629E",
@@ -18577,7 +18621,7 @@ function MonsterHeroGame() {
       className: "text-lg font-black text-white mb-4 text-center"
     }, "\u30A2\u30A4\u30B3\u30F3\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-3 mb-4"
-    }, STARTER_MONSTER_IDS.map(id => ALL_PLAYER_MONSTERS[id]).map(m => /*#__PURE__*/React.createElement("button", {
+    }, breederIconOptions().filter(m => m.source === 'starter').map(m => /*#__PURE__*/React.createElement("button", {
       key: m.id,
       onClick: () => {
         setBreederIcon(m.id);
@@ -18587,7 +18631,7 @@ function MonsterHeroGame() {
       },
       className: `aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon === m.id ? 'border-indigo-400 ring-2 ring-indigo-400' : 'border-slate-700'}`
     }, /*#__PURE__*/React.createElement(BreederIcon, {
-      src: m.faceIconUrl || m.iconUrl,
+      src: m.src,
       id: m.id,
       alt: m.name,
       roundedClass: "rounded-2xl",
@@ -18598,7 +18642,9 @@ function MonsterHeroGame() {
       size: 10
     }), "\u30DE\u30FC\u30B1\u30C3\u30C8\u8CFC\u5165\u30A2\u30A4\u30B3\u30F3"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-3 mb-4"
-    }, BREEDER_MARKET_ITEMS.filter(m => m.type === 'icon' && ownedMarketIcons.includes(m.id)).map(m => /*#__PURE__*/React.createElement("button", {
+    }, breederIconOptions({
+      ownedMarketIconIds: ownedMarketIcons
+    }).filter(m => m.source === 'market').map(m => /*#__PURE__*/React.createElement("button", {
       key: m.id,
       onClick: () => {
         setBreederIcon(m.id);
@@ -18608,7 +18654,7 @@ function MonsterHeroGame() {
       },
       className: `aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon === m.id ? 'border-amber-400 ring-2 ring-amber-400' : 'border-slate-700'}`
     }, /*#__PURE__*/React.createElement(BreederIcon, {
-      src: m.icon,
+      src: m.src,
       id: m.id,
       alt: m.name,
       roundedClass: "rounded-2xl",
