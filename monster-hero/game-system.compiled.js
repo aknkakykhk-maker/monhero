@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5e9abec478ee3471
+// source-sha256: 83426d5e5ebc4443
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 09:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 16:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2752,6 +2752,115 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
 // 染色マスクを作るときに解析する画像の最大サイズ(px)。表示は大きくても250px程度なので、
 // これ以上の解像度で判定しても見た目は変わらず、時間だけがかかる
 const MASK_ANALYSIS_MAX_SIZE = 384;
+// 判定は解析サイズ(上のMASK_ANALYSIS_MAX_SIZE)のままで、書き出すマスク画像だけを
+// 元絵に近い解像度へ引き上げるモンスター。
+// 元絵が解析サイズより大幅に大きいと、マスクの1画素が元絵の3画素ぶんに相当してしまい、
+// 部位の境目がマスクの画素単位の階段(ジャギー)として見えてしまう。実測でも
+// 「絵の輪郭とマスクの輪郭のズレ」がモッチー1.0〜1.5画素に対しイブリースは0.5画素で、
+// 元絵1162pxのモッチーだけ模様カスタムの丸プレビュー(96px表示)で階段が残っていた。
+// 判定と平滑化は解析サイズのまま(多数決の半径が画像幅に比例するため、解像度を上げると
+// 実測で7秒級まで重くなる)、書き出しだけを高解像度で行うことで見た目だけを直す。
+const MASK_HIRES_BASE_IDS = {
+  Mocchi: true
+};
+// 高解像度で書き出すときのマスクの最大サイズ(px)。表示は最大でも250px程度なので、
+// 元絵(1162px)まで上げる必要はなく、階段が見えなくなる範囲で抑える
+const MASK_HIRES_MAX_SIZE = 768;
+// 解析サイズで作った部位マップ(smoothed)を、高解像度のマスク画像(dataURL)へ書き出す。
+// 通常の書き出しとの違いは次の3点。
+//  ① 半透明でにじんでいる最外周へ部位を数画素ぶん広げてから書き出す。
+//     通常の書き出しはにじみを染色対象から外し、さらにマスクのアルファへ元絵のアルファを
+//     掛けている(重ねる染色画像そのものも同じアルファを持つため二重に薄くなる)ため、
+//     輪郭に元の色の縁が残っていた。マスクを広げても、重ねる染色画像が元絵と同じ透明度を
+//     持っているので輪郭からはみ出すことはない。
+//  ② 部位の境目は拡大時の補間でなだらかにし、マスクの画素単位の階段が出ないようにする。
+//  ③ 位置だけで決まる部位(posBbox/band)は解析サイズだと帯1本が1画素程度に潰れてしまうため、
+//     書き出し解像度で定義どおりに引き直す(モッチーの口は帯39本で作られている)。
+const _buildHiResMaskUrls = (smoothed, regionDefs, src, w, h, natW, natH) => {
+  // ① にじみへ部位を広げる
+  const map = new Int8Array(smoothed);
+  for (let pass = 0; pass < 2; pass++) {
+    const next = new Int8Array(map);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (map[i] >= 0) continue;
+      if (src[i * 4 + 3] >= 200) continue; // 不透明な内側は塗り足さない(本来無染色の箇所を潰さないため)
+      for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const nv = map[ny * w + nx];
+        if (nv >= 0) {
+          next[i] = nv;
+          break;
+        }
+      }
+    }
+    map.set(next);
+  }
+  const scale = Math.min(1, MASK_HIRES_MAX_SIZE / Math.max(natW, natH));
+  const outW = Math.max(1, Math.round(natW * scale)),
+    outH = Math.max(1, Math.round(natH * scale));
+  const small = document.createElement('canvas');
+  small.width = w;
+  small.height = h;
+  const smallCtx = small.getContext('2d');
+  if (!smallCtx) return null;
+  // ② 部位ごとに解析サイズの2値マスクを作り、補間つきで拡大する
+  const outCtxs = [],
+    outCanvases = [],
+    outDatas = [];
+  for (let idx = 0; idx < regionDefs.length; idx++) {
+    const sd = smallCtx.createImageData(w, h);
+    for (let i = 0; i < w * h; i++) if (map[i] === idx) sd.data[i * 4 + 3] = 255;
+    smallCtx.putImageData(sd, 0, 0);
+    const out = document.createElement('canvas');
+    out.width = outW;
+    out.height = outH;
+    const outCtx = out.getContext('2d');
+    if (!outCtx) return null;
+    outCtx.imageSmoothingEnabled = true;
+    outCtx.imageSmoothingQuality = 'high';
+    outCtx.drawImage(small, 0, 0, w, h, 0, 0, outW, outH);
+    outCanvases.push(out);
+    outCtxs.push(outCtx);
+    outDatas.push(outCtx.getImageData(0, 0, outW, outH));
+  }
+  // ③ 位置だけで決まる部位を書き出し解像度で引き直す(判定順は_classifyDyePixelと同じく最優先)
+  const posRegions = [];
+  regionDefs.forEach((rawDef, idx) => {
+    for (const def of _defAtoms(rawDef)) {
+      if (def && typeof def === 'object' && (def.band || def.posBbox)) posRegions.push([idx, def]);
+    }
+  });
+  if (posRegions.length) {
+    for (let y = 0; y < outH; y++) {
+      const ny = y / outH;
+      for (let x = 0; x < outW; x++) {
+        const nx = x / outW;
+        let hit = -1;
+        for (const [idx, def] of posRegions) {
+          if (def.band) {
+            const [y0, y1] = def.band;
+            if (ny >= y0 && ny < y1) {
+              hit = idx;
+              break;
+            }
+          }
+          if (def.posBbox && _bboxMatches(def.posBbox, nx, ny)) {
+            hit = idx;
+            break;
+          }
+        }
+        if (hit < 0) continue;
+        const o = (y * outW + x) * 4 + 3;
+        for (let idx = 0; idx < outDatas.length; idx++) outDatas[idx].data[o] = idx === hit ? 255 : 0;
+      }
+    }
+  }
+  return outCanvases.map((canvas, idx) => {
+    outCtxs[idx].putImageData(outDatas[idx], 0, 0);
+    return canvas.toDataURL();
+  });
+};
 const _dyeRegionMaskCache = {};
 const getDyeRegionMasks = (baseId, imgUrl) => {
   const hues = MASU_COLOR_REGION_HUES[baseId];
@@ -2908,6 +3017,12 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             if (orig < 0) continue;
             const def = regionDefs[orig];
             if (def && typeof def === 'object' && (def.noEdgeGuard || def.posBbox)) smoothed[i] = orig;
+          }
+          // 元絵が解析サイズより大幅に大きいモンスターは、マスクだけ高解像度で書き出す
+          const hiRes = MASK_HIRES_BASE_IDS[baseId] ? _buildHiResMaskUrls(smoothed, regionDefs, src, w, h, natW, natH) : null;
+          if (hiRes) {
+            resolve(hiRes);
+            return;
           }
           for (let i = 0; i < w * h; i++) {
             const best = smoothed[i];
