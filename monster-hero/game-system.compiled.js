@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8fb60b2ff24935ec
+// source-sha256: ddd466c649e6ed03
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 12:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 12:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6068,6 +6068,9 @@ function MonsterHeroGame() {
   // 画面から消せるようにする。閉じても更新は行わず、次に開き直したときや
   // さらに新しいバージョンが出たときはまた表示する
   const [dismissedUpdateBuild, setDismissedUpdateBuild] = useState(null);
+  const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
+  const [gameUpdatePending, setGameUpdatePending] = useState(false);
+  const gameUpdatePendingRef = useRef(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false); // 更新履歴モーダルの表示状態
   const [changelogTab, setChangelogTab] = useState('update'); // 'update'=更新情報 / 'issue'=不具合情報
@@ -6892,6 +6895,9 @@ function MonsterHeroGame() {
     };
   }, []);
   const reloadLatestVersion = () => {
+    if (gameUpdatePendingRef.current) return;
+    gameUpdatePendingRef.current = true;
+    setGameUpdatePending(true);
     const url = new URL(window.location.href);
     url.searchParams.set('mh_refresh', Date.now().toString());
     window.location.replace(url.toString());
@@ -14503,7 +14509,7 @@ function MonsterHeroGame() {
       onClick: () => setGameState('MASU_MONS'),
       className: "w-full min-h-[72px] bg-pink-950/50 border border-pink-500/40 px-4 py-5 rounded-2xl font-black shadow-lg active:scale-[.98]"
     }, "\u30DE\u30B9\u30E2\u30F3"))), gameState === 'SETTINGS' && /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 flex flex-col h-full p-4"
+      className: "flex-1 flex flex-col h-full p-4 overflow-y-auto mh-scroll"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-5"
     }, /*#__PURE__*/React.createElement("button", {
@@ -14538,6 +14544,16 @@ function MonsterHeroGame() {
       onClick: () => openHelp(),
       className: "w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black"
     }, "\u30D8\u30EB\u30D7"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowGameUpdateConfirm(true),
+      disabled: showGameUpdateConfirm || gameUpdatePending,
+      className: "w-full bg-slate-900 border border-cyan-500/30 py-3 rounded-2xl font-black disabled:opacity-50"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-cyan-200"
+    }, "\u30B2\u30FC\u30E0\u3092\u66F4\u65B0"), /*#__PURE__*/React.createElement("span", {
+      className: "block mt-1 text-[10px] text-slate-400"
+    }, "\u6700\u65B0\u306E\u30B2\u30FC\u30E0\u30C7\u30FC\u30BF\u3092\u8AAD\u307F\u8FBC\u307F\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
+      className: "text-center text-[9px] font-mono text-slate-600"
+    }, "BUILD ", BUILD_DATE), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowOfficialTitleConfirm(true),
       className: "w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black"
     }, "\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B"))), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
@@ -20469,7 +20485,33 @@ function MonsterHeroGame() {
     }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
       onClick: returnToOfficialTitle,
       className: "w-full bg-red-600 py-3 rounded-xl font-black"
-    }, "\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B")))), rankingPartyDetail && (() => {
+    }, "\u30BF\u30A4\u30C8\u30EB\u3078\u623B\u308B")))), showGameUpdateConfirm && /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 flex items-center justify-center p-6",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99000,
+        backgroundColor: 'rgba(0,0,0,0.94)'
+      },
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": "game-update-confirm-title"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"
+    }, /*#__PURE__*/React.createElement("h3", {
+      id: "game-update-confirm-title",
+      className: "text-lg font-black mb-3"
+    }, "\u6700\u65B0\u306E\u30B2\u30FC\u30E0\u30C7\u30FC\u30BF\u3092\u8AAD\u307F\u8FBC\u307F\u76F4\u3057\u307E\u3059\u3002", /*#__PURE__*/React.createElement("br", null), "\u30BB\u30FC\u30D6\u30C7\u30FC\u30BF\u306F\u6D88\u3048\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-3 mt-6"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: reloadLatestVersion,
+      disabled: gameUpdatePending,
+      className: "w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50"
+    }, gameUpdatePending ? '更新しています…' : '更新する'), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowGameUpdateConfirm(false),
+      disabled: gameUpdatePending,
+      className: "w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50"
+    }, "\u30AD\u30E3\u30F3\u30BB\u30EB")))), rankingPartyDetail && (() => {
       const entry = rankingPartyDetail;
       const finite = v => v == null || v === '' ? null : Number.isFinite(Number(v)) ? Number(v) : null;
       const score = finite(entry?.score),
