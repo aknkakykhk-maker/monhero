@@ -64,13 +64,17 @@ check('名前は16文字まで(カードの枠に収まる長さ)', longName.len
 const kiki = icons.find(i => i.id === 'kiki_icon');
 check('ききのアイコンが正式名称・価格で並ぶ', kiki?.name === 'ききのアイコン' && kiki?.cost === 1);
 check('ききの画像はブリーダーアイコン専用フォルダにある', stripCacheKey(kiki?.icon || '') === 'images/breeder-icons/kiki.PNG');
-check('対象の3アイコンだけに拡大・位置調整を適用する',
+check('対象アイコンを共通部品で拡大・位置調整する',
   source.includes('const MARKET_PROFILE_ICON_STYLES = {')
-    && source.includes('kiki_icon: { scale: 1.58, x: 0, y: 12 }')
-    && source.includes('snegurochka_icon: { scale: 2.85, x: 4, y: 39 }')
-    && source.includes('snegurochka_awakened_icon: { scale: 2.85, x: 3, y: 35 }')
+    && source.includes('snegurochka_icon: { scale: 4.28, x: 11, y: 111 }')
+    && source.includes('snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 }')
+    && source.includes('iblis_icon: { scale: 1.42, x: 3, y: -14 }')
     && source.includes('const profileIconTransformStyle = ({ scale=1, x=0, y=0 }={})')
-    && (source.match(/style=\{marketProfileIconStyle\(/g) || []).length >= 6);
+    && source.includes('transform: `translate(${x}%, ${y}%) scale(${scale})`')
+    && source.includes('transformOrigin:\'center center\'')
+    && source.includes('const BreederIcon =')
+    && (source.match(/<BreederIcon /g) || []).length >= 10
+    && !source.includes('transform: `scale(${scale}) translate(${x}%, ${y}%)`'));
 
 check('デバッグ画面で全アイコンの数値と3サイズを調整・コピーできる',
   source.includes("gameState==='BREEDER_ICON_DEBUG'")
