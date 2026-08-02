@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-02 20:11",
+    date: "2026-08-02 20:45",
     type: "update",
     title: "ブリーダーアイコン調整Debugを拡張しました",
     items: [

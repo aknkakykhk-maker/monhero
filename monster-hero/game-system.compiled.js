@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7d4f5147d34df5a2
+// source-sha256: 633d4b1829b98920
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 20:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 20:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6344,6 +6344,13 @@ function MonsterHeroGame() {
   const [iconAdjustments, setIconAdjustments] = useState(() => Object.fromEntries(debugIconItems.map(item => [item.id, {
     ...(MARKET_PROFILE_ICON_STYLES[item.id] || DEFAULT_PROFILE_ICON_STYLE)
   }])));
+  // モンスター画像確認はデバッグ画面を開いている間だけ保持し、セーブ領域へは書き込まない。
+  const [monsterImageDebugId, setMonsterImageDebugId] = useState(() => Object.keys(ALL_PLAYER_MONSTERS)[0] || '');
+  const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
+  const [monsterImageDebugTigerNew, setMonsterImageDebugTigerNew] = useState(false);
+  const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(['red', 'green', 'blue']);
+  const [monsterImageDebugRegions, setMonsterImageDebugRegions] = useState([true, true, true]);
+  const [monsterImageDebugSizes, setMonsterImageDebugSizes] = useState({});
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
@@ -15899,6 +15906,11 @@ function MonsterHeroGame() {
     }, "BATTLE TEST")), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll space-y-5"
     }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setGameState('MONSTER_IMAGE_DEBUG'),
+      className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
+    }, "\uD83D\uDDBC\uFE0F \u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-cyan-300"
+    }, "\u672C\u756A\u8868\u793A\u3068\u67D3\u8272\u3092\u4FDD\u5B58\u305B\u305A\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
       onClick: openDebugTraining,
       className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
     }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
@@ -16029,7 +16041,211 @@ function MonsterHeroGame() {
       disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || getActiveMonsterList().length === 0,
       onClick: startDebugBattle,
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
-    }, "3. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'PROFILE' && /*#__PURE__*/React.createElement("div", {
+    }, "3. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'MONSTER_IMAGE_DEBUG' && (() => {
+      const base = ALL_PLAYER_MONSTERS[monsterImageDebugId] || Object.values(ALL_PLAYER_MONSTERS)[0];
+      if (!base) return null;
+      const tigerTest = base.id === 'Tiger' && monsterImageDebugTigerNew;
+      const testUrl = 'images/monsters/tiger.PNG';
+      const sources = {
+        imgUrl: tigerTest ? testUrl : base.imgUrl,
+        iconUrl: tigerTest ? testUrl : base.iconUrl,
+        faceIconUrl: tigerTest ? testUrl : base.faceIconUrl
+      };
+      const colors = monsterImageDebugColors.map((color, index) => monsterImageDebugRegions[index] ? color : null);
+      const bgStyle = monsterImageDebugBg === 'white' ? {
+        background: '#fff'
+      } : monsterImageDebugBg === 'black' ? {
+        background: '#000'
+      } : {
+        backgroundColor: '#cbd5e1',
+        backgroundImage: 'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',
+        backgroundSize: '16px 16px',
+        backgroundPosition: '0 0,0 8px,8px -8px,-8px 0'
+      };
+      const recordSize = key => e => {
+        const next = `${e.currentTarget.naturalWidth} × ${e.currentTarget.naturalHeight}px`;
+        setMonsterImageDebugSizes(old => old[key] === next ? old : {
+          ...old,
+          [key]: next
+        });
+      };
+      const frame = (label, key, content, frameClass = 'w-20 h-20 rounded-full', fit = 'object-cover') => /*#__PURE__*/React.createElement("div", {
+        className: "text-center"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `${frameClass} mx-auto overflow-hidden border-2 border-white/30 flex items-center justify-center`,
+        style: bgStyle
+      }, content(fit)), /*#__PURE__*/React.createElement("b", {
+        className: "block mt-1 text-[9px] text-slate-200"
+      }, label));
+      return /*#__PURE__*/React.createElement("main", {
+        className: "flex-1 flex flex-col h-full min-h-0 p-3",
+        style: {
+          paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("header", {
+        className: "flex items-center gap-2 mb-2 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setGameState('DEBUG_SETTINGS'),
+        className: "p-3 text-slate-400"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        className: "text-[8px] font-black text-cyan-400"
+      }, "DEBUG\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
+        className: "text-sm font-black"
+      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3"
+      }, /*#__PURE__*/React.createElement("select", {
+        value: base.id,
+        onChange: e => {
+          setMonsterImageDebugId(e.target.value);
+          setMonsterImageDebugTigerNew(false);
+        },
+        className: "w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black"
+      }, Object.values(ALL_PLAYER_MONSTERS).map(mon => /*#__PURE__*/React.createElement("option", {
+        key: mon.id,
+        value: mon.id
+      }, mon.name, "\uFF08", mon.id, "\uFF09"))), base.id === 'Tiger' && /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, [[false, '現在の本番画像'], [true, '新画像で全差し替えテスト']].map(([value, label]) => /*#__PURE__*/React.createElement("button", {
+        key: label,
+        onClick: () => setMonsterImageDebugTigerNew(value),
+        className: `min-h-[48px] rounded-xl px-2 text-[9px] font-black border ${monsterImageDebugTigerNew === value ? 'bg-amber-700 border-amber-300' : 'bg-slate-900 border-white/10'}`
+      }, label))), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-2"
+      }, [['checker', '市松模様'], ['white', '白'], ['black', '黒']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+        key: id,
+        onClick: () => setMonsterImageDebugBg(id),
+        className: `min-h-[42px] rounded-xl text-[10px] font-black border ${monsterImageDebugBg === id ? 'border-cyan-300 ring-2 ring-cyan-500' : 'border-white/10'}`,
+        style: id === 'white' ? {
+          background: '#fff',
+          color: '#000'
+        } : id === 'black' ? {
+          background: '#000',
+          color: '#fff'
+        } : {
+          background: '#64748b'
+        }
+      }, label))), /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl border border-cyan-500/30 bg-slate-900/70 p-3"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "mb-3 text-[10px] font-black text-cyan-300"
+      }, "\u672C\u756A\u76F8\u5F53\u306E\u8868\u793A\u5F62\u5F0F"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-3 items-end"
+      }, frame('バトル／立ち絵', 'imgUrl', fit => /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: base.id,
+        src: sources.imgUrl,
+        alt: base.name,
+        masuColors: colors,
+        className: `w-full h-full ${fit} drop-shadow-md`
+      }), 'w-[70px] h-[90px] rounded-xl', 'object-contain'), frame('一覧・全身アイコン', 'iconUrl', fit => /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: base.id,
+        src: sources.iconUrl,
+        alt: base.name,
+        masuColors: colors,
+        className: `w-full h-full ${fit}`
+      })), frame('詳細・大きな全身', 'imgUrl', fit => /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: base.id,
+        src: sources.imgUrl,
+        alt: base.name,
+        masuColors: colors,
+        className: `w-full h-full ${fit} drop-shadow-lg`
+      }), 'w-28 h-28 rounded-2xl', 'object-contain'), frame('顔アイコン', 'faceIconUrl', fit => /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: base.id,
+        src: sources.faceIconUrl,
+        alt: base.name,
+        masuColors: colors,
+        className: `w-full h-full ${fit}`
+      }), 'w-16 h-16 rounded-full', 'object-cover'), frame('プロフィール・選択', 'faceIconUrl', fit => /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: base.id,
+        src: sources.faceIconUrl,
+        alt: base.name,
+        masuColors: colors,
+        className: `w-full h-full ${fit}`
+      }), 'w-12 h-12 rounded-full', 'object-cover'), frame('小型・編成枠', 'imgUrl', fit => /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: base.id,
+        src: sources.imgUrl,
+        alt: base.name,
+        masuColors: colors,
+        className: `w-full h-full ${fit}`
+      }), 'w-10 h-10 rounded-full', 'object-contain'))), /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-[10px] font-black text-fuchsia-300"
+      }, "\u672C\u756A\u306E\u67D3\u8272\u51E6\u7406"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-3 my-3 text-center"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "h-36 rounded-xl border border-white/20 flex items-center justify-center overflow-hidden",
+        style: bgStyle
+      }, /*#__PURE__*/React.createElement("img", {
+        src: sources.imgUrl,
+        alt: "\u5143\u753B\u50CF",
+        className: "w-full h-full object-contain"
+      })), /*#__PURE__*/React.createElement("b", {
+        className: "text-[9px]"
+      }, "\u5143\u753B\u50CF")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "h-36 rounded-xl border border-fuchsia-400/50 flex items-center justify-center overflow-hidden",
+        style: bgStyle
+      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        baseId: base.id,
+        src: sources.imgUrl,
+        alt: "\u67D3\u8272\u5F8C\u753B\u50CF",
+        masuColors: colors,
+        className: "w-full h-full object-contain"
+      })), /*#__PURE__*/React.createElement("b", {
+        className: "text-[9px]"
+      }, "\u67D3\u8272\u5F8C\u753B\u50CF"))), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2 mb-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          setMonsterImageDebugColors(['red', 'green', 'blue']);
+          setMonsterImageDebugRegions([true, true, true]);
+        },
+        className: "min-h-[42px] rounded-xl bg-slate-800 text-[9px] font-black"
+      }, "\u8D64\uFF0F\u7DD1\uFF0F\u9752"), /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          setMonsterImageDebugColors(['black', 'white', 'yellow']);
+          setMonsterImageDebugRegions([true, true, true]);
+        },
+        className: "min-h-[42px] rounded-xl bg-slate-800 text-[9px] font-black"
+      }, "\u9ED2\uFF0F\u767D\uFF0F\u9EC4")), [0, 1, 2].map(index => /*#__PURE__*/React.createElement("div", {
+        key: index,
+        className: "grid grid-cols-[auto_1fr] gap-2 items-center mb-2 rounded-xl bg-black/30 p-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setMonsterImageDebugRegions(old => old.map((v, i) => i === index ? !v : v)),
+        className: `min-h-[40px] min-w-[86px] rounded-lg text-[9px] font-black ${monsterImageDebugRegions[index] ? 'bg-fuchsia-700' : 'bg-slate-700'}`
+      }, "\u67D3\u8272\u90E8\u4F4D", index + 1, " ", monsterImageDebugRegions[index] ? 'ON' : 'OFF'), /*#__PURE__*/React.createElement("select", {
+        value: monsterImageDebugColors[index],
+        onChange: e => setMonsterImageDebugColors(old => old.map((v, i) => i === index ? e.target.value : v)),
+        className: "min-h-[40px] rounded-lg bg-slate-900 px-2 text-[10px]"
+      }, Object.keys(MASU_COLOR_TARGET).map(id => /*#__PURE__*/React.createElement("option", {
+        key: id,
+        value: id
+      }, MASU_COLOR_LABELS[id]))))), /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          setMonsterImageDebugColors(['red', 'green', 'blue']);
+          setMonsterImageDebugRegions([true, true, true]);
+          setMonsterImageDebugBg('checker');
+          setMonsterImageDebugTigerNew(false);
+        },
+        className: "w-full min-h-[44px] rounded-xl bg-fuchsia-800 text-[10px] font-black"
+      }, "\u521D\u671F\u72B6\u614B\u3078\u623B\u3059")), /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl bg-black/40 p-3 text-[9px] text-slate-300 space-y-2"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "font-black text-cyan-300"
+      }, "\u753B\u50CF\u30D1\u30B9\u30FB\u5143\u753B\u50CF\u30B5\u30A4\u30BA"), Object.entries(sources).map(([key, url]) => /*#__PURE__*/React.createElement("div", {
+        key: key,
+        className: "break-all"
+      }, /*#__PURE__*/React.createElement("b", null, key), ": ", url, /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500"
+      }, monsterImageDebugSizes[url] || '読み込み中…'), /*#__PURE__*/React.createElement("img", {
+        src: url,
+        alt: "",
+        className: "hidden",
+        onLoad: recordSize(url)
+      }))))));
+    })(), gameState === 'PROFILE' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-4 shrink-0"
