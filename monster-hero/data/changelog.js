@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-02 16:09",
+    date: "2026-08-02 16:18",
     type: "update",
     title: "モッチーのイラストを新しくしました",
     items: [
