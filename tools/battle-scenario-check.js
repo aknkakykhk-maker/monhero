@@ -175,15 +175,24 @@ check('選択肢を絞るのは台本があるときだけ',
   has('const scenarioPicksHero = (id) => !battleScenario || !battleScenario.heroId')
     && has('const scenarioPicksSlot = (idx) => !battleScenario || !Number.isInteger(battleScenario.slotIndex)')
     && has('const scenarioPicksTeaching = (id) => !battleScenario || !battleScenario.teachingId'));
-check('緊急回復の予告差し替えも台本があるときだけ',
-  has('const acting=scenario&&enemyIntent?enemyIntent:getNextEnemyAction(enemy,enemyDist);'));
+check('緊急回復は予告済みの敵行動を再抽選せず実行する',
+  has('const acting=enemyIntent;')
+    && has("await handleEnemyTurn('none',{},acting);")
+    && !has('const acting=scenario&&enemyIntent?enemyIntent:getNextEnemyAction(enemy,enemyDist);'));
+check('緊急回復後は敵行動を終えてから次ターンを1回だけ予約する',
+  has("const distForNextPredict=acting&&acting.type==='MOVE'?acting.targetDist:enemyDist;")
+    && has('setEnemyIntent(getNextEnemyAction(enemy,distForNextPredict));'));
+check('大きなスコアでも諦める領域を縮めない',
+  has('data-battle-score className="min-w-0 max-w-[54px] shrink')
+    && has('data-battle-quit disabled={!!battleTutorial}')
+    && has('aria-label="諦める" className="shrink-0 w-[28px] h-[28px]'));
 check('操作の記録も台本があるときだけ',
   has('const tutorialKinds=battleScenarioRef.current'));
 // カードを出した瞬間ではなく、敵の行動まで終わってから次の説明へ進める。
 // 早すぎると攻撃の演出中に説明が始まり、何が起きたのか分からなくなる
 check('次へ進めるのは1ターンぶんを見せ終わってから',
   has('if (tutorialKinds.length) setBattleTutorialLastAction(tutorialKinds.join(\',\'));')
-    && has("{ setEnemyIntent(getNextEnemyAction(enemy,enemyDist)); setBattleTutorialLastAction('emergency'); }"));
+    && has("if (scenario) setBattleTutorialLastAction('emergency');"));
 // 光る枠に position を当てると、absolute で置いている「ステータス」「緊急」が
 // 本来の場所から外れて画面の中央へ落ちてしまう
 check('光る枠が配置を壊さない',
