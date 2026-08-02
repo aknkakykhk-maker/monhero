@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 15:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 16:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1174,11 +1174,19 @@ const getRecoloredImage = (imgUrl, colorId, baseId) => {
       const img = new window.Image();
       img.onload = () => {
         try {
-          const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+          const natW = img.naturalWidth || img.width;
+          const natH = img.naturalHeight || img.height;
+          const scale = baseId === 'Mocchi'
+            ? Math.min(1, MASK_ANALYSIS_MAX_SIZE / Math.max(natW, natH))
+            : 1;
+          const w = Math.max(1, Math.round(natW * scale));
+          const h = Math.max(1, Math.round(natH * scale));
           const canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d');
           if (!ctx) { resolve(null); return; }
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0, w, h);
           const imgData = ctx.getImageData(0, 0, w, h);
           _recolorImageData(imgData.data, colorId, baseId);
