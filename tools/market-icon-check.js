@@ -11,6 +11,7 @@ const root = path.resolve(__dirname, '..');
 const web = path.join(root, 'monster-hero');
 const read = (p) => fs.readFileSync(path.join(web, p), 'utf8');
 const source = read('src/game-system.jsx');
+const stripCacheKey = (value) => value.split('?')[0];
 
 const ctx = {};
 vm.createContext(ctx);
@@ -37,7 +38,7 @@ check('商品idが重複していない', dup.length === 0, dup.join(', '));
 // --- 画像ファイルを指すアイコンが実在するか(綴り・大文字小文字も含めて) ---
 const fileIcons = items.filter(i => i.type === 'icon' && typeof i.icon === 'string' && !i.icon.startsWith('data:'));
 const missing = fileIcons.filter(i => {
-  const full = path.join(web, i.icon);
+  const full = path.join(web, stripCacheKey(i.icon));
   if (!fs.existsSync(full)) return true;
   // 実在しても綴りが違う(大文字小文字だけ違う)場合を弾く
   return !fs.readdirSync(path.dirname(full)).includes(path.basename(full));
@@ -49,24 +50,49 @@ check('ファイルを指すアイコンがある', fileIcons.length > 0, `${fil
 // 表情を足したら商品も足す。片方だけ増えて「買えない表情」が出るのを防ぐ
 const myua = ASSISTANTS.find(a => a.id === 'mua');
 const wantedFaces = ASSISTANT_EXPRESSIONS.map(e => assistantFaceImage(myua, e));
-const soldFaces = new Set(fileIcons.map(i => i.icon));
-const notSold = wantedFaces.filter(p => !soldFaces.has(p));
+const soldFaces = new Set(fileIcons.map(i => stripCacheKey(i.icon)));
+const notSold = wantedFaces.filter(p => !soldFaces.has(stripCacheKey(p)));
 check('みゅあの表情はすべてマーケットに並んでいる', notSold.length === 0, notSold.join(', '));
 
 // --- 値段と名前 ---
 const icons = items.filter(i => i.type === 'icon');
 check('アイコンはすべてptで買える安さにそろえる', icons.every(i => i.cost === 1), `${icons.length}件`);
-const longName = icons.filter(i => (i.name || '').length > 14);
-check('名前は14文字まで(カードの枠に収まる長さ)', longName.length === 0, longName.map(i => `${i.name}(${i.name.length})`).join(', '));
+const longName = icons.filter(i => (i.name || '').length > 16);
+check('名前は16文字まで(カードの枠に収まる長さ)', longName.length === 0, longName.map(i => `${i.name}(${i.name.length})`).join(', '));
 
 // ききは助手画像ではなく、ブリーダーアイコン専用フォルダの正式画像を使う。
 const kiki = icons.find(i => i.id === 'kiki_icon');
 check('ききのアイコンが正式名称・価格で並ぶ', kiki?.name === 'ききのアイコン' && kiki?.cost === 1);
-check('ききの画像はブリーダーアイコン専用フォルダにある', kiki?.icon === 'images/breeder-icons/kiki.PNG');
-check('ききだけに拡大・位置調整を適用する',
-  source.includes("const marketProfileIconStyle = (id) => id === 'kiki_icon'")
-    && source.includes("transform: 'scale(1.3) translateY(11.5%)'")
-    && (source.match(/style=\{marketProfileIconStyle\(/g) || []).length >= 6);
+check('ききの画像はブリーダーアイコン専用フォルダにある', stripCacheKey(kiki?.icon || '') === 'images/breeder-icons/kiki.PNG');
+check('対象アイコンを共通部品で拡大・位置調整する',
+  source.includes('const MARKET_PROFILE_ICON_STYLES = {')
+    && source.includes('snegurochka_icon: { scale: 4.28, x: 11, y: 111 }')
+    && source.includes('snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 }')
+    && source.includes('iblis_icon: { scale: 1.42, x: 2, y: -10 }')
+    && source.includes('const profileIconTransformStyle = ({ scale=1, x=0, y=0 }={})')
+    && source.includes('transform: `translate(${x}%, ${y}%) scale(${scale})`')
+    && source.includes('transformOrigin:\'center center\'')
+    && source.includes('const BreederIcon =')
+    && (source.match(/<BreederIcon /g) || []).length >= 10
+    && !source.includes('transform: `scale(${scale}) translate(${x}%, ${y}%)`'));
+
+check('デバッグ画面で全アイコンの数値と4つの本番表示を調整・コピーできる',
+  source.includes("gameState==='BREEDER_ICON_DEBUG'")
+    && source.includes('const breederIconOptions =')
+    && source.includes('breederIconOptions({includeUnowned:true})')
+    && source.includes('名前・内部IDで検索')
+    && source.includes("slider('scale','拡大率 scale'")
+    && source.includes("slider('x','左右位置 X'")
+    && source.includes("slider('y','上下位置 Y'")
+    && source.includes('const HomeProfileIcon =')
+    && (source.match(/<HomeProfileIcon /g) || []).length === 2
+    && source.includes('HOME左上プロフィール')
+    && source.includes('.mh-home-avatar>span{width:100%;height:100%}')
+    && !source.includes('.mh-home-avatar img')
+    && source.includes('マーケット一覧')
+    && source.includes('商品詳細')
+    && source.includes('プロフィール選択')
+    && source.includes("navigator.clipboard.writeText(copyText)"));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
