@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 13:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 14:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1262,12 +1262,19 @@ const makePatternSettings = () => ({
 const MASU_PATTERN_REPEAT_OPTIONS = [['stripe','縞模様'],['dot','水玉'],['leopard','ヒョウ柄'],['camouflage','迷彩'],['check','チェック柄'],['scale','鱗'],['honeycomb','ハニカム'],['lightning_repeat','雷模様'],['flame_repeat','炎模様'],['wave','波模様'],['crack','ひび割れ'],['star_repeat','星柄'],['heart_repeat','ハート柄'],['paw_repeat','肉球柄'],['rune_repeat','魔法文字'],['digital','デジタル柄']];
 const MASU_PATTERN_POINT_OPTIONS = [['star','星'],['heart','ハート'],['scar','傷跡'],['paw','肉球'],['crown','王冠'],['flame','炎'],['lightning','雷'],['moon','月'],['sun','太陽'],['magic_circle','魔法陣'],['skull','ドクロ'],['wing','羽'],['number','数字'],['alphabet','アルファベット']];
 const MASU_PATTERN_PRESET_COLORS = ['#38bdf8','#ef4444','#f59e0b','#22c55e','#a855f7','#ec4899','#f8fafc','#1f2937'];
-// 模様Canvasは解析用マスクの384pxへ縮小しない。立ち絵の元解像度（現行最大1174px）を
-// 保って描画することで、通常カードだけでなく拡大プレビューでも輪郭と模様を荒らさない。
-const MASU_PATTERN_RENDER_MAX_SIZE = 1200;
 // デバッグ画面だけで使う模様レイヤー。Canvasへ描き、保存データや元画像には触れない。
 const MasuPatternLayer = ({ baseId, src, settings }) => {
   const canvasRef = useRef(null);
+  const [displaySize,setDisplaySize]=useState({width:0,height:0});
+  useEffect(()=>{
+    const canvas=canvasRef.current;if(!canvas)return;
+    const update=()=>{const rect=canvas.getBoundingClientRect();const next={width:Math.max(1,rect.width),height:Math.max(1,rect.height)};setDisplaySize(prev=>Math.abs(prev.width-next.width)<.5&&Math.abs(prev.height-next.height)<.5?prev:next);};
+    update();
+    const observer=typeof ResizeObserver==='function'?new ResizeObserver(update):null;
+    observer?.observe(canvas);
+    window.addEventListener('resize',update);
+    return()=>{observer?.disconnect();window.removeEventListener('resize',update);};
+  },[]);
   useEffect(() => {
     const canvas=canvasRef.current;
     if (!canvas || !src || settings.pattern==='none') { const ctx=canvas?.getContext('2d'); if(ctx)ctx.clearRect(0,0,canvas.width,canvas.height); return; }
@@ -1279,14 +1286,19 @@ const MasuPatternLayer = ({ baseId, src, settings }) => {
       const maskUrl=masks?.[Math.max(0,Number(settings.target)-1)];
       const mask=maskUrl?await loadImage(maskUrl):body;
       if(cancelled||!body||!mask)return;
-      const scale=Math.min(1,MASU_PATTERN_RENDER_MAX_SIZE/Math.max(body.naturalWidth||body.width,body.naturalHeight||body.height));
-      const w=Math.max(1,Math.round((body.naturalWidth||body.width)*scale)),h=Math.max(1,Math.round((body.naturalHeight||body.height)*scale));
+      // CSS表示寸法とは別にDPR込みの内部解像度を持つ。元画像寸法固定のCanvasを
+      // 横長プレビューへCSSで変形していた旧経路と違い、各表示先で一度だけ最終解像度へ縮小する。
+      const dpr=Math.max(1,window.devicePixelRatio||1);
+      const w=Math.max(1,Math.round(displaySize.width*dpr)),h=Math.max(1,Math.round(displaySize.height*dpr));
       canvas.width=w;canvas.height=h;
       const ctx=canvas.getContext('2d');if(!ctx)return;
       ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
       ctx.clearRect(0,0,w,h);ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,settings.opacity/100));ctx.fillStyle=settings.color;ctx.strokeStyle=settings.color;
-      const point=settings.mode==='point';ctx.translate(point?settings.x*w:settings.x*w,point?settings.y*h:settings.y*h);ctx.rotate(settings.rotation*Math.PI/180);
-      const basis=Math.min(w,h),unit=Math.max(1,basis*settings.spacing),motif=Math.max(1,basis*settings.size),extent=Math.hypot(w,h)*1.5;
+      // object-fit:containの立ち絵と同じ矩形へ座標・寸法をDPR単位で合わせる。
+      const bodyW=body.naturalWidth||body.width,bodyH=body.naturalHeight||body.height,fit=Math.min(w/bodyW,h/bodyH);
+      const drawW=bodyW*fit,drawH=bodyH*fit,offsetX=(w-drawW)/2,offsetY=(h-drawH)/2;
+      const point=settings.mode==='point';ctx.translate(offsetX+settings.x*drawW,offsetY+settings.y*drawH);ctx.rotate(settings.rotation*Math.PI/180);
+      const basis=Math.min(drawW,drawH),unit=Math.max(1,basis*settings.spacing),motif=Math.max(1,basis*settings.size),extent=Math.hypot(drawW,drawH)*1.5;
       const star=(x,y,r)=>{ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*.45:r,px=x+Math.cos(a)*rr,py=y+Math.sin(a)*rr;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.fill();};
       const heart=(x,y,r)=>{ctx.beginPath();ctx.moveTo(x,y+r*.8);ctx.bezierCurveTo(x-r*1.4,y-r*.1,x-r*.8,y-r,x,y-r*.35);ctx.bezierCurveTo(x+r*.8,y-r,x+r*1.4,y-r*.1,x,y+r*.8);ctx.fill();};
       const paw=(x,y,r)=>{ctx.beginPath();ctx.ellipse(x,y+r*.25,r*.65,r*.52,0,0,Math.PI*2);ctx.fill();for(let i=-1.5;i<=1.5;i++){ctx.beginPath();ctx.arc(x+i*r*.38,y-r*.48-Math.abs(i)*r*.05,r*.22,0,Math.PI*2);ctx.fill();}};
@@ -1310,10 +1322,10 @@ const MasuPatternLayer = ({ baseId, src, settings }) => {
       else if(settings.pattern==='rune_repeat'){ctx.font=`900 ${motif}px serif`;ctx.textAlign='center';tile((x,y)=>ctx.fillText('ᚱ',x,y));}
       else if(settings.pattern==='camouflage'){tile((x,y)=>{ctx.beginPath();ctx.ellipse(x,y,motif*.75,motif*.4,(x+y)%2,0,Math.PI*2);ctx.fill();});}
       else if(settings.pattern==='lightning_repeat'||settings.pattern==='flame_repeat'){ctx.lineWidth=Math.max(1,motif*.25);tile((x,y)=>{ctx.beginPath();ctx.moveTo(x-motif*.4,y-motif*.5);ctx.lineTo(x+motif*.15,y);ctx.lineTo(x-motif*.1,y+motif*.55);ctx.stroke();});}
-      ctx.restore();ctx.globalAlpha=1;ctx.globalCompositeOperation='destination-in';ctx.drawImage(mask,0,0,w,h);ctx.globalCompositeOperation='source-over';
+      ctx.restore();ctx.globalAlpha=1;ctx.globalCompositeOperation='destination-in';ctx.drawImage(mask,offsetX,offsetY,drawW,drawH);ctx.globalCompositeOperation='source-over';
     })();
     return()=>{cancelled=true;};
-  },[baseId,src,settings.mode,settings.pattern,settings.target,settings.color,settings.opacity,settings.size,settings.spacing,settings.rotation,settings.x,settings.y,settings.placed]);
+  },[baseId,src,displaySize.width,displaySize.height,settings.mode,settings.pattern,settings.target,settings.color,settings.opacity,settings.size,settings.spacing,settings.rotation,settings.x,settings.y,settings.placed]);
   return <canvas ref={canvasRef} aria-hidden="true" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'contain',pointerEvents:'none'}}/>;
 };
 const patternLayers = settings => [settings.fullPattern&&{...settings.fullPattern,_key:'full'},...Object.entries(settings.regionPatterns||{}).map(([key,value])=>value&&({...value,_key:`region:${key}`})),...(settings.decals||[]).map(value=>({...value,mode:'point',target:'all',placed:true,_key:`decal:${value.id}`}))].filter(layer=>layer&&layer.visible!==false);
