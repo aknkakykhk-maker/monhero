@@ -34,7 +34,8 @@ vm.runInContext([
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
   'globalThis.__m={BATTLE_MODES,battleModeInfo,normalizeBattleMode,isQuickMode,QUICK_REWARD_MULT,QUICK_GROWTH_MULT,'
   + 'waveXpGain,waveGoldGain,xpForWavesCleared,goldForWavesCleared,xpForWavesClearedInMode,goldForWavesClearedInMode,'
-  + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE};',
+  + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE,'
+  + 'calculateRemainingHp,quickGrowStat,resolveQuickGrowthStats};',
 ].join('\n'), ctx);
 const m = ctx.__m;
 
@@ -83,13 +84,31 @@ check('成長倍率は10%', m.QUICK_GROWTH_MULT === 1.10);
 check('クイックだけ強化フェーズを飛ばす', has('} else if (isQuickMode(runMode)) {') && has('beginQuickGrowth();'));
 const growthBlock = grab(source, 'const beginQuickGrowth = () => {', 'const finishQuickGrowth');
 check('味方の全ステータスを10%上げる',
-  ['hp: quickGrowStat(before.hp)', 'atk: quickGrowStat(before.atk)', 'def: quickGrowStat(before.def)', 'guts: quickGrowStat(before.guts)'].every(t => growthBlock.includes(t)));
+  growthBlock.includes('const after = resolveQuickGrowthStats(before);'));
 check('端数は既存の強化と同じくfloor', has('const quickGrowStat = (value) => Math.floor((Number(value) || 0) * QUICK_GROWTH_MULT);'));
 check('ライフとガッツを全回復する', growthBlock.includes('setHp(after.hp); setGuts(after.guts); // 全回復'));
 check('表示する値と実際に入れる値が同じ', growthBlock.includes('setMaxHp(after.hp); setAtk(after.atk); setDef(after.def); setMaxGuts(after.guts);') && growthBlock.includes("{ label: 'ライフ', before: before.hp, after: after.hp }"));
 check('敵には成長も回復もかけない', !growthBlock.includes('setEnemy') && !growthBlock.includes('enemy.'));
 check('クイックでは教えの選択画面へ進まない', !grab(source, 'const finishQuickGrowth', 'const rollQuickUniqueUpgrade').includes("setGameState('PICK_TEACHING')"));
 check('成長のあとに伴モン合流のWAVEなら選択画面へ', grab(source, 'const finishQuickGrowth', 'const rollQuickUniqueUpgrade').includes("setGameState('PICK_ALLY')"));
+check('確定した成長後ステータスを次WAVEへ明示的に渡す',
+  growthBlock.includes('nextStats: after')
+    && grab(source, 'const finishQuickGrowth', 'const rollQuickUniqueUpgrade').includes('null, null, null, nextStats'));
+
+// 文字列の存在だけでなく、本番の計算関数で死亡境界と複数WAVEの状態遷移を再現する。
+check('残りライフ1では敗北しない', m.calculateRemainingHp(151, 150) === 1);
+check('残りライフ0では敗北する', m.calculateRemainingHp(150, 150) === 0);
+check('超過ダメージでも0未満にならない', m.calculateRemainingHp(150, 999) === 0);
+let quickState = {hp: 500, atk: 100, def: 100, guts: 100};
+let quickFullyRecovered = true;
+for (let wave = 1; wave <= 5; wave++) {
+  quickState = m.resolveQuickGrowthStats(quickState);
+  const waveStart = {maxHp: quickState.hp, hp: quickState.hp, maxGuts: quickState.guts, guts: quickState.guts};
+  quickFullyRecovered = quickFullyRecovered && waveStart.hp === waveStart.maxHp && waveStart.guts === waveStart.maxGuts;
+}
+check('クイック複数WAVEで成長後の最大値まで全回復する',
+  quickFullyRecovered && quickState.hp === 804 && quickState.guts === 160,
+  `5回成長後 ライフ${quickState.hp} / ガッツ${quickState.guts}`);
 
 // --- ④ 伴モンと固有技 ---
 const rollBlock = grab(source, 'const rollQuickUniqueUpgrade = (uniques', 'const finishQuickJoin');
@@ -135,7 +154,7 @@ check('クイックはスコア関連を出さない',
     && has("{ label:'自己ベストスコア', value:`${(highScores[key]||0).toLocaleString()} pt`"));
 check('クイックでも最高到達WAVEは出す', has("{ label:'最高到達WAVE', value:`WAVE ${waveOf(key)}`"));
 // クイックはスコアを競わないので、バトル中もリザルトもスコアを出さない
-check('バトル中もクイックはスコアを出さない', has('{!isQuickMode(runMode)&&<div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter mr-1"><Award size={10}/> {score.toLocaleString()}</div>}'));
+check('バトル中もクイックはスコアを出さない', has('{!isQuickMode(runMode)&&<div data-battle-score'));
 check('最終リザルト3画面のスコア枠をクイックでは出さない',
   (source.match(/\{!isQuickMode\(runMode\)&&<div className="[^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white">\{score\.toLocaleString\(\)\}<\/div><\/div>\}/g) || []).length === 3,
   `${(source.match(/\{!isQuickMode\(runMode\)&&<div className="[^"]*"><div className="text-(?:5xl|3xl) font-mono font-black text-white">\{score\.toLocaleString\(\)\}<\/div><\/div>\}/g) || []).length}か所`);

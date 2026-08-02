@@ -25,7 +25,7 @@ check('共通の敵撃破処理がある', !!resolver);
 check('撃破処理に同期ロックがあり二重確定を防ぐ', !!resolver && /enemyDefeatResolvedRef\.current/.test(resolver[0]));
 check('撃破ファンファーレとWAVEリザルト遷移は共通処理にある', !!resolver && /playJingle\('victory'\)/.test(resolver[0]) && /setGameState\('WAVE_RESULT'\)/.test(resolver[0]));
 check('通常攻撃・固有技・連撃・追撃の合計が共通撃破処理へ進む', /resolveEnemyDefeat\(\{remainingHp:Math\.max\(0,enemy\.hp-totalDmg\),damage:totalDmg,distDamage:attackDistDamage\}\)/.test(source));
-check('反射は演出待機後に確定ライフを渡して共通撃破処理へ進む', /setEnemy\(prev=>\(\{\.\.\.prev,hp:reflectedHp\}\)\); await wait\(1000\);[\s\S]{0,220}resolveEnemyDefeat\(\{remainingHp:reflectedHp,damage:incomingDmg\}\)/.test(source));
+check('反射は演出待機後に確定ライフを渡して共通撃破処理へ進む', /setEnemy\(prev=>\(\{\.\.\.prev,hp:reflectedHp\}\)\); await battleWait\(1000\);[\s\S]{0,220}resolveEnemyDefeat\(\{remainingHp:reflectedHp,damage:incomingDmg\}\)/.test(source));
 check('反射撃破後は回復・次ターンへ進まずreturnする', /if \(await resolveEnemyDefeat\(\{remainingHp:reflectedHp,damage:incomingDmg\}\)\) return;/.test(source));
 check('反射ダメージはWAVE合計へ一度だけ加算する', (source.match(/setCurrentWaveDamage\(p=>p\+incomingDmg\)/g) || []).length === 1);
 check('反射ダメージは距離別ダメージを渡さない', /resolveEnemyDefeat\(\{remainingHp:reflectedHp,damage:incomingDmg\}\)/.test(source));
