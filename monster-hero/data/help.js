@@ -750,6 +750,8 @@ const HELP_SCREEN_COVERAGE = {
   MISSIONS:         'items/missions',
   PROFILE:          'home/profile',
   SETTINGS:         'tips/settings',
+  // 模様テストは開発用の隠し画面なので、公開説明は増やさず既存の染色項目を参照先にする。
+  MASU_PATTERN_DEBUG:'masu/dye',
   // 対象外: DEBUG_SETTINGS は開発用の隠し画面。TRAINING_* は別担当のため触らない
   DEBUG_SETTINGS:   null,
   TRAINING_INFO:    null,
