@@ -64,9 +64,12 @@ check('名前は16文字まで(カードの枠に収まる長さ)', longName.len
 const kiki = icons.find(i => i.id === 'kiki_icon');
 check('ききのアイコンが正式名称・価格で並ぶ', kiki?.name === 'ききのアイコン' && kiki?.cost === 1);
 check('ききの画像はブリーダーアイコン専用フォルダにある', stripCacheKey(kiki?.icon || '') === 'images/breeder-icons/kiki.PNG');
-check('ききだけに拡大・位置調整を適用する',
-  source.includes("const marketProfileIconStyle = (id) => id === 'kiki_icon'")
-    && /transform: 'scale\([^)]+\) translateY\([^)]+\)'/.test(source)
+check('対象の3アイコンだけに拡大・位置調整を適用する',
+  source.includes('const MARKET_PROFILE_ICON_STYLES = {')
+    && source.includes("kiki_icon: { transform: 'scale(")
+    && source.includes("snegurochka_icon: { transform: 'scale(")
+    && source.includes("snegurochka_awakened_icon: { transform: 'scale(")
+    && source.includes('const marketProfileIconStyle = (id) => MARKET_PROFILE_ICON_STYLES[id];')
     && (source.match(/style=\{marketProfileIconStyle\(/g) || []).length >= 6);
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
