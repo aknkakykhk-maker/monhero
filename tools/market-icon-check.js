@@ -87,6 +87,8 @@ check('デバッグ画面で全アイコンの数値と4つの本番表示を調
     && source.includes('const HomeProfileIcon =')
     && (source.match(/<HomeProfileIcon /g) || []).length === 2
     && source.includes('HOME左上プロフィール')
+    && source.includes('.mh-home-avatar>span{width:100%;height:100%}')
+    && !source.includes('.mh-home-avatar img')
     && source.includes('マーケット一覧')
     && source.includes('商品詳細')
     && source.includes('プロフィール選択')
