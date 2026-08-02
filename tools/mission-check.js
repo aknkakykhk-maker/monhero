@@ -16,8 +16,13 @@ check('デイリーはJST 04:00で切り替わる',m.missionDailyPeriod(at('2026
 check('ウィークリーは月曜JST 04:00で切り替わる',m.missionWeeklyPeriod(at('2026-08-02T18:59:59Z'))==='2026-07-27'&&m.missionWeeklyPeriod(at('2026-08-02T19:00:00Z'))==='2026-08-03');
 let state=m.normalizeMissions(null,at('2026-07-29T20:00:00Z'));state.daily={...state.daily,login:1,battles:3,wins:5,enhances:1};
 check('通常デイリー4個達成でコンプリート',m.missionValue(state,'daily',m.MISSION_DEFS.daily[4])===4);
-state.weekly={...state.weekly,battles:20,wins:50,enhances:10,dailyClaims:15,marketTrades:3,donations:3};state.weeklyLoginDays=['a','b','c','d','e'];
-check('通常ウィークリー7個中6個でコンプリート',m.missionValue(state,'weekly',m.MISSION_DEFS.weekly[7])===7&&m.missionValue({...state,weekly:{...state.weekly,donations:0}},'weekly',m.MISSION_DEFS.weekly[7])===6);
+state.weekly={...state.weekly,battles:20,wins:50,enhances:10,dailyClaims:15,marketTrades:3,challengeRuns:3};state.weeklyLoginDays=['a','b','c','d','e'];
+check('通常ウィークリー7個中6個でコンプリート',m.missionValue(state,'weekly',m.MISSION_DEFS.weekly[7])===7&&m.missionValue({...state,weekly:{...state.weekly,challengeRuns:0}},'weekly',m.MISSION_DEFS.weekly[7])===6);
+const challengeMission=m.MISSION_DEFS.weekly.find(x=>x.id==='weekly_donations');
+check('旧ID・報酬を維持してチャレンジ3回へ変更',challengeMission?.name==='チャレンジ挑戦'&&challengeMission?.condition==='チャレンジモードを3回プレイする'&&challengeMission?.key==='challengeRuns'&&challengeMission?.target===3&&challengeMission?.rewards?.some(r=>r.type==='breederXp'&&r.amount===200));
+const receivedOld={...state,weekly:{...state.weekly,challengeRuns:0,donations:3},sentWeekly:['weekly_donations']};
+check('旧ミッション受取済みは維持し寄付回数を変換しない',m.missionValue(receivedOld,'weekly',challengeMission)===3&&m.missionValue({...receivedOld,sentWeekly:[]},'weekly',challengeMission)===0);
+check('WAVE1開始時だけ通常チャレンジを1周1回加算',/w === 1 && !forcedEnemyKey && !debugBattleRef\.current && !isQuickMode\(runMode\) && challengeMissionRunIdRef\.current !== runIdRef\.current/.test(source)&&/void saveMissionProgress\('challengeRun'\)/.test(source));
 state.sentDaily=m.MISSION_DEFS.daily.map(x=>x.id);state.sentWeekly=m.MISSION_DEFS.weekly.map(x=>x.id);
 check('ギフト送付済みは未受取バッジに含めない',m.missionClaimableCount(state)===0);
 const base={gold:0,breederPoints:0,ownedItems:{}};

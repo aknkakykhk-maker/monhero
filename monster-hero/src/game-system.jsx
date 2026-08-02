@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 12:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 12:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1659,19 +1659,19 @@ const MISSION_DEFS = {
     {id:'weekly_enhance',name:'育成週間',condition:'モンスターを10回強化する',key:'enhances',target:10,rewards:[{type:'trainingTicketLarge',amount:2}]},
     {id:'weekly_daily_claims',name:'デイリー挑戦者',condition:'デイリー個別報酬を15回ギフトへ送る',key:'dailyClaims',target:15,rewards:[{type:'diamond',amount:1000}]},
     {id:'weekly_market',name:'マーケット常連',condition:'マーケットで3回取引を正常完了する',key:'marketTrades',target:3,rewards:[{type:'dyeMock',amount:1}]},
-    {id:'weekly_donations',name:'神殿への貢献',condition:'神殿で3回寄付を正常完了する',key:'donations',target:3,rewards:[{type:'breederXp',amount:200}]},
+    {id:'weekly_donations',name:'チャレンジ挑戦',condition:'チャレンジモードを3回プレイする',key:'challengeRuns',target:3,rewards:[{type:'breederXp',amount:200}]},
     {id:'weekly_complete',name:'ウィークリーコンプリート',condition:'通常ウィークリー7個のうち6個を達成する',key:'complete',target:6,rewards:[{type:'diamond',amount:2000},{type:'skipTicketKyu',amount:1}],complete:true},
   ],
 };
 const missionDailyPeriod = loginBonusPeriodKey;
 const missionWeeklyPeriod = (now=Date.now()) => { const d=new Date(Number(now)+5*60*60*1000); const day=d.getUTCDay(); d.setUTCDate(d.getUTCDate()-((day+6)%7)); return d.toISOString().slice(0,10); };
-const emptyMissionCounts = () => ({login:0,battles:0,wins:0,enhances:0,dailyClaims:0,marketTrades:0,donations:0});
+const emptyMissionCounts = () => ({login:0,battles:0,wins:0,enhances:0,dailyClaims:0,marketTrades:0,donations:0,challengeRuns:0});
 const normalizeMissions = (value,now=Date.now()) => {
   const dailyPeriod=missionDailyPeriod(now), weeklyPeriod=missionWeeklyPeriod(now), old=value&&typeof value==='object'?value:{};
   const dailySame=old.dailyPeriod===dailyPeriod, weeklySame=old.weeklyPeriod===weeklyPeriod;
   return {version:1,dailyPeriod,weeklyPeriod,daily:dailySame?{...emptyMissionCounts(),...(old.daily||{})}:emptyMissionCounts(),weekly:weeklySame?{...emptyMissionCounts(),...(old.weekly||{})}:emptyMissionCounts(),sentDaily:dailySame&&Array.isArray(old.sentDaily)?old.sentDaily:[],sentWeekly:weeklySame&&Array.isArray(old.sentWeekly)?old.sentWeekly:[],weeklyLoginDays:weeklySame&&Array.isArray(old.weeklyLoginDays)?old.weeklyLoginDays:[]};
 };
-const missionValue = (state,type,mission) => { if(mission.complete){ const normal=MISSION_DEFS[type].filter(m=>!m.complete); return normal.filter(m=>missionValue(state,type,m)>=m.target).length; } if(mission.key==='loginDays') return state.weeklyLoginDays.length; return Number(state[type]?.[mission.key])||0; };
+const missionValue = (state,type,mission) => { if(mission.complete){ const normal=MISSION_DEFS[type].filter(m=>!m.complete); return normal.filter(m=>missionValue(state,type,m)>=m.target).length; } if(mission.key==='loginDays') return state.weeklyLoginDays.length; if(type==='weekly'&&mission.id==='weekly_donations'&&state.sentWeekly.includes(mission.id)) return mission.target; return Number(state[type]?.[mission.key])||0; };
 // 「達成済みかつ未受取(ギフト未送付)」のミッション。HOMEの通知バッジ・タブのバッジ・一括受取が
 // すべてこの判定を共有するので、どこか1か所だけ数え方がずれることがない
 const missionClaimableList = (state,type) => MISSION_DEFS[type].filter(m=>missionValue(state,type,m)>=m.target && !(type==='daily'?state.sentDaily:state.sentWeekly).includes(m.id));
@@ -2670,6 +2670,7 @@ function MonsterHeroGame() {
   const rewardsAwardedRef = useRef(false);
   const clearRecordedRef = useRef(false);
   const runIdRef = useRef(createRunId());
+  const challengeMissionRunIdRef = useRef(null);
   const [runFinalizing, setRunFinalizing] = useState(false);
   const [resultProcessing, setResultProcessing] = useState(false);
   // 最終画面の遷移ボタンも、最初のpointer/clickを受けた瞬間に同期ロックする。
@@ -5457,7 +5458,7 @@ function MonsterHeroGame() {
     // WAVEクリア時の battle/win がここを通っていたため、練習でも進んでしまっていた
     if (debugBattleRef.current) return;
     const next=normalizeMissions(missionsRef.current);
-    const key={battle:'battles',win:'wins',enhance:'enhances',market:'marketTrades',donation:'donations'}[event];
+    const key={battle:'battles',win:'wins',enhance:'enhances',market:'marketTrades',donation:'donations',challengeRun:'challengeRuns'}[event];
     if(!key)return;
     next.daily[key]=(Number(next.daily[key])||0)+amount;
     next.weekly[key]=(Number(next.weekly[key])||0)+amount;
@@ -6427,6 +6428,12 @@ function MonsterHeroGame() {
     const selectedInitialDistance = w===1 && !forcedEnemyKey ? initialBattleDistanceRef.current : null;
     const dist = spawnEnemy(w, forcedEnemyKey, selectedInitialDistance);
     if (dist === null) return;
+    // 通常プレイのチャレンジモードでWAVE 1の戦闘が成立した時点だけ、1周につき1回数える。
+    // 難易度画面・スキップはinitBattleへ来ず、練習/デバッグはdebugBattleRef、クイックはrunModeで除外する。
+    if (w === 1 && !forcedEnemyKey && !debugBattleRef.current && !isQuickMode(runMode) && challengeMissionRunIdRef.current !== runIdRef.current) {
+      challengeMissionRunIdRef.current = runIdRef.current;
+      void saveMissionProgress('challengeRun');
+    }
     const nAtkL = computeAtkTier(currentSlots, dist, aptPctOverride);
     const nGrdL = computeGuardLevel(defVal!==undefined?defVal:def);
     const nGB = nGrdL;
