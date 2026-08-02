@@ -40,6 +40,47 @@ const page = `<!doctype html><meta charset="utf-8"><body style="margin:0;backgro
 ${dyeSource}
 const COLORS = Object.keys(MASU_COLOR_SWATCH);
 const MONS = Object.keys(ALL_PLAYER_MONSTERS).filter(id => (MASU_COLOR_REGION_HUES[id]||[]).length > 0);
+// いまの一覧の1行(順位・ブリーダーアイコン・名前・スコア・詳細ボタン)をN件並べて測る。
+// 使っていたモンスターの絵は詳細へ移したので、一覧に残る絵はブリーダーアイコンだけ
+window.__runRows = async (ROWS) => {
+  const icons = MONS.slice(0, 8).map(id => ALL_PLAYER_MONSTERS[id].faceIconUrl || ALL_PLAYER_MONSTERS[id].iconUrl);
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  const t = performance.now();
+  const frag = document.createDocumentFragment();
+  let nodes = 0;
+  for (let i = 0; i < ROWS; i++) {
+    const card = document.createElement('div');
+    card.style.cssText = 'border:1px solid #ffffff11;border-radius:12px;padding:6px 8px;margin-bottom:6px';
+    const head = document.createElement('div');
+    head.style.cssText = 'display:flex;align-items:center;gap:6px';
+    const rank = document.createElement('div');
+    rank.textContent = String(i + 1);
+    rank.style.cssText = 'width:28px;height:28px;border-radius:999px;background:#1e293b;color:#94a3b8;font-size:9px;display:flex;align-items:center;justify-content:center';
+    head.appendChild(rank); nodes++;
+    const icon = document.createElement('img');
+    icon.src = icons[i % icons.length];
+    icon.style.cssText = 'width:32px;height:32px;border-radius:999px;object-fit:cover';
+    head.appendChild(icon); nodes++;
+    const name = document.createElement('span');
+    name.textContent = 'あつまろう  ブリーダーLv.34';
+    name.style.cssText = 'flex:1;font-size:10px;color:#fff';
+    head.appendChild(name); nodes++;
+    const score = document.createElement('span');
+    score.textContent = '928,996 pt';
+    score.style.cssText = 'font-size:10px;color:#a5b4fc';
+    head.appendChild(score); nodes++;
+    card.appendChild(head);
+    const btn = document.createElement('div');
+    btn.textContent = 'パーティー詳細 >';
+    btn.style.cssText = 'margin-top:4px;border:1px solid #818cf866;border-radius:8px;padding:4px;text-align:center;font-size:9px;color:#c7d2fe';
+    card.appendChild(btn); nodes++;
+    frag.appendChild(card);
+  }
+  list.appendChild(frag);
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  return { ms: Math.round(performance.now() - t), nodes };
+};
 // 一覧の現状(素のアイコンを並べる)と、アイコンを外した場合を測る
 window.__runPlain = async (TOTAL, withIcons) => {
   const kinds = MONS.slice(0, 12);
@@ -184,6 +225,18 @@ const server = http.createServer((req, res) => {
       console.log(`  素のアイコンを200個並べる : ${withIcons.ms} ms (DOM ${withIcons.nodes}個)`);
       console.log(`  アイコンを外して文字だけ  : ${noIcons.ms} ms (DOM ${noIcons.nodes}個)`);
       console.log(`  → 外したときの差         : ${withIcons.ms - noIcons.ms} ms`);
+      console.log('');
+      await page_.close();
+    }
+    // いまの一覧を20件と50件で比べる
+    {
+      const page_ = await browser.newPage();
+      await page_.goto('http://localhost:8978/harness.html', { waitUntil: 'load' });
+      console.log('【いまの一覧(使用モンスターは詳細へ移したあと)】');
+      for (const rows of [20, 50]) {
+        const r = await page_.evaluate((n) => window.__runRows(n), rows);
+        console.log(`  ${String(rows).padStart(2)}件を並べる : ${String(r.ms).padStart(3)} ms (DOM ${r.nodes}個)`);
+      }
       console.log('');
       await page_.close();
     }
