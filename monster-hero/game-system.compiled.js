@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b109157492447add
+// source-sha256: 2924a3de815487d4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 17:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 17:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3735,6 +3735,27 @@ const PatternPlacementPreview = ({
     }
   }));
 };
+// カードやアイテムの icon 欄には「絵文字1文字」と「画像」が混在している。
+// 2026年8月に画像を base64 の埋め込みから images/ 以下のPNGファイルへ移したため、
+// 「data: で始まるかどうか」では画像だと判定できなくなり、ブリーダーカードや
+// ブリーダーの教えのアイコンがパスの文字列のまま画面に出る不具合を出した。
+// 判定はこの1か所に集約し、以後どちらの形でも画像として扱えるようにする。
+const isImageIconValue = v => typeof v === 'string' && (v.startsWith('images/') || v.startsWith('data:') || /^https?:\/\//.test(v));
+// icon欄が画像なら<img>、絵文字ならそのまま返す。sizePxは画像のときの表示サイズ
+const cardIconNode = (icon, sizePx) => isImageIconValue(icon) ? /*#__PURE__*/React.createElement("img", {
+  src: icon,
+  alt: "",
+  draggable: false,
+  style: {
+    width: sizePx,
+    height: sizePx,
+    WebkitTouchCallout: 'none',
+    WebkitUserSelect: 'none',
+    userSelect: 'none',
+    pointerEvents: 'none'
+  },
+  className: "rounded-full object-cover inline-block shrink-0"
+}) : icon;
 const RebirthStars = ({
   count = 0,
   className = ''
@@ -10864,21 +10885,6 @@ function MonsterHeroGame() {
   // ダメージを与える(攻撃順・ダメージ予測の対象になる)カードか。あつの挑発(stun_atsu)は
   // debuffだが実際にダメージを与えるためprocessTurnと同様ここでも攻撃扱いする
   const isAttackCard = card => !!card && (['atk', 'range_atk', 'unique'].includes(card.type) || card.type === 'debuff' && card.subType === 'stun_atsu');
-  // カードのicon欄が画像(顔アイコン)かemoji文字かを判別して描画
-  const cardIconNode = (icon, sizePx) => typeof icon === 'string' && icon.startsWith('data:') ? /*#__PURE__*/React.createElement("img", {
-    src: icon,
-    alt: "",
-    draggable: false,
-    style: {
-      width: sizePx,
-      height: sizePx,
-      WebkitTouchCallout: 'none',
-      WebkitUserSelect: 'none',
-      userSelect: 'none',
-      pointerEvents: 'none'
-    },
-    className: "rounded-full object-cover inline-block shrink-0"
-  }) : icon;
   // プロフィールアイコンidから表示URLを解決(味方モンスター由来 or ブリーダーマーケット購入品)
   const resolveIconUrl = id => {
     if (!id) return null;
@@ -18611,7 +18617,7 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"
-    }, /*#__PURE__*/React.createElement("span", null, enemySkillName.icon), enemySkillName.label)), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'CHARGE' && /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'CHARGE' && /*#__PURE__*/React.createElement("div", {
       className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
       style: {
         top: '11%',
@@ -18684,7 +18690,7 @@ function MonsterHeroGame() {
         }
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[110px] drop-shadow-[0_0_30px_rgba(255,255,255,0.9)]"
-      }, fx.icon)), [0, 1, 2, 3, 4, 5, 6, 7].map(k => /*#__PURE__*/React.createElement("div", {
+      }, cardIconNode(fx.icon, 110))), [0, 1, 2, 3, 4, 5, 6, 7].map(k => /*#__PURE__*/React.createElement("div", {
         key: k,
         className: "absolute",
         style: {
@@ -22619,7 +22625,7 @@ function MonsterHeroGame() {
         fontSize: effect.type === 'unique' ? '60px' : '48px'
       },
       className: "mt-8 animate-bounce relative"
-    }, effect.icon)), rosterSkillDetail && (() => {
+    }, cardIconNode(effect.icon, effect.type === 'unique' ? 60 : 48))), rosterSkillDetail && (() => {
       const mon = rosterSkillDetail.mon;
       const isUnique = rosterSkillDetail.kind === 'unique';
       const levels = isUnique ? getUniqueSkillLevels(mon) : getAtkSkillLevels(mon);
