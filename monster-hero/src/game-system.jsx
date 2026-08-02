@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 12:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 12:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2947,6 +2947,9 @@ function MonsterHeroGame() {
   // 画面から消せるようにする。閉じても更新は行わず、次に開き直したときや
   // さらに新しいバージョンが出たときはまた表示する
   const [dismissedUpdateBuild, setDismissedUpdateBuild] = useState(null);
+  const [showGameUpdateConfirm, setShowGameUpdateConfirm] = useState(false);
+  const [gameUpdatePending, setGameUpdatePending] = useState(false);
+  const gameUpdatePendingRef = useRef(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false); // 更新履歴モーダルの表示状態
   const [changelogTab, setChangelogTab] = useState('update'); // 'update'=更新情報 / 'issue'=不具合情報
@@ -3519,6 +3522,9 @@ function MonsterHeroGame() {
   }, []);
 
   const reloadLatestVersion = () => {
+    if (gameUpdatePendingRef.current) return;
+    gameUpdatePendingRef.current = true;
+    setGameUpdatePending(true);
     const url = new URL(window.location.href);
     url.searchParams.set('mh_refresh', Date.now().toString());
     window.location.replace(url.toString());
@@ -7190,7 +7196,7 @@ function MonsterHeroGame() {
         )}
 
         {gameState==='SETTINGS'&&(
-          <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-5"><button onClick={returnToHome} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-slate-200">設定</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="settings"/></div><div className="space-y-3"><button onClick={()=>setShowAudioSettings(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">音量設定</button><button onClick={()=>setShowBgmArrangement(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">BGMアレンジ</button><button onClick={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">データ引き継ぎ</button><button onClick={()=>openHelp()} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">ヘルプ</button><button onClick={()=>setShowOfficialTitleConfirm(true)} className="w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black">タイトルへ戻る</button></div></div>
+          <div className="flex-1 flex flex-col h-full p-4 overflow-y-auto mh-scroll"><div className="flex items-center gap-2 mb-5"><button onClick={returnToHome} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-slate-200">設定</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="settings"/></div><div className="space-y-3"><button onClick={()=>setShowAudioSettings(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">音量設定</button><button onClick={()=>setShowBgmArrangement(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">BGMアレンジ</button><button onClick={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">データ引き継ぎ</button><button onClick={()=>openHelp()} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">ヘルプ</button><button onClick={()=>setShowGameUpdateConfirm(true)} disabled={showGameUpdateConfirm||gameUpdatePending} className="w-full bg-slate-900 border border-cyan-500/30 py-3 rounded-2xl font-black disabled:opacity-50"><span className="block text-cyan-200">ゲームを更新</span><span className="block mt-1 text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button><div className="text-center text-[9px] font-mono text-slate-600">BUILD {BUILD_DATE}</div><button onClick={()=>setShowOfficialTitleConfirm(true)} className="w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black">タイトルへ戻る</button></div></div>
         )}
 
         {gameState==='DEBUG_SETTINGS'&&(
@@ -9856,6 +9862,7 @@ function MonsterHeroGame() {
       {titleModal}
 
       {showOfficialTitleConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}}><div className="w-full max-w-sm bg-slate-900 border border-white/10 rounded-3xl p-6 text-center"><h3 className="text-lg font-black mb-6">タイトル画面へ戻りますか？</h3><div className="space-y-3"><button onClick={()=>setShowOfficialTitleConfirm(false)} className="w-full bg-slate-800 py-3 rounded-xl font-black">キャンセル</button><button onClick={returnToOfficialTitle} className="w-full bg-red-600 py-3 rounded-xl font-black">タイトルへ戻る</button></div></div></div>)}
+      {showGameUpdateConfirm&&(<div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,zIndex:99000,backgroundColor:'rgba(0,0,0,0.94)'}} role="dialog" aria-modal="true" aria-labelledby="game-update-confirm-title"><div className="w-full max-w-sm bg-slate-900 border border-cyan-500/30 rounded-3xl p-6 text-center"><h3 id="game-update-confirm-title" className="text-lg font-black mb-3">最新のゲームデータを読み込み直します。<br/>セーブデータは消えません。</h3><div className="space-y-3 mt-6"><button onClick={reloadLatestVersion} disabled={gameUpdatePending} className="w-full bg-cyan-600 py-3 rounded-xl font-black disabled:opacity-50">{gameUpdatePending?'更新しています…':'更新する'}</button><button onClick={()=>setShowGameUpdateConfirm(false)} disabled={gameUpdatePending} className="w-full bg-slate-800 py-3 rounded-xl font-black disabled:opacity-50">キャンセル</button></div></div></div>)}
 
       {/* ランキングの編成をくわしく見る。一覧は軽さ優先で素の絵のままにしてあるので、
           染色(実際にその人が染めた色)を見せるのはこの画面だけ。ここなら1件ぶん
