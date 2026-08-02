@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 20:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 20:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1967,7 +1967,19 @@ const MARKET_PROFILE_ICON_STYLES = {
   kiki_icon: { scale: 2.37, x: 0, y: 19 },
   snegurochka_icon: { scale: 4.28, x: 11, y: 111 },
   snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 },
-  iblis_icon: { scale: 1.42, x: 3, y: -14 },
+  iblis_icon: { scale: 1.42, x: 2, y: -10 },
+};
+const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
+// 実際のプロフィール選択と調整Debugが共有するアイコン一覧。Debugだけの一覧は持たない。
+// 同じid、またはキャッシュキーだけが異なる同じ画像は先に現れた1件へまとめる。
+const breederIconOptions = ({ includeUnowned=false, ownedMarketIconIds=[] }={}) => {
+  const owned = new Set(ownedMarketIconIds);
+  const candidates = [
+    ...STARTER_MONSTER_IDS.map(id=>{const monster=ALL_PLAYER_MONSTERS[id];return monster&&{id:monster.id,name:monster.name,src:monster.faceIconUrl||monster.iconUrl,source:'starter'};}),
+    ...BREEDER_MARKET_ITEMS.filter(item=>item.type==='icon'&&(includeUnowned||owned.has(item.id))).map(item=>({id:item.id,name:item.name,src:item.icon,source:'market'})),
+  ].filter(Boolean);
+  const ids = new Set(), images = new Set();
+  return candidates.filter(item=>{const image=String(item.src||'').split('?')[0];if(ids.has(item.id)||images.has(image))return false;ids.add(item.id);images.add(image);return true;});
 };
 const profileIconTransformStyle = ({ scale=1, x=0, y=0 }={}) => ({ transform: `translate(${x}%, ${y}%) scale(${scale})`, transformOrigin:'center center' });
 const marketProfileIconStyle = (id) => profileIconTransformStyle(MARKET_PROFILE_ICON_STYLES[id]);
@@ -2778,9 +2790,10 @@ function MonsterHeroGame() {
   // マーケットの商品アイコンを大きく見る(1行4つで小さいため)
   const [marketIconZoom, setMarketIconZoom] = useState(null);
   // 開発中にアイコンの顔位置を合わせるための一時値。保存領域には書き込まない。
-  const marketIconItems = BREEDER_MARKET_ITEMS.filter(item=>item.type==='icon');
-  const [iconAdjustId, setIconAdjustId] = useState(marketIconItems[0]?.id||'');
-  const [iconAdjustments, setIconAdjustments] = useState(()=>Object.fromEntries(marketIconItems.map(item=>[item.id,{...(MARKET_PROFILE_ICON_STYLES[item.id]||{scale:1,x:0,y:0})}])));
+  const debugIconItems = breederIconOptions({includeUnowned:true});
+  const [iconAdjustId, setIconAdjustId] = useState(debugIconItems[0]?.id||'');
+  const [iconAdjustQuery, setIconAdjustQuery] = useState('');
+  const [iconAdjustments, setIconAdjustments] = useState(()=>Object.fromEntries(debugIconItems.map(item=>[item.id,{...(MARKET_PROFILE_ICON_STYLES[item.id]||DEFAULT_PROFILE_ICON_STYLE)}])));
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
@@ -7461,18 +7474,22 @@ function MonsterHeroGame() {
         })()}
 
         {gameState==='BREEDER_ICON_DEBUG'&&(()=>{
-          const item=marketIconItems.find(entry=>entry.id===iconAdjustId)||marketIconItems[0];
+          const item=debugIconItems.find(entry=>entry.id===iconAdjustId)||debugIconItems[0];
           if(!item)return <div className="p-4 text-slate-400">調整できるアイコンがありません。</div>;
-          const initial={...(MARKET_PROFILE_ICON_STYLES[item.id]||{scale:1,x:0,y:0})};
+          const initial={...(MARKET_PROFILE_ICON_STYLES[item.id]||DEFAULT_PROFILE_ICON_STYLE)};
           const values=iconAdjustments[item.id]||initial;
+          const normalizedQuery=iconAdjustQuery.trim().toLocaleLowerCase('ja');
+          const filteredItems=debugIconItems.filter(entry=>!normalizedQuery||`${entry.name} ${entry.id}`.toLocaleLowerCase('ja').includes(normalizedQuery));
           const patchValue=(key,value)=>setIconAdjustments(current=>({...current,[item.id]:{...values,[key]:Number(value)}}));
           const slider=(key,label,min,max,step)=><label className="block rounded-xl bg-slate-900 p-3"><span className="mb-2 flex justify-between text-[10px] font-black text-slate-300"><b>{label}</b><output>{values[key]}</output></span><input className="w-full accent-fuchsia-500" type="range" min={min} max={max} step={step} value={values[key]} onChange={e=>patchValue(key,e.target.value)}/></label>;
           const copyText=`${item.id}: { scale: ${values.scale}, x: ${values.x}, y: ${values.y} }`;
           return <main className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG・保存されません</small><h2 className="text-sm font-black">ブリーダーアイコン調整</h2></div></header>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3">
-              <select value={item.id} onChange={e=>setIconAdjustId(e.target.value)} className="w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black">{marketIconItems.map(entry=><option key={entry.id} value={entry.id}>{entry.name}（{entry.id}）</option>)}</select>
-              <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"><div className="flex items-end justify-around gap-3 text-center text-[8px] font-black text-slate-400"><div><BreederIcon src={item.icon} id={item.id} adjustment={values} alt="マーケット一覧" className="w-10 h-10 mx-auto border-2 border-white/20 bg-black/30"/><span>マーケット一覧</span></div><div><BreederIcon src={item.icon} id={item.id} adjustment={values} alt="商品詳細" className="w-28 h-28 mx-auto border-4 border-white/20 bg-black/30"/><span>商品詳細</span></div><div><BreederIcon src={item.icon} id={item.id} adjustment={values} alt="プロフィール選択" roundedClass="rounded-2xl" className="w-16 h-16 mx-auto border-2 border-amber-400 bg-black/30"/><span>プロフィール選択</span></div></div></section>
+              <input type="search" value={iconAdjustQuery} onChange={e=>setIconAdjustQuery(e.target.value)} placeholder="名前・内部IDで検索" className="w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black"/>
+              <select value={filteredItems.some(entry=>entry.id===item.id)?item.id:''} onChange={e=>e.target.value&&setIconAdjustId(e.target.value)} size={Math.min(6,Math.max(2,filteredItems.length))} className="w-full rounded-xl bg-slate-900 border border-white/10 p-2 text-xs font-black">{!filteredItems.length&&<option value="">一致するアイコンはありません</option>}{filteredItems.map(entry=><option key={entry.id} value={entry.id}>{entry.name}（{entry.id}）</option>)}</select>
+              <small className="block text-right text-[8px] text-slate-500">全{debugIconItems.length}件・表示{filteredItems.length}件</small>
+              <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"><div className="flex items-end justify-around gap-3 text-center text-[8px] font-black text-slate-400"><div><BreederIcon src={item.src} id={item.id} adjustment={values} alt="マーケット一覧" className="w-10 h-10 mx-auto border-2 border-white/20 bg-black/30"/><span>マーケット一覧</span></div><div><BreederIcon src={item.src} id={item.id} adjustment={values} alt="商品詳細" className="w-28 h-28 mx-auto border-4 border-white/20 bg-black/30"/><span>商品詳細</span></div><div><BreederIcon src={item.src} id={item.id} adjustment={values} alt="プロフィール選択" roundedClass="rounded-2xl" className="w-16 h-16 mx-auto border-2 border-amber-400 bg-black/30"/><span>プロフィール選択</span></div></div></section>
               {slider('scale','拡大率 scale',.5,5,.01)}{slider('x','左右位置 X',-50,50,1)}{slider('y','上下位置 Y',-50,130,1)}
               <pre className="whitespace-pre-wrap break-all rounded-xl bg-black/40 p-3 text-[10px] text-cyan-200">{copyText}</pre>
               <div className="grid grid-cols-2 gap-2"><button onClick={()=>setIconAdjustments(current=>({...current,[item.id]:initial}))} className="min-h-[46px] rounded-xl bg-slate-800 text-[10px] font-black">初期値へ戻す</button><button onClick={async()=>{await navigator.clipboard.writeText(copyText);window.alert('設定値をコピーしました。');}} className="min-h-[46px] rounded-xl bg-fuchsia-700 text-[10px] font-black">設定値をコピー</button></div>
@@ -8800,18 +8817,18 @@ function MonsterHeroGame() {
             <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
               <h3 className="text-lg font-black text-white mb-4 text-center">アイコンを選択</h3>
               <div className="grid grid-cols-4 gap-3 mb-4">
-                {STARTER_MONSTER_IDS.map(id=>ALL_PLAYER_MONSTERS[id]).map(m=>(
+                {breederIconOptions().filter(m=>m.source==='starter').map(m=>(
                   <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
-                    <BreederIcon src={m.faceIconUrl||m.iconUrl} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
+                    <BreederIcon src={m.src} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
                   </button>
                 ))}
               </div>
               {ownedMarketIcons.length>0&&(<>
                 <h4 className="text-[10px] font-black text-amber-400 mb-2 text-center uppercase tracking-widest flex items-center justify-center gap-1"><ShoppingBag size={10}/>マーケット購入アイコン</h4>
                 <div className="grid grid-cols-4 gap-3 mb-4">
-                  {BREEDER_MARKET_ITEMS.filter(m=>m.type==='icon'&&ownedMarketIcons.includes(m.id)).map(m=>(
+                  {breederIconOptions({ownedMarketIconIds:ownedMarketIcons}).filter(m=>m.source==='market').map(m=>(
                     <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-amber-400 ring-2 ring-amber-400':'border-slate-700'}`}>
-                      <BreederIcon src={m.icon} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
+                      <BreederIcon src={m.src} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
                     </button>
                   ))}
                 </div>
