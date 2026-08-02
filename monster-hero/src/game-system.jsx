@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 19:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 19:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1961,11 +1961,14 @@ const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';
 // 商品アイコンの大きさ。円盤石は絵を見せたいのでいちばん大きく、
 // ブリーダーアイコンやカード・アイテムは名前のほうが大事なので小さくする
 const MARKET_ICON_SIZE = { disc: 'w-12 h-12', breeder: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };
-// ききは元画像の余白がほかの顔アイコンより広いため、画像自体には手を加えず表示時だけ寄せる。
-// 上端をほぼ動かさずに拡大することで、うさ耳を残したまま顔を大きく見せる。
-const marketProfileIconStyle = (id) => id === 'kiki_icon'
-  ? { transform: 'scale(1.58) translateY(12%)' }
-  : undefined;
+// 全身画像を使う一部のアイコンは、画像自体には手を加えず表示時だけ顔まわりへ寄せる。
+// 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と縦位置を固定する。
+const MARKET_PROFILE_ICON_STYLES = {
+  kiki_icon: { transform: 'scale(1.58) translateY(12%)' },
+  snegurochka_icon: { transform: 'scale(2.15) translateY(20%)' },
+  snegurochka_awakened_icon: { transform: 'scale(2.15) translateY(20%)' },
+};
+const marketProfileIconStyle = (id) => MARKET_PROFILE_ICON_STYLES[id];
 
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
 const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
