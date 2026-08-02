@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 20:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 21:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1340,6 +1340,22 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, drag
       ) : null)}
     </div>
   );
+};
+// 本番の染色モーダルとDebugで共有する色選択UI。色ID（元色=null、プリセット、カスタム）を
+// そのまま受け渡し、表示側も共通のDyedMonsterImageへ渡すため、Debug専用の色変換を持たない。
+const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom }) => {
+  const regionCount = dyeRegionCount(baseId);
+  const regionLabels = ['①','②','③'];
+  return <div className="space-y-2">{Array.from({length:regionCount}).map((_,idx)=>(
+    <div key={idx} className="bg-black/30 rounded-xl p-2 border border-white/5">
+      <div className="text-[8px] text-fuchsia-300 font-black uppercase mb-1">{regionCount>1?`染色${regionLabels[idx]||idx+1}`:'染色'}</div>
+      <div className="grid grid-cols-6 gap-0.5">
+        <button onClick={()=>onChange(idx,null)} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${!colors[idx]?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={7}/></span><span className="text-[5.5px] font-black">元の色</span></button>
+        {Object.keys(MASU_COLOR_TARGET).map(colorId=><button key={colorId} onClick={()=>onChange(idx,colorId)} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${colors[idx]===colorId?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}/><span className="text-[5.5px] font-black">{MASU_COLOR_LABELS[colorId]}</span></button>)}
+        <button onClick={()=>onCustom(idx)} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${_parseCustomColorId(colors[idx])?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{background:_parseCustomColorId(colors[idx])?getColorSwatchHex(colors[idx]):'conic-gradient(#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#d946ef,#ef4444)'}}/><span className="text-[5.5px] font-black">カスタム</span></button>
+      </div>
+    </div>
+  ))}</div>;
 };
 // マスモンの全身表示は画面ごとにiconUrlへ切り替えず、通常表示と同じ立ち絵を使う。
 // iconUrlしか持たない旧データも従来どおり表示できるようフォールバックは残す。
@@ -2795,12 +2811,10 @@ function MonsterHeroGame() {
   const [iconAdjustQuery, setIconAdjustQuery] = useState('');
   const [iconAdjustments, setIconAdjustments] = useState(()=>Object.fromEntries(debugIconItems.map(item=>[item.id,{...(MARKET_PROFILE_ICON_STYLES[item.id]||DEFAULT_PROFILE_ICON_STYLE)}])));
   // モンスター画像確認はデバッグ画面を開いている間だけ保持し、セーブ領域へは書き込まない。
-  const [monsterImageDebugId, setMonsterImageDebugId] = useState(()=>Object.keys(ALL_PLAYER_MONSTERS)[0]||'');
+  const [monsterImageDebugId, setMonsterImageDebugId] = useState(null);
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
-  const [monsterImageDebugTigerNew, setMonsterImageDebugTigerNew] = useState(false);
-  const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(['red','green','blue']);
-  const [monsterImageDebugRegions, setMonsterImageDebugRegions] = useState([true,true,true]);
-  const [monsterImageDebugSizes, setMonsterImageDebugSizes] = useState({});
+  const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('old');
+  const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(null);
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
@@ -7542,35 +7556,31 @@ function MonsterHeroGame() {
         )}
 
         {gameState==='MONSTER_IMAGE_DEBUG'&&(()=>{
-          const base=ALL_PLAYER_MONSTERS[monsterImageDebugId]||Object.values(ALL_PLAYER_MONSTERS)[0];
-          if(!base)return null;
-          const tigerTest=base.id==='Tiger'&&monsterImageDebugTigerNew;
+          const owned=masuMons.filter(m=>ALL_PLAYER_MONSTERS[m.baseId]);
+          const selected=owned.find(m=>String(m.id)===String(monsterImageDebugId))||owned[0];
+          if(!selected)return <main className="flex-1 p-4"><header className="flex items-center"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3"><ArrowLeft/></button><h2 className="font-black">モンスター画像・染色確認</h2></header><p className="p-6 text-center text-slate-400">確認できる所持モンスター個体がありません。</p></main>;
+          const base=ALL_PLAYER_MONSTERS[selected.baseId];
+          const regionCount=dyeRegionCount(selected.baseId);
+          const colors=Array.from({length:regionCount},(_,i)=>monsterImageDebugColors===null?(getMasuColors(selected)[i]||null):(monsterImageDebugColors[i]||null));
+          const isTiger=selected.baseId==='Tiger';
           const testUrl='images/monsters/tiger.PNG';
-          const sources={imgUrl:tigerTest?testUrl:base.imgUrl,iconUrl:tigerTest?testUrl:base.iconUrl,faceIconUrl:tigerTest?testUrl:base.faceIconUrl};
-          const colors=monsterImageDebugColors.map((color,index)=>monsterImageDebugRegions[index]?color:null);
+          const oldSources={imgUrl:base.imgUrl,iconUrl:base.iconUrl,faceIconUrl:base.faceIconUrl};
+          const newSources={imgUrl:testUrl,iconUrl:testUrl,faceIconUrl:testUrl};
+          const variants=isTiger&&monsterImageDebugTigerMode==='compare'?[['旧',oldSources],['新',newSources]]:[[isTiger&&monsterImageDebugTigerMode==='new'?'新':'本番',isTiger&&monsterImageDebugTigerMode==='new'?newSources:oldSources]];
           const bgStyle=monsterImageDebugBg==='white'?{background:'#fff'}:monsterImageDebugBg==='black'?{background:'#000'}:{backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'};
-          const recordSize=(key)=>(e)=>{const next=`${e.currentTarget.naturalWidth} × ${e.currentTarget.naturalHeight}px`;setMonsterImageDebugSizes(old=>old[key]===next?old:{...old,[key]:next});};
-          const frame=(label,key,content,frameClass='w-20 h-20 rounded-full',fit='object-cover')=><div className="text-center"><div className={`${frameClass} mx-auto overflow-hidden border-2 border-white/30 flex items-center justify-center`} style={bgStyle}>{content(fit)}</div><b className="block mt-1 text-[9px] text-slate-200">{label}</b></div>;
+          const renderPair=(label,sourceKey,palette,frameClass='h-32',fit='object-contain')=><section className="rounded-xl bg-black/30 p-2"><b className="block mb-2 text-center text-[9px] text-cyan-200">{label}</b><div className={`grid gap-2 ${variants.length===2?'grid-cols-2':'grid-cols-1'}`}>{variants.map(([name,sources])=><div key={name} className="text-center"><div className={`${frameClass} overflow-hidden border border-white/20 flex items-center justify-center`} style={bgStyle}>{palette===null?<img src={sources[sourceKey]} alt={`${name}${label}`} className={`w-full h-full ${fit}`}/>:<DyedMonsterImage baseId="Tiger" src={sources[sourceKey]} alt={`${name}${label}`} masuColors={palette} className={`w-full h-full ${fit}`}/>}</div><small className="text-[8px] font-black">{name}</small></div>)}</div></section>;
+          const renderCurrent=(label,sourceKey,palette,frameClass='h-32',fit='object-contain')=>{if(isTiger)return renderPair(label,sourceKey,palette,frameClass,fit);const src=oldSources[sourceKey];return <section className="rounded-xl bg-black/30 p-2 text-center"><b className="block mb-2 text-[9px] text-cyan-200">{label}</b><div className={`${frameClass} overflow-hidden border border-white/20`} style={bgStyle}>{palette===null?<img src={src} alt={label} className={`w-full h-full ${fit}`}/>:<DyedMonsterImage baseId={base.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`}/>}</div></section>};
+          const colorText=(c)=>c?(_parseCustomColorId(c)?`カスタム(${c})`:(MASU_COLOR_LABELS[c]||c)):'元の色';
           return <main className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-400">DEBUG・保存されません</small><h2 className="text-sm font-black">モンスター画像・染色確認</h2></div></header>
+            <header className="flex items-center gap-2 mb-2"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-400">DEBUG・保存されません</small><h2 className="text-sm font-black">モンスター画像・染色確認</h2></div></header>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3">
-              <select value={base.id} onChange={e=>{setMonsterImageDebugId(e.target.value);setMonsterImageDebugTigerNew(false);}} className="w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black">{Object.values(ALL_PLAYER_MONSTERS).map(mon=><option key={mon.id} value={mon.id}>{mon.name}（{mon.id}）</option>)}</select>
-              {base.id==='Tiger'&&<div className="grid grid-cols-2 gap-2">{[[false,'現在の本番画像'],[true,'新画像で全差し替えテスト']].map(([value,label])=><button key={label} onClick={()=>setMonsterImageDebugTigerNew(value)} className={`min-h-[48px] rounded-xl px-2 text-[9px] font-black border ${monsterImageDebugTigerNew===value?'bg-amber-700 border-amber-300':'bg-slate-900 border-white/10'}`}>{label}</button>)}</div>}
-              <div className="grid grid-cols-3 gap-2">{[['checker','市松模様'],['white','白'],['black','黒']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugBg(id)} className={`min-h-[42px] rounded-xl text-[10px] font-black border ${monsterImageDebugBg===id?'border-cyan-300 ring-2 ring-cyan-500':'border-white/10'}`} style={id==='white'?{background:'#fff',color:'#000'}:id==='black'?{background:'#000',color:'#fff'}:{background:'#64748b'}}>{label}</button>)}</div>
-              <section className="rounded-2xl border border-cyan-500/30 bg-slate-900/70 p-3"><h3 className="mb-3 text-[10px] font-black text-cyan-300">本番相当の表示形式</h3><div className="grid grid-cols-3 gap-3 items-end">
-                {frame('バトル／立ち絵','imgUrl',(fit)=><DyedMonsterImage baseId={base.id} src={sources.imgUrl} alt={base.name} masuColors={colors} className={`w-full h-full ${fit} drop-shadow-md`}/>,'w-[70px] h-[90px] rounded-xl','object-contain')}
-                {frame('一覧・全身アイコン','iconUrl',(fit)=><DyedMonsterImage baseId={base.id} src={sources.iconUrl} alt={base.name} masuColors={colors} className={`w-full h-full ${fit}`}/>)}
-                {frame('詳細・大きな全身','imgUrl',(fit)=><DyedMonsterImage baseId={base.id} src={sources.imgUrl} alt={base.name} masuColors={colors} className={`w-full h-full ${fit} drop-shadow-lg`}/>,'w-28 h-28 rounded-2xl','object-contain')}
-                {frame('顔アイコン','faceIconUrl',(fit)=><DyedMonsterImage baseId={base.id} src={sources.faceIconUrl} alt={base.name} masuColors={colors} className={`w-full h-full ${fit}`}/>,'w-16 h-16 rounded-full','object-cover')}
-                {frame('プロフィール・選択','faceIconUrl',(fit)=><DyedMonsterImage baseId={base.id} src={sources.faceIconUrl} alt={base.name} masuColors={colors} className={`w-full h-full ${fit}`}/>,'w-12 h-12 rounded-full','object-cover')}
-                {frame('小型・編成枠','imgUrl',(fit)=><DyedMonsterImage baseId={base.id} src={sources.imgUrl} alt={base.name} masuColors={colors} className={`w-full h-full ${fit}`}/>,'w-10 h-10 rounded-full','object-contain')}
-              </div></section>
-              <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="text-[10px] font-black text-fuchsia-300">本番の染色処理</h3><div className="grid grid-cols-2 gap-3 my-3 text-center"><div><div className="h-36 rounded-xl border border-white/20 flex items-center justify-center overflow-hidden" style={bgStyle}><img src={sources.imgUrl} alt="元画像" className="w-full h-full object-contain"/></div><b className="text-[9px]">元画像</b></div><div><div className="h-36 rounded-xl border border-fuchsia-400/50 flex items-center justify-center overflow-hidden" style={bgStyle}><DyedMonsterImage baseId={base.id} src={sources.imgUrl} alt="染色後画像" masuColors={colors} className="w-full h-full object-contain"/></div><b className="text-[9px]">染色後画像</b></div></div>
-                <div className="grid grid-cols-2 gap-2 mb-2"><button onClick={()=>{setMonsterImageDebugColors(['red','green','blue']);setMonsterImageDebugRegions([true,true,true]);}} className="min-h-[42px] rounded-xl bg-slate-800 text-[9px] font-black">赤／緑／青</button><button onClick={()=>{setMonsterImageDebugColors(['black','white','yellow']);setMonsterImageDebugRegions([true,true,true]);}} className="min-h-[42px] rounded-xl bg-slate-800 text-[9px] font-black">黒／白／黄</button></div>
-                {[0,1,2].map(index=><div key={index} className="grid grid-cols-[auto_1fr] gap-2 items-center mb-2 rounded-xl bg-black/30 p-2"><button onClick={()=>setMonsterImageDebugRegions(old=>old.map((v,i)=>i===index?!v:v))} className={`min-h-[40px] min-w-[86px] rounded-lg text-[9px] font-black ${monsterImageDebugRegions[index]?'bg-fuchsia-700':'bg-slate-700'}`}>染色部位{index+1} {monsterImageDebugRegions[index]?'ON':'OFF'}</button><select value={monsterImageDebugColors[index]} onChange={e=>setMonsterImageDebugColors(old=>old.map((v,i)=>i===index?e.target.value:v))} className="min-h-[40px] rounded-lg bg-slate-900 px-2 text-[10px]">{Object.keys(MASU_COLOR_TARGET).map(id=><option key={id} value={id}>{MASU_COLOR_LABELS[id]}</option>)}</select></div>)}
-                <button onClick={()=>{setMonsterImageDebugColors(['red','green','blue']);setMonsterImageDebugRegions([true,true,true]);setMonsterImageDebugBg('checker');setMonsterImageDebugTigerNew(false);}} className="w-full min-h-[44px] rounded-xl bg-fuchsia-800 text-[10px] font-black">初期状態へ戻す</button>
-              </section>
-              <section className="rounded-2xl bg-black/40 p-3 text-[9px] text-slate-300 space-y-2"><h3 className="font-black text-cyan-300">画像パス・元画像サイズ</h3>{Object.entries(sources).map(([key,url])=><div key={key} className="break-all"><b>{key}</b>: {url}<br/><span className="text-slate-500">{monsterImageDebugSizes[url]||'読み込み中…'}</span><img src={url} alt="" className="hidden" onLoad={recordSize(url)}/></div>)}</section>
+              <select value={selected.id} onChange={e=>{const m=owned.find(x=>String(x.id)===e.target.value);setMonsterImageDebugId(e.target.value);setMonsterImageDebugColors(m?getMasuColors(m):[]);setMonsterImageDebugTigerMode('old');}} className="w-full min-h-[50px] rounded-xl bg-slate-900 border border-white/10 px-3 text-[10px] font-black">{owned.map(m=>{const b=ALL_PLAYER_MONSTERS[m.baseId];return <option key={m.id} value={m.id}>{m.name}／{b.name}／{m.baseId}／①{colorText(getMasuColors(m)[0])} ②{colorText(getMasuColors(m)[1])} ③{colorText(getMasuColors(m)[2])}</option>})}</select>
+              {isTiger&&<div className="grid grid-cols-3 gap-1">{[['old','旧画像／現在の本番構成'],['new','新画像で全差し替えテスト'],['compare','旧画像と新画像の比較表示']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugTigerMode(id)} className={`min-h-[54px] rounded-xl px-1 text-[8px] font-black border ${monsterImageDebugTigerMode===id?'bg-amber-700 border-amber-300':'bg-slate-900 border-white/10'}`}>{label}</button>)}</div>}
+              <div className="grid grid-cols-3 gap-2">{[['checker','市松模様'],['white','白'],['black','黒']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugBg(id)} className={`min-h-[42px] rounded-xl text-[10px] font-black border ${monsterImageDebugBg===id?'ring-2 ring-cyan-500':'border-white/10'}`} style={id==='white'?{background:'#fff',color:'#000'}:id==='black'?{background:'#000'}:{background:'#64748b'}}>{label}</button>)}</div>
+              <section className="rounded-2xl border border-fuchsia-500/30 bg-fuchsia-950/20 p-3"><h3 className="mb-2 text-[10px] font-black text-fuchsia-300">本番と共通の染色①～③</h3><DyeRegionColorControls baseId={selected.baseId} colors={colors} onChange={(idx,colorId)=>setMonsterImageDebugColors(prev=>{const next=[...colors];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(colors[idx]);setCustomColorPicker({mode:'debug',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/><button onClick={()=>setMonsterImageDebugColors(getMasuColors(selected))} className="w-full mt-2 min-h-[40px] rounded-xl bg-fuchsia-800 text-[9px] font-black">個体の現在色へ戻す</button></section>
+              <div className="grid grid-cols-2 gap-2">{renderCurrent('元画像','imgUrl',null)}{renderCurrent('実際の合成後プレビュー','imgUrl',colors)}{Array.from({length:regionCount},(_,i)=>renderCurrent(`染色${i+1}のみ`,'imgUrl',colors.map((c,j)=>i===j?c:null)))}</div>
+              <h3 className="text-[10px] font-black text-cyan-300">実際の表示条件</h3><div className="grid grid-cols-2 gap-2">{renderCurrent('バトル／立ち絵','imgUrl',colors,'h-36','object-contain')}{renderCurrent('一覧／全身アイコン','iconUrl',colors,'h-24','object-cover')}{renderCurrent('詳細／大きな全身表示','imgUrl',colors,'h-40','object-contain')}{renderCurrent('顔アイコン','faceIconUrl',colors,'h-20 rounded-full','object-cover')}{renderCurrent('プロフィール／選択アイコン','faceIconUrl',colors,'h-16 rounded-full','object-cover')}{renderCurrent('小型／編成枠','imgUrl',colors,'h-12 rounded-full','object-contain')}</div>
+              <section className="rounded-xl bg-black/40 p-3 text-[8px] break-all"><b>baseId: {selected.baseId}</b>{variants.map(([name,v])=><div key={name}>{name}: imgUrl={v.imgUrl} / iconUrl={v.iconUrl} / faceIconUrl={v.faceIconUrl}</div>)}</section>
             </div>
           </main>;
         })()}
@@ -8761,32 +8771,8 @@ function MonsterHeroGame() {
                 {regionCount===1&&(
                   <div className="text-[8px] text-slate-500 font-bold text-center px-2 -mt-1 shrink-0">このモンスターは全身一括の染色のみ対応しています</div>
                 )}
-                <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">
-                  {Array.from({length:regionCount}).map((_,idx)=>(
-                    <div key={idx} className="bg-black/30 rounded-xl p-2 border border-white/5">
-                      <div className="text-[8px] text-fuchsia-300 font-black uppercase mb-1">{regionCount>1?`染色${regionLabels[idx]||idx+1}`:'染色'}</div>
-                      <div className="grid grid-cols-6 gap-0.5">
-                        <button onClick={()=>setDyePreviewColors(prev=>{const next=[...prev]; next[idx]=null; return next;})} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${!dyePreviewColors[idx]?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
-                          <span className="w-3.5 h-3.5 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={7} className="text-white drop-shadow"/></span>
-                          <span className="text-[5.5px] text-white font-black leading-none">元の色</span>
-                        </button>
-                        {Object.keys(MASU_COLOR_TARGET).map(colorId=>(
-                          <button key={colorId} onClick={()=>setDyePreviewColors(prev=>{const next=[...prev]; next[idx]=colorId; return next;})} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${dyePreviewColors[idx]===colorId?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
-                          <span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}></span>
-                          <span className="text-[5.5px] text-white font-black leading-none">{MASU_COLOR_LABELS[colorId]}</span>
-                        </button>
-                        ))}
-                        <button onClick={()=>{
-                          const cur = dyePreviewColors[idx];
-                          const parsed = cur && _parseCustomColorId(cur);
-                          setCustomColorPicker({ idx, h: parsed?.h ?? 210, s: parsed?.s ?? 0.7, v: parsed?.v ?? 0.7 });
-                        }} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${_parseCustomColorId(dyePreviewColors[idx])?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}>
-                          <span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{background:_parseCustomColorId(dyePreviewColors[idx])?getColorSwatchHex(dyePreviewColors[idx]):'conic-gradient(#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#d946ef,#ef4444)'}}></span>
-                          <span className="text-[5.5px] text-white font-black leading-none">カスタム</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+                  <DyeRegionColorControls baseId={masu.baseId} colors={dyePreviewColors} onChange={(idx,colorId)=>setDyePreviewColors(prev=>{const next=[...prev];next[idx]=colorId;return next;})} onCustom={(idx)=>{const parsed=_parseCustomColorId(dyePreviewColors[idx]);setCustomColorPicker({mode:'production',idx,h:parsed?.h??210,s:parsed?.s??.7,v:parsed?.v??.7});}}/>
                 </div>
                 <div className="flex gap-2 mt-1 shrink-0">
                   <button onClick={closeDyePicker} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-black text-xs uppercase">キャンセル</button>
@@ -8799,17 +8785,19 @@ function MonsterHeroGame() {
 
         {/* 染色もどき: カスタム色選択(色相バー+彩度・明度パッドのスペクトラムピッカー) */}
         {customColorPicker&&(()=>{
-          const { idx, h, s, v } = customColorPicker;
-          const masu = getMasuMon(dyeTargetMasuId);
+          const { mode, idx, h, s, v } = customColorPicker;
+          const masu = mode==='debug' ? masuMons.find(m=>String(m.id)===String(monsterImageDebugId)) : getMasuMon(dyeTargetMasuId);
           const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
           const applyCustom = () => {
-            setDyePreviewColors(prev => { const next = [...prev]; next[idx] = _encodeCustomColorId(h, s, v); return next; });
+            const setter=mode==='debug'?setMonsterImageDebugColors:setDyePreviewColors;
+            setter(prev => { const next = [...(prev||(mode==='debug'?getMasuColors(masu):[]))]; next[idx] = _encodeCustomColorId(h, s, v); return next; });
             setCustomColorPicker(null);
           };
           // ドラッグ中は毎フレームcolorIdが変わり染色エンジンの再描画(Canvas処理)が大量発生するため、
           // プレビュー表示だけは色相/彩度/明度を粗く丸めて再描画の頻度を抑える(確定時は元の値をそのまま使う)
           const previewColorId = _encodeCustomColorId(Math.round(h / 4) * 4, Math.round(s * 20) / 20, Math.round(v * 20) / 20);
-          const previewColors = dyePreviewColors.map((c, i) => i === idx ? previewColorId : c);
+          const sourceColors=mode==='debug'?(monsterImageDebugColors||getMasuColors(masu)):dyePreviewColors;
+          const previewColors = sourceColors.map((c, i) => i === idx ? previewColorId : c);
           return (
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:32000}}>
               <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs flex flex-col gap-3 shadow-2xl">
