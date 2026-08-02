@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 21:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 21:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2005,6 +2005,10 @@ const BreederIcon = ({ src, id, alt='', className='', roundedClass='rounded-full
   <span className={`relative block overflow-hidden ${roundedClass} ${className}`}>
     <img src={src} alt={alt} className="absolute inset-0 w-full h-full object-contain" style={adjustment?profileIconTransformStyle(adjustment):marketProfileIconStyle(id)}/>
   </span>
+);
+// HOME本番と調整Debugで、丸枠・余白・画像の有無による代替表示まで同じ部品を使う。
+const HomeProfileIcon = ({ src, id, adjustment }) => (
+  <div className="mh-home-avatar">{src?<BreederIcon src={src} id={id} adjustment={adjustment} alt="プロフィール画像" className="w-full h-full"/>:<User size={24}/>}</div>
 );
 
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
@@ -7227,7 +7231,7 @@ function MonsterHeroGame() {
             {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
             <header className={`mh-home-status${spotClass('settings')}`}>
               <button type="button" className="mh-home-player" onClick={()=>setGameState('PROFILE')} aria-label="プロフィールを開く">
-                <div className="mh-home-avatar">{resolveIconUrl(breederIcon)?<BreederIcon src={resolveIconUrl(breederIcon)} id={breederIcon} alt="プロフィール画像" className="w-full h-full"/>:<User size={24}/>}</div>
+                <HomeProfileIcon src={resolveIconUrl(breederIcon)} id={breederIcon}/>
                 <div className="mh-home-player-copy"><strong>{breederName}</strong><span>ブリーダー Lv.{breederLevel.level}</span><div className="mh-home-xp"><i style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></i></div><small>{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</small></div>
                 <ChevronRight className="mh-home-profile-arrow" size={15}/>
               </button>
@@ -7510,7 +7514,7 @@ function MonsterHeroGame() {
               <input type="search" value={iconAdjustQuery} onChange={e=>setIconAdjustQuery(e.target.value)} placeholder="名前・内部IDで検索" className="w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black"/>
               <select value={filteredItems.some(entry=>entry.id===item.id)?item.id:''} onChange={e=>e.target.value&&setIconAdjustId(e.target.value)} size={Math.min(6,Math.max(2,filteredItems.length))} className="w-full rounded-xl bg-slate-900 border border-white/10 p-2 text-xs font-black">{!filteredItems.length&&<option value="">一致するアイコンはありません</option>}{filteredItems.map(entry=><option key={entry.id} value={entry.id}>{entry.name}（{entry.id}）</option>)}</select>
               <small className="block text-right text-[8px] text-slate-500">全{debugIconItems.length}件・表示{filteredItems.length}件</small>
-              <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"><div className="flex items-end justify-around gap-3 text-center text-[8px] font-black text-slate-400"><div><BreederIcon src={item.src} id={item.id} adjustment={values} alt="マーケット一覧" className="w-10 h-10 mx-auto border-2 border-white/20 bg-black/30"/><span>マーケット一覧</span></div><div><BreederIcon src={item.src} id={item.id} adjustment={values} alt="商品詳細" className="w-28 h-28 mx-auto border-4 border-white/20 bg-black/30"/><span>商品詳細</span></div><div><BreederIcon src={item.src} id={item.id} adjustment={values} alt="プロフィール選択" roundedClass="rounded-2xl" className="w-16 h-16 mx-auto border-2 border-amber-400 bg-black/30"/><span>プロフィール選択</span></div></div></section>
+              <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"><div className="grid grid-cols-2 items-end gap-3 text-center text-[8px] font-black text-slate-400"><div className="flex flex-col items-center"><HomeProfileIcon src={item.src} id={item.id} adjustment={values}/><span>HOME左上プロフィール</span></div><div><BreederIcon src={item.src} id={item.id} adjustment={values} alt="マーケット一覧" className="w-10 h-10 mx-auto border-2 border-white/20 bg-black/30"/><span>マーケット一覧</span></div><div><BreederIcon src={item.src} id={item.id} adjustment={values} alt="商品詳細" className="w-28 h-28 mx-auto border-4 border-white/20 bg-black/30"/><span>商品詳細</span></div><div><BreederIcon src={item.src} id={item.id} adjustment={values} alt="プロフィール選択" roundedClass="rounded-2xl" className="w-16 h-16 mx-auto border-2 border-amber-400 bg-black/30"/><span>プロフィール選択</span></div></div></section>
               {slider('scale','拡大率 scale',.5,5,.01)}{slider('x','左右位置 X',-50,50,1)}{slider('y','上下位置 Y',-50,130,1)}
               <pre className="whitespace-pre-wrap break-all rounded-xl bg-black/40 p-3 text-[10px] text-cyan-200">{copyText}</pre>
               <div className="grid grid-cols-2 gap-2"><button onClick={()=>setIconAdjustments(current=>({...current,[item.id]:initial}))} className="min-h-[46px] rounded-xl bg-slate-800 text-[10px] font-black">初期値へ戻す</button><button onClick={async()=>{await navigator.clipboard.writeText(copyText);window.alert('設定値をコピーしました。');}} className="min-h-[46px] rounded-xl bg-fuchsia-700 text-[10px] font-black">設定値をコピー</button></div>

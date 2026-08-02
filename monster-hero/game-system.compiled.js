@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a863970fcd81e400
+// source-sha256: 518f70b4ee710e04
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 21:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 21:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5080,6 +5080,22 @@ const BreederIcon = ({
   alt: alt,
   className: "absolute inset-0 w-full h-full object-contain",
   style: adjustment ? profileIconTransformStyle(adjustment) : marketProfileIconStyle(id)
+}));
+// HOME本番と調整Debugで、丸枠・余白・画像の有無による代替表示まで同じ部品を使う。
+const HomeProfileIcon = ({
+  src,
+  id,
+  adjustment
+}) => /*#__PURE__*/React.createElement("div", {
+  className: "mh-home-avatar"
+}, src ? /*#__PURE__*/React.createElement(BreederIcon, {
+  src: src,
+  id: id,
+  adjustment: adjustment,
+  alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u50CF",
+  className: "w-full h-full"
+}) : /*#__PURE__*/React.createElement(User, {
+  size: 24
 }));
 
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
@@ -13646,16 +13662,10 @@ function MonsterHeroGame() {
       className: "mh-home-player",
       onClick: () => setGameState('PROFILE'),
       "aria-label": "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3092\u958B\u304F"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-home-avatar"
-    }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement(BreederIcon, {
+    }, /*#__PURE__*/React.createElement(HomeProfileIcon, {
       src: resolveIconUrl(breederIcon),
-      id: breederIcon,
-      alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u50CF",
-      className: "w-full h-full"
-    }) : /*#__PURE__*/React.createElement(User, {
-      size: 24
-    })), /*#__PURE__*/React.createElement("div", {
+      id: breederIcon
+    }), /*#__PURE__*/React.createElement("div", {
       className: "mh-home-player-copy"
     }, /*#__PURE__*/React.createElement("strong", null, breederName), /*#__PURE__*/React.createElement("span", null, "\u30D6\u30EA\u30FC\u30C0\u30FC Lv.", breederLevel.level), /*#__PURE__*/React.createElement("div", {
       className: "mh-home-xp"
@@ -15902,8 +15912,14 @@ function MonsterHeroGame() {
       }, "\u5168", debugIconItems.length, "\u4EF6\u30FB\u8868\u793A", filteredItems.length, "\u4EF6"), /*#__PURE__*/React.createElement("section", {
         className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-end justify-around gap-3 text-center text-[8px] font-black text-slate-400"
-      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
+        className: "grid grid-cols-2 items-end gap-3 text-center text-[8px] font-black text-slate-400"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex flex-col items-center"
+      }, /*#__PURE__*/React.createElement(HomeProfileIcon, {
+        src: item.src,
+        id: item.id,
+        adjustment: values
+      }), /*#__PURE__*/React.createElement("span", null, "HOME\u5DE6\u4E0A\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
         src: item.src,
         id: item.id,
         adjustment: values,
