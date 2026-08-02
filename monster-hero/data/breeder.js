@@ -114,6 +114,8 @@ const BREEDER_MARKET_ITEMS = [
   { id:'Ark', name:"アークの円盤石", type:'disc', icon:ARK_DISC_ICON, cost:1500 },
   { id:'iblis_icon', name:"イブリースのアイコン", type:'icon', icon:IBLIS_FACE_ICON, cost:1 },
   { id:'Iblis', name:"イブリースの円盤石", type:'disc', icon:IBLIS_DISC_ICON, cost:1500 },
+  { id:'snegurochka_icon', name:"スネグーラチカのアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA.PNG?v=21ee3cd2a444', cost:1 },
+  { id:'snegurochka_awakened_icon', name:"スネグーラチカ（覚醒）のアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA_AWAKENED.PNG?v=3a71bfe44e3d', cost:1 },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   // 説明は実際の機能に合わせて更新すること。導入時は6色から全身を1色に変えるだけだったが、
   // その後アイコンごとの部位分け・プリセット27色・カスタムカラーに対応している
