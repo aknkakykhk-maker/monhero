@@ -29,7 +29,9 @@ const TARGETS = ['Mocchi', 'Iblis', 'Golem', 'Pixie'];
 // いまの実装値と、原寸に近い値で比べる
 const ANALYSIS_SIZES = [384, 1200];
 
-const pageFor = (maxSize) => `<!doctype html><meta charset="utf-8"><body>
+const pageFor = (maxSize) => `<!doctype html><meta charset="utf-8">
+<!-- 画像はPNGファイルになったので、monster-hero/ を基準にパスを解決させる -->
+<base href="/monster-hero/"><body>
 <script src="/monster-hero/data/images/images-ally.js"></script>
 <script src="/monster-hero/data/ally-monsters.js"></script>
 <script>

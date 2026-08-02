@@ -26,9 +26,10 @@ cd tools && npm install
 | `node dye-report.js [モンスターID...]` | 染色もどきの部位マスクを実画像で生成し、部位ごとの画素数・被覆率を出力する。回帰テスト用。 |
 | `node dye-report.js --save-baseline` | 現在の結果を `dye-baseline.json` に保存する。以降は実行のたびに差分が表示される。 |
 | `node region-map.js [モンスターID...]` | 部位分けを色分けしたPNGを `out/` に書き出す。目視確認用。 |
-| `node image-report.js` | 埋め込み画像(base64)の一覧をサイズ順に出す。重複した実体も検出する。 |
+| `node image-report.js` | `monster-hero/images/` のPNGをフォルダごとにサイズ順で出す。中身が同じ重複ファイル・どこからも参照されていないファイルも検出する。 |
 | `node monster-image-quality-check.js` | 敵・味方の全身画像数、PNG読込、透過隅、可視画素を検査する。 |
-| `node dedupe-images.js [--dry-run]` | 同じ base64 が複数の変数に重複して埋め込まれている箇所を、先に定義した変数への参照に置き換える。画像は1バイトも変えない。 |
+| `node extract-images.js [--dry-run]` | data/*.js に base64 で埋め込まれた画像をPNGファイルとして `monster-hero/images/` へ書き出し、定数をそのパスへ置き換える。置き場所はスクリプト内の `PLACEMENT` 表で決める。 |
+| `node image-asset-check.js` | 画像の参照先が実在するか、キャッシュキー(`?v=`)が中身と一致しているか、使われていない画像が残っていないかを確認する。 |
 | `node stamp-version.js` | BUILD_DATE、version.json、本体JSのキャッシュキーを現在の日本時間に揃える。手で書くと未来の時刻が入るので必ずこれを使う。 |
 | `node update-notice-dismiss-check.js` | 新バージョン通知が「押すと更新／×で今回は閉じる」の2択になっているか確認する。 |
 | `node update-notice-check.js` | 新バージョンの定期検知、常時表示、キャッシュ回避付き更新を静的に確認する。 |
@@ -90,7 +91,7 @@ cd tools && npm install
 | `node perf-check.js` | 読み込みにかかる時間と転送量を実ブラウザで計測する。 |
 | `node smoke.js` | 実ブラウザ(Chromium)で `data/*.js` を読み込み、画像の変数がすべて解決されるか確認する。事前にリポジトリのルートをHTTPで配信しておくこと(`python3 tools/serve.py`)。 |
 | `node grid-overlay.js 変数名...` | 立ち絵に0.1刻みの目盛りを重ねたPNGを出す。顔クロップや染色bboxの範囲を実測するときに使う。 |
-| `node make-face-icons.js [--preview] [MOCCHI ...]` | 立ち絵から顔部分を切り出して256pxの顔アイコンを作り、`_FACE_ICON` を差し替える。モンスターIDを指定すると対象だけを更新する。切り出し範囲はスクリプト内の `FACE_BOXES`。 |
+| `node make-face-icons.js [--preview] [MOCCHI ...]` | 立ち絵から顔部分を切り出して256pxの顔アイコンを作り、`images/monster-icons/face/` のPNGを上書きする。モンスターIDを指定すると対象だけを更新する。切り出し範囲はスクリプト内の `FACE_BOXES`。 |
 | `node face-render-check.js` | 顔アイコンが実ブラウザで正しく描画されるか確認し、アイコン選択画面と同じ見た目のスクリーンショットを出す。 |
 
 `dye-baseline.json` は「現在正しいとされている染色結果」の記録なので、
@@ -128,7 +129,7 @@ monster-hero/
   game-system.compiled.js     ★自動生成物★ src/game-system.jsx を tools/build.js で変換したもの
   src/game-system.jsx         ゲーム本体のソース(配信されない。改修はここに行う)
   data/
-    images/                   立ち絵・アイコンの巨大なbase64(images-ally.js / images-enemy.js)
+    images/                   立ち絵・アイコンの置き場所を書いたパス表(images-ally.js / images-enemy.js)
     ally-monsters.js          味方モンスターの定義
     enemy-monsters.js         敵モンスターの定義
     breeder.js                ブリーダーカード・マーケット・ブリーダー用の画像
@@ -142,7 +143,7 @@ atsu-cup/                     別アプリ(モンヒロとは独立)
 index.html                    2つのアプリへのハブページ
 ```
 
-巨大なbase64を `data/images/` にまとめてあるので、ゲームのバランスやデータを直すときに
+絵の実体は `monster-hero/images/` のPNGにまとめてあるので、ゲームのバランスやデータを直すときに
 開くファイル(`ally-monsters.js` など)と、めったに開かない画像ファイルが混ざらない。
 
 ## ブラウザに配信しているもの

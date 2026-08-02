@@ -10,7 +10,7 @@
 // 小さく縮んで表示されてしまっていた)。この6体分の顔アイコンをここで作る。
 const fs = require('fs');
 const path = require('path');
-const { REPO_ROOT, loadEmbeddedImages, decodeDataUrl, createCanvas, loadDyeModule } = require('./harness');
+const { REPO_ROOT, loadEmbeddedImages, decodeDataUrl, imageFilePath, createCanvas, loadDyeModule } = require('./harness');
 const { loadImage } = require('canvas');
 
 // 顔アイコン用の高解像度の元画像を置く場所(art-sources/README.md 参照)。
@@ -166,8 +166,6 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
   const dye = loadDyeModule();
   fs.mkdirSync(path.join(__dirname, 'out'), { recursive: true });
 
-  const filePath = path.join(REPO_ROOT, 'monster-hero', 'data', 'images', 'images-ally.js');
-  let src = fs.readFileSync(filePath, 'utf8');
   let changed = 0;
 
   for (const [name, box] of Object.entries(FACE_BOXES)) {
@@ -176,20 +174,23 @@ async function makeFaceIcon(dataUrl, box, name, dye) {
     if (!images[srcKey]) { console.log(`${srcKey}: 見つかりません(スキップ)`); continue; }
     const canvas = await makeFaceIcon(images[srcKey], box, name, dye);
     const buf = canvas.toBuffer('image/png');
-    const dataUrl = 'data:image/png;base64,' + buf.toString('base64');
 
     fs.writeFileSync(path.join(__dirname, 'out', `${name}_FACE_ICON.png`), buf);
     console.log(`${name.padEnd(10)} 顔クロップ ${SIZE}x${SIZE}  ${(buf.length / 1024).toFixed(0)} KB`);
 
     if (preview) continue;
-    // `const NAME_FACE_ICON = 何か;` を新しい dataURL で差し替える
-    const decl = new RegExp(`(const\\s+${name}_FACE_ICON\\s*=\\s*)(?:"[^"]*"|'[^']*'|\`[^\`]*\`|[A-Za-z0-9_$]+)(\\s*;)`);
-    if (!decl.test(src)) { console.log(`  ⚠ ${name}_FACE_ICON の宣言が見つかりませんでした`); continue; }
-    src = src.replace(decl, `$1"${dataUrl}"$2`);
+    // 顔アイコンはPNGファイルなので、変数が指しているファイルをそのまま上書きする。
+    // 全身アイコンを顔アイコンとして使い回しているモンスター(変数が別名になっている)は
+    // 上書きすると全身側まで書き換えてしまうため、対象外にする。
+    const dest = images[`${name}_FACE_ICON`];
+    if (!dest) { console.log(`  ⚠ ${name}_FACE_ICON の宣言が見つかりませんでした`); continue; }
+    if (dest === images[srcKey]) { console.log(`  ⚠ ${name}_FACE_ICON は全身画像と同じファイルを共有しているため書き換えません`); continue; }
+    const destPath = imageFilePath(dest);
+    fs.mkdirSync(path.dirname(destPath), { recursive: true });
+    fs.writeFileSync(destPath, buf);
     changed++;
   }
 
-  if (preview) { console.log('\n--preview のため images-ally.js は変更していません'); return; }
-  fs.writeFileSync(filePath, src);
-  console.log(`\n${changed}件の _FACE_ICON を顔クロップに差し替えました → ${(fs.statSync(filePath).size / 1024 / 1024).toFixed(2)} MB`);
+  if (preview) { console.log('\n--preview のため顔アイコンのPNGは更新していません'); return; }
+  console.log(`\n${changed}件の顔アイコンPNGを作り直しました`);
 })().catch((e) => { console.error(e); process.exit(1); });

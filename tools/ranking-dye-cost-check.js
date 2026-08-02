@@ -32,7 +32,9 @@ const CASES = [
   { label: '勇者モンだけ染める', total: ROWS },
 ];
 
-const page = `<!doctype html><meta charset="utf-8"><body style="margin:0;background:#020617">
+const page = `<!doctype html><meta charset="utf-8">
+<!-- 画像はPNGファイルになったので、monster-hero/ を基準にパスを解決させる -->
+<base href="/monster-hero/"><body style="margin:0;background:#020617">
 <div id="list"></div>
 <script src="/monster-hero/data/images/images-ally.js"></script>
 <script src="/monster-hero/data/ally-monsters.js"></script>

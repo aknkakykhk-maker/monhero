@@ -88,5 +88,47 @@ if (dataKeys.length === 0) {
 
 fs.writeFileSync(indexPath, replacedIndex);
 
+// 画像(images/*.png)のキャッシュキー(?v=)も中身のハッシュに合わせる。
+// 絵を差し替えてもファイル名は同じなので、キーが無いとブラウザに残った古い絵が
+// そのまま表示され続けてしまう。中身が変わった画像だけキーが変わる。
+// data/*.js のハッシュを計算するより前に行うと、ここで書き換えた内容が
+// 上のキーへ反映されないため、必ず後に置くこと(下で data/*.js を測り直す)。
+const IMAGE_HOST_FILES = [
+  'data/images/images-ally.js',
+  'data/images/images-enemy.js',
+  'data/breeder.js',
+];
+let imageCount = 0, imageChanged = 0;
+for (const rel of IMAGE_HOST_FILES) {
+  const hostPath = path.join(REPO_ROOT, 'monster-hero', rel);
+  if (!fs.existsSync(hostPath)) continue;
+  const before = fs.readFileSync(hostPath, 'utf8');
+  const after = before.replace(/(["'])(images\/[^"'?]+\.(?:png|jpe?g|webp|PNG))(?:\?v=[0-9a-f]*)?\1/g, (match, quote, imgRel) => {
+    const imgPath = path.join(REPO_ROOT, 'monster-hero', imgRel);
+    if (!fs.existsSync(imgPath)) {
+      console.error(`NG: ${rel} が参照している ${imgRel} が見つかりませんでした`);
+      process.exit(1);
+    }
+    imageCount++;
+    const h = crypto.createHash('sha256').update(fs.readFileSync(imgPath)).digest('hex').slice(0, 12);
+    return `${quote}${imgRel}?v=${h}${quote}`;
+  });
+  if (after !== before) { fs.writeFileSync(hostPath, after); imageChanged++; }
+}
+
+// 画像のキーを書き換えたぶん data/*.js の中身も変わるので、index.html 側のキーを測り直す
+if (imageChanged) {
+  const index2 = fs.readFileSync(indexPath, 'utf8');
+  const redone = index2.replace(/(<script src="(data\/[^"?]+\.js)\?v=)[^"]*(")/g, (match, head, relPath, tail) => {
+    const filePath = path.join(REPO_ROOT, 'monster-hero', relPath);
+    const hash = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex').slice(0, 12);
+    const i = dataKeys.findIndex(k => k.startsWith(relPath + '='));
+    if (i >= 0) dataKeys[i] = `${relPath}=${hash}`;
+    return `${head}${hash}${tail}`;
+  });
+  fs.writeFileSync(indexPath, redone);
+}
+
 console.log(`BUILD_DATE、version.json、更新履歴、GAME_BUILD を ${stamp} に更新しました`);
 console.log(`data/*.js のキャッシュキー: ${dataKeys.join(' / ')}`);
+console.log(`画像のキャッシュキー: ${imageCount}枚`);

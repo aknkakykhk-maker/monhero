@@ -52,8 +52,8 @@
 | `data/skills.js` | 通常技・ガード・距離技段階、カード色 | 共通カード定義の正本 |
 | `data/breeder.js` | 教えカード、効果段階、マーケット商品、関連画像 | ブリーダー系データの正本 |
 | `data/changelog.js` | 利用者向け更新・不具合履歴 | 機能出荷時に先頭へ追記 |
-| `data/images/images-ally.js` | 味方のbase64画像 | 大容量。通常ロジック変更で触らない |
-| `data/images/images-enemy.js` | 敵のbase64画像 | 同上 |
+| `data/images/images-ally.js` | 味方の画像のパス表 | 実体は `monster-hero/images/monsters` ほか。通常ロジック変更で触らない |
+| `data/images/images-enemy.js` | 敵の画像のパス表 | 実体は `monster-hero/images/enemies`。同上 |
 | `audio/` | 画面別BGM、勝利ジングル | `preload='none'` で遅延読込 |
 | `vendor/` | React 18 / ReactDOM 18 production UMD | バージョン更新時のみ差替え |
 | `icons/` | favicon、Apple touch、PWAアイコン | manifest/HTML参照と同期 |
@@ -81,7 +81,7 @@
 - **生成・整合:** `build.js`, `check-syntax.js`, `stamp-version.js`。
 - **主要回帰:** `feature-check.js`, `battle-check.js`, `boot-check.js`, `ranking-check.js`, `ranking-finish-check.js`, `difficulty-item-check.js`, `bulk-enhance-check.js`。
 - **音声:** `bgm-check.js`, `title-bgm-check.js`, `tap-sound-trace.js`。
-- **画像・染色:** `harness.js`, `dye-report.js`, `region-map.js`, `grid-overlay.js`, `make-face-icons.js`, `face-render-check.js`, `image-report.js`, `dedupe-images.js`。
+- **画像・染色:** `harness.js`, `dye-report.js`, `region-map.js`, `grid-overlay.js`, `make-face-icons.js`, `face-render-check.js`, `image-report.js`, `extract-images.js`, `image-asset-check.js`。
 - **配信・性能:** `serve.py`, `smoke.js`, `perf-check.js`。
 
 Node依存は `tools/package.json` / `package-lock.json` に閉じ、ゲーム配信物へバンドルしない。ブラウザ検査はリポジトリルートを `python3 tools/serve.py` でポート8899に配信する前提である。
@@ -98,7 +98,7 @@ Node依存は `tools/package.json` / `package-lock.json` に閉じ、ゲーム�
 
 - `traitDesc` / `effectDesc` は説明であり、効果実装は本体にも存在する。
 - `game-system.compiled.js` はレビュー対象になる生成物だが編集元ではない。
-- base64画像と音声は通信・差分コストが大きく、不要な移動や再エンコードをしない。
+- 画像(`monster-hero/images/`)と音声は通信・差分コストが大きく、不要な移動や再エンコードをしない。
 - Tailwindは実行時CDN生成のため、動的クラスだけに重要色を依存させない。
 - ランキング以外のゲーム進行は端末保存。ランキングのサーバースキーマ管理ファイル、CI設定、service workerはリポジトリ内に**未確認**。
 

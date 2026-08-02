@@ -35,13 +35,15 @@ const CHECK = [
     let v;
     try { v = eval(n); } catch (e) { return { n, ok: false, why: '未定義(' + e.message + ')' }; }
     if (typeof v !== 'string') return { n, ok: false, why: '文字列ではない: ' + typeof v };
-    if (!v.startsWith('data:image/')) return { n, ok: false, why: 'dataURLではない' };
-    return { n, ok: true, chars: v.length };
+    // 2026年8月に画像をbase64の埋め込みからPNGファイルへ移したため、
+    // 値は 'images/...' のパスになる(古い形式のdataURLも一応通す)
+    if (!v.startsWith('images/') && !v.startsWith('data:image/')) return { n, ok: false, why: '画像のパスでもdataURLでもない: ' + v.slice(0, 40) };
+    return { n, ok: true, chars: v.length, path: v.startsWith('images/') ? v : null };
   }), CHECK);
 
   let ng = 0;
   for (const r of result) {
-    if (r.ok) console.log(`  OK  ${r.n.padEnd(22)} ${r.chars} chars`);
+    if (r.ok) console.log(`  OK  ${r.n.padEnd(22)} ${r.path || (r.chars + ' chars')}`);
     else { console.log(`  NG  ${r.n.padEnd(22)} ${r.why}`); ng++; }
   }
 
