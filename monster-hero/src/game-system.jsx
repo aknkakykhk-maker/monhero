@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 23:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 23:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -101,6 +101,8 @@ const QUICK_REWARD_MULT = 1.5;
 // クイックモードでWAVEごとに味方の全ステータスへかける倍率
 const QUICK_GROWTH_MULT = 1.10;
 const calculateRemainingHp = (currentHp, finalDamage) => Math.max(0, (Number(currentHp) || 0) - (Number(finalDamage) || 0));
+// 恒久成長後の基礎最大値とバトル中の上限バフから、表示・回復上限に使う実効最大値を一意に求める。
+const resolveEffectiveMaxStat = (baseMax, buffPct) => Math.floor((Number(baseMax) || 0) * (1 + (Number(buffPct) || 0)));
 const quickGrowStat = (value) => Math.floor((Number(value) || 0) * QUICK_GROWTH_MULT);
 const resolveQuickGrowthStats = ({hp, atk, def, guts}) => ({
   hp: quickGrowStat(hp), atk: quickGrowStat(atk), def: quickGrowStat(def), guts: quickGrowStat(guts),
@@ -3416,8 +3418,11 @@ function MonsterHeroGame() {
 
   const scoreMultiplier = useMemo(() => DIFFICULTY_SETTINGS[safeDifficulty].score, [safeDifficulty]);
   const goldMultiplier = useMemo(() => DIFFICULTY_SETTINGS[safeDifficulty].gold, [safeDifficulty]);
-  const effectiveMaxHp = useMemo(() => Math.floor(maxHp * (1.0 + getPermaBuff('muaHpPct'))), [maxHp, permaBuffs]);
-  const effectiveMaxGuts = useMemo(() => Math.floor(maxGuts * (1.0 + getPermaBuff('muaGutsPct'))), [maxGuts, permaBuffs]);
+  const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);
+  const effectiveMaxGuts = useMemo(() => resolveEffectiveMaxStat(maxGuts, getPermaBuff('muaGutsPct')), [maxGuts, permaBuffs]);
+  // バフが外れて実効最大値が下がった場合も、現在値だけが新しい上限を超えた状態を残さない。
+  useEffect(() => { setHp(current => Math.min(current, effectiveMaxHp)); }, [effectiveMaxHp]);
+  useEffect(() => { setGuts(current => Math.min(current, effectiveMaxGuts)); }, [effectiveMaxGuts]);
 
   // 全国ランキングをSupabaseから取得。失敗時は端末内保存の値にフォールバック
   // ブリーダーレベルのランキング。ランキング行は難易度ごとに保存されているので、
@@ -6539,9 +6544,12 @@ function MonsterHeroGame() {
   const beginQuickGrowth = () => {
     const before = { hp: maxHp, atk, def, guts: maxGuts };
     const after = resolveQuickGrowthStats(before);
+    // setMax*後の古いmemo値は読まず、成長後の基礎値と現在のバフ率から実効最大値をここで確定する。
+    const nextEffectiveMaxHp = resolveEffectiveMaxStat(after.hp, getPermaBuff('muaHpPct'));
+    const nextEffectiveMaxGuts = resolveEffectiveMaxStat(after.guts, getPermaBuff('muaGutsPct'));
     // 画面に出す値と実際に反映する値がずれないよう、同じ after をそのまま state へ入れる
     setMaxHp(after.hp); setAtk(after.atk); setDef(after.def); setMaxGuts(after.guts);
-    setHp(after.hp); setGuts(after.guts); // 全回復
+    setHp(nextEffectiveMaxHp); setGuts(nextEffectiveMaxGuts); // バトル中バフ込みの実効最大値まで全回復
     setQuickGrowth({
       nextWave: wave + 1,
       stats: [
@@ -6551,7 +6559,7 @@ function MonsterHeroGame() {
         { label: 'ガッツ', before: before.guts, after: after.guts },
       ],
       nextDef: after.def,
-      nextStats: after,
+      nextStats: { ...after, effectiveMaxHp: nextEffectiveMaxHp, effectiveMaxGuts: nextEffectiveMaxGuts },
     });
     quickAdvanceRef.current = null;
     Audio_.se.levelUp();
@@ -6777,8 +6785,10 @@ function MonsterHeroGame() {
     // クイック成長で確定した最大値を明示的に引き継ぎ、次WAVE開始時も同じ値で全回復する。
     // setMax*直後の古いstateやモンスター初期値は参照しない。
     if (restoredStats) {
-      setMaxHp(restoredStats.hp); setHp(restoredStats.hp);
-      setMaxGuts(restoredStats.guts); setGuts(restoredStats.guts);
+      const restoredEffectiveMaxHp = resolveEffectiveMaxStat(restoredStats.hp, getPermaBuff('muaHpPct'));
+      const restoredEffectiveMaxGuts = resolveEffectiveMaxStat(restoredStats.guts, getPermaBuff('muaGutsPct'));
+      setMaxHp(restoredStats.hp); setHp(restoredEffectiveMaxHp);
+      setMaxGuts(restoredStats.guts); setGuts(restoredEffectiveMaxGuts);
       setAtk(restoredStats.atk); setDef(restoredStats.def);
     }
     const currentSlots = s||slots;
