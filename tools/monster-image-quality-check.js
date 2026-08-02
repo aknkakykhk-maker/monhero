@@ -2,18 +2,27 @@
 const fs = require('fs');
 const path = require('path');
 const { createCanvas, Image } = require('canvas');
-const { REPO_ROOT, imageFilePath } = require('./harness');
+const { REPO_ROOT, imageFilePath, loadEmbeddedImages } = require('./harness');
 
 // 2026年8月に画像をbase64の埋め込みからPNGファイルへ移したため、
 // 変数が指しているパスからファイルを読んで検査する
+// 件数は決め打ちにしない(モンスターを1体足すたびにこの検査だけが落ちるため)。
+// 代わりに「モンスター定義が使っている立ち絵が1枚残らず検査対象になっていること」を確かめる。
 const files = ['images-ally.js', 'images-enemy.js'];
-const expected = { 'images-ally.js': 12, 'images-enemy.js': 10 };
 const images = [];
 for (const file of files) {
   const source = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/data/images', file), 'utf8');
   const matches = [...source.matchAll(/const\s+(\w+_IMG(?:_DATA)?)\s*=\s*"(images\/[^"]+)"/g)];
-  if (matches.length !== expected[file]) throw new Error(`${file}: 全身画像は${expected[file]}件必要ですが${matches.length}件です`);
+  if (matches.length === 0) throw new Error(`${file}: 全身画像の宣言が1件も見つかりません`);
   images.push(...matches.map(match => ({ name: match[1], url: match[2] })));
+}
+{
+  const covered = new Set(images.map(i => i.url.split('?')[0]));
+  const usedByMonsters = Object.entries(loadEmbeddedImages())
+    .filter(([name]) => /_IMG(_DATA)?$/.test(name))
+    .map(([, url]) => String(url).split('?')[0]);
+  const missing = usedByMonsters.filter(url => !covered.has(url));
+  if (missing.length) throw new Error(`検査から漏れている立ち絵があります: ${missing.join(', ')}`);
 }
 
 for (const { name, url } of images) {

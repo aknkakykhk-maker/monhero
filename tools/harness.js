@@ -43,6 +43,10 @@ const EXPORTED_NAMES = [
   'isImageIconValue',
   'cardIconNode',
   'rankingPartyColors',
+  'rankingMasuDetail',
+  'rankingDetailToMasu',
+  'masuBondLevelInfo',
+  'uniqueSkillAtLevel',
 ];
 
 // ブラウザAPIの最小スタブ。canvasだけは node-canvas で本物と同じように動かす
@@ -95,6 +99,19 @@ function makeBrowserStubs() {
   return { windowStub, documentStub, React, ReactDOM };
 }
 
+// index.html が本体より先に読み込むデータ(読み込み順もそのまま)
+const DATA_FILES = [
+  'data/images/images-ally.js',
+  'data/images/images-enemy.js',
+  'data/ally-monsters.js',
+  'data/breeder.js',
+  'data/enemy-monsters.js',
+  'data/skills.js',
+  'data/changelog.js',
+  'data/help.js',
+  'data/assistants.js',
+];
+
 let _cached = null;
 
 // game-system.jsx を実行し、染色関連のシンボルを返す(何度呼んでも1回だけ実行する)
@@ -113,6 +130,13 @@ function loadDyeModule() {
   sandbox.globalThis = sandbox;
   sandbox.self = sandbox;
   vm.createContext(sandbox);
+  // 本体は index.html で data/*.js を先に読み込んでから動く前提なので、同じ順番で先に流し込む。
+  // これが無いと ALL_PLAYER_MONSTERS などを参照する関数を取り出したときだけ落ちる。
+  for (const rel of DATA_FILES) {
+    const p = path.join(REPO_ROOT, 'monster-hero', rel);
+    if (!fs.existsSync(p)) continue;
+    vm.runInContext(fs.readFileSync(p, 'utf8'), sandbox, { filename: rel });
+  }
   const exportLine = `\n;globalThis.__dyeExports = { ${EXPORTED_NAMES.join(', ')} };\n`;
   vm.runInContext(code + exportLine, sandbox, { filename: 'game-system.jsx', timeout: 120000 });
   _cached = sandbox.__dyeExports;
