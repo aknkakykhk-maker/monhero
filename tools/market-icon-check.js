@@ -67,8 +67,8 @@ check('ききの画像はブリーダーアイコン専用フォルダにある'
 check('対象の3アイコンだけに拡大・位置調整を適用する',
   source.includes('const MARKET_PROFILE_ICON_STYLES = {')
     && source.includes("kiki_icon: { transform: 'scale(")
-    && source.includes("snegurochka_icon: { transform: 'scale(2.3) translateY(34%)' }")
-    && source.includes("snegurochka_awakened_icon: { transform: 'scale(2.3) translateY(34%)' }")
+    && source.includes("snegurochka_icon: { transform: 'scale(2.85) translate(3%, 35%)' }")
+    && source.includes("snegurochka_awakened_icon: { transform: 'scale(2.85) translate(3%, 35%)' }")
     && source.includes('const marketProfileIconStyle = (id) => MARKET_PROFILE_ICON_STYLES[id];')
     && (source.match(/style=\{marketProfileIconStyle\(/g) || []).length >= 6);
 
