@@ -91,6 +91,34 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   const inBattle = (await bodyText()).includes('WAVE 1/');
   check('バトルが始まる', inBattle);
 
+  // --- 上部ヘッダー ---
+  // Reactの状態を進めず、表示中のスコア文字列だけを受け入れ条件の値へ差し替えて
+  // 375px幅で全要素と「諦める」のタップ領域がヘッダー内に残ることを測る。
+  await page.setViewportSize({ width: 375, height: 812 });
+  for (const scoreText of ['0', '9,999', '64,240', '999,999', '1,234,567.89']) {
+    const layout = await page.evaluate((value) => {
+      const header = document.querySelector('[data-battle-header]');
+      const score = document.querySelector('[data-battle-score]');
+      const quit = document.querySelector('[data-battle-quit]');
+      if (!header || !score || !quit) return null;
+      const textNode = [...score.childNodes].find(n => n.nodeType === Node.TEXT_NODE);
+      if (textNode) textNode.textContent = ` ${value}`;
+      const h = header.getBoundingClientRect();
+      const q = quit.getBoundingClientRect();
+      const controls = [...header.querySelectorAll('button')].map(button => button.getBoundingClientRect());
+      return {
+        inside: q.left >= h.left && q.right <= h.right && q.top >= h.top && q.bottom <= h.bottom,
+        tappable: q.width >= 28 && q.height >= 28,
+        controlsInside: controls.every(r => r.left >= h.left && r.right <= h.right),
+        noOverlap: controls.every((r, i) => controls.every((other, j) => i === j || r.right <= other.left || other.right <= r.left)),
+      };
+    }, scoreText);
+    check(`375px・スコア${scoreText}で諦めるを表示して押せる`,
+      !!layout && layout.inside && layout.tappable && layout.controlsInside && layout.noOverlap);
+  }
+  await page.screenshot({ path: path.join(__dirname, 'out', 'battle-header-375.png') }).catch(() => {});
+  await page.setViewportSize({ width: 390, height: 844 });
+
   // --- ① 距離撃 ---
   // 手札は毎ターン入れ替わるので、バトル中に見えた距離撃の名前をすべて集めて判定する
   const seenRange = new Set();
