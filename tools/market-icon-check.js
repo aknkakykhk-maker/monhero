@@ -68,7 +68,7 @@ check('対象アイコンを共通部品で拡大・位置調整する',
   source.includes('const MARKET_PROFILE_ICON_STYLES = {')
     && source.includes('snegurochka_icon: { scale: 4.28, x: 11, y: 111 }')
     && source.includes('snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 }')
-    && source.includes('iblis_icon: { scale: 1.42, x: 3, y: -14 }')
+    && source.includes('iblis_icon: { scale: 1.42, x: 2, y: -10 }')
     && source.includes('const profileIconTransformStyle = ({ scale=1, x=0, y=0 }={})')
     && source.includes('transform: `translate(${x}%, ${y}%) scale(${scale})`')
     && source.includes('transformOrigin:\'center center\'')
@@ -78,7 +78,9 @@ check('対象アイコンを共通部品で拡大・位置調整する',
 
 check('デバッグ画面で全アイコンの数値と3サイズを調整・コピーできる',
   source.includes("gameState==='BREEDER_ICON_DEBUG'")
-    && source.includes("BREEDER_MARKET_ITEMS.filter(item=>item.type==='icon')")
+    && source.includes('const breederIconOptions =')
+    && source.includes('breederIconOptions({includeUnowned:true})')
+    && source.includes('名前・内部IDで検索')
     && source.includes("slider('scale','拡大率 scale'")
     && source.includes("slider('x','左右位置 X'")
     && source.includes("slider('y','上下位置 Y'")
