@@ -90,7 +90,7 @@ const sources = [...DATA_FILES, 'data/assistants.js', 'data/ally-monsters.js', '
   .map((p) => fs.readFileSync(p, 'utf8'))
   .join('\n');
 const referenced = new Set(entries.map(([, v]) => v.split('?')[0]));
-for (const m of sources.matchAll(/["'`](images\/[^"'`\s)]+\.(?:png|jpe?g|webp|PNG))["'`]/g)) referenced.add(m[1].split('?')[0]);
+for (const m of sources.matchAll(/["'`](images\/[^"'`\s)?]+\.(?:png|jpe?g|webp|PNG))(?:\?[^"'`\s)]*)?["'`]/g)) referenced.add(m[1]);
 // 助手の表情画像のように「imageDir + 表情名」で組み立てるものは、フォルダごと参照済みとみなす
 const referencedDirs = [...sources.matchAll(/imageDir:\s*["'`](images\/[^"'`]+)["'`]/g)].map((m) => m[1]);
 const orphans = files.filter((rel) => !referenced.has(rel) && !referencedDirs.some((d) => rel.startsWith(d + '/')));

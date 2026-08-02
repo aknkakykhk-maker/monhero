@@ -1,5 +1,14 @@
 const CHANGELOG = [
   {
+    date: "2026-08-02 19:03",
+    type: "update",
+    title: "ブリーダーアイコンを追加しました",
+    items: [
+      "スネグーラチカと覚醒版のブリーダーアイコンを追加しました",
+    ],
+  },
+
+  {
     date: "2026-08-02 17:20",
     type: "issue",
     status: "fixed",
