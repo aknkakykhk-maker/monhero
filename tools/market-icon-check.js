@@ -76,7 +76,7 @@ check('対象アイコンを共通部品で拡大・位置調整する',
     && (source.match(/<BreederIcon /g) || []).length >= 10
     && !source.includes('transform: `scale(${scale}) translate(${x}%, ${y}%)`'));
 
-check('デバッグ画面で全アイコンの数値と3サイズを調整・コピーできる',
+check('デバッグ画面で全アイコンの数値と4つの本番表示を調整・コピーできる',
   source.includes("gameState==='BREEDER_ICON_DEBUG'")
     && source.includes('const breederIconOptions =')
     && source.includes('breederIconOptions({includeUnowned:true})')
@@ -84,6 +84,9 @@ check('デバッグ画面で全アイコンの数値と3サイズを調整・コ
     && source.includes("slider('scale','拡大率 scale'")
     && source.includes("slider('x','左右位置 X'")
     && source.includes("slider('y','上下位置 Y'")
+    && source.includes('const HomeProfileIcon =')
+    && (source.match(/<HomeProfileIcon /g) || []).length === 2
+    && source.includes('HOME左上プロフィール')
     && source.includes('マーケット一覧')
     && source.includes('商品詳細')
     && source.includes('プロフィール選択')
