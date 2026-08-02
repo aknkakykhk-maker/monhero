@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 21:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 22:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1469,6 +1469,65 @@ const cardIconNode = (icon, sizePx) => isImageIconValue(icon)
 const rankingPartyColors = (baseId, colors) => {
   const raw = Array.isArray(colors) ? colors : [];
   return Array.from({ length: dyeRegionCount(baseId) }, (_, i) => raw[i] || null);
+};
+// ランキングの記録に載せる「マスモンの詳細」。編成の詳細から1体ずつ、育て方まで見られるようにする。
+// 記録が重くならないよう、表示に必要な最小限だけを送る。技の中身はどの端末も同じデータを
+// 持っているので、継承した固有技も元のモンスターIDとレベルだけ送り、見る側で組み立て直す
+// (1体あたり数百バイト。以前ここへ画像を入れて読み込みが終わらなくなったことがあるため、
+//  「同梱してあるもの(絵・技のデータ)は送らない」という方針を守る)。
+const RANKING_DETAIL_VERSION = 1;
+const rankingMasuDetail = (masu) => {
+  if (!masu) return null;
+  const sp = masu.statPoints || {};
+  const num = (v) => Math.max(0, Math.floor(Number(v) || 0));
+  const inherited = (Array.isArray(masu.inheritedUniques) ? masu.inheritedUniques : []).map((unique, index) => {
+    const monId = unique && unique.monId;
+    if (!monId) return null;
+    return { monId, level: Math.max(num(unique.evoLevel), num(masu.uniqueSkillLevels?.[`inh:${index}`])) };
+  }).filter(Boolean);
+  return {
+    v: RANKING_DETAIL_VERSION,
+    name: typeof masu.name === 'string' ? masu.name.slice(0, 24) : null,
+    bondXp: num(masu.bondXp),
+    rebirthCount: num(masu.rebirthCount),
+    levelCap: num(masu.levelCap) || null,
+    statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
+    distApt: Array.isArray(masu.distApt) ? masu.distApt.slice(0, 4).map(v => Math.round(Number(v) || 0)) : null,
+    distAptPoints: num(masu.distAptPoints),
+    uniqueLevel: num(masu.uniqueSkillLevels?.own),
+    inherited,
+    fusionCount: Array.isArray(masu.fusionHistory) ? masu.fusionHistory.length : 0,
+  };
+};
+// 記録の詳細を、モンスター詳細の表示に使う「マスモン相当」の形へ戻す。
+// 壊れた記録・知らないモンスターが入っていても落ちないよう、すべて既定値へ倒す。
+const rankingDetailToMasu = (baseId, detail, colors) => {
+  if (!detail || typeof detail !== 'object' || !baseId) return null;
+  const num = (v) => Math.max(0, Math.floor(Number(v) || 0));
+  const sp = detail.statPoints || {};
+  const uniqueSkillLevels = { own: num(detail.uniqueLevel) };
+  const inheritedUniques = [];
+  (Array.isArray(detail.inherited) ? detail.inherited : []).forEach((entry) => {
+    const source = ALL_PLAYER_MONSTERS[entry && entry.monId]?.unique;
+    if (!source) return; // 知らないモンスターの技は出せないので飛ばす(位置は詰めて数え直す)
+    uniqueSkillLevels[`inh:${inheritedUniques.length}`] = num(entry.level);
+    inheritedUniques.push({ ...source, monId: entry.monId, evoLevel: num(entry.level) });
+  });
+  return {
+    id: null,
+    baseId,
+    name: (typeof detail.name === 'string' && detail.name.trim()) ? detail.name : (ALL_PLAYER_MONSTERS[baseId]?.name || 'マスモン'),
+    bondXp: num(detail.bondXp),
+    rebirthCount: num(detail.rebirthCount),
+    levelCap: num(detail.levelCap) || INITIAL_MASU_LEVEL_CAP,
+    statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
+    distApt: Array.isArray(detail.distApt) && detail.distApt.length === 4 ? detail.distApt.map(v => Math.round(Number(v) || 0)) : null,
+    distAptPoints: num(detail.distAptPoints),
+    uniqueSkillLevels,
+    inheritedUniques,
+    fusionHistory: Array.from({ length: num(detail.fusionCount) }, () => ({})),
+    colors: Array.isArray(colors) ? colors : [],
+  };
 };
 const RebirthStars = ({ count = 0, className = '' }) => {
   const value = Math.max(0, Math.floor(Number(count) || 0));
@@ -3035,6 +3094,8 @@ function MonsterHeroGame() {
   // 染色はここでだけ見せる(一覧で全員染めるとCanvasの再着色が重すぎる。
   // 実測は tools/ranking-dye-cost-check.js を参照)
   const [rankingPartyDetail, setRankingPartyDetail] = useState(null);
+  // 編成の詳細からさらに1体ぶんの育て方を見る(記録に詳細が入っているときだけ開ける)
+  const [rankingMonsterDetail, setRankingMonsterDetail] = useState(null);
   const [skillEffectDetail, setSkillEffectDetail] = useState(null); // 技の効果が枠に収まらないときに全文を出すモーダル
   const [selectedTeachingCard, setSelectedTeachingCard] = useState(null);
   // ==================== バフ・デバフ統合管理システム ====================
@@ -4382,7 +4443,10 @@ function MonsterHeroGame() {
       if (!s) return null;
       const colors = rankingPartyColors(s.id, s.colors);
       const dyed = colors.some(Boolean);
-      return { role:index===heroSlotIndex?'hero':'ally', id:s.id, baseId:s.id, monsterId:s.id, masuId:s.masuId||null, name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji:s.emoji||ALL_PLAYER_MONSTERS[s.id]?.emoji||null, bondLevel:s.masuId?getMasuBondLevel(s.masuId).level:null, ...(dyed ? { colors } : {}) };
+      // 育て方(ステータス・間合い適性・固有技Lv)は、編成の詳細から1体ずつ見られるように残す。
+      // 育てていないベースモンは種のデータだけで表示できるので、マスモンのときだけ付ける。
+      const detail = s.masuId ? rankingMasuDetail(getMasuMon(s.masuId)) : null;
+      return { role:index===heroSlotIndex?'hero':'ally', id:s.id, baseId:s.id, monsterId:s.id, masuId:s.masuId||null, name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji:s.emoji||ALL_PLAYER_MONSTERS[s.id]?.emoji||null, bondLevel:s.masuId?getMasuBondLevel(s.masuId).level:null, ...(dyed ? { colors } : {}), ...(detail ? { detail } : {}) };
     });
     const name = breederName || '名無しのブリーダー';
     const heroName = (mainHero && (ALL_PLAYER_MONSTERS[mainHero.id]?.name || mainHero.name)) || 'Unknown';
@@ -10276,6 +10340,14 @@ function MonsterHeroGame() {
                             : <span className="text-[8px] text-slate-500">染色なし</span>}
                         </div>
                       </div>
+                      {/* 育て方まで見せられるのは、詳細を送るようになってからの記録だけ。
+                          それ以前の記録では押せない状態にして、理由をその場に出す */}
+                      <button
+                        onClick={()=>{ if (m?.detail) setRankingMonsterDetail(m); }}
+                        disabled={!m?.detail}
+                        className={`shrink-0 self-stretch px-2 rounded-xl border text-[9px] font-black leading-tight ${m?.detail?'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95':'border-white/10 bg-black/20 text-slate-600'}`}>
+                        {m?.detail?<>詳細<br/>›</>:<>情報<br/>なし</>}
+                      </button>
                     </div>
                   );
                 })}
@@ -10283,6 +10355,71 @@ function MonsterHeroGame() {
             )}
             <button onClick={()=>setRankingPartyDetail(null)} className="w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0">とじる</button>
           </div>
+          </div>
+        </div>);
+      })()}
+
+      {/* ランキングの編成から開く、1体ぶんの詳細。表示はマスモン詳細と同じ共通実装を使い、
+          こちらは見るだけ(改名・強化・放牧の操作は出さない)。 */}
+      {rankingMonsterDetail&&(()=>{
+        const member = rankingMonsterDetail;
+        const baseId = rankingMonsterIdOf(member);
+        const base = ALL_PLAYER_MONSTERS[baseId];
+        const masu = base ? rankingDetailToMasu(baseId, member.detail, Array.isArray(member.colors) ? member.colors : []) : null;
+        const mon = masu ? mergeMasuIntoMon(masu) : null;
+        const close = () => setRankingMonsterDetail(null);
+        if (!base || !masu || !mon) {
+          return (<div onClick={close} className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:41900}} role="dialog" aria-modal="true">
+            <div onClick={e=>e.stopPropagation()} className="w-full max-w-sm rounded-3xl border-2 border-indigo-500 bg-slate-900 p-5 text-center">
+              <div className="text-[11px] text-slate-400">このモンスターの詳細は表示できません</div>
+              <button onClick={close} className="mt-4 w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98]">とじる</button>
+            </div>
+          </div>);
+        }
+        const lvl = masuBondLevelInfo(masu);
+        const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
+        const sp = masu.statPoints || {};
+        const statRow = (label, value, plus, color) => [label, (<>{value}{plus>0&&<span className="text-emerald-400 text-[8px]"> (+{plus})</span>}</>), color];
+        return (<div onClick={close} className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:41900}} role="dialog" aria-modal="true" aria-label={`${masu.name}の詳細`}>
+          <div onClick={e=>e.stopPropagation()} className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
+            <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
+              <div className="relative w-20 h-20 shrink-0">
+                <div className={`w-20 h-20 rounded-full overflow-hidden border ${masu.fusionHistory.length>0?'border-amber-400 ring-2 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={baseId} src={base.iconUrl} alt={masu.name} masuColors={masu.colors} className="w-full h-full object-cover"/></div>
+                {masu.fusionHistory.length>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1.5 py-0.5 text-[8px] font-black text-black leading-tight">+{masu.fusionHistory.length}</div>}
+                <RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-black text-white truncate">{masu.name}</h3>
+                <div className="text-[9px] text-pink-400 font-bold uppercase tracking-wider">マスモン・元は{base.name}</div>
+                <div className="mt-1">
+                  <div className="text-[9px] text-pink-300 font-black flex items-center gap-1"><Heart size={9}/>絆Lv.{lvl.level}</div>
+                  <div className="flex items-center gap-2 text-[8px] font-black"><span className="text-violet-300">転生 {masu.rebirthCount}回</span><span className="text-cyan-300">上限 Lv.{masu.levelCap}</span></div>
+                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
+                  <div className="text-[7px] text-pink-400/70 font-mono mt-0.5">{lvl.xpIntoLevel.toLocaleString()} / {lvl.xpForNext.toLocaleString()} XP</div>
+                </div>
+              </div>
+              <button onClick={close} className="p-2 bg-white/5 rounded-full active:scale-90 shrink-0"><X size={16}/></button>
+            </div>
+            <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
+              {renderMonsterDetailInfo(mon, {
+                statTitle: '現在のステータス(強化分込み)',
+                statValues: [
+                  statRow('ライフ', base.baseHp+(sp.hp||0), sp.hp||0, 'text-pink-400'),
+                  statRow('ちから', base.baseAtk+(sp.atk||0), sp.atk||0, 'text-red-400'),
+                  statRow('丈夫さ', base.baseDef+(sp.def||0), sp.def||0, 'text-emerald-400'),
+                  statRow('ガッツ', base.baseGuts+(sp.guts||0), sp.guts||0, 'text-amber-400'),
+                ],
+                aptPointsLabel: <div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints}</div>,
+              })}
+              <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30">
+                <div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>
+                {getRebirthSkillChoices(masu).map(skill=>{
+                  const current=uniqueSkillAtLevel(skill.unique, skill.level);
+                  return <div key={skill.key} className="w-full flex items-center justify-between text-[10px] font-black py-0.5"><span className="text-white truncate">{current?.name||skill.name}</span><span className="text-amber-300 shrink-0">Lv.{skill.level}</span></div>;
+                })}
+              </div>
+            </div>
+            <button onClick={close} className="w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0">とじる</button>
           </div>
         </div>);
       })()}
