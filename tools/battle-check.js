@@ -92,18 +92,23 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   check('バトルが始まる', inBattle);
 
   // --- 上部ヘッダー ---
-  // Reactの状態を進めず、表示中のスコア文字列だけを受け入れ条件の値へ差し替えて
-  // 375px幅で全要素と「諦める」のタップ領域がヘッダー内に残ることを測る。
-  await page.setViewportSize({ width: 375, height: 812 });
-  for (const scoreText of ['0', '9,999', '64,240', '999,999', '1,234,567.89']) {
+  // Reactの状態を進めず、表示中のスコア文字列だけを受け入れ条件の値へ差し替えて、
+  // iPhone SE相当の幅でTURN・SCOREと固定操作領域が重ならずヘッダー内に残ることを測る。
+  await page.setViewportSize({ width: 375, height: 667 });
+  for (const scoreText of ['0', '64,240', '1,273,520', '999,999,999', '1,000,000,000']) {
     const layout = await page.evaluate((value) => {
       const header = document.querySelector('[data-battle-header]');
+      const turn = document.querySelector('[data-battle-turn]');
       const score = document.querySelector('[data-battle-score]');
+      const scoreValue = document.querySelector('[data-battle-score-value]');
+      const controlsBox = document.querySelector('[data-battle-controls]');
       const quit = document.querySelector('[data-battle-quit]');
-      if (!header || !score || !quit) return null;
-      const textNode = [...score.childNodes].find(n => n.nodeType === Node.TEXT_NODE);
-      if (textNode) textNode.textContent = ` ${value}`;
+      if (!header || !turn || !score || !scoreValue || !controlsBox || !quit) return null;
+      scoreValue.textContent = value;
       const h = header.getBoundingClientRect();
+      const t = turn.getBoundingClientRect();
+      const s = score.getBoundingClientRect();
+      const c = controlsBox.getBoundingClientRect();
       const q = quit.getBoundingClientRect();
       const controls = [...header.querySelectorAll('button')].map(button => button.getBoundingClientRect());
       return {
@@ -111,10 +116,13 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
         tappable: q.width >= 28 && q.height >= 28,
         controlsInside: controls.every(r => r.left >= h.left && r.right <= h.right),
         noOverlap: controls.every((r, i) => controls.every((other, j) => i === j || r.right <= other.left || other.right <= r.left)),
+        metricsSeparate: t.right <= s.left && s.right <= c.left,
+        labelsVisible: turn.innerText.includes('TURN') && score.innerText.includes('SCORE') && score.innerText.includes(value),
       };
     }, scoreText);
-    check(`375px・スコア${scoreText}で諦めるを表示して押せる`,
-      !!layout && layout.inside && layout.tappable && layout.controlsInside && layout.noOverlap);
+    check(`375px・スコア${scoreText}で上部表示と4操作を重ねない`,
+      !!layout && layout.inside && layout.tappable && layout.controlsInside && layout.noOverlap
+        && layout.metricsSeparate && layout.labelsVisible);
   }
   await page.screenshot({ path: path.join(__dirname, 'out', 'battle-header-375.png') }).catch(() => {});
   await page.setViewportSize({ width: 390, height: 844 });

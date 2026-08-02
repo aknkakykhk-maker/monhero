@@ -1,5 +1,16 @@
 const CHANGELOG = [
   {
+    date: "2026-08-02 23:03",
+    type: "issue",
+    status: "fixed",
+    title: "バトル上部のターン・スコア表示を見やすくしました",
+    items: [
+      "TURNとSCOREを見出し・数値の2段表示にし、大きなスコアでも重ならない配置へ変更しました",
+      "iPhone幅でも倍率・音量・ヘルプ・諦めるボタンの位置がスコアに押し出されないようにしました",
+    ],
+  },
+
+  {
     date: "2026-08-02 22:47",
     type: "issue",
     status: "fixed",
