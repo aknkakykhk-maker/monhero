@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e145f82a48348377
+// source-sha256: 93d47cb9ca0915e5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 19:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 20:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4943,19 +4943,24 @@ const MARKET_ICON_SIZE = {
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
   kiki_icon: {
-    scale: 1.58,
+    scale: 2.37,
     x: 0,
-    y: 12
+    y: 19
   },
   snegurochka_icon: {
-    scale: 2.85,
-    x: 4,
-    y: 39
+    scale: 4.28,
+    x: 11,
+    y: 111
   },
   snegurochka_awakened_icon: {
-    scale: 2.85,
+    scale: 4.28,
+    x: 9,
+    y: 100
+  },
+  iblis_icon: {
+    scale: 1.42,
     x: 3,
-    y: 35
+    y: -14
   }
 };
 const profileIconTransformStyle = ({
@@ -4963,9 +4968,27 @@ const profileIconTransformStyle = ({
   x = 0,
   y = 0
 } = {}) => ({
-  transform: `scale(${scale}) translate(${x}%, ${y}%)`
+  transform: `translate(${x}%, ${y}%) scale(${scale})`,
+  transformOrigin: 'center center'
 });
 const marketProfileIconStyle = id => profileIconTransformStyle(MARKET_PROFILE_ICON_STYLES[id]);
+// 枠と画像を全画面で共有し、元画像全体を基準に同じ構図を再現する。
+// object-cover で先に中央切り抜きせず、移動量が拡大率に影響されない順序で変形する。
+const BreederIcon = ({
+  src,
+  id,
+  alt = '',
+  className = '',
+  roundedClass = 'rounded-full',
+  adjustment
+}) => /*#__PURE__*/React.createElement("span", {
+  className: `relative block overflow-hidden ${roundedClass} ${className}`
+}, /*#__PURE__*/React.createElement("img", {
+  src: src,
+  alt: alt,
+  className: "absolute inset-0 w-full h-full object-contain",
+  style: adjustment ? profileIconTransformStyle(adjustment) : marketProfileIconStyle(id)
+}));
 
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
 const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
@@ -13357,14 +13380,11 @@ function MonsterHeroGame() {
   const rankingPlace = index => /*#__PURE__*/React.createElement("div", {
     className: `w-7 h-7 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index === 0 ? 'bg-amber-500 text-black' : index === 1 ? 'bg-slate-300 text-black' : index === 2 ? 'bg-orange-600 text-white' : 'bg-slate-800 text-slate-400'}`
   }, index + 1);
-  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon) ? /*#__PURE__*/React.createElement("span", {
-    className: "w-8 h-8 rounded-full overflow-hidden shrink-0"
-  }, /*#__PURE__*/React.createElement("img", {
+  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon) ? /*#__PURE__*/React.createElement(BreederIcon, {
     src: resolveIconUrl(entry.icon),
-    alt: "",
-    style: marketProfileIconStyle(entry.icon),
-    className: "w-full h-full object-cover"
-  })) : /*#__PURE__*/React.createElement("div", {
+    id: entry.icon,
+    className: "w-8 h-8 shrink-0"
+  }) : /*#__PURE__*/React.createElement("div", {
     className: "w-8 h-8 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-xs"
   }, "\uD83D\uDC64");
   const rankingCardClass = index => `rounded-xl border ${index === 0 ? 'bg-amber-500/10 border-amber-500/50' : 'bg-slate-900 border-white/5'}`;
@@ -13532,10 +13552,11 @@ function MonsterHeroGame() {
       "aria-label": "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3092\u958B\u304F"
     }, /*#__PURE__*/React.createElement("div", {
       className: "mh-home-avatar"
-    }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement("img", {
+    }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement(BreederIcon, {
       src: resolveIconUrl(breederIcon),
+      id: breederIcon,
       alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u753B\u50CF",
-      style: marketProfileIconStyle(breederIcon)
+      className: "w-full h-full"
     }) : /*#__PURE__*/React.createElement(User, {
       size: 24
     })), /*#__PURE__*/React.createElement("div", {
@@ -15726,7 +15747,6 @@ function MonsterHeroGame() {
         })
       };
       const values = iconAdjustments[item.id] || initial;
-      const previewStyle = profileIconTransformStyle(values);
       const patchValue = (key, value) => setIconAdjustments(current => ({
         ...current,
         [item.id]: {
@@ -15778,28 +15798,26 @@ function MonsterHeroGame() {
         className: "rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-end justify-around gap-3 text-center text-[8px] font-black text-slate-400"
-      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-        className: "w-10 h-10 mx-auto rounded-full overflow-hidden border-2 border-white/20 bg-black/30"
-      }, /*#__PURE__*/React.createElement("img", {
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
         src: item.icon,
+        id: item.id,
+        adjustment: values,
         alt: "\u30DE\u30FC\u30B1\u30C3\u30C8\u4E00\u89A7",
-        style: previewStyle,
-        className: "w-full h-full object-cover"
-      })), /*#__PURE__*/React.createElement("span", null, "\u30DE\u30FC\u30B1\u30C3\u30C8\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-        className: "w-28 h-28 mx-auto rounded-full overflow-hidden border-4 border-white/20 bg-black/30"
-      }, /*#__PURE__*/React.createElement("img", {
+        className: "w-10 h-10 mx-auto border-2 border-white/20 bg-black/30"
+      }), /*#__PURE__*/React.createElement("span", null, "\u30DE\u30FC\u30B1\u30C3\u30C8\u4E00\u89A7")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
         src: item.icon,
+        id: item.id,
+        adjustment: values,
         alt: "\u5546\u54C1\u8A73\u7D30",
-        style: previewStyle,
-        className: "w-full h-full object-cover"
-      })), /*#__PURE__*/React.createElement("span", null, "\u5546\u54C1\u8A73\u7D30")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-        className: "w-16 h-16 mx-auto rounded-2xl overflow-hidden border-2 border-amber-400 bg-black/30"
-      }, /*#__PURE__*/React.createElement("img", {
+        className: "w-28 h-28 mx-auto border-4 border-white/20 bg-black/30"
+      }), /*#__PURE__*/React.createElement("span", null, "\u5546\u54C1\u8A73\u7D30")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(BreederIcon, {
         src: item.icon,
+        id: item.id,
+        adjustment: values,
         alt: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u9078\u629E",
-        style: previewStyle,
-        className: "w-full h-full object-cover"
-      })), /*#__PURE__*/React.createElement("span", null, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u9078\u629E")))), slider('scale', '拡大率 scale', .5, 4, .01), slider('x', '左右位置 X', -50, 50, 1), slider('y', '上下位置 Y', -50, 70, 1), /*#__PURE__*/React.createElement("pre", {
+        roundedClass: "rounded-2xl",
+        className: "w-16 h-16 mx-auto border-2 border-amber-400 bg-black/30"
+      }), /*#__PURE__*/React.createElement("span", null, "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u9078\u629E")))), slider('scale', '拡大率 scale', .5, 5, .01), slider('x', '左右位置 X', -50, 50, 1), slider('y', '上下位置 Y', -50, 130, 1), /*#__PURE__*/React.createElement("pre", {
         className: "whitespace-pre-wrap break-all rounded-xl bg-black/40 p-3 text-[10px] text-cyan-200"
       }, copyText), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-2 gap-2"
@@ -16028,11 +16046,11 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowIconPicker(true),
       className: "relative w-20 h-20 rounded-full bg-slate-800 border-2 border-indigo-400/50 flex items-center justify-center overflow-hidden active:scale-95"
-    }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement("img", {
+    }, resolveIconUrl(breederIcon) ? /*#__PURE__*/React.createElement(BreederIcon, {
       src: resolveIconUrl(breederIcon),
+      id: breederIcon,
       alt: "icon",
-      style: marketProfileIconStyle(breederIcon),
-      className: "w-full h-full object-cover"
+      className: "w-full h-full"
     }) : /*#__PURE__*/React.createElement(User, {
       size: 36,
       className: "text-indigo-400"
@@ -16241,10 +16259,14 @@ function MonsterHeroGame() {
           onClick: () => setMarketIconZoom(item),
           "aria-label": `${item.name}を大きく見る`,
           className: `${MARKET_ICON_SIZE[item.type] || 'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon ? 'grayscale opacity-50' : ''}`
-        }, item.icon ? /*#__PURE__*/React.createElement("img", {
+        }, item.icon ? item.type === 'icon' ? /*#__PURE__*/React.createElement(BreederIcon, {
+          src: item.icon,
+          id: item.id,
+          alt: item.name,
+          className: "w-full h-full"
+        }) : /*#__PURE__*/React.createElement("img", {
           src: item.icon,
           alt: item.name,
-          style: marketProfileIconStyle(item.id),
           className: "w-full h-full object-cover"
         }) : /*#__PURE__*/React.createElement("span", {
           className: "text-xl"
@@ -18564,10 +18586,12 @@ function MonsterHeroGame() {
         setShowIconPicker(false);
       },
       className: `aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon === m.id ? 'border-indigo-400 ring-2 ring-indigo-400' : 'border-slate-700'}`
-    }, /*#__PURE__*/React.createElement("img", {
+    }, /*#__PURE__*/React.createElement(BreederIcon, {
       src: m.faceIconUrl || m.iconUrl,
+      id: m.id,
       alt: m.name,
-      className: "w-full h-full object-cover"
+      roundedClass: "rounded-2xl",
+      className: "w-full h-full"
     })))), ownedMarketIcons.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("h4", {
       className: "text-[10px] font-black text-amber-400 mb-2 text-center uppercase tracking-widest flex items-center justify-center gap-1"
     }, /*#__PURE__*/React.createElement(ShoppingBag, {
@@ -18583,11 +18607,12 @@ function MonsterHeroGame() {
         setShowIconPicker(false);
       },
       className: `aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon === m.id ? 'border-amber-400 ring-2 ring-amber-400' : 'border-slate-700'}`
-    }, /*#__PURE__*/React.createElement("img", {
+    }, /*#__PURE__*/React.createElement(BreederIcon, {
       src: m.icon,
+      id: m.id,
       alt: m.name,
-      style: marketProfileIconStyle(m.id),
-      className: "w-full h-full object-cover"
+      roundedClass: "rounded-2xl",
+      className: "w-full h-full"
     }))))), /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowIconPicker(false),
       className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
@@ -19800,10 +19825,14 @@ function MonsterHeroGame() {
         className: "w-full max-w-[280px] rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col items-center gap-3"
       }, /*#__PURE__*/React.createElement("div", {
         className: `w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round ? 'rounded-full' : 'rounded-2xl'}`
-      }, item.icon ? /*#__PURE__*/React.createElement("img", {
+      }, item.icon ? item.type === 'icon' ? /*#__PURE__*/React.createElement(BreederIcon, {
+        src: item.icon,
+        id: item.id,
+        alt: item.name,
+        className: "w-full h-full"
+      }) : /*#__PURE__*/React.createElement("img", {
         src: item.icon,
         alt: item.name,
-        style: marketProfileIconStyle(item.id),
         className: `w-full h-full ${round ? 'object-cover' : 'object-contain'}`
       }) : /*#__PURE__*/React.createElement("span", {
         style: {

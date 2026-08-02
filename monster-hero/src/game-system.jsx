@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 19:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 20:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1964,12 +1964,20 @@ const MARKET_ICON_SIZE = { disc: 'w-12 h-12', breeder: 'w-10 h-10', icon: 'w-10 
 // 全身画像を使う一部のアイコンは、画像自体には手を加えず表示時だけ顔まわりへ寄せる。
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
-  kiki_icon: { scale: 1.58, x: 0, y: 12 },
-  snegurochka_icon: { scale: 2.85, x: 4, y: 39 },
-  snegurochka_awakened_icon: { scale: 2.85, x: 3, y: 35 },
+  kiki_icon: { scale: 2.37, x: 0, y: 19 },
+  snegurochka_icon: { scale: 4.28, x: 11, y: 111 },
+  snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 },
+  iblis_icon: { scale: 1.42, x: 3, y: -14 },
 };
-const profileIconTransformStyle = ({ scale=1, x=0, y=0 }={}) => ({ transform: `scale(${scale}) translate(${x}%, ${y}%)` });
+const profileIconTransformStyle = ({ scale=1, x=0, y=0 }={}) => ({ transform: `translate(${x}%, ${y}%) scale(${scale})`, transformOrigin:'center center' });
 const marketProfileIconStyle = (id) => profileIconTransformStyle(MARKET_PROFILE_ICON_STYLES[id]);
+// 枠と画像を全画面で共有し、元画像全体を基準に同じ構図を再現する。
+// object-cover で先に中央切り抜きせず、移動量が拡大率に影響されない順序で変形する。
+const BreederIcon = ({ src, id, alt='', className='', roundedClass='rounded-full', adjustment }) => (
+  <span className={`relative block overflow-hidden ${roundedClass} ${className}`}>
+    <img src={src} alt={alt} className="absolute inset-0 w-full h-full object-contain" style={adjustment?profileIconTransformStyle(adjustment):marketProfileIconStyle(id)}/>
+  </span>
+);
 
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
 const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
@@ -7126,7 +7134,7 @@ function MonsterHeroGame() {
     </main>{updateNotice}</>
   );
   const rankingPlace = index => <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-[9px] shrink-0 ${index===0?'bg-amber-500 text-black':index===1?'bg-slate-300 text-black':index===2?'bg-orange-600 text-white':'bg-slate-800 text-slate-400'}`}>{index+1}</div>;
-  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon)?<span className="w-8 h-8 rounded-full overflow-hidden shrink-0"><img src={resolveIconUrl(entry.icon)} alt="" style={marketProfileIconStyle(entry.icon)} className="w-full h-full object-cover"/></span>:<div className="w-8 h-8 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-xs">👤</div>;
+  const rankingBreederIcon = entry => resolveIconUrl(entry?.icon)?<BreederIcon src={resolveIconUrl(entry.icon)} id={entry.icon} className="w-8 h-8 shrink-0"/>:<div className="w-8 h-8 rounded-full bg-slate-800 shrink-0 flex items-center justify-center text-xs">👤</div>;
   const rankingCardClass = index => `rounded-xl border ${index===0?'bg-amber-500/10 border-amber-500/50':'bg-slate-900 border-white/5'}`;
   // スコア専用カード。編成表示と勇者モン重複防止はこのカードだけが担当する。
   const renderScoreRankingEntry = (entry, index) => {
@@ -7185,7 +7193,7 @@ function MonsterHeroGame() {
             {/* 設定を光らせるときは、上の帯ごと暗幕より前に出す(帯が z-index を持っていて中だけ前に出せないため) */}
             <header className={`mh-home-status${spotClass('settings')}`}>
               <button type="button" className="mh-home-player" onClick={()=>setGameState('PROFILE')} aria-label="プロフィールを開く">
-                <div className="mh-home-avatar">{resolveIconUrl(breederIcon)?<img src={resolveIconUrl(breederIcon)} alt="プロフィール画像" style={marketProfileIconStyle(breederIcon)}/>:<User size={24}/>}</div>
+                <div className="mh-home-avatar">{resolveIconUrl(breederIcon)?<BreederIcon src={resolveIconUrl(breederIcon)} id={breederIcon} alt="プロフィール画像" className="w-full h-full"/>:<User size={24}/>}</div>
                 <div className="mh-home-player-copy"><strong>{breederName}</strong><span>ブリーダー Lv.{breederLevel.level}</span><div className="mh-home-xp"><i style={{width:`${Math.min(100,(breederLevel.xpIntoLevel/breederLevel.xpForNext)*100)}%`}}></i></div><small>{breederLevel.xpIntoLevel.toLocaleString()} / {breederLevel.xpForNext.toLocaleString()} XP</small></div>
                 <ChevronRight className="mh-home-profile-arrow" size={15}/>
               </button>
@@ -7457,7 +7465,6 @@ function MonsterHeroGame() {
           if(!item)return <div className="p-4 text-slate-400">調整できるアイコンがありません。</div>;
           const initial={...(MARKET_PROFILE_ICON_STYLES[item.id]||{scale:1,x:0,y:0})};
           const values=iconAdjustments[item.id]||initial;
-          const previewStyle=profileIconTransformStyle(values);
           const patchValue=(key,value)=>setIconAdjustments(current=>({...current,[item.id]:{...values,[key]:Number(value)}}));
           const slider=(key,label,min,max,step)=><label className="block rounded-xl bg-slate-900 p-3"><span className="mb-2 flex justify-between text-[10px] font-black text-slate-300"><b>{label}</b><output>{values[key]}</output></span><input className="w-full accent-fuchsia-500" type="range" min={min} max={max} step={step} value={values[key]} onChange={e=>patchValue(key,e.target.value)}/></label>;
           const copyText=`${item.id}: { scale: ${values.scale}, x: ${values.x}, y: ${values.y} }`;
@@ -7465,8 +7472,8 @@ function MonsterHeroGame() {
             <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">DEBUG・保存されません</small><h2 className="text-sm font-black">ブリーダーアイコン調整</h2></div></header>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3">
               <select value={item.id} onChange={e=>setIconAdjustId(e.target.value)} className="w-full min-h-[46px] rounded-xl bg-slate-900 border border-white/10 px-3 text-xs font-black">{marketIconItems.map(entry=><option key={entry.id} value={entry.id}>{entry.name}（{entry.id}）</option>)}</select>
-              <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"><div className="flex items-end justify-around gap-3 text-center text-[8px] font-black text-slate-400"><div><div className="w-10 h-10 mx-auto rounded-full overflow-hidden border-2 border-white/20 bg-black/30"><img src={item.icon} alt="マーケット一覧" style={previewStyle} className="w-full h-full object-cover"/></div><span>マーケット一覧</span></div><div><div className="w-28 h-28 mx-auto rounded-full overflow-hidden border-4 border-white/20 bg-black/30"><img src={item.icon} alt="商品詳細" style={previewStyle} className="w-full h-full object-cover"/></div><span>商品詳細</span></div><div><div className="w-16 h-16 mx-auto rounded-2xl overflow-hidden border-2 border-amber-400 bg-black/30"><img src={item.icon} alt="プロフィール選択" style={previewStyle} className="w-full h-full object-cover"/></div><span>プロフィール選択</span></div></div></section>
-              {slider('scale','拡大率 scale',.5,4,.01)}{slider('x','左右位置 X',-50,50,1)}{slider('y','上下位置 Y',-50,70,1)}
+              <section className="rounded-2xl border border-fuchsia-500/40 bg-fuchsia-950/20 p-3"><div className="flex items-end justify-around gap-3 text-center text-[8px] font-black text-slate-400"><div><BreederIcon src={item.icon} id={item.id} adjustment={values} alt="マーケット一覧" className="w-10 h-10 mx-auto border-2 border-white/20 bg-black/30"/><span>マーケット一覧</span></div><div><BreederIcon src={item.icon} id={item.id} adjustment={values} alt="商品詳細" className="w-28 h-28 mx-auto border-4 border-white/20 bg-black/30"/><span>商品詳細</span></div><div><BreederIcon src={item.icon} id={item.id} adjustment={values} alt="プロフィール選択" roundedClass="rounded-2xl" className="w-16 h-16 mx-auto border-2 border-amber-400 bg-black/30"/><span>プロフィール選択</span></div></div></section>
+              {slider('scale','拡大率 scale',.5,5,.01)}{slider('x','左右位置 X',-50,50,1)}{slider('y','上下位置 Y',-50,130,1)}
               <pre className="whitespace-pre-wrap break-all rounded-xl bg-black/40 p-3 text-[10px] text-cyan-200">{copyText}</pre>
               <div className="grid grid-cols-2 gap-2"><button onClick={()=>setIconAdjustments(current=>({...current,[item.id]:initial}))} className="min-h-[46px] rounded-xl bg-slate-800 text-[10px] font-black">初期値へ戻す</button><button onClick={async()=>{await navigator.clipboard.writeText(copyText);window.alert('設定値をコピーしました。');}} className="min-h-[46px] rounded-xl bg-fuchsia-700 text-[10px] font-black">設定値をコピー</button></div>
             </div>
@@ -7544,7 +7551,7 @@ function MonsterHeroGame() {
             })()}
             <div className="shrink-0 bg-slate-900/80 border border-white/10 rounded-3xl p-5 flex flex-col items-center gap-3 mb-4">
               <button onClick={()=>setShowIconPicker(true)} className="relative w-20 h-20 rounded-full bg-slate-800 border-2 border-indigo-400/50 flex items-center justify-center overflow-hidden active:scale-95">
-                {resolveIconUrl(breederIcon)?(<img src={resolveIconUrl(breederIcon)} alt="icon" style={marketProfileIconStyle(breederIcon)} className="w-full h-full object-cover"/>):(<User size={36} className="text-indigo-400"/>)}
+                {resolveIconUrl(breederIcon)?(<BreederIcon src={resolveIconUrl(breederIcon)} id={breederIcon} alt="icon" className="w-full h-full"/>):(<User size={36} className="text-indigo-400"/>)}
                 <div className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 flex items-center justify-center"><Edit3 size={9} className="text-white"/></div>
               </button>
               <button onClick={()=>{setTempName(breederName); setShowNameEdit(true);}} className="flex items-center gap-2 bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl active:scale-95 group">
@@ -7648,7 +7655,7 @@ function MonsterHeroGame() {
                     // 高さを決めた枠に入れて並びを崩さない。購入ボタンはmt-autoでカード下端に揃える
                     <div key={item.id} className={`rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
                       {/* 1行に4つ並べているぶん小さいので、タップすると大きく見られるようにしている */}
-                      <button type="button" onClick={()=>setMarketIconZoom(item)} aria-label={`${item.name}を大きく見る`} className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?<img src={item.icon} alt={item.name} style={marketProfileIconStyle(item.id)} className="w-full h-full object-cover"/>:<span className="text-xl">{item.emoji}</span>}</button>
+                      <button type="button" onClick={()=>setMarketIconZoom(item)} aria-label={`${item.name}を大きく見る`} className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>}</button>
                       {/* 名前の枠は3行ぶん。細い端末で長い名前が3行になっても、
                           カードの高さが商品ごとにばらつかないようにしている */}
                       <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'36px'}}>{item.name}</div>
@@ -8795,7 +8802,7 @@ function MonsterHeroGame() {
               <div className="grid grid-cols-4 gap-3 mb-4">
                 {STARTER_MONSTER_IDS.map(id=>ALL_PLAYER_MONSTERS[id]).map(m=>(
                   <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-indigo-400 ring-2 ring-indigo-400':'border-slate-700'}`}>
-                    <img src={m.faceIconUrl||m.iconUrl} alt={m.name} className="w-full h-full object-cover"/>
+                    <BreederIcon src={m.faceIconUrl||m.iconUrl} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
                   </button>
                 ))}
               </div>
@@ -8804,7 +8811,7 @@ function MonsterHeroGame() {
                 <div className="grid grid-cols-4 gap-3 mb-4">
                   {BREEDER_MARKET_ITEMS.filter(m=>m.type==='icon'&&ownedMarketIcons.includes(m.id)).map(m=>(
                     <button key={m.id} onClick={()=>{setBreederIcon(m.id); setOnboardingIcon(m.id); if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false); setShowIconPicker(false);}} className={`aspect-square rounded-2xl overflow-hidden border-2 active:scale-90 ${breederIcon===m.id?'border-amber-400 ring-2 ring-amber-400':'border-slate-700'}`}>
-                      <img src={m.icon} alt={m.name} style={marketProfileIconStyle(m.id)} className="w-full h-full object-cover"/>
+                      <BreederIcon src={m.icon} id={m.id} alt={m.name} roundedClass="rounded-2xl" className="w-full h-full"/>
                     </button>
                   ))}
                 </div>
@@ -9315,7 +9322,7 @@ function MonsterHeroGame() {
           <div onClick={e=>e.stopPropagation()} className="w-full max-w-[280px] rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col items-center gap-3">
             <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`}>
               {item.icon
-                ? <img src={item.icon} alt={item.name} style={marketProfileIconStyle(item.id)} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>
+                ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
                 : <span style={{fontSize:'96px'}}>{item.emoji}</span>}
             </div>
             <div className="text-center text-sm font-black text-white leading-tight">{item.name}</div>
