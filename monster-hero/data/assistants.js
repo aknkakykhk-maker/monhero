@@ -171,6 +171,13 @@ const assistantLineMatchesBond = (line, level) => {
 // バトル中・クイックの成長演出・供モンの加入演出には常設しない(テンポを止めないため)。
 // バトル中の案内は「ステータス」やヘルプを開いたときだけ出す。
 const ASSISTANT_SCENES = {
+  // 日次案内は通常ログインとデバッグ再生で同じ scene を参照する。
+  // 本文は下の addAssistantLinePack から合流するため、ここでは受け皿だけを定義する。
+  dailyMasuAdvice: {
+    help: 'basics/battle-modes',
+    lines: [],
+  },
+
   // ---- はじめて ----
   onboarding: {
     help: 'basics/onboarding',
@@ -665,6 +672,20 @@ const addAssistantLinePack = (pack) => { if (pack && pack.id && pack.lines) ASSI
 
 // ===== 親密度ぶんのセリフ(HOME) =====
 addAssistantLinePack({
+  id: 'dailyMasuAdvice',
+  label: '日次・マスモン登録アドバイス',
+  lines: {
+    dailyMasuAdvice: [
+      { e:'wink', t:'マスモンを早く増やしたいなら、いい方法があるよ♪' },
+      { e:'happy', t:'クイックのBeginnerでWAVE2まで進んだら、\n「あきらめる」を選んでみて！' },
+      { e:'excited', t:'これが今のところ、マスモンを一番早く登録できる方法だよ♪' },
+      { e:'normal', t:'WAVE2まで進むのがポイント！ そこから登録できるよ。' },
+      { e:'wink', t:'短い時間で仲間を増やしたいときに試してみてね♪' },
+    ],
+  },
+});
+
+addAssistantLinePack({
   id: 'bondHome',
   label: '親密度・HOME',
   lines: {
@@ -1111,9 +1132,16 @@ const ASSISTANT_TUTORIAL = [
   { e:'surprise', t:'ミッションとギフトはこの辺！ 報酬の受け取り忘れに気をつけてね♪', title:'ミッションとギフト', help:'items/missions', spot:'reward' },
   { e:'normal',  t:'ヘルプは右上の「設定」の中！ 遊び方に迷ったら、ここを開いてね。', title:'ヘルプは設定の中', help:'tips/assistant', spot:'settings' },
   { e:'happy',   t:'あたしはここにいるよ。困ったらいつでもタップしてね♪', title:'それじゃあ、いってらっしゃい！', spot:'assistant' },
-  // 最後のページ。offer:'battle' が付いたページでは「やってみる／あとで」を選べる。
-  // 断ってもヘルプの「バトルのれんしゅう」からいつでも始められる
-  { e:'excited', t:'さっそくバトルを1回いっしょにやってみる？ 練習だから記録は残らないよ♪', title:'バトルもやってみる？', offer:'battle' },
+];
+
+// ---------- バトルチュートリアルの初回案内 ----------
+// バトルの練習を未完了の人へ、ログイン後のHOMEで一度だけ見せる。
+// 実際の練習台本とは分け、断った場合も「視聴済み」にはしない。
+const ASSISTANT_BATTLE_TUTORIAL_GUIDE = [
+  { e:'excited', t:'バトルチュートリアルが新しく追加されたよ♪', title:'新しいれんしゅうができたよ！' },
+  { e:'normal', t:'Monster Heroのバトルはちょっと特殊だから、最初にやっておくと遊び方が分かりやすいと思うよ！', title:'バトルを動かして覚えよう' },
+  { e:'wink', t:'今から一緒にやってみる？', title:'どうする？', offer:'battleGuide' },
+  { e:'happy', t:'わかったよ♪ あとからでも「設定 → ヘルプ」からいつでも見られるから、分からなくなったら見てみてね！', title:'いつでも待ってるね', declined:true },
 ];
 
 // ---------- バトルチュートリアル(操作しながら覚える) ----------
