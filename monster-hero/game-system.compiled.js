@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d0fc33369e371004
+// source-sha256: aa52b5f835cd8419
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -15315,7 +15315,10 @@ function MonsterHeroGame() {
           className: `min-h-[38px] rounded-xl text-[9px] font-black ${mode === id ? 'bg-fuchsia-700 ring-2 ring-fuchsia-300' : 'bg-slate-800 text-slate-400'}`
         }, label))), /*#__PURE__*/React.createElement("section", {
           id: "masu-pattern-large-preview",
-          className: "relative shrink-0 w-[92%] max-w-[390px] h-[min(40vh,390px)] min-h-[230px] mx-auto rounded-3xl border border-fuchsia-500/40 bg-[radial-gradient(circle,#1e293b,#020617)] shadow-xl overflow-hidden"
+          className: "relative shrink-0 w-[calc(100%_-_1.5rem)] max-w-[430px] mx-auto rounded-3xl border border-fuchsia-500/40 bg-[radial-gradient(circle,#1e293b,#020617)] shadow-xl overflow-hidden",
+          style: {
+            height: 'clamp(280px,34vh,360px)'
+          }
         }, /*#__PURE__*/React.createElement(PatternPlacementPreview, {
           masu: selected,
           base: base,
