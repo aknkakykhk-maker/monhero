@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: eb1187bc73d015a8
+// source-sha256: b76800ef4275a911
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 23:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 23:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -161,6 +161,19 @@ const normalizeBattleMode = value => value === BATTLE_MODE_QUICK ? BATTLE_MODE_Q
 const QUICK_REWARD_MULT = 1.5;
 // クイックモードでWAVEごとに味方の全ステータスへかける倍率
 const QUICK_GROWTH_MULT = 1.10;
+const calculateRemainingHp = (currentHp, finalDamage) => Math.max(0, (Number(currentHp) || 0) - (Number(finalDamage) || 0));
+const quickGrowStat = value => Math.floor((Number(value) || 0) * QUICK_GROWTH_MULT);
+const resolveQuickGrowthStats = ({
+  hp,
+  atk,
+  def,
+  guts
+}) => ({
+  hp: quickGrowStat(hp),
+  atk: quickGrowStat(atk),
+  def: quickGrowStat(def),
+  guts: quickGrowStat(guts)
+});
 const isQuickMode = mode => normalizeBattleMode(mode) === BATTLE_MODE_QUICK;
 // 難易度倍率をかけたあとの獲得量へ、さらにモードの倍率をかける。
 // WAVEごとの内訳と合計がずれないよう、内訳と同じ「WAVE単位で丸めてから合計」に揃える
@@ -11378,7 +11391,7 @@ function MonsterHeroGame() {
     setTimeout(() => setGameState('WAVE_RESULT'), battleMs(500));
     return true;
   };
-  const handleEnemyTurn = async (lastActionType, immediateEffects = {}, overrideIntent = null) => {
+  const handleEnemyTurn = async (lastActionType, immediateEffects = {}, overrideIntent = null, hpAtAttackStart = hp) => {
     if (!enemy) return;
     const intent = overrideIntent || enemyIntent;
     setEnemySkillName({
@@ -11386,7 +11399,9 @@ function MonsterHeroGame() {
       icon: intent.icon
     });
     await battleWait(600);
-    let currentHp = hp;
+    // 味方行動中の回復・自傷はsetHpの反映を待たず、呼び出し元で確定した値を受け取る。
+    // この値から算出したremainingHpだけを表示・state更新・敗北判定に使う。
+    let currentHp = hpAtAttackStart;
     if (getTurnBuff('invincible', false) || immediateEffects.invincible) {
       addPopup("無効化！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-md');
       setImmediateTurnBuff('invincible', false);
@@ -11488,8 +11503,9 @@ function MonsterHeroGame() {
             const fd = Math.abs(diff);
             addPopup(`貫通! -${fd}`, 'hero', 'text-pink-600 text-3xl font-black drop-shadow-lg');
             await battleWait(1000);
-            currentHp = Math.max(0, currentHp - fd);
-            setHp(currentHp);
+            const remainingHp = calculateRemainingHp(currentHp, fd);
+            currentHp = remainingHp;
+            setHp(remainingHp);
             await battleWait(1000);
           } else {
             const gGain = Math.floor(diff * 0.1);
@@ -11506,8 +11522,9 @@ function MonsterHeroGame() {
           addPopup(`-${incomingDmg}`, 'hero', 'text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce');
           triggerShake();
           await battleWait(1000);
-          currentHp = Math.max(0, currentHp - incomingDmg);
-          setHp(currentHp);
+          const remainingHp = calculateRemainingHp(currentHp, incomingDmg);
+          currentHp = remainingHp;
+          setHp(remainingHp);
           await battleWait(1000);
         }
       }
@@ -11577,7 +11594,8 @@ function MonsterHeroGame() {
     // 別の技へ変えられてしまうため、技・対象・順番・予測値を保持した予約だけを参照する。
     const scenario = battleScenarioRef.current;
     const acting = enemyIntent;
-    await handleEnemyTurn('none', {}, acting);
+    const hpAfterRecovery = Math.min(effectiveMaxHp, hp + recoverHp);
+    await handleEnemyTurn('none', {}, acting, hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const distForNextPredict = acting && acting.type === 'MOVE' ? acting.targetDist : enemyDist;
     setEnemyIntent(getNextEnemyAction(enemy, distForNextPredict));
@@ -11614,6 +11632,7 @@ function MonsterHeroGame() {
       immediateStun = false,
       currentTurnGuardFlat = 0,
       currentTurnGuardMult = 0;
+    let hpBeforeEnemyAttack = hp;
     let forcedMoveTarget = null; // 最後に使った距離撃の指定距離を、敵行動後にも最終距離として再適用する
     let attackDistance = enemyDist; // 同一ターンの各攻撃開始時点の距離。距離撃後は指定距離へ進める
     const attackHits = []; // {dmg, isCrit, slotIdx}
@@ -11703,9 +11722,10 @@ function MonsterHeroGame() {
           }
         } else if (card.subType === 'buff_myaru') {
           setNextTurnBuff('atkMult', card.baseValue);
-          const selfDmgAmt = Math.floor(hp * card.selfDmg);
+          const selfDmgAmt = Math.floor(hpBeforeEnemyAttack * card.selfDmg);
           addPopup(`自傷-${selfDmgAmt}`, 'hero', 'text-red-600 text-2xl font-black');
-          setHp(p => Math.max(1, p - selfDmgAmt));
+          hpBeforeEnemyAttack = Math.max(1, hpBeforeEnemyAttack - selfDmgAmt);
+          setHp(hpBeforeEnemyAttack);
         }
       } else if (card.type === 'heal') {
         Audio_.se.heal();
@@ -11834,7 +11854,8 @@ function MonsterHeroGame() {
           } else if (card.monId === 'Oboro') {
             const hRec = Math.floor(finalD * 0.5);
             const gRec = Math.floor(finalD * 0.05);
-            setHp(p => Math.min(effectiveMaxHp, p + hRec));
+            hpBeforeEnemyAttack = Math.min(effectiveMaxHp, hpBeforeEnemyAttack + hRec);
+            setHp(hpBeforeEnemyAttack);
             setGuts(p => Math.min(effectiveMaxGuts, p + gRec));
             addPopup(`💚 ドレイン +${hRec}`, 'life', 'text-emerald-400 text-xl font-black drop-shadow-md');
             addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-base font-bold drop-shadow-md');
@@ -11868,7 +11889,8 @@ function MonsterHeroGame() {
       if (totalHeal > 0) {
         addPopup(`💚 回復 +${totalHeal}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
         await battleWait(600);
-        setHp(p => Math.min(effectiveMaxHp, p + totalHeal));
+        hpBeforeEnemyAttack = Math.min(effectiveMaxHp, hpBeforeEnemyAttack + totalHeal);
+        setHp(hpBeforeEnemyAttack);
         await battleWait(400);
       }
       if (totalDmg > 0) {
@@ -12057,7 +12079,7 @@ function MonsterHeroGame() {
       guardFlat: currentTurnGuardFlat,
       guardMult: currentTurnGuardMult,
       distLocked: forcedMoveTarget != null
-    }, executedIntent);
+    }, executedIntent, hpBeforeEnemyAttack);
     // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
     if (forcedMoveTarget != null) {
       setEnemyDist(forcedMoveTarget);
@@ -12110,7 +12132,6 @@ function MonsterHeroGame() {
   // 味方の全ステータスをそのWAVE終了時点の値から10%上げ、ライフとガッツを全回復する。
   // 敵側には何もしない(敵の強さは難易度・WAVEの既存設定のまま)。
   // 端数は既存の強化処理と同じくMath.floorで落とす。
-  const quickGrowStat = value => Math.floor((Number(value) || 0) * QUICK_GROWTH_MULT);
   const beginQuickGrowth = () => {
     const before = {
       hp: maxHp,
@@ -12118,12 +12139,7 @@ function MonsterHeroGame() {
       def,
       guts: maxGuts
     };
-    const after = {
-      hp: quickGrowStat(before.hp),
-      atk: quickGrowStat(before.atk),
-      def: quickGrowStat(before.def),
-      guts: quickGrowStat(before.guts)
-    };
+    const after = resolveQuickGrowthStats(before);
     // 画面に出す値と実際に反映する値がずれないよう、同じ after をそのまま state へ入れる
     setMaxHp(after.hp);
     setAtk(after.atk);
@@ -12150,7 +12166,8 @@ function MonsterHeroGame() {
         before: before.guts,
         after: after.guts
       }],
-      nextDef: after.def
+      nextDef: after.def,
+      nextStats: after
     });
     quickAdvanceRef.current = null;
     Audio_.se.levelUp();
@@ -12161,6 +12178,7 @@ function MonsterHeroGame() {
     if (quickAdvanceRef.current === 'growth') return;
     quickAdvanceRef.current = 'growth';
     const nextDef = quickGrowth?.nextDef;
+    const nextStats = quickGrowth?.nextStats;
     setQuickGrowth(null);
     const joinWaves = [2, 4, 6];
     const activeIds = slots.filter(s => s).map(s => s.id);
@@ -12169,7 +12187,7 @@ function MonsterHeroGame() {
       setMonSelection(avail.sort(() => Math.random() - 0.5).slice(0, 4));
       setGameState('PICK_ALLY');
     } else {
-      initBattle(wave + 1, slots, ownedUniques, ownedTeachings, nextDef !== undefined ? nextDef : def);
+      initBattle(wave + 1, slots, ownedUniques, ownedTeachings, nextDef !== undefined ? nextDef : def, null, null, null, nextStats);
     }
   };
 
@@ -12201,7 +12219,7 @@ function MonsterHeroGame() {
     quickAdvanceRef.current = 'join';
     const info = quickJoin;
     setQuickJoin(null);
-    initBattle(wave + 1, info?.nextSlots || slots, info?.nextUniques || ownedUniques, ownedTeachings, info?.nextDef !== undefined ? info.nextDef : def);
+    initBattle(wave + 1, info?.nextSlots || slots, info?.nextUniques || ownedUniques, ownedTeachings, info?.nextDef !== undefined ? info.nextDef : def, null, null, null, info?.nextStats);
   };
 
   // スロットで現在選べる固有技一覧(自分の固有技+合体で引き継いだ固有技)を返す。
@@ -12513,13 +12531,23 @@ function MonsterHeroGame() {
   // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
   // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
   // 必ず呼び出し元が保持している最新のローカル値を渡す
-  const initBattle = (w, s, u, t, defVal, forcedEnemyKey = null, heroForDeck = null, aptPctOverride = null) => {
+  const initBattle = (w, s, u, t, defVal, forcedEnemyKey = null, heroForDeck = null, aptPctOverride = null, restoredStats = null) => {
     // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
     if (w === 1 && !forcedEnemyKey) {
       addAssistantBond('battle');
       addAssistantBond(isQuickMode(runMode) ? 'quick' : 'challenge');
     }
     setWave(w);
+    // クイック成長で確定した最大値を明示的に引き継ぎ、次WAVE開始時も同じ値で全回復する。
+    // setMax*直後の古いstateやモンスター初期値は参照しない。
+    if (restoredStats) {
+      setMaxHp(restoredStats.hp);
+      setHp(restoredStats.hp);
+      setMaxGuts(restoredStats.guts);
+      setGuts(restoredStats.guts);
+      setAtk(restoredStats.atk);
+      setDef(restoredStats.def);
+    }
     const currentSlots = s || slots;
     // 通常周回の初戦だけ、デッキ編成で勇者モンを置いた初期間合いから開始する。
     // 敵の選択・以降のWAVEの距離決定は従来どおりランダムのまま維持する。
@@ -12908,7 +12936,13 @@ function MonsterHeroGame() {
           unique: rolled,
           nextSlots,
           nextUniques: appliedUniques,
-          nextDef: nDef
+          nextDef: nDef,
+          nextStats: {
+            hp: nMaxHp,
+            atk: nAtk,
+            def: nDef,
+            guts: nMaxGuts
+          }
         });
         quickAdvanceRef.current = null;
         Audio_.se.levelUp();
