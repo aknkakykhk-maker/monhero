@@ -6,7 +6,7 @@ const src=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
 for(const token of [
   "role:index===heroSlotIndex?'hero':'ally'",
   'masuId:s.masuId||null',
-  'const colors = Array.isArray(s.colors) ? s.colors.filter(Boolean) : [];',
+  'const colors = rankingPartyColors(s.id, s.colors);',
   'const splitRankingParty',
   "entry?.heroMasuId",
 ]) assert(src.includes(token), token);

@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 17:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 21:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1445,6 +1445,15 @@ const isImageIconValue = (v) => typeof v === 'string' && (v.startsWith('images/'
 const cardIconNode = (icon, sizePx) => isImageIconValue(icon)
   ? <img src={icon} alt="" draggable={false} style={{width:sizePx,height:sizePx,WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="rounded-full object-cover inline-block shrink-0"/>
   : icon;
+// ランキングの記録に載せる部位別の色を作る。
+// colors は「何番目の部位か」を位置で表す配列なので、空きを詰めてはいけない。
+// 詰めると ["青", 未設定, "青"] が ["青","青"] になり、2番目の部位まで染まって
+// 3番目が元の色のまま残る(実際の染色と違う色でランキングに出る)。
+// 部位数ぶんの長さに揃え、未設定は null で埋めて位置を保つ。
+const rankingPartyColors = (baseId, colors) => {
+  const raw = Array.isArray(colors) ? colors : [];
+  return Array.from({ length: dyeRegionCount(baseId) }, (_, i) => raw[i] || null);
+};
 const RebirthStars = ({ count = 0, className = '' }) => {
   const value = Math.max(0, Math.floor(Number(count) || 0));
   if (!value) return null;
@@ -4313,11 +4322,13 @@ function MonsterHeroGame() {
     // 絵はアプリに同梱しているので、記録にはIDだけ残して表示時にIDから引く。
     // 染色した色も一緒に残す。他の人の端末にはその個体の色が無いので、送らないと
     // ランキングでは素の色でしか出せない。色コードが数個ぶんなので容量は増えない。
-    // 染めていない子には colors を付けない(記録の形をこれまでと同じに保つ)
+    // 染めていない子には colors を付けない(記録の形をこれまでと同じに保つ)。
+    // 色は rankingPartyColors で部位の位置を保ったまま作る(詰めると別の部位が染まる)。
     const party = slots.map((s,index) => {
       if (!s) return null;
-      const colors = Array.isArray(s.colors) ? s.colors.filter(Boolean) : [];
-      return { role:index===heroSlotIndex?'hero':'ally', id:s.id, baseId:s.id, monsterId:s.id, masuId:s.masuId||null, name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji:s.emoji||ALL_PLAYER_MONSTERS[s.id]?.emoji||null, bondLevel:s.masuId?getMasuBondLevel(s.masuId).level:null, ...(colors.length ? { colors } : {}) };
+      const colors = rankingPartyColors(s.id, s.colors);
+      const dyed = colors.some(Boolean);
+      return { role:index===heroSlotIndex?'hero':'ally', id:s.id, baseId:s.id, monsterId:s.id, masuId:s.masuId||null, name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji:s.emoji||ALL_PLAYER_MONSTERS[s.id]?.emoji||null, bondLevel:s.masuId?getMasuBondLevel(s.masuId).level:null, ...(dyed ? { colors } : {}) };
     });
     const name = breederName || '名無しのブリーダー';
     const heroName = (mainHero && (ALL_PLAYER_MONSTERS[mainHero.id]?.name || mainHero.name)) || 'Unknown';

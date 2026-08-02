@@ -38,11 +38,11 @@ check('行をタップすると編成の詳細が開く',
 check('詳細でその人が染めた色を出す',
   has('<DyedMonsterImage baseId={rankingMonsterIdOf(m)}') && has('masuColors={colors}'));
 check('色を記録にも残している',
-  has('const colors = Array.isArray(s.colors) ? s.colors.filter(Boolean) : [];')
-    && has('...(colors.length ? { colors } : {})'));
+  has('const colors = rankingPartyColors(s.id, s.colors);')
+    && has('...(dyed ? { colors } : {})'));
 // 染めていない子に colors を付けると、記録の形が変わって
 // ローカル保存とサーバー取得を畳む rowKey がずれる。付けるのは染めた子だけにする
-check('染めていない子には色を付けない', has('...(colors.length ? { colors } : {})'));
+check('染めていない子には色を付けない', has('const dyed = colors.some(Boolean);') && has('...(dyed ? { colors } : {})'));
 check('任意の色でも見本の色が出せる', has('backgroundColor:getColorSwatchHex(c)'));
 check('置いていた距離も出す',
   has('const byDistance=raw&&raw.length===RANGE_LABELS.length;') && has('{RANGE_LABELS[m.slotIndex]}距離'));
