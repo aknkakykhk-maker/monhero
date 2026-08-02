@@ -108,6 +108,12 @@ node tools/render-error-check.js         # 実際に開いて真っ白になら�
 実際にブラウザで開いてJSの実行時エラーを拾うので、Tailwindが読めないこの
 サンドボックスでも「真っ白になるかどうか」だけは確実に分かる。
 
+モンスターの絵やアイコンを差し替え・追加したら、`node tools/build.js` でキャッシュキーを更新したうえで
+`node tools/image-asset-check.js` を通す。絵の実体は `monster-hero/images/` 以下のPNGで、
+`data/images/images-*.js` と `data/breeder.js` にはそのパスだけを書く(base64で埋め戻さない)。
+参照先の綴り間違いやキャッシュキーの取り違えは、公開してから「絵が出ない・古い絵のまま」になって初めて分かるため、
+このチェックで機械的に拾う。
+
 表示が絡む改修をしたら、**画面ごとの見た目チェック(`layout-consistency-check.js` など)も併せて通す**。
 HOMEの配置(みゅあの吹き出し・施設・はじめての案内)を触ったら
 `node tools/home-layout-check.js` を通す。HOMEのCSSだけを取り出して実際のブラウザで

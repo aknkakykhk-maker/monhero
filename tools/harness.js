@@ -116,31 +116,47 @@ function loadDyeModule() {
   return _cached;
 }
 
-// data/images-*.js に埋め込まれた base64 画像を { 変数名: dataURL } で取り出す
+// data/images-*.js が持つ画像の場所を { 変数名: monster-hero/ からの相対パス } で取り出す。
+// 2026年8月に画像をbase64の埋め込みからPNGファイルへ移したため、値はdataURLではなくパスになる。
+// 別名(const MOCCHI_ICON = MOCCHI_IMG;)も辿って、実体のパスへ解決する。
 function loadEmbeddedImages() {
   const files = ['images/images-ally.js', 'images/images-enemy.js', 'breeder.js'];
   const map = {};
+  const aliases = [];
   for (const f of files) {
     const p = path.join(REPO_ROOT, 'monster-hero', 'data', f);
     if (!fs.existsSync(p)) continue;
     const s = fs.readFileSync(p, 'utf8');
-    const re = /(?:const\s+)?([A-Za-z0-9_$]+)\s*[:=]\s*["'`](data:image\/[a-z+]+;base64,[^"'`]*)/g;
+    const re = /(?:const\s+)?([A-Za-z0-9_$]+)\s*[:=]\s*["'`]((?:data:image\/[a-z+]+;base64,[^"'`]*)|(?:images\/[^"'`]+))["'`]/g;
     let m;
     while ((m = re.exec(s))) map[m[1]] = m[2];
+    const reAlias = /const\s+([A-Za-z0-9_$]+)\s*=\s*([A-Za-z0-9_$]+)\s*;/g;
+    while ((m = reAlias.exec(s))) aliases.push([m[1], m[2]]);
   }
+  // 別名は定義順に並んでいるので、前から解決すれば多段の別名も辿れる
+  for (const [name, target] of aliases) if (map[target] !== undefined) map[name] = map[target];
   return map;
 }
 
-// MASU_COLOR_REGION_HUES のキー(baseId)から、検証に使う立ち絵のdataURLを引く。
+// MASU_COLOR_REGION_HUES のキー(baseId)から、検証に使う立ち絵の場所を引く。
 // 変数名は SUEZO_IMG のように baseId の大文字スネークケース + _IMG になっている
 function imageForBaseId(baseId, images) {
   const upper = baseId.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
   return images[`${upper}_IMG`] || images[`${upper}_ICON`] || null;
 }
 
-// dataURL を node-canvas の Image として読む
-async function decodeDataUrl(dataUrl) {
-  return loadImage(Buffer.from(dataUrl.split(',')[1], 'base64'));
+// loadEmbeddedImages が返した値(PNGのパス、または昔ながらのdataURL)を
+// node-canvas の Image として読む
+async function decodeDataUrl(src) {
+  if (typeof src === 'string' && src.startsWith('data:')) {
+    return loadImage(Buffer.from(src.split(',')[1], 'base64'));
+  }
+  return loadImage(imageFilePath(src));
 }
 
-module.exports = { REPO_ROOT, GAME_SYSTEM, transformGameSystem, loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, createCanvas };
+// 画像のパス(images/... 。?v= が付いていても可)を実ファイルの絶対パスへ直す
+function imageFilePath(rel) {
+  return path.join(REPO_ROOT, 'monster-hero', String(rel).split('?')[0]);
+}
+
+module.exports = { REPO_ROOT, GAME_SYSTEM, transformGameSystem, loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, imageFilePath, createCanvas };

@@ -32,7 +32,9 @@ const RIM_BARE_LIMIT = 5; // %
 // MASK_HIRES_BASE_IDSからうっかり外れたときに気付けるよう、ここにも明示しておく
 const EXPECTED = ['Mocchi'];
 
-const page = `<!doctype html><meta charset="utf-8"><body>
+const page = `<!doctype html><meta charset="utf-8">
+<!-- 画像はPNGファイルになったので、monster-hero/ を基準にパスを解決させる -->
+<base href="/monster-hero/"><body>
 <script src="/monster-hero/data/images/images-ally.js"></script>
 <script src="/monster-hero/data/ally-monsters.js"></script>
 <script>

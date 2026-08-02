@@ -2,21 +2,25 @@
 const fs = require('fs');
 const path = require('path');
 const { createCanvas, Image } = require('canvas');
-const { REPO_ROOT } = require('./harness');
+const { REPO_ROOT, imageFilePath } = require('./harness');
 
+// 2026年8月に画像をbase64の埋め込みからPNGファイルへ移したため、
+// 変数が指しているパスからファイルを読んで検査する
 const files = ['images-ally.js', 'images-enemy.js'];
 const expected = { 'images-ally.js': 12, 'images-enemy.js': 10 };
 const images = [];
 for (const file of files) {
   const source = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/data/images', file), 'utf8');
-  const matches = [...source.matchAll(/const\s+(\w+_IMG(?:_DATA)?)\s*=\s*"(data:image\/png;base64,[^"]+)"/g)];
+  const matches = [...source.matchAll(/const\s+(\w+_IMG(?:_DATA)?)\s*=\s*"(images\/[^"]+)"/g)];
   if (matches.length !== expected[file]) throw new Error(`${file}: 全身画像は${expected[file]}件必要ですが${matches.length}件です`);
   images.push(...matches.map(match => ({ name: match[1], url: match[2] })));
 }
 
 for (const { name, url } of images) {
+  const file = imageFilePath(url);
+  if (!fs.existsSync(file)) throw new Error(`${name}: ${url} がありません`);
   const image = new Image();
-  image.src = url;
+  image.src = fs.readFileSync(file);
   if (!image.width || !image.height) throw new Error(`${name}: PNGを読み込めません`);
   const canvas = createCanvas(image.width, image.height);
   const context = canvas.getContext('2d');
