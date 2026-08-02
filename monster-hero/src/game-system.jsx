@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 12:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 12:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1247,6 +1247,45 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, drag
 // マスモンの全身表示は画面ごとにiconUrlへ切り替えず、通常表示と同じ立ち絵を使う。
 // iconUrlしか持たない旧データも従来どおり表示できるようフォールバックは残す。
 const masuDisplayImageUrl = (base) => base?.imgUrl || base?.iconUrl || '';
+const MASU_PATTERN_DEFAULTS = Object.freeze({ pattern:'stripe', target:'all', color:'#38bdf8', opacity:55, size:50, rotation:0, x:0, y:0 });
+const MASU_PATTERN_OPTIONS = [['stripe','縞模様'],['dot','水玉'],['leopard','ヒョウ柄'],['crack','ひび割れ'],['star','星柄'],['none','模様なし']];
+// デバッグ画面だけで使う模様レイヤー。Canvasへ描き、保存データや元画像には触れない。
+const MasuPatternLayer = ({ baseId, src, settings }) => {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const canvas=canvasRef.current;
+    if (!canvas || !src || settings.pattern==='none') { const ctx=canvas?.getContext('2d'); if(ctx)ctx.clearRect(0,0,canvas.width,canvas.height); return; }
+    let cancelled=false;
+    const loadImage=url=>new Promise(resolve=>{const img=new window.Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src=url;});
+    (async()=>{
+      const body=await loadImage(src);
+      const masks=settings.target==='all'?null:await Promise.resolve(getDyeRegionMasks(baseId,src));
+      const maskUrl=masks?.[Math.max(0,Number(settings.target)-1)];
+      const mask=maskUrl?await loadImage(maskUrl):body;
+      if(cancelled||!body||!mask)return;
+      const scale=Math.min(1,MASK_ANALYSIS_MAX_SIZE/Math.max(body.naturalWidth||body.width,body.naturalHeight||body.height));
+      const w=Math.max(1,Math.round((body.naturalWidth||body.width)*scale)),h=Math.max(1,Math.round((body.naturalHeight||body.height)*scale));
+      canvas.width=w;canvas.height=h;
+      const ctx=canvas.getContext('2d');if(!ctx)return;
+      ctx.clearRect(0,0,w,h);ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,settings.opacity/100));ctx.fillStyle=settings.color;ctx.strokeStyle=settings.color;
+      ctx.translate(w/2+settings.x*w/200,h/2+settings.y*h/200);ctx.rotate(settings.rotation*Math.PI/180);
+      const unit=Math.max(8,settings.size*.7),extent=Math.hypot(w,h)*1.5;
+      if(settings.pattern==='stripe'){
+        ctx.lineWidth=Math.max(3,unit*.28);for(let x=-extent;x<=extent;x+=unit){ctx.beginPath();ctx.moveTo(x,-extent);ctx.lineTo(x,extent);ctx.stroke();}
+      }else if(settings.pattern==='dot'||settings.pattern==='leopard'){
+        for(let y=-extent;y<=extent;y+=unit)for(let x=-extent;x<=extent;x+=unit){const offset=(Math.round(y/unit)&1)*unit*.5,r=unit*(settings.pattern==='dot' ? .22 : .3);ctx.beginPath();ctx.arc(x+offset,y,r,0,Math.PI*2);settings.pattern==='dot'?ctx.fill():ctx.stroke();if(settings.pattern==='leopard'){ctx.beginPath();ctx.arc(x+offset+r*.25,y-r*.1,r*.48,0,Math.PI*2);ctx.stroke();}}
+      }else if(settings.pattern==='star'){
+        for(let y=-extent;y<=extent;y+=unit)for(let x=-extent;x<=extent;x+=unit){const ox=x+((Math.round(y/unit)&1)*unit*.5);ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?unit*.18:unit*.42,px=ox+Math.cos(a)*r,py=y+Math.sin(a)*r;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();ctx.fill();}
+      }else if(settings.pattern==='crack'){
+        ctx.lineWidth=Math.max(1,unit*.08);for(let y=-extent;y<=extent;y+=unit)for(let x=-extent;x<=extent;x+=unit){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+unit*.23,y+unit*.33);ctx.lineTo(x-unit*.12,y+unit*.61);ctx.lineTo(x+unit*.3,y+unit);ctx.stroke();ctx.beginPath();ctx.moveTo(x+unit*.23,y+unit*.33);ctx.lineTo(x+unit*.55,y+unit*.48);ctx.stroke();}
+      }
+      ctx.restore();ctx.globalAlpha=1;ctx.globalCompositeOperation='destination-in';ctx.drawImage(mask,0,0,w,h);ctx.globalCompositeOperation='source-over';
+    })();
+    return()=>{cancelled=true;};
+  },[baseId,src,settings.pattern,settings.target,settings.color,settings.opacity,settings.size,settings.rotation,settings.x,settings.y]);
+  return <canvas ref={canvasRef} aria-hidden="true" style={{position:'absolute',left:'50%',top:'50%',width:'auto',height:'auto',maxWidth:'100%',maxHeight:'100%',transform:'translate(-50%,-50%)',pointerEvents:'none'}}/>;
+};
+const PatternedMasuImage = ({ masu, base, colors, settings, className='' }) => <div className={className} style={{position:'relative',overflow:'hidden'}}><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={colors} className="w-full h-full object-contain"/><MasuPatternLayer baseId={masu.baseId} src={masuDisplayImageUrl(base)} settings={settings}/></div>;
 const RebirthStars = ({ count = 0, className = '' }) => {
   const value = Math.max(0, Math.floor(Number(count) || 0));
   if (!value) return null;
@@ -2833,6 +2872,8 @@ function MonsterHeroGame() {
   // { id, baseId(元のモンスター種id), name, bondXp, distAptPoints(未使用の強化ポイント),
   //   distApt:[g0,g1,g2,g3](このマスモン専用の間合い適性), statPoints:{hp,atk,def,guts}, color(染色もどきで変えた色id、無ければnull), createdAt }
   const [masuMons, setMasuMons] = useState([]);
+  const [patternMasuId, setPatternMasuId] = useState(null);
+  const [patternSettings, setPatternSettings] = useState({...MASU_PATTERN_DEFAULTS});
   const [homePastureIds, setHomePastureIds] = useState([]);
   const [draftHomePastureIds, setDraftHomePastureIds] = useState([]);
   const [pastureLoaded, setPastureLoaded] = useState(false);
@@ -7199,10 +7240,31 @@ function MonsterHeroGame() {
           <div className="flex-1 flex flex-col h-full p-4 overflow-y-auto mh-scroll"><div className="flex items-center gap-2 mb-5"><button onClick={returnToHome} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-slate-200">設定</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="settings"/></div><div className="space-y-3"><button onClick={()=>setShowAudioSettings(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">音量設定</button><button onClick={()=>setShowBgmArrangement(true)} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">BGMアレンジ</button><button onClick={()=>{setShowBackup(true);setBackupTab('export');setBackupCode('');setRestoreInput('');setRestoreMsg('');}} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">データ引き継ぎ</button><button onClick={()=>openHelp()} className="w-full bg-slate-900 border border-white/10 py-4 rounded-2xl font-black">ヘルプ</button><button onClick={()=>setShowGameUpdateConfirm(true)} disabled={showGameUpdateConfirm||gameUpdatePending} className="w-full bg-slate-900 border border-cyan-500/30 py-3 rounded-2xl font-black disabled:opacity-50"><span className="block text-cyan-200">ゲームを更新</span><span className="block mt-1 text-[10px] text-slate-400">最新のゲームデータを読み込みます</span></button><div className="text-center text-[9px] font-mono text-slate-600">BUILD {BUILD_DATE}</div><button onClick={()=>setShowOfficialTitleConfirm(true)} className="w-full bg-red-950/50 border border-red-500/40 text-red-200 py-4 rounded-2xl font-black">タイトルへ戻る</button></div></div>
         )}
 
+        {gameState==='MASU_PATTERN_DEBUG'&&(()=>{
+          const eligible=masuMons.filter(m=>ALL_PLAYER_MONSTERS[m.baseId]);
+          const selected=eligible.find(m=>String(m.id)===String(patternMasuId));
+          const updatePattern=(key,value)=>setPatternSettings(prev=>({...prev,[key]:value}));
+          const slider=(key,label,min,max,unit='')=><label className="block rounded-xl bg-slate-900/80 px-3 py-2"><span className="flex justify-between text-[10px] font-black text-slate-300"><b>{label}</b><output>{patternSettings[key]}{unit}</output></span><input aria-label={label} type="range" min={min} max={max} value={patternSettings[key]} onChange={e=>updatePattern(key,Number(e.target.value))} className="w-full min-h-[42px] accent-fuchsia-500 touch-none"/></label>;
+          return <main className="flex-1 min-h-0 flex flex-col bg-slate-950" style={{paddingTop:'env(safe-area-inset-top)',paddingBottom:'env(safe-area-inset-bottom)'}}>
+            <div className="mh-debug-banner">DEBUG・模様は保存されません</div>
+            <header className="flex items-center gap-2 px-3 py-2 shrink-0 border-b border-white/10"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-fuchsia-400">PATTERN CUSTOM TEST</small><h2 className="text-sm font-black">マスモン模様カスタムテスト</h2></div></header>
+            {eligible.length===0?<section className="flex-1 flex flex-col items-center justify-center p-6 text-center"><div className="text-5xl mb-4">🐾</div><p className="font-black text-slate-300">カスタマイズできるマスモンがいません</p><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="mt-6 min-h-[48px] px-8 rounded-xl bg-slate-800 font-black">デバッグ設定へ戻る</button></section>:!selected?<section className="flex-1 min-h-0 overflow-y-auto mh-scroll p-4"><p className="mb-3 text-[11px] font-bold text-slate-400">所持マスモンを1体選択してください。</p><div className="grid grid-cols-3 gap-2">{eligible.map(m=>{const base=ALL_PLAYER_MONSTERS[m.baseId];return <button key={m.id} onClick={()=>{setPatternMasuId(m.id);setPatternSettings({...MASU_PATTERN_DEFAULTS});}} className="min-h-[116px] rounded-2xl border border-fuchsia-500/30 bg-slate-900 p-2 active:scale-[.97]"><DyedMonsterImage baseId={m.baseId} src={masuDisplayImageUrl(base)} alt={m.name} masuColors={getMasuColors(m)} className="w-16 h-16 mx-auto object-contain"/><b className="block truncate text-[10px]">{m.name}</b><small className="text-[8px] text-amber-300">{Number(m.rebirthCount)>0?`転生 ${m.rebirthCount}回`:'未転生'}</small></button>})}</div></section>:(()=>{const base=ALL_PLAYER_MONSTERS[selected.baseId],regions=dyeRegionCount(selected.baseId);return <div className="flex-1 min-h-0 overflow-y-auto mh-scroll p-3 space-y-3">
+              <section className="rounded-2xl border border-fuchsia-500/30 bg-gradient-to-b from-slate-900 to-slate-950 p-3 text-center"><PatternedMasuImage masu={selected} base={base} colors={getMasuColors(selected)} settings={patternSettings} className="w-[min(68vw,280px)] aspect-square mx-auto"/><div className="font-black">{selected.name}</div><div className="text-[9px] text-amber-300">{Number(selected.rebirthCount)>0?`転生 ${selected.rebirthCount}回`:'未転生'}　・　{getMasuColors(selected).some(Boolean)?'染色反映中':'染色なし'}</div></section>
+              <section className="rounded-2xl border border-white/10 bg-slate-900/60 p-3"><div className="mb-2 text-[10px] font-black text-fuchsia-300">サイズ比較</div><div className="flex items-end justify-center gap-7"><div><PatternedMasuImage masu={selected} base={base} colors={getMasuColors(selected)} settings={patternSettings} className="w-24 h-24"/><small className="block text-center text-[8px] text-slate-400">通常カード相当</small></div><div><PatternedMasuImage masu={selected} base={base} colors={getMasuColors(selected)} settings={patternSettings} className="w-12 h-12"/><small className="block text-center text-[8px] text-slate-400">小型アイコン相当</small></div></div></section>
+              <section className="space-y-3 rounded-2xl border border-white/10 bg-slate-900/50 p-3"><div><div className="mb-2 text-[10px] font-black text-slate-300">模様</div><div className="grid grid-cols-3 gap-2">{MASU_PATTERN_OPTIONS.map(([id,label])=><button key={id} onClick={()=>updatePattern('pattern',id)} className={`min-h-[44px] rounded-xl text-[10px] font-black ${patternSettings.pattern===id?'bg-fuchsia-700 ring-2 ring-fuchsia-300':'bg-slate-800 text-slate-300'}`}>{label}</button>)}</div></div>
+                <div><div className="mb-2 text-[10px] font-black text-slate-300">対象部位</div><div className="grid grid-cols-4 gap-2">{['all','1','2','3'].map((id,i)=>{const disabled=id!=='all'&&Number(id)>regions;return <button key={id} disabled={disabled} onClick={()=>updatePattern('target',id)} className={`min-h-[44px] rounded-xl text-[9px] font-black disabled:opacity-25 ${patternSettings.target===id?'bg-cyan-700 ring-2 ring-cyan-300':'bg-slate-800'}`}>{id==='all'?'全身':`染色${'①②③'[i-1]}`}</button>})}</div></div>
+                <label className="flex items-center justify-between rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-black"><span>模様の色</span><input aria-label="模様の色" type="color" value={patternSettings.color} onChange={e=>updatePattern('color',e.target.value)} className="w-16 h-11 rounded-lg bg-transparent"/></label>
+                {slider('opacity','透明度',0,100,'%')}{slider('size','大きさ',12,120)}{slider('rotation','回転',-180,180,'°')}{slider('x','横位置',-100,100)}{slider('y','縦位置',-100,100)}
+                <button onClick={()=>setPatternSettings({...MASU_PATTERN_DEFAULTS})} className="w-full min-h-[48px] rounded-xl bg-slate-700 font-black">初期値へ戻す</button><button onClick={()=>setPatternMasuId(null)} className="w-full min-h-[48px] rounded-xl border border-fuchsia-500/50 bg-fuchsia-950 font-black text-fuchsia-100">別のマスモンを選ぶ</button>
+              </section>
+            </div>})()}
+          </main>;
+        })()}
+
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
-            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button>
+            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings({...MASU_PATTERN_DEFAULTS});setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
               {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
               <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
                 <div className="text-[10px] text-pink-300 font-black mb-2">💖 みゅあデバッグ</div>
