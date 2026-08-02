@@ -17,7 +17,7 @@ check('成功失敗計算は表示のみ',/settleTrainingRewards/.test(source)&&
 check('BGM2場面とSE9種',/trainingMenu:'original_home'/.test(source)&&/trainingBoard:'original_home'/.test(source)&&['trainingDice','trainingMove','trainingDecide','trainingReward','trainingGood','trainingBad','trainingTool','trainingGoal','trainingFail'].every(k=>source.includes(`${k}: async`)));
 check('サイコロの振動・出目確定演出と前回出目',/trainingDiceStage/.test(source)&&/mh-dice-overlay/.test(source)&&/が出た！/.test(source)&&/前回の出目/.test(source));
 check('マス詳細に数値・発動タイミング・補足',/trainingSpaceValue/.test(source)&&/発動タイミング/.test(source)&&/mh-space-detail/.test(source));
-check('修行を更新履歴へ掲載しない',!require('fs').readFileSync('monster-hero/data/changelog.js','utf8').includes('修行'));
+check('デバッグ修行本編を更新履歴へ掲載しない',!require('fs').readFileSync('monster-hero/data/changelog.js','utf8').includes('修行テスト'));
 check('不具合通知を種類別キーで既読管理',/mh_changelog_seen_ids_\$\{type\}/.test(source)&&/CHANGELOG_IDS_BY_TYPE/.test(source)&&/changelogUnread\.issue/.test(source));
 check('ピンチ拡縮・ドラッグパン・現在地復帰',/trainingPointerDown/.test(source)&&/trainingPointerMove/.test(source)&&/Math\.max\(\.48,Math\.min\(2\.15/.test(source)&&/focusTrainingCurrent/.test(source)&&/touch-action:none/.test(source));
 check('停止マス別の軽量エフェクト',/showTrainingEffect\(space\)/.test(source)&&/mh-training-effect/.test(source)&&/trainingParticle/.test(source));

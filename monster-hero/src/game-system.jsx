@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 23:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-02 23:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -291,6 +291,21 @@ const migrateRebornMasuToFullReset = (masuMons) => (Array.isArray(masuMons) ? ma
 const cappedBondXp = (masu, gain = 0) => {
   const normalized = normalizeMasuProgression(masu);
   return Math.min(totalBondXpForLevel(normalized.levelCap), donationDiamondValue(normalized.bondXp) + Math.max(0, Math.floor(Number(gain) || 0)));
+};
+// 絆経験値の加算・レベル上限・強化ポイント付与を、通常バトル、チケット、合体で共有する。
+// 戻り値に表示用の前後レベルと実際の付与量も含め、画面と保存値の計算がずれないようにする。
+const applyBondXpGain = (masu, gain = 0) => {
+  const before = masuBondLevelInfo(masu);
+  const bondXp = cappedBondXp(masu, gain);
+  const after = bondLevelInfo(bondXp);
+  const gainedLevels = Math.max(0, after.level - before.level);
+  return {
+    masu: { ...masu, bondXp, distAptPoints: (masu.distAptPoints || 0) + gainedLevels },
+    before,
+    after,
+    gainedLevels,
+    xpGain: Math.max(0, bondXp - donationDiamondValue(masu.bondXp)),
+  };
 };
 // 周回終了時の絆経験値配布先を、表示処理やReact state更新から独立して一度だけ決定する。
 // 優先順位は勇者モン(100%) > バトル参加マスモン(50%) > 編成内の控え(25%)。
@@ -4996,13 +5011,15 @@ function MonsterHeroGame() {
     const masu = getMasuMon(masuId);
     if (!masu) return;
     const gain = item.bondXp * n;
+    const result = applyBondXpGain(masu, gain);
     setMasuMons(prev => {
-      const next = prev.map(m => m.id === masuId ? { ...m, bondXp: cappedBondXp(m, gain) } : m);
+      const next = prev.map(m => m.id === masuId ? applyBondXpGain(m, gain).masu : m);
       storeSet('mh_masu_mons', next, false);
       return next;
     });
     setOwnedItems(prev => { const next = { ...prev, [itemId]: have - n }; storeSet('mh_owned_items', next, false); return next; });
     Audio_.se.levelUp();
+    return result;
   };
   const openTrainingInfo=()=>setGameState('TRAINING_INFO');
   const openDebugTraining=()=>{setTrainingSelectedId(null);setTrainingDifficulty('BEGINNER');setTrainingSession(null);setGameState('TRAINING_SELECT');};
@@ -5102,15 +5119,16 @@ function MonsterHeroGame() {
     setMasuMons(prev => {
       const next = prev
         .filter(m => m.id !== sub.id)
-        .map(m => m.id === main.id ? {
-          ...m,
-          bondXp: afterXp,
-          // 上がったレベルぶんの強化ポイントを配る(確認画面に出している「強化ポイント +N」と同じ)
-          distAptPoints: (m.distAptPoints || 0) + gainedLevels,
-          fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + gainedLevels,
-          fusionHistory: [...(m.fusionHistory || []), historyEntry],
-          ...(inheritedUnique ? { inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique] } : {}),
-        } : m);
+        .map(m => {
+          if (m.id !== main.id) return m;
+          const advanced = applyBondXpGain(m, gainedXp);
+          return {
+            ...advanced.masu,
+            fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + advanced.gainedLevels,
+            fusionHistory: [...(m.fusionHistory || []), historyEntry],
+            ...(inheritedUnique ? { inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique] } : {}),
+          };
+        });
       storeSet('mh_masu_mons', next, false);
       return next;
     });
@@ -5323,10 +5341,7 @@ function MonsterHeroGame() {
         const next = prev.map(m => {
           const award = awardByMasuId.get(String(m.id));
           if (!award) return m;
-          const before = masuBondLevelInfo(m);
-          const afterXp = cappedBondXp(m, award.gain);
-          const after = bondLevelInfo(afterXp);
-          return { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + (after.level - before.level) };
+          return applyBondXpGain(m, award.gain).masu;
         });
         storeSet('mh_masu_mons', next, false);
         return next;
@@ -8489,10 +8504,12 @@ function MonsterHeroGame() {
           const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
           if (!item || !masu || !base) return null;
           const have = ownedItems[item.id]||0;
+          const usedResult = xpTicketUse.result;
           const count = Math.max(1, Math.min(xpTicketUse.count||1, Math.max(1, have)));
           const gain = (item.bondXp||0) * count;
-          const before = masuBondLevelInfo(masu);
-          const after = bondLevelInfo((masu.bondXp||0) + gain);
+          const preview = usedResult || applyBondXpGain(masu, gain);
+          const before = preview.before;
+          const after = preview.after;
           const gaugePct = (l)=>Math.max(0, Math.min(100, (l.xpIntoLevel/Math.max(1,l.xpForNext))*100));
           const setCount = (n)=>setXpTicketUse(p=>({...p, count: Math.max(1, Math.min(have, n))}));
           return (
@@ -8513,10 +8530,11 @@ function MonsterHeroGame() {
                   </div>
 
                   <div className="bg-black/30 rounded-xl p-3 border border-white/5">
-                    <div className="flex items-center justify-between mb-2">
+                    {!usedResult&&<div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">使う枚数</span>
                       <span className="text-[10px] font-mono font-black text-teal-300">所持 {have}枚</span>
-                    </div>
+                    </div>}
+                    {usedResult?<div className="text-center text-sm font-black text-teal-300">{xpTicketUse.usedCount}枚 使用しました</div>:
                     <div className="flex items-center gap-3">
                       <button onClick={()=>setCount(count-1)} disabled={count<=1} className="w-10 h-10 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90 shrink-0"><MinusCircle size={20}/></button>
                       <div className="flex-1 min-w-0">
@@ -8524,13 +8542,13 @@ function MonsterHeroGame() {
                         <div className="text-center text-2xl font-mono font-black text-white leading-none mt-1">{count}<span className="text-[10px] text-slate-500 font-black"> 枚</span></div>
                       </div>
                       <button onClick={()=>setCount(count+1)} disabled={count>=have} className="w-10 h-10 flex items-center justify-center bg-teal-600 rounded-lg text-white disabled:opacity-20 active:scale-90 shrink-0"><PlusCircle size={20}/></button>
-                    </div>
-                    <div className="grid grid-cols-4 gap-1.5 mt-3">
+                    </div>}
+                    {!usedResult&&<div className="grid grid-cols-4 gap-1.5 mt-3">
                       {[1,10,50].map(n=>(
                         <button key={n} onClick={()=>setCount(n)} disabled={have<n} className="py-1.5 rounded-lg bg-slate-800 border border-white/10 text-[10px] font-black text-slate-300 disabled:opacity-25 active:scale-95">{n}枚</button>
                       ))}
                       <button onClick={()=>setCount(have)} className="py-1.5 rounded-lg bg-slate-800 border border-teal-500/40 text-[10px] font-black text-teal-300 active:scale-95">最大</button>
-                    </div>
+                    </div>}
                   </div>
 
                   <div className="mt-3 bg-black/30 rounded-xl p-3 border border-white/5">
@@ -8539,6 +8557,7 @@ function MonsterHeroGame() {
                       <span className="text-emerald-400 font-mono text-base">+{gain.toLocaleString()}</span>
                     </div>
                     <div className="text-[9px] text-slate-500 font-bold mb-1">絆Lv.{before.level} → <span className="text-white font-black">Lv.{after.level}</span>{after.level>before.level&&<span className="text-emerald-400 font-black"> (+{after.level-before.level})</span>}</div>
+                    <div className="text-[10px] text-amber-300 font-black mb-2">強化ポイント +{preview.gainedLevels}</div>
                     <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 relative">
                       <div className="h-full bg-slate-600 absolute inset-y-0 left-0" style={{width:`${gaugePct(before)}%`}}></div>
                       <div className="h-full bg-gradient-to-r from-pink-500 to-rose-400 absolute inset-y-0 left-0" style={{width:`${gaugePct(after)}%`}}></div>
@@ -8548,8 +8567,8 @@ function MonsterHeroGame() {
                 </div>
               </div>
               <div className="flex gap-2 shrink-0 mt-3">
-                <button onClick={()=>setXpTicketUse(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95">やめる</button>
-                <button onClick={()=>{ useBondXpTickets(item.id, masu.id, count); setXpTicketUse(null); }} disabled={have<=0} className="flex-[2] bg-teal-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95 disabled:opacity-30">{count}枚 使う</button>
+                <button onClick={()=>setXpTicketUse(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95">{usedResult?'閉じる':'やめる'}</button>
+                {!usedResult&&<button onClick={()=>{ const result=useBondXpTickets(item.id, masu.id, count); if(result)setXpTicketUse({itemId:item.id,masuId:masu.id,count,usedCount:count,result}); }} disabled={have<=0} className="flex-[2] bg-teal-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95 disabled:opacity-30">{count}枚 使う</button>}
               </div>
             </div>
           );
