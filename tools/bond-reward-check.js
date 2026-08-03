@@ -50,7 +50,7 @@ check('レベル上昇数ぶん強化ポイントを加算できる', after.leve
 const cappedMasu = { id:'capped', bondXp:totalBondXpForLevel(30) - 1, levelCap:30 };
 check('既存のレベル上限で絆経験値を打ち止める', cappedBondXp(cappedMasu, 999999) === totalBondXpForLevel(30));
 
-// トレーニングチケット(10XP)・修行チケット(100XP)も通常報酬と同じ共通処理を通す。
+// トレーニングチケット(15XP)・修行チケット(150XP)も通常報酬と同じ共通処理を通す。
 const xpJustBefore = level => totalBondXpForLevel(level) - 1;
 const noLevel = applyBondXpGain({ id:'ticket-0', bondXp:totalBondXpForLevel(10), levelCap:30, distAptPoints:4 }, 1);
 check('チケットでレベルが上がらなければ強化ポイント+0', noLevel.gainedLevels === 0 && noLevel.masu.distAptPoints === 4);
@@ -60,7 +60,7 @@ const threeStart = totalBondXpForLevel(10);
 const threeGain = totalBondXpForLevel(13) - threeStart;
 const threeLevels = applyBondXpGain({ id:'ticket-3', bondXp:threeStart, levelCap:30, distAptPoints:2 }, threeGain);
 check('複数枚使用で3レベル上昇ぶんをすべて付与', threeLevels.before.level === 10 && threeLevels.after.level === 13 && threeLevels.gainedLevels === 3 && threeLevels.masu.distAptPoints === 5);
-const largeTicket = applyBondXpGain({ id:'large-ticket', bondXp:xpJustBefore(10), levelCap:30, distAptPoints:0 }, 100);
+const largeTicket = applyBondXpGain({ id:'large-ticket', bondXp:xpJustBefore(10), levelCap:30, distAptPoints:0 }, 150);
 check('修行チケットも共通処理で全上昇レベルぶんを付与', largeTicket.gainedLevels > 0 && largeTicket.masu.distAptPoints === largeTicket.gainedLevels);
 const capArrival = applyBondXpGain({ id:'cap', bondXp:totalBondXpForLevel(29), levelCap:30, distAptPoints:7 }, 999999);
 check('上限到達時は到達した1レベルぶんだけ付与', capArrival.after.level === 30 && capArrival.gainedLevels === 1 && capArrival.masu.distAptPoints === 8);
@@ -72,8 +72,8 @@ check('reconcileMasuPointsを再実行しても二重付与しない', repairedT
 check('両チケットが共通処理を使い結果表示に実付与量を渡す',
   /const result = applyBondXpGain\(masu, gain\)/.test(source)
     && source.includes('強化ポイント +{preview.gainedLevels}')
-    && /id:'training_ticket'[^\n]*bondXp:10/.test(fs.readFileSync(path.join(__dirname, '..', 'monster-hero', 'data', 'breeder.js'), 'utf8'))
-    && /id:'training_ticket_l'[^\n]*bondXp:100/.test(fs.readFileSync(path.join(__dirname, '..', 'monster-hero', 'data', 'breeder.js'), 'utf8')));
+    && /id:'training_ticket'[^\n]*bondXp:15/.test(fs.readFileSync(path.join(__dirname, '..', 'monster-hero', 'data', 'breeder.js'), 'utf8'))
+    && /id:'training_ticket_l'[^\n]*bondXp:150/.test(fs.readFileSync(path.join(__dirname, '..', 'monster-hero', 'data', 'breeder.js'), 'utf8')));
 
 // --- 必要経験値の緩和(0.05 → 0.025) ---
 // 1レベルぶんの必要XP = round(50 × Lv^1.4 × BOND_XP_DISCOUNT)。係数を下げると必要XPが下がる
