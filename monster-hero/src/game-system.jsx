@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 23:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-03 10:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6647,11 +6647,13 @@ function MonsterHeroGame() {
       })),
     ];
   };
+  const MAX_GUARD_CARD_COUNT = 3;
+  const guardCardCount = (bonusCount) => Math.min(MAX_GUARD_CARD_COUNT, 2 + Math.max(0, bonusCount || 0));
   const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus, uChoice, uLevelChoice, cInhEvo, heroOverride=null) => {
     const atkNames=HERO_ATK_NAMES[(heroOverride||mainHero)?.id]||HERO_ATK_NAMES['Mocchi'];
     let pool=[];
     pool.push({...BASE_ATK_EVOLUTION[aLvl],name:atkNames[aLvl],type:'atk',uid:Math.random()},{...BASE_ATK_EVOLUTION[aLvl],name:atkNames[aLvl],type:'atk',uid:Math.random()});
-    for(let i=0;i<2+gBonus;i++) pool.push({...GUARD_EVOLUTION[gLvl],type:'guard',uid:Math.random()});
+    for(let i=0;i<guardCardCount(gBonus);i++) pool.push({...GUARD_EVOLUTION[gLvl],type:'guard',uid:Math.random()});
     currentSlots.forEach((s,idx)=>{
       if(s){
         const revo=RANGE_EVOLUTION[aLvl];
@@ -7100,9 +7102,11 @@ function MonsterHeroGame() {
     else if(type==='hp'){nMaxGuts=Math.floor((maxGuts+10)*1.1);}
     setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts);
     const nGrdL=computeGuardLevel(nDef);
-    const guardLevelUp=type==='def'&&nGrdL>computeGuardLevel(def);
+    const currentGuardLevel=computeGuardLevel(def);
+    const guardLevelUp=type==='def'&&nGrdL>currentGuardLevel;
+    const guardCountUp=guardLevelUp&&guardCardCount(nGrdL)>guardCardCount(currentGuardLevel);
     const guardName=GUARD_EVOLUTION[nGrdL].name;
-    setEffect({type:'heal',label:guardLevelUp?`${guardName}解放！ 枚数UP`:(type==='def'?"丈夫さUP":"能力覚醒完了"),icon:type==='def'?"🛡️":"⚡",monEmoji:"🆙",subLabel:guardLevelUp?`丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化し、枚数も増えます。`:''});
+    setEffect({type:'heal',label:guardLevelUp?`${guardName}解放！${guardCountUp?' 枚数UP':''}`:(type==='def'?"丈夫さUP":"能力覚醒完了"),icon:type==='def'?"🛡️":"⚡",monEmoji:"🆙",subLabel:guardLevelUp?`丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数は最大3枚です。`:''});
     setTimeout(()=>{
       setEffect(null);
       const joinWaves=[2,4,6];
@@ -10211,7 +10215,7 @@ function MonsterHeroGame() {
             <button disabled={!!effect} onClick={()=>setPendingReward('def')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='def'?'bg-emerald-900/40 border-emerald-400 scale-[1.03] ring-4 ring-emerald-500/50 shadow-[0_0_25px_rgba(52,211,153,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
               <div className="p-2 bg-emerald-600/20 rounded-xl text-emerald-500 relative"><ShieldCheck size={18}/>{pendingReward==='def'&&<div className="absolute -top-1.5 -right-1.5 bg-emerald-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
               <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>防御覚醒</div><div className="grid grid-cols-2 gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ライフ {maxHp} → <span className="text-pink-400 font-bold">{Math.floor(maxHp*1.20)}</span></div><div>丈夫さ {def} → <span className="text-emerald-400 font-bold">{Math.floor((def+20)*1.10)}</span></div></div>
-              {(()=>{const nextDef=Math.floor((def+20)*1.10); const curGL=computeGuardLevel(def); const nextGL=computeGuardLevel(nextDef); return nextGL>curGL&&(<div className="text-emerald-400 font-mono font-bold mt-1" style={{fontSize:'9px'}}>丈夫さ100到達で [{GUARD_EVOLUTION[nextGL].name}] 解放！ガード枚数 {2+curGL} → {2+nextGL}</div>);})()}
+              {(()=>{const nextDef=Math.floor((def+20)*1.10); const curGL=computeGuardLevel(def); const nextGL=computeGuardLevel(nextDef); return nextGL>curGL&&(<div className="text-emerald-400 font-mono font-bold mt-1" style={{fontSize:'9px'}}>丈夫さ100到達で [{GUARD_EVOLUTION[nextGL].name}] 解放！ガード枚数 {guardCardCount(curGL)} → {guardCardCount(nextGL)}</div>);})()}
               </div>
             </button>
             <button disabled={!!effect} onClick={()=>setPendingReward('hp')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='hp'?'bg-pink-900/40 border-pink-400 scale-[1.03] ring-4 ring-pink-500/50 shadow-[0_0_25px_rgba(244,114,182,0.5)]':'bg-slate-900/50 border-slate-800'}`}>

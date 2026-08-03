@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ca8178f7bae1eef8
+// source-sha256: 21689e539b127a66
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 23:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-03 10:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12272,6 +12272,8 @@ function MonsterHeroGame() {
       }
     }))];
   };
+  const MAX_GUARD_CARD_COUNT = 3;
+  const guardCardCount = bonusCount => Math.min(MAX_GUARD_CARD_COUNT, 2 + Math.max(0, bonusCount || 0));
   const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus, uChoice, uLevelChoice, cInhEvo, heroOverride = null) => {
     const atkNames = HERO_ATK_NAMES[(heroOverride || mainHero)?.id] || HERO_ATK_NAMES['Mocchi'];
     let pool = [];
@@ -12286,7 +12288,7 @@ function MonsterHeroGame() {
       type: 'atk',
       uid: Math.random()
     });
-    for (let i = 0; i < 2 + gBonus; i++) pool.push({
+    for (let i = 0; i < guardCardCount(gBonus); i++) pool.push({
       ...GUARD_EVOLUTION[gLvl],
       type: 'guard',
       uid: Math.random()
@@ -13062,14 +13064,16 @@ function MonsterHeroGame() {
     setDef(nDef);
     setMaxGuts(nMaxGuts);
     const nGrdL = computeGuardLevel(nDef);
-    const guardLevelUp = type === 'def' && nGrdL > computeGuardLevel(def);
+    const currentGuardLevel = computeGuardLevel(def);
+    const guardLevelUp = type === 'def' && nGrdL > currentGuardLevel;
+    const guardCountUp = guardLevelUp && guardCardCount(nGrdL) > guardCardCount(currentGuardLevel);
     const guardName = GUARD_EVOLUTION[nGrdL].name;
     setEffect({
       type: 'heal',
-      label: guardLevelUp ? `${guardName}解放！ 枚数UP` : type === 'def' ? "丈夫さUP" : "能力覚醒完了",
+      label: guardLevelUp ? `${guardName}解放！${guardCountUp ? ' 枚数UP' : ''}` : type === 'def' ? "丈夫さUP" : "能力覚醒完了",
       icon: type === 'def' ? "🛡️" : "⚡",
       monEmoji: "🆙",
-      subLabel: guardLevelUp ? `丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化し、枚数も増えます。` : ''
+      subLabel: guardLevelUp ? `丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数は最大3枚です。` : ''
     });
     setTimeout(() => {
       setEffect(null);
@@ -22005,7 +22009,7 @@ function MonsterHeroGame() {
         style: {
           fontSize: '9px'
         }
-      }, "\u4E08\u592B\u3055100\u5230\u9054\u3067 [", GUARD_EVOLUTION[nextGL].name, "] \u89E3\u653E\uFF01\u30AC\u30FC\u30C9\u679A\u6570 ", 2 + curGL, " \u2192 ", 2 + nextGL);
+      }, "\u4E08\u592B\u3055100\u5230\u9054\u3067 [", GUARD_EVOLUTION[nextGL].name, "] \u89E3\u653E\uFF01\u30AC\u30FC\u30C9\u679A\u6570 ", guardCardCount(curGL), " \u2192 ", guardCardCount(nextGL));
     })())), /*#__PURE__*/React.createElement("button", {
       disabled: !!effect,
       onClick: () => setPendingReward('hp'),
