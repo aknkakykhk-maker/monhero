@@ -28,6 +28,10 @@ const dyeSource = source.slice(from, to);
 // 染めた色が元の色とはっきり違うほど塗り残しが見つけやすいので、寒色で染めて測る
 const COLORS = ['blue', 'blue', 'blue'];
 const RIM_BARE_LIMIT = 5; // %
+// 内側の塗り残し。部位の定義が実際のイラストの色とずれていると、腕と体の境目などに
+// 元の色の筋(点線状の塗り残し)が残る。定義を実測値へ合わせた状態で0%なので、
+// 「気づかないうちに定義とイラストがずれた」ことを拾えるよう厳しめにしておく
+const INNER_BARE_LIMIT = 0.2; // %
 // 高解像度マスクが必ず効いていてほしいモンスター(元絵が解析サイズより大幅に大きいもの)。
 // MASK_HIRES_BASE_IDSからうっかり外れたときに気付けるよう、ここにも明示しておく
 const EXPECTED = ['Mocchi'];
@@ -69,16 +73,24 @@ window.__measure = async (id, colors) => {
   }
   const on = new Uint8Array(n * n);
   for (let p = 0; p < n * n; p++) on[p] = ad[p * 4 + 3] >= 32 ? 1 : 0;
-  let rim = 0, rimBare = 0;
+  let rim = 0, rimBare = 0, inner = 0, innerBare = 0;
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
     const p = y * n + x;
     if (!on[p]) continue;
     const isRim = [[x-3,y],[x+3,y],[x,y-3],[x,y+3]].some(([a, b]) => (a < 0 || b < 0 || a >= n || b >= n) ? true : !on[b * n + a]);
-    if (!isRim) continue;
-    rim++;
-    if (sum[p] < 32) rimBare++;
+    if (isRim) { rim++; if (sum[p] < 32) rimBare++; continue; }
+    // 内側は「色が付いている画素」だけを数える。白いハイライトや黒い目は
+    // もともと染めない部分なので、塗り残しとして数えると意味がなくなる
+    const r = ad[p*4], g = ad[p*4+1], b2 = ad[p*4+2];
+    const mx = Math.max(r, g, b2), mn = Math.min(r, g, b2);
+    const s = mx === 0 ? 0 : (mx - mn) / mx, v = mx / 255;
+    if (s < 0.1 || v < 0.25) continue;
+    inner++;
+    if (sum[p] < 32) innerBare++;
   }
-  return { ms, n, maskSizes, rim, rimBare, rimBareRatio: +(rimBare / Math.max(1, rim) * 100).toFixed(2) };
+  return { ms, n, maskSizes, rim, rimBare, inner, innerBare,
+    rimBareRatio: +(rimBare / Math.max(1, rim) * 100).toFixed(2),
+    innerBareRatio: +(innerBare / Math.max(1, inner) * 100).toFixed(2) };
 };
 </script></body>`;
 
@@ -111,12 +123,15 @@ const server = http.createServer((req, res) => {
     for (const id of targets) {
       const r = await tab.evaluate(([i, c]) => window.__measure(i, c), [id, COLORS]);
       if (!r || r.error) { problems.push(`${id}: ${(r && r.error) || '計測できませんでした'}`); continue; }
-      console.log(`${id.padEnd(8)} 元絵 ${r.n}px / マスク ${r.maskSizes.join(',')}px / 生成 ${r.ms}ms / 輪郭の塗り残し ${r.rimBareRatio}%`);
+      console.log(`${id.padEnd(8)} 元絵 ${r.n}px / マスク ${r.maskSizes.join(',')}px / 生成 ${r.ms}ms / 輪郭の塗り残し ${r.rimBareRatio}% / 内側の塗り残し ${r.innerBareRatio}%`);
       if (r.maskSizes.some(s => s > 0 && s <= analysisSize)) {
         problems.push(`${id}: マスクが解析サイズ(${analysisSize}px)のまま書き出されています。高解像度書き出しが効いていません`);
       }
       if (r.rimBareRatio > RIM_BARE_LIMIT) {
         problems.push(`${id}: 輪郭の塗り残しが ${r.rimBareRatio}% (上限 ${RIM_BARE_LIMIT}%)。染めても元の色の縁が残ります`);
+      }
+      if (r.innerBareRatio > INNER_BARE_LIMIT) {
+        problems.push(`${id}: 内側の塗り残しが ${r.innerBareRatio}% (上限 ${INNER_BARE_LIMIT}%)。腕と体の境目などに元の色の筋が残ります — 部位定義の色相がイラストと合っているか確認してください`);
       }
     }
     await tab.close();
@@ -125,5 +140,5 @@ const server = http.createServer((req, res) => {
     server.close();
   }
   if (problems.length) { problems.forEach(p => console.log('NG: ' + p)); process.exitCode = 1; }
-  else console.log('OK: 高解像度マスクの輪郭に塗り残しはありません');
+  else console.log('OK: 高解像度マスクの輪郭にも内側にも塗り残しはありません');
 })();
