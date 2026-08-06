@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8fe182339b2205cf
+// source-sha256: b7adad1da6bf15f7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-06 20:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-06 23:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2516,18 +2516,26 @@ const getColorSwatchHex = colorId => {
 //                                          (例: 色相の判定+離れた場所の白い部位を1つの染色枠にまとめたい場合)
 // 配列が空/未定義のモンスターは部位分割が綺麗に取れなかった(単色に近い等)ため、従来通り全身一括の染色のみ対応。
 const MASU_COLOR_REGION_HUES = {
-  // 2026年8月の新規透過イラストへ差し替え。体(染色①)と頭の葉(染色②)は
-  // 色相で分離し、口ばし(染色③)は黄色だけを拾うよう実測範囲へ限定している。
+  // 2026年8月の新規透過イラストへ差し替え。体(染色①)・頭の葉(染色②)・口ばし(染色③)を色相で分ける。
+  // 色相はイラストの実測値に合わせてある(体=330〜345のパステルピンク、葉=90前後、口ばし=30〜45の黄橙)。
+  // 以前は体を350、口ばしを45+範囲指定にしていたが、実際の色とずれていたため
+  // 腕と体の境目に白い点線状の塗り残しが出て、口ばしも半分しか染まっていなかった。
+  // noEdgeGuard は「隣と色相が違う画素を無染色で残す」既定の除外を切るための指定。
+  // モッチーは見えている部分がすべてどれかの部位に属するので、境目を残すと
+  // 部位と部位のあいだに元の色の筋が出てしまう。切ることで境目がぴったり合う。
   Mocchi: [{
-    hue: 350,
-    sMin: 0.08
+    hue: 332,
+    sMin: 0.06,
+    noEdgeGuard: true
   }, {
-    hue: 92,
-    sMin: 0.2
+    hue: 90,
+    sMin: 0.2,
+    noEdgeGuard: true
   }, {
-    hue: 45,
-    sMin: 0.12,
-    bbox: [0.30, 0.23, 0.70, 0.35]
+    hue: [35, 12],
+    sMin: 0.22,
+    vMin: 0.3,
+    noEdgeGuard: true
   }],
   // 2026年に新規イラストへ差し替え。体(明るい黄)と瞳(暗い黄褐色)は同じ色相のため、
   // 明度で明暗を分けて別部位にしている(白目・彩度の低い部分は染色対象外のまま)。
