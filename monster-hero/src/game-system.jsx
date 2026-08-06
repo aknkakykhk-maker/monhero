@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-06 23:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-06 23:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1326,7 +1326,11 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
 // 光沢のあるグラデーション塗り(彩度の低いハイライト〜彩度の高い陰の帯で立体感を出す絵)を持つ
 // モンスターの一覧。染色時に彩度を狙った値へ一律固定すると、このグラデーションが均一に塗り潰されて
 // のっぺり・安っぽく見えてしまうため、該当モンスターだけ元の彩度分布に比例させて塗る(下記参照)
-const MASU_COLOR_PRESERVE_GLOSS = { Ark: true, Tiger: true };
+// 値は true か数値。
+//   true  … 画像全体の最大彩度を基準にする(元からコントラストの強い絵向け)
+//   数値  … その彩度を基準にする。淡い絵は最大彩度が一部の濃い箇所(モッチーなら口ばし)に
+//           引っぱられて全体が白っぽくなってしまうため、体の彩度に合わせた基準を直接指定する
+const MASU_COLOR_PRESERVE_GLOSS = { Ark: true, Tiger: true, Mocchi: 0.22 };
 // ImageDataのピクセル配列(RGBA)を、指定した染色色idの狙った色相・彩度に置き換える(明度は元の陰影を保つ)
 const _recolorImageData = (data, colorId, baseId) => {
   const t = _resolveColorTarget(colorId);
@@ -1342,6 +1346,7 @@ const _recolorImageData = (data, colorId, baseId) => {
       if (s > maxS) maxS = s;
     }
     satRef = Math.max(maxS, 0.3);
+    if (typeof MASU_COLOR_PRESERVE_GLOSS[baseId] === 'number') satRef = Math.max(0.05, MASU_COLOR_PRESERVE_GLOSS[baseId]);
   }
   for (let i = 0; i < data.length; i += 4) {
     if (data[i+3] < 10) continue;

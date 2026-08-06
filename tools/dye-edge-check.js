@@ -32,6 +32,11 @@ const RIM_BARE_LIMIT = 5; // %
 // 元の色の筋(点線状の塗り残し)が残る。定義を実測値へ合わせた状態で0%なので、
 // 「気づかないうちに定義とイラストがずれた」ことを拾えるよう厳しめにしておく
 const INNER_BARE_LIMIT = 0.2; // %
+// 元の陰影を保つ設定(MASU_COLOR_PRESERVE_GLOSS に数値を入れたモンスター)で、
+// 染め上がりの彩度がどれだけばらつくか。彩度を一律に固定する塗りだと0になる
+const GLOSS_SPREAD_MIN = 0.05;
+// 元の陰影を保つ設定が外れていないか気付けるよう、対象をここにも明示しておく
+const GLOSS_EXPECTED = ['Mocchi'];
 // 高解像度マスクが必ず効いていてほしいモンスター(元絵が解析サイズより大幅に大きいもの)。
 // MASK_HIRES_BASE_IDSからうっかり外れたときに気付けるよう、ここにも明示しておく
 const EXPECTED = ['Mocchi'];
@@ -44,6 +49,28 @@ const page = `<!doctype html><meta charset="utf-8">
 <script>
 ${dyeSource}
 window.__targets = () => Object.keys(MASK_HIRES_BASE_IDS);
+window.__glossTargets = () => Object.entries(MASU_COLOR_PRESERVE_GLOSS).filter(([, v]) => typeof v === 'number').map(([k]) => k);
+// 染め上がりの彩度がどれだけばらついているかを測る。
+// 彩度を一律に固定する塗り方だと全画素が同じ値になり、ばらつきは0になる
+window.__glossSpread = async (id) => {
+  const base = ALL_PLAYER_MONSTERS[id];
+  const url = await Promise.resolve(getRecoloredImage(base.imgUrl, 'blue', id));
+  if (!url) return { error: '染め直せませんでした' };
+  const im = await load(url);
+  const n = im.naturalWidth;
+  const cv = document.createElement('canvas'); cv.width = n; cv.height = n;
+  const ctx = cv.getContext('2d'); ctx.drawImage(im, 0, 0);
+  const d = ctx.getImageData(0, 0, n, n).data;
+  const vals = [];
+  for (let p = 0; p < n * n; p += 7) {
+    if (d[p*4+3] < 250) continue;
+    vals.push(_rgbToHsv(d[p*4], d[p*4+1], d[p*4+2])[1]);
+  }
+  if (!vals.length) return { error: '不透明な画素がありません' };
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const sd = Math.sqrt(vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / vals.length);
+  return { sd: +sd.toFixed(4), mean: +mean.toFixed(3), n: vals.length };
+};
 window.__analysisSize = () => MASK_ANALYSIS_MAX_SIZE;
 const load = (url) => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; });
 window.__measure = async (id, colors) => {
@@ -120,6 +147,18 @@ const server = http.createServer((req, res) => {
     const analysisSize = await tab.evaluate(() => window.__analysisSize());
     EXPECTED.forEach((id) => { if (!declared.includes(id)) problems.push(`${id}: MASK_HIRES_BASE_IDS から外れています(高解像度マスクが効きません)`); });
     const targets = Array.from(new Set([...EXPECTED, ...declared]));
+    // 元の陰影を保つ設定にしたモンスターは、染めたあとも彩度にばらつきが残ること。
+    // 設定が外れると全画素が同じ彩度になり、のっぺりした塗りに戻ってしまう
+    const glossDeclared = await tab.evaluate(() => window.__glossTargets());
+    GLOSS_EXPECTED.forEach((id) => { if (!glossDeclared.includes(id)) problems.push(`${id}: MASU_COLOR_PRESERVE_GLOSS の指定が外れています(のっぺりした塗りに戻ります)`); });
+    for (const id of Array.from(new Set([...GLOSS_EXPECTED, ...glossDeclared]))) {
+      const g = await tab.evaluate((i) => window.__glossSpread(i), id);
+      if (!g || g.error) { problems.push(`${id}: 染め上がりを測れませんでした（${(g && g.error) || '不明'}）`); continue; }
+      console.log(`${id.padEnd(8)} 染め上がりの彩度 平均 ${g.mean} / ばらつき ${g.sd}`);
+      if (g.sd < GLOSS_SPREAD_MIN) {
+        problems.push(`${id}: 染め上がりの彩度のばらつきが ${g.sd} (下限 ${GLOSS_SPREAD_MIN})。元の陰影が消えてのっぺりした塗りになっています`);
+      }
+    }
     for (const id of targets) {
       const r = await tab.evaluate(([i, c]) => window.__measure(i, c), [id, COLORS]);
       if (!r || r.error) { problems.push(`${id}: ${(r && r.error) || '計測できませんでした'}`); continue; }
