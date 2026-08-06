@@ -28,8 +28,7 @@ vm.runInContext(
 const { BREEDER_MARKET_ITEMS: items, SKIP_TICKET_BY_DIFFICULTY: byDiff } = itemCtx.__i;
 const ticket = (id) => items.find(i => i.id === id);
 
-// 価格は「その難易度を10WAVEクリアしたときに受け取れるダイヤ × 1.5 ＋ 同じくもらえる経験値」。
-// 数字を直に書かず、本番の獲得ダイヤ・獲得経験値の式と難易度倍率から計算して照合する
+// 販売価格は報酬計算とは独立した固定値。
 const goldCtx = {};
 vm.createContext(goldCtx);
 vm.runInContext([
@@ -40,12 +39,9 @@ vm.runInContext([
 const { goldForWavesCleared, xpForWavesCleared, DIFFICULTY_SETTINGS } = goldCtx.__g;
 const skipClearGold = (diff) => goldForWavesCleared(10, DIFFICULTY_SETTINGS[diff].gold);
 const skipClearXp = (diff) => xpForWavesCleared(10, DIFFICULTY_SETTINGS[diff].score);
-const expectedCost = (diff) => skipClearGold(diff) * 1.5 + skipClearXp(diff);
-const costDetail = (diff, id) => `${skipClearGold(diff)}×1.5+${skipClearXp(diff)}=${expectedCost(diff)} / 実際${ticket(id)?.cost}`;
-
-check('スキップチケット・序はNormalの獲得ダイヤ×1.5＋獲得経験値', ticket('skip_ticket_jo')?.cost === expectedCost('Normal') && ticket('skip_ticket_jo')?.skipDifficulty === 'Normal', costDetail('Normal', 'skip_ticket_jo'));
-check('スキップチケット・破はHardの獲得ダイヤ×1.5＋獲得経験値', ticket('skip_ticket_ha')?.cost === expectedCost('Hard') && ticket('skip_ticket_ha')?.skipDifficulty === 'Hard', costDetail('Hard', 'skip_ticket_ha'));
-check('スキップチケット・急はExpertの獲得ダイヤ×1.5＋獲得経験値', ticket('skip_ticket_kyu')?.cost === expectedCost('Expert') && ticket('skip_ticket_kyu')?.skipDifficulty === 'Expert', costDetail('Expert', 'skip_ticket_kyu'));
+check('スキップチケット・序は3,300ダイヤ', ticket('skip_ticket_jo')?.cost === 3300 && ticket('skip_ticket_jo')?.skipDifficulty === 'Normal');
+check('スキップチケット・破は5,900ダイヤ', ticket('skip_ticket_ha')?.cost === 5900 && ticket('skip_ticket_ha')?.skipDifficulty === 'Hard');
+check('スキップチケット・急は8,500ダイヤ', ticket('skip_ticket_kyu')?.cost === 8500 && ticket('skip_ticket_kyu')?.skipDifficulty === 'Expert');
 check('価格は難易度が上がるほど高い', ticket('skip_ticket_jo').cost < ticket('skip_ticket_ha').cost && ticket('skip_ticket_ha').cost < ticket('skip_ticket_kyu').cost);
 check('3種ともマーケットで買える消耗アイテム', ['skip_ticket_jo', 'skip_ticket_ha', 'skip_ticket_kyu'].every(id => ticket(id)?.type === 'item' && ticket(id)?.usage === 'battleSkip'));
 check('難易度→チケットの対応表がある', byDiff.Normal === 'skip_ticket_jo' && byDiff.Hard === 'skip_ticket_ha' && byDiff.Expert === 'skip_ticket_kyu');

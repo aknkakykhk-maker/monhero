@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-06 20:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-06 20:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -100,6 +100,13 @@ const normalizeBattleMode = (value) => value === BATTLE_MODE_QUICK ? BATTLE_MODE
 const QUICK_REWARD_MULT = 1.5;
 // クイックモードでWAVEごとに味方の全ステータスへかける倍率
 const QUICK_GROWTH_MULT = 1.10;
+const calculateRemainingHp = (currentHp, finalDamage) => Math.max(0, (Number(currentHp) || 0) - (Number(finalDamage) || 0));
+// 恒久成長後の基礎最大値とバトル中の上限バフから、表示・回復上限に使う実効最大値を一意に求める。
+const resolveEffectiveMaxStat = (baseMax, buffPct) => Math.floor((Number(baseMax) || 0) * (1 + (Number(buffPct) || 0)));
+const quickGrowStat = (value) => Math.floor((Number(value) || 0) * QUICK_GROWTH_MULT);
+const resolveQuickGrowthStats = ({hp, atk, def, guts}) => ({
+  hp: quickGrowStat(hp), atk: quickGrowStat(atk), def: quickGrowStat(def), guts: quickGrowStat(guts),
+});
 const isQuickMode = (mode) => normalizeBattleMode(mode) === BATTLE_MODE_QUICK;
 // 難易度倍率をかけたあとの獲得量へ、さらにモードの倍率をかける。
 // WAVEごとの内訳と合計がずれないよう、内訳と同じ「WAVE単位で丸めてから合計」に揃える
@@ -308,6 +315,21 @@ const migrateRebornMasuToFullReset = (masuMons) => (Array.isArray(masuMons) ? ma
 const cappedBondXp = (masu, gain = 0) => {
   const normalized = normalizeMasuProgression(masu);
   return Math.min(totalBondXpForLevel(normalized.levelCap), donationDiamondValue(normalized.bondXp) + Math.max(0, Math.floor(Number(gain) || 0)));
+};
+// 絆経験値の加算・レベル上限・強化ポイント付与を、通常バトル、チケット、合体で共有する。
+// 戻り値に表示用の前後レベルと実際の付与量も含め、画面と保存値の計算がずれないようにする。
+const applyBondXpGain = (masu, gain = 0) => {
+  const before = masuBondLevelInfo(masu);
+  const bondXp = cappedBondXp(masu, gain);
+  const after = bondLevelInfo(bondXp);
+  const gainedLevels = Math.max(0, after.level - before.level);
+  return {
+    masu: { ...masu, bondXp, distAptPoints: (masu.distAptPoints || 0) + gainedLevels },
+    before,
+    after,
+    gainedLevels,
+    xpGain: Math.max(0, bondXp - donationDiamondValue(masu.bondXp)),
+  };
 };
 // 周回終了時の絆経験値配布先を、表示処理やReact state更新から独立して一度だけ決定する。
 // 優先順位は勇者モン(100%) > バトル参加マスモン(50%) > 編成内の控え(25%)。
@@ -3503,8 +3525,11 @@ function MonsterHeroGame() {
 
   const scoreMultiplier = useMemo(() => DIFFICULTY_SETTINGS[safeDifficulty].score, [safeDifficulty]);
   const goldMultiplier = useMemo(() => DIFFICULTY_SETTINGS[safeDifficulty].gold, [safeDifficulty]);
-  const effectiveMaxHp = useMemo(() => Math.floor(maxHp * (1.0 + getPermaBuff('muaHpPct'))), [maxHp, permaBuffs]);
-  const effectiveMaxGuts = useMemo(() => Math.floor(maxGuts * (1.0 + getPermaBuff('muaGutsPct'))), [maxGuts, permaBuffs]);
+  const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);
+  const effectiveMaxGuts = useMemo(() => resolveEffectiveMaxStat(maxGuts, getPermaBuff('muaGutsPct')), [maxGuts, permaBuffs]);
+  // バフが外れて実効最大値が下がった場合も、現在値だけが新しい上限を超えた状態を残さない。
+  useEffect(() => { setHp(current => Math.min(current, effectiveMaxHp)); }, [effectiveMaxHp]);
+  useEffect(() => { setGuts(current => Math.min(current, effectiveMaxGuts)); }, [effectiveMaxGuts]);
 
   // 全国ランキングをSupabaseから取得。失敗時は端末内保存の値にフォールバック
   // ブリーダーレベルのランキング。ランキング行は難易度ごとに保存されているので、
@@ -5077,13 +5102,15 @@ function MonsterHeroGame() {
     const masu = getMasuMon(masuId);
     if (!masu) return;
     const gain = item.bondXp * n;
+    const result = applyBondXpGain(masu, gain);
     setMasuMons(prev => {
-      const next = prev.map(m => m.id === masuId ? { ...m, bondXp: cappedBondXp(m, gain) } : m);
+      const next = prev.map(m => m.id === masuId ? applyBondXpGain(m, gain).masu : m);
       storeSet('mh_masu_mons', next, false);
       return next;
     });
     setOwnedItems(prev => { const next = { ...prev, [itemId]: have - n }; storeSet('mh_owned_items', next, false); return next; });
     Audio_.se.levelUp();
+    return result;
   };
   const openTrainingInfo=()=>setGameState('TRAINING_INFO');
   const openDebugTraining=()=>{setTrainingSelectedId(null);setTrainingDifficulty('BEGINNER');setTrainingSession(null);setGameState('TRAINING_SELECT');};
@@ -5183,15 +5210,16 @@ function MonsterHeroGame() {
     setMasuMons(prev => {
       const next = prev
         .filter(m => m.id !== sub.id)
-        .map(m => m.id === main.id ? {
-          ...m,
-          bondXp: afterXp,
-          // 上がったレベルぶんの強化ポイントを配る(確認画面に出している「強化ポイント +N」と同じ)
-          distAptPoints: (m.distAptPoints || 0) + gainedLevels,
-          fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + gainedLevels,
-          fusionHistory: [...(m.fusionHistory || []), historyEntry],
-          ...(inheritedUnique ? { inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique] } : {}),
-        } : m);
+        .map(m => {
+          if (m.id !== main.id) return m;
+          const advanced = applyBondXpGain(m, gainedXp);
+          return {
+            ...advanced.masu,
+            fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + advanced.gainedLevels,
+            fusionHistory: [...(m.fusionHistory || []), historyEntry],
+            ...(inheritedUnique ? { inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique] } : {}),
+          };
+        });
       storeSet('mh_masu_mons', next, false);
       return next;
     });
@@ -5428,10 +5456,7 @@ function MonsterHeroGame() {
         const next = prev.map(m => {
           const award = awardByMasuId.get(String(m.id));
           if (!award) return m;
-          const before = masuBondLevelInfo(m);
-          const afterXp = cappedBondXp(m, award.gain);
-          const after = bondLevelInfo(afterXp);
-          return { ...m, bondXp: afterXp, distAptPoints: (m.distAptPoints || 0) + (after.level - before.level) };
+          return applyBondXpGain(m, award.gain).masu;
         });
         storeSet('mh_masu_mons', next, false);
         return next;
@@ -6217,12 +6242,14 @@ function MonsterHeroGame() {
     return true;
   };
 
-  const handleEnemyTurn = async (lastActionType, immediateEffects={}, overrideIntent=null) => {
+  const handleEnemyTurn = async (lastActionType, immediateEffects={}, overrideIntent=null, hpAtAttackStart=hp) => {
     if (!enemy) return;
     const intent = overrideIntent||enemyIntent;
     setEnemySkillName({label:intent.label, icon:intent.icon});
     await battleWait(600);
-    let currentHp = hp;
+    // 味方行動中の回復・自傷はsetHpの反映を待たず、呼び出し元で確定した値を受け取る。
+    // この値から算出したremainingHpだけを表示・state更新・敗北判定に使う。
+    let currentHp = hpAtAttackStart;
 
     if (getTurnBuff('invincible',false)||immediateEffects.invincible) {
       addPopup("無効化！",'hero','text-blue-400 font-black text-xl drop-shadow-md');
@@ -6298,11 +6325,11 @@ function MonsterHeroGame() {
           // キーンと弾くガード演出
           setGuardFx(true); Audio_.se.guard(); triggerShake();
           await battleWait(550); setGuardFx(false);
-          if (diff<0) { const fd=Math.abs(diff); addPopup(`貫通! -${fd}`,'hero','text-pink-600 text-3xl font-black drop-shadow-lg'); await battleWait(1000); currentHp=Math.max(0,currentHp-fd); setHp(currentHp); await battleWait(1000); }
+          if (diff<0) { const fd=Math.abs(diff); addPopup(`貫通! -${fd}`,'hero','text-pink-600 text-3xl font-black drop-shadow-lg'); await battleWait(1000); const remainingHp=calculateRemainingHp(currentHp,fd); currentHp=remainingHp; setHp(remainingHp); await battleWait(1000); }
           else { const gGain=Math.floor(diff*0.1); addPopup(`🛡 ガード成功`,'hero','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`💚 ライフ +${diff}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gGain}`,'guts','text-amber-400 text-xl font-bold drop-shadow-md'); await battleWait(1000); currentHp=Math.min(effectiveMaxHp,currentHp+diff); setHp(currentHp); setGuts(p=>Math.min(effectiveMaxGuts,p+gGain)); await battleWait(1000); }
         } else {
           addPopup(`-${incomingDmg}`,'hero','text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce'); triggerShake(); await battleWait(1000);
-          currentHp=Math.max(0,currentHp-incomingDmg); setHp(currentHp); await battleWait(1000);
+          const remainingHp=calculateRemainingHp(currentHp,incomingDmg); currentHp=remainingHp; setHp(remainingHp); await battleWait(1000);
         }
       }
     }
@@ -6335,12 +6362,16 @@ function MonsterHeroGame() {
     addPopup(`💚 ライフ +${recoverHp}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md');
     addPopup(`⚡ ガッツ +${recoverGuts}`,'guts','text-amber-400 text-2xl font-black drop-shadow-md'); await battleWait(1000);
     setHp(p=>Math.min(effectiveMaxHp,p+recoverHp)); setGuts(p=>Math.min(effectiveMaxGuts,p+recoverGuts)); await battleWait(1000);
-    // 練習の台本があるときは、予告を引き直すと画面と食い違うので出ている行動をそのまま実行する
+    // 画面に予告済みの行動をそのまま実行する。ここで敵AIを再抽選すると、緊急回復で予告を
+    // 別の技へ変えられてしまうため、技・対象・順番・予測値を保持した予約だけを参照する。
     const scenario=battleScenarioRef.current;
-    const acting=scenario&&enemyIntent?enemyIntent:getNextEnemyAction(enemy,enemyDist);
-    setEnemyIntent(acting);
-    await handleEnemyTurn('none',{},acting);
-    if (scenario) { setEnemyIntent(getNextEnemyAction(enemy,enemyDist)); setBattleTutorialLastAction('emergency'); }
+    const acting=enemyIntent;
+    const hpAfterRecovery=Math.min(effectiveMaxHp,hp+recoverHp);
+    await handleEnemyTurn('none',{},acting,hpAfterRecovery);
+    // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
+    const distForNextPredict=acting&&acting.type==='MOVE'?acting.targetDist:enemyDist;
+    setEnemyIntent(getNextEnemyAction(enemy,distForNextPredict));
+    if (scenario) setBattleTutorialLastAction('emergency');
   };
 
   const processTurn = async () => {
@@ -6359,6 +6390,7 @@ function MonsterHeroGame() {
     const defaultSlot=slots.findIndex(s=>s!==null);
     setIsBusy(true);
     let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, localOryoAdd=0, localDmgModAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardFlat=0, currentTurnGuardMult=0;
+    let hpBeforeEnemyAttack=hp;
     let forcedMoveTarget=null; // 最後に使った距離撃の指定距離を、敵行動後にも最終距離として再適用する
     let attackDistance=enemyDist; // 同一ターンの各攻撃開始時点の距離。距離撃後は指定距離へ進める
     const attackHits=[]; // {dmg, isCrit, slotIdx}
@@ -6401,7 +6433,7 @@ function MonsterHeroGame() {
             }
           }
         }
-        else if (card.subType==='buff_myaru') { setNextTurnBuff('atkMult',card.baseValue); const selfDmgAmt=Math.floor(hp*card.selfDmg); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black'); setHp(p=>Math.max(1,p-selfDmgAmt)); }
+        else if (card.subType==='buff_myaru') { setNextTurnBuff('atkMult',card.baseValue); const selfDmgAmt=Math.floor(hpBeforeEnemyAttack*card.selfDmg); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black'); hpBeforeEnemyAttack=Math.max(1,hpBeforeEnemyAttack-selfDmgAmt); setHp(hpBeforeEnemyAttack); }
       }
       else if (card.type==='heal') {
         Audio_.se.heal();
@@ -6459,7 +6491,7 @@ function MonsterHeroGame() {
           else if(card.monId==='Pixie'){setNextTurnBuff('zeroGuts',true); addPopup('次ターン消費0!','hero','text-blue-400 text-lg font-bold');}
           else if(card.monId==='Tiger'){setNextTurnBuff('guaranteedCrit',true); addPermaBuff('critRatePct',0.02*effMul); addPermaBuff('critDmgPct',0.02*effMul); addPopup('次ターン会心確定!','hero','text-red-400 text-lg font-bold'); addPopup(`会心率+${(2*effMul).toFixed(effMul===1?0:1)}% 会心ダメ+${(2*effMul).toFixed(effMul===1?0:1)}%`,'hero','text-yellow-400 text-sm font-bold');}
           else if(card.monId==='Monol'){addPermaBuff('dmgCutPct',0.03*effMul); addWaveBuff('enemyAtkDebuffPct',0.10*effMul); setNextTurnBuff('reflect',true); addPopup('次ターン反射！','hero','text-purple-400 text-lg font-bold');}
-          else if(card.monId==='Oboro'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05); setHp(p=>Math.min(effectiveMaxHp,p+hRec)); setGuts(p=>Math.min(effectiveMaxGuts,p+gRec)); addPopup(`💚 ドレイン +${hRec}`,'life','text-emerald-400 text-xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');}
+          else if(card.monId==='Oboro'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05); hpBeforeEnemyAttack=Math.min(effectiveMaxHp,hpBeforeEnemyAttack+hRec); setHp(hpBeforeEnemyAttack); setGuts(p=>Math.min(effectiveMaxGuts,p+gRec)); addPopup(`💚 ドレイン +${hRec}`,'life','text-emerald-400 text-xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');}
           else if(card.monId==='Ark'||card.monId==='Iblis'){
             // 贖罪: 与ダメの20%で追撃(ザンの「連撃」とは別名にして、ザン専用の連撃モーション判定と衝突しないようにする)
             // noAnim:true → 専用モーションを2回連続再生させず、直前のヒットに続けてダメージ数値だけ表示する
@@ -6476,7 +6508,7 @@ function MonsterHeroGame() {
     }
 
     if (totalDmg>0||totalHeal>0) {
-      if(totalHeal>0){addPopup(`💚 回復 +${totalHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg'); await battleWait(600); setHp(p=>Math.min(effectiveMaxHp,p+totalHeal)); await battleWait(400);}
+      if(totalHeal>0){addPopup(`💚 回復 +${totalHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg'); await battleWait(600); hpBeforeEnemyAttack=Math.min(effectiveMaxHp,hpBeforeEnemyAttack+totalHeal); setHp(hpBeforeEnemyAttack); await battleWait(400);}
       if(totalDmg>0){
         const fallbackSlot = lastActionSlot !== null ? lastActionSlot : slots.findIndex(s => s !== null);
         const multiHit = attackHits.length > 1;
@@ -6588,7 +6620,7 @@ function MonsterHeroGame() {
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
     // distLocked: このターン距離撃を撃ったか。敵の移動は距離撃で上書きされるため、行動しなかった扱いにする
-    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,distLocked:forcedMoveTarget!=null},executedIntent);
+    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,distLocked:forcedMoveTarget!=null},executedIntent,hpBeforeEnemyAttack);
     // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
     if (forcedMoveTarget!=null) {
       setEnemyDist(forcedMoveTarget);
@@ -6639,13 +6671,15 @@ function MonsterHeroGame() {
   // 味方の全ステータスをそのWAVE終了時点の値から10%上げ、ライフとガッツを全回復する。
   // 敵側には何もしない(敵の強さは難易度・WAVEの既存設定のまま)。
   // 端数は既存の強化処理と同じくMath.floorで落とす。
-  const quickGrowStat = (value) => Math.floor((Number(value) || 0) * QUICK_GROWTH_MULT);
   const beginQuickGrowth = () => {
     const before = { hp: maxHp, atk, def, guts: maxGuts };
-    const after = { hp: quickGrowStat(before.hp), atk: quickGrowStat(before.atk), def: quickGrowStat(before.def), guts: quickGrowStat(before.guts) };
+    const after = resolveQuickGrowthStats(before);
+    // setMax*後の古いmemo値は読まず、成長後の基礎値と現在のバフ率から実効最大値をここで確定する。
+    const nextEffectiveMaxHp = resolveEffectiveMaxStat(after.hp, getPermaBuff('muaHpPct'));
+    const nextEffectiveMaxGuts = resolveEffectiveMaxStat(after.guts, getPermaBuff('muaGutsPct'));
     // 画面に出す値と実際に反映する値がずれないよう、同じ after をそのまま state へ入れる
     setMaxHp(after.hp); setAtk(after.atk); setDef(after.def); setMaxGuts(after.guts);
-    setHp(after.hp); setGuts(after.guts); // 全回復
+    setHp(nextEffectiveMaxHp); setGuts(nextEffectiveMaxGuts); // バトル中バフ込みの実効最大値まで全回復
     setQuickGrowth({
       nextWave: wave + 1,
       stats: [
@@ -6655,6 +6689,7 @@ function MonsterHeroGame() {
         { label: 'ガッツ', before: before.guts, after: after.guts },
       ],
       nextDef: after.def,
+      nextStats: { ...after, effectiveMaxHp: nextEffectiveMaxHp, effectiveMaxGuts: nextEffectiveMaxGuts },
     });
     quickAdvanceRef.current = null;
     Audio_.se.levelUp();
@@ -6665,6 +6700,7 @@ function MonsterHeroGame() {
     if (quickAdvanceRef.current === 'growth') return;
     quickAdvanceRef.current = 'growth';
     const nextDef = quickGrowth?.nextDef;
+    const nextStats = quickGrowth?.nextStats;
     setQuickGrowth(null);
     const joinWaves = [2, 4, 6];
     const activeIds = slots.filter(s => s).map(s => s.id);
@@ -6673,7 +6709,7 @@ function MonsterHeroGame() {
       setMonSelection(avail.sort(() => Math.random() - 0.5).slice(0, 4));
       setGameState('PICK_ALLY');
     } else {
-      initBattle(wave + 1, slots, ownedUniques, ownedTeachings, nextDef !== undefined ? nextDef : def);
+      initBattle(wave + 1, slots, ownedUniques, ownedTeachings, nextDef !== undefined ? nextDef : def, null, null, null, nextStats);
     }
   };
 
@@ -6704,7 +6740,7 @@ function MonsterHeroGame() {
     quickAdvanceRef.current = 'join';
     const info = quickJoin;
     setQuickJoin(null);
-    initBattle(wave + 1, info?.nextSlots || slots, info?.nextUniques || ownedUniques, ownedTeachings, info?.nextDef !== undefined ? info.nextDef : def);
+    initBattle(wave + 1, info?.nextSlots || slots, info?.nextUniques || ownedUniques, ownedTeachings, info?.nextDef !== undefined ? info.nextDef : def, null, null, null, info?.nextStats);
   };
 
   // スロットで現在選べる固有技一覧(自分の固有技+合体で引き継いだ固有技)を返す。
@@ -6726,11 +6762,13 @@ function MonsterHeroGame() {
       })),
     ];
   };
+  const MAX_GUARD_CARD_COUNT = 3;
+  const guardCardCount = (bonusCount) => Math.min(MAX_GUARD_CARD_COUNT, 2 + Math.max(0, bonusCount || 0));
   const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus, uChoice, uLevelChoice, cInhEvo, heroOverride=null) => {
     const atkNames=HERO_ATK_NAMES[(heroOverride||mainHero)?.id]||HERO_ATK_NAMES['Mocchi'];
     let pool=[];
     pool.push({...BASE_ATK_EVOLUTION[aLvl],name:atkNames[aLvl],type:'atk',uid:Math.random()},{...BASE_ATK_EVOLUTION[aLvl],name:atkNames[aLvl],type:'atk',uid:Math.random()});
-    for(let i=0;i<2+gBonus;i++) pool.push({...GUARD_EVOLUTION[gLvl],type:'guard',uid:Math.random()});
+    for(let i=0;i<guardCardCount(gBonus);i++) pool.push({...GUARD_EVOLUTION[gLvl],type:'guard',uid:Math.random()});
     currentSlots.forEach((s,idx)=>{
       if(s){
         const revo=RANGE_EVOLUTION[aLvl];
@@ -6872,10 +6910,19 @@ function MonsterHeroGame() {
   // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
   // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
   // 必ず呼び出し元が保持している最新のローカル値を渡す
-  const initBattle = (w, s, u, t, defVal, forcedEnemyKey=null, heroForDeck=null, aptPctOverride=null) => {
+  const initBattle = (w, s, u, t, defVal, forcedEnemyKey=null, heroForDeck=null, aptPctOverride=null, restoredStats=null) => {
     // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
     if (w === 1 && !forcedEnemyKey) { addAssistantBond('battle'); addAssistantBond(isQuickMode(runMode) ? 'quick' : 'challenge'); }
     setWave(w);
+    // クイック成長で確定した最大値を明示的に引き継ぎ、次WAVE開始時も同じ値で全回復する。
+    // setMax*直後の古いstateやモンスター初期値は参照しない。
+    if (restoredStats) {
+      const restoredEffectiveMaxHp = resolveEffectiveMaxStat(restoredStats.hp, getPermaBuff('muaHpPct'));
+      const restoredEffectiveMaxGuts = resolveEffectiveMaxStat(restoredStats.guts, getPermaBuff('muaGutsPct'));
+      setMaxHp(restoredStats.hp); setHp(restoredEffectiveMaxHp);
+      setMaxGuts(restoredStats.guts); setGuts(restoredEffectiveMaxGuts);
+      setAtk(restoredStats.atk); setDef(restoredStats.def);
+    }
     const currentSlots = s||slots;
     // 通常周回の初戦だけ、デッキ編成で勇者モンを置いた初期間合いから開始する。
     // 敵の選択・以降のWAVEの距離決定は従来どおりランダムのまま維持する。
@@ -7131,6 +7178,7 @@ function MonsterHeroGame() {
           ].filter(x=>x.after!==x.before),
           aptLabel, unique:rolled,
           nextSlots, nextUniques:appliedUniques, nextDef:nDef,
+          nextStats:{hp:nMaxHp,atk:nAtk,def:nDef,guts:nMaxGuts},
         });
         quickAdvanceRef.current=null;
         Audio_.se.levelUp();
@@ -7169,9 +7217,11 @@ function MonsterHeroGame() {
     else if(type==='hp'){nMaxGuts=Math.floor((maxGuts+10)*1.1);}
     setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts);
     const nGrdL=computeGuardLevel(nDef);
-    const guardLevelUp=type==='def'&&nGrdL>computeGuardLevel(def);
+    const currentGuardLevel=computeGuardLevel(def);
+    const guardLevelUp=type==='def'&&nGrdL>currentGuardLevel;
+    const guardCountUp=guardLevelUp&&guardCardCount(nGrdL)>guardCardCount(currentGuardLevel);
     const guardName=GUARD_EVOLUTION[nGrdL].name;
-    setEffect({type:'heal',label:guardLevelUp?`${guardName}解放！ 枚数UP`:(type==='def'?"丈夫さUP":"能力覚醒完了"),icon:type==='def'?"🛡️":"⚡",monEmoji:"🆙",subLabel:guardLevelUp?`丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化し、枚数も増えます。`:''});
+    setEffect({type:'heal',label:guardLevelUp?`${guardName}解放！${guardCountUp?' 枚数UP':''}`:(type==='def'?"丈夫さUP":"能力覚醒完了"),icon:type==='def'?"🛡️":"⚡",monEmoji:"🆙",subLabel:guardLevelUp?`丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数は最大3枚です。`:''});
     setTimeout(()=>{
       setEffect(null);
       const joinWaves=[2,4,6];
@@ -8605,10 +8655,12 @@ function MonsterHeroGame() {
           const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
           if (!item || !masu || !base) return null;
           const have = ownedItems[item.id]||0;
+          const usedResult = xpTicketUse.result;
           const count = Math.max(1, Math.min(xpTicketUse.count||1, Math.max(1, have)));
           const gain = (item.bondXp||0) * count;
-          const before = masuBondLevelInfo(masu);
-          const after = bondLevelInfo((masu.bondXp||0) + gain);
+          const preview = usedResult || applyBondXpGain(masu, gain);
+          const before = preview.before;
+          const after = preview.after;
           const gaugePct = (l)=>Math.max(0, Math.min(100, (l.xpIntoLevel/Math.max(1,l.xpForNext))*100));
           const setCount = (n)=>setXpTicketUse(p=>({...p, count: Math.max(1, Math.min(have, n))}));
           return (
@@ -8629,10 +8681,11 @@ function MonsterHeroGame() {
                   </div>
 
                   <div className="bg-black/30 rounded-xl p-3 border border-white/5">
-                    <div className="flex items-center justify-between mb-2">
+                    {!usedResult&&<div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">使う枚数</span>
                       <span className="text-[10px] font-mono font-black text-teal-300">所持 {have}枚</span>
-                    </div>
+                    </div>}
+                    {usedResult?<div className="text-center text-sm font-black text-teal-300">{xpTicketUse.usedCount}枚 使用しました</div>:
                     <div className="flex items-center gap-3">
                       <button onClick={()=>setCount(count-1)} disabled={count<=1} className="w-10 h-10 flex items-center justify-center bg-slate-700 rounded-lg text-white disabled:opacity-20 active:scale-90 shrink-0"><MinusCircle size={20}/></button>
                       <div className="flex-1 min-w-0">
@@ -8640,13 +8693,13 @@ function MonsterHeroGame() {
                         <div className="text-center text-2xl font-mono font-black text-white leading-none mt-1">{count}<span className="text-[10px] text-slate-500 font-black"> 枚</span></div>
                       </div>
                       <button onClick={()=>setCount(count+1)} disabled={count>=have} className="w-10 h-10 flex items-center justify-center bg-teal-600 rounded-lg text-white disabled:opacity-20 active:scale-90 shrink-0"><PlusCircle size={20}/></button>
-                    </div>
-                    <div className="grid grid-cols-4 gap-1.5 mt-3">
+                    </div>}
+                    {!usedResult&&<div className="grid grid-cols-4 gap-1.5 mt-3">
                       {[1,10,50].map(n=>(
                         <button key={n} onClick={()=>setCount(n)} disabled={have<n} className="py-1.5 rounded-lg bg-slate-800 border border-white/10 text-[10px] font-black text-slate-300 disabled:opacity-25 active:scale-95">{n}枚</button>
                       ))}
                       <button onClick={()=>setCount(have)} className="py-1.5 rounded-lg bg-slate-800 border border-teal-500/40 text-[10px] font-black text-teal-300 active:scale-95">最大</button>
-                    </div>
+                    </div>}
                   </div>
 
                   <div className="mt-3 bg-black/30 rounded-xl p-3 border border-white/5">
@@ -8655,6 +8708,7 @@ function MonsterHeroGame() {
                       <span className="text-emerald-400 font-mono text-base">+{gain.toLocaleString()}</span>
                     </div>
                     <div className="text-[9px] text-slate-500 font-bold mb-1">絆Lv.{before.level} → <span className="text-white font-black">Lv.{after.level}</span>{after.level>before.level&&<span className="text-emerald-400 font-black"> (+{after.level-before.level})</span>}</div>
+                    <div className="text-[10px] text-amber-300 font-black mb-2">強化ポイント +{preview.gainedLevels}</div>
                     <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 relative">
                       <div className="h-full bg-slate-600 absolute inset-y-0 left-0" style={{width:`${gaugePct(before)}%`}}></div>
                       <div className="h-full bg-gradient-to-r from-pink-500 to-rose-400 absolute inset-y-0 left-0" style={{width:`${gaugePct(after)}%`}}></div>
@@ -8664,8 +8718,8 @@ function MonsterHeroGame() {
                 </div>
               </div>
               <div className="flex gap-2 shrink-0 mt-3">
-                <button onClick={()=>setXpTicketUse(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95">やめる</button>
-                <button onClick={()=>{ useBondXpTickets(item.id, masu.id, count); setXpTicketUse(null); }} disabled={have<=0} className="flex-[2] bg-teal-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95 disabled:opacity-30">{count}枚 使う</button>
+                <button onClick={()=>setXpTicketUse(null)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-2xl font-black text-xs uppercase active:scale-95">{usedResult?'閉じる':'やめる'}</button>
+                {!usedResult&&<button onClick={()=>{ const result=useBondXpTickets(item.id, masu.id, count); if(result)setXpTicketUse({itemId:item.id,masuId:masu.id,count,usedCount:count,result}); }} disabled={have<=0} className="flex-[2] bg-teal-600 text-white py-3 rounded-2xl font-black text-xs uppercase shadow-lg active:scale-95 disabled:opacity-30">{count}枚 使う</button>}
               </div>
             </div>
           );
@@ -9133,9 +9187,13 @@ function MonsterHeroGame() {
         {/* BATTLE */}
         {gameState==='BATTLE'&&(
           <div className="flex-1 flex flex-col h-full" data-battle-speed={battleSpeed}>
-            <header className="h-[5%] shrink-0 bg-slate-900 px-4 flex items-center justify-between border-b border-white/5 z-[6500]">
-              <div className={`flex items-center gap-2${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1.5 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-2 py-0.5 rounded border tracking-wider ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* いま遊んでいるモードと難易度。既存の表示を邪魔しないよう1行に収める */}<span className="text-[7px] font-black px-1.5 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</span><span className="text-[8px] font-black text-blue-400 flex items-center gap-1 uppercase tracking-widest"><Timer size={8}/> TURN {turnCount}/20</span></div>
-              <div className="flex items-center gap-1.5">{!isQuickMode(runMode)&&<div className="text-[10px] font-mono font-black text-amber-500 flex items-center gap-1 uppercase tracking-tighter"><Award size={10}/> {score.toLocaleString()}</div>}<button type="button" disabled={!!battleTutorial} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} className="min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:opacity-50" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}</button><button onClick={toggleQuickMute} className="p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[28px] h-[28px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} className="p-1.5 bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} className="p-1.5 bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
+            <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
+              <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</span></div>
+              <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
+                <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[7px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
+                {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[7px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
+              </div>
+              <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:opacity-50" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}</button><button onClick={toggleQuickMute} aria-label="音量" className="shrink-0 p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[28px] h-[28px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} aria-label="ヘルプ" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button data-battle-quit disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} aria-label="諦める" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
             </header>
             {enemy&&(
               <div className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
@@ -10304,7 +10362,7 @@ function MonsterHeroGame() {
             <button disabled={!!effect} onClick={()=>setPendingReward('def')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='def'?'bg-emerald-900/40 border-emerald-400 scale-[1.03] ring-4 ring-emerald-500/50 shadow-[0_0_25px_rgba(52,211,153,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
               <div className="p-2 bg-emerald-600/20 rounded-xl text-emerald-500 relative"><ShieldCheck size={18}/>{pendingReward==='def'&&<div className="absolute -top-1.5 -right-1.5 bg-emerald-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
               <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>防御覚醒</div><div className="grid grid-cols-2 gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ライフ {maxHp} → <span className="text-pink-400 font-bold">{Math.floor(maxHp*1.20)}</span></div><div>丈夫さ {def} → <span className="text-emerald-400 font-bold">{Math.floor((def+20)*1.10)}</span></div></div>
-              {(()=>{const nextDef=Math.floor((def+20)*1.10); const curGL=computeGuardLevel(def); const nextGL=computeGuardLevel(nextDef); return nextGL>curGL&&(<div className="text-emerald-400 font-mono font-bold mt-1" style={{fontSize:'9px'}}>丈夫さ100到達で [{GUARD_EVOLUTION[nextGL].name}] 解放！ガード枚数 {2+curGL} → {2+nextGL}</div>);})()}
+              {(()=>{const nextDef=Math.floor((def+20)*1.10); const curGL=computeGuardLevel(def); const nextGL=computeGuardLevel(nextDef); return nextGL>curGL&&(<div className="text-emerald-400 font-mono font-bold mt-1" style={{fontSize:'9px'}}>丈夫さ100到達で [{GUARD_EVOLUTION[nextGL].name}] 解放！ガード枚数 {guardCardCount(curGL)} → {guardCardCount(nextGL)}</div>);})()}
               </div>
             </button>
             <button disabled={!!effect} onClick={()=>setPendingReward('hp')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='hp'?'bg-pink-900/40 border-pink-400 scale-[1.03] ring-4 ring-pink-500/50 shadow-[0_0_25px_rgba(244,114,182,0.5)]':'bg-slate-900/50 border-slate-800'}`}>

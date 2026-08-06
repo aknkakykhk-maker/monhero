@@ -63,7 +63,8 @@ check('振り済みのぶんは重複して配らない',
   m.reconcileMasuPoints({ ...lv10, distApt: ['B', 'C', 'C', 'C'], statPoints: { hp: 10 }, distAptPoints: 0 }).distAptPoints === 7);
 
 // --- 画面・実処理の結線 ---
-check('合体の実処理で強化ポイントを配る', has('distAptPoints: (m.distAptPoints || 0) + gainedLevels,'));
+// 上がったレベルぶんの強化ポイントは applyBondXpGain がまとめて配る。合体もそこを通す
+check('合体の実処理で強化ポイントを配る', has('distAptPoints: (masu.distAptPoints || 0) + gainedLevels') && has('applyBondXpGain(m, gainedXp)'));
 check('確認画面と実処理が同じ費用計算を使う', (source.match(/masuFusionCost\(mainLvl\.level, subLvl\.level\)/g) || []).length === 2);
 check('古い×100の計算が残っていない', !has('(mainLvl.level + subLvl.level) * 100') && !has('const cost = level * 100;'));
 check('確認画面は強化ポイントの増分を出したまま', has('{mainPointsNow} → {mainPointsNow + gainedLevels}'));
