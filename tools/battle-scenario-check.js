@@ -175,9 +175,11 @@ check('選択肢を絞るのは台本があるときだけ',
   has('const scenarioPicksHero = (id) => !battleScenario || !battleScenario.heroId')
     && has('const scenarioPicksSlot = (idx) => !battleScenario || !Number.isInteger(battleScenario.slotIndex)')
     && has('const scenarioPicksTeaching = (id) => !battleScenario || !battleScenario.teachingId'));
+// 予告した行動をそのまま実行することが大事なので、handleEnemyTurn へ渡す引数が
+// 増えても通るように「acting を渡していること」だけを見る
 check('緊急回復は予告済みの敵行動を再抽選せず実行する',
   has('const acting=enemyIntent;')
-    && has("await handleEnemyTurn('none',{},acting);")
+    && /await handleEnemyTurn\('none',\{\},acting[,)]/.test(source)
     && !has('const acting=scenario&&enemyIntent?enemyIntent:getNextEnemyAction(enemy,enemyDist);'));
 check('緊急回復後は敵行動を終えてから次ターンを1回だけ予約する',
   has("const distForNextPredict=acting&&acting.type==='MOVE'?acting.targetDist:enemyDist;")

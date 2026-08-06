@@ -16,7 +16,7 @@
 // 崩れていないかは tools/image-report.js で確認できる。
 // パスの綴り間違い・置き忘れは tools/image-asset-check.js が拾う。
 const MOCCHI_IMG = "images/monsters/mocchi.png?v=f8d4f69ac32c";
-const HAM_IMG = "images/monsters/ham.png?v=513e9b26e67a";
+const HAM_IMG = "images/monsters/ham.png?v=40397c7cc50e";
 const TIGER_ROLLBACK_IMG = "images/monsters/tiger.png?v=7066f58deafb";
 const TIGER_ROLLBACK_ICON = "images/monster-icons/tiger.png?v=d45553b8bd12";
 const TIGER_IMG = "images/monsters/tiger.PNG?v=c5e09bb1f395";
@@ -25,22 +25,22 @@ const SUEZO_IMG = "images/monsters/suezo.png?v=979846ef01a1";
 const GOLEM_IMG = "images/monsters/golem.png?v=497d87ab23d5";
 const MONOL_IMG = "images/monsters/monol.png?v=5527c974fa3e";
 const OBORO_IMG = "images/monsters/oboro.png?v=fb0ab6eb992f";
-const ZAN_IMG = "images/monsters/zan.png?v=190a2cd61c75";
+const ZAN_IMG = "images/monsters/zan.png?v=1d798611b6bd";
 const MITARASHI_IMG = "images/monsters/mitarashi.png?v=2a637bc237b6";
-const ARK_IMG = "images/monsters/ark.png?v=8e498956946e";
+const ARK_IMG = "images/monsters/ark.png?v=4f978d873f99";
 const IBLIS_IMG = "images/monsters/iblis.png?v=9b2efa1e0744";
 
 const MOCCHI_ICON = MOCCHI_IMG;
-const HAM_ICON = "images/monster-icons/ham.png?v=b8e74464588e";
+const HAM_ICON = HAM_IMG;
 const TIGER_ICON = TIGER_IMG;
 const PIXIE_ICON = PIXIE_IMG;
 const SUEZO_ICON = SUEZO_IMG;
 const GOLEM_ICON = GOLEM_IMG;
 const MONOL_ICON = "images/monster-icons/monol.png?v=7e8c9c35fd62";
 const OBORO_ICON = "images/monster-icons/oboro.png?v=d8d0981d2921";
-const ZAN_ICON = "images/monster-icons/zan.png?v=56d9a300b038";
+const ZAN_ICON = ZAN_IMG;
 const MITARASHI_ICON = MITARASHI_IMG;
-const ARK_ICON = "images/monster-icons/ark.png?v=299cb6faf32a";
+const ARK_ICON = ARK_IMG;
 const IBLIS_ICON = IBLIS_IMG;
 
 // ==================== 顔アイコン (faceIconUrl) ====================
@@ -53,14 +53,14 @@ const IBLIS_ICON = IBLIS_IMG;
 // ライガー・モノリス・オボロゲソウ・ザンのように元絵が顔中心の構図で、全身アイコンを
 // そのまま顔アイコンとして使えるモンスターだけ、base64 を重複させず変数参照にしている。
 const MOCCHI_FACE_ICON = "images/monster-icons/face/mocchi.png?v=13f5804c1dd1";
-const HAM_FACE_ICON = "images/monster-icons/face/ham.png?v=de97b54fa6f6";
+const HAM_FACE_ICON = "images/monster-icons/face/ham.png?v=a267da2b457e";
 const TIGER_FACE_ICON = TIGER_ICON;
 const PIXIE_FACE_ICON = "images/monster-icons/face/pixie.png?v=91ad4058896a";
 const SUEZO_FACE_ICON = "images/monster-icons/face/suezo.png?v=90766f3c0cb1";
 const GOLEM_FACE_ICON = "images/monster-icons/face/golem.png?v=708a1f656fc7";
 const MONOL_FACE_ICON = MONOL_ICON;
 const OBORO_FACE_ICON = OBORO_ICON;
-const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=7b6032acfa5d";
+const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=f6a88d1769df";
 const MITARASHI_FACE_ICON = "images/monster-icons/face/mitarashi.png?v=5176f031b2ce";
-const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=44703e0069d2";
+const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=222959bd0def";
 const IBLIS_FACE_ICON = "images/monster-icons/face/iblis.png?v=46d9d96874ae";
