@@ -69,3 +69,9 @@ fs.writeFileSync(OUT_FILE, header + code + '\n');
 const kb = (fs.statSync(OUT_FILE).size / 1024).toFixed(0);
 console.log(`書き出しました: ${path.relative(process.cwd(), OUT_FILE)} (${kb} KB)`);
 console.log(`source-sha256: ${hash}`);
+
+// ローディングのゲージが使う「起動時に読み込むファイルの実サイズ」を測り直す。
+// game-system.compiled.js 自身も対象なので、必ず書き出したあとに行う。
+const { stampBootSizes } = require('./stamp-boot-sizes');
+const boot = stampBootSizes();
+console.log(`起動時に読み込むファイル: ${boot.count}件 / 合計 ${(boot.total / 1024 / 1024).toFixed(2)}MB (ローディングのゲージの分母)`);

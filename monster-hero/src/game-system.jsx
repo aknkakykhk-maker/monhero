@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 07:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 08:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1337,32 +1337,43 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
   _dyeRegionMaskCache[cacheKey] = promise;
   return promise;
 };
-// 光沢のあるグラデーション塗り(彩度の低いハイライト〜彩度の高い陰の帯で立体感を出す絵)を持つ
-// モンスターの一覧。染色時に彩度を狙った値へ一律固定すると、このグラデーションが均一に塗り潰されて
-// のっぺり・安っぽく見えてしまうため、該当モンスターだけ元の彩度分布に比例させて塗る(下記参照)
-// 値は true / 数値 / false、または部位ごとに書き分ける配列。
-//   true  … 画像全体の最大彩度を基準にする(元からコントラストの強い絵向け)
-//   数値  … その彩度を基準にする。淡い絵は最大彩度が一部の濃い箇所(モッチーなら口ばし)に
-//           引っぱられて全体が白っぽくなってしまうため、体の彩度に合わせた基準を直接指定する
-//   false … 元の彩度に比例させず、狙った彩度で塗る(既定)
-//   配列  … 部位ごとの設定。要素の並びは MASU_COLOR_REGION_HUES と同じ
+// 部位ごとの染まり方の調整。書かなければ「選んだ色の彩度でそのまま塗る」(既定)。
+//   gloss … 元のイラストの彩度に比例させるときの基準彩度。
+//           true なら画像全体の最大彩度、数値ならその値を基準にする。
+//           光沢のあるグラデーション塗り(彩度の低いハイライト〜彩度の高い陰の帯で立体感を
+//           出している絵)を、彩度を一律に固定して塗り潰してしまわないための設定。
+//           淡い絵は最大彩度が一部の濃い箇所(モッチーなら口ばし)に引っぱられて全体が
+//           白っぽくなるため、体の彩度に合わせた基準を数値で直接指定する。
+//   sat   … 選んだ色の彩度に掛ける倍率。1未満にすると淡く仕上がる。
+//           絵によっては同じ色でも色が乗りすぎて重く見えるので、その調整に使う。
+// 値はモンスターごとに1つ書けば全部位に、配列で書けば部位ごとに効く(並びは MASU_COLOR_REGION_HUES と同じ)。
 //
 // 部位ごとに書き分けられるようにしているのは、白い部分にまったく色が入らなくなるため。
 // 元の彩度に比例させる塗りは「元が白い＝染めても白い」になるので、白を基準色にした部位
 // (アークの染色②は元の彩度が0.008しかない)は明度しか変わらず、暗い色を選んだときだけ
 // 変化して見える＝「黒しか入らない」状態になっていた。白い部位は比例させず狙った彩度で塗る。
-const MASU_COLOR_PRESERVE_GLOSS = { Ark: [0.76, false, 0.35], Tiger: true, Mocchi: 0.22 };
-// 指定した部位に効く光沢保持の設定を返す(配列でなければ全部位に同じ設定が効く)
-const _glossSettingFor = (baseId, regionIdx) => {
-  const v = MASU_COLOR_PRESERVE_GLOSS[baseId];
-  if (Array.isArray(v)) return v[regionIdx || 0] ?? false;
-  return v || false;
+const MASU_COLOR_REGION_DYE = {
+  // アークは3部位とも色が乗りすぎて重く見えたため、sat で全体を控えめにしている。
+  // 染色②は白い部分なので比例させず(gloss なし)、そのぶん sat を強めに下げる。
+  Ark: [{ gloss: 0.85, sat: 0.85 }, { sat: 0.72 }, { gloss: 0.45, sat: 0.85 }],
+  Tiger: { gloss: true },
+  Mocchi: { gloss: 0.22 },
+};
+const _NO_REGION_DYE = { gloss: false, sat: 1 };
+// 指定した部位に効く染め方の設定を返す(配列でなければ全部位に同じ設定が効く)
+const _regionDyeSettingFor = (baseId, regionIdx) => {
+  const v = MASU_COLOR_REGION_DYE[baseId];
+  if (!v) return _NO_REGION_DYE;
+  const one = Array.isArray(v) ? v[regionIdx || 0] : v;
+  if (!one) return _NO_REGION_DYE;
+  return { gloss: one.gloss || false, sat: Number.isFinite(one.sat) ? one.sat : 1 };
 };
 // ImageDataのピクセル配列(RGBA)を、指定した染色色idの狙った色相・彩度に置き換える(明度は元の陰影を保つ)
 const _recolorImageData = (data, colorId, baseId, regionIdx) => {
   const t = _resolveColorTarget(colorId);
   if (!t) return;
-  const gloss = _glossSettingFor(baseId, regionIdx);
+  const { gloss, sat } = _regionDyeSettingFor(baseId, regionIdx);
+  const targetS = Math.max(0, Math.min(1, t.s * sat));
   let satRef = 1;
   if (typeof gloss === 'number') {
     satRef = Math.max(0.05, gloss);
@@ -1381,7 +1392,7 @@ const _recolorImageData = (data, colorId, baseId, regionIdx) => {
     if (data[i+3] < 10) continue;
     const [, ss, vv] = _rgbToHsv(data[i], data[i+1], data[i+2]);
     const newV = t.vMin + (t.vMax - t.vMin) * vv;
-    const newS = gloss ? t.s * Math.min(1, ss / satRef) : t.s;
+    const newS = gloss ? targetS * Math.min(1, ss / satRef) : targetS;
     const [r, g, b] = _hsvToRgb(t.h, newS, newV);
     data[i] = r; data[i+1] = g; data[i+2] = b;
   }
@@ -1392,9 +1403,10 @@ const getRecoloredImage = (imgUrl, colorId, baseId, regionIdx) => {
   if (!_resolveColorTarget(colorId)) return null;
   // 同じ画像・色でも、光沢保持などbaseId固有の染色規則が異なり得るため、
   // 通常表示とすべての呼び出し元で同じ条件のキャッシュだけを共有する。
-  // 光沢保持は部位ごとに変えられるので、その設定もキーへ入れる。部位が違っても
+  // 染め方は部位ごとに変えられるので、その設定もキーへ入れる。部位が違っても
   // 設定が同じなら同じ画像を使い回すので、書き分けていないモンスターの負荷は変わらない。
-  const cacheKey = baseId + '::' + String(_glossSettingFor(baseId, regionIdx)) + '::' + imgUrl + '::' + colorId;
+  const dye = _regionDyeSettingFor(baseId, regionIdx);
+  const cacheKey = baseId + '::' + dye.gloss + '/' + dye.sat + '::' + imgUrl + '::' + colorId;
   if (_dyeRecolorCache[cacheKey]) return _dyeRecolorCache[cacheKey];
   const promise = new Promise((resolve) => {
     try {
@@ -2997,6 +3009,18 @@ const RewardSummaryCard = ({ summary }) => (
   </div>
 );
 
+// ---- 起動ローディングのゲージ ----
+// 進み具合そのものは index.html の __mhBoot が持っている。静的なローディング画面と
+// Reactのブート画面で同じ値を使うため、React側は数えなおさずここから読むだけにする。
+// __mhBoot が無い環境(検証用に compiled.js だけを読み込む道具など)でも落ちないよう、
+// そのときは「読み込み済み」として扱う。
+const bootLoadRatio = () => { try { return window.__mhBoot ? window.__mhBoot.ratio() : 1; } catch (e) { return 1; } };
+const bootProgressNow = (label) => ({ done: Math.round(bootLoadRatio() * 1000), total: 1000, label });
+const bootLoadDone = (name) => { try { if (window.__mhBoot) window.__mhBoot.done(name); } catch (e) {} };
+// 数え漏れが残っていてもゲージの右端まで伸ばす(終わったのに98%で止まって見えないように)
+const bootLoadFinish = () => { try { if (window.__mhBoot) window.__mhBoot.finish(); } catch (e) {} };
+const bootLoadWatch = (fn) => { try { return window.__mhBoot ? window.__mhBoot.watch(fn) : null; } catch (e) { return null; } };
+
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -3118,7 +3142,7 @@ function MonsterHeroGame() {
     } catch { return 'MH-LOCAL'; }
   });
   const [dataLoaded, setDataLoaded] = useState(false); // 端末に保存したセーブデータの読み込みが終わったか
-  const [bootProgress, setBootProgress] = useState({ done: 0, total: 10, label: 'ゲームシステムを起動中' });
+  const [bootProgress, setBootProgress] = useState(() => bootProgressNow('ゲームシステムを起動中'));
   const [localRankings, setLocalRankings] = useState({});
   // ブリーダーLv・絆Lvの集計に使う記録。スコア上位に入らなかった直近のプレイも含むので、
   // スコアランキングの表示(localRankings)とは別に持つ
@@ -4028,6 +4052,19 @@ function MonsterHeroGame() {
     window.location.replace(url.toString());
   };
 
+  // ダウンロードが進むたびにゲージを描き直す。__mhBoot がバイト数を受け取った時点で
+  // 呼ばれるので、タイトル画像のように大きいファイルは少しずつ伸びていく。
+  useEffect(() => {
+    if (bootPhase !== 'LOADING') return;
+    const stop = bootLoadWatch(() => setBootProgress(prev => {
+      const next = bootProgressNow(prev.label);
+      // 画面に出るのは0〜100の整数なので、そこが変わらないなら描き直さない
+      // (大きいファイルは細切れに届くため、そのたびに描き直すと無駄が大きい)
+      return next.done === prev.done ? prev : next;
+    }));
+    return () => { if (stop) stop(); };
+  }, [bootPhase]);
+
   // 正式タイトルに必要なものだけを直列に確認する。重いゲーム素材はENTRY_READY後の
   // idleキューへ分離し、タイトル操作と音声開始を妨げない。
   useEffect(() => {
@@ -4035,8 +4072,12 @@ function MonsterHeroGame() {
     let cancelled = false;
     let retryTimer = null;
     const required = async () => {
-      const step = (done, label) => { if (!cancelled) setBootProgress({ done, total: 10, label }); };
-      step(0, 'ゲームシステムを起動中');
+      // ゲージは index.html の __mhBoot が持つ「実際に受け取ったバイト数」で動く。
+      // ここではまだ残っている読み込み(タイトルBGM)を済ませて、見出しだけを差し替える。
+      // 以前はこの関数が10段階のカウンタを持っていたが、うち8段階が await Promise.resolve() の
+      // 即終わりで、ゲージが「BGM待ちで止まってから一気に飛ぶ」動きになっていた。
+      const say = (label) => { if (!cancelled) setBootProgress(bootProgressNow(label)); };
+      say('タイトル画面を準備中');
       await new Promise((resolve, reject) => {
         const image = new Image(); let settled = false;
         const finish = () => { if (!settled) { settled = true; resolve(); } };
@@ -4044,26 +4085,17 @@ function MonsterHeroGame() {
         image.onerror = () => { if (!settled) { settled = true; reject(new Error('title image unavailable')); } }; image.src = 'data/images/title-screen-clean.PNG';
         if (image.complete) image.onload();
       });
-      step(1, 'タイトルBGMを準備中');
+      say('タイトルBGMを準備中');
       if (!await Audio_.prepareBGM('title', 5000).catch(() => false)) throw new Error('title BGM unavailable');
+      bootLoadDone('audio/bgm-title-theme.mp3');
       await Audio_.prepareSE(5000).catch(() => false);
-      step(2, 'セーブデータを確認中');
-      await Promise.resolve();
-      step(3, '音量設定を確認中');
-      await Promise.resolve({ bgmVolume, seVolume, audioOn });
-      step(4, 'PLAYER IDを確認中');
-      await Promise.resolve(titlePlayerId);
-      step(5, 'ビルドバージョンを確認中');
-      await Promise.resolve(BUILD_DATE);
-      step(6, '更新情報を確認中');
-      await Promise.resolve(typeof CHANGELOG !== 'undefined' ? CHANGELOG : []);
-      step(7, 'お知らせを準備中');
-      await Promise.resolve(changelogUnread);
-      step(8, 'タイトル画面を準備中');
-      await new Promise(r => requestAnimationFrame(() => r()));
-      step(9, 'モンスターデータを展開中');
+      say('冒険の準備をととのえています');
       await Promise.resolve(ALL_PLAYER_MONSTERS.Mocchi);
-      step(10, '準備完了');
+      // 最後は必ずゲージの右端(100%)まで伸ばし、伸びきったのが見えてから次の画面へ移る。
+      // 数え漏れたぶんが残っていても、ここで100%に届くことを保証する
+      bootLoadFinish();
+      if (!cancelled) setBootProgress(bootProgressNow('準備完了'));
+      await new Promise(r => setTimeout(r, 260));
       if (!cancelled) setBootPhase('ENTRY_READY');
     };
     const runRequired = () => required().catch(() => {
@@ -4073,7 +4105,11 @@ function MonsterHeroGame() {
     });
     runRequired();
     return () => { cancelled = true; if (retryTimer) clearTimeout(retryTimer); };
-  }, [bootPhase, dataLoaded, bgmVolume, seVolume, audioOn, titlePlayerId, changelogUnread]);
+    // 依存は「起動中かどうか」と「セーブデータを読み終えたか」だけにする。
+    // 以前は changelogUnread も並べていたが、これは描画のたびに作り直される
+    // オブジェクトなので、実際には毎回この処理が走り直していた
+    // (タイトル画像の取得とBGMの準備が何百回もやり直されていた)。
+  }, [bootPhase, dataLoaded]);
 
   // 色マスクなど後続画面用の素材は、ブラウザが空いた時に1件ずつ処理する。
   useEffect(() => {

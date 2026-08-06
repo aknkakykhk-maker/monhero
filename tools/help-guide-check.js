@@ -31,7 +31,9 @@ const h = helpCtx.__h;
 const categories = h.HELP_CATEGORIES;
 const topics = categories.flatMap(c => c.topics.map(t => ({ ...t, catId: c.id })));
 
-check('index.htmlがdata/help.jsを読み込んでいる', /<script src="data\/help\.js\?v=[0-9a-f]{12}"><\/script>/.test(indexHtml));
+// キャッシュキー付きで読み込んでいること。読み込み完了をローディングのゲージへ伝える
+// onload などの属性が付くことがあるので、タグの中身までは決め打ちしない
+check('index.htmlがdata/help.jsを読み込んでいる', /<script src="data\/help\.js\?v=[0-9a-f]{12}"[^>]*><\/script>/.test(indexHtml));
 check('カテゴリが複数ある', categories.length >= 4, `${categories.length}カテゴリ / ${topics.length}項目`);
 check('カテゴリのidが重複していない', new Set(categories.map(c => c.id)).size === categories.length);
 check('カテゴリに必要な項目がそろっている',
