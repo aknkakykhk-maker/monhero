@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2899bf930f24299a
+// source-sha256: 3b933cf95a03d233
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-06 23:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 00:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2638,14 +2638,20 @@ const MASU_COLOR_REGION_HUES = {
   }],
   // 2026年に新規イラストへ差し替え。ほぼ単色の甲殻(染色①)+赤い目(染色②、小さいのでsMinを
   // 上げて実測範囲のみ拾う)+両腕・翼(染色③、色相は本体とほぼ同じなので位置指定で分離)
+  // 2026年8月の新規イラストへ差し替え。体(染色①)・目の赤(染色②)・両腕の刃(染色③)。
+  // 体は彩度がとても低い(実測S0.22前後)ので sMin を下げないと大半が無染色で残る。
   Zan: [{
-    hue: 232,
-    sMin: 0.15
+    hue: 230,
+    sMin: 0.04,
+    noEdgeGuard: true
   }, {
     hue: 2,
-    sMin: 0.4
+    sMin: 0.4,
+    noEdgeGuard: true
   }, {
-    posBbox: [[0.0, 0.30, 0.30, 0.88], [0.70, 0.30, 1.0, 0.88]]
+    posBbox: [[0.0, 0.30, 0.30, 0.88], [0.70, 0.30, 1.0, 0.88]],
+    noAAGuard: true,
+    noEdgeGuard: true
   }],
   // 2026年に新規イラストへ差し替え。体(赤、染色①)・お腹/頭上クレスト/翼の金色(染色②)・
   // 口元(染色③)の3部位。
@@ -2669,12 +2675,25 @@ const MASU_COLOR_REGION_HUES = {
     bbox: [0.29, 0.265, 0.71, 0.40],
     noEdgeGuard: true
   }],
-  Ark: [219, 187, [60, {
+  // 2026年8月の新規イラストへ差し替え。体と翼の青(染色①)・白い羽と胸の紋章(染色②)・
+  // 王冠と輪の金(染色③)を、実測した色に合わせて分ける。
+  // noEdgeGuard は「隣と色相が違う画素を無染色で残す」既定の除外を切るための指定
+  // (見えている部分がすべてどれかの部位に属するので、境目を残すと元の色の筋が出る)。
+  Ark: [{
+    hue: 200,
+    sMin: 0.10,
+    noEdgeGuard: true
+  }, {
     white: true,
-    sMax: 0.15,
-    vMin: 0.85,
-    bbox: [0.30, 0.56, 0.70, 0.79]
-  }]],
+    sMax: 0.2,
+    vMin: 0.7,
+    noEdgeGuard: true
+  }, {
+    hue: [45, 30],
+    sMin: 0.15,
+    vMin: 0.4,
+    noEdgeGuard: true
+  }],
   // 2026年に新規イラスト(羊の天使)へ差し替え。もふもふの白い毛(染色①)、紫のパーツ(染色②)、
   // 翼の黒(染色③)の3部位。元絵の実測値(高解像度版570px)に基づいて次のように切り分けている。
   //  ・白い毛: ほぼ白(彩度0.02)〜薄いピンク紫の影(色相295〜326・彩度0.06〜0.19・明度0.85以上)。
@@ -2896,7 +2915,10 @@ const MASK_ANALYSIS_MAX_SIZE = 384;
 // 判定と平滑化は解析サイズのまま(多数決の半径が画像幅に比例するため、解像度を上げると
 // 実測で7秒級まで重くなる)、書き出しだけを高解像度で行うことで見た目だけを直す。
 const MASK_HIRES_BASE_IDS = {
-  Mocchi: true
+  Mocchi: true,
+  Ark: true,
+  Ham: true,
+  Zan: true
 };
 // 高解像度で書き出すときのマスクの最大サイズ(px)。表示は最大でも250px程度なので、
 // 元絵の原寸まで上げる必要はなく、階段が見えなくなる範囲で抑える

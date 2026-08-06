@@ -39,7 +39,7 @@ const GLOSS_SPREAD_MIN = 0.05;
 const GLOSS_EXPECTED = ['Mocchi'];
 // 高解像度マスクが必ず効いていてほしいモンスター(元絵が解析サイズより大幅に大きいもの)。
 // MASK_HIRES_BASE_IDSからうっかり外れたときに気付けるよう、ここにも明示しておく
-const EXPECTED = ['Mocchi'];
+const EXPECTED = ['Mocchi', 'Ark', 'Ham', 'Zan'];
 
 const page = `<!doctype html><meta charset="utf-8">
 <!-- 画像はPNGファイルになったので、monster-hero/ を基準にパスを解決させる -->
@@ -104,14 +104,14 @@ window.__measure = async (id, colors) => {
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
     const p = y * n + x;
     if (!on[p]) continue;
-    const isRim = [[x-3,y],[x+3,y],[x,y-3],[x,y+3]].some(([a, b]) => (a < 0 || b < 0 || a >= n || b >= n) ? true : !on[b * n + a]);
-    if (isRim) { rim++; if (sum[p] < 32) rimBare++; continue; }
-    // 内側は「色が付いている画素」だけを数える。白いハイライトや黒い目は
+    // 数えるのは「色が付いている画素」だけ。白いハイライトや黒い輪郭線は
     // もともと染めない部分なので、塗り残しとして数えると意味がなくなる
     const r = ad[p*4], g = ad[p*4+1], b2 = ad[p*4+2];
     const mx = Math.max(r, g, b2), mn = Math.min(r, g, b2);
     const s = mx === 0 ? 0 : (mx - mn) / mx, v = mx / 255;
     if (s < 0.1 || v < 0.25) continue;
+    const isRim = [[x-3,y],[x+3,y],[x,y-3],[x,y+3]].some(([a, b]) => (a < 0 || b < 0 || a >= n || b >= n) ? true : !on[b * n + a]);
+    if (isRim) { rim++; if (sum[p] < 32) rimBare++; continue; }
     inner++;
     if (sum[p] < 32) innerBare++;
   }
