@@ -500,10 +500,20 @@ const ASSISTANT_SCENES = {
     help: 'masu/rebirth',
     lines: [
       { e:'excited', t:'上限まで育てたごほうびだね♪' },
-      { e:'happy',   t:'Lvは戻るけど、上限＋5と固有技アップが狙えるよ！' },
-      { e:'wink',    t:'長い目で見ると、転生したほうが断然強いよ！' },
+      { e:'happy',   t:'レベルはそのまま、上限だけ＋5だよ！' },
+      { e:'wink',    t:'固有技も1つ上がるから、迷わずいこ！' },
       { e:'excited', t:'星が増えるのもテンション上がるじゃん♪' },
       { e:'normal',  t:'コストを確認したら、いってみよ！' },
+    ],
+  },
+  reincarnate: {
+    help: 'masu/reincarnate',
+    lines: [
+      { e:'excited',  t:'Lv.100まで育てた子だけの特別なやつ！' },
+      { e:'happy',    t:'レベルは99ぶん返すけど、強化を全部振り直せるよ♪' },
+      { e:'normal',   t:'上限はそのままだから、また同じところまで登れるよ。' },
+      { e:'wink',     t:'強化ポイントが＋10されるのがおいしいとこ！' },
+      { e:'troubled', t:'いま振ってる強化は白紙に戻るから、そこだけ覚えといてね。' },
     ],
   },
   donation: {
@@ -999,10 +1009,16 @@ addAssistantLinePack({
       { e:'wink',     t:'固有技を引き継ぐには両方が絆Lv.10以上ね！' },
     ],
     rebirth: [
-      { e:'excited',  t:'{name}、転生すると星が増えますよ♪', bond:[1,2] },
-      { e:'happy',    t:'{name}、思いきっていこ！ 見た目は変わらないから。', bond:[3,4] },
+      { e:'excited',  t:'{name}、限界突破すると星が増えますよ♪', bond:[1,2] },
+      { e:'happy',    t:'{name}、思いきっていこ！ レベルは戻らないから。', bond:[3,4] },
       { e:'excited',  t:'{name}、この瞬間いつ見てもいいよね〜♪', bond:5 },
-      { e:'normal',   t:'レベルは1に戻るけど、上限が上がるよ。' },
+      { e:'normal',   t:'レベルはそのまま、上限だけ上がるよ。' },
+    ],
+    reincarnate: [
+      { e:'excited',  t:'{name}、ここまで育てたんですね…！', bond:[1,2] },
+      { e:'happy',    t:'{name}、振り直しのチャンスだよ♪', bond:[3,4] },
+      { e:'wink',     t:'{name}となら、もう一度てっぺんまでいけるよね！', bond:5 },
+      { e:'normal',   t:'レベルは99ぶん戻るけど、上限はそのままだよ。' },
     ],
     donation: [
       { e:'troubled', t:'{name}、寄付は取り消せないので慎重に…！', bond:[1,2] },

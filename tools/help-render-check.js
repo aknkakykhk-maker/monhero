@@ -26,7 +26,7 @@ const dataTablePrelude = [
   grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
   // 神殿でかかるダイヤの表は、合体・転生の単価をそのまま使う
-  grab(source, 'const FUSION_COST_PER_LEVEL =', 'const buildMasuRebirth ='),
+  grab(source, 'const FUSION_COST_PER_LEVEL =', 'const buildMasuBreakthrough ='),
   'const SKIP_TICKETS = SKIP_TICKET_BY_DIFFICULTY;',
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む

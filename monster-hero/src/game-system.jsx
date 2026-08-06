@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-02 22:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-06 20:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -201,7 +201,8 @@ const bondLevelInfo = (totalXp) => {
   return { level, xpIntoLevel: xp, xpForNext: xpForBondLevel(level), totalXp };
 };
 const INITIAL_MASU_LEVEL_CAP = 30;
-const REBIRTH_LEVEL_CAP_GAIN = 5;
+// 限界突破1回でレベル上限がいくつ上がるか
+const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
 const MAX_UNIQUE_SKILL_LEVEL = 8;
 const uniqueSkillAtLevel = (unique, level = 0) => {
   if (!unique) return null;
@@ -248,27 +249,50 @@ const totalBondXpForLevel = (level) => {
   for (let current = 1; current < Math.max(1, level); current++) total += xpForBondLevel(current);
   return total;
 };
+// 【限界突破と転生】
+// 限界突破(旧「転生」): 上限に届いたらレベルはそのままで上限だけ +BREAKTHROUGH_LEVEL_CAP_GAIN する。
+//   回数は rebirthCount に入れる。上限を上げた回数という意味は昔から変わらないので、
+//   保存キーは変えない(名前だけ画面上で「限界突破」に改めた)。★の数がこの回数。
+// 転生(新): 絆Lv REINCARNATE_MIN_LEVEL 以上で使える。レベルが REINCARNATE_LEVEL_DROP ぶん下がる
+//   代わりに、振った強化をすべて振り直せる。回数は reincarnateCount(新しい項目)に入れ、
+//   アイコンの「+N」で示す。
+const MAX_MASU_LEVEL_CAP = 200;
+// 限界突破でもらえる強化ポイント。初回(Lv30からの1回目)だけ多めにする
+const BREAKTHROUGH_FIRST_POINTS = 5;
+const BREAKTHROUGH_POINTS = 1;
+const totalBreakthroughPoints = (count) => {
+  const n = Math.max(0, Math.floor(Number(count) || 0));
+  return n === 0 ? 0 : BREAKTHROUGH_FIRST_POINTS + BREAKTHROUGH_POINTS * (n - 1);
+};
+const REINCARNATE_MIN_LEVEL = 100;
+const REINCARNATE_LEVEL_DROP = 99;
+const REINCARNATE_POINTS = 10;
+const totalReincarnatePoints = (count) => Math.max(0, Math.floor(Number(count) || 0)) * REINCARNATE_POINTS;
 const normalizeMasuProgression = (masu) => ({
   ...masu,
   rebirthCount: Math.max(0, Math.floor(Number(masu?.rebirthCount) || 0)),
-  levelCap: Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(masu?.levelCap) || INITIAL_MASU_LEVEL_CAP)),
+  // 転生回数は後から足した項目なので、持っていない既存データは0として扱う
+  reincarnateCount: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)),
+  levelCap: Math.min(MAX_MASU_LEVEL_CAP, Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
   uniqueSkillLevels: masu?.uniqueSkillLevels && typeof masu.uniqueSkillLevels === 'object' ? { ...masu.uniqueSkillLevels } : {},
 });
-// 転生では個体の識別情報・外見・固有技・履歴だけを残し、育成値は同種の未育成Lv1へ戻す。
+// 転生では個体の識別情報・外見・固有技・履歴だけを残し、振った強化は白紙に戻す。
 // オブジェクトスプレッドで旧育成値を残さないよう、維持対象を明示して新しい保存形を組み立てる。
-const resetMasuForRebirth = (masu, { rebirthCount, levelCap, uniqueSkillLevels } = {}) => {
+// toLevel を渡すとそのレベル相当の絆経験値から再開する(渡さなければLv1へ戻す)。
+const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, levelCap, uniqueSkillLevels, toLevel, distAptPoints } = {}) => {
   const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
   const reset = {
     id: masu?.id,
     baseId: masu?.baseId,
     name: masu?.name,
-    bondXp: totalBondXpForLevel(1),
-    distAptPoints: 5,
+    bondXp: totalBondXpForLevel(Math.max(1, Math.floor(Number(toLevel) || 1))),
+    distAptPoints: Math.max(0, Math.floor(Number(distAptPoints ?? 5) || 0)),
     distApt: [...(base?.distAptitude || ['C','C','C','C'])],
     statPoints: { hp:0, atk:0, def:0, guts:0 },
     createdAt: masu?.createdAt,
     rebirthCount: Math.max(0, Math.floor(Number(rebirthCount ?? masu?.rebirthCount) || 0)),
-    levelCap: Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP)),
+    reincarnateCount: Math.max(0, Math.floor(Number(reincarnateCount ?? masu?.reincarnateCount) || 0)),
+    levelCap: Math.min(MAX_MASU_LEVEL_CAP, Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
     uniqueSkillLevels: { ...(uniqueSkillLevels ?? masu?.uniqueSkillLevels ?? {}) },
   };
   if (Array.isArray(masu?.colors)) reset.colors = [...masu.colors];
@@ -334,17 +358,62 @@ const masuFusionCost = (mainLevel, subLevel) => (mainLevel + subLevel) * FUSION_
 // (以前は画面だけが「レベル×100」で計算しており、実際に引かれる額の倍が表示され、
 //  そのぶんダイヤを持っていないと転生ボタンを押せない状態になっていた)
 const masuRebirthCost = (level) => Math.max(0, Math.floor(Number(level) || 0)) * REBIRTH_COST_PER_LEVEL;
-const buildMasuRebirth = ({ masu, skillKey, gold }) => {
+// 限界突破: 上限に届いた個体の上限だけを上げる。レベル・振った強化はそのまま残し、
+// 強化ポイントを初回5・以降1だけ足す(以前の「転生」はここでLv1へ戻していた)。
+const buildMasuBreakthrough = ({ masu, skillKey, gold }) => {
   if (!masu) return { ok:false, reason:'対象のマスモンが見つかりません。' };
   const normalized = normalizeMasuProgression(masu);
   const level = masuBondLevelInfo(normalized).level;
-  if (level !== normalized.levelCap) return { ok:false, reason:`Lv.${normalized.levelCap}到達後に転生できます。` };
+  if (normalized.levelCap >= MAX_MASU_LEVEL_CAP) return { ok:false, reason:`レベル上限は Lv.${MAX_MASU_LEVEL_CAP} までです。` };
+  if (level !== normalized.levelCap) return { ok:false, reason:`Lv.${normalized.levelCap}到達後に限界突破できます。` };
   const cost = masuRebirthCost(level);
   if (donationDiamondValue(gold) < cost) return { ok:false, reason:'ダイヤが不足しています。' };
   const currentSkillLevel = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
   if (!skillKey || currentSkillLevel >= MAX_UNIQUE_SKILL_LEVEL) return { ok:false, reason:'強化できる固有技を選んでください。' };
   const uniqueSkillLevels = { ...normalized.uniqueSkillLevels, [skillKey]:currentSkillLevel + 1 };
-  return { ok:true, cost, skillKey, skillLevel:currentSkillLevel + 1, nextGold:donationDiamondValue(gold) - cost, nextMasu:resetMasuForRebirth(normalized, { rebirthCount:normalized.rebirthCount + 1, levelCap:normalized.levelCap + REBIRTH_LEVEL_CAP_GAIN, uniqueSkillLevels }) };
+  const nextCount = normalized.rebirthCount + 1;
+  const gainedPoints = nextCount === 1 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS;
+  return {
+    ok:true, cost, skillKey, skillLevel:currentSkillLevel + 1, gainedPoints,
+    nextGold:donationDiamondValue(gold) - cost,
+    nextMasu:{
+      ...normalized,
+      rebirthCount: nextCount,
+      levelCap: Math.min(MAX_MASU_LEVEL_CAP, normalized.levelCap + BREAKTHROUGH_LEVEL_CAP_GAIN),
+      distAptPoints: Math.max(0, Math.floor(Number(normalized.distAptPoints) || 0)) + gainedPoints,
+      uniqueSkillLevels,
+    },
+  };
+};
+// 転生: 絆Lv100以上の個体を、レベル99ぶん引き換えに白紙から育て直す。
+// 振った強化はすべて戻り、強化ポイントは「新しいレベルぶん + これまでの限界突破ぶん + 10」で
+// 配り直す(限界突破で得たポイントも振り直しの対象に含める、というユーザー指定に合わせる)。
+const buildMasuReincarnation = ({ masu, skillKey, gold }) => {
+  if (!masu) return { ok:false, reason:'対象のマスモンが見つかりません。' };
+  const normalized = normalizeMasuProgression(masu);
+  const level = masuBondLevelInfo(normalized).level;
+  if (level < REINCARNATE_MIN_LEVEL) return { ok:false, reason:`Lv.${REINCARNATE_MIN_LEVEL}到達後に転生できます。` };
+  const cost = masuRebirthCost(level);
+  if (donationDiamondValue(gold) < cost) return { ok:false, reason:'ダイヤが不足しています。' };
+  const currentSkillLevel = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
+  if (!skillKey || currentSkillLevel >= MAX_UNIQUE_SKILL_LEVEL) return { ok:false, reason:'強化できる固有技を選んでください。' };
+  const uniqueSkillLevels = { ...normalized.uniqueSkillLevels, [skillKey]:currentSkillLevel + 1 };
+  const nextLevel = Math.max(1, level - REINCARNATE_LEVEL_DROP);
+  const nextCount = normalized.reincarnateCount + 1;
+  // 振り直せる合計。レベル由来ぶんは reconcileMasuPoints と同じ「レベル-1」で数える
+  const nextPoints = (nextLevel - 1) + totalBreakthroughPoints(normalized.rebirthCount) + totalReincarnatePoints(nextCount);
+  return {
+    ok:true, cost, skillKey, skillLevel:currentSkillLevel + 1,
+    fromLevel:level, nextLevel, gainedPoints:REINCARNATE_POINTS, nextPoints,
+    nextGold:donationDiamondValue(gold) - cost,
+    nextMasu:resetMasuForRebirth(normalized, {
+      reincarnateCount: nextCount,
+      levelCap: normalized.levelCap, // 上限は据え置き(転生を重ねても上限は伸びない)
+      toLevel: nextLevel,
+      distAptPoints: nextPoints,
+      uniqueSkillLevels,
+    }),
+  };
 };
 
 // 神殿の寄付で受け取るダイヤ。保存データが古い・破損している場合も負数やNaNを返さない。
@@ -1540,7 +1609,14 @@ const RebirthStars = ({ count = 0, className = '' }) => {
   const tier = Math.floor((value - 1) / 5) % 4;
   const colors = ['#fde047','#f472b6','#ef4444','#ffffff'];
   const shadows = ['#ca8a04','#db2777','#991b1b','#22d3ee'];
-  return <span className={`mh-rebirth-stars ${className}`} aria-label={`転生${value}回`}>{Array.from({length:Math.min(5, value)},(_,i)=><span key={i} style={{color:colors[tier],textShadow:tier===3?`0 0 2px #f472b6,0 0 4px ${shadows[tier]}`:`0 0 3px ${shadows[tier]}`}}>★</span>)}</span>;
+  return <span className={`mh-rebirth-stars ${className}`} aria-label={`限界突破${value}回`}>{Array.from({length:Math.min(5, value)},(_,i)=><span key={i} style={{color:colors[tier],textShadow:tier===3?`0 0 2px #f472b6,0 0 4px ${shadows[tier]}`:`0 0 3px ${shadows[tier]}`}}>★</span>)}</span>;
+};
+// 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま転生へ移した
+// (合体の回数は詳細の合体履歴で見られるので、アイコン上のバッジは転生だけに使う)。
+const ReincarnateBadge = ({ count = 0, className = '' }) => {
+  const value = Math.max(0, Math.floor(Number(count) || 0));
+  if (!value) return null;
+  return <div className={`mh-reincarnate-badge ${className}`} aria-label={`転生${value}回`}>+{value}</div>;
 };
 // HOME中央の安全領域だけを歩くマスモン。HOMEから外れるとコンポーネントごと破棄され、
 // visibilitychangeでもタイマーを止めるため、画面遷移やバックグラウンド復帰で処理が重複しない。
@@ -1998,7 +2074,14 @@ const reconcileMasuPoints = (masu) => {
   // 合体で上がったレベルも「絆レベルが上がった」ことに変わりはないので、強化ポイントの
   // 付与対象に含める(合体の確認画面も「強化ポイント +N」と出しており、実際に増えていなかった)。
   // 過去に合体でレベルを上げた分も、ここの不足補填でまとめて受け取れる。
-  const earned = Math.max(0, masuBondLevelInfo(masu).level - 1);
+  // 限界突破・転生でもらえるぶんも「得たはずの総数」に含める。ここに入れておかないと、
+  // 限界突破の直後にレベルが1つ上がったとき「レベルぶんの不足」として相殺されてしまい、
+  // せっかく足したポイントが消えたように見える。
+  // ここを新しい方式で数え直すことが、そのまま既存のマスモンの調整にもなる
+  // (読み込みのたびに不足分だけを補うので、二重に配られることはない)。
+  const earned = Math.max(0, masuBondLevelInfo(masu).level - 1)
+    + totalBreakthroughPoints(masu.rebirthCount)
+    + totalReincarnatePoints(masu.reincarnateCount);
   const missing = earned - (aptSpent + statSpent + (masu.distAptPoints || 0));
   return missing > 0 ? { ...masu, distAptPoints: (masu.distAptPoints || 0) + missing } : masu;
 };
@@ -2121,6 +2204,7 @@ const helpDataRows = (id) => {
     case 'masuCosts':
       return [
         ['合体', `（主の絆Lv ＋ 副の絆Lv）× ${FUSION_COST_PER_LEVEL} ダイヤ`],
+        ['限界突破', `絆Lv × ${REBIRTH_COST_PER_LEVEL} ダイヤ`],
         ['転生', `絆Lv × ${REBIRTH_COST_PER_LEVEL} ダイヤ`],
         ['寄付', 'かからない（逆に累計絆経験値と同じ数のダイヤを受け取れる）'],
       ];
@@ -3237,6 +3321,14 @@ function MonsterHeroGame() {
   const [rebirthSkillKey, setRebirthSkillKey] = useState('');
   const [rebirthError, setRebirthError] = useState('');
   const [rebirthAnimation, setRebirthAnimation] = useState(null);
+  // rebirth* は「限界突破」(旧・転生)用。保存キー rebirthCount が昔から
+  // 「上限を上げた回数」を指しているので、内部の名前はそのままにしてある。
+  // reincarnate* は Lv100以上で使える新しい「転生」用。
+  const [reincarnateSelectedId, setReincarnateSelectedId] = useState(null);
+  const [reincarnateSkillKey, setReincarnateSkillKey] = useState('');
+  const [reincarnateError, setReincarnateError] = useState('');
+  const [reincarnateAnimation, setReincarnateAnimation] = useState(null);
+  const reincarnateProcessingRef = useRef(false);
   const rebirthProcessingRef = useRef(false);
   const [levelCapCompensation, setLevelCapCompensation] = useState(null);
   const masuMonsRef = useRef(masuMons);
@@ -3786,7 +3878,8 @@ function MonsterHeroGame() {
     TEMPLE: 'temple',           // 神殿は合体と同じ曲を続ける
     MASU_FUSION: 'temple',      // 合体ページ
     MASU_DONATION: 'temple',    // 寄付ページも神殿の曲を続ける
-    MASU_REBIRTH: 'temple',     // 転生ページも神殿の曲を継続する
+    MASU_REBIRTH: 'temple',     // 限界突破ページも神殿の曲を継続する
+    MASU_REINCARNATE: 'temple', // 転生ページも同じ
     BREEDER_MARKET: 'market',   // マーケットページ
     TRAINING_SELECT: 'trainingMenu', TRAINING_DIFFICULTY: 'trainingMenu', TRAINING_CONFIRM: 'trainingMenu', TRAINING_RESULT: 'trainingMenu',
     TRAINING_BOARD: 'trainingBoard',
@@ -4225,13 +4318,11 @@ function MonsterHeroGame() {
           await storeSet('mh_masu_mons', savedMasuMons, false);
         }
       }
-      // 旧転生仕様で育成値や未使用ポイントを持ち越した個体を、一度だけ正しいLv1状態へ補正する。
-      const rebirthFullResetMigrated = await storeGet('mh_masu_rebirth_full_reset_migrated_v1', false, false);
-      if (!rebirthFullResetMigrated) {
-        savedMasuMons = migrateRebornMasuToFullReset(savedMasuMons);
-        await storeSet('mh_masu_mons', savedMasuMons, false);
-        await storeSet('mh_masu_rebirth_full_reset_migrated_v1', true, false);
-      }
+      // かつて「転生したらLv1へ戻す」という仕様だったころ、持ち越した育成値を一度だけ
+      // Lv1へ補正する移行(mh_masu_rebirth_full_reset_migrated_v1)を走らせていた。
+      // 2026年8月に限界突破へ変えてレベルが戻らなくなったため、この移行はもう走らせない。
+      // まだ移行していない端末で今さら走らせると、育てたレベルを消してしまうことになる。
+      // 保存済みのフラグはそのまま残す(消すと他の移行と区別がつかなくなるため)。
       // 表示名ではなく固有技系統IDで既存の重複継承を整理する。最高Lvだけを残す正規化は
       // 冪等だが、過去の移行済みフラグに阻まれないよう今回専用のバージョンを持つ。
       const uniqueLineageMigrated = await storeGet('mh_unique_lineage_dedupe_migrated_v1', false, false);
@@ -4655,14 +4746,14 @@ function MonsterHeroGame() {
     { key: 'name', label: '名前' },
     { key: 'active', label: '編成中' },
     { key: 'fused', label: '合体済み' },
-    { key: 'reborn', label: '転生済み' },
+    { key: 'reborn', label: '限界突破済み' },
   ];
   const MONSTER_DISPLAY_OPTIONS = [
     { key: 'base', label: 'ベースモン' },
     { key: 'masu', label: 'マスモン' },
     { key: 'fused', label: '合体済み' },
     { key: 'active', label: '編成中' },
-    { key: 'reborn', label: '転生済み' },
+    { key: 'reborn', label: '限界突破済み' },
   ];
   // 「ベースモン(未マスモン化の種)」「マスモン(育成済み個体)」を1つの配列に統一して扱うための変換。
   // activeIdsには現在編成に入っている種id/'masu:'付きidの配列を渡す(画面によって draftMonsterRoster か
@@ -5130,10 +5221,11 @@ function MonsterHeroGame() {
     return [...own, ...(masu.inheritedUniques || []).map((unique,index)=>({ key:`inh:${index}`, name:unique.name, unique }))]
       .map(choice=>({ ...choice, level:Math.max(0, Math.floor(Number(masu.uniqueSkillLevels?.[choice.key]) || 0)) }));
   };
-  const executeMasuRebirth = async () => {
+  // 限界突破: レベルはそのままで上限だけ上げる
+  const executeMasuBreakthrough = async () => {
     if (rebirthProcessingRef.current || !rebirthSelectedId) return;
     const masu = masuMonsRef.current.find(m=>String(m.id)===String(rebirthSelectedId));
-    const result = buildMasuRebirth({ masu, skillKey:rebirthSkillKey, gold });
+    const result = buildMasuBreakthrough({ masu, skillKey:rebirthSkillKey, gold });
     if (!result.ok) { setRebirthError(result.reason); return; }
     rebirthProcessingRef.current = true;
     setRebirthError('');
@@ -5145,11 +5237,34 @@ function MonsterHeroGame() {
       setMasuMons(next); setGold(result.nextGold);
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       const skill = getRebirthSkillChoices(masu).find(choice=>choice.key===rebirthSkillKey);
-      setRebirthAnimation({ masu:result.nextMasu, base, skillName:skill?.name || '固有技', skillLevel:result.skillLevel });
+      setRebirthAnimation({ masu:result.nextMasu, base, skillName:skill?.name || '固有技', skillLevel:result.skillLevel, gainedPoints:result.gainedPoints });
       setTimeout(()=>{ setRebirthAnimation(null); setRebirthSelectedId(null); setRebirthSkillKey(''); rebirthProcessingRef.current=false; }, 4100);
     } catch {
       rebirthProcessingRef.current=false;
-      setRebirthError('転生データを保存できませんでした。もう一度お試しください。');
+      setRebirthError('限界突破のデータを保存できませんでした。もう一度お試しください。');
+    }
+  };
+  // 転生: レベルを99ぶん返して、振った強化をすべて振り直す
+  const executeMasuReincarnation = async () => {
+    if (reincarnateProcessingRef.current || !reincarnateSelectedId) return;
+    const masu = masuMonsRef.current.find(m=>String(m.id)===String(reincarnateSelectedId));
+    const result = buildMasuReincarnation({ masu, skillKey:reincarnateSkillKey, gold });
+    if (!result.ok) { setReincarnateError(result.reason); return; }
+    reincarnateProcessingRef.current = true;
+    setReincarnateError('');
+    const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?result.nextMasu:m);
+    try {
+      await storeSet('mh_masu_mons', next, false);
+      await storeSet('mh_gold', result.nextGold, false);
+      masuMonsRef.current = next;
+      setMasuMons(next); setGold(result.nextGold);
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      const skill = getRebirthSkillChoices(masu).find(choice=>choice.key===reincarnateSkillKey);
+      setReincarnateAnimation({ masu:result.nextMasu, base, skillName:skill?.name || '固有技', skillLevel:result.skillLevel, fromLevel:result.fromLevel, nextLevel:result.nextLevel, nextPoints:result.nextPoints });
+      setTimeout(()=>{ setReincarnateAnimation(null); setReincarnateSelectedId(null); setReincarnateSkillKey(''); reincarnateProcessingRef.current=false; }, 4100);
+    } catch {
+      reincarnateProcessingRef.current=false;
+      setReincarnateError('転生データを保存できませんでした。もう一度お試しください。');
     }
   };
   const executeMasuDonation = async () => {
@@ -7395,15 +7510,34 @@ function MonsterHeroGame() {
         {gameState==='TEMPLE'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-5 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">神殿</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="temple"/></div>
-            <div className="w-full max-w-md mx-auto space-y-3"><button onClick={()=>{resetFusionFlow();setGameState('MASU_FUSION');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>合体</button><button onClick={()=>{resetDonationFlow();setGameState('MASU_DONATION');}} className="mh-management-link mh-temple-link"><Gem size={18}/>寄付</button><button onClick={()=>{setRebirthSelectedId(null);setRebirthSkillKey('');setRebirthError('');setGameState('MASU_REBIRTH');}} className="mh-management-link mh-temple-link"><Star size={18}/>転生</button></div>
+            <div className="w-full max-w-md mx-auto space-y-3"><button onClick={()=>{resetFusionFlow();setGameState('MASU_FUSION');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>合体</button><button onClick={()=>{resetDonationFlow();setGameState('MASU_DONATION');}} className="mh-management-link mh-temple-link"><Gem size={18}/>寄付</button><button onClick={()=>{setRebirthSelectedId(null);setRebirthSkillKey('');setRebirthError('');setGameState('MASU_REBIRTH');}} className="mh-management-link mh-temple-link"><Star size={18}/>限界突破</button><button onClick={()=>{setReincarnateSelectedId(null);setReincarnateSkillKey('');setReincarnateError('');setGameState('MASU_REINCARNATE');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>転生</button></div>
           </div>
         )}
 
         {gameState==='MASU_REBIRTH'&&(()=>{
           const selected=masuMons.find(m=>String(m.id)===String(rebirthSelectedId));
-          if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが転生できます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const can=lvl.level===normalizeMasuProgression(masu).levelCap;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey('');}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div></button>})}</div></div>; }
+          if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが限界突破できます。レベルはそのままで、上限だけ+{BREAKTHROUGH_LEVEL_CAP_GAIN}されます（上限Lv.{MAX_MASU_LEVEL_CAP}まで）。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey('');}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div></button>})}</div></div>; }
           const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=masuRebirthCost(lvl.level), skills=getRebirthSkillChoices(selected);
-          return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">星が1つ増えて、上限が+{REBIRTH_LEVEL_CAP_GAIN}になります</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div><div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選択してください（最大Lv.8）</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}</div>{rebirthError&&<div className="text-red-300 text-[10px] my-2">{rebirthError}</div>}<button disabled={!rebirthSkillKey||gold<cost||rebirthProcessingRef.current} onClick={executeMasuRebirth} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">転生する</button></div>;
+          return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">星が1つ増えて上限が+{BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります</div><div className="text-amber-300 text-[10px] font-black">強化ポイント +{normalized.rebirthCount===0?BREAKTHROUGH_FIRST_POINTS:BREAKTHROUGH_POINTS}</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div><div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選択してください（最大Lv.8）</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}</div>{rebirthError&&<div className="text-red-300 text-[10px] my-2">{rebirthError}</div>}<button disabled={!rebirthSkillKey||gold<cost||rebirthProcessingRef.current} onClick={executeMasuBreakthrough} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">限界突破する</button></div>;
+        })()}
+
+        {/* 転生: Lv100以上で使える。レベルを99ぶん返す代わりに、振った強化をすべて振り直せる */}
+        {gameState==='MASU_REINCARNATE'&&(()=>{
+          const selected=masuMons.find(m=>String(m.id)===String(reincarnateSelectedId));
+          if (!selected) {
+            const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags));
+            return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="reincarnate" compact/></div><div className="text-[10px] text-slate-400 mb-3">絆Lv.{REINCARNATE_MIN_LEVEL}以上のマスモンだけが転生できます。レベルが{REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const can=lvl.level>=REINCARNATE_MIN_LEVEL;return <button key={masu.id} disabled={!can} onClick={()=>{setReincarnateSelectedId(masu.id);setReincarnateSkillKey('');setReincarnateError('');}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={masu.reincarnateCount}/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{normalizeMasuProgression(masu).levelCap}</div></button>})}</div></div>;
+          }
+          const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=masuRebirthCost(lvl.level), skills=getRebirthSkillChoices(selected);
+          const nextLevel=Math.max(1, lvl.level-REINCARNATE_LEVEL_DROP);
+          const nextPoints=(nextLevel-1)+totalBreakthroughPoints(normalized.rebirthCount)+totalReincarnatePoints(normalized.reincarnateCount+1);
+          return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={reincarnateProcessingRef.current} onClick={()=>setReincarnateSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生・固有技選択</h2></div>
+            <div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={normalized.reincarnateCount}/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} → Lv.{nextLevel}</div><div className="text-slate-400 text-[10px]">上限Lv.{normalized.levelCap}はそのまま。振った強化は白紙に戻ります</div><div className="text-amber-300 text-[10px] font-black">振り直せる強化ポイント {nextPoints}（うち転生ぶん +{REINCARNATE_POINTS}）</div></div></div>
+            <div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div>
+            <div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選択してください（最大Lv.8）</div>
+            <div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setReincarnateSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${reincarnateSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}</div>
+            {reincarnateError&&<div className="text-red-300 text-[10px] my-2">{reincarnateError}</div>}
+            <button disabled={!reincarnateSkillKey||gold<cost||reincarnateProcessingRef.current} onClick={executeMasuReincarnation} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">転生する</button></div>;
         })()}
 
         {gameState==='MASU_DONATION'&&(()=>{
@@ -7431,8 +7565,21 @@ function MonsterHeroGame() {
           <div className="flex gap-2"><button onClick={()=>setDonationSelectedId(null)} disabled={donationProcessing} className="flex-1 bg-slate-800 text-slate-300 py-3 rounded-2xl font-black text-xs disabled:opacity-40">キャンセル</button><button onClick={executeMasuDonation} disabled={donationProcessing} className="flex-[2] bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3 rounded-2xl font-black text-xs shadow-lg disabled:opacity-40">{donationProcessing?'処理中…':`寄付して${diamonds.toLocaleString()}ダイヤを受け取る`}</button></div>
         </div></div>})()}
 
-        {levelCapCompensation&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50000,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center"><Gem size={38} className="text-amber-300 mx-auto mb-3"/><h2 className="font-black text-lg mb-2">Lv30上限補償</h2><p className="text-[11px] text-slate-300 leading-relaxed">Lv30を超えていた未転生マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。</p><div className="text-2xl text-amber-300 font-black my-4">+{levelCapCompensation.diamonds.toLocaleString()} ダイヤ</div><button onClick={()=>{setLevelCapCompensation(null);storeSet('mh_masu_level_cap_compensation_notice_seen_v1',true,false);}} className="w-full bg-amber-500 text-black py-3 rounded-2xl font-black">受け取る</button></div></div>}
-        {rebirthAnimation&&<div className="mh-rebirth-animation" role="status" aria-live="polite"><div className="mh-rebirth-circle">✧</div><div className="mh-rebirth-glow"></div><div className="mh-rebirth-mon"><DyedMonsterImage baseId={rebirthAnimation.masu.baseId} src={rebirthAnimation.base?.iconUrl} alt={rebirthAnimation.masu.name} masuColors={getMasuColors(rebirthAnimation.masu)} className="w-full h-full object-contain"/><RebirthStars count={rebirthAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="mh-rebirth-copy"><b>転生完了！</b><span>★ 転生星を追加</span><span>レベル上限UP → {rebirthAnimation.masu.levelCap}</span><span>{rebirthAnimation.skillName} Lv.{rebirthAnimation.skillLevel}へ進化</span><span>強化ポイント +5</span></div></div>}
+        {levelCapCompensation&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50000,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center"><Gem size={38} className="text-amber-300 mx-auto mb-3"/><h2 className="font-black text-lg mb-2">Lv30上限補償</h2><p className="text-[11px] text-slate-300 leading-relaxed">Lv30を超えていた未限界突破マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。</p><div className="text-2xl text-amber-300 font-black my-4">+{levelCapCompensation.diamonds.toLocaleString()} ダイヤ</div><button onClick={()=>{setLevelCapCompensation(null);storeSet('mh_masu_level_cap_compensation_notice_seen_v1',true,false);}} className="w-full bg-amber-500 text-black py-3 rounded-2xl font-black">受け取る</button></div></div>}
+        {/* 限界突破の演出。転生とは別物なので専用の見た目にし、最後に星が1つ増える */}
+        {rebirthAnimation&&(()=>{
+          const stars=Math.min(5, Math.max(1, rebirthAnimation.masu.rebirthCount||1));
+          return <div className="mh-breakthrough-animation" role="status" aria-live="polite">
+            <div className="mh-breakthrough-beam"></div>
+            <div className="mh-breakthrough-ring"></div>
+            <div className="mh-breakthrough-cap">レベル上限<b>Lv.{rebirthAnimation.masu.levelCap}</b></div>
+            <div className="mh-breakthrough-mon"><DyedMonsterImage baseId={rebirthAnimation.masu.baseId} src={rebirthAnimation.base?.iconUrl} alt={rebirthAnimation.masu.name} masuColors={getMasuColors(rebirthAnimation.masu)} className="w-full h-full object-contain"/></div>
+            <div className="mh-breakthrough-stars" aria-hidden="true">{Array.from({length:stars},(_,i)=><i key={i} className={i===stars-1?'is-new':'is-old'}>★</i>)}</div>
+            <div className="mh-breakthrough-copy"><b>限界突破！</b><span>★ が1つ増えました</span><span>{rebirthAnimation.skillName} Lv.{rebirthAnimation.skillLevel}へ進化</span><span>強化ポイント +{rebirthAnimation.gainedPoints}</span></div>
+          </div>;
+        })()}
+        {/* 転生の演出。これまでの転生(＝いまの限界突破)の見た目をそのまま引き継ぐ */}
+        {reincarnateAnimation&&<div className="mh-rebirth-animation" role="status" aria-live="polite"><div className="mh-rebirth-circle">✧</div><div className="mh-rebirth-glow"></div><div className="mh-rebirth-mon"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={reincarnateAnimation.masu.reincarnateCount}/></div><div className="mh-rebirth-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.skillName} Lv.{reincarnateAnimation.skillLevel}へ進化</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div></div>}
         {donationAnimation&&<div className="mh-donation-animation" role="status" aria-live="polite" aria-label="寄付を処理中"><div className="mh-donation-beam"></div><div className="mh-donation-monster"><DyedMonsterImage baseId={donationAnimation.baseId} src={donationAnimation.src} alt={donationAnimation.name} masuColors={donationAnimation.colors} className="w-full h-full object-contain"/></div><div className="mh-donation-gem"><Gem size={42}/></div><div className="mh-donation-particles">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div><div className="mh-donation-copy">神殿へ寄付中…</div></div>}
 
         {gameState==='MASU_DONATION'&&donationResult&&<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.name}を寄付しました</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm">寄付一覧へ戻る</button></div></div>}
@@ -7897,7 +8044,7 @@ function MonsterHeroGame() {
                               <div className={`${MONSTER_CARD_ICON_CLASS} border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                               <RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>
                               <div className="absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[6px] font-black text-white leading-tight">マスモン</div>
-                              {monsterDisplayFlags.fused&&(masu.fusionHistory||[]).length>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1 text-[6px] font-black text-black leading-tight">+{masu.fusionHistory.length}</div>}
+                              <ReincarnateBadge count={masu.reincarnateCount} className="is-small"/>
                             </div>
                             {monsterCardName(masu.name,'text-pink-200')}
                             {monsterCardInfo(monsterCardBond(lvl))}
@@ -8079,7 +8226,7 @@ function MonsterHeroGame() {
                           <button onClick={()=>setMasuMonDetail(masu)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} border-pink-900/50 bg-slate-900`}>
                             <div className="relative shrink-0">
                               <div className={`${MONSTER_CARD_ICON_CLASS} border ${fusionCount>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>
-                              {monsterDisplayFlags.fused&&fusionCount>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1 text-[6px] font-black text-black leading-tight">+{fusionCount}</div>}
+                              <ReincarnateBadge count={masu.reincarnateCount} className="is-small"/>
                             </div>
                             {monsterCardName(masu.name,'text-pink-200')}
                             {monsterCardInfo(monsterCardBond(lvl))}
@@ -8293,7 +8440,7 @@ function MonsterHeroGame() {
                     {/* 主のレベル上限を超えるぶんは入らない。押す前に分かるようにしておく */}
                     {wastedXp>0&&<div className="text-[9px] text-amber-200 leading-relaxed mt-2 bg-amber-950/40 border border-amber-500/40 rounded-xl px-2.5 py-2">
                       <b className="text-amber-300">上限 Lv.{mainCap} で止まります</b><br/>
-                      {afterLvl.level>=mainCap?'すでに上限に届くため、':''}{wastedXp.toLocaleString()} XP は入りません。転生でレベル上限を上げてからのほうが無駄になりません。
+                      {afterLvl.level>=mainCap?'すでに上限に届くため、':''}{wastedXp.toLocaleString()} XP は入りません。限界突破でレベル上限を上げてからのほうが無駄になりません。
                     </div>}
                   </div>
                   <div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-2 space-y-1.5">
@@ -8588,7 +8735,7 @@ function MonsterHeroGame() {
                 <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
                   <div className="relative w-20 h-20 shrink-0">
                     <div className={`w-20 h-20 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-2 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
-                    {(masu.fusionHistory||[]).length>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1.5 py-0.5 text-[8px] font-black text-black leading-tight">+{masu.fusionHistory.length}</div>}
+                    <ReincarnateBadge count={masu.reincarnateCount}/>
                     <RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -8598,7 +8745,7 @@ function MonsterHeroGame() {
                     <div className="text-[9px] text-pink-400 font-bold uppercase tracking-wider">マスモン・元は{base.name}</div>
                     <div className="mt-1">
                       <div className="text-[9px] text-pink-300 font-black flex items-center gap-1"><Heart size={9}/>絆Lv.{lvl.level}</div>
-                      <div className="flex items-center gap-2 text-[8px] font-black"><span className="text-violet-300">転生 {masu.rebirthCount||0}回</span><span className="text-cyan-300">上限 Lv.{masu.levelCap||INITIAL_MASU_LEVEL_CAP}</span></div>
+                      <div className="flex items-center gap-2 text-[8px] font-black"><span className="text-violet-300">限界突破 {masu.rebirthCount||0}回</span>{(masu.reincarnateCount||0)>0&&<span className="text-amber-300">転生 {masu.reincarnateCount}回</span>}<span className="text-cyan-300">上限 Lv.{masu.levelCap||INITIAL_MASU_LEVEL_CAP}</span></div>
                       <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
                       <div className="text-[7px] text-pink-400/70 font-mono mt-0.5">{lvl.xpIntoLevel.toLocaleString()} / {lvl.xpForNext.toLocaleString()} XP</div>
                     </div>
@@ -8751,7 +8898,7 @@ function MonsterHeroGame() {
                 <div className="flex items-center gap-4 bg-slate-900 border border-amber-500/30 rounded-3xl p-4 shadow-xl">
                   <div className="relative w-20 h-20 shrink-0">
                     <div className={`w-20 h-20 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-2 ring-amber-400':'border-amber-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
-                    {(masu.fusionHistory||[]).length>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1.5 py-0.5 text-[8px] font-black text-black leading-tight">+{masu.fusionHistory.length}</div>}
+                    <ReincarnateBadge count={masu.reincarnateCount}/>
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-black text-white truncate">{masu.name}</h3>
@@ -10390,7 +10537,7 @@ function MonsterHeroGame() {
             <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
               <div className="relative w-20 h-20 shrink-0">
                 <div className={`w-20 h-20 rounded-full overflow-hidden border ${masu.fusionHistory.length>0?'border-amber-400 ring-2 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={baseId} src={base.iconUrl} alt={masu.name} masuColors={masu.colors} className="w-full h-full object-cover"/></div>
-                {masu.fusionHistory.length>0&&<div className="absolute -bottom-1 -left-1 bg-amber-500 rounded-full px-1.5 py-0.5 text-[8px] font-black text-black leading-tight">+{masu.fusionHistory.length}</div>}
+                <ReincarnateBadge count={masu.reincarnateCount}/>
                 <RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>
               </div>
               <div className="flex-1 min-w-0">
@@ -10398,7 +10545,7 @@ function MonsterHeroGame() {
                 <div className="text-[9px] text-pink-400 font-bold uppercase tracking-wider">マスモン・元は{base.name}</div>
                 <div className="mt-1">
                   <div className="text-[9px] text-pink-300 font-black flex items-center gap-1"><Heart size={9}/>絆Lv.{lvl.level}</div>
-                  <div className="flex items-center gap-2 text-[8px] font-black"><span className="text-violet-300">転生 {masu.rebirthCount}回</span><span className="text-cyan-300">上限 Lv.{masu.levelCap}</span></div>
+                  <div className="flex items-center gap-2 text-[8px] font-black"><span className="text-violet-300">限界突破 {masu.rebirthCount}回</span>{masu.reincarnateCount>0&&<span className="text-amber-300">転生 {masu.reincarnateCount}回</span>}<span className="text-cyan-300">上限 Lv.{masu.levelCap}</span></div>
                   <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
                   <div className="text-[7px] text-pink-400/70 font-mono mt-0.5">{lvl.xpIntoLevel.toLocaleString()} / {lvl.xpForNext.toLocaleString()} XP</div>
                 </div>
@@ -11000,7 +11147,33 @@ const createAnimationStyle = () => {
     .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}.mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management>span,.mh-home-facility.temple>span{top:45%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-reincarnate-badge{position:absolute;bottom:-4px;left:-4px;background:#f59e0b;color:#000;border-radius:9999px;padding:2px 6px;font-size:8px;font-weight:900;line-height:1;z-index:3;box-shadow:0 0 6px #f59e0b99}
+    .mh-reincarnate-badge.is-small{padding:1px 4px;font-size:6px}
+    /* 限界突破の演出。転生とは別物として、上へ突き抜ける光と、最後に増える星で見せる */
+    .mh-breakthrough-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#f59e0b55,#020617 64%);pointer-events:auto;touch-action:none}
+    .mh-breakthrough-ring{position:absolute;width:210px;height:210px;border:4px solid #fcd34d;border-radius:50%;animation:mhBreakRing 3.6s cubic-bezier(.2,.7,.3,1) forwards}
+    .mh-breakthrough-ring::after{content:"";position:absolute;inset:-18px;border:2px solid #fde68a88;border-radius:50%;animation:mhBreakRing 3.6s .25s cubic-bezier(.2,.7,.3,1) forwards}
+    .mh-breakthrough-beam{position:absolute;width:120px;height:130%;background:linear-gradient(0deg,transparent,#fde68acc 35%,#fff 55%,transparent);filter:blur(10px);animation:mhBreakBeam 3.6s ease-in forwards}
+    .mh-breakthrough-mon{position:relative;width:145px;height:145px;animation:mhBreakMon 3.6s cubic-bezier(.3,.9,.4,1) forwards}
+    .mh-breakthrough-cap{position:absolute;top:calc(16% + env(safe-area-inset-top));color:#fde68a;font-weight:900;font-size:13px;letter-spacing:.1em;animation:mhBreakCap 3.6s ease-out forwards}
+    .mh-breakthrough-cap b{display:block;font-size:30px;color:#fff;text-shadow:0 0 16px #f59e0b}
+    /* 最後に星が1つ増える。増えたぶんだけ大きく光ってから元の大きさに落ち着く */
+    .mh-breakthrough-stars{position:absolute;top:calc(46% + 0px);display:flex;gap:4px;font-size:22px;color:#fde047;text-shadow:0 0 8px #ca8a04}
+    .mh-breakthrough-stars i{opacity:.35;font-style:normal}
+    .mh-breakthrough-stars i.is-new{animation:mhBreakStar 3.6s ease-out forwards}
+    .mh-breakthrough-stars i.is-old{animation:mhBreakOldStar 3.6s ease-out forwards}
+    .mh-breakthrough-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 3.6s ease-out forwards}
+    .mh-breakthrough-copy b{font-size:20px;color:#fcd34d}
+    .mh-breakthrough-copy span{margin-top:2px}
+    @keyframes mhBreakRing{0%{opacity:0;transform:scale(.2)}18%{opacity:1}70%{opacity:.7;transform:scale(1.15)}100%{opacity:0;transform:scale(2.1)}}
+    @keyframes mhBreakBeam{0%,10%{opacity:0;transform:translateY(40%) scaleY(.2)}45%{opacity:1;transform:translateY(0) scaleY(1)}100%{opacity:0;transform:translateY(-40%) scaleY(1.2)}}
+    @keyframes mhBreakMon{0%{transform:translateY(24px) scale(.9);filter:brightness(1)}40%{transform:translateY(-14px) scale(1.06);filter:brightness(1.8)}60%{filter:brightness(1)}100%{transform:translateY(0) scale(1)}}
+    @keyframes mhBreakCap{0%,25%{opacity:0;transform:translateY(10px)}45%{opacity:1;transform:translateY(0)}100%{opacity:1}}
+    @keyframes mhBreakStar{0%,55%{opacity:0;transform:scale(0) rotate(-90deg)}70%{opacity:1;transform:scale(2.1) rotate(20deg)}85%{transform:scale(.9) rotate(0)}100%{opacity:1;transform:scale(1.25)}}
+    @keyframes mhBreakOldStar{0%,55%{opacity:.35}100%{opacity:1}}
+    @media(prefers-reduced-motion:reduce){.mh-breakthrough-ring,.mh-breakthrough-ring::after,.mh-breakthrough-beam,.mh-breakthrough-mon,.mh-breakthrough-cap,.mh-breakthrough-stars i,.mh-breakthrough-copy{animation:none}.mh-breakthrough-stars i{opacity:1}}
+    .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management>span,.mh-home-facility.temple>span{top:45%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
     .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
    施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:62%}}
     .mh-gift-list{display:flex;flex-direction:column;gap:5px}.mh-gift-card{display:flex;flex-direction:column;min-height:80px;padding:5px 8px}.mh-gift-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;height:18px}.mh-gift-heading h3{display:flex;align-items:center;gap:4px;min-width:0;font-size:12px;line-height:18px;color:#fff}.mh-gift-heading h3 span{flex:none;padding:1px 4px;border-radius:5px;background:#78350f;color:#fde68a;font-size:8px;line-height:14px}.mh-gift-heading h3 b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-gift-heading>em{flex:none;padding:1px 6px;border-radius:999px;font-size:8px;line-height:15px;font-style:normal;font-weight:900}.mh-gift-main{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:37px}.mh-gift-rewards{display:flex;flex:1;flex-wrap:wrap;align-items:center;gap:2px 7px;min-width:0;color:#fde68a;font-size:11px;line-height:15px;font-weight:900}.mh-gift-rewards span{overflow-wrap:anywhere}.mh-gift-main>button{flex:none;min-width:76px;height:36px;padding:0 10px;border-radius:10px;background:#0891b2;color:#fff;font-size:12px;font-weight:900;white-space:nowrap}.mh-gift-main>button:disabled{background:#334155;color:#64748b}.mh-gift-deadline{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b;font-size:8px;line-height:12px}
