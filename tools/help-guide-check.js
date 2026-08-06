@@ -103,7 +103,7 @@ check('1WAVEあたりのダイヤの説明が実際の合計と合う',
 check('絆レベルの上限の説明が実際の初期上限と一致',
   textOf('masu', 'masumon').includes(`Lv.${source.match(/const INITIAL_MASU_LEVEL_CAP = (\d+);/)[1]}`));
 check('転生の上限アップ量が実際の値と一致',
-  textOf('masu', 'rebirth').includes(`上限が+${source.match(/const REBIRTH_LEVEL_CAP_GAIN = (\d+);/)[1]}`));
+  textOf('masu', 'rebirth').includes(`上限が+${source.match(/const BREAKTHROUGH_LEVEL_CAP_GAIN = (\d+);/)[1]}`));
 check('固有技の最大レベルが実際の値と一致',
   textOf('masu', 'rebirth').includes(`上限はLv.${source.match(/const MAX_UNIQUE_SKILL_LEVEL = (\d+);/)[1]}`));
 check('絆経験値の配分(勇者=満額/供モン1/2/控え1/4)を説明している',

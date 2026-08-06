@@ -1,41 +1,86 @@
-// Lv上限移行・転生・表示・保存経路を本番ソースから検証する。
+// Lv上限移行・限界突破・転生・表示・保存経路を本番ソースから検証する。
+//
+// 2026年8月に仕組みを2つに分けた。
+//   限界突破(旧「転生」) … 上限に届いたら、レベルはそのままで上限だけ+5。強化ポイントは初回5・以降1。
+//   転生(新)            … 絆Lv100以上で使える。レベルを99ぶん返す代わりに強化を全部振り直す(+10P)。
+// どちらも保存データ(mh_masu_mons)を書き換えるため、「レベルが勝手に戻る」
+// 「もらえるポイントが消える」といった取り返しのつかない壊れ方をしうる。
 const fs = require('fs');
-const vm = require('vm');
 const path = require('path');
 const source = fs.readFileSync(path.join(__dirname, '..', 'monster-hero', 'src', 'game-system.jsx'), 'utf8');
-const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
-const context = { React: { createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} } };
-vm.createContext(context);
-vm.runInContext(`${prefix}\nglobalThis.__rebirth={totalBondXpForLevel,bondLevelInfo,migrateMasuLevelCaps,migrateRebornMasuToFullReset,buildMasuRebirth,cappedBondXp,uniqueSkillAtLevel};`, context);
-const {totalBondXpForLevel,bondLevelInfo,migrateMasuLevelCaps,migrateRebornMasuToFullReset,buildMasuRebirth,cappedBondXp,uniqueSkillAtLevel}=context.__rebirth;
-let failed=0; const check=(name,ok)=>{console.log(`${ok?'OK':'NG'}: ${name}`);if(!ok)failed++;};
+// 本体を丸ごと動かしてから関数を取り出す(データ定義より後ろにある関数も使えるようにするため)
+const {totalBondXpForLevel,bondLevelInfo,masuBondLevelInfo,migrateMasuLevelCaps,buildMasuBreakthrough,buildMasuReincarnation,reconcileMasuPoints,totalBreakthroughPoints,totalReincarnatePoints,cappedBondXp,uniqueSkillAtLevel,MAX_MASU_LEVEL_CAP,REINCARNATE_MIN_LEVEL,REINCARNATE_LEVEL_DROP,REINCARNATE_POINTS,BREAKTHROUGH_FIRST_POINTS,BREAKTHROUGH_POINTS,BREAKTHROUGH_LEVEL_CAP_GAIN}=require('./harness').loadDyeModule();
+let failed=0; const check=(name,ok,detail='')=>{console.log(`${ok?'OK':'NG'}: ${name}${detail?` — ${detail}`:''}`);if(!ok)failed++;};
+
+// --- Lv30上限の移行(以前の補償。二重に走らないこと) ---
 const capXp=totalBondXpForLevel(30), excess=777;
 const old={id:'old',baseId:'Mocchi',name:'旧',bondXp:capXp+excess,distAptPoints:50};
 const migrated=migrateMasuLevelCaps([old],100);
 check('Lv30超過XPを同数のダイヤへ補償',migrated.compensation===excess&&migrated.nextGold===100+excess&&migrated.nextMasuMons[0].bondXp===capXp&&bondLevelInfo(capXp).level===30);
 const second=migrateMasuLevelCaps(migrated.nextMasuMons,migrated.nextGold);
 check('移行済みデータは二重補償されない',second.compensation===0&&second.nextGold===migrated.nextGold);
-const ready={...migrated.nextMasuMons[0],rebirthCount:0,levelCap:30,distAptPoints:9,distApt:['S','A','B','C'],statPoints:{hp:30,atk:9,def:6,guts:3},colors:['red'],inheritedUniques:[{monId:'Suezo',name:'熱視線'}],fusionHistory:[{subName:'副'}],uniqueSkillLevels:{'inh:0':2}};
-const rebirth=buildMasuRebirth({masu:ready,skillKey:'own',gold:4000});
-check('新規転生はLv1能力・距離適性・使用済み0・未使用5へ完全初期化',rebirth.ok&&rebirth.cost===1500&&rebirth.nextGold===2500&&rebirth.nextMasu.bondXp===0&&rebirth.nextMasu.distAptPoints===5&&JSON.stringify(rebirth.nextMasu.distApt)===JSON.stringify(['C','C','C','C'])&&Object.values(rebirth.nextMasu.statPoints).every(v=>v===0));
-check('新規転生は固有技・継承技・上限・回数・名前・染色・合体履歴を維持',rebirth.nextMasu.uniqueSkillLevels.own===1&&rebirth.nextMasu.uniqueSkillLevels['inh:0']===2&&rebirth.nextMasu.inheritedUniques.length===1&&rebirth.nextMasu.levelCap===35&&rebirth.nextMasu.rebirthCount===1&&rebirth.nextMasu.name===ready.name&&rebirth.nextMasu.colors[0]==='red'&&rebirth.nextMasu.fusionHistory.length===1);
-const legacyReborn={...ready,rebirthCount:2,levelCap:40,bondXp:999,distAptPoints:17};
-const corrected=migrateRebornMasuToFullReset([legacyReborn])[0];
-check('以前転生した個体もLv1能力・距離適性・使用済み0・未使用5へ移行',corrected.bondXp===0&&corrected.distAptPoints===5&&JSON.stringify(corrected.distApt)===JSON.stringify(['C','C','C','C'])&&Object.values(corrected.statPoints).every(v=>v===0));
-check('既存個体移行でも固有技・継承技・上限・回数を維持',corrected.uniqueSkillLevels['inh:0']===2&&corrected.inheritedUniques.length===1&&corrected.levelCap===40&&corrected.rebirthCount===2);
+
+// --- 限界突破: レベル・強化はそのまま、上限とポイントだけ増える ---
+const ready={...migrated.nextMasuMons[0],rebirthCount:0,levelCap:30,distAptPoints:9,distApt:['S','A','B','C'],statPoints:{hp:30,atk:9,def:6,guts:3},colors:['red'],inheritedUniques:[{monId:'Suezo',name:'熱視線'}],fusionHistory:[{subName:'副'}],uniqueSkillLevels:{own:0,'inh:0':2}};
+const bt=buildMasuBreakthrough({masu:ready,skillKey:'own',gold:4000});
+check('限界突破はレベル・絆経験値・強化を戻さない',
+  bt.ok&&bt.nextMasu.bondXp===ready.bondXp&&JSON.stringify(bt.nextMasu.distApt)===JSON.stringify(ready.distApt)&&JSON.stringify(bt.nextMasu.statPoints)===JSON.stringify(ready.statPoints),
+  bt.ok?`Lv${masuBondLevelInfo(bt.nextMasu).level}`:bt.reason);
+check('限界突破で上限が+5され、回数と費用が合う',bt.nextMasu.levelCap===30+BREAKTHROUGH_LEVEL_CAP_GAIN&&bt.nextMasu.rebirthCount===1&&bt.cost===1500&&bt.nextGold===2500);
+check('限界突破の初回は強化ポイント+5',bt.gainedPoints===BREAKTHROUGH_FIRST_POINTS&&bt.nextMasu.distAptPoints===9+BREAKTHROUGH_FIRST_POINTS);
+const bt2=buildMasuBreakthrough({masu:{...bt.nextMasu,bondXp:totalBondXpForLevel(35)},skillKey:'own',gold:99999});
+check('限界突破の2回目からは強化ポイント+1',bt2.ok&&bt2.gainedPoints===BREAKTHROUGH_POINTS&&bt2.nextMasu.distAptPoints===bt.nextMasu.distAptPoints+BREAKTHROUGH_POINTS,bt2.ok?'':bt2.reason);
+check('限界突破は固有技・継承技・名前・染色・合体履歴を維持',bt.nextMasu.uniqueSkillLevels.own===1&&bt.nextMasu.uniqueSkillLevels['inh:0']===2&&bt.nextMasu.inheritedUniques.length===1&&bt.nextMasu.name===ready.name&&JSON.stringify(bt.nextMasu.colors)===JSON.stringify(['red'])&&bt.nextMasu.fusionHistory.length===1);
 check('上限到達後はXPを取得しない',cappedBondXp(ready,9999)===capXp);
-check('ダイヤ不足・未到達・最大Lv技は転生不可',!buildMasuRebirth({masu:ready,skillKey:'own',gold:1499}).ok&&!buildMasuRebirth({masu:{...ready,bondXp:0},skillKey:'own',gold:9999}).ok&&!buildMasuRebirth({masu:{...ready,uniqueSkillLevels:{own:8}},skillKey:'own',gold:9999}).ok);
-check('専用移行フラグとマスモン・ダイヤ保存がある',source.includes("mh_masu_level_cap_migrated_v1")&&source.includes("mh_masu_level_cap_migration_pending_v1")&&/storeSet\('mh_masu_mons', savedMasuMons/.test(source)&&/storeSet\('mh_gold', migratedCap.nextGold/.test(source));
+check('ダイヤ不足・未到達・最大Lv技は限界突破できない',!buildMasuBreakthrough({masu:ready,skillKey:'own',gold:1499}).ok&&!buildMasuBreakthrough({masu:{...ready,bondXp:0},skillKey:'own',gold:9999}).ok&&!buildMasuBreakthrough({masu:{...ready,uniqueSkillLevels:{own:8}},skillKey:'own',gold:9999}).ok);
+const atMax={...ready,levelCap:MAX_MASU_LEVEL_CAP,bondXp:totalBondXpForLevel(MAX_MASU_LEVEL_CAP)};
+check(`上限Lv.${MAX_MASU_LEVEL_CAP}に届いたらそれ以上は上げられない`,!buildMasuBreakthrough({masu:atMax,skillKey:'own',gold:999999}).ok);
+
+// --- 転生: レベルを99返して強化を振り直す ---
+const hundred={...ready,levelCap:120,rebirthCount:14,bondXp:totalBondXpForLevel(103),distAptPoints:0,reincarnateCount:0};
+const re=buildMasuReincarnation({masu:hundred,skillKey:'own',gold:999999});
+check(`絆Lv.${REINCARNATE_MIN_LEVEL}未満では転生できない`,!buildMasuReincarnation({masu:{...hundred,bondXp:totalBondXpForLevel(99)},skillKey:'own',gold:999999}).ok);
+check('転生でレベルが99下がる',re.ok&&re.fromLevel===103&&re.nextLevel===103-REINCARNATE_LEVEL_DROP&&masuBondLevelInfo(re.nextMasu).level===4,re.ok?'':re.reason);
+check('転生でレベル上限は据え置き',re.nextMasu.levelCap===120);
+check('転生で強化とステータスが白紙に戻る',JSON.stringify(re.nextMasu.statPoints)==='{"hp":0,"atk":0,"def":0,"guts":0}'&&JSON.stringify(re.nextMasu.distApt)===JSON.stringify(['C','C','C','C']));
+const wantPoints=(4-1)+totalBreakthroughPoints(14)+REINCARNATE_POINTS;
+check('転生で振り直せるポイントは「新レベル分＋限界突破分＋10」',re.nextMasu.distAptPoints===wantPoints&&re.nextPoints===wantPoints,`${re.nextMasu.distAptPoints} / 期待 ${wantPoints}`);
+check('転生の回数が増え、固有技も1つ上がる',re.nextMasu.reincarnateCount===1&&re.nextMasu.uniqueSkillLevels.own===1);
+check('転生は名前・染色・継承技・限界突破の回数を維持',re.nextMasu.name===ready.name&&JSON.stringify(re.nextMasu.colors)===JSON.stringify(['red'])&&re.nextMasu.inheritedUniques.length===1&&re.nextMasu.rebirthCount===14);
+
+// --- 強化ポイントの辻褄 ---
+// 限界突破のぶんを「得たはずの総数」に含めていないと、直後のレベルアップで相殺されて消える
+const afterBt=reconcileMasuPoints({...bt.nextMasu,baseId:'Mocchi'});
+check('限界突破でもらったポイントがレベルアップで消えない',afterBt.distAptPoints>=bt.nextMasu.distAptPoints,`${afterBt.distAptPoints} >= ${bt.nextMasu.distAptPoints}`);
+check('限界突破ぶんのポイント計算',totalBreakthroughPoints(0)===0&&totalBreakthroughPoints(1)===BREAKTHROUGH_FIRST_POINTS&&totalBreakthroughPoints(3)===BREAKTHROUGH_FIRST_POINTS+BREAKTHROUGH_POINTS*2);
+check('転生ぶんのポイント計算',totalReincarnatePoints(0)===0&&totalReincarnatePoints(2)===REINCARNATE_POINTS*2);
+// 旧仕様で転生してレベルが1に戻っている個体も、新しい数え方で不足分が補われる
+const legacyReborn=reconcileMasuPoints({...ready,baseId:'Mocchi',rebirthCount:3,levelCap:45,bondXp:0,distAptPoints:0,distApt:['C','C','C','C'],statPoints:{hp:0,atk:0,def:0,guts:0}});
+check('以前の転生でレベルが戻った個体も新しい数え方で補われる',legacyReborn.distAptPoints===totalBreakthroughPoints(3),`${legacyReborn.distAptPoints} / 期待 ${totalBreakthroughPoints(3)}`);
+// 二度読み込んでも増え続けないこと(補填は「不足分だけ」)
+check('読み込みを繰り返してもポイントが増え続けない',reconcileMasuPoints(legacyReborn).distAptPoints===legacyReborn.distAptPoints);
+
+// --- 保存経路・画面 ---
+check('専用移行フラグとマスモン・ダイヤ保存がある',source.includes("mh_masu_level_cap_migrated_v1")&&source.includes("mh_masu_level_cap_migration_pending_v1")&&/storeSet\('mh_masu_mons', savedMasuMons/.test(source)&&/storeSet\('mh_gold'/.test(source));
 const fusionSource=source.slice(source.indexOf('const executeMasuFusion'),source.indexOf('const resetFusionFlow'));
-// 合体は能力値・距離適性・副の強化ポイントを引き継がないが、上がった絆レベルぶんの
-// 強化ポイントは通常のレベルアップと同じように主へ配る(確認画面の表示と揃える)。
-check('完全初期化移行フラグがあり合体でレベルぶんの強化ポイントを配る',source.includes("mh_masu_rebirth_full_reset_migrated_v1")&&fusionSource.includes('distAptPoints: (m.distAptPoints || 0) + gainedLevels,')&&fusionSource.includes('fusionBondLevels'));
+// 上がったレベルぶんの強化ポイントは applyBondXpGain がまとめて配る。
+// 合体もそこを通しているので、経路と付与の両方を見る
+check('レベルが上がったぶんの強化ポイントを配る',source.includes('distAptPoints: (masu.distAptPoints || 0) + gainedLevels'));
+check('合体もその経路を通る',fusionSource.includes('applyBondXpGain(m, gainedXp)'));
+// 「転生したらLv1へ戻す」時代の移行を今さら走らせると、育てたレベルを消してしまう
+check('旧仕様のLv1リセット移行はもう走らせない',!/savedMasuMons = migrateRebornMasuToFullReset/.test(source));
 const golemUnique={name:'合掌',names:['合掌','フライングプレス','竜巻アタック'],baseMult:3.2,baseGuts:68,effectDesc:'闘志'};
 const evolved=uniqueSkillAtLevel(golemUnique,2);
 check('固有技Lv2で技名・威力・会心率・消費Gを現在技へ切替',evolved.name==='竜巻アタック'&&evolved.mult===4.2&&evolved.crit===0.2&&evolved.guts===89&&evolved.effectDesc==='闘志');
-check('転生済みソート・表示設定と旧設定の補完を追加',source.includes("key: 'reborn', label: '転生済み'")&&source.includes("monsterSortKey === 'reborn'")&&source.includes('DEFAULT_MONSTER_LIST_SETTINGS.display[key]'));
+check('限界突破済みソート・表示設定と旧設定の補完を追加',source.includes("key: 'reborn', label: '限界突破済み'")&&source.includes("monsterSortKey === 'reborn'")&&source.includes('DEFAULT_MONSTER_LIST_SETTINGS.display[key]'));
 check('同一固有技の継承を禁止',source.includes('duplicateUnique')&&source.includes('同じ固有技はすでに所持しているため引き継げません'));
 check('現在技・解放済み・未解放を固有技詳細に表示',source.includes("current?'現在の技':locked?'未解放':'解放済み'"));
-check('星4色・最大5個表示と約4秒演出がある',source.includes("['#fde047','#f472b6','#ef4444','#ffffff']")&&source.includes('Math.min(5, value)')&&source.includes('mh-rebirth-animation')&&source.includes('4100'));
-check('神殿BGMを転生画面でも継続',/MASU_REBIRTH:\s*'temple'/.test(source));
+check('星4色・最大5個表示がある',source.includes("['#fde047','#f472b6','#ef4444','#ffffff']")&&source.includes('Math.min(5, value)'));
+check('限界突破は専用の演出を使い、最後に星が増える',source.includes('mh-breakthrough-animation')&&source.includes('mh-breakthrough-stars')&&source.includes("i===stars-1?'is-new':'is-old'")&&source.includes('@keyframes mhBreakStar'));
+check('転生はこれまでの演出を引き継ぐ',source.includes('reincarnateAnimation&&<div className="mh-rebirth-animation"'));
+check('転生の回数は「+N」バッジで示し、合体のバッジは出さない',source.includes('mh-reincarnate-badge')&&source.includes('<ReincarnateBadge')&&!source.includes('+{masu.fusionHistory.length}</div>')&&!source.includes('+{fusionCount}</div>'));
+check('神殿BGMを限界突破・転生の画面でも継続',/MASU_REBIRTH:\s*'temple'/.test(source)&&/MASU_REINCARNATE:\s*'temple'/.test(source));
+check('神殿から限界突破と転生の両方へ入れる',source.includes(">限界突破</button>")&&source.includes("setGameState('MASU_REINCARNATE')"));
+
+console.log(failed?`\n${failed}件のNGがあります`:'\nすべてOK');
 process.exit(failed?1:0);

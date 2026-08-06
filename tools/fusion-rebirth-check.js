@@ -30,7 +30,7 @@ vm.runInContext([
   grab('const XP_CURVE_EXPONENT', 'const bondLevelInfo ='),
   grab('const bondLevelInfo =', 'const rosterBaseId ='),
   grab('const reconcileMasuPoints', 'const RANGE_STYLES'),
-  'globalThis.__m={bondLevelInfo,totalBondXpForLevel,masuBondLevelInfo,reconcileMasuPoints,buildMasuRebirth,masuFusionCost,FUSION_COST_PER_LEVEL,REBIRTH_COST_PER_LEVEL,normalizeMasuProgression};',
+  'globalThis.__m={bondLevelInfo,totalBondXpForLevel,masuBondLevelInfo,reconcileMasuPoints,buildMasuBreakthrough,masuFusionCost,FUSION_COST_PER_LEVEL,REBIRTH_COST_PER_LEVEL,normalizeMasuProgression};',
 ].join('\n'), ctx);
 const m = ctx.__m;
 
@@ -41,9 +41,9 @@ check('合体費用は(主Lv+副Lv)×50', m.masuFusionCost(10, 8) === 900, `${m.
 check('以前の半額になっている', m.masuFusionCost(10, 8) * 2 === (10 + 8) * 100);
 
 const atCap = { id: 1, baseId: 'Golem', bondXp: m.totalBondXpForLevel(30), levelCap: 30, rebirthCount: 0, distAptPoints: 0, statPoints: {}, uniqueSkillLevels: { own: 0 } };
-const rebirth = m.buildMasuRebirth({ masu: atCap, skillKey: 'own', gold: 999999 });
+const rebirth = m.buildMasuBreakthrough({ masu: atCap, skillKey: 'own', gold: 999999 });
 check('転生費用は上限Lv×50', rebirth.ok && rebirth.cost === 1500, `${rebirth.cost}ダイヤ`);
-check('ダイヤ不足なら転生できない', m.buildMasuRebirth({ masu: atCap, skillKey: 'own', gold: 1499 }).ok === false);
+check('ダイヤ不足なら転生できない', m.buildMasuBreakthrough({ masu: atCap, skillKey: 'own', gold: 1499 }).ok === false);
 check('転生後は強化ポイント5で始まる', rebirth.ok && rebirth.nextMasu.distAptPoints === 5);
 
 // --- ① 合体で上がったレベルぶんの強化ポイント ---
@@ -63,7 +63,8 @@ check('振り済みのぶんは重複して配らない',
   m.reconcileMasuPoints({ ...lv10, distApt: ['B', 'C', 'C', 'C'], statPoints: { hp: 10 }, distAptPoints: 0 }).distAptPoints === 7);
 
 // --- 画面・実処理の結線 ---
-check('合体の実処理で強化ポイントを配る', has('distAptPoints: (m.distAptPoints || 0) + gainedLevels,'));
+// 上がったレベルぶんの強化ポイントは applyBondXpGain がまとめて配る。合体もそこを通す
+check('合体の実処理で強化ポイントを配る', has('distAptPoints: (masu.distAptPoints || 0) + gainedLevels') && has('applyBondXpGain(m, gainedXp)'));
 check('確認画面と実処理が同じ費用計算を使う', (source.match(/masuFusionCost\(mainLvl\.level, subLvl\.level\)/g) || []).length === 2);
 check('古い×100の計算が残っていない', !has('(mainLvl.level + subLvl.level) * 100') && !has('const cost = level * 100;'));
 check('確認画面は強化ポイントの増分を出したまま', has('{mainPointsNow} → {mainPointsNow + gainedLevels}'));
@@ -77,12 +78,12 @@ vm.createContext(capCtx);
 vm.runInContext([
   grab('const donationDiamondValue =', 'const rosterBaseId ='),
   grab('const XP_CURVE_EXPONENT', 'const masuFusionCost'),
-  'globalThis.__c={bondLevelInfo,cappedBondXp,masuBondLevelInfo,normalizeMasuProgression,totalBondXpForLevel,INITIAL_MASU_LEVEL_CAP,REBIRTH_LEVEL_CAP_GAIN};',
+  'globalThis.__c={bondLevelInfo,cappedBondXp,masuBondLevelInfo,normalizeMasuProgression,totalBondXpForLevel,INITIAL_MASU_LEVEL_CAP,BREAKTHROUGH_LEVEL_CAP_GAIN};',
 ].join('\n'), capCtx);
 const C = capCtx.__c;
-const capOf = (rebirthCount) => C.INITIAL_MASU_LEVEL_CAP + rebirthCount * C.REBIRTH_LEVEL_CAP_GAIN;
+const capOf = (rebirthCount) => C.INITIAL_MASU_LEVEL_CAP + rebirthCount * C.BREAKTHROUGH_LEVEL_CAP_GAIN;
 check('転生していないマスモンの上限は初期値', capOf(0) === C.INITIAL_MASU_LEVEL_CAP, `Lv.${capOf(0)}`);
-check('1回転生すると上限が上がる', capOf(1) === C.INITIAL_MASU_LEVEL_CAP + C.REBIRTH_LEVEL_CAP_GAIN, `Lv.${capOf(1)}`);
+check('1回限界突破すると上限が上がる', capOf(1) === C.INITIAL_MASU_LEVEL_CAP + C.BREAKTHROUGH_LEVEL_CAP_GAIN, `Lv.${capOf(1)}`);
 // 実際に起きていたケース(転生1回・上限35の主に、副の1324XPを足す)
 {
   const main = { id:1, bondXp:2529, rebirthCount:1, levelCap:capOf(1) };
@@ -126,18 +127,21 @@ check('確認画面に上限を出す', has('上限 Lv.{mainCap}</div>'));
 const rebirthCtx = {};
 vm.createContext(rebirthCtx);
 vm.runInContext([
-  grab('const FUSION_COST_PER_LEVEL =', 'const buildMasuRebirth ='),
+  grab('const FUSION_COST_PER_LEVEL =', 'const buildMasuBreakthrough ='),
   'globalThis.__r={FUSION_COST_PER_LEVEL,REBIRTH_COST_PER_LEVEL,masuFusionCost,masuRebirthCost};',
 ].join('\n'), rebirthCtx);
 const R = rebirthCtx.__r;
 check('転生の費用は「絆レベル × 単価」', R.masuRebirthCost(30) === 30 * R.REBIRTH_COST_PER_LEVEL, `Lv30 → ${R.masuRebirthCost(30)}ダイヤ`);
 check('転生の費用は「レベル×100の半額」', R.masuRebirthCost(30) === 30 * 100 / 2, `${R.masuRebirthCost(30)} / ${30 * 100 / 2}`);
 check('転生の費用は壊れた値でも0以上', R.masuRebirthCost(null) === 0 && R.masuRebirthCost(-5) === 0 && R.masuRebirthCost(undefined) === 0);
-check('転生も確認画面と実処理で同じ費用計算を使う',
+// 限界突破と転生はどちらも同じ費用計算を使う。画面側だけ別の式で出すと、
+// 表示と実際に引かれる額が食い違う(以前それで「押せないのに足りているように見える」不具合が出た)
+check('限界突破・転生とも確認画面と実処理で同じ費用計算を使う',
   has('const masuRebirthCost = (level) =>')
-    && (source.match(/masuRebirthCost\(/g) || []).length === 2
-    && has('const cost = masuRebirthCost(level);')
-    && has('cost=masuRebirthCost(lvl.level)'));
+    && (source.match(/masuRebirthCost\(/g) || []).length === 4
+    && (source.match(/const cost = masuRebirthCost\(level\);/g) || []).length === 2
+    && (source.match(/cost=masuRebirthCost\(lvl\.level\)/g) || []).length === 2,
+  `masuRebirthCost の使用箇所 ${(source.match(/masuRebirthCost\(/g) || []).length}`);
 check('転生の画面に古い×100の計算が残っていない', !has('cost=lvl.level*100'));
 // 必要ダイヤは、押す前に気づける場所へ出す
 check('転生の必要ダイヤを独立した枠で出す',

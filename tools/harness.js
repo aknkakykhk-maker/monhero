@@ -50,6 +50,22 @@ const EXPORTED_NAMES = [
   'getMonsterAptPct',
   'formatAptBonus',
   'DIST_APTITUDE_GRADES',
+  'totalBondXpForLevel',
+  'bondLevelInfo',
+  'migrateMasuLevelCaps',
+  'buildMasuBreakthrough',
+  'buildMasuReincarnation',
+  'reconcileMasuPoints',
+  'totalBreakthroughPoints',
+  'totalReincarnatePoints',
+  'cappedBondXp',
+  'MAX_MASU_LEVEL_CAP',
+  'REINCARNATE_MIN_LEVEL',
+  'REINCARNATE_LEVEL_DROP',
+  'REINCARNATE_POINTS',
+  'BREAKTHROUGH_FIRST_POINTS',
+  'BREAKTHROUGH_POINTS',
+  'BREAKTHROUGH_LEVEL_CAP_GAIN',
 ];
 
 // ブラウザAPIの最小スタブ。canvasだけは node-canvas で本物と同じように動かす
