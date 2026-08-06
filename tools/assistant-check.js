@@ -72,7 +72,9 @@ check('助手の顔は大きさと表情を指定して使い回せる', has('co
 check('顔は以前より大きい(既定88px・コンパクト48px)',
   has('const size = faceSize != null ? faceSize : (compact ? 48 : 88);'));
 check('場面が変わったら表情を読み直す', has('useEffect(() => { setSrc(assistantFaceSrc(who, expression)); }, [who.id, expression]);'));
-check('index.htmlがdata/assistants.jsを読み込んでいる', /<script src="data\/assistants\.js\?v=[0-9a-f]{12}"><\/script>/.test(indexHtml));
+// キャッシュキー付きで読み込んでいること。読み込み完了をローディングのゲージへ伝える
+// onload などの属性が付くことがあるので、タグの中身までは決め打ちしない
+check('index.htmlがdata/assistants.jsを読み込んでいる', /<script src="data\/assistants\.js\?v=[0-9a-f]{12}"[^>]*><\/script>/.test(indexHtml));
 check('助手は画像を持つbreeder.jsより後に読み込む',
   indexHtml.indexOf('data/breeder.js') < indexHtml.indexOf('data/assistants.js'));
 

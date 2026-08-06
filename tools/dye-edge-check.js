@@ -32,16 +32,20 @@ const RIM_BARE_LIMIT = 5; // %
 // 元の色の筋(点線状の塗り残し)が残る。定義を実測値へ合わせた状態で0%なので、
 // 「気づかないうちに定義とイラストがずれた」ことを拾えるよう厳しめにしておく
 const INNER_BARE_LIMIT = 0.2; // %
-// 元の陰影を保つ設定(MASU_COLOR_PRESERVE_GLOSS に数値を入れたモンスター)で、
+// 元の陰影を保つ設定(MASU_COLOR_REGION_DYE の gloss に数値を入れたモンスター)で、
 // 染め上がりの彩度がどれだけばらつくか。彩度を一律に固定する塗りだと0になる
 const GLOSS_SPREAD_MIN = 0.05;
 // 元の陰影を保つ設定が外れていないか気付けるよう、対象をここにも明示しておく
 const GLOSS_EXPECTED = ['Mocchi'];
-// 部位ごとの「染め上がりの彩度 ÷ 狙った彩度」の下限。
-// 元の彩度に比例させる塗り(MASU_COLOR_PRESERVE_GLOSS)は、元が白い部位だと
+// 部位ごとの「染め上がりの彩度 ÷ その部位で狙っている彩度」の下限。
+// 元の彩度に比例させる塗り(MASU_COLOR_REGION_DYE の gloss)は、元が白い部位だと
 // 「元が白い＝染めても白い」となり、明度しか変わらず色がほとんど入らなくなる。
 // 実際にアークの染色②(元の彩度0.008の白い部分)が「黒しか入らない」状態になっていた。
-// 見た目では気付きにくく例外も出ないので、部位ごとに数値で見張る
+// 見た目では気付きにくく例外も出ないので、部位ごとに数値で見張る。
+//
+// 比べる相手は「選んだ色の彩度」ではなく「その部位の sat を掛けた彩度」にしている。
+// sat は淡く仕上げたいときに意図して下げる設定なので、そこまで不具合として数えると
+// 意図した調整のたびに落ちてしまい、検査の意味がなくなる
 const REGION_SAT_RATIO_MIN = 0.45;
 // 高解像度マスクが必ず効いていてほしいモンスター(元絵が解析サイズより大幅に大きいもの)。
 // MASK_HIRES_BASE_IDSからうっかり外れたときに気付けるよう、ここにも明示しておく
@@ -55,8 +59,8 @@ const page = `<!doctype html><meta charset="utf-8">
 <script>
 ${dyeSource}
 window.__targets = () => Object.keys(MASK_HIRES_BASE_IDS);
-window.__glossTargets = () => Object.entries(MASU_COLOR_PRESERVE_GLOSS)
-  .filter(([, v]) => (Array.isArray(v) ? v : [v]).some((x) => typeof x === 'number')).map(([k]) => k);
+window.__glossTargets = () => Object.entries(MASU_COLOR_REGION_DYE)
+  .filter(([, v]) => (Array.isArray(v) ? v : [v]).some((x) => x && typeof x.gloss === 'number')).map(([k]) => k);
 // 部位ごとに、染めたあとの彩度が狙った彩度のどれくらいまで届いているかを測る。
 // 部位マスクの中だけを見るので、「①は染まるが②は白いまま」のような部位単位の
 // 塗り漏れを拾える(画像全体の平均では①に埋もれて気付けない)
@@ -85,7 +89,9 @@ window.__regionSaturation = async (id, colorId) => {
       if (md[p*4+3] < 128 || dd[p*4+3] < 250) continue;
       cnt++; sum += _rgbToHsv(dd[p*4], dd[p*4+1], dd[p*4+2])[1];
     }
-    out.push(cnt ? { mean: +(sum / cnt).toFixed(3), ratio: +(sum / cnt / target.s).toFixed(2) } : null);
+    // その部位で狙っている彩度(選んだ色の彩度 × その部位の sat)
+    const want = Math.max(0.01, Math.min(1, target.s * _regionDyeSettingFor(id, i).sat));
+    out.push(cnt ? { mean: +(sum / cnt).toFixed(3), want: +want.toFixed(3), ratio: +(sum / cnt / want).toFixed(2) } : null);
   }
   return { target: target.s, regions: out };
 };
@@ -189,7 +195,7 @@ const server = http.createServer((req, res) => {
     // 元の陰影を保つ設定にしたモンスターは、染めたあとも彩度にばらつきが残ること。
     // 設定が外れると全画素が同じ彩度になり、のっぺりした塗りに戻ってしまう
     const glossDeclared = await tab.evaluate(() => window.__glossTargets());
-    GLOSS_EXPECTED.forEach((id) => { if (!glossDeclared.includes(id)) problems.push(`${id}: MASU_COLOR_PRESERVE_GLOSS の指定が外れています(のっぺりした塗りに戻ります)`); });
+    GLOSS_EXPECTED.forEach((id) => { if (!glossDeclared.includes(id)) problems.push(`${id}: MASU_COLOR_REGION_DYE の gloss 指定が外れています(のっぺりした塗りに戻ります)`); });
     for (const id of Array.from(new Set([...GLOSS_EXPECTED, ...glossDeclared]))) {
       const g = await tab.evaluate((i) => window.__glossSpread(i), id);
       if (!g || g.error) { problems.push(`${id}: 染め上がりを測れませんでした（${(g && g.error) || '不明'}）`); continue; }
@@ -202,10 +208,10 @@ const server = http.createServer((req, res) => {
     for (const id of targets) {
       const g = await tab.evaluate((i) => window.__regionSaturation(i, 'blue'), id);
       if (!g || g.error) { problems.push(`${id}: 部位ごとの染め上がりを測れませんでした（${(g && g.error) || '不明'}）`); continue; }
-      console.log(`${id.padEnd(8)} 部位ごとの染め上がりの彩度 ${g.regions.map((r, i) => `染色${i+1} ${r ? `${r.mean}(狙いの${Math.round(r.ratio*100)}%)` : '—'}`).join(' / ')}`);
+      console.log(`${id.padEnd(8)} 部位ごとの染め上がりの彩度 ${g.regions.map((r, i) => `染色${i+1} ${r ? `${r.mean}(狙い${r.want}の${Math.round(r.ratio*100)}%)` : '—'}`).join(' / ')}`);
       g.regions.forEach((r, i) => {
         if (r && r.ratio < REGION_SAT_RATIO_MIN) {
-          problems.push(`${id}: 染色${i+1}の染め上がりの彩度が狙い(${g.target})の${Math.round(r.ratio*100)}%しかありません。元が白い部位に元の彩度比例の塗りを掛けていないか確認してください(MASU_COLOR_PRESERVE_GLOSSはモンスターごとだけでなく部位ごとにも書けます)`);
+          problems.push(`${id}: 染色${i+1}の染め上がりの彩度が${r.mean}で、その部位で狙っている${r.want}の${Math.round(r.ratio*100)}%しかありません。元が白い部位に元の彩度比例の塗り(gloss)を掛けていないか確認してください(MASU_COLOR_REGION_DYEはモンスターごとだけでなく部位ごとにも書けます)`);
         }
       });
     }
