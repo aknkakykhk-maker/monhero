@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3b933cf95a03d233
+// source-sha256: fdaf12696586f048
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 00:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 07:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3208,22 +3208,38 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
 // 光沢のあるグラデーション塗り(彩度の低いハイライト〜彩度の高い陰の帯で立体感を出す絵)を持つ
 // モンスターの一覧。染色時に彩度を狙った値へ一律固定すると、このグラデーションが均一に塗り潰されて
 // のっぺり・安っぽく見えてしまうため、該当モンスターだけ元の彩度分布に比例させて塗る(下記参照)
-// 値は true か数値。
+// 値は true / 数値 / false、または部位ごとに書き分ける配列。
 //   true  … 画像全体の最大彩度を基準にする(元からコントラストの強い絵向け)
 //   数値  … その彩度を基準にする。淡い絵は最大彩度が一部の濃い箇所(モッチーなら口ばし)に
 //           引っぱられて全体が白っぽくなってしまうため、体の彩度に合わせた基準を直接指定する
+//   false … 元の彩度に比例させず、狙った彩度で塗る(既定)
+//   配列  … 部位ごとの設定。要素の並びは MASU_COLOR_REGION_HUES と同じ
+//
+// 部位ごとに書き分けられるようにしているのは、白い部分にまったく色が入らなくなるため。
+// 元の彩度に比例させる塗りは「元が白い＝染めても白い」になるので、白を基準色にした部位
+// (アークの染色②は元の彩度が0.008しかない)は明度しか変わらず、暗い色を選んだときだけ
+// 変化して見える＝「黒しか入らない」状態になっていた。白い部位は比例させず狙った彩度で塗る。
 const MASU_COLOR_PRESERVE_GLOSS = {
-  Ark: true,
+  Ark: [0.76, false, 0.35],
   Tiger: true,
   Mocchi: 0.22
 };
+// 指定した部位に効く光沢保持の設定を返す(配列でなければ全部位に同じ設定が効く)
+const _glossSettingFor = (baseId, regionIdx) => {
+  const v = MASU_COLOR_PRESERVE_GLOSS[baseId];
+  if (Array.isArray(v)) return v[regionIdx || 0] ?? false;
+  return v || false;
+};
 // ImageDataのピクセル配列(RGBA)を、指定した染色色idの狙った色相・彩度に置き換える(明度は元の陰影を保つ)
-const _recolorImageData = (data, colorId, baseId) => {
+const _recolorImageData = (data, colorId, baseId, regionIdx) => {
   const t = _resolveColorTarget(colorId);
   if (!t) return;
+  const gloss = _glossSettingFor(baseId, regionIdx);
   let satRef = 1;
-  if (MASU_COLOR_PRESERVE_GLOSS[baseId]) {
-    // 光沢グラデーションを保つモンスターは、画像全体の最大彩度を基準に各ピクセルの彩度を正規化する
+  if (typeof gloss === 'number') {
+    satRef = Math.max(0.05, gloss);
+  } else if (gloss) {
+    // 光沢グラデーションを保つ部位は、画像全体の最大彩度を基準に各ピクセルの彩度を正規化する
     // (元絵の彩度が高い部分ほど狙った彩度に近づき、低いハイライト部分はより白っぽく残る)
     let maxS = 0;
     for (let i = 0; i < data.length; i += 4) {
@@ -3232,13 +3248,12 @@ const _recolorImageData = (data, colorId, baseId) => {
       if (s > maxS) maxS = s;
     }
     satRef = Math.max(maxS, 0.3);
-    if (typeof MASU_COLOR_PRESERVE_GLOSS[baseId] === 'number') satRef = Math.max(0.05, MASU_COLOR_PRESERVE_GLOSS[baseId]);
   }
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] < 10) continue;
     const [, ss, vv] = _rgbToHsv(data[i], data[i + 1], data[i + 2]);
     const newV = t.vMin + (t.vMax - t.vMin) * vv;
-    const newS = MASU_COLOR_PRESERVE_GLOSS[baseId] ? t.s * Math.min(1, ss / satRef) : t.s;
+    const newS = gloss ? t.s * Math.min(1, ss / satRef) : t.s;
     const [r, g, b] = _hsvToRgb(t.h, newS, newV);
     data[i] = r;
     data[i + 1] = g;
@@ -3247,11 +3262,13 @@ const _recolorImageData = (data, colorId, baseId) => {
 };
 // imgUrlの画像全体を指定色に染め直した画像をCanvasで生成し、dataURLで返す(色ごとにキャッシュ)
 const _dyeRecolorCache = {};
-const getRecoloredImage = (imgUrl, colorId, baseId) => {
+const getRecoloredImage = (imgUrl, colorId, baseId, regionIdx) => {
   if (!_resolveColorTarget(colorId)) return null;
   // 同じ画像・色でも、光沢保持などbaseId固有の染色規則が異なり得るため、
   // 通常表示とすべての呼び出し元で同じ条件のキャッシュだけを共有する。
-  const cacheKey = baseId + '::' + imgUrl + '::' + colorId;
+  // 光沢保持は部位ごとに変えられるので、その設定もキーへ入れる。部位が違っても
+  // 設定が同じなら同じ画像を使い回すので、書き分けていないモンスターの負荷は変わらない。
+  const cacheKey = baseId + '::' + String(_glossSettingFor(baseId, regionIdx)) + '::' + imgUrl + '::' + colorId;
   if (_dyeRecolorCache[cacheKey]) return _dyeRecolorCache[cacheKey];
   const promise = new Promise(resolve => {
     try {
@@ -3275,7 +3292,7 @@ const getRecoloredImage = (imgUrl, colorId, baseId) => {
           ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0, w, h);
           const imgData = ctx.getImageData(0, 0, w, h);
-          _recolorImageData(imgData.data, colorId, baseId);
+          _recolorImageData(imgData.data, colorId, baseId, regionIdx);
           ctx.putImageData(imgData, 0, 0);
           resolve(canvas.toDataURL());
         } catch (e) {
@@ -3331,14 +3348,17 @@ const DyedMonsterImage = ({
       cancelled = true;
     };
   }, [baseId, src, colorKey]);
+  // 染め直した画像は部位ごとに作る(光沢保持の設定を部位ごとに変えられるため)。
+  // 設定が同じ部位はgetRecoloredImage側のキャッシュで同じ画像を共有するので、
+  // 書き分けていないモンスターでは作る枚数はこれまでと変わらない
   useEffect(() => {
-    const wanted = Array.from(new Set(colors.filter(Boolean)));
+    const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
     if (wanted.length === 0) {
       setRecolored({});
       return;
     }
     let cancelled = false;
-    Promise.all(wanted.map(c => Promise.resolve(getRecoloredImage(src, c, baseId)).then(url => [c, url]))).then(entries => {
+    Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then(url => [idx + '|' + c, url]))).then(entries => {
       if (!cancelled) setRecolored(Object.fromEntries(entries));
     });
     return () => {
@@ -3346,7 +3366,7 @@ const DyedMonsterImage = ({
     };
   }, [baseId, src, colorKey]);
   if (!hues || hues.length === 0) {
-    const recoloredSrc = colors[0] && recolored[colors[0]];
+    const recoloredSrc = colors[0] && recolored['0|' + colors[0]];
     return /*#__PURE__*/React.createElement("img", {
       src: recoloredSrc || src,
       alt: alt,
@@ -3382,9 +3402,9 @@ const DyedMonsterImage = ({
       height: '100%',
       objectFit: 'inherit'
     }
-  }), hues.map((_, idx) => colors[idx] && masks[idx] && recolored[colors[idx]] ? /*#__PURE__*/React.createElement("img", {
+  }), hues.map((_, idx) => colors[idx] && masks[idx] && recolored[idx + '|' + colors[idx]] ? /*#__PURE__*/React.createElement("img", {
     key: idx,
-    src: recolored[colors[idx]],
+    src: recolored[idx + '|' + colors[idx]],
     alt: "",
     draggable: false,
     style: {

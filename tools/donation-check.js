@@ -28,7 +28,10 @@ check('存在しないIDではダイヤが増えない', !missing.ok && missing.
 check('不正bondXpを0以上の整数へ正規化', [-1, NaN, Infinity, 'abc'].every(v=>donationDiamondValue(v)===0) && donationDiamondValue('12.9')===12);
 check('保存キーと同期ロックが実装されている', /donationProcessingRef\.current/.test(source) && /storeSet\('mh_gold', result\.nextGold, false\)/.test(source) && /storeSet\('mh_monster_roster', result\.nextRoster, false\)/.test(source) && /storeSet\('mh_masu_mons', result\.nextMasuMons, false\)/.test(source));
 check('寄付の3表示は通常の全身画像と共通染色を使う', (source.match(/src=\{masuDisplayImageUrl\(/g)||[]).length >= 2 && /setDonationAnimation\(\{[^}]*src: masuDisplayImageUrl/.test(source));
-check('染色キャッシュは種類・元画像・色をキーにする', /const cacheKey = baseId \+ '::' \+ imgUrl \+ '::' \+ colorId/.test(source));
+// キャッシュキーには最低限この3つが要る(どれかが抜けると別のモンスター・別の色の画像を
+// 使い回してしまう)。光沢保持の設定など、これ以外の条件が足されるのは構わない
+check('染色キャッシュは種類・元画像・色をキーにする',
+  /const cacheKey = baseId \+ .*\bimgUrl\b.*\bcolorId\b/.test(source));
 check('寄付一覧と演出の画像サイズを抑えて全身を収める', /relative w-16 h-16 rounded-lg/.test(source) && /\.mh-donation-monster\{position:absolute;width:96px;height:96px/.test(source));
 check('MASU_DONATIONは神殿BGM', /MASU_DONATION:\s*'temple'/.test(source));
 check('寄付の戻り先は神殿', /resetDonationFlow\(\);setGameState\('TEMPLE'\)/.test(source));

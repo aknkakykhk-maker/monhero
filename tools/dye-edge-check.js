@@ -37,6 +37,12 @@ const INNER_BARE_LIMIT = 0.2; // %
 const GLOSS_SPREAD_MIN = 0.05;
 // 元の陰影を保つ設定が外れていないか気付けるよう、対象をここにも明示しておく
 const GLOSS_EXPECTED = ['Mocchi'];
+// 部位ごとの「染め上がりの彩度 ÷ 狙った彩度」の下限。
+// 元の彩度に比例させる塗り(MASU_COLOR_PRESERVE_GLOSS)は、元が白い部位だと
+// 「元が白い＝染めても白い」となり、明度しか変わらず色がほとんど入らなくなる。
+// 実際にアークの染色②(元の彩度0.008の白い部分)が「黒しか入らない」状態になっていた。
+// 見た目では気付きにくく例外も出ないので、部位ごとに数値で見張る
+const REGION_SAT_RATIO_MIN = 0.45;
 // 高解像度マスクが必ず効いていてほしいモンスター(元絵が解析サイズより大幅に大きいもの)。
 // MASK_HIRES_BASE_IDSからうっかり外れたときに気付けるよう、ここにも明示しておく
 const EXPECTED = ['Mocchi', 'Ark', 'Ham', 'Zan'];
@@ -49,7 +55,40 @@ const page = `<!doctype html><meta charset="utf-8">
 <script>
 ${dyeSource}
 window.__targets = () => Object.keys(MASK_HIRES_BASE_IDS);
-window.__glossTargets = () => Object.entries(MASU_COLOR_PRESERVE_GLOSS).filter(([, v]) => typeof v === 'number').map(([k]) => k);
+window.__glossTargets = () => Object.entries(MASU_COLOR_PRESERVE_GLOSS)
+  .filter(([, v]) => (Array.isArray(v) ? v : [v]).some((x) => typeof x === 'number')).map(([k]) => k);
+// 部位ごとに、染めたあとの彩度が狙った彩度のどれくらいまで届いているかを測る。
+// 部位マスクの中だけを見るので、「①は染まるが②は白いまま」のような部位単位の
+// 塗り漏れを拾える(画像全体の平均では①に埋もれて気付けない)
+window.__regionSaturation = async (id, colorId) => {
+  const base = ALL_PLAYER_MONSTERS[id];
+  const masks = await Promise.resolve(getDyeRegionMasks(id, base.imgUrl));
+  if (!masks) return { error: 'マスクを作れませんでした' };
+  const art = await load(base.imgUrl);
+  const n = art.naturalWidth;
+  const grab = (im) => { const c = document.createElement('canvas'); c.width = n; c.height = n;
+    const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+    x.drawImage(im, 0, 0, n, n); return x.getImageData(0, 0, n, n).data; };
+  const target = _resolveColorTarget(colorId);
+  const out = [];
+  for (let i = 0; i < masks.length; i++) {
+    if (!masks[i]) { out.push(null); continue; }
+    // 実際の表示と同じく、その部位に効く設定で染めた画像を使う
+    const dyedUrl = await Promise.resolve(getRecoloredImage(base.imgUrl, colorId, id, i));
+    if (!dyedUrl) { out.push(null); continue; }
+    const dd = grab(await load(dyedUrl));
+    const md = grab(await load(masks[i]));
+    let cnt = 0, sum = 0;
+    for (let p = 0; p < n * n; p += 3) {
+      // マスクは位置で決める部位(posBbox)だと絵の無い透明な余白まで含むことがある。
+      // 透明な画素はRGBが0で彩度0と出てしまい、染まっていないように見えるので除く
+      if (md[p*4+3] < 128 || dd[p*4+3] < 250) continue;
+      cnt++; sum += _rgbToHsv(dd[p*4], dd[p*4+1], dd[p*4+2])[1];
+    }
+    out.push(cnt ? { mean: +(sum / cnt).toFixed(3), ratio: +(sum / cnt / target.s).toFixed(2) } : null);
+  }
+  return { target: target.s, regions: out };
+};
 // 染め上がりの彩度がどれだけばらついているかを測る。
 // 彩度を一律に固定する塗り方だと全画素が同じ値になり、ばらつきは0になる
 window.__glossSpread = async (id) => {
@@ -158,6 +197,17 @@ const server = http.createServer((req, res) => {
       if (g.sd < GLOSS_SPREAD_MIN) {
         problems.push(`${id}: 染め上がりの彩度のばらつきが ${g.sd} (下限 ${GLOSS_SPREAD_MIN})。元の陰影が消えてのっぺりした塗りになっています`);
       }
+    }
+    // 部位ごとに色がちゃんと入るか(白い部位が染まらないまま残っていないか)
+    for (const id of targets) {
+      const g = await tab.evaluate((i) => window.__regionSaturation(i, 'blue'), id);
+      if (!g || g.error) { problems.push(`${id}: 部位ごとの染め上がりを測れませんでした（${(g && g.error) || '不明'}）`); continue; }
+      console.log(`${id.padEnd(8)} 部位ごとの染め上がりの彩度 ${g.regions.map((r, i) => `染色${i+1} ${r ? `${r.mean}(狙いの${Math.round(r.ratio*100)}%)` : '—'}`).join(' / ')}`);
+      g.regions.forEach((r, i) => {
+        if (r && r.ratio < REGION_SAT_RATIO_MIN) {
+          problems.push(`${id}: 染色${i+1}の染め上がりの彩度が狙い(${g.target})の${Math.round(r.ratio*100)}%しかありません。元が白い部位に元の彩度比例の塗りを掛けていないか確認してください(MASU_COLOR_PRESERVE_GLOSSはモンスターごとだけでなく部位ごとにも書けます)`);
+        }
+      });
     }
     for (const id of targets) {
       const r = await tab.evaluate(([i, c]) => window.__measure(i, c), [id, COLORS]);
