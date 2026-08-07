@@ -1,11 +1,12 @@
-// バトルモード(チャレンジ／クイック)を検証する。
+// バトルモード(チャレンジ／クイック／プロ)を検証する。
 //
-//   ① 報酬: クイックだけ経験値とダイヤが1.5倍。スコア倍率は難易度のまま
-//   ② 記録: クイックはランキングへ送らず、チャレンジの自己ベストを上書きしない
+//   ① 報酬: クイックだけ経験値とダイヤが1.5倍。プロは絆3倍・ブリーダー1.5倍。スコア倍率は難易度のまま
+//   ② 記録: クイックはランキングへ送らず、プロは別枠へ送る。どちらもチャレンジの記録を上書きしない
 //   ③ 成長: WAVEごとに味方だけ10%上昇し、ライフとガッツが全回復する
 //   ④ 伴モン: クイックは固有技の選択画面を出さず、ランダムで1上げる(上限を超えない)
 //   ⑤ 画面: モードのタブ・説明・ランキングボタン・バトル中のモード表示
-//   ⑥ BGM: モードごとの通常戦とデュラハン戦を個別に設定できる
+//   ⑥ BGM: モードごとの通常戦とデュラハン戦を個別に設定できる(プロはチャレンジと同じ曲)
+//   ⑦ プロ基盤: 定数・保存キー・ランキング名前空間・助手が揃っていて、まだ本番導線には出ていない
 const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
@@ -32,17 +33,34 @@ vm.createContext(ctx);
 vm.runInContext([
   grab(source, 'const WAVE_XP_TABLE =', 'const xpForLevel ='),
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
-  'globalThis.__m={BATTLE_MODES,battleModeInfo,normalizeBattleMode,isQuickMode,QUICK_REWARD_MULT,QUICK_GROWTH_MULT,'
+  // ランキングの難易度キー(プロは Pro 付き)は、モードの定数と難易度の表より後ろにある
+  grab(source, 'const normalizeBattleDifficulty = (value)', '// クリアするともらえる虹のプシュケー'),
+  grab(source, 'const PRO_RANKING_PREFIX =', '// 通信、state、リクエスト管理、画面参照で共有する唯一のランキング内部キー'),
+  'globalThis.__m={BATTLE_MODES,PUBLIC_BATTLE_MODES,battleModeInfo,normalizeBattleMode,isQuickMode,isProMode,QUICK_REWARD_MULT,QUICK_GROWTH_MULT,'
+  + 'PRO_BOND_XP_MULT,PRO_BREEDER_XP_MULT,PRO_ALLY_POOL_SIZE,PRO_ALLY_OFFER_SIZE,'
+  + 'modeBreederXpMult,modeBondXpMult,modeGoldMult,applyModeReward,modeHasRanking,modeBondAction,modeKeyPrefix,'
   + 'waveXpGain,waveGoldGain,xpForWavesCleared,goldForWavesCleared,xpForWavesClearedInMode,goldForWavesClearedInMode,'
-  + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE,'
+  + 'bondXpForWavesClearedInMode,waveBondXpGainInMode,'
+  + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE,BATTLE_MODE_PRO,'
+  + 'PRO_RANKING_PREFIX,RANKING_DIFFICULTY_KEYS,rankingDifficultyForMode,rankingDifficultyBase,normalizeRankingDifficulty,'
   + 'calculateRemainingHp,resolveEffectiveMaxStat,quickGrowStat,resolveQuickGrowthStats};',
 ].join('\n'), ctx);
 const m = ctx.__m;
 
 // --- ① 報酬 ---
-check('モードは2種類', m.BATTLE_MODES.length === 2 && m.BATTLE_MODES.map(x => x.id).join(',') === 'challenge,quick');
+check('モードは3種類', m.BATTLE_MODES.length === 3 && m.BATTLE_MODES.map(x => x.id).join(',') === 'challenge,quick,pro');
 check('知らない値はチャレンジ扱い', m.normalizeBattleMode('nope') === 'challenge' && m.normalizeBattleMode(undefined) === 'challenge');
+check('プロは正しいモードとして通る', m.normalizeBattleMode('pro') === 'pro' && m.isProMode('pro') === true && m.isProMode('quick') === false && m.isProMode('challenge') === false);
 check('クイックの倍率は1.5', m.QUICK_REWARD_MULT === 1.5);
+check('プロの倍率は絆3倍・ブリーダー1.5倍', m.PRO_BOND_XP_MULT === 3 && m.PRO_BREEDER_XP_MULT === 1.5);
+check('プロの供モンは5体選んで3体', m.PRO_ALLY_POOL_SIZE === 5 && m.PRO_ALLY_OFFER_SIZE === 3);
+// 「全部3倍」ではないことを、倍率そのものの形で固定する
+check('プロは絆だけ3倍。ブリーダーは1.5倍でダイヤは等倍',
+  m.modeBondXpMult('pro') === 3 && m.modeBreederXpMult('pro') === 1.5 && m.modeGoldMult('pro') === 1);
+check('チャレンジはどの倍率も等倍',
+  m.modeBondXpMult('challenge') === 1 && m.modeBreederXpMult('challenge') === 1 && m.modeGoldMult('challenge') === 1);
+check('クイックは3つとも1.5倍のまま',
+  m.modeBondXpMult('quick') === 1.5 && m.modeBreederXpMult('quick') === 1.5 && m.modeGoldMult('quick') === 1.5);
 for (const diff of ['Normal', 'Hard', 'Expert']) {
   const s = m.DIFFICULTY_SETTINGS[diff];
   const baseXp = m.xpForWavesCleared(10, s.score), quickXp = m.xpForWavesClearedInMode(10, s.score, 'quick');
@@ -50,6 +68,16 @@ for (const diff of ['Normal', 'Hard', 'Expert']) {
   check(`${diff}: クイックの経験値がおよそ1.5倍`, quickXp > baseXp * 1.45 && quickXp <= baseXp * 1.5, `${baseXp} → ${quickXp}`);
   check(`${diff}: クイックのダイヤがおよそ1.5倍`, quickGold > baseGold * 1.45 && quickGold <= baseGold * 1.5, `${baseGold} → ${quickGold}`);
   check(`${diff}: チャレンジは従来どおり`, m.xpForWavesClearedInMode(10, s.score, 'challenge') === baseXp && m.goldForWavesClearedInMode(10, s.gold, 'challenge') === baseGold);
+  // プロは難易度の倍率をそのまま活かしたうえで、絆とブリーダーに別々の補正をかける
+  const proBreederXp = m.xpForWavesClearedInMode(10, s.score, 'pro');
+  const proBondXp = m.bondXpForWavesClearedInMode(10, s.score, 'pro');
+  const proGold = m.goldForWavesClearedInMode(10, s.gold, 'pro');
+  check(`${diff}: プロのブリーダー経験値がおよそ1.5倍`, proBreederXp > baseXp * 1.45 && proBreederXp <= baseXp * 1.5, `${baseXp} → ${proBreederXp}`);
+  check(`${diff}: プロの絆経験値がおよそ3倍`, proBondXp > baseXp * 2.9 && proBondXp <= baseXp * 3, `${baseXp} → ${proBondXp}`);
+  check(`${diff}: プロのダイヤは等倍`, proGold === baseGold, `${baseGold} → ${proGold}`);
+  // チャレンジ・クイックでは絆とブリーダーの獲得量がこれまでどおり同じであること
+  check(`${diff}: チャレンジの絆はブリーダーと同額のまま`, m.bondXpForWavesClearedInMode(10, s.score, 'challenge') === baseXp);
+  check(`${diff}: クイックの絆はブリーダーと同額のまま`, m.bondXpForWavesClearedInMode(10, s.score, 'quick') === quickXp);
 }
 // WAVEごとの内訳の合計と、リザルトの合計が一致する(表示と実際がずれない)
 const sumOfWaves = (mult, mode, fn) => { let sum = 0; for (let w = 1; w <= 10; w++) sum += fn(w, mult, mode); return sum; };
@@ -62,7 +90,7 @@ check('スコアの計算はモードを見ない', scoreBlock.length > 0 && !sc
 check('実処理が経験値・ダイヤ・絆経験値にモード倍率を使う',
   has('const breederXpGain = xpForWavesClearedInMode(wavesCleared, scoreMult, runMode);')
     && has('const goldGain = goldForWavesClearedInMode(wavesCleared, goldMult, runMode);')
-    && has('const gain = xpForWavesClearedInMode(wavesCleared, scoreMult, runMode);'));
+    && has('const gain = bondXpForWavesClearedInMode(wavesCleared, scoreMult, runMode);'));
 check('WAVEごとの内訳もモード倍率を使う', has('xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)') && has('goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode)'));
 
 // --- ② 記録 ---
@@ -71,13 +99,58 @@ check('保存キーがモードごとに分かれている',
     && m.bestWaveKey('quick', 'Hard') === 'mh_quick_highest_wave_Hard' && m.clearCountKey('quick', 'Hard') === 'mh_quick_clears_Hard');
 check('チャレンジの保存キーは従来のまま',
   m.bestWaveKey('challenge', 'Hard') === 'mh_highest_wave_Hard' && m.clearCountKey('challenge', 'Hard') === 'mh_clears_Hard');
+check('プロは mh_pro_ の新しいキーへ分ける',
+  m.modeKeyPrefix('pro') === 'mh_pro_' && m.bestScoreKey('pro', 'Normal') === 'mh_pro_hs_Normal'
+    && m.bestWaveKey('pro', 'Hard') === 'mh_pro_highest_wave_Hard' && m.clearCountKey('pro', 'Hard') === 'mh_pro_clears_Hard');
+// 3モードの保存キーがひとつも衝突しない(既存の記録をプロが上書きしない)
+{
+  const keys = [];
+  for (const mode of ['challenge', 'quick', 'pro']) for (const d of Object.keys(m.DIFFICULTY_SETTINGS)) {
+    keys.push(m.bestScoreKey(mode, d), m.bestWaveKey(mode, d), m.clearCountKey(mode, d));
+  }
+  check('3モードの保存キーが1つも重複しない', new Set(keys).size === keys.length, `${keys.length}件`);
+}
 const submitBlock = grab(source, 'const submitRunScoreOnce = async', 'const handleSaveName');
 check('クイックはランキングへ送信しない', /if \(isQuickMode\(runMode\)\) \{[\s\S]*?return;\s*\}/.test(submitBlock) && submitBlock.indexOf('isQuickMode(runMode)') < submitBlock.indexOf('submitLocalScore'));
 check('クイックはチャレンジの自己ベストを上書きしない',
   submitBlock.includes('bestScoreKey(BATTLE_MODE_QUICK, difficulty)') && submitBlock.includes('setQuickHighScores'));
-check('クリア回数もモードごとに分ける', has('await storeSet(clearCountKey(BATTLE_MODE_QUICK, difficulty), nextQuick, false);'));
-check('最高到達WAVEもモードごとに分ける', has('storeSet(bestWaveKey(BATTLE_MODE_QUICK,difficulty),w,false);') && has('storeSet(bestWaveKey(BATTLE_MODE_CHALLENGE,difficulty),w,false);'));
-check('起動時にクイックの記録も読み込む', has('quickScores[d] = await storeGet(bestScoreKey(BATTLE_MODE_QUICK, d), 0, false);'));
+check('プロはプロ専用の難易度キーで送信する',
+  submitBlock.includes('submitLocalScore(rankingDifficultyForMode(BATTLE_MODE_PRO, difficulty), score, runIdRef.current)'));
+check('プロはチャレンジの自己ベストを上書きしない',
+  submitBlock.includes('bestScoreKey(BATTLE_MODE_PRO, difficulty)') && submitBlock.includes('setProHighScores')
+    && submitBlock.indexOf('isProMode(runMode)') < submitBlock.indexOf('await storeSet(`mh_hs_'));
+check('デバッグ・練習の周回はどのモードでも送信しない',
+  submitBlock.includes('if (debugBattleRef.current) return;')
+    && submitBlock.indexOf('debugBattleRef.current') < submitBlock.indexOf('scoreSubmittedRef.current = true;'));
+check('クリア回数もモードごとに分ける',
+  has('await storeSet(clearCountKey(BATTLE_MODE_QUICK, difficulty), nextQuick, false);')
+    && has('await storeSet(clearCountKey(BATTLE_MODE_PRO, difficulty), nextPro, false);'));
+check('最高到達WAVEもモードごとに分ける',
+  has('storeSet(bestWaveKey(BATTLE_MODE_QUICK,difficulty),w,false);') && has('storeSet(bestWaveKey(BATTLE_MODE_CHALLENGE,difficulty),w,false);')
+    && has('storeSet(bestWaveKey(BATTLE_MODE_PRO,difficulty),w,false);'));
+check('起動時にクイック・プロの記録も読み込む',
+  has('quickScores[d] = await storeGet(bestScoreKey(BATTLE_MODE_QUICK, d), 0, false);')
+    && has('proScores[d] = await storeGet(bestScoreKey(BATTLE_MODE_PRO, d), 0, false);')
+    && has('proClears[d] = await storeGet(clearCountKey(BATTLE_MODE_PRO, d), 0, false);')
+    && has('proWaves[d] = await storeGet(bestWaveKey(BATTLE_MODE_PRO, d), 0, false);'));
+
+// --- ②-2 ランキングの名前空間 ---
+check('スコアランキングはチャレンジとプロだけ',
+  m.modeHasRanking('challenge') === true && m.modeHasRanking('pro') === true && m.modeHasRanking('quick') === false);
+check('プロの難易度キーは Pro 付きの別枠',
+  m.rankingDifficultyForMode('pro', 'Hard') === 'ProHard' && m.rankingDifficultyForMode('challenge', 'Hard') === 'Hard');
+check('既存のチャレンジの難易度キーは変わらない',
+  Object.keys(m.DIFFICULTY_SETTINGS).every(d => m.rankingDifficultyForMode('challenge', d) === d && m.normalizeRankingDifficulty(d) === d));
+check('Pro付きのキーもランキングの難易度として通る',
+  Object.keys(m.DIFFICULTY_SETTINGS).every(d => m.normalizeRankingDifficulty(`Pro${d}`) === `Pro${d}`));
+check('素の難易度へ戻せる',
+  Object.keys(m.DIFFICULTY_SETTINGS).every(d => m.rankingDifficultyBase(`Pro${d}`) === d && m.rankingDifficultyBase(d) === d));
+check('知らない難易度は今までどおり弾く', (() => { try { m.normalizeRankingDifficulty('Pro'); return false; } catch { return true; } })());
+check('難易度キーの一覧に重複が無い', new Set(m.RANKING_DIFFICULTY_KEYS).size === m.RANKING_DIFFICULTY_KEYS.length
+  && m.RANKING_DIFFICULTY_KEYS.length === Object.keys(m.DIFFICULTY_SETTINGS).length * 2);
+// 既存のランキングデータは1行も書き換えない(移行・変換・削除をしない)
+check('既存のランキング行を書き換える処理を足していない',
+  !/rankingDifficultyForMode\([^)]*\)\s*=>/.test(source) && !has('PATCH') && !has('DELETE FROM') && !has('migrateRanking'));
 
 // --- ③ WAVEごとの自動成長 ---
 check('成長倍率は10%', m.QUICK_GROWTH_MULT === 1.10);
@@ -157,7 +230,7 @@ check('加入のステータス変化と固有技上昇を1画面で出す',
 check('演出はタップするまで進まない',
   has('const QuickStepScreen = ({ onDone, accent =') && !has('setTimeout(finish') && has("onClick={finish}") && has('タップして次へ'));
 check('連打しても1回だけ進む', has('if (doneRef.current) return; doneRef.current = true; onDone();') && has("if (quickAdvanceRef.current === 'growth') return;"));
-check('モードのタブがある', has('{BATTLE_MODES.map(mode=>{') && has('setBattleMode(mode.id);setBattleMenuTab(\'difficulty\');'));
+check('モードのタブがある', has('{PUBLIC_BATTLE_MODES.map(mode=>{') && has('setBattleMode(mode.id);setBattleMenuTab(\'difficulty\');'));
 check('タブの横に説明の「？」がある', has('aria-label={`${mode.label}の説明`}') && has('setModeInfoId(mode.id)'));
 // 説明の各項目は [アイコン, 見出し, 本文] の3つ組
 check('モード説明に必要な項目がそろっている',
@@ -165,6 +238,11 @@ check('モード説明に必要な項目がそろっている',
 check('クイックの説明に自動成長と1.5倍がある',
   m.battleModeInfo('quick').points.some(p => p[2].includes('10%')) && m.battleModeInfo('quick').points.some(p => p[1].includes('1.5倍')));
 check('チャレンジの説明にランキング対象と書いてある', m.battleModeInfo('challenge').points[0][1] === 'ランキング対象');
+check('プロの説明にベースモン限定・絆3倍・ブリーダー1.5倍・専用ランキングがある',
+  m.battleModeInfo('pro').points.some(p => p[1].includes('ベースモン限定'))
+    && m.battleModeInfo('pro').points.some(p => p[1].includes('絆経験値3倍'))
+    && m.battleModeInfo('pro').points.some(p => p[1].includes('ブリーダー経験値1.5倍'))
+    && m.battleModeInfo('pro').points.some(p => p[1].includes('プロ専用ランキング')));
 check('説明の見出しにアイコンが付く', has('{mode.points.map(([icon,title,text])=>(') && has('{mode.label}とは？'));
 check('モードを変えても選択中の難易度は変えない', !/setBattleMode\(mode\.id\);[^}]*setDifficulty/.test(source));
 check('横スライドの難易度選択を維持している', has('snap-x snap-mandatory') && has("touchAction:'pan-x pinch-zoom'") && has('前の難易度') && has('次の難易度'));
@@ -243,6 +321,31 @@ check('新しいBGM項目は既存設定が無くても既定値で補われる'
 check('BGMアレンジ画面に4項目そろっている',
   has("['battle','チャレンジモード BGM']") && has("['quickBattle','クイックモード BGM']")
     && has("['dullahan','チャレンジ デュラハン戦 BGM']") && has("['quickDullahan','クイック デュラハン戦 BGM']"));
+// プロは専用曲を新設せず、チャレンジと同じ曲へ落とす。BGM設定の項目も増やさないので、
+// 既存の保存値(mh_bgm_arrangement)はそのまま読める
+const bgmBlock = grab(source, "if (state === 'BATTLE') {", "if (RUN_PHASE_STATES.includes(state))");
+check('プロ専用のBGM項目を増やしていない',
+  !has('proBattle') && !has('proDullahan') && !bgmBlock.includes('isProMode'));
+check('プロはチャレンジと同じ曲になる', bgmBlock.includes('const quick = isQuickMode(runMode);'));
+
+// --- ⑦ プロ基盤 ---
+// 第1段階では、本番のバトル画面にプロのタブを出さない(新しい入口とセットで公開する)
+check('本番のモードのタブはチャレンジとクイックだけ',
+  m.PUBLIC_BATTLE_MODES.map(x => x.id).join(',') === 'challenge,quick');
+check('プロは定義には入っているがタブには出ない',
+  m.BATTLE_MODES.some(x => x.id === 'pro') && !m.PUBLIC_BATTLE_MODES.some(x => x.id === 'pro'));
+// 助手のセリフはJSXへ直書きせず、data/assistants.js へ場面として足す
+check('プロの助手コメントが場面として用意されている', assistantsSrc.includes('battlePro: {'));
+check('プロの助手コメントが5件以上ある',
+  (assistantsSrc.match(/battlePro: \[|battlePro: \{/g) || []).length >= 2);
+check('プロの親密度行動があり、既存の獲得量は変わっていない',
+  assistantsSrc.includes("pro:       { amount:2, dailyMax:10, label:'プロモード' },")
+    && assistantsSrc.includes("challenge: { amount:2, dailyMax:10, label:'チャレンジモード' },")
+    && assistantsSrc.includes("quick:     { amount:1, dailyMax:6,  label:'クイックモード' },")
+    && assistantsSrc.includes('const ASSISTANT_BOND_DAILY_MAX = 30;'));
+check('遊んだモードに応じて親密度の行動を切り替える',
+  m.modeBondAction('challenge') === 'challenge' && m.modeBondAction('quick') === 'quick' && m.modeBondAction('pro') === 'pro'
+    && has("addAssistantBond('battle'); addAssistantBond(modeBondAction(runMode));"));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

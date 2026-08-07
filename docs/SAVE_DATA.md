@@ -31,12 +31,23 @@
 | `mh_masu_mons` | object[] / `[]` | マスモン個体一覧 |
 | `mh_changelog_seen` | string / `''` | 最後に既読にした更新日時 |
 | `mh_onboarded` | boolean or null | 初回プロフィール誘導完了 |
-| `mh_hs_<難易度>` | number / `0` | 端末ハイスコア |
+| `mh_hs_<難易度>` | number / `0` | 端末ハイスコア（チャレンジ） |
 | `mh_attempts_<難易度>` | number / `0` | 挑戦回数 |
-| `mh_clears_<難易度>` | number / `0` | 完走回数 |
+| `mh_clears_<難易度>` | number / `0` | 完走回数（チャレンジ） |
+| `mh_highest_wave_<難易度>` | number / `0` | 最高到達WAVE（チャレンジ） |
+| `mh_quick_hs_<難易度>` | number / `0` | 端末ハイスコア（クイック） |
+| `mh_quick_clears_<難易度>` | number / `0` | 完走回数（クイック） |
+| `mh_quick_highest_wave_<難易度>` | number / `0` | 最高到達WAVE（クイック） |
+| `mh_pro_hs_<難易度>` | number / `0` | 端末ハイスコア（プロ） |
+| `mh_pro_clears_<難易度>` | number / `0` | 完走回数（プロ） |
+| `mh_pro_highest_wave_<難易度>` | number / `0` | 最高到達WAVE（プロ） |
 | `mh_rank_<難易度>` | object[] / `[]` | 全国送信失敗時の端末ランキング |
 
 難易度部分は `Beginner`, `Easy`, `Normal`, `Hard`, `Expert`, `Master`, `GrandMaster`, `Hell`, `Legend`。難易度キーは保存・ランキング識別子なので既存名を変更しない。
+
+バトルモードごとの記録は接頭辞で分ける（`modeKeyPrefix`：チャレンジ `mh_`／クイック `mh_quick_`／プロ `mh_pro_`）。モードを増やしても既存キーの意味は変えず、新しい接頭辞のキーを足すだけにする。未プレイのモードのキーは存在しないので、読み込みは既定値 `0` に落ちる。
+
+全国ランキング（Supabase）はテーブルの列を増やさず、`difficulty` へ入れる値でモードを分ける。プロは `ProHard` のように先頭へ `Pro` を付けた値（`rankingDifficultyForMode`）。既存のチャレンジの行（`Hard` など）は書き換えも変換もしない。
 
 ## 3. マイグレーション・補正フラグ
 
