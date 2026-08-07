@@ -1362,12 +1362,13 @@ const BATTLE_TUTORIAL_SCENARIO = {
   draw: ['unique', 'guard', 'atk'],
   intents: [
     { type:'ATTACK' },              // 1ターン目 … 攻撃予告 → ガードで受ける
-    { type:'CHARGE' },              // 2ターン目 … 必殺技を魅せる
-    { type:'WAIT' },                // 3ターン目 … ブリーダーカードでバフ
-    { type:'MOVE', targetDist:3 },  // 4ターン目 … 緊急回復のあいだに遠距離へ移動
-    { type:'WAIT' },                // 5ターン目 … 距離技で引き戻す
-    { type:'WAIT' },                // 6ターン目 … 通常攻撃
-    { type:'WAIT' },                // 7ターン目以降 … 技変更 → 固有技でトドメ
+    { type:'CHARGE' },              // 2ターン目 … 必殺技のためを見せる(ダメージは無い)
+    { type:'SPECIAL' },             // 3ターン目 … ためた必殺技が飛んでくる
+    { type:'WAIT' },                // 4ターン目 … ブリーダーカードでバフ
+    { type:'MOVE', targetDist:3 },  // 5ターン目 … 緊急回復のあいだに遠距離へ移動
+    { type:'WAIT' },                // 6ターン目 … 距離技で引き戻す
+    { type:'WAIT' },                // 7ターン目 … 通常攻撃
+    { type:'WAIT' },                // 8ターン目以降 … 技変更 → 固有技でトドメ
   ],
 };
 // 台本の敵の行動を順に返す。呼ばれるたびに1つ進む(画面側がindexを持つ)
@@ -1383,9 +1384,10 @@ const battleScenarioIntent = (scenario, index, enemy, currentDist) => {
   }
   const def = (typeof ENEMY_ACTION_DEFINITIONS !== 'undefined' ? ENEMY_ACTION_DEFINITIONS : [])
     .find(d => d.type === step.type) || { multiplier: 0, id:'wait' };
-  const label = step.type === 'ATTACK' ? (enemy.normal || '通常攻撃')
-    : step.type === 'CHARGE' ? (enemy.special || '必殺技！') : '様子を見ている';
-  const icon = step.type === 'ATTACK' ? '👊' : step.type === 'CHARGE' ? '🔥' : '⏳';
+  // 見出しとアイコンは本番の抽選と同じものを使う(台本だけ古い表記になるのを防ぐ)
+  const label = typeof enemyActionLabel === 'function' ? enemyActionLabel(enemy, step.type)
+    : (step.type === 'ATTACK' ? (enemy.normal || '通常攻撃') : '様子を見ている');
+  const icon = (typeof ENEMY_ACTION_ICONS !== 'undefined' && ENEMY_ACTION_ICONS[step.type]) || '⏳';
   return { type:step.type, value:Math.floor(enemy.atk * def.multiplier), label, icon, actionId:def.id };
 };
 // 台本どおりの並びに手札を組み直す。引く順は山札の末尾から取り出されるので逆に並べる

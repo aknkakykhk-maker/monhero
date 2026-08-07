@@ -22,8 +22,13 @@ const check = (name, ok, detail = '') => {
 };
 
 // --- ゲームのデータを読む ---
-const ctx = {};
+const ctx = { Math };
 vm.createContext(ctx);
+// 敵の行動の定義(威力倍率・見出し・アイコン)は game-system.jsx にある。
+// 台本もこれを見て行動を組み立てるので、本番と同じものを先に読み込んでおく
+// (入れずに動かすと倍率が0扱いになり、威力の確認が素通りしてしまう)
+const gs = read('monster-hero/src/game-system.jsx');
+const enemyActionChunk = gs.slice(gs.indexOf('const ENEMY_ACTION_DEFINITIONS'), gs.indexOf('// 難易度選択プレビュー'));
 vm.runInContext([
   read('monster-hero/data/images/images-ally.js'),
   read('monster-hero/data/images/images-enemy.js'),
@@ -31,6 +36,7 @@ vm.runInContext([
   read('monster-hero/data/ally-monsters.js'),
   read('monster-hero/data/enemy-monsters.js'),
   read('monster-hero/data/breeder.js'),
+  enemyActionChunk,
   read('monster-hero/data/assistants.js'),
   'globalThis.__d = { BATTLE_TUTORIAL_SCENARIO, battleScenarioIntent, orderDeckForScenario, ASSISTANT_BATTLE_TUTORIAL, ALL_PLAYER_MONSTERS, ENEMY_DATA, BASE_ATK_EVOLUTION, RANGE_EVOLUTION, GUARD_EVOLUTION, TEACHING_CARDS };',
 ].join('\n'), ctx);
@@ -88,7 +94,20 @@ check('使う順のカードが全部そろっている', orderOk, useOrder.join
 // 敵の行動が、台本の説明(ガード→必殺技→…)と合っているか
 const intents = (sc.intents || []).map(i => i.type);
 check('1ターン目は攻撃予告', intents[0] === 'ATTACK', intents.join(' → '));
-check('2ターン目は必殺技', intents[1] === 'CHARGE');
+// 必殺技は「ためる」→「発動」の2ターン。台本もその並びになっていないと、
+// 練習でオーラを溜めたまま必殺技が飛んでこない
+check('2ターン目はためる', intents[1] === 'CHARGE');
+check('3ターン目にためた必殺技が飛んでくる', intents[2] === 'SPECIAL', intents.join(' → '));
+// 台本が返す行動が、本番と同じ形(見出し・アイコン・威力)になっていること
+// 練習では敵の攻撃力を台本の値へ差し替えるので、そのときの値で組み立てる
+const enemyForScript = { ...d.ENEMY_DATA[sc.enemyKey], atk: sc.enemyAtk };
+const scripted = (sc.intents || []).map((_, i) => d.battleScenarioIntent(sc, i, enemyForScript, 2));
+check('台本の行動を組み立てられる', scripted.every(x => x && x.type));
+const chargeStep = scripted[1], specialStep = scripted[2];
+check('ためるターンにダメージは無い', chargeStep.value === 0, `value=${chargeStep.value}`);
+check('必殺技のターンだけ威力が乗る', specialStep.value > 0, `value=${specialStep.value}`);
+check('台本の移動先が行動にそのまま入る',
+  scripted.filter(x => x.type === 'MOVE').every(x => Number.isInteger(x.targetDist)));
 check('緊急回復のターンに敵が移動する', intents.some(t => t === 'MOVE'));
 const moveStep = (sc.intents || []).find(i => i.type === 'MOVE');
 check('移動先が勇者モンと違う距離', !!moveStep && moveStep.targetDist !== sc.slotIndex,
@@ -126,7 +145,9 @@ const incoming = (mult) => Math.max(1, Math.floor(Math.max(30, sc.enemyAtk * mul
 const guard = d.GUARD_EVOLUTION[0];
 const guardCut = Math.floor(guard.flat + defStat * guard.mult);
 const ATTACK_MULT = num(/id:'normal',type:'ATTACK',category:'通常攻撃',weight:\d+,multiplier:(\d+(?:\.\d+)?)/, '通常攻撃の倍率');
-const CHARGE_MULT = num(/id:'special',type:'CHARGE',category:'特殊攻撃',weight:\d+,multiplier:(\d+(?:\.\d+)?)/, '必殺技の倍率');
+// 必殺技は「ためる(CHARGE)」→「発動(SPECIAL)」の2ターンに分かれた。
+// ダメージが出るのは発動ターンだけなので、倍率はSPECIALの定義から読む
+const CHARGE_MULT = num(/id:'special',type:'SPECIAL',category:'必殺技',weight:\d+,multiplier:(\d+(?:\.\d+)?)/, '必殺技の倍率');
 const normalHit = Math.max(0, incoming(ATTACK_MULT) - guardCut);
 const chargeHit = Math.max(0, incoming(CHARGE_MULT) - guardCut);
 const totalTaken = normalHit + chargeHit;
@@ -165,7 +186,9 @@ check('台本を入れるのは練習の開始だけ',
   `代入${(source.match(/battleScenarioRef\.current = /g) || []).length}か所`);
 check('敵の行動は台本があるときだけ差し替える',
   has('const scenario = battleScenarioRef.current;\n    if (scenario && typeof battleScenarioIntent === \'function\') {')
-    && has('return chooseEnemyAction(ent,currentDist);'));
+    // 台本が無ければ通常の抽選へ落ちること。抽選には「直前に何をしたか」も渡すので、
+    // 引数の並びまでは決め打ちしない
+    && /return chooseEnemyAction\(ent,currentDist[,)]/.test(source));
 check('手札の並びは台本があるときだけ固定する',
   has('if (scenario && typeof orderDeckForScenario === \'function\') return orderDeckForScenario(scenario, pool);')
     && has('return pool.sort(()=>Math.random()-0.5);'));
@@ -183,7 +206,8 @@ check('緊急回復は予告済みの敵行動を再抽選せず実行する',
     && !has('const acting=scenario&&enemyIntent?enemyIntent:getNextEnemyAction(enemy,enemyDist);'));
 check('緊急回復後は敵行動を終えてから次ターンを1回だけ予約する',
   has("const distForNextPredict=acting&&acting.type==='MOVE'?acting.targetDist:enemyDist;")
-    && has('setEnemyIntent(getNextEnemyAction(enemy,distForNextPredict));'));
+    && /setEnemyIntent\(getNextEnemyAction\(enemy,distForNextPredict[,)]/.test(source)
+    && (source.match(/setEnemyIntent\(getNextEnemyAction\(enemy,distForNextPredict/g) || []).length === 2);
 check('大きなスコアでも諦める領域を縮めない',
   has('data-battle-metrics className="shrink-0')
     && has('data-battle-score className="flex min-w-[64px]')
