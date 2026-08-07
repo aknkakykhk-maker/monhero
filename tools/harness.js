@@ -73,6 +73,18 @@ const EXPORTED_NAMES = [
   'BREAKTHROUGH_FIRST_POINTS',
   'BREAKTHROUGH_POINTS',
   'BREAKTHROUGH_LEVEL_CAP_GAIN',
+  'BREAKTHROUGH_STAR_TIERS',
+  'BREAKTHROUGH_STARS_PER_TIER',
+  'BREAKTHROUGH_MAX_COUNT',
+  'BREAKTHROUGH_FINAL_LEVEL_CAP',
+  'FINAL_BREAKTHROUGH_COUNT',
+  'RAINBOW_STAR_COLORS',
+  'breakthroughStars',
+  'isFinalBreakthroughCount',
+  'INITIAL_MASU_LEVEL_CAP',
+  'masuBondLevelInfo',
+  'normalizeMasuProgression',
+  'masuRebirthCost',
 ];
 
 // ブラウザAPIの最小スタブ。canvasだけは node-canvas で本物と同じように動かす
