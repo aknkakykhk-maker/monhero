@@ -204,10 +204,12 @@ check('緊急回復は予告済みの敵行動を再抽選せず実行する',
   has('const acting=enemyIntent;')
     && /await handleEnemyTurn\('none',\{\},acting[,)]/.test(source)
     && !has('const acting=scenario&&enemyIntent?enemyIntent:getNextEnemyAction(enemy,enemyDist);'));
+// 次ターンの予約は「ふつうのターンの終わり」と「緊急回復のあと」の2か所だけ。
+// 増えると同じターンで二重に抽選され、予告した行動が別のものへ差し替わる
 check('緊急回復後は敵行動を終えてから次ターンを1回だけ予約する',
   has("const distForNextPredict=acting&&acting.type==='MOVE'?acting.targetDist:enemyDist;")
-    && /setEnemyIntent\(getNextEnemyAction\(enemy,distForNextPredict[,)]/.test(source)
-    && (source.match(/setEnemyIntent\(getNextEnemyAction\(enemy,distForNextPredict/g) || []).length === 2);
+    && has('advanceEnemyIntents(acting,distForNextPredict)')
+    && (source.match(/advanceEnemyIntents\(/g) || []).length === 2);
 check('大きなスコアでも諦める領域を縮めない',
   has('data-battle-metrics className="shrink-0')
     && has('data-battle-score className="flex min-w-[64px]')

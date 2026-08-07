@@ -74,7 +74,6 @@ check('移動先は現在の間合い以外', [0, 0.25, 0.5, 0.75, 0.99].every(r
 }));
 
 // --- 見出し ---
-check('ためるは技名つきで「ためている」と出る', /ためている/.test(api.enemyActionLabel(enemy, 'CHARGE')), api.enemyActionLabel(enemy, 'CHARGE'));
 check('必殺技は技名がそのまま出る', api.enemyActionLabel(enemy, 'SPECIAL') === '必殺');
 
 // --- 画面側 ---
@@ -91,10 +90,28 @@ check('予測ダメージが出るのは通常攻撃と必殺技だけ',
 check('ためるターンは専用の演出でダメージを与えない',
   has("} else if (intent.type==='CHARGE') {") && has("setEnemyAttackFx({kind:'charge'})"));
 check('必殺技の警告は発動ターンの予告で出る', has("!enemyAttackFx&&enemyIntent.type==='SPECIAL'&&("));
-check('移動の予告は吹き出しで出し、行き先は予告の値をそのまま使う',
-  has('mh-enemy-move-hint') && has('{RANGE_LABELS[enemyIntent.targetDist]}…！'));
+// 準備のターンは、必殺技そのものの音と突進モーションを使わないこと。
+// 同じものを使うと「準備しただけなのに撃たれた」ように見え・聞こえる
+check('準備のターンは専用の音を鳴らす', has('Audio_.se.enemyCharge();') && has('enemyCharge: async () =>'));
+check('準備のターンは突進せず、その場で溜める',
+  has("enemyAttackFx?.kind==='charge'?'enemyChargeShake") && has('@keyframes enemyChargeShake'));
+const chargeBranch = src.slice(src.indexOf("} else if (intent.type==='CHARGE') {"), src.indexOf("} else if (intent.type==='ATTACK'||intent.type==='SPECIAL') {"));
+check('準備のターンに必殺技の音を鳴らさない', !chargeBranch.includes('enemySpecial'));
+check('準備の見出しに技名を出さない', api.enemyActionLabel(enemy, 'CHARGE') === '必殺技の準備をしている',
+  api.enemyActionLabel(enemy, 'CHARGE'));
+// 移動の吹き出しは「1つ先」ではなく「2つ先」を見て出す。
+// 通常攻撃などの予告と同時に出て、その次のターンに実際に動く
+check('移動の吹き出しは2手先の行動から出す',
+  has('mh-enemy-move-hint') && has('{RANGE_LABELS[enemyNextIntent.targetDist]}…！')
+    && has("enemyNextIntent.type==='MOVE'"));
+check('予告済みの行動は抽選し直さず繰り上げる',
+  has('const upcoming = enemyNextIntentRef.current || getNextEnemyAction(enemy, distAfterExecuted, executedIntent);')
+    && has('setEnemyIntent(upcoming);'));
+check('戦闘開始時に2手ぶん用意する',
+  has('const firstIntent = getNextEnemyAction(newEnemy,dist);')
+    && has('reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent));'));
 check('次の行動を決めるとき直前の行動を渡している',
-  has('getNextEnemyAction(enemy,distForNextPredict,executedIntent)') && has('getNextEnemyAction(enemy,distForNextPredict,acting)'));
+  has('advanceEnemyIntents(executedIntent,distForNextPredict)') && has('advanceEnemyIntents(acting,distForNextPredict)'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exitCode = failed ? 1 : 0;

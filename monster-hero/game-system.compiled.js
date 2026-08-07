@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 427da9075ccd25d6
+// source-sha256: 29eaa48529a636cc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 10:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 10:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2078,6 +2078,50 @@ const Audio_ = (() => {
           dread.dispose();
         } catch (e) {}
       }, 2000);
+    },
+    // 必殺技の準備(ためる)の音。上へ登っていくうなりと、集まっていくきらめきだけで、
+    // 炸裂音は鳴らさない。必殺技そのものの音(enemySpecial)を使うと
+    // 「準備しただけなのに撃たれた」ように聞こえてしまうため分けている
+    enemyCharge: async () => {
+      if (!enabled) return;
+      await ensure();
+      if (!Tone) return;
+      const t = Tone.now();
+      const hum = new Tone.Synth({
+        oscillator: {
+          type: 'sawtooth'
+        },
+        envelope: {
+          attack: 0.35,
+          decay: 0.1,
+          sustain: 0.5,
+          release: 0.35
+        },
+        volume: -14
+      }).connect(seBus);
+      hum.triggerAttackRelease('A1', '2n', t);
+      try {
+        hum.frequency.rampTo('A2', 0.85, t);
+      } catch (e) {}
+      const shimmer = new Tone.PolySynth(Tone.Synth, {
+        oscillator: {
+          type: 'triangle'
+        },
+        envelope: {
+          attack: 0.005,
+          decay: 0.16,
+          sustain: 0,
+          release: 0.1
+        },
+        volume: -18
+      }).connect(reverb);
+      [[0.05, 'E5'], [0.24, 'G5'], [0.43, 'B5'], [0.62, 'E6'], [0.8, 'B6']].forEach(([tt, n]) => shimmer.triggerAttackRelease(n, '16n', t + tt));
+      setTimeout(() => {
+        try {
+          hum.dispose();
+          shimmer.dispose();
+        } catch (e) {}
+      }, 1600);
     },
     enemyMove: async () => {
       if (!enabled) return;
@@ -6025,7 +6069,7 @@ const enemyActionProbabilities = (ent, currentDist, state = {}) => {
   }));
 };
 // 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
-const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? `${ent?.special || '必殺技'} をためている` : type === 'SPECIAL' ? ent?.special || '必殺技！' : '様子を見ている';
+const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? '必殺技の準備をしている' : type === 'SPECIAL' ? ent?.special || '必殺技！' : '様子を見ている';
 const ENEMY_ACTION_ICONS = {
   ATTACK: '👊',
   CHARGE: '✨',
@@ -7043,6 +7087,18 @@ function MonsterHeroGame() {
   // 直前に敵が実行した行動。SCANが「ためた直後なので次は必殺技で確定」「移動した直後なので
   // 続けて移動しない」を実戦と同じ判定で出すために持っておく
   const [enemyLastIntent, setEnemyLastIntent] = useState(null);
+  // さらに1つ先(enemyIntentの次)の行動。移動の吹き出しをこちらから出すことで、
+  // 「通常攻撃の予告と同時に、次の次は移動だと分かる」形にしている。
+  // 予告に出した行動をあとで抽選し直すと予告が嘘になるので、ここで決めたものを
+  // そのまま enemyIntent へ繰り上げる
+  const [enemyNextIntent, setEnemyNextIntent] = useState(null);
+  // 表示用のstateとは別に、すぐ読める控えも持つ。敵ターンの処理は非同期なので、
+  // 描画のタイミングに左右されずに「予告済みの行動」を取り出せるようにしておく
+  const enemyNextIntentRef = useRef(null);
+  const reserveEnemyNextIntent = intent => {
+    enemyNextIntentRef.current = intent || null;
+    setEnemyNextIntent(intent || null);
+  };
   const [atkLevel, setAtkLevel] = useState(0);
   const [guardLevel, setGuardLevel] = useState(0);
   const [guardBonusCount, setGuardBonusCount] = useState(0);
@@ -10928,6 +10984,7 @@ function MonsterHeroGame() {
     focusedCard: null,
     enemyIntent: null,
     enemyLastIntent: null,
+    enemyNextIntent: null,
     effect: null,
     finalRewardSummary: null,
     waveHistory: [],
@@ -11154,6 +11211,7 @@ function MonsterHeroGame() {
     setShowQuitConfirm(false);
     setEnemyIntent(s.enemyIntent);
     setEnemyLastIntent(s.enemyLastIntent || null);
+    reserveEnemyNextIntent(s.enemyNextIntent || null);
     setEffect(s.effect);
     setFinalRewardSummary(s.finalRewardSummary);
     setWaveHistory(s.waveHistory || []);
@@ -11465,6 +11523,7 @@ function MonsterHeroGame() {
     setSkillPicker(null);
     setEnemyIntent(s.enemyIntent);
     setEnemyLastIntent(s.enemyLastIntent || null);
+    reserveEnemyNextIntent(s.enemyNextIntent || null);
     setEffect(s.effect);
     setPendingReward(null);
     setFinalRewardSummary(s.finalRewardSummary);
@@ -11494,6 +11553,9 @@ function MonsterHeroGame() {
   };
 
   // ふだんは抽選。練習の台本があるあいだだけ、決まった順番の行動を返す
+  // 行動が終わったあとの間合い。移動なら移動先、それ以外は今のまま
+  const distAfterIntent = (intent, currentDist) => intent && intent.type === 'MOVE' && Number.isInteger(intent.targetDist) ? intent.targetDist : currentDist;
+
   // lastIntent は「たった今どの行動を終えたか」。
   // ためた次のターンを必殺技で確定させ、移動した次のターンに移動を選ばないために使う
   const getNextEnemyAction = useCallback((ent, currentDist, lastIntent = null) => {
@@ -11507,6 +11569,17 @@ function MonsterHeroGame() {
     }
     return chooseEnemyAction(ent, currentDist, Math.random, enemyActionStateFrom(lastIntent));
   }, []);
+
+  // 敵の行動を1つ繰り上げる。
+  // 「移動の吹き出し」で先に見せた行動は enemyNextIntent に入っているので、
+  // それをそのまま enemyIntent へ移し、新しく2手先だけを抽選する。
+  // ここで抽選し直すと、吹き出しで予告した移動が来ないことになってしまう。
+  const advanceEnemyIntents = (executedIntent, distAfterExecuted) => {
+    // 予約が無いときだけその場で抽選する(戦闘の途中から復帰した場合など)
+    const upcoming = enemyNextIntentRef.current || getNextEnemyAction(enemy, distAfterExecuted, executedIntent);
+    setEnemyIntent(upcoming);
+    reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming));
+  };
   const getPredictedDamage = useCallback(intent => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent || intent.type !== 'ATTACK' && intent.type !== 'SPECIAL') return 0;
@@ -11815,13 +11888,15 @@ function MonsterHeroGame() {
         addPopup("待機中...", 'enemy', 'text-slate-400 text-lg');
         await battleWait(500);
       } else if (intent.type === 'CHARGE') {
-        // ためるターン。オーラを溜めるだけでダメージは無く、次のターンに必殺技が確定で来る
-        Audio_.se.enemySpecial();
+        // 必殺技の準備。オーラを溜めるだけでダメージは無く、次のターンに必殺技が確定で来る。
+        // 突進モーションと炸裂音は必殺技を撃つターンのものなので、ここでは使わない
+        // (使うと「準備しただけなのに殴られた」ように見えてしまう)
+        Audio_.se.enemyCharge();
         setEnemyAttackFx({
           kind: 'charge'
         });
         setEnemyAttackAnim(true);
-        addPopup("力をためている…！", 'enemy', 'text-amber-300 font-black text-xl drop-shadow-md');
+        addPopup("必殺技の準備をしている…！", 'enemy', 'text-amber-300 font-black text-xl drop-shadow-md');
         await battleWait(1100);
         setEnemyAttackAnim(false);
         await battleWait(200);
@@ -11987,7 +12062,7 @@ function MonsterHeroGame() {
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const distForNextPredict = acting && acting.type === 'MOVE' ? acting.targetDist : enemyDist;
     setEnemyLastIntent(acting);
-    setEnemyIntent(getNextEnemyAction(enemy, distForNextPredict, acting));
+    advanceEnemyIntents(acting, distForNextPredict);
     if (scenario) setBattleTutorialLastAction('emergency');
   };
   const processTurn = async () => {
@@ -12478,7 +12553,7 @@ function MonsterHeroGame() {
     // 敵が移動した場合は移動後の距離を基準にする
     const distForNextPredict = forcedMoveTarget != null ? forcedMoveTarget : executedIntent && executedIntent.type === 'MOVE' ? executedIntent.targetDist : enemyDist;
     setEnemyLastIntent(executedIntent);
-    setEnemyIntent(getNextEnemyAction(enemy, distForNextPredict, executedIntent));
+    advanceEnemyIntents(executedIntent, distForNextPredict);
     // ここまで来てはじめて「1ターンぶんを見終わった」ので、練習を次へ進める
     if (tutorialKinds.length) setBattleTutorialLastAction(tutorialKinds.join(','));
   };
@@ -12919,7 +12994,9 @@ function MonsterHeroGame() {
     setEnemy(newEnemy);
     setEnemyDist(dist);
     setEnemyLastIntent(null);
-    setEnemyIntent(getNextEnemyAction(newEnemy, dist));
+    const firstIntent = getNextEnemyAction(newEnemy, dist);
+    setEnemyIntent(firstIntent);
+    reserveEnemyNextIntent(getNextEnemyAction(newEnemy, distAfterIntent(firstIntent, dist), firstIntent));
     setTurnCount(1);
     setSelectedCards([]);
     setLastActionSlot(null);
@@ -20005,7 +20082,7 @@ function MonsterHeroGame() {
       className: `rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`,
       style: enemyAttackAnim ? {
         padding: 'clamp(8px,2.2dvh,28px)',
-        animation: enemyAttackFx?.kind === 'move' ? enemy?.id === 'Moo' ? 'enemyMoveSlideMoo 1000ms ease-in-out forwards' : 'enemyMoveSlide 1000ms ease-in-out forwards' : 'enemyAttackFly 450ms ease-in forwards',
+        animation: enemyAttackFx?.kind === 'move' ? enemy?.id === 'Moo' ? 'enemyMoveSlideMoo 1000ms ease-in-out forwards' : 'enemyMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'enemyChargeShake 1100ms ease-in-out forwards' : 'enemyAttackFly 450ms ease-in forwards',
         ...(enemy?.id === 'Moo' && enemyAttackFx?.kind !== 'move' ? {
           transform: 'translateY(3dvh)'
         } : {}),
@@ -20139,11 +20216,11 @@ function MonsterHeroGame() {
       style: {
         animation: 'idleExclaim 1100ms ease-in-out infinite'
       }
-    }, "\u2757")), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'MOVE' && /*#__PURE__*/React.createElement("div", {
+    }, "\u2757")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none z-[9000]"
     }, /*#__PURE__*/React.createElement("div", {
       className: "mh-enemy-move-hint"
-    }, RANGE_LABELS[enemyIntent.targetDist], "\u2026\uFF01")), enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
+    }, RANGE_LABELS[enemyNextIntent.targetDist], "\u2026\uFF01")), enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
     }, /*#__PURE__*/React.createElement("div", {
       className: "absolute -inset-6 rounded-full",
@@ -24243,6 +24320,16 @@ const createAnimationStyle = () => {
     }
     @keyframes enemyExclaim {
       0%,100% { opacity: 1; }
+    }
+    /* 必殺技の準備。その場で踏ん張って力を溜める(前に出る突進とは別の動き) */
+    @keyframes enemyChargeShake {
+      0% { transform: scale(1); }
+      15% { transform: scale(0.94) translateY(2px); }
+      30% { transform: scale(0.96) translate(-2px, 1px); }
+      45% { transform: scale(0.98) translate(2px, 1px); }
+      60% { transform: scale(1.02) translate(-2px, -1px); }
+      80% { transform: scale(1.06) translate(2px, -2px); }
+      100% { transform: scale(1); }
     }
     /* ためている最中に、周りからオーラが敵へ吸い込まれていく */
     @keyframes chargeGather {

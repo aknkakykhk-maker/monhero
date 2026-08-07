@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 10:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 10:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -761,6 +761,15 @@ const Audio_ = (() => {
       const dread = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'square' }, envelope: { attack: 0.02, decay: 0.3, sustain: 0.2, release: 0.6 }, volume: -16 }).connect(reverb);
       ['C2','C#2','G2'].forEach(n => dread.triggerAttackRelease(n, '2n', bt + 0.05));
       setTimeout(() => { try { charge.dispose(); boom.dispose(); metal.dispose(); blast.dispose(); dread.dispose(); } catch (e) {} }, 2000); },
+    // 必殺技の準備(ためる)の音。上へ登っていくうなりと、集まっていくきらめきだけで、
+    // 炸裂音は鳴らさない。必殺技そのものの音(enemySpecial)を使うと
+    // 「準備しただけなのに撃たれた」ように聞こえてしまうため分けている
+    enemyCharge: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now();
+      const hum = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.35, decay: 0.1, sustain: 0.5, release: 0.35 }, volume: -14 }).connect(seBus);
+      hum.triggerAttackRelease('A1', '2n', t); try { hum.frequency.rampTo('A2', 0.85, t); } catch (e) {}
+      const shimmer = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.16, sustain: 0, release: 0.1 }, volume: -18 }).connect(reverb);
+      [[0.05,'E5'],[0.24,'G5'],[0.43,'B5'],[0.62,'E6'],[0.8,'B6']].forEach(([tt, n]) => shimmer.triggerAttackRelease(n, '16n', t + tt));
+      setTimeout(() => { try { hum.dispose(); shimmer.dispose(); } catch (e) {} }, 1600); },
     enemyMove: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const t = Tone.now(); const s = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.05 }, volume: -14 }).connect(seBus); s.triggerAttackRelease('E4', '32n', t); s.triggerAttackRelease('B3', '16n', t + 0.06); setTimeout(() => { try { s.dispose(); } catch (e) {} }, 400); },
     join: async () => { if (!enabled) return; await ensure(); if (!Tone) return; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.18, sustain: 0.3, release: 0.4 }, volume: -10 }).connect(reverb); const t = Tone.now(); const seq = [[0,'E5','8n'],[0.15,'G5','8n'],[0.3,'C6','8n'],[0.45,'E6','4n'],[0.45,'C6','4n'],[0.45,'G5','4n'],[0.8,'D6','8n'],[0.95,'E6','4n'],[0.95,'C6','4n'],[0.95,'G5','4n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); setTimeout(() => { try { v.dispose(); } catch (e) {} }, 1800); },
     victory: async () => { if (!enabled) return; await ensure(); if (!Tone) return; stopOthers(null); currentKey = null; const v = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.4 }, volume: -19 }).connect(reverb); const vb = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.02, decay: 0.2, sustain: 0.4, release: 0.3 }, volume: -19 }).connect(seBus); const t = Tone.now(); const seq = [[0,'C5','8n'],[0,'E5','8n'],[0,'G5','8n'],[0.18,'C5','8n'],[0.18,'E5','8n'],[0.18,'G5','8n'],[0.36,'C5','8n'],[0.36,'E5','8n'],[0.36,'G5','8n'],[0.54,'G5','4n'],[0.54,'C6','4n'],[0.54,'E6','4n'],[0.9,'F5','8n'],[0.9,'A5','8n'],[1.08,'G5','8n'],[1.08,'B5','8n'],[1.26,'C6','2n'],[1.26,'E6','2n'],[1.26,'G6','2n']]; seq.forEach(([tt, n, d]) => v.triggerAttackRelease(n, d, t + tt)); [[0,'C3'],[0.54,'C3'],[0.9,'F2'],[1.08,'G2'],[1.26,'C3']].forEach(([tt, n]) => vb.triggerAttackRelease(n, '4n', t + tt)); setTimeout(() => { try { v.dispose(); vb.dispose(); } catch (e) {} }, 2600); },
@@ -2569,7 +2578,7 @@ const enemyActionProbabilities = (ent,currentDist,state={}) => {
 };
 // 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
 const enemyActionLabel = (ent,type) => type==='ATTACK' ? (ent?.normal||'通常攻撃')
-  : type==='CHARGE' ? `${ent?.special||'必殺技'} をためている`
+  : type==='CHARGE' ? '必殺技の準備をしている'
   : type==='SPECIAL' ? (ent?.special||'必殺技！')
   : '様子を見ている';
 const ENEMY_ACTION_ICONS = {ATTACK:'👊',CHARGE:'✨',SPECIAL:'🔥',WAIT:'⏳',MOVE:'🏃'};
@@ -3282,6 +3291,15 @@ function MonsterHeroGame() {
   // 直前に敵が実行した行動。SCANが「ためた直後なので次は必殺技で確定」「移動した直後なので
   // 続けて移動しない」を実戦と同じ判定で出すために持っておく
   const [enemyLastIntent, setEnemyLastIntent] = useState(null);
+  // さらに1つ先(enemyIntentの次)の行動。移動の吹き出しをこちらから出すことで、
+  // 「通常攻撃の予告と同時に、次の次は移動だと分かる」形にしている。
+  // 予告に出した行動をあとで抽選し直すと予告が嘘になるので、ここで決めたものを
+  // そのまま enemyIntent へ繰り上げる
+  const [enemyNextIntent, setEnemyNextIntent] = useState(null);
+  // 表示用のstateとは別に、すぐ読める控えも持つ。敵ターンの処理は非同期なので、
+  // 描画のタイミングに左右されずに「予告済みの行動」を取り出せるようにしておく
+  const enemyNextIntentRef = useRef(null);
+  const reserveEnemyNextIntent = (intent) => { enemyNextIntentRef.current = intent || null; setEnemyNextIntent(intent || null); };
   const [atkLevel, setAtkLevel] = useState(0);
   const [guardLevel, setGuardLevel] = useState(0);
   const [guardBonusCount, setGuardBonusCount] = useState(0);
@@ -5825,7 +5843,7 @@ function MonsterHeroGame() {
     atkLevel:0, guardLevel:0, guardBonusCount:0, upgradePoints:0, turnCount:1,
     permaBuffs:{ autoHpRecovery:0.1 }, waveBuffs:{}, turnBuffs:{}, nextTurnBuffs:{},
     currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], distAptPct:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
-    focusedCard:null, enemyIntent:null, enemyLastIntent:null, effect:null, finalRewardSummary:null, waveHistory:[], gaveUp:false
+    focusedCard:null, enemyIntent:null, enemyLastIntent:null, enemyNextIntent:null, effect:null, finalRewardSummary:null, waveHistory:[], gaveUp:false
   });
 
   // 自動案内の優先順位判定でも使うため、描画部より前で確定する。
@@ -5974,7 +5992,7 @@ function MonsterHeroGame() {
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
-    setPendingReward(null); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
+    setPendingReward(null); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
     setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
     setSkipFlow(null); setSkipConfirmOpen(false); setSkipResult(null); setSkipInfoItemId(null);
@@ -6157,7 +6175,7 @@ function MonsterHeroGame() {
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
-    setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
+    setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
     setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
     setGameState('PICK_HERO');
@@ -6176,7 +6194,10 @@ function MonsterHeroGame() {
   };
 
   // ふだんは抽選。練習の台本があるあいだだけ、決まった順番の行動を返す
-  // lastIntent は「たった今どの行動を終えたか」。
+  // 行動が終わったあとの間合い。移動なら移動先、それ以外は今のまま
+const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOVE' && Number.isInteger(intent.targetDist)) ? intent.targetDist : currentDist;
+
+// lastIntent は「たった今どの行動を終えたか」。
   // ためた次のターンを必殺技で確定させ、移動した次のターンに移動を選ばないために使う
   const getNextEnemyAction = useCallback((ent, currentDist, lastIntent=null) => {
     const scenario = battleScenarioRef.current;
@@ -6186,6 +6207,17 @@ function MonsterHeroGame() {
     }
     return chooseEnemyAction(ent,currentDist,Math.random,enemyActionStateFrom(lastIntent));
   }, []);
+
+  // 敵の行動を1つ繰り上げる。
+  // 「移動の吹き出し」で先に見せた行動は enemyNextIntent に入っているので、
+  // それをそのまま enemyIntent へ移し、新しく2手先だけを抽選する。
+  // ここで抽選し直すと、吹き出しで予告した移動が来ないことになってしまう。
+  const advanceEnemyIntents = (executedIntent, distAfterExecuted) => {
+    // 予約が無いときだけその場で抽選する(戦闘の途中から復帰した場合など)
+    const upcoming = enemyNextIntentRef.current || getNextEnemyAction(enemy, distAfterExecuted, executedIntent);
+    setEnemyIntent(upcoming);
+    reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming));
+  };
 
   const getPredictedDamage = useCallback((intent) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
@@ -6407,11 +6439,13 @@ function MonsterHeroGame() {
       } else if (intent.type==='WAIT') {
         addPopup("待機中...",'enemy','text-slate-400 text-lg'); await battleWait(500);
       } else if (intent.type==='CHARGE') {
-        // ためるターン。オーラを溜めるだけでダメージは無く、次のターンに必殺技が確定で来る
-        Audio_.se.enemySpecial();
+        // 必殺技の準備。オーラを溜めるだけでダメージは無く、次のターンに必殺技が確定で来る。
+        // 突進モーションと炸裂音は必殺技を撃つターンのものなので、ここでは使わない
+        // (使うと「準備しただけなのに殴られた」ように見えてしまう)
+        Audio_.se.enemyCharge();
         setEnemyAttackFx({kind:'charge'});
         setEnemyAttackAnim(true);
-        addPopup("力をためている…！",'enemy','text-amber-300 font-black text-xl drop-shadow-md');
+        addPopup("必殺技の準備をしている…！",'enemy','text-amber-300 font-black text-xl drop-shadow-md');
         await battleWait(1100);
         setEnemyAttackAnim(false);
         await battleWait(200);
@@ -6505,7 +6539,7 @@ function MonsterHeroGame() {
     await handleEnemyTurn('none',{},acting,hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const distForNextPredict=acting&&acting.type==='MOVE'?acting.targetDist:enemyDist;
-    setEnemyLastIntent(acting); setEnemyIntent(getNextEnemyAction(enemy,distForNextPredict,acting));
+    setEnemyLastIntent(acting); advanceEnemyIntents(acting,distForNextPredict);
     if (scenario) setBattleTutorialLastAction('emergency');
   };
 
@@ -6764,7 +6798,7 @@ function MonsterHeroGame() {
     // 敵の行動が終わった後で、次ターンの予測を1回だけ抽選してセット
     // 敵が移動した場合は移動後の距離を基準にする
     const distForNextPredict=forcedMoveTarget!=null?forcedMoveTarget:((executedIntent&&executedIntent.type==='MOVE')?executedIntent.targetDist:enemyDist);
-    setEnemyLastIntent(executedIntent); setEnemyIntent(getNextEnemyAction(enemy,distForNextPredict,executedIntent));
+    setEnemyLastIntent(executedIntent); advanceEnemyIntents(executedIntent,distForNextPredict);
     // ここまで来てはじめて「1ターンぶんを見終わった」ので、練習を次へ進める
     if (tutorialKinds.length) setBattleTutorialLastAction(tutorialKinds.join(','));
   };
@@ -7043,7 +7077,10 @@ function MonsterHeroGame() {
       battleScenarioIntentIndexRef.current=0;
     }
     enemyDefeatResolvedRef.current=false;
-    setEnemy(newEnemy); setEnemyDist(dist); setEnemyLastIntent(null); setEnemyIntent(getNextEnemyAction(newEnemy,dist));
+    setEnemy(newEnemy); setEnemyDist(dist); setEnemyLastIntent(null);
+    const firstIntent = getNextEnemyAction(newEnemy,dist);
+    setEnemyIntent(firstIntent);
+    reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent));
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
   }, [getNextEnemyAction, difficulty, highestWaves, quickHighestWaves, runMode]);
@@ -9426,7 +9463,7 @@ function MonsterHeroGame() {
                   </div>
                 )}
                 {/* 行動予測ラベルはmain下部に移動 */}
-                <div className={`rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim?{padding:'clamp(8px,2.2dvh,28px)',animation:(enemyAttackFx?.kind==='move'?(enemy?.id==='Moo'?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):'enemyAttackFly 450ms ease-in forwards'), ...(enemy?.id==='Moo'&&enemyAttackFx?.kind!=='move'?{transform:'translateY(3dvh)'}:{}),...(enemy?.id!=='Moo'&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(8px,2.2dvh,28px)',...(enemy?.id==='Moo'?{transform:'translateY(3dvh)'}:{})}}>
+                <div className={`rounded-full transition-all duration-500 border-4 relative ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border} ${RANGE_STYLES[enemyDist].shadow} ${RANGE_STYLES[enemyDist].glow} shadow-[0_0_50px]`} style={enemyAttackAnim?{padding:'clamp(8px,2.2dvh,28px)',animation:(enemyAttackFx?.kind==='move'?(enemy?.id==='Moo'?'enemyMoveSlideMoo 1000ms ease-in-out forwards':'enemyMoveSlide 1000ms ease-in-out forwards'):enemyAttackFx?.kind==='charge'?'enemyChargeShake 1100ms ease-in-out forwards':'enemyAttackFly 450ms ease-in forwards'), ...(enemy?.id==='Moo'&&enemyAttackFx?.kind!=='move'?{transform:'translateY(3dvh)'}:{}),...(enemy?.id!=='Moo'&&enemyAttackFx?.kind!=='move'?{zIndex:9999}:{})}:{padding:'clamp(8px,2.2dvh,28px)',...(enemy?.id==='Moo'?{transform:'translateY(3dvh)'}:{})}}>
                   {enemy?.imgUrl?(enemy?.id==='Moo'?<div style={{width:'clamp(70px,12dvh,120px)',height:'clamp(80px,16dvh,150px)'}}/>:<img src={enemy.imgUrl} alt={enemy?.name} style={{width:'clamp(70px,12dvh,120px)',height:'clamp(80px,16dvh,150px)'}} className="object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"/>):(<div style={{fontSize:'clamp(58px,11dvh,104px)',lineHeight:1}} className="drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]">{enemy?.emoji}</div>)}
                   {/* ラスボス・ムー: 丸枠内は台座オーラのみ（本体は枠外に巨大表示） */}
                   {enemy?.id==='Moo'&&(
@@ -9472,11 +9509,13 @@ function MonsterHeroGame() {
                       <div className="absolute -top-2 -right-1 text-4xl font-black text-yellow-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" style={{animation:'idleExclaim 1100ms ease-in-out infinite'}}>❗</div>
                     </div>
                   )}
-                  {/* 移動の予告。次のターンにどの間合いへ動くつもりかを、敵のつぶやきとして見せる。
-                      予告に出す間合いは enemyIntent.targetDist そのものなので、実際の移動先と必ず一致する */}
-                  {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&enemyIntent.type==='MOVE'&&(
+                  {/* 移動の予告。いま出ている行動予告(通常攻撃など)と同時に、
+                      「その次のターンに間合いを変える」ことを敵のつぶやきとして見せる。
+                      出す間合いは enemyNextIntent.targetDist そのもので、繰り上げても抽選し直さないため、
+                      吹き出しに出た間合いへ必ず動く */}
+                  {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&enemyNextIntent.type==='MOVE'&&(
                     <div className="absolute inset-0 pointer-events-none z-[9000]">
-                      <div className="mh-enemy-move-hint">{RANGE_LABELS[enemyIntent.targetDist]}…！</div>
+                      <div className="mh-enemy-move-hint">{RANGE_LABELS[enemyNextIntent.targetDist]}…！</div>
                     </div>
                   )}
                   {/* ためている最中は、敵の周りにオーラが集まる */}
@@ -11248,6 +11287,16 @@ const createAnimationStyle = () => {
     }
     @keyframes enemyExclaim {
       0%,100% { opacity: 1; }
+    }
+    /* 必殺技の準備。その場で踏ん張って力を溜める(前に出る突進とは別の動き) */
+    @keyframes enemyChargeShake {
+      0% { transform: scale(1); }
+      15% { transform: scale(0.94) translateY(2px); }
+      30% { transform: scale(0.96) translate(-2px, 1px); }
+      45% { transform: scale(0.98) translate(2px, 1px); }
+      60% { transform: scale(1.02) translate(-2px, -1px); }
+      80% { transform: scale(1.06) translate(2px, -2px); }
+      100% { transform: scale(1); }
     }
     /* ためている最中に、周りからオーラが敵へ吸い込まれていく */
     @keyframes chargeGather {
