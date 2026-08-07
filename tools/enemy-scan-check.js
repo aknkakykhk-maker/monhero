@@ -121,12 +121,15 @@ check('移動の吹き出しは2手先の行動から出す',
   has('mh-enemy-move-hint') && has('{RANGE_LABELS[enemyNextIntent.targetDist]}距離')
     && has("enemyNextIntent.type==='MOVE'"));
 // 吹き出しは行き先まで文章で書く(「近…！」だけでは何が起きるのか読み取れなかった)
-check('吹き出しに行き先と、何が起きるかを書く', has('つぎ <b>{RANGE_LABELS[enemyNextIntent.targetDist]}距離</b>へ動く…！'));
+check('吹き出しに行き先と、何が起きるかを書く', has('{RANGE_LABELS[enemyNextIntent.targetDist]}距離に移動しようとしている…？'));
+// 大きいと敵の絵を隠してしまうので、画面下の行動予告バッジと同じ大きさで右へ寄せる
+check('吹き出しは行動予告と同じ大きさで右へ寄せる',
+  /font-size: 9px; font-weight: 1000;/.test(src) && has('translateX(calc(min(50vw, 300px) - 100% - 8px))'));
 // ムーは丸枠の外へ巨大に描いているので、丸枠の中に置くと本体の裏へ回る。
 // 必殺技の警告と同じく画面基準で前面に出すこと
 const hintBlock = src.slice(src.indexOf("enemyNextIntent.type==='MOVE'&&("), src.indexOf('mh-enemy-move-hint') + 400);
 check('吹き出しはムーの手前に出る(画面基準で前面に置く)',
-  /fixed left-1\/2 -translate-x-1\/2 pointer-events-none/.test(hintBlock) && /zIndex:65000/.test(hintBlock));
+  /fixed left-1\/2 pointer-events-none/.test(hintBlock) && /zIndex:65000/.test(hintBlock));
 // スタン・無効化・眼力・距離撃で敵の行動を止めたときは、その行動を「やらなかった」ことにする。
 // ここが抜けていると、必殺技の準備をスタンで止めたのに次のターンだけ必殺技が飛んでくる
 check('止められたターンは行動しなかった扱いにする',
