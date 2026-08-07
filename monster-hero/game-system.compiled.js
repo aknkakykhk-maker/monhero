@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 33e9fb3f78982464
+// source-sha256: df3db313988a49da
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 01:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 01:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -359,6 +359,68 @@ const totalBreakthroughPoints = count => {
   const n = Math.max(0, Math.floor(Number(count) || 0));
   return n === 0 ? 0 : BREAKTHROUGH_FIRST_POINTS + BREAKTHROUGH_POINTS * (n - 1);
 };
+// ===== 限界突破の★ =====
+// 5凸で1段階が完成し、次の段階では1個ずつ新しい色へ置き換わる(例: 6凸 = 黄1 + 青4)。
+// 色は保存せず、保存してある rebirthCount から毎回組み立てる(表示用データを増やさない)。
+// 「黄色」と「金」が見分けにくくならないよう、黄色は光沢を付けない素の黄色、
+// 金は上が明るく下が暗い金属的な縁取りにして、色みも一段濃くしてある。
+const BREAKTHROUGH_STARS_PER_TIER = 5;
+const BREAKTHROUGH_STAR_TIERS = [{
+  key: 'blue',
+  color: '#60a5fa',
+  shadow: '0 1px 2px rgba(0,0,0,.85),0 0 3px #1d4ed8'
+}, {
+  key: 'yellow',
+  color: '#fde047',
+  shadow: '0 1px 2px rgba(0,0,0,.85)'
+}, {
+  key: 'pink',
+  color: '#f472b6',
+  shadow: '0 1px 2px rgba(0,0,0,.85),0 0 3px #db2777'
+}, {
+  key: 'purple',
+  color: '#c084fc',
+  shadow: '0 1px 2px rgba(0,0,0,.85),0 0 3px #7e22ce'
+}, {
+  key: 'red',
+  color: '#ef4444',
+  shadow: '0 1px 2px rgba(0,0,0,.85),0 0 3px #991b1b'
+}, {
+  key: 'gold',
+  color: '#f5c04a',
+  shadow: '0 -1px 0 #fff3c4,0 1px 0 #7a4f0d,0 0 5px rgba(255,180,40,.95)'
+}];
+// 通常の限界突破で到達できる回数。段階数×5 = 30回で、そのときのレベル上限はLv.180
+const BREAKTHROUGH_MAX_COUNT = BREAKTHROUGH_STAR_TIERS.length * BREAKTHROUGH_STARS_PER_TIER;
+const BREAKTHROUGH_FINAL_LEVEL_CAP = INITIAL_MASU_LEVEL_CAP + BREAKTHROUGH_LEVEL_CAP_GAIN * BREAKTHROUGH_MAX_COUNT;
+// 最終限界突破を終えた回数。ここだけ上限が+5ではなくLv.200へ一気に上がり、★は虹になる
+const FINAL_BREAKTHROUGH_COUNT = BREAKTHROUGH_MAX_COUNT + 1;
+// 虹は5個の星それぞれを違う色にする。小さくても最終段階だと分かり、常時アニメーションも要らない
+const RAINBOW_STAR_COLORS = ['#ff5a5a', '#ffa33d', '#ffe14d', '#5ce08a', '#7aa2ff'];
+const RAINBOW_STAR_SHADOW = '0 1px 2px rgba(0,0,0,.9),0 0 4px rgba(255,255,255,.55)';
+// 凸数から★の並びを作る。新しい色を先頭に、残りは1つ前の段階の色で埋める
+const breakthroughStars = count => {
+  const n = Math.max(0, Math.floor(Number(count) || 0));
+  if (n <= 0) return [];
+  // 最終限界突破(31回目)以降は虹★5。旧仕様で31回以上まで進めていた個体もここへ入る
+  if (n >= FINAL_BREAKTHROUGH_COUNT) return RAINBOW_STAR_COLORS.map(color => ({
+    key: 'rainbow',
+    color,
+    shadow: RAINBOW_STAR_SHADOW
+  }));
+  const capped = Math.min(n, BREAKTHROUGH_MAX_COUNT);
+  const tierIndex = Math.floor((capped - 1) / BREAKTHROUGH_STARS_PER_TIER);
+  const filled = (capped - 1) % BREAKTHROUGH_STARS_PER_TIER + 1;
+  const tier = BREAKTHROUGH_STAR_TIERS[tierIndex];
+  const prev = tierIndex > 0 ? BREAKTHROUGH_STAR_TIERS[tierIndex - 1] : null;
+  const stars = Array.from({
+    length: filled
+  }, () => tier);
+  // 1段階目(青)だけは前の色が無いので、5個に満たないまま出す
+  if (prev) for (let i = filled; i < BREAKTHROUGH_STARS_PER_TIER; i++) stars.push(prev);
+  return stars;
+};
+const isFinalBreakthroughCount = count => Math.max(0, Math.floor(Number(count) || 0)) >= FINAL_BREAKTHROUGH_COUNT;
 const REINCARNATE_MIN_LEVEL = 100;
 const REINCARNATE_LEVEL_DROP = 99;
 const REINCARNATE_POINTS = 10;
@@ -696,17 +758,22 @@ const buildMasuBreakthrough = ({
   };
   const nextCount = normalized.rebirthCount + 1;
   const gainedPoints = nextCount === 1 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS;
+  // 30凸(上限Lv.180)まで来ていたら、この1回だけが最終限界突破。
+  // 上限を+5ではなくLv.200へ一気に上げ、★は虹になる。以降は上の levelCap 判定で突破できなくなる
+  const isFinal = normalized.levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP;
+  const nextLevelCap = isFinal ? MAX_MASU_LEVEL_CAP : Math.min(MAX_MASU_LEVEL_CAP, normalized.levelCap + BREAKTHROUGH_LEVEL_CAP_GAIN);
   return {
     ok: true,
     cost,
     skillKey,
     skillLevel: currentSkillLevel + 1,
     gainedPoints,
+    finalBreakthrough: isFinal,
     nextGold: donationDiamondValue(gold) - cost,
     nextMasu: {
       ...normalized,
       rebirthCount: nextCount,
-      levelCap: Math.min(MAX_MASU_LEVEL_CAP, normalized.levelCap + BREAKTHROUGH_LEVEL_CAP_GAIN),
+      levelCap: nextLevelCap,
       distAptPoints: Math.max(0, Math.floor(Number(normalized.distAptPoints) || 0)) + gainedPoints,
       uniqueSkillLevels
     }
@@ -4511,25 +4578,23 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     colors: Array.isArray(colors) ? colors : []
   };
 };
+// 限界突破の★。並びと色は breakthroughStars が保存値(rebirthCount)から組み立てる
 const RebirthStars = ({
   count = 0,
   className = ''
 }) => {
   const value = Math.max(0, Math.floor(Number(count) || 0));
-  if (!value) return null;
-  const tier = Math.floor((value - 1) / 5) % 4;
-  const colors = ['#fde047', '#f472b6', '#ef4444', '#ffffff'];
-  const shadows = ['#ca8a04', '#db2777', '#991b1b', '#22d3ee'];
+  const stars = breakthroughStars(value);
+  if (!stars.length) return null;
+  const final = isFinalBreakthroughCount(value);
   return /*#__PURE__*/React.createElement("span", {
     className: `mh-rebirth-stars ${className}`,
-    "aria-label": `限界突破${value}回`
-  }, Array.from({
-    length: Math.min(5, value)
-  }, (_, i) => /*#__PURE__*/React.createElement("span", {
+    "aria-label": final ? `最終限界突破(${value}回)` : `限界突破${value}回`
+  }, stars.map((s, i) => /*#__PURE__*/React.createElement("span", {
     key: i,
     style: {
-      color: colors[tier],
-      textShadow: tier === 3 ? `0 0 2px #f472b6,0 0 4px ${shadows[tier]}` : `0 0 3px ${shadows[tier]}`
+      color: s.color,
+      textShadow: s.shadow
     }
   }, "\u2605")));
 };
@@ -15864,7 +15929,7 @@ function MonsterHeroGame() {
           compact: true
         })), /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] text-slate-400 mb-3"
-        }, "\u73FE\u5728\u306E\u30EC\u30D9\u30EB\u4E0A\u9650\u306B\u5230\u9054\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u9650\u754C\u7A81\u7834\u3067\u304D\u307E\u3059\u3002\u30EC\u30D9\u30EB\u306F\u305D\u306E\u307E\u307E\u3067\u3001\u4E0A\u9650\u3060\u3051+", BREAKTHROUGH_LEVEL_CAP_GAIN, "\u3055\u308C\u307E\u3059\uFF08\u4E0A\u9650Lv.", MAX_MASU_LEVEL_CAP, "\u307E\u3067\uFF09\u3002"), renderMonsterSortFilterBar({
+        }, "\u73FE\u5728\u306E\u30EC\u30D9\u30EB\u4E0A\u9650\u306B\u5230\u9054\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u9650\u754C\u7A81\u7834\u3067\u304D\u307E\u3059\u3002\u30EC\u30D9\u30EB\u306F\u305D\u306E\u307E\u307E\u3067\u3001\u4E0A\u9650\u3060\u3051+", BREAKTHROUGH_LEVEL_CAP_GAIN, "\u3055\u308C\u307E\u3059\u3002", BREAKTHROUGH_MAX_COUNT, "\u56DE\u76EE\u3067\u4E0A\u9650Lv.", BREAKTHROUGH_FINAL_LEVEL_CAP, "\u30FB\u2605\u306F\u91D1\u306B\u306A\u308A\u3001\u305D\u306E\u6B21\u306E\u300C\u6700\u7D42\u9650\u754C\u7A81\u7834\u300D\u3067\u4E0A\u9650\u304C\u4E00\u6C17\u306BLv.", MAX_MASU_LEVEL_CAP, "\u30FB\u2605\u306F\u8679\u306B\u306A\u308A\u307E\u3059\uFF08\u305D\u3053\u3067\u6253\u3061\u6B62\u3081\u3067\u3059\uFF09\u3002"), renderMonsterSortFilterBar({
           singleType: true
         }), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
@@ -15936,7 +16001,7 @@ function MonsterHeroGame() {
         className: "text-pink-300 text-xs"
       }, "Lv.", lvl.level, " / \u4E0A\u9650Lv.", normalized.levelCap), /*#__PURE__*/React.createElement("div", {
         className: "text-slate-400 text-[10px]"
-      }, "\u661F\u304C1\u3064\u5897\u3048\u3066\u4E0A\u9650\u304C+", BREAKTHROUGH_LEVEL_CAP_GAIN, "\u3002\u30EC\u30D9\u30EB\u3068\u5F37\u5316\u306F\u305D\u306E\u307E\u307E\u6B8B\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+      }, normalized.levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP ? `最終限界突破：上限が一気にLv.${MAX_MASU_LEVEL_CAP}へ上がり、★は虹になります（これが最後の限界突破です）` : `星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`), /*#__PURE__*/React.createElement("div", {
         className: "text-amber-300 text-[10px] font-black"
       }, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", normalized.rebirthCount === 0 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS))), /*#__PURE__*/React.createElement("div", {
         className: "bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"
@@ -16331,7 +16396,8 @@ function MonsterHeroGame() {
       },
       className: "w-full bg-amber-500 text-black py-3 rounded-2xl font-black"
     }, "\u53D7\u3051\u53D6\u308B"))), rebirthAnimation && (() => {
-      const stars = Math.min(5, Math.max(1, rebirthAnimation.masu.rebirthCount || 1));
+      const starList = breakthroughStars(rebirthAnimation.masu.rebirthCount || 1);
+      const finalBreak = isFinalBreakthroughCount(rebirthAnimation.masu.rebirthCount);
       return /*#__PURE__*/React.createElement("div", {
         className: "mh-breakthrough-animation",
         role: "status",
@@ -16353,14 +16419,16 @@ function MonsterHeroGame() {
       })), /*#__PURE__*/React.createElement("div", {
         className: "mh-breakthrough-stars",
         "aria-hidden": "true"
-      }, Array.from({
-        length: stars
-      }, (_, i) => /*#__PURE__*/React.createElement("i", {
+      }, starList.map((s, i) => /*#__PURE__*/React.createElement("i", {
         key: i,
-        className: i === stars - 1 ? 'is-new' : 'is-old'
+        className: finalBreak || i === 0 ? 'is-new' : 'is-old',
+        style: {
+          color: s.color,
+          textShadow: s.shadow
+        }
       }, "\u2605"))), /*#__PURE__*/React.createElement("div", {
         className: "mh-breakthrough-copy"
-      }, /*#__PURE__*/React.createElement("b", null, "\u9650\u754C\u7A81\u7834\uFF01"), /*#__PURE__*/React.createElement("span", null, "\u2605 \u304C1\u3064\u5897\u3048\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("span", null, rebirthAnimation.skillName, " Lv.", rebirthAnimation.skillLevel, "\u3078\u9032\u5316"), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", rebirthAnimation.gainedPoints)));
+      }, /*#__PURE__*/React.createElement("b", null, finalBreak ? '最終限界突破！' : '限界突破！'), /*#__PURE__*/React.createElement("span", null, finalBreak ? '★ が虹になりました' : '★ が1つ増えました'), /*#__PURE__*/React.createElement("span", null, rebirthAnimation.skillName, " Lv.", rebirthAnimation.skillLevel, "\u3078\u9032\u5316"), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", rebirthAnimation.gainedPoints)));
     })(), reincarnateAnimation && /*#__PURE__*/React.createElement("div", {
       className: "mh-rebirth-animation",
       role: "status",

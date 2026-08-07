@@ -75,8 +75,20 @@ check('固有技Lv2で技名・威力・会心率・消費Gを現在技へ切替
 check('限界突破済みソート・表示設定と旧設定の補完を追加',source.includes("key: 'reborn', label: '限界突破済み'")&&source.includes("monsterSortKey === 'reborn'")&&source.includes('DEFAULT_MONSTER_LIST_SETTINGS.display[key]'));
 check('同一固有技の継承を禁止',source.includes('duplicateUnique')&&source.includes('同じ固有技はすでに所持しているため引き継げません'));
 check('現在技・解放済み・未解放を固有技詳細に表示',source.includes("current?'現在の技':locked?'未解放':'解放済み'"));
-check('星4色・最大5個表示がある',source.includes("['#fde047','#f472b6','#ef4444','#ffffff']")&&source.includes('Math.min(5, value)'));
-check('限界突破は専用の演出を使い、最後に星が増える',source.includes('mh-breakthrough-animation')&&source.includes('mh-breakthrough-stars')&&source.includes("i===stars-1?'is-new':'is-old'")&&source.includes('@keyframes mhBreakStar'));
+// ★は 青→黄色→ピンク→紫→赤→金 の6段階。5凸で1段階が完成し、次の段階は1個ずつ置き換わる。
+// 31凸(最終限界突破)だけ虹★5。細かい凸数ごとの並びは breakthrough-star-check.js で見る
+check('星は6段階＋虹で、常に5個まで',
+  source.includes("{ key:'blue',")&&source.includes("{ key:'gold',")
+  &&source.includes('const BREAKTHROUGH_STARS_PER_TIER = 5;')
+  &&source.includes('const RAINBOW_STAR_COLORS')
+  &&source.includes('const breakthroughStars = (count)')
+  &&!source.includes("['#fde047','#f472b6','#ef4444','#ffffff']"));
+check('最終限界突破でLv.200・虹★になる',
+  source.includes('const FINAL_BREAKTHROUGH_COUNT = BREAKTHROUGH_MAX_COUNT + 1;')
+  &&source.includes('const isFinal = normalized.levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP;')
+  &&source.includes('finalBreakthrough:isFinal'));
+// 増えた★は先頭に来るので、光らせるのは先頭(最終突破では5個とも虹なので全部)
+check('限界突破は専用の演出を使い、増えた星が光る',source.includes('mh-breakthrough-animation')&&source.includes('mh-breakthrough-stars')&&source.includes("(finalBreak||i===0)?'is-new':'is-old'")&&source.includes('@keyframes mhBreakStar'));
 check('転生はこれまでの演出を引き継ぐ',source.includes('reincarnateAnimation&&<div className="mh-rebirth-animation"'));
 check('転生の回数は「+N」バッジで示し、合体のバッジは出さない',source.includes('mh-reincarnate-badge')&&source.includes('<ReincarnateBadge')&&!source.includes('+{masu.fusionHistory.length}</div>')&&!source.includes('+{fusionCount}</div>'));
 check('神殿BGMを限界突破・転生の画面でも継続',/MASU_REBIRTH:\s*'temple'/.test(source)&&/MASU_REINCARNATE:\s*'temple'/.test(source));

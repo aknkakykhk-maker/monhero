@@ -258,10 +258,61 @@ WAVE1で諦めた場合だけはクリアWAVEが0で絆経験値の加算が起�
 
 ## 7. 転生
 
+> レベル上限を上げるのは §7.5 の**限界突破**（`rebirthCount`）で、転生（`reincarnateCount`）とは別物である。
+> 以下の記述は名称を分けるより前のもので、上限+5の部分は限界突破が担う。
+
 - 現在のレベル上限到達時に転生でき、転生回数を1、レベル上限を5、選択した固有技Lvを1増やす。
 - 転生後は同種の未育成Lv1と同じ絆XP、能力値、距離適性へ戻し、使用済み強化ポイントを0、未使用強化ポイントを5にする。転生前の未使用ポイントは持ち越さない。
 - 名前、染色、転生回数、レベル上限、固有技Lv、引き継ぎ固有技、合体履歴、編成状態だけを維持する。
 - 旧仕様で転生済みの個体は、ロード時の `mh_masu_rebirth_full_reset_migrated_v1` 移行で一度だけ同じ状態へ補正する。
+
+## 7.5. 限界突破（★とレベル上限）
+
+回数は `rebirthCount`（保存キーは従来のまま）、レベル上限は `levelCap` に持つ。
+**★の色と個数は保存しない。`rebirthCount` から `breakthroughStars(count)` が毎回組み立てる。**
+
+### レベル上限
+
+| 凸数 | レベル上限 |
+|---|---|
+| 0 | 30（`INITIAL_MASU_LEVEL_CAP`） |
+| n（1〜30） | 30 + 5n（`BREAKTHROUGH_LEVEL_CAP_GAIN` = 5） |
+| 30 | 180（`BREAKTHROUGH_FINAL_LEVEL_CAP`） |
+| 31 | **200**（`MAX_MASU_LEVEL_CAP`）＝最終限界突破。以降は突破できない |
+
+30凸（上限Lv.180）に達したあとの1回だけが**最終限界突破**で、+5ではなく一気にLv.200へ上げる
+（`buildMasuBreakthrough` の `isFinal` / 戻り値の `finalBreakthrough`）。
+Lv.200へ達すると `levelCap >= MAX_MASU_LEVEL_CAP` の判定で突破できなくなる。
+費用（`masuRebirthCost`）・もらえる強化ポイント・固有技Lvアップの扱いは通常の限界突破と同じ。
+
+### ★の段階
+
+5凸で1段階が完成し、次の段階では**1個ずつ新しい色へ置き換わる**。並びは新しい色が先頭。
+
+| 段階 | 色 | 凸数 |
+|---|---|---|
+| 1 | 青 | 1〜5 |
+| 2 | 黄色 | 6〜10 |
+| 3 | ピンク | 11〜15 |
+| 4 | 紫 | 16〜20 |
+| 5 | 赤 | 21〜25 |
+| 6 | 金 | 26〜30 |
+| 最終 | 虹 | 31 |
+
+例: `1凸=青★1` / `5凸=青★5` / `6凸=黄色★1+青★4` / `11凸=ピンク★1+黄色★4` /
+`26凸=金★1+赤★4` / `30凸=金★5` / `31凸=虹★5`。
+1段階目（青）だけは前の色が無いので、5個に満たないまま凸数ぶんだけ出す。
+
+- 「黄色」と「金」を見分けられるよう、黄色は光沢無しの素の黄色（`#fde047`）、
+  金は一段濃い金色（`#f5c04a`）に上が明るく下が暗い金属的な縁取りを付ける。
+- 虹は5個それぞれを違う色にして、小さくても最終段階だと分かるようにする。常時アニメーションは使わない。
+- 旧仕様で31回を超えて進めていた個体（上限Lv.185〜195）も虹★5で表示し、
+  次の限界突破でLv.200へ入れる。既存の保存値は書き換えない。
+
+★を描くのは `RebirthStars` の1か所だけで、マスモン詳細・一覧カード・編成・放牧・限界突破/転生画面・
+HOMEの放牧マスモン・ランキングの詳細まで、すべて同じ実装を通る。限界突破の演出も同じ色を使う。
+
+回帰確認: `node tools/breakthrough-star-check.js`
 
 ## 8. 染色
 
@@ -278,4 +329,5 @@ WAVE1で諦めた場合だけはクリアWAVEが0で絆経験値の加算が起�
 - 合体詳細: `renderFusionSection` / `renderFusionDetailModal` / `normalizeFusionHistory`
 - ランキングの記録形: `RANKING_DETAIL_VERSION` / `rankingMasuDetail` / `rankingDetailToMasu`
 - 絆Lvランキングへ送る値: `submitLocalScore` / `postRunMasuMonsRef` / `runHeroBondLevelRef`
-- 回帰確認: `node tools/monster-power-check.js`、`node tools/monster-detail-unified-check.js`、`node tools/fusion-detail-check.js`、`node tools/ranking-monster-detail-check.js`、`node tools/bond-ranking-submit-check.js`、`node tools/bulk-enhance-check.js`、`node tools/dye-report.js`、`node tools/battle-check.js`
+- 限界突破の★とレベル上限: `breakthroughStars` / `BREAKTHROUGH_STAR_TIERS` / `BREAKTHROUGH_FINAL_LEVEL_CAP` / `buildMasuBreakthrough`
+- 回帰確認: `node tools/monster-power-check.js`、`node tools/monster-detail-unified-check.js`、`node tools/fusion-detail-check.js`、`node tools/ranking-monster-detail-check.js`、`node tools/bond-ranking-submit-check.js`、`node tools/breakthrough-star-check.js`、`node tools/bulk-enhance-check.js`、`node tools/dye-report.js`、`node tools/battle-check.js`

@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 01:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 01:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -271,6 +271,45 @@ const totalBreakthroughPoints = (count) => {
   const n = Math.max(0, Math.floor(Number(count) || 0));
   return n === 0 ? 0 : BREAKTHROUGH_FIRST_POINTS + BREAKTHROUGH_POINTS * (n - 1);
 };
+// ===== 限界突破の★ =====
+// 5凸で1段階が完成し、次の段階では1個ずつ新しい色へ置き換わる(例: 6凸 = 黄1 + 青4)。
+// 色は保存せず、保存してある rebirthCount から毎回組み立てる(表示用データを増やさない)。
+// 「黄色」と「金」が見分けにくくならないよう、黄色は光沢を付けない素の黄色、
+// 金は上が明るく下が暗い金属的な縁取りにして、色みも一段濃くしてある。
+const BREAKTHROUGH_STARS_PER_TIER = 5;
+const BREAKTHROUGH_STAR_TIERS = [
+  { key:'blue',   color:'#60a5fa', shadow:'0 1px 2px rgba(0,0,0,.85),0 0 3px #1d4ed8' },
+  { key:'yellow', color:'#fde047', shadow:'0 1px 2px rgba(0,0,0,.85)' },
+  { key:'pink',   color:'#f472b6', shadow:'0 1px 2px rgba(0,0,0,.85),0 0 3px #db2777' },
+  { key:'purple', color:'#c084fc', shadow:'0 1px 2px rgba(0,0,0,.85),0 0 3px #7e22ce' },
+  { key:'red',    color:'#ef4444', shadow:'0 1px 2px rgba(0,0,0,.85),0 0 3px #991b1b' },
+  { key:'gold',   color:'#f5c04a', shadow:'0 -1px 0 #fff3c4,0 1px 0 #7a4f0d,0 0 5px rgba(255,180,40,.95)' },
+];
+// 通常の限界突破で到達できる回数。段階数×5 = 30回で、そのときのレベル上限はLv.180
+const BREAKTHROUGH_MAX_COUNT = BREAKTHROUGH_STAR_TIERS.length * BREAKTHROUGH_STARS_PER_TIER;
+const BREAKTHROUGH_FINAL_LEVEL_CAP = INITIAL_MASU_LEVEL_CAP + BREAKTHROUGH_LEVEL_CAP_GAIN * BREAKTHROUGH_MAX_COUNT;
+// 最終限界突破を終えた回数。ここだけ上限が+5ではなくLv.200へ一気に上がり、★は虹になる
+const FINAL_BREAKTHROUGH_COUNT = BREAKTHROUGH_MAX_COUNT + 1;
+// 虹は5個の星それぞれを違う色にする。小さくても最終段階だと分かり、常時アニメーションも要らない
+const RAINBOW_STAR_COLORS = ['#ff5a5a','#ffa33d','#ffe14d','#5ce08a','#7aa2ff'];
+const RAINBOW_STAR_SHADOW = '0 1px 2px rgba(0,0,0,.9),0 0 4px rgba(255,255,255,.55)';
+// 凸数から★の並びを作る。新しい色を先頭に、残りは1つ前の段階の色で埋める
+const breakthroughStars = (count) => {
+  const n = Math.max(0, Math.floor(Number(count) || 0));
+  if (n <= 0) return [];
+  // 最終限界突破(31回目)以降は虹★5。旧仕様で31回以上まで進めていた個体もここへ入る
+  if (n >= FINAL_BREAKTHROUGH_COUNT) return RAINBOW_STAR_COLORS.map(color => ({ key:'rainbow', color, shadow:RAINBOW_STAR_SHADOW }));
+  const capped = Math.min(n, BREAKTHROUGH_MAX_COUNT);
+  const tierIndex = Math.floor((capped - 1) / BREAKTHROUGH_STARS_PER_TIER);
+  const filled = ((capped - 1) % BREAKTHROUGH_STARS_PER_TIER) + 1;
+  const tier = BREAKTHROUGH_STAR_TIERS[tierIndex];
+  const prev = tierIndex > 0 ? BREAKTHROUGH_STAR_TIERS[tierIndex - 1] : null;
+  const stars = Array.from({ length: filled }, () => tier);
+  // 1段階目(青)だけは前の色が無いので、5個に満たないまま出す
+  if (prev) for (let i = filled; i < BREAKTHROUGH_STARS_PER_TIER; i++) stars.push(prev);
+  return stars;
+};
+const isFinalBreakthroughCount = (count) => Math.max(0, Math.floor(Number(count) || 0)) >= FINAL_BREAKTHROUGH_COUNT;
 const REINCARNATE_MIN_LEVEL = 100;
 const REINCARNATE_LEVEL_DROP = 99;
 const REINCARNATE_POINTS = 10;
@@ -508,13 +547,19 @@ const buildMasuBreakthrough = ({ masu, skillKey, gold }) => {
   const uniqueSkillLevels = { ...normalized.uniqueSkillLevels, [skillKey]:currentSkillLevel + 1 };
   const nextCount = normalized.rebirthCount + 1;
   const gainedPoints = nextCount === 1 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS;
+  // 30凸(上限Lv.180)まで来ていたら、この1回だけが最終限界突破。
+  // 上限を+5ではなくLv.200へ一気に上げ、★は虹になる。以降は上の levelCap 判定で突破できなくなる
+  const isFinal = normalized.levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP;
+  const nextLevelCap = isFinal
+    ? MAX_MASU_LEVEL_CAP
+    : Math.min(MAX_MASU_LEVEL_CAP, normalized.levelCap + BREAKTHROUGH_LEVEL_CAP_GAIN);
   return {
-    ok:true, cost, skillKey, skillLevel:currentSkillLevel + 1, gainedPoints,
+    ok:true, cost, skillKey, skillLevel:currentSkillLevel + 1, gainedPoints, finalBreakthrough:isFinal,
     nextGold:donationDiamondValue(gold) - cost,
     nextMasu:{
       ...normalized,
       rebirthCount: nextCount,
-      levelCap: Math.min(MAX_MASU_LEVEL_CAP, normalized.levelCap + BREAKTHROUGH_LEVEL_CAP_GAIN),
+      levelCap: nextLevelCap,
       distAptPoints: Math.max(0, Math.floor(Number(normalized.distAptPoints) || 0)) + gainedPoints,
       uniqueSkillLevels,
     },
@@ -1957,13 +2002,13 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     colors: Array.isArray(colors) ? colors : [],
   };
 };
+// 限界突破の★。並びと色は breakthroughStars が保存値(rebirthCount)から組み立てる
 const RebirthStars = ({ count = 0, className = '' }) => {
   const value = Math.max(0, Math.floor(Number(count) || 0));
-  if (!value) return null;
-  const tier = Math.floor((value - 1) / 5) % 4;
-  const colors = ['#fde047','#f472b6','#ef4444','#ffffff'];
-  const shadows = ['#ca8a04','#db2777','#991b1b','#22d3ee'];
-  return <span className={`mh-rebirth-stars ${className}`} aria-label={`限界突破${value}回`}>{Array.from({length:Math.min(5, value)},(_,i)=><span key={i} style={{color:colors[tier],textShadow:tier===3?`0 0 2px #f472b6,0 0 4px ${shadows[tier]}`:`0 0 3px ${shadows[tier]}`}}>★</span>)}</span>;
+  const stars = breakthroughStars(value);
+  if (!stars.length) return null;
+  const final = isFinalBreakthroughCount(value);
+  return <span className={`mh-rebirth-stars ${className}`} aria-label={final ? `最終限界突破(${value}回)` : `限界突破${value}回`}>{stars.map((s,i)=><span key={i} style={{color:s.color,textShadow:s.shadow}}>★</span>)}</span>;
 };
 // 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま転生へ移した
 // (合体の回数は詳細の合体履歴で見られるので、アイコン上のバッジは転生だけに使う)。
@@ -8317,9 +8362,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='MASU_REBIRTH'&&(()=>{
           const selected=masuMons.find(m=>String(m.id)===String(rebirthSelectedId));
-          if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが限界突破できます。レベルはそのままで、上限だけ+{BREAKTHROUGH_LEVEL_CAP_GAIN}されます（上限Lv.{MAX_MASU_LEVEL_CAP}まで）。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey('');}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div></button>})}</div></div>; }
+          if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが限界突破できます。レベルはそのままで、上限だけ+{BREAKTHROUGH_LEVEL_CAP_GAIN}されます。{BREAKTHROUGH_MAX_COUNT}回目で上限Lv.{BREAKTHROUGH_FINAL_LEVEL_CAP}・★は金になり、その次の「最終限界突破」で上限が一気にLv.{MAX_MASU_LEVEL_CAP}・★は虹になります（そこで打ち止めです）。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey('');}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div></button>})}</div></div>; }
           const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=masuRebirthCost(lvl.level), skills=getRebirthSkillChoices(selected);
-          return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">星が1つ増えて上限が+{BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります</div><div className="text-amber-300 text-[10px] font-black">強化ポイント +{normalized.rebirthCount===0?BREAKTHROUGH_FIRST_POINTS:BREAKTHROUGH_POINTS}</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div><div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選択してください（最大Lv.8）</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}</div>{rebirthError&&<div className="text-red-300 text-[10px] my-2">{rebirthError}</div>}<button disabled={!rebirthSkillKey||gold<cost||rebirthProcessingRef.current} onClick={executeMasuBreakthrough} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">限界突破する</button></div>;
+          return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">{normalized.levelCap>=BREAKTHROUGH_FINAL_LEVEL_CAP?`最終限界突破：上限が一気にLv.${MAX_MASU_LEVEL_CAP}へ上がり、★は虹になります（これが最後の限界突破です）`:`星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`}</div><div className="text-amber-300 text-[10px] font-black">強化ポイント +{normalized.rebirthCount===0?BREAKTHROUGH_FIRST_POINTS:BREAKTHROUGH_POINTS}</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div><div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選択してください（最大Lv.8）</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}</div>{rebirthError&&<div className="text-red-300 text-[10px] my-2">{rebirthError}</div>}<button disabled={!rebirthSkillKey||gold<cost||rebirthProcessingRef.current} onClick={executeMasuBreakthrough} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">限界突破する</button></div>;
         })()}
 
         {/* 転生: Lv100以上で使える。レベルを99ぶん返す代わりに、振った強化をすべて振り直せる */}
@@ -8369,14 +8414,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {levelCapCompensation&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50000,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center"><Gem size={38} className="text-amber-300 mx-auto mb-3"/><h2 className="font-black text-lg mb-2">Lv30上限補償</h2><p className="text-[11px] text-slate-300 leading-relaxed">Lv30を超えていた未限界突破マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。</p><div className="text-2xl text-amber-300 font-black my-4">+{levelCapCompensation.diamonds.toLocaleString()} ダイヤ</div><button onClick={()=>{setLevelCapCompensation(null);storeSet('mh_masu_level_cap_compensation_notice_seen_v1',true,false);}} className="w-full bg-amber-500 text-black py-3 rounded-2xl font-black">受け取る</button></div></div>}
         {/* 限界突破の演出。転生とは別物なので専用の見た目にし、最後に星が1つ増える */}
         {rebirthAnimation&&(()=>{
-          const stars=Math.min(5, Math.max(1, rebirthAnimation.masu.rebirthCount||1));
+          const starList=breakthroughStars(rebirthAnimation.masu.rebirthCount||1);
+          const finalBreak=isFinalBreakthroughCount(rebirthAnimation.masu.rebirthCount);
           return <div className="mh-breakthrough-animation" role="status" aria-live="polite">
             <div className="mh-breakthrough-beam"></div>
             <div className="mh-breakthrough-ring"></div>
             <div className="mh-breakthrough-cap">レベル上限<b>Lv.{rebirthAnimation.masu.levelCap}</b></div>
             <div className="mh-breakthrough-mon"><DyedMonsterImage baseId={rebirthAnimation.masu.baseId} src={rebirthAnimation.base?.iconUrl} alt={rebirthAnimation.masu.name} masuColors={getMasuColors(rebirthAnimation.masu)} className="w-full h-full object-contain"/></div>
-            <div className="mh-breakthrough-stars" aria-hidden="true">{Array.from({length:stars},(_,i)=><i key={i} className={i===stars-1?'is-new':'is-old'}>★</i>)}</div>
-            <div className="mh-breakthrough-copy"><b>限界突破！</b><span>★ が1つ増えました</span><span>{rebirthAnimation.skillName} Lv.{rebirthAnimation.skillLevel}へ進化</span><span>強化ポイント +{rebirthAnimation.gainedPoints}</span></div>
+            {/* 新しく増えた★は先頭。最終限界突破では5個とも虹になるので全部を「増えた★」として光らせる */}
+            <div className="mh-breakthrough-stars" aria-hidden="true">{starList.map((s,i)=><i key={i} className={(finalBreak||i===0)?'is-new':'is-old'} style={{color:s.color,textShadow:s.shadow}}>★</i>)}</div>
+            <div className="mh-breakthrough-copy"><b>{finalBreak?'最終限界突破！':'限界突破！'}</b><span>{finalBreak?'★ が虹になりました':'★ が1つ増えました'}</span><span>{rebirthAnimation.skillName} Lv.{rebirthAnimation.skillLevel}へ進化</span><span>強化ポイント +{rebirthAnimation.gainedPoints}</span></div>
           </div>;
         })()}
         {/* 転生の演出。これまでの転生(＝いまの限界突破)の見た目をそのまま引き継ぐ */}

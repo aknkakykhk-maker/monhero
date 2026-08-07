@@ -12,6 +12,8 @@ const check = (label, ok) => {
 const uniqueChunk = source.slice(source.indexOf('const uniqueSkillAtLevel'), source.indexOf('// 転生では個体'));
 const uniqueContext = {
   INITIAL_MASU_LEVEL_CAP:30,
+  // 切り出した範囲に限界突破の★の定数が含まれるので、外にある値だけ補う
+  BREAKTHROUGH_LEVEL_CAP_GAIN:5,
   ALL_PLAYER_MONSTERS: {
     Ham: { unique:{ monId:'Ham', names:['おなら'] } },
     Golem: { unique:{ monId:'Golem', names:['合掌','フライングプレス','竜巻アタック'] } },
