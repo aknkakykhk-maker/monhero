@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 00:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 00:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1855,7 +1855,8 @@ const fusionHistoryHasDetail = (list) => Array.isArray(list) && list.some(h => h
 const RANKING_FUSION_MAX = 12;
 // v1: 育て方(ステータス・間合い適性・固有技Lv)＋合体回数だけ
 // v2: 記録時点の総合力(power)と、合体履歴の中身(fusion)を追加。v1の項目はそのまま残す
-const RANKING_DETAIL_VERSION = 2;
+// v3: 転生回数(reincarnateCount)を追加。v1・v2は持っていないので、読むときは0へ倒す
+const RANKING_DETAIL_VERSION = 3;
 const rankingMasuDetail = (masu) => {
   if (!masu) return null;
   const sp = masu.statPoints || {};
@@ -1870,6 +1871,8 @@ const rankingMasuDetail = (masu) => {
     name: typeof masu.name === 'string' ? masu.name.slice(0, 24) : null,
     bondXp: num(masu.bondXp),
     rebirthCount: num(masu.rebirthCount),
+    // 転生回数。詳細の上部サマリーで「転生 +N」を出すのに要る
+    reincarnateCount: num(masu.reincarnateCount),
     levelCap: num(masu.levelCap) || null,
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // 間合い適性は「グレードの文字」の配列(['C','M','C','C'] など)。数値ではないので
@@ -1916,6 +1919,8 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     name: (typeof detail.name === 'string' && detail.name.trim()) ? detail.name : (ALL_PLAYER_MONSTERS[baseId]?.name || 'マスモン'),
     bondXp: num(detail.bondXp),
     rebirthCount: num(detail.rebirthCount),
+    // 転生回数はv3から。持っていない古い記録は0になる(転生していない扱い)
+    reincarnateCount: num(detail.reincarnateCount),
     levelCap: num(detail.levelCap) || INITIAL_MASU_LEVEL_CAP,
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // グレード以外(数値へ潰してしまった古い記録など)が入っていたら、その記録には
@@ -3778,6 +3783,15 @@ function MonsterHeroGame() {
   const [levelCapCompensation, setLevelCapCompensation] = useState(null);
   const masuMonsRef = useRef(masuMons);
   masuMonsRef.current = masuMons;
+  // ランの報酬を配ったあとのマスモン。setMasuMons の反映は非同期なので、同じ処理の続きで走る
+  // ランキング送信からは「そのランで増えた絆経験値が入る前」の値しか見えなかった。
+  // そのため、ランキングへ送る絆Lvと育て方が1ラン遅れていた
+  const postRunMasuMonsRef = useRef(null);
+  // 勇者モンがまだマスモンでないとき、そのランでためた絆経験値ぶんの絆Lv。
+  // リザルトで「マスモンとして登録」するとこの経験値がそのまま初期値になるので、
+  // 登録後の個体が到達する絆Lvと同じ値になる。
+  // これが無いと、ベースモンで遊んだランは絆Lvランキングへ1件も載らなかった
+  const runHeroBondLevelRef = useRef(null);
   const [finalRewardSummary, setFinalRewardSummary] = useState(null); // 最終リザルト画面に出す今回の獲得内訳
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
@@ -5019,14 +5033,24 @@ function MonsterHeroGame() {
     // ランキングでは素の色でしか出せない。色コードが数個ぶんなので容量は増えない。
     // 染めていない子には colors を付けない(記録の形をこれまでと同じに保つ)。
     // 色は rankingPartyColors で部位の位置を保ったまま作る(詰めると別の部位が染まる)。
+    // 絆Lvランキングはこの party[].bondLevel を集計している。
+    // マスモンは「そのランの絆経験値を加算したあと」の個体を見る(postRunMasuMonsRef)。
+    // 加算はsetMasuMonsで非同期に反映されるため、stateを直接読むと1ラン遅れた絆Lvを送ってしまう
+    const masuForRanking = (masuId) => (postRunMasuMonsRef.current || masuMonsRef.current || masuMons)
+      .find(m => String(m.id) === String(masuId)) || null;
     const party = slots.map((s,index) => {
       if (!s) return null;
       const colors = rankingPartyColors(s.id, s.colors);
       const dyed = colors.some(Boolean);
       // 育て方(ステータス・間合い適性・固有技Lv)は、編成の詳細から1体ずつ見られるように残す。
       // 育てていないベースモンは種のデータだけで表示できるので、マスモンのときだけ付ける。
-      const detail = s.masuId ? rankingMasuDetail(getMasuMon(s.masuId)) : null;
-      return { role:index===heroSlotIndex?'hero':'ally', id:s.id, baseId:s.id, monsterId:s.id, masuId:s.masuId||null, name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji:s.emoji||ALL_PLAYER_MONSTERS[s.id]?.emoji||null, bondLevel:s.masuId?getMasuBondLevel(s.masuId).level:null, ...(dyed ? { colors } : {}), ...(detail ? { detail } : {}) };
+      const masu = s.masuId ? masuForRanking(s.masuId) : null;
+      const detail = masu ? rankingMasuDetail(masu) : null;
+      // マスモンならその絆Lv。まだマスモンでない勇者モンは、このランでためた絆経験値ぶんの絆Lvを送る
+      // (登録すればそのままその絆Lvの個体になる)。供モンのベースモンには絆の概念が無いのでnull
+      const bondLevel = masu ? masuBondLevelInfo(masu).level
+        : (index === heroSlotIndex ? runHeroBondLevelRef.current : null);
+      return { role:index===heroSlotIndex?'hero':'ally', id:s.id, baseId:s.id, monsterId:s.id, masuId:s.masuId||null, name: ALL_PLAYER_MONSTERS[s.id]?.name || s.name, emoji:s.emoji||ALL_PLAYER_MONSTERS[s.id]?.emoji||null, bondLevel: bondLevel ?? null, ...(dyed ? { colors } : {}), ...(detail ? { detail } : {}) };
     });
     const name = breederName || '名無しのブリーダー';
     const heroName = (mainHero && (ALL_PLAYER_MONSTERS[mainHero.id]?.name || mainHero.name)) || 'Unknown';
@@ -5793,6 +5817,10 @@ function MonsterHeroGame() {
     // awaitより前に同期ロックする。敗北effectとボタン連打が同時に到達しても報酬は一度だけ。
     if (rewardsAwardedRef.current) return;
     rewardsAwardedRef.current = true;
+    // 前のランの値が残らないよう、報酬を配りはじめる時点でいったん空にする
+    // (WAVEを1つもクリアできなかったランは下で早期に戻るため、ここで消しておく必要がある)
+    postRunMasuMonsRef.current = null;
+    runHeroBondLevelRef.current = null;
     // 敗北・リタイア時は未決着だった現在WAVEを「挑戦」にだけ数える。勝利WAVEは撃破時に記録済み。
     if (wavesCleared < wave) await saveMissionProgress('battle');
     if (wavesCleared <= 0) { setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain: 0, breederLevelBefore: breederLevel, breederLevelAfter: breederLevel, goldBefore: gold, goldAfter: gold, heroBondGain: null, allyBondGains: [], waveHistory }); return; }
@@ -5859,16 +5887,22 @@ function MonsterHeroGame() {
     }).filter(Boolean);
 
     if (bondAwards.length > 0) {
-      setMasuMons(prev => {
-        const next = prev.map(m => {
-          const award = awardByMasuId.get(String(m.id));
-          if (!award) return m;
-          return applyBondXpGain(m, award.gain).masu;
-        });
-        storeSet('mh_masu_mons', next, false);
-        return next;
+      // 加算後の配列をこの場で作る。setMasuMons の更新関数の中だけで作っていたころは、
+      // 続けて走るランキング送信からは加算前の値しか見えなかった
+      const next = (masuMonsRef.current || masuMons).map(m => {
+        const award = awardByMasuId.get(String(m.id));
+        if (!award) return m;
+        return applyBondXpGain(m, award.gain).masu;
       });
+      masuMonsRef.current = next;
+      postRunMasuMonsRef.current = next;
+      setMasuMons(next);
+      storeSet('mh_masu_mons', next, false);
     }
+    // 勇者モンがまだマスモンでないときは、このランでためた絆経験値ぶんの絆Lvを覚えておく。
+    // ランキングにはこの値を送る(登録すればそのまま同じ絆Lvの個体になる)
+    runHeroBondLevelRef.current = (heroBondGain && heroBondGain.masuId == null && heroBondGain.xpGain > 0)
+      ? heroBondGain.levelAfter.level : null;
 
     setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory });
   };

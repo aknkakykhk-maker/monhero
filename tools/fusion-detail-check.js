@@ -77,7 +77,7 @@ check('知らない種の履歴から名前を作らない', (() => {
 })());
 
 // ===== 2. ランキングの記録 =====
-check('ランキング詳細のバージョンが上がっている', RANKING_DETAIL_VERSION >= 2, `v${RANKING_DETAIL_VERSION}`);
+check('ランキング詳細のバージョンが上がっている', RANKING_DETAIL_VERSION >= 3, `v${RANKING_DETAIL_VERSION}`);
 const detail = rankingMasuDetail(localMasu);
 check('記録にバージョンが入る', detail.v === RANKING_DETAIL_VERSION);
 
@@ -114,6 +114,12 @@ check('復元した履歴が元と同じ',
   restoredHistory.map(h => `${h.subName}:${h.xpGained}`).join(','));
 check('復元した継承技も戻る', restoredHistory[1].inherited === true && !!restoredHistory[1].inheritedUnique);
 check('復元した総合力スナップショットが残る', restored.powerSnapshot === livePower, String(restored.powerSnapshot));
+// 転生回数(v3で追加)。詳細の上部サマリーで「転生 +N」を出すのに要る
+check('記録に転生回数が残る', detail.reincarnateCount === 1, String(detail.reincarnateCount));
+check('復元した転生回数が元と同じ', restored.reincarnateCount === localMasu.reincarnateCount, String(restored.reincarnateCount));
+check('限界突破と転生を取り違えていない',
+  detail.rebirthCount === localMasu.rebirthCount && detail.reincarnateCount === localMasu.reincarnateCount,
+  `限界突破=${detail.rebirthCount} 転生=${detail.reincarnateCount}`);
 const restoredMany = rankingDetailToMasu('Golem', manyDetail, []);
 check('上限で切った記録でも本当の合体回数が分かる', restoredMany.fusionRecordedCount === 30);
 
@@ -125,6 +131,7 @@ const oldDetail = { v: 1, name: 'ふるいこ', bondXp: 12000, rebirthCount: 1, 
 let oldRestored = null;
 check('古い記録でも落ちない', (() => { try { oldRestored = rankingDetailToMasu('Golem', oldDetail, []); return !!oldRestored; } catch (e) { return false; } })());
 check('古い記録には総合力スナップショットが無い(0にしない)', oldRestored.powerSnapshot === null, String(oldRestored.powerSnapshot));
+check('転生回数を持たない古い記録は0にする(推測しない)', oldRestored.reincarnateCount === 0, String(oldRestored.reincarnateCount));
 check('古い記録でも合体回数は分かる', oldRestored.fusionHistory.length === 3 && oldRestored.fusionRecordedCount === 3);
 check('古い記録から架空の合体履歴を作らない',
   fusionHistoryHasDetail(normalizeFusionHistory(oldRestored)) === false,

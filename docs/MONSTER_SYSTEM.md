@@ -146,6 +146,7 @@ max(1, round(50 × level^1.4 × 0.05))
 |---|---|
 | v1 | 名前・絆XP・限界突破・Lv上限・強化ステータス・間合い適性・強化P・固有技Lv・継承技(monId+Lv)・`fusionCount` |
 | v2 | `power`（記録時点の総合力）と `fusion`（合体履歴の中身） |
+| v3 | `reincarnateCount`（転生回数）。v1・v2 は持たないので読むときは 0 へ倒す |
 
 - `power` は必ず共通の `monsterPowerOf(mergeMasuIntoMon(masu))` で作る。ランキング専用の式は作らない。
   あとで種のバランス・能力・距離適性・固有技を変えても、過去の記録の数字が動かないようにするためのもの。
@@ -161,6 +162,27 @@ max(1, round(50 × level^1.4 × 0.05))
   **0 を総合力として表示しない**（分からないときは `—`）。
 - v1 の記録には `fusion` が無い。`fusionCount` ぶんの空の項目だけを置き、履歴の中身は作らない。
 - 壊れた記録（`fusion` が配列でない、`power` が負や文字列）でも落ちず、既定値へ倒す。
+
+### 絆Lvランキングへ何を送るか
+
+絆Lvランキングは、記録の `party[].bondLevel` を `collectBondRankingEntries` で集計している。
+つまり**載るかどうかは送信側で `bondLevel` を入れているかで決まる**。`submitLocalScore` の決まりは次のとおり。
+
+- マスモンの枠 … **そのランの絆経験値を加算したあと**の個体（`postRunMasuMonsRef`）から絆Lvを出す。
+  `setMasuMons` の反映は非同期なので、state を直接読むと1ラン遅れた絆Lvを送ってしまう。
+  同じ理由で `detail`（育て方・総合力スナップショット）も加算後の個体から作る。
+- まだマスモンでない勇者モンの枠 … そのランでためた絆経験値ぶんの絆Lv（`runHeroBondLevelRef`）を送る。
+  リザルトで「マスモンとして登録」するとこの経験値がそのまま初期値になるので、
+  登録後の個体が到達する絆Lvと同じ値になる。
+  これが無いと、ベースモンで遊んだランは絆Lvランキングへ1件も載らなかった
+  （登録はスコア送信より後なので、その記録には間に合わない）。
+- 供モンのベースモンの枠 … 絆の概念が無いので `null`（送らない）。
+
+集計側は `masuId` があれば `masu:<id>`、無ければ `legacy:<種ID>` で個体を数える。
+同じ人・同じ種で両方の記録があるときは個体ID付きへ寄せるので、
+登録前の記録と登録後の記録が二重に並ぶことはない。
+
+回帰確認: `node tools/bond-ranking-submit-check.js`、`node tools/bond-ranking-check.js`
 
 ### ランキングの詳細は readOnly
 
@@ -229,4 +251,5 @@ max(1, round(50 × level^1.4 × 0.05))
 - 一覧カードのマスターUI: `renderMonsterCardBody`
 - 合体詳細: `renderFusionSection` / `renderFusionDetailModal` / `normalizeFusionHistory`
 - ランキングの記録形: `RANKING_DETAIL_VERSION` / `rankingMasuDetail` / `rankingDetailToMasu`
-- 回帰確認: `node tools/monster-power-check.js`、`node tools/monster-detail-unified-check.js`、`node tools/fusion-detail-check.js`、`node tools/ranking-monster-detail-check.js`、`node tools/bulk-enhance-check.js`、`node tools/dye-report.js`、`node tools/battle-check.js`
+- 絆Lvランキングへ送る値: `submitLocalScore` / `postRunMasuMonsRef` / `runHeroBondLevelRef`
+- 回帰確認: `node tools/monster-power-check.js`、`node tools/monster-detail-unified-check.js`、`node tools/fusion-detail-check.js`、`node tools/ranking-monster-detail-check.js`、`node tools/bond-ranking-submit-check.js`、`node tools/bulk-enhance-check.js`、`node tools/dye-report.js`、`node tools/battle-check.js`
