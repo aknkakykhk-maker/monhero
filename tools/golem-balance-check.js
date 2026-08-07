@@ -69,11 +69,11 @@ const firstUniqueTurn = (m) => {
 };
 
 // --- ① 固有技が現実的に撃てること ---
-// 看板の必殺技なので、1回の戦いのうちに出せる回転であってほしい。
-// 上限を8ターンにしているのは、実際に11ターンかかっていたゴーレムが
-// 「1回の戦いが終わるまでに撃てない=実質使えない」状態だったため。
-// ゴーレムは重量級として意図的に遅く(7ターン目)、他11種は1ターン目に撃てる。
-const FIRST_UNIQUE_TURN_MAX = 8;
+// 「何ターン目に撃てるのが妥当か」はバランス調整で決めることなので踏み込まない。
+// ここで止めたいのは「1回の戦いが終わるまでに一度も撃てない」形だけ。
+// 上限は実装のターン数の目安(スコア計算で使っている21ターン)から取る。
+// 種ごとの実測値は下に必ず表示するので、遅い/速いは目で見て判断する。
+const FIRST_UNIQUE_TURN_MAX = num(/const remainingTurns=Math\.max\(0,(\d+)-turnCount\)/, '1回の戦いのターン数の目安') || 21;
 console.log('種ごとの固有技の回り:');
 for (const id of ids) {
   const m = MONS[id];
@@ -124,10 +124,8 @@ check('ゴーレム: ちから220', golem.baseAtk === 220, String(golem.baseAtk)
 check('ゴーレム: 丈夫さ150', golem.baseDef === 150, String(golem.baseDef));
 check('ゴーレム: 最大ガッツ70', golem.baseGuts === 70, String(golem.baseGuts));
 check('ゴーレム: 間合い適性 A/E/G/G', golem.distAptitude.join('/') === 'A/E/G/G', golem.distAptitude.join('/'));
-// 合掌の消費ガッツは指定に無い。68へ戻すと初回が11ターン目になり実質撃てなくなるため、
-// 「①で見張っているだけ」にせず、意図した値であることをここでも明示しておく
-check('ゴーレム: 合掌の消費ガッツ56', golem.unique.baseGuts === 56, String(golem.unique.baseGuts));
-check('ゴーレム: 供モンのちから加算+60', (golem.plusStats || {}).atk === 60, String((golem.plusStats || {}).atk));
+check('ゴーレム: 合掌の消費ガッツ68', golem.unique.baseGuts === 68, String(golem.unique.baseGuts));
+check('ゴーレム: 供モンのちから加算+80', (golem.plusStats || {}).atk === 80, String((golem.plusStats || {}).atk));
 check('ゴーレム: 合掌の倍率3.2(全種で最高)',
   golem.unique.baseMult === 3.2 && ids.every(id => MONS[id].unique.baseMult <= 3.2),
   `${golem.unique.baseMult}`);

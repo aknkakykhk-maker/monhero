@@ -22,12 +22,12 @@ const ALL_PLAYER_MONSTERS = {
   // ゴーレムは「一撃が重い代わりにガッツが続かず、零距離でしか戦えない」重量級。
   // ライフ600・ちから220・丈夫さ150・ガッツ70・間合い適性A/E/G/Gと、固有技「合掌」の
   // 効果(闘志)7.5%はユーザー指定の値。変えるときは指示を確認すること。
+  // 合掌の消費ガッツ68と供モンのちから加算+80も、ユーザーの指示で元の値に戻したもの。
   //
-  // 合掌の消費ガッツだけは指定に無いため56のままにしてある(元は68)。最大ガッツ70に
-  // 対して消費68だと、自動回復(最大の5%=3/ターン)では初めて撃てるのが11ターン目に
-  // なり、看板の必殺技が実質使えず「闘志」も積めないまま終わっていたため。
-  // 56なら7ターン目に撃てる。ここを68へ戻すとその不具合が再発する。
-  Golem:  { id:'Golem',  name:"ゴーレム", emoji:"🗿", imgUrl:GOLEM_IMG, iconUrl:GOLEM_ICON, faceIconUrl:GOLEM_FACE_ICON, atkMotion:'default', trait:"怪力", traitDesc:"勇者モン選択時：与ダメージ20%増加", baseHp:600, baseGuts:70, baseAtk:220, baseDef:150, plusStats:{hp:400,atk:60,def:0,guts:0}, distAptitude:['A','E','G','G'], unique:{name:"合掌",icon:GOLEM_ICON,monId:"Golem",baseMult:3.2,baseGuts:56,evoLevel:0,names:["合掌","フライングプレス","竜巻アタック","ぐるぐるアタック","大岩落とし","隕石落とし","超竜巻アタック","超ぐるぐるアタック","銀河破壊"],effectDesc:"闘志：味方の与ダメージ7.5%アップ(永続)"}},
+  // 合掌はガッツを貯めるだけの場合、初めて撃てるのが11ターン目になる(最大70・開始35・
+  // 自動回復3/ターンで消費68)。他の11種は1ターン目に撃てるので、これはゴーレムだけの
+  // 「重い」性格として意図した値。tools/golem-balance-check.js が実測して表示する。
+  Golem:  { id:'Golem',  name:"ゴーレム", emoji:"🗿", imgUrl:GOLEM_IMG, iconUrl:GOLEM_ICON, faceIconUrl:GOLEM_FACE_ICON, atkMotion:'default', trait:"怪力", traitDesc:"勇者モン選択時：与ダメージ20%増加", baseHp:600, baseGuts:70, baseAtk:220, baseDef:150, plusStats:{hp:400,atk:80,def:0,guts:0}, distAptitude:['A','E','G','G'], unique:{name:"合掌",icon:GOLEM_ICON,monId:"Golem",baseMult:3.2,baseGuts:68,evoLevel:0,names:["合掌","フライングプレス","竜巻アタック","ぐるぐるアタック","大岩落とし","隕石落とし","超竜巻アタック","超ぐるぐるアタック","銀河破壊"],effectDesc:"闘志：味方の与ダメージ7.5%アップ(永続)"}},
   Tiger:  { id:'Tiger',  name:"ライガー", emoji:"🐺", imgUrl:TIGER_IMG, iconUrl:TIGER_ICON, faceIconUrl:TIGER_FACE_ICON, atkMotion:'default', trait:"俊足", traitDesc:"勇者モン選択時：50%の確率で攻撃を回避", baseHp:400, baseGuts:110, baseAtk:150, baseDef:80, plusStats:{hp:200,atk:50,def:50,guts:0}, distAptitude:['C','B','D','D'], unique:{name:"雷撃",icon:TIGER_ICON,monId:"Tiger",baseMult:2.3,baseGuts:46,evoLevel:0,names:["雷撃","冷気弾","超雷撃","ブリザード","突き刺し","落雷共鳴","かがやきいき","ライジングブースト","氷雷突殺"],effectDesc:"ロックオン：次ターン会心確定＆会心率+2%・会心ダメージ+2%(永続/重複可)"}},
   Ham:    { id:'Ham',    name:"ハム", emoji:"🐹", imgUrl:HAM_IMG, iconUrl:HAM_ICON, faceIconUrl:HAM_FACE_ICON, atkMotion:'default', trait:"連続攻撃", traitDesc:"勇者モン選択時：同時使用可能枚数+1", baseHp:350, baseGuts:120, baseAtk:110, baseDef:70, plusStats:{hp:150,atk:60,def:0,guts:20}, distAptitude:['B','B','D','D'], unique:{name:"おなら",icon:HAM_ICON,monId:"Ham",baseMult:2.0,baseGuts:40,evoLevel:0,names:["おなら","瞬撃","大放屁","暗けい","フラフラダンス","超放屁","超暗けい","デンプシーロール","マジワンツー"],effectDesc:"スタン：このターン、敵を行動不能にする"}},
   Pixie:  { id:'Pixie',  name:"ピクシー", emoji:"🧚", imgUrl:PIXIE_IMG, iconUrl:PIXIE_ICON, faceIconUrl:PIXIE_FACE_ICON, atkMotion:'default', trait:"魔力開放", traitDesc:"勇者モン選択時：固有技のダメージが2倍", baseHp:250, baseGuts:140, baseAtk:160, baseDef:50, plusStats:{hp:100,atk:20,def:0,guts:60}, distAptitude:['G','F','B','A'], unique:{name:"バン",icon:PIXIE_ICON,monId:"Pixie",baseMult:2.1,baseGuts:42,evoLevel:0,names:["バン","ギガレイ","ギガサンダー","ビッグバン","ギガライトニング","コズミッグバン","テラレイ","テラバン","ドラゴ・ノヴァ"],effectDesc:"魔法空間：次ターン、カード消費ガッツ0"}},
