@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 13:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 14:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1364,7 +1364,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
 const MASU_COLOR_REGION_DYE = {
   // アークは3部位とも色が乗りすぎて重く見えたため、sat で全体を控えめにしている。
   // 染色②は白い部分なので比例させず(gloss なし)、そのぶん sat を強めに下げる。
-  Ark: [{ gloss: 0.85, sat: 0.85 }, { sat: 0.72 }, { gloss: 0.45, sat: 0.85 }],
+  Ark: [{ gloss: 1.0, sat: 0.85 }, { sat: 0.72 }, { gloss: 0.45, sat: 0.85 }],
   Tiger: { gloss: true },
   Mocchi: { gloss: 0.22 },
 };
@@ -2032,6 +2032,14 @@ const COMPENSATION_GIFTS = [
       { type:'skipTicketJo', amount:1 },
       { type:'skipTicketHa', amount:1 },
       { type:'skipTicketKyu', amount:1 },
+    ],
+  },
+  {
+    id: 'gift_compensation_20260807_dye',
+    title: 'お詫びのしるし',
+    description: 'アークの染色で、色が入らなかったり濃く出すぎたりしていた不具合のお詫びです。染めなおしにお使いください。ご迷惑をおかけしました。',
+    rewards: [
+      { type:'dyeMock', amount:5 },
     ],
   },
 ];

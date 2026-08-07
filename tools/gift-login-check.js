@@ -44,6 +44,17 @@ check('2回目は配らない',grantCompensationGifts(comp.gifts,at('2026-08-01T
 check('受取済みでも再配布しない',grantCompensationGifts(comp.gifts.map(g=>({...g,claimedAt:'2026-08-01T00:00:00.000Z'})),at('2026-08-02T00:00:00Z')).granted===false);
 check('既存のギフトは消さない',grantCompensationGifts([{id:'other'}],at('2026-07-31T00:00:00Z')).gifts.some(g=>g.id==='other'));
 check('お詫びのラベルが付く',giftTitleDisplay(comp.gifts[0]).label==='お詫び');
+// 染色のお詫び(染色もどき5個)。すでに配ったお詫びを消したり、数を変えたりしていないか
+const dyeId='gift_compensation_20260807_dye';
+check('染色のお詫びが入っている',comp.gifts.some(g=>g.id===dyeId));
+check('染色もどきが5個',compReward(dyeId,'dyeMock')===5);
+check('染色のお詫びも受取可能な形式',!!normalizeGiftRewards(comp.gifts.find(g=>g.id===dyeId)));
+// すでに配ったお詫びを受け取り済みの人へ、染色のぶんだけが追加で届くこと
+const onlyOld=COMPENSATION_GIFTS.filter(d=>d.id!==dyeId).map(d=>({...d,claimedAt:'2026-08-01T00:00:00.000Z'}));
+const addDye=grantCompensationGifts(onlyOld,at('2026-08-07T00:00:00Z'));
+check('過去のお詫びを受け取り済みでも染色のぶんは届く',addDye.granted&&addDye.gifts.filter(g=>g.id===dyeId).length===1);
+check('過去のお詫びを重ねて配らない',addDye.gifts.filter(g=>g.id!==dyeId).length===onlyOld.length);
+check('染色のお詫びも2回目は配らない',grantCompensationGifts(addDye.gifts,at('2026-08-08T00:00:00Z')).granted===false);
 check('起動時にお詫びも配る',source.includes('const compensationGrant = grantCompensationGifts(loginGrant.gifts);')&&source.includes('if (loginGrant.granted || compensationGrant.granted)'));
 
 process.exit(failed?1:0);
