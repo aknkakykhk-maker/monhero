@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 11:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 11:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9540,10 +9540,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       ムーは丸枠の外へ巨大に描いており、丸枠の中に置くと本体の裏へ回ってしまうため、
                       必殺技の警告と同じく画面基準(fixed)で前面に出す */}
                   {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&enemyNextIntent.type==='MOVE'&&(
-                    <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none" style={{top:'22%',zIndex:65000}}>
+                    // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
+                    // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
+                    <div className="fixed left-1/2 pointer-events-none" style={{top:'22%',transform:'translateX(calc(min(50vw, 300px) - 100% - 8px))',zIndex:65000}}>
                       <div className="mh-enemy-move-hint">
                         <span aria-hidden="true">🏃</span>
-                        <span>つぎ <b>{RANGE_LABELS[enemyNextIntent.targetDist]}距離</b>へ動く…！</span>
+                        <span>{RANGE_LABELS[enemyNextIntent.targetDist]}距離に移動しようとしている…？</span>
                       </div>
                     </div>
                   )}
@@ -11336,21 +11338,24 @@ const createAnimationStyle = () => {
     /* 次のターンに間合いを変える、という敵のつぶやき。
        文字だけだと背景に埋もれるので、しっぽ付きの吹き出しにして敵の右上に出す */
     /* 次のターンに間合いを変える、という敵のつぶやき。
-       小さすぎて読み飛ばされていたので、必殺技の警告と同じくらいの大きさにし、
-       「つぎ ◯距離へ動く」と行き先まで文章で書く */
+       大きくすると敵の絵を隠してしまうので、画面下の行動予告バッジと同じ大きさにして
+       右へ寄せる。読み取れるように行き先は文章で書く */
     .mh-enemy-move-hint {
-      position: relative; display: flex; align-items: center; gap: 7px;
-      padding: 7px 15px; border-radius: 15px;
-      border: 2px solid #67e8f9; background: linear-gradient(135deg, #083344f5, #0e4f63f5); color: #ecfeff;
-      font-size: 15px; font-weight: 1000; letter-spacing: .06em; white-space: nowrap;
-      text-shadow: 0 2px 4px #000;
-      box-shadow: 0 4px 14px #000b, 0 0 22px #22d3ee88;
+      position: relative; display: flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 999px;
+      border: 1px solid #22d3ee99; background: #083344f2; color: #cffafe;
+      /* font のまとめ書きは font-family に inherit を書けず、指定ごと無効になる。
+         大きさが効かず敵の絵を隠してしまったので、個別に書く */
+      font-size: 9px; font-weight: 1000; line-height: 1.4;
+      letter-spacing: -.01em; white-space: nowrap;
+      text-shadow: 0 1px 3px #000;
+      box-shadow: 0 2px 8px #000a;
       animation: moveHintBob 1200ms ease-in-out infinite;
     }
-    .mh-enemy-move-hint b { color: #fde68a; font-size: 17px; }
+    .mh-enemy-move-hint span:first-child { font-size: 10px; }
     .mh-enemy-move-hint::after {
-      content: ''; position: absolute; left: 50%; margin-left: -7px; bottom: -8px;
-      border: 7px solid transparent; border-top-color: #67e8f9;
+      content: ''; position: absolute; right: 16px; bottom: -6px;
+      border: 5px solid transparent; border-top-color: #22d3ee99;
     }
     @keyframes moveHintBob {
       0%,100% { transform: translateY(0); }

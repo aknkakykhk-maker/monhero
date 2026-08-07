@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0003322c047d11ef
+// source-sha256: 2e1ee7be4750b212
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 11:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 11:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -20250,17 +20250,22 @@ function MonsterHeroGame() {
       style: {
         animation: 'idleExclaim 1100ms ease-in-out infinite'
       }
-    }, "\u2757")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' && /*#__PURE__*/React.createElement("div", {
-      className: "fixed left-1/2 -translate-x-1/2 pointer-events-none",
+    }, "\u2757")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
+    /*#__PURE__*/
+    // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
+    // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
+    React.createElement("div", {
+      className: "fixed left-1/2 pointer-events-none",
       style: {
         top: '22%',
+        transform: 'translateX(calc(min(50vw, 300px) - 100% - 8px))',
         zIndex: 65000
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "mh-enemy-move-hint"
     }, /*#__PURE__*/React.createElement("span", {
       "aria-hidden": "true"
-    }, "\uD83C\uDFC3"), /*#__PURE__*/React.createElement("span", null, "\u3064\u304E ", /*#__PURE__*/React.createElement("b", null, RANGE_LABELS[enemyNextIntent.targetDist], "\u8DDD\u96E2"), "\u3078\u52D5\u304F\u2026\uFF01"))), enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
+    }, "\uD83C\uDFC3"), /*#__PURE__*/React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "\u8DDD\u96E2\u306B\u79FB\u52D5\u3057\u3088\u3046\u3068\u3057\u3066\u3044\u308B\u2026\uFF1F"))), enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
     }, /*#__PURE__*/React.createElement("div", {
       className: "absolute -inset-6 rounded-full",
@@ -24382,21 +24387,24 @@ const createAnimationStyle = () => {
     /* 次のターンに間合いを変える、という敵のつぶやき。
        文字だけだと背景に埋もれるので、しっぽ付きの吹き出しにして敵の右上に出す */
     /* 次のターンに間合いを変える、という敵のつぶやき。
-       小さすぎて読み飛ばされていたので、必殺技の警告と同じくらいの大きさにし、
-       「つぎ ◯距離へ動く」と行き先まで文章で書く */
+       大きくすると敵の絵を隠してしまうので、画面下の行動予告バッジと同じ大きさにして
+       右へ寄せる。読み取れるように行き先は文章で書く */
     .mh-enemy-move-hint {
-      position: relative; display: flex; align-items: center; gap: 7px;
-      padding: 7px 15px; border-radius: 15px;
-      border: 2px solid #67e8f9; background: linear-gradient(135deg, #083344f5, #0e4f63f5); color: #ecfeff;
-      font-size: 15px; font-weight: 1000; letter-spacing: .06em; white-space: nowrap;
-      text-shadow: 0 2px 4px #000;
-      box-shadow: 0 4px 14px #000b, 0 0 22px #22d3ee88;
+      position: relative; display: flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 999px;
+      border: 1px solid #22d3ee99; background: #083344f2; color: #cffafe;
+      /* font のまとめ書きは font-family に inherit を書けず、指定ごと無効になる。
+         大きさが効かず敵の絵を隠してしまったので、個別に書く */
+      font-size: 9px; font-weight: 1000; line-height: 1.4;
+      letter-spacing: -.01em; white-space: nowrap;
+      text-shadow: 0 1px 3px #000;
+      box-shadow: 0 2px 8px #000a;
       animation: moveHintBob 1200ms ease-in-out infinite;
     }
-    .mh-enemy-move-hint b { color: #fde68a; font-size: 17px; }
+    .mh-enemy-move-hint span:first-child { font-size: 10px; }
     .mh-enemy-move-hint::after {
-      content: ''; position: absolute; left: 50%; margin-left: -7px; bottom: -8px;
-      border: 7px solid transparent; border-top-color: #67e8f9;
+      content: ''; position: absolute; right: 16px; bottom: -6px;
+      border: 5px solid transparent; border-top-color: #22d3ee99;
     }
     @keyframes moveHintBob {
       0%,100% { transform: translateY(0); }
