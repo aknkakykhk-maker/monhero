@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 11:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 13:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9410,7 +9410,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             )}
             <main className="flex-1 relative flex flex-col items-center justify-between pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0">
-              <button onClick={()=>setShowEnemyInfo(true)} className="absolute right-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">解析</span></button>
+              {/* 移動の吹き出し(画面の上から22%)と重なるため、左の「緊急」と同じ高さまで下げている */}
+              <button onClick={()=>setShowEnemyInfo(true)} className="absolute right-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">解析</span></button>
               <button onClick={()=>setShowHeroInfo(true)} className={`absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">ステータス</span></button>
               <button onClick={useEmergency} disabled={isBusy||!battleTutorialAllowsEmergency} className={`absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[7px] font-black text-white">緊急</span></button>
               <div className="mt-1 relative flex flex-col items-center">
@@ -9429,6 +9430,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1" style={{top:'11%',zIndex:65000,animation:'specialWarnFlash 700ms ease-in-out infinite'}}>
                     <div className="text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]">✨</div>
                     <div className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]">た め る</div>
+                  </div>
+                )}
+                {/* 移動の予告。いま出ている行動予告(通常攻撃など)と同時に、
+                    「その次のターンに間合いを変える」ことを敵のつぶやきとして見せる。
+                    出す間合いは enemyNextIntent.targetDist そのもので、繰り上げても抽選し直さないため、
+                    吹き出しに出た間合いへ必ず動く。
+                    【置き場所】丸枠(敵の円)の中には置かないこと。丸枠は transform を持つため
+                    独自の重ね順の島になり、いくらz-indexを上げても、枠の外へ巨大に描くムーの
+                    裏へ回ってしまう。必殺技の警告と同じこの階層に置くと前面に出る */}
+                {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&enemyNextIntent.type==='MOVE'&&(
+                  // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
+                  // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
+                  <div className="fixed left-1/2 pointer-events-none" style={{top:'22%',transform:'translateX(calc(min(50vw, 300px) - 100% - 8px))',zIndex:65000}}>
+                    <div className="mh-enemy-move-hint">
+                      <span aria-hidden="true">🏃</span>
+                      <span>{RANGE_LABELS[enemyNextIntent.targetDist]}距離に移動しようとしている…？</span>
+                    </div>
                   </div>
                 )}
                 {slotSkill&&(
@@ -9469,7 +9487,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 })()}
                 {enemy?.id==='Moo'&&enemy?.imgUrl&&(
                   <div className="fixed left-1/2 pointer-events-none flex items-center justify-center" style={{top:'30%',transform:'translate(-50%,-50%)',zIndex:focusedCard?5:30,width:'min(108vw,560px)',height:'min(108vw,560px)'}}>
-                    <img src={enemy.imgUrl} alt="ムー" style={{width:'100%',height:'100%',animation:enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite',imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className="object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]"/>
+                    <img src={enemy.imgUrl} alt="ムー" style={{width:'100%',height:'100%',animation:enemyAttackAnim?(enemyAttackFx?.kind==='move'?'mooMoveSlide 1000ms ease-in-out forwards':enemyAttackFx?.kind==='charge'?'mooChargeGather 1100ms ease-in-out forwards':'mooAttackLunge 900ms ease-in-out forwards'):'mooFloat 3000ms ease-in-out infinite',imageRendering:'auto',WebkitMaskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',maskImage:'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'}} className="object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]"/>
                   </div>
                 )}
                 {/* ムー攻撃時: 全画面の破壊的演出 */}
@@ -9533,22 +9551,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <div className="absolute -top-2 -right-1 text-4xl font-black text-yellow-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]" style={{animation:'idleExclaim 1100ms ease-in-out infinite'}}>❗</div>
                     </div>
                   )}
-                  {/* 移動の予告。いま出ている行動予告(通常攻撃など)と同時に、
-                      「その次のターンに間合いを変える」ことを敵のつぶやきとして見せる。
-                      出す間合いは enemyNextIntent.targetDist そのもので、繰り上げても抽選し直さないため、
-                      吹き出しに出た間合いへ必ず動く。
-                      ムーは丸枠の外へ巨大に描いており、丸枠の中に置くと本体の裏へ回ってしまうため、
-                      必殺技の警告と同じく画面基準(fixed)で前面に出す */}
-                  {enemy&&enemyNextIntent&&!isBusy&&!enemyAttackFx&&enemyNextIntent.type==='MOVE'&&(
-                    // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
-                    // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
-                    <div className="fixed left-1/2 pointer-events-none" style={{top:'22%',transform:'translateX(calc(min(50vw, 300px) - 100% - 8px))',zIndex:65000}}>
-                      <div className="mh-enemy-move-hint">
-                        <span aria-hidden="true">🏃</span>
-                        <span>{RANGE_LABELS[enemyNextIntent.targetDist]}距離に移動しようとしている…？</span>
-                      </div>
-                    </div>
-                  )}
                   {/* ためている最中は、敵の周りにオーラが集まる */}
                   {enemy&&enemyAttackFx?.kind==='charge'&&(
                     <div className="absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible">
@@ -9559,8 +9561,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <div className="absolute inset-0 rounded-full border-4 border-amber-300/80" style={{animation:'auraRing 700ms ease-out infinite'}}></div>
                     </div>
                   )}
-                  {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&(enemyIntent.type==='SPECIAL'||enemyIntent.type==='CHARGE'||(enemy?.id==='Moo'&&enemyIntent.type==='ATTACK'))&&(()=>{
-                    const isSpecial = enemyIntent.type==='SPECIAL'||enemyIntent.type==='CHARGE';
+                  {enemy&&enemyIntent&&!isBusy&&!enemyAttackFx&&(enemyIntent.type==='SPECIAL'||(enemy?.id==='Moo'&&enemyIntent.type==='ATTACK'))&&(()=>{
+                    // ためる(CHARGE)の予告にはこのオーラを出さない。必殺技の予告と同じ見た目になり、
+                    // 「準備なのか、いま撃たれるのか」が見分けられなくなるため
+                    const isSpecial = enemyIntent.type==='SPECIAL';
                     // 通常技 = 赤系 / 必殺技(チャージ) = 紫＋金系 で明確に色分け
                     return (
                     <div className="absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible">
@@ -11318,6 +11322,16 @@ const createAnimationStyle = () => {
     }
     @keyframes enemyExclaim {
       0%,100% { opacity: 1; }
+    }
+    /* ムーの必殺技の準備。巨体なので沈み込みを浅く、ゆらぎを大きめにする。
+       攻撃の突進(mooAttackLunge)を流用すると、準備なのに殴りかかって見えてしまう */
+    @keyframes mooChargeGather {
+      0% { transform: scale(1) translateY(0); }
+      20% { transform: scale(0.97) translateY(6px); }
+      40% { transform: scale(0.98) translate(-5px, 4px); }
+      60% { transform: scale(1.01) translate(5px, 0); }
+      80% { transform: scale(1.05) translate(-4px, -5px); }
+      100% { transform: scale(1) translateY(0); }
     }
     /* 必殺技の準備。その場で踏ん張って力を溜める(前に出る突進とは別の動き) */
     @keyframes enemyChargeShake {

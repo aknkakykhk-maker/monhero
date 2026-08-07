@@ -19,6 +19,12 @@ const MAX_HEIGHT_DIFF = 6;   // px
 const MAX_WIDTH_RATIO = 0.55; // 遊ぶ列の幅に対して
 // 敵の丸枠(180px)と重なってよい面積の割合
 const MAX_OVERLAP_RATIO = 0.12;
+// 「解析」ボタンは戦闘画面の入れ物からの絶対位置(Tailwindの top-NN)で置いている。
+// 入れ物の上端は画面の上から約15.5%(ヘッダーと敵のライフバーの下)。
+// この値は実機のスクリーンショットから測ったもので、Tailwindが読めないこの環境では
+// 実物を描けないため、位置の計算だけをここで確かめる
+const SCAN_BUTTON_CONTAINER_TOP_RATIO = 0.155;
+const REM = 16;
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -28,6 +34,9 @@ const check = (name, ok, detail = '') => {
 
 const css = src.slice(src.indexOf('.mh-enemy-move-hint {'), src.indexOf('@keyframes moveHintBob'));
 check('吹き出しのCSSを取り出せる', css.includes('.mh-enemy-move-hint'));
+// 「解析」ボタンの高さ(Tailwindの top-NN は NN/4 rem)
+const scanTopMatch = src.match(/setShowEnemyInfo\(true\)\} className="absolute right-2 top-(\d+)/);
+check('解析ボタンの高さを読み取れる', !!scanTopMatch, scanTopMatch ? `top-${scanTopMatch[1]}` : '見つからない');
 // 画面側が使っている寄せ方をそのまま持ってくる(ここが変わったら測る位置も変える)
 const shiftMatch = src.match(/transform:'(translateX\(calc\([^']+\))'/);
 check('右へ寄せる指定を読み取れる', !!shiftMatch, shiftMatch ? shiftMatch[1] : '見つからない');
@@ -79,6 +88,13 @@ const page = `<!doctype html><meta charset="utf-8"><style>
         `吹き出しの中心 ${Math.round(hintCenter)} / 列の中央 ${Math.round(colCenter)}`);
       check(`${vp.name}: 敵の絵をほとんど隠さない`, overlap <= MAX_OVERLAP_RATIO,
         `${Math.round(overlap * 100)}% (上限 ${Math.round(MAX_OVERLAP_RATIO * 100)}%)`);
+      // 「解析」ボタンの上端が、吹き出しの下端より下にあること。
+      // 実際に重なって文字が読めなくなっていたので、位置の計算で見張る
+      if (scanTopMatch) {
+        const scanTop = vp.height * SCAN_BUTTON_CONTAINER_TOP_RATIO + (Number(scanTopMatch[1]) / 4) * REM;
+        check(`${vp.name}: 解析ボタンが吹き出しと重ならない`, scanTop >= r.hint.bottom,
+          `解析の上端 ${Math.round(scanTop)} / 吹き出しの下端 ${Math.round(r.hint.bottom)}`);
+      }
       await tab.close();
     }
   } finally {

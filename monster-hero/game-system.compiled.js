@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2e1ee7be4750b212
+// source-sha256: 43d52c21f9000982
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 11:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 13:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -19903,7 +19903,7 @@ function MonsterHeroGame() {
       className: "flex-1 relative flex flex-col items-center justify-between pt-3 pb-1 px-2 overflow-x-visible overflow-y-auto min-h-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowEnemyInfo(true),
-      className: "absolute right-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"
+      className: "absolute right-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"
     }, /*#__PURE__*/React.createElement(Search, {
       className: "text-red-400 mb-0.5",
       size: 14
@@ -19959,7 +19959,22 @@ function MonsterHeroGame() {
       className: "text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]"
     }, "\u2728"), /*#__PURE__*/React.createElement("div", {
       className: "px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]"
-    }, "\u305F \u3081 \u308B")), slotSkill && /*#__PURE__*/React.createElement("div", {
+    }, "\u305F \u3081 \u308B")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
+    /*#__PURE__*/
+    // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
+    // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
+    React.createElement("div", {
+      className: "fixed left-1/2 pointer-events-none",
+      style: {
+        top: '22%',
+        transform: 'translateX(calc(min(50vw, 300px) - 100% - 8px))',
+        zIndex: 65000
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mh-enemy-move-hint"
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true"
+    }, "\uD83C\uDFC3"), /*#__PURE__*/React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "\u8DDD\u96E2\u306B\u79FB\u52D5\u3057\u3088\u3046\u3068\u3057\u3066\u3044\u308B\u2026\uFF1F"))), slotSkill && /*#__PURE__*/React.createElement("div", {
       className: "fixed -translate-x-1/2 pointer-events-none whitespace-nowrap",
       style: {
         left: `${12.5 + slotSkill.slotIndex * 25}%`,
@@ -20062,7 +20077,7 @@ function MonsterHeroGame() {
       style: {
         width: '100%',
         height: '100%',
-        animation: enemyAttackAnim ? enemyAttackFx?.kind === 'move' ? 'mooMoveSlide 1000ms ease-in-out forwards' : 'mooAttackLunge 900ms ease-in-out forwards' : 'mooFloat 3000ms ease-in-out infinite',
+        animation: enemyAttackAnim ? enemyAttackFx?.kind === 'move' ? 'mooMoveSlide 1000ms ease-in-out forwards' : enemyAttackFx?.kind === 'charge' ? 'mooChargeGather 1100ms ease-in-out forwards' : 'mooAttackLunge 900ms ease-in-out forwards' : 'mooFloat 3000ms ease-in-out infinite',
         imageRendering: 'auto',
         WebkitMaskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',
         maskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'
@@ -20250,22 +20265,7 @@ function MonsterHeroGame() {
       style: {
         animation: 'idleExclaim 1100ms ease-in-out infinite'
       }
-    }, "\u2757")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' &&
-    /*#__PURE__*/
-    // 画面ではなく遊ぶ列(最大600px)の右端に寄せる。left:50%から
-    // 「列の半分ぶん右へ、自分の幅だけ左へ」動かすと、広い画面でも列の中に収まる
-    React.createElement("div", {
-      className: "fixed left-1/2 pointer-events-none",
-      style: {
-        top: '22%',
-        transform: 'translateX(calc(min(50vw, 300px) - 100% - 8px))',
-        zIndex: 65000
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mh-enemy-move-hint"
-    }, /*#__PURE__*/React.createElement("span", {
-      "aria-hidden": "true"
-    }, "\uD83C\uDFC3"), /*#__PURE__*/React.createElement("span", null, RANGE_LABELS[enemyNextIntent.targetDist], "\u8DDD\u96E2\u306B\u79FB\u52D5\u3057\u3088\u3046\u3068\u3057\u3066\u3044\u308B\u2026\uFF1F"))), enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
+    }, "\u2757")), enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
     }, /*#__PURE__*/React.createElement("div", {
       className: "absolute -inset-6 rounded-full",
@@ -20285,8 +20285,10 @@ function MonsterHeroGame() {
       style: {
         animation: 'auraRing 700ms ease-out infinite'
       }
-    })), enemy && enemyIntent && !isBusy && !enemyAttackFx && (enemyIntent.type === 'SPECIAL' || enemyIntent.type === 'CHARGE' || enemy?.id === 'Moo' && enemyIntent.type === 'ATTACK') && (() => {
-      const isSpecial = enemyIntent.type === 'SPECIAL' || enemyIntent.type === 'CHARGE';
+    })), enemy && enemyIntent && !isBusy && !enemyAttackFx && (enemyIntent.type === 'SPECIAL' || enemy?.id === 'Moo' && enemyIntent.type === 'ATTACK') && (() => {
+      // ためる(CHARGE)の予告にはこのオーラを出さない。必殺技の予告と同じ見た目になり、
+      // 「準備なのか、いま撃たれるのか」が見分けられなくなるため
+      const isSpecial = enemyIntent.type === 'SPECIAL';
       // 通常技 = 赤系 / 必殺技(チャージ) = 紫＋金系 で明確に色分け
       return /*#__PURE__*/React.createElement("div", {
         className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
@@ -24367,6 +24369,16 @@ const createAnimationStyle = () => {
     }
     @keyframes enemyExclaim {
       0%,100% { opacity: 1; }
+    }
+    /* ムーの必殺技の準備。巨体なので沈み込みを浅く、ゆらぎを大きめにする。
+       攻撃の突進(mooAttackLunge)を流用すると、準備なのに殴りかかって見えてしまう */
+    @keyframes mooChargeGather {
+      0% { transform: scale(1) translateY(0); }
+      20% { transform: scale(0.97) translateY(6px); }
+      40% { transform: scale(0.98) translate(-5px, 4px); }
+      60% { transform: scale(1.01) translate(5px, 0); }
+      80% { transform: scale(1.05) translate(-4px, -5px); }
+      100% { transform: scale(1) translateY(0); }
     }
     /* 必殺技の準備。その場で踏ん張って力を溜める(前に出る突進とは別の動き) */
     @keyframes enemyChargeShake {
