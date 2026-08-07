@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d87a8cd0b96c294e
+// source-sha256: d887241093a2b590
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 19:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 19:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7295,11 +7295,9 @@ function MonsterHeroGame() {
     ...p,
     [key]: value
   })); // 次ターンへ持ち越さない、このターン限りの即時効果
-  // 「丈夫さそのもの」を割合で上げる。上の3つのバフとは別物で、能力値(def)を直接増やす。
-  // 被ダメージ計算(丈夫さ×0.15を引く)とガードの軽減量(固定値＋丈夫さ×倍率)の両方に効くので、
-  // 「被ダメージを◯%軽減する(dmgCutPct)」とは効き方がはっきり違う。
-  // 端数切り捨てで0になり「使ったのに何も起きない」状態を作らないよう、最低でも+1は上げる。
-  const addDefPct = rate => setDef(d => d + Math.max(1, Math.floor(d * rate)));
+  // 丈夫さのバフは permaBuffs の 'defPct' に積む(基礎ステータスの def は書き換えない)。
+  // 実際に計算へ使う値は effectiveDef で、被ダメージの軽減量とガードの軽減量の両方に効く。
+  // 「被ダメージを◯%軽減する(dmgCutPct)」とは効き方が違うので、混ぜないこと。
   // ======================================================================
   const [attackAnim, setAttackAnim] = useState(null); // {slotIndex}
   const [slotSkill, setSlotSkill] = useState(null); // {slotIndex, name, type} スロット上の技名インライン表示
@@ -7703,6 +7701,11 @@ function MonsterHeroGame() {
   const goldMultiplier = useMemo(() => DIFFICULTY_SETTINGS[safeDifficulty].gold, [safeDifficulty]);
   const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);
   const effectiveMaxGuts = useMemo(() => resolveEffectiveMaxStat(maxGuts, getPermaBuff('muaGutsPct')), [maxGuts, permaBuffs]);
+  // 丈夫さのバフ(defPct)を乗せた「実際に計算へ使う丈夫さ」。ライフ・ガッツと同じ考え方で、
+  // 基礎ステータス(def)そのものは書き換えずバフ層で持つ。
+  // 被ダメージの軽減量とガードの軽減量に効き、能力報酬の計算(def+20)×1.1 や
+  // ガード段階(丈夫さ100ごと)は従来どおり基礎の丈夫さで決まる。
+  const effectiveDef = useMemo(() => resolveEffectiveMaxStat(def, getPermaBuff('defPct')), [def, permaBuffs]);
   // バフが外れて実効最大値が下がった場合も、現在値だけが新しい上限を超えた状態を残さない。
   useEffect(() => {
     setHp(current => Math.min(current, effectiveMaxHp));
@@ -11731,9 +11734,9 @@ function MonsterHeroGame() {
     if (!intent || intent.type !== 'ATTACK' && intent.type !== 'SPECIAL') return 0;
     const atkVal = Math.floor(intent.value * (1.0 - getWaveBuff('enemyAtkDebuffPct')));
     const chuuniCutActive = (mainHero?.id === 'Ark' || mainHero?.id === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
-    const dmgBase = Math.max(30, atkVal * getTurnBuff('takenDamageMult', 1.0) - def * 0.15) * (mainHero?.id === 'Mocchi' || mainHero?.id === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
+    const dmgBase = Math.max(30, atkVal * getTurnBuff('takenDamageMult', 1.0) - effectiveDef * 0.15) * (mainHero?.id === 'Mocchi' || mainHero?.id === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
     return Math.max(1, Math.floor(dmgBase * Math.max(0.01, 1.0 - getPermaBuff('dmgCutPct'))));
-  }, [def, turnBuffs, mainHero, permaBuffs, waveBuffs]);
+  }, [effectiveDef, turnBuffs, mainHero, permaBuffs, waveBuffs]);
   const addPopup = (text, side, color) => {
     const id = Date.now() + Math.random();
     setPopups(prev => [...prev, {
@@ -11887,7 +11890,7 @@ function MonsterHeroGame() {
   // ガードカードの重み(弱ガードは半分)。軽減量の合計表示と実処理で同じ式を使う。
   const guardCardWeight = card => card?.type === 'guard' ? 1 : card?.type === 'weak_guard' ? 0.5 : 0;
   // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」。handleEnemyTurnの計算と同じ式にする。
-  const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + def * mult) : 0;
+  const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + effectiveDef * mult) : 0;
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx - attackStartDist);
@@ -12056,7 +12059,7 @@ function MonsterHeroGame() {
         setEnemyAttackFx(null);
       } else if (intent.type === 'ATTACK' || intent.type === 'SPECIAL') {
         // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」(GUARD_EVOLUTIONのflat/mult参照)
-        const guardValue = immediateEffects.guardFlat > 0 || immediateEffects.guardMult > 0 ? Math.floor(immediateEffects.guardFlat + def * immediateEffects.guardMult) : 0;
+        const guardValue = immediateEffects.guardFlat > 0 || immediateEffects.guardMult > 0 ? Math.floor(immediateEffects.guardFlat + effectiveDef * immediateEffects.guardMult) : 0;
         const incomingDmg = getPredictedDamage(intent);
         if ((mainHero?.id === 'Ark' || mainHero?.id === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2) {
           addWaveBuff('chuuniDmgCutUses', 1);
@@ -12467,7 +12470,7 @@ function MonsterHeroGame() {
             addPopup('次ターン会心確定!', 'hero', 'text-red-400 text-lg font-bold');
             addPopup(`会心率+${(2 * effMul).toFixed(effMul === 1 ? 0 : 1)}% 会心ダメ+${(2 * effMul).toFixed(effMul === 1 ? 0 : 1)}%`, 'hero', 'text-yellow-400 text-sm font-bold');
           } else if (card.monId === 'Monol') {
-            addDefPct(0.03 * effMul);
+            addPermaBuff('defPct', 0.03 * effMul);
             addWaveBuff('enemyAtkDebuffPct', 0.10 * effMul);
             setNextTurnBuff('reflect', true);
             addPopup('丈夫さUP!', 'hero', 'text-emerald-400 text-lg font-bold');
@@ -20534,6 +20537,10 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement(Shield, {
       size: 7
     }), " \u88AB\u30C0\u30E1 -", Math.floor(getPermaBuff('dmgCutPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
+    }, /*#__PURE__*/React.createElement(Shield, {
+      size: 7
+    }), " DEF +", Math.floor(getPermaBuff('defPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-pink-500 bg-black/60 px-2 py-0.5 rounded border border-pink-500/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 7
@@ -23903,7 +23910,9 @@ function MonsterHeroGame() {
       className: "text-[9px] text-emerald-400 font-black uppercase"
     }, "\u4E08\u592B\u3055"), /*#__PURE__*/React.createElement("div", {
       className: "text-xl font-mono font-black"
-    }, def, getPermaBuff('dmgCutPct') > 0 && /*#__PURE__*/React.createElement("span", {
+    }, effectiveDef, getPermaBuff('defPct') > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] text-emerald-400 ml-1"
+    }, "(\u57FA\u790E", def, " DEF +", Math.round(getPermaBuff('defPct') * 100), "%)"), getPermaBuff('dmgCutPct') > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] text-emerald-400 ml-1"
     }, "(\u88AB\u30C0\u30E1 -", Math.round(getPermaBuff('dmgCutPct') * 100), "%)"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-amber-400 font-black uppercase"
