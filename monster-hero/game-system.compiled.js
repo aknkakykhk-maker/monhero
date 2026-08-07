@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d725b024e79b7b93
+// source-sha256: d87a8cd0b96c294e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 16:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 19:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7295,6 +7295,11 @@ function MonsterHeroGame() {
     ...p,
     [key]: value
   })); // 次ターンへ持ち越さない、このターン限りの即時効果
+  // 「丈夫さそのもの」を割合で上げる。上の3つのバフとは別物で、能力値(def)を直接増やす。
+  // 被ダメージ計算(丈夫さ×0.15を引く)とガードの軽減量(固定値＋丈夫さ×倍率)の両方に効くので、
+  // 「被ダメージを◯%軽減する(dmgCutPct)」とは効き方がはっきり違う。
+  // 端数切り捨てで0になり「使ったのに何も起きない」状態を作らないよう、最低でも+1は上げる。
+  const addDefPct = rate => setDef(d => d + Math.max(1, Math.floor(d * rate)));
   // ======================================================================
   const [attackAnim, setAttackAnim] = useState(null); // {slotIndex}
   const [slotSkill, setSlotSkill] = useState(null); // {slotIndex, name, type} スロット上の技名インライン表示
@@ -12377,11 +12382,14 @@ function MonsterHeroGame() {
         if (card.type === 'unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。合体で引き継いだ
           // 固有技を別のモンスターが使う場合でも、元モンスターの固有技効果を正しく再現するため
+          // モッチー/ミタラシは「被ダメージを割合で軽減」、モノリスは「丈夫さそのものを上げる」。
+          // 見た目が似ているので取り違えやすいが、丈夫さはガードの軽減量にも効くぶん意味が違う。
+          // 説明文(effectDesc)と食い違っていないかは tools/unique-effect-check.js が見張る
           if (card.monId === 'Mocchi' || card.monId === 'Mitarashi') {
             addPermaBuff('dmgCutPct', 0.03 * effMul);
             addWaveBuff('enemyTakenDmgBonus', 0.1 * effMul);
             localDmgModAdd += 0.1 * effMul;
-            addPopup('丈夫さUP!', 'hero', 'text-emerald-400 text-lg font-bold');
+            addPopup('被ダメ軽減UP!', 'hero', 'text-emerald-400 text-lg font-bold');
           } else if (card.monId === 'Golem') {
             addPermaBuff('atkPct', 0.075 * effMul);
             localOryoAdd += 0.075 * effMul;
@@ -12459,9 +12467,10 @@ function MonsterHeroGame() {
             addPopup('次ターン会心確定!', 'hero', 'text-red-400 text-lg font-bold');
             addPopup(`会心率+${(2 * effMul).toFixed(effMul === 1 ? 0 : 1)}% 会心ダメ+${(2 * effMul).toFixed(effMul === 1 ? 0 : 1)}%`, 'hero', 'text-yellow-400 text-sm font-bold');
           } else if (card.monId === 'Monol') {
-            addPermaBuff('dmgCutPct', 0.03 * effMul);
+            addDefPct(0.03 * effMul);
             addWaveBuff('enemyAtkDebuffPct', 0.10 * effMul);
             setNextTurnBuff('reflect', true);
+            addPopup('丈夫さUP!', 'hero', 'text-emerald-400 text-lg font-bold');
             addPopup('次ターン反射！', 'hero', 'text-purple-400 text-lg font-bold');
           } else if (card.monId === 'Oboro') {
             const hRec = Math.floor(finalD * 0.5);
@@ -20524,7 +20533,7 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-emerald-500 bg-black/60 px-2 py-0.5 rounded border border-emerald-500/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Shield, {
       size: 7
-    }), " DEF +", Math.floor(getPermaBuff('dmgCutPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    }), " \u88AB\u30C0\u30E1 -", Math.floor(getPermaBuff('dmgCutPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-pink-500 bg-black/60 px-2 py-0.5 rounded border border-pink-500/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 7
@@ -23896,7 +23905,7 @@ function MonsterHeroGame() {
       className: "text-xl font-mono font-black"
     }, def, getPermaBuff('dmgCutPct') > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] text-emerald-400 ml-1"
-    }, "(+", Math.round(getPermaBuff('dmgCutPct') * 100), "%\u8EFD\u6E1B)"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    }, "(\u88AB\u30C0\u30E1 -", Math.round(getPermaBuff('dmgCutPct') * 100), "%)"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-amber-400 font-black uppercase"
     }, "\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("div", {
       className: "text-xl font-mono font-black"
