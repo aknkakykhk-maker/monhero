@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2c106fbaf2b7681a
+// source-sha256: 02435f6f7febac82
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 06:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 06:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -424,11 +424,11 @@ const isFinalBreakthroughCount = count => Math.max(0, Math.floor(Number(count) |
 // ===== 限界突破に使うアイテム「虹のプシュケー」 =====
 // 所持数は他の消耗アイテムと同じ mh_owned_items({ itemId: 個数 })へ入れる。
 // 新しい保存キーは作らないので、持っていない旧セーブは「0個」として読める。
-// 必要数は限界突破1回ごとに増える。1回目10個・以降+5個で、
-//   30回目 = 10 + 29×5 = 155個 / 最終限界突破(31回目) = 10 + 30×5 = 160個
+// 必要数は限界突破1回ごとに増える。1回目5個・以降+1個で、
+//   30回目 = 5 + 29×1 = 34個 / 最終限界突破(31回目) = 5 + 30×1 = 35個
 const BREAKTHROUGH_ITEM_ID = 'rainbow_psyche';
-const BREAKTHROUGH_ITEM_BASE = 10;
-const BREAKTHROUGH_ITEM_STEP = 5;
+const BREAKTHROUGH_ITEM_BASE = 5;
+const BREAKTHROUGH_ITEM_STEP = 1;
 // nextCount は「これから行う限界突破が何回目か」(rebirthCount + 1)
 const breakthroughItemCost = nextCount => {
   const n = Math.max(1, Math.floor(Number(nextCount) || 1));
@@ -16037,7 +16037,7 @@ function MonsterHeroGame() {
           className: "text-[11px] font-mono font-black text-white"
         }, "\u6240\u6301 ", ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString())), /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-slate-500 font-bold mb-2"
-        }, "\u9650\u754C\u7A81\u7834\u306B\u306F\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u5FC5\u8981\u3067\u3059\uFF081\u56DE\u76EE10\u500B\u30FB\u4EE5\u964D1\u56DE\u3054\u3068\u306B+5\u500B\uFF09\u3002\u30C1\u30E3\u30EC\u30F3\u30B8\uFF0F\u30AF\u30A4\u30C3\u30AF\u3092\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3082\u3089\u3048\u307E\u3059\u3002"), renderMonsterSortFilterBar({
+        }, "\u9650\u754C\u7A81\u7834\u306B\u306F\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u5FC5\u8981\u3067\u3059\uFF081\u56DE\u76EE", BREAKTHROUGH_ITEM_BASE, "\u500B\u30FB\u4EE5\u964D1\u56DE\u3054\u3068\u306B+", BREAKTHROUGH_ITEM_STEP, "\u500B\uFF09\u3002\u30C1\u30E3\u30EC\u30F3\u30B8\uFF0F\u30AF\u30A4\u30C3\u30AF\u3092\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3082\u3089\u3048\u307E\u3059\u3002"), renderMonsterSortFilterBar({
           singleType: true
         }), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
@@ -16150,7 +16150,7 @@ function MonsterHeroGame() {
           "aria-hidden": "true"
         }, "\uD83C\uDF08"), need.toLocaleString())), /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-slate-400"
-        }, "\uFF08", normalizeMasuProgression(selected).rebirthCount + 1, "\u56DE\u76EE\u306E\u9650\u754C\u7A81\u7834\uFF1A10 +\uFF08\u56DE\u6570-1\uFF09\xD75\uFF09"), /*#__PURE__*/React.createElement("div", {
+        }, "\uFF08", normalizeMasuProgression(selected).rebirthCount + 1, "\u56DE\u76EE\u306E\u9650\u754C\u7A81\u7834\uFF1A", BREAKTHROUGH_ITEM_BASE, " +\uFF08\u56DE\u6570-1\uFF09\xD7", BREAKTHROUGH_ITEM_STEP, "\uFF09"), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[9px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-500"

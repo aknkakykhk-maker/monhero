@@ -34,24 +34,24 @@ check('虹のプシュケーがアイテムとして定義されている', !!it
 check('他の消耗アイテムと同じ type:item', item.type === 'item');
 check('マーケットでは売らない(shop:false)', item.shop === false);
 check('限界突破で使うアイテムだと分かる印がある', item.usage === 'breakthrough');
-check('説明に必要数の増え方が書いてある', /10個/.test(item.desc) && /5個ずつ/.test(item.desc));
+check('説明に必要数の増え方が書いてある', /5個/.test(item.desc) && /1個ずつ/.test(item.desc));
 
 // ===== 2. 必要数 =====
-check('1回目は10個', breakthroughItemCost(1) === 10, String(breakthroughItemCost(1)));
-check('2回目は15個', breakthroughItemCost(2) === 15, String(breakthroughItemCost(2)));
-check('3回目は20個', breakthroughItemCost(3) === 20, String(breakthroughItemCost(3)));
-check('4回目は25個', breakthroughItemCost(4) === 25, String(breakthroughItemCost(4)));
-check('5回目は30個', breakthroughItemCost(5) === 30, String(breakthroughItemCost(5)));
+check('1回目は5個', breakthroughItemCost(1) === 5, String(breakthroughItemCost(1)));
+check('2回目は6個', breakthroughItemCost(2) === 6, String(breakthroughItemCost(2)));
+check('3回目は7個', breakthroughItemCost(3) === 7, String(breakthroughItemCost(3)));
+check('4回目は8個', breakthroughItemCost(4) === 8, String(breakthroughItemCost(4)));
+check('5回目は9個', breakthroughItemCost(5) === 9, String(breakthroughItemCost(5)));
 let formulaOk = true, formulaNg = '';
 for (let n = 1; n <= 40; n++) {
   const want = BREAKTHROUGH_ITEM_BASE + (n - 1) * BREAKTHROUGH_ITEM_STEP;
   if (breakthroughItemCost(n) !== want) { formulaOk = false; formulaNg = `${n}回目=${breakthroughItemCost(n)}(期待${want})`; break; }
 }
-check('n回目 = 10 +(n-1)×5', formulaOk, formulaNg);
-check('30回目は155個', breakthroughItemCost(BREAKTHROUGH_MAX_COUNT) === 155, String(breakthroughItemCost(BREAKTHROUGH_MAX_COUNT)));
-check('最終限界突破(31回目)は160個', breakthroughItemCost(FINAL_BREAKTHROUGH_COUNT) === 160, String(breakthroughItemCost(FINAL_BREAKTHROUGH_COUNT)));
+check('n回目 = 5 +(n-1)×1', formulaOk, formulaNg);
+check('30回目は34個', breakthroughItemCost(BREAKTHROUGH_MAX_COUNT) === 34, String(breakthroughItemCost(BREAKTHROUGH_MAX_COUNT)));
+check('最終限界突破(31回目)は35個', breakthroughItemCost(FINAL_BREAKTHROUGH_COUNT) === 35, String(breakthroughItemCost(FINAL_BREAKTHROUGH_COUNT)));
 check('おかしな回数でも落ちない',
-  breakthroughItemCost(0) === 10 && breakthroughItemCost(-5) === 10 && breakthroughItemCost(null) === 10 && breakthroughItemCost('あ') === 10);
+  breakthroughItemCost(0) === 5 && breakthroughItemCost(-5) === 5 && breakthroughItemCost(null) === 5 && breakthroughItemCost('あ') === 5);
 
 // ===== 3. 旧セーブ互換(所持数0として読める) =====
 check('所持データが無ければ0個', ownedItemCount(undefined, BREAKTHROUGH_ITEM_ID) === 0 && ownedItemCount(null, BREAKTHROUGH_ITEM_ID) === 0);
@@ -72,22 +72,22 @@ const makeMasu = (levelCap, rebirthCount) => ({
 });
 const build = (masu, psycheOwned) => buildMasuBreakthrough({ masu, skillKey: 'own', gold: 9_999_999, psycheOwned });
 const first = makeMasu(INITIAL_MASU_LEVEL_CAP, 0);
-check('必要数ちょうどなら突破できる', build(first, 10).ok === true);
-check('1個足りないと突破できない', build(first, 9).ok === false, build(first, 9).reason);
+check('必要数ちょうどなら突破できる', build(first, 5).ok === true);
+check('1個足りないと突破できない', build(first, 4).ok === false, build(first, 4).reason);
 check('0個でも落ちずに断る', build(first, 0).ok === false && build(first, undefined).ok === false);
-check('足りないときは必要数と所持数を伝える', /必要 10/.test(build(first, 9).reason) && /所持 9/.test(build(first, 9).reason));
-check('足りないときも必要数を返す', build(first, 0).psycheCost === 10);
-check('成功したら必要数ぶんだけ減った数を返す', build(first, 42).nextPsyche === 32, String(build(first, 42).nextPsyche));
-check('多く持っていても余分に減らさない', build(first, 1000).nextPsyche === 990);
+check('足りないときは必要数と所持数を伝える', /必要 5/.test(build(first, 4).reason) && /所持 4/.test(build(first, 4).reason));
+check('足りないときも必要数を返す', build(first, 0).psycheCost === 5);
+check('成功したら必要数ぶんだけ減った数を返す', build(first, 42).nextPsyche === 37, String(build(first, 42).nextPsyche));
+check('多く持っていても余分に減らさない', build(first, 1000).nextPsyche === 995);
 // 回数が進むと必要数も増える
 const tenth = makeMasu(INITIAL_MASU_LEVEL_CAP + 5 * 9, 9);
-check('10回目は55個必要', build(tenth, 55).ok === true && build(tenth, 54).ok === false && build(tenth, 55).psycheCost === 55);
+check('10回目は14個必要', build(tenth, 14).ok === true && build(tenth, 13).ok === false && build(tenth, 14).psycheCost === 14);
 // 30凸→最終限界突破
 const thirtieth = makeMasu(180, 30);
-check('最終限界突破は160個必要', build(thirtieth, 160).ok === true && build(thirtieth, 159).ok === false,
-  `160個=${build(thirtieth, 160).ok} / 159個=${build(thirtieth, 159).ok}`);
+check('最終限界突破は35個必要', build(thirtieth, 35).ok === true && build(thirtieth, 34).ok === false,
+  `35個=${build(thirtieth, 35).ok} / 34個=${build(thirtieth, 34).ok}`);
 check('最終限界突破でもLv.200・最終扱いは変わらない',
-  build(thirtieth, 160).nextMasu.levelCap === MAX_MASU_LEVEL_CAP && build(thirtieth, 160).finalBreakthrough === true);
+  build(thirtieth, 35).nextMasu.levelCap === MAX_MASU_LEVEL_CAP && build(thirtieth, 35).finalBreakthrough === true);
 // 他の条件で弾かれるときは、アイテムを持っていても突破できない(誤って消費させない)
 check('レベルが上限に届いていなければ突破できない',
   build({ ...first, bondXp: 0 }, 999).ok === false);
@@ -108,10 +108,10 @@ while (steps < 40) {
   steps++;
 }
 const costAt = (n) => (costs.find(c => c[0] === n) || [])[1];
-check('通しでまわしても各回の必要数が式どおり', costAt(1) === 10 && costAt(30) === 155 && costAt(31) === 160,
+check('通しでまわしても各回の必要数が式どおり', costAt(1) === 5 && costAt(30) === 34 && costAt(31) === 35,
   `1回目=${costAt(1)} 30回目=${costAt(30)} 31回目=${costAt(31)}`);
 check('31回で打ち止め', steps === 31, `${steps}回`);
-check('31回ぶんの合計は2635個', spent === 2635, String(spent));
+check('31回ぶんの合計は620個', spent === 620, String(spent));
 
 // ===== 5. クリア報酬 =====
 const want = { Beginner: 1, Easy: 2, Normal: 3, Hard: 5, Expert: 7, Master: 10, GrandMaster: 15, Hell: 20, Legend: 30 };
