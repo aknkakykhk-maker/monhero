@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 20:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 22:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3797,6 +3797,42 @@ function MonsterHeroGame() {
   const monsterCardBond = (lvl, cap) => (
     <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5 leading-none whitespace-nowrap"><Heart size={7}/>絆 {lvl.level}<span className="text-slate-500"> / {cap}</span></div>
   );
+  // ===== 一覧カードのマスターUI =====
+  // 編成・ベースモン一覧・マスモン一覧・勇者モン選択/供モン選択が同じ形になるよう、
+  // アイコン(丸くくり抜いたiconUrl・限界突破★・転生バッジ)から名前・絆Lv・総合力・強化P・状態までを
+  // ここ1か所で組む。画面ごとの違いは info / sub / status / extra / badge だけを渡して差し替える。
+  // 以前は画面ごとにJSXを書き写していたため、勇者モン選択と供モン選択だけ絆レベルも総合力も
+  // 限界突破の★も出ておらず、同じモンスターが画面によって違う見た目になっていた。
+  const MONSTER_CARD_NO_SELECT = {WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'};
+  // masu を渡すとマスモン扱い(ピンクのふち・染色・★・転生・絆Lv・強化P)になる。
+  // mon は総合力の計算に使うモンスター。省略時は masu / base から自動で決める。
+  // info / sub は undefined なら既定(絆Lv・強化P)、null を渡すと空欄になる。
+  const renderMonsterCardBody = ({ masu=null, base, mon=undefined, info=undefined, sub=undefined, status=null, extra=null, badge=null }) => {
+    if (!base) return null;
+    const fused = (masu?.fusionHistory || []).length > 0;
+    const power = mon !== undefined ? (mon ? monsterPowerOf(mon) : null) : (masu ? masuPowerOf(masu) : monsterPowerOf(base));
+    const iconSrc = base.iconUrl || base.imgUrl || '';
+    return (<>
+      <div className="relative shrink-0">
+        <div className={`${MONSTER_CARD_ICON_CLASS} border ${masu?(fused?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'):'border-white/10'}`}>
+          {masu
+            ? <DyedMonsterImage baseId={masu.baseId} src={iconSrc} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={MONSTER_CARD_NO_SELECT} className="w-full h-full object-cover"/>
+            : (iconSrc
+              ? <img src={iconSrc} alt={base.name} draggable={false} style={MONSTER_CARD_NO_SELECT} className="w-full h-full object-cover"/>
+              : <div className="w-full h-full flex items-center justify-center text-2xl">{base.emoji}</div>)}
+        </div>
+        {masu&&<RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>}
+        {badge}
+        {masu&&<ReincarnateBadge count={masu.reincarnateCount} className="is-small"/>}
+      </div>
+      {monsterCardName(masu?masu.name:base.name, masu?'text-pink-200':'text-white')}
+      {monsterCardInfo(info!==undefined?info:(masu?monsterCardBond(masuBondLevelInfo(masu), normalizeMasuProgression(masu).levelCap):null))}
+      {monsterCardPower(power)}
+      {monsterCardSub(sub!==undefined?sub:((masu&&(masu.distAptPoints||0)>0)?<span className="text-[7px] text-amber-300 font-black flex items-center gap-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</span>:null))}
+      {monsterCardStatus(status)}
+      {extra}
+    </>);
+  };
   // mon引数は素のモンスター種、またはresolveRosterEntryToMonで解決済みのマスモン反映後オブジェクトのどちらもあり得る。
   // どちらの場合もmon.distAptitudeを見るだけでよい(マスモンの場合はresolve時にdistApt配列が既に反映されている)
   // そのモンスター自身のグレード。編成全員の合計はdistAptPctが持つので、ここでは加算しない
@@ -8552,33 +8588,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         return (
                           <div key={e.key} className="relative">
                             <button onClick={()=>toggleDraftMonster(e.entryId)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
-                              <div className={`${MONSTER_CARD_ICON_CLASS} border border-white/10`}><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                              {monsterCardName(m.name)}
-                              {monsterCardInfo(<div className="text-[8px] text-slate-500 font-bold text-center leading-none">ベースモン</div>)}
-                              {monsterCardPower(monsterPowerOf(m))}
-                              {monsterCardSub(null)}
-                              {monsterCardStatus(monsterDisplayFlags.active?<span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</span>:null)}
+                              {renderMonsterCardBody({
+                                base: m,
+                                info: <div className="text-[8px] text-slate-500 font-bold text-center leading-none">ベースモン</div>,
+                                status: monsterDisplayFlags.active?<span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</span>:null,
+                              })}
                             </button>
                             <button onClick={(ev)=>{ev.stopPropagation(); setRosterDetailMon(m);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
                           </div>
                         );
                       }
                       const masu = e.masu, base = e.base, selected = e.active;
-                      const lvl = masuBondLevelInfo(masu);
                       return (
                         <div key={e.key} className="relative">
                           <button onClick={()=>toggleDraftMonster(e.entryId)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} ${selected?'bg-pink-900/40 border-pink-400 ring-2 ring-pink-400':'bg-slate-900 border-pink-900/50'}`}>
-                            <div className="relative shrink-0">
-                              <div className={`${MONSTER_CARD_ICON_CLASS} border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                              <RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>
-                              <div className="absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[6px] font-black text-white leading-tight">マスモン</div>
-                              <ReincarnateBadge count={masu.reincarnateCount} className="is-small"/>
-                            </div>
-                            {monsterCardName(masu.name,'text-pink-200')}
-                            {monsterCardInfo(monsterCardBond(lvl, normalizeMasuProgression(masu).levelCap))}
-                            {monsterCardPower(masuPowerOf(masu))}
-                            {monsterCardSub((masu.distAptPoints||0)>0?<span className="text-[7px] text-amber-300 font-black flex items-center gap-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</span>:null)}
-                            {monsterCardStatus(monsterDisplayFlags.active?<span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-pink-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</span>:null)}
+                            {renderMonsterCardBody({
+                              masu, base,
+                              badge: <div className="absolute -top-1 -right-1 bg-pink-500 rounded-full px-1 text-[6px] font-black text-white leading-tight">マスモン</div>,
+                              status: monsterDisplayFlags.active?<span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-pink-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</span>:null,
+                            })}
                           </button>
                           <button onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
                         </div>
@@ -8670,12 +8698,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   return (
                     <div key={e.key} className="relative">
                       <button onClick={()=>setRosterDetailMon(m)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} border-slate-800 bg-slate-900`}>
-                        <div className={`${MONSTER_CARD_ICON_CLASS} border border-white/10`}><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
-                        {monsterCardName(m.name)}
-                        {monsterCardInfo(<div className="text-[8px] text-pink-400 font-bold text-center leading-none">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>)}
-                        {monsterCardPower(monsterPowerOf(e.base))}
-                        {monsterCardSub(null)}
-                        {monsterCardStatus(monsterDisplayFlags.active&&e.active?<span className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white">編成中</span>:null)}
+                        {renderMonsterCardBody({
+                          base: m,
+                          info: <div className="text-[8px] text-pink-400 font-bold text-center leading-none">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>,
+                          status: monsterDisplayFlags.active&&e.active?<span className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white">編成中</span>:null,
+                        })}
                       </button>
                       <button onClick={(ev)=>{ev.stopPropagation(); setRosterDetailMon(m);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
                     </div>
@@ -8708,13 +8735,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="grid grid-cols-3 gap-2.5 pb-4">
                 {sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)).map(({masu,base})=>{
                   const id=String(masu.id), selected=draftHomePastureIds.includes(id), disabled=!selected&&draftHomePastureIds.length>=5;
-                  const lvl=masuBondLevelInfo(masu);
-                  return <div key={id} className="relative"><button disabled={disabled} onClick={()=>toggleDraftPasture(id)} aria-pressed={selected} className={`w-full relative rounded-2xl border-2 p-2 flex flex-col items-center gap-1 active:scale-95 ${selected?'border-emerald-300 bg-emerald-950/80 ring-2 ring-emerald-400/30':'border-slate-800 bg-slate-900'} disabled:opacity-35`}>
+                  return <div key={id} className="relative"><button disabled={disabled} onClick={()=>toggleDraftPasture(id)} aria-pressed={selected} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} relative ${selected?'border-emerald-300 bg-emerald-950/80 ring-2 ring-emerald-400/30':'border-slate-800 bg-slate-900'} disabled:opacity-35`}>
                     {selected&&<span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-emerald-400 text-slate-950 font-black text-xs">✓</span>}
-                    <div className="relative w-12 h-12"><div className="w-12 h-12 rounded-full overflow-hidden border border-pink-400/40"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
-                    <div className="text-[9px] font-black text-pink-100 truncate w-full text-center">{masu.name}</div>
-                    {monsterCardBond(lvl, normalizeMasuProgression(masu).levelCap)}
-                    {monsterCardPower(masuPowerOf(masu))}
+                    {renderMonsterCardBody({
+                      masu, base,
+                      status: selected?<span className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-emerald-500 text-white">放牧中</span>:null,
+                    })}
                   </button><button onClick={(ev)=>{ev.stopPropagation();setMasuMonDetail(masu);}} aria-label={`${masu.name}の詳細`} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button></div>;
                 })}
               </div>
@@ -8743,20 +8769,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="grid grid-cols-3 gap-2.5 pb-4">
                     {entries.map(e=>{
                       const masu = e.masu, base = e.base;
-                      const lvl = masuBondLevelInfo(masu);
-                      const fusionCount = (masu.fusionHistory||[]).length;
                       return (
                         <div key={e.key} className="relative">
                           <button onClick={()=>setMasuMonDetail(masu)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} border-pink-900/50 bg-slate-900`}>
-                            <div className="relative shrink-0">
-                              <div className={`${MONSTER_CARD_ICON_CLASS} border ${fusionCount>0?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>
-                              <ReincarnateBadge count={masu.reincarnateCount} className="is-small"/>
-                            </div>
-                            {monsterCardName(masu.name,'text-pink-200')}
-                            {monsterCardInfo(monsterCardBond(lvl, normalizeMasuProgression(masu).levelCap))}
-                            {monsterCardPower(masuPowerOf(masu))}
-                            {monsterCardSub((masu.distAptPoints||0)>0?<span className="text-[7px] text-amber-300 font-black flex items-center gap-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</span>:null)}
-                            {monsterCardStatus(monsterDisplayFlags.active&&e.active?<span className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white">編成中</span>:null)}
+                            {renderMonsterCardBody({
+                              masu, base,
+                              status: monsterDisplayFlags.active&&e.active?<span className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white">編成中</span>:null,
+                            })}
                           </button>
                           <button onClick={(ev)=>{ev.stopPropagation(); setMasuMonDetail(masu);}} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button>
                         </div>
@@ -10354,31 +10373,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 外枠だと画面からはみ出して「どこを押すのか」が分からなかった */}
             <div className="grid grid-cols-2 gap-2.5">
             {(gameState==='PICK_HERO'&&heroPickTab==='base'?getUnlockedBaseMonsterList():monSelection).map(m=>{const isSel=currentPickingMon?.id===m.id;
-              // アイコンはM/B管理の一覧と同じ「丸くくり抜いたiconUrl」に揃える。
-              // ここだけ素の立ち絵(imgUrl)を貼っていたため、他の画面と見た目が違ううえ、
-              // マスモンでも限界突破の★・転生バッジが出ず、どれが育った個体か分からなかった。
+              // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
+              // 以前はこの画面だけ独自に組んでいたため、絆レベルも総合力も限界突破の★も出ず、
+              // 同じマスモンが画面によって違う見た目になっていた。
+              // この画面だけの情報(固有技名・ステータス・詳細への案内)はextraで足す。
               const pickMasu=m.masuId?getMasuMon(m.masuId):null;
-              const pickFused=(pickMasu?.fusionHistory||[]).length>0;
-              return(<button key={m.id} disabled={!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} className={`bg-slate-900 border-2 rounded-2xl flex flex-col items-center transition-all active:scale-95 disabled:opacity-25${scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`} style={{padding:'12px 8px'}}>
-              <div className="relative shrink-0">
-                <div className={`w-16 h-16 rounded-full overflow-hidden shrink-0 border transition-transform ${pickMasu?(pickFused?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'):'border-white/10'}`} style={{transform:isSel?'scale(1.08)':'scale(1)'}}>
-                  {(m.iconUrl||m.imgUrl)?(<DyedMonsterImage baseId={m.id} src={m.iconUrl||m.imgUrl} alt={m.name} masuColors={m.colors} className="w-full h-full object-cover"/>):(<div className="w-full h-full flex items-center justify-center" style={{fontSize:'40px'}}>{m.emoji}</div>)}
-                </div>
-                {pickMasu&&<RebirthStars count={pickMasu.rebirthCount} className="mh-rebirth-stars-overlay"/>}
-                {pickMasu&&<ReincarnateBadge count={pickMasu.reincarnateCount} className="is-small"/>}
-                {isSel&&<div className="absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>}
-              </div>
-              <span className={`font-black truncate w-full text-center mt-1 ${pickMasu?'text-pink-200':'text-white'}`} style={{fontSize:'14px'}}>{m.name}</span>
-              <div className="text-amber-400 font-black flex items-center gap-1 leading-tight mt-0.5" style={{fontSize:'9px'}}><Zap size={9}/> {m.unique.name}</div>
-              {/* 一覧で「どれが強いか」を比べられるよう、他のモンスター一覧と同じ総合力の行を置く */}
-              {monsterCardPower(monsterPowerOf(m))}
-              <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full mt-1 px-1 font-mono" style={{fontSize:'9px'}}>
-                <div className="flex justify-between"><span className="text-slate-500">HP</span><span className="text-pink-400 font-bold">{gameState==='PICK_HERO'?m.baseHp:`+${m.plusStats?.hp||0}`}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">力</span><span className="text-red-400 font-bold">{gameState==='PICK_HERO'?m.baseAtk:`+${m.plusStats?.atk||0}`}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">防</span><span className="text-emerald-400 font-bold">{gameState==='PICK_HERO'?m.baseDef:`+${m.plusStats?.def||0}`}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">G</span><span className="text-amber-400 font-bold">{gameState==='PICK_HERO'?m.baseGuts:`+${m.plusStats?.guts||0}`}</span></div>
-              </div>
-              <div className="text-indigo-400 font-black uppercase mt-2 flex items-center gap-0.5" style={{fontSize:'8px'}}>詳細を見る <ChevronRight size={9}/></div>
+              const pickBase=ALL_PLAYER_MONSTERS[m.id]||m;
+              return(<button key={m.id} disabled={!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25${scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`}>
+              {renderMonsterCardBody({
+                masu: pickMasu, base: pickBase, mon: m,
+                badge: isSel?<div className="absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>:null,
+                extra: (<>
+                  <div className="text-amber-400 font-black flex items-center gap-1 leading-tight" style={{fontSize:'9px'}}><Zap size={9}/> {m.unique.name}</div>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono" style={{fontSize:'9px'}}>
+                    <div className="flex justify-between"><span className="text-slate-500">HP</span><span className="text-pink-400 font-bold">{gameState==='PICK_HERO'?m.baseHp:`+${m.plusStats?.hp||0}`}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">力</span><span className="text-red-400 font-bold">{gameState==='PICK_HERO'?m.baseAtk:`+${m.plusStats?.atk||0}`}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">防</span><span className="text-emerald-400 font-bold">{gameState==='PICK_HERO'?m.baseDef:`+${m.plusStats?.def||0}`}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">G</span><span className="text-amber-400 font-bold">{gameState==='PICK_HERO'?m.baseGuts:`+${m.plusStats?.guts||0}`}</span></div>
+                  </div>
+                  <div className="text-indigo-400 font-black uppercase mt-1 flex items-center gap-0.5" style={{fontSize:'8px'}}>詳細を見る <ChevronRight size={9}/></div>
+                </>),
+              })}
             </button>);})}
             </div>
           </div>
