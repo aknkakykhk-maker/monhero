@@ -64,15 +64,18 @@ const RULES = [
       { re: /addPermaBuff\('dmgCutPct',([\d.]+)\*effMul\)/, mustSay: '被ダメージ', unit: '%', note: '被ダメージの割合軽減' },
       { re: /addWaveBuff\('enemyTakenDmgBonus',([\d.]+)\*effMul\)/, mustSay: '敵被ダメ', unit: '%', note: '敵の被ダメージ増加' },
     ],
-    forbid: [{ re: /addDefPct\(/, why: 'モッチーは丈夫さそのものは上げない(被ダメージ軽減)' }],
+    forbid: [{ re: /addPermaBuff\('defPct'/, why: 'モッチーは丈夫さは上げない(被ダメージ軽減)' }],
   },
   {
     monId: 'Monol', label: 'モノリス(トリオビームX)',
     impl: [
-      { re: /addDefPct\(([\d.]+)\*effMul\)/, mustSay: '丈夫さ', unit: '%', note: '丈夫さそのものの増加' },
+      { re: /addPermaBuff\('defPct',([\d.]+)\*effMul\)/, mustSay: '丈夫さ', unit: '%', note: '丈夫さのバフ(defPct)' },
       { re: /addWaveBuff\('enemyAtkDebuffPct',([\d.]+)\*effMul\)/, mustSay: '敵攻', unit: '%', note: '敵攻撃力の低下' },
     ],
-    forbid: [{ re: /addPermaBuff\('dmgCutPct'/, why: 'モノリスは被ダメージ軽減ではなく丈夫さアップ' }],
+    forbid: [
+      { re: /addPermaBuff\('dmgCutPct'/, why: 'モノリスは被ダメージ軽減ではなく丈夫さアップ' },
+      { re: /setDef\(/, why: '丈夫さアップは基礎ステータスではなくバフとして持つ' },
+    ],
   },
   {
     monId: 'Golem', label: 'ゴーレム(合掌)',
@@ -124,17 +127,20 @@ for (const [, key, arg] of buffCalls) {
   if (NOT_HALVED.has(key)) continue;
   check(`2枚目以降の半減が効く: ${key}`, /\*effMul/.test(arg), arg);
 }
-check('丈夫さアップにも2枚目以降の半減が効く',
-  !/addDefPct\(/.test(effectRegion) || /addDefPct\([\d.]+\*effMul\)/.test(effectRegion));
-
-// --- 丈夫さアップの実装が「0にならない」こと ---
-// 割合を切り捨てるだけだと、丈夫さが低いうちは +0 になって何も起きない
-check('丈夫さアップは最低でも+1上がる',
-  /const addDefPct = \(rate\) => setDef\(d => d \+ Math\.max\(1, Math\.floor\(d \* rate\)\)\);/.test(source));
+// --- 丈夫さバフが「基礎ステータスを書き換えない」こと ---
+// def を直接いじると、能力報酬の計算((丈夫さ+20)×1.1)やガード段階まで巻き込み、
+// バフが外れたときに戻せなくなる。ライフ・ガッツと同じく実効値で扱う
+check('丈夫さバフは基礎ステータスを書き換えない', !/setDef\(d => d \+/.test(source));
+check('丈夫さバフを乗せた実効値がある',
+  /const effectiveDef = useMemo\(\(\) => resolveEffectiveMaxStat\(def, getPermaBuff\('defPct'\)\), \[def, permaBuffs\]\);/.test(source));
+check('被ダメージの計算に実効の丈夫さを使う', /-\(effectiveDef\*0\.15\)/.test(source));
+check('ガードの軽減量(表示)に実効の丈夫さを使う', /Math\.floor\(flat \+ effectiveDef \* mult\)/.test(source));
+check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.floor\(immediateEffects\.guardFlat \+ effectiveDef\*immediateEffects\.guardMult\)/.test(source));
 
 // --- 画面の表示が意味と合っていること ---
 // 「被ダメージ軽減」を「DEF +3%」と出していたため、丈夫さが増えたように見えていた
-check('被ダメージ軽減のバッジが「被ダメ -◯%」と出る', /被ダメ -\{Math\.floor\(getPermaBuff\('dmgCutPct'\)\*100\)\}%/.test(source));
+check('丈夫さバフが「DEF +◯%」として出る', /DEF \+\{Math\.floor\(getPermaBuff\('defPct'\)\*100\)\}%/.test(source));
+check('被ダメージ軽減は「被ダメ -◯%」として別に出る', /被ダメ -\{Math\.floor\(getPermaBuff\('dmgCutPct'\)\*100\)\}%/.test(source));
 check('被ダメージ軽減を「DEF +◯%」と表示していない', !/DEF \+\{Math\.floor\(getPermaBuff\('dmgCutPct'\)\*100\)\}%/.test(source));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

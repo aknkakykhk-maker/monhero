@@ -84,9 +84,14 @@ check('半減マークは保留カード自身の判定で出す', has("{isPendi
 // ガードの見え方
 check('ガードの合計軽減を表示する', has('合計軽減') && has('const committedGuard=guardValueOf(guardFlat,guardMult);'));
 check('合計軽減も置く前の予測を出す', has('const projectedGuard=') && has('showGuardProjected'));
+// 表示と実処理が同じ丈夫さを見ていること。丈夫さのバフ(defPct)を入れたとき、
+// 片方だけ実効値へ切り替えると「表示より実際のほうが硬い(柔らかい)」ことになる。
+// どの変数名を使うかはバフの持ち方で変わるので、名前ではなく「両方が同じもの」を見る
+const guardDefVar = (source.match(/const guardValueOf = \(flat, mult\) => \(flat > 0 \|\| mult > 0\) \? Math\.floor\(flat \+ (\w+) \* mult\) : 0;/) || [])[1];
+const enemyTurnDefVar = (source.match(/Math\.floor\(immediateEffects\.guardFlat \+ (\w+)\*immediateEffects\.guardMult\)/) || [])[1];
 check('合計軽減は実処理と同じ式で出す',
-  has('const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + def * mult) : 0;')
-    && has('const guardCardWeight = (card) =>'));
+  !!guardDefVar && guardDefVar === enemyTurnDefVar && has('const guardCardWeight = (card) =>'),
+  `表示=${guardDefVar} / 実処理=${enemyTurnDefVar}`);
 check('弱ガードの重みも合計に反映する', has("card?.type === 'weak_guard' ? 0.5 : 0"));
 check('スロットのガード表示に軽減量を出す', has('{gv>0&&<span'));
 check('半減するカードには½を付ける', has("{halvedByIdx[idx]?'½':''}{card.name}"));
