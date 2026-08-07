@@ -285,6 +285,43 @@ WAVE1で諦めた場合だけはクリアWAVEが0で絆経験値の加算が起�
 Lv.200へ達すると `levelCap >= MAX_MASU_LEVEL_CAP` の判定で突破できなくなる。
 費用（`masuRebirthCost`）・もらえる強化ポイント・固有技Lvアップの扱いは通常の限界突破と同じ。
 
+### 必要アイテム「虹のプシュケー」
+
+限界突破には `rainbow_psyche`（虹のプシュケー）を消費する。
+所持数は他の消耗アイテムと同じ **`mh_owned_items`（`{ itemId: 個数 }`）** に入れる。
+新しい保存キーは作らないので、持っていない旧セーブは自動的に0個として読める（`ownedItemCount` が0へ倒す）。
+
+必要数は `breakthroughItemCost(nextCount)`（`nextCount` = `rebirthCount + 1`）。
+
+```text
+必要数 = 10 + (突破回数 - 1) × 5
+```
+
+| 回数 | 必要数 |
+|---|---|
+| 1 | 10 |
+| 2 | 15 |
+| 3 | 20 |
+| 30 | 155 |
+| 31（最終限界突破） | 160 |
+
+- 判定は `buildMasuBreakthrough` の中で、レベル上限・到達Lv・ダイヤの次に行う。
+  足りなければ `ok:false` を返し、**何も消費しない**。
+- 消費は `executeMasuBreakthrough` が保存に成功したときだけ。`result.nextPsyche`（= 所持 − 必要数）を
+  そのまま `mh_owned_items` へ書くので、失敗・キャンセル・画面遷移では減らない。
+- 入手は**クリアしたときだけ**。難易度ごとの個数は `CLEAR_PSYCHE_REWARD`。
+
+| 難易度 | Beginner | Easy | Normal | Hard | Expert | Master | Grand Master | Hell | Legend |
+|---|---|---|---|---|---|---|---|---|---|
+| 個数 | 1 | 2 | 3 | 5 | 7 | 10 | 15 | 20 | 30 |
+
+  配るのは `recordClearOnce` の中の `awardClearPsyche` 1か所だけ。
+  `recordClearOnce` はチャレンジ・クイックの両方が通る「クリアを1周回に1回だけ記録する」入口で、
+  `clearRecordedRef` が二重付与を止める。敗北・リタイア・スキップチケットはこの関数を通らない。
+- マーケットでは売らない（`shop:false`）。獲得数はリザルトの `psycheGain` に出す。
+
+回帰確認: `node tools/breakthrough-item-check.js`
+
 ### ★の段階
 
 5凸で1段階が完成し、次の段階では**1個ずつ新しい色へ置き換わる**。並びは新しい色が先頭。
@@ -330,4 +367,5 @@ HOMEの放牧マスモン・ランキングの詳細まで、すべて同じ実�
 - ランキングの記録形: `RANKING_DETAIL_VERSION` / `rankingMasuDetail` / `rankingDetailToMasu`
 - 絆Lvランキングへ送る値: `submitLocalScore` / `postRunMasuMonsRef` / `runHeroBondLevelRef`
 - 限界突破の★とレベル上限: `breakthroughStars` / `BREAKTHROUGH_STAR_TIERS` / `BREAKTHROUGH_FINAL_LEVEL_CAP` / `buildMasuBreakthrough`
-- 回帰確認: `node tools/monster-power-check.js`、`node tools/monster-detail-unified-check.js`、`node tools/fusion-detail-check.js`、`node tools/ranking-monster-detail-check.js`、`node tools/bond-ranking-submit-check.js`、`node tools/breakthrough-star-check.js`、`node tools/bulk-enhance-check.js`、`node tools/dye-report.js`、`node tools/battle-check.js`
+- 限界突破に使うアイテム: `BREAKTHROUGH_ITEM_ID` / `breakthroughItemCost` / `CLEAR_PSYCHE_REWARD` / `awardClearPsyche`
+- 回帰確認: `node tools/monster-power-check.js`、`node tools/monster-detail-unified-check.js`、`node tools/fusion-detail-check.js`、`node tools/ranking-monster-detail-check.js`、`node tools/bond-ranking-submit-check.js`、`node tools/breakthrough-star-check.js`、`node tools/breakthrough-item-check.js`、`node tools/bulk-enhance-check.js`、`node tools/dye-report.js`、`node tools/battle-check.js`

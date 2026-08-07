@@ -41,9 +41,9 @@ check('合体費用は(主Lv+副Lv)×50', m.masuFusionCost(10, 8) === 900, `${m.
 check('以前の半額になっている', m.masuFusionCost(10, 8) * 2 === (10 + 8) * 100);
 
 const atCap = { id: 1, baseId: 'Golem', bondXp: m.totalBondXpForLevel(30), levelCap: 30, rebirthCount: 0, distAptPoints: 0, statPoints: {}, uniqueSkillLevels: { own: 0 } };
-const rebirth = m.buildMasuBreakthrough({ masu: atCap, skillKey: 'own', gold: 999999 });
+const rebirth = m.buildMasuBreakthrough({ masu: atCap, skillKey: 'own', gold: 999999, psycheOwned: 999999 });
 check('転生費用は上限Lv×50', rebirth.ok && rebirth.cost === 1500, `${rebirth.cost}ダイヤ`);
-check('ダイヤ不足なら転生できない', m.buildMasuBreakthrough({ masu: atCap, skillKey: 'own', gold: 1499 }).ok === false);
+check('ダイヤ不足なら転生できない', m.buildMasuBreakthrough({ masu: atCap, skillKey: 'own', gold: 1499, psycheOwned: 999999 }).ok === false);
 check('転生後は強化ポイント5で始まる', rebirth.ok && rebirth.nextMasu.distAptPoints === 5);
 
 // --- ① 合体で上がったレベルぶんの強化ポイント ---

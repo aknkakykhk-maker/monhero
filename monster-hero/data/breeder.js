@@ -133,6 +133,12 @@ const BREEDER_MARKET_ITEMS = [
   { id:'skip_ticket_jo',  name:"スキップチケット・序", type:'item', emoji:"⏩", cost:3300, usage:'battleSkip', skipDifficulty:'Normal', desc:"バトルのNormalで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
   { id:'skip_ticket_ha',  name:"スキップチケット・破", type:'item', emoji:"⏭️", cost:5900, usage:'battleSkip', skipDifficulty:'Hard',   desc:"バトルのHardで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
   { id:'skip_ticket_kyu', name:"スキップチケット・急", type:'item', emoji:"⚡", cost:8500, usage:'battleSkip', skipDifficulty:'Expert', desc:"バトルのExpertで使う。1枚消費して、ボスまで倒したときと同じ絆経験値・ブリーダー経験値・ダイヤを受け取れる。まとめて使うこともでき、その場合は枚数ぶん受け取れる。スコアとランキングには記録されない。" },
+  // 限界突破専用のアイテム。マーケットでは売らない(shop:false)ので、
+  // 入手はチャレンジモード・クイックモードのクリア報酬だけ。
+  // 必要数は限界突破1回ごとに増える(1回目10個・以降+5個)。計算は game-system.jsx の
+  // breakthroughItemCost が正本で、ここには説明だけを書く。
+  { id:'rainbow_psyche', name:"虹のプシュケー", type:'item', emoji:"🌈", cost:0, shop:false, usage:'breakthrough',
+    desc:"マスモンの限界突破に使う。必要数は1回目が10個で、限界突破1回ごとに5個ずつ増える(2回目15個、3回目20個…)。チャレンジモード・クイックモードをクリアすると、選んだ難易度に応じてもらえる。" },
   // 助手みゅあの表情アイコン(8種)。アイコンタブの最後に並ぶ
   ...MYUA_MARKET_ICONS
 ];

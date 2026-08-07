@@ -24,7 +24,8 @@ const dataTablePrelude = [
   grab(source, 'const LOGIN_BONUS_REWARDS = [', 'const LOGIN_BONUS_DEFAULT'),
   grab(source, 'const giftRewardText = ', 'const giftTitleDisplay'),
   grab(source, 'const MISSION_DEFS = {', 'const missionDailyPeriod'),
-  grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
+  // 難易度の表と、クリアでもらえる虹のプシュケーの表は同じ塊から作る
+  grab(source, 'const DIFFICULTY_SETTINGS = {', '// ヘルプの中に出す「実データから作る表」'),
   // 神殿でかかるダイヤの表は、合体・転生の単価をそのまま使う
   grab(source, 'const FUSION_COST_PER_LEVEL =', 'const buildMasuBreakthrough ='),
   'const SKIP_TICKETS = SKIP_TICKET_BY_DIFFICULTY;',

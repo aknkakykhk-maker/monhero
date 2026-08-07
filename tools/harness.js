@@ -85,6 +85,15 @@ const EXPORTED_NAMES = [
   'masuBondLevelInfo',
   'normalizeMasuProgression',
   'masuRebirthCost',
+  'BREAKTHROUGH_ITEM_ID',
+  'BREAKTHROUGH_ITEM_BASE',
+  'BREAKTHROUGH_ITEM_STEP',
+  'breakthroughItemCost',
+  'ownedItemCount',
+  'CLEAR_PSYCHE_REWARD',
+  'clearPsycheReward',
+  'DIFFICULTY_SETTINGS',
+  'BREEDER_MARKET_ITEMS',
 ];
 
 // ブラウザAPIの最小スタブ。canvasだけは node-canvas で本物と同じように動かす
