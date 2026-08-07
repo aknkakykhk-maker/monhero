@@ -59,10 +59,14 @@ check('弱ガードも同じ扱い', has('GUARD_EVOLUTION[guardLevel].flat*0.5*e
 check('攻撃ダメージの半減が枚数基準になっている',
   has('getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist)') && !has('localDmgModAdd,attackCount>0,attackStartDist'));
 check('あつの挑発(ブリーダーカード)の攻撃は半減しない', has('getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)'));
+// 効果量そのものはバランス調整で変わるので、数字ではなく「*effMul が掛かっているか」を見る。
+// (実際にゴーレムの闘志を 0.1 → 0.075 にしたときここが落ちた。見たいのは半減の結線であって
+//  効果量ではないので、数字を書き写さない形にしてある)
+const buffHalved = (fn, key) => new RegExp(`${fn}\\('${key}',[\\d.]+\\*effMul\\)`).test(source);
 check('固有技の数値効果も半減する',
-  has("addPermaBuff('dmgCutPct',0.03*effMul)") && has("addPermaBuff('atkPct',0.1*effMul)")
-    && has("addPermaBuff('comboDmgPct',0.03*effMul)") && has('effectiveMaxGuts*0.5*effMul')
-    && has("addPermaBuff('critRatePct',0.02*effMul)") && has("addWaveBuff('enemyAtkDebuffPct',0.10*effMul)"));
+  buffHalved('addPermaBuff', 'dmgCutPct') && buffHalved('addPermaBuff', 'atkPct')
+    && buffHalved('addPermaBuff', 'comboDmgPct') && has('effectiveMaxGuts*0.5*effMul')
+    && buffHalved('addPermaBuff', 'critRatePct') && buffHalved('addWaveBuff', 'enemyAtkDebuffPct'));
 check('半減したことを画面に出す', has("addPopup('2枚目以降 効果半減'"));
 check('ダメージ予測も同じ数え方を使う',
   has('let committedTotal=0; let committedPenaltyCnt=0;') && has('const isPenalty=!isBreederCard(card);')

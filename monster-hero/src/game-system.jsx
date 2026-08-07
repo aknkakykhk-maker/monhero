@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 15:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 16:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6722,7 +6722,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。合体で引き継いだ
           // 固有技を別のモンスターが使う場合でも、元モンスターの固有技効果を正しく再現するため
           if(card.monId==='Mocchi'||card.monId==='Mitarashi'){addPermaBuff('dmgCutPct',0.03*effMul); addWaveBuff('enemyTakenDmgBonus',0.1*effMul); localDmgModAdd+=0.1*effMul; addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold');}
-          else if(card.monId==='Golem'){addPermaBuff('atkPct',0.1*effMul); localOryoAdd+=0.1*effMul; addPopup('闘志UP!','hero','text-red-600 text-lg font-bold');}
+          else if(card.monId==='Golem'){addPermaBuff('atkPct',0.075*effMul); localOryoAdd+=0.075*effMul; addPopup('闘志UP!','hero','text-red-600 text-lg font-bold');}
           else if(card.monId==='Zan'){addPermaBuff('comboDmgPct',0.03*effMul); addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
         }
         const attackStartDist=attackDistance;
