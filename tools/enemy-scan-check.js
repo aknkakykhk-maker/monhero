@@ -104,14 +104,38 @@ check('準備の見出しに技名を出さない', api.enemyActionLabel(enemy, 
 check('移動の吹き出しは2手先の行動から出す',
   has('mh-enemy-move-hint') && has('{RANGE_LABELS[enemyNextIntent.targetDist]}…！')
     && has("enemyNextIntent.type==='MOVE'"));
+// スタン・無効化・眼力・距離撃で敵の行動を止めたときは、その行動を「やらなかった」ことにする。
+// ここが抜けていると、必殺技の準備をスタンで止めたのに次のターンだけ必殺技が飛んでくる
+check('止められたターンは行動しなかった扱いにする',
+  has('enemyActionPerformedRef.current = false;') && has('enemyActionPerformedRef.current = true;'));
+check('止められたターンは直前の行動として数えない',
+  has('setEnemyLastIntent(enemyActionPerformedRef.current?acting:null)')
+    && has('setEnemyLastIntent(enemyActionPerformedRef.current?executedIntent:null)'));
+check('止められたことを次の行動の抽選へ伝えている',
+  has('advanceEnemyIntents(acting,distForNextPredict,enemyActionPerformedRef.current)')
+    && has('advanceEnemyIntents(executedIntent,distForNextPredict,enemyActionPerformedRef.current)'));
+check('ためを止めたら予約してあった必殺技を捨てる',
+  has("if (reserved && reserved.type === 'SPECIAL' && !(performed && executedIntent?.type === 'CHARGE')) reserved = null;"));
+check('いま居る間合いへの移動予約も捨てる',
+  has("if (reserved && reserved.type === 'MOVE' && reserved.targetDist === distAfterExecuted) reserved = null;"));
+// 抽選側も「何もしなかった」を受け取れること(nullを渡すとためも移動も無かった扱いになる)
+const cancelled = api.enemyActionStateFrom(null);
+check('何もしなかったターンの次はふつうの抽選に戻る',
+  cancelled.charging === false && cancelled.movedLast === false, JSON.stringify(cancelled));
+const afterCancel = api.enemyActionProbabilities(enemy, 1, cancelled);
+check('ためを止めた次のターンは必殺技が出ない', afterCancel.find(a => a.id === 'special').available === false);
+check('ためを止めた次のターンはふだんの出やすさに戻る',
+  JSON.stringify(pct(afterCancel)) === JSON.stringify({ normal: 50, charge: 15, special: 0, wait: 20, move: 15 }),
+  JSON.stringify(pct(afterCancel)));
+
 check('予告済みの行動は抽選し直さず繰り上げる',
-  has('const upcoming = enemyNextIntentRef.current || getNextEnemyAction(enemy, distAfterExecuted, executedIntent);')
+  has('const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective);')
     && has('setEnemyIntent(upcoming);'));
 check('戦闘開始時に2手ぶん用意する',
   has('const firstIntent = getNextEnemyAction(newEnemy,dist);')
     && has('reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent));'));
 check('次の行動を決めるとき直前の行動を渡している',
-  has('advanceEnemyIntents(executedIntent,distForNextPredict)') && has('advanceEnemyIntents(acting,distForNextPredict)'));
+  /advanceEnemyIntents\(executedIntent,distForNextPredict[,)]/.test(src) && /advanceEnemyIntents\(acting,distForNextPredict[,)]/.test(src));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exitCode = failed ? 1 : 0;

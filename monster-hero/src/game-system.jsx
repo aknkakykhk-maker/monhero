@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 10:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 10:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3299,6 +3299,9 @@ function MonsterHeroGame() {
   // 表示用のstateとは別に、すぐ読める控えも持つ。敵ターンの処理は非同期なので、
   // 描画のタイミングに左右されずに「予告済みの行動」を取り出せるようにしておく
   const enemyNextIntentRef = useRef(null);
+  // 敵が予告どおりに行動をやり終えたか。スタン・無効化・眼力・距離撃で止めた場合はfalseになる。
+  // 「必殺技の準備を止めたのに、次のターンだけ必殺技が飛んでくる」のを防ぐために見る
+  const enemyActionPerformedRef = useRef(true);
   const reserveEnemyNextIntent = (intent) => { enemyNextIntentRef.current = intent || null; setEnemyNextIntent(intent || null); };
   const [atkLevel, setAtkLevel] = useState(0);
   const [guardLevel, setGuardLevel] = useState(0);
@@ -6212,9 +6215,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 「移動の吹き出し」で先に見せた行動は enemyNextIntent に入っているので、
   // それをそのまま enemyIntent へ移し、新しく2手先だけを抽選する。
   // ここで抽選し直すと、吹き出しで予告した移動が来ないことになってしまう。
-  const advanceEnemyIntents = (executedIntent, distAfterExecuted) => {
-    // 予約が無いときだけその場で抽選する(戦闘の途中から復帰した場合など)
-    const upcoming = enemyNextIntentRef.current || getNextEnemyAction(enemy, distAfterExecuted, executedIntent);
+  const advanceEnemyIntents = (executedIntent, distAfterExecuted, performed = true) => {
+    // 止められたターンは「何もしなかった」扱いにする。
+    // ためを止めたのに次が必殺技のままだと、スタンさせた意味が無くなる
+    const effective = performed ? executedIntent : null;
+    let reserved = enemyNextIntentRef.current;
+    // 予約は「その行動をやり終えた前提」で選んである。前提が崩れたものだけ捨てて引き直す
+    //   ・ためを止めたのに必殺技が予約されている
+    //   ・いま居る間合いへ移動する予約になっている(移動を封じられて間合いが変わらなかった等)
+    if (reserved && reserved.type === 'SPECIAL' && !(performed && executedIntent?.type === 'CHARGE')) reserved = null;
+    if (reserved && reserved.type === 'MOVE' && reserved.targetDist === distAfterExecuted) reserved = null;
+    const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective);
     setEnemyIntent(upcoming);
     reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming));
   };
@@ -6408,6 +6419,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // この値から算出したremainingHpだけを表示・state更新・敗北判定に使う。
     let currentHp = hpAtAttackStart;
 
+    // 止められたターンは「何もしなかった」ことにする。ここをfalseのままにしておくと、
+    // ためを止めたのに次のターンだけ必殺技が来る、という状態になる
+    enemyActionPerformedRef.current = false;
     if (getTurnBuff('invincible',false)||immediateEffects.invincible) {
       addPopup("無効化！",'hero','text-blue-400 font-black text-xl drop-shadow-md');
       setImmediateTurnBuff('invincible',false); await battleWait(1000);
@@ -6417,7 +6431,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } else if (mainHero?.id==='Suezo'&&Math.random()<0.4) {
       addPopup("眼力！",'enemy','text-indigo-400 font-black text-xl drop-shadow-md'); await battleWait(1000);
     } else {
+      // 距離撃で移動を封じたときだけは、この中でも「行動しなかった扱い」に戻す
+      enemyActionPerformedRef.current = true;
       if (intent.type==='MOVE' && immediateEffects.distLocked) {
+        enemyActionPerformedRef.current = false;
         // 距離撃を撃ったターンは最終的な間合いが距離撃側で確定する。
         // それでも敵が移動モーションを見せると「動いたのに距離が変わらない」ように見えるため、
         // 移動しようとしていた敵は行動しなかった扱いにする(モーションも距離変更も行わない)。
@@ -6539,7 +6556,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     await handleEnemyTurn('none',{},acting,hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const distForNextPredict=acting&&acting.type==='MOVE'?acting.targetDist:enemyDist;
-    setEnemyLastIntent(acting); advanceEnemyIntents(acting,distForNextPredict);
+    setEnemyLastIntent(enemyActionPerformedRef.current?acting:null); advanceEnemyIntents(acting,distForNextPredict,enemyActionPerformedRef.current);
     if (scenario) setBattleTutorialLastAction('emergency');
   };
 
@@ -6798,7 +6815,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 敵の行動が終わった後で、次ターンの予測を1回だけ抽選してセット
     // 敵が移動した場合は移動後の距離を基準にする
     const distForNextPredict=forcedMoveTarget!=null?forcedMoveTarget:((executedIntent&&executedIntent.type==='MOVE')?executedIntent.targetDist:enemyDist);
-    setEnemyLastIntent(executedIntent); advanceEnemyIntents(executedIntent,distForNextPredict);
+    setEnemyLastIntent(enemyActionPerformedRef.current?executedIntent:null); advanceEnemyIntents(executedIntent,distForNextPredict,enemyActionPerformedRef.current);
     // ここまで来てはじめて「1ターンぶんを見終わった」ので、練習を次へ進める
     if (tutorialKinds.length) setBattleTutorialLastAction(tutorialKinds.join(','));
   };
