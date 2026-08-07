@@ -69,6 +69,23 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: マスモンの現在ステータス表記が残っている`, code.includes('現在のステータス(強化分込み)'));
   check(`${label}: マスモンの所持固有技Lvが残っている`, code.includes('所持固有技Lv'));
   check(`${label}: マスモンの強化ポイント表示が残っている`, code.includes('masu.distAptPoints'));
+  // 勇者モン選択・供モン選択のカード。ここだけ素の立ち絵(imgUrl)を68pxで貼っていたため、
+  // 他の一覧と見た目が違い、マスモンの限界突破★・転生バッジも出ていなかった
+  const cardStart = code.indexOf('const pickMasu');
+  const cardEnd = cardStart > 0 ? code.indexOf('詳細を見る', cardStart) : -1;
+  const card = cardStart > 0 && cardEnd > 0 ? code.slice(cardStart, cardEnd) : '';
+  check(`${label}: 勇者モン選択・供モン選択のカードが見つかる`, card.length > 0);
+  check(`${label}: カードのアイコンは丸くくり抜いたiconUrl`,
+    /m\.iconUrl\s*\|\|\s*m\.imgUrl/.test(card) && card.includes('rounded-full') && card.includes('object-cover'));
+  check(`${label}: 素の立ち絵をそのまま貼る形に戻っていない`,
+    !card.includes('object-contain') && !card.includes('68px'));
+  check(`${label}: マスモンなら限界突破★と転生バッジが出る`,
+    /RebirthStars[\s\S]{0,120}pickMasu\.rebirthCount/.test(card) && /ReincarnateBadge[\s\S]{0,120}pickMasu\.reincarnateCount/.test(card));
+  check(`${label}: マスモンだけアイコンの枠と名前の色を変える`,
+    card.includes('border-pink-400/40') && card.includes('text-pink-200'));
+  check(`${label}: カードに総合力がある`, /monsterCardPower\(monsterPowerOf\(m\)\)/.test(card));
+  check(`${label}: 長い名前がカードからはみ出さない`, card.includes('truncate'));
+
   // マスモンの絆XPゲージは共通サマリーの中だけ(ブリーダーLvのゲージは別物なので数えない)
   check(`${label}: マスモンの絆XPゲージは共通サマリーの中に1つだけ`,
     (code.match(/lvl\.xpIntoLevel\.toLocaleString\(\)/g) || []).length === 1,
