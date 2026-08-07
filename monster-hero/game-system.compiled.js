@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5cc03944025fd99c
+// source-sha256: e96294e8b51c5baf
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 15:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 15:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2514,7 +2514,50 @@ const MASU_COLOR_SWATCH = {
 // 色id文字列自体に "custom:色相:彩度:明度"(彩度・明度は0-100の整数)を埋め込んでエンコードする。
 // masu.colorsは元々ただの文字列配列なので、この方式ならデータモデルを変えずに保存できる
 const _encodeCustomColorId = (h, s, v) => `custom:${Math.round(h)}:${Math.round(s * 100)}:${Math.round(v * 100)}`;
-const _parseCustomColorId = colorId => {
+// 【部位ごとの透け具合(濃さ)】
+// 色idの末尾に "@60" のように付ける。付いていなければ100%(そのまま塗る)。
+//
+// なぜ色idへ埋めるか: 染色データ(masu.colors)は文字列の配列で、画面の49か所へ
+// そのまま流れている。別の配列を足すと49か所すべてに配り直すことになり、
+// 渡し漏れた画面だけ濃さが効かない、という壊れ方をする。
+// 色idに含めておけば、色が流れるところへ必ず濃さも一緒に流れる。
+// 100%のときは "@100" を付けないので、濃さをいじっていない既存データは1文字も変わらない。
+const MASU_COLOR_ALPHA_MIN = 10; // これ未満は「色を選んだのに見えない」ので下限にする
+const MASU_COLOR_ALPHA_MAX = 100;
+const _clampColorAlpha = pct => Math.max(MASU_COLOR_ALPHA_MIN, Math.min(MASU_COLOR_ALPHA_MAX, Math.round(Number.isFinite(Number(pct)) ? Number(pct) : MASU_COLOR_ALPHA_MAX)));
+// 色idを「色そのもの」と「濃さ(%)」に分ける。壊れた値・古い値は濃さ100%として読む
+const splitColorAlpha = colorId => {
+  if (typeof colorId !== 'string') return {
+    base: colorId,
+    alpha: MASU_COLOR_ALPHA_MAX
+  };
+  const at = colorId.lastIndexOf('@');
+  if (at < 0) return {
+    base: colorId,
+    alpha: MASU_COLOR_ALPHA_MAX
+  };
+  const pct = Number(colorId.slice(at + 1));
+  if (!Number.isFinite(pct)) return {
+    base: colorId,
+    alpha: MASU_COLOR_ALPHA_MAX
+  };
+  return {
+    base: colorId.slice(0, at),
+    alpha: _clampColorAlpha(pct)
+  };
+};
+// 色idへ濃さを付け直す。100%のときは付けない(既存データと同じ文字列に保つ)
+const withColorAlpha = (colorId, pct) => {
+  if (typeof colorId !== 'string' || !colorId) return colorId;
+  const {
+    base
+  } = splitColorAlpha(colorId);
+  const alpha = _clampColorAlpha(pct);
+  return alpha >= MASU_COLOR_ALPHA_MAX ? base : `${base}@${alpha}`;
+};
+const colorAlphaOf = colorId => splitColorAlpha(colorId).alpha;
+const _parseCustomColorId = rawColorId => {
+  const colorId = splitColorAlpha(rawColorId).base;
   if (typeof colorId !== 'string' || !colorId.startsWith('custom:')) return null;
   const parts = colorId.slice(7).split(':').map(Number);
   if (parts.length !== 3 || parts.some(n => !Number.isFinite(n))) return null;
@@ -2526,7 +2569,9 @@ const _parseCustomColorId = colorId => {
   };
 };
 // プリセット色id・カスタム色idのどちらでも、染色エンジンが使う{h,s,vMin,vMax}形式に解決する
-const _resolveColorTarget = colorId => {
+const _resolveColorTarget = rawColorId => {
+  // 濃さ(@NN)は塗る色そのものには関係しないので、ここで外してから解決する
+  const colorId = splitColorAlpha(rawColorId).base;
   if (MASU_COLOR_TARGET[colorId]) return MASU_COLOR_TARGET[colorId];
   const custom = _parseCustomColorId(colorId);
   if (!custom) return null;
@@ -2541,7 +2586,9 @@ const _resolveColorTarget = colorId => {
     vMax
   };
 };
-const getColorSwatchHex = colorId => {
+const getColorSwatchHex = rawColorId => {
+  // 見本の丸は「どの色か」を示すものなので、濃さ(@NN)は外して色だけを見る
+  const colorId = splitColorAlpha(rawColorId).base;
   if (MASU_COLOR_SWATCH[colorId]) return MASU_COLOR_SWATCH[colorId];
   const custom = _parseCustomColorId(colorId);
   if (!custom) return '#64748b';
@@ -3336,7 +3383,10 @@ const _recolorImageData = (data, colorId, baseId, regionIdx) => {
 };
 // imgUrlの画像全体を指定色に染め直した画像をCanvasで生成し、dataURLで返す(色ごとにキャッシュ)
 const _dyeRecolorCache = {};
-const getRecoloredImage = (imgUrl, colorId, baseId, regionIdx) => {
+const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
+  // 濃さ(@NN)は重ねるときの透明度で表現するので、染め直した画像そのものには影響しない。
+  // ここで外しておかないと、濃さを変えるたびに同じ絵をもう一度作ってしまう
+  const colorId = splitColorAlpha(rawColorId).base;
   if (!_resolveColorTarget(colorId)) return null;
   // 同じ画像・色でも、光沢保持などbaseId固有の染色規則が異なり得るため、
   // 通常表示とすべての呼び出し元で同じ条件のキャッシュだけを共有する。
@@ -3392,6 +3442,8 @@ const MASU_COLOR_FALLBACK_REGION = {
     2: 0
   }
 };
+// 染め直した絵の置き場所の名前。濃さ(@NN)は絵に影響しないので名前へ含めない
+const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).base;
 // マスモンの画像を、部位別の染色(masuColors配列)を反映して表示するコンポーネント。
 // 部位分割データが無いモンスターは画像全体を染め直した1枚を表示する。
 const DyedMonsterImage = ({
@@ -3433,7 +3485,9 @@ const DyedMonsterImage = ({
       return;
     }
     let cancelled = false;
-    Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then(url => [idx + '|' + c, url]))).then(entries => {
+    // 濃さ(@NN)は重ねる透明度で出すので、作る絵は濃さ抜きの色で1枚。
+    // 置き場所の名前も濃さ抜きにしておくと、スライダーを動かしている間に絵を作り直さない
+    Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then(url => [_recoloredKey(idx, c), url]))).then(entries => {
       if (!cancelled) setRecolored(Object.fromEntries(entries));
     });
     return () => {
@@ -3441,7 +3495,43 @@ const DyedMonsterImage = ({
     };
   }, [baseId, src, colorKey]);
   if (!hues || hues.length === 0) {
-    const recoloredSrc = colors[0] && recolored['0|' + colors[0]];
+    const recoloredSrc = colors[0] && recolored[_recoloredKey(0, colors[0])];
+    const alpha = colorAlphaOf(colors[0]);
+    // 濃さを下げているときだけ、元の絵の上に染めた絵を薄く重ねる。
+    // 100%(既定)のときは今までどおり画像1枚だけを出す
+    if (recoloredSrc && alpha < MASU_COLOR_ALPHA_MAX) {
+      return /*#__PURE__*/React.createElement("div", {
+        className: className,
+        style: {
+          ...style,
+          position: 'relative',
+          overflow: 'hidden'
+        }
+      }, /*#__PURE__*/React.createElement("img", {
+        src: src,
+        alt: alt,
+        draggable: draggable,
+        style: {
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'inherit'
+        }
+      }), /*#__PURE__*/React.createElement("img", {
+        src: recoloredSrc,
+        alt: "",
+        draggable: false,
+        style: {
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'inherit',
+          opacity: alpha / 100
+        }
+      }));
+    }
     return /*#__PURE__*/React.createElement("img", {
       src: recoloredSrc || src,
       alt: alt,
@@ -3477,9 +3567,9 @@ const DyedMonsterImage = ({
       height: '100%',
       objectFit: 'inherit'
     }
-  }), hues.map((_, idx) => colors[idx] && masks[idx] && recolored[idx + '|' + colors[idx]] ? /*#__PURE__*/React.createElement("img", {
+  }), hues.map((_, idx) => colors[idx] && masks[idx] && recolored[_recoloredKey(idx, colors[idx])] ? /*#__PURE__*/React.createElement("img", {
     key: idx,
-    src: recolored[idx + '|' + colors[idx]],
+    src: recolored[_recoloredKey(idx, colors[idx])],
     alt: "",
     draggable: false,
     style: {
@@ -3491,7 +3581,8 @@ const DyedMonsterImage = ({
       WebkitMaskImage: `url(${masks[idx]})`,
       maskImage: `url(${masks[idx]})`,
       WebkitMaskSize: '100% 100%',
-      maskSize: '100% 100%'
+      maskSize: '100% 100%',
+      opacity: colorAlphaOf(colors[idx]) / 100
     }
   }) : null));
 };
@@ -3530,8 +3621,8 @@ const DyeRegionColorControls = ({
     className: "text-[5.5px] font-black"
   }, "\u5143\u306E\u8272")), Object.keys(MASU_COLOR_TARGET).map(colorId => /*#__PURE__*/React.createElement("button", {
     key: colorId,
-    onClick: () => onChange(idx, colorId),
-    className: `flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${colors[idx] === colorId ? 'border-fuchsia-400 ring-2 ring-fuchsia-400' : 'border-white/10'}`
+    onClick: () => onChange(idx, withColorAlpha(colorId, colorAlphaOf(colors[idx]))),
+    className: `flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${splitColorAlpha(colors[idx]).base === colorId ? 'border-fuchsia-400 ring-2 ring-fuchsia-400' : 'border-white/10'}`
   }, /*#__PURE__*/React.createElement("span", {
     className: "w-3.5 h-3.5 rounded-full border border-white/20",
     style: {
@@ -3549,7 +3640,22 @@ const DyeRegionColorControls = ({
     }
   }), /*#__PURE__*/React.createElement("span", {
     className: "text-[5.5px] font-black"
-  }, "\u30AB\u30B9\u30BF\u30E0"))))));
+  }, "\u30AB\u30B9\u30BF\u30E0"))), colors[idx] && /*#__PURE__*/React.createElement("div", {
+    className: "mt-1.5 flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-[8px] font-black text-slate-300 shrink-0"
+  }, "\u6FC3\u3055"), /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    min: MASU_COLOR_ALPHA_MIN,
+    max: MASU_COLOR_ALPHA_MAX,
+    step: 5,
+    value: colorAlphaOf(colors[idx]),
+    onChange: e => onChange(idx, withColorAlpha(colors[idx], e.target.value)),
+    "aria-label": `染色${regionLabels[idx] || idx + 1}の濃さ`,
+    className: "flex-1 min-w-0 min-h-[32px] accent-fuchsia-500 touch-none"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-[8px] font-black text-fuchsia-200 w-8 text-right shrink-0"
+  }, colorAlphaOf(colors[idx]), "%")))));
 };
 // マスモンの全身表示は画面ごとにiconUrlへ切り替えず、通常表示と同じ立ち絵を使う。
 // iconUrlしか持たない旧データも従来どおり表示できるようフォールバックは残す。
@@ -17058,7 +17164,15 @@ function MonsterHeroGame() {
           className: `w-full h-full ${fit}`
         })));
       };
-      const colorText = c => c ? _parseCustomColorId(c) ? `カスタム(${c})` : MASU_COLOR_LABELS[c] || c : '元の色';
+      const colorText = c => {
+        if (!c) return '元の色';
+        const {
+          base,
+          alpha
+        } = splitColorAlpha(c);
+        const name = _parseCustomColorId(base) ? `カスタム(${base})` : MASU_COLOR_LABELS[base] || base;
+        return alpha < MASU_COLOR_ALPHA_MAX ? `${name} 濃さ${alpha}%` : name;
+      };
       return /*#__PURE__*/React.createElement("main", {
         className: "flex-1 flex flex-col h-full min-h-0 p-3",
         style: {
@@ -19589,9 +19703,10 @@ function MonsterHeroGame() {
       const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
       const applyCustom = () => {
         const setter = mode === 'debug' ? setMonsterImageDebugColors : setDyePreviewColors;
+        // 濃さ(@NN)は色を作り直しても引き継ぐ
         setter(prev => {
           const next = [...(prev || (mode === 'debug' ? getMasuColors(masu) : []))];
-          next[idx] = _encodeCustomColorId(h, s, v);
+          next[idx] = withColorAlpha(_encodeCustomColorId(h, s, v), colorAlphaOf(next[idx]));
           return next;
         });
         setCustomColorPicker(null);
@@ -19600,7 +19715,7 @@ function MonsterHeroGame() {
       // プレビュー表示だけは色相/彩度/明度を粗く丸めて再描画の頻度を抑える(確定時は元の値をそのまま使う)
       const previewColorId = _encodeCustomColorId(Math.round(h / 4) * 4, Math.round(s * 20) / 20, Math.round(v * 20) / 20);
       const sourceColors = mode === 'debug' ? monsterImageDebugColors || getMasuColors(masu) : dyePreviewColors;
-      const previewColors = sourceColors.map((c, i) => i === idx ? previewColorId : c);
+      const previewColors = sourceColors.map((c, i) => i === idx ? withColorAlpha(previewColorId, colorAlphaOf(c)) : c);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center p-4",
         style: {

@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 15:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 15:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -830,7 +830,37 @@ const MASU_COLOR_SWATCH = { red: '#ef4444', orange: '#f97316', yellow: '#eab308'
 // 色id文字列自体に "custom:色相:彩度:明度"(彩度・明度は0-100の整数)を埋め込んでエンコードする。
 // masu.colorsは元々ただの文字列配列なので、この方式ならデータモデルを変えずに保存できる
 const _encodeCustomColorId = (h, s, v) => `custom:${Math.round(h)}:${Math.round(s * 100)}:${Math.round(v * 100)}`;
-const _parseCustomColorId = (colorId) => {
+// 【部位ごとの透け具合(濃さ)】
+// 色idの末尾に "@60" のように付ける。付いていなければ100%(そのまま塗る)。
+//
+// なぜ色idへ埋めるか: 染色データ(masu.colors)は文字列の配列で、画面の49か所へ
+// そのまま流れている。別の配列を足すと49か所すべてに配り直すことになり、
+// 渡し漏れた画面だけ濃さが効かない、という壊れ方をする。
+// 色idに含めておけば、色が流れるところへ必ず濃さも一緒に流れる。
+// 100%のときは "@100" を付けないので、濃さをいじっていない既存データは1文字も変わらない。
+const MASU_COLOR_ALPHA_MIN = 10;   // これ未満は「色を選んだのに見えない」ので下限にする
+const MASU_COLOR_ALPHA_MAX = 100;
+const _clampColorAlpha = (pct) => Math.max(MASU_COLOR_ALPHA_MIN, Math.min(MASU_COLOR_ALPHA_MAX,
+  Math.round(Number.isFinite(Number(pct)) ? Number(pct) : MASU_COLOR_ALPHA_MAX)));
+// 色idを「色そのもの」と「濃さ(%)」に分ける。壊れた値・古い値は濃さ100%として読む
+const splitColorAlpha = (colorId) => {
+  if (typeof colorId !== 'string') return { base: colorId, alpha: MASU_COLOR_ALPHA_MAX };
+  const at = colorId.lastIndexOf('@');
+  if (at < 0) return { base: colorId, alpha: MASU_COLOR_ALPHA_MAX };
+  const pct = Number(colorId.slice(at + 1));
+  if (!Number.isFinite(pct)) return { base: colorId, alpha: MASU_COLOR_ALPHA_MAX };
+  return { base: colorId.slice(0, at), alpha: _clampColorAlpha(pct) };
+};
+// 色idへ濃さを付け直す。100%のときは付けない(既存データと同じ文字列に保つ)
+const withColorAlpha = (colorId, pct) => {
+  if (typeof colorId !== 'string' || !colorId) return colorId;
+  const { base } = splitColorAlpha(colorId);
+  const alpha = _clampColorAlpha(pct);
+  return alpha >= MASU_COLOR_ALPHA_MAX ? base : `${base}@${alpha}`;
+};
+const colorAlphaOf = (colorId) => splitColorAlpha(colorId).alpha;
+const _parseCustomColorId = (rawColorId) => {
+  const colorId = splitColorAlpha(rawColorId).base;
   if (typeof colorId !== 'string' || !colorId.startsWith('custom:')) return null;
   const parts = colorId.slice(7).split(':').map(Number);
   if (parts.length !== 3 || parts.some(n => !Number.isFinite(n))) return null;
@@ -838,7 +868,9 @@ const _parseCustomColorId = (colorId) => {
   return { h: Math.max(0, Math.min(360, h)), s: Math.max(0, Math.min(1, s / 100)), v: Math.max(0, Math.min(1, v / 100)) };
 };
 // プリセット色id・カスタム色idのどちらでも、染色エンジンが使う{h,s,vMin,vMax}形式に解決する
-const _resolveColorTarget = (colorId) => {
+const _resolveColorTarget = (rawColorId) => {
+  // 濃さ(@NN)は塗る色そのものには関係しないので、ここで外してから解決する
+  const colorId = splitColorAlpha(rawColorId).base;
   if (MASU_COLOR_TARGET[colorId]) return MASU_COLOR_TARGET[colorId];
   const custom = _parseCustomColorId(colorId);
   if (!custom) return null;
@@ -848,7 +880,9 @@ const _resolveColorTarget = (colorId) => {
   const vMax = Math.min(1.0, Math.max(custom.v + 0.24, vMin + 0.2));
   return { h: custom.h, s: custom.s, vMin, vMax };
 };
-const getColorSwatchHex = (colorId) => {
+const getColorSwatchHex = (rawColorId) => {
+  // 見本の丸は「どの色か」を示すものなので、濃さ(@NN)は外して色だけを見る
+  const colorId = splitColorAlpha(rawColorId).base;
   if (MASU_COLOR_SWATCH[colorId]) return MASU_COLOR_SWATCH[colorId];
   const custom = _parseCustomColorId(colorId);
   if (!custom) return '#64748b';
@@ -1410,7 +1444,10 @@ const _recolorImageData = (data, colorId, baseId, regionIdx) => {
 };
 // imgUrlの画像全体を指定色に染め直した画像をCanvasで生成し、dataURLで返す(色ごとにキャッシュ)
 const _dyeRecolorCache = {};
-const getRecoloredImage = (imgUrl, colorId, baseId, regionIdx) => {
+const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
+  // 濃さ(@NN)は重ねるときの透明度で表現するので、染め直した画像そのものには影響しない。
+  // ここで外しておかないと、濃さを変えるたびに同じ絵をもう一度作ってしまう
+  const colorId = splitColorAlpha(rawColorId).base;
   if (!_resolveColorTarget(colorId)) return null;
   // 同じ画像・色でも、光沢保持などbaseId固有の染色規則が異なり得るため、
   // 通常表示とすべての呼び出し元で同じ条件のキャッシュだけを共有する。
@@ -1456,6 +1493,8 @@ const getRecoloredImage = (imgUrl, colorId, baseId, regionIdx) => {
 // 追従するようにし、「染色①だけで耳まで含めた全身が染まる」→染色③は耳・尻尾だけを別の
 // アクセント色にしたいときだけ使う任意スロット、という運用にする
 const MASU_COLOR_FALLBACK_REGION = { Tiger: { 2: 0 } };
+// 染め直した絵の置き場所の名前。濃さ(@NN)は絵に影響しないので名前へ含めない
+const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).base;
 // マスモンの画像を、部位別の染色(masuColors配列)を反映して表示するコンポーネント。
 // 部位分割データが無いモンスターは画像全体を染め直した1枚を表示する。
 const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, draggable }) => {
@@ -1479,12 +1518,25 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, drag
     const wanted = colors.map((c, idx) => [idx, c]).filter(([, c]) => c);
     if (wanted.length === 0) { setRecolored({}); return; }
     let cancelled = false;
-    Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then((url) => [idx + '|' + c, url])))
+    // 濃さ(@NN)は重ねる透明度で出すので、作る絵は濃さ抜きの色で1枚。
+    // 置き場所の名前も濃さ抜きにしておくと、スライダーを動かしている間に絵を作り直さない
+    Promise.all(wanted.map(([idx, c]) => Promise.resolve(getRecoloredImage(src, c, baseId, idx)).then((url) => [_recoloredKey(idx, c), url])))
       .then((entries) => { if (!cancelled) setRecolored(Object.fromEntries(entries)); });
     return () => { cancelled = true; };
   }, [baseId, src, colorKey]);
   if (!hues || hues.length === 0) {
-    const recoloredSrc = colors[0] && recolored['0|' + colors[0]];
+    const recoloredSrc = colors[0] && recolored[_recoloredKey(0, colors[0])];
+    const alpha = colorAlphaOf(colors[0]);
+    // 濃さを下げているときだけ、元の絵の上に染めた絵を薄く重ねる。
+    // 100%(既定)のときは今までどおり画像1枚だけを出す
+    if (recoloredSrc && alpha < MASU_COLOR_ALPHA_MAX) {
+      return (
+        <div className={className} style={{...style, position:'relative', overflow:'hidden'}}>
+          <img src={src} alt={alt} draggable={draggable} style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'inherit'}}/>
+          <img src={recoloredSrc} alt="" draggable={false} style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'inherit', opacity:alpha/100}}/>
+        </div>
+      );
+    }
     return <img src={recoloredSrc || src} alt={alt} draggable={draggable} className={className} style={style}/>;
   }
   if (!masks || !colors.some(Boolean)) {
@@ -1493,11 +1545,12 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, drag
   return (
     <div className={className} style={{...style, position:'relative', overflow:'hidden'}}>
       <img src={src} alt={alt} draggable={draggable} style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'inherit'}}/>
-      {hues.map((_, idx) => (colors[idx] && masks[idx] && recolored[idx + '|' + colors[idx]]) ? (
-        <img key={idx} src={recolored[idx + '|' + colors[idx]]} alt="" draggable={false} style={{
+      {hues.map((_, idx) => (colors[idx] && masks[idx] && recolored[_recoloredKey(idx, colors[idx])]) ? (
+        <img key={idx} src={recolored[_recoloredKey(idx, colors[idx])]} alt="" draggable={false} style={{
           position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'inherit',
           WebkitMaskImage:`url(${masks[idx]})`, maskImage:`url(${masks[idx]})`,
           WebkitMaskSize:'100% 100%', maskSize:'100% 100%',
+          opacity:colorAlphaOf(colors[idx])/100,
         }}/>
       ) : null)}
     </div>
@@ -1513,9 +1566,18 @@ const DyeRegionColorControls = ({ baseId, colors, onChange, onCustom }) => {
       <div className="text-[8px] text-fuchsia-300 font-black uppercase mb-1">{regionCount>1?`染色${regionLabels[idx]||idx+1}`:'染色'}</div>
       <div className="grid grid-cols-6 gap-0.5">
         <button onClick={()=>onChange(idx,null)} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${!colors[idx]?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20 flex items-center justify-center" style={{background:'conic-gradient(#ef4444,#eab308,#22c55e,#3b82f6,#ef4444)'}}><RotateCcw size={7}/></span><span className="text-[5.5px] font-black">元の色</span></button>
-        {Object.keys(MASU_COLOR_TARGET).map(colorId=><button key={colorId} onClick={()=>onChange(idx,colorId)} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${colors[idx]===colorId?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}/><span className="text-[5.5px] font-black">{MASU_COLOR_LABELS[colorId]}</span></button>)}
+        {/* 色を選び直しても濃さは引き継ぐ(色だけ変えたいときに毎回つまみを直さなくてよいように) */}
+        {Object.keys(MASU_COLOR_TARGET).map(colorId=><button key={colorId} onClick={()=>onChange(idx,withColorAlpha(colorId,colorAlphaOf(colors[idx])))} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${splitColorAlpha(colors[idx]).base===colorId?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{backgroundColor:MASU_COLOR_SWATCH[colorId]}}/><span className="text-[5.5px] font-black">{MASU_COLOR_LABELS[colorId]}</span></button>)}
         <button onClick={()=>onCustom(idx)} className={`flex flex-col items-center gap-0.5 bg-black/40 border rounded-lg py-1 active:scale-95 ${_parseCustomColorId(colors[idx])?'border-fuchsia-400 ring-2 ring-fuchsia-400':'border-white/10'}`}><span className="w-3.5 h-3.5 rounded-full border border-white/20" style={{background:_parseCustomColorId(colors[idx])?getColorSwatchHex(colors[idx]):'conic-gradient(#ef4444,#eab308,#22c55e,#06b6d4,#3b82f6,#d946ef,#ef4444)'}}/><span className="text-[5.5px] font-black">カスタム</span></button>
       </div>
+      {/* 濃さ(透過率)。色を選んでいる部位にだけ出す。「元の色」には濃さの意味が無いため */}
+      {colors[idx]&&<div className="mt-1.5 flex items-center gap-2">
+        <span className="text-[8px] font-black text-slate-300 shrink-0">濃さ</span>
+        <input type="range" min={MASU_COLOR_ALPHA_MIN} max={MASU_COLOR_ALPHA_MAX} step={5} value={colorAlphaOf(colors[idx])}
+          onChange={e=>onChange(idx,withColorAlpha(colors[idx],e.target.value))}
+          aria-label={`染色${regionLabels[idx]||idx+1}の濃さ`} className="flex-1 min-w-0 min-h-[32px] accent-fuchsia-500 touch-none"/>
+        <span className="text-[8px] font-black text-fuchsia-200 w-8 text-right shrink-0">{colorAlphaOf(colors[idx])}%</span>
+      </div>}
     </div>
   ))}</div>;
 };
@@ -8064,7 +8126,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const bgStyle=monsterImageDebugBg==='white'?{background:'#fff'}:monsterImageDebugBg==='black'?{background:'#000'}:{backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'};
           const renderPair=(label,sourceKey,palette,frameClass='h-32',fit='object-contain')=><section className="rounded-xl bg-black/30 p-2"><b className="block mb-2 text-center text-[9px] text-cyan-200">{label}</b><div className={`grid gap-2 ${variants.length===2?'grid-cols-2':'grid-cols-1'}`}>{variants.map(([name,sources])=><div key={name} className="text-center"><div className={`${frameClass} overflow-hidden border border-white/20 flex items-center justify-center`} style={bgStyle}>{palette===null?<img src={sources[sourceKey]} alt={`${name}${label}`} className={`w-full h-full ${fit}`}/>:<DyedMonsterImage baseId="Tiger" src={sources[sourceKey]} alt={`${name}${label}`} masuColors={palette} className={`w-full h-full ${fit}`}/>}</div><small className="text-[8px] font-black">{name}</small></div>)}</div></section>;
           const renderCurrent=(label,sourceKey,palette,frameClass='h-32',fit='object-contain')=>{if(isTiger)return renderPair(label,sourceKey,palette,frameClass,fit);const src=oldSources[sourceKey];return <section className="rounded-xl bg-black/30 p-2 text-center"><b className="block mb-2 text-[9px] text-cyan-200">{label}</b><div className={`${frameClass} overflow-hidden border border-white/20`} style={bgStyle}>{palette===null?<img src={src} alt={label} className={`w-full h-full ${fit}`}/>:<DyedMonsterImage baseId={base.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`}/>}</div></section>};
-          const colorText=(c)=>c?(_parseCustomColorId(c)?`カスタム(${c})`:(MASU_COLOR_LABELS[c]||c)):'元の色';
+          const colorText=(c)=>{if(!c)return '元の色';const{base,alpha}=splitColorAlpha(c);const name=_parseCustomColorId(base)?`カスタム(${base})`:(MASU_COLOR_LABELS[base]||base);return alpha<MASU_COLOR_ALPHA_MAX?`${name} 濃さ${alpha}%`:name;};
           return <main className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
             <header className="flex items-center gap-2 mb-2"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-400">DEBUG・保存されません</small><h2 className="text-sm font-black">モンスター画像・染色確認</h2></div></header>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3">
@@ -9288,14 +9350,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const base = masu && ALL_PLAYER_MONSTERS[masu.baseId];
           const applyCustom = () => {
             const setter=mode==='debug'?setMonsterImageDebugColors:setDyePreviewColors;
-            setter(prev => { const next = [...(prev||(mode==='debug'?getMasuColors(masu):[]))]; next[idx] = _encodeCustomColorId(h, s, v); return next; });
+            // 濃さ(@NN)は色を作り直しても引き継ぐ
+            setter(prev => { const next = [...(prev||(mode==='debug'?getMasuColors(masu):[]))]; next[idx] = withColorAlpha(_encodeCustomColorId(h, s, v), colorAlphaOf(next[idx])); return next; });
             setCustomColorPicker(null);
           };
           // ドラッグ中は毎フレームcolorIdが変わり染色エンジンの再描画(Canvas処理)が大量発生するため、
           // プレビュー表示だけは色相/彩度/明度を粗く丸めて再描画の頻度を抑える(確定時は元の値をそのまま使う)
           const previewColorId = _encodeCustomColorId(Math.round(h / 4) * 4, Math.round(s * 20) / 20, Math.round(v * 20) / 20);
           const sourceColors=mode==='debug'?(monsterImageDebugColors||getMasuColors(masu)):dyePreviewColors;
-          const previewColors = sourceColors.map((c, i) => i === idx ? previewColorId : c);
+          const previewColors = sourceColors.map((c, i) => i === idx ? withColorAlpha(previewColorId, colorAlphaOf(c)) : c);
           return (
             <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.94)',zIndex:32000}}>
               <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-xs flex flex-col gap-3 shadow-2xl">
