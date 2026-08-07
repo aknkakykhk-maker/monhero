@@ -59,6 +59,19 @@ check('連続で移動しない', moveAgain.length === 0, `${moveAgain.length}�
 check('移動を除いたぶんは残りへ配り直される',
   Math.abs(afterMove.filter(a => a.available).reduce((s, a) => s + a.probability, 0) - 1) < 1e-9);
 
+// --- 戦闘開始の1ターン目 ---
+// 移動は必ず前のターンに吹き出しで予告してから行うので、予告を出す機会が無い
+// 1ターン目に移動が出てはいけない(実際に開幕から動いてしまっていた)
+const firstTurn = api.enemyActionProbabilities(enemy, 1, { firstTurn: true });
+check('戦闘開始の1ターン目は移動を選ばない', firstTurn.find(a => a.id === 'move').available === false,
+  firstTurn.find(a => a.id === 'move').unavailableReason);
+check('1ターン目の出やすさは移動ぶんを残りへ配り直す',
+  JSON.stringify(pct(firstTurn)) === JSON.stringify({ normal: 58.82353, charge: 17.64706, special: 0, wait: 23.52941, move: 0 }),
+  JSON.stringify(pct(firstTurn)));
+const openings = Array.from({ length: 2000 }, (_, i) => api.chooseEnemyAction(enemy, 1, () => i / 2000, { firstTurn: true }).type);
+check('どんな乱数でも開幕は移動にならない', !openings.includes('MOVE'),
+  `出た行動: ${Array.from(new Set(openings)).join(' / ')}`);
+
 // --- 抽選そのもの ---
 check('小さい乱数では通常攻撃', api.chooseEnemyAction(enemy, 1, () => 0, {}).type === 'ATTACK');
 check('通常攻撃の次の帯はためる', api.chooseEnemyAction(enemy, 1, () => 0.51, {}).type === 'CHARGE');
@@ -132,8 +145,9 @@ check('予告済みの行動は抽選し直さず繰り上げる',
   has('const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective);')
     && has('setEnemyIntent(upcoming);'));
 check('戦闘開始時に2手ぶん用意する',
-  has('const firstIntent = getNextEnemyAction(newEnemy,dist);')
+  has('const firstIntent = getNextEnemyAction(newEnemy,dist,null,{firstTurn:true});')
     && has('reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent));'));
+check('戦闘開始前のSCANも1ターン目の条件で見せる', has('scanBeforeBattle?{firstTurn:true}:enemyActionStateFrom(enemyLastIntent)'));
 check('次の行動を決めるとき直前の行動を渡している',
   /advanceEnemyIntents\(executedIntent,distForNextPredict[,)]/.test(src) && /advanceEnemyIntents\(acting,distForNextPredict[,)]/.test(src));
 
