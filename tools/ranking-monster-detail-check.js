@@ -135,8 +135,15 @@ check('読める間合い適性はそのまま残す', goodApt && JSON.stringify
 // --- 画面側 ---
 const source = read('src/game-system.jsx');
 const has = (t) => source.includes(t);
+// 詳細を付けるのはマスモンの枠だけ。参照する個体は「そのランの絆経験値を加算したあと」の
+// スナップショットで、stateを直接読むと1ラン遅れた育て方を送ってしまう
 check('記録にマスモンのときだけ詳細を付ける',
-  has('const detail = s.masuId ? rankingMasuDetail(getMasuMon(s.masuId)) : null;') && has('...(detail ? { detail } : {})'));
+  has('const masu = s.masuId ? masuForRanking(s.masuId) : null;')
+  && has('const detail = masu ? rankingMasuDetail(masu) : null;')
+  && has('...(detail ? { detail } : {})'));
+check('詳細は報酬を配ったあとの個体から作る',
+  /const masuForRanking = \(masuId\) => \(postRunMasuMonsRef\.current/.test(source)
+  && !has('rankingMasuDetail(getMasuMon('));
 check('編成の各モンスターに詳細ボタンがある',
   has('onClick={()=>{ if (m?.detail) setRankingMonsterDetail(m); }}') && has('disabled={!m?.detail}'));
 check('詳細が無い古い記録は押せず、理由が出る', has('情報<br/>なし'));
