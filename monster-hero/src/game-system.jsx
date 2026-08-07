@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 20:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 20:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10354,11 +10354,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 外枠だと画面からはみ出して「どこを押すのか」が分からなかった */}
             <div className="grid grid-cols-2 gap-2.5">
             {(gameState==='PICK_HERO'&&heroPickTab==='base'?getUnlockedBaseMonsterList():monSelection).map(m=>{const isSel=currentPickingMon?.id===m.id;
+              // アイコンはM/B管理の一覧と同じ「丸くくり抜いたiconUrl」に揃える。
+              // ここだけ素の立ち絵(imgUrl)を貼っていたため、他の画面と見た目が違ううえ、
+              // マスモンでも限界突破の★・転生バッジが出ず、どれが育った個体か分からなかった。
+              const pickMasu=m.masuId?getMasuMon(m.masuId):null;
+              const pickFused=(pickMasu?.fusionHistory||[]).length>0;
               return(<button key={m.id} disabled={!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} className={`bg-slate-900 border-2 rounded-2xl flex flex-col items-center transition-all active:scale-95 disabled:opacity-25${scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`} style={{padding:'12px 8px'}}>
-              <div className="relative">{m.imgUrl?(<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt={m.name} masuColors={m.colors} className="object-contain transition-transform" style={{width:'68px',height:'68px',transform:isSel?'scale(1.12)':'scale(1)'}}/>):(<span style={{fontSize:'52px'}}>{m.emoji}</span>)}{isSel&&<div className="absolute -top-1 -right-1 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>}</div>
-              <span className="font-black text-white mt-1" style={{fontSize:'14px'}}>{m.name}</span>
+              <div className="relative shrink-0">
+                <div className={`w-16 h-16 rounded-full overflow-hidden shrink-0 border transition-transform ${pickMasu?(pickFused?'border-amber-400 ring-1 ring-amber-400':'border-pink-400/40'):'border-white/10'}`} style={{transform:isSel?'scale(1.08)':'scale(1)'}}>
+                  {(m.iconUrl||m.imgUrl)?(<DyedMonsterImage baseId={m.id} src={m.iconUrl||m.imgUrl} alt={m.name} masuColors={m.colors} className="w-full h-full object-cover"/>):(<div className="w-full h-full flex items-center justify-center" style={{fontSize:'40px'}}>{m.emoji}</div>)}
+                </div>
+                {pickMasu&&<RebirthStars count={pickMasu.rebirthCount} className="mh-rebirth-stars-overlay"/>}
+                {pickMasu&&<ReincarnateBadge count={pickMasu.reincarnateCount} className="is-small"/>}
+                {isSel&&<div className="absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>}
+              </div>
+              <span className={`font-black truncate w-full text-center mt-1 ${pickMasu?'text-pink-200':'text-white'}`} style={{fontSize:'14px'}}>{m.name}</span>
               <div className="text-amber-400 font-black flex items-center gap-1 leading-tight mt-0.5" style={{fontSize:'9px'}}><Zap size={9}/> {m.unique.name}</div>
-              <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full mt-2 px-1 font-mono" style={{fontSize:'9px'}}>
+              {/* 一覧で「どれが強いか」を比べられるよう、他のモンスター一覧と同じ総合力の行を置く */}
+              {monsterCardPower(monsterPowerOf(m))}
+              <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full mt-1 px-1 font-mono" style={{fontSize:'9px'}}>
                 <div className="flex justify-between"><span className="text-slate-500">HP</span><span className="text-pink-400 font-bold">{gameState==='PICK_HERO'?m.baseHp:`+${m.plusStats?.hp||0}`}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">力</span><span className="text-red-400 font-bold">{gameState==='PICK_HERO'?m.baseAtk:`+${m.plusStats?.atk||0}`}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">防</span><span className="text-emerald-400 font-bold">{gameState==='PICK_HERO'?m.baseDef:`+${m.plusStats?.def||0}`}</span></div>

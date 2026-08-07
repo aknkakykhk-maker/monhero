@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 20785de734e5adb9
+// source-sha256: 1e1f2b0b3b04cf07
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 20:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 20:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -21820,6 +21820,11 @@ function MonsterHeroGame() {
       className: "grid grid-cols-2 gap-2.5"
     }, (gameState === 'PICK_HERO' && heroPickTab === 'base' ? getUnlockedBaseMonsterList() : monSelection).map(m => {
       const isSel = currentPickingMon?.id === m.id;
+      // アイコンはM/B管理の一覧と同じ「丸くくり抜いたiconUrl」に揃える。
+      // ここだけ素の立ち絵(imgUrl)を貼っていたため、他の画面と見た目が違ううえ、
+      // マスモンでも限界突破の★・転生バッジが出ず、どれが育った個体か分からなかった。
+      const pickMasu = m.masuId ? getMasuMon(m.masuId) : null;
+      const pickFused = (pickMasu?.fusionHistory || []).length > 0;
       return /*#__PURE__*/React.createElement("button", {
         key: m.id,
         disabled: !scenarioPicksHero(m.id),
@@ -21829,29 +21834,36 @@ function MonsterHeroGame() {
           padding: '12px 8px'
         }
       }, /*#__PURE__*/React.createElement("div", {
-        className: "relative"
-      }, m.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+        className: "relative shrink-0"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: `w-16 h-16 rounded-full overflow-hidden shrink-0 border transition-transform ${pickMasu ? pickFused ? 'border-amber-400 ring-1 ring-amber-400' : 'border-pink-400/40' : 'border-white/10'}`,
+        style: {
+          transform: isSel ? 'scale(1.08)' : 'scale(1)'
+        }
+      }, m.iconUrl || m.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
         baseId: m.id,
-        src: m.imgUrl,
+        src: m.iconUrl || m.imgUrl,
         alt: m.name,
         masuColors: m.colors,
-        className: "object-contain transition-transform",
+        className: "w-full h-full object-cover"
+      }) : /*#__PURE__*/React.createElement("div", {
+        className: "w-full h-full flex items-center justify-center",
         style: {
-          width: '68px',
-          height: '68px',
-          transform: isSel ? 'scale(1.12)' : 'scale(1)'
+          fontSize: '40px'
         }
-      }) : /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: '52px'
-        }
-      }, m.emoji), isSel && /*#__PURE__*/React.createElement("div", {
-        className: "absolute -top-1 -right-1 bg-indigo-500 rounded-full p-1 shadow-lg"
+      }, m.emoji)), pickMasu && /*#__PURE__*/React.createElement(RebirthStars, {
+        count: pickMasu.rebirthCount,
+        className: "mh-rebirth-stars-overlay"
+      }), pickMasu && /*#__PURE__*/React.createElement(ReincarnateBadge, {
+        count: pickMasu.reincarnateCount,
+        className: "is-small"
+      }), isSel && /*#__PURE__*/React.createElement("div", {
+        className: "absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"
       }, /*#__PURE__*/React.createElement(Check, {
         size: 12,
         className: "text-white"
       }))), /*#__PURE__*/React.createElement("span", {
-        className: "font-black text-white mt-1",
+        className: `font-black truncate w-full text-center mt-1 ${pickMasu ? 'text-pink-200' : 'text-white'}`,
         style: {
           fontSize: '14px'
         }
@@ -21862,8 +21874,8 @@ function MonsterHeroGame() {
         }
       }, /*#__PURE__*/React.createElement(Zap, {
         size: 9
-      }), " ", m.unique.name), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full mt-2 px-1 font-mono",
+      }), " ", m.unique.name), monsterCardPower(monsterPowerOf(m)), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full mt-1 px-1 font-mono",
         style: {
           fontSize: '9px'
         }
