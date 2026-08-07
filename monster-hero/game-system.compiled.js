@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7ec6a37647c237ee
+// source-sha256: 0003322c047d11ef
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 10:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 11:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6044,10 +6044,12 @@ const evaluateEnemyActions = (ent, currentDist, state = {}) => {
         reason = 'ためた次のターンにだけ発動します';
       } else if (def.type === 'MOVE') {
         // 移動は必ず前のターンに吹き出しで予告してから行う。
-        // 戦闘が始まった1ターン目には予告を出す機会が無いので、そもそも選ばない
-        if (state.firstTurn) {
+        // 予告を出す機会が無かったターンの直後は、そもそも移動を選ばない。
+        //   ・戦闘が始まった1ターン目
+        //   ・必殺技の準備をスタンで止めるなどして、予約していた行動を引き直したとき
+        if (state.unannounced) {
           available = false;
-          reason = '戦闘開始の1ターン目は移動しません(移動は必ず前のターンに予告します)';
+          reason = '移動は前のターンの吹き出しで予告してから行うため、予告を出していないこの場面では選ばれません';
         } else if (movedLast) {
           available = false;
           reason = '移動した次のターンは移動しません';
@@ -11595,7 +11597,11 @@ function MonsterHeroGame() {
     //   ・いま居る間合いへ移動する予約になっている(移動を封じられて間合いが変わらなかった等)
     if (reserved && reserved.type === 'SPECIAL' && !(performed && executedIntent?.type === 'CHARGE')) reserved = null;
     if (reserved && reserved.type === 'MOVE' && reserved.targetDist === distAfterExecuted) reserved = null;
-    const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective);
+    // 引き直しになった行動は、次のターンにそのまま実行されるのに吹き出しを出していない。
+    // ここで移動を引くと「予告なしでいきなり動く」ことになるので、移動は選ばせない
+    const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {
+      unannounced: true
+    });
     setEnemyIntent(upcoming);
     reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming));
   };
@@ -13021,7 +13027,7 @@ function MonsterHeroGame() {
     setEnemyDist(dist);
     setEnemyLastIntent(null);
     const firstIntent = getNextEnemyAction(newEnemy, dist, null, {
-      firstTurn: true
+      unannounced: true
     });
     setEnemyIntent(firstIntent);
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy, distAfterIntent(firstIntent, dist), firstIntent));
@@ -20245,10 +20251,16 @@ function MonsterHeroGame() {
         animation: 'idleExclaim 1100ms ease-in-out infinite'
       }
     }, "\u2757")), enemy && enemyNextIntent && !isBusy && !enemyAttackFx && enemyNextIntent.type === 'MOVE' && /*#__PURE__*/React.createElement("div", {
-      className: "absolute inset-0 pointer-events-none z-[9000]"
+      className: "fixed left-1/2 -translate-x-1/2 pointer-events-none",
+      style: {
+        top: '22%',
+        zIndex: 65000
+      }
     }, /*#__PURE__*/React.createElement("div", {
       className: "mh-enemy-move-hint"
-    }, RANGE_LABELS[enemyNextIntent.targetDist], "\u2026\uFF01")), enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("span", {
+      "aria-hidden": "true"
+    }, "\uD83C\uDFC3"), /*#__PURE__*/React.createElement("span", null, "\u3064\u304E ", /*#__PURE__*/React.createElement("b", null, RANGE_LABELS[enemyNextIntent.targetDist], "\u8DDD\u96E2"), "\u3078\u52D5\u304F\u2026\uFF01"))), enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
     }, /*#__PURE__*/React.createElement("div", {
       className: "absolute -inset-6 rounded-full",
@@ -23601,7 +23613,7 @@ function MonsterHeroGame() {
       const scanDist = waveScanPreview ? 2 : enemyDist;
       const scanBeforeBattle = !!waveScanPreview;
       const scanState = scanBeforeBattle ? {
-        firstTurn: true
+        unannounced: true
       } : enemyActionStateFrom(enemyLastIntent);
       const actions = enemyActionProbabilities(scanEnemy, scanDist, scanState);
       return /*#__PURE__*/React.createElement("div", {
@@ -24369,17 +24381,22 @@ const createAnimationStyle = () => {
     }
     /* 次のターンに間合いを変える、という敵のつぶやき。
        文字だけだと背景に埋もれるので、しっぽ付きの吹き出しにして敵の右上に出す */
+    /* 次のターンに間合いを変える、という敵のつぶやき。
+       小さすぎて読み飛ばされていたので、必殺技の警告と同じくらいの大きさにし、
+       「つぎ ◯距離へ動く」と行き先まで文章で書く */
     .mh-enemy-move-hint {
-      position: absolute; right: -6px; top: -14px;
-      padding: 4px 10px; border-radius: 12px;
-      border: 2px solid #67e8f9; background: #083344f2; color: #cffafe;
-      font-size: 12px; font-weight: 1000; letter-spacing: .08em; white-space: nowrap;
-      box-shadow: 0 3px 10px #000a, 0 0 14px #22d3ee66;
+      position: relative; display: flex; align-items: center; gap: 7px;
+      padding: 7px 15px; border-radius: 15px;
+      border: 2px solid #67e8f9; background: linear-gradient(135deg, #083344f5, #0e4f63f5); color: #ecfeff;
+      font-size: 15px; font-weight: 1000; letter-spacing: .06em; white-space: nowrap;
+      text-shadow: 0 2px 4px #000;
+      box-shadow: 0 4px 14px #000b, 0 0 22px #22d3ee88;
       animation: moveHintBob 1200ms ease-in-out infinite;
     }
+    .mh-enemy-move-hint b { color: #fde68a; font-size: 17px; }
     .mh-enemy-move-hint::after {
-      content: ''; position: absolute; left: 12px; bottom: -7px;
-      border: 6px solid transparent; border-top-color: #67e8f9;
+      content: ''; position: absolute; left: 50%; margin-left: -7px; bottom: -8px;
+      border: 7px solid transparent; border-top-color: #67e8f9;
     }
     @keyframes moveHintBob {
       0%,100% { transform: translateY(0); }

@@ -59,17 +59,20 @@ check('連続で移動しない', moveAgain.length === 0, `${moveAgain.length}�
 check('移動を除いたぶんは残りへ配り直される',
   Math.abs(afterMove.filter(a => a.available).reduce((s, a) => s + a.probability, 0) - 1) < 1e-9);
 
-// --- 戦闘開始の1ターン目 ---
-// 移動は必ず前のターンに吹き出しで予告してから行うので、予告を出す機会が無い
-// 1ターン目に移動が出てはいけない(実際に開幕から動いてしまっていた)
-const firstTurn = api.enemyActionProbabilities(enemy, 1, { firstTurn: true });
-check('戦闘開始の1ターン目は移動を選ばない', firstTurn.find(a => a.id === 'move').available === false,
-  firstTurn.find(a => a.id === 'move').unavailableReason);
-check('1ターン目の出やすさは移動ぶんを残りへ配り直す',
-  JSON.stringify(pct(firstTurn)) === JSON.stringify({ normal: 58.82353, charge: 17.64706, special: 0, wait: 23.52941, move: 0 }),
-  JSON.stringify(pct(firstTurn)));
-const openings = Array.from({ length: 2000 }, (_, i) => api.chooseEnemyAction(enemy, 1, () => i / 2000, { firstTurn: true }).type);
-check('どんな乱数でも開幕は移動にならない', !openings.includes('MOVE'),
+// --- 予告を出していない場面 ---
+// 移動は必ず前のターンに吹き出しで予告してから行う。予告を出す機会が無かった直後
+//   ・戦闘開始の1ターン目(実際に開幕から動いてしまっていた)
+//   ・必殺技の準備をスタンで止めて、予約していた行動を引き直したとき
+//     (こちらも実際に、止めた次のターンにいきなり移動が来ていた)
+// には移動を選んではいけない
+const unannounced = api.enemyActionProbabilities(enemy, 1, { unannounced: true });
+check('予告を出していないターンの次は移動を選ばない', unannounced.find(a => a.id === 'move').available === false,
+  unannounced.find(a => a.id === 'move').unavailableReason);
+check('移動ぶんの出やすさは残りへ配り直す',
+  JSON.stringify(pct(unannounced)) === JSON.stringify({ normal: 58.82353, charge: 17.64706, special: 0, wait: 23.52941, move: 0 }),
+  JSON.stringify(pct(unannounced)));
+const openings = Array.from({ length: 2000 }, (_, i) => api.chooseEnemyAction(enemy, 1, () => i / 2000, { unannounced: true }).type);
+check('どんな乱数でも予告なしの移動にならない', !openings.includes('MOVE'),
   `出た行動: ${Array.from(new Set(openings)).join(' / ')}`);
 
 // --- 抽選そのもの ---
@@ -115,8 +118,15 @@ check('準備の見出しに技名を出さない', api.enemyActionLabel(enemy, 
 // 移動の吹き出しは「1つ先」ではなく「2つ先」を見て出す。
 // 通常攻撃などの予告と同時に出て、その次のターンに実際に動く
 check('移動の吹き出しは2手先の行動から出す',
-  has('mh-enemy-move-hint') && has('{RANGE_LABELS[enemyNextIntent.targetDist]}…！')
+  has('mh-enemy-move-hint') && has('{RANGE_LABELS[enemyNextIntent.targetDist]}距離')
     && has("enemyNextIntent.type==='MOVE'"));
+// 吹き出しは行き先まで文章で書く(「近…！」だけでは何が起きるのか読み取れなかった)
+check('吹き出しに行き先と、何が起きるかを書く', has('つぎ <b>{RANGE_LABELS[enemyNextIntent.targetDist]}距離</b>へ動く…！'));
+// ムーは丸枠の外へ巨大に描いているので、丸枠の中に置くと本体の裏へ回る。
+// 必殺技の警告と同じく画面基準で前面に出すこと
+const hintBlock = src.slice(src.indexOf("enemyNextIntent.type==='MOVE'&&("), src.indexOf('mh-enemy-move-hint') + 400);
+check('吹き出しはムーの手前に出る(画面基準で前面に置く)',
+  /fixed left-1\/2 -translate-x-1\/2 pointer-events-none/.test(hintBlock) && /zIndex:65000/.test(hintBlock));
 // スタン・無効化・眼力・距離撃で敵の行動を止めたときは、その行動を「やらなかった」ことにする。
 // ここが抜けていると、必殺技の準備をスタンで止めたのに次のターンだけ必殺技が飛んでくる
 check('止められたターンは行動しなかった扱いにする',
@@ -142,12 +152,15 @@ check('ためを止めた次のターンはふだんの出やすさに戻る',
   JSON.stringify(pct(afterCancel)));
 
 check('予告済みの行動は抽選し直さず繰り上げる',
-  has('const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective);')
+  has('const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true});')
     && has('setEnemyIntent(upcoming);'));
 check('戦闘開始時に2手ぶん用意する',
-  has('const firstIntent = getNextEnemyAction(newEnemy,dist,null,{firstTurn:true});')
+  has('const firstIntent = getNextEnemyAction(newEnemy,dist,null,{unannounced:true});')
     && has('reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent));'));
-check('戦闘開始前のSCANも1ターン目の条件で見せる', has('scanBeforeBattle?{firstTurn:true}:enemyActionStateFrom(enemyLastIntent)'));
+check('戦闘開始前のSCANも同じ条件で見せる', has('scanBeforeBattle?{unannounced:true}:enemyActionStateFrom(enemyLastIntent)'));
+// 予約を捨てて引き直した行動は、次のターンにそのまま実行されるのに吹き出しを出していない
+check('引き直した行動でも予告なしの移動にしない',
+  has('const upcoming = reserved || getNextEnemyAction(enemy, distAfterExecuted, effective, {unannounced:true});'));
 check('次の行動を決めるとき直前の行動を渡している',
   /advanceEnemyIntents\(executedIntent,distForNextPredict[,)]/.test(src) && /advanceEnemyIntents\(acting,distForNextPredict[,)]/.test(src));
 
