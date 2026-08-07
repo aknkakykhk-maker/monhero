@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6412db9eb71f8190
+// source-sha256: 427da9075ccd25d6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 08:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 10:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5916,11 +5916,18 @@ const enemyArtStyle = (enemyId, context = 'scan') => {
 };
 
 // 実戦の抽選とSCANは同じ定義・使用可否評価を参照する。SCAN側は候補を評価するだけで乱数を使わない。
+//
+// 必殺技は「ためる(CHARGE)」→「発動(SPECIAL)」の2ターンに分かれている。
+// CHARGE のターンはオーラを溜めるだけでダメージが無く、その次のターンは必ず SPECIAL になる
+// (再抽選せず、移動などほかの行動でも上書きしない)。SPECIAL は抽選には出てこないので重みは0。
+//
+// 移動は「移動した次のターンには選ばない」。同じ間合いを行ったり来たりして
+// 手が出せないまま終わる、という状態を避けるため。
 const ENEMY_ACTION_DEFINITIONS = [{
   id: 'normal',
   type: 'ATTACK',
   category: '通常攻撃',
-  weight: 45,
+  weight: 50,
   multiplier: 1,
   hits: 1,
   range: '全間合い',
@@ -5928,14 +5935,25 @@ const ENEMY_ACTION_DEFINITIONS = [{
   cooldown: 0,
   useLimit: null
 }, {
-  id: 'special',
+  id: 'charge',
   type: 'CHARGE',
-  category: '特殊攻撃',
+  category: 'ためる',
   weight: 15,
+  multiplier: 0,
+  hits: 0,
+  range: '全間合い',
+  condition: '常時',
+  cooldown: 0,
+  useLimit: null
+}, {
+  id: 'special',
+  type: 'SPECIAL',
+  category: '必殺技',
+  weight: 0,
   multiplier: 2.5,
   hits: 1,
   range: '全間合い',
-  condition: '常時',
+  condition: 'ためた次のターンに必ず発動',
   cooldown: 0,
   useLimit: null
 }, {
@@ -5953,32 +5971,70 @@ const ENEMY_ACTION_DEFINITIONS = [{
   id: 'move',
   type: 'MOVE',
   category: '移動',
-  weight: 20,
+  weight: 15,
   multiplier: 0,
   hits: 0,
   range: '現在以外の3間合い',
-  condition: '移動先がある',
+  condition: '移動先がある・移動した次のターンは選ばない',
   cooldown: 0,
   useLimit: null
 }];
-const evaluateEnemyActions = (ent, currentDist) => ENEMY_ACTION_DEFINITIONS.map(def => {
-  const available = !!ent && (def.type !== 'MOVE' || RANGE_LABELS.some((_, i) => i !== currentDist));
-  return {
-    ...def,
-    available,
-    unavailableReason: available ? '' : !ent ? '敵情報がありません' : '移動先がありません'
-  };
+// 直前の行動から、次に選べる行動を決めるための状態を作る
+const enemyActionStateFrom = lastIntent => ({
+  charging: lastIntent?.type === 'CHARGE',
+  movedLast: lastIntent?.type === 'MOVE'
 });
-const enemyActionProbabilities = (ent, currentDist) => {
-  const actions = evaluateEnemyActions(ent, currentDist),
+const evaluateEnemyActions = (ent, currentDist, state = {}) => {
+  const charging = !!state.charging,
+    movedLast = !!state.movedLast;
+  return ENEMY_ACTION_DEFINITIONS.map(def => {
+    let available = !!ent,
+      reason = ent ? '' : '敵情報がありません';
+    if (available) {
+      if (charging) {
+        // ためた次のターンは必殺技で確定。ほかの行動では上書きしない
+        available = def.type === 'SPECIAL';
+        if (!available) reason = 'ためているため、次は必殺技で確定しています';
+      } else if (def.type === 'SPECIAL') {
+        available = false;
+        reason = 'ためた次のターンにだけ発動します';
+      } else if (def.type === 'MOVE') {
+        if (movedLast) {
+          available = false;
+          reason = '移動した次のターンは移動しません';
+        } else if (!RANGE_LABELS.some((_, i) => i !== currentDist)) {
+          available = false;
+          reason = '移動先がありません';
+        }
+      }
+    }
+    return {
+      ...def,
+      weight: charging ? def.type === 'SPECIAL' ? 1 : 0 : def.weight,
+      available,
+      unavailableReason: available ? '' : reason
+    };
+  });
+};
+const enemyActionProbabilities = (ent, currentDist, state = {}) => {
+  const actions = evaluateEnemyActions(ent, currentDist, state),
     total = actions.reduce((sum, a) => sum + (a.available ? a.weight : 0), 0);
   return actions.map(a => ({
     ...a,
     probability: a.available && total > 0 ? a.weight / total : 0
   }));
 };
-const chooseEnemyAction = (ent, currentDist, random = Math.random) => {
-  const actions = enemyActionProbabilities(ent, currentDist),
+// 行動の見出しとアイコン。抽選と台本(練習モード)の両方から使う
+const enemyActionLabel = (ent, type) => type === 'ATTACK' ? ent?.normal || '通常攻撃' : type === 'CHARGE' ? `${ent?.special || '必殺技'} をためている` : type === 'SPECIAL' ? ent?.special || '必殺技！' : '様子を見ている';
+const ENEMY_ACTION_ICONS = {
+  ATTACK: '👊',
+  CHARGE: '✨',
+  SPECIAL: '🔥',
+  WAIT: '⏳',
+  MOVE: '🏃'
+};
+const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) => {
+  const actions = enemyActionProbabilities(ent, currentDist, state),
     roll = random(),
     available = actions.filter(a => a.available);
   let cursor = roll;
@@ -5990,21 +6046,22 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random) => {
   if (selected.type === 'MOVE') {
     const targets = RANGE_LABELS.map((_, i) => i).filter(i => i !== currentDist);
     const targetDist = targets[Math.min(targets.length - 1, Math.floor(random() * targets.length))];
+    // 予告に出した移動先をそのまま持ち歩く。実行時はこの値だけを見るので、
+    // 予告と実際の移動先が食い違うことはない
     return {
       type: selected.type,
       value: 0,
       label: `移動: ${RANGE_LABELS[targetDist]}`,
       targetDist,
-      icon: '🏃',
+      icon: ENEMY_ACTION_ICONS.MOVE,
       actionId: selected.id
     };
   }
-  const label = selected.type === 'ATTACK' ? ent.normal || '通常攻撃' : selected.type === 'CHARGE' ? ent.special || '必殺技！' : '様子を見ている';
   return {
     type: selected.type,
     value: Math.floor(ent.atk * selected.multiplier),
-    label,
-    icon: selected.type === 'ATTACK' ? '👊' : selected.type === 'CHARGE' ? '🔥' : '⏳',
+    label: enemyActionLabel(ent, selected.type),
+    icon: ENEMY_ACTION_ICONS[selected.type] || '⏳',
     actionId: selected.id
   };
 };
@@ -6983,6 +7040,9 @@ function MonsterHeroGame() {
   const [popups, setPopups] = useState([]);
   const [effect, setEffect] = useState(null);
   const [enemyIntent, setEnemyIntent] = useState(null);
+  // 直前に敵が実行した行動。SCANが「ためた直後なので次は必殺技で確定」「移動した直後なので
+  // 続けて移動しない」を実戦と同じ判定で出すために持っておく
+  const [enemyLastIntent, setEnemyLastIntent] = useState(null);
   const [atkLevel, setAtkLevel] = useState(0);
   const [guardLevel, setGuardLevel] = useState(0);
   const [guardBonusCount, setGuardBonusCount] = useState(0);
@@ -10867,6 +10927,7 @@ function MonsterHeroGame() {
     waveResult: null,
     focusedCard: null,
     enemyIntent: null,
+    enemyLastIntent: null,
     effect: null,
     finalRewardSummary: null,
     waveHistory: [],
@@ -11092,6 +11153,7 @@ function MonsterHeroGame() {
     setSkillPicker(null);
     setShowQuitConfirm(false);
     setEnemyIntent(s.enemyIntent);
+    setEnemyLastIntent(s.enemyLastIntent || null);
     setEffect(s.effect);
     setFinalRewardSummary(s.finalRewardSummary);
     setWaveHistory(s.waveHistory || []);
@@ -11402,6 +11464,7 @@ function MonsterHeroGame() {
     setFocusedCard(s.focusedCard);
     setSkillPicker(null);
     setEnemyIntent(s.enemyIntent);
+    setEnemyLastIntent(s.enemyLastIntent || null);
     setEffect(s.effect);
     setPendingReward(null);
     setFinalRewardSummary(s.finalRewardSummary);
@@ -11431,7 +11494,9 @@ function MonsterHeroGame() {
   };
 
   // ふだんは抽選。練習の台本があるあいだだけ、決まった順番の行動を返す
-  const getNextEnemyAction = useCallback((ent, currentDist) => {
+  // lastIntent は「たった今どの行動を終えたか」。
+  // ためた次のターンを必殺技で確定させ、移動した次のターンに移動を選ばないために使う
+  const getNextEnemyAction = useCallback((ent, currentDist, lastIntent = null) => {
     const scenario = battleScenarioRef.current;
     if (scenario && typeof battleScenarioIntent === 'function') {
       const scripted = battleScenarioIntent(scenario, battleScenarioIntentIndexRef.current, ent, currentDist);
@@ -11440,10 +11505,11 @@ function MonsterHeroGame() {
         return scripted;
       }
     }
-    return chooseEnemyAction(ent, currentDist);
+    return chooseEnemyAction(ent, currentDist, Math.random, enemyActionStateFrom(lastIntent));
   }, []);
   const getPredictedDamage = useCallback(intent => {
-    if (!intent || intent.type !== 'ATTACK' && intent.type !== 'CHARGE') return 0;
+    // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
+    if (!intent || intent.type !== 'ATTACK' && intent.type !== 'SPECIAL') return 0;
     const atkVal = Math.floor(intent.value * (1.0 - getWaveBuff('enemyAtkDebuffPct')));
     const chuuniCutActive = (mainHero?.id === 'Ark' || mainHero?.id === 'Iblis') && getWaveBuff('chuuniDmgCutUses') < 2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
     const dmgBase = Math.max(30, atkVal * getTurnBuff('takenDamageMult', 1.0) - def * 0.15) * (mainHero?.id === 'Mocchi' || mainHero?.id === 'Mitarashi' ? 0.8 : 1.0) * (chuuniCutActive ? 0.5 : 1.0);
@@ -11748,7 +11814,19 @@ function MonsterHeroGame() {
       } else if (intent.type === 'WAIT') {
         addPopup("待機中...", 'enemy', 'text-slate-400 text-lg');
         await battleWait(500);
-      } else if (intent.type === 'ATTACK' || intent.type === 'CHARGE') {
+      } else if (intent.type === 'CHARGE') {
+        // ためるターン。オーラを溜めるだけでダメージは無く、次のターンに必殺技が確定で来る
+        Audio_.se.enemySpecial();
+        setEnemyAttackFx({
+          kind: 'charge'
+        });
+        setEnemyAttackAnim(true);
+        addPopup("力をためている…！", 'enemy', 'text-amber-300 font-black text-xl drop-shadow-md');
+        await battleWait(1100);
+        setEnemyAttackAnim(false);
+        await battleWait(200);
+        setEnemyAttackFx(null);
+      } else if (intent.type === 'ATTACK' || intent.type === 'SPECIAL') {
         // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」(GUARD_EVOLUTIONのflat/mult参照)
         const guardValue = immediateEffects.guardFlat > 0 || immediateEffects.guardMult > 0 ? Math.floor(immediateEffects.guardFlat + def * immediateEffects.guardMult) : 0;
         const incomingDmg = getPredictedDamage(intent);
@@ -11760,16 +11838,16 @@ function MonsterHeroGame() {
         const isAbsorb = mainHero?.id === 'Oboro' && Math.random() < 0.3;
 
         // Enemy lunge animation + attack effect (normal = ! mark, special = aura burst)
-        const fxKind = enemy?.id === 'Moo' ? 'moo' : intent.type === 'CHARGE' ? 'special' : 'normal';
+        const fxKind = enemy?.id === 'Moo' ? 'moo' : intent.type === 'SPECIAL' ? 'special' : 'normal';
         setEnemyAttackFx({
           kind: fxKind
         });
-        if (intent.type === 'CHARGE') Audio_.se.enemySpecial();else Audio_.se.enemyAttack();
+        if (intent.type === 'SPECIAL') Audio_.se.enemySpecial();else Audio_.se.enemyAttack();
         setEnemyAttackAnim(true);
         if (fxKind === 'moo') triggerShake(true);
-        await battleWait(fxKind === 'moo' ? 900 : intent.type === 'CHARGE' ? 1100 : 450);
+        await battleWait(fxKind === 'moo' ? 900 : intent.type === 'SPECIAL' ? 1100 : 450);
         setEnemyAttackAnim(false);
-        await battleWait(fxKind === 'moo' ? 250 : intent.type === 'CHARGE' ? 300 : 100);
+        await battleWait(fxKind === 'moo' ? 250 : intent.type === 'SPECIAL' ? 300 : 100);
         setEnemyAttackFx(null);
         if (isReflect) {
           addPopup("反射！", 'hero', 'text-purple-400 font-black text-2xl drop-shadow-lg');
@@ -11908,7 +11986,8 @@ function MonsterHeroGame() {
     await handleEnemyTurn('none', {}, acting, hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const distForNextPredict = acting && acting.type === 'MOVE' ? acting.targetDist : enemyDist;
-    setEnemyIntent(getNextEnemyAction(enemy, distForNextPredict));
+    setEnemyLastIntent(acting);
+    setEnemyIntent(getNextEnemyAction(enemy, distForNextPredict, acting));
     if (scenario) setBattleTutorialLastAction('emergency');
   };
   const processTurn = async () => {
@@ -12398,7 +12477,8 @@ function MonsterHeroGame() {
     // 敵の行動が終わった後で、次ターンの予測を1回だけ抽選してセット
     // 敵が移動した場合は移動後の距離を基準にする
     const distForNextPredict = forcedMoveTarget != null ? forcedMoveTarget : executedIntent && executedIntent.type === 'MOVE' ? executedIntent.targetDist : enemyDist;
-    setEnemyIntent(getNextEnemyAction(enemy, distForNextPredict));
+    setEnemyLastIntent(executedIntent);
+    setEnemyIntent(getNextEnemyAction(enemy, distForNextPredict, executedIntent));
     // ここまで来てはじめて「1ターンぶんを見終わった」ので、練習を次へ進める
     if (tutorialKinds.length) setBattleTutorialLastAction(tutorialKinds.join(','));
   };
@@ -12561,8 +12641,12 @@ function MonsterHeroGame() {
       }
     }))];
   };
-  const MAX_GUARD_CARD_COUNT = 3;
-  const guardCardCount = bonusCount => Math.min(MAX_GUARD_CARD_COUNT, 2 + Math.max(0, bonusCount || 0));
+  // デッキに入るガードカードの枚数。
+  // 丈夫さ100ごとに上がるガードレベルが2上がるたびに1枚増え、4枚で頭打ちになる。
+  // (以前はレベルが1上がるごとに1枚増え、3枚で頭打ちだった)
+  const MAX_GUARD_CARD_COUNT = 4;
+  const GUARD_LEVELS_PER_EXTRA_CARD = 2;
+  const guardCardCount = guardLv => Math.min(MAX_GUARD_CARD_COUNT, 2 + Math.floor(Math.max(0, guardLv || 0) / GUARD_LEVELS_PER_EXTRA_CARD));
   const buildDeck = (currentSlots, aLvl, gLvl, cUniques, cTeachings, gBonus, uChoice, uLevelChoice, cInhEvo, heroOverride = null) => {
     const atkNames = HERO_ATK_NAMES[(heroOverride || mainHero)?.id] || HERO_ATK_NAMES['Mocchi'];
     let pool = [];
@@ -12834,6 +12918,7 @@ function MonsterHeroGame() {
     enemyDefeatResolvedRef.current = false;
     setEnemy(newEnemy);
     setEnemyDist(dist);
+    setEnemyLastIntent(null);
     setEnemyIntent(getNextEnemyAction(newEnemy, dist));
     setTurnCount(1);
     setSelectedCards([]);
@@ -13362,7 +13447,7 @@ function MonsterHeroGame() {
       label: guardLevelUp ? `${guardName}解放！${guardCountUp ? ' 枚数UP' : ''}` : type === 'def' ? "丈夫さUP" : "能力覚醒完了",
       icon: type === 'def' ? "🛡️" : "⚡",
       monEmoji: "🆙",
-      subLabel: guardLevelUp ? `丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数は最大3枚です。` : ''
+      subLabel: guardLevelUp ? `丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数はガードが2段階進化するごとに1枚増え、最大${MAX_GUARD_CARD_COUNT}枚です。` : ''
     });
     setTimeout(() => {
       setEffect(null);
@@ -19741,7 +19826,7 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("div", {
       className: "px-4 py-1.5 rounded-xl font-black text-[13px] bg-red-700 border-2 border-red-200 text-white shadow-[0_2px_16px_rgba(0,0,0,0.9)] flex items-center gap-2"
-    }, /*#__PURE__*/React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'CHARGE' && /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("span", null, cardIconNode(enemySkillName.icon, 16)), enemySkillName.label)), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'SPECIAL' && /*#__PURE__*/React.createElement("div", {
       className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
       style: {
         top: '11%',
@@ -19752,7 +19837,18 @@ function MonsterHeroGame() {
       className: "text-5xl drop-shadow-[0_0_20px_rgba(217,70,239,1)]"
     }, "\u2620\uFE0F"), /*#__PURE__*/React.createElement("div", {
       className: "px-3 py-1 rounded-lg bg-gradient-to-r from-purple-900 via-fuchsia-700 to-purple-900 border-2 border-fuchsia-300 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(217,70,239,0.9)]"
-    }, "\u5FC5 \u6BBA \u6280")), slotSkill && /*#__PURE__*/React.createElement("div", {
+    }, "\u5FC5 \u6BBA \u6280")), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'CHARGE' && /*#__PURE__*/React.createElement("div", {
+      className: "fixed left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1",
+      style: {
+        top: '11%',
+        zIndex: 65000,
+        animation: 'specialWarnFlash 700ms ease-in-out infinite'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-5xl drop-shadow-[0_0_20px_rgba(251,191,36,1)]"
+    }, "\u2728"), /*#__PURE__*/React.createElement("div", {
+      className: "px-3 py-1 rounded-lg bg-gradient-to-r from-amber-900 via-amber-600 to-amber-900 border-2 border-amber-200 text-sm font-black text-white tracking-[0.2em] shadow-[0_0_20px_rgba(251,191,36,0.9)]"
+    }, "\u305F \u3081 \u308B")), slotSkill && /*#__PURE__*/React.createElement("div", {
       className: "fixed -translate-x-1/2 pointer-events-none whitespace-nowrap",
       style: {
         left: `${12.5 + slotSkill.slotIndex * 25}%`,
@@ -20043,8 +20139,32 @@ function MonsterHeroGame() {
       style: {
         animation: 'idleExclaim 1100ms ease-in-out infinite'
       }
-    }, "\u2757")), enemy && enemyIntent && !isBusy && !enemyAttackFx && (enemyIntent.type === 'CHARGE' || enemy?.id === 'Moo' && (enemyIntent.type === 'ATTACK' || enemyIntent.type === 'CHARGE')) && (() => {
-      const isSpecial = enemyIntent.type === 'CHARGE';
+    }, "\u2757")), enemy && enemyIntent && !isBusy && !enemyAttackFx && enemyIntent.type === 'MOVE' && /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 pointer-events-none z-[9000]"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "mh-enemy-move-hint"
+    }, RANGE_LABELS[enemyIntent.targetDist], "\u2026\uFF01")), enemy && enemyAttackFx?.kind === 'charge' && /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "absolute -inset-6 rounded-full",
+      style: {
+        background: 'radial-gradient(circle, rgba(251,191,36,0.45) 0%, rgba(251,191,36,0.2) 45%, rgba(0,0,0,0) 70%)',
+        animation: 'auraPulse 700ms ease-out infinite'
+      }
+    }), [0, 1, 2, 3, 4, 5, 6, 7].map(k => /*#__PURE__*/React.createElement("div", {
+      key: k,
+      className: "absolute text-2xl",
+      style: {
+        '--deg': `${k * 45}deg`,
+        animation: `chargeGather 900ms ease-in ${k * 70}ms infinite`
+      }
+    }, "\u2728")), /*#__PURE__*/React.createElement("div", {
+      className: "absolute inset-0 rounded-full border-4 border-amber-300/80",
+      style: {
+        animation: 'auraRing 700ms ease-out infinite'
+      }
+    })), enemy && enemyIntent && !isBusy && !enemyAttackFx && (enemyIntent.type === 'SPECIAL' || enemyIntent.type === 'CHARGE' || enemy?.id === 'Moo' && enemyIntent.type === 'ATTACK') && (() => {
+      const isSpecial = enemyIntent.type === 'SPECIAL' || enemyIntent.type === 'CHARGE';
       // 通常技 = 赤系 / 必殺技(チャージ) = 紫＋金系 で明確に色分け
       return /*#__PURE__*/React.createElement("div", {
         className: "absolute inset-0 pointer-events-none z-[9000] flex items-center justify-center overflow-visible"
@@ -20133,13 +20253,19 @@ function MonsterHeroGame() {
       className: "w-full max-w-[180px] mt-2 mb-1 shrink-0 relative z-[40]"
     }, /*#__PURE__*/React.createElement("div", {
       className: "h-2"
-    })), enemy && enemyIntent && !isBusy && /*#__PURE__*/React.createElement("div", {
-      className: `mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard ? 'invisible' : 'visible'} ${enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : 'bg-red-950 border-red-600/50 text-red-400'}`
-    }, /*#__PURE__*/React.createElement(Target, {
-      size: 12
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] font-black uppercase tracking-tight"
-    }, enemyIntent.label, " (\u4E88\u6E2C: ", getPredictedDamage(enemyIntent), ")")), /*#__PURE__*/React.createElement("div", {
+    })), enemy && enemyIntent && !isBusy && (() => {
+      // ためる・待機・移動はダメージが無いので「予測」を出さない。
+      // 出すと必ず0になり、ガードを構える判断の邪魔になる
+      const dmg = getPredictedDamage(enemyIntent);
+      const tone = enemyIntent.type === 'SPECIAL' ? 'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300' : enemyIntent.type === 'CHARGE' ? 'bg-amber-950 border-amber-500 text-amber-400' : enemyIntent.type === 'MOVE' ? 'bg-cyan-950 border-cyan-500/60 text-cyan-300' : 'bg-red-950 border-red-600/50 text-red-400';
+      return /*#__PURE__*/React.createElement("div", {
+        className: `mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard ? 'invisible' : 'visible'} ${tone}`
+      }, /*#__PURE__*/React.createElement(Target, {
+        size: 12
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black uppercase tracking-tight"
+      }, enemyIntent.label, dmg > 0 ? ` (予測: ${dmg})` : ''));
+    })(), /*#__PURE__*/React.createElement("div", {
       className: `flex flex-wrap justify-center gap-1 max-w-[340px] mt-auto mb-1 shrink-0 relative z-[40] ${focusedCard ? 'invisible' : 'visible'}`
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-red-500 bg-black/60 px-2 py-0.5 rounded border border-red-500/50 flex items-center gap-1 shadow-lg uppercase"
@@ -23369,7 +23495,8 @@ function MonsterHeroGame() {
       const scanEnemy = waveScanPreview?.enemy || enemy;
       const scanDist = waveScanPreview ? 2 : enemyDist;
       const scanBeforeBattle = !!waveScanPreview;
-      const actions = enemyActionProbabilities(scanEnemy, scanDist);
+      const scanState = scanBeforeBattle ? {} : enemyActionStateFrom(enemyLastIntent);
+      const actions = enemyActionProbabilities(scanEnemy, scanDist, scanState);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex flex-col",
         style: {
@@ -23431,7 +23558,7 @@ function MonsterHeroGame() {
       }, scanBeforeBattle ? '戦闘状況' : '現在の間合い'), /*#__PURE__*/React.createElement("b", null, scanBeforeBattle ? '戦闘開始前' : `${RANGE_LABELS[scanDist]}距離`)), /*#__PURE__*/React.createElement("div", {
         className: "space-y-2 text-left"
       }, actions.map((action, index) => {
-        const actionName = action.type === 'ATTACK' ? scanEnemy.normal || '通常攻撃' : action.type === 'CHARGE' ? scanEnemy.special || '必殺技！' : action.type === 'MOVE' ? '間合い移動' : '様子を見る';
+        const actionName = action.type === 'MOVE' ? '間合い移動' : enemyActionLabel(scanEnemy, action.type);
         const power = Math.floor(scanEnemy.atk * action.multiplier);
         return /*#__PURE__*/React.createElement("details", {
           key: action.id,
@@ -23464,7 +23591,7 @@ function MonsterHeroGame() {
         className: "text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"
       }, /*#__PURE__*/React.createElement("b", {
         className: "block text-slate-200 mb-1"
-      }, "\u884C\u52D5\u30EB\u30FC\u30EB"), "\u4F7F\u7528\u53EF\u80FD\u306A\u884C\u52D5\u306E\u91CD\u307F\u3092\u5408\u8A08100%\u306B\u6B63\u898F\u5316\u3057\u3066\u62BD\u9078\u3057\u307E\u3059\u3002\u79FB\u52D5\u304C\u9078\u3070\u308C\u305F\u5834\u5408\u306F\u3001\u73FE\u5728\u4EE5\u5916\u306E3\u9593\u5408\u3044\u304B\u3089\u540C\u7387\u3067\u79FB\u52D5\u5148\u3092\u9078\u3073\u307E\u3059\u3002SCAN\u8868\u793A\u3067\u306F\u62BD\u9078\u3057\u307E\u305B\u3093\u3002")))));
+      }, "\u884C\u52D5\u30EB\u30FC\u30EB"), "\u4F7F\u7528\u53EF\u80FD\u306A\u884C\u52D5\u306E\u91CD\u307F\u3092\u5408\u8A08100%\u306B\u6B63\u898F\u5316\u3057\u3066\u62BD\u9078\u3057\u307E\u3059\u3002\u79FB\u52D5\u304C\u9078\u3070\u308C\u305F\u5834\u5408\u306F\u3001\u73FE\u5728\u4EE5\u5916\u306E3\u9593\u5408\u3044\u304B\u3089\u540C\u7387\u3067\u79FB\u52D5\u5148\u3092\u9078\u3073\u307E\u3059\u3002\u5FC5\u6BBA\u6280\u306F\u300C\u305F\u3081\u308B\u300D\u306E\u6B21\u306E\u30BF\u30FC\u30F3\u306B\u5FC5\u305A\u767A\u52D5\u3057\u3001\u307B\u304B\u306E\u884C\u52D5\u3067\u306F\u4E0A\u66F8\u304D\u3055\u308C\u307E\u305B\u3093\u3002\u79FB\u52D5\u3057\u305F\u6B21\u306E\u30BF\u30FC\u30F3\u306B\u79FB\u52D5\u306F\u9078\u3070\u308C\u307E\u305B\u3093\u3002SCAN\u8868\u793A\u3067\u306F\u62BD\u9078\u3057\u307E\u305B\u3093\u3002")))));
     })(), showHeroInfo && mainHero && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 p-6 flex flex-col",
       style: {
@@ -24116,6 +24243,30 @@ const createAnimationStyle = () => {
     }
     @keyframes enemyExclaim {
       0%,100% { opacity: 1; }
+    }
+    /* ためている最中に、周りからオーラが敵へ吸い込まれていく */
+    @keyframes chargeGather {
+      0% { transform: rotate(var(--deg,0deg)) translateY(-70px) scale(0.6); opacity: 0; }
+      35% { opacity: 1; }
+      100% { transform: rotate(var(--deg,0deg)) translateY(0) scale(1.15); opacity: 0; }
+    }
+    /* 次のターンに間合いを変える、という敵のつぶやき。
+       文字だけだと背景に埋もれるので、しっぽ付きの吹き出しにして敵の右上に出す */
+    .mh-enemy-move-hint {
+      position: absolute; right: -6px; top: -14px;
+      padding: 4px 10px; border-radius: 12px;
+      border: 2px solid #67e8f9; background: #083344f2; color: #cffafe;
+      font-size: 12px; font-weight: 1000; letter-spacing: .08em; white-space: nowrap;
+      box-shadow: 0 3px 10px #000a, 0 0 14px #22d3ee66;
+      animation: moveHintBob 1200ms ease-in-out infinite;
+    }
+    .mh-enemy-move-hint::after {
+      content: ''; position: absolute; left: 12px; bottom: -7px;
+      border: 6px solid transparent; border-top-color: #67e8f9;
+    }
+    @keyframes moveHintBob {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
     }
     @keyframes auraPulse {
       0% { transform: scale(0.85); opacity: 0.55; }
