@@ -130,6 +130,28 @@ check('吹き出しは行動予告と同じ大きさで右へ寄せる',
 const hintBlock = src.slice(src.indexOf("enemyNextIntent.type==='MOVE'&&("), src.indexOf('mh-enemy-move-hint') + 400);
 check('吹き出しはムーの手前に出る(画面基準で前面に置く)',
   /fixed left-1\/2 pointer-events-none/.test(hintBlock) && /zIndex:65000/.test(hintBlock));
+// 丸枠(敵の円)は transform を持つので独自の重ね順の島になる。
+// その中に吹き出しを置くと、いくらz-indexを上げてもムーの裏へ回る。
+// 必殺技の警告と同じ階層(丸枠より前)に置かれているかを、書かれている順で確かめる
+const circleAt = src.indexOf("{/* 行動予測ラベルはmain下部に移動 */}");
+const hintAt = src.indexOf("<div className=\"mh-enemy-move-hint\">");
+const specialWarnAt = src.indexOf("必 殺 技</div>");
+check('吹き出しを丸枠の中に置いていない', hintAt > 0 && circleAt > 0 && hintAt < circleAt,
+  `吹き出し ${hintAt} / 丸枠 ${circleAt}`);
+check('吹き出しは必殺技の警告と同じ階層にある', hintAt > specialWarnAt && specialWarnAt > 0);
+
+// ためる(準備)の予告に、必殺技と同じ全画面オーラを出さないこと。
+// 出すと「準備なのか、いま撃たれるのか」が見分けられなくなる
+check('準備の予告に必殺技のオーラを流用しない',
+  has("const isSpecial = enemyIntent.type==='SPECIAL';")
+    && !has("const isSpecial = enemyIntent.type==='SPECIAL'||enemyIntent.type==='CHARGE';"));
+// ムーの本体は丸枠の外へ別に描いているので、動きも別に指定しないと
+// ためるターンに攻撃の突進(mooAttackLunge)が出てしまう
+check('ムーの準備は突進せず、その場で溜める',
+  has("enemyAttackFx?.kind==='charge'?'mooChargeGather") && has('@keyframes mooChargeGather'));
+// 解析ボタンが吹き出し(画面の上から22%)と重なっていたので下げてある
+check('解析ボタンを吹き出しと重ならない高さへ下げている',
+  /onClick=\{\(\)=>setShowEnemyInfo\(true\)\} className="absolute right-2 top-24/.test(src));
 // スタン・無効化・眼力・距離撃で敵の行動を止めたときは、その行動を「やらなかった」ことにする。
 // ここが抜けていると、必殺技の準備をスタンで止めたのに次のターンだけ必殺技が飛んでくる
 check('止められたターンは行動しなかった扱いにする',
