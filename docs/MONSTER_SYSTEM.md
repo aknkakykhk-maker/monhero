@@ -294,16 +294,19 @@ Lv.200へ達すると `levelCap >= MAX_MASU_LEVEL_CAP` の判定で突破でき�
 必要数は `breakthroughItemCost(nextCount)`（`nextCount` = `rebirthCount + 1`）。
 
 ```text
-必要数 = 10 + (突破回数 - 1) × 5
+必要数 = 5 + (突破回数 - 1) × 1
 ```
 
 | 回数 | 必要数 |
 |---|---|
-| 1 | 10 |
-| 2 | 15 |
-| 3 | 20 |
-| 30 | 155 |
-| 31（最終限界突破） | 160 |
+| 1 | 5 |
+| 2 | 6 |
+| 3 | 7 |
+| 30 | 34 |
+| 31（最終限界突破） | 35 |
+
+31回すべて行うと合計620個。数値は `BREAKTHROUGH_ITEM_BASE` / `BREAKTHROUGH_ITEM_STEP` が正本で、
+画面の説明文と計算式の表記もこの定数から作る（数字を書き写さない）。
 
 - 判定は `buildMasuBreakthrough` の中で、レベル上限・到達Lv・ダイヤの次に行う。
   足りなければ `ok:false` を返し、**何も消費しない**。
