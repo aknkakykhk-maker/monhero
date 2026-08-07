@@ -131,8 +131,10 @@ check('編成の各モンスターに詳細ボタンがある',
   has('onClick={()=>{ if (m?.detail) setRankingMonsterDetail(m); }}') && has('disabled={!m?.detail}'));
 check('詳細が無い古い記録は押せず、理由が出る', has('情報<br/>なし'));
 check('表示はマスモン詳細と同じ共通実装を使う',
-  has("statTitle: '現在のステータス(強化分込み)'") && /rankingMonsterDetail&&\(\(\)=>\{[\s\S]{0,4000}renderMonsterDetailInfo\(mon,/.test(source));
-check('マスモン名と血統名の両方を出す', /rankingMonsterDetail&&\(\(\)=>\{[\s\S]{0,4000}マスモン・元は\{base\.name\}/.test(source));
+  has("statTitle: '現在のステータス(強化分込み)'") && /rankingMonsterDetail&&\(\(\)=>\{[\s\S]{0,4000}return renderMonsterDetailModal\(\{/.test(source));
+// 名前と血統名は共通の上部サマリー(個体名 → 元：ベースモン名)が出す
+check('マスモン名と血統名の両方を出す',
+  /renderMonsterSummaryHeader = \(\{[\s\S]{0,3000}\{mon\.name\}[\s\S]{0,1200}元：\$\{base\.name\}/.test(source));
 // 他人の記録なので、こちらから育て直せてしまってはいけない
 const modal = source.slice(source.indexOf('{rankingMonsterDetail&&(()=>{'), source.indexOf('{/* DECK INFO */}'));
 check('他人のマスモンを操作できない',

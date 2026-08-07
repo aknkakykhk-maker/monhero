@@ -268,7 +268,7 @@ check('勇者モンはカード1枚ずつを光らせる',
   has("${scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}") && !has("battleTutorialSpotClass('monList')"));
 // 詳細を開くと画面いっぱいのモーダルが出るので、上のみゅあの帯と名前が重ならないようにする
 check('詳細と吹き出しが重ならない',
-  has("paddingTop:battleTutorial?'calc(4.25rem + env(safe-area-inset-top))':undefined"));
+  has("paddingTop: battleTutorial?'calc(4.25rem + env(safe-area-inset-top))':undefined") && has('zIndex,paddingTop'));
 check('光らせる見た目がCSSにある',
   has('.is-battle-tutorial-spot{') && has('@keyframes mhBattleSpot'));
 check('動きを減らす設定にも配慮する', has('@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}'));

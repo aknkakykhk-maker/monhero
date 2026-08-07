@@ -28,6 +28,10 @@ const dataTablePrelude = [
   // 神殿でかかるダイヤの表は、合体・転生の単価をそのまま使う
   grab(source, 'const FUSION_COST_PER_LEVEL =', 'const buildMasuBreakthrough ='),
   'const SKIP_TICKETS = SKIP_TICKET_BY_DIFFICULTY;',
+  // 総合力の表は計算式の定数から作るので、そちらも持ち込む
+  grab(source, 'const MONSTER_POWER_STAT_WEIGHT', 'const monsterPowerUniques'),
+  grab(source, "const DIST_APTITUDE_GRADES = [", 'const DIST_APTITUDE_MULT'),
+  grab(source, 'const STAT_POINT_GAIN = {', 'const STAT_POINT_KEYS'),
   grab(source, 'const helpDataRows = (id)', '// ===== 助手(ナビゲーター) ここから ====='),
   // 助手(吹き出し・顔・詳細モーダル)も本番の実装をそのまま持ち込む
   "const { useState, useEffect, useRef, useContext } = React;\nconst MUA_FACE_ICON = 'data:image/png;base64,TEST';\n"
