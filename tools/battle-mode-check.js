@@ -303,7 +303,7 @@ check('ランキングからの戻るはバトルの画面へ',
   has("onClick={()=>{if(battleMenuTab!=='difficulty'){setBattleMenuTab('difficulty');return;}returnToHome();}}"));
 // 勇者モン選択はバトルを始める前なので、戻るときは来た場所(難易度の画面)へ返す
 check('勇者モン選択からの戻るは難易度の画面へ',
-  has("onClick={()=>{if(gameState==='PICK_HERO'){setCurrentPickingMon(null);setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');return;}returnToHome();}}"));
+  has("onClick={()=>{if(gameState==='PICK_HERO'){setCurrentPickingMon(null);setBattleMenuTab('difficulty');setGameState(battleEntryStateRef.current);return;}returnToHome();}}"));
 check('助手コメントは既存の共通UIを使う', has("<AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'}") && assistantsSrc.includes('battleChallenge:') && assistantsSrc.includes('battleQuick:'));
 check('挑戦を始めるときにモードを固定する', has('setDifficulty(key);setRunMode(battleMode);'));
 check('バトル中にモード名と難易度を出す', has('{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}'));
@@ -346,6 +346,56 @@ check('プロの親密度行動があり、既存の獲得量は変わってい�
 check('遊んだモードに応じて親密度の行動を切り替える',
   m.modeBondAction('challenge') === 'challenge' && m.modeBondAction('quick') === 'quick' && m.modeBondAction('pro') === 'pro'
     && has("addAssistantBond('battle'); addAssistantBond(modeBondAction(runMode));"));
+
+// --- ⑧ 新しいバトルの入口(第2段階) ---
+// 「バトル → バトルモード選択 → 難易度選択」の3画面。まだデバッグからだけ開ける
+check('新しい3画面がある',
+  has("gameState==='BATTLE_MODE_SELECT'") && has("gameState==='BATTLE_DIFFICULTY_SELECT'") && has("gameState==='BATTLE_SCORE_RANKING'"));
+check('新しい入口はデバッグ設定からだけ開ける',
+  has("setGameState('BATTLE_MODE_SELECT');}} className=\"col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70")
+    && count("setGameState('BATTLE_MODE_SELECT')") === 2, `モード選択へ移る場所 ${count("setGameState('BATTLE_MODE_SELECT')")}か所`);
+check('ふだんの「バトル」は今までどおり BATTLE_MENU へ入る',
+  has("onClick={()=>{setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');}} aria-label=\"バトル\""));
+check('モード選択は3モードすべてを横スライドで並べる',
+  has('const modes=BATTLE_MODES,current=battleModeInfo(battleMode);') && has('aria-label="前のモード"') && has('aria-label="次のモード"')
+    && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'));
+check('上のタブはモード選択・ブリーダーLv・絆Lvの3つ',
+  has("{[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv']].map(([key,label])=>("));
+// スコアランキングはモードごとに分かれるので、上のタブには置かない
+check('上のタブにスコアランキングを混ぜない',
+  !/\[\['mode','モード選択'\],\['score'/.test(source) && !has("['score','スコア'],['breeder'"));
+check('スコアランキングはモードのカードと難易度のカードから開く',
+  count("openModeScoreRanking(") === 2, `openModeScoreRanking ${count('openModeScoreRanking(')}か所`);
+check('ランキングが無いモードには導線も高さ合わせの空枠も出さない',
+  has('{ranked&&<button onClick={()=>openModeScoreRanking(m.id,safeDifficulty,')
+    && has('{ranked&&<button onClick={()=>openModeScoreRanking(battleMode,key,')
+    && has('ranked=modeHasRanking(battleMode);') && has('ranked=modeHasRanking(m.id);'));
+check('難易度カードから開いたときは、その難易度のタブを最初に選ぶ',
+  has('setRankingViewDiff(diff);') && has('loadRankings(rankingDifficultyForMode(mode, diff));')
+    && has("openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')"));
+// ランキングの一覧は共通の描画を呼ぶだけにして、画面ごとに作り直さない
+check('ランキングの一覧を複製していない',
+  count('const renderScoreRankingBody = ') === 1 && count('const renderBreederRankingBody = ') === 1 && count('const renderBondRankingBody = ') === 1
+    && count('renderScoreRankingBody(') === 2 && count('renderBreederRankingBody()') === 2 && count('renderBondRankingBody()') === 2);
+check('既存のバトル画面のランキングも同じ描画を使う',
+  has("{rankingKind==='score'&&renderScoreRankingBody(BATTLE_MODE_CHALLENGE)}")
+    && has("{rankingKind==='breeder'&&renderBreederRankingBody()}") && has("{rankingKind==='bond'&&renderBondRankingBody()}"));
+check('プロの中身はまだ無いので、新しい画面からも始められない',
+  has("<button disabled={pro} onClick={()=>{battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';") && has("{pro?'プロモードは準備中です':'この難易度で挑戦'}"));
+check('助手のセリフは場面キーで出し分ける(JSXへ直書きしない)',
+  m.BATTLE_MODES.every(x => ['battleChallenge','battleQuick','battlePro'].includes(
+    x.id === 'quick' ? 'battleQuick' : x.id === 'pro' ? 'battlePro' : 'battleChallenge'))
+    && has('scene={battleModeAssistantScene(current.id)}') && has('scene={battleModeAssistantScene(battleMode)}'));
+check('スキップや勇者モン選択の戻りは、来た入口の画面へ返す',
+  has("const battleEntryStateRef = useRef('BATTLE_MENU');") && count('battleEntryStateRef.current)') === 3
+    && has("battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);setRunMode(battleMode);"));
+check('新しい画面もBGMとヘルプの対応表に載っている',
+  has("BATTLE_MODE_SELECT: 'enhance'") && has("BATTLE_DIFFICULTY_SELECT: 'enhance'") && has("BATTLE_SCORE_RANKING: 'enhance'")
+    && helpSrc.includes("BATTLE_MODE_SELECT:       'basics/battle-modes'")
+    && helpSrc.includes("BATTLE_DIFFICULTY_SELECT: 'basics/difficulty'")
+    && helpSrc.includes("BATTLE_SCORE_RANKING:     'basics/ranking'"));
+check('実際に開いて押せることを確かめる道具がある',
+  fs.existsSync(path.join(root, 'tools/battle-mode-select-check.js')));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

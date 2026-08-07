@@ -793,6 +793,10 @@ const HELP_CATEGORIES = [
 const HELP_SCREEN_COVERAGE = {
   HOME:             'home/roster',
   BATTLE_MENU:      'basics/difficulty',
+  // 新しいバトルの入口(いまはデバッグ設定からだけ開ける)
+  BATTLE_MODE_SELECT:       'basics/battle-modes',
+  BATTLE_DIFFICULTY_SELECT: 'basics/difficulty',
+  BATTLE_SCORE_RANKING:     'basics/ranking',
   PICK_HERO:        'basics/flow',
   PICK_SLOT:        'battle/distance',
   PICK_ALLY:        'battle/join-bonus',

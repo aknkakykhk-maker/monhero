@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4d3b5a28db06fccc
+// source-sha256: c92b5bade9808004
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 07:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 08:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -259,6 +259,8 @@ const modeHasRanking = mode => !isQuickMode(mode);
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
 const modeBondAction = mode => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';
+// そのモードの画面で助手(みゅあ)に話させる場面。セリフは data/assistants.js にある
+const battleModeAssistantScene = mode => isQuickMode(mode) ? 'battleQuick' : isProMode(mode) ? 'battlePro' : 'battleChallenge';
 // そのレベルから次レベルに必要なXP(基準値)。指数を上げるほど高レベルが急に重くなる。
 // 10WAVE完全クリアを1周=100XPとして、Lv30到達までの周回数は次のように緩和してきている。
 //   指数1.8(当初)  … ブリーダー約580周 / 絆約410周
@@ -7603,6 +7605,19 @@ function MonsterHeroGame() {
   const rankingViewKey = rankingDifficultyKey(rankingViewDiff);
   const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
+  // 新しいバトルの入口(バトルモード再編・第2段階)。
+  // 「バトル → バトルモード選択 → 難易度選択」の3画面と、そこから開くランキング。
+  // まだデバッグ設定からだけ開ける。ふだんの「バトル」はこれまでどおり BATTLE_MENU のまま
+  const [modeSelectTab, setModeSelectTab] = useState('mode'); // 'mode' | 'breeder' | 'bond'
+  // スコアランキングを「どのモードのぶんとして」見ているか。チャレンジとプロの2つだけ
+  const [scoreRankingMode, setScoreRankingMode] = useState(BATTLE_MODE_CHALLENGE);
+  // ランキングから戻る先。モード選択カードから開いたか、難易度カードから開いたかで変わる
+  const [scoreRankingBack, setScoreRankingBack] = useState('BATTLE_MODE_SELECT');
+  const modeCarouselRef = useRef(null);
+  const modeDifficultyCarouselRef = useRef(null);
+  // バトルを始めた入口がどの画面だったか。スキップや勇者モン選択の「戻る」を、
+  // 来た画面(既存の BATTLE_MENU / 新しい BATTLE_DIFFICULTY_SELECT)へ返すために覚えておく
+  const battleEntryStateRef = useRef('BATTLE_MENU');
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
   const [bulkPlan, setBulkPlan] = useState(null); // null=1ポイントずつのモード / {apt:[0,0,0,0], stat:{...}}
   // 合体画面の並べかえ。マスモンが増えると目的の個体を探しにくいため
@@ -8743,6 +8758,12 @@ function MonsterHeroGame() {
     // ミッション画面でもHOMEの曲を続ける
     BATTLE_MENU: 'enhance',
     // 難易度・ランキング(モンスター選択と同じ曲)
+    BATTLE_MODE_SELECT: 'enhance',
+    // 新しいバトルモード選択(BATTLE_MENUと同じ曲を続ける)
+    BATTLE_DIFFICULTY_SELECT: 'enhance',
+    // 新しい難易度選択も同じ曲
+    BATTLE_SCORE_RANKING: 'enhance',
+    // そこから開くスコアランキングも同じ曲
     SKIP_PICK: 'enhance',
     // スキップの編成選択(勇者モン選択と同じ曲)
     SKIP_RESULT: 'result',
@@ -11441,10 +11462,11 @@ function MonsterHeroGame() {
     setSkipConfirmOpen(false);
     setGameState('SKIP_PICK');
   };
+  // 戻る先は「バトルを始めた入口の画面」。既存の入口からなら BATTLE_MENU、新しい入口からならモード別の難易度選択
   const closeBattleSkip = () => {
     setSkipFlow(null);
     setSkipConfirmOpen(false);
-    setGameState('BATTLE_MENU');
+    setGameState(battleEntryStateRef.current);
   };
   // 同じ種を二重に選ばないための鍵(編成タブとベースモンタブで同じ種が並ぶため、種idで見る)
   const skipMonKey = mon => mon ? String(mon.id) : '';
@@ -15288,6 +15310,99 @@ function MonsterHeroGame() {
       className: "truncate text-[10px]"
     }, entry.monName)));
   };
+  // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
+  // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
+  const modeRecordFor = (mode, diff) => isQuickMode(mode) ? {
+    score: quickHighScores[diff] || 0,
+    wave: quickHighestWaves[diff] || 0,
+    clears: quickClearCounts[diff] || 0
+  } : isProMode(mode) ? {
+    score: proHighScores[diff] || 0,
+    wave: proHighestWaves[diff] || 0,
+    clears: proClearCounts[diff] || 0
+  } : {
+    score: highScores[diff] || 0,
+    wave: highestWaves[diff] || 0,
+    clears: clearCounts[diff] || 0
+  };
+  // 新しい入口からスコアランキングを開く。難易度カードから来たときは、その難易度のタブを最初に選ぶ
+  const openModeScoreRanking = (mode, diff, backTo) => {
+    if (!modeHasRanking(mode)) return;
+    addAssistantBond('ranking');
+    setScoreRankingMode(mode);
+    setScoreRankingBack(backTo);
+    setRankingViewDiff(diff);
+    loadRankings(rankingDifficultyForMode(mode, diff));
+    setGameState('BATTLE_SCORE_RANKING');
+  };
+  // ===== ランキングの中身(3種類) =====
+  // 既存のバトル画面(BATTLE_MENU)と、新しいバトルモード選択画面のどちらからも同じものを出す。
+  // 画面が増えても表示の作りが枝分かれしないよう、一覧はここにしか書かない
+  const rankingRetryButton = onRetry => /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-red-300 py-8"
+  }, /*#__PURE__*/React.createElement("p", null, "\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
+    onClick: onRetry,
+    className: "mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black"
+  }, "\u518D\u8AAD\u8FBC"));
+  const rankingEmptyText = /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-slate-500 py-8"
+  }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093");
+  // スコアランキング。モードごとに別枠なので、どのモードのぶんを見るかを受け取る。
+  // チャレンジは従来どおりの難易度キー、プロは Pro を付けたキーを読み書きする
+  const renderScoreRankingBody = (mode = BATTLE_MODE_CHALLENGE) => {
+    const keyOf = diff => rankingDifficultyKey(rankingDifficultyForMode(mode, diff));
+    const viewKey = keyOf(rankingViewDiff);
+    const rows = localRankings[viewKey] || [],
+      status = rankingStatus(`score:${viewKey}`);
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-1.5 overflow-x-auto pb-2 shrink-0"
+    }, Object.entries(DIFFICULTY_SETTINGS).map(([d, st]) => /*#__PURE__*/React.createElement("button", {
+      key: d,
+      onClick: () => {
+        setRankingViewDiff(d);
+        loadRankings(keyOf(d));
+      },
+      className: `px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff === d ? 'ring-2 ring-white' : 'border border-white/10'}`,
+      style: difficultyStyle(st, rankingViewDiff === d)
+    }, st.label))), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
+    }, status.refreshing && /*#__PURE__*/React.createElement("div", {
+      className: "text-center text-[9px] text-indigo-300"
+    }, "\u66F4\u65B0\u4E2D\u2026"), status.error && status.fetched && /*#__PURE__*/React.createElement("div", {
+      className: "text-center text-[9px] text-amber-300"
+    }, status.error), rows.map(renderScoreRankingEntry), rows.length === 0 && (status.loading ? /*#__PURE__*/React.createElement("div", {
+      className: "text-center text-slate-400 py-8"
+    }, "Loading...") : status.error && !status.fetched ? rankingRetryButton(() => loadRankings(viewKey, false, true)) : rankingEmptyText)));
+  };
+  // ブリーダーLvランキング。モードで分かれない(そのブリーダーのレベルは1つだけ)
+  const renderBreederRankingBody = () => {
+    const status = rankingStatus('breeder:all');
+    return /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
+    }, status.refreshing && /*#__PURE__*/React.createElement("div", {
+      className: "text-center text-[9px] text-indigo-300"
+    }, "\u66F4\u65B0\u4E2D\u2026"), status.error && status.fetched && /*#__PURE__*/React.createElement("div", {
+      className: "text-center text-[9px] text-amber-300"
+    }, status.error), breederRanking.map(renderBreederRankingEntry), breederRanking.length === 0 && (status.loading ? /*#__PURE__*/React.createElement("div", {
+      className: "text-center text-slate-400 py-8"
+    }, "Loading...") : status.error && !status.fetched ? rankingRetryButton(() => loadRankings(null, true, true, 'breeder')) : rankingEmptyText));
+  };
+  // 絆Lvランキング。こちらもモードでは分かれず、モンスターの種類で絞る
+  const renderBondRankingBody = () => /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0"
+  }, ['all', ...bondRankingMonNames].map(n => /*#__PURE__*/React.createElement("button", {
+    key: n,
+    onClick: () => setBondRankMonFilter(n),
+    className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter === n ? 'bg-pink-600 border-pink-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
+  }, n === 'all' ? 'すべて' : n))), /*#__PURE__*/React.createElement("div", {
+    className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
+  }, bondRankingLoading && bondRankingData && /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[9px] text-indigo-300"
+  }, "\u66F4\u65B0\u4E2D\u2026"), bondRankingError && bondRankingData && /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-[9px] text-amber-300"
+  }, bondRankingError), bondRanking.map(renderBondRankingEntry), bondRanking.length === 0 && (bondRankingLoading && !bondRankingData ? /*#__PURE__*/React.createElement("div", {
+    className: "text-center text-slate-400 py-8"
+  }, "Loading...") : bondRankingError && !bondRankingData ? rankingRetryButton(() => loadRankings(null, true, true, 'bond')) : rankingEmptyText)));
   if (bootPhase === 'TITLE') return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("main", {
     className: "mh-title-gate",
     "aria-label": "Monster Hero \u30BF\u30A4\u30C8\u30EB\u753B\u9762"
@@ -17068,6 +17183,7 @@ function MonsterHeroGame() {
               beginBattleTutorialRun();
               return;
             }
+            battleEntryStateRef.current = 'BATTLE_MENU';
             setDifficulty(key);
             setRunMode(battleMode);
             debugBattleRef.current = false;
@@ -17096,6 +17212,7 @@ function MonsterHeroGame() {
           }, /*#__PURE__*/React.createElement("button", {
             disabled: have <= 0,
             onClick: () => {
+              battleEntryStateRef.current = 'BATTLE_MENU';
               setDifficulty(key);
               openBattleSkip(key);
             },
@@ -17156,75 +17273,411 @@ function MonsterHeroGame() {
         }
       },
       className: `min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
-    }, t.label))), rankingKind === 'score' && (() => {
-      const rows = localRankings[rankingViewKey] || [],
-        status = rankingStatus(`score:${rankingViewKey}`);
-      return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-        className: "flex gap-1.5 overflow-x-auto pb-2 shrink-0"
-      }, Object.entries(DIFFICULTY_SETTINGS).map(([d, st]) => /*#__PURE__*/React.createElement("button", {
-        key: d,
-        onClick: () => {
-          setRankingViewDiff(d);
-          loadRankings(d);
-        },
-        className: `px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff === d ? 'ring-2 ring-white' : 'border border-white/10'}`,
-        style: difficultyStyle(st, rankingViewDiff === d)
-      }, st.label))), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
-      }, status.refreshing && /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[9px] text-indigo-300"
-      }, "\u66F4\u65B0\u4E2D\u2026"), status.error && status.fetched && /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[9px] text-amber-300"
-      }, status.error), rows.map(renderScoreRankingEntry), rows.length === 0 && (status.loading ? /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-slate-400 py-8"
-      }, "Loading...") : status.error && !status.fetched ? /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-red-300 py-8"
-      }, /*#__PURE__*/React.createElement("p", null, "\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
-        onClick: () => loadRankings(rankingViewKey, false, true),
-        className: "mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black"
-      }, "\u518D\u8AAD\u8FBC")) : /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-slate-500 py-8"
-      }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093"))));
-    })(), rankingKind === 'breeder' && (() => {
-      const status = rankingStatus('breeder:all');
+    }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_MODE_SELECT' && (() => {
+      const modes = BATTLE_MODES,
+        current = battleModeInfo(battleMode);
+      const selectedIndex = Math.max(0, modes.findIndex(m => m.id === current.id));
+      const selectModeIndex = (index, behavior = 'smooth') => {
+        const safe = Math.max(0, Math.min(modes.length - 1, index));
+        setBattleMode(modes[safe].id);
+        modeCarouselRef.current?.children[safe]?.scrollIntoView({
+          behavior,
+          inline: 'center',
+          block: 'nearest'
+        });
+      };
       return /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
-      }, status.refreshing && /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[9px] text-indigo-300"
-      }, "\u66F4\u65B0\u4E2D\u2026"), status.error && status.fetched && /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-[9px] text-amber-300"
-      }, status.error), breederRanking.map(renderBreederRankingEntry), breederRanking.length === 0 && (status.loading ? /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-slate-400 py-8"
-      }, "Loading...") : status.error && !status.fetched ? /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-red-300 py-8"
-      }, /*#__PURE__*/React.createElement("p", null, "\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
-        onClick: () => loadRankings(null, true, true, 'breeder'),
-        className: "mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black"
-      }, "\u518D\u8AAD\u8FBC")) : /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-slate-500 py-8"
-      }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093")));
-    })(), rankingKind === 'bond' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-      className: "flex gap-1 overflow-x-auto pb-1.5 shrink-0"
-    }, ['all', ...bondRankingMonNames].map(n => /*#__PURE__*/React.createElement("button", {
-      key: n,
-      onClick: () => setBondRankMonFilter(n),
-      className: `px-2.5 py-1 rounded-full text-[8px] font-black shrink-0 border ${bondRankMonFilter === n ? 'bg-pink-600 border-pink-400' : 'bg-slate-900 border-white/10 text-slate-400'}`
-    }, n === 'all' ? 'すべて' : n))), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 overflow-y-auto mh-scroll space-y-1.5"
-    }, bondRankingLoading && bondRankingData && /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-[9px] text-indigo-300"
-    }, "\u66F4\u65B0\u4E2D\u2026"), bondRankingError && bondRankingData && /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-[9px] text-amber-300"
-    }, bondRankingError), bondRanking.map(renderBondRankingEntry), bondRanking.length === 0 && (bondRankingLoading && !bondRankingData ? /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-slate-400 py-8"
-    }, "Loading...") : bondRankingError && !bondRankingData ? /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-red-300 py-8"
-    }, /*#__PURE__*/React.createElement("p", null, "\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => loadRankings(null, true, true, 'bond'),
-      className: "mt-3 min-h-[44px] px-5 rounded-xl bg-indigo-600 text-white font-black"
-    }, "\u518D\u8AAD\u8FBC")) : /*#__PURE__*/React.createElement("div", {
-      className: "text-center text-slate-500 py-8"
-    }, "\u8A18\u9332\u306F\u307E\u3060\u3042\u308A\u307E\u305B\u3093"))))))), gameState === 'MONSTER_LIST_MENU' && /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 flex flex-col h-full min-h-0 px-4",
+        style: {
+          paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-1 mb-1 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u623B\u308B",
+        onClick: () => {
+          if (modeSelectTab !== 'mode') {
+            setModeSelectTab('mode');
+            return;
+          }
+          returnToHome();
+        },
+        className: "p-3 text-slate-400 active:scale-90"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
+      }, "\u30D0\u30C8\u30EB")), /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5"
+      }, [['mode', 'モード選択'], ['breeder', 'ブリーダーLv'], ['bond', '絆Lv']].map(([key, label]) => /*#__PURE__*/React.createElement("button", {
+        key: key,
+        onClick: () => {
+          setModeSelectTab(key);
+          if (key === 'mode') return;
+          addAssistantBond('ranking');
+          if (key === 'bond') setBondRankMonFilter('all');
+          loadRankings(null, true, false, key);
+        },
+        "aria-label": key === 'mode' ? 'モード選択' : `${label}ランキング`,
+        className: `min-h-[38px] rounded-lg text-[10px] font-black active:scale-95 ${modeSelectTab === key ? 'bg-indigo-600 text-white' : 'text-slate-400'}`
+      }, label))), modeSelectTab === 'mode' && /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
+      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u30E2\u30FC\u30C9\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
+        className: "relative shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u524D\u306E\u30E2\u30FC\u30C9",
+        disabled: selectedIndex === 0,
+        onClick: () => selectModeIndex(selectedIndex - 1),
+        className: "absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
+      }, /*#__PURE__*/React.createElement(ChevronLeft, null)), /*#__PURE__*/React.createElement("div", {
+        ref: modeCarouselRef,
+        onScroll: e => {
+          const root = e.currentTarget,
+            c = root.scrollLeft + root.clientWidth / 2;
+          let best = 0,
+            d = Infinity;
+          [...root.children].forEach((card, i) => {
+            const n = Math.abs(card.offsetLeft + card.offsetWidth / 2 - c);
+            if (n < d) {
+              d = n;
+              best = i;
+            }
+          });
+          if (modes[best] && modes[best].id !== current.id) setBattleMode(modes[best].id);
+        },
+        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll",
+        style: {
+          paddingLeft: '11%',
+          paddingRight: '11%',
+          touchAction: 'pan-x pinch-zoom'
+        }
+      }, modes.map(m => {
+        const active = m.id === current.id,
+          rec = modeRecordFor(m.id, safeDifficulty),
+          ranked = modeHasRanking(m.id);
+        return /*#__PURE__*/React.createElement("article", {
+          key: m.id,
+          className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+          style: {
+            borderColor: active ? m.color : 'rgba(255,255,255,.12)',
+            background: 'linear-gradient(180deg,#152044,#0d142b)',
+            boxShadow: active ? `0 0 30px ${m.color}55` : 'none'
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "text-center text-[7px] tracking-[.2em] text-slate-400 font-black"
+        }, "BATTLE MODE"), /*#__PURE__*/React.createElement("h3", {
+          className: "text-center text-lg font-black leading-tight",
+          style: {
+            color: m.color
+          }
+        }, m.emoji, " ", m.label), /*#__PURE__*/React.createElement("p", {
+          className: "text-center text-[9px] text-slate-300 leading-snug mt-0.5 min-h-[26px]"
+        }, m.tagline), /*#__PURE__*/React.createElement("div", {
+          className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
+        }, /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px] text-slate-400 font-black"
+        }, DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty, "\u306E\u8A18\u9332"), /*#__PURE__*/React.createElement("b", {
+          className: "block text-right text-base leading-tight",
+          style: {
+            color: m.color
+          }
+        }, ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), /*#__PURE__*/React.createElement("span", {
+          className: "block text-right text-[9px] text-amber-300"
+        }, ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), /*#__PURE__*/React.createElement("ul", {
+          className: "mt-1.5 space-y-0.5"
+        }, m.points.slice(0, 3).map(([icon, title]) => /*#__PURE__*/React.createElement("li", {
+          key: title,
+          className: "flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black text-slate-200"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "shrink-0"
+        }, icon), /*#__PURE__*/React.createElement("span", {
+          className: "truncate"
+        }, title)))), /*#__PURE__*/React.createElement("div", {
+          className: "grid gap-1.5 mt-1.5"
+        }, /*#__PURE__*/React.createElement("button", {
+          onClick: () => setModeInfoId(m.id),
+          className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs"
+        }, "\u3053\u306E\u30E2\u30FC\u30C9\u306E\u8AAC\u660E"), /*#__PURE__*/React.createElement("button", {
+          onClick: () => {
+            setBattleMode(m.id);
+            setGameState('BATTLE_DIFFICULTY_SELECT');
+          },
+          className: "min-h-[44px] rounded-xl font-black text-sm",
+          style: {
+            backgroundColor: m.color,
+            color: '#0f172a'
+          }
+        }, "\u96E3\u6613\u5EA6\u3092\u9078\u3076"), ranked && /*#__PURE__*/React.createElement("button", {
+          onClick: () => openModeScoreRanking(m.id, safeDifficulty, 'BATTLE_MODE_SELECT'),
+          className: "min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "flex-1 text-center whitespace-nowrap"
+        }, "\uD83C\uDFC6 ", m.label, "\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
+          size: 16,
+          className: "shrink-0"
+        }))));
+      })), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u6B21\u306E\u30E2\u30FC\u30C9",
+        disabled: selectedIndex === modes.length - 1,
+        onClick: () => selectModeIndex(selectedIndex + 1),
+        className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
+      }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-center gap-1 py-0.5"
+      }, modes.map((m, i) => /*#__PURE__*/React.createElement("button", {
+        key: m.id,
+        "aria-label": `${i + 1}ページ目`,
+        onClick: () => selectModeIndex(i),
+        className: `w-1.5 h-1.5 rounded-full ${m.id === current.id ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 pt-1.5 pb-1"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        key: current.id,
+        scene: battleModeAssistantScene(current.id),
+        accent: current.color,
+        faceSize: 56
+      }))), modeSelectTab === 'breeder' && /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 flex flex-col"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full mb-2.5"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "ranking",
+        compact: true
+      })), renderBreederRankingBody()), modeSelectTab === 'bond' && /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 flex flex-col"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full mb-2.5"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "ranking",
+        compact: true
+      })), renderBondRankingBody())));
+    })(), gameState === 'BATTLE_DIFFICULTY_SELECT' && (() => {
+      const difficulties = Object.entries(DIFFICULTY_SETTINGS),
+        selectedIndex = difficulties.findIndex(([key]) => key === safeDifficulty);
+      const selectDifficultyIndex = (index, behavior = 'smooth') => {
+        const safe = Math.max(0, Math.min(difficulties.length - 1, index));
+        setDifficulty(difficulties[safe][0]);
+        modeDifficultyCarouselRef.current?.children[safe]?.scrollIntoView({
+          behavior,
+          inline: 'center',
+          block: 'nearest'
+        });
+      };
+      const mode = battleModeInfo(battleMode),
+        quick = isQuickMode(battleMode),
+        pro = isProMode(battleMode),
+        ranked = modeHasRanking(battleMode);
+      // 倍率の枠は3つまで。4つ並べると見出しが2行に折り返して読みにくくなる。
+      // クイックはスコアを競わないのでスコアの代わりに経験値を出す
+      const bonusLabel = value => `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}`;
+      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false], ['経験値', bonusLabel(setting.score), true], ['ダイヤ', bonusLabel(setting.gold), true]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
+      const noteText = quick ? '経験値・ダイヤのみ1.5倍' : pro ? '絆経験値3倍・ブリーダー経験値1.5倍' : 'スコアがランキングに登録される';
+      return /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 flex flex-col h-full min-h-0 px-4",
+        style: {
+          paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-1 mb-1 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u623B\u308B",
+        onClick: () => setGameState('BATTLE_MODE_SELECT'),
+        className: "p-3 text-slate-400 active:scale-90"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-xl font-black italic uppercase tracking-widest truncate",
+        style: {
+          color: mode.color
+        }
+      }, mode.label)), /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
+      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
+        className: "relative shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u524D\u306E\u96E3\u6613\u5EA6",
+        disabled: selectedIndex === 0,
+        onClick: () => selectDifficultyIndex(selectedIndex - 1),
+        className: "absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"
+      }, /*#__PURE__*/React.createElement(ChevronLeft, null)), /*#__PURE__*/React.createElement("div", {
+        ref: modeDifficultyCarouselRef,
+        onScroll: e => {
+          const root = e.currentTarget,
+            c = root.scrollLeft + root.clientWidth / 2;
+          let best = 0,
+            d = Infinity;
+          [...root.children].forEach((card, i) => {
+            const n = Math.abs(card.offsetLeft + card.offsetWidth / 2 - c);
+            if (n < d) {
+              d = n;
+              best = i;
+            }
+          });
+          if (difficulties[best]?.[0] !== safeDifficulty) setDifficulty(difficulties[best][0]);
+        },
+        className: "flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll",
+        style: {
+          paddingLeft: '11%',
+          paddingRight: '11%',
+          touchAction: 'pan-x pinch-zoom'
+        }
+      }, difficulties.map(([key, setting]) => {
+        const active = key === safeDifficulty,
+          rec = modeRecordFor(battleMode, key);
+        return /*#__PURE__*/React.createElement("article", {
+          key: key,
+          className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+          style: {
+            borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
+            background: 'linear-gradient(180deg,#152044,#0d142b)',
+            boxShadow: active ? `0 0 30px ${setting.bg}55` : 'none'
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "text-center text-[7px] tracking-[.2em] text-slate-400 font-black"
+        }, "BATTLE DIFFICULTY"), /*#__PURE__*/React.createElement("h3", {
+          className: "text-center text-lg font-black leading-tight",
+          style: {
+            color: setting.text
+          }
+        }, setting.label), /*#__PURE__*/React.createElement("div", {
+          className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
+        }, /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px] text-slate-400 font-black"
+        }, ranked ? '自己ベストスコア' : '最高到達WAVE'), /*#__PURE__*/React.createElement("b", {
+          className: `block text-right text-base leading-tight ${ranked ? 'text-indigo-200' : 'text-amber-300'}`
+        }, ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), /*#__PURE__*/React.createElement("span", {
+          className: "block text-right text-[9px] text-amber-300"
+        }, ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-3 gap-1 mt-1.5"
+        }, rateCells(setting).map(([label, value, boosted]) => /*#__PURE__*/React.createElement("div", {
+          key: label,
+          className: "rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap"
+        }, label, /*#__PURE__*/React.createElement("b", {
+          className: "block text-xs",
+          style: {
+            color: boosted ? mode.color : '#ffffff'
+          }
+        }, value)))), /*#__PURE__*/React.createElement("div", {
+          className: "mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden",
+          style: {
+            borderColor: `${mode.color}55`,
+            color: mode.color
+          }
+        }, noteText), /*#__PURE__*/React.createElement("div", {
+          className: "grid gap-1.5 mt-1.5"
+        }, /*#__PURE__*/React.createElement("button", {
+          onClick: () => {
+            setDifficulty(key);
+            setShowWaveDetails(true);
+          },
+          className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs"
+        }, "\u5168WAVE\u8A73\u7D30"), /*#__PURE__*/React.createElement("button", {
+          disabled: pro,
+          onClick: () => {
+            battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
+            setDifficulty(key);
+            setRunMode(battleMode);
+            debugBattleRef.current = false;
+            setDebugBattle(false);
+            setDebugOutcome(null);
+            setMonSelection(getActiveMonsterList());
+            setHeroPickTab('roster');
+            setGameState('PICK_HERO');
+          },
+          className: "min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30",
+          style: {
+            backgroundColor: setting.bg,
+            color: setting.darkText ? '#0f172a' : '#ffffff'
+          }
+        }, pro ? 'プロモードは準備中です' : 'この難易度で挑戦'), ranked && /*#__PURE__*/React.createElement("button", {
+          onClick: () => openModeScoreRanking(battleMode, key, 'BATTLE_DIFFICULTY_SELECT'),
+          className: "min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "flex-1 text-center whitespace-nowrap"
+        }, "\uD83C\uDFC6 ", setting.label, "\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
+          size: 16,
+          className: "shrink-0"
+        })), quick && (() => {
+          const tid = SKIP_TICKETS[key];
+          if (!tid) return null;
+          const have = ownedItems[tid] || 0;
+          return /*#__PURE__*/React.createElement("div", {
+            className: "flex gap-1.5"
+          }, /*#__PURE__*/React.createElement("button", {
+            disabled: have <= 0,
+            onClick: () => {
+              battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
+              setDifficulty(key);
+              openBattleSkip(key);
+            },
+            className: `flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have > 0 ? 'bg-teal-600 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
+          }, /*#__PURE__*/React.createElement("span", null, "\u30B9\u30AD\u30C3\u30D7"), /*#__PURE__*/React.createElement("span", {
+            className: `text-[10px] font-black px-1.5 py-0.5 rounded-full ${have > 0 ? 'bg-black/30 text-teal-100' : 'bg-black/40 text-slate-500'}`
+          }, have, "\u679A")), /*#__PURE__*/React.createElement("button", {
+            onClick: () => setSkipInfoItemId(tid),
+            "aria-label": "\u30B9\u30AD\u30C3\u30D7\u306E\u8AAC\u660E",
+            className: "shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95"
+          }, "\uFF1F"));
+        })()));
+      })), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u6B21\u306E\u96E3\u6613\u5EA6",
+        disabled: selectedIndex === difficulties.length - 1,
+        onClick: () => selectDifficultyIndex(selectedIndex + 1),
+        className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
+      }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-center gap-1 py-0.5"
+      }, difficulties.map(([key], i) => /*#__PURE__*/React.createElement("button", {
+        key: key,
+        "aria-label": `${i + 1}ページ目`,
+        onClick: () => selectDifficultyIndex(i),
+        className: `w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 pt-1.5 pb-1"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        key: battleMode,
+        scene: battleModeAssistantScene(battleMode),
+        accent: mode.color,
+        faceSize: 56
+      })))));
+    })(), gameState === 'BATTLE_SCORE_RANKING' && (() => {
+      const mode = battleModeInfo(scoreRankingMode);
+      return /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 flex flex-col h-full min-h-0 px-4",
+        style: {
+          paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-1 mb-1 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u623B\u308B",
+        onClick: () => setGameState(scoreRankingBack),
+        className: "p-3 text-slate-400 active:scale-90"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-xl font-black italic uppercase tracking-widest truncate",
+        style: {
+          color: mode.color
+        }
+      }, mode.label, "\u30E9\u30F3\u30AD\u30F3\u30B0")), /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full mb-2.5"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "ranking",
+        compact: true
+      })), renderScoreRankingBody(scoreRankingMode)));
+    })(), gameState === 'MONSTER_LIST_MENU' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -17987,6 +18440,13 @@ function MonsterHeroGame() {
       onClick: () => setAssistantDebug('random'),
       className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
     }, "\u30E9\u30F3\u30C0\u30E0\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        setModeSelectTab('mode');
+        setBattleMode(BATTLE_MODE_CHALLENGE);
+        setGameState('BATTLE_MODE_SELECT');
+      },
+      className: "col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95"
+    }, "\u65B0\u30D0\u30C8\u30EB\u30E2\u30FC\u30C9\u9078\u629E\u3092\u958B\u304F\uFF08\u304A\u8A66\u3057\uFF09"), /*#__PURE__*/React.createElement("button", {
       onClick: () => startBattleTutorial(),
       className: "col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95"
     }, "\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u958B\u59CB\uFF08\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
@@ -22378,7 +22838,7 @@ function MonsterHeroGame() {
       onClick: () => {
         setSkipResult(null);
         setSkipFlow(null);
-        setGameState('BATTLE_MENU');
+        setGameState(battleEntryStateRef.current);
       },
       className: "w-full max-w-sm mx-auto shrink-0 mt-2 min-h-[52px] rounded-2xl bg-teal-600 text-white font-black text-sm uppercase shadow-lg active:scale-[.98]"
     }, "\u30D0\u30C8\u30EB\u30E1\u30CB\u30E5\u30FC\u3078\u623B\u308B")), (gameState === 'PICK_HERO' || gameState === 'PICK_ALLY') && /*#__PURE__*/React.createElement("div", {
@@ -22397,7 +22857,7 @@ function MonsterHeroGame() {
         if (gameState === 'PICK_HERO') {
           setCurrentPickingMon(null);
           setBattleMenuTab('difficulty');
-          setGameState('BATTLE_MENU');
+          setGameState(battleEntryStateRef.current);
           return;
         }
         returnToHome();

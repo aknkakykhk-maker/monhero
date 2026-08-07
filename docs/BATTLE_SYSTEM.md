@@ -135,11 +135,27 @@ WAVE経験値基礎値は `[4,5,6,7,8,10,12,14,16,18]`、ゴールド基礎値�
 - BGMはプロ専用曲を作らず、チャレンジと同じ `battle` / `dullahan` を流す。BGM設定の項目も増やさないので既存の `mh_bgm_arrangement` はそのまま読める。
 - 助手（みゅあ）は `battlePro` の場面と `pro` の親密度行動を持つ。既存の `challenge` / `quick` の獲得量・1日上限・合計上限（30）は変えていない。
 
+### 新しい入口（準備中）
+
+`バトル → バトルモード選択 → 難易度選択` の3画面を作ってある。まだ**デバッグ設定の「新バトルモード選択を開く（お試し）」からだけ**開ける。
+
+| gameState | 中身 |
+| --- | --- |
+| `BATTLE_MODE_SELECT` | 3モードの横スライドカード。上のタブは「モード選択／ブリーダーLv／絆Lv」 |
+| `BATTLE_DIFFICULTY_SELECT` | 選んだモードの難易度カード9枚。倍率・記録・補足行がモードで変わる |
+| `BATTLE_SCORE_RANKING` | モード別のスコアランキング。難易度タブで切り替える |
+
+- スコアランキングは**モードごとに別枠**なので、モード選択画面の上のタブには置かず、モードのカードと難易度のカードから開く（`openModeScoreRanking`）。難易度カードから開いたときは、その難易度のタブが最初に選ばれる。
+- ブリーダーLv・絆Lvはモードで分かれないので、上のタブに置く。
+- ランキングの一覧は `renderScoreRankingBody` / `renderBreederRankingBody` / `renderBondRankingBody` の共通の描画を呼ぶだけで、画面ごとに作り直していない。既存の `BATTLE_MENU` のランキングタブも同じものを呼ぶ。
+- クイックにはスコアランキングが無いので、導線も「ランキング対象外です」の高さ合わせの空枠も置かない。
+- スキップと勇者モン選択の「戻る」は `battleEntryStateRef` が覚えている入口の画面へ返す（既定は `BATTLE_MENU`）。
+
 ### 公開状況
 
-プロモードは**まだ本番の導線に出していない**。既存のバトル画面のタブは `PUBLIC_BATTLE_MODES`（チャレンジ・クイックのみ）を並べる。`BATTLE_MODES` には入っているので、ヘルプ・検査・今後のデバッグ入口からは見える。新しいバトルモード選択画面とセットで公開する。
+プロモードは**まだ本番の導線に出していない**。既存のバトル画面のタブは `PUBLIC_BATTLE_MODES`（チャレンジ・クイックのみ）を並べる。新しい難易度選択画面からもプロは始められない（ボタンは「プロモードは準備中です」で押せない）。ベースモン限定の編成と供モン5体→3体の実装が入ったら開放する。
 
-`submitRunScoreOnce` は先頭で `debugBattleRef.current` を見て打ち切るので、デバッグ・練習の周回はどのモードでも全国ランキングにも自己ベストにも残らない。
+`submitRunScoreOnce` は先頭で `debugBattleRef.current` を見て打ち切るので、デバッグ・練習の周回はどのモードでも全国ランキングにも自己ベストにも残らない。ただし新しい画面から始めたチャレンジ・クイックは**ふつうの1プレイ**なので、記録もランキングも通常どおり残る。
 
 ## 10. 変更時に確認する場所
 
@@ -151,5 +167,6 @@ WAVE経験値基礎値は `[4,5,6,7,8,10,12,14,16,18]`、ゴールド基礎値�
 - 回帰確認: `node tools/battle-check.js`、`node tools/difficulty-item-check.js`、
   `node tools/enemy-scan-check.js`、`node tools/battle-scenario-check.js`、
   `node tools/guard-card-check.js`、`node tools/golem-balance-check.js`、
-  `node tools/battle-mode-check.js`（モードの倍率・保存キー・ランキング名前空間）
+  `node tools/battle-mode-check.js`（モードの倍率・保存キー・ランキング名前空間・新しい入口）、
+  `node tools/battle-mode-select-check.js`（新しい入口を実ブラウザで開いて押せるか）
 
