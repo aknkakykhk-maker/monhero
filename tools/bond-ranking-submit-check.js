@@ -86,6 +86,21 @@ check('クリアしたときだけ走る絆・ランキング処理が無い',
 check('絆経験値が入らないランでも今のマスモンへ落とす',
   /postRunMasuMonsRef\.current \|\| masuMonsRef\.current \|\| masuMons/.test(submitBody));
 
+// ===== 2.7. 取得の並び順と件数 =====
+// 絆Lvは「新しい記録」を見て集計する。以前は order=id.desc だけを使っていたが、
+// rankings.id が uuid だと id.desc は作成順にならず、毎回ばらばらの記録を拾ってしまう。
+// スコアは score.desc、ブリーダーLvは level.desc なので影響が無く、絆Lvだけが
+// 「プレイしても更新されない」ように見えていた
+check('絆Lvの取得は記録時刻で並べる',
+  /const BOND_RANKING_ORDERS = \['created_at\.desc\.nullslast', 'id\.desc'\];/.test(source));
+check('絆Lvの取得が id.desc だけに戻っていない',
+  !/levelKind === 'bond' \? 'id\.desc'/.test(source));
+check('並べ方が使えない環境では順に試して落とす',
+  /for \(const order of orders\)[\s\S]{0,400}sbFetchRankings\(null, levelLimit, order/.test(source));
+const limitMatch = source.match(/const RANKING_LEVEL_FETCH_LIMIT = (\d+);/);
+check('絆Lvの取得枠が狭すぎない', limitMatch && Number(limitMatch[1]) >= 100, limitMatch ? `${limitMatch[1]}件` : '見つからない');
+check('絆Lvだけ編成(party)を取る', /levelKind === 'bond' \? RANKING_SELECT_FULL : RANKING_SELECT_NO_PARTY/.test(source));
+
 // ===== 3. 集計側は送った値をそのまま拾えるか =====
 // collectBondRankingEntries を取り出して、実際の記録の形で通す
 const from = source.indexOf('const collectBondRankingEntries');

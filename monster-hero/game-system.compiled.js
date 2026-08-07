@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f302f2a416e9894a
+// source-sha256: 33e9fb3f78982464
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 00:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 01:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6762,8 +6762,16 @@ const rankingLog = (requestId, event, detail = {}) => {
   });
 };
 // レベル系ランキングは難易度で絞らず1回で取る。件数が多いほど並べ替えと転送に時間がかかるため、
-// 表示に必要な範囲にとどめる
-const RANKING_LEVEL_FETCH_LIMIT = 60;
+// 表示に必要な範囲にとどめる。
+// 絆Lvは編成(party)ごと取るので1行が重い。ただし60件では取得枠が狭すぎて、
+// プレイ直後の自分の記録すら入らないことがあったため広げた
+const RANKING_LEVEL_FETCH_LIMIT = 120;
+// 絆Lvは「新しい記録」から取りたい。以前は order=id.desc だけを使っていたが、
+// rankings.id が uuid の場合 id.desc は作成順にならず、毎回ばらばらの記録を拾ってしまう
+// (スコアは score.desc、ブリーダーLvは level.desc なので影響が無く、絆Lvだけが
+//  「プレイしても更新されない」ように見えていた)。
+// 記録した時刻で並べ、その列が使えない環境では従来どおり id.desc へ落とす。
+const BOND_RANKING_ORDERS = ['created_at.desc.nullslast', 'id.desc'];
 // ブリーダーLvは「1人1行」ではなく、プレイのたびに増える記録から名前ごとにまとめて出す。
 // そのため、よく遊ぶ人の記録が取得枠を食いつぶし、下位の人が1行も取れずに
 // 一覧から消えてしまっていた(60行しか取らないと、7人いても3人しか出ない状態だった)。
@@ -8258,11 +8266,23 @@ function MonsterHeroGame() {
         let error = null,
           rows = [];
         try {
-          // ブリーダーLvはレベル上位、絆Lvは編成(party)を見るので新しい記録から取る
-          const order = levelKind === 'bond' ? 'id.desc' : 'level.desc.nullslast';
+          // ブリーダーLvはレベル上位、絆Lvは編成(party)を見るので新しい記録から取る。
+          // 絆Lvは並べ方を順に試す(created_at が無い環境でも id.desc で取れるようにする)
+          const orders = levelKind === 'bond' ? BOND_RANKING_ORDERS : ['level.desc.nullslast'];
           const columns = levelKind === 'bond' ? RANKING_SELECT_FULL : RANKING_SELECT_NO_PARTY;
           const levelLimit = levelKind === 'bond' ? RANKING_LEVEL_FETCH_LIMIT : RANKING_BREEDER_FETCH_LIMIT;
-          rows = await sbFetchRankings(null, levelLimit, order, 0, requestId, columns);
+          let orderError = null;
+          for (const order of orders) {
+            try {
+              rows = await sbFetchRankings(null, levelLimit, order, 0, requestId, columns);
+              orderError = null;
+              break;
+            } catch (orderErr) {
+              orderError = orderErr;
+              console.error('[ranking] level fetch failed for order', order, orderErr && orderErr.message ? orderErr.message : orderErr);
+            }
+          }
+          if (orderError) throw orderError;
         } catch (e) {
           const message = e?.message || String(e);
           console.error('[ranking] level fetch failed:', message);
@@ -8355,7 +8375,7 @@ function MonsterHeroGame() {
           let rows;
           try {
             // 旧データのscore=NULLが上位枠を埋めて有効な記録を押し出さないよう、明示的にNULLを末尾へ送る。
-            const primaryOrder = includeLevels && levelKind === 'bond' ? 'id.desc' : 'score.desc.nullslast';
+            const primaryOrder = includeLevels && levelKind === 'bond' ? BOND_RANKING_ORDERS[0] : 'score.desc.nullslast';
             rows = mergeRows([], d === 'Master' ? await fetchMasterRows(primaryOrder, requestId, fetchLimit) : await sbFetchRankings(d, fetchLimit, primaryOrder, 0, requestId));
           } catch (scoreError) {
             console.error('[ranking] score order fetch failed for', d, scoreError && scoreError.message ? scoreError.message : scoreError);

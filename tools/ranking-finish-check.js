@@ -76,8 +76,10 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
     && code.includes('const fetchLimit = normalizedTargetDiff ? RANKING_SCORE_LIMIT : RANKING_BULK_LIMIT;'));
   check(`${label}: 端末内自己ベストから復旧`, code.includes('`mh_hs_${d}`') && code.includes("hero: '記録復旧'"));
   check(`${label}: score.desc失敗時も同じ件数で取る`, code.includes("sbFetchRankings(d, fetchLimit, 'id.desc', 0"));
-  // 取得順は primaryOrder に集約されている。score系は score.desc.nullslast、絆は id.desc。
-  check(`${label}: score=NULLの旧データが取得枠を埋めない`, code.includes("const primaryOrder = includeLevels && levelKind === 'bond' ? 'id.desc' : 'score.desc.nullslast'") && code.includes('fetchMasterRows(primaryOrder, requestId, fetchLimit)'));
+  // 取得順は primaryOrder に集約されている。score系は score.desc.nullslast、
+  // 絆Lvは BOND_RANKING_ORDERS の先頭(記録時刻の新しい順)。
+  // 以前は絆Lvも id.desc だったが、rankings.id が uuid だと作成順にならないため変えた
+  check(`${label}: score=NULLの旧データが取得枠を埋めない`, code.includes("const primaryOrder = includeLevels && levelKind === 'bond' ? BOND_RANKING_ORDERS[0] : 'score.desc.nullslast'") && code.includes('fetchMasterRows(primaryOrder, requestId, fetchLimit)'));
   check(`${label}: stateの最新ハイスコアも復旧元に使う`, code.includes('highScoresRef.current[d]'));
   check(`${label}: 0件成功をローカル復旧へ誤分類しない`, !code.includes('if (byDiff[d].length === 0)'));
   check(`${label}: 古い同一取得単位のリクエストを画面へ反映しない`, code.includes("'stale-result-discarded'") && code.includes('rankingLatestRequestRef.current.get(latestKey) !== requestId'));
