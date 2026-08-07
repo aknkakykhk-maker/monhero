@@ -68,6 +68,24 @@ check('終わり方3通りとも報酬付与→スコア送信の順',
   && submitCalls.every((pos, i) => awardCalls[i] < pos),
   `付与${awardCalls.length}か所 / 送信${submitCalls.length}か所`);
 
+// ===== 2.5. 諦めた(リタイア)ときも同じ経路を通るか =====
+// 「クリアしたときだけ絆Lvが載る」ようになっていないことを確かめる。
+// クリア・敗北・リタイアはどれも awardRunRewards → submitRunScoreOnce を通り、
+// 違うのは渡すクリアWAVE数だけ(クリアは10、敗北とリタイアは wave-1)
+const giveUpFrom = source.indexOf('const handleGiveUp');
+const giveUpBody = giveUpFrom > 0 ? source.slice(giveUpFrom, source.indexOf('const handleRetry', giveUpFrom)) : '';
+check('リタイアの実装を取り出せる', giveUpBody.length > 0);
+check('リタイアでも報酬付与→スコア送信を通る',
+  /await awardRunRewards\(Math\.max\(0, wave - 1\)\)/.test(giveUpBody) && /await submitRunScoreOnce\(\)/.test(giveUpBody));
+check('リタイア専用の送信経路を作っていない',
+  !/submitLocalScore\(/.test(giveUpBody) && !/rankingMasuDetail\(/.test(giveUpBody));
+check('クリアしたときだけ走る絆・ランキング処理が無い',
+  !/bondLevel|rankingMasuDetail|submitLocalScore/.test(source.slice(source.indexOf('const recordClearOnce'), source.indexOf('const recordClearOnce') + 1400)));
+// クリアWAVEが0のラン(WAVE1で諦めた等)では絆経験値を配らないので postRunMasuMonsRef は空になる。
+// そのとき今のマスモンへ落ちないと、諦めたランだけ絆Lvが送られなくなる
+check('絆経験値が入らないランでも今のマスモンへ落とす',
+  /postRunMasuMonsRef\.current \|\| masuMonsRef\.current \|\| masuMons/.test(submitBody));
+
 // ===== 3. 集計側は送った値をそのまま拾えるか =====
 // collectBondRankingEntries を取り出して、実際の記録の形で通す
 const from = source.indexOf('const collectBondRankingEntries');
