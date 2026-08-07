@@ -22,19 +22,19 @@ check('移行済みデータは二重補償されない',second.compensation===0
 
 // --- 限界突破: レベル・強化はそのまま、上限とポイントだけ増える ---
 const ready={...migrated.nextMasuMons[0],rebirthCount:0,levelCap:30,distAptPoints:9,distApt:['S','A','B','C'],statPoints:{hp:30,atk:9,def:6,guts:3},colors:['red'],inheritedUniques:[{monId:'Suezo',name:'熱視線'}],fusionHistory:[{subName:'副'}],uniqueSkillLevels:{own:0,'inh:0':2}};
-const bt=buildMasuBreakthrough({masu:ready,skillKey:'own',gold:4000});
+const bt=buildMasuBreakthrough({masu:ready,skillKey:'own',gold:4000,psycheOwned:999999});
 check('限界突破はレベル・絆経験値・強化を戻さない',
   bt.ok&&bt.nextMasu.bondXp===ready.bondXp&&JSON.stringify(bt.nextMasu.distApt)===JSON.stringify(ready.distApt)&&JSON.stringify(bt.nextMasu.statPoints)===JSON.stringify(ready.statPoints),
   bt.ok?`Lv${masuBondLevelInfo(bt.nextMasu).level}`:bt.reason);
 check('限界突破で上限が+5され、回数と費用が合う',bt.nextMasu.levelCap===30+BREAKTHROUGH_LEVEL_CAP_GAIN&&bt.nextMasu.rebirthCount===1&&bt.cost===1500&&bt.nextGold===2500);
 check('限界突破の初回は強化ポイント+5',bt.gainedPoints===BREAKTHROUGH_FIRST_POINTS&&bt.nextMasu.distAptPoints===9+BREAKTHROUGH_FIRST_POINTS);
-const bt2=buildMasuBreakthrough({masu:{...bt.nextMasu,bondXp:totalBondXpForLevel(35)},skillKey:'own',gold:99999});
+const bt2=buildMasuBreakthrough({masu:{...bt.nextMasu,bondXp:totalBondXpForLevel(35)},skillKey:'own',gold:99999,psycheOwned:999999});
 check('限界突破の2回目からは強化ポイント+1',bt2.ok&&bt2.gainedPoints===BREAKTHROUGH_POINTS&&bt2.nextMasu.distAptPoints===bt.nextMasu.distAptPoints+BREAKTHROUGH_POINTS,bt2.ok?'':bt2.reason);
 check('限界突破は固有技・継承技・名前・染色・合体履歴を維持',bt.nextMasu.uniqueSkillLevels.own===1&&bt.nextMasu.uniqueSkillLevels['inh:0']===2&&bt.nextMasu.inheritedUniques.length===1&&bt.nextMasu.name===ready.name&&JSON.stringify(bt.nextMasu.colors)===JSON.stringify(['red'])&&bt.nextMasu.fusionHistory.length===1);
 check('上限到達後はXPを取得しない',cappedBondXp(ready,9999)===capXp);
-check('ダイヤ不足・未到達・最大Lv技は限界突破できない',!buildMasuBreakthrough({masu:ready,skillKey:'own',gold:1499}).ok&&!buildMasuBreakthrough({masu:{...ready,bondXp:0},skillKey:'own',gold:9999}).ok&&!buildMasuBreakthrough({masu:{...ready,uniqueSkillLevels:{own:8}},skillKey:'own',gold:9999}).ok);
+check('ダイヤ不足・未到達・最大Lv技は限界突破できない',!buildMasuBreakthrough({masu:ready,skillKey:'own',gold:1499,psycheOwned:999999}).ok&&!buildMasuBreakthrough({masu:{...ready,bondXp:0},skillKey:'own',gold:9999,psycheOwned:999999}).ok&&!buildMasuBreakthrough({masu:{...ready,uniqueSkillLevels:{own:8}},skillKey:'own',gold:9999,psycheOwned:999999}).ok);
 const atMax={...ready,levelCap:MAX_MASU_LEVEL_CAP,bondXp:totalBondXpForLevel(MAX_MASU_LEVEL_CAP)};
-check(`上限Lv.${MAX_MASU_LEVEL_CAP}に届いたらそれ以上は上げられない`,!buildMasuBreakthrough({masu:atMax,skillKey:'own',gold:999999}).ok);
+check(`上限Lv.${MAX_MASU_LEVEL_CAP}に届いたらそれ以上は上げられない`,!buildMasuBreakthrough({masu:atMax,skillKey:'own',gold:999999,psycheOwned:999999}).ok);
 
 // --- 転生: レベルを99返して強化を振り直す ---
 const hundred={...ready,levelCap:120,rebirthCount:14,bondXp:totalBondXpForLevel(103),distAptPoints:0,reincarnateCount:0};

@@ -120,7 +120,8 @@ let masu = makeMasu(INITIAL_MASU_LEVEL_CAP, 0);
 const caps = [];
 let steps = 0, buildFail = '';
 while (steps < 40) {
-  const result = buildMasuBreakthrough({ masu, skillKey: 'own', gold: 9_999_999 });
+  // 虹のプシュケーはここでは見ないので、必ず足りる数を渡す(専用の検査は breakthrough-item-check.js)
+  const result = buildMasuBreakthrough({ masu, skillKey: 'own', gold: 9_999_999, psycheOwned: 9_999_999 });
   if (!result.ok) { buildFail = result.reason; break; }
   masu = { ...result.nextMasu, bondXp: totalBondXpForLevel(result.nextMasu.levelCap), uniqueSkillLevels: { own: 0 } };
   caps.push([masu.rebirthCount, masu.levelCap, result.finalBreakthrough === true]);
@@ -140,12 +141,12 @@ check('31凸の★は虹', describe(31) === '虹★5');
 // 旧仕様で上限Lv.185〜195まで進んでいた個体も、次の1回でLv.200へ入れる（壊さない）
 for (const legacyCap of [185, 190, 195]) {
   const legacy = makeMasu(legacyCap, 31);
-  const r = buildMasuBreakthrough({ masu: legacy, skillKey: 'own', gold: 9_999_999 });
+  const r = buildMasuBreakthrough({ masu: legacy, skillKey: 'own', gold: 9_999_999, psycheOwned: 9_999_999 });
   check(`旧データ(上限Lv.${legacyCap})も最終限界突破でLv.200へ`, r.ok && r.nextMasu.levelCap === 200 && r.finalBreakthrough === true,
     r.ok ? `Lv.${r.nextMasu.levelCap}` : r.reason);
 }
 check('上限Lv.200の個体はもう限界突破できない',
-  buildMasuBreakthrough({ masu: makeMasu(200, 31), skillKey: 'own', gold: 9_999_999 }).ok === false);
+  buildMasuBreakthrough({ masu: makeMasu(200, 31), skillKey: 'own', gold: 9_999_999, psycheOwned: 9_999_999 }).ok === false);
 // 既存の保存値をそのまま使う(表示用の項目を増やしていない)
 check('★のために保存する項目を増やしていない',
   !/starTier|starColor|rebirthTier|breakthroughTier/.test(source));

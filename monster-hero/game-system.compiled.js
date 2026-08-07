@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: df3db313988a49da
+// source-sha256: 2c106fbaf2b7681a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 01:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 06:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -421,6 +421,20 @@ const breakthroughStars = count => {
   return stars;
 };
 const isFinalBreakthroughCount = count => Math.max(0, Math.floor(Number(count) || 0)) >= FINAL_BREAKTHROUGH_COUNT;
+// ===== 限界突破に使うアイテム「虹のプシュケー」 =====
+// 所持数は他の消耗アイテムと同じ mh_owned_items({ itemId: 個数 })へ入れる。
+// 新しい保存キーは作らないので、持っていない旧セーブは「0個」として読める。
+// 必要数は限界突破1回ごとに増える。1回目10個・以降+5個で、
+//   30回目 = 10 + 29×5 = 155個 / 最終限界突破(31回目) = 10 + 30×5 = 160個
+const BREAKTHROUGH_ITEM_ID = 'rainbow_psyche';
+const BREAKTHROUGH_ITEM_BASE = 10;
+const BREAKTHROUGH_ITEM_STEP = 5;
+// nextCount は「これから行う限界突破が何回目か」(rebirthCount + 1)
+const breakthroughItemCost = nextCount => {
+  const n = Math.max(1, Math.floor(Number(nextCount) || 1));
+  return BREAKTHROUGH_ITEM_BASE + (n - 1) * BREAKTHROUGH_ITEM_STEP;
+};
+const ownedItemCount = (ownedItems, itemId) => Math.max(0, Math.floor(Number(ownedItems?.[itemId]) || 0));
 const REINCARNATE_MIN_LEVEL = 100;
 const REINCARNATE_LEVEL_DROP = 99;
 const REINCARNATE_POINTS = 10;
@@ -726,7 +740,8 @@ const masuRebirthCost = level => Math.max(0, Math.floor(Number(level) || 0)) * R
 const buildMasuBreakthrough = ({
   masu,
   skillKey,
-  gold
+  gold,
+  psycheOwned = 0
 }) => {
   if (!masu) return {
     ok: false,
@@ -734,18 +749,33 @@ const buildMasuBreakthrough = ({
   };
   const normalized = normalizeMasuProgression(masu);
   const level = masuBondLevelInfo(normalized).level;
+  // 何回目の限界突破かで、必要な虹のプシュケーの数が決まる
+  const psycheCost = breakthroughItemCost(normalized.rebirthCount + 1);
+  const psycheHave = Math.max(0, Math.floor(Number(psycheOwned) || 0));
   if (normalized.levelCap >= MAX_MASU_LEVEL_CAP) return {
     ok: false,
-    reason: `レベル上限は Lv.${MAX_MASU_LEVEL_CAP} までです。`
+    reason: `レベル上限は Lv.${MAX_MASU_LEVEL_CAP} までです。`,
+    psycheCost,
+    psycheHave
   };
   if (level !== normalized.levelCap) return {
     ok: false,
-    reason: `Lv.${normalized.levelCap}到達後に限界突破できます。`
+    reason: `Lv.${normalized.levelCap}到達後に限界突破できます。`,
+    psycheCost,
+    psycheHave
   };
   const cost = masuRebirthCost(level);
   if (donationDiamondValue(gold) < cost) return {
     ok: false,
-    reason: 'ダイヤが不足しています。'
+    reason: 'ダイヤが不足しています。',
+    psycheCost,
+    psycheHave
+  };
+  if (psycheHave < psycheCost) return {
+    ok: false,
+    reason: `虹のプシュケーが不足しています（必要 ${psycheCost} / 所持 ${psycheHave}）。`,
+    psycheCost,
+    psycheHave
   };
   const currentSkillLevel = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
   if (!skillKey || currentSkillLevel >= MAX_UNIQUE_SKILL_LEVEL) return {
@@ -769,6 +799,9 @@ const buildMasuBreakthrough = ({
     skillLevel: currentSkillLevel + 1,
     gainedPoints,
     finalBreakthrough: isFinal,
+    psycheCost,
+    psycheHave,
+    nextPsyche: psycheHave - psycheCost,
     nextGold: donationDiamondValue(gold) - cost,
     nextMasu: {
       ...normalized,
@@ -5773,6 +5806,22 @@ const DIFFICULTY_SETTINGS = {
   }
 };
 const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
+// クリアするともらえる虹のプシュケー。難易度が高いほど多い。
+// 難易度のキーは DIFFICULTY_SETTINGS が正本なので、増減したらここも合わせる
+// (ずれていないかは tools/breakthrough-item-check.js が見る)。
+// もらえるのは「クリアしたとき」だけ。敗北・リタイア・スキップチケットでは配らない
+const CLEAR_PSYCHE_REWARD = Object.freeze({
+  Beginner: 1,
+  Easy: 2,
+  Normal: 3,
+  Hard: 5,
+  Expert: 7,
+  Master: 10,
+  GrandMaster: 15,
+  Hell: 20,
+  Legend: 30
+});
+const clearPsycheReward = difficulty => Math.max(0, Math.floor(Number(CLEAR_PSYCHE_REWARD[normalizeBattleDifficulty(difficulty)]) || 0));
 // ヘルプの中に出す「実データから作る表」。data/help.js の { t:'data', id } がこれを呼ぶ。
 // 難易度の倍率やアイテムの値段をヘルプへ手で書き写すと、値を変えたときに片方だけ古くなる。
 // (実際「難易度が3つしか載っていない」状態になっていた)。ここを通せば取りこぼしが起きない。
@@ -5920,7 +5969,11 @@ const helpDataRows = id => {
     case 'skipTickets':
       return marketItems.filter(item => skipIds.has(item.id)).map(item => [item.name, `${DIFFICULTY_SETTINGS[item.skipDifficulty]?.label || item.skipDifficulty} で使える ／ マーケット ${item.cost.toLocaleString()}ダイヤ`]);
     case 'items':
-      return marketItems.filter(item => item.type === 'item' && !skipIds.has(item.id)).map(item => [item.name, `${item.cost.toLocaleString()}ダイヤ ／ ${item.desc || ''}`]);
+      // マーケットで売らないアイテム(虹のプシュケー)は値段の代わりに入手方法を出す
+      return marketItems.filter(item => item.type === 'item' && !skipIds.has(item.id)).map(item => [item.name, `${item.shop === false ? 'マーケットでは買えない' : `${item.cost.toLocaleString()}ダイヤ`} ／ ${item.desc || ''}`]);
+    // クリアでもらえる虹のプシュケー。難易度と個数は実データからそのまま作る
+    case 'psycheRewards':
+      return Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => [setting.label, `クリアで ${clearPsycheReward(key)} 個`]);
     case 'loginBonus':
       return (typeof LOGIN_BONUS_REWARDS !== 'undefined' && LOGIN_BONUS_REWARDS || []).map((rewards, i) => [`${i + 1}日目`, rewards.map(giftRewardText).join(' ／ ')]);
     // 合体・転生の消費ダイヤ。単価を変えたときにヘルプだけ古くなることがないよう、
@@ -5958,7 +6011,8 @@ const HELP_DATA_TITLES = {
   masuCosts: '神殿でかかるダイヤ',
   assistantBond: 'みゅあとの仲良し度の段階',
   assistantBondActions: '仲良し度が増える行動',
-  monsterPower: '総合力の内訳'
+  monsterPower: '総合力の内訳',
+  psycheRewards: '難易度ごとにもらえる虹のプシュケー'
 };
 // ===== 助手(ナビゲーター) ここから =====
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。
@@ -7178,7 +7232,15 @@ const RewardSummaryCard = ({
   to: summary.goldAfter
 }), summary.goldAfter > summary.goldBefore && /*#__PURE__*/React.createElement("span", {
   className: "text-amber-300 text-[10px]"
-}, "(+", (summary.goldAfter - summary.goldBefore).toLocaleString(), ")"))), summary.heroBondGain && /*#__PURE__*/React.createElement("div", {
+}, "(+", (summary.goldAfter - summary.goldBefore).toLocaleString(), ")"))), summary.psycheGain > 0 && /*#__PURE__*/React.createElement("div", {
+  className: "pt-2 border-t border-white/10 flex items-center justify-between text-[11px]"
+}, /*#__PURE__*/React.createElement("span", {
+  className: "text-fuchsia-300 font-black flex items-center gap-1"
+}, /*#__PURE__*/React.createElement("span", {
+  "aria-hidden": "true"
+}, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
+  className: "text-white font-mono font-bold"
+}, "\xD7", summary.psycheGain.toLocaleString())), summary.heroBondGain && /*#__PURE__*/React.createElement("div", {
   className: "pt-2 border-t border-white/10"
 }, /*#__PURE__*/React.createElement("div", {
   className: "flex items-center justify-between text-[11px] mb-1"
@@ -7676,6 +7738,9 @@ function MonsterHeroGame() {
   const [draftHomePastureIds, setDraftHomePastureIds] = useState([]);
   const [pastureLoaded, setPastureLoaded] = useState(false);
   const [ownedItems, setOwnedItems] = useState({}); // マーケットで買った消耗アイテムの所持数 { itemId: count } (端末保存)
+  // setOwnedItems の反映は非同期なので、クリア報酬の付与と限界突破の消費はこのrefの値を土台にする
+  const ownedItemsRef = useRef(ownedItems);
+  ownedItemsRef.current = ownedItems;
   const [trainingSelectedId, setTrainingSelectedId] = useState(null);
   const [trainingDifficulty, setTrainingDifficulty] = useState('BEGINNER');
   const [trainingSession, setTrainingSession] = useState(null);
@@ -10763,7 +10828,8 @@ function MonsterHeroGame() {
     const result = buildMasuBreakthrough({
       masu,
       skillKey: rebirthSkillKey,
-      gold
+      gold,
+      psycheOwned: ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID)
     });
     if (!result.ok) {
       setRebirthError(result.reason);
@@ -10772,12 +10838,21 @@ function MonsterHeroGame() {
     rebirthProcessingRef.current = true;
     setRebirthError('');
     const next = masuMonsRef.current.map(m => String(m.id) === String(masu.id) ? result.nextMasu : m);
+    // 虹のプシュケーは限界突破が成立したときだけ減らす。
+    // 途中で失敗したら保存もstateも触らないので、誤って減ることはない
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [BREAKTHROUGH_ITEM_ID]: result.nextPsyche
+    };
     try {
       await storeSet('mh_masu_mons', next, false);
       await storeSet('mh_gold', result.nextGold, false);
+      await storeSet('mh_owned_items', nextItems, false);
       masuMonsRef.current = next;
+      ownedItemsRef.current = nextItems;
       setMasuMons(next);
       setGold(result.nextGold);
+      setOwnedItems(nextItems);
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       const skill = getRebirthSkillChoices(masu).find(choice => choice.key === rebirthSkillKey);
       setRebirthAnimation({
@@ -11307,9 +11382,32 @@ function MonsterHeroGame() {
   // Masterを含む最終WAVEのクリア回数も、報酬・ランキングとは独立した同期ロックで1回だけ記録する。
   // Reactのstate updater内で永続化すると開発時のStrict Modeでupdaterが再評価され得るため、
   // 保存する値をrefロック後に確定し、副作用をupdaterの外へ出す。
+  // クリア報酬の虹のプシュケー。難易度ごとの個数は CLEAR_PSYCHE_REWARD が正本。
+  // 所持数は他の消耗アイテムと同じ mh_owned_items へ足すので、新しい保存キーは作らない。
+  // 獲得数はリザルトに出したいので finalRewardSummary へも足す(報酬付与のあとに走るため関数形で足す)
+  const awardClearPsyche = async () => {
+    const gain = clearPsycheReward(difficulty);
+    if (gain <= 0) return 0;
+    const nextItems = {
+      ...ownedItemsRef.current,
+      [BREAKTHROUGH_ITEM_ID]: ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID) + gain
+    };
+    ownedItemsRef.current = nextItems;
+    setOwnedItems(nextItems);
+    await storeSet('mh_owned_items', nextItems, false);
+    setFinalRewardSummary(prev => ({
+      ...(prev || {}),
+      psycheGain: gain
+    }));
+    return gain;
+  };
   const recordClearOnce = async () => {
     if (clearRecordedRef.current) return;
     clearRecordedRef.current = true;
+    // 虹のプシュケーはクリアしたときだけ配る。ここは「クリアを1周回に1回だけ記録する」入口で、
+    // チャレンジ・クイックのどちらもここを通り、clearRecordedRef が連打も二重付与も止める。
+    // 敗北・リタイア・スキップチケットはこの関数を通らないので配られない
+    await awardClearPsyche();
     if (isQuickMode(runMode)) {
       const nextQuick = (quickClearCounts[difficulty] || 0) + 1;
       setQuickClearCounts(prev => ({
@@ -15929,7 +16027,17 @@ function MonsterHeroGame() {
           compact: true
         })), /*#__PURE__*/React.createElement("div", {
           className: "text-[10px] text-slate-400 mb-3"
-        }, "\u73FE\u5728\u306E\u30EC\u30D9\u30EB\u4E0A\u9650\u306B\u5230\u9054\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u9650\u754C\u7A81\u7834\u3067\u304D\u307E\u3059\u3002\u30EC\u30D9\u30EB\u306F\u305D\u306E\u307E\u307E\u3067\u3001\u4E0A\u9650\u3060\u3051+", BREAKTHROUGH_LEVEL_CAP_GAIN, "\u3055\u308C\u307E\u3059\u3002", BREAKTHROUGH_MAX_COUNT, "\u56DE\u76EE\u3067\u4E0A\u9650Lv.", BREAKTHROUGH_FINAL_LEVEL_CAP, "\u30FB\u2605\u306F\u91D1\u306B\u306A\u308A\u3001\u305D\u306E\u6B21\u306E\u300C\u6700\u7D42\u9650\u754C\u7A81\u7834\u300D\u3067\u4E0A\u9650\u304C\u4E00\u6C17\u306BLv.", MAX_MASU_LEVEL_CAP, "\u30FB\u2605\u306F\u8679\u306B\u306A\u308A\u307E\u3059\uFF08\u305D\u3053\u3067\u6253\u3061\u6B62\u3081\u3067\u3059\uFF09\u3002"), renderMonsterSortFilterBar({
+        }, "\u73FE\u5728\u306E\u30EC\u30D9\u30EB\u4E0A\u9650\u306B\u5230\u9054\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u3060\u3051\u304C\u9650\u754C\u7A81\u7834\u3067\u304D\u307E\u3059\u3002\u30EC\u30D9\u30EB\u306F\u305D\u306E\u307E\u307E\u3067\u3001\u4E0A\u9650\u3060\u3051+", BREAKTHROUGH_LEVEL_CAP_GAIN, "\u3055\u308C\u307E\u3059\u3002", BREAKTHROUGH_MAX_COUNT, "\u56DE\u76EE\u3067\u4E0A\u9650Lv.", BREAKTHROUGH_FINAL_LEVEL_CAP, "\u30FB\u2605\u306F\u91D1\u306B\u306A\u308A\u3001\u305D\u306E\u6B21\u306E\u300C\u6700\u7D42\u9650\u754C\u7A81\u7834\u300D\u3067\u4E0A\u9650\u304C\u4E00\u6C17\u306BLv.", MAX_MASU_LEVEL_CAP, "\u30FB\u2605\u306F\u8679\u306B\u306A\u308A\u307E\u3059\uFF08\u305D\u3053\u3067\u6253\u3061\u6B62\u3081\u3067\u3059\uFF09\u3002"), /*#__PURE__*/React.createElement("div", {
+          className: "flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-[10px] font-black text-fuchsia-200 flex items-center gap-1"
+        }, /*#__PURE__*/React.createElement("span", {
+          "aria-hidden": "true"
+        }, "\uD83C\uDF08"), "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
+          className: "text-[11px] font-mono font-black text-white"
+        }, "\u6240\u6301 ", ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString())), /*#__PURE__*/React.createElement("div", {
+          className: "text-[9px] text-slate-500 font-bold mb-2"
+        }, "\u9650\u754C\u7A81\u7834\u306B\u306F\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u5FC5\u8981\u3067\u3059\uFF081\u56DE\u76EE10\u500B\u30FB\u4EE5\u964D1\u56DE\u3054\u3068\u306B+5\u500B\uFF09\u3002\u30C1\u30E3\u30EC\u30F3\u30B8\uFF0F\u30AF\u30A4\u30C3\u30AF\u3092\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3082\u3089\u3048\u307E\u3059\u3002"), renderMonsterSortFilterBar({
           singleType: true
         }), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
@@ -15940,7 +16048,9 @@ function MonsterHeroGame() {
           if (!base) return null;
           const lvl = masuBondLevelInfo(masu);
           const cap = normalizeMasuProgression(masu).levelCap;
-          const can = lvl.level === cap && cap < MAX_MASU_LEVEL_CAP;
+          const need = breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount + 1);
+          const enoughPsyche = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) >= need;
+          const can = lvl.level === cap && cap < MAX_MASU_LEVEL_CAP && enoughPsyche;
           return /*#__PURE__*/React.createElement("button", {
             key: masu.id,
             disabled: !can,
@@ -15964,7 +16074,9 @@ function MonsterHeroGame() {
             className: "text-[9px] font-black truncate"
           }, masu.name), /*#__PURE__*/React.createElement("div", {
             className: "text-[8px] text-pink-300"
-          }, "Lv.", lvl.level, "/", masu.levelCap || 30));
+          }, "Lv.", lvl.level, "/", masu.levelCap || 30), /*#__PURE__*/React.createElement("div", {
+            className: `text-[8px] font-black ${enoughPsyche ? 'text-fuchsia-300' : 'text-red-400'}`
+          }, "\uD83C\uDF08", need));
         })));
       }
       const normalized = normalizeMasuProgression(selected),
@@ -16023,7 +16135,31 @@ function MonsterHeroGame() {
         className: "text-slate-300 font-black"
       }, gold.toLocaleString())), gold < cost && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-red-400 font-black"
-      }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (cost - gold).toLocaleString(), "\uFF09")), /*#__PURE__*/React.createElement("div", {
+      }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (cost - gold).toLocaleString(), "\uFF09")), (() => {
+        const need = breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount + 1);
+        const have = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+        return /*#__PURE__*/React.createElement("div", {
+          className: "bg-black/40 p-3 rounded-xl border border-fuchsia-500/30 mb-3 space-y-1.5"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[10px] font-bold"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-400"
+        }, "\u5FC5\u8981\u306A\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", {
+          className: `font-black flex items-center gap-1 ${have >= need ? 'text-fuchsia-300' : 'text-red-400'}`
+        }, /*#__PURE__*/React.createElement("span", {
+          "aria-hidden": "true"
+        }, "\uD83C\uDF08"), need.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+          className: "text-[8px] text-slate-400"
+        }, "\uFF08", normalizeMasuProgression(selected).rebirthCount + 1, "\u56DE\u76EE\u306E\u9650\u754C\u7A81\u7834\uFF1A10 +\uFF08\u56DE\u6570-1\uFF09\xD75\uFF09"), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[9px] font-bold"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500"
+        }, "\u6240\u6301\u6570"), /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-300 font-black"
+        }, have.toLocaleString())), have < need && /*#__PURE__*/React.createElement("div", {
+          className: "text-[8px] text-red-400 font-black"
+        }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (need - have).toLocaleString(), "\uFF09"));
+      })(), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-slate-300 mb-2"
       }, "LvUP\u3059\u308B\u56FA\u6709\u6280\u30921\u3064\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\uFF08\u6700\u5927Lv.8\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "space-y-2 flex-1 overflow-y-auto mh-scroll"
@@ -16039,7 +16175,7 @@ function MonsterHeroGame() {
       }, "\u73FE\u5728Lv.", skill.level, " \u2192 Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1))))), rebirthError && /*#__PURE__*/React.createElement("div", {
         className: "text-red-300 text-[10px] my-2"
       }, rebirthError), /*#__PURE__*/React.createElement("button", {
-        disabled: !rebirthSkillKey || gold < cost || rebirthProcessingRef.current,
+        disabled: !rebirthSkillKey || gold < cost || ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) < breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount + 1) || rebirthProcessingRef.current,
         onClick: executeMasuBreakthrough,
         className: "w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30"
       }, "\u9650\u754C\u7A81\u7834\u3059\u308B"));
@@ -18244,11 +18380,11 @@ function MonsterHeroGame() {
       className: `flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab === tab.key ? 'bg-amber-500 text-black' : 'bg-slate-900 border border-slate-800 text-slate-400'}`
     }, tab.label))), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
-    }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab).length === 0 ? /*#__PURE__*/React.createElement("div", {
+    }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).length === 0 ? /*#__PURE__*/React.createElement("div", {
       className: "text-center text-[11px] text-slate-600 font-bold py-10"
     }, "\u307E\u3060\u5546\u54C1\u304C\u3042\u308A\u307E\u305B\u3093") : /*#__PURE__*/React.createElement("div", {
       className: MARKET_GRID_CLASS
-    }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab).map(item => {
+    }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).map(item => {
       const comingSoon = item.available === false;
       const owned = !comingSoon && isMarketItemOwned(item);
       const usesGold = item.type === 'disc' || item.type === 'breeder' || item.type === 'item';
@@ -19351,7 +19487,9 @@ function MonsterHeroGame() {
       className: "text-[9px] font-black text-teal-300 mt-0.5"
     }, "\u6240\u6301\u6570: ", ownedItems[item.id])), item.usage === 'battleSkip' ? /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2"
-    }, "\u30D0\u30C8\u30EB\u306E", /*#__PURE__*/React.createElement("br", null), DIFFICULTY_SETTINGS[item.skipDifficulty]?.label, /*#__PURE__*/React.createElement("br", null), "\u30B9\u30AD\u30C3\u30D7\u3067\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
+    }, "\u30D0\u30C8\u30EB\u306E", /*#__PURE__*/React.createElement("br", null), DIFFICULTY_SETTINGS[item.skipDifficulty]?.label, /*#__PURE__*/React.createElement("br", null), "\u30B9\u30AD\u30C3\u30D7\u3067\u4F7F\u7528") : item.usage === 'breakthrough' ? /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 text-[9px] font-black text-fuchsia-300 text-center leading-tight px-2"
+    }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9650\u754C\u7A81\u7834\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
       onClick: () => setPendingItemUse(item.id),
       className: "shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase"
     }, "\u4F7F\u3046")))))), pendingItemUse && (() => {
