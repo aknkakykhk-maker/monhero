@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 19:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 20:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -358,6 +358,119 @@ const buildRunBondAwards = ({ gain, heroMasuId, participantMasuIds, monsterRoste
   return awards;
 };
 const masuBondLevelInfo = (masu) => bondLevelInfo(cappedBondXp(masu));
+// 旧セーブは単色の color を持っている。染色もどきの部位別対応より前に染めた分を染色①へ読み替える
+const getMasuColors = (masu) => (masu && masu.colors) || (masu && masu.color ? [masu.color] : []);
+// マスモンの保存データへ、種の基礎データ(ALL_PLAYER_MONSTERS)と強化ポイントぶんを合成して
+// 「モンスターらしいオブジェクト」を作る。詳細画面の表示も総合力の計算もこの結果を使うので、
+// 画面に出ている現在値と総合力の元になる値が必ず一致する。
+// idは元のモンスター種idのまま保つ(mainHero?.id==='Golem' 等の特性判定を壊さないため)。
+const mergeMasuIntoMon = (masu) => {
+  const base = ALL_PLAYER_MONSTERS[masu?.baseId];
+  if (!base) return null;
+  const sp = masu.statPoints || {};
+  return {
+    ...base,
+    masuId: masu.id,
+    masuName: masu.name,
+    name: masu.name,
+    baseHp: base.baseHp + (sp.hp || 0),
+    baseAtk: base.baseAtk + (sp.atk || 0),
+    baseDef: base.baseDef + (sp.def || 0),
+    baseGuts: base.baseGuts + (sp.guts || 0),
+    plusStats: {
+      hp: (base.plusStats?.hp || 0) + (sp.hp || 0),
+      atk: (base.plusStats?.atk || 0) + (sp.atk || 0),
+      def: (base.plusStats?.def || 0) + (sp.def || 0),
+      guts: (base.plusStats?.guts || 0) + (sp.guts || 0),
+    },
+    distAptitude: masu.distApt || base.distAptitude,
+    colors: getMasuColors(masu),
+    unique: uniqueSkillAtLevel(base.unique, masu.uniqueSkillLevels?.own),
+    // 壊れた保存データ(null や技の体を成さない要素)が混ざっていても落ちないようにする。
+    // 位置で強化Lvを引く(inh:0, inh:1 …)ので、詰めずにそのまま null を残す
+    inheritedUniques: (masu.inheritedUniques || []).map((unique, index) => uniqueSkillAtLevel(unique, Math.max(Number(unique?.evoLevel) || 0, Number(masu.uniqueSkillLevels?.[`inh:${index}`]) || 0))),
+  };
+};
+
+// ==================== 総合力 ====================
+// 「その個体がいま実際に持っている能力・育成結果」を1つの数値にした、表示・比較用の派生指標。
+// 未使用の強化ポイントや育成の履歴(絆Lv・限界突破・転生・合体回数)には点を付けない。
+// 保存はしない。いつでも現在の個体データから計算し直すので、能力・間合い適性・固有技Lvを
+// 変えれば自動で追従し、絆ポイントリセットで能力が未使用ポイントへ戻れば同じだけ下がる。
+//
+// 計算に含めないもの: 未使用強化P / 絆Lv・絆XP / Lv上限 / 限界突破回数 / 転生回数 /
+//   合体回数と合体で得たXP / 勇者特性 / 合流ボーナス(plusStats) / 染色 / 所持品・ダイヤ
+const MONSTER_POWER_STAT_WEIGHT = { hp: 1, atk: 10 / 3, def: 10 / 3, guts: 10 / 3 };
+// 間合い適性の段階ごとの点。Cを0として1段階ごとに10。4距離すべてを合計する
+const MONSTER_POWER_APTITUDE = { M: 70, 'SS+': 60, SS: 50, 'S+': 40, S: 30, A: 20, B: 10, C: 0, D: -10, E: -20, F: -30, G: -40 };
+const MONSTER_POWER_UNIQUE_OWNED = 100;   // 固有技を1つ持っていること自体の点(Lv0でも付く)
+const MONSTER_POWER_UNIQUE_PER_LEVEL = 200 / 3; // 固有技の強化Lv1段階ごとの点
+// 総合力に数える固有技の一覧。自前の固有技と、合体で継承した固有技を同じ基準で扱う。
+// 壊れたデータ・存在しない技を架空の技として数えないよう、名前と倍率を持つものだけを通す。
+const monsterPowerUniques = (mon) => [mon?.unique, ...((mon?.inheritedUniques) || [])]
+  .filter(u => u && typeof u === 'object' && typeof u.name === 'string' && Number.isFinite(Number(u.baseMult)));
+// 総合力の内訳。合計を出す前の各項目を返すので、検査や画面の説明にも使える
+const monsterPowerParts = (mon) => {
+  if (!mon) return { stat: 0, aptitude: 0, unique: 0, total: 0 };
+  const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+  const stat = num(mon.baseHp) * MONSTER_POWER_STAT_WEIGHT.hp
+    + num(mon.baseAtk) * MONSTER_POWER_STAT_WEIGHT.atk
+    + num(mon.baseDef) * MONSTER_POWER_STAT_WEIGHT.def
+    + num(mon.baseGuts) * MONSTER_POWER_STAT_WEIGHT.guts;
+  const apt = (Array.isArray(mon.distAptitude) ? mon.distAptitude : [])
+    .slice(0, 4)
+    .reduce((sum, grade) => sum + (MONSTER_POWER_APTITUDE[grade] ?? 0), 0);
+  const uniques = monsterPowerUniques(mon);
+  const uniquePower = uniques.length * MONSTER_POWER_UNIQUE_OWNED
+    + uniques.reduce((sum, u) => sum + Math.max(0, Math.floor(num(u.evoLevel))), 0) * MONSTER_POWER_UNIQUE_PER_LEVEL;
+  return { stat, aptitude: apt, unique: uniquePower, total: stat + apt + uniquePower };
+};
+// 総合力の正本。解決済みのモンスター(ベースモンの定義、または mergeMasuIntoMon の結果)を渡す。
+// 端数は最後にまとめて四捨五入する(項目ごとに丸めない)
+const monsterPowerOf = (mon) => Math.round(monsterPowerParts(mon).total);
+// 保存データのマスモンから総合力を出す。詳細画面と同じ解決(mergeMasuIntoMon)を通してから
+// 同じ式へ渡すので、ベース値と強化値の二重加算は起きない
+const masuPowerOf = (masu) => monsterPowerOf(mergeMasuIntoMon(masu));
+// 一覧・詳細で出す桁区切りの表記
+const formatMonsterPower = (power) => Number(power || 0).toLocaleString();
+
+// 強化の下書き(plan)を当てはめた「強化後のマスモン」を、保存データに触れずに作る。
+// 一括強化のプレビュー・1ポイント強化のプレビュー・実際の確定処理が、すべてこの1か所を通るので、
+// 画面に出した「強化後の総合力」と、確定したあとの総合力が必ず一致する。
+// 戻り値の masu は計算用のコピーで、これを保存しない限り実データは変わらない。
+const applyEnhancePlanToMasu = (masu, plan) => {
+  if (!masu) return null;
+  const available = masu.distAptPoints || 0;
+  const aptPlan = (plan && plan.apt) || [0, 0, 0, 0];
+  const statPlan = (plan && plan.stat) || {};
+  const wanted = aptPlan.reduce((a, b) => a + (b || 0), 0) + Object.values(statPlan).reduce((a, b) => a + (b || 0), 0);
+  if (wanted <= 0 || wanted > available) return null;
+  const distApt = [...(masu.distApt || ['C', 'C', 'C', 'C'])];
+  let used = 0;
+  aptPlan.forEach((n, idx) => {
+    for (let i = 0; i < (n || 0); i++) {
+      const cur = DIST_APTITUDE_GRADES.indexOf(distApt[idx] || 'C');
+      if (cur < 0 || cur >= DIST_APTITUDE_GRADES.length - 1) break; // 上限Mに達したらそこで止める
+      distApt[idx] = DIST_APTITUDE_GRADES[cur + 1];
+      used++;
+    }
+  });
+  const statPoints = { ...(masu.statPoints || {}) };
+  Object.entries(statPlan).forEach(([key, n]) => {
+    if (!STAT_POINT_KEYS[key]) return;
+    for (let i = 0; i < (n || 0); i++) {
+      statPoints[key] = (statPoints[key] || 0) + (STAT_POINT_GAIN[key] || 1);
+      used++;
+    }
+  });
+  if (used <= 0) return null;
+  return { masu: { ...masu, distApt, statPoints, distAptPoints: available - used }, used };
+};
+// 下書きを当てはめたあとの総合力。当てはめられない(ポイント不足など)ときは現在の総合力を返す
+const plannedMasuPowerOf = (masu, plan) => {
+  const applied = applyEnhancePlanToMasu(masu, plan);
+  return masuPowerOf(applied ? applied.masu : masu);
+};
 const migrateMasuLevelCaps = (masuMons, gold) => {
   const capXp = totalBondXpForLevel(INITIAL_MASU_LEVEL_CAP);
   let compensation = 0;
@@ -2204,6 +2317,8 @@ const missionClaimableList = (state,type) => MISSION_DEFS[type].filter(m=>missio
 const missionClaimableCount = state => ['daily','weekly'].reduce((sum,type)=>sum+missionClaimableList(state,type).length,0);
 const missionNextReset = (type,now=Date.now()) => { const shifted=new Date(Number(now)+5*60*60*1000); shifted.setUTCHours(0,0,0,0); shifted.setUTCDate(shifted.getUTCDate()+(type==='daily'?1:7-((shifted.getUTCDay()+6)%7))); return shifted.getTime()-5*60*60*1000; };
 const STAT_POINT_GAIN = { hp: 10, atk: 3, def: 3, guts: 3 };
+// 強化ポイントで伸ばせる能力の表示名。強化の下書き適用(applyEnhancePlanToMasu)からも見るのでモジュール直下に置く
+const STAT_POINT_KEYS = { hp: 'ライフ', atk: 'ちから', def: '丈夫さ', guts: 'ガッツ' };
 // 間合い適性は「距離ごとの与ダメージ補正(%)」として扱う。
 // Cが±0、Mなら+25%、Gなら-20%。編成した勇者モン・供モンの補正は、そのモンスターを
 // どの距離に置いたかに関係なく、4距離すべての補正値へ加算されていく。
@@ -2376,6 +2491,17 @@ const helpDataRows = (id) => {
     case 'assistantBond':
       return ((typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || [])
         .map(s => [`Lv.${s.level} ${s.title}`, `${s.need} から ／ 呼び方「${String(s.call).replace('{name}', 'あなたの名前')}」 ／ ${s.tone}`]);
+    case 'monsterPower':
+      // 総合力の内訳は、実際の計算に使っている定数から作る(ヘルプへ数字を手で書き写さない)
+      return [
+        ['ライフ 1', `+${MONSTER_POWER_STAT_WEIGHT.hp}`],
+        ['ちから 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.atk * 100) / 100}（強化P1つ=ちから+${STAT_POINT_GAIN.atk} で +10）`],
+        ['丈夫さ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.def * 100) / 100}（強化P1つ=丈夫さ+${STAT_POINT_GAIN.def} で +10）`],
+        ['ガッツ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.guts * 100) / 100}（強化P1つ=ガッツ+${STAT_POINT_GAIN.guts} で +10）`],
+        ['間合い適性', DIST_APTITUDE_GRADES.slice().reverse().map(g => `${g} ${MONSTER_POWER_APTITUDE[g] > 0 ? '+' : ''}${MONSTER_POWER_APTITUDE[g]}`).join(' ／ ') + '（4距離すべてを合計）'],
+        ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`],
+        ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`],
+      ];
     case 'assistantBondActions':
       return Object.values((typeof ASSISTANT_BOND_ACTIONS !== 'undefined' && ASSISTANT_BOND_ACTIONS) || {})
         .map(x => [x.label, `1回 +${x.amount} ／ 1日 ${x.dailyMax} まで`]);
@@ -2400,6 +2526,7 @@ const HELP_DATA_TITLES = {
   masuCosts: '神殿でかかるダイヤ',
   assistantBond: 'みゅあとの仲良し度の段階',
   assistantBondActions: '仲良し度が増える行動',
+  monsterPower: '総合力の内訳',
 };
 // ===== 助手(ナビゲーター) ここから =====
 // 助手の名前・画像・セリフは data/assistants.js が持つ。ここは表示だけを受け持つ。
@@ -3652,8 +3779,6 @@ function MonsterHeroGame() {
   // 絆レベルの概念自体が存在しない
   const getMasuMon = (masuId) => masuMons.find(m => m.id === masuId) || null;
   // マスモンの染色データを部位別配列で返す。旧仕様(単一色のcolorフィールド)しか無いデータは
-  // 染色①に割り当てて読み替える(染色もどきの部位別対応より前に染色していた分を引き継ぐ)
-  const getMasuColors = (masu) => (masu && masu.colors) || (masu && masu.color ? [masu.color] : []);
   const getMasuBondLevel = (masuId) => masuBondLevelInfo(getMasuMon(masuId) || {});
   // モンスターを並べるカード(編成・ベースモン一覧・マスモン一覧)の共通サイズ。
   // 以前は種別(ベースモン/マスモン)や、強化ポイント・編成中バッジの有無で高さが変わり、
@@ -3663,30 +3788,15 @@ function MonsterHeroGame() {
   const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';
   // 名前・情報・補足・状態の4行。中身が無くても同じ高さの空欄を確保する
   const monsterCardName = (node, className='text-white') => <div className={`text-[10px] font-black truncate w-full text-center leading-tight ${className}`} style={{height:'14px'}}>{node}</div>;
-  const monsterCardInfo = (node) => <div className="w-full" style={{height:'22px'}}>{node||null}</div>;
+  const monsterCardInfo = (node) => <div className="w-full flex items-center justify-center" style={{height:'14px'}}>{node||null}</div>;
+  // 総合力の行。一覧では「どれが強いか」がいちばん知りたい情報なので、強化Pより上に置く
+  const monsterCardPower = (power) => <div className="w-full flex items-center justify-center gap-1 leading-none" style={{height:'16px'}}>{power==null?null:(<><span className="text-[7px] text-amber-400/80 font-black uppercase">総合力</span><span className="text-[11px] font-mono font-black text-amber-200 tabular-nums">{formatMonsterPower(power)}</span></>)}</div>;
   const monsterCardSub = (node) => <div className="w-full flex items-center justify-center" style={{height:'13px'}}>{node||null}</div>;
   const monsterCardStatus = (node) => <div className="w-full flex items-center justify-center" style={{height:'18px'}}>{node||null}</div>;
-  // マスモンの絆Lvと進捗バー(カードの情報行に入れる小さい版)
-  const monsterCardBond = (lvl) => (<>
-    <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5 leading-tight"><Heart size={7}/>絆Lv.{lvl.level}</div>
-    <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${Math.max(0,Math.min(100,(lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100))}%`}}></div></div>
-  </>);
-  // モンスター詳細画面(rosterDetailMon/currentPickingMon/マスモン一覧)共通: 絆レベルとその進捗ゲージを表示。
-  // masuIdが無い(=まだマスモン化していない)場合は何も表示しない
-  const bondGaugeNode = (masuId) => {
-    if (!masuId) return null;
-    const lvl = getMasuBondLevel(masuId);
-    const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel / Math.max(1, lvl.xpForNext)) * 100));
-    return (
-      <div className="mt-1">
-        <div className="text-[9px] text-pink-300 font-black flex items-center gap-1"><Heart size={9}/>絆Lv.{lvl.level}</div>
-        <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5">
-          <div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div>
-        </div>
-        <div className="text-[7px] text-pink-400/70 font-mono mt-0.5">{lvl.xpIntoLevel.toLocaleString()} / {lvl.xpForNext.toLocaleString()} XP</div>
-      </div>
-    );
-  };
+  // マスモンの絆Lvと上限。細かいXPの進み具合は詳細画面で見るので、一覧ではゲージを出さない
+  const monsterCardBond = (lvl, cap) => (
+    <div className="text-[8px] text-pink-300 font-black flex items-center gap-0.5 leading-none whitespace-nowrap"><Heart size={7}/>絆 {lvl.level}<span className="text-slate-500"> / {cap}</span></div>
+  );
   // mon引数は素のモンスター種、またはresolveRosterEntryToMonで解決済みのマスモン反映後オブジェクトのどちらもあり得る。
   // どちらの場合もmon.distAptitudeを見るだけでよい(マスモンの場合はresolve時にdistApt配列が既に反映されている)
   // そのモンスター自身のグレード。編成全員の合計はdistAptPctが持つので、ここでは加算しない
@@ -4946,37 +5056,7 @@ function MonsterHeroGame() {
 
   // 編成の1枠(monsterRosterIdsの要素)を、実際に使えるモンスターオブジェクトに変換する。
   // 通常は素のモンスター種idの文字列だが、"masu:<masuId>"の形式ならマスモンインスタンスを指す。
-  // マスモンの場合、表示名をマスモン名に差し替え、ステータス強化ポイント・間合い適性を反映した
-  // オブジェクトを返す(idは元のモンスター種idのまま保つ。mainHero?.id==='Golem'等の特性判定を壊さないため)
-  // マスモンインスタンスに、種の基礎データ(ALL_PLAYER_MONSTERS)とstatPointsによる強化分を
-  // 合成した「モンスターらしいオブジェクト」を作る。resolveRosterEntryToMon(id経由)と、
-  // spendAptPoint/spendStatPointが返す最新のマスモンをその場で反映したい場面(PICK_ALLYモーダルの
-  // 再同期など)の両方から使う共通ロジック
-  const mergeMasuIntoMon = (masu) => {
-    const base = ALL_PLAYER_MONSTERS[masu.baseId];
-    if (!base) return null;
-    const sp = masu.statPoints || {};
-    return {
-      ...base,
-      masuId: masu.id,
-      masuName: masu.name,
-      name: masu.name,
-      baseHp: base.baseHp + (sp.hp || 0),
-      baseAtk: base.baseAtk + (sp.atk || 0),
-      baseDef: base.baseDef + (sp.def || 0),
-      baseGuts: base.baseGuts + (sp.guts || 0),
-      plusStats: {
-        hp: (base.plusStats?.hp || 0) + (sp.hp || 0),
-        atk: (base.plusStats?.atk || 0) + (sp.atk || 0),
-        def: (base.plusStats?.def || 0) + (sp.def || 0),
-        guts: (base.plusStats?.guts || 0) + (sp.guts || 0),
-      },
-      distAptitude: masu.distApt || base.distAptitude,
-      colors: getMasuColors(masu),
-      unique: uniqueSkillAtLevel(base.unique, masu.uniqueSkillLevels?.own),
-      inheritedUniques: (masu.inheritedUniques || []).map((unique,index)=>uniqueSkillAtLevel(unique, Math.max(Number(unique.evoLevel)||0, Number(masu.uniqueSkillLevels?.[`inh:${index}`])||0))),
-    };
-  };
+  // マスモンの解決はモジュール直下の mergeMasuIntoMon が正本(総合力の計算も同じものを使う)。
   const resolveRosterEntryToMon = (entry) => {
     if (typeof entry === 'string' && entry.startsWith('masu:')) {
       const masu = getMasuMon(entry.slice(5));
@@ -4996,6 +5076,7 @@ function MonsterHeroGame() {
     { key: 'masu', label: 'マスモン' },
     { key: 'lineage', label: '血統' },
     { key: 'bond', label: '絆レベル' },
+    { key: 'power', label: '総合力' },
     { key: 'name', label: '名前' },
     { key: 'active', label: '編成中' },
     { key: 'fused', label: '合体済み' },
@@ -5015,13 +5096,13 @@ function MonsterHeroGame() {
     const baseEntries = baseIds.map(id => {
       const base = ALL_PLAYER_MONSTERS[id];
       if (!base) return null;
-      return { type: 'base', key: id, entryId: id, baseId: id, base, masu: null, name: base.name, lineageName: base.name, bondLevel: null, active: activeIds.includes(id), fusionCount: 0, rebirthCount: 0 };
+      return { type: 'base', key: id, entryId: id, baseId: id, base, masu: null, name: base.name, lineageName: base.name, bondLevel: null, power: monsterPowerOf(base), active: activeIds.includes(id), fusionCount: 0, rebirthCount: 0 };
     }).filter(Boolean);
     const masuEntries = masuList.map(masu => {
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       if (!base) return null;
       const entryId = 'masu:' + masu.id;
-      return { type: 'masu', key: entryId, entryId, baseId: masu.baseId, base, masu, name: masu.name, lineageName: base.name, bondLevel: masuBondLevelInfo(masu).level, active: activeIds.includes(entryId), fusionCount: (masu.fusionHistory||[]).length, rebirthCount: donationDiamondValue(masu.rebirthCount) };
+      return { type: 'masu', key: entryId, entryId, baseId: masu.baseId, base, masu, name: masu.name, lineageName: base.name, bondLevel: masuBondLevelInfo(masu).level, power: masuPowerOf(masu), active: activeIds.includes(entryId), fusionCount: (masu.fusionHistory||[]).length, rebirthCount: donationDiamondValue(masu.rebirthCount) };
     }).filter(Boolean);
     return [...baseEntries, ...masuEntries];
   };
@@ -5033,6 +5114,7 @@ function MonsterHeroGame() {
       else if (monsterSortKey === 'masu') cmp = (a.type === 'masu' ? 0 : 1) - (b.type === 'masu' ? 0 : 1);
       else if (monsterSortKey === 'lineage') cmp = a.lineageName.localeCompare(b.lineageName, 'ja');
       else if (monsterSortKey === 'bond') cmp = (a.bondLevel ?? -1) - (b.bondLevel ?? -1);
+      else if (monsterSortKey === 'power') cmp = (a.power ?? 0) - (b.power ?? 0);
       else if (monsterSortKey === 'name') cmp = a.name.localeCompare(b.name, 'ja');
       else if (monsterSortKey === 'active') cmp = (a.active ? 0 : 1) - (b.active ? 0 : 1);
       else if (monsterSortKey === 'fused') cmp = (a.fusionCount || 0) - (b.fusionCount || 0);
@@ -5237,41 +5319,17 @@ function MonsterHeroGame() {
     Audio_.se.tap();
     return updatedMasu;
   };
-  const STAT_POINT_KEYS = { hp: 'ライフ', atk: 'ちから', def: '丈夫さ', guts: 'ガッツ' };
   // 強化ポイントをまとめて振る。1つずつタップするのが手間だったため、
   // 「間合い適性を何段階」「どのステータスを何回」を一度に指定して確定できるようにしている。
   // plan の形は { apt: [0,0,0,0], stat: { hp:0, atk:0, def:0, guts:0 } }。
   // 実際に振れる分だけを反映し、更新後のマスモンを返す(足りない場合は何もしない)
+  // まとめて強化の確定。下書きの当てはめは applyEnhancePlanToMasu が正本なので、
+  // プレビューで見せた強化後の総合力と、確定後の総合力が食い違わない
   const spendPointsBulk = (masuId, plan) => {
     const masu = getMasuMon(masuId);
-    if (!masu) return null;
-    const available = masu.distAptPoints || 0;
-    const aptPlan = plan.apt || [0, 0, 0, 0];
-    const statPlan = plan.stat || {};
-    const total = aptPlan.reduce((a, b) => a + (b || 0), 0) + Object.values(statPlan).reduce((a, b) => a + (b || 0), 0);
-    if (total <= 0 || total > available) return null;
-
-    const distApt = [...(masu.distApt || ['C', 'C', 'C', 'C'])];
-    let used = 0;
-    aptPlan.forEach((n, idx) => {
-      for (let i = 0; i < (n || 0); i++) {
-        const cur = DIST_APTITUDE_GRADES.indexOf(distApt[idx] || 'C');
-        if (cur < 0 || cur >= DIST_APTITUDE_GRADES.length - 1) break; // 上限Mに達したらそこで止める
-        distApt[idx] = DIST_APTITUDE_GRADES[cur + 1];
-        used++;
-      }
-    });
-    const statPoints = { ...(masu.statPoints || {}) };
-    Object.entries(statPlan).forEach(([key, n]) => {
-      if (!STAT_POINT_KEYS[key]) return;
-      for (let i = 0; i < (n || 0); i++) {
-        statPoints[key] = (statPoints[key] || 0) + (STAT_POINT_GAIN[key] || 1);
-        used++;
-      }
-    });
-    if (used <= 0) return null;
-
-    const updatedMasu = { ...masu, distApt, statPoints, distAptPoints: available - used };
+    const applied = applyEnhancePlanToMasu(masu, plan);
+    if (!applied) return null;
+    const updatedMasu = applied.masu;
     setMasuMons(prev => {
       const next = prev.map(m => m.id === masuId ? updatedMasu : m);
       storeSet('mh_masu_mons', next, false);
@@ -7647,22 +7705,155 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const joinBonus = [plus.hp>0&&`HP+${plus.hp}`, plus.atk>0&&`攻+${plus.atk}`, plus.def>0&&`防+${plus.def}`, plus.guts>0&&`G+${plus.guts}`].filter(Boolean).join(' ');
     const aptBonus = formatAptBonus(mon);
     return (<>
-      <div className="grid grid-cols-2 gap-2 shrink-0">
-        <div className="bg-black/40 p-2 rounded-xl border border-white/5"><div className="text-[7px] text-slate-500 uppercase font-bold">{statTitle}</div><div className="space-y-1 mt-1">{rows.map(([label,value,color])=><div key={label} className="flex justify-between text-[10px] font-mono"><span>{label}:</span><span className={`${color} font-bold`}>{value}</span></div>)}</div></div>
-        <div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div>{mon.trait&&<div className="text-[8px] text-indigo-300 font-black mt-0.5">{mon.trait}</div>}<div className="text-[9px] text-white font-bold leading-tight mt-1">{mon.traitDesc||'特性なし'}</div></div>
-      </div>
-      <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[8px] text-white font-bold mt-1">{joinBonus||'なし'}</div>{aptBonus&&<div className="text-[8px] text-cyan-300 font-bold mt-0.5">間合い適性 {aptBonus}</div>}</div>
+      {/* ① この個体そのものの強さ(総合力に反映される) */}
+      <div className="bg-black/40 p-2 rounded-xl border border-white/5 shrink-0"><div className="text-[7px] text-slate-500 uppercase font-bold">{statTitle}</div><div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1">{rows.map(([label,value,color])=><div key={label} className="flex justify-between text-[10px] font-mono"><span>{label}:</span><span className={`${color} font-bold`}>{value}</span></div>)}</div></div>
       {/* 間合い適性は「距離ごとの与ダメージ補正(%)」。グレードは目安で、実際に効くのは%のほう。
           aptCurrentPctを渡すと、いまの距離補正値からこのモンスターを加えた後の値まで出す。 */}
       <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性（距離補正）</div>{aptPointsLabel}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(mon,idx); const pct=aptGradeToPct(grade); const cur=aptCurrentPct?(aptCurrentPct[idx]||0):null; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span><span className={`text-[9px] font-mono font-black leading-none ${pct>0?'text-cyan-300':pct<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(pct)}</span>{cur!=null&&(<span className="w-full text-center leading-tight mt-0.5"><span className="block text-[7px] text-slate-400 font-mono">現在 {formatAptPct(cur)}</span><span className={`block text-[10px] font-mono font-black ${pct>0?'text-emerald-300':pct<0?'text-red-300':'text-slate-400'}`}>→ {formatAptPct(cur+pct)}</span></span>)}{aptExtra?aptExtra(idx,grade):null}</div>);})}</div><div className="text-[7px] text-slate-500 font-bold mt-1 leading-tight">置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます</div></div>
-      {extraAfterApt}
       {renderSkillSection(mon)}
+      {/* ② 選び方で決まる効果。個体そのものの強さ(総合力)とは別物なので見出しで分ける */}
+      {renderDetailSectionLabel('選び方で決まる効果', '総合力には含みません')}
+      <div className="grid grid-cols-2 gap-2 shrink-0">
+        <div className="bg-black/40 p-2 rounded-xl border border-indigo-500/30"><div className="text-[7px] text-indigo-400 uppercase font-bold">勇者特性</div><div className="text-[7px] text-slate-500 font-bold">勇者モンに選んだとき</div>{mon.trait&&<div className="text-[8px] text-indigo-300 font-black mt-0.5">{mon.trait}</div>}<div className="text-[9px] text-white font-bold leading-tight mt-1">{mon.traitDesc||'特性なし'}</div></div>
+        <div className="bg-black/40 p-2 rounded-xl border border-pink-500/30"><div className="text-[7px] text-pink-400 uppercase font-bold">合流ボーナス</div><div className="text-[7px] text-slate-500 font-bold">供モンとして合流したとき</div><div className="text-[8px] text-white font-bold mt-1">{joinBonus||'なし'}</div>{aptBonus&&<div className="text-[8px] text-cyan-300 font-bold mt-0.5">間合い適性 {aptBonus}</div>}</div>
+      </div>
+      {extraAfterApt}
     </>);
   };
   const renderSkillSection = (mon) => { const currentUnique=uniqueSkillAtLevel(mon.unique, mon.unique?.evoLevel); return (<>
     <button onClick={()=>setRosterSkillDetail({mon,kind:'atk'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Sword size={12} className="text-red-400"/><span className="text-[10px] font-black uppercase">通常技: {(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {Math.floor(BASE_ATK_EVOLUTION[0].mult*100)}</span><span className="text-amber-400 font-bold">消費G {BASE_ATK_EVOLUTION[0].baseGuts}</span></div></button>
     <button onClick={()=>setRosterSkillDetail({mon,kind:'unique'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技 Lv.{currentUnique.evoLevel}: {currentUnique.name}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-3 text-[9px] font-mono mb-2"><span className="text-red-400 font-bold">技威力 {Math.floor(currentUnique.mult*100)}</span><span className="text-yellow-400 font-bold">会心率 {Math.round(currentUnique.crit*100)}%</span><span className="text-amber-400 font-bold">消費G {currentUnique.guts}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic">"{currentUnique.effectDesc}"</div></button>
   </>); };
+
+
+  // ==================== モンスター詳細のマスターUI ====================
+  // 編成・ベースモン一覧・マスモン一覧・勇者モン選択・ランキングのどこから開いても、
+  // 同じ枠・同じ並び・同じ言い回しになるようにここへ1つだけ用意する。
+  // 呼び出し元が渡すのは「閉じ方」と「その画面だけの操作」だけ。詳細JSXを画面ごとに写さないこと。
+
+  // 総合力の表示。一覧・詳細・強化画面で見た目と桁区切りを揃える。
+  // delta を渡すと「12,480 → 12,530 / +50」の形で強化前後を出す
+  const renderPowerBadge = (power, { size = 'md', before = null, dense = false } = {}) => {
+    const delta = before == null ? null : power - before;
+    const valueClass = size === 'lg' ? 'text-[22px]' : size === 'sm' ? 'text-[12px]' : 'text-[17px]';
+    return (
+      <div className={`rounded-xl border border-amber-400/40 bg-gradient-to-r from-amber-950/70 to-orange-950/50 ${dense ? 'px-2 py-1' : 'px-2.5 py-1.5'} flex items-center justify-between gap-2 min-w-0`}>
+        <span className="text-[8px] font-black text-amber-300 uppercase tracking-widest shrink-0">総合力</span>
+        <span className="flex items-baseline gap-1.5 min-w-0 justify-end">
+          {before != null && before !== power && <span className="text-[11px] font-mono font-black text-slate-400 shrink-0">{formatMonsterPower(before)} →</span>}
+          <b className={`${valueClass} font-mono font-black text-amber-200 leading-none tabular-nums`}>{formatMonsterPower(power)}</b>
+          {delta != null && delta !== 0 && <span className={`text-[11px] font-mono font-black shrink-0 ${delta > 0 ? 'text-emerald-300' : 'text-red-300'}`}>{delta > 0 ? '+' : ''}{formatMonsterPower(delta)}</span>}
+        </span>
+      </div>
+    );
+  };
+
+  // 詳細の上部サマリー。個体の「いまの状態」がここだけで分かるようにする。
+  // 並びは 画像 → 個体名 → 元のベースモン名 → 総合力 → 絆Lv/上限 → 限界突破 → 転生 → XPゲージ。
+  // 限界突破(rebirthCount)は RebirthStars、転生(reincarnateCount)は ReincarnateBadge のまま使う
+  // (段階・色・意味は既存実装をそのまま利用し、ここでは入れ替えない)。
+  const renderMonsterSummaryHeader = ({ mon, masu = null, onRename = null, onClose = null }) => {
+    const base = ALL_PLAYER_MONSTERS[mon.id] || mon;
+    const power = monsterPowerOf(mon);
+    const norm = masu ? normalizeMasuProgression(masu) : null;
+    const lvl = masu ? masuBondLevelInfo(masu) : null;
+    const xpPct = lvl ? Math.max(0, Math.min(100, (lvl.xpIntoLevel / Math.max(1, lvl.xpForNext)) * 100)) : 0;
+    const fused = masu ? (masu.fusionHistory || []).length > 0 : false;
+    return (
+      <div className="flex items-start gap-3 border-b border-white/10 pb-3 shrink-0">
+        <div className="relative w-[68px] h-[68px] shrink-0">
+          <div className={`w-[68px] h-[68px] rounded-full overflow-hidden border ${fused ? 'border-amber-400 ring-2 ring-amber-400' : masu ? 'border-pink-400/40' : 'border-white/15'}`}>
+            {(mon.iconUrl || mon.imgUrl)
+              ? <DyedMonsterImage baseId={mon.id} src={mon.iconUrl || mon.imgUrl} alt={mon.name} masuColors={mon.colors} className="w-full h-full object-cover"/>
+              : <div className="w-full h-full flex items-center justify-center text-4xl">{mon.emoji}</div>}
+          </div>
+          {masu && <><RebirthStars count={norm.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={norm.reincarnateCount}/></>}
+        </div>
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-start gap-1.5 min-w-0">
+            <div className="flex-1 min-w-0">
+              {onRename ? (
+                <button onClick={onRename} className="flex items-center gap-1.5 max-w-full active:scale-95"><h3 className="text-[17px] font-black text-white truncate leading-tight">{mon.name}</h3><Edit3 size={12} className="text-slate-500 shrink-0"/></button>
+              ) : (
+                <h3 className="text-[17px] font-black text-white truncate leading-tight">{mon.name}</h3>
+              )}
+              <div className={`text-[9px] font-bold ${masu ? 'text-pink-400' : 'text-indigo-400'} truncate`}>{masu ? `元：${base.name}` : 'ベースモン'}</div>
+            </div>
+            {onClose && <button onClick={onClose} aria-label="閉じる" className="p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"><X size={16}/></button>}
+          </div>
+          {renderPowerBadge(power)}
+          {masu && (<>
+            <div className="flex items-center justify-between gap-2 text-[10px] font-black">
+              <span className="text-pink-300 flex items-center gap-1 shrink-0"><Heart size={10}/>絆 Lv.{lvl.level} <span className="text-slate-500">/ {norm.levelCap}</span></span>
+              <span className="flex items-center gap-1.5 text-[8px] shrink-0">
+                {norm.rebirthCount > 0 && <span className="text-violet-300">限界突破 {norm.rebirthCount}</span>}
+                {norm.reincarnateCount > 0 && <span className="text-amber-300">転生 +{norm.reincarnateCount}</span>}
+              </span>
+            </div>
+            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${xpPct}%`}}></div></div>
+            <div className="text-[8px] text-pink-400/70 font-mono tabular-nums">{lvl.xpIntoLevel.toLocaleString()} / {lvl.xpForNext.toLocaleString()} XP</div>
+          </>)}
+        </div>
+      </div>
+    );
+  };
+
+  // 「個体そのものの強さ」と「勇者モン・供モンに選んだときだけの特殊効果」を見分けやすくするための見出し
+  const renderDetailSectionLabel = (text, note) => (
+    <div className="flex items-baseline gap-2 pt-1 px-0.5">
+      <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{text}</span>
+      {note && <span className="text-[7px] text-slate-500 font-bold truncate">{note}</span>}
+    </div>
+  );
+
+  // 合体のセクション。第2段階でここから合体詳細ページへ入れるよう、履歴は消さずに枠だけ先に用意する
+  const renderFusionSection = (masu) => {
+    const history = (masu && masu.fusionHistory) || [];
+    if (history.length === 0) return null;
+    return (
+      <div className="bg-black/40 p-2 rounded-xl border border-amber-500/30" data-fusion-section>
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-[7px] text-amber-400 uppercase font-bold flex items-center gap-1"><Sparkles size={9}/>合体</div>
+          <div className="text-[9px] font-black text-amber-200">合体回数 {history.length}回</div>
+        </div>
+        <div className="space-y-1">
+          {history.map((h,idx)=>(
+            <div key={idx} className="text-[8px] text-slate-300 font-bold flex items-center justify-between gap-1 bg-black/30 rounded-lg px-2 py-1">
+              <span className="truncate">{h.subName}（{ALL_PLAYER_MONSTERS[h.subBaseId]?.name||'?'}）と合体{h.inherited&&<span className="text-amber-300">(固有技継承)</span>}</span>
+              <span className="text-pink-300 font-black shrink-0">+{Number(h.xpGained||0).toLocaleString()}XP</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // 詳細モーダルの外枠。ヘッダーは固定したまま本文だけスクロールする。
+  //   mon       … 解決済みモンスター(ベースモンの定義 or mergeMasuIntoMon の結果)
+  //   masu      … マスモンならその保存データ(絆・限界突破・転生・合体の表示に使う)
+  //   onRename  … 名前を変えられる画面だけ渡す
+  //   detailOpts… renderMonsterDetailInfo への画面固有の差し込み
+  //   bodyExtra … その画面だけの追加セクション
+  //   footer    … 決定・強化などの操作(渡さなければ「閉じる」だけ)
+  const renderMonsterDetailModal = ({ mon, masu = null, onClose, onRename = null, accent = 'indigo', detailOpts = {}, bodyExtra = null, footer = null, zIndex = 31000, label = null, paddingTop = undefined }) => {
+    if (!mon) return null;
+    const accentClass = accent === 'pink' ? 'border-pink-500' : 'border-indigo-500';
+    return (
+      <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex,paddingTop}} role="dialog" aria-modal="true" aria-label={label||`${mon.name}の詳細`}>
+        <div className={`bg-slate-900 border-2 ${accentClass} rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden`}
+             style={{maxHeight:'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'}}>
+          {renderMonsterSummaryHeader({ mon, masu, onRename, onClose })}
+          <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
+            {renderDetailSectionLabel('この個体の強さ', '総合力に反映されます')}
+            {renderMonsterDetailInfo(mon, detailOpts)}
+            {masu && renderFusionSection(masu)}
+            {bodyExtra}
+          </div>
+          {footer || <button onClick={onClose} className="w-full min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg shrink-0 active:scale-95">閉じる</button>}
+        </div>
+      </div>
+    );
+  };
 
 
   const pct = Math.round((bootProgress.done / Math.max(1, bootProgress.total)) * 100);
@@ -8363,7 +8554,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                             <button onClick={()=>toggleDraftMonster(e.entryId)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} ${selected?'bg-indigo-900/40 border-indigo-400 ring-2 ring-indigo-400':'bg-slate-900 border-slate-800'}`}>
                               <div className={`${MONSTER_CARD_ICON_CLASS} border border-white/10`}><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                               {monsterCardName(m.name)}
-                              {monsterCardInfo(<div className="text-[8px] text-slate-500 font-bold text-center leading-tight pt-1">ベースモン</div>)}
+                              {monsterCardInfo(<div className="text-[8px] text-slate-500 font-bold text-center leading-none">ベースモン</div>)}
+                              {monsterCardPower(monsterPowerOf(m))}
                               {monsterCardSub(null)}
                               {monsterCardStatus(monsterDisplayFlags.active?<span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-indigo-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</span>:null)}
                             </button>
@@ -8383,7 +8575,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               <ReincarnateBadge count={masu.reincarnateCount} className="is-small"/>
                             </div>
                             {monsterCardName(masu.name,'text-pink-200')}
-                            {monsterCardInfo(monsterCardBond(lvl))}
+                            {monsterCardInfo(monsterCardBond(lvl, normalizeMasuProgression(masu).levelCap))}
+                            {monsterCardPower(masuPowerOf(masu))}
                             {monsterCardSub((masu.distAptPoints||0)>0?<span className="text-[7px] text-amber-300 font-black flex items-center gap-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</span>:null)}
                             {monsterCardStatus(monsterDisplayFlags.active?<span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-pink-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</span>:null)}
                           </button>
@@ -8436,21 +8629,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
-        {rosterDetailMon&&(
-          <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000}}>
-            <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
-              <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
-                {rosterDetailMon.imgUrl?(<DyedMonsterImage baseId={rosterDetailMon.id} src={rosterDetailMon.imgUrl} alt={rosterDetailMon.name} masuColors={rosterDetailMon.colors} className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-110"/>):(<div className="text-6xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{rosterDetailMon.emoji}</div>)}
-                <div className="flex-1"><h3 className="text-xl font-black text-white">{rosterDetailMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile{rosterDetailMon.masuId&&<span className="ml-1 text-pink-400">・マスモン({ALL_PLAYER_MONSTERS[rosterDetailMon.id]?.name})</span>}</div>{rosterDetailMon.masuId?bondGaugeNode(rosterDetailMon.masuId):<div className="text-[8px] text-slate-500 font-bold mt-1">勇者モンとして選んでラン終了時に登録すると「マスモン」化できます</div>}</div>
-                <button onClick={()=>setRosterDetailMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
-              </div>
-              <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
-                {renderMonsterDetailInfo(rosterDetailMon)}
-              </div>
-              <button onClick={()=>setRosterDetailMon(null)} className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg mt-2 shrink-0 active:scale-95">閉じる</button>
-            </div>
-          </div>
-        )}
+        {/* 編成・ベースモン一覧から開く詳細。マスモンでも素の種でも同じマスターUIを使う。
+            マスモンなら保存データを渡して絆・限界突破・転生・合体まで同じ並びで出す */}
+        {rosterDetailMon&&renderMonsterDetailModal({
+          mon: rosterDetailMon,
+          masu: rosterDetailMon.masuId ? getMasuMon(rosterDetailMon.masuId) : null,
+          onClose: ()=>setRosterDetailMon(null),
+          detailOpts: rosterDetailMon.masuId ? { statTitle:'現在のステータス(強化分込み)' } : {},
+        })}
         {rosterDetailTeaching&&(()=>{const owned=ownedTeachings.find(ot=>ot.id===rosterDetailTeaching.id); const currentLvl=owned?owned.evoLevel:-1; return(
           <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000}}>
             <div className="bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full">
@@ -8486,7 +8672,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <button onClick={()=>setRosterDetailMon(m)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} border-slate-800 bg-slate-900`}>
                         <div className={`${MONSTER_CARD_ICON_CLASS} border border-white/10`}><img src={m.iconUrl} alt={m.name} draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="w-full h-full object-cover"/></div>
                         {monsterCardName(m.name)}
-                        {monsterCardInfo(<div className="text-[8px] text-pink-400 font-bold text-center leading-tight pt-1">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>)}
+                        {monsterCardInfo(<div className="text-[8px] text-pink-400 font-bold text-center leading-none">{masuCount>0?`マスモン${masuCount}体`:'マスモン未登録'}</div>)}
+                        {monsterCardPower(monsterPowerOf(e.base))}
                         {monsterCardSub(null)}
                         {monsterCardStatus(monsterDisplayFlags.active&&e.active?<span className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-indigo-500 text-white">編成中</span>:null)}
                       </button>
@@ -8526,7 +8713,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {selected&&<span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-emerald-400 text-slate-950 font-black text-xs">✓</span>}
                     <div className="relative w-12 h-12"><div className="w-12 h-12 rounded-full overflow-hidden border border-pink-400/40"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div>
                     <div className="text-[9px] font-black text-pink-100 truncate w-full text-center">{masu.name}</div>
-                    <div className="text-[7px] text-pink-300 font-black"><Heart size={6} className="inline"/> 絆Lv.{lvl.level}</div>
+                    {monsterCardBond(lvl, normalizeMasuProgression(masu).levelCap)}
+                    {monsterCardPower(masuPowerOf(masu))}
                   </button><button onClick={(ev)=>{ev.stopPropagation();setMasuMonDetail(masu);}} aria-label={`${masu.name}の詳細`} className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full bg-black/70 border border-white/20 flex items-center justify-center active:scale-90"><Info size={12} className="text-white"/></button></div>;
                 })}
               </div>
@@ -8565,7 +8753,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               <ReincarnateBadge count={masu.reincarnateCount} className="is-small"/>
                             </div>
                             {monsterCardName(masu.name,'text-pink-200')}
-                            {monsterCardInfo(monsterCardBond(lvl))}
+                            {monsterCardInfo(monsterCardBond(lvl, normalizeMasuProgression(masu).levelCap))}
+                            {monsterCardPower(masuPowerOf(masu))}
                             {monsterCardSub((masu.distAptPoints||0)>0?<span className="text-[7px] text-amber-300 font-black flex items-center gap-0.5"><Sparkles size={7}/>強化P {masu.distAptPoints}</span>:null)}
                             {monsterCardStatus(monsterDisplayFlags.active&&e.active?<span className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-pink-500 text-white">編成中</span>:null)}
                           </button>
@@ -9058,83 +9247,48 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           );
         })()}
 
+        {/* マスモン詳細。編成・ベースモン一覧・勇者モン選択・ランキングと同じマスターUIを使い、
+            この画面だけの操作(名前変更・強化・削除)を外から渡す */}
         {masuMonDetail&&gameState!=='MASU_ENHANCE'&&(()=>{
           const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
           const base = ALL_PLAYER_MONSTERS[masu.baseId];
-          if (!base) { setMasuMonDetail(null); return null; }
-          const lvl = masuBondLevelInfo(masu);
-          const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
-          const inRoster = monsterRosterIds.includes('masu:'+masu.id);
-          // 詳細の表示内容は他のモンスター詳細と同じ共通実装を使う(勇者特性などの見落としを無くす)
+          if (!base) return null;
           const mergedMasu = mergeMasuIntoMon(masu);
+          const inRoster = monsterRosterIds.includes('masu:'+masu.id);
           const sp = masu.statPoints || {};
           const masuStatRow = (label, value, plus, color) => [label, (<>{value}{plus>0&&<span className="text-emerald-400 text-[8px]"> (+{plus})</span>}</>), color];
-          return (
-            <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000}}>
-              <div className="bg-slate-900 border-2 border-pink-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
-                <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
-                  <div className="relative w-20 h-20 shrink-0">
-                    <div className={`w-20 h-20 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-2 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
-                    <ReincarnateBadge count={masu.reincarnateCount}/>
-                    <RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <button onClick={()=>{setMasuRenameInput(masu.name); setShowMasuRenameModal(true);}} className="flex items-center gap-1.5 active:scale-95">
-                      <h3 className="text-lg font-black text-white truncate">{masu.name}</h3><Edit3 size={12} className="text-slate-500 shrink-0"/>
-                    </button>
-                    <div className="text-[9px] text-pink-400 font-bold uppercase tracking-wider">マスモン・元は{base.name}</div>
-                    <div className="mt-1">
-                      <div className="text-[9px] text-pink-300 font-black flex items-center gap-1"><Heart size={9}/>絆Lv.{lvl.level}</div>
-                      <div className="flex items-center gap-2 text-[8px] font-black"><span className="text-violet-300">限界突破 {masu.rebirthCount||0}回</span>{(masu.reincarnateCount||0)>0&&<span className="text-amber-300">転生 {masu.reincarnateCount}回</span>}<span className="text-cyan-300">上限 Lv.{masu.levelCap||INITIAL_MASU_LEVEL_CAP}</span></div>
-                      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
-                      <div className="text-[7px] text-pink-400/70 font-mono mt-0.5">{lvl.xpIntoLevel.toLocaleString()} / {lvl.xpForNext.toLocaleString()} XP</div>
-                    </div>
-                  </div>
-                  <button onClick={()=>setMasuMonDetail(null)} className="p-2 bg-white/5 rounded-full active:scale-90 shrink-0"><X size={16}/></button>
+          return renderMonsterDetailModal({
+            mon: mergedMasu,
+            masu,
+            accent: 'pink',
+            onClose: ()=>setMasuMonDetail(null),
+            onRename: ()=>{setMasuRenameInput(masu.name); setShowMasuRenameModal(true);},
+            detailOpts: {
+              statTitle: '現在のステータス(強化分込み)',
+              statValues: [
+                masuStatRow('ライフ', mergedMasu.baseHp, sp.hp||0, 'text-pink-400'),
+                masuStatRow('ちから', mergedMasu.baseAtk, sp.atk||0, 'text-red-400'),
+                masuStatRow('丈夫さ', mergedMasu.baseDef, sp.def||0, 'text-emerald-400'),
+                masuStatRow('ガッツ', mergedMasu.baseGuts, sp.guts||0, 'text-amber-400'),
+              ],
+              aptPointsLabel: <div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</div>,
+            },
+            bodyExtra: (<>
+              <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30"><div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>{getRebirthSkillChoices(masu).map(skill=>{const current=uniqueSkillAtLevel(skill.unique,skill.level);return <button key={skill.key} onClick={()=>setRosterSkillDetail({mon:{...mergedMasu,unique:current},kind:'unique'})} className="w-full flex justify-between text-[9px] py-1 text-left"><span className="truncate">{current.name}</span><span className="text-amber-300 font-black shrink-0">Lv.{skill.level} ›</span></button>;})}</div>
+              {(masu.inheritedUniques||[]).length>0&&(
+                <div className="bg-black/40 p-2 rounded-xl border border-amber-500/30">
+                  <div className="text-[7px] text-amber-400 uppercase font-bold mb-1">継承した固有技(バトル中にスロットのバッジをタップで切替可能)</div>
+                  <div className="space-y-1">{masu.inheritedUniques.map((u,idx)=>(<div key={idx} className="text-[8px] text-amber-200 font-bold bg-black/30 rounded-lg px-2 py-1">{u.name}<span className="text-slate-500 font-normal">(元{u.sourceMasuName})</span></div>))}</div>
                 </div>
-                <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
-                  {renderMonsterDetailInfo(mergedMasu, {
-                    statTitle: '現在のステータス(強化分込み)',
-                    statValues: [
-                      masuStatRow('ライフ', base.baseHp+(sp.hp||0), sp.hp||0, 'text-pink-400'),
-                      masuStatRow('ちから', base.baseAtk+(sp.atk||0), sp.atk||0, 'text-red-400'),
-                      masuStatRow('丈夫さ', base.baseDef+(sp.def||0), sp.def||0, 'text-emerald-400'),
-                      masuStatRow('ガッツ', base.baseGuts+(sp.guts||0), sp.guts||0, 'text-amber-400'),
-                    ],
-                    aptPointsLabel: <div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</div>,
-                  })}
-                  <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30"><div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>{getRebirthSkillChoices(masu).map(skill=>{const current=uniqueSkillAtLevel(skill.unique,skill.level);return <button key={skill.key} onClick={()=>setRosterSkillDetail({mon:{...mergedMasu,unique:current},kind:'unique'})} className="w-full flex justify-between text-[9px] py-1 text-left"><span>{current.name}</span><span className="text-amber-300 font-black">Lv.{skill.level} ›</span></button>;})}</div>
-                  <button onClick={()=>{setMasuEnhanceFrom(gameState); setGameState('MASU_ENHANCE');}} className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white py-2.5 rounded-xl font-black text-[11px] uppercase active:scale-95 flex items-center justify-center gap-1.5 shadow-lg"><Sparkles size={13}/>強化する{(masu.distAptPoints||0)>0&&<span className="bg-white/25 px-1.5 rounded-full text-[9px]">強化P {masu.distAptPoints}</span>}</button>
-                  {(masu.fusionHistory||[]).length>0&&(
-                    <div className="bg-black/40 p-2 rounded-xl border border-amber-500/30">
-                      <div className="text-[7px] text-amber-400 uppercase font-bold mb-1 flex items-center gap-1"><Sparkles size={9}/>合体履歴</div>
-                      <div className="space-y-1">
-                        {masu.fusionHistory.map((h,idx)=>(
-                          <div key={idx} className="text-[8px] text-slate-300 font-bold flex items-center justify-between gap-1 bg-black/30 rounded-lg px-2 py-1">
-                            <span className="truncate">{h.subName}（{ALL_PLAYER_MONSTERS[h.subBaseId]?.name||'?'}）と合体{h.inherited&&<span className="text-amber-300">(固有技継承)</span>}</span>
-                            <span className="text-pink-300 font-black shrink-0">+{h.xpGained.toLocaleString()}XP</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {(masu.inheritedUniques||[]).length>0&&(
-                    <div className="bg-black/40 p-2 rounded-xl border border-amber-500/30">
-                      <div className="text-[7px] text-amber-400 uppercase font-bold mb-1">継承した固有技(バトル中にスロットのバッジをタップで切替可能)</div>
-                      <div className="space-y-1">
-                        {masu.inheritedUniques.map((u,idx)=>(
-                          <div key={idx} className="text-[8px] text-amber-200 font-bold bg-black/30 rounded-lg px-2 py-1">{u.name}<span className="text-slate-500 font-normal">(元{u.sourceMasuName})</span></div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div className="text-[8px] text-slate-500 font-bold text-center px-2">{inRoster?'現在、編成に入っています':'編成画面で選ぶと、次の周回でこのマスモンを使えます'}</div>
-                  <div className="text-[8px] text-teal-400/80 font-bold text-center px-2">絆ポイントリセットの書・染色もどきは「アイテム」から使用できます</div>
-                  <button onClick={()=>{ if(window.confirm(`「${masu.name}」を削除しますか？この操作は取り消せません。`)){ deleteMasuMon(masu.id); setMasuMonDetail(null); } }} className="w-full bg-red-950/40 border border-red-500/30 text-red-400 py-2.5 rounded-xl font-black text-[10px] uppercase active:scale-95">このマスモンを削除する</button>
-                </div>
-              </div>
-            </div>
-          );
+              )}
+              <div className="text-[8px] text-slate-500 font-bold text-center px-2">{inRoster?'現在、編成に入っています':'編成画面で選ぶと、次の周回でこのマスモンを使えます'}</div>
+              <div className="text-[8px] text-teal-400/80 font-bold text-center px-2">絆ポイントリセットの書・染色もどきは「アイテム」から使用できます</div>
+              <button onClick={()=>{ if(window.confirm(`「${masu.name}」を削除しますか？この操作は取り消せません。`)){ deleteMasuMon(masu.id); setMasuMonDetail(null); } }} className="w-full min-h-[40px] text-[10px] font-black text-red-300 bg-red-950/40 border border-red-500/30 rounded-xl active:scale-95">このマスモンを削除する</button>
+            </>),
+            footer: (
+              <button onClick={()=>{setMasuEnhanceFrom(gameState); setGameState('MASU_ENHANCE');}} className="w-full min-h-[48px] bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-2xl font-black text-sm uppercase active:scale-95 flex items-center justify-center gap-1.5 shadow-lg shrink-0"><Sparkles size={14}/>強化する{(masu.distAptPoints||0)>0&&<span className="bg-white/25 px-1.5 rounded-full text-[10px]">強化P {masu.distAptPoints}</span>}</button>
+            ),
+          });
         })()}
 
         {/* マスモン強化: 専用ページ(間合い適性・ステータス強化を、変動値のプレビュー付きで行う) */}
@@ -9146,6 +9300,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
           const points = masu.distAptPoints||0;
           const currentStatValue = (key) => ({hp:base.baseHp,atk:base.baseAtk,def:base.baseDef,guts:base.baseGuts}[key]||0) + (masu.statPoints?.[key]||0);
+          // 総合力は共通関数から都度出す。1ポイント強化も一括強化も、強化前と強化後を
+          // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
+          const currentPower = masuPowerOf(masu);
+          const powerAfterApt = (idx) => plannedMasuPowerOf(masu, {apt:[0,1,2,3].map(i=>i===idx?1:0), stat:{}});
+          const powerAfterStat = (key) => plannedMasuPowerOf(masu, {apt:[0,0,0,0], stat:{[key]:1}});
+          const powerDeltaLabel = (after) => {const d=after-currentPower; return d===0?null:<span className={`text-[8px] font-mono font-black ${d>0?'text-amber-300':'text-red-300'}`}>総合力 {d>0?'+':''}{formatMonsterPower(d)}</span>;};
           const ps = mergeMasuIntoMon(masu)?.plusStats||{};
           const backToList = () => { setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); setBulkPlan(null); };
           // --- まとめて振るモード ---
@@ -9188,6 +9348,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={14}/>まとめて強化</div>
                       <div className="text-[10px] font-black text-white">残り <span className={`font-mono text-[15px] ${planLeft>0?'text-amber-300':'text-slate-500'}`}>{planLeft}</span> / {points} pt</div>
+                    </div>
+                    {/* 下書きの中身に合わせてリアルタイムに動く。確定するまで実データは書き換えない */}
+                    <div className="mb-3">{renderPowerBadge(plannedMasuPowerOf(masu, plan), {before: currentPower, size:'md'})}
+                      {planUsed>0&&<div className="text-[8px] text-slate-500 font-bold mt-1">使用予定 強化P {planUsed}</div>}
                     </div>
                     <div className="text-[9px] text-slate-400 font-bold mb-2">間合い適性</div>
                     <div className="grid grid-cols-4 gap-1.5 mb-3">
@@ -9244,8 +9408,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <h3 className="text-lg font-black text-white truncate">{masu.name}</h3>
                     <div className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">マスモン・元は{base.name}</div>
                     <div className="mt-1">
-                      <div className="text-[9px] text-pink-300 font-black flex items-center gap-1"><Heart size={9}/>絆Lv.{lvl.level}</div>
+                      <div className="text-[9px] text-pink-300 font-black flex items-center gap-1"><Heart size={9}/>絆 Lv.{lvl.level} <span className="text-slate-500">/ {normalizeMasuProgression(masu).levelCap}</span></div>
                       <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
+                      <div className="mt-1.5">{renderPowerBadge(currentPower, {dense:true, size:'sm'})}</div>
                     </div>
                   </div>
                 </div>
@@ -9275,6 +9440,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <span className={`w-full text-center py-1 rounded-lg border text-base font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>
                           <span className={`text-[9px] font-mono font-black leading-none ${aptGradeToPct(grade)>0?'text-cyan-300':aptGradeToPct(grade)<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(aptGradeToPct(grade))}</span>
                           <span className="text-[7px] text-slate-500 font-mono h-3">{nextGrade?`次: ${nextGrade} ${formatAptPct(aptGradeToPct(nextGrade))}`:'MAX'}</span>
+                          <span className="h-3 flex items-center">{canUp?powerDeltaLabel(powerAfterApt(idx)):null}</span>
                           <button disabled={!canUp} onClick={()=>{
                             const beforeGrade=grade;
                             const updated=spendAptPoint(masu.id,idx);
@@ -9308,6 +9474,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         }} className="flex flex-col items-center gap-1 bg-emerald-950/50 border border-emerald-500/30 rounded-xl py-2.5 active:scale-95 disabled:opacity-20">
                           <span className="text-[9px] text-emerald-300 font-black">{label}</span>
                           <span className="text-[11px] text-white font-mono font-black">{before} → <span className="text-emerald-400">{after}</span></span>
+                          <span className="h-3 flex items-center">{points>0?powerDeltaLabel(powerAfterStat(key)):null}</span>
                         </button>
                       );
                     })}
@@ -10201,55 +10368,52 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </button>);})}
             </div>
           </div>
-          {currentPickingMon&&(
-            /* 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする */
-            <div className="fixed inset-0 z-[3100] flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000,paddingTop:battleTutorial?'calc(4.25rem + env(safe-area-inset-top))':undefined}}>
-              <div className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
-                <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
-                  {currentPickingMon.imgUrl?(<DyedMonsterImage baseId={currentPickingMon.id} src={currentPickingMon.imgUrl} alt={currentPickingMon.name} masuColors={currentPickingMon.colors} className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-110"/>):(<div className="text-6xl drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">{currentPickingMon.emoji}</div>)}
-                  <div className="flex-1"><h3 className="text-xl font-black text-white">{currentPickingMon.name}</h3><div className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Monster Profile{currentPickingMon.masuId&&<span className="ml-1 text-pink-400">・マスモン({ALL_PLAYER_MONSTERS[currentPickingMon.id]?.name})</span>}</div>{bondGaugeNode(currentPickingMon.masuId)}</div><button onClick={()=>setCurrentPickingMon(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
-                </div>
-                <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
-                  {/* 表示内容は共通実装(renderMonsterDetailInfo)。この画面だけの違いは
-                      「現在値 → 合流後」のステータス表記と、強化Pの割り振りボタン。 */}
-                  {renderMonsterDetailInfo(currentPickingMon, {
-                    statValues: gameState==='PICK_HERO' ? null : [
-                      ['ライフ', `${maxHp} → ${maxHp+(currentPickingMon.plusStats?.hp||0)}`, 'text-pink-400'],
-                      ['ちから', `${atk} → ${atk+(currentPickingMon.plusStats?.atk||0)}`, 'text-red-400'],
-                      ['丈夫さ', `${def} → ${def+(currentPickingMon.plusStats?.def||0)}`, 'text-emerald-400'],
-                      ['ガッツ', `${maxGuts} → ${maxGuts+(currentPickingMon.plusStats?.guts||0)}`, 'text-amber-400'],
-                    ],
-                    statTitle: gameState==='PICK_HERO' ? '基本ステータス' : '基本ステータス(現在 → 合流後)',
-                    // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる
-                    aptCurrentPct: [0,1,2,3].map(i=>distTotalBonus(i)),
-                    aptPointsLabel: currentPickingMon.masuId?<div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {getMasuMon(currentPickingMon.masuId)?.distAptPoints||0}</div>:null,
-                    aptExtra: (idx,grade)=>{const pts=currentPickingMon.masuId?(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0):0; const canUp=pts>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return canUp?<button onClick={()=>{const updated=spendAptPoint(currentPickingMon.masuId,idx); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>:null;},
-                    extraAfterApt: (<>
-                      {currentPickingMon.masuId&&(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0)>0&&(
-                        <div className="bg-black/40 p-2 rounded-xl border border-emerald-500/30">
-                          <div className="text-[7px] text-emerald-400 uppercase font-bold mb-1">ステータス強化(強化P 1つにつき使用・調整中)</div>
-                          <div className="grid grid-cols-4 gap-1">
-                            {Object.entries(STAT_POINT_KEYS).map(([key,label])=>(
-                              <button key={key} onClick={()=>{const updated=spendStatPoint(currentPickingMon.masuId,key); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95">
-                                <span className="text-[7px] text-emerald-300 font-black">{label}</span>
-                                <span className="text-[10px] text-white font-black">+{STAT_POINT_GAIN[key]||1}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {!currentPickingMon.masuId&&(
-                        <div className="bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center">
-                          {gameState==='PICK_HERO'?'勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます':'絆レベルの強化は勇者モン(マスモン)のみ対象です'}
-                        </div>
-                      )}
-                    </>),
-                  })}
-                </div>
-                <div className="flex gap-2 mt-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 bg-slate-800 text-slate-400 py-3.5 rounded-2xl font-black text-sm uppercase">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className={`w-3/5 bg-indigo-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg${battleTutorialSpotClass('monDecide')}`}>決定</button></div>
-              </div>
-            </div>
-          )}
+          {/* 勇者モン選択・供モン合流の詳細。外枠と上部サマリーは他の画面と同じマスターUIで、
+              この画面だけの違いは「現在値 → 合流後」のステータス表記と強化Pの割り振りボタン */}
+          {currentPickingMon&&renderMonsterDetailModal({
+            mon: currentPickingMon,
+            masu: currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId) : null,
+            onClose: ()=>setCurrentPickingMon(null),
+            zIndex: 31000,
+            // 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする
+            paddingTop: battleTutorial?'calc(4.25rem + env(safe-area-inset-top))':undefined,
+            detailOpts: {
+  statValues: gameState==='PICK_HERO' ? null : [
+    ['ライフ', `${maxHp} → ${maxHp+(currentPickingMon.plusStats?.hp||0)}`, 'text-pink-400'],
+    ['ちから', `${atk} → ${atk+(currentPickingMon.plusStats?.atk||0)}`, 'text-red-400'],
+    ['丈夫さ', `${def} → ${def+(currentPickingMon.plusStats?.def||0)}`, 'text-emerald-400'],
+    ['ガッツ', `${maxGuts} → ${maxGuts+(currentPickingMon.plusStats?.guts||0)}`, 'text-amber-400'],
+  ],
+  statTitle: gameState==='PICK_HERO' ? '基本ステータス' : '基本ステータス(現在 → 合流後)',
+  // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる
+  aptCurrentPct: [0,1,2,3].map(i=>distTotalBonus(i)),
+  aptPointsLabel: currentPickingMon.masuId?<div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {getMasuMon(currentPickingMon.masuId)?.distAptPoints||0}</div>:null,
+  aptExtra: (idx,grade)=>{const pts=currentPickingMon.masuId?(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0):0; const canUp=pts>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return canUp?<button onClick={()=>{const updated=spendAptPoint(currentPickingMon.masuId,idx); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>:null;},
+  extraAfterApt: (<>
+    {currentPickingMon.masuId&&(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0)>0&&(
+      <div className="bg-black/40 p-2 rounded-xl border border-emerald-500/30">
+        <div className="text-[7px] text-emerald-400 uppercase font-bold mb-1">ステータス強化(強化P 1つにつき使用・調整中)</div>
+        <div className="grid grid-cols-4 gap-1">
+          {Object.entries(STAT_POINT_KEYS).map(([key,label])=>(
+            <button key={key} onClick={()=>{const updated=spendStatPoint(currentPickingMon.masuId,key); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="flex flex-col items-center gap-0.5 bg-emerald-950/50 border border-emerald-500/30 rounded-lg py-1.5 active:scale-95">
+              <span className="text-[7px] text-emerald-300 font-black">{label}</span>
+              <span className="text-[10px] text-white font-black">+{STAT_POINT_GAIN[key]||1}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+    {!currentPickingMon.masuId&&(
+      <div className="bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center">
+        {gameState==='PICK_HERO'?'勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます':'絆レベルの強化は勇者モン(マスモン)のみ対象です'}
+      </div>
+    )}
+  </>),
+            },
+            footer: (
+              <div className="flex gap-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className={`flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`}>決定</button></div>
+            ),
+          })}
         </div>
       )}
 
@@ -10923,48 +11087,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
         const sp = masu.statPoints || {};
         const statRow = (label, value, plus, color) => [label, (<>{value}{plus>0&&<span className="text-emerald-400 text-[8px]"> (+{plus})</span>}</>), color];
-        return (<div onClick={close} className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:41900}} role="dialog" aria-modal="true" aria-label={`${masu.name}の詳細`}>
-          <div onClick={e=>e.stopPropagation()} className="bg-slate-900 border-2 border-indigo-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto max-h-full overflow-hidden">
-            <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
-              <div className="relative w-20 h-20 shrink-0">
-                <div className={`w-20 h-20 rounded-full overflow-hidden border ${masu.fusionHistory.length>0?'border-amber-400 ring-2 ring-amber-400':'border-pink-400/40'}`}><DyedMonsterImage baseId={baseId} src={base.iconUrl} alt={masu.name} masuColors={masu.colors} className="w-full h-full object-cover"/></div>
-                <ReincarnateBadge count={masu.reincarnateCount}/>
-                <RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-black text-white truncate">{masu.name}</h3>
-                <div className="text-[9px] text-pink-400 font-bold uppercase tracking-wider">マスモン・元は{base.name}</div>
-                <div className="mt-1">
-                  <div className="text-[9px] text-pink-300 font-black flex items-center gap-1"><Heart size={9}/>絆Lv.{lvl.level}</div>
-                  <div className="flex items-center gap-2 text-[8px] font-black"><span className="text-violet-300">限界突破 {masu.rebirthCount}回</span>{masu.reincarnateCount>0&&<span className="text-amber-300">転生 {masu.reincarnateCount}回</span>}<span className="text-cyan-300">上限 Lv.{masu.levelCap}</span></div>
-                  <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 mt-0.5"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${pct}%`}}></div></div>
-                  <div className="text-[7px] text-pink-400/70 font-mono mt-0.5">{lvl.xpIntoLevel.toLocaleString()} / {lvl.xpForNext.toLocaleString()} XP</div>
-                </div>
-              </div>
-              <button onClick={close} className="p-2 bg-white/5 rounded-full active:scale-90 shrink-0"><X size={16}/></button>
-            </div>
-            <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
-              {renderMonsterDetailInfo(mon, {
-                statTitle: '現在のステータス(強化分込み)',
-                statValues: [
-                  statRow('ライフ', base.baseHp+(sp.hp||0), sp.hp||0, 'text-pink-400'),
-                  statRow('ちから', base.baseAtk+(sp.atk||0), sp.atk||0, 'text-red-400'),
-                  statRow('丈夫さ', base.baseDef+(sp.def||0), sp.def||0, 'text-emerald-400'),
-                  statRow('ガッツ', base.baseGuts+(sp.guts||0), sp.guts||0, 'text-amber-400'),
-                ],
-                aptPointsLabel: <div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints}</div>,
+        // ランキングから開く詳細も、他の画面と同じマスターUIを使う(読み取り専用)
+        return renderMonsterDetailModal({
+          mon,
+          masu,
+          onClose: close,
+          zIndex: 41900,
+          detailOpts: {
+            statTitle: '現在のステータス(強化分込み)',
+            statValues: [
+              statRow('ライフ', mon.baseHp, sp.hp||0, 'text-pink-400'),
+              statRow('ちから', mon.baseAtk, sp.atk||0, 'text-red-400'),
+              statRow('丈夫さ', mon.baseDef, sp.def||0, 'text-emerald-400'),
+              statRow('ガッツ', mon.baseGuts, sp.guts||0, 'text-amber-400'),
+            ],
+          },
+          bodyExtra: (
+            <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30">
+              <div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>
+              {getRebirthSkillChoices(masu).map(skill=>{
+                const current=uniqueSkillAtLevel(skill.unique, skill.level);
+                return <div key={skill.key} className="w-full flex items-center justify-between text-[10px] font-black py-0.5"><span className="text-white truncate">{current?.name||skill.name}</span><span className="text-amber-300 shrink-0">Lv.{skill.level}</span></div>;
               })}
-              <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30">
-                <div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>
-                {getRebirthSkillChoices(masu).map(skill=>{
-                  const current=uniqueSkillAtLevel(skill.unique, skill.level);
-                  return <div key={skill.key} className="w-full flex items-center justify-between text-[10px] font-black py-0.5"><span className="text-white truncate">{current?.name||skill.name}</span><span className="text-amber-300 shrink-0">Lv.{skill.level}</span></div>;
-                })}
-              </div>
             </div>
-            <button onClick={close} className="w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0">とじる</button>
-          </div>
-        </div>);
+          ),
+          footer: <button onClick={close} className="w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0">とじる</button>,
+        });
       })()}
 
       {/* DECK INFO */}

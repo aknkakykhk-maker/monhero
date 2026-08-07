@@ -32,10 +32,30 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 画面ごとの差分を引数で受け取る`,
     body.includes('statValues') && body.includes('aptExtra') && body.includes('aptPointsLabel'));
 
-  // 呼び出し側(3つの詳細すべてが共通実装を使う)
-  check(`${label}: 編成・ベースモン一覧の詳細が共通表示を使う`, code.includes('renderMonsterDetailInfo(rosterDetailMon)'));
-  check(`${label}: 勇者モン選択・供モン合流の詳細が共通表示を使う`, code.includes('renderMonsterDetailInfo(currentPickingMon,'));
-  check(`${label}: マスモン一覧の詳細が共通表示を使う`, code.includes('renderMonsterDetailInfo(mergedMasu,'));
+  // 呼び出し側: どこから開いても同じマスターUI(外枠・上部サマリー・本文)を通ること。
+  // 以前は画面ごとに外枠と上部を書き写していたため、絆ゲージや限界突破の出方が画面で違っていた
+  check(`${label}: 詳細の外枠が共通実装にまとまっている`, code.includes('renderMonsterDetailModal = ({'));
+  check(`${label}: 上部サマリーが共通実装にまとまっている`, code.includes('renderMonsterSummaryHeader = ({'));
+  check(`${label}: 本文の共通表示を呼ぶのはマスターUIの中だけ`,
+    (code.match(/renderMonsterDetailInfo\(/g) || []).length === 1,
+    `${(code.match(/renderMonsterDetailInfo\(/g) || []).length}回の呼び出し`);
+  check(`${label}: 編成・ベースモン一覧の詳細がマスターUIを使う`, /rosterDetailMon\s*&&\s*renderMonsterDetailModal\(/.test(code));
+  check(`${label}: 勇者モン選択・供モン合流の詳細がマスターUIを使う`, /currentPickingMon\s*&&\s*renderMonsterDetailModal\(/.test(code));
+  check(`${label}: マスモン一覧の詳細がマスターUIを使う`, code.includes('mon: mergedMasu,'));
+  check(`${label}: ランキングの詳細もマスターUIを使う`, /return renderMonsterDetailModal\(\{\s*mon,/.test(code));
+  // 呼び出し元固有の操作だけを外から渡す形になっていること
+  check(`${label}: 呼び出し元固有の操作を引数で受け取る`,
+    code.includes('onRename') && code.includes('detailOpts') && code.includes('bodyExtra') && code.includes('footer'));
+  check(`${label}: 名前変更は渡された画面だけ`, /onRename: \(\)\s*=>\s*\{\s*setMasuRenameInput\(/.test(code));
+  // 上部サマリーの並び(画像→個体名→元のベースモン名→総合力→絆Lv/上限→限界突破→転生→XP)
+  check(`${label}: サマリーに総合力がある`, code.includes('const power = monsterPowerOf(mon);') && code.includes('renderPowerBadge(power)'));
+  check(`${label}: サマリーに元のベースモン名がある`, code.includes('元：'));
+  check(`${label}: サマリーに絆Lvと上限がある`, /絆 Lv\./.test(code) && code.includes('norm.levelCap'));
+  check(`${label}: 限界突破は rebirthCount、転生は reincarnateCount のまま`,
+    /RebirthStars[^A-Za-z][\s\S]{0,80}norm\.rebirthCount/.test(code) && /ReincarnateBadge[^A-Za-z][\s\S]{0,80}norm\.reincarnateCount/.test(code));
+  check(`${label}: 個体の強さと選び方で決まる効果を分けている`,
+    code.includes('この個体の強さ') && code.includes('選び方で決まる効果'));
+  check(`${label}: 第2段階の合体詳細を置ける枠がある`, code.includes('renderFusionSection') && code.includes('合体回数 '));
 
   // 勇者特性を画面で出し分けていた分岐が残っていないこと
   check(`${label}: 勇者特性を勇者モン選択だけに限定していない`,
@@ -49,7 +69,10 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: マスモンの現在ステータス表記が残っている`, code.includes('現在のステータス(強化分込み)'));
   check(`${label}: マスモンの所持固有技Lvが残っている`, code.includes('所持固有技Lv'));
   check(`${label}: マスモンの強化ポイント表示が残っている`, code.includes('masu.distAptPoints'));
-  check(`${label}: 編成詳細でも絆Lvゲージを出す`, code.includes('bondGaugeNode(rosterDetailMon.masuId)'));
+  // マスモンの絆XPゲージは共通サマリーの中だけ(ブリーダーLvのゲージは別物なので数えない)
+  check(`${label}: マスモンの絆XPゲージは共通サマリーの中に1つだけ`,
+    (code.match(/lvl\.xpIntoLevel\.toLocaleString\(\)/g) || []).length === 1,
+    `${(code.match(/lvl\.xpIntoLevel\.toLocaleString\(\)/g) || []).length}か所`);
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
