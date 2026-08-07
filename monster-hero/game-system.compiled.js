@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 188039eefb4e1612
+// source-sha256: 7ec6a37647c237ee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 10:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-07 10:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6043,7 +6043,12 @@ const evaluateEnemyActions = (ent, currentDist, state = {}) => {
         available = false;
         reason = 'ためた次のターンにだけ発動します';
       } else if (def.type === 'MOVE') {
-        if (movedLast) {
+        // 移動は必ず前のターンに吹き出しで予告してから行う。
+        // 戦闘が始まった1ターン目には予告を出す機会が無いので、そもそも選ばない
+        if (state.firstTurn) {
+          available = false;
+          reason = '戦闘開始の1ターン目は移動しません(移動は必ず前のターンに予告します)';
+        } else if (movedLast) {
           available = false;
           reason = '移動した次のターンは移動しません';
         } else if (!RANGE_LABELS.some((_, i) => i !== currentDist)) {
@@ -11561,7 +11566,7 @@ function MonsterHeroGame() {
 
   // lastIntent は「たった今どの行動を終えたか」。
   // ためた次のターンを必殺技で確定させ、移動した次のターンに移動を選ばないために使う
-  const getNextEnemyAction = useCallback((ent, currentDist, lastIntent = null) => {
+  const getNextEnemyAction = useCallback((ent, currentDist, lastIntent = null, extraState = null) => {
     const scenario = battleScenarioRef.current;
     if (scenario && typeof battleScenarioIntent === 'function') {
       const scripted = battleScenarioIntent(scenario, battleScenarioIntentIndexRef.current, ent, currentDist);
@@ -11570,7 +11575,10 @@ function MonsterHeroGame() {
         return scripted;
       }
     }
-    return chooseEnemyAction(ent, currentDist, Math.random, enemyActionStateFrom(lastIntent));
+    return chooseEnemyAction(ent, currentDist, Math.random, {
+      ...enemyActionStateFrom(lastIntent),
+      ...(extraState || {})
+    });
   }, []);
 
   // 敵の行動を1つ繰り上げる。
@@ -13012,7 +13020,9 @@ function MonsterHeroGame() {
     setEnemy(newEnemy);
     setEnemyDist(dist);
     setEnemyLastIntent(null);
-    const firstIntent = getNextEnemyAction(newEnemy, dist);
+    const firstIntent = getNextEnemyAction(newEnemy, dist, null, {
+      firstTurn: true
+    });
     setEnemyIntent(firstIntent);
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy, distAfterIntent(firstIntent, dist), firstIntent));
     setTurnCount(1);
@@ -23590,7 +23600,9 @@ function MonsterHeroGame() {
       const scanEnemy = waveScanPreview?.enemy || enemy;
       const scanDist = waveScanPreview ? 2 : enemyDist;
       const scanBeforeBattle = !!waveScanPreview;
-      const scanState = scanBeforeBattle ? {} : enemyActionStateFrom(enemyLastIntent);
+      const scanState = scanBeforeBattle ? {
+        firstTurn: true
+      } : enemyActionStateFrom(enemyLastIntent);
       const actions = enemyActionProbabilities(scanEnemy, scanDist, scanState);
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex flex-col",
@@ -23686,7 +23698,7 @@ function MonsterHeroGame() {
         className: "text-left text-[10px] leading-relaxed text-slate-400 bg-black/30 rounded-xl p-3"
       }, /*#__PURE__*/React.createElement("b", {
         className: "block text-slate-200 mb-1"
-      }, "\u884C\u52D5\u30EB\u30FC\u30EB"), "\u4F7F\u7528\u53EF\u80FD\u306A\u884C\u52D5\u306E\u91CD\u307F\u3092\u5408\u8A08100%\u306B\u6B63\u898F\u5316\u3057\u3066\u62BD\u9078\u3057\u307E\u3059\u3002\u79FB\u52D5\u304C\u9078\u3070\u308C\u305F\u5834\u5408\u306F\u3001\u73FE\u5728\u4EE5\u5916\u306E3\u9593\u5408\u3044\u304B\u3089\u540C\u7387\u3067\u79FB\u52D5\u5148\u3092\u9078\u3073\u307E\u3059\u3002\u5FC5\u6BBA\u6280\u306F\u300C\u305F\u3081\u308B\u300D\u306E\u6B21\u306E\u30BF\u30FC\u30F3\u306B\u5FC5\u305A\u767A\u52D5\u3057\u3001\u307B\u304B\u306E\u884C\u52D5\u3067\u306F\u4E0A\u66F8\u304D\u3055\u308C\u307E\u305B\u3093\u3002\u79FB\u52D5\u3057\u305F\u6B21\u306E\u30BF\u30FC\u30F3\u306B\u79FB\u52D5\u306F\u9078\u3070\u308C\u307E\u305B\u3093\u3002SCAN\u8868\u793A\u3067\u306F\u62BD\u9078\u3057\u307E\u305B\u3093\u3002")))));
+      }, "\u884C\u52D5\u30EB\u30FC\u30EB"), "\u4F7F\u7528\u53EF\u80FD\u306A\u884C\u52D5\u306E\u91CD\u307F\u3092\u5408\u8A08100%\u306B\u6B63\u898F\u5316\u3057\u3066\u62BD\u9078\u3057\u307E\u3059\u3002\u79FB\u52D5\u304C\u9078\u3070\u308C\u305F\u5834\u5408\u306F\u3001\u73FE\u5728\u4EE5\u5916\u306E3\u9593\u5408\u3044\u304B\u3089\u540C\u7387\u3067\u79FB\u52D5\u5148\u3092\u9078\u3073\u307E\u3059\u3002\u5FC5\u6BBA\u6280\u306F\u300C\u305F\u3081\u308B\u300D\u306E\u6B21\u306E\u30BF\u30FC\u30F3\u306B\u5FC5\u305A\u767A\u52D5\u3057\u3001\u307B\u304B\u306E\u884C\u52D5\u3067\u306F\u4E0A\u66F8\u304D\u3055\u308C\u307E\u305B\u3093\u3002\u79FB\u52D5\u306F\u5FC5\u305A\u524D\u306E\u30BF\u30FC\u30F3\u306B\u5439\u304D\u51FA\u3057\u3067\u4E88\u544A\u3057\u3066\u304B\u3089\u884C\u3046\u305F\u3081\u3001\u6226\u95D8\u958B\u59CB\u306E1\u30BF\u30FC\u30F3\u76EE\u3068\u3001\u79FB\u52D5\u3057\u305F\u6B21\u306E\u30BF\u30FC\u30F3\u306B\u306F\u9078\u3070\u308C\u307E\u305B\u3093\u3002SCAN\u8868\u793A\u3067\u306F\u62BD\u9078\u3057\u307E\u305B\u3093\u3002")))));
     })(), showHeroInfo && mainHero && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 p-6 flex flex-col",
       style: {
