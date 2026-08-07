@@ -48,7 +48,11 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
     code.includes('onRename') && code.includes('detailOpts') && code.includes('bodyExtra') && code.includes('footer'));
   check(`${label}: 名前変更は渡された画面だけ`, /onRename: \(\)\s*=>\s*\{\s*setMasuRenameInput\(/.test(code));
   // 上部サマリーの並び(画像→個体名→元のベースモン名→総合力→絆Lv/上限→限界突破→転生→XP)
-  check(`${label}: サマリーに総合力がある`, code.includes('const power = monsterPowerOf(mon);') && code.includes('renderPowerBadge(power)'));
+  // 総合力は共通の monsterPowerOf で出す。ランキングだけは「記録した時点の値」を渡せるよう
+  // powerOverride を受け取るが、渡されなければ必ず共通の計算に落ちること
+  check(`${label}: サマリーに総合力がある`,
+    /const power = powerOverride !== undefined \? powerOverride : monsterPowerOf\(mon\);/.test(code)
+    && /renderPowerBadge\(power,/.test(code));
   check(`${label}: サマリーに元のベースモン名がある`, code.includes('元：'));
   check(`${label}: サマリーに絆Lvと上限がある`, /絆 Lv\./.test(code) && code.includes('norm.levelCap'));
   check(`${label}: 限界突破は rebirthCount、転生は reincarnateCount のまま`,

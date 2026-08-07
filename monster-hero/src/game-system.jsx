@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-07 22:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 00:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1812,7 +1812,50 @@ const rankingPartyColors = (baseId, colors) => {
 // 持っているので、継承した固有技も元のモンスターIDとレベルだけ送り、見る側で組み立て直す
 // (1体あたり数百バイト。以前ここへ画像を入れて読み込みが終わらなくなったことがあるため、
 //  「同梱してあるもの(絵・技のデータ)は送らない」という方針を守る)。
-const RANKING_DETAIL_VERSION = 1;
+// ===== 合体履歴 =====
+// 実際に保存されているのは executeMasuFusion が積む
+//   { subName, subBaseId, subBondLevel, xpGained, inherited, timestamp }
+// の6項目だけ。ここではそれを表示できる形へそろえるだけで、無い項目は null のままにする
+// (推測で埋めると「実際には残っていない履歴」を作ってしまう)。
+// 継承した固有技そのものは履歴に持っていないが、継承したのは必ず相手の種の固有技なので、
+// 主が持っている inheritedUniques から同じ種のものを探し、無ければ種の固有技を出す。
+const normalizeFusionHistory = (masu) => {
+  const raw = Array.isArray(masu?.fusionHistory) ? masu.fusionHistory : [];
+  const inheritedList = Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : [];
+  const posNum = (v) => (Number.isFinite(Number(v)) && Number(v) > 0) ? Math.floor(Number(v)) : null;
+  return raw.map((entry, index) => {
+    const e = (entry && typeof entry === 'object') ? entry : {};
+    const subBaseId = (typeof e.subBaseId === 'string' && ALL_PLAYER_MONSTERS[e.subBaseId]) ? e.subBaseId : null;
+    const subName = (typeof e.subName === 'string' && e.subName.trim()) ? e.subName.trim() : null;
+    const inherited = e.inherited === true;
+    let inheritedUnique = null;
+    if (inherited && subBaseId) {
+      // 主が今も持っている継承技のうち、同じ種から来たもの。見つかればそのときの名前・Lvが分かる
+      const owned = inheritedList.find(u => u && u.monId === subBaseId && (!subName || !u.sourceMasuName || u.sourceMasuName === subName))
+        || inheritedList.find(u => u && u.monId === subBaseId);
+      inheritedUnique = owned || ALL_PLAYER_MONSTERS[subBaseId]?.unique || null;
+    }
+    const subBondLevel = posNum(e.subBondLevel);
+    const xpGained = posNum(e.xpGained);
+    const timestamp = posNum(e.timestamp);
+    return {
+      order: index + 1,                 // 何回目の合体か(古いほうが1)
+      subName, subBaseId,
+      subBaseName: subBaseId ? ALL_PLAYER_MONSTERS[subBaseId].name : null,
+      subBondLevel, xpGained, inherited, inheritedUnique, timestamp,
+      // 中身のある履歴かどうか。合体回数しか残っていない古いランキング記録は
+      // 「{}」が回数ぶん並ぶだけなので、それを架空の履歴として描かないための目印
+      hasDetail: !!(subBaseId || subName || subBondLevel != null || xpGained != null || timestamp != null),
+    };
+  });
+};
+const fusionHistoryHasDetail = (list) => Array.isArray(list) && list.some(h => h && h.hasDetail);
+// 記録に載せる合体履歴の上限。1件60バイト前後なので、ここを外すと4体ぶんで記録が一気に重くなる。
+// 実際の合体回数は fusionCount にそのまま残すので、上限を超えても回数は正しく出せる
+const RANKING_FUSION_MAX = 12;
+// v1: 育て方(ステータス・間合い適性・固有技Lv)＋合体回数だけ
+// v2: 記録時点の総合力(power)と、合体履歴の中身(fusion)を追加。v1の項目はそのまま残す
+const RANKING_DETAIL_VERSION = 2;
 const rankingMasuDetail = (masu) => {
   if (!masu) return null;
   const sp = masu.statPoints || {};
@@ -1836,6 +1879,21 @@ const rankingMasuDetail = (masu) => {
     uniqueLevel: num(masu.uniqueSkillLevels?.own),
     inherited,
     fusionCount: Array.isArray(masu.fusionHistory) ? masu.fusionHistory.length : 0,
+    // 記録した時点の総合力。あとで種のバランスを変えても、過去の記録の数字が動かないようにする。
+    // 計算は必ず共通の monsterPowerOf を通す(ランキング専用の式は作らない)
+    power: (() => { const p = monsterPowerOf(mergeMasuIntoMon(masu)); return Number.isFinite(p) && p > 0 ? p : null; })(),
+    // 合体履歴。技の中身・絵はどの端末も持っているので、相手の種のIDだけ送って見る側で組み立てる。
+    // 空の項目は入れない(1件でも小さくするため)。新しいほうを残したいので後ろから切り出す
+    fusion: normalizeFusionHistory(masu).filter(h => h.hasDetail).slice(-RANKING_FUSION_MAX).map(h => {
+      const out = {};
+      if (h.subBaseId) out.b = h.subBaseId;
+      if (h.subName) out.n = h.subName.slice(0, 12);
+      if (h.subBondLevel != null) out.l = h.subBondLevel;
+      if (h.xpGained != null) out.x = h.xpGained;
+      if (h.inherited) out.i = 1;
+      if (h.timestamp != null) out.t = Math.floor(h.timestamp / 1000); // 秒で持つ(ミリ秒は要らない)
+      return out;
+    }),
   };
 };
 // 記録の詳細を、モンスター詳細の表示に使う「マスモン相当」の形へ戻す。
@@ -1867,7 +1925,30 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     distAptPoints: num(detail.distAptPoints),
     uniqueSkillLevels,
     inheritedUniques,
-    fusionHistory: Array.from({ length: num(detail.fusionCount) }, () => ({})),
+    // 合体履歴。v2の記録には中身(fusion)が入っている。
+    // 中身が無いv1の記録では「回数ぶんの空の項目」だけを置き、履歴の中身は作らない。
+    // ここで適当な相手や日時を作ってしまうと、実際には残っていない履歴を見せることになる
+    fusionHistory: (() => {
+      const raw = Array.isArray(detail.fusion) ? detail.fusion : [];
+      const restored = raw.map((e) => {
+        if (!e || typeof e !== 'object') return {};
+        const t = num(e.t);
+        return {
+          subName: typeof e.n === 'string' ? e.n : undefined,
+          subBaseId: typeof e.b === 'string' ? e.b : undefined,
+          subBondLevel: num(e.l) || undefined,
+          xpGained: num(e.x) || undefined,
+          inherited: e.i === 1 || e.i === true,
+          timestamp: t ? t * 1000 : undefined,
+        };
+      });
+      if (restored.length > 0) return restored;
+      return Array.from({ length: num(detail.fusionCount) }, () => ({}));
+    })(),
+    // 記録に残っている合体回数。上限で切った記録でも「全何回か」はこちらで分かる
+    fusionRecordedCount: num(detail.fusionCount),
+    // 記録した時点の総合力。無い(v1)なら null。0は「総合力0」ではなく「記録が無い」なので入れない
+    powerSnapshot: (Number.isFinite(Number(detail.power)) && Number(detail.power) > 0) ? Math.round(Number(detail.power)) : null,
     colors: Array.isArray(colors) ? colors : [],
   };
 };
@@ -3542,6 +3623,10 @@ function MonsterHeroGame() {
   const [rankingPartyDetail, setRankingPartyDetail] = useState(null);
   // 編成の詳細からさらに1体ぶんの育て方を見る(記録に詳細が入っているときだけ開ける)
   const [rankingMonsterDetail, setRankingMonsterDetail] = useState(null);
+  // 合体詳細ページ。モンスター詳細が「いまの姿」なのに対し、こちらは「どう合体してきたか」を見る場所。
+  // 自分のマスモンからもランキングの個体からも同じ画面へ入れるよう、開くときの材料をここへ持つ
+  // ({ mon, masu, power, readOnly, zIndex })
+  const [fusionDetail, setFusionDetail] = useState(null);
   const [skillEffectDetail, setSkillEffectDetail] = useState(null); // 技の効果が枠に収まらないときに全文を出すモーダル
   const [selectedTeachingCard, setSelectedTeachingCard] = useState(null);
   // ==================== バフ・デバフ統合管理システム ====================
@@ -7769,17 +7854,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   // 総合力の表示。一覧・詳細・強化画面で見た目と桁区切りを揃える。
   // delta を渡すと「12,480 → 12,530 / +50」の形で強化前後を出す
-  const renderPowerBadge = (power, { size = 'md', before = null, dense = false } = {}) => {
-    const delta = before == null ? null : power - before;
+  // power に null を渡すと「—」を出す。総合力が分からない古いランキング記録で、
+  // 0 を本当の総合力のように見せないため(0点の個体は存在しない)
+  const renderPowerBadge = (power, { size = 'md', before = null, dense = false, note = null } = {}) => {
+    const known = Number.isFinite(Number(power));
+    const delta = (!known || before == null) ? null : power - before;
     const valueClass = size === 'lg' ? 'text-[22px]' : size === 'sm' ? 'text-[12px]' : 'text-[17px]';
     return (
-      <div className={`rounded-xl border border-amber-400/40 bg-gradient-to-r from-amber-950/70 to-orange-950/50 ${dense ? 'px-2 py-1' : 'px-2.5 py-1.5'} flex items-center justify-between gap-2 min-w-0`}>
-        <span className="text-[8px] font-black text-amber-300 uppercase tracking-widest shrink-0">総合力</span>
-        <span className="flex items-baseline gap-1.5 min-w-0 justify-end">
-          {before != null && before !== power && <span className="text-[11px] font-mono font-black text-slate-400 shrink-0">{formatMonsterPower(before)} →</span>}
-          <b className={`${valueClass} font-mono font-black text-amber-200 leading-none tabular-nums`}>{formatMonsterPower(power)}</b>
-          {delta != null && delta !== 0 && <span className={`text-[11px] font-mono font-black shrink-0 ${delta > 0 ? 'text-emerald-300' : 'text-red-300'}`}>{delta > 0 ? '+' : ''}{formatMonsterPower(delta)}</span>}
-        </span>
+      <div className={`rounded-xl border border-amber-400/40 bg-gradient-to-r from-amber-950/70 to-orange-950/50 ${dense ? 'px-2 py-1' : 'px-2.5 py-1.5'} min-w-0`}>
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <span className="text-[8px] font-black text-amber-300 uppercase tracking-widest shrink-0">総合力</span>
+          <span className="flex items-baseline gap-1.5 min-w-0 justify-end">
+            {known && before != null && before !== power && <span className="text-[11px] font-mono font-black text-slate-400 shrink-0">{formatMonsterPower(before)} →</span>}
+            <b className={`${valueClass} font-mono font-black text-amber-200 leading-none tabular-nums`}>{known ? formatMonsterPower(power) : '—'}</b>
+            {delta != null && delta !== 0 && <span className={`text-[11px] font-mono font-black shrink-0 ${delta > 0 ? 'text-emerald-300' : 'text-red-300'}`}>{delta > 0 ? '+' : ''}{formatMonsterPower(delta)}</span>}
+          </span>
+        </div>
+        {note && <div className="text-[7px] text-amber-400/70 font-bold leading-tight mt-0.5">{note}</div>}
       </div>
     );
   };
@@ -7788,9 +7879,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 並びは 画像 → 個体名 → 元のベースモン名 → 総合力 → 絆Lv/上限 → 限界突破 → 転生 → XPゲージ。
   // 限界突破(rebirthCount)は RebirthStars、転生(reincarnateCount)は ReincarnateBadge のまま使う
   // (段階・色・意味は既存実装をそのまま利用し、ここでは入れ替えない)。
-  const renderMonsterSummaryHeader = ({ mon, masu = null, onRename = null, onClose = null }) => {
+  // power / powerNote … ランキングのように「記録した時点の総合力」を出したいときだけ渡す。
+  //                      渡さなければ、いまの個体データから共通の monsterPowerOf で計算する。
+  // compact           … 絆Lv・XPゲージを出さない(合体詳細のように別の切り口で見る画面用)。
+  // extraLine         … 総合力の下に1行だけ足せる枠(合体回数など)
+  const renderMonsterSummaryHeader = ({ mon, masu = null, onRename = null, onClose = null, power: powerOverride = undefined, powerNote = null, compact = false, extraLine = null }) => {
     const base = ALL_PLAYER_MONSTERS[mon.id] || mon;
-    const power = monsterPowerOf(mon);
+    const power = powerOverride !== undefined ? powerOverride : monsterPowerOf(mon);
     const norm = masu ? normalizeMasuProgression(masu) : null;
     const lvl = masu ? masuBondLevelInfo(masu) : null;
     const xpPct = lvl ? Math.max(0, Math.min(100, (lvl.xpIntoLevel / Math.max(1, lvl.xpForNext)) * 100)) : 0;
@@ -7817,8 +7912,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             {onClose && <button onClick={onClose} aria-label="閉じる" className="p-2 -m-1 bg-white/5 rounded-full active:scale-90 shrink-0"><X size={16}/></button>}
           </div>
-          {renderPowerBadge(power)}
-          {masu && (<>
+          {renderPowerBadge(power, { note: powerNote })}
+          {extraLine}
+          {masu && !compact && (<>
             <div className="flex items-center justify-between gap-2 text-[10px] font-black">
               <span className="text-pink-300 flex items-center gap-1 shrink-0"><Heart size={10}/>絆 Lv.{lvl.level} <span className="text-slate-500">/ {norm.levelCap}</span></span>
               <span className="flex items-center gap-1.5 text-[8px] shrink-0">
@@ -7842,23 +7938,107 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     </div>
   );
 
-  // 合体のセクション。第2段階でここから合体詳細ページへ入れるよう、履歴は消さずに枠だけ先に用意する
-  const renderFusionSection = (masu) => {
-    const history = (masu && masu.fusionHistory) || [];
-    if (history.length === 0) return null;
+  // 記録に残っている「本当の合体回数」。ランキングの記録は履歴の中身を上限で切っているので、
+  // 切られたぶんも数に入れる(fusionRecordedCount は表示用に復元したときだけ入る)
+  const fusionTotalCount = (masu, history) => {
+    const recorded = Math.max(0, Math.floor(Number(masu?.fusionRecordedCount) || 0));
+    return Math.max(recorded, history.length);
+  };
+  // モンスター詳細に置く合体のサマリー。履歴そのものは合体詳細ページで見る。
+  // 一度も合体していなくても出す(入口の場所が個体によって変わらないようにするため)
+  const renderFusionSection = (masu, { mon = null, power = undefined, readOnly = false, zIndex = 31000 } = {}) => {
+    if (!masu) return null;
+    const history = normalizeFusionHistory(masu);
+    const total = fusionTotalCount(masu, history);
     return (
-      <div className="bg-black/40 p-2 rounded-xl border border-amber-500/30" data-fusion-section>
-        <div className="flex items-center justify-between mb-1">
-          <div className="text-[7px] text-amber-400 uppercase font-bold flex items-center gap-1"><Sparkles size={9}/>合体</div>
-          <div className="text-[9px] font-black text-amber-200">合体回数 {history.length}回</div>
-        </div>
-        <div className="space-y-1">
-          {history.map((h,idx)=>(
-            <div key={idx} className="text-[8px] text-slate-300 font-bold flex items-center justify-between gap-1 bg-black/30 rounded-lg px-2 py-1">
-              <span className="truncate">{h.subName}（{ALL_PLAYER_MONSTERS[h.subBaseId]?.name||'?'}）と合体{h.inherited&&<span className="text-amber-300">(固有技継承)</span>}</span>
-              <span className="text-pink-300 font-black shrink-0">+{Number(h.xpGained||0).toLocaleString()}XP</span>
-            </div>
-          ))}
+      <button
+        onClick={()=>setFusionDetail({ mon: mon || mergeMasuIntoMon(masu), masu, power, readOnly, zIndex: zIndex + 500 })}
+        aria-label="合体詳細を見る"
+        className="w-full bg-black/40 p-2 rounded-xl border border-amber-500/30 flex items-center justify-between gap-2 active:scale-95"
+        data-fusion-section>
+        <span className="text-[7px] text-amber-400 uppercase font-bold flex items-center gap-1 shrink-0"><Sparkles size={9}/>合体</span>
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="text-[10px] font-black text-amber-200 shrink-0">合体回数 {total}回</span>
+          <span className="text-[9px] font-black text-indigo-300 flex items-center gap-0.5 shrink-0">合体詳細を見る<ChevronRight size={11}/></span>
+        </span>
+      </button>
+    );
+  };
+
+  // 合体の日時。記録が無ければ何も出さない(それらしい日付を作らない)
+  const fusionDateText = (ts) => {
+    if (!Number.isFinite(Number(ts)) || Number(ts) <= 0) return null;
+    const d = new Date(Number(ts));
+    if (Number.isNaN(d.getTime())) return null;
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
+  // ===== 合体詳細ページ =====
+  // モンスター詳細が「いまの個体を見る場所」なのに対し、ここは
+  // 「その個体がどんな合体を重ねて今に至ったか」だけを見る場所。
+  // 上部サマリーは詳細とまったく同じ共通実装(renderMonsterSummaryHeader)を使う。
+  // 出すのは実際に保存されている項目だけで、無いものは行ごと出さない。
+  const renderFusionDetailModal = () => {
+    if (!fusionDetail || !fusionDetail.mon || !fusionDetail.masu) return null;
+    const { mon, masu, power, zIndex = 31500 } = fusionDetail;
+    const close = () => setFusionDetail(null);
+    const history = normalizeFusionHistory(masu);
+    const total = fusionTotalCount(masu, history);
+    const hasDetail = fusionHistoryHasDetail(history);
+    // 記録に中身が残っているぶんだけを新しい順に並べる。上限で切られた記録でも
+    // 「何回目の合体か」がずれないよう、切られたぶんを番号に足す
+    const shown = history.filter(h => h.hasDetail);
+    const offset = total - shown.length;
+    const rows = shown.map((h, idx) => ({ ...h, no: offset + idx + 1 })).reverse();
+    return (
+      <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex}} role="dialog" aria-modal="true" aria-label={`${mon.name}の合体詳細`}>
+        <div className="bg-slate-900 border-2 border-amber-500 rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden"
+             style={{maxHeight:'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'}}>
+          <div className="flex items-center justify-between shrink-0">
+            <h3 className="text-[11px] font-black text-amber-300 uppercase tracking-widest flex items-center gap-1"><Sparkles size={12}/>合体詳細</h3>
+          </div>
+          {renderMonsterSummaryHeader({
+            mon, masu, onClose: close, power, compact: true,
+            extraLine: <div className="text-[10px] font-black text-amber-200">合体回数 {total}回</div>,
+          })}
+          <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5">
+            {renderDetailSectionLabel('合体履歴', total > 0 ? '新しい合体が上' : null)}
+            {total === 0 && (
+              <div className="text-[10px] text-slate-400 font-bold text-center py-6">まだ合体履歴はありません</div>
+            )}
+            {total > 0 && !hasDetail && (
+              <div className="bg-black/40 p-3 rounded-xl border border-white/10 text-center">
+                <div className="text-[11px] font-black text-amber-200">合体回数 {total}回</div>
+                <div className="text-[9px] text-slate-400 font-bold mt-1 leading-relaxed">詳細な合体履歴はこの記録には保存されていません</div>
+              </div>
+            )}
+            {rows.map((h) => (
+              <div key={h.no} className="bg-black/40 rounded-xl border border-amber-500/20 px-2.5 py-2">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-[10px] font-mono font-black text-amber-400/80 shrink-0">#{h.no}</span>
+                  {fusionDateText(h.timestamp) && <span className="text-[8px] text-slate-500 font-bold tabular-nums shrink-0">{fusionDateText(h.timestamp)}</span>}
+                </div>
+                <div className="text-[11px] font-black text-white truncate mt-0.5">
+                  {h.subName || h.subBaseName || '記録なし'}
+                  {h.subBaseName && <span className="text-[9px] text-slate-400 font-bold">（{h.subBaseName}）</span>}
+                </div>
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-1">
+                  {h.subBondLevel != null && <span className="text-[9px] text-pink-300 font-black flex items-center gap-0.5"><Heart size={8}/>相手の絆 Lv.{h.subBondLevel}</span>}
+                  {h.xpGained != null && <span className="text-[9px] text-pink-200 font-mono font-black tabular-nums">+{h.xpGained.toLocaleString()} XP</span>}
+                </div>
+                {h.inherited && (
+                  <div className="mt-1 text-[9px] font-black text-amber-300 flex items-center gap-1 bg-amber-950/40 border border-amber-500/30 rounded-lg px-2 py-1">
+                    <Zap size={9}/>固有技を継承{h.inheritedUnique?.name && <span className="text-amber-100 truncate">：{h.inheritedUnique.name}</span>}
+                  </div>
+                )}
+              </div>
+            ))}
+            {shown.length > 0 && offset > 0 && (
+              <div className="text-[8px] text-slate-500 font-bold text-center pt-1">この記録には直近{shown.length}件ぶんの履歴が残っています（全{total}回）</div>
+            )}
+          </div>
+          <button onClick={close} className="w-full min-h-[48px] bg-amber-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg shrink-0 active:scale-95">閉じる</button>
         </div>
       </div>
     );
@@ -7871,18 +8051,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   //   detailOpts… renderMonsterDetailInfo への画面固有の差し込み
   //   bodyExtra … その画面だけの追加セクション
   //   footer    … 決定・強化などの操作(渡さなければ「閉じる」だけ)
-  const renderMonsterDetailModal = ({ mon, masu = null, onClose, onRename = null, accent = 'indigo', detailOpts = {}, bodyExtra = null, footer = null, zIndex = 31000, label = null, paddingTop = undefined }) => {
+  //   power/powerNote … ランキングのように記録時点の総合力を出したいときだけ渡す
+  //   readOnly        … 他人の記録を見ているとき。所有者だけの操作は呼び出し元が渡さない決まり
+  const renderMonsterDetailModal = ({ mon, masu = null, onClose, onRename = null, accent = 'indigo', detailOpts = {}, bodyExtra = null, footer = null, zIndex = 31000, label = null, paddingTop = undefined, power = undefined, powerNote = null, readOnly = false }) => {
     if (!mon) return null;
     const accentClass = accent === 'pink' ? 'border-pink-500' : 'border-indigo-500';
     return (
       <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex,paddingTop}} role="dialog" aria-modal="true" aria-label={label||`${mon.name}の詳細`}>
         <div className={`bg-slate-900 border-2 ${accentClass} rounded-3xl p-4 w-full max-w-sm flex flex-col gap-2 shadow-2xl h-auto overflow-hidden`}
              style={{maxHeight:'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)'}}>
-          {renderMonsterSummaryHeader({ mon, masu, onRename, onClose })}
+          {renderMonsterSummaryHeader({ mon, masu, onRename: readOnly ? null : onRename, onClose, power, powerNote })}
           <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
             {renderDetailSectionLabel('この個体の強さ', '総合力に反映されます')}
             {renderMonsterDetailInfo(mon, detailOpts)}
-            {masu && renderFusionSection(masu)}
+            {masu && renderFusionSection(masu, { mon, power, readOnly, zIndex })}
             {bodyExtra}
           </div>
           {footer || <button onClick={onClose} className="w-full min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg shrink-0 active:scale-95">閉じる</button>}
@@ -11116,12 +11298,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
         const sp = masu.statPoints || {};
         const statRow = (label, value, plus, color) => [label, (<>{value}{plus>0&&<span className="text-emerald-400 text-[8px]"> (+{plus})</span>}</>), color];
+        // 総合力は「その記録を作った時点」の値を出す。古い記録には残っていないので、
+        // そのときだけ今のデータで計算し直したものを出し、記録時点の値ではないと断る。
+        // どちらも計算は共通の monsterPowerOf(第1段階)を通す
+        const snapshotPower = masu.powerSnapshot;
+        const shownPower = snapshotPower != null ? snapshotPower : monsterPowerOf(mon);
+        const powerNote = snapshotPower != null ? null : 'この記録には総合力が残っていないため、いまのデータで計算した参考値です';
         // ランキングから開く詳細も、他の画面と同じマスターUIを使う(読み取り専用)
         return renderMonsterDetailModal({
           mon,
           masu,
           onClose: close,
           zIndex: 41900,
+          readOnly: true,
+          power: shownPower,
+          powerNote,
           detailOpts: {
             statTitle: '現在のステータス(強化分込み)',
             statValues: [
@@ -11143,6 +11334,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           footer: <button onClick={close} className="w-full min-h-[48px] rounded-2xl bg-white text-black font-black text-sm active:scale-[.98] shrink-0">とじる</button>,
         });
       })()}
+
+      {/* 合体詳細。自分のマスモンからもランキングの個体からも同じここへ入る。
+          モンスター詳細より上へ重ねたいので、開いた元のzIndexより高い値を持たせてある */}
+      {renderFusionDetailModal()}
 
       {/* DECK INFO */}
       {showDeckInfo&&(<div className="fixed inset-0 z-[40000] p-4 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2"><h3 className="font-black italic uppercase text-indigo-400 text-base">Deck View</h3><button onClick={()=>setShowDeckInfo(false)} className="px-4 py-2 bg-white/10 rounded-full text-[11px] active:scale-90 text-white">閉じる</button></div><div className="flex-1 overflow-y-auto">{(()=>{

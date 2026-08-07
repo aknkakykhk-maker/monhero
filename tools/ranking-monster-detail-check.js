@@ -27,7 +27,7 @@ vm.runInContext([
 ].join('\n'), ctx);
 const { ALL_PLAYER_MONSTERS } = ctx.__x;
 
-const { rankingMasuDetail, rankingDetailToMasu, masuBondLevelInfo, getMonsterAptPct, formatAptBonus, DIST_APTITUDE_GRADES } = loadDyeModule();
+const { rankingMasuDetail, rankingDetailToMasu, masuBondLevelInfo, getMonsterAptPct, formatAptBonus, DIST_APTITUDE_GRADES, masuPowerOf, normalizeFusionHistory } = loadDyeModule();
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -89,6 +89,10 @@ for (let i = 0; i < ids.length; i++) {
   same('固有技Lv', masu.uniqueSkillLevels, back.uniqueSkillLevels);
   same('染色', masu.colors, back.colors);
   same('合体回数', masu.fusionHistory.length, back.fusionHistory.length);
+  // 合体履歴の中身(v2で追加)。相手の名前まで往復すること
+  same('合体履歴', masu.fusionHistory.map(h => h.subName), normalizeFusionHistory(back).map(h => h.subName));
+  // 記録した時点の総合力。共通の計算(masuPowerOf)と同じ値が残ること
+  same('総合力スナップショット', masuPowerOf(masu), back.powerSnapshot);
   same('継承した技', [otherId], back.inheritedUniques.map(u => u.monId));
   same('継承した技のLv', [4], back.inheritedUniques.map(u => u.evoLevel));
   // 絆レベルは絆XPから出しているので、往復後も同じレベルになること
@@ -99,6 +103,12 @@ check('育て方が往復しても変わらない', mismatched.length === 0, mis
 // 記録が重くならないこと(以前ここへ画像を入れて読み込みが終わらなくなったことがある)
 const maxSize = Math.max(...sizes);
 check('1体ぶんの詳細が十分小さい', maxSize < 600, `最大 ${maxSize} バイト（4体で最大 ${maxSize * 4} バイト）`);
+// 記録に絵や技の説明を入れていないこと(端末が同じものを持っているので送る必要がない)
+check('記録に絵・技の中身を入れていない',
+  sizes.length > 0 && !/data:|base64|iconUrl|imgUrl|faceIconUrl|effectDesc|\.png/i.test(JSON.stringify(rankingMasuDetail({
+    id: 'x', baseId: ids[0], name: 'a', bondXp: 1000, statPoints: {}, uniqueSkillLevels: {},
+    fusionHistory: [{ subName: 'z', subBaseId: ids[1], xpGained: 1, inherited: true, timestamp: Date.now() }],
+  }))));
 
 // 壊れた記録・知らないモンスターでも落ちないこと
 const robust = [
