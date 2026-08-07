@@ -122,6 +122,9 @@ max(1, round(50 × level^1.4 × 0.05))
 
 ### 保存しない
 
+ランキングだけは例外で、記録を作った時点の総合力を **`detail.power` として数値1つだけ保存する**（§5.6）。
+セーブデータ（`mh_*`）には保存しない。
+
 総合力そのものは**セーブデータへ保存しない**。現在の個体データから毎回計算する派生値なので、
 能力の変更・間合い適性の変更・固有技の強化・継承技の追加・リセットへ自動で追従する。
 ベースモンは基礎能力・基礎の4距離適性・自前の固有技1個から同じ式で計算するため、マスモンと比較できる。
@@ -134,6 +137,39 @@ max(1, round(50 × level^1.4 × 0.05))
 
 回帰確認: `node tools/monster-power-check.js`
 
+## 5.6. ランキングの記録形（RANKING_DETAIL_VERSION）
+
+ランキングの1体ぶんの詳細は `rankingMasuDetail(masu)` が作り、`rankingDetailToMasu(baseId, detail, colors)`
+が表示用の「マスモン相当」へ戻す。Supabase のスキーマは変えず、既存の `party[].detail` の JSON の中だけで拡張する。
+
+| 版 | 追加したもの |
+|---|---|
+| v1 | 名前・絆XP・限界突破・Lv上限・強化ステータス・間合い適性・強化P・固有技Lv・継承技(monId+Lv)・`fusionCount` |
+| v2 | `power`（記録時点の総合力）と `fusion`（合体履歴の中身） |
+
+- `power` は必ず共通の `monsterPowerOf(mergeMasuIntoMon(masu))` で作る。ランキング専用の式は作らない。
+  あとで種のバランス・能力・距離適性・固有技を変えても、過去の記録の数字が動かないようにするためのもの。
+- `fusion` は1件 `{ b:相手の種ID, n:当時の個体名, l:相手の絆Lv, x:獲得XP, i:継承1, t:日時(秒) }`。
+  空の項目は入れない。件数は `RANKING_FUSION_MAX`（12件）で切り、切っても `fusionCount` には本当の回数を残す。
+- 絵・技の説明・base64 は**絶対に入れない**。どの端末も同じデータを持っているので、IDから引き直す。
+  1体あたり v1相当236バイト → v2(合体3回)431バイト → v2(上限12件)933バイト。
+
+### 旧記録との互換
+
+- v1 の記録には `power` が無い。そのときは**現在の共通計算で出した参考値**を表示し、
+  「この記録には総合力が残っていないため、いまのデータで計算した参考値です」と断る。
+  **0 を総合力として表示しない**（分からないときは `—`）。
+- v1 の記録には `fusion` が無い。`fusionCount` ぶんの空の項目だけを置き、履歴の中身は作らない。
+- 壊れた記録（`fusion` が配列でない、`power` が負や文字列）でも落ちず、既定値へ倒す。
+
+### ランキングの詳細は readOnly
+
+ランキングから開くモンスター詳細・合体詳細は、自分の個体と**同じ** `renderMonsterDetailModal` /
+`renderFusionDetailModal` を使う。違いは `readOnly: true` を渡すことだけで、
+名前変更・強化・編成・合体・限界突破・転生・寄付といった所有者だけの操作は呼び出し元が渡さない。
+
+回帰確認: `node tools/ranking-monster-detail-check.js`、`node tools/fusion-detail-check.js`
+
 ## 6. 融合
 
 - 主と副の異なる2個体を選ぶ。費用は `(主の絆Lv + 副の絆Lv) × 100` ゴールド。
@@ -141,6 +177,36 @@ max(1, round(50 × level^1.4 × 0.05))
 - 主・副がともに絆Lv10以上で、継承を選択した場合、副の種の固有技を `inheritedUniques` へ追加する。
 - 融合履歴には副名、種ID、融合時絆Lv、獲得XP、継承有無、時刻を残す。
 - 副が編成中なら編成から除く。主の種、名前、強化、染色は維持される。
+
+### 6.1. 合体詳細
+
+モンスター詳細が「いまの個体を見る場所」なのに対し、合体詳細は
+**「その個体がどんな合体を重ねて今に至ったか」を見る場所**として分離してある。
+
+- モンスター詳細に置くのは `renderFusionSection` のサマリー1行（`合体回数 N回` ＋ `合体詳細を見る ＞`）だけ。
+  合体が0回でも出す（入口の場所が個体によって変わらないようにするため）。
+- 本体は `renderFusionDetailModal`。上部サマリーは詳細とまったく同じ `renderMonsterSummaryHeader` を
+  `compact: true` で使い、画像・個体名・元のベースモン名・総合力・合体回数だけを出す。
+- 履歴は**新しい合体が上**（`#3 → #2 → #1`）。1件に出すのは実際に保存されている項目だけで、
+  日時・相手の絆Lv・獲得XPは保存が無ければ行ごと出さない。
+- 継承した固有技そのものは履歴に持っていない。継承したのは必ず相手の種の固有技なので、
+  主の `inheritedUniques` から同じ `monId` のものを探して名前を出し、見つからなければ種の固有技名を出す。
+- 0件なら「まだ合体履歴はありません」。
+- 読み取りは `normalizeFusionHistory(masu)` が正本。保存が無い項目は `null` のままにし、推測で埋めない。
+
+### 6.2. ランキングの合体詳細
+
+ランキングの記録から復元した個体でも、同じ `renderFusionDetailModal` へ入る（readOnly）。
+合体回数しか残っていない古い記録では、履歴を作らず
+
+```
+合体回数 3回
+詳細な合体履歴はこの記録には保存されていません
+```
+
+と出す。架空の相手・日時は生成しない（`hasDetail` で見分ける）。
+
+回帰確認: `node tools/fusion-detail-check.js`
 
 ## 7. 転生
 
@@ -160,4 +226,7 @@ max(1, round(50 × level^1.4 × 0.05))
 - 育成・融合・染色: `mergeMasuIntoMon`、`reconcileMasuPoints`、`executeMasuFusion`、`useDyeItem`
 - 総合力: `monsterPowerOf` / `masuPowerOf` / `applyEnhancePlanToMasu`（`game-system.jsx` のモジュール直下）
 - モンスター詳細のマスターUI: `renderMonsterDetailModal` / `renderMonsterSummaryHeader` / `renderMonsterDetailInfo`
-- 回帰確認: `node tools/monster-power-check.js`、`node tools/monster-detail-unified-check.js`、`node tools/bulk-enhance-check.js`、`node tools/dye-report.js`、`node tools/battle-check.js`
+- 一覧カードのマスターUI: `renderMonsterCardBody`
+- 合体詳細: `renderFusionSection` / `renderFusionDetailModal` / `normalizeFusionHistory`
+- ランキングの記録形: `RANKING_DETAIL_VERSION` / `rankingMasuDetail` / `rankingDetailToMasu`
+- 回帰確認: `node tools/monster-power-check.js`、`node tools/monster-detail-unified-check.js`、`node tools/fusion-detail-check.js`、`node tools/ranking-monster-detail-check.js`、`node tools/bulk-enhance-check.js`、`node tools/dye-report.js`、`node tools/battle-check.js`

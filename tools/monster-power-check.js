@@ -164,7 +164,9 @@ check('一覧カードが共通関数を使う',
   /masuPowerOf\(masu\)\s*:\s*monsterPowerOf\(base\)/.test(source)
   && /monsterCardPower\(power\)/.test(source)
   && (source.match(/monsterCardPower\(/g) || []).length === 1);
-check('詳細の上部サマリーが共通関数を使う', /const power = monsterPowerOf\(mon\);/.test(source));
+// ランキングは記録時点の総合力(powerOverride)を渡せるが、渡されなければ共通の計算に落ちる
+check('詳細の上部サマリーが共通関数を使う',
+  /const power = powerOverride !== undefined \? powerOverride : monsterPowerOf\(mon\);/.test(source));
 check('並べ替えが共通関数を使う', /power: masuPowerOf\(masu\)/.test(source) && /power: monsterPowerOf\(base\)/.test(source));
 check('並べ替えに総合力がある', /\{ key: 'power', label: '総合力' \}/.test(source) && /monsterSortKey === 'power'/.test(source));
 check('強化画面が共通関数を使う', /const currentPower = masuPowerOf\(masu\);/.test(source) && /plannedMasuPowerOf\(masu, plan\)/.test(source));
