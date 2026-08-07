@@ -69,22 +69,38 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: マスモンの現在ステータス表記が残っている`, code.includes('現在のステータス(強化分込み)'));
   check(`${label}: マスモンの所持固有技Lvが残っている`, code.includes('所持固有技Lv'));
   check(`${label}: マスモンの強化ポイント表示が残っている`, code.includes('masu.distAptPoints'));
-  // 勇者モン選択・供モン選択のカード。ここだけ素の立ち絵(imgUrl)を68pxで貼っていたため、
-  // 他の一覧と見た目が違い、マスモンの限界突破★・転生バッジも出ていなかった
-  const cardStart = code.indexOf('const pickMasu');
-  const cardEnd = cardStart > 0 ? code.indexOf('詳細を見る', cardStart) : -1;
-  const card = cardStart > 0 && cardEnd > 0 ? code.slice(cardStart, cardEnd) : '';
-  check(`${label}: 勇者モン選択・供モン選択のカードが見つかる`, card.length > 0);
-  check(`${label}: カードのアイコンは丸くくり抜いたiconUrl`,
-    /m\.iconUrl\s*\|\|\s*m\.imgUrl/.test(card) && card.includes('rounded-full') && card.includes('object-cover'));
-  check(`${label}: 素の立ち絵をそのまま貼る形に戻っていない`,
-    !card.includes('object-contain') && !card.includes('68px'));
-  check(`${label}: マスモンなら限界突破★と転生バッジが出る`,
-    /RebirthStars[\s\S]{0,120}pickMasu\.rebirthCount/.test(card) && /ReincarnateBadge[\s\S]{0,120}pickMasu\.reincarnateCount/.test(card));
-  check(`${label}: マスモンだけアイコンの枠と名前の色を変える`,
-    card.includes('border-pink-400/40') && card.includes('text-pink-200'));
-  check(`${label}: カードに総合力がある`, /monsterCardPower\(monsterPowerOf\(m\)\)/.test(card));
-  check(`${label}: 長い名前がカードからはみ出さない`, card.includes('truncate'));
+  // ===== 一覧カードのマスターUI =====
+  // 編成・ベースモン一覧・マスモン一覧・放牧設定・勇者モン選択/供モン選択が、同じ1つの実装で
+  // 描かれていること。以前は画面ごとにJSXを書き写していたため、勇者モン選択と供モン選択だけ
+  // 絆レベルも総合力も限界突破の★も出ず、同じマスモンが画面によって違う見た目になっていた
+  check(`${label}: 一覧カードの共通実装がある`, code.includes('renderMonsterCardBody = ({'));
+  const bodyStart = code.indexOf('renderMonsterCardBody = ({');
+  const cardBody = bodyStart > 0 ? code.slice(bodyStart, code.indexOf('getDistAptitude = (mon, slotIdx)', bodyStart)) : '';
+  check(`${label}: 共通カードは丸くくり抜いたiconUrlを使う`,
+    /base\.iconUrl\s*\|\|\s*base\.imgUrl/.test(cardBody) && cardBody.includes('MONSTER_CARD_ICON_CLASS') && cardBody.includes('object-cover'));
+  check(`${label}: 共通カードは素の立ち絵をそのまま貼らない`, !cardBody.includes('object-contain'));
+  check(`${label}: 共通カードにマスモンの限界突破★と転生バッジがある`,
+    /RebirthStars[\s\S]{0,120}masu\.rebirthCount/.test(cardBody) && /ReincarnateBadge[\s\S]{0,120}masu\.reincarnateCount/.test(cardBody));
+  check(`${label}: 共通カードに名前・絆Lv・総合力・強化P・状態がある`,
+    cardBody.includes('monsterCardName(') && cardBody.includes('monsterCardBond(') && cardBody.includes('monsterCardPower(')
+    && cardBody.includes('強化P') && cardBody.includes('monsterCardStatus('));
+  check(`${label}: マスモンだけふちと名前の色を変える`,
+    cardBody.includes('border-pink-400/40') && cardBody.includes('text-pink-200'));
+  // カードの行を組む部品は共通実装の中だけで使う(画面ごとに書き写すと今回の食い違いが再発する)
+  for (const part of ['monsterCardName(', 'monsterCardInfo(', 'monsterCardPower(', 'monsterCardSub(', 'monsterCardStatus(', 'monsterCardBond(']) {
+    const times = (code.split(part).length - 1);
+    check(`${label}: ${part.replace('(', '')} を使うのは共通実装だけ`, times === 1, `${times}か所`);
+  }
+  // 呼び出し側: 一覧を出すすべての画面が共通実装を通ること
+  const cardCalls = (code.match(/renderMonsterCardBody\(\{/g) || []).length;
+  check(`${label}: すべての一覧画面が共通カードを呼ぶ`, cardCalls === 6, `${cardCalls}か所(編成2・ベースモン一覧・マスモン一覧・放牧設定・勇者モン選択/供モン選択)`);
+  const pickStart = code.indexOf('const pickMasu');
+  const pickEnd = pickStart > 0 ? code.indexOf('詳細を見る', pickStart) : -1;
+  const pick = pickStart > 0 && pickEnd > 0 ? code.slice(pickStart, pickEnd) : '';
+  check(`${label}: 勇者モン選択・供モン選択も共通カードを通す`,
+    /renderMonsterCardBody\(\{[\s\S]{0,200}masu:\s*pickMasu/.test(pick));
+  check(`${label}: 勇者モン選択の固有技名とステータスが残っている`,
+    pick.includes('m.unique.name') && pick.includes('m.baseHp') && pick.includes('m.plusStats?.guts'));
 
   // マスモンの絆XPゲージは共通サマリーの中だけ(ブリーダーLvのゲージは別物なので数えない)
   check(`${label}: マスモンの絆XPゲージは共通サマリーの中に1つだけ`,

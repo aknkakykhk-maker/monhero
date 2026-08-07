@@ -158,7 +158,12 @@ const uses = (needle) => (source.match(new RegExp(needle.replace(/[.*+?^${}()|[\
 check('総合力の式は1か所だけ',
   uses('* MONSTER_POWER_STAT_WEIGHT.') === 4 && uses('const monsterPowerParts') === 1 && uses('const monsterPowerOf') === 1,
   `重みの掛け算 ${uses('* MONSTER_POWER_STAT_WEIGHT.')}回`);
-check('一覧カードが共通関数を使う', /monsterCardPower\(masuPowerOf\(masu\)\)/.test(source) && /monsterCardPower\(monsterPowerOf\(/.test(source));
+// 一覧カードは画面ごとに書かず renderMonsterCardBody 1か所で総合力を出す。
+// 画面ごとに書き写していたころ、勇者モン選択だけ総合力が出ていなかった
+check('一覧カードが共通関数を使う',
+  /masuPowerOf\(masu\)\s*:\s*monsterPowerOf\(base\)/.test(source)
+  && /monsterCardPower\(power\)/.test(source)
+  && (source.match(/monsterCardPower\(/g) || []).length === 1);
 check('詳細の上部サマリーが共通関数を使う', /const power = monsterPowerOf\(mon\);/.test(source));
 check('並べ替えが共通関数を使う', /power: masuPowerOf\(masu\)/.test(source) && /power: monsterPowerOf\(base\)/.test(source));
 check('並べ替えに総合力がある', /\{ key: 'power', label: '総合力' \}/.test(source) && /monsterSortKey === 'power'/.test(source));
