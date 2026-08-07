@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 02435f6f7febac82
+// source-sha256: 4d3b5a28db06fccc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 06:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 07:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -156,9 +156,20 @@ const goldForWavesCleared = (wavesCleared, mult) => {
 // 増える値はここだけで決まる。バトル本体は複製せず、この定義とモードの分岐で振る舞いを変える。
 const BATTLE_MODE_CHALLENGE = 'challenge';
 const BATTLE_MODE_QUICK = 'quick';
-const normalizeBattleMode = value => value === BATTLE_MODE_QUICK ? BATTLE_MODE_QUICK : BATTLE_MODE_CHALLENGE;
+// プロモード: ベースモンだけで挑み、新しいマスモンを育てる価値を高めたモード。
+// バトルの中身はチャレンジと同じで、違うのは「編成がベースモン限定」「経験値の倍率」
+// 「記録の置き場(mh_pro_* とプロ専用ランキング)」だけ。
+// 画面はまだデバッグからしか開けない(本番のバトル導線は従来どおり)
+const BATTLE_MODE_PRO = 'pro';
+const normalizeBattleMode = value => value === BATTLE_MODE_QUICK || value === BATTLE_MODE_PRO ? value : BATTLE_MODE_CHALLENGE;
 // クイックモードで経験値・ダイヤにかかる倍率(スコアにはかけない)
 const QUICK_REWARD_MULT = 1.5;
+// プロモードの倍率。「全部3倍」ではなく、絆経験値とブリーダー経験値で別々にかける
+const PRO_BOND_XP_MULT = 3;
+const PRO_BREEDER_XP_MULT = 1.5;
+// プロモードで始める前に選ぶ供モン候補の数と、そこから実際に加入候補として出す数
+const PRO_ALLY_POOL_SIZE = 5;
+const PRO_ALLY_OFFER_SIZE = 3;
 // クイックモードでWAVEごとに味方の全ステータスへかける倍率
 const QUICK_GROWTH_MULT = 1.10;
 const calculateRemainingHp = (currentHp, finalDamage) => Math.max(0, (Number(currentHp) || 0) - (Number(finalDamage) || 0));
@@ -177,11 +188,19 @@ const resolveQuickGrowthStats = ({
   guts: quickGrowStat(guts)
 });
 const isQuickMode = mode => normalizeBattleMode(mode) === BATTLE_MODE_QUICK;
+const isProMode = mode => normalizeBattleMode(mode) === BATTLE_MODE_PRO;
 // 難易度倍率をかけたあとの獲得量へ、さらにモードの倍率をかける。
-// WAVEごとの内訳と合計がずれないよう、内訳と同じ「WAVE単位で丸めてから合計」に揃える
-const applyModeReward = (value, mode) => isQuickMode(mode) ? Math.floor(value * QUICK_REWARD_MULT) : value;
-const waveXpGainInMode = (waveNum, mult, mode) => applyModeReward(waveXpGain(waveNum, mult), mode);
-const waveGoldGainInMode = (waveNum, mult, mode) => applyModeReward(waveGoldGain(waveNum, mult), mode);
+// WAVEごとの内訳と合計がずれないよう、内訳と同じ「WAVE単位で丸めてから合計」に揃える。
+// 倍率はブリーダー経験値・絆経験値・ダイヤで別々に決める。
+// プロは絆だけ3倍・ブリーダーは1.5倍で、ダイヤとスコアはチャレンジと同じ
+const modeBreederXpMult = mode => isQuickMode(mode) ? QUICK_REWARD_MULT : isProMode(mode) ? PRO_BREEDER_XP_MULT : 1;
+const modeBondXpMult = mode => isQuickMode(mode) ? QUICK_REWARD_MULT : isProMode(mode) ? PRO_BOND_XP_MULT : 1;
+const modeGoldMult = mode => isQuickMode(mode) ? QUICK_REWARD_MULT : 1;
+const applyModeReward = (value, mult) => mult === 1 ? value : Math.floor(value * mult);
+const waveXpGainInMode = (waveNum, mult, mode) => applyModeReward(waveXpGain(waveNum, mult), modeBreederXpMult(mode));
+const waveGoldGainInMode = (waveNum, mult, mode) => applyModeReward(waveGoldGain(waveNum, mult), modeGoldMult(mode));
+// 絆経験値はブリーダー経験値と同じ基準値から作るが、かける倍率だけが違う
+const waveBondXpGainInMode = (waveNum, mult, mode) => applyModeReward(waveXpGain(waveNum, mult), modeBondXpMult(mode));
 const xpForWavesClearedInMode = (wavesCleared, mult, mode) => {
   let sum = 0;
   for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveXpGainInMode(w, mult, mode);
@@ -192,11 +211,18 @@ const goldForWavesClearedInMode = (wavesCleared, mult, mode) => {
   for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveGoldGainInMode(w, mult, mode);
   return sum;
 };
+const bondXpForWavesClearedInMode = (wavesCleared, mult, mode) => {
+  let sum = 0;
+  for (let w = 1; w <= Math.min(10, wavesCleared); w++) sum += waveBondXpGainInMode(w, mult, mode);
+  return sum;
+};
 // 自己ベスト・最高到達WAVE・クリア回数の保存キー。チャレンジは従来のキーをそのまま使い、
 // クイックは別のキーへ保存して、チャレンジの記録を上書きしないようにする
-const bestScoreKey = (mode, diff) => isQuickMode(mode) ? `mh_quick_hs_${diff}` : `mh_hs_${diff}`;
-const bestWaveKey = (mode, diff) => isQuickMode(mode) ? `mh_quick_highest_wave_${diff}` : `mh_highest_wave_${diff}`;
-const clearCountKey = (mode, diff) => isQuickMode(mode) ? `mh_quick_clears_${diff}` : `mh_clears_${diff}`;
+// プロは mh_pro_* へ分ける。チャレンジ(mh_*)・クイック(mh_quick_*)のキーには一切触らない
+const modeKeyPrefix = mode => isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) ? 'mh_pro_' : 'mh_';
+const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
+const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
+const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
 // モードの表示情報と「？」で出す説明。文言を1か所にまとめ、タブ・カード・説明の食い違いを防ぐ
 const BATTLE_MODES = [{
   id: BATTLE_MODE_CHALLENGE,
@@ -214,8 +240,25 @@ const BATTLE_MODES = [{
   color: '#2dd4bf',
   tagline: 'テンポ重視。WAVEごとに自動で強くなる',
   points: [['🚫', 'ランキング対象外', 'このモードのスコアはランキングに反映されません'], ['⚔️', '強化フェーズなし', '通常の強化選択を行わず、テンポよく進行します'], ['📈', 'WAVEごとに自動成長', '味方全員の全ステータスが10%上昇し、ライフとガッツが全回復します'], ['👹', '難易度は高め', '強化内容を選べないため、チャレンジモードとは異なる難しさがあります'], ['🤝', '供モン加入あり', '供モン加入時は、味方の誰かの固有技がランダムで1上昇します'], ['⭐', 'マスモン登録あり', 'クイックモードで完成したモンスターも登録できます'], ['💎', '経験値・ダイヤ1.5倍', '獲得できる経験値とダイヤが1.5倍になります（スコア倍率は難易度どおりです）'], ['🎯', 'おすすめのプレイスタイル', 'テンポよく育成したいときや、自動成長だけでどこまで進めるか腕試ししたい人向けです']]
+}, {
+  id: BATTLE_MODE_PRO,
+  label: 'プロモード',
+  short: 'プロ',
+  emoji: '🎓',
+  color: '#f472b6',
+  tagline: 'ベースモン限定。新しいマスモンを一気に育てる',
+  points: [['🚫', 'ベースモン限定', '育てたマスモンは編成できません。素のベースモンだけで挑みます'], ['💗', '絆経験値3倍', '獲得できる絆経験値がチャレンジモードの3倍になります'], ['👑', 'ブリーダー経験値1.5倍', '獲得できるブリーダー経験値がチャレンジモードの1.5倍になります'], ['🏆', 'プロ専用ランキング', 'スコアはチャレンジとは別の「プロランキング」に反映されます'], ['🤝', '供モンは5体から3体', '始める前に供モン候補を5体選び、その中から3体がランダムで加入候補になります'], ['⭐', 'マスモン登録あり', '勇者モンにしたベースモンは、これまでどおりマスモンとして登録できます'], ['💎', 'ダイヤとスコアは通常どおり', 'ダイヤとスコアの倍率は難易度の設定どおりです'], ['🎯', 'おすすめのプレイスタイル', '新しいマスモンを一から育てたい人、育成の効率を上げたい人向けです']]
 }];
 const battleModeInfo = mode => BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
+// いま本番のバトル画面へ出しているモード。プロモードは新しい入口(モード選択画面)と
+// セットで公開する予定なので、今の段階では既存のタブへ出さない。
+// BATTLE_MODES 自体には入れてあるので、デバッグからの動作確認・ヘルプの表・検査からは見える
+const PUBLIC_BATTLE_MODES = BATTLE_MODES.filter(mode => mode.id !== BATTLE_MODE_PRO);
+// スコアランキングがあるモードかどうか。クイックだけ対象外
+const modeHasRanking = mode => !isQuickMode(mode);
+// そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
+// 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
+const modeBondAction = mode => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';
 // そのレベルから次レベルに必要なXP(基準値)。指数を上げるほど高レベルが急に重くなる。
 // 10WAVE完全クリアを1周=100XPとして、Lv30到達までの周回数は次のように緩和してきている。
 //   指数1.8(当初)  … ブリーダー約580周 / 絆約410周
@@ -6841,9 +6884,21 @@ const SB_HEADERS = {
 };
 
 // 画面表示名とDB識別子を分離し、ランキング通信では必ず既存の難易度keyへ正規化する。
+// プロのランキングはチャレンジと混ざらないよう、難易度キーの先頭へ Pro を付けて別枠にする。
+// 既存のチャレンジの記録(difficulty='Hard' など)はそのままで、行の書き換えも変換も行わない。
+// Supabaseの列(スキーマ)は変えず、difficulty へ入れる値だけで分ける
+const PRO_RANKING_PREFIX = 'Pro';
+const RANKING_DIFFICULTY_KEYS = Object.freeze([...Object.keys(DIFFICULTY_SETTINGS), ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`)]);
+// そのモード・難易度の記録を置く難易度キー。チャレンジは従来どおりの値をそのまま使う
+const rankingDifficultyForMode = (mode, diff) => isProMode(mode) ? `${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}` : normalizeBattleDifficulty(diff);
+// ランキングの難易度キーから、表示に使う素の難易度へ戻す
+const rankingDifficultyBase = key => {
+  const text = String(key || '');
+  return text.startsWith(PRO_RANKING_PREFIX) ? text.slice(PRO_RANKING_PREFIX.length) : text;
+};
 const normalizeRankingDifficulty = value => {
   const compact = String(value ?? '').trim().replace(/\s+/g, '').toLowerCase();
-  const canonical = Object.keys(DIFFICULTY_SETTINGS).find(key => key.toLowerCase() === compact);
+  const canonical = RANKING_DIFFICULTY_KEYS.find(key => key.toLowerCase() === compact);
   if (!canonical) throw new Error(`unknown ranking difficulty: ${String(value)}`);
   return canonical;
 };
@@ -7357,6 +7412,11 @@ function MonsterHeroGame() {
   const [quickHighScores, setQuickHighScores] = useState({});
   const [quickHighestWaves, setQuickHighestWaves] = useState({});
   const [quickClearCounts, setQuickClearCounts] = useState({});
+  // プロモードの記録も同じ考え方でさらに別枠へ持つ(mh_pro_*)。
+  // チャレンジ(mh_*)・クイック(mh_quick_*)のどちらの記録も読み書きしない
+  const [proHighScores, setProHighScores] = useState({});
+  const [proHighestWaves, setProHighestWaves] = useState({});
+  const [proClearCounts, setProClearCounts] = useState({});
   // このランで「自己ベストを更新したか」「その難易度を初めてクリアしたか」。
   // リザルトで助手に特別なセリフを言わせるためだけに使う(保存はしない)
   const [runHighlights, setRunHighlights] = useState({
@@ -8728,7 +8788,9 @@ function MonsterHeroGame() {
     // デバッグ戦は選択した敵を直接生成するため、WAVE番号だけに頼らず敵IDでもムーを判定する。
     // デュラハン専用曲はアレンジ設定より優先する既存仕様を維持する。
     if (state === 'BATTLE') {
-      // 曲はモードごとに分けて設定できる。ボス(ムー)戦だけは両モード共通
+      // 曲はモードごとに分けて設定できる。ボス(ムー)戦だけは全モード共通。
+      // プロモードは専用曲を新しく用意せず、チャレンジと同じ曲(battle / dullahan)を流す。
+      // BGM設定の項目も増やさないので、既存の保存値(mh_bgm_arrangement)はそのまま使える
       const quick = isQuickMode(runMode);
       if (enemyId === 'Durahan') return quick ? bgmArrangement.quickDullahan : bgmArrangement.dullahan;
       if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement.boss;
@@ -9402,6 +9464,10 @@ function MonsterHeroGame() {
       const quickScores = {};
       const quickClears = {};
       const quickWaves = {};
+      // プロモードもさらに別のキー(mh_pro_*)。まだ遊んだことがなければ既定値の0で埋まる
+      const proScores = {};
+      const proClears = {};
+      const proWaves = {};
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async d => {
         scores[d] = await storeGet(`mh_hs_${d}`, 0, false);
         attempts[d] = await storeGet(`mh_attempts_${d}`, 0, false);
@@ -9410,6 +9476,9 @@ function MonsterHeroGame() {
         quickScores[d] = await storeGet(bestScoreKey(BATTLE_MODE_QUICK, d), 0, false);
         quickClears[d] = await storeGet(clearCountKey(BATTLE_MODE_QUICK, d), 0, false);
         quickWaves[d] = await storeGet(bestWaveKey(BATTLE_MODE_QUICK, d), 0, false);
+        proScores[d] = await storeGet(bestScoreKey(BATTLE_MODE_PRO, d), 0, false);
+        proClears[d] = await storeGet(clearCountKey(BATTLE_MODE_PRO, d), 0, false);
+        proWaves[d] = await storeGet(bestWaveKey(BATTLE_MODE_PRO, d), 0, false);
       }));
       setHighScores(scores);
       highScoresRef.current = scores;
@@ -9419,6 +9488,9 @@ function MonsterHeroGame() {
       setQuickHighScores(quickScores);
       setQuickClearCounts(quickClears);
       setQuickHighestWaves(quickWaves);
+      setProHighScores(proScores);
+      setProClearCounts(proClears);
+      setProHighestWaves(proWaves);
       let wasOnboarded = await storeGet('mh_onboarded', null, false);
       const hasSavedName = typeof savedName === 'string' && savedName.trim() && savedName !== '名無しのブリーダー';
       const hasSavedIcon = typeof savedIcon === 'string' && savedIcon.length > 0;
@@ -9608,6 +9680,9 @@ function MonsterHeroGame() {
   // Normal/Hard/Masterを同じ経路で保存・反映する。
   const submitRunScoreOnce = async () => {
     if (score <= 0 || scoreSubmittedRef.current) return;
+    // デバッグ・練習の周回は、どのモードでも全国ランキングにも自己ベストにも残さない。
+    // 呼び出し側でも弾いているが、ここでも止めて「デバッグから遊んだら記録がついた」を確実に防ぐ
+    if (debugBattleRef.current) return;
     scoreSubmittedRef.current = true;
     // クイックモードはランキング対象外。送信も、チャレンジの自己ベスト更新も行わず、
     // 記録は専用のキーへだけ残す
@@ -9624,6 +9699,32 @@ function MonsterHeroGame() {
         }));
       }
       return;
+    }
+    // プロモードはランキングへ載せるが、チャレンジとは別枠(difficultyへ Pro を付けた値)へ送る。
+    // 自己ベストも mh_pro_hs_* へ分けるので、チャレンジの記録は書き換わらない
+    if (isProMode(runMode)) {
+      try {
+        const result = await submitLocalScore(rankingDifficultyForMode(BATTLE_MODE_PRO, difficulty), score, runIdRef.current);
+        if (!result?.nationalSaved) {
+          console.error('[result] pro score save failed:', result?.error?.message || 'unknown ranking error');
+          return result;
+        }
+        if (score > (proHighScores[difficulty] || 0)) {
+          await storeSet(bestScoreKey(BATTLE_MODE_PRO, difficulty), score, false);
+          setProHighScores(prev => ({
+            ...prev,
+            [difficulty]: score
+          }));
+          setRunHighlights(prev => ({
+            ...prev,
+            newRecord: true
+          }));
+        }
+        return result;
+      } catch (e) {
+        console.error('[result] pro score submit failed:', e && e.message ? e.message : e);
+        return;
+      }
     }
     try {
       const result = await submitLocalScore(difficulty, score, runIdRef.current);
@@ -11107,7 +11208,8 @@ function MonsterHeroGame() {
     // 登録する」を選んだ場合にのみ、この獲得量を初期値として新しいマスモンが作られる(registerMasuMon参照)
     // バトルへ参加した供モンには勇者モンの1/2、モンスター編成内で参加しなかった控えのマスモンには
     // 1/4を加算する。勇者・参加・控えの区分と個体IDは先に一意化し、同じ個体へ重複付与しない。
-    const gain = xpForWavesClearedInMode(wavesCleared, scoreMult, runMode);
+    // 絆経験値はブリーダー経験値と倍率が違う(プロは絆3倍・ブリーダー1.5倍)ので専用の関数を通す
+    const gain = bondXpForWavesClearedInMode(wavesCleared, scoreMult, runMode);
     const bondAwards = buildRunBondAwards({
       gain,
       heroMasuId: mainHero?.masuId,
@@ -11415,6 +11517,16 @@ function MonsterHeroGame() {
         [difficulty]: Math.max(prev[difficulty] || 0, nextQuick)
       }));
       await storeSet(clearCountKey(BATTLE_MODE_QUICK, difficulty), nextQuick, false);
+      return;
+    }
+    // プロモードのクリア回数も専用キーへ。チャレンジの通算クリア数(初勝利判定にも使う)は動かさない
+    if (isProMode(runMode)) {
+      const nextPro = (proClearCounts[difficulty] || 0) + 1;
+      setProClearCounts(prev => ({
+        ...prev,
+        [difficulty]: Math.max(prev[difficulty] || 0, nextPro)
+      }));
+      await storeSet(clearCountKey(BATTLE_MODE_PRO, difficulty), nextPro, false);
       return;
     }
     // 通算ではじめての優勝かどうか(どの難易度も1度もクリアしていない状態からの1勝目)
@@ -13578,6 +13690,14 @@ function MonsterHeroGame() {
           }));
           storeSet(bestWaveKey(BATTLE_MODE_QUICK, difficulty), w, false);
         }
+      } else if (isProMode(runMode)) {
+        if (w > (proHighestWaves[difficulty] || 0)) {
+          setProHighestWaves(prev => ({
+            ...prev,
+            [difficulty]: w
+          }));
+          storeSet(bestWaveKey(BATTLE_MODE_PRO, difficulty), w, false);
+        }
       } else if (w > (highestWaves[difficulty] || 0)) {
         setHighestWaves(prev => ({
           ...prev,
@@ -13618,7 +13738,7 @@ function MonsterHeroGame() {
     setWaveDistDamage([0, 0, 0, 0]);
     setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
-  }, [getNextEnemyAction, difficulty, highestWaves, quickHighestWaves, runMode]);
+  }, [getNextEnemyAction, difficulty, highestWaves, quickHighestWaves, proHighestWaves, runMode]);
 
   // defValは呼び出し元が直前に算出したばかりの丈夫さ(setDefで更新中の値)を明示的に渡すための引数。
   // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
@@ -13628,7 +13748,7 @@ function MonsterHeroGame() {
     // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
     if (w === 1 && !forcedEnemyKey) {
       addAssistantBond('battle');
-      addAssistantBond(isQuickMode(runMode) ? 'quick' : 'challenge');
+      addAssistantBond(modeBondAction(runMode));
     }
     setWave(w);
     // クイック成長で確定した最大値を明示的に引き継ぎ、次WAVE開始時も同じ値で全回復する。
@@ -16743,7 +16863,7 @@ function MonsterHeroGame() {
       className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1"
     }, battleMenuTab === 'difficulty' && /*#__PURE__*/React.createElement("div", {
       className: `grid grid-cols-2 gap-1 mb-0.5 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeTabs')}`
-    }, BATTLE_MODES.map(mode => {
+    }, PUBLIC_BATTLE_MODES.map(mode => {
       const on = battleMode === mode.id && battleMenuTab === 'difficulty';
       return /*#__PURE__*/React.createElement("div", {
         key: mode.id,

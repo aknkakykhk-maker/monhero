@@ -61,7 +61,7 @@ check('最大まで行くと次は無い', A.assistantBondNext(99999) === null);
 // --- セリフの数 ---
 // 画面ごとの目標。長く遊んでも同じことばかり言わないようにするための下限
 const SCENE_TARGET = {
-  home: 40, battleChallenge: 30, battleQuick: 20, temple: 30, ranking: 20,
+  home: 40, battleChallenge: 30, battleQuick: 20, battlePro: 20, temple: 30, ranking: 20,
   roster: 25, masuList: 20, market: 20, profile: 15, settings: 15, helpTop: 20,
 };
 const countOf = (key) => (A.ASSISTANT_SCENES[key]?.lines || []).length;
@@ -213,7 +213,7 @@ check('画面側はこれまでどおり scene を渡すだけ',
 for (const [key, wired] of Object.entries({
   login: "gainAssistantBond(savedBond, 'login')",
   battle: "addAssistantBond('battle')",
-  challenge: "addAssistantBond(isQuickMode(runMode) ? 'quick' : 'challenge')",
+  challenge: "addAssistantBond(modeBondAction(runMode))",
   ranking: "addAssistantBond('ranking')",
   temple: "addAssistantBond('temple')",
   market: "addAssistantBond('market')",

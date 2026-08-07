@@ -119,7 +119,29 @@ WAVE経験値基礎値は `[4,5,6,7,8,10,12,14,16,18]`、ゴールド基礎値�
 
 スコア加算の完全な式は `processTurn` 内に分散しているため、本書では一つの閉じた式としては**未確認**。ランキング送信は敗北・降参・優勝で非同期に1回だけ行い、通信をリザルト表示の待ち条件にしない。
 
-## 9. 変更時に確認する場所
+## 9. バトルモード
+
+`BATTLE_MODES` が正本。難易度の倍率はどのモードでも共通で、そこへモードごとの補正を掛ける。
+
+| モード | id | ブリーダーXP | 絆XP | ダイヤ | スコアランキング | 保存キーの接頭辞 |
+| --- | --- | --- | --- | --- | --- | --- |
+| チャレンジ | `challenge` | ×1 | ×1 | ×1 | あり（従来どおり） | `mh_` |
+| クイック | `quick` | ×1.5 | ×1.5 | ×1.5 | なし | `mh_quick_` |
+| プロ | `pro` | ×1.5 | ×3 | ×1 | あり（プロ専用枠） | `mh_pro_` |
+
+- 倍率は `modeBreederXpMult` / `modeBondXpMult` / `modeGoldMult` の3つに分かれている。プロは「全部3倍」ではなく、**絆だけ3倍・ブリーダーは1.5倍・ダイヤは等倍**。
+- スコア倍率はモードで変えない（難易度の設定どおり）。
+- ランキングは Supabase の列を増やさず、`difficulty` へ入れる値で分ける。プロは `rankingDifficultyForMode` が先頭へ `Pro` を付けた `ProHard` のような値を使う。既存のチャレンジの記録（`Hard` など）は書き換えも変換もしない。表示用に素の難易度へ戻すのは `rankingDifficultyBase`。
+- BGMはプロ専用曲を作らず、チャレンジと同じ `battle` / `dullahan` を流す。BGM設定の項目も増やさないので既存の `mh_bgm_arrangement` はそのまま読める。
+- 助手（みゅあ）は `battlePro` の場面と `pro` の親密度行動を持つ。既存の `challenge` / `quick` の獲得量・1日上限・合計上限（30）は変えていない。
+
+### 公開状況
+
+プロモードは**まだ本番の導線に出していない**。既存のバトル画面のタブは `PUBLIC_BATTLE_MODES`（チャレンジ・クイックのみ）を並べる。`BATTLE_MODES` には入っているので、ヘルプ・検査・今後のデバッグ入口からは見える。新しいバトルモード選択画面とセットで公開する。
+
+`submitRunScoreOnce` は先頭で `debugBattleRef.current` を見て打ち切るので、デバッグ・練習の周回はどのモードでも全国ランキングにも自己ベストにも残らない。
+
+## 10. 変更時に確認する場所
 
 - バトル進行・計算: `monster-hero/src/game-system.jsx` の `getDmg`、`handleEnemyTurn`、`processTurn`、`handleNextWave`、`buildDeck`
 - カード段階: `monster-hero/data/skills.js`
@@ -128,5 +150,6 @@ WAVE経験値基礎値は `[4,5,6,7,8,10,12,14,16,18]`、ゴールド基礎値�
 - 敵の行動: `ENEMY_ACTION_DEFINITIONS`、`evaluateEnemyActions`、`chooseEnemyAction`、`advanceEnemyIntents`
 - 回帰確認: `node tools/battle-check.js`、`node tools/difficulty-item-check.js`、
   `node tools/enemy-scan-check.js`、`node tools/battle-scenario-check.js`、
-  `node tools/guard-card-check.js`、`node tools/golem-balance-check.js`
+  `node tools/guard-card-check.js`、`node tools/golem-balance-check.js`、
+  `node tools/battle-mode-check.js`（モードの倍率・保存キー・ランキング名前空間）
 

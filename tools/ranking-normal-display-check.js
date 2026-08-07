@@ -4,8 +4,10 @@ const path = require('path');
 const vm = require('vm');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'monster-hero/src/game-system.jsx'), 'utf8');
-const normalizeStart = source.indexOf('const normalizeRankingDifficulty =');
-const normalizeEnd = source.indexOf('\n};', normalizeStart) + 3;
+// normalizeRankingDifficulty はモードごとの難易度キー一覧(チャレンジ＋プロ)を見るので、
+// その一覧を作っている PRO_RANKING_PREFIX からまとめて取り出す
+const normalizeStart = source.indexOf('const PRO_RANKING_PREFIX =');
+const normalizeEnd = source.indexOf('\n};', source.indexOf('const normalizeRankingDifficulty =')) + 3;
 const stateKeyStart = source.indexOf('const rankingDifficultyKey =');
 const stateKeyEnd = source.indexOf('\n', stateKeyStart);
 if (normalizeStart < 0 || normalizeEnd < 3 || stateKeyStart < 0) {

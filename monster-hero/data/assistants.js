@@ -136,6 +136,7 @@ const ASSISTANT_BOND_ACTIONS = {
   battle:    { amount:3, dailyMax:15, label:'バトルを遊ぶ' },
   challenge: { amount:2, dailyMax:10, label:'チャレンジモード' },
   quick:     { amount:1, dailyMax:6,  label:'クイックモード' },
+  pro:       { amount:2, dailyMax:10, label:'プロモード' },
   ranking:   { amount:1, dailyMax:3,  label:'ランキングを見る' },
   temple:    { amount:1, dailyMax:4,  label:'神殿を使う' },
   mission:   { amount:2, dailyMax:8,  label:'ミッション達成' },
@@ -143,7 +144,7 @@ const ASSISTANT_BOND_ACTIONS = {
   market:    { amount:1, dailyMax:3,  label:'マーケットを見る' },
   talk:      { amount:1, dailyMax:5,  label:'みゅあと話す' },
 };
-// 1日に増やせる合計。上の dailyMax を全部足すと 63 になるが、
+// 1日に増やせる合計。上の dailyMax を全部足すと 73 になるが、
 // ここで頭打ちにして「1日で一気に仲良くなる」ことがないようにしている
 const ASSISTANT_BOND_DAILY_MAX = 30;
 
@@ -245,6 +246,20 @@ const ASSISTANT_SCENES = {
       { e:'wink',    t:'強化は選べないから、編成で勝負だね！' },
       { e:'happy',   t:'短時間でも結構強くなるよ♪' },
       { e:'excited', t:'経験値もダイヤも1.5倍！ おいしいじゃん♪' },
+    ],
+  },
+  // プロモード。ベースモンだけで挑む上級者向けのモード
+  battlePro: {
+    help: 'basics/battle-modes',
+    lines: [
+      { e:'excited', t:'ここはベースモンだけの世界！ 腕の見せどころだよ♪' },
+      { e:'wink',    t:'絆経験値3倍！ 新しい子を育てるなら断然ここ！' },
+      { e:'happy',   t:'ブリーダー経験値も1.5倍だからね♪' },
+      { e:'normal',  t:'育てたマスモンは連れていけないよ。素の力で勝負！' },
+      { e:'wink',    t:'供モンは5体選んで、その中から3体が来てくれるの。誰が来るかはお楽しみ♪' },
+      { e:'happy',   t:'ランキングもチャレンジとは別枠。プロの中で競い合おう！' },
+      { e:'excited', t:'勝てたら、その勇者モンはマスモンにできるよ！' },
+      { e:'normal',  t:'きびしいけど、そのぶん伸びるモードだからね。' },
     ],
   },
   ranking: {
@@ -788,6 +803,26 @@ addAssistantLinePack({
       { e:'wink',     t:'固有技もひとりでに伸びるから、放っておいても育つよ♪' },
       { e:'normal',   t:'チャレンジの自己ベストは、こっちでは動かないから安心して。' },
       { e:'happy',    t:'まとめて育てたいときは、絆を伸ばしたい子を勇者モンに！' },
+    ],
+    battlePro: [
+      { e:'normal',   t:'{name}、プロはベースモンだけです。慣れてからでも遅くないですよ！', bond:[1,2] },
+      { e:'happy',    t:'{name}、育てたい子を勇者モンにすると伸びが早いですよ♪', bond:[1,2] },
+      { e:'wink',     t:'{name}、供モンは5体選んでくださいね。3体が加わります♪', bond:[1,2] },
+      { e:'excited',  t:'{name}、そろそろプロに挑んでみない？', bond:[3,4] },
+      { e:'happy',    t:'{name}、素の力だけで勝つの、かっこいいと思うんだよね〜', bond:[3,4] },
+      { e:'wink',     t:'{name}のプロの記録、あたしが見届けてあげる♪', bond:4 },
+      { e:'excited',  t:'{name}、いってらっしゃい！ ここが一番燃えるところだよ！', bond:5 },
+      { e:'happy',    t:'{name}なら、この難しさも楽しめると思うんだ。', bond:5, w:0.5 },
+      { e:'normal',   t:'マスモンは連れていけないよ。全員ベースモンからのスタート！' },
+      { e:'excited',  t:'絆経験値は3倍！ 新しい子を一気に育てられるよ♪' },
+      { e:'happy',    t:'ブリーダー経験値も1.5倍。ちょっとお得だね！' },
+      { e:'normal',   t:'ダイヤとスコアの倍率は、難易度どおりだよ。' },
+      { e:'wink',     t:'ランキングはチャレンジと別枠。プロの人たちと勝負だね！' },
+      { e:'normal',   t:'勇者モンにした子は、勝ったあとマスモンに登録できるよ。' },
+      { e:'troubled', t:'強化の拾いかたを間違えると、あっという間に押されちゃうよ…。' },
+      { e:'happy',    t:'供モンの候補は、間合いをばらけさせておくと安心かな♪' },
+      { e:'normal',   t:'誰が加わるかはランダム。5体ぜんぶ使える子にしておこう。' },
+      { e:'surprise', t:'ベースモンだけでムーを倒す人、ほんとにいるんだよ〜', w:0.3 },
     ],
     ranking: [
       { e:'happy',    t:'{name}、まずは上位の編成を見てみましょ♪', bond:[1,2] },
