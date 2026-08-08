@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7590685e3830277a
+// source-sha256: 2b50bc91042585b5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 16:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 16:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -260,10 +260,10 @@ const BATTLE_MODES = [{
   points: [['⚔️', '編成', '育てたマスモンは1体も連れていけません。全員が素のベースモンです。これまで積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'], ['📈', 'WAVEのあいだの強化', 'チャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、どこを伸ばすかの判断がそのまま結果に出ます。'], ['👹', '難しさ', 'このゲームでいちばん難しいモードです。同じ難易度でも、育てた個体を使えるチャレンジモードとは手ごたえがまったく違います。敵の強さは難易度どおりなので、上の難易度へ行くほど差が開きます。'], ['💎', 'もらえる経験値とダイヤ', '絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりで、上乗せはありません。'], ['🏆', 'スコアと記録', 'スコアはチャレンジモードとは別の「プロランキング」に反映されます。同じ条件で挑んだ人どうしで競う場所です。自己ベスト・最高到達WAVE・クリア回数もプロ専用の場所に残り、チャレンジモードの記録は書き換わりません。'], ['🤝', '供モンの加入', '始める前に供モンの候補を5体選びます。実際に加入候補として出るのは、その5体からランダムに選ばれた3体です。誰が来てもいいように候補を組むところまでが編成です。'], ['⭐', 'マスモン登録', '勇者モンにしたベースモンは、プレイが終わったあとマスモンとして登録できます。厳しい条件で戦ったぶん、絆経験値は3倍ぶん貯まっています。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '育成の力を借りずに腕だけで勝ちたい人、チャレンジモードが物足りなくなった人向けです。']]
 }];
 const battleModeInfo = mode => BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
-// いま本番のバトル画面へ出しているモード。プロモードは新しい入口(モード選択画面)と
-// セットで公開する予定なので、今の段階では既存のタブへ出さない。
-// BATTLE_MODES 自体には入れてあるので、デバッグからの動作確認・ヘルプの表・検査からは見える
-const PUBLIC_BATTLE_MODES = BATTLE_MODES.filter(mode => mode.id !== BATTLE_MODE_PRO);
+// 本番のバトル画面へ出すモード。いまは3モードすべてを公開している。
+// 作りかけのモードを足すときは、ここから外せば新しい入口には出ないまま
+// デバッグ・ヘルプの表・検査からだけ見える状態にできる
+const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 // スコアランキングがあるモードかどうか。クイックだけ対象外
 const modeHasRanking = mode => !isQuickMode(mode);
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
@@ -7647,7 +7647,7 @@ function MonsterHeroGame() {
   const modeLoopTimerRef = useRef(null);
   // バトルを始めた入口がどの画面だったか。スキップや勇者モン選択の「戻る」を、
   // 来た画面(既存の BATTLE_MENU / 新しい BATTLE_DIFFICULTY_SELECT)へ返すために覚えておく
-  const battleEntryStateRef = useRef('BATTLE_MENU');
+  const battleEntryStateRef = useRef('BATTLE_DIFFICULTY_SELECT');
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
   const [bulkPlan, setBulkPlan] = useState(null); // null=1ポイントずつのモード / {apt:[0,0,0,0], stat:{...}}
   // 合体画面の並べかえ。マスモンが増えると目的の個体を探しにくいため
@@ -11952,7 +11952,7 @@ function MonsterHeroGame() {
     setRunMode(BATTLE_MODE_QUICK);
     setDifficulty('Beginner');
     setBattleMenuTab('difficulty');
-    setGameState('BATTLE_MENU');
+    setGameState('BATTLE_DIFFICULTY_SELECT');
   };
   const debugDailyMasuAdviceAt = count => {
     setDailyMasuAdvice({
@@ -13920,7 +13920,9 @@ function MonsterHeroGame() {
   // ランキング・クリア回数・ミッションのどれにも影響しない)。
   // 入口は3つ。デバッグ設定・はじめての案内の最後・ヘルプの「バトルのれんしゅう」。
   // どこから始めても終わったら元の場所へ帰れるよう、戻り先を覚えておく。
-  const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v1') => {
+  // variant は 'v2'(いまの本番。新しいモード選択から始まる)と
+  // 'v1'(旧バトル画面から始まる。見比べ用にデバッグからだけ開ける)
+  const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v2') => {
     // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
     battleSpeedRef.current = 1;
     setBattleSpeed(1);
@@ -13966,11 +13968,11 @@ function MonsterHeroGame() {
     battleScenarioIntentIndexRef.current = 0;
     setBattleTutorialLastAction(null);
     setBattleTutorialReturn(returnTo);
-    setBattleTutorialVariant(variant === 'v2' ? 'v2' : 'v1');
+    setBattleTutorialVariant(variant === 'v1' ? 'v1' : 'v2');
     setBattleTutorialStep(0);
     // モード・ランキング・難易度もここで説明したいので、バトルの入口から始める。
     // 新しい台本(v2)は、新しいモード選択の画面から始める
-    if (variant === 'v2') {
+    if (variant !== 'v1') {
       setModeSelectTab('mode');
       setGameState('BATTLE_MODE_SELECT');
       return;
@@ -14020,7 +14022,7 @@ function MonsterHeroGame() {
     const savedSpeed = normalizeBattleSpeed(await storeGet(BATTLE_SPEED_KEY, 1, false));
     battleSpeedRef.current = savedSpeed;
     setBattleSpeed(savedSpeed);
-    setBattleTutorialVariant('v1');
+    setBattleTutorialVariant('v2');
     // 「見た」と記録するのは、ふだんの入口(HOMEへ戻る練習)から最後まで通したときだけ。
     // デバッグのお試し再生で、通常プレイの既読状態を書き換えないようにする
     if (completed && back === 'HOME') {
@@ -14035,7 +14037,7 @@ function MonsterHeroGame() {
     }
     setGameState(back || 'DEBUG_SETTINGS');
   };
-  const battleTutorialSteps = (battleTutorialVariant === 'v2' ? typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2 : typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL) || [];
+  const battleTutorialSteps = (battleTutorialVariant === 'v1' ? typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL : typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2) || [];
   const battleTutorial = battleTutorialStep != null ? battleTutorialSteps[battleTutorialStep] || null : null;
   // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく。
   // spot は配列でも書けるので、1つの操作で「一覧」と「その決定ボタン」を同時に光らせられる
@@ -15676,8 +15678,8 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFB2 \u4FEE\u884C", /*#__PURE__*/React.createElement("small", null, "\u6E96\u5099\u4E2D"))), /*#__PURE__*/React.createElement("button", {
       className: `mh-home-facility battle${spotClass('battle')}`,
       onClick: () => {
-        setBattleMenuTab('difficulty');
-        setGameState('BATTLE_MENU');
+        setModeSelectTab('mode');
+        setGameState('BATTLE_MODE_SELECT');
       },
       "aria-label": "\u30D0\u30C8\u30EB"
     }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement(Sword, {
@@ -18601,18 +18603,17 @@ function MonsterHeroGame() {
       className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
     }, "\u30E9\u30F3\u30C0\u30E0\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
-        setModeSelectTab('mode');
-        setBattleMode(BATTLE_MODE_CHALLENGE);
-        setGameState('BATTLE_MODE_SELECT');
+        setBattleMenuTab('difficulty');
+        setGameState('BATTLE_MENU');
       },
-      className: "col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u65B0\u30D0\u30C8\u30EB\u30E2\u30FC\u30C9\u9078\u629E\u3092\u958B\u304F\uFF08\u304A\u8A66\u3057\uFF09"), /*#__PURE__*/React.createElement("button", {
+      className: "col-span-2 min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-300 text-[10px] font-black active:scale-95"
+    }, "\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u3092\u958B\u304F\uFF08\u898B\u6BD4\u3079\u7528\uFF09"), /*#__PURE__*/React.createElement("button", {
       onClick: () => startBattleTutorial(),
       className: "col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95"
     }, "\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u958B\u59CB\uFF08\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => startBattleTutorial('DEBUG_SETTINGS', 'v2'),
-      className: "col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95"
-    }, "\u65B0\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B\uFF08\u304A\u8A66\u3057\u30FB\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => startBattleTutorial('DEBUG_SETTINGS', 'v1'),
+      className: "col-span-2 min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-300 text-[10px] font-black active:scale-95"
+    }, "\u65E7\u30D0\u30C8\u30EB\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB\u3092\u898B\u308B\uFF08\u65E7\u30D0\u30C8\u30EB\u753B\u9762\u30FB\u8A18\u9332\u306F\u6B8B\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("button", {
       onClick: async () => {
         await storeSet(BATTLE_TUTORIAL_SEEN_KEY, false, false);
         window.alert('バトルチュートリアルを未視聴に戻しました。');

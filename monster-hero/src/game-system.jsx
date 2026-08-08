@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 16:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 16:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -225,10 +225,10 @@ const BATTLE_MODES = [
   },
 ];
 const battleModeInfo = (mode) => BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
-// いま本番のバトル画面へ出しているモード。プロモードは新しい入口(モード選択画面)と
-// セットで公開する予定なので、今の段階では既存のタブへ出さない。
-// BATTLE_MODES 自体には入れてあるので、デバッグからの動作確認・ヘルプの表・検査からは見える
-const PUBLIC_BATTLE_MODES = BATTLE_MODES.filter(mode => mode.id !== BATTLE_MODE_PRO);
+// 本番のバトル画面へ出すモード。いまは3モードすべてを公開している。
+// 作りかけのモードを足すときは、ここから外せば新しい入口には出ないまま
+// デバッグ・ヘルプの表・検査からだけ見える状態にできる
+const PUBLIC_BATTLE_MODES = BATTLE_MODES;
 // スコアランキングがあるモードかどうか。クイックだけ対象外
 const modeHasRanking = (mode) => !isQuickMode(mode);
 // そのモードで遊んだときに増える、みゅあの仲良し度の行動キー。
@@ -3756,7 +3756,7 @@ function MonsterHeroGame() {
   const modeLoopTimerRef = useRef(null);
   // バトルを始めた入口がどの画面だったか。スキップや勇者モン選択の「戻る」を、
   // 来た画面(既存の BATTLE_MENU / 新しい BATTLE_DIFFICULTY_SELECT)へ返すために覚えておく
-  const battleEntryStateRef = useRef('BATTLE_MENU');
+  const battleEntryStateRef = useRef('BATTLE_DIFFICULTY_SELECT');
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
   const [bulkPlan, setBulkPlan] = useState(null); // null=1ポイントずつのモード / {apt:[0,0,0,0], stat:{...}}
   // 合体画面の並べかえ。マスモンが増えると目的の個体を探しにくいため
@@ -6631,7 +6631,7 @@ function MonsterHeroGame() {
     setRunMode(BATTLE_MODE_QUICK);
     setDifficulty('Beginner');
     setBattleMenuTab('difficulty');
-    setGameState('BATTLE_MENU');
+    setGameState('BATTLE_DIFFICULTY_SELECT');
   };
   const debugDailyMasuAdviceAt = count => {
     setDailyMasuAdvice({ debugCount:count, eligible:count < 8 });
@@ -7821,7 +7821,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ランキング・クリア回数・ミッションのどれにも影響しない)。
   // 入口は3つ。デバッグ設定・はじめての案内の最後・ヘルプの「バトルのれんしゅう」。
   // どこから始めても終わったら元の場所へ帰れるよう、戻り先を覚えておく。
-  const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v1') => {
+  // variant は 'v2'(いまの本番。新しいモード選択から始まる)と
+  // 'v1'(旧バトル画面から始まる。見比べ用にデバッグからだけ開ける)
+  const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v2') => {
     // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
     battleSpeedRef.current = 1;
     setBattleSpeed(1);
@@ -7845,11 +7847,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     battleScenarioIntentIndexRef.current = 0;
     setBattleTutorialLastAction(null);
     setBattleTutorialReturn(returnTo);
-    setBattleTutorialVariant(variant === 'v2' ? 'v2' : 'v1');
+    setBattleTutorialVariant(variant === 'v1' ? 'v1' : 'v2');
     setBattleTutorialStep(0);
     // モード・ランキング・難易度もここで説明したいので、バトルの入口から始める。
     // 新しい台本(v2)は、新しいモード選択の画面から始める
-    if (variant === 'v2') { setModeSelectTab('mode'); setGameState('BATTLE_MODE_SELECT'); return; }
+    if (variant !== 'v1') { setModeSelectTab('mode'); setGameState('BATTLE_MODE_SELECT'); return; }
     setGameState('BATTLE_MENU');
   };
   // 「この難易度で挑戦」を練習として押したとき。ふだんのボタンは記録を残す状態(debugBattleRef=false)に
@@ -7889,7 +7891,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const savedSpeed = normalizeBattleSpeed(await storeGet(BATTLE_SPEED_KEY, 1, false));
     battleSpeedRef.current = savedSpeed;
     setBattleSpeed(savedSpeed);
-    setBattleTutorialVariant('v1');
+    setBattleTutorialVariant('v2');
     // 「見た」と記録するのは、ふだんの入口(HOMEへ戻る練習)から最後まで通したときだけ。
     // デバッグのお試し再生で、通常プレイの既読状態を書き換えないようにする
     if (completed && back === 'HOME') { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }
@@ -7897,9 +7899,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (back === 'HOME') { returnToHome(); return; }
     setGameState(back || 'DEBUG_SETTINGS');
   };
-  const battleTutorialSteps = (battleTutorialVariant === 'v2'
-    ? (typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2)
-    : (typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL)) || [];
+  const battleTutorialSteps = (battleTutorialVariant === 'v1'
+    ? (typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL)
+    : (typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2)) || [];
   const battleTutorial = battleTutorialStep != null ? (battleTutorialSteps[battleTutorialStep] || null) : null;
   // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく。
   // spot は配列でも書けるので、1つの操作で「一覧」と「その決定ボタン」を同時に光らせられる
@@ -8646,7 +8648,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <button className={`mh-home-facility temple${spotClass('temple')}`} onClick={()=>{addAssistantBond('temple');setGameState('TEMPLE');}} aria-label="神殿"><span><Sparkles size={18}/>神殿</span></button>
               <button className={`mh-home-facility market${spotClass('market')}`} onClick={()=>{addAssistantBond('market');setGameState('BREEDER_MARKET');}} aria-label="マーケット"><span><ShoppingBag size={17}/>マーケット</span></button>
               <button className="mh-home-facility training" onClick={openTrainingInfo} aria-label="修行（準備中）"><span>🎲 修行<small>準備中</small></span></button>
-              <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={()=>{setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');}} aria-label="バトル"><span><Sword size={25}/>バトル</span></button>
+              <button className={`mh-home-facility battle${spotClass('battle')}`} onClick={()=>{setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} aria-label="バトル"><span><Sword size={25}/>バトル</span></button>
             </nav>
             <button onClick={openMissions} className={`mh-home-mission${spotClass('reward')}`}><List size={16}/>ミッション
               {missionClaimableCount(normalizeMissions(missions))>0&&<em>{missionClaimableCount(normalizeMissions(missions))}</em>}
@@ -9123,13 +9125,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 新しいバトルの入口(バトルモード再編・第2段階)。ふだんの「バトル」はこれまでどおりで、
                       ここからだけ新しいモード選択・難易度選択・モード別ランキングを見られる。
                       チャレンジ・クイックはそのまま遊べて記録も通常どおり残る。プロモードの中身は第3段階 */}
-                  <button onClick={()=>{setModeSelectTab('mode');setBattleMode(BATTLE_MODE_CHALLENGE);setGameState('BATTLE_MODE_SELECT');}} className="col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95">新バトルモード選択を開く（お試し）</button>
+                  <button onClick={()=>{setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');}} className="col-span-2 min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-300 text-[10px] font-black active:scale-95">旧バトル画面を開く（見比べ用）</button>
                   {/* バトルチュートリアル(お試し)。記録は一切残らないので何度でも遊べる */}
                   <button onClick={()=>startBattleTutorial()} className="col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95">バトルチュートリアル開始（記録は残りません）</button>
-                  {/* 新しいチュートリアル(お試し)。新しいモード選択から始まる版。
-                      ふだんの初回案内・ヘルプからはこれまでどおり上の版が始まる。
-                      ここから最後まで通しても「見た」とは記録しないので、通常プレイの既読状態は変わらない */}
-                  <button onClick={()=>startBattleTutorial('DEBUG_SETTINGS','v2')} className="col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95">新バトルチュートリアルを見る（お試し・記録は残りません）</button>
+                  {/* 旧バージョンのチュートリアル。旧バトル画面(BATTLE_MENU)から始まる。
+                      見比べ用にここからだけ開ける。最後まで通しても「見た」とは記録しない */}
+                  <button onClick={()=>startBattleTutorial('DEBUG_SETTINGS','v1')} className="col-span-2 min-h-[46px] rounded-xl bg-slate-800 border border-white/20 text-slate-300 text-[10px] font-black active:scale-95">旧バトルチュートリアルを見る（旧バトル画面・記録は残りません）</button>
                   <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_SEEN_KEY,false,false);window.alert('バトルチュートリアルを未視聴に戻しました。');}} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">バトル練習を未視聴へ戻す</button>
                   <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY,false,false);battleTutorialGuideCheckedRef.current=false;window.alert('初回案内を未表示に戻しました。');}} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">初回案内を未表示へ戻す</button>
                   <button onClick={()=>{returnToHome();startTutorial('battleGuide');}} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">バトル初回案内を再生</button>

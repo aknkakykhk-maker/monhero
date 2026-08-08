@@ -86,17 +86,10 @@ const check = (name, ok, detail = '') => {
       await page.waitForTimeout(250);
     }
 
-    // --- ① デバッグ設定から新しい入口を開く ---
-    // デバッグ設定はヘルプの一番下の「💊」からしか開けない
-    await page.getByRole('button', { name: '設定' }).dispatchEvent('click', {}, { timeout: 15000 });
-    await page.getByRole('button', { name: 'ヘルプ' }).dispatchEvent('click', {}, { timeout: 15000 });
-    // Tailwindを読めないぶん見た目が崩れて画面外に出ることがあるので、
-    // 押せるかどうかは DOM のクリックで確かめる(押した結果の画面遷移は同じ)
-    await page.locator('button', { hasText: /^💊$/ }).dispatchEvent('click', {}, { timeout: 15000 });
-    const openButton = page.getByRole('button', { name: '新バトルモード選択を開く（お試し）' });
-    check('デバッグ設定に新しい入口のボタンがある', await openButton.count() === 1);
-    await openButton.dispatchEvent('click');
+    // --- ① HOMEの「バトル」からモード選択を開く(本番の入口) ---
+    await page.getByRole('button', { name: 'バトル' }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
+    check('HOMEの「バトル」からモード選択が開く', true);
 
     // --- ② 3モードがカードで並ぶ(ぐるぐる回すため同じ並びを3回置いている) ---
     const modeCards = page.locator('.snap-mandatory > article');
