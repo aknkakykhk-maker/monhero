@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 14:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 15:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3747,6 +3747,9 @@ function MonsterHeroGame() {
   const [scoreRankingMode, setScoreRankingMode] = useState(BATTLE_MODE_CHALLENGE);
   // ランキングから戻る先。モード選択カードから開いたか、難易度カードから開いたかで変わる
   const [scoreRankingBack, setScoreRankingBack] = useState('BATTLE_MODE_SELECT');
+  // プロの供モン合流を横スライドで見せるための現在位置と入れ物
+  const [allyCardIndex, setAllyCardIndex] = useState(0);
+  const allyCarouselRef = useRef(null);
   const modeCarouselRef = useRef(null);
   const modeDifficultyCarouselRef = useRef(null);
   // モードのカルーセルを「ぐるぐる回す」ための、スクロールが止まったかどうかの見張り
@@ -5458,6 +5461,13 @@ function MonsterHeroGame() {
     });
     return()=>cancelAnimationFrame(id);
   },[gameState,modeSelectTab]);
+  // 供モン合流の横スライドは、開くたびに先頭から見せる
+  useEffect(()=>{
+    if(gameState!=='PICK_ALLY')return;
+    setAllyCardIndex(0);
+    const id=requestAnimationFrame(()=>{allyCarouselRef.current?.children[0]?.scrollIntoView({inline:'center',block:'nearest'});});
+    return()=>cancelAnimationFrame(id);
+  },[gameState,monSelection]);
   // 画面を離れるときは位置戻しの見張りを止める(閉じたあとに動かさない)
   useEffect(()=>()=>{if(modeLoopTimerRef.current)clearTimeout(modeLoopTimerRef.current);},[]);
 
@@ -7855,6 +7865,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   // 台本で「これを選ぶ」と決めているもの。決めていないものは押せなくする(選択肢を1つに絞る)
   const battleScenario = battleScenarioRef.current;
+  // 台本の「この子だけ選べる」は勇者モン選択にだけ効かせる。
+  // 供モンの合流にも効かせてしまうと、台本の勇者モン(モッチー)だけが押せる状態になり、
+  // 「勇者モンと同じ子が強制で選ばれる」ように見えてしまう
   const scenarioPicksHero = (id) => !battleScenario || !battleScenario.heroId || battleScenario.heroId === id;
   const scenarioPicksSlot = (idx) => !battleScenario || !Number.isInteger(battleScenario.slotIndex) || battleScenario.slotIndex === idx;
   const scenarioPicksTeaching = (id) => !battleScenario || !battleScenario.teachingId || battleScenario.teachingId === id;
@@ -8841,7 +8854,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {difficulties.map(([key,setting])=>{const active=key===safeDifficulty;return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div><h3 className="text-center text-lg font-black leading-tight" style={{color:setting.text}}>{setting.label}</h3>{(()=>{const rec=recordBox(key);return(
                 <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="block text-[8px] text-slate-400 font-black">{rec.label}</small><b className={`block text-right text-base leading-tight ${rec.valueColor}`}>{rec.value}</b><span className="block text-right text-[9px] text-amber-300">{rec.sub}</span></div>
               );})()}<div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div><div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div><div className="grid gap-1.5 mt-1.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button>{/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
-                ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}<button disabled={!!battleTutorial&&key!=='Beginner'} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);setRunMode(battleMode);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す。
+                ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}<button disabled={!!battleTutorial&&key!=='Beginner'} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す。
                 スキップはクイックモード専用。チャレンジで使えるとスコアを出さずに報酬だけ取れてしまい、
                 ランキングを競う意味が薄れるため */}{(()=>{const tid=SKIP_TICKETS[key];if(!quick)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">スキップはクイックモード専用</div>);if(!tid)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">この難易度はスキップできません</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1 py-0.5">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
               {/* ランキングへの導線はモードのタブのすぐ下へ移したので、ここには助手コメントだけを置く */}
@@ -8976,7 +8989,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               ベースモンのタブで開く。編成(マスモン入り)は使えない */}
                           {/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
                               ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}
-                          <button disabled={(pro&&!proReady)||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setProAllyPool([]);setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
+                          <button disabled={(pro&&!proReady)||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setProAllyPool([]);setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
                           {/* 難易度カードからもランキングへ入れる。ここから開いたときは、この難易度のタブが最初に選ばれる */}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
                           {/* スキップはクイックモード専用。チケットが無い難易度では出さない */}
@@ -11156,15 +11169,31 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className={`flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col ${gameState==='PICK_ALLY'?'justify-center':''}`}>
             {/* バトルチュートリアル中は一覧の外枠ではなくカード1枚ずつを光らせる。
                 外枠だと画面からはみ出して「どこを押すのか」が分からなかった */}
-            <div className="grid grid-cols-2 gap-2.5">
-            {(gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection).map(m=>{const isSel=currentPickingMon?.id===m.id;
+            {/* プロの供モン合流だけ、バトルモード選択と同じ横スライドで1体ずつ見せる。
+                3体しか出ないので、2列に並べるより1体ずつ大きく見比べられるほうが選びやすい */}
+            {(()=>{const allyCarousel=gameState==='PICK_ALLY'&&isProMode(runMode);
+              // 念のため、すでに編成にいる子は一覧にも出さない(勇者モンがもう一度出ないようにする)
+              const inParty=slots.filter(x=>x).map(x=>x.id);
+              const rawList=gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;
+              const list=(gameState==='PICK_ALLY'?rawList.filter(m=>m&&!inParty.includes(m.id)):rawList)||[];
+              const stepAlly=(delta)=>{const root=allyCarouselRef.current;if(!root)return;const next=Math.max(0,Math.min(list.length-1,allyCardIndex+delta));setAllyCardIndex(next);root.children[next]?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});};
+              return (<>
+            {allyCarousel&&<div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0 mb-1">左右にスワイプして供モンを選択</div>}
+            {allyCarousel&&<div className="relative h-0">
+              <button aria-label="前の供モン" disabled={allyCardIndex===0} onClick={()=>stepAlly(-1)} className="absolute left-0 top-[70px] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
+              <button aria-label="次の供モン" disabled={allyCardIndex>=list.length-1} onClick={()=>stepAlly(1)} className="absolute right-0 top-[70px] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
+            </div>}
+            <div ref={allyCarousel?allyCarouselRef:null} onScroll={allyCarousel?(e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(best!==allyCardIndex)setAllyCardIndex(best);}):undefined}
+                 className={allyCarousel?'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll':'grid grid-cols-2 gap-2.5'}
+                 style={allyCarousel?{paddingLeft:'18%',paddingRight:'18%',touchAction:'pan-x pinch-zoom'}:undefined}>
+            {list.map((m,cardIndex)=>{const isSel=currentPickingMon?.id===m.id;const focused=allyCarousel&&cardIndex===allyCardIndex;
               // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
               // 以前はこの画面だけ独自に組んでいたため、絆レベルも総合力も限界突破の★も出ず、
               // 同じマスモンが画面によって違う見た目になっていた。
               // この画面だけの情報(固有技名・ステータス・詳細への案内)はextraで足す。
               const pickMasu=m.masuId?getMasuMon(m.masuId):null;
               const pickBase=ALL_PLAYER_MONSTERS[m.id]||m;
-              return(<button key={m.id} disabled={!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25${scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`}>
+              return(<button key={m.id} disabled={gameState==='PICK_HERO'&&!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} style={allyCarousel?{...MONSTER_CARD_STYLE,flex:'0 0 64%'}:MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25${gameState!=='PICK_HERO'||scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}${allyCarousel?` snap-center shrink-0 ${focused?'scale-100 opacity-100':'scale-[.92] opacity-55'}`:''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`}>
               {renderMonsterCardBody({
                 masu: pickMasu, base: pickBase, mon: m,
                 badge: isSel?<div className="absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>:null,
@@ -11181,6 +11210,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               })}
             </button>);})}
             </div>
+            {allyCarousel&&<div className="flex justify-center gap-1 py-1 shrink-0">{list.map((m,i)=><button key={m.id} aria-label={`${i+1}体目`} onClick={()=>stepAlly(i-allyCardIndex)} className={`w-1.5 h-1.5 rounded-full ${i===allyCardIndex?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>}
+              </>);})()}
           </div>
           {/* 勇者モン選択・供モン合流の詳細。外枠と上部サマリーは他の画面と同じマスターUIで、
               この画面だけの違いは「現在値 → 合流後」のステータス表記と強化Pの割り振りボタン */}

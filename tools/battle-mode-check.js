@@ -446,7 +446,7 @@ check('実際に開いて押せることを確かめる道具がある',
 // 編成はベースモンだけ。育てたマスモンは勇者モンにも供モンにも出さない
 check('プロの勇者モン選択はベースモンだけ',
   has("setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');")
-    && has("{gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection}".replace('{', '(').replace('}', ')'))
+    && has("const rawList=gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;")
     && has('{!isProMode(runMode)&&<div className="flex gap-1.5">'));
 check('プロの勇者モン選択に編成タブを出さない',
   has("isProMode(runMode)?'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません'"));
@@ -493,6 +493,27 @@ check('候補の抽選は1か所の関数にまとめてある',
 }
 check('プロで候補が空でもマスモンは混ぜない',
   has('return proAllyPool.length > 0 ? proAllyPool : getUnlockedBaseMonsterList();'));
+// 練習の台本の「この子だけ選べる」は勇者モン選択にだけ効かせる。
+// 供モンの合流にも効くと、台本の勇者モン(モッチー)が強制で選ばれたように見える
+check('台本の強制選択は勇者モン選択にだけ効く',
+  has("disabled={gameState==='PICK_HERO'&&!scenarioPicksHero(m.id)}")
+    && !/disabled=\{!scenarioPicksHero\(m\.id\)\}/.test(source));
+// 練習をやめ損ねても、ふだんの周回へ台本を持ち込まない
+check('ふだんの周回を始めるときは台本を必ず捨てる',
+  count('battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;') === 2);
+// 供モンの一覧には、すでに編成にいる子(勇者モンを含む)を出さない
+check('供モンの一覧に編成中の子を出さない',
+  has("const inParty=slots.filter(x=>x).map(x=>x.id);")
+    && has("const list=(gameState==='PICK_ALLY'?rawList.filter(m=>m&&!inParty.includes(m.id)):rawList)||[];"));
+// 供モンの合流はバトルモード選択と同じ横スライドで見せる
+check('プロの供モン合流は横スライドで出す',
+  has("const allyCarousel=gameState==='PICK_ALLY'&&isProMode(runMode);")
+    && has('aria-label="前の供モン"') && has('aria-label="次の供モン"')
+    && has("'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll':'grid grid-cols-2 gap-2.5'"));
+check('横スライドは開くたびに先頭から見せる',
+  has("if(gameState!=='PICK_ALLY')return;\n    setAllyCardIndex(0);"));
+check('チャレンジ・クイックの供モン一覧はこれまでどおり2列',
+  has("allyCarousel?'flex items-start gap-2.5") && has(":'grid grid-cols-2 gap-2.5'"));
 // 勇者モンを決めたあと、プロだけ供モン候補を選ぶ画面へ寄り道する
 check('プロだけ供モン候補の画面をはさむ',
   has("if (isProMode(runMode)) { setProAllyPool([]); setGameState('PICK_PRO_ALLIES'); return; }")
