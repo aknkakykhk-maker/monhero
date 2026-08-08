@@ -97,7 +97,7 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   }
   // 呼び出し側: 一覧を出すすべての画面が共通実装を通ること
   const cardCalls = (code.match(/renderMonsterCardBody\(\{/g) || []).length;
-  check(`${label}: すべての一覧画面が共通カードを呼ぶ`, cardCalls === 6, `${cardCalls}か所(編成2・ベースモン一覧・マスモン一覧・放牧設定・勇者モン選択/供モン選択)`);
+  check(`${label}: すべての一覧画面が共通カードを呼ぶ`, cardCalls === 7, `${cardCalls}か所(編成2・ベースモン一覧・マスモン一覧・放牧設定・勇者モン選択/供モン選択・プロの供モン候補)`);
   const pickStart = code.indexOf('const pickMasu');
   const pickEnd = pickStart > 0 ? code.indexOf('詳細を見る', pickStart) : -1;
   const pick = pickStart > 0 && pickEnd > 0 ? code.slice(pickStart, pickEnd) : '';

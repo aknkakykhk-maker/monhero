@@ -170,9 +170,22 @@ WAVE経験値基礎値は `[4,5,6,7,8,10,12,14,16,18]`、ゴールド基礎値�
 - クイックにはスコアランキングが無いので、導線も「ランキング対象外です」の高さ合わせの空枠も置かない。
 - スキップと勇者モン選択の「戻る」は `battleEntryStateRef` が覚えている入口の画面へ返す（既定は `BATTLE_MENU`）。
 
+### プロモードの編成と供モン
+
+| gameState | 中身 |
+| --- | --- |
+| `PICK_HERO` | プロは編成タブを出さず、`getUnlockedBaseMonsterList()` のベースモンだけを並べる |
+| `PICK_PRO_ALLIES` | 勇者モンを決めたあとに入る、プロだけの画面。供モンの候補を5体（`PRO_ALLY_POOL_SIZE`）えらぶ |
+
+- 流れは `PICK_HERO → PICK_SLOT → setupMon(勇者) → PICK_PRO_ALLIES → PICK_TEACHING → バトル`。プロ以外は今までどおり `setupMon(勇者) → PICK_TEACHING` へ直行する。
+- ラン中の加入候補は `joinCandidatePool()` が返す。プロは `proAllyPool`（選んだ5体）、それ以外は `getActiveMonsterList()`。一度に見せる数は `joinOfferSize()` で、プロだけ `PRO_ALLY_OFFER_SIZE`（3）。加入の場面そのものは既存のしくみ（WAVE 2/4/6・`PICK_ALLY`）をそのまま使う。
+- 勇者モンにした種は候補から外す（同じ種は1体しか編成に入らないため）。
+- 解放済みのベースモンが `PRO_ALLY_POOL_SIZE + 1` 種に足りないときは、難易度カードの開始ボタンを押せなくする。
+- マスモン登録・リザルト・スコア送信はすべて既存のしくみを使い回し、プロ専用の分岐を作っていない。勇者モンがベースモンなので、既存の「ベースモンを勇者モンにして登録する」経路がそのまま働く。
+
 ### 公開状況
 
-プロモードは**まだ本番の導線に出していない**。既存のバトル画面のタブは `PUBLIC_BATTLE_MODES`（チャレンジ・クイックのみ）を並べる。新しい難易度選択画面からもプロは始められない（ボタンは「プロモードは準備中です」で押せない）。ベースモン限定の編成と供モン5体→3体の実装が入ったら開放する。
+プロモードは**まだ本番の導線に出していない**。既存のバトル画面のタブは `PUBLIC_BATTLE_MODES`（チャレンジ・クイックのみ）を並べる。プロを遊べるのはデバッグ設定から開く新しい入口だけ。
 
 `submitRunScoreOnce` は先頭で `debugBattleRef.current` を見て打ち切るので、デバッグ・練習の周回はどのモードでも全国ランキングにも自己ベストにも残らない。ただし新しい画面から始めたチャレンジ・クイックは**ふつうの1プレイ**なので、記録もランキングも通常どおり残る。
 
@@ -187,5 +200,6 @@ WAVE経験値基礎値は `[4,5,6,7,8,10,12,14,16,18]`、ゴールド基礎値�
   `node tools/enemy-scan-check.js`、`node tools/battle-scenario-check.js`、
   `node tools/guard-card-check.js`、`node tools/golem-balance-check.js`、
   `node tools/battle-mode-check.js`（モードの倍率・保存キー・ランキング名前空間・新しい入口）、
-  `node tools/battle-mode-select-check.js`（新しい入口を実ブラウザで開いて押せるか）
+  `node tools/battle-mode-select-check.js`（新しい入口を実ブラウザで開いて押せるか）、
+  `node tools/pro-mode-check.js`（プロモードを実ブラウザで最初から遊んでみる）
 

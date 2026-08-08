@@ -808,6 +808,7 @@ const HELP_SCREEN_COVERAGE = {
   PICK_HERO:        'basics/flow',
   PICK_SLOT:        'battle/distance',
   PICK_ALLY:        'battle/join-bonus',
+  PICK_PRO_ALLIES:  'basics/battle-modes',
   PICK_TEACHING:    'growth/teaching',
   BATTLE:           'battle/cards',
   QUICK_GROWTH:     'basics/battle-modes',
