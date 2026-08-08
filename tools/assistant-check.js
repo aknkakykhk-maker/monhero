@@ -266,9 +266,11 @@ check('バトル練習の視聴済みと初回案内表示済みを分ける',
     && has("const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';")
     && has('storeGet(BATTLE_TUTORIAL_SEEN_KEY, false, false)')
     && has('storeGet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, false, false)'));
+// 「見た」と記録するのは、ふだんの入口(HOMEへ戻る練習)から最後まで通したときだけ。
+// デバッグのお試し再生では書き換えない
 check('バトル初回案内は表示時に記録し、完了時だけ練習を視聴済みにする',
   has('storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY, true, false)')
-    && has('if (completed) { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }')
+    && has("if (completed && back === 'HOME') { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }")
     && has('if(last) endBattleTutorial(true)') && has('endBattleTutorial(false)'));
 check('デバッグはデバッグ設定からだけ開ける',
   has('💖 みゅあデバッグ') && source.indexOf('💖 みゅあデバッグ') > source.indexOf("gameState==='DEBUG_SETTINGS'"));

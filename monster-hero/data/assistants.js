@@ -1231,7 +1231,13 @@ const ASSISTANT_BATTLE_TUTORIAL_GUIDE = [
 //   いきなり act から始めるとその画面の説明が出ないまま操作モードになってしまうので、
 //   操作させたい画面には必ずその手前に説明のステップ(同じ at・同じ spot)を置く。
 //   説明のステップにも spot を書いておくと、読んでいる間から光って場所が分かる。
-const ASSISTANT_BATTLE_TUTORIAL = [
+// バトルのれんしゅうは「導入 → 本体 → しめくくり」の3つに分けて持つ。
+// 本体(勇者モン選択からの操作説明)は入口が変わっても中身が同じなので、
+// 新旧どちらの導入からも同じ配列を使い回す。
+//
+//   V1 … いまの本番の入口(BATTLE_MENU のタブと難易度カード)から始める
+//   V2 … 新しい入口(バトルモード選択 → 難易度選択)から始める。まだお試しのみ
+const ASSISTANT_BATTLE_TUTORIAL_INTRO_V1 = [
   // バトルの入口。モード・ランキング・難易度をここで一度に説明する
   { id:'intro',        at:'BATTLE_MENU',   e:'excited', title:'バトルのれんしゅう', t:'{name}、ここからは実際に動かして覚えよ！ あたしが横で見てるからね♪', wait:'next' },
   { id:'modeTalk',     at:'BATTLE_MENU',   e:'normal',  title:'2つのモード', t:'チャレンジは記録が残る本番。クイックは気軽に遊ぶモードだよ。', spot:'modeTabs', wait:'next' },
@@ -1239,6 +1245,26 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   { id:'diffTalk',     at:'BATTLE_MENU',   e:'normal',  title:'難易度を選ぶ', t:'左右にスワイプして選ぶよ。難しいほど報酬の倍率も上がるの。', spot:'difficulty', wait:'next' },
   { id:'startTalk',    at:'BATTLE_MENU',   e:'wink',    title:'ビギナーで挑戦', t:'今回は練習だから、ビギナーのチャレンジをやってみよ！', spot:'battleStart', wait:'next' },
   { id:'start',        at:'BATTLE_MENU',   e:'excited', title:'押してみて！', t:'「この難易度で挑戦」を押すとバトルが始まるよ♪', spot:'battleStart', wait:'act' },
+];
+// 新しい入口の導入。モード選択でチャレンジ・クイック・プロの3つを見せてから、
+// チャレンジを選んで難易度選択へ進み、ビギナーで始める。
+// クイックとプロは「こういうモードがあるよ」と見せるだけで、初回には遊ばせない
+const ASSISTANT_BATTLE_TUTORIAL_INTRO_V2 = [
+  { id:'intro',        at:'BATTLE_MODE_SELECT',       e:'excited', title:'バトルのれんしゅう', t:'{name}、ここからは実際に動かして覚えよ！ あたしが横で見てるからね♪', wait:'next' },
+  { id:'modeTalk',     at:'BATTLE_MODE_SELECT',       e:'normal',  title:'まずはモード選び', t:'バトルは3つのモードから選ぶよ。左右にスワイプすると、ぐるぐる回せるんだ♪', spot:'modeCards', wait:'next' },
+  { id:'modeChallenge',at:'BATTLE_MODE_SELECT',       e:'happy',   title:'チャレンジモード', t:'いま出てるのがチャレンジ。強化を自分で選んでスコアを伸ばす、いちばん基本のモードだよ。', spot:'modeCards', wait:'next' },
+  { id:'modeQuick',    at:'BATTLE_MODE_SELECT',       e:'wink',    title:'クイックモード', t:'となりはクイック。育成用のモードで、短い時間で何周も回せて経験値が1.5倍もらえるの。', spot:'modeCards', wait:'next' },
+  { id:'modePro',      at:'BATTLE_MODE_SELECT',       e:'surprise',title:'プロモード', t:'その先はプロ。育てた子を一切つれていけない、いちばん難しいモードだよ…！', spot:'modeCards', wait:'next' },
+  { id:'modeDetail',   at:'BATTLE_MODE_SELECT',       e:'normal',  title:'くわしく知りたいとき', t:'カードの「このモードの説明」を押すと、どのモードも同じ並びで細かく読めるよ。', spot:'modeCards', wait:'next' },
+  { id:'rankTalk',     at:'BATTLE_MODE_SELECT',       e:'happy',   title:'ランキング', t:'上のタブでブリーダーLvと絆Lvのランキング、カードのボタンでモードごとのスコアランキングが見られるよ♪', spot:'modeRankTabs', wait:'next' },
+  { id:'modePick',     at:'BATTLE_MODE_SELECT',       e:'wink',    title:'今日はチャレンジで', t:'最初はチャレンジがおすすめ！ 「難易度を選ぶ」を押してみて♪', spot:'modeStart', wait:'act' },
+  { id:'diffTalk',     at:'BATTLE_DIFFICULTY_SELECT', e:'normal',  title:'難易度を選ぶ', t:'左右にスワイプして選ぶよ。難しいほど報酬の倍率も上がるの。', spot:'difficulty', wait:'next' },
+  { id:'diffDefault',  at:'BATTLE_DIFFICULTY_SELECT', e:'happy',   title:'まん中はノーマル', t:'開いたときはいつもノーマルから。今日は左へ寄せてビギナーにしてあるよ♪', spot:'difficulty', wait:'next' },
+  { id:'startTalk',    at:'BATTLE_DIFFICULTY_SELECT', e:'wink',    title:'ビギナーで挑戦', t:'今回は練習だから、いちばんやさしいビギナーをやってみよ！', spot:'battleStart', wait:'next' },
+  { id:'start',        at:'BATTLE_DIFFICULTY_SELECT', e:'excited', title:'押してみて！', t:'「この難易度で挑戦」を押すとバトルが始まるよ♪', spot:'battleStart', wait:'act' },
+];
+// ここから先は入口によらず同じ。勇者モン選択からWAVEクリア・強化フェーズまで
+const ASSISTANT_BATTLE_TUTORIAL_BODY = [
   // 勇者モンを選ぶ
   { id:'heroTalk',     at:'PICK_HERO',     e:'happy',   title:'まずは勇者モン', t:'主役になる子が勇者モン。この中から1体えらぶよ！', spot:['monCards','monDecide'], wait:'next' },
   { id:'hero',         at:'PICK_HERO',     e:'wink',    title:'えらんでみよう', t:'好きな子を押して、出てきた画面で「決定」だよ♪', spot:['monCards','monDecide'], wait:'act' },
@@ -1307,6 +1333,9 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   // 強化フェーズ
   { id:'rewardTalk',   at:'REWARD_PICK',   e:'happy',   title:'能力アップ', t:'クリアのたびに強くなれる！ 3つから1つ選べるんだ。', spot:'rewards', wait:'next' },
   { id:'reward',       at:'REWARD_PICK',   e:'wink',    title:'選んでみて', t:'好きな強化を1つ押してね♪', spot:'rewards', wait:'act' },
+];
+// しめくくり。ここだけは入口によって話す中身が変わる(モードの数がちがうため)
+const ASSISTANT_BATTLE_TUTORIAL_OUTRO_V1 = [
   // 覚えておいてほしいこと
   { id:'ally',         at:'*',             e:'normal',  title:'このあとは', t:'WAVE2・4・6では供モンが合流するよ。ステータスがそのまま足されるんだ！', wait:'next' },
   { id:'unique',       at:'*',             e:'happy',   title:'固有技のこと', t:'勇者モンの固有技は、レベルが上がるほど強くなるよ。育てるほど頼りになる♪', wait:'next' },
@@ -1314,10 +1343,32 @@ const ASSISTANT_BATTLE_TUTORIAL = [
   { id:'wrapUp',       at:'*',             e:'excited', title:'おつかれさま！', t:'これでバトルのれんしゅうは終わり！ 一連の流れはバッチリだね♪', wait:'next' },
   { id:'end',          at:'*',             e:'happy',   title:'いってらっしゃい！', t:'困ったらヘルプからいつでもこの練習をやり直せるよ。がんばってね{name}！', wait:'end' },
 ];
-// いまの画面に合うステップを探す(画面が変わったときに呼ぶ)
-const findBattleTutorialStep = (fromIndex, screen) => {
-  for (let i = Math.max(0, fromIndex); i < ASSISTANT_BATTLE_TUTORIAL.length; i++) {
-    const step = ASSISTANT_BATTLE_TUTORIAL[i];
+const ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2 = [
+  // 覚えておいてほしいこと
+  { id:'ally',         at:'*',             e:'normal',  title:'このあとは', t:'WAVE2・4・6では供モンが合流するよ。ステータスがそのまま足されるんだ！', wait:'next' },
+  { id:'unique',       at:'*',             e:'happy',   title:'固有技のこと', t:'勇者モンの固有技は、レベルが上がるほど強くなるよ。育てるほど頼りになる♪', wait:'next' },
+  { id:'modeAfter',    at:'*',             e:'normal',  title:'モードの使い分け', t:'スコアに挑むならチャレンジ、育てたいならクイック。腕だめしがしたくなったらプロだよ♪', wait:'next' },
+  { id:'modeLater',    at:'*',             e:'wink',    title:'あわてなくて大丈夫', t:'クイックもプロも、いつでも選べるからね。まずはチャレンジで慣れていこ！', wait:'next' },
+  { id:'wrapUp',       at:'*',             e:'excited', title:'おつかれさま！', t:'これでバトルのれんしゅうは終わり！ 一連の流れはバッチリだね♪', wait:'next' },
+  { id:'end',          at:'*',             e:'happy',   title:'いってらっしゃい！', t:'困ったらヘルプからいつでもこの練習をやり直せるよ。がんばってね{name}！', wait:'end' },
+];
+// いま使うほう。V1がこれまでどおりの本番、V2は新しい入口のお試し
+const ASSISTANT_BATTLE_TUTORIAL = [
+  ...ASSISTANT_BATTLE_TUTORIAL_INTRO_V1,
+  ...ASSISTANT_BATTLE_TUTORIAL_BODY,
+  ...ASSISTANT_BATTLE_TUTORIAL_OUTRO_V1,
+];
+const ASSISTANT_BATTLE_TUTORIAL_V2 = [
+  ...ASSISTANT_BATTLE_TUTORIAL_INTRO_V2,
+  ...ASSISTANT_BATTLE_TUTORIAL_BODY,
+  ...ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2,
+];
+// いまの画面に合うステップを探す(画面が変わったときに呼ぶ)。
+// どちらの台本を使っているかは呼ぶ側が渡す
+const findBattleTutorialStep = (fromIndex, screen, steps) => {
+  const list = Array.isArray(steps) && steps.length ? steps : ASSISTANT_BATTLE_TUTORIAL;
+  for (let i = Math.max(0, fromIndex); i < list.length; i++) {
+    const step = list[i];
     if (step.at === '*' || step.at === screen) return i;
   }
   return -1;

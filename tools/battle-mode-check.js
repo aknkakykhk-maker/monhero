@@ -377,7 +377,8 @@ check('新しい3画面がある',
   has("gameState==='BATTLE_MODE_SELECT'") && has("gameState==='BATTLE_DIFFICULTY_SELECT'") && has("gameState==='BATTLE_SCORE_RANKING'"));
 check('新しい入口はデバッグ設定からだけ開ける',
   has("setGameState('BATTLE_MODE_SELECT');}} className=\"col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70")
-    && count("setGameState('BATTLE_MODE_SELECT')") === 2, `モード選択へ移る場所 ${count("setGameState('BATTLE_MODE_SELECT')")}か所`);
+    && count("setGameState('BATTLE_MODE_SELECT')") === 3,
+  `モード選択へ移る場所 ${count("setGameState('BATTLE_MODE_SELECT')")}か所(デバッグの入口・難易度選択の戻る・新チュートリアルの開始)`);
 check('ふだんの「バトル」は今までどおり BATTLE_MENU へ入る',
   has("onClick={()=>{setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');}} aria-label=\"バトル\""));
 check('モード選択は3モードすべてを横スライドで並べる',
@@ -391,8 +392,8 @@ check('上のタブにスコアランキングを混ぜない',
 check('スコアランキングはモードのカードと難易度のカードから開く',
   count("openModeScoreRanking(") === 2, `openModeScoreRanking ${count('openModeScoreRanking(')}か所`);
 check('ランキングが無いモードには導線も高さ合わせの空枠も出さない',
-  has('{ranked&&<button onClick={()=>openModeScoreRanking(m.id,safeDifficulty,')
-    && has('{ranked&&<button onClick={()=>openModeScoreRanking(battleMode,key,')
+  has('{ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,')
+    && has('{ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,')
     && has('ranked=modeHasRanking(battleMode);') && has('ranked=modeHasRanking(m.id);'));
 check('難易度カードから開いたときは、その難易度のタブを最初に選ぶ',
   has('setRankingViewDiff(diff);') && has('loadRankings(rankingDifficultyForMode(mode, diff));')
@@ -405,7 +406,7 @@ check('既存のバトル画面のランキングも同じ描画を使う',
   has("{rankingKind==='score'&&renderScoreRankingBody(BATTLE_MODE_CHALLENGE)}")
     && has("{rankingKind==='breeder'&&renderBreederRankingBody()}") && has("{rankingKind==='bond'&&renderBondRankingBody()}"));
 check('新しい画面から実際に始められる',
-  has("<button disabled={pro&&!proReady} onClick={()=>{battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';")
+  has("battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);")
     && !has('プロモードは準備中です'));
 check('助手のセリフは場面キーで出し分ける(JSXへ直書きしない)',
   m.BATTLE_MODES.every(x => ['battleChallenge','battleQuick','battlePro'].includes(
@@ -433,8 +434,8 @@ check('開いたときは真ん中のコピーから始める',
 // 難易度選択はいつでもノーマルから。前に遊んだ難易度を引きずらない
 check('難易度選択の既定はノーマル', has("const BATTLE_DEFAULT_DIFFICULTY = 'Normal';"));
 check('難易度選択を開くたびに既定へ戻す',
-  has("if(gameState!=='BATTLE_DIFFICULTY_SELECT')return;\n    setDifficulty(BATTLE_DEFAULT_DIFFICULTY);")
-    && has('const index=Object.keys(DIFFICULTY_SETTINGS).indexOf(BATTLE_DEFAULT_DIFFICULTY);'));
+  has("const start=battleTutorialStep!=null?'Beginner':BATTLE_DEFAULT_DIFFICULTY;")
+    && has('const index=Object.keys(DIFFICULTY_SETTINGS).indexOf(start);'));
 check('既存のバトル画面の難易度は今までどおり引き継ぐ',
   has("if(gameState!=='BATTLE_MENU'||battleMenuTab!=='difficulty')return;") && !/BATTLE_MENU'\|\|battleMenuTab!=='difficulty'\)return;\s*setDifficulty/.test(source));
 check('実際に開いて押せることを確かめる道具がある',
@@ -469,7 +470,7 @@ check('勇者モンにした種は候補から外す',
   has('const candidates=getUnlockedBaseMonsterList().filter(m=>m.id!==mainHero?.id);'));
 check('ベースモンが足りないときはプロを始められない',
   has('const proReady=getUnlockedBaseMonsterList().length>=PRO_ALLY_POOL_SIZE+1;')
-    && has('disabled={pro&&!proReady}') && has('`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`'));
+    && has("disabled={(pro&&!proReady)||(!!battleTutorial&&key!=='Beginner')}") && has('`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`'));
 // マスモン登録・リザルトは既存のしくみをそのまま使う(プロ専用の分岐を作らない)
 check('マスモン登録は既存のしくみを使い回す',
   !has('proMasuRegister') && !has('registerProMasu')
