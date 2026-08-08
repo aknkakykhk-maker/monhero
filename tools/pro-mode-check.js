@@ -83,11 +83,8 @@ const check = (name, ok, detail = '') => {
       await page.waitForTimeout(250);
     }
 
-    // デバッグ設定 → 新しいモード選択 → プロ → 難易度選択
-    await page.getByRole('button', { name: '設定' }).dispatchEvent('click', {}, { timeout: 15000 });
-    await page.getByRole('button', { name: 'ヘルプ' }).dispatchEvent('click', {}, { timeout: 15000 });
-    await page.locator('button', { hasText: /^💊$/ }).dispatchEvent('click', {}, { timeout: 15000 });
-    await page.getByRole('button', { name: '新バトルモード選択を開く（お試し）' }).dispatchEvent('click');
+    // HOMEの「バトル」 → モード選択 → プロ → 難易度選択
+    await page.getByRole('button', { name: 'バトル' }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
     await page.getByRole('button', { name: '3ページ目' }).dispatchEvent('click');
     await page.waitForTimeout(700);

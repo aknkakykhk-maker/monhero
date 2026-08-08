@@ -1,4 +1,5 @@
-// 新しいバトルチュートリアル(お試し)を実際のブラウザで最後まで通してみる。
+// いま本番で使っているバトルチュートリアル(新しいモード選択から始まる版)を
+// 実際のブラウザで通してみる。
 //
 //   ① デバッグ設定から「新バトルチュートリアルを見る（お試し）」で始まる
 //   ② 新しいモード選択の画面から始まり、3モードの説明が順に出る
@@ -79,12 +80,12 @@ const check = (name, ok, detail = '') => {
       await page.waitForTimeout(250);
     }
 
-    // --- ① デバッグ設定から新しいチュートリアルを始める ---
+    // --- ① デバッグ設定からチュートリアルを始める(ふだんの初回案内・ヘルプと同じ台本) ---
     await page.getByRole('button', { name: '設定' }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.getByRole('button', { name: 'ヘルプ' }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.locator('button', { hasText: /^💊$/ }).dispatchEvent('click', {}, { timeout: 15000 });
-    const startButton = page.getByRole('button', { name: '新バトルチュートリアルを見る（お試し・記録は残りません）' });
-    check('デバッグ設定に新しいチュートリアルの入口がある', await startButton.count() === 1);
+    const startButton = page.getByRole('button', { name: 'バトルチュートリアル開始（記録は残りません）' });
+    check('デバッグ設定にチュートリアルの入口がある', await startButton.count() === 1);
     await startButton.dispatchEvent('click');
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
     check('新しいモード選択の画面から始まる', true);
@@ -162,7 +163,7 @@ const check = (name, ok, detail = '') => {
 
     // --- ⑦ やめると始めた場所へ帰り、既読は書き換わらない ---
     await page.locator('button').filter({ hasText: /^やめる$/ }).first().dispatchEvent('click');
-    await page.getByRole('button', { name: '新バトルチュートリアルを見る（お試し・記録は残りません）' }).waitFor({ timeout: 15000 });
+    await page.getByRole('button', { name: 'バトルチュートリアル開始（記録は残りません）' }).waitFor({ timeout: 15000 });
     check('やめると始めた場所(デバッグ設定)へ帰る', true);
     const seen = await page.evaluate(() => localStorage.getItem('mh_battle_tutorial_seen_v1'));
     check('お試し再生で既読フラグを書き換えない', seen === 'false' || seen === JSON.stringify(false), String(seen));

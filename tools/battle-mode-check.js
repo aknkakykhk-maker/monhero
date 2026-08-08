@@ -355,10 +355,10 @@ check('プロはチャレンジと同じ曲になる', bgmBlock.includes('const 
 
 // --- ⑦ プロ基盤 ---
 // 第1段階では、本番のバトル画面にプロのタブを出さない(新しい入口とセットで公開する)
-check('本番のモードのタブはチャレンジとクイックだけ',
-  m.PUBLIC_BATTLE_MODES.map(x => x.id).join(',') === 'challenge,quick');
-check('プロは定義には入っているがタブには出ない',
-  m.BATTLE_MODES.some(x => x.id === 'pro') && !m.PUBLIC_BATTLE_MODES.some(x => x.id === 'pro'));
+check('本番のモード選択に3モードすべて出す',
+  m.PUBLIC_BATTLE_MODES.map(x => x.id).join(',') === 'challenge,quick,pro');
+// 作りかけのモードを足すときは、ここから外せば新しい入口に出ないまま検査だけ通せる
+check('公開するモードは1か所で決めている', has('const PUBLIC_BATTLE_MODES = BATTLE_MODES;'));
 // 助手のセリフはJSXへ直書きせず、data/assistants.js へ場面として足す
 check('プロの助手コメントが場面として用意されている', assistantsSrc.includes('battlePro: {'));
 check('プロの助手コメントが5件以上ある',
@@ -376,12 +376,13 @@ check('遊んだモードに応じて親密度の行動を切り替える',
 // 「バトル → バトルモード選択 → 難易度選択」の3画面。まだデバッグからだけ開ける
 check('新しい3画面がある',
   has("gameState==='BATTLE_MODE_SELECT'") && has("gameState==='BATTLE_DIFFICULTY_SELECT'") && has("gameState==='BATTLE_SCORE_RANKING'"));
-check('新しい入口はデバッグ設定からだけ開ける',
-  has("setGameState('BATTLE_MODE_SELECT');}} className=\"col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70")
-    && count("setGameState('BATTLE_MODE_SELECT')") === 3,
-  `モード選択へ移る場所 ${count("setGameState('BATTLE_MODE_SELECT')")}か所(デバッグの入口・難易度選択の戻る・新チュートリアルの開始)`);
-check('ふだんの「バトル」は今までどおり BATTLE_MENU へ入る',
-  has("onClick={()=>{setBattleMenuTab('difficulty');setGameState('BATTLE_MENU');}} aria-label=\"バトル\""));
+// HOMEの「バトル」は新しいモード選択へ入る(本番の入口)
+check('ふだんの「バトル」はモード選択へ入る',
+  has("onClick={()=>{setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} aria-label=\"バトル\""));
+check('旧バトル画面はデバッグからだけ開ける',
+  has('旧バトル画面を開く（見比べ用）')
+    && (source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length === 2,
+  `BATTLE_MENUへ移る場所 ${(source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length}か所(デバッグの見比べ用・旧チュートリアルの開始)`);
 check('モード選択は3モードすべてを横スライドで並べる',
   has('const modes=BATTLE_MODES,current=battleModeInfo(battleMode);') && has('aria-label="前のモード"') && has('aria-label="次のモード"')
     && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'));
@@ -414,8 +415,9 @@ check('助手のセリフは場面キーで出し分ける(JSXへ直書きしな
     x.id === 'quick' ? 'battleQuick' : x.id === 'pro' ? 'battlePro' : 'battleChallenge'))
     && has('scene={battleModeAssistantScene(current.id)}') && has('scene={battleModeAssistantScene(battleMode)}'));
 check('スキップや勇者モン選択の戻りは、来た入口の画面へ返す',
-  has("const battleEntryStateRef = useRef('BATTLE_MENU');") && count('battleEntryStateRef.current)') === 3
-    && has("battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);setRunMode(battleMode);"));
+  has("const battleEntryStateRef = useRef('BATTLE_DIFFICULTY_SELECT');") && count('battleEntryStateRef.current)') === 3
+    && has("battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);setRunMode(battleMode);")
+    && has("battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);"));
 check('新しい画面もBGMとヘルプの対応表に載っている',
   has("BATTLE_MODE_SELECT: 'enhance'") && has("BATTLE_DIFFICULTY_SELECT: 'enhance'") && has("BATTLE_SCORE_RANKING: 'enhance'")
     && helpSrc.includes("BATTLE_MODE_SELECT:       'basics/battle-modes'")
