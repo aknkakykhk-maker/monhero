@@ -1,0 +1,31 @@
+name: Compiled source check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  compiled-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - name: Install locked tool dependencies
+        run: npm ci --omit=optional
+      - name: Verify the committed compiled output
+        run: node build.js --check
+      - name: Exercise the canonical build
+        run: |
+          node build.js
+          node build.js --check
