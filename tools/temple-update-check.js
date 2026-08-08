@@ -1,0 +1,22 @@
+// 神殿の合体・寄付・再生の仕様と後方互換性を、編集元ソースから確認する。
+const fs = require('fs');
+const vm = require('vm');
+const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
+const grab = (a, b) => source.slice(source.indexOf(a), source.indexOf(b));
+const code = `${grab('const donationDiamondValue =', 'const rosterBaseId =')}\n${grab('const mergeMasuIntoMon =', '// ==================== 総合力')}\nglobalThis.out={donationDiamondValue,donationPsycheValue,randomRegenerationStat,buildRegeneratedMasu,mergeMasuIntoMon};`;
+const base = { id:'Test', name:'Test', baseHp:100, baseAtk:50, baseDef:80, baseGuts:40, distAptitude:['A','B','C','D'], plusStats:{}, unique:{name:'技'} };
+const context = { Math, Date, ALL_PLAYER_MONSTERS:{Test:base}, masuBondLevelInfo:masu=>({level:masu.bondXp}), uniqueSkillAtLevel:value=>value, getMasuColors:()=>[] };
+vm.createContext(context); vm.runInContext(code, context);
+const check = (label, value) => { if (!value) throw new Error(`FAIL: ${label}`); console.log(`OK: ${label}`); };
+const x=context.out;
+check('寄付ダイヤは累計絆XPと同数', x.donationDiamondValue(30)===30);
+check('寄付プシュケーはLv÷5切り捨て', x.donationPsycheValue({bondXp:5})===1 && x.donationPsycheValue({bondXp:10})===2 && x.donationPsycheValue({bondXp:30})===6);
+let i=0; const values=[0,1,.5,.25]; const masu=x.buildRegeneratedMasu(base,()=>values[i++],1);
+check('再生能力は90〜110%を四捨五入', JSON.stringify(masu.individualStats)===JSON.stringify({hp:90,atk:55,def:80,guts:38}));
+check('再生で間合い適性を変えない', JSON.stringify(masu.distApt)===JSON.stringify(base.distAptitude));
+check('個体差を保存データから再解決できる', x.mergeMasuIntoMon(masu).baseHp===90);
+check('既存マスモンは従来の基礎値', x.mergeMasuIntoMon({id:'old',baseId:'Test',name:'old',statPoints:{}}).baseHp===100);
+check('合体費用は0/3000', source.includes("inherit = false) => inherit ? FUSION_INHERIT_COST : 0") && source.includes('const FUSION_INHERIT_COST = 3000'));
+check('技継承条件は副Lv30のみ', source.includes('subLvl.level >= FUSION_INHERIT_MIN_SUB_LEVEL && fusionInheritUnique') && !source.includes('mainLvl.level >= 10 && subLvl.level'));
+check('連打防止ロックと初回専用保存値', source.includes('fusionProcessingRef.current') && source.includes('regenerationProcessingRef.current') && source.includes("mh_temple_regeneration_used_v1"));
+check('登録済み円盤石画像を再利用', source.includes("images/disc-icons/stone-base.png") && fs.existsSync('monster-hero/images/disc-icons/stone-base.png'));
