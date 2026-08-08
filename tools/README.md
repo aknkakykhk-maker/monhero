@@ -9,13 +9,32 @@ Node.js 製の検証スクリプト。ビルド工程は無いので、これら
 ## セットアップ
 
 ```
-cd tools && npm install
+cd tools && npm ci
 ```
 
 `@babel/core` / `@babel/preset-react`(JSXの構文チェック・変換用)、`canvas`
 (ブラウザのCanvas APIをNode上で再現し、染色マスクの生成を実画像で検証するため)、
 `playwright`(実ブラウザでのスモークテスト用)を入れる。
 `node_modules/` はコミットしない(`.gitignore` 済み)。
+
+正規ビルドと構文確認だけが必要な Codex クラウドでは、ネイティブ依存を省く
+`cd tools && npm ci --omit=optional` を使える。画像・ブラウザ系チェックも行う通常の開発環境では、
+上記の `npm ci` ですべてを導入する。
+
+`package-lock.json` を正本として `npm ci` を使う。音声・画像を再圧縮するときだけ使う
+`ffmpeg-static` / `sharp` は通常のビルド依存から外しているため、必要な作業環境で
+`npm install --no-save ffmpeg-static@5.2.0 sharp@0.34.5` を実行する。これらの大型・ネイティブ依存や
+`node_modules/`、生成キャッシュはコミットしない。
+
+Codex クラウドで npm レジストリが 403 を返した場合は、`npm config list` と失敗したパッケージを記録し、
+レジストリや変換器を独自に差し替えない。正規ビルド不能でも安全な編集元の変更とコミット、標準の
+Push / PR フローまでは進められるが、生成物未同期の PR は配信可能・完了ではない。`main` へマージする前に、
+依存を利用できる環境で必ず次の両方を成功させる。
+
+```bash
+node tools/build.js
+node tools/build.js --check
+```
 
 ## スクリプト
 

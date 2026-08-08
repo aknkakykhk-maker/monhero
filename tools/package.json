@@ -12,12 +12,12 @@
   },
   "dependencies": {
     "@babel/core": "^7.28.4",
-    "@babel/preset-react": "^7.27.1",
+    "@babel/preset-react": "^7.27.1"
+  },
+  "optionalDependencies": {
     "canvas": "^3.2.0",
-    "ffmpeg-static": "^5.2.0",
     "playwright": "^1.56.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "sharp": "^0.34.5"
+    "react-dom": "^18.3.1"
   }
 }

@@ -49,7 +49,7 @@
 
 ```bash
 # 初回のみ
-cd tools && npm install && cd ..
+cd tools && npm ci --omit=optional && cd ..
 
 # 最低限の静的確認
 node tools/check-syntax.js
@@ -59,6 +59,13 @@ node tools/build.js --check
 node tools/feature-check.js
 node tools/dye-report.js
 ```
+
+`npm ci` が 403 になる場合は、まずエラーになった URL と `npm config list` を記録します。
+Codex クラウドの通信ポリシーによる 403 は、レジストリ変更、認証情報の追加、Bun 等への置換で
+回避しません。依存がないため正規ビルドできない場合でも、独立して安全性を確認できる編集元の実装と
+コミットまでは行い、Codex 標準の Push / PR フローへ進めます。その PR は未同期の生成物を含むため
+**配信可能・完了ではありません**。依存を利用できる環境で `node tools/build.js` を実行して生成物を同期し、
+`node tools/build.js --check` が成功してから `main` へマージします。別の変換器で生成物を作ってはいけません。
 
 ブラウザ検証には別ターミナルで `python3 tools/serve.py` を起動し、`http://localhost:8899/monster-hero/`
 をスマートフォン相当のビューポートでも確認します。変更に対応する個別チェック（BGM、ランキング、戦闘など）を

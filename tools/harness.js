@@ -5,7 +5,6 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const babel = require('@babel/core');
-const { createCanvas, Image, loadImage } = require('canvas');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const GAME_SYSTEM = path.join(REPO_ROOT, 'monster-hero', 'src', 'game-system.jsx');
@@ -98,6 +97,9 @@ const EXPORTED_NAMES = [
 
 // ブラウザAPIの最小スタブ。canvasだけは node-canvas で本物と同じように動かす
 function makeBrowserStubs() {
+  // 正規ビルドはCanvasを使わない。画像系チェックを実行するときだけ読み込み、
+  // Babelだけを用意した軽量な環境でも build.js を実行できるようにする。
+  const { createCanvas, Image, loadImage } = require('canvas');
   const noop = () => {};
   const makeEl = (tag) => {
     if (tag === 'canvas') return createCanvas(1, 1);
