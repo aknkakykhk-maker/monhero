@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-09 00:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-09 06:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2388,7 +2388,7 @@ const LOGIN_BONUS_REWARDS = [
   [{ type:'diamond', amount:2000 },     { type:'skipTicketJo', amount:1 }],
   [{ type:'bondPointReset', amount:1 }, { type:'skipTicketJo', amount:1 }],
 ];
-const GIFT_REWARD_LABELS = { diamond:'ダイヤ', breederPoint:'ブリーダーポイント', breederXp:'ブリーダー経験値', dyeMock:'染色もどき', bondPointReset:'絆ポイントリセットアイテム', trainingTicket:'トレーニングチケット', trainingTicketLarge:'修行チケット', skipTicketJo:'スキップチケット・序', skipTicketHa:'スキップチケット・破', skipTicketKyu:'スキップチケット・急' };
+const GIFT_REWARD_LABELS = { diamond:'ダイヤ', breederPoint:'ブリーダーポイント', breederXp:'ブリーダー経験値', dyeMock:'染色もどき', bondPointReset:'絆ポイントリセットアイテム', trainingTicket:'トレーニングチケット', trainingTicketLarge:'重トレーニングチケット', skipTicketJo:'スキップチケット・序', skipTicketHa:'スキップチケット・破', skipTicketKyu:'スキップチケット・急' };
 const LOGIN_BONUS_DEFAULT = { currentDay:1, lastGrantedPeriod:null, totalLoginDays:0 };
 // 日本時間へ直した後に4時間戻した暦日を期間キーにする。03:59と04:00は別の日、
 // 04:00から翌03:59までは同じ日として扱える、比較・保存しやすい YYYY-MM-DD 形式。
@@ -4016,6 +4016,7 @@ function MonsterHeroGame() {
   const giftClaimingRef = useRef(false);
   const [pendingItemUse, setPendingItemUse] = useState(null); // アイテム欄で「使う」を押した後、対象のマスモンを選ぶ画面用(itemId)
   const [xpTicketUse, setXpTicketUse] = useState(null); // 絆経験値チケットをまとめて使う画面用 {itemId, masuId, count}
+  const [trainingTicketTargetId, setTrainingTicketTargetId] = useState(null); // 詳細から対象を変えずに使う絆経験値チケットを選ぶ画面用
   const [dyeTargetMasuId, setDyeTargetMasuId] = useState(null); // 染色もどき: 対象に選んだマスモンid(色選択モーダル表示のトリガー)
   const [dyePreviewColors, setDyePreviewColors] = useState([]); // 染色もどき: 確定前にプレビュー中の部位別色id配列(染色①②③)
   const [customColorPicker, setCustomColorPicker] = useState(null); // 染色もどき: カスタム色選択中の{idx,h,s,v}(nullなら非表示)
@@ -6887,7 +6888,7 @@ function MonsterHeroGame() {
     setShowDeckInfo(false); setShowEnemyInfo(false); setShowHeroInfo(false); setShowQuitConfirm(false);
     setShowMasuRegisterModal(false); setShowMasuRenameModal(false); setShowIconPicker(false);
     setShowSortFilterModal(false); setShowNameEdit(false);
-    setPendingItemUse(null); setXpTicketUse(null); setDyeTargetMasuId(null); setCustomColorPicker(null); setMasuMonDetail(null);
+    setPendingItemUse(null); setXpTicketUse(null); setTrainingTicketTargetId(null); setDyeTargetMasuId(null); setCustomColorPicker(null); setMasuMonDetail(null);
     setFocusedCard(null); setSkillPicker(null); setRosterDetailMon(null); setRosterDetailTeaching(null); setRosterSkillDetail(null);
     titleStartingRef.current = false; setTitleStarting(false);
     entryAnimatingRef.current = false; setEntryAnimating(false);
@@ -8780,7 +8781,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>
         )}
 
-        {gameState==='TRAINING_INFO'&&<main className="mh-training-screen"><header className="mh-training-head"><button onClick={returnToHome}><ArrowLeft/></button><div><small>COMING SOON</small><h2>修行</h2></div><i/></header><section className="mh-training-confirm"><div className="text-6xl text-center my-6">🎲</div><h3>修行は準備中です</h3><p>マスモンとすごろく形式のマップを進み、さまざまなマス効果や修行道具を使ってゴールを目指す予定です。</p><div className="mh-training-ticket"><b>正式実装前のお知らせ</b><small>通常プレイから修行本編は開始できません。修行チケットの消費、報酬の付与、進行状況の保存も行いません。</small></div></section><footer className="mh-training-footer"><button onClick={returnToHome}>HOMEへ戻る</button></footer></main>}
+        {gameState==='TRAINING_INFO'&&<main className="mh-training-screen"><header className="mh-training-head"><button onClick={returnToHome}><ArrowLeft/></button><div><small>COMING SOON</small><h2>修行</h2></div><i/></header><section className="mh-training-confirm"><div className="text-6xl text-center my-6">🎲</div><h3>修行は準備中です</h3><p>マスモンとすごろく形式のマップを進み、さまざまなマス効果や修行道具を使ってゴールを目指す予定です。</p><div className="mh-training-ticket"><b>正式実装前のお知らせ</b><small>通常プレイから修行本編は開始できません。重トレーニングチケットの消費、報酬の付与、進行状況の保存も行いません。</small></div></section><footer className="mh-training-footer"><button onClick={returnToHome}>HOMEへ戻る</button></footer></main>}
 
         {gameState==='TRAINING_SELECT'&&(()=>{const selected=masuMons.find(m=>String(m.id)===String(trainingSelectedId));return <main className="mh-training-screen"><div className="mh-debug-banner">DEBUG・報酬や進行状況は保存されません</div><header className="mh-training-head"><button onClick={()=>setGameState('DEBUG_SETTINGS')}><ArrowLeft/></button><div><small>TRAINING TEST</small><h2>所持マスモン選択</h2></div><i/></header>{selected&&<section className="mh-training-selected"><DyedMonsterImage baseId={selected.baseId} src={ALL_PLAYER_MONSTERS[selected.baseId]?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)}/><div><b>{selected.name}</b><span>絆Lv.{bondLevelInfo(selected.bondXp||0).level}</span></div></section>}<p className="mh-training-note">デバッグ修行に参加する所持マスモンを1体選択してください。</p><div className="mh-training-mon-list">{masuMons.map(m=><button key={m.id} className={String(m.id)===String(trainingSelectedId)?'active':''} onClick={()=>setTrainingSelectedId(m.id)}><DyedMonsterImage baseId={m.baseId} src={ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl} alt={m.name} masuColors={getMasuColors(m)}/><b>{m.name}</b><small>絆Lv.{bondLevelInfo(m.bondXp||0).level}</small></button>)}</div><footer className="mh-training-footer"><button disabled={!selected} onClick={()=>setGameState('TRAINING_DIFFICULTY')}>難易度選択へ</button></footer></main>})()}
 
@@ -10074,6 +10075,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           );
         })()}
 
+        {/* 詳細で選んだ個体を保ったまま、使用するトレーニングチケットだけを選ぶ */}
+        {trainingTicketTargetId&&(()=>{
+          const masu=getMasuMon(trainingTicketTargetId);
+          if(!masu)return null;
+          const tickets=['training_ticket','training_ticket_l'].map(id=>BREEDER_MARKET_ITEMS.find(item=>item.id===id)).filter(Boolean);
+          return (
+            <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.96)',zIndex:31400,paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true" aria-label={`${masu.name}に使うトレーニングチケットを選択`}>
+              <section className="w-full max-w-sm rounded-3xl border-2 border-teal-500 bg-slate-900 p-4 shadow-2xl">
+                <div className="mb-3 flex items-center justify-between gap-2"><div className="min-w-0"><div className="text-[9px] font-black tracking-widest text-teal-300">トレーニング</div><h2 className="truncate text-lg font-black">{masu.name}に使うチケット</h2></div><button onClick={()=>setTrainingTicketTargetId(null)} aria-label="閉じる" className="shrink-0 rounded-full bg-white/5 p-3 active:scale-90"><X size={18}/></button></div>
+                <div className="space-y-2">{tickets.map(item=>{const have=ownedItems[item.id]||0;return <button key={item.id} disabled={have<=0} onClick={()=>{setXpTicketUse({itemId:item.id,masuId:masu.id,count:1});setTrainingTicketTargetId(null);}} className="flex min-h-[58px] w-full items-center gap-3 rounded-2xl border border-teal-500/30 bg-teal-950/40 px-3 text-left active:scale-[.98] disabled:opacity-40"><span className="text-2xl">{item.emoji}</span><span className="min-w-0 flex-1"><b className="block truncate text-xs">{item.name}</b><small className="block text-[9px] text-slate-400">1枚で絆経験値 +{item.bondXp}</small></span><strong className="shrink-0 text-[10px] text-teal-300">所持 {have}枚</strong></button>})}</div>
+                <p className="mt-3 text-[8px] font-bold text-slate-500">対象のマスモンは選び直さず、次の画面で使う枚数を決められます。</p>
+              </section>
+            </div>
+          );
+        })()}
+
         {/* 絆経験値チケットをまとめて使う画面。枚数を動かすと、増える経験値と絆レベルの変化がその場で分かる */}
         {xpTicketUse&&(()=>{
           const item = BREEDER_MARKET_ITEMS.find(i=>i.id===xpTicketUse.itemId);
@@ -10235,11 +10252,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
               )}
               <div className="text-[8px] text-slate-500 font-bold text-center px-2">{inRoster?'現在、編成に入っています':'編成画面で選ぶと、次の周回でこのマスモンを使えます'}</div>
-              <div className="text-[8px] text-teal-400/80 font-bold text-center px-2">絆ポイントリセットの書・染色もどきは「アイテム」から使用できます</div>
+              <div className="text-[8px] text-teal-400/80 font-bold text-center px-2">絆ポイントリセットの書は「アイテム」から使用できます</div>
               <button onClick={()=>{ if(window.confirm(`「${masu.name}」を削除しますか？この操作は取り消せません。`)){ deleteMasuMon(masu.id); setMasuMonDetail(null); } }} className="w-full min-h-[40px] text-[10px] font-black text-red-300 bg-red-950/40 border border-red-500/30 rounded-xl active:scale-95">このマスモンを削除する</button>
             </>),
             footer: (
-              <button onClick={()=>{setMasuEnhanceFrom(gameState); setGameState('MASU_ENHANCE');}} className="w-full min-h-[48px] bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-2xl font-black text-sm uppercase active:scale-95 flex items-center justify-center gap-1.5 shadow-lg shrink-0"><Sparkles size={14}/>強化する{(masu.distAptPoints||0)>0&&<span className="bg-white/25 px-1.5 rounded-full text-[10px]">強化P {masu.distAptPoints}</span>}</button>
+              <section aria-label="育成・カスタム" className="shrink-0 rounded-2xl border border-white/10 bg-black/25 p-2">
+                <div className="mb-1.5 text-[9px] font-black tracking-widest text-slate-400">育成・カスタム</div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={()=>{setMasuEnhanceFrom(gameState); setGameState('MASU_ENHANCE');}} className="min-h-[48px] rounded-xl bg-gradient-to-b from-amber-600 to-orange-700 px-1 text-[11px] font-black text-white active:scale-95"><span className="block text-base leading-none mb-1">💪</span>強化</button>
+                  <button onClick={()=>setTrainingTicketTargetId(masu.id)} className="min-h-[48px] rounded-xl bg-gradient-to-b from-teal-600 to-cyan-800 px-1 text-[11px] font-black text-white active:scale-95"><span className="block text-base leading-none mb-1">🎟️</span>トレーニング</button>
+                  <button onClick={()=>{const n=dyeRegionCount(masu.baseId),cur=getMasuColors(masu);setDyeTargetMasuId(masu.id);setDyePreviewColors(Array.from({length:n},(_,i)=>cur[i]||null));}} disabled={(ownedItems.dye_mock||0)<=0} className="min-h-[48px] rounded-xl bg-gradient-to-b from-fuchsia-600 to-purple-800 px-1 text-[11px] font-black text-white active:scale-95 disabled:opacity-40"><span className="block text-base leading-none mb-1">🎨</span>染色</button>
+                </div>
+                {(ownedItems.dye_mock||0)<=0&&<div className="mt-1 text-right text-[7px] font-bold text-slate-500">染色もどき 所持0</div>}
+              </section>
             ),
           });
         })()}

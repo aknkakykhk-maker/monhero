@@ -50,7 +50,7 @@ check('レベル上昇数ぶん強化ポイントを加算できる', after.leve
 const cappedMasu = { id:'capped', bondXp:totalBondXpForLevel(30) - 1, levelCap:30 };
 check('既存のレベル上限で絆経験値を打ち止める', cappedBondXp(cappedMasu, 999999) === totalBondXpForLevel(30));
 
-// トレーニングチケット(15XP)・修行チケット(150XP)も通常報酬と同じ共通処理を通す。
+// トレーニングチケット(15XP)・重トレーニングチケット(150XP)も通常報酬と同じ共通処理を通す。
 const xpJustBefore = level => totalBondXpForLevel(level) - 1;
 const noLevel = applyBondXpGain({ id:'ticket-0', bondXp:totalBondXpForLevel(10), levelCap:30, distAptPoints:4 }, 1);
 check('チケットでレベルが上がらなければ強化ポイント+0', noLevel.gainedLevels === 0 && noLevel.masu.distAptPoints === 4);
@@ -61,7 +61,7 @@ const threeGain = totalBondXpForLevel(13) - threeStart;
 const threeLevels = applyBondXpGain({ id:'ticket-3', bondXp:threeStart, levelCap:30, distAptPoints:2 }, threeGain);
 check('複数枚使用で3レベル上昇ぶんをすべて付与', threeLevels.before.level === 10 && threeLevels.after.level === 13 && threeLevels.gainedLevels === 3 && threeLevels.masu.distAptPoints === 5);
 const largeTicket = applyBondXpGain({ id:'large-ticket', bondXp:xpJustBefore(10), levelCap:30, distAptPoints:0 }, 150);
-check('修行チケットも共通処理で全上昇レベルぶんを付与', largeTicket.gainedLevels > 0 && largeTicket.masu.distAptPoints === largeTicket.gainedLevels);
+check('重トレーニングチケットも共通処理で全上昇レベルぶんを付与', largeTicket.gainedLevels > 0 && largeTicket.masu.distAptPoints === largeTicket.gainedLevels);
 const capArrival = applyBondXpGain({ id:'cap', bondXp:totalBondXpForLevel(29), levelCap:30, distAptPoints:7 }, 999999);
 check('上限到達時は到達した1レベルぶんだけ付与', capArrival.after.level === 30 && capArrival.gainedLevels === 1 && capArrival.masu.distAptPoints === 8);
 const deficient = { id:'old', baseId:'base', bondXp:totalBondXpForLevel(10), levelCap:30, distAptPoints:2, distApt:['C','C','C','C'], statPoints:{} };
