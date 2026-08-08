@@ -511,12 +511,22 @@ check('プロの供モン合流は横スライドで出す',
     && has('aria-label="前の供モン"') && has('aria-label="次の供モン"')
     && has("'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll':'grid grid-cols-2 gap-2.5'"));
 check('横スライドは開くたびに先頭から見せる',
-  has("if(gameState!=='PICK_ALLY')return;\n    setAllyCardIndex(0);"));
+  has("if(gameState!=='PICK_ALLY')return;") && has('setAllyCardIndex(0);'));
+// 勇者モンを置いたあと、開いていた詳細を必ず閉じる。
+// プロだけ早く return するので、関数の最後にある片付けを通らない。
+// 閉じ忘れると、WAVE 2の供モン合流で「勝手に勇者モンが選ばれている」ように見える
+check('勇者モンの詳細を開いたまま次の画面へ行かない',
+  has("if (isProMode(runMode)) { setCurrentPickingMon(null); setProAllyPool([]); setGameState('PICK_PRO_ALLIES'); return; }"));
+check('供モン合流を開くときも開いていた詳細を閉じる',
+  has("// 前の画面で開いていた詳細が残っていると、開いた瞬間に別の子が選ばれて見える\n    setCurrentPickingMon(null);"));
+// 画面を切り替える早い return が増えたときの取りこぼしを見つけるための目安
+check('setupMon はどの道でも詳細を片付ける',
+  (grab(source, 'const setupMon = (m, slotIdx) => {', '// バトルチュートリアル用の台本').match(/setCurrentPickingMon\(null\)/g) || []).length >= 2);
 check('チャレンジ・クイックの供モン一覧はこれまでどおり2列',
   has("allyCarousel?'flex items-start gap-2.5") && has(":'grid grid-cols-2 gap-2.5'"));
 // 勇者モンを決めたあと、プロだけ供モン候補を選ぶ画面へ寄り道する
 check('プロだけ供モン候補の画面をはさむ',
-  has("if (isProMode(runMode)) { setProAllyPool([]); setGameState('PICK_PRO_ALLIES'); return; }")
+  has("if (isProMode(runMode)) { setCurrentPickingMon(null); setProAllyPool([]); setGameState('PICK_PRO_ALLIES'); return; }")
     && has("{gameState==='PICK_PRO_ALLIES'&&(()=>{"));
 check('候補が5体そろうまで始められない',
   has('const ready=proAllyPool.length===need;') && has('<button disabled={!ready}')
