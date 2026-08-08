@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 08:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 11:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -154,46 +154,73 @@ const modeKeyPrefix = (mode) => isQuickMode(mode) ? 'mh_quick_' : isProMode(mode
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
 const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
 const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
-// モードの表示情報と「？」で出す説明。文言を1か所にまとめ、タブ・カード・説明の食い違いを防ぐ
+// モードの表示情報と「？」で出す説明。文言を1か所にまとめ、タブ・カード・説明の食い違いを防ぐ。
+//
+// どのモードも同じ形で書く。読み比べたときに「あるモードにだけ書いてある」が起きないようにするため。
+//   tagline    … 1行の紹介
+//   highlights … カードへ出す3行。並びは必ず【売り】→【報酬】→【記録】の順で固定する
+//   points     … 「？」の説明に出す詳細。見出しは全モード共通で、下の並び順もそろえる
+//                 編成 → WAVEのあいだの強化 → 難しさ → もらえる経験値とダイヤ →
+//                 スコアと記録 → 供モンの加入 → マスモン登録 → スキップチケット → こんな人におすすめ
 const BATTLE_MODES = [
   {
     id: BATTLE_MODE_CHALLENGE, label: 'チャレンジモード', short: 'チャレンジ', emoji: '🏆', color: '#818cf8',
-    tagline: 'じっくり攻略してランキングを狙う',
+    tagline: '強化を選んでじっくり攻略する、基本のモード',
+    highlights: [
+      ['🏆', '強化を選んでスコアを伸ばす王道'],
+      ['💎', '経験値・ダイヤは難易度どおり'],
+      ['📊', 'スコアランキングに反映される'],
+    ],
     points: [
-      ['🏆', 'ランキング対象', 'このモードのスコアはランキングに反映されます'],
-      ['📈', '強化フェーズあり', '通常どおり強化フェーズが発生し、強化内容を選びながら戦えます'],
-      ['🛡️', '育成と攻略の両立', '戦略的に強くなりながら、最後までの到達を目指します'],
-      ['🤝', '供モン加入・マスモン登録あり', '供モンの加入やマスモンの登録ができます'],
-      ['💎', '通常報酬', '経験値・ダイヤ・スコアの倍率は難易度の設定どおりです'],
-      ['🎯', 'おすすめのプレイスタイル', 'じっくり攻略しながら、ランキング上位や自己ベスト更新を目指したい人向けです'],
+      ['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。勇者モン1体と供モンで挑みます。'],
+      ['📈', 'WAVEのあいだの強化', 'WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選べるので、編成のかみ合わせを考えながら組み立てられます。ブリーダーの教えもここで選びます。'],
+      ['👹', '難しさ', '9段階の難易度から選べます。強化を自分で選べるぶん、うまく組み立てれば高い難易度でも十分に戦えます。育てたマスモンをそのまま活かせる、いちばん素直な難しさです。'],
+      ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤは、どれも難易度の設定どおりの倍率です。モードによる上乗せはありません。'],
+      ['🏆', 'スコアと記録', 'スコアは難易度ごとの全国ランキングに反映されます。自己ベストスコア・最高到達WAVE・クリア回数も難易度ごとに残ります。'],
+      ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。加わる子は所持しているモンスターから選べます。'],
+      ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'],
+      ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'],
+      ['🎯', 'こんな人におすすめ', 'じっくり考えて攻略したい人、ランキング上位や自己ベスト更新を狙いたい人向けです。'],
     ],
   },
   {
     id: BATTLE_MODE_QUICK, label: 'クイックモード', short: 'クイック', emoji: '⚡', color: '#2dd4bf',
-    tagline: 'テンポ重視。WAVEごとに自動で強くなる',
+    tagline: '短い時間でモンスターを育てるためのモード',
+    highlights: [
+      ['⚡', '育成向き。短い時間で何周でも回せる'],
+      ['💎', '経験値・ダイヤが1.5倍'],
+      ['🚫', 'スコアランキングは無し'],
+    ],
     points: [
-      ['🚫', 'ランキング対象外', 'このモードのスコアはランキングに反映されません'],
-      ['⚔️', '強化フェーズなし', '通常の強化選択を行わず、テンポよく進行します'],
-      ['📈', 'WAVEごとに自動成長', '味方全員の全ステータスが10%上昇し、ライフとガッツが全回復します'],
-      ['👹', '難易度は高め', '強化内容を選べないため、チャレンジモードとは異なる難しさがあります'],
-      ['🤝', '供モン加入あり', '供モン加入時は、味方の誰かの固有技がランダムで1上昇します'],
-      ['⭐', 'マスモン登録あり', 'クイックモードで完成したモンスターも登録できます'],
-      ['💎', '経験値・ダイヤ1.5倍', '獲得できる経験値とダイヤが1.5倍になります（スコア倍率は難易度どおりです）'],
-      ['🎯', 'おすすめのプレイスタイル', 'テンポよく育成したいときや、自動成長だけでどこまで進めるか腕試ししたい人向けです'],
+      ['⚔️', '編成', 'ベースモンもマスモンも自由に連れていけます。育てたい子を勇者モンにすると、その子の絆経験値がいちばん多く貯まります。'],
+      ['📈', 'WAVEのあいだの強化', '強化を選ぶ画面は出ません。かわりにWAVEをクリアするたび、味方全員の全ステータス（ライフ・ちから・丈夫さ・ガッツ）がそのときの値から10%上がり、ライフとガッツが満タンまで回復します。'],
+      ['👹', '難しさ', '9段階の難易度から選べます。強化を選べないぶん苦手をふさぎにくく、チャレンジモードとは違う難しさがあります。育成が目的なので、無理のない難易度で回すのが向いています。'],
+      ['💎', 'もらえる経験値とダイヤ', 'ブリーダー経験値・絆経験値・ダイヤが、難易度の倍率にさらに1.5倍かかります。同じ時間でいちばん多く育つのがこのモードです。'],
+      ['🏆', 'スコアと記録', 'スコアは競いません。ランキングには載らず、チャレンジモードの自己ベストも書き換わりません。記録はクイック専用の場所に、最高到達WAVEとクリア回数として残ります。'],
+      ['🤝', '供モンの加入', '決まったWAVEで供モンが加わります。加わったあと、味方の誰か1体の固有技がランダムで1レベル上がります（上限Lv.8）。技を選ぶ画面は出ません。'],
+      ['⭐', 'マスモン登録', '勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'],
+      ['⏩', 'スキップチケット', 'このモードでだけ使えます。チケットのある難易度は、戦わずに一気にクリアぶんの報酬を受け取れます。'],
+      ['🎯', 'こんな人におすすめ', '新しい子を早く育てたい人、絆レベルや強化ポイントをまとめて稼ぎたい人向けです。'],
     ],
   },
   {
     id: BATTLE_MODE_PRO, label: 'プロモード', short: 'プロ', emoji: '🎓', color: '#f472b6',
-    tagline: 'ベースモン限定。新しいマスモンを一気に育てる',
+    tagline: '育てたマスモンを一切使えない、いちばん難しいモード',
+    highlights: [
+      ['🔥', '素のベースモンだけで挑む最高難度'],
+      ['💎', '絆経験値3倍・ブリーダー経験値1.5倍'],
+      ['📊', 'プロ専用のスコアランキング'],
+    ],
     points: [
-      ['🚫', 'ベースモン限定', '育てたマスモンは編成できません。素のベースモンだけで挑みます'],
-      ['💗', '絆経験値3倍', '獲得できる絆経験値がチャレンジモードの3倍になります'],
-      ['👑', 'ブリーダー経験値1.5倍', '獲得できるブリーダー経験値がチャレンジモードの1.5倍になります'],
-      ['🏆', 'プロ専用ランキング', 'スコアはチャレンジとは別の「プロランキング」に反映されます'],
-      ['🤝', '供モンは5体から3体', '始める前に供モン候補を5体選び、その中から3体がランダムで加入候補になります'],
-      ['⭐', 'マスモン登録あり', '勇者モンにしたベースモンは、これまでどおりマスモンとして登録できます'],
-      ['💎', 'ダイヤとスコアは通常どおり', 'ダイヤとスコアの倍率は難易度の設定どおりです'],
-      ['🎯', 'おすすめのプレイスタイル', '新しいマスモンを一から育てたい人、育成の効率を上げたい人向けです'],
+      ['⚔️', '編成', '育てたマスモンは1体も連れていけません。全員が素のベースモンです。これまで積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'],
+      ['📈', 'WAVEのあいだの強化', 'チャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、どこを伸ばすかの判断がそのまま結果に出ます。'],
+      ['👹', '難しさ', 'このゲームでいちばん難しいモードです。同じ難易度でも、育てた個体を使えるチャレンジモードとは手ごたえがまったく違います。敵の強さは難易度どおりなので、上の難易度へ行くほど差が開きます。'],
+      ['💎', 'もらえる経験値とダイヤ', '絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりで、上乗せはありません。'],
+      ['🏆', 'スコアと記録', 'スコアはチャレンジモードとは別の「プロランキング」に反映されます。同じ条件で挑んだ人どうしで競う場所です。自己ベスト・最高到達WAVE・クリア回数もプロ専用の場所に残り、チャレンジモードの記録は書き換わりません。'],
+      ['🤝', '供モンの加入', '始める前に供モンの候補を5体選びます。実際に加入候補として出るのは、その5体からランダムに選ばれた3体です。誰が来てもいいように候補を組むところまでが編成です。'],
+      ['⭐', 'マスモン登録', '勇者モンにしたベースモンは、プレイが終わったあとマスモンとして登録できます。厳しい条件で戦ったぶん、絆経験値は3倍ぶん貯まっています。'],
+      ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'],
+      ['🎯', 'こんな人におすすめ', '育成の力を借りずに腕だけで勝ちたい人、チャレンジモードが物足りなくなった人向けです。'],
     ],
   },
 ];
@@ -2596,6 +2623,8 @@ const DIFFICULTY_SETTINGS = {
   Legend:      { label: "Legend",       power: 10.0, score: 18.0, gold: 4.0,  bg: '#be185d', text: '#f9a8d4', color: "bg-pink-700", shadow: "shadow-pink-600/60" },
 };
 const normalizeBattleDifficulty = (value) => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
+// 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
+const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
 // クリアするともらえる虹のプシュケー。難易度が高いほど多い。
 // 難易度のキーは DIFFICULTY_SETTINGS が正本なので、増減したらここも合わせる
 // (ずれていないかは tools/breakthrough-item-check.js が見る)。
@@ -3707,6 +3736,8 @@ function MonsterHeroGame() {
   const [scoreRankingBack, setScoreRankingBack] = useState('BATTLE_MODE_SELECT');
   const modeCarouselRef = useRef(null);
   const modeDifficultyCarouselRef = useRef(null);
+  // モードのカルーセルを「ぐるぐる回す」ための、スクロールが止まったかどうかの見張り
+  const modeLoopTimerRef = useRef(null);
   // バトルを始めた入口がどの画面だったか。スキップや勇者モン選択の「戻る」を、
   // 来た画面(既存の BATTLE_MENU / 新しい BATTLE_DIFFICULTY_SELECT)へ返すために覚えておく
   const battleEntryStateRef = useRef('BATTLE_MENU');
@@ -5400,6 +5431,31 @@ function MonsterHeroGame() {
     const id=requestAnimationFrame(()=>{const index=Object.keys(DIFFICULTY_SETTINGS).indexOf(difficulty);difficultyCarouselRef.current?.children[index]?.scrollIntoView({inline:'center',block:'nearest'});});
     return()=>cancelAnimationFrame(id);
   },[gameState,battleMenuTab]);
+
+  // 新しいモード選択を開いたら、3回くり返して置いた並びの「真ん中のコピー」から始める。
+  // こうしておくと、最初にどちらへスワイプしても同じように回り続けられる
+  useEffect(()=>{
+    if(gameState!=='BATTLE_MODE_SELECT'||modeSelectTab!=='mode')return;
+    const id=requestAnimationFrame(()=>{
+      const index=BATTLE_MODES.length+Math.max(0,BATTLE_MODES.findIndex(m=>m.id===normalizeBattleMode(battleMode)));
+      modeCarouselRef.current?.children[index]?.scrollIntoView({inline:'center',block:'nearest'});
+    });
+    return()=>cancelAnimationFrame(id);
+  },[gameState,modeSelectTab]);
+  // 画面を離れるときは位置戻しの見張りを止める(閉じたあとに動かさない)
+  useEffect(()=>()=>{if(modeLoopTimerRef.current)clearTimeout(modeLoopTimerRef.current);},[]);
+
+  // 新しい難易度選択を開いたときは、いつでもノーマルから始める。
+  // 前に遊んだ難易度がそのまま残っていると、うっかり高い難易度で始めてしまうため
+  useEffect(()=>{
+    if(gameState!=='BATTLE_DIFFICULTY_SELECT')return;
+    setDifficulty(BATTLE_DEFAULT_DIFFICULTY);
+    const id=requestAnimationFrame(()=>{
+      const index=Object.keys(DIFFICULTY_SETTINGS).indexOf(BATTLE_DEFAULT_DIFFICULTY);
+      modeDifficultyCarouselRef.current?.children[index]?.scrollIntoView({inline:'center',block:'nearest'});
+    });
+    return()=>cancelAnimationFrame(id);
+  },[gameState,battleMode]);
 
   // 端末のlocalStorageに保存された進行状況(mh_で始まる全キー)をひとつの文字列コードに書き出す。
   // ホーム画面アイコンを作り直すとiOSではデータが引き継がれないため、その手動バックアップ手段として使う
@@ -8773,7 +8829,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='BATTLE_MODE_SELECT'&&(()=>{
           const modes=BATTLE_MODES,current=battleModeInfo(battleMode);
           const selectedIndex=Math.max(0,modes.findIndex(m=>m.id===current.id));
-          const selectModeIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(modes.length-1,index));setBattleMode(modes[safe].id);modeCarouselRef.current?.children[safe]?.scrollIntoView({behavior,inline:'center',block:'nearest'});};
+          // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
+          // 端のコピーまで来たら、指を離したあとに黙って真ん中のコピーへ位置を戻す。
+          // 見た目は動かないので、どちらへスワイプしてもいつまでも回り続けるように見える
+          const loopModes=[...modes,...modes,...modes];
+          const centeredLoopIndex=()=>{const root=modeCarouselRef.current;if(!root)return modes.length+selectedIndex;const c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});return best;};
+          const scrollToLoopIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(loopModes.length-1,index));modeCarouselRef.current?.children[safe]?.scrollIntoView({behavior,inline:'center',block:'nearest'});setBattleMode(loopModes[safe].id);};
+          // 矢印は端でも止まらない。1つ進む・1つ戻るだけで、位置の戻しはスクロールが止まってから行う
+          const stepMode=(delta)=>scrollToLoopIndex(centeredLoopIndex()+delta);
+          // 真ん中のコピーの外にいたら、同じモードが同じ見え方で並んでいる真ん中へ差し替える
+          const recenterModeLoop=()=>{const root=modeCarouselRef.current;if(!root)return;const index=centeredLoopIndex();if(index>=modes.length&&index<modes.length*2)return;const target=modes.length+(index%modes.length);const from=root.children[index],to=root.children[target];if(!from||!to)return;root.scrollLeft+=to.offsetLeft-from.offsetLeft;};
           return (
           <div className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             {/* ランキングのタブを見ているときは、いきなりホームへ帰らずまずモード選択へ戻す */}
@@ -8789,10 +8854,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {modeSelectTab==='mode'&&<div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
                 <div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプしてモードを選択</div>
                 <div className="relative shrink-0">
-                  <button aria-label="前のモード" disabled={selectedIndex===0} onClick={()=>selectModeIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
-                  <div ref={modeCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(modes[best]&&modes[best].id!==current.id)setBattleMode(modes[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {modes.map(m=>{const active=m.id===current.id,rec=modeRecordFor(m.id,safeDifficulty),ranked=modeHasRanking(m.id);return (
-                      <article key={m.id} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?m.color:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${m.color}55`:'none'}}>
+                  <button aria-label="前のモード" onClick={()=>stepMode(-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70"><ChevronLeft/></button>
+                  <div ref={modeCarouselRef} onScroll={()=>{const index=centeredLoopIndex();const picked=loopModes[index];if(picked&&picked.id!==current.id)setBattleMode(picked.id);if(modeLoopTimerRef.current)clearTimeout(modeLoopTimerRef.current);modeLoopTimerRef.current=setTimeout(recenterModeLoop,180);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
+                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,rec=modeRecordFor(m.id,safeDifficulty),ranked=modeHasRanking(m.id);return (
+                      <article key={`${m.id}-${loopIndex}`} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?m.color:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${m.color}55`:'none'}}>
                         <div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE MODE</div>
                         <h3 className="text-center text-lg font-black leading-tight" style={{color:m.color}}>{m.emoji} {m.label}</h3>
                         <p className="text-center text-[9px] text-slate-300 leading-snug mt-0.5 min-h-[26px]">{m.tagline}</p>
@@ -8802,9 +8867,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <b className="block text-right text-base leading-tight" style={{color:m.color}}>{ranked?`${rec.score.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
                           <span className="block text-right text-[9px] text-amber-300">{ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</span>
                         </div>
-                        {/* 特徴は上から3つだけ。残りは「このモードの説明」で全部読める */}
-                        <ul className="mt-1.5 space-y-0.5">{m.points.slice(0,3).map(([icon,title])=>(
-                          <li key={title} className="flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black text-slate-200"><span className="shrink-0">{icon}</span><span className="truncate">{title}</span></li>
+                        {/* カードへ出す3行。どのモードも【売り】→【報酬】→【記録】の順でそろえてある。
+                            細かい説明は「このモードの説明」で全部読める */}
+                        <ul className="mt-1.5 space-y-0.5">{m.highlights.map(([icon,text])=>(
+                          <li key={text} className="flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black text-slate-200"><span className="shrink-0">{icon}</span><span className="truncate">{text}</span></li>
                         ))}</ul>
                         <div className="grid gap-1.5 mt-1.5">
                           <button onClick={()=>setModeInfoId(m.id)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">このモードの説明</button>
@@ -8815,9 +8881,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       </article>
                     );})}
                   </div>
-                  <button aria-label="次のモード" disabled={selectedIndex===modes.length-1} onClick={()=>selectModeIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
+                  <button aria-label="次のモード" onClick={()=>stepMode(1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70"><ChevronRight/></button>
                 </div>
-                <div className="flex justify-center gap-1 py-0.5">{modes.map((m,i)=><button key={m.id} aria-label={`${i+1}ページ目`} onClick={()=>selectModeIndex(i)} className={`w-1.5 h-1.5 rounded-full ${m.id===current.id?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
+                <div className="flex justify-center gap-1 py-0.5">{modes.map((m,i)=><button key={m.id} aria-label={`${i+1}ページ目`} onClick={()=>scrollToLoopIndex(modes.length+i)} className={`w-1.5 h-1.5 rounded-full ${m.id===current.id?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
                 <div className="shrink-0 pt-1.5 pb-1"><AssistantBubble key={current.id} scene={battleModeAssistantScene(current.id)} accent={current.color} faceSize={56}/></div>
               </div>}
               {modeSelectTab==='breeder'&&<div className="flex-1 min-h-0 flex flex-col"><div className="shrink-0 w-full mb-2.5"><AssistantBubble scene="ranking" compact/></div>{renderBreederRankingBody()}</div>}

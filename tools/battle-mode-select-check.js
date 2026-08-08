@@ -11,7 +11,8 @@
 //   ⑧ どこを通っても実行時エラー(真っ白)が出ない
 //
 // このサンドボックスは外部CDN(Tailwind)へ出られないため、Tailwindの読み込みだけ
-// 打ち切って起動する。見た目は崩れるが、押せるかどうかと実行時エラーは観測できる。
+// 打ち切って起動し、横スライドに必要な最小限のCSSだけ自前で足す。
+// 見た目(色・余白・折り返し)は確かめられないが、押せるか・回るか・実行時エラーが出ないかは観測できる。
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
@@ -65,6 +66,13 @@ const check = (name, ok, detail = '') => {
       localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
     });
     await page.goto(`http://localhost:${PORT}/monster-hero/index.html`, { waitUntil: 'domcontentloaded' });
+    // 横スライドは overflow-x や flex の指定がないと動かない。ふだんはTailwindが当てているが、
+    // ここではCDNへ出られないので、カルーセルが動くのに必要な最小限だけ自前で足す。
+    // (色や余白は当たらないままなので、見た目の確認はできない)
+    await page.addStyleTag({ content: `
+      .snap-mandatory { display:flex; overflow-x:auto; width:100%; scroll-snap-type:x mandatory; }
+      .snap-mandatory > article { flex:0 0 82%; scroll-snap-align:center; }
+    ` });
 
     // LOADING → TITLE → GAME
     await page.getByRole('button', { name: 'TAP TO START' }).click({ timeout: 60000 });
@@ -90,22 +98,48 @@ const check = (name, ok, detail = '') => {
     await openButton.dispatchEvent('click');
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
 
-    // --- ② 3モードがカードで並ぶ ---
+    // --- ② 3モードがカードで並ぶ(ぐるぐる回すため同じ並びを3回置いている) ---
     const modeCards = page.locator('.snap-mandatory > article');
-    check('モードのカードが3枚ある', await modeCards.count() === 3, `${await modeCards.count()}枚`);
+    check('モードのカードが3モード×3周ぶん並んでいる', await modeCards.count() === 9, `${await modeCards.count()}枚`);
     for (const label of ['チャレンジモード', 'クイックモード', 'プロモード']) {
-      check(`${label}のカードがある`, await page.getByRole('heading', { name: new RegExp(label) }).count() === 1);
+      check(`${label}のカードがある`, await page.getByRole('heading', { name: new RegExp(label) }).count() === 3);
     }
     check('前へ・次への矢印がある',
       await page.getByRole('button', { name: '前のモード' }).count() === 1
         && await page.getByRole('button', { name: '次のモード' }).count() === 1);
-    check('最初は先頭なので「前のモード」は押せない', await page.getByRole('button', { name: '前のモード' }).isDisabled());
+    // 端で止まらない。左へ回しても右へ回しても、いつまでも次のモードへ進める
+    check('矢印は端でも止まらない',
+      !(await page.getByRole('button', { name: '前のモード' }).isDisabled())
+        && !(await page.getByRole('button', { name: '次のモード' }).isDisabled()));
+    const centeredMode = () => page.evaluate(() => {
+      const root = document.querySelector('.snap-mandatory');
+      const c = root.scrollLeft + root.clientWidth / 2;
+      let best = null, d = Infinity;
+      [...root.children].forEach((card) => {
+        const n = Math.abs(card.offsetLeft + card.offsetWidth / 2 - c);
+        if (n < d) { d = n; best = card; }
+      });
+      return best ? best.querySelector('h3').textContent.replace(/\s/g, '') : null;
+    });
+    // 3モードなので、同じ向きに3回進めば元のモードへ戻ってくる(ぐるぐる回る)
+    const seen = [];
+    for (let i = 0; i < 4; i++) {
+      seen.push(await centeredMode());
+      await page.getByRole('button', { name: '次のモード' }).dispatchEvent('click');
+      await page.waitForTimeout(700);
+    }
+    check('右へ回し続けると一周して戻ってくる', seen[0] === seen[3] && new Set(seen).size === 3, seen.join(' → '));
+    const before = await centeredMode();
+    await page.getByRole('button', { name: '前のモード' }).dispatchEvent('click');
+    await page.waitForTimeout(700);
+    const back = await centeredMode();
+    check('左へも回せる', back !== null && back !== before, `${before} → ${back}`);
 
     // --- ③ ランキングの導線はチャレンジとプロだけ ---
     check('チャレンジのカードにランキングの導線がある',
-      await page.getByRole('button', { name: /チャレンジモードのランキング/ }).count() === 1);
+      await page.getByRole('button', { name: /チャレンジモードのランキング/ }).count() === 3);
     check('プロのカードにランキングの導線がある',
-      await page.getByRole('button', { name: /プロモードのランキング/ }).count() === 1);
+      await page.getByRole('button', { name: /プロモードのランキング/ }).count() === 3);
     // 「ランキング対象外」はクイックのカードの特徴として1行出るが、
     // 既存画面にあった高さ合わせだけの空枠(押せない案内ボックス)は新UIには置かない
     check('クイックにはランキングの導線も高さ合わせの空枠も出さない',
@@ -113,7 +147,7 @@ const check = (name, ok, detail = '') => {
         && await page.getByText('クイックモードはランキング対象外です').count() === 0);
 
     // --- ④ プロ専用ランキングへ入れる ---
-    await page.getByRole('button', { name: /プロモードのランキング/ }).dispatchEvent('click');
+    await page.getByRole('button', { name: /プロモードのランキング/ }).first().dispatchEvent('click');
     await page.getByRole('heading', { name: 'プロモードランキング' }).waitFor({ timeout: 15000 });
     check('プロモードのランキング画面へ入れる', true);
     await page.getByRole('button', { name: '戻る' }).dispatchEvent('click');
@@ -121,19 +155,29 @@ const check = (name, ok, detail = '') => {
     check('ランキングから戻るとモード選択へ帰る', true);
 
     // --- ⑤ 難易度選択へ進む ---
-    await page.getByRole('button', { name: '次のモード' }).dispatchEvent('click');
-    await page.waitForTimeout(600);
-    await page.getByRole('button', { name: '次のモード' }).dispatchEvent('click');
-    await page.waitForTimeout(600);
-    check('矢印でプロモードまで進める', await page.getByRole('button', { name: '次のモード' }).isDisabled());
-    // プロのカードの「難易度を選ぶ」
-    await page.locator('article').filter({ hasText: 'プロモード' }).getByRole('button', { name: '難易度を選ぶ' }).dispatchEvent('click');
+    // ドット(3ページ目)でプロモードへ寄せてから、そのカードの「難易度を選ぶ」を押す
+    await page.getByRole('button', { name: '3ページ目' }).dispatchEvent('click');
+    await page.waitForTimeout(700);
+    check('ドットでプロモードへ移動できる', (await centeredMode()).includes('プロモード'), await centeredMode());
+    await page.locator('article').filter({ hasText: 'プロモード' }).first().getByRole('button', { name: '難易度を選ぶ' }).dispatchEvent('click');
     await page.getByText('BATTLE DIFFICULTY').first().waitFor({ timeout: 15000 });
     check('難易度選択画面へ進める', await page.getByRole('heading', { name: 'プロモード' }).count() === 1);
     check('難易度のカードが9枚ある', await page.locator('.snap-mandatory > article').count() === 9,
       `${await page.locator('.snap-mandatory > article').count()}枚`);
     check('プロはまだ始められない',
       await page.getByRole('button', { name: 'プロモードは準備中です' }).first().isDisabled());
+    // 開いた直後はいつでもノーマルが選ばれている(前に遊んだ難易度を引きずらない)
+    const centeredDifficulty = () => page.evaluate(() => {
+      const root = document.querySelector('.snap-mandatory');
+      const c = root.scrollLeft + root.clientWidth / 2;
+      let best = null, d = Infinity;
+      [...root.children].forEach((card) => {
+        const n = Math.abs(card.offsetLeft + card.offsetWidth / 2 - c);
+        if (n < d) { d = n; best = card; }
+      });
+      return best ? best.querySelector('h3').textContent.trim() : null;
+    });
+    check('難易度の既定位置はノーマル', await centeredDifficulty() === 'Normal', String(await centeredDifficulty()));
 
     // --- ⑥ 難易度カードのランキングは、その難易度のタブが最初に選ばれる ---
     const hardCard = page.locator('.snap-mandatory > article').filter({ hasText: 'Hard' }).first();

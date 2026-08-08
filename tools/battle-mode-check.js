@@ -235,14 +235,38 @@ check('タブの横に説明の「？」がある', has('aria-label={`${mode.lab
 // 説明の各項目は [アイコン, 見出し, 本文] の3つ組
 check('モード説明に必要な項目がそろっている',
   m.BATTLE_MODES.every(mode => mode.points.length >= 6 && mode.points.every(p => p.length === 3 && p[0] && p[1] && p[2])));
-check('クイックの説明に自動成長と1.5倍がある',
-  m.battleModeInfo('quick').points.some(p => p[2].includes('10%')) && m.battleModeInfo('quick').points.some(p => p[1].includes('1.5倍')));
-check('チャレンジの説明にランキング対象と書いてある', m.battleModeInfo('challenge').points[0][1] === 'ランキング対象');
-check('プロの説明にベースモン限定・絆3倍・ブリーダー1.5倍・専用ランキングがある',
-  m.battleModeInfo('pro').points.some(p => p[1].includes('ベースモン限定'))
-    && m.battleModeInfo('pro').points.some(p => p[1].includes('絆経験値3倍'))
-    && m.battleModeInfo('pro').points.some(p => p[1].includes('ブリーダー経験値1.5倍'))
-    && m.battleModeInfo('pro').points.some(p => p[1].includes('プロ専用ランキング')));
+// 説明はどのモードも同じ見出しを同じ順で並べる。読み比べたとき
+// 「あるモードにだけ書いてある」が起きないようにするための約束
+const POINT_TITLES = ['編成','WAVEのあいだの強化','難しさ','もらえる経験値とダイヤ','スコアと記録','供モンの加入','マスモン登録','スキップチケット','こんな人におすすめ'];
+check('説明の見出しが全モードで同じ・同じ順',
+  m.BATTLE_MODES.every(mode => mode.points.map(p => p[1]).join('/') === POINT_TITLES.join('/')),
+  m.BATTLE_MODES.map(mode => `${mode.short}:${mode.points.length}項目`).join(' '));
+// ルールが同じ項目(マスモン登録・スキップチケット)は同じ文でよいが、
+// モードの違いそのものを表す項目は必ず書き分ける
+const VARYING_TITLES = ['編成','WAVEのあいだの強化','難しさ','もらえる経験値とダイヤ','スコアと記録','供モンの加入','こんな人におすすめ'];
+check('説明の本文はどれも空でなく、モードの違いはきちんと書き分けてある',
+  m.BATTLE_MODES.every(mode => mode.points.every(p => p[0] && p[2] && p[2].length >= 20))
+    && VARYING_TITLES.every(title => new Set(m.BATTLE_MODES.map(mode => mode.points.find(p => p[1] === title)[2])).size === 3));
+// カードへ出す3行も全モードで同じ数・同じ並び(【売り】→【報酬】→【記録】)
+check('カードの3行がどのモードにもある', m.BATTLE_MODES.every(mode => mode.highlights.length === 3 && mode.highlights.every(h => h.length === 2 && h[0] && h[1])));
+const pointOf = (mode, title) => m.battleModeInfo(mode).points.find(p => p[1] === title)[2];
+const highlightText = (mode) => m.battleModeInfo(mode).highlights.map(h => h[1]).join(' / ');
+check('チャレンジの売りは強化を選ぶ王道',
+  highlightText('challenge').includes('強化') && highlightText('challenge').includes('スコアランキング'));
+check('クイックの売りは育成',
+  highlightText('quick').includes('育成') && highlightText('quick').includes('1.5倍') && highlightText('quick').includes('ランキングは無し')
+    && pointOf('quick', 'WAVEのあいだの強化').includes('10%'));
+// プロの売りは「マスモンの経験値」ではなく「ベースモンだけで挑む難しさ」
+check('プロの売りはベースモンだけで挑む難しさ',
+  highlightText('pro').includes('ベースモン') && highlightText('pro').includes('最高難度')
+    && !m.battleModeInfo('pro').highlights[0][1].includes('経験値'));
+check('プロの説明に編成の制限と難しさが書いてある',
+  pointOf('pro', '編成').includes('マスモンは1体も連れていけません')
+    && pointOf('pro', '難しさ').includes('いちばん難しい')
+    && pointOf('pro', 'もらえる経験値とダイヤ').includes('絆経験値が3倍')
+    && pointOf('pro', 'もらえる経験値とダイヤ').includes('ブリーダー経験値が1.5倍')
+    && pointOf('pro', 'スコアと記録').includes('プロランキング')
+    && pointOf('pro', '供モンの加入').includes('5体') && pointOf('pro', '供モンの加入').includes('3体'));
 check('説明の見出しにアイコンが付く', has('{mode.points.map(([icon,title,text])=>(') && has('{mode.label}とは？'));
 check('モードを変えても選択中の難易度は変えない', !/setBattleMode\(mode\.id\);[^}]*setDifficulty/.test(source));
 check('横スライドの難易度選択を維持している', has('snap-x snap-mandatory') && has("touchAction:'pan-x pinch-zoom'") && has('前の難易度') && has('次の難易度'));
@@ -394,6 +418,24 @@ check('新しい画面もBGMとヘルプの対応表に載っている',
     && helpSrc.includes("BATTLE_MODE_SELECT:       'basics/battle-modes'")
     && helpSrc.includes("BATTLE_DIFFICULTY_SELECT: 'basics/difficulty'")
     && helpSrc.includes("BATTLE_SCORE_RANKING:     'basics/ranking'"));
+// モードのカードは端で止まらず、どちらへスワイプしてもぐるぐる回る
+check('モードのカードは同じ並びを3回置いてループさせる',
+  has('const loopModes=[...modes,...modes,...modes];') && has('{loopModes.map((m,loopIndex)=>{'));
+check('端まで来たら黙って真ん中のコピーへ戻す',
+  has('const recenterModeLoop=()=>{') && has('root.scrollLeft+=to.offsetLeft-from.offsetLeft;')
+    && has('modeLoopTimerRef.current=setTimeout(recenterModeLoop,180);'));
+check('左右の矢印は端でも止まらない',
+  has('aria-label="前のモード" onClick={()=>stepMode(-1)}') && has('aria-label="次のモード" onClick={()=>stepMode(1)}')
+    && !/aria-label="(前|次)のモード" disabled=/.test(source));
+check('開いたときは真ん中のコピーから始める',
+  has('const index=BATTLE_MODES.length+Math.max(0,BATTLE_MODES.findIndex(m=>m.id===normalizeBattleMode(battleMode)));'));
+// 難易度選択はいつでもノーマルから。前に遊んだ難易度を引きずらない
+check('難易度選択の既定はノーマル', has("const BATTLE_DEFAULT_DIFFICULTY = 'Normal';"));
+check('難易度選択を開くたびに既定へ戻す',
+  has("if(gameState!=='BATTLE_DIFFICULTY_SELECT')return;\n    setDifficulty(BATTLE_DEFAULT_DIFFICULTY);")
+    && has('const index=Object.keys(DIFFICULTY_SETTINGS).indexOf(BATTLE_DEFAULT_DIFFICULTY);'));
+check('既存のバトル画面の難易度は今までどおり引き継ぐ',
+  has("if(gameState!=='BATTLE_MENU'||battleMenuTab!=='difficulty')return;") && !/BATTLE_MENU'\|\|battleMenuTab!=='difficulty'\)return;\s*setDifficulty/.test(source));
 check('実際に開いて押せることを確かめる道具がある',
   fs.existsSync(path.join(root, 'tools/battle-mode-select-check.js')));
 
