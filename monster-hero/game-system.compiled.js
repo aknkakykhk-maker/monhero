@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9f154c6e716f2a03
+// source-sha256: 7590685e3830277a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 15:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 16:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9876,6 +9876,8 @@ function MonsterHeroGame() {
   // 供モン合流の横スライドは、開くたびに先頭から見せる
   useEffect(() => {
     if (gameState !== 'PICK_ALLY') return;
+    // 前の画面で開いていた詳細が残っていると、開いた瞬間に別の子が選ばれて見える
+    setCurrentPickingMon(null);
     setAllyCardIndex(0);
     const id = requestAnimationFrame(() => {
       allyCarouselRef.current?.children[0]?.scrollIntoView({
@@ -14216,7 +14218,11 @@ function MonsterHeroGame() {
       setDef(m.baseDef);
       // プロモードは、ここで先に供モンの候補5体を選んでもらう。
       // 選び終わったらふだんと同じブリーダーカードの画面へ合流する
+      // ここで早く返すので、関数の最後にある setCurrentPickingMon(null) を通らない。
+      // 消し忘れると、選んだ勇者モンの詳細が開いたまま残り、
+      // WAVE 2の供モン合流で「勝手に勇者モンが選ばれている」ように見えてしまう
       if (isProMode(runMode)) {
+        setCurrentPickingMon(null);
         setProAllyPool([]);
         setGameState('PICK_PRO_ALLIES');
         return;

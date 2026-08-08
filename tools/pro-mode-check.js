@@ -119,6 +119,11 @@ const check = (name, ok, detail = '') => {
     await page.locator('button').filter({ hasText: '中距離' }).first().dispatchEvent('click');
     await page.getByRole('heading', { name: '供モンの候補' }).waitFor({ timeout: 15000 });
     check('勇者モンを決めると供モン候補の画面へ進む', true);
+    // 勇者モンの詳細が開いたまま残っていないこと。
+    // 残ると、あとの供モン合流で「勝手に勇者モンが選ばれている」ように見える
+    check('勇者モンの詳細が開いたまま残らない',
+      await page.getByRole('button', { name: '決定' }).count() === 0,
+      `決定ボタン ${await page.getByRole('button', { name: '決定' }).count()}個`);
 
     // --- ③④ 5体そろうまで始められない ---
     const startButton = page.getByRole('button', { name: /この候補で始める|あと\d体えらんでください/ });
