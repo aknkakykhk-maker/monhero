@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 14:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -236,6 +236,17 @@ const modeHasRanking = (mode) => !isQuickMode(mode);
 const modeBondAction = (mode) => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';
 // そのモードの画面で助手(みゅあ)に話させる場面。セリフは data/assistants.js にある
 const battleModeAssistantScene = (mode) => isQuickMode(mode) ? 'battleQuick' : isProMode(mode) ? 'battlePro' : 'battleChallenge';
+// ラン中に供モンが合流するとき、画面へ出す候補を作る。
+// 「すでに編成にいる子」と「勇者モン」は必ず外す。勇者モンは編成にいるので普通は
+// activeIds で外れるが、そこに頼ると取りこぼしたときに自分自身が候補として出てしまうため、
+// 種idでも明示的に外している。
+// プロモードは pool に「始める前に選んだ5体」が入るので、そこからランダムに offerSize 体だけ出る。
+const pickJoinCandidates = (pool, activeIds, heroId, offerSize) => {
+  const used = new Set([...(Array.isArray(activeIds) ? activeIds : []), heroId].filter(Boolean));
+  const list = (Array.isArray(pool) ? pool : []).filter(m => m && m.id && !used.has(m.id));
+  const shuffled = [...list].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.max(0, Number(offerSize) || 0));
+};
 // そのレベルから次レベルに必要なXP(基準値)。指数を上げるほど高レベルが急に重くなる。
 // 10WAVE完全クリアを1周=100XPとして、Lv30到達までの周回数は次のように緩和してきている。
 //   指数1.8(当初)  … ブリーダー約580周 / 絆約410周
@@ -5630,7 +5641,12 @@ function MonsterHeroGame() {
   // ラン中に供モンが合流するときの候補。
   // プロモードは「始める前に選んだ5体」からしか出さないので、育てたマスモンは一切出てこない。
   // それ以外のモードはこれまでどおり編成から出す
-  const joinCandidatePool = () => isProMode(runMode) ? proAllyPool : getActiveMonsterList();
+  const joinCandidatePool = () => {
+    if (!isProMode(runMode)) return getActiveMonsterList();
+    // 始める前に選んだ5体。何かの拍子に空のまま始まっていても、育てたマスモンが
+    // 混ざらないようベースモンへ落とす(プロの「ベースモンだけ」という約束を必ず守る)
+    return proAllyPool.length > 0 ? proAllyPool : getUnlockedBaseMonsterList();
+  };
   // 一度に見せる候補の数。プロは5体からランダムに3体だけ見せる
   const joinOfferSize = () => isProMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;
   const getActiveTeachingCards = () => {
@@ -7526,9 +7542,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setQuickGrowth(null);
     const joinWaves = [2, 4, 6];
     const activeIds = slots.filter(s => s).map(s => s.id);
-    const avail = joinCandidatePool().filter(m => !activeIds.includes(m.id));
+    const avail = pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
     if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
-      setMonSelection(avail.sort(() => Math.random() - 0.5).slice(0, joinOfferSize()));
+      setMonSelection(avail);
       setGameState('PICK_ALLY');
     } else {
       initBattle(wave + 1, slots, ownedUniques, ownedTeachings, nextDef !== undefined ? nextDef : def, null, null, null, nextStats);
@@ -8074,9 +8090,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setEffect(null);
       const joinWaves=[2,4,6];
       const activeIds=slots.filter(s=>s).map(s=>s.id);
-      const avail=joinCandidatePool().filter(m=>!activeIds.includes(m.id));
+      const avail=pickJoinCandidates(joinCandidatePool(),activeIds,mainHero?.id,joinOfferSize());
       if(joinWaves.includes(wave)&&slots.filter(s=>s).length<4&&avail.length>0){
-        setMonSelection(avail.sort(()=>Math.random()-0.5).slice(0,joinOfferSize())); setGameState('PICK_ALLY');
+        setMonSelection(avail); setGameState('PICK_ALLY');
       } else if([1,3,5,7,9].includes(wave)){
         const activeCards=getActiveTeachingCards();
         const upgradeableIds=ownedTeachings.filter(ot=>ot.evoLevel<2).map(ot=>ot.id);

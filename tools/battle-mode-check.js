@@ -43,6 +43,7 @@ vm.runInContext([
   + 'bondXpForWavesClearedInMode,waveBondXpGainInMode,'
   + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE,BATTLE_MODE_PRO,'
   + 'PRO_RANKING_PREFIX,RANKING_DIFFICULTY_KEYS,rankingDifficultyForMode,rankingDifficultyBase,normalizeRankingDifficulty,'
+  + 'pickJoinCandidates,battleModeAssistantScene,'
   + 'calculateRemainingHp,resolveEffectiveMaxStat,quickGrowStat,resolveQuickGrowthStats};',
 ].join('\n'), ctx);
 const m = ctx.__m;
@@ -451,14 +452,47 @@ check('プロの勇者モン選択に編成タブを出さない',
   has("isProMode(runMode)?'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません'"));
 // 供モンの候補は「始める前に選んだ5体」からしか出さない
 check('ラン中の加入候補はモードで切り替える',
-  has('const joinCandidatePool = () => isProMode(runMode) ? proAllyPool : getActiveMonsterList();')
+  has('if (!isProMode(runMode)) return getActiveMonsterList();')
     && has('const joinOfferSize = () => isProMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;'));
 check('加入の抽選は2か所とも共通の入口を通る',
-  count('joinCandidatePool().filter(') === 2 && count('joinOfferSize()') === 2
+  count('pickJoinCandidates(joinCandidatePool()') === 2 && count('joinOfferSize()') === 2
     && !/getActiveMonsterList\(\)\.filter\(m\s*=>\s*!activeIds/.test(source));
-check('プロは5体から3体だけを候補に出す',
-  m.PRO_ALLY_POOL_SIZE === 5 && m.PRO_ALLY_OFFER_SIZE === 3
-    && has('setMonSelection(avail.sort(()=>Math.random()-0.5).slice(0,joinOfferSize())); setGameState(\'PICK_ALLY\');'));
+check('プロは5体から3体だけを候補に出す', m.PRO_ALLY_POOL_SIZE === 5 && m.PRO_ALLY_OFFER_SIZE === 3);
+check('候補の抽選は1か所の関数にまとめてある',
+  has('const pickJoinCandidates = (pool, activeIds, heroId, offerSize) => {')
+    && count('pickJoinCandidates(joinCandidatePool()') === 2
+    && !/setMonSelection\(avail\.sort\(/.test(source));
+// 抽選そのものを何度も回して確かめる。「勇者モンが混ざる」「選んだ5体の外から出る」を確実に潰す
+{
+  const pool = ['Suezo', 'Golem', 'Tiger', 'Ham', 'Pixie'].map(id => ({ id }));
+  const heroId = 'Mocchi';
+  let sizeOk = true, subsetOk = true, noHero = true, noDup = true;
+  const seen = new Set();
+  for (let i = 0; i < 500; i++) {
+    const got = m.pickJoinCandidates(pool, [heroId], heroId, m.PRO_ALLY_OFFER_SIZE);
+    if (got.length !== m.PRO_ALLY_OFFER_SIZE) sizeOk = false;
+    if (!got.every(x => pool.some(p => p.id === x.id))) subsetOk = false;
+    if (got.some(x => x.id === heroId)) noHero = false;
+    if (new Set(got.map(x => x.id)).size !== got.length) noDup = false;
+    got.forEach(x => seen.add(x.id));
+  }
+  check('毎回ちょうど3体出る', sizeOk);
+  check('出るのは選んだ5体の中からだけ', subsetOk);
+  check('勇者モンは絶対に候補へ出ない', noHero);
+  check('同じ子が2体並ばない', noDup);
+  check('5体すべてがいつかは出る(ランダムになっている)', seen.size === pool.length, `${seen.size}/${pool.length}種`);
+  // すでに合流した子は次から出ない
+  const second = m.pickJoinCandidates(pool, [heroId, 'Ham'], heroId, m.PRO_ALLY_OFFER_SIZE);
+  check('すでに編成にいる子は候補へ出ない', !second.some(x => x.id === 'Ham'));
+  // 壊れた値でも落ちない
+  check('候補が空でも落ちない', m.pickJoinCandidates([], ['x'], 'x', 3).length === 0
+    && m.pickJoinCandidates(null, null, null, 3).length === 0
+    && m.pickJoinCandidates(pool, null, null, 0).length === 0);
+  // 5体より少ないときは、あるぶんだけ出る
+  check('候補が3体未満ならあるぶんだけ出る', m.pickJoinCandidates(pool.slice(0, 2), [], null, 3).length === 2);
+}
+check('プロで候補が空でもマスモンは混ぜない',
+  has('return proAllyPool.length > 0 ? proAllyPool : getUnlockedBaseMonsterList();'));
 // 勇者モンを決めたあと、プロだけ供モン候補を選ぶ画面へ寄り道する
 check('プロだけ供モン候補の画面をはさむ',
   has("if (isProMode(runMode)) { setProAllyPool([]); setGameState('PICK_PRO_ALLIES'); return; }")
