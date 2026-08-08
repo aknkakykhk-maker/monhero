@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 12:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11232,8 +11232,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         };
         const ready=proAllyPool.length===need;
         return (
-        <div className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
-          <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0">
+        // ラン中の画面(勇者モン選択・配置・教え)と同じ全画面のかぶせ方にする。
+        // これを付けないと、ふだんの画面の下敷きになってカードを押せなくなる
+        <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">
+          <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))'}}>
             {/* 勇者モンから選び直せるようにしておく(まだバトルは始まっていない) */}
             <button aria-label="戻る" onClick={()=>{setProAllyPool([]);setMainHero(null);setSlots([null,null,null,null]);setCurrentPickingMon(null);setGameState('PICK_HERO');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
             <h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>供モンの候補</h2>

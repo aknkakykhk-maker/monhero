@@ -468,6 +468,14 @@ check('候補が5体そろうまで始められない',
     && has("setTeachingPool([...getActiveTeachingCards()]);setGameState('PICK_TEACHING');"));
 check('勇者モンにした種は候補から外す',
   has('const candidates=getUnlockedBaseMonsterList().filter(m=>m.id!==mainHero?.id);'));
+// ラン中の画面は「全画面のかぶせ方」で出す。これが抜けるとふだんの画面の下敷きになり、
+// 表示はされているのに押しても反応しない(実際に供モン候補で出した不具合)
+const RUN_OVERLAY = 'style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}}';
+for (const [label, screen] of [['勇者モン・供モン選択', "(gameState==='PICK_HERO'||gameState==='PICK_ALLY')&&("], ['配置場所', "{gameState==='PICK_SLOT'&&("], ['プロの供モン候補', "{gameState==='PICK_PRO_ALLIES'&&(()=>{"]]) {
+  const at = source.indexOf(screen);
+  const near = at >= 0 ? source.slice(at, at + 900) : '';
+  check(`${label}の画面は全画面でかぶせる`, near.includes(RUN_OVERLAY), at < 0 ? '画面が見つからない' : '');
+}
 check('ベースモンが足りないときはプロを始められない',
   has('const proReady=getUnlockedBaseMonsterList().length>=PRO_ALLY_POOL_SIZE+1;')
     && has("disabled={(pro&&!proReady)||(!!battleTutorial&&key!=='Beginner')}") && has('`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`'));

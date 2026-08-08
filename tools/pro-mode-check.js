@@ -136,6 +136,19 @@ const check = (name, ok, detail = '') => {
       await page.waitForTimeout(120);
     }
     check('5体えらぶと始められる', await page.getByRole('button', { name: 'この候補で始める' }).isEnabled());
+    // 「押しても反応しない」を拾うための確認。
+    // dispatchEvent はDOMへ直接イベントを送るので、他の層の下敷きになっていても通ってしまう。
+    // 実際の指タップは重なりの判定を通るので、画面のかぶせ方(position/z-index)が抜けていると押せない。
+    // ここでは、この画面が勇者モン選択と同じ全画面のかぶせ方になっているかを実測する
+    const overlay = await page.evaluate(() => {
+      const root = document.querySelector('[data-screen="pick-pro-allies"]');
+      if (!root) return null;
+      const st = getComputedStyle(root);
+      return { position: st.position, zIndex: st.zIndex, bg: st.backgroundColor };
+    });
+    check('供モン候補の画面は全画面のかぶせ方になっている',
+      !!overlay && overlay.position === 'absolute' && Number(overlay.zIndex) >= 30000 && overlay.bg !== 'rgba(0, 0, 0, 0)',
+      JSON.stringify(overlay));
     // 6体目は押せない(上限を超えて選べない)
     check('6体目は選べない', await poolCards.nth(5).isDisabled());
 
