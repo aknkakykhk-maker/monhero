@@ -183,6 +183,22 @@ WAVE経験値基礎値は `[4,5,6,7,8,10,12,14,16,18]`、ゴールド基礎値�
 - 解放済みのベースモンが `PRO_ALLY_POOL_SIZE + 1` 種に足りないときは、難易度カードの開始ボタンを押せなくする。
 - マスモン登録・リザルト・スコア送信はすべて既存のしくみを使い回し、プロ専用の分岐を作っていない。勇者モンがベースモンなので、既存の「ベースモンを勇者モンにして登録する」経路がそのまま働く。
 
+### バトルのれんしゅう（チュートリアル）
+
+台本は `data/assistants.js` に「導入 → 本体 → しめくくり」の3つに分けて持つ。本体（勇者モン選択から強化フェーズまで）は入口が変わっても中身が同じなので、新旧どちらの導入からも同じ配列を使い回す。
+
+| 台本 | 導入 | 使うところ |
+| --- | --- | --- |
+| `ASSISTANT_BATTLE_TUTORIAL`（V1） | `BATTLE_MENU` のタブと難易度カード | いまの本番。はじめての案内の最後・ヘルプ・デバッグ設定から |
+| `ASSISTANT_BATTLE_TUTORIAL_V2` | `BATTLE_MODE_SELECT` → `BATTLE_DIFFICULTY_SELECT` | **お試しのみ**。デバッグ設定の「新バトルチュートリアルを見る」から |
+
+- どちらを使うかは `battleTutorialVariant`（`'v1'` / `'v2'`）。`startBattleTutorial(returnTo, variant)` で決まる。
+- V2はモード選択でチャレンジ・クイック・プロの3つを順に見せてから、チャレンジを選んで難易度選択へ進み、ビギナーで始める。**初回にクイックとプロは遊ばせない**（チャレンジ以外の「難易度を選ぶ」を押せなくする）。
+- 練習中の難易度選択はノーマルではなくビギナーから始まり、ビギナー以外は押せない。
+- 練習中は戻る・ランキング・モードの説明・スキップ・全WAVE詳細を押せなくして、台本から外れないようにする。
+- 光らせる場所（`spot`）は新UIぶんとして `modeCards` / `modeRankTabs` / `modeStart` を足した。難易度カルーセルと開始ボタンは新旧で同じ `difficulty` / `battleStart` を使う。
+- **既読（`mh_battle_tutorial_seen_v1`）を書くのは、ふだんの入口（HOMEへ戻る練習）から最後まで通したときだけ。** デバッグのお試し再生では書き換えない。
+
 ### 公開状況
 
 プロモードは**まだ本番の導線に出していない**。既存のバトル画面のタブは `PUBLIC_BATTLE_MODES`（チャレンジ・クイックのみ）を並べる。プロを遊べるのはデバッグ設定から開く新しい入口だけ。
@@ -201,5 +217,7 @@ WAVE経験値基礎値は `[4,5,6,7,8,10,12,14,16,18]`、ゴールド基礎値�
   `node tools/guard-card-check.js`、`node tools/golem-balance-check.js`、
   `node tools/battle-mode-check.js`（モードの倍率・保存キー・ランキング名前空間・新しい入口）、
   `node tools/battle-mode-select-check.js`（新しい入口を実ブラウザで開いて押せるか）、
-  `node tools/pro-mode-check.js`（プロモードを実ブラウザで最初から遊んでみる）
+  `node tools/pro-mode-check.js`（プロモードを実ブラウザで最初から遊んでみる）、
+  `node tools/battle-tutorial-check.js`（台本の中身と、通るべき画面の並び）、
+  `node tools/battle-tutorial-v2-check.js`（新しいチュートリアルを実ブラウザで通してみる）
 

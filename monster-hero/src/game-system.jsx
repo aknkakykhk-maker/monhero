@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 11:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 12:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3605,6 +3605,8 @@ function MonsterHeroGame() {
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
   // 練習を始めた場所。終わったらここへ帰す(デバッグ設定 / HOME)
   const [battleTutorialReturn, setBattleTutorialReturn] = useState('DEBUG_SETTINGS');
+  // どちらの台本で練習するか。'v1'=いまの本番の入口 / 'v2'=新しいモード選択からの入口(お試し)
+  const [battleTutorialVariant, setBattleTutorialVariant] = useState('v1');
   // 光らせている場所が画面の上半分にあるとき、吹き出しを下へ逃がす
   const [battleTutorialAtBottom, setBattleTutorialAtBottom] = useState(false);
   // 練習の台本(シナリオ)。ここに値が入っているあいだだけ、敵の行動・手札・敵の強さを
@@ -5452,9 +5454,11 @@ function MonsterHeroGame() {
   // 前に遊んだ難易度がそのまま残っていると、うっかり高い難易度で始めてしまうため
   useEffect(()=>{
     if(gameState!=='BATTLE_DIFFICULTY_SELECT')return;
-    setDifficulty(BATTLE_DEFAULT_DIFFICULTY);
+    // 練習中はいちばんやさしいビギナーから始める(そこしか押せないようにしているため)
+    const start=battleTutorialStep!=null?'Beginner':BATTLE_DEFAULT_DIFFICULTY;
+    setDifficulty(start);
     const id=requestAnimationFrame(()=>{
-      const index=Object.keys(DIFFICULTY_SETTINGS).indexOf(BATTLE_DEFAULT_DIFFICULTY);
+      const index=Object.keys(DIFFICULTY_SETTINGS).indexOf(start);
       modeDifficultyCarouselRef.current?.children[index]?.scrollIntoView({inline:'center',block:'nearest'});
     });
     return()=>cancelAnimationFrame(id);
@@ -7789,7 +7793,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // ランキング・クリア回数・ミッションのどれにも影響しない)。
   // 入口は3つ。デバッグ設定・はじめての案内の最後・ヘルプの「バトルのれんしゅう」。
   // どこから始めても終わったら元の場所へ帰れるよう、戻り先を覚えておく。
-  const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS') => {
+  const startBattleTutorial = (returnTo = 'DEBUG_SETTINGS', variant = 'v1') => {
     // 説明を読みやすく保つため、練習中だけ1倍へ固定する（保存済み設定は上書きしない）。
     battleSpeedRef.current = 1;
     setBattleSpeed(1);
@@ -7813,8 +7817,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     battleScenarioIntentIndexRef.current = 0;
     setBattleTutorialLastAction(null);
     setBattleTutorialReturn(returnTo);
+    setBattleTutorialVariant(variant === 'v2' ? 'v2' : 'v1');
     setBattleTutorialStep(0);
-    // モード・ランキング・難易度もここで説明したいので、バトルの入口から始める
+    // モード・ランキング・難易度もここで説明したいので、バトルの入口から始める。
+    // 新しい台本(v2)は、新しいモード選択の画面から始める
+    if (variant === 'v2') { setModeSelectTab('mode'); setGameState('BATTLE_MODE_SELECT'); return; }
     setGameState('BATTLE_MENU');
   };
   // 「この難易度で挑戦」を練習として押したとき。ふだんのボタンは記録を残す状態(debugBattleRef=false)に
@@ -7851,12 +7858,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const savedSpeed = normalizeBattleSpeed(await storeGet(BATTLE_SPEED_KEY, 1, false));
     battleSpeedRef.current = savedSpeed;
     setBattleSpeed(savedSpeed);
-    if (completed) { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }
+    setBattleTutorialVariant('v1');
+    // 「見た」と記録するのは、ふだんの入口(HOMEへ戻る練習)から最後まで通したときだけ。
+    // デバッグのお試し再生で、通常プレイの既読状態を書き換えないようにする
+    if (completed && back === 'HOME') { try { await storeSet(BATTLE_TUTORIAL_SEEN_KEY, true, false); } catch {} }
     // HOMEへ帰るときは走らせかけたバトルの状態も片付ける
     if (back === 'HOME') { returnToHome(); return; }
     setGameState(back || 'DEBUG_SETTINGS');
   };
-  const battleTutorialSteps = (typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL) || [];
+  const battleTutorialSteps = (battleTutorialVariant === 'v2'
+    ? (typeof ASSISTANT_BATTLE_TUTORIAL_V2 !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_V2)
+    : (typeof ASSISTANT_BATTLE_TUTORIAL !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL)) || [];
   const battleTutorial = battleTutorialStep != null ? (battleTutorialSteps[battleTutorialStep] || null) : null;
   // いま光らせる場所。画面側は battleTutorialSpotClass('キー') を付けておく。
   // spot は配列でも書けるので、1つの操作で「一覧」と「その決定ボタン」を同時に光らせられる
@@ -7890,7 +7902,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!cur) return;
     if (cur.at === '*' || cur.at === gameState) return;
     const next = (typeof findBattleTutorialStep === 'function')
-      ? findBattleTutorialStep(battleTutorialStep + 1, gameState) : -1;
+      ? findBattleTutorialStep(battleTutorialStep + 1, gameState, battleTutorialSteps) : -1;
     if (next >= 0) setBattleTutorialStep(next);
   }, [gameState, battleTutorialStep]);
   // 技ピッカーは閉じたときに「見た」と数える。開いた時点で次の説明へ進むと、
@@ -8854,18 +8866,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return (
           <div className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
             {/* ランキングのタブを見ているときは、いきなりホームへ帰らずまずモード選択へ戻す */}
-            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" onClick={()=>{if(modeSelectTab!=='mode'){setModeSelectTab('mode');return;}returnToHome();}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
+            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>{if(modeSelectTab!=='mode'){setModeSelectTab('mode');return;}returnToHome();}} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">バトル</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               {/* 上のタブ。スコアランキングはモードごとに分かれるのでここには置かず、
                   モードのカードと難易度のカードから開く。ここに並ぶのはモードで分かれない2つだけ */}
-              <div className="grid grid-cols-3 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5">
+              {/* 練習中はランキングへ移らせない(台本がモード選択のまま進むため) */}
+              <div className={`grid grid-cols-3 gap-1 mb-2 shrink-0 rounded-xl bg-slate-900/60 p-0.5 border border-white/5${battleTutorialSpotClass('modeRankTabs')}`}>
                 {[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv']].map(([key,label])=>(
-                  <button key={key} onClick={()=>{setModeSelectTab(key);if(key==='mode')return;addAssistantBond('ranking');if(key==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,key);}} aria-label={key==='mode'?'モード選択':`${label}ランキング`} className={`min-h-[38px] rounded-lg text-[10px] font-black active:scale-95 ${modeSelectTab===key?'bg-indigo-600 text-white':'text-slate-400'}`}>{label}</button>
+                  <button key={key} disabled={!!battleTutorial} onClick={()=>{setModeSelectTab(key);if(key==='mode')return;addAssistantBond('ranking');if(key==='bond')setBondRankMonFilter('all');loadRankings(null,true,false,key);}} aria-label={key==='mode'?'モード選択':`${label}ランキング`} className={`min-h-[38px] rounded-lg text-[10px] font-black active:scale-95 disabled:opacity-40 ${modeSelectTab===key?'bg-indigo-600 text-white':'text-slate-400'}`}>{label}</button>
                 ))}
               </div>
               {modeSelectTab==='mode'&&<div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
                 <div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプしてモードを選択</div>
-                <div className="relative shrink-0">
+                <div className={`relative shrink-0${battleTutorialSpotClass('modeCards')}`}>
                   <button aria-label="前のモード" onClick={()=>stepMode(-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70"><ChevronLeft/></button>
                   <div ref={modeCarouselRef} onScroll={()=>{const index=centeredLoopIndex();const picked=loopModes[index];if(picked&&picked.id!==current.id)setBattleMode(picked.id);if(modeLoopTimerRef.current)clearTimeout(modeLoopTimerRef.current);modeLoopTimerRef.current=setTimeout(recenterModeLoop,180);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
                     {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,rec=modeRecordFor(m.id,safeDifficulty),ranked=modeHasRanking(m.id);return (
@@ -8885,10 +8898,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <li key={text} className="flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black text-slate-200"><span className="shrink-0">{icon}</span><span className="truncate">{text}</span></li>
                         ))}</ul>
                         <div className="grid gap-1.5 mt-1.5">
-                          <button onClick={()=>setModeInfoId(m.id)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">このモードの説明</button>
-                          <button onClick={()=>{setBattleMode(m.id);setGameState('BATTLE_DIFFICULTY_SELECT');}} className="min-h-[44px] rounded-xl font-black text-sm" style={{backgroundColor:m.color,color:'#0f172a'}}>難易度を選ぶ</button>
+                          <button disabled={!!battleTutorial} onClick={()=>setModeInfoId(m.id)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-30">このモードの説明</button>
+                          {/* 練習中はチャレンジだけ進めるようにする。初回からクイックやプロを遊ばせない */}
+                          <button disabled={!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE} onClick={()=>{setBattleMode(m.id);setGameState('BATTLE_DIFFICULTY_SELECT');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id===BATTLE_MODE_CHALLENGE?battleTutorialSpotClass('modeStart'):''}`} style={{backgroundColor:m.color,color:'#0f172a'}}>難易度を選ぶ</button>
                           {/* スコアランキングの導線。クイックはランキングが無いので、高さ合わせの空枠も置かない */}
-                          {ranked&&<button onClick={()=>openModeScoreRanking(m.id,safeDifficulty,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
+                          {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
                         </div>
                       </article>
                     );})}
@@ -8919,11 +8933,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const noteText=quick?'経験値・ダイヤのみ1.5倍':pro?'絆経験値3倍・ブリーダー経験値1.5倍':'スコアがランキングに登録される';
           return (
           <div className="flex-1 flex flex-col h-full min-h-0 px-4" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
-            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" onClick={()=>setGameState('BATTLE_MODE_SELECT')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{mode.label}</h2></div>
+            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" disabled={!!battleTutorial} onClick={()=>setGameState('BATTLE_MODE_SELECT')} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{mode.label}</h2></div>
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
                 <div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>
-                <div className="relative shrink-0">
+                <div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}>
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==safeDifficulty)setDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
                     {difficulties.map(([key,setting])=>{const active=key===safeDifficulty,rec=modeRecordFor(battleMode,key);return (
@@ -8939,17 +8953,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div>
                         <div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div>
                         <div className="grid gap-1.5 mt-1.5">
-                          <button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button>
+                          <button disabled={!!battleTutorial} onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-30">全WAVE詳細</button>
                           {/* プロモードの中身(ベースモン限定の編成・供モン5体から3体)はまだ作っていないので、
                               ここからは始められないようにしている。第3段階で実際に遊べるようにする */}
                           {/* プロモードはベースモンだけで挑むので、勇者モン選択も最初から
                               ベースモンのタブで開く。編成(マスモン入り)は使えない */}
-                          <button disabled={pro&&!proReady} onClick={()=>{battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setProAllyPool([]);setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className="min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30" style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
+                          {/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
+                              ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}
+                          <button disabled={(pro&&!proReady)||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setProAllyPool([]);setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
                           {/* 難易度カードからもランキングへ入れる。ここから開いたときは、この難易度のタブが最初に選ばれる */}
-                          {ranked&&<button onClick={()=>openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
+                          {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
                           {/* スキップはクイックモード専用。チケットが無い難易度では出さない */}
                           {quick&&(()=>{const tid=SKIP_TICKETS[key];if(!tid)return null;const have=ownedItems[tid]||0;return(
-                            <div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>
+                            <div className="flex gap-1.5"><button disabled={have<=0||!!battleTutorial} onClick={()=>{battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>
                           );})()}
                         </div>
                       </article>
@@ -9076,6 +9092,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button onClick={()=>{setModeSelectTab('mode');setBattleMode(BATTLE_MODE_CHALLENGE);setGameState('BATTLE_MODE_SELECT');}} className="col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95">新バトルモード選択を開く（お試し）</button>
                   {/* バトルチュートリアル(お試し)。記録は一切残らないので何度でも遊べる */}
                   <button onClick={()=>startBattleTutorial()} className="col-span-2 min-h-[46px] rounded-xl bg-indigo-700/80 border border-indigo-300/60 text-white text-[10px] font-black active:scale-95">バトルチュートリアル開始（記録は残りません）</button>
+                  {/* 新しいチュートリアル(お試し)。新しいモード選択から始まる版。
+                      ふだんの初回案内・ヘルプからはこれまでどおり上の版が始まる。
+                      ここから最後まで通しても「見た」とは記録しないので、通常プレイの既読状態は変わらない */}
+                  <button onClick={()=>startBattleTutorial('DEBUG_SETTINGS','v2')} className="col-span-2 min-h-[46px] rounded-xl bg-fuchsia-800/70 border border-fuchsia-300/60 text-white text-[10px] font-black active:scale-95">新バトルチュートリアルを見る（お試し・記録は残りません）</button>
                   <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_SEEN_KEY,false,false);window.alert('バトルチュートリアルを未視聴に戻しました。');}} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">バトル練習を未視聴へ戻す</button>
                   <button onClick={async()=>{await storeSet(BATTLE_TUTORIAL_GUIDE_SHOWN_KEY,false,false);battleTutorialGuideCheckedRef.current=false;window.alert('初回案内を未表示に戻しました。');}} className="min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">初回案内を未表示へ戻す</button>
                   <button onClick={()=>{returnToHome();startTutorial('battleGuide');}} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">バトル初回案内を再生</button>

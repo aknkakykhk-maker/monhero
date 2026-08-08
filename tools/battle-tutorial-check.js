@@ -22,12 +22,20 @@ const check = (name, ok, detail = '') => {
   if (!ok) failed++;
 };
 const has = (needle) => source.includes(needle);
+// 既読フラグの定数名。ここだけで持つ
+const BATTLE_TUTORIAL_SEEN = 'BATTLE_TUTORIAL_SEEN_KEY';
 
 const ctx = {};
 vm.createContext(ctx);
 vm.runInContext(`${assistantsSrc}
-globalThis.__t = { ASSISTANT_BATTLE_TUTORIAL, findBattleTutorialStep, ASSISTANT_EXPRESSIONS };`, ctx);
-const { ASSISTANT_BATTLE_TUTORIAL: steps, findBattleTutorialStep, ASSISTANT_EXPRESSIONS } = ctx.__t;
+globalThis.__t = { ASSISTANT_BATTLE_TUTORIAL, ASSISTANT_BATTLE_TUTORIAL_V2, ASSISTANT_BATTLE_TUTORIAL_BODY,
+  ASSISTANT_BATTLE_TUTORIAL_INTRO_V1, ASSISTANT_BATTLE_TUTORIAL_INTRO_V2,
+  ASSISTANT_BATTLE_TUTORIAL_OUTRO_V1, ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2,
+  findBattleTutorialStep, ASSISTANT_EXPRESSIONS };`, ctx);
+const { ASSISTANT_BATTLE_TUTORIAL: steps, ASSISTANT_BATTLE_TUTORIAL_V2: stepsV2,
+  ASSISTANT_BATTLE_TUTORIAL_BODY: bodySteps, ASSISTANT_BATTLE_TUTORIAL_INTRO_V2: introV2,
+  ASSISTANT_BATTLE_TUTORIAL_OUTRO_V2: outroV2,
+  findBattleTutorialStep, ASSISTANT_EXPRESSIONS } = ctx.__t;
 
 // --- ① 台本はデータで持つ ---
 check('台本が data/assistants.js のデータになっている', Array.isArray(steps) && steps.length >= 8, `${steps.length}ステップ`);
@@ -43,7 +51,9 @@ check('表情はすべて用意されているもの', steps.every(s => ASSISTAN
 check('セリフは短く保つ(スマホで読める長さ)',
   steps.every(s => s.t.length <= 60), steps.filter(s => s.t.length > 60).map(s => `${s.id}:${s.t.length}字`).join(', '));
 check('セリフを画面のJSXへ直接書いていない',
-  steps.every(s => !source.includes(s.t.replace('{name}', ''))) && has('const battleTutorialSteps = (typeof ASSISTANT_BATTLE_TUTORIAL'));
+  steps.every(s => !source.includes(s.t.replace('{name}', '')))
+    && stepsV2.every(s => !source.includes(s.t.replace('{name}', '')))
+    && has("const battleTutorialSteps = (battleTutorialVariant === 'v2'"));
 
 // --- ② 流れ ---
 const order = steps.map(s => s.at);
@@ -132,8 +142,12 @@ check('保存しないことはデバッグ戦と同じ仕組み',
   source.includes('if (debugBattleRef.current) {') && source.includes("setDebugOutcome('win');"));
 check('練習の中で保存していない',
   !/storeSet\(/.test(startBlock) && !/submitLocalScore|recordClearOnce|saveMissionProgress/.test(startBlock));
-const endBlock = source.slice(source.indexOf('const endBattleTutorial = () => {'), source.indexOf('const battleTutorialSteps'));
-check('終わるときも保存しない', !/storeSet\(/.test(endBlock));
+const endBlock = source.slice(source.indexOf('const endBattleTutorial = async ('), source.indexOf('const battleTutorialSteps'));
+// 終わるときに書き込むのは「練習を見た」という既読フラグだけ。
+// スコア・記録・編成などのセーブデータには一切触らない
+check('終わるときに保存するのは既読フラグだけ',
+  (endBlock.match(/storeSet\(/g) || []).length === 1 && endBlock.includes(`storeSet(${BATTLE_TUTORIAL_SEEN}, true, false)`)
+    && !/submitLocalScore|recordClearOnce|saveMissionProgress/.test(endBlock));
 check('やさしい難易度で固定する', startBlock.includes("setDifficulty('Beginner');"));
 check('編成が空でも始められる', startBlock.includes('setMonSelection(getUnlockedBaseMonsterList());'));
 // ふだんの「この難易度で挑戦」は debugBattleRef を false へ戻すので、
@@ -142,7 +156,8 @@ const runBlock = source.slice(source.indexOf('const beginBattleTutorialRun = () 
 check('練習の開始は専用の処理を通る',
   has('const beginBattleTutorialRun = () => {') && runBlock.includes('debugBattleRef.current = true;'));
 check('ふだんの開始ボタンは練習中そちらへ回す',
-  has('onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}setDifficulty(key);'));
+  (source.match(/onClick=\{\(\)=>\{if\(battleTutorial\)\{beginBattleTutorialRun\(\);return;\}/g) || []).length === 2,
+  '既存のバトル画面と新しい難易度選択の2か所');
 check('練習中はビギナー以外で始められない',
   has("disabled={!!battleTutorial&&key!=='Beginner'}"));
 check('練習中はモードを切り替えられない',
@@ -160,7 +175,7 @@ check('練習は強化フェーズまで進める',
 // --- ④ 入口は3つ・戻り先を覚える ---
 check('デバッグ設定から開始できる', has('<button onClick={()=>startBattleTutorial()}') && has('バトルチュートリアル開始'));
 check('はじめての案内の最後から開始できる',
-  has("startBattleTutorial('HOME')") && assistantsSrc.includes("offer:'battle'"));
+  has("startBattleTutorial('HOME'); }") && has('バトルのれんしゅうをやってみる！'));
 check('ヘルプの項目から開始できる',
   has("topic.launch==='battleTutorial'") && has('バトルのれんしゅうを始める'));
 // ヘルプを開いてすぐ目に入る場所にも導線を置く(いつでも見返せるように)
@@ -168,16 +183,22 @@ check('ヘルプのいちばん上に導線がある',
   has("onClick={()=>{setHelpCatId('battle');setHelpTopicId('tutorial');}}")
     && has('みゅあと一緒に、実際に動かして遊び方を覚えられます'));
 check('ヘルプ側に項目がある', helpSrc.includes("launch: 'battleTutorial'"));
-check('入口は3つだけ',
-  (source.match(/startBattleTutorial\(/g) || []).length === 3,
-  `${(source.match(/startBattleTutorial\(/g) || []).length}か所`);
+// 呼び出し口は、定義を除いて デバッグ(v1)・デバッグ(v2お試し)・はじめての案内2つ・ヘルプ の5つ
+const entryCalls = (source.match(/startBattleTutorial\(/g) || []).length;
+check('入口は決めた5つだけ', entryCalls === 5, `${entryCalls}か所`);
+check('新しい台本はデバッグからだけ開ける',
+  (source.match(/startBattleTutorial\('DEBUG_SETTINGS','v2'\)/g) || []).length === 1
+    && !/startBattleTutorial\('HOME',\s*'v2'\)/.test(source));
 check('デバッグ設定の入口はデバッグ設定の中にある',
   source.indexOf('バトルチュートリアル開始') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
 check('終わったら始めた場所へ帰る',
   startBlock.includes('setBattleTutorialReturn(returnTo);')
     && endBlock.includes("if (back === 'HOME') { returnToHome(); return; }"));
-check('何度でも始められる(既読フラグを持たない)',
-  !/battleTutorial[A-Za-z]*(Seen|Done)/.test(source) && !source.includes('mh_battle_tutorial'));
+// 既読は持つが、練習そのものは何度でも始められる(始めるときに既読を見ない)
+check('何度でも始められる', !startBlock.includes(BATTLE_TUTORIAL_SEEN) && !startBlock.includes('battleTutorialSeen'));
+// デバッグのお試し再生で、通常プレイの既読状態を書き換えない
+check('既読にするのはふだんの入口から通したときだけ',
+  endBlock.includes(`if (completed && back === 'HOME') { try { await storeSet(${BATTLE_TUTORIAL_SEEN}, true, false); } catch {} }`));
 
 // --- ⑤ 画面の重ね方 ---
 check('専用画面を作らず、いまの画面へ重ねる',
@@ -215,14 +236,14 @@ check('技変更は閉じたときに数える',
   has('const skillPickerOpenRef = useRef(false);') && has('}, [skillPicker]);')
     && !has("if(battleScenarioRef.current)setBattleTutorialLastAction('skillPicker'); setSkillPicker("));
 check('操作の番でも「やめる」は残す',
-  (source.match(/onClick=\{endBattleTutorial\}/g) || []).length >= 2,
-  `${(source.match(/onClick=\{endBattleTutorial\}/g) || []).length}か所`);
+  (source.match(/onClick=\{\(\)=>endBattleTutorial\(false\)\}/g) || []).length >= 2,
+  `${(source.match(/onClick=\{\(\)=>endBattleTutorial\(false\)\}/g) || []).length}か所`);
 check('吹き出し以外は操作を邪魔しない', has("pointerEvents:'none'") && has("pointerEvents:'auto'"));
 check('みゅあの顔と吹き出しは共通のものを使う',
   has('<AssistantFace who={who} size={64} accent={who.accent} expression={battleTutorial.e}/>')
     && has('assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow)'));
 check('つぎへとスキップ(やめる)がある',
-  has("{last?'おわる':'つぎへ'}") && has('<button onClick={endBattleTutorial}') && has('やめる</button>'));
+  has("{last?'おわる':'つぎへ'}") && has('<button onClick={()=>endBattleTutorial(false)}') && has('やめる</button>'));
 // 押してほしいものだけを押せるようにする。枠全体を光らせると
 // 「どれを押すのか」が分からず、他が押せると台本から外れてしまう
 check('置く距離は押せる枠だけ光らせる',
@@ -279,10 +300,36 @@ check('練習中は戻る・リタイアを止める',
 
 // --- 将来の移行 ---
 check('開始と終了が1つの関数にまとまっている',
-  has('const startBattleTutorial = (') && has('const endBattleTutorial = () => {'));
-check('入口を増やしても同じ関数を呼ぶだけで済むと書いてある',
-  source.includes('入口は3つ。デバッグ設定・はじめての案内の最後・ヘルプの「バトルのれんしゅう」')
-    && assistantsSrc.includes('呼び出し口(いまはデバッグ設定)を変えるだけで'));
+  has('const startBattleTutorial = (returnTo = \'DEBUG_SETTINGS\', variant = \'v1\') => {')
+    && has('const endBattleTutorial = async (completed = false) => {'));
+
+// --- ⑥ 新しい入口の台本(V2・お試し) ---
+check('新しい台本がある', Array.isArray(stepsV2) && stepsV2.length >= steps.length, `${stepsV2.length}ステップ`);
+check('本体(勇者モン選択から強化フェーズまで)は新旧で同じものを使い回す',
+  bodySteps.length > 0 && JSON.stringify(steps.slice(steps.length - bodySteps.length - 5, steps.length - 5)) === JSON.stringify(bodySteps)
+    && JSON.stringify(stepsV2.slice(introV2.length, introV2.length + bodySteps.length)) === JSON.stringify(bodySteps));
+check('新しい台本は新しいモード選択から始まる',
+  stepsV2[0].at === 'BATTLE_MODE_SELECT' && introV2.some(s => s.at === 'BATTLE_DIFFICULTY_SELECT'));
+check('3モードすべてに触れる',
+  ['チャレンジ', 'クイック', 'プロ'].every(word => introV2.some(s => s.t.includes(word))));
+check('チャレンジを選んでビギナーで始めると伝える',
+  introV2.some(s => s.t.includes('チャレンジ') && s.wait === 'act') && introV2.some(s => s.t.includes('ビギナー')));
+check('しめくくりで3モードの使い分けに触れる',
+  ['チャレンジ', 'クイック', 'プロ'].every(word => outroV2.some(s => s.t.includes(word))));
+check('新しい台本もセリフを短く保つ', stepsV2.every(s => s.t.length <= 70), stepsV2.filter(s => s.t.length > 70).map(s => `${s.id}:${s.t.length}字`).join(', '));
+check('新しい台本のidも重複していない', new Set(stepsV2.map(s => s.id)).size === stepsV2.length);
+check('新しい台本の表情もすべて用意されているもの', stepsV2.every(s => ASSISTANT_EXPRESSIONS.includes(s.e)));
+// 初回でクイック・プロを実際に遊ばせない
+check('練習中はチャレンジ以外の「難易度を選ぶ」を押せない',
+  has('disabled={!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE}'));
+check('新しい難易度選択でも練習中はビギナーだけ',
+  has("disabled={(pro&&!proReady)||(!!battleTutorial&&key!=='Beginner')}"));
+check('練習中の難易度選択はビギナーから始まる',
+  has("const start=battleTutorialStep!=null?'Beginner':BATTLE_DEFAULT_DIFFICULTY;"));
+check('新しい画面でも押してほしい場所だけ光らせる',
+  has("battleTutorialSpotClass('modeCards')") && has("battleTutorialSpotClass('modeRankTabs')")
+    && has("battleTutorialSpotClass('modeStart')")
+    && introV2.every(s => !s.spot || ['modeCards','modeRankTabs','modeStart','difficulty','battleStart'].includes(s.spot)));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
