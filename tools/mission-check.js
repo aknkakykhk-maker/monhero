@@ -28,7 +28,7 @@ check('ギフト送付済みは未受取バッジに含めない',m.missionClaim
 const base={gold:0,breederPoints:0,ownedItems:{}};
 const gift={rewards:[{type:'trainingTicket',amount:3},{type:'trainingTicketLarge',amount:2}],expiresAt:new Date(Date.now()+100000).toISOString(),claimedAt:null};
 const claim=m.buildGiftClaim(gift,base);
-check('トレーニング・修行チケットを既存IDへ加算',claim.ok&&claim.balances.ownedItems.training_ticket===3&&claim.balances.ownedItems.training_ticket_l===2);
+check('トレーニング・重トレーニングチケットを既存IDへ加算',claim.ok&&claim.balances.ownedItems.training_ticket===3&&claim.balances.ownedItems.training_ticket_l===2);
 const invalid=m.buildGiftClaim({...gift,rewards:[{type:'diamond',amount:1},{type:'unknown',amount:1}]},base);
 check('不明報酬を含むギフトは全体を拒否',!invalid.ok&&base.gold===0);
 check('ミッション画面はHOME BGMを継続',/MISSIONS:\s*'home'/.test(source));
