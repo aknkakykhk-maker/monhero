@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ca065a35f8ebf4b7
+// source-sha256: 96df37b74fabde50
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 12:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 12:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -23154,158 +23154,169 @@ function MonsterHeroGame() {
         setProAllyPool(prev => [...prev, m]);
       };
       const ready = proAllyPool.length === need;
-      return /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 flex flex-col h-full min-h-0 px-4",
-        style: {
-          paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "mb-2 text-center flex items-center justify-between px-2 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": "\u623B\u308B",
-        onClick: () => {
-          setProAllyPool([]);
-          setMainHero(null);
-          setSlots([null, null, null, null]);
-          setCurrentPickingMon(null);
-          setGameState('PICK_HERO');
-        },
-        className: "p-3 text-slate-400 active:scale-90"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("h2", {
-        className: "text-xl font-black italic uppercase tracking-widest truncate",
-        style: {
-          color: mode.color
-        }
-      }, "\u4F9B\u30E2\u30F3\u306E\u5019\u88DC"), /*#__PURE__*/React.createElement("div", {
-        className: "w-10"
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full mb-2"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "pickProAllies",
-        accent: mode.color,
-        compact: true
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 rounded-2xl border px-3 py-2 mb-2",
-        style: {
-          borderColor: `${mode.color}55`,
-          backgroundColor: 'rgba(0,0,0,.35)'
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-baseline justify-between"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "text-[10px] font-black text-slate-300"
-      }, "\u5019\u88DC\u306B\u5165\u308C\u308B\u4F9B\u30E2\u30F3"), /*#__PURE__*/React.createElement("b", {
-        className: "text-base font-black",
-        style: {
-          color: mode.color
-        }
-      }, proAllyPool.length, " / ", need)), /*#__PURE__*/React.createElement("p", {
-        className: "text-[9px] text-slate-400 leading-snug mt-0.5"
-      }, "\u5408\u6D41\u306E\u5834\u9762\u3067\u306F\u3001\u3053\u306E", need, "\u4F53\u304B\u3089\u30E9\u30F3\u30C0\u30E0\u306B", Math.min(PRO_ALLY_OFFER_SIZE, need), "\u4F53\u3060\u3051\u304C\u51FA\u307E\u3059\u3002\u8AB0\u304C\u6765\u3066\u3082\u3044\u3044\u3088\u3046\u306B\u7D44\u3093\u3067\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "flex gap-1 mt-1.5 min-h-[26px] items-center"
-      }, Array.from({
-        length: need
-      }).map((_, i) => {
-        const m = proAllyPool[i];
-        return /*#__PURE__*/React.createElement("div", {
-          key: i,
-          className: "flex-1 h-[26px] rounded-lg border flex items-center justify-center overflow-hidden",
+      return (
+        /*#__PURE__*/
+        // ラン中の画面(勇者モン選択・配置・教え)と同じ全画面のかぶせ方にする。
+        // これを付けないと、ふだんの画面の下敷きになってカードを押せなくなる
+        React.createElement("div", {
           style: {
-            borderColor: m ? `${mode.color}88` : 'rgba(255,255,255,.1)',
-            backgroundColor: m ? 'rgba(0,0,0,.5)' : 'transparent'
+            position: "absolute",
+            inset: 0,
+            backgroundColor: "#020617",
+            zIndex: 30000
+          },
+          className: "absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden",
+          "data-screen": "pick-pro-allies"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "mb-2 text-center flex items-center justify-between px-2 shrink-0",
+          style: {
+            paddingTop: 'calc(.35rem + env(safe-area-inset-top))'
           }
-        }, m ? m.imgUrl ? /*#__PURE__*/React.createElement("img", {
-          src: m.imgUrl,
-          alt: m.name,
-          className: "h-[22px] object-contain"
-        }) : /*#__PURE__*/React.createElement("span", {
-          className: "text-sm"
-        }, m.emoji) : /*#__PURE__*/React.createElement("span", {
-          className: "text-[9px] text-slate-600 font-black"
-        }, i + 1));
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2.5"
-      }, candidates.map(m => {
-        const isSel = chosenIds.includes(m.id);
-        const full = !isSel && proAllyPool.length >= need;
-        return /*#__PURE__*/React.createElement("button", {
-          key: m.id,
-          disabled: full,
-          onClick: () => toggle(m),
-          style: MONSTER_CARD_STYLE,
-          className: `${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25 ${isSel ? 'border-pink-400 bg-pink-900/30 ring-4 ring-pink-500/50 scale-[1.03] shadow-[0_0_25px_rgba(244,114,182,0.6)]' : 'border-slate-800'}`
-        }, renderMonsterCardBody({
-          masu: null,
-          base: ALL_PLAYER_MONSTERS[m.id] || m,
-          mon: m,
-          badge: isSel ? /*#__PURE__*/React.createElement("div", {
-            className: "absolute -top-1 -right-1 z-10 bg-pink-500 rounded-full p-1 shadow-lg"
-          }, /*#__PURE__*/React.createElement(Check, {
-            size: 12,
-            className: "text-white"
-          })) : null,
-          extra: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-            className: "text-amber-400 font-black flex items-center gap-1 leading-tight",
+        }, /*#__PURE__*/React.createElement("button", {
+          "aria-label": "\u623B\u308B",
+          onClick: () => {
+            setProAllyPool([]);
+            setMainHero(null);
+            setSlots([null, null, null, null]);
+            setCurrentPickingMon(null);
+            setGameState('PICK_HERO');
+          },
+          className: "p-3 text-slate-400 active:scale-90"
+        }, /*#__PURE__*/React.createElement(ArrowLeft, {
+          size: 20
+        })), /*#__PURE__*/React.createElement("h2", {
+          className: "text-xl font-black italic uppercase tracking-widest truncate",
+          style: {
+            color: mode.color
+          }
+        }, "\u4F9B\u30E2\u30F3\u306E\u5019\u88DC"), /*#__PURE__*/React.createElement("div", {
+          className: "w-10"
+        })), /*#__PURE__*/React.createElement("div", {
+          className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "shrink-0 w-full mb-2"
+        }, /*#__PURE__*/React.createElement(AssistantBubble, {
+          scene: "pickProAllies",
+          accent: mode.color,
+          compact: true
+        })), /*#__PURE__*/React.createElement("div", {
+          className: "shrink-0 rounded-2xl border px-3 py-2 mb-2",
+          style: {
+            borderColor: `${mode.color}55`,
+            backgroundColor: 'rgba(0,0,0,.35)'
+          }
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex items-baseline justify-between"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-[10px] font-black text-slate-300"
+        }, "\u5019\u88DC\u306B\u5165\u308C\u308B\u4F9B\u30E2\u30F3"), /*#__PURE__*/React.createElement("b", {
+          className: "text-base font-black",
+          style: {
+            color: mode.color
+          }
+        }, proAllyPool.length, " / ", need)), /*#__PURE__*/React.createElement("p", {
+          className: "text-[9px] text-slate-400 leading-snug mt-0.5"
+        }, "\u5408\u6D41\u306E\u5834\u9762\u3067\u306F\u3001\u3053\u306E", need, "\u4F53\u304B\u3089\u30E9\u30F3\u30C0\u30E0\u306B", Math.min(PRO_ALLY_OFFER_SIZE, need), "\u4F53\u3060\u3051\u304C\u51FA\u307E\u3059\u3002\u8AB0\u304C\u6765\u3066\u3082\u3044\u3044\u3088\u3046\u306B\u7D44\u3093\u3067\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
+          className: "flex gap-1 mt-1.5 min-h-[26px] items-center"
+        }, Array.from({
+          length: need
+        }).map((_, i) => {
+          const m = proAllyPool[i];
+          return /*#__PURE__*/React.createElement("div", {
+            key: i,
+            className: "flex-1 h-[26px] rounded-lg border flex items-center justify-center overflow-hidden",
             style: {
-              fontSize: '9px'
+              borderColor: m ? `${mode.color}88` : 'rgba(255,255,255,.1)',
+              backgroundColor: m ? 'rgba(0,0,0,.5)' : 'transparent'
             }
-          }, /*#__PURE__*/React.createElement(Zap, {
-            size: 9
-          }), " ", m.unique.name), /*#__PURE__*/React.createElement("div", {
-            className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono",
-            style: {
-              fontSize: '9px'
-            }
-          }, /*#__PURE__*/React.createElement("div", {
-            className: "flex justify-between"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-slate-500"
-          }, "HP"), /*#__PURE__*/React.createElement("span", {
-            className: "text-pink-400 font-bold"
-          }, "+", m.plusStats?.hp || 0)), /*#__PURE__*/React.createElement("div", {
-            className: "flex justify-between"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-slate-500"
-          }, "\u529B"), /*#__PURE__*/React.createElement("span", {
-            className: "text-red-400 font-bold"
-          }, "+", m.plusStats?.atk || 0)), /*#__PURE__*/React.createElement("div", {
-            className: "flex justify-between"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-slate-500"
-          }, "\u9632"), /*#__PURE__*/React.createElement("span", {
-            className: "text-emerald-400 font-bold"
-          }, "+", m.plusStats?.def || 0)), /*#__PURE__*/React.createElement("div", {
-            className: "flex justify-between"
-          }, /*#__PURE__*/React.createElement("span", {
-            className: "text-slate-500"
-          }, "G"), /*#__PURE__*/React.createElement("span", {
-            className: "text-amber-400 font-bold"
-          }, "+", m.plusStats?.guts || 0))))
-        }));
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 pt-1",
-        style: {
-          paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("button", {
-        disabled: !ready,
-        onClick: () => {
-          setTeachingPool([...getActiveTeachingCards()]);
-          setGameState('PICK_TEACHING');
-        },
-        className: "w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30",
-        style: {
-          backgroundColor: mode.color,
-          color: '#0f172a'
-        }
-      }, ready ? 'この候補で始める' : `あと${need - proAllyPool.length}体えらんでください`))));
+          }, m ? m.imgUrl ? /*#__PURE__*/React.createElement("img", {
+            src: m.imgUrl,
+            alt: m.name,
+            className: "h-[22px] object-contain"
+          }) : /*#__PURE__*/React.createElement("span", {
+            className: "text-sm"
+          }, m.emoji) : /*#__PURE__*/React.createElement("span", {
+            className: "text-[9px] text-slate-600 font-black"
+          }, i + 1));
+        }))), /*#__PURE__*/React.createElement("div", {
+          className: "flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-2 gap-2.5"
+        }, candidates.map(m => {
+          const isSel = chosenIds.includes(m.id);
+          const full = !isSel && proAllyPool.length >= need;
+          return /*#__PURE__*/React.createElement("button", {
+            key: m.id,
+            disabled: full,
+            onClick: () => toggle(m),
+            style: MONSTER_CARD_STYLE,
+            className: `${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25 ${isSel ? 'border-pink-400 bg-pink-900/30 ring-4 ring-pink-500/50 scale-[1.03] shadow-[0_0_25px_rgba(244,114,182,0.6)]' : 'border-slate-800'}`
+          }, renderMonsterCardBody({
+            masu: null,
+            base: ALL_PLAYER_MONSTERS[m.id] || m,
+            mon: m,
+            badge: isSel ? /*#__PURE__*/React.createElement("div", {
+              className: "absolute -top-1 -right-1 z-10 bg-pink-500 rounded-full p-1 shadow-lg"
+            }, /*#__PURE__*/React.createElement(Check, {
+              size: 12,
+              className: "text-white"
+            })) : null,
+            extra: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+              className: "text-amber-400 font-black flex items-center gap-1 leading-tight",
+              style: {
+                fontSize: '9px'
+              }
+            }, /*#__PURE__*/React.createElement(Zap, {
+              size: 9
+            }), " ", m.unique.name), /*#__PURE__*/React.createElement("div", {
+              className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono",
+              style: {
+                fontSize: '9px'
+              }
+            }, /*#__PURE__*/React.createElement("div", {
+              className: "flex justify-between"
+            }, /*#__PURE__*/React.createElement("span", {
+              className: "text-slate-500"
+            }, "HP"), /*#__PURE__*/React.createElement("span", {
+              className: "text-pink-400 font-bold"
+            }, "+", m.plusStats?.hp || 0)), /*#__PURE__*/React.createElement("div", {
+              className: "flex justify-between"
+            }, /*#__PURE__*/React.createElement("span", {
+              className: "text-slate-500"
+            }, "\u529B"), /*#__PURE__*/React.createElement("span", {
+              className: "text-red-400 font-bold"
+            }, "+", m.plusStats?.atk || 0)), /*#__PURE__*/React.createElement("div", {
+              className: "flex justify-between"
+            }, /*#__PURE__*/React.createElement("span", {
+              className: "text-slate-500"
+            }, "\u9632"), /*#__PURE__*/React.createElement("span", {
+              className: "text-emerald-400 font-bold"
+            }, "+", m.plusStats?.def || 0)), /*#__PURE__*/React.createElement("div", {
+              className: "flex justify-between"
+            }, /*#__PURE__*/React.createElement("span", {
+              className: "text-slate-500"
+            }, "G"), /*#__PURE__*/React.createElement("span", {
+              className: "text-amber-400 font-bold"
+            }, "+", m.plusStats?.guts || 0))))
+          }));
+        }))), /*#__PURE__*/React.createElement("div", {
+          className: "shrink-0 pt-1",
+          style: {
+            paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
+          }
+        }, /*#__PURE__*/React.createElement("button", {
+          disabled: !ready,
+          onClick: () => {
+            setTeachingPool([...getActiveTeachingCards()]);
+            setGameState('PICK_TEACHING');
+          },
+          className: "w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30",
+          style: {
+            backgroundColor: mode.color,
+            color: '#0f172a'
+          }
+        }, ready ? 'この候補で始める' : `あと${need - proAllyPool.length}体えらんでください`))))
+      );
     })(), gameState === 'PICK_SLOT' && /*#__PURE__*/React.createElement("div", {
       style: {
         position: "absolute",
