@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ef9be7939044c52b
+// source-sha256: 61a9c86a50529056
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 11:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 11:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7660,6 +7660,9 @@ function MonsterHeroGame() {
   const [isBusy, setIsBusy] = useState(false);
   const [monSelection, setMonSelection] = useState([]);
   const [heroPickTab, setHeroPickTab] = useState('roster'); // 勇者モン選択のタブ: 'roster'(編成) / 'base'(ベースモン)
+  // プロモードで、始める前に選んだ供モンの候補(ベースモンだけ)。
+  // ラン中の加入候補はここからしか出さない。ふだんのモードでは使わないので空のまま
+  const [proAllyPool, setProAllyPool] = useState([]);
   // スキップ(チケットを1枚使って、ボス撃破まで到達したのと同じ経験値・ダイヤを受け取る)
   const [skipFlow, setSkipFlow] = useState(null); // { difficulty, itemId, hero, allies:[] }
   const [skipPickTab, setSkipPickTab] = useState('roster');
@@ -8812,7 +8815,7 @@ function MonsterHeroGame() {
   //  ・準備中(最初の勇者モン選択〜最初のバトルの直前) … 強化フェーズの曲
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
   // 敵撃破のファンファーレのあと、リザルトの曲が強化フェーズまで途切れず流れるようにするための切り分け
-  const RUN_PHASE_STATES = ['PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT', 'CHAMPION', 'QUICK_GROWTH', 'QUICK_JOIN'];
+  const RUN_PHASE_STATES = ['PICK_HERO', 'PICK_ALLY', 'PICK_SLOT', 'PICK_TEACHING', 'PICK_PRO_ALLIES', 'REWARD_PICK', 'UPGRADE_SKILL', 'WAVE_RESULT', 'CHAMPION', 'QUICK_GROWTH', 'QUICK_JOIN'];
   // 画面から鳴らすべき曲のキーを決める
   const bgmKeyForState = (state, currentWave, enemyId, wavesDone, isGameOver) => {
     if (isGameOver) return 'gameOver';
@@ -10115,6 +10118,12 @@ function MonsterHeroGame() {
   // 勇者モン選択の「ベースモン」タブ用。解放済みの種は編成に入れていなくても選べる。
   // マスモン登録のためだけに編成を入れ替える手間を無くすためのもの。
   const getUnlockedBaseMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
+  // ラン中に供モンが合流するときの候補。
+  // プロモードは「始める前に選んだ5体」からしか出さないので、育てたマスモンは一切出てこない。
+  // それ以外のモードはこれまでどおり編成から出す
+  const joinCandidatePool = () => isProMode(runMode) ? proAllyPool : getActiveMonsterList();
+  // 一度に見せる候補の数。プロは5体からランダムに3体だけ見せる
+  const joinOfferSize = () => isProMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;
   const getActiveTeachingCards = () => {
     const list = TEACHING_CARDS.filter(t => teachingRosterIds.includes(t.id));
     return list.length > 0 ? list : TEACHING_CARDS.filter(t => unlockedTeachingIds.includes(t.id));
@@ -13445,9 +13454,9 @@ function MonsterHeroGame() {
     setQuickGrowth(null);
     const joinWaves = [2, 4, 6];
     const activeIds = slots.filter(s => s).map(s => s.id);
-    const avail = getActiveMonsterList().filter(m => !activeIds.includes(m.id));
+    const avail = joinCandidatePool().filter(m => !activeIds.includes(m.id));
     if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
-      setMonSelection(avail.sort(() => Math.random() - 0.5).slice(0, 4));
+      setMonSelection(avail.sort(() => Math.random() - 0.5).slice(0, joinOfferSize()));
       setGameState('PICK_ALLY');
     } else {
       initBattle(wave + 1, slots, ownedUniques, ownedTeachings, nextDef !== undefined ? nextDef : def, null, null, null, nextStats);
@@ -14157,6 +14166,13 @@ function MonsterHeroGame() {
       setGuts(Math.floor(m.baseGuts * 0.5));
       setAtk(m.baseAtk);
       setDef(m.baseDef);
+      // プロモードは、ここで先に供モンの候補5体を選んでもらう。
+      // 選び終わったらふだんと同じブリーダーカードの画面へ合流する
+      if (isProMode(runMode)) {
+        setProAllyPool([]);
+        setGameState('PICK_PRO_ALLIES');
+        return;
+      }
       setTeachingPool([...getActiveTeachingCards()]);
       setGameState('PICK_TEACHING');
     } else {
@@ -14331,9 +14347,9 @@ function MonsterHeroGame() {
       setEffect(null);
       const joinWaves = [2, 4, 6];
       const activeIds = slots.filter(s => s).map(s => s.id);
-      const avail = getActiveMonsterList().filter(m => !activeIds.includes(m.id));
+      const avail = joinCandidatePool().filter(m => !activeIds.includes(m.id));
       if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
-        setMonSelection(avail.sort(() => Math.random() - 0.5).slice(0, 4));
+        setMonSelection(avail.sort(() => Math.random() - 0.5).slice(0, joinOfferSize()));
         setGameState('PICK_ALLY');
       } else if ([1, 3, 5, 7, 9].includes(wave)) {
         const activeCards = getActiveTeachingCards();
@@ -17542,6 +17558,8 @@ function MonsterHeroGame() {
         quick = isQuickMode(battleMode),
         pro = isProMode(battleMode),
         ranked = modeHasRanking(battleMode);
+      // プロは勇者モン1体＋供モン候補5体をベースモンだけで組むので、それだけの種が解放されている必要がある
+      const proReady = getUnlockedBaseMonsterList().length >= PRO_ALLY_POOL_SIZE + 1;
       // 倍率の枠は3つまで。4つ並べると見出しが2行に折り返して読みにくくなる。
       // クイックはスコアを競わないのでスコアの代わりに経験値を出す
       const bonusLabel = value => `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}`;
@@ -17652,7 +17670,7 @@ function MonsterHeroGame() {
           },
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs"
         }, "\u5168WAVE\u8A73\u7D30"), /*#__PURE__*/React.createElement("button", {
-          disabled: pro,
+          disabled: pro && !proReady,
           onClick: () => {
             battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
             setDifficulty(key);
@@ -17660,8 +17678,9 @@ function MonsterHeroGame() {
             debugBattleRef.current = false;
             setDebugBattle(false);
             setDebugOutcome(null);
-            setMonSelection(getActiveMonsterList());
-            setHeroPickTab('roster');
+            setProAllyPool([]);
+            setMonSelection(pro ? getUnlockedBaseMonsterList() : getActiveMonsterList());
+            setHeroPickTab(pro ? 'base' : 'roster');
             setGameState('PICK_HERO');
           },
           className: "min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30",
@@ -17669,7 +17688,7 @@ function MonsterHeroGame() {
             backgroundColor: setting.bg,
             color: setting.darkText ? '#0f172a' : '#ffffff'
           }
-        }, pro ? 'プロモードは準備中です' : 'この難易度で挑戦'), ranked && /*#__PURE__*/React.createElement("button", {
+        }, pro && !proReady ? `ベースモンが${PRO_ALLY_POOL_SIZE + 1}種必要です` : 'この難易度で挑戦'), ranked && /*#__PURE__*/React.createElement("button", {
           onClick: () => openModeScoreRanking(battleMode, key, 'BATTLE_DIFFICULTY_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2"
         }, /*#__PURE__*/React.createElement("span", {
@@ -22948,7 +22967,7 @@ function MonsterHeroGame() {
       compact: true
     })), gameState === 'PICK_HERO' && /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
-    }, /*#__PURE__*/React.createElement("div", {
+    }, !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
       className: "flex gap-1.5"
     }, [['roster', '編成'], ['base', 'ベースモン']].map(([key, label]) => /*#__PURE__*/React.createElement("button", {
       key: key,
@@ -22960,11 +22979,11 @@ function MonsterHeroGame() {
       className: `flex-1 min-h-[40px] rounded-2xl font-black text-[12px] border-2 active:scale-95 ${heroPickTab === key ? 'bg-indigo-600 border-indigo-300 text-white shadow-lg' : 'bg-slate-900 border-slate-700 text-slate-400'}`
     }, label))), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
-    }, heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), /*#__PURE__*/React.createElement("div", {
+    }, isProMode(runMode) ? 'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), /*#__PURE__*/React.createElement("div", {
       className: `flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col ${gameState === 'PICK_ALLY' ? 'justify-center' : ''}`
     }, /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-2 gap-2.5"
-    }, (gameState === 'PICK_HERO' && heroPickTab === 'base' ? getUnlockedBaseMonsterList() : monSelection).map(m => {
+    }, (gameState === 'PICK_HERO' && (heroPickTab === 'base' || isProMode(runMode)) ? getUnlockedBaseMonsterList() : monSelection).map(m => {
       const isSel = currentPickingMon?.id === m.id;
       // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
       // 以前はこの画面だけ独自に組んでいたため、絆レベルも総合力も限界突破の★も出ず、
@@ -23091,7 +23110,174 @@ function MonsterHeroGame() {
         onClick: () => setGameState('PICK_SLOT'),
         className: `flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`
       }, "\u6C7A\u5B9A"))
-    })), gameState === 'PICK_SLOT' && /*#__PURE__*/React.createElement("div", {
+    })), gameState === 'PICK_PRO_ALLIES' && (() => {
+      const mode = battleModeInfo(runMode);
+      // 勇者モンにした種は候補から外す(同じ種は1体しか編成に入らないため)
+      const candidates = getUnlockedBaseMonsterList().filter(m => m.id !== mainHero?.id);
+      const need = Math.min(PRO_ALLY_POOL_SIZE, candidates.length);
+      const chosenIds = proAllyPool.map(m => m.id);
+      const toggle = m => {
+        if (chosenIds.includes(m.id)) {
+          setProAllyPool(prev => prev.filter(x => x.id !== m.id));
+          return;
+        }
+        if (proAllyPool.length >= need) return;
+        setProAllyPool(prev => [...prev, m]);
+      };
+      const ready = proAllyPool.length === need;
+      return /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 flex flex-col h-full min-h-0 px-4",
+        style: {
+          paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "mb-2 text-center flex items-center justify-between px-2 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u623B\u308B",
+        onClick: () => {
+          setProAllyPool([]);
+          setMainHero(null);
+          setSlots([null, null, null, null]);
+          setCurrentPickingMon(null);
+          setGameState('PICK_HERO');
+        },
+        className: "p-3 text-slate-400 active:scale-90"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-xl font-black italic uppercase tracking-widest truncate",
+        style: {
+          color: mode.color
+        }
+      }, "\u4F9B\u30E2\u30F3\u306E\u5019\u88DC"), /*#__PURE__*/React.createElement("div", {
+        className: "w-10"
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full mb-2"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "pickProAllies",
+        accent: mode.color,
+        compact: true
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 rounded-2xl border px-3 py-2 mb-2",
+        style: {
+          borderColor: `${mode.color}55`,
+          backgroundColor: 'rgba(0,0,0,.35)'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-baseline justify-between"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black text-slate-300"
+      }, "\u5019\u88DC\u306B\u5165\u308C\u308B\u4F9B\u30E2\u30F3"), /*#__PURE__*/React.createElement("b", {
+        className: "text-base font-black",
+        style: {
+          color: mode.color
+        }
+      }, proAllyPool.length, " / ", need)), /*#__PURE__*/React.createElement("p", {
+        className: "text-[9px] text-slate-400 leading-snug mt-0.5"
+      }, "\u5408\u6D41\u306E\u5834\u9762\u3067\u306F\u3001\u3053\u306E", need, "\u4F53\u304B\u3089\u30E9\u30F3\u30C0\u30E0\u306B", Math.min(PRO_ALLY_OFFER_SIZE, need), "\u4F53\u3060\u3051\u304C\u51FA\u307E\u3059\u3002\u8AB0\u304C\u6765\u3066\u3082\u3044\u3044\u3088\u3046\u306B\u7D44\u3093\u3067\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "flex gap-1 mt-1.5 min-h-[26px] items-center"
+      }, Array.from({
+        length: need
+      }).map((_, i) => {
+        const m = proAllyPool[i];
+        return /*#__PURE__*/React.createElement("div", {
+          key: i,
+          className: "flex-1 h-[26px] rounded-lg border flex items-center justify-center overflow-hidden",
+          style: {
+            borderColor: m ? `${mode.color}88` : 'rgba(255,255,255,.1)',
+            backgroundColor: m ? 'rgba(0,0,0,.5)' : 'transparent'
+          }
+        }, m ? m.imgUrl ? /*#__PURE__*/React.createElement("img", {
+          src: m.imgUrl,
+          alt: m.name,
+          className: "h-[22px] object-contain"
+        }) : /*#__PURE__*/React.createElement("span", {
+          className: "text-sm"
+        }, m.emoji) : /*#__PURE__*/React.createElement("span", {
+          className: "text-[9px] text-slate-600 font-black"
+        }, i + 1));
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2.5"
+      }, candidates.map(m => {
+        const isSel = chosenIds.includes(m.id);
+        const full = !isSel && proAllyPool.length >= need;
+        return /*#__PURE__*/React.createElement("button", {
+          key: m.id,
+          disabled: full,
+          onClick: () => toggle(m),
+          style: MONSTER_CARD_STYLE,
+          className: `${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25 ${isSel ? 'border-pink-400 bg-pink-900/30 ring-4 ring-pink-500/50 scale-[1.03] shadow-[0_0_25px_rgba(244,114,182,0.6)]' : 'border-slate-800'}`
+        }, renderMonsterCardBody({
+          masu: null,
+          base: ALL_PLAYER_MONSTERS[m.id] || m,
+          mon: m,
+          badge: isSel ? /*#__PURE__*/React.createElement("div", {
+            className: "absolute -top-1 -right-1 z-10 bg-pink-500 rounded-full p-1 shadow-lg"
+          }, /*#__PURE__*/React.createElement(Check, {
+            size: 12,
+            className: "text-white"
+          })) : null,
+          extra: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+            className: "text-amber-400 font-black flex items-center gap-1 leading-tight",
+            style: {
+              fontSize: '9px'
+            }
+          }, /*#__PURE__*/React.createElement(Zap, {
+            size: 9
+          }), " ", m.unique.name), /*#__PURE__*/React.createElement("div", {
+            className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono",
+            style: {
+              fontSize: '9px'
+            }
+          }, /*#__PURE__*/React.createElement("div", {
+            className: "flex justify-between"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "text-slate-500"
+          }, "HP"), /*#__PURE__*/React.createElement("span", {
+            className: "text-pink-400 font-bold"
+          }, "+", m.plusStats?.hp || 0)), /*#__PURE__*/React.createElement("div", {
+            className: "flex justify-between"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "text-slate-500"
+          }, "\u529B"), /*#__PURE__*/React.createElement("span", {
+            className: "text-red-400 font-bold"
+          }, "+", m.plusStats?.atk || 0)), /*#__PURE__*/React.createElement("div", {
+            className: "flex justify-between"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "text-slate-500"
+          }, "\u9632"), /*#__PURE__*/React.createElement("span", {
+            className: "text-emerald-400 font-bold"
+          }, "+", m.plusStats?.def || 0)), /*#__PURE__*/React.createElement("div", {
+            className: "flex justify-between"
+          }, /*#__PURE__*/React.createElement("span", {
+            className: "text-slate-500"
+          }, "G"), /*#__PURE__*/React.createElement("span", {
+            className: "text-amber-400 font-bold"
+          }, "+", m.plusStats?.guts || 0))))
+        }));
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 pt-1",
+        style: {
+          paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        disabled: !ready,
+        onClick: () => {
+          setTeachingPool([...getActiveTeachingCards()]);
+          setGameState('PICK_TEACHING');
+        },
+        className: "w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30",
+        style: {
+          backgroundColor: mode.color,
+          color: '#0f172a'
+        }
+      }, ready ? 'この候補で始める' : `あと${need - proAllyPool.length}体えらんでください`))));
+    })(), gameState === 'PICK_SLOT' && /*#__PURE__*/React.createElement("div", {
       style: {
         position: "absolute",
         inset: 0,

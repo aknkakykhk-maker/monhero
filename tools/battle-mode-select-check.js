@@ -164,8 +164,9 @@ const check = (name, ok, detail = '') => {
     check('難易度選択画面へ進める', await page.getByRole('heading', { name: 'プロモード' }).count() === 1);
     check('難易度のカードが9枚ある', await page.locator('.snap-mandatory > article').count() === 9,
       `${await page.locator('.snap-mandatory > article').count()}枚`);
-    check('プロはまだ始められない',
-      await page.getByRole('button', { name: 'プロモードは準備中です' }).first().isDisabled());
+    // プロも実際に始められる(中身は tools/pro-mode-check.js が最後まで通して確かめる)
+    check('プロも「この難易度で挑戦」から始められる',
+      await page.getByRole('button', { name: 'この難易度で挑戦' }).first().isEnabled());
     // 開いた直後はいつでもノーマルが選ばれている(前に遊んだ難易度を引きずらない)
     const centeredDifficulty = () => page.evaluate(() => {
       const root = document.querySelector('.snap-mandatory');

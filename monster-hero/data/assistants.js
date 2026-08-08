@@ -318,6 +318,19 @@ const ASSISTANT_SCENES = {
       { e:'happy',   t:'心強い仲間がきたら、あと半分いけそうじゃん♪' },
     ],
   },
+  // プロモードだけの画面。始める前に供モンの候補を5体えらぶ
+  pickProAllies: {
+    help: 'basics/battle-modes',
+    lines: [
+      { e:'excited', t:'ここで選んだ子の中からしか来ないよ！ よく考えてね♪' },
+      { e:'wink',    t:'合流のときに出るのは、この中からランダムで3体だけ！' },
+      { e:'normal',  t:'誰が来てもいいように組むのがコツかな。' },
+      { e:'happy',   t:'間合いをばらけさせておくと安心だよ♪' },
+      { e:'troubled', t:'ぜんぶ同じ距離の子にすると、届かない相手が出ちゃうかも…。' },
+      { e:'wink',    t:'ステータスの合流ボーナスも見ておいてね！' },
+      { e:'happy',   t:'ベースモンだけだから、素の相性がそのまま出るよ。' },
+    ],
+  },
   pickTeaching: {
     help: 'growth/teaching',
     lines: [

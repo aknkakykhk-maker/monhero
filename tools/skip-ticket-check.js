@@ -151,7 +151,8 @@ check('まとめ表示から説明を開ける', ticketRow.includes('onClick={()
 
 // --- 勇者モン選択のタブ ---
 check('勇者モン選択にタブがある', has("setHeroPickTab(key); setCurrentPickingMon(null);") && has("[['roster','編成'],['base','ベースモン']]"));
-check('ベースモンタブは解放済みの種を全部出す', has("gameState==='PICK_HERO'&&heroPickTab==='base'?getUnlockedBaseMonsterList():monSelection"));
+// プロモードはタブを出さず、つねにベースモンの一覧になる
+check('ベースモンタブは解放済みの種を全部出す', has("gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection"));
 check('タブは勇者モン選択だけに出す', has("{gameState==='PICK_HERO'&&(\n            <div className=\"shrink-0 w-full max-w-md mx-auto mb-2\">"));
 check('挑戦するたびに編成タブから始まる', has("setHeroPickTab('roster');setGameState('PICK_HERO');"));
 

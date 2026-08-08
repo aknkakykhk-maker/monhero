@@ -404,8 +404,9 @@ check('ランキングの一覧を複製していない',
 check('既存のバトル画面のランキングも同じ描画を使う',
   has("{rankingKind==='score'&&renderScoreRankingBody(BATTLE_MODE_CHALLENGE)}")
     && has("{rankingKind==='breeder'&&renderBreederRankingBody()}") && has("{rankingKind==='bond'&&renderBondRankingBody()}"));
-check('プロの中身はまだ無いので、新しい画面からも始められない',
-  has("<button disabled={pro} onClick={()=>{battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';") && has("{pro?'プロモードは準備中です':'この難易度で挑戦'}"));
+check('新しい画面から実際に始められる',
+  has("<button disabled={pro&&!proReady} onClick={()=>{battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';")
+    && !has('プロモードは準備中です'));
 check('助手のセリフは場面キーで出し分ける(JSXへ直書きしない)',
   m.BATTLE_MODES.every(x => ['battleChallenge','battleQuick','battlePro'].includes(
     x.id === 'quick' ? 'battleQuick' : x.id === 'pro' ? 'battlePro' : 'battleChallenge'))
@@ -438,6 +439,47 @@ check('既存のバトル画面の難易度は今までどおり引き継ぐ',
   has("if(gameState!=='BATTLE_MENU'||battleMenuTab!=='difficulty')return;") && !/BATTLE_MENU'\|\|battleMenuTab!=='difficulty'\)return;\s*setDifficulty/.test(source));
 check('実際に開いて押せることを確かめる道具がある',
   fs.existsSync(path.join(root, 'tools/battle-mode-select-check.js')));
+
+// --- ⑨ プロモードの中身(第3段階) ---
+// 編成はベースモンだけ。育てたマスモンは勇者モンにも供モンにも出さない
+check('プロの勇者モン選択はベースモンだけ',
+  has("setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');")
+    && has("{gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection}".replace('{', '(').replace('}', ')'))
+    && has('{!isProMode(runMode)&&<div className="flex gap-1.5">'));
+check('プロの勇者モン選択に編成タブを出さない',
+  has("isProMode(runMode)?'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません'"));
+// 供モンの候補は「始める前に選んだ5体」からしか出さない
+check('ラン中の加入候補はモードで切り替える',
+  has('const joinCandidatePool = () => isProMode(runMode) ? proAllyPool : getActiveMonsterList();')
+    && has('const joinOfferSize = () => isProMode(runMode) ? PRO_ALLY_OFFER_SIZE : 4;'));
+check('加入の抽選は2か所とも共通の入口を通る',
+  count('joinCandidatePool().filter(') === 2 && count('joinOfferSize()') === 2
+    && !/getActiveMonsterList\(\)\.filter\(m\s*=>\s*!activeIds/.test(source));
+check('プロは5体から3体だけを候補に出す',
+  m.PRO_ALLY_POOL_SIZE === 5 && m.PRO_ALLY_OFFER_SIZE === 3
+    && has('setMonSelection(avail.sort(()=>Math.random()-0.5).slice(0,joinOfferSize())); setGameState(\'PICK_ALLY\');'));
+// 勇者モンを決めたあと、プロだけ供モン候補を選ぶ画面へ寄り道する
+check('プロだけ供モン候補の画面をはさむ',
+  has("if (isProMode(runMode)) { setProAllyPool([]); setGameState('PICK_PRO_ALLIES'); return; }")
+    && has("{gameState==='PICK_PRO_ALLIES'&&(()=>{"));
+check('候補が5体そろうまで始められない',
+  has('const ready=proAllyPool.length===need;') && has('<button disabled={!ready}')
+    && has("setTeachingPool([...getActiveTeachingCards()]);setGameState('PICK_TEACHING');"));
+check('勇者モンにした種は候補から外す',
+  has('const candidates=getUnlockedBaseMonsterList().filter(m=>m.id!==mainHero?.id);'));
+check('ベースモンが足りないときはプロを始められない',
+  has('const proReady=getUnlockedBaseMonsterList().length>=PRO_ALLY_POOL_SIZE+1;')
+    && has('disabled={pro&&!proReady}') && has('`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`'));
+// マスモン登録・リザルトは既存のしくみをそのまま使う(プロ専用の分岐を作らない)
+check('マスモン登録は既存のしくみを使い回す',
+  !has('proMasuRegister') && !has('registerProMasu')
+    && has("gameState==='PICK_HERO'?'勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます'"));
+check('新しい画面もBGMとヘルプに載っている',
+  has("'PICK_TEACHING','PICK_PRO_ALLIES'") && helpSrc.includes("PICK_PRO_ALLIES:  'basics/battle-modes'"));
+check('プロ用の助手コメントが場面として用意されている',
+  assistantsSrc.includes('pickProAllies: {') && has('scene="pickProAllies"'));
+check('プロモードを実際に遊んで確かめる道具がある',
+  fs.existsSync(path.join(root, 'tools/pro-mode-check.js')));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
