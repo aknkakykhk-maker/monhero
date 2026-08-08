@@ -28,7 +28,7 @@
 | `mh_monster_roster` | string[] / 解放済み一覧 | 候補編成。種IDまたは `masu:<id>` |
 | `mh_unlocked_teachings` | string[] / 初期6枚 | 解放済み教えID |
 | `mh_teaching_roster` | string[] / 解放済み一覧 | 教え候補編成 |
-| `mh_masu_mons` | object[] / `[]` | マスモン個体一覧 |
+| `mh_masu_mons` | object[] / `[]` | マスモン個体一覧。`uniqueSkillPoints`（未使用の固有技ポイント）は後から足した項目で、持っていない既存データは0として読む |
 | `mh_changelog_seen` | string / `''` | 最後に既読にした更新日時 |
 | `mh_onboarded` | boolean or null | 初回プロフィール誘導完了 |
 | `mh_hs_<難易度>` | number / `0` | 端末ハイスコア（チャレンジ） |

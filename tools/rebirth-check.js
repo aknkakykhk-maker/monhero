@@ -32,7 +32,11 @@ const bt2=buildMasuBreakthrough({masu:{...bt.nextMasu,bondXp:totalBondXpForLevel
 check('限界突破の2回目からは強化ポイント+1',bt2.ok&&bt2.gainedPoints===BREAKTHROUGH_POINTS&&bt2.nextMasu.distAptPoints===bt.nextMasu.distAptPoints+BREAKTHROUGH_POINTS,bt2.ok?'':bt2.reason);
 check('限界突破は固有技・継承技・名前・染色・合体履歴を維持',bt.nextMasu.uniqueSkillLevels.own===1&&bt.nextMasu.uniqueSkillLevels['inh:0']===2&&bt.nextMasu.inheritedUniques.length===1&&bt.nextMasu.name===ready.name&&JSON.stringify(bt.nextMasu.colors)===JSON.stringify(['red'])&&bt.nextMasu.fusionHistory.length===1);
 check('上限到達後はXPを取得しない',cappedBondXp(ready,9999)===capXp);
-check('ダイヤ不足・未到達・最大Lv技は限界突破できない',!buildMasuBreakthrough({masu:ready,skillKey:'own',gold:1499,psycheOwned:999999}).ok&&!buildMasuBreakthrough({masu:{...ready,bondXp:0},skillKey:'own',gold:9999,psycheOwned:999999}).ok&&!buildMasuBreakthrough({masu:{...ready,uniqueSkillLevels:{own:8}},skillKey:'own',gold:9999,psycheOwned:999999}).ok);
+check('ダイヤ不足・未到達は限界突破できない',!buildMasuBreakthrough({masu:ready,skillKey:'own',gold:1499,psycheOwned:999999}).ok&&!buildMasuBreakthrough({masu:{...ready,bondXp:0},skillKey:'own',gold:9999,psycheOwned:999999}).ok);
+// 固有技が最大まで育っていても限界突破そのものは止めない。上げなかったぶんは固有技ポイントとして残る
+// (以前はここで止めていたため、全部の技が最大の個体は限界突破できなくなっていた)
+const btMaxSkill=buildMasuBreakthrough({masu:{...ready,uniqueSkillLevels:{own:8}},skillKey:'own',gold:9999,psycheOwned:999999});
+check('固有技が最大でも限界突破でき、ポイントとして残る',btMaxSkill.ok&&btMaxSkill.raisesSkill===false&&btMaxSkill.nextMasu.uniqueSkillPoints===1,btMaxSkill.ok?'':btMaxSkill.reason);
 const atMax={...ready,levelCap:MAX_MASU_LEVEL_CAP,bondXp:totalBondXpForLevel(MAX_MASU_LEVEL_CAP)};
 check(`上限Lv.${MAX_MASU_LEVEL_CAP}に届いたらそれ以上は上げられない`,!buildMasuBreakthrough({masu:atMax,skillKey:'own',gold:999999,psycheOwned:999999}).ok);
 

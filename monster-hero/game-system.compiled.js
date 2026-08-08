@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2b50bc91042585b5
+// source-sha256: 78390f94a25f50eb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 16:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 16:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -513,7 +513,10 @@ const normalizeMasuProgression = masu => ({
   levelCap: Math.min(MAX_MASU_LEVEL_CAP, Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
   uniqueSkillLevels: masu?.uniqueSkillLevels && typeof masu.uniqueSkillLevels === 'object' ? {
     ...masu.uniqueSkillLevels
-  } : {}
+  } : {},
+  // 未使用の固有技ポイント。限界突破・転生でその場に上げなかったぶんをここへ貯めておき、
+  // マスモンの詳細からいつでも使える。後から足した項目なので、持っていない既存データは0
+  uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0))
 });
 // 転生では個体の識別情報・外見・固有技・履歴だけを残し、振った強化は白紙に戻す。
 // オブジェクトスプレッドで旧育成値を残さないよう、維持対象を明示して新しい保存形を組み立てる。
@@ -523,6 +526,7 @@ const resetMasuForRebirth = (masu, {
   reincarnateCount,
   levelCap,
   uniqueSkillLevels,
+  uniqueSkillPoints,
   toLevel,
   distAptPoints
 } = {}) => {
@@ -546,7 +550,9 @@ const resetMasuForRebirth = (masu, {
     levelCap: Math.min(MAX_MASU_LEVEL_CAP, Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
     uniqueSkillLevels: {
       ...(uniqueSkillLevels ?? masu?.uniqueSkillLevels ?? {})
-    }
+    },
+    // 固有技のレベルは転生でも残るので、未使用のぶんもそのまま持ち越す
+    uniqueSkillPoints: Math.max(0, Math.floor(Number(uniqueSkillPoints ?? masu?.uniqueSkillPoints) || 0))
   };
   if (Array.isArray(masu?.colors)) reset.colors = [...masu.colors];else if (masu?.color != null) reset.color = masu.color;
   if (Array.isArray(masu?.inheritedUniques)) reset.inheritedUniques = masu.inheritedUniques.map(unique => ({
@@ -843,15 +849,19 @@ const buildMasuBreakthrough = ({
     psycheCost,
     psycheHave
   };
+  // 固有技をその場で上げるかどうかは自由。選ばなかったとき(と、選んだ技がもう最大のとき)は
+  // 「未使用の固有技ポイント」として残し、あとでマスモンの詳細から使える。
+  // 以前はここで突破そのものを止めていたため、全部の固有技が最大まで育っていると
+  // 限界突破できなくなっていた
   const currentSkillLevel = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
-  if (!skillKey || currentSkillLevel >= MAX_UNIQUE_SKILL_LEVEL) return {
-    ok: false,
-    reason: '強化できる固有技を選んでください。'
-  };
-  const uniqueSkillLevels = {
+  const raisesSkill = !!skillKey && currentSkillLevel < MAX_UNIQUE_SKILL_LEVEL;
+  const uniqueSkillLevels = raisesSkill ? {
     ...normalized.uniqueSkillLevels,
     [skillKey]: currentSkillLevel + 1
+  } : {
+    ...normalized.uniqueSkillLevels
   };
+  const keptSkillPoints = Math.max(0, Math.floor(Number(normalized.uniqueSkillPoints) || 0)) + (raisesSkill ? 0 : 1);
   const nextCount = normalized.rebirthCount + 1;
   const gainedPoints = nextCount === 1 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS;
   // 30凸(上限Lv.180)まで来ていたら、この1回だけが最終限界突破。
@@ -861,8 +871,10 @@ const buildMasuBreakthrough = ({
   return {
     ok: true,
     cost,
-    skillKey,
-    skillLevel: currentSkillLevel + 1,
+    skillKey: raisesSkill ? skillKey : null,
+    skillLevel: raisesSkill ? currentSkillLevel + 1 : null,
+    raisesSkill,
+    keptSkillPoints,
     gainedPoints,
     finalBreakthrough: isFinal,
     psycheCost,
@@ -874,7 +886,8 @@ const buildMasuBreakthrough = ({
       rebirthCount: nextCount,
       levelCap: nextLevelCap,
       distAptPoints: Math.max(0, Math.floor(Number(normalized.distAptPoints) || 0)) + gainedPoints,
-      uniqueSkillLevels
+      uniqueSkillLevels,
+      uniqueSkillPoints: keptSkillPoints
     }
   };
 };
@@ -901,15 +914,16 @@ const buildMasuReincarnation = ({
     ok: false,
     reason: 'ダイヤが不足しています。'
   };
+  // 限界突破と同じで、固有技を上げるかどうかは自由。選ばなかったぶんはポイントとして残す
   const currentSkillLevel = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
-  if (!skillKey || currentSkillLevel >= MAX_UNIQUE_SKILL_LEVEL) return {
-    ok: false,
-    reason: '強化できる固有技を選んでください。'
-  };
-  const uniqueSkillLevels = {
+  const raisesSkill = !!skillKey && currentSkillLevel < MAX_UNIQUE_SKILL_LEVEL;
+  const uniqueSkillLevels = raisesSkill ? {
     ...normalized.uniqueSkillLevels,
     [skillKey]: currentSkillLevel + 1
+  } : {
+    ...normalized.uniqueSkillLevels
   };
+  const keptSkillPoints = Math.max(0, Math.floor(Number(normalized.uniqueSkillPoints) || 0)) + (raisesSkill ? 0 : 1);
   const nextLevel = Math.max(1, level - REINCARNATE_LEVEL_DROP);
   const nextCount = normalized.reincarnateCount + 1;
   // 振り直せる合計。レベル由来ぶんは reconcileMasuPoints と同じ「レベル-1」で数える
@@ -917,8 +931,10 @@ const buildMasuReincarnation = ({
   return {
     ok: true,
     cost,
-    skillKey,
-    skillLevel: currentSkillLevel + 1,
+    skillKey: raisesSkill ? skillKey : null,
+    skillLevel: raisesSkill ? currentSkillLevel + 1 : null,
+    raisesSkill,
+    keptSkillPoints,
     fromLevel: level,
     nextLevel,
     gainedPoints: REINCARNATE_POINTS,
@@ -930,7 +946,8 @@ const buildMasuReincarnation = ({
       // 上限は据え置き(転生を重ねても上限は伸びない)
       toLevel: nextLevel,
       distAptPoints: nextPoints,
-      uniqueSkillLevels
+      uniqueSkillLevels,
+      uniqueSkillPoints: keptSkillPoints
     })
   };
 };
@@ -7940,14 +7957,16 @@ function MonsterHeroGame() {
   const [donationAnimation, setDonationAnimation] = useState(null);
   const donationProcessingRef = useRef(false);
   const [rebirthSelectedId, setRebirthSelectedId] = useState(null);
-  const [rebirthSkillKey, setRebirthSkillKey] = useState('');
+  // 限界突破で上げる固有技。null=まだ選んでいない / ''=あとで決める(ポイントとして残す) / それ以外=その技を上げる
+  const [rebirthSkillKey, setRebirthSkillKey] = useState(null);
   const [rebirthError, setRebirthError] = useState('');
   const [rebirthAnimation, setRebirthAnimation] = useState(null);
   // rebirth* は「限界突破」(旧・転生)用。保存キー rebirthCount が昔から
   // 「上限を上げた回数」を指しているので、内部の名前はそのままにしてある。
   // reincarnate* は Lv100以上で使える新しい「転生」用。
   const [reincarnateSelectedId, setReincarnateSelectedId] = useState(null);
-  const [reincarnateSkillKey, setReincarnateSkillKey] = useState('');
+  // 転生で上げる固有技。null=まだ選んでいない / ''=あとで決める(ポイントとして残す)
+  const [reincarnateSkillKey, setReincarnateSkillKey] = useState(null);
   const [reincarnateError, setReincarnateError] = useState('');
   const [reincarnateAnimation, setReincarnateAnimation] = useState(null);
   const reincarnateProcessingRef = useRef(false);
@@ -10390,6 +10409,32 @@ function MonsterHeroGame() {
     Audio_.se.tap();
     return updatedMasu;
   };
+  // 限界突破・転生で残しておいた固有技ポイントを1つ使い、その技のレベルを1上げる。
+  // マスモンの詳細からいつでも使える(その場で上げなくてよいので、上限まで育った技しか
+  // 無いときでも限界突破そのものは進められる)
+  const spendUniqueSkillPoint = (masuId, skillKey) => {
+    const masu = getMasuMon(masuId);
+    if (!masu || !skillKey) return null;
+    const normalized = normalizeMasuProgression(masu);
+    if (normalized.uniqueSkillPoints <= 0) return null;
+    const current = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
+    if (current >= MAX_UNIQUE_SKILL_LEVEL) return null;
+    const updatedMasu = {
+      ...normalized,
+      uniqueSkillLevels: {
+        ...normalized.uniqueSkillLevels,
+        [skillKey]: current + 1
+      },
+      uniqueSkillPoints: normalized.uniqueSkillPoints - 1
+    };
+    setMasuMons(prev => {
+      const next = prev.map(m => String(m.id) === String(masuId) ? updatedMasu : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    Audio_.se.tap();
+    return updatedMasu;
+  };
   // 強化ポイントリセットの書: 使用済みの強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻す。
   // 絆レベル・絆経験値そのものは変更しない
   const useBondResetScroll = masuId => {
@@ -11069,10 +11114,12 @@ function MonsterHeroGame() {
       setGold(result.nextGold);
       setOwnedItems(nextItems);
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
-      const skill = getRebirthSkillChoices(masu).find(choice => choice.key === rebirthSkillKey);
+      const skill = result.raisesSkill ? getRebirthSkillChoices(masu).find(choice => choice.key === result.skillKey) : null;
       setRebirthAnimation({
         masu: result.nextMasu,
         base,
+        raisesSkill: result.raisesSkill,
+        keptSkillPoints: result.keptSkillPoints,
         skillName: skill?.name || '固有技',
         skillLevel: result.skillLevel,
         gainedPoints: result.gainedPoints
@@ -11080,7 +11127,7 @@ function MonsterHeroGame() {
       setTimeout(() => {
         setRebirthAnimation(null);
         setRebirthSelectedId(null);
-        setRebirthSkillKey('');
+        setRebirthSkillKey(null);
         rebirthProcessingRef.current = false;
       }, 4100);
     } catch {
@@ -11111,10 +11158,12 @@ function MonsterHeroGame() {
       setMasuMons(next);
       setGold(result.nextGold);
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
-      const skill = getRebirthSkillChoices(masu).find(choice => choice.key === reincarnateSkillKey);
+      const skill = result.raisesSkill ? getRebirthSkillChoices(masu).find(choice => choice.key === result.skillKey) : null;
       setReincarnateAnimation({
         masu: result.nextMasu,
         base,
+        raisesSkill: result.raisesSkill,
+        keptSkillPoints: result.keptSkillPoints,
         skillName: skill?.name || '固有技',
         skillLevel: result.skillLevel,
         fromLevel: result.fromLevel,
@@ -11124,7 +11173,7 @@ function MonsterHeroGame() {
       setTimeout(() => {
         setReincarnateAnimation(null);
         setReincarnateSelectedId(null);
-        setReincarnateSkillKey('');
+        setReincarnateSkillKey(null);
         reincarnateProcessingRef.current = false;
       }, 4100);
     } catch {
@@ -14719,6 +14768,44 @@ function MonsterHeroGame() {
       className: "text-[8px] text-cyan-300 font-bold mt-0.5"
     }, "\u9593\u5408\u3044\u9069\u6027 ", aptBonus))), extraAfterApt);
   };
+  // 限界突破・転生で残した固有技ポイントを使う枠。マスモンの詳細に出す。
+  // ポイントを持っていないときは何も出さない(画面を無駄に長くしない)
+  const renderUniqueSkillPointBox = (masu, onUpdated) => {
+    if (!masu) return null;
+    const normalized = normalizeMasuProgression(masu);
+    if (normalized.uniqueSkillPoints <= 0) return null;
+    const choices = getRebirthSkillChoices(normalized);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "bg-black/40 p-2 rounded-xl border border-amber-500/40"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between mb-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] text-amber-400 uppercase font-bold"
+    }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] font-black text-amber-300 flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement(Sparkles, {
+      size: 10
+    }), normalized.uniqueSkillPoints)), /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-slate-400 font-bold mb-1.5 leading-tight"
+    }, "\u9650\u754C\u7A81\u7834\u3084\u8EE2\u751F\u3067\u6B8B\u3057\u3066\u304A\u3044\u305F\u3076\u3093\u3067\u3059\u3002\u4E0A\u3052\u305F\u3044\u56FA\u6709\u6280\u3092\u62BC\u3059\u30681\u3064\u4F7F\u3063\u3066Lv\u304C1\u4E0A\u304C\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-1"
+    }, choices.map(choice => {
+      const maxed = choice.level >= MAX_UNIQUE_SKILL_LEVEL;
+      return /*#__PURE__*/React.createElement("button", {
+        key: choice.key,
+        disabled: maxed,
+        onClick: () => {
+          const updated = spendUniqueSkillPoint(masu.id, choice.key);
+          if (updated && onUpdated) onUpdated(updated);
+        },
+        className: `w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border text-left disabled:opacity-30 ${maxed ? 'bg-slate-900 border-white/10' : 'bg-amber-950/40 border-amber-500/40 active:scale-95'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0 flex-1 truncate text-[10px] font-black text-white"
+      }, choice.name), /*#__PURE__*/React.createElement("span", {
+        className: "shrink-0 text-[9px] font-mono font-black text-amber-300"
+      }, maxed ? `Lv.${choice.level} MAX` : `Lv.${choice.level} → ${choice.level + 1}`));
+    })));
+  };
   const renderSkillSection = mon => {
     const currentUnique = uniqueSkillAtLevel(mon.unique, mon.unique?.evoLevel);
     return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
@@ -16342,7 +16429,7 @@ function MonsterHeroGame() {
     }), "\u5BC4\u4ED8"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setRebirthSelectedId(null);
-        setRebirthSkillKey('');
+        setRebirthSkillKey(null);
         setRebirthError('');
         setGameState('MASU_REBIRTH');
       },
@@ -16352,7 +16439,7 @@ function MonsterHeroGame() {
     }), "\u9650\u754C\u7A81\u7834"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setReincarnateSelectedId(null);
-        setReincarnateSkillKey('');
+        setReincarnateSkillKey(null);
         setReincarnateError('');
         setGameState('MASU_REINCARNATE');
       },
@@ -16410,7 +16497,7 @@ function MonsterHeroGame() {
             disabled: !can,
             onClick: () => {
               setRebirthSelectedId(masu.id);
-              setRebirthSkillKey('');
+              setRebirthSkillKey(null);
             },
             className: "relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"
           }, /*#__PURE__*/React.createElement("div", {
@@ -16515,7 +16602,7 @@ function MonsterHeroGame() {
         }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (need - have).toLocaleString(), "\uFF09"));
       })(), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-slate-300 mb-2"
-      }, "LvUP\u3059\u308B\u56FA\u6709\u6280\u30921\u3064\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\uFF08\u6700\u5927Lv.8\uFF09"), /*#__PURE__*/React.createElement("div", {
+      }, "LvUP\u3059\u308B\u56FA\u6709\u6280\u30921\u3064\u9078\u3079\u307E\u3059\uFF08\u6700\u5927Lv.8\uFF09\u3002\u9078\u3070\u306A\u3044\u3068\u304D\u306F\u300C\u3042\u3068\u3067\u6C7A\u3081\u308B\u300D\u3067\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u305B\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "space-y-2 flex-1 overflow-y-auto mh-scroll"
       }, skills.map(skill => /*#__PURE__*/React.createElement("button", {
         key: skill.key,
@@ -16526,10 +16613,17 @@ function MonsterHeroGame() {
         className: "font-black text-xs"
       }, skill.name), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-300"
-      }, "\u73FE\u5728Lv.", skill.level, " \u2192 Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1))))), rebirthError && /*#__PURE__*/React.createElement("div", {
+      }, "\u73FE\u5728Lv.", skill.level, " \u2192 Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1)))), /*#__PURE__*/React.createElement("button", {
+        onClick: () => setRebirthSkillKey(''),
+        className: `w-full p-3 rounded-xl border text-left ${rebirthSkillKey === '' ? 'bg-amber-700 border-white' : 'bg-slate-900 border-amber-500/40'}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "font-black text-xs"
+      }, "\u3042\u3068\u3067\u6C7A\u3081\u308B\uFF08\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u3059\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] text-amber-300"
+      }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8 +1\uFF08\u3044\u307E\u306E\u6240\u6301 ", normalized.uniqueSkillPoints, "\uFF09"))), rebirthError && /*#__PURE__*/React.createElement("div", {
         className: "text-red-300 text-[10px] my-2"
       }, rebirthError), /*#__PURE__*/React.createElement("button", {
-        disabled: !rebirthSkillKey || gold < cost || ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) < breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount + 1) || rebirthProcessingRef.current,
+        disabled: rebirthSkillKey == null || gold < cost || ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) < breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount + 1) || rebirthProcessingRef.current,
         onClick: executeMasuBreakthrough,
         className: "w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30"
       }, "\u9650\u754C\u7A81\u7834\u3059\u308B"));
@@ -16571,7 +16665,7 @@ function MonsterHeroGame() {
             disabled: !can,
             onClick: () => {
               setReincarnateSelectedId(masu.id);
-              setReincarnateSkillKey('');
+              setReincarnateSkillKey(null);
               setReincarnateError('');
             },
             className: "relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"
@@ -16657,7 +16751,7 @@ function MonsterHeroGame() {
         className: "text-[8px] text-red-400 font-black"
       }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093\uFF08\u3042\u3068 ", (cost - gold).toLocaleString(), "\uFF09")), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-slate-300 mb-2"
-      }, "LvUP\u3059\u308B\u56FA\u6709\u6280\u30921\u3064\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\uFF08\u6700\u5927Lv.8\uFF09"), /*#__PURE__*/React.createElement("div", {
+      }, "LvUP\u3059\u308B\u56FA\u6709\u6280\u30921\u3064\u9078\u3079\u307E\u3059\uFF08\u6700\u5927Lv.8\uFF09\u3002\u9078\u3070\u306A\u3044\u3068\u304D\u306F\u300C\u3042\u3068\u3067\u6C7A\u3081\u308B\u300D\u3067\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u305B\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "space-y-2 flex-1 overflow-y-auto mh-scroll"
       }, skills.map(skill => /*#__PURE__*/React.createElement("button", {
         key: skill.key,
@@ -16668,10 +16762,17 @@ function MonsterHeroGame() {
         className: "font-black text-xs"
       }, skill.name), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-300"
-      }, "\u73FE\u5728Lv.", skill.level, " \u2192 Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1))))), reincarnateError && /*#__PURE__*/React.createElement("div", {
+      }, "\u73FE\u5728Lv.", skill.level, " \u2192 Lv.", Math.min(MAX_UNIQUE_SKILL_LEVEL, skill.level + 1)))), /*#__PURE__*/React.createElement("button", {
+        onClick: () => setReincarnateSkillKey(''),
+        className: `w-full p-3 rounded-xl border text-left ${reincarnateSkillKey === '' ? 'bg-amber-700 border-white' : 'bg-slate-900 border-amber-500/40'}`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "font-black text-xs"
+      }, "\u3042\u3068\u3067\u6C7A\u3081\u308B\uFF08\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u3059\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] text-amber-300"
+      }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8 +1\uFF08\u3044\u307E\u306E\u6240\u6301 ", normalized.uniqueSkillPoints, "\uFF09"))), reincarnateError && /*#__PURE__*/React.createElement("div", {
         className: "text-red-300 text-[10px] my-2"
       }, reincarnateError), /*#__PURE__*/React.createElement("button", {
-        disabled: !reincarnateSkillKey || gold < cost || reincarnateProcessingRef.current,
+        disabled: reincarnateSkillKey == null || gold < cost || reincarnateProcessingRef.current,
         onClick: executeMasuReincarnation,
         className: "w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30"
       }, "\u8EE2\u751F\u3059\u308B"));
@@ -16918,7 +17019,7 @@ function MonsterHeroGame() {
         }
       }, "\u2605"))), /*#__PURE__*/React.createElement("div", {
         className: "mh-breakthrough-copy"
-      }, /*#__PURE__*/React.createElement("b", null, finalBreak ? '最終限界突破！' : '限界突破！'), /*#__PURE__*/React.createElement("span", null, finalBreak ? '★ が虹になりました' : '★ が1つ増えました'), /*#__PURE__*/React.createElement("span", null, rebirthAnimation.skillName, " Lv.", rebirthAnimation.skillLevel, "\u3078\u9032\u5316"), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", rebirthAnimation.gainedPoints)));
+      }, /*#__PURE__*/React.createElement("b", null, finalBreak ? '最終限界突破！' : '限界突破！'), /*#__PURE__*/React.createElement("span", null, finalBreak ? '★ が虹になりました' : '★ が1つ増えました'), /*#__PURE__*/React.createElement("span", null, rebirthAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${rebirthAnimation.keptSkillPoints}）` : `${rebirthAnimation.skillName} Lv.${rebirthAnimation.skillLevel}へ進化`), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", rebirthAnimation.gainedPoints)));
     })(), reincarnateAnimation && /*#__PURE__*/React.createElement("div", {
       className: "mh-rebirth-animation",
       role: "status",
@@ -16942,7 +17043,7 @@ function MonsterHeroGame() {
       count: reincarnateAnimation.masu.reincarnateCount
     })), /*#__PURE__*/React.createElement("div", {
       className: "mh-rebirth-copy"
-    }, /*#__PURE__*/React.createElement("b", null, "\u8EE2\u751F\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("span", null, "Lv.", reincarnateAnimation.fromLevel, " \u2192 Lv.", reincarnateAnimation.nextLevel), /*#__PURE__*/React.createElement("span", null, reincarnateAnimation.skillName, " Lv.", reincarnateAnimation.skillLevel, "\u3078\u9032\u5316"), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 ", reincarnateAnimation.nextPoints, " \u3092\u632F\u308A\u76F4\u305B\u307E\u3059"))), donationAnimation && /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("b", null, "\u8EE2\u751F\u5B8C\u4E86\uFF01"), /*#__PURE__*/React.createElement("span", null, "Lv.", reincarnateAnimation.fromLevel, " \u2192 Lv.", reincarnateAnimation.nextLevel), /*#__PURE__*/React.createElement("span", null, reincarnateAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）` : `${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 ", reincarnateAnimation.nextPoints, " \u3092\u632F\u308A\u76F4\u305B\u307E\u3059"))), donationAnimation && /*#__PURE__*/React.createElement("div", {
       className: "mh-donation-animation",
       role: "status",
       "aria-live": "polite",
@@ -19380,7 +19481,8 @@ function MonsterHeroGame() {
       masu: rosterDetailMon.masuId ? getMasuMon(rosterDetailMon.masuId) : null,
       onClose: () => setRosterDetailMon(null),
       detailOpts: rosterDetailMon.masuId ? {
-        statTitle: '現在のステータス(強化分込み)'
+        statTitle: '現在のステータス(強化分込み)',
+        extraAfterApt: renderUniqueSkillPointBox(getMasuMon(rosterDetailMon.masuId), updated => setRosterDetailMon(mergeMasuIntoMon(updated)))
       } : {}
     }), rosterDetailTeaching && (() => {
       const owned = ownedTeachings.find(ot => ot.id === rosterDetailTeaching.id);
@@ -20586,7 +20688,9 @@ function MonsterHeroGame() {
             className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
           }, /*#__PURE__*/React.createElement(Sparkles, {
             size: 9
-          }), "\u5F37\u5316P: ", masu.distAptPoints || 0)
+          }), "\u5F37\u5316P: ", masu.distAptPoints || 0),
+          // 限界突破・転生で残した固有技ポイントは、この詳細からいつでも使える
+          extraAfterApt: renderUniqueSkillPointBox(masu, updated => setMasuMonDetail(updated))
         },
         bodyExtra: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
           className: "bg-black/40 p-2 rounded-xl border border-violet-500/30"
