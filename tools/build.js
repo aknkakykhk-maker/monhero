@@ -45,7 +45,17 @@ if (process.argv.includes('--check')) {
     console.error(`  compiled: ${embedded} / jsx: ${hash}`);
     process.exit(1);
   }
-  console.log('OK: game-system.compiled.js は game-system.jsx と一致しています');
+
+  // ハッシュだけでは、別の変換器で生成したコードへ同じハッシュを付けた不整合を検出できない。
+  // 正規ビルドの出力そのものを比較し、tools/build.js 以外による生成物の混入を防ぐ。
+  const headerEnd = fs.readFileSync(OUT_FILE, 'utf8').indexOf('\n\n');
+  const compiledCode = fs.readFileSync(OUT_FILE, 'utf8').slice(headerEnd + 2).trimEnd();
+  const expectedCode = transformGameSystem().trimEnd();
+  if (headerEnd < 0 || compiledCode !== expectedCode) {
+    console.error('NG: game-system.compiled.js が正規ビルドの出力と一致しません。node tools/build.js を実行してください');
+    process.exit(1);
+  }
+  console.log('OK: game-system.compiled.js は game-system.jsx の正規ビルドと一致しています');
   process.exit(0);
 }
 
