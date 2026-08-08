@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-08 18:00",
+    date: "2026-08-09 00:44",
     type: "update",
     title: "神殿に再生を追加し、合体と寄付を更新しました",
     items: [
