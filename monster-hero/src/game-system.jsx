@@ -453,6 +453,7 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, levelCap, u
   else if (masu?.color != null) reset.color = masu.color;
   if (Array.isArray(masu?.inheritedUniques)) reset.inheritedUniques = masu.inheritedUniques.map(unique => ({ ...unique }));
   if (Array.isArray(masu?.fusionHistory)) reset.fusionHistory = masu.fusionHistory.map(entry => ({ ...entry }));
+  if (masu?.individualStats && typeof masu.individualStats === 'object') reset.individualStats = { ...masu.individualStats };
   return reset;
 };
 const migrateRebornMasuToFullReset = (masuMons) => (Array.isArray(masuMons) ? masuMons : []).map(raw => {
@@ -520,10 +521,10 @@ const mergeMasuIntoMon = (masu) => {
     masuId: masu.id,
     masuName: masu.name,
     name: masu.name,
-    baseHp: base.baseHp + (sp.hp || 0),
-    baseAtk: base.baseAtk + (sp.atk || 0),
-    baseDef: base.baseDef + (sp.def || 0),
-    baseGuts: base.baseGuts + (sp.guts || 0),
+    baseHp: (masu.individualStats?.hp ?? base.baseHp) + (sp.hp || 0),
+    baseAtk: (masu.individualStats?.atk ?? base.baseAtk) + (sp.atk || 0),
+    baseDef: (masu.individualStats?.def ?? base.baseDef) + (sp.def || 0),
+    baseGuts: (masu.individualStats?.guts ?? base.baseGuts) + (sp.guts || 0),
     plusStats: {
       hp: (base.plusStats?.hp || 0) + (sp.hp || 0),
       atk: (base.plusStats?.atk || 0) + (sp.atk || 0),
@@ -633,9 +634,12 @@ const migrateMasuLevelCaps = (masuMons, gold) => {
 };
 // 合体・転生の消費ダイヤ単価(絆レベル1あたり)。以前はどちらも100だったが、
 // 周回で貯まるダイヤに対して重すぎたため半額にした。表示と実処理で同じ値を使う。
-const FUSION_COST_PER_LEVEL = 50;
+const FUSION_INHERIT_COST = 3000;
+const FUSION_INHERIT_MIN_SUB_LEVEL = 30;
+const REGENERATION_COST = 100;
+const REGENERATION_DISC_IMAGE = 'images/disc-icons/stone-base.png';
 const REBIRTH_COST_PER_LEVEL = 50;
-const masuFusionCost = (mainLevel, subLevel) => (mainLevel + subLevel) * FUSION_COST_PER_LEVEL;
+const masuFusionCost = (_mainLevel, _subLevel, inherit = false) => inherit ? FUSION_INHERIT_COST : 0;
 // 転生の消費ダイヤ。画面の表示と実処理で必ずこの関数を使う。
 // (以前は画面だけが「レベル×100」で計算しており、実際に引かれる額の倍が表示され、
 //  そのぶんダイヤを持っていないと転生ボタンを押せない状態になっていた)
@@ -729,6 +733,18 @@ const donationDiamondValue = (bondXp) => {
   const value = Number(bondXp);
   return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 };
+const donationPsycheValue = (masu) => Math.floor(masuBondLevelInfo(masu).level / 5);
+const randomRegenerationStat = (baseValue, random = Math.random) => Math.round(baseValue * (0.9 + Math.max(0, Math.min(1, Number(random()) || 0)) * 0.2));
+const buildRegeneratedMasu = (base, random = Math.random, now = Date.now()) => {
+  if (!base) return null;
+  return {
+    id:`masu_regenerated_${now}_${Math.random().toString(36).slice(2,8)}`, baseId:base.id, name:base.name,
+    bondXp:0, distAptPoints:0, distApt:[...(base.distAptitude || ['C','C','C','C'])],
+    statPoints:{hp:0,atk:0,def:0,guts:0},
+    individualStats:{ hp:randomRegenerationStat(base.baseHp,random), atk:randomRegenerationStat(base.baseAtk,random), def:randomRegenerationStat(base.baseDef,random), guts:randomRegenerationStat(base.baseGuts,random) },
+    createdAt:now,
+  };
+};
 const rosterBaseId = (entryId, masuMons) => {
   if (typeof entryId !== 'string') return null;
   if (!entryId.startsWith('masu:')) return entryId;
@@ -771,7 +787,8 @@ const buildMasuDonation = ({ masuMons, targetId, gold, monsterRosterIds, draftMo
   const draft = repairRosterAfterDonation(draftMonsterRoster, donated, nextMasuMons, unlockedMonsterIds, validBaseIds, requiredCount);
   if (!draft.ok) return draft;
   const diamonds = donationDiamondValue(donated.bondXp);
-  return { ok: true, donated, diamonds, nextGold: donationDiamondValue(gold) + diamonds, nextMasuMons, nextRoster: active.roster, nextDraftRoster: draft.roster };
+  const psyche = donationPsycheValue(donated);
+  return { ok: true, donated, diamonds, psyche, nextGold: donationDiamondValue(gold) + diamonds, nextMasuMons, nextRoster: active.roster, nextDraftRoster: draft.roster };
 };
 
 // 修行試作版は通常データ・チケット・ミッションから完全に分離したメモリ内デバッグセッション。
@@ -2756,7 +2773,9 @@ const helpDataRows = (id) => {
     // 実際に使っている定数からそのまま表を作る
     case 'masuCosts':
       return [
-        ['合体', `（主の絆Lv ＋ 副の絆Lv）× ${FUSION_COST_PER_LEVEL} ダイヤ`],
+        ['再生', `初回無料・2回目以降 ${REGENERATION_COST} ダイヤ`],
+        ['合体（技継承なし）', '0 ダイヤ'],
+        ['合体（技継承あり）', `${FUSION_INHERIT_COST} ダイヤ`],
         ['限界突破', `絆Lv × ${REBIRTH_COST_PER_LEVEL} ダイヤ`],
         ['転生', `絆Lv × ${REBIRTH_COST_PER_LEVEL} ダイヤ`],
         ['寄付', 'かからない（逆に累計絆経験値と同じ数のダイヤを受け取れる）'],
@@ -4011,9 +4030,15 @@ function MonsterHeroGame() {
   const [fusionStep, setFusionStep] = useState('main'); // 'main'|'sub'|'confirm'|'anim'|'result'
   const [fusionMainId, setFusionMainId] = useState(null); // 主として選んだマスモンid
   const [fusionSubId, setFusionSubId] = useState(null); // 副として選んだマスモンid(合体後に消滅する)
-  const [fusionInheritUnique, setFusionInheritUnique] = useState(false); // 副の固有技を引き継ぐか(絆Lv10以上同士のみ選択可)
+  const [fusionInheritUnique, setFusionInheritUnique] = useState(false); // 副の固有技を引き継ぐか(副が絆Lv30以上のみ選択可)
   const [fusionAnimPhase, setFusionAnimPhase] = useState(0); // 合体演出の進行段階(0=開始前,1=接近,2=フラッシュ)
   const [fusionResultData, setFusionResultData] = useState(null); // 演出後の結果画面表示用スナップショット
+  const fusionProcessingRef = useRef(false);
+  const [regenerationUsed, setRegenerationUsed] = useState(false);
+  const [regenerationSelectedId, setRegenerationSelectedId] = useState(null);
+  const [regenerationResult, setRegenerationResult] = useState(null);
+  const [regenerationProcessing, setRegenerationProcessing] = useState(false);
+  const regenerationProcessingRef = useRef(false);
   const [donationSelectedId, setDonationSelectedId] = useState(null);
   const [donationResult, setDonationResult] = useState(null);
   const [donationError, setDonationError] = useState('');
@@ -4629,6 +4654,7 @@ function MonsterHeroGame() {
     MB_MANAGEMENT: 'management', // M/B管理はモンスター一覧・編成と同じ曲を続ける
     PASTURE_SETTINGS: 'management', // 放牧設定もM/B管理の曲を続ける
     TEMPLE: 'temple',           // 神殿は合体と同じ曲を続ける
+    MASU_REGENERATION: 'temple',
     MASU_FUSION: 'temple',      // 合体ページ
     MASU_DONATION: 'temple',    // 寄付ページも神殿の曲を続ける
     MASU_REBIRTH: 'temple',     // 限界突破ページも神殿の曲を継続する
@@ -5028,6 +5054,7 @@ function MonsterHeroGame() {
       setBreederXp(savedXp);
       const savedGold = await storeGet('mh_gold', 0, false);
       setGold(savedGold);
+      setRegenerationUsed(!!await storeGet('mh_temple_regeneration_used_v1', false, false));
       // 旧仕様(モンスター種ごとの絆レベル)。マスモン導入により廃止済みだが、既存プレイヤーの
       // 育成データをマスモンへ1回だけ移行するために読み込む(このデータ自体はstateとして保持しない)
       const savedBondXp = await storeGet('mh_bond_xp', {}, false);
@@ -5985,21 +6012,23 @@ function MonsterHeroGame() {
     });
   };
   // 合体: 副の絆経験値(累計bondXp)をまるごと主に加算し、副は消滅させる。
-  // 消費ダイヤは(主の絆Lv+副の絆Lv)×FUSION_COST_PER_LEVEL。両者とも絆Lv10以上で
+  // 技を引き継がなければ無料、引き継ぐ場合は3000ダイヤ。副が絆Lv30以上で
   // fusionInheritUniqueがtrueなら、副の固有技を「継承した固有技」としてinheritedUniquesに記録する。
   // 能力値・距離適性・副の強化ポイントは引き継がないが、絆レベルが上がったぶんの
   // 強化ポイントは通常のレベルアップと同じように主へ配る。
   const executeMasuFusion = () => {
+    if (fusionProcessingRef.current) return null;
+    fusionProcessingRef.current = true;
     const main = getMasuMon(fusionMainId);
     const sub = getMasuMon(fusionSubId);
-    if (!main || !sub || main.id === sub.id) return null;
+    if (!main || !sub || main.id === sub.id) { fusionProcessingRef.current=false; return null; }
     // レベルは必ず上限(levelCap)を通したものを使う。上限を超えた絆経験値がそのまま
     // レベルとして扱われると、費用が高くなったり上がらないレベルぶんの強化ポイントを
     // 配ってしまう(確認画面が「Lv.41になる」と出ていたのがこれ)
     const mainLvl = masuBondLevelInfo(main);
     const subLvl = masuBondLevelInfo(sub);
-    const cost = masuFusionCost(mainLvl.level, subLvl.level);
-    if (gold < cost) return null;
+    const cost = masuFusionCost(mainLvl.level, subLvl.level, fusionInheritUnique);
+    if (gold < cost) { fusionProcessingRef.current=false; return null; }
     const gainedXp = cappedBondXp(sub);
     const afterXp = cappedBondXp(main, gainedXp);
     const before = mainLvl;
@@ -6009,7 +6038,7 @@ function MonsterHeroGame() {
     const mainBase = ALL_PLAYER_MONSTERS[main.baseId];
     const ownedUniqueIds = new Set([uniqueLineageId(mainBase?.unique, mainBase?.id), ...(main.inheritedUniques || []).map(unique=>uniqueLineageId(unique))].filter(Boolean));
     const subUniqueLineageId = uniqueLineageId(subBase?.unique, subBase?.id);
-    const canInherit = mainLvl.level >= 10 && subLvl.level >= 10 && fusionInheritUnique && subBase?.unique && !ownedUniqueIds.has(subUniqueLineageId);
+    const canInherit = subLvl.level >= FUSION_INHERIT_MIN_SUB_LEVEL && fusionInheritUnique && subBase?.unique && !ownedUniqueIds.has(subUniqueLineageId);
     const inheritedLevel = Math.max(0, Number(sub.uniqueSkillLevels?.own) || Number(subBase?.unique?.evoLevel) || 0);
     const inheritedUnique = canInherit ? { ...uniqueSkillAtLevel(subBase.unique, inheritedLevel), monId: subBase.id, lineageId:subUniqueLineageId, sourceMasuName: sub.name } : null;
     const historyEntry = { subName: sub.name, subBaseId: sub.baseId, subBondLevel: subLvl.level, xpGained: gainedXp, inherited: !!inheritedUnique, timestamp: Date.now() };
@@ -6046,7 +6075,7 @@ function MonsterHeroGame() {
     };
   };
   const resetFusionFlow = () => {
-    setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
+    fusionProcessingRef.current=false; setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
   };
   const resetDonationFlow = () => { if (donationProcessingRef.current) return; setDonationSelectedId(null); setDonationResult(null); setDonationAnimation(null); setDonationError(''); };
   const getRebirthSkillChoices = (masu) => {
@@ -6107,6 +6136,22 @@ function MonsterHeroGame() {
       setReincarnateError('転生データを保存できませんでした。もう一度お試しください。');
     }
   };
+  const executeMasuRegeneration = async () => {
+    if (regenerationProcessingRef.current || !regenerationSelectedId) return;
+    const base=ALL_PLAYER_MONSTERS[regenerationSelectedId];
+    const cost=regenerationUsed ? REGENERATION_COST : 0;
+    if (!base || gold < cost) return;
+    regenerationProcessingRef.current=true; setRegenerationProcessing(true);
+    try {
+      const masu=buildRegeneratedMasu(base);
+      const next=[...masuMonsRef.current,masu];
+      await storeSet('mh_masu_mons',next,false);
+      await storeSet('mh_gold',gold-cost,false);
+      await storeSet('mh_temple_regeneration_used_v1',true,false);
+      masuMonsRef.current=next; setMasuMons(next); setGold(gold-cost); setRegenerationUsed(true);
+      setRegenerationResult({masu,base,cost});
+    } finally { regenerationProcessingRef.current=false; setRegenerationProcessing(false); }
+  };
   const executeMasuDonation = async () => {
     if (donationProcessingRef.current || !donationSelectedId) return;
     donationProcessingRef.current = true;
@@ -6123,7 +6168,10 @@ function MonsterHeroGame() {
       masuMonsRef.current = result.nextMasuMons;
       await storeSet('mh_masu_mons', result.nextMasuMons, false);
       await storeSet('mh_gold', result.nextGold, false);
+      const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]:ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID) + result.psyche };
       await storeSet('mh_monster_roster', result.nextRoster, false);
+      await storeSet('mh_owned_items', nextItems, false);
+      ownedItemsRef.current=nextItems; setOwnedItems(nextItems);
       await saveMissionProgress('donation');
       setMasuMons(result.nextMasuMons);
       setGold(result.nextGold);
@@ -6132,10 +6180,10 @@ function MonsterHeroGame() {
       if (fusionMainId === result.donated.id || fusionSubId === result.donated.id) resetFusionFlow();
       setMasuMonDetail(null);
       setDonationSelectedId(null);
-      setDonationAnimation({ name: result.donated.name, baseId: result.donated.baseId, src: masuDisplayImageUrl(ALL_PLAYER_MONSTERS[result.donated.baseId]), colors: getMasuColors(result.donated), diamonds: result.diamonds });
+      setDonationAnimation({ name: result.donated.name, baseId: result.donated.baseId, src: masuDisplayImageUrl(ALL_PLAYER_MONSTERS[result.donated.baseId]), colors: getMasuColors(result.donated), diamonds: result.diamonds, psyche:result.psyche });
       await wait(1500);
       setDonationAnimation(null);
-      setDonationResult({ name: result.donated.name, diamonds: result.diamonds, gold: result.nextGold });
+      setDonationResult({ name: result.donated.name, diamonds: result.diamonds, psyche:result.psyche, gold: result.nextGold });
     } catch (error) {
       setDonationError('寄付データを保存できませんでした。もう一度お試しください。');
     } finally {
@@ -8552,6 +8600,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2">
             {renderDetailSectionLabel('この個体の強さ', '総合力に反映されます')}
             {renderMonsterDetailInfo(mon, detailOpts)}
+            {masu && (masu.inheritedUniques||[]).length>0 && <section className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-3"><div className="text-[10px] font-black text-amber-300 mb-1">継承した固有技</div>{masu.inheritedUniques.map((u,i)=><div key={i} className="text-[10px] text-white font-bold">{u?.name||'固有技'} <span className="text-slate-400">Lv.{Math.max(Number(u?.evoLevel)||0,Number(masu.uniqueSkillLevels?.[`inh:${i}`])||0)}</span></div>)}</section>}
             {masu && renderFusionSection(masu, { mon, power, readOnly, zIndex })}
             {bodyExtra}
           </div>
@@ -8787,9 +8836,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='TEMPLE'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-5 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">神殿</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="temple"/></div>
-            <div className="w-full max-w-md mx-auto space-y-3"><button onClick={()=>{resetFusionFlow();setGameState('MASU_FUSION');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>合体</button><button onClick={()=>{resetDonationFlow();setGameState('MASU_DONATION');}} className="mh-management-link mh-temple-link"><Gem size={18}/>寄付</button><button onClick={()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');}} className="mh-management-link mh-temple-link"><Star size={18}/>限界突破</button><button onClick={()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateError('');setGameState('MASU_REINCARNATE');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>転生</button></div>
+            <div className="w-full max-w-md mx-auto space-y-2"><button onClick={()=>{setRegenerationSelectedId(null);setRegenerationResult(null);setGameState('MASU_REGENERATION');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>再生</button><button onClick={()=>{resetFusionFlow();setGameState('MASU_FUSION');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>合体</button><button onClick={()=>{resetDonationFlow();setGameState('MASU_DONATION');}} className="mh-management-link mh-temple-link"><Gem size={18}/>寄付</button><button onClick={()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');}} className="mh-management-link mh-temple-link"><Star size={18}/>限界突破</button><button onClick={()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateError('');setGameState('MASU_REINCARNATE');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>転生</button></div>
           </div>
         )}
+
+        {gameState==='MASU_REGENERATION'&&(()=>{const cost=regenerationUsed?REGENERATION_COST:0;const unlocked=Object.values(ALL_PLAYER_MONSTERS).filter(m=>unlockedMonsterIds.includes(m.id));return <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}><div className="flex items-center gap-2 mb-3"><button disabled={regenerationProcessing} onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">再生</h2></div><p className="text-[10px] text-slate-300 mb-2">所持・解放済みのベースモンから、新しい個体を再生します。初回無料、以降100ダイヤです。</p><div className="text-center text-amber-300 font-black mb-2">必要ダイヤ {cost}</div><div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{unlocked.map(base=><button key={base.id} disabled={regenerationProcessing} onClick={()=>setRegenerationSelectedId(base.id)} className={`rounded-xl border p-2 ${regenerationSelectedId===base.id?'border-amber-300 bg-violet-800':'border-violet-500/30 bg-slate-900'}`}><img src={base.iconUrl} alt={base.name} className="w-16 h-16 mx-auto object-contain"/><div className="text-[9px] font-black truncate">{base.name}</div></button>)}</div><button disabled={!regenerationSelectedId||gold<cost||regenerationProcessing} onClick={executeMasuRegeneration} className="mt-3 min-h-[48px] bg-violet-600 rounded-2xl font-black disabled:opacity-30">{regenerationProcessing?'再生中…':gold<cost?'ダイヤが不足しています':'再生する'}</button></div>;})()}
 
         {gameState==='MASU_REBIRTH'&&(()=>{
           const selected=masuMons.find(m=>String(m.id)===String(rebirthSelectedId));
@@ -8841,12 +8892,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {gameState==='MASU_DONATION'&&donationSelectedId&&(()=>{const masu=masuMons.find(m=>String(m.id)===String(donationSelectedId));if(!masu)return null;const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const diamonds=donationDiamondValue(masu.bondXp);const after=donationDiamondValue(gold)+diamonds;const active=monsterRosterIds.includes(`masu:${masu.id}`);return <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.95)',zIndex:32000}}><div className="w-full max-w-sm bg-slate-900 border-2 border-violet-400 rounded-3xl p-5 shadow-2xl">
-          <h3 className="text-lg font-black text-violet-200 text-center mb-4">寄付の最終確認</h3><div className="flex items-center gap-3 mb-4"><div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-amber-400/60 bg-black/30 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-contain"/></div><div><div className="font-black text-white">{masu.name}</div><div className="text-[10px] text-slate-400">ベースモン {base.name}</div><div className="text-[10px] text-slate-300 mt-1">累計絆経験値 {diamonds.toLocaleString()} XP</div><div className="text-sm text-amber-300 font-black">獲得ダイヤ {diamonds.toLocaleString()}</div></div></div>
+          <h3 className="text-lg font-black text-violet-200 text-center mb-4">寄付の最終確認</h3><div className="flex items-center gap-3 mb-4"><div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-amber-400/60 bg-black/30 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-contain"/></div><div><div className="font-black text-white">{masu.name}</div><div className="text-[10px] text-slate-400">ベースモン {base.name}</div><div className="text-[10px] text-slate-300 mt-1">累計絆経験値 {diamonds.toLocaleString()} XP</div><div className="text-sm text-amber-300 font-black">獲得ダイヤ {diamonds.toLocaleString()}</div><div className="text-sm text-fuchsia-300 font-black">虹のプシュケー ×{donationPsycheValue(masu)}</div></div></div>
           <div className="bg-black/40 rounded-2xl p-3 space-y-1 text-[11px] mb-3"><div className="flex justify-between"><span>現在の所持ダイヤ</span><b>{donationDiamondValue(gold).toLocaleString()}</b></div><div className="flex justify-between text-amber-300"><span>寄付後の所持ダイヤ</span><b>{after.toLocaleString()}</b></div></div>
           <div className="bg-amber-950/40 border border-amber-500/50 text-amber-100 text-[10px] leading-relaxed rounded-xl p-3 mb-3"><AlertCircle size={14} className="inline mr-1"/>寄付したマスモンはいなくなります。この操作は取り消せません。{active&&<div className="mt-2 font-black">このマスモンは編成中です。寄付すると編成から外れます。</div>}</div>
           <div className="flex gap-2"><button onClick={()=>setDonationSelectedId(null)} disabled={donationProcessing} className="flex-1 bg-slate-800 text-slate-300 py-3 rounded-2xl font-black text-xs disabled:opacity-40">キャンセル</button><button onClick={executeMasuDonation} disabled={donationProcessing} className="flex-[2] bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3 rounded-2xl font-black text-xs shadow-lg disabled:opacity-40">{donationProcessing?'処理中…':`寄付して${diamonds.toLocaleString()}ダイヤを受け取る`}</button></div>
         </div></div>})()}
 
+        {regenerationResult&&<div className="mh-regeneration-animation" role="dialog" aria-modal="true"><img src={REGENERATION_DISC_IMAGE} alt="円盤石" className="mh-regeneration-disc"/><div className="mh-regeneration-born"><img src={regenerationResult.base.iconUrl} alt={regenerationResult.masu.name} className="w-28 h-28 object-contain mx-auto"/><h3>モンスター誕生！</h3><div className="grid grid-cols-2 gap-1 text-[11px] text-left mt-2"><span>ライフ <b>{regenerationResult.masu.individualStats.hp}</b></span><span>ちから <b>{regenerationResult.masu.individualStats.atk}</b></span><span>丈夫さ <b>{regenerationResult.masu.individualStats.def}</b></span><span>ガッツ <b>{regenerationResult.masu.individualStats.guts}</b></span></div><button onClick={()=>{setRegenerationResult(null);setRegenerationSelectedId(null);}} className="mt-4 w-full py-3 bg-amber-500 text-black rounded-xl font-black">完了</button></div></div>}
         {levelCapCompensation&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50000,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center"><Gem size={38} className="text-amber-300 mx-auto mb-3"/><h2 className="font-black text-lg mb-2">Lv30上限補償</h2><p className="text-[11px] text-slate-300 leading-relaxed">Lv30を超えていた未限界突破マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。</p><div className="text-2xl text-amber-300 font-black my-4">+{levelCapCompensation.diamonds.toLocaleString()} ダイヤ</div><button onClick={()=>{setLevelCapCompensation(null);storeSet('mh_masu_level_cap_compensation_notice_seen_v1',true,false);}} className="w-full bg-amber-500 text-black py-3 rounded-2xl font-black">受け取る</button></div></div>}
         {/* 限界突破の演出。転生とは別物なので専用の見た目にし、最後に星が1つ増える */}
         {rebirthAnimation&&(()=>{
@@ -8866,7 +8918,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {reincarnateAnimation&&<div className="mh-rebirth-animation" role="status" aria-live="polite"><div className="mh-rebirth-circle">✧</div><div className="mh-rebirth-glow"></div><div className="mh-rebirth-mon"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={reincarnateAnimation.masu.reincarnateCount}/></div><div className="mh-rebirth-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div></div>}
         {donationAnimation&&<div className="mh-donation-animation" role="status" aria-live="polite" aria-label="寄付を処理中"><div className="mh-donation-beam"></div><div className="mh-donation-monster"><DyedMonsterImage baseId={donationAnimation.baseId} src={donationAnimation.src} alt={donationAnimation.name} masuColors={donationAnimation.colors} className="w-full h-full object-contain"/></div><div className="mh-donation-gem"><Gem size={42}/></div><div className="mh-donation-particles">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div><div className="mh-donation-copy">神殿へ寄付中…</div></div>}
 
-        {gameState==='MASU_DONATION'&&donationResult&&<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.name}を寄付しました</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm">寄付一覧へ戻る</button></div></div>}
+        {gameState==='MASU_DONATION'&&donationResult&&<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.name}を寄付しました</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-base text-fuchsia-300 font-black mt-1">虹のプシュケー ×{donationResult.psyche}</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm">寄付一覧へ戻る</button></div></div>}
 
         {showWaveDetails&&<div className="fixed inset-0 flex items-center justify-center p-3" style={{zIndex:70000,backgroundColor:'rgba(2,6,23,.96)',paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true"><section className="w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"><header className="flex items-center justify-between mb-3"><div><small className="text-indigo-300 font-black">{DIFFICULTY_SETTINGS[safeDifficulty].label}</small><h2 className="text-xl font-black">全WAVE詳細</h2></div><button aria-label="閉じる" onClick={()=>{setWaveScanPreview(null);setShowWaveDetails(false);}} className="p-3 rounded-full bg-white/10"><X/></button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{ENEMY_SEQUENCE.map((enemyKey,index)=>{const enemy=createBattleEnemy(index+1,safeDifficulty);const boss=index===ENEMY_SEQUENCE.length-1;return <article key={`${enemyKey}-${index}`} data-wave={index+1} role="button" tabIndex={0} aria-label={`WAVE ${index+1} ${enemy.name}を解析`} onClick={()=>setWaveScanPreview({enemy,wave:index+1,difficulty:safeDifficulty})} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setWaveScanPreview({enemy,wave:index+1,difficulty:safeDifficulty});}}} className={`grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 cursor-pointer active:scale-[.99] ${boss?'border-amber-400/40 min-h-[120px]':'border-white/10 min-h-[64px]'}`}><b className={`${boss?'text-amber-300':'text-indigo-300'} whitespace-nowrap`}>W{index+1}</b><div data-wave-art className="relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id,'waveDetail')} className="w-14 h-14 object-contain"/>:<span className="text-3xl">{enemy.emoji}</span>}</div><div className="min-w-0"><b className={`block truncate whitespace-nowrap ${boss?'text-amber-300':''}`} title={enemy.name}>{enemy.name}</b>{boss&&<span className="block text-[9px] leading-tight font-black text-amber-400">BOSS</span>}</div><div data-wave-stats className="w-[72px] text-right text-[10px] whitespace-nowrap"><div>HP <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃 <b>{enemy.atk.toLocaleString()}</b></div></div></article>})}</div></section></div>}
         {gameState==='BATTLE_MENU'&&(
@@ -9712,8 +9764,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="text-[9px] text-slate-300 leading-relaxed">・<span className="text-white font-bold">主</span>が残り、<span className="text-white font-bold">副</span>は消滅します。副の絆経験値は累計のまま主に加算されます</div>
               <div className="text-[9px] text-slate-300 leading-relaxed">・上がった絆レベルの数だけ、主が<span className="text-amber-300 font-bold">強化ポイント</span>を獲得します</div>
               <div className="text-[9px] text-slate-300 leading-relaxed">・主の名前・見た目・間合い適性・ステータス強化は<span className="text-white font-bold">そのまま維持</span>されます(副の強化は引き継がれません)</div>
-              <div className="text-[9px] text-slate-300 leading-relaxed">・消費ダイヤは<span className="text-cyan-300 font-bold">(主の絆Lv＋副の絆Lv)×50</span>です</div>
-              <div className="text-[9px] text-amber-200 leading-relaxed border-t border-white/10 pt-1.5">・<span className="font-bold">固有技の引き継ぎ</span>は、<span className="font-bold">主と副が両方とも絆Lv.10以上</span>のときだけ選べます。条件を満たすと副の固有技が主に記録されます</div>
+              <div className="text-[9px] text-slate-300 leading-relaxed">・技を引き継がない合体は<span className="text-cyan-300 font-bold">0ダイヤ</span>、引き継ぐ合体は<span className="text-amber-300 font-bold">3000ダイヤ</span>です</div>
+              <div className="text-[9px] text-amber-200 leading-relaxed border-t border-white/10 pt-1.5">・<span className="font-bold">固有技の引き継ぎ</span>は、<span className="font-bold">副が絆Lv.30以上</span>のときだけ選べます。条件を満たすと副の固有技が主に記録されます</div>
             </div>
           );
 
@@ -9800,11 +9852,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if (!mainBase || !subBase) { resetFusionFlow(); return null; }
             const mainLvl = masuBondLevelInfo(main);
             const subLvl = masuBondLevelInfo(sub);
-            const cost = masuFusionCost(mainLvl.level, subLvl.level);
+            const cost = masuFusionCost(mainLvl.level, subLvl.level, fusionInheritUnique);
             const canAfford = gold >= cost;
           const ownedUniqueIds = new Set([uniqueLineageId(mainBase.unique, mainBase.id), ...(main.inheritedUniques || []).map(unique=>uniqueLineageId(unique))].filter(Boolean));
           const duplicateUnique = ownedUniqueIds.has(uniqueLineageId(subBase.unique, subBase.id));
-          const canChooseInherit = mainLvl.level>=10 && subLvl.level>=10 && !!subBase.unique && !duplicateUnique;
+          const canChooseInherit = subLvl.level>=FUSION_INHERIT_MIN_SUB_LEVEL && !!subBase.unique && !duplicateUnique;
             // 合体後にどうなるかを先に計算して見せる(実行してみないと分からない状態だったため)
             // 実処理と同じ計算にする。主のレベル上限を超えるぶんは入らないので、
             // ここで上限まで切ったうえで「合体後」を出す(以前は上限を無視して出していた)
@@ -9868,7 +9920,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-2 space-y-1.5">
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">受け継ぐ絆経験値</span><span className="text-pink-300 font-black">{(sub.bondXp||0).toLocaleString()} XP</span></div>
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${canAfford?'text-amber-300':'text-red-400'}`}><Gem size={10}/>{cost.toLocaleString()}</span></div>
-                    <div className="text-[8px] text-slate-400">（{main.name}絆Lv.{mainLvl.level} ＋ {sub.name}絆Lv.{subLvl.level}）× {FUSION_COST_PER_LEVEL}</div>
+                    <div className="text-[8px] text-slate-400">{fusionInheritUnique?'技を引き継ぐ合体':'技を引き継がない合体'}</div>
                     {!canAfford&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません(所持: {gold.toLocaleString()})</div>}
                   </div>
                   {canChooseInherit && (
@@ -12753,6 +12805,7 @@ const createAnimationStyle = () => {
     .mh-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) rgba(255,255,255,0.05); }
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
+    .mh-regeneration-animation{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle,#4c1d95,#020617 65%)}.mh-regeneration-disc{position:absolute;width:170px;height:170px;object-fit:contain;animation:mhRegenerationDisc 1.5s ease-in forwards}.mh-regeneration-born{position:relative;width:min(330px,100%);padding:20px;border:2px solid #fbbf24;border-radius:24px;background:#0f172a;text-align:center;opacity:0;animation:mhRegenerationBorn .6s 1.4s ease-out forwards}.mh-regeneration-born h3{font-size:20px;font-weight:1000;color:#fde68a}.mh-regeneration-born b{float:right;color:#f9a8d4}@keyframes mhRegenerationDisc{0%{transform:rotate(0) scale(.7);opacity:1}85%{transform:rotate(1080deg) scale(1.15);opacity:1}100%{transform:rotate(1260deg) scale(.1);opacity:0}}@keyframes mhRegenerationBorn{to{opacity:1;transform:none}}
     .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     .mh-reincarnate-badge{position:absolute;bottom:-4px;left:-4px;background:#f59e0b;color:#000;border-radius:9999px;padding:2px 6px;font-size:8px;font-weight:900;line-height:1;z-index:3;box-shadow:0 0 6px #f59e0b99}
     .mh-reincarnate-badge.is-small{padding:1px 4px;font-size:6px}

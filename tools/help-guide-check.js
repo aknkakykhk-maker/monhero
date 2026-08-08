@@ -86,8 +86,8 @@ vm.createContext(calcCtx);
 vm.runInContext([
   grab(source, 'const WAVE_XP_TABLE =', 'const xpForLevel ='),
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
-  grab(source, 'const FUSION_COST_PER_LEVEL', 'const masuFusionCost'),
-  'globalThis.__c={goldForWavesCleared,DIFFICULTY_SETTINGS,FUSION_COST_PER_LEVEL,REBIRTH_COST_PER_LEVEL};',
+  grab(source, 'const FUSION_INHERIT_COST', 'const masuFusionCost'),
+  'globalThis.__c={goldForWavesCleared,DIFFICULTY_SETTINGS,FUSION_INHERIT_COST,REGENERATION_COST,REBIRTH_COST_PER_LEVEL};',
 ].join('\n'), calcCtx);
 const c = calcCtx.__c;
 const textOf = (catId, topicId) => h.helpPlainText(h.helpFindTopic(catId, topicId));
