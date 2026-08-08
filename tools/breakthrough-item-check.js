@@ -165,7 +165,7 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 限界突破の一覧に所持数を出す`, /虹のプシュケー[\s\S]{0,200}所持 /.test(code));
   // 配信用JSでは演算子まわりに空白が入るので、空白をまたいで見る
   check(`${label}: 足りないときは限界突破のボタンを押せない`,
-    /disabled[=:]\s*\{?\s*!rebirthSkillKey\s*\|\|\s*gold\s*<\s*cost\s*\|\|\s*ownedItemCount\(ownedItems,\s*BREAKTHROUGH_ITEM_ID\)\s*<\s*breakthroughItemCost/.test(code));
+    /disabled[=:]\s*\{?\s*rebirthSkillKey\s*===?\s*null\s*\|\|\s*gold\s*<\s*cost\s*\|\|\s*ownedItemCount\(ownedItems,\s*BREAKTHROUGH_ITEM_ID\)\s*<\s*breakthroughItemCost/.test(code));
   check(`${label}: リザルトに獲得数を出す`, /summary\.psycheGain > 0/.test(code) && code.includes('虹のプシュケー'));
   check(`${label}: マーケットには並べない`, (code.match(/item\.shop !== false|item\.shop!==false/g) || []).length === 2);
 }

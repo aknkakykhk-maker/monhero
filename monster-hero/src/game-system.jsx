@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-08 16:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-08 16:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -424,11 +424,14 @@ const normalizeMasuProgression = (masu) => ({
   reincarnateCount: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)),
   levelCap: Math.min(MAX_MASU_LEVEL_CAP, Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
   uniqueSkillLevels: masu?.uniqueSkillLevels && typeof masu.uniqueSkillLevels === 'object' ? { ...masu.uniqueSkillLevels } : {},
+  // 未使用の固有技ポイント。限界突破・転生でその場に上げなかったぶんをここへ貯めておき、
+  // マスモンの詳細からいつでも使える。後から足した項目なので、持っていない既存データは0
+  uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0)),
 });
 // 転生では個体の識別情報・外見・固有技・履歴だけを残し、振った強化は白紙に戻す。
 // オブジェクトスプレッドで旧育成値を残さないよう、維持対象を明示して新しい保存形を組み立てる。
 // toLevel を渡すとそのレベル相当の絆経験値から再開する(渡さなければLv1へ戻す)。
-const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, levelCap, uniqueSkillLevels, toLevel, distAptPoints } = {}) => {
+const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, levelCap, uniqueSkillLevels, uniqueSkillPoints, toLevel, distAptPoints } = {}) => {
   const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
   const reset = {
     id: masu?.id,
@@ -443,6 +446,8 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, levelCap, u
     reincarnateCount: Math.max(0, Math.floor(Number(reincarnateCount ?? masu?.reincarnateCount) || 0)),
     levelCap: Math.min(MAX_MASU_LEVEL_CAP, Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
     uniqueSkillLevels: { ...(uniqueSkillLevels ?? masu?.uniqueSkillLevels ?? {}) },
+    // 固有技のレベルは転生でも残るので、未使用のぶんもそのまま持ち越す
+    uniqueSkillPoints: Math.max(0, Math.floor(Number(uniqueSkillPoints ?? masu?.uniqueSkillPoints) || 0)),
   };
   if (Array.isArray(masu?.colors)) reset.colors = [...masu.colors];
   else if (masu?.color != null) reset.color = masu.color;
@@ -649,9 +654,16 @@ const buildMasuBreakthrough = ({ masu, skillKey, gold, psycheOwned = 0 }) => {
   const cost = masuRebirthCost(level);
   if (donationDiamondValue(gold) < cost) return { ok:false, reason:'ダイヤが不足しています。', psycheCost, psycheHave };
   if (psycheHave < psycheCost) return { ok:false, reason:`虹のプシュケーが不足しています（必要 ${psycheCost} / 所持 ${psycheHave}）。`, psycheCost, psycheHave };
+  // 固有技をその場で上げるかどうかは自由。選ばなかったとき(と、選んだ技がもう最大のとき)は
+  // 「未使用の固有技ポイント」として残し、あとでマスモンの詳細から使える。
+  // 以前はここで突破そのものを止めていたため、全部の固有技が最大まで育っていると
+  // 限界突破できなくなっていた
   const currentSkillLevel = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
-  if (!skillKey || currentSkillLevel >= MAX_UNIQUE_SKILL_LEVEL) return { ok:false, reason:'強化できる固有技を選んでください。' };
-  const uniqueSkillLevels = { ...normalized.uniqueSkillLevels, [skillKey]:currentSkillLevel + 1 };
+  const raisesSkill = !!skillKey && currentSkillLevel < MAX_UNIQUE_SKILL_LEVEL;
+  const uniqueSkillLevels = raisesSkill
+    ? { ...normalized.uniqueSkillLevels, [skillKey]:currentSkillLevel + 1 }
+    : { ...normalized.uniqueSkillLevels };
+  const keptSkillPoints = Math.max(0, Math.floor(Number(normalized.uniqueSkillPoints) || 0)) + (raisesSkill ? 0 : 1);
   const nextCount = normalized.rebirthCount + 1;
   const gainedPoints = nextCount === 1 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS;
   // 30凸(上限Lv.180)まで来ていたら、この1回だけが最終限界突破。
@@ -661,7 +673,8 @@ const buildMasuBreakthrough = ({ masu, skillKey, gold, psycheOwned = 0 }) => {
     ? MAX_MASU_LEVEL_CAP
     : Math.min(MAX_MASU_LEVEL_CAP, normalized.levelCap + BREAKTHROUGH_LEVEL_CAP_GAIN);
   return {
-    ok:true, cost, skillKey, skillLevel:currentSkillLevel + 1, gainedPoints, finalBreakthrough:isFinal,
+    ok:true, cost, skillKey:raisesSkill ? skillKey : null, skillLevel:raisesSkill ? currentSkillLevel + 1 : null,
+    raisesSkill, keptSkillPoints, gainedPoints, finalBreakthrough:isFinal,
     psycheCost, psycheHave, nextPsyche:psycheHave - psycheCost,
     nextGold:donationDiamondValue(gold) - cost,
     nextMasu:{
@@ -670,6 +683,7 @@ const buildMasuBreakthrough = ({ masu, skillKey, gold, psycheOwned = 0 }) => {
       levelCap: nextLevelCap,
       distAptPoints: Math.max(0, Math.floor(Number(normalized.distAptPoints) || 0)) + gainedPoints,
       uniqueSkillLevels,
+      uniqueSkillPoints: keptSkillPoints,
     },
   };
 };
@@ -683,15 +697,20 @@ const buildMasuReincarnation = ({ masu, skillKey, gold }) => {
   if (level < REINCARNATE_MIN_LEVEL) return { ok:false, reason:`Lv.${REINCARNATE_MIN_LEVEL}到達後に転生できます。` };
   const cost = masuRebirthCost(level);
   if (donationDiamondValue(gold) < cost) return { ok:false, reason:'ダイヤが不足しています。' };
+  // 限界突破と同じで、固有技を上げるかどうかは自由。選ばなかったぶんはポイントとして残す
   const currentSkillLevel = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
-  if (!skillKey || currentSkillLevel >= MAX_UNIQUE_SKILL_LEVEL) return { ok:false, reason:'強化できる固有技を選んでください。' };
-  const uniqueSkillLevels = { ...normalized.uniqueSkillLevels, [skillKey]:currentSkillLevel + 1 };
+  const raisesSkill = !!skillKey && currentSkillLevel < MAX_UNIQUE_SKILL_LEVEL;
+  const uniqueSkillLevels = raisesSkill
+    ? { ...normalized.uniqueSkillLevels, [skillKey]:currentSkillLevel + 1 }
+    : { ...normalized.uniqueSkillLevels };
+  const keptSkillPoints = Math.max(0, Math.floor(Number(normalized.uniqueSkillPoints) || 0)) + (raisesSkill ? 0 : 1);
   const nextLevel = Math.max(1, level - REINCARNATE_LEVEL_DROP);
   const nextCount = normalized.reincarnateCount + 1;
   // 振り直せる合計。レベル由来ぶんは reconcileMasuPoints と同じ「レベル-1」で数える
   const nextPoints = (nextLevel - 1) + totalBreakthroughPoints(normalized.rebirthCount) + totalReincarnatePoints(nextCount);
   return {
-    ok:true, cost, skillKey, skillLevel:currentSkillLevel + 1,
+    ok:true, cost, skillKey:raisesSkill ? skillKey : null, skillLevel:raisesSkill ? currentSkillLevel + 1 : null,
+    raisesSkill, keptSkillPoints,
     fromLevel:level, nextLevel, gainedPoints:REINCARNATE_POINTS, nextPoints,
     nextGold:donationDiamondValue(gold) - cost,
     nextMasu:resetMasuForRebirth(normalized, {
@@ -700,6 +719,7 @@ const buildMasuReincarnation = ({ masu, skillKey, gold }) => {
       toLevel: nextLevel,
       distAptPoints: nextPoints,
       uniqueSkillLevels,
+      uniqueSkillPoints: keptSkillPoints,
     }),
   };
 };
@@ -4001,14 +4021,16 @@ function MonsterHeroGame() {
   const [donationAnimation, setDonationAnimation] = useState(null);
   const donationProcessingRef = useRef(false);
   const [rebirthSelectedId, setRebirthSelectedId] = useState(null);
-  const [rebirthSkillKey, setRebirthSkillKey] = useState('');
+  // 限界突破で上げる固有技。null=まだ選んでいない / ''=あとで決める(ポイントとして残す) / それ以外=その技を上げる
+  const [rebirthSkillKey, setRebirthSkillKey] = useState(null);
   const [rebirthError, setRebirthError] = useState('');
   const [rebirthAnimation, setRebirthAnimation] = useState(null);
   // rebirth* は「限界突破」(旧・転生)用。保存キー rebirthCount が昔から
   // 「上限を上げた回数」を指しているので、内部の名前はそのままにしてある。
   // reincarnate* は Lv100以上で使える新しい「転生」用。
   const [reincarnateSelectedId, setReincarnateSelectedId] = useState(null);
-  const [reincarnateSkillKey, setReincarnateSkillKey] = useState('');
+  // 転生で上げる固有技。null=まだ選んでいない / ''=あとで決める(ポイントとして残す)
+  const [reincarnateSkillKey, setReincarnateSkillKey] = useState(null);
   const [reincarnateError, setReincarnateError] = useState('');
   const [reincarnateAnimation, setReincarnateAnimation] = useState(null);
   const reincarnateProcessingRef = useRef(false);
@@ -5831,6 +5853,29 @@ function MonsterHeroGame() {
     Audio_.se.tap();
     return updatedMasu;
   };
+  // 限界突破・転生で残しておいた固有技ポイントを1つ使い、その技のレベルを1上げる。
+  // マスモンの詳細からいつでも使える(その場で上げなくてよいので、上限まで育った技しか
+  // 無いときでも限界突破そのものは進められる)
+  const spendUniqueSkillPoint = (masuId, skillKey) => {
+    const masu = getMasuMon(masuId);
+    if (!masu || !skillKey) return null;
+    const normalized = normalizeMasuProgression(masu);
+    if (normalized.uniqueSkillPoints <= 0) return null;
+    const current = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
+    if (current >= MAX_UNIQUE_SKILL_LEVEL) return null;
+    const updatedMasu = {
+      ...normalized,
+      uniqueSkillLevels: { ...normalized.uniqueSkillLevels, [skillKey]: current + 1 },
+      uniqueSkillPoints: normalized.uniqueSkillPoints - 1,
+    };
+    setMasuMons(prev => {
+      const next = prev.map(m => String(m.id) === String(masuId) ? updatedMasu : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    Audio_.se.tap();
+    return updatedMasu;
+  };
   // 強化ポイントリセットの書: 使用済みの強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻す。
   // 絆レベル・絆経験値そのものは変更しない
   const useBondResetScroll = (masuId) => {
@@ -6030,9 +6075,10 @@ function MonsterHeroGame() {
       ownedItemsRef.current = nextItems;
       setMasuMons(next); setGold(result.nextGold); setOwnedItems(nextItems);
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
-      const skill = getRebirthSkillChoices(masu).find(choice=>choice.key===rebirthSkillKey);
-      setRebirthAnimation({ masu:result.nextMasu, base, skillName:skill?.name || '固有技', skillLevel:result.skillLevel, gainedPoints:result.gainedPoints });
-      setTimeout(()=>{ setRebirthAnimation(null); setRebirthSelectedId(null); setRebirthSkillKey(''); rebirthProcessingRef.current=false; }, 4100);
+      const skill = result.raisesSkill ? getRebirthSkillChoices(masu).find(choice=>choice.key===result.skillKey) : null;
+      setRebirthAnimation({ masu:result.nextMasu, base, raisesSkill:result.raisesSkill, keptSkillPoints:result.keptSkillPoints,
+        skillName:skill?.name || '固有技', skillLevel:result.skillLevel, gainedPoints:result.gainedPoints });
+      setTimeout(()=>{ setRebirthAnimation(null); setRebirthSelectedId(null); setRebirthSkillKey(null); rebirthProcessingRef.current=false; }, 4100);
     } catch {
       rebirthProcessingRef.current=false;
       setRebirthError('限界突破のデータを保存できませんでした。もう一度お試しください。');
@@ -6053,9 +6099,9 @@ function MonsterHeroGame() {
       masuMonsRef.current = next;
       setMasuMons(next); setGold(result.nextGold);
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
-      const skill = getRebirthSkillChoices(masu).find(choice=>choice.key===reincarnateSkillKey);
-      setReincarnateAnimation({ masu:result.nextMasu, base, skillName:skill?.name || '固有技', skillLevel:result.skillLevel, fromLevel:result.fromLevel, nextLevel:result.nextLevel, nextPoints:result.nextPoints });
-      setTimeout(()=>{ setReincarnateAnimation(null); setReincarnateSelectedId(null); setReincarnateSkillKey(''); reincarnateProcessingRef.current=false; }, 4100);
+      const skill = result.raisesSkill ? getRebirthSkillChoices(masu).find(choice=>choice.key===result.skillKey) : null;
+      setReincarnateAnimation({ masu:result.nextMasu, base, raisesSkill:result.raisesSkill, keptSkillPoints:result.keptSkillPoints, skillName:skill?.name || '固有技', skillLevel:result.skillLevel, fromLevel:result.fromLevel, nextLevel:result.nextLevel, nextPoints:result.nextPoints });
+      setTimeout(()=>{ setReincarnateAnimation(null); setReincarnateSelectedId(null); setReincarnateSkillKey(null); reincarnateProcessingRef.current=false; }, 4100);
     } catch {
       reincarnateProcessingRef.current=false;
       setReincarnateError('転生データを保存できませんでした。もう一度お試しください。');
@@ -8260,6 +8306,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {extraAfterApt}
     </>);
   };
+  // 限界突破・転生で残した固有技ポイントを使う枠。マスモンの詳細に出す。
+  // ポイントを持っていないときは何も出さない(画面を無駄に長くしない)
+  const renderUniqueSkillPointBox = (masu, onUpdated) => {
+    if (!masu) return null;
+    const normalized = normalizeMasuProgression(masu);
+    if (normalized.uniqueSkillPoints <= 0) return null;
+    const choices = getRebirthSkillChoices(normalized);
+    return (
+      <div className="bg-black/40 p-2 rounded-xl border border-amber-500/40">
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-[7px] text-amber-400 uppercase font-bold">固有技ポイント</div>
+          <div className="text-[10px] font-black text-amber-300 flex items-center gap-1"><Sparkles size={10}/>{normalized.uniqueSkillPoints}</div>
+        </div>
+        <div className="text-[8px] text-slate-400 font-bold mb-1.5 leading-tight">限界突破や転生で残しておいたぶんです。上げたい固有技を押すと1つ使ってLvが1上がります。</div>
+        <div className="space-y-1">{choices.map(choice=>{const maxed=choice.level>=MAX_UNIQUE_SKILL_LEVEL;return (
+          <button key={choice.key} disabled={maxed} onClick={()=>{const updated=spendUniqueSkillPoint(masu.id,choice.key); if(updated&&onUpdated) onUpdated(updated);}} className={`w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border text-left disabled:opacity-30 ${maxed?'bg-slate-900 border-white/10':'bg-amber-950/40 border-amber-500/40 active:scale-95'}`}>
+            <span className="min-w-0 flex-1 truncate text-[10px] font-black text-white">{choice.name}</span>
+            <span className="shrink-0 text-[9px] font-mono font-black text-amber-300">{maxed?`Lv.${choice.level} MAX`:`Lv.${choice.level} → ${choice.level+1}`}</span>
+          </button>
+        );})}</div>
+      </div>
+    );
+  };
   const renderSkillSection = (mon) => { const currentUnique=uniqueSkillAtLevel(mon.unique, mon.unique?.evoLevel); return (<>
     <button onClick={()=>setRosterSkillDetail({mon,kind:'atk'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Sword size={12} className="text-red-400"/><span className="text-[10px] font-black uppercase">通常技: {(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-4 text-[9px] font-mono"><span className="text-red-400 font-bold">技威力 {Math.floor(BASE_ATK_EVOLUTION[0].mult*100)}</span><span className="text-amber-400 font-bold">消費G {BASE_ATK_EVOLUTION[0].baseGuts}</span></div></button>
     <button onClick={()=>setRosterSkillDetail({mon,kind:'unique'})} className="w-full text-left bg-slate-800/50 p-3 rounded-2xl border border-white/10 shrink-0 active:scale-95 transition-all"><div className="flex items-center justify-between mb-2 border-b border-white/5 pb-1"><div className="flex items-center gap-2"><Zap size={12} className="text-amber-400"/><span className="text-[10px] font-black uppercase">固有技 Lv.{currentUnique.evoLevel}: {currentUnique.name}</span></div><ChevronRight size={12} className="text-slate-500"/></div><div className="flex gap-3 text-[9px] font-mono mb-2"><span className="text-red-400 font-bold">技威力 {Math.floor(currentUnique.mult*100)}</span><span className="text-yellow-400 font-bold">会心率 {Math.round(currentUnique.crit*100)}%</span><span className="text-amber-400 font-bold">消費G {currentUnique.guts}</span></div><div className="text-[9px] text-slate-300 leading-relaxed italic">"{currentUnique.effectDesc}"</div></button>
@@ -8718,15 +8787,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='TEMPLE'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-5 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">神殿</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="temple"/></div>
-            <div className="w-full max-w-md mx-auto space-y-3"><button onClick={()=>{resetFusionFlow();setGameState('MASU_FUSION');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>合体</button><button onClick={()=>{resetDonationFlow();setGameState('MASU_DONATION');}} className="mh-management-link mh-temple-link"><Gem size={18}/>寄付</button><button onClick={()=>{setRebirthSelectedId(null);setRebirthSkillKey('');setRebirthError('');setGameState('MASU_REBIRTH');}} className="mh-management-link mh-temple-link"><Star size={18}/>限界突破</button><button onClick={()=>{setReincarnateSelectedId(null);setReincarnateSkillKey('');setReincarnateError('');setGameState('MASU_REINCARNATE');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>転生</button></div>
+            <div className="w-full max-w-md mx-auto space-y-3"><button onClick={()=>{resetFusionFlow();setGameState('MASU_FUSION');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>合体</button><button onClick={()=>{resetDonationFlow();setGameState('MASU_DONATION');}} className="mh-management-link mh-temple-link"><Gem size={18}/>寄付</button><button onClick={()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');}} className="mh-management-link mh-temple-link"><Star size={18}/>限界突破</button><button onClick={()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateError('');setGameState('MASU_REINCARNATE');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>転生</button></div>
           </div>
         )}
 
         {gameState==='MASU_REBIRTH'&&(()=>{
           const selected=masuMons.find(m=>String(m.id)===String(rebirthSelectedId));
-          if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが限界突破できます。レベルはそのままで、上限だけ+{BREAKTHROUGH_LEVEL_CAP_GAIN}されます。{BREAKTHROUGH_MAX_COUNT}回目で上限Lv.{BREAKTHROUGH_FINAL_LEVEL_CAP}・★は金になり、その次の「最終限界突破」で上限が一気にLv.{MAX_MASU_LEVEL_CAP}・★は虹になります（そこで打ち止めです）。</div><div className="flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"><span className="text-[10px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span><span className="text-[11px] font-mono font-black text-white">所持 {ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div><div className="text-[9px] text-slate-500 font-bold mb-2">限界突破には虹のプシュケーが必要です（1回目{BREAKTHROUGH_ITEM_BASE}個・以降1回ごとに+{BREAKTHROUGH_ITEM_STEP}個）。チャレンジ／クイックをクリアするともらえます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const need=breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount+1);const enoughPsyche=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)>=need;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP&&enoughPsyche;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey('');}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div><div className={`text-[8px] font-black ${enoughPsyche?'text-fuchsia-300':'text-red-400'}`}>🌈{need}</div></button>})}</div></div>; }
+          if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが限界突破できます。レベルはそのままで、上限だけ+{BREAKTHROUGH_LEVEL_CAP_GAIN}されます。{BREAKTHROUGH_MAX_COUNT}回目で上限Lv.{BREAKTHROUGH_FINAL_LEVEL_CAP}・★は金になり、その次の「最終限界突破」で上限が一気にLv.{MAX_MASU_LEVEL_CAP}・★は虹になります（そこで打ち止めです）。</div><div className="flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"><span className="text-[10px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span><span className="text-[11px] font-mono font-black text-white">所持 {ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div><div className="text-[9px] text-slate-500 font-bold mb-2">限界突破には虹のプシュケーが必要です（1回目{BREAKTHROUGH_ITEM_BASE}個・以降1回ごとに+{BREAKTHROUGH_ITEM_STEP}個）。チャレンジ／クイックをクリアするともらえます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const need=breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount+1);const enoughPsyche=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)>=need;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP&&enoughPsyche;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey(null);}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div><div className={`text-[8px] font-black ${enoughPsyche?'text-fuchsia-300':'text-red-400'}`}>🌈{need}</div></button>})}</div></div>; }
           const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=masuRebirthCost(lvl.level), skills=getRebirthSkillChoices(selected);
-          return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">{normalized.levelCap>=BREAKTHROUGH_FINAL_LEVEL_CAP?`最終限界突破：上限が一気にLv.${MAX_MASU_LEVEL_CAP}へ上がり、★は虹になります（これが最後の限界突破です）`:`星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`}</div><div className="text-amber-300 text-[10px] font-black">強化ポイント +{normalized.rebirthCount===0?BREAKTHROUGH_FIRST_POINTS:BREAKTHROUGH_POINTS}</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div>{/* 限界突破には虹のプシュケーも要る。必要数と所持数を必ず並べて出す */}{(()=>{const need=breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1);const have=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID);return <div className="bg-black/40 p-3 rounded-xl border border-fuchsia-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要な虹のプシュケー</span><span className={`font-black flex items-center gap-1 ${have>=need?'text-fuchsia-300':'text-red-400'}`}><span aria-hidden="true">🌈</span>{need.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（{normalizeMasuProgression(selected).rebirthCount+1}回目の限界突破：{BREAKTHROUGH_ITEM_BASE} +（回数-1）×{BREAKTHROUGH_ITEM_STEP}）</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持数</span><span className="text-slate-300 font-black">{have.toLocaleString()}</span></div>{have<need&&<div className="text-[8px] text-red-400 font-black">虹のプシュケーが足りません（あと {(need-have).toLocaleString()}）</div>}</div>;})()}<div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選択してください（最大Lv.8）</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}</div>{rebirthError&&<div className="text-red-300 text-[10px] my-2">{rebirthError}</div>}<button disabled={!rebirthSkillKey||gold<cost||ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)<breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1)||rebirthProcessingRef.current} onClick={executeMasuBreakthrough} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">限界突破する</button></div>;
+          return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">{normalized.levelCap>=BREAKTHROUGH_FINAL_LEVEL_CAP?`最終限界突破：上限が一気にLv.${MAX_MASU_LEVEL_CAP}へ上がり、★は虹になります（これが最後の限界突破です）`:`星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`}</div><div className="text-amber-300 text-[10px] font-black">強化ポイント +{normalized.rebirthCount===0?BREAKTHROUGH_FIRST_POINTS:BREAKTHROUGH_POINTS}</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div>{/* 限界突破には虹のプシュケーも要る。必要数と所持数を必ず並べて出す */}{(()=>{const need=breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1);const have=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID);return <div className="bg-black/40 p-3 rounded-xl border border-fuchsia-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要な虹のプシュケー</span><span className={`font-black flex items-center gap-1 ${have>=need?'text-fuchsia-300':'text-red-400'}`}><span aria-hidden="true">🌈</span>{need.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（{normalizeMasuProgression(selected).rebirthCount+1}回目の限界突破：{BREAKTHROUGH_ITEM_BASE} +（回数-1）×{BREAKTHROUGH_ITEM_STEP}）</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持数</span><span className="text-slate-300 font-black">{have.toLocaleString()}</span></div>{have<need&&<div className="text-[8px] text-red-400 font-black">虹のプシュケーが足りません（あと {(need-have).toLocaleString()}）</div>}</div>;})()}<div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}
+{/* 固有技を上げずに突破する道。全部の技が最大まで育っていても限界突破できるようにするためのもの。
+    残したぶんはマスモンの詳細からいつでも使える */}
+<button onClick={()=>setRebirthSkillKey('')} className={`w-full p-3 rounded-xl border text-left ${rebirthSkillKey===''?'bg-amber-700 border-white':'bg-slate-900 border-amber-500/40'}`}><div className="font-black text-xs">あとで決める（ポイントとして残す）</div><div className="text-[10px] text-amber-300">固有技ポイント +1（いまの所持 {normalized.uniqueSkillPoints}）</div></button></div>{rebirthError&&<div className="text-red-300 text-[10px] my-2">{rebirthError}</div>}<button disabled={rebirthSkillKey==null||gold<cost||ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)<breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1)||rebirthProcessingRef.current} onClick={executeMasuBreakthrough} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">限界突破する</button></div>;
         })()}
 
         {/* 転生: Lv100以上で使える。レベルを99ぶん返す代わりに、振った強化をすべて振り直せる */}
@@ -8734,7 +8806,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const selected=masuMons.find(m=>String(m.id)===String(reincarnateSelectedId));
           if (!selected) {
             const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags));
-            return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="reincarnate" compact/></div><div className="text-[10px] text-slate-400 mb-3">絆Lv.{REINCARNATE_MIN_LEVEL}以上のマスモンだけが転生できます。レベルが{REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const can=lvl.level>=REINCARNATE_MIN_LEVEL;return <button key={masu.id} disabled={!can} onClick={()=>{setReincarnateSelectedId(masu.id);setReincarnateSkillKey('');setReincarnateError('');}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={masu.reincarnateCount}/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{normalizeMasuProgression(masu).levelCap}</div></button>})}</div></div>;
+            return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="reincarnate" compact/></div><div className="text-[10px] text-slate-400 mb-3">絆Lv.{REINCARNATE_MIN_LEVEL}以上のマスモンだけが転生できます。レベルが{REINCARNATE_LEVEL_DROP}下がる代わりに、振った強化をすべて振り直せます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const can=lvl.level>=REINCARNATE_MIN_LEVEL;return <button key={masu.id} disabled={!can} onClick={()=>{setReincarnateSelectedId(masu.id);setReincarnateSkillKey(null);setReincarnateError('');}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={masu.reincarnateCount}/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{normalizeMasuProgression(masu).levelCap}</div></button>})}</div></div>;
           }
           const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=masuRebirthCost(lvl.level), skills=getRebirthSkillChoices(selected);
           const nextLevel=Math.max(1, lvl.level-REINCARNATE_LEVEL_DROP);
@@ -8742,10 +8814,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={reincarnateProcessingRef.current} onClick={()=>setReincarnateSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生・固有技選択</h2></div>
             <div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={normalized.reincarnateCount}/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} → Lv.{nextLevel}</div><div className="text-slate-400 text-[10px]">上限Lv.{normalized.levelCap}はそのまま。振った強化は白紙に戻ります</div><div className="text-amber-300 text-[10px] font-black">振り直せる強化ポイント {nextPoints}（うち転生ぶん +{REINCARNATE_POINTS}）</div></div></div>
             <div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div>
-            <div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選択してください（最大Lv.8）</div>
-            <div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setReincarnateSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${reincarnateSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}</div>
+            <div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます</div>
+            <div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setReincarnateSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${reincarnateSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}
+            {/* 固有技を上げずに転生する道。全部の技が最大まで育っていても転生できるようにする */}
+            <button onClick={()=>setReincarnateSkillKey('')} className={`w-full p-3 rounded-xl border text-left ${reincarnateSkillKey===''?'bg-amber-700 border-white':'bg-slate-900 border-amber-500/40'}`}><div className="font-black text-xs">あとで決める（ポイントとして残す）</div><div className="text-[10px] text-amber-300">固有技ポイント +1（いまの所持 {normalized.uniqueSkillPoints}）</div></button></div>
             {reincarnateError&&<div className="text-red-300 text-[10px] my-2">{reincarnateError}</div>}
-            <button disabled={!reincarnateSkillKey||gold<cost||reincarnateProcessingRef.current} onClick={executeMasuReincarnation} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">転生する</button></div>;
+            <button disabled={reincarnateSkillKey==null||gold<cost||reincarnateProcessingRef.current} onClick={executeMasuReincarnation} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">転生する</button></div>;
         })()}
 
         {gameState==='MASU_DONATION'&&(()=>{
@@ -8785,11 +8859,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="mh-breakthrough-mon"><DyedMonsterImage baseId={rebirthAnimation.masu.baseId} src={rebirthAnimation.base?.iconUrl} alt={rebirthAnimation.masu.name} masuColors={getMasuColors(rebirthAnimation.masu)} className="w-full h-full object-contain"/></div>
             {/* 新しく増えた★は先頭。最終限界突破では5個とも虹になるので全部を「増えた★」として光らせる */}
             <div className="mh-breakthrough-stars" aria-hidden="true">{starList.map((s,i)=><i key={i} className={(finalBreak||i===0)?'is-new':'is-old'} style={{color:s.color,textShadow:s.shadow}}>★</i>)}</div>
-            <div className="mh-breakthrough-copy"><b>{finalBreak?'最終限界突破！':'限界突破！'}</b><span>{finalBreak?'★ が虹になりました':'★ が1つ増えました'}</span><span>{rebirthAnimation.skillName} Lv.{rebirthAnimation.skillLevel}へ進化</span><span>強化ポイント +{rebirthAnimation.gainedPoints}</span></div>
+            <div className="mh-breakthrough-copy"><b>{finalBreak?'最終限界突破！':'限界突破！'}</b><span>{finalBreak?'★ が虹になりました':'★ が1つ増えました'}</span><span>{rebirthAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${rebirthAnimation.keptSkillPoints}）`:`${rebirthAnimation.skillName} Lv.${rebirthAnimation.skillLevel}へ進化`}</span><span>強化ポイント +{rebirthAnimation.gainedPoints}</span></div>
           </div>;
         })()}
         {/* 転生の演出。これまでの転生(＝いまの限界突破)の見た目をそのまま引き継ぐ */}
-        {reincarnateAnimation&&<div className="mh-rebirth-animation" role="status" aria-live="polite"><div className="mh-rebirth-circle">✧</div><div className="mh-rebirth-glow"></div><div className="mh-rebirth-mon"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={reincarnateAnimation.masu.reincarnateCount}/></div><div className="mh-rebirth-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.skillName} Lv.{reincarnateAnimation.skillLevel}へ進化</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div></div>}
+        {reincarnateAnimation&&<div className="mh-rebirth-animation" role="status" aria-live="polite"><div className="mh-rebirth-circle">✧</div><div className="mh-rebirth-glow"></div><div className="mh-rebirth-mon"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={reincarnateAnimation.masu.reincarnateCount}/></div><div className="mh-rebirth-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div></div>}
         {donationAnimation&&<div className="mh-donation-animation" role="status" aria-live="polite" aria-label="寄付を処理中"><div className="mh-donation-beam"></div><div className="mh-donation-monster"><DyedMonsterImage baseId={donationAnimation.baseId} src={donationAnimation.src} alt={donationAnimation.name} masuColors={donationAnimation.colors} className="w-full h-full object-contain"/></div><div className="mh-donation-gem"><Gem size={42}/></div><div className="mh-donation-particles">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div><div className="mh-donation-copy">神殿へ寄付中…</div></div>}
 
         {gameState==='MASU_DONATION'&&donationResult&&<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.name}を寄付しました</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm">寄付一覧へ戻る</button></div></div>}
@@ -9464,7 +9538,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           mon: rosterDetailMon,
           masu: rosterDetailMon.masuId ? getMasuMon(rosterDetailMon.masuId) : null,
           onClose: ()=>setRosterDetailMon(null),
-          detailOpts: rosterDetailMon.masuId ? { statTitle:'現在のステータス(強化分込み)' } : {},
+          detailOpts: rosterDetailMon.masuId
+            ? { statTitle:'現在のステータス(強化分込み)',
+                extraAfterApt: renderUniqueSkillPointBox(getMasuMon(rosterDetailMon.masuId), updated=>setRosterDetailMon(mergeMasuIntoMon(updated))) }
+            : {},
         })}
         {rosterDetailTeaching&&(()=>{const owned=ownedTeachings.find(ot=>ot.id===rosterDetailTeaching.id); const currentLvl=owned?owned.evoLevel:-1; return(
           <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000}}>
@@ -10094,6 +10171,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 masuStatRow('ガッツ', mergedMasu.baseGuts, sp.guts||0, 'text-amber-400'),
               ],
               aptPointsLabel: <div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</div>,
+              // 限界突破・転生で残した固有技ポイントは、この詳細からいつでも使える
+              extraAfterApt: renderUniqueSkillPointBox(masu, updated=>setMasuMonDetail(updated)),
             },
             bodyExtra: (<>
               <div className="bg-black/40 p-2 rounded-xl border border-violet-500/30"><div className="text-[7px] text-violet-300 uppercase font-bold mb-1">所持固有技Lv</div>{getRebirthSkillChoices(masu).map(skill=>{const current=uniqueSkillAtLevel(skill.unique,skill.level);return <button key={skill.key} onClick={()=>setRosterSkillDetail({mon:{...mergedMasu,unique:current},kind:'unique'})} className="w-full flex justify-between text-[9px] py-1 text-left"><span className="truncate">{current.name}</span><span className="text-amber-300 font-black shrink-0">Lv.{skill.level} ›</span></button>;})}</div>
