@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-10 01:10",
+    date: "2026-08-10 01:22",
     type: "update",
     title: "バトルの難易度選択でクリア報酬を確認できるようにしました",
     items: [
