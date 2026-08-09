@@ -2,6 +2,8 @@
 const fs = require('fs');
 const assert = require('assert');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
+const changelog = fs.readFileSync('monster-hero/data/changelog.js', 'utf8');
+const help = fs.readFileSync('monster-hero/data/help.js', 'utf8');
 const config = source.slice(source.indexOf('const EXTREME_DEBUG_DIFFICULTIES'), source.indexOf('const normalizeBattleDifficulty'));
 for (const name of ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY']) assert(config.includes(`'${name}'`), `${name} must be listed`);
 assert(/EXTREME[^\n]+available:true[^\n]+power:13[^\n]+score:20[^\n]+xp:25[^\n]+gold:7\.5[^\n]+psyche:75[^\n]+teachingEffect:0\.5/.test(config), 'EXTREME settings must match the trial specification');
@@ -13,6 +15,13 @@ assert(source.includes('Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,loca
 assert(source.includes("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved"), 'non-breeder attacks must retain their existing calculation');
 assert(source.indexOf('debugBattleRef.current') < source.indexOf('awardRunRewards'), 'debug reward isolation must precede persistent rewards');
 assert(source.includes('EXTREME 検証結果（保存されません）'), 'debug result must show calculated rewards without persistence');
+assert(source.includes('data-debug-battle-mode'), 'debug settings must enter the real battle mode selection flow');
+assert(source.includes("debugBattle?[...BATTLE_MODES,EXTREME_DEBUG_MODE]:BATTLE_MODES"), 'EXTREME mode must only join the debug mode carousel');
+assert(source.includes("isExtreme?'EXTREME_DEBUG_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT'"), 'EXTREME mode must lead to its dedicated difficulty screen');
+assert(source.includes('data-extreme-debug-difficulties'), 'dedicated EXTREME difficulty screen must be rendered');
+assert(source.includes("debugExtremeRef.current=true;setDebugBattle(true);setDebugExtreme(true)"), 'EXTREME start must preserve debug isolation before hero selection');
+assert(!changelog.includes('極限チャレンジをデバッグ限定'), 'debug-only trial must not be listed in the user changelog');
+assert(!help.includes('極限チャレンジの開発確認'), 'debug-only trial must not be described in user help');
 assert.strictEqual(Math.floor(100 * 0.5), 50, 'representative integer card effect must be exactly 50%');
 assert.strictEqual(0.1 * 0.5, 0.05, 'representative ratio card effect must be exactly 50%');
 assert.strictEqual(Math.floor(100 * 13), 1300, 'EXTREME enemy HP/attack must be x13 versus Normal');
