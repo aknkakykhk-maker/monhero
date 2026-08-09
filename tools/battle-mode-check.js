@@ -400,6 +400,12 @@ check('ランキングが無いモードには導線も高さ合わせの空枠�
 check('難易度カードから開いたときは、その難易度のタブを最初に選ぶ',
   has('setRankingViewDiff(diff);') && has('loadRankings(rankingDifficultyForMode(mode, diff));')
     && has("openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')"));
+check('難易度カードの虹のプシュケー表示は実際の付与関数を使う',
+  has('data-psyche-reward={key}') && has('虹のプシュケー ×{clearPsycheReward(key)}')
+    && has('const gain = clearPsycheReward(difficulty);'));
+check('全モードのクリアが共通の虹のプシュケー付与処理を通る',
+  grab(source, 'const recordClearOnce = async () => {', 'const recordBestWave').indexOf('await awardClearPsyche();')
+    < grab(source, 'const recordClearOnce = async () => {', 'const recordBestWave').indexOf('if (isQuickMode(runMode))'));
 // ランキングの一覧は共通の描画を呼ぶだけにして、画面ごとに作り直さない
 check('ランキングの一覧を複製していない',
   count('const renderScoreRankingBody = ') === 1 && count('const renderBreederRankingBody = ') === 1 && count('const renderBondRankingBody = ') === 1

@@ -157,6 +157,12 @@ const check = (name, ok, detail = '') => {
     check('難易度選択画面へ進める', await page.getByRole('heading', { name: 'プロモード' }).count() === 1);
     check('難易度のカードが9枚ある', await page.locator('.snap-mandatory > article').count() === 9,
       `${await page.locator('.snap-mandatory > article').count()}枚`);
+    const psycheRewards = { Beginner:1, Easy:2, Normal:3, Hard:5, Expert:7, Master:10, GrandMaster:15, Hell:20, Legend:30 };
+    for (const [difficulty, amount] of Object.entries(psycheRewards)) {
+      const reward = page.locator(`[data-psyche-reward="${difficulty}"]`);
+      check(`${difficulty}の虹のプシュケー報酬を表示する`,
+        await reward.count() === 1 && (await reward.textContent()).includes(`×${amount}`));
+    }
     // プロも実際に始められる(中身は tools/pro-mode-check.js が最後まで通して確かめる)
     check('プロも「この難易度で挑戦」から始められる',
       await page.getByRole('button', { name: 'この難易度で挑戦' }).first().isEnabled());
