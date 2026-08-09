@@ -72,11 +72,12 @@ const PLACEMENT = {
     GEZUDERO_ICON: 'images/breeder-icons/gezudero.png',
     MELOPANMAN_ICON: 'images/breeder-icons/melopanman.png',
     CADMIUM_FACE_ICON: 'images/breeder-icons/cadmium.png',
-    DISC_STONE_BASE: 'images/disc-icons/stone-base.png',
+    DISC_STONE_BASE: 'images/disc-icons/disc-stone-base.PNG',
     ZAN_DISC_ICON: 'images/disc-icons/zan.png',
     MITARASHI_DISC_ICON: 'images/disc-icons/mitarashi.png',
     ARK_DISC_ICON: 'images/disc-icons/ark.png',
     IBLIS_DISC_ICON: 'images/disc-icons/iblis.png',
+    SNEGUROCHKA_DISC_ICON: 'images/disc-icons/snegurochka-disc.PNG',
   },
 };
 
