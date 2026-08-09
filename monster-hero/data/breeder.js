@@ -116,8 +116,8 @@ const BREEDER_MARKET_ITEMS = [
   { id:'Iblis', name:"イブリースの円盤石", type:'disc', icon:IBLIS_DISC_ICON, cost:1500 },
   { id:'snegurochka_icon', name:"スネグーラチカのアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA.PNG?v=21ee3cd2a444', cost:1 },
   { id:'snegurochka_awakened_icon', name:"スネグーラチカ（覚醒）のアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA_AWAKENED.PNG?v=3a71bfe44e3d', cost:1 },
-  // 円盤石専用画像は未提供のため、既存の全身画像を比率を変えずに表示する。
-  { id:'Snegurochka', name:"スネグーラチカの円盤石", type:'disc', icon:'images/monsters/SNEGUROCHKA.PNG?v=21ee3cd2a444', cost:1500 },
+  // 専用画像を新しく作らず、既存の共通円盤石画像をほかの円盤石商品と同じ表示経路で使う。
+  { id:'Snegurochka', name:"スネグーラチカの円盤石", type:'disc', icon:DISC_STONE_BASE, cost:1500 },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   // 説明は実際の機能に合わせて更新すること。導入時は6色から全身を1色に変えるだけだったが、
   // その後アイコンごとの部位分け・プリセット27色・カスタムカラーに対応している

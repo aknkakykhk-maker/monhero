@@ -9,6 +9,8 @@ const checks = [
   ['通常技9段階', /Snegurochka: \["アイスブレード"[\s\S]*?"ジングルベル"\]/.test(ally)],
   ['固有技9段階・倍率・消費', /name:"アイスアロー"[\s\S]*?baseMult:2\.2,baseGuts:44[\s\S]*?"メリークリスマス"/.test(ally)],
   ['マーケット1500ダイヤ', /id:'Snegurochka'[\s\S]*?type:'disc'[\s\S]*?cost:1500/.test(breeder)],
+  ['既存の共通円盤石画像を商品に使用', /id:'Snegurochka'[\s\S]*?type:'disc'[\s\S]*?icon:DISC_STONE_BASE/.test(breeder)],
+  ['円盤石の商品詳細も共通表示を使用', game.includes('marketDiscIcon:item.icon') && game.includes('detailOpts.marketDiscIcon')],
   ['移動封印はMOVEを失敗し行動済みを維持', /intent\.type==='MOVE' && \(getWaveBuff\('iceLockTurns'\)>0\|\|immediateEffects\.iceLockActive\)[\s\S]*?移動できない！/.test(game)],
   ['封印は5ターンから減算しWAVEでリセット', /iceLockTurns:5/.test(game) && /iceLockTurns:immediateEffects\.iceLockActive\?4/.test(game) && /setWaveBuffs\(\{\}\)/.test(game)],
   ['消費ガッツ3%累積・安全な下限', /Math\.max\(0\.1, 1 - 0\.03\*getPermaBuff\('snegurochkaGutsDiscountStacks'\)\)/.test(game)],
