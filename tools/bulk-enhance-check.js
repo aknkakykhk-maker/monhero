@@ -125,6 +125,13 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
   check('確定でポイントが5消費される', after.distAptPoints === before.distAptPoints - 5, `${before.distAptPoints} → ${after.distAptPoints}`);
   check('間合い適性が2段階上がる', after.distApt[0] === 'A', after.distApt.join(','));
   check('ライフが3ポイント分上がる', after.statPoints.hp === 30, `+${after.statPoints.hp}`);
+
+  // 強化を終えたら、入口だったマスモン詳細へ戻る(一覧まで戻されると染色などを続けられない)
+  await click('完了');
+  await page.waitForTimeout(1200);
+  const back = await text();
+  check('強化から戻ると詳細へ戻る', back.includes('育成・カスタム') && back.includes('テストスエゾー'), back.slice(0, 60));
+
   check('操作中に致命的なJSエラーが出ない', fatal.length === 0, fatal.slice(0, 2).join(' / '));
 
   await page.screenshot({ path: path.join(__dirname, 'out', 'bulk-enhance.png') });

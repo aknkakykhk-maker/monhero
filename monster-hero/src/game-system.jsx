@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-09 10:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-09 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10285,7 +10285,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const powerAfterStat = (key) => plannedMasuPowerOf(masu, {apt:[0,0,0,0], stat:{[key]:1}});
           const powerDeltaLabel = (after) => {const d=after-currentPower; return d===0?null:<span className={`text-[8px] font-mono font-black ${d>0?'text-amber-300':'text-red-300'}`}>総合力 {d>0?'+':''}{formatMonsterPower(d)}</span>;};
           const ps = mergeMasuIntoMon(masu)?.plusStats||{};
-          const backToList = () => { setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuMonDetail(null); setMasuEnhanceFrom(null); setBulkPlan(null); };
+          // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
+          // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
+          // また同じ個体を探し直すことになる(詳細の中身は getMasuMon で引き直すので最新の値が出る)
+          const backToDetail = () => { setGameState(masuEnhanceFrom||'MASU_MONS'); setMasuEnhanceFrom(null); setBulkPlan(null); };
           // --- まとめて振るモード ---
           const plan = bulkPlan || { apt:[0,0,0,0], stat:{hp:0,atk:0,def:0,guts:0} };
           const planUsed = plan.apt.reduce((a,b)=>a+b,0) + Object.values(plan.stat).reduce((a,b)=>a+b,0);
@@ -10313,7 +10316,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return (
             <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col overflow-hidden">
               <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
-                <button onClick={backToList} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                <button onClick={backToDetail} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
                 <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest flex-1">マスモン強化</h2>
               </div>
               <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene="masuEnhance" compact/></div>
@@ -10458,7 +10461,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     })}
                   </div>
                 </div>
-                <button onClick={backToList} className="w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2">完了</button>
+                <button onClick={backToDetail} className="w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2">完了</button>
               </div>
             </div>
           );
