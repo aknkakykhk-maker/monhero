@@ -19,6 +19,10 @@ assert(source.includes('data-debug-battle-mode'), 'debug settings must enter the
 assert(source.includes("debugBattle?[...BATTLE_MODES,EXTREME_DEBUG_MODE]:BATTLE_MODES"), 'EXTREME mode must only join the debug mode carousel');
 assert(source.includes("isExtreme?'EXTREME_DEBUG_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT'"), 'EXTREME mode must lead to its dedicated difficulty screen');
 assert(source.includes('data-extreme-debug-difficulties'), 'dedicated EXTREME difficulty screen must be rendered');
+assert(source.includes("EXTREME_DEBUG_DIFFICULTY_SELECT: 'enhance'"), 'EXTREME difficulty selection must reuse the challenge selection BGM');
+assert(source.includes('左右にスワイプして難易度を選択') && source.includes('snap-x snap-mandatory'), 'EXTREME must reuse the challenge difficulty carousel structure');
+assert(source.includes('⚠ 極限ルール') && source.match(/ブリーダーカード効果 50%/g)?.length >= 2, 'the 50% breeder-card rule must be prominent on both screens');
+assert(source.includes("setting.available?'この難易度で挑戦':'選択できません'"), 'only available EXTREME tiers may be started');
 assert(source.includes("debugExtremeRef.current=true;setDebugBattle(true);setDebugExtreme(true)"), 'EXTREME start must preserve debug isolation before hero selection');
 assert(!changelog.includes('極限チャレンジをデバッグ限定'), 'debug-only trial must not be listed in the user changelog');
 assert(!help.includes('極限チャレンジの開発確認'), 'debug-only trial must not be described in user help');

@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 01:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 01:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2700,8 +2700,8 @@ const EXTREME_DEBUG_DIFFICULTIES = Object.freeze([
 const EXTREME_DEBUG_SETTING = EXTREME_DEBUG_DIFFICULTIES[0];
 const EXTREME_DEBUG_MODE = Object.freeze({
   id:'extreme_debug', label:'極限チャレンジ', short:'極限', emoji:'🔥', color:'#e879f9',
-  tagline:'限界を超えた強敵へ挑む、デバッグ限定の試験モード',
-  highlights:[['🔥','敵強度13倍の極限バトル'],['🌈','高倍率報酬を結果画面で確認'],['🔒','記録・報酬は保存されない']],
+  tagline:'限界を超えた強敵に挑む、チャレンジモード最高難度',
+  highlights:[['⚔️','チャレンジモードの上位高難易度版'],['✨','極限の戦いに見合う高倍率報酬'],['🧪','デバッグ中：記録・報酬は保存されません']],
 });
 const normalizeBattleDifficulty = (value) => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
@@ -4291,6 +4291,7 @@ function MonsterHeroGame() {
   const debugBattleRef = useRef(false);
   const [debugExtreme, setDebugExtreme] = useState(false);
   const debugExtremeRef = useRef(false);
+  const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
@@ -4684,6 +4685,7 @@ function MonsterHeroGame() {
     BATTLE_MENU: 'enhance',      // 難易度・ランキング(モンスター選択と同じ曲)
     BATTLE_MODE_SELECT: 'enhance',       // 新しいバトルモード選択(BATTLE_MENUと同じ曲を続ける)
     BATTLE_DIFFICULTY_SELECT: 'enhance', // 新しい難易度選択も同じ曲
+    EXTREME_DEBUG_DIFFICULTY_SELECT: 'enhance', // 極限もチャレンジと同じ選択画面BGMを続ける
     BATTLE_SCORE_RANKING: 'enhance',     // そこから開くスコアランキングも同じ曲
     SKIP_PICK: 'enhance',        // スキップの編成選択(勇者モン選択と同じ曲)
     SKIP_RESULT: 'result',       // スキップのリザルト(通常のリザルトと同じ曲)
@@ -5543,11 +5545,12 @@ function MonsterHeroGame() {
   useEffect(()=>{
     if(gameState!=='BATTLE_MODE_SELECT'||modeSelectTab!=='mode')return;
     const id=requestAnimationFrame(()=>{
-      const index=BATTLE_MODES.length+Math.max(0,BATTLE_MODES.findIndex(m=>m.id===normalizeBattleMode(battleMode)));
+      const modes=debugBattle?[...BATTLE_MODES,EXTREME_DEBUG_MODE]:BATTLE_MODES;
+      const index=modes.length+Math.max(0,modes.findIndex(m=>m.id===battleMode));
       modeCarouselRef.current?.children[index]?.scrollIntoView({inline:'center',block:'nearest'});
     });
     return()=>cancelAnimationFrame(id);
-  },[gameState,modeSelectTab]);
+  },[gameState,modeSelectTab,debugBattle]);
   // 供モン合流の横スライドは、開くたびに先頭から見せる
   useEffect(()=>{
     if(gameState!=='PICK_ALLY')return;
@@ -5573,6 +5576,13 @@ function MonsterHeroGame() {
     });
     return()=>cancelAnimationFrame(id);
   },[gameState,battleMode]);
+  // 極限の難易度画面も通常チャレンジと同じ横カルーセルで、開くたびEXTREMEから見せる。
+  useEffect(()=>{
+    if(gameState!=='EXTREME_DEBUG_DIFFICULTY_SELECT')return;
+    setExtremeDifficulty('EXTREME');
+    const id=requestAnimationFrame(()=>modeDifficultyCarouselRef.current?.children[0]?.scrollIntoView({inline:'center',block:'nearest'}));
+    return()=>cancelAnimationFrame(id);
+  },[gameState]);
 
   // 端末のlocalStorageに保存された進行状況(mh_で始まる全キー)をひとつの文字列コードに書き出す。
   // ホーム画面アイコンを作り直すとiOSではデータが引き継がれないため、その手動バックアップ手段として使う
@@ -9120,22 +9130,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <h3 className="text-center text-lg font-black leading-tight" style={{color:m.color}}>{m.emoji} {m.label}</h3>
                         <p className="text-center text-[9px] text-slate-300 leading-snug mt-0.5 min-h-[26px]">{m.tagline}</p>
                         {/* 記録の枠は、いま選んでいる難易度のぶんをモードごとの保存先から出す */}
-                        {!isExtreme&&<div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5">
-                          <small className="block text-[8px] text-slate-400 font-black">{DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}の記録</small>
-                          <b className="block text-right text-base leading-tight" style={{color:m.color}}>{ranked?`${rec.score.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</span>
-                        </div>}
+                        <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5">
+                          <small className="block text-[8px] text-slate-400 font-black">{isExtreme?'EXTREMEの記録':`${DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}の記録`}</small>
+                          <b className="block text-right text-base leading-tight" style={{color:m.color}}>{isExtreme?'保存されません':ranked?`${rec.score.toLocaleString()} pt`:`WAVE ${rec.wave}`}</b>
+                          <span className="block text-right text-[9px] text-amber-300">{isExtreme?'デバッグプレイ専用':ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</span>
+                        </div>
                         {/* カードへ出す3行。どのモードも【売り】→【報酬】→【記録】の順でそろえてある。
                             細かい説明は「このモードの説明」で全部読める */}
                         <ul className="mt-1.5 space-y-0.5">{m.highlights.map(([icon,text])=>(
                           <li key={text} className="flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black text-slate-200"><span className="shrink-0">{icon}</span><span className="truncate">{text}</span></li>
                         ))}</ul>
+                        {isExtreme&&<div className="mt-1.5 rounded-xl border-2 border-fuchsia-400/70 bg-fuchsia-950/65 px-2.5 py-1.5 text-center shadow-[0_0_16px_rgba(232,121,249,.2)]">
+                          <small className="block text-[8px] font-black tracking-wider text-amber-300">⚠ 極限ルール</small>
+                          <b className="block text-xs text-white">ブリーダーカード効果 50%</b>
+                        </div>}
                         <div className="grid gap-1.5 mt-1.5">
-                          {!isExtreme&&<button disabled={!!battleTutorial} onClick={()=>setModeInfoId(m.id)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-30">このモードの説明</button>}
+                          <button disabled={isExtreme||!!battleTutorial} onClick={()=>setModeInfoId(m.id)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{isExtreme?'チャレンジモード最高難度': 'このモードの説明'}</button>
                           {/* 練習中はチャレンジだけ進めるようにする。初回からクイックやプロを遊ばせない */}
                           <button disabled={!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE} onClick={()=>{setBattleMode(m.id);setGameState(isExtreme?'EXTREME_DEBUG_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id===BATTLE_MODE_CHALLENGE?battleTutorialSpotClass('modeStart'):''}`} style={{backgroundColor:m.color,color:'#0f172a'}}>難易度を選ぶ</button>
                           {/* スコアランキングの導線。クイックはランキングが無いので、高さ合わせの空枠も置かない */}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
+                          {isExtreme&&<button disabled className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/25 text-slate-400 font-black text-[11px] opacity-60">🏆 ランキング対象外（デバッグ）</button>}
                         </div>
                       </article>
                     );})}
@@ -9151,17 +9166,49 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>);
         })()}
 
-        {gameState==='EXTREME_DEBUG_DIFFICULTY_SELECT'&&(
+        {gameState==='EXTREME_DEBUG_DIFFICULTY_SELECT'&&(()=>{
+          const difficulties=EXTREME_DEBUG_DIFFICULTIES;
+          const selectedIndex=Math.max(0,difficulties.findIndex(setting=>setting.id===extremeDifficulty));
+          const selectDifficultyIndex=(index,behavior='smooth')=>{const safe=Math.max(0,Math.min(difficulties.length-1,index));setExtremeDifficulty(difficulties[safe].id);modeDifficultyCarouselRef.current?.children[safe]?.scrollIntoView({behavior,inline:'center',block:'nearest'});};
+          return (
           <div className="flex-1 flex flex-col h-full min-h-0 px-4" data-extreme-debug-difficulties style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))',paddingBottom:'calc(.35rem + env(safe-area-inset-bottom))'}}>
-            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" onClick={()=>setGameState('BATTLE_MODE_SELECT')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-fuchsia-300 tracking-widest">極限チャレンジ</h2></div>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 w-full max-w-md mx-auto pb-2">
-              {EXTREME_DEBUG_DIFFICULTIES.map(setting=><article key={setting.id} className={`rounded-2xl border-2 px-3 py-2.5 ${setting.available?'border-fuchsia-400 bg-fuchsia-950/40':'border-white/10 bg-slate-950/60 opacity-55'}`}>
-                <div className="flex items-center justify-between"><h3 className="text-base font-black text-white">{setting.label}</h3><b className="text-[10px] text-fuchsia-200">{setting.available?'選択可能':'？？？'}</b></div>
-                {setting.available?<><div className="grid grid-cols-2 gap-1 mt-2 text-[10px] text-slate-200"><span>敵強度 <b>×{setting.power}</b></span><span>スコア <b>×{setting.score}</b></span><span>経験値 <b>×{setting.xp}</b></span><span>ダイヤ <b>×{setting.gold}</b></span><span className="col-span-2">🌈 虹のプシュケー <b>{setting.psyche}</b></span></div><div className="mt-2 rounded-xl border border-fuchsia-400/40 bg-black/30 px-2 py-1.5 text-center text-[10px] font-black text-fuchsia-200">特殊ルール：ブリーダーカード効果 50%</div><button onClick={()=>{battleEntryStateRef.current='EXTREME_DEBUG_DIFFICULTY_SELECT';setDifficulty('Normal');setRunMode(BATTLE_MODE_CHALLENGE);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=true;debugExtremeRef.current=true;setDebugBattle(true);setDebugExtreme(true);setDebugOutcome(null);setProAllyPool([]);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="w-full min-h-[44px] mt-2 rounded-xl bg-fuchsia-600 text-white font-black text-sm">EXTREMEで挑戦</button></>:<div className="py-2 text-center text-xs tracking-[.35em] text-slate-500">？？？</div>}
-              </article>)}
+            <div className="flex items-center gap-1 mb-1 shrink-0"><button aria-label="戻る" onClick={()=>setGameState('BATTLE_MODE_SELECT')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-fuchsia-300 uppercase tracking-widest truncate">極限チャレンジ</h2></div>
+            <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
+              <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
+                <div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>
+                <div className="relative shrink-0">
+                  <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
+                  <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;return (
+                      <article key={setting.id} aria-disabled={!setting.available} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?'#f0abfc':'rgba(255,255,255,.12)',background:setting.available?'linear-gradient(180deg,#34133f,#160d2b)':'linear-gradient(180deg,#1e293b,#0d142b)',boxShadow:active?'0 0 30px rgba(232,121,249,.35)':'none'}}>
+                        <div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
+                        <h3 className="text-center text-lg font-black leading-tight text-fuchsia-200">{setting.label}</h3>
+                        <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5">
+                          <small className="block text-[8px] text-slate-400 font-black">{setting.available?'EXTREMEの記録':'難易度情報'}</small>
+                          <b className="block text-right text-base leading-tight text-fuchsia-200">{setting.available?'保存されません':'？？？'}</b>
+                          <span className="block text-right text-[9px] text-amber-300">{setting.available?'デバッグプレイ専用':'未実装・選択できません'}</span>
+                        </div>
+                        {setting.available?<>
+                          <div className="grid grid-cols-3 gap-1 mt-1.5">{[['敵強度',`×${setting.power}`],['スコア',`×${setting.score}`],['ダイヤ',`×${setting.gold}`]].map(([label,value])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs text-white">{value}</b></div>)}</div>
+                          <div className="grid grid-cols-2 gap-1 mt-1">{[['経験値',`×${setting.xp}`],['虹のプシュケー',setting.psyche]].map(([label,value])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs text-white">{value}</b></div>)}</div>
+                          <div className="mt-1.5 rounded-xl border-2 border-fuchsia-400/70 bg-fuchsia-950/65 px-2 py-1.5 text-center"><small className="block text-[8px] font-black text-amber-300">⚠ 極限ルール</small><b className="block text-xs text-white">ブリーダーカード効果 50%</b></div>
+                        </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
+                        <div className="grid gap-1.5 mt-1.5">
+                          <button disabled className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs opacity-50">{setting.available?'全WAVE詳細（デバッグ）':'詳細 ？？？'}</button>
+                          <button disabled={!setting.available} onClick={()=>{battleEntryStateRef.current='EXTREME_DEBUG_DIFFICULTY_SELECT';setDifficulty('Normal');setRunMode(BATTLE_MODE_CHALLENGE);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=true;debugExtremeRef.current=true;setDebugBattle(true);setDebugExtreme(true);setDebugOutcome(null);setProAllyPool([]);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[44px] rounded-xl bg-fuchsia-600 text-white font-black text-sm disabled:bg-slate-800 disabled:text-slate-500">{setting.available?'この難易度で挑戦':'選択できません'}</button>
+                          <button disabled className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/25 text-slate-400 font-black text-[11px] opacity-60">🏆 ランキング対象外（デバッグ）</button>
+                        </div>
+                      </article>
+                    );})}
+                  </div>
+                  <button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
+                </div>
+                <div className="flex justify-center gap-1 py-0.5">{difficulties.map((setting,i)=><button key={setting.id} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${setting.id===extremeDifficulty?'bg-fuchsia-300 scale-125':'bg-slate-700'}`}/>)}</div>
+                <div className="shrink-0 pt-1.5 pb-1 text-center text-[9px] text-slate-500">デバッグ確認中のため、記録・報酬は保存されません</div>
+              </div>
             </div>
-          </div>
-        )}
+          </div>);
+        })()}
 
         {gameState==='BATTLE_DIFFICULTY_SELECT'&&(()=>{
           const difficulties=Object.entries(DIFFICULTY_SETTINGS),selectedIndex=difficulties.findIndex(([key])=>key===safeDifficulty);

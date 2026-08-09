@@ -439,7 +439,7 @@ check('左右の矢印は端でも止まらない',
   has('aria-label="前のモード" onClick={()=>stepMode(-1)}') && has('aria-label="次のモード" onClick={()=>stepMode(1)}')
     && !/aria-label="(前|次)のモード" disabled=/.test(source));
 check('開いたときは真ん中のコピーから始める',
-  has('const index=BATTLE_MODES.length+Math.max(0,BATTLE_MODES.findIndex(m=>m.id===normalizeBattleMode(battleMode)));'));
+  has('const index=modes.length+Math.max(0,modes.findIndex(m=>m.id===battleMode));'));
 // 難易度選択はいつでもノーマルから。前に遊んだ難易度を引きずらない
 check('難易度選択の既定はノーマル', has("const BATTLE_DEFAULT_DIFFICULTY = 'Normal';"));
 check('難易度選択を開くたびに既定へ戻す',
