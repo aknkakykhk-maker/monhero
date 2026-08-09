@@ -866,8 +866,9 @@ const HELP_SCREEN_COVERAGE = {
   // 模様テストは開発用の隠し画面なので、公開説明は増やさず既存の染色項目を参照先にする。
   MASU_PATTERN_DEBUG:'masu/dye',
   MONSTER_IMAGE_DEBUG:'masu/dye',
-  // 対象外: DEBUG_SETTINGS は開発用の隠し画面。TRAINING_* は別担当のため触らない
+  // 対象外: DEBUG_SETTINGS と極限の難易度選択は開発用の隠し画面。TRAINING_* は別担当のため触らない
   DEBUG_SETTINGS:   null,
+  EXTREME_DEBUG_DIFFICULTY_SELECT: null,
   BREEDER_ICON_DEBUG:'home/profile',
   TRAINING_INFO:    null,
   TRAINING_SELECT:  null,

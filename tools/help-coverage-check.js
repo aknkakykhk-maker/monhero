@@ -64,7 +64,7 @@ check('もう無い画面が対応表に残っていない', staleScreens.length
 
 const covered = Object.entries(coverage).filter(([, v]) => v !== null);
 check('対象外にした画面は開発用と別担当のものだけ',
-  Object.entries(coverage).filter(([, v]) => v === null).every(([k]) => k === 'DEBUG_SETTINGS' || k.startsWith('TRAINING_')),
+  Object.entries(coverage).filter(([, v]) => v === null).every(([k]) => k === 'DEBUG_SETTINGS' || k === 'EXTREME_DEBUG_DIFFICULTY_SELECT' || k.startsWith('TRAINING_')),
   `説明あり${covered.length} / 対象外${Object.keys(coverage).length - covered.length}`);
 
 // --- ② 一覧は実データから作る ---
