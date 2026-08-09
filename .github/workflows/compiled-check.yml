@@ -1,4 +1,4 @@
-name: Compiled source check
+name: Build and deploy Pages
 
 on:
   pull_request:
@@ -7,13 +7,16 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
-  compiled-check:
+  build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: tools
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,10 +25,43 @@ jobs:
           cache: npm
           cache-dependency-path: tools/package-lock.json
       - name: Install locked tool dependencies
+        working-directory: tools
         run: npm ci --omit=optional
-      - name: Verify the committed compiled output
-        run: node build.js --check
-      - name: Exercise the canonical build
+      - name: Build the canonical compiled output
+        run: node tools/build.js
+      - name: Verify the canonical compiled output
+        run: node tools/build.js --check
+      - name: Verify the compiled runtime
+        run: node tools/compiled-runtime-check.js
+      - name: Check source syntax and references
         run: |
-          node build.js
-          node build.js --check
+          node tools/check-syntax.js
+          node tools/undefined-reference-check.js
+      - name: Check the boot path
+        run: node tools/boot-flow-check.js
+      - name: Configure GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+      - name: Stage the GitHub Pages site
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir _site
+          cp index.html _site/
+          cp -a monster-hero _site/
+      - name: Upload GitHub Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

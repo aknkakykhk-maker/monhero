@@ -145,7 +145,13 @@ function makeBrowserStubs() {
     fetch: () => Promise.reject(new Error('fetch is stubbed')),
     AudioContext: function () { return { createOscillator: () => ({ connect: noop, start: noop, stop: noop, frequency: { value: 0, setValueAtTime: noop } }), createGain: () => ({ connect: noop, gain: { value: 0, setValueAtTime: noop, exponentialRampToValueAtTime: noop } }), destination: {}, currentTime: 0, resume: () => Promise.resolve(), state: 'running' }; },
   };
-  return { windowStub, documentStub, React, ReactDOM };
+  return { windowStub, documentStub, React, ReactDOM, Image };
+}
+
+// 画像系ツール向けの互換エクスポート。canvas は呼び出されたときだけ読み込み、
+// 正規ビルドや構文チェックからネイティブ依存を切り離したままにする。
+function createCanvas(...args) {
+  return require('canvas').createCanvas(...args);
 }
 
 // index.html が本体より先に読み込むデータ(読み込み順もそのまま)
@@ -167,7 +173,7 @@ let _cached = null;
 function loadDyeModule() {
   if (_cached) return _cached;
   const code = transformGameSystem();
-  const { windowStub, documentStub, React, ReactDOM } = makeBrowserStubs();
+  const { windowStub, documentStub, React, ReactDOM, Image } = makeBrowserStubs();
   const sandbox = {
     window: windowStub, document: documentStub, React, ReactDOM, Image,
     localStorage: windowStub.localStorage, navigator: windowStub.navigator, location: windowStub.location,
@@ -224,6 +230,7 @@ function imageForBaseId(baseId, images) {
 // loadEmbeddedImages が返した値(PNGのパス、または昔ながらのdataURL)を
 // node-canvas の Image として読む
 async function decodeDataUrl(src) {
+  const { loadImage } = require('canvas');
   if (typeof src === 'string' && src.startsWith('data:')) {
     return loadImage(Buffer.from(src.split(',')[1], 'base64'));
   }
