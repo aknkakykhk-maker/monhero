@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 2cd8beaab10b1246
+// source-sha256: 169368f8fcb91101
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-09 19:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-09 20:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15328,7 +15328,19 @@ function MonsterHeroGame() {
       powerNote
     }), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-2"
-    }, renderDetailSectionLabel('この個体の強さ', '総合力に反映されます'), renderMonsterDetailInfo(mon, detailOpts), masu && (masu.inheritedUniques || []).length > 0 && /*#__PURE__*/React.createElement("section", {
+    }, detailOpts.marketDiscIcon && /*#__PURE__*/React.createElement("section", {
+      className: "rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3"
+    }, /*#__PURE__*/React.createElement("img", {
+      src: detailOpts.marketDiscIcon,
+      alt: detailOpts.marketDiscName || '円盤石',
+      className: "w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] font-black text-amber-400"
+    }, "\u30DE\u30FC\u30B1\u30C3\u30C8\u8CA9\u58F2\u4E2D\u306E\u5186\u76E4\u77F3"), /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black text-white leading-tight break-words"
+    }, detailOpts.marketDiscName))), renderDetailSectionLabel('この個体の強さ', '総合力に反映されます'), renderMonsterDetailInfo(mon, detailOpts), masu && (masu.inheritedUniques || []).length > 0 && /*#__PURE__*/React.createElement("section", {
       className: "rounded-xl border border-amber-500/40 bg-amber-950/30 p-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-black text-amber-300 mb-1"
@@ -19483,7 +19495,11 @@ function MonsterHeroGame() {
           size: 8
         }), "\u8A73\u7D30")) : (detailMon || detailTeaching) && !comingSoon ? /*#__PURE__*/React.createElement("button", {
           onClick: () => {
-            if (detailMon) setRosterDetailMon(detailMon);else setRosterDetailTeaching(detailTeaching);
+            if (detailMon) setRosterDetailMon({
+              ...detailMon,
+              marketDiscIcon: item.icon,
+              marketDiscName: item.name
+            });else setRosterDetailTeaching(detailTeaching);
           },
           "aria-label": `${item.name}の詳細を見る`,
           className: "text-[8px] font-black text-indigo-300 bg-indigo-950/50 border border-indigo-500/40 px-1 py-0.5 rounded-full active:scale-95 flex items-center gap-0.5 whitespace-nowrap"
@@ -19686,7 +19702,10 @@ function MonsterHeroGame() {
       detailOpts: rosterDetailMon.masuId ? {
         statTitle: '現在のステータス(強化分込み)',
         extraAfterApt: renderUniqueSkillPointBox(getMasuMon(rosterDetailMon.masuId), updated => setRosterDetailMon(mergeMasuIntoMon(updated)))
-      } : {}
+      } : {
+        marketDiscIcon: rosterDetailMon.marketDiscIcon,
+        marketDiscName: rosterDetailMon.marketDiscName
+      }
     }), rosterDetailTeaching && (() => {
       const owned = ownedTeachings.find(ot => ot.id === rosterDetailTeaching.id);
       const currentLvl = owned ? owned.evoLevel : -1;
