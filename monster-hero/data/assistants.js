@@ -708,6 +708,18 @@ const ASSISTANT_LINE_PACKS = [];
 // 束を1つ足す。読み込み順は問わない(合流は下の applyAssistantLinePacks でまとめて行う)
 const addAssistantLinePack = (pack) => { if (pack && pack.id && pack.lines) ASSISTANT_LINE_PACKS.push(pack); };
 
+// デバッグ公開中でも正式公開時と同じ助手データ・吹き出しで体験を確認する。
+addAssistantLinePack({
+  id: 'extremeChallengeGuide',
+  label: '極限チャレンジ案内',
+  lines: {
+    extremeChallenge: [
+      { e:'excited', t:'極限チャレンジへようこそ！\nチャレンジモードの上位高難易度版だよ！' },
+      { e:'troubled', t:'ここではブリーダーカードの効果が半分になるの。\nいつも以上に慎重に戦ってね！' },
+    ],
+  },
+});
+
 // ===== 親密度ぶんのセリフ(HOME) =====
 addAssistantLinePack({
   id: 'dailyMasuAdvice',

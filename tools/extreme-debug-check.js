@@ -24,6 +24,10 @@ assert(source.includes('左右にスワイプして難易度を選択') && sourc
 assert(source.includes('⚠ 極限ルール') && source.match(/ブリーダーカード効果 50%/g)?.length >= 2, 'the 50% breeder-card rule must be prominent on both screens');
 assert(source.includes("setting.available?'この難易度で挑戦':'選択できません'"), 'only available EXTREME tiers may be started');
 assert(source.includes("debugExtremeRef.current=true;setDebugBattle(true);setDebugExtreme(true)"), 'EXTREME start must preserve debug isolation before hero selection');
+assert(source.includes("assistantSceneLines('extremeChallenge'") && source.includes('setExtremeGuideStep(extremeGuideStep+1)'), 'EXTREME must use the shared assistant data and tap progression');
+assert(source.includes("const showExtremeRule = w === 1 && debugExtremeRef.current") && source.includes('setExtremeRuleOpen(showExtremeRule); setIsBusy(showExtremeRule)'), 'the 50% rule must block normal input once at WAVE 1');
+assert(source.includes('mh-extreme-enemy-aura') && source.includes('debugExtreme&&<div className="mh-extreme-enemy-aura"'), 'all EXTREME enemies must receive the lightweight dedicated aura');
+assert(source.includes('h-[366px]') && source.includes('flex items-start gap-2.5'), 'mode cards must share a fixed outer height and aligned carousel');
 assert(!changelog.includes('極限チャレンジをデバッグ限定'), 'debug-only trial must not be listed in the user changelog');
 assert(!help.includes('極限チャレンジの開発確認'), 'debug-only trial must not be described in user help');
 assert.strictEqual(Math.floor(100 * 0.5), 50, 'representative integer card effect must be exactly 50%');
