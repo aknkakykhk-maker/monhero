@@ -20,3 +20,6 @@ check('合体費用は0/3000', source.includes("inherit = false) => inherit ? FU
 check('技継承条件は副Lv30のみ', source.includes('subLvl.level >= FUSION_INHERIT_MIN_SUB_LEVEL && fusionInheritUnique') && !source.includes('mainLvl.level >= 10 && subLvl.level'));
 check('連打防止ロックと初回専用保存値', source.includes('fusionProcessingRef.current') && source.includes('regenerationProcessingRef.current') && source.includes("mh_temple_regeneration_used_v1"));
 check('登録済み円盤石画像を再利用', source.includes("images/disc-icons/stone-base.png") && fs.existsSync('monster-hero/images/disc-icons/stone-base.png'));
+check('再生一覧は3列の選択だけを表示', source.includes("gameState==='MASU_REGENERATION'") && source.includes('grid grid-cols-3 gap-2') && source.includes("setGameState('MASU_REGENERATION_DETAIL')"));
+check('再生詳細は選択IDから対象を再取得', source.includes("gameState==='MASU_REGENERATION_DETAIL'") && source.includes('ALL_PLAYER_MONSTERS[regenerationSelectedId]'));
+check('再生詳細で対象と費用を確認して実行', source.includes('再生に必要な情報') && source.includes('必要ダイヤ') && source.includes('onClick={executeMasuRegeneration}'));
