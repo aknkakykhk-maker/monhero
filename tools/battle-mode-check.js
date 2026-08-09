@@ -384,7 +384,7 @@ check('旧バトル画面はデバッグからだけ開ける',
     && (source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length === 2,
   `BATTLE_MENUへ移る場所 ${(source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length}か所(デバッグの見比べ用・旧チュートリアルの開始)`);
 check('モード選択は3モードすべてを横スライドで並べる',
-  has('const modes=BATTLE_MODES,current=battleModeInfo(battleMode);') && has('aria-label="前のモード"') && has('aria-label="次のモード"')
+  has('const modes=debugBattle?[...BATTLE_MODES,EXTREME_DEBUG_MODE]:BATTLE_MODES;') && has('aria-label="前のモード"') && has('aria-label="次のモード"')
     && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'));
 check('上のタブはモード選択・ブリーダーLv・絆Lvの3つ',
   has("{[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv']].map(([key,label])=>("));
@@ -396,7 +396,7 @@ check('スコアランキングはモードのカードと難易度のカード�
 check('ランキングが無いモードには導線も高さ合わせの空枠も出さない',
   has('{ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,')
     && has('{ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,')
-    && has('ranked=modeHasRanking(battleMode);') && has('ranked=modeHasRanking(m.id);'));
+    && has('ranked=modeHasRanking(battleMode);') && has('ranked=!isExtreme&&modeHasRanking(m.id);'));
 check('難易度カードから開いたときは、その難易度のタブを最初に選ぶ',
   has('setRankingViewDiff(diff);') && has('loadRankings(rankingDifficultyForMode(mode, diff));')
     && has("openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')"));
@@ -508,7 +508,7 @@ check('台本の強制選択は勇者モン選択にだけ効く',
     && !/disabled=\{!scenarioPicksHero\(m\.id\)\}/.test(source));
 // 練習をやめ損ねても、ふだんの周回へ台本を持ち込まない
 check('ふだんの周回を始めるときは台本を必ず捨てる',
-  count('battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;') === 2);
+  count('battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;') === 3);
 // 供モンの一覧には、すでに編成にいる子(勇者モンを含む)を出さない
 check('供モンの一覧に編成中の子を出さない',
   has("const inParty=slots.filter(x=>x).map(x=>x.id);")

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 41051a84fbdae41e
+// source-sha256: 2786df90e1534ba7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 00:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 01:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5984,6 +5984,15 @@ const EXTREME_DEBUG_DIFFICULTIES = Object.freeze([{
   available: false
 }]);
 const EXTREME_DEBUG_SETTING = EXTREME_DEBUG_DIFFICULTIES[0];
+const EXTREME_DEBUG_MODE = Object.freeze({
+  id: 'extreme_debug',
+  label: '極限チャレンジ',
+  short: '極限',
+  emoji: '🔥',
+  color: '#e879f9',
+  tagline: '限界を超えた強敵へ挑む、デバッグ限定の試験モード',
+  highlights: [['🔥', '敵強度13倍の極限バトル'], ['🌈', '高倍率報酬を結果画面で確認'], ['🔒', '記録・報酬は保存されない']]
+});
 const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
@@ -17867,8 +17876,8 @@ function MonsterHeroGame() {
       },
       className: `min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
     }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_MODE_SELECT' && (() => {
-      const modes = BATTLE_MODES,
-        current = battleModeInfo(battleMode);
+      const modes = debugBattle ? [...BATTLE_MODES, EXTREME_DEBUG_MODE] : BATTLE_MODES;
+      const current = modes.find(m => m.id === battleMode) || modes[0];
       const selectedIndex = Math.max(0, modes.findIndex(m => m.id === current.id));
       // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
       // 端のコピーまで来たら、指を離したあとに黙って真ん中のコピーへ位置を戻す。
@@ -17978,8 +17987,13 @@ function MonsterHeroGame() {
         }
       }, loopModes.map((m, loopIndex) => {
         const active = m.id === current.id,
-          rec = modeRecordFor(m.id, safeDifficulty),
-          ranked = modeHasRanking(m.id);
+          isExtreme = m.id === EXTREME_DEBUG_MODE.id,
+          rec = isExtreme ? {
+            score: 0,
+            wave: 0,
+            clears: 0
+          } : modeRecordFor(m.id, safeDifficulty),
+          ranked = !isExtreme && modeHasRanking(m.id);
         return /*#__PURE__*/React.createElement("article", {
           key: `${m.id}-${loopIndex}`,
           className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
@@ -17997,7 +18011,7 @@ function MonsterHeroGame() {
           }
         }, m.emoji, " ", m.label), /*#__PURE__*/React.createElement("p", {
           className: "text-center text-[9px] text-slate-300 leading-snug mt-0.5 min-h-[26px]"
-        }, m.tagline), /*#__PURE__*/React.createElement("div", {
+        }, m.tagline), !isExtreme && /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
@@ -18019,7 +18033,7 @@ function MonsterHeroGame() {
           className: "truncate"
         }, text)))), /*#__PURE__*/React.createElement("div", {
           className: "grid gap-1.5 mt-1.5"
-        }, /*#__PURE__*/React.createElement("button", {
+        }, !isExtreme && /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
           onClick: () => setModeInfoId(m.id),
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-30"
@@ -18027,7 +18041,7 @@ function MonsterHeroGame() {
           disabled: !!battleTutorial && m.id !== BATTLE_MODE_CHALLENGE,
           onClick: () => {
             setBattleMode(m.id);
-            setGameState('BATTLE_DIFFICULTY_SELECT');
+            setGameState(isExtreme ? 'EXTREME_DEBUG_DIFFICULTY_SELECT' : 'BATTLE_DIFFICULTY_SELECT');
           },
           className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id === BATTLE_MODE_CHALLENGE ? battleTutorialSpotClass('modeStart') : ''}`,
           style: {
@@ -18055,7 +18069,7 @@ function MonsterHeroGame() {
         "aria-label": `${i + 1}ページ目`,
         onClick: () => scrollToLoopIndex(modes.length + i),
         className: `w-1.5 h-1.5 rounded-full ${m.id === current.id ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
-      }))), /*#__PURE__*/React.createElement("div", {
+      }))), !debugBattle && /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 pt-1.5 pb-1"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         key: current.id,
@@ -18077,7 +18091,61 @@ function MonsterHeroGame() {
         scene: "ranking",
         compact: true
       })), renderBondRankingBody())));
-    })(), gameState === 'BATTLE_DIFFICULTY_SELECT' && (() => {
+    })(), gameState === 'EXTREME_DEBUG_DIFFICULTY_SELECT' && /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 flex flex-col h-full min-h-0 px-4",
+      "data-extreme-debug-difficulties": true,
+      style: {
+        paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-1 mb-1 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      "aria-label": "\u623B\u308B",
+      onClick: () => setGameState('BATTLE_MODE_SELECT'),
+      className: "p-3 text-slate-400 active:scale-90"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("h2", {
+      className: "text-xl font-black italic text-fuchsia-300 tracking-widest"
+    }, "\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8")), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2 w-full max-w-md mx-auto pb-2"
+    }, EXTREME_DEBUG_DIFFICULTIES.map(setting => /*#__PURE__*/React.createElement("article", {
+      key: setting.id,
+      className: `rounded-2xl border-2 px-3 py-2.5 ${setting.available ? 'border-fuchsia-400 bg-fuchsia-950/40' : 'border-white/10 bg-slate-950/60 opacity-55'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-base font-black text-white"
+    }, setting.label), /*#__PURE__*/React.createElement("b", {
+      className: "text-[10px] text-fuchsia-200"
+    }, setting.available ? '選択可能' : '？？？')), setting.available ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-1 mt-2 text-[10px] text-slate-200"
+    }, /*#__PURE__*/React.createElement("span", null, "\u6575\u5F37\u5EA6 ", /*#__PURE__*/React.createElement("b", null, "\xD7", setting.power)), /*#__PURE__*/React.createElement("span", null, "\u30B9\u30B3\u30A2 ", /*#__PURE__*/React.createElement("b", null, "\xD7", setting.score)), /*#__PURE__*/React.createElement("span", null, "\u7D4C\u9A13\u5024 ", /*#__PURE__*/React.createElement("b", null, "\xD7", setting.xp)), /*#__PURE__*/React.createElement("span", null, "\u30C0\u30A4\u30E4 ", /*#__PURE__*/React.createElement("b", null, "\xD7", setting.gold)), /*#__PURE__*/React.createElement("span", {
+      className: "col-span-2"
+    }, "\uD83C\uDF08 \u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC ", /*#__PURE__*/React.createElement("b", null, setting.psyche))), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 rounded-xl border border-fuchsia-400/40 bg-black/30 px-2 py-1.5 text-center text-[10px] font-black text-fuchsia-200"
+    }, "\u7279\u6B8A\u30EB\u30FC\u30EB\uFF1A\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u52B9\u679C 50%"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        battleEntryStateRef.current = 'EXTREME_DEBUG_DIFFICULTY_SELECT';
+        setDifficulty('Normal');
+        setRunMode(BATTLE_MODE_CHALLENGE);
+        battleScenarioRef.current = null;
+        battleScenarioIntentIndexRef.current = 0;
+        debugBattleRef.current = true;
+        debugExtremeRef.current = true;
+        setDebugBattle(true);
+        setDebugExtreme(true);
+        setDebugOutcome(null);
+        setProAllyPool([]);
+        setMonSelection(getActiveMonsterList());
+        setHeroPickTab('roster');
+        setGameState('PICK_HERO');
+      },
+      className: "w-full min-h-[44px] mt-2 rounded-xl bg-fuchsia-600 text-white font-black text-sm"
+    }, "EXTREME\u3067\u6311\u6226")) : /*#__PURE__*/React.createElement("div", {
+      className: "py-2 text-center text-xs tracking-[.35em] text-slate-500"
+    }, "\uFF1F\uFF1F\uFF1F"))))), gameState === 'BATTLE_DIFFICULTY_SELECT' && (() => {
       const difficulties = Object.entries(DIFFICULTY_SETTINGS),
         selectedIndex = difficulties.findIndex(([key]) => key === safeDifficulty);
       const selectDifficultyIndex = (index, behavior = 'smooth') => {
@@ -19045,33 +19113,21 @@ function MonsterHeroGame() {
       className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
     }, "\uD83C\uDFA8 \u30DE\u30B9\u30E2\u30F3\u6A21\u69D8\u30AB\u30B9\u30BF\u30E0\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
-    }, "\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("section", {
-      className: "rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 p-3",
-      "data-extreme-debug": true
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-sm text-fuchsia-200 font-black mb-1"
-    }, "\uD83D\uDD25 \u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u691C\u8A3C"), /*#__PURE__*/React.createElement("p", {
-      className: "text-[9px] leading-relaxed text-slate-300 mb-3"
-    }, "\u30C7\u30D0\u30C3\u30B0\u5C02\u7528\u3067\u3059\u3002\u7D50\u679C\u3068\u5831\u916C\u306F\u8868\u793A\u3060\u3051\u3067\u3001\u30BB\u30FC\u30D6\u30FB\u30AF\u30EA\u30A2\u72B6\u6CC1\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u306B\u306F\u6B8B\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-2"
-    }, EXTREME_DEBUG_DIFFICULTIES.map(setting => /*#__PURE__*/React.createElement("div", {
-      key: setting.id,
-      className: `rounded-xl border px-3 py-2 ${setting.available ? 'border-fuchsia-400 bg-fuchsia-900/40' : 'border-white/10 bg-slate-950/60 opacity-60'}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between gap-2"
-    }, /*#__PURE__*/React.createElement("b", {
-      className: "text-xs text-white"
-    }, setting.label), /*#__PURE__*/React.createElement("span", {
-      className: "text-[9px] font-black text-slate-300"
-    }, setting.available ? setting.japanese : '？？？')), setting.available ? /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] leading-relaxed text-slate-200"
-    }, /*#__PURE__*/React.createElement("span", null, "\u6575HP\u30FB\u653B\u6483 \xD7", setting.power), /*#__PURE__*/React.createElement("span", null, "\u30B9\u30B3\u30A2 \xD7", setting.score), /*#__PURE__*/React.createElement("span", null, "\u7D4C\u9A13\u5024 \xD7", setting.xp), /*#__PURE__*/React.createElement("span", null, "\u30C0\u30A4\u30E4 \xD7", setting.gold), /*#__PURE__*/React.createElement("span", null, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC \xD7", setting.psyche), /*#__PURE__*/React.createElement("span", null, "\u6559\u3048\u52B9\u679C \xD7", setting.teachingEffect)) : /*#__PURE__*/React.createElement("div", {
-      className: "mt-1 text-center text-[10px] tracking-[.25em] text-slate-500"
-    }, "\uFF1F\uFF1F\uFF1F")))), /*#__PURE__*/React.createElement("button", {
-      disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || getActiveMonsterList().length === 0,
-      onClick: () => startDebugBattle(true),
-      className: "w-full mt-3 min-h-[48px] rounded-xl bg-fuchsia-600 text-white text-xs font-black disabled:opacity-30"
-    }, "EXTREME\u3067\u9078\u629E\u4E2D\u306E\u6575\u3068\u6226\u3046")), /*#__PURE__*/React.createElement("section", {
+    }, "\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("button", {
+      "data-debug-battle-mode": true,
+      onClick: () => {
+        debugBattleRef.current = true;
+        debugExtremeRef.current = false;
+        setDebugBattle(true);
+        setDebugExtreme(false);
+        setBattleMode(BATTLE_MODE_CHALLENGE);
+        setModeSelectTab('mode');
+        setGameState('BATTLE_MODE_SELECT');
+      },
+      className: "w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black"
+    }, "\u2694\uFE0F \u30D0\u30C8\u30EB\u30E2\u30FC\u30C9", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-fuchsia-300"
+    }, "\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u3092\u542B\u3080\u8A66\u9A13\u7528\u30E2\u30FC\u30C9\u9078\u629E\u30FB\u7D50\u679C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("section", {
       className: "rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-pink-300 font-black mb-2"
