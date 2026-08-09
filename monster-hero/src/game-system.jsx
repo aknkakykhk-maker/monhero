@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-09 23:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 00:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2688,6 +2688,16 @@ const DIFFICULTY_SETTINGS = {
   Hell:        { label: "Hell",         power: 8.0,  score: 12.0, gold: 3.0,  bg: '#7f1d1d', text: '#f87171', color: "bg-red-900", shadow: "shadow-red-900/60" },
   Legend:      { label: "Legend",       power: 10.0, score: 18.0, gold: 4.0,  bg: '#be185d', text: '#f9a8d4', color: "bg-pink-700", shadow: "shadow-pink-600/60" },
 };
+// 本番の難易度一覧・保存・ランキングへ混ぜない、デバッグ検証専用の極限チャレンジ設定。
+// 未決定の将来難易度には数値を持たせず、EXTREMEだけを実戦で使用する。
+const EXTREME_DEBUG_DIFFICULTIES = Object.freeze([
+  { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:75, teachingEffect:0.5 },
+  { id:'NIGHTMARE', label:'NIGHTMARE', available:false },
+  { id:'CHAOS', label:'CHAOS', available:false },
+  { id:'ULTIMATE', label:'ULTIMATE', available:false },
+  { id:'INFINITY', label:'INFINITY', available:false },
+]);
+const EXTREME_DEBUG_SETTING = EXTREME_DEBUG_DIFFICULTIES[0];
 const normalizeBattleDifficulty = (value) => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
@@ -3115,11 +3125,11 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
 };
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
-const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null) => {
+const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null) => {
   const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
   const base = ENEMY_DATA[enemyKey];
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
-  const mod = DIFFICULTY_SETTINGS[safeDifficulty].power;
+  const mod = Number.isFinite(Number(powerOverride)) ? Number(powerOverride) : DIFFICULTY_SETTINGS[safeDifficulty].power;
   const baseHp = Number.isFinite(Number(base?.baseHp)) ? Math.max(1, Number(base.baseHp)) : 1;
   const baseAtk = Number.isFinite(Number(base?.baseAtk)) ? Math.max(0, Number(base.baseAtk)) : 0;
   return {
@@ -4274,12 +4284,15 @@ function MonsterHeroGame() {
   // 敗北・諦め・勝利の非同期処理が通常の保存処理へ入る前に必ず判定できるようにする。
   const [debugBattle, setDebugBattle] = useState(false);
   const debugBattleRef = useRef(false);
+  const [debugExtreme, setDebugExtreme] = useState(false);
+  const debugExtremeRef = useRef(false);
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
 
-  const scoreMultiplier = useMemo(() => DIFFICULTY_SETTINGS[safeDifficulty].score, [safeDifficulty]);
-  const goldMultiplier = useMemo(() => DIFFICULTY_SETTINGS[safeDifficulty].gold, [safeDifficulty]);
+  const scoreMultiplier = debugExtreme ? EXTREME_DEBUG_SETTING.score : DIFFICULTY_SETTINGS[safeDifficulty].score;
+  const xpMultiplier = debugExtreme ? EXTREME_DEBUG_SETTING.xp : scoreMultiplier;
+  const goldMultiplier = debugExtreme ? EXTREME_DEBUG_SETTING.gold : DIFFICULTY_SETTINGS[safeDifficulty].gold;
   const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);
   const effectiveMaxGuts = useMemo(() => resolveEffectiveMaxStat(maxGuts, getPermaBuff('muaGutsPct')), [maxGuts, permaBuffs]);
   // 丈夫さのバフ(defPct)を乗せた「実際に計算へ使う丈夫さ」。ライフ・ガッツと同じ考え方で、
@@ -6755,8 +6768,9 @@ function MonsterHeroGame() {
 
   const returnToHome = () => {
     debugBattleRef.current = false;
+    debugExtremeRef.current = false;
     debugResultRef.current = false;
-    setDebugBattle(false);
+    setDebugBattle(false); setDebugExtreme(false);
     setDebugOutcome(null);
     beginNewRankingRun({ runIdRef, scoreSubmittedRef, runFinalizingRef, rewardsAwardedRef, clearRecordedRef });
     setRunFinalizing(false);
@@ -7187,7 +7201,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setWaveResult({wave,waveMult,turn:turnCount,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,gainedDistBonus,newDistBonus,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
-    setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
+    setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(debugExtreme?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
     setTimeout(()=>setGameState('WAVE_RESULT'),battleMs(500));
     return true;
   };
@@ -7380,7 +7394,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // 2枚目以降のカードは効果が半減する。ブリーダーカードは対象外で、枚数にも数えない。
       const isBreeder=isBreederCard(card);
       const halved=!isBreeder&&penaltyCardCount>0;
-      const effMul=halved?0.5:1;
+      // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
+      const effMul=isBreeder&&debugExtremeRef.current?EXTREME_DEBUG_SETTING.teachingEffect:(halved?0.5:1);
       if(!isBreeder) penaltyCardCount++;
       if(halved) addPopup('2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
       const slotIdx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
@@ -7391,14 +7406,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if (card.type==='draw') continue;
       if (card.type==='buff'||card.type==='debuff') {
         fireTeachingFx(card.id);
-        if (card.subType==='atk_buff') { addPopup(`攻撃UP!`,'hero','text-red-400 font-black text-2xl drop-shadow-md'); addPermaBuff('atkPct',card.baseValue); localOryoAdd+=card.baseValue; }
-        else if (card.subType==='dmg_cut_buff') { addPopup(`防御UP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=level===0?0.03:(level===1?0.06:0.10); setPermaBuffs(p=>({...p, dmgCutPct:Math.min(0.9,(p.dmgCutPct||0)+cutValue)})); }
+        if (card.subType==='atk_buff') { addPopup(`攻撃UP!`,'hero','text-red-400 font-black text-2xl drop-shadow-md'); addPermaBuff('atkPct',card.baseValue*effMul); localOryoAdd+=card.baseValue*effMul; }
+        else if (card.subType==='dmg_cut_buff') { addPopup(`防御UP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=(level===0?0.03:(level===1?0.06:0.10))*effMul; setPermaBuffs(p=>({...p, dmgCutPct:Math.min(0.9,(p.dmgCutPct||0)+cutValue)})); }
         // かどみうむ: 効果量はdata/breeder.jsのCADMIUM_TIERSに集約している(説明文の生成も同じ値を見る)
-        else if (card.subType==='guts_buff') { const owned=ownedTeachings.find(ot=>ot.id===card.id); const tier=CADMIUM_TIERS[Math.min(owned?owned.evoLevel:0,CADMIUM_TIERS.length-1)]; addPopup(tier.gutsLimit>0?`⚡ ガッツ上限UP!`:`⚡ ガッツ回復UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); if(tier.autoGuts>0) addPermaBuff('gutsRecoverPct',tier.autoGuts); if(tier.gutsLimit>0) addPermaBuff('muaGutsPct',tier.gutsLimit); if(tier.hpLimit>0) addPermaBuff('muaHpPct',tier.hpLimit); if(tier.autoHp>0){ addPermaBuff('autoHpRecovery',tier.autoHp); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md'); } }
+        else if (card.subType==='guts_buff') { const owned=ownedTeachings.find(ot=>ot.id===card.id); const tier=CADMIUM_TIERS[Math.min(owned?owned.evoLevel:0,CADMIUM_TIERS.length-1)]; addPopup(tier.gutsLimit>0?`⚡ ガッツ上限UP!`:`⚡ ガッツ回復UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); if(tier.autoGuts>0) addPermaBuff('gutsRecoverPct',tier.autoGuts*effMul); if(tier.gutsLimit>0) addPermaBuff('muaGutsPct',tier.gutsLimit*effMul); if(tier.hpLimit>0) addPermaBuff('muaHpPct',tier.hpLimit*effMul); if(tier.autoHp>0){ addPermaBuff('autoHpRecovery',tier.autoHp*effMul); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md'); } }
         else if (card.subType==='stun_atsu') {
           immediateInvincible=true; setImmediateTurnBuff('invincible',true);
           const stunMon=slots[slotIdx];
-          const d=getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false); totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
+          const d=Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul); totalDmg+=d; attackCount++; attackHits.push({dmg:d, isCrit:false, slotIdx});
           // 勇者特性「連撃」: ザンが勇者モンの時、ザンの攻撃(あつの挑発シリーズ含む)に連撃ヒットを追加
           if (stunMon?.id==='Zan' && mainHero?.id==='Zan') {
             const comboBase=Math.floor(d*(0.3+getPermaBuff('comboDmgPct')));
@@ -7410,7 +7425,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             }
           }
         }
-        else if (card.subType==='buff_myaru') { setNextTurnBuff('atkMult',card.baseValue); const selfDmgAmt=Math.floor(hpBeforeEnemyAttack*card.selfDmg); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black'); hpBeforeEnemyAttack=Math.max(1,hpBeforeEnemyAttack-selfDmgAmt); setHp(hpBeforeEnemyAttack); }
+        else if (card.subType==='buff_myaru') { setNextTurnBuff('atkMult',1+(card.baseValue-1)*effMul); const selfDmgAmt=Math.floor(hpBeforeEnemyAttack*card.selfDmg*effMul); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black'); hpBeforeEnemyAttack=Math.max(1,hpBeforeEnemyAttack-selfDmgAmt); setHp(hpBeforeEnemyAttack); }
       }
       else if (card.type==='heal') {
         Audio_.se.heal();
@@ -7419,13 +7434,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (card.id==='mua') {
           let hpRecRate=level===1?0.7:(level>=2?0.9:0.5), gutsRecRate=level>=1?(level>=2?0.9:0.7):0;
           let hpB=level===1?0.05:(level>=2?0.08:0.03), atkB=level>=2?0.05:0.03, gutsB=level>=2?0.05:0.03;
-          const healVal=Math.floor(effectiveMaxHp*hpRecRate); totalHeal+=healVal;
-          addPermaBuff('muaHpPct',hpB); addPermaBuff('muaAtkPct',atkB); addPermaBuff('muaGutsPct',gutsB);
-          if(gutsRecRate>0){const gv=Math.floor(effectiveMaxGuts*gutsRecRate); setGuts(p=>Math.min(effectiveMaxGuts,p+gv)); addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
+          const healVal=Math.floor(effectiveMaxHp*hpRecRate*effMul); totalHeal+=healVal;
+          addPermaBuff('muaHpPct',hpB*effMul); addPermaBuff('muaAtkPct',atkB*effMul); addPermaBuff('muaGutsPct',gutsB*effMul);
+          if(gutsRecRate>0){const gv=Math.floor(effectiveMaxGuts*gutsRecRate*effMul); setGuts(p=>Math.min(effectiveMaxGuts,p+gv)); addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
         } else {
-          const healVal=Math.floor(effectiveMaxHp*(0.5+level*0.2)); totalHeal+=healVal;
-          addPermaBuff('muaHpPct',0.10); addPermaBuff('muaAtkPct',0.05); addPermaBuff('muaGutsPct',0.10);
-          if(level>=1){const gv=Math.floor(effectiveMaxGuts*(0.5+level*0.2)); setGuts(p=>Math.min(effectiveMaxGuts,p+gv)); addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
+          const healVal=Math.floor(effectiveMaxHp*(0.5+level*0.2)*effMul); totalHeal+=healVal;
+          addPermaBuff('muaHpPct',0.10*effMul); addPermaBuff('muaAtkPct',0.05*effMul); addPermaBuff('muaGutsPct',0.10*effMul);
+          if(level>=1){const gv=Math.floor(effectiveMaxGuts*(0.5+level*0.2)*effMul); setGuts(p=>Math.min(effectiveMaxGuts,p+gv)); addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
         }
       }
       else if (card.type!=='guard'&&card.type!=='weak_guard') {
@@ -7870,7 +7885,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const computeGuardLevel = (defVal) => Math.max(0, Math.min(GUARD_EVOLUTION.length - 1, Math.floor((defVal || 0) / 100)));
 
   const spawnEnemy = useCallback((w, forcedEnemyKey=null, initialDistance=null) => {
-    const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey);
+    const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,debugExtremeRef.current?EXTREME_DEBUG_SETTING.power:null);
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する
     if (!forcedEnemyKey) {
@@ -7967,8 +7982,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     battleSpeedRef.current = 1;
     setBattleSpeed(1);
     debugBattleRef.current = true;
+    debugExtremeRef.current = false;
     debugResultRef.current = false;
-    setDebugBattle(true); setDebugOutcome(null); setGaveUp(false);
+    setDebugBattle(true); setDebugExtreme(false); setDebugOutcome(null); setGaveUp(false);
     setScore(0); setWaveHistory([]); setFinalRewardSummary(null);
     setPermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); setNextTurnBuffs({});
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
@@ -8024,8 +8040,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setBattleTutorialStep(null);
     setBattleTutorialReturn('DEBUG_SETTINGS');
     debugBattleRef.current = false;
+    debugExtremeRef.current = false;
     debugResultRef.current = false;
-    setDebugBattle(false); setDebugOutcome(null); setGaveUp(false);
+    setDebugBattle(false); setDebugExtreme(false); setDebugOutcome(null); setGaveUp(false);
     setCurrentPickingMon(null);
     const savedSpeed = normalizeBattleSpeed(await storeGet(BATTLE_SPEED_KEY, 1, false));
     battleSpeedRef.current = savedSpeed;
@@ -8125,7 +8142,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return () => { cancelled = true; clearTimeout(timer); };
   }, [battleTutorialStep, gameState, currentPickingMon]);
 
-  const startDebugBattle = () => {
+  const startDebugBattle = (extreme=false) => {
     const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
     const party = getActiveMonsterList().slice(0, 4);
     if (!option || party.length === 0) return;
@@ -8140,8 +8157,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const uniques = debugSlots.filter(Boolean).map(mon => ({...mon.unique,evoLevel:0}));
     const teachings = getActiveTeachingCards().map(card => ({...card,evoLevel:0,uid:Math.random()}));
     debugBattleRef.current = true;
+    debugExtremeRef.current = extreme;
     debugResultRef.current = false;
-    setDebugBattle(true); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
+    setDebugBattle(true); setDebugExtreme(extreme); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
     setPermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); setNextTurnBuffs({});
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
@@ -9034,7 +9052,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {difficulties.map(([key,setting])=>{const active=key===safeDifficulty;return <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}><div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div><h3 className="text-center text-lg font-black leading-tight" style={{color:setting.text}}>{setting.label}</h3>{(()=>{const rec=recordBox(key);return(
                 <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"><small className="block text-[8px] text-slate-400 font-black">{rec.label}</small><b className={`block text-right text-base leading-tight ${rec.valueColor}`}>{rec.value}</b><span className="block text-right text-[9px] text-amber-300">{rec.sub}</span></div>
               );})()}<div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div><div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div><div className="grid gap-1.5 mt-1.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button>{/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
-                ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}<button disabled={!!battleTutorial&&key!=='Beginner'} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す。
+                ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}<button disabled={!!battleTutorial&&key!=='Beginner'} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;debugExtremeRef.current=false;setDebugBattle(false);setDebugExtreme(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す。
                 スキップはクイックモード専用。チャレンジで使えるとスコアを出さずに報酬だけ取れてしまい、
                 ランキングを競う意味が薄れるため */}{(()=>{const tid=SKIP_TICKETS[key];if(!quick)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">スキップはクイックモード専用</div>);if(!tid)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">この難易度はスキップできません</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1 py-0.5">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
               {/* ランキングへの導線はモードのタブのすぐ下へ移したので、ここには助手コメントだけを置く */}
@@ -9174,7 +9192,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               ベースモンのタブで開く。編成(マスモン入り)は使えない */}
                           {/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
                               ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}
-                          <button disabled={(pro&&!proReady)||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setProAllyPool([]);setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
+                          <button disabled={(pro&&!proReady)||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;debugExtremeRef.current=false;setDebugBattle(false);setDebugExtreme(false);setDebugOutcome(null);setProAllyPool([]);setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
                           {/* 難易度カードからもランキングへ入れる。ここから開いたときは、この難易度のタブが最初に選ばれる */}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
                           {/* スキップはクイックモード専用。チケットが無い難易度では出さない */}
@@ -9287,6 +9305,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
             <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
+              <section className="rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 p-3" data-extreme-debug>
+                <div className="text-sm text-fuchsia-200 font-black mb-1">🔥 極限チャレンジ検証</div>
+                <p className="text-[9px] leading-relaxed text-slate-300 mb-3">デバッグ専用です。結果と報酬は表示だけで、セーブ・クリア状況・ランキングには残りません。</p>
+                <div className="space-y-2">
+                  {EXTREME_DEBUG_DIFFICULTIES.map(setting=><div key={setting.id} className={`rounded-xl border px-3 py-2 ${setting.available?'border-fuchsia-400 bg-fuchsia-900/40':'border-white/10 bg-slate-950/60 opacity-60'}`}>
+                    <div className="flex items-center justify-between gap-2"><b className="text-xs text-white">{setting.label}</b><span className="text-[9px] font-black text-slate-300">{setting.available?setting.japanese:'？？？'}</span></div>
+                    {setting.available?<div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] leading-relaxed text-slate-200"><span>敵HP・攻撃 ×{setting.power}</span><span>スコア ×{setting.score}</span><span>経験値 ×{setting.xp}</span><span>ダイヤ ×{setting.gold}</span><span>虹のプシュケー ×{setting.psyche}</span><span>教え効果 ×{setting.teachingEffect}</span></div>:<div className="mt-1 text-center text-[10px] tracking-[.25em] text-slate-500">？？？</div>}
+                  </div>)}
+                </div>
+                <button disabled={!getDebugEnemyOptions(difficulty).some(o=>o.key===debugEnemyKey)||getActiveMonsterList().length===0} onClick={()=>startDebugBattle(true)} className="w-full mt-3 min-h-[48px] rounded-xl bg-fuchsia-600 text-white text-xs font-black disabled:opacity-30">EXTREMEで選択中の敵と戦う</button>
+              </section>
               {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
               <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
                 <div className="text-[10px] text-pink-300 font-black mb-2">💖 みゅあデバッグ</div>
@@ -10674,7 +10703,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='BATTLE'&&(
           <div className="flex-1 flex flex-col h-full" data-battle-speed={battleSpeed}>
             <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
-              <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</span></div>
+              <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{debugExtreme?'極限チャレンジ / EXTREME':<>{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
               <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
                 <div data-battle-turn className="flex flex-col items-center justify-center whitespace-nowrap font-black text-blue-400"><span className="flex items-center gap-0.5 text-[7px] tracking-wide"><Timer size={7}/>TURN</span><span className="mt-0.5 text-[10px] font-mono">{turnCount}/20</span></div>
                 {!isQuickMode(runMode)&&<div data-battle-score className="flex min-w-[64px] flex-col items-end justify-center whitespace-nowrap font-mono font-black text-amber-500"><span className="flex items-center gap-0.5 text-[7px] tracking-wide"><Award size={7}/>SCORE</span><span data-battle-score-value className="mt-0.5 text-[10px] tabular-nums">{score.toLocaleString()}</span></div>}
@@ -11971,7 +12000,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {!isQuickMode(runMode)&&(<>
             <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">WAVE ボーナス ({waveResult.wave} WAVE)</span><span className="text-yellow-400 font-mono font-black text-base">x{waveResult.waveMult.toFixed(2)}</span></div>
             <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">残りターン数ボーナス ({waveResult.remainingTurns})</span><span className="text-blue-400 font-mono font-black text-base">x{waveResult.turnMult.toFixed(2)}</span></div>
-            <div className="pt-1 flex flex-col gap-0.5 text-right"><div className="text-[9px] text-slate-500 font-bold uppercase italic">難易度ボーナス ({difficulty}): x{scoreMultiplier}</div><div className="flex justify-between items-end"><span className="text-indigo-400 text-xs font-black uppercase">獲得スコア</span><span className="text-white font-mono font-black text-xl">{waveResult.roundScore.toLocaleString()}</span></div></div>
+            <div className="pt-1 flex flex-col gap-0.5 text-right"><div className="text-[9px] text-slate-500 font-bold uppercase italic">難易度ボーナス ({debugExtreme?'EXTREME':difficulty}): x{scoreMultiplier}</div><div className="flex justify-between items-end"><span className="text-indigo-400 text-xs font-black uppercase">獲得スコア</span><span className="text-white font-mono font-black text-xl">{waveResult.roundScore.toLocaleString()}</span></div></div>
             <div className="pt-1 flex justify-between items-end border-t border-white/20"><span className="text-amber-500 text-[11px] font-black uppercase">累計スコア</span><span className="text-amber-400 font-mono font-black text-lg">{waveResult.totalScore.toLocaleString()}</span></div>
             </>)}
           </div>
@@ -12100,7 +12129,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
           <footer className="shrink-0 p-4 bg-slate-900 border-t border-white/10 text-center" style={{backgroundColor:'#0f172a',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <button onClick={()=>setShowHelp(false)} className="w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm shadow-2xl active:scale-95">わかった！冒険に戻る</button>
-            <button aria-label="" onClick={()=>{const options=getDebugEnemyOptions(difficulty);setDebugEnemyKey(options[0]?.key||null);debugBattleRef.current=false;setDebugBattle(false);setDebugOutcome(null);setShowHelp(false);setGameState('DEBUG_SETTINGS');}} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
+            <button aria-label="" onClick={()=>{const options=getDebugEnemyOptions(difficulty);setDebugEnemyKey(options[0]?.key||null);debugBattleRef.current=false;debugExtremeRef.current=false;setDebugBattle(false);setDebugExtreme(false);setDebugOutcome(null);setShowHelp(false);setGameState('DEBUG_SETTINGS');}} className="mt-5 mx-auto block text-[10px] opacity-25 hover:opacity-40 active:opacity-60">💊</button>
           </footer>
         </div>);
       })()}
@@ -12447,9 +12476,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {debugBattle&&debugOutcome&&(
         <div className="fixed inset-0 flex flex-col items-center justify-center p-6 text-center" style={{position:'fixed',inset:0,zIndex:81000,backgroundColor:'rgba(2,6,23,.98)'}}>
           <div className="text-[10px] font-black text-fuchsia-300 tracking-[.35em] mb-3">DEBUG</div>
-          <h2 className="text-2xl font-black text-white mb-8">{debugOutcome==='win'?'勝利':debugOutcome==='lose'?'敗北':'リタイア'}</h2>
+          <h2 className="text-2xl font-black text-white mb-4">{debugOutcome==='win'?'勝利':debugOutcome==='lose'?'敗北':'リタイア'}</h2>
+          {debugExtreme&&<div className="w-full max-w-xs mb-4 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/30 p-3 text-left">
+            <div className="text-[10px] text-fuchsia-200 font-black mb-2">EXTREME 検証結果（保存されません）</div>
+            <div className="grid grid-cols-2 gap-1 text-[10px] text-slate-200"><span>今回のスコア</span><b className="text-right">{score.toLocaleString()}</b><span>10WAVE 経験値</span><b className="text-right">{xpForWavesCleared(10,EXTREME_DEBUG_SETTING.xp).toLocaleString()}</b><span>10WAVE ダイヤ</span><b className="text-right">{goldForWavesCleared(10,EXTREME_DEBUG_SETTING.gold).toLocaleString()}</b><span>クリア時プシュケー</span><b className="text-right">{EXTREME_DEBUG_SETTING.psyche}</b></div>
+          </div>}
           <div className="w-full max-w-xs space-y-3">
-            <button onClick={()=>runResultActionOnce(startDebugBattle)} disabled={resultActionPending} className="w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">同じ条件でもう一度</button>
+            <button onClick={()=>runResultActionOnce(()=>startDebugBattle(debugExtreme))} disabled={resultActionPending} className="w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50">同じ条件でもう一度</button>
             <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('DEBUG_SETTINGS');})} disabled={resultActionPending} className="w-full bg-slate-800 text-slate-200 py-3.5 rounded-2xl font-black disabled:opacity-50">デバッグ設定へ戻る</button>
             <button onClick={()=>runResultActionOnce(()=>{returnToHome();setGameState('SETTINGS');openHelp();})} disabled={resultActionPending} className="w-full bg-slate-900 border border-white/10 text-slate-400 py-3.5 rounded-2xl font-black disabled:opacity-50">ヘルプへ戻る</button>
           </div>
