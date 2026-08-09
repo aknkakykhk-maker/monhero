@@ -56,8 +56,11 @@ check('ブリーダーカードは枚数に数えない(実処理)', has('if(!is
 check('ガードの軽減量を半減する',
   has('currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul') && has('currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul'));
 check('弱ガードも同じ扱い', has('GUARD_EVOLUTION[guardLevel].flat*0.5*effMul'));
+// getDmgの引数は後ろへ増えることがある(絶氷の楔の判定を足した等)ので、
+// 半減の判定に「攻撃枚数」ではなく halved を渡していることだけを見る
 check('攻撃ダメージの半減が枚数基準になっている',
-  has('getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist)') && !has('localDmgModAdd,attackCount>0,attackStartDist'));
+  /getDmg\(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist[,)]/.test(source)
+    && !has('localDmgModAdd,attackCount>0,attackStartDist'));
 check('あつの挑発(ブリーダーカード)の攻撃は半減しない', has('getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)'));
 // 効果量そのものはバランス調整で変わるので、数字ではなく「*effMul が掛かっているか」を見る。
 // (実際にゴーレムの闘志を 0.1 → 0.075 にしたときここが落ちた。見たいのは半減の結線であって

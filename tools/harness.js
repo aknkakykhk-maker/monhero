@@ -33,6 +33,7 @@ const EXPORTED_NAMES = [
   'MASU_COLOR_REGION_SIZE_OVERRIDES',
   'dyeRegionCount',
   'getDyeRegionMasks',
+  'getRecoloredImage',
   '_classifyDyePixel',
   '_isExcludedDyePixel',
   '_getSmoothParams',
@@ -101,6 +102,18 @@ function makeBrowserStubs() {
   // Babelだけを用意した軽量な環境でも build.js を実行できるようにする。
   const { createCanvas, Image, loadImage } = require('canvas');
   const noop = () => {};
+  // 本体は new window.Image() に "images/monsters/xxx.png?v=..." のような
+  // 配信時の相対パスを渡す。node-canvas の Image はブラウザと違って
+  // 相対パスもキャッシュキー(?v=)も解決できず、そのまま渡すと必ず onerror になり
+  // 染色マスクが1体も作れなくなる(画像をbase64から実ファイルへ移したときに壊れた)。
+  // ここで実ファイルの絶対パスへ直してから本物のsrcへ渡す。
+  class BrowserImage extends Image {
+    set src(value) {
+      const str = String(value);
+      super.src = (str.startsWith('data:') || path.isAbsolute(str)) ? str : imageFilePath(str);
+    }
+    get src() { return super.src; }
+  }
   const makeEl = (tag) => {
     if (tag === 'canvas') return createCanvas(1, 1);
     return {
@@ -132,7 +145,7 @@ function makeBrowserStubs() {
   };
   const ReactDOM = { createRoot: () => ({ render: noop, unmount: noop }), render: noop };
   const windowStub = {
-    Image, document: documentStub, React, ReactDOM,
+    Image: BrowserImage, document: documentStub, React, ReactDOM,
     localStorage: (() => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), clear: () => m.clear() }; })(),
     location: { href: 'http://localhost/', search: '', hash: '', reload: noop },
     navigator: { userAgent: 'node', language: 'ja' },
@@ -145,7 +158,7 @@ function makeBrowserStubs() {
     fetch: () => Promise.reject(new Error('fetch is stubbed')),
     AudioContext: function () { return { createOscillator: () => ({ connect: noop, start: noop, stop: noop, frequency: { value: 0, setValueAtTime: noop } }), createGain: () => ({ connect: noop, gain: { value: 0, setValueAtTime: noop, exponentialRampToValueAtTime: noop } }), destination: {}, currentTime: 0, resume: () => Promise.resolve(), state: 'running' }; },
   };
-  return { windowStub, documentStub, React, ReactDOM, Image };
+  return { windowStub, documentStub, React, ReactDOM, Image: BrowserImage };
 }
 
 // 画像系ツール向けの互換エクスポート。canvas は呼び出されたときだけ読み込み、
