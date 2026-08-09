@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 05cc8f1643cec3c6
+// source-sha256: 6309cce758768399
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-09 21:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-09 22:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16628,6 +16628,7 @@ function MonsterHeroGame() {
     }), "\u8EE2\u751F"))), gameState === 'MASU_REGENERATION' && (() => {
       const cost = regenerationUsed ? REGENERATION_COST : 0;
       const unlocked = Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
+      const selectedBase = regenerationSelectedId ? ALL_PLAYER_MONSTERS[regenerationSelectedId] : null;
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full min-h-0 p-4",
         style: {
@@ -16635,7 +16636,7 @@ function MonsterHeroGame() {
           paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
         }
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-2 mb-3"
+        className: "flex items-center gap-2 mb-3 shrink-0"
       }, /*#__PURE__*/React.createElement("button", {
         disabled: regenerationProcessing,
         onClick: () => setGameState('TEMPLE'),
@@ -16645,27 +16646,46 @@ function MonsterHeroGame() {
       })), /*#__PURE__*/React.createElement("h2", {
         className: "text-xl font-black italic text-violet-300"
       }, "\u518D\u751F")), /*#__PURE__*/React.createElement("p", {
-        className: "text-[10px] text-slate-300 mb-2"
+        className: "text-[10px] text-slate-300 mb-2 shrink-0"
       }, "\u6240\u6301\u30FB\u89E3\u653E\u6E08\u307F\u306E\u30D9\u30FC\u30B9\u30E2\u30F3\u304B\u3089\u3001\u65B0\u3057\u3044\u500B\u4F53\u3092\u518D\u751F\u3057\u307E\u3059\u3002\u521D\u56DE\u7121\u6599\u3001\u4EE5\u964D100\u30C0\u30A4\u30E4\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-        className: "text-center text-amber-300 font-black mb-2"
+        className: "text-center text-amber-300 font-black mb-2 shrink-0"
       }, "\u5FC5\u8981\u30C0\u30A4\u30E4 ", cost), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-2 overflow-y-auto mh-scroll"
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-3 gap-2"
       }, unlocked.map(base => /*#__PURE__*/React.createElement("button", {
         key: base.id,
         disabled: regenerationProcessing,
+        "aria-pressed": regenerationSelectedId === base.id,
         onClick: () => setRegenerationSelectedId(base.id),
-        className: `rounded-xl border p-2 ${regenerationSelectedId === base.id ? 'border-amber-300 bg-violet-800' : 'border-violet-500/30 bg-slate-900'}`
+        className: `rounded-xl border p-2 ${regenerationSelectedId === base.id ? 'border-amber-300 bg-violet-800 ring-2 ring-amber-300/30' : 'border-violet-500/30 bg-slate-900'}`
       }, /*#__PURE__*/React.createElement("img", {
         src: base.iconUrl,
         alt: base.name,
-        className: "w-16 h-16 mx-auto object-contain"
+        className: "w-16 h-16 max-w-full mx-auto object-contain"
       }), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-black truncate"
-      }, base.name)))), /*#__PURE__*/React.createElement("button", {
+      }, base.name)))), selectedBase && /*#__PURE__*/React.createElement("section", {
+        className: "mt-3 space-y-2",
+        "aria-live": "polite",
+        "aria-label": `選択中のベースモン ${selectedBase.name} の詳細`
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2 px-1"
+      }, /*#__PURE__*/React.createElement("img", {
+        src: selectedBase.iconUrl,
+        alt: "",
+        className: "w-10 h-10 object-contain shrink-0"
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-amber-300 font-black"
+      }, "\u9078\u629E\u4E2D\u306E\u30D9\u30FC\u30B9\u30E2\u30F3"), /*#__PURE__*/React.createElement("h3", {
+        className: "text-sm text-white font-black truncate"
+      }, selectedBase.name))), renderDetailSectionLabel('この個体の強さ', '総合力に反映されます'), renderMonsterDetailInfo(selectedBase)), /*#__PURE__*/React.createElement("button", {
         disabled: !regenerationSelectedId || gold < cost || regenerationProcessing,
         onClick: executeMasuRegeneration,
-        className: "mt-3 min-h-[48px] bg-violet-600 rounded-2xl font-black disabled:opacity-30"
-      }, regenerationProcessing ? '再生中…' : gold < cost ? 'ダイヤが不足しています' : '再生する'));
+        className: "mt-3 w-full min-h-[48px] bg-violet-600 rounded-2xl font-black disabled:opacity-30"
+      }, regenerationProcessing ? '再生中…' : gold < cost ? 'ダイヤが不足しています' : '再生する')));
     })(), gameState === 'MASU_REBIRTH' && (() => {
       const selected = masuMons.find(m => String(m.id) === String(rebirthSelectedId));
       if (!selected) {
@@ -17183,29 +17203,42 @@ function MonsterHeroGame() {
         disabled: donationProcessing,
         className: "flex-[2] bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3 rounded-2xl font-black text-xs shadow-lg disabled:opacity-40"
       }, donationProcessing ? '処理中…' : `寄付して${diamonds.toLocaleString()}ダイヤを受け取る`))));
-    })(), regenerationResult && /*#__PURE__*/React.createElement("div", {
-      className: "mh-regeneration-animation",
-      role: "dialog",
-      "aria-modal": "true"
-    }, /*#__PURE__*/React.createElement("img", {
-      src: REGENERATION_DISC_IMAGE,
-      alt: "\u5186\u76E4\u77F3",
-      className: "mh-regeneration-disc"
-    }), /*#__PURE__*/React.createElement("div", {
-      className: "mh-regeneration-born"
-    }, /*#__PURE__*/React.createElement("img", {
-      src: regenerationResult.base.iconUrl,
-      alt: regenerationResult.masu.name,
-      className: "w-28 h-28 object-contain mx-auto"
-    }), /*#__PURE__*/React.createElement("h3", null, "\u30E2\u30F3\u30B9\u30BF\u30FC\u8A95\u751F\uFF01"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-1 text-[11px] text-left mt-2"
-    }, /*#__PURE__*/React.createElement("span", null, "\u30E9\u30A4\u30D5 ", /*#__PURE__*/React.createElement("b", null, regenerationResult.masu.individualStats.hp)), /*#__PURE__*/React.createElement("span", null, "\u3061\u304B\u3089 ", /*#__PURE__*/React.createElement("b", null, regenerationResult.masu.individualStats.atk)), /*#__PURE__*/React.createElement("span", null, "\u4E08\u592B\u3055 ", /*#__PURE__*/React.createElement("b", null, regenerationResult.masu.individualStats.def)), /*#__PURE__*/React.createElement("span", null, "\u30AC\u30C3\u30C4 ", /*#__PURE__*/React.createElement("b", null, regenerationResult.masu.individualStats.guts))), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        setRegenerationResult(null);
-        setRegenerationSelectedId(null);
-      },
-      className: "mt-4 w-full py-3 bg-amber-500 text-black rounded-xl font-black"
-    }, "\u5B8C\u4E86"))), levelCapCompensation && /*#__PURE__*/React.createElement("div", {
+    })(), regenerationResult && (() => {
+      const statRows = [['ライフ', 'hp', 'baseHp'], ['ちから', 'atk', 'baseAtk'], ['丈夫さ', 'def', 'baseDef'], ['ガッツ', 'guts', 'baseGuts']];
+      return /*#__PURE__*/React.createElement("div", {
+        className: "mh-regeneration-animation",
+        role: "dialog",
+        "aria-modal": "true"
+      }, /*#__PURE__*/React.createElement("img", {
+        src: REGENERATION_DISC_IMAGE,
+        alt: "\u5186\u76E4\u77F3",
+        className: "mh-regeneration-disc"
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "mh-regeneration-born"
+      }, /*#__PURE__*/React.createElement("img", {
+        src: regenerationResult.base.iconUrl,
+        alt: regenerationResult.masu.name,
+        className: "w-28 h-28 object-contain mx-auto"
+      }), /*#__PURE__*/React.createElement("h3", null, "\u30E2\u30F3\u30B9\u30BF\u30FC\u8A95\u751F\uFF01"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-slate-400 font-bold mt-1"
+      }, "\u30D9\u30FC\u30B9\u30E2\u30F3\u306E\u57FA\u790E\u5024\u3068\u306E\u5DEE"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-1 text-[11px] text-left mt-2"
+      }, statRows.map(([label, key, baseKey]) => {
+        const value = regenerationResult.masu.individualStats[key];
+        const delta = value - regenerationResult.base[baseKey];
+        return /*#__PURE__*/React.createElement("span", {
+          key: key
+        }, label, " ", /*#__PURE__*/React.createElement("b", null, value, " ", /*#__PURE__*/React.createElement("small", {
+          className: `text-[9px] ${delta > 0 ? 'text-emerald-300' : delta < 0 ? 'text-red-300' : 'text-slate-400'}`
+        }, "\uFF08", delta > 0 ? '+' : delta < 0 ? '' : '±', delta, "\uFF09")));
+      })), /*#__PURE__*/React.createElement("button", {
+        onClick: () => {
+          setRegenerationResult(null);
+          setRegenerationSelectedId(null);
+        },
+        className: "mt-4 w-full py-3 bg-amber-500 text-black rounded-xl font-black"
+      }, "\u5B8C\u4E86")));
+    })(), levelCapCompensation && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
         position: 'fixed',
