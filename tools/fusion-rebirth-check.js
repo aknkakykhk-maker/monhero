@@ -30,15 +30,17 @@ vm.runInContext([
   grab('const XP_CURVE_EXPONENT', 'const bondLevelInfo ='),
   grab('const bondLevelInfo =', 'const rosterBaseId ='),
   grab('const reconcileMasuPoints', 'const RANGE_STYLES'),
-  'globalThis.__m={bondLevelInfo,totalBondXpForLevel,masuBondLevelInfo,reconcileMasuPoints,buildMasuBreakthrough,masuFusionCost,FUSION_COST_PER_LEVEL,REBIRTH_COST_PER_LEVEL,normalizeMasuProgression};',
+  'globalThis.__m={bondLevelInfo,totalBondXpForLevel,masuBondLevelInfo,reconcileMasuPoints,buildMasuBreakthrough,masuFusionCost,FUSION_INHERIT_COST,FUSION_INHERIT_MIN_SUB_LEVEL,REBIRTH_COST_PER_LEVEL,normalizeMasuProgression};',
 ].join('\n'), ctx);
 const m = ctx.__m;
 
-// --- ② 単価 ---
-check('合体の単価は絆レベル1あたり50ダイヤ', m.FUSION_COST_PER_LEVEL === 50);
-check('転生の単価は絆レベル1あたり50ダイヤ', m.REBIRTH_COST_PER_LEVEL === 50);
-check('合体費用は(主Lv+副Lv)×50', m.masuFusionCost(10, 8) === 900, `${m.masuFusionCost(10, 8)}ダイヤ`);
-check('以前の半額になっている', m.masuFusionCost(10, 8) * 2 === (10 + 8) * 100);
+// --- ② 費用 ---
+// 合体は「技を引き継がなければ無料・引き継ぐときだけ定額」に変わった(絆レベル単価では計算しない)
+check('技を引き継がない合体は無料', m.masuFusionCost(10, 8) === 0, `${m.masuFusionCost(10, 8)}ダイヤ`);
+check('技を引き継ぐ合体は定額', m.masuFusionCost(10, 8, true) === m.FUSION_INHERIT_COST && m.FUSION_INHERIT_COST === 3000,
+  `${m.masuFusionCost(10, 8, true)}ダイヤ`);
+check('技継承には副モンの絆レベル条件がある', m.FUSION_INHERIT_MIN_SUB_LEVEL === 30);
+check('限界突破の単価は絆レベル1あたり50ダイヤ', m.REBIRTH_COST_PER_LEVEL === 50);
 
 const atCap = { id: 1, baseId: 'Golem', bondXp: m.totalBondXpForLevel(30), levelCap: 30, rebirthCount: 0, distAptPoints: 0, statPoints: {}, uniqueSkillLevels: { own: 0 } };
 const rebirth = m.buildMasuBreakthrough({ masu: atCap, skillKey: 'own', gold: 999999, psycheOwned: 999999 });
@@ -65,7 +67,7 @@ check('振り済みのぶんは重複して配らない',
 // --- 画面・実処理の結線 ---
 // 上がったレベルぶんの強化ポイントは applyBondXpGain がまとめて配る。合体もそこを通す
 check('合体の実処理で強化ポイントを配る', has('distAptPoints: (masu.distAptPoints || 0) + gainedLevels') && has('applyBondXpGain(m, gainedXp)'));
-check('確認画面と実処理が同じ費用計算を使う', (source.match(/masuFusionCost\(mainLvl\.level, subLvl\.level\)/g) || []).length === 2);
+check('確認画面と実処理が同じ費用計算を使う', (source.match(/masuFusionCost\(mainLvl\.level, subLvl\.level, fusionInheritUnique\)/g) || []).length === 2);
 check('古い×100の計算が残っていない', !has('(mainLvl.level + subLvl.level) * 100') && !has('const cost = level * 100;'));
 check('確認画面は強化ポイントの増分を出したまま', has('{mainPointsNow} → {mainPointsNow + gainedLevels}'));
 
@@ -127,8 +129,8 @@ check('確認画面に上限を出す', has('上限 Lv.{mainCap}</div>'));
 const rebirthCtx = {};
 vm.createContext(rebirthCtx);
 vm.runInContext([
-  grab('const FUSION_COST_PER_LEVEL =', 'const buildMasuBreakthrough ='),
-  'globalThis.__r={FUSION_COST_PER_LEVEL,REBIRTH_COST_PER_LEVEL,masuFusionCost,masuRebirthCost};',
+  grab('const FUSION_INHERIT_COST =', 'const buildMasuBreakthrough ='),
+  'globalThis.__r={FUSION_INHERIT_COST,REBIRTH_COST_PER_LEVEL,masuFusionCost,masuRebirthCost};',
 ].join('\n'), rebirthCtx);
 const R = rebirthCtx.__r;
 check('転生の費用は「絆レベル × 単価」', R.masuRebirthCost(30) === 30 * R.REBIRTH_COST_PER_LEVEL, `Lv30 → ${R.masuRebirthCost(30)}ダイヤ`);
@@ -147,9 +149,9 @@ check('転生の画面に古い×100の計算が残っていない', !has('cost=
 check('転生の必要ダイヤを独立した枠で出す',
   has('<span className="text-slate-400">必要ダイヤ</span>') && has('<span className="text-slate-500">所持ダイヤ</span>')
     && has('ダイヤが足りません（あと '));
-check('費用の内訳は単価をそのまま出す',
+check('費用の内訳は定義した値をそのまま出す',
   has('（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}')
-    && has('× {FUSION_COST_PER_LEVEL}'));
+    && has('${FUSION_INHERIT_COST} ダイヤ'));
 // 説明に書いた倍率と、実際に使う単価がずれていないか(合体の説明が「×100」のままだった)
 check('合体の説明に書いた倍率が実際の単価と合っている', !/[×x]\s*100(?!\d)/.test(
   source.slice(source.indexOf('必要ダイヤ</span>'), source.indexOf('ダイヤが足りません(所持'))));

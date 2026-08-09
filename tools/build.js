@@ -33,6 +33,25 @@ function readEmbeddedHash() {
   return m ? m[1] : null;
 }
 
+// 書き出す内容そのものを作る関数。--check もこれと丸ごと比べるので、
+// 「先頭の注記がどこで終わるか」を推測する必要がなくなる。
+// (以前は --check 側が「空行までが注記」と決め打ちしていたが、
+//  実際の注記は空行を挟まないため、変換後コードの最初の空行までを注記とみなし、
+//  正しくビルドした直後でも必ず不一致になっていた。GitHub Actions が
+//  ここで必ず落ち、Pagesへの公開が丸ごと止まっていた)
+function buildFileContents(hash, code) {
+  const header = [
+    '// ============================================================',
+    '// このファイルは tools/build.js が game-system.jsx から自動生成したものです。',
+    '// 直接編集しないでください。変更は game-system.jsx に対して行い、',
+    '// リポジトリのルートで `cd tools && node build.js` を実行して作り直します。',
+    `// source-sha256: ${hash}`,
+    '// ============================================================',
+    '',
+  ].join('\n');
+  return header + code + '\n';
+}
+
 if (process.argv.includes('--check')) {
   const hash = sourceHash();
   const embedded = readEmbeddedHash();
@@ -48,10 +67,7 @@ if (process.argv.includes('--check')) {
 
   // ハッシュだけでは、別の変換器で生成したコードへ同じハッシュを付けた不整合を検出できない。
   // 正規ビルドの出力そのものを比較し、tools/build.js 以外による生成物の混入を防ぐ。
-  const headerEnd = fs.readFileSync(OUT_FILE, 'utf8').indexOf('\n\n');
-  const compiledCode = fs.readFileSync(OUT_FILE, 'utf8').slice(headerEnd + 2).trimEnd();
-  const expectedCode = transformGameSystem().trimEnd();
-  if (headerEnd < 0 || compiledCode !== expectedCode) {
+  if (fs.readFileSync(OUT_FILE, 'utf8') !== buildFileContents(hash, transformGameSystem())) {
     console.error('NG: game-system.compiled.js が正規ビルドの出力と一致しません。node tools/build.js を実行してください');
     process.exit(1);
   }
@@ -65,17 +81,8 @@ require('./stamp-version');
 
 const hash = sourceHash();
 const code = transformGameSystem();
-const header = [
-  '// ============================================================',
-  '// このファイルは tools/build.js が game-system.jsx から自動生成したものです。',
-  '// 直接編集しないでください。変更は game-system.jsx に対して行い、',
-  '// リポジトリのルートで `cd tools && node build.js` を実行して作り直します。',
-  `// source-sha256: ${hash}`,
-  '// ============================================================',
-  '',
-].join('\n');
 
-fs.writeFileSync(OUT_FILE, header + code + '\n');
+fs.writeFileSync(OUT_FILE, buildFileContents(hash, code));
 const kb = (fs.statSync(OUT_FILE).size / 1024).toFixed(0);
 console.log(`書き出しました: ${path.relative(process.cwd(), OUT_FILE)} (${kb} KB)`);
 console.log(`source-sha256: ${hash}`);

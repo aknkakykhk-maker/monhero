@@ -86,6 +86,11 @@ Codex クラウドの通信ポリシーによる 403 は、レジストリ変更
    `node tools/help-guide-check.js` / `node tools/help-render-check.js` で更新漏れを検出できる。
 6. 差分を再確認し、依頼された場合にコミット、プッシュ、PR 作成を行う。
 
+GitHub Actions（`.github/workflows/compiled-check.yml`）は、**コミット済みの
+`monster-hero/game-system.compiled.js` をそのまま GitHub Pages へ配信します**。
+CI 側でビルドし直さないため、`node tools/build.js` を忘れたままコミットすると
+`node tools/build.js --check` で落ち、公開もされません（配信物とリポジトリの中身を必ず一致させるための意図的な作りです）。
+
 ## 6. Git / GitHub 運用
 
 - 1コミットは1つの目的に絞り、例として `docs: add AI development guides` のような命令形の件名にする。
