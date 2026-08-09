@@ -27,9 +27,11 @@ jobs:
       - name: Install locked tool dependencies
         working-directory: tools
         run: npm ci --omit=optional
-      - name: Build the canonical compiled output
-        run: node tools/build.js
-      - name: Verify the canonical compiled output
+      # コミット済みの配信用JSが game-system.jsx の正規ビルドと一致していることを先に確かめる。
+      # ここでビルドし直してから確認すると、build.js の実行を忘れたコミットでも必ず通ってしまい、
+      # リポジトリの中身と配信物がずれたまま気付けない(実際にそのまま公開された)。
+      # 配信するのはリポジトリの中身そのものなので、ずれていたら公開せずに落とす。
+      - name: Verify the committed compiled output is canonical
         run: node tools/build.js --check
       - name: Verify the compiled runtime
         run: node tools/compiled-runtime-check.js
@@ -39,6 +41,8 @@ jobs:
           node tools/undefined-reference-check.js
       - name: Check the boot path
         run: node tools/boot-flow-check.js
+      - name: Check the shipped version stamps
+        run: node tools/update-notice-check.js
       - name: Configure GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5

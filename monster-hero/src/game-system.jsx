@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-09 00:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-09 10:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8781,7 +8781,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>
         )}
 
-        {gameState==='TRAINING_INFO'&&<main className="mh-training-screen"><header className="mh-training-head"><button onClick={returnToHome}><ArrowLeft/></button><div><small>COMING SOON</small><h2>修行</h2></div><i/></header><section className="mh-training-confirm"><div className="text-6xl text-center my-6">🎲</div><h3>修行は準備中です</h3><p>マスモンとすごろく形式のマップを進み、さまざまなマス効果や修行道具を使ってゴールを目指す予定です。</p><div className="mh-training-ticket"><b>正式実装前のお知らせ</b><small>通常プレイから修行本編は開始できません。修行チケットの消費、報酬の付与、進行状況の保存も行いません。</small></div></section><footer className="mh-training-footer"><button onClick={returnToHome}>HOMEへ戻る</button></footer></main>}
+        {gameState==='TRAINING_INFO'&&<main className="mh-training-screen"><header className="mh-training-head"><button onClick={returnToHome}><ArrowLeft/></button><div><small>COMING SOON</small><h2>修行</h2></div><i/></header><section className="mh-training-confirm"><div className="text-6xl text-center my-6">🎲</div><h3>修行は準備中です</h3><p>マスモンとすごろく形式のマップを進み、さまざまなマス効果や修行道具を使ってゴールを目指す予定です。</p><div className="mh-training-ticket"><b>正式実装前のお知らせ</b><small>通常プレイから修行本編は開始できません。チケットの消費、報酬の付与、進行状況の保存も行いません。</small></div></section><footer className="mh-training-footer"><button onClick={returnToHome}>HOMEへ戻る</button></footer></main>}
 
         {gameState==='TRAINING_SELECT'&&(()=>{const selected=masuMons.find(m=>String(m.id)===String(trainingSelectedId));return <main className="mh-training-screen"><div className="mh-debug-banner">DEBUG・報酬や進行状況は保存されません</div><header className="mh-training-head"><button onClick={()=>setGameState('DEBUG_SETTINGS')}><ArrowLeft/></button><div><small>TRAINING TEST</small><h2>所持マスモン選択</h2></div><i/></header>{selected&&<section className="mh-training-selected"><DyedMonsterImage baseId={selected.baseId} src={ALL_PLAYER_MONSTERS[selected.baseId]?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)}/><div><b>{selected.name}</b><span>絆Lv.{bondLevelInfo(selected.bondXp||0).level}</span></div></section>}<p className="mh-training-note">デバッグ修行に参加する所持マスモンを1体選択してください。</p><div className="mh-training-mon-list">{masuMons.map(m=><button key={m.id} className={String(m.id)===String(trainingSelectedId)?'active':''} onClick={()=>setTrainingSelectedId(m.id)}><DyedMonsterImage baseId={m.baseId} src={ALL_PLAYER_MONSTERS[m.baseId]?.iconUrl} alt={m.name} masuColors={getMasuColors(m)}/><b>{m.name}</b><small>絆Lv.{bondLevelInfo(m.bondXp||0).level}</small></button>)}</div><footer className="mh-training-footer"><button disabled={!selected} onClick={()=>setGameState('TRAINING_DIFFICULTY')}>難易度選択へ</button></footer></main>})()}
 
