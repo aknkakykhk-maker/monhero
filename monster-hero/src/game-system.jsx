@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-09 22:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-09 23:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9161,6 +9161,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         </div>
                         <div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div>
                         <div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div>
+                        {/* 実際のクリア付与と同じ関数を使い、表示専用の報酬値を持たない。 */}
+                        <div className="mt-1.5 rounded-xl border border-fuchsia-400/35 bg-fuchsia-950/35 px-3 py-2 flex items-center justify-between gap-2" data-psyche-reward={key}>
+                          <span className="text-[10px] leading-tight text-fuchsia-200 font-black">クリア報酬</span>
+                          <b className="text-sm text-white whitespace-nowrap"><span aria-hidden="true">🌈</span> 虹のプシュケー ×{clearPsycheReward(key)}</b>
+                        </div>
                         <div className="grid gap-1.5 mt-1.5">
                           <button disabled={!!battleTutorial} onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-30">全WAVE詳細</button>
                           {/* プロモードの中身(ベースモン限定の編成・供モン5体から3体)はまだ作っていないので、
