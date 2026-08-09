@@ -29,7 +29,7 @@ const ZAN_IMG = "images/monsters/zan.png?v=1d798611b6bd";
 const MITARASHI_IMG = "images/monsters/mitarashi.png?v=2a637bc237b6";
 const ARK_IMG = "images/monsters/ark.png?v=4f978d873f99";
 const IBLIS_IMG = "images/monsters/iblis.png?v=9b2efa1e0744";
-const SNEGUROCHKA_IMG = "images/monsters/SNEGUROCHKA.PNG?v=21ee3cd2a444";
+const SNEGUROCHKA_IMG = "images/monsters/snegurochka.png?v=81fb95247bc6";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
@@ -66,5 +66,4 @@ const ZAN_FACE_ICON = "images/monster-icons/face/zan.png?v=f6a88d1769df";
 const MITARASHI_FACE_ICON = "images/monster-icons/face/mitarashi.png?v=5176f031b2ce";
 const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=222959bd0def";
 const IBLIS_FACE_ICON = "images/monster-icons/face/iblis.png?v=46d9d96874ae";
-// 専用の顔クロップ画像が用意されるまでは、既存の全身画像を比率を変えずに使う。
-const SNEGUROCHKA_FACE_ICON = SNEGUROCHKA_IMG;
+const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=c3b4e8213dd1";

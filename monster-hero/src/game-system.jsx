@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-09 21:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-09 21:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1294,6 +1294,24 @@ const MASU_COLOR_REGION_HUES = {
     { white: true, sMax: 0.20, vMin: 0.80, bbox: [0.24, 0.14, 0.76, 0.82] },
     { hue: 272, sMin: 0.18, vMin: 0.15, bbox: [0.16, 0.13, 0.84, 0.82] },
     { white: true, sMax: 0.55, vMin: 0.05, vMax: 0.34, bbox: [[0.02, 0.42, 0.34, 0.80], [0.64, 0.42, 0.98, 0.80]] },
+  ],
+  // 2026年8月に追加した人魚。髪とヒレの青緑(染色①)・サンタの帽子と衣装の赤(染色②)・
+  // 体と尾の淡い水色(染色③)の3部位。元絵の実測値は次のとおり。
+  //  ・青緑: 色相175〜190・彩度0.65〜0.90(髪、耳、両脇のヒレ、尾びれの先)
+  //  ・赤:   色相350〜358・彩度0.80〜0.90(帽子と衣装。ほかに赤い色相は無いので取り違えない)
+  //  ・淡い水色: 色相195〜215・彩度0.08〜0.30(腕、おなか、尾)。青緑とは色相が近いが
+  //    彩度がはっきり分かれる(0.30を境に上が青緑、下が淡い水色)ため、sMin/sMaxで確実に切れる
+  // 尾はほぼ白の部分が広く、彩度だけでは拾えないので白バケツも③に足す。ただし白は
+  // 帽子と衣装のふち・肌・白目にも使われているため、bboxで尾のある範囲だけに絞る。
+  // noEdgeGuard は「隣と色相が違う画素を無染色で残す」既定の除外を切るための指定
+  // (髪と衣装、体と尾のように部位どうしが直に接するので、境目を残すと元の色の筋が出る)。
+  Snegurochka: [
+    { hue: 181, sMin: 0.60, noEdgeGuard: true },
+    { hue: 355, sMin: 0.35, noEdgeGuard: true },
+    [
+      { hue: 195, sMin: 0.05, sMax: 0.60, vMin: 0.55, noEdgeGuard: true },
+      { white: true, sMax: 0.05, vMin: 0.55, bbox: [0.18, 0.55, 0.84, 0.98], noEdgeGuard: true },
+    ],
   ],
 };
 // 染色の対象外にする装飾(モンスター本体ではない背景の飾りなど)。ここに合致した画素はどの部位にも
