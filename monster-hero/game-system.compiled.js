@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 61c1e94c8bd92995
+// source-sha256: 41051a84fbdae41e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-09 23:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 00:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5953,6 +5953,37 @@ const DIFFICULTY_SETTINGS = {
     shadow: "shadow-pink-600/60"
   }
 };
+// 本番の難易度一覧・保存・ランキングへ混ぜない、デバッグ検証専用の極限チャレンジ設定。
+// 未決定の将来難易度には数値を持たせず、EXTREMEだけを実戦で使用する。
+const EXTREME_DEBUG_DIFFICULTIES = Object.freeze([{
+  id: 'EXTREME',
+  label: 'EXTREME',
+  japanese: 'エクストリーム',
+  available: true,
+  power: 13,
+  score: 20,
+  xp: 25,
+  gold: 7.5,
+  psyche: 75,
+  teachingEffect: 0.5
+}, {
+  id: 'NIGHTMARE',
+  label: 'NIGHTMARE',
+  available: false
+}, {
+  id: 'CHAOS',
+  label: 'CHAOS',
+  available: false
+}, {
+  id: 'ULTIMATE',
+  label: 'ULTIMATE',
+  available: false
+}, {
+  id: 'INFINITY',
+  label: 'INFINITY',
+  available: false
+}]);
+const EXTREME_DEBUG_SETTING = EXTREME_DEBUG_DIFFICULTIES[0];
 const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
@@ -6752,11 +6783,11 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
 };
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
-const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null) => {
+const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null, powerOverride = null) => {
   const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
   const base = ENEMY_DATA[enemyKey];
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
-  const mod = DIFFICULTY_SETTINGS[safeDifficulty].power;
+  const mod = Number.isFinite(Number(powerOverride)) ? Number(powerOverride) : DIFFICULTY_SETTINGS[safeDifficulty].power;
   const baseHp = Number.isFinite(Number(base?.baseHp)) ? Math.max(1, Number(base.baseHp)) : 1;
   const baseAtk = Number.isFinite(Number(base?.baseAtk)) ? Math.max(0, Number(base.baseAtk)) : 0;
   return {
@@ -8335,11 +8366,14 @@ function MonsterHeroGame() {
   // 敗北・諦め・勝利の非同期処理が通常の保存処理へ入る前に必ず判定できるようにする。
   const [debugBattle, setDebugBattle] = useState(false);
   const debugBattleRef = useRef(false);
+  const [debugExtreme, setDebugExtreme] = useState(false);
+  const debugExtremeRef = useRef(false);
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
-  const scoreMultiplier = useMemo(() => DIFFICULTY_SETTINGS[safeDifficulty].score, [safeDifficulty]);
-  const goldMultiplier = useMemo(() => DIFFICULTY_SETTINGS[safeDifficulty].gold, [safeDifficulty]);
+  const scoreMultiplier = debugExtreme ? EXTREME_DEBUG_SETTING.score : DIFFICULTY_SETTINGS[safeDifficulty].score;
+  const xpMultiplier = debugExtreme ? EXTREME_DEBUG_SETTING.xp : scoreMultiplier;
+  const goldMultiplier = debugExtreme ? EXTREME_DEBUG_SETTING.gold : DIFFICULTY_SETTINGS[safeDifficulty].gold;
   const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);
   const effectiveMaxGuts = useMemo(() => resolveEffectiveMaxStat(maxGuts, getPermaBuff('muaGutsPct')), [maxGuts, permaBuffs]);
   // 丈夫さのバフ(defPct)を乗せた「実際に計算へ使う丈夫さ」。ライフ・ガッツと同じ考え方で、
@@ -12134,8 +12168,10 @@ function MonsterHeroGame() {
   };
   const returnToHome = () => {
     debugBattleRef.current = false;
+    debugExtremeRef.current = false;
     debugResultRef.current = false;
     setDebugBattle(false);
+    setDebugExtreme(false);
     setDebugOutcome(null);
     beginNewRankingRun({
       runIdRef,
@@ -12836,7 +12872,11 @@ function MonsterHeroGame() {
       wave,
       roundScore: finalRoundScore,
       totalScore: score + finalRoundScore,
-      xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode),
+      ...(debugExtreme ? {
+        xpGain: waveXpGainInMode(wave, xpMultiplier, runMode)
+      } : {
+        xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)
+      }),
       goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode)
     }]);
     setTimeout(() => setGameState('WAVE_RESULT'), battleMs(500));
@@ -13130,7 +13170,8 @@ function MonsterHeroGame() {
       // 2枚目以降のカードは効果が半減する。ブリーダーカードは対象外で、枚数にも数えない。
       const isBreeder = isBreederCard(card);
       const halved = !isBreeder && penaltyCardCount > 0;
-      const effMul = halved ? 0.5 : 1;
+      // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
+      const effMul = isBreeder && debugExtremeRef.current ? EXTREME_DEBUG_SETTING.teachingEffect : halved ? 0.5 : 1;
       if (!isBreeder) penaltyCardCount++;
       if (halved) addPopup('2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
       const slotIdx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
@@ -13151,13 +13192,13 @@ function MonsterHeroGame() {
         fireTeachingFx(card.id);
         if (card.subType === 'atk_buff') {
           addPopup(`攻撃UP!`, 'hero', 'text-red-400 font-black text-2xl drop-shadow-md');
-          addPermaBuff('atkPct', card.baseValue);
-          localOryoAdd += card.baseValue;
+          addPermaBuff('atkPct', card.baseValue * effMul);
+          localOryoAdd += card.baseValue * effMul;
         } else if (card.subType === 'dmg_cut_buff') {
           addPopup(`防御UP!`, 'hero', 'text-emerald-400 font-black text-2xl drop-shadow-md');
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = owned ? owned.evoLevel : 0;
-          let cutValue = level === 0 ? 0.03 : level === 1 ? 0.06 : 0.10;
+          let cutValue = (level === 0 ? 0.03 : level === 1 ? 0.06 : 0.10) * effMul;
           setPermaBuffs(p => ({
             ...p,
             dmgCutPct: Math.min(0.9, (p.dmgCutPct || 0) + cutValue)
@@ -13168,18 +13209,18 @@ function MonsterHeroGame() {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const tier = CADMIUM_TIERS[Math.min(owned ? owned.evoLevel : 0, CADMIUM_TIERS.length - 1)];
           addPopup(tier.gutsLimit > 0 ? `⚡ ガッツ上限UP!` : `⚡ ガッツ回復UP!`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
-          if (tier.autoGuts > 0) addPermaBuff('gutsRecoverPct', tier.autoGuts);
-          if (tier.gutsLimit > 0) addPermaBuff('muaGutsPct', tier.gutsLimit);
-          if (tier.hpLimit > 0) addPermaBuff('muaHpPct', tier.hpLimit);
+          if (tier.autoGuts > 0) addPermaBuff('gutsRecoverPct', tier.autoGuts * effMul);
+          if (tier.gutsLimit > 0) addPermaBuff('muaGutsPct', tier.gutsLimit * effMul);
+          if (tier.hpLimit > 0) addPermaBuff('muaHpPct', tier.hpLimit * effMul);
           if (tier.autoHp > 0) {
-            addPermaBuff('autoHpRecovery', tier.autoHp);
+            addPermaBuff('autoHpRecovery', tier.autoHp * effMul);
             addPopup(`💚 再生強化`, 'life', 'text-emerald-400 font-black text-xl drop-shadow-md');
           }
         } else if (card.subType === 'stun_atsu') {
           immediateInvincible = true;
           setImmediateTurnBuff('invincible', true);
           const stunMon = slots[slotIdx];
-          const d = getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false);
+          const d = Math.floor(getDmg(card, slotIdx, stunMon, localOryoAdd, localDmgModAdd, false) * effMul);
           totalDmg += d;
           attackCount++;
           attackHits.push({
@@ -13206,8 +13247,8 @@ function MonsterHeroGame() {
             }
           }
         } else if (card.subType === 'buff_myaru') {
-          setNextTurnBuff('atkMult', card.baseValue);
-          const selfDmgAmt = Math.floor(hpBeforeEnemyAttack * card.selfDmg);
+          setNextTurnBuff('atkMult', 1 + (card.baseValue - 1) * effMul);
+          const selfDmgAmt = Math.floor(hpBeforeEnemyAttack * card.selfDmg * effMul);
           addPopup(`自傷-${selfDmgAmt}`, 'hero', 'text-red-600 text-2xl font-black');
           hpBeforeEnemyAttack = Math.max(1, hpBeforeEnemyAttack - selfDmgAmt);
           setHp(hpBeforeEnemyAttack);
@@ -13223,24 +13264,24 @@ function MonsterHeroGame() {
           let hpB = level === 1 ? 0.05 : level >= 2 ? 0.08 : 0.03,
             atkB = level >= 2 ? 0.05 : 0.03,
             gutsB = level >= 2 ? 0.05 : 0.03;
-          const healVal = Math.floor(effectiveMaxHp * hpRecRate);
+          const healVal = Math.floor(effectiveMaxHp * hpRecRate * effMul);
           totalHeal += healVal;
-          addPermaBuff('muaHpPct', hpB);
-          addPermaBuff('muaAtkPct', atkB);
-          addPermaBuff('muaGutsPct', gutsB);
+          addPermaBuff('muaHpPct', hpB * effMul);
+          addPermaBuff('muaAtkPct', atkB * effMul);
+          addPermaBuff('muaGutsPct', gutsB * effMul);
           if (gutsRecRate > 0) {
-            const gv = Math.floor(effectiveMaxGuts * gutsRecRate);
+            const gv = Math.floor(effectiveMaxGuts * gutsRecRate * effMul);
             setGuts(p => Math.min(effectiveMaxGuts, p + gv));
             addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           }
         } else {
-          const healVal = Math.floor(effectiveMaxHp * (0.5 + level * 0.2));
+          const healVal = Math.floor(effectiveMaxHp * (0.5 + level * 0.2) * effMul);
           totalHeal += healVal;
-          addPermaBuff('muaHpPct', 0.10);
-          addPermaBuff('muaAtkPct', 0.05);
-          addPermaBuff('muaGutsPct', 0.10);
+          addPermaBuff('muaHpPct', 0.10 * effMul);
+          addPermaBuff('muaAtkPct', 0.05 * effMul);
+          addPermaBuff('muaGutsPct', 0.10 * effMul);
           if (level >= 1) {
-            const gv = Math.floor(effectiveMaxGuts * (0.5 + level * 0.2));
+            const gv = Math.floor(effectiveMaxGuts * (0.5 + level * 0.2) * effMul);
             setGuts(p => Math.min(effectiveMaxGuts, p + gv));
             addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           }
@@ -13993,7 +14034,7 @@ function MonsterHeroGame() {
   // 100毎に自動で1段階上がる
   const computeGuardLevel = defVal => Math.max(0, Math.min(GUARD_EVOLUTION.length - 1, Math.floor((defVal || 0) / 100)));
   const spawnEnemy = useCallback((w, forcedEnemyKey = null, initialDistance = null) => {
-    const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey);
+    const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, debugExtremeRef.current ? EXTREME_DEBUG_SETTING.power : null);
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する
     if (!forcedEnemyKey) {
@@ -14127,8 +14168,10 @@ function MonsterHeroGame() {
     battleSpeedRef.current = 1;
     setBattleSpeed(1);
     debugBattleRef.current = true;
+    debugExtremeRef.current = false;
     debugResultRef.current = false;
     setDebugBattle(true);
+    setDebugExtreme(false);
     setDebugOutcome(null);
     setGaveUp(false);
     setScore(0);
@@ -14214,8 +14257,10 @@ function MonsterHeroGame() {
     setBattleTutorialStep(null);
     setBattleTutorialReturn('DEBUG_SETTINGS');
     debugBattleRef.current = false;
+    debugExtremeRef.current = false;
     debugResultRef.current = false;
     setDebugBattle(false);
+    setDebugExtreme(false);
     setDebugOutcome(null);
     setGaveUp(false);
     setCurrentPickingMon(null);
@@ -14334,7 +14379,7 @@ function MonsterHeroGame() {
       clearTimeout(timer);
     };
   }, [battleTutorialStep, gameState, currentPickingMon]);
-  const startDebugBattle = () => {
+  const startDebugBattle = (extreme = false) => {
     const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
     const party = getActiveMonsterList().slice(0, 4);
     if (!option || party.length === 0) return;
@@ -14356,8 +14401,10 @@ function MonsterHeroGame() {
       uid: Math.random()
     }));
     debugBattleRef.current = true;
+    debugExtremeRef.current = extreme;
     debugResultRef.current = false;
     setDebugBattle(true);
+    setDebugExtreme(extreme);
     setDebugOutcome(null);
     setGaveUp(false);
     setScore(0);
@@ -17731,7 +17778,9 @@ function MonsterHeroGame() {
             battleScenarioRef.current = null;
             battleScenarioIntentIndexRef.current = 0;
             debugBattleRef.current = false;
+            debugExtremeRef.current = false;
             setDebugBattle(false);
+            setDebugExtreme(false);
             setDebugOutcome(null);
             setMonSelection(getActiveMonsterList());
             setHeroPickTab('roster');
@@ -18179,7 +18228,9 @@ function MonsterHeroGame() {
             battleScenarioRef.current = null;
             battleScenarioIntentIndexRef.current = 0;
             debugBattleRef.current = false;
+            debugExtremeRef.current = false;
             setDebugBattle(false);
+            setDebugExtreme(false);
             setDebugOutcome(null);
             setProAllyPool([]);
             setMonSelection(pro ? getUnlockedBaseMonsterList() : getActiveMonsterList());
@@ -18995,6 +19046,32 @@ function MonsterHeroGame() {
     }, "\uD83C\uDFA8 \u30DE\u30B9\u30E2\u30F3\u6A21\u69D8\u30AB\u30B9\u30BF\u30E0\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
     }, "\u6A21\u69D8\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093")), /*#__PURE__*/React.createElement("section", {
+      className: "rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 p-3",
+      "data-extreme-debug": true
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-sm text-fuchsia-200 font-black mb-1"
+    }, "\uD83D\uDD25 \u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u691C\u8A3C"), /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] leading-relaxed text-slate-300 mb-3"
+    }, "\u30C7\u30D0\u30C3\u30B0\u5C02\u7528\u3067\u3059\u3002\u7D50\u679C\u3068\u5831\u916C\u306F\u8868\u793A\u3060\u3051\u3067\u3001\u30BB\u30FC\u30D6\u30FB\u30AF\u30EA\u30A2\u72B6\u6CC1\u30FB\u30E9\u30F3\u30AD\u30F3\u30B0\u306B\u306F\u6B8B\u308A\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2"
+    }, EXTREME_DEBUG_DIFFICULTIES.map(setting => /*#__PURE__*/React.createElement("div", {
+      key: setting.id,
+      className: `rounded-xl border px-3 py-2 ${setting.available ? 'border-fuchsia-400 bg-fuchsia-900/40' : 'border-white/10 bg-slate-950/60 opacity-60'}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2"
+    }, /*#__PURE__*/React.createElement("b", {
+      className: "text-xs text-white"
+    }, setting.label), /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] font-black text-slate-300"
+    }, setting.available ? setting.japanese : '？？？')), setting.available ? /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] leading-relaxed text-slate-200"
+    }, /*#__PURE__*/React.createElement("span", null, "\u6575HP\u30FB\u653B\u6483 \xD7", setting.power), /*#__PURE__*/React.createElement("span", null, "\u30B9\u30B3\u30A2 \xD7", setting.score), /*#__PURE__*/React.createElement("span", null, "\u7D4C\u9A13\u5024 \xD7", setting.xp), /*#__PURE__*/React.createElement("span", null, "\u30C0\u30A4\u30E4 \xD7", setting.gold), /*#__PURE__*/React.createElement("span", null, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC \xD7", setting.psyche), /*#__PURE__*/React.createElement("span", null, "\u6559\u3048\u52B9\u679C \xD7", setting.teachingEffect)) : /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 text-center text-[10px] tracking-[.25em] text-slate-500"
+    }, "\uFF1F\uFF1F\uFF1F")))), /*#__PURE__*/React.createElement("button", {
+      disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || getActiveMonsterList().length === 0,
+      onClick: () => startDebugBattle(true),
+      className: "w-full mt-3 min-h-[48px] rounded-xl bg-fuchsia-600 text-white text-xs font-black disabled:opacity-30"
+    }, "EXTREME\u3067\u9078\u629E\u4E2D\u306E\u6575\u3068\u6226\u3046")), /*#__PURE__*/React.createElement("section", {
       className: "rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-pink-300 font-black mb-2"
@@ -21949,7 +22026,7 @@ function MonsterHeroGame() {
         borderColor: `${battleModeInfo(runMode).color}66`,
         backgroundColor: 'rgba(0,0,0,.35)'
       }
-    }, battleModeInfo(runMode).short, " / ", DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty)), /*#__PURE__*/React.createElement("div", {
+    }, debugExtreme ? '極限チャレンジ / EXTREME' : /*#__PURE__*/React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), /*#__PURE__*/React.createElement("div", {
       "data-battle-metrics": true,
       className: "shrink-0 flex items-center gap-1 px-1 leading-none"
     }, /*#__PURE__*/React.createElement("div", {
@@ -24954,7 +25031,7 @@ function MonsterHeroGame() {
       className: "pt-1 flex flex-col gap-0.5 text-right"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold uppercase italic"
-    }, "\u96E3\u6613\u5EA6\u30DC\u30FC\u30CA\u30B9 (", difficulty, "): x", scoreMultiplier), /*#__PURE__*/React.createElement("div", {
+    }, "\u96E3\u6613\u5EA6\u30DC\u30FC\u30CA\u30B9 (", debugExtreme ? 'EXTREME' : difficulty, "): x", scoreMultiplier), /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-end"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-indigo-400 text-xs font-black uppercase"
@@ -25298,7 +25375,9 @@ function MonsterHeroGame() {
           const options = getDebugEnemyOptions(difficulty);
           setDebugEnemyKey(options[0]?.key || null);
           debugBattleRef.current = false;
+          debugExtremeRef.current = false;
           setDebugBattle(false);
+          setDebugExtreme(false);
           setDebugOutcome(null);
           setShowHelp(false);
           setGameState('DEBUG_SETTINGS');
@@ -26128,11 +26207,25 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-black text-fuchsia-300 tracking-[.35em] mb-3"
     }, "DEBUG"), /*#__PURE__*/React.createElement("h2", {
-      className: "text-2xl font-black text-white mb-8"
-    }, debugOutcome === 'win' ? '勝利' : debugOutcome === 'lose' ? '敗北' : 'リタイア'), /*#__PURE__*/React.createElement("div", {
+      className: "text-2xl font-black text-white mb-4"
+    }, debugOutcome === 'win' ? '勝利' : debugOutcome === 'lose' ? '敗北' : 'リタイア'), debugExtreme && /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-xs mb-4 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/30 p-3 text-left"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-fuchsia-200 font-black mb-2"
+    }, "EXTREME \u691C\u8A3C\u7D50\u679C\uFF08\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-1 text-[10px] text-slate-200"
+    }, /*#__PURE__*/React.createElement("span", null, "\u4ECA\u56DE\u306E\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("b", {
+      className: "text-right"
+    }, score.toLocaleString()), /*#__PURE__*/React.createElement("span", null, "10WAVE \u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("b", {
+      className: "text-right"
+    }, xpForWavesCleared(10, EXTREME_DEBUG_SETTING.xp).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "10WAVE \u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", {
+      className: "text-right"
+    }, goldForWavesCleared(10, EXTREME_DEBUG_SETTING.gold).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30EA\u30A2\u6642\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("b", {
+      className: "text-right"
+    }, EXTREME_DEBUG_SETTING.psyche))), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-xs space-y-3"
     }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => runResultActionOnce(startDebugBattle),
+      onClick: () => runResultActionOnce(() => startDebugBattle(debugExtreme)),
       disabled: resultActionPending,
       className: "w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50"
     }, "\u540C\u3058\u6761\u4EF6\u3067\u3082\u3046\u4E00\u5EA6"), /*#__PURE__*/React.createElement("button", {
