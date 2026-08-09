@@ -1401,7 +1401,10 @@ const assistantRecentLimit = (total) => Math.max(1, Math.min(3, total - 2));
 // 仲良し度で絞った結果が空になったときは、絞る前の一覧をそのまま使う
 // (Lvを増やしたときに「話すことが無い」画面ができないようにするための安全弁)
 const assistantSceneLines = (scene, condition, bondLevel) => {
-  const def = (scene && ASSISTANT_SCENES[scene]) || null;
+  // line pack だけで追加されたデバッグ用の場面も取得できるようにする。
+  // これが無いと pack のセリフは読み込み時に捨てられ、案内待ちのまま画面が止まる。
+  const packedLines = scene ? ASSISTANT_LINE_PACKS.flatMap(pack => Array.isArray(pack.lines?.[scene]) ? pack.lines[scene] : []) : [];
+  const def = (scene && ASSISTANT_SCENES[scene]) || (packedLines.length ? { lines:packedLines } : null);
   if (!def) return [];
   const conditional = (condition && def.when && Array.isArray(def.when[condition])) ? def.when[condition] : null;
   const list = (conditional && conditional.length) ? conditional : def.lines;
