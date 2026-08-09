@@ -10158,9 +10158,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const tickets = BREEDER_MARKET_ITEMS.filter(item=>['training_ticket','training_ticket_l'].includes(item.id));
           if (!masu) return null;
           return (
-            <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31500,paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31500,paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true" aria-label={`${masu.name}のトレーニング`}>
               <div className="bg-slate-900 border border-teal-500/50 rounded-3xl p-4 w-full max-w-sm shadow-2xl">
-                <div className="flex items-center justify-between gap-2 mb-1"><h3 className="text-sm font-black text-white">🎓 {masu.name}をトレーニング</h3><button onClick={()=>setDetailTrainingMasuId(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button></div>
+                <div className="flex items-center justify-between gap-2 mb-1"><h3 className="text-sm font-black text-white">🎓 {masu.name}をトレーニング</h3><button type="button" aria-label="トレーニングを閉じる" onClick={()=>setDetailTrainingMasuId(null)} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button></div>
                 <p className="text-[9px] text-slate-400 font-bold mb-3">使うチケットを選んでください。対象はこのマスモンのままです。</p>
                 <div className="space-y-2">{tickets.map(item=>{const count=ownedItems[item.id]||0;return <button key={item.id} disabled={count<=0} onClick={()=>{setXpTicketUse({itemId:item.id,masuId:masu.id,count:1});setDetailTrainingMasuId(null);}} className="w-full min-h-[52px] flex items-center gap-3 rounded-2xl border border-teal-500/30 bg-teal-950/40 px-3 text-left active:scale-[.98] disabled:opacity-40"><span className="text-xl">{item.emoji}</span><span className="flex-1 min-w-0"><b className="block text-[11px] text-white truncate">{item.name}</b><small className="block text-[8px] text-teal-300">絆経験値 +{item.bondXp}</small></span><strong className="text-[10px] text-white">{count}枚</strong></button>;})}</div>
                 {tickets.every(item=>(ownedItems[item.id]||0)<=0)&&<p className="text-[9px] text-amber-300 font-bold text-center mt-3">チケットはマーケットで購入できます</p>}
@@ -10260,9 +10260,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="w-full rounded-2xl border border-white/10 bg-black/30 p-2 shrink-0">
                 <div className="text-[8px] font-black text-slate-400 tracking-wider mb-1.5 px-1">育成・カスタム</div>
                 <div className="grid grid-cols-3 gap-1.5">
-                  <button onClick={()=>{setMasuEnhanceFrom(gameState);setGameState('MASU_ENHANCE');}} className="min-h-[46px] bg-gradient-to-b from-amber-600 to-orange-700 text-white rounded-xl font-black text-[10px] active:scale-95 flex flex-col items-center justify-center gap-0.5"><Sparkles size={14}/><span>強化</span>{(masu.distAptPoints||0)>0&&<small className="text-[7px] bg-white/20 px-1 rounded">{masu.distAptPoints}P</small>}</button>
-                  <button onClick={()=>setDetailTrainingMasuId(masu.id)} className="min-h-[46px] bg-gradient-to-b from-teal-600 to-cyan-800 text-white rounded-xl font-black text-[10px] active:scale-95 flex flex-col items-center justify-center gap-0.5"><span className="text-sm leading-none">🎓</span><span>トレーニング</span></button>
-                  <button onClick={()=>{const n=dyeRegionCount(masu.baseId),cur=getMasuColors(masu);setDyeTargetMasuId(masu.id);setDyePreviewColors(Array.from({length:n},(_,i)=>cur[i]||null));}} className="min-h-[46px] bg-gradient-to-b from-fuchsia-600 to-purple-800 text-white rounded-xl font-black text-[10px] active:scale-95 flex flex-col items-center justify-center gap-0.5"><span className="text-sm leading-none">🎨</span><span>染色</span><small className="text-[7px] text-fuchsia-100">所持 {ownedItems.dye_mock||0}</small></button>
+                  <button type="button" aria-label={`${masu.name}を強化`} onClick={()=>{setMasuEnhanceFrom(gameState);setGameState('MASU_ENHANCE');}} className="min-h-[46px] bg-gradient-to-b from-amber-600 to-orange-700 text-white rounded-xl font-black text-[10px] active:scale-95 flex flex-col items-center justify-center gap-0.5"><Sparkles size={14}/><span>強化</span>{(masu.distAptPoints||0)>0&&<small className="text-[7px] bg-white/20 px-1 rounded">{masu.distAptPoints}P</small>}</button>
+                  <button type="button" aria-label={`${masu.name}をトレーニング`} onClick={()=>setDetailTrainingMasuId(masu.id)} className="min-h-[46px] bg-gradient-to-b from-teal-600 to-cyan-800 text-white rounded-xl font-black text-[10px] active:scale-95 flex flex-col items-center justify-center gap-0.5"><span className="text-sm leading-none">🎓</span><span>トレーニング</span></button>
+                  <button type="button" aria-label={`${masu.name}を染色`} onClick={()=>{const n=dyeRegionCount(masu.baseId),cur=getMasuColors(masu);setDyeTargetMasuId(masu.id);setDyePreviewColors(Array.from({length:n},(_,i)=>cur[i]||null));}} className="min-h-[46px] bg-gradient-to-b from-fuchsia-600 to-purple-800 text-white rounded-xl font-black text-[10px] active:scale-95 flex flex-col items-center justify-center gap-0.5"><span className="text-sm leading-none">🎨</span><span>染色</span><small className="text-[7px] text-fuchsia-100">所持 {ownedItems.dye_mock||0}</small></button>
                 </div>
               </div>
             ),
@@ -10476,11 +10476,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const noChange = Array.from({length:regionCount},(_,i)=>(dyePreviewColors[i]||null)===(curColors[i]||null)).every(Boolean);
           const hasAnyColor = dyePreviewColors.some(Boolean);
           return (
-            <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31500}}>
+            <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31500,paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true" aria-label={`${masu.name}の染色`}>
               <div className="bg-slate-900 border-2 border-fuchsia-500 rounded-3xl p-5 w-full max-w-sm flex flex-col gap-3 shadow-2xl max-h-full overflow-hidden">
                 <div className="flex items-center justify-between shrink-0">
                   <h3 className="text-sm font-black text-white">🎨 {masu.name}の色をプレビュー</h3>
-                  <button onClick={closeDyePicker} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
+                  <button type="button" aria-label="染色を閉じる" onClick={closeDyePicker} className="p-2 bg-white/5 rounded-full active:scale-90"><X size={16}/></button>
                 </div>
                 <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-fuchsia-400/40 mx-auto shrink-0"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={dyePreviewColors} className="w-full h-full object-cover"/></div>
                 <div className="text-[9px] text-fuchsia-300 font-black text-center -mt-1 shrink-0">{hasAnyColor?'プレビュー中(合成後の見た目です)':'現在の色のまま'}</div>

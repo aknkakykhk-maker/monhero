@@ -12,6 +12,8 @@ check('詳細にコンパクトな育成・カスタム3導線', detail.includes
 check('強化は詳細の個体を維持して専用画面へ進む', detail.includes("setMasuEnhanceFrom(gameState);setGameState('MASU_ENHANCE')"));
 check('トレーニングは詳細の個体IDを引き継ぐ', detail.includes('setDetailTrainingMasuId(masu.id)') && source.includes('masuId:masu.id,count:1'));
 check('染色は詳細の個体IDと現在色を引き継ぐ', detail.includes('setDyeTargetMasuId(masu.id)') && detail.includes('getMasuColors(masu)'));
+check('3つの操作は対象名つきのアクセシブルなタップボタン', ['を強化','をトレーニング','を染色'].every(label=>detail.includes(`aria-label={\`${'${masu.name}'}${label}\`}`)) && (detail.match(/min-h-\[46px\]/g)||[]).length>=3);
+check('トレーニングと染色のモーダルはiPhoneのSafe Area内に収まる', (source.match(/paddingBottom:'calc\(1rem \+ env\(safe-area-inset-bottom\)\)'/g)||[]).length>=2 && source.includes('aria-label={`${masu.name}のトレーニング`}') && source.includes('aria-label={`${masu.name}の染色`}'));
 check('限界突破・転生・合体の操作導線を追加していない', !detail.includes('限界突破する') && !detail.includes('転生する') && !detail.includes('合体する'));
 check('重トレーニングチケットは表示名だけ変更', /id:'training_ticket_l', name:"重トレーニングチケット", type:'item', emoji:"🎟️", cost:1000, bondXp:150/.test(breeder));
 
