@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-09 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-09 19:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6589,6 +6589,8 @@ function MonsterHeroGame() {
     }
     if (getTurnBuff('zeroGuts', false) && ['atk','range_atk','unique'].includes(card.type)) cost = 0;
     cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0));
+    // 絶氷の楔は使用後のカードすべてを3%ずつ軽くする。重ねすぎても負倍率にならないよう10%を下限にする。
+    cost = Math.floor(cost * Math.max(0.1, 1 - 0.03*getPermaBuff('snegurochkaGutsDiscountStacks')));
     return cost;
   };
 
@@ -7105,7 +7107,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const guardCardWeight = (card) => card?.type === 'guard' ? 1 : (card?.type === 'weak_guard' ? 0.5 : 0);
   // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」。handleEnemyTurnの計算と同じ式にする。
   const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + effectiveDef * mult) : 0;
-  const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
+  const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist, activatesIceLock=false) => {
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx-attackStartDist);
     const distMult = [1.5,1.3,1.1,0.9][distDiff]||1.0;
@@ -7114,7 +7116,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else if (card.type==='unique') { const level=card.evoLevel||0; const chuuniBonus=(card.monId==='Ark'||card.monId==='Iblis')?0.1*getPermaBuff('chuuniUniqueStack'):0; baseDmgMult=card.baseMult+(level*0.5)+chuuniBonus; }
     else if (card.type==='range_atk') { baseDmgMult=rangeAttackDamageMultiplier(card,attackStartDist); }
     else { baseDmgMult=card.mult||card.baseMult||1.0; }
-    let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0);
+    // 氷海の支配者は勇者モンがスネグーラチカの場合だけ発動する。供モンの種は見ない。
+    // distMult（既存の距離一致×1.5）とは別項なので、両条件成立時は1.5×1.5になる。
+    const iceRulerMult=mainHero?.id==='Snegurochka'
+      && (getWaveBuff('iceLockTurns')>0||activatesIceLock)
+      && slotIdx===attackStartDist ? 1.5 : 1.0;
+    let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0)*iceRulerMult;
     // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
     // 攻撃したモンスター自身のグレードだけを見るのではない
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(distAptPct[slotIdx]||0);
@@ -7189,7 +7196,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } else {
       // 距離撃で移動を封じたときだけは、この中でも「行動しなかった扱い」に戻す
       enemyActionPerformedRef.current = true;
-      if (intent.type==='MOVE' && immediateEffects.distLocked) {
+      if (intent.type==='MOVE' && (getWaveBuff('iceLockTurns')>0||immediateEffects.iceLockActive)) {
+        // 予約済みMOVEも再抽選せず失敗させる。行動済みのままなので、このターンは確実に消費される。
+        addPopup("移動できない！",'enemy','text-cyan-200 font-black text-xl drop-shadow-md');
+        await battleWait(800);
+      } else if (intent.type==='MOVE' && immediateEffects.distLocked) {
         enemyActionPerformedRef.current = false;
         // 距離撃を撃ったターンは最終的な間合いが距離撃側で確定する。
         // それでも敵が移動モーションを見せると「動いたのに距離が変わらない」ように見えるため、
@@ -7276,6 +7287,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       }
     }
     setEnemySkillName(null);
+    if (getWaveBuff('iceLockTurns')>0||immediateEffects.iceLockActive) {
+      setWaveBuffs(p=>({...p,iceLockTurns:immediateEffects.iceLockActive?4:Math.max(0,(p.iceLockTurns||0)-1)}));
+    }
     if (currentHp<=0) { setIsBusy(false); return; }
     const autoHpRecoveryRate=getPermaBuff('autoHpRecovery',0.1);
     const gutsRecoveryRate=Math.max(0,0.05+(autoHpRecoveryRate-0.1))+getPermaBuff('gutsRecoverPct');
@@ -7311,7 +7325,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const hpAfterRecovery=Math.min(effectiveMaxHp,hp+recoverHp);
     await handleEnemyTurn('none',{},acting,hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
-    const distForNextPredict=acting&&acting.type==='MOVE'?acting.targetDist:enemyDist;
+    const moveWasFrozen=acting&&acting.type==='MOVE'&&getWaveBuff('iceLockTurns')>0;
+    const distForNextPredict=acting&&acting.type==='MOVE'&&!moveWasFrozen?acting.targetDist:enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current?acting:null); advanceEnemyIntents(acting,distForNextPredict,enemyActionPerformedRef.current);
     if (scenario) setBattleTutorialLastAction('emergency');
   };
@@ -7333,6 +7348,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setIsBusy(true);
     let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, localOryoAdd=0, localDmgModAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardFlat=0, currentTurnGuardMult=0;
     let hpBeforeEnemyAttack=hp;
+    let activatedIceLockThisTurn=false;
     let forcedMoveTarget=null; // 最後に使った距離撃の指定距離を、敵行動後にも最終距離として再適用する
     let attackDistance=enemyDist; // 同一ターンの各攻撃開始時点の距離。距離撃後は指定距離へ進める
     const attackHits=[]; // {dmg, isCrit, slotIdx}
@@ -7406,7 +7422,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           else if(card.monId==='Zan'){addPermaBuff('comboDmgPct',0.03*effMul); addPopup('連斬!','hero','text-cyan-400 text-lg font-bold');}
         }
         const attackStartDist=attackDistance;
-        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist); attackCount++;
+        const activatesIceLock=card.type==='unique'&&card.monId==='Snegurochka';
+        const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist,activatedIceLockThisTurn||activatesIceLock); attackCount++;
         const critRateBonus=getPermaBuff('critRatePct'), critDmgBonus=getPermaBuff('critDmgPct');
         const isCrit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+critRateBonus));
         const finalD=isCrit?Math.floor(d*(1.5+critDmgBonus)):d; if(isCrit) hasCrit=true; totalDmg+=finalD;
@@ -7447,6 +7464,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 贖罪: 次ターン消費ガッツ15%増・被ダメージ50%減(1回)
             setNextTurnBuff('takenDamageMult',0.5); setNextTurnBuff('gutsCostMult',1.15);
             addPopup('次ターン被ダメ50%減!','hero','text-pink-400 text-lg font-bold');
+          }
+          else if(card.monId==='Snegurochka'){
+            activatedIceLockThisTurn=true;
+            setWaveBuffs(p=>({...p,iceLockTurns:5}));
+            addPermaBuff('snegurochkaGutsDiscountStacks',1);
+            addPopup('絶氷の楔！ 5ターン移動封印','enemy','text-cyan-200 text-lg font-bold');
+            addPopup('消費ガッツ3%減！','hero','text-cyan-300 text-sm font-bold');
           }
         }
       }
@@ -7515,11 +7539,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               Audio_.se.special();
               await battleWait(650);
               setAttackAnim({slotIndex: animSlot, charge:false, motion});
-              await battleWait(motion==='floatStab'?700:500);
+              await battleWait(motion==='floatStab'?700:(motion==='waterBurst'?520:500));
             } else {
               setAttackAnim({slotIndex: animSlot, motion});
               if(hit.isSpecial) Audio_.se.special(); else if(hit.isCrit) Audio_.se.crit(); else Audio_.se.attack();
-              await battleWait(motion==='floatStab'?650:450);
+              await battleWait(motion==='floatStab'?650:(motion==='waterBurst'?520:450));
             }
             setAttackAnim(null);
             setSlotSkill(null);
@@ -7565,7 +7589,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
     // distLocked: このターン距離撃を撃ったか。敵の移動は距離撃で上書きされるため、行動しなかった扱いにする
-    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,distLocked:forcedMoveTarget!=null},executedIntent,hpBeforeEnemyAttack);
+    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,distLocked:forcedMoveTarget!=null,iceLockActive:activatedIceLockThisTurn},executedIntent,hpBeforeEnemyAttack);
     // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
     if (forcedMoveTarget!=null) {
       setEnemyDist(forcedMoveTarget);
@@ -7573,7 +7597,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     // 敵の行動が終わった後で、次ターンの予測を1回だけ抽選してセット
     // 敵が移動した場合は移動後の距離を基準にする
-    const distForNextPredict=forcedMoveTarget!=null?forcedMoveTarget:((executedIntent&&executedIntent.type==='MOVE')?executedIntent.targetDist:enemyDist);
+    const moveWasFrozen=executedIntent&&executedIntent.type==='MOVE'&&(getWaveBuff('iceLockTurns')>0||activatedIceLockThisTurn);
+    const distForNextPredict=forcedMoveTarget!=null?forcedMoveTarget:((executedIntent&&executedIntent.type==='MOVE'&&!moveWasFrozen)?executedIntent.targetDist:enemyDist);
     setEnemyLastIntent(enemyActionPerformedRef.current?executedIntent:null); advanceEnemyIntents(executedIntent,distForNextPredict,enemyActionPerformedRef.current);
     // ここまで来てはじめて「1ターンぶんを見終わった」ので、練習を次へ進める
     if (tutorialKinds.length) setBattleTutorialLastAction(tutorialKinds.join(','));
@@ -11038,7 +11063,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       setSlotSettle(i);
                       setTimeout(()=>{ setSlotSettle(null); }, 500);
                     }
-                  }} disabled={isBusy} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':'specialLunge 500ms ease-in forwards'):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':'attackFly 450ms ease-in forwards'))))}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined)}>
+                  }} disabled={isBusy} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards')):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards')))))}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined)}>
                     {/* 名前の行。勇者モンには王冠を付ける。どれが勇者モンか分からないと
                         「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
                     <div className={`h-[25%] flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[7px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[7px] font-black text-indigo-300">×{assignedCount}</span>}</div>
@@ -12502,6 +12527,18 @@ const createAnimationStyle = () => {
         transform: translateY(0) scale(1);
         filter: drop-shadow(0 0 0 rgba(0,0,0,0));
       }
+    }
+    /* スネグーラチカ専用: 追加画像を使わず、水弾の残像を軽量なdrop-shadowで表現する。 */
+    @keyframes waterBurstAttack {
+      0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 4px rgba(103,232,249,.45)); }
+      35% { transform: translateY(-45px) scale(1.06); filter: drop-shadow(0 -20px 2px rgba(34,211,238,.75)) drop-shadow(0 -42px 4px rgba(59,130,246,.55)); }
+      68% { transform: translateY(-155px) scale(1.12); filter: drop-shadow(0 38px 3px rgba(125,211,252,.8)) drop-shadow(0 76px 6px rgba(37,99,235,.5)); }
+      100% { transform: translateY(0) scale(1); filter: none; }
+    }
+    @keyframes waterBurstLunge {
+      0% { transform: translateY(44px) scale(.78); filter: drop-shadow(0 0 20px rgba(34,211,238,.8)); }
+      55% { transform: translateY(-190px) scale(1.25); filter: drop-shadow(0 45px 3px rgba(125,211,252,.9)) drop-shadow(0 90px 7px rgba(37,99,235,.6)); }
+      100% { transform: translateY(0) scale(1); filter: none; }
     }
     @keyframes zanComboDash {
       0% {
