@@ -12,11 +12,12 @@ const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
 
 // ==================== モンスター円盤石アイコン ====================
 // DISC_STONE_BASE: 円盤石の土台画像(全モンスター共通)。作り方の詳細はBREEDER_MARKET_ITEMS手前のコメント参照。
-const DISC_STONE_BASE = "images/disc-icons/stone-base.png?v=fda820864674";
+const DISC_STONE_BASE = "images/disc-icons/disc-stone-base.PNG?v=68c0be1a0e05";
 const ZAN_DISC_ICON = "images/disc-icons/zan.png?v=168e92b11f79";
 const MITARASHI_DISC_ICON = "images/disc-icons/mitarashi.png?v=4fe8d8d99525";
 const ARK_DISC_ICON = "images/disc-icons/ark.png?v=1c124027f057";
 const IBLIS_DISC_ICON = "images/disc-icons/iblis.png?v=8202f75a06f1";
+const SNEGUROCHKA_DISC_ICON = "images/disc-icons/snegurochka-disc.PNG?v=f1032185e592";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["おりょうの力", "おりょうの気合", "おりょうの憤怒"],
@@ -116,8 +117,7 @@ const BREEDER_MARKET_ITEMS = [
   { id:'Iblis', name:"イブリースの円盤石", type:'disc', icon:IBLIS_DISC_ICON, cost:1500 },
   { id:'snegurochka_icon', name:"スネグーラチカのアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA.PNG?v=21ee3cd2a444', cost:1 },
   { id:'snegurochka_awakened_icon', name:"スネグーラチカ（覚醒）のアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA_AWAKENED.PNG?v=3a71bfe44e3d', cost:1 },
-  // 専用画像を新しく作らず、既存の共通円盤石画像をほかの円盤石商品と同じ表示経路で使う。
-  { id:'Snegurochka', name:"スネグーラチカの円盤石", type:'disc', icon:DISC_STONE_BASE, cost:1500 },
+  { id:'Snegurochka', name:"スネグーラチカの円盤石", type:'disc', icon:SNEGUROCHKA_DISC_ICON, cost:1500 },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   // 説明は実際の機能に合わせて更新すること。導入時は6色から全身を1色に変えるだけだったが、
   // その後アイコンごとの部位分け・プリセット27色・カスタムカラーに対応している
