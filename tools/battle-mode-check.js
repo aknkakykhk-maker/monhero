@@ -438,7 +438,7 @@ check('難易度カードから開いたときは、その難易度のタブを�
     && has("openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')"));
 check('難易度カードの虹のプシュケー表示は実際の付与関数を使う',
   has('data-psyche-reward={key}') && has('applyQuickPsychePolicy(clearPsycheReward(key),battleMode,quickRewardPolicy)')
-    && has('const baseGain = extremeRunRef.current ? EXTREME_SETTING.psyche : clearPsycheReward(difficulty);'));
+    && has('const baseGain = extremeRunRef.current ? selectedExtremeSetting.psyche : clearPsycheReward(difficulty);'));
 check('クイック難易度画面に押しやすく状態が分かる2択を出す',
   has("[QUICK_REWARD_POLICY_GROWTH,'育成','経験値あり']")
     && has("[QUICK_REWARD_POLICY_PSYCHE,'プシュケー優先','経験値0・虹×2']")

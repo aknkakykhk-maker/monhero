@@ -3,7 +3,7 @@
 //   ① 敵のライフ・攻撃がノーマル比×13
 //   ② 通常難易度(Beginner〜Legend)・クイック・プロの敵性能に回帰がない
 //      (powerOverride を渡さないときは今までどおり難易度の倍率が使われる)
-//   ③ スコア×20・経験値×25・ダイヤ×7.5・虹のプシュケー75
+//   ③ スコア×20・経験値×25・ダイヤ×7.5・虹のプシュケー30
 //   ④ 解放条件(Grand Master / Hell / Legend のどれかを1回以上クリア)
 const fs = require('fs');
 const vm = require('vm');
@@ -63,15 +63,15 @@ check('0を渡したときだけ0倍になる(nullと取り違えない)', m.cre
 check('スコア×20', m.EXTREME_SETTING.score === 20);
 check('経験値×25', m.EXTREME_SETTING.xp === 25);
 check('ダイヤ×7.5', m.EXTREME_SETTING.gold === 7.5);
-check('虹のプシュケー75個', m.EXTREME_SETTING.psyche === 75);
+check('虹のプシュケー30個', m.EXTREME_SETTING.psyche === 30);
 check('ブリーダーカード効果50%はEXTREME固有ルール',
   m.extremeSpecialRule('EXTREME', 'breederCardEffect') === 0.5
     && m.extremeSpecialRule('NIGHTMARE', 'breederCardEffect') === 1);
-check('NIGHTMAREは×15 / ×20 / ×30 / ×10 / 虹100を持つ',
+check('NIGHTMAREは×15 / ×20 / ×30 / ×10 / 虹40を持つ',
   m.NIGHTMARE_SETTING.available === true
     && m.NIGHTMARE_SETTING.power === 15 && m.NIGHTMARE_SETTING.score === 20
     && m.NIGHTMARE_SETTING.xp === 30 && m.NIGHTMARE_SETTING.gold === 10
-    && m.NIGHTMARE_SETTING.psyche === 100);
+    && m.NIGHTMARE_SETTING.psyche === 40);
 check('NIGHTMAREより後の難易度は未実装のまま数値を持たない',
   m.EXTREME_DIFFICULTIES.slice(2).every(s => s.available === false && s.power === undefined && s.score === undefined));
 check('NIGHTMAREはEXTREMEを1回以上クリア済みなら解放判定',

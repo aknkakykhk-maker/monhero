@@ -159,7 +159,7 @@ const check = (name, ok, detail = '') => {
     check('難易度選択画面へ進める', await page.getByRole('heading', { name: 'プロモード' }).count() === 1);
     check('難易度のカードが9枚ある', await page.locator('.snap-mandatory > article').count() === 9,
       `${await page.locator('.snap-mandatory > article').count()}枚`);
-    const psycheRewards = { Beginner:1, Easy:2, Normal:3, Hard:5, Expert:7, Master:10, GrandMaster:15, Hell:20, Legend:30 };
+    const psycheRewards = { Beginner:1, Easy:2, Normal:3, Hard:5, Expert:7, Master:10, GrandMaster:15, Hell:20, Legend:25 };
     for (const [difficulty, amount] of Object.entries(psycheRewards)) {
       const reward = page.locator(`[data-psyche-reward="${difficulty}"]`);
       check(`${difficulty}の虹のプシュケー報酬を表示する`,
