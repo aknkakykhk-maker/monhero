@@ -17,10 +17,10 @@ const config = source.slice(source.indexOf('const EXTREME_DIFFICULTIES'), source
 // --- ① 難易度表 ---
 for (const name of ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY']) assert(config.includes(`'${name}'`), `${name} must be listed`);
 assert(/EXTREME[^\n]+available:true[^\n]+power:13[^\n]+score:20[^\n]+xp:25[^\n]+gold:7\.5[^\n]+psyche:75[^\n]+specialRules:Object\.freeze\(\{ breederCardEffect:0\.5 \}\)/.test(config), 'EXTREME settings and its difficulty-specific rule must match the official specification');
-assert(/NIGHTMARE[^\n]+available:false[^\n]+power:15[^\n]+score:20[^\n]+xp:30[^\n]+gold:10[^\n]+psyche:100/.test(config), 'NIGHTMARE must keep its prepared values while remaining unavailable');
+assert(/NIGHTMARE[^\n]+available:false[^\n]+previewAvailable:true[^\n]+power:15[^\n]+score:20[^\n]+xp:30[^\n]+gold:10[^\n]+psyche:100[^\n]+plannedRules/.test(config), 'NIGHTMARE preview must expose its prepared values and planned rules while remaining unavailable for battle');
 for (const name of ['CHAOS','ULTIMATE','INFINITY']) assert(new RegExp(`${name}[^\\n]+available:false`).test(config), `${name} must remain unavailable without placeholder values`);
 assert(config.includes('const isNightmareUnlocked = (extremeClearCount) => (Number(extremeClearCount) || 0) > 0;'), 'NIGHTMARE unlock must reuse the existing EXTREME clear count');
-assert(source.includes("？？？") && source.includes("setting.available?'この難易度で挑戦':'選択できません'"), 'unavailable tiers must show ??? and stay unselectable');
+assert(source.includes("setting.available?'この難易度で挑戦':previewable?'準備中（挑戦できません）':'選択できません'"), 'NIGHTMARE and future tiers must stay unselectable');
 
 // --- ② 解放条件 ---
 assert(config.includes("const EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['GrandMaster', 'Hell', 'Legend'])"), 'unlock must reuse the three highest challenge difficulties');
@@ -28,12 +28,13 @@ assert(config.includes("const EXTREME_UNLOCK_TEXT = 'チャレンジ Grand Maste
 assert(/const isExtremeUnlocked = \(clearCounts\) => EXTREME_UNLOCK_DIFFICULTIES[\s\S]{0,160}\(Number\(clearCounts\?\.\[key\]\) \|\| 0\) > 0\)/.test(config), 'unlock must read the existing challenge clear counts');
 assert(source.includes('const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);'), 'unlock state must derive from the loaded clear counts');
 assert(source.includes('const modes=[...BATTLE_MODES,EXTREME_MODE];'), 'the extreme card must always be listed, locked or not');
-assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked') && source.includes("disabled={extremeLocked||(!!battleTutorial") && source.includes("disabled={!setting.available||!extremeUnlocked}"), 'locked extreme must be visible but unselectable on both screens');
-assert(source.includes("disabled={!setting.available} onClick={()=>setShowWaveDetails(true)}")
+assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked') && source.includes("disabled={extremeLocked||(!!battleTutorial") && source.includes("disabled={!setting.available||!extremeUnlocked}"), 'locked extreme and preview-only NIGHTMARE must remain unselectable');
+assert(source.includes("const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);") && source.includes("setting.id==='NIGHTMARE'&&nightmareUnlocked"), 'NIGHTMARE details must unlock from the loaded EXTREME clear count');
+assert(source.includes("disabled={!previewable} onClick={()=>setShowWaveDetails(true)}")
   && source.includes("const extreme=gameState==='EXTREME_DIFFICULTY_SELECT'")
-  && source.includes("const powerOverride=extreme?EXTREME_SETTING.power:null")
+  && source.includes("const powerOverride=extreme?extremePreviewSetting.power:null")
   && source.includes('createBattleEnemy(index+1,waveDifficulty,null,powerOverride)'), 'EXTREME must open the shared WAVE details with its battle power override');
-assert(source.includes("{setting.available?'全WAVE詳細':'詳細 ？？？'}"), 'future extreme tiers must not open WAVE details');
+assert(source.includes("{previewable?'全WAVE詳細':'詳細 ？？？'}"), 'only unlocked previewable tiers may open WAVE details');
 
 // --- ③ EXTREME固有ルール ---
 assert(source.includes("isBreeder&&extremeRunRef.current?extremeSpecialRule(extremeDifficulty,'breederCardEffect')"), 'only breeder cards must receive the selected EXTREME difficulty rule');
@@ -103,13 +104,15 @@ assert(source.includes('mh-extreme-enemy-image') && source.includes("extremeRun?
 assert(source.includes('mh-extreme-enemy-aura-shell') && source.includes('@keyframes mhExtremeEnemyMist') && source.includes('@keyframes mhExtremeEnemyFloor'), 'EXTREME aura must combine silhouette glow, rising evil energy, and a foot glow with lightweight CSS-only motion');
 assert(source.includes('h-[366px]') && source.includes('flex items-start gap-2.5'), 'mode cards must share a fixed outer height and aligned carousel');
 assert(/const packedLines = scene \? ASSISTANT_LINE_PACKS\.flatMap/.test(assistants), 'line-pack-only EXTREME assistant dialogue must remain reachable');
-assert(source.includes("? 'extremeChallenge'") && source.includes('scene="extremeDifficulty"') && !source.includes('extremeGuideStep'), 'mode and EXTREME difficulty must use separate shared assistant scenes without a post-selection dialogue');
+assert(source.includes("? 'extremeChallenge'") && source.includes("const extremeDifficultyAssistantScene = extremeDifficulty === NIGHTMARE_SETTING.id && nightmareUnlocked ? 'nightmareDifficulty' : 'extremeDifficulty';") && source.includes('scene={extremeDifficultyAssistantScene}') && !source.includes('extremeGuideStep'), 'mode and EXTREME difficulty must use separate shared assistant scenes without a post-selection dialogue');
 const sceneLines = (name) => {
   const start = assistants.indexOf(`${name}: [`);
   return assistants.slice(start, assistants.indexOf('],', start)).match(/\{ e:/g)?.length || 0;
 };
 assert(sceneLines('extremeChallenge') >= 5, 'the extreme mode scene needs at least 5 lines');
 assert(sceneLines('extremeDifficulty') >= 5, 'the EXTREME difficulty scene needs at least 5 lines');
+assert(sceneLines('nightmareDifficulty') >= 5, 'the NIGHTMARE preview scene needs at least 5 lines');
+for (const expected of ['EXTREMEの次', '有利な補正', '不利な補正', '距離適性', 'WAVEごとの戦い方']) assert(assistants.includes(expected), `NIGHTMARE assistant guidance must include: ${expected}`);
 const modeScene = assistants.slice(assistants.indexOf('extremeChallenge: ['), assistants.indexOf('extremeDifficulty: ['));
 assert(!modeScene.includes('ブリーダーカード'), 'the mode scene must not explain the EXTREME-only breeder-card rule');
 for (const forbidden of ['×13', '×20', '×25', '×7.5', '75', '50%']) {
@@ -127,4 +130,5 @@ assert(changelog.includes('極限チャレンジに全WAVE詳細を追加しま�
 assert.strictEqual(Math.floor(100 * 0.5), 50, 'representative integer card effect must be exactly 50%');
 assert.strictEqual(0.1 * 0.5, 0.05, 'representative ratio card effect must be exactly 50%');
 assert.strictEqual(Math.floor(100 * 13), 1300, 'EXTREME enemy HP/attack must be x13 versus Normal');
+assert.strictEqual(Math.floor(100 * 15), 1500, 'NIGHTMARE preview enemy HP/attack must be x15 versus Normal');
 console.log('OK: 極限チャレンジ 正式版(解放条件・EXTREME倍率・50%固有ルール・報酬保存・デバッグ隔離・記録の分離)');

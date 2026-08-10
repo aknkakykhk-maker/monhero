@@ -232,6 +232,10 @@ const ASSISTANT_SCENES = {
     help: 'basics/extreme-challenge',
     lines: [],
   },
+  nightmareDifficulty: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
 
   // ---- はじめて ----
   onboarding: {
@@ -785,6 +789,21 @@ addAssistantLinePack({
       { e:'wink', t:'ここはEXTREME！ 準備できてるなら、思いっきりいこ！' },
       { e:'normal', t:'厳しそうなら無理しなくてOK。もうひと育成してから挑むのもアリだよ。' },
       { e:'happy', t:'EXTREMEへの挑戦、あたしも応援してる！ ベストを尽くそ♪' },
+    ],
+  },
+});
+
+// NIGHTMAREはまだ戦闘開始できないため、解放後の詳細閲覧では予定仕様と準備の要点だけを案内する。
+addAssistantLinePack({
+  id: 'nightmareDifficultyPreview',
+  label: 'NIGHTMARE難易度案内',
+  lines: {
+    nightmareDifficulty: [
+      { e:'surprise', t:'NIGHTMAREはEXTREMEの次の難易度！ 今は詳細とWAVEを確認できるよ。' },
+      { e:'troubled', t:'NIGHTMAREでは、有利な補正が弱くなる予定なの。' },
+      { e:'surprise', t:'不利な補正はもっと重くなる予定。詳細の3項目を見ておこ！' },
+      { e:'normal', t:'距離適性がいつも以上に大事になるよ。編成をじっくり考えよう。' },
+      { e:'wink', t:'全WAVE詳細で敵の順番を見て、WAVEごとの戦い方を組み立てておこ♪' },
     ],
   },
 });

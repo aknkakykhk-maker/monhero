@@ -1,5 +1,13 @@
 const CHANGELOG = [
   {
+    date: "2026-08-10 19:11",
+    title: "NIGHTMAREの詳細を公開しました",
+    changes: [
+      "EXTREMEクリア後に、NIGHTMAREの説明・倍率・予定特殊ルールを確認できるようにしました",
+      "NIGHTMAREの敵強度×15を反映した全WAVE詳細を追加しました（挑戦と戦闘は引き続き準備中です）",
+    ],
+  },
+  {
     date: "2026-08-10 19:00",
     title: "NIGHTMAREの準備を進めました",
     changes: [

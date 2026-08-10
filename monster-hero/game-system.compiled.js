@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f462692abc6d4fb6
+// source-sha256: d43fec43548de883
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 19:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 19:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6077,7 +6077,7 @@ const DIFFICULTY_SETTINGS = {
 };
 // 極限チャレンジ。チャレンジモードの上位高難易度版で、DIFFICULTY_SETTINGS(通常の難易度)とは
 // 別の表にしてある。通常の難易度・全国ランキング・既存の保存キーへは混ぜない。
-// NIGHTMAREは次回実装に向けた数値と解放判定だけを持つが、まだ実戦では使用しない。
+// NIGHTMAREは詳細とWAVEプレビュー用の設定を持つが、まだ実戦では使用しない。
 // それより後の未決定難易度には数値を持たせず、現時点ではEXTREMEだけを実戦で使用する。
 const EXTREME_DIFFICULTIES = Object.freeze([{
   id: 'EXTREME',
@@ -6097,11 +6097,14 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   label: 'NIGHTMARE',
   japanese: 'ナイトメア',
   available: false,
+  previewAvailable: true,
   power: 15,
   score: 20,
   xp: 30,
   gold: 10,
-  psyche: 100
+  psyche: 100,
+  description: '有利な補正が弱まり、不利な補正がさらに重くなる悪夢級の高難易度。モンスターの距離適性と、各WAVEの戦い方がより重要になる。',
+  plannedRules: Object.freeze([['WAVE後強化', '50%'], ['自動回復率補正', 'プラス50% / マイナス200%'], ['距離適性補正', 'プラス50% / マイナス200%']])
 }, {
   id: 'CHAOS',
   label: 'CHAOS',
@@ -6308,7 +6311,7 @@ const helpDataRows = id => {
   switch (id) {
     case 'difficulties':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label, `敵×${s.power} ／ スコア×${s.score} ／ ダイヤ×${s.gold}`]);
-    // 極限チャレンジの難易度。遊べるものは倍率を、未実装のものは「？？？」を実データから出す
+    // 極限チャレンジの難易度。閲覧可能な準備中難易度も倍率は実データから出す
     case 'extremeDifficulties':
       return EXTREME_DIFFICULTIES.map(s => [s.label, s.available ? `敵×${s.power} ／ スコア×${s.score} ／ 経験値×${s.xp} ／ ダイヤ×${s.gold} ／ 虹のプシュケー ${s.psyche}個` : '？？？（未実装）']);
     case 'teachings':
@@ -8571,6 +8574,8 @@ function MonsterHeroGame() {
 
   // 極限チャレンジの解放判定。チャレンジのクリア記録(mh_clears_*)をそのまま見る
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
+  const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
+  const extremeDifficultyAssistantScene = extremeDifficulty === NIGHTMARE_SETTING.id && nightmareUnlocked ? 'nightmareDifficulty' : 'extremeDifficulty';
   const scoreMultiplier = extremeRun ? EXTREME_SETTING.score : DIFFICULTY_SETTINGS[safeDifficulty].score;
   const xpMultiplier = extremeRun ? EXTREME_SETTING.xp : scoreMultiplier;
   const goldMultiplier = extremeRun ? EXTREME_SETTING.gold : DIFFICULTY_SETTINGS[safeDifficulty].gold;
@@ -17988,9 +17993,10 @@ function MonsterHeroGame() {
       className: "w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm"
     }, "\u5BC4\u4ED8\u4E00\u89A7\u3078\u623B\u308B"))), showWaveDetails && (() => {
       const extreme = gameState === 'EXTREME_DIFFICULTY_SELECT';
+      const extremePreviewSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
       const waveDifficulty = extreme ? 'Normal' : safeDifficulty;
-      const powerOverride = extreme ? EXTREME_SETTING.power : null;
-      const label = extreme ? EXTREME_SETTING.label : DIFFICULTY_SETTINGS[safeDifficulty].label;
+      const powerOverride = extreme ? extremePreviewSetting.power : null;
+      const label = extreme ? extremePreviewSetting.label : DIFFICULTY_SETTINGS[safeDifficulty].label;
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center p-3",
         style: {
@@ -18687,13 +18693,15 @@ function MonsterHeroGame() {
         }
       }, difficulties.map(setting => {
         const active = setting.id === extremeDifficulty;
+        const unlocked = setting.available || setting.id === 'NIGHTMARE' && nightmareUnlocked;
+        const previewable = setting.available || setting.previewAvailable && unlocked;
         return /*#__PURE__*/React.createElement("article", {
           key: setting.id,
-          "aria-disabled": !setting.available,
+          "aria-disabled": !unlocked,
           className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? '#f0abfc' : 'rgba(255,255,255,.12)',
-            background: setting.available ? 'linear-gradient(180deg,#34133f,#160d2b)' : 'linear-gradient(180deg,#1e293b,#0d142b)',
+            background: previewable ? 'linear-gradient(180deg,#34133f,#160d2b)' : 'linear-gradient(180deg,#1e293b,#0d142b)',
             boxShadow: active ? '0 0 30px rgba(232,121,249,.35)' : 'none'
           }
         }, /*#__PURE__*/React.createElement("div", {
@@ -18704,11 +18712,11 @@ function MonsterHeroGame() {
           className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
-        }, setting.available ? 'EXTREMEの記録' : '難易度情報'), /*#__PURE__*/React.createElement("b", {
+        }, setting.available ? 'EXTREMEの記録' : previewable ? 'NIGHTMARE 詳細' : '難易度情報'), /*#__PURE__*/React.createElement("b", {
           className: "block text-right text-base leading-tight text-fuchsia-200"
-        }, setting.available ? `${extremeBestScore.toLocaleString()} pt` : '？？？'), /*#__PURE__*/React.createElement("span", {
+        }, setting.available ? `${extremeBestScore.toLocaleString()} pt` : previewable ? '準備中' : '？？？'), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, setting.available ? `クリア ${extremeClearCount}回` : '未実装・選択できません')), setting.available ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        }, setting.available ? `クリア ${extremeClearCount}回` : previewable ? '詳細のみ閲覧できます' : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : '未実装・選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-1 mt-1.5"
         }, [['敵強度', `×${setting.power}`], ['スコア', `×${setting.score}`], ['ダイヤ', `×${setting.gold}`]].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
@@ -18722,21 +18730,34 @@ function MonsterHeroGame() {
           className: "rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap"
         }, label, /*#__PURE__*/React.createElement("b", {
           className: "block text-xs text-white"
-        }, value)))), /*#__PURE__*/React.createElement("div", {
+        }, value)))), setting.description && /*#__PURE__*/React.createElement("p", {
+          className: "mt-1.5 rounded-xl bg-black/30 px-2 py-1.5 text-[9px] leading-relaxed text-slate-200"
+        }, setting.description), setting.id === 'EXTREME' ? /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1.5 text-center shadow-[0_0_18px_rgba(232,121,249,.28)]"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] font-black text-amber-300"
         }, "\u26A0 EXTREME\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("b", {
           className: "block text-xs text-white"
-        }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u52B9\u679C 50%"))) : /*#__PURE__*/React.createElement("div", {
+        }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u52B9\u679C 50%")) : /*#__PURE__*/React.createElement("div", {
+          className: "mt-1.5 rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-1.5"
+        }, /*#__PURE__*/React.createElement("small", {
+          className: "block text-center text-[8px] font-black text-amber-300"
+        }, "\u26A0 NIGHTMARE\u4E88\u5B9A\u7279\u6B8A\u30EB\u30FC\u30EB\uFF08\u672A\u5B9F\u88C5\uFF09"), setting.plannedRules.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+          key: label,
+          className: "mt-1 flex items-start justify-between gap-2 text-[9px] leading-tight"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-300"
+        }, label), /*#__PURE__*/React.createElement("b", {
+          className: "text-right text-white"
+        }, value))))) : /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500"
         }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("div", {
           className: "grid gap-1.5 mt-1.5"
         }, /*#__PURE__*/React.createElement("button", {
-          disabled: !setting.available,
+          disabled: !previewable,
           onClick: () => setShowWaveDetails(true),
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50"
-        }, setting.available ? '全WAVE詳細' : '詳細 ？？？'), /*#__PURE__*/React.createElement("button", {
+        }, previewable ? '全WAVE詳細' : '詳細 ？？？'), /*#__PURE__*/React.createElement("button", {
           disabled: !setting.available || !extremeUnlocked,
           onClick: () => {
             battleEntryStateRef.current = 'EXTREME_DIFFICULTY_SELECT';
@@ -18753,7 +18774,7 @@ function MonsterHeroGame() {
             setGameState('PICK_HERO');
           },
           className: "min-h-[44px] rounded-xl bg-fuchsia-600 text-white font-black text-sm disabled:bg-slate-800 disabled:text-slate-500"
-        }, setting.available ? 'この難易度で挑戦' : '選択できません'), /*#__PURE__*/React.createElement("button", {
+        }, setting.available ? 'この難易度で挑戦' : previewable ? '準備中（挑戦できません）' : '選択できません'), /*#__PURE__*/React.createElement("button", {
           disabled: !setting.available,
           onClick: () => openModeScoreRanking(EXTREME_MODE.id, setting.id, 'EXTREME_DIFFICULTY_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
@@ -18777,7 +18798,7 @@ function MonsterHeroGame() {
       }))), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 pt-1.5 pb-1"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "extremeDifficulty",
+        scene: extremeDifficultyAssistantScene,
         accent: "#e879f9",
         faceSize: 56
       })), /*#__PURE__*/React.createElement("div", {
