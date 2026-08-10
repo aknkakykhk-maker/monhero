@@ -28,6 +28,8 @@ assert(/const packedLines = scene \? ASSISTANT_LINE_PACKS\.flatMap/.test(fs.read
 assert(source.includes("assistantSceneLines('extremeChallenge'") && source.includes('setExtremeGuideStep(extremeGuideStep+1)'), 'EXTREME must use the shared assistant data and tap progression');
 assert(source.includes("const showExtremeRule = w === 1 && debugExtremeRef.current") && source.includes('setExtremeRuleOpen(showExtremeRule); setIsBusy(showExtremeRule)'), 'the 50% rule must block normal input once at WAVE 1');
 assert(source.includes('mh-extreme-enemy-aura') && source.includes('debugExtreme&&<div className="mh-extreme-enemy-aura"'), 'all EXTREME enemies must receive the lightweight dedicated aura');
+assert(source.includes('mh-extreme-enemy-aura-floor') && source.includes('debugExtreme&&<div className="mh-extreme-enemy-aura-floor"'), 'EXTREME aura must layer a foreground foot aura over the enemy body');
+assert(source.includes('inset:-48%') && source.includes('@keyframes mhExtremeAuraFloor'), 'EXTREME aura must spread beyond the enemy body with lightweight CSS-only motion');
 assert(source.includes('h-[366px]') && source.includes('flex items-start gap-2.5'), 'mode cards must share a fixed outer height and aligned carousel');
 assert(!changelog.includes('極限チャレンジをデバッグ限定'), 'debug-only trial must not be listed in the user changelog');
 assert(!help.includes('極限チャレンジの開発確認'), 'debug-only trial must not be described in user help');

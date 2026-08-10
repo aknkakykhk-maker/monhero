@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1db5f7930ee1599b
+// source-sha256: beb29b701f1100ce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 08:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 09:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22469,7 +22469,10 @@ function MonsterHeroGame() {
         WebkitMaskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',
         maskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'
       },
-      className: "object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]"
+      className: "relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]"
+    }), debugExtreme && /*#__PURE__*/React.createElement("div", {
+      className: "mh-extreme-enemy-aura-floor mh-extreme-enemy-aura-floor-wide",
+      "aria-hidden": "true"
     })), enemy?.id === 'Moo' && enemyAttackFx?.kind === 'moo' && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden",
       style: {
@@ -22546,14 +22549,17 @@ function MonsterHeroGame() {
         width: 'clamp(70px,12dvh,120px)',
         height: 'clamp(80px,16dvh,150px)'
       },
-      className: "object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
+      className: "relative z-[1] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
     }) : /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'clamp(58px,11dvh,104px)',
         lineHeight: 1
       },
-      className: "drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
-    }, enemy?.emoji), enemy?.id === 'Moo' && /*#__PURE__*/React.createElement("div", {
+      className: "relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]"
+    }, enemy?.emoji), debugExtreme && /*#__PURE__*/React.createElement("div", {
+      className: "mh-extreme-enemy-aura-floor",
+      "aria-hidden": "true"
+    }), enemy?.id === 'Moo' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible",
       style: {
         zIndex: 1
@@ -27204,7 +27210,8 @@ const createAnimationStyle = () => {
     .mh-breakthrough-cap{position:absolute;top:calc(16% + env(safe-area-inset-top));color:#fde68a;font-weight:900;font-size:13px;letter-spacing:.1em;animation:mhBreakCap 3.6s ease-out forwards}
     .mh-breakthrough-cap b{display:block;font-size:30px;color:#fff;text-shadow:0 0 16px #f59e0b}
     /* 最後に星が1つ増える。増えたぶんだけ大きく光ってから元の大きさに落ち着く */
-    .mh-extreme-enemy-aura{position:absolute;z-index:0;inset:-24%;border-radius:50%;pointer-events:none;background:radial-gradient(circle,transparent 32%,#c026d355 54%,#7e22ce33 67%,transparent 75%);box-shadow:0 0 22px 8px #a21caf55,inset 0 -14px 20px #be185d33;animation:mhExtremeAura 2.8s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-aura::after{content:'';position:absolute;left:18%;right:18%;bottom:8%;height:22%;border-radius:50%;background:#e879f955;filter:blur(7px);transform:scaleX(1.15)}.mh-extreme-enemy-aura-wide{inset:12%;z-index:-1;opacity:.6}@keyframes mhExtremeAura{0%,100%{opacity:.55;transform:scale(.96) translateY(2px)}50%{opacity:.85;transform:scale(1.04) translateY(-3px)}}@keyframes mhExtremeGuideIn{from{opacity:0;transform:translateY(18px) scale(.97)}}@keyframes mhExtremeRuleIn{from{opacity:0;transform:scale(.82)}60%{transform:scale(1.03)}}@media(prefers-reduced-motion:reduce){.mh-extreme-enemy-aura{animation:none;will-change:auto}.mh-extreme-enemy-aura,.mh-extreme-enemy-aura-wide{opacity:.65}}
+    /* EXTREMEの敵本体だけを包む3層オーラ。枠の発光ではなく、背面の黒紫のモヤ→本体→足元の赤紫光の順に重ねる。 */
+    .mh-extreme-enemy-aura{position:absolute;z-index:0;inset:-48%;border-radius:46% 54% 48% 52%;pointer-events:none;background:radial-gradient(ellipse at 50% 56%,#09000dcc 0 25%,#2b073fcc 39%,#701a75a6 53%,#9d174d73 64%,transparent 76%);filter:blur(6px);box-shadow:0 -16px 30px 5px #3b0764aa,18px -5px 26px #86198f88,-16px 8px 28px #4c0519aa;animation:mhExtremeAura 3.6s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-aura::before{content:'';position:absolute;inset:5% 12% 20%;border-radius:42% 58% 38% 62%;background:radial-gradient(ellipse at 42% 62%,#0b0011dd 0 30%,#581c8788 52%,#be123c55 67%,transparent 78%);filter:blur(9px);transform:rotate(-7deg)}.mh-extreme-enemy-aura-wide{inset:5%;opacity:.86}.mh-extreme-enemy-aura-floor{position:absolute;z-index:2;left:-27%;right:-27%;bottom:-18%;height:42%;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse,#16001bd9 0 25%,#701a75a6 48%,#be123c66 62%,transparent 76%);filter:blur(5px);animation:mhExtremeAuraFloor 3.2s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-aura-floor-wide{left:17%;right:17%;bottom:15%;height:18%}@keyframes mhExtremeAura{0%,100%{opacity:.72;transform:scale(.96,1.01) translate(-2px,3px) rotate(-1deg)}50%{opacity:1;transform:scale(1.05,1.09) translate(3px,-5px) rotate(1.5deg)}}@keyframes mhExtremeAuraFloor{0%,100%{opacity:.58;transform:scaleX(.92)}50%{opacity:.9;transform:scaleX(1.08)}}@keyframes mhExtremeGuideIn{from{opacity:0;transform:translateY(18px) scale(.97)}}@keyframes mhExtremeRuleIn{from{opacity:0;transform:scale(.82)}60%{transform:scale(1.03)}}@media(prefers-reduced-motion:reduce){.mh-extreme-enemy-aura,.mh-extreme-enemy-aura-floor{animation:none;will-change:auto}.mh-extreme-enemy-aura,.mh-extreme-enemy-aura-wide{opacity:.82}.mh-extreme-enemy-aura-floor{opacity:.72}}
     .mh-breakthrough-stars{position:absolute;top:calc(46% + 0px);display:flex;gap:4px;font-size:22px;color:#fde047;text-shadow:0 0 8px #ca8a04}
     .mh-breakthrough-stars i{opacity:.35;font-style:normal}
     .mh-breakthrough-stars i.is-new{animation:mhBreakStar 3.6s ease-out forwards}
