@@ -74,6 +74,16 @@ const ASSISTANT_UPDATE_NOTICES = [
     ],
     destination: 'market', buttonLabel: 'マーケットを見る',
   },
+  {
+    // 極限チャレンジの正式公開。デバッグ版を遊んでいた人にも、正式公開の案内として一度だけ出す
+    id: 'update_notice_extreme_challenge_v1', enabled: true,
+    title: '極限チャレンジ 正式追加', expression: 'excited',
+    pages: [
+      '極限チャレンジが追加されたよ！ 育てたモンスターの本気を試してみよ♪',
+      'チャレンジで Grand Master以上をクリアしていれば、バトルのモード選択から挑戦できるよ！',
+    ],
+    destination: 'battle', buttonLabel: 'バトルへ行く',
+  },
 ];
 
 // 指定された表情が用意されていなければ既定の表情へ落とす(画像切れを起こさないため)
@@ -724,7 +734,8 @@ const ASSISTANT_LINE_PACKS = [];
 // 束を1つ足す。読み込み順は問わない(合流は下の applyAssistantLinePacks でまとめて行う)
 const addAssistantLinePack = (pack) => { if (pack && pack.id && pack.lines) ASSISTANT_LINE_PACKS.push(pack); };
 
-// デバッグ公開中でも正式公開時と同じ助手データ・吹き出しで体験を確認する。
+// 極限チャレンジ。モード選択(extremeChallenge)では「チャレンジの上位高難易度版」だけを話し、
+// EXTREME固有のブリーダーカード50%は難易度側(extremeDifficulty)でだけ触れる。
 addAssistantLinePack({
   id: 'extremeChallengeGuide',
   label: '極限チャレンジ案内',

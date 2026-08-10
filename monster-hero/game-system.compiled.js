@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9cf6bb71d6a1a6fb
+// source-sha256: a822b826fadc3035
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 10:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 11:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -270,7 +270,7 @@ const modeHasRanking = mode => !isQuickMode(mode);
 // 既存の challenge / quick の獲得量と1日上限は変えず、プロぶんの pro を足しただけ
 const modeBondAction = mode => isQuickMode(mode) ? 'quick' : isProMode(mode) ? 'pro' : 'challenge';
 // そのモードの画面で助手(みゅあ)に話させる場面。セリフは data/assistants.js にある
-const battleModeAssistantScene = mode => mode === EXTREME_DEBUG_MODE.id ? 'extremeChallenge' : isQuickMode(mode) ? 'battleQuick' : isProMode(mode) ? 'battlePro' : 'battleChallenge';
+const battleModeAssistantScene = mode => mode === EXTREME_MODE.id ? 'extremeChallenge' : isQuickMode(mode) ? 'battleQuick' : isProMode(mode) ? 'battlePro' : 'battleChallenge';
 // ラン中に供モンが合流するとき、画面へ出す候補を作る。
 // 「すでに編成にいる子」と「勇者モン」は必ず外す。勇者モンは編成にいるので普通は
 // activeIds で外れるが、そこに頼ると取りこぼしたときに自分自身が候補として出てしまうため、
@@ -6030,9 +6030,10 @@ const DIFFICULTY_SETTINGS = {
     shadow: "shadow-pink-600/60"
   }
 };
-// 本番の難易度一覧・保存・ランキングへ混ぜない、デバッグ検証専用の極限チャレンジ設定。
+// 極限チャレンジ。チャレンジモードの上位高難易度版で、DIFFICULTY_SETTINGS(通常の難易度)とは
+// 別の表にしてある。通常の難易度・全国ランキング・既存の保存キーへは混ぜない。
 // 未決定の将来難易度には数値を持たせず、EXTREMEだけを実戦で使用する。
-const EXTREME_DEBUG_DIFFICULTIES = Object.freeze([{
+const EXTREME_DIFFICULTIES = Object.freeze([{
   id: 'EXTREME',
   label: 'EXTREME',
   japanese: 'エクストリーム',
@@ -6062,17 +6063,29 @@ const EXTREME_DEBUG_DIFFICULTIES = Object.freeze([{
   label: 'INFINITY',
   available: false
 }]);
-const EXTREME_DEBUG_SETTING = EXTREME_DEBUG_DIFFICULTIES[0];
-const extremeSpecialRule = (difficultyId, rule) => EXTREME_DEBUG_DIFFICULTIES.find(setting => setting.id === difficultyId)?.specialRules?.[rule] ?? 1;
-const EXTREME_DEBUG_MODE = Object.freeze({
-  id: 'extreme_debug',
+const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
+const extremeSpecialRule = (difficultyId, rule) => EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId)?.specialRules?.[rule] ?? 1;
+// 極限チャレンジの説明はモード共通の売りだけを書く。EXTREME固有のブリーダーカード50%は
+// ここではなく、難易度カード側の「⚠ EXTREME特殊ルール」で目立たせる
+const EXTREME_MODE = Object.freeze({
+  id: 'extreme',
   label: '極限チャレンジ',
   short: '極限',
   emoji: '🔥',
   color: '#e879f9',
   tagline: '限界を超えた強敵に挑む、最高難度チャレンジ',
-  highlights: [['⚔️', 'チャレンジモードの上位高難易度版'], ['✨', '極限の戦いに見合う高倍率報酬'], ['🧪', 'デバッグ中（保存・ランキングなし）']]
+  highlights: [['⚔️', 'チャレンジモードの上位高難易度版'], ['✨', '極限の戦いに見合う高倍率報酬'], ['🏅', 'クリア回数と自己ベストを記録']]
 });
+// 解放条件。チャレンジモードで Grand Master / Hell / Legend のどれかを1回以上クリアしていること。
+// 判定には既存の mh_clears_<難易度> をそのまま読む(新しい解放フラグは作らない)ので、
+// 旧セーブのプレイヤーもログインした時点で解放済みとして扱われる
+const EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['GrandMaster', 'Hell', 'Legend']);
+const EXTREME_UNLOCK_TEXT = 'チャレンジ Grand Master以上クリアで解放';
+const isExtremeUnlocked = clearCounts => EXTREME_UNLOCK_DIFFICULTIES.some(key => (Number(clearCounts?.[key]) || 0) > 0);
+// 極限チャレンジの記録。チャレンジ・クイック・プロと同じく専用の接頭辞へ分けて保存し、
+// 既存の mh_hs_* / mh_clears_* は一切書き換えない(全国ランキングへも送らない)
+const EXTREME_BEST_SCORE_KEY = 'mh_extreme_hs_EXTREME';
+const EXTREME_CLEAR_COUNT_KEY = 'mh_extreme_clears_EXTREME';
 const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
@@ -6239,6 +6252,9 @@ const helpDataRows = id => {
   switch (id) {
     case 'difficulties':
       return Object.values(DIFFICULTY_SETTINGS).map(s => [s.label, `敵×${s.power} ／ スコア×${s.score} ／ ダイヤ×${s.gold}`]);
+    // 極限チャレンジの難易度。遊べるものは倍率を、未実装のものは「？？？」を実データから出す
+    case 'extremeDifficulties':
+      return EXTREME_DIFFICULTIES.map(s => [s.label, s.available ? `敵×${s.power} ／ スコア×${s.score} ／ 経験値×${s.xp} ／ ダイヤ×${s.gold} ／ 虹のプシュケー ${s.psyche}個` : '？？？（未実装）']);
     case 'teachings':
       return (typeof TEACHING_CARDS !== 'undefined' && TEACHING_CARDS || []).map(card => [card.baseName, `${card.desc}（消費ガッツ ${card.guts}）`]);
     case 'skipTickets':
@@ -6277,6 +6293,7 @@ const helpDataRows = id => {
 // 表の上に出す見出し(何の表かを分かるようにする)
 const HELP_DATA_TITLES = {
   difficulties: '難易度と倍率',
+  extremeDifficulties: '極限チャレンジの難易度',
   teachings: 'ブリーダーの教え',
   skipTickets: 'スキップチケットの種類',
   items: 'アイテム一覧',
@@ -7721,6 +7738,9 @@ function MonsterHeroGame() {
   const [attemptCounts, setAttemptCounts] = useState({}); // 難易度別 挑戦回数(端末保存)
   const [clearCounts, setClearCounts] = useState({}); // 難易度別 クリア回数(端末保存)
   const [highestWaves, setHighestWaves] = useState({});
+  // 極限チャレンジ(EXTREME)の記録。チャレンジの mh_hs_* / mh_clears_* とは別のキーへ持つ
+  const [extremeBestScore, setExtremeBestScore] = useState(0);
+  const [extremeClearCount, setExtremeClearCount] = useState(0);
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
   const [onboardingName, setOnboardingName] = useState('');
   const [onboardingIcon, setOnboardingIcon] = useState(null);
@@ -8466,16 +8486,19 @@ function MonsterHeroGame() {
   // 敗北・諦め・勝利の非同期処理が通常の保存処理へ入る前に必ず判定できるようにする。
   const [debugBattle, setDebugBattle] = useState(false);
   const debugBattleRef = useRef(false);
-  const [debugExtreme, setDebugExtreme] = useState(false);
-  const debugExtremeRef = useRef(false);
+  const [extremeRun, setExtremeRun] = useState(false);
+  const extremeRunRef = useRef(false);
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
-  const scoreMultiplier = debugExtreme ? EXTREME_DEBUG_SETTING.score : DIFFICULTY_SETTINGS[safeDifficulty].score;
-  const xpMultiplier = debugExtreme ? EXTREME_DEBUG_SETTING.xp : scoreMultiplier;
-  const goldMultiplier = debugExtreme ? EXTREME_DEBUG_SETTING.gold : DIFFICULTY_SETTINGS[safeDifficulty].gold;
+
+  // 極限チャレンジの解放判定。チャレンジのクリア記録(mh_clears_*)をそのまま見る
+  const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
+  const scoreMultiplier = extremeRun ? EXTREME_SETTING.score : DIFFICULTY_SETTINGS[safeDifficulty].score;
+  const xpMultiplier = extremeRun ? EXTREME_SETTING.xp : scoreMultiplier;
+  const goldMultiplier = extremeRun ? EXTREME_SETTING.gold : DIFFICULTY_SETTINGS[safeDifficulty].gold;
   const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);
   const effectiveMaxGuts = useMemo(() => resolveEffectiveMaxStat(maxGuts, getPermaBuff('muaGutsPct')), [maxGuts, permaBuffs]);
   // 丈夫さのバフ(defPct)を乗せた「実際に計算へ使う丈夫さ」。ライフ・ガッツと同じ考え方で、
@@ -9022,7 +9045,7 @@ function MonsterHeroGame() {
     // 新しいバトルモード選択(BATTLE_MENUと同じ曲を続ける)
     BATTLE_DIFFICULTY_SELECT: 'enhance',
     // 新しい難易度選択も同じ曲
-    EXTREME_DEBUG_DIFFICULTY_SELECT: 'enhance',
+    EXTREME_DIFFICULTY_SELECT: 'enhance',
     // 極限もチャレンジと同じ選択画面BGMを続ける
     BATTLE_SCORE_RANKING: 'enhance',
     // そこから開くスコアランキングも同じ曲
@@ -9074,7 +9097,7 @@ function MonsterHeroGame() {
     // 専用戦は敵IDとWAVEの両方で判定し、ムー → デュラハン → 通常戦の順に優先する。
     // デバッグで敵を直接呼び出した場合も、選択中のモードに対応する曲を使う。
     if (state === 'BATTLE') {
-      const modeBgm = debugExtremeRef.current ? {
+      const modeBgm = extremeRunRef.current ? {
         normal: 'extremeBattle',
         dullahan: 'extremeDullahan',
         moo: 'extremeMoo'
@@ -9780,6 +9803,9 @@ function MonsterHeroGame() {
         proClears[d] = await storeGet(clearCountKey(BATTLE_MODE_PRO, d), 0, false);
         proWaves[d] = await storeGet(bestWaveKey(BATTLE_MODE_PRO, d), 0, false);
       }));
+      // 極限チャレンジの記録。まだ遊んだことがなければ0のまま(既存セーブでも安全に読める)
+      setExtremeBestScore(Math.max(0, Math.floor(Number(await storeGet(EXTREME_BEST_SCORE_KEY, 0, false)) || 0)));
+      setExtremeClearCount(Math.max(0, Math.floor(Number(await storeGet(EXTREME_CLEAR_COUNT_KEY, 0, false)) || 0)));
       setHighScores(scores);
       highScoresRef.current = scores;
       setAttemptCounts(attempts);
@@ -9988,6 +10014,19 @@ function MonsterHeroGame() {
     // 呼び出し側でも弾いているが、ここでも止めて「デバッグから遊んだら記録がついた」を確実に防ぐ
     if (debugBattleRef.current) return;
     scoreSubmittedRef.current = true;
+    // 極限チャレンジは全国ランキングへ送らない(専用ランキングも作らない)。
+    // 自己ベストだけ専用キーへ残すので、チャレンジの mh_hs_* は書き換わらない
+    if (extremeRunRef.current) {
+      if (score > (Number(extremeBestScore) || 0)) {
+        await storeSet(EXTREME_BEST_SCORE_KEY, score, false);
+        setExtremeBestScore(score);
+        setRunHighlights(prev => ({
+          ...prev,
+          newRecord: true
+        }));
+      }
+      return;
+    }
     // クイックモードはランキング対象外。送信も、チャレンジの自己ベスト更新も行わず、
     // 記録は専用のキーへだけ残す
     if (isQuickMode(runMode)) {
@@ -10117,7 +10156,8 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (gameState !== 'BATTLE_MODE_SELECT' || modeSelectTab !== 'mode') return;
     const id = requestAnimationFrame(() => {
-      const modes = debugBattle ? [...BATTLE_MODES, EXTREME_DEBUG_MODE] : BATTLE_MODES;
+      // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
+      const modes = [...BATTLE_MODES, EXTREME_MODE];
       const index = modes.length + Math.max(0, modes.findIndex(m => m.id === battleMode));
       modeCarouselRef.current?.children[index]?.scrollIntoView({
         inline: 'center',
@@ -10125,7 +10165,7 @@ function MonsterHeroGame() {
       });
     });
     return () => cancelAnimationFrame(id);
-  }, [gameState, modeSelectTab, debugBattle]);
+  }, [gameState, modeSelectTab]);
   // 供モン合流の横スライドは、開くたびに先頭から見せる
   useEffect(() => {
     if (gameState !== 'PICK_ALLY') return;
@@ -10163,7 +10203,7 @@ function MonsterHeroGame() {
   }, [gameState, battleMode]);
   // 極限の難易度画面も通常チャレンジと同じ横カルーセルで、開くたびEXTREMEから見せる。
   useEffect(() => {
-    if (gameState !== 'EXTREME_DEBUG_DIFFICULTY_SELECT') return;
+    if (gameState !== 'EXTREME_DIFFICULTY_SELECT') return;
     setExtremeDifficulty('EXTREME');
     const id = requestAnimationFrame(() => modeDifficultyCarouselRef.current?.children[0]?.scrollIntoView({
       inline: 'center',
@@ -11633,11 +11673,15 @@ function MonsterHeroGame() {
       });
       return;
     }
-    const scoreMult = DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
-    const goldMult = DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
+    // 極限チャレンジはスコア×20・経験値×25・ダイヤ×7.5。通常の難易度表ではなく EXTREME_SETTING を使う
+    const extreme = extremeRunRef.current;
+    const scoreMult = extreme ? EXTREME_SETTING.score : DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
+    const goldMult = extreme ? EXTREME_SETTING.gold : DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
+    // 経験値はスコアと倍率が違う(極限はスコア×20に対して経験値×25)ので別に持つ
+    const xpMult = extreme ? EXTREME_SETTING.xp : scoreMult;
 
     // クイックモードは経験値とダイヤだけ1.5倍(スコア倍率は難易度のまま)
-    const breederXpGain = xpForWavesClearedInMode(wavesCleared, scoreMult, runMode);
+    const breederXpGain = xpForWavesClearedInMode(wavesCleared, xpMult, runMode);
     const breederLevelBefore = levelInfo(breederXp);
     const nextXp = breederXp + breederXpGain;
     const breederLevelAfter = levelInfo(nextXp);
@@ -11666,7 +11710,7 @@ function MonsterHeroGame() {
     // バトルへ参加した供モンには勇者モンの1/2、モンスター編成内で参加しなかった控えのマスモンには
     // 1/4を加算する。勇者・参加・控えの区分と個体IDは先に一意化し、同じ個体へ重複付与しない。
     // 絆経験値はブリーダー経験値と倍率が違う(プロは絆3倍・ブリーダー1.5倍)ので専用の関数を通す
-    const gain = bondXpForWavesClearedInMode(wavesCleared, scoreMult, runMode);
+    const gain = bondXpForWavesClearedInMode(wavesCleared, xpMult, runMode);
     const bondAwards = buildRunBondAwards({
       gain,
       heroMasuId: mainHero?.masuId,
@@ -11946,7 +11990,8 @@ function MonsterHeroGame() {
   // 所持数は他の消耗アイテムと同じ mh_owned_items へ足すので、新しい保存キーは作らない。
   // 獲得数はリザルトに出したいので finalRewardSummary へも足す(報酬付与のあとに走るため関数形で足す)
   const awardClearPsyche = async () => {
-    const gain = clearPsycheReward(difficulty);
+    // 極限チャレンジは通常の難易度表ではなく EXTREME_SETTING の個数を配る
+    const gain = extremeRunRef.current ? EXTREME_SETTING.psyche : clearPsycheReward(difficulty);
     if (gain <= 0) return 0;
     const nextItems = {
       ...ownedItemsRef.current,
@@ -11968,6 +12013,13 @@ function MonsterHeroGame() {
     // チャレンジ・クイックのどちらもここを通り、clearRecordedRef が連打も二重付与も止める。
     // 敗北・リタイア・スキップチケットはこの関数を通らないので配られない
     await awardClearPsyche();
+    // 極限チャレンジは専用キーへ。チャレンジの通算クリア数(初勝利判定・解放判定に使う)は動かさない
+    if (extremeRunRef.current) {
+      const nextExtreme = (Number(extremeClearCount) || 0) + 1;
+      setExtremeClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));
+      await storeSet(EXTREME_CLEAR_COUNT_KEY, nextExtreme, false);
+      return;
+    }
     if (isQuickMode(runMode)) {
       const nextQuick = (quickClearCounts[difficulty] || 0) + 1;
       setQuickClearCounts(prev => ({
@@ -12336,10 +12388,10 @@ function MonsterHeroGame() {
   };
   const returnToHome = () => {
     debugBattleRef.current = false;
-    debugExtremeRef.current = false;
+    extremeRunRef.current = false;
     debugResultRef.current = false;
     setDebugBattle(false);
-    setDebugExtreme(false);
+    setExtremeRun(false);
     setDebugOutcome(null);
     beginNewRankingRun({
       runIdRef,
@@ -13045,7 +13097,7 @@ function MonsterHeroGame() {
       wave,
       roundScore: finalRoundScore,
       totalScore: score + finalRoundScore,
-      ...(debugExtreme ? {
+      ...(extremeRun ? {
         xpGain: waveXpGainInMode(wave, xpMultiplier, runMode)
       } : {
         xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)
@@ -13349,7 +13401,7 @@ function MonsterHeroGame() {
       const isBreeder = isBreederCard(card);
       const halved = !isBreeder && penaltyCardCount > 0;
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
-      const effMul = isBreeder && debugExtremeRef.current ? extremeSpecialRule(extremeDifficulty, 'breederCardEffect') : halved ? 0.5 : 1;
+      const effMul = isBreeder && extremeRunRef.current ? extremeSpecialRule(extremeDifficulty, 'breederCardEffect') : halved ? 0.5 : 1;
       if (!isBreeder) penaltyCardCount++;
       if (halved) addPopup('2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
       const slotIdx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
@@ -14212,10 +14264,12 @@ function MonsterHeroGame() {
   // 100毎に自動で1段階上がる
   const computeGuardLevel = defVal => Math.max(0, Math.min(GUARD_EVOLUTION.length - 1, Math.floor((defVal || 0) / 100)));
   const spawnEnemy = useCallback((w, forcedEnemyKey = null, initialDistance = null) => {
-    const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, debugExtremeRef.current ? EXTREME_DEBUG_SETTING.power : null);
+    const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, extremeRunRef.current ? EXTREME_SETTING.power : null);
     if (!newEnemy) return null;
-    // 最高到達WAVEもモードごとに別々に記録する
-    if (!forcedEnemyKey) {
+    // 最高到達WAVEもモードごとに別々に記録する。
+    // 極限チャレンジは難易度が別表(内部の difficulty は Normal のまま)なので、ここへ入れると
+    // チャレンジのNormalの記録を書き換えてしまう。デバッグ戦・練習と同じく記録しない
+    if (!forcedEnemyKey && !extremeRunRef.current && !debugBattleRef.current) {
       if (isQuickMode(runMode)) {
         if (w > (quickHighestWaves[difficulty] || 0)) {
           setQuickHighestWaves(prev => ({
@@ -14316,7 +14370,7 @@ function MonsterHeroGame() {
     setGuardLevel(nGrdL);
     setGuardBonusCount(nGB);
     const pool = buildDeck(currentSlots, nAtkL, nGrdL, u || ownedUniques, t || ownedTeachings, nGB, slotUniqueChoice, slotUniqueLevelChoice, inheritedUniqueEvo, heroForDeck);
-    const showExtremeRule = w === 1 && debugExtremeRef.current;
+    const showExtremeRule = w === 1 && extremeRunRef.current;
     setHand(pool.slice(0, 5));
     setDeck(pool.slice(5));
     setGraveyard([]);
@@ -14348,10 +14402,10 @@ function MonsterHeroGame() {
     battleSpeedRef.current = 1;
     setBattleSpeed(1);
     debugBattleRef.current = true;
-    debugExtremeRef.current = false;
+    extremeRunRef.current = false;
     debugResultRef.current = false;
     setDebugBattle(true);
-    setDebugExtreme(false);
+    setExtremeRun(false);
     setDebugOutcome(null);
     setGaveUp(false);
     setScore(0);
@@ -14437,10 +14491,10 @@ function MonsterHeroGame() {
     setBattleTutorialStep(null);
     setBattleTutorialReturn('DEBUG_SETTINGS');
     debugBattleRef.current = false;
-    debugExtremeRef.current = false;
+    extremeRunRef.current = false;
     debugResultRef.current = false;
     setDebugBattle(false);
-    setDebugExtreme(false);
+    setExtremeRun(false);
     setDebugOutcome(null);
     setGaveUp(false);
     setCurrentPickingMon(null);
@@ -14581,10 +14635,10 @@ function MonsterHeroGame() {
       uid: Math.random()
     }));
     debugBattleRef.current = true;
-    debugExtremeRef.current = extreme;
+    extremeRunRef.current = extreme;
     debugResultRef.current = false;
     setDebugBattle(true);
-    setDebugExtreme(extreme);
+    setExtremeRun(extreme);
     setDebugOutcome(null);
     setGaveUp(false);
     setScore(0);
@@ -14777,8 +14831,9 @@ function MonsterHeroGame() {
       });
     }
     if (isUpgrade) addPopup("強化完了！", 'hero', 'text-white bg-indigo-600 px-2 text-[10px]');
-    if (!enemy) {
-      // このWAVE1開始が今回の挑戦のスタート地点
+    // このWAVE1開始が今回の挑戦のスタート地点。
+    // 極限チャレンジ・デバッグ戦・練習は、チャレンジの挑戦回数(mh_attempts_*)へ数えない
+    if (!enemy && !extremeRunRef.current && !debugBattleRef.current) {
       setAttemptCounts(prev => {
         const next = {
           ...prev,
@@ -18069,9 +18124,9 @@ function MonsterHeroGame() {
             battleScenarioRef.current = null;
             battleScenarioIntentIndexRef.current = 0;
             debugBattleRef.current = false;
-            debugExtremeRef.current = false;
+            extremeRunRef.current = false;
             setDebugBattle(false);
-            setDebugExtreme(false);
+            setExtremeRun(false);
             setDebugOutcome(null);
             setMonSelection(getActiveMonsterList());
             setHeroPickTab('roster');
@@ -18158,7 +18213,8 @@ function MonsterHeroGame() {
       },
       className: `min-h-[38px] rounded-xl text-[10px] font-black border-2 active:scale-95 ${rankingKind === t.k ? 'bg-indigo-600 border-indigo-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
     }, t.label))), rankingKind === 'score' && renderScoreRankingBody(BATTLE_MODE_CHALLENGE), rankingKind === 'breeder' && renderBreederRankingBody(), rankingKind === 'bond' && renderBondRankingBody()))), gameState === 'BATTLE_MODE_SELECT' && (() => {
-      const modes = debugBattle ? [...BATTLE_MODES, EXTREME_DEBUG_MODE] : BATTLE_MODES;
+      // 極限チャレンジは未解放でもカードは出す(押せるかどうかだけを切り替える)
+      const modes = [...BATTLE_MODES, EXTREME_MODE];
       const current = modes.find(m => m.id === battleMode) || modes[0];
       const selectedIndex = Math.max(0, modes.findIndex(m => m.id === current.id));
       // 端で止まらず「ぐるぐる回る」ようにするため、同じ並びを3回くり返して置く。
@@ -18269,11 +18325,12 @@ function MonsterHeroGame() {
         }
       }, loopModes.map((m, loopIndex) => {
         const active = m.id === current.id,
-          isExtreme = m.id === EXTREME_DEBUG_MODE.id,
+          isExtreme = m.id === EXTREME_MODE.id,
+          extremeLocked = isExtreme && !extremeUnlocked,
           rec = isExtreme ? {
-            score: 0,
+            score: extremeBestScore,
             wave: 0,
-            clears: 0
+            clears: extremeClearCount
           } : modeRecordFor(m.id, safeDifficulty),
           ranked = !isExtreme && modeHasRanking(m.id);
         return /*#__PURE__*/React.createElement("article", {
@@ -18297,14 +18354,14 @@ function MonsterHeroGame() {
           className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
-        }, isExtreme ? 'デバッグ確認' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`), /*#__PURE__*/React.createElement("b", {
+        }, isExtreme ? extremeLocked ? '解放条件' : 'EXTREMEの記録' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`), /*#__PURE__*/React.createElement("b", {
           className: "block text-right text-base leading-tight",
           style: {
             color: m.color
           }
-        }, isExtreme ? '記録・報酬なし' : ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), /*#__PURE__*/React.createElement("span", {
+        }, isExtreme ? extremeLocked ? '🔒 未解放' : `${rec.score.toLocaleString()} pt` : ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, isExtreme ? '通常データへ保存しません' : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), /*#__PURE__*/React.createElement("ul", {
+        }, isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), /*#__PURE__*/React.createElement("ul", {
           className: "mt-1.5 space-y-0.5"
         }, m.highlights.map(([icon, text]) => /*#__PURE__*/React.createElement("li", {
           key: text,
@@ -18320,17 +18377,17 @@ function MonsterHeroGame() {
           onClick: () => setModeInfoId(m.id),
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50"
         }, isExtreme ? 'チャレンジモード最高難度' : 'このモードの説明'), /*#__PURE__*/React.createElement("button", {
-          disabled: !!battleTutorial && m.id !== BATTLE_MODE_CHALLENGE,
+          disabled: extremeLocked || !!battleTutorial && m.id !== BATTLE_MODE_CHALLENGE,
           onClick: () => {
             setBattleMode(m.id);
-            setGameState(isExtreme ? 'EXTREME_DEBUG_DIFFICULTY_SELECT' : 'BATTLE_DIFFICULTY_SELECT');
+            setGameState(isExtreme ? 'EXTREME_DIFFICULTY_SELECT' : 'BATTLE_DIFFICULTY_SELECT');
           },
           className: `min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id === BATTLE_MODE_CHALLENGE ? battleTutorialSpotClass('modeStart') : ''}`,
           style: {
             backgroundColor: m.color,
             color: '#0f172a'
           }
-        }, "\u96E3\u6613\u5EA6\u3092\u9078\u3076"), ranked && /*#__PURE__*/React.createElement("button", {
+        }, extremeLocked ? 'まだ挑戦できません' : '難易度を選ぶ'), ranked && /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
           onClick: () => openModeScoreRanking(m.id, safeDifficulty, 'BATTLE_MODE_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
@@ -18339,10 +18396,9 @@ function MonsterHeroGame() {
         }, "\uD83C\uDFC6 ", m.label, "\u306E\u30E9\u30F3\u30AD\u30F3\u30B0"), /*#__PURE__*/React.createElement(ChevronRight, {
           size: 16,
           className: "shrink-0"
-        })), isExtreme && /*#__PURE__*/React.createElement("button", {
-          disabled: true,
-          className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/25 text-slate-400 font-black text-[11px] opacity-60"
-        }, "\uD83C\uDFC6 \u30E9\u30F3\u30AD\u30F3\u30B0\u5BFE\u8C61\u5916\uFF08\u30C7\u30D0\u30C3\u30B0\uFF09")));
+        })), isExtreme && /*#__PURE__*/React.createElement("div", {
+          className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/25 text-slate-400 font-black text-[11px] flex items-center justify-center px-2 text-center leading-tight"
+        }, extremeLocked ? EXTREME_UNLOCK_TEXT : '全国ランキングの対象外です')));
       })), /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u6B21\u306E\u30E2\u30FC\u30C9",
         onClick: () => stepMode(1),
@@ -18376,8 +18432,8 @@ function MonsterHeroGame() {
         scene: "ranking",
         compact: true
       })), renderBondRankingBody())));
-    })(), gameState === 'EXTREME_DEBUG_DIFFICULTY_SELECT' && (() => {
-      const difficulties = EXTREME_DEBUG_DIFFICULTIES;
+    })(), gameState === 'EXTREME_DIFFICULTY_SELECT' && (() => {
+      const difficulties = EXTREME_DIFFICULTIES;
       const selectedIndex = Math.max(0, difficulties.findIndex(setting => setting.id === extremeDifficulty));
       const selectDifficultyIndex = (index, behavior = 'smooth') => {
         const safe = Math.max(0, Math.min(difficulties.length - 1, index));
@@ -18390,7 +18446,7 @@ function MonsterHeroGame() {
       };
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full min-h-0 px-4",
-        "data-extreme-debug-difficulties": true,
+        "data-extreme-difficulties": true,
         style: {
           paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
           paddingBottom: 'calc(.35rem + env(safe-area-inset-bottom))'
@@ -18461,9 +18517,9 @@ function MonsterHeroGame() {
           className: "block text-[8px] text-slate-400 font-black"
         }, setting.available ? 'EXTREMEの記録' : '難易度情報'), /*#__PURE__*/React.createElement("b", {
           className: "block text-right text-base leading-tight text-fuchsia-200"
-        }, setting.available ? '保存されません' : '？？？'), /*#__PURE__*/React.createElement("span", {
+        }, setting.available ? `${extremeBestScore.toLocaleString()} pt` : '？？？'), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, setting.available ? 'デバッグプレイ専用' : '未実装・選択できません')), setting.available ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        }, setting.available ? `クリア ${extremeClearCount}回` : '未実装・選択できません')), setting.available ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-1 mt-1.5"
         }, [['敵強度', `×${setting.power}`], ['スコア', `×${setting.score}`], ['ダイヤ', `×${setting.gold}`]].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
@@ -18490,18 +18546,16 @@ function MonsterHeroGame() {
         }, /*#__PURE__*/React.createElement("button", {
           disabled: true,
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs opacity-50"
-        }, setting.available ? '全WAVE詳細（デバッグ）' : '詳細 ？？？'), /*#__PURE__*/React.createElement("button", {
-          disabled: !setting.available,
+        }, setting.available ? 'チャレンジモード最高難度' : '詳細 ？？？'), /*#__PURE__*/React.createElement("button", {
+          disabled: !setting.available || !extremeUnlocked,
           onClick: () => {
-            battleEntryStateRef.current = 'EXTREME_DEBUG_DIFFICULTY_SELECT';
+            battleEntryStateRef.current = 'EXTREME_DIFFICULTY_SELECT';
             setDifficulty('Normal');
             setRunMode(BATTLE_MODE_CHALLENGE);
             battleScenarioRef.current = null;
             battleScenarioIntentIndexRef.current = 0;
-            debugBattleRef.current = true;
-            debugExtremeRef.current = true;
-            setDebugBattle(true);
-            setDebugExtreme(true);
+            extremeRunRef.current = true;
+            setExtremeRun(true);
             setDebugOutcome(null);
             setProAllyPool([]);
             setMonSelection(getActiveMonsterList());
@@ -18509,10 +18563,9 @@ function MonsterHeroGame() {
             setGameState('PICK_HERO');
           },
           className: "min-h-[44px] rounded-xl bg-fuchsia-600 text-white font-black text-sm disabled:bg-slate-800 disabled:text-slate-500"
-        }, setting.available ? 'この難易度で挑戦' : '選択できません'), /*#__PURE__*/React.createElement("button", {
-          disabled: true,
-          className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/25 text-slate-400 font-black text-[11px] opacity-60"
-        }, "\uD83C\uDFC6 \u30E9\u30F3\u30AD\u30F3\u30B0\u5BFE\u8C61\u5916\uFF08\u30C7\u30D0\u30C3\u30B0\uFF09")));
+        }, setting.available ? 'この難易度で挑戦' : '選択できません'), /*#__PURE__*/React.createElement("div", {
+          className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/25 text-slate-400 font-black text-[11px] flex items-center justify-center px-2 text-center leading-tight"
+        }, "\uD83C\uDFC6 \u5168\u56FD\u30E9\u30F3\u30AD\u30F3\u30B0\u306E\u5BFE\u8C61\u5916\u3067\u3059")));
       })), /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u6B21\u306E\u96E3\u6613\u5EA6",
         disabled: selectedIndex === difficulties.length - 1,
@@ -18533,7 +18586,7 @@ function MonsterHeroGame() {
         faceSize: 56
       })), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 pt-1.5 pb-1 text-center text-[9px] text-slate-500"
-      }, "\u30C7\u30D0\u30C3\u30B0\u78BA\u8A8D\u4E2D\u306E\u305F\u3081\u3001\u8A18\u9332\u30FB\u5831\u916C\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"))));
+      }, "\u8A18\u9332\u306F\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u5C02\u7528\u306E\u67A0\u306B\u4FDD\u5B58\u3055\u308C\u3001\u30C1\u30E3\u30EC\u30F3\u30B8\u306E\u8A18\u9332\u306F\u5909\u308F\u308A\u307E\u305B\u3093"))));
     })(), gameState === 'BATTLE_DIFFICULTY_SELECT' && (() => {
       const difficulties = Object.entries(DIFFICULTY_SETTINGS),
         selectedIndex = difficulties.findIndex(([key]) => key === safeDifficulty);
@@ -18685,9 +18738,9 @@ function MonsterHeroGame() {
             battleScenarioRef.current = null;
             battleScenarioIntentIndexRef.current = 0;
             debugBattleRef.current = false;
-            debugExtremeRef.current = false;
+            extremeRunRef.current = false;
             setDebugBattle(false);
-            setDebugExtreme(false);
+            setExtremeRun(false);
             setDebugOutcome(null);
             setProAllyPool([]);
             setMonSelection(pro ? getUnlockedBaseMonsterList() : getActiveMonsterList());
@@ -19506,9 +19559,9 @@ function MonsterHeroGame() {
       "data-debug-battle-mode": true,
       onClick: () => {
         debugBattleRef.current = true;
-        debugExtremeRef.current = false;
+        extremeRunRef.current = false;
         setDebugBattle(true);
-        setDebugExtreme(false);
+        setExtremeRun(false);
         setBattleMode(BATTLE_MODE_CHALLENGE);
         setModeSelectTab('mode');
         setGameState('BATTLE_MODE_SELECT');
@@ -22477,7 +22530,7 @@ function MonsterHeroGame() {
         borderColor: `${battleModeInfo(runMode).color}66`,
         backgroundColor: 'rgba(0,0,0,.35)'
       }
-    }, debugExtreme ? '極限チャレンジ / EXTREME' : /*#__PURE__*/React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), /*#__PURE__*/React.createElement("div", {
+    }, extremeRun ? '極限チャレンジ / EXTREME' : /*#__PURE__*/React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), /*#__PURE__*/React.createElement("div", {
       "data-battle-metrics": true,
       className: "shrink-0 flex items-center gap-1 px-1 leading-none"
     }, /*#__PURE__*/React.createElement("div", {
@@ -22744,7 +22797,7 @@ function MonsterHeroGame() {
         WebkitMaskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',
         maskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'
       },
-      className: `relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${debugExtreme ? ' mh-extreme-enemy-image' : ''}`
+      className: `relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun ? ' mh-extreme-enemy-image' : ''}`
     })), enemy?.id === 'Moo' && enemyAttackFx?.kind === 'moo' && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden",
       style: {
@@ -22812,7 +22865,7 @@ function MonsterHeroGame() {
         height: 'clamp(80px,16dvh,150px)'
       }
     }) : /*#__PURE__*/React.createElement("span", {
-      className: debugExtreme ? 'mh-extreme-enemy-aura-shell' : '',
+      className: extremeRun ? 'mh-extreme-enemy-aura-shell' : '',
       style: {
         width: 'clamp(70px,12dvh,120px)',
         height: 'clamp(80px,16dvh,150px)'
@@ -22820,15 +22873,15 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("img", {
       src: enemy.imgUrl,
       alt: enemy?.name,
-      className: `relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${debugExtreme ? ' mh-extreme-enemy-image' : ''}`
+      className: `relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? ' mh-extreme-enemy-image' : ''}`
     })) : /*#__PURE__*/React.createElement("span", {
-      className: debugExtreme ? 'mh-extreme-enemy-aura-shell' : ''
+      className: extremeRun ? 'mh-extreme-enemy-aura-shell' : ''
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'clamp(58px,11dvh,104px)',
         lineHeight: 1
       },
-      className: `relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${debugExtreme ? ' mh-extreme-enemy-image' : ''}`
+      className: `relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? ' mh-extreme-enemy-image' : ''}`
     }, enemy?.emoji)), enemy?.id === 'Moo' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible",
       style: {
@@ -25572,7 +25625,7 @@ function MonsterHeroGame() {
       className: "pt-1 flex flex-col gap-0.5 text-right"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold uppercase italic"
-    }, "\u96E3\u6613\u5EA6\u30DC\u30FC\u30CA\u30B9 (", debugExtreme ? 'EXTREME' : difficulty, "): x", scoreMultiplier), /*#__PURE__*/React.createElement("div", {
+    }, "\u96E3\u6613\u5EA6\u30DC\u30FC\u30CA\u30B9 (", extremeRun ? 'EXTREME' : difficulty, "): x", scoreMultiplier), /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-end"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-indigo-400 text-xs font-black uppercase"
@@ -25916,9 +25969,9 @@ function MonsterHeroGame() {
           const options = getDebugEnemyOptions(difficulty);
           setDebugEnemyKey(options[0]?.key || null);
           debugBattleRef.current = false;
-          debugExtremeRef.current = false;
+          extremeRunRef.current = false;
           setDebugBattle(false);
-          setDebugExtreme(false);
+          setExtremeRun(false);
           setDebugOutcome(null);
           setShowHelp(false);
           setGameState('DEBUG_SETTINGS');
@@ -26749,7 +26802,7 @@ function MonsterHeroGame() {
       className: "text-[10px] font-black text-fuchsia-300 tracking-[.35em] mb-3"
     }, "DEBUG"), /*#__PURE__*/React.createElement("h2", {
       className: "text-2xl font-black text-white mb-4"
-    }, debugOutcome === 'win' ? '勝利' : debugOutcome === 'lose' ? '敗北' : 'リタイア'), debugExtreme && /*#__PURE__*/React.createElement("div", {
+    }, debugOutcome === 'win' ? '勝利' : debugOutcome === 'lose' ? '敗北' : 'リタイア'), extremeRun && /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-xs mb-4 rounded-2xl border border-fuchsia-400/50 bg-fuchsia-950/30 p-3 text-left"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-fuchsia-200 font-black mb-2"
@@ -26759,14 +26812,14 @@ function MonsterHeroGame() {
       className: "text-right"
     }, score.toLocaleString()), /*#__PURE__*/React.createElement("span", null, "10WAVE \u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, xpForWavesCleared(10, EXTREME_DEBUG_SETTING.xp).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "10WAVE \u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", {
+    }, xpForWavesCleared(10, EXTREME_SETTING.xp).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "10WAVE \u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, goldForWavesCleared(10, EXTREME_DEBUG_SETTING.gold).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30EA\u30A2\u6642\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("b", {
+    }, goldForWavesCleared(10, EXTREME_SETTING.gold).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30EA\u30A2\u6642\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, EXTREME_DEBUG_SETTING.psyche))), /*#__PURE__*/React.createElement("div", {
+    }, EXTREME_SETTING.psyche))), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-xs space-y-3"
     }, /*#__PURE__*/React.createElement("button", {
-      onClick: () => runResultActionOnce(() => startDebugBattle(debugExtreme)),
+      onClick: () => runResultActionOnce(() => startDebugBattle(extremeRun)),
       disabled: resultActionPending,
       className: "w-full bg-fuchsia-700 text-white py-3.5 rounded-2xl font-black disabled:opacity-50"
     }, "\u540C\u3058\u6761\u4EF6\u3067\u3082\u3046\u4E00\u5EA6"), /*#__PURE__*/React.createElement("button", {

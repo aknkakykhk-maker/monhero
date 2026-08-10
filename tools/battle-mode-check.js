@@ -88,10 +88,11 @@ check('WAVEごとの内訳の合計がリザルトの合計と一致する',
 // スコアはモードで変えない。スコア加算の実処理がモードを見ていないことを確かめる
 const scoreBlock = grab(source, 'const finalRoundScore', 'setWaveHistory(prev =>');
 check('スコアの計算はモードを見ない', scoreBlock.length > 0 && !scoreBlock.includes('runMode') && !/QUICK_REWARD_MULT/.test(scoreBlock));
+// 経験値はスコアと倍率が違うモード(極限チャレンジ)があるので xpMult を通す
 check('実処理が経験値・ダイヤ・絆経験値にモード倍率を使う',
-  has('const breederXpGain = xpForWavesClearedInMode(wavesCleared, scoreMult, runMode);')
+  has('const breederXpGain = xpForWavesClearedInMode(wavesCleared, xpMult, runMode);')
     && has('const goldGain = goldForWavesClearedInMode(wavesCleared, goldMult, runMode);')
-    && has('const gain = bondXpForWavesClearedInMode(wavesCleared, scoreMult, runMode);'));
+    && has('const gain = bondXpForWavesClearedInMode(wavesCleared, xpMult, runMode);'));
 check('WAVEごとの内訳もモード倍率を使う', has('xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)') && has('goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode)'));
 
 // --- ② 記録 ---
@@ -350,7 +351,7 @@ check('BGMアレンジ画面に4モード×3用途がそろっている',
   ['battle','dullahan','boss','quickBattle','quickDullahan','quickMoo','proBattle','proDullahan','proMoo','extremeBattle','extremeDullahan','extremeMoo']
     .every(key => has(`[\'${key}\',`)) && has('aria-label="バトルモード"'));
 const bgmBlock = grab(source, "if (state === 'BATTLE') {", "if (RUN_PHASE_STATES.includes(state))");
-check('極限デバッグとプロは3用途すべて専用キーを使う',
+check('極限チャレンジとプロは3用途すべて専用キーを使う',
   bgmBlock.includes("normal:'extremeBattle', dullahan:'extremeDullahan', moo:'extremeMoo'")
     && bgmBlock.includes("normal:'proBattle', dullahan:'proDullahan', moo:'proMoo'"));
 
@@ -384,8 +385,8 @@ check('旧バトル画面はデバッグからだけ開ける',
   has('旧バトル画面を開く（見比べ用）')
     && (source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length === 2,
   `BATTLE_MENUへ移る場所 ${(source.match(/setGameState\('BATTLE_MENU'\)/g) || []).length}か所(デバッグの見比べ用・旧チュートリアルの開始)`);
-check('モード選択は3モードすべてを横スライドで並べる',
-  has('const modes=debugBattle?[...BATTLE_MODES,EXTREME_DEBUG_MODE]:BATTLE_MODES;') && has('aria-label="前のモード"') && has('aria-label="次のモード"')
+check('モード選択は極限チャレンジを含む全モードを横スライドで並べる',
+  has('const modes=[...BATTLE_MODES,EXTREME_MODE];') && has('aria-label="前のモード"') && has('aria-label="次のモード"')
     && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'));
 check('上のタブはモード選択・ブリーダーLv・絆Lvの3つ',
   has("{[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv']].map(([key,label])=>("));
@@ -403,7 +404,7 @@ check('難易度カードから開いたときは、その難易度のタブを�
     && has("openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')"));
 check('難易度カードの虹のプシュケー表示は実際の付与関数を使う',
   has('data-psyche-reward={key}') && has('虹のプシュケー ×{clearPsycheReward(key)}')
-    && has('const gain = clearPsycheReward(difficulty);'));
+    && has('extremeRunRef.current ? EXTREME_SETTING.psyche : clearPsycheReward(difficulty);'));
 check('全モードのクリアが共通の虹のプシュケー付与処理を通る',
   grab(source, 'const recordClearOnce = async () => {', 'const recordBestWave').indexOf('await awardClearPsyche();')
     < grab(source, 'const recordClearOnce = async () => {', 'const recordBestWave').indexOf('if (isQuickMode(runMode))'));

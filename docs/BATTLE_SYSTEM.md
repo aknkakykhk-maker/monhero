@@ -34,6 +34,18 @@ Grand Master 以上では一致しない。
 | Hell | 8.0 | 12.0 | 3.0 |
 | Legend | 10.0 | 18.0 | 4.0 |
 
+極限チャレンジ（`EXTREME_DIFFICULTIES`）は上の表とは別の難易度表で、`createBattleEnemy` の第4引数
+`powerOverride` へ倍率を渡して敵を作る。**`powerOverride` は `null` / `undefined` のときだけ難易度の倍率へ落ちる**
+（`hasPowerOverride` で判定する）。ここを truthy 判定にすると `0` と `null` を取り違え、通常バトルの敵HP・攻撃が
+すべて0になる。
+
+| 極限の難易度 | 状態 | 敵HP・攻撃 | スコア | 経験値 | ダイヤ | 虹のプシュケー | 固有ルール |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| EXTREME | 実装済み | ×13 | ×20 | ×25 | ×7.5 | 75 | ブリーダーカード効果50% |
+| NIGHTMARE / CHAOS / ULTIMATE / INFINITY | 未実装（`available:false`） | － | － | － | － | － | － |
+
+未実装の段階は数値を持たせず、画面には「？？？」とだけ出す（仮の倍率を置かない）。
+
 敵順はディノ、ゲル、ブラックディノ、ジャアクソウ、ブルーマウンテン、ガリ、ナーガ、リリム、デュラハン、ムーの固定10体。各 WAVE 開始時に敵の初期距離を4枠から一様に選ぶ。基礎HP・基礎攻撃は `enemy-monsters.js`、倍率は `DIFFICULTY_SETTINGS` にある。
 
 ### 敵の行動
@@ -157,8 +169,9 @@ HOMEの「バトル」は `バトル → バトルモード選択 → 難易度�
 
 | gameState | 中身 |
 | --- | --- |
-| `BATTLE_MODE_SELECT` | 3モードの横スライドカード。上のタブは「モード選択／ブリーダーLv／絆Lv」 |
+| `BATTLE_MODE_SELECT` | 4モードの横スライドカード。上のタブは「モード選択／ブリーダーLv／絆Lv」 |
 | `BATTLE_DIFFICULTY_SELECT` | 選んだモードの難易度カード9枚。倍率・記録・補足行がモードで変わる |
+| `EXTREME_DIFFICULTY_SELECT` | 極限チャレンジ専用の難易度カード5枚。構造はチャレンジと同じ横スライド |
 | `BATTLE_SCORE_RANKING` | モード別のスコアランキング。難易度タブで切り替える |
 
 - モードのカードは**端で止まらずぐるぐる回る**。同じ並びを3回置き（`loopModes`）、スクロールが止まってから真ん中のコピーへ黙って戻す（`recenterModeLoop`）。左右の矢印は無効にならない。
@@ -169,6 +182,26 @@ HOMEの「バトル」は `バトル → バトルモード選択 → 難易度�
 - ランキングの一覧は `renderScoreRankingBody` / `renderBreederRankingBody` / `renderBondRankingBody` の共通の描画を呼ぶだけで、画面ごとに作り直していない。既存の `BATTLE_MENU` のランキングタブも同じものを呼ぶ。
 - クイックにはスコアランキングが無いので、導線も「ランキング対象外です」の高さ合わせの空枠も置かない。
 - スキップと勇者モン選択の「戻る」は `battleEntryStateRef` が覚えている入口の画面へ返す（既定は `BATTLE_DIFFICULTY_SELECT`）。
+
+### 極限チャレンジ
+
+チャレンジモードの上位高難易度版。モードのカードは常に並べ、解放していないときは押せなくする。
+
+- **解放条件**: チャレンジで `GrandMaster` / `Hell` / `Legend` のどれかを1回以上クリア（`isExtremeUnlocked` が
+  既存の `mh_clears_<難易度>` をそのまま読む）。専用の解放フラグは作らないので、旧セーブもそのまま解放される。
+- **内部の扱い**: `runMode` はチャレンジ、`difficulty` は `Normal` のまま固定し、極限かどうかは `extremeRunRef` で持つ。
+  そのため**チャレンジのNormalの記録を汚さないよう、挑戦回数（`mh_attempts_*`）と最高到達WAVE（`mh_highest_wave_*`）へは入れない**。
+- **記録**: 自己ベストは `mh_extreme_hs_EXTREME`、クリア回数は `mh_extreme_clears_EXTREME`。**全国ランキングへは送らない**
+  （専用ランキングも作らず、Supabaseのスキーマも変えない）。
+- **報酬**: `awardRunRewards` が `EXTREME_SETTING` の倍率（スコア×20・経験値×25・ダイヤ×7.5）を使い、
+  クリア時の虹のプシュケーは `awardClearPsyche` が75個を配る。
+- **EXTREME固有ルール**: ブリーダーカードの効果量だけ50%（`extremeSpecialRule('EXTREME','breederCardEffect')`）。
+  モードの説明には書かず、難易度カードとWAVE 1の発動テロップだけで見せる。
+- **デバッグとの分離**: `debugBattleRef` は極限の開始ボタンで**書き換えない**。デバッグ設定から入った周回だけ
+  `true` のままになり、報酬・クリア記録・ランキングのすべてを通らない。
+- **助手**: モード選択は `extremeChallenge`、難易度は `extremeDifficulty`。EXTREMEを選んだあとに別の会話は挟まず、
+  `難易度選択 → 勇者モン選択 → バトル開始 → 極限ルール発動` の順で進む。
+- **BGM**: `extremeBattle` / `extremeDullahan` / `extremeMoo`。難易度選択は他モードと同じ `enhance` を続ける。
 
 ### プロモードの編成と供モン
 
@@ -221,5 +254,8 @@ HOMEの「バトル」は `バトル → バトルモード選択 → 難易度�
   `node tools/battle-mode-select-check.js`（新しい入口を実ブラウザで開いて押せるか）、
   `node tools/pro-mode-check.js`（プロモードを実ブラウザで最初から遊んでみる）、
   `node tools/battle-tutorial-check.js`（台本の中身と、通るべき画面の並び）、
-  `node tools/battle-tutorial-v2-check.js`（新しいチュートリアルを実ブラウザで通してみる）
+  `node tools/battle-tutorial-v2-check.js`（新しいチュートリアルを実ブラウザで通してみる）、
+  `node tools/extreme-challenge-check.js`（極限チャレンジの解放条件・固有ルール・記録の分離）、
+  `node tools/extreme-reward-check.js`（EXTREMEの倍率と、通常難易度の敵性能に回帰がないこと）、
+  `node tools/extreme-browser-check.js`（極限チャレンジを実ブラウザで開始まで進めてみる）
 

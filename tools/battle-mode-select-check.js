@@ -91,10 +91,11 @@ const check = (name, ok, detail = '') => {
     await page.getByText('BATTLE MODE').first().waitFor({ timeout: 15000 });
     check('HOMEの「バトル」からモード選択が開く', true);
 
-    // --- ② 3モードがカードで並ぶ(ぐるぐる回すため同じ並びを3回置いている) ---
+    // --- ② 4モードがカードで並ぶ(ぐるぐる回すため同じ並びを3回置いている) ---
+    const MODE_LABELS = ['チャレンジモード', 'クイックモード', 'プロモード', '極限チャレンジ'];
     const modeCards = page.locator('.snap-mandatory > article');
-    check('モードのカードが3モード×3周ぶん並んでいる', await modeCards.count() === 9, `${await modeCards.count()}枚`);
-    for (const label of ['チャレンジモード', 'クイックモード', 'プロモード']) {
+    check('モードのカードが4モード×3周ぶん並んでいる', await modeCards.count() === MODE_LABELS.length * 3, `${await modeCards.count()}枚`);
+    for (const label of MODE_LABELS) {
       check(`${label}のカードがある`, await page.getByRole('heading', { name: new RegExp(label) }).count() === 3);
     }
     check('前へ・次への矢印がある',
@@ -114,14 +115,15 @@ const check = (name, ok, detail = '') => {
       });
       return best ? best.querySelector('h3').textContent.replace(/\s/g, '') : null;
     });
-    // 3モードなので、同じ向きに3回進めば元のモードへ戻ってくる(ぐるぐる回る)
+    // モードの数だけ同じ向きに進めば元のモードへ戻ってくる(ぐるぐる回る)
     const seen = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i <= MODE_LABELS.length; i++) {
       seen.push(await centeredMode());
       await page.getByRole('button', { name: '次のモード' }).dispatchEvent('click');
       await page.waitForTimeout(700);
     }
-    check('右へ回し続けると一周して戻ってくる', seen[0] === seen[3] && new Set(seen).size === 3, seen.join(' → '));
+    check('右へ回し続けると一周して戻ってくる',
+      seen[0] === seen[MODE_LABELS.length] && new Set(seen).size === MODE_LABELS.length, seen.join(' → '));
     const before = await centeredMode();
     await page.getByRole('button', { name: '前のモード' }).dispatchEvent('click');
     await page.waitForTimeout(700);
