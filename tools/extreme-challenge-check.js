@@ -27,6 +27,11 @@ assert(/const isExtremeUnlocked = \(clearCounts\) => EXTREME_UNLOCK_DIFFICULTIES
 assert(source.includes('const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);'), 'unlock state must derive from the loaded clear counts');
 assert(source.includes('const modes=[...BATTLE_MODES,EXTREME_MODE];'), 'the extreme card must always be listed, locked or not');
 assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked') && source.includes("disabled={extremeLocked||(!!battleTutorial") && source.includes("disabled={!setting.available||!extremeUnlocked}"), 'locked extreme must be visible but unselectable on both screens');
+assert(source.includes("disabled={!setting.available} onClick={()=>setShowWaveDetails(true)}")
+  && source.includes("const extreme=gameState==='EXTREME_DIFFICULTY_SELECT'")
+  && source.includes("const powerOverride=extreme?EXTREME_SETTING.power:null")
+  && source.includes('createBattleEnemy(index+1,waveDifficulty,null,powerOverride)'), 'EXTREME must open the shared WAVE details with its battle power override');
+assert(source.includes("{setting.available?'全WAVE詳細':'詳細 ？？？'}"), 'future extreme tiers must not open WAVE details');
 
 // --- ③ EXTREME固有ルール ---
 assert(source.includes("isBreeder&&extremeRunRef.current?extremeSpecialRule(extremeDifficulty,'breederCardEffect')"), 'only breeder cards must receive the selected EXTREME difficulty rule');
@@ -113,9 +118,8 @@ for (const forbidden of ['×13', '×20', '×25', '×7.5', '75', '50%']) {
 assert(/id: 'update_notice_extreme_challenge_v1', enabled: true,/.test(assistants) && !/id: 'update_notice_extreme_challenge_v1'[^}]*debugOnly/.test(assistants), 'the official release must be announced once through the shared update notice');
 assert(help.includes("id: 'extreme-challenge'") && help.includes("EXTREME_DIFFICULTY_SELECT: 'basics/extreme-challenge'"), 'help must describe the official extreme challenge and cover its screen');
 assert(help.includes("{ t:'data', id:'extremeDifficulties' }") && source.includes("case 'extremeDifficulties':"), 'the difficulty table must be generated from the real data');
-const latestExtremeEntryStart = changelog.indexOf('title: "極限チャレンジ');
-const latestExtremeEntry = changelog.slice(latestExtremeEntryStart, changelog.indexOf('},', latestExtremeEntryStart));
-assert(latestExtremeEntry.includes('モード説明を再調整') && !latestExtremeEntry.includes('デバッグ'), 'the latest extreme changelog entry must describe the mode-copy adjustment');
+assert(changelog.includes('極限チャレンジのモード説明を再調整しました') && !changelog.includes('極限チャレンジのモード説明をデバッグ'), 'the extreme changelog must retain the mode-copy adjustment');
+assert(changelog.includes('極限チャレンジに全WAVE詳細を追加しました'), 'the latest extreme changelog must describe WAVE details');
 
 // --- 代表値 ---
 assert.strictEqual(Math.floor(100 * 0.5), 50, 'representative integer card effect must be exactly 50%');

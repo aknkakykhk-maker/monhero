@@ -25,7 +25,7 @@ for (const difficulty of ['GrandMaster', 'Hell', 'Legend']) {
   }
 }
 
-assert(source.includes('const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,debugExtremeRef.current?EXTREME_DEBUG_SETTING.power:null)'), 'battle must use shared enemy creation and only override power for EXTREME');
+assert(source.includes('const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,extremeRunRef.current?EXTREME_SETTING.power:null)'), 'battle must use shared enemy creation and only override power for EXTREME');
 const enemyFactoryBlock = source.slice(source.indexOf('const createBattleEnemy ='), source.indexOf('\n};', source.indexOf('const createBattleEnemy =')) + 3);
 const createBattleEnemy = Function(
   'ENEMY_SEQUENCE', 'ENEMY_DATA', 'normalizeBattleDifficulty', 'DIFFICULTY_SETTINGS',
@@ -46,8 +46,7 @@ assert.strictEqual(extremeEnemy.maxHp, 1300, 'EXTREME HP must use power override
 assert.strictEqual(extremeEnemy.atk, 260, 'EXTREME attack must use power override 13');
 // 難易度カードのWAVE1プレビューは廃止し、敵の情報は「全WAVE詳細」だけで見せる
 assert(!source.includes('createBattleEnemy(1,key)'), '難易度カードにWAVE1の敵情報を戻していないこと');
-assert(source.includes('createBattleEnemy(index+1,safeDifficulty)'), '全WAVE詳細が共通の敵生成を使う');
-assert(source.includes('createBattleEnemy(index+1,safeDifficulty)'), 'all-wave preview must use shared enemy creation');
+assert(source.includes('createBattleEnemy(index+1,waveDifficulty,null,powerOverride)'), '全WAVE詳細が共通の敵生成を使う');
 assert(source.includes("Moo: { scanScale:2.75, waveDetailScale:2"), 'Moo must have context-specific scan and wave scales');
 assert(source.includes("enemyArtStyle(scanEnemy.id,'scan')"), 'scan must request scan art context');
 assert(source.includes("enemyArtStyle(enemy.id,'waveDetail')"), 'wave detail must request its own art context');
