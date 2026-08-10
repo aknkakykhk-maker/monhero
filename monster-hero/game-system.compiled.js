@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e8ba0e1519f4897b
+// source-sha256: ed3cf4d84fd6b65c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 12:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 12:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -189,6 +189,13 @@ const resolveQuickGrowthStats = ({
 });
 const isQuickMode = mode => normalizeBattleMode(mode) === BATTLE_MODE_QUICK;
 const isProMode = mode => normalizeBattleMode(mode) === BATTLE_MODE_PRO;
+// クイックの報酬方針は画面内だけで選び、保存データには増やさない。
+// 周回開始時の選択をrefへ固定するため、途中の画面遷移や他モードへ影響しない。
+const QUICK_REWARD_POLICY_GROWTH = 'growth';
+const QUICK_REWARD_POLICY_PSYCHE = 'psyche';
+const normalizeQuickRewardPolicy = value => value === QUICK_REWARD_POLICY_PSYCHE ? value : QUICK_REWARD_POLICY_GROWTH;
+const applyQuickXpPolicy = (value, mode, policy) => isQuickMode(mode) && normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_PSYCHE ? 0 : value;
+const applyQuickPsychePolicy = (value, mode, policy) => isQuickMode(mode) && normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_PSYCHE ? value * 2 : value;
 // 難易度倍率をかけたあとの獲得量へ、さらにモードの倍率をかける。
 // WAVEごとの内訳と合計がずれないよう、内訳と同じ「WAVE単位で丸めてから合計」に揃える。
 // 倍率はブリーダー経験値・絆経験値・ダイヤで別々に決める。
@@ -7666,6 +7673,8 @@ function MonsterHeroGame() {
   // 進行中の周回のモード。バトル中の表示・報酬・BGM・記録の保存先がこれで決まる。
   // 周回の途中で変わらないよう、挑戦を始めるときにだけ書き換える
   const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
+  const [quickRewardPolicy, setQuickRewardPolicy] = useState(QUICK_REWARD_POLICY_GROWTH);
+  const quickRewardPolicyRunRef = useRef(QUICK_REWARD_POLICY_GROWTH);
   const [managementTab, setManagementTab] = useState('monster');
   const [homeBackgroundReady, setHomeBackgroundReady] = useState(false);
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
@@ -11712,7 +11721,7 @@ function MonsterHeroGame() {
     const xpMult = extreme ? EXTREME_SETTING.xp : scoreMult;
 
     // クイックモードは経験値とダイヤだけ1.5倍(スコア倍率は難易度のまま)
-    const breederXpGain = xpForWavesClearedInMode(wavesCleared, xpMult, runMode);
+    const breederXpGain = applyQuickXpPolicy(xpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);
     const breederLevelBefore = levelInfo(breederXp);
     const nextXp = breederXp + breederXpGain;
     const breederLevelAfter = levelInfo(nextXp);
@@ -11741,7 +11750,7 @@ function MonsterHeroGame() {
     // バトルへ参加した供モンには勇者モンの1/2、モンスター編成内で参加しなかった控えのマスモンには
     // 1/4を加算する。勇者・参加・控えの区分と個体IDは先に一意化し、同じ個体へ重複付与しない。
     // 絆経験値はブリーダー経験値と倍率が違う(プロは絆3倍・ブリーダー1.5倍)ので専用の関数を通す
-    const gain = bondXpForWavesClearedInMode(wavesCleared, xpMult, runMode);
+    const gain = applyQuickXpPolicy(bondXpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);
     const bondAwards = buildRunBondAwards({
       gain,
       heroMasuId: mainHero?.masuId,
@@ -11811,6 +11820,10 @@ function MonsterHeroGame() {
     // 勇者モンがまだマスモンでないときは、このランでためた絆経験値ぶんの絆Lvを覚えておく。
     // ランキングにはこの値を送る(登録すればそのまま同じ絆Lvの個体になる)
     runHeroBondLevelRef.current = heroBondGain && heroBondGain.masuId == null && heroBondGain.xpGain > 0 ? heroBondGain.levelAfter.level : null;
+    const rewardWaveHistory = applyQuickXpPolicy(1, runMode, quickRewardPolicyRunRef.current) === 0 ? waveHistory.map(entry => ({
+      ...entry,
+      xpGain: 0
+    })) : waveHistory;
     setFinalRewardSummary({
       quickMode: isQuickMode(runMode),
       breederXpGain,
@@ -11820,7 +11833,7 @@ function MonsterHeroGame() {
       goldAfter,
       heroBondGain,
       allyBondGains,
-      waveHistory
+      waveHistory: rewardWaveHistory
     });
   };
 
@@ -11858,7 +11871,7 @@ function MonsterHeroGame() {
       const goldMult = DIFFICULTY_SETTINGS[flow.difficulty]?.gold || 1.0;
 
       // ブリーダー経験値・ブリーダーポイント(枚数ぶんまとめて受け取る)
-      const breederXpGain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;
+      const breederXpGain = applyQuickXpPolicy(xpForWavesCleared(SKIP_WAVES, scoreMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy);
       const breederLevelBefore = levelInfo(breederXp);
       const nextBreederXp = breederXp + breederXpGain;
       const breederLevelAfter = levelInfo(nextBreederXp);
@@ -11882,7 +11895,7 @@ function MonsterHeroGame() {
       await storeSet('mh_gold', goldAfter, false);
 
       // 絆経験値。勇者モン=満額、選んだ供モン=1/2、編成内で選ばなかったマスモン=1/4 も通常と同じ
-      const gain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;
+      const gain = applyQuickXpPolicy(xpForWavesCleared(SKIP_WAVES, scoreMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy);
       const allies = (flow.allies || []).filter(Boolean);
       const bondAwards = buildRunBondAwards({
         gain,
@@ -11967,7 +11980,8 @@ function MonsterHeroGame() {
       itemId,
       hero: null,
       allies: [],
-      count: 1
+      count: 1,
+      rewardPolicy: normalizeQuickRewardPolicy(quickRewardPolicy)
     });
     setSkipPickTab('roster');
     setSkipConfirmOpen(false);
@@ -12022,7 +12036,8 @@ function MonsterHeroGame() {
   // 獲得数はリザルトに出したいので finalRewardSummary へも足す(報酬付与のあとに走るため関数形で足す)
   const awardClearPsyche = async () => {
     // 極限チャレンジは通常の難易度表ではなく EXTREME_SETTING の個数を配る
-    const gain = extremeRunRef.current ? EXTREME_SETTING.psyche : clearPsycheReward(difficulty);
+    const baseGain = extremeRunRef.current ? EXTREME_SETTING.psyche : clearPsycheReward(difficulty);
+    const gain = applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current);
     if (gain <= 0) return 0;
     const nextItems = {
       ...ownedItemsRef.current,
@@ -18693,7 +18708,26 @@ function MonsterHeroGame() {
         className: "flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0"
-      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("div", {
+      }, "\u5DE6\u53F3\u306B\u30B9\u30EF\u30A4\u30D7\u3057\u3066\u96E3\u6613\u5EA6\u3092\u9078\u629E"), quick && /*#__PURE__*/React.createElement("fieldset", {
+        className: "shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1.5"
+      }, /*#__PURE__*/React.createElement("legend", {
+        className: "px-1 text-[9px] font-black text-teal-200"
+      }, "\u5831\u916C\u65B9\u91DD"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-1.5"
+      }, [[QUICK_REWARD_POLICY_GROWTH, '育成', '経験値あり'], [QUICK_REWARD_POLICY_PSYCHE, 'プシュケー優先', '経験値0・虹×2']].map(([id, label, detail]) => {
+        const selected = quickRewardPolicy === id;
+        return /*#__PURE__*/React.createElement("button", {
+          key: id,
+          type: "button",
+          "aria-pressed": selected,
+          onClick: () => setQuickRewardPolicy(id),
+          className: `min-h-[44px] rounded-xl border-2 px-1 py-1 font-black active:scale-[.98] ${selected ? 'border-teal-300 bg-teal-600 text-white shadow-[0_0_14px_rgba(45,212,191,.3)]' : 'border-white/10 bg-slate-950 text-slate-400'}`
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "block text-xs"
+        }, label), /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px]"
+        }, detail));
+      }))), /*#__PURE__*/React.createElement("div", {
         className: `relative shrink-0${battleTutorialSpotClass('difficulty')}`
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u524D\u306E\u96E3\u6613\u5EA6",
@@ -18769,11 +18803,15 @@ function MonsterHeroGame() {
           "data-psyche-reward": key
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-[10px] leading-tight text-fuchsia-200 font-black"
-        }, "\u30AF\u30EA\u30A2\u5831\u916C"), /*#__PURE__*/React.createElement("b", {
-          className: "text-sm text-white whitespace-nowrap"
+        }, "\u30AF\u30EA\u30A2\u5831\u916C"), /*#__PURE__*/React.createElement("div", {
+          className: "text-right whitespace-nowrap"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: "block text-[10px] text-white"
+        }, "\u7D4C\u9A13\u5024\uFF1A", quick && quickRewardPolicy === QUICK_REWARD_POLICY_PSYCHE ? '0' : quick ? '現在値' : '通常'), /*#__PURE__*/React.createElement("b", {
+          className: "block text-xs text-fuchsia-100"
         }, /*#__PURE__*/React.createElement("span", {
           "aria-hidden": "true"
-        }, "\uD83C\uDF08"), " \u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC \xD7", clearPsycheReward(key))), /*#__PURE__*/React.createElement("div", {
+        }, "\uD83C\uDF08"), " \u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\uFF1A", applyQuickPsychePolicy(clearPsycheReward(key), battleMode, quickRewardPolicy), "\u500B", quick && quickRewardPolicy === QUICK_REWARD_POLICY_PSYCHE ? '（×2）' : ''))), /*#__PURE__*/React.createElement("div", {
           className: "grid gap-1.5 mt-1.5"
         }, /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
@@ -18792,6 +18830,7 @@ function MonsterHeroGame() {
             battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
             setDifficulty(key);
             setRunMode(battleMode);
+            quickRewardPolicyRunRef.current = quick ? normalizeQuickRewardPolicy(quickRewardPolicy) : QUICK_REWARD_POLICY_GROWTH;
             battleScenarioRef.current = null;
             battleScenarioIntentIndexRef.current = 0;
             debugBattleRef.current = false;

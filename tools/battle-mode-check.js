@@ -34,11 +34,12 @@ vm.runInContext([
   grab(source, 'const WAVE_XP_TABLE =', 'const xpForLevel ='),
   grab(source, 'const DIFFICULTY_SETTINGS = {', 'const normalizeBattleDifficulty'),
   // ランキングの難易度キー(プロは Pro 付き)は、モードの定数と難易度の表より後ろにある
-  grab(source, 'const normalizeBattleDifficulty = (value)', '// クリアするともらえる虹のプシュケー'),
+  grab(source, 'const normalizeBattleDifficulty = (value)', '// ヘルプの中に出す「実データから作る表」'),
   grab(source, 'const PRO_RANKING_PREFIX =', '// 通信、state、リクエスト管理、画面参照で共有する唯一のランキング内部キー'),
   'globalThis.__m={BATTLE_MODES,PUBLIC_BATTLE_MODES,battleModeInfo,normalizeBattleMode,isQuickMode,isProMode,QUICK_REWARD_MULT,QUICK_GROWTH_MULT,'
   + 'PRO_BOND_XP_MULT,PRO_BREEDER_XP_MULT,PRO_ALLY_POOL_SIZE,PRO_ALLY_OFFER_SIZE,'
   + 'modeBreederXpMult,modeBondXpMult,modeGoldMult,applyModeReward,modeHasRanking,modeBondAction,modeKeyPrefix,'
+  + 'QUICK_REWARD_POLICY_GROWTH,QUICK_REWARD_POLICY_PSYCHE,normalizeQuickRewardPolicy,applyQuickXpPolicy,applyQuickPsychePolicy,clearPsycheReward,'
   + 'waveXpGain,waveGoldGain,xpForWavesCleared,goldForWavesCleared,xpForWavesClearedInMode,goldForWavesClearedInMode,'
   + 'bondXpForWavesClearedInMode,waveBondXpGainInMode,'
   + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE,BATTLE_MODE_PRO,'
@@ -62,6 +63,16 @@ check('チャレンジはどの倍率も等倍',
   m.modeBondXpMult('challenge') === 1 && m.modeBreederXpMult('challenge') === 1 && m.modeGoldMult('challenge') === 1);
 check('クイックは3つとも1.5倍のまま',
   m.modeBondXpMult('quick') === 1.5 && m.modeBreederXpMult('quick') === 1.5 && m.modeGoldMult('quick') === 1.5);
+check('報酬方針の初期値と不正値は育成',
+  m.QUICK_REWARD_POLICY_GROWTH === 'growth' && m.normalizeQuickRewardPolicy(undefined) === 'growth' && m.normalizeQuickRewardPolicy('nope') === 'growth');
+check('クイック＋育成は経験値とプシュケーが従来どおり',
+  m.applyQuickXpPolicy(123, 'quick', 'growth') === 123 && m.applyQuickPsychePolicy(7, 'quick', 'growth') === 7);
+check('クイック＋プシュケー優先は経験値0・プシュケー2倍',
+  m.applyQuickXpPolicy(123, 'quick', 'psyche') === 0 && m.applyQuickPsychePolicy(7, 'quick', 'psyche') === 14);
+check('チャレンジ・プロは報酬方針の影響を受けない',
+  ['challenge','pro'].every(mode => m.applyQuickXpPolicy(123, mode, 'psyche') === 123 && m.applyQuickPsychePolicy(7, mode, 'psyche') === 7));
+check('全難易度のプシュケー優先が現行クリア報酬のちょうど2倍',
+  Object.keys(m.DIFFICULTY_SETTINGS).every(diff => m.applyQuickPsychePolicy(m.clearPsycheReward(diff), 'quick', 'psyche') === m.clearPsycheReward(diff) * 2));
 for (const diff of ['Normal', 'Hard', 'Expert']) {
   const s = m.DIFFICULTY_SETTINGS[diff];
   const baseXp = m.xpForWavesCleared(10, s.score), quickXp = m.xpForWavesClearedInMode(10, s.score, 'quick');
@@ -90,9 +101,17 @@ const scoreBlock = grab(source, 'const finalRoundScore', 'setWaveHistory(prev =>
 check('スコアの計算はモードを見ない', scoreBlock.length > 0 && !scoreBlock.includes('runMode') && !/QUICK_REWARD_MULT/.test(scoreBlock));
 // 経験値はスコアと倍率が違うモード(極限チャレンジ)があるので xpMult を通す
 check('実処理が経験値・ダイヤ・絆経験値にモード倍率を使う',
-  has('const breederXpGain = xpForWavesClearedInMode(wavesCleared, xpMult, runMode);')
+  has('const breederXpGain = applyQuickXpPolicy(xpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);')
     && has('const goldGain = goldForWavesClearedInMode(wavesCleared, goldMult, runMode);')
-    && has('const gain = bondXpForWavesClearedInMode(wavesCleared, xpMult, runMode);'));
+    && has('const gain = applyQuickXpPolicy(bondXpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);'));
+check('クリア報酬は共通付与地点で一度だけ報酬方針を適用する',
+  has('const gain = applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current);')
+    && count('applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current)') === 1);
+check('選択は保存キーを増やさず周回開始時に固定する',
+  has('quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH')
+    && !/storeSet\([^\n]*quickRewardPolicy/.test(source));
+check('スキップでもプシュケー優先なら経験値を付与しない',
+  count('applyQuickXpPolicy(xpForWavesCleared(SKIP_WAVES, scoreMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy)') === 2);
 check('WAVEごとの内訳もモード倍率を使う', has('xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)') && has('goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode)'));
 
 // --- ② 記録 ---
@@ -408,8 +427,12 @@ check('難易度カードから開いたときは、その難易度のタブを�
   has('setRankingViewDiff(diff);') && has('loadRankings(rankingDifficultyForMode(mode, diff));')
     && has("openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')"));
 check('難易度カードの虹のプシュケー表示は実際の付与関数を使う',
-  has('data-psyche-reward={key}') && has('虹のプシュケー ×{clearPsycheReward(key)}')
-    && has('extremeRunRef.current ? EXTREME_SETTING.psyche : clearPsycheReward(difficulty);'));
+  has('data-psyche-reward={key}') && has('applyQuickPsychePolicy(clearPsycheReward(key),battleMode,quickRewardPolicy)')
+    && has('const baseGain = extremeRunRef.current ? EXTREME_SETTING.psyche : clearPsycheReward(difficulty);'));
+check('クイック難易度画面に押しやすく状態が分かる2択を出す',
+  has("[QUICK_REWARD_POLICY_GROWTH,'育成','経験値あり']")
+    && has("[QUICK_REWARD_POLICY_PSYCHE,'プシュケー優先','経験値0・虹×2']")
+    && has('aria-pressed={selected}') && has('min-h-[44px]'));
 check('全モードのクリアが共通の虹のプシュケー付与処理を通る',
   grab(source, 'const recordClearOnce = async () => {', 'const recordBestWave').indexOf('await awardClearPsyche();')
     < grab(source, 'const recordClearOnce = async () => {', 'const recordBestWave').indexOf('if (isQuickMode(runMode))'));
