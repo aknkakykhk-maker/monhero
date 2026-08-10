@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bedc0370d060d8de
+// source-sha256: f02d3ec012f14d83
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 03:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 03:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -536,6 +536,35 @@ const normalizeMasuProgression = masu => ({
   // マスモンの詳細からいつでも使える。後から足した項目なので、持っていない既存データは0
   uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0))
 });
+// 固有技ポイントの仮配分を検証して反映した個体を返す。UI操作中は呼ばず、確定時だけ保存へ渡す。
+const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
+  const normalized = normalizeMasuProgression(masu);
+  if (!plan || typeof plan !== 'object' || !Array.isArray(allowedSkillKeys)) return null;
+  const allowed = new Set(allowedSkillKeys.map(String));
+  const allocations = {};
+  let total = 0;
+  for (const [rawKey, rawAmount] of Object.entries(plan)) {
+    const key = String(rawKey);
+    const amount = Math.max(0, Math.floor(Number(rawAmount) || 0));
+    if (!allowed.has(key) || amount <= 0) continue;
+    const current = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[key]) || 0));
+    if (current + amount > MAX_UNIQUE_SKILL_LEVEL) return null;
+    allocations[key] = amount;
+    total += amount;
+  }
+  if (total <= 0 || total > normalized.uniqueSkillPoints) return null;
+  const uniqueSkillLevels = {
+    ...normalized.uniqueSkillLevels
+  };
+  Object.entries(allocations).forEach(([key, amount]) => {
+    uniqueSkillLevels[key] = Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.max(0, Math.floor(Number(uniqueSkillLevels[key]) || 0)) + amount);
+  });
+  return {
+    ...normalized,
+    uniqueSkillLevels,
+    uniqueSkillPoints: normalized.uniqueSkillPoints - total
+  };
+};
 // 転生では個体の識別情報・外見・固有技・履歴だけを残し、振った強化は白紙に戻す。
 // オブジェクトスプレッドで旧育成値を残さないよう、維持対象を明示して新しい保存形を組み立てる。
 // toLevel を渡すとそのレベル相当の絆経験値から再開する(渡さなければLv1へ戻す)。
@@ -8243,6 +8272,7 @@ function MonsterHeroGame() {
   const [masuNameInput, setMasuNameInput] = useState('');
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
   const [masuMonDetail, setMasuMonDetail] = useState(null); // マスモン一覧: タップ中のマスモン詳細
+  const [uniqueSkillPointDrafts, setUniqueSkillPointDrafts] = useState({}); // 個体IDごとの固有技ポイント仮配分
   const [masuEnhanceFrom, setMasuEnhanceFrom] = useState(null); // マスモン強化ページを開く直前のgameState(戻る先。masuMonDetailはROSTER等の複数画面から開けるため)
   const [showMasuRenameModal, setShowMasuRenameModal] = useState(false);
   const [masuRenameInput, setMasuRenameInput] = useState('');
@@ -10870,30 +10900,19 @@ function MonsterHeroGame() {
     Audio_.se.tap();
     return updatedMasu;
   };
-  // 限界突破・転生で残しておいた固有技ポイントを1つ使い、その技のレベルを1上げる。
-  // マスモンの詳細からいつでも使える(その場で上げなくてよいので、上限まで育った技しか
-  // 無いときでも限界突破そのものは進められる)
-  const spendUniqueSkillPoint = (masuId, skillKey) => {
+  // 仮配分した固有技ポイントをまとめて確定する。＋／－操作中は保存値を変更しない。
+  const spendUniqueSkillPoint = (masuId, plan) => {
     const masu = getMasuMon(masuId);
-    if (!masu || !skillKey) return null;
-    const normalized = normalizeMasuProgression(masu);
-    if (normalized.uniqueSkillPoints <= 0) return null;
-    const current = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
-    if (current >= MAX_UNIQUE_SKILL_LEVEL) return null;
-    const updatedMasu = {
-      ...normalized,
-      uniqueSkillLevels: {
-        ...normalized.uniqueSkillLevels,
-        [skillKey]: current + 1
-      },
-      uniqueSkillPoints: normalized.uniqueSkillPoints - 1
-    };
+    if (!masu) return null;
+    const choices = getRebirthSkillChoices(masu);
+    const updatedMasu = applyUniqueSkillPointPlan(masu, plan, choices.map(choice => choice.key));
+    if (!updatedMasu) return null;
     setMasuMons(prev => {
       const next = prev.map(m => String(m.id) === String(masuId) ? updatedMasu : m);
       storeSet('mh_masu_mons', next, false);
       return next;
     });
-    Audio_.se.tap();
+    Audio_.se.levelUp();
     return updatedMasu;
   };
   // 強化ポイントリセットの書: 使用済みの強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻す。
@@ -15401,43 +15420,104 @@ function MonsterHeroGame() {
       className: "text-[8px] text-cyan-300 font-bold mt-0.5"
     }, "\u9593\u5408\u3044\u9069\u6027 ", aptBonus))), extraAfterApt);
   };
-  // 限界突破・転生で残した固有技ポイントを使う枠。マスモンの詳細に出す。
-  // ポイントを持っていないときは何も出さない(画面を無駄に長くしない)
+  // 限界突破・転生で残した固有技ポイントを仮配分してから確定する枠。
+  // 0ポイントでも項目名と残数はコンパクトに表示し、確認場所を統一する。
   const renderUniqueSkillPointBox = (masu, onUpdated) => {
     if (!masu) return null;
     const normalized = normalizeMasuProgression(masu);
-    if (normalized.uniqueSkillPoints <= 0) return null;
     const choices = getRebirthSkillChoices(normalized);
+    const draft = uniqueSkillPointDrafts[String(masu.id)] || {};
+    const allocated = Object.values(draft).reduce((sum, value) => sum + Math.max(0, Math.floor(Number(value) || 0)), 0);
+    const remaining = Math.max(0, normalized.uniqueSkillPoints - allocated);
+    const changeDraft = (skillKey, delta) => setUniqueSkillPointDrafts(prev => {
+      const id = String(masu.id),
+        current = {
+          ...(prev[id] || {})
+        },
+        choice = choices.find(item => item.key === skillKey);
+      if (!choice) return prev;
+      const before = Math.max(0, Math.floor(Number(current[skillKey]) || 0));
+      const next = Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL - choice.level, before + delta));
+      const used = Object.values(current).reduce((sum, value) => sum + Math.max(0, Math.floor(Number(value) || 0)), 0);
+      if (delta > 0 && used >= normalized.uniqueSkillPoints) return prev;
+      if (next > 0) current[skillKey] = next;else delete current[skillKey];
+      return {
+        ...prev,
+        [id]: current
+      };
+    });
+    const clearDraft = () => setUniqueSkillPointDrafts(prev => {
+      const next = {
+        ...prev
+      };
+      delete next[String(masu.id)];
+      return next;
+    });
     return /*#__PURE__*/React.createElement("div", {
-      className: "bg-black/40 p-2 rounded-xl border border-amber-500/40"
+      className: `bg-black/40 p-2 rounded-xl border ${normalized.uniqueSkillPoints > 0 ? 'border-amber-400/60' : 'border-white/10'}`
     }, /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center justify-between mb-1"
+      className: "flex items-center justify-between gap-2 mb-1"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] text-amber-400 uppercase font-bold"
-    }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("div", {
-      className: "text-[10px] font-black text-amber-300 flex items-center gap-1"
+      className: `text-[10px] uppercase font-black ${normalized.uniqueSkillPoints > 0 ? 'text-amber-300' : 'text-slate-400'}`
+    }, "\u56FA\u6709\u6280\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
+      className: `text-[10px] font-black flex items-center gap-1 ${normalized.uniqueSkillPoints > 0 ? 'text-amber-300' : 'text-slate-500'}`
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 10
-    }), normalized.uniqueSkillPoints)), /*#__PURE__*/React.createElement("div", {
+    }), "\u672A\u4F7F\u7528 \u56FA\u6709\u6280P\uFF1A", normalized.uniqueSkillPoints)), normalized.uniqueSkillPoints > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] text-slate-400 font-bold mb-1.5 leading-tight"
-    }, "\u9650\u754C\u7A81\u7834\u3084\u8EE2\u751F\u3067\u6B8B\u3057\u3066\u304A\u3044\u305F\u3076\u3093\u3067\u3059\u3002\u4E0A\u3052\u305F\u3044\u56FA\u6709\u6280\u3092\u62BC\u3059\u30681\u3064\u4F7F\u3063\u3066Lv\u304C1\u4E0A\u304C\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-1"
+    }, "\uFF0B\uFF0F\uFF0D\u3067\u4EEE\u914D\u5206\u3057\u3001\u300C\u5F37\u5316\u3092\u78BA\u5B9A\u300D\u3067\u53CD\u6620\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-1.5"
     }, choices.map(choice => {
-      const maxed = choice.level >= MAX_UNIQUE_SKILL_LEVEL;
-      return /*#__PURE__*/React.createElement("button", {
+      const amount = Math.max(0, Math.floor(Number(draft[choice.key]) || 0)),
+        after = choice.level + amount,
+        maxed = choice.level >= MAX_UNIQUE_SKILL_LEVEL;
+      return /*#__PURE__*/React.createElement("div", {
         key: choice.key,
-        disabled: maxed,
-        onClick: () => {
-          const updated = spendUniqueSkillPoint(masu.id, choice.key);
-          if (updated && onUpdated) onUpdated(updated);
-        },
-        className: `w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border text-left disabled:opacity-30 ${maxed ? 'bg-slate-900 border-white/10' : 'bg-amber-950/40 border-amber-500/40 active:scale-95'}`
+        className: "rounded-lg border border-white/10 bg-slate-900/80 px-2 py-1.5 min-w-0"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between gap-2"
       }, /*#__PURE__*/React.createElement("span", {
-        className: "min-w-0 flex-1 truncate text-[10px] font-black text-white"
+        className: "min-w-0 truncate text-[10px] font-black text-white"
       }, choice.name), /*#__PURE__*/React.createElement("span", {
         className: "shrink-0 text-[9px] font-mono font-black text-amber-300"
-      }, maxed ? `Lv.${choice.level} MAX` : `Lv.${choice.level} → ${choice.level + 1}`));
-    })));
+      }, maxed ? `Lv.${choice.level} MAX` : `Lv.${choice.level} → Lv.${after}`)), !maxed && /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 flex items-center justify-end gap-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": `${choice.name}の仮配分を減らす`,
+        disabled: amount <= 0,
+        onClick: () => changeDraft(choice.key, -1),
+        className: "w-9 min-h-[36px] rounded-lg bg-slate-700 text-base font-black disabled:opacity-30"
+      }, "\u2212"), /*#__PURE__*/React.createElement("span", {
+        className: "w-8 text-center text-[11px] font-mono font-black text-amber-200"
+      }, "\uFF0B", amount), /*#__PURE__*/React.createElement("button", {
+        "aria-label": `${choice.name}の仮配分を増やす`,
+        disabled: remaining <= 0 || after >= MAX_UNIQUE_SKILL_LEVEL,
+        onClick: () => changeDraft(choice.key, 1),
+        className: "w-9 min-h-[36px] rounded-lg bg-amber-700 text-base font-black disabled:opacity-30"
+      }, "\uFF0B")));
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 flex items-center justify-between text-[10px] font-black"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, "\u6B8B\u308AP"), /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-300"
+    }, remaining)), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 mt-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      disabled: allocated <= 0,
+      onClick: clearDraft,
+      className: "min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30"
+    }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
+      disabled: allocated <= 0,
+      onClick: () => {
+        const updated = spendUniqueSkillPoint(masu.id, draft);
+        if (updated) {
+          clearDraft();
+          if (onUpdated) onUpdated(updated);
+        }
+      },
+      className: "min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30"
+    }, "\u5F37\u5316\u3092\u78BA\u5B9A"))));
   };
   const renderSkillSection = mon => {
     const currentUnique = uniqueSkillAtLevel(mon.unique, mon.unique?.evoLevel);
@@ -17454,7 +17534,9 @@ function MonsterHeroGame() {
         className: "font-black text-xs"
       }, "\u3042\u3068\u3067\u6C7A\u3081\u308B\uFF08\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u3059\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-300"
-      }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8 +1\uFF08\u3044\u307E\u306E\u6240\u6301 ", normalized.uniqueSkillPoints, "\uFF09"))), rebirthError && /*#__PURE__*/React.createElement("div", {
+      }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8 +1\uFF08\u3044\u307E\u306E\u6240\u6301 ", normalized.uniqueSkillPoints, "\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] text-slate-300 mt-1"
+      }, "\u4FDD\u7559\u3057\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E\u300C\u56FA\u6709\u6280\u5F37\u5316\u300D\u304B\u3089\u4F7F\u7528\u3067\u304D\u307E\u3059"))), rebirthError && /*#__PURE__*/React.createElement("div", {
         className: "text-red-300 text-[10px] my-2"
       }, rebirthError), /*#__PURE__*/React.createElement("button", {
         disabled: rebirthSkillKey == null || gold < cost || ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) < breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount + 1) || rebirthProcessingRef.current,
@@ -17603,7 +17685,9 @@ function MonsterHeroGame() {
         className: "font-black text-xs"
       }, "\u3042\u3068\u3067\u6C7A\u3081\u308B\uFF08\u30DD\u30A4\u30F3\u30C8\u3068\u3057\u3066\u6B8B\u3059\uFF09"), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-300"
-      }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8 +1\uFF08\u3044\u307E\u306E\u6240\u6301 ", normalized.uniqueSkillPoints, "\uFF09"))), reincarnateError && /*#__PURE__*/React.createElement("div", {
+      }, "\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8 +1\uFF08\u3044\u307E\u306E\u6240\u6301 ", normalized.uniqueSkillPoints, "\uFF09"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] text-slate-300 mt-1"
+      }, "\u4FDD\u7559\u3057\u305F\u30DD\u30A4\u30F3\u30C8\u306F\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E\u300C\u56FA\u6709\u6280\u5F37\u5316\u300D\u304B\u3089\u4F7F\u7528\u3067\u304D\u307E\u3059"))), reincarnateError && /*#__PURE__*/React.createElement("div", {
         className: "text-red-300 text-[10px] my-2"
       }, reincarnateError), /*#__PURE__*/React.createElement("button", {
         disabled: reincarnateSkillKey == null || gold < cost || reincarnateProcessingRef.current,

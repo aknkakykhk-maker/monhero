@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 03:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 03:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -446,6 +446,27 @@ const normalizeMasuProgression = (masu) => ({
   // マスモンの詳細からいつでも使える。後から足した項目なので、持っていない既存データは0
   uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0)),
 });
+// 固有技ポイントの仮配分を検証して反映した個体を返す。UI操作中は呼ばず、確定時だけ保存へ渡す。
+const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
+  const normalized = normalizeMasuProgression(masu);
+  if (!plan || typeof plan !== 'object' || !Array.isArray(allowedSkillKeys)) return null;
+  const allowed = new Set(allowedSkillKeys.map(String));
+  const allocations = {};
+  let total = 0;
+  for (const [rawKey, rawAmount] of Object.entries(plan)) {
+    const key = String(rawKey);
+    const amount = Math.max(0, Math.floor(Number(rawAmount) || 0));
+    if (!allowed.has(key) || amount <= 0) continue;
+    const current = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[key]) || 0));
+    if (current + amount > MAX_UNIQUE_SKILL_LEVEL) return null;
+    allocations[key] = amount;
+    total += amount;
+  }
+  if (total <= 0 || total > normalized.uniqueSkillPoints) return null;
+  const uniqueSkillLevels = { ...normalized.uniqueSkillLevels };
+  Object.entries(allocations).forEach(([key, amount]) => { uniqueSkillLevels[key] = Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.max(0, Math.floor(Number(uniqueSkillLevels[key]) || 0)) + amount); });
+  return { ...normalized, uniqueSkillLevels, uniqueSkillPoints: normalized.uniqueSkillPoints - total };
+};
 // 転生では個体の識別情報・外見・固有技・履歴だけを残し、振った強化は白紙に戻す。
 // オブジェクトスプレッドで旧育成値を残さないよう、維持対象を明示して新しい保存形を組み立てる。
 // toLevel を渡すとそのレベル相当の絆経験値から再開する(渡さなければLv1へ戻す)。
@@ -4211,6 +4232,7 @@ function MonsterHeroGame() {
   const [masuNameInput, setMasuNameInput] = useState('');
   const [masuRegisteredThisRun, setMasuRegisteredThisRun] = useState(false); // 今回のランで既に登録済みか(二重登録防止)
   const [masuMonDetail, setMasuMonDetail] = useState(null); // マスモン一覧: タップ中のマスモン詳細
+  const [uniqueSkillPointDrafts, setUniqueSkillPointDrafts] = useState({}); // 個体IDごとの固有技ポイント仮配分
   const [masuEnhanceFrom, setMasuEnhanceFrom] = useState(null); // マスモン強化ページを開く直前のgameState(戻る先。masuMonDetailはROSTER等の複数画面から開けるため)
   const [showMasuRenameModal, setShowMasuRenameModal] = useState(false);
   const [masuRenameInput, setMasuRenameInput] = useState('');
@@ -6187,27 +6209,19 @@ function MonsterHeroGame() {
     Audio_.se.tap();
     return updatedMasu;
   };
-  // 限界突破・転生で残しておいた固有技ポイントを1つ使い、その技のレベルを1上げる。
-  // マスモンの詳細からいつでも使える(その場で上げなくてよいので、上限まで育った技しか
-  // 無いときでも限界突破そのものは進められる)
-  const spendUniqueSkillPoint = (masuId, skillKey) => {
+  // 仮配分した固有技ポイントをまとめて確定する。＋／－操作中は保存値を変更しない。
+  const spendUniqueSkillPoint = (masuId, plan) => {
     const masu = getMasuMon(masuId);
-    if (!masu || !skillKey) return null;
-    const normalized = normalizeMasuProgression(masu);
-    if (normalized.uniqueSkillPoints <= 0) return null;
-    const current = Math.max(0, Math.floor(Number(normalized.uniqueSkillLevels[skillKey]) || 0));
-    if (current >= MAX_UNIQUE_SKILL_LEVEL) return null;
-    const updatedMasu = {
-      ...normalized,
-      uniqueSkillLevels: { ...normalized.uniqueSkillLevels, [skillKey]: current + 1 },
-      uniqueSkillPoints: normalized.uniqueSkillPoints - 1,
-    };
+    if (!masu) return null;
+    const choices = getRebirthSkillChoices(masu);
+    const updatedMasu = applyUniqueSkillPointPlan(masu, plan, choices.map(choice=>choice.key));
+    if (!updatedMasu) return null;
     setMasuMons(prev => {
       const next = prev.map(m => String(m.id) === String(masuId) ? updatedMasu : m);
       storeSet('mh_masu_mons', next, false);
       return next;
     });
-    Audio_.se.tap();
+    Audio_.se.levelUp();
     return updatedMasu;
   };
   // 強化ポイントリセットの書: 使用済みの強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻す。
@@ -8755,26 +8769,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {extraAfterApt}
     </>);
   };
-  // 限界突破・転生で残した固有技ポイントを使う枠。マスモンの詳細に出す。
-  // ポイントを持っていないときは何も出さない(画面を無駄に長くしない)
+  // 限界突破・転生で残した固有技ポイントを仮配分してから確定する枠。
+  // 0ポイントでも項目名と残数はコンパクトに表示し、確認場所を統一する。
   const renderUniqueSkillPointBox = (masu, onUpdated) => {
     if (!masu) return null;
     const normalized = normalizeMasuProgression(masu);
-    if (normalized.uniqueSkillPoints <= 0) return null;
     const choices = getRebirthSkillChoices(normalized);
+    const draft = uniqueSkillPointDrafts[String(masu.id)] || {};
+    const allocated = Object.values(draft).reduce((sum,value)=>sum+Math.max(0,Math.floor(Number(value)||0)),0);
+    const remaining = Math.max(0,normalized.uniqueSkillPoints-allocated);
+    const changeDraft = (skillKey,delta) => setUniqueSkillPointDrafts(prev=>{
+      const id=String(masu.id),current={...(prev[id]||{})},choice=choices.find(item=>item.key===skillKey);
+      if(!choice)return prev;
+      const before=Math.max(0,Math.floor(Number(current[skillKey])||0));
+      const next=Math.max(0,Math.min(MAX_UNIQUE_SKILL_LEVEL-choice.level,before+delta));
+      const used=Object.values(current).reduce((sum,value)=>sum+Math.max(0,Math.floor(Number(value)||0)),0);
+      if(delta>0&&used>=normalized.uniqueSkillPoints)return prev;
+      if(next>0)current[skillKey]=next;else delete current[skillKey];
+      return {...prev,[id]:current};
+    });
+    const clearDraft=()=>setUniqueSkillPointDrafts(prev=>{const next={...prev};delete next[String(masu.id)];return next;});
     return (
-      <div className="bg-black/40 p-2 rounded-xl border border-amber-500/40">
-        <div className="flex items-center justify-between mb-1">
-          <div className="text-[7px] text-amber-400 uppercase font-bold">固有技ポイント</div>
-          <div className="text-[10px] font-black text-amber-300 flex items-center gap-1"><Sparkles size={10}/>{normalized.uniqueSkillPoints}</div>
-        </div>
-        <div className="text-[8px] text-slate-400 font-bold mb-1.5 leading-tight">限界突破や転生で残しておいたぶんです。上げたい固有技を押すと1つ使ってLvが1上がります。</div>
-        <div className="space-y-1">{choices.map(choice=>{const maxed=choice.level>=MAX_UNIQUE_SKILL_LEVEL;return (
-          <button key={choice.key} disabled={maxed} onClick={()=>{const updated=spendUniqueSkillPoint(masu.id,choice.key); if(updated&&onUpdated) onUpdated(updated);}} className={`w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border text-left disabled:opacity-30 ${maxed?'bg-slate-900 border-white/10':'bg-amber-950/40 border-amber-500/40 active:scale-95'}`}>
-            <span className="min-w-0 flex-1 truncate text-[10px] font-black text-white">{choice.name}</span>
-            <span className="shrink-0 text-[9px] font-mono font-black text-amber-300">{maxed?`Lv.${choice.level} MAX`:`Lv.${choice.level} → ${choice.level+1}`}</span>
-          </button>
+      <div className={`bg-black/40 p-2 rounded-xl border ${normalized.uniqueSkillPoints>0?'border-amber-400/60':'border-white/10'}`}>
+        <div className="flex items-center justify-between gap-2 mb-1"><div className={`text-[10px] uppercase font-black ${normalized.uniqueSkillPoints>0?'text-amber-300':'text-slate-400'}`}>固有技強化</div><div className={`text-[10px] font-black flex items-center gap-1 ${normalized.uniqueSkillPoints>0?'text-amber-300':'text-slate-500'}`}><Sparkles size={10}/>未使用 固有技P：{normalized.uniqueSkillPoints}</div></div>
+        {normalized.uniqueSkillPoints>0&&<><div className="text-[8px] text-slate-400 font-bold mb-1.5 leading-tight">＋／－で仮配分し、「強化を確定」で反映します。</div>
+        <div className="space-y-1.5">{choices.map(choice=>{const amount=Math.max(0,Math.floor(Number(draft[choice.key])||0)),after=choice.level+amount,maxed=choice.level>=MAX_UNIQUE_SKILL_LEVEL;return (
+          <div key={choice.key} className="rounded-lg border border-white/10 bg-slate-900/80 px-2 py-1.5 min-w-0"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[10px] font-black text-white">{choice.name}</span><span className="shrink-0 text-[9px] font-mono font-black text-amber-300">{maxed?`Lv.${choice.level} MAX`:`Lv.${choice.level} → Lv.${after}`}</span></div>{!maxed&&<div className="mt-1 flex items-center justify-end gap-2"><button aria-label={`${choice.name}の仮配分を減らす`} disabled={amount<=0} onClick={()=>changeDraft(choice.key,-1)} className="w-9 min-h-[36px] rounded-lg bg-slate-700 text-base font-black disabled:opacity-30">−</button><span className="w-8 text-center text-[11px] font-mono font-black text-amber-200">＋{amount}</span><button aria-label={`${choice.name}の仮配分を増やす`} disabled={remaining<=0||after>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>changeDraft(choice.key,1)} className="w-9 min-h-[36px] rounded-lg bg-amber-700 text-base font-black disabled:opacity-30">＋</button></div>}</div>
         );})}</div>
+        <div className="mt-2 flex items-center justify-between text-[10px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining}</span></div><div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 mt-2"><button disabled={allocated<=0} onClick={clearDraft} className="min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30">キャンセル</button><button disabled={allocated<=0} onClick={()=>{const updated=spendUniqueSkillPoint(masu.id,draft);if(updated){clearDraft();if(onUpdated)onUpdated(updated);}}} className="min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30">強化を確定</button></div></>}
       </div>
     );
   };
@@ -9263,7 +9285,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">{normalized.levelCap>=BREAKTHROUGH_FINAL_LEVEL_CAP?`最終限界突破：上限が一気にLv.${MAX_MASU_LEVEL_CAP}へ上がり、★は虹になります（これが最後の限界突破です）`:`星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`}</div><div className="text-amber-300 text-[10px] font-black">強化ポイント +{normalized.rebirthCount===0?BREAKTHROUGH_FIRST_POINTS:BREAKTHROUGH_POINTS}</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div>{/* 限界突破には虹のプシュケーも要る。必要数と所持数を必ず並べて出す */}{(()=>{const need=breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1);const have=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID);return <div className="bg-black/40 p-3 rounded-xl border border-fuchsia-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要な虹のプシュケー</span><span className={`font-black flex items-center gap-1 ${have>=need?'text-fuchsia-300':'text-red-400'}`}><span aria-hidden="true">🌈</span>{need.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（{normalizeMasuProgression(selected).rebirthCount+1}回目の限界突破：{BREAKTHROUGH_ITEM_BASE} +（回数-1）×{BREAKTHROUGH_ITEM_STEP}）</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持数</span><span className="text-slate-300 font-black">{have.toLocaleString()}</span></div>{have<need&&<div className="text-[8px] text-red-400 font-black">虹のプシュケーが足りません（あと {(need-have).toLocaleString()}）</div>}</div>;})()}<div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}
 {/* 固有技を上げずに突破する道。全部の技が最大まで育っていても限界突破できるようにするためのもの。
     残したぶんはマスモンの詳細からいつでも使える */}
-<button onClick={()=>setRebirthSkillKey('')} className={`w-full p-3 rounded-xl border text-left ${rebirthSkillKey===''?'bg-amber-700 border-white':'bg-slate-900 border-amber-500/40'}`}><div className="font-black text-xs">あとで決める（ポイントとして残す）</div><div className="text-[10px] text-amber-300">固有技ポイント +1（いまの所持 {normalized.uniqueSkillPoints}）</div></button></div>{rebirthError&&<div className="text-red-300 text-[10px] my-2">{rebirthError}</div>}<button disabled={rebirthSkillKey==null||gold<cost||ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)<breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1)||rebirthProcessingRef.current} onClick={executeMasuBreakthrough} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">限界突破する</button></div>;
+<button onClick={()=>setRebirthSkillKey('')} className={`w-full p-3 rounded-xl border text-left ${rebirthSkillKey===''?'bg-amber-700 border-white':'bg-slate-900 border-amber-500/40'}`}><div className="font-black text-xs">あとで決める（ポイントとして残す）</div><div className="text-[10px] text-amber-300">固有技ポイント +1（いまの所持 {normalized.uniqueSkillPoints}）</div><div className="text-[9px] text-slate-300 mt-1">保留したポイントはマスモン詳細の「固有技強化」から使用できます</div></button></div>{rebirthError&&<div className="text-red-300 text-[10px] my-2">{rebirthError}</div>}<button disabled={rebirthSkillKey==null||gold<cost||ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)<breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1)||rebirthProcessingRef.current} onClick={executeMasuBreakthrough} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">限界突破する</button></div>;
         })()}
 
         {/* 転生: Lv100以上で使える。レベルを99ぶん返す代わりに、振った強化をすべて振り直せる */}
@@ -9282,7 +9304,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます</div>
             <div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setReincarnateSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${reincarnateSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}
             {/* 固有技を上げずに転生する道。全部の技が最大まで育っていても転生できるようにする */}
-            <button onClick={()=>setReincarnateSkillKey('')} className={`w-full p-3 rounded-xl border text-left ${reincarnateSkillKey===''?'bg-amber-700 border-white':'bg-slate-900 border-amber-500/40'}`}><div className="font-black text-xs">あとで決める（ポイントとして残す）</div><div className="text-[10px] text-amber-300">固有技ポイント +1（いまの所持 {normalized.uniqueSkillPoints}）</div></button></div>
+            <button onClick={()=>setReincarnateSkillKey('')} className={`w-full p-3 rounded-xl border text-left ${reincarnateSkillKey===''?'bg-amber-700 border-white':'bg-slate-900 border-amber-500/40'}`}><div className="font-black text-xs">あとで決める（ポイントとして残す）</div><div className="text-[10px] text-amber-300">固有技ポイント +1（いまの所持 {normalized.uniqueSkillPoints}）</div><div className="text-[9px] text-slate-300 mt-1">保留したポイントはマスモン詳細の「固有技強化」から使用できます</div></button></div>
             {reincarnateError&&<div className="text-red-300 text-[10px] my-2">{reincarnateError}</div>}
             <button disabled={reincarnateSkillKey==null||gold<cost||reincarnateProcessingRef.current} onClick={executeMasuReincarnation} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">転生する</button></div>;
         })()}
