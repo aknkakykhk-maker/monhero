@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ed3cf4d84fd6b65c
+// source-sha256: d486c2a279be6b87
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 12:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 12:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18755,13 +18755,15 @@ function MonsterHeroGame() {
           paddingLeft: '11%',
           paddingRight: '11%',
           touchAction: 'pan-x pinch-zoom'
-        }
+        },
+        "data-difficulty-carousel": true
       }, difficulties.map(([key, setting]) => {
         const active = key === safeDifficulty,
           rec = modeRecordFor(battleMode, key);
         return /*#__PURE__*/React.createElement("article", {
           key: key,
-          className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+          "data-difficulty-card": key,
+          className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${quick ? 'h-[366px] flex flex-col' : ''} ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
             background: 'linear-gradient(180deg,#152044,#0d142b)',
@@ -18799,20 +18801,20 @@ function MonsterHeroGame() {
             color: mode.color
           }
         }, noteText), /*#__PURE__*/React.createElement("div", {
-          className: "mt-1.5 rounded-xl border border-fuchsia-400/35 bg-fuchsia-950/35 px-3 py-2 flex items-center justify-between gap-2",
+          className: "mt-1.5 min-h-[48px] rounded-xl border border-fuchsia-400/35 bg-fuchsia-950/35 px-2.5 py-1.5 flex items-center gap-2",
           "data-psyche-reward": key
         }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] leading-tight text-fuchsia-200 font-black"
+          className: "shrink-0 whitespace-nowrap text-[10px] leading-tight text-fuchsia-200 font-black"
         }, "\u30AF\u30EA\u30A2\u5831\u916C"), /*#__PURE__*/React.createElement("div", {
-          className: "text-right whitespace-nowrap"
+          className: "flex-1 min-w-0 text-left whitespace-nowrap leading-tight"
         }, /*#__PURE__*/React.createElement("b", {
           className: "block text-[10px] text-white"
         }, "\u7D4C\u9A13\u5024\uFF1A", quick && quickRewardPolicy === QUICK_REWARD_POLICY_PSYCHE ? '0' : quick ? '現在値' : '通常'), /*#__PURE__*/React.createElement("b", {
-          className: "block text-xs text-fuchsia-100"
+          className: "block text-[10px] text-fuchsia-100"
         }, /*#__PURE__*/React.createElement("span", {
           "aria-hidden": "true"
         }, "\uD83C\uDF08"), " \u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\uFF1A", applyQuickPsychePolicy(clearPsycheReward(key), battleMode, quickRewardPolicy), "\u500B", quick && quickRewardPolicy === QUICK_REWARD_POLICY_PSYCHE ? '（×2）' : ''))), /*#__PURE__*/React.createElement("div", {
-          className: "grid gap-1.5 mt-1.5"
+          className: `grid gap-1.5 mt-1.5 ${quick ? 'mt-auto' : ''}`
         }, /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
           onClick: () => {
@@ -18892,12 +18894,14 @@ function MonsterHeroGame() {
         onClick: () => selectDifficultyIndex(i),
         className: `w-1.5 h-1.5 rounded-full ${key === safeDifficulty ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
       }))), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 pt-1.5 pb-1"
+        className: `shrink-0 ${quick ? 'pt-0.5 pb-0' : 'pt-1.5 pb-1'}`,
+        "data-difficulty-assistant": true
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         key: battleMode,
         scene: battleModeAssistantScene(battleMode),
         accent: mode.color,
-        faceSize: 56
+        faceSize: quick ? 48 : 56,
+        compact: quick
       })))));
     })(), gameState === 'BATTLE_SCORE_RANKING' && (() => {
       const mode = battleModeInfo(scoreRankingMode);
