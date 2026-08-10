@@ -76,6 +76,7 @@ check('旧仕様のLv1リセット移行はもう走らせない',!/savedMasuMon
 const golemUnique={name:'合掌',names:['合掌','フライングプレス','竜巻アタック'],baseMult:3.2,baseGuts:68,effectDesc:'闘志'};
 const evolved=uniqueSkillAtLevel(golemUnique,2);
 check('固有技Lv2で技名・威力・会心率・消費Gを現在技へ切替',evolved.name==='竜巻アタック'&&evolved.mult===4.2&&evolved.crit===0.2&&evolved.guts===89&&evolved.effectDesc==='闘志');
+check('限界突破の固有技候補名は強化後Lvのレベル別名称を使う',source.includes('name:uniqueSkillAtLevel(choice.unique,Math.min(MAX_UNIQUE_SKILL_LEVEL,level+1))?.name||choice.name'));
 check('限界突破済みソート・表示設定と旧設定の補完を追加',source.includes("key: 'reborn', label: '限界突破済み'")&&source.includes("monsterSortKey === 'reborn'")&&source.includes('DEFAULT_MONSTER_LIST_SETTINGS.display[key]'));
 check('同一固有技の継承を禁止',source.includes('duplicateUnique')&&source.includes('同じ固有技はすでに所持しているため引き継げません'));
 check('現在技・解放済み・未解放を固有技詳細に表示',source.includes("current?'現在の技':locked?'未解放':'解放済み'"));
