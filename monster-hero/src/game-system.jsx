@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 03:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 03:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -429,6 +429,50 @@ const BREAKTHROUGH_ITEM_STEP = 1;
 const breakthroughItemCost = (nextCount) => {
   const n = Math.max(1, Math.floor(Number(nextCount) || 1));
   return BREAKTHROUGH_ITEM_BASE + (n - 1) * BREAKTHROUGH_ITEM_STEP;
+};
+// 合体XPを全量受け取るための限界突破を、既存の上限上昇・費用式だけでまとめて試算する。
+// 合体確定時にも同じ結果を使い、表示と実際の消費がずれないようにする。
+const buildFusionBreakthroughPlan = ({ masu, fusionXp = 0, gold = 0, psycheOwned = 0 }) => {
+  const normalized = normalizeMasuProgression(masu);
+  const beforeXp = cappedBondXp(normalized);
+  const gain = Math.max(0, Math.floor(Number(fusionXp) || 0));
+  const uncappedXp = beforeXp + gain;
+  const plannedLevel = bondLevelInfo(uncappedXp).level;
+  let levelCap = normalized.levelCap;
+  let rebirthCount = normalized.rebirthCount;
+  let psycheCost = 0;
+  let diamondCost = 0;
+  let gainedPoints = 0;
+  while (plannedLevel > levelCap && levelCap < MAX_MASU_LEVEL_CAP) {
+    rebirthCount += 1;
+    psycheCost += breakthroughItemCost(rebirthCount);
+    diamondCost += masuRebirthCost(levelCap);
+    gainedPoints += rebirthCount === 1 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS;
+    levelCap = levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP
+      ? MAX_MASU_LEVEL_CAP
+      : Math.min(MAX_MASU_LEVEL_CAP, levelCap + BREAKTHROUGH_LEVEL_CAP_GAIN);
+  }
+  const count = rebirthCount - normalized.rebirthCount;
+  const psycheHave = ownedItemCount({ [BREAKTHROUGH_ITEM_ID]:psycheOwned }, BREAKTHROUGH_ITEM_ID);
+  const goldHave = donationDiamondValue(gold);
+  return {
+    count, plannedLevel, levelCap, rebirthCount, psycheCost, diamondCost, gainedPoints,
+    psycheHave, goldHave,
+    psycheShortage:Math.max(0, psycheCost - psycheHave),
+    diamondShortage:Math.max(0, diamondCost - goldHave),
+    canReceiveAll:plannedLevel <= levelCap,
+    canAfford:plannedLevel <= levelCap && psycheHave >= psycheCost && goldHave >= diamondCost,
+    nextPsyche:psycheHave - psycheCost,
+    nextGold:goldHave - diamondCost,
+    nextMasu:{
+      ...normalized,
+      levelCap,
+      rebirthCount,
+      distAptPoints:Math.max(0, Math.floor(Number(normalized.distAptPoints) || 0)) + gainedPoints,
+      // まとめて突破するときは従来の「あとで決める」と同じく、固有技ポイントを保持する。
+      uniqueSkillPoints:Math.max(0, Math.floor(Number(normalized.uniqueSkillPoints) || 0)) + count,
+    },
+  };
 };
 const ownedItemCount = (ownedItems, itemId) => Math.max(0, Math.floor(Number(ownedItems?.[itemId]) || 0));
 const REINCARNATE_MIN_LEVEL = 100;
@@ -6331,7 +6375,7 @@ function MonsterHeroGame() {
   // fusionInheritUniqueがtrueなら、副の固有技を「継承した固有技」としてinheritedUniquesに記録する。
   // 能力値・距離適性・副の強化ポイントは引き継がないが、絆レベルが上がったぶんの
   // 強化ポイントは通常のレベルアップと同じように主へ配る。
-  const executeMasuFusion = () => {
+  const executeMasuFusion = async (withBreakthrough = false) => {
     if (fusionProcessingRef.current) return null;
     fusionProcessingRef.current = true;
     const main = getMasuMon(fusionMainId);
@@ -6343,9 +6387,11 @@ function MonsterHeroGame() {
     const mainLvl = masuBondLevelInfo(main);
     const subLvl = masuBondLevelInfo(sub);
     const cost = masuFusionCost(mainLvl.level, subLvl.level, fusionInheritUnique);
-    if (gold < cost) { fusionProcessingRef.current=false; return null; }
     const gainedXp = cappedBondXp(sub);
-    const afterXp = cappedBondXp(main, gainedXp);
+    const breakthroughPlan = buildFusionBreakthroughPlan({ masu:main, fusionXp:gainedXp, gold:gold-cost, psycheOwned:ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID) });
+    if (gold < cost || (withBreakthrough && (breakthroughPlan.count < 1 || !breakthroughPlan.canAfford))) { fusionProcessingRef.current=false; return null; }
+    const fusionMain = withBreakthrough ? breakthroughPlan.nextMasu : main;
+    const afterXp = cappedBondXp(fusionMain, gainedXp);
     const before = mainLvl;
     const after = bondLevelInfo(afterXp);
     const gainedLevels = after.level - before.level;
@@ -6357,12 +6403,12 @@ function MonsterHeroGame() {
     const inheritedLevel = Math.max(0, Number(sub.uniqueSkillLevels?.own) || Number(subBase?.unique?.evoLevel) || 0);
     const inheritedUnique = canInherit ? { ...uniqueSkillAtLevel(subBase.unique, inheritedLevel), monId: subBase.id, lineageId:subUniqueLineageId, sourceMasuName: sub.name } : null;
     const historyEntry = { subName: sub.name, subBaseId: sub.baseId, subBondLevel: subLvl.level, xpGained: gainedXp, inherited: !!inheritedUnique, timestamp: Date.now() };
-    setMasuMons(prev => {
-      const next = prev
+    const next = masuMonsRef.current
         .filter(m => m.id !== sub.id)
         .map(m => {
           if (m.id !== main.id) return m;
-          const advanced = applyBondXpGain(m, gainedXp);
+          const prepared = withBreakthrough ? { ...m, ...breakthroughPlan.nextMasu } : m;
+          const advanced = applyBondXpGain(prepared, gainedXp);
           return {
             ...advanced.masu,
             fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + advanced.gainedLevels,
@@ -6370,17 +6416,30 @@ function MonsterHeroGame() {
             ...(inheritedUnique ? { inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique] } : {}),
           };
         });
-      storeSet('mh_masu_mons', next, false);
-      return next;
-    });
+    const goldAfter = gold - cost - (withBreakthrough ? breakthroughPlan.diamondCost : 0);
+    const nextItems = withBreakthrough
+      ? { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]:breakthroughPlan.nextPsyche }
+      : ownedItemsRef.current;
+    try {
+      await Promise.all([
+        storeSet('mh_masu_mons', next, false),
+        storeSet('mh_gold', goldAfter, false),
+        ...(withBreakthrough ? [storeSet('mh_owned_items', nextItems, false)] : []),
+      ]);
+    } catch {
+      fusionProcessingRef.current=false;
+      return null;
+    }
+    masuMonsRef.current = next;
+    ownedItemsRef.current = nextItems;
+    setMasuMons(next); setGold(goldAfter);
+    if (withBreakthrough) setOwnedItems(nextItems);
     removeMasuFromAllPartySets(sub.id);
-    const goldAfter = gold - cost;
-    setGold(goldAfter);
-    storeSet('mh_gold', goldAfter, false);
     return {
       mainName: main.name, mainIconUrl: mainBase?.iconUrl, mainBaseId: main.baseId, mainEmoji: mainBase?.emoji, mainColors: getMasuColors(main),
       subName: sub.name, subIconUrl: subBase?.iconUrl, subBaseId: sub.baseId, subEmoji: subBase?.emoji, subColors: getMasuColors(sub),
       before, after, gainedXp, gainedLevels, inherited: !!inheritedUnique, cost,
+      breakthroughCount:withBreakthrough ? breakthroughPlan.count : 0,
     };
   };
   const resetFusionFlow = () => {
@@ -10381,6 +10440,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const mainCap = normalizeMasuProgression(main).levelCap;
             const subXp = cappedBondXp(sub);
             const beforeXp = cappedBondXp(main);
+            const breakthroughPlan = buildFusionBreakthroughPlan({ masu:main, fusionXp:subXp, gold:gold-cost, psycheOwned:ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) });
             const afterXp = cappedBondXp(main, subXp);
             const afterLvl = bondLevelInfo(afterXp);
             const gainedLevels = afterLvl.level - mainLvl.level;
@@ -10431,10 +10491,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     {gainedLevels===0&&wastedXp===0&&<div className="text-[8px] text-slate-500 leading-relaxed mt-2">※ 絆経験値は加算されますが、次のレベルには届きません(強化ポイントは増えません)</div>}
                     {/* 主のレベル上限を超えるぶんは入らない。押す前に分かるようにしておく */}
                     {wastedXp>0&&<div className="text-[9px] text-amber-200 leading-relaxed mt-2 bg-amber-950/40 border border-amber-500/40 rounded-xl px-2.5 py-2">
-                      <b className="text-amber-300">上限 Lv.{mainCap} で止まります</b><br/>
-                      {afterLvl.level>=mainCap?'すでに上限に届くため、':''}{wastedXp.toLocaleString()} XP は入りません。限界突破でレベル上限を上げてからのほうが無駄になりません。
+                      <b className="text-amber-300">この合体ではLv上限を超える経験値を獲得します</b><br/>
+                      通常合体では、超過する {wastedXp.toLocaleString()} XP は失われます。
                     </div>}
                   </div>
+                  {breakthroughPlan.count>0&&<div className="bg-violet-950/45 p-3 rounded-xl border border-violet-400/50 mb-2 space-y-1">
+                    <div className="flex justify-between text-[10px] font-black text-violet-200"><span>合体後予定</span><span>Lv.{breakthroughPlan.plannedLevel}</span></div>
+                    <div className="flex justify-between text-[9px] font-bold"><span className="text-slate-400">現在のLv上限</span><span>Lv.{mainCap}</span></div>
+                    <div className="flex justify-between text-[10px] font-black"><span className="text-slate-300">必要な限界突破</span><span className="text-violet-300">×{breakthroughPlan.count}</span></div>
+                    <div className={`flex justify-between text-[9px] font-bold ${breakthroughPlan.psycheShortage?'text-red-300':'text-fuchsia-300'}`}><span>虹のプシュケー</span><span>{breakthroughPlan.psycheHave.toLocaleString()} / {breakthroughPlan.psycheCost.toLocaleString()}{breakthroughPlan.psycheShortage?`（あと${breakthroughPlan.psycheShortage.toLocaleString()}個）`:''}</span></div>
+                    <div className={`flex justify-between text-[9px] font-bold ${breakthroughPlan.diamondShortage?'text-red-300':'text-amber-300'}`}><span>限界突破のダイヤ</span><span>{breakthroughPlan.goldHave.toLocaleString()} / {breakthroughPlan.diamondCost.toLocaleString()}{breakthroughPlan.diamondShortage?`（あと${breakthroughPlan.diamondShortage.toLocaleString()}）`:''}</span></div>
+                    {!breakthroughPlan.canReceiveAll&&<div className="text-[8px] text-red-300 font-black">最大上限Lv.{MAX_MASU_LEVEL_CAP}でも全XPは受け取れません。</div>}
+                    <div className="text-[7px] text-slate-400">限界突破分の固有技ポイントは「あとで決める」として保持されます。</div>
+                  </div>}
                   <div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-2 space-y-1.5">
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">受け継ぐ絆経験値</span><span className="text-pink-300 font-black">{(sub.bondXp||0).toLocaleString()} XP</span></div>
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${canAfford?'text-amber-300':'text-red-400'}`}><Gem size={10}/>{cost.toLocaleString()}</span></div>
@@ -10453,14 +10522,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="text-[8px] text-red-200/90 leading-relaxed">合体すると副の「{sub.name}」はいなくなります。この操作は取り消せません。</div>
                   </div>
                 </div>
-                <button onClick={()=>{
+                <div className="grid grid-cols-1 gap-2 shrink-0 mt-1">
+                {breakthroughPlan.count>0&&<button onClick={async()=>{
+                  if (!canAfford || !breakthroughPlan.canAfford) return;
+                  const result = await executeMasuFusion(true);
+                  if (!result) return;
+                  setFusionResultData(result); setFusionStep('anim'); Audio_.se.fusion();
+                }} disabled={!canAfford||!breakthroughPlan.canAfford||fusionProcessingRef.current} className="w-full py-3 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white disabled:bg-slate-800 disabled:text-slate-600 disabled:opacity-50"><Star size={16}/>限界突破 ×{breakthroughPlan.count} して合体</button>}
+                <button onClick={async()=>{
                   if (!canAfford) return;
-                  const result = executeMasuFusion();
+                  const result = await executeMasuFusion(false);
                   if (!result) return;
                   setFusionResultData(result);
                   setFusionStep('anim');
                   Audio_.se.fusion();
-                }} disabled={!canAfford} className={`w-full py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg shrink-0 mt-1 flex items-center justify-center gap-2 ${canAfford?'bg-violet-600 text-white active:scale-95':'bg-slate-800 text-slate-600'}`}><Sparkles size={16}/>合体する</button>
+                }} disabled={!canAfford||fusionProcessingRef.current} className={`w-full py-3 rounded-2xl font-black text-sm uppercase shadow-lg flex items-center justify-center gap-2 ${canAfford?'bg-slate-700 text-white active:scale-95':'bg-slate-800 text-slate-600'}`}><Sparkles size={16}/>{breakthroughPlan.count>0?'通常合体':'合体する'}</button>
+                </div>
               </div>
             );
           }

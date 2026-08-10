@@ -66,7 +66,7 @@ check('振り済みのぶんは重複して配らない',
 
 // --- 画面・実処理の結線 ---
 // 上がったレベルぶんの強化ポイントは applyBondXpGain がまとめて配る。合体もそこを通す
-check('合体の実処理で強化ポイントを配る', has('distAptPoints: (masu.distAptPoints || 0) + gainedLevels') && has('applyBondXpGain(m, gainedXp)'));
+check('合体の実処理で強化ポイントを配る', has('distAptPoints: (masu.distAptPoints || 0) + gainedLevels') && has('applyBondXpGain(prepared, gainedXp)'));
 check('確認画面と実処理が同じ費用計算を使う', (source.match(/masuFusionCost\(mainLvl\.level, subLvl\.level, fusionInheritUnique\)/g) || []).length === 2);
 check('古い×100の計算が残っていない', !has('(mainLvl.level + subLvl.level) * 100') && !has('const cost = level * 100;'));
 check('確認画面は強化ポイントの増分を出したまま', has('{mainPointsNow} → {mainPointsNow + gainedLevels}'));
@@ -117,10 +117,10 @@ check('合体の費用も上限つきのレベルで計算する',
   has('const mainLvl = masuBondLevelInfo(main);') && has('const subLvl = masuBondLevelInfo(sub);')
     && (source.match(/const mainLvl = masuBondLevelInfo\(main\);/g) || []).length === 2);
 check('確認画面と実処理が同じ「合体後」を出す',
-  has('const afterXp = cappedBondXp(main, gainedXp);') && has('const afterXp = cappedBondXp(main, subXp);'));
+  has('const afterXp = cappedBondXp(fusionMain, gainedXp);') && has('const afterXp = cappedBondXp(main, subXp);'));
 check('上限で入らない絆経験値を事前に知らせる',
   has('const wastedXp = Math.max(0, (beforeXp + subXp) - afterXp);')
-    && has('上限 Lv.{mainCap} で止まります') && has('XP は入りません'));
+    && has('超過する {wastedXp.toLocaleString()} XP は失われます'));
 check('確認画面に上限を出す', has('上限 Lv.{mainCap}</div>'));
 
 // --- 転生の消費ダイヤ ---
@@ -140,7 +140,7 @@ check('転生の費用は壊れた値でも0以上', R.masuRebirthCost(null) ===
 // 表示と実際に引かれる額が食い違う(以前それで「押せないのに足りているように見える」不具合が出た)
 check('限界突破・転生とも確認画面と実処理で同じ費用計算を使う',
   has('const masuRebirthCost = (level) =>')
-    && (source.match(/masuRebirthCost\(/g) || []).length === 4
+    && (source.match(/masuRebirthCost\(/g) || []).length === 5
     && (source.match(/const cost = masuRebirthCost\(level\);/g) || []).length === 2
     && (source.match(/cost=masuRebirthCost\(lvl\.level\)/g) || []).length === 2,
   `masuRebirthCost の使用箇所 ${(source.match(/masuRebirthCost\(/g) || []).length}`);
