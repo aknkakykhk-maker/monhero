@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b16a3d47847b9029
+// source-sha256: 3764b55265fcbe62
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 09:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 09:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5965,7 +5965,9 @@ const EXTREME_DEBUG_DIFFICULTIES = Object.freeze([{
   xp: 25,
   gold: 7.5,
   psyche: 75,
-  teachingEffect: 0.5
+  specialRules: Object.freeze({
+    breederCardEffect: 0.5
+  })
 }, {
   id: 'NIGHTMARE',
   label: 'NIGHTMARE',
@@ -5984,6 +5986,7 @@ const EXTREME_DEBUG_DIFFICULTIES = Object.freeze([{
   available: false
 }]);
 const EXTREME_DEBUG_SETTING = EXTREME_DEBUG_DIFFICULTIES[0];
+const extremeSpecialRule = (difficultyId, rule) => EXTREME_DEBUG_DIFFICULTIES.find(setting => setting.id === difficultyId)?.specialRules?.[rule] ?? 1;
 const EXTREME_DEBUG_MODE = Object.freeze({
   id: 'extreme_debug',
   label: '極限チャレンジ',
@@ -13196,7 +13199,7 @@ function MonsterHeroGame() {
       const isBreeder = isBreederCard(card);
       const halved = !isBreeder && penaltyCardCount > 0;
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
-      const effMul = isBreeder && debugExtremeRef.current ? EXTREME_DEBUG_SETTING.teachingEffect : halved ? 0.5 : 1;
+      const effMul = isBreeder && debugExtremeRef.current ? extremeSpecialRule(extremeDifficulty, 'breederCardEffect') : halved ? 0.5 : 1;
       if (!isBreeder) penaltyCardCount++;
       if (halved) addPopup('2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
       const slotIdx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
@@ -18049,13 +18052,7 @@ function MonsterHeroGame() {
           className: "shrink-0"
         }, icon), /*#__PURE__*/React.createElement("span", {
           className: "truncate"
-        }, text)))), isExtreme && /*#__PURE__*/React.createElement("div", {
-          className: "mt-1.5 rounded-xl border-2 border-fuchsia-400/70 bg-fuchsia-950/65 px-2.5 py-1.5 text-center shadow-[0_0_16px_rgba(232,121,249,.2)]"
-        }, /*#__PURE__*/React.createElement("small", {
-          className: "block text-[8px] font-black tracking-wider text-amber-300"
-        }, "\u26A0 \u6975\u9650\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("b", {
-          className: "block text-xs text-white"
-        }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u52B9\u679C 50%")), /*#__PURE__*/React.createElement("div", {
+        }, text)))), /*#__PURE__*/React.createElement("div", {
           className: "grid gap-1.5 mt-auto pt-1.5"
         }, /*#__PURE__*/React.createElement("button", {
           disabled: isExtreme || !!battleTutorial,
@@ -18220,10 +18217,10 @@ function MonsterHeroGame() {
         }, label, /*#__PURE__*/React.createElement("b", {
           className: "block text-xs text-white"
         }, value)))), /*#__PURE__*/React.createElement("div", {
-          className: "mt-1.5 rounded-xl border-2 border-fuchsia-400/70 bg-fuchsia-950/65 px-2 py-1.5 text-center"
+          className: "mt-1.5 rounded-xl border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1.5 text-center shadow-[0_0_18px_rgba(232,121,249,.28)]"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] font-black text-amber-300"
-        }, "\u26A0 \u6975\u9650\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("b", {
+        }, "\u26A0 EXTREME\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("b", {
           className: "block text-xs text-white"
         }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u52B9\u679C 50%"))) : /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500"
@@ -18270,7 +18267,7 @@ function MonsterHeroGame() {
       }))), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 pt-1.5 pb-1"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "extremeChallenge",
+        scene: "extremeDifficulty",
         accent: "#e879f9",
         faceSize: 56
       })), /*#__PURE__*/React.createElement("div", {
@@ -22538,21 +22535,25 @@ function MonsterHeroGame() {
         width: 'clamp(70px,12dvh,120px)',
         height: 'clamp(80px,16dvh,150px)'
       }
-    }) : /*#__PURE__*/React.createElement("img", {
-      src: enemy.imgUrl,
-      alt: enemy?.name,
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: debugExtreme ? 'mh-extreme-enemy-aura-shell' : '',
       style: {
         width: 'clamp(70px,12dvh,120px)',
         height: 'clamp(80px,16dvh,150px)'
-      },
-      className: `relative z-[1] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${debugExtreme ? ' mh-extreme-enemy-image' : ''}`
-    }) : /*#__PURE__*/React.createElement("div", {
+      }
+    }, /*#__PURE__*/React.createElement("img", {
+      src: enemy.imgUrl,
+      alt: enemy?.name,
+      className: `relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${debugExtreme ? ' mh-extreme-enemy-image' : ''}`
+    })) : /*#__PURE__*/React.createElement("span", {
+      className: debugExtreme ? 'mh-extreme-enemy-aura-shell' : ''
+    }, /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'clamp(58px,11dvh,104px)',
         lineHeight: 1
       },
       className: `relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${debugExtreme ? ' mh-extreme-enemy-image' : ''}`
-    }, enemy?.emoji), enemy?.id === 'Moo' && /*#__PURE__*/React.createElement("div", {
+    }, enemy?.emoji)), enemy?.id === 'Moo' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible",
       style: {
         zIndex: 1
@@ -27161,10 +27162,10 @@ const createAnimationStyle = () => {
     .mh-breakthrough-cap b{display:block;font-size:30px;color:#fff;text-shadow:0 0 16px #f59e0b}
     /* 最後に星が1つ増える。増えたぶんだけ大きく光ってから元の大きさに落ち着く */
     /* EXTREMEは透過画像の輪郭へdrop-shadowを重ね、敵枠ではなくモンスター本体から邪気を漏らす。 */
-    .mh-extreme-enemy-image{filter:drop-shadow(0 0 3px #08000d) drop-shadow(0 0 7px #2e0648) drop-shadow(-5px -2px 9px #4c1d95cc) drop-shadow(6px 3px 11px #701a75aa) drop-shadow(2px -4px 13px #9f123977);animation:mhExtremeEnemyAura 2.8s ease-in-out infinite;will-change:filter}
-    @keyframes mhExtremeEnemyAura{0%,100%{filter:drop-shadow(0 0 3px #08000d) drop-shadow(0 0 7px #2e0648) drop-shadow(-5px -2px 9px #4c1d95cc) drop-shadow(6px 3px 11px #701a75aa) drop-shadow(2px -4px 13px #9f123966)}52%{filter:drop-shadow(0 0 4px #09000f) drop-shadow(0 0 9px #3b0764) drop-shadow(-7px 2px 12px #581c87dd) drop-shadow(7px -3px 13px #86198fbb) drop-shadow(-2px -5px 15px #be123c99)}}
+    .mh-extreme-enemy-aura-shell{position:relative;display:inline-flex;align-items:center;justify-content:center;isolation:isolate;overflow:visible}.mh-extreme-enemy-aura-shell::before{content:"";position:absolute;z-index:0;inset:-38% -48% -22%;border-radius:44% 56% 48% 52%;pointer-events:none;background:radial-gradient(ellipse at 50% 62%,#050008ee 0 25%,#240034e8 38%,#581c87bb 52%,#a21caf88 64%,transparent 78%);filter:blur(7px);animation:mhExtremeEnemyMist 3.7s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-aura-shell::after{content:"";position:absolute;z-index:2;left:-35%;right:-35%;bottom:-15%;height:35%;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse,#140018ee 0 24%,#701a75cc 48%,#be185d88 62%,transparent 76%);filter:blur(5px);animation:mhExtremeEnemyFloor 3.1s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-image{filter:drop-shadow(0 0 4px #030006) drop-shadow(0 0 9px #3b0764) drop-shadow(-7px -3px 13px #6b21a8ee) drop-shadow(8px 2px 15px #a21cafdd) drop-shadow(1px -7px 18px #be123caa);animation:mhExtremeEnemyAura 2.8s ease-in-out infinite;will-change:filter}
+    @keyframes mhExtremeEnemyAura{0%,100%{filter:drop-shadow(0 0 4px #030006) drop-shadow(0 0 9px #3b0764) drop-shadow(-7px -3px 13px #6b21a8ee) drop-shadow(8px 2px 15px #a21cafdd) drop-shadow(1px -7px 18px #be123c99)}47%{filter:drop-shadow(0 0 6px #08000d) drop-shadow(0 0 13px #4c1d95) drop-shadow(-10px 3px 17px #7e22ceff) drop-shadow(10px -4px 19px #c026d3ee) drop-shadow(-3px -9px 22px #e11d48bb)}}@keyframes mhExtremeEnemyMist{0%,100%{opacity:.76;transform:scale(.94,1.01) translate(-2px,3px) rotate(-2deg)}41%{opacity:1;transform:scale(1.09,1.14) translate(4px,-7px) rotate(2deg)}73%{opacity:.84;transform:scale(1.02,1.08) translate(-3px,-2px) rotate(-1deg)}}@keyframes mhExtremeEnemyFloor{0%,100%{opacity:.68;transform:scaleX(.9)}55%{opacity:1;transform:scaleX(1.12)}}
     @keyframes mhExtremeRuleIn{from{opacity:0;transform:scale(.82)}60%{transform:scale(1.03)}}
-    @media(prefers-reduced-motion:reduce){.mh-extreme-enemy-image{animation:none;will-change:auto}}
+    @media(prefers-reduced-motion:reduce){.mh-extreme-enemy-image,.mh-extreme-enemy-aura-shell::before,.mh-extreme-enemy-aura-shell::after{animation:none;will-change:auto}}
     .mh-breakthrough-stars{position:absolute;top:calc(46% + 0px);display:flex;gap:4px;font-size:22px;color:#fde047;text-shadow:0 0 8px #ca8a04}
     .mh-breakthrough-stars i{opacity:.35;font-style:normal}
     .mh-breakthrough-stars i.is-new{animation:mhBreakStar 3.6s ease-out forwards}
