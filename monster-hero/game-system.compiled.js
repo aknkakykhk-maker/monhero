@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 546e3d56852c788c
+// source-sha256: 1136ff15f1163384
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 10:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 10:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1061,6 +1061,51 @@ const buildMasuDonation = ({
     nextMasuMons,
     nextRoster: active.roster,
     nextDraftRoster: draft.roster
+  };
+};
+// 複数寄付も1体寄付の正本を順番に適用し、途中で1体でも寄付できなければ何も確定しない。
+// 報酬計算・編成補正を別実装にせず、最後にまとめて保存できる完成形だけを返す。
+const buildMasuDonations = ({
+  targetIds,
+  ...state
+}) => {
+  const ids = [...new Set((Array.isArray(targetIds) ? targetIds : []).map(String))];
+  if (!ids.length) return {
+    ok: false,
+    reason: '寄付するマスモンを選んでください。'
+  };
+  let current = {
+    ...state
+  };
+  const donated = [];
+  let diamonds = 0,
+    psyche = 0;
+  for (const targetId of ids) {
+    const result = buildMasuDonation({
+      ...current,
+      targetId
+    });
+    if (!result.ok) return result;
+    donated.push(result.donated);
+    diamonds += result.diamonds;
+    psyche += result.psyche;
+    current = {
+      ...current,
+      masuMons: result.nextMasuMons,
+      gold: result.nextGold,
+      monsterRosterIds: result.nextRoster,
+      draftMonsterRoster: result.nextDraftRoster
+    };
+  }
+  return {
+    ok: true,
+    donated,
+    diamonds,
+    psyche,
+    nextGold: current.gold,
+    nextMasuMons: current.masuMons,
+    nextRoster: current.monsterRosterIds,
+    nextDraftRoster: current.draftMonsterRoster
   };
 };
 
@@ -8091,7 +8136,8 @@ function MonsterHeroGame() {
   const [regenerationResult, setRegenerationResult] = useState(null);
   const [regenerationProcessing, setRegenerationProcessing] = useState(false);
   const regenerationProcessingRef = useRef(false);
-  const [donationSelectedId, setDonationSelectedId] = useState(null);
+  const [donationSelectedIds, setDonationSelectedIds] = useState([]);
+  const [donationConfirmOpen, setDonationConfirmOpen] = useState(false);
   const [donationResult, setDonationResult] = useState(null);
   const [donationError, setDonationError] = useState('');
   const [donationProcessing, setDonationProcessing] = useState(false);
@@ -11253,7 +11299,8 @@ function MonsterHeroGame() {
   };
   const resetDonationFlow = () => {
     if (donationProcessingRef.current) return;
-    setDonationSelectedId(null);
+    setDonationSelectedIds([]);
+    setDonationConfirmOpen(false);
     setDonationResult(null);
     setDonationAnimation(null);
     setDonationError('');
@@ -11402,15 +11449,15 @@ function MonsterHeroGame() {
     }
   };
   const executeMasuDonation = async () => {
-    if (donationProcessingRef.current || !donationSelectedId) return;
+    if (donationProcessingRef.current || !donationSelectedIds.length) return;
     donationProcessingRef.current = true;
     setDonationProcessing(true);
     setDonationError('');
     try {
       // state更新前の連打でも同じ個体を再利用できないよう、同期参照からIDで再取得する。
-      const result = buildMasuDonation({
+      const result = buildMasuDonations({
         masuMons: masuMonsRef.current,
-        targetId: donationSelectedId,
+        targetIds: donationSelectedIds,
         gold,
         monsterRosterIds,
         draftMonsterRoster,
@@ -11420,7 +11467,8 @@ function MonsterHeroGame() {
       });
       if (!result.ok) {
         setDonationError(result.reason);
-        setDonationSelectedId(null);
+        setDonationSelectedIds([]);
+        setDonationConfirmOpen(false);
         return;
       }
       masuMonsRef.current = result.nextMasuMons;
@@ -11434,26 +11482,29 @@ function MonsterHeroGame() {
       await storeSet('mh_owned_items', nextItems, false);
       ownedItemsRef.current = nextItems;
       setOwnedItems(nextItems);
-      await saveMissionProgress('donation');
+      await saveMissionProgress('donation', result.donated.length);
       setMasuMons(result.nextMasuMons);
       setGold(result.nextGold);
       setMonsterRosterIds(result.nextRoster);
       setDraftMonsterRoster(result.nextDraftRoster);
-      if (fusionMainId === result.donated.id || fusionSubId === result.donated.id) resetFusionFlow();
+      if (result.donated.some(m => fusionMainId === m.id || fusionSubId === m.id)) resetFusionFlow();
       setMasuMonDetail(null);
-      setDonationSelectedId(null);
+      setDonationSelectedIds([]);
+      setDonationConfirmOpen(false);
+      const animationMasu = result.donated[0];
       setDonationAnimation({
-        name: result.donated.name,
-        baseId: result.donated.baseId,
-        src: masuDisplayImageUrl(ALL_PLAYER_MONSTERS[result.donated.baseId]),
-        colors: getMasuColors(result.donated),
+        name: result.donated.length === 1 ? animationMasu.name : `${result.donated.length}体`,
+        baseId: animationMasu.baseId,
+        src: masuDisplayImageUrl(ALL_PLAYER_MONSTERS[animationMasu.baseId]),
+        colors: getMasuColors(animationMasu),
         diamonds: result.diamonds,
         psyche: result.psyche
       });
       await wait(1500);
       setDonationAnimation(null);
       setDonationResult({
-        name: result.donated.name,
+        count: result.donated.length,
+        name: result.donated[0]?.name,
         diamonds: result.diamonds,
         psyche: result.psyche,
         gold: result.nextGold
@@ -17286,6 +17337,25 @@ function MonsterHeroGame() {
         key: 'active',
         label: '編成中'
       }];
+      const donationArgs = {
+        masuMons,
+        gold,
+        monsterRosterIds,
+        draftMonsterRoster,
+        unlockedMonsterIds,
+        validBaseIds: Object.keys(ALL_PLAYER_MONSTERS),
+        requiredCount: STARTER_MONSTER_IDS.length
+      };
+      const selectedSet = new Set(donationSelectedIds.map(String));
+      const selectedResult = donationSelectedIds.length ? buildMasuDonations({
+        ...donationArgs,
+        targetIds: donationSelectedIds
+      }) : null;
+      const selectedDiamonds = selectedResult?.ok ? selectedResult.diamonds : donationSelectedIds.reduce((sum, id) => sum + donationDiamondValue(masuMons.find(m => String(m.id) === String(id))?.bondXp), 0);
+      const selectedPsyche = selectedResult?.ok ? selectedResult.psyche : donationSelectedIds.reduce((sum, id) => {
+        const m = masuMons.find(x => String(x.id) === String(id));
+        return sum + (m ? donationPsycheValue(m) : 0);
+      }, 0);
       const dir = donationSortDir === 'asc' ? 1 : -1;
       const sorted = [...masuMons].sort((a, b) => {
         const active = m => monsterRosterIds.includes(`masu:${m.id}`) ? 1 : 0;
@@ -17315,12 +17385,7 @@ function MonsterHeroGame() {
         className: "text-xl font-black italic text-violet-300"
       }, "\u5BC4\u4ED8")), /*#__PURE__*/React.createElement("p", {
         className: "text-[10px] text-slate-300 leading-relaxed bg-violet-950/40 border border-violet-500/30 rounded-xl px-3 py-2 mb-2 shrink-0"
-      }, "\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024\u3068\u540C\u3058\u6570\u306E\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 w-full max-w-md mx-auto mb-3"
-      }, /*#__PURE__*/React.createElement(AssistantBubble, {
-        scene: "donation",
-        compact: true
-      })), /*#__PURE__*/React.createElement("div", {
+      }, "\u7DCF\u5408\u529B\u3068\u5831\u916C\u3092\u898B\u6BD4\u3079\u3066\u8907\u6570\u9078\u3079\u307E\u3059\u3002\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024\u3068\u540C\u3058\u6570\u306E\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-3 gap-1.5 mb-2 shrink-0"
       }, options.map(o => {
         const active = donationSortKey === o.key;
@@ -17348,21 +17413,30 @@ function MonsterHeroGame() {
       }), /*#__PURE__*/React.createElement("p", {
         className: "text-[11px] mt-3 font-bold"
       }, "\u5BC4\u4ED8\u3067\u304D\u308B\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u307E\u305B\u3093")) : /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-1.5 pb-4"
+        className: "grid grid-cols-3 gap-1.5 pb-3"
       }, sorted.map(masu => {
         const base = ALL_PLAYER_MONSTERS[masu.baseId];
         if (!base) return null;
         const diamonds = donationDiamondValue(masu.bondXp);
-        const lvl = bondLevelInfo(diamonds);
+        const lvl = masuBondLevelInfo(masu);
         const active = monsterRosterIds.includes(`masu:${masu.id}`);
+        const selected = selectedSet.has(String(masu.id));
+        const trial = selected ? {
+          ok: true
+        } : buildMasuDonations({
+          ...donationArgs,
+          targetIds: [...donationSelectedIds, masu.id]
+        });
+        const canSelect = trial.ok;
         return /*#__PURE__*/React.createElement("button", {
           key: masu.id,
-          disabled: donationProcessing,
+          disabled: donationProcessing || !selected && !canSelect,
+          "aria-pressed": selected,
           onClick: () => {
             setDonationError('');
-            setDonationSelectedId(masu.id);
+            setDonationSelectedIds(ids => selected ? ids.filter(id => String(id) !== String(masu.id)) : [...ids, masu.id]);
           },
-          className: "min-w-0 overflow-hidden bg-slate-900 border border-violet-500/30 rounded-xl p-1.5 flex flex-col items-center text-center active:scale-[.97] disabled:opacity-50"
+          className: `relative min-h-[122px] min-w-0 overflow-hidden bg-slate-900 border-2 rounded-xl p-1.5 flex flex-col items-center text-center active:scale-[.97] disabled:opacity-35 ${selected ? 'border-amber-300 bg-violet-950/80' : 'border-violet-500/30'}`
         }, /*#__PURE__*/React.createElement("div", {
           className: "relative w-16 h-16 rounded-lg overflow-hidden bg-black/30"
         }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
@@ -17375,28 +17449,59 @@ function MonsterHeroGame() {
           count: masu.rebirthCount,
           className: "mh-rebirth-stars-overlay"
         }), active && /*#__PURE__*/React.createElement("span", {
-          className: "absolute top-1 left-1 right-1 text-[7px] leading-4 bg-pink-600/95 text-white rounded-full font-black"
-        }, "\u7DE8\u6210\u4E2D")), /*#__PURE__*/React.createElement("div", {
+          className: "absolute top-1 left-1 text-[7px] leading-4 px-1 bg-pink-600/95 text-white rounded-full font-black"
+        }, "\u7DE8\u6210\u4E2D"), selected && /*#__PURE__*/React.createElement("span", {
+          className: "absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded-full bg-amber-300 text-slate-950 font-black"
+        }, "\u2713")), /*#__PURE__*/React.createElement("div", {
           className: "w-full mt-1 font-black text-[9px] leading-tight text-white truncate"
         }, masu.name), /*#__PURE__*/React.createElement("div", {
-          className: "text-[8px] leading-tight text-pink-300 font-black"
-        }, "\u7D46Lv.", lvl.level), /*#__PURE__*/React.createElement("div", {
-          className: "w-full text-[7px] leading-tight text-slate-300 truncate"
-        }, "\u7D2F\u8A08 ", diamonds.toLocaleString(), " XP"), /*#__PURE__*/React.createElement("div", {
+          className: "w-full flex justify-center gap-1 text-[8px] leading-tight font-black"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-pink-300"
+        }, "\u7D46Lv.", lvl.level), /*#__PURE__*/React.createElement("span", {
+          className: "text-cyan-300"
+        }, "\u7DCF\u5408\u529B ", formatMonsterPower(masuPowerOf(masu)))), /*#__PURE__*/React.createElement("div", {
           className: "w-full text-[8px] leading-tight text-amber-300 font-black truncate"
         }, /*#__PURE__*/React.createElement(Gem, {
           size: 8,
           className: "inline"
-        }), " ", diamonds.toLocaleString()));
-      }))));
-    })(), gameState === 'MASU_DONATION' && donationSelectedId && (() => {
-      const masu = masuMons.find(m => String(m.id) === String(donationSelectedId));
-      if (!masu) return null;
-      const base = ALL_PLAYER_MONSTERS[masu.baseId];
-      if (!base) return null;
-      const diamonds = donationDiamondValue(masu.bondXp);
-      const after = donationDiamondValue(gold) + diamonds;
-      const active = monsterRosterIds.includes(`masu:${masu.id}`);
+        }), " ", diamonds.toLocaleString()), !canSelect && !selected && /*#__PURE__*/React.createElement("span", {
+          className: "text-[7px] text-red-300 font-black"
+        }, "\u7DE8\u6210\u3092\u7DAD\u6301\u3067\u304D\u306A\u3044\u305F\u3081\u9078\u629E\u4E0D\u53EF"));
+      }))), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 rounded-2xl border border-violet-400/50 bg-slate-950 px-3 py-2 shadow-xl",
+        style: {
+          paddingBottom: 'max(.5rem, env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between mb-2 text-[10px] font-black"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-violet-200"
+      }, "\u9078\u629E\u6570\uFF1A", /*#__PURE__*/React.createElement("b", {
+        className: "text-white text-sm"
+      }, donationSelectedIds.length, "\u4F53")), /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "\u5408\u8A08 ", /*#__PURE__*/React.createElement(Gem, {
+        size: 11,
+        className: "inline"
+      }), " ", selectedDiamonds.toLocaleString(), " / \u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC \xD7", selectedPsyche)), /*#__PURE__*/React.createElement("button", {
+        disabled: !donationSelectedIds.length || donationProcessing || !selectedResult?.ok,
+        onClick: () => setDonationConfirmOpen(true),
+        className: "w-full min-h-[44px] bg-gradient-to-r from-violet-600 to-amber-600 text-white rounded-xl font-black text-sm disabled:opacity-30"
+      }, "\u9078\u3093\u3060\u30DE\u30B9\u30E2\u30F3\u3092\u5BC4\u4ED8\u3059\u308B")));
+    })(), gameState === 'MASU_DONATION' && donationConfirmOpen && donationSelectedIds.length > 0 && (() => {
+      const selected = donationSelectedIds.map(id => masuMons.find(m => String(m.id) === String(id))).filter(Boolean);
+      const result = buildMasuDonations({
+        masuMons,
+        targetIds: donationSelectedIds,
+        gold,
+        monsterRosterIds,
+        draftMonsterRoster,
+        unlockedMonsterIds,
+        validBaseIds: Object.keys(ALL_PLAYER_MONSTERS),
+        requiredCount: STARTER_MONSTER_IDS.length
+      });
+      if (!result.ok) return null;
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center p-4",
         style: {
@@ -17404,55 +17509,55 @@ function MonsterHeroGame() {
           inset: 0,
           backgroundColor: 'rgba(2,6,23,.95)',
           zIndex: 32000
-        }
+        },
+        role: "dialog",
+        "aria-modal": "true"
       }, /*#__PURE__*/React.createElement("div", {
         className: "w-full max-w-sm bg-slate-900 border-2 border-violet-400 rounded-3xl p-5 shadow-2xl"
       }, /*#__PURE__*/React.createElement("h3", {
-        className: "text-lg font-black text-violet-200 text-center mb-4"
+        className: "text-lg font-black text-violet-200 text-center mb-3"
       }, "\u5BC4\u4ED8\u306E\u6700\u7D42\u78BA\u8A8D"), /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center gap-3 mb-4"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "w-20 h-20 rounded-2xl overflow-hidden border-2 border-amber-400/60 bg-black/30 shrink-0"
-      }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: masu.baseId,
-        src: masuDisplayImageUrl(base),
-        alt: masu.name,
-        masuColors: getMasuColors(masu),
-        className: "w-full h-full object-contain"
-      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-        className: "font-black text-white"
-      }, masu.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-slate-400"
-      }, "\u30D9\u30FC\u30B9\u30E2\u30F3 ", base.name), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] text-slate-300 mt-1"
-      }, "\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024 ", diamonds.toLocaleString(), " XP"), /*#__PURE__*/React.createElement("div", {
-        className: "text-sm text-amber-300 font-black"
-      }, "\u7372\u5F97\u30C0\u30A4\u30E4 ", diamonds.toLocaleString()), /*#__PURE__*/React.createElement("div", {
-        className: "text-sm text-fuchsia-300 font-black"
-      }, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC \xD7", donationPsycheValue(masu)))), /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 rounded-2xl p-3 space-y-1 text-[11px] mb-3"
+        className: "flex -space-x-2 justify-center mb-3"
+      }, selected.slice(0, 5).map(m => {
+        const base = ALL_PLAYER_MONSTERS[m.baseId];
+        return /*#__PURE__*/React.createElement("div", {
+          key: m.id,
+          className: "w-14 h-14 rounded-xl overflow-hidden border-2 border-amber-400 bg-slate-950"
+        }, /*#__PURE__*/React.createElement(DyedMonsterImage, {
+          baseId: m.baseId,
+          src: masuDisplayImageUrl(base),
+          alt: m.name,
+          masuColors: getMasuColors(m),
+          className: "w-full h-full object-contain"
+        }));
+      }), selected.length > 5 && /*#__PURE__*/React.createElement("span", {
+        className: "w-14 h-14 flex items-center justify-center rounded-xl border-2 border-amber-400 bg-slate-800 font-black"
+      }, "+", selected.length - 5)), /*#__PURE__*/React.createElement("div", {
+        className: "bg-black/40 rounded-2xl p-3 space-y-1 text-[12px] mb-3"
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between"
-      }, /*#__PURE__*/React.createElement("span", null, "\u73FE\u5728\u306E\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", null, donationDiamondValue(gold).toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u9078\u629E\u6570"), /*#__PURE__*/React.createElement("b", null, selected.length, "\u4F53")), /*#__PURE__*/React.createElement("div", {
         className: "flex justify-between text-amber-300"
-      }, /*#__PURE__*/React.createElement("span", null, "\u5BC4\u4ED8\u5F8C\u306E\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", null, after.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
+      }, /*#__PURE__*/React.createElement("span", null, "\u7372\u5F97\u30C0\u30A4\u30E4\u5408\u8A08"), /*#__PURE__*/React.createElement("b", null, result.diamonds.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between text-fuchsia-300"
+      }, /*#__PURE__*/React.createElement("span", null, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\u5408\u8A08"), /*#__PURE__*/React.createElement("b", null, "\xD7", result.psyche)), /*#__PURE__*/React.createElement("div", {
+        className: "flex justify-between text-slate-300"
+      }, /*#__PURE__*/React.createElement("span", null, "\u5BC4\u4ED8\u5F8C\u306E\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", null, result.nextGold.toLocaleString()))), /*#__PURE__*/React.createElement("div", {
         className: "bg-amber-950/40 border border-amber-500/50 text-amber-100 text-[10px] leading-relaxed rounded-xl p-3 mb-3"
       }, /*#__PURE__*/React.createElement(AlertCircle, {
         size: 14,
         className: "inline mr-1"
-      }), "\u5BC4\u4ED8\u3057\u305F\u30DE\u30B9\u30E2\u30F3\u306F\u3044\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002", active && /*#__PURE__*/React.createElement("div", {
-        className: "mt-2 font-black"
-      }, "\u3053\u306E\u30DE\u30B9\u30E2\u30F3\u306F\u7DE8\u6210\u4E2D\u3067\u3059\u3002\u5BC4\u4ED8\u3059\u308B\u3068\u7DE8\u6210\u304B\u3089\u5916\u308C\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+      }), "\u9078\u629E\u3057\u305F\u5168\u30DE\u30B9\u30E2\u30F3\u304C\u3044\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
         className: "flex gap-2"
       }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setDonationSelectedId(null),
+        onClick: () => setDonationConfirmOpen(false),
         disabled: donationProcessing,
-        className: "flex-1 bg-slate-800 text-slate-300 py-3 rounded-2xl font-black text-xs disabled:opacity-40"
-      }, "\u30AD\u30E3\u30F3\u30BB\u30EB"), /*#__PURE__*/React.createElement("button", {
+        className: "flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-2xl font-black text-xs disabled:opacity-40"
+      }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
         onClick: executeMasuDonation,
         disabled: donationProcessing,
-        className: "flex-[2] bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3 rounded-2xl font-black text-xs shadow-lg disabled:opacity-40"
-      }, donationProcessing ? '処理中…' : `寄付して${diamonds.toLocaleString()}ダイヤを受け取る`))));
+        className: "flex-[2] min-h-[44px] bg-gradient-to-r from-violet-600 to-amber-600 text-white rounded-2xl font-black text-xs shadow-lg disabled:opacity-40"
+      }, donationProcessing ? '処理中…' : `${selected.length}体を寄付する`))));
     })(), regenerationResult && (() => {
       const statRows = [['ライフ', 'hp', 'baseHp'], ['ちから', 'atk', 'baseAtk'], ['丈夫さ', 'def', 'baseDef'], ['ガッツ', 'guts', 'baseGuts']];
       return /*#__PURE__*/React.createElement("div", {
@@ -17618,7 +17723,7 @@ function MonsterHeroGame() {
       className: "text-xl font-black text-white mb-3"
     }, "\u5BC4\u4ED8\u5B8C\u4E86"), /*#__PURE__*/React.createElement("p", {
       className: "text-sm text-violet-200 font-bold"
-    }, donationResult.name, "\u3092\u5BC4\u4ED8\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("p", {
+    }, donationResult.count === 1 ? `${donationResult.name}を寄付しました` : `${donationResult.count}体をまとめて寄付しました`), /*#__PURE__*/React.createElement("p", {
       className: "text-lg text-amber-300 font-black mt-2"
     }, donationResult.diamonds.toLocaleString(), "\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308A\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("p", {
       className: "text-base text-fuchsia-300 font-black mt-1"

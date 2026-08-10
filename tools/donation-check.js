@@ -7,8 +7,8 @@ const source = fs.readFileSync(sourcePath, 'utf8');
 const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
 const context = { React: { createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} } };
 vm.createContext(context);
-vm.runInContext(`${prefix}\nglobalThis.__donation = { donationDiamondValue, buildMasuDonation };`, context);
-const { donationDiamondValue, buildMasuDonation } = context.__donation;
+vm.runInContext(`${prefix}\nglobalThis.__donation = { donationDiamondValue, buildMasuDonation, buildMasuDonations, masuPowerOf };`, context);
+const { donationDiamondValue, buildMasuDonation, buildMasuDonations, masuPowerOf } = context.__donation;
 let failed = 0;
 const check = (name, ok) => { console.log(`${ok ? 'OK' : 'NG'}: ${name}`); if (!ok) failed++; };
 const masuMons = [
@@ -25,9 +25,17 @@ check('編成中のmasu IDが残らない', result.ok && !result.nextRoster.incl
 check('編成は8体かつ同種重複なし', result.ok && result.nextRoster.length===8 && new Set(result.nextRoster).size===8);
 const missing = buildMasuDonation({ masuMons, targetId:'missing', gold:50, monsterRosterIds:roster, draftMonsterRoster:roster, unlockedMonsterIds:unlocked, validBaseIds:valid, requiredCount:8 });
 check('存在しないIDではダイヤが増えない', !missing.ok && missing.nextGold === undefined);
+const bulk = buildMasuDonations({ masuMons, targetIds:['keep','target','keep'], gold:50, monsterRosterIds:roster, draftMonsterRoster:roster, unlockedMonsterIds:unlocked, validBaseIds:valid, requiredCount:8 });
+check('複数寄付は重複IDを除いて全対象を処理する', bulk.ok && bulk.donated.length===2 && bulk.nextMasuMons.length===0);
+check('複数寄付の合計報酬を1回だけ加算する', bulk.ok && bulk.diamonds===1349 && bulk.nextGold===1399);
+const atomicFailure = buildMasuDonations({ masuMons, targetIds:['keep','missing'], gold:50, monsterRosterIds:roster, draftMonsterRoster:roster, unlockedMonsterIds:unlocked, validBaseIds:valid, requiredCount:8 });
+check('一括処理の途中で失敗したときは完成データを返さない', !atomicFailure.ok && atomicFailure.nextGold===undefined);
 check('不正bondXpを0以上の整数へ正規化', [-1, NaN, Infinity, 'abc'].every(v=>donationDiamondValue(v)===0) && donationDiamondValue('12.9')===12);
 check('保存キーと同期ロックが実装されている', /donationProcessingRef\.current/.test(source) && /storeSet\('mh_gold', result\.nextGold, false\)/.test(source) && /storeSet\('mh_monster_roster', result\.nextRoster, false\)/.test(source) && /storeSet\('mh_masu_mons', result\.nextMasuMons, false\)/.test(source));
-check('寄付の3表示は通常の全身画像と共通染色を使う', (source.match(/src=\{masuDisplayImageUrl\(/g)||[]).length >= 2 && /setDonationAnimation\(\{[^}]*src: masuDisplayImageUrl/.test(source));
+check('複数選択・選択解除・最終確認を備える', /setDonationSelectedIds\(ids=>selected\?ids\.filter/.test(source) && /選択数：/.test(source) && /donationConfirmOpen/.test(source));
+check('寄付一覧の総合力は共通関数を使う', /formatMonsterPower\(masuPowerOf\(masu\)\)/.test(source));
+check('一括寄付後に選択を消し、個体数ぶんミッションを進める', /setDonationSelectedIds\(\[\]\); setDonationConfirmOpen\(false\)/.test(source) && /saveMissionProgress\('donation', result\.donated\.length\)/.test(source));
+check('寄付の3表示は通常の全身画像と共通染色を使う', (source.match(/src=\{masuDisplayImageUrl\(/g)||[]).length >= 2 && /src: masuDisplayImageUrl\(ALL_PLAYER_MONSTERS\[animationMasu\.baseId\]\)/.test(source));
 // キャッシュキーには最低限この3つが要る(どれかが抜けると別のモンスター・別の色の画像を
 // 使い回してしまう)。光沢保持の設定など、これ以外の条件が足されるのは構わない
 check('染色キャッシュは種類・元画像・色をキーにする',

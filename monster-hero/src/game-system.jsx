@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 10:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 10:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -789,6 +789,22 @@ const buildMasuDonation = ({ masuMons, targetId, gold, monsterRosterIds, draftMo
   const diamonds = donationDiamondValue(donated.bondXp);
   const psyche = donationPsycheValue(donated);
   return { ok: true, donated, diamonds, psyche, nextGold: donationDiamondValue(gold) + diamonds, nextMasuMons, nextRoster: active.roster, nextDraftRoster: draft.roster };
+};
+// 複数寄付も1体寄付の正本を順番に適用し、途中で1体でも寄付できなければ何も確定しない。
+// 報酬計算・編成補正を別実装にせず、最後にまとめて保存できる完成形だけを返す。
+const buildMasuDonations = ({ targetIds, ...state }) => {
+  const ids = [...new Set((Array.isArray(targetIds) ? targetIds : []).map(String))];
+  if (!ids.length) return { ok:false, reason:'寄付するマスモンを選んでください。' };
+  let current = { ...state };
+  const donated=[];
+  let diamonds=0, psyche=0;
+  for (const targetId of ids) {
+    const result=buildMasuDonation({ ...current, targetId });
+    if (!result.ok) return result;
+    donated.push(result.donated); diamonds+=result.diamonds; psyche+=result.psyche;
+    current={ ...current, masuMons:result.nextMasuMons, gold:result.nextGold, monsterRosterIds:result.nextRoster, draftMonsterRoster:result.nextDraftRoster };
+  }
+  return { ok:true, donated, diamonds, psyche, nextGold:current.gold, nextMasuMons:current.masuMons, nextRoster:current.monsterRosterIds, nextDraftRoster:current.draftMonsterRoster };
 };
 
 // 修行試作版は通常データ・チケット・ミッションから完全に分離したメモリ内デバッグセッション。
@@ -4089,7 +4105,8 @@ function MonsterHeroGame() {
   const [regenerationResult, setRegenerationResult] = useState(null);
   const [regenerationProcessing, setRegenerationProcessing] = useState(false);
   const regenerationProcessingRef = useRef(false);
-  const [donationSelectedId, setDonationSelectedId] = useState(null);
+  const [donationSelectedIds, setDonationSelectedIds] = useState([]);
+  const [donationConfirmOpen, setDonationConfirmOpen] = useState(false);
   const [donationResult, setDonationResult] = useState(null);
   const [donationError, setDonationError] = useState('');
   const [donationProcessing, setDonationProcessing] = useState(false);
@@ -6154,7 +6171,7 @@ function MonsterHeroGame() {
   const resetFusionFlow = () => {
     fusionProcessingRef.current=false; setFusionStep('main'); setFusionMainId(null); setFusionSubId(null); setFusionInheritUnique(false); setFusionAnimPhase(0); setFusionResultData(null);
   };
-  const resetDonationFlow = () => { if (donationProcessingRef.current) return; setDonationSelectedId(null); setDonationResult(null); setDonationAnimation(null); setDonationError(''); };
+  const resetDonationFlow = () => { if (donationProcessingRef.current) return; setDonationSelectedIds([]); setDonationConfirmOpen(false); setDonationResult(null); setDonationAnimation(null); setDonationError(''); };
   const getRebirthSkillChoices = (masu) => {
     const base = ALL_PLAYER_MONSTERS[masu.baseId];
     const own = base?.unique ? [{ key:'own', name:base.unique.name, unique:base.unique }] : [];
@@ -6230,18 +6247,18 @@ function MonsterHeroGame() {
     } finally { regenerationProcessingRef.current=false; setRegenerationProcessing(false); }
   };
   const executeMasuDonation = async () => {
-    if (donationProcessingRef.current || !donationSelectedId) return;
+    if (donationProcessingRef.current || !donationSelectedIds.length) return;
     donationProcessingRef.current = true;
     setDonationProcessing(true);
     setDonationError('');
     try {
       // state更新前の連打でも同じ個体を再利用できないよう、同期参照からIDで再取得する。
-      const result = buildMasuDonation({
-        masuMons: masuMonsRef.current, targetId: donationSelectedId, gold,
+      const result = buildMasuDonations({
+        masuMons: masuMonsRef.current, targetIds: donationSelectedIds, gold,
         monsterRosterIds, draftMonsterRoster, unlockedMonsterIds,
         validBaseIds: Object.keys(ALL_PLAYER_MONSTERS), requiredCount: STARTER_MONSTER_IDS.length,
       });
-      if (!result.ok) { setDonationError(result.reason); setDonationSelectedId(null); return; }
+      if (!result.ok) { setDonationError(result.reason); setDonationSelectedIds([]); setDonationConfirmOpen(false); return; }
       masuMonsRef.current = result.nextMasuMons;
       await storeSet('mh_masu_mons', result.nextMasuMons, false);
       await storeSet('mh_gold', result.nextGold, false);
@@ -6249,18 +6266,19 @@ function MonsterHeroGame() {
       await storeSet('mh_monster_roster', result.nextRoster, false);
       await storeSet('mh_owned_items', nextItems, false);
       ownedItemsRef.current=nextItems; setOwnedItems(nextItems);
-      await saveMissionProgress('donation');
+      await saveMissionProgress('donation', result.donated.length);
       setMasuMons(result.nextMasuMons);
       setGold(result.nextGold);
       setMonsterRosterIds(result.nextRoster);
       setDraftMonsterRoster(result.nextDraftRoster);
-      if (fusionMainId === result.donated.id || fusionSubId === result.donated.id) resetFusionFlow();
+      if (result.donated.some(m=>fusionMainId === m.id || fusionSubId === m.id)) resetFusionFlow();
       setMasuMonDetail(null);
-      setDonationSelectedId(null);
-      setDonationAnimation({ name: result.donated.name, baseId: result.donated.baseId, src: masuDisplayImageUrl(ALL_PLAYER_MONSTERS[result.donated.baseId]), colors: getMasuColors(result.donated), diamonds: result.diamonds, psyche:result.psyche });
+      setDonationSelectedIds([]); setDonationConfirmOpen(false);
+      const animationMasu=result.donated[0];
+      setDonationAnimation({ name: result.donated.length===1?animationMasu.name:`${result.donated.length}体`, baseId: animationMasu.baseId, src: masuDisplayImageUrl(ALL_PLAYER_MONSTERS[animationMasu.baseId]), colors: getMasuColors(animationMasu), diamonds: result.diamonds, psyche:result.psyche });
       await wait(1500);
       setDonationAnimation(null);
-      setDonationResult({ name: result.donated.name, diamonds: result.diamonds, psyche:result.psyche, gold: result.nextGold });
+      setDonationResult({ count:result.donated.length, name:result.donated[0]?.name, diamonds: result.diamonds, psyche:result.psyche, gold: result.nextGold });
     } catch (error) {
       setDonationError('寄付データを保存できませんでした。もう一度お試しください。');
     } finally {
@@ -9017,27 +9035,33 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='MASU_DONATION'&&(()=>{
           const options=[{key:'bondXp',label:'絆経験値'},{key:'bond',label:'絆レベル'},{key:'name',label:'名前'},{key:'lineage',label:'血統'},{key:'newest',label:'新しい順'},{key:'active',label:'編成中'}];
+          const donationArgs={masuMons, gold, monsterRosterIds, draftMonsterRoster, unlockedMonsterIds, validBaseIds:Object.keys(ALL_PLAYER_MONSTERS), requiredCount:STARTER_MONSTER_IDS.length};
+          const selectedSet=new Set(donationSelectedIds.map(String));
+          const selectedResult=donationSelectedIds.length?buildMasuDonations({...donationArgs,targetIds:donationSelectedIds}):null;
+          const selectedDiamonds=selectedResult?.ok?selectedResult.diamonds:donationSelectedIds.reduce((sum,id)=>sum+donationDiamondValue(masuMons.find(m=>String(m.id)===String(id))?.bondXp),0);
+          const selectedPsyche=selectedResult?.ok?selectedResult.psyche:donationSelectedIds.reduce((sum,id)=>{const m=masuMons.find(x=>String(x.id)===String(id));return sum+(m?donationPsycheValue(m):0);},0);
           const dir=donationSortDir==='asc'?1:-1;
           const sorted=[...masuMons].sort((a,b)=>{const active=m=>monsterRosterIds.includes(`masu:${m.id}`)?1:0;const val=m=>donationSortKey==='bondXp'?donationDiamondValue(m.bondXp):donationSortKey==='bond'?masuBondLevelInfo(m).level:donationSortKey==='name'?(m.name||''):donationSortKey==='lineage'?((ALL_PLAYER_MONSTERS[m.baseId]||{}).name||''):donationSortKey==='active'?active(m):(Number(m.createdAt)||Number(m.id)||0);const av=val(a),bv=val(b);return (typeof av==='string'?av.localeCompare(bv,'ja'):av-bv)*dir;});
           return <div className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-1 shrink-0"><button disabled={donationProcessing} onClick={()=>{resetDonationFlow();setGameState('TEMPLE');}} className="p-3 text-slate-400 active:scale-90 disabled:opacity-40"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">寄付</h2></div>
-            <p className="text-[10px] text-slate-300 leading-relaxed bg-violet-950/40 border border-violet-500/30 rounded-xl px-3 py-2 mb-2 shrink-0">累計絆経験値と同じ数のダイヤを受け取れます</p><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="donation" compact/></div>
+            <p className="text-[10px] text-slate-300 leading-relaxed bg-violet-950/40 border border-violet-500/30 rounded-xl px-3 py-2 mb-2 shrink-0">総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます</p>
             <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">{options.map(o=>{const active=donationSortKey===o.key;return <button key={o.key} onClick={()=>{if(active)setDonationSortDir(d=>d==='asc'?'desc':'asc');else{setDonationSortKey(o.key);setDonationSortDir(o.key==='name'||o.key==='lineage'?'asc':'desc');}}} className={`min-w-0 px-1 py-2 rounded-lg text-[8px] font-black border ${active?'bg-violet-600 border-violet-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{o.label}{active&&(donationSortDir==='asc'?' ▲':' ▼')}</button>})}</div>
             {donationError&&<div className="text-[9px] text-amber-200 bg-amber-950/40 border border-amber-500/40 rounded-xl p-2 mb-2 shrink-0"><AlertCircle size={12} className="inline mr-1"/>{donationError}</div>}
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
-              {masuMons.length===0?<div className="flex flex-col items-center justify-center h-full text-center text-slate-500"><Gem size={42}/><p className="text-[11px] mt-3 font-bold">寄付できるマスモンがいません</p></div>:<div className="grid grid-cols-3 gap-1.5 pb-4">{sorted.map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const diamonds=donationDiamondValue(masu.bondXp);const lvl=bondLevelInfo(diamonds);const active=monsterRosterIds.includes(`masu:${masu.id}`);return <button key={masu.id} disabled={donationProcessing} onClick={()=>{setDonationError('');setDonationSelectedId(masu.id);}} className="min-w-0 overflow-hidden bg-slate-900 border border-violet-500/30 rounded-xl p-1.5 flex flex-col items-center text-center active:scale-[.97] disabled:opacity-50">
-                <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-black/30"><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-contain"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>{active&&<span className="absolute top-1 left-1 right-1 text-[7px] leading-4 bg-pink-600/95 text-white rounded-full font-black">編成中</span>}</div>
-                <div className="w-full mt-1 font-black text-[9px] leading-tight text-white truncate">{masu.name}</div><div className="text-[8px] leading-tight text-pink-300 font-black">絆Lv.{lvl.level}</div><div className="w-full text-[7px] leading-tight text-slate-300 truncate">累計 {diamonds.toLocaleString()} XP</div><div className="w-full text-[8px] leading-tight text-amber-300 font-black truncate"><Gem size={8} className="inline"/> {diamonds.toLocaleString()}</div>
+              {masuMons.length===0?<div className="flex flex-col items-center justify-center h-full text-center text-slate-500"><Gem size={42}/><p className="text-[11px] mt-3 font-bold">寄付できるマスモンがいません</p></div>:<div className="grid grid-cols-3 gap-1.5 pb-3">{sorted.map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const diamonds=donationDiamondValue(masu.bondXp);const lvl=masuBondLevelInfo(masu);const active=monsterRosterIds.includes(`masu:${masu.id}`);const selected=selectedSet.has(String(masu.id));const trial=selected?{ok:true}:buildMasuDonations({...donationArgs,targetIds:[...donationSelectedIds,masu.id]});const canSelect=trial.ok;return <button key={masu.id} disabled={donationProcessing||(!selected&&!canSelect)} aria-pressed={selected} onClick={()=>{setDonationError('');setDonationSelectedIds(ids=>selected?ids.filter(id=>String(id)!==String(masu.id)):[...ids,masu.id]);}} className={`relative min-h-[122px] min-w-0 overflow-hidden bg-slate-900 border-2 rounded-xl p-1.5 flex flex-col items-center text-center active:scale-[.97] disabled:opacity-35 ${selected?'border-amber-300 bg-violet-950/80':'border-violet-500/30'}`}>
+                <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-black/30"><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-contain"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>{active&&<span className="absolute top-1 left-1 text-[7px] leading-4 px-1 bg-pink-600/95 text-white rounded-full font-black">編成中</span>}{selected&&<span className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded-full bg-amber-300 text-slate-950 font-black">✓</span>}</div>
+                <div className="w-full mt-1 font-black text-[9px] leading-tight text-white truncate">{masu.name}</div><div className="w-full flex justify-center gap-1 text-[8px] leading-tight font-black"><span className="text-pink-300">絆Lv.{lvl.level}</span><span className="text-cyan-300">総合力 {formatMonsterPower(masuPowerOf(masu))}</span></div><div className="w-full text-[8px] leading-tight text-amber-300 font-black truncate"><Gem size={8} className="inline"/> {diamonds.toLocaleString()}</div>{!canSelect&&!selected&&<span className="text-[7px] text-red-300 font-black">編成を維持できないため選択不可</span>}
               </button>})}</div>}
             </div>
+            <div className="shrink-0 rounded-2xl border border-violet-400/50 bg-slate-950 px-3 py-2 shadow-xl" style={{paddingBottom:'max(.5rem, env(safe-area-inset-bottom))'}}><div className="flex items-center justify-between mb-2 text-[10px] font-black"><span className="text-violet-200">選択数：<b className="text-white text-sm">{donationSelectedIds.length}体</b></span><span className="text-amber-300">合計 <Gem size={11} className="inline"/> {selectedDiamonds.toLocaleString()} / 虹のプシュケー ×{selectedPsyche}</span></div><button disabled={!donationSelectedIds.length||donationProcessing||!selectedResult?.ok} onClick={()=>setDonationConfirmOpen(true)} className="w-full min-h-[44px] bg-gradient-to-r from-violet-600 to-amber-600 text-white rounded-xl font-black text-sm disabled:opacity-30">選んだマスモンを寄付する</button></div>
           </div>;
         })()}
 
-        {gameState==='MASU_DONATION'&&donationSelectedId&&(()=>{const masu=masuMons.find(m=>String(m.id)===String(donationSelectedId));if(!masu)return null;const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const diamonds=donationDiamondValue(masu.bondXp);const after=donationDiamondValue(gold)+diamonds;const active=monsterRosterIds.includes(`masu:${masu.id}`);return <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.95)',zIndex:32000}}><div className="w-full max-w-sm bg-slate-900 border-2 border-violet-400 rounded-3xl p-5 shadow-2xl">
-          <h3 className="text-lg font-black text-violet-200 text-center mb-4">寄付の最終確認</h3><div className="flex items-center gap-3 mb-4"><div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-amber-400/60 bg-black/30 shrink-0"><DyedMonsterImage baseId={masu.baseId} src={masuDisplayImageUrl(base)} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-contain"/></div><div><div className="font-black text-white">{masu.name}</div><div className="text-[10px] text-slate-400">ベースモン {base.name}</div><div className="text-[10px] text-slate-300 mt-1">累計絆経験値 {diamonds.toLocaleString()} XP</div><div className="text-sm text-amber-300 font-black">獲得ダイヤ {diamonds.toLocaleString()}</div><div className="text-sm text-fuchsia-300 font-black">虹のプシュケー ×{donationPsycheValue(masu)}</div></div></div>
-          <div className="bg-black/40 rounded-2xl p-3 space-y-1 text-[11px] mb-3"><div className="flex justify-between"><span>現在の所持ダイヤ</span><b>{donationDiamondValue(gold).toLocaleString()}</b></div><div className="flex justify-between text-amber-300"><span>寄付後の所持ダイヤ</span><b>{after.toLocaleString()}</b></div></div>
-          <div className="bg-amber-950/40 border border-amber-500/50 text-amber-100 text-[10px] leading-relaxed rounded-xl p-3 mb-3"><AlertCircle size={14} className="inline mr-1"/>寄付したマスモンはいなくなります。この操作は取り消せません。{active&&<div className="mt-2 font-black">このマスモンは編成中です。寄付すると編成から外れます。</div>}</div>
-          <div className="flex gap-2"><button onClick={()=>setDonationSelectedId(null)} disabled={donationProcessing} className="flex-1 bg-slate-800 text-slate-300 py-3 rounded-2xl font-black text-xs disabled:opacity-40">キャンセル</button><button onClick={executeMasuDonation} disabled={donationProcessing} className="flex-[2] bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3 rounded-2xl font-black text-xs shadow-lg disabled:opacity-40">{donationProcessing?'処理中…':`寄付して${diamonds.toLocaleString()}ダイヤを受け取る`}</button></div>
+        {gameState==='MASU_DONATION'&&donationConfirmOpen&&donationSelectedIds.length>0&&(()=>{const selected=donationSelectedIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(Boolean);const result=buildMasuDonations({masuMons,targetIds:donationSelectedIds,gold,monsterRosterIds,draftMonsterRoster,unlockedMonsterIds,validBaseIds:Object.keys(ALL_PLAYER_MONSTERS),requiredCount:STARTER_MONSTER_IDS.length});if(!result.ok)return null;return <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.95)',zIndex:32000}} role="dialog" aria-modal="true"><div className="w-full max-w-sm bg-slate-900 border-2 border-violet-400 rounded-3xl p-5 shadow-2xl">
+          <h3 className="text-lg font-black text-violet-200 text-center mb-3">寄付の最終確認</h3><div className="flex -space-x-2 justify-center mb-3">{selected.slice(0,5).map(m=>{const base=ALL_PLAYER_MONSTERS[m.baseId];return <div key={m.id} className="w-14 h-14 rounded-xl overflow-hidden border-2 border-amber-400 bg-slate-950"><DyedMonsterImage baseId={m.baseId} src={masuDisplayImageUrl(base)} alt={m.name} masuColors={getMasuColors(m)} className="w-full h-full object-contain"/></div>})}{selected.length>5&&<span className="w-14 h-14 flex items-center justify-center rounded-xl border-2 border-amber-400 bg-slate-800 font-black">+{selected.length-5}</span>}</div>
+          <div className="bg-black/40 rounded-2xl p-3 space-y-1 text-[12px] mb-3"><div className="flex justify-between"><span>選択数</span><b>{selected.length}体</b></div><div className="flex justify-between text-amber-300"><span>獲得ダイヤ合計</span><b>{result.diamonds.toLocaleString()}</b></div><div className="flex justify-between text-fuchsia-300"><span>虹のプシュケー合計</span><b>×{result.psyche}</b></div><div className="flex justify-between text-slate-300"><span>寄付後の所持ダイヤ</span><b>{result.nextGold.toLocaleString()}</b></div></div>
+          <div className="bg-amber-950/40 border border-amber-500/50 text-amber-100 text-[10px] leading-relaxed rounded-xl p-3 mb-3"><AlertCircle size={14} className="inline mr-1"/>選択した全マスモンがいなくなります。この操作は取り消せません。</div>
+          <div className="flex gap-2"><button onClick={()=>setDonationConfirmOpen(false)} disabled={donationProcessing} className="flex-1 min-h-[44px] bg-slate-800 text-slate-300 rounded-2xl font-black text-xs disabled:opacity-40">戻る</button><button onClick={executeMasuDonation} disabled={donationProcessing} className="flex-[2] min-h-[44px] bg-gradient-to-r from-violet-600 to-amber-600 text-white rounded-2xl font-black text-xs shadow-lg disabled:opacity-40">{donationProcessing?'処理中…':`${selected.length}体を寄付する`}</button></div>
         </div></div>})()}
 
         {regenerationResult&&(()=>{const statRows=[['ライフ','hp','baseHp'],['ちから','atk','baseAtk'],['丈夫さ','def','baseDef'],['ガッツ','guts','baseGuts']];return <div className="mh-regeneration-animation" role="dialog" aria-modal="true"><img src={REGENERATION_DISC_IMAGE} alt="円盤石" className="mh-regeneration-disc"/><div className="mh-regeneration-born"><img src={regenerationResult.base.iconUrl} alt={regenerationResult.masu.name} className="w-28 h-28 object-contain mx-auto"/><h3>モンスター誕生！</h3><div className="text-[8px] text-slate-400 font-bold mt-1">ベースモンの基礎値との差</div><div className="grid grid-cols-2 gap-1 text-[11px] text-left mt-2">{statRows.map(([label,key,baseKey])=>{const value=regenerationResult.masu.individualStats[key];const delta=value-regenerationResult.base[baseKey];return <span key={key}>{label} <b>{value} <small className={`text-[9px] ${delta>0?'text-emerald-300':delta<0?'text-red-300':'text-slate-400'}`}>（{delta>0?'+':delta<0?'':'±'}{delta}）</small></b></span>;})}</div><button onClick={()=>{setRegenerationResult(null);setRegenerationSelectedId(null);setGameState('MASU_REGENERATION');}} className="mt-4 w-full py-3 bg-amber-500 text-black rounded-xl font-black">一覧へ戻る</button></div></div>;})()}
@@ -9060,7 +9084,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {reincarnateAnimation&&<div className="mh-rebirth-animation" role="status" aria-live="polite"><div className="mh-rebirth-circle">✧</div><div className="mh-rebirth-glow"></div><div className="mh-rebirth-mon"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={reincarnateAnimation.masu.reincarnateCount}/></div><div className="mh-rebirth-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div></div>}
         {donationAnimation&&<div className="mh-donation-animation" role="status" aria-live="polite" aria-label="寄付を処理中"><div className="mh-donation-beam"></div><div className="mh-donation-monster"><DyedMonsterImage baseId={donationAnimation.baseId} src={donationAnimation.src} alt={donationAnimation.name} masuColors={donationAnimation.colors} className="w-full h-full object-contain"/></div><div className="mh-donation-gem"><Gem size={42}/></div><div className="mh-donation-particles">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div><div className="mh-donation-copy">神殿へ寄付中…</div></div>}
 
-        {gameState==='MASU_DONATION'&&donationResult&&<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.name}を寄付しました</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-base text-fuchsia-300 font-black mt-1">虹のプシュケー ×{donationResult.psyche}</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm">寄付一覧へ戻る</button></div></div>}
+        {gameState==='MASU_DONATION'&&donationResult&&<div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,.96)',zIndex:32100}}><div className="w-full max-w-sm bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center shadow-2xl"><Gem size={48} className="text-amber-300 mx-auto mb-3"/><h3 className="text-xl font-black text-white mb-3">寄付完了</h3><p className="text-sm text-violet-200 font-bold">{donationResult.count===1?`${donationResult.name}を寄付しました`:`${donationResult.count}体をまとめて寄付しました`}</p><p className="text-lg text-amber-300 font-black mt-2">{donationResult.diamonds.toLocaleString()}ダイヤを受け取りました</p><p className="text-base text-fuchsia-300 font-black mt-1">虹のプシュケー ×{donationResult.psyche}</p><p className="text-[11px] text-slate-300 mt-2">所持ダイヤ {donationResult.gold.toLocaleString()}</p><button onClick={()=>setDonationResult(null)} className="w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm">寄付一覧へ戻る</button></div></div>}
 
         {showWaveDetails&&<div className="fixed inset-0 flex items-center justify-center p-3" style={{zIndex:70000,backgroundColor:'rgba(2,6,23,.96)',paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}} role="dialog" aria-modal="true"><section className="w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"><header className="flex items-center justify-between mb-3"><div><small className="text-indigo-300 font-black">{DIFFICULTY_SETTINGS[safeDifficulty].label}</small><h2 className="text-xl font-black">全WAVE詳細</h2></div><button aria-label="閉じる" onClick={()=>{setWaveScanPreview(null);setShowWaveDetails(false);}} className="p-3 rounded-full bg-white/10"><X/></button></header><div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2">{ENEMY_SEQUENCE.map((enemyKey,index)=>{const enemy=createBattleEnemy(index+1,safeDifficulty);const boss=index===ENEMY_SEQUENCE.length-1;return <article key={`${enemyKey}-${index}`} data-wave={index+1} role="button" tabIndex={0} aria-label={`WAVE ${index+1} ${enemy.name}を解析`} onClick={()=>setWaveScanPreview({enemy,wave:index+1,difficulty:safeDifficulty})} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setWaveScanPreview({enemy,wave:index+1,difficulty:safeDifficulty});}}} className={`grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 cursor-pointer active:scale-[.99] ${boss?'border-amber-400/40 min-h-[120px]':'border-white/10 min-h-[64px]'}`}><b className={`${boss?'text-amber-300':'text-indigo-300'} whitespace-nowrap`}>W{index+1}</b><div data-wave-art className="relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden">{enemy.imgUrl?<img src={enemy.imgUrl} alt={enemy.name} style={enemyArtStyle(enemy.id,'waveDetail')} className="w-14 h-14 object-contain"/>:<span className="text-3xl">{enemy.emoji}</span>}</div><div className="min-w-0"><b className={`block truncate whitespace-nowrap ${boss?'text-amber-300':''}`} title={enemy.name}>{enemy.name}</b>{boss&&<span className="block text-[9px] leading-tight font-black text-amber-400">BOSS</span>}</div><div data-wave-stats className="w-[72px] text-right text-[10px] whitespace-nowrap"><div>HP <b>{enemy.maxHp.toLocaleString()}</b></div><div>攻撃 <b>{enemy.atk.toLocaleString()}</b></div></div></article>})}</div></section></div>}
         {gameState==='BATTLE_MENU'&&(
