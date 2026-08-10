@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 19:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 19:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2700,9 +2700,9 @@ const STAT_POINT_KEYS = { hp: 'ライフ', atk: 'ちから', def: '丈夫さ', g
 // 例) 零距離の補正が+6%のところへ、零距離M(+25%)のモンスターが合流すると+31%になる。
 const aptGradeToPct = (grade) => (DIST_APTITUDE_MULT[grade] ?? 1.0) - 1.0;
 // モンスター(素の種・マスモン反映後のどちらでも可)の4距離分の補正値(小数)を返す
-const getMonsterAptPct = (mon) => {
+const getMonsterAptPct = (mon, nightmare=false) => {
   const apt = (mon && mon.distAptitude) || ['C','C','C','C'];
-  return [0,1,2,3].map(i => aptGradeToPct(apt[i] || 'C'));
+  return [0,1,2,3].map(i => applyNightmareSignedModifier(aptGradeToPct(apt[i] || 'C'), nightmare));
 };
 // 補正値の表示用文字列(小数第1位まで。整数のときは小数を出さない)
 const formatAptPct = (v) => `${v > 0 ? '+' : v < 0 ? '-' : ''}${Math.round(Math.abs(v) * 1000) / 10}%`;
@@ -2775,7 +2775,7 @@ const DIFFICULTY_SETTINGS = {
 // それより後の未決定難易度には数値を持たせず、現時点ではEXTREMEだけを実戦で使用する。
 const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:75, specialRules:Object.freeze({ breederCardEffect:0.5 }) },
-  { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:false, previewAvailable:true, power:15, score:20, xp:30, gold:10, psyche:100, description:'有利な補正が弱まり、不利な補正がさらに重くなる悪夢級の高難易度。モンスターの距離適性と、各WAVEの戦い方がより重要になる。', plannedRules:Object.freeze([['WAVE後強化','50%'],['自動回復率補正','プラス50% / マイナス200%'],['距離適性補正','プラス50% / マイナス200%']]) },
+  { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:false, previewAvailable:true, power:15, score:20, xp:30, gold:10, psyche:100, description:'有利な補正が弱まり、不利な補正がさらに重くなる悪夢級の高難易度。モンスターの距離適性と、各WAVEの戦い方がより重要になる。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }), plannedRules:Object.freeze([['WAVE後強化','50%'],['自動回復率補正','プラス50% / マイナス200%'],['距離適性補正','プラス50% / マイナス200%']]) },
   { id:'CHAOS', label:'CHAOS', available:false },
   { id:'ULTIMATE', label:'ULTIMATE', available:false },
   { id:'INFINITY', label:'INFINITY', available:false },
@@ -2784,6 +2784,13 @@ const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
 const extremeSpecialRule = (difficultyId, rule) =>
   EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId)?.specialRules?.[rule] ?? 1;
+// NIGHTMAREの倍率は、既存式が出した最終的な獲得量・補正値へだけ掛ける。
+const applyNightmareSignedModifier = (value, nightmare=false) => value * (nightmare
+  ? extremeSpecialRule(NIGHTMARE_SETTING.id, value >= 0 ? 'positiveModifier' : 'negativeModifier') : 1);
+const applyNightmareWaveEnhancement = (value, nightmare=false) => value * (nightmare
+  ? extremeSpecialRule(NIGHTMARE_SETTING.id, 'waveEnhancement') : 1);
+const applyNightmareStatGain = (before, normalAfter, nightmare=false) => before
+  + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, nightmare));
 // 極限チャレンジの説明にはモード全体に共通する特徴を十分に載せる。EXTREME固有の倍率や
 // ブリーダーカード50%は、ここではなく難易度カード側で案内する
 const EXTREME_MODE = Object.freeze({
@@ -7490,13 +7497,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const finalRoundScore=Math.floor(((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier);
     setScore(s=>s+finalRoundScore);
     const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
-    const gainedDistBonus=finalDistDamage.map(d=>d*0.001/100);
+    const nightmareRun=extremeRunRef.current&&extremeDifficulty===NIGHTMARE_SETTING.id;
+    // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
+    const gainedDistBonus=finalDistDamage.map(d=>applyNightmareWaveEnhancement(d*0.001/100,nightmareRun));
     const newDistBonus=distDmgBonus.map((b,i)=>b+gainedDistBonus[i]);
     setDistDmgBonus(newDistBonus);
     const newTotalDistDamage=totalDistDamage.map((d,i)=>d+finalDistDamage[i]);
     const newTotalAllDamage=totalAllDamage+totalWaveDamage;
     setTotalDistDamage(newTotalDistDamage); setTotalAllDamage(newTotalAllDamage);
-    const recoveryDelta=Math.max(-0.05,Math.min(0.05,(remainingTurns-10)*0.005));
+    const baseRecoveryDelta=Math.max(-0.05,Math.min(0.05,(remainingTurns-10)*0.005));
+    // 既存式と上限・下限を適用した後、符号に応じたNIGHTMARE倍率を掛ける。
+    const recoveryDelta=applyNightmareSignedModifier(baseRecoveryDelta,nightmareRun);
     const newTotalRecoveryDelta=totalRecoveryDelta+recoveryDelta;
     setPermaBuffs(p=>({...p, autoHpRecovery:Math.max(0,(p.autoHpRecovery??0.1)+recoveryDelta)}));
     setTotalRecoveryDelta(newTotalRecoveryDelta);
@@ -8474,7 +8485,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setMaxGuts(debugMaxGuts); setGuts(Math.floor(debugMaxGuts*0.5));
     // 間合い適性は編成全員分(勇者モンを含む)を距離ごとに合計する。
     // setDistAptPctの反映はこの関数の後になるため、initBattleへ計算済みの値を渡す
-    const debugAptPct = debugSlots.filter(Boolean).reduce((sum, mon) => sum.map((v,i)=>v+getMonsterAptPct(mon)[i]), [0,0,0,0]);
+    const nightmareRun=extreme&&extremeDifficulty===NIGHTMARE_SETTING.id;
+    const debugAptPct = debugSlots.filter(Boolean).reduce((sum, mon) => sum.map((v,i)=>v+getMonsterAptPct(mon,nightmareRun)[i]), [0,0,0,0]);
     setDistAptPct(debugAptPct);
     initBattle(option.wave, debugSlots, uniques, teachings, debugDef, option.key, hero, debugAptPct);
   };
@@ -8486,7 +8498,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (isHero) {
       initialBattleDistanceRef.current=slotIdx;
       // 勇者モンの間合い適性も、置いた距離だけでなく4距離すべての補正値になる
-      setDistAptPct(getMonsterAptPct(m));
+      const nightmareRun=extremeRunRef.current&&extremeDifficulty===NIGHTMARE_SETTING.id;
+      setDistAptPct(getMonsterAptPct(m,nightmareRun));
       const initialUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)};
       setOwnedUniques([initialUnique]); setMainHero(m); setMaxHp(m.baseHp); setHp(m.baseHp);
       setMaxGuts(m.baseGuts); setGuts(Math.floor(m.baseGuts*0.5)); setAtk(m.baseAtk); setDef(m.baseDef);
@@ -8504,7 +8517,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts); setHp(p=>p+(nMaxHp-bHp));
       // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
       // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
-      const aptDelta=getMonsterAptPct(m);
+      const nightmareRun=extremeRunRef.current&&extremeDifficulty===NIGHTMARE_SETTING.id;
+      const aptDelta=getMonsterAptPct(m,nightmareRun);
       if (aptDelta.some(d=>d!==0)) setDistAptPct(prev=>prev.map((v,i)=>v+aptDelta[i]));
       const aptLabel=aptDelta.map((d,i)=>d!==0?`${RANGE_LABELS[i]}${formatAptPct(d)}`:null).filter(Boolean).join(' ');
       const newAllyUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)};
@@ -8561,9 +8575,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 攻撃強化・防御強化はステータスのみ上昇させる(技レベル・防御カード枚数は距離適性/丈夫さから
     // 自動算出されるため、ここでは直接いじらない)
     let nMaxHp=maxHp, nAtk=atk, nDef=def, nMaxGuts=maxGuts;
-    if(type==='atk'){nAtk=Math.floor(atk*1.10);}
-    else if(type==='def'){nDef=Math.floor((def+20)*1.10); nMaxHp=Math.floor(maxHp*1.20);}
-    else if(type==='hp'){nMaxGuts=Math.floor((maxGuts+10)*1.1);}
+    const nightmareRun=extremeRunRef.current&&extremeDifficulty===NIGHTMARE_SETTING.id;
+    if(type==='atk'){nAtk=applyNightmareStatGain(atk,Math.floor(atk*1.10),nightmareRun);}
+    else if(type==='def'){nDef=applyNightmareStatGain(def,Math.floor((def+20)*1.10),nightmareRun); nMaxHp=applyNightmareStatGain(maxHp,Math.floor(maxHp*1.20),nightmareRun);}
+    else if(type==='hp'){nMaxGuts=applyNightmareStatGain(maxGuts,Math.floor((maxGuts+10)*1.1),nightmareRun);}
     setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts);
     const nGrdL=computeGuardLevel(nDef);
     const currentGuardLevel=computeGuardLevel(def);
@@ -12420,17 +12435,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className={`w-full max-w-sm space-y-3 mb-3 shrink-0 flex-1 min-h-0 overflow-y-auto mh-scroll flex flex-col justify-center${battleTutorialSpotClass('rewards')}`}>
             <button disabled={!!effect} onClick={()=>setPendingReward('atk')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='atk'?'bg-red-900/40 border-red-400 scale-[1.03] ring-4 ring-red-500/50 shadow-[0_0_25px_rgba(248,113,113,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
               <div className="p-2 bg-red-600/20 rounded-xl text-red-500 relative"><Sword size={18}/>{pendingReward==='atk'&&<div className="absolute -top-1.5 -right-1.5 bg-red-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
-              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>攻撃覚醒</div><div className="flex flex-wrap justify-between gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ちから {atk} → <span className="text-red-400 font-bold">{Math.floor(atk*1.10)}</span></div></div><div className="text-slate-500 mt-1" style={{fontSize:'8px'}}>※技レベルは距離適性、防御カードは丈夫さに応じて自動で決まります</div></div>
+              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>攻撃覚醒</div><div className="flex flex-wrap justify-between gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ちから {atk} → <span className="text-red-400 font-bold">{applyNightmareStatGain(atk,Math.floor(atk*1.10),extremeRun&&extremeDifficulty===NIGHTMARE_SETTING.id)}</span></div></div><div className="text-slate-500 mt-1" style={{fontSize:'8px'}}>※技レベルは距離適性、防御カードは丈夫さに応じて自動で決まります</div></div>
             </button>
             <button disabled={!!effect} onClick={()=>setPendingReward('def')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='def'?'bg-emerald-900/40 border-emerald-400 scale-[1.03] ring-4 ring-emerald-500/50 shadow-[0_0_25px_rgba(52,211,153,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
               <div className="p-2 bg-emerald-600/20 rounded-xl text-emerald-500 relative"><ShieldCheck size={18}/>{pendingReward==='def'&&<div className="absolute -top-1.5 -right-1.5 bg-emerald-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
-              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>防御覚醒</div><div className="grid grid-cols-2 gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ライフ {maxHp} → <span className="text-pink-400 font-bold">{Math.floor(maxHp*1.20)}</span></div><div>丈夫さ {def} → <span className="text-emerald-400 font-bold">{Math.floor((def+20)*1.10)}</span></div></div>
-              {(()=>{const nextDef=Math.floor((def+20)*1.10); const curGL=computeGuardLevel(def); const nextGL=computeGuardLevel(nextDef); return nextGL>curGL&&(<div className="text-emerald-400 font-mono font-bold mt-1" style={{fontSize:'9px'}}>丈夫さ100到達で [{GUARD_EVOLUTION[nextGL].name}] 解放！ガード枚数 {guardCardCount(curGL)} → {guardCardCount(nextGL)}</div>);})()}
+              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>防御覚醒</div><div className="grid grid-cols-2 gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ライフ {maxHp} → <span className="text-pink-400 font-bold">{applyNightmareStatGain(maxHp,Math.floor(maxHp*1.20),extremeRun&&extremeDifficulty===NIGHTMARE_SETTING.id)}</span></div><div>丈夫さ {def} → <span className="text-emerald-400 font-bold">{applyNightmareStatGain(def,Math.floor((def+20)*1.10),extremeRun&&extremeDifficulty===NIGHTMARE_SETTING.id)}</span></div></div>
+              {(()=>{const nextDef=applyNightmareStatGain(def,Math.floor((def+20)*1.10),extremeRun&&extremeDifficulty===NIGHTMARE_SETTING.id); const curGL=computeGuardLevel(def); const nextGL=computeGuardLevel(nextDef); return nextGL>curGL&&(<div className="text-emerald-400 font-mono font-bold mt-1" style={{fontSize:'9px'}}>丈夫さ100到達で [{GUARD_EVOLUTION[nextGL].name}] 解放！ガード枚数 {guardCardCount(curGL)} → {guardCardCount(nextGL)}</div>);})()}
               </div>
             </button>
             <button disabled={!!effect} onClick={()=>setPendingReward('hp')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='hp'?'bg-pink-900/40 border-pink-400 scale-[1.03] ring-4 ring-pink-500/50 shadow-[0_0_25px_rgba(244,114,182,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
               <div className="p-2 bg-pink-600/20 rounded-xl text-pink-500 relative"><Heart size={18}/>{pendingReward==='hp'&&<div className="absolute -top-1.5 -right-1.5 bg-pink-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
-              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-1" style={{fontSize:'13px'}}>精神強化 <Sparkles size={10} className="text-amber-400"/> 最大GUTS +10 & 10% UP</div><div className="text-amber-300 font-mono font-bold mt-1.5 text-center" style={{fontSize:'10px'}}>ガッツ {maxGuts} → {Math.floor((maxGuts+10)*1.1)}</div></div>
+              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-1" style={{fontSize:'13px'}}>精神強化 <Sparkles size={10} className="text-amber-400"/> 最大GUTS +10 & 10% UP</div><div className="text-amber-300 font-mono font-bold mt-1.5 text-center" style={{fontSize:'10px'}}>ガッツ {maxGuts} → {applyNightmareStatGain(maxGuts,Math.floor((maxGuts+10)*1.1),extremeRun&&extremeDifficulty===NIGHTMARE_SETTING.id)}</div></div>
             </button>
           </div>
           <button disabled={!pendingReward||!!effect} onClick={()=>{const r=pendingReward; setPendingReward(null); handleReward(r);}} className={`w-full max-w-sm py-4 rounded-2xl font-black text-lg uppercase shadow-lg active:scale-95 transition-all shrink-0 mt-auto ${pendingReward&&!effect?'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]':'bg-slate-800 text-slate-600'}`}>{pendingReward?'決定する':'強化を選択'}</button>
