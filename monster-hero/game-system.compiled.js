@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d154aca9888f7e8d
+// source-sha256: 7ca9544c9d66d4dd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 13:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 13:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17872,82 +17872,88 @@ function MonsterHeroGame() {
     }, "\u6240\u6301\u30C0\u30A4\u30E4 ", donationResult.gold.toLocaleString()), /*#__PURE__*/React.createElement("button", {
       onClick: () => setDonationResult(null),
       className: "w-full mt-5 bg-gradient-to-r from-violet-600 to-amber-600 text-white py-3.5 rounded-2xl font-black text-sm"
-    }, "\u5BC4\u4ED8\u4E00\u89A7\u3078\u623B\u308B"))), showWaveDetails && /*#__PURE__*/React.createElement("div", {
-      className: "fixed inset-0 flex items-center justify-center p-3",
-      style: {
-        zIndex: 70000,
-        backgroundColor: 'rgba(2,6,23,.96)',
-        paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
-        paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
-      },
-      role: "dialog",
-      "aria-modal": "true"
-    }, /*#__PURE__*/React.createElement("section", {
-      className: "w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"
-    }, /*#__PURE__*/React.createElement("header", {
-      className: "flex items-center justify-between mb-3"
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-      className: "text-indigo-300 font-black"
-    }, DIFFICULTY_SETTINGS[safeDifficulty].label), /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black"
-    }, "\u5168WAVE\u8A73\u7D30")), /*#__PURE__*/React.createElement("button", {
-      "aria-label": "\u9589\u3058\u308B",
-      onClick: () => {
-        setWaveScanPreview(null);
-        setShowWaveDetails(false);
-      },
-      className: "p-3 rounded-full bg-white/10"
-    }, /*#__PURE__*/React.createElement(X, null))), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2"
-    }, ENEMY_SEQUENCE.map((enemyKey, index) => {
-      const enemy = createBattleEnemy(index + 1, safeDifficulty);
-      const boss = index === ENEMY_SEQUENCE.length - 1;
-      return /*#__PURE__*/React.createElement("article", {
-        key: `${enemyKey}-${index}`,
-        "data-wave": index + 1,
-        role: "button",
-        tabIndex: 0,
-        "aria-label": `WAVE ${index + 1} ${enemy.name}を解析`,
-        onClick: () => setWaveScanPreview({
-          enemy,
-          wave: index + 1,
-          difficulty: safeDifficulty
-        }),
-        onKeyDown: e => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            setWaveScanPreview({
-              enemy,
-              wave: index + 1,
-              difficulty: safeDifficulty
-            });
-          }
+    }, "\u5BC4\u4ED8\u4E00\u89A7\u3078\u623B\u308B"))), showWaveDetails && (() => {
+      const extreme = gameState === 'EXTREME_DIFFICULTY_SELECT';
+      const waveDifficulty = extreme ? 'Normal' : safeDifficulty;
+      const powerOverride = extreme ? EXTREME_SETTING.power : null;
+      const label = extreme ? EXTREME_SETTING.label : DIFFICULTY_SETTINGS[safeDifficulty].label;
+      return /*#__PURE__*/React.createElement("div", {
+        className: "fixed inset-0 flex items-center justify-center p-3",
+        style: {
+          zIndex: 70000,
+          backgroundColor: 'rgba(2,6,23,.96)',
+          paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
         },
-        className: `grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 cursor-pointer active:scale-[.99] ${boss ? 'border-amber-400/40 min-h-[120px]' : 'border-white/10 min-h-[64px]'}`
-      }, /*#__PURE__*/React.createElement("b", {
-        className: `${boss ? 'text-amber-300' : 'text-indigo-300'} whitespace-nowrap`
-      }, "W", index + 1), /*#__PURE__*/React.createElement("div", {
-        "data-wave-art": true,
-        className: "relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden"
-      }, enemy.imgUrl ? /*#__PURE__*/React.createElement("img", {
-        src: enemy.imgUrl,
-        alt: enemy.name,
-        style: enemyArtStyle(enemy.id, 'waveDetail'),
-        className: "w-14 h-14 object-contain"
-      }) : /*#__PURE__*/React.createElement("span", {
-        className: "text-3xl"
-      }, enemy.emoji)), /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0"
-      }, /*#__PURE__*/React.createElement("b", {
-        className: `block truncate whitespace-nowrap ${boss ? 'text-amber-300' : ''}`,
-        title: enemy.name
-      }, enemy.name), boss && /*#__PURE__*/React.createElement("span", {
-        className: "block text-[9px] leading-tight font-black text-amber-400"
-      }, "BOSS")), /*#__PURE__*/React.createElement("div", {
-        "data-wave-stats": true,
-        className: "w-[72px] text-right text-[10px] whitespace-nowrap"
-      }, /*#__PURE__*/React.createElement("div", null, "HP ", /*#__PURE__*/React.createElement("b", null, enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "\u653B\u6483 ", /*#__PURE__*/React.createElement("b", null, enemy.atk.toLocaleString()))));
-    })))), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
+        role: "dialog",
+        "aria-modal": "true"
+      }, /*#__PURE__*/React.createElement("section", {
+        className: "w-full max-w-md max-h-full flex flex-col rounded-3xl border-2 border-indigo-400 bg-slate-950 p-4"
+      }, /*#__PURE__*/React.createElement("header", {
+        className: "flex items-center justify-between mb-3"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+        className: "text-indigo-300 font-black"
+      }, label), /*#__PURE__*/React.createElement("h2", {
+        className: "text-xl font-black"
+      }, "\u5168WAVE\u8A73\u7D30")), /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u9589\u3058\u308B",
+        onClick: () => {
+          setWaveScanPreview(null);
+          setShowWaveDetails(false);
+        },
+        className: "p-3 rounded-full bg-white/10"
+      }, /*#__PURE__*/React.createElement(X, null))), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2"
+      }, ENEMY_SEQUENCE.map((enemyKey, index) => {
+        const enemy = createBattleEnemy(index + 1, waveDifficulty, null, powerOverride);
+        const boss = index === ENEMY_SEQUENCE.length - 1;
+        return /*#__PURE__*/React.createElement("article", {
+          key: `${enemyKey}-${index}`,
+          "data-wave": index + 1,
+          role: "button",
+          tabIndex: 0,
+          "aria-label": `WAVE ${index + 1} ${enemy.name}を解析`,
+          onClick: () => setWaveScanPreview({
+            enemy,
+            wave: index + 1,
+            difficulty: waveDifficulty
+          }),
+          onKeyDown: e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setWaveScanPreview({
+                enemy,
+                wave: index + 1,
+                difficulty: waveDifficulty
+              });
+            }
+          },
+          className: `grid grid-cols-[34px_104px_minmax(0,1fr)_72px] items-center gap-2 rounded-2xl border bg-slate-900 px-2 cursor-pointer active:scale-[.99] ${boss ? 'border-amber-400/40 min-h-[120px]' : 'border-white/10 min-h-[64px]'}`
+        }, /*#__PURE__*/React.createElement("b", {
+          className: `${boss ? 'text-amber-300' : 'text-indigo-300'} whitespace-nowrap`
+        }, "W", index + 1), /*#__PURE__*/React.createElement("div", {
+          "data-wave-art": true,
+          className: "relative w-[104px] h-full min-h-[60px] flex items-center justify-center overflow-hidden"
+        }, enemy.imgUrl ? /*#__PURE__*/React.createElement("img", {
+          src: enemy.imgUrl,
+          alt: enemy.name,
+          style: enemyArtStyle(enemy.id, 'waveDetail'),
+          className: "w-14 h-14 object-contain"
+        }) : /*#__PURE__*/React.createElement("span", {
+          className: "text-3xl"
+        }, enemy.emoji)), /*#__PURE__*/React.createElement("div", {
+          className: "min-w-0"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: `block truncate whitespace-nowrap ${boss ? 'text-amber-300' : ''}`,
+          title: enemy.name
+        }, enemy.name), boss && /*#__PURE__*/React.createElement("span", {
+          className: "block text-[9px] leading-tight font-black text-amber-400"
+        }, "BOSS")), /*#__PURE__*/React.createElement("div", {
+          "data-wave-stats": true,
+          className: "w-[72px] text-right text-[10px] whitespace-nowrap"
+        }, /*#__PURE__*/React.createElement("div", null, "HP ", /*#__PURE__*/React.createElement("b", null, enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", null, "\u653B\u6483 ", /*#__PURE__*/React.createElement("b", null, enemy.atk.toLocaleString()))));
+      }))));
+    })(), gameState === 'BATTLE_MENU' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 px-4",
       style: {
         paddingTop: 'calc(.35rem + env(safe-area-inset-top))',
@@ -18610,9 +18616,10 @@ function MonsterHeroGame() {
         }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("div", {
           className: "grid gap-1.5 mt-1.5"
         }, /*#__PURE__*/React.createElement("button", {
-          disabled: true,
-          className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs opacity-50"
-        }, setting.available ? 'チャレンジモード最高難度' : '詳細 ？？？'), /*#__PURE__*/React.createElement("button", {
+          disabled: !setting.available,
+          onClick: () => setShowWaveDetails(true),
+          className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50"
+        }, setting.available ? '全WAVE詳細' : '詳細 ？？？'), /*#__PURE__*/React.createElement("button", {
           disabled: !setting.available || !extremeUnlocked,
           onClick: () => {
             battleEntryStateRef.current = 'EXTREME_DIFFICULTY_SELECT';

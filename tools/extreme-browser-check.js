@@ -135,6 +135,19 @@ const extremeCardInfo = () => {
     check('難易度の並びが仕様どおり', tiers.map(t => t.label).join(',') === 'EXTREME,NIGHTMARE,CHAOS,ULTIMATE,INFINITY', tiers.map(t => t.label).join(','));
     check('NIGHTMARE以降は？？？表示', tiers.slice(1).every(t => t.locked) && !tiers[0].locked);
 
+    // EXTREMEも通常チャレンジと同じ全WAVE詳細を使い、実戦の×13で表示する
+    await page.evaluate(() => {
+      const card = [...document.querySelectorAll('[data-extreme-difficulties] article')][0];
+      [...card.querySelectorAll('button')].find(b => b.textContent.includes('全WAVE詳細'))?.click();
+    });
+    await page.waitForTimeout(500);
+    const waves = await page.evaluate(() => [...document.querySelectorAll('[data-wave]')].map(row => row.innerText.replace(/\s+/g, ' ')));
+    check('EXTREMEで全10WAVE詳細を開ける', waves.length === 10, `${waves.length} WAVE`);
+    check('EXTREMEの敵能力が実戦と同じ×13', waves[0]?.includes('HP 1,300') && waves[0]?.includes('攻撃 1,300'), waves[0]);
+    check('デュラハン・ムーとボス表示がある', waves.some(w => w.includes('デュラハン')) && waves.at(-1)?.includes('ムー') && waves.at(-1)?.includes('BOSS'), waves.slice(-2).join(' / '));
+    await page.getByRole('button', { name:'閉じる' }).click();
+    check('NIGHTMARE以降の詳細ボタンは無効', await page.evaluate(() => [...document.querySelectorAll('[data-extreme-difficulties] article')].slice(1).every(card => [...card.querySelectorAll('button')].find(b => b.textContent.includes('詳細 ？？？'))?.disabled)));
+
     // 難易度カードからもランキングを開ける
     await page.evaluate(() => {
       const card = [...document.querySelectorAll('[data-extreme-difficulties] article')][0];
