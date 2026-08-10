@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 43686388f91d367d
+// source-sha256: 0729cc2cdf878f07
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 19:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 19:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6101,13 +6101,13 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   xp: 30,
   gold: 10,
   psyche: 100,
-  description: '有利な補正が弱まり、不利な補正がさらに重くなる悪夢級の高難易度。モンスターの距離適性と、各WAVEの戦い方がより重要になる。',
+  description: '有利な補正が弱く、不利な補正が重くなる悪夢級。距離適性とWAVEごとの戦い方が重要。',
   specialRules: Object.freeze({
     waveEnhancement: 0.5,
     positiveModifier: 0.5,
     negativeModifier: 2.0
   }),
-  plannedRules: Object.freeze([['WAVE後強化', '50%'], ['自動回復率補正', 'プラス50% / マイナス200%'], ['距離適性補正', 'プラス50% / マイナス200%']])
+  plannedRules: Object.freeze([['WAVE後強化', '50%'], ['自動回復', '＋50% / −200%'], ['距離適性', '＋50% / −200%']])
 }, {
   id: 'CHAOS',
   label: 'CHAOS',
@@ -8588,7 +8588,8 @@ function MonsterHeroGame() {
   // 極限チャレンジの解放判定。チャレンジのクリア記録(mh_clears_*)をそのまま見る
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
-  const extremeDifficultyAssistantScene = extremeDifficulty === NIGHTMARE_SETTING.id && (nightmareUnlocked || debugBattle) ? 'nightmareDifficulty' : 'extremeDifficulty';
+  // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
+  const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
   const scoreMultiplier = extremeRun ? activeExtremeSetting.score : DIFFICULTY_SETTINGS[safeDifficulty].score;
   const xpMultiplier = extremeRun ? activeExtremeSetting.xp : scoreMultiplier;
@@ -18728,7 +18729,8 @@ function MonsterHeroGame() {
         return /*#__PURE__*/React.createElement("article", {
           key: setting.id,
           "aria-disabled": !unlocked,
-          className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+          "data-extreme-difficulty-card": setting.id,
+          className: `snap-center shrink-0 w-[82%] h-[382px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? '#f0abfc' : 'rgba(255,255,255,.12)',
             background: previewable ? 'linear-gradient(180deg,#34133f,#160d2b)' : 'linear-gradient(180deg,#1e293b,#0d142b)',
@@ -18761,7 +18763,7 @@ function MonsterHeroGame() {
         }, label, /*#__PURE__*/React.createElement("b", {
           className: "block text-xs text-white"
         }, value)))), setting.description && /*#__PURE__*/React.createElement("p", {
-          className: "mt-1.5 rounded-xl bg-black/30 px-2 py-1.5 text-[9px] leading-relaxed text-slate-200"
+          className: "mt-1 rounded-xl bg-black/30 px-2 py-1 text-[9px] leading-snug text-slate-200"
         }, setting.description), setting.id === 'EXTREME' ? /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1.5 text-center shadow-[0_0_18px_rgba(232,121,249,.28)]"
         }, /*#__PURE__*/React.createElement("small", {
@@ -18769,12 +18771,12 @@ function MonsterHeroGame() {
         }, "\u26A0 EXTREME\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("b", {
           className: "block text-xs text-white"
         }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u52B9\u679C 50%")) : /*#__PURE__*/React.createElement("div", {
-          className: "mt-1.5 rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-1.5"
+          className: "mt-1 rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-1"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-center text-[8px] font-black text-amber-300"
         }, "\u26A0 NIGHTMARE\u7279\u6B8A\u30EB\u30FC\u30EB"), setting.plannedRules.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
-          className: "mt-1 flex items-start justify-between gap-2 text-[9px] leading-tight"
+          className: "mt-0.5 grid grid-cols-[5.25rem_1fr] items-center gap-1 text-[9px] leading-tight whitespace-nowrap"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-300"
         }, label), /*#__PURE__*/React.createElement("b", {
@@ -18782,7 +18784,7 @@ function MonsterHeroGame() {
         }, value))))) : /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500"
         }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("div", {
-          className: "grid gap-1.5 mt-1.5"
+          className: "grid gap-1.5 mt-auto pt-1.5"
         }, /*#__PURE__*/React.createElement("button", {
           disabled: !previewable,
           onClick: () => setShowWaveDetails(true),
@@ -18828,9 +18830,11 @@ function MonsterHeroGame() {
       }))), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 pt-1.5 pb-1"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        key: extremeDifficultyAssistantScene,
         scene: extremeDifficultyAssistantScene,
         accent: "#e879f9",
-        faceSize: 56
+        faceSize: 56,
+        compact: true
       })), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 pt-1.5 pb-1 text-center text-[9px] text-slate-500"
       }, "\u30B9\u30B3\u30A2\u306F\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u5C02\u7528\u306E\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u8F09\u308A\u3001\u30C1\u30E3\u30EC\u30F3\u30B8\u306E\u8A18\u9332\u306F\u5909\u308F\u308A\u307E\u305B\u3093"))));

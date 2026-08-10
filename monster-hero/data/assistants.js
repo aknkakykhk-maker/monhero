@@ -245,6 +245,18 @@ const ASSISTANT_SCENES = {
     help: 'basics/extreme-challenge',
     lines: [],
   },
+  chaosDifficulty: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
+  ultimateDifficulty: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
+  infinityDifficulty: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
 
   // ---- はじめて ----
   onboarding: {
@@ -802,17 +814,39 @@ addAssistantLinePack({
   },
 });
 
-// NIGHTMAREはまだ戦闘開始できないため、解放後の詳細閲覧では予定仕様と準備の要点だけを案内する。
+// 極限チャレンジの難易度カードごとの案内。解放状態にかかわらず、中央のカードに合わせて使う。
 addAssistantLinePack({
-  id: 'nightmareDifficultyPreview',
-  label: 'NIGHTMARE難易度案内',
+  id: 'extremeDifficultyGuides',
+  label: '極限チャレンジ難易度別案内',
   lines: {
     nightmareDifficulty: [
-      { e:'surprise', t:'NIGHTMAREはEXTREMEの次の難易度！ 今は詳細とWAVEを確認できるよ。' },
-      { e:'troubled', t:'NIGHTMAREでは、有利な補正が弱くなる予定なの。' },
-      { e:'surprise', t:'不利な補正はもっと重くなる予定。詳細の3項目を見ておこ！' },
+      { e:'surprise', t:'NIGHTMAREはEXTREMEの次の高難易度！ さらに手強い悪夢が待ってるよ。' },
+      { e:'troubled', t:'NIGHTMAREでは、有利な補正が弱くなるの。' },
+      { e:'surprise', t:'不利な補正はもっと重くなるよ。特殊ルールの3項目を見ておこ！' },
       { e:'normal', t:'距離適性がいつも以上に大事になるよ。編成をじっくり考えよう。' },
       { e:'wink', t:'全WAVE詳細で敵の順番を見て、WAVEごとの戦い方を組み立てておこ♪' },
+      { e:'excited', t:'有利と不利で補正のかかり方が違うよ。作戦を練って挑も！' },
+    ],
+    chaosDifficulty: [
+      { e:'surprise', t:'この先はCHAOS…名前からしてヤバそうだね！' },
+      { e:'normal', t:'CHAOSの詳細はまだ秘密みたい。どんな戦いになるんだろ？' },
+      { e:'excited', t:'EXTREME、NIGHTMAREの先にはCHAOSが待ってるよ！' },
+      { e:'troubled', t:'CHAOSかぁ…名前を見ただけでドキドキしちゃうね。' },
+      { e:'wink', t:'いつかCHAOSへ挑める日に向けて、今からじっくり育てよ♪' },
+    ],
+    ultimateDifficulty: [
+      { e:'surprise', t:'ULTIMATEまであるんだ…相当な高難易度になりそう！' },
+      { e:'normal', t:'ULTIMATEの詳しい内容はまだ秘密。続報を楽しみに待とうね。' },
+      { e:'excited', t:'いつかULTIMATEのカードが開く日、あたしも楽しみ！' },
+      { e:'troubled', t:'ULTIMATE…名前どおり究極の挑戦って雰囲気だね。' },
+      { e:'wink', t:'ここまでたどり着く未来を目指して、一歩ずつ強くなろ♪' },
+    ],
+    infinityDifficulty: [
+      { e:'excited', t:'最後に待ってるのはINFINITY…いつか挑める日が楽しみだね！' },
+      { e:'surprise', t:'INFINITYって無限ってこと！？ どんな難易度になるんだろ。' },
+      { e:'normal', t:'INFINITYの詳細はまだ秘密。いちばん奥で待ってるみたい。' },
+      { e:'troubled', t:'極限の果てがINFINITYかぁ…想像するだけで緊張しちゃう！' },
+      { e:'wink', t:'いつかこのカードで挑戦できる日まで、育成を楽しも♪' },
     ],
   },
 });

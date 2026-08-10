@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 19:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 19:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2774,7 +2774,7 @@ const DIFFICULTY_SETTINGS = {
 // NIGHTMAREまで正式に実戦可能。それより後の未決定難易度には数値を持たせない。
 const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:75, specialRules:Object.freeze({ breederCardEffect:0.5 }) },
-  { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:100, description:'有利な補正が弱まり、不利な補正がさらに重くなる悪夢級の高難易度。モンスターの距離適性と、各WAVEの戦い方がより重要になる。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }), plannedRules:Object.freeze([['WAVE後強化','50%'],['自動回復率補正','プラス50% / マイナス200%'],['距離適性補正','プラス50% / マイナス200%']]) },
+  { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:100, description:'有利な補正が弱く、不利な補正が重くなる悪夢級。距離適性とWAVEごとの戦い方が重要。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }), plannedRules:Object.freeze([['WAVE後強化','50%'],['自動回復','＋50% / −200%'],['距離適性','＋50% / −200%']]) },
   { id:'CHAOS', label:'CHAOS', available:false },
   { id:'ULTIMATE', label:'ULTIMATE', available:false },
   { id:'INFINITY', label:'INFINITY', available:false },
@@ -4460,7 +4460,8 @@ function MonsterHeroGame() {
   // 極限チャレンジの解放判定。チャレンジのクリア記録(mh_clears_*)をそのまま見る
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
-  const extremeDifficultyAssistantScene = extremeDifficulty === NIGHTMARE_SETTING.id && (nightmareUnlocked || debugBattle) ? 'nightmareDifficulty' : 'extremeDifficulty';
+  // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
+  const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
   const scoreMultiplier = extremeRun ? activeExtremeSetting.score : DIFFICULTY_SETTINGS[safeDifficulty].score;
   const xpMultiplier = extremeRun ? activeExtremeSetting.xp : scoreMultiplier;
@@ -9516,7 +9517,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
                     {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:false);const previewable=setting.available&&unlocked;return (
-                      <article key={setting.id} aria-disabled={!unlocked} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?'#f0abfc':'rgba(255,255,255,.12)',background:previewable?'linear-gradient(180deg,#34133f,#160d2b)':'linear-gradient(180deg,#1e293b,#0d142b)',boxShadow:active?'0 0 30px rgba(232,121,249,.35)':'none'}}>
+                      <article key={setting.id} aria-disabled={!unlocked} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[382px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?'#f0abfc':'rgba(255,255,255,.12)',background:previewable?'linear-gradient(180deg,#34133f,#160d2b)':'linear-gradient(180deg,#1e293b,#0d142b)',boxShadow:active?'0 0 30px rgba(232,121,249,.35)':'none'}}>
                         <div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
                         <h3 className="text-center text-lg font-black leading-tight text-fuchsia-200">{setting.label}</h3>
                         <div className="mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5">
@@ -9527,10 +9528,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1.5">{[['敵強度',`×${setting.power}`],['スコア',`×${setting.score}`],['ダイヤ',`×${setting.gold}`]].map(([label,value])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs text-white">{value}</b></div>)}</div>
                           <div className="grid grid-cols-2 gap-1 mt-1">{[['経験値',`×${setting.xp}`],['虹のプシュケー',setting.psyche]].map(([label,value])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs text-white">{value}</b></div>)}</div>
-                          {setting.description&&<p className="mt-1.5 rounded-xl bg-black/30 px-2 py-1.5 text-[9px] leading-relaxed text-slate-200">{setting.description}</p>}
-                          {setting.id==='EXTREME'?<div className="mt-1.5 rounded-xl border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1.5 text-center shadow-[0_0_18px_rgba(232,121,249,.28)]"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-xs text-white">ブリーダーカード効果 50%</b></div>:<div className="mt-1.5 rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-1.5"><small className="block text-center text-[8px] font-black text-amber-300">⚠ NIGHTMARE特殊ルール</small>{setting.plannedRules.map(([label,value])=><div key={label} className="mt-1 flex items-start justify-between gap-2 text-[9px] leading-tight"><span className="text-slate-300">{label}</span><b className="text-right text-white">{value}</b></div>)}</div>}
+                          {setting.description&&<p className="mt-1 rounded-xl bg-black/30 px-2 py-1 text-[9px] leading-snug text-slate-200">{setting.description}</p>}
+                          {setting.id==='EXTREME'?<div className="mt-1.5 rounded-xl border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1.5 text-center shadow-[0_0_18px_rgba(232,121,249,.28)]"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-xs text-white">ブリーダーカード効果 50%</b></div>:<div className="mt-1 rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-1"><small className="block text-center text-[8px] font-black text-amber-300">⚠ NIGHTMARE特殊ルール</small>{setting.plannedRules.map(([label,value])=><div key={label} className="mt-0.5 grid grid-cols-[5.25rem_1fr] items-center gap-1 text-[9px] leading-tight whitespace-nowrap"><span className="text-slate-300">{label}</span><b className="text-right text-white">{value}</b></div>)}</div>}
                         </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
-                        <div className="grid gap-1.5 mt-1.5">
+                        <div className="grid gap-1.5 mt-auto pt-1.5">
                           <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
                           {/* 極限は難易度そのものが別表なので、通常の難易度は Normal のまま触らない。
                               debugBattleRef はここで書き換えないこと。デバッグ設定から入ったときだけ true のままになり、
@@ -9544,7 +9545,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
                 </div>
                 <div className="flex justify-center gap-1 py-0.5">{difficulties.map((setting,i)=><button key={setting.id} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${setting.id===extremeDifficulty?'bg-fuchsia-300 scale-125':'bg-slate-700'}`}/>)}</div>
-                <div className="shrink-0 pt-1.5 pb-1"><AssistantBubble scene={extremeDifficultyAssistantScene} accent="#e879f9" faceSize={56}/></div>
+                <div className="shrink-0 pt-1.5 pb-1"><AssistantBubble key={extremeDifficultyAssistantScene} scene={extremeDifficultyAssistantScene} accent="#e879f9" faceSize={56} compact/></div>
                 <div className="shrink-0 pt-1.5 pb-1 text-center text-[9px] text-slate-500">スコアは極限チャレンジ専用のランキングへ載り、チャレンジの記録は変わりません</div>
               </div>
             </div>

@@ -105,7 +105,7 @@ assert(source.includes('mh-extreme-enemy-image') && source.includes("extremeDiff
 assert(source.includes('mh-nightmare-enemy-aura-shell') && source.includes('@keyframes mhNightmareMist') && source.includes('mh-extreme-enemy-aura-shell') && source.includes('@keyframes mhExtremeEnemyMist') && source.includes('@keyframes mhExtremeEnemyFloor'), 'EXTREME and NIGHTMARE auras must remain distinct; EXTREME must combine silhouette glow, rising evil energy, and a foot glow with lightweight CSS-only motion');
 assert(source.includes('h-[366px]') && source.includes('flex items-start gap-2.5'), 'mode cards must share a fixed outer height and aligned carousel');
 assert(/const packedLines = scene \? ASSISTANT_LINE_PACKS\.flatMap/.test(assistants), 'line-pack-only EXTREME assistant dialogue must remain reachable');
-assert(source.includes("? 'extremeChallenge'") && source.includes("const extremeDifficultyAssistantScene = extremeDifficulty === NIGHTMARE_SETTING.id && (nightmareUnlocked || debugBattle) ? 'nightmareDifficulty' : 'extremeDifficulty';") && source.includes('scene={extremeDifficultyAssistantScene}') && !source.includes('extremeGuideStep'), 'mode and EXTREME difficulty must use separate shared assistant scenes without a post-selection dialogue');
+assert(source.includes("? 'extremeChallenge'") && source.includes('const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;') && source.includes('key={extremeDifficultyAssistantScene}') && source.includes('scene={extremeDifficultyAssistantScene}') && !source.includes('extremeGuideStep'), 'the centered EXTREME tier card must select its own shared assistant scene regardless of unlock state');
 const sceneLines = (name) => {
   const start = assistants.indexOf(`${name}: [`);
   return assistants.slice(start, assistants.indexOf('],', start)).match(/\{ e:/g)?.length || 0;
@@ -113,6 +113,11 @@ const sceneLines = (name) => {
 assert(sceneLines('extremeChallenge') >= 5, 'the extreme mode scene needs at least 5 lines');
 assert(sceneLines('extremeDifficulty') >= 5, 'the EXTREME difficulty scene needs at least 5 lines');
 assert(sceneLines('nightmareDifficulty') >= 5, 'the NIGHTMARE scene needs at least 5 lines');
+for (const name of ['chaosDifficulty', 'ultimateDifficulty', 'infinityDifficulty']) {
+  assert(sceneLines(name) >= 5, `the ${name} preview scene needs at least 5 lines`);
+}
+assert(source.includes('data-extreme-difficulty-card={setting.id}') && source.includes('h-[382px] flex flex-col'), 'all five EXTREME tier cards must share one fixed outer height');
+assert(source.includes("['自動回復','＋50% / −200%']") && source.includes("['距離適性','＋50% / −200%']") && source.includes('whitespace-nowrap'), 'NIGHTMARE rule labels and values must remain short and unbroken');
 for (const expected of ['EXTREMEの次', '有利な補正', '不利な補正', '距離適性', 'WAVEごとの戦い方']) assert(assistants.includes(expected), `NIGHTMARE assistant guidance must include: ${expected}`);
 const modeScene = assistants.slice(assistants.indexOf('extremeChallenge: ['), assistants.indexOf('extremeDifficulty: ['));
 assert(!modeScene.includes('ブリーダーカード'), 'the mode scene must not explain the EXTREME-only breeder-card rule');
