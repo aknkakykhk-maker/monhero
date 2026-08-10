@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7ca9544c9d66d4dd
+// source-sha256: df93836eb2ecc118
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 13:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 13:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1019,6 +1019,33 @@ const rosterBaseId = (entryId, masuMons) => {
   if (typeof entryId !== 'string') return null;
   if (!entryId.startsWith('masu:')) return entryId;
   return masuMons.find(m => String(m.id) === entryId.slice(5))?.baseId || null;
+};
+const MONSTER_PARTY_SET_COUNT = 5;
+const MONSTER_PARTY_SETS_KEY = 'mh_monster_roster_sets_v1';
+const MONSTER_PARTY_SETS_MIGRATED_KEY = 'mh_monster_roster_sets_migrated_v1';
+const defaultMonsterPartySetName = index => `セット${index + 1}`;
+const normalizeMonsterPartySets = (saved, legacyRoster = []) => {
+  const source = saved && typeof saved === 'object' ? saved : null;
+  const sourceRosters = Array.isArray(source?.rosters) ? source.rosters : null;
+  const sourceNames = Array.isArray(source?.names) ? source.names : [];
+  const activeValue = Number(source?.activeIndex);
+  const activeIndex = Number.isInteger(activeValue) && activeValue >= 0 && activeValue < MONSTER_PARTY_SET_COUNT ? activeValue : 0;
+  return {
+    version: 1,
+    activeIndex,
+    names: Array.from({
+      length: MONSTER_PARTY_SET_COUNT
+    }, (_, index) => {
+      const name = typeof sourceNames[index] === 'string' ? sourceNames[index].trim().slice(0, 20) : '';
+      return name || defaultMonsterPartySetName(index);
+    }),
+    rosters: Array.from({
+      length: MONSTER_PARTY_SET_COUNT
+    }, (_, index) => {
+      const roster = sourceRosters ? sourceRosters[index] : index === 0 ? legacyRoster : [];
+      return Array.isArray(roster) ? [...roster] : [];
+    })
+  };
 };
 const repairRosterAfterDonation = (roster, donated, remainingMasuMons, unlockedMonsterIds, validBaseIds, requiredCount) => {
   const donatedEntry = `masu:${donated.id}`;
@@ -8241,6 +8268,9 @@ function MonsterHeroGame() {
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS); // モンスター編成(解放済みの中から周回で使う候補、端末保存)
+  const [monsterPartySets, setMonsterPartySets] = useState(() => normalizeMonsterPartySets(null, STARTER_MONSTER_IDS));
+  const [editingPartySetIndex, setEditingPartySetIndex] = useState(0);
+  const [partySetCopyTarget, setPartySetCopyTarget] = useState(null);
   const [unlockedTeachingIds, setUnlockedTeachingIds] = useState(STARTER_TEACHING_IDS); // 解放済みブリーダーカードid(初期6枚+購入分、端末保存)
   const [teachingRosterIds, setTeachingRosterIds] = useState(STARTER_TEACHING_IDS); // ブリーダーカード編成(解放済みの中から周回で使う候補、端末保存)
   const [marketTab, setMarketTab] = useState('icon'); // ブリーダーマーケットの表示カテゴリ: 'icon'|'disc'|'breeder'
@@ -9803,7 +9833,16 @@ function MonsterHeroGame() {
       const savedUnlockedMonsters = await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false);
       setUnlockedMonsterIds(savedUnlockedMonsters);
       const savedMonsterRoster = await storeGet('mh_monster_roster', savedUnlockedMonsters, false);
-      setMonsterRosterIds(savedMonsterRoster);
+      const partySetsMigrated = await storeGet(MONSTER_PARTY_SETS_MIGRATED_KEY, false, false);
+      const savedPartySets = partySetsMigrated === true ? await storeGet(MONSTER_PARTY_SETS_KEY, null, false) : null;
+      const normalizedPartySets = normalizeMonsterPartySets(savedPartySets, savedMonsterRoster);
+      if (partySetsMigrated !== true) {
+        await storeSet(MONSTER_PARTY_SETS_KEY, normalizedPartySets, false);
+        await storeSet(MONSTER_PARTY_SETS_MIGRATED_KEY, true, false);
+      }
+      setMonsterPartySets(normalizedPartySets);
+      setEditingPartySetIndex(normalizedPartySets.activeIndex);
+      setMonsterRosterIds(normalizedPartySets.rosters[normalizedPartySets.activeIndex]);
       const savedUnlockedTeachings = await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false);
       setUnlockedTeachingIds(savedUnlockedTeachings);
       const savedTeachingRoster = await storeGet('mh_teaching_roster', savedUnlockedTeachings, false);
@@ -10565,6 +10604,59 @@ function MonsterHeroGame() {
     if (item.type === 'item') return false;
     return ownedMarketIcons.includes(item.id);
   };
+  const saveMonsterPartySets = nextSets => {
+    const normalized = normalizeMonsterPartySets(nextSets);
+    setMonsterPartySets(normalized);
+    storeSet(MONSTER_PARTY_SETS_KEY, normalized, false);
+    const activeRoster = normalized.rosters[normalized.activeIndex];
+    setMonsterRosterIds(activeRoster);
+    // 旧キーは使用中セットの写しとして維持し、旧版への後方互換と既存処理を守る。
+    storeSet('mh_monster_roster', activeRoster, false);
+    return normalized;
+  };
+  const switchMonsterPartySet = index => {
+    if (index < 0 || index >= MONSTER_PARTY_SET_COUNT) return;
+    const next = {
+      ...monsterPartySets,
+      activeIndex: index
+    };
+    const saved = saveMonsterPartySets(next);
+    setEditingPartySetIndex(index);
+    setDraftMonsterRoster(saved.rosters[index]);
+    setPartySetCopyTarget(null);
+  };
+  const renameMonsterPartySet = (index, value) => {
+    const name = String(value || '').trim().slice(0, 20) || defaultMonsterPartySetName(index);
+    saveMonsterPartySets({
+      ...monsterPartySets,
+      names: monsterPartySets.names.map((old, i) => i === index ? name : old)
+    });
+  };
+  const copyMonsterPartySet = targetIndex => {
+    if (targetIndex == null || targetIndex === editingPartySetIndex) return;
+    const rosters = monsterPartySets.rosters.map((roster, index) => index === targetIndex ? [...monsterPartySets.rosters[editingPartySetIndex]] : roster);
+    const saved = saveMonsterPartySets({
+      ...monsterPartySets,
+      rosters
+    });
+    if (targetIndex === editingPartySetIndex) setDraftMonsterRoster(saved.rosters[targetIndex]);
+    setPartySetCopyTarget(null);
+  };
+  const removeMasuFromAllPartySets = (masuId, remainingMasuMons = null, donated = null) => {
+    const entry = `masu:${masuId}`;
+    let rosters = monsterPartySets.rosters.map(roster => roster.filter(id => id !== entry));
+    if (remainingMasuMons && donated) {
+      rosters = monsterPartySets.rosters.map(roster => {
+        const repaired = repairRosterAfterDonation(roster, donated, remainingMasuMons, unlockedMonsterIds, Object.keys(ALL_PLAYER_MONSTERS), STARTER_MONSTER_IDS.length);
+        return repaired.ok ? repaired.roster : roster.filter(id => id !== entry);
+      });
+    }
+    const saved = saveMonsterPartySets({
+      ...monsterPartySets,
+      rosters
+    });
+    setDraftMonsterRoster(prev => editingPartySetIndex === saved.activeIndex ? saved.rosters[editingPartySetIndex] : prev.filter(id => id !== entry));
+  };
 
   // ブリーダーマーケットでアイテムを購入。アイコンはpt、円盤石/ブリーダー/消耗品はゴールドを消費し、
   // 種別ごとの解放リストに追加(端末保存)。円盤石/ブリーダーは解放と同時に編成へも自動追加する
@@ -10594,12 +10686,13 @@ function MonsterHeroGame() {
         return next;
       });
       // 編成はモンスター8体固定。既に8体埋まっている場合は自動追加せず、編成画面で手動入れ替えしてもらう
-      setMonsterRosterIds(prev => {
-        if (prev.length >= STARTER_MONSTER_IDS.length) return prev;
-        const next = [...prev, item.id];
-        storeSet('mh_monster_roster', next, false);
-        return next;
-      });
+      if (monsterRosterIds.length < STARTER_MONSTER_IDS.length) {
+        const rosters = monsterPartySets.rosters.map((roster, index) => index === monsterPartySets.activeIndex ? [...roster, item.id] : roster);
+        saveMonsterPartySets({
+          ...monsterPartySets,
+          rosters
+        });
+      }
     } else if (item.type === 'breeder') {
       setUnlockedTeachingIds(prev => {
         const next = [...prev, item.id];
@@ -10649,8 +10742,12 @@ function MonsterHeroGame() {
   };
   const confirmMonsterRoster = () => {
     if (draftMonsterRoster.length !== STARTER_MONSTER_IDS.length) return;
-    setMonsterRosterIds(draftMonsterRoster);
-    storeSet('mh_monster_roster', draftMonsterRoster, false);
+    const rosters = monsterPartySets.rosters.map((roster, index) => index === editingPartySetIndex ? [...draftMonsterRoster] : roster);
+    saveMonsterPartySets({
+      ...monsterPartySets,
+      activeIndex: editingPartySetIndex,
+      rosters
+    });
     // 決定したらM/B管理のモンスタータブへ戻る(古い編成メニューは経由しない)
     setManagementTab('monster');
     setGameState('MB_MANAGEMENT');
@@ -11280,13 +11377,7 @@ function MonsterHeroGame() {
       storeSet('mh_masu_mons', next, false);
       return next;
     });
-    const entry = 'masu:' + masuId;
-    setMonsterRosterIds(prev => {
-      if (!prev.includes(entry)) return prev;
-      const next = prev.filter(x => x !== entry);
-      storeSet('mh_monster_roster', next, false);
-      return next;
-    });
+    removeMasuFromAllPartySets(masuId);
   };
   // 合体: 副の絆経験値(累計bondXp)をまるごと主に加算し、副は消滅させる。
   // 技を引き継がなければ無料、引き継ぐ場合は3000ダイヤ。副が絆Lv30以上で
@@ -11353,13 +11444,7 @@ function MonsterHeroGame() {
       storeSet('mh_masu_mons', next, false);
       return next;
     });
-    const subEntry = 'masu:' + sub.id;
-    setMonsterRosterIds(prev => {
-      if (!prev.includes(subEntry)) return prev;
-      const next = prev.filter(x => x !== subEntry);
-      storeSet('mh_monster_roster', next, false);
-      return next;
-    });
+    removeMasuFromAllPartySets(sub.id);
     const goldAfter = gold - cost;
     setGold(goldAfter);
     storeSet('mh_gold', goldAfter, false);
@@ -11581,6 +11666,19 @@ function MonsterHeroGame() {
       setGold(result.nextGold);
       setMonsterRosterIds(result.nextRoster);
       setDraftMonsterRoster(result.nextDraftRoster);
+      let repairedRosters = monsterPartySets.rosters.map(roster => [...roster]);
+      let remaining = [...masuMonsRef.current, ...result.donated];
+      result.donated.forEach(donated => {
+        remaining = remaining.filter(m => String(m.id) !== String(donated.id));
+        repairedRosters = repairedRosters.map(roster => {
+          const repaired = repairRosterAfterDonation(roster, donated, remaining, unlockedMonsterIds, Object.keys(ALL_PLAYER_MONSTERS), STARTER_MONSTER_IDS.length);
+          return repaired.ok ? repaired.roster : roster.filter(id => id !== `masu:${donated.id}`);
+        });
+      });
+      saveMonsterPartySets({
+        ...monsterPartySets,
+        rosters: repairedRosters
+      });
       if (result.donated.some(m => fusionMainId === m.id || fusionSubId === m.id)) resetFusionFlow();
       setMasuMonDetail(null);
       setDonationSelectedIds([]);
@@ -20348,6 +20446,58 @@ function MonsterHeroGame() {
     })), rosterTab === 'monster' ? /*#__PURE__*/React.createElement("div", {
       className: "flex-1 min-h-0 flex flex-col"
     }, /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 mb-2 rounded-2xl border border-indigo-500/40 bg-slate-900/90 p-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2 overflow-x-auto pb-1 scrollbar-hide",
+      role: "tablist",
+      "aria-label": "\u7DE8\u6210\u30BB\u30C3\u30C8"
+    }, monsterPartySets.names.map((name, index) => /*#__PURE__*/React.createElement("button", {
+      key: index,
+      role: "tab",
+      "aria-selected": editingPartySetIndex === index,
+      onClick: () => switchMonsterPartySet(index),
+      className: `shrink-0 min-w-[92px] min-h-[44px] rounded-xl border px-2 py-1 text-left active:scale-95 ${editingPartySetIndex === index ? 'border-indigo-300 bg-indigo-600/40' : 'border-slate-700 bg-slate-800'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[10px] font-black truncate"
+    }, index + 1, ". ", name), monsterPartySets.activeIndex === index ? /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] font-black text-emerald-300"
+    }, "\u2713 \u4F7F\u7528\u4E2D") : /*#__PURE__*/React.createElement("span", {
+      className: "text-[8px] text-slate-500"
+    }, "\u30BF\u30C3\u30D7\u3067\u4F7F\u7528")))), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-end"
+    }, /*#__PURE__*/React.createElement("label", {
+      className: "min-w-0 text-[8px] font-black text-slate-400"
+    }, "\u30BB\u30C3\u30C8\u540D", /*#__PURE__*/React.createElement("input", {
+      key: `${editingPartySetIndex}:${monsterPartySets.names[editingPartySetIndex]}`,
+      defaultValue: monsterPartySets.names[editingPartySetIndex],
+      maxLength: 20,
+      onBlur: e => renameMonsterPartySet(editingPartySetIndex, e.target.value),
+      onKeyDown: e => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+      },
+      className: "mt-0.5 block w-full min-w-0 rounded-lg border border-slate-600 bg-slate-950 px-2 py-2 text-[12px] text-white"
+    })), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setPartySetCopyTarget(partySetCopyTarget == null ? (editingPartySetIndex + 1) % MONSTER_PARTY_SET_COUNT : null),
+      className: "min-h-[38px] rounded-lg border border-amber-500/50 px-3 text-[10px] font-black text-amber-200"
+    }, "\u7DE8\u6210\u3092\u30B3\u30D4\u30FC")), partySetCopyTarget != null && /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 rounded-xl bg-amber-950/40 p-2"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[9px] font-bold text-amber-100 mb-1"
+    }, "\u300C", monsterPartySets.names[editingPartySetIndex], "\u300D\u306E\u7DE8\u6210\u5185\u5BB9\u3092\u30B3\u30D4\u30FC\u3059\u308B\u5148\uFF08\u540D\u524D\u306F\u5909\u308F\u308A\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-wrap gap-1"
+    }, monsterPartySets.names.map((name, index) => index === editingPartySetIndex ? null : /*#__PURE__*/React.createElement("button", {
+      key: index,
+      onClick: () => setPartySetCopyTarget(index),
+      className: `min-h-[34px] max-w-[120px] truncate rounded-lg border px-2 text-[9px] font-black ${partySetCopyTarget === index ? 'border-amber-300 bg-amber-600 text-white' : 'border-slate-600 text-slate-300'}`
+    }, index + 1, ". ", name))), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 flex gap-2"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setPartySetCopyTarget(null),
+      className: "flex-1 min-h-[36px] rounded-lg bg-slate-700 text-[10px] font-black"
+    }, "\u3084\u3081\u308B"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => copyMonsterPartySet(partySetCopyTarget),
+      className: "flex-1 min-h-[36px] rounded-lg bg-amber-500 text-slate-950 text-[10px] font-black"
+    }, "\u3053\u306E\u30BB\u30C3\u30C8\u3078\u4E0A\u66F8\u304D")))), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0 bg-indigo-950/30 border border-indigo-500/30 rounded-2xl px-2 py-2"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-[9px] font-black text-indigo-300 shrink-0 leading-tight"
