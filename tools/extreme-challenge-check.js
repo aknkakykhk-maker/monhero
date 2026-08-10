@@ -132,6 +132,12 @@ assert(help.includes("id: 'extreme-challenge'") && help.includes("EXTREME_DIFFIC
 assert(help.includes("{ t:'data', id:'extremeDifficulties' }") && source.includes("case 'extremeDifficulties':"), 'the difficulty table must be generated from the real data');
 assert(changelog.includes('極限チャレンジのモード説明を再調整しました') && !changelog.includes('極限チャレンジのモード説明をデバッグ'), 'the extreme changelog must retain the mode-copy adjustment');
 assert(changelog.includes('極限チャレンジに全WAVE詳細を追加しました'), 'the latest extreme changelog must describe WAVE details');
+const latestVisibleUpdate = changelog.match(/const CHANGELOG = \[\s*\{([\s\S]*?)\n  \},/)?.[1] || '';
+assert(latestVisibleUpdate.includes('type: "update"') && latestVisibleUpdate.includes('items: ['), 'the latest NIGHTMARE entry must use the schema rendered by the in-game update screen');
+for (const expected of ['極限チャレンジに新難易度 NIGHTMARE を追加', 'EXTREMEをクリアすると解放', '独自の特殊ルール']) {
+  assert(latestVisibleUpdate.includes(expected), `the visible NIGHTMARE changelog must include: ${expected}`);
+}
+assert(!/デバッグ|準備中|内部実装/.test(latestVisibleUpdate), 'the visible NIGHTMARE changelog must not include internal or debug history');
 
 // --- 代表値 ---
 assert.strictEqual(Math.floor(100 * 0.5), 50, 'representative integer card effect must be exactly 50%');

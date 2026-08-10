@@ -80,6 +80,8 @@ Codex クラウドの通信ポリシーによる 403 は、レジストリ変更
 2. 関連テストと `node tools/build.js --check` を通す。
 3. `BUILD_DATE`、`version.json`、更新履歴の最新リリース日時が同じであることを確認する（`node tools/build.js` が自動更新するため手入力しない）。
 4. `monster-hero/data/changelog.js` の先頭へ利用者向け変更内容を追記してから再度ビルドする。
+   新モード、新難易度、新機能、新モンスター、マーケット新商品、重要な仕様変更は更新履歴の対象とし、
+   デバッグ限定変更や内部修正は掲載しない。
 5. **`monster-hero/data/help.js` のヘルプにも同じ変更を反映する**（更新履歴だけ書いてヘルプが古いままにしない）。
    一覧になるものは手書きせず `{ t:'data', id:'...' }` で実データから表を作り、画面を増やした場合は
    `HELP_SCREEN_COVERAGE` にも追加する。`node tools/help-coverage-check.js` /
