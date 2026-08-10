@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5da9f836c3db39db
+// source-sha256: bedc0370d060d8de
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 22:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 03:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11535,10 +11535,14 @@ function MonsterHeroGame() {
       key: `inh:${index}`,
       name: unique.name,
       unique
-    }))].map(choice => ({
-      ...choice,
-      level: Math.max(0, Math.floor(Number(masu.uniqueSkillLevels?.[choice.key]) || 0))
-    }));
+    }))].map(choice => {
+      const level = Math.max(0, Math.floor(Number(masu.uniqueSkillLevels?.[choice.key]) || 0));
+      return {
+        ...choice,
+        name: uniqueSkillAtLevel(choice.unique, Math.min(MAX_UNIQUE_SKILL_LEVEL, level + 1))?.name || choice.name,
+        level
+      };
+    });
   };
   // 限界突破: レベルはそのままで上限だけ上げる
   const executeMasuBreakthrough = async () => {
