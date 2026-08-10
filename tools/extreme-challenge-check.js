@@ -35,6 +35,12 @@ assert(source.includes('Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,loca
 assert(source.includes("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved"), 'non-breeder attacks must retain their existing calculation');
 assert(!config.includes('teachingEffect') && source.includes('⚠ EXTREME特殊ルール') && source.match(/ブリーダーカード効果 50%/g)?.length === 1 && source.includes('ブリーダーカードの効果量が半分になります'), 'the 50% breeder-card rule must belong to EXTREME details and the WAVE 1 presentation only');
 assert(!/highlights:\[[^\]]*ブリーダーカード/.test(config), 'the mode-level description must not mention the EXTREME-only breeder-card rule');
+const modeDescription = config.slice(config.indexOf('const EXTREME_MODE'), config.indexOf('const EXTREME_UNLOCK_DIFFICULTIES'));
+for (const forbidden of ['×13', '13倍', '×20', '20倍', '×25', '25倍', '×7.5', '7.5倍', '75個', 'ブリーダーカード', '50%']) {
+  assert(!modeDescription.includes(forbidden), `the mode-level description must not include EXTREME-only information: ${forbidden}`);
+}
+assert(modeDescription.includes("tagline:'限界を超えた強敵に挑む、最高難度チャレンジ'")
+  && modeDescription.includes("highlights:[['⚔️','チャレンジモードの上位高難易度版']]"), 'the mode card must only give the concise shared high-difficulty description');
 assert(source.includes("const showExtremeRule = w === 1 && extremeRunRef.current") && source.includes('setExtremeRuleOpen(showExtremeRule); setIsBusy(showExtremeRule)'), 'the 50% rule must block normal input once at WAVE 1');
 
 // --- ④ 報酬・記録 ---
@@ -70,9 +76,8 @@ assert(source.includes("if (text.startsWith(EXTREME_RANKING_PREFIX)) return text
 assert(!/submitLocalScore\((?!rankingDifficultyForMode|difficulty)/.test(source), 'no other ranking submission path may be introduced');
 
 // --- ⑥ 画面・演出・助手 ---
-// モードの説明とランキングの導線(チャレンジ・プロと同じ2つのボタン)
-assert(/points:\[\s*\['⚔️','編成'/.test(config), 'the extreme mode must have its own description points');
-assert(config.includes("['🎯','こんな人におすすめ'"), 'the description must keep the shared headings and order');
+// モードの共通説明とランキングの導線(チャレンジ・プロと同じ2つのボタン)
+assert(/points:\[\s*\['⚔️','モード概要','チャレンジモードの上位高難易度版です。/.test(config), 'the extreme mode must keep its concise shared description point');
 assert(source.includes("if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) return EXTREME_MODE;"), 'battleModeInfo must resolve the extreme mode so its description and ranking screen work');
 assert(source.includes('<button disabled={!!battleTutorial} onClick={()=>setModeInfoId(m.id)}') && !source.includes("isExtreme?'チャレンジモード最高難度'"), 'the description button must be enabled for every mode');
 assert(source.includes("openModeScoreRanking(m.id,EXTREME_SETTING.id,'BATTLE_MODE_SELECT')")
@@ -96,6 +101,9 @@ assert(sceneLines('extremeChallenge') >= 5, 'the extreme mode scene needs at lea
 assert(sceneLines('extremeDifficulty') >= 5, 'the EXTREME difficulty scene needs at least 5 lines');
 const modeScene = assistants.slice(assistants.indexOf('extremeChallenge: ['), assistants.indexOf('extremeDifficulty: ['));
 assert(!modeScene.includes('ブリーダーカード'), 'the mode scene must not explain the EXTREME-only breeder-card rule');
+for (const forbidden of ['×13', '×20', '×25', '×7.5', '75', '報酬', '50%']) {
+  assert(!modeScene.includes(forbidden), `the mode assistant scene must not include EXTREME-only information: ${forbidden}`);
+}
 
 // --- ⑦ 初回案内・ヘルプ・更新履歴 ---
 assert(/id: 'update_notice_extreme_challenge_v1', enabled: true,/.test(assistants) && !/id: 'update_notice_extreme_challenge_v1'[^}]*debugOnly/.test(assistants), 'the official release must be announced once through the shared update notice');
