@@ -15,9 +15,12 @@ const checks = [
   ['円盤石の商品詳細も共通表示を使用', game.includes('marketDiscIcon:item.icon') && game.includes('detailOpts.marketDiscIcon')],
   ['移動封印は有効中のMOVEを失敗し行動済みを維持', /intent\.type==='MOVE' && getWaveBuff\('iceLockTurns'\)>0[\s\S]*?移動できない！/.test(game)],
   ['付与ターンは減算せず次ターンから5ターン', /iceLockTurns:5/.test(game) && /getWaveBuff\('iceLockTurns'\)>0 && !immediateEffects\.iceLockRefreshed/.test(game) && /iceLockTurns:Math\.max\(0,\(p\.iceLockTurns\|\|0\)-1\)/.test(game)],
+  ['初回付与ターンは準備中として次ターンに解除', /iceLockPreparing:\(p\.iceLockTurns\|\|0\)<=0/.test(game) && /iceLockRefreshed\) setWaveBuffs\(p=>\(\{\.\.\.p,iceLockPreparing:false\}\)\)/.test(game)],
   ['消費ガッツ3%累積・安全な下限', /Math\.max\(0\.1, 1 - 0\.03\*getPermaBuff\('snegurochkaGutsDiscountStacks'\)\)/.test(game)],
-  ['勇者限定AND条件・既存距離倍率と別乗算', /mainHero\?\.id==='Snegurochka'[\s\S]*?getWaveBuff\('iceLockTurns'\)>0[\s\S]*?slotIdx===attackStartDist \? 1\.5 : 1\.0[\s\S]*?\*iceRulerMult/.test(game)],
+  ['勇者限定AND条件・既存距離倍率と別乗算', game.includes("mainHero?.id==='Snegurochka'") && game.includes('iceLockTurns>0') && game.includes('slotIdx===targetDist') && /traitMult=[^\n]*\*iceRulerMult/.test(game)],
   ['付与中フラグを特性判定へ混ぜない', !game.includes('activatesIceLock') && !/getDmg\([^\n]*activatedIceLockThisTurn/.test(game)],
+  ['特性の実効果と表示は共通発動判定を使用', game.includes('const isIceRulerActive = (slotIdx, targetDist)') && game.includes('&& !iceLockPreparing') && game.includes('iceRulerMult=isIceRulerActive(slotIdx,attackStartDist)') && /isIceRulerActive\(slots\.findIndex\(isHeroSlotMon\),enemyDist\)[\s\S]*?data-ice-ruler-active/.test(game)],
+  ['敵情報欄に準備・残りターンの小型バッジ', /data-ice-lock-status[\s\S]*?iceLockPreparing\?'準備':`\$\{iceLockTurns\}T`/.test(game) && /text-\[7px\][\s\S]*?❄️絶氷/.test(game)],
   ['専用水攻撃モーション', /atkMotion:'waterBurst'/.test(ally) && /@keyframes waterBurstAttack/.test(game) && /@keyframes waterBurstLunge/.test(game)],
   ['ヘルプに特性・固有効果', help.includes('勇者特性「氷海の支配者」') && help.includes('スネグーラチカ「絶氷の楔」')],
   // 立ち絵は他のモンスターと同じ正方形・同じ余白へそろえる(import-monster-art.jsの出力)。

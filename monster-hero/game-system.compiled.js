@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d9107b085e306196
+// source-sha256: 9cf6bb71d6a1a6fb
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 10:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 10:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12945,6 +12945,11 @@ function MonsterHeroGame() {
   const guardCardWeight = card => card?.type === 'guard' ? 1 : card?.type === 'weak_guard' ? 0.5 : 0;
   // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」。handleEnemyTurnの計算と同じ式にする。
   const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + effectiveDef * mult) : 0;
+  // 絶氷の楔と氷海の支配者の実効果・表示が別判定にならないよう、発動条件をここへ集約する。
+  // 初回付与ターンはwaveBuffs上で準備中として保持し、次のプレイヤーターンから有効になる。
+  const iceLockTurns = getWaveBuff('iceLockTurns');
+  const iceLockPreparing = !!getWaveBuff('iceLockPreparing', false);
+  const isIceRulerActive = (slotIdx, targetDist) => mainHero?.id === 'Snegurochka' && iceLockTurns > 0 && !iceLockPreparing && slotIdx === targetDist;
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx - attackStartDist);
@@ -12963,7 +12968,7 @@ function MonsterHeroGame() {
     }
     // 氷海の支配者は勇者モンがスネグーラチカの場合だけ発動する。供モンの種は見ない。
     // distMult（既存の距離一致×1.5）とは別項なので、両条件成立時は1.5×1.5になる。
-    const iceRulerMult = mainHero?.id === 'Snegurochka' && getWaveBuff('iceLockTurns') > 0 && slotIdx === attackStartDist ? 1.5 : 1.0;
+    const iceRulerMult = isIceRulerActive(slotIdx, attackStartDist) ? 1.5 : 1.0;
     let traitMult = (mainHero?.id === 'Golem' ? 1.2 : 1.0) * (mainHero?.id === 'Pixie' && card.type === 'unique' ? 2.0 : 1.0) * iceRulerMult;
     // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
     // 攻撃したモンスター自身のグレードだけを見るのではない
@@ -13220,6 +13225,11 @@ function MonsterHeroGame() {
         iceLockTurns: Math.max(0, (p.iceLockTurns || 0) - 1)
       }));
     }
+    // 初回付与ターンだけの「準備」を敵行動終了時に解除する。再付与時は減算せず5Tを維持する。
+    if (immediateEffects.iceLockRefreshed) setWaveBuffs(p => ({
+      ...p,
+      iceLockPreparing: false
+    }));
     if (currentHp <= 0) {
       setIsBusy(false);
       return;
@@ -13583,7 +13593,8 @@ function MonsterHeroGame() {
             activatedIceLockThisTurn = true;
             setWaveBuffs(p => ({
               ...p,
-              iceLockTurns: 5
+              iceLockTurns: 5,
+              iceLockPreparing: (p.iceLockTurns || 0) <= 0
             }));
             addPermaBuff('snegurochkaGutsDiscountStacks', 1);
             addPopup('絶氷の楔！ 5ターン移動封印', 'enemy', 'text-cyan-200 text-lg font-bold');
@@ -22526,12 +22537,21 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1"
     }, /*#__PURE__*/React.createElement("span", {
-      className: `flex items-center gap-1 ${wave === 10 ? 'text-red-500 animate-pulse' : 'text-slate-200'}`
+      className: `flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave === 10 ? 'text-red-500 animate-pulse' : 'text-slate-200'}`
     }, /*#__PURE__*/React.createElement(Skull, {
-      size: 11
-    }), " ", enemy.name, " ", /*#__PURE__*/React.createElement("span", {
-      className: `ml-1 px-2 py-0.5 rounded-full text-[8px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
-    }, RANGE_LABELS[enemyDist])), /*#__PURE__*/React.createElement("span", {
+      size: 11,
+      className: "shrink-0"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "max-w-[34vw] truncate"
+    }, enemy.name), /*#__PURE__*/React.createElement("span", {
+      className: `shrink-0 px-1.5 py-0.5 rounded-full text-[8px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
+    }, RANGE_LABELS[enemyDist]), iceLockTurns > 0 && /*#__PURE__*/React.createElement("span", {
+      "data-ice-lock-status": true,
+      className: "shrink-0 px-1.5 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[7px] not-italic tracking-tight whitespace-nowrap text-cyan-100"
+    }, "\u2744\uFE0F\u7D76\u6C37 ", iceLockPreparing ? '準備' : `${iceLockTurns}T`), isIceRulerActive(slots.findIndex(isHeroSlotMon), enemyDist) && /*#__PURE__*/React.createElement("span", {
+      "data-ice-ruler-active": true,
+      className: "shrink-0 px-1.5 py-0.5 rounded-full border border-amber-400/60 bg-amber-950/80 text-[7px] not-italic tracking-tight whitespace-nowrap text-amber-100"
+    }, "\u2694\uFE0F\u7279\u6027\u767A\u52D5")), /*#__PURE__*/React.createElement("span", {
       className: "text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
     }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
       className: "h-2.5 bg-slate-900 rounded-full overflow-hidden border border-white/20 relative shadow-inner"
