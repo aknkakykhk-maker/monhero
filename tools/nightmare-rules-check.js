@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+// NIGHTMAREステップ3の数値処理と、既存モードからの分離を静的・代表値で確認する。
+const fs = require('fs');
+const assert = require('assert');
+const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
+
+const signed = (value, nightmare=false) => value * (nightmare ? (value >= 0 ? 0.5 : 2) : 1);
+const wave = (value, nightmare=false) => value * (nightmare ? 0.5 : 1);
+
+assert.strictEqual(wave(10, true), 5, 'NIGHTMARE WAVE enhancement must be 50%');
+assert.strictEqual(signed(0.025, true), 0.0125, 'positive recovery modifier must be 50%');
+assert.strictEqual(signed(-0.025, true), -0.05, 'negative recovery modifier must be 200%');
+assert.strictEqual(signed(0.1, true), 0.05, 'positive aptitude modifier must be 50%');
+assert.strictEqual(signed(-0.1, true), -0.2, 'negative aptitude modifier must be 200%');
+assert.strictEqual(wave(10, false), 10, 'non-NIGHTMARE WAVE enhancement must stay unchanged');
+assert.strictEqual(signed(-0.025, false), -0.025, 'non-NIGHTMARE signed modifiers must stay unchanged');
+
+assert(source.includes("specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 })"));
+assert(source.includes('applyNightmareWaveEnhancement(d*0.001/100,nightmareRun)'), 'WAVE distance gain must use the WAVE enhancement rule');
+assert(source.includes("applyNightmareSignedModifier(aptGradeToPct(apt[i] || 'C'), nightmare)"), 'monster aptitude must use the signed rule separately');
+assert(source.includes('const baseRecoveryDelta=Math.max(-0.05,Math.min(0.05,(remainingTurns-10)*0.005));'), 'recovery base formula and bounds must stay intact');
+assert(source.includes('const recoveryDelta=applyNightmareSignedModifier(baseRecoveryDelta,nightmareRun);'), 'recovery rule must apply after the base calculation');
+assert(source.includes("isBreeder&&extremeRunRef.current?extremeSpecialRule(extremeDifficulty,'breederCardEffect')"), 'EXTREME breeder-card rule must stay intact');
+assert(!source.includes("specialRules:Object.freeze({ breederCardEffect:0.5, waveEnhancement"), 'NIGHTMARE rules must not leak into EXTREME');
+
+console.log('OK: NIGHTMARE特殊ルール（WAVE後50%、自動回復・距離適性のプラス50%／マイナス200%、既存モード分離）');

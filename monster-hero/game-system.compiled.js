@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d43fec43548de883
+// source-sha256: 7a1795b8629c3c74
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 19:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 19:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5893,9 +5893,9 @@ const STAT_POINT_KEYS = {
 // 例) 零距離の補正が+6%のところへ、零距離M(+25%)のモンスターが合流すると+31%になる。
 const aptGradeToPct = grade => (DIST_APTITUDE_MULT[grade] ?? 1.0) - 1.0;
 // モンスター(素の種・マスモン反映後のどちらでも可)の4距離分の補正値(小数)を返す
-const getMonsterAptPct = mon => {
+const getMonsterAptPct = (mon, nightmare = false) => {
   const apt = mon && mon.distAptitude || ['C', 'C', 'C', 'C'];
-  return [0, 1, 2, 3].map(i => aptGradeToPct(apt[i] || 'C'));
+  return [0, 1, 2, 3].map(i => applyNightmareSignedModifier(aptGradeToPct(apt[i] || 'C'), nightmare));
 };
 // 補正値の表示用文字列(小数第1位まで。整数のときは小数を出さない)
 const formatAptPct = v => `${v > 0 ? '+' : v < 0 ? '-' : ''}${Math.round(Math.abs(v) * 1000) / 10}%`;
@@ -6104,6 +6104,11 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   gold: 10,
   psyche: 100,
   description: '有利な補正が弱まり、不利な補正がさらに重くなる悪夢級の高難易度。モンスターの距離適性と、各WAVEの戦い方がより重要になる。',
+  specialRules: Object.freeze({
+    waveEnhancement: 0.5,
+    positiveModifier: 0.5,
+    negativeModifier: 2.0
+  }),
   plannedRules: Object.freeze([['WAVE後強化', '50%'], ['自動回復率補正', 'プラス50% / マイナス200%'], ['距離適性補正', 'プラス50% / マイナス200%']])
 }, {
   id: 'CHAOS',
@@ -6121,6 +6126,10 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
 const extremeSpecialRule = (difficultyId, rule) => EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId)?.specialRules?.[rule] ?? 1;
+// NIGHTMAREの倍率は、既存式が出した最終的な獲得量・補正値へだけ掛ける。
+const applyNightmareSignedModifier = (value, nightmare = false) => value * (nightmare ? extremeSpecialRule(NIGHTMARE_SETTING.id, value >= 0 ? 'positiveModifier' : 'negativeModifier') : 1);
+const applyNightmareWaveEnhancement = (value, nightmare = false) => value * (nightmare ? extremeSpecialRule(NIGHTMARE_SETTING.id, 'waveEnhancement') : 1);
+const applyNightmareStatGain = (before, normalAfter, nightmare = false) => before + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, nightmare));
 // 極限チャレンジの説明にはモード全体に共通する特徴を十分に載せる。EXTREME固有の倍率や
 // ブリーダーカード50%は、ここではなく難易度カード側で案内する
 const EXTREME_MODE = Object.freeze({
@@ -13225,14 +13234,18 @@ function MonsterHeroGame() {
     const finalRoundScore = Math.floor((totalWaveDamage * waveMult + totalWaveDamage * turnMult) * scoreMultiplier);
     setScore(s => s + finalRoundScore);
     const finalDistDamage = waveDistDamage.map((value, index) => (value || 0) + (distDamage[index] || 0));
-    const gainedDistBonus = finalDistDamage.map(d => d * 0.001 / 100);
+    const nightmareRun = extremeRunRef.current && extremeDifficulty === NIGHTMARE_SETTING.id;
+    // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
+    const gainedDistBonus = finalDistDamage.map(d => applyNightmareWaveEnhancement(d * 0.001 / 100, nightmareRun));
     const newDistBonus = distDmgBonus.map((b, i) => b + gainedDistBonus[i]);
     setDistDmgBonus(newDistBonus);
     const newTotalDistDamage = totalDistDamage.map((d, i) => d + finalDistDamage[i]);
     const newTotalAllDamage = totalAllDamage + totalWaveDamage;
     setTotalDistDamage(newTotalDistDamage);
     setTotalAllDamage(newTotalAllDamage);
-    const recoveryDelta = Math.max(-0.05, Math.min(0.05, (remainingTurns - 10) * 0.005));
+    const baseRecoveryDelta = Math.max(-0.05, Math.min(0.05, (remainingTurns - 10) * 0.005));
+    // 既存式と上限・下限を適用した後、符号に応じたNIGHTMARE倍率を掛ける。
+    const recoveryDelta = applyNightmareSignedModifier(baseRecoveryDelta, nightmareRun);
     const newTotalRecoveryDelta = totalRecoveryDelta + recoveryDelta;
     setPermaBuffs(p => ({
       ...p,
@@ -14835,7 +14848,8 @@ function MonsterHeroGame() {
     setGuts(Math.floor(debugMaxGuts * 0.5));
     // 間合い適性は編成全員分(勇者モンを含む)を距離ごとに合計する。
     // setDistAptPctの反映はこの関数の後になるため、initBattleへ計算済みの値を渡す
-    const debugAptPct = debugSlots.filter(Boolean).reduce((sum, mon) => sum.map((v, i) => v + getMonsterAptPct(mon)[i]), [0, 0, 0, 0]);
+    const nightmareRun = extreme && extremeDifficulty === NIGHTMARE_SETTING.id;
+    const debugAptPct = debugSlots.filter(Boolean).reduce((sum, mon) => sum.map((v, i) => v + getMonsterAptPct(mon, nightmareRun)[i]), [0, 0, 0, 0]);
     setDistAptPct(debugAptPct);
     initBattle(option.wave, debugSlots, uniques, teachings, debugDef, option.key, hero, debugAptPct);
   };
@@ -14851,7 +14865,8 @@ function MonsterHeroGame() {
     if (isHero) {
       initialBattleDistanceRef.current = slotIdx;
       // 勇者モンの間合い適性も、置いた距離だけでなく4距離すべての補正値になる
-      setDistAptPct(getMonsterAptPct(m));
+      const nightmareRun = extremeRunRef.current && extremeDifficulty === NIGHTMARE_SETTING.id;
+      setDistAptPct(getMonsterAptPct(m, nightmareRun));
       const initialUnique = {
         ...m.unique,
         evoLevel: Math.max(0, m.unique.evoLevel || 0)
@@ -14894,7 +14909,8 @@ function MonsterHeroGame() {
       setHp(p => p + (nMaxHp - bHp));
       // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
       // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
-      const aptDelta = getMonsterAptPct(m);
+      const nightmareRun = extremeRunRef.current && extremeDifficulty === NIGHTMARE_SETTING.id;
+      const aptDelta = getMonsterAptPct(m, nightmareRun);
       if (aptDelta.some(d => d !== 0)) setDistAptPct(prev => prev.map((v, i) => v + aptDelta[i]));
       const aptLabel = aptDelta.map((d, i) => d !== 0 ? `${RANGE_LABELS[i]}${formatAptPct(d)}` : null).filter(Boolean).join(' ');
       const newAllyUnique = {
@@ -15022,13 +15038,14 @@ function MonsterHeroGame() {
       nAtk = atk,
       nDef = def,
       nMaxGuts = maxGuts;
+    const nightmareRun = extremeRunRef.current && extremeDifficulty === NIGHTMARE_SETTING.id;
     if (type === 'atk') {
-      nAtk = Math.floor(atk * 1.10);
+      nAtk = applyNightmareStatGain(atk, Math.floor(atk * 1.10), nightmareRun);
     } else if (type === 'def') {
-      nDef = Math.floor((def + 20) * 1.10);
-      nMaxHp = Math.floor(maxHp * 1.20);
+      nDef = applyNightmareStatGain(def, Math.floor((def + 20) * 1.10), nightmareRun);
+      nMaxHp = applyNightmareStatGain(maxHp, Math.floor(maxHp * 1.20), nightmareRun);
     } else if (type === 'hp') {
-      nMaxGuts = Math.floor((maxGuts + 10) * 1.1);
+      nMaxGuts = applyNightmareStatGain(maxGuts, Math.floor((maxGuts + 10) * 1.1), nightmareRun);
     }
     setMaxHp(nMaxHp);
     setAtk(nAtk);
@@ -25993,7 +26010,7 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("div", null, "\u3061\u304B\u3089 ", atk, " \u2192 ", /*#__PURE__*/React.createElement("span", {
       className: "text-red-400 font-bold"
-    }, Math.floor(atk * 1.10)))), /*#__PURE__*/React.createElement("div", {
+    }, applyNightmareStatGain(atk, Math.floor(atk * 1.10), extremeRun && extremeDifficulty === NIGHTMARE_SETTING.id)))), /*#__PURE__*/React.createElement("div", {
       className: "text-slate-500 mt-1",
       style: {
         fontSize: '8px'
@@ -26025,10 +26042,10 @@ function MonsterHeroGame() {
       }
     }, /*#__PURE__*/React.createElement("div", null, "\u30E9\u30A4\u30D5 ", maxHp, " \u2192 ", /*#__PURE__*/React.createElement("span", {
       className: "text-pink-400 font-bold"
-    }, Math.floor(maxHp * 1.20))), /*#__PURE__*/React.createElement("div", null, "\u4E08\u592B\u3055 ", def, " \u2192 ", /*#__PURE__*/React.createElement("span", {
+    }, applyNightmareStatGain(maxHp, Math.floor(maxHp * 1.20), extremeRun && extremeDifficulty === NIGHTMARE_SETTING.id))), /*#__PURE__*/React.createElement("div", null, "\u4E08\u592B\u3055 ", def, " \u2192 ", /*#__PURE__*/React.createElement("span", {
       className: "text-emerald-400 font-bold"
-    }, Math.floor((def + 20) * 1.10)))), (() => {
-      const nextDef = Math.floor((def + 20) * 1.10);
+    }, applyNightmareStatGain(def, Math.floor((def + 20) * 1.10), extremeRun && extremeDifficulty === NIGHTMARE_SETTING.id)))), (() => {
+      const nextDef = applyNightmareStatGain(def, Math.floor((def + 20) * 1.10), extremeRun && extremeDifficulty === NIGHTMARE_SETTING.id);
       const curGL = computeGuardLevel(def);
       const nextGL = computeGuardLevel(nextDef);
       return nextGL > curGL && /*#__PURE__*/React.createElement("div", {
@@ -26065,7 +26082,7 @@ function MonsterHeroGame() {
       style: {
         fontSize: '10px'
       }
-    }, "\u30AC\u30C3\u30C4 ", maxGuts, " \u2192 ", Math.floor((maxGuts + 10) * 1.1))))), /*#__PURE__*/React.createElement("button", {
+    }, "\u30AC\u30C3\u30C4 ", maxGuts, " \u2192 ", applyNightmareStatGain(maxGuts, Math.floor((maxGuts + 10) * 1.1), extremeRun && extremeDifficulty === NIGHTMARE_SETTING.id))))), /*#__PURE__*/React.createElement("button", {
       disabled: !pendingReward || !!effect,
       onClick: () => {
         const r = pendingReward;
