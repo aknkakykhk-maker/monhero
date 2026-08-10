@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-10 18:22",
+    date: "2026-08-10 18:27",
     type: "update",
     title: "みゅあの画面案内を最新仕様に合わせました",
     items: [

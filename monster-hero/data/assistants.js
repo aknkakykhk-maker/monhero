@@ -62,6 +62,8 @@ const DEFAULT_ASSISTANT_ID = 'mua';
 
 // ---------- 正式アップデートの初回案内 ----------
 // BUILD_DATE や更新履歴から自動生成しない。プレイヤーへ知らせたい正式公開だけをここへ追加する。
+// changelog の全項目ではなく、大型・恒常かつ存在を見逃しやすい新機能だけが対象。
+// 小修正や細かなUI変更は対象外とし、新規プレイヤーへ過去通知を大量表示しない運用を守る。
 // pages は1件の更新にまとめて順番に表示でき、destination/buttonLabel は必要な案内だけ指定する。
 // debugOnly はデバッグ設定からの検証専用で、通常ログインの候補には絶対に入らない。
 const ASSISTANT_UPDATE_NOTICES = [
@@ -83,6 +85,23 @@ const ASSISTANT_UPDATE_NOTICES = [
       'チャレンジで Grand Master以上をクリアしていれば、バトルのモード選択から挑戦できるよ！',
     ],
     destination: 'battle', buttonLabel: 'バトルへ行く',
+  },
+  {
+    id: 'update_notice_pro_mode_v1', enabled: true,
+    title: 'プロモード追加', expression: 'excited',
+    pages: [
+      'ベースモンだけで挑む「プロモード」が増えたよ！ 育成なしの編成勝負、試してみよ♪',
+      'バトルのモード選択から遊べるよ。勇者モンと供モン候補を選んで挑戦してね！',
+    ],
+    destination: 'battle', buttonLabel: 'バトルへ行く',
+  },
+  {
+    id: 'update_notice_temple_rebirth_v1', enabled: true,
+    title: '神殿に「再生」追加', expression: 'excited',
+    pages: [
+      '神殿に「再生」が増えたよ！ 解放したベースモンから、新しいマスモンを生み出せるんだ♪',
+      '最初の1回は無料！ 神殿で能力や技を見てから再生できるよ。',
+    ],
   },
 ];
 
