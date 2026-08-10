@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 12:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 12:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -120,6 +120,13 @@ const resolveQuickGrowthStats = ({hp, atk, def, guts}) => ({
 });
 const isQuickMode = (mode) => normalizeBattleMode(mode) === BATTLE_MODE_QUICK;
 const isProMode = (mode) => normalizeBattleMode(mode) === BATTLE_MODE_PRO;
+// クイックの報酬方針は画面内だけで選び、保存データには増やさない。
+// 周回開始時の選択をrefへ固定するため、途中の画面遷移や他モードへ影響しない。
+const QUICK_REWARD_POLICY_GROWTH = 'growth';
+const QUICK_REWARD_POLICY_PSYCHE = 'psyche';
+const normalizeQuickRewardPolicy = (value) => value === QUICK_REWARD_POLICY_PSYCHE ? value : QUICK_REWARD_POLICY_GROWTH;
+const applyQuickXpPolicy = (value, mode, policy) => isQuickMode(mode) && normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_PSYCHE ? 0 : value;
+const applyQuickPsychePolicy = (value, mode, policy) => isQuickMode(mode) && normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_PSYCHE ? value * 2 : value;
 // 難易度倍率をかけたあとの獲得量へ、さらにモードの倍率をかける。
 // WAVEごとの内訳と合計がずれないよう、内訳と同じ「WAVE単位で丸めてから合計」に揃える。
 // 倍率はブリーダー経験値・絆経験値・ダイヤで別々に決める。
@@ -3727,6 +3734,8 @@ function MonsterHeroGame() {
   // 進行中の周回のモード。バトル中の表示・報酬・BGM・記録の保存先がこれで決まる。
   // 周回の途中で変わらないよう、挑戦を始めるときにだけ書き換える
   const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
+  const [quickRewardPolicy, setQuickRewardPolicy] = useState(QUICK_REWARD_POLICY_GROWTH);
+  const quickRewardPolicyRunRef = useRef(QUICK_REWARD_POLICY_GROWTH);
   const [managementTab, setManagementTab] = useState('monster');
   const [homeBackgroundReady, setHomeBackgroundReady] = useState(false);
   const [showOfficialTitleConfirm, setShowOfficialTitleConfirm] = useState(false);
@@ -6448,7 +6457,7 @@ function MonsterHeroGame() {
     const xpMult = extreme ? EXTREME_SETTING.xp : scoreMult;
 
     // クイックモードは経験値とダイヤだけ1.5倍(スコア倍率は難易度のまま)
-    const breederXpGain = xpForWavesClearedInMode(wavesCleared, xpMult, runMode);
+    const breederXpGain = applyQuickXpPolicy(xpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);
     const breederLevelBefore = levelInfo(breederXp);
     const nextXp = breederXp + breederXpGain;
     const breederLevelAfter = levelInfo(nextXp);
@@ -6474,7 +6483,7 @@ function MonsterHeroGame() {
     // バトルへ参加した供モンには勇者モンの1/2、モンスター編成内で参加しなかった控えのマスモンには
     // 1/4を加算する。勇者・参加・控えの区分と個体IDは先に一意化し、同じ個体へ重複付与しない。
     // 絆経験値はブリーダー経験値と倍率が違う(プロは絆3倍・ブリーダー1.5倍)ので専用の関数を通す
-    const gain = bondXpForWavesClearedInMode(wavesCleared, xpMult, runMode);
+    const gain = applyQuickXpPolicy(bondXpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);
     const bondAwards = buildRunBondAwards({
       gain,
       heroMasuId: mainHero?.masuId,
@@ -6525,7 +6534,9 @@ function MonsterHeroGame() {
     runHeroBondLevelRef.current = (heroBondGain && heroBondGain.masuId == null && heroBondGain.xpGain > 0)
       ? heroBondGain.levelAfter.level : null;
 
-    setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory });
+    const rewardWaveHistory = applyQuickXpPolicy(1, runMode, quickRewardPolicyRunRef.current) === 0
+      ? waveHistory.map(entry => ({ ...entry, xpGain: 0 })) : waveHistory;
+    setFinalRewardSummary({ quickMode: isQuickMode(runMode), breederXpGain, breederLevelBefore, breederLevelAfter, goldBefore, goldAfter, heroBondGain, allyBondGains, waveHistory: rewardWaveHistory });
   };
 
   // スキップ: チケットを1枚使い、その難易度をボスまで倒したのと同じ経験値・ダイヤを受け取る。
@@ -6557,7 +6568,7 @@ function MonsterHeroGame() {
       const goldMult = DIFFICULTY_SETTINGS[flow.difficulty]?.gold || 1.0;
 
       // ブリーダー経験値・ブリーダーポイント(枚数ぶんまとめて受け取る)
-      const breederXpGain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;
+      const breederXpGain = applyQuickXpPolicy(xpForWavesCleared(SKIP_WAVES, scoreMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy);
       const breederLevelBefore = levelInfo(breederXp);
       const nextBreederXp = breederXp + breederXpGain;
       const breederLevelAfter = levelInfo(nextBreederXp);
@@ -6577,7 +6588,7 @@ function MonsterHeroGame() {
       await storeSet('mh_gold', goldAfter, false);
 
       // 絆経験値。勇者モン=満額、選んだ供モン=1/2、編成内で選ばなかったマスモン=1/4 も通常と同じ
-      const gain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;
+      const gain = applyQuickXpPolicy(xpForWavesCleared(SKIP_WAVES, scoreMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy);
       const allies = (flow.allies || []).filter(Boolean);
       const bondAwards = buildRunBondAwards({
         gain,
@@ -6635,7 +6646,7 @@ function MonsterHeroGame() {
     if (!isQuickMode(battleMode)) return;
     const itemId = SKIP_TICKETS[difficultyKey];
     if (!itemId || (ownedItems[itemId] || 0) <= 0) return;
-    setSkipFlow({ difficulty: difficultyKey, itemId, hero: null, allies: [], count: 1 });
+    setSkipFlow({ difficulty: difficultyKey, itemId, hero: null, allies: [], count: 1, rewardPolicy: normalizeQuickRewardPolicy(quickRewardPolicy) });
     setSkipPickTab('roster');
     setSkipConfirmOpen(false);
     setGameState('SKIP_PICK');
@@ -6672,7 +6683,8 @@ function MonsterHeroGame() {
   // 獲得数はリザルトに出したいので finalRewardSummary へも足す(報酬付与のあとに走るため関数形で足す)
   const awardClearPsyche = async () => {
     // 極限チャレンジは通常の難易度表ではなく EXTREME_SETTING の個数を配る
-    const gain = extremeRunRef.current ? EXTREME_SETTING.psyche : clearPsycheReward(difficulty);
+    const baseGain = extremeRunRef.current ? EXTREME_SETTING.psyche : clearPsycheReward(difficulty);
+    const gain = applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current);
     if (gain <= 0) return 0;
     const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]: ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID) + gain };
     ownedItemsRef.current = nextItems;
@@ -9435,6 +9447,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
                 <div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>
+                {quick&&<fieldset className="shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1.5">
+                  <legend className="px-1 text-[9px] font-black text-teal-200">報酬方針</legend>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[[QUICK_REWARD_POLICY_GROWTH,'育成','経験値あり'],[QUICK_REWARD_POLICY_PSYCHE,'プシュケー優先','経験値0・虹×2']].map(([id,label,detail])=>{const selected=quickRewardPolicy===id;return <button key={id} type="button" aria-pressed={selected} onClick={()=>setQuickRewardPolicy(id)} className={`min-h-[44px] rounded-xl border-2 px-1 py-1 font-black active:scale-[.98] ${selected?'border-teal-300 bg-teal-600 text-white shadow-[0_0_14px_rgba(45,212,191,.3)]':'border-white/10 bg-slate-950 text-slate-400'}`}><span className="block text-xs">{label}</span><small className="block text-[8px]">{detail}</small></button>;})}
+                  </div>
+                </fieldset>}
                 <div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}>
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==safeDifficulty)setDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
@@ -9453,7 +9471,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         {/* 実際のクリア付与と同じ関数を使い、表示専用の報酬値を持たない。 */}
                         <div className="mt-1.5 rounded-xl border border-fuchsia-400/35 bg-fuchsia-950/35 px-3 py-2 flex items-center justify-between gap-2" data-psyche-reward={key}>
                           <span className="text-[10px] leading-tight text-fuchsia-200 font-black">クリア報酬</span>
-                          <b className="text-sm text-white whitespace-nowrap"><span aria-hidden="true">🌈</span> 虹のプシュケー ×{clearPsycheReward(key)}</b>
+                          <div className="text-right whitespace-nowrap"><b className="block text-[10px] text-white">経験値：{quick&&quickRewardPolicy===QUICK_REWARD_POLICY_PSYCHE?'0':quick?'現在値':'通常'}</b><b className="block text-xs text-fuchsia-100"><span aria-hidden="true">🌈</span> 虹のプシュケー：{applyQuickPsychePolicy(clearPsycheReward(key),battleMode,quickRewardPolicy)}個{quick&&quickRewardPolicy===QUICK_REWARD_POLICY_PSYCHE?'（×2）':''}</b></div>
                         </div>
                         <div className="grid gap-1.5 mt-1.5">
                           <button disabled={!!battleTutorial} onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-30">全WAVE詳細</button>
@@ -9463,7 +9481,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               ベースモンのタブで開く。編成(マスモン入り)は使えない */}
                           {/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
                               ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}
-                          <button disabled={(pro&&!proReady)||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setProAllyPool([]);setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
+                          <button disabled={(pro&&!proReady)||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setProAllyPool([]);setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
                           {/* 難易度カードからもランキングへ入れる。ここから開いたときは、この難易度のタブが最初に選ばれる */}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
                           {/* スキップはクイックモード専用。チケットが無い難易度では出さない */}
