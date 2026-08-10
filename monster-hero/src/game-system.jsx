@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 12:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 13:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2753,14 +2753,17 @@ const EXTREME_DIFFICULTIES = Object.freeze([
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const extremeSpecialRule = (difficultyId, rule) =>
   EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId)?.specialRules?.[rule] ?? 1;
-// 極限チャレンジの説明はモード共通の売りだけを書く。EXTREME固有のブリーダーカード50%は
-// ここではなく、難易度カード側の「⚠ EXTREME特殊ルール」で目立たせる
+// 極限チャレンジの説明にはモード全体に共通する特徴を十分に載せる。EXTREME固有の倍率や
+// ブリーダーカード50%は、ここではなく難易度カード側で案内する
 const EXTREME_MODE = Object.freeze({
   id:'extreme', label:'極限チャレンジ', short:'極限', emoji:'🔥', color:'#e879f9',
-  tagline:'限界を超えた強敵に挑む、最高難度チャレンジ',
-  highlights:[['⚔️','チャレンジモードの上位高難易度版']],
+  tagline:'育てたモンスターで限界へ挑む、上級者向け高難度モード',
+  highlights:[['⚔️','通常チャレンジを超える高難易度'],['🔥','EXTREMEから始まる、さらなる強敵への挑戦'],['✨','高難易度に見合った高い報酬']],
   points:[
-    ['⚔️','モード概要','チャレンジモードの上位高難易度版です。限界を超えた強敵との戦いに挑みます。'],
+    ['⚔️','モード概要','通常チャレンジのさらに上に位置する、上級者向けの高難易度モードです。育てたモンスターで限界に挑みます。'],
+    ['🔥','難易度','EXTREMEから始まり、さらに上位の難易度が並びます。難易度が上がるほど、より強力な敵との戦いになります。'],
+    ['✨','報酬','強敵を乗り越えた先で、高難易度に見合った高い報酬を狙えます。'],
+    ['🎯','こんな人におすすめ','通常チャレンジを攻略し、育成したモンスターの実力をさらに試したい人におすすめです。'],
   ],
 });
 // 解放条件。チャレンジモードで Grand Master / Hell / Legend のどれかを1回以上クリアしていること。
