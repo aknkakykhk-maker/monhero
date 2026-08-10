@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 11:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 12:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -224,7 +224,12 @@ const BATTLE_MODES = [
     ],
   },
 ];
-const battleModeInfo = (mode) => BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
+// 極限チャレンジは通常の3モードとは別に持っているので、説明・ランキング画面から引けるようにここで合流させる
+// (EXTREME_MODE はこの下で定義するため、呼ばれた時点で参照する)
+const battleModeInfo = (mode) => {
+  if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) return EXTREME_MODE;
+  return BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
+};
 // 本番のバトル画面へ出すモード。いまは3モードすべてを公開している。
 // 作りかけのモードを足すときは、ここから外せば新しい入口には出ないまま
 // デバッグ・ヘルプの表・検査からだけ見える状態にできる
@@ -2746,7 +2751,18 @@ const extremeSpecialRule = (difficultyId, rule) =>
 const EXTREME_MODE = Object.freeze({
   id:'extreme', label:'極限チャレンジ', short:'極限', emoji:'🔥', color:'#e879f9',
   tagline:'限界を超えた強敵に挑む、最高難度チャレンジ',
-  highlights:[['⚔️','チャレンジモードの上位高難易度版'],['✨','極限の戦いに見合う高倍率報酬'],['🏅','クリア回数と自己ベストを記録']],
+  highlights:[['⚔️','チャレンジモードの上位高難易度版'],['✨','極限の戦いに見合う高倍率報酬'],['📊','極限専用のスコアランキング']],
+  points:[
+    ['⚔️','編成','ベースモンもマスモンも自由に連れていけます。チャレンジモードと同じ編成で、勇者モン1体と供モンで挑みます。'],
+    ['📈','WAVEのあいだの強化','チャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。ちから・丈夫さ・ライフ・ガッツのどれを伸ばすかを自分で選べます。'],
+    ['👹','難しさ','チャレンジモードのさらに上の難易度です。敵のライフと攻撃はノーマルの13倍。育てたマスモンの力をそのまま出せるぶん、生半可な育成では10WAVEを走りきれません。難易度ごとの固有ルールが付くこともあります。'],
+    ['💎','もらえる経験値とダイヤ','高難度に見合う高倍率です。EXTREMEではブリーダー経験値・絆経験値が25倍、ダイヤが7.5倍。クリアすると虹のプシュケーを75個受け取れます。'],
+    ['🏆','スコアと記録','スコアは極限チャレンジ専用のランキングに反映されます。チャレンジ・クイック・プロの記録とは別枠なので、これまでの自己ベストが書き換わることはありません。'],
+    ['🤝','供モンの加入','チャレンジモードと同じです。決まったWAVEで、所持しているモンスターから選んだ供モンが加わります。'],
+    ['⭐','マスモン登録','勇者モンにした子は、プレイが終わったあとマスモンとして登録できます。'],
+    ['⏩','スキップチケット','使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'],
+    ['🎯','こんな人におすすめ','チャレンジモードのLegendを走りきれるようになった人、育てたマスモンの本気を試したい人向けです。'],
+  ],
 });
 // 解放条件。チャレンジモードで Grand Master / Hell / Legend のどれかを1回以上クリアしていること。
 // 判定には既存の mh_clears_<難易度> をそのまま読む(新しい解放フラグは作らない)ので、
@@ -3374,17 +3390,29 @@ const SB_HEADERS = { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' 
 // 既存のチャレンジの記録(difficulty='Hard' など)はそのままで、行の書き換えも変換も行わない。
 // Supabaseの列(スキーマ)は変えず、difficulty へ入れる値だけで分ける
 const PRO_RANKING_PREFIX = 'Pro';
+// 極限チャレンジも同じやり方。難易度の並びが通常と別なので、極限の段階IDへ接頭辞を付ける
+// (例: ExtremeEXTREME)。チャレンジ・プロの行は読みも書きもしない
+const EXTREME_RANKING_PREFIX = 'Extreme';
 const RANKING_DIFFICULTY_KEYS = Object.freeze([
   ...Object.keys(DIFFICULTY_SETTINGS),
   ...Object.keys(DIFFICULTY_SETTINGS).map(key => `${PRO_RANKING_PREFIX}${key}`),
+  ...EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`),
 ]);
-// そのモード・難易度の記録を置く難易度キー。チャレンジは従来どおりの値をそのまま使う
-const rankingDifficultyForMode = (mode, diff) => isProMode(mode)
-  ? `${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}`
-  : normalizeBattleDifficulty(diff);
+// 極限の段階ID。知らない値が来ても実装済みの段階へ落として、ランキングのキーを壊さない
+const normalizeExtremeDifficulty = (value) => (EXTREME_DIFFICULTIES
+  .find(setting => setting.id === value && setting.available) ? value : EXTREME_SETTING.id);
+// そのモード・難易度の記録を置く難易度キー。チャレンジは従来どおりの値をそのまま使う。
+// 極限チャレンジは diff に極限の段階ID(EXTREMEなど)を渡す
+const rankingDifficultyForMode = (mode, diff) => {
+  if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) {
+    return `${EXTREME_RANKING_PREFIX}${normalizeExtremeDifficulty(diff)}`;
+  }
+  return isProMode(mode) ? `${PRO_RANKING_PREFIX}${normalizeBattleDifficulty(diff)}` : normalizeBattleDifficulty(diff);
+};
 // ランキングの難易度キーから、表示に使う素の難易度へ戻す
 const rankingDifficultyBase = (key) => {
   const text = String(key || '');
+  if (text.startsWith(EXTREME_RANKING_PREFIX)) return text.slice(EXTREME_RANKING_PREFIX.length);
   return text.startsWith(PRO_RANKING_PREFIX) ? text.slice(PRO_RANKING_PREFIX.length) : text;
 };
 const normalizeRankingDifficulty = (value) => {
@@ -3882,7 +3910,10 @@ function MonsterHeroGame() {
     setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 650);
   }, []);
   const [rankingViewDiff, setRankingViewDiff] = useState('Normal');
-  const rankingViewKey = rankingDifficultyKey(rankingViewDiff);
+  // 旧バトル画面(BATTLE_MENU)のランキングはチャレンジ固定。極限の段階ID(EXTREMEなど)が
+  // 選ばれたまま来ても normalizeRankingDifficulty を落とさないよう、通常の難易度へ寄せる
+  const rankingViewKey = rankingDifficultyKey(
+    Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY);
   const [rankingKind, setRankingKind] = useState('score'); // 'score' | 'breeder' | 'bond'
   const [bondRankMonFilter, setBondRankMonFilter] = useState('all'); // 絆レベルランキングのモンスター種別フィルタ
   // 新しいバトルの入口(バトルモード再編・第2段階)。
@@ -5540,16 +5571,6 @@ function MonsterHeroGame() {
     // 呼び出し側でも弾いているが、ここでも止めて「デバッグから遊んだら記録がついた」を確実に防ぐ
     if (debugBattleRef.current) return;
     scoreSubmittedRef.current = true;
-    // 極限チャレンジは全国ランキングへ送らない(専用ランキングも作らない)。
-    // 自己ベストだけ専用キーへ残すので、チャレンジの mh_hs_* は書き換わらない
-    if (extremeRunRef.current) {
-      if (score > (Number(extremeBestScore) || 0)) {
-        await storeSet(EXTREME_BEST_SCORE_KEY, score, false);
-        setExtremeBestScore(score);
-        setRunHighlights(prev => ({ ...prev, newRecord: true }));
-      }
-      return;
-    }
     // クイックモードはランキング対象外。送信も、チャレンジの自己ベスト更新も行わず、
     // 記録は専用のキーへだけ残す
     if (isQuickMode(runMode)) {
@@ -5559,6 +5580,27 @@ function MonsterHeroGame() {
         setRunHighlights(prev => ({ ...prev, newRecord: true }));
       }
       return;
+    }
+    // 極限チャレンジもチャレンジ・プロと同じ作りでランキングへ載せる。
+    // 送り先は difficulty へ Extreme を付けた値だけが違い、テーブルも列も同じものを使う。
+    // 自己ベストは専用キーなので、チャレンジの mh_hs_* は書き換わらない
+    if (extremeRunRef.current) {
+      try {
+        const result = await submitLocalScore(rankingDifficultyForMode(EXTREME_MODE.id, extremeDifficulty), score, runIdRef.current);
+        if (!result?.nationalSaved) {
+          console.error('[result] extreme score save failed:', result?.error?.message || 'unknown ranking error');
+          return result;
+        }
+        if (score > (Number(extremeBestScore) || 0)) {
+          await storeSet(EXTREME_BEST_SCORE_KEY, score, false);
+          setExtremeBestScore(score);
+          setRunHighlights(prev => ({ ...prev, newRecord: true }));
+        }
+        return result;
+      } catch (e) {
+        console.error('[result] extreme score submit failed:', e && e.message ? e.message : e);
+        return;
+      }
     }
     // プロモードはランキングへ載せるが、チャレンジとは別枠(difficultyへ Pro を付けた値)へ送る。
     // 自己ベストも mh_pro_hs_* へ分けるので、チャレンジの記録は書き換わらない
@@ -8951,11 +8993,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // スコアランキング。モードごとに別枠なので、どのモードのぶんを見るかを受け取る。
   // チャレンジは従来どおりの難易度キー、プロは Pro を付けたキーを読み書きする
   const renderScoreRankingBody = (mode = BATTLE_MODE_CHALLENGE) => {
+    const isExtreme = mode === EXTREME_MODE.id;
     const keyOf = (diff) => rankingDifficultyKey(rankingDifficultyForMode(mode, diff));
     const viewKey = keyOf(rankingViewDiff);
     const rows = localRankings[viewKey] || [], status = rankingStatus(`score:${viewKey}`);
     return <>
-      <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=><button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(keyOf(d));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff===d?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle(st,rankingViewDiff===d)}>{st.label}</button>)}</div>
+      {/* 難易度のタブ。極限チャレンジだけは通常の9段階ではなく、遊べる極限の段階を並べる */}
+      {isExtreme
+        ? <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=><button key={setting.id} onClick={()=>{setRankingViewDiff(setting.id);loadRankings(keyOf(setting.id));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff===setting.id?'ring-2 ring-white':'border border-white/10'}`} style={{backgroundColor:EXTREME_MODE.color,color:'#0f172a'}}>{setting.label}</button>)}</div>
+        : <div className="flex gap-1.5 overflow-x-auto pb-2 shrink-0">{Object.entries(DIFFICULTY_SETTINGS).map(([d,st])=><button key={d} onClick={()=>{setRankingViewDiff(d);loadRankings(keyOf(d));}} className={`px-3 min-h-[30px] rounded-full text-[9px] font-black shrink-0 active:scale-95 ${rankingViewDiff===d?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle(st,rankingViewDiff===d)}>{st.label}</button>)}</div>}
       <div className="flex-1 overflow-y-auto mh-scroll space-y-1.5">{status.refreshing&&<div className="text-center text-[9px] text-indigo-300">更新中…</div>}{status.error&&status.fetched&&<div className="text-center text-[9px] text-amber-300">{status.error}</div>}{rows.map(renderScoreRankingEntry)}{rows.length===0&&(status.loading?<div className="text-center text-slate-400 py-8">Loading...</div>:status.error&&!status.fetched?rankingRetryButton(()=>loadRankings(viewKey,false,true)):rankingEmptyText)}</div>
     </>;
   };
@@ -9308,12 +9354,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <li key={text} className="flex items-center gap-1 rounded-lg bg-black/30 px-2 py-1 text-[9px] font-black text-slate-200"><span className="shrink-0">{icon}</span><span className="truncate">{text}</span></li>
                         ))}</ul>
                         <div className="grid gap-1.5 mt-auto pt-1.5">
-                          <button disabled={isExtreme||!!battleTutorial} onClick={()=>setModeInfoId(m.id)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{isExtreme?'チャレンジモード最高難度': 'このモードの説明'}</button>
+                          <button disabled={!!battleTutorial} onClick={()=>setModeInfoId(m.id)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">このモードの説明</button>
                           {/* 練習中はチャレンジだけ進めるようにする。初回からクイックやプロを遊ばせない */}
                           <button disabled={extremeLocked||(!!battleTutorial&&m.id!==BATTLE_MODE_CHALLENGE)} onClick={()=>{setBattleMode(m.id);setGameState(isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${m.id===BATTLE_MODE_CHALLENGE?battleTutorialSpotClass('modeStart'):''}`} style={{backgroundColor:m.color,color:'#0f172a'}}>{extremeLocked?'まだ挑戦できません':'難易度を選ぶ'}</button>
                           {/* スコアランキングの導線。クイックはランキングが無いので、高さ合わせの空枠も置かない */}
+                          {isExtreme&&<button disabled={extremeLocked||!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,EXTREME_SETTING.id,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={14}/></button>}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,'BATTLE_MODE_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {m.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
-                          {isExtreme&&<div className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/25 text-slate-400 font-black text-[11px] flex items-center justify-center px-2 text-center leading-tight">{extremeLocked?EXTREME_UNLOCK_TEXT:'全国ランキングの対象外です'}</div>}
+
                         </div>
                       </article>
                     );})}
@@ -9362,7 +9409,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               debugBattleRef はここで書き換えないこと。デバッグ設定から入ったときだけ true のままになり、
                               その周回は今までどおり報酬もクリア記録も保存されない(正式プレイと混ざらない) */}
                           <button disabled={!setting.available||!extremeUnlocked} onClick={()=>{battleEntryStateRef.current='EXTREME_DIFFICULTY_SELECT';setDifficulty('Normal');setRunMode(BATTLE_MODE_CHALLENGE);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;extremeRunRef.current=true;setExtremeRun(true);setDebugOutcome(null);setProAllyPool([]);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[44px] rounded-xl bg-fuchsia-600 text-white font-black text-sm disabled:bg-slate-800 disabled:text-slate-500">{setting.available?'この難易度で挑戦':'選択できません'}</button>
-                          <div className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/25 text-slate-400 font-black text-[11px] flex items-center justify-center px-2 text-center leading-tight">🏆 全国ランキングの対象外です</div>
+                          <button disabled={!setting.available} onClick={()=>openModeScoreRanking(EXTREME_MODE.id,setting.id,'EXTREME_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={14}/></button>
                         </div>
                       </article>
                     );})}
@@ -9371,7 +9418,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
                 <div className="flex justify-center gap-1 py-0.5">{difficulties.map((setting,i)=><button key={setting.id} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${setting.id===extremeDifficulty?'bg-fuchsia-300 scale-125':'bg-slate-700'}`}/>)}</div>
                 <div className="shrink-0 pt-1.5 pb-1"><AssistantBubble scene="extremeDifficulty" accent="#e879f9" faceSize={56}/></div>
-                <div className="shrink-0 pt-1.5 pb-1 text-center text-[9px] text-slate-500">記録は極限チャレンジ専用の枠に保存され、チャレンジの記録は変わりません</div>
+                <div className="shrink-0 pt-1.5 pb-1 text-center text-[9px] text-slate-500">スコアは極限チャレンジ専用のランキングへ載り、チャレンジの記録は変わりません</div>
               </div>
             </div>
           </div>);

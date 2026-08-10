@@ -60,11 +60,25 @@ for (const label of ['ランキング対象外（デバッグ）','デバッグ�
 
 // --- ⑤ 保存キー・ランキング ---
 assert(source.includes("const EXTREME_BEST_SCORE_KEY = 'mh_extreme_hs_EXTREME';") && source.includes("const EXTREME_CLEAR_COUNT_KEY = 'mh_extreme_clears_EXTREME';"), 'EXTREME records must live in their own new keys');
-assert(/if \(extremeRunRef\.current\) \{[\s\S]{0,420}await storeSet\(EXTREME_BEST_SCORE_KEY, score, false\);[\s\S]{0,220}return;/.test(source), 'EXTREME must keep its own best score and skip the national ranking');
+assert(source.includes('await storeSet(EXTREME_BEST_SCORE_KEY, score, false);'), 'EXTREME must keep its own best score');
 assert(source.indexOf('if (extremeRunRef.current) {') < source.indexOf('const result = await submitLocalScore(difficulty, score, runIdRef.current);'), 'EXTREME must return before the challenge ranking submission');
-assert(!/rankingDifficultyForMode\([^)]*EXTREME/.test(source) && !source.includes("'Extreme'"), 'no dedicated EXTREME ranking namespace may be added');
+// ランキングはチャレンジ・プロと同じ作り。テーブルも列も増やさず、difficultyへ入れる値だけで分ける
+assert(source.includes("const EXTREME_RANKING_PREFIX = 'Extreme';")
+  && source.includes('...EXTREME_DIFFICULTIES.map(setting => `${EXTREME_RANKING_PREFIX}${setting.id}`),'), 'EXTREME must get its own ranking namespace inside the existing table');
+assert(source.includes('const result = await submitLocalScore(rankingDifficultyForMode(EXTREME_MODE.id, extremeDifficulty), score, runIdRef.current);'), 'EXTREME scores must be submitted through the shared ranking path');
+assert(source.includes("if (text.startsWith(EXTREME_RANKING_PREFIX)) return text.slice(EXTREME_RANKING_PREFIX.length);"), 'the extreme prefix must be stripped for display');
+assert(!/submitLocalScore\((?!rankingDifficultyForMode|difficulty)/.test(source), 'no other ranking submission path may be introduced');
 
 // --- ⑥ 画面・演出・助手 ---
+// モードの説明とランキングの導線(チャレンジ・プロと同じ2つのボタン)
+assert(/points:\[\s*\['⚔️','編成'/.test(config), 'the extreme mode must have its own description points');
+assert(config.includes("['🎯','こんな人におすすめ'"), 'the description must keep the shared headings and order');
+assert(source.includes("if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) return EXTREME_MODE;"), 'battleModeInfo must resolve the extreme mode so its description and ranking screen work');
+assert(source.includes('<button disabled={!!battleTutorial} onClick={()=>setModeInfoId(m.id)}') && !source.includes("isExtreme?'チャレンジモード最高難度'"), 'the description button must be enabled for every mode');
+assert(source.includes("openModeScoreRanking(m.id,EXTREME_SETTING.id,'BATTLE_MODE_SELECT')")
+  && source.includes("openModeScoreRanking(EXTREME_MODE.id,setting.id,'EXTREME_DIFFICULTY_SELECT')"), 'the extreme ranking must be reachable from both the mode card and the difficulty card');
+assert(source.includes('const isExtreme = mode === EXTREME_MODE.id;') && source.includes('EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>'), 'the ranking screen must list the extreme tiers instead of the nine challenge difficulties');
+assert(source.includes("Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY"), 'the legacy ranking screen must not crash on an extreme tier id');
 assert(source.includes('data-extreme-difficulties'), 'dedicated EXTREME difficulty screen must be rendered');
 assert(source.includes("isExtreme?'EXTREME_DIFFICULTY_SELECT':'BATTLE_DIFFICULTY_SELECT'"), 'EXTREME mode must lead to its dedicated difficulty screen');
 assert(source.includes("EXTREME_DIFFICULTY_SELECT: 'enhance'"), 'EXTREME difficulty selection must reuse the challenge selection BGM');

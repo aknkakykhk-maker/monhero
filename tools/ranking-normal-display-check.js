@@ -14,8 +14,12 @@ if (normalizeStart < 0 || normalizeEnd < 3 || stateKeyStart < 0) {
   throw new Error('ランキング内部キーの共通関数を抽出できません');
 }
 
-const context = { DIFFICULTY_SETTINGS: { Normal: {}, Hard: {}, Master: {} }, String, Error };
+// 極限チャレンジの段階もランキングの難易度キーに入るので、その一覧も渡す
+const extremeStart = source.indexOf('const EXTREME_DIFFICULTIES = Object.freeze([');
+const extremeEnd = source.indexOf(']);', extremeStart) + 3;
+const context = { DIFFICULTY_SETTINGS: { Normal: {}, Hard: {}, Master: {} }, String, Error, Object };
 vm.createContext(context);
+vm.runInContext(source.slice(extremeStart, extremeEnd), context);
 vm.runInContext(`${source.slice(normalizeStart, normalizeEnd)}\n${source.slice(stateKeyStart, stateKeyEnd)}\nthis.key=rankingDifficultyKey;`, context);
 
 const checks = [];
@@ -53,7 +57,10 @@ check('Normalが配列index 0でも除外されない', Object.keys(context.DIFF
 check('NO RECORDS YET判定にならない', displayed.length !== 0);
 check('loadRankings入口で内部キーへ正規化', source.includes('const normalizedTargetDiff = targetDiff == null ? null : rankingDifficultyKey(targetDiff)'));
 check('state系Mapとstate更新が同じ内部キーを使用', source.includes('const d = rankingDifficultyKey(requestedDiff)'));
-check('UI参照も同じ内部キーを使用', source.includes('const rankingViewKey = rankingDifficultyKey(rankingViewDiff)'));
+// 旧バトル画面のランキングはチャレンジ固定。極限の段階IDが選ばれたままでも
+// normalizeRankingDifficulty を落とさないよう、通常の難易度へ寄せてから同じ内部キーにする
+check('UI参照も同じ内部キーを使用', source.includes('const rankingViewKey = rankingDifficultyKey(')
+  && source.includes('Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, rankingViewDiff) ? rankingViewDiff : BATTLE_DEFAULT_DIFFICULTY)'));
 
 for (const difficulty of ['Hard', 'Master']) {
   const result = loadRankingsModel(difficulty.toLowerCase(), [{ user_name: difficulty, difficulty, score: 1 }]);
