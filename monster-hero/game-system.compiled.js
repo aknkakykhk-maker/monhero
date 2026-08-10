@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0507da69af7ae990
+// source-sha256: 546e3d56852c788c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 10:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 10:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6164,6 +6164,11 @@ const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
 // マスモンが少ないプレイヤー向けの日次案内。端末の暦日を値として保存し、
 // 既存セーブにキーが無い場合は未表示として安全に扱う。
 const DAILY_MASU_ADVICE_KEY = 'mh_daily_masu_advice_date_v1';
+const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1';
+const normalizeSeenUpdateNoticeIds = value => [...new Set((Array.isArray(value) ? value : []).filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
+const availableUpdateNotices = ({
+  debug = false
+} = {}) => (typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES || []).filter(notice => notice && notice.enabled === true && typeof notice.id === 'string' && (debug ? notice.debugOnly === true : notice.debugOnly !== true));
 const localCalendarDate = (now = new Date()) => {
   const d = now instanceof Date ? now : new Date(now);
   const pad = n => String(n).padStart(2, '0');
@@ -7602,6 +7607,8 @@ function MonsterHeroGame() {
   // 助手のデバッグ表示。'lines'=全セリフ / 'expressions'=全表情 / 'conditions'=条件つき / 'spam'=連打
   const [assistantDebug, setAssistantDebug] = useState(null);
   const [dailyMasuAdvice, setDailyMasuAdvice] = useState(null); // null / { debugCount:null|number, eligible:boolean }
+  const [updateGuideQueue, setUpdateGuideQueue] = useState([]);
+  const [updateGuidePage, setUpdateGuidePage] = useState(0);
   const dailyMasuAdviceCheckedRef = useRef(false);
   // マーケットのアイテムの効果説明。カードを小さくしたぶん、詳細ボタンから出す
   const [marketItemDetail, setMarketItemDetail] = useState(null);
@@ -9734,6 +9741,10 @@ function MonsterHeroGame() {
       }
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
+      const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+      // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
+      // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
+      if (wasOnboarded) setUpdateGuideQueue(availableUpdateNotices().filter(notice => !seenUpdateIds.includes(notice.id)));else await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seenUpdateIds, ...availableUpdateNotices().map(n => n.id)]), false);
       if (!wasOnboarded) {
         // 決め終わっていない項目はプロフィール画面で続きから設定してもらう
         setOnboardingName(hasSavedName ? savedName.trim().slice(0, 10) : '');
@@ -10015,6 +10026,8 @@ function MonsterHeroGame() {
     setBreederName(name);
     setBreederIcon(onboardingIcon);
     await storeSet('mh_onboarded', true, false);
+    const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+    await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seenUpdateIds, ...availableUpdateNotices().map(n => n.id)]), false);
     await storeSet('mh_onboarding_step', null, false);
     setOnboarded(true);
     setGameState('HOME');
@@ -12189,7 +12202,7 @@ function MonsterHeroGame() {
   // 初回案内・重要通知・ログインボーナスのすべてが閉じた後にだけ、日次アドバイスを出す。
   // 表示を決めた時点で日付を保存するため、閉じる・再読込でも同日に繰り返さない。
   useEffect(() => {
-    if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || tutorialStep != null || updateNoticeVisible || loginBonusPopup || levelCapCompensation || dailyMasuAdvice || dailyMasuAdviceCheckedRef.current) return;
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || tutorialStep != null || updateGuideQueue.length > 0 || updateNoticeVisible || loginBonusPopup || levelCapCompensation || dailyMasuAdvice || dailyMasuAdviceCheckedRef.current) return;
     dailyMasuAdviceCheckedRef.current = true;
     let cancelled = false;
     (async () => {
@@ -12211,7 +12224,7 @@ function MonsterHeroGame() {
     return () => {
       cancelled = true;
     };
-  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateNoticeVisible, loginBonusPopup, levelCapCompensation, dailyMasuAdvice, masuMons.length]);
+  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, dailyMasuAdvice, masuMons.length]);
   const closeDailyMasuAdvice = () => setDailyMasuAdvice(null);
   const tryDailyMasuAdvice = () => {
     setDailyMasuAdvice(null);
@@ -12226,6 +12239,35 @@ function MonsterHeroGame() {
       debugCount: count,
       eligible: count < 8
     });
+  };
+  const finishUpdateGuide = async (destination = null) => {
+    const current = updateGuideQueue[0];
+    if (!current) return;
+    const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+    await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id]), false);
+    setUpdateGuidePage(0);
+    setUpdateGuideQueue(queue => queue.slice(1));
+    if (destination === 'market') setGameState('BREEDER_MARKET');else if (destination === 'battle') setGameState('BATTLE_MODE_SELECT');else if (destination === 'training') setGameState('TRAINING_INFO');
+  };
+  const debugPlayUpdateGuide = async () => {
+    const notice = availableUpdateNotices({
+      debug: true
+    })[0];
+    if (!notice) return window.alert('テスト通知が登録されていません。');
+    const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+    if (seen.includes(notice.id)) return window.alert('テスト通知は既読です。リセット後に再確認できます。');
+    setDailyMasuAdvice(null);
+    setUpdateGuidePage(0);
+    setUpdateGuideQueue([notice]);
+    returnToHome();
+  };
+  const debugResetUpdateGuide = async () => {
+    const debugIds = new Set(availableUpdateNotices({
+      debug: true
+    }).map(n => n.id));
+    const seen = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
+    await storeSet(UPDATE_NOTICE_SEEN_KEY, seen.filter(id => !debugIds.has(id)), false);
+    window.alert('アップデート通知テストを未読へ戻しました。');
   };
   const returnToHome = () => {
     debugBattleRef.current = false;
@@ -19384,6 +19426,12 @@ function MonsterHeroGame() {
       onClick: () => setAssistantDebug('random'),
       className: "min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95"
     }, "\u30E9\u30F3\u30C0\u30E0\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
+      onClick: debugPlayUpdateGuide,
+      className: "min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95"
+    }, "\u30A2\u30C3\u30D7\u30C7\u30FC\u30C8\u901A\u77E5\u30C6\u30B9\u30C8"), /*#__PURE__*/React.createElement("button", {
+      onClick: debugResetUpdateGuide,
+      className: "min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
+    }, "\u901A\u77E5\u30C6\u30B9\u30C8\u3092\u672A\u8AAD\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         setBattleMenuTab('difficulty');
         setGameState('BATTLE_MENU');
@@ -24565,7 +24613,56 @@ function MonsterHeroGame() {
       className: "text-amber-300"
     }, "Lv.", quickJoin.unique.after))) : /*#__PURE__*/React.createElement("div", {
       className: "mt-3 text-[10px] font-black text-slate-500"
-    }, "\u4E0A\u3052\u3089\u308C\u308B\u56FA\u6709\u6280\u306F\u3082\u3046\u3042\u308A\u307E\u305B\u3093")), dailyMasuAdvice && (() => {
+    }, "\u4E0A\u3052\u3089\u308C\u308B\u56FA\u6709\u6280\u306F\u3082\u3046\u3042\u308A\u307E\u305B\u3093")), bootPhase === 'GAME' && gameState === 'HOME' && onboarded && tutorialStep == null && updateGuideQueue.length > 0 && (() => {
+      const notice = updateGuideQueue[0];
+      const pages = Array.isArray(notice.pages) && notice.pages.length ? notice.pages : ['新しいアップデートがあるよ♪'];
+      const page = Math.min(updateGuidePage, pages.length - 1);
+      const last = page === pages.length - 1;
+      const who = assistantById();
+      return /*#__PURE__*/React.createElement("div", {
+        className: "fixed inset-0 flex items-end justify-center",
+        style: {
+          position: 'fixed',
+          inset: 0,
+          zIndex: 76000,
+          backgroundColor: 'rgba(2,6,23,.94)'
+        },
+        role: "dialog",
+        "aria-modal": "true",
+        "aria-label": notice.title
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4",
+        style: {
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        }
+      }, notice.debugOnly && /*#__PURE__*/React.createElement("div", {
+        className: "mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white"
+      }, "DEBUG\u30FB\u901A\u5E38\u30ED\u30B0\u30A4\u30F3\u3067\u306F\u8868\u793A\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
+        className: "mb-1 text-center text-base font-black text-pink-200"
+      }, notice.title), /*#__PURE__*/React.createElement("p", {
+        className: "mb-3 text-center text-[10px] font-bold text-slate-400"
+      }, page + 1, " / ", pages.length), /*#__PURE__*/React.createElement("div", {
+        className: "flex items-end gap-2"
+      }, /*#__PURE__*/React.createElement(AssistantFace, {
+        who: who,
+        size: 76,
+        accent: who.accent,
+        expression: notice.expression || 'happy'
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white"
+      }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow))), !last ? /*#__PURE__*/React.createElement("button", {
+        onClick: () => setUpdateGuidePage(page + 1),
+        className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
+      }, "\u6B21\u3078") : /*#__PURE__*/React.createElement("div", {
+        className: `mt-4 grid ${notice.destination ? 'grid-cols-2' : 'grid-cols-1'} gap-2`
+      }, notice.destination && /*#__PURE__*/React.createElement("button", {
+        onClick: () => finishUpdateGuide(notice.destination),
+        className: "min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
+      }, notice.buttonLabel || '見に行く'), /*#__PURE__*/React.createElement("button", {
+        onClick: () => finishUpdateGuide(),
+        className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white"
+      }, notice.destination ? 'あとで' : '閉じる'))));
+    })(), dailyMasuAdvice && (() => {
       const who = assistantById();
       const lines = assistantSceneById('dailyMasuAdvice')?.lines || [];
       const eligible = dailyMasuAdvice.eligible !== false;
