@@ -1,5 +1,14 @@
 const CHANGELOG = [
   {
+    date: "2026-08-10 19:58",
+    type: "update",
+    title: "極限チャレンジに新難易度 NIGHTMARE を追加",
+    items: [
+      "極限チャレンジに新難易度 NIGHTMARE を追加しました。EXTREMEをクリアすると解放されます",
+      "NIGHTMAREでは、WAVE後の強化や自動回復率、距離適性への補正が変化する独自の特殊ルールが適用されます",
+    ],
+  },
+  {
     date: "2026-08-10 19:53",
     title: "極限チャレンジの難易度選択を見やすくしました",
     changes: [
