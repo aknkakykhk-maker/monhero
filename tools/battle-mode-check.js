@@ -433,6 +433,15 @@ check('クイック難易度画面に押しやすく状態が分かる2択を出
   has("[QUICK_REWARD_POLICY_GROWTH,'育成','経験値あり']")
     && has("[QUICK_REWARD_POLICY_PSYCHE,'プシュケー優先','経験値0・虹×2']")
     && has('aria-pressed={selected}') && has('min-h-[44px]'));
+check('クイックの全難易度カードは報酬方針で外寸とボタン位置が変わらない',
+  has("quick?'h-[366px] flex flex-col':''") && has("${quick?'mt-auto':''}")
+    && has('data-difficulty-card={key}') && has('data-difficulty-carousel'));
+check('クリア報酬は見出しを横書きに保ち、同じ高さの2行へ収める',
+  has('min-h-[48px] rounded-xl border border-fuchsia-400/35')
+    && has('shrink-0 whitespace-nowrap text-[10px] leading-tight text-fuchsia-200 font-black')
+    && has('虹のプシュケー：{applyQuickPsychePolicy'));
+check('クイック難易度画面の助手は縦画面向けのコンパクト表示にする',
+  has('data-difficulty-assistant') && has('faceSize={quick?48:56} compact={quick}'));
 check('全モードのクリアが共通の虹のプシュケー付与処理を通る',
   grab(source, 'const recordClearOnce = async () => {', 'const recordBestWave').indexOf('await awardClearPsyche();')
     < grab(source, 'const recordClearOnce = async () => {', 'const recordBestWave').indexOf('if (isQuickMode(runMode))'));

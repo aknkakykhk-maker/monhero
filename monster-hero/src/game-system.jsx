@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 12:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 12:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9455,9 +9455,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </fieldset>}
                 <div className={`relative shrink-0${battleTutorialSpotClass('difficulty')}`}>
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
-                  <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==safeDifficulty)setDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
+                  <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.[0]!==safeDifficulty)setDifficulty(difficulties[best][0]);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}} data-difficulty-carousel>
                     {difficulties.map(([key,setting])=>{const active=key===safeDifficulty,rec=modeRecordFor(battleMode,key);return (
-                      <article key={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}>
+                      <article key={key} data-difficulty-card={key} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${quick?'h-[366px] flex flex-col':''} ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?setting.text:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${setting.bg}55`:'none'}}>
                         <div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
                         <h3 className="text-center text-lg font-black leading-tight" style={{color:setting.text}}>{setting.label}</h3>
                         {/* 記録の枠は「見出し・大きい値・補足」の3行構成をどのモードでも守り、カードの高さをそろえる */}
@@ -9469,11 +9469,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div>
                         <div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div>
                         {/* 実際のクリア付与と同じ関数を使い、表示専用の報酬値を持たない。 */}
-                        <div className="mt-1.5 rounded-xl border border-fuchsia-400/35 bg-fuchsia-950/35 px-3 py-2 flex items-center justify-between gap-2" data-psyche-reward={key}>
-                          <span className="text-[10px] leading-tight text-fuchsia-200 font-black">クリア報酬</span>
-                          <div className="text-right whitespace-nowrap"><b className="block text-[10px] text-white">経験値：{quick&&quickRewardPolicy===QUICK_REWARD_POLICY_PSYCHE?'0':quick?'現在値':'通常'}</b><b className="block text-xs text-fuchsia-100"><span aria-hidden="true">🌈</span> 虹のプシュケー：{applyQuickPsychePolicy(clearPsycheReward(key),battleMode,quickRewardPolicy)}個{quick&&quickRewardPolicy===QUICK_REWARD_POLICY_PSYCHE?'（×2）':''}</b></div>
+                        <div className="mt-1.5 min-h-[48px] rounded-xl border border-fuchsia-400/35 bg-fuchsia-950/35 px-2.5 py-1.5 flex items-center gap-2" data-psyche-reward={key}>
+                          <span className="shrink-0 whitespace-nowrap text-[10px] leading-tight text-fuchsia-200 font-black">クリア報酬</span>
+                          <div className="flex-1 min-w-0 text-left whitespace-nowrap leading-tight"><b className="block text-[10px] text-white">経験値：{quick&&quickRewardPolicy===QUICK_REWARD_POLICY_PSYCHE?'0':quick?'現在値':'通常'}</b><b className="block text-[10px] text-fuchsia-100"><span aria-hidden="true">🌈</span> 虹のプシュケー：{applyQuickPsychePolicy(clearPsycheReward(key),battleMode,quickRewardPolicy)}個{quick&&quickRewardPolicy===QUICK_REWARD_POLICY_PSYCHE?'（×2）':''}</b></div>
                         </div>
-                        <div className="grid gap-1.5 mt-1.5">
+                        <div className={`grid gap-1.5 mt-1.5 ${quick?'mt-auto':''}`}>
                           <button disabled={!!battleTutorial} onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-30">全WAVE詳細</button>
                           {/* プロモードの中身(ベースモン限定の編成・供モン5体から3体)はまだ作っていないので、
                               ここからは始められないようにしている。第3段階で実際に遊べるようにする */}
@@ -9495,7 +9495,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
                 </div>
                 <div className="flex justify-center gap-1 py-0.5">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
-                <div className="shrink-0 pt-1.5 pb-1"><AssistantBubble key={battleMode} scene={battleModeAssistantScene(battleMode)} accent={mode.color} faceSize={56}/></div>
+                <div className={`shrink-0 ${quick?'pt-0.5 pb-0':'pt-1.5 pb-1'}`} data-difficulty-assistant><AssistantBubble key={battleMode} scene={battleModeAssistantScene(battleMode)} accent={mode.color} faceSize={quick?48:56} compact={quick}/></div>
               </div>
             </div>
           </div>);
