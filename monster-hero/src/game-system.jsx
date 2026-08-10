@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 20:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 22:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2773,8 +2773,8 @@ const DIFFICULTY_SETTINGS = {
 // 別の表にしてある。通常の難易度・全国ランキング・既存の保存キーへは混ぜない。
 // NIGHTMAREまで正式に実戦可能。それより後の未決定難易度には数値を持たせない。
 const EXTREME_DIFFICULTIES = Object.freeze([
-  { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:75, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ breederCardEffect:0.5 }) },
-  { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:100, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }), plannedRules:Object.freeze([['WAVE後強化','50%'],['自動回復補正','＋50% / −200%'],['距離適性補正','＋50% / −200%']]) },
+  { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ breederCardEffect:0.5 }) },
+  { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }), plannedRules:Object.freeze([['WAVE後強化','50%'],['自動回復補正','＋50% / −200%'],['距離適性補正','＋50% / −200%']]) },
   { id:'CHAOS', label:'CHAOS', available:false },
   { id:'ULTIMATE', label:'ULTIMATE', available:false },
   { id:'INFINITY', label:'INFINITY', available:false },
@@ -2829,7 +2829,7 @@ const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
 // もらえるのは「クリアしたとき」だけ。敗北・リタイア・スキップチケットでは配らない
 const CLEAR_PSYCHE_REWARD = Object.freeze({
   Beginner: 1, Easy: 2, Normal: 3, Hard: 5, Expert: 7,
-  Master: 10, GrandMaster: 15, Hell: 20, Legend: 30,
+  Master: 10, GrandMaster: 15, Hell: 20, Legend: 25,
 });
 const clearPsycheReward = (difficulty) => Math.max(0, Math.floor(Number(CLEAR_PSYCHE_REWARD[normalizeBattleDifficulty(difficulty)]) || 0));
 // ヘルプの中に出す「実データから作る表」。data/help.js の { t:'data', id } がこれを呼ぶ。

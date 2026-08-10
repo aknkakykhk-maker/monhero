@@ -125,7 +125,7 @@ const extremeCardInfo = () => {
     await page.waitForTimeout(1500);
     const diff = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
     check('極限専用の難易度画面が開く', !!(await page.$('[data-extreme-difficulties]')));
-    check('EXTREMEの倍率が出ている', ['×13', '×20', '×25', '×7.5', '75'].every(v => diff.includes(v)), diff.slice(0, 110));
+    check('EXTREMEの倍率と報酬が出ている', ['×13', '×20', '×25', '×7.5', '虹のプシュケー ×30'].every(v => diff.includes(v)), diff.slice(0, 110));
     check('EXTREME特殊ルールを難易度側で見せる', diff.includes('EXTREME特殊ルール') && diff.includes('ブリーダーカード効果 50%'));
     check('デバッグ表記が残っていない', !/DEBUG|デバッグ|保存されません/.test(diff));
     const tiers = await page.evaluate(() => [...document.querySelectorAll('[data-extreme-difficulties] article')].map(a => ({

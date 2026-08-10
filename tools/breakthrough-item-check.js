@@ -114,7 +114,7 @@ check('31回で打ち止め', steps === 31, `${steps}回`);
 check('31回ぶんの合計は620個', spent === 620, String(spent));
 
 // ===== 5. クリア報酬 =====
-const want = { Beginner: 1, Easy: 2, Normal: 3, Hard: 5, Expert: 7, Master: 10, GrandMaster: 15, Hell: 20, Legend: 30 };
+const want = { Beginner: 1, Easy: 2, Normal: 3, Hard: 5, Expert: 7, Master: 10, GrandMaster: 15, Hell: 20, Legend: 25 };
 for (const [diff, n] of Object.entries(want)) {
   check(`${DIFFICULTY_SETTINGS[diff].label}のクリア報酬は${n}個`, clearPsycheReward(diff) === n, String(clearPsycheReward(diff)));
 }
@@ -131,7 +131,8 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
     (code.match(/awardClearPsyche\(\)/g) || []).length === 1
     && (code.match(/const awardClearPsyche = /g) || []).length === 1);
   const clearFrom = code.indexOf('const recordClearOnce');
-  const clearBody = clearFrom > 0 ? code.slice(clearFrom, clearFrom + 900) : '';
+  const clearEnd = code.indexOf('useEffect(', clearFrom);
+  const clearBody = clearFrom > 0 ? code.slice(clearFrom, clearEnd > clearFrom ? clearEnd : clearFrom + 2500) : '';
   check(`${label}: クリアの二重記録を止める鍵より後で配る`,
     /clearRecordedRef\.current = true;[\s\S]{0,400}awardClearPsyche\(\)/.test(clearBody));
   check(`${label}: チャレンジ・クイックの分岐より前で配る`,
