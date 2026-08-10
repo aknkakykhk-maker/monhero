@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 09:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 10:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -845,12 +845,16 @@ const BGM_TRACKS = [
 ];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
-// battle/dullahan はチャレンジモード用、quickBattle/quickDullahan はクイックモード用。
-// クイックのデュラハン戦は専用曲が無いため、チャレンジと同じデュラハン曲を既定にする。
-// proBattle/extremeBattle は追加前に流れていたチャレンジ曲へフォールバックし、既存ユーザーの体験を維持する。
-// 新しいキーを足しても normalizeBgmArrangement が既定値で補うので、既存ユーザーの設定は壊れない
-const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', quickBattle:'ichika_battle', proBattle:'original_battle', extremeBattle:'original_battle', dullahan:'original_dullahan', quickDullahan:'original_dullahan', boss:'original_boss', clear:'ichika_clear' });
-const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => [scene, BGM_TRACK_BY_ID[value?.[scene]] ? value[scene] : fallback]));
+// 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
+// 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
+const DEFAULT_BGM_ARRANGEMENT = Object.freeze({ home:'original_home', management:'original_profile', market:'original_market', temple:'original_fusion', trainingMenu:'original_home', trainingBoard:'original_home', battle:'original_battle', dullahan:'original_dullahan', boss:'original_boss', quickBattle:'ichika_battle', quickDullahan:'original_dullahan', quickMoo:'original_boss', proBattle:'original_battle', proDullahan:'original_dullahan', proMoo:'original_boss', extremeBattle:'original_battle', extremeDullahan:'original_dullahan', extremeMoo:'original_boss', clear:'ichika_clear' });
+const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({ quickMoo:'boss', proDullahan:'dullahan', proMoo:'boss', extremeDullahan:'dullahan', extremeMoo:'boss' });
+const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => {
+  const saved = value?.[scene];
+  if (BGM_TRACK_BY_ID[saved]) return [scene, saved];
+  const legacySaved = value?.[BGM_ARRANGEMENT_LEGACY_FALLBACK[scene]];
+  return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
+}));
 
 const Audio_ = (() => {
   let Tone = null, ready = false, loading = null, started = false;
@@ -4164,6 +4168,7 @@ function MonsterHeroGame() {
   const [showAudioSettings, setShowAudioSettings] = useState(false); // 音量設定モーダルの表示状態
   const [showBgmArrangement, setShowBgmArrangement] = useState(false);
   const [bgmArrangementCategory, setBgmArrangementCategory] = useState('basic');
+  const [bgmArrangementBattleMode, setBgmArrangementBattleMode] = useState('challenge');
   const [bgmArrangement, setBgmArrangement] = useState(DEFAULT_BGM_ARRANGEMENT);
   const [previewTrackId, setPreviewTrackId] = useState(null);
   const [quickMuted, setQuickMuted] = useState(false);
@@ -4723,16 +4728,19 @@ function MonsterHeroGame() {
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return bgmArrangement.home;
     if (BGM_STATE_MAP[state]) return bgmArrangement[BGM_STATE_MAP[state]] || BGM_STATE_MAP[state];
     if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;
-    // デバッグ戦は選択した敵を直接生成するため、WAVE番号だけに頼らず敵IDでもムーを判定する。
-    // デュラハン専用曲はアレンジ設定より優先する既存仕様を維持する。
+    // 専用戦は敵IDとWAVEの両方で判定し、ムー → デュラハン → 通常戦の順に優先する。
+    // デバッグで敵を直接呼び出した場合も、選択中のモードに対応する曲を使う。
     if (state === 'BATTLE') {
-      // 通常戦はモードごとに選べる。デュラハン専用曲とボス(ムー)戦は既存の場面別設定を維持する。
-      const quick = isQuickMode(runMode);
-      if (enemyId === 'Durahan') return quick ? bgmArrangement.quickDullahan : bgmArrangement.dullahan;
-      if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement.boss;
-      if (debugExtremeRef.current) return bgmArrangement.extremeBattle;
-      if (isProMode(runMode)) return bgmArrangement.proBattle;
-      return quick ? bgmArrangement.quickBattle : bgmArrangement.battle;
+      const modeBgm = debugExtremeRef.current
+        ? { normal:'extremeBattle', dullahan:'extremeDullahan', moo:'extremeMoo' }
+        : isProMode(runMode)
+          ? { normal:'proBattle', dullahan:'proDullahan', moo:'proMoo' }
+          : isQuickMode(runMode)
+            ? { normal:'quickBattle', dullahan:'quickDullahan', moo:'quickMoo' }
+            : { normal:'battle', dullahan:'dullahan', moo:'boss' };
+      if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement[modeBgm.moo];
+      if (enemyId === 'Durahan' || currentWave === 9) return bgmArrangement[modeBgm.dullahan];
+      return bgmArrangement[modeBgm.normal];
     }
     if (RUN_PHASE_STATES.includes(state)) return wavesDone ? 'result' : 'enhance';
     return null;
@@ -8722,9 +8730,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   ) : showBgmArrangement ? (
     <div className="mh-title-modal"><div className="mh-title-dialog" style={{maxHeight:'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px)',overflowY:'auto'}}><div className="mh-dialog-head"><h3>BGMアレンジ</h3><button onClick={closeBgmArrangement}><X size={18}/></button></div>{(()=>{const categories=[
       {id:'basic',label:'基本',items:[['home','HOME BGM'],['management','M/B管理 BGM'],['clear','ゲームクリア BGM']]},
-      {id:'battle',label:'バトル',items:[['battle','チャレンジモード BGM'],['quickBattle','クイックモード BGM'],['proBattle','プロモード BGM'],['extremeBattle','極限チャレンジ BGM']]},
-      {id:'other',label:'その他',items:[['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM'],['dullahan','チャレンジ デュラハン戦 BGM'],['quickDullahan','クイック デュラハン戦 BGM'],['boss','ボスバトル BGM']]},
-    ];const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-3 gap-2 mb-4">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border text-xs font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div><div className="space-y-4">{selected.items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="flex gap-2 mt-1"><select aria-label={label} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="shrink-0 min-w-[58px] min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
+      {id:'battle',label:'バトル'},
+      {id:'other',label:'その他',items:[['market','マーケット BGM'],['temple','神殿 BGM'],['trainingMenu','修行メニュー BGM'],['trainingBoard','修行中 BGM']]},
+    ];const battleModes=[
+      {id:'challenge',label:'チャレンジ',items:[['battle','通常戦 BGM'],['dullahan','デュラハン戦 BGM'],['boss','ムー戦 BGM']]},
+      {id:'quick',label:'クイック',items:[['quickBattle','通常戦 BGM'],['quickDullahan','デュラハン戦 BGM'],['quickMoo','ムー戦 BGM']]},
+      {id:'pro',label:'プロ',items:[['proBattle','通常戦 BGM'],['proDullahan','デュラハン戦 BGM'],['proMoo','ムー戦 BGM']]},
+      {id:'extreme',label:'極限',items:[['extremeBattle','通常戦 BGM'],['extremeDullahan','デュラハン戦 BGM'],['extremeMoo','ムー戦 BGM']]},
+    ];const selected=categories.find(category=>category.id===bgmArrangementCategory)||categories[0];const selectedMode=battleModes.find(mode=>mode.id===bgmArrangementBattleMode)||battleModes[0];const items=selected.id==='battle'?selectedMode.items:selected.items;return <><div role="tablist" aria-label="BGMカテゴリ" className="grid grid-cols-3 gap-2 mb-3">{categories.map(category=><button key={category.id} type="button" role="tab" aria-selected={selected.id===category.id} onClick={()=>setBgmArrangementCategory(category.id)} className={`min-h-[44px] rounded-xl border text-xs font-black ${selected.id===category.id?'bg-indigo-600 border-indigo-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{category.label}</button>)}</div>{selected.id==='battle'&&<div role="tablist" aria-label="バトルモード" className="grid grid-cols-4 gap-1 mb-4">{battleModes.map(mode=><button key={mode.id} type="button" role="tab" aria-selected={selectedMode.id===mode.id} onClick={()=>setBgmArrangementBattleMode(mode.id)} className={`min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id===mode.id?'bg-fuchsia-700 border-fuchsia-300 text-white':'bg-slate-900 border-white/15 text-slate-300'}`}>{mode.label}</button>)}</div>}<div className="space-y-4">{items.map(([scene,label])=><label key={scene} className="block text-left"><span className="text-xs font-black text-slate-300">{label}</span><div className="flex gap-2 mt-1"><select aria-label={`${selected.id==='battle'?`${selectedMode.label} `:''}${label}`} value={bgmArrangement[scene]} onChange={e=>changeBgmArrangement(scene,e.target.value)} className="min-w-0 min-h-[44px] flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white">{BGM_TRACKS.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select><button type="button" aria-label={`${label}を試聴`} onClick={()=>toggleBgmPreview(bgmArrangement[scene])} className="shrink-0 min-w-[58px] min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black">{previewTrackId===bgmArrangement[scene]?'停止':'試聴'}</button></div></label>)}</div></>})()}<button className="mh-dialog-choice mt-4" onClick={()=>setBgmArrangement({...DEFAULT_BGM_ARRANGEMENT})}>デフォルトに戻す</button></div></div>
   ) : showBackup ? (
     <div className="mh-title-modal"><div className="mh-title-dialog"><div className="mh-dialog-head"><h3>データ引き継ぎ</h3><button onClick={()=>setShowBackup(false)}><X size={18}/></button></div><div className="mh-changelog-tabs"><button className={backupTab==='export'?'active':''} onClick={()=>setBackupTab('export')}>バックアップ</button><button className={backupTab==='import'?'active':''} onClick={()=>setBackupTab('import')}>復元</button></div>{backupTab==='export'?<>{backupCode&&<textarea readOnly value={backupCode}/>}<button className="mh-dialog-choice" onClick={generateBackupCode}>バックアップコードを作成</button></>:<><textarea value={restoreInput} onChange={e=>setRestoreInput(e.target.value)} placeholder="バックアップコードを貼り付け"/><button className="mh-dialog-choice" onClick={restoreFromBackupCode}>このコードで復元する</button></>}{restoreMsg&&<p>{restoreMsg}</p>}</div></div>
   ) : null;

@@ -338,21 +338,21 @@ check('ヘルプにバトルモードの説明がある', helpSrc.includes("id: 
 // --- ⑥ BGM ---
 for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) {
   const flat = code.replace(/\s+/g, '');
-  check(`${label}: 通常戦の曲をモードで切り替える`, flat.includes('returnquick?bgmArrangement.quickBattle:bgmArrangement.battle'));
-  check(`${label}: デュラハン戦の曲もモードで切り替える`, flat.includes("enemyId==='Durahan')returnquick?bgmArrangement.quickDullahan:bgmArrangement.dullahan"));
+  check(`${label}: 通常戦の曲をモードで切り替える`, flat.includes('returnbgmArrangement[modeBgm.normal]'));
+  check(`${label}: 専用戦の曲もモードで切り替える`, flat.includes("enemyId==='Durahan'||currentWave===9)returnbgmArrangement[modeBgm.dullahan]") && flat.includes("enemyId==='Moo'||currentWave===10)returnbgmArrangement[modeBgm.moo]"));
 }
 check('モード別BGMの既定値がある',
   has("quickBattle:'ichika_battle'") && has("proBattle:'original_battle'") && has("extremeBattle:'original_battle'")
-    && has("dullahan:'original_dullahan'") && has("quickDullahan:'original_dullahan'"));
-check('新しいBGM項目は既存設定が無くても既定値で補われる', has('const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT)'));
-check('BGMアレンジ画面にモード別4項目と既存の専用戦項目がそろっている',
-  has("['battle','チャレンジモード BGM']") && has("['quickBattle','クイックモード BGM']")
-    && has("['proBattle','プロモード BGM']") && has("['extremeBattle','極限チャレンジ BGM']")
-    && has("['dullahan','チャレンジ デュラハン戦 BGM']") && has("['quickDullahan','クイック デュラハン戦 BGM']"));
+    && ['dullahan','quickDullahan','proDullahan','extremeDullahan'].every(key=>has(`${key}:'original_dullahan'`))
+    && ['boss','quickMoo','proMoo','extremeMoo'].every(key=>has(`${key}:'original_boss'`)));
+check('新しいBGM項目は既存設定から補われる', has("proDullahan:'dullahan'") && has("extremeMoo:'boss'") && has('BGM_TRACK_BY_ID[legacySaved]'));
+check('BGMアレンジ画面に4モード×3用途がそろっている',
+  ['battle','dullahan','boss','quickBattle','quickDullahan','quickMoo','proBattle','proDullahan','proMoo','extremeBattle','extremeDullahan','extremeMoo']
+    .every(key => has(`[\'${key}\',`)) && has('aria-label="バトルモード"'));
 const bgmBlock = grab(source, "if (state === 'BATTLE') {", "if (RUN_PHASE_STATES.includes(state))");
-check('プロと極限は個別の通常戦BGMになる',
-  bgmBlock.includes('if (debugExtremeRef.current) return bgmArrangement.extremeBattle;')
-    && bgmBlock.includes('if (isProMode(runMode)) return bgmArrangement.proBattle;'));
+check('極限デバッグとプロは3用途すべて専用キーを使う',
+  bgmBlock.includes("normal:'extremeBattle', dullahan:'extremeDullahan', moo:'extremeMoo'")
+    && bgmBlock.includes("normal:'proBattle', dullahan:'proDullahan', moo:'proMoo'"));
 
 // --- ⑦ プロ基盤 ---
 // 第1段階では、本番のバトル画面にプロのタブを出さない(新しい入口とセットで公開する)
