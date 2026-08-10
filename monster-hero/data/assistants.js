@@ -60,6 +60,22 @@ const ASSISTANTS = [
 ];
 const DEFAULT_ASSISTANT_ID = 'mua';
 
+// ---------- 正式アップデートの初回案内 ----------
+// BUILD_DATE や更新履歴から自動生成しない。プレイヤーへ知らせたい正式公開だけをここへ追加する。
+// pages は1件の更新にまとめて順番に表示でき、destination/buttonLabel は必要な案内だけ指定する。
+// debugOnly はデバッグ設定からの検証専用で、通常ログインの候補には絶対に入らない。
+const ASSISTANT_UPDATE_NOTICES = [
+  {
+    id: 'update_notice_debug_v1', enabled: true, debugOnly: true,
+    title: 'アップデート通知テスト', expression: 'excited',
+    pages: [
+      '新しい遊びが増えたときは、こんな感じであたしが一度だけ知らせるよ♪',
+      'まとめて追加された内容も、この中でサクッと確認できるから安心してね！',
+    ],
+    destination: 'market', buttonLabel: 'マーケットを見る',
+  },
+];
+
 // 指定された表情が用意されていなければ既定の表情へ落とす(画像切れを起こさないため)
 const assistantExpressionName = (who, expression) => {
   const list = (who && Array.isArray(who.expressions)) ? who.expressions : ASSISTANT_EXPRESSIONS;
