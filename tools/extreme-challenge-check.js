@@ -117,7 +117,9 @@ for (const name of ['chaosDifficulty', 'ultimateDifficulty', 'infinityDifficulty
   assert(sceneLines(name) >= 5, `the ${name} preview scene needs at least 5 lines`);
 }
 assert(source.includes('data-extreme-difficulty-card={setting.id}') && source.includes('h-[382px] flex flex-col'), 'all five EXTREME tier cards must share one fixed outer height');
-assert(source.includes("['自動回復','＋50% / −200%']") && source.includes("['距離適性','＋50% / −200%']") && source.includes('whitespace-nowrap'), 'NIGHTMARE rule labels and values must remain short and unbroken');
+assert(source.includes("['自動回復補正','＋50% / −200%']") && source.includes("['距離適性補正','＋50% / −200%']") && source.includes('grid-cols-[6.5rem_1fr]') && source.includes('whitespace-nowrap'), 'NIGHTMARE rule labels and values must remain aligned and unbroken');
+assert(source.includes('有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。'), 'NIGHTMARE card must use the approved natural description');
+assert(source.includes('h-[42px] shrink-0') && source.includes('h-[51px] shrink-0') && source.includes('mt-auto pt-1.5'), 'available tier cards must reserve equal record, rule, and footer regions');
 for (const expected of ['EXTREMEの次', '有利な補正', '不利な補正', '距離適性', 'WAVEごとの戦い方']) assert(assistants.includes(expected), `NIGHTMARE assistant guidance must include: ${expected}`);
 const modeScene = assistants.slice(assistants.indexOf('extremeChallenge: ['), assistants.indexOf('extremeDifficulty: ['));
 assert(!modeScene.includes('ブリーダーカード'), 'the mode scene must not explain the EXTREME-only breeder-card rule');
@@ -132,8 +134,9 @@ assert(help.includes("id: 'extreme-challenge'") && help.includes("EXTREME_DIFFIC
 assert(help.includes("{ t:'data', id:'extremeDifficulties' }") && source.includes("case 'extremeDifficulties':"), 'the difficulty table must be generated from the real data');
 assert(changelog.includes('極限チャレンジのモード説明を再調整しました') && !changelog.includes('極限チャレンジのモード説明をデバッグ'), 'the extreme changelog must retain the mode-copy adjustment');
 assert(changelog.includes('極限チャレンジに全WAVE詳細を追加しました'), 'the latest extreme changelog must describe WAVE details');
-const latestVisibleUpdate = changelog.match(/const CHANGELOG = \[\s*\{([\s\S]*?)\n  \},/)?.[1] || '';
-assert(latestVisibleUpdate.includes('type: "update"') && latestVisibleUpdate.includes('items: ['), 'the latest NIGHTMARE entry must use the schema rendered by the in-game update screen');
+const nightmareUpdateStart = changelog.indexOf('title: "極限チャレンジに新難易度 NIGHTMARE を追加"');
+const latestVisibleUpdate = changelog.slice(changelog.lastIndexOf('  {', nightmareUpdateStart), changelog.indexOf('\n  },', nightmareUpdateStart));
+assert(latestVisibleUpdate.includes('type: "update"') && latestVisibleUpdate.includes('items: ['), 'the official NIGHTMARE entry must use the schema rendered by the in-game update screen');
 for (const expected of ['極限チャレンジに新難易度 NIGHTMARE を追加', 'EXTREMEをクリアすると解放', '独自の特殊ルール']) {
   assert(latestVisibleUpdate.includes(expected), `the visible NIGHTMARE changelog must include: ${expected}`);
 }

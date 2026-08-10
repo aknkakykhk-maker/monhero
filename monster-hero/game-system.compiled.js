@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 660c8db25ceb9ff7
+// source-sha256: 8a570b91fd8b04ee
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 19:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 20:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6088,6 +6088,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   xp: 25,
   gold: 7.5,
   psyche: 75,
+  description: '通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。',
   specialRules: Object.freeze({
     breederCardEffect: 0.5
   })
@@ -6101,13 +6102,13 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   xp: 30,
   gold: 10,
   psyche: 100,
-  description: '有利な補正が弱く、不利な補正が重くなる悪夢級。距離適性とWAVEごとの戦い方が重要。',
+  description: '有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。',
   specialRules: Object.freeze({
     waveEnhancement: 0.5,
     positiveModifier: 0.5,
     negativeModifier: 2.0
   }),
-  plannedRules: Object.freeze([['WAVE後強化', '50%'], ['自動回復', '＋50% / −200%'], ['距離適性', '＋50% / −200%']])
+  plannedRules: Object.freeze([['WAVE後強化', '50%'], ['自動回復補正', '＋50% / −200%'], ['距離適性補正', '＋50% / −200%']])
 }, {
   id: 'CHAOS',
   label: 'CHAOS',
@@ -18737,11 +18738,11 @@ function MonsterHeroGame() {
             boxShadow: active ? '0 0 30px rgba(232,121,249,.35)' : 'none'
           }
         }, /*#__PURE__*/React.createElement("div", {
-          className: "text-center text-[7px] tracking-[.2em] text-slate-400 font-black"
+          className: "text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black"
         }, "BATTLE DIFFICULTY"), /*#__PURE__*/React.createElement("h3", {
           className: "text-center text-lg font-black leading-tight text-fuchsia-200"
         }, setting.label), /*#__PURE__*/React.createElement("div", {
-          className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
+          className: "mt-1 h-[42px] shrink-0 rounded-xl bg-black/45 px-2.5 py-1"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
         }, setting.available ? `${setting.label}の記録` : '難易度情報'), /*#__PURE__*/React.createElement("b", {
@@ -18749,34 +18750,34 @@ function MonsterHeroGame() {
         }, setting.available && unlocked ? `${(setting.id === 'NIGHTMARE' ? nightmareBestScore : extremeBestScore).toLocaleString()} pt` : '？？？'), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
         }, setting.available && unlocked ? `クリア ${setting.id === 'NIGHTMARE' ? nightmareClearCount : extremeClearCount}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : '未実装・選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-          className: "grid grid-cols-3 gap-1 mt-1.5"
+          className: "grid grid-cols-3 gap-1 mt-1"
         }, [['敵強度', `×${setting.power}`], ['スコア', `×${setting.score}`], ['ダイヤ', `×${setting.gold}`]].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
-          className: "rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap"
+          className: "rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap"
         }, label, /*#__PURE__*/React.createElement("b", {
-          className: "block text-xs text-white"
+          className: "block text-[11px] leading-tight text-white"
         }, value)))), /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-2 gap-1 mt-1"
         }, [['経験値', `×${setting.xp}`], ['虹のプシュケー', setting.psyche]].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
-          className: "rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap"
+          className: "rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap"
         }, label, /*#__PURE__*/React.createElement("b", {
-          className: "block text-xs text-white"
-        }, value)))), setting.description && /*#__PURE__*/React.createElement("p", {
-          className: "mt-1 rounded-xl bg-black/30 px-2 py-1 text-[9px] leading-snug text-slate-200"
+          className: "block text-[11px] leading-tight text-white"
+        }, value)))), /*#__PURE__*/React.createElement("p", {
+          className: "mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200"
         }, setting.description), setting.id === 'EXTREME' ? /*#__PURE__*/React.createElement("div", {
-          className: "mt-1.5 rounded-xl border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1.5 text-center shadow-[0_0_18px_rgba(232,121,249,.28)]"
+          className: "mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] font-black text-amber-300"
         }, "\u26A0 EXTREME\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("b", {
-          className: "block text-xs text-white"
+          className: "block text-[11px] text-white whitespace-nowrap"
         }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u52B9\u679C 50%")) : /*#__PURE__*/React.createElement("div", {
-          className: "mt-1 rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-1"
+          className: "mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"
         }, /*#__PURE__*/React.createElement("small", {
-          className: "block text-center text-[8px] font-black text-amber-300"
+          className: "block text-center text-[8px] leading-tight font-black text-amber-300"
         }, "\u26A0 NIGHTMARE\u7279\u6B8A\u30EB\u30FC\u30EB"), setting.plannedRules.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
-          className: "mt-0.5 grid grid-cols-[5.25rem_1fr] items-center gap-1 text-[9px] leading-tight whitespace-nowrap"
+          className: "grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[12px] whitespace-nowrap"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-300"
         }, label), /*#__PURE__*/React.createElement("b", {
