@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 57cba50aabd30379
+// source-sha256: 0507da69af7ae990
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 09:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 10:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1455,10 +1455,8 @@ const BGM_TRACKS = [{
 }];
 const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, track]));
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
-// battle/dullahan はチャレンジモード用、quickBattle/quickDullahan はクイックモード用。
-// クイックのデュラハン戦は専用曲が無いため、チャレンジと同じデュラハン曲を既定にする。
-// proBattle/extremeBattle は追加前に流れていたチャレンジ曲へフォールバックし、既存ユーザーの体験を維持する。
-// 新しいキーを足しても normalizeBgmArrangement が既定値で補うので、既存ユーザーの設定は壊れない
+// 既存の battle / dullahan / boss はチャレンジ用として維持し、保存済み設定との互換性を守る。
+// 追加したモード別専用戦キーは、旧セーブでは従来その場面で使っていた dullahan / boss の選択を継承する。
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   home: 'original_home',
   management: 'original_profile',
@@ -1467,15 +1465,32 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   trainingMenu: 'original_home',
   trainingBoard: 'original_home',
   battle: 'original_battle',
-  quickBattle: 'ichika_battle',
-  proBattle: 'original_battle',
-  extremeBattle: 'original_battle',
   dullahan: 'original_dullahan',
-  quickDullahan: 'original_dullahan',
   boss: 'original_boss',
+  quickBattle: 'ichika_battle',
+  quickDullahan: 'original_dullahan',
+  quickMoo: 'original_boss',
+  proBattle: 'original_battle',
+  proDullahan: 'original_dullahan',
+  proMoo: 'original_boss',
+  extremeBattle: 'original_battle',
+  extremeDullahan: 'original_dullahan',
+  extremeMoo: 'original_boss',
   clear: 'ichika_clear'
 });
-const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => [scene, BGM_TRACK_BY_ID[value?.[scene]] ? value[scene] : fallback]));
+const BGM_ARRANGEMENT_LEGACY_FALLBACK = Object.freeze({
+  quickMoo: 'boss',
+  proDullahan: 'dullahan',
+  proMoo: 'boss',
+  extremeDullahan: 'dullahan',
+  extremeMoo: 'boss'
+});
+const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT).map(([scene, fallback]) => {
+  const saved = value?.[scene];
+  if (BGM_TRACK_BY_ID[saved]) return [scene, saved];
+  const legacySaved = value?.[BGM_ARRANGEMENT_LEGACY_FALLBACK[scene]];
+  return [scene, BGM_TRACK_BY_ID[legacySaved] ? legacySaved : fallback];
+}));
 const Audio_ = (() => {
   let Tone = null,
     ready = false,
@@ -8161,6 +8176,7 @@ function MonsterHeroGame() {
   const [showAudioSettings, setShowAudioSettings] = useState(false); // 音量設定モーダルの表示状態
   const [showBgmArrangement, setShowBgmArrangement] = useState(false);
   const [bgmArrangementCategory, setBgmArrangementCategory] = useState('basic');
+  const [bgmArrangementBattleMode, setBgmArrangementBattleMode] = useState('challenge');
   const [bgmArrangement, setBgmArrangement] = useState(DEFAULT_BGM_ARRANGEMENT);
   const [previewTrackId, setPreviewTrackId] = useState(null);
   const [quickMuted, setQuickMuted] = useState(false);
@@ -8988,16 +9004,29 @@ function MonsterHeroGame() {
     if (state === 'HOME' || state === 'PROFILE' || state === 'ITEM_INVENTORY') return bgmArrangement.home;
     if (BGM_STATE_MAP[state]) return bgmArrangement[BGM_STATE_MAP[state]] || BGM_STATE_MAP[state];
     if (PROFILE_BGM_STATES.includes(state)) return bgmArrangement.management;
-    // デバッグ戦は選択した敵を直接生成するため、WAVE番号だけに頼らず敵IDでもムーを判定する。
-    // デュラハン専用曲はアレンジ設定より優先する既存仕様を維持する。
+    // 専用戦は敵IDとWAVEの両方で判定し、ムー → デュラハン → 通常戦の順に優先する。
+    // デバッグで敵を直接呼び出した場合も、選択中のモードに対応する曲を使う。
     if (state === 'BATTLE') {
-      // 通常戦はモードごとに選べる。デュラハン専用曲とボス(ムー)戦は既存の場面別設定を維持する。
-      const quick = isQuickMode(runMode);
-      if (enemyId === 'Durahan') return quick ? bgmArrangement.quickDullahan : bgmArrangement.dullahan;
-      if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement.boss;
-      if (debugExtremeRef.current) return bgmArrangement.extremeBattle;
-      if (isProMode(runMode)) return bgmArrangement.proBattle;
-      return quick ? bgmArrangement.quickBattle : bgmArrangement.battle;
+      const modeBgm = debugExtremeRef.current ? {
+        normal: 'extremeBattle',
+        dullahan: 'extremeDullahan',
+        moo: 'extremeMoo'
+      } : isProMode(runMode) ? {
+        normal: 'proBattle',
+        dullahan: 'proDullahan',
+        moo: 'proMoo'
+      } : isQuickMode(runMode) ? {
+        normal: 'quickBattle',
+        dullahan: 'quickDullahan',
+        moo: 'quickMoo'
+      } : {
+        normal: 'battle',
+        dullahan: 'dullahan',
+        moo: 'boss'
+      };
+      if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement[modeBgm.moo];
+      if (enemyId === 'Durahan' || currentWave === 9) return bgmArrangement[modeBgm.dullahan];
+      return bgmArrangement[modeBgm.normal];
     }
     if (RUN_PHASE_STATES.includes(state)) return wavesDone ? 'result' : 'enhance';
     return null;
@@ -15613,18 +15642,36 @@ function MonsterHeroGame() {
       items: [['home', 'HOME BGM'], ['management', 'M/B管理 BGM'], ['clear', 'ゲームクリア BGM']]
     }, {
       id: 'battle',
-      label: 'バトル',
-      items: [['battle', 'チャレンジモード BGM'], ['quickBattle', 'クイックモード BGM'], ['proBattle', 'プロモード BGM'], ['extremeBattle', '極限チャレンジ BGM']]
+      label: 'バトル'
     }, {
       id: 'other',
       label: 'その他',
-      items: [['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM'], ['dullahan', 'チャレンジ デュラハン戦 BGM'], ['quickDullahan', 'クイック デュラハン戦 BGM'], ['boss', 'ボスバトル BGM']]
+      items: [['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM']]
+    }];
+    const battleModes = [{
+      id: 'challenge',
+      label: 'チャレンジ',
+      items: [['battle', '通常戦 BGM'], ['dullahan', 'デュラハン戦 BGM'], ['boss', 'ムー戦 BGM']]
+    }, {
+      id: 'quick',
+      label: 'クイック',
+      items: [['quickBattle', '通常戦 BGM'], ['quickDullahan', 'デュラハン戦 BGM'], ['quickMoo', 'ムー戦 BGM']]
+    }, {
+      id: 'pro',
+      label: 'プロ',
+      items: [['proBattle', '通常戦 BGM'], ['proDullahan', 'デュラハン戦 BGM'], ['proMoo', 'ムー戦 BGM']]
+    }, {
+      id: 'extreme',
+      label: '極限',
+      items: [['extremeBattle', '通常戦 BGM'], ['extremeDullahan', 'デュラハン戦 BGM'], ['extremeMoo', 'ムー戦 BGM']]
     }];
     const selected = categories.find(category => category.id === bgmArrangementCategory) || categories[0];
+    const selectedMode = battleModes.find(mode => mode.id === bgmArrangementBattleMode) || battleModes[0];
+    const items = selected.id === 'battle' ? selectedMode.items : selected.items;
     return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       role: "tablist",
       "aria-label": "BGM\u30AB\u30C6\u30B4\u30EA",
-      className: "grid grid-cols-3 gap-2 mb-4"
+      className: "grid grid-cols-3 gap-2 mb-3"
     }, categories.map(category => /*#__PURE__*/React.createElement("button", {
       key: category.id,
       type: "button",
@@ -15632,9 +15679,20 @@ function MonsterHeroGame() {
       "aria-selected": selected.id === category.id,
       onClick: () => setBgmArrangementCategory(category.id),
       className: `min-h-[44px] rounded-xl border text-xs font-black ${selected.id === category.id ? 'bg-indigo-600 border-indigo-300 text-white' : 'bg-slate-900 border-white/15 text-slate-300'}`
-    }, category.label))), /*#__PURE__*/React.createElement("div", {
+    }, category.label))), selected.id === 'battle' && /*#__PURE__*/React.createElement("div", {
+      role: "tablist",
+      "aria-label": "\u30D0\u30C8\u30EB\u30E2\u30FC\u30C9",
+      className: "grid grid-cols-4 gap-1 mb-4"
+    }, battleModes.map(mode => /*#__PURE__*/React.createElement("button", {
+      key: mode.id,
+      type: "button",
+      role: "tab",
+      "aria-selected": selectedMode.id === mode.id,
+      onClick: () => setBgmArrangementBattleMode(mode.id),
+      className: `min-h-[44px] rounded-xl border px-1 text-[10px] font-black ${selectedMode.id === mode.id ? 'bg-fuchsia-700 border-fuchsia-300 text-white' : 'bg-slate-900 border-white/15 text-slate-300'}`
+    }, mode.label))), /*#__PURE__*/React.createElement("div", {
       className: "space-y-4"
-    }, selected.items.map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
+    }, items.map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
       key: scene,
       className: "block text-left"
     }, /*#__PURE__*/React.createElement("span", {
@@ -15642,10 +15700,10 @@ function MonsterHeroGame() {
     }, label), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-2 mt-1"
     }, /*#__PURE__*/React.createElement("select", {
-      "aria-label": label,
+      "aria-label": `${selected.id === 'battle' ? `${selectedMode.label} ` : ''}${label}`,
       value: bgmArrangement[scene],
       onChange: e => changeBgmArrangement(scene, e.target.value),
-      className: "min-w-0 flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"
+      className: "min-w-0 min-h-[44px] flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"
     }, BGM_TRACKS.map(track => /*#__PURE__*/React.createElement("option", {
       key: track.id,
       value: track.id
