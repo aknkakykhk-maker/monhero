@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f02d3ec012f14d83
+// source-sha256: 3567766ce54638b8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 03:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 03:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -517,6 +517,62 @@ const BREAKTHROUGH_ITEM_STEP = 1;
 const breakthroughItemCost = nextCount => {
   const n = Math.max(1, Math.floor(Number(nextCount) || 1));
   return BREAKTHROUGH_ITEM_BASE + (n - 1) * BREAKTHROUGH_ITEM_STEP;
+};
+// 合体XPを全量受け取るための限界突破を、既存の上限上昇・費用式だけでまとめて試算する。
+// 合体確定時にも同じ結果を使い、表示と実際の消費がずれないようにする。
+const buildFusionBreakthroughPlan = ({
+  masu,
+  fusionXp = 0,
+  gold = 0,
+  psycheOwned = 0
+}) => {
+  const normalized = normalizeMasuProgression(masu);
+  const beforeXp = cappedBondXp(normalized);
+  const gain = Math.max(0, Math.floor(Number(fusionXp) || 0));
+  const uncappedXp = beforeXp + gain;
+  const plannedLevel = bondLevelInfo(uncappedXp).level;
+  let levelCap = normalized.levelCap;
+  let rebirthCount = normalized.rebirthCount;
+  let psycheCost = 0;
+  let diamondCost = 0;
+  let gainedPoints = 0;
+  while (plannedLevel > levelCap && levelCap < MAX_MASU_LEVEL_CAP) {
+    rebirthCount += 1;
+    psycheCost += breakthroughItemCost(rebirthCount);
+    diamondCost += masuRebirthCost(levelCap);
+    gainedPoints += rebirthCount === 1 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS;
+    levelCap = levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP ? MAX_MASU_LEVEL_CAP : Math.min(MAX_MASU_LEVEL_CAP, levelCap + BREAKTHROUGH_LEVEL_CAP_GAIN);
+  }
+  const count = rebirthCount - normalized.rebirthCount;
+  const psycheHave = ownedItemCount({
+    [BREAKTHROUGH_ITEM_ID]: psycheOwned
+  }, BREAKTHROUGH_ITEM_ID);
+  const goldHave = donationDiamondValue(gold);
+  return {
+    count,
+    plannedLevel,
+    levelCap,
+    rebirthCount,
+    psycheCost,
+    diamondCost,
+    gainedPoints,
+    psycheHave,
+    goldHave,
+    psycheShortage: Math.max(0, psycheCost - psycheHave),
+    diamondShortage: Math.max(0, diamondCost - goldHave),
+    canReceiveAll: plannedLevel <= levelCap,
+    canAfford: plannedLevel <= levelCap && psycheHave >= psycheCost && goldHave >= diamondCost,
+    nextPsyche: psycheHave - psycheCost,
+    nextGold: goldHave - diamondCost,
+    nextMasu: {
+      ...normalized,
+      levelCap,
+      rebirthCount,
+      distAptPoints: Math.max(0, Math.floor(Number(normalized.distAptPoints) || 0)) + gainedPoints,
+      // まとめて突破するときは従来の「あとで決める」と同じく、固有技ポイントを保持する。
+      uniqueSkillPoints: Math.max(0, Math.floor(Number(normalized.uniqueSkillPoints) || 0)) + count
+    }
+  };
 };
 const ownedItemCount = (ownedItems, itemId) => Math.max(0, Math.floor(Number(ownedItems?.[itemId]) || 0));
 const REINCARNATE_MIN_LEVEL = 100;
@@ -11443,7 +11499,7 @@ function MonsterHeroGame() {
   // fusionInheritUniqueがtrueなら、副の固有技を「継承した固有技」としてinheritedUniquesに記録する。
   // 能力値・距離適性・副の強化ポイントは引き継がないが、絆レベルが上がったぶんの
   // 強化ポイントは通常のレベルアップと同じように主へ配る。
-  const executeMasuFusion = () => {
+  const executeMasuFusion = async (withBreakthrough = false) => {
     if (fusionProcessingRef.current) return null;
     fusionProcessingRef.current = true;
     const main = getMasuMon(fusionMainId);
@@ -11458,12 +11514,19 @@ function MonsterHeroGame() {
     const mainLvl = masuBondLevelInfo(main);
     const subLvl = masuBondLevelInfo(sub);
     const cost = masuFusionCost(mainLvl.level, subLvl.level, fusionInheritUnique);
-    if (gold < cost) {
+    const gainedXp = cappedBondXp(sub);
+    const breakthroughPlan = buildFusionBreakthroughPlan({
+      masu: main,
+      fusionXp: gainedXp,
+      gold: gold - cost,
+      psycheOwned: ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID)
+    });
+    if (gold < cost || withBreakthrough && (breakthroughPlan.count < 1 || !breakthroughPlan.canAfford)) {
       fusionProcessingRef.current = false;
       return null;
     }
-    const gainedXp = cappedBondXp(sub);
-    const afterXp = cappedBondXp(main, gainedXp);
+    const fusionMain = withBreakthrough ? breakthroughPlan.nextMasu : main;
+    const afterXp = cappedBondXp(fusionMain, gainedXp);
     const before = mainLvl;
     const after = bondLevelInfo(afterXp);
     const gainedLevels = after.level - before.level;
@@ -11487,26 +11550,39 @@ function MonsterHeroGame() {
       inherited: !!inheritedUnique,
       timestamp: Date.now()
     };
-    setMasuMons(prev => {
-      const next = prev.filter(m => m.id !== sub.id).map(m => {
-        if (m.id !== main.id) return m;
-        const advanced = applyBondXpGain(m, gainedXp);
-        return {
-          ...advanced.masu,
-          fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + advanced.gainedLevels,
-          fusionHistory: [...(m.fusionHistory || []), historyEntry],
-          ...(inheritedUnique ? {
-            inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique]
-          } : {})
-        };
-      });
-      storeSet('mh_masu_mons', next, false);
-      return next;
+    const next = masuMonsRef.current.filter(m => m.id !== sub.id).map(m => {
+      if (m.id !== main.id) return m;
+      const prepared = withBreakthrough ? {
+        ...m,
+        ...breakthroughPlan.nextMasu
+      } : m;
+      const advanced = applyBondXpGain(prepared, gainedXp);
+      return {
+        ...advanced.masu,
+        fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + advanced.gainedLevels,
+        fusionHistory: [...(m.fusionHistory || []), historyEntry],
+        ...(inheritedUnique ? {
+          inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique]
+        } : {})
+      };
     });
-    removeMasuFromAllPartySets(sub.id);
-    const goldAfter = gold - cost;
+    const goldAfter = gold - cost - (withBreakthrough ? breakthroughPlan.diamondCost : 0);
+    const nextItems = withBreakthrough ? {
+      ...ownedItemsRef.current,
+      [BREAKTHROUGH_ITEM_ID]: breakthroughPlan.nextPsyche
+    } : ownedItemsRef.current;
+    try {
+      await Promise.all([storeSet('mh_masu_mons', next, false), storeSet('mh_gold', goldAfter, false), ...(withBreakthrough ? [storeSet('mh_owned_items', nextItems, false)] : [])]);
+    } catch {
+      fusionProcessingRef.current = false;
+      return null;
+    }
+    masuMonsRef.current = next;
+    ownedItemsRef.current = nextItems;
+    setMasuMons(next);
     setGold(goldAfter);
-    storeSet('mh_gold', goldAfter, false);
+    if (withBreakthrough) setOwnedItems(nextItems);
+    removeMasuFromAllPartySets(sub.id);
     return {
       mainName: main.name,
       mainIconUrl: mainBase?.iconUrl,
@@ -11523,7 +11599,8 @@ function MonsterHeroGame() {
       gainedXp,
       gainedLevels,
       inherited: !!inheritedUnique,
-      cost
+      cost,
+      breakthroughCount: withBreakthrough ? breakthroughPlan.count : 0
     };
   };
   const resetFusionFlow = () => {
@@ -21336,6 +21413,12 @@ function MonsterHeroGame() {
         const mainCap = normalizeMasuProgression(main).levelCap;
         const subXp = cappedBondXp(sub);
         const beforeXp = cappedBondXp(main);
+        const breakthroughPlan = buildFusionBreakthroughPlan({
+          masu: main,
+          fusionXp: subXp,
+          gold: gold - cost,
+          psycheOwned: ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID)
+        });
         const afterXp = cappedBondXp(main, subXp);
         const afterLvl = bondLevelInfo(afterXp);
         const gainedLevels = afterLvl.level - mainLvl.level;
@@ -21447,7 +21530,29 @@ function MonsterHeroGame() {
           className: "text-[9px] text-amber-200 leading-relaxed mt-2 bg-amber-950/40 border border-amber-500/40 rounded-xl px-2.5 py-2"
         }, /*#__PURE__*/React.createElement("b", {
           className: "text-amber-300"
-        }, "\u4E0A\u9650 Lv.", mainCap, " \u3067\u6B62\u307E\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("br", null), afterLvl.level >= mainCap ? 'すでに上限に届くため、' : '', wastedXp.toLocaleString(), " XP \u306F\u5165\u308A\u307E\u305B\u3093\u3002\u9650\u754C\u7A81\u7834\u3067\u30EC\u30D9\u30EB\u4E0A\u9650\u3092\u4E0A\u3052\u3066\u304B\u3089\u306E\u307B\u3046\u304C\u7121\u99C4\u306B\u306A\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
+        }, "\u3053\u306E\u5408\u4F53\u3067\u306FLv\u4E0A\u9650\u3092\u8D85\u3048\u308B\u7D4C\u9A13\u5024\u3092\u7372\u5F97\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("br", null), "\u901A\u5E38\u5408\u4F53\u3067\u306F\u3001\u8D85\u904E\u3059\u308B ", wastedXp.toLocaleString(), " XP \u306F\u5931\u308F\u308C\u307E\u3059\u3002")), breakthroughPlan.count > 0 && /*#__PURE__*/React.createElement("div", {
+          className: "bg-violet-950/45 p-3 rounded-xl border border-violet-400/50 mb-2 space-y-1"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[10px] font-black text-violet-200"
+        }, /*#__PURE__*/React.createElement("span", null, "\u5408\u4F53\u5F8C\u4E88\u5B9A"), /*#__PURE__*/React.createElement("span", null, "Lv.", breakthroughPlan.plannedLevel)), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[9px] font-bold"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-400"
+        }, "\u73FE\u5728\u306ELv\u4E0A\u9650"), /*#__PURE__*/React.createElement("span", null, "Lv.", mainCap)), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[10px] font-black"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-300"
+        }, "\u5FC5\u8981\u306A\u9650\u754C\u7A81\u7834"), /*#__PURE__*/React.createElement("span", {
+          className: "text-violet-300"
+        }, "\xD7", breakthroughPlan.count)), /*#__PURE__*/React.createElement("div", {
+          className: `flex justify-between text-[9px] font-bold ${breakthroughPlan.psycheShortage ? 'text-red-300' : 'text-fuchsia-300'}`
+        }, /*#__PURE__*/React.createElement("span", null, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", null, breakthroughPlan.psycheHave.toLocaleString(), " / ", breakthroughPlan.psycheCost.toLocaleString(), breakthroughPlan.psycheShortage ? `（あと${breakthroughPlan.psycheShortage.toLocaleString()}個）` : '')), /*#__PURE__*/React.createElement("div", {
+          className: `flex justify-between text-[9px] font-bold ${breakthroughPlan.diamondShortage ? 'text-red-300' : 'text-amber-300'}`
+        }, /*#__PURE__*/React.createElement("span", null, "\u9650\u754C\u7A81\u7834\u306E\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", null, breakthroughPlan.goldHave.toLocaleString(), " / ", breakthroughPlan.diamondCost.toLocaleString(), breakthroughPlan.diamondShortage ? `（あと${breakthroughPlan.diamondShortage.toLocaleString()}）` : '')), !breakthroughPlan.canReceiveAll && /*#__PURE__*/React.createElement("div", {
+          className: "text-[8px] text-red-300 font-black"
+        }, "\u6700\u5927\u4E0A\u9650Lv.", MAX_MASU_LEVEL_CAP, "\u3067\u3082\u5168XP\u306F\u53D7\u3051\u53D6\u308C\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+          className: "text-[7px] text-slate-400"
+        }, "\u9650\u754C\u7A81\u7834\u5206\u306E\u56FA\u6709\u6280\u30DD\u30A4\u30F3\u30C8\u306F\u300C\u3042\u3068\u3067\u6C7A\u3081\u308B\u300D\u3068\u3057\u3066\u4FDD\u6301\u3055\u308C\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
           className: "bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-2 space-y-1.5"
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
@@ -21488,20 +21593,35 @@ function MonsterHeroGame() {
           size: 11
         }), "\u6CE8\u610F"), /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-red-200/90 leading-relaxed"
-        }, "\u5408\u4F53\u3059\u308B\u3068\u526F\u306E\u300C", sub.name, "\u300D\u306F\u3044\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("button", {
-          onClick: () => {
-            if (!canAfford) return;
-            const result = executeMasuFusion();
+        }, "\u5408\u4F53\u3059\u308B\u3068\u526F\u306E\u300C", sub.name, "\u300D\u306F\u3044\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002"))), /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-1 gap-2 shrink-0 mt-1"
+        }, breakthroughPlan.count > 0 && /*#__PURE__*/React.createElement("button", {
+          onClick: async () => {
+            if (!canAfford || !breakthroughPlan.canAfford) return;
+            const result = await executeMasuFusion(true);
             if (!result) return;
             setFusionResultData(result);
             setFusionStep('anim');
             Audio_.se.fusion();
           },
-          disabled: !canAfford,
-          className: `w-full py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg shrink-0 mt-1 flex items-center justify-center gap-2 ${canAfford ? 'bg-violet-600 text-white active:scale-95' : 'bg-slate-800 text-slate-600'}`
+          disabled: !canAfford || !breakthroughPlan.canAfford || fusionProcessingRef.current,
+          className: "w-full py-3 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white disabled:bg-slate-800 disabled:text-slate-600 disabled:opacity-50"
+        }, /*#__PURE__*/React.createElement(Star, {
+          size: 16
+        }), "\u9650\u754C\u7A81\u7834 \xD7", breakthroughPlan.count, " \u3057\u3066\u5408\u4F53"), /*#__PURE__*/React.createElement("button", {
+          onClick: async () => {
+            if (!canAfford) return;
+            const result = await executeMasuFusion(false);
+            if (!result) return;
+            setFusionResultData(result);
+            setFusionStep('anim');
+            Audio_.se.fusion();
+          },
+          disabled: !canAfford || fusionProcessingRef.current,
+          className: `w-full py-3 rounded-2xl font-black text-sm uppercase shadow-lg flex items-center justify-center gap-2 ${canAfford ? 'bg-slate-700 text-white active:scale-95' : 'bg-slate-800 text-slate-600'}`
         }, /*#__PURE__*/React.createElement(Sparkles, {
           size: 16
-        }), "\u5408\u4F53\u3059\u308B"));
+        }), breakthroughPlan.count > 0 ? '通常合体' : '合体する')));
       }
       if (fusionStep === 'anim') {
         const d = fusionResultData;

@@ -61,6 +61,7 @@ const EXPORTED_NAMES = [
   'bondLevelInfo',
   'migrateMasuLevelCaps',
   'buildMasuBreakthrough',
+  'buildFusionBreakthroughPlan',
   'buildMasuReincarnation',
   'reconcileMasuPoints',
   'totalBreakthroughPoints',
