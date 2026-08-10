@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+'use strict';
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const source=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
+const start=source.indexOf('const rosterBaseId =');
+const end=source.indexOf('// HOME放牧設定',start);
+assert(start>=0&&end>start,'編成セットの正規化関数を取得できません');
+const code=source.slice(start,end)+'\nthis.exports={normalizeMonsterPartySets,repairRosterAfterDonation,MONSTER_PARTY_SET_COUNT};';
+const context={};vm.createContext(context);vm.runInContext(code,context);
+const {normalizeMonsterPartySets,repairRosterAfterDonation}=context.exports;
+const old=['A','masu:1'];
+const migrated=normalizeMonsterPartySets(null,old);
+assert.deepStrictEqual(Array.from(migrated.rosters[0]),old);
+assert.deepStrictEqual(Array.from(migrated.rosters[1]),[]);
+assert.strictEqual(migrated.activeIndex,0);
+assert.strictEqual(migrated.names[4],'セット5');
+const restored=normalizeMonsterPartySets({activeIndex:3,names:['通常用'],rosters:[['A'],['B'],[],['D'],[]]});
+assert.strictEqual(restored.activeIndex,3);assert.strictEqual(restored.names[0],'通常用');assert.deepStrictEqual(Array.from(restored.rosters[3]),['D']);
+const mons=[{id:'2',baseId:'B'}];
+const repaired=repairRosterAfterDonation(['masu:1','B'],{id:'1',baseId:'A'},mons,['A','B'],['A','B'],2);
+assert.strictEqual(repaired.ok,true);assert.deepStrictEqual(Array.from(repaired.roster),['A','B']);
+for(const text of ['mh_monster_roster_sets_v1','mh_monster_roster_sets_migrated_v1','switchMonsterPartySet','copyMonsterPartySet','removeMasuFromAllPartySets']) assert(source.includes(text),`${text} が実装されていません`);
+assert(source.includes("setMonsterRosterIds(normalizedPartySets.rosters[normalizedPartySets.activeIndex])"),'使用中セットをバトル編成へ反映していません');
+console.log('編成セット: 旧セーブ移行・5セット正規化・使用中復元・コピー/全セット除去の結線 OK');
