@@ -31,7 +31,7 @@ vm.runInContext([
   grab('const DIFFICULTY_SETTINGS', 'const CLEAR_PSYCHE_REWARD'),
   grab('const createBattleEnemy', 'const collectBondRankingEntries'),
   'globalThis.__m={DIFFICULTY_SETTINGS,EXTREME_DIFFICULTIES,EXTREME_SETTING,extremeSpecialRule,'
-  + 'EXTREME_UNLOCK_DIFFICULTIES,isExtremeUnlocked,normalizeBattleDifficulty,createBattleEnemy};',
+  + 'EXTREME_UNLOCK_DIFFICULTIES,isExtremeUnlocked,NIGHTMARE_SETTING,isNightmareUnlocked,normalizeBattleDifficulty,createBattleEnemy};',
 ].join('\n'), ctx);
 const m = ctx.__m;
 
@@ -67,8 +67,17 @@ check('虹のプシュケー75個', m.EXTREME_SETTING.psyche === 75);
 check('ブリーダーカード効果50%はEXTREME固有ルール',
   m.extremeSpecialRule('EXTREME', 'breederCardEffect') === 0.5
     && m.extremeSpecialRule('NIGHTMARE', 'breederCardEffect') === 1);
-check('EXTREME以外の難易度は未実装のまま数値を持たない',
-  m.EXTREME_DIFFICULTIES.slice(1).every(s => s.available === false && s.power === undefined && s.score === undefined));
+check('NIGHTMAREは×15 / ×20 / ×30 / ×10 / 虹100を持つ',
+  m.NIGHTMARE_SETTING.available === false
+    && m.NIGHTMARE_SETTING.power === 15 && m.NIGHTMARE_SETTING.score === 20
+    && m.NIGHTMARE_SETTING.xp === 30 && m.NIGHTMARE_SETTING.gold === 10
+    && m.NIGHTMARE_SETTING.psyche === 100);
+check('NIGHTMAREより後の難易度は未実装のまま数値を持たない',
+  m.EXTREME_DIFFICULTIES.slice(2).every(s => s.available === false && s.power === undefined && s.score === undefined));
+check('NIGHTMAREはEXTREMEを1回以上クリア済みなら解放判定',
+  m.isNightmareUnlocked(1) === true && m.isNightmareUnlocked('2') === true);
+check('NIGHTMAREはEXTREME未クリアなら未解放判定',
+  m.isNightmareUnlocked(0) === false && m.isNightmareUnlocked(undefined) === false);
 check('難易度の並びは EXTREME → NIGHTMARE → CHAOS → ULTIMATE → INFINITY',
   m.EXTREME_DIFFICULTIES.map(s => s.id).join(',') === 'EXTREME,NIGHTMARE,CHAOS,ULTIMATE,INFINITY');
 
