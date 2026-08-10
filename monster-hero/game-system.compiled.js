@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7a1795b8629c3c74
+// source-sha256: 64bc8b8ec0c642f4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 19:20"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 19:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6077,8 +6077,7 @@ const DIFFICULTY_SETTINGS = {
 };
 // 極限チャレンジ。チャレンジモードの上位高難易度版で、DIFFICULTY_SETTINGS(通常の難易度)とは
 // 別の表にしてある。通常の難易度・全国ランキング・既存の保存キーへは混ぜない。
-// NIGHTMAREは詳細とWAVEプレビュー用の設定を持つが、まだ実戦では使用しない。
-// それより後の未決定難易度には数値を持たせず、現時点ではEXTREMEだけを実戦で使用する。
+// NIGHTMAREまで正式に実戦可能。それより後の未決定難易度には数値を持たせない。
 const EXTREME_DIFFICULTIES = Object.freeze([{
   id: 'EXTREME',
   label: 'EXTREME',
@@ -6096,8 +6095,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   id: 'NIGHTMARE',
   label: 'NIGHTMARE',
   japanese: 'ナイトメア',
-  available: false,
-  previewAvailable: true,
+  available: true,
   power: 15,
   score: 20,
   xp: 30,
@@ -6150,9 +6148,13 @@ const EXTREME_UNLOCK_TEXT = 'チャレンジ Grand Master以上クリアで解�
 const isExtremeUnlocked = clearCounts => EXTREME_UNLOCK_DIFFICULTIES.some(key => (Number(clearCounts?.[key]) || 0) > 0);
 // 極限チャレンジの記録。チャレンジ・クイック・プロと同じく専用の接頭辞へ分けて保存し、
 // 既存の mh_hs_* / mh_clears_* は一切書き換えない(全国ランキングへも送らない)
-const EXTREME_BEST_SCORE_KEY = 'mh_extreme_hs_EXTREME';
-const EXTREME_CLEAR_COUNT_KEY = 'mh_extreme_clears_EXTREME';
-// NIGHTMAREの解放には既存のEXTREMEクリア回数を再利用する。専用の保存キーは作らない。
+const extremeBestScoreKey = id => `mh_extreme_hs_${id}`;
+const extremeClearCountKey = id => `mh_extreme_clears_${id}`;
+const EXTREME_BEST_SCORE_KEY = extremeBestScoreKey('EXTREME');
+const EXTREME_CLEAR_COUNT_KEY = extremeClearCountKey('EXTREME');
+const NIGHTMARE_BEST_SCORE_KEY = extremeBestScoreKey('NIGHTMARE');
+const NIGHTMARE_CLEAR_COUNT_KEY = extremeClearCountKey('NIGHTMARE');
+// NIGHTMAREの解放には既存のEXTREMEクリア回数を再利用する。
 const isNightmareUnlocked = extremeClearCount => (Number(extremeClearCount) || 0) > 0;
 const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
@@ -7823,6 +7825,8 @@ function MonsterHeroGame() {
   // 極限チャレンジ(EXTREME)の記録。チャレンジの mh_hs_* / mh_clears_* とは別のキーへ持つ
   const [extremeBestScore, setExtremeBestScore] = useState(0);
   const [extremeClearCount, setExtremeClearCount] = useState(0);
+  const [nightmareBestScore, setNightmareBestScore] = useState(0);
+  const [nightmareClearCount, setNightmareClearCount] = useState(0);
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
   const [onboardingName, setOnboardingName] = useState('');
   const [onboardingIcon, setOnboardingIcon] = useState(null);
@@ -8585,9 +8589,10 @@ function MonsterHeroGame() {
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
   const extremeDifficultyAssistantScene = extremeDifficulty === NIGHTMARE_SETTING.id && nightmareUnlocked ? 'nightmareDifficulty' : 'extremeDifficulty';
-  const scoreMultiplier = extremeRun ? EXTREME_SETTING.score : DIFFICULTY_SETTINGS[safeDifficulty].score;
-  const xpMultiplier = extremeRun ? EXTREME_SETTING.xp : scoreMultiplier;
-  const goldMultiplier = extremeRun ? EXTREME_SETTING.gold : DIFFICULTY_SETTINGS[safeDifficulty].gold;
+  const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
+  const scoreMultiplier = extremeRun ? activeExtremeSetting.score : DIFFICULTY_SETTINGS[safeDifficulty].score;
+  const xpMultiplier = extremeRun ? activeExtremeSetting.xp : scoreMultiplier;
+  const goldMultiplier = extremeRun ? activeExtremeSetting.gold : DIFFICULTY_SETTINGS[safeDifficulty].gold;
   const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);
   const effectiveMaxGuts = useMemo(() => resolveEffectiveMaxStat(maxGuts, getPermaBuff('muaGutsPct')), [maxGuts, permaBuffs]);
   // 丈夫さのバフ(defPct)を乗せた「実際に計算へ使う丈夫さ」。ライフ・ガッツと同じ考え方で、
@@ -9904,6 +9909,8 @@ function MonsterHeroGame() {
       // 極限チャレンジの記録。まだ遊んだことがなければ0のまま(既存セーブでも安全に読める)
       setExtremeBestScore(Math.max(0, Math.floor(Number(await storeGet(EXTREME_BEST_SCORE_KEY, 0, false)) || 0)));
       setExtremeClearCount(Math.max(0, Math.floor(Number(await storeGet(EXTREME_CLEAR_COUNT_KEY, 0, false)) || 0)));
+      setNightmareBestScore(Math.max(0, Math.floor(Number(await storeGet(NIGHTMARE_BEST_SCORE_KEY, 0, false)) || 0)));
+      setNightmareClearCount(Math.max(0, Math.floor(Number(await storeGet(NIGHTMARE_CLEAR_COUNT_KEY, 0, false)) || 0)));
       setHighScores(scores);
       highScoresRef.current = scores;
       setAttemptCounts(attempts);
@@ -10138,9 +10145,10 @@ function MonsterHeroGame() {
           console.error('[result] extreme score save failed:', result?.error?.message || 'unknown ranking error');
           return result;
         }
-        if (score > (Number(extremeBestScore) || 0)) {
-          await storeSet(EXTREME_BEST_SCORE_KEY, score, false);
-          setExtremeBestScore(score);
+        const currentBest = extremeDifficulty === NIGHTMARE_SETTING.id ? nightmareBestScore : extremeBestScore;
+        if (score > (Number(currentBest) || 0)) {
+          await storeSet(extremeBestScoreKey(extremeDifficulty), score, false);
+          if (extremeDifficulty === NIGHTMARE_SETTING.id) setNightmareBestScore(score);else setExtremeBestScore(score);
           setRunHighlights(prev => ({
             ...prev,
             newRecord: true
@@ -11843,10 +11851,11 @@ function MonsterHeroGame() {
     }
     // 極限チャレンジはスコア×20・経験値×25・ダイヤ×7.5。通常の難易度表ではなく EXTREME_SETTING を使う
     const extreme = extremeRunRef.current;
-    const scoreMult = extreme ? EXTREME_SETTING.score : DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
-    const goldMult = extreme ? EXTREME_SETTING.gold : DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
+    const selectedExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
+    const scoreMult = extreme ? selectedExtremeSetting.score : DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
+    const goldMult = extreme ? selectedExtremeSetting.gold : DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
     // 経験値はスコアと倍率が違う(極限はスコア×20に対して経験値×25)ので別に持つ
-    const xpMult = extreme ? EXTREME_SETTING.xp : scoreMult;
+    const xpMult = extreme ? selectedExtremeSetting.xp : scoreMult;
 
     // クイックモードは経験値とダイヤだけ1.5倍(スコア倍率は難易度のまま)
     const breederXpGain = applyQuickXpPolicy(xpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);
@@ -12164,7 +12173,8 @@ function MonsterHeroGame() {
   // 獲得数はリザルトに出したいので finalRewardSummary へも足す(報酬付与のあとに走るため関数形で足す)
   const awardClearPsyche = async () => {
     // 極限チャレンジは通常の難易度表ではなく EXTREME_SETTING の個数を配る
-    const baseGain = extremeRunRef.current ? EXTREME_SETTING.psyche : clearPsycheReward(difficulty);
+    const selectedExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
+    const baseGain = extremeRunRef.current ? selectedExtremeSetting.psyche : clearPsycheReward(difficulty);
     const gain = applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current);
     if (gain <= 0) return 0;
     const nextItems = {
@@ -12189,9 +12199,11 @@ function MonsterHeroGame() {
     await awardClearPsyche();
     // 極限チャレンジは専用キーへ。チャレンジの通算クリア数(初勝利判定・解放判定に使う)は動かさない
     if (extremeRunRef.current) {
-      const nextExtreme = (Number(extremeClearCount) || 0) + 1;
-      setExtremeClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));
-      await storeSet(EXTREME_CLEAR_COUNT_KEY, nextExtreme, false);
+      const nightmare = extremeDifficulty === NIGHTMARE_SETTING.id;
+      const currentCount = nightmare ? nightmareClearCount : extremeClearCount;
+      const nextExtreme = (Number(currentCount) || 0) + 1;
+      if (nightmare) setNightmareClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));else setExtremeClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));
+      await storeSet(extremeClearCountKey(extremeDifficulty), nextExtreme, false);
       return;
     }
     if (isQuickMode(runMode)) {
@@ -14442,7 +14454,7 @@ function MonsterHeroGame() {
   // 100毎に自動で1段階上がる
   const computeGuardLevel = defVal => Math.max(0, Math.min(GUARD_EVOLUTION.length - 1, Math.floor((defVal || 0) / 100)));
   const spawnEnemy = useCallback((w, forcedEnemyKey = null, initialDistance = null) => {
-    const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, extremeRunRef.current ? EXTREME_SETTING.power : null);
+    const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, extremeRunRef.current ? (EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING).power : null);
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する。
     // 極限チャレンジは難易度が別表(内部の difficulty は Normal のまま)なので、ここへ入れると
@@ -14504,7 +14516,7 @@ function MonsterHeroGame() {
     setWaveDistDamage([0, 0, 0, 0]);
     setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
-  }, [getNextEnemyAction, difficulty, highestWaves, quickHighestWaves, proHighestWaves, runMode]);
+  }, [getNextEnemyAction, difficulty, extremeDifficulty, highestWaves, quickHighestWaves, proHighestWaves, runMode]);
 
   // defValは呼び出し元が直前に算出したばかりの丈夫さ(setDefで更新中の値)を明示的に渡すための引数。
   // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
@@ -18532,7 +18544,8 @@ function MonsterHeroGame() {
           extremeLocked = isExtreme && !extremeUnlocked,
           rec = isExtreme ? {
             score: highestModeScore({
-              [EXTREME_SETTING.id]: extremeBestScore
+              [EXTREME_SETTING.id]: extremeBestScore,
+              [NIGHTMARE_SETTING.id]: nightmareBestScore
             }, EXTREME_DIFFICULTIES.filter(setting => setting.available).map(setting => setting.id)),
             wave: 0,
             clears: extremeClearCount
@@ -18710,8 +18723,8 @@ function MonsterHeroGame() {
         }
       }, difficulties.map(setting => {
         const active = setting.id === extremeDifficulty;
-        const unlocked = setting.available || setting.id === 'NIGHTMARE' && nightmareUnlocked;
-        const previewable = setting.available || setting.previewAvailable && unlocked;
+        const unlocked = setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : false;
+        const previewable = setting.available && unlocked;
         return /*#__PURE__*/React.createElement("article", {
           key: setting.id,
           "aria-disabled": !unlocked,
@@ -18729,11 +18742,11 @@ function MonsterHeroGame() {
           className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
-        }, setting.available ? 'EXTREMEの記録' : previewable ? 'NIGHTMARE 詳細' : '難易度情報'), /*#__PURE__*/React.createElement("b", {
+        }, setting.available ? `${setting.label}の記録` : '難易度情報'), /*#__PURE__*/React.createElement("b", {
           className: "block text-right text-base leading-tight text-fuchsia-200"
-        }, setting.available ? `${extremeBestScore.toLocaleString()} pt` : previewable ? '準備中' : '？？？'), /*#__PURE__*/React.createElement("span", {
+        }, setting.available && unlocked ? `${(setting.id === 'NIGHTMARE' ? nightmareBestScore : extremeBestScore).toLocaleString()} pt` : '？？？'), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, setting.available ? `クリア ${extremeClearCount}回` : previewable ? '詳細のみ閲覧できます' : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : '未実装・選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        }, setting.available && unlocked ? `クリア ${setting.id === 'NIGHTMARE' ? nightmareClearCount : extremeClearCount}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : '未実装・選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-1 mt-1.5"
         }, [['敵強度', `×${setting.power}`], ['スコア', `×${setting.score}`], ['ダイヤ', `×${setting.gold}`]].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
@@ -18759,7 +18772,7 @@ function MonsterHeroGame() {
           className: "mt-1.5 rounded-xl border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-1.5"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-center text-[8px] font-black text-amber-300"
-        }, "\u26A0 NIGHTMARE\u4E88\u5B9A\u7279\u6B8A\u30EB\u30FC\u30EB\uFF08\u672A\u5B9F\u88C5\uFF09"), setting.plannedRules.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+        }, "\u26A0 NIGHTMARE\u7279\u6B8A\u30EB\u30FC\u30EB"), setting.plannedRules.map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
           className: "mt-1 flex items-start justify-between gap-2 text-[9px] leading-tight"
         }, /*#__PURE__*/React.createElement("span", {
@@ -18775,7 +18788,7 @@ function MonsterHeroGame() {
           onClick: () => setShowWaveDetails(true),
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50"
         }, previewable ? '全WAVE詳細' : '詳細 ？？？'), /*#__PURE__*/React.createElement("button", {
-          disabled: !setting.available || !extremeUnlocked,
+          disabled: !setting.available || !unlocked,
           onClick: () => {
             battleEntryStateRef.current = 'EXTREME_DIFFICULTY_SELECT';
             setDifficulty('Normal');
@@ -18791,8 +18804,8 @@ function MonsterHeroGame() {
             setGameState('PICK_HERO');
           },
           className: "min-h-[44px] rounded-xl bg-fuchsia-600 text-white font-black text-sm disabled:bg-slate-800 disabled:text-slate-500"
-        }, setting.available ? 'この難易度で挑戦' : previewable ? '準備中（挑戦できません）' : '選択できません'), /*#__PURE__*/React.createElement("button", {
-          disabled: !setting.available,
+        }, setting.available && unlocked ? 'この難易度で挑戦' : '選択できません'), /*#__PURE__*/React.createElement("button", {
+          disabled: !setting.available || !unlocked,
           onClick: () => openModeScoreRanking(EXTREME_MODE.id, setting.id, 'EXTREME_DIFFICULTY_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
         }, /*#__PURE__*/React.createElement("span", {
@@ -22844,7 +22857,7 @@ function MonsterHeroGame() {
         borderColor: `${battleModeInfo(runMode).color}66`,
         backgroundColor: 'rgba(0,0,0,.35)'
       }
-    }, extremeRun ? '極限チャレンジ / EXTREME' : /*#__PURE__*/React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), /*#__PURE__*/React.createElement("div", {
+    }, extremeRun ? `極限チャレンジ / ${extremeDifficulty}` : /*#__PURE__*/React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), /*#__PURE__*/React.createElement("div", {
       "data-battle-metrics": true,
       className: "shrink-0 flex items-center gap-1 px-1 leading-none"
     }, /*#__PURE__*/React.createElement("div", {
@@ -23111,7 +23124,7 @@ function MonsterHeroGame() {
         WebkitMaskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)',
         maskImage: 'radial-gradient(circle at 50% 42%, #000 60%, transparent 92%)'
       },
-      className: `relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun ? ' mh-extreme-enemy-image' : ''}`
+      className: `relative z-[1] object-contain drop-shadow-[0_0_55px_rgba(168,85,247,0.95)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
     })), enemy?.id === 'Moo' && enemyAttackFx?.kind === 'moo' && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 pointer-events-none flex items-center justify-center overflow-hidden",
       style: {
@@ -23179,7 +23192,7 @@ function MonsterHeroGame() {
         height: 'clamp(80px,16dvh,150px)'
       }
     }) : /*#__PURE__*/React.createElement("span", {
-      className: extremeRun ? 'mh-extreme-enemy-aura-shell' : '',
+      className: extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? 'mh-nightmare-enemy-aura-shell' : 'mh-extreme-enemy-aura-shell' : '',
       style: {
         width: 'clamp(70px,12dvh,120px)',
         height: 'clamp(80px,16dvh,150px)'
@@ -23187,15 +23200,15 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("img", {
       src: enemy.imgUrl,
       alt: enemy?.name,
-      className: `relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? ' mh-extreme-enemy-image' : ''}`
+      className: `relative z-[1] w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
     })) : /*#__PURE__*/React.createElement("span", {
-      className: extremeRun ? 'mh-extreme-enemy-aura-shell' : ''
+      className: extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? 'mh-nightmare-enemy-aura-shell' : 'mh-extreme-enemy-aura-shell' : ''
     }, /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 'clamp(58px,11dvh,104px)',
         lineHeight: 1
       },
-      className: `relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? ' mh-extreme-enemy-image' : ''}`
+      className: `relative z-[1] drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]${extremeRun ? extremeDifficulty === NIGHTMARE_SETTING.id ? ' mh-nightmare-enemy-image' : ' mh-extreme-enemy-image' : ''}`
     }, enemy?.emoji)), enemy?.id === 'Moo' && /*#__PURE__*/React.createElement("div", {
       className: "absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible",
       style: {
@@ -25569,7 +25582,17 @@ function MonsterHeroGame() {
       style: {
         animation: 'mhExtremeRuleIn .38s ease-out'
       }
-    }, /*#__PURE__*/React.createElement("div", {
+    }, extremeDifficulty === NIGHTMARE_SETTING.id ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black tracking-[.16em] text-cyan-200"
+    }, "NIGHTMARE\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-3 space-y-2 text-left text-[11px] text-slate-200"
+    }, /*#__PURE__*/React.createElement("div", null, "\u30FBWAVE\u5F8C\u5F37\u5316 ", /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, "50%")), /*#__PURE__*/React.createElement("div", null, "\u30FB\u81EA\u52D5\u56DE\u5FA9\u7387\u88DC\u6B63 ", /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, "\uFF0B50% / \uFF0D200%")), /*#__PURE__*/React.createElement("div", null, "\u30FB\u8DDD\u96E2\u9069\u6027\u88DC\u6B63 ", /*#__PURE__*/React.createElement("b", {
+      className: "text-white"
+    }, "\uFF0B50% / \uFF0D200%")))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "text-[11px] font-black tracking-[.2em] text-amber-300"
     }, "\u26A0 \u6975\u9650\u30EB\u30FC\u30EB\u767A\u52D5"), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 text-sm font-black text-white"
@@ -25577,7 +25600,7 @@ function MonsterHeroGame() {
       className: "text-4xl font-black text-fuchsia-300"
     }, "50%\u306B\u6E1B\u5C11"), /*#__PURE__*/React.createElement("p", {
       className: "mt-2 text-[10px] leading-relaxed text-slate-300"
-    }, "\u3053\u306E\u30D0\u30C8\u30EB\u3067\u306F\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u306E\u52B9\u679C\u91CF\u304C\u534A\u5206\u306B\u306A\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    }, "\u3053\u306E\u30D0\u30C8\u30EB\u3067\u306F\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u306E\u52B9\u679C\u91CF\u304C\u534A\u5206\u306B\u306A\u308A\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
       className: "mt-4 text-[9px] font-black tracking-widest text-fuchsia-200"
     }, "\u30BF\u30C3\u30D7\u3057\u3066\u30D0\u30C8\u30EB\u958B\u59CB"))), tutorialStep != null && (() => {
       const intro = tutorialKind === 'intro';
@@ -25939,7 +25962,7 @@ function MonsterHeroGame() {
       className: "pt-1 flex flex-col gap-0.5 text-right"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold uppercase italic"
-    }, "\u96E3\u6613\u5EA6\u30DC\u30FC\u30CA\u30B9 (", extremeRun ? 'EXTREME' : difficulty, "): x", scoreMultiplier), /*#__PURE__*/React.createElement("div", {
+    }, "\u96E3\u6613\u5EA6\u30DC\u30FC\u30CA\u30B9 (", extremeRun ? extremeDifficulty : difficulty, "): x", scoreMultiplier), /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-end"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-indigo-400 text-xs font-black uppercase"
@@ -27126,11 +27149,11 @@ function MonsterHeroGame() {
       className: "text-right"
     }, score.toLocaleString()), /*#__PURE__*/React.createElement("span", null, "10WAVE \u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, xpForWavesCleared(10, EXTREME_SETTING.xp).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "10WAVE \u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", {
+    }, xpForWavesCleared(10, activeExtremeSetting.xp).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "10WAVE \u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, goldForWavesCleared(10, EXTREME_SETTING.gold).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30EA\u30A2\u6642\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("b", {
+    }, goldForWavesCleared(10, activeExtremeSetting.gold).toLocaleString()), /*#__PURE__*/React.createElement("span", null, "\u30AF\u30EA\u30A2\u6642\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("b", {
       className: "text-right"
-    }, EXTREME_SETTING.psyche))), /*#__PURE__*/React.createElement("div", {
+    }, activeExtremeSetting.psyche))), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-xs space-y-3"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => runResultActionOnce(() => startDebugBattle(extremeRun)),
@@ -27856,8 +27879,11 @@ const createAnimationStyle = () => {
     /* EXTREMEは透過画像の輪郭へdrop-shadowを重ね、敵枠ではなくモンスター本体から邪気を漏らす。 */
     .mh-extreme-enemy-aura-shell{position:relative;display:inline-flex;align-items:center;justify-content:center;isolation:isolate;overflow:visible}.mh-extreme-enemy-aura-shell::before{content:"";position:absolute;z-index:0;inset:-38% -48% -22%;border-radius:44% 56% 48% 52%;pointer-events:none;background:radial-gradient(ellipse at 50% 62%,#050008ee 0 25%,#240034e8 38%,#581c87bb 52%,#a21caf88 64%,transparent 78%);filter:blur(7px);animation:mhExtremeEnemyMist 3.7s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-aura-shell::after{content:"";position:absolute;z-index:2;left:-35%;right:-35%;bottom:-15%;height:35%;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse,#140018ee 0 24%,#701a75cc 48%,#be185d88 62%,transparent 76%);filter:blur(5px);animation:mhExtremeEnemyFloor 3.1s ease-in-out infinite;will-change:transform,opacity}.mh-extreme-enemy-image{filter:drop-shadow(0 0 4px #030006) drop-shadow(0 0 9px #3b0764) drop-shadow(-7px -3px 13px #6b21a8ee) drop-shadow(8px 2px 15px #a21cafdd) drop-shadow(1px -7px 18px #be123caa);animation:mhExtremeEnemyAura 2.8s ease-in-out infinite;will-change:filter}
     @keyframes mhExtremeEnemyAura{0%,100%{filter:drop-shadow(0 0 4px #030006) drop-shadow(0 0 9px #3b0764) drop-shadow(-7px -3px 13px #6b21a8ee) drop-shadow(8px 2px 15px #a21cafdd) drop-shadow(1px -7px 18px #be123c99)}47%{filter:drop-shadow(0 0 6px #08000d) drop-shadow(0 0 13px #4c1d95) drop-shadow(-10px 3px 17px #7e22ceff) drop-shadow(10px -4px 19px #c026d3ee) drop-shadow(-3px -9px 22px #e11d48bb)}}@keyframes mhExtremeEnemyMist{0%,100%{opacity:.76;transform:scale(.94,1.01) translate(-2px,3px) rotate(-2deg)}41%{opacity:1;transform:scale(1.09,1.14) translate(4px,-7px) rotate(2deg)}73%{opacity:.84;transform:scale(1.02,1.08) translate(-3px,-2px) rotate(-1deg)}}@keyframes mhExtremeEnemyFloor{0%,100%{opacity:.68;transform:scaleX(.9)}55%{opacity:1;transform:scaleX(1.12)}}
+    /* NIGHTMAREは暗い青の霊気と霧で、赤紫のEXTREMEから区別する。 */
+    .mh-nightmare-enemy-aura-shell{position:relative;display:inline-flex;align-items:center;justify-content:center;isolation:isolate;overflow:visible}.mh-nightmare-enemy-aura-shell::before{content:"";position:absolute;z-index:0;inset:-42% -55% -28%;border-radius:50%;pointer-events:none;background:radial-gradient(ellipse at 50% 52%,#020617ee 0 23%,#172554cc 42%,#312e81a8 58%,#bfdbfe55 69%,transparent 80%);filter:blur(8px);animation:mhNightmareMist 4.8s ease-in-out infinite}.mh-nightmare-enemy-aura-shell::after{content:"";position:absolute;z-index:2;inset:-30% -45% 4%;border-radius:46%;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,transparent 38%,#60a5fa44 58%,#0f172a99 71%,transparent 82%);filter:blur(6px);animation:mhNightmarePulse 3.9s ease-in-out infinite}.mh-nightmare-enemy-image{filter:drop-shadow(0 0 5px #020617) drop-shadow(0 0 11px #1e3a8a) drop-shadow(0 0 18px #818cf899) drop-shadow(0 -5px 20px #dbeafe77);animation:mhNightmarePulse 3.9s ease-in-out infinite}
+    @keyframes mhNightmareMist{0%,100%{opacity:.58;transform:translate(-4px,5px) scale(.94,1.02)}50%{opacity:.9;transform:translate(5px,-6px) scale(1.08,1.14)}}@keyframes mhNightmarePulse{0%,100%{opacity:.72;transform:scale(.98)}52%{opacity:1;transform:scale(1.035)}}
     @keyframes mhExtremeRuleIn{from{opacity:0;transform:scale(.82)}60%{transform:scale(1.03)}}
-    @media(prefers-reduced-motion:reduce){.mh-extreme-enemy-image,.mh-extreme-enemy-aura-shell::before,.mh-extreme-enemy-aura-shell::after{animation:none;will-change:auto}}
+    @media(prefers-reduced-motion:reduce){.mh-extreme-enemy-image,.mh-extreme-enemy-aura-shell::before,.mh-extreme-enemy-aura-shell::after,.mh-nightmare-enemy-image,.mh-nightmare-enemy-aura-shell::before,.mh-nightmare-enemy-aura-shell::after{animation:none;will-change:auto}}
     .mh-breakthrough-stars{position:absolute;top:calc(46% + 0px);display:flex;gap:4px;font-size:22px;color:#fde047;text-shadow:0 0 8px #ca8a04}
     .mh-breakthrough-stars i{opacity:.35;font-style:normal}
     .mh-breakthrough-stars i.is-new{animation:mhBreakStar 3.6s ease-out forwards}

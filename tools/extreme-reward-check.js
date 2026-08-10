@@ -68,7 +68,7 @@ check('ブリーダーカード効果50%はEXTREME固有ルール',
   m.extremeSpecialRule('EXTREME', 'breederCardEffect') === 0.5
     && m.extremeSpecialRule('NIGHTMARE', 'breederCardEffect') === 1);
 check('NIGHTMAREは×15 / ×20 / ×30 / ×10 / 虹100を持つ',
-  m.NIGHTMARE_SETTING.available === false
+  m.NIGHTMARE_SETTING.available === true
     && m.NIGHTMARE_SETTING.power === 15 && m.NIGHTMARE_SETTING.score === 20
     && m.NIGHTMARE_SETTING.xp === 30 && m.NIGHTMARE_SETTING.gold === 10
     && m.NIGHTMARE_SETTING.psyche === 100);

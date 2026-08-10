@@ -25,7 +25,7 @@ for (const difficulty of ['GrandMaster', 'Hell', 'Legend']) {
   }
 }
 
-assert(source.includes('const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,extremeRunRef.current?EXTREME_SETTING.power:null)'), 'battle must use shared enemy creation and only override power for EXTREME');
+assert(source.includes('const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,extremeRunRef.current?(EXTREME_DIFFICULTIES.find(setting=>setting.id===extremeDifficulty)||EXTREME_SETTING).power:null)'), 'battle must use shared enemy creation and override power for the selected extreme difficulty');
 const enemyFactoryBlock = source.slice(source.indexOf('const createBattleEnemy ='), source.indexOf('\n};', source.indexOf('const createBattleEnemy =')) + 3);
 const createBattleEnemy = Function(
   'ENEMY_SEQUENCE', 'ENEMY_DATA', 'normalizeBattleDifficulty', 'DIFFICULTY_SETTINGS',
