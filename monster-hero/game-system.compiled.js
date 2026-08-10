@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 84fe6f7f8c8766de
+// source-sha256: f462692abc6d4fb6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 18:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 19:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6077,7 +6077,8 @@ const DIFFICULTY_SETTINGS = {
 };
 // 極限チャレンジ。チャレンジモードの上位高難易度版で、DIFFICULTY_SETTINGS(通常の難易度)とは
 // 別の表にしてある。通常の難易度・全国ランキング・既存の保存キーへは混ぜない。
-// 未決定の将来難易度には数値を持たせず、EXTREMEだけを実戦で使用する。
+// NIGHTMAREは次回実装に向けた数値と解放判定だけを持つが、まだ実戦では使用しない。
+// それより後の未決定難易度には数値を持たせず、現時点ではEXTREMEだけを実戦で使用する。
 const EXTREME_DIFFICULTIES = Object.freeze([{
   id: 'EXTREME',
   label: 'EXTREME',
@@ -6094,7 +6095,13 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
 }, {
   id: 'NIGHTMARE',
   label: 'NIGHTMARE',
-  available: false
+  japanese: 'ナイトメア',
+  available: false,
+  power: 15,
+  score: 20,
+  xp: 30,
+  gold: 10,
+  psyche: 100
 }, {
   id: 'CHAOS',
   label: 'CHAOS',
@@ -6109,6 +6116,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   available: false
 }]);
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
+const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
 const extremeSpecialRule = (difficultyId, rule) => EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId)?.specialRules?.[rule] ?? 1;
 // 極限チャレンジの説明にはモード全体に共通する特徴を十分に載せる。EXTREME固有の倍率や
 // ブリーダーカード50%は、ここではなく難易度カード側で案内する
@@ -6132,6 +6140,8 @@ const isExtremeUnlocked = clearCounts => EXTREME_UNLOCK_DIFFICULTIES.some(key =>
 // 既存の mh_hs_* / mh_clears_* は一切書き換えない(全国ランキングへも送らない)
 const EXTREME_BEST_SCORE_KEY = 'mh_extreme_hs_EXTREME';
 const EXTREME_CLEAR_COUNT_KEY = 'mh_extreme_clears_EXTREME';
+// NIGHTMAREの解放には既存のEXTREMEクリア回数を再利用する。専用の保存キーは作らない。
+const isNightmareUnlocked = extremeClearCount => (Number(extremeClearCount) || 0) > 0;
 const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
