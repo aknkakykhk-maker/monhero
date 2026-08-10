@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: df93836eb2ecc118
+// source-sha256: 179e04fc6f57ddb2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 13:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 13:35"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -230,6 +230,12 @@ const modeKeyPrefix = mode => isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) 
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
 const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
 const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
+// モード選択カードの最高スコアは、現在の選択難易度ではなく、そのモードで
+// 記録対象になっている全難易度の自己ベストから求める。未プレイ・壊れた値は0として扱う。
+const highestModeScore = (scores, difficultyIds) => Math.max(0, ...difficultyIds.map(diff => {
+  const value = Number(scores?.[diff]);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}));
 // モードの表示情報と「？」で出す説明。文言を1か所にまとめ、タブ・カード・説明の食い違いを防ぐ。
 //
 // どのモードも同じ形で書く。読み比べたときに「あるモードにだけ書いてある」が起きないようにするため。
@@ -18492,11 +18498,14 @@ function MonsterHeroGame() {
           isExtreme = m.id === EXTREME_MODE.id,
           extremeLocked = isExtreme && !extremeUnlocked,
           rec = isExtreme ? {
-            score: extremeBestScore,
+            score: highestModeScore({
+              [EXTREME_SETTING.id]: extremeBestScore
+            }, EXTREME_DIFFICULTIES.filter(setting => setting.available).map(setting => setting.id)),
             wave: 0,
             clears: extremeClearCount
           } : modeRecordFor(m.id, safeDifficulty),
-          ranked = !isExtreme && modeHasRanking(m.id);
+          ranked = !isExtreme && modeHasRanking(m.id),
+          modeBestScore = ranked ? highestModeScore(isProMode(m.id) ? proHighScores : highScores, Object.keys(DIFFICULTY_SETTINGS)) : rec.score;
         return /*#__PURE__*/React.createElement("article", {
           key: `${m.id}-${loopIndex}`,
           className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
@@ -18518,12 +18527,12 @@ function MonsterHeroGame() {
           className: "mt-1.5 rounded-xl bg-black/45 px-2.5 py-1.5"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
-        }, isExtreme ? extremeLocked ? '解放条件' : 'EXTREMEの記録' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`), /*#__PURE__*/React.createElement("b", {
+        }, isExtreme ? extremeLocked ? '解放条件' : '最高スコア' : ranked ? '最高スコア' : `${DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty}の記録`), /*#__PURE__*/React.createElement("b", {
           className: "block text-right text-base leading-tight",
           style: {
             color: m.color
           }
-        }, isExtreme ? extremeLocked ? '🔒 未解放' : `${rec.score.toLocaleString()} pt` : ranked ? `${rec.score.toLocaleString()} pt` : `WAVE ${rec.wave}`), /*#__PURE__*/React.createElement("span", {
+        }, isExtreme ? extremeLocked ? '🔒 未解放' : `${modeBestScore.toLocaleString()} pt` : ranked ? `${modeBestScore.toLocaleString()} pt` : `WAVE ${rec.wave}`), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
         }, isExtreme ? extremeLocked ? EXTREME_UNLOCK_TEXT : `クリア ${rec.clears}回` : ranked ? `最高到達 WAVE ${rec.wave}` : `クリア ${rec.clears}回`)), /*#__PURE__*/React.createElement("ul", {
           className: "mt-1.5 space-y-0.5"

@@ -42,7 +42,7 @@ vm.runInContext([
   + 'QUICK_REWARD_POLICY_GROWTH,QUICK_REWARD_POLICY_PSYCHE,normalizeQuickRewardPolicy,applyQuickXpPolicy,applyQuickPsychePolicy,clearPsycheReward,'
   + 'waveXpGain,waveGoldGain,xpForWavesCleared,goldForWavesCleared,xpForWavesClearedInMode,goldForWavesClearedInMode,'
   + 'bondXpForWavesClearedInMode,waveBondXpGainInMode,'
-  + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE,BATTLE_MODE_PRO,'
+  + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,highestModeScore,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE,BATTLE_MODE_PRO,'
   + 'PRO_RANKING_PREFIX,EXTREME_RANKING_PREFIX,EXTREME_DIFFICULTIES,RANKING_DIFFICULTY_KEYS,rankingDifficultyForMode,rankingDifficultyBase,normalizeRankingDifficulty,'
   + 'pickJoinCandidates,battleModeAssistantScene,'
   + 'calculateRemainingHp,resolveEffectiveMaxStat,quickGrowStat,resolveQuickGrowthStats};',
@@ -304,6 +304,11 @@ check('クイックはスコア関連を出さない',
   has("const rateCells=(setting)=>quick") && has("? [['敵強度',`×${setting.power}`,false],['経験値',bonusLabel(setting.score),true],['ダイヤ',bonusLabel(setting.gold),true]]")
     && has("{ label:'自己ベストスコア', value:`${(highScores[key]||0).toLocaleString()} pt`"));
 check('クイックでも最高到達WAVEは出す', has("{ label:'最高到達WAVE', value:`WAVE ${waveOf(key)}`"));
+check('モードカードの最高スコアは全難易度の自己ベスト最大値',
+  m.highestModeScore({ Normal:12000, Hard:18000, Legend:25000 }, Object.keys(m.DIFFICULTY_SETTINGS)) === 25000
+    && m.highestModeScore({ Normal:12000, Hard:18000 }, Object.keys(m.DIFFICULTY_SETTINGS)) === 18000
+    && m.highestModeScore({ Normal:12000 }, Object.keys(m.DIFFICULTY_SETTINGS)) === 12000
+    && m.highestModeScore({}, Object.keys(m.DIFFICULTY_SETTINGS)) === 0);
 // クイックはスコアを競わないので、バトル中もリザルトもスコアを出さない
 check('バトル中もクイックはスコアを出さない', has('{!isQuickMode(runMode)&&<div data-battle-score'));
 check('最終リザルト3画面のスコア枠をクイックでは出さない',
@@ -411,6 +416,11 @@ check('旧バトル画面はデバッグからだけ開ける',
 check('モード選択は極限チャレンジを含む全モードを横スライドで並べる',
   has('const modes=[...BATTLE_MODES,EXTREME_MODE];') && has('aria-label="前のモード"') && has('aria-label="次のモード"')
     && has('snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5'));
+check('モードカードは選択難易度固定でなくモード内最高スコアを表示する',
+  has('modeBestScore=ranked?highestModeScore(isProMode(m.id)?proHighScores:highScores,Object.keys(DIFFICULTY_SETTINGS)):rec.score')
+    && has('EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>setting.id)')
+    && has("ranked?'最高スコア'")
+    && has("ranked?`${modeBestScore.toLocaleString()} pt`"));
 check('上のタブはモード選択・ブリーダーLv・絆Lvの3つ',
   has("{[['mode','モード選択'],['breeder','ブリーダーLv'],['bond','絆Lv']].map(([key,label])=>("));
 // スコアランキングはモードごとに分かれるので、上のタブには置かない
@@ -422,7 +432,7 @@ check('スコアランキングはモードのカードと難易度のカード�
 check('ランキングが無いモードには導線も高さ合わせの空枠も出さない',
   has('{ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,')
     && has('{ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,')
-    && has('ranked=modeHasRanking(battleMode);') && has('ranked=!isExtreme&&modeHasRanking(m.id);'));
+    && has('ranked=modeHasRanking(battleMode);') && has('ranked=!isExtreme&&modeHasRanking(m.id),'));
 check('難易度カードから開いたときは、その難易度のタブを最初に選ぶ',
   has('setRankingViewDiff(diff);') && has('loadRankings(rankingDifficultyForMode(mode, diff));')
     && has("openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')"));
