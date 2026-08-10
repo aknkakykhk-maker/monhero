@@ -42,7 +42,7 @@ vm.runInContext([
   + 'waveXpGain,waveGoldGain,xpForWavesCleared,goldForWavesCleared,xpForWavesClearedInMode,goldForWavesClearedInMode,'
   + 'bondXpForWavesClearedInMode,waveBondXpGainInMode,'
   + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE,BATTLE_MODE_PRO,'
-  + 'PRO_RANKING_PREFIX,RANKING_DIFFICULTY_KEYS,rankingDifficultyForMode,rankingDifficultyBase,normalizeRankingDifficulty,'
+  + 'PRO_RANKING_PREFIX,EXTREME_RANKING_PREFIX,EXTREME_DIFFICULTIES,RANKING_DIFFICULTY_KEYS,rankingDifficultyForMode,rankingDifficultyBase,normalizeRankingDifficulty,'
   + 'pickJoinCandidates,battleModeAssistantScene,'
   + 'calculateRemainingHp,resolveEffectiveMaxStat,quickGrowStat,resolveQuickGrowthStats};',
 ].join('\n'), ctx);
@@ -113,7 +113,10 @@ check('プロは mh_pro_ の新しいキーへ分ける',
   check('3モードの保存キーが1つも重複しない', new Set(keys).size === keys.length, `${keys.length}件`);
 }
 const submitBlock = grab(source, 'const submitRunScoreOnce = async', 'const handleSaveName');
-check('クイックはランキングへ送信しない', /if \(isQuickMode\(runMode\)\) \{[\s\S]*?return;\s*\}/.test(submitBlock) && submitBlock.indexOf('isQuickMode(runMode)') < submitBlock.indexOf('submitLocalScore'));
+// クイックは submitLocalScore へ行き着く前に return する。
+// (極限チャレンジは送信するので、クイックの分岐が最初の送信より前にあることで見る)
+check('クイックはランキングへ送信しない', /if \(isQuickMode\(runMode\)\) \{[\s\S]*?return;\s*\}/.test(submitBlock)
+  && submitBlock.indexOf('isQuickMode(runMode)') < submitBlock.indexOf('submitLocalScore'));
 check('クイックはチャレンジの自己ベストを上書きしない',
   submitBlock.includes('bestScoreKey(BATTLE_MODE_QUICK, difficulty)') && submitBlock.includes('setQuickHighScores'));
 check('プロはプロ専用の難易度キーで送信する',
@@ -148,8 +151,9 @@ check('Pro付きのキーもランキングの難易度として通る',
 check('素の難易度へ戻せる',
   Object.keys(m.DIFFICULTY_SETTINGS).every(d => m.rankingDifficultyBase(`Pro${d}`) === d && m.rankingDifficultyBase(d) === d));
 check('知らない難易度は今までどおり弾く', (() => { try { m.normalizeRankingDifficulty('Pro'); return false; } catch { return true; } })());
+// チャレンジ9 + プロ9 + 極限の段階ぶん。重複が無いこと(同じ行を2モードで奪い合わない)を見る
 check('難易度キーの一覧に重複が無い', new Set(m.RANKING_DIFFICULTY_KEYS).size === m.RANKING_DIFFICULTY_KEYS.length
-  && m.RANKING_DIFFICULTY_KEYS.length === Object.keys(m.DIFFICULTY_SETTINGS).length * 2);
+  && m.RANKING_DIFFICULTY_KEYS.length === Object.keys(m.DIFFICULTY_SETTINGS).length * 2 + m.EXTREME_DIFFICULTIES.length);
 // 既存のランキングデータは1行も書き換えない(移行・変換・削除をしない)
 check('既存のランキング行を書き換える処理を足していない',
   !/rankingDifficultyForMode\([^)]*\)\s*=>/.test(source) && !has('PATCH') && !has('DELETE FROM') && !has('migrateRanking'));
@@ -393,8 +397,9 @@ check('上のタブはモード選択・ブリーダーLv・絆Lvの3つ',
 // スコアランキングはモードごとに分かれるので、上のタブには置かない
 check('上のタブにスコアランキングを混ぜない',
   !/\[\['mode','モード選択'\],\['score'/.test(source) && !has("['score','スコア'],['breeder'"));
+// チャレンジ/プロのカード2か所 + 極限のモードカード・難易度カード2か所
 check('スコアランキングはモードのカードと難易度のカードから開く',
-  count("openModeScoreRanking(") === 2, `openModeScoreRanking ${count('openModeScoreRanking(')}か所`);
+  count("openModeScoreRanking(") === 4, `openModeScoreRanking ${count('openModeScoreRanking(')}か所`);
 check('ランキングが無いモードには導線も高さ合わせの空枠も出さない',
   has('{ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(m.id,safeDifficulty,')
     && has('{ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,')

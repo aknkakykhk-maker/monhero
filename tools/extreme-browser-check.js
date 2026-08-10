@@ -84,8 +84,37 @@ const extremeCardInfo = () => {
     const fatal = [];
     page.on('pageerror', e => fatal.push(e.message));
     await openBattle(page, { GrandMaster: 1 });
-    const info = await page.evaluate(extremeCardInfo);
-    check('Grand Masterクリア済みで解放される', !!info && info.disabled === false && info.label === '難易度を選ぶ', info?.label);
+    const card2 = await page.evaluate(extremeCardInfo);
+    check('Grand Masterクリア済みで解放される', !!card2 && card2.disabled === false && card2.label === '難易度を選ぶ', card2?.label);
+
+    // モード説明が開く(他モードと同じ見出しで並ぶ)
+    await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('article')].filter(a => a.textContent.includes('極限チャレンジ'));
+      const card = cards[Math.floor(cards.length / 2)] || cards[0];
+      [...card.querySelectorAll('button')].find(b => b.textContent.includes('このモードの説明'))?.click();
+    });
+    await page.waitForTimeout(900);
+    const info = await page.evaluate(() => document.querySelector('[role="dialog"][aria-label="極限チャレンジの説明"]')?.innerText.replace(/\s+/g, ' ') || '');
+    check('モード説明が開く', info.includes('極限チャレンジとは？'), info.slice(0, 60));
+    check('モード説明が他モードと同じ見出しで並ぶ',
+      ['編成', 'WAVEのあいだの強化', '難しさ', 'もらえる経験値とダイヤ', 'スコアと記録', '供モンの加入', 'マスモン登録', 'スキップチケット', 'こんな人におすすめ'].every(t => info.includes(t)),
+      info.slice(0, 80));
+    check('モード説明にEXTREME固有の50%ルールを書かない', !info.includes('ブリーダーカード'), info.slice(0, 60));
+    await page.evaluate(() => { document.querySelector('[aria-label="説明を閉じる"]')?.click(); });
+    await page.waitForTimeout(700);
+
+    // モードカードからランキングを開ける
+    await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('article')].filter(a => a.textContent.includes('極限チャレンジ'));
+      const card = cards[Math.floor(cards.length / 2)] || cards[0];
+      [...card.querySelectorAll('button')].find(b => b.textContent.includes('のランキング'))?.click();
+    });
+    await page.waitForTimeout(2000);
+    const rank = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
+    check('モードカードからランキングを開ける', rank.includes('極限チャレンジランキング'), rank.slice(0, 70));
+    check('ランキングの難易度タブが極限の段階になっている', rank.includes('EXTREME') && !/Grand Master|Legend/.test(rank), rank.slice(0, 90));
+    await page.evaluate(() => { document.querySelector('button[aria-label="戻る"]')?.click(); });
+    await page.waitForTimeout(1200);
 
     // 極限の難易度画面へ
     await page.evaluate(() => {
@@ -105,6 +134,18 @@ const extremeCardInfo = () => {
     })));
     check('難易度の並びが仕様どおり', tiers.map(t => t.label).join(',') === 'EXTREME,NIGHTMARE,CHAOS,ULTIMATE,INFINITY', tiers.map(t => t.label).join(','));
     check('NIGHTMARE以降は？？？表示', tiers.slice(1).every(t => t.locked) && !tiers[0].locked);
+
+    // 難易度カードからもランキングを開ける
+    await page.evaluate(() => {
+      const card = [...document.querySelectorAll('[data-extreme-difficulties] article')][0];
+      [...card.querySelectorAll('button')].find(b => b.textContent.includes('のランキング'))?.click();
+    });
+    await page.waitForTimeout(2000);
+    const rank2 = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
+    check('難易度カードからランキングを開ける', rank2.includes('極限チャレンジランキング'), rank2.slice(0, 70));
+    await page.evaluate(() => { document.querySelector('button[aria-label="戻る"]')?.click(); });
+    await page.waitForTimeout(1200);
+    check('ランキングから難易度画面へ戻れる', !!(await page.$('[data-extreme-difficulties]')));
 
     // EXTREMEで挑戦 → 勇者モン選択
     const started = await page.evaluate(() => {

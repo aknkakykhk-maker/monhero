@@ -172,7 +172,7 @@ HOMEの「バトル」は `バトル → バトルモード選択 → 難易度�
 | `BATTLE_MODE_SELECT` | 4モードの横スライドカード。上のタブは「モード選択／ブリーダーLv／絆Lv」 |
 | `BATTLE_DIFFICULTY_SELECT` | 選んだモードの難易度カード9枚。倍率・記録・補足行がモードで変わる |
 | `EXTREME_DIFFICULTY_SELECT` | 極限チャレンジ専用の難易度カード5枚。構造はチャレンジと同じ横スライド |
-| `BATTLE_SCORE_RANKING` | モード別のスコアランキング。難易度タブで切り替える |
+| `BATTLE_SCORE_RANKING` | モード別のスコアランキング。難易度タブで切り替える（極限は極限の段階タブ） |
 
 - モードのカードは**端で止まらずぐるぐる回る**。同じ並びを3回置き（`loopModes`）、スクロールが止まってから真ん中のコピーへ黙って戻す（`recenterModeLoop`）。左右の矢印は無効にならない。
 - 難易度選択は開くたびに**ノーマル**（`BATTLE_DEFAULT_DIFFICULTY`）から始める。前に遊んだ難易度を引きずらない。れんしゅう中だけビギナーから始まる。
@@ -191,8 +191,10 @@ HOMEの「バトル」は `バトル → バトルモード選択 → 難易度�
   既存の `mh_clears_<難易度>` をそのまま読む）。専用の解放フラグは作らないので、旧セーブもそのまま解放される。
 - **内部の扱い**: `runMode` はチャレンジ、`difficulty` は `Normal` のまま固定し、極限かどうかは `extremeRunRef` で持つ。
   そのため**チャレンジのNormalの記録を汚さないよう、挑戦回数（`mh_attempts_*`）と最高到達WAVE（`mh_highest_wave_*`）へは入れない**。
-- **記録**: 自己ベストは `mh_extreme_hs_EXTREME`、クリア回数は `mh_extreme_clears_EXTREME`。**全国ランキングへは送らない**
-  （専用ランキングも作らず、Supabaseのスキーマも変えない）。
+- **記録**: 自己ベストは `mh_extreme_hs_EXTREME`、クリア回数は `mh_extreme_clears_EXTREME`。
+- **ランキング**: チャレンジ・プロと同じ作りで、Supabaseのテーブル・列は増やさず `difficulty` へ入れる値だけで分ける
+  （`EXTREME_RANKING_PREFIX = 'Extreme'` → `ExtremeEXTREME`）。既存のチャレンジ・プロの行は読みも書きもしない。
+  ランキング画面の難易度タブは、通常の9段階ではなく**遊べる極限の段階**を並べる。
 - **報酬**: `awardRunRewards` が `EXTREME_SETTING` の倍率（スコア×20・経験値×25・ダイヤ×7.5）を使い、
   クリア時の虹のプシュケーは `awardClearPsyche` が75個を配る。
 - **EXTREME固有ルール**: ブリーダーカードの効果量だけ50%（`extremeSpecialRule('EXTREME','breederCardEffect')`）。
