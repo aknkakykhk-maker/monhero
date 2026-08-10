@@ -734,8 +734,8 @@ const ASSISTANT_LINE_PACKS = [];
 // 束を1つ足す。読み込み順は問わない(合流は下の applyAssistantLinePacks でまとめて行う)
 const addAssistantLinePack = (pack) => { if (pack && pack.id && pack.lines) ASSISTANT_LINE_PACKS.push(pack); };
 
-// 極限チャレンジ。モード選択(extremeChallenge)では「チャレンジの上位高難易度版」だけを話し、
-// EXTREME固有のブリーダーカード50%は難易度側(extremeDifficulty)でだけ触れる。
+// 極限チャレンジ。モード選択(extremeChallenge)ではモード全体に共通する特徴を案内し、
+// EXTREME固有の倍率やブリーダーカード50%は難易度側(extremeDifficulty)でだけ触れる。
 addAssistantLinePack({
   id: 'extremeChallengeGuide',
   label: '極限チャレンジ案内',
@@ -747,6 +747,8 @@ addAssistantLinePack({
       { e:'wink', t:'上位プレイヤー向けの腕試しだよ。強敵との勝負、燃えるじゃん♪' },
       { e:'normal', t:'チャレンジモードのさらに上！ 無理そうなら育成して出直すのも作戦だよ。' },
       { e:'excited', t:'限界を超えた強敵が待ってるよ！ あたしも全力で応援するね！' },
+      { e:'surprise', t:'EXTREMEの先にも、さらに上の難易度が待ってるんだって！' },
+      { e:'happy', t:'手強くなるほど高い報酬も狙えるよ。育てた子と一緒に限界へ挑も♪' },
     ],
     extremeDifficulty: [
       { e:'troubled', t:'EXTREMEはブリーダーカードの効果が半分！ いつもの感覚だと危ないよ！' },

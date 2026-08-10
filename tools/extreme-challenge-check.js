@@ -39,12 +39,14 @@ const modeDescription = config.slice(config.indexOf('const EXTREME_MODE'), confi
 for (const forbidden of ['×13', '13倍', '×20', '20倍', '×25', '25倍', '×7.5', '7.5倍', '75個', 'ブリーダーカード', '50%']) {
   assert(!modeDescription.includes(forbidden), `the mode-level description must not include EXTREME-only information: ${forbidden}`);
 }
-assert(modeDescription.includes("tagline:'限界を超えた強敵に挑む、最高難度チャレンジ'")
-  && modeDescription.includes("highlights:[['⚔️','チャレンジモードの上位高難易度版']]"), 'the mode card must only give the concise shared high-difficulty description');
+for (const expected of ['通常チャレンジを超える高難易度', 'EXTREMEから始まる、さらなる強敵への挑戦', '高難易度に見合った高い報酬']) {
+  assert(modeDescription.includes(expected), `the mode card must explain the shared extreme-challenge feature: ${expected}`);
+}
 assert(source.includes("const showExtremeRule = w === 1 && extremeRunRef.current") && source.includes('setExtremeRuleOpen(showExtremeRule); setIsBusy(showExtremeRule)'), 'the 50% rule must block normal input once at WAVE 1');
 
 // --- ④ 報酬・記録 ---
-assert(source.includes('const gain = extremeRunRef.current ? EXTREME_SETTING.psyche : clearPsycheReward(difficulty);'), 'EXTREME clear must grant its own psyche count');
+assert(source.includes('const baseGain = extremeRunRef.current ? EXTREME_SETTING.psyche : clearPsycheReward(difficulty);')
+  && source.includes('const gain = applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current);'), 'EXTREME clear must grant its own psyche count through the shared reward-policy path');
 assert(source.includes('const extreme = extremeRunRef.current;') && source.includes('const scoreMult = extreme ? EXTREME_SETTING.score : (DIFFICULTY_SETTINGS[difficulty]?.score || 1.0);')
   && source.includes('const goldMult = extreme ? EXTREME_SETTING.gold : (DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0);')
   && source.includes('const xpMult = extreme ? EXTREME_SETTING.xp : scoreMult;'), 'official EXTREME rewards must use its own score/xp/gold multipliers');
@@ -77,7 +79,9 @@ assert(!/submitLocalScore\((?!rankingDifficultyForMode|difficulty)/.test(source)
 
 // --- ⑥ 画面・演出・助手 ---
 // モードの共通説明とランキングの導線(チャレンジ・プロと同じ2つのボタン)
-assert(/points:\[\s*\['⚔️','モード概要','チャレンジモードの上位高難易度版です。/.test(config), 'the extreme mode must keep its concise shared description point');
+for (const heading of ['モード概要', '難易度', '報酬', 'こんな人におすすめ']) {
+  assert(modeDescription.includes(`'${heading}'`), `the extreme mode details must include the shared heading: ${heading}`);
+}
 assert(source.includes("if (typeof EXTREME_MODE !== 'undefined' && EXTREME_MODE && mode === EXTREME_MODE.id) return EXTREME_MODE;"), 'battleModeInfo must resolve the extreme mode so its description and ranking screen work');
 assert(source.includes('<button disabled={!!battleTutorial} onClick={()=>setModeInfoId(m.id)}') && !source.includes("isExtreme?'チャレンジモード最高難度'"), 'the description button must be enabled for every mode');
 assert(source.includes("openModeScoreRanking(m.id,EXTREME_SETTING.id,'BATTLE_MODE_SELECT')")
@@ -101,7 +105,7 @@ assert(sceneLines('extremeChallenge') >= 5, 'the extreme mode scene needs at lea
 assert(sceneLines('extremeDifficulty') >= 5, 'the EXTREME difficulty scene needs at least 5 lines');
 const modeScene = assistants.slice(assistants.indexOf('extremeChallenge: ['), assistants.indexOf('extremeDifficulty: ['));
 assert(!modeScene.includes('ブリーダーカード'), 'the mode scene must not explain the EXTREME-only breeder-card rule');
-for (const forbidden of ['×13', '×20', '×25', '×7.5', '75', '報酬', '50%']) {
+for (const forbidden of ['×13', '×20', '×25', '×7.5', '75', '50%']) {
   assert(!modeScene.includes(forbidden), `the mode assistant scene must not include EXTREME-only information: ${forbidden}`);
 }
 
@@ -109,9 +113,9 @@ for (const forbidden of ['×13', '×20', '×25', '×7.5', '75', '報酬', '50%']
 assert(/id: 'update_notice_extreme_challenge_v1', enabled: true,/.test(assistants) && !/id: 'update_notice_extreme_challenge_v1'[^}]*debugOnly/.test(assistants), 'the official release must be announced once through the shared update notice');
 assert(help.includes("id: 'extreme-challenge'") && help.includes("EXTREME_DIFFICULTY_SELECT: 'basics/extreme-challenge'"), 'help must describe the official extreme challenge and cover its screen');
 assert(help.includes("{ t:'data', id:'extremeDifficulties' }") && source.includes("case 'extremeDifficulties':"), 'the difficulty table must be generated from the real data');
-// 最新エントリ(今回の正式公開)だけを見る。過去のエントリには別件の記述が入っている
-const latestEntry = changelog.slice(0, changelog.indexOf('},', changelog.indexOf('const CHANGELOG = [')));
-assert(latestEntry.includes('極限チャレンジを正式に追加') && !latestEntry.includes('デバッグ'), 'the changelog must describe the official release only');
+const latestExtremeEntryStart = changelog.indexOf('title: "極限チャレンジ');
+const latestExtremeEntry = changelog.slice(latestExtremeEntryStart, changelog.indexOf('},', latestExtremeEntryStart));
+assert(latestExtremeEntry.includes('モード説明を再調整') && !latestExtremeEntry.includes('デバッグ'), 'the latest extreme changelog entry must describe the mode-copy adjustment');
 
 // --- 代表値 ---
 assert.strictEqual(Math.floor(100 * 0.5), 50, 'representative integer card effect must be exactly 50%');
