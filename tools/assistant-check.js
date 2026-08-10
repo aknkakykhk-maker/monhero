@@ -295,12 +295,49 @@ check('初回状態へ戻してもセーブデータは消さない',
   has('モンスターやダイヤなどのセーブデータは消えません') && has('await storeSet(TUTORIAL_SEEN_KEY,false,false);'));
 check('話し方の決まりごとが書いてある',
   assistantsSrc.includes('一人称は「あたし」') && assistantsSrc.includes('語尾は'));
-check('場面が指すヘルプ項目は実在する', (() => {
-  const helpCtx = {};
-  vm.createContext(helpCtx);
-  vm.runInContext(`${helpSrc}\nglobalThis.__h={helpFindTopic};`, helpCtx);
-  return Object.values(a.ASSISTANT_SCENES).every(s => !s.help || !!helpCtx.__h.helpFindTopic(...s.help.split('/')));
-})());
+// JSX に置いた scene とデータ定義を結ぶ。直接指定・三項演算子に加え、scene に渡す
+// 変数や小さな選択関数の同じ行にある候補も拾う（battleModeAssistantScene など）。
+const sceneRefs = new Set();
+const addQuotedSceneRefs = (text) => {
+  for (const match of text.matchAll(/['"]([A-Za-z][A-Za-z0-9]*)['"]/g)) sceneRefs.add(match[1]);
+};
+for (const match of source.matchAll(/\bscene=(?:"([A-Za-z][A-Za-z0-9]*)"|\{([^}\n]+)\})/g)) {
+  if (match[1]) sceneRefs.add(match[1]);
+  if (!match[2]) continue;
+  addQuotedSceneRefs(match[2]);
+  for (const id of match[2].matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) {
+    const declaration = source.match(new RegExp(`const\\s+${id[1]}\\s*=([^\\n;]+)`));
+    if (declaration) addQuotedSceneRefs(declaration[1]);
+  }
+}
+const missingSceneRefs = [...sceneRefs].filter(scene => !a.ASSISTANT_SCENES[scene]).sort();
+if (missingSceneRefs.length === 0) {
+  check('JSXで使うAssistant sceneがすべて定義されている', true, `${sceneRefs.size}場面`);
+} else {
+  for (const scene of missingSceneRefs) check(`Assistant scene “${scene}” が ASSISTANT_SCENES に存在する`, false,
+    'game-system.jsx の scene 指定か data/assistants.js の定義を確認してください');
+}
+
+// scene の help は任意。ただし設定した参照はカテゴリ/トピックとも実在しなければならない。
+const helpCtx = {};
+vm.createContext(helpCtx);
+vm.runInContext(`${helpSrc}\nglobalThis.__h={helpFindCategory,helpFindTopic};`, helpCtx);
+const badSceneHelpRefs = [];
+for (const [scene, def] of SCENES) {
+  if (!def.help) continue;
+  const parts = typeof def.help === 'string' ? def.help.split('/') : [];
+  const categoryExists = parts.length === 2 && !!helpCtx.__h.helpFindCategory(parts[0]);
+  const topicExists = categoryExists && !!helpCtx.__h.helpFindTopic(parts[0], parts[1]);
+  if (!topicExists) badSceneHelpRefs.push({ scene, ref:def.help, categoryExists });
+}
+if (badSceneHelpRefs.length === 0) {
+  check('Assistant sceneのhelp参照先がすべて実在する', true);
+} else {
+  for (const { scene, ref, categoryExists } of badSceneHelpRefs) {
+    check(`Assistant scene “${scene}” の help参照 “${ref}” が存在する`, false,
+      categoryExists ? 'data/help.js にトピックがありません' : 'data/help.js にカテゴリがありません');
+  }
+}
 check('知らない場面キーではnullを返す', a.findAssistantScene('nope') === null);
 check('場面の足しかたが手順として書いてある',
   assistantsSrc.includes('<AssistantBubble scene="home"/>') && assistantsSrc.includes('ASSISTANT_SCENES に場面を1つ足す'));

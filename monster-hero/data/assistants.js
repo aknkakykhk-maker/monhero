@@ -223,6 +223,15 @@ const ASSISTANT_SCENES = {
     help: 'basics/battle-modes',
     lines: [],
   },
+  // セリフ本体は extremeChallengeGuide の束から合流する。
+  extremeChallenge: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
+  extremeDifficulty: {
+    help: 'basics/extreme-challenge',
+    lines: [],
+  },
 
   // ---- はじめて ----
   onboarding: {
