@@ -5,10 +5,16 @@ const path = require('path');
 const sourcePath = path.join(__dirname, '..', 'monster-hero', 'src', 'game-system.jsx');
 const source = fs.readFileSync(sourcePath, 'utf8');
 const prefix = source.slice(0, source.indexOf('// =====================================================================\n// AUDIO:'));
-const context = { React: { createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} } };
+const context = {
+  React: { createElement: () => null, useState(){}, useEffect(){}, useCallback(){}, useMemo(){}, useRef(){} },
+  ALL_PLAYER_MONSTERS: {
+    Ark: { id:'Ark', name:'アーク', baseHp:100, baseAtk:20, baseDef:20, baseGuts:20, distAptitude:['C','C','C','C'] },
+    Suezo: { id:'Suezo', name:'スエゾー', baseHp:50, baseAtk:10, baseDef:10, baseGuts:10, distAptitude:['C','C','C','C'] },
+  },
+};
 vm.createContext(context);
-vm.runInContext(`${prefix}\nglobalThis.__donation = { donationDiamondValue, buildMasuDonation, buildMasuDonations, masuPowerOf };`, context);
-const { donationDiamondValue, buildMasuDonation, buildMasuDonations, masuPowerOf } = context.__donation;
+vm.runInContext(`${prefix}\nglobalThis.__donation = { donationDiamondValue, buildMasuDonation, buildMasuDonations, masuPowerOf, sortDonationMasuMons };`, context);
+const { donationDiamondValue, buildMasuDonation, buildMasuDonations, masuPowerOf, sortDonationMasuMons } = context.__donation;
 let failed = 0;
 const check = (name, ok) => { console.log(`${ok ? 'OK' : 'NG'}: ${name}`); if (!ok) failed++; };
 const masuMons = [
@@ -34,6 +40,17 @@ check('不正bondXpを0以上の整数へ正規化', [-1, NaN, Infinity, 'abc'].
 check('保存キーと同期ロックが実装されている', /donationProcessingRef\.current/.test(source) && /storeSet\('mh_gold', result\.nextGold, false\)/.test(source) && /storeSet\('mh_monster_roster', result\.nextRoster, false\)/.test(source) && /storeSet\('mh_masu_mons', result\.nextMasuMons, false\)/.test(source));
 check('複数選択・選択解除・最終確認を備える', /setDonationSelectedIds\(ids=>selected\?ids\.filter/.test(source) && /選択数：/.test(source) && /donationConfirmOpen/.test(source));
 check('寄付一覧の総合力は共通関数を使う', /formatMonsterPower\(masuPowerOf\(masu\)\)/.test(source));
+const powerSortedHigh = sortDonationMasuMons(masuMons, 'power', 'desc').map(m=>m.id);
+const powerSortedLow = sortDonationMasuMons(masuMons, 'power', 'asc').map(m=>m.id);
+check('総合力の高い順・低い順は表示と同じ共通計算値で並ぶ',
+  powerSortedHigh[0] === (masuPowerOf(masuMons[0]) >= masuPowerOf(masuMons[1]) ? 'target' : 'keep')
+  && powerSortedLow[0] === powerSortedHigh[1]);
+check('ソート前後の選択は配列位置でなく個体IDを維持する',
+  /new Set\(donationSelectedIds\.map\(String\)\)/.test(source)
+  && /key=\{masu\.id\}/.test(source)
+  && /targetIds:donationSelectedIds/.test(source));
+check('総合力ソートは高い順・低い順を1ボタンで切り替える',
+  /key:'power',label:'総合力'/.test(source) && /総合力を\$\{direction\}で表示中/.test(source));
 check('一括寄付後に選択を消し、個体数ぶんミッションを進める', /setDonationSelectedIds\(\[\]\); setDonationConfirmOpen\(false\)/.test(source) && /saveMissionProgress\('donation', result\.donated\.length\)/.test(source));
 check('寄付の3表示は通常の全身画像と共通染色を使う', (source.match(/src=\{masuDisplayImageUrl\(/g)||[]).length >= 2 && /src: masuDisplayImageUrl\(ALL_PLAYER_MONSTERS\[animationMasu\.baseId\]\)/.test(source));
 // キャッシュキーには最低限この3つが要る(どれかが抜けると別のモンスター・別の色の画像を

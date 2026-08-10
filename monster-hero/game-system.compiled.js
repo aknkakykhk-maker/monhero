@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1136ff15f1163384
+// source-sha256: c7602078e1c93b28
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 10:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 10:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -730,6 +730,20 @@ const monsterPowerOf = mon => Math.round(monsterPowerParts(mon).total);
 const masuPowerOf = masu => monsterPowerOf(mergeMasuIntoMon(masu));
 // 一覧・詳細で出す桁区切りの表記
 const formatMonsterPower = power => Number(power || 0).toLocaleString();
+
+// 寄付一覧も表示と同じ masuPowerOf を使って並べる。コピーをソートするため、元の保存配列や
+// IDで持っている選択状態には触れず、並べ替え後も同じ個体を選択・寄付できる。
+const sortDonationMasuMons = (masuList, sortKey, sortDir, activeIds = []) => {
+  const dir = sortDir === 'asc' ? 1 : -1;
+  const activeSet = new Set(activeIds);
+  const value = masu => sortKey === 'bondXp' ? donationDiamondValue(masu.bondXp) : sortKey === 'bond' ? masuBondLevelInfo(masu).level : sortKey === 'power' ? masuPowerOf(masu) : sortKey === 'name' ? masu.name || '' : sortKey === 'lineage' ? (ALL_PLAYER_MONSTERS[masu.baseId] || {}).name || '' : sortKey === 'active' ? activeSet.has(`masu:${masu.id}`) ? 1 : 0 : Number(masu.createdAt) || Number(masu.id) || 0;
+  return [...masuList].sort((a, b) => {
+    const av = value(a),
+      bv = value(b);
+    const compared = typeof av === 'string' ? av.localeCompare(bv, 'ja') : av - bv;
+    return compared * dir;
+  });
+};
 
 // 強化の下書き(plan)を当てはめた「強化後のマスモン」を、保存データに触れずに作る。
 // 一括強化のプレビュー・1ポイント強化のプレビュー・実際の確定処理が、すべてこの1か所を通るので、
@@ -5221,7 +5235,7 @@ const normalizeFusionSortSettings = value => {
   };
 };
 const normalizeDonationSortSettings = value => {
-  if (!value || value.version !== 1 || !['bondXp', 'bond', 'name', 'lineage', 'newest', 'active'].includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir)) return DEFAULT_DONATION_SORT_SETTINGS;
+  if (!value || value.version !== 1 || !['bondXp', 'bond', 'power', 'name', 'lineage', 'newest', 'active'].includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir)) return DEFAULT_DONATION_SORT_SETTINGS;
   return value;
 };
 // 不具合情報タブに出す状態バッジの見た目
@@ -17325,6 +17339,9 @@ function MonsterHeroGame() {
         key: 'bond',
         label: '絆レベル'
       }, {
+        key: 'power',
+        label: '総合力'
+      }, {
         key: 'name',
         label: '名前'
       }, {
@@ -17356,14 +17373,7 @@ function MonsterHeroGame() {
         const m = masuMons.find(x => String(x.id) === String(id));
         return sum + (m ? donationPsycheValue(m) : 0);
       }, 0);
-      const dir = donationSortDir === 'asc' ? 1 : -1;
-      const sorted = [...masuMons].sort((a, b) => {
-        const active = m => monsterRosterIds.includes(`masu:${m.id}`) ? 1 : 0;
-        const val = m => donationSortKey === 'bondXp' ? donationDiamondValue(m.bondXp) : donationSortKey === 'bond' ? masuBondLevelInfo(m).level : donationSortKey === 'name' ? m.name || '' : donationSortKey === 'lineage' ? (ALL_PLAYER_MONSTERS[m.baseId] || {}).name || '' : donationSortKey === 'active' ? active(m) : Number(m.createdAt) || Number(m.id) || 0;
-        const av = val(a),
-          bv = val(b);
-        return (typeof av === 'string' ? av.localeCompare(bv, 'ja') : av - bv) * dir;
-      });
+      const sorted = sortDonationMasuMons(masuMons, donationSortKey, donationSortDir, monsterRosterIds);
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full min-h-0 p-3",
         style: {
@@ -17386,9 +17396,12 @@ function MonsterHeroGame() {
       }, "\u5BC4\u4ED8")), /*#__PURE__*/React.createElement("p", {
         className: "text-[10px] text-slate-300 leading-relaxed bg-violet-950/40 border border-violet-500/30 rounded-xl px-3 py-2 mb-2 shrink-0"
       }, "\u7DCF\u5408\u529B\u3068\u5831\u916C\u3092\u898B\u6BD4\u3079\u3066\u8907\u6570\u9078\u3079\u307E\u3059\u3002\u7D2F\u8A08\u7D46\u7D4C\u9A13\u5024\u3068\u540C\u3058\u6570\u306E\u30C0\u30A4\u30E4\u3092\u53D7\u3051\u53D6\u308C\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-1.5 mb-2 shrink-0"
+        className: "grid grid-cols-4 gap-1 mb-2 shrink-0",
+        "aria-label": "\u5BC4\u4ED8\u4E00\u89A7\u306E\u4E26\u3079\u66FF\u3048"
       }, options.map(o => {
         const active = donationSortKey === o.key;
+        const direction = donationSortDir === 'asc' ? '低い順' : '高い順';
+        const activeLabel = o.key === 'power' ? `${o.label}：${direction}` : `${o.label}${donationSortDir === 'asc' ? ' ▲' : ' ▼'}`;
         return /*#__PURE__*/React.createElement("button", {
           key: o.key,
           onClick: () => {
@@ -17397,8 +17410,10 @@ function MonsterHeroGame() {
               setDonationSortDir(o.key === 'name' || o.key === 'lineage' ? 'asc' : 'desc');
             }
           },
-          className: `min-w-0 px-1 py-2 rounded-lg text-[8px] font-black border ${active ? 'bg-violet-600 border-violet-400 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`
-        }, o.label, active && (donationSortDir === 'asc' ? ' ▲' : ' ▼'));
+          "aria-pressed": active,
+          "aria-label": o.key === 'power' ? active ? `総合力を${direction}で表示中。押すと${donationSortDir === 'asc' ? '高い順' : '低い順'}に変更` : '総合力を高い順に並べ替え' : undefined,
+          className: `min-w-0 min-h-[34px] px-1 py-1 rounded-lg text-[8px] leading-tight font-black border ${active ? 'bg-violet-600 border-violet-400 text-white' : 'bg-slate-900 border-white/10 text-slate-400'} ${o.key === 'power' ? 'col-span-2' : ''}`
+        }, active ? activeLabel : o.label);
       })), donationError && /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-amber-200 bg-amber-950/40 border border-amber-500/40 rounded-xl p-2 mb-2 shrink-0"
       }, /*#__PURE__*/React.createElement(AlertCircle, {

@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 10:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 10:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -581,6 +581,25 @@ const monsterPowerOf = (mon) => Math.round(monsterPowerParts(mon).total);
 const masuPowerOf = (masu) => monsterPowerOf(mergeMasuIntoMon(masu));
 // 一覧・詳細で出す桁区切りの表記
 const formatMonsterPower = (power) => Number(power || 0).toLocaleString();
+
+// 寄付一覧も表示と同じ masuPowerOf を使って並べる。コピーをソートするため、元の保存配列や
+// IDで持っている選択状態には触れず、並べ替え後も同じ個体を選択・寄付できる。
+const sortDonationMasuMons = (masuList, sortKey, sortDir, activeIds = []) => {
+  const dir = sortDir === 'asc' ? 1 : -1;
+  const activeSet = new Set(activeIds);
+  const value = (masu) => sortKey === 'bondXp' ? donationDiamondValue(masu.bondXp)
+    : sortKey === 'bond' ? masuBondLevelInfo(masu).level
+    : sortKey === 'power' ? masuPowerOf(masu)
+    : sortKey === 'name' ? (masu.name || '')
+    : sortKey === 'lineage' ? ((ALL_PLAYER_MONSTERS[masu.baseId] || {}).name || '')
+    : sortKey === 'active' ? (activeSet.has(`masu:${masu.id}`) ? 1 : 0)
+    : (Number(masu.createdAt) || Number(masu.id) || 0);
+  return [...masuList].sort((a, b) => {
+    const av = value(a), bv = value(b);
+    const compared = typeof av === 'string' ? av.localeCompare(bv, 'ja') : av - bv;
+    return compared * dir;
+  });
+};
 
 // 強化の下書き(plan)を当てはめた「強化後のマスモン」を、保存データに触れずに作る。
 // 一括強化のプレビュー・1ポイント強化のプレビュー・実際の確定処理が、すべてこの1か所を通るので、
@@ -2402,7 +2421,7 @@ const normalizeFusionSortSettings = (value) => {
   return { version: 1, sortKey: value.sortKey, sortDir: value.sortDir };
 };
 const normalizeDonationSortSettings = (value) => {
-  if (!value || value.version !== 1 || !['bondXp', 'bond', 'name', 'lineage', 'newest', 'active'].includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir)) return DEFAULT_DONATION_SORT_SETTINGS;
+  if (!value || value.version !== 1 || !['bondXp', 'bond', 'power', 'name', 'lineage', 'newest', 'active'].includes(value.sortKey) || !['asc', 'desc'].includes(value.sortDir)) return DEFAULT_DONATION_SORT_SETTINGS;
   return value;
 };
 // 不具合情報タブに出す状態バッジの見た目
@@ -9034,18 +9053,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {gameState==='MASU_DONATION'&&(()=>{
-          const options=[{key:'bondXp',label:'絆経験値'},{key:'bond',label:'絆レベル'},{key:'name',label:'名前'},{key:'lineage',label:'血統'},{key:'newest',label:'新しい順'},{key:'active',label:'編成中'}];
+          const options=[{key:'bondXp',label:'絆経験値'},{key:'bond',label:'絆レベル'},{key:'power',label:'総合力'},{key:'name',label:'名前'},{key:'lineage',label:'血統'},{key:'newest',label:'新しい順'},{key:'active',label:'編成中'}];
           const donationArgs={masuMons, gold, monsterRosterIds, draftMonsterRoster, unlockedMonsterIds, validBaseIds:Object.keys(ALL_PLAYER_MONSTERS), requiredCount:STARTER_MONSTER_IDS.length};
           const selectedSet=new Set(donationSelectedIds.map(String));
           const selectedResult=donationSelectedIds.length?buildMasuDonations({...donationArgs,targetIds:donationSelectedIds}):null;
           const selectedDiamonds=selectedResult?.ok?selectedResult.diamonds:donationSelectedIds.reduce((sum,id)=>sum+donationDiamondValue(masuMons.find(m=>String(m.id)===String(id))?.bondXp),0);
           const selectedPsyche=selectedResult?.ok?selectedResult.psyche:donationSelectedIds.reduce((sum,id)=>{const m=masuMons.find(x=>String(x.id)===String(id));return sum+(m?donationPsycheValue(m):0);},0);
-          const dir=donationSortDir==='asc'?1:-1;
-          const sorted=[...masuMons].sort((a,b)=>{const active=m=>monsterRosterIds.includes(`masu:${m.id}`)?1:0;const val=m=>donationSortKey==='bondXp'?donationDiamondValue(m.bondXp):donationSortKey==='bond'?masuBondLevelInfo(m).level:donationSortKey==='name'?(m.name||''):donationSortKey==='lineage'?((ALL_PLAYER_MONSTERS[m.baseId]||{}).name||''):donationSortKey==='active'?active(m):(Number(m.createdAt)||Number(m.id)||0);const av=val(a),bv=val(b);return (typeof av==='string'?av.localeCompare(bv,'ja'):av-bv)*dir;});
+          const sorted=sortDonationMasuMons(masuMons,donationSortKey,donationSortDir,monsterRosterIds);
           return <div className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-1 shrink-0"><button disabled={donationProcessing} onClick={()=>{resetDonationFlow();setGameState('TEMPLE');}} className="p-3 text-slate-400 active:scale-90 disabled:opacity-40"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">寄付</h2></div>
             <p className="text-[10px] text-slate-300 leading-relaxed bg-violet-950/40 border border-violet-500/30 rounded-xl px-3 py-2 mb-2 shrink-0">総合力と報酬を見比べて複数選べます。累計絆経験値と同じ数のダイヤを受け取れます</p>
-            <div className="grid grid-cols-3 gap-1.5 mb-2 shrink-0">{options.map(o=>{const active=donationSortKey===o.key;return <button key={o.key} onClick={()=>{if(active)setDonationSortDir(d=>d==='asc'?'desc':'asc');else{setDonationSortKey(o.key);setDonationSortDir(o.key==='name'||o.key==='lineage'?'asc':'desc');}}} className={`min-w-0 px-1 py-2 rounded-lg text-[8px] font-black border ${active?'bg-violet-600 border-violet-400 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{o.label}{active&&(donationSortDir==='asc'?' ▲':' ▼')}</button>})}</div>
+            <div className="grid grid-cols-4 gap-1 mb-2 shrink-0" aria-label="寄付一覧の並べ替え">{options.map(o=>{const active=donationSortKey===o.key;const direction=donationSortDir==='asc'?'低い順':'高い順';const activeLabel=o.key==='power'?`${o.label}：${direction}`:`${o.label}${donationSortDir==='asc'?' ▲':' ▼'}`;return <button key={o.key} onClick={()=>{if(active)setDonationSortDir(d=>d==='asc'?'desc':'asc');else{setDonationSortKey(o.key);setDonationSortDir(o.key==='name'||o.key==='lineage'?'asc':'desc');}}} aria-pressed={active} aria-label={o.key==='power'?(active?`総合力を${direction}で表示中。押すと${donationSortDir==='asc'?'高い順':'低い順'}に変更`:'総合力を高い順に並べ替え'):undefined} className={`min-w-0 min-h-[34px] px-1 py-1 rounded-lg text-[8px] leading-tight font-black border ${active?'bg-violet-600 border-violet-400 text-white':'bg-slate-900 border-white/10 text-slate-400'} ${o.key==='power'?'col-span-2':''}`}>{active?activeLabel:o.label}</button>})}</div>
             {donationError&&<div className="text-[9px] text-amber-200 bg-amber-950/40 border border-amber-500/40 rounded-xl p-2 mb-2 shrink-0"><AlertCircle size={12} className="inline mr-1"/>{donationError}</div>}
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               {masuMons.length===0?<div className="flex flex-col items-center justify-center h-full text-center text-slate-500"><Gem size={42}/><p className="text-[11px] mt-3 font-bold">寄付できるマスモンがいません</p></div>:<div className="grid grid-cols-3 gap-1.5 pb-3">{sorted.map(masu=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const diamonds=donationDiamondValue(masu.bondXp);const lvl=masuBondLevelInfo(masu);const active=monsterRosterIds.includes(`masu:${masu.id}`);const selected=selectedSet.has(String(masu.id));const trial=selected?{ok:true}:buildMasuDonations({...donationArgs,targetIds:[...donationSelectedIds,masu.id]});const canSelect=trial.ok;return <button key={masu.id} disabled={donationProcessing||(!selected&&!canSelect)} aria-pressed={selected} onClick={()=>{setDonationError('');setDonationSelectedIds(ids=>selected?ids.filter(id=>String(id)!==String(masu.id)):[...ids,masu.id]);}} className={`relative min-h-[122px] min-w-0 overflow-hidden bg-slate-900 border-2 rounded-xl p-1.5 flex flex-col items-center text-center active:scale-[.97] disabled:opacity-35 ${selected?'border-amber-300 bg-violet-950/80':'border-violet-500/30'}`}>
