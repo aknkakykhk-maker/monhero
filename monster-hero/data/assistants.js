@@ -1278,7 +1278,7 @@ const ASSISTANT_BATTLE_TUTORIAL_INTRO_V2 = [
   { id:'modeTalk',     at:'BATTLE_MODE_SELECT',       e:'normal',  title:'まずはモード選び', t:'バトルは3つのモードから選ぶよ。左右にスワイプすると、ぐるぐる回せるんだ♪', spot:'modeCards', wait:'next' },
   { id:'modeChallenge',at:'BATTLE_MODE_SELECT',       e:'happy',   title:'チャレンジモード', t:'いま出てるのがチャレンジ。強化を自分で選んでスコアを伸ばす、いちばん基本のモードだよ。', spot:'modeCards', wait:'next' },
   { id:'modeQuick',    at:'BATTLE_MODE_SELECT',       e:'wink',    title:'クイックモード', t:'となりはクイック。育成用のモードで、短い時間で何周も回せて経験値が1.5倍もらえるの。', spot:'modeCards', wait:'next' },
-  { id:'modePro',      at:'BATTLE_MODE_SELECT',       e:'surprise',title:'プロモード', t:'その先はプロ。育てた子を一切つれていけない、いちばん難しいモードだよ…！', spot:'modeCards', wait:'next' },
+  { id:'modePro',      at:'BATTLE_MODE_SELECT',       e:'surprise',title:'プロモード', t:'その先はプロ。育てた子に頼らず、ベースモンだけで挑む特殊モードだよ…！', spot:'modeCards', wait:'next' },
   { id:'modeDetail',   at:'BATTLE_MODE_SELECT',       e:'normal',  title:'くわしく知りたいとき', t:'カードの「このモードの説明」を押すと、どのモードも同じ並びで細かく読めるよ。', spot:'modeCards', wait:'next' },
   { id:'rankTalk',     at:'BATTLE_MODE_SELECT',       e:'happy',   title:'ランキング', t:'上のタブでブリーダーLvと絆Lvのランキング、カードのボタンでモードごとのスコアランキングが見られるよ♪', spot:'modeRankTabs', wait:'next' },
   { id:'modePick',     at:'BATTLE_MODE_SELECT',       e:'wink',    title:'今日はチャレンジで', t:'最初はチャレンジがおすすめ！ 「難易度を選ぶ」を押してみて♪', spot:'modeStart', wait:'act' },

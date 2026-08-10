@@ -11,9 +11,9 @@ for (const file of files) {
   const source = fs.readFileSync(path.join(ROOT, file), 'utf8');
   check(`${file}: 4曲のいちかトラックを登録`,
     ['ichika_home','ichika_battle','ichika_boss','ichika_clear'].every(id => source.includes(id)));
-  check(`${file}: 9場面のデフォルトを定義`,
+  check(`${file}: 主要場面とモード別のデフォルトを定義`,
     /DEFAULT_BGM_ARRANGEMENT/.test(source) &&
-    [['home','original_home'],['management','original_profile'],['market','original_market'],['temple','original_fusion'],['trainingMenu','original_home'],['trainingBoard','original_home'],['battle','original_battle'],['boss','original_boss'],['clear','ichika_clear']]
+    [['home','original_home'],['management','original_profile'],['market','original_market'],['temple','original_fusion'],['trainingMenu','original_home'],['trainingBoard','original_home'],['battle','original_battle'],['quickBattle','ichika_battle'],['proBattle','original_battle'],['extremeBattle','original_battle'],['boss','original_boss'],['clear','ichika_clear']]
       .every(([scene, track]) => new RegExp(`${scene}:\\s*['"]${track}`).test(source)));
   check(`${file}: 不正な保存IDを既定値へ正規化`, /normalizeBgmArrangement/.test(source) && /BGM_TRACK_BY_ID\[value/.test(source));
   check(`${file}: アレンジを専用キーへ保存`, /mh_bgm_arrangement/.test(source));
@@ -28,9 +28,15 @@ for (const file of files) {
   check(`${file}: デュラハン専用曲をボス曲より優先`,
     /enemyId\s*===\s*['"]Durahan['"]\)\s*return\s+quick\s*\?\s*bgmArrangement\.quickDullahan\s*:\s*bgmArrangement\.dullahan/.test(source));
   check(`${file}: 通常バトルの曲をモードごとに切り替える`,
+    /debugExtremeRef\.current\)\s*return\s+bgmArrangement\.extremeBattle/.test(source) &&
+    /isProMode\(runMode\)\)\s*return\s+bgmArrangement\.proBattle/.test(source) &&
     /return\s+quick\s*\?\s*bgmArrangement\.quickBattle\s*:\s*bgmArrangement\.battle/.test(source));
   check(`${file}: モード別BGMの既定値がある`,
-    /quickBattle:\s*'ichika_battle'/.test(source) && /[^k]dullahan:\s*'original_dullahan'/.test(source) && /quickDullahan:\s*'original_dullahan'/.test(source));
+    /quickBattle:\s*'ichika_battle'/.test(source) && /proBattle:\s*'original_battle'/.test(source) &&
+    /extremeBattle:\s*'original_battle'/.test(source) && /[^k]dullahan:\s*'original_dullahan'/.test(source) && /quickDullahan:\s*'original_dullahan'/.test(source));
+  check(`${file}: BGM画面を3カテゴリに分けている`,
+    /id:\s*['"]basic['"],\s*label:\s*['"]基本/.test(source) && /id:\s*['"]battle['"],\s*label:\s*['"]バトル/.test(source) &&
+    /id:\s*['"]other['"],\s*label:\s*['"]その他/.test(source) && /(?:role=|role:)\s*['"]tablist/.test(source));
   check(`${file}: 曲別gainを上限付きで全体音量へ合成`,
     /Math\.min\(1\.25/.test(source) && /_bgmGain\(bgmVolumePct\)\s*\*\s*safeTrackGain/.test(source));
   check(`${file}: Web Audio試聴を単一ソースで管理`,

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3764b55265fcbe62
+// source-sha256: 57cba50aabd30379
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 09:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 09:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -255,9 +255,9 @@ const BATTLE_MODES = [{
   short: 'プロ',
   emoji: '🎓',
   color: '#f472b6',
-  tagline: '育てたマスモンを一切使えない、いちばん難しいモード',
-  highlights: [['🔥', '素のベースモンだけで挑む最高難度'], ['💎', '絆経験値3倍・ブリーダー経験値1.5倍'], ['📊', 'プロ専用のスコアランキング']],
-  points: [['⚔️', '編成', '育てたマスモンは1体も連れていけません。全員が素のベースモンです。これまで積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'], ['📈', 'WAVEのあいだの強化', 'チャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、どこを伸ばすかの判断がそのまま結果に出ます。'], ['👹', '難しさ', 'このゲームでいちばん難しいモードです。同じ難易度でも、育てた個体を使えるチャレンジモードとは手ごたえがまったく違います。敵の強さは難易度どおりなので、上の難易度へ行くほど差が開きます。'], ['💎', 'もらえる経験値とダイヤ', '絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりで、上乗せはありません。'], ['🏆', 'スコアと記録', 'スコアはチャレンジモードとは別の「プロランキング」に反映されます。同じ条件で挑んだ人どうしで競う場所です。自己ベスト・最高到達WAVE・クリア回数もプロ専用の場所に残り、チャレンジモードの記録は書き換わりません。'], ['🤝', '供モンの加入', '始める前に供モンの候補を5体選びます。実際に加入候補として出るのは、その5体からランダムに選ばれた3体です。誰が来てもいいように候補を組むところまでが編成です。'], ['⭐', 'マスモン登録', '勇者モンにしたベースモンは、プレイが終わったあとマスモンとして登録できます。厳しい条件で戦ったぶん、絆経験値は3倍ぶん貯まっています。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '育成の力を借りずに腕だけで勝ちたい人、チャレンジモードが物足りなくなった人向けです。']]
+  tagline: 'ベースモンだけで挑む、育成に頼れない特殊モード',
+  highlights: [['🔥', '育てたマスモンなしで挑む実力勝負'], ['💎', '絆経験値3倍・ブリーダー経験値1.5倍'], ['📊', 'プロ専用のスコアランキング']],
+  points: [['⚔️', '編成', '育てたマスモンは1体も連れていけません。全員が素のベースモンです。これまで積み上げたステータス・強化ポイント・固有技レベル・限界突破は、このモードでは一切使えません。'], ['📈', 'WAVEのあいだの強化', 'チャレンジモードと同じで、WAVEをクリアするたびに強化フェーズがあります。素の状態から始まるぶん、どこを伸ばすかの判断がそのまま結果に出ます。'], ['👹', '難しさ', '育成済みの個体を使わない特殊な制約があります。同じ難易度でも、育てた個体を使えるチャレンジモードとは違う手ごたえです。敵の強さは難易度どおりなので、上の難易度へ行くほど制約の重みが増します。'], ['💎', 'もらえる経験値とダイヤ', '絆経験値が3倍、ブリーダー経験値が1.5倍になります（難易度の倍率にさらにかかります）。ダイヤとスコアの倍率は難易度の設定どおりで、上乗せはありません。'], ['🏆', 'スコアと記録', 'スコアはチャレンジモードとは別の「プロランキング」に反映されます。同じ条件で挑んだ人どうしで競う場所です。自己ベスト・最高到達WAVE・クリア回数もプロ専用の場所に残り、チャレンジモードの記録は書き換わりません。'], ['🤝', '供モンの加入', '始める前に供モンの候補を5体選びます。実際に加入候補として出るのは、その5体からランダムに選ばれた3体です。誰が来てもいいように候補を組むところまでが編成です。'], ['⭐', 'マスモン登録', '勇者モンにしたベースモンは、プレイが終わったあとマスモンとして登録できます。厳しい条件で戦ったぶん、絆経験値は3倍ぶん貯まっています。'], ['⏩', 'スキップチケット', '使えません。スコアを競うモードなので、戦わずに報酬だけ取れないようにしています。'], ['🎯', 'こんな人におすすめ', '育成の力を借りずに腕だけで勝ちたい人、チャレンジモードが物足りなくなった人向けです。']]
 }];
 const battleModeInfo = mode => BATTLE_MODES.find(m => m.id === normalizeBattleMode(mode)) || BATTLE_MODES[0];
 // 本番のバトル画面へ出すモード。いまは3モードすべてを公開している。
@@ -1457,6 +1457,7 @@ const BGM_TRACK_BY_ID = Object.fromEntries(BGM_TRACKS.map(track => [track.id, tr
 const BGM_TRACK_BY_KEY = Object.fromEntries(BGM_TRACKS.filter(track => track.legacyKey).map(track => [track.legacyKey, track]));
 // battle/dullahan はチャレンジモード用、quickBattle/quickDullahan はクイックモード用。
 // クイックのデュラハン戦は専用曲が無いため、チャレンジと同じデュラハン曲を既定にする。
+// proBattle/extremeBattle は追加前に流れていたチャレンジ曲へフォールバックし、既存ユーザーの体験を維持する。
 // 新しいキーを足しても normalizeBgmArrangement が既定値で補うので、既存ユーザーの設定は壊れない
 const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   home: 'original_home',
@@ -1467,6 +1468,8 @@ const DEFAULT_BGM_ARRANGEMENT = Object.freeze({
   trainingBoard: 'original_home',
   battle: 'original_battle',
   quickBattle: 'ichika_battle',
+  proBattle: 'original_battle',
+  extremeBattle: 'original_battle',
   dullahan: 'original_dullahan',
   quickDullahan: 'original_dullahan',
   boss: 'original_boss',
@@ -5993,7 +5996,7 @@ const EXTREME_DEBUG_MODE = Object.freeze({
   short: '極限',
   emoji: '🔥',
   color: '#e879f9',
-  tagline: '限界を超えた強敵に挑む、チャレンジモード最高難度',
+  tagline: '限界を超えた強敵に挑む、最高難度チャレンジ',
   highlights: [['⚔️', 'チャレンジモードの上位高難易度版'], ['✨', '極限の戦いに見合う高倍率報酬'], ['🧪', 'デバッグ中（保存・ランキングなし）']]
 });
 const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
@@ -8157,6 +8160,7 @@ function MonsterHeroGame() {
   const [audioUnlocked, setAudioUnlocked] = useState(true);
   const [showAudioSettings, setShowAudioSettings] = useState(false); // 音量設定モーダルの表示状態
   const [showBgmArrangement, setShowBgmArrangement] = useState(false);
+  const [bgmArrangementCategory, setBgmArrangementCategory] = useState('basic');
   const [bgmArrangement, setBgmArrangement] = useState(DEFAULT_BGM_ARRANGEMENT);
   const [previewTrackId, setPreviewTrackId] = useState(null);
   const [quickMuted, setQuickMuted] = useState(false);
@@ -8987,12 +8991,12 @@ function MonsterHeroGame() {
     // デバッグ戦は選択した敵を直接生成するため、WAVE番号だけに頼らず敵IDでもムーを判定する。
     // デュラハン専用曲はアレンジ設定より優先する既存仕様を維持する。
     if (state === 'BATTLE') {
-      // 曲はモードごとに分けて設定できる。ボス(ムー)戦だけは全モード共通。
-      // プロモードは専用曲を新しく用意せず、チャレンジと同じ曲(battle / dullahan)を流す。
-      // BGM設定の項目も増やさないので、既存の保存値(mh_bgm_arrangement)はそのまま使える
+      // 通常戦はモードごとに選べる。デュラハン専用曲とボス(ムー)戦は既存の場面別設定を維持する。
       const quick = isQuickMode(runMode);
       if (enemyId === 'Durahan') return quick ? bgmArrangement.quickDullahan : bgmArrangement.dullahan;
       if (enemyId === 'Moo' || currentWave === 10) return bgmArrangement.boss;
+      if (debugExtremeRef.current) return bgmArrangement.extremeBattle;
+      if (isProMode(runMode)) return bgmArrangement.proBattle;
       return quick ? bgmArrangement.quickBattle : bgmArrangement.battle;
     }
     if (RUN_PHASE_STATES.includes(state)) return wavesDone ? 'result' : 'enhance';
@@ -15602,29 +15606,56 @@ function MonsterHeroGame() {
     onClick: closeBgmArrangement
   }, /*#__PURE__*/React.createElement(X, {
     size: 18
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "space-y-4"
-  }, [['home', 'HOME BGM'], ['management', 'M/B管理 BGM'], ['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM'], ['battle', 'チャレンジモード BGM'], ['quickBattle', 'クイックモード BGM'], ['dullahan', 'チャレンジ デュラハン戦 BGM'], ['quickDullahan', 'クイック デュラハン戦 BGM'], ['boss', 'ボスバトル BGM'], ['clear', 'ゲームクリア BGM']].map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
-    key: scene,
-    className: "block text-left"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "text-xs font-black text-slate-300"
-  }, label), /*#__PURE__*/React.createElement("div", {
-    className: "flex gap-2 mt-1"
-  }, /*#__PURE__*/React.createElement("select", {
-    "aria-label": label,
-    value: bgmArrangement[scene],
-    onChange: e => changeBgmArrangement(scene, e.target.value),
-    className: "min-w-0 flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"
-  }, BGM_TRACKS.map(track => /*#__PURE__*/React.createElement("option", {
-    key: track.id,
-    value: track.id
-  }, track.name))), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    "aria-label": `${label}を試聴`,
-    onClick: () => toggleBgmPreview(bgmArrangement[scene]),
-    className: "shrink-0 min-w-[58px] rounded-xl bg-indigo-700 px-2 text-xs font-black"
-  }, previewTrackId === bgmArrangement[scene] ? '停止' : '試聴'))))), /*#__PURE__*/React.createElement("button", {
+  }))), (() => {
+    const categories = [{
+      id: 'basic',
+      label: '基本',
+      items: [['home', 'HOME BGM'], ['management', 'M/B管理 BGM'], ['clear', 'ゲームクリア BGM']]
+    }, {
+      id: 'battle',
+      label: 'バトル',
+      items: [['battle', 'チャレンジモード BGM'], ['quickBattle', 'クイックモード BGM'], ['proBattle', 'プロモード BGM'], ['extremeBattle', '極限チャレンジ BGM']]
+    }, {
+      id: 'other',
+      label: 'その他',
+      items: [['market', 'マーケット BGM'], ['temple', '神殿 BGM'], ['trainingMenu', '修行メニュー BGM'], ['trainingBoard', '修行中 BGM'], ['dullahan', 'チャレンジ デュラハン戦 BGM'], ['quickDullahan', 'クイック デュラハン戦 BGM'], ['boss', 'ボスバトル BGM']]
+    }];
+    const selected = categories.find(category => category.id === bgmArrangementCategory) || categories[0];
+    return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      role: "tablist",
+      "aria-label": "BGM\u30AB\u30C6\u30B4\u30EA",
+      className: "grid grid-cols-3 gap-2 mb-4"
+    }, categories.map(category => /*#__PURE__*/React.createElement("button", {
+      key: category.id,
+      type: "button",
+      role: "tab",
+      "aria-selected": selected.id === category.id,
+      onClick: () => setBgmArrangementCategory(category.id),
+      className: `min-h-[44px] rounded-xl border text-xs font-black ${selected.id === category.id ? 'bg-indigo-600 border-indigo-300 text-white' : 'bg-slate-900 border-white/15 text-slate-300'}`
+    }, category.label))), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-4"
+    }, selected.items.map(([scene, label]) => /*#__PURE__*/React.createElement("label", {
+      key: scene,
+      className: "block text-left"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-xs font-black text-slate-300"
+    }, label), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2 mt-1"
+    }, /*#__PURE__*/React.createElement("select", {
+      "aria-label": label,
+      value: bgmArrangement[scene],
+      onChange: e => changeBgmArrangement(scene, e.target.value),
+      className: "min-w-0 flex-1 bg-slate-950 border border-white/15 rounded-xl px-2 py-3 text-xs text-white"
+    }, BGM_TRACKS.map(track => /*#__PURE__*/React.createElement("option", {
+      key: track.id,
+      value: track.id
+    }, track.name))), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "aria-label": `${label}を試聴`,
+      onClick: () => toggleBgmPreview(bgmArrangement[scene]),
+      className: "shrink-0 min-w-[58px] min-h-[44px] rounded-xl bg-indigo-700 px-2 text-xs font-black"
+    }, previewTrackId === bgmArrangement[scene] ? '停止' : '試聴'))))));
+  })(), /*#__PURE__*/React.createElement("button", {
     className: "mh-dialog-choice mt-4",
     onClick: () => setBgmArrangement({
       ...DEFAULT_BGM_ARRANGEMENT
