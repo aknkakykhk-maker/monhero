@@ -14,7 +14,13 @@ notices.forEach(n=>{ assert(n.title && n.expression && Array.isArray(n.pages) &&
 assert(notices.filter(n=>n.debugOnly!==true).every(n=>n.id!=='update_notice_debug_v1'), 'テスト通知を通常配信してはいけません');
 const nightmareNotice = notices.find(n=>n.id==='update_notice_nightmare_v1');
 assert(nightmareNotice && nightmareNotice.enabled && nightmareNotice.debugOnly!==true, 'NIGHTMARE正式追加通知が必要です');
-assert(notices.some(n=>n.id==='update_notice_extreme_challenge_v1') && nightmareNotice.id!=='update_notice_extreme_challenge_v1', 'EXTREMEとは別の通知IDが必要です');
+const extremeNotice = notices.find(n=>n.id==='update_notice_extreme_challenge_v1');
+assert(extremeNotice && nightmareNotice.id!==extremeNotice.id, 'EXTREMEとは別の通知IDが必要です');
+const officialNotices = notices.filter(n=>n.enabled===true && n.debugOnly!==true);
+const unseenNotices = seenIds => officialNotices.filter(n=>!seenIds.includes(n.id));
+assert(unseenNotices([extremeNotice.id]).some(n=>n.id===nightmareNotice.id), 'EXTREME既読でもNIGHTMARE初回案内を表示する必要があります');
+assert(!unseenNotices([extremeNotice.id, nightmareNotice.id]).some(n=>n.id===nightmareNotice.id), 'NIGHTMARE初回案内は2回目以降に表示してはいけません');
+assert(unseenNotices([nightmareNotice.id]).some(n=>n.id===extremeNotice.id), 'NIGHTMARE既読がEXTREME通知へ影響してはいけません');
 
 assert(game.includes("const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1'"));
 assert(game.includes('new Set((Array.isArray(value) ? value : [])'), '不正値の正規化と重複除去が必要です');
