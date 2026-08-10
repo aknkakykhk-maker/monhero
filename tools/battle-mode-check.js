@@ -257,13 +257,14 @@ check('チャレンジの売りは強化を選ぶ王道',
 check('クイックの売りは育成',
   highlightText('quick').includes('育成') && highlightText('quick').includes('1.5倍') && highlightText('quick').includes('ランキングは無し')
     && pointOf('quick', 'WAVEのあいだの強化').includes('10%'));
-// プロの売りは「マスモンの経験値」ではなく「ベースモンだけで挑む難しさ」
-check('プロの売りはベースモンだけで挑む難しさ',
-  highlightText('pro').includes('ベースモン') && highlightText('pro').includes('最高難度')
+// プロの売りは極限との強さ比較ではなく「育成済みマスモンを使わない特殊制約」
+check('プロの売りはベースモンだけで挑む特殊制約',
+  highlightText('pro').includes('マスモン') && highlightText('pro').includes('実力勝負')
     && !m.battleModeInfo('pro').highlights[0][1].includes('経験値'));
-check('プロの説明に編成の制限と難しさが書いてある',
+check('プロの説明に編成の特殊制約が書いてある',
   pointOf('pro', '編成').includes('マスモンは1体も連れていけません')
-    && pointOf('pro', '難しさ').includes('いちばん難しい')
+    && pointOf('pro', '難しさ').includes('特殊な制約')
+    && !/いちばん難しい|最高難度/.test(m.battleModeInfo('pro').tagline + highlightText('pro') + pointOf('pro', '難しさ'))
     && pointOf('pro', 'もらえる経験値とダイヤ').includes('絆経験値が3倍')
     && pointOf('pro', 'もらえる経験値とダイヤ').includes('ブリーダー経験値が1.5倍')
     && pointOf('pro', 'スコアと記録').includes('プロランキング')
@@ -341,17 +342,17 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: デュラハン戦の曲もモードで切り替える`, flat.includes("enemyId==='Durahan')returnquick?bgmArrangement.quickDullahan:bgmArrangement.dullahan"));
 }
 check('モード別BGMの既定値がある',
-  has("quickBattle:'ichika_battle'") && has("dullahan:'original_dullahan'") && has("quickDullahan:'original_dullahan'"));
+  has("quickBattle:'ichika_battle'") && has("proBattle:'original_battle'") && has("extremeBattle:'original_battle'")
+    && has("dullahan:'original_dullahan'") && has("quickDullahan:'original_dullahan'"));
 check('新しいBGM項目は既存設定が無くても既定値で補われる', has('const normalizeBgmArrangement = value => Object.fromEntries(Object.entries(DEFAULT_BGM_ARRANGEMENT)'));
-check('BGMアレンジ画面に4項目そろっている',
+check('BGMアレンジ画面にモード別4項目と既存の専用戦項目がそろっている',
   has("['battle','チャレンジモード BGM']") && has("['quickBattle','クイックモード BGM']")
+    && has("['proBattle','プロモード BGM']") && has("['extremeBattle','極限チャレンジ BGM']")
     && has("['dullahan','チャレンジ デュラハン戦 BGM']") && has("['quickDullahan','クイック デュラハン戦 BGM']"));
-// プロは専用曲を新設せず、チャレンジと同じ曲へ落とす。BGM設定の項目も増やさないので、
-// 既存の保存値(mh_bgm_arrangement)はそのまま読める
 const bgmBlock = grab(source, "if (state === 'BATTLE') {", "if (RUN_PHASE_STATES.includes(state))");
-check('プロ専用のBGM項目を増やしていない',
-  !has('proBattle') && !has('proDullahan') && !bgmBlock.includes('isProMode'));
-check('プロはチャレンジと同じ曲になる', bgmBlock.includes('const quick = isQuickMode(runMode);'));
+check('プロと極限は個別の通常戦BGMになる',
+  bgmBlock.includes('if (debugExtremeRef.current) return bgmArrangement.extremeBattle;')
+    && bgmBlock.includes('if (isProMode(runMode)) return bgmArrangement.proBattle;'));
 
 // --- ⑦ プロ基盤 ---
 // 第1段階では、本番のバトル画面にプロのタブを出さない(新しい入口とセットで公開する)
