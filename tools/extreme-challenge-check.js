@@ -28,8 +28,9 @@ assert(config.includes("const EXTREME_UNLOCK_TEXT = 'チャレンジ Grand Maste
 assert(/const isExtremeUnlocked = \(clearCounts\) => EXTREME_UNLOCK_DIFFICULTIES[\s\S]{0,160}\(Number\(clearCounts\?\.\[key\]\) \|\| 0\) > 0\)/.test(config), 'unlock must read the existing challenge clear counts');
 assert(source.includes('const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);'), 'unlock state must derive from the loaded clear counts');
 assert(source.includes('const modes=[...BATTLE_MODES,EXTREME_MODE];'), 'the extreme card must always be listed, locked or not');
-assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked') && source.includes("disabled={extremeLocked||(!!battleTutorial") && source.includes("disabled={!setting.available||!unlocked}"), 'locked extreme tiers must remain unselectable');
+assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||(!!battleTutorial") && source.includes("disabled={!setting.available||!unlocked}"), 'official locked extreme tiers must remain unselectable while debug may enter');
 assert(source.includes("const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);") && source.includes("setting.id==='NIGHTMARE'?nightmareUnlocked:false"), 'NIGHTMARE details must unlock from the loaded EXTREME clear count');
+assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:false)"), 'debug mode must unlock EXTREME and NIGHTMARE regardless of official progress');
 assert(source.includes("disabled={!previewable} onClick={()=>setShowWaveDetails(true)}")
   && source.includes("const extreme=gameState==='EXTREME_DIFFICULTY_SELECT'")
   && source.includes("const powerOverride=extreme?extremePreviewSetting.power:null")
@@ -104,7 +105,7 @@ assert(source.includes('mh-extreme-enemy-image') && source.includes("extremeDiff
 assert(source.includes('mh-nightmare-enemy-aura-shell') && source.includes('@keyframes mhNightmareMist') && source.includes('mh-extreme-enemy-aura-shell') && source.includes('@keyframes mhExtremeEnemyMist') && source.includes('@keyframes mhExtremeEnemyFloor'), 'EXTREME and NIGHTMARE auras must remain distinct; EXTREME must combine silhouette glow, rising evil energy, and a foot glow with lightweight CSS-only motion');
 assert(source.includes('h-[366px]') && source.includes('flex items-start gap-2.5'), 'mode cards must share a fixed outer height and aligned carousel');
 assert(/const packedLines = scene \? ASSISTANT_LINE_PACKS\.flatMap/.test(assistants), 'line-pack-only EXTREME assistant dialogue must remain reachable');
-assert(source.includes("? 'extremeChallenge'") && source.includes("const extremeDifficultyAssistantScene = extremeDifficulty === NIGHTMARE_SETTING.id && nightmareUnlocked ? 'nightmareDifficulty' : 'extremeDifficulty';") && source.includes('scene={extremeDifficultyAssistantScene}') && !source.includes('extremeGuideStep'), 'mode and EXTREME difficulty must use separate shared assistant scenes without a post-selection dialogue');
+assert(source.includes("? 'extremeChallenge'") && source.includes("const extremeDifficultyAssistantScene = extremeDifficulty === NIGHTMARE_SETTING.id && (nightmareUnlocked || debugBattle) ? 'nightmareDifficulty' : 'extremeDifficulty';") && source.includes('scene={extremeDifficultyAssistantScene}') && !source.includes('extremeGuideStep'), 'mode and EXTREME difficulty must use separate shared assistant scenes without a post-selection dialogue');
 const sceneLines = (name) => {
   const start = assistants.indexOf(`${name}: [`);
   return assistants.slice(start, assistants.indexOf('],', start)).match(/\{ e:/g)?.length || 0;
@@ -121,6 +122,7 @@ for (const forbidden of ['×13', '×20', '×25', '×7.5', '75', '50%']) {
 
 // --- ⑦ 初回案内・ヘルプ・更新履歴 ---
 assert(/id: 'update_notice_extreme_challenge_v1', enabled: true,/.test(assistants) && !/id: 'update_notice_extreme_challenge_v1'[^}]*debugOnly/.test(assistants), 'the official release must be announced once through the shared update notice');
+assert(/id: 'update_notice_nightmare_v1', enabled: true,/.test(assistants) && !/id: 'update_notice_nightmare_v1'[^}]*debugOnly/.test(assistants), 'NIGHTMARE must have its own official one-time notice');
 assert(help.includes("id: 'extreme-challenge'") && help.includes("EXTREME_DIFFICULTY_SELECT: 'basics/extreme-challenge'"), 'help must describe the official extreme challenge and cover its screen');
 assert(help.includes("{ t:'data', id:'extremeDifficulties' }") && source.includes("case 'extremeDifficulties':"), 'the difficulty table must be generated from the real data');
 assert(changelog.includes('極限チャレンジのモード説明を再調整しました') && !changelog.includes('極限チャレンジのモード説明をデバッグ'), 'the extreme changelog must retain the mode-copy adjustment');

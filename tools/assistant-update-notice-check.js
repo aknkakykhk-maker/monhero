@@ -12,6 +12,9 @@ assert(Array.isArray(notices) && notices.length, '検証用通知が必要です
 assert.strictEqual(new Set(notices.map(n=>n.id)).size, notices.length, '通知IDは一意である必要があります');
 notices.forEach(n=>{ assert(n.title && n.expression && Array.isArray(n.pages) && n.pages.length); });
 assert(notices.filter(n=>n.debugOnly!==true).every(n=>n.id!=='update_notice_debug_v1'), 'テスト通知を通常配信してはいけません');
+const nightmareNotice = notices.find(n=>n.id==='update_notice_nightmare_v1');
+assert(nightmareNotice && nightmareNotice.enabled && nightmareNotice.debugOnly!==true, 'NIGHTMARE正式追加通知が必要です');
+assert(notices.some(n=>n.id==='update_notice_extreme_challenge_v1') && nightmareNotice.id!=='update_notice_extreme_challenge_v1', 'EXTREMEとは別の通知IDが必要です');
 
 assert(game.includes("const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1'"));
 assert(game.includes('new Set((Array.isArray(value) ? value : [])'), '不正値の正規化と重複除去が必要です');

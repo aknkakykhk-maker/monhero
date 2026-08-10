@@ -87,6 +87,15 @@ const ASSISTANT_UPDATE_NOTICES = [
     destination: 'battle', buttonLabel: 'バトルへ行く',
   },
   {
+    id: 'update_notice_nightmare_v1', enabled: true,
+    title: 'NIGHTMARE解禁！', expression: 'excited',
+    pages: [
+      'NIGHTMARE解禁！ EXTREMEを超えた悪夢級の戦いが待ってるよ。',
+      'EXTREMEをクリアすると挑戦できるよ！',
+    ],
+    destination: 'battle', buttonLabel: 'バトルへ行く',
+  },
+  {
     id: 'update_notice_pro_mode_v1', enabled: true,
     title: 'プロモード追加', expression: 'excited',
     pages: [
