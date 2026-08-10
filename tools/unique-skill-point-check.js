@@ -29,7 +29,7 @@ vm.runInContext([
   grab('const XP_CURVE_EXPONENT', 'const BOND_XP_DISCOUNT'),
   grab('const BOND_XP_DISCOUNT', 'const rosterBaseId = (entryId, masuMons)'),
   'globalThis.__m={normalizeMasuProgression,buildMasuBreakthrough,buildMasuReincarnation,resetMasuForRebirth,'
-  + 'MAX_UNIQUE_SKILL_LEVEL,INITIAL_MASU_LEVEL_CAP,MAX_MASU_LEVEL_CAP,BREAKTHROUGH_LEVEL_CAP_GAIN,'
+  + 'applyUniqueSkillPointPlan,MAX_UNIQUE_SKILL_LEVEL,INITIAL_MASU_LEVEL_CAP,MAX_MASU_LEVEL_CAP,BREAKTHROUGH_LEVEL_CAP_GAIN,'
   + 'totalBondXpForLevel,masuBondLevelInfo,breakthroughItemCost,masuRebirthCost,REINCARNATE_MIN_LEVEL};',
 ].join('\n'), ctx);
 const m = ctx.__m;
@@ -105,31 +105,45 @@ check('転生でその場で上げたときはポイントが増えない', (() 
 check('転生でリセットしても固有技ポイントは消えない',
   m.resetMasuForRebirth({ ...reincMasu }).uniqueSkillPoints === 2);
 
-// --- ⑤ 画面から使える ---
+// --- ⑤ 仮配分→確定 ---
+const multiSkillMasu = { ...freshMasu, uniqueSkillLevels:{ own:2, inherited:1 }, uniqueSkillPoints:4 };
+const draft = { own:2, inherited:1 };
+check('仮配分を作っても保存元のポイントと技Lvは変わらない',
+  multiSkillMasu.uniqueSkillPoints===4 && multiSkillMasu.uniqueSkillLevels.own===2 && multiSkillMasu.uniqueSkillLevels.inherited===1);
+const confirmed = m.applyUniqueSkillPointPlan(multiSkillMasu,draft,['own','inherited']);
+check('確定時だけ複数技へ振ったポイントが減る', confirmed&&confirmed.uniqueSkillPoints===1);
+check('固有技Lvが確定分だけ上がる', confirmed&&confirmed.uniqueSkillLevels.own===4&&confirmed.uniqueSkillLevels.inherited===2);
+check('仮配分をキャンセルすれば元データのまま',
+  multiSkillMasu.uniqueSkillPoints===4&&multiSkillMasu.uniqueSkillLevels.own===2&&multiSkillMasu.uniqueSkillLevels.inherited===1);
+check('MAXを超える配分は確定できない',
+  m.applyUniqueSkillPointPlan({ ...multiSkillMasu,uniqueSkillLevels:{own:m.MAX_UNIQUE_SKILL_LEVEL-1} },{own:2},['own'])===null);
+check('所持ポイントを超える配分は確定できない',
+  m.applyUniqueSkillPointPlan({ ...multiSkillMasu,uniqueSkillPoints:1 },{own:2},['own'])===null);
+
+// --- ⑥ 画面から使える ---
 check('ポイントを使う処理がある',
-  has('const spendUniqueSkillPoint = (masuId, skillKey) => {')
-    && has('if (normalized.uniqueSkillPoints <= 0) return null;')
-    && has('if (current >= MAX_UNIQUE_SKILL_LEVEL) return null;')
-    && has('uniqueSkillPoints: normalized.uniqueSkillPoints - 1,'));
+  has('const spendUniqueSkillPoint = (masuId, plan) => {'));
 check('マスモンの詳細から使える枠がある',
   has('const renderUniqueSkillPointBox = (masu, onUpdated) => {')
     && has('extraAfterApt: renderUniqueSkillPointBox(masu, updated=>setMasuMonDetail(updated)),')
     && has('extraAfterApt: renderUniqueSkillPointBox(getMasuMon(rosterDetailMon.masuId)'));
-check('ポイントが無いときは枠を出さない', has('if (normalized.uniqueSkillPoints <= 0) return null;'));
-check('最大まで育った技は押せない', has('const maxed=choice.level>=MAX_UNIQUE_SKILL_LEVEL;'));
+check('ポイントが0でも未使用数を表示する', has('未使用 固有技P：{normalized.uniqueSkillPoints}'));
+check('仮配分の増減・キャンセル・確定がある', has('changeDraft(choice.key,-1)')&&has('changeDraft(choice.key,1)')&&has('キャンセル')&&has('強化を確定'));
+check('最大まで育った技は押せない', has('maxed=choice.level>=MAX_UNIQUE_SKILL_LEVEL'));
 // 限界突破・転生の画面に「あとで決める」がある
 check('限界突破の画面であとで決められる',
   has("<button onClick={()=>setRebirthSkillKey('')}") && has('あとで決める（ポイントとして残す）'));
 check('転生の画面でもあとで決められる', has("<button onClick={()=>setReincarnateSkillKey('')}"));
+check('保留ポイントの使用場所を両画面で案内する', (source.match(/保留したポイントはマスモン詳細の「固有技強化」から使用できます/g)||[]).length===2);
 check('何も選ばないうちは押せない',
   has('disabled={rebirthSkillKey==null||gold<cost') && has('disabled={reincarnateSkillKey==null||gold<cost'));
 
-// --- ⑥ 保存 ---
+// --- ⑦ 保存 ---
 check('新しい保存キーを作らず、マスモンの中の項目として持つ',
   !/mh_unique_skill|mh_skill_point/.test(source)
     && has('uniqueSkillPoints: Math.max(0, Math.floor(Number(masu?.uniqueSkillPoints) || 0)),'));
 check('保存はこれまでどおり mh_masu_mons へ書く',
-  grab('const spendUniqueSkillPoint = (masuId, skillKey) => {', '// 強化ポイントリセットの書').includes("storeSet('mh_masu_mons', next, false)"));
+  grab('const spendUniqueSkillPoint = (masuId, plan) => {', '// 強化ポイントリセットの書').includes("storeSet('mh_masu_mons', next, false)"));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
