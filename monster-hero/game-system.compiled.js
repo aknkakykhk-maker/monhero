@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c7602078e1c93b28
+// source-sha256: d9107b085e306196
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-10 10:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-10 10:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12945,7 +12945,7 @@ function MonsterHeroGame() {
   const guardCardWeight = card => card?.type === 'guard' ? 1 : card?.type === 'weak_guard' ? 0.5 : 0;
   // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」。handleEnemyTurnの計算と同じ式にする。
   const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + effectiveDef * mult) : 0;
-  const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist, activatesIceLock = false) => {
+  const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx - attackStartDist);
     const distMult = [1.5, 1.3, 1.1, 0.9][distDiff] || 1.0;
@@ -12963,7 +12963,7 @@ function MonsterHeroGame() {
     }
     // 氷海の支配者は勇者モンがスネグーラチカの場合だけ発動する。供モンの種は見ない。
     // distMult（既存の距離一致×1.5）とは別項なので、両条件成立時は1.5×1.5になる。
-    const iceRulerMult = mainHero?.id === 'Snegurochka' && (getWaveBuff('iceLockTurns') > 0 || activatesIceLock) && slotIdx === attackStartDist ? 1.5 : 1.0;
+    const iceRulerMult = mainHero?.id === 'Snegurochka' && getWaveBuff('iceLockTurns') > 0 && slotIdx === attackStartDist ? 1.5 : 1.0;
     let traitMult = (mainHero?.id === 'Golem' ? 1.2 : 1.0) * (mainHero?.id === 'Pixie' && card.type === 'unique' ? 2.0 : 1.0) * iceRulerMult;
     // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
     // 攻撃したモンスター自身のグレードだけを見るのではない
@@ -13079,7 +13079,7 @@ function MonsterHeroGame() {
     } else {
       // 距離撃で移動を封じたときだけは、この中でも「行動しなかった扱い」に戻す
       enemyActionPerformedRef.current = true;
-      if (intent.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || immediateEffects.iceLockActive)) {
+      if (intent.type === 'MOVE' && getWaveBuff('iceLockTurns') > 0) {
         // 予約済みMOVEも再抽選せず失敗させる。行動済みのままなので、このターンは確実に消費される。
         addPopup("移動できない！", 'enemy', 'text-cyan-200 font-black text-xl drop-shadow-md');
         await battleWait(800);
@@ -13214,10 +13214,10 @@ function MonsterHeroGame() {
       }
     }
     setEnemySkillName(null);
-    if (getWaveBuff('iceLockTurns') > 0 || immediateEffects.iceLockActive) {
+    if (getWaveBuff('iceLockTurns') > 0 && !immediateEffects.iceLockRefreshed) {
       setWaveBuffs(p => ({
         ...p,
-        iceLockTurns: immediateEffects.iceLockActive ? 4 : Math.max(0, (p.iceLockTurns || 0) - 1)
+        iceLockTurns: Math.max(0, (p.iceLockTurns || 0) - 1)
       }));
     }
     if (currentHp <= 0) {
@@ -13477,8 +13477,7 @@ function MonsterHeroGame() {
           }
         }
         const attackStartDist = attackDistance;
-        const activatesIceLock = card.type === 'unique' && card.monId === 'Snegurochka';
-        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist, activatedIceLockThisTurn || activatesIceLock);
+        const d = getDmg(card, slotIdx, activeMon, localOryoAdd, localDmgModAdd, halved, attackStartDist);
         attackCount++;
         const critRateBonus = getPermaBuff('critRatePct'),
           critDmgBonus = getPermaBuff('critDmgPct');
@@ -13787,7 +13786,7 @@ function MonsterHeroGame() {
       guardFlat: currentTurnGuardFlat,
       guardMult: currentTurnGuardMult,
       distLocked: forcedMoveTarget != null,
-      iceLockActive: activatedIceLockThisTurn
+      iceLockRefreshed: activatedIceLockThisTurn
     }, executedIntent, hpBeforeEnemyAttack);
     // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
     if (forcedMoveTarget != null) {
@@ -13796,7 +13795,7 @@ function MonsterHeroGame() {
     }
     // 敵の行動が終わった後で、次ターンの予測を1回だけ抽選してセット
     // 敵が移動した場合は移動後の距離を基準にする
-    const moveWasFrozen = executedIntent && executedIntent.type === 'MOVE' && (getWaveBuff('iceLockTurns') > 0 || activatedIceLockThisTurn);
+    const moveWasFrozen = executedIntent && executedIntent.type === 'MOVE' && getWaveBuff('iceLockTurns') > 0;
     const distForNextPredict = forcedMoveTarget != null ? forcedMoveTarget : executedIntent && executedIntent.type === 'MOVE' && !moveWasFrozen ? executedIntent.targetDist : enemyDist;
     setEnemyLastIntent(enemyActionPerformedRef.current ? executedIntent : null);
     advanceEnemyIntents(executedIntent, distForNextPredict, enemyActionPerformedRef.current);
