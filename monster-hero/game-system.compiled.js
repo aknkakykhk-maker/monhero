@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 96b99b032022e1e7
+// source-sha256: 6333d103909d5cac
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 11:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 11:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -234,6 +234,11 @@ const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
 // 記録対象になっている全難易度の自己ベストから求める。未プレイ・壊れた値は0として扱う。
 const highestModeScore = (scores, difficultyIds) => Math.max(0, ...difficultyIds.map(diff => {
   const value = Number(scores?.[diff]);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}));
+// クイックの代表記録も、難易度カードとプロフィールで同じ記録オブジェクトから集計する。
+const highestModeWave = (waves, difficultyIds) => Math.max(0, ...difficultyIds.map(diff => {
+  const value = Number(waves?.[diff]);
   return Number.isFinite(value) && value > 0 ? value : 0;
 }));
 // モードの表示情報と「？」で出す説明。文言を1か所にまとめ、タブ・カード・説明の食い違いを防ぐ。
@@ -7813,6 +7818,7 @@ function MonsterHeroGame() {
   // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
   const [battleMode, setBattleMode] = useState(BATTLE_MODE_CHALLENGE);
   const [modeInfoId, setModeInfoId] = useState(null); // 「？」で開くモード説明
+  const [profileBattleMode, setProfileBattleMode] = useState(null); // プロフィールのバトル記録詳細
   // 進行中の周回のモード。バトル中の表示・報酬・BGM・記録の保存先がこれで決まる。
   // 周回の途中で変わらないよう、挑戦を始めるときにだけ書き換える
   const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
@@ -20497,37 +20503,135 @@ function MonsterHeroGame() {
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-400 font-bold mt-1 text-right"
       }, next ? `次のLv.${next.level}まで あと${next.remain}` : 'いちばん仲良し！'));
-    })(), /*#__PURE__*/React.createElement("div", {
-      className: "text-[9px] text-slate-500 font-black uppercase tracking-widest mb-2 px-1 shrink-0"
-    }, "\u96E3\u6613\u5EA6\u5225 \u8A18\u9332"), /*#__PURE__*/React.createElement("div", {
-      className: "flex flex-col gap-2 mb-4"
-    }, Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => /*#__PURE__*/React.createElement("div", {
-      key: key,
-      className: "bg-slate-900/60 border border-white/5 rounded-2xl p-3 flex items-center gap-3"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "px-1 py-1 rounded-lg text-[9px] font-black uppercase shrink-0 w-20 text-center leading-[1.05]",
-      style: difficultyStyle(setting, true)
-    }, setting.label), /*#__PURE__*/React.createElement("div", {
-      className: "flex-1 grid grid-cols-3 gap-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-center"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] text-slate-500 uppercase tracking-wide"
-    }, "\u6311\u6226"), /*#__PURE__*/React.createElement("div", {
-      className: "text-xs font-black text-white"
-    }, attemptCounts[key] || 0)), /*#__PURE__*/React.createElement("div", {
-      className: "text-center"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] text-slate-500 uppercase tracking-wide"
-    }, "\u30AF\u30EA\u30A2"), /*#__PURE__*/React.createElement("div", {
-      className: "text-xs font-black text-emerald-400"
-    }, clearCounts[key] || 0)), /*#__PURE__*/React.createElement("div", {
-      className: "text-right"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "text-[7px] text-slate-500 uppercase tracking-wide"
-    }, "\u30CF\u30A4\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("div", {
-      className: "text-xs font-black text-amber-400"
-    }, (highScores[key] || 0).toLocaleString())))))))), gameState === 'BREEDER_MARKET' && /*#__PURE__*/React.createElement("div", {
+    })(), (() => {
+      const difficultyIds = Object.keys(DIFFICULTY_SETTINGS);
+      const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE];
+      const selected = modes.find(mode => mode.id === profileBattleMode) || null;
+      const scoreMapFor = mode => isProMode(mode.id) ? proHighScores : highScores;
+      const representativeFor = mode => {
+        if (isQuickMode(mode.id)) {
+          const wave = highestModeWave(quickHighestWaves, difficultyIds);
+          return wave > 0 ? `最高到達 WAVE ${wave}` : '未記録';
+        }
+        const scores = mode.id === EXTREME_MODE.id ? {
+          [EXTREME_SETTING.id]: extremeBestScore,
+          [NIGHTMARE_SETTING.id]: nightmareBestScore
+        } : scoreMapFor(mode);
+        const ids = mode.id === EXTREME_MODE.id ? EXTREME_DIFFICULTIES.filter(item => item.available).map(item => item.id) : difficultyIds;
+        const best = highestModeScore(scores, ids);
+        return best > 0 ? `最高スコア ${best.toLocaleString()} pt` : '未記録';
+      };
+      return /*#__PURE__*/React.createElement("section", {
+        className: "mb-4",
+        "data-profile-battle-records": true
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "mb-2 flex items-end justify-between px-1"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-black text-indigo-300 tracking-widest"
+      }, "\u30D0\u30C8\u30EB\u8A18\u9332"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] text-slate-500"
+      }, "\u30E2\u30FC\u30C9\u3092\u30BF\u30C3\u30D7\u3059\u308B\u3068\u96E3\u6613\u5EA6\u5225\u306B\u78BA\u8A8D\u3067\u304D\u307E\u3059"))), !selected ? /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-1 gap-2"
+      }, modes.map(mode => /*#__PURE__*/React.createElement("button", {
+        key: mode.id,
+        type: "button",
+        onClick: () => setProfileBattleMode(mode.id),
+        className: "w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]",
+        style: {
+          borderColor: `${mode.color}66`
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "flex items-center gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-xl",
+        "aria-hidden": "true"
+      }, mode.emoji), /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-[13px] text-white"
+      }, mode.label), /*#__PURE__*/React.createElement("small", {
+        className: "block text-[11px] font-black",
+        style: {
+          color: mode.color
+        }
+      }, representativeFor(mode))), /*#__PURE__*/React.createElement(ChevronRight, {
+        size: 18,
+        className: "shrink-0 text-slate-500"
+      }))))) : /*#__PURE__*/React.createElement("div", {
+        className: "rounded-2xl border bg-slate-900/70 p-3",
+        style: {
+          borderColor: `${selected.color}66`
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: () => setProfileBattleMode(null),
+        className: "mb-3 flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-black/25 px-2 text-left active:scale-[.98]"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 18
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "text-lg",
+        "aria-hidden": "true"
+      }, selected.emoji), /*#__PURE__*/React.createElement("span", {
+        className: "font-black text-[13px]"
+      }, selected.label, "\u306E\u8A18\u9332")), /*#__PURE__*/React.createElement("div", {
+        className: "flex flex-col gap-2"
+      }, selected.id === EXTREME_MODE.id ? EXTREME_DIFFICULTIES.filter(setting => setting.available).map(setting => {
+        const score = setting.id === NIGHTMARE_SETTING.id ? nightmareBestScore : extremeBestScore;
+        const clears = setting.id === NIGHTMARE_SETTING.id ? nightmareClearCount : extremeClearCount;
+        const played = score > 0 || clears > 0;
+        return /*#__PURE__*/React.createElement("div", {
+          key: setting.id,
+          className: "rounded-xl border border-white/5 bg-black/25 p-3"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: "block text-[11px] text-fuchsia-200"
+        }, setting.label), played ? /*#__PURE__*/React.createElement("div", {
+          className: "mt-2 grid grid-cols-2 gap-2 text-center"
+        }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px] text-slate-500"
+        }, "\u6700\u9AD8\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("strong", {
+          className: "text-[12px] text-amber-300"
+        }, score.toLocaleString(), " pt")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px] text-slate-500"
+        }, "\u30AF\u30EA\u30A2\u56DE\u6570"), /*#__PURE__*/React.createElement("strong", {
+          className: "text-[12px] text-emerald-300"
+        }, clears, "\u56DE"))) : /*#__PURE__*/React.createElement("div", {
+          className: "mt-2 text-center text-[11px] font-black text-slate-500"
+        }, "\u672A\u8A18\u9332"));
+      }) : Object.entries(DIFFICULTY_SETTINGS).map(([key, setting]) => {
+        const record = modeRecordFor(selected.id, key);
+        const quick = isQuickMode(selected.id);
+        const challenge = selected.id === BATTLE_MODE_CHALLENGE;
+        const attempts = challenge ? attemptCounts[key] || 0 : 0;
+        const played = record.score > 0 || record.wave > 0 || record.clears > 0 || attempts > 0;
+        return /*#__PURE__*/React.createElement("div", {
+          key: key,
+          className: "rounded-xl border border-white/5 bg-black/25 p-3"
+        }, /*#__PURE__*/React.createElement("div", {
+          className: "px-2 py-1 rounded-lg text-[10px] font-black text-center",
+          style: difficultyStyle(setting, true)
+        }, setting.label), played ? /*#__PURE__*/React.createElement("div", {
+          className: `mt-2 grid gap-1 text-center ${quick ? 'grid-cols-2' : challenge ? 'grid-cols-2' : 'grid-cols-3'}`
+        }, challenge && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px] text-slate-500"
+        }, "\u6311\u6226\u56DE\u6570"), /*#__PURE__*/React.createElement("strong", {
+          className: "text-[11px] text-white"
+        }, attempts, "\u56DE")), !quick && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px] text-slate-500"
+        }, "\u6700\u9AD8\u30B9\u30B3\u30A2"), /*#__PURE__*/React.createElement("strong", {
+          className: "text-[11px] text-amber-300"
+        }, record.score.toLocaleString(), " pt")), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px] text-slate-500"
+        }, "\u6700\u9AD8\u5230\u9054WAVE"), /*#__PURE__*/React.createElement("strong", {
+          className: "text-[11px] text-indigo-200"
+        }, "WAVE ", record.wave)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px] text-slate-500"
+        }, "\u30AF\u30EA\u30A2\u56DE\u6570"), /*#__PURE__*/React.createElement("strong", {
+          className: "text-[11px] text-emerald-300"
+        }, record.clears, "\u56DE"))) : /*#__PURE__*/React.createElement("div", {
+          className: "mt-2 text-center text-[11px] font-black text-slate-500"
+        }, "\u672A\u8A18\u9332"));
+      }))));
+    })())), gameState === 'BREEDER_MARKET' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-2 shrink-0"
