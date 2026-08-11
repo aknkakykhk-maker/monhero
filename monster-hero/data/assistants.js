@@ -105,6 +105,16 @@ const ASSISTANT_UPDATE_NOTICES = [
     destination: 'battle', buttonLabel: 'バトルへ行く',
   },
   {
+    // 極限チャレンジ版とは別のお知らせとして、一度だけ表示する
+    id: 'update_notice_quick_chaos_v1', enabled: true,
+    title: 'クイック CHAOS追加！', expression: 'excited',
+    pages: [
+      'クイックモードにCHAOSが追加されたよ！ 極限チャレンジのCHAOSをクリアすると挑戦できるよ♪',
+      '3つの報酬方針を選べて、CHAOSの特殊ルールも同じ！ 育てた仲間で挑んでみてね。',
+    ],
+    destination: 'battle', buttonLabel: 'バトルへ行く',
+  },
+  {
     id: 'update_notice_pro_mode_v1', enabled: true,
     title: 'プロモード追加', expression: 'excited',
     pages: [

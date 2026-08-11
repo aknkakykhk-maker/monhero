@@ -100,6 +100,7 @@ node tools/build.js --check
 | `node extreme-challenge-check.js` | 極限チャレンジ(正式版)を確認する。EXTREMEの倍率と未実装段階、Grand Master以上クリアの解放条件、ブリーダーカード50%がEXTREME固有ルールに閉じていること、正式プレイは報酬・クリア記録を保存しデバッグプレイでは保存しないこと、既存の保存キーと全国ランキングへ混ぜていないことを見る。 |
 | `node nightmare-rules-check.js` | NIGHTMAREのWAVE後強化50%、自動回復率・距離適性のプラス50%／マイナス200%を代表値で確認し、WAVE後距離強化との分離、EXTREMEと通常モードへの非適用も確認する。 |
 | `node quick-extreme-special-rules-check.js` | クイック極限難易度が極限本体の `specialRules` を共用し、EXTREME/NIGHTMAREの相互混入や通常クイックへの誤適用がないこと、開始表示・カード表示・固定カード高・ランキング除外を確認する。 |
+| `node quick-chaos-check.js` | クイックCHAOSの3報酬方針、同難易度解放、特殊ルール共有、ランキング除外、デバッグ保存なし、既存記録キー、カード構成、一度きり通知を確認する。 |
 | `node extreme-reward-check.js` | 極限チャレンジの数値を本番の定義で計算して確かめる。EXTREMEの敵×13と報酬倍率、通常難易度(Beginner〜Legend)の敵性能に回帰がないこと(powerOverride=nullを0と取り違えない)、解放判定の境界を見る。 |
 | `node extreme-browser-check.js` | 極限チャレンジを実ブラウザで遊んで確認する。未解放時のロック表示、Grand Masterクリア後の解放、EXTREMEを押してバトルが始まること、敵の強さが×13、極限ルール発動の表示、通常難易度に影響が無いこと、正式公開の初回案内が1回だけ出ることを見る。 |
 | `node battle-mode-check.js` | チャレンジ／クイック／プロの報酬と記録を確認する。クイックの育成・プシュケー優先・ダイヤ優先の各方針、他モードへの非適用、ランキング分離、WAVEごとの自動成長、伴モン加入、画面・BGM設定の結線を見る。 |
