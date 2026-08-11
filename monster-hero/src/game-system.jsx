@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 11:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 11:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -165,6 +165,11 @@ const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
 // 記録対象になっている全難易度の自己ベストから求める。未プレイ・壊れた値は0として扱う。
 const highestModeScore = (scores, difficultyIds) => Math.max(0, ...difficultyIds.map(diff => {
   const value = Number(scores?.[diff]);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}));
+// クイックの代表記録も、難易度カードとプロフィールで同じ記録オブジェクトから集計する。
+const highestModeWave = (waves, difficultyIds) => Math.max(0, ...difficultyIds.map(diff => {
+  const value = Number(waves?.[diff]);
   return Number.isFinite(value) && value > 0 ? value : 0;
 }));
 // モードの表示情報と「？」で出す説明。文言を1か所にまとめ、タブ・カード・説明の食い違いを防ぐ。
@@ -3842,6 +3847,7 @@ function MonsterHeroGame() {
   // バトルメニューで選んでいるモード。挑戦を始めた時点の値が runMode に固定される
   const [battleMode, setBattleMode] = useState(BATTLE_MODE_CHALLENGE);
   const [modeInfoId, setModeInfoId] = useState(null); // 「？」で開くモード説明
+  const [profileBattleMode, setProfileBattleMode] = useState(null); // プロフィールのバトル記録詳細
   // 進行中の周回のモード。バトル中の表示・報酬・BGM・記録の保存先がこれで決まる。
   // 周回の途中で変わらないよう、挑戦を始めるときにだけ書き換える
   const [runMode, setRunMode] = useState(BATTLE_MODE_CHALLENGE);
@@ -9950,19 +9956,44 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
               );
             })()}
-            <div className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-2 px-1 shrink-0">難易度別 記録</div>
-            <div className="flex flex-col gap-2 mb-4">
-              {Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>(
-                <div key={key} className="bg-slate-900/60 border border-white/5 rounded-2xl p-3 flex items-center gap-3">
-                  <div className="px-1 py-1 rounded-lg text-[9px] font-black uppercase shrink-0 w-20 text-center leading-[1.05]" style={difficultyStyle(setting, true)}>{setting.label}</div>
-                  <div className="flex-1 grid grid-cols-3 gap-1">
-                    <div className="text-center"><div className="text-[7px] text-slate-500 uppercase tracking-wide">挑戦</div><div className="text-xs font-black text-white">{attemptCounts[key]||0}</div></div>
-                    <div className="text-center"><div className="text-[7px] text-slate-500 uppercase tracking-wide">クリア</div><div className="text-xs font-black text-emerald-400">{clearCounts[key]||0}</div></div>
-                    <div className="text-right"><div className="text-[7px] text-slate-500 uppercase tracking-wide">ハイスコア</div><div className="text-xs font-black text-amber-400">{(highScores[key]||0).toLocaleString()}</div></div>
+            {/* 保存済みの各モード記録を読むだけのプロフィール表示。新しい保存キーは作らない。 */}
+            {(()=>{
+              const difficultyIds=Object.keys(DIFFICULTY_SETTINGS);
+              const modes=[...PUBLIC_BATTLE_MODES,EXTREME_MODE];
+              const selected=modes.find(mode=>mode.id===profileBattleMode)||null;
+              const scoreMapFor=(mode)=>isProMode(mode.id)?proHighScores:highScores;
+              const representativeFor=(mode)=>{
+                if(isQuickMode(mode.id)){
+                  const wave=highestModeWave(quickHighestWaves,difficultyIds);
+                  return wave>0?`最高到達 WAVE ${wave}`:'未記録';
+                }
+                const scores=mode.id===EXTREME_MODE.id
+                  ? {[EXTREME_SETTING.id]:extremeBestScore,[NIGHTMARE_SETTING.id]:nightmareBestScore}
+                  : scoreMapFor(mode);
+                const ids=mode.id===EXTREME_MODE.id?EXTREME_DIFFICULTIES.filter(item=>item.available).map(item=>item.id):difficultyIds;
+                const best=highestModeScore(scores,ids);
+                return best>0?`最高スコア ${best.toLocaleString()} pt`:'未記録';
+              };
+              return <section className="mb-4" data-profile-battle-records>
+                <div className="mb-2 flex items-end justify-between px-1"><div><div className="text-[10px] font-black text-indigo-300 tracking-widest">バトル記録</div><div className="text-[9px] text-slate-500">モードをタップすると難易度別に確認できます</div></div></div>
+                {!selected?(
+                  <div className="grid grid-cols-1 gap-2">
+                    {modes.map(mode=><button key={mode.id} type="button" onClick={()=>setProfileBattleMode(mode.id)} className="w-full min-h-[64px] rounded-2xl border bg-slate-900/70 px-3 py-2.5 text-left active:scale-[.98]" style={{borderColor:`${mode.color}66`}}>
+                      <span className="flex items-center gap-2"><span className="text-xl" aria-hidden="true">{mode.emoji}</span><span className="min-w-0 flex-1"><b className="block text-[13px] text-white">{mode.label}</b><small className="block text-[11px] font-black" style={{color:mode.color}}>{representativeFor(mode)}</small></span><ChevronRight size={18} className="shrink-0 text-slate-500"/></span>
+                    </button>)}
                   </div>
-                </div>
-              ))}
-            </div>
+                ):(
+                  <div className="rounded-2xl border bg-slate-900/70 p-3" style={{borderColor:`${selected.color}66`}}>
+                    <button type="button" onClick={()=>setProfileBattleMode(null)} className="mb-3 flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-black/25 px-2 text-left active:scale-[.98]"><ArrowLeft size={18}/><span className="text-lg" aria-hidden="true">{selected.emoji}</span><span className="font-black text-[13px]">{selected.label}の記録</span></button>
+                    <div className="flex flex-col gap-2">
+                      {selected.id===EXTREME_MODE.id
+                        ? EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>{const score=setting.id===NIGHTMARE_SETTING.id?nightmareBestScore:extremeBestScore;const clears=setting.id===NIGHTMARE_SETTING.id?nightmareClearCount:extremeClearCount;const played=score>0||clears>0;return <div key={setting.id} className="rounded-xl border border-white/5 bg-black/25 p-3"><b className="block text-[11px] text-fuchsia-200">{setting.label}</b>{played?<div className="mt-2 grid grid-cols-2 gap-2 text-center"><div><small className="block text-[8px] text-slate-500">最高スコア</small><strong className="text-[12px] text-amber-300">{score.toLocaleString()} pt</strong></div><div><small className="block text-[8px] text-slate-500">クリア回数</small><strong className="text-[12px] text-emerald-300">{clears}回</strong></div></div>:<div className="mt-2 text-center text-[11px] font-black text-slate-500">未記録</div>}</div>})
+                        : Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>{const record=modeRecordFor(selected.id,key);const quick=isQuickMode(selected.id);const challenge=selected.id===BATTLE_MODE_CHALLENGE;const attempts=challenge?(attemptCounts[key]||0):0;const played=record.score>0||record.wave>0||record.clears>0||attempts>0;return <div key={key} className="rounded-xl border border-white/5 bg-black/25 p-3"><div className="px-2 py-1 rounded-lg text-[10px] font-black text-center" style={difficultyStyle(setting,true)}>{setting.label}</div>{played?<div className={`mt-2 grid gap-1 text-center ${quick?'grid-cols-2':challenge?'grid-cols-2':'grid-cols-3'}`}>{challenge&&<div><small className="block text-[8px] text-slate-500">挑戦回数</small><strong className="text-[11px] text-white">{attempts}回</strong></div>}{!quick&&<div><small className="block text-[8px] text-slate-500">最高スコア</small><strong className="text-[11px] text-amber-300">{record.score.toLocaleString()} pt</strong></div>}<div><small className="block text-[8px] text-slate-500">最高到達WAVE</small><strong className="text-[11px] text-indigo-200">WAVE {record.wave}</strong></div><div><small className="block text-[8px] text-slate-500">クリア回数</small><strong className="text-[11px] text-emerald-300">{record.clears}回</strong></div></div>:<div className="mt-2 text-center text-[11px] font-black text-slate-500">未記録</div>}</div>})}
+                    </div>
+                  </div>
+                )}
+              </section>;
+            })()}
             </div>
           </div>
         )}
