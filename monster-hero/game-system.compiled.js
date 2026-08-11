@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3e40034e64e88136
+// source-sha256: b99b1887fc325c55
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 12:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 12:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8800,9 +8800,12 @@ function MonsterHeroGame() {
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
-  const scoreMultiplier = extremeRun ? activeExtremeSetting.score : DIFFICULTY_SETTINGS[safeDifficulty].score;
+  // クイックのEXTREME/NIGHTMAREは通常難易度表に存在しない。カルーセルのonScrollで
+  // difficultyが切り替わった直後の再描画でも、クイック用の表から倍率を解決する。
+  const activeDifficultySetting = QUICK_DIFFICULTY_SETTINGS[safeDifficulty];
+  const scoreMultiplier = extremeRun ? activeExtremeSetting.score : isQuickMode(runMode) ? activeDifficultySetting.xp ?? activeDifficultySetting.score : activeDifficultySetting.score;
   const xpMultiplier = extremeRun ? activeExtremeSetting.xp : scoreMultiplier;
-  const goldMultiplier = extremeRun ? activeExtremeSetting.gold : DIFFICULTY_SETTINGS[safeDifficulty].gold;
+  const goldMultiplier = extremeRun ? activeExtremeSetting.gold : activeDifficultySetting.gold;
   const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);
   const effectiveMaxGuts = useMemo(() => resolveEffectiveMaxStat(maxGuts, getPermaBuff('muaGutsPct')), [maxGuts, permaBuffs]);
   // 丈夫さのバフ(defPct)を乗せた「実際に計算へ使う丈夫さ」。ライフ・ガッツと同じ考え方で、

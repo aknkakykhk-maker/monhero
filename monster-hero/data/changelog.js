@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-11 12:46",
+    date: "2026-08-11 12:53",
     type: "update",
     title: "クイックモードに極限難易度を追加しました",
     items: [
