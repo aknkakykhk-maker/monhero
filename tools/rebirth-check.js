@@ -70,7 +70,7 @@ const fusionSource=source.slice(source.indexOf('const executeMasuFusion'),source
 // 上がったレベルぶんの強化ポイントは applyBondXpGain がまとめて配る。
 // 合体もそこを通しているので、経路と付与の両方を見る
 check('レベルが上がったぶんの強化ポイントを配る',source.includes('distAptPoints: (masu.distAptPoints || 0) + gainedLevels'));
-check('合体もその経路を通る',fusionSource.includes('applyBondXpGain(m, gainedXp)'));
+check('合体もその経路を通る',fusionSource.includes('applyBondXpGain(prepared, gainedXp)'));
 // 「転生したらLv1へ戻す」時代の移行を今さら走らせると、育てたレベルを消してしまう
 check('旧仕様のLv1リセット移行はもう走らせない',!/savedMasuMons = migrateRebornMasuToFullReset/.test(source));
 const golemUnique={name:'合掌',names:['合掌','フライングプレス','竜巻アタック'],baseMult:3.2,baseGuts:68,effectDesc:'闘志'};

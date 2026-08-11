@@ -69,7 +69,7 @@ check('振り済みのぶんは重複して配らない',
 check('合体の実処理で強化ポイントを配る', has('distAptPoints: (masu.distAptPoints || 0) + gainedLevels') && has('applyBondXpGain(prepared, gainedXp)'));
 check('確認画面と実処理が同じ費用計算を使う', (source.match(/masuFusionCost\(mainLvl\.level, subLvl\.level, fusionInheritUnique\)/g) || []).length === 2);
 check('古い×100の計算が残っていない', !has('(mainLvl.level + subLvl.level) * 100') && !has('const cost = level * 100;'));
-check('確認画面は強化ポイントの増分を出したまま', has('{mainPointsNow} → {mainPointsNow + gainedLevels}'));
+check('確認画面はレベル上昇と転生継承を合わせた強化ポイント増分を表示', has('{mainPointsNow} → {mainPointsNow + gainedLevels + reincarnateTransfer.points}'));
 
 // --- レベル上限(levelCap)をどこでも通しているか ---
 // 転生していないマスモンの上限は30、1回転生で35。上限を超えた絆経験値をそのまま

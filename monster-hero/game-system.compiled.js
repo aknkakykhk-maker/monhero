@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6333d103909d5cac
+// source-sha256: fcef2232b2782edc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 11:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 11:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -584,11 +584,23 @@ const REINCARNATE_MIN_LEVEL = 100;
 const REINCARNATE_LEVEL_DROP = 99;
 const REINCARNATE_POINTS = 10;
 const totalReincarnatePoints = count => Math.max(0, Math.floor(Number(count) || 0)) * REINCARNATE_POINTS;
+// 転生で実際に得た強化ポイントを回数とは別に保存する。旧個体だけは当時の確定値
+// (回数×10)へフォールバックし、以後は報酬量が変わっても保存済みの価値を再計算しない。
+const ownReincarnateBonusPoints = masu => Number.isFinite(Number(masu?.reincarnateBonusPoints)) ? Math.max(0, Math.floor(Number(masu.reincarnateBonusPoints))) : totalReincarnatePoints(masu?.reincarnateCount);
+const inheritedReincarnateBonusPointsOf = masu => Math.max(0, Math.floor(Number(masu?.inheritedReincarnateBonusPoints) || 0));
+const inheritedReincarnateCountOf = masu => Math.max(0, Math.floor(Number(masu?.inheritedReincarnateCount) || 0));
+const transferableReincarnateBonus = masu => ({
+  points: ownReincarnateBonusPoints(masu) + inheritedReincarnateBonusPointsOf(masu),
+  count: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)) + inheritedReincarnateCountOf(masu)
+});
 const normalizeMasuProgression = masu => ({
   ...masu,
   rebirthCount: Math.max(0, Math.floor(Number(masu?.rebirthCount) || 0)),
   // 転生回数は後から足した項目なので、持っていない既存データは0として扱う
   reincarnateCount: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)),
+  reincarnateBonusPoints: ownReincarnateBonusPoints(masu),
+  inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
+  inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
   levelCap: Math.min(MAX_MASU_LEVEL_CAP, Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
   uniqueSkillLevels: masu?.uniqueSkillLevels && typeof masu.uniqueSkillLevels === 'object' ? {
     ...masu.uniqueSkillLevels
@@ -632,6 +644,7 @@ const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
 const resetMasuForRebirth = (masu, {
   rebirthCount,
   reincarnateCount,
+  reincarnateBonusPoints,
   levelCap,
   uniqueSkillLevels,
   uniqueSkillPoints,
@@ -655,6 +668,9 @@ const resetMasuForRebirth = (masu, {
     createdAt: masu?.createdAt,
     rebirthCount: Math.max(0, Math.floor(Number(rebirthCount ?? masu?.rebirthCount) || 0)),
     reincarnateCount: Math.max(0, Math.floor(Number(reincarnateCount ?? masu?.reincarnateCount) || 0)),
+    reincarnateBonusPoints: Math.max(0, Math.floor(Number(reincarnateBonusPoints ?? ownReincarnateBonusPoints(masu)) || 0)),
+    inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
+    inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: Math.min(MAX_MASU_LEVEL_CAP, Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
     uniqueSkillLevels: {
       ...(uniqueSkillLevels ?? masu?.uniqueSkillLevels ?? {})
@@ -1055,7 +1071,8 @@ const buildMasuReincarnation = ({
   const nextLevel = Math.max(1, level - REINCARNATE_LEVEL_DROP);
   const nextCount = normalized.reincarnateCount + 1;
   // 振り直せる合計。レベル由来ぶんは reconcileMasuPoints と同じ「レベル-1」で数える
-  const nextPoints = nextLevel - 1 + totalBreakthroughPoints(normalized.rebirthCount) + totalReincarnatePoints(nextCount);
+  const nextOwnBonusPoints = normalized.reincarnateBonusPoints + REINCARNATE_POINTS;
+  const nextPoints = nextLevel - 1 + totalBreakthroughPoints(normalized.rebirthCount) + nextOwnBonusPoints + normalized.inheritedReincarnateBonusPoints;
   return {
     ok: true,
     cost,
@@ -1070,6 +1087,7 @@ const buildMasuReincarnation = ({
     nextGold: donationDiamondValue(gold) - cost,
     nextMasu: resetMasuForRebirth(normalized, {
       reincarnateCount: nextCount,
+      reincarnateBonusPoints: nextOwnBonusPoints,
       levelCap: normalized.levelCap,
       // 上限は据え置き(転生を重ねても上限は伸びない)
       toLevel: nextLevel,
@@ -4845,8 +4863,8 @@ const fusionHistoryHasDetail = list => Array.isArray(list) && list.some(h => h &
 const RANKING_FUSION_MAX = 12;
 // v1: 育て方(ステータス・間合い適性・固有技Lv)＋合体回数だけ
 // v2: 記録時点の総合力(power)と、合体履歴の中身(fusion)を追加。v1の項目はそのまま残す
-// v3: 転生回数(reincarnateCount)を追加。v1・v2は持っていないので、読むときは0へ倒す
-const RANKING_DETAIL_VERSION = 3;
+// v3: 転生回数、v4: 保存済みの転生育成ボーナスと合体継承回数を追加
+const RANKING_DETAIL_VERSION = 4;
 const rankingMasuDetail = masu => {
   if (!masu) return null;
   const sp = masu.statPoints || {};
@@ -4866,6 +4884,9 @@ const rankingMasuDetail = masu => {
     rebirthCount: num(masu.rebirthCount),
     // 転生回数。詳細の上部サマリーで「転生 +N」を出すのに要る
     reincarnateCount: num(masu.reincarnateCount),
+    reincarnateBonusPoints: ownReincarnateBonusPoints(masu),
+    inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
+    inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: num(masu.levelCap) || null,
     statPoints: {
       hp: num(sp.hp),
@@ -4928,6 +4949,9 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     rebirthCount: num(detail.rebirthCount),
     // 転生回数はv3から。持っていない古い記録は0になる(転生していない扱い)
     reincarnateCount: num(detail.reincarnateCount),
+    reincarnateBonusPoints: Number.isFinite(Number(detail.reincarnateBonusPoints)) ? num(detail.reincarnateBonusPoints) : totalReincarnatePoints(detail.reincarnateCount),
+    inheritedReincarnateBonusPoints: num(detail.inheritedReincarnateBonusPoints),
+    inheritedReincarnateCount: num(detail.inheritedReincarnateCount),
     levelCap: num(detail.levelCap) || INITIAL_MASU_LEVEL_CAP,
     statPoints: {
       hp: num(sp.hp),
@@ -6013,7 +6037,7 @@ const reconcileMasuPoints = masu => {
   // せっかく足したポイントが消えたように見える。
   // ここを新しい方式で数え直すことが、そのまま既存のマスモンの調整にもなる
   // (読み込みのたびに不足分だけを補うので、二重に配られることはない)。
-  const earned = Math.max(0, masuBondLevelInfo(masu).level - 1) + totalBreakthroughPoints(masu.rebirthCount) + totalReincarnatePoints(masu.reincarnateCount);
+  const earned = Math.max(0, masuBondLevelInfo(masu).level - 1) + totalBreakthroughPoints(masu.rebirthCount) + ownReincarnateBonusPoints(masu) + inheritedReincarnateBonusPointsOf(masu);
   const missing = earned - (aptSpent + statSpent + (masu.distAptPoints || 0));
   return missing > 0 ? {
     ...masu,
@@ -11548,12 +11572,14 @@ function MonsterHeroGame() {
       lineageId: subUniqueLineageId,
       sourceMasuName: sub.name
     } : null;
+    const reincarnateTransfer = transferableReincarnateBonus(sub);
     const historyEntry = {
       subName: sub.name,
       subBaseId: sub.baseId,
       subBondLevel: subLvl.level,
       xpGained: gainedXp,
       inherited: !!inheritedUnique,
+      inheritedReincarnateCount: reincarnateTransfer.count,
       timestamp: Date.now()
     };
     const next = masuMonsRef.current.filter(m => m.id !== sub.id).map(m => {
@@ -11565,6 +11591,11 @@ function MonsterHeroGame() {
       const advanced = applyBondXpGain(prepared, gainedXp);
       return {
         ...advanced.masu,
+        // 副の通常強化は移さず、転生で獲得済みの強化ポイントだけを未使用Pとして全量加算する。
+        // 自身の転生回数・Lv・固有技・限界突破は変更しない。
+        distAptPoints: advanced.masu.distAptPoints + reincarnateTransfer.points,
+        inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(m) + reincarnateTransfer.points,
+        inheritedReincarnateCount: inheritedReincarnateCountOf(m) + reincarnateTransfer.count,
         fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + advanced.gainedLevels,
         fusionHistory: [...(m.fusionHistory || []), historyEntry],
         ...(inheritedUnique ? {
@@ -11606,6 +11637,8 @@ function MonsterHeroGame() {
       gainedLevels,
       inherited: !!inheritedUnique,
       cost,
+      inheritedReincarnatePoints: reincarnateTransfer.points,
+      inheritedReincarnateCount: reincarnateTransfer.count,
       breakthroughCount: withBreakthrough ? breakthroughPlan.count : 0
     };
   };
@@ -15778,9 +15811,11 @@ function MonsterHeroGame() {
       className: "flex items-center gap-1.5 text-[8px] shrink-0"
     }, norm.rebirthCount > 0 && /*#__PURE__*/React.createElement("span", {
       className: "text-violet-300"
-    }, "\u9650\u754C\u7A81\u7834 ", norm.rebirthCount), norm.reincarnateCount > 0 && /*#__PURE__*/React.createElement("span", {
+    }, "\u9650\u754C\u7A81\u7834 ", norm.rebirthCount), /*#__PURE__*/React.createElement("span", {
       className: "text-amber-300"
-    }, "\u8EE2\u751F +", norm.reincarnateCount))), /*#__PURE__*/React.createElement("div", {
+    }, "\u8EE2\u751F ", norm.reincarnateCount, "\u56DE", norm.inheritedReincarnateCount > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "text-amber-200"
+    }, "\uFF08\u7D99\u627F ", norm.inheritedReincarnateCount, "\u56DE\u5206\uFF09")))), /*#__PURE__*/React.createElement("div", {
       className: "w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"
     }, /*#__PURE__*/React.createElement("div", {
       className: "h-full bg-gradient-to-r from-pink-500 to-rose-400",
@@ -17695,7 +17730,7 @@ function MonsterHeroGame() {
         cost = masuRebirthCost(lvl.level),
         skills = getRebirthSkillChoices(selected);
       const nextLevel = Math.max(1, lvl.level - REINCARNATE_LEVEL_DROP);
-      const nextPoints = nextLevel - 1 + totalBreakthroughPoints(normalized.rebirthCount) + totalReincarnatePoints(normalized.reincarnateCount + 1);
+      const nextPoints = nextLevel - 1 + totalBreakthroughPoints(normalized.rebirthCount) + normalized.reincarnateBonusPoints + REINCARNATE_POINTS + normalized.inheritedReincarnateBonusPoints;
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full p-4"
       }, /*#__PURE__*/React.createElement("div", {
@@ -21527,6 +21562,7 @@ function MonsterHeroGame() {
         const afterXp = cappedBondXp(main, subXp);
         const afterLvl = bondLevelInfo(afterXp);
         const gainedLevels = afterLvl.level - mainLvl.level;
+        const reincarnateTransfer = transferableReincarnateBonus(sub);
         // 上限で切り捨てられる絆経験値。あるときは事前に知らせる
         const wastedXp = Math.max(0, beforeXp + subXp - afterXp);
         const mainPointsNow = main.distAptPoints || 0;
@@ -21626,10 +21662,10 @@ function MonsterHeroGame() {
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
         }, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8"), /*#__PURE__*/React.createElement("span", {
-          className: `font-black ${gainedLevels > 0 ? 'text-amber-300' : 'text-slate-400'}`
-        }, mainPointsNow, " \u2192 ", mainPointsNow + gainedLevels, gainedLevels > 0 && /*#__PURE__*/React.createElement("span", {
+          className: `font-black ${gainedLevels + reincarnateTransfer.points > 0 ? 'text-amber-300' : 'text-slate-400'}`
+        }, mainPointsNow, " \u2192 ", mainPointsNow + gainedLevels + reincarnateTransfer.points, gainedLevels + reincarnateTransfer.points > 0 && /*#__PURE__*/React.createElement("span", {
           className: "text-amber-200"
-        }, " (+", gainedLevels, ")")))), gainedLevels === 0 && wastedXp === 0 && /*#__PURE__*/React.createElement("div", {
+        }, " (+", gainedLevels + reincarnateTransfer.points, ")")))), gainedLevels === 0 && wastedXp === 0 && /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-slate-500 leading-relaxed mt-2"
         }, "\u203B \u7D46\u7D4C\u9A13\u5024\u306F\u52A0\u7B97\u3055\u308C\u307E\u3059\u304C\u3001\u6B21\u306E\u30EC\u30D9\u30EB\u306B\u306F\u5C4A\u304D\u307E\u305B\u3093(\u5F37\u5316\u30DD\u30A4\u30F3\u30C8\u306F\u5897\u3048\u307E\u305B\u3093)"), wastedXp > 0 && /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-amber-200 leading-relaxed mt-2 bg-amber-950/40 border border-amber-500/40 rounded-xl px-2.5 py-2"
@@ -21666,6 +21702,14 @@ function MonsterHeroGame() {
         }, "\u53D7\u3051\u7D99\u3050\u7D46\u7D4C\u9A13\u5024"), /*#__PURE__*/React.createElement("span", {
           className: "text-pink-300 font-black"
         }, (sub.bondXp || 0).toLocaleString(), " XP")), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[10px] font-bold"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-400"
+        }, "\u8EE2\u751F\u80B2\u6210\u30DC\u30FC\u30CA\u30B9"), /*#__PURE__*/React.createElement("span", {
+          className: "text-amber-300 font-black"
+        }, reincarnateTransfer.count, "\u56DE\u5206 / +", reincarnateTransfer.points, "P")), reincarnateTransfer.count > 0 && /*#__PURE__*/React.createElement("div", {
+          className: "text-[8px] text-slate-400"
+        }, "\u526F\u81EA\u8EAB ", normalizeMasuProgression(sub).reincarnateCount, "\u56DE\uFF0B\u7D99\u627F\u6E08\u307F ", inheritedReincarnateCountOf(sub), "\u56DE\u5206\u3092\u5168\u91CF\u7D99\u627F\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
@@ -21834,7 +21878,9 @@ function MonsterHeroGame() {
         className: "text-[9px] text-emerald-400 font-black text-center mt-1"
       }, "\u7D46\u30EC\u30D9\u30EB\u304C", d.gainedLevels, "\u4E0A\u304C\u3063\u305F\uFF01")), d.inherited && /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-amber-300 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2"
-      }, "\u300C", d.subName, "\u300D\u306E\u56FA\u6709\u6280\u3092\u7D99\u627F\u30C7\u30FC\u30BF\u3068\u3057\u3066\u8A18\u9332\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("div", {
+      }, "\u300C", d.subName, "\u300D\u306E\u56FA\u6709\u6280\u3092\u7D99\u627F\u30C7\u30FC\u30BF\u3068\u3057\u3066\u8A18\u9332\u3057\u307E\u3057\u305F"), d.inheritedReincarnateCount > 0 && /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] text-amber-200 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2"
+      }, "\u8EE2\u751F\u80B2\u6210\u30DC\u30FC\u30CA\u30B9 ", d.inheritedReincarnateCount, "\u56DE\u5206\uFF08\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", d.inheritedReincarnatePoints, "\uFF09\u3092\u7D99\u627F\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] text-slate-500 font-bold mb-4"
       }, "\u30C0\u30A4\u30E4\u3092", d.cost.toLocaleString(), "\u6D88\u8CBB\u3057\u307E\u3057\u305F"), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
