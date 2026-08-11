@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f8861ec872344623
+// source-sha256: d84c0d9fe2ec44ea
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 23:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 23:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6404,7 +6404,10 @@ const extremeSpecialRuleLines = difficultyId => {
     const signed = `＋${specialRulePercent(rules.positiveModifier ?? 1)} / −${specialRulePercent(rules.negativeModifier ?? 1)}`;
     lines.push(['自動回復補正', signed], ['距離適性補正', signed]);
   }
-  const known = new Set(['breederCardEffect', 'waveEnhancement', 'positiveModifier', 'negativeModifier']);
+  if (rules.damageDealt != null) lines.push(['与ダメージ', specialRulePercent(rules.damageDealt)]);
+  if (rules.allyJoinBonus != null) lines.push(['供モン加入ボーナス', specialRulePercent(rules.allyJoinBonus)]);
+  if (rules.gutsCost != null) lines.push(['消費ガッツ', specialRulePercent(rules.gutsCost)]);
+  const known = new Set(['breederCardEffect', 'waveEnhancement', 'positiveModifier', 'negativeModifier', 'damageDealt', 'allyJoinBonus', 'gutsCost']);
   Object.entries(rules).filter(([rule]) => !known.has(rule)).forEach(([rule, value]) => lines.push([rule, specialRulePercent(value)]));
   return lines;
 };
@@ -19162,10 +19165,11 @@ function MonsterHeroGame() {
       }, difficulties.map(setting => {
         const active = setting.id === extremeDifficulty;
         const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : false);
-        const previewable = setting.available && unlocked;
+        const debugChaos = debugBattle && setting.id === 'CHAOS';
+        const previewable = setting.available && unlocked || debugChaos;
         return /*#__PURE__*/React.createElement("article", {
           key: setting.id,
-          "aria-disabled": !unlocked,
+          "aria-disabled": !previewable,
           "data-extreme-difficulty-card": setting.id,
           className: `snap-center shrink-0 w-[82%] h-[382px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
@@ -19181,11 +19185,11 @@ function MonsterHeroGame() {
           className: "mt-1 h-[42px] shrink-0 rounded-xl bg-black/45 px-2.5 py-1"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
-        }, setting.available ? `${setting.label}の記録` : '難易度情報'), /*#__PURE__*/React.createElement("b", {
+        }, debugChaos ? '解放条件' : setting.available ? `${setting.label}の記録` : '難易度情報'), /*#__PURE__*/React.createElement("b", {
           className: "block text-right text-base leading-tight text-fuchsia-200"
-        }, setting.available && unlocked ? `${(setting.id === 'NIGHTMARE' ? nightmareBestScore : extremeBestScore).toLocaleString()} pt` : '？？？'), /*#__PURE__*/React.createElement("span", {
+        }, debugChaos ? 'NIGHTMAREクリア' : setting.available && unlocked ? `${(setting.id === 'NIGHTMARE' ? nightmareBestScore : extremeBestScore).toLocaleString()} pt` : '？？？'), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, setting.available && unlocked ? `クリア ${setting.id === 'NIGHTMARE' ? nightmareClearCount : extremeClearCount}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : '未実装・選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        }, debugChaos ? 'DEBUG確認専用・保存なし' : setting.available && unlocked ? `クリア ${setting.id === 'NIGHTMARE' ? nightmareClearCount : extremeClearCount}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : '未実装・選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-1 mt-1"
         }, [['敵強度', `×${setting.power}`], ['スコア', `×${setting.score}`], ['ダイヤ', `×${setting.gold}`]].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
@@ -19211,7 +19215,7 @@ function MonsterHeroGame() {
           className: "mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-center text-[8px] leading-tight font-black text-amber-300"
-        }, "\u26A0 NIGHTMARE\u7279\u6B8A\u30EB\u30FC\u30EB"), extremeSpecialRuleLines(setting.id).map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+        }, "\u26A0 ", setting.label, "\u7279\u6B8A\u30EB\u30FC\u30EB"), extremeSpecialRuleLines(setting.id).map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
           className: "grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[12px] whitespace-nowrap"
         }, /*#__PURE__*/React.createElement("span", {
@@ -19227,7 +19231,7 @@ function MonsterHeroGame() {
           onClick: () => setShowWaveDetails(true),
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50"
         }, previewable ? '全WAVE詳細' : '詳細 ？？？'), /*#__PURE__*/React.createElement("button", {
-          disabled: !setting.available || !unlocked,
+          disabled: !previewable,
           onClick: () => {
             battleEntryStateRef.current = 'EXTREME_DIFFICULTY_SELECT';
             setDifficulty('Normal');
@@ -19243,7 +19247,7 @@ function MonsterHeroGame() {
             setGameState('PICK_HERO');
           },
           className: "min-h-[44px] rounded-xl bg-fuchsia-600 text-white font-black text-sm disabled:bg-slate-800 disabled:text-slate-500"
-        }, setting.available && unlocked ? 'この難易度で挑戦' : '選択できません'), /*#__PURE__*/React.createElement("button", {
+        }, previewable ? 'この難易度で挑戦' : '選択できません'), /*#__PURE__*/React.createElement("button", {
           disabled: !setting.available || !unlocked,
           onClick: () => openModeScoreRanking(EXTREME_MODE.id, setting.id, 'EXTREME_DIFFICULTY_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
