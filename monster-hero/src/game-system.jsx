@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 21:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 21:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12315,29 +12315,33 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             </div>
             <div className="flex-1 overflow-y-auto mh-scroll pb-2 min-h-0">
-              {/* カードはほかの一覧とまったく同じ共通実装(renderMonsterCardBody)を通す */}
-              <div className="grid grid-cols-2 gap-2.5">
+              {/* 第1弾のプロ勇者モン選択と同じ横長カード。カード本体は選択、右端は詳細だけに分ける。 */}
+              <div className="flex flex-col gap-2.5">
                 {candidates.map(m=>{const isSel=chosenIds.includes(m.id);const full=!isSel&&proAllyPool.length>=need;return (
-                  <article key={m.id} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 transition-all overflow-hidden ${isSel?'border-pink-400 bg-pink-900/30 ring-2 ring-pink-500/50 shadow-[0_0_20px_rgba(244,114,182,0.45)]':'border-slate-800'}`}>
-                    <button onClick={()=>setProAllyDetail(m)} aria-label={`${m.name}の詳細を見る`} className="w-full min-h-[44px] flex flex-col items-center active:bg-white/5">
-                      {renderMonsterCardBody({
-                        masu: null, base: ALL_PLAYER_MONSTERS[m.id]||m, mon: m,
-                        badge: isSel?<div className="absolute -top-1 -right-1 z-10 bg-pink-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>:null,
-                        extra: (<>
-                          <div className="text-amber-400 font-black flex items-center gap-1 leading-tight" style={{fontSize:'9px'}}><Zap size={9}/> {m.unique.name}</div>
-                          <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono" style={{fontSize:'9px'}}>
-                            <div className="flex justify-between"><span className="text-slate-500">HP</span><span className="text-pink-400 font-bold">{m.baseHp}</span></div>
-                            <div className="flex justify-between"><span className="text-slate-500">力</span><span className="text-red-400 font-bold">{m.baseAtk}</span></div>
-                            <div className="flex justify-between"><span className="text-slate-500">防</span><span className="text-emerald-400 font-bold">{m.baseDef}</span></div>
-                            <div className="flex justify-between"><span className="text-slate-500">G</span><span className="text-amber-400 font-bold">{m.baseGuts}</span></div>
-                          </div>
-                          <div className="min-h-[36px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black flex items-center justify-center gap-1" style={{fontSize:'10px'}}>詳細を見る <ChevronRight size={11}/></div>
-                        </>),
-                      })}
+                  <article key={m.id} className={`relative min-h-[112px] rounded-2xl border overflow-hidden flex shadow-lg transition-all ${isSel?'border-pink-300 bg-pink-900/30 ring-2 ring-pink-500/60 shadow-[0_0_20px_rgba(244,114,182,0.45)]':'border-slate-700 bg-slate-900'}`}>
+                    <button disabled={full} onClick={()=>toggle(m)} aria-label={`${m.name}を供モン候補${isSel?'から解除':'に追加'}`} aria-pressed={isSel} className="relative min-w-0 flex-1 grid grid-cols-[64px_minmax(0,1fr)_74px] gap-2 items-center p-2 pr-1 text-left active:bg-pink-900/30 disabled:opacity-35">
+                      {isSel&&<div className="absolute top-1 right-1 z-10 bg-pink-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>}
+                      <div className="w-16 h-[88px] flex items-center justify-center overflow-hidden shrink-0">
+                        {m.imgUrl?<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt={m.name} masuColors={m.colors} className="w-full h-full object-contain"/>:<span className="text-5xl">{m.emoji}</span>}
+                      </div>
+                      <div className="min-w-0 self-stretch flex flex-col justify-center gap-1">
+                        <div className="font-black text-[13px] text-white leading-tight truncate">{m.name}</div>
+                        <div className="font-black text-[10px] text-amber-300 leading-tight truncate"><Zap size={10} className="inline mr-0.5"/>{m.unique.name}</div>
+                        <div className="grid grid-cols-2 gap-x-2 text-[10px] font-mono leading-tight">
+                          <span className="flex justify-between text-slate-400">HP <b className="text-pink-300">{m.baseHp}</b></span><span className="flex justify-between text-slate-400">ちから <b className="text-red-300">{m.baseAtk}</b></span>
+                          <span className="flex justify-between text-slate-400">丈夫さ <b className="text-emerald-300">{m.baseDef}</b></span><span className="flex justify-between text-slate-400">ガッツ <b className="text-amber-300">{m.baseGuts}</b></span>
+                        </div>
+                      </div>
+                      <div className="min-w-0 self-stretch flex flex-col justify-center gap-1 border-l border-white/10 pl-2">
+                        <div className="grid grid-cols-4 gap-0.5 text-center">{RANGE_LABELS.map((label,idx)=><div key={label}><div className="text-[8px] text-slate-500 font-black">{label}</div><div className={`text-[11px] font-black rounded ${DIST_APTITUDE_COLOR[getDistAptitude(m,idx)]}`}>{getDistAptitude(m,idx)}</div></div>)}</div>
+                        <div className="text-[8px] text-indigo-400 font-black">勇者特性</div>
+                        <div className="text-[10px] text-indigo-200 font-black leading-tight line-clamp-2">{m.trait||'特性なし'}</div>
+                      </div>
                     </button>
-                    <button disabled={full} onClick={()=>toggle(m)} aria-pressed={isSel} className={`w-full min-h-[48px] mt-1 border-t font-black text-[11px] flex items-center justify-center gap-1.5 active:scale-[.98] disabled:opacity-35 ${isSel?'border-pink-400/40 bg-pink-600 text-white':'border-white/10 bg-slate-800 text-slate-200'}`}>
-                      {isSel?<><Check size={15}/>候補から解除</>:full?'5体選択済み':<><PlusCircle size={15}/>供モン候補に追加</>}
-                    </button>
+                    <div className="w-[74px] shrink-0 border-l border-white/10 flex flex-col">
+                      <div className="flex-1 flex flex-col items-center justify-center bg-black/25 px-1"><span className="text-[8px] text-slate-500 font-black">総合力</span><b className="text-[14px] text-amber-300 font-mono leading-tight">{formatMonsterPower(monsterPowerOf(m))}</b></div>
+                      <button onClick={()=>setProAllyDetail(m)} aria-label={`${m.name}の詳細を見る`} className="min-h-[46px] border-t border-indigo-400/30 bg-indigo-950/60 text-[10px] leading-tight text-indigo-200 font-black flex items-center justify-center active:bg-indigo-800/60">詳細を見る<ChevronRight size={12}/></button>
+                    </div>
                   </article>
                 );})}
               </div>
