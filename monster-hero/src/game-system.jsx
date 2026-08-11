@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 03:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 10:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10871,7 +10871,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const lvl = masuBondLevelInfo(masu);
           const pct = Math.max(0, Math.min(100, (lvl.xpIntoLevel/Math.max(1,lvl.xpForNext))*100));
           const points = masu.distAptPoints||0;
-          const currentStatValue = (key) => ({hp:base.baseHp,atk:base.baseAtk,def:base.baseDef,guts:base.baseGuts}[key]||0) + (masu.statPoints?.[key]||0);
+          const currentStatValue = (key) => ({
+            hp:masu.individualStats?.hp ?? base.baseHp,
+            atk:masu.individualStats?.atk ?? base.baseAtk,
+            def:masu.individualStats?.def ?? base.baseDef,
+            guts:masu.individualStats?.guts ?? base.baseGuts,
+          }[key]||0) + (masu.statPoints?.[key]||0);
           // 総合力は共通関数から都度出す。1ポイント強化も一括強化も、強化前と強化後を
           // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
           const currentPower = masuPowerOf(masu);

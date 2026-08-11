@@ -151,6 +151,32 @@ check('強化を未使用ポイントへ戻すと総合力は下がる', masuPow
   `リセット後 ${masuPowerOf(afterReset)} / 強化後 ${masuPowerOf(applied.masu)}`);
 check('ポイント不足の下書きは当てはめない', applyEnhancePlanToMasu(makeMasu({ distAptPoints: 1 }), { apt: [2, 0, 0, 0], stat: {} }) === null);
 
+// 再生個体はベースモンと異なる基礎値を保存している。強化の下書き・確定のどちらでも
+// individualStats を維持し、その値へ statPoints を加えた結果を使う。
+const regenerated = makeMasu({
+  distAptPoints: 2,
+  individualStats: {
+    hp: baseMon.baseHp + 10,
+    atk: baseMon.baseAtk - 3,
+    def: baseMon.baseDef + 3,
+    guts: baseMon.baseGuts - 3,
+  },
+});
+const regeneratedPlan = { apt: [0, 0, 0, 0], stat: { hp: 1, atk: 1 } };
+const regeneratedPreview = plannedMasuPowerOf(regenerated, regeneratedPlan);
+const regeneratedApplied = applyEnhancePlanToMasu(regenerated, regeneratedPlan);
+check('再生個体の強化で individualStats を変更しない',
+  JSON.stringify(regeneratedApplied.masu.individualStats) === JSON.stringify(regenerated.individualStats));
+const regeneratedResolved = mergeMasuIntoMon(regeneratedApplied.masu);
+check('再生個体の解決値は individualStats + statPoints',
+  regeneratedResolved.baseHp === regenerated.individualStats.hp + 10
+  && regeneratedResolved.baseAtk === regenerated.individualStats.atk + 3
+  && regeneratedResolved.baseDef === regenerated.individualStats.def
+  && regeneratedResolved.baseGuts === regenerated.individualStats.guts);
+check('再生個体も一括強化プレビューと確定後の総合力が一致する',
+  masuPowerOf(regeneratedApplied.masu) === regeneratedPreview,
+  `${masuPowerOf(regeneratedApplied.masu)} / ${regeneratedPreview}`);
+
 // --- ⑧ 画面が同じ共通関数を使っているか(式のコピーが無いこと) ---
 const uses = (needle) => (source.match(new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
 // 重みを掛けている場所(=式そのもの)は monsterPowerParts の中だけ。
@@ -170,6 +196,8 @@ check('詳細の上部サマリーが共通関数を使う',
 check('並べ替えが共通関数を使う', /power: masuPowerOf\(masu\)/.test(source) && /power: monsterPowerOf\(base\)/.test(source));
 check('並べ替えに総合力がある', /\{ key: 'power', label: '総合力' \}/.test(source) && /monsterSortKey === 'power'/.test(source));
 check('強化画面が共通関数を使う', /const currentPower = masuPowerOf\(masu\);/.test(source) && /plannedMasuPowerOf\(masu, plan\)/.test(source));
+check('強化画面の現在値が再生個体の individualStats を優先する',
+  ['hp', 'atk', 'def', 'guts'].every(key => source.includes(`${key}:masu.individualStats?.${key} ?? base.base${key === 'hp' ? 'Hp' : key === 'atk' ? 'Atk' : key === 'def' ? 'Def' : 'Guts'}`)));
 check('確定処理も下書き適用の共通関数を通る', /const applied = applyEnhancePlanToMasu\(masu, plan\);/.test(source));
 check('総合力をセーブデータへ保存していない', !/storeSet\([^)]*power/i.test(source) && !/power:\s*masuPowerOf[^)]*\}\s*;\s*\n\s*storeSet/.test(source));
 
