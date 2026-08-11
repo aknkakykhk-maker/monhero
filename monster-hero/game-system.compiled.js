@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e24513becce0bdf0
+// source-sha256: 97eba12ece4b984c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 20:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 21:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8272,6 +8272,7 @@ function MonsterHeroGame() {
   // プロモードで、始める前に選んだ供モンの候補(ベースモンだけ)。
   // ラン中の加入候補はここからしか出さない。ふだんのモードでは使わないので空のまま
   const [proAllyPool, setProAllyPool] = useState([]);
+  const [proAllyDetail, setProAllyDetail] = useState(null); // 候補の選択状態とは分けて開く、既存のベースモン詳細
   // スキップ(チケットを1枚使って、ボス撃破まで到達したのと同じ経験値・ダイヤを受け取る)
   const [skipFlow, setSkipFlow] = useState(null); // { difficulty, itemId, hero, allies:[] }
   const [skipPickTab, setSkipPickTab] = useState('roster');
@@ -25313,12 +25314,12 @@ function MonsterHeroGame() {
           }, "G"), /*#__PURE__*/React.createElement("span", {
             className: "text-amber-400 font-bold"
           }, gameState === 'PICK_HERO' ? m.baseGuts : `+${m.plusStats?.guts || 0}`))), /*#__PURE__*/React.createElement("div", {
-            className: "text-indigo-400 font-black uppercase mt-1 flex items-center gap-0.5",
+            className: "min-h-[32px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black mt-1 flex items-center justify-center gap-1",
             style: {
-              fontSize: '8px'
+              fontSize: '10px'
             }
           }, "\u8A73\u7D30\u3092\u898B\u308B ", /*#__PURE__*/React.createElement(ChevronRight, {
-            size: 9
+            size: 11
           })))
         }));
       })), allyCarousel && /*#__PURE__*/React.createElement("div", {
@@ -25386,7 +25387,7 @@ function MonsterHeroGame() {
       }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
         onClick: () => setGameState('PICK_SLOT'),
         className: `flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`
-      }, "\u6C7A\u5B9A"))
+      }, gameState === 'PICK_HERO' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
     })), gameState === 'PICK_PRO_ALLIES' && (() => {
       const mode = battleModeInfo(runMode);
       // 勇者モンにした種は候補から外す(同じ種は1体しか編成に入らないため)
@@ -25423,6 +25424,7 @@ function MonsterHeroGame() {
         }, /*#__PURE__*/React.createElement("button", {
           "aria-label": "\u623B\u308B",
           onClick: () => {
+            setProAllyDetail(null);
             setProAllyPool([]);
             setMainHero(null);
             setSlots([null, null, null, null]);
@@ -25456,8 +25458,8 @@ function MonsterHeroGame() {
         }, /*#__PURE__*/React.createElement("div", {
           className: "flex items-baseline justify-between"
         }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-black text-slate-300"
-        }, "\u5019\u88DC\u306B\u5165\u308C\u308B\u4F9B\u30E2\u30F3"), /*#__PURE__*/React.createElement("b", {
+          className: "text-[11px] font-black text-slate-200"
+        }, "\u4F9B\u30E2\u30F3\u5019\u88DC"), /*#__PURE__*/React.createElement("b", {
           className: "text-base font-black",
           style: {
             color: mode.color
@@ -25493,12 +25495,14 @@ function MonsterHeroGame() {
         }, candidates.map(m => {
           const isSel = chosenIds.includes(m.id);
           const full = !isSel && proAllyPool.length >= need;
-          return /*#__PURE__*/React.createElement("button", {
+          return /*#__PURE__*/React.createElement("article", {
             key: m.id,
-            disabled: full,
-            onClick: () => toggle(m),
             style: MONSTER_CARD_STYLE,
-            className: `${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25 ${isSel ? 'border-pink-400 bg-pink-900/30 ring-4 ring-pink-500/50 scale-[1.03] shadow-[0_0_25px_rgba(244,114,182,0.6)]' : 'border-slate-800'}`
+            className: `${MONSTER_CARD_CLASS} bg-slate-900 transition-all overflow-hidden ${isSel ? 'border-pink-400 bg-pink-900/30 ring-2 ring-pink-500/50 shadow-[0_0_20px_rgba(244,114,182,0.45)]' : 'border-slate-800'}`
+          }, /*#__PURE__*/React.createElement("button", {
+            onClick: () => setProAllyDetail(m),
+            "aria-label": `${m.name}の詳細を見る`,
+            className: "w-full min-h-[44px] flex flex-col items-center active:bg-white/5"
           }, renderMonsterCardBody({
             masu: null,
             base: ALL_PLAYER_MONSTERS[m.id] || m,
@@ -25527,27 +25531,59 @@ function MonsterHeroGame() {
               className: "text-slate-500"
             }, "HP"), /*#__PURE__*/React.createElement("span", {
               className: "text-pink-400 font-bold"
-            }, "+", m.plusStats?.hp || 0)), /*#__PURE__*/React.createElement("div", {
+            }, m.baseHp)), /*#__PURE__*/React.createElement("div", {
               className: "flex justify-between"
             }, /*#__PURE__*/React.createElement("span", {
               className: "text-slate-500"
             }, "\u529B"), /*#__PURE__*/React.createElement("span", {
               className: "text-red-400 font-bold"
-            }, "+", m.plusStats?.atk || 0)), /*#__PURE__*/React.createElement("div", {
+            }, m.baseAtk)), /*#__PURE__*/React.createElement("div", {
               className: "flex justify-between"
             }, /*#__PURE__*/React.createElement("span", {
               className: "text-slate-500"
             }, "\u9632"), /*#__PURE__*/React.createElement("span", {
               className: "text-emerald-400 font-bold"
-            }, "+", m.plusStats?.def || 0)), /*#__PURE__*/React.createElement("div", {
+            }, m.baseDef)), /*#__PURE__*/React.createElement("div", {
               className: "flex justify-between"
             }, /*#__PURE__*/React.createElement("span", {
               className: "text-slate-500"
             }, "G"), /*#__PURE__*/React.createElement("span", {
               className: "text-amber-400 font-bold"
-            }, "+", m.plusStats?.guts || 0))))
-          }));
-        }))), /*#__PURE__*/React.createElement("div", {
+            }, m.baseGuts))), /*#__PURE__*/React.createElement("div", {
+              className: "min-h-[36px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black flex items-center justify-center gap-1",
+              style: {
+                fontSize: '10px'
+              }
+            }, "\u8A73\u7D30\u3092\u898B\u308B ", /*#__PURE__*/React.createElement(ChevronRight, {
+              size: 11
+            })))
+          })), /*#__PURE__*/React.createElement("button", {
+            disabled: full,
+            onClick: () => toggle(m),
+            "aria-pressed": isSel,
+            className: `w-full min-h-[48px] mt-1 border-t font-black text-[11px] flex items-center justify-center gap-1.5 active:scale-[.98] disabled:opacity-35 ${isSel ? 'border-pink-400/40 bg-pink-600 text-white' : 'border-white/10 bg-slate-800 text-slate-200'}`
+          }, isSel ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Check, {
+            size: 15
+          }), "\u5019\u88DC\u304B\u3089\u89E3\u9664") : full ? '5体選択済み' : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(PlusCircle, {
+            size: 15
+          }), "\u4F9B\u30E2\u30F3\u5019\u88DC\u306B\u8FFD\u52A0")));
+        }))), proAllyDetail && renderMonsterDetailModal({
+          mon: proAllyDetail,
+          onClose: () => setProAllyDetail(null),
+          accent: 'pink',
+          zIndex: 31000,
+          label: `${proAllyDetail.name}のベースモン詳細`,
+          footer: /*#__PURE__*/React.createElement("div", {
+            className: "flex gap-2 shrink-0"
+          }, /*#__PURE__*/React.createElement("button", {
+            onClick: () => setProAllyDetail(null),
+            className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95"
+          }, "\u4E00\u89A7\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
+            disabled: !chosenIds.includes(proAllyDetail.id) && proAllyPool.length >= need,
+            onClick: () => toggle(proAllyDetail),
+            className: `flex-1 min-h-[48px] rounded-2xl font-black text-[12px] shadow-lg active:scale-95 disabled:opacity-35 ${chosenIds.includes(proAllyDetail.id) ? 'bg-slate-700 text-pink-200' : 'bg-pink-600 text-white'}`
+          }, chosenIds.includes(proAllyDetail.id) ? '供モン候補から解除' : '供モン候補に追加'))
+        }), /*#__PURE__*/React.createElement("div", {
           className: "shrink-0 pt-1",
           style: {
             paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
