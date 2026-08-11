@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b9b87909bc349f7c
+// source-sha256: 6232461f7d8daac3
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 12:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -492,12 +492,15 @@ const BREAKTHROUGH_MAX_COUNT = BREAKTHROUGH_STAR_TIERS.length * BREAKTHROUGH_STA
 const BREAKTHROUGH_FINAL_LEVEL_CAP = INITIAL_MASU_LEVEL_CAP + BREAKTHROUGH_LEVEL_CAP_GAIN * BREAKTHROUGH_MAX_COUNT;
 // 最終限界突破を終えた回数。ここだけ上限が+5ではなくLv.200へ一気に上がり、★は虹になる
 const FINAL_BREAKTHROUGH_COUNT = BREAKTHROUGH_MAX_COUNT + 1;
-// 虹は各★の中に全色が入る宝石調。色相の開始位置だけをずらし、5個を別色にはしない。
-// 明るい色だけのconic-gradientへ広めの白金ハイライトを重ね、中心が暗くならないようにする。
-const RAINBOW_STAR_COLORS = [8, 38, 68, 98, 128].map(angle => `radial-gradient(circle at 48% 42%,#fff 0 10%,rgba(255,255,244,.88) 18%,rgba(255,255,255,.32) 34%,transparent 52%),conic-gradient(from ${angle}deg,#ff4f67,#ff9f32,#fff35a,#54f58b,#3fe6e0,#5688ff,#d66cff,#ff4f67)`);
-// 紫だけが強く見えないよう、赤・金・緑・青紫を同じ強さで薄く発光させる。
-const RAINBOW_STAR_SHADOW = '0 1px 1px rgba(15,23,42,.95),-1px 0 3px rgba(255,79,103,.8),1px 0 3px rgba(63,230,224,.8),0 -1px 3px rgba(255,211,66,.8),0 1px 3px rgba(102,126,255,.8),0 0 6px rgba(255,255,255,.9)';
-const RAINBOW_STAR_STROKE = '0.5px rgba(255,255,244,.98)';
+// 虹は5個とも同じ★の内部に、赤→橙→黄→緑→水色→青→紫→ピンクの全色を左から並べる。
+// 白い輪郭の内側は端から端まで明色だけで塗り、中心が暗色や透明に見える層は重ねない。
+const RAINBOW_STAR_FILL = 'linear-gradient(90deg,#ff355d 0%,#ff8a24 14%,#ffe84a 28%,#43ef78 42%,#38e8ee 56%,#4388ff 70%,#a855f7 84%,#ff4fb8 100%)';
+const RAINBOW_STAR_COLORS = Array.from({
+  length: BREAKTHROUGH_STARS_PER_TIER
+}, () => RAINBOW_STAR_FILL);
+// 白い輪郭を芯にして、その外へ各方向から均等な虹色グローを出す。
+const RAINBOW_STAR_SHADOW = '-2px 0 4px rgba(255,53,93,.95),-1px -1px 4px rgba(255,232,74,.9),1px -1px 4px rgba(67,239,120,.9),2px 0 4px rgba(56,232,238,.95),1px 1px 4px rgba(67,136,255,.95),-1px 1px 4px rgba(255,79,184,.9),0 0 7px rgba(255,255,255,1)';
+const RAINBOW_STAR_STROKE = '0.65px rgba(255,255,255,1)';
 // 凸数から★の並びを作る。新しい色を先頭に、残りは1つ前の段階の色で埋める
 const breakthroughStars = count => {
   const n = Math.max(0, Math.floor(Number(count) || 0));
@@ -523,6 +526,15 @@ const breakthroughStars = count => {
   return stars;
 };
 const isFinalBreakthroughCount = count => Math.max(0, Math.floor(Number(count) || 0)) >= FINAL_BREAKTHROUGH_COUNT;
+const breakthroughStarStyle = star => ({
+  color: star.color,
+  textShadow: star.shadow,
+  backgroundImage: star.background,
+  WebkitBackgroundClip: star.background ? 'text' : undefined,
+  backgroundClip: star.background ? 'text' : undefined,
+  WebkitTextFillColor: star.background ? 'transparent' : undefined,
+  WebkitTextStroke: star.stroke
+});
 // ===== 限界突破に使うアイテム「虹のプシュケー」 =====
 // 所持数は他の消耗アイテムと同じ mh_owned_items({ itemId: 個数 })へ入れる。
 // 新しい保存キーは作らないので、持っていない旧セーブは「0個」として読める。
@@ -5022,15 +5034,7 @@ const RebirthStars = ({
     "aria-label": final ? `最終限界突破(${value}回)` : `限界突破${value}回`
   }, stars.map((s, i) => /*#__PURE__*/React.createElement("span", {
     key: i,
-    style: {
-      color: s.color,
-      textShadow: s.shadow,
-      backgroundImage: s.background,
-      WebkitBackgroundClip: s.background ? 'text' : undefined,
-      backgroundClip: s.background ? 'text' : undefined,
-      WebkitTextFillColor: s.background ? 'transparent' : undefined,
-      WebkitTextStroke: s.stroke
-    }
+    style: breakthroughStarStyle(s)
   }, "\u2605")));
 };
 const breakthroughDebugInfo = count => {
@@ -18199,10 +18203,7 @@ function MonsterHeroGame() {
       }, starList.map((s, i) => /*#__PURE__*/React.createElement("i", {
         key: i,
         className: finalBreak || i === 0 ? 'is-new' : 'is-old',
-        style: {
-          color: s.color,
-          textShadow: s.shadow
-        }
+        style: breakthroughStarStyle(s)
       }, "\u2605"))), /*#__PURE__*/React.createElement("div", {
         className: "mh-breakthrough-copy"
       }, /*#__PURE__*/React.createElement("b", null, finalBreak ? '最終限界突破！' : '限界突破！'), /*#__PURE__*/React.createElement("span", null, finalBreak ? '★ が虹になりました' : '★ が1つ増えました'), /*#__PURE__*/React.createElement("span", null, rebirthAnimation.raisesSkill === false ? `固有技ポイント +1（所持 ${rebirthAnimation.keptSkillPoints}）` : `${rebirthAnimation.skillName} Lv.${rebirthAnimation.skillLevel}へ進化`), /*#__PURE__*/React.createElement("span", null, "\u5F37\u5316\u30DD\u30A4\u30F3\u30C8 +", rebirthAnimation.gainedPoints)));
