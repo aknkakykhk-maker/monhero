@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 13:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 13:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -465,11 +465,14 @@ const buildFusionBreakthroughPlan = ({ masu, fusionXp = 0, gold = 0, psycheOwned
   let rebirthCount = normalized.rebirthCount;
   let psycheCost = 0;
   let diamondCost = 0;
+  const diamondCosts = [];
   let gainedPoints = 0;
   while (plannedLevel > levelCap && levelCap < MAX_MASU_LEVEL_CAP) {
     rebirthCount += 1;
     psycheCost += breakthroughItemCost(rebirthCount);
-    diamondCost += masuRebirthCost(levelCap);
+    const nextDiamondCost = masuRebirthCost(levelCap);
+    diamondCost += nextDiamondCost;
+    diamondCosts.push(nextDiamondCost);
     gainedPoints += rebirthCount === 1 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS;
     levelCap = levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP
       ? MAX_MASU_LEVEL_CAP
@@ -479,7 +482,7 @@ const buildFusionBreakthroughPlan = ({ masu, fusionXp = 0, gold = 0, psycheOwned
   const psycheHave = ownedItemCount({ [BREAKTHROUGH_ITEM_ID]:psycheOwned }, BREAKTHROUGH_ITEM_ID);
   const goldHave = donationDiamondValue(gold);
   return {
-    count, plannedLevel, levelCap, rebirthCount, psycheCost, diamondCost, gainedPoints,
+    count, plannedLevel, levelCap, rebirthCount, psycheCost, diamondCost, diamondCosts, gainedPoints,
     psycheHave, goldHave,
     psycheShortage:Math.max(0, psycheCost - psycheHave),
     diamondShortage:Math.max(0, diamondCost - goldHave),
@@ -782,6 +785,25 @@ const REGENERATION_COST = 100;
 const REGENERATION_DISC_IMAGE = 'images/disc-icons/stone-base.png';
 const REBIRTH_COST_PER_LEVEL = 50;
 const masuFusionCost = (_mainLevel, _subLevel, inherit = false) => inherit ? FUSION_INHERIT_COST : 0;
+// 合体確認と確定処理で共有するダイヤ収支。画面には必ず差し引き前の所持数を見せる。
+const buildFusionDiamondSummary = ({ masu, fusionXp = 0, gold = 0, psycheOwned = 0, mainLevel = 0, subLevel = 0, inherit = false }) => {
+  const goldBefore = donationDiamondValue(gold);
+  const inheritCost = masuFusionCost(mainLevel, subLevel, inherit);
+  const breakthroughPlan = buildFusionBreakthroughPlan({
+    masu, fusionXp, gold:goldBefore - inheritCost, psycheOwned,
+  });
+  const breakthroughDiamondCost = breakthroughPlan.diamondCost;
+  const totalDiamondCost = inheritCost + breakthroughDiamondCost;
+  return {
+    goldBefore, inheritCost, breakthroughDiamondCost, totalDiamondCost,
+    diamondAfter:goldBefore - totalDiamondCost,
+    diamondShortage:Math.max(0, totalDiamondCost - goldBefore),
+    normalDiamondCost:inheritCost,
+    normalDiamondAfter:goldBefore - inheritCost,
+    normalDiamondShortage:Math.max(0, inheritCost - goldBefore),
+    breakthroughPlan,
+  };
+};
 // 転生の消費ダイヤ。画面の表示と実処理で必ずこの関数を使う。
 // (以前は画面だけが「レベル×100」で計算しており、実際に引かれる額の倍が表示され、
 //  そのぶんダイヤを持っていないと転生ボタンを押せない状態になっていた)
@@ -6497,10 +6519,10 @@ function MonsterHeroGame() {
     // 配ってしまう(確認画面が「Lv.41になる」と出ていたのがこれ)
     const mainLvl = masuBondLevelInfo(main);
     const subLvl = masuBondLevelInfo(sub);
-    const cost = masuFusionCost(mainLvl.level, subLvl.level, fusionInheritUnique);
     const gainedXp = cappedBondXp(sub);
-    const breakthroughPlan = buildFusionBreakthroughPlan({ masu:main, fusionXp:gainedXp, gold:gold-cost, psycheOwned:ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID) });
-    if (gold < cost || (withBreakthrough && (breakthroughPlan.count < 1 || !breakthroughPlan.canAfford))) { fusionProcessingRef.current=false; return null; }
+    const diamondSummary = buildFusionDiamondSummary({ masu:main, fusionXp:gainedXp, gold, psycheOwned:ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID), mainLevel:mainLvl.level, subLevel:subLvl.level, inherit:fusionInheritUnique });
+    const { breakthroughPlan } = diamondSummary;
+    if (diamondSummary.normalDiamondShortage || (withBreakthrough && (breakthroughPlan.count < 1 || !breakthroughPlan.canAfford))) { fusionProcessingRef.current=false; return null; }
     const fusionMain = withBreakthrough ? breakthroughPlan.nextMasu : main;
     const afterXp = cappedBondXp(fusionMain, gainedXp);
     const before = mainLvl;
@@ -6533,7 +6555,7 @@ function MonsterHeroGame() {
             ...(inheritedUnique ? { inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique] } : {}),
           };
         });
-    const goldAfter = gold - cost - (withBreakthrough ? breakthroughPlan.diamondCost : 0);
+    const goldAfter = withBreakthrough ? diamondSummary.diamondAfter : diamondSummary.normalDiamondAfter;
     const nextItems = withBreakthrough
       ? { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]:breakthroughPlan.nextPsyche }
       : ownedItemsRef.current;
@@ -10587,8 +10609,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if (!mainBase || !subBase) { resetFusionFlow(); return null; }
             const mainLvl = masuBondLevelInfo(main);
             const subLvl = masuBondLevelInfo(sub);
-            const cost = masuFusionCost(mainLvl.level, subLvl.level, fusionInheritUnique);
-            const canAfford = gold >= cost;
           const ownedUniqueIds = new Set([uniqueLineageId(mainBase.unique, mainBase.id), ...(main.inheritedUniques || []).map(unique=>uniqueLineageId(unique))].filter(Boolean));
           const duplicateUnique = ownedUniqueIds.has(uniqueLineageId(subBase.unique, subBase.id));
           const canChooseInherit = subLvl.level>=FUSION_INHERIT_MIN_SUB_LEVEL && !!subBase.unique && !duplicateUnique;
@@ -10598,7 +10618,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const mainCap = normalizeMasuProgression(main).levelCap;
             const subXp = cappedBondXp(sub);
             const beforeXp = cappedBondXp(main);
-            const breakthroughPlan = buildFusionBreakthroughPlan({ masu:main, fusionXp:subXp, gold:gold-cost, psycheOwned:ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID) });
+            const diamondSummary = buildFusionDiamondSummary({ masu:main, fusionXp:subXp, gold, psycheOwned:ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID), mainLevel:mainLvl.level, subLevel:subLvl.level, inherit:fusionInheritUnique });
+            const { inheritCost, breakthroughDiamondCost, totalDiamondCost, diamondAfter, diamondShortage, breakthroughPlan } = diamondSummary;
+            const canAfford = diamondSummary.normalDiamondShortage === 0;
             const afterXp = cappedBondXp(main, subXp);
             const afterLvl = bondLevelInfo(afterXp);
             const gainedLevels = afterLvl.level - mainLvl.level;
@@ -10659,7 +10681,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="flex justify-between text-[9px] font-bold"><span className="text-slate-400">現在のLv上限</span><span>Lv.{mainCap}</span></div>
                     <div className="flex justify-between text-[10px] font-black"><span className="text-slate-300">必要な限界突破</span><span className="text-violet-300">×{breakthroughPlan.count}</span></div>
                     <div className={`flex justify-between text-[9px] font-bold ${breakthroughPlan.psycheShortage?'text-red-300':'text-fuchsia-300'}`}><span>虹のプシュケー</span><span>{breakthroughPlan.psycheHave.toLocaleString()} / {breakthroughPlan.psycheCost.toLocaleString()}{breakthroughPlan.psycheShortage?`（あと${breakthroughPlan.psycheShortage.toLocaleString()}個）`:''}</span></div>
-                    <div className={`flex justify-between text-[9px] font-bold ${breakthroughPlan.diamondShortage?'text-red-300':'text-amber-300'}`}><span>限界突破のダイヤ</span><span>{breakthroughPlan.goldHave.toLocaleString()} / {breakthroughPlan.diamondCost.toLocaleString()}{breakthroughPlan.diamondShortage?`（あと${breakthroughPlan.diamondShortage.toLocaleString()}）`:''}</span></div>
+                    <div className="flex justify-between text-[9px] font-bold text-amber-300"><span>限界突破のダイヤ</span><span>{breakthroughDiamondCost.toLocaleString()}</span></div>
+                    {breakthroughPlan.diamondCosts.length>1&&<div className="text-right text-[7px] text-slate-400">{breakthroughPlan.diamondCosts.map(value=>value.toLocaleString()).join(' + ')}</div>}
                     {!breakthroughPlan.canReceiveAll&&<div className="text-[8px] text-red-300 font-black">最大上限Lv.{MAX_MASU_LEVEL_CAP}でも全XPは受け取れません。</div>}
                     <div className="text-[7px] text-slate-400">限界突破分の固有技ポイントは「あとで決める」として保持されます。</div>
                   </div>}
@@ -10667,9 +10690,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">受け継ぐ絆経験値</span><span className="text-pink-300 font-black">{(sub.bondXp||0).toLocaleString()} XP</span></div>
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">転生育成ボーナス</span><span className="text-amber-300 font-black">{reincarnateTransfer.count}回分 / +{reincarnateTransfer.points}P</span></div>
                     {reincarnateTransfer.count>0&&<div className="text-[8px] text-slate-400">副自身 {normalizeMasuProgression(sub).reincarnateCount}回＋継承済み {inheritedReincarnateCountOf(sub)}回分を全量継承します</div>}
-                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${canAfford?'text-amber-300':'text-red-400'}`}><Gem size={10}/>{cost.toLocaleString()}</span></div>
-                    <div className="text-[8px] text-slate-400">{fusionInheritUnique?'技を引き継ぐ合体':'技を引き継がない合体'}</div>
-                    {!canAfford&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません(所持: {gold.toLocaleString()})</div>}
+                    <div className="text-[9px] font-black text-violet-200 tracking-wider">ダイヤ消費</div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">所持ダイヤ</span><span className="text-white font-black">{diamondSummary.goldBefore.toLocaleString()}</span></div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">固有技引き継ぎ</span><span className="text-amber-300 font-black">{inheritCost.toLocaleString()}</span></div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">限界突破 ×{breakthroughPlan.count}</span><span className="text-amber-300 font-black">{breakthroughDiamondCost.toLocaleString()}</span></div>
+                    <div className="border-t border-slate-700 pt-1 flex justify-between text-[11px] font-black"><span className="text-slate-200">合計消費</span><span className={diamondShortage?'text-red-300':'text-amber-300'}>{totalDiamondCost.toLocaleString()}</span></div>
+                    <div className="flex justify-between text-[11px] font-black"><span className="text-slate-200">合体後</span><span className={diamondShortage?'text-red-300':'text-emerald-300'}>{Math.max(0, diamondAfter).toLocaleString()}</span></div>
+                    {diamondShortage>0&&<div className="text-[9px] text-red-300 font-black text-right">あと{diamondShortage.toLocaleString()}ダイヤ必要</div>}
                   </div>
                   {canChooseInherit && (
                     <button onClick={()=>setFusionInheritUnique(v=>!v)} className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border mb-2 active:scale-95 ${fusionInheritUnique?'bg-amber-950/50 border-amber-500':'bg-slate-900 border-slate-800'}`}>
@@ -10685,11 +10712,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 </div>
                 <div className="grid grid-cols-1 gap-2 shrink-0 mt-1">
                 {breakthroughPlan.count>0&&<button onClick={async()=>{
-                  if (!canAfford || !breakthroughPlan.canAfford) return;
+                  if (diamondShortage || !breakthroughPlan.canAfford) return;
                   const result = await executeMasuFusion(true);
                   if (!result) return;
                   setFusionResultData(result); setFusionStep('anim'); Audio_.se.fusion();
-                }} disabled={!canAfford||!breakthroughPlan.canAfford||fusionProcessingRef.current} className="w-full py-3 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white disabled:bg-slate-800 disabled:text-slate-600 disabled:opacity-50"><Star size={16}/>限界突破 ×{breakthroughPlan.count} して合体</button>}
+                }} disabled={!!diamondShortage||!breakthroughPlan.canAfford||fusionProcessingRef.current} className="w-full py-2.5 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white disabled:bg-slate-800 disabled:text-slate-600 disabled:opacity-50"><Star size={16}/><span>限界突破 ×{breakthroughPlan.count} して合体<span className="block text-[8px] font-bold opacity-80">{totalDiamondCost.toLocaleString()}ダイヤ消費 → 残り{Math.max(0, diamondAfter).toLocaleString()}</span></span></button>}
                 <button onClick={async()=>{
                   if (!canAfford) return;
                   const result = await executeMasuFusion(false);
@@ -10697,7 +10724,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   setFusionResultData(result);
                   setFusionStep('anim');
                   Audio_.se.fusion();
-                }} disabled={!canAfford||fusionProcessingRef.current} className={`w-full py-3 rounded-2xl font-black text-sm uppercase shadow-lg flex items-center justify-center gap-2 ${canAfford?'bg-slate-700 text-white active:scale-95':'bg-slate-800 text-slate-600'}`}><Sparkles size={16}/>{breakthroughPlan.count>0?'通常合体':'合体する'}</button>
+                }} disabled={!canAfford||fusionProcessingRef.current} className={`w-full py-2.5 rounded-2xl font-black text-sm uppercase shadow-lg flex items-center justify-center gap-2 ${canAfford?'bg-slate-700 text-white active:scale-95':'bg-slate-800 text-slate-600'}`}><Sparkles size={16}/><span>{breakthroughPlan.count>0?'通常合体':'合体する'}<span className="block text-[8px] normal-case font-bold opacity-80">{diamondSummary.normalDiamondCost.toLocaleString()}ダイヤ消費 → 残り{Math.max(0, diamondSummary.normalDiamondAfter).toLocaleString()}</span></span></button>
                 </div>
               </div>
             );
