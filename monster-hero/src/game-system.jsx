@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 14:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 14:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -124,9 +124,12 @@ const isProMode = (mode) => normalizeBattleMode(mode) === BATTLE_MODE_PRO;
 // 周回開始時の選択をrefへ固定するため、途中の画面遷移や他モードへ影響しない。
 const QUICK_REWARD_POLICY_GROWTH = 'growth';
 const QUICK_REWARD_POLICY_PSYCHE = 'psyche';
-const normalizeQuickRewardPolicy = (value) => value === QUICK_REWARD_POLICY_PSYCHE ? value : QUICK_REWARD_POLICY_GROWTH;
-const applyQuickXpPolicy = (value, mode, policy) => isQuickMode(mode) && normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_PSYCHE ? 0 : value;
+const QUICK_REWARD_POLICY_DIAMOND = 'diamond';
+const normalizeQuickRewardPolicy = (value) => value === QUICK_REWARD_POLICY_PSYCHE || value === QUICK_REWARD_POLICY_DIAMOND ? value : QUICK_REWARD_POLICY_GROWTH;
+const applyQuickXpPolicy = (value, mode, policy) => isQuickMode(mode) && normalizeQuickRewardPolicy(policy) !== QUICK_REWARD_POLICY_GROWTH ? 0 : value;
 const applyQuickPsychePolicy = (value, mode, policy) => isQuickMode(mode) && normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_PSYCHE ? value * 2 : value;
+// 難易度とクイックモードの倍率をすべて適用した最終ダイヤだけを、ダイヤ優先時に2倍にする。
+const applyQuickDiamondPolicy = (value, mode, policy) => isQuickMode(mode) && normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_DIAMOND ? value * 2 : value;
 // 難易度倍率をかけたあとの獲得量へ、さらにモードの倍率をかける。
 // WAVEごとの内訳と合計がずれないよう、内訳と同じ「WAVE単位で丸めてから合計」に揃える。
 // 倍率はブリーダー経験値・絆経験値・ダイヤで別々に決める。
@@ -6796,7 +6799,7 @@ function MonsterHeroGame() {
       storeSet('mh_breeder_points_granted', Math.max(0, breederLevelAfter.level - 1), false);
     }
 
-    const goldGain = goldForWavesClearedInMode(wavesCleared, goldMult, runMode);
+    const goldGain = applyQuickDiamondPolicy(goldForWavesClearedInMode(wavesCleared, goldMult, runMode), runMode, quickRewardPolicyRunRef.current);
     const goldBefore = gold;
     const goldAfter = gold + goldGain;
     setGold(goldAfter);
@@ -6907,7 +6910,7 @@ function MonsterHeroGame() {
       }
 
       // ダイヤ
-      const goldGain = goldForWavesCleared(SKIP_WAVES, goldMult) * count;
+      const goldGain = applyQuickDiamondPolicy(goldForWavesCleared(SKIP_WAVES, goldMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy);
       const goldBefore = gold;
       const goldAfter = gold + goldGain;
       setGold(goldAfter);
@@ -9796,10 +9799,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col pt-1">
               <div className="flex-1 min-h-0 flex flex-col overflow-y-auto mh-scroll">
                 <div className="text-center text-[8px] tracking-[.18em] text-slate-400 font-black shrink-0">左右にスワイプして難易度を選択</div>
-                {quick&&<fieldset className="shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1.5">
+                {quick&&<fieldset className="shrink-0 mx-1 mb-1 rounded-2xl border border-teal-400/30 bg-slate-900/80 p-1">
                   <legend className="px-1 text-[9px] font-black text-teal-200">報酬方針</legend>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {[[QUICK_REWARD_POLICY_GROWTH,'育成','経験値あり'],[QUICK_REWARD_POLICY_PSYCHE,'プシュケー優先','経験値0・虹×2']].map(([id,label,detail])=>{const selected=quickRewardPolicy===id;return <button key={id} type="button" aria-pressed={selected} onClick={()=>setQuickRewardPolicy(id)} className={`min-h-[44px] rounded-xl border-2 px-1 py-1 font-black active:scale-[.98] ${selected?'border-teal-300 bg-teal-600 text-white shadow-[0_0_14px_rgba(45,212,191,.3)]':'border-white/10 bg-slate-950 text-slate-400'}`}><span className="block text-xs">{label}</span><small className="block text-[8px]">{detail}</small></button>;})}
+                  <div className="grid grid-cols-3 gap-1">
+                    {[[QUICK_REWARD_POLICY_GROWTH,'育成','経験値あり'],[QUICK_REWARD_POLICY_PSYCHE,'プシュケー優先','経験値0・虹×2'],[QUICK_REWARD_POLICY_DIAMOND,'ダイヤ優先','経験値0・ダイヤ×2']].map(([id,label,detail])=>{const selected=quickRewardPolicy===id;return <button key={id} type="button" aria-pressed={selected} onClick={()=>setQuickRewardPolicy(id)} className={`min-h-[44px] rounded-xl border-2 px-1 py-0.5 font-black leading-tight active:scale-[.98] ${selected?'border-teal-300 bg-teal-600 text-white shadow-[0_0_14px_rgba(45,212,191,.3)]':'border-white/10 bg-slate-950 text-slate-400'}`}><span className="block text-[10px]">{label}</span><small className="block text-[8px]">{detail}</small></button>;})}
                   </div>
                   <p className="mt-1 text-center text-[8px] font-black text-slate-400">同じ難易度をチャレンジ・プロ・極限のどれかでクリアすると解放</p>
                 </fieldset>}
@@ -9819,9 +9822,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div>
                         <div className="mt-1 rounded-xl border px-2 py-0.5 text-[8px] font-black whitespace-nowrap overflow-hidden flex items-center justify-between gap-1" style={{borderColor:`${mode.color}55`,color:mode.color}}><span className="truncate">{noteText}</span>{quick&&hasExtremeSpecialRules(key)&&<span className="shrink-0 text-[8px] text-amber-300">特殊ルールあり</span>}</div>
                         {/* 実際のクリア付与と同じ関数を使い、表示専用の報酬値を持たない。 */}
-                        <div className="mt-1.5 min-h-[48px] rounded-xl border border-fuchsia-400/35 bg-fuchsia-950/35 px-2.5 py-1.5 flex items-center gap-2" data-psyche-reward={key}>
+                        <div className="mt-1.5 min-h-[54px] rounded-xl border border-fuchsia-400/35 bg-fuchsia-950/35 px-2.5 py-1 flex items-center gap-2" data-psyche-reward={key}>
                           <span className="shrink-0 whitespace-nowrap text-[10px] leading-tight text-fuchsia-200 font-black">クリア報酬</span>
-                          <div className="flex-1 min-w-0 text-left whitespace-nowrap leading-tight"><b className="block text-[10px] text-white">経験値：{quick&&quickRewardPolicy===QUICK_REWARD_POLICY_PSYCHE?'0':quick?bonusLabel(setting.xp||setting.score):'通常'}</b><b className="block text-[10px] text-fuchsia-100"><span aria-hidden="true">🌈</span> 虹のプシュケー：{applyQuickPsychePolicy(clearPsycheReward(key),battleMode,quickRewardPolicy)}個{quick&&quickRewardPolicy===QUICK_REWARD_POLICY_PSYCHE?'（×2）':''}</b></div>
+                          <div className="flex-1 min-w-0 text-left whitespace-nowrap leading-[1.35]"><b className="block text-[10px] text-white">経験値：{quick&&quickRewardPolicy!==QUICK_REWARD_POLICY_GROWTH?'0':quick?bonusLabel(setting.xp||setting.score):'通常'}</b><b className="block text-[10px] text-fuchsia-100"><span aria-hidden="true">🌈</span> 虹のプシュケー：{applyQuickPsychePolicy(clearPsycheReward(key),battleMode,quickRewardPolicy)}個{quick?quickRewardPolicy===QUICK_REWARD_POLICY_PSYCHE?'（×2）':'（×1）':''}</b><b className="block text-[10px] text-amber-200">💎 ダイヤ：{quick?bonusLabel(setting.gold*(quickRewardPolicy===QUICK_REWARD_POLICY_DIAMOND?2:1)):`×${setting.gold}`}{quick&&quickRewardPolicy===QUICK_REWARD_POLICY_DIAMOND?'（×2）':''}</b></div>
                         </div>
                         <div className={`grid gap-1.5 mt-1.5 ${quick?'mt-auto':''}`}>
                           <button disabled={!!battleTutorial} onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-30">全WAVE詳細</button>

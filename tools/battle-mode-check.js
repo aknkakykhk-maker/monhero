@@ -39,7 +39,7 @@ vm.runInContext([
   'globalThis.__m={BATTLE_MODES,PUBLIC_BATTLE_MODES,battleModeInfo,normalizeBattleMode,isQuickMode,isProMode,QUICK_REWARD_MULT,QUICK_GROWTH_MULT,'
   + 'PRO_BOND_XP_MULT,PRO_BREEDER_XP_MULT,PRO_ALLY_POOL_SIZE,PRO_ALLY_OFFER_SIZE,'
   + 'modeBreederXpMult,modeBondXpMult,modeGoldMult,applyModeReward,modeHasRanking,modeBondAction,modeKeyPrefix,'
-  + 'QUICK_REWARD_POLICY_GROWTH,QUICK_REWARD_POLICY_PSYCHE,normalizeQuickRewardPolicy,applyQuickXpPolicy,applyQuickPsychePolicy,clearPsycheReward,'
+  + 'QUICK_REWARD_POLICY_GROWTH,QUICK_REWARD_POLICY_PSYCHE,QUICK_REWARD_POLICY_DIAMOND,normalizeQuickRewardPolicy,applyQuickXpPolicy,applyQuickPsychePolicy,applyQuickDiamondPolicy,clearPsycheReward,'
   + 'waveXpGain,waveGoldGain,xpForWavesCleared,goldForWavesCleared,xpForWavesClearedInMode,goldForWavesClearedInMode,'
   + 'bondXpForWavesClearedInMode,waveBondXpGainInMode,'
   + 'waveXpGainInMode,waveGoldGainInMode,bestScoreKey,bestWaveKey,clearCountKey,highestModeScore,DIFFICULTY_SETTINGS,BATTLE_MODE_QUICK,BATTLE_MODE_CHALLENGE,BATTLE_MODE_PRO,'
@@ -66,11 +66,15 @@ check('クイックは3つとも1.5倍のまま',
 check('報酬方針の初期値と不正値は育成',
   m.QUICK_REWARD_POLICY_GROWTH === 'growth' && m.normalizeQuickRewardPolicy(undefined) === 'growth' && m.normalizeQuickRewardPolicy('nope') === 'growth');
 check('クイック＋育成は経験値とプシュケーが従来どおり',
-  m.applyQuickXpPolicy(123, 'quick', 'growth') === 123 && m.applyQuickPsychePolicy(7, 'quick', 'growth') === 7);
+  m.applyQuickXpPolicy(123, 'quick', 'growth') === 123 && m.applyQuickPsychePolicy(7, 'quick', 'growth') === 7 && m.applyQuickDiamondPolicy(40, 'quick', 'growth') === 40);
 check('クイック＋プシュケー優先は経験値0・プシュケー2倍',
-  m.applyQuickXpPolicy(123, 'quick', 'psyche') === 0 && m.applyQuickPsychePolicy(7, 'quick', 'psyche') === 14);
+  m.applyQuickXpPolicy(123, 'quick', 'psyche') === 0 && m.applyQuickPsychePolicy(7, 'quick', 'psyche') === 14 && m.applyQuickDiamondPolicy(40, 'quick', 'psyche') === 40);
+check('クイック＋ダイヤ優先は経験値0・ダイヤ2倍・プシュケー等倍',
+  m.QUICK_REWARD_POLICY_DIAMOND === 'diamond' && m.normalizeQuickRewardPolicy('diamond') === 'diamond'
+    && m.applyQuickXpPolicy(123, 'quick', 'diamond') === 0 && m.applyQuickDiamondPolicy(40, 'quick', 'diamond') === 80
+    && m.applyQuickPsychePolicy(7, 'quick', 'diamond') === 7);
 check('チャレンジ・プロは報酬方針の影響を受けない',
-  ['challenge','pro'].every(mode => m.applyQuickXpPolicy(123, mode, 'psyche') === 123 && m.applyQuickPsychePolicy(7, mode, 'psyche') === 7));
+  ['challenge','pro'].every(mode => ['psyche','diamond'].every(policy => m.applyQuickXpPolicy(123, mode, policy) === 123 && m.applyQuickPsychePolicy(7, mode, policy) === 7 && m.applyQuickDiamondPolicy(40, mode, policy) === 40)));
 check('全難易度のプシュケー優先が現行クリア報酬のちょうど2倍',
   Object.keys(m.DIFFICULTY_SETTINGS).every(diff => m.applyQuickPsychePolicy(m.clearPsycheReward(diff), 'quick', 'psyche') === m.clearPsycheReward(diff) * 2));
 for (const diff of ['Normal', 'Hard', 'Expert']) {
@@ -102,8 +106,11 @@ check('スコアの計算はモードを見ない', scoreBlock.length > 0 && !sc
 // 経験値はスコアと倍率が違うモード(極限チャレンジ)があるので xpMult を通す
 check('実処理が経験値・ダイヤ・絆経験値にモード倍率を使う',
   has('const breederXpGain = applyQuickXpPolicy(xpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);')
-    && has('const goldGain = goldForWavesClearedInMode(wavesCleared, goldMult, runMode);')
+    && has('const goldGain = applyQuickDiamondPolicy(goldForWavesClearedInMode(wavesCleared, goldMult, runMode), runMode, quickRewardPolicyRunRef.current);')
     && has('const gain = applyQuickXpPolicy(bondXpForWavesClearedInMode(wavesCleared, xpMult, runMode), runMode, quickRewardPolicyRunRef.current);'));
+check('ダイヤ優先は通常・スキップの最終ダイヤへ一度だけ適用する',
+  count('applyQuickDiamondPolicy(goldForWavesClearedInMode(wavesCleared, goldMult, runMode), runMode, quickRewardPolicyRunRef.current)') === 1
+    && count('applyQuickDiamondPolicy(goldForWavesCleared(SKIP_WAVES, goldMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy)') === 1);
 check('クリア報酬は共通付与地点で一度だけ報酬方針を適用する',
   has('const gain = applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current);')
     && count('applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current)') === 1);
@@ -439,17 +446,18 @@ check('難易度カードから開いたときは、その難易度のタブを�
 check('難易度カードの虹のプシュケー表示は実際の付与関数を使う',
   has('data-psyche-reward={key}') && has('applyQuickPsychePolicy(clearPsycheReward(key),battleMode,quickRewardPolicy)')
     && has('const baseGain = extremeRunRef.current ? selectedExtremeSetting.psyche : clearPsycheReward(difficulty);'));
-check('クイック難易度画面に押しやすく状態が分かる2択を出す',
+check('クイック難易度画面に同じ高さで状態が分かる3択を出す',
   has("[QUICK_REWARD_POLICY_GROWTH,'育成','経験値あり']")
     && has("[QUICK_REWARD_POLICY_PSYCHE,'プシュケー優先','経験値0・虹×2']")
-    && has('aria-pressed={selected}') && has('min-h-[44px]'));
+    && has("[QUICK_REWARD_POLICY_DIAMOND,'ダイヤ優先','経験値0・ダイヤ×2']")
+    && has('grid grid-cols-3 gap-1') && has('aria-pressed={selected}') && has('min-h-[44px]'));
 check('クイックの全難易度カードは報酬方針で外寸とボタン位置が変わらない',
   has("quick?'h-[366px] flex flex-col':''") && has("${quick?'mt-auto':''}")
     && has('data-difficulty-card={key}') && has('data-difficulty-carousel'));
-check('クリア報酬は見出しを横書きに保ち、同じ高さの2行へ収める',
-  has('min-h-[48px] rounded-xl border border-fuchsia-400/35')
+check('クリア報酬は見出しを横書きに保ち、同じ高さの3行へ収める',
+  has('min-h-[54px] rounded-xl border border-fuchsia-400/35')
     && has('shrink-0 whitespace-nowrap text-[10px] leading-tight text-fuchsia-200 font-black')
-    && has('虹のプシュケー：{applyQuickPsychePolicy'));
+    && has('虹のプシュケー：{applyQuickPsychePolicy') && has('💎 ダイヤ：{quick?bonusLabel'));
 check('クイック難易度画面の助手は縦画面向けのコンパクト表示にする',
   has('data-difficulty-assistant') && has('faceSize={quick?48:56} compact={quick}'));
 check('全モードのクリアが共通の虹のプシュケー付与処理を通る',
