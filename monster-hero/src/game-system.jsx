@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 19:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 20:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7580,13 +7580,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     reserveEnemyNextIntent(getNextEnemyAction(enemy, distAfterIntent(upcoming, distAfterExecuted), upcoming));
   };
 
+  // 絶氷の楔の実効果と表示が別判定にならないよう、準備を除いた発動状態をここへ集約する。
+  const iceLockTurns = getWaveBuff('iceLockTurns');
+  const iceLockPreparing = !!getWaveBuff('iceLockPreparing', false);
+  const iceLockActive = iceLockTurns>0 && !iceLockPreparing;
+  const iceLockEnemyDamageMult = iceLockActive ? 0.7 : 1.0;
+
   const getPredictedDamage = useCallback((intent) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='SPECIAL')) return 0;
     const atkVal = Math.floor(intent.value*(1.0-getWaveBuff('enemyAtkDebuffPct')));
     const chuuniCutActive = (mainHero?.id==='Ark'||mainHero?.id==='Iblis') && getWaveBuff('chuuniDmgCutUses')<2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
     const dmgBase = Math.max(30,(atkVal*getTurnBuff('takenDamageMult',1.0))-(effectiveDef*0.15))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
-    return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))));
+    return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult));
   }, [effectiveDef, turnBuffs, mainHero, permaBuffs, waveBuffs]);
 
   const addPopup = (text, side, color) => {
@@ -7699,13 +7705,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const guardCardWeight = (card) => card?.type === 'guard' ? 1 : (card?.type === 'weak_guard' ? 0.5 : 0);
   // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」。handleEnemyTurnの計算と同じ式にする。
   const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + effectiveDef * mult) : 0;
-  // 絶氷の楔と氷海の支配者の実効果・表示が別判定にならないよう、発動条件をここへ集約する。
-  // 初回付与ターンはwaveBuffs上で準備中として保持し、次のプレイヤーターンから有効になる。
-  const iceLockTurns = getWaveBuff('iceLockTurns');
-  const iceLockPreparing = !!getWaveBuff('iceLockPreparing', false);
+  // 氷海の支配者も、絶氷の楔の実効果と同じ発動状態を使う。
   const isIceRulerActive = (slotIdx, targetDist) => mainHero?.id==='Snegurochka'
-    && iceLockTurns>0
-    && !iceLockPreparing
+    && iceLockActive
     && slotIdx===targetDist;
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
@@ -11448,7 +11450,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {enemy&&(
               <div className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
                 <div className="flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1">
-                  <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/><span className="max-w-[34vw] truncate">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[8px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{iceLockTurns>0&&<span data-ice-lock-status className="shrink-0 px-1.5 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[7px] not-italic tracking-tight whitespace-nowrap text-cyan-100">❄️絶氷 {iceLockPreparing?'準備':`${iceLockTurns}T`}</span>}{isIceRulerActive(slots.findIndex(isHeroSlotMon),enemyDist)&&<span data-ice-ruler-active className="shrink-0 px-1.5 py-0.5 rounded-full border border-amber-400/60 bg-amber-950/80 text-[7px] not-italic tracking-tight whitespace-nowrap text-amber-100">⚔️特性発動</span>}</span>
+                  <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/><span className="max-w-[34vw] truncate">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[8px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{iceLockTurns>0&&<span data-ice-lock-status className="shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[7px] not-italic tracking-tighter whitespace-nowrap text-cyan-100">❄️絶氷 {iceLockPreparing?'準備':<>{iceLockTurns}T　⬇30%{isIceRulerActive(slots.findIndex(isHeroSlotMon),enemyDist)&&<>　<span data-ice-ruler-active className="text-amber-100">⚔️特性</span></>}</>}</span>}</span>
                   <span className="text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span>
                 </div>
                 <div className="h-2.5 bg-slate-900 rounded-full overflow-hidden border border-white/20 relative shadow-inner">
