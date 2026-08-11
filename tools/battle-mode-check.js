@@ -97,7 +97,7 @@ check('WAVEごとの内訳の合計がリザルトの合計と一致する',
   sumOfWaves(3.0, 'quick', m.waveXpGainInMode) === m.xpForWavesClearedInMode(10, 3.0, 'quick')
     && sumOfWaves(1.5, 'quick', m.waveGoldGainInMode) === m.goldForWavesClearedInMode(10, 1.5, 'quick'));
 // スコアはモードで変えない。スコア加算の実処理がモードを見ていないことを確かめる
-const scoreBlock = grab(source, 'const finalRoundScore', 'setWaveHistory(prev =>');
+const scoreBlock = grab(source, 'const finalRoundScore', 'setScore(s=>s+finalRoundScore);');
 check('スコアの計算はモードを見ない', scoreBlock.length > 0 && !scoreBlock.includes('runMode') && !/QUICK_REWARD_MULT/.test(scoreBlock));
 // 経験値はスコアと倍率が違うモード(極限チャレンジ)があるので xpMult を通す
 check('実処理が経験値・ダイヤ・絆経験値にモード倍率を使う',
@@ -350,7 +350,7 @@ check('記録の枠の見出し・値・補足がすべて1行ずつある',
     && has('<span className="block text-right text-[9px] text-amber-300">{rec.sub}</span>'));
 check('倍率の下の補足行はどちらのモードでも出す',
   has("const noteText=quick?'経験値・ダイヤのみ1.5倍':'スコアがランキングに登録される';")
-    && has('style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div>')
+    && has('<span className="truncate">{noteText}</span>')
     && !has('{quick&&<div className="mt-1 rounded-xl border'));
 check('ランキングの導線は助手コメントより前にある', source.indexOf('🏆 ランキングを見る（チャレンジモード）') < source.indexOf("scene={quick?'battleQuick':'battleChallenge'}"));
 // ランキングを見ているときの戻るは、ホームではなく難易度の画面へ戻す

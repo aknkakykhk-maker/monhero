@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 12:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 13:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2904,7 +2904,7 @@ const DIFFICULTY_SETTINGS = {
 // NIGHTMAREまで正式に実戦可能。それより後の未決定難易度には数値を持たせない。
 const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ breederCardEffect:0.5 }) },
-  { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }), plannedRules:Object.freeze([['WAVE後強化','50%'],['自動回復補正','＋50% / −200%'],['距離適性補正','＋50% / −200%']]) },
+  { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
   { id:'CHAOS', label:'CHAOS', available:false },
   { id:'ULTIMATE', label:'ULTIMATE', available:false },
   { id:'INFINITY', label:'INFINITY', available:false },
@@ -2921,15 +2921,41 @@ const QUICK_DIFFICULTY_SETTINGS = Object.freeze({
   ...DIFFICULTY_SETTINGS,
   ...QUICK_EXTREME_SETTINGS,
 });
+const extremeDifficultySetting = (difficultyId) =>
+  EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId) || null;
 const extremeSpecialRule = (difficultyId, rule) =>
-  EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId)?.specialRules?.[rule] ?? 1;
-// NIGHTMAREの倍率は、既存式が出した最終的な獲得量・補正値へだけ掛ける。
-const applyNightmareSignedModifier = (value, nightmare=false) => value * (nightmare
-  ? extremeSpecialRule(NIGHTMARE_SETTING.id, value >= 0 ? 'positiveModifier' : 'negativeModifier') : 1);
-const applyNightmareWaveEnhancement = (value, nightmare=false) => value * (nightmare
-  ? extremeSpecialRule(NIGHTMARE_SETTING.id, 'waveEnhancement') : 1);
-const applyNightmareStatGain = (before, normalAfter, nightmare=false) => before
-  + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, nightmare));
+  extremeDifficultySetting(difficultyId)?.specialRules?.[rule] ?? 1;
+const hasExtremeSpecialRules = (difficultyId) => {
+  const rules=extremeDifficultySetting(difficultyId)?.specialRules;
+  return !!rules && Object.keys(rules).length > 0;
+};
+// 極限本体だけでなく、同名のクイック極限難易度も同じspecialRulesを参照する。
+// これにより今後の難易度もEXTREME_DIFFICULTIESへ定義を足すだけでクイックへ引き継がれる。
+const specialRuleDifficultyForRun = (runMode, difficultyId, extremeRun=false, extremeDifficultyId=null) => {
+  const candidate=extremeRun ? extremeDifficultyId : (isQuickMode(runMode) ? difficultyId : null);
+  return hasExtremeSpecialRules(candidate) ? candidate : null;
+};
+const specialRulePercent = (value) => `${Math.round((Number(value)||0)*100)}%`;
+const extremeSpecialRuleLines = (difficultyId) => {
+  const rules=extremeDifficultySetting(difficultyId)?.specialRules || {};
+  const lines=[];
+  if (rules.breederCardEffect != null) lines.push(['ブリーダーカード効果',specialRulePercent(rules.breederCardEffect)]);
+  if (rules.waveEnhancement != null) lines.push(['WAVE後強化',specialRulePercent(rules.waveEnhancement)]);
+  if (rules.positiveModifier != null || rules.negativeModifier != null) {
+    const signed=`＋${specialRulePercent(rules.positiveModifier ?? 1)} / −${specialRulePercent(rules.negativeModifier ?? 1)}`;
+    lines.push(['自動回復補正',signed],['距離適性補正',signed]);
+  }
+  const known=new Set(['breederCardEffect','waveEnhancement','positiveModifier','negativeModifier']);
+  Object.entries(rules).filter(([rule])=>!known.has(rule)).forEach(([rule,value])=>lines.push([rule,specialRulePercent(value)]));
+  return lines;
+};
+// 特殊倍率は、既存式が出した最終的な獲得量・補正値へだけ掛ける。
+const applyNightmareSignedModifier = (value, specialDifficulty=null) => value * (specialDifficulty
+  ? extremeSpecialRule(specialDifficulty, value >= 0 ? 'positiveModifier' : 'negativeModifier') : 1);
+const applyNightmareWaveEnhancement = (value, specialDifficulty=null) => value * (specialDifficulty
+  ? extremeSpecialRule(specialDifficulty, 'waveEnhancement') : 1);
+const applyNightmareStatGain = (before, normalAfter, specialDifficulty=null) => before
+  + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, specialDifficulty));
 // 極限チャレンジの説明にはモード全体に共通する特徴を十分に載せる。EXTREME固有の倍率や
 // ブリーダーカード50%は、ここではなく難易度カード側で案内する
 const EXTREME_MODE = Object.freeze({
@@ -7679,9 +7705,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const finalRoundScore=Math.floor(((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier);
     setScore(s=>s+finalRoundScore);
     const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
-    const nightmareRun=extremeRunRef.current&&extremeDifficulty===NIGHTMARE_SETTING.id;
+    const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
-    const gainedDistBonus=finalDistDamage.map(d=>applyNightmareWaveEnhancement(d*0.001/100,nightmareRun));
+    const gainedDistBonus=finalDistDamage.map(d=>applyNightmareWaveEnhancement(d*0.001/100,specialRuleDifficulty));
     const newDistBonus=distDmgBonus.map((b,i)=>b+gainedDistBonus[i]);
     setDistDmgBonus(newDistBonus);
     const newTotalDistDamage=totalDistDamage.map((d,i)=>d+finalDistDamage[i]);
@@ -7689,7 +7715,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setTotalDistDamage(newTotalDistDamage); setTotalAllDamage(newTotalAllDamage);
     const baseRecoveryDelta=Math.max(-0.05,Math.min(0.05,(remainingTurns-10)*0.005));
     // 既存式と上限・下限を適用した後、符号に応じたNIGHTMARE倍率を掛ける。
-    const recoveryDelta=applyNightmareSignedModifier(baseRecoveryDelta,nightmareRun);
+    const recoveryDelta=applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty);
     const newTotalRecoveryDelta=totalRecoveryDelta+recoveryDelta;
     setPermaBuffs(p=>({...p, autoHpRecovery:Math.max(0,(p.autoHpRecovery??0.1)+recoveryDelta)}));
     setTotalRecoveryDelta(newTotalRecoveryDelta);
@@ -7892,7 +7918,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const isBreeder=isBreederCard(card);
       const halved=!isBreeder&&penaltyCardCount>0;
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
-      const effMul=isBreeder&&extremeRunRef.current?extremeSpecialRule(extremeDifficulty,'breederCardEffect'):(halved?0.5:1);
+      const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
+      const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'breederCardEffect'):(halved?0.5:1);
       if(!isBreeder) penaltyCardCount++;
       if(halved) addPopup('2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
       const slotIdx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
@@ -8457,7 +8484,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const nGB = nGrdL;
     setAtkLevel(nAtkL); setGuardLevel(nGrdL); setGuardBonusCount(nGB);
     const pool=buildDeck(currentSlots,nAtkL,nGrdL,u||ownedUniques,t||ownedTeachings,nGB,slotUniqueChoice,slotUniqueLevelChoice,inheritedUniqueEvo,heroForDeck);
-    const showExtremeRule = w === 1 && extremeRunRef.current;
+    const showExtremeRule = w === 1 && !!specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     setHand(pool.slice(0,5)); setDeck(pool.slice(5)); setGraveyard([]); setGameState('BATTLE'); setExtremeRuleOpen(showExtremeRule); setIsBusy(showExtremeRule);
     setTurnBuffs({}); setNextTurnBuffs({}); // WAVE毎リセットの一時バフ・デバフを全てクリア
   };
@@ -8667,8 +8694,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setMaxGuts(debugMaxGuts); setGuts(Math.floor(debugMaxGuts*0.5));
     // 間合い適性は編成全員分(勇者モンを含む)を距離ごとに合計する。
     // setDistAptPctの反映はこの関数の後になるため、initBattleへ計算済みの値を渡す
-    const nightmareRun=extreme&&extremeDifficulty===NIGHTMARE_SETTING.id;
-    const debugAptPct = debugSlots.filter(Boolean).reduce((sum, mon) => sum.map((v,i)=>v+getMonsterAptPct(mon,nightmareRun)[i]), [0,0,0,0]);
+    const specialRuleDifficulty=specialRuleDifficultyForRun(extreme?EXTREME_MODE.id:runMode,difficulty,extreme,extremeDifficulty);
+    const debugAptPct = debugSlots.filter(Boolean).reduce((sum, mon) => sum.map((v,i)=>v+getMonsterAptPct(mon,specialRuleDifficulty)[i]), [0,0,0,0]);
     setDistAptPct(debugAptPct);
     initBattle(option.wave, debugSlots, uniques, teachings, debugDef, option.key, hero, debugAptPct);
   };
@@ -8680,8 +8707,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (isHero) {
       initialBattleDistanceRef.current=slotIdx;
       // 勇者モンの間合い適性も、置いた距離だけでなく4距離すべての補正値になる
-      const nightmareRun=extremeRunRef.current&&extremeDifficulty===NIGHTMARE_SETTING.id;
-      setDistAptPct(getMonsterAptPct(m,nightmareRun));
+      const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
+      setDistAptPct(getMonsterAptPct(m,specialRuleDifficulty));
       const initialUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)};
       setOwnedUniques([initialUnique]); setMainHero(m); setMaxHp(m.baseHp); setHp(m.baseHp);
       setMaxGuts(m.baseGuts); setGuts(Math.floor(m.baseGuts*0.5)); setAtk(m.baseAtk); setDef(m.baseDef);
@@ -8699,8 +8726,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts); setHp(p=>p+(nMaxHp-bHp));
       // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
       // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
-      const nightmareRun=extremeRunRef.current&&extremeDifficulty===NIGHTMARE_SETTING.id;
-      const aptDelta=getMonsterAptPct(m,nightmareRun);
+      const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
+      const aptDelta=getMonsterAptPct(m,specialRuleDifficulty);
       if (aptDelta.some(d=>d!==0)) setDistAptPct(prev=>prev.map((v,i)=>v+aptDelta[i]));
       const aptLabel=aptDelta.map((d,i)=>d!==0?`${RANGE_LABELS[i]}${formatAptPct(d)}`:null).filter(Boolean).join(' ');
       const newAllyUnique={...m.unique,evoLevel:Math.max(0,m.unique.evoLevel||0)};
@@ -8757,10 +8784,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 攻撃強化・防御強化はステータスのみ上昇させる(技レベル・防御カード枚数は距離適性/丈夫さから
     // 自動算出されるため、ここでは直接いじらない)
     let nMaxHp=maxHp, nAtk=atk, nDef=def, nMaxGuts=maxGuts;
-    const nightmareRun=extremeRunRef.current&&extremeDifficulty===NIGHTMARE_SETTING.id;
-    if(type==='atk'){nAtk=applyNightmareStatGain(atk,Math.floor(atk*1.10),nightmareRun);}
-    else if(type==='def'){nDef=applyNightmareStatGain(def,Math.floor((def+20)*1.10),nightmareRun); nMaxHp=applyNightmareStatGain(maxHp,Math.floor(maxHp*1.20),nightmareRun);}
-    else if(type==='hp'){nMaxGuts=applyNightmareStatGain(maxGuts,Math.floor((maxGuts+10)*1.1),nightmareRun);}
+    const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
+    if(type==='atk'){nAtk=applyNightmareStatGain(atk,Math.floor(atk*1.10),specialRuleDifficulty);}
+    else if(type==='def'){nDef=applyNightmareStatGain(def,Math.floor((def+20)*1.10),specialRuleDifficulty); nMaxHp=applyNightmareStatGain(maxHp,Math.floor(maxHp*1.20),specialRuleDifficulty);}
+    else if(type==='hp'){nMaxGuts=applyNightmareStatGain(maxGuts,Math.floor((maxGuts+10)*1.1),specialRuleDifficulty);}
     setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts);
     const nGrdL=computeGuardLevel(nDef);
     const currentGuardLevel=computeGuardLevel(def);
@@ -9704,7 +9731,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',`×${setting.score}`],['ダイヤ',`×${setting.gold}`]].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <div className="grid grid-cols-2 gap-1 mt-1">{[['経験値',`×${setting.xp}`],['虹のプシュケー',setting.psyche]].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <p className="mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200">{setting.description}</p>
-                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div className="mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"><small className="block text-center text-[8px] leading-tight font-black text-amber-300">⚠ NIGHTMARE特殊ルール</small>{setting.plannedRules.map(([label,value])=><div key={label} className="grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[12px] whitespace-nowrap"><span className="text-slate-300">{label}</span><b className="text-right text-white">{value}</b></div>)}</div>}
+                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div className="mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"><small className="block text-center text-[8px] leading-tight font-black text-amber-300">⚠ NIGHTMARE特殊ルール</small>{extremeSpecialRuleLines(setting.id).map(([label,value])=><div key={label} className="grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[12px] whitespace-nowrap"><span className="text-slate-300">{label}</span><b className="text-right text-white">{value}</b></div>)}</div>}
                         </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
                         <div className="grid gap-1.5 mt-auto pt-1.5">
                           <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
@@ -9767,7 +9794,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <span className="block text-right text-[9px] text-amber-300">{ranked?`最高到達 WAVE ${rec.wave}`:`クリア ${rec.clears}回`}</span>
                         </div>
                         <div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div>
-                        <div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div>
+                        <div className="mt-1 rounded-xl border px-2 py-0.5 text-[8px] font-black whitespace-nowrap overflow-hidden flex items-center justify-between gap-1" style={{borderColor:`${mode.color}55`,color:mode.color}}><span className="truncate">{noteText}</span>{quick&&hasExtremeSpecialRules(key)&&<span className="shrink-0 text-[8px] text-amber-300">特殊ルールあり</span>}</div>
                         {/* 実際のクリア付与と同じ関数を使い、表示専用の報酬値を持たない。 */}
                         <div className="mt-1.5 min-h-[48px] rounded-xl border border-fuchsia-400/35 bg-fuchsia-950/35 px-2.5 py-1.5 flex items-center gap-2" data-psyche-reward={key}>
                           <span className="shrink-0 whitespace-nowrap text-[10px] leading-tight text-fuchsia-200 font-black">クリア報酬</span>
@@ -12550,14 +12577,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* WAVE 1で操作可能になる前に一度だけ出す極限ルール発動テロップ。 */}
       {gameState==='BATTLE'&&extremeRuleOpen&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:90500,background:'radial-gradient(circle,rgba(112,26,117,.58),rgba(2,6,23,.9))'}} onClick={()=>{setExtremeRuleOpen(false);setIsBusy(false);}} role="dialog" aria-modal="true" aria-label="極限ルール発動">
         <div className="w-full max-w-xs rounded-3xl border-2 border-fuchsia-300 bg-slate-950/95 px-5 py-6 text-center shadow-[0_0_42px_rgba(217,70,239,.65)]" style={{animation:'mhExtremeRuleIn .38s ease-out'}}>
-          {extremeDifficulty===NIGHTMARE_SETTING.id?<>
-            <div className="text-[11px] font-black tracking-[.16em] text-cyan-200">NIGHTMARE特殊ルール</div>
-            <div className="mt-3 space-y-2 text-left text-[11px] text-slate-200"><div>・WAVE後強化 <b className="text-white">50%</b></div><div>・自動回復率補正 <b className="text-white">＋50% / －200%</b></div><div>・距離適性補正 <b className="text-white">＋50% / －200%</b></div></div>
-          </>:<>
-            <div className="text-[11px] font-black tracking-[.2em] text-amber-300">⚠ 極限ルール発動</div>
-            <div className="mt-2 text-sm font-black text-white">ブリーダーカード効果</div><div className="text-4xl font-black text-fuchsia-300">50%に減少</div>
-            <p className="mt-2 text-[10px] leading-relaxed text-slate-300">このバトルではブリーダーカードの効果量が半分になります</p>
-          </>}
+          {(()=>{const specialDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);return <>
+            <div className="text-[11px] font-black tracking-[.16em] text-amber-300">⚠ {specialDifficulty}特殊ルール</div>
+            <div className="mt-3 space-y-2 text-left text-[11px] text-slate-200">{extremeSpecialRuleLines(specialDifficulty).map(([label,value])=><div key={label}>・{label} <b className="text-white">{value}</b></div>)}</div>
+          </>;})()}
           <div className="mt-4 text-[9px] font-black tracking-widest text-fuchsia-200">タップしてバトル開始</div>
         </div>
       </div>}
