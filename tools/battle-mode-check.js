@@ -600,7 +600,7 @@ for (const [label, screen] of [['勇者モン・供モン選択', "(gameState===
 }
 check('ベースモンが足りないときはプロを始められない',
   has('const proReady=getUnlockedBaseMonsterList().length>=PRO_ALLY_POOL_SIZE+1;')
-    && has("disabled={(pro&&!proReady)||(!!battleTutorial&&key!=='Beginner')}") && has('`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`'));
+    && has("disabled={(pro&&!proReady)||!quickUnlocked||(!!battleTutorial&&key!=='Beginner')}") && has('`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`'));
 // マスモン登録・リザルトは既存のしくみをそのまま使う(プロ専用の分岐を作らない)
 check('マスモン登録は既存のしくみを使い回す',
   !has('proMasuRegister') && !has('registerProMasu')
