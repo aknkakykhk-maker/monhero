@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 13:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 14:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6577,7 +6577,8 @@ function MonsterHeroGame() {
     return {
       mainName: main.name, mainIconUrl: mainBase?.iconUrl, mainBaseId: main.baseId, mainEmoji: mainBase?.emoji, mainColors: getMasuColors(main),
       subName: sub.name, subIconUrl: subBase?.iconUrl, subBaseId: sub.baseId, subEmoji: subBase?.emoji, subColors: getMasuColors(sub),
-      before, after, gainedXp, gainedLevels, inherited: !!inheritedUnique, cost,
+      before, after, gainedXp, gainedLevels, inherited: !!inheritedUnique,
+      cost: withBreakthrough ? diamondSummary.totalDiamondCost : diamondSummary.normalDiamondCost,
       inheritedReincarnatePoints:reincarnateTransfer.points, inheritedReincarnateCount:reincarnateTransfer.count,
       breakthroughCount:withBreakthrough ? breakthroughPlan.count : 0,
     };
