@@ -35,12 +35,11 @@ check('通常の限界突破は30回まで', BREAKTHROUGH_MAX_COUNT === 30, Stri
 check('最終限界突破は31回目', FINAL_BREAKTHROUGH_COUNT === 31, String(FINAL_BREAKTHROUGH_COUNT));
 check('虹は5個ぶん用意されている', Array.isArray(RAINBOW_STAR_COLORS) && RAINBOW_STAR_COLORS.length === 5);
 check('虹の各★そのものに全色の静的グラデーションが入る', RAINBOW_STAR_COLORS.every(background =>
-  /radial-gradient/.test(background) && /conic-gradient/.test(background)
-  && ['#ff4f67','#ff9f32','#fff35a','#54f58b','#3fe6e0','#5688ff','#d66cff'].every(color => background.includes(color))));
-check('虹の中心は広く明るく、黒や暗色を塗りに使わない', RAINBOW_STAR_COLORS.every(background =>
-  /#fff 0 10%/.test(background) && /255,255,244,.88/.test(background)
-  && !/(#000|#111|#222|#333|#444|#555|#666)/i.test(background)));
-check('虹の5個は色相の開始位置だけが少しずつ違う', new Set(RAINBOW_STAR_COLORS).size === 5);
+  /linear-gradient\(90deg/.test(background)
+  && ['#ff355d','#ff8a24','#ffe84a','#43ef78','#38e8ee','#4388ff','#a855f7','#ff4fb8'].every(color => background.includes(color))));
+check('虹の中心を含む★全体は明色だけで塗り、暗色・透明の層を使わない', RAINBOW_STAR_COLORS.every(background =>
+  !/(#000|#111|#222|#333|#444|#555|#666|transparent|rgba\([^)]*,0\))/i.test(background)));
+check('虹の5個は別色にせず、同じ全色グラデーションを使う', new Set(RAINBOW_STAR_COLORS).size === 1);
 // 黄色と金が見分けにくくならないこと
 const yellow = BREAKTHROUGH_STAR_TIERS.find(t => t.key === 'yellow');
 const gold = BREAKTHROUGH_STAR_TIERS.find(t => t.key === 'gold');
@@ -51,12 +50,13 @@ check('金は暗金・明金・白金の静的グラデーションを持つ',
   /linear-gradient/.test(gold.background || '') && /#fff/.test(gold.background) && /#7a3d05/.test(gold.background), gold.background);
 check('金は濃い輪郭を持つ', /#6b3605/.test(gold.stroke || ''), gold.stroke);
 const rainbow = breakthroughStars(FINAL_BREAKTHROUGH_COUNT);
-check('虹は白金系の中心ハイライトと輪郭を持つ', rainbow.every(star =>
-  /#fff/.test(star.background || '') && /rgba\(255,255,244/.test(star.stroke || '')));
-check('虹は白・赤・金・シアン・青紫の均等な多色発光を持つ', rainbow.every(star =>
-  /255,255,255/.test(star.shadow || '') && /255,79,103/.test(star.shadow || '')
-  && /255,211,66/.test(star.shadow || '') && /63,230,224/.test(star.shadow || '')
-  && /102,126,255/.test(star.shadow || '')));
+check('虹はくっきりした白い輪郭を持つ', rainbow.every(star =>
+  /rgba\(255,255,255,1\)/.test(star.stroke || '')));
+check('虹は白・赤・黄・緑・水色・青・ピンクの多色発光を持つ', rainbow.every(star =>
+  /255,255,255/.test(star.shadow || '') && /255,53,93/.test(star.shadow || '')
+  && /255,232,74/.test(star.shadow || '') && /67,239,120/.test(star.shadow || '')
+  && /56,232,238/.test(star.shadow || '') && /67,136,255/.test(star.shadow || '')
+  && /255,79,184/.test(star.shadow || '')));
 
 // ===== 2. 凸数ごとの表示（仕様の確認項目をそのまま並べる） =====
 const nameOf = { blue:'青', yellow:'黄色', pink:'ピンク', purple:'紫', red:'赤', gold:'金', rainbow:'虹' };
@@ -179,6 +179,8 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
     && /const stars = breakthroughStars\(value\);/.test(code)
     && !/Math\.floor\(\(value - 1\) \/ 5\) % 4/.test(code));
   check(`${label}: 演出でも同じ色を使う`, /starList\.map\(\(s,i\)=>/.test(code) || /starList\.map\(\(s, i\) =>/.test(code));
+  check(`${label}: 本番表示と限界突破演出は同じ★スタイルを使う`,
+    (code.match(/breakthroughStarStyle\(s\)/g) || []).length === 2);
   check(`${label}: 限界突破の説明に最終突破がある`, code.includes('最終限界突破'));
   check(`${label}: 最終突破ではLv.200へ上げる`,
     /const isFinal = normalized\.levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP;/.test(code)
