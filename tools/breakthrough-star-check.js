@@ -33,8 +33,11 @@ check('段階は 青→黄→ピンク→紫→赤→金 の6段階',
 check('1段階は5凸で完成する', BREAKTHROUGH_STARS_PER_TIER === 5);
 check('通常の限界突破は30回まで', BREAKTHROUGH_MAX_COUNT === 30, String(BREAKTHROUGH_MAX_COUNT));
 check('最終限界突破は31回目', FINAL_BREAKTHROUGH_COUNT === 31, String(FINAL_BREAKTHROUGH_COUNT));
-check('虹は5色ぶん用意されている', Array.isArray(RAINBOW_STAR_COLORS) && RAINBOW_STAR_COLORS.length === 5);
-check('虹の5個は全部ちがう色（小さくても見分けられる）', new Set(RAINBOW_STAR_COLORS).size === 5);
+check('虹は5個ぶん用意されている', Array.isArray(RAINBOW_STAR_COLORS) && RAINBOW_STAR_COLORS.length === 5);
+check('虹の各★そのものに全色の静的グラデーションが入る', RAINBOW_STAR_COLORS.every(background =>
+  /radial-gradient/.test(background) && /conic-gradient/.test(background)
+  && ['#ff3d71','#fff04a','#54ef8a','#34e7ef','#4e7dff','#bd5cff'].every(color => background.includes(color))));
+check('虹の5個は色相の開始位置だけが少しずつ違う', new Set(RAINBOW_STAR_COLORS).size === 5);
 // 黄色と金が見分けにくくならないこと
 const yellow = BREAKTHROUGH_STAR_TIERS.find(t => t.key === 'yellow');
 const gold = BREAKTHROUGH_STAR_TIERS.find(t => t.key === 'gold');
@@ -44,6 +47,12 @@ check('金は金属的な縁取りを持つ', /0 -1px 0/.test(gold.shadow) && /0
 check('金は暗金・明金・白金の静的グラデーションを持つ',
   /linear-gradient/.test(gold.background || '') && /#fff/.test(gold.background) && /#7a3d05/.test(gold.background), gold.background);
 check('金は濃い輪郭を持つ', /#6b3605/.test(gold.stroke || ''), gold.stroke);
+const rainbow = breakthroughStars(FINAL_BREAKTHROUGH_COUNT);
+check('虹は白金系の中心ハイライトと輪郭を持つ', rainbow.every(star =>
+  /#fff/.test(star.background || '') && /rgba\(255,255,238/.test(star.stroke || '')));
+check('虹は白・赤・シアン・紫の多色発光を持つ', rainbow.every(star =>
+  /255,255,255/.test(star.shadow || '') && /255,61,113/.test(star.shadow || '')
+  && /52,231,239/.test(star.shadow || '') && /189,92,255/.test(star.shadow || '')));
 
 // ===== 2. 凸数ごとの表示（仕様の確認項目をそのまま並べる） =====
 const nameOf = { blue:'青', yellow:'黄色', pink:'ピンク', purple:'紫', red:'赤', gold:'金', rainbow:'虹' };

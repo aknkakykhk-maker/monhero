@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fd0ad6d22a75431d
+// source-sha256: 3e8222dc92d6c50a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 11:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 12:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -492,18 +492,22 @@ const BREAKTHROUGH_MAX_COUNT = BREAKTHROUGH_STAR_TIERS.length * BREAKTHROUGH_STA
 const BREAKTHROUGH_FINAL_LEVEL_CAP = INITIAL_MASU_LEVEL_CAP + BREAKTHROUGH_LEVEL_CAP_GAIN * BREAKTHROUGH_MAX_COUNT;
 // 最終限界突破を終えた回数。ここだけ上限が+5ではなくLv.200へ一気に上がり、★は虹になる
 const FINAL_BREAKTHROUGH_COUNT = BREAKTHROUGH_MAX_COUNT + 1;
-// 虹は5個の星それぞれを違う色にする。小さくても最終段階だと分かり、常時アニメーションも要らない
-const RAINBOW_STAR_COLORS = ['#ff5a5a', '#ffa33d', '#ffe14d', '#5ce08a', '#7aa2ff'];
-const RAINBOW_STAR_SHADOW = '0 1px 2px rgba(0,0,0,.9),0 0 4px rgba(255,255,255,.55)';
+// 虹は各★の中に全色が入る宝石調。色相の開始位置だけをずらし、5個を別色にはしない。
+// 白金の中心光はradial-gradient、虹色の本体はconic-gradientで静的に描き、常時処理を増やさない。
+const RAINBOW_STAR_COLORS = [8, 38, 68, 98, 128].map(angle => `radial-gradient(circle at 48% 42%,#fff 0 7%,#fffde9 9%,rgba(255,255,255,.72) 15%,transparent 29%),conic-gradient(from ${angle}deg,#ff3d71,#ff9f2f,#fff04a,#54ef8a,#34e7ef,#4e7dff,#bd5cff,#ff3d71)`);
+const RAINBOW_STAR_SHADOW = '0 1px 1px rgba(0,0,0,.9),-1px 0 4px rgba(255,61,113,.95),1px 0 4px rgba(52,231,239,.95),0 -1px 5px rgba(189,92,255,.9),0 0 7px rgba(255,255,255,.85)';
+const RAINBOW_STAR_STROKE = '0.35px rgba(255,255,238,.95)';
 // 凸数から★の並びを作る。新しい色を先頭に、残りは1つ前の段階の色で埋める
 const breakthroughStars = count => {
   const n = Math.max(0, Math.floor(Number(count) || 0));
   if (n <= 0) return [];
   // 最終限界突破(31回目)以降は虹★5。旧仕様で31回以上まで進めていた個体もここへ入る
-  if (n >= FINAL_BREAKTHROUGH_COUNT) return RAINBOW_STAR_COLORS.map(color => ({
+  if (n >= FINAL_BREAKTHROUGH_COUNT) return RAINBOW_STAR_COLORS.map(background => ({
     key: 'rainbow',
-    color,
-    shadow: RAINBOW_STAR_SHADOW
+    color: '#ffffff',
+    background,
+    shadow: RAINBOW_STAR_SHADOW,
+    stroke: RAINBOW_STAR_STROKE
   }));
   const capped = Math.min(n, BREAKTHROUGH_MAX_COUNT);
   const tierIndex = Math.floor((capped - 1) / BREAKTHROUGH_STARS_PER_TIER);
