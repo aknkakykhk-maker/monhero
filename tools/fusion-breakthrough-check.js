@@ -2,7 +2,7 @@
 const { loadDyeModule } = require('./harness');
 const {
   buildFusionBreakthroughPlan, totalBondXpForLevel, breakthroughItemCost,
-  masuRebirthCost, INITIAL_MASU_LEVEL_CAP,
+  buildFusionDiamondSummary, masuRebirthCost, INITIAL_MASU_LEVEL_CAP,
 } = loadDyeModule();
 
 let failed = 0;
@@ -38,6 +38,26 @@ check('両方不足を同時に返す', !bothShort.canAfford && bothShort.diamon
 
 const legacy = buildFusionBreakthroughPlan({ masu:{ id:'old', baseId:'Golem', bondXp:0 }, fusionXp:0, gold:0 });
 check('旧セーブの欠落項目は既定値へ正規化', legacy.count === 0 && legacy.levelCap === INITIAL_MASU_LEVEL_CAP && legacy.rebirthCount === 0);
+
+// 表示と確定処理が共用する収支で、継承ON/OFF・突破回数・不足量を検算する。
+const summary = (inherit, to, gold = 10000) => buildFusionDiamondSummary({
+  masu:masuAt(30), fusionXp:xpTo(30, to), gold, psycheOwned:999,
+  mainLevel:30, subLevel:30, inherit,
+});
+const noCost = buildFusionDiamondSummary({ masu:masuAt(20), fusionXp:0, gold:10000, psycheOwned:999, inherit:false });
+check('継承なし・限界突破なしは合計0', noCost.totalDiamondCost === 0 && noCost.diamondAfter === 10000);
+const inheritOnly = buildFusionDiamondSummary({ masu:masuAt(20), fusionXp:0, gold:10000, psycheOwned:999, inherit:true });
+check('継承あり・限界突破なしは3000', inheritOnly.inheritCost === 3000 && inheritOnly.totalDiamondCost === 3000 && inheritOnly.diamondAfter === 7000);
+const oneWithout = summary(false, 34);
+check('継承なし・限界突破1回は突破分のみ', oneWithout.totalDiamondCost === masuRebirthCost(30));
+const oneWith = summary(true, 34);
+check('継承あり・限界突破1回は両費用の合計', oneWith.totalDiamondCost === 3000 + masuRebirthCost(30));
+const multipleWith = summary(true, 43);
+check('継承あり・複数突破は全費用の合計', multipleWith.totalDiamondCost === 3000 + multiple.diamondCost);
+check('合体後残高は所持から合計消費を引いた値', multipleWith.diamondAfter === multipleWith.goldBefore - multipleWith.totalDiamondCost);
+const shortage = summary(true, 43, 7000);
+check('不足量は合計消費と元の所持数の差', shortage.diamondShortage === shortage.totalDiamondCost - 7000);
+check('通常合体は継承代だけを表示・消費', multipleWith.normalDiamondCost === 3000 && multipleWith.normalDiamondAfter === 7000);
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

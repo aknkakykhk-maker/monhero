@@ -67,7 +67,8 @@ check('振り済みのぶんは重複して配らない',
 // --- 画面・実処理の結線 ---
 // 上がったレベルぶんの強化ポイントは applyBondXpGain がまとめて配る。合体もそこを通す
 check('合体の実処理で強化ポイントを配る', has('distAptPoints: (masu.distAptPoints || 0) + gainedLevels') && has('applyBondXpGain(prepared, gainedXp)'));
-check('確認画面と実処理が同じ費用計算を使う', (source.match(/masuFusionCost\(mainLvl\.level, subLvl\.level, fusionInheritUnique\)/g) || []).length === 2);
+check('確認画面と実処理が同じ費用計算を使う', (source.match(/buildFusionDiamondSummary\(\{/g) || []).length === 2
+  && has('const buildFusionDiamondSummary ='));
 check('古い×100の計算が残っていない', !has('(mainLvl.level + subLvl.level) * 100') && !has('const cost = level * 100;'));
 check('確認画面はレベル上昇と転生継承を合わせた強化ポイント増分を表示', has('{mainPointsNow} → {mainPointsNow + gainedLevels + reincarnateTransfer.points}'));
 
@@ -153,8 +154,8 @@ check('費用の内訳は定義した値をそのまま出す',
   has('（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}')
     && has('${FUSION_INHERIT_COST} ダイヤ'));
 // 説明に書いた倍率と、実際に使う単価がずれていないか(合体の説明が「×100」のままだった)
-check('合体の説明に書いた倍率が実際の単価と合っている', !/[×x]\s*100(?!\d)/.test(
-  source.slice(source.indexOf('必要ダイヤ</span>'), source.indexOf('ダイヤが足りません(所持'))));
+const fusionConfirmSource = source.slice(source.indexOf("if (fusionStep==='confirm')"), source.indexOf("if (fusionStep==='anim')"));
+check('合体の説明に書いた倍率が実際の単価と合っている', !/[×x]\s*100(?!\d)/.test(fusionConfirmSource));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

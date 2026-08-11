@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ee420f42abe769a7
+// source-sha256: e8b14f88f199a83a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 13:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 13:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -568,11 +568,14 @@ const buildFusionBreakthroughPlan = ({
   let rebirthCount = normalized.rebirthCount;
   let psycheCost = 0;
   let diamondCost = 0;
+  const diamondCosts = [];
   let gainedPoints = 0;
   while (plannedLevel > levelCap && levelCap < MAX_MASU_LEVEL_CAP) {
     rebirthCount += 1;
     psycheCost += breakthroughItemCost(rebirthCount);
-    diamondCost += masuRebirthCost(levelCap);
+    const nextDiamondCost = masuRebirthCost(levelCap);
+    diamondCost += nextDiamondCost;
+    diamondCosts.push(nextDiamondCost);
     gainedPoints += rebirthCount === 1 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS;
     levelCap = levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP ? MAX_MASU_LEVEL_CAP : Math.min(MAX_MASU_LEVEL_CAP, levelCap + BREAKTHROUGH_LEVEL_CAP_GAIN);
   }
@@ -588,6 +591,7 @@ const buildFusionBreakthroughPlan = ({
     rebirthCount,
     psycheCost,
     diamondCost,
+    diamondCosts,
     gainedPoints,
     psycheHave,
     goldHave,
@@ -975,6 +979,39 @@ const REGENERATION_COST = 100;
 const REGENERATION_DISC_IMAGE = 'images/disc-icons/stone-base.png';
 const REBIRTH_COST_PER_LEVEL = 50;
 const masuFusionCost = (_mainLevel, _subLevel, inherit = false) => inherit ? FUSION_INHERIT_COST : 0;
+// 合体確認と確定処理で共有するダイヤ収支。画面には必ず差し引き前の所持数を見せる。
+const buildFusionDiamondSummary = ({
+  masu,
+  fusionXp = 0,
+  gold = 0,
+  psycheOwned = 0,
+  mainLevel = 0,
+  subLevel = 0,
+  inherit = false
+}) => {
+  const goldBefore = donationDiamondValue(gold);
+  const inheritCost = masuFusionCost(mainLevel, subLevel, inherit);
+  const breakthroughPlan = buildFusionBreakthroughPlan({
+    masu,
+    fusionXp,
+    gold: goldBefore - inheritCost,
+    psycheOwned
+  });
+  const breakthroughDiamondCost = breakthroughPlan.diamondCost;
+  const totalDiamondCost = inheritCost + breakthroughDiamondCost;
+  return {
+    goldBefore,
+    inheritCost,
+    breakthroughDiamondCost,
+    totalDiamondCost,
+    diamondAfter: goldBefore - totalDiamondCost,
+    diamondShortage: Math.max(0, totalDiamondCost - goldBefore),
+    normalDiamondCost: inheritCost,
+    normalDiamondAfter: goldBefore - inheritCost,
+    normalDiamondShortage: Math.max(0, inheritCost - goldBefore),
+    breakthroughPlan
+  };
+};
 // 転生の消費ダイヤ。画面の表示と実処理で必ずこの関数を使う。
 // (以前は画面だけが「レベル×100」で計算しており、実際に引かれる額の倍が表示され、
 //  そのぶんダイヤを持っていないと転生ボタンを押せない状態になっていた)
@@ -11666,15 +11703,20 @@ function MonsterHeroGame() {
     // 配ってしまう(確認画面が「Lv.41になる」と出ていたのがこれ)
     const mainLvl = masuBondLevelInfo(main);
     const subLvl = masuBondLevelInfo(sub);
-    const cost = masuFusionCost(mainLvl.level, subLvl.level, fusionInheritUnique);
     const gainedXp = cappedBondXp(sub);
-    const breakthroughPlan = buildFusionBreakthroughPlan({
+    const diamondSummary = buildFusionDiamondSummary({
       masu: main,
       fusionXp: gainedXp,
-      gold: gold - cost,
-      psycheOwned: ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID)
+      gold,
+      psycheOwned: ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID),
+      mainLevel: mainLvl.level,
+      subLevel: subLvl.level,
+      inherit: fusionInheritUnique
     });
-    if (gold < cost || withBreakthrough && (breakthroughPlan.count < 1 || !breakthroughPlan.canAfford)) {
+    const {
+      breakthroughPlan
+    } = diamondSummary;
+    if (diamondSummary.normalDiamondShortage || withBreakthrough && (breakthroughPlan.count < 1 || !breakthroughPlan.canAfford)) {
       fusionProcessingRef.current = false;
       return null;
     }
@@ -11726,7 +11768,7 @@ function MonsterHeroGame() {
         } : {})
       };
     });
-    const goldAfter = gold - cost - (withBreakthrough ? breakthroughPlan.diamondCost : 0);
+    const goldAfter = withBreakthrough ? diamondSummary.diamondAfter : diamondSummary.normalDiamondAfter;
     const nextItems = withBreakthrough ? {
       ...ownedItemsRef.current,
       [BREAKTHROUGH_ITEM_ID]: breakthroughPlan.nextPsyche
@@ -21722,8 +21764,6 @@ function MonsterHeroGame() {
         }
         const mainLvl = masuBondLevelInfo(main);
         const subLvl = masuBondLevelInfo(sub);
-        const cost = masuFusionCost(mainLvl.level, subLvl.level, fusionInheritUnique);
-        const canAfford = gold >= cost;
         const ownedUniqueIds = new Set([uniqueLineageId(mainBase.unique, mainBase.id), ...(main.inheritedUniques || []).map(unique => uniqueLineageId(unique))].filter(Boolean));
         const duplicateUnique = ownedUniqueIds.has(uniqueLineageId(subBase.unique, subBase.id));
         const canChooseInherit = subLvl.level >= FUSION_INHERIT_MIN_SUB_LEVEL && !!subBase.unique && !duplicateUnique;
@@ -21733,12 +21773,24 @@ function MonsterHeroGame() {
         const mainCap = normalizeMasuProgression(main).levelCap;
         const subXp = cappedBondXp(sub);
         const beforeXp = cappedBondXp(main);
-        const breakthroughPlan = buildFusionBreakthroughPlan({
+        const diamondSummary = buildFusionDiamondSummary({
           masu: main,
           fusionXp: subXp,
-          gold: gold - cost,
-          psycheOwned: ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID)
+          gold,
+          psycheOwned: ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID),
+          mainLevel: mainLvl.level,
+          subLevel: subLvl.level,
+          inherit: fusionInheritUnique
         });
+        const {
+          inheritCost,
+          breakthroughDiamondCost,
+          totalDiamondCost,
+          diamondAfter,
+          diamondShortage,
+          breakthroughPlan
+        } = diamondSummary;
+        const canAfford = diamondSummary.normalDiamondShortage === 0;
         const afterXp = cappedBondXp(main, subXp);
         const afterLvl = bondLevelInfo(afterXp);
         const gainedLevels = afterLvl.level - mainLvl.level;
@@ -21868,8 +21920,10 @@ function MonsterHeroGame() {
         }, "\xD7", breakthroughPlan.count)), /*#__PURE__*/React.createElement("div", {
           className: `flex justify-between text-[9px] font-bold ${breakthroughPlan.psycheShortage ? 'text-red-300' : 'text-fuchsia-300'}`
         }, /*#__PURE__*/React.createElement("span", null, "\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC"), /*#__PURE__*/React.createElement("span", null, breakthroughPlan.psycheHave.toLocaleString(), " / ", breakthroughPlan.psycheCost.toLocaleString(), breakthroughPlan.psycheShortage ? `（あと${breakthroughPlan.psycheShortage.toLocaleString()}個）` : '')), /*#__PURE__*/React.createElement("div", {
-          className: `flex justify-between text-[9px] font-bold ${breakthroughPlan.diamondShortage ? 'text-red-300' : 'text-amber-300'}`
-        }, /*#__PURE__*/React.createElement("span", null, "\u9650\u754C\u7A81\u7834\u306E\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", null, breakthroughPlan.goldHave.toLocaleString(), " / ", breakthroughPlan.diamondCost.toLocaleString(), breakthroughPlan.diamondShortage ? `（あと${breakthroughPlan.diamondShortage.toLocaleString()}）` : '')), !breakthroughPlan.canReceiveAll && /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[9px] font-bold text-amber-300"
+        }, /*#__PURE__*/React.createElement("span", null, "\u9650\u754C\u7A81\u7834\u306E\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", null, breakthroughDiamondCost.toLocaleString())), breakthroughPlan.diamondCosts.length > 1 && /*#__PURE__*/React.createElement("div", {
+          className: "text-right text-[7px] text-slate-400"
+        }, breakthroughPlan.diamondCosts.map(value => value.toLocaleString()).join(' + ')), !breakthroughPlan.canReceiveAll && /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-red-300 font-black"
         }, "\u6700\u5927\u4E0A\u9650Lv.", MAX_MASU_LEVEL_CAP, "\u3067\u3082\u5168XP\u306F\u53D7\u3051\u53D6\u308C\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
           className: "text-[7px] text-slate-400"
@@ -21890,18 +21944,40 @@ function MonsterHeroGame() {
         }, reincarnateTransfer.count, "\u56DE\u5206 / +", reincarnateTransfer.points, "P")), reincarnateTransfer.count > 0 && /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-slate-400"
         }, "\u526F\u81EA\u8EAB ", normalizeMasuProgression(sub).reincarnateCount, "\u56DE\uFF0B\u7D99\u627F\u6E08\u307F ", inheritedReincarnateCountOf(sub), "\u56DE\u5206\u3092\u5168\u91CF\u7D99\u627F\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+          className: "text-[9px] font-black text-violet-200 tracking-wider"
+        }, "\u30C0\u30A4\u30E4\u6D88\u8CBB"), /*#__PURE__*/React.createElement("div", {
           className: "flex justify-between text-[10px] font-bold"
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-400"
-        }, "\u5FC5\u8981\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
-          className: `font-black flex items-center gap-1 ${canAfford ? 'text-amber-300' : 'text-red-400'}`
-        }, /*#__PURE__*/React.createElement(Gem, {
-          size: 10
-        }), cost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
-          className: "text-[8px] text-slate-400"
-        }, fusionInheritUnique ? '技を引き継ぐ合体' : '技を引き継がない合体'), !canAfford && /*#__PURE__*/React.createElement("div", {
-          className: "text-[8px] text-red-400 font-black"
-        }, "\u30C0\u30A4\u30E4\u304C\u8DB3\u308A\u307E\u305B\u3093(\u6240\u6301: ", gold.toLocaleString(), ")")), canChooseInherit && /*#__PURE__*/React.createElement("button", {
+        }, "\u6240\u6301\u30C0\u30A4\u30E4"), /*#__PURE__*/React.createElement("span", {
+          className: "text-white font-black"
+        }, diamondSummary.goldBefore.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[10px] font-bold"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-400"
+        }, "\u56FA\u6709\u6280\u5F15\u304D\u7D99\u304E"), /*#__PURE__*/React.createElement("span", {
+          className: "text-amber-300 font-black"
+        }, inheritCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[10px] font-bold"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-400"
+        }, "\u9650\u754C\u7A81\u7834 \xD7", breakthroughPlan.count), /*#__PURE__*/React.createElement("span", {
+          className: "text-amber-300 font-black"
+        }, breakthroughDiamondCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+          className: "border-t border-slate-700 pt-1 flex justify-between text-[11px] font-black"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-200"
+        }, "\u5408\u8A08\u6D88\u8CBB"), /*#__PURE__*/React.createElement("span", {
+          className: diamondShortage ? 'text-red-300' : 'text-amber-300'
+        }, totalDiamondCost.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+          className: "flex justify-between text-[11px] font-black"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-200"
+        }, "\u5408\u4F53\u5F8C"), /*#__PURE__*/React.createElement("span", {
+          className: diamondShortage ? 'text-red-300' : 'text-emerald-300'
+        }, Math.max(0, diamondAfter).toLocaleString())), diamondShortage > 0 && /*#__PURE__*/React.createElement("div", {
+          className: "text-[9px] text-red-300 font-black text-right"
+        }, "\u3042\u3068", diamondShortage.toLocaleString(), "\u30C0\u30A4\u30E4\u5FC5\u8981")), canChooseInherit && /*#__PURE__*/React.createElement("button", {
           onClick: () => setFusionInheritUnique(v => !v),
           className: `w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border mb-2 active:scale-95 ${fusionInheritUnique ? 'bg-amber-950/50 border-amber-500' : 'bg-slate-900 border-slate-800'}`
         }, /*#__PURE__*/React.createElement("span", {
@@ -21926,18 +22002,20 @@ function MonsterHeroGame() {
           className: "grid grid-cols-1 gap-2 shrink-0 mt-1"
         }, breakthroughPlan.count > 0 && /*#__PURE__*/React.createElement("button", {
           onClick: async () => {
-            if (!canAfford || !breakthroughPlan.canAfford) return;
+            if (diamondShortage || !breakthroughPlan.canAfford) return;
             const result = await executeMasuFusion(true);
             if (!result) return;
             setFusionResultData(result);
             setFusionStep('anim');
             Audio_.se.fusion();
           },
-          disabled: !canAfford || !breakthroughPlan.canAfford || fusionProcessingRef.current,
-          className: "w-full py-3 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white disabled:bg-slate-800 disabled:text-slate-600 disabled:opacity-50"
+          disabled: !!diamondShortage || !breakthroughPlan.canAfford || fusionProcessingRef.current,
+          className: "w-full py-2.5 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white disabled:bg-slate-800 disabled:text-slate-600 disabled:opacity-50"
         }, /*#__PURE__*/React.createElement(Star, {
           size: 16
-        }), "\u9650\u754C\u7A81\u7834 \xD7", breakthroughPlan.count, " \u3057\u3066\u5408\u4F53"), /*#__PURE__*/React.createElement("button", {
+        }), /*#__PURE__*/React.createElement("span", null, "\u9650\u754C\u7A81\u7834 \xD7", breakthroughPlan.count, " \u3057\u3066\u5408\u4F53", /*#__PURE__*/React.createElement("span", {
+          className: "block text-[8px] font-bold opacity-80"
+        }, totalDiamondCost.toLocaleString(), "\u30C0\u30A4\u30E4\u6D88\u8CBB \u2192 \u6B8B\u308A", Math.max(0, diamondAfter).toLocaleString()))), /*#__PURE__*/React.createElement("button", {
           onClick: async () => {
             if (!canAfford) return;
             const result = await executeMasuFusion(false);
@@ -21947,10 +22025,12 @@ function MonsterHeroGame() {
             Audio_.se.fusion();
           },
           disabled: !canAfford || fusionProcessingRef.current,
-          className: `w-full py-3 rounded-2xl font-black text-sm uppercase shadow-lg flex items-center justify-center gap-2 ${canAfford ? 'bg-slate-700 text-white active:scale-95' : 'bg-slate-800 text-slate-600'}`
+          className: `w-full py-2.5 rounded-2xl font-black text-sm uppercase shadow-lg flex items-center justify-center gap-2 ${canAfford ? 'bg-slate-700 text-white active:scale-95' : 'bg-slate-800 text-slate-600'}`
         }, /*#__PURE__*/React.createElement(Sparkles, {
           size: 16
-        }), breakthroughPlan.count > 0 ? '通常合体' : '合体する')));
+        }), /*#__PURE__*/React.createElement("span", null, breakthroughPlan.count > 0 ? '通常合体' : '合体する', /*#__PURE__*/React.createElement("span", {
+          className: "block text-[8px] normal-case font-bold opacity-80"
+        }, diamondSummary.normalDiamondCost.toLocaleString(), "\u30C0\u30A4\u30E4\u6D88\u8CBB \u2192 \u6B8B\u308A", Math.max(0, diamondSummary.normalDiamondAfter).toLocaleString())))));
       }
       if (fusionStep === 'anim') {
         const d = fusionResultData;
