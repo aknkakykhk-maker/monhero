@@ -16,11 +16,11 @@ assert.strictEqual(wave(10, false), 10, 'non-NIGHTMARE WAVE enhancement must sta
 assert.strictEqual(signed(-0.025, false), -0.025, 'non-NIGHTMARE signed modifiers must stay unchanged');
 
 assert(source.includes("specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 })"));
-assert(source.includes('applyNightmareWaveEnhancement(d*0.001/100,nightmareRun)'), 'WAVE distance gain must use the WAVE enhancement rule');
+assert(source.includes('applyNightmareWaveEnhancement(d*0.001/100,specialRuleDifficulty)'), 'WAVE distance gain must use the WAVE enhancement rule');
 assert(source.includes("applyNightmareSignedModifier(aptGradeToPct(apt[i] || 'C'), nightmare)"), 'monster aptitude must use the signed rule separately');
 assert(source.includes('const baseRecoveryDelta=Math.max(-0.05,Math.min(0.05,(remainingTurns-10)*0.005));'), 'recovery base formula and bounds must stay intact');
-assert(source.includes('const recoveryDelta=applyNightmareSignedModifier(baseRecoveryDelta,nightmareRun);'), 'recovery rule must apply after the base calculation');
-assert(source.includes("isBreeder&&extremeRunRef.current?extremeSpecialRule(extremeDifficulty,'breederCardEffect')"), 'EXTREME breeder-card rule must stay intact');
+assert(source.includes('const recoveryDelta=applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty);'), 'recovery rule must apply after the base calculation');
+assert(source.includes("isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'breederCardEffect')"), 'EXTREME breeder-card rule must stay intact');
 assert(!source.includes("specialRules:Object.freeze({ breederCardEffect:0.5, waveEnhancement"), 'NIGHTMARE rules must not leak into EXTREME');
 
 console.log('OK: NIGHTMARE特殊ルール（WAVE後50%、自動回復・距離適性のプラス50%／マイナス200%、既存モード分離）');
