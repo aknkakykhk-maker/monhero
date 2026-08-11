@@ -30,6 +30,6 @@ assert(!source.includes("if (['buff','debuff','heal','draw'].includes(card.type)
 assert.strictEqual((source.match(/applyExtremeIntegerRule\(bonus\[key\]\|\|0,specialRuleDifficulty,'allyJoinBonus'\)/g)||[]).length, 1, '加入時ステータス増加へ1回だけ適用');
 assert(source.includes("const aptDelta=getMonsterAptPct(m,specialRuleDifficulty)"), '間合い適性の加入処理を維持');
 assert(source.includes('const newAllyUnique={...m.unique'), '固有技の加入処理を維持');
-assert(help.includes('CHAOS（デバッグ確認中）') && help.includes('供モンの加入、間合い適性、固有技の取得は半減しません'), 'ヘルプにデバッグ限定仕様と対象外を記載');
+assert(help.includes('CHAOS だけの特殊ルール') && help.includes('供モンの加入、間合い適性、固有技の取得は半減しません'), 'ヘルプに正式仕様と対象外を記載');
 
 console.log('OK: CHAOS特殊ルール（与ダメージ50%・加入ボーナス50%・消費ガッツ150%・一重適用・他難易度隔離）');

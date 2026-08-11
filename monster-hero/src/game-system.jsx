@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 23:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-12 00:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2932,16 +2932,17 @@ const DIFFICULTY_SETTINGS = {
 };
 // 極限チャレンジ。チャレンジモードの上位高難易度版で、DIFFICULTY_SETTINGS(通常の難易度)とは
 // 別の表にしてある。通常の難易度・全国ランキング・既存の保存キーへは混ぜない。
-// NIGHTMAREまで正式に実戦可能。CHAOSは内部仕様だけを定義し、公開準備が整うまで選択不可にする。
+// CHAOSまで正式に実戦可能。上位2段階は公開準備が整うまで選択不可にする。
 const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ breederCardEffect:0.5 }) },
   { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
-  { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:false, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
+  { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:true, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
   { id:'ULTIMATE', label:'ULTIMATE', available:false },
   { id:'INFINITY', label:'INFINITY', available:false },
 ]);
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
+const CHAOS_SETTING = EXTREME_DIFFICULTIES[2];
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
 const QUICK_EXTREME_SETTINGS = Object.freeze({
@@ -3022,8 +3023,11 @@ const EXTREME_BEST_SCORE_KEY = extremeBestScoreKey('EXTREME');
 const EXTREME_CLEAR_COUNT_KEY = extremeClearCountKey('EXTREME');
 const NIGHTMARE_BEST_SCORE_KEY = extremeBestScoreKey('NIGHTMARE');
 const NIGHTMARE_CLEAR_COUNT_KEY = extremeClearCountKey('NIGHTMARE');
+const CHAOS_BEST_SCORE_KEY = extremeBestScoreKey('CHAOS');
+const CHAOS_CLEAR_COUNT_KEY = extremeClearCountKey('CHAOS');
 // NIGHTMAREの解放には既存のEXTREMEクリア回数を再利用する。
 const isNightmareUnlocked = (extremeClearCount) => (Number(extremeClearCount) || 0) > 0;
+const isChaosUnlocked = (nightmareClearCount) => (Number(nightmareClearCount) || 0) > 0;
 const normalizeBattleDifficulty = (value) => Object.prototype.hasOwnProperty.call(QUICK_DIFFICULTY_SETTINGS, value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
@@ -3034,7 +3038,7 @@ const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
 const CLEAR_PSYCHE_REWARD = Object.freeze({
   Beginner: 1, Easy: 2, Normal: 3, Hard: 5, Expert: 7,
   Master: 10, GrandMaster: 15, Hell: 20, Legend: 25,
-  EXTREME: 30, NIGHTMARE: 40,
+  EXTREME: 30, NIGHTMARE: 40, CHAOS: 50,
 });
 const clearPsycheReward = (difficulty) => Math.max(0, Math.floor(Number(CLEAR_PSYCHE_REWARD[normalizeBattleDifficulty(difficulty)]) || 0));
 // ヘルプの中に出す「実データから作る表」。data/help.js の { t:'data', id } がこれを呼ぶ。
@@ -4072,6 +4076,8 @@ function MonsterHeroGame() {
   const [extremeClearCount, setExtremeClearCount] = useState(0);
   const [nightmareBestScore, setNightmareBestScore] = useState(0);
   const [nightmareClearCount, setNightmareClearCount] = useState(0);
+  const [chaosBestScore, setChaosBestScore] = useState(0);
+  const [chaosClearCount, setChaosClearCount] = useState(0);
   const [extremeDifficultyClearCounts, setExtremeDifficultyClearCounts] = useState({});
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
   const [onboardingName, setOnboardingName] = useState('');
@@ -4670,6 +4676,9 @@ function MonsterHeroGame() {
   // 極限チャレンジの解放判定。チャレンジのクリア記録(mh_clears_*)をそのまま見る
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
+  const chaosUnlocked = useMemo(() => isChaosUnlocked(nightmareClearCount), [nightmareClearCount]);
+  const extremeBestScores = { EXTREME:extremeBestScore, NIGHTMARE:nightmareBestScore, CHAOS:chaosBestScore };
+  const extremeClearCounts = { EXTREME:extremeClearCount, NIGHTMARE:nightmareClearCount, CHAOS:chaosClearCount };
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
@@ -5716,6 +5725,8 @@ function MonsterHeroGame() {
       setExtremeClearCount(Math.max(0, Math.floor(Number(await storeGet(EXTREME_CLEAR_COUNT_KEY, 0, false)) || 0)));
       setNightmareBestScore(Math.max(0, Math.floor(Number(await storeGet(NIGHTMARE_BEST_SCORE_KEY, 0, false)) || 0)));
       setNightmareClearCount(Math.max(0, Math.floor(Number(await storeGet(NIGHTMARE_CLEAR_COUNT_KEY, 0, false)) || 0)));
+      setChaosBestScore(Math.max(0, Math.floor(Number(await storeGet(CHAOS_BEST_SCORE_KEY, 0, false)) || 0)));
+      setChaosClearCount(Math.max(0, Math.floor(Number(await storeGet(CHAOS_CLEAR_COUNT_KEY, 0, false)) || 0)));
       setHighScores(scores);
       highScoresRef.current = scores;
       setAttemptCounts(attempts);
@@ -5890,10 +5901,12 @@ function MonsterHeroGame() {
           console.error('[result] extreme score save failed:', result?.error?.message || 'unknown ranking error');
           return result;
         }
-        const currentBest = extremeDifficulty === NIGHTMARE_SETTING.id ? nightmareBestScore : extremeBestScore;
+        const currentBest = extremeBestScores[extremeDifficulty] || 0;
         if (score > (Number(currentBest) || 0)) {
           await storeSet(extremeBestScoreKey(extremeDifficulty), score, false);
-          if (extremeDifficulty === NIGHTMARE_SETTING.id) setNightmareBestScore(score); else setExtremeBestScore(score);
+          if (extremeDifficulty === CHAOS_SETTING.id) setChaosBestScore(score);
+          else if (extremeDifficulty === NIGHTMARE_SETTING.id) setNightmareBestScore(score);
+          else setExtremeBestScore(score);
           setRunHighlights(prev => ({ ...prev, newRecord: true }));
         }
         return result;
@@ -7062,10 +7075,10 @@ function MonsterHeroGame() {
     await awardClearPsyche();
     // 極限チャレンジは専用キーへ。チャレンジの通算クリア数(初勝利判定・解放判定に使う)は動かさない
     if (extremeRunRef.current) {
-      const nightmare = extremeDifficulty === NIGHTMARE_SETTING.id;
-      const currentCount = nightmare ? nightmareClearCount : extremeClearCount;
+      const currentCount = extremeClearCounts[extremeDifficulty] || 0;
       const nextExtreme = (Number(currentCount) || 0) + 1;
-      if (nightmare) setNightmareClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));
+      if (extremeDifficulty === CHAOS_SETTING.id) setChaosClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));
+      else if (extremeDifficulty === NIGHTMARE_SETTING.id) setNightmareClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));
       else setExtremeClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));
       setExtremeDifficultyClearCounts(prev => ({ ...prev, [extremeDifficulty]: Math.max(Number(prev[extremeDifficulty]) || 0, nextExtreme) }));
       await storeSet(extremeClearCountKey(extremeDifficulty), nextExtreme, false);
@@ -9726,7 +9739,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className={`relative shrink-0${battleTutorialSpotClass('modeCards')}`}>
                   <button aria-label="前のモード" onClick={()=>stepMode(-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70"><ChevronLeft/></button>
                   <div ref={modeCarouselRef} onScroll={()=>{const index=centeredLoopIndex();const picked=loopModes[index];if(picked&&picked.id!==current.id)setBattleMode(picked.id);if(modeLoopTimerRef.current)clearTimeout(modeLoopTimerRef.current);modeLoopTimerRef.current=setTimeout(recenterModeLoop,180);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore({[EXTREME_SETTING.id]:extremeBestScore,[NIGHTMARE_SETTING.id]:nightmareBestScore},EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isProMode(m.id)?proHighScores:highScores,Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
+                    {loopModes.map((m,loopIndex)=>{const active=m.id===current.id,isExtreme=m.id===EXTREME_MODE.id,extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle,rec=isExtreme?{score:highestModeScore(extremeBestScores,EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>setting.id)),wave:0,clears:extremeClearCount}:modeRecordFor(m.id,safeDifficulty),ranked=!isExtreme&&modeHasRanking(m.id),modeBestScore=ranked?highestModeScore(isProMode(m.id)?proHighScores:highScores,Object.keys(DIFFICULTY_SETTINGS)):rec.score;return (
                       <article key={`${m.id}-${loopIndex}`} className={`snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2.5 h-[366px] overflow-hidden transition-all flex flex-col ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?m.color:'rgba(255,255,255,.12)',background:'linear-gradient(180deg,#152044,#0d142b)',boxShadow:active?`0 0 30px ${m.color}55`:'none'}}>
                         <div className="text-center text-[7px] tracking-[.2em] text-slate-400 font-black">BATTLE MODE</div>
                         <h3 className="text-center text-lg font-black leading-tight" style={{color:m.color}}>{m.emoji} {m.label}</h3>
@@ -9778,14 +9791,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:false);const debugChaos=debugBattle&&setting.id==='CHAOS';const previewable=(setting.available&&unlocked)||debugChaos;return (
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:false);const previewable=setting.available&&unlocked;return (
                       <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[382px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?'#f0abfc':'rgba(255,255,255,.12)',background:previewable?'linear-gradient(180deg,#34133f,#160d2b)':'linear-gradient(180deg,#1e293b,#0d142b)',boxShadow:active?'0 0 30px rgba(232,121,249,.35)':'none'}}>
                         <div className="text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
                         <h3 className="text-center text-lg font-black leading-tight text-fuchsia-200">{setting.label}</h3>
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/45 px-2.5 py-1">
-                          <small className="block text-[8px] text-slate-400 font-black">{debugChaos?'解放条件':setting.available?`${setting.label}の記録`:'難易度情報'}</small>
-                          <b className="block text-right text-base leading-tight text-fuchsia-200">{debugChaos?'NIGHTMAREクリア':setting.available&&unlocked?`${(setting.id==='NIGHTMARE'?nightmareBestScore:extremeBestScore).toLocaleString()} pt`:'？？？'}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{debugChaos?'DEBUG確認専用・保存なし':setting.available&&unlocked?`クリア ${setting.id==='NIGHTMARE'?nightmareClearCount:extremeClearCount}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':'未実装・選択できません'}</span>
+                          <small className="block text-[8px] text-slate-400 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
+                          <b className="block text-right text-base leading-tight text-fuchsia-200">{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
+                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':'未実装・選択できません'}</span>
                         </div>
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',`×${setting.score}`],['ダイヤ',`×${setting.gold}`]].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
@@ -10155,7 +10168,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   return wave>0?`最高到達 WAVE ${wave}`:'未記録';
                 }
                 const scores=mode.id===EXTREME_MODE.id
-                  ? {[EXTREME_SETTING.id]:extremeBestScore,[NIGHTMARE_SETTING.id]:nightmareBestScore}
+                  ? extremeBestScores
                   : scoreMapFor(mode);
                 const ids=mode.id===EXTREME_MODE.id?EXTREME_DIFFICULTIES.filter(item=>item.available).map(item=>item.id):difficultyIds;
                 const best=highestModeScore(scores,ids);
@@ -10174,7 +10187,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <button type="button" onClick={()=>setProfileBattleMode(null)} className="mb-3 flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-black/25 px-2 text-left active:scale-[.98]"><ArrowLeft size={18}/><span className="text-lg" aria-hidden="true">{selected.emoji}</span><span className="font-black text-[13px]">{selected.label}の記録</span></button>
                     <div className="flex flex-col gap-2">
                       {selected.id===EXTREME_MODE.id
-                        ? EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>{const score=setting.id===NIGHTMARE_SETTING.id?nightmareBestScore:extremeBestScore;const clears=setting.id===NIGHTMARE_SETTING.id?nightmareClearCount:extremeClearCount;const played=score>0||clears>0;return <div key={setting.id} className="rounded-xl border border-white/5 bg-black/25 p-3"><b className="block text-[11px] text-fuchsia-200">{setting.label}</b>{played?<div className="mt-2 grid grid-cols-2 gap-2 text-center"><div><small className="block text-[8px] text-slate-500">最高スコア</small><strong className="text-[12px] text-amber-300">{score.toLocaleString()} pt</strong></div><div><small className="block text-[8px] text-slate-500">クリア回数</small><strong className="text-[12px] text-emerald-300">{clears}回</strong></div></div>:<div className="mt-2 text-center text-[11px] font-black text-slate-500">未記録</div>}</div>})
+                        ? EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>{const score=extremeBestScores[setting.id]||0;const clears=extremeClearCounts[setting.id]||0;const played=score>0||clears>0;return <div key={setting.id} className="rounded-xl border border-white/5 bg-black/25 p-3"><b className="block text-[11px] text-fuchsia-200">{setting.label}</b>{played?<div className="mt-2 grid grid-cols-2 gap-2 text-center"><div><small className="block text-[8px] text-slate-500">最高スコア</small><strong className="text-[12px] text-amber-300">{score.toLocaleString()} pt</strong></div><div><small className="block text-[8px] text-slate-500">クリア回数</small><strong className="text-[12px] text-emerald-300">{clears}回</strong></div></div>:<div className="mt-2 text-center text-[11px] font-black text-slate-500">未記録</div>}</div>})
                         : Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=>{const record=modeRecordFor(selected.id,key);const quick=isQuickMode(selected.id);const challenge=selected.id===BATTLE_MODE_CHALLENGE;const attempts=challenge?(attemptCounts[key]||0):0;const played=record.score>0||record.wave>0||record.clears>0||attempts>0;return <div key={key} className="rounded-xl border border-white/5 bg-black/25 p-3"><div className="px-2 py-1 rounded-lg text-[10px] font-black text-center" style={difficultyStyle(setting,true)}>{setting.label}</div>{played?<div className={`mt-2 grid gap-1 text-center ${quick?'grid-cols-2':challenge?'grid-cols-2':'grid-cols-3'}`}>{challenge&&<div><small className="block text-[8px] text-slate-500">挑戦回数</small><strong className="text-[11px] text-white">{attempts}回</strong></div>}{!quick&&<div><small className="block text-[8px] text-slate-500">最高スコア</small><strong className="text-[11px] text-amber-300">{record.score.toLocaleString()} pt</strong></div>}<div><small className="block text-[8px] text-slate-500">最高到達WAVE</small><strong className="text-[11px] text-indigo-200">WAVE {record.wave}</strong></div><div><small className="block text-[8px] text-slate-500">クリア回数</small><strong className="text-[11px] text-emerald-300">{record.clears}回</strong></div></div>:<div className="mt-2 text-center text-[11px] font-black text-slate-500">未記録</div>}</div>})}
                     </div>
                   </div>
