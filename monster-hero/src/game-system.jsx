@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 11:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 11:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -484,11 +484,25 @@ const REINCARNATE_MIN_LEVEL = 100;
 const REINCARNATE_LEVEL_DROP = 99;
 const REINCARNATE_POINTS = 10;
 const totalReincarnatePoints = (count) => Math.max(0, Math.floor(Number(count) || 0)) * REINCARNATE_POINTS;
+// 転生で実際に得た強化ポイントを回数とは別に保存する。旧個体だけは当時の確定値
+// (回数×10)へフォールバックし、以後は報酬量が変わっても保存済みの価値を再計算しない。
+const ownReincarnateBonusPoints = (masu) => Number.isFinite(Number(masu?.reincarnateBonusPoints))
+  ? Math.max(0, Math.floor(Number(masu.reincarnateBonusPoints)))
+  : totalReincarnatePoints(masu?.reincarnateCount);
+const inheritedReincarnateBonusPointsOf = (masu) => Math.max(0, Math.floor(Number(masu?.inheritedReincarnateBonusPoints) || 0));
+const inheritedReincarnateCountOf = (masu) => Math.max(0, Math.floor(Number(masu?.inheritedReincarnateCount) || 0));
+const transferableReincarnateBonus = (masu) => ({
+  points: ownReincarnateBonusPoints(masu) + inheritedReincarnateBonusPointsOf(masu),
+  count: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)) + inheritedReincarnateCountOf(masu),
+});
 const normalizeMasuProgression = (masu) => ({
   ...masu,
   rebirthCount: Math.max(0, Math.floor(Number(masu?.rebirthCount) || 0)),
   // 転生回数は後から足した項目なので、持っていない既存データは0として扱う
   reincarnateCount: Math.max(0, Math.floor(Number(masu?.reincarnateCount) || 0)),
+  reincarnateBonusPoints: ownReincarnateBonusPoints(masu),
+  inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
+  inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
   levelCap: Math.min(MAX_MASU_LEVEL_CAP, Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
   uniqueSkillLevels: masu?.uniqueSkillLevels && typeof masu.uniqueSkillLevels === 'object' ? { ...masu.uniqueSkillLevels } : {},
   // 未使用の固有技ポイント。限界突破・転生でその場に上げなかったぶんをここへ貯めておき、
@@ -519,7 +533,7 @@ const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
 // 転生では個体の識別情報・外見・固有技・履歴だけを残し、振った強化は白紙に戻す。
 // オブジェクトスプレッドで旧育成値を残さないよう、維持対象を明示して新しい保存形を組み立てる。
 // toLevel を渡すとそのレベル相当の絆経験値から再開する(渡さなければLv1へ戻す)。
-const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, levelCap, uniqueSkillLevels, uniqueSkillPoints, toLevel, distAptPoints } = {}) => {
+const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnateBonusPoints, levelCap, uniqueSkillLevels, uniqueSkillPoints, toLevel, distAptPoints } = {}) => {
   const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu?.baseId] : null;
   const reset = {
     id: masu?.id,
@@ -532,6 +546,9 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, levelCap, u
     createdAt: masu?.createdAt,
     rebirthCount: Math.max(0, Math.floor(Number(rebirthCount ?? masu?.rebirthCount) || 0)),
     reincarnateCount: Math.max(0, Math.floor(Number(reincarnateCount ?? masu?.reincarnateCount) || 0)),
+    reincarnateBonusPoints: Math.max(0, Math.floor(Number(reincarnateBonusPoints ?? ownReincarnateBonusPoints(masu)) || 0)),
+    inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
+    inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: Math.min(MAX_MASU_LEVEL_CAP, Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
     uniqueSkillLevels: { ...(uniqueSkillLevels ?? masu?.uniqueSkillLevels ?? {}) },
     // 固有技のレベルは転生でも残るので、未使用のぶんもそのまま持ち越す
@@ -818,7 +835,8 @@ const buildMasuReincarnation = ({ masu, skillKey, gold }) => {
   const nextLevel = Math.max(1, level - REINCARNATE_LEVEL_DROP);
   const nextCount = normalized.reincarnateCount + 1;
   // 振り直せる合計。レベル由来ぶんは reconcileMasuPoints と同じ「レベル-1」で数える
-  const nextPoints = (nextLevel - 1) + totalBreakthroughPoints(normalized.rebirthCount) + totalReincarnatePoints(nextCount);
+  const nextOwnBonusPoints = normalized.reincarnateBonusPoints + REINCARNATE_POINTS;
+  const nextPoints = (nextLevel - 1) + totalBreakthroughPoints(normalized.rebirthCount) + nextOwnBonusPoints + normalized.inheritedReincarnateBonusPoints;
   return {
     ok:true, cost, skillKey:raisesSkill ? skillKey : null, skillLevel:raisesSkill ? currentSkillLevel + 1 : null,
     raisesSkill, keptSkillPoints,
@@ -826,6 +844,7 @@ const buildMasuReincarnation = ({ masu, skillKey, gold }) => {
     nextGold:donationDiamondValue(gold) - cost,
     nextMasu:resetMasuForRebirth(normalized, {
       reincarnateCount: nextCount,
+      reincarnateBonusPoints: nextOwnBonusPoints,
       levelCap: normalized.levelCap, // 上限は据え置き(転生を重ねても上限は伸びない)
       toLevel: nextLevel,
       distAptPoints: nextPoints,
@@ -2214,8 +2233,8 @@ const fusionHistoryHasDetail = (list) => Array.isArray(list) && list.some(h => h
 const RANKING_FUSION_MAX = 12;
 // v1: 育て方(ステータス・間合い適性・固有技Lv)＋合体回数だけ
 // v2: 記録時点の総合力(power)と、合体履歴の中身(fusion)を追加。v1の項目はそのまま残す
-// v3: 転生回数(reincarnateCount)を追加。v1・v2は持っていないので、読むときは0へ倒す
-const RANKING_DETAIL_VERSION = 3;
+// v3: 転生回数、v4: 保存済みの転生育成ボーナスと合体継承回数を追加
+const RANKING_DETAIL_VERSION = 4;
 const rankingMasuDetail = (masu) => {
   if (!masu) return null;
   const sp = masu.statPoints || {};
@@ -2232,6 +2251,9 @@ const rankingMasuDetail = (masu) => {
     rebirthCount: num(masu.rebirthCount),
     // 転生回数。詳細の上部サマリーで「転生 +N」を出すのに要る
     reincarnateCount: num(masu.reincarnateCount),
+    reincarnateBonusPoints: ownReincarnateBonusPoints(masu),
+    inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
+    inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
     levelCap: num(masu.levelCap) || null,
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // 間合い適性は「グレードの文字」の配列(['C','M','C','C'] など)。数値ではないので
@@ -2280,6 +2302,9 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
     rebirthCount: num(detail.rebirthCount),
     // 転生回数はv3から。持っていない古い記録は0になる(転生していない扱い)
     reincarnateCount: num(detail.reincarnateCount),
+    reincarnateBonusPoints: Number.isFinite(Number(detail.reincarnateBonusPoints)) ? num(detail.reincarnateBonusPoints) : totalReincarnatePoints(detail.reincarnateCount),
+    inheritedReincarnateBonusPoints: num(detail.inheritedReincarnateBonusPoints),
+    inheritedReincarnateCount: num(detail.inheritedReincarnateCount),
     levelCap: num(detail.levelCap) || INITIAL_MASU_LEVEL_CAP,
     statPoints: { hp: num(sp.hp), atk: num(sp.atk), def: num(sp.def), guts: num(sp.guts) },
     // グレード以外(数値へ潰してしまった古い記録など)が入っていたら、その記録には
@@ -2804,7 +2829,8 @@ const reconcileMasuPoints = (masu) => {
   // (読み込みのたびに不足分だけを補うので、二重に配られることはない)。
   const earned = Math.max(0, masuBondLevelInfo(masu).level - 1)
     + totalBreakthroughPoints(masu.rebirthCount)
-    + totalReincarnatePoints(masu.reincarnateCount);
+    + ownReincarnateBonusPoints(masu)
+    + inheritedReincarnateBonusPointsOf(masu);
   const missing = earned - (aptSpent + statSpent + (masu.distAptPoints || 0));
   return missing > 0 ? { ...masu, distAptPoints: (masu.distAptPoints || 0) + missing } : masu;
 };
@@ -6408,7 +6434,8 @@ function MonsterHeroGame() {
     const canInherit = subLvl.level >= FUSION_INHERIT_MIN_SUB_LEVEL && fusionInheritUnique && subBase?.unique && !ownedUniqueIds.has(subUniqueLineageId);
     const inheritedLevel = Math.max(0, Number(sub.uniqueSkillLevels?.own) || Number(subBase?.unique?.evoLevel) || 0);
     const inheritedUnique = canInherit ? { ...uniqueSkillAtLevel(subBase.unique, inheritedLevel), monId: subBase.id, lineageId:subUniqueLineageId, sourceMasuName: sub.name } : null;
-    const historyEntry = { subName: sub.name, subBaseId: sub.baseId, subBondLevel: subLvl.level, xpGained: gainedXp, inherited: !!inheritedUnique, timestamp: Date.now() };
+    const reincarnateTransfer = transferableReincarnateBonus(sub);
+    const historyEntry = { subName: sub.name, subBaseId: sub.baseId, subBondLevel: subLvl.level, xpGained: gainedXp, inherited: !!inheritedUnique, inheritedReincarnateCount:reincarnateTransfer.count, timestamp: Date.now() };
     const next = masuMonsRef.current
         .filter(m => m.id !== sub.id)
         .map(m => {
@@ -6417,6 +6444,11 @@ function MonsterHeroGame() {
           const advanced = applyBondXpGain(prepared, gainedXp);
           return {
             ...advanced.masu,
+            // 副の通常強化は移さず、転生で獲得済みの強化ポイントだけを未使用Pとして全量加算する。
+            // 自身の転生回数・Lv・固有技・限界突破は変更しない。
+            distAptPoints: advanced.masu.distAptPoints + reincarnateTransfer.points,
+            inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(m) + reincarnateTransfer.points,
+            inheritedReincarnateCount: inheritedReincarnateCountOf(m) + reincarnateTransfer.count,
             fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + advanced.gainedLevels,
             fusionHistory: [...(m.fusionHistory || []), historyEntry],
             ...(inheritedUnique ? { inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique] } : {}),
@@ -6445,6 +6477,7 @@ function MonsterHeroGame() {
       mainName: main.name, mainIconUrl: mainBase?.iconUrl, mainBaseId: main.baseId, mainEmoji: mainBase?.emoji, mainColors: getMasuColors(main),
       subName: sub.name, subIconUrl: subBase?.iconUrl, subBaseId: sub.baseId, subEmoji: subBase?.emoji, subColors: getMasuColors(sub),
       before, after, gainedXp, gainedLevels, inherited: !!inheritedUnique, cost,
+      inheritedReincarnatePoints:reincarnateTransfer.points, inheritedReincarnateCount:reincarnateTransfer.count,
       breakthroughCount:withBreakthrough ? breakthroughPlan.count : 0,
     };
   };
@@ -8943,7 +8976,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <span className="text-pink-300 flex items-center gap-1 shrink-0"><Heart size={10}/>絆 Lv.{lvl.level} <span className="text-slate-500">/ {norm.levelCap}</span></span>
               <span className="flex items-center gap-1.5 text-[8px] shrink-0">
                 {norm.rebirthCount > 0 && <span className="text-violet-300">限界突破 {norm.rebirthCount}</span>}
-                {norm.reincarnateCount > 0 && <span className="text-amber-300">転生 +{norm.reincarnateCount}</span>}
+                <span className="text-amber-300">転生 {norm.reincarnateCount}回{norm.inheritedReincarnateCount > 0 && <span className="text-amber-200">（継承 {norm.inheritedReincarnateCount}回分）</span>}</span>
               </span>
             </div>
             <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20"><div className="h-full bg-gradient-to-r from-pink-500 to-rose-400" style={{width:`${xpPct}%`}}></div></div>
@@ -9362,7 +9395,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
           const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=masuRebirthCost(lvl.level), skills=getRebirthSkillChoices(selected);
           const nextLevel=Math.max(1, lvl.level-REINCARNATE_LEVEL_DROP);
-          const nextPoints=(nextLevel-1)+totalBreakthroughPoints(normalized.rebirthCount)+totalReincarnatePoints(normalized.reincarnateCount+1);
+          const nextPoints=(nextLevel-1)+totalBreakthroughPoints(normalized.rebirthCount)+normalized.reincarnateBonusPoints+REINCARNATE_POINTS+normalized.inheritedReincarnateBonusPoints;
           return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={reincarnateProcessingRef.current} onClick={()=>setReincarnateSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">転生・固有技選択</h2></div>
             <div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/><ReincarnateBadge count={normalized.reincarnateCount}/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} → Lv.{nextLevel}</div><div className="text-slate-400 text-[10px]">上限Lv.{normalized.levelCap}はそのまま。振った強化は白紙に戻ります</div><div className="text-amber-300 text-[10px] font-black">振り直せる強化ポイント {nextPoints}（うち転生ぶん +{REINCARNATE_POINTS}）</div></div></div>
             <div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div>
@@ -10475,6 +10508,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const afterXp = cappedBondXp(main, subXp);
             const afterLvl = bondLevelInfo(afterXp);
             const gainedLevels = afterLvl.level - mainLvl.level;
+            const reincarnateTransfer = transferableReincarnateBonus(sub);
             // 上限で切り捨てられる絆経験値。あるときは事前に知らせる
             const wastedXp = Math.max(0, (beforeXp + subXp) - afterXp);
             const mainPointsNow = main.distAptPoints || 0;
@@ -10517,7 +10551,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">絆レベル</span><span className={`font-black ${gainedLevels>0?'text-pink-300':'text-slate-400'}`}>{gainedLevels>0?`+${gainedLevels}`:'変化なし'}</span></div>
                       <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">絆経験値</span><span className="text-white font-black">{(main.bondXp||0).toLocaleString()} → {afterXp.toLocaleString()} XP</span></div>
                       <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">次のレベルまで</span><span className="text-slate-300 font-black">{afterLvl.xpIntoLevel.toLocaleString()} / {afterLvl.xpForNext.toLocaleString()} XP</span></div>
-                      <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">強化ポイント</span><span className={`font-black ${gainedLevels>0?'text-amber-300':'text-slate-400'}`}>{mainPointsNow} → {mainPointsNow + gainedLevels}{gainedLevels>0&&<span className="text-amber-200"> (+{gainedLevels})</span>}</span></div>
+                      <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">強化ポイント</span><span className={`font-black ${gainedLevels+reincarnateTransfer.points>0?'text-amber-300':'text-slate-400'}`}>{mainPointsNow} → {mainPointsNow + gainedLevels + reincarnateTransfer.points}{gainedLevels+reincarnateTransfer.points>0&&<span className="text-amber-200"> (+{gainedLevels+reincarnateTransfer.points})</span>}</span></div>
                     </div>
                     {gainedLevels===0&&wastedXp===0&&<div className="text-[8px] text-slate-500 leading-relaxed mt-2">※ 絆経験値は加算されますが、次のレベルには届きません(強化ポイントは増えません)</div>}
                     {/* 主のレベル上限を超えるぶんは入らない。押す前に分かるようにしておく */}
@@ -10537,6 +10571,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>}
                   <div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-2 space-y-1.5">
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">受け継ぐ絆経験値</span><span className="text-pink-300 font-black">{(sub.bondXp||0).toLocaleString()} XP</span></div>
+                    <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">転生育成ボーナス</span><span className="text-amber-300 font-black">{reincarnateTransfer.count}回分 / +{reincarnateTransfer.points}P</span></div>
+                    {reincarnateTransfer.count>0&&<div className="text-[8px] text-slate-400">副自身 {normalizeMasuProgression(sub).reincarnateCount}回＋継承済み {inheritedReincarnateCountOf(sub)}回分を全量継承します</div>}
                     <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${canAfford?'text-amber-300':'text-red-400'}`}><Gem size={10}/>{cost.toLocaleString()}</span></div>
                     <div className="text-[8px] text-slate-400">{fusionInheritUnique?'技を引き継ぐ合体':'技を引き継がない合体'}</div>
                     {!canAfford&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません(所持: {gold.toLocaleString()})</div>}
@@ -10612,6 +10648,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {d.gainedLevels>0&&<div className="text-[9px] text-emerald-400 font-black text-center mt-1">絆レベルが{d.gainedLevels}上がった！</div>}
               </div>
               {d.inherited&&(<div className="text-[10px] text-amber-300 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2">「{d.subName}」の固有技を継承データとして記録しました</div>)}
+              {d.inheritedReincarnateCount>0&&(<div className="text-[10px] text-amber-200 font-black bg-amber-950/50 border border-amber-500/40 rounded-xl px-3 py-1.5 mb-2">転生育成ボーナス {d.inheritedReincarnateCount}回分（強化ポイント +{d.inheritedReincarnatePoints}）を継承しました</div>)}
               <div className="text-[9px] text-slate-500 font-bold mb-4">ダイヤを{d.cost.toLocaleString()}消費しました</div>
               <button onClick={()=>{ resetFusionFlow(); setGameState('MASU_MONS'); }} className="w-full max-w-xs bg-violet-600 text-white py-3.5 rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95">とじる</button>
             </div>
