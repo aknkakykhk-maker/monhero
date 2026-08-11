@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 20:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 21:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4214,6 +4214,7 @@ function MonsterHeroGame() {
   // プロモードで、始める前に選んだ供モンの候補(ベースモンだけ)。
   // ラン中の加入候補はここからしか出さない。ふだんのモードでは使わないので空のまま
   const [proAllyPool, setProAllyPool] = useState([]);
+  const [proAllyDetail, setProAllyDetail] = useState(null); // 候補の選択状態とは分けて開く、既存のベースモン詳細
   // スキップ(チケットを1枚使って、ボス撃破まで到達したのと同じ経験値・ダイヤを受け取る)
   const [skipFlow, setSkipFlow] = useState(null);       // { difficulty, itemId, hero, allies:[] }
   const [skipPickTab, setSkipPickTab] = useState('roster');
@@ -12187,7 +12188,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="flex justify-between"><span className="text-slate-500">防</span><span className="text-emerald-400 font-bold">{gameState==='PICK_HERO'?m.baseDef:`+${m.plusStats?.def||0}`}</span></div>
                     <div className="flex justify-between"><span className="text-slate-500">G</span><span className="text-amber-400 font-bold">{gameState==='PICK_HERO'?m.baseGuts:`+${m.plusStats?.guts||0}`}</span></div>
                   </div>
-                  <div className="text-indigo-400 font-black uppercase mt-1 flex items-center gap-0.5" style={{fontSize:'8px'}}>詳細を見る <ChevronRight size={9}/></div>
+                  <div className="min-h-[32px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black mt-1 flex items-center justify-center gap-1" style={{fontSize:'10px'}}>詳細を見る <ChevronRight size={11}/></div>
                 </>),
               })}
             </button>);})}
@@ -12238,7 +12239,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   </>),
             },
             footer: (
-              <div className="flex gap-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className={`flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`}>決定</button></div>
+              <div className="flex gap-2 shrink-0"><button onClick={()=>setCurrentPickingMon(null)} className="w-2/5 min-h-[48px] bg-slate-800 text-slate-400 rounded-2xl font-black text-sm uppercase active:scale-95">戻る</button><button onClick={()=>setGameState('PICK_SLOT')} className={`flex-1 min-h-[48px] bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase shadow-lg active:scale-95${battleTutorialSpotClass('monDecide')}`}>{gameState==='PICK_HERO'?'勇者モンに選ぶ':'この供モンを選ぶ'}</button></div>
             ),
           })}
         </div>
@@ -12266,7 +12267,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">
           <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))'}}>
             {/* 勇者モンから選び直せるようにしておく(まだバトルは始まっていない) */}
-            <button aria-label="戻る" onClick={()=>{setProAllyPool([]);setMainHero(null);setSlots([null,null,null,null]);setCurrentPickingMon(null);setGameState('PICK_HERO');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+            <button aria-label="戻る" onClick={()=>{setProAllyDetail(null);setProAllyPool([]);setMainHero(null);setSlots([null,null,null,null]);setCurrentPickingMon(null);setGameState('PICK_HERO');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
             <h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>供モンの候補</h2>
             <div className="w-10"></div>
           </div>
@@ -12275,7 +12276,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {/* いま何体えらんだか。押した順に並ぶので、選び直しも分かりやすい */}
             <div className="shrink-0 rounded-2xl border px-3 py-2 mb-2" style={{borderColor:`${mode.color}55`,backgroundColor:'rgba(0,0,0,.35)'}}>
               <div className="flex items-baseline justify-between">
-                <span className="text-[10px] font-black text-slate-300">候補に入れる供モン</span>
+                <span className="text-[11px] font-black text-slate-200">供モン候補</span>
                 <b className="text-base font-black" style={{color:mode.color}}>{proAllyPool.length} / {need}</b>
               </div>
               <p className="text-[9px] text-slate-400 leading-snug mt-0.5">合流の場面では、この{need}体からランダムに{Math.min(PRO_ALLY_OFFER_SIZE,need)}体だけが出ます。誰が来てもいいように組んでください。</p>
@@ -12291,24 +12292,43 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* カードはほかの一覧とまったく同じ共通実装(renderMonsterCardBody)を通す */}
               <div className="grid grid-cols-2 gap-2.5">
                 {candidates.map(m=>{const isSel=chosenIds.includes(m.id);const full=!isSel&&proAllyPool.length>=need;return (
-                  <button key={m.id} disabled={full} onClick={()=>toggle(m)} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25 ${isSel?'border-pink-400 bg-pink-900/30 ring-4 ring-pink-500/50 scale-[1.03] shadow-[0_0_25px_rgba(244,114,182,0.6)]':'border-slate-800'}`}>
-                    {renderMonsterCardBody({
-                      masu: null, base: ALL_PLAYER_MONSTERS[m.id]||m, mon: m,
-                      badge: isSel?<div className="absolute -top-1 -right-1 z-10 bg-pink-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>:null,
-                      extra: (<>
-                        <div className="text-amber-400 font-black flex items-center gap-1 leading-tight" style={{fontSize:'9px'}}><Zap size={9}/> {m.unique.name}</div>
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono" style={{fontSize:'9px'}}>
-                          <div className="flex justify-between"><span className="text-slate-500">HP</span><span className="text-pink-400 font-bold">+{m.plusStats?.hp||0}</span></div>
-                          <div className="flex justify-between"><span className="text-slate-500">力</span><span className="text-red-400 font-bold">+{m.plusStats?.atk||0}</span></div>
-                          <div className="flex justify-between"><span className="text-slate-500">防</span><span className="text-emerald-400 font-bold">+{m.plusStats?.def||0}</span></div>
-                          <div className="flex justify-between"><span className="text-slate-500">G</span><span className="text-amber-400 font-bold">+{m.plusStats?.guts||0}</span></div>
-                        </div>
-                      </>),
-                    })}
-                  </button>
+                  <article key={m.id} style={MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 transition-all overflow-hidden ${isSel?'border-pink-400 bg-pink-900/30 ring-2 ring-pink-500/50 shadow-[0_0_20px_rgba(244,114,182,0.45)]':'border-slate-800'}`}>
+                    <button onClick={()=>setProAllyDetail(m)} aria-label={`${m.name}の詳細を見る`} className="w-full min-h-[44px] flex flex-col items-center active:bg-white/5">
+                      {renderMonsterCardBody({
+                        masu: null, base: ALL_PLAYER_MONSTERS[m.id]||m, mon: m,
+                        badge: isSel?<div className="absolute -top-1 -right-1 z-10 bg-pink-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>:null,
+                        extra: (<>
+                          <div className="text-amber-400 font-black flex items-center gap-1 leading-tight" style={{fontSize:'9px'}}><Zap size={9}/> {m.unique.name}</div>
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono" style={{fontSize:'9px'}}>
+                            <div className="flex justify-between"><span className="text-slate-500">HP</span><span className="text-pink-400 font-bold">{m.baseHp}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500">力</span><span className="text-red-400 font-bold">{m.baseAtk}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500">防</span><span className="text-emerald-400 font-bold">{m.baseDef}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500">G</span><span className="text-amber-400 font-bold">{m.baseGuts}</span></div>
+                          </div>
+                          <div className="min-h-[36px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black flex items-center justify-center gap-1" style={{fontSize:'10px'}}>詳細を見る <ChevronRight size={11}/></div>
+                        </>),
+                      })}
+                    </button>
+                    <button disabled={full} onClick={()=>toggle(m)} aria-pressed={isSel} className={`w-full min-h-[48px] mt-1 border-t font-black text-[11px] flex items-center justify-center gap-1.5 active:scale-[.98] disabled:opacity-35 ${isSel?'border-pink-400/40 bg-pink-600 text-white':'border-white/10 bg-slate-800 text-slate-200'}`}>
+                      {isSel?<><Check size={15}/>候補から解除</>:full?'5体選択済み':<><PlusCircle size={15}/>供モン候補に追加</>}
+                    </button>
+                  </article>
                 );})}
               </div>
             </div>
+            {proAllyDetail&&renderMonsterDetailModal({
+              mon: proAllyDetail,
+              onClose: ()=>setProAllyDetail(null),
+              accent: 'pink',
+              zIndex: 31000,
+              label: `${proAllyDetail.name}のベースモン詳細`,
+              footer: (
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={()=>setProAllyDetail(null)} className="w-2/5 min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95">一覧へ戻る</button>
+                  <button disabled={!chosenIds.includes(proAllyDetail.id)&&proAllyPool.length>=need} onClick={()=>toggle(proAllyDetail)} className={`flex-1 min-h-[48px] rounded-2xl font-black text-[12px] shadow-lg active:scale-95 disabled:opacity-35 ${chosenIds.includes(proAllyDetail.id)?'bg-slate-700 text-pink-200':'bg-pink-600 text-white'}`}>{chosenIds.includes(proAllyDetail.id)?'供モン候補から解除':'供モン候補に追加'}</button>
+                </div>
+              ),
+            })}
             <div className="shrink-0 pt-1" style={{paddingBottom:'calc(.25rem + env(safe-area-inset-bottom))'}}>
               <button disabled={!ready} onClick={()=>{setTeachingPool([...getActiveTeachingCards()]);setGameState('PICK_TEACHING');}} className="w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30" style={{backgroundColor:mode.color,color:'#0f172a'}}>{ready?'この候補で始める':`あと${need-proAllyPool.length}体えらんでください`}</button>
             </div>
