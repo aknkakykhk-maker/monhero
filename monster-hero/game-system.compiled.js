@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d84c0d9fe2ec44ea
+// source-sha256: 41530181a2deb4bc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 23:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 23:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6415,6 +6415,9 @@ const extremeSpecialRuleLines = difficultyId => {
 const applyNightmareSignedModifier = (value, specialDifficulty = null) => value * (specialDifficulty ? extremeSpecialRule(specialDifficulty, value >= 0 ? 'positiveModifier' : 'negativeModifier') : 1);
 const applyNightmareWaveEnhancement = (value, specialDifficulty = null) => value * (specialDifficulty ? extremeSpecialRule(specialDifficulty, 'waveEnhancement') : 1);
 const applyNightmareStatGain = (before, normalAfter, specialDifficulty = null) => before + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, specialDifficulty));
+// 整数で扱うバトル値の特殊ルール倍率はここでだけ丸める。対象ルールがない難易度は
+// extremeSpecialRule が1を返すため、EXTREME / NIGHTMAREを含む既存値は変化しない。
+const applyExtremeIntegerRule = (value, specialDifficulty = null, rule) => Math.floor((Number(value) || 0) * (specialDifficulty ? extremeSpecialRule(specialDifficulty, rule) : 1));
 // 極限チャレンジの説明にはモード全体に共通する特徴を十分に載せる。EXTREME固有の倍率や
 // ブリーダーカード50%は、ここではなく難易度カード側で案内する
 const EXTREME_MODE = Object.freeze({
@@ -12655,10 +12658,8 @@ function MonsterHeroGame() {
   }, [effectiveMaxGuts, slots, heroCardBonus]);
   const getCardGuts = card => {
     if (!card) return 0;
-    if (card.type === 'guard') return 0;
-    if (['buff', 'debuff', 'heal', 'draw'].includes(card.type)) return card.guts || 20;
-    let cost = 20;
-    if (['atk', 'range_atk', 'unique'].includes(card.type)) {
+    let cost = card.type === 'guard' ? 0 : ['buff', 'debuff', 'heal', 'draw'].includes(card.type) ? card.guts || 20 : 20;
+    if (cost > 0 && ['atk', 'range_atk', 'unique'].includes(card.type)) {
       let actualBaseMult = 1.0,
         actualCurrentMult = 1.0,
         actualBaseGuts = 20;
@@ -12683,7 +12684,8 @@ function MonsterHeroGame() {
     cost = Math.floor(cost * getTurnBuff('gutsCostMult', 1.0));
     // 絶氷の楔は使用後のカードすべてを3%ずつ軽くする。重ねすぎても負倍率にならないよう10%を下限にする。
     cost = Math.floor(cost * Math.max(0.1, 1 - 0.03 * getPermaBuff('snegurochkaGutsDiscountStacks')));
-    return cost;
+    const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    return applyExtremeIntegerRule(cost, specialRuleDifficulty, 'gutsCost');
   };
   const resetAllState = () => ({
     score: 0,
@@ -13570,8 +13572,9 @@ function MonsterHeroGame() {
     const totalBuffMult = traitMult * getTurnBuff('atkMult', 1.0) * (1.0 + getPermaBuff('atkPct') + getPermaBuff('muaAtkPct') + additionalOryo) * distBonusMult;
     let finalDmg = Math.floor(atk * distMult * baseDmgMult * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
-    return finalDmg;
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct]);
+    const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    return applyExtremeIntegerRule(finalDmg, specialRuleDifficulty, 'damageDealt');
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, runMode, difficulty, extremeDifficulty]);
 
   // ザンの勇者特性「連撃」による追加ヒット分の合計(プレビュー用)。実際のバトルログはprocessTurn内で別枠ヒットとして計算する
   const getComboBonusDmg = useCallback((card, mon, baseDmg) => {
@@ -15267,10 +15270,12 @@ function MonsterHeroGame() {
         bAtk = atk,
         bDef = def,
         bGuts = maxGuts;
-      const nMaxHp = maxHp + (bonus.hp || 0),
-        nAtk = atk + (bonus.atk || 0),
-        nDef = def + (bonus.def || 0),
-        nMaxGuts = maxGuts + (bonus.guts || 0);
+      const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+      const joinBonus = key => applyExtremeIntegerRule(bonus[key] || 0, specialRuleDifficulty, 'allyJoinBonus');
+      const nMaxHp = maxHp + joinBonus('hp'),
+        nAtk = atk + joinBonus('atk'),
+        nDef = def + joinBonus('def'),
+        nMaxGuts = maxGuts + joinBonus('guts');
       setMaxHp(nMaxHp);
       setAtk(nAtk);
       setDef(nDef);
@@ -15278,7 +15283,6 @@ function MonsterHeroGame() {
       setHp(p => p + (nMaxHp - bHp));
       // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
       // 置いた距離に関係なくそのまま足す(零がMなら零距離の補正値が+25%される)
-      const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
       const aptDelta = getMonsterAptPct(m, specialRuleDifficulty);
       if (aptDelta.some(d => d !== 0)) setDistAptPct(prev => prev.map((v, i) => v + aptDelta[i]));
       const aptLabel = aptDelta.map((d, i) => d !== 0 ? `${RANGE_LABELS[i]}${formatAptPct(d)}` : null).filter(Boolean).join(' ');
