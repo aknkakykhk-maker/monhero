@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-11 10:52",
+    date: "2026-08-11 11:04",
     type: "update",
     title: "合体と限界突破をまとめて行えるようにしました",
     items: [
