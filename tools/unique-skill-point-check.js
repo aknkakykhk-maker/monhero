@@ -29,7 +29,7 @@ vm.runInContext([
   grab('const XP_CURVE_EXPONENT', 'const BOND_XP_DISCOUNT'),
   grab('const BOND_XP_DISCOUNT', 'const rosterBaseId = (entryId, masuMons)'),
   'globalThis.__m={normalizeMasuProgression,buildMasuBreakthrough,buildMasuReincarnation,resetMasuForRebirth,'
-  + 'applyUniqueSkillPointPlan,MAX_UNIQUE_SKILL_LEVEL,INITIAL_MASU_LEVEL_CAP,MAX_MASU_LEVEL_CAP,BREAKTHROUGH_LEVEL_CAP_GAIN,'
+  + 'applyUniqueSkillPointPlan,uniqueSkillAtLevel,MAX_UNIQUE_SKILL_LEVEL,INITIAL_MASU_LEVEL_CAP,MAX_MASU_LEVEL_CAP,BREAKTHROUGH_LEVEL_CAP_GAIN,'
   + 'totalBondXpForLevel,masuBondLevelInfo,breakthroughItemCost,masuRebirthCost,REINCARNATE_MIN_LEVEL};',
 ].join('\n'), ctx);
 const m = ctx.__m;
@@ -130,6 +130,14 @@ check('マスモンの詳細から使える枠がある',
 check('ポイントが0でも未使用数を表示する', has('未使用 固有技P：{normalized.uniqueSkillPoints}'));
 check('仮配分の増減・キャンセル・確定がある', has('changeDraft(choice.key,-1)')&&has('changeDraft(choice.key,1)')&&has('キャンセル')&&has('強化を確定'));
 check('最大まで育った技は押せない', has('maxed=choice.level>=MAX_UNIQUE_SKILL_LEVEL'));
+const namedUnique = { name:'モッチ砲', names:['モッチ砲','大モッチ砲','超モッチ砲'], baseMult:1, baseGuts:1 };
+check('固有技Lv.0の初期表示は初期技名になる',
+  m.uniqueSkillAtLevel(namedUnique,0).name==='モッチ砲'
+    && has('current=uniqueSkillAtLevel(choice.unique,after)'));
+check('仮配分の増減に合わせて共通処理で表示名を解決する',
+  m.uniqueSkillAtLevel(namedUnique,1).name==='大モッチ砲'
+    && m.uniqueSkillAtLevel(namedUnique,0).name==='モッチ砲'
+    && has('{current?.name||choice.name}'));
 // 限界突破・転生の画面に「あとで決める」がある
 check('限界突破の画面であとで決められる',
   has("<button onClick={()=>setRebirthSkillKey('')}") && has('あとで決める（ポイントとして残す）'));

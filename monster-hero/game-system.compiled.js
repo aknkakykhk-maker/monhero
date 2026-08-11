@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 589c752200e963e0
+// source-sha256: 96b99b032022e1e7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 10:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 11:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15547,6 +15547,7 @@ function MonsterHeroGame() {
     }, choices.map(choice => {
       const amount = Math.max(0, Math.floor(Number(draft[choice.key]) || 0)),
         after = choice.level + amount,
+        current = uniqueSkillAtLevel(choice.unique, after),
         maxed = choice.level >= MAX_UNIQUE_SKILL_LEVEL;
       return /*#__PURE__*/React.createElement("div", {
         key: choice.key,
@@ -15555,19 +15556,19 @@ function MonsterHeroGame() {
         className: "flex items-center justify-between gap-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "min-w-0 truncate text-[10px] font-black text-white"
-      }, choice.name), /*#__PURE__*/React.createElement("span", {
+      }, current?.name || choice.name), /*#__PURE__*/React.createElement("span", {
         className: "shrink-0 text-[9px] font-mono font-black text-amber-300"
       }, maxed ? `Lv.${choice.level} MAX` : `Lv.${choice.level} → Lv.${after}`)), !maxed && /*#__PURE__*/React.createElement("div", {
         className: "mt-1 flex items-center justify-end gap-2"
       }, /*#__PURE__*/React.createElement("button", {
-        "aria-label": `${choice.name}の仮配分を減らす`,
+        "aria-label": `${current?.name || choice.name}の仮配分を減らす`,
         disabled: amount <= 0,
         onClick: () => changeDraft(choice.key, -1),
         className: "w-9 min-h-[36px] rounded-lg bg-slate-700 text-base font-black disabled:opacity-30"
       }, "\u2212"), /*#__PURE__*/React.createElement("span", {
         className: "w-8 text-center text-[11px] font-mono font-black text-amber-200"
       }, "\uFF0B", amount), /*#__PURE__*/React.createElement("button", {
-        "aria-label": `${choice.name}の仮配分を増やす`,
+        "aria-label": `${current?.name || choice.name}の仮配分を増やす`,
         disabled: remaining <= 0 || after >= MAX_UNIQUE_SKILL_LEVEL,
         onClick: () => changeDraft(choice.key, 1),
         className: "w-9 min-h-[36px] rounded-lg bg-amber-700 text-base font-black disabled:opacity-30"
