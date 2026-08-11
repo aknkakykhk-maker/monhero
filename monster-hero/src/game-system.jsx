@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 21:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 21:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12168,7 +12168,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>}
             <div ref={allyCarousel?allyCarouselRef:null} onScroll={allyCarousel?(e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(best!==allyCardIndex)setAllyCardIndex(best);}):undefined}
                  className={allyCarousel?'flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-1 mh-scroll':'grid grid-cols-2 gap-2.5'}
-                 style={allyCarousel?{paddingLeft:'18%',paddingRight:'18%',touchAction:'pan-x pinch-zoom'}:undefined}>
+                 style={allyCarousel?{paddingLeft:'18%',paddingRight:'18%',touchAction:'pan-x pinch-zoom'}:gameState==='PICK_HERO'&&isProMode(runMode)?{display:'flex',flexDirection:'column'}:undefined}>
             {list.map((m,cardIndex)=>{const isSel=currentPickingMon?.id===m.id;const focused=allyCarousel&&cardIndex===allyCardIndex;
               // カードはM/B管理の一覧とまったく同じ共通実装(renderMonsterCardBody)を通す。
               // 以前はこの画面だけ独自に組んでいたため、絆レベルも総合力も限界突破の★も出ず、
@@ -12176,6 +12176,32 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // この画面だけの情報(固有技名・ステータス・詳細への案内)はextraで足す。
               const pickMasu=m.masuId?getMasuMon(m.masuId):null;
               const pickBase=ALL_PLAYER_MONSTERS[m.id]||m;
+              if(gameState==='PICK_HERO'&&isProMode(runMode)) return (
+                <article key={m.id} className="relative min-h-[112px] rounded-2xl border border-slate-700 bg-slate-900 overflow-hidden flex shadow-lg">
+                  <button disabled={gameState==='PICK_HERO'&&!scenarioPicksHero(m.id)} onClick={()=>{setCurrentPickingMon(m);setGameState('PICK_SLOT');}} aria-label={`${m.name}を勇者モンに選ぶ`} className={`min-w-0 flex-1 grid grid-cols-[64px_minmax(0,1fr)_74px] gap-2 items-center p-2 pr-1 text-left active:bg-indigo-900/30 disabled:opacity-25${scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}`}>
+                    <div className="w-16 h-[88px] flex items-center justify-center overflow-hidden shrink-0">
+                      {m.imgUrl?<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt={m.name} masuColors={m.colors} className="w-full h-full object-contain"/>:<span className="text-5xl">{m.emoji}</span>}
+                    </div>
+                    <div className="min-w-0 self-stretch flex flex-col justify-center gap-1">
+                      <div className="font-black text-[13px] text-white leading-tight truncate">{m.name}</div>
+                      <div className="font-black text-[10px] text-amber-300 leading-tight truncate"><Zap size={10} className="inline mr-0.5"/>{m.unique.name}</div>
+                      <div className="grid grid-cols-2 gap-x-2 text-[10px] font-mono leading-tight">
+                        <span className="flex justify-between text-slate-400">HP <b className="text-pink-300">{m.baseHp}</b></span><span className="flex justify-between text-slate-400">ちから <b className="text-red-300">{m.baseAtk}</b></span>
+                        <span className="flex justify-between text-slate-400">丈夫さ <b className="text-emerald-300">{m.baseDef}</b></span><span className="flex justify-between text-slate-400">ガッツ <b className="text-amber-300">{m.baseGuts}</b></span>
+                      </div>
+                    </div>
+                    <div className="min-w-0 self-stretch flex flex-col justify-center gap-1 border-l border-white/10 pl-2">
+                      <div className="grid grid-cols-4 gap-0.5 text-center">{RANGE_LABELS.map((label,idx)=><div key={label}><div className="text-[8px] text-slate-500 font-black">{label}</div><div className={`text-[11px] font-black rounded ${DIST_APTITUDE_COLOR[getDistAptitude(m,idx)]}`}>{getDistAptitude(m,idx)}</div></div>)}</div>
+                      <div className="text-[8px] text-indigo-400 font-black">勇者特性</div>
+                      <div className="text-[10px] text-indigo-200 font-black leading-tight line-clamp-2">{m.trait||'特性なし'}</div>
+                    </div>
+                  </button>
+                  <div className="w-[74px] shrink-0 border-l border-white/10 flex flex-col">
+                    <div className="flex-1 flex flex-col items-center justify-center bg-black/25 px-1"><span className="text-[8px] text-slate-500 font-black">総合力</span><b className="text-[14px] text-amber-300 font-mono leading-tight">{formatMonsterPower(monsterPowerOf(m))}</b></div>
+                    <button onClick={()=>setCurrentPickingMon(m)} aria-label={`${m.name}の詳細を見る`} className="min-h-[46px] border-t border-indigo-400/30 bg-indigo-950/60 text-[10px] leading-tight text-indigo-200 font-black flex items-center justify-center active:bg-indigo-800/60">詳細を見る<ChevronRight size={12}/></button>
+                  </div>
+                </article>
+              );
               return(<button key={m.id} disabled={gameState==='PICK_HERO'&&!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} style={allyCarousel?{...MONSTER_CARD_STYLE,flex:'0 0 64%'}:MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25${gameState!=='PICK_HERO'||scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}${allyCarousel?` snap-center shrink-0 ${focused?'scale-100 opacity-100':'scale-[.92] opacity-55'}`:''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`}>
               {renderMonsterCardBody({
                 masu: pickMasu, base: pickBase, mon: m,
