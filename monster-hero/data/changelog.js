@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-11 20:01",
+    date: "2026-08-11 20:14",
     type: "update",
     title: "絶氷の楔の効果を強化しました",
     items: [
