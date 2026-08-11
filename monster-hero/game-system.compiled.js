@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6232461f7d8daac3
+// source-sha256: 1fb01d5c453b49e0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 12:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 12:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -230,6 +230,9 @@ const modeKeyPrefix = mode => isQuickMode(mode) ? 'mh_quick_' : isProMode(mode) 
 const bestScoreKey = (mode, diff) => `${modeKeyPrefix(mode)}hs_${diff}`;
 const bestWaveKey = (mode, diff) => `${modeKeyPrefix(mode)}highest_wave_${diff}`;
 const clearCountKey = (mode, diff) => `${modeKeyPrefix(mode)}clears_${diff}`;
+// クイックの各難易度は、同じ難易度をチャレンジ・プロ・極限のどれかでクリア済みなら解放する。
+// 新しい解放フラグは作らず、各モードの既存クリア回数だけを参照するため、既存セーブにも即時反映される。
+const isQuickDifficultyUnlocked = (difficulty, challengeClears, proClears, extremeClears) => [challengeClears, proClears, extremeClears].some(clears => (Number(clears?.[difficulty]) || 0) > 0);
 // モード選択カードの最高スコアは、現在の選択難易度ではなく、そのモードで
 // 記録対象になっている全難易度の自己ベストから求める。未プレイ・壊れた値は0として扱う。
 const highestModeScore = (scores, difficultyIds) => Math.max(0, ...difficultyIds.map(diff => {
@@ -8003,6 +8006,7 @@ function MonsterHeroGame() {
   const [extremeClearCount, setExtremeClearCount] = useState(0);
   const [nightmareBestScore, setNightmareBestScore] = useState(0);
   const [nightmareClearCount, setNightmareClearCount] = useState(0);
+  const [extremeDifficultyClearCounts, setExtremeDifficultyClearCounts] = useState({});
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
   const [onboardingName, setOnboardingName] = useState('');
   const [onboardingIcon, setOnboardingIcon] = useState(null);
@@ -10072,6 +10076,8 @@ function MonsterHeroGame() {
       const proScores = {};
       const proClears = {};
       const proWaves = {};
+      // 極限側にも同じ難易度IDの既存記録がある場合は、クイックの解放判定へそのまま利用する。
+      const extremeDifficultyClears = {};
       await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async d => {
         scores[d] = await storeGet(`mh_hs_${d}`, 0, false);
         attempts[d] = await storeGet(`mh_attempts_${d}`, 0, false);
@@ -10083,6 +10089,7 @@ function MonsterHeroGame() {
         proScores[d] = await storeGet(bestScoreKey(BATTLE_MODE_PRO, d), 0, false);
         proClears[d] = await storeGet(clearCountKey(BATTLE_MODE_PRO, d), 0, false);
         proWaves[d] = await storeGet(bestWaveKey(BATTLE_MODE_PRO, d), 0, false);
+        extremeDifficultyClears[d] = await storeGet(extremeClearCountKey(d), 0, false);
       }));
       // 極限チャレンジの記録。まだ遊んだことがなければ0のまま(既存セーブでも安全に読める)
       setExtremeBestScore(Math.max(0, Math.floor(Number(await storeGet(EXTREME_BEST_SCORE_KEY, 0, false)) || 0)));
@@ -10100,6 +10107,7 @@ function MonsterHeroGame() {
       setProHighScores(proScores);
       setProClearCounts(proClears);
       setProHighestWaves(proWaves);
+      setExtremeDifficultyClearCounts(extremeDifficultyClears);
       let wasOnboarded = await storeGet('mh_onboarded', null, false);
       const hasSavedName = typeof savedName === 'string' && savedName.trim() && savedName !== '名無しのブリーダー';
       const hasSavedIcon = typeof savedIcon === 'string' && savedIcon.length > 0;
@@ -19171,7 +19179,9 @@ function MonsterHeroGame() {
         }, label), /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px]"
         }, detail));
-      }))), /*#__PURE__*/React.createElement("div", {
+      })), /*#__PURE__*/React.createElement("p", {
+        className: "mt-1 text-center text-[8px] font-black text-slate-400"
+      }, "\u540C\u3058\u96E3\u6613\u5EA6\u3092\u30C1\u30E3\u30EC\u30F3\u30B8\u30FB\u30D7\u30ED\u30FB\u6975\u9650\u306E\u3069\u308C\u304B\u3067\u30AF\u30EA\u30A2\u3059\u308B\u3068\u89E3\u653E")), /*#__PURE__*/React.createElement("div", {
         className: `relative shrink-0${battleTutorialSpotClass('difficulty')}`
       }, /*#__PURE__*/React.createElement("button", {
         "aria-label": "\u524D\u306E\u96E3\u6613\u5EA6",
@@ -19204,10 +19214,12 @@ function MonsterHeroGame() {
       }, difficulties.map(([key, setting]) => {
         const active = key === safeDifficulty,
           rec = modeRecordFor(battleMode, key);
+        const quickUnlocked = !quick || debugBattle || isQuickDifficultyUnlocked(key, clearCounts, proClearCounts, extremeDifficultyClearCounts);
         return /*#__PURE__*/React.createElement("article", {
           key: key,
+          "aria-disabled": !quickUnlocked,
           "data-difficulty-card": key,
-          className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${quick ? 'h-[366px] flex flex-col' : ''} ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+          className: `snap-center shrink-0 w-[82%] rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${quick ? 'h-[366px] flex flex-col' : ''} ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'} ${quickUnlocked ? '' : 'grayscale'}`,
           style: {
             borderColor: active ? setting.text : 'rgba(255,255,255,.12)',
             background: 'linear-gradient(180deg,#152044,#0d142b)',
@@ -19267,7 +19279,7 @@ function MonsterHeroGame() {
           },
           className: "min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-30"
         }, "\u5168WAVE\u8A73\u7D30"), /*#__PURE__*/React.createElement("button", {
-          disabled: pro && !proReady || !!battleTutorial && key !== 'Beginner',
+          disabled: pro && !proReady || !quickUnlocked || !!battleTutorial && key !== 'Beginner',
           onClick: () => {
             if (battleTutorial) {
               beginBattleTutorialRun();
@@ -19294,7 +19306,7 @@ function MonsterHeroGame() {
             backgroundColor: setting.bg,
             color: setting.darkText ? '#0f172a' : '#ffffff'
           }
-        }, pro && !proReady ? `ベースモンが${PRO_ALLY_POOL_SIZE + 1}種必要です` : 'この難易度で挑戦'), ranked && /*#__PURE__*/React.createElement("button", {
+        }, !quickUnlocked ? '🔒 同じ難易度クリアで解放' : pro && !proReady ? `ベースモンが${PRO_ALLY_POOL_SIZE + 1}種必要です` : 'この難易度で挑戦'), ranked && /*#__PURE__*/React.createElement("button", {
           disabled: !!battleTutorial,
           onClick: () => openModeScoreRanking(battleMode, key, 'BATTLE_DIFFICULTY_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
@@ -19310,15 +19322,15 @@ function MonsterHeroGame() {
           return /*#__PURE__*/React.createElement("div", {
             className: "flex gap-1.5"
           }, /*#__PURE__*/React.createElement("button", {
-            disabled: have <= 0 || !!battleTutorial,
+            disabled: !quickUnlocked || have <= 0 || !!battleTutorial,
             onClick: () => {
               battleEntryStateRef.current = 'BATTLE_DIFFICULTY_SELECT';
               setDifficulty(key);
               openBattleSkip(key);
             },
-            className: `flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have > 0 ? 'bg-teal-600 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
+            className: `flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${quickUnlocked && have > 0 ? 'bg-teal-600 text-white active:scale-95' : 'bg-slate-800 text-slate-500'}`
           }, /*#__PURE__*/React.createElement("span", null, "\u30B9\u30AD\u30C3\u30D7"), /*#__PURE__*/React.createElement("span", {
-            className: `text-[10px] font-black px-1.5 py-0.5 rounded-full ${have > 0 ? 'bg-black/30 text-teal-100' : 'bg-black/40 text-slate-500'}`
+            className: `text-[10px] font-black px-1.5 py-0.5 rounded-full ${quickUnlocked && have > 0 ? 'bg-black/30 text-teal-100' : 'bg-black/40 text-slate-500'}`
           }, have, "\u679A")), /*#__PURE__*/React.createElement("button", {
             onClick: () => setSkipInfoItemId(tid),
             "aria-label": "\u30B9\u30AD\u30C3\u30D7\u306E\u8AAC\u660E",
