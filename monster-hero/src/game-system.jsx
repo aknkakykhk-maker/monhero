@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 14:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 19:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -344,6 +344,12 @@ const uniqueSkillAtLevel = (unique, level = 0) => {
     crit: 0.10 + 0.05 * lvl,
   };
 };
+// 継承固有技は、ラン内stateがまだ無い間もマスモンに保存された恒久Lvから始める。
+// 0も有効なラン内値なので truthy 判定ではなく null/undefined のときだけ恒久Lvへ戻す。
+const inheritedUniqueRunLevel = (unique, runLevel) => Math.max(0, Math.min(
+  MAX_UNIQUE_SKILL_LEVEL,
+  Math.floor(Number(runLevel != null ? runLevel : unique?.evoLevel) || 0),
+));
 // 固有技の表示名は固有技Lvで変わるため、重複判定には技の出自を表す不変IDを使う。
 // lineageId は今後データ側で明示でき、既存データは従来から保存されている monId へ安全にフォールバックする。
 const uniqueLineageId = (unique, fallbackMonId = null) => unique?.lineageId || unique?.monId || fallbackMonId || null;
@@ -4445,6 +4451,7 @@ function MonsterHeroGame() {
   const reincarnateProcessingRef = useRef(false);
   const rebirthProcessingRef = useRef(false);
   const [levelCapCompensation, setLevelCapCompensation] = useState(null);
+  const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
   const masuMonsRef = useRef(masuMons);
   masuMonsRef.current = masuMons;
   // ランの報酬を配ったあとのマスモン。setMasuMons の反映は非同期なので、同じ処理の続きで走る
@@ -5602,7 +5609,22 @@ function MonsterHeroGame() {
       setBreederPoints(savedPoints);
       const savedMarketIcons = await storeGet('mh_market_icons', [], false);
       setOwnedMarketIcons(savedMarketIcons);
-      const savedOwnedItems = await storeGet('mh_owned_items', {}, false);
+      let savedOwnedItems = await storeGet('mh_owned_items', {}, false);
+      // 継承固有技Lv不具合のお詫び。付与後の所持品全体をpendingへ先に保存しておき、
+      // 書き込み途中で終了しても同じ値を再適用することで二重加算を防ぐ。
+      const inheritedUniqueCompensationDone = await storeGet('mh_inherited_unique_level_compensation_v1', false, false);
+      if (!inheritedUniqueCompensationDone) {
+        let pendingItems = await storeGet('mh_inherited_unique_level_compensation_pending_v1', null, false);
+        if (!pendingItems || typeof pendingItems !== 'object' || Array.isArray(pendingItems)) {
+          pendingItems = { ...savedOwnedItems, [BREAKTHROUGH_ITEM_ID]:Math.max(0, Math.floor(Number(savedOwnedItems?.[BREAKTHROUGH_ITEM_ID]) || 0)) + 20 };
+          await storeSet('mh_inherited_unique_level_compensation_pending_v1', pendingItems, false);
+        }
+        savedOwnedItems = pendingItems;
+        await storeSet('mh_owned_items', savedOwnedItems, false);
+        await storeSet('mh_inherited_unique_level_compensation_v1', true, false);
+        await storeSet('mh_inherited_unique_level_compensation_pending_v1', null, false);
+        setInheritedUniqueCompensation(true);
+      }
       setOwnedItems(savedOwnedItems);
       const savedGifts = await storeGet('mh_gifts', [], false);
       // みゅあとの仲良し度。開いた日のぶんをここで1回だけ足す
@@ -7241,7 +7263,7 @@ function MonsterHeroGame() {
   // 表示を決めた時点で日付を保存するため、閉じる・再読込でも同日に繰り返さない。
   useEffect(() => {
     if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded ||
-        tutorialStep != null || updateGuideQueue.length > 0 || updateNoticeVisible || loginBonusPopup || levelCapCompensation ||
+        tutorialStep != null || updateGuideQueue.length > 0 || updateNoticeVisible || loginBonusPopup || levelCapCompensation || inheritedUniqueCompensation ||
         dailyMasuAdvice || dailyMasuAdviceCheckedRef.current) return;
     dailyMasuAdviceCheckedRef.current = true;
     let cancelled = false;
@@ -7263,7 +7285,7 @@ function MonsterHeroGame() {
       if (!cancelled) setDailyMasuAdvice({ debugCount:null, eligible:true });
     })();
     return () => { cancelled = true; };
-  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, dailyMasuAdvice, masuMons.length]);
+  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, inheritedUniqueCompensation, dailyMasuAdvice, masuMons.length]);
 
   const closeDailyMasuAdvice = () => setDailyMasuAdvice(null);
   const tryDailyMasuAdvice = () => {
@@ -8311,7 +8333,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ...inherited.map((iu,ii)=>({
         key:`inh${ii}`,
         inhIdx:ii,
-        unique:{...iu, evoLevel: (slotIdx!=null && evoMap[inhEvoKey(slotIdx,ii)]!=null) ? evoMap[inhEvoKey(slotIdx,ii)] : (iu.evoLevel||0)},
+        unique:{...iu, evoLevel:inheritedUniqueRunLevel(iu, slotIdx!=null ? evoMap[inhEvoKey(slotIdx,ii)] : null)},
       })),
     ];
   };
@@ -8856,7 +8878,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 上げ下げの範囲・1回あたりの消費もまったく同じにしている
   const upgradeInheritedUnique = (slotIdx, inhIdx, diff) => {
     const key=inhEvoKey(slotIdx,inhIdx);
-    const cur=inheritedUniqueEvo[key]||0;
+    const cur=inheritedUniqueRunLevel(slots[slotIdx]?.inheritedUniques?.[inhIdx], inheritedUniqueEvo[key]);
     if(diff>0&&(upgradePoints<=0||cur>=8)) return;
     if(diff<0&&cur<=0) return;
     const nextEvo=Math.max(0,Math.min(8,cur+diff));
@@ -8906,7 +8928,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const rows=ownedUniques.map(u=>({ rowKey:`own:${u.monId}`, u, holderMon:slots.find(sl=>sl&&sl.id===u.monId)||null, inherited:false, onStep:(d)=>upgradeUnique(u.monId,d) }));
     slots.forEach((mon,idx)=>{
       (mon?.inheritedUniques||[]).forEach((iu,ii)=>{
-        const lvl=inheritedUniqueEvo[inhEvoKey(idx,ii)]||0;
+        const lvl=inheritedUniqueRunLevel(iu, inheritedUniqueEvo[inhEvoKey(idx,ii)]);
         rows.push({ rowKey:`inh:${idx}:${ii}`, u:{...iu, evoLevel:lvl}, holderMon:mon, inherited:true, onStep:(d)=>upgradeInheritedUnique(idx,ii,d) });
       });
     });
@@ -9547,6 +9569,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {regenerationResult&&(()=>{const statRows=[['ライフ','hp','baseHp'],['ちから','atk','baseAtk'],['丈夫さ','def','baseDef'],['ガッツ','guts','baseGuts']];return <div className="mh-regeneration-animation" role="dialog" aria-modal="true"><img src={REGENERATION_DISC_IMAGE} alt="円盤石" className="mh-regeneration-disc"/><div className="mh-regeneration-born"><img src={regenerationResult.base.iconUrl} alt={regenerationResult.masu.name} className="w-28 h-28 object-contain mx-auto"/><h3>モンスター誕生！</h3><div className="text-[8px] text-slate-400 font-bold mt-1">ベースモンの基礎値との差</div><div className="grid grid-cols-2 gap-1 text-[11px] text-left mt-2">{statRows.map(([label,key,baseKey])=>{const value=regenerationResult.masu.individualStats[key];const delta=value-regenerationResult.base[baseKey];return <span key={key}>{label} <b>{value} <small className={`text-[9px] ${delta>0?'text-emerald-300':delta<0?'text-red-300':'text-slate-400'}`}>（{delta>0?'+':delta<0?'':'±'}{delta}）</small></b></span>;})}</div><button onClick={()=>{setRegenerationResult(null);setRegenerationSelectedId(null);setGameState('MASU_REGENERATION');}} className="mt-4 w-full py-3 bg-amber-500 text-black rounded-xl font-black">一覧へ戻る</button></div></div>;})()}
         {levelCapCompensation&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50000,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center"><Gem size={38} className="text-amber-300 mx-auto mb-3"/><h2 className="font-black text-lg mb-2">Lv30上限補償</h2><p className="text-[11px] text-slate-300 leading-relaxed">Lv30を超えていた未限界突破マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。</p><div className="text-2xl text-amber-300 font-black my-4">+{levelCapCompensation.diamonds.toLocaleString()} ダイヤ</div><button onClick={()=>{setLevelCapCompensation(null);storeSet('mh_masu_level_cap_compensation_notice_seen_v1',true,false);}} className="w-full bg-amber-500 text-black py-3 rounded-2xl font-black">受け取る</button></div></div>}
+        {inheritedUniqueCompensation&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:49999,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full bg-slate-900 border-2 border-fuchsia-400 rounded-3xl p-6 text-center"><div className="text-4xl mb-3">🌈</div><h2 className="font-black text-lg mb-2">お詫びの配布</h2><p className="text-[11px] text-slate-300 leading-relaxed">継承固有技Lv不具合修正のお詫びとして虹のプシュケー×20を配布しました。</p><button onClick={()=>setInheritedUniqueCompensation(false)} className="w-full bg-fuchsia-500 text-white py-3 mt-5 rounded-2xl font-black">確認</button></div></div>}
         {/* 限界突破の演出。転生とは別物なので専用の見た目にし、最後に星が1つ増える */}
         {rebirthAnimation&&(()=>{
           const starList=breakthroughStars(rebirthAnimation.masu.rebirthCount||1);
