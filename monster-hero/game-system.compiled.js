@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 47df91de6c22703f
+// source-sha256: f8861ec872344623
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 21:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 23:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6297,7 +6297,7 @@ const DIFFICULTY_SETTINGS = {
 };
 // 極限チャレンジ。チャレンジモードの上位高難易度版で、DIFFICULTY_SETTINGS(通常の難易度)とは
 // 別の表にしてある。通常の難易度・全国ランキング・既存の保存キーへは混ぜない。
-// NIGHTMAREまで正式に実戦可能。それより後の未決定難易度には数値を持たせない。
+// NIGHTMAREまで正式に実戦可能。CHAOSは内部仕様だけを定義し、公開準備が整うまで選択不可にする。
 const EXTREME_DIFFICULTIES = Object.freeze([{
   id: 'EXTREME',
   label: 'EXTREME',
@@ -6331,7 +6331,20 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
 }, {
   id: 'CHAOS',
   label: 'CHAOS',
-  available: false
+  japanese: 'カオス',
+  available: false,
+  power: 20,
+  score: 20,
+  xp: 35,
+  gold: 15,
+  psyche: 50,
+  unlockRequirement: 'NIGHTMARE',
+  description: '力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。',
+  specialRules: Object.freeze({
+    damageDealt: 0.5,
+    allyJoinBonus: 0.5,
+    gutsCost: 1.5
+  })
 }, {
   id: 'ULTIMATE',
   label: 'ULTIMATE',

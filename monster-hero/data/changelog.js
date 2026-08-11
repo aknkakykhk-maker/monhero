@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-11 21:55",
+    date: "2026-08-11 23:28",
     type: "update",
     title: "プロモードの供モン候補を見比べやすくしました",
     items: [

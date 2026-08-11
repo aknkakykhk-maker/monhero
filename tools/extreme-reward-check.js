@@ -72,8 +72,16 @@ check('NIGHTMAREは×15 / ×20 / ×30 / ×10 / 虹40を持つ',
     && m.NIGHTMARE_SETTING.power === 15 && m.NIGHTMARE_SETTING.score === 20
     && m.NIGHTMARE_SETTING.xp === 30 && m.NIGHTMARE_SETTING.gold === 10
     && m.NIGHTMARE_SETTING.psyche === 40);
-check('NIGHTMAREより後の難易度は未実装のまま数値を持たない',
-  m.EXTREME_DIFFICULTIES.slice(2).every(s => s.available === false && s.power === undefined && s.score === undefined));
+const chaos = m.EXTREME_DIFFICULTIES.find(s => s.id === 'CHAOS');
+check('CHAOSは内部数値を持つが未公開のまま',
+  chaos.available === false && chaos.power === 20 && chaos.score === 20
+    && chaos.xp === 35 && chaos.gold === 15 && chaos.psyche === 50
+    && chaos.unlockRequirement === 'NIGHTMARE');
+check('CHAOS特殊ルールは内部定義のみを持つ',
+  chaos.specialRules.damageDealt === 0.5 && chaos.specialRules.allyJoinBonus === 0.5
+    && chaos.specialRules.gutsCost === 1.5);
+check('ULTIMATEとINFINITYは未実装のまま数値を持たない',
+  m.EXTREME_DIFFICULTIES.slice(3).every(s => s.available === false && s.power === undefined && s.score === undefined));
 check('NIGHTMAREはEXTREMEを1回以上クリア済みなら解放判定',
   m.isNightmareUnlocked(1) === true && m.isNightmareUnlocked('2') === true);
 check('NIGHTMAREはEXTREME未クリアなら未解放判定',
