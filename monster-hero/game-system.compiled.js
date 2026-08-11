@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fcef2232b2782edc
+// source-sha256: fd0ad6d22a75431d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 11:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 11:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -456,28 +456,36 @@ const totalBreakthroughPoints = count => {
 const BREAKTHROUGH_STARS_PER_TIER = 5;
 const BREAKTHROUGH_STAR_TIERS = [{
   key: 'blue',
+  label: '青',
   color: '#60a5fa',
   shadow: '0 1px 2px rgba(0,0,0,.85),0 0 3px #1d4ed8'
 }, {
   key: 'yellow',
+  label: '黄色',
   color: '#fde047',
   shadow: '0 1px 2px rgba(0,0,0,.85)'
 }, {
   key: 'pink',
+  label: 'ピンク',
   color: '#f472b6',
   shadow: '0 1px 2px rgba(0,0,0,.85),0 0 3px #db2777'
 }, {
   key: 'purple',
+  label: '紫',
   color: '#c084fc',
   shadow: '0 1px 2px rgba(0,0,0,.85),0 0 3px #7e22ce'
 }, {
   key: 'red',
+  label: '赤',
   color: '#ef4444',
   shadow: '0 1px 2px rgba(0,0,0,.85),0 0 3px #991b1b'
 }, {
   key: 'gold',
-  color: '#f5c04a',
-  shadow: '0 -1px 0 #fff3c4,0 1px 0 #7a4f0d,0 0 5px rgba(255,180,40,.95)'
+  label: '金',
+  color: '#c88716',
+  background: 'linear-gradient(165deg,#fffdf0 3%,#f8e7a1 22%,#ffc83d 43%,#b66a08 70%,#fff0a8 86%,#7a3d05 100%)',
+  shadow: '0 -1px 0 #fffbdc,0 1px 0 #5b2b03,0 0 5px rgba(255,174,24,.9)',
+  stroke: '0.45px #6b3605'
 }];
 // 通常の限界突破で到達できる回数。段階数×5 = 30回で、そのときのレベル上限はLv.180
 const BREAKTHROUGH_MAX_COUNT = BREAKTHROUGH_STAR_TIERS.length * BREAKTHROUGH_STARS_PER_TIER;
@@ -5011,9 +5019,52 @@ const RebirthStars = ({
     key: i,
     style: {
       color: s.color,
-      textShadow: s.shadow
+      textShadow: s.shadow,
+      backgroundImage: s.background,
+      WebkitBackgroundClip: s.background ? 'text' : undefined,
+      backgroundClip: s.background ? 'text' : undefined,
+      WebkitTextFillColor: s.background ? 'transparent' : undefined,
+      WebkitTextStroke: s.stroke
     }
   }, "\u2605")));
+};
+const breakthroughDebugInfo = count => {
+  const value = Math.max(0, Math.floor(Number(count) || 0));
+  const levelCap = value >= FINAL_BREAKTHROUGH_COUNT ? MAX_MASU_LEVEL_CAP : INITIAL_MASU_LEVEL_CAP + value * BREAKTHROUGH_LEVEL_CAP_GAIN;
+  if (!value) return {
+    levelCap,
+    label: '★なし'
+  };
+  if (value >= FINAL_BREAKTHROUGH_COUNT) return {
+    levelCap,
+    label: '虹'
+  };
+  return {
+    levelCap,
+    label: BREAKTHROUGH_STAR_TIERS[Math.floor((value - 1) / BREAKTHROUGH_STARS_PER_TIER)].label
+  };
+};
+const BreakthroughStarDebugCard = ({
+  count,
+  compact = false
+}) => {
+  const info = breakthroughDebugInfo(count);
+  return /*#__PURE__*/React.createElement("article", {
+    className: `min-w-0 rounded-xl border bg-slate-900/90 text-center ${compact ? 'border-amber-400/50 p-2' : 'border-white/10 p-3'}`,
+    "data-breakthrough-star-debug-count": count
+  }, /*#__PURE__*/React.createElement("b", {
+    className: "block text-[11px] text-white"
+  }, count, "\u51F8"), /*#__PURE__*/React.createElement("span", {
+    className: "block text-[8px] text-slate-400"
+  }, "\u4E0A\u9650Lv", info.levelCap), /*#__PURE__*/React.createElement("span", {
+    className: "block text-[9px] font-black text-amber-200"
+  }, info.label), /*#__PURE__*/React.createElement("div", {
+    className: "mt-2 min-h-[12px] flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(RebirthStars, {
+    count: count
+  }), count === 0 && /*#__PURE__*/React.createElement("span", {
+    className: "text-[8px] text-slate-600"
+  }, "\u2605\u306A\u3057")));
 };
 // 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま転生へ移した
 // (合体の回数は詳細の合体履歴で見られるので、アイコン上のバッジは転生だけに使う)。
@@ -19998,7 +20049,48 @@ function MonsterHeroGame() {
         },
         className: "min-h-[46px] rounded-xl bg-fuchsia-700 text-[10px] font-black"
       }, "\u8A2D\u5B9A\u5024\u3092\u30B3\u30D4\u30FC"))));
-    })(), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
+    })(), gameState === 'BREAKTHROUGH_STAR_DEBUG' && /*#__PURE__*/React.createElement("main", {
+      className: "flex-1 flex flex-col h-full min-h-0 p-4",
+      style: {
+        paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+        paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+      }
+    }, /*#__PURE__*/React.createElement("header", {
+      className: "flex items-center gap-2 mb-3 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setGameState('DEBUG_SETTINGS'),
+      className: "p-3 text-slate-400"
+    }, /*#__PURE__*/React.createElement(ArrowLeft, {
+      size: 20
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+      className: "text-[8px] font-black text-amber-400"
+    }, "DEBUG\u30FB\u672C\u756A\u3068\u540C\u3058 RebirthStars"), /*#__PURE__*/React.createElement("h2", {
+      className: "text-sm font-black"
+    }, "\u9650\u754C\u7A81\u7834\u2605\u8868\u793A\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4"
+    }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+      className: "mb-2 text-[9px] font-black text-amber-300"
+    }, "\u9EC4\u8272\u30FB\u91D1\u30FB\u8679 \u6BD4\u8F03"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-3 gap-1.5"
+    }, [10, 30, 31].map(count => /*#__PURE__*/React.createElement(BreakthroughStarDebugCard, {
+      key: count,
+      count: count,
+      compact: true
+    })))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+      className: "mb-2 text-[9px] font-black text-slate-300"
+    }, "\u5B8C\u6210\u72B6\u614B"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, [0, 5, 10, 15, 20, 25, 30, 31].map(count => /*#__PURE__*/React.createElement(BreakthroughStarDebugCard, {
+      key: count,
+      count: count
+    })))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h3", {
+      className: "mb-2 text-[9px] font-black text-slate-300"
+    }, "\u8272\u306E\u5207\u308A\u66FF\u308F\u308A"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-2"
+    }, [1, 6, 11, 16, 21, 26].map(count => /*#__PURE__*/React.createElement(BreakthroughStarDebugCard, {
+      key: count,
+      count: count
+    })))))), gameState === 'DEBUG_SETTINGS' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -20019,6 +20111,11 @@ function MonsterHeroGame() {
     }, "BATTLE TEST")), /*#__PURE__*/React.createElement("div", {
       className: "flex-1 overflow-y-auto mh-scroll space-y-5"
     }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setGameState('BREAKTHROUGH_STAR_DEBUG'),
+      className: "w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black"
+    }, "\u2B50 \u9650\u754C\u7A81\u7834\u2605\u8868\u793A\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] text-amber-300"
+    }, "\u5168\u8272\u6BB5\u968E\u3092\u672C\u756A\u3068\u540C\u3058\u2605\u3067\u6BD4\u8F03")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('MONSTER_IMAGE_DEBUG'),
       className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black"
     }, "\uD83D\uDDBC\uFE0F \u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {

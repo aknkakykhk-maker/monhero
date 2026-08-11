@@ -41,6 +41,9 @@ const gold = BREAKTHROUGH_STAR_TIERS.find(t => t.key === 'gold');
 check('黄色と金は違う色', yellow.color.toLowerCase() !== gold.color.toLowerCase(), `黄=${yellow.color} 金=${gold.color}`);
 check('黄色には光沢を付けない', !/0 0 \d+px/.test(yellow.shadow), yellow.shadow);
 check('金は金属的な縁取りを持つ', /0 -1px 0/.test(gold.shadow) && /0 1px 0/.test(gold.shadow), gold.shadow);
+check('金は暗金・明金・白金の静的グラデーションを持つ',
+  /linear-gradient/.test(gold.background || '') && /#fff/.test(gold.background) && /#7a3d05/.test(gold.background), gold.background);
+check('金は濃い輪郭を持つ', /#6b3605/.test(gold.stroke || ''), gold.stroke);
 
 // ===== 2. 凸数ごとの表示（仕様の確認項目をそのまま並べる） =====
 const nameOf = { blue:'青', yellow:'黄色', pink:'ピンク', purple:'紫', red:'赤', gold:'金', rainbow:'虹' };
@@ -167,6 +170,12 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 最終突破ではLv.200へ上げる`,
     /const isFinal = normalized\.levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP;/.test(code)
     && /isFinal[\s\S]{0,80}MAX_MASU_LEVEL_CAP/.test(code));
+  check(`${label}: デバッグ画面も共通の RebirthStars を使う`,
+    code.includes("gameState==='BREAKTHROUGH_STAR_DEBUG'") || code.includes("gameState === 'BREAKTHROUGH_STAR_DEBUG'"));
+  check(`${label}: デバッグ画面に指定された代表段階がある`,
+    /\[0,\s*5,\s*10,\s*15,\s*20,\s*25,\s*30,\s*31\]/.test(code)
+    && /\[1,\s*6,\s*11,\s*16,\s*21,\s*26\]/.test(code)
+    && /\[10,\s*30,\s*31\]/.test(code));
 }
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

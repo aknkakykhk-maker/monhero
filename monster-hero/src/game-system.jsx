@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 11:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 11:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -390,12 +390,12 @@ const totalBreakthroughPoints = (count) => {
 // 金は上が明るく下が暗い金属的な縁取りにして、色みも一段濃くしてある。
 const BREAKTHROUGH_STARS_PER_TIER = 5;
 const BREAKTHROUGH_STAR_TIERS = [
-  { key:'blue',   color:'#60a5fa', shadow:'0 1px 2px rgba(0,0,0,.85),0 0 3px #1d4ed8' },
-  { key:'yellow', color:'#fde047', shadow:'0 1px 2px rgba(0,0,0,.85)' },
-  { key:'pink',   color:'#f472b6', shadow:'0 1px 2px rgba(0,0,0,.85),0 0 3px #db2777' },
-  { key:'purple', color:'#c084fc', shadow:'0 1px 2px rgba(0,0,0,.85),0 0 3px #7e22ce' },
-  { key:'red',    color:'#ef4444', shadow:'0 1px 2px rgba(0,0,0,.85),0 0 3px #991b1b' },
-  { key:'gold',   color:'#f5c04a', shadow:'0 -1px 0 #fff3c4,0 1px 0 #7a4f0d,0 0 5px rgba(255,180,40,.95)' },
+  { key:'blue',   label:'青', color:'#60a5fa', shadow:'0 1px 2px rgba(0,0,0,.85),0 0 3px #1d4ed8' },
+  { key:'yellow', label:'黄色', color:'#fde047', shadow:'0 1px 2px rgba(0,0,0,.85)' },
+  { key:'pink',   label:'ピンク', color:'#f472b6', shadow:'0 1px 2px rgba(0,0,0,.85),0 0 3px #db2777' },
+  { key:'purple', label:'紫', color:'#c084fc', shadow:'0 1px 2px rgba(0,0,0,.85),0 0 3px #7e22ce' },
+  { key:'red',    label:'赤', color:'#ef4444', shadow:'0 1px 2px rgba(0,0,0,.85),0 0 3px #991b1b' },
+  { key:'gold',   label:'金', color:'#c88716', background:'linear-gradient(165deg,#fffdf0 3%,#f8e7a1 22%,#ffc83d 43%,#b66a08 70%,#fff0a8 86%,#7a3d05 100%)', shadow:'0 -1px 0 #fffbdc,0 1px 0 #5b2b03,0 0 5px rgba(255,174,24,.9)', stroke:'0.45px #6b3605' },
 ];
 // 通常の限界突破で到達できる回数。段階数×5 = 30回で、そのときのレベル上限はLv.180
 const BREAKTHROUGH_MAX_COUNT = BREAKTHROUGH_STAR_TIERS.length * BREAKTHROUGH_STARS_PER_TIER;
@@ -2347,7 +2347,23 @@ const RebirthStars = ({ count = 0, className = '' }) => {
   const stars = breakthroughStars(value);
   if (!stars.length) return null;
   const final = isFinalBreakthroughCount(value);
-  return <span className={`mh-rebirth-stars ${className}`} aria-label={final ? `最終限界突破(${value}回)` : `限界突破${value}回`}>{stars.map((s,i)=><span key={i} style={{color:s.color,textShadow:s.shadow}}>★</span>)}</span>;
+  return <span className={`mh-rebirth-stars ${className}`} aria-label={final ? `最終限界突破(${value}回)` : `限界突破${value}回`}>{stars.map((s,i)=><span key={i} style={{color:s.color,textShadow:s.shadow,backgroundImage:s.background,WebkitBackgroundClip:s.background?'text':undefined,backgroundClip:s.background?'text':undefined,WebkitTextFillColor:s.background?'transparent':undefined,WebkitTextStroke:s.stroke}}>★</span>)}</span>;
+};
+const breakthroughDebugInfo = (count) => {
+  const value = Math.max(0, Math.floor(Number(count) || 0));
+  const levelCap = value >= FINAL_BREAKTHROUGH_COUNT ? MAX_MASU_LEVEL_CAP : INITIAL_MASU_LEVEL_CAP + value * BREAKTHROUGH_LEVEL_CAP_GAIN;
+  if (!value) return { levelCap, label:'★なし' };
+  if (value >= FINAL_BREAKTHROUGH_COUNT) return { levelCap, label:'虹' };
+  return { levelCap, label:BREAKTHROUGH_STAR_TIERS[Math.floor((value - 1) / BREAKTHROUGH_STARS_PER_TIER)].label };
+};
+const BreakthroughStarDebugCard = ({ count, compact = false }) => {
+  const info = breakthroughDebugInfo(count);
+  return <article className={`min-w-0 rounded-xl border bg-slate-900/90 text-center ${compact?'border-amber-400/50 p-2':'border-white/10 p-3'}`} data-breakthrough-star-debug-count={count}>
+    <b className="block text-[11px] text-white">{count}凸</b>
+    <span className="block text-[8px] text-slate-400">上限Lv{info.levelCap}</span>
+    <span className="block text-[9px] font-black text-amber-200">{info.label}</span>
+    <div className="mt-2 min-h-[12px] flex items-center justify-center"><RebirthStars count={count}/>{count===0&&<span className="text-[8px] text-slate-600">★なし</span>}</div>
+  </article>;
 };
 // 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま転生へ移した
 // (合体の回数は詳細の合体履歴で見られるので、アイコン上のバッジは転生だけに使う)。
@@ -9834,10 +9850,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
+        {gameState==='BREAKTHROUGH_STAR_DEBUG'&&(
+          <main className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-amber-400">DEBUG・本番と同じ RebirthStars</small><h2 className="text-sm font-black">限界突破★表示確認</h2></div></header>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4">
+              <section><h3 className="mb-2 text-[9px] font-black text-amber-300">黄色・金・虹 比較</h3><div className="grid grid-cols-3 gap-1.5">{[10,30,31].map(count=><BreakthroughStarDebugCard key={count} count={count} compact/>)}</div></section>
+              <section><h3 className="mb-2 text-[9px] font-black text-slate-300">完成状態</h3><div className="grid grid-cols-2 gap-2">{[0,5,10,15,20,25,30,31].map(count=><BreakthroughStarDebugCard key={count} count={count}/>)}</div></section>
+              <section><h3 className="mb-2 text-[9px] font-black text-slate-300">色の切り替わり</h3><div className="grid grid-cols-2 gap-2">{[1,6,11,16,21,26].map(count=><BreakthroughStarDebugCard key={count} count={count}/>)}</div></section>
+            </div>
+          </main>
+        )}
+
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
-            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
+            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
               <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} className="w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black">⚔️ バトルモード<small className="block text-[8px] text-fuchsia-300">極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
               {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
               <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
