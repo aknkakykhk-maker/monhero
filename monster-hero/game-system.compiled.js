@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: f6e750802684d386
+// source-sha256: ec88dd522b11d5cd
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 14:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 19:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -393,6 +393,9 @@ const uniqueSkillAtLevel = (unique, level = 0) => {
     crit: 0.10 + 0.05 * lvl
   };
 };
+// 継承固有技は、ラン内stateがまだ無い間もマスモンに保存された恒久Lvから始める。
+// 0も有効なラン内値なので truthy 判定ではなく null/undefined のときだけ恒久Lvへ戻す。
+const inheritedUniqueRunLevel = (unique, runLevel) => Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.floor(Number(runLevel != null ? runLevel : unique?.evoLevel) || 0)));
 // 固有技の表示名は固有技Lvで変わるため、重複判定には技の出自を表す不変IDを使う。
 // lineageId は今後データ側で明示でき、既存データは従来から保存されている monId へ安全にフォールバックする。
 const uniqueLineageId = (unique, fallbackMonId = null) => unique?.lineageId || unique?.monId || fallbackMonId || null;
@@ -8554,6 +8557,7 @@ function MonsterHeroGame() {
   const reincarnateProcessingRef = useRef(false);
   const rebirthProcessingRef = useRef(false);
   const [levelCapCompensation, setLevelCapCompensation] = useState(null);
+  const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
   const masuMonsRef = useRef(masuMons);
   masuMonsRef.current = masuMons;
   // ランの報酬を配ったあとのマスモン。setMasuMons の反映は非同期なので、同じ処理の続きで走る
@@ -10097,7 +10101,25 @@ function MonsterHeroGame() {
       setBreederPoints(savedPoints);
       const savedMarketIcons = await storeGet('mh_market_icons', [], false);
       setOwnedMarketIcons(savedMarketIcons);
-      const savedOwnedItems = await storeGet('mh_owned_items', {}, false);
+      let savedOwnedItems = await storeGet('mh_owned_items', {}, false);
+      // 継承固有技Lv不具合のお詫び。付与後の所持品全体をpendingへ先に保存しておき、
+      // 書き込み途中で終了しても同じ値を再適用することで二重加算を防ぐ。
+      const inheritedUniqueCompensationDone = await storeGet('mh_inherited_unique_level_compensation_v1', false, false);
+      if (!inheritedUniqueCompensationDone) {
+        let pendingItems = await storeGet('mh_inherited_unique_level_compensation_pending_v1', null, false);
+        if (!pendingItems || typeof pendingItems !== 'object' || Array.isArray(pendingItems)) {
+          pendingItems = {
+            ...savedOwnedItems,
+            [BREAKTHROUGH_ITEM_ID]: Math.max(0, Math.floor(Number(savedOwnedItems?.[BREAKTHROUGH_ITEM_ID]) || 0)) + 20
+          };
+          await storeSet('mh_inherited_unique_level_compensation_pending_v1', pendingItems, false);
+        }
+        savedOwnedItems = pendingItems;
+        await storeSet('mh_owned_items', savedOwnedItems, false);
+        await storeSet('mh_inherited_unique_level_compensation_v1', true, false);
+        await storeSet('mh_inherited_unique_level_compensation_pending_v1', null, false);
+        setInheritedUniqueCompensation(true);
+      }
       setOwnedItems(savedOwnedItems);
       const savedGifts = await storeGet('mh_gifts', [], false);
       // みゅあとの仲良し度。開いた日のぶんをここで1回だけ足す
@@ -12819,7 +12841,7 @@ function MonsterHeroGame() {
   // 初回案内・重要通知・ログインボーナスのすべてが閉じた後にだけ、日次アドバイスを出す。
   // 表示を決めた時点で日付を保存するため、閉じる・再読込でも同日に繰り返さない。
   useEffect(() => {
-    if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || tutorialStep != null || updateGuideQueue.length > 0 || updateNoticeVisible || loginBonusPopup || levelCapCompensation || dailyMasuAdvice || dailyMasuAdviceCheckedRef.current) return;
+    if (bootPhase !== 'GAME' || gameState !== 'HOME' || !dataLoaded || !onboarded || tutorialStep != null || updateGuideQueue.length > 0 || updateNoticeVisible || loginBonusPopup || levelCapCompensation || inheritedUniqueCompensation || dailyMasuAdvice || dailyMasuAdviceCheckedRef.current) return;
     dailyMasuAdviceCheckedRef.current = true;
     let cancelled = false;
     (async () => {
@@ -12841,7 +12863,7 @@ function MonsterHeroGame() {
     return () => {
       cancelled = true;
     };
-  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, dailyMasuAdvice, masuMons.length]);
+  }, [bootPhase, gameState, dataLoaded, onboarded, tutorialStep, updateGuideQueue.length, updateNoticeVisible, loginBonusPopup, levelCapCompensation, inheritedUniqueCompensation, dailyMasuAdvice, masuMons.length]);
   const closeDailyMasuAdvice = () => setDailyMasuAdvice(null);
   const tryDailyMasuAdvice = () => {
     setDailyMasuAdvice(null);
@@ -14525,7 +14547,7 @@ function MonsterHeroGame() {
       inhIdx: ii,
       unique: {
         ...iu,
-        evoLevel: slotIdx != null && evoMap[inhEvoKey(slotIdx, ii)] != null ? evoMap[inhEvoKey(slotIdx, ii)] : iu.evoLevel || 0
+        evoLevel: inheritedUniqueRunLevel(iu, slotIdx != null ? evoMap[inhEvoKey(slotIdx, ii)] : null)
       }
     }))];
   };
@@ -15437,7 +15459,7 @@ function MonsterHeroGame() {
   // 上げ下げの範囲・1回あたりの消費もまったく同じにしている
   const upgradeInheritedUnique = (slotIdx, inhIdx, diff) => {
     const key = inhEvoKey(slotIdx, inhIdx);
-    const cur = inheritedUniqueEvo[key] || 0;
+    const cur = inheritedUniqueRunLevel(slots[slotIdx]?.inheritedUniques?.[inhIdx], inheritedUniqueEvo[key]);
     if (diff > 0 && (upgradePoints <= 0 || cur >= 8)) return;
     if (diff < 0 && cur <= 0) return;
     const nextEvo = Math.max(0, Math.min(8, cur + diff));
@@ -15550,7 +15572,7 @@ function MonsterHeroGame() {
     }));
     slots.forEach((mon, idx) => {
       (mon?.inheritedUniques || []).forEach((iu, ii) => {
-        const lvl = inheritedUniqueEvo[inhEvoKey(idx, ii)] || 0;
+        const lvl = inheritedUniqueRunLevel(iu, inheritedUniqueEvo[inhEvoKey(idx, ii)]);
         rows.push({
           rowKey: `inh:${idx}:${ii}`,
           u: {
@@ -18290,7 +18312,26 @@ function MonsterHeroGame() {
         storeSet('mh_masu_level_cap_compensation_notice_seen_v1', true, false);
       },
       className: "w-full bg-amber-500 text-black py-3 rounded-2xl font-black"
-    }, "\u53D7\u3051\u53D6\u308B"))), rebirthAnimation && (() => {
+    }, "\u53D7\u3051\u53D6\u308B"))), inheritedUniqueCompensation && /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 flex items-center justify-center p-5",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        zIndex: 49999,
+        backgroundColor: 'rgba(2,6,23,.96)'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "max-w-sm w-full bg-slate-900 border-2 border-fuchsia-400 rounded-3xl p-6 text-center"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-4xl mb-3"
+    }, "\uD83C\uDF08"), /*#__PURE__*/React.createElement("h2", {
+      className: "font-black text-lg mb-2"
+    }, "\u304A\u8A6B\u3073\u306E\u914D\u5E03"), /*#__PURE__*/React.createElement("p", {
+      className: "text-[11px] text-slate-300 leading-relaxed"
+    }, "\u7D99\u627F\u56FA\u6709\u6280Lv\u4E0D\u5177\u5408\u4FEE\u6B63\u306E\u304A\u8A6B\u3073\u3068\u3057\u3066\u8679\u306E\u30D7\u30B7\u30E5\u30B1\u30FC\xD720\u3092\u914D\u5E03\u3057\u307E\u3057\u305F\u3002"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setInheritedUniqueCompensation(false),
+      className: "w-full bg-fuchsia-500 text-white py-3 mt-5 rounded-2xl font-black"
+    }, "\u78BA\u8A8D"))), rebirthAnimation && (() => {
       const starList = breakthroughStars(rebirthAnimation.masu.rebirthCount || 1);
       const finalBreak = isFinalBreakthroughCount(rebirthAnimation.masu.rebirthCount);
       return /*#__PURE__*/React.createElement("div", {
