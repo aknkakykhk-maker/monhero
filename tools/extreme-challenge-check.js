@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 極限チャレンジ(正式公開)の仕様を静的に確認する。
-//   ① 難易度表(EXTREMEとNIGHTMAREを実装・以降は？？？)と倍率
+//   ① 難易度表(EXTREMEとNIGHTMAREを公開、CHAOSは内部仕様のみ)と倍率
 //   ② 解放条件(チャレンジ Grand Master以上のクリア)
 //   ③ EXTREME固有のブリーダーカード50%が「極限共通ルール」になっていないこと
 //   ④ 正式プレイは報酬・クリア記録を保存し、デバッグプレイでは保存しないこと
@@ -18,7 +18,8 @@ const config = source.slice(source.indexOf('const EXTREME_DIFFICULTIES'), source
 for (const name of ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY']) assert(config.includes(`'${name}'`), `${name} must be listed`);
 assert(/EXTREME[^\n]+available:true[^\n]+power:13[^\n]+score:20[^\n]+xp:25[^\n]+gold:7\.5[^\n]+psyche:30[^\n]+specialRules:Object\.freeze\(\{ breederCardEffect:0\.5 \}\)/.test(config), 'EXTREME settings and its difficulty-specific rule must match the official specification');
 assert(/NIGHTMARE[^\n]+available:true[^\n]+power:15[^\n]+score:20[^\n]+xp:30[^\n]+gold:10[^\n]+psyche:40[^\n]+specialRules/.test(config), 'NIGHTMARE must expose its official values and rules for battle');
-for (const name of ['CHAOS','ULTIMATE','INFINITY']) assert(new RegExp(`${name}[^\\n]+available:false`).test(config), `${name} must remain unavailable without placeholder values`);
+assert(/CHAOS[^\n]+available:false[^\n]+power:20[^\n]+score:20[^\n]+xp:35[^\n]+gold:15[^\n]+psyche:50[^\n]+unlockRequirement:'NIGHTMARE'[^\n]+specialRules:Object\.freeze\(\{ damageDealt:0\.5, allyJoinBonus:0\.5, gutsCost:1\.5 \}\)/.test(config), 'CHAOS must retain its complete internal specification while unavailable');
+for (const name of ['ULTIMATE','INFINITY']) assert(new RegExp(`${name}[^\\n]+available:false`).test(config), `${name} must remain unavailable without placeholder values`);
 assert(config.includes('const isNightmareUnlocked = (extremeClearCount) => (Number(extremeClearCount) || 0) > 0;'), 'NIGHTMARE unlock must reuse the existing EXTREME clear count');
 assert(source.includes("{setting.available&&unlocked?'この難易度で挑戦':'選択できません'}"), 'NIGHTMARE must be selectable only after unlock');
 
