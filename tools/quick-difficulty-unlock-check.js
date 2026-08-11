@@ -18,7 +18,16 @@ assert(!unlocked('Master', empty, empty, empty), '全モード未クリアなら
 assert(!unlocked('Master', { Legend: 1 }, { Hard: 1 }, { Expert: 1 }), '別難易度では解放されない');
 assert(unlocked('Legend', { Legend: '2' }, empty, empty), '保存値を数値として正規化して判定する');
 assert(!unlocked('Legend', { Legend: 'broken' }, empty, empty), '壊れた保存値では解放されない');
+assert(unlocked('EXTREME', { EXTREME: 1 }, empty, empty), 'チャレンジのEXTREMEクリアでクイックEXTREMEが解放される');
+assert(unlocked('EXTREME', empty, { EXTREME: 1 }, empty), 'プロのEXTREMEクリアでクイックEXTREMEが解放される');
+assert(unlocked('EXTREME', empty, empty, { EXTREME: 1 }), '極限のEXTREMEクリアでクイックEXTREMEが解放される');
+assert(unlocked('NIGHTMARE', empty, empty, { NIGHTMARE: 1 }), '極限のNIGHTMAREクリアでクイックNIGHTMAREが解放される');
+assert(!unlocked('NIGHTMARE', { EXTREME: 1 }, { EXTREME: 1 }, { EXTREME: 1 }), 'EXTREMEクリアではNIGHTMAREが解放されない');
 assert(source.includes('extremeDifficultyClears[d] = await storeGet(extremeClearCountKey(d), 0, false);'), '既存の極限クリア保存キーを読む');
+assert(source.includes('Object.keys(QUICK_DIFFICULTY_SETTINGS).map(async d =>'), '極限2難易度を含む既存クリア記録を読む');
+assert(source.includes("EXTREME: { label:'EXTREME', power:EXTREME_SETTING.power, xp:20, gold:4.5, psyche:30"), 'EXTREMEのクイック基準報酬が正しい');
+assert(source.includes("NIGHTMARE: { label:'NIGHTMARE', power:NIGHTMARE_SETTING.power, xp:25, gold:6, psyche:40"), 'NIGHTMAREのクイック基準報酬が正しい');
+assert(source.includes("key==='EXTREME'?'―― 極限難易度 ――':'BATTLE DIFFICULTY'"), 'Legendの次のEXTREMEカードに極限難易度の区切りを表示する');
 assert(source.includes('disabled={(pro&&!proReady)||!quickUnlocked'), 'クイックだけに解放条件を適用する');
 
 console.log('quick difficulty unlock checks passed');

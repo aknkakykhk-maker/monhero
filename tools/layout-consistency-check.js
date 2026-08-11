@@ -61,7 +61,7 @@ check('モードのタブはランキングでは出さない',
 // いま許しているのはスキップチケットの枚数バッジ1か所だけ(親に min-h-[24px] がある)。
 // 増やしたくなったら、まず親に高さを持たせてからこの本数を見直すこと
 {
-  const start = source.indexOf("{battleMenuTab==='difficulty'&&(()=>{\n              const difficulties=");
+  const start = source.indexOf("{battleMenuTab==='difficulty'&&(()=>{\n              const quick=isQuickMode(battleMode),difficulties=");
   const end = source.indexOf("{battleMenuTab==='ranking'&&", start);
   const tab = start >= 0 && end > start ? source.slice(start, end) : '';
   const onlyQuick = (tab.match(/\{quick&&/g) || []).length;

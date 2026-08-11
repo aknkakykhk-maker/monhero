@@ -301,7 +301,7 @@ check('カードに自己ベスト・到達WAVE・倍率・全WAVE詳細が残�
   has('自己ベストスコア') && has('最高到達 WAVE') && has('全WAVE詳細') && has('この難易度で挑戦'));
 // クイックはスコアを競わないので、自己ベストスコアもスコア倍率も出さない
 check('クイックはスコア関連を出さない',
-  has("const rateCells=(setting)=>quick") && has("? [['敵強度',`×${setting.power}`,false],['経験値',bonusLabel(setting.score),true],['ダイヤ',bonusLabel(setting.gold),true]]")
+  has("const rateCells=(setting)=>quick") && has("? [['敵強度',`×${setting.power}`,false],['経験値',bonusLabel(setting.xp||setting.score),true],['ダイヤ',bonusLabel(setting.gold),true]]")
     && has("{ label:'自己ベストスコア', value:`${(highScores[key]||0).toLocaleString()} pt`"));
 check('クイックでも最高到達WAVEは出す', has("{ label:'最高到達WAVE', value:`WAVE ${waveOf(key)}`"));
 check('モードカードの最高スコアは全難易度の自己ベスト最大値',
@@ -361,7 +361,7 @@ check('勇者モン選択からの戻るは難易度の画面へ',
   has("onClick={()=>{if(gameState==='PICK_HERO'){setCurrentPickingMon(null);setBattleMenuTab('difficulty');setGameState(battleEntryStateRef.current);return;}returnToHome();}}"));
 check('助手コメントは既存の共通UIを使う', has("<AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'}") && assistantsSrc.includes('battleChallenge:') && assistantsSrc.includes('battleQuick:'));
 check('挑戦を始めるときにモードを固定する', has('setDifficulty(key);setRunMode(battleMode);'));
-check('バトル中にモード名と難易度を出す', has('{battleModeInfo(runMode).short} / {DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}'));
+check('バトル中にモード名と難易度を出す', has('{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}'));
 check('ヘルプにバトルモードの説明がある', helpSrc.includes("id: 'battle-modes'") && helpSrc.includes('QUICK_GROWTH:') && helpSrc.includes('QUICK_JOIN:'));
 
 // --- ⑥ BGM ---

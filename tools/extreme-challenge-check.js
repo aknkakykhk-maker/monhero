@@ -56,8 +56,8 @@ assert(source.includes("const showExtremeRule = w === 1 && extremeRunRef.current
 // --- ④ 報酬・記録 ---
 assert(source.includes('const baseGain = extremeRunRef.current ? selectedExtremeSetting.psyche : clearPsycheReward(difficulty);')
   && source.includes('const gain = applyQuickPsychePolicy(baseGain, runMode, quickRewardPolicyRunRef.current);'), 'EXTREME clear must grant its own psyche count through the shared reward-policy path');
-assert(source.includes('const extreme = extremeRunRef.current;') && source.includes('const scoreMult = extreme ? selectedExtremeSetting.score : (DIFFICULTY_SETTINGS[difficulty]?.score || 1.0);')
-  && source.includes('const goldMult = extreme ? selectedExtremeSetting.gold : (DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0);')
+assert(source.includes('const extreme = extremeRunRef.current;') && source.includes('const scoreMult = extreme ? selectedExtremeSetting.score : (quickExtremeSetting?.xp || DIFFICULTY_SETTINGS[difficulty]?.score || 1.0);')
+  && source.includes('const goldMult = extreme ? selectedExtremeSetting.gold : (quickExtremeSetting?.gold || DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0);')
   && source.includes('const xpMult = extreme ? selectedExtremeSetting.xp : scoreMult;'), 'official EXTREME rewards must use its own score/xp/gold multipliers');
 assert(source.includes('await storeSet(extremeClearCountKey(extremeDifficulty), nextExtreme, false);'), 'EXTREME clears must be recorded');
 // 極限は内部の difficulty が Normal のままなので、挑戦回数・最高到達WAVEへ入れるとチャレンジの記録が壊れる
@@ -66,7 +66,7 @@ assert(source.includes('if (!forcedEnemyKey && !extremeRunRef.current && !debugB
 // 敵の強さ: 極限だけ×13を渡し、それ以外は null(=難易度の倍率)のまま。null が 0 扱いされないこと
 assert(source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,extremeRunRef.current?(EXTREME_DIFFICULTIES.find(setting=>setting.id===extremeDifficulty)||EXTREME_SETTING).power:null)'), 'only EXTREME may override the enemy power');
 assert(source.includes('const hasPowerOverride = powerOverride !== null && powerOverride !== undefined && Number.isFinite(Number(powerOverride));')
-  && source.includes('const mod = hasPowerOverride ? Number(powerOverride) : DIFFICULTY_SETTINGS[safeDifficulty].power;'), 'a null override must fall back to the difficulty power');
+  && source.includes('const mod = hasPowerOverride ? Number(powerOverride) : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].power;'), 'a null override must fall back to the difficulty power');
 // デバッグから入った周回は debugBattleRef が true のままなので、報酬・記録・ランキングをすべて通らない
 assert(!/EXTREME_DIFFICULTY_SELECT';[^\n]*debugBattleRef\.current=/.test(source), 'the EXTREME start button must not overwrite the debug flag');
 assert(source.indexOf('debugBattleRef.current') < source.indexOf('awardRunRewards'), 'debug reward isolation must precede persistent rewards');

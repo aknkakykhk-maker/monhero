@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1fb01d5c453b49e0
+// source-sha256: 3e40034e64e88136
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 12:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-11 12:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6301,6 +6301,32 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
 }]);
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
+// クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
+// クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
+const QUICK_EXTREME_SETTINGS = Object.freeze({
+  EXTREME: {
+    label: 'EXTREME',
+    power: EXTREME_SETTING.power,
+    xp: 20,
+    gold: 4.5,
+    psyche: 30,
+    bg: '#a21caf',
+    text: '#f0abfc'
+  },
+  NIGHTMARE: {
+    label: 'NIGHTMARE',
+    power: NIGHTMARE_SETTING.power,
+    xp: 25,
+    gold: 6,
+    psyche: 40,
+    bg: '#6b21a8',
+    text: '#e9d5ff'
+  }
+});
+const QUICK_DIFFICULTY_SETTINGS = Object.freeze({
+  ...DIFFICULTY_SETTINGS,
+  ...QUICK_EXTREME_SETTINGS
+});
 const extremeSpecialRule = (difficultyId, rule) => EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId)?.specialRules?.[rule] ?? 1;
 // NIGHTMAREの倍率は、既存式が出した最終的な獲得量・補正値へだけ掛ける。
 const applyNightmareSignedModifier = (value, nightmare = false) => value * (nightmare ? extremeSpecialRule(NIGHTMARE_SETTING.id, value >= 0 ? 'positiveModifier' : 'negativeModifier') : 1);
@@ -6334,7 +6360,7 @@ const NIGHTMARE_BEST_SCORE_KEY = extremeBestScoreKey('NIGHTMARE');
 const NIGHTMARE_CLEAR_COUNT_KEY = extremeClearCountKey('NIGHTMARE');
 // NIGHTMAREの解放には既存のEXTREMEクリア回数を再利用する。
 const isNightmareUnlocked = extremeClearCount => (Number(extremeClearCount) || 0) > 0;
-const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(DIFFICULTY_SETTINGS, value) ? value : 'Normal';
+const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(QUICK_DIFFICULTY_SETTINGS, value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
 // クリアするともらえる虹のプシュケー。難易度が高いほど多い。
@@ -6350,7 +6376,9 @@ const CLEAR_PSYCHE_REWARD = Object.freeze({
   Master: 10,
   GrandMaster: 15,
   Hell: 20,
-  Legend: 25
+  Legend: 25,
+  EXTREME: 30,
+  NIGHTMARE: 40
 });
 const clearPsycheReward = difficulty => Math.max(0, Math.floor(Number(CLEAR_PSYCHE_REWARD[normalizeBattleDifficulty(difficulty)]) || 0));
 // ヘルプの中に出す「実データから作る表」。data/help.js の { t:'data', id } がこれを呼ぶ。
@@ -7147,7 +7175,7 @@ const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null, powerOverrid
   const base = ENEMY_DATA[enemyKey];
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
   const hasPowerOverride = powerOverride !== null && powerOverride !== undefined && Number.isFinite(Number(powerOverride));
-  const mod = hasPowerOverride ? Number(powerOverride) : DIFFICULTY_SETTINGS[safeDifficulty].power;
+  const mod = hasPowerOverride ? Number(powerOverride) : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].power;
   const baseHp = Number.isFinite(Number(base?.baseHp)) ? Math.max(1, Number(base.baseHp)) : 1;
   const baseAtk = Number.isFinite(Number(base?.baseAtk)) ? Math.max(0, Number(base.baseAtk)) : 0;
   return {
@@ -10078,7 +10106,7 @@ function MonsterHeroGame() {
       const proWaves = {};
       // 極限側にも同じ難易度IDの既存記録がある場合は、クイックの解放判定へそのまま利用する。
       const extremeDifficultyClears = {};
-      await Promise.all(Object.keys(DIFFICULTY_SETTINGS).map(async d => {
+      await Promise.all(Object.keys(QUICK_DIFFICULTY_SETTINGS).map(async d => {
         scores[d] = await storeGet(`mh_hs_${d}`, 0, false);
         attempts[d] = await storeGet(`mh_attempts_${d}`, 0, false);
         clears[d] = await storeGet(`mh_clears_${d}`, 0, false);
@@ -12061,8 +12089,9 @@ function MonsterHeroGame() {
     // 極限チャレンジはスコア×20・経験値×25・ダイヤ×7.5。通常の難易度表ではなく EXTREME_SETTING を使う
     const extreme = extremeRunRef.current;
     const selectedExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
-    const scoreMult = extreme ? selectedExtremeSetting.score : DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
-    const goldMult = extreme ? selectedExtremeSetting.gold : DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
+    const quickExtremeSetting = isQuickMode(runMode) ? QUICK_EXTREME_SETTINGS[difficulty] : null;
+    const scoreMult = extreme ? selectedExtremeSetting.score : quickExtremeSetting?.xp || DIFFICULTY_SETTINGS[difficulty]?.score || 1.0;
+    const goldMult = extreme ? selectedExtremeSetting.gold : quickExtremeSetting?.gold || DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0;
     // 経験値はスコアと倍率が違う(極限はスコア×20に対して経験値×25)ので別に持つ
     const xpMult = extreme ? selectedExtremeSetting.xp : scoreMult;
 
@@ -12412,6 +12441,10 @@ function MonsterHeroGame() {
       const currentCount = nightmare ? nightmareClearCount : extremeClearCount;
       const nextExtreme = (Number(currentCount) || 0) + 1;
       if (nightmare) setNightmareClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));else setExtremeClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));
+      setExtremeDifficultyClearCounts(prev => ({
+        ...prev,
+        [extremeDifficulty]: Math.max(Number(prev[extremeDifficulty]) || 0, nextExtreme)
+      }));
       await storeSet(extremeClearCountKey(extremeDifficulty), nextExtreme, false);
       return;
     }
@@ -18299,7 +18332,7 @@ function MonsterHeroGame() {
       const extremePreviewSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
       const waveDifficulty = extreme ? 'Normal' : safeDifficulty;
       const powerOverride = extreme ? extremePreviewSetting.power : null;
-      const label = extreme ? extremePreviewSetting.label : DIFFICULTY_SETTINGS[safeDifficulty].label;
+      const label = extreme ? extremePreviewSetting.label : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].label;
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-center justify-center p-3",
         style: {
@@ -18460,7 +18493,8 @@ function MonsterHeroGame() {
         className: "shrink-0"
       })));
     })(), battleMenuTab === 'difficulty' && (() => {
-      const difficulties = Object.entries(DIFFICULTY_SETTINGS),
+      const quick = isQuickMode(battleMode),
+        difficulties = Object.entries(quick ? QUICK_DIFFICULTY_SETTINGS : DIFFICULTY_SETTINGS),
         selectedIndex = difficulties.findIndex(([key]) => key === safeDifficulty);
       const selectDifficultyIndex = (index, behavior = 'smooth') => {
         const safe = Math.max(0, Math.min(difficulties.length - 1, index));
@@ -18471,12 +18505,11 @@ function MonsterHeroGame() {
           block: 'nearest'
         });
       };
-      const mode = battleModeInfo(battleMode),
-        quick = isQuickMode(battleMode);
+      const mode = battleModeInfo(battleMode);
       // 倍率の枠は3つまで。4つ並べると見出しが2行に折り返して読みにくくなる。
       // クイックモードはスコアを競わないのでスコア倍率は出さず、代わりに経験値倍率を出す
       const bonusLabel = value => `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}`;
-      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false], ['経験値', bonusLabel(setting.score), true], ['ダイヤ', bonusLabel(setting.gold), true]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
+      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false], ['経験値', bonusLabel(setting.xp || setting.score), true], ['ダイヤ', bonusLabel(setting.gold), true]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
       const waveOf = key => quick ? quickHighestWaves[key] || 0 : highestWaves[key] || 0;
       // 記録の枠は、モードで中身が変わっても「見出し・大きい値・補足」の3行構成を必ず守る。
       // 以前は行数そのものが違い(チャレンジ3行/クイック1行)、最低の高さを指定して
@@ -18559,8 +18592,8 @@ function MonsterHeroGame() {
             boxShadow: active ? `0 0 30px ${setting.bg}55` : 'none'
           }
         }, /*#__PURE__*/React.createElement("div", {
-          className: "text-center text-[7px] tracking-[.2em] text-slate-400 font-black"
-        }, "BATTLE DIFFICULTY"), /*#__PURE__*/React.createElement("h3", {
+          className: `text-center text-[7px] tracking-[.2em] font-black ${key === 'EXTREME' ? 'text-fuchsia-300' : 'text-slate-400'}`
+        }, key === 'EXTREME' ? '―― 極限難易度 ――' : 'BATTLE DIFFICULTY'), /*#__PURE__*/React.createElement("h3", {
           className: "text-center text-lg font-black leading-tight",
           style: {
             color: setting.text
@@ -19112,7 +19145,8 @@ function MonsterHeroGame() {
         className: "shrink-0 pt-1.5 pb-1 text-center text-[9px] text-slate-500"
       }, "\u30B9\u30B3\u30A2\u306F\u6975\u9650\u30C1\u30E3\u30EC\u30F3\u30B8\u5C02\u7528\u306E\u30E9\u30F3\u30AD\u30F3\u30B0\u3078\u8F09\u308A\u3001\u30C1\u30E3\u30EC\u30F3\u30B8\u306E\u8A18\u9332\u306F\u5909\u308F\u308A\u307E\u305B\u3093"))));
     })(), gameState === 'BATTLE_DIFFICULTY_SELECT' && (() => {
-      const difficulties = Object.entries(DIFFICULTY_SETTINGS),
+      const quick = isQuickMode(battleMode),
+        difficulties = Object.entries(quick ? QUICK_DIFFICULTY_SETTINGS : DIFFICULTY_SETTINGS),
         selectedIndex = difficulties.findIndex(([key]) => key === safeDifficulty);
       const selectDifficultyIndex = (index, behavior = 'smooth') => {
         const safe = Math.max(0, Math.min(difficulties.length - 1, index));
@@ -19124,7 +19158,6 @@ function MonsterHeroGame() {
         });
       };
       const mode = battleModeInfo(battleMode),
-        quick = isQuickMode(battleMode),
         pro = isProMode(battleMode),
         ranked = modeHasRanking(battleMode);
       // プロは勇者モン1体＋供モン候補5体をベースモンだけで組むので、それだけの種が解放されている必要がある
@@ -19132,7 +19165,7 @@ function MonsterHeroGame() {
       // 倍率の枠は3つまで。4つ並べると見出しが2行に折り返して読みにくくなる。
       // クイックはスコアを競わないのでスコアの代わりに経験値を出す
       const bonusLabel = value => `×${Math.round(value * QUICK_REWARD_MULT * 100) / 100}`;
-      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false], ['経験値', bonusLabel(setting.score), true], ['ダイヤ', bonusLabel(setting.gold), true]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
+      const rateCells = setting => quick ? [['敵強度', `×${setting.power}`, false], ['経験値', bonusLabel(setting.xp || setting.score), true], ['ダイヤ', bonusLabel(setting.gold), true]] : [['敵強度', `×${setting.power}`, false], ['スコア', `×${setting.score}`, false], ['ダイヤ', `×${setting.gold}`, false]];
       const noteText = quick ? '経験値・ダイヤのみ1.5倍' : pro ? '絆経験値3倍・ブリーダー経験値1.5倍' : 'スコアがランキングに登録される';
       return /*#__PURE__*/React.createElement("div", {
         className: "flex-1 flex flex-col h-full min-h-0 px-4",
@@ -19226,8 +19259,8 @@ function MonsterHeroGame() {
             boxShadow: active ? `0 0 30px ${setting.bg}55` : 'none'
           }
         }, /*#__PURE__*/React.createElement("div", {
-          className: "text-center text-[7px] tracking-[.2em] text-slate-400 font-black"
-        }, "BATTLE DIFFICULTY"), /*#__PURE__*/React.createElement("h3", {
+          className: `text-center text-[7px] tracking-[.2em] font-black ${key === 'EXTREME' ? 'text-fuchsia-300' : 'text-slate-400'}`
+        }, key === 'EXTREME' ? '―― 極限難易度 ――' : 'BATTLE DIFFICULTY'), /*#__PURE__*/React.createElement("h3", {
           className: "text-center text-lg font-black leading-tight",
           style: {
             color: setting.text
@@ -19265,7 +19298,7 @@ function MonsterHeroGame() {
           className: "flex-1 min-w-0 text-left whitespace-nowrap leading-tight"
         }, /*#__PURE__*/React.createElement("b", {
           className: "block text-[10px] text-white"
-        }, "\u7D4C\u9A13\u5024\uFF1A", quick && quickRewardPolicy === QUICK_REWARD_POLICY_PSYCHE ? '0' : quick ? '現在値' : '通常'), /*#__PURE__*/React.createElement("b", {
+        }, "\u7D4C\u9A13\u5024\uFF1A", quick && quickRewardPolicy === QUICK_REWARD_POLICY_PSYCHE ? '0' : quick ? bonusLabel(setting.xp || setting.score) : '通常'), /*#__PURE__*/React.createElement("b", {
           className: "block text-[10px] text-fuchsia-100"
         }, /*#__PURE__*/React.createElement("span", {
           "aria-hidden": "true"
@@ -23336,7 +23369,7 @@ function MonsterHeroGame() {
         borderColor: `${battleModeInfo(runMode).color}66`,
         backgroundColor: 'rgba(0,0,0,.35)'
       }
-    }, extremeRun ? `極限チャレンジ / ${extremeDifficulty}` : /*#__PURE__*/React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), /*#__PURE__*/React.createElement("div", {
+    }, extremeRun ? `極限チャレンジ / ${extremeDifficulty}` : /*#__PURE__*/React.createElement(React.Fragment, null, battleModeInfo(runMode).short, " / ", QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label || safeDifficulty))), /*#__PURE__*/React.createElement("div", {
       "data-battle-metrics": true,
       className: "shrink-0 flex items-center gap-1 px-1 leading-none"
     }, /*#__PURE__*/React.createElement("div", {
