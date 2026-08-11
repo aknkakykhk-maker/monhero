@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 41530181a2deb4bc
+// source-sha256: b27cab88f390427b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-11 23:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-12 00:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6297,7 +6297,7 @@ const DIFFICULTY_SETTINGS = {
 };
 // 極限チャレンジ。チャレンジモードの上位高難易度版で、DIFFICULTY_SETTINGS(通常の難易度)とは
 // 別の表にしてある。通常の難易度・全国ランキング・既存の保存キーへは混ぜない。
-// NIGHTMAREまで正式に実戦可能。CHAOSは内部仕様だけを定義し、公開準備が整うまで選択不可にする。
+// CHAOSまで正式に実戦可能。上位2段階は公開準備が整うまで選択不可にする。
 const EXTREME_DIFFICULTIES = Object.freeze([{
   id: 'EXTREME',
   label: 'EXTREME',
@@ -6332,7 +6332,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   id: 'CHAOS',
   label: 'CHAOS',
   japanese: 'カオス',
-  available: false,
+  available: true,
   power: 20,
   score: 20,
   xp: 35,
@@ -6356,6 +6356,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
 }]);
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
+const CHAOS_SETTING = EXTREME_DIFFICULTIES[2];
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
 const QUICK_EXTREME_SETTINGS = Object.freeze({
@@ -6444,8 +6445,11 @@ const EXTREME_BEST_SCORE_KEY = extremeBestScoreKey('EXTREME');
 const EXTREME_CLEAR_COUNT_KEY = extremeClearCountKey('EXTREME');
 const NIGHTMARE_BEST_SCORE_KEY = extremeBestScoreKey('NIGHTMARE');
 const NIGHTMARE_CLEAR_COUNT_KEY = extremeClearCountKey('NIGHTMARE');
+const CHAOS_BEST_SCORE_KEY = extremeBestScoreKey('CHAOS');
+const CHAOS_CLEAR_COUNT_KEY = extremeClearCountKey('CHAOS');
 // NIGHTMAREの解放には既存のEXTREMEクリア回数を再利用する。
 const isNightmareUnlocked = extremeClearCount => (Number(extremeClearCount) || 0) > 0;
+const isChaosUnlocked = nightmareClearCount => (Number(nightmareClearCount) || 0) > 0;
 const normalizeBattleDifficulty = value => Object.prototype.hasOwnProperty.call(QUICK_DIFFICULTY_SETTINGS, value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
@@ -6464,7 +6468,8 @@ const CLEAR_PSYCHE_REWARD = Object.freeze({
   Hell: 20,
   Legend: 25,
   EXTREME: 30,
-  NIGHTMARE: 40
+  NIGHTMARE: 40,
+  CHAOS: 50
 });
 const clearPsycheReward = difficulty => Math.max(0, Math.floor(Number(CLEAR_PSYCHE_REWARD[normalizeBattleDifficulty(difficulty)]) || 0));
 // ヘルプの中に出す「実データから作る表」。data/help.js の { t:'data', id } がこれを呼ぶ。
@@ -8120,6 +8125,8 @@ function MonsterHeroGame() {
   const [extremeClearCount, setExtremeClearCount] = useState(0);
   const [nightmareBestScore, setNightmareBestScore] = useState(0);
   const [nightmareClearCount, setNightmareClearCount] = useState(0);
+  const [chaosBestScore, setChaosBestScore] = useState(0);
+  const [chaosClearCount, setChaosClearCount] = useState(0);
   const [extremeDifficultyClearCounts, setExtremeDifficultyClearCounts] = useState({});
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
   const [onboardingName, setOnboardingName] = useState('');
@@ -8885,6 +8892,17 @@ function MonsterHeroGame() {
   // 極限チャレンジの解放判定。チャレンジのクリア記録(mh_clears_*)をそのまま見る
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
+  const chaosUnlocked = useMemo(() => isChaosUnlocked(nightmareClearCount), [nightmareClearCount]);
+  const extremeBestScores = {
+    EXTREME: extremeBestScore,
+    NIGHTMARE: nightmareBestScore,
+    CHAOS: chaosBestScore
+  };
+  const extremeClearCounts = {
+    EXTREME: extremeClearCount,
+    NIGHTMARE: nightmareClearCount,
+    CHAOS: chaosClearCount
+  };
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
@@ -10233,6 +10251,8 @@ function MonsterHeroGame() {
       setExtremeClearCount(Math.max(0, Math.floor(Number(await storeGet(EXTREME_CLEAR_COUNT_KEY, 0, false)) || 0)));
       setNightmareBestScore(Math.max(0, Math.floor(Number(await storeGet(NIGHTMARE_BEST_SCORE_KEY, 0, false)) || 0)));
       setNightmareClearCount(Math.max(0, Math.floor(Number(await storeGet(NIGHTMARE_CLEAR_COUNT_KEY, 0, false)) || 0)));
+      setChaosBestScore(Math.max(0, Math.floor(Number(await storeGet(CHAOS_BEST_SCORE_KEY, 0, false)) || 0)));
+      setChaosClearCount(Math.max(0, Math.floor(Number(await storeGet(CHAOS_CLEAR_COUNT_KEY, 0, false)) || 0)));
       setHighScores(scores);
       highScoresRef.current = scores;
       setAttemptCounts(attempts);
@@ -10468,10 +10488,10 @@ function MonsterHeroGame() {
           console.error('[result] extreme score save failed:', result?.error?.message || 'unknown ranking error');
           return result;
         }
-        const currentBest = extremeDifficulty === NIGHTMARE_SETTING.id ? nightmareBestScore : extremeBestScore;
+        const currentBest = extremeBestScores[extremeDifficulty] || 0;
         if (score > (Number(currentBest) || 0)) {
           await storeSet(extremeBestScoreKey(extremeDifficulty), score, false);
-          if (extremeDifficulty === NIGHTMARE_SETTING.id) setNightmareBestScore(score);else setExtremeBestScore(score);
+          if (extremeDifficulty === CHAOS_SETTING.id) setChaosBestScore(score);else if (extremeDifficulty === NIGHTMARE_SETTING.id) setNightmareBestScore(score);else setExtremeBestScore(score);
           setRunHighlights(prev => ({
             ...prev,
             newRecord: true
@@ -12551,10 +12571,9 @@ function MonsterHeroGame() {
     await awardClearPsyche();
     // 極限チャレンジは専用キーへ。チャレンジの通算クリア数(初勝利判定・解放判定に使う)は動かさない
     if (extremeRunRef.current) {
-      const nightmare = extremeDifficulty === NIGHTMARE_SETTING.id;
-      const currentCount = nightmare ? nightmareClearCount : extremeClearCount;
+      const currentCount = extremeClearCounts[extremeDifficulty] || 0;
       const nextExtreme = (Number(currentCount) || 0) + 1;
-      if (nightmare) setNightmareClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));else setExtremeClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));
+      if (extremeDifficulty === CHAOS_SETTING.id) setChaosClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));else if (extremeDifficulty === NIGHTMARE_SETTING.id) setNightmareClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));else setExtremeClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));
       setExtremeDifficultyClearCounts(prev => ({
         ...prev,
         [extremeDifficulty]: Math.max(Number(prev[extremeDifficulty]) || 0, nextExtreme)
@@ -18988,10 +19007,7 @@ function MonsterHeroGame() {
           isExtreme = m.id === EXTREME_MODE.id,
           extremeLocked = isExtreme && !extremeUnlocked && !debugBattle,
           rec = isExtreme ? {
-            score: highestModeScore({
-              [EXTREME_SETTING.id]: extremeBestScore,
-              [NIGHTMARE_SETTING.id]: nightmareBestScore
-            }, EXTREME_DIFFICULTIES.filter(setting => setting.available).map(setting => setting.id)),
+            score: highestModeScore(extremeBestScores, EXTREME_DIFFICULTIES.filter(setting => setting.available).map(setting => setting.id)),
             wave: 0,
             clears: extremeClearCount
           } : modeRecordFor(m.id, safeDifficulty),
@@ -19168,9 +19184,8 @@ function MonsterHeroGame() {
         }
       }, difficulties.map(setting => {
         const active = setting.id === extremeDifficulty;
-        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : false);
-        const debugChaos = debugBattle && setting.id === 'CHAOS';
-        const previewable = setting.available && unlocked || debugChaos;
+        const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : false);
+        const previewable = setting.available && unlocked;
         return /*#__PURE__*/React.createElement("article", {
           key: setting.id,
           "aria-disabled": !previewable,
@@ -19189,11 +19204,11 @@ function MonsterHeroGame() {
           className: "mt-1 h-[42px] shrink-0 rounded-xl bg-black/45 px-2.5 py-1"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] text-slate-400 font-black"
-        }, debugChaos ? '解放条件' : setting.available ? `${setting.label}の記録` : '難易度情報'), /*#__PURE__*/React.createElement("b", {
+        }, setting.available ? `${setting.label}の記録` : '難易度情報'), /*#__PURE__*/React.createElement("b", {
           className: "block text-right text-base leading-tight text-fuchsia-200"
-        }, debugChaos ? 'NIGHTMAREクリア' : setting.available && unlocked ? `${(setting.id === 'NIGHTMARE' ? nightmareBestScore : extremeBestScore).toLocaleString()} pt` : '？？？'), /*#__PURE__*/React.createElement("span", {
+        }, setting.available && unlocked ? `${(extremeBestScores[setting.id] || 0).toLocaleString()} pt` : '？？？'), /*#__PURE__*/React.createElement("span", {
           className: "block text-right text-[9px] text-amber-300"
-        }, debugChaos ? 'DEBUG確認専用・保存なし' : setting.available && unlocked ? `クリア ${setting.id === 'NIGHTMARE' ? nightmareClearCount : extremeClearCount}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : '未実装・選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        }, setting.available && unlocked ? `クリア ${extremeClearCounts[setting.id] || 0}回` : setting.id === 'NIGHTMARE' ? 'EXTREMEクリアで解放' : setting.id === 'CHAOS' ? 'NIGHTMAREクリアで解放' : '未実装・選択できません')), previewable ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
           className: "grid grid-cols-3 gap-1 mt-1"
         }, [['敵強度', `×${setting.power}`], ['スコア', `×${setting.score}`], ['ダイヤ', `×${setting.gold}`]].map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
@@ -20841,10 +20856,7 @@ function MonsterHeroGame() {
           const wave = highestModeWave(quickHighestWaves, difficultyIds);
           return wave > 0 ? `最高到達 WAVE ${wave}` : '未記録';
         }
-        const scores = mode.id === EXTREME_MODE.id ? {
-          [EXTREME_SETTING.id]: extremeBestScore,
-          [NIGHTMARE_SETTING.id]: nightmareBestScore
-        } : scoreMapFor(mode);
+        const scores = mode.id === EXTREME_MODE.id ? extremeBestScores : scoreMapFor(mode);
         const ids = mode.id === EXTREME_MODE.id ? EXTREME_DIFFICULTIES.filter(item => item.available).map(item => item.id) : difficultyIds;
         const best = highestModeScore(scores, ids);
         return best > 0 ? `最高スコア ${best.toLocaleString()} pt` : '未記録';
@@ -20904,8 +20916,8 @@ function MonsterHeroGame() {
       }, selected.label, "\u306E\u8A18\u9332")), /*#__PURE__*/React.createElement("div", {
         className: "flex flex-col gap-2"
       }, selected.id === EXTREME_MODE.id ? EXTREME_DIFFICULTIES.filter(setting => setting.available).map(setting => {
-        const score = setting.id === NIGHTMARE_SETTING.id ? nightmareBestScore : extremeBestScore;
-        const clears = setting.id === NIGHTMARE_SETTING.id ? nightmareClearCount : extremeClearCount;
+        const score = extremeBestScores[setting.id] || 0;
+        const clears = extremeClearCounts[setting.id] || 0;
         const played = score > 0 || clears > 0;
         return /*#__PURE__*/React.createElement("div", {
           key: setting.id,

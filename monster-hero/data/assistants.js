@@ -96,6 +96,15 @@ const ASSISTANT_UPDATE_NOTICES = [
     destination: 'battle', buttonLabel: 'バトルへ行く',
   },
   {
+    id: 'update_notice_chaos_v1', enabled: true,
+    title: 'CHAOS解禁！', expression: 'excited',
+    pages: [
+      '極限チャレンジにCHAOSが正式追加！ さらに過酷な戦いが待ってるよ！',
+      'NIGHTMAREを1回クリアすると挑戦できるよ。与ダメージと加入ボーナスは50%、消費ガッツは150%になるから準備してね！',
+    ],
+    destination: 'battle', buttonLabel: 'バトルへ行く',
+  },
+  {
     id: 'update_notice_pro_mode_v1', enabled: true,
     title: 'プロモード追加', expression: 'excited',
     pages: [
@@ -828,11 +837,11 @@ addAssistantLinePack({
       { e:'excited', t:'有利と不利で補正のかかり方が違うよ。作戦を練って挑も！' },
     ],
     chaosDifficulty: [
-      { e:'surprise', t:'この先はCHAOS…名前からしてヤバそうだね！' },
-      { e:'normal', t:'CHAOSの詳細はまだ秘密みたい。どんな戦いになるんだろ？' },
-      { e:'excited', t:'EXTREME、NIGHTMAREの先にはCHAOSが待ってるよ！' },
-      { e:'troubled', t:'CHAOSかぁ…名前を見ただけでドキドキしちゃうね。' },
-      { e:'wink', t:'いつかCHAOSへ挑める日に向けて、今からじっくり育てよ♪' },
+      { e:'surprise', t:'CHAOSは敵の強さが一気に×20！ 本当に極限の戦いだね！' },
+      { e:'normal', t:'NIGHTMAREを1回クリアするとCHAOSへ挑めるよ。' },
+      { e:'excited', t:'CHAOSはスコア×20、経験値×35、ダイヤ×15！ 報酬もすごいよ！' },
+      { e:'troubled', t:'与ダメージと加入ボーナスは半分、消費ガッツは1.5倍。慎重にいこ！' },
+      { e:'wink', t:'CHAOSクリアで虹のプシュケー50個！ あたしも全力で応援するよ♪' },
     ],
     ultimateDifficulty: [
       { e:'surprise', t:'ULTIMATEまであるんだ…相当な高難易度になりそう！' },

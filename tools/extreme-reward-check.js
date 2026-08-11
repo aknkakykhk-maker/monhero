@@ -31,7 +31,7 @@ vm.runInContext([
   grab('const DIFFICULTY_SETTINGS', 'const CLEAR_PSYCHE_REWARD'),
   grab('const createBattleEnemy', 'const collectBondRankingEntries'),
   'globalThis.__m={DIFFICULTY_SETTINGS,EXTREME_DIFFICULTIES,EXTREME_SETTING,extremeSpecialRule,'
-  + 'EXTREME_UNLOCK_DIFFICULTIES,isExtremeUnlocked,NIGHTMARE_SETTING,isNightmareUnlocked,normalizeBattleDifficulty,createBattleEnemy};',
+  + 'EXTREME_UNLOCK_DIFFICULTIES,isExtremeUnlocked,NIGHTMARE_SETTING,isNightmareUnlocked,isChaosUnlocked,normalizeBattleDifficulty,createBattleEnemy};',
 ].join('\n'), ctx);
 const m = ctx.__m;
 
@@ -73,11 +73,11 @@ check('NIGHTMAREは×15 / ×20 / ×30 / ×10 / 虹40を持つ',
     && m.NIGHTMARE_SETTING.xp === 30 && m.NIGHTMARE_SETTING.gold === 10
     && m.NIGHTMARE_SETTING.psyche === 40);
 const chaos = m.EXTREME_DIFFICULTIES.find(s => s.id === 'CHAOS');
-check('CHAOSは内部数値を持つが未公開のまま',
-  chaos.available === false && chaos.power === 20 && chaos.score === 20
+check('CHAOSは正式公開の数値を持つ',
+  chaos.available === true && chaos.power === 20 && chaos.score === 20
     && chaos.xp === 35 && chaos.gold === 15 && chaos.psyche === 50
     && chaos.unlockRequirement === 'NIGHTMARE');
-check('CHAOS特殊ルールは内部定義のみを持つ',
+check('CHAOS特殊ルールを持つ',
   chaos.specialRules.damageDealt === 0.5 && chaos.specialRules.allyJoinBonus === 0.5
     && chaos.specialRules.gutsCost === 1.5);
 check('ULTIMATEとINFINITYは未実装のまま数値を持たない',
@@ -86,6 +86,7 @@ check('NIGHTMAREはEXTREMEを1回以上クリア済みなら解放判定',
   m.isNightmareUnlocked(1) === true && m.isNightmareUnlocked('2') === true);
 check('NIGHTMAREはEXTREME未クリアなら未解放判定',
   m.isNightmareUnlocked(0) === false && m.isNightmareUnlocked(undefined) === false);
+check('CHAOSはNIGHTMAREを1回以上クリア済みなら解放判定', m.isChaosUnlocked(1) === true && m.isChaosUnlocked(0) === false);
 check('難易度の並びは EXTREME → NIGHTMARE → CHAOS → ULTIMATE → INFINITY',
   m.EXTREME_DIFFICULTIES.map(s => s.id).join(',') === 'EXTREME,NIGHTMARE,CHAOS,ULTIMATE,INFINITY');
 
