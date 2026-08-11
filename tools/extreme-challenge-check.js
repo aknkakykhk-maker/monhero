@@ -21,7 +21,7 @@ assert(/NIGHTMARE[^\n]+available:true[^\n]+power:15[^\n]+score:20[^\n]+xp:30[^\n
 assert(/CHAOS[^\n]+available:false[^\n]+power:20[^\n]+score:20[^\n]+xp:35[^\n]+gold:15[^\n]+psyche:50[^\n]+unlockRequirement:'NIGHTMARE'[^\n]+specialRules:Object\.freeze\(\{ damageDealt:0\.5, allyJoinBonus:0\.5, gutsCost:1\.5 \}\)/.test(config), 'CHAOS must retain its complete internal specification while unavailable');
 for (const name of ['ULTIMATE','INFINITY']) assert(new RegExp(`${name}[^\\n]+available:false`).test(config), `${name} must remain unavailable without placeholder values`);
 assert(config.includes('const isNightmareUnlocked = (extremeClearCount) => (Number(extremeClearCount) || 0) > 0;'), 'NIGHTMARE unlock must reuse the existing EXTREME clear count');
-assert(source.includes("{setting.available&&unlocked?'この難易度で挑戦':'選択できません'}"), 'NIGHTMARE must be selectable only after unlock');
+assert(source.includes("{previewable?'この難易度で挑戦':'選択できません'}"), 'previewable EXTREME tiers must be selectable');
 
 // --- ② 解放条件 ---
 assert(config.includes("const EXTREME_UNLOCK_DIFFICULTIES = Object.freeze(['GrandMaster', 'Hell', 'Legend'])"), 'unlock must reuse the three highest challenge difficulties');
@@ -29,9 +29,12 @@ assert(config.includes("const EXTREME_UNLOCK_TEXT = 'チャレンジ Grand Maste
 assert(/const isExtremeUnlocked = \(clearCounts\) => EXTREME_UNLOCK_DIFFICULTIES[\s\S]{0,160}\(Number\(clearCounts\?\.\[key\]\) \|\| 0\) > 0\)/.test(config), 'unlock must read the existing challenge clear counts');
 assert(source.includes('const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);'), 'unlock state must derive from the loaded clear counts');
 assert(source.includes('const modes=[...BATTLE_MODES,EXTREME_MODE];'), 'the extreme card must always be listed, locked or not');
-assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||(!!battleTutorial") && source.includes("disabled={!setting.available||!unlocked}"), 'official locked extreme tiers must remain unselectable while debug may enter');
+assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||(!!battleTutorial") && source.includes("disabled={!previewable}"), 'official locked extreme tiers must remain unselectable while debug may enter');
 assert(source.includes("const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);") && source.includes("setting.id==='NIGHTMARE'?nightmareUnlocked:false"), 'NIGHTMARE details must unlock from the loaded EXTREME clear count');
 assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:false)"), 'debug mode must unlock EXTREME and NIGHTMARE regardless of official progress');
+assert(source.includes("const debugChaos=debugBattle&&setting.id==='CHAOS'")
+  && source.includes('const previewable=(setting.available&&unlocked)||debugChaos'), 'only debug mode may preview unavailable CHAOS');
+assert(source.includes("debugChaos?'NIGHTMAREクリア'") && source.includes("debugChaos?'DEBUG確認専用・保存なし'"), 'debug CHAOS card must show its unlock condition and no-save status');
 assert(source.includes("disabled={!previewable} onClick={()=>setShowWaveDetails(true)}")
   && source.includes("const extreme=gameState==='EXTREME_DIFFICULTY_SELECT'")
   && source.includes("const powerOverride=extreme?extremePreviewSetting.power:null")
@@ -119,6 +122,9 @@ for (const name of ['chaosDifficulty', 'ultimateDifficulty', 'infinityDifficulty
 }
 assert(source.includes('data-extreme-difficulty-card={setting.id}') && source.includes('h-[382px] flex flex-col'), 'all five EXTREME tier cards must share one fixed outer height');
 assert(source.includes("lines.push(['自動回復補正',signed],['距離適性補正',signed])") && source.includes('grid-cols-[6.5rem_1fr]') && source.includes('whitespace-nowrap'), 'NIGHTMARE rule labels and values must remain aligned and unbroken');
+for (const expected of ["['与ダメージ',specialRulePercent(rules.damageDealt)]", "['供モン加入ボーナス',specialRulePercent(rules.allyJoinBonus)]", "['消費ガッツ',specialRulePercent(rules.gutsCost)]"]) {
+  assert(source.includes(expected), `CHAOS debug card must label its planned special rule: ${expected}`);
+}
 assert(source.includes('有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。'), 'NIGHTMARE card must use the approved natural description');
 assert(source.includes('h-[42px] shrink-0') && source.includes('h-[51px] shrink-0') && source.includes('mt-auto pt-1.5'), 'available tier cards must reserve equal record, rule, and footer regions');
 for (const expected of ['EXTREMEの次', '有利な補正', '不利な補正', '距離適性', 'WAVEごとの戦い方']) assert(assistants.includes(expected), `NIGHTMARE assistant guidance must include: ${expected}`);
