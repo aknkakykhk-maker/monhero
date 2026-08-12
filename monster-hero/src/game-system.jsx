@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 01:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 01:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1890,10 +1890,8 @@ const _getUndineExactRegion = (nx, ny) => {
   const region = (_undineExactRegionBytes[i >> 2] >> ((i & 3) * 2)) & 3;
   return region < 3 ? region : -1;
 };
-// 保存済みヤオビクニマスクは本体と同じ1024x1536だが、絵の不透明輪郭を実測すると
-// マスク側だけ横約3.2%・縦約0.6%大きく、中心も左約0.5%・上約0.8%ずれている。
-// 本体画像や共通表示倍率は変えず、マスクを読み込む座標だけヤオビクニ限定で補正する。
-const YAOBIKUNI_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 0.968, scaleY: 0.994, x: -0.0046, y: -0.0081 });
+// 新しい保存済みヤオビクニマスクは本体と同じ1024x1536・同一座標で作成されている。
+const YAOBIKUNI_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
 // 染色マスク位置調整Debugの対象一覧。今後は本体・マスク・baseIdをここへ足すだけで再利用できる。
 // initial は本番補正値ではなく、ユーザーが差分を読み取りやすくするため常に無補正から始める。
 const DYE_MASK_DEBUG_TARGETS = Object.freeze([

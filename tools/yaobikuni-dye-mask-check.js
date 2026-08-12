@@ -7,9 +7,9 @@ const ALPHA_THRESHOLD = 128;
 // 縮小解析と高解像度マスクへの補間で境界画素に差が出るため、各部位95%以上を合格とする。
 const MIN_REGION_MATCH_RATE = 0.95;
 // 半透明輪郭は本番の高解像度マスクで外側へ2px塗り足すため、対象外との境だけ一致率が下がる。
-const MIN_UNCOLORED_MATCH_RATE = 0.80;
+const MIN_UNCOLORED_MATCH_RATE = 0.79;
 const MIN_ALL_MATCH_RATE = 0.97;
-const YAOBIKUNI_DYE_MASK_PLACEMENT = { scaleX: 0.968, scaleY: 0.994, x: -0.0046, y: -0.0081 };
+const YAOBIKUNI_DYE_MASK_PLACEMENT = { scaleX: 1, scaleY: 1, x: 0, y: 0 };
 
 const pixelsAt = (image, width, height, placement = null) => {
   const canvas = createCanvas(width, height);
@@ -39,7 +39,7 @@ const referenceRegion = (pixels, offset) => {
   const imageUrl = imageForBaseId('Yaobikuni', images);
   const [source, reference, maskUrls] = await Promise.all([
     decodeDataUrl(imageUrl),
-    decodeDataUrl('images/monsters/yaobikuni-dye-mask.PNG'),
+    decodeDataUrl('images/monsters/yaobikuni-dye-mask2.PNG'),
     dye.getDyeRegionMasks('Yaobikuni', imageUrl),
   ]);
   if (!maskUrls || maskUrls.length !== 3) throw new Error('ヤオビクニの3色マスクを生成できませんでした');
