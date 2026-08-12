@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 615cbe85c6044378
+// source-sha256: bc3e5f0ad7861b26
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 02:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 08:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4092,10 +4092,15 @@ const _exactDyeMaskRegion = (pixels, offset) => {
   return -1;
 };
 const _dyeRegionMaskCache = {};
+// タッチ式エディタから試す間だけ使うBlob URL。保存領域や正式な画像参照は変更しない。
+const _temporaryDyeMasks = Object.create(null);
 const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
+  debugPlacement = debugPlacement || (_temporaryDyeMasks[baseId] ? {
+    maskUrl: _temporaryDyeMasks[baseId]
+  } : null);
   const hues = MASU_COLOR_REGION_HUES[baseId];
   if (!hues || hues.length === 0) return null;
-  const cacheKey = baseId + '::' + imgUrl + (debugPlacement ? `::debug:${debugPlacement.xPx}:${debugPlacement.yPx}:${debugPlacement.scaleX}:${debugPlacement.scaleY}` : '');
+  const cacheKey = baseId + '::' + imgUrl + (debugPlacement ? `::debug:${debugPlacement.maskUrl || ''}:${debugPlacement.xPx}:${debugPlacement.yPx}:${debugPlacement.scaleX}:${debugPlacement.scaleY}` : '');
   if (_dyeRegionMaskCache[cacheKey]) return _dyeRegionMaskCache[cacheKey];
   const promise = new Promise(resolve => {
     try {
@@ -8409,7 +8414,12 @@ const bootLoadWatch = fn => {
 
 // 開発用。全ベースモンの本体ピクセルを唯一の座標系にする汎用タッチ式マスクエディタ。
 const DyeMaskTouchEditor = ({
-  onClose
+  onClose,
+  onTryInGame,
+  onReleaseTemporary,
+  onReleaseAllTemporary,
+  temporaryMasks,
+  active = true
 }) => {
   const targets = useMemo(makeDyeMaskEditorTargets, []),
     [targetIndex, setTargetIndex] = useState(0),
@@ -8860,6 +8870,15 @@ const DyeMaskTouchEditor = ({
       setDirty(false);
     }, 'image/png');
   };
+  const tryInGame = () => {
+    const c = maskRef.current;
+    if (!c || !ready) return;
+    const image = normalizeMask(context().getImageData(0, 0, c.width, c.height), bodyDataRef.current);
+    context().putImageData(image, 0, 0);
+    c.toBlob(blob => {
+      if (blob) onTryInGame(target, blob);
+    }, 'image/png');
+  };
   const close = () => {
       if (confirmDiscard()) onClose();
     },
@@ -8879,7 +8898,7 @@ const DyeMaskTouchEditor = ({
       t
     }) => t.name.includes(search) || t.baseId.toLowerCase().includes(search.toLowerCase()));
   return /*#__PURE__*/React.createElement("main", {
-    className: "fixed inset-0 z-50 flex flex-col overflow-hidden bg-slate-950",
+    className: `${active ? 'flex' : 'hidden'} fixed inset-0 z-50 flex-col overflow-hidden bg-slate-950`,
     style: {
       paddingTop: 'max(.25rem,env(safe-area-inset-top))'
     }
@@ -8894,7 +8913,7 @@ const DyeMaskTouchEditor = ({
     className: "min-w-0"
   }, /*#__PURE__*/React.createElement("small", {
     className: "block text-[7px] font-black text-cyan-400"
-  }, "DEBUG\u30FB\u7AEF\u672B/\u30BB\u30FC\u30D6/\u672C\u756A\u30C7\u30FC\u30BF\u3078\u4FDD\u5B58\u3057\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
+  }, "DEBUG\u30FB\u30E1\u30E2\u30EA\u4E0A\u3060\u3051\uFF0F\u518D\u8AAD\u8FBC\u3067\u6D88\u53BB"), /*#__PURE__*/React.createElement("h2", {
     className: "truncate text-[11px] font-black"
   }, "\u6C4E\u7528\u67D3\u8272\u30DE\u30B9\u30AF\u30A8\u30C7\u30A3\u30BF")), /*#__PURE__*/React.createElement("button", {
     onClick: exportPng,
@@ -9032,7 +9051,23 @@ const DyeMaskTouchEditor = ({
   }, "\u30D6\u30E9\u30B7"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setTool('fill'),
     className: `rounded-xl text-[7px] ${tool === 'fill' ? 'bg-violet-700' : 'bg-slate-700'}`
-  }, "\u5857\u308A\u3064\u3076\u3057")), /*#__PURE__*/React.createElement("button", {
+  }, "\u5857\u308A\u3064\u3076\u3057")), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 grid grid-cols-3 gap-1"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: tryInGame,
+    disabled: !ready,
+    className: "min-h-[38px] rounded-lg bg-fuchsia-700 text-[8px] font-black disabled:opacity-40"
+  }, "\u30B2\u30FC\u30E0\u3067\u8A66\u3059"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onReleaseTemporary(target.baseId),
+    disabled: !temporaryMasks[target.baseId],
+    className: "rounded-lg bg-amber-800 text-[7px] font-black disabled:opacity-30"
+  }, "\u4E00\u6642\u53CD\u6620\u3092\u89E3\u9664"), /*#__PURE__*/React.createElement("button", {
+    onClick: onReleaseAllTemporary,
+    disabled: !Object.keys(temporaryMasks).length,
+    className: "rounded-lg bg-red-900 text-[8px] font-black disabled:opacity-30"
+  }, "\u3059\u3079\u3066\u89E3\u9664")), temporaryMasks[target.baseId] && /*#__PURE__*/React.createElement("p", {
+    className: "pt-0.5 text-center text-[8px] font-black text-fuchsia-300"
+  }, "\u25CF \u4E00\u6642\u53CD\u6620\u4E2D"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setDetails(v => !v),
     className: "mt-1 min-h-[28px] w-full rounded-lg bg-slate-700 text-[8px]"
   }, "\u8A73\u7D30 ", details ? '▲' : '▼'), details && /*#__PURE__*/React.createElement("div", {
@@ -9090,7 +9125,7 @@ const DyeMaskTouchEditor = ({
     className: "rounded bg-amber-900"
   }, "\u5143\u30DE\u30B9\u30AF\u518D\u8AAD\u8FBC")), /*#__PURE__*/React.createElement("p", {
     className: "pt-1 text-center text-[7px] text-slate-400"
-  }, "1\u672C\u6307\uFF1A\u30DD\u30A4\u30F3\u30BF\u30FC\u4F4D\u7F6E\u3078\u63CF\u753B\u30FB2\u672C\u6307\uFF1A\u30D1\u30F3/\u30D4\u30F3\u30C1\u30FB\u30C0\u30D6\u30EB\u30BF\u30C3\u30D7\uFF1A\u5168\u4F53\u8868\u793A\u30FB", Math.round(zoom * 100), "%")));
+  }, "1\u672C\u6307\uFF1A\u63CF\u753B\u30FB2\u672C\u6307\uFF1A\u30D1\u30F3/\u30D4\u30F3\u30C1\u30FB\u30C0\u30D6\u30EB\u30BF\u30C3\u30D7\uFF1A\u5168\u4F53\u8868\u793A\u30FB", Math.round(zoom * 100), "%")));
 };
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -9161,6 +9196,46 @@ function MonsterHeroGame() {
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
   const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('old');
   const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(null);
+  const [dyeMaskEditorOpened, setDyeMaskEditorOpened] = useState(false);
+  const [temporaryDyeMasks, setTemporaryDyeMasks] = useState({});
+  const temporaryDyeMasksRef = useRef({});
+  useEffect(() => () => {
+    Object.values(temporaryDyeMasksRef.current).forEach(URL.revokeObjectURL);
+    temporaryDyeMasksRef.current = {};
+  }, []);
+  const releaseTemporaryDyeMask = baseId => {
+    const url = temporaryDyeMasksRef.current[baseId];
+    if (!url) return;
+    URL.revokeObjectURL(url);
+    delete temporaryDyeMasksRef.current[baseId];
+    delete _temporaryDyeMasks[baseId];
+    setTemporaryDyeMasks({
+      ...temporaryDyeMasksRef.current
+    });
+  };
+  const releaseAllTemporaryDyeMasks = () => {
+    if (Object.keys(temporaryDyeMasksRef.current).length && !window.confirm('全モンスターの一時マスクを解除しますか？')) return;
+    Object.keys(temporaryDyeMasksRef.current).forEach(releaseTemporaryDyeMask);
+  };
+  const tryTemporaryDyeMask = (target, blob) => {
+    releaseTemporaryDyeMask(target.baseId);
+    const url = URL.createObjectURL(blob);
+    temporaryDyeMasksRef.current[target.baseId] = url;
+    _temporaryDyeMasks[target.baseId] = url;
+    setTemporaryDyeMasks({
+      ...temporaryDyeMasksRef.current
+    });
+    const individual = masuMons.find(m => m.baseId === target.baseId),
+      preview = individual || {
+        id: `temporary-dye-${target.baseId}`,
+        baseId: target.baseId,
+        name: target.name,
+        colors: []
+      };
+    setMonsterImageDebugId(preview.id);
+    setMonsterImageDebugColors(getMasuColors(preview));
+    setGameState('MONSTER_IMAGE_DEBUG');
+  };
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
@@ -21232,8 +21307,16 @@ function MonsterHeroGame() {
           className: "w-11 h-11 mx-auto"
         }), /*#__PURE__*/React.createElement("small", null, "\u5C0F\u578B\u30A2\u30A4\u30B3\u30F3"))))));
       })());
-    })(), gameState === 'DYE_MASK_POSITION_DEBUG' && /*#__PURE__*/React.createElement(DyeMaskTouchEditor, {
-      onClose: () => setGameState('DEBUG_SETTINGS')
+    })(), dyeMaskEditorOpened && /*#__PURE__*/React.createElement(DyeMaskTouchEditor, {
+      active: gameState === 'DYE_MASK_POSITION_DEBUG',
+      onClose: () => {
+        setDyeMaskEditorOpened(false);
+        setGameState('DEBUG_SETTINGS');
+      },
+      onTryInGame: tryTemporaryDyeMask,
+      onReleaseTemporary: releaseTemporaryDyeMask,
+      onReleaseAllTemporary: releaseAllTemporaryDyeMasks,
+      temporaryMasks: temporaryDyeMasks
     }), gameState === 'BREEDER_ICON_DEBUG' && (() => {
       const item = debugIconItems.find(entry => entry.id === iconAdjustId) || debugIconItems[0];
       if (!item) return /*#__PURE__*/React.createElement("div", {
@@ -21499,7 +21582,10 @@ function MonsterHeroGame() {
     }, "\uD83D\uDDBC\uFE0F \u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
     }, "\u672C\u756A\u8868\u793A\u3068\u67D3\u8272\u3092\u4FDD\u5B58\u305B\u305A\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setGameState('DYE_MASK_POSITION_DEBUG'),
+      onClick: () => {
+        setDyeMaskEditorOpened(true);
+        setGameState('DYE_MASK_POSITION_DEBUG');
+      },
       className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black"
     }, "\uD83D\uDD8C\uFE0F \u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
@@ -21664,7 +21750,15 @@ function MonsterHeroGame() {
       onClick: startDebugBattle,
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
     }, "3. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'MONSTER_IMAGE_DEBUG' && (() => {
-      const owned = masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId]);
+      const owned = [...masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId])];
+      Object.keys(temporaryDyeMasks).forEach(baseId => {
+        if (!owned.some(m => m.baseId === baseId) && ALL_PLAYER_MONSTERS[baseId]) owned.push({
+          id: `temporary-dye-${baseId}`,
+          baseId,
+          name: `${ALL_PLAYER_MONSTERS[baseId].name}（一時確認）`,
+          colors: []
+        });
+      });
       const selected = owned.find(m => String(m.id) === String(monsterImageDebugId)) || owned[0];
       if (!selected) return /*#__PURE__*/React.createElement("main", {
         className: "flex-1 p-4"
@@ -21779,7 +21873,12 @@ function MonsterHeroGame() {
         className: "text-[8px] font-black text-cyan-400"
       }, "DEBUG\u30FB\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
         className: "text-sm font-black"
-      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D"))), /*#__PURE__*/React.createElement("div", {
+      }, "\u30E2\u30F3\u30B9\u30BF\u30FC\u753B\u50CF\u30FB\u67D3\u8272\u78BA\u8A8D")), temporaryDyeMasks[selected.baseId] && /*#__PURE__*/React.createElement("span", {
+        className: "ml-auto rounded-full bg-fuchsia-800 px-2 py-1 text-[8px] font-black"
+      }, "\u4E00\u6642\u53CD\u6620\u4E2D")), temporaryDyeMasks[selected.baseId] && dyeMaskEditorOpened && /*#__PURE__*/React.createElement("button", {
+        onClick: () => setGameState('DYE_MASK_POSITION_DEBUG'),
+        className: "mb-2 min-h-[42px] shrink-0 rounded-xl border border-fuchsia-300 bg-fuchsia-800 text-[10px] font-black"
+      }, "\u30DE\u30B9\u30AF\u7DE8\u96C6\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3"
       }, /*#__PURE__*/React.createElement("select", {
         value: selected.id,
