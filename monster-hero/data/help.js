@@ -570,9 +570,9 @@ const HELP_CATEGORIES = [
             'レベルの上限はそのままです。転生を重ねても上限は上がりません',
             'ステータス強化と間合い適性は白紙に戻り、強化ポイントをまとめて振り直せます',
             '振り直せるポイントは「新しいレベルぶん＋これまでの限界突破ぶん＋10」です',
-            'アイコンに転生した回数が「+N」で表示されます',
+            '転生済みのアイコンには紫～青白の二重リングと淡い発光が付き、回数が「転生 ×N」で表示されます',
           ] },
-          { t:'note', title:'限界突破との違い', text:'限界突破は「上限を上げる」もので、レベルは減りません。転生は「レベルを返して強化を振り直す」もので、上限は変わりません。★が限界突破の回数(色が段階)、「+N」が転生の回数です。' },
+          { t:'note', title:'限界突破との違い', text:'限界突破は「上限を上げる」もので、レベルは減りません。転生は「レベルを返して強化を振り直す」もので、上限は変わりません。★の色と数が限界突破、紫～青白の専用リングと「転生 ×N」が転生を表します。' },
         ],
       },
       {
@@ -909,6 +909,7 @@ const HELP_SCREEN_COVERAGE = {
   MONSTER_IMAGE_DEBUG:'masu/dye',
   // 限界突破★テストは開発用だが、本番と同じ★を確認するため限界突破の説明へ対応させる。
   BREAKTHROUGH_STAR_DEBUG:'masu/rebirth',
+  REINCARNATE_DISPLAY_DEBUG:'masu/reincarnate',
   EXTREME_DIFFICULTY_SELECT: 'basics/extreme-challenge',
   // 対象外: DEBUG_SETTINGS は開発用の隠し画面。TRAINING_* は別担当のため触らない
   DEBUG_SETTINGS:   null,
