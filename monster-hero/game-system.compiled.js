@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: a9defb7f3e39d536
+// source-sha256: e2b2cc9ebe99a167
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-12 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 00:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3582,7 +3582,7 @@ const MASU_COLOR_REGION_HUES = {
     bbox: [0.395, 0.272, 0.605, 0.500],
     noEdgeGuard: true
   }]],
-  //  ・ヤオビクニ: 緑部分(髪・腕・尻尾・上衣、染色①)/ピンク髪(染色②)/肌(顔・上半身、染色③)
+  //  ・ヤオビクニ: 保存済み3色マスクを使用（下記の色相定義は染色の質感調整に利用）
   Yaobikuni: [[{
     hue: [86, 77],
     sMin: 0.30,
@@ -3972,6 +3972,42 @@ const _getUndineExactRegion = (nx, ny) => {
   const region = _undineExactRegionBytes[i >> 2] >> (i & 3) * 2 & 3;
   return region < 3 ? region : -1;
 };
+const _loadExactDyeMask = (url, width, height) => new Promise(resolve => {
+  try {
+    const image = new window.Image();
+    image.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        if (!context) {
+          resolve(null);
+          return;
+        }
+        context.imageSmoothingEnabled = false;
+        context.drawImage(image, 0, 0, width, height);
+        resolve(context.getImageData(0, 0, width, height).data);
+      } catch (_) {
+        resolve(null);
+      }
+    };
+    image.onerror = () => resolve(null);
+    image.src = url;
+  } catch (_) {
+    resolve(null);
+  }
+});
+const _exactDyeMaskRegion = (pixels, offset) => {
+  if (!pixels || pixels[offset + 3] < 20) return -1;
+  const r = pixels[offset],
+    g = pixels[offset + 1],
+    b = pixels[offset + 2];
+  if (r > 200 && g < 80 && b < 80) return 0;
+  if (g > 200 && r < 80 && b < 80) return 1;
+  if (b > 200 && r < 80 && g < 80) return 2;
+  return -1;
+};
 const _dyeRegionMaskCache = {};
 const getDyeRegionMasks = (baseId, imgUrl) => {
   const hues = MASU_COLOR_REGION_HUES[baseId];
@@ -3981,7 +4017,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
   const promise = new Promise(resolve => {
     try {
       const img = new window.Image();
-      img.onload = () => {
+      img.onload = async () => {
         try {
           const natW = img.naturalWidth || img.width,
             natH = img.naturalHeight || img.height;
@@ -4007,6 +4043,9 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
           srcCtx.imageSmoothingQuality = 'high';
           srcCtx.drawImage(img, 0, 0, w, h);
           const src = srcCtx.getImageData(0, 0, w, h).data;
+          // ヤオビクニは保存済みマスクの赤・緑・青を染色①・②・③として使う。
+          // マスクの透明／無彩色部分は対象外のままにし、色相推定による目や境界への誤染色を防ぐ。
+          const exactMask = baseId === 'Yaobikuni' ? await _loadExactDyeMask(YAOBIKUNI_DYE_MASK, w, h) : null;
           const aaAlphaThreshold = baseId === 'Mocchi' ? 96 : 200;
           const maskCanvases = regionDefs.map(() => {
             const c = document.createElement('canvas');
@@ -4042,10 +4081,9 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
               y = i / w | 0;
             const [hh, ss, vv] = _rgbToHsv(r, g, b);
             // 背景の飾りなど、そもそも染色対象にしない画素はここで除外する
-            if (_isExcludedDyePixel(baseId, hh, ss, vv, x / w, y / h)) continue;
-            // ウンディーネだけは、正解見本から事前変換した輪郭座標を優先する。
-            // それ以外のモンスター（ヤオビクニを含む）は従来の色相判定を変更しない。
-            const region = baseId === 'Undine' ? _getUndineExactRegion((x + 0.5) / w, (y + 0.5) / h) : _classifyDyePixel(hh, ss, vv, x / w, y / h, regionDefs);
+            if (!exactMask && _isExcludedDyePixel(baseId, hh, ss, vv, x / w, y / h)) continue;
+            // 保存済みの正解見本がある2体は、その輪郭座標を色相推定より優先する。
+            const region = exactMask ? _exactDyeMaskRegion(exactMask, o) : baseId === 'Undine' ? _getUndineExactRegion((x + 0.5) / w, (y + 0.5) / h) : _classifyDyePixel(hh, ss, vv, x / w, y / h, regionDefs);
             if (region < 0) continue;
             const def = regionDefs[region];
             // 輪郭線のうち実際に半透明でにじんでいる1px(自分自身の不透明度が低いピクセル)は
@@ -4058,7 +4096,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             // なって丸ごと消えてしまうため、部位定義でnoAAGuard:trueを指定すればこの除外もスキップできる
             // (posBboxで位置を絞っているぶん、色のにじみを気にする理由がそもそも無い部位向け)
             const skipAAGuard = !!(def && typeof def === 'object' && def.noAAGuard);
-            if (!skipAAGuard && a < aaAlphaThreshold) continue;
+            if (!exactMask && !skipAAGuard && a < aaAlphaThreshold) continue;
             // 塗り分けの境目(色が隣接するピクセルとの間でにじむ部分)も誤判定しやすいため、
             // 隣接ピクセルと色相が大きく違う場所は既定で除外する。ただし目のように細い部位は
             // 全域が境目になってしまい丸ごと消えるため、部位定義でnoEdgeGuard:trueを指定すれば
@@ -4072,7 +4110,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             // しまう(イブリースの羊毛でガビガビに見えていた主因)。白バケツ判定は自己のS/Vで既に
             // 確定しているため、こちらも既定で除外をスキップする
             const wantsEdgeGuard = !(def && typeof def === 'object' && (def.noEdgeGuard || def.posBbox || def.band || def.white));
-            if (wantsEdgeGuard && ss >= 0.1 && vv >= 0.12) {
+            if (!exactMask && wantsEdgeGuard && ss >= 0.1 && vv >= 0.12) {
               let isColorEdge = false;
               for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
                 const nh = hueAt(nx, ny);
