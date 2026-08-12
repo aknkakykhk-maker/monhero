@@ -126,14 +126,16 @@ for (const id of ['Undine', 'Yaobikuni']) {
   const block = start < 0 ? '' : source.slice(start, source.indexOf('\n  ],', start));
   // 1部位は「1つの定義」または「複数の判定をまとめた配列」なので、行頭のインデントで数える
   check(`${id}の染色は3部位`, (block.match(/^ {4}[[{]/gm) || []).length === 3, block ? '' : '定義が見つかりません');
-  // 瞳・肌は髪や衣装と同系色で色では切り分けられないため、位置(notBbox)で外している
+  // 瞳は髪と同系色なので染色①から位置(notBbox)で外し、肌は指定された染色枠へ分けている
   const upper = id === 'Undine' ? 'UNDINE' : 'YAOBIKUNI';
   check(`${id}は目を染めない(左右の目をnotBboxで除外)`,
     new RegExp(`const ${upper}_EYE_BOXES = \\[\\[[\\d., ]+\\], \\[[\\d., ]+\\]\\];`).test(source)
-      && block.includes(`...${upper}_EYE_BOXES`));
-  check(`${id}は肌(首・胸元)を染めない(notBboxで除外)`,
-    new RegExp(`const ${upper}_SKIN_BOXES = `).test(source) && block.includes(`${upper}_SKIN_BOXES`));
+      && block.includes(`${upper}_EYE_BOXES`));
 }
+check('ウンディーネの染色②は肌(顔・腕・尻尾)',
+  source.includes('ウンディーネ: 髪(染色①)/肌(顔・腕・尻尾、染色②)/白い衣装(染色③)'));
+check('ヤオビクニの染色①は緑部分、染色②はピンク髪、染色③は肌',
+  source.includes('ヤオビクニ: 緑部分(髪・腕・尻尾・上衣、染色①)/ピンク髪(染色②)/肌(顔・上半身、染色③)'));
 check('notBboxは染色エンジン側で効いている', source.includes('const _defExcluded = (def, nx, ny)') && (source.match(/_defExcluded\(def, nx, ny\)/g) || []).length >= 4);
 check('ヘルプに2体の染色部位を書いている', help.includes('ウンディーネの染色部位') && help.includes('ヤオビクニの染色部位'));
 
