@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5eb0cb4736ff54fc
+// source-sha256: ea4774ad9fd97220
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 00:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 00:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3990,6 +3990,66 @@ const DYE_MASK_DEBUG_TARGETS = Object.freeze([{
   imageUrl: YAOBIKUNI_IMG,
   maskUrl: YAOBIKUNI_DYE_MASK
 }]);
+// Debug専用。画像全体の透明余白を除外し、実際に描かれた輪郭同士が重なる初期調整値を求める。
+// 戻り値は256x384の調整プレビュー基準のpxと倍率で、本番補正やセーブデータには書き込まない。
+const DYE_MASK_DEBUG_PREVIEW_SIZE = Object.freeze({
+  width: 256,
+  height: 384
+});
+const _getImageAlphaBounds = url => new Promise((resolve, reject) => {
+  const image = new window.Image();
+  image.onload = () => {
+    try {
+      const width = image.naturalWidth || image.width,
+        height = image.naturalHeight || image.height;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d', {
+        willReadFrequently: true
+      });
+      if (!context) throw new Error('Canvasを利用できません');
+      context.drawImage(image, 0, 0, width, height);
+      const pixels = context.getImageData(0, 0, width, height).data;
+      let left = width,
+        top = height,
+        right = -1,
+        bottom = -1;
+      for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) if (pixels[(y * width + x) * 4 + 3] > 0) {
+        left = Math.min(left, x);
+        top = Math.min(top, y);
+        right = Math.max(right, x);
+        bottom = Math.max(bottom, y);
+      }
+      if (right < left || bottom < top) throw new Error('非透明部分がありません');
+      resolve({
+        left: left / width,
+        top: top / height,
+        right: (right + 1) / width,
+        bottom: (bottom + 1) / height
+      });
+    } catch (error) {
+      reject(error);
+    }
+  };
+  image.onerror = () => reject(new Error('画像を読み込めません'));
+  image.src = url;
+});
+const _calculateDyeMaskAutoFit = async (bodyUrl, maskUrl) => {
+  const [body, mask] = await Promise.all([_getImageAlphaBounds(bodyUrl), _getImageAlphaBounds(maskUrl)]);
+  const scaleX = (body.right - body.left) / (mask.right - mask.left),
+    scaleY = (body.bottom - body.top) / (mask.bottom - mask.top);
+  const bodyCenterX = (body.left + body.right) / 2,
+    bodyCenterY = (body.top + body.bottom) / 2;
+  const maskCenterX = (mask.left + mask.right) / 2,
+    maskCenterY = (mask.top + mask.bottom) / 2;
+  return {
+    x: +((bodyCenterX - (.5 + scaleX * (maskCenterX - .5))) * DYE_MASK_DEBUG_PREVIEW_SIZE.width).toFixed(2),
+    y: +((bodyCenterY - (.5 + scaleY * (maskCenterY - .5))) * DYE_MASK_DEBUG_PREVIEW_SIZE.height).toFixed(2),
+    scaleX: +(scaleX * 100).toFixed(2),
+    scaleY: +(scaleY * 100).toFixed(2)
+  };
+};
 const _loadExactDyeMask = (url, width, height, placement = null) => new Promise(resolve => {
   try {
     const image = new window.Image();
@@ -4037,7 +4097,7 @@ const _dyeRegionMaskCache = {};
 const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
   const hues = MASU_COLOR_REGION_HUES[baseId];
   if (!hues || hues.length === 0) return null;
-  const cacheKey = baseId + '::' + imgUrl + (debugPlacement ? `::debug:${debugPlacement.xPx}:${debugPlacement.yPx}:${debugPlacement.scalePercent}` : '');
+  const cacheKey = baseId + '::' + imgUrl + (debugPlacement ? `::debug:${debugPlacement.xPx}:${debugPlacement.yPx}:${debugPlacement.scaleX}:${debugPlacement.scaleY}` : '');
   if (_dyeRegionMaskCache[cacheKey]) return _dyeRegionMaskCache[cacheKey];
   const promise = new Promise(resolve => {
     try {
@@ -4417,7 +4477,7 @@ const DyedMonsterImage = ({
     return () => {
       cancelled = true;
     };
-  }, [baseId, src, colorKey, debugMaskPlacement?.xPx, debugMaskPlacement?.yPx, debugMaskPlacement?.scalePercent]);
+  }, [baseId, src, colorKey, debugMaskPlacement?.xPx, debugMaskPlacement?.yPx, debugMaskPlacement?.scaleX, debugMaskPlacement?.scaleY]);
   // 染め直した画像は部位ごとに作る(光沢保持の設定を部位ごとに変えられるため)。
   // 設定が同じ部位はgetRecoloredImage側のキャッシュで同じ画像を共有するので、
   // 書き分けていないモンスターでは作る枚数はこれまでと変わらない
@@ -8417,8 +8477,11 @@ function MonsterHeroGame() {
   const [dyeMaskDebugValues, setDyeMaskDebugValues] = useState({
     x: 0,
     y: 0,
-    scale: 100
+    scaleX: 100,
+    scaleY: 100
   });
+  const [dyeMaskDebugStep, setDyeMaskDebugStep] = useState('normal');
+  const [dyeMaskAutoFitState, setDyeMaskAutoFitState] = useState('idle');
   // モンスター画像確認はデバッグ画面を開いている間だけ保持し、セーブ領域へは書き込まない。
   const [monsterImageDebugId, setMonsterImageDebugId] = useState(null);
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
@@ -20501,106 +20564,106 @@ function MonsterHeroGame() {
         className: "p-4 text-slate-400"
       }, "\u8ABF\u6574\u3067\u304D\u308B\u67D3\u8272\u30DE\u30B9\u30AF\u304C\u3042\u308A\u307E\u305B\u3093\u3002");
       const values = dyeMaskDebugValues;
-      const setValue = (key, value) => setDyeMaskDebugValues(current => ({
+      const stepOptions = {
+        fine: {
+          label: '細かく',
+          position: 1,
+          scale: .1
+        },
+        normal: {
+          label: '普通',
+          position: 3,
+          scale: .5
+        },
+        large: {
+          label: '大きく',
+          position: 10,
+          scale: 2
+        }
+      };
+      const activeStep = stepOptions[dyeMaskDebugStep] || stepOptions.normal;
+      const clamp = (key, value) => +Math.max(key === 'x' || key === 'y' ? -100 : 50, Math.min(key === 'x' || key === 'y' ? 100 : 150, value)).toFixed(2);
+      const adjust = (key, amount) => setDyeMaskDebugValues(current => ({
         ...current,
-        [key]: Number(value)
+        [key]: clamp(key, current[key] + amount)
       }));
+      const reset = () => {
+        setDyeMaskDebugValues({
+          x: 0,
+          y: 0,
+          scaleX: 100,
+          scaleY: 100
+        });
+        setDyeMaskAutoFitState('idle');
+      };
+      const autoFit = async () => {
+        setDyeMaskAutoFitState('loading');
+        try {
+          setDyeMaskDebugValues(await _calculateDyeMaskAutoFit(target.imageUrl, target.maskUrl));
+          setDyeMaskAutoFitState('done');
+        } catch (_) {
+          setDyeMaskAutoFitState('error');
+        }
+      };
       const signed = value => value > 0 ? `+${value}` : String(value);
-      const copyText = `${target.id}: X=${values.x}, Y=${values.y}, Scale=${values.scale}%`;
+      const copyText = `${target.id}: X=${values.x}, Y=${values.y}, ScaleX=${values.scaleX.toFixed(1)}%, ScaleY=${values.scaleY.toFixed(1)}%`;
       const placement = {
         xPx: values.x,
         yPx: values.y,
-        scalePercent: values.scale,
+        scaleX: values.scaleX / 100,
+        scaleY: values.scaleY / 100,
         maskUrl: target.maskUrl
       };
-      const control = (key, label, min, max, step, suffix = '') => /*#__PURE__*/React.createElement("label", {
-        className: "block rounded-xl bg-slate-900 p-3"
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "mb-1 flex justify-between text-[10px] font-black text-slate-300"
-      }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("output", null, key === 'scale' ? values[key] : signed(values[key]), suffix)), /*#__PURE__*/React.createElement("input", {
-        "aria-label": `${label}スライダー`,
-        className: "w-full min-h-[32px] accent-cyan-500 touch-none",
-        type: "range",
-        min: min,
-        max: max,
-        step: step,
-        value: values[key],
-        onChange: e => setValue(key, e.target.value)
-      }), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1 grid grid-cols-[46px_1fr_46px] gap-2"
-      }, /*#__PURE__*/React.createElement("button", {
+      const maskTransform = `translate(${values.x / DYE_MASK_DEBUG_PREVIEW_SIZE.width * 100}%, ${values.y / DYE_MASK_DEBUG_PREVIEW_SIZE.height * 100}%) scale(${values.scaleX / 100}, ${values.scaleY / 100})`;
+      const action = (label, key, amount, aria) => /*#__PURE__*/React.createElement("button", {
         type: "button",
-        "aria-label": `${label}を減らす`,
-        onClick: () => setValue(key, Math.max(min, +(values[key] - step).toFixed(2))),
-        className: "min-h-[44px] rounded-xl bg-slate-700 text-lg font-black"
-      }, "\u2212"), /*#__PURE__*/React.createElement("input", {
-        "aria-label": `${label}数値入力`,
-        type: "number",
-        min: min,
-        max: max,
-        step: step,
-        value: values[key],
-        onChange: e => e.target.value !== '' && setValue(key, Math.min(max, Math.max(min, Number(e.target.value)))),
-        className: "min-w-0 rounded-xl border border-white/10 bg-black/40 px-2 text-center text-sm font-black"
-      }), /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "aria-label": `${label}を増やす`,
-        onClick: () => setValue(key, Math.min(max, +(values[key] + step).toFixed(2))),
-        className: "min-h-[44px] rounded-xl bg-slate-700 text-lg font-black"
-      }, "\uFF0B")));
-      const maskTransform = `translate(${values.x}px, ${values.y}px) scale(${values.scale / 100})`;
+        "aria-label": aria,
+        onClick: () => adjust(key, amount),
+        className: "min-h-[46px] rounded-xl border border-white/10 bg-slate-800 text-xs font-black active:bg-cyan-700"
+      }, label);
       return /*#__PURE__*/React.createElement("main", {
-        className: "flex-1 flex flex-col h-full min-h-0 p-3",
+        className: "fixed inset-0 z-50 flex flex-col overflow-hidden bg-slate-950 px-2",
         style: {
-          paddingTop: 'calc(.75rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(.75rem + env(safe-area-inset-bottom))'
+          paddingTop: 'max(.35rem,env(safe-area-inset-top))'
         }
       }, /*#__PURE__*/React.createElement("header", {
-        className: "flex items-center gap-2 mb-2 shrink-0"
+        className: "flex h-11 items-center gap-1 shrink-0"
       }, /*#__PURE__*/React.createElement("button", {
         onClick: () => setGameState('DEBUG_SETTINGS'),
-        className: "p-3 text-slate-400"
+        "aria-label": "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B",
+        className: "min-h-[44px] min-w-[44px] text-slate-400"
       }, /*#__PURE__*/React.createElement(ArrowLeft, {
         size: 20
-      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
-        className: "text-[8px] font-black text-cyan-400"
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "min-w-0"
+      }, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[7px] font-black text-cyan-400"
       }, "DEBUG\u30FB\u4FDD\u5B58\uFF0F\u672C\u756A\u53CD\u6620\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
-        className: "text-sm font-black"
-      }, "\u67D3\u8272\u30DE\u30B9\u30AF\u4F4D\u7F6E\u8ABF\u6574"))), /*#__PURE__*/React.createElement("div", {
-        className: "flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-2"
-      }, /*#__PURE__*/React.createElement("select", {
+        className: "truncate text-xs font-black"
+      }, "\u67D3\u8272\u30DE\u30B9\u30AF\u4F4D\u7F6E\u8ABF\u6574")), /*#__PURE__*/React.createElement("select", {
+        "aria-label": "\u8ABF\u6574\u5BFE\u8C61",
         value: target.id,
         onChange: e => {
           setDyeMaskDebugId(e.target.value);
-          setDyeMaskDebugValues({
-            x: 0,
-            y: 0,
-            scale: 100
-          });
+          reset();
         },
-        className: "w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-black"
+        className: "ml-auto min-h-[38px] max-w-[42%] rounded-lg bg-slate-900 px-2 text-[9px] font-black"
       }, DYE_MASK_DEBUG_TARGETS.map(entry => /*#__PURE__*/React.createElement("option", {
         key: entry.id,
         value: entry.id
-      }, entry.name, "\uFF08", entry.id, "\uFF09"))), /*#__PURE__*/React.createElement("section", {
-        className: "sticky top-0 z-10 rounded-2xl border-2 border-cyan-400 bg-slate-950/95 p-3 text-center shadow-xl"
+      }, entry.name)))), /*#__PURE__*/React.createElement("section", {
+        className: "flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden pb-1"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-cyan-300"
-      }, "\u73FE\u5728\u5024\uFF08\u3053\u306E\u307E\u307E\u4F1D\u3048\u3089\u308C\u307E\u3059\uFF09"), /*#__PURE__*/React.createElement("output", {
-        className: "mt-1 block font-mono text-base font-black text-white"
-      }, "X: ", signed(values.x), "\u3000Y: ", signed(values.y), /*#__PURE__*/React.createElement("br", null), "Scale: ", values.scale, "%")), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-3 gap-1"
+        className: "mb-1 grid w-full max-w-sm grid-cols-3 gap-1"
       }, [['composite', '合成'], ['body', '本体のみ'], ['mask', 'マスクのみ']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
         key: id,
         onClick: () => setDyeMaskDebugMode(id),
         "aria-pressed": dyeMaskDebugMode === id,
-        className: `min-h-[44px] rounded-xl border text-[10px] font-black ${dyeMaskDebugMode === id ? 'bg-cyan-700 border-cyan-300 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`
-      }, label))), /*#__PURE__*/React.createElement("section", {
-        className: "rounded-2xl border border-white/15 bg-black/40 p-2"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "relative mx-auto overflow-hidden",
+        className: `min-h-[38px] rounded-lg border text-[9px] font-black ${dyeMaskDebugMode === id ? 'bg-cyan-700 border-cyan-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
+      }, label))), /*#__PURE__*/React.createElement("div", {
+        className: "relative min-h-0 max-h-full max-w-full overflow-hidden",
         style: {
-          width: 'min(256px, 100%)',
+          height: '100%',
           aspectRatio: '2 / 3',
           backgroundColor: '#cbd5e1',
           backgroundImage: 'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',
@@ -20613,33 +20676,48 @@ function MonsterHeroGame() {
         alt: `${target.name}の染色合成`,
         masuColors: ['red', 'green', 'blue'],
         debugMaskPlacement: placement,
-        className: "absolute inset-0 w-full h-full object-contain"
+        className: "absolute inset-0 h-full w-full object-contain"
       }), dyeMaskDebugMode === 'body' && /*#__PURE__*/React.createElement("img", {
         src: target.imageUrl,
         alt: `${target.name}本体`,
-        className: "absolute inset-0 w-full h-full object-contain"
+        className: "absolute inset-0 h-full w-full object-contain"
       }), dyeMaskDebugMode === 'mask' && /*#__PURE__*/React.createElement("img", {
         src: target.maskUrl,
         alt: `${target.name}染色マスク`,
-        className: "absolute inset-0 w-full h-full object-contain",
+        className: "absolute inset-0 h-full w-full object-contain",
         style: {
           transform: maskTransform,
           transformOrigin: 'center'
         }
-      })), /*#__PURE__*/React.createElement("p", {
-        className: "mt-2 text-center text-[8px] text-slate-400"
-      }, "\u5408\u6210\u306F\u67D3\u8272\u2460=\u8D64\u30FB\u2461=\u7DD1\u30FB\u2462=\u9752\u3067\u8868\u793A")), control('x', 'X位置', -50, 50, 1), control('y', 'Y位置', -50, 50, 1), control('scale', 'Scale', 50, 150, .1, '%'), /*#__PURE__*/React.createElement("pre", {
-        className: "whitespace-pre-wrap break-all rounded-xl bg-black/50 p-3 text-[11px] text-cyan-200"
-      }, copyText), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
+      }))), /*#__PURE__*/React.createElement("section", {
+        "aria-label": "\u67D3\u8272\u30DE\u30B9\u30AF\u56FA\u5B9A\u64CD\u4F5C\u30D1\u30CD\u30EB",
+        className: "-mx-2 shrink-0 rounded-t-2xl border-t-2 border-cyan-400 bg-slate-900/98 px-2 pt-2 shadow-2xl",
+        style: {
+          paddingBottom: 'max(.45rem,env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("output", {
+        className: "mb-1 block text-center font-mono text-[11px] font-black text-cyan-100"
+      }, "X: ", signed(values.x), "\u3000Y: ", signed(values.y), "\u3000ScaleX: ", values.scaleX.toFixed(1), "%\u3000ScaleY: ", values.scaleY.toFixed(1), "%"), /*#__PURE__*/React.createElement("div", {
+        className: "mb-1 grid grid-cols-3 gap-1"
+      }, Object.entries(stepOptions).map(([id, option]) => /*#__PURE__*/React.createElement("button", {
+        key: id,
+        onClick: () => setDyeMaskDebugStep(id),
+        "aria-pressed": dyeMaskDebugStep === id,
+        className: `min-h-[38px] rounded-lg text-[9px] font-black ${dyeMaskDebugStep === id ? 'bg-cyan-700' : 'bg-slate-700'}`
+      }, option.label, /*#__PURE__*/React.createElement("small", {
+        className: "block text-[7px]"
+      }, option.position, "px / ", option.scale, "%")))), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-4 gap-1"
+      }, action('X ←', 'x', -activeStep.position, 'マスクを左へ'), action('X →', 'x', activeStep.position, 'マスクを右へ'), action('Y ↑', 'y', -activeStep.position, 'マスクを上へ'), action('Y ↓', 'y', activeStep.position, 'マスクを下へ'), action('横幅 −', 'scaleX', -activeStep.scale, 'マスクの横幅を縮める'), action('横幅 ＋', 'scaleX', activeStep.scale, 'マスクの横幅を広げる'), action('縦幅 −', 'scaleY', -activeStep.scale, 'マスクの縦幅を縮める'), action('縦幅 ＋', 'scaleY', activeStep.scale, 'マスクの縦幅を広げる')), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1 grid grid-cols-3 gap-1"
       }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setDyeMaskDebugValues({
-          x: 0,
-          y: 0,
-          scale: 100
-        }),
-        className: "min-h-[48px] rounded-xl bg-slate-800 text-[10px] font-black"
-      }, "\u521D\u671F\u5024\u3078\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
+        onClick: autoFit,
+        disabled: dyeMaskAutoFitState === 'loading',
+        className: "min-h-[42px] rounded-xl bg-violet-700 text-[9px] font-black disabled:opacity-50"
+      }, dyeMaskAutoFitState === 'loading' ? '計測中…' : '自動フィット'), /*#__PURE__*/React.createElement("button", {
+        onClick: reset,
+        className: "min-h-[42px] rounded-xl bg-slate-700 text-[9px] font-black"
+      }, "\u521D\u671F\u72B6\u614B\u306B\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
         onClick: async () => {
           try {
             await navigator.clipboard.writeText(copyText);
@@ -20648,8 +20726,11 @@ function MonsterHeroGame() {
             window.prompt('この数値をコピーしてください。', copyText);
           }
         },
-        className: "min-h-[48px] rounded-xl bg-cyan-700 text-[10px] font-black"
-      }, "\u6570\u5024\u3092\u30B3\u30D4\u30FC"))));
+        className: "min-h-[42px] rounded-xl bg-cyan-700 text-[9px] font-black"
+      }, "\u6570\u5024\u3092\u30B3\u30D4\u30FC")), dyeMaskAutoFitState === 'error' && /*#__PURE__*/React.createElement("p", {
+        role: "alert",
+        className: "pt-1 text-center text-[8px] font-black text-red-300"
+      }, "\u753B\u50CF\u3092\u8A08\u6E2C\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u521D\u671F\u72B6\u614B\u306E\u307E\u307E\u624B\u52D5\u8ABF\u6574\u3067\u304D\u307E\u3059\u3002")));
     })(), gameState === 'BREEDER_ICON_DEBUG' && (() => {
       const item = debugIconItems.find(entry => entry.id === iconAdjustId) || debugIconItems[0];
       if (!item) return /*#__PURE__*/React.createElement("div", {
@@ -20919,7 +21000,7 @@ function MonsterHeroGame() {
       className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black"
     }, "\uD83C\uDFAF \u67D3\u8272\u30DE\u30B9\u30AF\u4F4D\u7F6E\u8ABF\u6574", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
-    }, "X\u30FBY\u30FBScale\u3092\u4FDD\u5B58\u305B\u305A\u5B9F\u6A5F\u8ABF\u6574")), /*#__PURE__*/React.createElement("button", {
+    }, "X\u30FBY\u30FB\u7E26\u6A2AScale\u3092\u4FDD\u5B58\u305B\u305A\u5B9F\u6A5F\u8ABF\u6574")), /*#__PURE__*/React.createElement("button", {
       onClick: openDebugTraining,
       className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
     }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
