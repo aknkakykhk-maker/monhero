@@ -32,6 +32,11 @@ const RIM_BARE_LIMIT = 5; // %
 // 元の色の筋(点線状の塗り残し)が残る。定義を実測値へ合わせた状態で0%なので、
 // 「気づかないうちに定義とイラストがずれた」ことを拾えるよう厳しめにしておく
 const INNER_BARE_LIMIT = 0.2; // %
+// 例外: 肌そのものを染めない仕様のモンスター。人魚2体は肌が寒色/暖色の淡い色で塗られていて
+// 「色が付いている画素」として数えられるが、仕様として髪・尾・衣装だけを染め、肌・目・白目は
+// 元の色のまま残す。実測(ウンディーネ5.6%・ヤオビクニ2.5%)のほとんどが顔と首の肌なので、
+// ここだけ上限を分ける。値は実測+2%程度にしてあり、部位定義が崩れて塗り残しが増えれば落ちる
+const INNER_BARE_LIMIT_BY_ID = { Undine: 7.5, Yaobikuni: 4.5 };
 // 元の陰影を保つ設定(MASU_COLOR_REGION_DYE の gloss に数値を入れたモンスター)で、
 // 染め上がりの彩度がどれだけばらつくか。彩度を一律に固定する塗りだと0になる
 const GLOSS_SPREAD_MIN = 0.05;
@@ -49,7 +54,7 @@ const GLOSS_EXPECTED = ['Mocchi'];
 const REGION_SAT_RATIO_MIN = 0.45;
 // 高解像度マスクが必ず効いていてほしいモンスター(元絵が解析サイズより大幅に大きいもの)。
 // MASK_HIRES_BASE_IDSからうっかり外れたときに気付けるよう、ここにも明示しておく
-const EXPECTED = ['Mocchi', 'Ark', 'Ham', 'Zan'];
+const EXPECTED = ['Mocchi', 'Ark', 'Ham', 'Zan', 'Undine', 'Yaobikuni'];
 
 const page = `<!doctype html><meta charset="utf-8">
 <!-- 画像はPNGファイルになったので、monster-hero/ を基準にパスを解決させる -->
@@ -125,37 +130,46 @@ window.__measure = async (id, colors) => {
   const ms = Math.round(performance.now() - t0);
   if (!masks) return { error: 'マスクを作れませんでした' };
   const art = await load(base.imgUrl);
-  const n = art.naturalWidth;
-  const cv = document.createElement('canvas'); cv.width = n; cv.height = n;
+  // 立ち絵は正方形とは限らない(人魚2体は1024x1536)。正方形で測ると下半分を見落とすので実寸で測る
+  const n = art.naturalWidth, nh = art.naturalHeight;
+  const cv = document.createElement('canvas'); cv.width = n; cv.height = nh;
   const ctx = cv.getContext('2d'); ctx.drawImage(art, 0, 0);
-  const ad = ctx.getImageData(0, 0, n, n).data;
+  const ad = ctx.getImageData(0, 0, n, nh).data;
   // 全部位のマスクを元絵の解像度へ戻して足し合わせる
-  const sum = new Uint16Array(n * n);
+  const sum = new Uint16Array(n * nh);
   const maskSizes = [];
   for (let i = 0; i < masks.length; i++) {
     if (!masks[i]) { maskSizes.push(0); continue; }
     const mi = await load(masks[i]);
     maskSizes.push(mi.naturalWidth);
-    const mc = document.createElement('canvas'); mc.width = n; mc.height = n;
+    const mc = document.createElement('canvas'); mc.width = n; mc.height = nh;
     const mx = mc.getContext('2d');
     mx.imageSmoothingEnabled = true; mx.imageSmoothingQuality = 'high';
-    mx.drawImage(mi, 0, 0, n, n);
-    const md = mx.getImageData(0, 0, n, n).data;
-    for (let p = 0; p < n * n; p++) sum[p] = Math.min(255, sum[p] + md[p * 4 + 3]);
+    mx.drawImage(mi, 0, 0, n, nh);
+    const md = mx.getImageData(0, 0, n, nh).data;
+    for (let p = 0; p < n * nh; p++) sum[p] = Math.min(255, sum[p] + md[p * 4 + 3]);
   }
-  const on = new Uint8Array(n * n);
-  for (let p = 0; p < n * n; p++) on[p] = ad[p * 4 + 3] >= 32 ? 1 : 0;
+  // 部位定義の notBbox は「肌・目なので狙って染めない」と宣言した範囲なので、塗り残しに数えない
+  const skip = (MASU_COLOR_REGION_HUES[id] || []).flatMap((def) => (Array.isArray(def) ? def : [def])
+    .flatMap((a) => (a && a.notBbox) ? (Array.isArray(a.notBbox[0]) ? a.notBbox : [a.notBbox]) : []));
+  const isSkipped = (x, y) => skip.some(([x0, y0, x1, y1]) => {
+    const nx = x / n, ny = y / nh;
+    return nx >= x0 && nx <= x1 && ny >= y0 && ny <= y1;
+  });
+  const on = new Uint8Array(n * nh);
+  for (let p = 0; p < n * nh; p++) on[p] = ad[p * 4 + 3] >= 32 ? 1 : 0;
   let rim = 0, rimBare = 0, inner = 0, innerBare = 0;
-  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+  for (let y = 0; y < nh; y++) for (let x = 0; x < n; x++) {
     const p = y * n + x;
     if (!on[p]) continue;
+    if (skip.length && isSkipped(x, y)) continue;
     // 数えるのは「色が付いている画素」だけ。白いハイライトや黒い輪郭線は
     // もともと染めない部分なので、塗り残しとして数えると意味がなくなる
     const r = ad[p*4], g = ad[p*4+1], b2 = ad[p*4+2];
     const mx = Math.max(r, g, b2), mn = Math.min(r, g, b2);
     const s = mx === 0 ? 0 : (mx - mn) / mx, v = mx / 255;
     if (s < 0.1 || v < 0.25) continue;
-    const isRim = [[x-3,y],[x+3,y],[x,y-3],[x,y+3]].some(([a, b]) => (a < 0 || b < 0 || a >= n || b >= n) ? true : !on[b * n + a]);
+    const isRim = [[x-3,y],[x+3,y],[x,y-3],[x,y+3]].some(([a, b]) => (a < 0 || b < 0 || a >= n || b >= nh) ? true : !on[b * n + a]);
     if (isRim) { rim++; if (sum[p] < 32) rimBare++; continue; }
     inner++;
     if (sum[p] < 32) innerBare++;
@@ -225,8 +239,9 @@ const server = http.createServer((req, res) => {
       if (r.rimBareRatio > RIM_BARE_LIMIT) {
         problems.push(`${id}: 輪郭の塗り残しが ${r.rimBareRatio}% (上限 ${RIM_BARE_LIMIT}%)。染めても元の色の縁が残ります`);
       }
-      if (r.innerBareRatio > INNER_BARE_LIMIT) {
-        problems.push(`${id}: 内側の塗り残しが ${r.innerBareRatio}% (上限 ${INNER_BARE_LIMIT}%)。腕と体の境目などに元の色の筋が残ります — 部位定義の色相がイラストと合っているか確認してください`);
+      const innerLimit = INNER_BARE_LIMIT_BY_ID[id] ?? INNER_BARE_LIMIT;
+      if (r.innerBareRatio > innerLimit) {
+        problems.push(`${id}: 内側の塗り残しが ${r.innerBareRatio}% (上限 ${innerLimit}%)。腕と体の境目などに元の色の筋が残ります — 部位定義の色相がイラストと合っているか確認してください`);
       }
     }
     await tab.close();
