@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-12 12:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-12 13:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1525,20 +1525,27 @@ const MASU_COLOR_REGION_HUES = {
   // noEdgeGuard は「隣と色相が違う画素を無染色で残す」既定の除外を切るための指定
   // (髪と衣装、体と尾のように部位どうしが直に接するので、境目を残すと元の色の筋が出る)。
   // 2026年8月に追加した人魚2体。髪と尻尾がどちらも同じ色相なので、色だけでは分けられない。
-  // 尻尾・腕のヒレ・衣装のある範囲を位置(posBbox/bbox)で切り出し、残りを髪として扱う。
+  // 尻尾・腕のヒレ・衣装のある範囲を位置(bbox)で切り出し、残りを髪として扱う。
+  // どちらも瞳が髪と同系色(ウンディーネ=青、ヤオビクニ=緑)で、彩度・明度でも切り分けられないため、
+  // 髪の判定から左右の目だけを notBbox で外している(目・白目は染めない)。
   //  ・ウンディーネ: 髪(染色①)/尻尾と腕のヒレ(染色②)/白い衣装(染色③)
-  //    肌は彩度0.20〜0.40の淡い水色なので、白バケツ(sMax0.18)にも髪の青(sMin0.45)にも入らず無染色のまま残る
+  //    肌は彩度0.23〜0.26の淡い水色。髪(sMin0.45)にも衣装の白バケツ(sMax0.22)にも入らないので無染色で残る。
+  //    衣装は明るい部分が彩度0.05〜0.20、影とベルトが0.22〜0.60と幅があるので、
+  //    白バケツ+色相の2条件を同じ枠にまとめて拾う(片方だけだと裾や影が虫食いになる)
   Undine: [
-    { hue: 218, sMin: 0.45, bbox: [[0.0, 0.0, 1.0, 0.48], [0.0, 0.48, 0.33, 0.76], [0.67, 0.48, 1.0, 0.76]], noEdgeGuard: true },
+    { hue: 218, sMin: 0.45, bbox: [[0.0, 0.0, 1.0, 0.48], [0.0, 0.48, 0.33, 0.76], [0.67, 0.48, 1.0, 0.76]], notBbox: [[0.366, 0.152, 0.440, 0.198], [0.495, 0.152, 0.570, 0.198]], noEdgeGuard: true },
     { hue: 200, sMin: 0.45, bbox: [0.0, 0.30, 1.0, 1.0], noEdgeGuard: true },
-    { white: true, sMax: 0.18, vMin: 0.70, bbox: [0.30, 0.20, 0.70, 0.56], noEdgeGuard: true },
+    [
+      { white: true, sMax: 0.22, vMin: 0.80, bbox: [0.355, 0.255, 0.645, 0.520], noEdgeGuard: true },
+      { hue: 216, sMin: 0.22, sMax: 0.60, vMin: 0.80, bbox: [0.395, 0.272, 0.605, 0.500], noEdgeGuard: true },
+    ],
   ],
   //  ・ヤオビクニ: 緑の髪(染色①)/ピンク(染色②)/緑の尻尾・腕・衣装(染色③)
   //    髪と尻尾はどちらも緑だが色相が分かれる(髪85前後・尻尾/腕/衣装78前後)ので、
   //    髪は頭まわりへ範囲を絞ったうえで色相の近いほうへ割り当てる。
   //    肌は彩度0.12なので sMin 0.30 に届かず、どの部位にも入らない
   Yaobikuni: [
-    { hue: 86, sMin: 0.30, bbox: [0.0, 0.0, 1.0, 0.36], noEdgeGuard: true },
+    { hue: 86, sMin: 0.30, bbox: [0.0, 0.0, 1.0, 0.36], notBbox: [[0.370, 0.144, 0.447, 0.194], [0.498, 0.144, 0.572, 0.194]], noEdgeGuard: true },
     { hue: 341, sMin: 0.25, noEdgeGuard: true },
     { hue: 77, sMin: 0.30, bbox: [0.0, 0.23, 1.0, 1.0], noEdgeGuard: true },
   ],
@@ -1641,6 +1648,10 @@ const _bboxMatches = (bbox, nx, ny) => {
 // 「いずれかのサブ定義にマッチすればこの部位」という意味になる(例:色相の判定+別の白バケツ判定を
 // 同じ染色枠にまとめたい場合。1要素=1部位という制約はそのままに、判定条件だけを複数持たせられる)
 const _defAtoms = (def) => Array.isArray(def) ? def : [def];
+// 部位から必ず外したい範囲(矩形、複数可)。bboxは「ここだけ見る」、notBboxは「ここだけ見ない」。
+// 目や白目のように、髪と同じ色相なのに絶対に染めてはいけない場所を抜くために使う
+// (人魚2体の瞳は髪と同系色のため、色だけでは分けられない)
+const _defExcluded = (def, nx, ny) => !!(def && typeof def === 'object' && def.notBbox && _bboxMatches(def.notBbox, nx, ny));
 // ピクセル(色相hh・彩度ss・明度vv・画像内の相対位置nx,ny)がregionDefs(MASU_COLOR_REGION_HUESの1モンスター分)の
 // どの部位に属するかを判定し、インデックスを返す(どれにも属さなければ-1=無染色のまま)
 const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
@@ -1649,6 +1660,7 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
   // まとめて1つの部位として選びたい離れた箇所を指定する場合などに使う)
   for (let idx = 0; idx < regionDefs.length; idx++) {
     for (const def of _defAtoms(regionDefs[idx])) {
+      if (_defExcluded(def, nx, ny)) continue;
       if (def && typeof def === 'object' && def.band) {
         const [y0, y1] = def.band;
         if (ny >= y0 && ny < y1) return idx;
@@ -1663,6 +1675,7 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
   for (let idx = 0; idx < regionDefs.length; idx++) {
     for (const def of _defAtoms(regionDefs[idx])) {
       if (def && typeof def === 'object' && def.white) {
+        if (_defExcluded(def, nx, ny)) continue;
         if (def.bbox && !_bboxMatches(def.bbox, nx, ny)) continue;
         if (ss <= (def.sMax ?? 0.18) && vv >= (def.vMin ?? 0.55) && vv <= (def.vMax ?? 1)) return idx;
       }
@@ -1675,6 +1688,7 @@ const _classifyDyePixel = (hh, ss, vv, nx, ny, regionDefs) => {
     for (const def of _defAtoms(rawDef)) {
       if (def && typeof def === 'object' && (def.white || def.band)) continue; // 上で判定済み
       if (def && typeof def === 'object' && def.posBbox && def.hue === undefined) continue; // 位置のみで判定する部位(色相を持たない)は上で判定済み
+      if (_defExcluded(def, nx, ny)) continue;
       if (def && typeof def === 'object' && def.bbox && !_bboxMatches(def.bbox, nx, ny)) continue;
       const hue = (typeof def === 'number') ? def : def.hue;
       const vMin = (def && typeof def === 'object') ? def.vMin : undefined;
@@ -1781,6 +1795,7 @@ const _buildHiResMaskUrls = (smoothed, regionDefs, src, w, h, natW, natH) => {
         const nx = x / outW;
         let hit = -1;
         for (const [idx, def] of posRegions) {
+          if (_defExcluded(def, nx, ny)) continue;
           if (def.band) { const [y0, y1] = def.band; if (ny >= y0 && ny < y1) { hit = idx; break; } }
           if (def.posBbox && _bboxMatches(def.posBbox, nx, ny)) { hit = idx; break; }
         }
@@ -2053,9 +2068,15 @@ const getRecoloredImage = (imgUrl, rawColorId, baseId, regionIdx) => {
 const MASU_COLOR_FALLBACK_REGION = { Tiger: { 2: 0 } };
 // 染め直した絵の置き場所の名前。濃さ(@NN)は絵に影響しないので名前へ含めない
 const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).base;
+// 立ち絵が縦長(2:3)のモンスター。一覧やアイコンの丸枠は正方形なので、既定の object-cover だと
+// 上下が25%ずつ切られ、頭のてっぺんと尾びれが欠ける。画像は加工せず、ここに入れたモンスターだけ
+// object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
+const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni']);
+const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
 // マスモンの画像を、部位別の染色(masuColors配列)を反映して表示するコンポーネント。
 // 部位分割データが無いモンスターは画像全体を染め直した1枚を表示する。
-const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style, draggable }) => {
+const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawStyle, draggable }) => {
+  const style = monsterArtFitStyle(baseId, rawStyle);
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);
   const [recolored, setRecolored] = useState({});
@@ -3090,10 +3111,12 @@ const MARKET_PROFILE_ICON_STYLES = {
   snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 },
   iblis_icon: { scale: 1.42, x: 2, y: -10 },
   // 人魚2体。本人アイコンは顔が丸の中央で大きく見える位置、円盤石アイコンは
-  // 円盤が丸へぴったり収まる位置。どちらも画像は加工せず、ここの倍率と位置だけで合わせる
-  undine_icon: { scale: 2.46, x: 0, y: 89 },
+  // 円盤が丸へぴったり収まる位置。どちらも画像は加工せず、ここの倍率と位置だけで合わせる。
+  // 立ち絵が縦長(1024x1536)で顔が小さく写っているため、スネグーラチカ(正方形)と
+  // 同じ「顔の高さが丸の約4割」になるよう倍率を上げ、顔の中心が絵の中央より左にある分を横へ寄せている
+  undine_icon: { scale: 3.67, x: 7.7, y: 118 },
   undine_disc_icon: { scale: 1.52, x: 0, y: 2 },
-  yaobikuni_icon: { scale: 2.56, x: 0, y: 92 },
+  yaobikuni_icon: { scale: 3.70, x: 6.8, y: 122 },
   yaobikuni_disc_icon: { scale: 1.55, x: 0, y: 2 },
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({ scale:1, x:0, y:0 });
@@ -8959,7 +8982,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return(
       <div key={rowKey} className={`p-3 rounded-2xl border shrink-0 ${inherited?'bg-cyan-950/40 border-cyan-700/60':'bg-slate-900 border-slate-800'}`}>
         <div className="flex items-center gap-3 mb-2">
-          {ownerMon?.iconUrl?(<img src={ownerMon.iconUrl} alt={ownerMon.name} className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0"/>):(<span style={{fontSize:'30px'}}>{cardIconNode(u.icon,40)}</span>)}
+          {ownerMon?.iconUrl?(<img src={ownerMon.iconUrl} alt={ownerMon.name} style={monsterArtFitStyle(ownerMon.id)} className="w-10 h-10 rounded-full object-cover border border-white/10 shrink-0"/>):(<span style={{fontSize:'30px'}}>{cardIconNode(u.icon,40)}</span>)}
           <div className="text-left flex-1">
             <div className={`text-[8px] font-black uppercase tracking-wider flex items-center gap-1 ${inherited?'text-cyan-300':'text-indigo-400'}`}>
               {inherited&&<span className="bg-cyan-600 text-white px-1 rounded-sm not-italic">引き継ぎ</span>}{heading}
@@ -10354,7 +10377,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       if (!base) return null;
                       return (
                         <button key={entryId} onClick={()=>toggleDraftMonster(entryId)} className="shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-400 active:scale-90 relative">
-                          {isMasu?(<><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></>):(<img src={base.iconUrl} alt={base.name} className="w-full h-full object-cover"/>)}
+                          {isMasu?(<><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></>):(<img src={base.iconUrl} alt={base.name} style={monsterArtFitStyle(base.id)} className="w-full h-full object-cover"/>)}
                         </button>
                       );
                     }))}
