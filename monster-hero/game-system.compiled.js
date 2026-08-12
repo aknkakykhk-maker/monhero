@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: db863bc8163a58ec
+// source-sha256: 40e9129c102cf4fe
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-12 18:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-12 18:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3553,26 +3553,43 @@ const MASU_COLOR_REGION_HUES = {
     noEdgeGuard: true
   }]],
   //  ・ヤオビクニ: 緑部分(髪・腕・尻尾・上衣、染色①)/ピンク髪(染色②)/肌(顔・上半身、染色③)
-  Yaobikuni: [{
+  Yaobikuni: [[{
     hue: [86, 77],
     sMin: 0.30,
     notBbox: YAOBIKUNI_EYE_BOXES,
     noEdgeGuard: true
   },
+  // 緑の前腕は肌との境界で彩度がほぼ白まで落ちる。腕の輪郭内だけ下限を下げ、
+  // 白い移行帯を塗り残さず、近接するピンク髪や肌へ緑マスクを侵食させない。
+  {
+    hue: [86, 77],
+    sMin: 0.035,
+    bbox: [[0.20, 0.475, 0.37, 0.66], [0.63, 0.475, 0.80, 0.66]],
+    noEdgeGuard: true
+  }, {
+    white: true,
+    sMax: 0.35,
+    vMin: 0.72,
+    bbox: [[0.20, 0.475, 0.37, 0.66], [0.63, 0.475, 0.80, 0.66]],
+    noEdgeGuard: true
+  }],
   // 薄いピンク(首の後ろから覗く毛先)は彩度0.16まで下がるので、肌(彩度0.12)を割らない範囲で拾う
   {
     hue: 341,
     sMin: 0.16,
     notBbox: YAOBIKUNI_FACE_BOX,
     noEdgeGuard: true
-  }, {
+  },
+  // 肌は顔と上半身だけでなく、緑の前腕へつながる左右の上腕も同じ染色③。
+  // 腕の外側に沿う細い矩形を段階的に置き、隣接するピンク髪と緑の上衣へ肌判定を広げない。
+  [{
     hue: 22,
     sMin: 0.015,
     sMax: 0.38,
     vMin: 0.58,
-    bbox: [[0.315, 0.095, 0.685, 0.235], [0.39, 0.205, 0.61, 0.47]],
+    bbox: [[0.315, 0.095, 0.685, 0.235], [0.39, 0.205, 0.61, 0.47], [0.315, 0.285, 0.415, 0.365], [0.585, 0.285, 0.685, 0.365], [0.285, 0.345, 0.405, 0.425], [0.595, 0.345, 0.715, 0.425], [0.265, 0.405, 0.385, 0.495], [0.615, 0.405, 0.735, 0.495], [0.245, 0.475, 0.365, 0.565], [0.635, 0.475, 0.755, 0.565], [0.235, 0.545, 0.345, 0.625], [0.655, 0.545, 0.765, 0.625]],
     noEdgeGuard: true
-  }],
+  }]],
   Snegurochka: [{
     hue: 181,
     sMin: 0.60,
