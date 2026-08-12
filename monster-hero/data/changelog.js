@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-13 02:10",
+    date: "2026-08-13 08:14",
     type: "fix",
     title: "ウンディーネ・ヤオビクニの3色染色を修正しました",
     items: [
