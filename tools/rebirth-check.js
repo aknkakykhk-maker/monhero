@@ -94,8 +94,8 @@ check('最終限界突破でLv.200・虹★になる',
   &&source.includes('finalBreakthrough:isFinal'));
 // 増えた★は先頭に来るので、光らせるのは先頭(最終突破では5個とも虹なので全部)
 check('限界突破は専用の演出を使い、増えた星が光る',source.includes('mh-breakthrough-animation')&&source.includes('mh-breakthrough-stars')&&source.includes("(finalBreak||i===0)?'is-new':'is-old'")&&source.includes('@keyframes mhBreakStar'));
-check('転生はこれまでの演出を引き継ぐ',source.includes('reincarnateAnimation&&<div className="mh-rebirth-animation"'));
-check('転生の回数は「+N」バッジで示し、合体のバッジは出さない',source.includes('mh-reincarnate-badge')&&source.includes('<ReincarnateBadge')&&!source.includes('+{masu.fusionHistory.length}</div>')&&!source.includes('+{fusionCount}</div>'));
+check('転生演出は通常表示と同じ霊炎オーラを使う',source.includes('reincarnateAnimation&&<div className="mh-reincarnation-animation"')&&source.includes('<ReincarnateAura count={reincarnateAnimation.masu.reincarnateCount}/>'));
+check('HOMEの転生表示は文字なしの霊炎で、限界突破★を変えない',source.includes('mhReincarnateFlameA')&&source.includes('<ReincarnateAura count={masu.reincarnateCount} className="is-home"/>')&&source.includes('<RebirthStars count={masu.rebirthCount} className="mh-home-masumon-stars"/>')&&!/mh-reincarnate-aura[^}]*ReincarnateBadge/.test(source));
 check('神殿BGMを限界突破・転生の画面でも継続',/MASU_REBIRTH:\s*'temple'/.test(source)&&/MASU_REINCARNATE:\s*'temple'/.test(source));
 check('神殿から限界突破と転生の両方へ入れる',source.includes(">限界突破</button>")&&source.includes("setGameState('MASU_REINCARNATE')"));
 
