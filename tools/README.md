@@ -47,7 +47,6 @@ node tools/build.js --check
 | `node dye-report.js --save-baseline` | 現在の結果を `dye-baseline.json` に保存する。以降は実行のたびに差分が表示される。 |
 | `node dye-region-map.js out.png <ID> [y0 y1]` | 染色もどきの部位分けを絵で確かめる。元の絵と、部位ごとに塗り分けた絵(①赤・②黄・③青)を左右に並べて書き出す。被覆率だけでは分からない「どこが混ざっているか」を見るために使う。 |
 | `node undine-dye-mask-check.js` | ウンディーネの染色1（髪）・染色2（顔、首、耳、腕、尻尾、尾びれ）・染色3（服）と3色同時の本番マスクを、正解見本 `undine-dye-mask.PNG` と画素単位で比較する。正解PNGは検査時だけ読み込む。 |
-| `node yaobikuni-dye-mask-check.js` | ヤオビクニの染色1（緑の髪・腕・尻尾・上衣）・染色2（ピンクの髪）・染色3（肌）と3色同時の本番マスクを、既存の正解見本 `yaobikuni-dye-mask.PNG` と画素単位で比較する。正解PNGは検査時だけ読み込む。 |
 | `node region-map.js [モンスターID...]` | 部位分けを色分けしたPNGを `out/` に書き出す。目視確認用。 |
 | `node image-report.js` | `monster-hero/images/` のPNGをフォルダごとにサイズ順で出す。中身が同じ重複ファイル・どこからも参照されていないファイルも検出する。 |
 | `node monster-image-quality-check.js` | 敵・味方の全身画像数、PNG読込、透過隅、可視画素を検査する。 |
