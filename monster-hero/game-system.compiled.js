@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d5f6ad5bd98cfb3
+// source-sha256: db863bc8163a58ec
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-12 17:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-12 18:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3520,10 +3520,14 @@ const MASU_COLOR_REGION_HUES = {
     vMin: 0.58,
     bbox: [[0.315, 0.095, 0.685, 0.285], [0.265, 0.285, 0.435, 0.525], [0.565, 0.285, 0.735, 0.525]],
     noEdgeGuard: true
-  }, {
+  },
+  // 耳と両腕（指先を含む）は髪より彩度が高い箇所もあるため、低彩度側の条件だけでは
+  // 髪（色相218）へ近い画素が染色①に流れる。肌の実測範囲内では彩度上限を設けず、
+  // 肌本来の色相200との距離で髪から分離する。中央の範囲は衣装の隙間から見える尾を拾う。
+  {
     hue: 200,
     sMin: 0.20,
-    bbox: [0.33, 0.30, 0.67, 0.78],
+    bbox: [[0.255, 0.135, 0.375, 0.195], [0.625, 0.135, 0.745, 0.195], [0.320, 0.275, 0.440, 0.325], [0.560, 0.275, 0.680, 0.325], [0.295, 0.325, 0.415, 0.375], [0.585, 0.325, 0.705, 0.375], [0.265, 0.375, 0.385, 0.425], [0.615, 0.375, 0.735, 0.425], [0.235, 0.425, 0.355, 0.475], [0.645, 0.425, 0.765, 0.475], [0.225, 0.475, 0.315, 0.535], [0.685, 0.475, 0.775, 0.535], [0.33, 0.30, 0.67, 0.78]],
     noEdgeGuard: true
   },
   // 尾びれは透けていて彩度が0.2台まで落ち、半透明なので既定の「にじみ除外」でも消える。
