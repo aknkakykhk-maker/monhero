@@ -134,8 +134,8 @@ for (const id of ['Undine', 'Yaobikuni']) {
 }
 check('ウンディーネの染色②は肌(顔・腕・尻尾)',
   source.includes('ウンディーネ: 髪(染色①)/肌(顔・腕・尻尾、染色②)/白い衣装(染色③)'));
-check('ヤオビクニの染色①は緑部分、染色②はピンク髪、染色③は肌',
-  source.includes('ヤオビクニ: 緑部分(髪・腕・尻尾・上衣、染色①)/ピンク髪(染色②)/肌(顔・上半身、染色③)'));
+check('ヤオビクニは保存済み3色マスクを染色に使う',
+  source.includes("baseId === 'Yaobikuni'") && source.includes('YAOBIKUNI_DYE_MASK'));
 check('notBboxは染色エンジン側で効いている', source.includes('const _defExcluded = (def, nx, ny)') && (source.match(/_defExcluded\(def, nx, ny\)/g) || []).length >= 4);
 check('ヘルプに2体の染色部位を書いている', help.includes('ウンディーネの染色部位') && help.includes('ヤオビクニの染色部位'));
 

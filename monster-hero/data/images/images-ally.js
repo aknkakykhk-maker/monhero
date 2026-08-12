@@ -34,6 +34,7 @@ const SNEGUROCHKA_IMG = "images/monsters/snegurochka.png?v=81fb95247bc6";
 // 画像を作り直さず MARKET_PROFILE_ICON_STYLES の scale/x/y で寄せている
 const UNDINE_IMG = "images/monsters/undine.PNG?v=5cb4df81fcb7";
 const YAOBIKUNI_IMG = "images/monsters/yaobikuni.PNG?v=efbd9d5dd6fa";
+const YAOBIKUNI_DYE_MASK = "images/monsters/yaobikuni-dye-mask.PNG?v=8034c43e377f";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
