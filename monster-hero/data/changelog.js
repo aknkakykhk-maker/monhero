@@ -1,5 +1,14 @@
 const CHANGELOG = [
   {
+    date: "2026-08-12 17:02",
+    type: "update",
+    title: "みゅあのアップデート案内を更新履歴と連動しました",
+    items: [
+      "新モード・主要な新機能・マーケットの新商品は、更新履歴の内容をもとに初回だけみゅあがお知らせします",
+      "通常の不具合修正や細かな更新はお知らせせず、案内から関連する画面へ進めます",
+    ],
+  },
+  {
     date: "2026-08-12 15:45",
     type: "update",
     title: "転生オーラを専用画像へ変更しました",
@@ -26,6 +35,7 @@ const CHANGELOG = [
     date: "2026-08-12 14:51",
     type: "update",
     title: "新モンスター「ウンディーネ」「ヤオビクニ」を追加しました",
+    assistantNotice: { id:'update_notice_undine_yaobikuni_market_v1', type:'market' },
     items: [
       "マーケットでウンディーネの円盤石・ヤオビクニの円盤石を各1500ダイヤで購入でき、購入するとその子を編成に入れられます",
       "ウンディーネは ライフ350／ガッツ170／ちから160／丈夫さ50、間合い適性は 零G・近D・中C・遠C、合流ボーナスは ライフ+100／ガッツ+60／ちから+45 です",
@@ -49,6 +59,7 @@ const CHANGELOG = [
     date: "2026-08-12 10:46",
     type: "update",
     title: "クイックモードに「CHAOS」を追加しました",
+    assistantNotice: { id:'update_notice_quick_chaos_v1', type:'mode' },
     items: [
       "極限チャレンジのCHAOSをクリアすると、クイックモードでもCHAOSへ挑戦できるようになりました",
       "敵強度×20、経験値×45、ダイヤ×13.5、虹のプシュケー50個を基準に、育成・プシュケー優先・ダイヤ優先の3方針を選べます",
@@ -59,6 +70,7 @@ const CHANGELOG = [
     date: "2026-08-12 10:46",
     type: "update",
     title: "極限チャレンジ「CHAOS」を正式追加しました",
+    assistantNotice: { id:'update_notice_chaos_v1', type:'mode' },
     items: [
       "NIGHTMAREを1回以上クリアすると、極限チャレンジのCHAOSへ挑戦できるようになりました",
       "敵強度×20・スコア×20・経験値×35・ダイヤ×15・虹のプシュケー50個と、与ダメージ50%・供モン加入ボーナス50%・消費ガッツ150%の特殊ルールを適用します",
@@ -270,6 +282,7 @@ const CHANGELOG = [
     date: "2026-08-10 19:58",
     type: "update",
     title: "極限チャレンジに新難易度 NIGHTMARE を追加",
+    assistantNotice: { id:'update_notice_nightmare_v1', type:'mode' },
     items: [
       "極限チャレンジに新難易度 NIGHTMARE を追加しました。EXTREMEをクリアすると解放されます",
       "NIGHTMAREでは、WAVE後の強化や自動回復率、距離適性への補正が変化する独自の特殊ルールが適用されます",
@@ -380,6 +393,7 @@ const CHANGELOG = [
     date: "2026-08-10 12:29",
     type: "update",
     title: "極限チャレンジを正式に追加しました",
+    assistantNotice: { id:'update_notice_extreme_challenge_v1', type:'mode' },
     items: [
       "バトルのモード選択に「極限チャレンジ」を追加しました。チャレンジモードの上位高難易度版です",
       "極限チャレンジのモード説明から、EXTREMEだけに適用される敵強度・報酬・特殊ルールを分離しました",
@@ -506,6 +520,7 @@ const CHANGELOG = [
     date: "2026-08-09 00:44",
     type: "update",
     title: "神殿に再生を追加し、合体と寄付を更新しました",
+    assistantNotice: { id:'update_notice_temple_rebirth_v1', type:'feature', destination:'TEMPLE', buttonLabel:'神殿へ行く' },
     items: [
       "神殿の一番上に、解放済みベースモンから個体差のあるマスモンを生み出す「再生」を追加しました。初回無料、以降100ダイヤです",
       "合体は技を引き継がなければ無料、引き継ぐ場合は3000ダイヤになりました。技継承は副モンの絆Lv.30以上で選べます",
@@ -531,6 +546,7 @@ const CHANGELOG = [
     date: "2026-08-08 16:53",
     type: "update",
     title: "バトルの入口を一新し、新モード「プロモード」を公開しました",
+    assistantNotice: { id:'update_notice_pro_mode_v1', type:'mode' },
     items: [
       "HOMEの「バトル」を開くと、まずモードを選ぶ画面になりました。左右にスワイプすると3つのモードをぐるぐる見られます",
       "新しい「プロモード」を追加しました。育てたマスモンを一切つれていけない特殊制約モードで、素のベースモンだけで挑みます",
