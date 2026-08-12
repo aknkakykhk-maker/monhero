@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 00:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 00:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1894,6 +1894,11 @@ const _getUndineExactRegion = (nx, ny) => {
 // マスク側だけ横約3.2%・縦約0.6%大きく、中心も左約0.5%・上約0.8%ずれている。
 // 本体画像や共通表示倍率は変えず、マスクを読み込む座標だけヤオビクニ限定で補正する。
 const YAOBIKUNI_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 0.968, scaleY: 0.994, x: -0.0046, y: -0.0081 });
+// 染色マスク位置調整Debugの対象一覧。今後は本体・マスク・baseIdをここへ足すだけで再利用できる。
+// initial は本番補正値ではなく、ユーザーが差分を読み取りやすくするため常に無補正から始める。
+const DYE_MASK_DEBUG_TARGETS = Object.freeze([
+  { id:'yaobikuni', name:'ヤオビクニ', baseId:'Yaobikuni', imageUrl:YAOBIKUNI_IMG, maskUrl:YAOBIKUNI_DYE_MASK },
+]);
 const _loadExactDyeMask = (url, width, height, placement = null) => new Promise((resolve) => {
   try {
     const image = new window.Image();
@@ -1904,10 +1909,11 @@ const _loadExactDyeMask = (url, width, height, placement = null) => new Promise(
         const context = canvas.getContext('2d');
         if (!context) { resolve(null); return; }
         context.imageSmoothingEnabled = false;
-        const scaleX = placement?.scaleX || 1, scaleY = placement?.scaleY || 1;
+        const uniformScale = placement?.scalePercent ? placement.scalePercent / 100 : 1;
+        const scaleX = placement?.scaleX || uniformScale, scaleY = placement?.scaleY || uniformScale;
         const drawWidth = width * scaleX, drawHeight = height * scaleY;
-        const drawX = (width - drawWidth) / 2 + width * (placement?.x || 0);
-        const drawY = (height - drawHeight) / 2 + height * (placement?.y || 0);
+        const drawX = (width - drawWidth) / 2 + width * (placement?.x || 0) + (placement?.xPx || 0);
+        const drawY = (height - drawHeight) / 2 + height * (placement?.y || 0) + (placement?.yPx || 0);
         context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
         resolve(context.getImageData(0, 0, width, height).data);
       } catch (_) { resolve(null); }
@@ -1925,10 +1931,10 @@ const _exactDyeMaskRegion = (pixels, offset) => {
   return -1;
 };
 const _dyeRegionMaskCache = {};
-const getDyeRegionMasks = (baseId, imgUrl) => {
+const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
   const hues = MASU_COLOR_REGION_HUES[baseId];
   if (!hues || hues.length === 0) return null;
-  const cacheKey = baseId + '::' + imgUrl;
+  const cacheKey = baseId + '::' + imgUrl + (debugPlacement ? `::debug:${debugPlacement.xPx}:${debugPlacement.yPx}:${debugPlacement.scalePercent}` : '');
   if (_dyeRegionMaskCache[cacheKey]) return _dyeRegionMaskCache[cacheKey];
   const promise = new Promise((resolve) => {
     try {
@@ -1955,8 +1961,9 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
           const src = srcCtx.getImageData(0, 0, w, h).data;
           // ヤオビクニは保存済みマスクの赤・緑・青を染色①・②・③として使う。
           // マスクの透明／無彩色部分は対象外のままにし、色相推定による目や境界への誤染色を防ぐ。
-          const exactMask = baseId === 'Yaobikuni'
-            ? await _loadExactDyeMask(YAOBIKUNI_DYE_MASK, w, h, YAOBIKUNI_DYE_MASK_PLACEMENT)
+          const exactMaskUrl = debugPlacement?.maskUrl || (baseId === 'Yaobikuni' ? YAOBIKUNI_DYE_MASK : null);
+          const exactMask = exactMaskUrl
+            ? await _loadExactDyeMask(exactMaskUrl, w, h, debugPlacement || YAOBIKUNI_DYE_MASK_PLACEMENT)
             : null;
           const aaAlphaThreshold = baseId === 'Mocchi' ? 96 : 200;
           const maskCanvases = regionDefs.map(() => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; });
@@ -2206,7 +2213,7 @@ const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(
 const monsterArtMaskSize = (baseId) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? 'contain' : '100% 100%');
 // マスモンの画像を、部位別の染色(masuColors配列)を反映して表示するコンポーネント。
 // 部位分割データが無いモンスターは画像全体を染め直した1枚を表示する。
-const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawStyle, draggable }) => {
+const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawStyle, draggable, debugMaskPlacement = null }) => {
   const style = monsterArtFitStyle(baseId, rawStyle);
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);
@@ -2218,9 +2225,9 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
   useEffect(() => {
     if (!hues || hues.length === 0 || !colors.some(Boolean)) { setMasks(null); return; }
     let cancelled = false;
-    Promise.resolve(getDyeRegionMasks(baseId, src)).then(urls => { if (!cancelled) setMasks(urls); });
+    Promise.resolve(getDyeRegionMasks(baseId, src, debugMaskPlacement)).then(urls => { if (!cancelled) setMasks(urls); });
     return () => { cancelled = true; };
-  }, [baseId, src, colorKey]);
+  }, [baseId, src, colorKey, debugMaskPlacement?.xPx, debugMaskPlacement?.yPx, debugMaskPlacement?.scalePercent]);
   // 染め直した画像は部位ごとに作る(光沢保持の設定を部位ごとに変えられるため)。
   // 設定が同じ部位はgetRecoloredImage側のキャッシュで同じ画像を共有するので、
   // 書き分けていないモンスターでは作る枚数はこれまでと変わらない
@@ -4237,6 +4244,10 @@ function MonsterHeroGame() {
   const [iconAdjustId, setIconAdjustId] = useState(debugIconItems[0]?.id||'');
   const [iconAdjustQuery, setIconAdjustQuery] = useState('');
   const [iconAdjustments, setIconAdjustments] = useState(()=>Object.fromEntries(debugIconItems.map(item=>[item.id,{...(MARKET_PROFILE_ICON_STYLES[item.id]||DEFAULT_PROFILE_ICON_STYLE)}])));
+  // 染色マスク調整値もDebug画面を閉じるまでの一時値で、セーブや本番補正値には書き込まない。
+  const [dyeMaskDebugId, setDyeMaskDebugId] = useState(DYE_MASK_DEBUG_TARGETS[0]?.id||'');
+  const [dyeMaskDebugMode, setDyeMaskDebugMode] = useState('composite');
+  const [dyeMaskDebugValues, setDyeMaskDebugValues] = useState({x:0,y:0,scale:100});
   // モンスター画像確認はデバッグ画面を開いている間だけ保持し、セーブ領域へは書き込まない。
   const [monsterImageDebugId, setMonsterImageDebugId] = useState(null);
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
@@ -10169,6 +10180,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
+        {gameState==='DYE_MASK_POSITION_DEBUG'&&(()=>{
+          const target=DYE_MASK_DEBUG_TARGETS.find(entry=>entry.id===dyeMaskDebugId)||DYE_MASK_DEBUG_TARGETS[0];
+          if(!target)return <div className="p-4 text-slate-400">調整できる染色マスクがありません。</div>;
+          const values=dyeMaskDebugValues;
+          const setValue=(key,value)=>setDyeMaskDebugValues(current=>({...current,[key]:Number(value)}));
+          const signed=(value)=>value>0?`+${value}`:String(value);
+          const copyText=`${target.id}: X=${values.x}, Y=${values.y}, Scale=${values.scale}%`;
+          const placement={xPx:values.x,yPx:values.y,scalePercent:values.scale,maskUrl:target.maskUrl};
+          const control=(key,label,min,max,step,suffix='')=><label className="block rounded-xl bg-slate-900 p-3"><span className="mb-1 flex justify-between text-[10px] font-black text-slate-300"><b>{label}</b><output>{key==='scale'?values[key]:signed(values[key])}{suffix}</output></span><input aria-label={`${label}スライダー`} className="w-full min-h-[32px] accent-cyan-500 touch-none" type="range" min={min} max={max} step={step} value={values[key]} onChange={e=>setValue(key,e.target.value)}/><div className="mt-1 grid grid-cols-[46px_1fr_46px] gap-2"><button type="button" aria-label={`${label}を減らす`} onClick={()=>setValue(key,Math.max(min,+(values[key]-step).toFixed(2)))} className="min-h-[44px] rounded-xl bg-slate-700 text-lg font-black">−</button><input aria-label={`${label}数値入力`} type="number" min={min} max={max} step={step} value={values[key]} onChange={e=>e.target.value!==''&&setValue(key,Math.min(max,Math.max(min,Number(e.target.value))))} className="min-w-0 rounded-xl border border-white/10 bg-black/40 px-2 text-center text-sm font-black"/><button type="button" aria-label={`${label}を増やす`} onClick={()=>setValue(key,Math.min(max,+(values[key]+step).toFixed(2)))} className="min-h-[44px] rounded-xl bg-slate-700 text-lg font-black">＋</button></div></label>;
+          const maskTransform=`translate(${values.x}px, ${values.y}px) scale(${values.scale/100})`;
+          return <main className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
+            <header className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-400">DEBUG・保存／本番反映されません</small><h2 className="text-sm font-black">染色マスク位置調整</h2></div></header>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-2">
+              <select value={target.id} onChange={e=>{setDyeMaskDebugId(e.target.value);setDyeMaskDebugValues({x:0,y:0,scale:100});}} className="w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-black">{DYE_MASK_DEBUG_TARGETS.map(entry=><option key={entry.id} value={entry.id}>{entry.name}（{entry.id}）</option>)}</select>
+              <section className="sticky top-0 z-10 rounded-2xl border-2 border-cyan-400 bg-slate-950/95 p-3 text-center shadow-xl"><div className="text-[9px] font-black text-cyan-300">現在値（このまま伝えられます）</div><output className="mt-1 block font-mono text-base font-black text-white">X: {signed(values.x)}　Y: {signed(values.y)}<br/>Scale: {values.scale}%</output></section>
+              <div className="grid grid-cols-3 gap-1">{[['composite','合成'],['body','本体のみ'],['mask','マスクのみ']].map(([id,label])=><button key={id} onClick={()=>setDyeMaskDebugMode(id)} aria-pressed={dyeMaskDebugMode===id} className={`min-h-[44px] rounded-xl border text-[10px] font-black ${dyeMaskDebugMode===id?'bg-cyan-700 border-cyan-300 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{label}</button>)}</div>
+              <section className="rounded-2xl border border-white/15 bg-black/40 p-2"><div className="relative mx-auto overflow-hidden" style={{width:'min(256px, 100%)',aspectRatio:'2 / 3',backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'}}>
+                {dyeMaskDebugMode==='composite'&&<DyedMonsterImage baseId={target.baseId} src={target.imageUrl} alt={`${target.name}の染色合成`} masuColors={['red','green','blue']} debugMaskPlacement={placement} className="absolute inset-0 w-full h-full object-contain"/>}
+                {dyeMaskDebugMode==='body'&&<img src={target.imageUrl} alt={`${target.name}本体`} className="absolute inset-0 w-full h-full object-contain"/>}
+                {dyeMaskDebugMode==='mask'&&<img src={target.maskUrl} alt={`${target.name}染色マスク`} className="absolute inset-0 w-full h-full object-contain" style={{transform:maskTransform,transformOrigin:'center'}}/>}
+              </div><p className="mt-2 text-center text-[8px] text-slate-400">合成は染色①=赤・②=緑・③=青で表示</p></section>
+              {control('x','X位置',-50,50,1)}{control('y','Y位置',-50,50,1)}{control('scale','Scale',50,150,.1,'%')}
+              <pre className="whitespace-pre-wrap break-all rounded-xl bg-black/50 p-3 text-[11px] text-cyan-200">{copyText}</pre>
+              <div className="grid grid-cols-2 gap-2"><button onClick={()=>setDyeMaskDebugValues({x:0,y:0,scale:100})} className="min-h-[48px] rounded-xl bg-slate-800 text-[10px] font-black">初期値へ戻す</button><button onClick={async()=>{try{await navigator.clipboard.writeText(copyText);window.alert('数値をコピーしました。');}catch(_){window.prompt('この数値をコピーしてください。',copyText);}}} className="min-h-[48px] rounded-xl bg-cyan-700 text-[10px] font-black">数値をコピー</button></div>
+            </div>
+          </main>;
+        })()}
+
         {gameState==='BREEDER_ICON_DEBUG'&&(()=>{
           const item=debugIconItems.find(entry=>entry.id===iconAdjustId)||debugIconItems[0];
           if(!item)return <div className="p-4 text-slate-400">調整できるアイコンがありません。</div>;
@@ -10220,7 +10259,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
-            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
+            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={()=>setGameState('DYE_MASK_POSITION_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🎯 染色マスク位置調整<small className="block text-[8px] text-cyan-300">X・Y・Scaleを保存せず実機調整</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
               <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} className="w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black">⚔️ バトルモード<small className="block text-[8px] text-fuchsia-300">極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
               {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
               <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
