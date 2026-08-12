@@ -18,6 +18,8 @@ const MITARASHI_DISC_ICON = "images/disc-icons/mitarashi.png?v=4fe8d8d99525";
 const ARK_DISC_ICON = "images/disc-icons/ark.png?v=1c124027f057";
 const IBLIS_DISC_ICON = "images/disc-icons/iblis.png?v=8202f75a06f1";
 const SNEGUROCHKA_DISC_ICON = "images/disc-icons/snegurochka-disc.PNG?v=f1032185e592";
+const UNDINE_DISC_ICON = "images/disc-icons/undine-disc.PNG?v=8a601df886c5";
+const YAOBIKUNI_DISC_ICON = "images/disc-icons/yaobikuni-disc.PNG?v=d2a3e509c7d2";
 
 const BREEDER_EVO_NAMES = {
   oryo: ["おりょうの力", "おりょうの気合", "おりょうの憤怒"],
@@ -118,6 +120,16 @@ const BREEDER_MARKET_ITEMS = [
   { id:'snegurochka_icon', name:"スネグーラチカのアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA.PNG?v=21ee3cd2a444', cost:1 },
   { id:'snegurochka_awakened_icon', name:"スネグーラチカ（覚醒）のアイコン", type:'icon', icon:'images/monsters/SNEGUROCHKA_AWAKENED.PNG?v=3a71bfe44e3d', cost:1 },
   { id:'Snegurochka', name:"スネグーラチカの円盤石", type:'disc', icon:SNEGUROCHKA_DISC_ICON, cost:1500 },
+  // ウンディーネ。本人アイコン・円盤石アイコン・解放用の円盤石の3商品。
+  // アイコンは立ち絵/円盤石の絵をそのまま使い、丸い枠での見え方は
+  // MARKET_PROFILE_ICON_STYLES の scale/x/y で寄せる(画像は複製しない)
+  { id:'undine_icon', name:"ウンディーネのアイコン", type:'icon', icon:'images/monsters/undine.PNG?v=5cb4df81fcb7', cost:1 },
+  { id:'undine_disc_icon', name:"ウンディーネの円盤石アイコン", type:'icon', icon:UNDINE_DISC_ICON, cost:1 },
+  { id:'Undine', name:"ウンディーネの円盤石", type:'disc', icon:UNDINE_DISC_ICON, cost:1500 },
+  // ヤオビクニ
+  { id:'yaobikuni_icon', name:"ヤオビクニのアイコン", type:'icon', icon:'images/monsters/yaobikuni.PNG?v=efbd9d5dd6fa', cost:1 },
+  { id:'yaobikuni_disc_icon', name:"ヤオビクニの円盤石アイコン", type:'icon', icon:YAOBIKUNI_DISC_ICON, cost:1 },
+  { id:'Yaobikuni', name:"ヤオビクニの円盤石", type:'disc', icon:YAOBIKUNI_DISC_ICON, cost:1500 },
   { id:'bond_reset_scroll', name:"絆ポイントリセットの書", type:'item', emoji:"📜", cost:500, desc:"マスモンに使うと、そのマスモンが使用した強化ポイント(間合い適性・ステータス強化)がすべて未使用に戻る。絆レベル・絆経験値はそのまま。" },
   // 説明は実際の機能に合わせて更新すること。導入時は6色から全身を1色に変えるだけだったが、
   // その後アイコンごとの部位分け・プリセット27色・カスタムカラーに対応している

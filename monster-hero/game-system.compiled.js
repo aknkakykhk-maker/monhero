@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3aac611645400474
+// source-sha256: 33faf14bcdffc962
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-12 10:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-12 12:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3484,6 +3484,46 @@ const MASU_COLOR_REGION_HUES = {
   // 帽子と衣装のふち・肌・白目にも使われているため、bboxで尾のある範囲だけに絞る。
   // noEdgeGuard は「隣と色相が違う画素を無染色で残す」既定の除外を切るための指定
   // (髪と衣装、体と尾のように部位どうしが直に接するので、境目を残すと元の色の筋が出る)。
+  // 2026年8月に追加した人魚2体。髪と尻尾がどちらも同じ色相なので、色だけでは分けられない。
+  // 尻尾・腕のヒレ・衣装のある範囲を位置(posBbox/bbox)で切り出し、残りを髪として扱う。
+  //  ・ウンディーネ: 髪(染色①)/尻尾と腕のヒレ(染色②)/白い衣装(染色③)
+  //    肌は彩度0.20〜0.40の淡い水色なので、白バケツ(sMax0.18)にも髪の青(sMin0.45)にも入らず無染色のまま残る
+  Undine: [{
+    hue: 218,
+    sMin: 0.45,
+    bbox: [[0.0, 0.0, 1.0, 0.48], [0.0, 0.48, 0.33, 0.76], [0.67, 0.48, 1.0, 0.76]],
+    noEdgeGuard: true
+  }, {
+    hue: 200,
+    sMin: 0.45,
+    bbox: [0.0, 0.30, 1.0, 1.0],
+    noEdgeGuard: true
+  }, {
+    white: true,
+    sMax: 0.18,
+    vMin: 0.70,
+    bbox: [0.30, 0.20, 0.70, 0.56],
+    noEdgeGuard: true
+  }],
+  //  ・ヤオビクニ: 緑の髪(染色①)/ピンク(染色②)/緑の尻尾・腕・衣装(染色③)
+  //    髪と尻尾はどちらも緑だが色相が分かれる(髪85前後・尻尾/腕/衣装78前後)ので、
+  //    髪は頭まわりへ範囲を絞ったうえで色相の近いほうへ割り当てる。
+  //    肌は彩度0.12なので sMin 0.30 に届かず、どの部位にも入らない
+  Yaobikuni: [{
+    hue: 86,
+    sMin: 0.30,
+    bbox: [0.0, 0.0, 1.0, 0.36],
+    noEdgeGuard: true
+  }, {
+    hue: 341,
+    sMin: 0.25,
+    noEdgeGuard: true
+  }, {
+    hue: 77,
+    sMin: 0.30,
+    bbox: [0.0, 0.23, 1.0, 1.0],
+    noEdgeGuard: true
+  }],
   Snegurochka: [{
     hue: 181,
     sMin: 0.60,
@@ -6539,6 +6579,28 @@ const MARKET_PROFILE_ICON_STYLES = {
     scale: 1.42,
     x: 2,
     y: -10
+  },
+  // 人魚2体。本人アイコンは顔が丸の中央で大きく見える位置、円盤石アイコンは
+  // 円盤が丸へぴったり収まる位置。どちらも画像は加工せず、ここの倍率と位置だけで合わせる
+  undine_icon: {
+    scale: 2.46,
+    x: 0,
+    y: 89
+  },
+  undine_disc_icon: {
+    scale: 1.52,
+    x: 0,
+    y: 2
+  },
+  yaobikuni_icon: {
+    scale: 2.56,
+    x: 0,
+    y: 92
+  },
+  yaobikuni_disc_icon: {
+    scale: 1.55,
+    x: 0,
+    y: 2
   }
 };
 const DEFAULT_PROFILE_ICON_STYLE = Object.freeze({
@@ -7287,6 +7349,10 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
 };
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
+// 絶氷の楔(固有効果)と氷海の支配者(勇者特性)を持つ人魚たち。
+// 実装は1つを共有するので、同じ効果のモンスターを足すときはここへIDを足すだけでよい
+const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni']);
+const isIceLockMonster = id => ICE_LOCK_MONSTER_IDS.includes(id);
 const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null, powerOverride = null) => {
   const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
   const base = ENEMY_DATA[enemyKey];
@@ -13590,7 +13656,7 @@ function MonsterHeroGame() {
   // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」。handleEnemyTurnの計算と同じ式にする。
   const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + effectiveDef * mult) : 0;
   // 氷海の支配者も、絶氷の楔の実効果と同じ発動状態を使う。
-  const isIceRulerActive = (slotIdx, targetDist) => mainHero?.id === 'Snegurochka' && iceLockActive && slotIdx === targetDist;
+  const isIceRulerActive = (slotIdx, targetDist) => isIceLockMonster(mainHero?.id) && iceLockActive && slotIdx === targetDist;
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx - attackStartDist);
@@ -14236,7 +14302,7 @@ function MonsterHeroGame() {
             setNextTurnBuff('takenDamageMult', 0.5);
             setNextTurnBuff('gutsCostMult', 1.15);
             addPopup('次ターン被ダメ50%減!', 'hero', 'text-pink-400 text-lg font-bold');
-          } else if (card.monId === 'Snegurochka') {
+          } else if (isIceLockMonster(card.monId)) {
             activatedIceLockThisTurn = true;
             setWaveBuffs(p => ({
               ...p,
