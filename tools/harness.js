@@ -197,6 +197,7 @@ function loadDyeModule() {
     matchMedia: windowStub.matchMedia, requestAnimationFrame: windowStub.requestAnimationFrame,
     cancelAnimationFrame: windowStub.cancelAnimationFrame, devicePixelRatio: 1,
     setTimeout, clearTimeout, setInterval, clearInterval, console, Math, Date, JSON,
+    atob: (value) => Buffer.from(value, 'base64').toString('binary'),
     fetch: windowStub.fetch, AudioContext: windowStub.AudioContext, webkitAudioContext: windowStub.AudioContext,
   };
   sandbox.globalThis = sandbox;
