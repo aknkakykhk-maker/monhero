@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ea4774ad9fd97220
+// source-sha256: 5ceadd9e2abb7192
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 00:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 01:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8408,6 +8408,421 @@ const bootLoadWatch = fn => {
     return null;
   }
 };
+
+// 開発用。八百比丘尼本体の実ピクセルを唯一の座標系にするタッチ式マスクエディタ。
+const DyeMaskTouchEditor = ({
+  target,
+  onClose
+}) => {
+  const bodyRef = useRef(null),
+    maskRef = useRef(null),
+    bodyDataRef = useRef(null),
+    historyRef = useRef({
+      undo: [],
+      redo: []
+    }),
+    gestureRef = useRef(null);
+  const [ready, setReady] = useState(false),
+    [error, setError] = useState(''),
+    [view, setView] = useState('composite'),
+    [opacity, setOpacity] = useState(50);
+  const [color, setColor] = useState('red'),
+    [tool, setTool] = useState('brush'),
+    [size, setSize] = useState(18),
+    [mode, setMode] = useState('edit');
+  const [zoom, setZoom] = useState(1),
+    [pan, setPan] = useState({
+      x: 0,
+      y: 0
+    }),
+    [historyTick, setHistoryTick] = useState(0),
+    [details, setDetails] = useState(false);
+  const colors = {
+    red: [255, 0, 0, 255],
+    green: [0, 255, 0, 255],
+    blue: [0, 0, 255, 255],
+    eraser: [0, 0, 0, 0]
+  };
+  const context = () => maskRef.current?.getContext('2d', {
+    willReadFrequently: true
+  });
+  const snap = () => context()?.getImageData(0, 0, maskRef.current.width, maskRef.current.height);
+  const restore = image => {
+    if (image) context()?.putImageData(image, 0, 0);
+  };
+  const checkpoint = () => {
+    const image = snap();
+    if (!image) return;
+    const h = historyRef.current;
+    h.undo.push(image);
+    if (h.undo.length > 6) h.undo.shift();
+    h.redo = [];
+    setHistoryTick(v => v + 1);
+  };
+  const undo = () => {
+    const h = historyRef.current;
+    if (!h.undo.length) return;
+    h.redo.push(snap());
+    restore(h.undo.pop());
+    setHistoryTick(v => v + 1);
+  };
+  const redo = () => {
+    const h = historyRef.current;
+    if (!h.redo.length) return;
+    h.undo.push(snap());
+    restore(h.redo.pop());
+    setHistoryTick(v => v + 1);
+  };
+  useEffect(() => {
+    let cancelled = false;
+    const load = url => new Promise((resolve, reject) => {
+      const image = new window.Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('画像を読み込めません'));
+      image.src = url;
+    });
+    Promise.all([load(target.imageUrl), load(target.maskUrl)]).then(([body, mask]) => {
+      if (cancelled) return;
+      const w = body.naturalWidth || body.width,
+        h = body.naturalHeight || body.height,
+        b = bodyRef.current,
+        m = maskRef.current;
+      b.width = m.width = w;
+      b.height = m.height = h;
+      const bc = b.getContext('2d', {
+        willReadFrequently: true
+      });
+      bc.drawImage(body, 0, 0, w, h);
+      bodyDataRef.current = bc.getImageData(0, 0, w, h).data;
+      const mc = context();
+      mc.imageSmoothingEnabled = false;
+      mc.drawImage(mask, 0, 0, w, h);
+      const image = mc.getImageData(0, 0, w, h),
+        data = image.data,
+        alpha = bodyDataRef.current;
+      for (let i = 0; i < data.length; i += 4) {
+        if (!alpha[i + 3] || !data[i + 3]) {
+          data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0;
+          continue;
+        }
+        const r = data[i],
+          g = data[i + 1],
+          bl = data[i + 2];
+        data[i] = r >= g && r >= bl ? 255 : 0;
+        data[i + 1] = g > r && g >= bl ? 255 : 0;
+        data[i + 2] = bl > r && bl > g ? 255 : 0;
+        data[i + 3] = 255;
+      }
+      mc.putImageData(image, 0, 0);
+      setReady(true);
+    }).catch(e => setError(e.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [target.imageUrl, target.maskUrl]);
+  const point = e => {
+    const c = maskRef.current,
+      r = c.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) * c.width / r.width,
+      y: (e.clientY - r.top) * c.height / r.height
+    };
+  };
+  const paint = (from, to) => {
+    const c = maskRef.current,
+      ctx = context(),
+      body = bodyDataRef.current,
+      rgba = colors[color],
+      distance = Math.hypot(to.x - from.x, to.y - from.y),
+      count = Math.max(1, Math.ceil(distance / Math.max(1, size * .22))),
+      radius = size / 2,
+      left = Math.max(0, Math.floor(Math.min(from.x, to.x) - radius)),
+      top = Math.max(0, Math.floor(Math.min(from.y, to.y) - radius)),
+      right = Math.min(c.width, Math.ceil(Math.max(from.x, to.x) + radius + 1)),
+      bottom = Math.min(c.height, Math.ceil(Math.max(from.y, to.y) + radius + 1)),
+      width = right - left,
+      height = bottom - top;
+    if (!width || !height) return;
+    const image = ctx.getImageData(left, top, width, height),
+      data = image.data;
+    for (let n = 0; n <= count; n++) {
+      const cx = from.x + (to.x - from.x) * n / count,
+        cy = from.y + (to.y - from.y) * n / count;
+      for (let y = Math.max(top, Math.floor(cy - radius)); y < Math.min(bottom, Math.ceil(cy + radius + 1)); y++) for (let x = Math.max(left, Math.floor(cx - radius)); x < Math.min(right, Math.ceil(cx + radius + 1)); x++) {
+        if ((x - cx) ** 2 + (y - cy) ** 2 > radius ** 2) continue;
+        const local = ((y - top) * width + x - left) * 4,
+          global = (y * c.width + x) * 4;
+        if (color !== 'eraser' && !body[global + 3]) continue;
+        data[local] = rgba[0];
+        data[local + 1] = rgba[1];
+        data[local + 2] = rgba[2];
+        data[local + 3] = rgba[3];
+      }
+    }
+    ctx.putImageData(image, left, top);
+  };
+  const fill = p => {
+    const c = maskRef.current,
+      ctx = context(),
+      image = ctx.getImageData(0, 0, c.width, c.height),
+      data = image.data,
+      body = bodyDataRef.current,
+      rgba = colors[color],
+      x = Math.max(0, Math.min(c.width - 1, Math.floor(p.x))),
+      y = Math.max(0, Math.min(c.height - 1, Math.floor(p.y))),
+      start = y * c.width + x,
+      offset = start * 4,
+      target = [data[offset], data[offset + 1], data[offset + 2], data[offset + 3]];
+    if (color !== 'eraser' && !body[offset + 3] || target.every((v, i) => v === rgba[i])) return;
+    checkpoint();
+    const queue = new Uint32Array(c.width * c.height);
+    let head = 0,
+      tail = 1;
+    queue[0] = start;
+    const add = index => {
+      const i = index * 4;
+      if (color !== 'eraser' && !body[i + 3] || data[i] !== target[0] || data[i + 1] !== target[1] || data[i + 2] !== target[2] || data[i + 3] !== target[3]) return;
+      data[i] = rgba[0];
+      data[i + 1] = rgba[1];
+      data[i + 2] = rgba[2];
+      data[i + 3] = rgba[3];
+      queue[tail++] = index;
+    };
+    add(start);
+    while (head < tail) {
+      const i = queue[head++],
+        px = i % c.width,
+        py = i / c.width | 0;
+      if (px) add(i - 1);
+      if (px < c.width - 1) add(i + 1);
+      if (py) add(i - c.width);
+      if (py < c.height - 1) add(i + c.width);
+    }
+    ctx.putImageData(image, 0, 0);
+    setHistoryTick(v => v + 1);
+  };
+  const down = e => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    if (mode === 'move') {
+      gestureRef.current = {
+        move: true,
+        x: e.clientX,
+        y: e.clientY,
+        pan
+      };
+      return;
+    }
+    const p = point(e);
+    if (tool === 'fill') {
+      fill(p);
+      return;
+    }
+    checkpoint();
+    gestureRef.current = {
+      point: p
+    };
+    paint(p, p);
+  };
+  const move = e => {
+    const g = gestureRef.current;
+    if (!g) return;
+    e.preventDefault();
+    if (g.move) {
+      setPan({
+        x: g.pan.x + e.clientX - g.x,
+        y: g.pan.y + e.clientY - g.y
+      });
+      return;
+    }
+    const p = point(e);
+    paint(g.point, p);
+    g.point = p;
+  };
+  const up = () => {
+    gestureRef.current = null;
+    setHistoryTick(v => v + 1);
+  };
+  const exportPng = () => {
+    const c = maskRef.current,
+      ctx = context(),
+      image = ctx.getImageData(0, 0, c.width, c.height),
+      data = image.data,
+      body = bodyDataRef.current;
+    for (let i = 0; i < data.length; i += 4) {
+      if (!body[i + 3] || !data[i + 3]) {
+        data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0;
+        continue;
+      }
+      const r = data[i],
+        g = data[i + 1],
+        b = data[i + 2];
+      data[i] = r >= g && r >= b ? 255 : 0;
+      data[i + 1] = g > r && g >= b ? 255 : 0;
+      data[i + 2] = b > r && b > g ? 255 : 0;
+      data[i + 3] = 255;
+    }
+    ctx.putImageData(image, 0, 0);
+    c.toBlob(blob => {
+      const a = document.createElement('a'),
+        url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = 'yaobikuni-dye-mask.PNG';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, 'image/png');
+  };
+  const colorButton = (id, label, bg) => /*#__PURE__*/React.createElement("button", {
+      onClick: () => setColor(id),
+      "aria-pressed": color === id,
+      className: `min-h-[44px] rounded-xl border-2 text-[9px] font-black ${color === id ? 'border-white' : 'border-transparent'}`,
+      style: {
+        backgroundColor: bg
+      }
+    }, label),
+    history = historyRef.current;
+  return /*#__PURE__*/React.createElement("main", {
+    className: "fixed inset-0 z-50 flex flex-col overflow-hidden bg-slate-950",
+    style: {
+      paddingTop: 'max(.25rem,env(safe-area-inset-top))'
+    }
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "flex h-11 shrink-0 items-center px-1"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "min-h-[44px] min-w-[44px]"
+  }, /*#__PURE__*/React.createElement(ArrowLeft, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+    className: "block text-[7px] font-black text-cyan-400"
+  }, "DEBUG\u30FB\u7DE8\u96C6\u9014\u4E2D\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
+    className: "text-xs font-black"
+  }, "\u30BF\u30C3\u30C1\u5F0F\u67D3\u8272\u30DE\u30B9\u30AF\u30A8\u30C7\u30A3\u30BF")), /*#__PURE__*/React.createElement("button", {
+    onClick: exportPng,
+    disabled: !ready,
+    className: "ml-auto min-h-[38px] rounded-xl bg-cyan-600 px-3 text-[9px] font-black disabled:opacity-40"
+  }, "PNG\u3092\u66F8\u304D\u51FA\u3059")), /*#__PURE__*/React.createElement("div", {
+    className: "grid shrink-0 grid-cols-3 gap-1 px-2"
+  }, [['composite', '合成'], ['body', '本体のみ'], ['mask', 'マスクのみ']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    onClick: () => setView(id),
+    className: `min-h-[34px] rounded-lg text-[9px] font-black ${view === id ? 'bg-cyan-700' : 'bg-slate-800'}`
+  }, label))), /*#__PURE__*/React.createElement("section", {
+    className: "relative m-2 min-h-0 flex-1 overflow-hidden rounded-xl bg-slate-600",
+    style: {
+      touchAction: 'none'
+    },
+    onPointerDown: down,
+    onPointerMove: move,
+    onPointerUp: up,
+    onPointerCancel: up
+  }, error ? /*#__PURE__*/React.createElement("p", {
+    className: "p-4 text-center text-red-200"
+  }, error) : !ready && /*#__PURE__*/React.createElement("p", {
+    className: "p-4 text-center"
+  }, "\u753B\u50CF\u3092\u8AAD\u307F\u8FBC\u307F\u4E2D\u2026"), /*#__PURE__*/React.createElement("div", {
+    className: "absolute inset-0 flex items-center justify-center",
+    style: {
+      transform: `translate(${pan.x}px,${pan.y}px) scale(${zoom})`,
+      pointerEvents: ready ? 'auto' : 'none'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "relative max-h-full max-w-full",
+    style: {
+      height: '100%',
+      aspectRatio: '2 / 3'
+    }
+  }, /*#__PURE__*/React.createElement("canvas", {
+    ref: bodyRef,
+    "aria-label": "\u516B\u767E\u6BD4\u4E18\u5C3C\u672C\u4F53\u30EC\u30A4\u30E4\u30FC",
+    className: "absolute inset-0 h-full w-full",
+    style: {
+      display: view === 'mask' ? 'none' : 'block'
+    }
+  }), /*#__PURE__*/React.createElement("canvas", {
+    ref: maskRef,
+    "aria-label": "\u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6\u30EC\u30A4\u30E4\u30FC",
+    className: "absolute inset-0 h-full w-full",
+    style: {
+      display: view === 'body' ? 'none' : 'block',
+      opacity: view === 'composite' ? opacity / 100 : 1
+    }
+  }))), /*#__PURE__*/React.createElement("div", {
+    onPointerDown: e => e.stopPropagation(),
+    className: "absolute right-1 top-1 flex flex-col gap-1"
+  }, [['＋', .5], ['−', -.5]].map(([label, delta]) => /*#__PURE__*/React.createElement("button", {
+    key: label,
+    onClick: e => {
+      e.stopPropagation();
+      setZoom(v => Math.max(.75, Math.min(8, v + delta)));
+    },
+    className: "h-10 w-10 rounded-lg bg-slate-950/80 font-black"
+  }, label)), /*#__PURE__*/React.createElement("button", {
+    onClick: e => {
+      e.stopPropagation();
+      setZoom(1);
+      setPan({
+        x: 0,
+        y: 0
+      });
+    },
+    className: "h-10 w-10 rounded-lg bg-slate-950/80 text-[8px]"
+  }, "\u7B49\u500D"))), /*#__PURE__*/React.createElement("section", {
+    className: "shrink-0 rounded-t-2xl border-t-2 border-cyan-400 bg-slate-900 px-2 pt-1",
+    style: {
+      paddingBottom: 'max(.4rem,env(safe-area-inset-bottom))'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-7 gap-1"
+  }, colorButton('red', '赤', '#f00'), colorButton('green', '緑', '#0b0'), colorButton('blue', '青', '#00f'), colorButton('eraser', '消す', '#475569'), /*#__PURE__*/React.createElement("button", {
+    onClick: undo,
+    disabled: !history.undo.length,
+    className: "rounded-xl bg-slate-700 text-[8px] disabled:opacity-30"
+  }, "Undo"), /*#__PURE__*/React.createElement("button", {
+    onClick: redo,
+    disabled: !history.redo.length,
+    className: "rounded-xl bg-slate-700 text-[8px] disabled:opacity-30"
+  }, "Redo"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setDetails(v => !v),
+    className: "rounded-xl bg-slate-700 text-[8px]"
+  }, "\u8A73\u7D30")), /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 grid grid-cols-4 gap-1"
+  }, [['edit', '編集'], ['move', '移動']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    onClick: () => setMode(id),
+    className: `min-h-[38px] rounded-lg text-[9px] ${mode === id ? 'bg-cyan-700' : 'bg-slate-700'}`
+  }, label)), [['brush', 'ブラシ'], ['fill', '塗りつぶし']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    onClick: () => setTool(id),
+    className: `min-h-[38px] rounded-lg text-[9px] ${tool === id ? 'bg-violet-700' : 'bg-slate-700'}`
+  }, label))), details && /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-800 p-2"
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "text-[8px]"
+  }, "\u30D6\u30E9\u30B7 ", size, "px", /*#__PURE__*/React.createElement("input", {
+    className: "block w-full",
+    type: "range",
+    min: "2",
+    max: "100",
+    step: "2",
+    value: size,
+    onChange: e => setSize(+e.target.value)
+  })), /*#__PURE__*/React.createElement("label", {
+    className: "text-[8px]"
+  }, "\u30DE\u30B9\u30AF\u900F\u660E\u5EA6 ", opacity, "%", /*#__PURE__*/React.createElement("input", {
+    className: "block w-full",
+    type: "range",
+    min: "25",
+    max: "100",
+    step: "25",
+    value: opacity,
+    onChange: e => setOpacity(+e.target.value)
+  }))), /*#__PURE__*/React.createElement("p", {
+    className: "pt-1 text-center text-[7px] text-slate-400"
+  }, mode === 'move' ? 'ドラッグで表示移動（PNG座標は不変）' : tool === 'fill' ? '連続領域をタップ' : '指でなぞって編集（透明な本体外は自動クリップ）', "\u30FB", Math.round(zoom * 100), "%")));
+};
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -8472,16 +8887,6 @@ function MonsterHeroGame() {
     ...(MARKET_PROFILE_ICON_STYLES[item.id] || DEFAULT_PROFILE_ICON_STYLE)
   }])));
   // 染色マスク調整値もDebug画面を閉じるまでの一時値で、セーブや本番補正値には書き込まない。
-  const [dyeMaskDebugId, setDyeMaskDebugId] = useState(DYE_MASK_DEBUG_TARGETS[0]?.id || '');
-  const [dyeMaskDebugMode, setDyeMaskDebugMode] = useState('composite');
-  const [dyeMaskDebugValues, setDyeMaskDebugValues] = useState({
-    x: 0,
-    y: 0,
-    scaleX: 100,
-    scaleY: 100
-  });
-  const [dyeMaskDebugStep, setDyeMaskDebugStep] = useState('normal');
-  const [dyeMaskAutoFitState, setDyeMaskAutoFitState] = useState('idle');
   // モンスター画像確認はデバッグ画面を開いている間だけ保持し、セーブ領域へは書き込まない。
   const [monsterImageDebugId, setMonsterImageDebugId] = useState(null);
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
@@ -20558,180 +20963,10 @@ function MonsterHeroGame() {
           className: "w-11 h-11 mx-auto"
         }), /*#__PURE__*/React.createElement("small", null, "\u5C0F\u578B\u30A2\u30A4\u30B3\u30F3"))))));
       })());
-    })(), gameState === 'DYE_MASK_POSITION_DEBUG' && (() => {
-      const target = DYE_MASK_DEBUG_TARGETS.find(entry => entry.id === dyeMaskDebugId) || DYE_MASK_DEBUG_TARGETS[0];
-      if (!target) return /*#__PURE__*/React.createElement("div", {
-        className: "p-4 text-slate-400"
-      }, "\u8ABF\u6574\u3067\u304D\u308B\u67D3\u8272\u30DE\u30B9\u30AF\u304C\u3042\u308A\u307E\u305B\u3093\u3002");
-      const values = dyeMaskDebugValues;
-      const stepOptions = {
-        fine: {
-          label: '細かく',
-          position: 1,
-          scale: .1
-        },
-        normal: {
-          label: '普通',
-          position: 3,
-          scale: .5
-        },
-        large: {
-          label: '大きく',
-          position: 10,
-          scale: 2
-        }
-      };
-      const activeStep = stepOptions[dyeMaskDebugStep] || stepOptions.normal;
-      const clamp = (key, value) => +Math.max(key === 'x' || key === 'y' ? -100 : 50, Math.min(key === 'x' || key === 'y' ? 100 : 150, value)).toFixed(2);
-      const adjust = (key, amount) => setDyeMaskDebugValues(current => ({
-        ...current,
-        [key]: clamp(key, current[key] + amount)
-      }));
-      const reset = () => {
-        setDyeMaskDebugValues({
-          x: 0,
-          y: 0,
-          scaleX: 100,
-          scaleY: 100
-        });
-        setDyeMaskAutoFitState('idle');
-      };
-      const autoFit = async () => {
-        setDyeMaskAutoFitState('loading');
-        try {
-          setDyeMaskDebugValues(await _calculateDyeMaskAutoFit(target.imageUrl, target.maskUrl));
-          setDyeMaskAutoFitState('done');
-        } catch (_) {
-          setDyeMaskAutoFitState('error');
-        }
-      };
-      const signed = value => value > 0 ? `+${value}` : String(value);
-      const copyText = `${target.id}: X=${values.x}, Y=${values.y}, ScaleX=${values.scaleX.toFixed(1)}%, ScaleY=${values.scaleY.toFixed(1)}%`;
-      const placement = {
-        xPx: values.x,
-        yPx: values.y,
-        scaleX: values.scaleX / 100,
-        scaleY: values.scaleY / 100,
-        maskUrl: target.maskUrl
-      };
-      const maskTransform = `translate(${values.x / DYE_MASK_DEBUG_PREVIEW_SIZE.width * 100}%, ${values.y / DYE_MASK_DEBUG_PREVIEW_SIZE.height * 100}%) scale(${values.scaleX / 100}, ${values.scaleY / 100})`;
-      const action = (label, key, amount, aria) => /*#__PURE__*/React.createElement("button", {
-        type: "button",
-        "aria-label": aria,
-        onClick: () => adjust(key, amount),
-        className: "min-h-[46px] rounded-xl border border-white/10 bg-slate-800 text-xs font-black active:bg-cyan-700"
-      }, label);
-      return /*#__PURE__*/React.createElement("main", {
-        className: "fixed inset-0 z-50 flex flex-col overflow-hidden bg-slate-950 px-2",
-        style: {
-          paddingTop: 'max(.35rem,env(safe-area-inset-top))'
-        }
-      }, /*#__PURE__*/React.createElement("header", {
-        className: "flex h-11 items-center gap-1 shrink-0"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: () => setGameState('DEBUG_SETTINGS'),
-        "aria-label": "\u30C7\u30D0\u30C3\u30B0\u8A2D\u5B9A\u3078\u623B\u308B",
-        className: "min-h-[44px] min-w-[44px] text-slate-400"
-      }, /*#__PURE__*/React.createElement(ArrowLeft, {
-        size: 20
-      })), /*#__PURE__*/React.createElement("div", {
-        className: "min-w-0"
-      }, /*#__PURE__*/React.createElement("small", {
-        className: "block text-[7px] font-black text-cyan-400"
-      }, "DEBUG\u30FB\u4FDD\u5B58\uFF0F\u672C\u756A\u53CD\u6620\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
-        className: "truncate text-xs font-black"
-      }, "\u67D3\u8272\u30DE\u30B9\u30AF\u4F4D\u7F6E\u8ABF\u6574")), /*#__PURE__*/React.createElement("select", {
-        "aria-label": "\u8ABF\u6574\u5BFE\u8C61",
-        value: target.id,
-        onChange: e => {
-          setDyeMaskDebugId(e.target.value);
-          reset();
-        },
-        className: "ml-auto min-h-[38px] max-w-[42%] rounded-lg bg-slate-900 px-2 text-[9px] font-black"
-      }, DYE_MASK_DEBUG_TARGETS.map(entry => /*#__PURE__*/React.createElement("option", {
-        key: entry.id,
-        value: entry.id
-      }, entry.name)))), /*#__PURE__*/React.createElement("section", {
-        className: "flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden pb-1"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "mb-1 grid w-full max-w-sm grid-cols-3 gap-1"
-      }, [['composite', '合成'], ['body', '本体のみ'], ['mask', 'マスクのみ']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
-        key: id,
-        onClick: () => setDyeMaskDebugMode(id),
-        "aria-pressed": dyeMaskDebugMode === id,
-        className: `min-h-[38px] rounded-lg border text-[9px] font-black ${dyeMaskDebugMode === id ? 'bg-cyan-700 border-cyan-300' : 'bg-slate-900 border-white/10 text-slate-400'}`
-      }, label))), /*#__PURE__*/React.createElement("div", {
-        className: "relative min-h-0 max-h-full max-w-full overflow-hidden",
-        style: {
-          height: '100%',
-          aspectRatio: '2 / 3',
-          backgroundColor: '#cbd5e1',
-          backgroundImage: 'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',
-          backgroundSize: '16px 16px',
-          backgroundPosition: '0 0,0 8px,8px -8px,-8px 0'
-        }
-      }, dyeMaskDebugMode === 'composite' && /*#__PURE__*/React.createElement(DyedMonsterImage, {
-        baseId: target.baseId,
-        src: target.imageUrl,
-        alt: `${target.name}の染色合成`,
-        masuColors: ['red', 'green', 'blue'],
-        debugMaskPlacement: placement,
-        className: "absolute inset-0 h-full w-full object-contain"
-      }), dyeMaskDebugMode === 'body' && /*#__PURE__*/React.createElement("img", {
-        src: target.imageUrl,
-        alt: `${target.name}本体`,
-        className: "absolute inset-0 h-full w-full object-contain"
-      }), dyeMaskDebugMode === 'mask' && /*#__PURE__*/React.createElement("img", {
-        src: target.maskUrl,
-        alt: `${target.name}染色マスク`,
-        className: "absolute inset-0 h-full w-full object-contain",
-        style: {
-          transform: maskTransform,
-          transformOrigin: 'center'
-        }
-      }))), /*#__PURE__*/React.createElement("section", {
-        "aria-label": "\u67D3\u8272\u30DE\u30B9\u30AF\u56FA\u5B9A\u64CD\u4F5C\u30D1\u30CD\u30EB",
-        className: "-mx-2 shrink-0 rounded-t-2xl border-t-2 border-cyan-400 bg-slate-900/98 px-2 pt-2 shadow-2xl",
-        style: {
-          paddingBottom: 'max(.45rem,env(safe-area-inset-bottom))'
-        }
-      }, /*#__PURE__*/React.createElement("output", {
-        className: "mb-1 block text-center font-mono text-[11px] font-black text-cyan-100"
-      }, "X: ", signed(values.x), "\u3000Y: ", signed(values.y), "\u3000ScaleX: ", values.scaleX.toFixed(1), "%\u3000ScaleY: ", values.scaleY.toFixed(1), "%"), /*#__PURE__*/React.createElement("div", {
-        className: "mb-1 grid grid-cols-3 gap-1"
-      }, Object.entries(stepOptions).map(([id, option]) => /*#__PURE__*/React.createElement("button", {
-        key: id,
-        onClick: () => setDyeMaskDebugStep(id),
-        "aria-pressed": dyeMaskDebugStep === id,
-        className: `min-h-[38px] rounded-lg text-[9px] font-black ${dyeMaskDebugStep === id ? 'bg-cyan-700' : 'bg-slate-700'}`
-      }, option.label, /*#__PURE__*/React.createElement("small", {
-        className: "block text-[7px]"
-      }, option.position, "px / ", option.scale, "%")))), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-1"
-      }, action('X ←', 'x', -activeStep.position, 'マスクを左へ'), action('X →', 'x', activeStep.position, 'マスクを右へ'), action('Y ↑', 'y', -activeStep.position, 'マスクを上へ'), action('Y ↓', 'y', activeStep.position, 'マスクを下へ'), action('横幅 −', 'scaleX', -activeStep.scale, 'マスクの横幅を縮める'), action('横幅 ＋', 'scaleX', activeStep.scale, 'マスクの横幅を広げる'), action('縦幅 −', 'scaleY', -activeStep.scale, 'マスクの縦幅を縮める'), action('縦幅 ＋', 'scaleY', activeStep.scale, 'マスクの縦幅を広げる')), /*#__PURE__*/React.createElement("div", {
-        className: "mt-1 grid grid-cols-3 gap-1"
-      }, /*#__PURE__*/React.createElement("button", {
-        onClick: autoFit,
-        disabled: dyeMaskAutoFitState === 'loading',
-        className: "min-h-[42px] rounded-xl bg-violet-700 text-[9px] font-black disabled:opacity-50"
-      }, dyeMaskAutoFitState === 'loading' ? '計測中…' : '自動フィット'), /*#__PURE__*/React.createElement("button", {
-        onClick: reset,
-        className: "min-h-[42px] rounded-xl bg-slate-700 text-[9px] font-black"
-      }, "\u521D\u671F\u72B6\u614B\u306B\u623B\u3059"), /*#__PURE__*/React.createElement("button", {
-        onClick: async () => {
-          try {
-            await navigator.clipboard.writeText(copyText);
-            window.alert('数値をコピーしました。');
-          } catch (_) {
-            window.prompt('この数値をコピーしてください。', copyText);
-          }
-        },
-        className: "min-h-[42px] rounded-xl bg-cyan-700 text-[9px] font-black"
-      }, "\u6570\u5024\u3092\u30B3\u30D4\u30FC")), dyeMaskAutoFitState === 'error' && /*#__PURE__*/React.createElement("p", {
-        role: "alert",
-        className: "pt-1 text-center text-[8px] font-black text-red-300"
-      }, "\u753B\u50CF\u3092\u8A08\u6E2C\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u521D\u671F\u72B6\u614B\u306E\u307E\u307E\u624B\u52D5\u8ABF\u6574\u3067\u304D\u307E\u3059\u3002")));
-    })(), gameState === 'BREEDER_ICON_DEBUG' && (() => {
+    })(), gameState === 'DYE_MASK_POSITION_DEBUG' && /*#__PURE__*/React.createElement(DyeMaskTouchEditor, {
+      target: DYE_MASK_DEBUG_TARGETS[0],
+      onClose: () => setGameState('DEBUG_SETTINGS')
+    }), gameState === 'BREEDER_ICON_DEBUG' && (() => {
       const item = debugIconItems.find(entry => entry.id === iconAdjustId) || debugIconItems[0];
       if (!item) return /*#__PURE__*/React.createElement("div", {
         className: "p-4 text-slate-400"
@@ -20998,9 +21233,9 @@ function MonsterHeroGame() {
     }, "\u672C\u756A\u8868\u793A\u3068\u67D3\u8272\u3092\u4FDD\u5B58\u305B\u305A\u78BA\u8A8D")), /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('DYE_MASK_POSITION_DEBUG'),
       className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black"
-    }, "\uD83C\uDFAF \u67D3\u8272\u30DE\u30B9\u30AF\u4F4D\u7F6E\u8ABF\u6574", /*#__PURE__*/React.createElement("small", {
+    }, "\uD83D\uDD8C\uFE0F \u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
-    }, "X\u30FBY\u30FB\u7E26\u6A2AScale\u3092\u4FDD\u5B58\u305B\u305A\u5B9F\u6A5F\u8ABF\u6574")), /*#__PURE__*/React.createElement("button", {
+    }, "\u516B\u767E\u6BD4\u4E18\u5C3C\u3092\u57FA\u6E96\u306B\u76F4\u63A5\u63CF\u753B\u30FBPNG\u51FA\u529B")), /*#__PURE__*/React.createElement("button", {
       onClick: openDebugTraining,
       className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
     }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
