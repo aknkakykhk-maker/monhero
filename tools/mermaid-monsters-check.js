@@ -101,8 +101,12 @@ check('円盤石の画像はいただいたものをそのまま使う',
   /const UNDINE_DISC_ICON = "images\/disc-icons\/undine-disc\.PNG(\?v=[a-f0-9]{12})?"/.test(breederSrc)
     && /const YAOBIKUNI_DISC_ICON = "images\/disc-icons\/yaobikuni-disc\.PNG(\?v=[a-f0-9]{12})?"/.test(breederSrc));
 for (const id of ['undine_icon', 'undine_disc_icon', 'yaobikuni_icon', 'yaobikuni_disc_icon']) {
-  check(`${id} は丸い枠での見え方を scale/x/y で合わせている`, new RegExp(`${id}: \\{ scale: [\\d.]+, x: -?\\d+, y: -?\\d+ \\}`).test(source));
+  check(`${id} は丸い枠での見え方を scale/x/y で合わせている`, new RegExp(`${id}: \\{ scale: [\\d.]+, x: -?[\\d.]+, y: -?[\\d.]+ \\}`).test(source));
 }
+// 立ち絵が縦長なので、丸枠(正方形)では object-cover のままだと頭と尾びれが切れる
+check('縦長の立ち絵は丸枠で object-contain にして全身を収める',
+  /const MONSTER_ART_CONTAIN_IDS = Object\.freeze\(\['Undine', 'Yaobikuni'\]\)/.test(source)
+    && source.includes("objectFit: 'contain'") && source.includes('monsterArtFitStyle(baseId, rawStyle)'));
 // 参照している画像が実在すること
 for (const rel of ['monster-hero/images/monsters/undine.PNG', 'monster-hero/images/monsters/yaobikuni.PNG',
   'monster-hero/images/disc-icons/undine-disc.PNG', 'monster-hero/images/disc-icons/yaobikuni-disc.PNG']) {
@@ -113,8 +117,12 @@ for (const rel of ['monster-hero/images/monsters/undine.PNG', 'monster-hero/imag
 for (const id of ['Undine', 'Yaobikuni']) {
   const start = source.indexOf(`  ${id}: [`, source.indexOf('const MASU_COLOR_REGION_HUES'));
   const block = start < 0 ? '' : source.slice(start, source.indexOf('\n  ],', start));
-  check(`${id}の染色は3部位`, (block.match(/\{ (hue|white|posBbox)/g) || []).length === 3, block ? '' : '定義が見つかりません');
+  // 1部位は「1つの定義」または「複数の判定をまとめた配列」なので、行頭のインデントで数える
+  check(`${id}の染色は3部位`, (block.match(/^ {4}[[{]/gm) || []).length === 3, block ? '' : '定義が見つかりません');
+  // 瞳は髪と同系色で色では切り分けられないため、左右の目を範囲で外している
+  check(`${id}は目を染めない(notBboxで左右の目を除外)`, /notBbox: \[\[[\d.]+, [\d.]+, [\d.]+, [\d.]+\], \[[\d.]+, [\d.]+, [\d.]+, [\d.]+\]\]/.test(block));
 }
+check('notBboxは染色エンジン側で効いている', source.includes('const _defExcluded = (def, nx, ny)') && (source.match(/_defExcluded\(def, nx, ny\)/g) || []).length >= 4);
 check('ヘルプに2体の染色部位を書いている', help.includes('ウンディーネの染色部位') && help.includes('ヤオビクニの染色部位'));
 
 // --- ⑦ スネグーラチカに手を入れていない ---
