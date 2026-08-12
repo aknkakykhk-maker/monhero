@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ca389ec7582875e4
+// source-sha256: 615cbe85c6044378
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 01:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 02:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3979,15 +3979,15 @@ const YAOBIKUNI_DYE_MASK_PLACEMENT = Object.freeze({
   x: 0,
   y: 0
 });
-// 染色マスク位置調整Debugの対象一覧。今後は本体・マスク・baseIdをここへ足すだけで再利用できる。
-// initial は本番補正値ではなく、ユーザーが差分を読み取りやすくするため常に無補正から始める。
-const DYE_MASK_DEBUG_TARGETS = Object.freeze([{
-  id: 'yaobikuni',
-  name: 'ヤオビクニ',
-  baseId: 'Yaobikuni',
-  imageUrl: YAOBIKUNI_IMG,
-  maskUrl: YAOBIKUNI_DYE_MASK
-}]);
+// タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
+// モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
+const makeDyeMaskEditorTargets = () => Object.values(ALL_PLAYER_MONSTERS).map(monster => ({
+  id: String(monster.id).toLowerCase(),
+  baseId: monster.id,
+  name: monster.name,
+  imageUrl: monster.imgUrl,
+  hasMask: Array.isArray(MASU_COLOR_REGION_HUES[monster.id]) && MASU_COLOR_REGION_HUES[monster.id].length > 0
+}));
 // Debug専用。画像全体の透明余白を除外し、実際に描かれた輪郭同士が重なる初期調整値を求める。
 // 戻り値は256x384の調整プレビュー基準のpxと倍率で、本番補正やセーブデータには書き込まない。
 const DYE_MASK_DEBUG_PREVIEW_SIZE = Object.freeze({
@@ -8407,80 +8407,128 @@ const bootLoadWatch = fn => {
   }
 };
 
-// 開発用。八百比丘尼本体の実ピクセルを唯一の座標系にするタッチ式マスクエディタ。
+// 開発用。全ベースモンの本体ピクセルを唯一の座標系にする汎用タッチ式マスクエディタ。
 const DyeMaskTouchEditor = ({
-  target,
   onClose
 }) => {
+  const targets = useMemo(makeDyeMaskEditorTargets, []),
+    [targetIndex, setTargetIndex] = useState(0),
+    target = targets[targetIndex];
   const bodyRef = useRef(null),
     maskRef = useRef(null),
+    originalRef = useRef(null),
     bodyDataRef = useRef(null),
+    outlineRef = useRef(null),
+    loupeRef = useRef(null),
     historyRef = useRef({
       undo: [],
       redo: []
     }),
-    gestureRef = useRef(null);
+    pointersRef = useRef(new Map()),
+    gestureRef = useRef(null),
+    lastTapRef = useRef(0);
   const [ready, setReady] = useState(false),
     [error, setError] = useState(''),
     [view, setView] = useState('composite'),
-    [opacity, setOpacity] = useState(50);
+    [opacity, setOpacity] = useState(50),
+    [dirty, setDirty] = useState(false),
+    [search, setSearch] = useState('');
   const [color, setColor] = useState('red'),
     [tool, setTool] = useState('brush'),
     [size, setSize] = useState(18),
-    [mode, setMode] = useState('edit');
-  const [zoom, setZoom] = useState(1),
+    [zoom, setZoom] = useState(1),
     [pan, setPan] = useState({
       x: 0,
       y: 0
     }),
     [historyTick, setHistoryTick] = useState(0),
     [details, setDetails] = useState(false);
+  const [pointerDistance, setPointerDistance] = useState(50),
+    [pointerDirection, setPointerDirection] = useState('up'),
+    [pointer, setPointer] = useState(null),
+    [loupe, setLoupe] = useState(true);
   const colors = {
-    red: [255, 0, 0, 255],
-    green: [0, 255, 0, 255],
-    blue: [0, 0, 255, 255],
-    eraser: [0, 0, 0, 0]
-  };
+      red: [255, 0, 0, 255],
+      green: [0, 255, 0, 255],
+      blue: [0, 0, 255, 255],
+      eraser: [0, 0, 0, 0]
+    },
+    colorCss = {
+      red: '#ff0000',
+      green: '#00ff00',
+      blue: '#0000ff',
+      eraser: '#ffffff'
+    };
   const context = () => maskRef.current?.getContext('2d', {
-    willReadFrequently: true
-  });
-  const snap = () => context()?.getImageData(0, 0, maskRef.current.width, maskRef.current.height);
-  const restore = image => {
-    if (image) context()?.putImageData(image, 0, 0);
-  };
+      willReadFrequently: true
+    }),
+    snap = () => {
+      const c = maskRef.current;
+      return c && context()?.getImageData(0, 0, c.width, c.height);
+    },
+    restore = image => {
+      if (image) context()?.putImageData(image, 0, 0);
+    };
   const checkpoint = () => {
     const image = snap();
     if (!image) return;
     const h = historyRef.current;
     h.undo.push(image);
-    if (h.undo.length > 6) h.undo.shift();
+    if (h.undo.length > 12) h.undo.shift();
     h.redo = [];
     setHistoryTick(v => v + 1);
   };
   const undo = () => {
-    const h = historyRef.current;
-    if (!h.undo.length) return;
-    h.redo.push(snap());
-    restore(h.undo.pop());
-    setHistoryTick(v => v + 1);
+      const h = historyRef.current;
+      if (!h.undo.length) return;
+      h.redo.push(snap());
+      restore(h.undo.pop());
+      setDirty(true);
+      setHistoryTick(v => v + 1);
+    },
+    redo = () => {
+      const h = historyRef.current;
+      if (!h.redo.length) return;
+      h.undo.push(snap());
+      restore(h.redo.pop());
+      setDirty(true);
+      setHistoryTick(v => v + 1);
+    };
+  const normalizeMask = (image, body) => {
+    const data = image.data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (!body[i + 3] || !data[i + 3]) {
+        data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0;
+        continue;
+      }
+      const r = data[i],
+        g = data[i + 1],
+        b = data[i + 2];
+      data[i] = r >= g && r >= b ? 255 : 0;
+      data[i + 1] = g > r && g >= b ? 255 : 0;
+      data[i + 2] = b > r && b > g ? 255 : 0;
+      data[i + 3] = 255;
+    }
+    return image;
   };
-  const redo = () => {
-    const h = historyRef.current;
-    if (!h.redo.length) return;
-    h.undo.push(snap());
-    restore(h.redo.pop());
-    setHistoryTick(v => v + 1);
-  };
-  useEffect(() => {
+  const loadTarget = useCallback(async () => {
     let cancelled = false;
-    const load = url => new Promise((resolve, reject) => {
-      const image = new window.Image();
-      image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error('画像を読み込めません'));
-      image.src = url;
-    });
-    Promise.all([load(target.imageUrl), load(target.maskUrl)]).then(([body, mask]) => {
-      if (cancelled) return;
+    setReady(false);
+    setError('');
+    historyRef.current = {
+      undo: [],
+      redo: []
+    };
+    setHistoryTick(v => v + 1);
+    try {
+      const load = url => new Promise((resolve, reject) => {
+        const image = new window.Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('画像を読み込めません'));
+        image.src = url;
+      });
+      const body = await load(target.imageUrl);
+      if (cancelled) return () => {};
       const w = body.naturalWidth || body.width,
         h = body.naturalHeight || body.height,
         b = bodyRef.current,
@@ -8493,37 +8541,90 @@ const DyeMaskTouchEditor = ({
       bc.drawImage(body, 0, 0, w, h);
       bodyDataRef.current = bc.getImageData(0, 0, w, h).data;
       const mc = context();
-      mc.imageSmoothingEnabled = false;
-      mc.drawImage(mask, 0, 0, w, h);
-      const image = mc.getImageData(0, 0, w, h),
-        data = image.data,
-        alpha = bodyDataRef.current;
-      for (let i = 0; i < data.length; i += 4) {
-        if (!alpha[i + 3] || !data[i + 3]) {
-          data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0;
-          continue;
+      mc.clearRect(0, 0, w, h);
+      if (target.hasMask) {
+        const urls = await getDyeRegionMasks(target.baseId, target.imageUrl);
+        if (urls) {
+          const layers = await Promise.all(urls.slice(0, 3).map(load));
+          layers.forEach((layer, index) => {
+            const temp = document.createElement('canvas');
+            temp.width = w;
+            temp.height = h;
+            const tc = temp.getContext('2d');
+            tc.drawImage(layer, 0, 0, w, h);
+            tc.globalCompositeOperation = 'source-in';
+            tc.fillStyle = ['#f00', '#0f0', '#00f'][index];
+            tc.fillRect(0, 0, w, h);
+            mc.drawImage(temp, 0, 0);
+          });
         }
-        const r = data[i],
-          g = data[i + 1],
-          bl = data[i + 2];
-        data[i] = r >= g && r >= bl ? 255 : 0;
-        data[i + 1] = g > r && g >= bl ? 255 : 0;
-        data[i + 2] = bl > r && bl > g ? 255 : 0;
-        data[i + 3] = 255;
       }
-      mc.putImageData(image, 0, 0);
+      const normalized = normalizeMask(mc.getImageData(0, 0, w, h), bodyDataRef.current);
+      mc.putImageData(normalized, 0, 0);
+      const original = mc.createImageData(w, h);
+      original.data.set(normalized.data);
+      originalRef.current = original;
+      const outline = document.createElement('canvas');
+      outline.width = w;
+      outline.height = h;
+      const oc = outline.getContext('2d'),
+        alpha = bodyDataRef.current,
+        od = oc.createImageData(w, h);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (!alpha[i + 3]) continue;
+        const edge = x === 0 || y === 0 || x === w - 1 || y === h - 1 || !alpha[i - 4 + 3] || !alpha[i + 4 + 3] || !alpha[i - w * 4 + 3] || !alpha[i + w * 4 + 3];
+        if (edge) {
+          od.data[i] = 255;
+          od.data[i + 1] = 255;
+          od.data[i + 3] = 255;
+        }
+      }
+      oc.putImageData(od, 0, 0);
+      outlineRef.current = outline;
+      setDirty(false);
+      setZoom(1);
+      setPan({
+        x: 0,
+        y: 0
+      });
       setReady(true);
-    }).catch(e => setError(e.message));
+    } catch (e) {
+      setError(e.message);
+    }
     return () => {
       cancelled = true;
     };
-  }, [target.imageUrl, target.maskUrl]);
-  const point = e => {
+  }, [target]);
+  useEffect(() => {
+    let cleanup;
+    loadTarget().then(fn => cleanup = fn);
+    return () => cleanup?.();
+  }, [loadTarget]);
+  const confirmDiscard = () => !dirty || window.confirm('未書き出しの編集があります。破棄してモンスターを切り替えますか？');
+  const selectTarget = index => {
+    if (index === targetIndex || !confirmDiscard()) return;
+    setTargetIndex(index);
+  };
+  const offsetClient = e => {
+    const side = pointerDistance / Math.sqrt(2);
+    return pointerDirection === 'left' ? {
+      x: e.clientX - side,
+      y: e.clientY - side
+    } : pointerDirection === 'right' ? {
+      x: e.clientX + side,
+      y: e.clientY - side
+    } : {
+      x: e.clientX,
+      y: e.clientY - pointerDistance
+    };
+  };
+  const pointFromClient = client => {
     const c = maskRef.current,
       r = c.getBoundingClientRect();
     return {
-      x: (e.clientX - r.left) * c.width / r.width,
-      y: (e.clientY - r.top) * c.height / r.height
+      x: (client.x - r.left) * c.width / r.width,
+      y: (client.y - r.top) * c.height / r.height
     };
   };
   const paint = (from, to) => {
@@ -8551,13 +8652,11 @@ const DyeMaskTouchEditor = ({
         const local = ((y - top) * width + x - left) * 4,
           global = (y * c.width + x) * 4;
         if (color !== 'eraser' && !body[global + 3]) continue;
-        data[local] = rgba[0];
-        data[local + 1] = rgba[1];
-        data[local + 2] = rgba[2];
-        data[local + 3] = rgba[3];
+        data.set(rgba, local);
       }
     }
     ctx.putImageData(image, left, top);
+    setDirty(true);
   };
   const fill = p => {
     const c = maskRef.current,
@@ -8569,144 +8668,285 @@ const DyeMaskTouchEditor = ({
       x = Math.max(0, Math.min(c.width - 1, Math.floor(p.x))),
       y = Math.max(0, Math.min(c.height - 1, Math.floor(p.y))),
       start = y * c.width + x,
-      offset = start * 4,
-      target = [data[offset], data[offset + 1], data[offset + 2], data[offset + 3]];
-    if (color !== 'eraser' && !body[offset + 3] || target.every((v, i) => v === rgba[i])) return;
+      o = start * 4,
+      targetColor = [data[o], data[o + 1], data[o + 2], data[o + 3]];
+    if (color !== 'eraser' && !body[o + 3] || targetColor.every((v, i) => v === rgba[i])) return;
     checkpoint();
-    const queue = new Uint32Array(c.width * c.height);
-    let head = 0,
-      tail = 1;
-    queue[0] = start;
-    const add = index => {
-      const i = index * 4;
-      if (color !== 'eraser' && !body[i + 3] || data[i] !== target[0] || data[i + 1] !== target[1] || data[i + 2] !== target[2] || data[i + 3] !== target[3]) return;
-      data[i] = rgba[0];
-      data[i + 1] = rgba[1];
-      data[i + 2] = rgba[2];
-      data[i + 3] = rgba[3];
-      queue[tail++] = index;
-    };
-    add(start);
-    while (head < tail) {
-      const i = queue[head++],
-        px = i % c.width,
-        py = i / c.width | 0;
-      if (px) add(i - 1);
-      if (px < c.width - 1) add(i + 1);
-      if (py) add(i - c.width);
-      if (py < c.height - 1) add(i + c.width);
+    const q = [start],
+      seen = new Uint8Array(c.width * c.height);
+    while (q.length) {
+      const i = q.pop();
+      if (seen[i]) continue;
+      seen[i] = 1;
+      const d = i * 4;
+      if (color !== 'eraser' && !body[d + 3] || !targetColor.every((v, j) => data[d + j] === v)) continue;
+      data.set(rgba, d);
+      const x = i % c.width,
+        y = i / c.width | 0;
+      if (x) q.push(i - 1);
+      if (x < c.width - 1) q.push(i + 1);
+      if (y) q.push(i - c.width);
+      if (y < c.height - 1) q.push(i + c.width);
     }
     ctx.putImageData(image, 0, 0);
+    setDirty(true);
     setHistoryTick(v => v + 1);
+  };
+  const drawLoupe = p => {
+    if (!loupe || !p) return;
+    const c = loupeRef.current;
+    if (!c) return;
+    const ctx = c.getContext('2d'),
+      span = Math.max(12, size * 3),
+      sx = p.x - span / 2,
+      sy = p.y - span / 2;
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(bodyRef.current, sx, sy, span, span, 0, 0, c.width, c.height);
+    ctx.globalAlpha = opacity / 100;
+    ctx.drawImage(maskRef.current, sx, sy, span, span, 0, 0, c.width, c.height);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = colorCss[color];
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(c.width / 2, c.height / 2, Math.max(4, size / span * c.width / 2), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(c.width / 2 - 7, c.height / 2);
+    ctx.lineTo(c.width / 2 + 7, c.height / 2);
+    ctx.moveTo(c.width / 2, c.height / 2 - 7);
+    ctx.lineTo(c.width / 2, c.height / 2 + 7);
+    ctx.stroke();
+  };
+  useEffect(() => {
+    if (pointer?.p) drawLoupe(pointer.p);
+  }, [pointer, loupe, opacity, size, color]);
+  const beginPan = () => {
+    const ps = [...pointersRef.current.values()];
+    if (ps.length < 2) return;
+    const a = ps[0],
+      b = ps[1];
+    gestureRef.current = {
+      kind: 'pan',
+      mid: {
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2
+      },
+      distance: Math.hypot(a.x - b.x, a.y - b.y),
+      pan,
+      zoom
+    };
+    setPointer(null);
   };
   const down = e => {
     e.preventDefault();
     e.currentTarget.setPointerCapture?.(e.pointerId);
-    if (mode === 'move') {
-      gestureRef.current = {
-        move: true,
-        x: e.clientX,
-        y: e.clientY,
-        pan
-      };
+    pointersRef.current.set(e.pointerId, {
+      x: e.clientX,
+      y: e.clientY
+    });
+    if (pointersRef.current.size >= 2) {
+      beginPan();
       return;
     }
-    const p = point(e);
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      setZoom(1);
+      setPan({
+        x: 0,
+        y: 0
+      });
+      lastTapRef.current = 0;
+      return;
+    }
+    lastTapRef.current = now;
+    const client = offsetClient(e),
+      p = pointFromClient(client);
+    setPointer({
+      ...client,
+      p
+    });
+    drawLoupe(p);
     if (tool === 'fill') {
       fill(p);
       return;
     }
     checkpoint();
     gestureRef.current = {
+      kind: 'draw',
+      pointerId: e.pointerId,
       point: p
     };
     paint(p, p);
   };
   const move = e => {
-    const g = gestureRef.current;
-    if (!g) return;
+    if (!pointersRef.current.has(e.pointerId)) return;
     e.preventDefault();
-    if (g.move) {
+    pointersRef.current.set(e.pointerId, {
+      x: e.clientX,
+      y: e.clientY
+    });
+    const g = gestureRef.current;
+    if (pointersRef.current.size >= 2) {
+      if (g?.kind !== 'pan') beginPan();
+      const pg = gestureRef.current,
+        ps = [...pointersRef.current.values()],
+        a = ps[0],
+        b = ps[1],
+        mid = {
+          x: (a.x + b.x) / 2,
+          y: (a.y + b.y) / 2
+        },
+        distance = Math.hypot(a.x - b.x, a.y - b.y),
+        nextZoom = Math.max(.5, Math.min(8, pg.zoom * distance / Math.max(1, pg.distance)));
+      setZoom(nextZoom);
       setPan({
-        x: g.pan.x + e.clientX - g.x,
-        y: g.pan.y + e.clientY - g.y
+        x: pg.pan.x + mid.x - pg.mid.x,
+        y: pg.pan.y + mid.y - pg.mid.y
       });
       return;
     }
-    const p = point(e);
+    if (!g || g.kind !== 'draw' || g.pointerId !== e.pointerId) return;
+    const client = offsetClient(e),
+      p = pointFromClient(client);
+    setPointer({
+      ...client,
+      p
+    });
+    drawLoupe(p);
     paint(g.point, p);
     g.point = p;
   };
-  const up = () => {
-    gestureRef.current = null;
+  const up = e => {
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2 && gestureRef.current?.kind === 'pan') gestureRef.current = null;
+    if (!pointersRef.current.size) {
+      gestureRef.current = null;
+      setPointer(null);
+    }
     setHistoryTick(v => v + 1);
   };
+  const resetOriginal = () => {
+      if (!dirty || window.confirm('編集中の内容を破棄して元マスクを再読込しますか？')) {
+        restore(originalRef.current);
+        historyRef.current = {
+          undo: [],
+          redo: []
+        };
+        setDirty(false);
+        setHistoryTick(v => v + 1);
+      }
+    },
+    clearAll = () => {
+      if (window.confirm('現在のマスクを全消去しますか？')) {
+        checkpoint();
+        context().clearRect(0, 0, maskRef.current.width, maskRef.current.height);
+        setDirty(true);
+      }
+    };
   const exportPng = () => {
     const c = maskRef.current,
-      ctx = context(),
-      image = ctx.getImageData(0, 0, c.width, c.height),
-      data = image.data,
-      body = bodyDataRef.current;
-    for (let i = 0; i < data.length; i += 4) {
-      if (!body[i + 3] || !data[i + 3]) {
-        data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0;
-        continue;
-      }
-      const r = data[i],
-        g = data[i + 1],
-        b = data[i + 2];
-      data[i] = r >= g && r >= b ? 255 : 0;
-      data[i + 1] = g > r && g >= b ? 255 : 0;
-      data[i + 2] = b > r && b > g ? 255 : 0;
-      data[i + 3] = 255;
-    }
-    ctx.putImageData(image, 0, 0);
+      image = normalizeMask(context().getImageData(0, 0, c.width, c.height), bodyDataRef.current);
+    context().putImageData(image, 0, 0);
     c.toBlob(blob => {
       const a = document.createElement('a'),
         url = URL.createObjectURL(blob);
       a.href = url;
-      a.download = 'yaobikuni-dye-mask.PNG';
+      a.download = `${target.id}-dye-mask.PNG`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setDirty(false);
     }, 'image/png');
   };
-  const colorButton = (id, label, bg) => /*#__PURE__*/React.createElement("button", {
+  const close = () => {
+      if (confirmDiscard()) onClose();
+    },
+    colorButton = (id, label, bg) => /*#__PURE__*/React.createElement("button", {
       onClick: () => setColor(id),
       "aria-pressed": color === id,
-      className: `min-h-[44px] rounded-xl border-2 text-[9px] font-black ${color === id ? 'border-white' : 'border-transparent'}`,
+      className: `min-h-[42px] rounded-xl border-2 text-[9px] font-black ${color === id ? 'border-white' : 'border-transparent'}`,
       style: {
         backgroundColor: bg
       }
     }, label),
-    history = historyRef.current;
+    history = historyRef.current,
+    filtered = targets.map((t, i) => ({
+      t,
+      i
+    })).filter(({
+      t
+    }) => t.name.includes(search) || t.baseId.toLowerCase().includes(search.toLowerCase()));
   return /*#__PURE__*/React.createElement("main", {
     className: "fixed inset-0 z-50 flex flex-col overflow-hidden bg-slate-950",
     style: {
       paddingTop: 'max(.25rem,env(safe-area-inset-top))'
     }
   }, /*#__PURE__*/React.createElement("header", {
-    className: "flex h-11 shrink-0 items-center px-1"
+    className: "flex h-10 shrink-0 items-center px-1"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: onClose,
-    className: "min-h-[44px] min-w-[44px]"
+    onClick: close,
+    className: "min-h-[40px] min-w-[40px]"
   }, /*#__PURE__*/React.createElement(ArrowLeft, {
     size: 20
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", {
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("small", {
     className: "block text-[7px] font-black text-cyan-400"
-  }, "DEBUG\u30FB\u7DE8\u96C6\u9014\u4E2D\u306F\u4FDD\u5B58\u3055\u308C\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
-    className: "text-xs font-black"
-  }, "\u30BF\u30C3\u30C1\u5F0F\u67D3\u8272\u30DE\u30B9\u30AF\u30A8\u30C7\u30A3\u30BF")), /*#__PURE__*/React.createElement("button", {
+  }, "DEBUG\u30FB\u7AEF\u672B/\u30BB\u30FC\u30D6/\u672C\u756A\u30C7\u30FC\u30BF\u3078\u4FDD\u5B58\u3057\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("h2", {
+    className: "truncate text-[11px] font-black"
+  }, "\u6C4E\u7528\u67D3\u8272\u30DE\u30B9\u30AF\u30A8\u30C7\u30A3\u30BF")), /*#__PURE__*/React.createElement("button", {
     onClick: exportPng,
     disabled: !ready,
-    className: "ml-auto min-h-[38px] rounded-xl bg-cyan-600 px-3 text-[9px] font-black disabled:opacity-40"
-  }, "PNG\u3092\u66F8\u304D\u51FA\u3059")), /*#__PURE__*/React.createElement("div", {
-    className: "grid shrink-0 grid-cols-3 gap-1 px-2"
-  }, [['composite', '合成'], ['body', '本体のみ'], ['mask', 'マスクのみ']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    className: "ml-auto min-h-[36px] rounded-xl bg-cyan-600 px-2 text-[8px] font-black disabled:opacity-40"
+  }, "PNG\u66F8\u51FA")), /*#__PURE__*/React.createElement("section", {
+    className: "shrink-0 px-2 pb-1"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-[38px_1fr_38px] gap-1"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => selectTarget((targetIndex - 1 + targets.length) % targets.length),
+    className: "rounded-lg bg-slate-800",
+    "aria-label": "\u524D\u306E\u30E2\u30F3\u30B9\u30BF\u30FC"
+  }, "\u2190"), /*#__PURE__*/React.createElement("select", {
+    "aria-label": "\u30E2\u30F3\u30B9\u30BF\u30FC\u9078\u629E",
+    value: targetIndex,
+    onChange: e => selectTarget(+e.target.value),
+    className: "min-h-[34px] min-w-0 rounded-lg bg-slate-800 px-2 text-[9px] font-black"
+  }, targets.map((t, i) => /*#__PURE__*/React.createElement("option", {
+    key: t.baseId,
+    value: i
+  }, t.name, "\uFF0F", t.hasMask ? '染色マスクあり' : '染色マスクなし'))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => selectTarget((targetIndex + 1) % targets.length),
+    className: "rounded-lg bg-slate-800",
+    "aria-label": "\u6B21\u306E\u30E2\u30F3\u30B9\u30BF\u30FC"
+  }, "\u2192")), /*#__PURE__*/React.createElement("input", {
+    value: search,
+    onChange: e => setSearch(e.target.value),
+    list: "dye-mask-monsters",
+    placeholder: "\u540D\u524D\u691C\u7D22",
+    className: "mt-1 min-h-[30px] w-full rounded-lg bg-slate-800 px-2 text-[9px]"
+  }), /*#__PURE__*/React.createElement("datalist", {
+    id: "dye-mask-monsters"
+  }, filtered.map(({
+    t
+  }) => /*#__PURE__*/React.createElement("option", {
+    key: t.baseId,
+    value: t.name
+  }))), search && filtered.length > 0 && /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      selectTarget(filtered[0].i);
+      setSearch('');
+    },
+    className: "mt-1 w-full rounded bg-cyan-900 py-1 text-[8px]"
+  }, "\u300C", filtered[0].t.name, "\u300D\u3092\u9078\u629E"), /*#__PURE__*/React.createElement("p", {
+    className: `text-center text-[8px] font-black ${target.hasMask ? 'text-emerald-300' : 'text-amber-300'}`
+  }, target.name, "\u30FB", target.hasMask ? '既存の染色マスクを読込' : '染色マスクなし（完全透明から開始）', dirty ? '・未書き出し' : '')), /*#__PURE__*/React.createElement("div", {
+    className: "grid shrink-0 grid-cols-4 gap-1 px-2"
+  }, [['composite', '合成'], ['body', '本体のみ'], ['mask', 'マスクのみ'], ['boundary', '境界確認']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
     key: id,
     onClick: () => setView(id),
-    className: `min-h-[34px] rounded-lg text-[9px] font-black ${view === id ? 'bg-cyan-700' : 'bg-slate-800'}`
+    className: `min-h-[30px] rounded-lg text-[8px] font-black ${view === id ? 'bg-cyan-700' : 'bg-slate-800'}`
   }, label))), /*#__PURE__*/React.createElement("section", {
     className: "relative m-2 min-h-0 flex-1 overflow-hidden rounded-xl bg-slate-600",
     style: {
@@ -8734,7 +8974,7 @@ const DyeMaskTouchEditor = ({
     }
   }, /*#__PURE__*/React.createElement("canvas", {
     ref: bodyRef,
-    "aria-label": "\u516B\u767E\u6BD4\u4E18\u5C3C\u672C\u4F53\u30EC\u30A4\u30E4\u30FC",
+    "aria-label": `${target.name}本体レイヤー`,
     className: "absolute inset-0 h-full w-full",
     style: {
       display: view === 'mask' ? 'none' : 'block'
@@ -8745,61 +8985,59 @@ const DyeMaskTouchEditor = ({
     className: "absolute inset-0 h-full w-full",
     style: {
       display: view === 'body' ? 'none' : 'block',
-      opacity: view === 'composite' ? opacity / 100 : 1
+      opacity: view === 'composite' || view === 'boundary' ? opacity / 100 : 1
     }
-  }))), /*#__PURE__*/React.createElement("div", {
-    onPointerDown: e => e.stopPropagation(),
-    className: "absolute right-1 top-1 flex flex-col gap-1"
-  }, [['＋', .5], ['−', -.5]].map(([label, delta]) => /*#__PURE__*/React.createElement("button", {
-    key: label,
-    onClick: e => {
-      e.stopPropagation();
-      setZoom(v => Math.max(.75, Math.min(8, v + delta)));
-    },
-    className: "h-10 w-10 rounded-lg bg-slate-950/80 font-black"
-  }, label)), /*#__PURE__*/React.createElement("button", {
-    onClick: e => {
-      e.stopPropagation();
-      setZoom(1);
-      setPan({
-        x: 0,
-        y: 0
-      });
-    },
-    className: "h-10 w-10 rounded-lg bg-slate-950/80 text-[8px]"
-  }, "\u7B49\u500D"))), /*#__PURE__*/React.createElement("section", {
+  }), view === 'boundary' && outlineRef.current && /*#__PURE__*/React.createElement("img", {
+    src: outlineRef.current.toDataURL(),
+    alt: "\u672C\u4F53\u306E\u5916\u5468",
+    className: "pointer-events-none absolute inset-0 h-full w-full"
+  }))), loupe && pointer && /*#__PURE__*/React.createElement("canvas", {
+    ref: loupeRef,
+    width: "120",
+    height: "120",
+    "aria-label": "\u62E1\u5927\u93E1",
+    className: "pointer-events-none absolute left-2 top-2 rounded-full border-2 border-white bg-slate-950 shadow-xl"
+  }), pointer && /*#__PURE__*/React.createElement("div", {
+    className: "pointer-events-none fixed z-10 rounded-full border-2",
+    style: {
+      left: pointer.x - size * zoom / 2,
+      top: pointer.y - size * zoom / 2,
+      width: size * zoom,
+      height: size * zoom,
+      borderColor: colorCss[color],
+      background: color === 'eraser' ? 'repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(255,255,255,.7) 3px,rgba(255,255,255,.7) 5px)' : 'transparent'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "absolute left-1/2 top-1/2 h-px w-3 -translate-x-1/2 bg-white"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "absolute left-1/2 top-1/2 h-3 w-px -translate-y-1/2 bg-white"
+  }))), /*#__PURE__*/React.createElement("section", {
     className: "shrink-0 rounded-t-2xl border-t-2 border-cyan-400 bg-slate-900 px-2 pt-1",
     style: {
       paddingBottom: 'max(.4rem,env(safe-area-inset-bottom))'
     }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-7 gap-1"
-  }, colorButton('red', '赤', '#f00'), colorButton('green', '緑', '#0b0'), colorButton('blue', '青', '#00f'), colorButton('eraser', '消す', '#475569'), /*#__PURE__*/React.createElement("button", {
+    className: "grid grid-cols-8 gap-1"
+  }, colorButton('red', '赤', '#f00'), colorButton('green', '緑', '#080'), colorButton('blue', '青', '#00f'), colorButton('eraser', '消す', '#475569'), /*#__PURE__*/React.createElement("button", {
     onClick: undo,
     disabled: !history.undo.length,
-    className: "rounded-xl bg-slate-700 text-[8px] disabled:opacity-30"
+    className: "rounded-xl bg-slate-700 text-[7px] disabled:opacity-30"
   }, "Undo"), /*#__PURE__*/React.createElement("button", {
     onClick: redo,
     disabled: !history.redo.length,
-    className: "rounded-xl bg-slate-700 text-[8px] disabled:opacity-30"
+    className: "rounded-xl bg-slate-700 text-[7px] disabled:opacity-30"
   }, "Redo"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTool('brush'),
+    className: `rounded-xl text-[7px] ${tool === 'brush' ? 'bg-violet-700' : 'bg-slate-700'}`
+  }, "\u30D6\u30E9\u30B7"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTool('fill'),
+    className: `rounded-xl text-[7px] ${tool === 'fill' ? 'bg-violet-700' : 'bg-slate-700'}`
+  }, "\u5857\u308A\u3064\u3076\u3057")), /*#__PURE__*/React.createElement("button", {
     onClick: () => setDetails(v => !v),
-    className: "rounded-xl bg-slate-700 text-[8px]"
-  }, "\u8A73\u7D30")), /*#__PURE__*/React.createElement("div", {
-    className: "mt-1 grid grid-cols-4 gap-1"
-  }, [['edit', '編集'], ['move', '移動']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
-    key: id,
-    onClick: () => setMode(id),
-    className: `min-h-[38px] rounded-lg text-[9px] ${mode === id ? 'bg-cyan-700' : 'bg-slate-700'}`
-  }, label)), [['brush', 'ブラシ'], ['fill', '塗りつぶし']].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
-    key: id,
-    onClick: () => setTool(id),
-    className: `min-h-[38px] rounded-lg text-[9px] ${tool === id ? 'bg-violet-700' : 'bg-slate-700'}`
-  }, label))), details && /*#__PURE__*/React.createElement("div", {
-    className: "mt-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-800 p-2"
-  }, /*#__PURE__*/React.createElement("label", {
-    className: "text-[8px]"
-  }, "\u30D6\u30E9\u30B7 ", size, "px", /*#__PURE__*/React.createElement("input", {
+    className: "mt-1 min-h-[28px] w-full rounded-lg bg-slate-700 text-[8px]"
+  }, "\u8A73\u7D30 ", details ? '▲' : '▼'), details && /*#__PURE__*/React.createElement("div", {
+    className: "mt-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-800 p-2 text-[8px]"
+  }, /*#__PURE__*/React.createElement("label", null, "\u30D6\u30E9\u30B7 ", size, "px", /*#__PURE__*/React.createElement("input", {
     className: "block w-full",
     type: "range",
     min: "2",
@@ -8807,9 +9045,7 @@ const DyeMaskTouchEditor = ({
     step: "2",
     value: size,
     onChange: e => setSize(+e.target.value)
-  })), /*#__PURE__*/React.createElement("label", {
-    className: "text-[8px]"
-  }, "\u30DE\u30B9\u30AF\u900F\u660E\u5EA6 ", opacity, "%", /*#__PURE__*/React.createElement("input", {
+  })), /*#__PURE__*/React.createElement("label", null, "\u900F\u660E\u5EA6 ", opacity, "%", /*#__PURE__*/React.createElement("input", {
     className: "block w-full",
     type: "range",
     min: "25",
@@ -8817,9 +9053,44 @@ const DyeMaskTouchEditor = ({
     step: "25",
     value: opacity,
     onChange: e => setOpacity(+e.target.value)
-  }))), /*#__PURE__*/React.createElement("p", {
+  })), /*#__PURE__*/React.createElement("label", null, "\u30DD\u30A4\u30F3\u30BF\u30FC\u8DDD\u96E2", /*#__PURE__*/React.createElement("select", {
+    value: pointerDistance,
+    onChange: e => setPointerDistance(+e.target.value),
+    className: "block w-full bg-slate-700"
+  }, [0, 30, 50, 70].map(n => /*#__PURE__*/React.createElement("option", {
+    key: n,
+    value: n
+  }, n, "px")))), /*#__PURE__*/React.createElement("label", null, "\u65B9\u5411", /*#__PURE__*/React.createElement("select", {
+    value: pointerDirection,
+    onChange: e => setPointerDirection(e.target.value),
+    className: "block w-full bg-slate-700"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "up"
+  }, "\u771F\u4E0A"), /*#__PURE__*/React.createElement("option", {
+    value: "left"
+  }, "\u5DE6\u4E0A"), /*#__PURE__*/React.createElement("option", {
+    value: "right"
+  }, "\u53F3\u4E0A"))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setLoupe(v => !v),
+    className: "rounded bg-slate-700"
+  }, "\u62E1\u5927\u93E1 ", loupe ? 'ON' : 'OFF'), /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setZoom(1);
+      setPan({
+        x: 0,
+        y: 0
+      });
+    },
+    className: "rounded bg-slate-700"
+  }, "\u5168\u4F53\u8868\u793A"), /*#__PURE__*/React.createElement("button", {
+    onClick: clearAll,
+    className: "rounded bg-red-900"
+  }, "\u5168\u6D88\u53BB"), /*#__PURE__*/React.createElement("button", {
+    onClick: resetOriginal,
+    className: "rounded bg-amber-900"
+  }, "\u5143\u30DE\u30B9\u30AF\u518D\u8AAD\u8FBC")), /*#__PURE__*/React.createElement("p", {
     className: "pt-1 text-center text-[7px] text-slate-400"
-  }, mode === 'move' ? 'ドラッグで表示移動（PNG座標は不変）' : tool === 'fill' ? '連続領域をタップ' : '指でなぞって編集（透明な本体外は自動クリップ）', "\u30FB", Math.round(zoom * 100), "%")));
+  }, "1\u672C\u6307\uFF1A\u30DD\u30A4\u30F3\u30BF\u30FC\u4F4D\u7F6E\u3078\u63CF\u753B\u30FB2\u672C\u6307\uFF1A\u30D1\u30F3/\u30D4\u30F3\u30C1\u30FB\u30C0\u30D6\u30EB\u30BF\u30C3\u30D7\uFF1A\u5168\u4F53\u8868\u793A\u30FB", Math.round(zoom * 100), "%")));
 };
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
@@ -20962,7 +21233,6 @@ function MonsterHeroGame() {
         }), /*#__PURE__*/React.createElement("small", null, "\u5C0F\u578B\u30A2\u30A4\u30B3\u30F3"))))));
       })());
     })(), gameState === 'DYE_MASK_POSITION_DEBUG' && /*#__PURE__*/React.createElement(DyeMaskTouchEditor, {
-      target: DYE_MASK_DEBUG_TARGETS[0],
       onClose: () => setGameState('DEBUG_SETTINGS')
     }), gameState === 'BREEDER_ICON_DEBUG' && (() => {
       const item = debugIconItems.find(entry => entry.id === iconAdjustId) || debugIconItems[0];
@@ -21233,7 +21503,7 @@ function MonsterHeroGame() {
       className: "w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black"
     }, "\uD83D\uDD8C\uFE0F \u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6", /*#__PURE__*/React.createElement("small", {
       className: "block text-[8px] text-cyan-300"
-    }, "\u516B\u767E\u6BD4\u4E18\u5C3C\u3092\u57FA\u6E96\u306B\u76F4\u63A5\u63CF\u753B\u30FBPNG\u51FA\u529B")), /*#__PURE__*/React.createElement("button", {
+    }, "\u5168\u30D9\u30FC\u30B9\u30E2\u30F3\u3092\u9078\u629E\u3057\u3066\u76F4\u63A5\u63CF\u753B\u30FBPNG\u51FA\u529B")), /*#__PURE__*/React.createElement("button", {
       onClick: openDebugTraining,
       className: "w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black"
     }, "\uD83C\uDFB2 \u4FEE\u884C\u30C6\u30B9\u30C8", /*#__PURE__*/React.createElement("small", {
