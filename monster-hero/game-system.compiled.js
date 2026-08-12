@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 40e9129c102cf4fe
+// source-sha256: 8cf82a8665049156
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-12 18:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-12 18:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3506,7 +3506,10 @@ const MASU_COLOR_REGION_HUES = {
   {
     hue: 218,
     sMin: 0.45,
-    bbox: [[0.0, 0.0, 1.0, 0.30], [0.0, 0.30, 0.455, 0.38], [0.545, 0.30, 1.0, 0.38], [0.0, 0.38, 0.355, 0.50], [0.645, 0.38, 1.0, 0.50], [0.0, 0.50, 0.38, 0.78], [0.62, 0.50, 1.0, 0.78]],
+    bbox: [[0.0, 0.0, 1.0, 0.30], [0.0, 0.30, 0.455, 0.38], [0.545, 0.30, 1.0, 0.38], [0.0, 0.38, 0.355, 0.50], [0.645, 0.38, 1.0, 0.50],
+    // 腰より下は髪の外側の毛先だけに限定する。右へ曲がる尻尾も髪と同じ色相なので、
+    // ここを全幅の矩形にすると尻尾の付け根から中央のヒレまで染色①へ食い込む。
+    [0.0, 0.50, 0.36, 0.62], [0.70, 0.50, 1.0, 0.62], [0.0, 0.62, 0.30, 0.70], [0.78, 0.62, 1.0, 0.70]],
     notBbox: UNDINE_EYE_BOXES,
     noEdgeGuard: true
   },
@@ -3519,7 +3522,8 @@ const MASU_COLOR_REGION_HUES = {
     sMax: 0.44,
     vMin: 0.58,
     bbox: [[0.315, 0.095, 0.685, 0.285], [0.265, 0.285, 0.435, 0.525], [0.565, 0.285, 0.735, 0.525]],
-    noEdgeGuard: true
+    noEdgeGuard: true,
+    noAAGuard: true
   },
   // 耳と両腕（指先を含む）は髪より彩度が高い箇所もあるため、低彩度側の条件だけでは
   // 髪（色相218）へ近い画素が染色①に流れる。肌の実測範囲内では彩度上限を設けず、
@@ -3528,7 +3532,8 @@ const MASU_COLOR_REGION_HUES = {
     hue: 200,
     sMin: 0.20,
     bbox: [[0.255, 0.135, 0.375, 0.195], [0.625, 0.135, 0.745, 0.195], [0.320, 0.275, 0.440, 0.325], [0.560, 0.275, 0.680, 0.325], [0.295, 0.325, 0.415, 0.375], [0.585, 0.325, 0.705, 0.375], [0.265, 0.375, 0.385, 0.425], [0.615, 0.375, 0.735, 0.425], [0.235, 0.425, 0.355, 0.475], [0.645, 0.425, 0.765, 0.475], [0.225, 0.475, 0.315, 0.535], [0.685, 0.475, 0.775, 0.535], [0.33, 0.30, 0.67, 0.78]],
-    noEdgeGuard: true
+    noEdgeGuard: true,
+    noAAGuard: true
   },
   // 尾びれは透けていて彩度が0.2台まで落ち、半透明なので既定の「にじみ除外」でも消える。
   // 尾の先だけ彩度の下限を下げ、半透明でも染めるようにする(noAAGuard)
