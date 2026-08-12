@@ -61,12 +61,26 @@ const ASSISTANTS = [
 const DEFAULT_ASSISTANT_ID = 'mua';
 
 // ---------- 正式アップデートの初回案内 ----------
-// BUILD_DATE や更新履歴から自動生成しない。プレイヤーへ知らせたい正式公開だけをここへ追加する。
-// changelog の全項目ではなく、大型・恒常かつ存在を見逃しやすい新機能だけが対象。
-// 小修正や細かなUI変更は対象外とし、新規プレイヤーへ過去通知を大量表示しない運用を守る。
-// pages は1件の更新にまとめて順番に表示でき、destination/buttonLabel は必要な案内だけ指定する。
-// debugOnly はデバッグ設定からの検証専用で、通常ログインの候補には絶対に入らない。
+// 通常通知の本文は更新履歴を正本とし、assistantNotice を付けた主要更新だけを案内する。
+// debugOnly の検証通知だけは更新履歴と切り離し、通常ログインへ混ざらないようにする。
+const ASSISTANT_UPDATE_NOTICE_TYPES = new Set(['market', 'mode', 'feature']);
+const assistantUpdateNoticeFromChangelog = entry => {
+  const meta = entry && entry.assistantNotice;
+  if (!meta || !ASSISTANT_UPDATE_NOTICE_TYPES.has(meta.type) || typeof meta.id !== 'string' || !meta.id.trim()) return null;
+  const items = Array.isArray(entry.items) ? entry.items.filter(item => typeof item === 'string' && item.trim()) : [];
+  if (!entry.title || !items.length) return null;
+  const destination = meta.type === 'market' ? 'market' : meta.type === 'mode' ? 'battle' : meta.destination;
+  return {
+    id: meta.id.trim(), enabled: true, title: entry.title, expression: meta.expression || 'excited',
+    pages: items.slice(), destination,
+    buttonLabel: meta.buttonLabel || (meta.type === 'market' ? 'マーケットを見る' : meta.type === 'mode' ? 'バトルへ行く' : undefined),
+  };
+};
+const ASSISTANT_CHANGELOG_UPDATE_NOTICES =
+  ((typeof CHANGELOG !== 'undefined' && Array.isArray(CHANGELOG)) ? CHANGELOG : [])
+    .map(assistantUpdateNoticeFromChangelog).filter(Boolean);
 const ASSISTANT_UPDATE_NOTICES = [
+  ...ASSISTANT_CHANGELOG_UPDATE_NOTICES,
   {
     id: 'update_notice_debug_v1', enabled: true, debugOnly: true,
     title: 'アップデート通知テスト', expression: 'excited',
@@ -75,61 +89,6 @@ const ASSISTANT_UPDATE_NOTICES = [
       'まとめて追加された内容も、この中でサクッと確認できるから安心してね！',
     ],
     destination: 'market', buttonLabel: 'マーケットを見る',
-  },
-  {
-    // 極限チャレンジの正式公開。デバッグ版を遊んでいた人にも、正式公開の案内として一度だけ出す
-    id: 'update_notice_extreme_challenge_v1', enabled: true,
-    title: '極限チャレンジ 正式追加', expression: 'excited',
-    pages: [
-      '極限チャレンジが追加されたよ！ 育てたモンスターの本気を試してみよ♪',
-      'チャレンジで Grand Master以上をクリアしていれば、バトルのモード選択から挑戦できるよ！',
-    ],
-    destination: 'battle', buttonLabel: 'バトルへ行く',
-  },
-  {
-    id: 'update_notice_nightmare_v1', enabled: true,
-    title: 'NIGHTMARE解禁！', expression: 'excited',
-    pages: [
-      'NIGHTMARE解禁！ EXTREMEを超えた悪夢級の戦いが待ってるよ。',
-      'EXTREMEをクリアすると挑戦できるよ！',
-    ],
-    destination: 'battle', buttonLabel: 'バトルへ行く',
-  },
-  {
-    id: 'update_notice_chaos_v1', enabled: true,
-    title: 'CHAOS解禁！', expression: 'excited',
-    pages: [
-      '極限チャレンジにCHAOSが正式追加！ さらに過酷な戦いが待ってるよ！',
-      'NIGHTMAREを1回クリアすると挑戦できるよ。与ダメージと加入ボーナスは50%、消費ガッツは150%になるから準備してね！',
-    ],
-    destination: 'battle', buttonLabel: 'バトルへ行く',
-  },
-  {
-    // 極限チャレンジ版とは別のお知らせとして、一度だけ表示する
-    id: 'update_notice_quick_chaos_v1', enabled: true,
-    title: 'クイック CHAOS追加！', expression: 'excited',
-    pages: [
-      'クイックモードにCHAOSが追加されたよ！ 極限チャレンジのCHAOSをクリアすると挑戦できるよ♪',
-      '3つの報酬方針を選べて、CHAOSの特殊ルールも同じ！ 育てた仲間で挑んでみてね。',
-    ],
-    destination: 'battle', buttonLabel: 'バトルへ行く',
-  },
-  {
-    id: 'update_notice_pro_mode_v1', enabled: true,
-    title: 'プロモード追加', expression: 'excited',
-    pages: [
-      'ベースモンだけで挑む「プロモード」が増えたよ！ 育成なしの編成勝負、試してみよ♪',
-      'バトルのモード選択から遊べるよ。勇者モンと供モン候補を選んで挑戦してね！',
-    ],
-    destination: 'battle', buttonLabel: 'バトルへ行く',
-  },
-  {
-    id: 'update_notice_temple_rebirth_v1', enabled: true,
-    title: '神殿に「再生」追加', expression: 'excited',
-    pages: [
-      '神殿に「再生」が増えたよ！ 解放したベースモンから、新しいマスモンを生み出せるんだ♪',
-      '最初の1回は無料！ 神殿で能力や技を見てから再生できるよ。',
-    ],
   },
 ];
 

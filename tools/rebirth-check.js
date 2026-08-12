@@ -94,8 +94,13 @@ check('最終限界突破でLv.200・虹★になる',
   &&source.includes('finalBreakthrough:isFinal'));
 // 増えた★は先頭に来るので、光らせるのは先頭(最終突破では5個とも虹なので全部)
 check('限界突破は専用の演出を使い、増えた星が光る',source.includes('mh-breakthrough-animation')&&source.includes('mh-breakthrough-stars')&&source.includes("(finalBreak||i===0)?'is-new':'is-old'")&&source.includes('@keyframes mhBreakStar'));
-check('転生はこれまでの演出を引き継ぐ',source.includes('reincarnateAnimation&&<div className="mh-rebirth-animation"'));
-check('転生の回数は「+N」バッジで示し、合体のバッジは出さない',source.includes('mh-reincarnate-badge')&&source.includes('<ReincarnateBadge')&&!source.includes('+{masu.fusionHistory.length}</div>')&&!source.includes('+{fusionCount}</div>'));
+check('転生演出は通常表示と同じ霊炎オーラを使う',source.includes('reincarnateAnimation&&<div className="mh-reincarnation-animation"')&&source.includes('<ReincarnateAura count={reincarnateAnimation.masu.reincarnateCount} className="is-ceremony"/>'));
+check('転生霊炎は1回青・2回黄・3回以上赤を共通表示から選ぶ',source.includes("value >= 3 ? 'red' : value === 2 ? 'yellow' : 'blue'")&&source.includes("yellow: 'images/effects/reincarnate-aura-yellow.PNG'")&&source.includes("red: 'images/effects/reincarnate-aura-red.PNG'")&&source.includes("blue: 'images/effects/reincarnate-aura-blue.PNG'"));
+check('転生霊炎は独立スタックの本体背面に置き、限界突破★を前面に保つ',source.includes('.mh-reincarnate-stack{isolation:isolate}.mh-reincarnate-aura{position:absolute;z-index:-1;')&&source.includes('mh-reincarnation-mon mh-reincarnate-stack')&&source.includes('.mh-rebirth-stars-overlay,.mh-home-masumon-stars{z-index:4}'));
+check('転生霊炎は主炎・残光・足元炎を別周期で重ね、少量の火花を添える',source.includes('mh-reincarnate-flame is-main')&&source.includes('mh-reincarnate-flame is-back')&&source.includes('mh-reincarnate-flame is-foot')&&source.includes('mh-reincarnate-sparks')&&source.includes('@keyframes mhReincarnateMain')&&source.includes('@keyframes mhReincarnateBack')&&source.includes('@keyframes mhReincarnateFoot')&&source.includes('@keyframes mhReincarnateSpark'));
+check('転生完了時は共通の多層オーラを速め、一度燃え上がって通常状態へ戻す',source.includes('.mh-reincarnate-aura.is-ceremony .is-main{animation-duration:1.45s}')&&source.includes('@keyframes mhReincarnationAura')&&source.includes('47%{opacity:1;transform:scale(1.13);filter:brightness(1.45)}')&&source.includes('100%{opacity:1;transform:scale(1);filter:brightness(1)}'));
+check('転生完了の全面光は本体より背面で、発光フィルターはオーラだけに掛ける',source.includes('.mh-reincarnation-light{position:absolute;inset:0;z-index:0;')&&source.includes('.mh-reincarnation-mon{position:relative;z-index:1;')&&!source.includes('.mh-reincarnation-mon{position:relative;width'));
+check('HOMEの転生表示は文字なしの霊炎で、限界突破★を変えない',source.includes('object-fit:contain')&&source.includes('<ReincarnateAura count={masu.reincarnateCount} className="is-home"/>')&&source.includes('<RebirthStars count={masu.rebirthCount} className="mh-home-masumon-stars"/>')&&!/mh-reincarnate-aura[^}]*ReincarnateBadge/.test(source));
 check('神殿BGMを限界突破・転生の画面でも継続',/MASU_REBIRTH:\s*'temple'/.test(source)&&/MASU_REINCARNATE:\s*'temple'/.test(source));
 check('神殿から限界突破と転生の両方へ入れる',source.includes(">限界突破</button>")&&source.includes("setGameState('MASU_REINCARNATE')"));
 
