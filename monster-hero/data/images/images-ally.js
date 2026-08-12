@@ -30,6 +30,10 @@ const MITARASHI_IMG = "images/monsters/mitarashi.png?v=2a637bc237b6";
 const ARK_IMG = "images/monsters/ark.png?v=4f978d873f99";
 const IBLIS_IMG = "images/monsters/iblis.png?v=9b2efa1e0744";
 const SNEGUROCHKA_IMG = "images/monsters/snegurochka.png?v=81fb95247bc6";
+// 2026年8月に追加した人魚2体。いただいた立ち絵をそのまま使い、丸いアイコンでの見え方は
+// 画像を作り直さず MARKET_PROFILE_ICON_STYLES の scale/x/y で寄せている
+const UNDINE_IMG = "images/monsters/undine.PNG?v=5cb4df81fcb7";
+const YAOBIKUNI_IMG = "images/monsters/yaobikuni.PNG?v=efbd9d5dd6fa";
 
 const MOCCHI_ICON = MOCCHI_IMG;
 const HAM_ICON = HAM_IMG;
@@ -44,6 +48,8 @@ const MITARASHI_ICON = MITARASHI_IMG;
 const ARK_ICON = ARK_IMG;
 const IBLIS_ICON = IBLIS_IMG;
 const SNEGUROCHKA_ICON = SNEGUROCHKA_IMG;
+const UNDINE_ICON = UNDINE_IMG;
+const YAOBIKUNI_ICON = YAOBIKUNI_IMG;
 
 // ==================== 顔アイコン (faceIconUrl) ====================
 // プロフィールアイコン選択画面・ロースター詳細等で使う顔クロップ画像。
@@ -67,3 +73,6 @@ const MITARASHI_FACE_ICON = "images/monster-icons/face/mitarashi.png?v=5176f031b
 const ARK_FACE_ICON = "images/monster-icons/face/ark.png?v=222959bd0def";
 const IBLIS_FACE_ICON = "images/monster-icons/face/iblis.png?v=46d9d96874ae";
 const SNEGUROCHKA_FACE_ICON = "images/monster-icons/face/snegurochka.png?v=c3b4e8213dd1";
+// 顔クロップ画像は作らず、立ち絵をそのまま使う(表示側で寄せる方針)
+const UNDINE_FACE_ICON = UNDINE_IMG;
+const YAOBIKUNI_FACE_ICON = YAOBIKUNI_IMG;
