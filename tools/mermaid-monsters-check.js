@@ -107,6 +107,13 @@ for (const id of ['undine_icon', 'undine_disc_icon', 'yaobikuni_icon', 'yaobikun
 check('縦長の立ち絵は丸枠で object-contain にして全身を収める',
   /const MONSTER_ART_CONTAIN_IDS = Object\.freeze\(\['Undine', 'Yaobikuni'\]\)/.test(source)
     && source.includes("objectFit: 'contain'") && source.includes('monsterArtFitStyle(baseId, rawStyle)'));
+// object-contain にすると絵の左右に余白ができる。マスクだけ枠いっぱい(100% 100%)に伸ばすと
+// 部位が横へずれて別の場所が染まるので、マスクの収め方も絵と同じ contain・中央・繰り返しなしにそろえる
+check('部位マスクの収め方を絵の収め方に合わせている',
+  source.includes("const monsterArtMaskSize = (baseId)") && source.includes("? 'contain' : '100% 100%'")
+    && source.includes('WebkitMaskSize:monsterArtMaskSize(baseId), maskSize:monsterArtMaskSize(baseId)')
+    && source.includes("WebkitMaskPosition:'center', maskPosition:'center'")
+    && source.includes("WebkitMaskRepeat:'no-repeat', maskRepeat:'no-repeat'"));
 // 参照している画像が実在すること
 for (const rel of ['monster-hero/images/monsters/undine.PNG', 'monster-hero/images/monsters/yaobikuni.PNG',
   'monster-hero/images/disc-icons/undine-disc.PNG', 'monster-hero/images/disc-icons/yaobikuni-disc.PNG']) {

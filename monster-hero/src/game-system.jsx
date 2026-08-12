@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-12 13:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-12 13:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2073,6 +2073,10 @@ const _recoloredKey = (idx, colorId) => idx + '|' + splitColorAlpha(colorId).bas
 // object-contain で全身を収める(横長・正方形の絵はこれまでどおり object-cover のまま)
 const MONSTER_ART_CONTAIN_IDS = Object.freeze(['Undine', 'Yaobikuni']);
 const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? { ...style, objectFit: 'contain' } : style);
+// 部位マスクは絵にぴったり重ねる必要がある。既定の mask-size:100% 100% は枠いっぱいへ
+// 引き伸ばすので、object-contain で余白ができる縦長の絵ではマスクだけ横に伸びて位置がずれる
+// (髪のマスクが顔や尾に掛かる)。絵の収め方と同じ contain + 中央 + 繰り返しなしにそろえる
+const monsterArtMaskSize = (baseId) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? 'contain' : '100% 100%');
 // マスモンの画像を、部位別の染色(masuColors配列)を反映して表示するコンポーネント。
 // 部位分割データが無いモンスターは画像全体を染め直した1枚を表示する。
 const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawStyle, draggable }) => {
@@ -2128,7 +2132,9 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
         <img key={idx} src={recolored[_recoloredKey(idx, colors[idx])]} alt="" draggable={false} style={{
           position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'inherit',
           WebkitMaskImage:`url(${masks[idx]})`, maskImage:`url(${masks[idx]})`,
-          WebkitMaskSize:'100% 100%', maskSize:'100% 100%',
+          WebkitMaskSize:monsterArtMaskSize(baseId), maskSize:monsterArtMaskSize(baseId),
+          WebkitMaskPosition:'center', maskPosition:'center',
+          WebkitMaskRepeat:'no-repeat', maskRepeat:'no-repeat',
           opacity:colorAlphaOf(colors[idx])/100,
         }}/>
       ) : null)}
