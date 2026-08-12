@@ -9,12 +9,18 @@ const MIN_REGION_MATCH_RATE = 0.95;
 // 半透明輪郭は本番の高解像度マスクで外側へ2px塗り足すため、対象外との境だけ一致率が下がる。
 const MIN_UNCOLORED_MATCH_RATE = 0.80;
 const MIN_ALL_MATCH_RATE = 0.97;
+const YAOBIKUNI_DYE_MASK_PLACEMENT = { scaleX: 0.968, scaleY: 0.994, x: -0.0046, y: -0.0081 };
 
-const pixelsAt = (image, width, height) => {
+const pixelsAt = (image, width, height, placement = null) => {
   const canvas = createCanvas(width, height);
   const context = canvas.getContext('2d');
   context.imageSmoothingEnabled = false;
-  context.drawImage(image, 0, 0, width, height);
+  const scaleX = placement?.scaleX || 1, scaleY = placement?.scaleY || 1;
+  const drawWidth = width * scaleX, drawHeight = height * scaleY;
+  context.drawImage(image,
+    (width - drawWidth) / 2 + width * (placement?.x || 0),
+    (height - drawHeight) / 2 + height * (placement?.y || 0),
+    drawWidth, drawHeight);
   return context.getImageData(0, 0, width, height).data;
 };
 
@@ -40,7 +46,7 @@ const referenceRegion = (pixels, offset) => {
   const masks = await Promise.all(maskUrls.map(decodeDataUrl));
   const width = masks[0].width, height = masks[0].height;
   const sourcePixels = pixelsAt(source, width, height);
-  const referencePixels = pixelsAt(reference, width, height);
+  const referencePixels = pixelsAt(reference, width, height, YAOBIKUNI_DYE_MASK_PLACEMENT);
   const maskPixels = masks.map(mask => pixelsAt(mask, width, height));
   const expected = [0, 0, 0, 0], matched = [0, 0, 0, 0];
 
