@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 00:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 00:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1899,6 +1899,39 @@ const YAOBIKUNI_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 0.968, scaleY: 0.99
 const DYE_MASK_DEBUG_TARGETS = Object.freeze([
   { id:'yaobikuni', name:'ヤオビクニ', baseId:'Yaobikuni', imageUrl:YAOBIKUNI_IMG, maskUrl:YAOBIKUNI_DYE_MASK },
 ]);
+// Debug専用。画像全体の透明余白を除外し、実際に描かれた輪郭同士が重なる初期調整値を求める。
+// 戻り値は256x384の調整プレビュー基準のpxと倍率で、本番補正やセーブデータには書き込まない。
+const DYE_MASK_DEBUG_PREVIEW_SIZE = Object.freeze({ width:256, height:384 });
+const _getImageAlphaBounds = (url) => new Promise((resolve, reject) => {
+  const image = new window.Image();
+  image.onload = () => {
+    try {
+      const width=image.naturalWidth||image.width, height=image.naturalHeight||image.height;
+      const canvas=document.createElement('canvas'); canvas.width=width; canvas.height=height;
+      const context=canvas.getContext('2d', { willReadFrequently:true });
+      if(!context)throw new Error('Canvasを利用できません');
+      context.drawImage(image,0,0,width,height);
+      const pixels=context.getImageData(0,0,width,height).data;
+      let left=width,top=height,right=-1,bottom=-1;
+      for(let y=0;y<height;y++)for(let x=0;x<width;x++)if(pixels[(y*width+x)*4+3]>0){left=Math.min(left,x);top=Math.min(top,y);right=Math.max(right,x);bottom=Math.max(bottom,y);}
+      if(right<left||bottom<top)throw new Error('非透明部分がありません');
+      resolve({left:left/width,top:top/height,right:(right+1)/width,bottom:(bottom+1)/height});
+    }catch(error){reject(error);}
+  };
+  image.onerror=()=>reject(new Error('画像を読み込めません'));
+  image.src=url;
+});
+const _calculateDyeMaskAutoFit = async (bodyUrl, maskUrl) => {
+  const [body,mask]=await Promise.all([_getImageAlphaBounds(bodyUrl),_getImageAlphaBounds(maskUrl)]);
+  const scaleX=(body.right-body.left)/(mask.right-mask.left), scaleY=(body.bottom-body.top)/(mask.bottom-mask.top);
+  const bodyCenterX=(body.left+body.right)/2, bodyCenterY=(body.top+body.bottom)/2;
+  const maskCenterX=(mask.left+mask.right)/2, maskCenterY=(mask.top+mask.bottom)/2;
+  return {
+    x:+((bodyCenterX-(.5+scaleX*(maskCenterX-.5)))*DYE_MASK_DEBUG_PREVIEW_SIZE.width).toFixed(2),
+    y:+((bodyCenterY-(.5+scaleY*(maskCenterY-.5)))*DYE_MASK_DEBUG_PREVIEW_SIZE.height).toFixed(2),
+    scaleX:+(scaleX*100).toFixed(2), scaleY:+(scaleY*100).toFixed(2),
+  };
+};
 const _loadExactDyeMask = (url, width, height, placement = null) => new Promise((resolve) => {
   try {
     const image = new window.Image();
@@ -1934,7 +1967,7 @@ const _dyeRegionMaskCache = {};
 const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
   const hues = MASU_COLOR_REGION_HUES[baseId];
   if (!hues || hues.length === 0) return null;
-  const cacheKey = baseId + '::' + imgUrl + (debugPlacement ? `::debug:${debugPlacement.xPx}:${debugPlacement.yPx}:${debugPlacement.scalePercent}` : '');
+  const cacheKey = baseId + '::' + imgUrl + (debugPlacement ? `::debug:${debugPlacement.xPx}:${debugPlacement.yPx}:${debugPlacement.scaleX}:${debugPlacement.scaleY}` : '');
   if (_dyeRegionMaskCache[cacheKey]) return _dyeRegionMaskCache[cacheKey];
   const promise = new Promise((resolve) => {
     try {
@@ -2227,7 +2260,7 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
     let cancelled = false;
     Promise.resolve(getDyeRegionMasks(baseId, src, debugMaskPlacement)).then(urls => { if (!cancelled) setMasks(urls); });
     return () => { cancelled = true; };
-  }, [baseId, src, colorKey, debugMaskPlacement?.xPx, debugMaskPlacement?.yPx, debugMaskPlacement?.scalePercent]);
+  }, [baseId, src, colorKey, debugMaskPlacement?.xPx, debugMaskPlacement?.yPx, debugMaskPlacement?.scaleX, debugMaskPlacement?.scaleY]);
   // 染め直した画像は部位ごとに作る(光沢保持の設定を部位ごとに変えられるため)。
   // 設定が同じ部位はgetRecoloredImage側のキャッシュで同じ画像を共有するので、
   // 書き分けていないモンスターでは作る枚数はこれまでと変わらない
@@ -4247,7 +4280,9 @@ function MonsterHeroGame() {
   // 染色マスク調整値もDebug画面を閉じるまでの一時値で、セーブや本番補正値には書き込まない。
   const [dyeMaskDebugId, setDyeMaskDebugId] = useState(DYE_MASK_DEBUG_TARGETS[0]?.id||'');
   const [dyeMaskDebugMode, setDyeMaskDebugMode] = useState('composite');
-  const [dyeMaskDebugValues, setDyeMaskDebugValues] = useState({x:0,y:0,scale:100});
+  const [dyeMaskDebugValues, setDyeMaskDebugValues] = useState({x:0,y:0,scaleX:100,scaleY:100});
+  const [dyeMaskDebugStep, setDyeMaskDebugStep] = useState('normal');
+  const [dyeMaskAutoFitState, setDyeMaskAutoFitState] = useState('idle');
   // モンスター画像確認はデバッグ画面を開いている間だけ保持し、セーブ領域へは書き込まない。
   const [monsterImageDebugId, setMonsterImageDebugId] = useState(null);
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
@@ -10184,27 +10219,34 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const target=DYE_MASK_DEBUG_TARGETS.find(entry=>entry.id===dyeMaskDebugId)||DYE_MASK_DEBUG_TARGETS[0];
           if(!target)return <div className="p-4 text-slate-400">調整できる染色マスクがありません。</div>;
           const values=dyeMaskDebugValues;
-          const setValue=(key,value)=>setDyeMaskDebugValues(current=>({...current,[key]:Number(value)}));
+          const stepOptions={fine:{label:'細かく',position:1,scale:.1},normal:{label:'普通',position:3,scale:.5},large:{label:'大きく',position:10,scale:2}};
+          const activeStep=stepOptions[dyeMaskDebugStep]||stepOptions.normal;
+          const clamp=(key,value)=>+(Math.max(key==='x'||key==='y'?-100:50,Math.min(key==='x'||key==='y'?100:150,value))).toFixed(2);
+          const adjust=(key,amount)=>setDyeMaskDebugValues(current=>({...current,[key]:clamp(key,current[key]+amount)}));
+          const reset=()=>{setDyeMaskDebugValues({x:0,y:0,scaleX:100,scaleY:100});setDyeMaskAutoFitState('idle');};
+          const autoFit=async()=>{setDyeMaskAutoFitState('loading');try{setDyeMaskDebugValues(await _calculateDyeMaskAutoFit(target.imageUrl,target.maskUrl));setDyeMaskAutoFitState('done');}catch(_){setDyeMaskAutoFitState('error');}};
           const signed=(value)=>value>0?`+${value}`:String(value);
-          const copyText=`${target.id}: X=${values.x}, Y=${values.y}, Scale=${values.scale}%`;
-          const placement={xPx:values.x,yPx:values.y,scalePercent:values.scale,maskUrl:target.maskUrl};
-          const control=(key,label,min,max,step,suffix='')=><label className="block rounded-xl bg-slate-900 p-3"><span className="mb-1 flex justify-between text-[10px] font-black text-slate-300"><b>{label}</b><output>{key==='scale'?values[key]:signed(values[key])}{suffix}</output></span><input aria-label={`${label}スライダー`} className="w-full min-h-[32px] accent-cyan-500 touch-none" type="range" min={min} max={max} step={step} value={values[key]} onChange={e=>setValue(key,e.target.value)}/><div className="mt-1 grid grid-cols-[46px_1fr_46px] gap-2"><button type="button" aria-label={`${label}を減らす`} onClick={()=>setValue(key,Math.max(min,+(values[key]-step).toFixed(2)))} className="min-h-[44px] rounded-xl bg-slate-700 text-lg font-black">−</button><input aria-label={`${label}数値入力`} type="number" min={min} max={max} step={step} value={values[key]} onChange={e=>e.target.value!==''&&setValue(key,Math.min(max,Math.max(min,Number(e.target.value))))} className="min-w-0 rounded-xl border border-white/10 bg-black/40 px-2 text-center text-sm font-black"/><button type="button" aria-label={`${label}を増やす`} onClick={()=>setValue(key,Math.min(max,+(values[key]+step).toFixed(2)))} className="min-h-[44px] rounded-xl bg-slate-700 text-lg font-black">＋</button></div></label>;
-          const maskTransform=`translate(${values.x}px, ${values.y}px) scale(${values.scale/100})`;
-          return <main className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-2 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-400">DEBUG・保存／本番反映されません</small><h2 className="text-sm font-black">染色マスク位置調整</h2></div></header>
-            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-2">
-              <select value={target.id} onChange={e=>{setDyeMaskDebugId(e.target.value);setDyeMaskDebugValues({x:0,y:0,scale:100});}} className="w-full min-h-[48px] rounded-xl border border-white/10 bg-slate-900 px-3 text-xs font-black">{DYE_MASK_DEBUG_TARGETS.map(entry=><option key={entry.id} value={entry.id}>{entry.name}（{entry.id}）</option>)}</select>
-              <section className="sticky top-0 z-10 rounded-2xl border-2 border-cyan-400 bg-slate-950/95 p-3 text-center shadow-xl"><div className="text-[9px] font-black text-cyan-300">現在値（このまま伝えられます）</div><output className="mt-1 block font-mono text-base font-black text-white">X: {signed(values.x)}　Y: {signed(values.y)}<br/>Scale: {values.scale}%</output></section>
-              <div className="grid grid-cols-3 gap-1">{[['composite','合成'],['body','本体のみ'],['mask','マスクのみ']].map(([id,label])=><button key={id} onClick={()=>setDyeMaskDebugMode(id)} aria-pressed={dyeMaskDebugMode===id} className={`min-h-[44px] rounded-xl border text-[10px] font-black ${dyeMaskDebugMode===id?'bg-cyan-700 border-cyan-300 text-white':'bg-slate-900 border-white/10 text-slate-400'}`}>{label}</button>)}</div>
-              <section className="rounded-2xl border border-white/15 bg-black/40 p-2"><div className="relative mx-auto overflow-hidden" style={{width:'min(256px, 100%)',aspectRatio:'2 / 3',backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'}}>
-                {dyeMaskDebugMode==='composite'&&<DyedMonsterImage baseId={target.baseId} src={target.imageUrl} alt={`${target.name}の染色合成`} masuColors={['red','green','blue']} debugMaskPlacement={placement} className="absolute inset-0 w-full h-full object-contain"/>}
-                {dyeMaskDebugMode==='body'&&<img src={target.imageUrl} alt={`${target.name}本体`} className="absolute inset-0 w-full h-full object-contain"/>}
-                {dyeMaskDebugMode==='mask'&&<img src={target.maskUrl} alt={`${target.name}染色マスク`} className="absolute inset-0 w-full h-full object-contain" style={{transform:maskTransform,transformOrigin:'center'}}/>}
-              </div><p className="mt-2 text-center text-[8px] text-slate-400">合成は染色①=赤・②=緑・③=青で表示</p></section>
-              {control('x','X位置',-50,50,1)}{control('y','Y位置',-50,50,1)}{control('scale','Scale',50,150,.1,'%')}
-              <pre className="whitespace-pre-wrap break-all rounded-xl bg-black/50 p-3 text-[11px] text-cyan-200">{copyText}</pre>
-              <div className="grid grid-cols-2 gap-2"><button onClick={()=>setDyeMaskDebugValues({x:0,y:0,scale:100})} className="min-h-[48px] rounded-xl bg-slate-800 text-[10px] font-black">初期値へ戻す</button><button onClick={async()=>{try{await navigator.clipboard.writeText(copyText);window.alert('数値をコピーしました。');}catch(_){window.prompt('この数値をコピーしてください。',copyText);}}} className="min-h-[48px] rounded-xl bg-cyan-700 text-[10px] font-black">数値をコピー</button></div>
-            </div>
+          const copyText=`${target.id}: X=${values.x}, Y=${values.y}, ScaleX=${values.scaleX.toFixed(1)}%, ScaleY=${values.scaleY.toFixed(1)}%`;
+          const placement={xPx:values.x,yPx:values.y,scaleX:values.scaleX/100,scaleY:values.scaleY/100,maskUrl:target.maskUrl};
+          const maskTransform=`translate(${values.x/DYE_MASK_DEBUG_PREVIEW_SIZE.width*100}%, ${values.y/DYE_MASK_DEBUG_PREVIEW_SIZE.height*100}%) scale(${values.scaleX/100}, ${values.scaleY/100})`;
+          const action=(label,key,amount,aria)=><button type="button" aria-label={aria} onClick={()=>adjust(key,amount)} className="min-h-[46px] rounded-xl border border-white/10 bg-slate-800 text-xs font-black active:bg-cyan-700">{label}</button>;
+          return <main className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-slate-950 px-2" style={{paddingTop:'max(.35rem,env(safe-area-inset-top))'}}>
+            <header className="flex h-11 items-center gap-1 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} aria-label="デバッグ設定へ戻る" className="min-h-[44px] min-w-[44px] text-slate-400"><ArrowLeft size={20}/></button><div className="min-w-0"><small className="block text-[7px] font-black text-cyan-400">DEBUG・保存／本番反映されません</small><h2 className="truncate text-xs font-black">染色マスク位置調整</h2></div><select aria-label="調整対象" value={target.id} onChange={e=>{setDyeMaskDebugId(e.target.value);reset();}} className="ml-auto min-h-[38px] max-w-[42%] rounded-lg bg-slate-900 px-2 text-[9px] font-black">{DYE_MASK_DEBUG_TARGETS.map(entry=><option key={entry.id} value={entry.id}>{entry.name}</option>)}</select></header>
+            <section className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden pb-1">
+              <div className="mb-1 grid w-full max-w-sm grid-cols-3 gap-1">{[['composite','合成'],['body','本体のみ'],['mask','マスクのみ']].map(([id,label])=><button key={id} onClick={()=>setDyeMaskDebugMode(id)} aria-pressed={dyeMaskDebugMode===id} className={`min-h-[38px] rounded-lg border text-[9px] font-black ${dyeMaskDebugMode===id?'bg-cyan-700 border-cyan-300':'bg-slate-900 border-white/10 text-slate-400'}`}>{label}</button>)}</div>
+              <div className="relative min-h-0 max-h-full max-w-full overflow-hidden" style={{height:'100%',aspectRatio:'2 / 3',backgroundColor:'#cbd5e1',backgroundImage:'linear-gradient(45deg,#64748b 25%,transparent 25%),linear-gradient(-45deg,#64748b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#64748b 75%),linear-gradient(-45deg,transparent 75%,#64748b 75%)',backgroundSize:'16px 16px',backgroundPosition:'0 0,0 8px,8px -8px,-8px 0'}}>
+                {dyeMaskDebugMode==='composite'&&<DyedMonsterImage baseId={target.baseId} src={target.imageUrl} alt={`${target.name}の染色合成`} masuColors={['red','green','blue']} debugMaskPlacement={placement} className="absolute inset-0 h-full w-full object-contain"/>}
+                {dyeMaskDebugMode==='body'&&<img src={target.imageUrl} alt={`${target.name}本体`} className="absolute inset-0 h-full w-full object-contain"/>}
+                {dyeMaskDebugMode==='mask'&&<img src={target.maskUrl} alt={`${target.name}染色マスク`} className="absolute inset-0 h-full w-full object-contain" style={{transform:maskTransform,transformOrigin:'center'}}/>}
+              </div>
+            </section>
+            <section aria-label="染色マスク固定操作パネル" className="-mx-2 shrink-0 rounded-t-2xl border-t-2 border-cyan-400 bg-slate-900/98 px-2 pt-2 shadow-2xl" style={{paddingBottom:'max(.45rem,env(safe-area-inset-bottom))'}}>
+              <output className="mb-1 block text-center font-mono text-[11px] font-black text-cyan-100">X: {signed(values.x)}　Y: {signed(values.y)}　ScaleX: {values.scaleX.toFixed(1)}%　ScaleY: {values.scaleY.toFixed(1)}%</output>
+              <div className="mb-1 grid grid-cols-3 gap-1">{Object.entries(stepOptions).map(([id,option])=><button key={id} onClick={()=>setDyeMaskDebugStep(id)} aria-pressed={dyeMaskDebugStep===id} className={`min-h-[38px] rounded-lg text-[9px] font-black ${dyeMaskDebugStep===id?'bg-cyan-700':'bg-slate-700'}`}>{option.label}<small className="block text-[7px]">{option.position}px / {option.scale}%</small></button>)}</div>
+              <div className="grid grid-cols-4 gap-1">{action('X ←','x',-activeStep.position,'マスクを左へ')}{action('X →','x',activeStep.position,'マスクを右へ')}{action('Y ↑','y',-activeStep.position,'マスクを上へ')}{action('Y ↓','y',activeStep.position,'マスクを下へ')}{action('横幅 −','scaleX',-activeStep.scale,'マスクの横幅を縮める')}{action('横幅 ＋','scaleX',activeStep.scale,'マスクの横幅を広げる')}{action('縦幅 −','scaleY',-activeStep.scale,'マスクの縦幅を縮める')}{action('縦幅 ＋','scaleY',activeStep.scale,'マスクの縦幅を広げる')}</div>
+              <div className="mt-1 grid grid-cols-3 gap-1"><button onClick={autoFit} disabled={dyeMaskAutoFitState==='loading'} className="min-h-[42px] rounded-xl bg-violet-700 text-[9px] font-black disabled:opacity-50">{dyeMaskAutoFitState==='loading'?'計測中…':'自動フィット'}</button><button onClick={reset} className="min-h-[42px] rounded-xl bg-slate-700 text-[9px] font-black">初期状態に戻す</button><button onClick={async()=>{try{await navigator.clipboard.writeText(copyText);window.alert('数値をコピーしました。');}catch(_){window.prompt('この数値をコピーしてください。',copyText);}}} className="min-h-[42px] rounded-xl bg-cyan-700 text-[9px] font-black">数値をコピー</button></div>
+              {dyeMaskAutoFitState==='error'&&<p role="alert" className="pt-1 text-center text-[8px] font-black text-red-300">画像を計測できませんでした。初期状態のまま手動調整できます。</p>}
+            </section>
           </main>;
         })()}
 
@@ -10259,7 +10301,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
-            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={()=>setGameState('DYE_MASK_POSITION_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🎯 染色マスク位置調整<small className="block text-[8px] text-cyan-300">X・Y・Scaleを保存せず実機調整</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
+            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={()=>setGameState('DYE_MASK_POSITION_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🎯 染色マスク位置調整<small className="block text-[8px] text-cyan-300">X・Y・縦横Scaleを保存せず実機調整</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
               <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} className="w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black">⚔️ バトルモード<small className="block text-[8px] text-fuchsia-300">極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
               {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
               <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
