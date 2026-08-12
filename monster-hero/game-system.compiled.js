@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bc3e5f0ad7861b26
+// source-sha256: d4277ad12f40be4c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 08:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 08:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3986,6 +3986,7 @@ const makeDyeMaskEditorTargets = () => Object.values(ALL_PLAYER_MONSTERS).map(mo
   baseId: monster.id,
   name: monster.name,
   imageUrl: monster.imgUrl,
+  maskUrl: monster.id === 'Yaobikuni' ? YAOBIKUNI_DYE_MASK : null,
   hasMask: Array.isArray(MASU_COLOR_REGION_HUES[monster.id]) && MASU_COLOR_REGION_HUES[monster.id].length > 0
 }));
 // Debug専用。画像全体の透明余白を除外し、実際に描かれた輪郭同士が重なる初期調整値を求める。
@@ -8428,7 +8429,9 @@ const DyeMaskTouchEditor = ({
     maskRef = useRef(null),
     originalRef = useRef(null),
     bodyDataRef = useRef(null),
+    outsideRef = useRef(null),
     outlineRef = useRef(null),
+    warningRef = useRef(null),
     loupeRef = useRef(null),
     historyRef = useRef({
       undo: [],
@@ -8452,7 +8455,11 @@ const DyeMaskTouchEditor = ({
       y: 0
     }),
     [historyTick, setHistoryTick] = useState(0),
-    [details, setDetails] = useState(false);
+    [details, setDetails] = useState(false),
+    [imageSize, setImageSize] = useState({
+      width: 2,
+      height: 3
+    });
   const [pointerDistance, setPointerDistance] = useState(50),
     [pointerDirection, setPointerDirection] = useState('up'),
     [pointer, setPointer] = useState(null),
@@ -8504,10 +8511,39 @@ const DyeMaskTouchEditor = ({
       setDirty(true);
       setHistoryTick(v => v + 1);
     };
-  const normalizeMask = (image, body) => {
+  const findOutside = (body, w, h) => {
+    const outside = new Uint8Array(w * h),
+      queue = new Int32Array(w * h);
+    let head = 0,
+      tail = 0;
+    const add = i => {
+      if (i < 0 || i >= outside.length || outside[i] || body[i * 4 + 3]) return;
+      outside[i] = 1;
+      queue[tail++] = i;
+    };
+    for (let x = 0; x < w; x++) {
+      add(x);
+      add((h - 1) * w + x);
+    }
+    for (let y = 0; y < h; y++) {
+      add(y * w);
+      add(y * w + w - 1);
+    }
+    while (head < tail) {
+      const i = queue[head++],
+        x = i % w;
+      if (x) add(i - 1);
+      if (x < w - 1) add(i + 1);
+      add(i - w);
+      add(i + w);
+    }
+    return outside;
+  };
+  // Canvas端から本体の透明画素だけを辿った「外部」だけを除去する。目など輪郭内の透明な穴は保持する。
+  const normalizeMask = (image, outside) => {
     const data = image.data;
-    for (let i = 0; i < data.length; i += 4) {
-      if (!body[i + 3] || !data[i + 3]) {
+    for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+      if (outside[p] || !data[i + 3]) {
         data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0;
         continue;
       }
@@ -8520,6 +8556,25 @@ const DyeMaskTouchEditor = ({
       data[i + 3] = 255;
     }
     return image;
+  };
+  const updateWarning = () => {
+    const c = maskRef.current,
+      wc = warningRef.current,
+      outside = outsideRef.current;
+    if (!c || !wc || !outside) return;
+    const source = context().getImageData(0, 0, c.width, c.height).data,
+      ctx = wc.getContext('2d'),
+      warning = ctx.createImageData(c.width, c.height);
+    for (let p = 0; p < outside.length; p++) {
+      const i = p * 4;
+      if (outside[p] && source[i + 3]) {
+        warning.data[i] = 255;
+        warning.data[i + 1] = 0;
+        warning.data[i + 2] = 255;
+        warning.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(warning, 0, 0);
   };
   const loadTarget = useCallback(async () => {
     let cancelled = false;
@@ -8542,17 +8597,27 @@ const DyeMaskTouchEditor = ({
       const w = body.naturalWidth || body.width,
         h = body.naturalHeight || body.height,
         b = bodyRef.current,
-        m = maskRef.current;
-      b.width = m.width = w;
-      b.height = m.height = h;
+        m = maskRef.current,
+        wc = warningRef.current;
+      b.width = m.width = wc.width = w;
+      b.height = m.height = wc.height = h;
+      setImageSize({
+        width: w,
+        height: h
+      });
       const bc = b.getContext('2d', {
         willReadFrequently: true
       });
       bc.drawImage(body, 0, 0, w, h);
       bodyDataRef.current = bc.getImageData(0, 0, w, h).data;
+      outsideRef.current = findOutside(bodyDataRef.current, w, h);
       const mc = context();
       mc.clearRect(0, 0, w, h);
-      if (target.hasMask) {
+      if (target.maskUrl) {
+        const rawMask = await load(target.maskUrl);
+        mc.imageSmoothingEnabled = false;
+        mc.drawImage(rawMask, 0, 0, w, h);
+      } else if (target.hasMask) {
         const urls = await getDyeRegionMasks(target.baseId, target.imageUrl);
         if (urls) {
           const layers = await Promise.all(urls.slice(0, 3).map(load));
@@ -8569,11 +8634,10 @@ const DyeMaskTouchEditor = ({
           });
         }
       }
-      const normalized = normalizeMask(mc.getImageData(0, 0, w, h), bodyDataRef.current);
-      mc.putImageData(normalized, 0, 0);
       const original = mc.createImageData(w, h);
-      original.data.set(normalized.data);
+      original.data.set(mc.getImageData(0, 0, w, h).data);
       originalRef.current = original;
+      updateWarning();
       const outline = document.createElement('canvas');
       outline.width = w;
       outline.height = h;
@@ -8611,6 +8675,9 @@ const DyeMaskTouchEditor = ({
     loadTarget().then(fn => cleanup = fn);
     return () => cleanup?.();
   }, [loadTarget]);
+  useEffect(() => {
+    if (ready) updateWarning();
+  }, [ready, historyTick]);
   const confirmDiscard = () => !dirty || window.confirm('未書き出しの編集があります。破棄してモンスターを切り替えますか？');
   const selectTarget = index => {
     if (index === targetIndex || !confirmDiscard()) return;
@@ -8852,11 +8919,30 @@ const DyeMaskTouchEditor = ({
         checkpoint();
         context().clearRect(0, 0, maskRef.current.width, maskRef.current.height);
         setDirty(true);
+        setHistoryTick(v => v + 1);
       }
+    },
+    cleanOutside = () => {
+      const c = maskRef.current,
+        image = context().getImageData(0, 0, c.width, c.height),
+        outside = outsideRef.current;
+      let changed = false;
+      for (let p = 0; p < outside.length; p++) {
+        const i = p * 4;
+        if (outside[p] && image.data[i + 3]) {
+          image.data[i] = image.data[i + 1] = image.data[i + 2] = image.data[i + 3] = 0;
+          changed = true;
+        }
+      }
+      if (!changed) return;
+      checkpoint();
+      context().putImageData(image, 0, 0);
+      setDirty(true);
+      setHistoryTick(v => v + 1);
     };
   const exportPng = () => {
     const c = maskRef.current,
-      image = normalizeMask(context().getImageData(0, 0, c.width, c.height), bodyDataRef.current);
+      image = normalizeMask(context().getImageData(0, 0, c.width, c.height), outsideRef.current);
     context().putImageData(image, 0, 0);
     c.toBlob(blob => {
       const a = document.createElement('a'),
@@ -8873,7 +8959,7 @@ const DyeMaskTouchEditor = ({
   const tryInGame = () => {
     const c = maskRef.current;
     if (!c || !ready) return;
-    const image = normalizeMask(context().getImageData(0, 0, c.width, c.height), bodyDataRef.current);
+    const image = normalizeMask(context().getImageData(0, 0, c.width, c.height), outsideRef.current);
     context().putImageData(image, 0, 0);
     c.toBlob(blob => {
       if (blob) onTryInGame(target, blob);
@@ -8989,7 +9075,7 @@ const DyeMaskTouchEditor = ({
     className: "relative max-h-full max-w-full",
     style: {
       height: '100%',
-      aspectRatio: '2 / 3'
+      aspectRatio: `${imageSize.width} / ${imageSize.height}`
     }
   }, /*#__PURE__*/React.createElement("canvas", {
     ref: bodyRef,
@@ -9010,6 +9096,13 @@ const DyeMaskTouchEditor = ({
     src: outlineRef.current.toDataURL(),
     alt: "\u672C\u4F53\u306E\u5916\u5468",
     className: "pointer-events-none absolute inset-0 h-full w-full"
+  }), /*#__PURE__*/React.createElement("canvas", {
+    ref: warningRef,
+    "aria-label": "\u672C\u4F53\u7BC4\u56F2\u5916\u306E\u30DE\u30B9\u30AF\u8B66\u544A",
+    className: "pointer-events-none absolute inset-0 h-full w-full",
+    style: {
+      display: view === 'boundary' ? 'block' : 'none'
+    }
   }))), loupe && pointer && /*#__PURE__*/React.createElement("canvas", {
     ref: loupeRef,
     width: "120",
@@ -9118,6 +9211,9 @@ const DyeMaskTouchEditor = ({
     },
     className: "rounded bg-slate-700"
   }, "\u5168\u4F53\u8868\u793A"), /*#__PURE__*/React.createElement("button", {
+    onClick: cleanOutside,
+    className: "rounded bg-fuchsia-900"
+  }, "\u7BC4\u56F2\u5916\u3092\u6383\u9664"), /*#__PURE__*/React.createElement("button", {
     onClick: clearAll,
     className: "rounded bg-red-900"
   }, "\u5168\u6D88\u53BB"), /*#__PURE__*/React.createElement("button", {
