@@ -44,6 +44,7 @@ node tools/build.js --check
 | `node compiled-runtime-check.js` | 配信用コードが `jsxDEV` / automatic JSX runtime など、`index.html` が用意していないランタイムを参照していないことと、React / ReactDOM の読込順を確認する。 |
 | `node undefined-reference-check.js` | `game-system.jsx` が「その場所からは見えない変数」を参照していないか、Babelでスコープをたどって確認する。構文としては正しいので `check-syntax.js` では見つからず、その画面を開いた瞬間だけ真っ白になる類の不具合を防ぐ。**改修後は必ず実行する。** |
 | `node dye-report.js [モンスターID...]` | 染色もどきの部位マスクを実画像で生成し、部位ごとの画素数・被覆率を出力する。回帰テスト用。 |
+| `node dye-mask-editor-check.js` | 汎用染色マスクエディタの縦横比、本体内だけの描画、外部連結領域だけの掃除、Undo、境界警告、PNG正規化と輪郭内の透明穴維持を確認する。 |
 | `node dye-report.js --save-baseline` | 現在の結果を `dye-baseline.json` に保存する。以降は実行のたびに差分が表示される。 |
 | `node dye-region-map.js out.png <ID> [y0 y1]` | 染色もどきの部位分けを絵で確かめる。元の絵と、部位ごとに塗り分けた絵(①赤・②黄・③青)を左右に並べて書き出す。被覆率だけでは分からない「どこが混ざっているか」を見るために使う。 |
 | `node undine-dye-mask-check.js` | ウンディーネの染色1（髪）・染色2（顔、首、耳、腕、尻尾、尾びれ）・染色3（服）と3色同時の本番マスクを、正解見本 `undine-dye-mask.PNG` と画素単位で比較する。正解PNGは検査時だけ読み込む。 |
