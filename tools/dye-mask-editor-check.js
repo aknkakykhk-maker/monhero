@@ -28,4 +28,8 @@ assert(source.includes('範囲外を掃除') && source.includes('checkpoint();co
 assert(source.includes('warning.data[i]=255;warning.data[i+1]=0;warning.data[i+2]=255'),'範囲外警告を固定マゼンタで描画する');
 assert(source.includes('aspectRatio:`${imageSize.width} / ${imageSize.height}`'),'表示枠を元画像の縦横比に合わせる');
 assert(source.includes('b.width=m.width=wc.width=w;b.height=m.height=wc.height=h'),'本体・マスク・警告Canvasの画像座標を一致させる');
+assert(source.includes('debugMaskPlacement={{maskUrl:previewMaskUrl}}'),'合成表示は編集マスクを本番のDyedMonsterImageへ渡す');
+assert(source.includes("style={{display:view==='body'||view==='composite'?'none':'block'"),'合成表示では独自Canvasマスクを表示しない');
+assert(source.includes('debugMaskPlacement?.maskUrl, debugMaskPlacement?.xPx'),'一時マスクURLの変更時に本番マスクを再読込する');
+assert(source.includes('onTryInGame(target,blob,previewColors)')&&source.includes('setMonsterImageDebugColors(colors||getMasuColors(preview))'),'合成とゲーム内確認で同じ色設定を引き継ぐ');
 console.log('OK: マスク編集制限・外部連結領域・掃除/Undo・警告・PNG正規化・縦横比を確認しました');

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d4277ad12f40be4c
+// source-sha256: b19fe0036997f2f6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 08:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 08:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4481,7 +4481,7 @@ const DyedMonsterImage = ({
     return () => {
       cancelled = true;
     };
-  }, [baseId, src, colorKey, debugMaskPlacement?.xPx, debugMaskPlacement?.yPx, debugMaskPlacement?.scaleX, debugMaskPlacement?.scaleY]);
+  }, [baseId, src, colorKey, debugMaskPlacement?.maskUrl, debugMaskPlacement?.xPx, debugMaskPlacement?.yPx, debugMaskPlacement?.scaleX, debugMaskPlacement?.scaleY]);
   // 染め直した画像は部位ごとに作る(光沢保持の設定を部位ごとに変えられるため)。
   // 設定が同じ部位はgetRecoloredImage側のキャッシュで同じ画像を共有するので、
   // 書き分けていないモンスターでは作る枚数はこれまでと変わらない
@@ -8446,6 +8446,8 @@ const DyeMaskTouchEditor = ({
     [opacity, setOpacity] = useState(50),
     [dirty, setDirty] = useState(false),
     [search, setSearch] = useState('');
+  const [previewMaskUrl, setPreviewMaskUrl] = useState(null),
+    [previewColors, setPreviewColors] = useState(['red', 'green', 'blue']);
   const [color, setColor] = useState('red'),
     [tool, setTool] = useState('brush'),
     [size, setSize] = useState(18),
@@ -8678,6 +8680,40 @@ const DyeMaskTouchEditor = ({
   useEffect(() => {
     if (ready) updateWarning();
   }, [ready, historyTick]);
+  // 「合成」は編集補助Canvasを重ねず、編集中のPNGをBlob URLとして本番コンポーネントへ渡す。
+  // これにより座標、縦横比、半透明輪郭、色変換、部位別透明度、特殊処理がゲーム内確認と同じになる。
+  useEffect(() => {
+    if (!ready || view !== 'composite') return;
+    const c = maskRef.current,
+      ctx = context();
+    if (!c || !ctx) return;
+    let cancelled = false,
+      nextUrl = null;
+    const source = ctx.getImageData(0, 0, c.width, c.height),
+      image = ctx.createImageData(c.width, c.height);
+    image.data.set(source.data);
+    normalizeMask(image, outsideRef.current);
+    const temp = document.createElement('canvas');
+    temp.width = c.width;
+    temp.height = c.height;
+    temp.getContext('2d').putImageData(image, 0, 0);
+    temp.toBlob(blob => {
+      if (cancelled || !blob) return;
+      nextUrl = URL.createObjectURL(blob);
+      setPreviewMaskUrl(previous => {
+        if (previous) URL.revokeObjectURL(previous);
+        return nextUrl;
+      });
+    }, 'image/png');
+    return () => {
+      cancelled = true;
+      if (nextUrl) URL.revokeObjectURL(nextUrl);
+    };
+  }, [ready, view, historyTick, target.baseId]);
+  useEffect(() => () => setPreviewMaskUrl(previous => {
+    if (previous) URL.revokeObjectURL(previous);
+    return null;
+  }), []);
   const confirmDiscard = () => !dirty || window.confirm('未書き出しの編集があります。破棄してモンスターを切り替えますか？');
   const selectTarget = index => {
     if (index === targetIndex || !confirmDiscard()) return;
@@ -8962,7 +8998,7 @@ const DyeMaskTouchEditor = ({
     const image = normalizeMask(context().getImageData(0, 0, c.width, c.height), outsideRef.current);
     context().putImageData(image, 0, 0);
     c.toBlob(blob => {
-      if (blob) onTryInGame(target, blob);
+      if (blob) onTryInGame(target, blob, previewColors);
     }, 'image/png');
   };
   const close = () => {
@@ -9052,7 +9088,27 @@ const DyeMaskTouchEditor = ({
     key: id,
     onClick: () => setView(id),
     className: `min-h-[30px] rounded-lg text-[8px] font-black ${view === id ? 'bg-cyan-700' : 'bg-slate-800'}`
-  }, label))), /*#__PURE__*/React.createElement("section", {
+  }, label))), view === 'composite' && /*#__PURE__*/React.createElement("div", {
+    className: "grid shrink-0 grid-cols-3 gap-1 px-2 pt-1"
+  }, Array.from({
+    length: dyeRegionCount(target.baseId)
+  }, (_, idx) => /*#__PURE__*/React.createElement("label", {
+    key: idx,
+    className: "text-[7px] text-fuchsia-200"
+  }, "\u67D3\u8272", '①②③'[idx], /*#__PURE__*/React.createElement("select", {
+    value: previewColors[idx] || '',
+    onChange: e => setPreviewColors(current => {
+      const next = [...current];
+      next[idx] = e.target.value || null;
+      return next;
+    }),
+    className: "block min-h-[28px] w-full rounded bg-slate-800 text-[8px]"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "\u5143\u306E\u8272"), Object.keys(MASU_COLOR_TARGET).map(id => /*#__PURE__*/React.createElement("option", {
+    key: id,
+    value: id
+  }, MASU_COLOR_LABELS[id])))))), /*#__PURE__*/React.createElement("section", {
     className: "relative m-2 min-h-0 flex-1 overflow-hidden rounded-xl bg-slate-600",
     style: {
       touchAction: 'none'
@@ -9077,20 +9133,29 @@ const DyeMaskTouchEditor = ({
       height: '100%',
       aspectRatio: `${imageSize.width} / ${imageSize.height}`
     }
-  }, /*#__PURE__*/React.createElement("canvas", {
+  }, view === 'composite' && previewMaskUrl && /*#__PURE__*/React.createElement(DyedMonsterImage, {
+    baseId: target.baseId,
+    src: target.imageUrl,
+    alt: `${target.name}合成`,
+    masuColors: previewColors,
+    debugMaskPlacement: {
+      maskUrl: previewMaskUrl
+    },
+    className: "absolute inset-0 h-full w-full object-contain"
+  }), /*#__PURE__*/React.createElement("canvas", {
     ref: bodyRef,
     "aria-label": `${target.name}本体レイヤー`,
     className: "absolute inset-0 h-full w-full",
     style: {
-      display: view === 'mask' ? 'none' : 'block'
+      display: view === 'mask' || view === 'composite' ? 'none' : 'block'
     }
   }), /*#__PURE__*/React.createElement("canvas", {
     ref: maskRef,
     "aria-label": "\u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6\u30EC\u30A4\u30E4\u30FC",
     className: "absolute inset-0 h-full w-full",
     style: {
-      display: view === 'body' ? 'none' : 'block',
-      opacity: view === 'composite' || view === 'boundary' ? opacity / 100 : 1
+      display: view === 'body' || view === 'composite' ? 'none' : 'block',
+      opacity: view === 'boundary' ? opacity / 100 : 1
     }
   }), view === 'boundary' && outlineRef.current && /*#__PURE__*/React.createElement("img", {
     src: outlineRef.current.toDataURL(),
@@ -9313,7 +9378,7 @@ function MonsterHeroGame() {
     if (Object.keys(temporaryDyeMasksRef.current).length && !window.confirm('全モンスターの一時マスクを解除しますか？')) return;
     Object.keys(temporaryDyeMasksRef.current).forEach(releaseTemporaryDyeMask);
   };
-  const tryTemporaryDyeMask = (target, blob) => {
+  const tryTemporaryDyeMask = (target, blob, colors) => {
     releaseTemporaryDyeMask(target.baseId);
     const url = URL.createObjectURL(blob);
     temporaryDyeMasksRef.current[target.baseId] = url;
@@ -9329,7 +9394,7 @@ function MonsterHeroGame() {
         colors: []
       };
     setMonsterImageDebugId(preview.id);
-    setMonsterImageDebugColors(getMasuColors(preview));
+    setMonsterImageDebugColors(colors || getMasuColors(preview));
     setGameState('MONSTER_IMAGE_DEBUG');
   };
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
