@@ -35,6 +35,13 @@ check('1段階は5凸で完成する', BREAKTHROUGH_STARS_PER_TIER === 5);
 check('通常の限界突破は30回まで', BREAKTHROUGH_MAX_COUNT === 30, String(BREAKTHROUGH_MAX_COUNT));
 check('最終限界突破は35回目', FINAL_BREAKTHROUGH_COUNT === 35, String(FINAL_BREAKTHROUGH_COUNT));
 check('虹★画像の参照先が専用PNG', RAINBOW_STAR_IMAGE === 'images/ui/breakthrough-rainbow-star.PNG');
+const rainbowStarPath = path.join(REPO_ROOT, 'monster-hero', RAINBOW_STAR_IMAGE);
+const rainbowStarPng = fs.existsSync(rainbowStarPath) ? fs.readFileSync(rainbowStarPath) : Buffer.alloc(0);
+check('虹★画像が配信先に実在する', rainbowStarPng.length > 24, rainbowStarPath);
+check('虹★画像が有効なPNGで縦横を持つ',
+  rainbowStarPng.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))
+  && rainbowStarPng.readUInt32BE(16) > 0 && rainbowStarPng.readUInt32BE(20) > 0,
+  rainbowStarPng.length > 24 ? `${rainbowStarPng.readUInt32BE(16)}x${rainbowStarPng.readUInt32BE(20)}` : '読込不可');
 // 黄色と金が見分けにくくならないこと
 const yellow = BREAKTHROUGH_STAR_TIERS.find(t => t.key === 'yellow');
 const gold = BREAKTHROUGH_STAR_TIERS.find(t => t.key === 'gold');
@@ -163,6 +170,9 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 演出でも同じ色を使う`, /starList\.map\(\(s,i\)=>/.test(code) || /starList\.map\(\(s, i\) =>/.test(code));
   check(`${label}: 本番表示と限界突破演出は同じ★描画を使う`,
     (code.match(/renderBreakthroughStar\(s,\s*i/g) || []).length === 2);
+  check(`${label}: 虹★は文字ではなくimg要素として描画する`,
+    /const renderBreakthroughStar = \(star,\s*key,\s*props = \{\}\) => star\.image\s*\?\s*<img/.test(code)
+    || /const renderBreakthroughStar = \(star, key, props = \{\}\) => star\.image \?[^;]*React\.createElement\("img"/.test(code));
   check(`${label}: 限界突破の説明に虹5段階がある`, code.includes('31～35凸'));
   check(`${label}: 固定上限の共通関数を使う`,
     /const isFinal = nextCount === FINAL_BREAKTHROUGH_COUNT;/.test(code)
