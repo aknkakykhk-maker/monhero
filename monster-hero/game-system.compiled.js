@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ed717048fcf1a25e
+// source-sha256: 0b8608f3419c2b2f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 17:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 17:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5208,8 +5208,35 @@ const PatternPlacementPreview = ({
 // ブリーダーの教えのアイコンがパスの文字列のまま画面に出る不具合を出した。
 // 判定はこの1か所に集約し、以後どちらの形でも画像として扱えるようにする。
 const isImageIconValue = v => typeof v === 'string' && (v.startsWith('images/') || v.startsWith('data:') || /^https?:\/\//.test(v));
+// ききの元画像は全身を含むため、ブリーダーカードで使う丸アイコンだけ顔へ寄せる。
+// プロフィール用の BreederIcon とは経路を分け、プロフィール側の構図は変更しない。
+const BREEDER_CARD_ICON_STYLES = Object.freeze({
+  kiki: {
+    transform: 'translate(0%, 19%) scale(2.37)',
+    transformOrigin: 'center center'
+  }
+});
 // icon欄が画像なら<img>、絵文字ならそのまま返す。sizePxは画像のときの表示サイズ
-const cardIconNode = (icon, sizePx) => isImageIconValue(icon) ? /*#__PURE__*/React.createElement("img", {
+const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon) ? BREEDER_CARD_ICON_STYLES[cardId] ? /*#__PURE__*/React.createElement("span", {
+  "aria-hidden": "true",
+  style: {
+    width: sizePx,
+    height: sizePx
+  },
+  className: "relative overflow-hidden rounded-full inline-block shrink-0 align-middle"
+}, /*#__PURE__*/React.createElement("img", {
+  src: icon,
+  alt: "",
+  draggable: false,
+  style: {
+    WebkitTouchCallout: 'none',
+    WebkitUserSelect: 'none',
+    userSelect: 'none',
+    pointerEvents: 'none',
+    ...BREEDER_CARD_ICON_STYLES[cardId]
+  },
+  className: "absolute inset-0 w-full h-full object-contain"
+})) : /*#__PURE__*/React.createElement("img", {
   src: icon,
   alt: "",
   draggable: false,
@@ -22967,7 +22994,7 @@ function MonsterHeroGame() {
         key: id,
         onClick: () => toggleDraftTeaching(id),
         className: "shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-purple-400 active:scale-90 flex items-center justify-center bg-black/30"
-      }, cardIconNode(t.icon, 32));
+      }, cardIconNode(t.icon, 32, t.id));
     }))), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold mb-2 px-1 shrink-0"
     }, "\u89E3\u653E\u6E08\u307F", unlockedTeachingIds.length, "\u679A\u30FB\u3061\u3087\u3046\u3069", STARTER_TEACHING_IDS.length, "\u679A\u9078\u3076\u3068\u300C\u6C7A\u5B9A\u300D\u3067\u304D\u307E\u3059\u30FB\u30A2\u30A4\u30B3\u30F3\u30BF\u30C3\u30D7\u3067\u7DE8\u6210/\u89E3\u9664\u3001i\u30DC\u30BF\u30F3\u3067\u8A73\u7D30"), /*#__PURE__*/React.createElement("div", {
@@ -22984,7 +23011,7 @@ function MonsterHeroGame() {
         className: `w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected ? 'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400' : 'bg-slate-900 border-slate-800'}`
       }, /*#__PURE__*/React.createElement("div", {
         className: "w-10 h-10 rounded-full overflow-hidden border border-white/10 shrink-0 flex items-center justify-center bg-black/30"
-      }, cardIconNode(t.icon, 40)), /*#__PURE__*/React.createElement("div", {
+      }, cardIconNode(t.icon, 40, t.id)), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-white truncate w-full text-center"
       }, t.baseName), /*#__PURE__*/React.createElement("div", {
         className: `text-[8px] font-black px-2 py-0.5 rounded-full ${selected ? 'bg-purple-500 text-white' : 'bg-slate-800 text-slate-500'}`
@@ -23028,7 +23055,7 @@ function MonsterHeroGame() {
         className: "bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-6xl mb-2 shrink-0"
-      }, cardIconNode(rosterDetailTeaching.icon, 76)), /*#__PURE__*/React.createElement("h3", {
+      }, cardIconNode(rosterDetailTeaching.icon, 76, rosterDetailTeaching.id)), /*#__PURE__*/React.createElement("h3", {
         className: "text-lg font-black text-white mb-4 shrink-0"
       }, BREEDER_EVO_NAMES[rosterDetailTeaching.id][Math.max(currentLvl, 0)]), /*#__PURE__*/React.createElement("div", {
         className: "w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1"
@@ -26299,7 +26326,7 @@ function MonsterHeroGame() {
             fontSize: '7px'
           },
           className: "leading-none shrink-0"
-        }, cardIconNode(card.icon, 9)), /*#__PURE__*/React.createElement("span", {
+        }, cardIconNode(card.icon, 9, card.id)), /*#__PURE__*/React.createElement("span", {
           style: {
             fontSize: '7px'
           },
@@ -26459,7 +26486,7 @@ function MonsterHeroGame() {
         className: "text-[9px]"
       }, assignedMon.emoji)), /*#__PURE__*/React.createElement("div", {
         className: "text-3xl mt-1.5"
-      }, cardIconNode(c.icon, 32)), /*#__PURE__*/React.createElement("div", {
+      }, cardIconNode(c.icon, 32, c.id)), /*#__PURE__*/React.createElement("div", {
         className: "w-full text-center flex flex-col justify-end gap-0.5"
       }, ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
         onClick: ev => {
@@ -27519,7 +27546,7 @@ function MonsterHeroGame() {
         style: {
           fontSize: '44px'
         }
-      }, cardIconNode(t.icon, 52)), /*#__PURE__*/React.createElement("div", {
+      }, cardIconNode(t.icon, 52, t.id)), /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black leading-tight flex flex-col items-center justify-center"
       }, owned && !isMax && /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-amber-400 mb-0.5 line-through"
@@ -27540,7 +27567,7 @@ function MonsterHeroGame() {
       className: "bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-6xl mb-2 shrink-0"
-    }, cardIconNode(selectedTeachingCard.icon, 76)), /*#__PURE__*/React.createElement("h3", {
+    }, cardIconNode(selectedTeachingCard.icon, 76, selectedTeachingCard.id)), /*#__PURE__*/React.createElement("h3", {
       className: "text-lg font-black text-white mb-4 shrink-0"
     }, (() => {
       const t = selectedTeachingCard;
@@ -29125,7 +29152,7 @@ function MonsterHeroGame() {
         className: "absolute top-1 right-1 text-[6px] font-black text-white bg-black/60 px-1 rounded uppercase z-10"
       }, "\u6E08"), /*#__PURE__*/React.createElement("div", {
         className: "text-3xl mt-1.5"
-      }, cardIconNode(c.icon, 32)), /*#__PURE__*/React.createElement("div", {
+      }, cardIconNode(c.icon, 32, c.id)), /*#__PURE__*/React.createElement("div", {
         className: "w-full text-center flex flex-col justify-end gap-0.5"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5"
@@ -29332,7 +29359,7 @@ function MonsterHeroGame() {
       className: "flex items-center gap-2.5 mb-1 border-b border-white/10 pb-1"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-xl bg-indigo-500/20 p-1 rounded-xl"
-    }, cardIconNode(focusedCard.icon, 22)), /*#__PURE__*/React.createElement("div", {
+    }, cardIconNode(focusedCard.icon, 22, focusedCard.id)), /*#__PURE__*/React.createElement("div", {
       className: "text-left flex-1 overflow-hidden"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] font-black text-white uppercase truncate"
@@ -29969,7 +29996,7 @@ function MonsterHeroGame() {
         fontSize: effect.type === 'unique' ? '60px' : '48px'
       },
       className: "mt-8 animate-bounce relative"
-    }, cardIconNode(effect.icon, effect.type === 'unique' ? 60 : 48))), rosterSkillDetail && (() => {
+    }, cardIconNode(effect.icon, effect.type === 'unique' ? 60 : 48, effect.id))), rosterSkillDetail && (() => {
       const mon = rosterSkillDetail.mon;
       const isUnique = rosterSkillDetail.kind === 'unique';
       const levels = isUnique ? getUniqueSkillLevels(mon) : getAtkSkillLevels(mon);

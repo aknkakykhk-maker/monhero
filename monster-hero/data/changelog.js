@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-13 17:14",
+    date: "2026-08-13 17:51",
     type: 'update',
     title: '新ブリーダーカード「メロソ」を追加',
     assistantNotice: { id:'update_notice_meloso_breeder_v1', type:'market' },
@@ -10,7 +10,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-13 17:14",
+    date: "2026-08-13 17:51",
     type: 'update',
     title: '新ブリーダーカード「きき」を追加',
     assistantNotice: { id:'update_notice_kiki_breeder_v1', type:'market' },
@@ -30,7 +30,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-13 17:14",
+    date: "2026-08-13 17:51",
     type: "issue",
     title: "みゃるの薬系の自傷ダメージを修正しました",
     items: [
