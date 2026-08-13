@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d6a49911bcecc64a
+// source-sha256: ed3f8c56ca973625
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 14:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 15:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -397,6 +397,9 @@ const uniqueSkillAtLevel = (unique, level = 0) => {
 // 継承固有技は、ラン内stateがまだ無い間もマスモンに保存された恒久Lvから始める。
 // 0も有効なラン内値なので truthy 判定ではなく null/undefined のときだけ恒久Lvへ戻す。
 const inheritedUniqueRunLevel = (unique, runLevel) => Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.floor(Number(runLevel != null ? runLevel : unique?.evoLevel) || 0)));
+// みゃるの薬系は進化するたび、データのdmgStepぶん自傷率が下がる。
+// 表示と実戦処理で同じ計算を使い、進化後の説明と実効果がずれないようにする。
+const myaruSelfDamageRate = (card, level = card?.evoLevel || 0) => Math.max(0.1, card.selfDmg - level * card.dmgStep);
 // 固有技の表示名は固有技Lvで変わるため、重複判定には技の出自を表す不変IDを使う。
 // lineageId は今後データ側で明示でき、既存データは従来から保存されている monId へ安全にフォールバックする。
 const uniqueLineageId = (unique, fallbackMonId = null) => unique?.lineageId || unique?.monId || fallbackMonId || null;
@@ -15472,7 +15475,7 @@ function MonsterHeroGame() {
           }
         } else if (card.subType === 'buff_myaru') {
           setNextTurnBuff('atkMult', 1 + (card.baseValue - 1) * effMul);
-          const selfDmgAmt = Math.floor(hpBeforeEnemyAttack * card.selfDmg * effMul);
+          const selfDmgAmt = Math.floor(hpBeforeEnemyAttack * myaruSelfDamageRate(card) * effMul);
           addPopup(`自傷-${selfDmgAmt}`, 'hero', 'text-red-600 text-2xl font-black');
           hpBeforeEnemyAttack = Math.max(1, hpBeforeEnemyAttack - selfDmgAmt);
           setHp(hpBeforeEnemyAttack);
@@ -17083,7 +17086,7 @@ function MonsterHeroGame() {
     if (t.id === 'atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue + level * t.step).toFixed(1)}倍`;
     if (t.id === 'myaru') {
       const v = t.baseValue + level * t.step,
-        d = pct(Math.max(0.1, t.selfDmg - level * t.dmgStep));
+        d = pct(myaruSelfDamageRate(t, level));
       return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;
     }
     return t.desc;
