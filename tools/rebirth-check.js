@@ -69,7 +69,7 @@ check('専用移行フラグとマスモン・ダイヤ保存がある',source.i
 const fusionSource=source.slice(source.indexOf('const executeMasuFusion'),source.indexOf('const resetFusionFlow'));
 // 上がったレベルぶんの強化ポイントは applyBondXpGain がまとめて配る。
 // 合体もそこを通しているので、経路と付与の両方を見る
-check('レベルが上がったぶんの強化ポイントを配る',source.includes('distAptPoints: (masu.distAptPoints || 0) + gainedLevels'));
+check('レベルが上がったぶんの強化ポイントを配る',source.includes('distAptPoints: (masu.distAptPoints || 0) + gainedPoints'));
 check('合体もその経路を通る',fusionSource.includes('applyBondXpGain(prepared, gainedXp)'));
 // 「転生したらLv1へ戻す」時代の移行を今さら走らせると、育てたレベルを消してしまう
 check('旧仕様のLv1リセット移行はもう走らせない',!/savedMasuMons = migrateRebornMasuToFullReset/.test(source));
@@ -81,17 +81,17 @@ check('限界突破済みソート・表示設定と旧設定の補完を追加'
 check('同一固有技の継承を禁止',source.includes('duplicateUnique')&&source.includes('同じ固有技はすでに所持しているため引き継げません'));
 check('現在技・解放済み・未解放を固有技詳細に表示',source.includes("current?'現在の技':locked?'未解放':'解放済み'"));
 // ★は 青→黄色→ピンク→紫→赤→金 の6段階。5凸で1段階が完成し、次の段階は1個ずつ置き換わる。
-// 31凸(最終限界突破)だけ虹★5。細かい凸数ごとの並びは breakthrough-star-check.js で見る
+// 31～35凸で金★が虹★へ1個ずつ置き換わる。細かい凸数ごとの並びは breakthrough-star-check.js で見る
 check('星は6段階＋虹で、常に5個まで',
   source.includes("{ key:'blue',")&&source.includes("{ key:'gold',")
   &&source.includes('const BREAKTHROUGH_STARS_PER_TIER = 5;')
   &&source.includes('const RAINBOW_STAR_COLORS')
   &&source.includes('const breakthroughStars = (count)')
   &&!source.includes("['#fde047','#f472b6','#ef4444','#ffffff']"));
-check('最終限界突破でLv.200・虹★になる',
-  source.includes('const FINAL_BREAKTHROUGH_COUNT = BREAKTHROUGH_MAX_COUNT + 1;')
-  &&source.includes('const isFinal = normalized.levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP;')
-  &&source.includes('finalBreakthrough:isFinal'));
+check('35凸でLv.400・虹★5になる',
+  source.includes('const FINAL_BREAKTHROUGH_COUNT = BREAKTHROUGH_MAX_COUNT + BREAKTHROUGH_STARS_PER_TIER;')
+  &&source.includes('const isFinal = nextCount === FINAL_BREAKTHROUGH_COUNT;')
+  &&source.includes('const nextLevelCap = breakthroughLevelCap(nextCount);'));
 // 増えた★は先頭に来るので、光らせるのは先頭(最終突破では5個とも虹なので全部)
 check('限界突破は専用の演出を使い、増えた星が光る',source.includes('mh-breakthrough-animation')&&source.includes('mh-breakthrough-stars')&&source.includes("(finalBreak||i===0)?'is-new':'is-old'")&&source.includes('@keyframes mhBreakStar'));
 check('転生演出は通常表示と同じ霊炎オーラを使う',source.includes('reincarnateAnimation&&<div className="mh-reincarnation-animation"')&&source.includes('<ReincarnateAura count={reincarnateAnimation.masu.reincarnateCount} className="is-ceremony"/>'));
