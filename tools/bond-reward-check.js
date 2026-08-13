@@ -71,9 +71,29 @@ check('既存不足分はreconcileMasuPointsで不足分だけ補填', repairedO
 check('reconcileMasuPointsを再実行しても二重付与しない', repairedTwice.distAptPoints === repairedOnce.distAptPoints);
 check('両チケットが共通処理を使い結果表示に実付与量を渡す',
   /const result = applyBondXpGain\(masu, gain\)/.test(source)
-    && source.includes('強化ポイント +{preview.gainedLevels}')
+    && source.includes('強化ポイント +{preview.gainedPoints}')
     && /id:'training_ticket'[^\n]*bondXp:15/.test(fs.readFileSync(path.join(__dirname, '..', 'monster-hero', 'data', 'breeder.js'), 'utf8'))
     && /id:'training_ticket_l'[^\n]*bondXp:150/.test(fs.readFileSync(path.join(__dirname, '..', 'monster-hero', 'data', 'breeder.js'), 'utf8')));
+
+// --- 虹★4・5のレベルアップ強化ポイント倍率 ---
+const gainLevelsAt = (rebirthCount, from, to) => applyBondXpGain({
+  id:`rainbow-${rebirthCount}`, rebirthCount, levelCap:rebirthCount === 34 ? 330 : 400,
+  bondXp:totalBondXpForLevel(from), distAptPoints:0,
+}, totalBondXpForLevel(to) - totalBondXpForLevel(from));
+for (const [count, multiplier] of [[33,1],[34,2],[35,3]]) {
+  const result = gainLevelsAt(count, count === 35 ? 330 : 270, count === 35 ? 331 : 271);
+  check(`${count}凸は1Lvにつき+${multiplier}`, result.gainedLevels === 1 && result.gainedPoints === multiplier && result.masu.distAptPoints === multiplier);
+}
+const rainbow4Multi = gainLevelsAt(34,270,280);
+const rainbow5Multi = gainLevelsAt(35,330,340);
+check('34凸で複数Lv上昇は上昇Lv数×2', rainbow4Multi.gainedLevels === 10 && rainbow4Multi.gainedPoints === 20);
+check('35凸で複数Lv上昇は上昇Lv数×3', rainbow5Multi.gainedLevels === 10 && rainbow5Multi.gainedPoints === 30);
+check('Lv330までは虹4倍率', gainLevelsAt(34,329,330).gainedPoints === 2);
+check('35凸後のLv331～400は虹5倍率', gainLevelsAt(35,331,400).gainedPoints === 69 * 3);
+check('35凸/Lv400で停止', gainLevelsAt(35,400,401).gainedLevels === 0);
+check('経験値取得方法に依存せず共通処理だけが倍率を決める',
+  /const pointMultiplier = levelUpPointMultiplier\(masu\?\.rebirthCount\)/.test(source)
+  && ['applyBondXpGain(masu, gain)','applyBondXpGain(prepared, gainedXp)','applyBondXpGain(m, award.gain)'].every(call=>source.includes(call)));
 
 // --- 必要経験値の緩和(0.05 → 0.025) ---
 // 1レベルぶんの必要XP = round(50 × Lv^1.4 × BOND_XP_DISCOUNT)。係数を下げると必要XPが下がる
