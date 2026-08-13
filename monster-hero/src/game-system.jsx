@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 17:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 18:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -2466,14 +2466,19 @@ const PatternPlacementPreview = ({ masu, base, colors, settings, selectedDecal, 
 // 判定はこの1か所に集約し、以後どちらの形でも画像として扱えるようにする。
 const isImageIconValue = (v) => typeof v === 'string' && (v.startsWith('images/') || v.startsWith('data:') || /^https?:\/\//.test(v));
 // ききの元画像は全身を含むため、ブリーダーカードで使う丸アイコンだけ顔へ寄せる。
-// プロフィール用の BreederIcon とは経路を分け、プロフィール側の構図は変更しない。
+// 同じ画像を使うプロフィール用アイコンは別IDなので、従来のプロフィール構図を維持する。
+const KIKI_FACE_ICON_ADJUSTMENT = Object.freeze({ scale:2.37, x:0, y:19 });
+const iconAdjustmentTransformStyle = ({ scale=1, x=0, y=0 }={}) => ({ transform:`translate(${x}%, ${y}%) scale(${scale})`, transformOrigin:'center center' });
 const BREEDER_CARD_ICON_STYLES = Object.freeze({
-  kiki: { transform:'translate(0%, 19%) scale(2.37)', transformOrigin:'center center' },
+  kiki: KIKI_FACE_ICON_ADJUSTMENT,
 });
+const BreederCardIcon = ({ icon, cardId, className='', style }) => (
+  <span aria-hidden="true" style={style} className={`relative overflow-hidden rounded-full inline-block shrink-0 align-middle ${className}`}><img src={icon} alt="" draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none',...iconAdjustmentTransformStyle(BREEDER_CARD_ICON_STYLES[cardId])}} className="absolute inset-0 w-full h-full object-contain"/></span>
+);
 // icon欄が画像なら<img>、絵文字ならそのまま返す。sizePxは画像のときの表示サイズ
 const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon)
   ? (BREEDER_CARD_ICON_STYLES[cardId]
-    ? <span aria-hidden="true" style={{width:sizePx,height:sizePx}} className="relative overflow-hidden rounded-full inline-block shrink-0 align-middle"><img src={icon} alt="" draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none',...BREEDER_CARD_ICON_STYLES[cardId]}} className="absolute inset-0 w-full h-full object-contain"/></span>
+    ? <BreederCardIcon icon={icon} cardId={cardId} style={{width:sizePx,height:sizePx}}/>
     : <img src={icon} alt="" draggable={false} style={{width:sizePx,height:sizePx,WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="rounded-full object-cover inline-block shrink-0"/>)
   : icon;
 // ランキングの記録に載せる部位別の色を作る。
@@ -3338,7 +3343,7 @@ const MARKET_PROFILE_ICON_STYLES = {
   // 元PNGは左右端まで描画が続くため、縮小すると画像端の直線が枠内に露出する。
   // 中央の大きさを保ったまま両端を円・角丸枠の外へ逃がし、片側だけを寄せない。
   ark_icon: { scale: 1.08, x: 0, y: 0 },
-  kiki_icon: { scale: 2.37, x: 0, y: 19 },
+  kiki_icon: KIKI_FACE_ICON_ADJUSTMENT,
   snegurochka_icon: { scale: 4.28, x: 11, y: 111 },
   snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 },
   iblis_icon: { scale: 1.42, x: 2, y: -10 },
@@ -3363,7 +3368,7 @@ const breederIconOptions = ({ includeUnowned=false, ownedMarketIconIds=[] }={}) 
   const ids = new Set(), images = new Set();
   return candidates.filter(item=>{const image=String(item.src||'').split('?')[0];if(ids.has(item.id)||images.has(image))return false;ids.add(item.id);images.add(image);return true;});
 };
-const profileIconTransformStyle = ({ scale=1, x=0, y=0 }={}) => ({ transform: `translate(${x}%, ${y}%) scale(${scale})`, transformOrigin:'center center' });
+const profileIconTransformStyle = iconAdjustmentTransformStyle;
 const marketProfileIconStyle = (id) => profileIconTransformStyle(MARKET_PROFILE_ICON_STYLES[id]);
 // 枠と画像を全画面で共有し、元画像全体を基準に同じ構図を再現する。
 // object-cover で先に中央切り抜きせず、移動量が拡大率に影響されない順序で変形する。
@@ -10709,7 +10714,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     // 高さを決めた枠に入れて並びを崩さない。購入ボタンはmt-autoでカード下端に揃える
                     <div key={item.id} className={`rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
                       {/* 1行に4つ並べているぶん小さいので、タップすると大きく見られるようにしている */}
-                      <button type="button" onClick={()=>setMarketIconZoom(item)} aria-label={`${item.name}を大きく見る`} className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>}</button>
+                      <button type="button" onClick={()=>setMarketIconZoom(item)} aria-label={`${item.name}を大きく見る`} className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='breeder'&&BREEDER_CARD_ICON_STYLES[item.id]?<BreederCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>}</button>
                       {/* 名前の枠は3行ぶん。細い端末で長い名前が3行になっても、
                           カードの高さが商品ごとにばらつかないようにしている */}
                       <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'36px'}}>{item.name}</div>
@@ -12461,7 +12466,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div onClick={e=>e.stopPropagation()} className="w-full max-w-[280px] rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col items-center gap-3">
             <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`}>
               {item.icon
-                ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
+                ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='breeder'&&BREEDER_CARD_ICON_STYLES[item.id]?<BreederCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
                 : <span style={{fontSize:'96px'}}>{item.emoji}</span>}
             </div>
             <div className="text-center text-sm font-black text-white leading-tight">{item.name}</div>
