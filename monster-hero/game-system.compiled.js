@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 9fe8fd72814d94aa
+// source-sha256: 3c98ed8f9f02d33b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 16:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 17:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7871,6 +7871,13 @@ const TEACHING_FX_STYLE = {
     text: "text-purple-300",
     ring: "border-purple-300",
     rgb: "168,85,247"
+  },
+  kiki: {
+    icon: "📣",
+    label: "全力応援!",
+    text: "text-sky-300",
+    ring: "border-sky-300",
+    rgb: "56,189,248"
   }
 };
 
@@ -14090,13 +14097,14 @@ function MonsterHeroGame() {
   // 「勇者モンに選んだときだけ効く」特性なので、効いていることが画面から分かるように
   // 枚数表示の横にも出す。計算と表示で食い違わないよう、ここを唯一の出どころにする
   const heroCardBonus = useMemo(() => mainHero?.id === 'Ham' ? 1 : 0, [mainHero]);
+  const kikiCardBonus = getPermaBuff('kikiCardBonusTurns') > 0 ? 1 : 0;
   const cardLimit = useMemo(() => {
     const allyCount = slots.filter(s => s !== null).length;
     let limit = 1;
     if (effectiveMaxGuts >= 180 && allyCount >= 3) limit = 3;else if (effectiveMaxGuts >= 120 && allyCount >= 2) limit = 2;
-    limit += heroCardBonus;
+    limit += heroCardBonus + kikiCardBonus;
     return limit;
-  }, [effectiveMaxGuts, slots, heroCardBonus]);
+  }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);
   const getCardGuts = card => {
     if (!card) return 0;
     let cost = card.type === 'guard' ? 0 : ['buff', 'debuff', 'heal', 'draw'].includes(card.type) ? card.guts || 20 : 20;
@@ -15038,6 +15046,7 @@ function MonsterHeroGame() {
     let total = mainDmg;
     if (mainHero?.id === 'Zan' && mon?.id === 'Zan') total += extraHit(0.3 + comboDmgBonus); // 勇者特性「連撃」
     if (card.type === 'unique' && card.monId === 'Zan') total += extraHit(0.2 + comboDmgBonus); // 固有技「連斬」
+    total += extraHit(getPermaBuff('globalComboDmgPct')); // きき由来の全体連撃は全モンスター共通の別ヒット
     // 贖罪の追撃はメインヒットの確定値を基準にする（ランダム会心は予測しない）。
     if (card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')) total += Math.floor(mainDmg * 0.2);
     return total;
@@ -15386,6 +15395,7 @@ function MonsterHeroGame() {
       totalHeal = 0,
       localOryoAdd = 0,
       localDmgModAdd = 0,
+      localGlobalComboAdd = 0,
       attackCount = 0,
       hasCrit = false,
       immediateInvincible = false,
@@ -15483,12 +15493,42 @@ function MonsterHeroGame() {
               });
             }
           }
+          const globalComboRate = getPermaBuff('globalComboDmgPct') + localGlobalComboAdd;
+          if (globalComboRate > 0) {
+            const comboBase = Math.floor(d * globalComboRate);
+            if (comboBase > 0) {
+              const comboCrit = getTurnBuff('guaranteedCrit', false) || Math.random() < (card.crit || 0.1) + getPermaBuff('critRatePct');
+              const comboFinal = comboCrit ? Math.floor(comboBase * (1.5 + getPermaBuff('critDmgPct'))) : comboBase;
+              if (comboCrit) hasCrit = true;
+              totalDmg += comboFinal;
+              attackHits.push({
+                dmg: comboFinal,
+                isCrit: comboCrit,
+                slotIdx,
+                isSpecial: true,
+                skillName: '全体連撃',
+                isUnique: false,
+                noAnim: true
+              });
+            }
+          }
         } else if (card.subType === 'buff_myaru') {
           setNextTurnBuff('atkMult', 1 + (card.baseValue - 1) * effMul);
           const selfDmgAmt = Math.floor(hpBeforeEnemyAttack * myaruSelfDamageRate(card) * effMul);
           addPopup(`自傷-${selfDmgAmt}`, 'hero', 'text-red-600 text-2xl font-black');
           hpBeforeEnemyAttack = Math.max(1, hpBeforeEnemyAttack - selfDmgAmt);
           setHp(hpBeforeEnemyAttack);
+        } else if (card.subType === 'buff_kiki') {
+          const owned = ownedTeachings.find(ot => ot.id === card.id);
+          const level = Math.min(owned ? owned.evoLevel : 0, 2);
+          const comboAdd = (0.03 + level * 0.02) * effMul;
+          localGlobalComboAdd += comboAdd;
+          addPermaBuff('globalComboDmgPct', comboAdd);
+          setPermaBuffs(p => ({
+            ...p,
+            kikiCardBonusTurns: Math.max(1, (level + 1) * effMul) + 1
+          }));
+          addPopup(`全体連撃+${((3 + level * 2) * effMul).toFixed(effMul === 1 ? 0 : 1)}%!`, 'hero', 'text-sky-300 text-lg font-bold');
         }
       } else if (card.type === 'heal') {
         Audio_.se.heal();
@@ -15588,6 +15628,25 @@ function MonsterHeroGame() {
           if (mainHero?.id === 'Zan' && activeMon.id === 'Zan') rollCombo(0.3 + comboDmgBonus);
           // 固有技「連斬」自体の連撃: 技の出自(card.monId)がザンなら、誰が使っても発生する(合体で引き継いだ場合も含む)
           if (card.type === 'unique' && card.monId === 'Zan') rollCombo(0.2 + comboDmgBonus);
+        }
+        const globalComboRate = getPermaBuff('globalComboDmgPct') + localGlobalComboAdd;
+        if (globalComboRate > 0) {
+          const base = Math.floor(d * globalComboRate);
+          if (base > 0) {
+            const crit = getTurnBuff('guaranteedCrit', false) || Math.random() < (card.crit || 0.1) + critRateBonus;
+            const final = crit ? Math.floor(base * (1.5 + critDmgBonus)) : base;
+            if (crit) hasCrit = true;
+            totalDmg += final;
+            attackHits.push({
+              dmg: final,
+              isCrit: crit,
+              slotIdx,
+              isSpecial: true,
+              skillName: '全体連撃',
+              isUnique: false,
+              noAnim: true
+            });
+          }
         }
         if (rangeMoveTarget != null) {
           forcedMoveTarget = rangeMoveTarget;
@@ -15825,6 +15884,10 @@ function MonsterHeroGame() {
     replenish(selectedCards.length + drawCount);
     while (nextHand.length < 5 && (nextDeck.length > 0 || nextGraveyard.length > 0)) replenish(1);
     if (getTurnBuff('zeroGuts', false)) setImmediateTurnBuff('zeroGuts', false);
+    setPermaBuffs(p => p.kikiCardBonusTurns > 0 ? {
+      ...p,
+      kikiCardBonusTurns: Math.max(0, p.kikiCardBonusTurns - 1)
+    } : p);
     setHand(nextHand);
     setDeck(nextDeck);
     setGraveyard(nextGraveyard);
@@ -17099,6 +17162,7 @@ function MonsterHeroGame() {
         d = pct(myaruSelfDamageRate(t, level));
       return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;
     }
+    if (t.id === 'kiki') return `次の${level + 1}ターン 使用可能カード枚数 +1・全体連撃 ${3 + level * 2}%アップ（バトル中永続・使用ごとに加算）`;
     return t.desc;
   };
   const getFullEvolutionDetails = t => [0, 1, 2].map(lvl => ({
@@ -25767,7 +25831,15 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-cyan-400 bg-black/60 px-2 py-0.5 rounded border border-cyan-400/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Sword, {
       size: 7
-    }), " \u9023\u6483 +", Math.round(getPermaBuff('comboDmgPct') * 100), "%"), /*#__PURE__*/React.createElement("div", {
+    }), " \u9023\u6483 +", Math.round(getPermaBuff('comboDmgPct') * 100), "%"), getPermaBuff('globalComboDmgPct') > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"
+    }, /*#__PURE__*/React.createElement(Sword, {
+      size: 7
+    }), " \u5168\u4F53\u9023\u6483 +", Math.round(getPermaBuff('globalComboDmgPct') * 100), "%"), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"
+    }, /*#__PURE__*/React.createElement(PlusCircle, {
+      size: 7
+    }), " \u30AB\u30FC\u30C9\u4E0A\u9650 +1\uFF08\u6B8B\u308A", Math.ceil(getPermaBuff('kikiCardBonusTurns')), "T\uFF09"), /*#__PURE__*/React.createElement("div", {
       className: `text-[7px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery', 0.1) >= 0.1 ? 'text-rose-400 border-rose-400/50' : 'text-red-400 border-red-400/50'}`
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 7
@@ -26263,7 +26335,9 @@ function MonsterHeroGame() {
       className: "flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"
     }, /*#__PURE__*/React.createElement(Crown, {
       size: 8
-    }), "+", heroCardBonus)), /*#__PURE__*/React.createElement("div", {
+    }), "+", heroCardBonus), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap"
+    }, "\u5FDC\u63F4+1")), /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowDeckInfo(true),
