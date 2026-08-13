@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 226bb85fb524def1
+// source-sha256: 165ba19f5dc28279
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 11:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 11:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -674,6 +674,20 @@ const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
     ...normalized,
     uniqueSkillLevels,
     uniqueSkillPoints: normalized.uniqueSkillPoints - total
+  };
+};
+// 固有技へ配分済みのポイントだけを未使用へ戻す。個体のほかの育成情報はスプレッドでそのまま維持する。
+const buildUniqueSkillPointReset = masu => {
+  const normalized = normalizeMasuProgression(masu);
+  const refundedPoints = Object.values(normalized.uniqueSkillLevels).reduce((sum, level) => sum + Math.max(0, Math.floor(Number(level) || 0)), 0);
+  if (refundedPoints <= 0) return null;
+  return {
+    refundedPoints,
+    nextMasu: {
+      ...normalized,
+      uniqueSkillLevels: Object.fromEntries(Object.keys(normalized.uniqueSkillLevels).map(key => [key, 0])),
+      uniqueSkillPoints: normalized.uniqueSkillPoints + refundedPoints
+    }
   };
 };
 // 転生では個体の識別情報・外見・固有技・履歴だけを残し、振った強化は白紙に戻す。
@@ -12571,6 +12585,26 @@ function MonsterHeroGame() {
     Audio_.se.levelUp();
     return updatedMasu;
   };
+  const useUniqueSkillResetTicket = masuId => {
+    if (ownedItemCount(ownedItems, 'unique_skill_reset_ticket') <= 0) return null;
+    const result = buildUniqueSkillPointReset(getMasuMon(masuId));
+    if (!result) return null;
+    setMasuMons(prev => {
+      const next = prev.map(m => String(m.id) === String(masuId) ? result.nextMasu : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    setOwnedItems(prev => {
+      const next = {
+        ...prev,
+        unique_skill_reset_ticket: Math.max(0, ownedItemCount(prev, 'unique_skill_reset_ticket') - 1)
+      };
+      storeSet('mh_owned_items', next, false);
+      return next;
+    });
+    Audio_.se.tap();
+    return result;
+  };
   // 強化ポイントリセットの書: 使用済みの強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻す。
   // 絆レベル・絆経験値そのものは変更しない
   const useBondResetScroll = masuId => {
@@ -17136,6 +17170,8 @@ function MonsterHeroGame() {
     const draft = uniqueSkillPointDrafts[String(masu.id)] || {};
     const allocated = Object.values(draft).reduce((sum, value) => sum + Math.max(0, Math.floor(Number(value) || 0)), 0);
     const remaining = Math.max(0, normalized.uniqueSkillPoints - allocated);
+    const resetTicketCount = ownedItemCount(ownedItems, 'unique_skill_reset_ticket');
+    const resetPointCount = Object.values(normalized.uniqueSkillLevels).reduce((sum, level) => sum + Math.max(0, Math.floor(Number(level) || 0)), 0);
     const changeDraft = (skillKey, delta) => setUniqueSkillPointDrafts(prev => {
       const id = String(masu.id),
         current = {
@@ -17225,7 +17261,28 @@ function MonsterHeroGame() {
         }
       },
       className: "min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30"
-    }, "\u5F37\u5316\u3092\u78BA\u5B9A"))));
+    }, "\u5F37\u5316\u3092\u78BA\u5B9A"))), /*#__PURE__*/React.createElement("div", {
+      className: "mt-2 border-t border-white/10 pt-2 flex flex-col gap-1.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2 text-[9px] font-black"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-400"
+    }, "\u30B9\u30AD\u30EB\u30DD\u30A4\u30F3\u30C8\u30EA\u30BB\u30C3\u30C8\u5238"), /*#__PURE__*/React.createElement("span", {
+      className: resetTicketCount > 0 ? 'text-cyan-300' : 'text-slate-500'
+    }, "\u6240\u6301 ", resetTicketCount, "\u679A")), /*#__PURE__*/React.createElement("button", {
+      disabled: resetTicketCount <= 0 || resetPointCount <= 0,
+      onClick: () => {
+        if (!window.confirm(`このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`)) return;
+        const result = useUniqueSkillResetTicket(masu.id);
+        if (result) {
+          clearDraft();
+          if (onUpdated) onUpdated(result.nextMasu);
+        }
+      },
+      className: "w-full min-h-[42px] px-2 rounded-xl bg-cyan-700 text-[10px] font-black leading-tight disabled:opacity-30 disabled:bg-slate-700"
+    }, "\u914D\u5206\u6E08\u307F\u56FA\u6709\u6280P\u3092\u30EA\u30BB\u30C3\u30C8"), resetPointCount <= 0 && /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] text-slate-500 font-bold text-center"
+    }, "\u914D\u5206\u6E08\u307F\u56FA\u6709\u6280P\u304C\u306A\u3044\u305F\u3081\u4F7F\u7528\u3067\u304D\u307E\u305B\u3093")));
   };
   const renderSkillSection = mon => {
     const currentUnique = uniqueSkillAtLevel(mon.unique, mon.unique?.evoLevel);
@@ -23754,7 +23811,9 @@ function MonsterHeroGame() {
       className: "shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2"
     }, "\u30D0\u30C8\u30EB\u306E", /*#__PURE__*/React.createElement("br", null), DIFFICULTY_SETTINGS[item.skipDifficulty]?.label, /*#__PURE__*/React.createElement("br", null), "\u30B9\u30AD\u30C3\u30D7\u3067\u4F7F\u7528") : item.usage === 'breakthrough' ? /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 text-[9px] font-black text-fuchsia-300 text-center leading-tight px-2"
-    }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9650\u754C\u7A81\u7834\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
+    }, "\u795E\u6BBF\u306E", /*#__PURE__*/React.createElement("br", null), "\u9650\u754C\u7A81\u7834\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : item.usage === 'uniqueSkillReset' ? /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2"
+    }, "\u30DE\u30B9\u30E2\u30F3\u8A73\u7D30\u306E", /*#__PURE__*/React.createElement("br", null), "\u56FA\u6709\u6280\u5F37\u5316\u3067", /*#__PURE__*/React.createElement("br", null), "\u4F7F\u7528") : /*#__PURE__*/React.createElement("button", {
       onClick: () => setPendingItemUse(item.id),
       className: "shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase"
     }, "\u4F7F\u3046")))))), pendingItemUse && (() => {
