@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b19fe0036997f2f6
+// source-sha256: 20df06f7578323b2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 08:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 09:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8439,7 +8439,8 @@ const DyeMaskTouchEditor = ({
     }),
     pointersRef = useRef(new Map()),
     gestureRef = useRef(null),
-    lastTapRef = useRef(0);
+    lastTapRef = useRef(0),
+    previewFrameRef = useRef(null);
   const [ready, setReady] = useState(false),
     [error, setError] = useState(''),
     [view, setView] = useState('composite'),
@@ -8447,6 +8448,7 @@ const DyeMaskTouchEditor = ({
     [dirty, setDirty] = useState(false),
     [search, setSearch] = useState('');
   const [previewMaskUrl, setPreviewMaskUrl] = useState(null),
+    [previewRevision, setPreviewRevision] = useState(0),
     [previewColors, setPreviewColors] = useState(['red', 'green', 'blue']);
   const [color, setColor] = useState('red'),
     [tool, setTool] = useState('brush'),
@@ -8488,6 +8490,20 @@ const DyeMaskTouchEditor = ({
     restore = image => {
       if (image) context()?.putImageData(image, 0, 0);
     };
+  const requestCompositePreview = () => {
+    if (view !== 'composite' || previewFrameRef.current !== null) return;
+    previewFrameRef.current = requestAnimationFrame(() => {
+      previewFrameRef.current = null;
+      setPreviewRevision(v => v + 1);
+    });
+  };
+  const flushCompositePreview = () => {
+    if (previewFrameRef.current !== null) {
+      cancelAnimationFrame(previewFrameRef.current);
+      previewFrameRef.current = null;
+    }
+    if (view === 'composite') setPreviewRevision(v => v + 1);
+  };
   const checkpoint = () => {
     const image = snap();
     if (!image) return;
@@ -8687,8 +8703,7 @@ const DyeMaskTouchEditor = ({
     const c = maskRef.current,
       ctx = context();
     if (!c || !ctx) return;
-    let cancelled = false,
-      nextUrl = null;
+    let cancelled = false;
     const source = ctx.getImageData(0, 0, c.width, c.height),
       image = ctx.createImageData(c.width, c.height);
     image.data.set(source.data);
@@ -8699,7 +8714,7 @@ const DyeMaskTouchEditor = ({
     temp.getContext('2d').putImageData(image, 0, 0);
     temp.toBlob(blob => {
       if (cancelled || !blob) return;
-      nextUrl = URL.createObjectURL(blob);
+      const nextUrl = URL.createObjectURL(blob);
       setPreviewMaskUrl(previous => {
         if (previous) URL.revokeObjectURL(previous);
         return nextUrl;
@@ -8707,13 +8722,15 @@ const DyeMaskTouchEditor = ({
     }, 'image/png');
     return () => {
       cancelled = true;
-      if (nextUrl) URL.revokeObjectURL(nextUrl);
     };
-  }, [ready, view, historyTick, target.baseId]);
-  useEffect(() => () => setPreviewMaskUrl(previous => {
-    if (previous) URL.revokeObjectURL(previous);
-    return null;
-  }), []);
+  }, [ready, view, historyTick, previewRevision, target.baseId]);
+  useEffect(() => () => {
+    if (previewFrameRef.current !== null) cancelAnimationFrame(previewFrameRef.current);
+    setPreviewMaskUrl(previous => {
+      if (previous) URL.revokeObjectURL(previous);
+      return null;
+    });
+  }, []);
   const confirmDiscard = () => !dirty || window.confirm('未書き出しの編集があります。破棄してモンスターを切り替えますか？');
   const selectTarget = index => {
     if (index === targetIndex || !confirmDiscard()) return;
@@ -8770,6 +8787,7 @@ const DyeMaskTouchEditor = ({
     }
     ctx.putImageData(image, left, top);
     setDirty(true);
+    requestCompositePreview();
   };
   const fill = p => {
     const c = maskRef.current,
@@ -8938,6 +8956,7 @@ const DyeMaskTouchEditor = ({
       setPointer(null);
     }
     setHistoryTick(v => v + 1);
+    flushCompositePreview();
   };
   const resetOriginal = () => {
       if (!dirty || window.confirm('編集中の内容を破棄して元マスクを再読込しますか？')) {
@@ -9088,27 +9107,7 @@ const DyeMaskTouchEditor = ({
     key: id,
     onClick: () => setView(id),
     className: `min-h-[30px] rounded-lg text-[8px] font-black ${view === id ? 'bg-cyan-700' : 'bg-slate-800'}`
-  }, label))), view === 'composite' && /*#__PURE__*/React.createElement("div", {
-    className: "grid shrink-0 grid-cols-3 gap-1 px-2 pt-1"
-  }, Array.from({
-    length: dyeRegionCount(target.baseId)
-  }, (_, idx) => /*#__PURE__*/React.createElement("label", {
-    key: idx,
-    className: "text-[7px] text-fuchsia-200"
-  }, "\u67D3\u8272", '①②③'[idx], /*#__PURE__*/React.createElement("select", {
-    value: previewColors[idx] || '',
-    onChange: e => setPreviewColors(current => {
-      const next = [...current];
-      next[idx] = e.target.value || null;
-      return next;
-    }),
-    className: "block min-h-[28px] w-full rounded bg-slate-800 text-[8px]"
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "\u5143\u306E\u8272"), Object.keys(MASU_COLOR_TARGET).map(id => /*#__PURE__*/React.createElement("option", {
-    key: id,
-    value: id
-  }, MASU_COLOR_LABELS[id])))))), /*#__PURE__*/React.createElement("section", {
+  }, label))), /*#__PURE__*/React.createElement("section", {
     className: "relative m-2 min-h-0 flex-1 overflow-hidden rounded-xl bg-slate-600",
     style: {
       touchAction: 'none'
@@ -9154,8 +9153,8 @@ const DyeMaskTouchEditor = ({
     "aria-label": "\u67D3\u8272\u30DE\u30B9\u30AF\u7DE8\u96C6\u30EC\u30A4\u30E4\u30FC",
     className: "absolute inset-0 h-full w-full",
     style: {
-      display: view === 'body' || view === 'composite' ? 'none' : 'block',
-      opacity: view === 'boundary' ? opacity / 100 : 1
+      display: view === 'body' ? 'none' : 'block',
+      opacity: view === 'composite' ? 0 : view === 'boundary' ? opacity / 100 : 1
     }
   }), view === 'boundary' && outlineRef.current && /*#__PURE__*/React.createElement("img", {
     src: outlineRef.current.toDataURL(),
@@ -9230,7 +9229,27 @@ const DyeMaskTouchEditor = ({
     className: "mt-1 min-h-[28px] w-full rounded-lg bg-slate-700 text-[8px]"
   }, "\u8A73\u7D30 ", details ? '▲' : '▼'), details && /*#__PURE__*/React.createElement("div", {
     className: "mt-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-800 p-2 text-[8px]"
-  }, /*#__PURE__*/React.createElement("label", null, "\u30D6\u30E9\u30B7 ", size, "px", /*#__PURE__*/React.createElement("input", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "col-span-2 grid grid-cols-3 gap-1"
+  }, Array.from({
+    length: dyeRegionCount(target.baseId)
+  }, (_, idx) => /*#__PURE__*/React.createElement("label", {
+    key: idx,
+    className: "text-[7px] text-fuchsia-200"
+  }, "\u67D3\u8272", '①②③'[idx], /*#__PURE__*/React.createElement("select", {
+    value: previewColors[idx] || '',
+    onChange: e => setPreviewColors(current => {
+      const next = [...current];
+      next[idx] = e.target.value || null;
+      return next;
+    }),
+    className: "block min-h-[28px] w-full rounded bg-slate-700 text-[8px]"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "\u5143\u306E\u8272"), Object.keys(MASU_COLOR_TARGET).map(id => /*#__PURE__*/React.createElement("option", {
+    key: id,
+    value: id
+  }, MASU_COLOR_LABELS[id])))))), /*#__PURE__*/React.createElement("label", null, "\u30D6\u30E9\u30B7 ", size, "px", /*#__PURE__*/React.createElement("input", {
     className: "block w-full",
     type: "range",
     min: "2",
