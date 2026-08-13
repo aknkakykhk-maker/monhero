@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3c98ed8f9f02d33b
+// source-sha256: ed717048fcf1a25e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 17:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 17:14"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14996,7 +14996,11 @@ function MonsterHeroGame() {
   // 「何枚目か」の数え方をここに集約し、画面のダメージ予測とprocessTurnの実処理がずれないようにする。
   const isBreederCard = card => !!card && TEACHING_CARDS.some(t => t.id === card.id);
   // ガードカードの重み(弱ガードは半分)。軽減量の合計表示と実処理で同じ式を使う。
-  const guardCardWeight = card => card?.type === 'guard' ? 1 : card?.type === 'weak_guard' ? 0.5 : 0;
+  const guardCardWeight = card => card?.type === 'guard' || card?.subType === 'heal_guard_meloso' ? 1 : card?.type === 'weak_guard' ? 0.5 : 0;
+  const cardEffectMultiplier = (card, halved = false) => {
+    const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    return isBreederCard(card) && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'breederCardEffect') : halved ? 0.5 : 1;
+  };
   // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」。handleEnemyTurnの計算と同じ式にする。
   const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + effectiveDef * mult) : 0;
   // 氷海の支配者も、絶氷の楔の実効果と同じ発動状態を使う。
@@ -15324,7 +15328,17 @@ function MonsterHeroGame() {
     // 次ターン予約分(nextTurnBuffs)をそのまま今ターンの一時バフ(turnBuffs)へ入れ替える(新しい一時効果を追加してもここは変更不要)
     // 関数更新式で読むことで、このターン中に予約された最新のnextTurnBuffsを確実に反映する(古いクロージャ値を使わない)
     setNextTurnBuffs(latestNextTurnBuffs => {
-      setTurnBuffs(latestNextTurnBuffs);
+      const recoveryMult = latestNextTurnBuffs.melosoFullRecoveryMult || 0;
+      if (recoveryMult > 0) {
+        setHp(p => Math.min(effectiveMaxHp, p + Math.floor((effectiveMaxHp - p) * recoveryMult)));
+        setGuts(p => Math.min(effectiveMaxGuts, p + Math.floor((effectiveMaxGuts - p) * recoveryMult)));
+        addPopup(recoveryMult === 1 ? 'ライフ・ガッツ全回復!' : 'ライフ・ガッツ回復!', 'hero', 'text-rose-300 text-lg font-bold');
+      }
+      const {
+        melosoFullRecoveryMult,
+        ...activeTurnBuffs
+      } = latestNextTurnBuffs;
+      setTurnBuffs(activeTurnBuffs);
       return {};
     });
     const nextTurn = turnCount + 1;
@@ -15535,7 +15549,24 @@ function MonsterHeroGame() {
         fireTeachingFx(card.id);
         const owned = ownedTeachings.find(t => t.id === card.id);
         const level = owned ? owned.evoLevel : 0;
-        if (card.id === 'mua') {
+        if (card.id === 'meloso') {
+          const healVal = Math.floor(effectiveMaxHp * 0.3 * effMul);
+          totalHeal += healVal;
+          const gutsVal = Math.floor(effectiveMaxGuts * 0.3 * effMul);
+          setGuts(p => Math.min(effectiveMaxGuts, p + gutsVal));
+          currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * effMul;
+          currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * effMul;
+          guardTypeInTurn = 'guard';
+          addPopup(`⚡ ガッツ +${gutsVal}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
+          if (level >= 1 && usedCards.length >= 2) {
+            setNextTurnBuff('takenDamageMult', 1 - 0.5 * effMul);
+            addPopup('次ターン被ダメ50%減 予約!', 'hero', 'text-cyan-300 text-lg font-bold');
+          }
+          if (level >= 2 && usedCards.length >= 3) {
+            setNextTurnBuff('melosoFullRecoveryMult', effMul);
+            addPopup('次ターンライフ・ガッツ全回復 予約!', 'hero', 'text-rose-300 text-lg font-bold');
+          }
+        } else if (card.id === 'mua') {
           let hpRecRate = level === 1 ? 0.7 : level >= 2 ? 0.9 : 0.5,
             gutsRecRate = level >= 1 ? level >= 2 ? 0.9 : 0.7 : 0;
           let hpB = level === 1 ? 0.05 : level >= 2 ? 0.08 : 0.03,
@@ -17163,6 +17194,7 @@ function MonsterHeroGame() {
       return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;
     }
     if (t.id === 'kiki') return `次の${level + 1}ターン 使用可能カード枚数 +1・全体連撃 ${3 + level * 2}%アップ（バトル中永続・使用ごとに加算）`;
+    if (t.id === 'meloso') return level === 0 ? 'ライフ・ガッツ30%回復・現在ガード' : level === 1 ? 'ライフ・ガッツ30%回復・現在ガード・合計2枚使用で次ターン被ダメージ50%減' : 'ライフ・ガッツ30%回復・現在ガード・合計2枚で次ターン被ダメージ50%減・合計3枚で次ターン開始時ライフ・ガッツ全回復';
     return t.desc;
   };
   const getFullEvolutionDetails = t => [0, 1, 2].map(lvl => ({
@@ -25782,7 +25814,7 @@ function MonsterHeroGame() {
         const halved = isPenalty && previewPenaltyCnt > 0;
         const weight = guardCardWeight(card);
         if (weight > 0) {
-          const effect = halved ? 0.5 : 1;
+          const effect = cardEffectMultiplier(card, halved);
           previewGuardFlat += GUARD_EVOLUTION[guardLevel].flat * weight * effect;
           previewGuardMult += GUARD_EVOLUTION[guardLevel].mult * weight * effect;
         }
@@ -25847,7 +25879,11 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 7
-    }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round((Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct')) * 100), "%"), getTurnBuff('atkMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
+    }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round((Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct')) * 100), "%"), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement(Heart, {
+      size: 8
+    }), " \u6B21\u30BF\u30FC\u30F3\u5168\u56DE\u5FA9"), getTurnBuff('atkMult', 1.0) > 1 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Sparkles, {
       size: 8
@@ -25996,7 +26032,7 @@ function MonsterHeroGame() {
         }
         const gw = guardCardWeight(card);
         if (gw > 0) {
-          const e = halved ? 0.5 : 1;
+          const e = cardEffectMultiplier(card, halved);
           guardFlat += GUARD_EVOLUTION[guardLevel].flat * gw * e;
           guardMult += GUARD_EVOLUTION[guardLevel].mult * gw * e;
         }
@@ -26005,8 +26041,9 @@ function MonsterHeroGame() {
       const committedGuard = guardValueOf(guardFlat, guardMult);
       // 保留カードがガードなら、置いたあとの合計軽減も出す
       const pendingGuardWeight = guardCardWeight(pendingCardObj);
-      const pendingGuardHalved = pendingGuardWeight > 0 && committedPenaltyCnt > 0;
-      const projectedGuard = pendingGuardWeight > 0 ? guardValueOf(guardFlat + GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * (pendingGuardHalved ? 0.5 : 1), guardMult + GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * (pendingGuardHalved ? 0.5 : 1)) : committedGuard;
+      const pendingGuardHalved = pendingGuardWeight > 0 && !isBreederCard(pendingCardObj) && committedPenaltyCnt > 0;
+      const pendingGuardEffect = cardEffectMultiplier(pendingCardObj, pendingGuardHalved);
+      const projectedGuard = pendingGuardWeight > 0 ? guardValueOf(guardFlat + GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect, guardMult + GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect) : committedGuard;
       const pendingIsAtk = isAttackCard(pendingCardObj);
       // projected damage the pending card would add (as the next attack in order)
       let pendingAdd = 0;
@@ -26252,7 +26289,7 @@ function MonsterHeroGame() {
       }) => {
         // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
         const gw = guardCardWeight(card),
-          ge = halvedByIdx[idx] ? 0.5 : 1;
+          ge = cardEffectMultiplier(card, halvedByIdx[idx]);
         const gv = gw > 0 ? guardValueOf(GUARD_EVOLUTION[guardLevel].flat * gw * ge, GUARD_EVOLUTION[guardLevel].mult * gw * ge) : 0;
         return /*#__PURE__*/React.createElement("div", {
           key: idx,
