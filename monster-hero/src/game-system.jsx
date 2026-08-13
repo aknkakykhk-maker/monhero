@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 15:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 16:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8132,15 +8132,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return applyExtremeIntegerRule(finalDmg,specialRuleDifficulty,'damageDealt');
   }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, runMode, difficulty, extremeDifficulty]);
 
-  // ザンの勇者特性「連撃」による追加ヒット分の合計(プレビュー用)。実際のバトルログはprocessTurn内で別枠ヒットとして計算する
-  const getComboBonusDmg = useCallback((card, mon, baseDmg) => {
+  // 確定している追加ヒットまで含めた攻撃1枚の予測値。中央合計と各スロットで必ず同じ入口を使う。
+  // ランダム会心は含めず、会心予約だけは実処理と同じ倍率を適用する。
+  const getAttackPredictedDmg = useCallback((card, mon, baseDmg) => {
     if (baseDmg<=0) return 0;
+    const guaranteedCrit=getTurnBuff('guaranteedCrit',false);
+    const critMult=1.5+getPermaBuff('critDmgPct');
+    const mainDmg=guaranteedCrit?Math.floor(baseDmg*critMult):baseDmg;
     const comboDmgBonus = getPermaBuff('comboDmgPct');
-    let bonus = 0;
-    if (mainHero?.id==='Zan' && mon?.id==='Zan') bonus += Math.floor(baseDmg*(0.3+comboDmgBonus)); // 勇者特性「連撃」
-    if (card.type==='unique' && card.monId==='Zan') bonus += Math.floor(baseDmg*(0.2+comboDmgBonus)); // 固有技「連斬」自体の連撃(引き継ぎでも発生)
-    return bonus;
-  }, [mainHero, permaBuffs]);
+    const extraHit=(rate)=>{
+      const raw=Math.floor(baseDmg*rate);
+      return guaranteedCrit?Math.floor(raw*critMult):raw;
+    };
+    let total = mainDmg;
+    if (mainHero?.id==='Zan' && mon?.id==='Zan') total += extraHit(0.3+comboDmgBonus); // 勇者特性「連撃」
+    if (card.type==='unique' && card.monId==='Zan') total += extraHit(0.2+comboDmgBonus); // 固有技「連斬」
+    // 贖罪の追撃はメインヒットの確定値を基準にする（ランダム会心は予測しない）。
+    if (card.type==='unique' && (card.monId==='Ark'||card.monId==='Iblis')) total += Math.floor(mainDmg*0.2);
+    return total;
+  }, [mainHero, turnBuffs, permaBuffs]);
 
   // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
   // ダメージ前HPから算出した確定remainingHpと、今回加算済みのダメージを渡す。
@@ -12089,12 +12099,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {enemy&&enemyIntent&&!isBusy&&(()=>{
                 // ためる・待機・移動はダメージが無いので「予測」を出さない。
                 // 出すと必ず0になり、ガードを構える判断の邪魔になる
-                const dmg=getPredictedDamage(enemyIntent);
+                const rawDmg=getPredictedDamage(enemyIntent);
+                let previewGuardFlat=0, previewGuardMult=0, previewPenaltyCnt=0;
+                selectedCards.forEach(idx=>{
+                  const card=hand[idx];
+                  const isPenalty=!isBreederCard(card);
+                  const halved=isPenalty&&previewPenaltyCnt>0;
+                  const weight=guardCardWeight(card);
+                  if(weight>0){const effect=halved?0.5:1; previewGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*weight*effect; previewGuardMult+=GUARD_EVOLUTION[guardLevel].mult*weight*effect;}
+                  if(isPenalty) previewPenaltyCnt++;
+                });
+                const plannedDmg=Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult));
                 const tone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300'
                   :enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400'
                   :enemyIntent.type==='MOVE'?'bg-cyan-950 border-cyan-500/60 text-cyan-300'
                   :'bg-red-950 border-red-600/50 text-red-400';
-                return <div className={`mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[9px] font-black uppercase tracking-tight">{enemyIntent.label}{dmg>0?` (予測: ${dmg})`:''}</div></div>;
+                return <div className={`mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[9px] font-black uppercase tracking-tight">{enemyIntent.label}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
               })()}
               <div className={`flex flex-wrap justify-center gap-1 max-w-[340px] mt-auto mb-1 shrink-0 relative z-[40] ${focusedCard?'invisible':'visible'}`}>
                 {/* === 永続バフ（常時表示・数値が増減） === */}
@@ -12145,7 +12165,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   const card=hand[idx]; const slotIdx=cardAssignments[idx];
                   const isPenalty=!isBreederCard(card);
                   const halved=isPenalty&&committedPenaltyCnt>0;
-                  if(slotIdx!=null&&isAttackCard(card)) committedTotal+=getDmg(card,slotIdx,slots[slotIdx],0,0,halved);
+                  if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],0,0,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg);}
                   const gw=guardCardWeight(card);
                   if(gw>0){ const e=halved?0.5:1; guardFlat+=GUARD_EVOLUTION[guardLevel].flat*gw*e; guardMult+=GUARD_EVOLUTION[guardLevel].mult*gw*e; }
                   if(isPenalty) committedPenaltyCnt++;
@@ -12167,7 +12187,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
                     const maxUses=(mainHero?.id==='Ham'&&s?.id==='Ham')?cardLimit:1; if(assignedCount>=maxUses) continue;
                     if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                    pendingValidSlot=i; pendingAdd=getDmg(pendingCardObj,i,s,0,0,!isBreederCard(pendingCardObj)&&committedPenaltyCnt>0); break;
+                    pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,0,0,!isBreederCard(pendingCardObj)&&committedPenaltyCnt>0); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg); break;
                   }
                 }
                 const projectedTotal=committedTotal+pendingAdd;
@@ -12248,7 +12268,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     selectedCards.forEach(idx=>{if(idx!==pendingIdx&&!isBreederCard(hand[idx]))committedPenalty++;});
                     const isSecondOrLater = committedPenalty>=1 && !isBreederCard(pendingCardObj);
                     const baseDmg=getDmg(pendingCardObj,i,s,0,0,isSecondOrLater);
-                    previewDmg=baseDmg+getComboBonusDmg(pendingCardObj,s,baseDmg);
+                    previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg);
                     isPendingPreview=true; isPendingHalved=isSecondOrLater;
                   } else if(s){
                     // 選択順で「ブリーダーカード以外」を数え、2枚目以降は半減として予測する
@@ -12260,7 +12280,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       const halved=isPenalty&&globalPenaltyCnt>0;
                       if(cardAssignments[idx]===i){
                         const baseDmg=getDmg(card,i,s,0,0,halved);
-                        previewDmg+=baseDmg+getComboBonusDmg(card,s,baseDmg);
+                        previewDmg+=getAttackPredictedDmg(card,s,baseDmg);
                       }
                       if(isPenalty)globalPenaltyCnt++;
                     });
