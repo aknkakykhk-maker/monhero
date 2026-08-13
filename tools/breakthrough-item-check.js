@@ -49,7 +49,7 @@ for (let n = 1; n <= 40; n++) {
 }
 check('n回目 = 5 +(n-1)×1', formulaOk, formulaNg);
 check('30回目は34個', breakthroughItemCost(BREAKTHROUGH_MAX_COUNT) === 34, String(breakthroughItemCost(BREAKTHROUGH_MAX_COUNT)));
-check('最終限界突破(31回目)は35個', breakthroughItemCost(FINAL_BREAKTHROUGH_COUNT) === 35, String(breakthroughItemCost(FINAL_BREAKTHROUGH_COUNT)));
+check('最終限界突破(35回目)は39個', breakthroughItemCost(FINAL_BREAKTHROUGH_COUNT) === 39, String(breakthroughItemCost(FINAL_BREAKTHROUGH_COUNT)));
 check('おかしな回数でも落ちない',
   breakthroughItemCost(0) === 5 && breakthroughItemCost(-5) === 5 && breakthroughItemCost(null) === 5 && breakthroughItemCost('あ') === 5);
 
@@ -82,20 +82,18 @@ check('多く持っていても余分に減らさない', build(first, 1000).nex
 // 回数が進むと必要数も増える
 const tenth = makeMasu(INITIAL_MASU_LEVEL_CAP + 5 * 9, 9);
 check('10回目は14個必要', build(tenth, 14).ok === true && build(tenth, 13).ok === false && build(tenth, 14).psycheCost === 14);
-// 30凸→最終限界突破
+// 30凸→虹★1
 const thirtieth = makeMasu(180, 30);
-check('最終限界突破は35個必要', build(thirtieth, 35).ok === true && build(thirtieth, 34).ok === false,
-  `35個=${build(thirtieth, 35).ok} / 34個=${build(thirtieth, 34).ok}`);
-check('最終限界突破でもLv.200・最終扱いは変わらない',
-  build(thirtieth, 35).nextMasu.levelCap === MAX_MASU_LEVEL_CAP && build(thirtieth, 35).finalBreakthrough === true);
+check('31回目は35個必要', build(thirtieth, 35).ok === true && build(thirtieth, 34).ok === false);
+check('31凸はLv.200だが最終ではない', build(thirtieth, 35).nextMasu.levelCap === 200 && build(thirtieth, 35).finalBreakthrough === false);
 // 他の条件で弾かれるときは、アイテムを持っていても突破できない(誤って消費させない)
 check('レベルが上限に届いていなければ突破できない',
   build({ ...first, bondXp: 0 }, 999).ok === false);
-check('上限Lv.200なら何個持っていても突破できない', build(makeMasu(200, 31), 999).ok === false);
+check('35凸・上限Lv.400なら何個持っていても突破できない', build(makeMasu(400, 35), 999).ok === false);
 check('ダイヤが足りなければ突破できない',
   buildMasuBreakthrough({ masu: first, skillKey: 'own', gold: 0, psycheOwned: 999 }).ok === false);
 
-// 30回＋最終1回を通しでまわして、合計消費数が式どおりか
+// 30回＋虹5段階を通しでまわして、合計消費数が式どおりか
 let masu = makeMasu(INITIAL_MASU_LEVEL_CAP, 0);
 let stock = 100000, spent = 0, steps = 0, costs = [];
 while (steps < 40) {
@@ -108,10 +106,10 @@ while (steps < 40) {
   steps++;
 }
 const costAt = (n) => (costs.find(c => c[0] === n) || [])[1];
-check('通しでまわしても各回の必要数が式どおり', costAt(1) === 5 && costAt(30) === 34 && costAt(31) === 35,
-  `1回目=${costAt(1)} 30回目=${costAt(30)} 31回目=${costAt(31)}`);
-check('31回で打ち止め', steps === 31, `${steps}回`);
-check('31回ぶんの合計は620個', spent === 620, String(spent));
+check('通しでまわしても各回の必要数が式どおり', costAt(1) === 5 && costAt(30) === 34 && costAt(31) === 35 && costAt(35) === 39,
+  `1回目=${costAt(1)} 30回目=${costAt(30)} 31回目=${costAt(31)} 35回目=${costAt(35)}`);
+check('35回で打ち止め', steps === 35, `${steps}回`);
+check('35回ぶんの合計は770個', spent === 770, String(spent));
 
 // ===== 5. クリア報酬 =====
 const want = { Beginner: 1, Easy: 2, Normal: 3, Hard: 5, Expert: 7, Master: 10, GrandMaster: 15, Hell: 20, Legend: 25 };
@@ -119,7 +117,7 @@ for (const [diff, n] of Object.entries(want)) {
   check(`${DIFFICULTY_SETTINGS[diff].label}のクリア報酬は${n}個`, clearPsycheReward(diff) === n, String(clearPsycheReward(diff)));
 }
 check('難易度の並びが実データと一致している',
-  Object.keys(CLEAR_PSYCHE_REWARD).join(',') === Object.keys(DIFFICULTY_SETTINGS).join(','),
+  Object.keys(DIFFICULTY_SETTINGS).every(key => Object.hasOwn(CLEAR_PSYCHE_REWARD, key)),
   `報酬=${Object.keys(CLEAR_PSYCHE_REWARD).join(',')} / 難易度=${Object.keys(DIFFICULTY_SETTINGS).join(',')}`);
 check('全難易度に報酬が決まっている', Object.keys(DIFFICULTY_SETTINGS).every(d => clearPsycheReward(d) > 0));
 check('知らない難易度が来てもNormal扱いで落ちない', clearPsycheReward('NoSuchDifficulty') === 3 && clearPsycheReward(null) === 3);

@@ -12,6 +12,7 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(root, 'monster-hero/src/game-system.jsx'), 'utf8');
+const breederSource = fs.readFileSync(path.join(root, 'monster-hero/data/breeder.js'), 'utf8');
 
 let failed = 0;
 const check = (name, ok, detail = '') => {
@@ -29,10 +30,15 @@ vm.runInContext([
   grab('const XP_CURVE_EXPONENT', 'const BOND_XP_DISCOUNT'),
   grab('const BOND_XP_DISCOUNT', 'const rosterBaseId = (entryId, masuMons)'),
   'globalThis.__m={normalizeMasuProgression,buildMasuBreakthrough,buildMasuReincarnation,resetMasuForRebirth,'
-  + 'applyUniqueSkillPointPlan,uniqueSkillAtLevel,MAX_UNIQUE_SKILL_LEVEL,INITIAL_MASU_LEVEL_CAP,MAX_MASU_LEVEL_CAP,BREAKTHROUGH_LEVEL_CAP_GAIN,'
+  + 'applyUniqueSkillPointPlan,buildUniqueSkillPointReset,uniqueSkillAtLevel,MAX_UNIQUE_SKILL_LEVEL,INITIAL_MASU_LEVEL_CAP,MAX_MASU_LEVEL_CAP,BREAKTHROUGH_LEVEL_CAP_GAIN,'
   + 'totalBondXpForLevel,masuBondLevelInfo,breakthroughItemCost,masuRebirthCost,REINCARNATE_MIN_LEVEL};',
 ].join('\n'), ctx);
 const m = ctx.__m;
+
+const resetTicketDefinition = breederSource.match(/\{ id:'unique_skill_reset_ticket',[^\n]+/u)?.[0] || '';
+check('リセット券はマーケットで1000ダイヤの消耗アイテム', /type:'item'/.test(resetTicketDefinition)&&/cost:1000/.test(resetTicketDefinition)&&!/shop:false/.test(resetTicketDefinition));
+check('リセット券は所持済み扱いにならず連続購入できる', has("if (item.type === 'item') return false;")&&has("[item.id]: (prev[item.id] || 0) + 1"));
+check('ダイヤ不足では購入せず、購入時はダイヤと所持数を既存キーへ保存する', has('if (gold < item.cost) return;')&&has("storeSet('mh_gold', next, false)")&&has("storeSet('mh_owned_items', next, false)"));
 
 // Lv30(上限)まで育ち、固有技が最大まで行っているマスモン
 const maxedMasu = {
@@ -120,6 +126,19 @@ check('MAXを超える配分は確定できない',
 check('所持ポイントを超える配分は確定できない',
   m.applyUniqueSkillPointPlan({ ...multiSkillMasu,uniqueSkillPoints:1 },{own:2},['own'])===null);
 
+// --- 配分済み固有技ポイントのリセット ---
+const resetSource = {
+  ...multiSkillMasu, uniqueSkillLevels:{own:3,'inh:0':2}, uniqueSkillPoints:1,
+  bondXp:4321, levelCap:55, rebirthCount:4, reincarnateCount:2, distAptPoints:7,
+  statPoints:{hp:30,atk:6}, distApt:['S','A','B','C'], inheritedUniques:[{monId:'Suezo'}],
+  fusionHistory:[{subName:'副'}], colors:['#123456'], name:'維持確認',
+};
+const reset = m.buildUniqueSkillPointReset(resetSource);
+check('複数の固有技に配分した全ポイントを返還する', reset&&reset.refundedPoints===5&&reset.nextMasu.uniqueSkillPoints===6);
+check('すべての固有技Lvを未強化へ戻す', reset&&reset.nextMasu.uniqueSkillLevels.own===0&&reset.nextMasu.uniqueSkillLevels['inh:0']===0);
+check('固有技以外の個体情報を変更しない', reset&&['bondXp','levelCap','rebirthCount','reincarnateCount','distAptPoints','statPoints','distApt','inheritedUniques','fusionHistory','colors','name'].every(key=>JSON.stringify(reset.nextMasu[key])===JSON.stringify(m.normalizeMasuProgression(resetSource)[key])));
+check('配分済み固有技Pが0ならリセットできない', m.buildUniqueSkillPointReset({...resetSource,uniqueSkillLevels:{own:0}})===null);
+
 // --- ⑥ 画面から使える ---
 check('ポイントを使う処理がある',
   has('const spendUniqueSkillPoint = (masuId, plan) => {'));
@@ -129,6 +148,8 @@ check('マスモンの詳細から使える枠がある',
     && has('extraAfterApt: renderUniqueSkillPointBox(getMasuMon(rosterDetailMon.masuId)'));
 check('ポイントが0でも未使用数を表示する', has('未使用 固有技P：{normalized.uniqueSkillPoints}'));
 check('仮配分の増減・キャンセル・確定がある', has('changeDraft(choice.key,-1)')&&has('changeDraft(choice.key,1)')&&has('キャンセル')&&has('強化を確定'));
+check('リセット券の所持数・使用不可条件・確認文言がある', has('所持 {resetTicketCount}枚')&&has('disabled={resetTicketCount<=0||resetPointCount<=0}')&&has('スキルポイントリセット券を1枚消費します。'));
+check('リセット後は個体と券を既存キーへ保存する', grab('const useUniqueSkillResetTicket', '// 強化ポイントリセットの書').includes("storeSet('mh_masu_mons', next, false)")&&grab('const useUniqueSkillResetTicket', '// 強化ポイントリセットの書').includes("storeSet('mh_owned_items', next, false)"));
 check('最大まで育った技は押せない', has('maxed=choice.level>=MAX_UNIQUE_SKILL_LEVEL'));
 const namedUnique = { name:'モッチ砲', names:['モッチ砲','大モッチ砲','超モッチ砲'], baseMult:1, baseGuts:1 };
 check('固有技Lv.0の初期表示は初期技名になる',

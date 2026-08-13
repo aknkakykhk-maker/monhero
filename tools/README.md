@@ -44,8 +44,11 @@ node tools/build.js --check
 | `node compiled-runtime-check.js` | 配信用コードが `jsxDEV` / automatic JSX runtime など、`index.html` が用意していないランタイムを参照していないことと、React / ReactDOM の読込順を確認する。 |
 | `node undefined-reference-check.js` | `game-system.jsx` が「その場所からは見えない変数」を参照していないか、Babelでスコープをたどって確認する。構文としては正しいので `check-syntax.js` では見つからず、その画面を開いた瞬間だけ真っ白になる類の不具合を防ぐ。**改修後は必ず実行する。** |
 | `node dye-report.js [モンスターID...]` | 染色もどきの部位マスクを実画像で生成し、部位ごとの画素数・被覆率を出力する。回帰テスト用。 |
+| `node dye-mask-editor-check.js` | 汎用染色マスクエディタの縦横比、本体内だけの描画、外部連結領域だけの掃除、Undo、境界警告、PNG正規化と輪郭内の透明穴維持を確認する。 |
 | `node dye-report.js --save-baseline` | 現在の結果を `dye-baseline.json` に保存する。以降は実行のたびに差分が表示される。 |
 | `node dye-region-map.js out.png <ID> [y0 y1]` | 染色もどきの部位分けを絵で確かめる。元の絵と、部位ごとに塗り分けた絵(①赤・②黄・③青)を左右に並べて書き出す。被覆率だけでは分からない「どこが混ざっているか」を見るために使う。 |
+| `node undine-dye-mask-check.js` | ウンディーネの染色1（髪）・染色2（顔、首、耳、腕、尻尾、尾びれ）・染色3（服）と3色同時の本番マスクを、正解見本 `undine-dye-mask.PNG` と画素単位で比較する。正解PNGは検査時だけ読み込む。 |
+| `node yaobikuni-dye-mask-check.js` | ヤオビクニの染色1（髪・胸飾り・両腕〜手・下半身〜尾びれ）・染色2（左右のヒレ／羽状部分）・染色3（顔・耳・首〜胴体）を、保存済み3色マスクと画素単位で比較する。 |
 | `node region-map.js [モンスターID...]` | 部位分けを色分けしたPNGを `out/` に書き出す。目視確認用。 |
 | `node image-report.js` | `monster-hero/images/` のPNGをフォルダごとにサイズ順で出す。中身が同じ重複ファイル・どこからも参照されていないファイルも検出する。 |
 | `node monster-image-quality-check.js` | 敵・味方の全身画像数、PNG読込、透過隅、可視画素を検査する。 |
@@ -77,6 +80,7 @@ node tools/build.js --check
 | `node bond-ranking-dedupe-check.js` | 同じ人・同じ種類のマスモンが、個体ID付きの記録と古い記録に分かれて二重に並ばないことを確認する。 |
 | `node bond-ranking-check.js` | 絆ランキングの全party集計、新旧個体識別、最高Lv重複排除、空・失敗表示を確認する。 |
 | `node battle-check.js` | 実際にWAVEを自動で戦い、距離撃の取得・撃破ファンファーレ・引き継ぎ技の強化を確認する。 |
+| `node battle-damage-preview-check.js` | 味方の連撃・追撃を含む共通予測と、選択中ガードを反映した敵の予定ダメージ表示を静的に確認する。 |
 | `node enemy-defeat-check.js` | 反射ダメージの未満・同値・超過の境界値と、通常攻撃・固有技・連撃・追撃・反射が二重実行防止つきの共通撃破処理へ進むことを確認する。 |
 | `node battle-card-gesture-check.js` | カード名を含むカード全体から約10pxでスワイプへ切り替わり、終了後のclickを無効化しつつ通常タップと技変更を維持することを確認する。 |
 | `node bond-reward-check.js` | 周回終了時の勇者・参加・控えマスモンへの絆経験値配分、重複防止、上限・強化ポイント計算を確認する。 |
@@ -117,6 +121,7 @@ node tools/build.js --check
 | `node help-render-check.js` | ヘルプ画面のJSXを切り出してReactで実際に描画し、カテゴリ一覧・項目一覧・全項目の本文が最後まで描けることを確認する(未定義の変数を参照していれば失敗する)。 |
 | `node help-guide-check.js` | ヘルプ(攻略情報局)を確認する。data/help.js のデータの形、全項目に助手のひとことがあること、カテゴリ→項目→本文の3階層で描かれていること、本文の数値が実際の計算と一致することを見る。 |
 | `node data-cache-key-check.js` | index.htmlが読み込むdata/*.jsのキャッシュキーが中身と一致しているか確認する(古いデータが読まれて画面が真っ暗になるのを防ぐ)。 |
+| `node meloso-breeder-check.js` | メロソのカード定義、マーケット解放、6枠維持、回復・ガード・枚数条件・次ターン予約・予測共通化を確認する。 |
 | `node balance-second-card-check.js` | 同じターンの2枚目以降のカードが効果半減になるか(ブリーダーカードは対象外)と、かどみうむの効果量・説明文を確認する。 |
 | `node pasture-check.js` | HOME放牧設定の0体・1体・5体保存、旧セーブ互換、削除済みID除外、歩行タイマーの停止を確認する。 |
 | `node feature-check.js` | 実ブラウザでゲームを起動し、主要機能が動くかを確認する。 |

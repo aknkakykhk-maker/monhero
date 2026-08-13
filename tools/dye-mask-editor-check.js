@@ -1,0 +1,38 @@
+'use strict';
+const fs = require('fs');
+const vm = require('vm');
+const assert = require('assert');
+const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
+const pick = name => {
+  const match = source.match(new RegExp(`const ${name}=(.*?);\\n`));
+  assert(match, `${name} が見つかりません`);
+  return vm.runInNewContext(`(${match[1]})`);
+};
+const findOutside = pick('findOutside');
+const normalizeMask = pick('normalizeMask');
+const w=5,h=5,body=new Uint8ClampedArray(w*h*4);
+// 3x3の輪郭で囲み、中央は「目などの意図的な透明穴」として残す。
+for(let y=1;y<=3;y++)for(let x=1;x<=3;x++)if(x===1||x===3||y===1||y===3)body[(y*w+x)*4+3]=255;
+const outside=findOutside(body,w,h);
+assert.equal(outside[0],1,'外周の透明領域を本体外として検出する');
+assert.equal(outside[2*w+2],0,'閉じた透明穴を本体外に含めない');
+const image={data:new Uint8ClampedArray(w*h*4)};
+image.data.set([255,0,0,255],0);
+image.data.set([0,255,0,255],(2*w+2)*4);
+normalizeMask(image,outside);
+assert.equal(image.data[3],0,'PNG正規化で本体外を透明化する');
+assert.equal(image.data[(2*w+2)*4+3],255,'PNG正規化で輪郭内の透明穴にある編集結果を維持する');
+assert(source.includes("if(color!=='eraser'&&!body[global+3])continue"),'ブラシの色描画は本体アルファ内だけ');
+assert(source.includes("if((color!=='eraser'&&!body[d+3])"),'塗りつぶしの色描画は本体アルファ内だけ');
+assert(source.includes('範囲外を掃除') && source.includes('checkpoint();context().putImageData(image'),'一括掃除をUndo対象にする');
+assert(source.includes('warning.data[i]=255;warning.data[i+1]=0;warning.data[i+2]=255'),'範囲外警告を固定マゼンタで描画する');
+assert(source.includes('aspectRatio:`${imageSize.width} / ${imageSize.height}`'),'表示枠を元画像の縦横比に合わせる');
+assert(source.includes('b.width=m.width=wc.width=w;b.height=m.height=wc.height=h'),'本体・マスク・警告Canvasの画像座標を一致させる');
+assert(source.includes('debugMaskPlacement={{maskUrl:previewMaskUrl}}'),'合成表示は編集マスクを本番のDyedMonsterImageへ渡す');
+assert(source.includes("style={{display:view==='body'?'none':'block',opacity:view==='composite'?0"),'合成表示でも編集Canvasの座標領域を維持し、補助マスクだけ透明にする');
+assert(source.includes("requestAnimationFrame(()=>{previewFrameRef.current=null;setPreviewRevision")&&source.includes('flushCompositePreview();'),'合成表示を描画中はフレーム単位で更新し、pointerupで確定する');
+assert(!source.includes("{view==='composite'&&<div className=\"grid shrink-0 grid-cols-3"),'色選択UIで合成時だけviewportを縮めない');
+assert(source.includes("<section className=\"relative m-2 min-h-0 flex-1")&&source.includes("transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`"),'4表示モードで単一viewportとzoom/panを共有する');
+assert(source.includes('debugMaskPlacement?.maskUrl, debugMaskPlacement?.xPx'),'一時マスクURLの変更時に本番マスクを再読込する');
+assert(source.includes('onTryInGame(target,blob,previewColors)')&&source.includes('setMonsterImageDebugColors(colors||getMasuColors(preview))'),'合成とゲーム内確認で同じ色設定を引き継ぐ');
+console.log('OK: 合成中の逐次編集・共通viewport・マスク編集制限・外部連結領域・掃除/Undo・警告・PNG正規化・縦横比を確認しました');

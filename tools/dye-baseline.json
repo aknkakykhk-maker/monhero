@@ -130,5 +130,27 @@
       6220
     ],
     "uncolored": 10285
+  },
+  "Undine": {
+    "width": 512,
+    "height": 768,
+    "opaque": 119030,
+    "regions": [
+      48564,
+      62793,
+      14705
+    ],
+    "uncolored": -7032
+  },
+  "Yaobikuni": {
+    "width": 512,
+    "height": 768,
+    "opaque": 117210,
+    "regions": [
+      90684,
+      18870,
+      22259
+    ],
+    "uncolored": -14603
   }
 }

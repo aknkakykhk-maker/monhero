@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 02:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 02:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -320,7 +320,7 @@ const BOND_XP_DISCOUNT = 0.025;
 const xpForBondLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * BOND_XP_DISCOUNT));
 const bondLevelInfo = (totalXp) => {
   let level = 1, xp = totalXp;
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < MAX_BOND_LEVEL_ITERATIONS; i++) {
     const need = xpForBondLevel(level);
     if (xp < need) break;
     xp -= need; level++;
@@ -328,6 +328,7 @@ const bondLevelInfo = (totalXp) => {
   return { level, xpIntoLevel: xp, xpForNext: xpForBondLevel(level), totalXp };
 };
 const INITIAL_MASU_LEVEL_CAP = 30;
+const MAX_BOND_LEVEL_ITERATIONS = 400;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
 const MAX_UNIQUE_SKILL_LEVEL = 8;
@@ -350,6 +351,10 @@ const inheritedUniqueRunLevel = (unique, runLevel) => Math.max(0, Math.min(
   MAX_UNIQUE_SKILL_LEVEL,
   Math.floor(Number(runLevel != null ? runLevel : unique?.evoLevel) || 0),
 ));
+// みゃるの薬系は進化するたび、データのdmgStepぶん自傷率が下がる。
+// 表示と実戦処理で同じ計算を使い、進化後の説明と実効果がずれないようにする。
+const myaruSelfDamageRate = (card, level = card?.evoLevel || 0) =>
+  Math.max(0.1, card.selfDmg - level * card.dmgStep);
 // 固有技の表示名は固有技Lvで変わるため、重複判定には技の出自を表す不変IDを使う。
 // lineageId は今後データ側で明示でき、既存データは従来から保存されている monId へ安全にフォールバックする。
 const uniqueLineageId = (unique, fallbackMonId = null) => unique?.lineageId || unique?.monId || fallbackMonId || null;
@@ -389,7 +394,7 @@ const totalBondXpForLevel = (level) => {
 // 転生(新): 絆Lv REINCARNATE_MIN_LEVEL 以上で使える。レベルが REINCARNATE_LEVEL_DROP ぶん下がる
 //   代わりに、振った強化をすべて振り直せる。回数は reincarnateCount(新しい項目)に入れ、
 //   アイコンの「+N」で示す。
-const MAX_MASU_LEVEL_CAP = 200;
+const MAX_MASU_LEVEL_CAP = 400;
 // 限界突破でもらえる強化ポイント。初回(Lv30からの1回目)だけ多めにする
 const BREAKTHROUGH_FIRST_POINTS = 5;
 const BREAKTHROUGH_POINTS = 1;
@@ -414,21 +419,32 @@ const BREAKTHROUGH_STAR_TIERS = [
 // 通常の限界突破で到達できる回数。段階数×5 = 30回で、そのときのレベル上限はLv.180
 const BREAKTHROUGH_MAX_COUNT = BREAKTHROUGH_STAR_TIERS.length * BREAKTHROUGH_STARS_PER_TIER;
 const BREAKTHROUGH_FINAL_LEVEL_CAP = INITIAL_MASU_LEVEL_CAP + BREAKTHROUGH_LEVEL_CAP_GAIN * BREAKTHROUGH_MAX_COUNT;
-// 最終限界突破を終えた回数。ここだけ上限が+5ではなくLv.200へ一気に上がり、★は虹になる
-const FINAL_BREAKTHROUGH_COUNT = BREAKTHROUGH_MAX_COUNT + 1;
-// 虹は5個とも同じ★の内部に、赤→橙→黄→緑→水色→青→紫→ピンクの全色を左から並べる。
-// 白い輪郭の内側は端から端まで明色だけで塗り、中心が暗色や透明に見える層は重ねない。
-const RAINBOW_STAR_FILL = 'linear-gradient(90deg,#ff355d 0%,#ff8a24 14%,#ffe84a 28%,#43ef78 42%,#38e8ee 56%,#4388ff 70%,#a855f7 84%,#ff4fb8 100%)';
-const RAINBOW_STAR_COLORS = Array.from({ length: BREAKTHROUGH_STARS_PER_TIER }, () => RAINBOW_STAR_FILL);
-// 白い輪郭を芯にして、その外へ各方向から均等な虹色グローを出す。
-const RAINBOW_STAR_SHADOW = '-2px 0 4px rgba(255,53,93,.95),-1px -1px 4px rgba(255,232,74,.9),1px -1px 4px rgba(67,239,120,.9),2px 0 4px rgba(56,232,238,.95),1px 1px 4px rgba(67,136,255,.95),-1px 1px 4px rgba(255,79,184,.9),0 0 7px rgba(255,255,255,1)';
-const RAINBOW_STAR_STROKE = '0.65px rgba(255,255,255,1)';
+// 金★5のあと、虹★へ1個ずつ置き換わる5段階でLv.400へ到達する。
+const FINAL_BREAKTHROUGH_COUNT = BREAKTHROUGH_MAX_COUNT + BREAKTHROUGH_STARS_PER_TIER;
+const BREAKTHROUGH_LEVEL_CAPS = { 30:180, 31:200, 32:230, 33:270, 34:330, 35:400 };
+const breakthroughLevelCap = (count) => {
+  const n = Math.max(0, Math.min(FINAL_BREAKTHROUGH_COUNT, Math.floor(Number(count) || 0)));
+  return n <= BREAKTHROUGH_MAX_COUNT
+    ? INITIAL_MASU_LEVEL_CAP + n * BREAKTHROUGH_LEVEL_CAP_GAIN
+    : BREAKTHROUGH_LEVEL_CAPS[n];
+};
+// レベルアップ時の強化ポイント倍率。経験値量・必要経験値には掛けない。
+const levelUpPointMultiplier = (rebirthCount) => {
+  const n = Math.max(0, Math.floor(Number(rebirthCount) || 0));
+  return n >= 35 ? 3 : n >= 34 ? 2 : 1;
+};
+const RAINBOW_STAR_IMAGE = 'images/ui/breakthrough-rainbow-star.PNG';
 // 凸数から★の並びを作る。新しい色を先頭に、残りは1つ前の段階の色で埋める
 const breakthroughStars = (count) => {
   const n = Math.max(0, Math.floor(Number(count) || 0));
   if (n <= 0) return [];
-  // 最終限界突破(31回目)以降は虹★5。旧仕様で31回以上まで進めていた個体もここへ入る
-  if (n >= FINAL_BREAKTHROUGH_COUNT) return RAINBOW_STAR_COLORS.map(background => ({ key:'rainbow', color:'#ffffff', background, shadow:RAINBOW_STAR_SHADOW, stroke:RAINBOW_STAR_STROKE }));
+  // 31～35凸は、完成済みの虹★で金★を先頭から1個ずつ置き換える。
+  if (n > BREAKTHROUGH_MAX_COUNT) {
+    const rainbowCount = Math.min(BREAKTHROUGH_STARS_PER_TIER, n - BREAKTHROUGH_MAX_COUNT);
+    const rainbow = Array.from({ length:rainbowCount }, () => ({ key:'rainbow', image:RAINBOW_STAR_IMAGE }));
+    const gold = BREAKTHROUGH_STAR_TIERS[BREAKTHROUGH_STAR_TIERS.length - 1];
+    return rainbow.concat(Array.from({ length:BREAKTHROUGH_STARS_PER_TIER - rainbowCount }, () => gold));
+  }
   const capped = Math.min(n, BREAKTHROUGH_MAX_COUNT);
   const tierIndex = Math.floor((capped - 1) / BREAKTHROUGH_STARS_PER_TIER);
   const filled = ((capped - 1) % BREAKTHROUGH_STARS_PER_TIER) + 1;
@@ -483,9 +499,7 @@ const buildFusionBreakthroughPlan = ({ masu, fusionXp = 0, gold = 0, psycheOwned
     diamondCost += nextDiamondCost;
     diamondCosts.push(nextDiamondCost);
     gainedPoints += rebirthCount === 1 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS;
-    levelCap = levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP
-      ? MAX_MASU_LEVEL_CAP
-      : Math.min(MAX_MASU_LEVEL_CAP, levelCap + BREAKTHROUGH_LEVEL_CAP_GAIN);
+    levelCap = breakthroughLevelCap(rebirthCount);
   }
   const count = rebirthCount - normalized.rebirthCount;
   const psycheHave = ownedItemCount({ [BREAKTHROUGH_ITEM_ID]:psycheOwned }, BREAKTHROUGH_ITEM_ID);
@@ -560,6 +574,21 @@ const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
   Object.entries(allocations).forEach(([key, amount]) => { uniqueSkillLevels[key] = Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.max(0, Math.floor(Number(uniqueSkillLevels[key]) || 0)) + amount); });
   return { ...normalized, uniqueSkillLevels, uniqueSkillPoints: normalized.uniqueSkillPoints - total };
 };
+// 固有技へ配分済みのポイントだけを未使用へ戻す。個体のほかの育成情報はスプレッドでそのまま維持する。
+const buildUniqueSkillPointReset = (masu) => {
+  const normalized = normalizeMasuProgression(masu);
+  const refundedPoints = Object.values(normalized.uniqueSkillLevels)
+    .reduce((sum, level) => sum + Math.max(0, Math.floor(Number(level) || 0)), 0);
+  if (refundedPoints <= 0) return null;
+  return {
+    refundedPoints,
+    nextMasu: {
+      ...normalized,
+      uniqueSkillLevels: Object.fromEntries(Object.keys(normalized.uniqueSkillLevels).map(key => [key, 0])),
+      uniqueSkillPoints: normalized.uniqueSkillPoints + refundedPoints,
+    },
+  };
+};
 // 転生では個体の識別情報・外見・固有技・履歴だけを残し、振った強化は白紙に戻す。
 // オブジェクトスプレッドで旧育成値を残さないよう、維持対象を明示して新しい保存形を組み立てる。
 // toLevel を渡すとそのレベル相当の絆経験値から再開する(渡さなければLv1へ戻す)。
@@ -606,11 +635,15 @@ const applyBondXpGain = (masu, gain = 0) => {
   const bondXp = cappedBondXp(masu, gain);
   const after = bondLevelInfo(bondXp);
   const gainedLevels = Math.max(0, after.level - before.level);
+  const pointMultiplier = levelUpPointMultiplier(masu?.rebirthCount);
+  const gainedPoints = gainedLevels * pointMultiplier;
   return {
-    masu: { ...masu, bondXp, distAptPoints: (masu.distAptPoints || 0) + gainedLevels },
+    masu: { ...masu, bondXp, distAptPoints: (masu.distAptPoints || 0) + gainedPoints },
     before,
     after,
     gainedLevels,
+    gainedPoints,
+    pointMultiplier,
     xpGain: Math.max(0, bondXp - donationDiamondValue(masu.bondXp)),
   };
 };
@@ -843,12 +876,8 @@ const buildMasuBreakthrough = ({ masu, skillKey, gold, psycheOwned = 0 }) => {
   const keptSkillPoints = Math.max(0, Math.floor(Number(normalized.uniqueSkillPoints) || 0)) + (raisesSkill ? 0 : 1);
   const nextCount = normalized.rebirthCount + 1;
   const gainedPoints = nextCount === 1 ? BREAKTHROUGH_FIRST_POINTS : BREAKTHROUGH_POINTS;
-  // 30凸(上限Lv.180)まで来ていたら、この1回だけが最終限界突破。
-  // 上限を+5ではなくLv.200へ一気に上げ、★は虹になる。以降は上の levelCap 判定で突破できなくなる
-  const isFinal = normalized.levelCap >= BREAKTHROUGH_FINAL_LEVEL_CAP;
-  const nextLevelCap = isFinal
-    ? MAX_MASU_LEVEL_CAP
-    : Math.min(MAX_MASU_LEVEL_CAP, normalized.levelCap + BREAKTHROUGH_LEVEL_CAP_GAIN);
+  const isFinal = nextCount === FINAL_BREAKTHROUGH_COUNT;
+  const nextLevelCap = breakthroughLevelCap(nextCount);
   return {
     ok:true, cost, skillKey:raisesSkill ? skillKey : null, skillLevel:raisesSkill ? currentSkillLevel + 1 : null,
     raisesSkill, keptSkillPoints, gainedPoints, finalBreakthrough:isFinal,
@@ -1424,28 +1453,32 @@ const getColorSwatchHex = (rawColorId) => {
 //   {..., notBbox:[x0,y0,x1,y1] または矩形の配列} … その部位から必ず外す範囲(bboxの逆)
 // 配列が空/未定義のモンスターは部位分割が綺麗に取れなかった(単色に近い等)ため、従来通り全身一括の染色のみ対応。
 //
-// 人魚2体(ウンディーネ・ヤオビクニ)で「地の色のまま残す」範囲。
-// この2体は肌が髪・衣装と同系色で、しかも影の付いた肌(首すじ・鎖骨)は彩度まで髪と重なるため、
-// 色の条件だけでは首が髪に、胸元の肌が白い衣装に吸われてしまう(実測: ウンディーネの首は彩度0.44〜0.57、
-// 髪は0.90前後だが、影の濃い部分は見分けが付かない)。目・首・胸元の位置を実画像で測って範囲で外す。
+// 人魚2体の目は髪と同系色で、色だけでは分離できないため実測した範囲で必ず染色対象から外す。
 const UNDINE_EYE_BOXES = [[0.370, 0.152, 0.438, 0.196], [0.498, 0.152, 0.567, 0.196]];
-// 首すじ〜鎖骨〜胸元のV字。下へ行くほど衣装に挟まれて細くなるので2段に分けて近似する
-const UNDINE_SKIN_BOXES = [[0.437, 0.228, 0.530, 0.268], [0.452, 0.268, 0.522, 0.292],
-  [0.462, 0.292, 0.512, 0.306], [0.472, 0.306, 0.500, 0.318]];
+// ウンディーネの肌は、顔・首・耳・両腕・尾を別々に実測した範囲で判定する。
+// 一枚の胴体矩形にすると衣装を巻き込み、反対に細すぎると髪の下の肩や首が消えるため、
+// 輪郭の曲がりに合わせた小矩形を重ねている。色相条件も併用するので、矩形内の髪・衣装は染まらない。
+const UNDINE_SKIN_PART_BOXES = [
+  // 顔、左耳、右耳
+  [0.315, 0.095, 0.685, 0.238], [0.255, 0.135, 0.375, 0.198], [0.625, 0.135, 0.745, 0.198],
+  // 首（顎下から襟の合わせまで）
+  [0.435, 0.225, 0.565, 0.315],
+  // 左腕（肩から指先）
+  [0.320, 0.275, 0.440, 0.325], [0.295, 0.315, 0.415, 0.375],
+  [0.265, 0.365, 0.385, 0.425], [0.235, 0.415, 0.355, 0.475], [0.220, 0.465, 0.320, 0.540],
+  // 右腕（肩から指先）
+  [0.560, 0.275, 0.680, 0.325], [0.585, 0.315, 0.705, 0.375],
+  [0.615, 0.365, 0.735, 0.425], [0.645, 0.415, 0.765, 0.475], [0.680, 0.465, 0.780, 0.540],
+  // 腰から尾の付け根、尾、左右の尾びれ
+  [0.330, 0.475, 0.670, 0.620], [0.285, 0.600, 0.715, 0.790],
+  [0.000, 0.770, 0.535, 1.000], [0.465, 0.770, 1.000, 1.000],
+];
 const YAOBIKUNI_EYE_BOXES = [[0.378, 0.146, 0.444, 0.192], [0.500, 0.146, 0.568, 0.192]];
-// 素肌(首→肩→胸→おなか→腰)。輪郭沿いの影は彩度が上がってピンクの髪や緑と見分けが付かないため、
-// 体の形に沿って4段の矩形で外す。ここを外さないと、おなかの縁だけがピンクで縁取られる
-// 胸は帯(衣装)が覆っているので、素肌は 首 → おなか → 腰の3段。
-// 腰から下は尾のふちがV字に食い込むので、下へ行くほど幅を絞る
-const YAOBIKUNI_SKIN_BOXES = [[0.448, 0.205, 0.552, 0.240], [0.415, 0.292, 0.585, 0.415],
-  [0.455, 0.415, 0.545, 0.455], [0.475, 0.455, 0.525, 0.470]];
-// 胸の帯(緑の衣装)。緑の髪と色相が9°しか違わず取り合いになるので、位置で衣装(染色③)側へ寄せる
-const YAOBIKUNI_WRAP_BOX = [0.435, 0.232, 0.575, 0.292];
 // 頭と顔。ピンクの判定を薄い毛先まで届かせるため彩度の下限を0.16まで下げているので、
 // 頭頂の照り返し(彩度が抜けて色相が暖色へ振れる)や顔の陰影がピンク側へ流れないよう、
 // 頭から顎までをまとめてピンクの判定から外す。ピンクの毛はここより下にしか無い。
 // 髪・衣装(染色①③)はこの範囲でもそのまま染まる
-const YAOBIKUNI_FACE_BOX = [0.345, 0.0, 0.655, 0.208];
+const YAOBIKUNI_FACE_BOX = [[0.345, 0.0, 0.655, 0.208], [0.315, 0.145, 0.375, 0.205], [0.625, 0.145, 0.685, 0.205]];
 const MASU_COLOR_REGION_HUES = {
   // 2026年8月の新規透過イラストへ差し替え。体(染色①)・頭の葉(染色②)・口ばし(染色③)を色相で分ける。
   // 色相はイラストの実測値に合わせてある(体=330〜345のパステルピンク、葉=90前後、口ばし=30〜45の黄橙)。
@@ -1548,42 +1581,64 @@ const MASU_COLOR_REGION_HUES = {
   // 帽子と衣装のふち・肌・白目にも使われているため、bboxで尾のある範囲だけに絞る。
   // noEdgeGuard は「隣と色相が違う画素を無染色で残す」既定の除外を切るための指定
   // (髪と衣装、体と尾のように部位どうしが直に接するので、境目を残すと元の色の筋が出る)。
-  // 2026年8月に追加した人魚2体。髪と尻尾がどちらも同じ色相なので、色だけでは分けられない。
-  // 尻尾・腕のヒレ・衣装のある範囲を位置(bbox)で切り出し、残りを髪として扱う。
+  // 2026年8月に追加した人魚2体。髪・肌・衣装の境界を実画像の色と位置で分ける。
   // どちらも瞳が髪と同系色(ウンディーネ=青、ヤオビクニ=緑)で、彩度・明度でも切り分けられないため、
   // 髪の判定から左右の目だけを notBbox で外している(目・白目は染めない)。
-  //  ・ウンディーネ: 髪(染色①)/尻尾と腕のヒレ(染色②)/白い衣装(染色③)
-  //    肌は彩度0.23〜0.26の淡い水色。髪(sMin0.45)にも衣装の白バケツ(sMax0.22)にも入らないので無染色で残る。
+  //  ・ウンディーネ: 髪(染色①)/肌(顔・腕・尻尾、染色②)/白い衣装(染色③)
   //    衣装は明るい部分が彩度0.05〜0.20、影とベルトが0.22〜0.60と幅があるので、
   //    白バケツ+色相の2条件を同じ枠にまとめて拾う(片方だけだと裾や影が虫食いになる)
   Undine: [
     // 髪と尾は同じ青(色相210〜218)なので、髪として見る範囲を体より外側へ限る。
     // 胸から下まで全幅を髪にすると、スカートの合わせから覗く尾まで髪の色で染まってしまう
     { hue: 218, sMin: 0.45, bbox: [[0.0, 0.0, 1.0, 0.30], [0.0, 0.30, 0.455, 0.38], [0.545, 0.30, 1.0, 0.38],
-      [0.0, 0.38, 0.355, 0.50], [0.645, 0.38, 1.0, 0.50], [0.0, 0.50, 0.38, 0.78], [0.62, 0.50, 1.0, 0.78]], notBbox: [...UNDINE_EYE_BOXES, ...UNDINE_SKIN_BOXES], noEdgeGuard: true },
-    // 尾と腕(水のヒレ)。髪のハイライトは色相が尾とほぼ同じなので、体のある範囲だけに絞る
+      [0.0, 0.38, 0.355, 0.50], [0.645, 0.38, 1.0, 0.50],
+      // 腰より下は髪の外側の毛先だけに限定する。右へ曲がる尻尾も髪と同じ色相なので、
+      // ここを全幅の矩形にすると尻尾の付け根から中央のヒレまで染色①へ食い込む。
+      [0.0, 0.50, 0.36, 0.62], [0.70, 0.50, 1.0, 0.62],
+      [0.0, 0.62, 0.30, 0.70], [0.78, 0.62, 1.0, 0.70]], notBbox: UNDINE_EYE_BOXES, noEdgeGuard: true },
+    // 肌。顔・腕は低彩度の水色、尻尾は彩度の高い青なので位置と色相を併用する。
     [
-      // 尾と腕の水模様(明るい筋)は彩度0.25前後まで落ちる。ここを外すと染めたあとも
-      // 元の水色の筋だけが残るので拾う。肌は notBbox で必ず除く
-      { hue: 200, sMin: 0.25, bbox: [0.33, 0.30, 0.67, 0.78], notBbox: UNDINE_SKIN_BOXES, noEdgeGuard: true },
+      // 白目を拾わないよう白バケツではなく、肌に残っているごく薄い青の色相で判定する。
+      { hue: 200, sMin: 0.025, sMax: 0.44, vMin: 0.58, bbox: [[0.315, 0.095, 0.685, 0.285], [0.265, 0.275, 0.435, 0.540], [0.565, 0.275, 0.735, 0.540], [0.285, 0.475, 0.715, 0.790]], noEdgeGuard: true, noAAGuard: true },
+      // 耳と両腕（指先を含む）は髪より彩度が高い箇所もあるため、低彩度側の条件だけでは
+      // 髪（色相218）へ近い画素が染色①に流れる。肌の実測範囲内では彩度上限を設けず、
+      // 肌本来の色相200との距離で髪から分離する。中央の範囲は衣装の隙間から見える尾を拾う。
+      { hue: 200, sMin: 0.20, bbox: UNDINE_SKIN_PART_BOXES, notBbox: UNDINE_EYE_BOXES, noEdgeGuard: true, noAAGuard: true },
+      // 前腕の水面模様は白に近く色相が不安定になる。服と重ならない腕の外側だけを白バケツで補い、
+      // 模様を元色の島として残さず、肩から手先まで一続きの肌マスクにする。
+      { white: true, sMax: 0.80, vMin: 0.62, bbox: [[0.220, 0.335, 0.365, 0.540], [0.635, 0.335, 0.780, 0.540]], noEdgeGuard: true, noAAGuard: true },
       // 尾びれは透けていて彩度が0.2台まで落ち、半透明なので既定の「にじみ除外」でも消える。
       // 尾の先だけ彩度の下限を下げ、半透明でも染めるようにする(noAAGuard)
-      { hue: 200, sMin: 0.20, bbox: [[0.28, 0.70, 0.72, 0.78], [0.0, 0.78, 1.0, 1.0]], noEdgeGuard: true, noAAGuard: true },
+      { hue: 200, sMin: 0.12, bbox: [[0.285, 0.700, 0.715, 0.790], [0.0, 0.770, 1.0, 1.0]], noEdgeGuard: true, noAAGuard: true },
     ],
     [
-      { white: true, sMax: 0.30, vMin: 0.80, bbox: [0.375, 0.255, 0.625, 0.520], notBbox: UNDINE_SKIN_BOXES, noEdgeGuard: true },
-      { hue: 216, sMin: 0.22, sMax: 0.60, vMin: 0.80, bbox: [0.395, 0.272, 0.605, 0.500], notBbox: UNDINE_SKIN_BOXES, noEdgeGuard: true },
+      { white: true, sMax: 0.30, vMin: 0.80, bbox: [0.375, 0.255, 0.625, 0.520], noEdgeGuard: true },
+      { hue: 216, sMin: 0.22, sMax: 0.60, vMin: 0.80, bbox: [0.395, 0.272, 0.605, 0.500], noEdgeGuard: true },
     ],
   ],
-  //  ・ヤオビクニ: 緑の髪(染色①)/ピンク(染色②)/緑の尻尾・腕・衣装(染色③)
-  //    髪と尻尾はどちらも緑だが色相が分かれる(髪85前後・尻尾/腕/衣装78前後)ので、
-  //    髪は頭まわりへ範囲を絞ったうえで色相の近いほうへ割り当てる。
-  //    肌は彩度0.12なので sMin 0.30 に届かず、どの部位にも入らない
+  //  ・ヤオビクニ: 保存済み3色マスクを使用（下記の色相定義は染色の質感調整に利用）
   Yaobikuni: [
-    { hue: 86, sMin: 0.30, bbox: [0.0, 0.0, 1.0, 0.36], notBbox: [...YAOBIKUNI_EYE_BOXES, ...YAOBIKUNI_SKIN_BOXES, YAOBIKUNI_WRAP_BOX], noEdgeGuard: true },
+    [
+      { hue: [86, 77], sMin: 0.30, notBbox: YAOBIKUNI_EYE_BOXES, noEdgeGuard: true },
+      // 緑の前腕は肌との境界で彩度がほぼ白まで落ちる。腕の輪郭内だけ下限を下げ、
+      // 白い移行帯を塗り残さず、近接するピンク髪や肌へ緑マスクを侵食させない。
+      { hue: [86, 77], sMin: 0.035, bbox: [[0.20, 0.475, 0.37, 0.66], [0.63, 0.475, 0.80, 0.66]], noEdgeGuard: true },
+      { white: true, sMax: 0.35, vMin: 0.72, bbox: [[0.20, 0.475, 0.37, 0.66], [0.63, 0.475, 0.80, 0.66]], noEdgeGuard: true },
+    ],
     // 薄いピンク(首の後ろから覗く毛先)は彩度0.16まで下がるので、肌(彩度0.12)を割らない範囲で拾う
-    { hue: 341, sMin: 0.16, notBbox: [...YAOBIKUNI_SKIN_BOXES, YAOBIKUNI_FACE_BOX], noEdgeGuard: true },
-    { hue: 77, sMin: 0.30, bbox: [0.0, 0.23, 1.0, 1.0], notBbox: YAOBIKUNI_SKIN_BOXES, noEdgeGuard: true },
+    { hue: 341, sMin: 0.16, notBbox: YAOBIKUNI_FACE_BOX, noEdgeGuard: true },
+    // 肌は顔と上半身だけでなく、緑の前腕へつながる左右の上腕も同じ染色③。
+    // 腕の外側に沿う細い矩形を段階的に置き、隣接するピンク髪と緑の上衣へ肌判定を広げない。
+    [
+      { hue: 22, sMin: 0.015, sMax: 0.38, vMin: 0.58, bbox: [
+        [0.315, 0.095, 0.685, 0.235], [0.39, 0.205, 0.61, 0.47],
+        [0.315, 0.285, 0.415, 0.365], [0.585, 0.285, 0.685, 0.365],
+        [0.285, 0.345, 0.405, 0.425], [0.595, 0.345, 0.715, 0.425],
+        [0.265, 0.405, 0.385, 0.495], [0.615, 0.405, 0.735, 0.495],
+        [0.245, 0.475, 0.365, 0.565], [0.635, 0.475, 0.755, 0.565],
+        [0.235, 0.545, 0.345, 0.625], [0.655, 0.545, 0.765, 0.625],
+      ], noEdgeGuard: true },
+    ],
   ],
   Snegurochka: [
     { hue: 181, sMin: 0.60, noEdgeGuard: true },
@@ -1630,6 +1685,8 @@ const _isExcludedDyePixel = (baseId, hh, ss, vv, nx, ny) => {
 //  なり、逆に半径3だとまつ毛のような小さな部位まで塗り潰されてしまうため個別指定を撤去した)
 const MASU_COLOR_SMOOTH = {
   Tiger: { radius: 3, iterations: 1 },
+  // 正解見本の輪郭をそのまま使うウンディーネは、色相用の多数決を重ねない。
+  Undine: { radius: 1, iterations: 0 },
 };
 const _getSmoothParams = (baseId, w) => {
   const base = MASU_COLOR_SMOOTH[baseId] || { radius: 2, iterations: 1 };
@@ -1843,16 +1900,111 @@ const _buildHiResMaskUrls = (smoothed, regionDefs, src, w, h, natW, natH) => {
   }
   return outCanvases.map((canvas, idx) => { outCtxs[idx].putImageData(outDatas[idx], 0, 0); return canvas.toDataURL(); });
 };
+// ウンディーネは髪・肌・服がすべて青系で、色相や矩形だけでは腕の水面模様、髪との重なり、
+// 指先、尾びれの境界を一意に分けられない。undine-dye-mask.PNG を正本として256x384で
+// 2bit/px（0=髪、1=肌、2=服、3=対象外）へ事前変換した座標表を使う。PNG自体は実行時に
+// 読み込まず、既存のCanvasマスク生成・染色合成経路はそのまま利用する。
+const UNDINE_EXACT_REGION_SIZE = [256, 384];
+const UNDINE_EXACT_REGION_2BIT = "//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8/AMD/////////////////////////////////////////////////////////////////////////////////AAAA8P//////////////////////////////////////////////////////////////////////////////AAAAAADw////////////////////////////////////////////////////////////////////////////AwAAAAAAAPD/////////////////////////////////////////////////////////////////////////DwAAAAAAAAAA/////////////////////////////////////////////////////////////////////////wAAAAAAAAAAAMD//////////////////////////////////////////////////////////////////////w8AAAAAAAAAAAAA//////////////////////////////////////////////////////////////////////8AAAAAAAAAAAAAAPD///////////////////////////////////////////////////////////////////8/AAAAAAAAAAAAAAAA////////////////////////////////////////////////////////////////////AwAAAAAAAAAAAAAAAPz//////////////////////////////////////////////////////////////////wAAAAAAAAAAAAAAAADw/////////////////////////////////////////////////////////////////w8AAAAAAAAAAAAAAAAAwP////////////////////////////////////////////////////////////////8DAAAAAAAAAAAAAAAAAAD/////////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAA8P//////////////////////////////////////////////////////////////PwAAAAAAAAAAAAAAAAAAAPD//////////////////////////////////////////////////////////////w8AAAAAAAAAAAAAAAAAAADA//////////////////////////////////////////////////////////////8DAAAAAAAAAAAAAAAAAAAAAP//////////////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAD8////////////////////////////////////////////////////////////PwAAAAAAAAAAAAAAAAAAAAAA8P///////////////////////////////////////////////////////////w8AAAAAAAAAAAAAAAAAAAAAAMD///////////////////////////////////////////////////////////8PAAAAAAAAAAAAAAAAAAAAAADA////////////////////////////////////////////////////////////AwAAAAAAAAAAAAAAAAAAAAAAAP///////////////////////////////////////////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAD8/////////////////////////////////////////////////////////z8AAAAAAAAAAAAAAAAAAAAAAAAA/P////////////////////////////////////////////////////////8/AAAAAAAAAAAAAAAAAAAAAAAAAPD/////////////////////////////////////////////////////////DwAAAAAAAAAAAAAAAAAAAAAAAADw/////////////////////////////////////////////////////////w8AAAAAAAAAAAAAAAAAAAAAAAAAwP////////////////////////////////////////////////////////8DAAAAAAAAAAAAAAAAAAAAAAAAAMD/////////////////////////////////////////////////////////AwAAAAAAAAAAAAAAAAAAAAAAAAAA/////////////////////////////////////////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAP////////////////////////////////////////////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAD8//////////////////////////////////////////////////////8/AAAAAAAAAAAAABAAAAAAAAAAAAAA/P//////////////////////////////////////////////////////PwAAAAAAAAAAAFVVFQAAAAAAAAAAAPz//////////////////////////////////////////////////////w8AAAAAAAAAAMBVVRUAAAAAAAAAAADw//////////////////////////////////////////////////////8PAAAAAAAAwABAVVUVAAAAAAAAAAAA8P//////////////////////////////////////////////////////DwAAAAAAAEAAQFVVFQAMAAAAAAAAAPD//////////////////////////////////////////////////////wMAAAAAAABQAFBVVdUANAAAAAAAAADw//////////////////////////////////////////////////////8DAAAAAAAAUABQVVVVABQAAAAAAAAAwP//////////////////////////////////////////////////////AwAAAAAAAFQAUFVVVQDUAAAAAAAAAMD//////////////////////////////////////////////////////wAAAAAAAABUAFBVVVUAVAAAAAAAAADA//////////////////////////////////////////////////////8AAAAAAAAAVQBcVVVVAFQDAAAAAAAAwP//////////////////////////////////////////////////////AAAAAAAAAFUAVFVVVQBXAQAAAAAAAMD//////////////////////////////////////////////////////wAAAAAAAEBVA1RVVVUAVQEAAAAAAADA//////////////////////////////////////////////////////8AAAAAAABAVQFUVVVVAFUFAAAAAAAAAP//////////////////////////////////////////////////////AAAAAAAAUFUBVFVVVUBVBQAAAAAAAAD/////////////////////////////////////////////////////PwAAAAAAEFBVDVRVVVVAVTUwAAAAAAAA/////////////////////////////////////////////////////z8AAAAAABBcVQVUVVXVUFUVEAAAAAAAAP////////////////////////////////////////////////////8/AAAAAAAUVFU1VFVV1VBVFdAAAAAAAAD/////////////////////////////////////////////////////PwAAAAAAFFRVFVRVVRVUVdVQAAAAAAAA/////////////////////////////////////////////////////z8AAAAAABVUVVVUVVUVV1VVUAMAAAAAAP////////////////////////////////////////////////////8/AAAAAAAVV1VVX1VV1VVVVVQBAAAAAMD/////////////////////////////////////////////////////PwAAAABAFVVVVV1VVVVVVVVUDQAAAADA/////////////////////////////////////////////////////z8AAAAAQNVVVVVVVVVVVVVVVAUAAAAAwP////////////////////////////////////////////////////8/AAAAAHBVVVVVVVVVVVVVVVUFAAAAAMD/////////////////////////////////////////////////////PwAAAABQVVVVVVVVVVVVVVVVNQAAAADA/////////////////////////////////////////////////////z8AAAAAUFVVVVVVVVVVVVVVVRUAAAAAwP///////////////////////////////////////////////////181AAAAAFBVVVVVVVVVVVVVVVUVAAAAAHBV/f///////////////////////////////////////////////39VVVUNAABQVVV/VVVVVVVV/VdVFQAAAFdVVdX///////////////////////////////////////////////9/VVVVFQAAUFX//19VVVVV9f//VxUAAEBVVVX1/////////////////////////////////////////////////1VVVRUAAFDV//9/VVVVVfX//18VAABAVVVV/f////////////////////////////////////////////////9VVVUVAABQ/f//f1VVVVX1////FQAAQFVVVf//////////////////////////////////////////////////V1VVFQAAUP3//39VVVVV/f///xcAAEBVVdX//////////////////////////////////////////////////19VVRUAAFD9//9/VVVVVf3///8VAABAVVX1//////////////////////////////////////////////////9/VVUVAABQ/f//f1VVVVX9////NQAAwFVV/f///////////////////////////////////////////////////1dVFQAAUP3//39VVVVV/f//fwUAAEBVVf////////////////////////////////////////////////////9fVRUAAHD1//9/VVVVVfX//38FAABAVdX/////////////////////////////////////////////////////f1UVAABA9f//f1VVVVX1//9fBQAAQFX1//////////////////////////////////////////////////////9UFQAAQNX//19VVVVV9f//Vw0AAEBV/P//////////////////////////////////////////////////////cBUAAMBV//9fVVVVVdX//1cBAABAFfz//////////////////////////////////////////////////////wAVAAAAVf3/V1VVVVXV/39VAQAAQAH8/////////////////////////////////////////////////////z8AEAAAEFfV/1VVVVVVVf1XVRAAAMAA/P////////////////////////////////////////////////////8/AAAAAFBXVVVVVVVVVVVVVdUVAAAAAPz/////////////////////////////////////////////////////PwAAAABwVVVVVVVVVVVVVVVVFQAAAAD8/////////////////////////////////////////////////////z8AAAAAQFVVVVVVVVVVVVVVVQUAAAAA/P////////////////////////////////////////////////////8/AAAAAEBVVVVVVVVVVVVVVVUFAAAAAPz/////////////////////////////////////////////////////PwAAAAAAVVVVVVVVVVVVVVVVDQAAAAD8/////////////////////////////////////////////////////z8AAAAAAFVVVVVVVVVVVVVVVQEAAAAA/P////////////////////////////////////////////////////8/AAAAAABUVVVVVVVVVVVVVVUDAAAAAPz/////////////////////////////////////////////////////PwAAAAAAVFVVVVVVVVVVVVVVAAAAAAD8/////////////////////////////////////////////////////z8AAAAAAFBVVVVVVVVVVVVVFQAAAAAA8P////////////////////////////////////////////////////8/AAAAAABAVVVVVVVVVVVVVQUAAAAAAPD/////////////////////////////////////////////////////PwAAAAAAAFdVVVVVVVVVVVUDAAAAAADw/////////////////////////////////////////////////////z8AAAAAAABQVVVVVVVVVVUVAAAAAAAA8P////////////////////////////////////////////////////8/AAAAAAAAAFVVVVVVVVVVAQAAAAAAAPD/////////////////////////////////////////////////////PwAAAAAAAABQVVVVVVVVFQAAAAAAAADw/////////////////////////////////////////////////////z8AAAAAAAAAAFRVVVVVVQAAAAAAAAAA8P////////////////////////////////////////////////////8/AAAAAAAAAAAAVFVVVQMAAAAAAAAAAMD/////////////////////////////////////////////////////DwAAAAAAAAAAAFBVVdUAAAAAAAAAAADA/////////////////////////////////////////////////////w8AAAAAAAAAAABQVVXVAAAAAAAAAAAAwP////////////////////////////////////////////////////8PAAAAAAAAAAAAUFVV1QAAAAAAAAAAAMD/////////////////////////////////////////////////////DwAAAAAAAAAAAFBVVdUAAAAAAAAAAAAA/////////////////////////////////////////////////////w8AAAAAAAAAAABQVVXVAAAAAAAAAAAAAP////////////////////////////////////////////////////8PAAAAAAAAAAAAWFVVVQMAAAAAAAAAAAD/////////////////////////////////////////////////////DwAAAAAAAAAAwFZVVVULAAAAAAAAAAAA/////////////////////////////////////////////////////wMAAAAAAAAAALBWVVVVKwAAAAAAAAAAAPz///////////////////////////////////////////////////8DAAAAAAAAAACsVlVVVasAAAAAAAAAAAD8////////////////////////////////////////////////////AwAAAAAAAADAqVZVVVWqBwAAAAAAAAAA/P///////////////////////////////////////////////////wMAAAAAAAAAVapWVVVVqlYBAAAAAAAAAPD///////////////////////////////////////////////////8AAAAAAAAAVJWqVlVVVapaVQAAAAAAAADw////////////////////////////////////////////////////AAAAAAAAQFW1qlZVVdWqelUFAAAAAAAA8P///////////////////////////////////////////////////wAAAAAAAFxVpapWVVWVqmpV1QAAAAAAAMD///////////////////////////////////////////////////8AAAAAAABUVamqVlVVtaqqVVUAAAAAAADA//////////////////////////////////////////////////8/AAAAAAAAUFWpql5VVaWqqldVAAAAAAAAAP//////////////////////////////////////////////////PwAAAAAAAFBVqqpaVVWtqqpWVQAAAAAAAAD//////////////////////////////////////////////////z8AAAAAAABQVaqqWlVVqaqqXtUAAAAAAAAA//////////////////////////////////////////////////8/AAAAAAAAUJWqqnpVVaqqqloVAAAAAAAAAPz/////////////////////////////////////////////////DwAAAAAAQECVqqpqVdWqqqpaFQwAAAAAAAD8/////////////////////////////////////////////////w8AAAAAAEBBpaqqalWVqqqqajUHAAAAAAAA8P////////////////////////////////////////////////8PAAAAAADA9aWqqqpVpaqqqmpFBQAAAAAAAPD/////////////////////////////////////////////////AwAAAAAAAFWtqqqqVa2qqqrqXQUAAAAAAADA/////////////////////////////////////////////////wMAAAAAAABVqaqqqlepqqqqqlUFAAAAAAAAwP////////////////////////////////////////////////8DAAAAAAAAVamqqqpWqqqqqqpVDQAAAAAAAAD/////////////////////////////////////////////////AAAAAAAAAFWpqqqqnqqqqqqqVQEAAAAAAAAA/////////////////////////////////////////////////wAAAAAAAABXqaqqqrqqqqqqqlUBAAAAAAAAAPz//////////////////////////////////////////////z8AAAAAAAAAVKmqqqqqqqqqqqpVAQAAAAAAAAD8//////////////////////////////////////////////8/AAAAAAAQAFSpqqqqqqqqqqqqVQAQAAAAAAAA8P//////////////////////////////////////////////PwAAAAAAUABUqaqqqqqqqqqqqlUAFAAAAAAAAMD//////////////////////////////////////////////w8AAAAAAFABUKmqqqqqqqqqqqrVABUAAAAAAADA//////////////////////////////////////////////8PAAAAAABUBVCpqqqqqqqqqqqqFUBVAAAAAAAAAP//////////////////////////////////////////////AwAAAAAAVBVwqaqqqqqqqqqqqjVQVQAAAAAAAAD//////////////////////////////////////////////wMAAAAAAFRVQK2qqqqqqqqqqqoFVFUAAAAAAAAA/P////////////////////////////////////////////8AAAAAAABVVcWlqqqqqqqqqqrqTVVVAwAAAAAAAPD/////////////////////////////////////////////AAAAAAAAVVXVpaqqqqqqqqqqalVVVQEAAAAAAADw////////////////////////////////////////////PwAAAAAAAFVVVaWqqqqqqqqqqmpVVVUBAAAAAAAAwP///////////////////////////////////////////z8AAAAAAEBVVVWlqqqqqqqqqqrqVVVVAQAAAAAAAAD///////////////////////////////////////////8PAAAAAABAVVVVtaqqqqqqqqqqOlVVVQUAAAAAAAAA////////////////////////////////////////////DwAAAAAAQFVVVbGqqqqqqqqqqgpVVVUFAAAAAAAAAPz//////////////////////////////////////////wMAAAAAAFBVVVWhqqqqqqqqqqoKVFVVBQAAAAAAAADw//////////////////////////////////////////8AAAAAAABQVVVVoKqqqqqqqqqqClRVVTUAAAAAAAAA8P//////////////////////////////////////////AAAAAAAAUFVVVaCqqqqqqqqqqgpUVVUVAAAAAAAAAMD/////////////////////////////////////////PwAAAAAAAFRVVdWwqqqqqqqqqqo6UFVVFQAAAAAAAAAA/////////////////////////////////////////z8AAAAAAABUVVUVgKqqqqqqqqqqClBVVdUAAAAAAAAAAP////////////////////////////////////////8PAAAAAAAAVFVVFYCqqqqqqqqqqgpAVVVVAAAAAAAAAAD8////////////////////////////////////////DwAAAAAAAFVVVQWAqqqqqqqqqqoKQFVVVQAAAAAAAAAA8P///////////////////////////////////////wMAAAAAAABVVVUFgKqqqqqqqqqqDkBVVVUBAAAAAAAAAMD///////////////////////////////////////8AAAAAAABAVVVVDbCqqqqqqqqqqgoAVVVVAQAAAAAAAADA////////////////////////////////////////AAAAAAAAQFVVVQGgqqqqqqqqqqoqAFVVVQUAAAAAAAAAAP//////////////////////////////////////PwAAAAAAAFBVVVUBoKqqqqqqqqqqOgBXVVUFAAAAAAAAAAD8/////////////////////////////////////z8AAAAAAABUVVVVAKCqqqqqqqqqqgoAVFVVFQAAAAAAAAAA/P////////////////////////////////////8PAAAAAAAAVFVVVQCgqqqqqqqqqqo6AFRVVdUAAAAAAAAAAPD/////////////////////////////////////DwAAAAAAAFVVVdUAoKqqqqqqqqqqKgBQVVVVAAAAAAAAAADA/////////////////////////////////////wMAAAAAAMBVVVUVAKiqqqqqqqqqqqoAUFVVVQEAAAAAMAAAAP////////////////////////////////////8AAAAAAABAVVVVFQCoqqqqqqqqqqqqAFBVVVUBAAAAAMAAAAD/////////////////////////////////////AAAMAAAAUFVVVTUAqqqqqqqqqqqqqgJAVVVVBQAAAADAAwAA/P//////////////////////////////////PwAAAAAAAFxVVVUFAKqqqqqqqqqqqqoOQFVVVTUAAAAAAA8AAPD//////////////////////////////////z8AAAMAAABUVVVVBYCqqqqqqqqqqqqqCkBVVVUVAAAAAAAPAADw//////////////////////////////////8PAMAAAAAAV1VVVQGAqqqqqqqqqqqqqirAVVVV1QAAAAAAPwAAwP//////////////////////////////////DwDAAAAAAFVVVVUBoKqqqqqqqqqqqqoqAFVVVVUAAAAAAPwAAAD//////////////////////////////////wMA8AAAAEBVVVVVA6CqqqqqqqqqqqqqqgBVVVVVAwAAAAD8AwAA/P////////////////////////////////8DADwAAABAVVVVVQCoqqqqqqqqqqqqqqoDVFVVVQEAAAAA8A8AAPz/////////////////////////////////AAA8AAAAUFVVVVUAq6qqqqqqqqqqqqqqAFRVVVUNAAAAAPA/AADw/////////////////////////////////wAAPwAAAFBVVVUVAKqqqqqqqqqqqqqqqgBcVVVVBQAAAADwPwAAwP///////////////////////////////z8AwA8AAABUVVVVNQCqqqqqqqqqqqqqqqoAUFVVVTUAAAAAwP8AAMD///////////////////////////////8/AMAPAAAAVFVVVQWAqqqqqqqqqqqqqqqqAnBVVVUVAAAAAMD/AwAA////////////////////////////////DwDwDwAAAFVVVVUNgKqqqqqqqqqqqqqqqg5AVVVVFQAAAAAA/w8AAPz//////////////////////////////w8A8AMAAABVVVVVAaCqqqqqqqqqqqqqqqoKAFVVVVUAAAAAAP8/AAD8//////////////////////////////8DAPwDAABAVVVVVQCgqqqqqqqqqqqqqqqqOgBVVVVVAAAAAAD8PwAA8P//////////////////////////////AwD/AwAAQFVVVVUAqKqqqqqqqqqqqqqqqioAVFVVVQEAAAAA/P8AAPD//////////////////////////////wAA/wAAAHBVVVUVAKiqqqqqqqqqqqqqqqrqAFxVVVUBAAAAAPz/AwDA//////////////////////////////8AwP8AAABQVVVVNQCoqqqqqqqqqqqqqqqqqgBQVVVVDQAAAADw/w8AAP//////////////////////////////AMD/AAAAXFVVVQUAqKqqqqqqqqqqqqqqqqoCQFVVVQUAAAAA8P8PAAD//////////////////////////////wDw/wAAAFRVVVUBAKiqqqqqqqqqqqqqqqqqAkBVVVUFAAAAAMD/PwAA/P///////////////////////////z8A8D8AAABUVVVVAwCqqqqqqqqqqqqqqqqqqg4AVVVVFQAAAADA//8AAPz///////////////////////////8/APw/AAAAVVVVVQAAqqqqqqqqqqqqqqqqqqoKAFRVVRUAAAAAwP//AADw////////////////////////////PwD8PwAAAFVVVRUAgKqqqqqqqqqqqqqqqqqqOgBUVVXVAAAAAAD//wMA8P///////////////////////////w8A/D8AAEBVVVUFAICqqqqqqqqqqqqqqqqqqioAUFVVVQAAAAAA//8PAMD///////////////////////////8PAP8/AABAVVVVBQCwqqqqqqqqqqqqqqqqqqoqAEBVVVUDAAAAAP//DwDA////////////////////////////DwD/PwAAUFVVVQEAoKqqqqq6qqqqqqqqqqqqqgBAVVVVAQAAAAD8/z8AwP///////////////////////////w/A/z8AAFRVVVUAAKyqqqqq16qqqqqqqqqqqqoAAFVVVQUAAAAA/P//AAD///////////////////////////8PwP8/AABVVVVVAACoqqqqalWpqqqqqqqqqqqqAgBUVVUVAAAAAPz//wAA////////////////////////////D8D/PwBAVVVVFQAAqKqqql5VtaqqqqqqqqqqqgIAVFVVVQAAAADw//8DAPz//////////////////////////w/w/z8AUFVVVQUAAKqqqqpVVVWqqqqqqqqqqqoOAFBVVVUBAAAA8P//AwD8//////////////////////////8P8P8/AFxVVVUFAACqqqpaVVVVraqqqqqqqqqqCgBQVVVVDQAAAPD//w8A/P//////////////////////////D/D/PwBXVVVVBQDAqqqqV1VVVdWqqqqqqqqqqgoAUFVVVTUAAADA//8PAPD//////////////////////////w/w/z8AVVVVVQUAgKqqalVVVVVVqaqqqqqqqqoqAFBVVVXVAAAAwP//PwDw//////////////////////////8P8P8/QFVVVVUFAICqqlZVVVVVVdWqqqqqqqqqKgBQVVVVVQAAAMD//z8A8P//////////////////////////D/D/P1BVVVVVBQCgqupVVVVVVVVVraqqqqqqqioAcFVVVVUBAADA//8/APD//////////////////////////w/8//9UVVVVVQUAoKpeVVVVVVVVVVWqqqqqqqqqAEBVVVVVBQAAwP///wDw//////////////////////////8P/P//VFVVVVUBAKCqV1VVVVVVVVVVlaqqqqqqqgBAVVVVVTUAAMD///8AwP//////////////////////////P/z//1VVVVVVAQCoqlVVVVVVVVVVVVW1qqqqqqoAQFVVVVUVAAAA////A8D//////////////////////////z/8/39VVVVVVQMAqKpVVVVVVVVVVVVVVfWqqqqqAwBVVVVV1QAAAP///wPA//////////////////////////8//P9/VVVVVVUAAKiqVVVVVVVVVVVVVVVVVa+qqgIAVVVVVVUAAAD///8DwP////////////////////////////D/X1VVVVXVAACr6lVVVVVVVVVVVVVVVVVVraoCAFRVVVVVAwAA////D8D////////////////////////////w/19VVVVVFQAAqmpVVVVVVVVVVVVVVVVVVa2qAgBUVVVVVQEAAP///w/A////////////////////////////8/9XVVVVVwUAAKpqVVVVVVVVVVVVVVVVVVWlqg4AUFVVVVUNAAD///8PwP//////////////////////////////V1VVVVcFAACqalVVVVVVVVVVVVVVVVVVpaoKAFAVVVVVBQAA////D8D//////////////////////////////1VVVdVVAQAAq2pVVVVVVVVVVVVVVVVVVaWqDgBAFVVVVQUAAP///z/A//////////////////////////////9VVVUVVQMAAKh6VVVVVVVVVVVVVVVVVVWlqgIAwNVUVVU1AMD///8/wP//////////////////////////////VVVVNVUAAACgWlVVVVVVVVVVVVVVVVVVpaoCAABVVFVVFQDA////P8D//////////////////////////////1VVVQUVAAAAgFpVVVVVVVVVVVVVVVVVVaWqAAAAVFBVVRUAwP///z/A/////////////////////////////39VVVUNBQAAAABaVVVVVVVVVVVVVVVVVVW1KgAAABBQVVUVAMD///8/wP////////////////////////////9/VVVVAQAADAAAWFVVVVVVVVVVVVVVVVVVtQoAAAAAcFVVFQDA////P8D/////////////////////////////f1VVVQMAAAwAAFBVVVVVVVVVVVVVVVVVVbUCAAAAAEBVVTQA8P///z/A//////////////////////////////9f1VUAAAAPAABcVVVVVVVVVVVVVVVVVVWVAAAAAADAFVUAAPD///8/wP//////////////////////////////X1XVAAAADwAAVFVVVVVVVVVVVVVVVVVVFQAAAAAAANVUAAD8////P8D//////////////////////////////1919QAAAA8AAFRVVVVVVVVVVVVVVVVVVRUAAAAAAAAUUAAA/P///z/w//////////////////////////////9///0AAAAPAABUVVVVVVVVVVVVVVVVVVUVAAAAAAAAAAAAAP////8/8P//////////////////////////////////AAAAPwAAVFVVVVVVVVVVVVVVVVVVFQAAAAAAAAwAAAD/////P/D//////////////////////////////////wAAwD8AAFRVVVVVVVVVVVVVVVVVVRUAAAAAAAAMAADA/////z/8//////////////////////////////////8AAMA/AABUVVVVVVVVVVVVVVVVVVUVAAAAAAAADAAA8P////8//P//////////////////////////////////AADA/wAAVFVVVVVVVVVVVVVVVVVVFQAAAAAAAA8AAPz/////D/z//////////////////////////////////wMAwP8AAFRVVVVVVVVVVVVVVVVVVRUAAAAAAAAPAAD//////w////////////////////////////////////8DAMD/AABUVVVVVVVVVVVVVVVVVVUVAAAAAAAADwAA///////P////////////////////////////////////AwDA/wMAVFVVVVVVVVVVVVVVVVVVFQAAAAAAwA8AAP//////w////////////////////////////////////w8AwP8DAFRVVVVVVVVVVVVVVVVVVRUAAAAAAMAPAMD///////P///////////////////////////////////8PAMD/DwBXVVVVVVVVVVVVVVVVVVU1AAAAAADwDwDA///////8////////////////////////////////////DwDA/w8AV1VVVVVVVVVVVVVVVVVVNQAAAAAA/A8A8P///////////////////////////////////////////z8AwP8/AFdVVVVVVVVVVVVVVVVVVQUAAAAAAPwPAPz///////////////////////////////////////////8/AAD/PwBXVVVVVVVVVVVVVVVVVVUFAAAAAAD/AwD8/////////////////////////////////////////////wAA//8AV1VVVVVVVVVVVVVVVVVVBQAAAADA/wMA//////////////////////////////////////////////8AAP//A1dVVVVVVVVVVVVVVVVVVQUAAAAA8P8DwP//////////////////////////////////////////////AwD//w9XVVVVVVVVVVVVVVVVVVUFAAAAAPD/AMD//////////////////////////////////////////////w8A//8PVFVVVVVVVVVVVVVVVVVVBQAAAAD8/wDw//////////////////////////////////////////////8PAPz/P1RVVVVVVVVVVVVVVVVVVQUAAAAA//8A/P//////////////////////////////////////////////PwD8//9XVVVVVVVVVVVVVVVVVVUNAAAAwP8/AP////////////////////////////////////////////////8A/P//V1VVVVVVVVVVVVVVVVVVAQAAAPD/P8D/////////////////////////////////////////////////A/D//1dVVVVVVVVVVVVVVVVVVQEAAADw/w/w/////////////////////////////////////////////////w/A//9XVVVVVVVVVVVVVVVVVVUBAAAA/P8D//////////////////////////////////////////////////8/wP//V1VVVVVVVVVVVVVVVVVVAQAAAP//w////////////////////////////////////////////////////wD//1dVVVVVVVVVVVVVVVVVVQMAAAD///z///////////////////////////////////////////////////8P/P9XVVVVVVVVVVVVVVVVVVUAAADA////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVVVVAAADwP///////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVVVVQAAA8D///////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVVVVUAAAPw////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVVVVAMAD8P///////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVVV1QDAA/D///////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVVVRUAwAPw////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVVUVAPAP8P///////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVVFQDwD/D///////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVVVRUA/A/w////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVVUVAPwP8P///////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVVFQD/P/D///////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVVVTXA/z/w////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVVU1wP//8P///////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVVNfD///D///////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVVVQX8///D/////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVUF////z/////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVVVxf///z//////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVfX//////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVX1//////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVV9f//////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVfX//////////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVXV//////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVV1f//////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVdX//////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVXV//////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVV1f//////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVdX//////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVV////////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVf///////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVX///////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVV////////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVf3//////////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVX9//////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVV/f//////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVfX//////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVX1//////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVV9f///////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVdX///////////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVXV////////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVVVf///////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVX///////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVVV/f//////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVf3//////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVX1////////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVV9f///////////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVdX///////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVXV////////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVf///////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVX9//////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVV/f///////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVfX///////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVX1////////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVV1f///////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVX///////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVV/////////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVf3///////////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVX1////////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVV9f///////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVV/////////////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVf////////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVVX9////////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVV9f////////////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVV/////////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVf3///////////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVX9/////////////////////////////////////////////////////////////////////1VVVVVVVVVVVVVV9f////////////////////////////////////////////////////////////////////9fVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVV//////////////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVfX/////////////////////////////////////////////////////////////////////X1VVVVVVVVVVVVXV/////////////////////////////////////////////////////////////////////39VVVVVVVVVVVVVVfX/////////////////////////////////////////////////////////////////////V1VVVVVVVVVVVVVV/f///////////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVV9f//////////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVVVVVVX9/////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVVVVVVVfX/////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVVVVVVVV/////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVVVVVVVV/f///////////////////////////////////////////////////////////39VVVVVVVVVVVVVVVVVVVVVVdX/////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVVVVVVVV//////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVVVVVVVf3//////////////////////////////////////////////////////////////1dVVVVVVVVVVVVVVVVVVVXV//////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVVVVVVVf///////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVVVVVX9//////////////////////////////////////////////////////////////9XVVVVVVVVVVVVVVVVVVVV9f//////////////////////////////////////////////////////////////X1VVVVVVVVVVVVVVVVVVVdX//////////////////////////////////////////////////////////////19VVVVVVVVVVVVVVVVVVVVV//////////////////////////////////////////////////////////////9/VVVVVVVVVVVVVVVVVVVVVf3/////////////////////////////////////////////////////////////f1VVVVVVVVVVVVVVVVVVVVX1//////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVVVVVVV9f//////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVVVVVdX//////////////////////////////////////////////////////////////1VVVVVVVVVVVVVVVVVVVVVV//////////////////////////////////////////////////////////////9VVVVVVVVVVVVVVVVVVVVVVf//////////////////////////////////////////////////////////////VVVVVVVVVVVVVVVVVVVVVVX9/////////////////////////////////////////////////////////////1dVVVVVVV1VVVVVVVVVVVVV/f////////////////////////////////////////////////////////////9XVVVVVVX1VVVVVVVVVVVVVfX/////////////////////////////////////////////////////////////V1VVVVVV1V9VVVVVVVVVVVX1/////////////////////////////////////////////////////////////1dVVVVVVVX/VVVVVVVVVVVV1f////////////////////////////////////////////////////////////9XVVVVVVVV/V9VVVVVVVVVVdX/////////////////////////////////////////////////////////////V1VVVVVVVf3/V1VVVVVVVVXV/////////////////////////////////////////////////////////////1dVVVVVVVX1//9XVVX1//9VVf////////////////////////////////////////////////////////////9XVVVVVVVV9f//////////f1X/////////////////////////////////////////////////////////////V1VVVVVVVdX///////////9X/////////////////////////////////////////////////////////////1dVVVVVVVVV////////////X/3///////////////////////////////////////////////////////////9XVVVVVVVVVf/////////////9////////////////////////////////////////////////////////////V1VVVVVVVVX9/////////////////////////////////////////////////////////////////////////1dVVVVVVVVV/f////////////////////////////////////////////////////////////////////////9XVVVVVVVVVf3/////////////////////////////////////////////////////////////////////////V1VVVVVVVVX1/////////////////////////////////////////////////////////////////////////1dVVVVVVVVV9f////////////////////////////////////////////////////////////////////////9XVVVVVVVVVfX/////////////////////////////////////////////////////////////////////////V1VVVVVVVVXV/////////////////////////////////////////////////////////////////////////1dVVVVVVVVV1f////////////////////////////////////////////////////////////////////////9XVVVVVVVVVdX/////////////////////////////////////////////////////////////////////////X1VVVVVVVVXV/////////////////////////////////////////////////////////////////////////19VVVVVVVVVVf////////////////////////////////////////////////////////////////////////9fVVVVVVVVVVX/////////////////////////////////////////////////////////////////////////X1VVVVVVVVVV/////////////////////////////////////////////////////////////////////////19VVVVVVVVVVf////////////////////////////////////////////////////////////////////////9/VVVVVVVVVVX/////////////////////////////////////////////////////////////////////////f1VVVVVVVVVV/////////////////////////////////////////////////////////////////////////39VVVVVVVVVVf//////////////////////////////////////////////////////////////////////////VVVVVVVVVVX//////////////////////////////////////////////////////////////////////////1VVVVVVVVVV//////////////////////////////////////////////////////////////////////////9VVVVVVVVVVf//////////////////////////////////////////////////////////////////////////V1VVVVVVVVX//////////////////////////////////////////////////////////////////////////1dVVVVVVVXV//////////////////////////////////////////////////////////////////////////9fVVVVVVVV1f//////////////////////////////////////////////////////////////////////////X1VVVVVVVdX//////////////////////////////////////////////////////////////////////////39VVVVVVVXV//////////////////////////////////////////////////////////////////////////9/VVVVVVVV1f///////////////////////////////////////////////////////////////////////////1VVVVVVVdX///////////////////////////////////////////////////////////////////////////9XVVVVVVX1////////////////////////////////////////////////////////////////////////////V1VVVVVV9f///////////////////////////////////////////////////////////////////////////19VVVVVVfX///////////////////////////////////////////////////////////////////////////9/VVVVVVX1/////////////////////////////////////////////////////////////////////////////1VVVVVV9f////////////////////////////////////////////////////////////////////////////9VVVVVVdX/////////////////////////////////////////////////////////////////////////////V1VVVVXV/////////////////////////////////////////////////////////////////////////////19VVVVV1f////////////////////////////////////////////////////////////////////////////9/VVVVVdX//////////////////////////////////////////////////////////////////////////////1dVVVXV//////////////////////////////////////////////////////////////////////////////9fVVVVVf//////////////////////////////////////////////////////////////////////////////f1VVVVX///////////////////////////////////////////////////////////////////////////////9VVVVV////////////////////////////////////////////////////////////////////////////////X1VVVf3///////////////////////////////////////////////////////////////////////////////9VVVX9////////////////////////////////////////////////////////////////////////////////X1VV9f////////////////////////////////////////////////////////////////////////////////9VVfX/////////////////////////////////////////////////////////////////////////////////X1XV//////////////////////////////////////////////////////////////////////////////////9VVf//////////////////////////////////////////////////////////////////////////////////f1X///////////////////////////////////////////////////////////////////////////////////9f/f//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////";
+let _undineExactRegionBytes = null;
+const _getUndineExactRegion = (nx, ny) => {
+  if (!_undineExactRegionBytes) {
+    const raw = atob(UNDINE_EXACT_REGION_2BIT);
+    _undineExactRegionBytes = Uint8Array.from(raw, ch => ch.charCodeAt(0));
+  }
+  const [w, h] = UNDINE_EXACT_REGION_SIZE;
+  const x = Math.min(w - 1, Math.max(0, Math.floor(nx * w)));
+  const y = Math.min(h - 1, Math.max(0, Math.floor(ny * h)));
+  const i = y * w + x;
+  const region = (_undineExactRegionBytes[i >> 2] >> ((i & 3) * 2)) & 3;
+  return region < 3 ? region : -1;
+};
+// 新しい保存済みヤオビクニマスクは本体と同じ1024x1536・同一座標で作成されている。
+const YAOBIKUNI_DYE_MASK_PLACEMENT = Object.freeze({ scaleX: 1, scaleY: 1, x: 0, y: 0 });
+// タッチ式マスクエディタの対象は ALL_PLAYER_MONSTERS から実行時に生成する。
+// モンスター名・画像URLをDebug用に複製せず、新規ベースモンも自動的に候補へ加わる。
+const makeDyeMaskEditorTargets = () => Object.values(ALL_PLAYER_MONSTERS).map(monster => ({
+  id:String(monster.id).toLowerCase(), baseId:monster.id, name:monster.name, imageUrl:monster.imgUrl,
+  maskUrl:monster.id === 'Yaobikuni' ? YAOBIKUNI_DYE_MASK : null,
+  hasMask:Array.isArray(MASU_COLOR_REGION_HUES[monster.id]) && MASU_COLOR_REGION_HUES[monster.id].length > 0,
+}));
+// Debug専用。画像全体の透明余白を除外し、実際に描かれた輪郭同士が重なる初期調整値を求める。
+// 戻り値は256x384の調整プレビュー基準のpxと倍率で、本番補正やセーブデータには書き込まない。
+const DYE_MASK_DEBUG_PREVIEW_SIZE = Object.freeze({ width:256, height:384 });
+const _getImageAlphaBounds = (url) => new Promise((resolve, reject) => {
+  const image = new window.Image();
+  image.onload = () => {
+    try {
+      const width=image.naturalWidth||image.width, height=image.naturalHeight||image.height;
+      const canvas=document.createElement('canvas'); canvas.width=width; canvas.height=height;
+      const context=canvas.getContext('2d', { willReadFrequently:true });
+      if(!context)throw new Error('Canvasを利用できません');
+      context.drawImage(image,0,0,width,height);
+      const pixels=context.getImageData(0,0,width,height).data;
+      let left=width,top=height,right=-1,bottom=-1;
+      for(let y=0;y<height;y++)for(let x=0;x<width;x++)if(pixels[(y*width+x)*4+3]>0){left=Math.min(left,x);top=Math.min(top,y);right=Math.max(right,x);bottom=Math.max(bottom,y);}
+      if(right<left||bottom<top)throw new Error('非透明部分がありません');
+      resolve({left:left/width,top:top/height,right:(right+1)/width,bottom:(bottom+1)/height});
+    }catch(error){reject(error);}
+  };
+  image.onerror=()=>reject(new Error('画像を読み込めません'));
+  image.src=url;
+});
+const _calculateDyeMaskAutoFit = async (bodyUrl, maskUrl) => {
+  const [body,mask]=await Promise.all([_getImageAlphaBounds(bodyUrl),_getImageAlphaBounds(maskUrl)]);
+  const scaleX=(body.right-body.left)/(mask.right-mask.left), scaleY=(body.bottom-body.top)/(mask.bottom-mask.top);
+  const bodyCenterX=(body.left+body.right)/2, bodyCenterY=(body.top+body.bottom)/2;
+  const maskCenterX=(mask.left+mask.right)/2, maskCenterY=(mask.top+mask.bottom)/2;
+  return {
+    x:+((bodyCenterX-(.5+scaleX*(maskCenterX-.5)))*DYE_MASK_DEBUG_PREVIEW_SIZE.width).toFixed(2),
+    y:+((bodyCenterY-(.5+scaleY*(maskCenterY-.5)))*DYE_MASK_DEBUG_PREVIEW_SIZE.height).toFixed(2),
+    scaleX:+(scaleX*100).toFixed(2), scaleY:+(scaleY*100).toFixed(2),
+  };
+};
+const _loadExactDyeMask = (url, width, height, placement = null) => new Promise((resolve) => {
+  try {
+    const image = new window.Image();
+    image.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const context = canvas.getContext('2d');
+        if (!context) { resolve(null); return; }
+        context.imageSmoothingEnabled = false;
+        const uniformScale = placement?.scalePercent ? placement.scalePercent / 100 : 1;
+        const scaleX = placement?.scaleX || uniformScale, scaleY = placement?.scaleY || uniformScale;
+        const drawWidth = width * scaleX, drawHeight = height * scaleY;
+        const drawX = (width - drawWidth) / 2 + width * (placement?.x || 0) + (placement?.xPx || 0);
+        const drawY = (height - drawHeight) / 2 + height * (placement?.y || 0) + (placement?.yPx || 0);
+        context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+        resolve(context.getImageData(0, 0, width, height).data);
+      } catch (_) { resolve(null); }
+    };
+    image.onerror = () => resolve(null);
+    image.src = url;
+  } catch (_) { resolve(null); }
+});
+const _exactDyeMaskRegion = (pixels, offset) => {
+  if (!pixels || pixels[offset + 3] < 20) return -1;
+  const r = pixels[offset], g = pixels[offset + 1], b = pixels[offset + 2];
+  if (r > 200 && g < 80 && b < 80) return 0;
+  if (g > 200 && r < 80 && b < 80) return 1;
+  if (b > 200 && r < 80 && g < 80) return 2;
+  return -1;
+};
 const _dyeRegionMaskCache = {};
-const getDyeRegionMasks = (baseId, imgUrl) => {
+// タッチ式エディタから試す間だけ使うBlob URL。保存領域や正式な画像参照は変更しない。
+const _temporaryDyeMasks = Object.create(null);
+const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
+  debugPlacement = debugPlacement || (_temporaryDyeMasks[baseId] ? { maskUrl:_temporaryDyeMasks[baseId] } : null);
   const hues = MASU_COLOR_REGION_HUES[baseId];
   if (!hues || hues.length === 0) return null;
-  const cacheKey = baseId + '::' + imgUrl;
+  const cacheKey = baseId + '::' + imgUrl + (debugPlacement ? `::debug:${debugPlacement.maskUrl||''}:${debugPlacement.xPx}:${debugPlacement.yPx}:${debugPlacement.scaleX}:${debugPlacement.scaleY}` : '');
   if (_dyeRegionMaskCache[cacheKey]) return _dyeRegionMaskCache[cacheKey];
   const promise = new Promise((resolve) => {
     try {
       const img = new window.Image();
-      img.onload = () => {
+      img.onload = async () => {
         try {
           const natW = img.naturalWidth || img.width, natH = img.naturalHeight || img.height;
           // 解析は元の解像度ではなく縮小した画像で行う。
@@ -1872,6 +2024,12 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
           srcCtx.imageSmoothingQuality = 'high';
           srcCtx.drawImage(img, 0, 0, w, h);
           const src = srcCtx.getImageData(0, 0, w, h).data;
+          // ヤオビクニは保存済みマスクの赤・緑・青を染色①・②・③として使う。
+          // マスクの透明／無彩色部分は対象外のままにし、色相推定による目や境界への誤染色を防ぐ。
+          const exactMaskUrl = debugPlacement?.maskUrl || (baseId === 'Yaobikuni' ? YAOBIKUNI_DYE_MASK : null);
+          const exactMask = exactMaskUrl
+            ? await _loadExactDyeMask(exactMaskUrl, w, h, debugPlacement || YAOBIKUNI_DYE_MASK_PLACEMENT)
+            : null;
           const aaAlphaThreshold = baseId === 'Mocchi' ? 96 : 200;
           const maskCanvases = regionDefs.map(() => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; });
           const maskCtxs = maskCanvases.map(c => c.getContext('2d'));
@@ -1895,8 +2053,13 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             const x = i % w, y = (i / w) | 0;
             const [hh, ss, vv] = _rgbToHsv(r, g, b);
             // 背景の飾りなど、そもそも染色対象にしない画素はここで除外する
-            if (_isExcludedDyePixel(baseId, hh, ss, vv, x / w, y / h)) continue;
-            const region = _classifyDyePixel(hh, ss, vv, x / w, y / h, regionDefs);
+            if (!exactMask && _isExcludedDyePixel(baseId, hh, ss, vv, x / w, y / h)) continue;
+            // 保存済みの正解見本がある2体は、その輪郭座標を色相推定より優先する。
+            const region = exactMask
+              ? _exactDyeMaskRegion(exactMask, o)
+              : baseId === 'Undine'
+                ? _getUndineExactRegion((x + 0.5) / w, (y + 0.5) / h)
+                : _classifyDyePixel(hh, ss, vv, x / w, y / h, regionDefs);
             if (region < 0) continue;
             const def = regionDefs[region];
             // 輪郭線のうち実際に半透明でにじんでいる1px(自分自身の不透明度が低いピクセル)は
@@ -1909,7 +2072,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             // なって丸ごと消えてしまうため、部位定義でnoAAGuard:trueを指定すればこの除外もスキップできる
             // (posBboxで位置を絞っているぶん、色のにじみを気にする理由がそもそも無い部位向け)
             const skipAAGuard = !!(def && typeof def === 'object' && def.noAAGuard);
-            if (!skipAAGuard && a < aaAlphaThreshold) continue;
+            if (!exactMask && !skipAAGuard && a < aaAlphaThreshold) continue;
             // 塗り分けの境目(色が隣接するピクセルとの間でにじむ部分)も誤判定しやすいため、
             // 隣接ピクセルと色相が大きく違う場所は既定で除外する。ただし目のように細い部位は
             // 全域が境目になってしまい丸ごと消えるため、部位定義でnoEdgeGuard:trueを指定すれば
@@ -1923,7 +2086,7 @@ const getDyeRegionMasks = (baseId, imgUrl) => {
             // しまう(イブリースの羊毛でガビガビに見えていた主因)。白バケツ判定は自己のS/Vで既に
             // 確定しているため、こちらも既定で除外をスキップする
             const wantsEdgeGuard = !(def && typeof def === 'object' && (def.noEdgeGuard || def.posBbox || def.band || def.white));
-            if (wantsEdgeGuard && ss >= 0.1 && vv >= 0.12) {
+            if (!exactMask && wantsEdgeGuard && ss >= 0.1 && vv >= 0.12) {
               let isColorEdge = false;
               for (const [nx, ny] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]) {
                 const nh = hueAt(nx, ny);
@@ -2115,7 +2278,7 @@ const monsterArtFitStyle = (baseId, style) => (MONSTER_ART_CONTAIN_IDS.includes(
 const monsterArtMaskSize = (baseId) => (MONSTER_ART_CONTAIN_IDS.includes(baseId) ? 'contain' : '100% 100%');
 // マスモンの画像を、部位別の染色(masuColors配列)を反映して表示するコンポーネント。
 // 部位分割データが無いモンスターは画像全体を染め直した1枚を表示する。
-const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawStyle, draggable }) => {
+const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawStyle, draggable, debugMaskPlacement = null }) => {
   const style = monsterArtFitStyle(baseId, rawStyle);
   const hues = MASU_COLOR_REGION_HUES[baseId];
   const [masks, setMasks] = useState(null);
@@ -2127,9 +2290,9 @@ const DyedMonsterImage = ({ baseId, src, masuColors, alt, className, style: rawS
   useEffect(() => {
     if (!hues || hues.length === 0 || !colors.some(Boolean)) { setMasks(null); return; }
     let cancelled = false;
-    Promise.resolve(getDyeRegionMasks(baseId, src)).then(urls => { if (!cancelled) setMasks(urls); });
+    Promise.resolve(getDyeRegionMasks(baseId, src, debugMaskPlacement)).then(urls => { if (!cancelled) setMasks(urls); });
     return () => { cancelled = true; };
-  }, [baseId, src, colorKey]);
+  }, [baseId, src, colorKey, debugMaskPlacement?.maskUrl, debugMaskPlacement?.xPx, debugMaskPlacement?.yPx, debugMaskPlacement?.scaleX, debugMaskPlacement?.scaleY]);
   // 染め直した画像は部位ごとに作る(光沢保持の設定を部位ごとに変えられるため)。
   // 設定が同じ部位はgetRecoloredImage側のキャッシュで同じ画像を共有するので、
   // 書き分けていないモンスターでは作る枚数はこれまでと変わらない
@@ -2302,9 +2465,21 @@ const PatternPlacementPreview = ({ masu, base, colors, settings, selectedDecal, 
 // ブリーダーの教えのアイコンがパスの文字列のまま画面に出る不具合を出した。
 // 判定はこの1か所に集約し、以後どちらの形でも画像として扱えるようにする。
 const isImageIconValue = (v) => typeof v === 'string' && (v.startsWith('images/') || v.startsWith('data:') || /^https?:\/\//.test(v));
+// ききの元画像は全身を含むため、ブリーダーカードで使う丸アイコンだけ顔へ寄せる。
+// 同じ画像を使うプロフィール用アイコンは別IDなので、従来のプロフィール構図を維持する。
+const KIKI_FACE_ICON_ADJUSTMENT = Object.freeze({ scale:2.37, x:0, y:19 });
+const iconAdjustmentTransformStyle = ({ scale=1, x=0, y=0 }={}) => ({ transform:`translate(${x}%, ${y}%) scale(${scale})`, transformOrigin:'center center' });
+const BREEDER_CARD_ICON_STYLES = Object.freeze({
+  kiki: KIKI_FACE_ICON_ADJUSTMENT,
+});
+const BreederCardIcon = ({ icon, cardId, className='', style }) => (
+  <span aria-hidden="true" style={style} className={`relative overflow-hidden rounded-full inline-block shrink-0 align-middle ${className}`}><img src={icon} alt="" draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none',...iconAdjustmentTransformStyle(BREEDER_CARD_ICON_STYLES[cardId])}} className="absolute inset-0 w-full h-full object-contain"/></span>
+);
 // icon欄が画像なら<img>、絵文字ならそのまま返す。sizePxは画像のときの表示サイズ
-const cardIconNode = (icon, sizePx) => isImageIconValue(icon)
-  ? <img src={icon} alt="" draggable={false} style={{width:sizePx,height:sizePx,WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="rounded-full object-cover inline-block shrink-0"/>
+const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon)
+  ? (BREEDER_CARD_ICON_STYLES[cardId]
+    ? <BreederCardIcon icon={icon} cardId={cardId} style={{width:sizePx,height:sizePx}}/>
+    : <img src={icon} alt="" draggable={false} style={{width:sizePx,height:sizePx,WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="rounded-full object-cover inline-block shrink-0"/>)
   : icon;
 // ランキングの記録に載せる部位別の色を作る。
 // colors は「何番目の部位か」を位置で表す配列なので、空きを詰めてはいけない。
@@ -2472,18 +2647,21 @@ const rankingDetailToMasu = (baseId, detail, colors) => {
   };
 };
 // 限界突破の★。並びと色は breakthroughStars が保存値(rebirthCount)から組み立てる
+const renderBreakthroughStar = (star, key, props = {}) => star.image
+  ? <img key={key} src={star.image} alt="" className="mh-rainbow-breakthrough-star" {...props}/>
+  : <span key={key} style={breakthroughStarStyle(star)} {...props}>★</span>;
 const RebirthStars = ({ count = 0, className = '' }) => {
   const value = Math.max(0, Math.floor(Number(count) || 0));
   const stars = breakthroughStars(value);
   if (!stars.length) return null;
   const final = isFinalBreakthroughCount(value);
-  return <span className={`mh-rebirth-stars ${className}`} aria-label={final ? `最終限界突破(${value}回)` : `限界突破${value}回`}>{stars.map((s,i)=><span key={i} style={breakthroughStarStyle(s)}>★</span>)}</span>;
+  return <span className={`mh-rebirth-stars ${className}`} aria-label={final ? `最終限界突破(${value}回)` : `限界突破${value}回`}>{stars.map((s,i)=>renderBreakthroughStar(s,i))}</span>;
 };
 const breakthroughDebugInfo = (count) => {
   const value = Math.max(0, Math.floor(Number(count) || 0));
-  const levelCap = value >= FINAL_BREAKTHROUGH_COUNT ? MAX_MASU_LEVEL_CAP : INITIAL_MASU_LEVEL_CAP + value * BREAKTHROUGH_LEVEL_CAP_GAIN;
+  const levelCap = breakthroughLevelCap(value);
   if (!value) return { levelCap, label:'★なし' };
-  if (value >= FINAL_BREAKTHROUGH_COUNT) return { levelCap, label:'虹' };
+  if (value > BREAKTHROUGH_MAX_COUNT) return { levelCap, label:`虹${value-BREAKTHROUGH_MAX_COUNT}+金${FINAL_BREAKTHROUGH_COUNT-value}`, multiplier:levelUpPointMultiplier(value) };
   return { levelCap, label:BREAKTHROUGH_STAR_TIERS[Math.floor((value - 1) / BREAKTHROUGH_STARS_PER_TIER)].label };
 };
 const BreakthroughStarDebugCard = ({ count, compact = false }) => {
@@ -2491,6 +2669,7 @@ const BreakthroughStarDebugCard = ({ count, compact = false }) => {
   return <article className={`min-w-0 rounded-xl border bg-slate-900/90 text-center ${compact?'border-amber-400/50 p-2':'border-white/10 p-3'}`} data-breakthrough-star-debug-count={count}>
     <b className="block text-[11px] text-white">{count}凸</b>
     <span className="block text-[8px] text-slate-400">上限Lv{info.levelCap}</span>
+    {info.multiplier>1&&<span className="block text-[8px] font-black text-amber-300">LvUPボーナス×{info.multiplier}</span>}
     <span className="block text-[9px] font-black text-amber-200">{info.label}</span>
     <div className="mt-2 min-h-[12px] flex items-center justify-center"><RebirthStars count={count}/>{count===0&&<span className="text-[8px] text-slate-600">★なし</span>}</div>
   </article>;
@@ -3160,7 +3339,11 @@ const MARKET_ICON_SIZE = { disc: 'w-12 h-12', breeder: 'w-10 h-10', icon: 'w-10 
 // 全身画像を使う一部のアイコンは、画像自体には手を加えず表示時だけ顔まわりへ寄せる。
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
-  kiki_icon: { scale: 2.37, x: 0, y: 19 },
+  Tiger: { scale: 2.31, x: 3, y: 38 },
+  // 元PNGは左右端まで描画が続くため、縮小すると画像端の直線が枠内に露出する。
+  // 中央の大きさを保ったまま両端を円・角丸枠の外へ逃がし、片側だけを寄せない。
+  ark_icon: { scale: 1.08, x: 0, y: 0 },
+  kiki_icon: KIKI_FACE_ICON_ADJUSTMENT,
   snegurochka_icon: { scale: 4.28, x: 11, y: 111 },
   snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 },
   iblis_icon: { scale: 1.42, x: 2, y: -10 },
@@ -3185,7 +3368,7 @@ const breederIconOptions = ({ includeUnowned=false, ownedMarketIconIds=[] }={}) 
   const ids = new Set(), images = new Set();
   return candidates.filter(item=>{const image=String(item.src||'').split('?')[0];if(ids.has(item.id)||images.has(image))return false;ids.add(item.id);images.add(image);return true;});
 };
-const profileIconTransformStyle = ({ scale=1, x=0, y=0 }={}) => ({ transform: `translate(${x}%, ${y}%) scale(${scale})`, transformOrigin:'center center' });
+const profileIconTransformStyle = iconAdjustmentTransformStyle;
 const marketProfileIconStyle = (id) => profileIconTransformStyle(MARKET_PROFILE_ICON_STYLES[id]);
 // 枠と画像を全画面で共有し、元画像全体を基準に同じ構図を再現する。
 // object-cover で先に中央切り抜きせず、移動量が拡大率に影響されない順序で変形する。
@@ -3686,6 +3869,7 @@ const TEACHING_FX_STYLE = {
   mua:     { icon:"💖", label:"祝福!",       text:"text-pink-300",    ring:"border-pink-300",    rgb:"236,72,153" },
   atsu:    { icon:"🔥", label:"挑発!",       text:"text-orange-300",  ring:"border-orange-300",  rgb:"234,88,12" },
   myaru:   { icon:"🐈", label:"怪薬投与!",   text:"text-purple-300",  ring:"border-purple-300",  rgb:"168,85,247" },
+  kiki:    { icon:"📣", label:"全力応援!",   text:"text-sky-300",     ring:"border-sky-300",     rgb:"56,189,248" },
 };
 
 
@@ -4135,6 +4319,56 @@ const bootLoadDone = (name) => { try { if (window.__mhBoot) window.__mhBoot.done
 const bootLoadFinish = () => { try { if (window.__mhBoot) window.__mhBoot.finish(); } catch (e) {} };
 const bootLoadWatch = (fn) => { try { return window.__mhBoot ? window.__mhBoot.watch(fn) : null; } catch (e) { return null; } };
 
+// 開発用。全ベースモンの本体ピクセルを唯一の座標系にする汎用タッチ式マスクエディタ。
+const DyeMaskTouchEditor=({onClose,onTryInGame,onReleaseTemporary,onReleaseAllTemporary,temporaryMasks,active=true})=>{
+ const targets=useMemo(makeDyeMaskEditorTargets,[]),[targetIndex,setTargetIndex]=useState(0),target=targets[targetIndex];
+ const bodyRef=useRef(null),maskRef=useRef(null),originalRef=useRef(null),bodyDataRef=useRef(null),outsideRef=useRef(null),outlineRef=useRef(null),warningRef=useRef(null),loupeRef=useRef(null),historyRef=useRef({undo:[],redo:[]}),pointersRef=useRef(new Map()),gestureRef=useRef(null),lastTapRef=useRef(0),previewFrameRef=useRef(null);
+ const [ready,setReady]=useState(false),[error,setError]=useState(''),[view,setView]=useState('composite'),[opacity,setOpacity]=useState(50),[dirty,setDirty]=useState(false),[search,setSearch]=useState('');
+ const [previewMaskUrl,setPreviewMaskUrl]=useState(null),[previewRevision,setPreviewRevision]=useState(0),[previewColors,setPreviewColors]=useState(['red','green','blue']);
+ const [color,setColor]=useState('red'),[tool,setTool]=useState('brush'),[size,setSize]=useState(18),[zoom,setZoom]=useState(1),[pan,setPan]=useState({x:0,y:0}),[historyTick,setHistoryTick]=useState(0),[details,setDetails]=useState(false),[imageSize,setImageSize]=useState({width:2,height:3});
+ const [pointerDistance,setPointerDistance]=useState(50),[pointerDirection,setPointerDirection]=useState('up'),[pointer,setPointer]=useState(null),[loupe,setLoupe]=useState(true);
+ const colors={red:[255,0,0,255],green:[0,255,0,255],blue:[0,0,255,255],eraser:[0,0,0,0]},colorCss={red:'#ff0000',green:'#00ff00',blue:'#0000ff',eraser:'#ffffff'};
+ const context=()=>maskRef.current?.getContext('2d',{willReadFrequently:true}),snap=()=>{const c=maskRef.current;return c&&context()?.getImageData(0,0,c.width,c.height);},restore=image=>{if(image)context()?.putImageData(image,0,0);};
+ const requestCompositePreview=()=>{if(view!=='composite'||previewFrameRef.current!==null)return;previewFrameRef.current=requestAnimationFrame(()=>{previewFrameRef.current=null;setPreviewRevision(v=>v+1);});};
+ const flushCompositePreview=()=>{if(previewFrameRef.current!==null){cancelAnimationFrame(previewFrameRef.current);previewFrameRef.current=null;}if(view==='composite')setPreviewRevision(v=>v+1);};
+ const checkpoint=()=>{const image=snap();if(!image)return;const h=historyRef.current;h.undo.push(image);if(h.undo.length>12)h.undo.shift();h.redo=[];setHistoryTick(v=>v+1);};
+ const undo=()=>{const h=historyRef.current;if(!h.undo.length)return;h.redo.push(snap());restore(h.undo.pop());setDirty(true);setHistoryTick(v=>v+1);},redo=()=>{const h=historyRef.current;if(!h.redo.length)return;h.undo.push(snap());restore(h.redo.pop());setDirty(true);setHistoryTick(v=>v+1);};
+ const findOutside=(body,w,h)=>{const outside=new Uint8Array(w*h),queue=new Int32Array(w*h);let head=0,tail=0;const add=i=>{if(i<0||i>=outside.length||outside[i]||body[i*4+3])return;outside[i]=1;queue[tail++]=i;};for(let x=0;x<w;x++){add(x);add((h-1)*w+x);}for(let y=0;y<h;y++){add(y*w);add(y*w+w-1);}while(head<tail){const i=queue[head++],x=i%w;if(x)add(i-1);if(x<w-1)add(i+1);add(i-w);add(i+w);}return outside;};
+ // Canvas端から本体の透明画素だけを辿った「外部」だけを除去する。目など輪郭内の透明な穴は保持する。
+ const normalizeMask=(image,outside)=>{const data=image.data;for(let i=0,p=0;i<data.length;i+=4,p++){if(outside[p]||!data[i+3]){data[i]=data[i+1]=data[i+2]=data[i+3]=0;continue;}const r=data[i],g=data[i+1],b=data[i+2];data[i]=r>=g&&r>=b?255:0;data[i+1]=g>r&&g>=b?255:0;data[i+2]=b>r&&b>g?255:0;data[i+3]=255;}return image;};
+ const updateWarning=()=>{const c=maskRef.current,wc=warningRef.current,outside=outsideRef.current;if(!c||!wc||!outside)return;const source=context().getImageData(0,0,c.width,c.height).data,ctx=wc.getContext('2d'),warning=ctx.createImageData(c.width,c.height);for(let p=0;p<outside.length;p++){const i=p*4;if(outside[p]&&source[i+3]){warning.data[i]=255;warning.data[i+1]=0;warning.data[i+2]=255;warning.data[i+3]=255;}}ctx.putImageData(warning,0,0);};
+ const loadTarget=useCallback(async()=>{let cancelled=false;setReady(false);setError('');historyRef.current={undo:[],redo:[]};setHistoryTick(v=>v+1);try{const load=url=>new Promise((resolve,reject)=>{const image=new window.Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('画像を読み込めません'));image.src=url;});const body=await load(target.imageUrl);if(cancelled)return()=>{};const w=body.naturalWidth||body.width,h=body.naturalHeight||body.height,b=bodyRef.current,m=maskRef.current,wc=warningRef.current;b.width=m.width=wc.width=w;b.height=m.height=wc.height=h;setImageSize({width:w,height:h});const bc=b.getContext('2d',{willReadFrequently:true});bc.drawImage(body,0,0,w,h);bodyDataRef.current=bc.getImageData(0,0,w,h).data;outsideRef.current=findOutside(bodyDataRef.current,w,h);
+   const mc=context();mc.clearRect(0,0,w,h);if(target.maskUrl){const rawMask=await load(target.maskUrl);mc.imageSmoothingEnabled=false;mc.drawImage(rawMask,0,0,w,h);}else if(target.hasMask){const urls=await getDyeRegionMasks(target.baseId,target.imageUrl);if(urls){const layers=await Promise.all(urls.slice(0,3).map(load));layers.forEach((layer,index)=>{const temp=document.createElement('canvas');temp.width=w;temp.height=h;const tc=temp.getContext('2d');tc.drawImage(layer,0,0,w,h);tc.globalCompositeOperation='source-in';tc.fillStyle=['#f00','#0f0','#00f'][index];tc.fillRect(0,0,w,h);mc.drawImage(temp,0,0);});}}const original=mc.createImageData(w,h);original.data.set(mc.getImageData(0,0,w,h).data);originalRef.current=original;updateWarning();
+   const outline=document.createElement('canvas');outline.width=w;outline.height=h;const oc=outline.getContext('2d'),alpha=bodyDataRef.current,od=oc.createImageData(w,h);for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4;if(!alpha[i+3])continue;const edge=x===0||y===0||x===w-1||y===h-1||!alpha[i-4+3]||!alpha[i+4+3]||!alpha[i-w*4+3]||!alpha[i+w*4+3];if(edge){od.data[i]=255;od.data[i+1]=255;od.data[i+3]=255;}}oc.putImageData(od,0,0);outlineRef.current=outline;setDirty(false);setZoom(1);setPan({x:0,y:0});setReady(true);}catch(e){setError(e.message);}return()=>{cancelled=true;};},[target]);
+ useEffect(()=>{let cleanup;loadTarget().then(fn=>cleanup=fn);return()=>cleanup?.();},[loadTarget]);
+ useEffect(()=>{if(ready)updateWarning();},[ready,historyTick]);
+ // 「合成」は編集補助Canvasを重ねず、編集中のPNGをBlob URLとして本番コンポーネントへ渡す。
+ // これにより座標、縦横比、半透明輪郭、色変換、部位別透明度、特殊処理がゲーム内確認と同じになる。
+ useEffect(()=>{if(!ready||view!=='composite')return;const c=maskRef.current,ctx=context();if(!c||!ctx)return;let cancelled=false;const source=ctx.getImageData(0,0,c.width,c.height),image=ctx.createImageData(c.width,c.height);image.data.set(source.data);normalizeMask(image,outsideRef.current);const temp=document.createElement('canvas');temp.width=c.width;temp.height=c.height;temp.getContext('2d').putImageData(image,0,0);temp.toBlob(blob=>{if(cancelled||!blob)return;const nextUrl=URL.createObjectURL(blob);setPreviewMaskUrl(previous=>{if(previous)URL.revokeObjectURL(previous);return nextUrl;});},'image/png');return()=>{cancelled=true;};},[ready,view,historyTick,previewRevision,target.baseId]);
+ useEffect(()=>()=>{if(previewFrameRef.current!==null)cancelAnimationFrame(previewFrameRef.current);setPreviewMaskUrl(previous=>{if(previous)URL.revokeObjectURL(previous);return null;});},[]);
+ const confirmDiscard=()=>!dirty||window.confirm('未書き出しの編集があります。破棄してモンスターを切り替えますか？');
+ const selectTarget=index=>{if(index===targetIndex||!confirmDiscard())return;setTargetIndex(index);};
+ const offsetClient=e=>{const side=pointerDistance/Math.sqrt(2);return pointerDirection==='left'?{x:e.clientX-side,y:e.clientY-side}:pointerDirection==='right'?{x:e.clientX+side,y:e.clientY-side}:{x:e.clientX,y:e.clientY-pointerDistance};};
+ const pointFromClient=client=>{const c=maskRef.current,r=c.getBoundingClientRect();return{x:(client.x-r.left)*c.width/r.width,y:(client.y-r.top)*c.height/r.height};};
+ const paint=(from,to)=>{const c=maskRef.current,ctx=context(),body=bodyDataRef.current,rgba=colors[color],distance=Math.hypot(to.x-from.x,to.y-from.y),count=Math.max(1,Math.ceil(distance/Math.max(1,size*.22))),radius=size/2,left=Math.max(0,Math.floor(Math.min(from.x,to.x)-radius)),top=Math.max(0,Math.floor(Math.min(from.y,to.y)-radius)),right=Math.min(c.width,Math.ceil(Math.max(from.x,to.x)+radius+1)),bottom=Math.min(c.height,Math.ceil(Math.max(from.y,to.y)+radius+1)),width=right-left,height=bottom-top;if(!width||!height)return;const image=ctx.getImageData(left,top,width,height),data=image.data;for(let n=0;n<=count;n++){const cx=from.x+(to.x-from.x)*n/count,cy=from.y+(to.y-from.y)*n/count;for(let y=Math.max(top,Math.floor(cy-radius));y<Math.min(bottom,Math.ceil(cy+radius+1));y++)for(let x=Math.max(left,Math.floor(cx-radius));x<Math.min(right,Math.ceil(cx+radius+1));x++){if((x-cx)**2+(y-cy)**2>radius**2)continue;const local=((y-top)*width+x-left)*4,global=(y*c.width+x)*4;if(color!=='eraser'&&!body[global+3])continue;data.set(rgba,local);}}ctx.putImageData(image,left,top);setDirty(true);requestCompositePreview();};
+ const fill=p=>{const c=maskRef.current,ctx=context(),image=ctx.getImageData(0,0,c.width,c.height),data=image.data,body=bodyDataRef.current,rgba=colors[color],x=Math.max(0,Math.min(c.width-1,Math.floor(p.x))),y=Math.max(0,Math.min(c.height-1,Math.floor(p.y))),start=y*c.width+x,o=start*4,targetColor=[data[o],data[o+1],data[o+2],data[o+3]];if((color!=='eraser'&&!body[o+3])||targetColor.every((v,i)=>v===rgba[i]))return;checkpoint();const q=[start],seen=new Uint8Array(c.width*c.height);while(q.length){const i=q.pop();if(seen[i])continue;seen[i]=1;const d=i*4;if((color!=='eraser'&&!body[d+3])||!targetColor.every((v,j)=>data[d+j]===v))continue;data.set(rgba,d);const x=i%c.width,y=(i/c.width)|0;if(x)q.push(i-1);if(x<c.width-1)q.push(i+1);if(y)q.push(i-c.width);if(y<c.height-1)q.push(i+c.width);}ctx.putImageData(image,0,0);setDirty(true);setHistoryTick(v=>v+1);};
+ const drawLoupe=p=>{if(!loupe||!p)return;const c=loupeRef.current;if(!c)return;const ctx=c.getContext('2d'),span=Math.max(12,size*3),sx=p.x-span/2,sy=p.y-span/2;ctx.clearRect(0,0,c.width,c.height);ctx.imageSmoothingEnabled=false;ctx.drawImage(bodyRef.current,sx,sy,span,span,0,0,c.width,c.height);ctx.globalAlpha=opacity/100;ctx.drawImage(maskRef.current,sx,sy,span,span,0,0,c.width,c.height);ctx.globalAlpha=1;ctx.strokeStyle=colorCss[color];ctx.lineWidth=2;ctx.beginPath();ctx.arc(c.width/2,c.height/2,Math.max(4,size/span*c.width/2),0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(c.width/2-7,c.height/2);ctx.lineTo(c.width/2+7,c.height/2);ctx.moveTo(c.width/2,c.height/2-7);ctx.lineTo(c.width/2,c.height/2+7);ctx.stroke();};
+ useEffect(()=>{if(pointer?.p)drawLoupe(pointer.p);},[pointer,loupe,opacity,size,color]);
+ const beginPan=()=>{const ps=[...pointersRef.current.values()];if(ps.length<2)return;const a=ps[0],b=ps[1];gestureRef.current={kind:'pan',mid:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},distance:Math.hypot(a.x-b.x,a.y-b.y),pan,zoom};setPointer(null);};
+ const down=e=>{e.preventDefault();e.currentTarget.setPointerCapture?.(e.pointerId);pointersRef.current.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointersRef.current.size>=2){beginPan();return;}const now=Date.now();if(now-lastTapRef.current<300){setZoom(1);setPan({x:0,y:0});lastTapRef.current=0;return;}lastTapRef.current=now;const client=offsetClient(e),p=pointFromClient(client);setPointer({...client,p});drawLoupe(p);if(tool==='fill'){fill(p);return;}checkpoint();gestureRef.current={kind:'draw',pointerId:e.pointerId,point:p};paint(p,p);};
+ const move=e=>{if(!pointersRef.current.has(e.pointerId))return;e.preventDefault();pointersRef.current.set(e.pointerId,{x:e.clientX,y:e.clientY});const g=gestureRef.current;if(pointersRef.current.size>=2){if(g?.kind!=='pan')beginPan();const pg=gestureRef.current,ps=[...pointersRef.current.values()],a=ps[0],b=ps[1],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2},distance=Math.hypot(a.x-b.x,a.y-b.y),nextZoom=Math.max(.5,Math.min(8,pg.zoom*distance/Math.max(1,pg.distance)));setZoom(nextZoom);setPan({x:pg.pan.x+mid.x-pg.mid.x,y:pg.pan.y+mid.y-pg.mid.y});return;}if(!g||g.kind!=='draw'||g.pointerId!==e.pointerId)return;const client=offsetClient(e),p=pointFromClient(client);setPointer({...client,p});drawLoupe(p);paint(g.point,p);g.point=p;};
+ const up=e=>{pointersRef.current.delete(e.pointerId);if(pointersRef.current.size<2&&gestureRef.current?.kind==='pan')gestureRef.current=null;if(!pointersRef.current.size){gestureRef.current=null;setPointer(null);}setHistoryTick(v=>v+1);flushCompositePreview();};
+ const resetOriginal=()=>{if(!dirty||window.confirm('編集中の内容を破棄して元マスクを再読込しますか？')){restore(originalRef.current);historyRef.current={undo:[],redo:[]};setDirty(false);setHistoryTick(v=>v+1);}},clearAll=()=>{if(window.confirm('現在のマスクを全消去しますか？')){checkpoint();context().clearRect(0,0,maskRef.current.width,maskRef.current.height);setDirty(true);setHistoryTick(v=>v+1);}},cleanOutside=()=>{const c=maskRef.current,image=context().getImageData(0,0,c.width,c.height),outside=outsideRef.current;let changed=false;for(let p=0;p<outside.length;p++){const i=p*4;if(outside[p]&&image.data[i+3]){image.data[i]=image.data[i+1]=image.data[i+2]=image.data[i+3]=0;changed=true;}}if(!changed)return;checkpoint();context().putImageData(image,0,0);setDirty(true);setHistoryTick(v=>v+1);};
+ const exportPng=()=>{const c=maskRef.current,image=normalizeMask(context().getImageData(0,0,c.width,c.height),outsideRef.current);context().putImageData(image,0,0);c.toBlob(blob=>{const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=`${target.id}-dye-mask.PNG`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);setDirty(false);},'image/png');};
+ const tryInGame=()=>{const c=maskRef.current;if(!c||!ready)return;const image=normalizeMask(context().getImageData(0,0,c.width,c.height),outsideRef.current);context().putImageData(image,0,0);c.toBlob(blob=>{if(blob)onTryInGame(target,blob,previewColors);},'image/png');};
+ const close=()=>{if(confirmDiscard())onClose();},colorButton=(id,label,bg)=><button onClick={()=>setColor(id)} aria-pressed={color===id} className={`min-h-[42px] rounded-xl border-2 text-[9px] font-black ${color===id?'border-white':'border-transparent'}`} style={{backgroundColor:bg}}>{label}</button>,history=historyRef.current,filtered=targets.map((t,i)=>({t,i})).filter(({t})=>t.name.includes(search)||t.baseId.toLowerCase().includes(search.toLowerCase()));
+ return <main className={`${active?'flex':'hidden'} fixed inset-0 z-50 flex-col overflow-hidden bg-slate-950`} style={{paddingTop:'max(.25rem,env(safe-area-inset-top))'}}><header className="flex h-10 shrink-0 items-center px-1"><button onClick={close} className="min-h-[40px] min-w-[40px]"><ArrowLeft size={20}/></button><div className="min-w-0"><small className="block text-[7px] font-black text-cyan-400">DEBUG・メモリ上だけ／再読込で消去</small><h2 className="truncate text-[11px] font-black">汎用染色マスクエディタ</h2></div><button onClick={exportPng} disabled={!ready} className="ml-auto min-h-[36px] rounded-xl bg-cyan-600 px-2 text-[8px] font-black disabled:opacity-40">PNG書出</button></header>
+ <section className="shrink-0 px-2 pb-1"><div className="grid grid-cols-[38px_1fr_38px] gap-1"><button onClick={()=>selectTarget((targetIndex-1+targets.length)%targets.length)} className="rounded-lg bg-slate-800" aria-label="前のモンスター">←</button><select aria-label="モンスター選択" value={targetIndex} onChange={e=>selectTarget(+e.target.value)} className="min-h-[34px] min-w-0 rounded-lg bg-slate-800 px-2 text-[9px] font-black">{targets.map((t,i)=><option key={t.baseId} value={i}>{t.name}／{t.hasMask?'染色マスクあり':'染色マスクなし'}</option>)}</select><button onClick={()=>selectTarget((targetIndex+1)%targets.length)} className="rounded-lg bg-slate-800" aria-label="次のモンスター">→</button></div><input value={search} onChange={e=>setSearch(e.target.value)} list="dye-mask-monsters" placeholder="名前検索" className="mt-1 min-h-[30px] w-full rounded-lg bg-slate-800 px-2 text-[9px]"/><datalist id="dye-mask-monsters">{filtered.map(({t})=><option key={t.baseId} value={t.name}/>)}</datalist>{search&&filtered.length>0&&<button onClick={()=>{selectTarget(filtered[0].i);setSearch('');}} className="mt-1 w-full rounded bg-cyan-900 py-1 text-[8px]">「{filtered[0].t.name}」を選択</button>}<p className={`text-center text-[8px] font-black ${target.hasMask?'text-emerald-300':'text-amber-300'}`}>{target.name}・{target.hasMask?'既存の染色マスクを読込':'染色マスクなし（完全透明から開始）'}{dirty?'・未書き出し':''}</p></section>
+ <div className="grid shrink-0 grid-cols-4 gap-1 px-2">{[['composite','合成'],['body','本体のみ'],['mask','マスクのみ'],['boundary','境界確認']].map(([id,label])=><button key={id} onClick={()=>setView(id)} className={`min-h-[30px] rounded-lg text-[8px] font-black ${view===id?'bg-cyan-700':'bg-slate-800'}`}>{label}</button>)}</div>
+ <section className="relative m-2 min-h-0 flex-1 overflow-hidden rounded-xl bg-slate-600" style={{touchAction:'none'}} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>{error?<p className="p-4 text-center text-red-200">{error}</p>:!ready&&<p className="p-4 text-center">画像を読み込み中…</p>}<div className="absolute inset-0 flex items-center justify-center" style={{transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`,pointerEvents:ready?'auto':'none'}}><div className="relative max-h-full max-w-full" style={{height:'100%',aspectRatio:`${imageSize.width} / ${imageSize.height}`}}>{view==='composite'&&previewMaskUrl&&<DyedMonsterImage baseId={target.baseId} src={target.imageUrl} alt={`${target.name}合成`} masuColors={previewColors} debugMaskPlacement={{maskUrl:previewMaskUrl}} className="absolute inset-0 h-full w-full object-contain"/>}<canvas ref={bodyRef} aria-label={`${target.name}本体レイヤー`} className="absolute inset-0 h-full w-full" style={{display:view==='mask'||view==='composite'?'none':'block'}}/><canvas ref={maskRef} aria-label="染色マスク編集レイヤー" className="absolute inset-0 h-full w-full" style={{display:view==='body'?'none':'block',opacity:view==='composite'?0:view==='boundary'?opacity/100:1}}/>{view==='boundary'&&outlineRef.current&&<img src={outlineRef.current.toDataURL()} alt="本体の外周" className="pointer-events-none absolute inset-0 h-full w-full"/>}<canvas ref={warningRef} aria-label="本体範囲外のマスク警告" className="pointer-events-none absolute inset-0 h-full w-full" style={{display:view==='boundary'?'block':'none'}}/></div></div>{loupe&&pointer&&<canvas ref={loupeRef} width="120" height="120" aria-label="拡大鏡" className="pointer-events-none absolute left-2 top-2 rounded-full border-2 border-white bg-slate-950 shadow-xl"/>}{pointer&&<div className="pointer-events-none fixed z-10 rounded-full border-2" style={{left:pointer.x-size*zoom/2,top:pointer.y-size*zoom/2,width:size*zoom,height:size*zoom,borderColor:colorCss[color],background:color==='eraser'?'repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(255,255,255,.7) 3px,rgba(255,255,255,.7) 5px)':'transparent'}}><span className="absolute left-1/2 top-1/2 h-px w-3 -translate-x-1/2 bg-white"/><span className="absolute left-1/2 top-1/2 h-3 w-px -translate-y-1/2 bg-white"/></div>}</section>
+ <section className="shrink-0 rounded-t-2xl border-t-2 border-cyan-400 bg-slate-900 px-2 pt-1" style={{paddingBottom:'max(.4rem,env(safe-area-inset-bottom))'}}><div className="grid grid-cols-8 gap-1">{colorButton('red','赤','#f00')}{colorButton('green','緑','#080')}{colorButton('blue','青','#00f')}{colorButton('eraser','消す','#475569')}<button onClick={undo} disabled={!history.undo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Undo</button><button onClick={redo} disabled={!history.redo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Redo</button><button onClick={()=>setTool('brush')} className={`rounded-xl text-[7px] ${tool==='brush'?'bg-violet-700':'bg-slate-700'}`}>ブラシ</button><button onClick={()=>setTool('fill')} className={`rounded-xl text-[7px] ${tool==='fill'?'bg-violet-700':'bg-slate-700'}`}>塗りつぶし</button></div><div className="mt-1 grid grid-cols-3 gap-1"><button onClick={tryInGame} disabled={!ready} className="min-h-[38px] rounded-lg bg-fuchsia-700 text-[8px] font-black disabled:opacity-40">ゲームで試す</button><button onClick={()=>onReleaseTemporary(target.baseId)} disabled={!temporaryMasks[target.baseId]} className="rounded-lg bg-amber-800 text-[7px] font-black disabled:opacity-30">一時反映を解除</button><button onClick={onReleaseAllTemporary} disabled={!Object.keys(temporaryMasks).length} className="rounded-lg bg-red-900 text-[8px] font-black disabled:opacity-30">すべて解除</button></div>{temporaryMasks[target.baseId]&&<p className="pt-0.5 text-center text-[8px] font-black text-fuchsia-300">● 一時反映中</p>}<button onClick={()=>setDetails(v=>!v)} className="mt-1 min-h-[28px] w-full rounded-lg bg-slate-700 text-[8px]">詳細 {details?'▲':'▼'}</button>{details&&<div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-800 p-2 text-[8px]"><div className="col-span-2 grid grid-cols-3 gap-1">{Array.from({length:dyeRegionCount(target.baseId)},(_,idx)=><label key={idx} className="text-[7px] text-fuchsia-200">染色{'①②③'[idx]}<select value={previewColors[idx]||''} onChange={e=>setPreviewColors(current=>{const next=[...current];next[idx]=e.target.value||null;return next;})} className="block min-h-[28px] w-full rounded bg-slate-700 text-[8px]"><option value="">元の色</option>{Object.keys(MASU_COLOR_TARGET).map(id=><option key={id} value={id}>{MASU_COLOR_LABELS[id]}</option>)}</select></label>)}</div><label>ブラシ {size}px<input className="block w-full" type="range" min="2" max="100" step="2" value={size} onChange={e=>setSize(+e.target.value)}/></label><label>透明度 {opacity}%<input className="block w-full" type="range" min="25" max="100" step="25" value={opacity} onChange={e=>setOpacity(+e.target.value)}/></label><label>ポインター距離<select value={pointerDistance} onChange={e=>setPointerDistance(+e.target.value)} className="block w-full bg-slate-700">{[0,30,50,70].map(n=><option key={n} value={n}>{n}px</option>)}</select></label><label>方向<select value={pointerDirection} onChange={e=>setPointerDirection(e.target.value)} className="block w-full bg-slate-700"><option value="up">真上</option><option value="left">左上</option><option value="right">右上</option></select></label><button onClick={()=>setLoupe(v=>!v)} className="rounded bg-slate-700">拡大鏡 {loupe?'ON':'OFF'}</button><button onClick={()=>{setZoom(1);setPan({x:0,y:0});}} className="rounded bg-slate-700">全体表示</button><button onClick={cleanOutside} className="rounded bg-fuchsia-900">範囲外を掃除</button><button onClick={clearAll} className="rounded bg-red-900">全消去</button><button onClick={resetOriginal} className="rounded bg-amber-900">元マスク再読込</button></div>}<p className="pt-1 text-center text-[7px] text-slate-400">1本指：描画・2本指：パン/ピンチ・ダブルタップ：全体表示・{Math.round(zoom*100)}%</p></section></main>;
+};
+
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -4189,11 +4423,32 @@ function MonsterHeroGame() {
   const [iconAdjustId, setIconAdjustId] = useState(debugIconItems[0]?.id||'');
   const [iconAdjustQuery, setIconAdjustQuery] = useState('');
   const [iconAdjustments, setIconAdjustments] = useState(()=>Object.fromEntries(debugIconItems.map(item=>[item.id,{...(MARKET_PROFILE_ICON_STYLES[item.id]||DEFAULT_PROFILE_ICON_STYLE)}])));
+  // 染色マスク調整値もDebug画面を閉じるまでの一時値で、セーブや本番補正値には書き込まない。
   // モンスター画像確認はデバッグ画面を開いている間だけ保持し、セーブ領域へは書き込まない。
   const [monsterImageDebugId, setMonsterImageDebugId] = useState(null);
   const [monsterImageDebugBg, setMonsterImageDebugBg] = useState('checker');
   const [monsterImageDebugTigerMode, setMonsterImageDebugTigerMode] = useState('old');
   const [monsterImageDebugColors, setMonsterImageDebugColors] = useState(null);
+  const [dyeMaskEditorOpened, setDyeMaskEditorOpened] = useState(false);
+  const [temporaryDyeMasks, setTemporaryDyeMasks] = useState({});
+  const temporaryDyeMasksRef = useRef({});
+  useEffect(()=>()=>{Object.values(temporaryDyeMasksRef.current).forEach(URL.revokeObjectURL);temporaryDyeMasksRef.current={};},[]);
+  const releaseTemporaryDyeMask = (baseId) => {
+    const url=temporaryDyeMasksRef.current[baseId];if(!url)return;
+    URL.revokeObjectURL(url);delete temporaryDyeMasksRef.current[baseId];
+    delete _temporaryDyeMasks[baseId];setTemporaryDyeMasks({...temporaryDyeMasksRef.current});
+  };
+  const releaseAllTemporaryDyeMasks = () => {
+    if(Object.keys(temporaryDyeMasksRef.current).length&&!window.confirm('全モンスターの一時マスクを解除しますか？'))return;
+    Object.keys(temporaryDyeMasksRef.current).forEach(releaseTemporaryDyeMask);
+  };
+  const tryTemporaryDyeMask = (target,blob,colors) => {
+    releaseTemporaryDyeMask(target.baseId);
+    const url=URL.createObjectURL(blob);temporaryDyeMasksRef.current[target.baseId]=url;_temporaryDyeMasks[target.baseId]=url;
+    setTemporaryDyeMasks({...temporaryDyeMasksRef.current});
+    const individual=masuMons.find(m=>m.baseId===target.baseId),preview=individual||{id:`temporary-dye-${target.baseId}`,baseId:target.baseId,name:target.name,colors:[]};
+    setMonsterImageDebugId(preview.id);setMonsterImageDebugColors(colors||getMasuColors(preview));setGameState('MONSTER_IMAGE_DEBUG');
+  };
   // バトルチュートリアル(操作しながら覚える)。null のときは動いていない。
   // いまはデバッグ設定からだけ開始できる。台本は data/assistants.js が持つ
   const [battleTutorialStep, setBattleTutorialStep] = useState(null);
@@ -4249,6 +4504,15 @@ function MonsterHeroGame() {
   // refも併用し、pointerdown直後のclickが同じ操作でトップ遷移を始めないよう同期的に判定する。
   const [bootSoundUnlocked, setBootSoundUnlocked] = useState(false);
   const bootSoundUnlockedRef = useRef(false);
+  // 虹★は起動完了を待たせず裏で読み込み、表示前に可能ならデコードまで済ませる。
+  useEffect(() => {
+    const image = new Image();
+    const decode = () => { if (image.decode) image.decode().catch(()=>{}); };
+    image.onload = decode;
+    image.src = RAINBOW_STAR_IMAGE;
+    if (image.complete) decode();
+    return () => { image.onload = null; };
+  }, []);
   // タイトル表示を止めずにHOME背景を先読みする。decode非対応時もload完了で表示する。
   useEffect(() => {
     let active = true;
@@ -6599,6 +6863,23 @@ function MonsterHeroGame() {
     Audio_.se.levelUp();
     return updatedMasu;
   };
+  const useUniqueSkillResetTicket = (masuId) => {
+    if (ownedItemCount(ownedItems, 'unique_skill_reset_ticket') <= 0) return null;
+    const result = buildUniqueSkillPointReset(getMasuMon(masuId));
+    if (!result) return null;
+    setMasuMons(prev => {
+      const next = prev.map(m => String(m.id) === String(masuId) ? result.nextMasu : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    setOwnedItems(prev => {
+      const next = { ...prev, unique_skill_reset_ticket: Math.max(0, ownedItemCount(prev, 'unique_skill_reset_ticket') - 1) };
+      storeSet('mh_owned_items', next, false);
+      return next;
+    });
+    Audio_.se.tap();
+    return result;
+  };
   // 強化ポイントリセットの書: 使用済みの強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻す。
   // 絆レベル・絆経験値そのものは変更しない
   const useBondResetScroll = (masuId) => {
@@ -7304,14 +7585,15 @@ function MonsterHeroGame() {
   // 「勇者モンに選んだときだけ効く」特性なので、効いていることが画面から分かるように
   // 枚数表示の横にも出す。計算と表示で食い違わないよう、ここを唯一の出どころにする
   const heroCardBonus = useMemo(() => (mainHero?.id === 'Ham' ? 1 : 0), [mainHero]);
+  const kikiCardBonus = getPermaBuff('kikiCardBonusTurns')>0 ? 1 : 0;
   const cardLimit = useMemo(() => {
     const allyCount = slots.filter(s => s !== null).length;
     let limit = 1;
     if (effectiveMaxGuts >= 180 && allyCount >= 3) limit = 3;
     else if (effectiveMaxGuts >= 120 && allyCount >= 2) limit = 2;
-    limit += heroCardBonus;
+    limit += heroCardBonus + kikiCardBonus;
     return limit;
-  }, [effectiveMaxGuts, slots, heroCardBonus]);
+  }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);
 
   const getCardGuts = (card) => {
     if (!card) return 0;
@@ -7874,7 +8156,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 「何枚目か」の数え方をここに集約し、画面のダメージ予測とprocessTurnの実処理がずれないようにする。
   const isBreederCard = (card) => !!card && TEACHING_CARDS.some(t => t.id === card.id);
   // ガードカードの重み(弱ガードは半分)。軽減量の合計表示と実処理で同じ式を使う。
-  const guardCardWeight = (card) => card?.type === 'guard' ? 1 : (card?.type === 'weak_guard' ? 0.5 : 0);
+  const guardCardWeight = (card) => card?.type === 'guard' || card?.subType === 'heal_guard_meloso' ? 1 : (card?.type === 'weak_guard' ? 0.5 : 0);
+  const cardEffectMultiplier = (card, halved=false) => {
+    const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
+    return isBreederCard(card)&&specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty,'breederCardEffect') : (halved?0.5:1);
+  };
   // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」。handleEnemyTurnの計算と同じ式にする。
   const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + effectiveDef * mult) : 0;
   // 氷海の支配者も、絶氷の楔の実効果と同じ発動状態を使う。
@@ -7904,15 +8190,26 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return applyExtremeIntegerRule(finalDmg,specialRuleDifficulty,'damageDealt');
   }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, runMode, difficulty, extremeDifficulty]);
 
-  // ザンの勇者特性「連撃」による追加ヒット分の合計(プレビュー用)。実際のバトルログはprocessTurn内で別枠ヒットとして計算する
-  const getComboBonusDmg = useCallback((card, mon, baseDmg) => {
+  // 確定している追加ヒットまで含めた攻撃1枚の予測値。中央合計と各スロットで必ず同じ入口を使う。
+  // ランダム会心は含めず、会心予約だけは実処理と同じ倍率を適用する。
+  const getAttackPredictedDmg = useCallback((card, mon, baseDmg) => {
     if (baseDmg<=0) return 0;
+    const guaranteedCrit=getTurnBuff('guaranteedCrit',false);
+    const critMult=1.5+getPermaBuff('critDmgPct');
+    const mainDmg=guaranteedCrit?Math.floor(baseDmg*critMult):baseDmg;
     const comboDmgBonus = getPermaBuff('comboDmgPct');
-    let bonus = 0;
-    if (mainHero?.id==='Zan' && mon?.id==='Zan') bonus += Math.floor(baseDmg*(0.3+comboDmgBonus)); // 勇者特性「連撃」
-    if (card.type==='unique' && card.monId==='Zan') bonus += Math.floor(baseDmg*(0.2+comboDmgBonus)); // 固有技「連斬」自体の連撃(引き継ぎでも発生)
-    return bonus;
-  }, [mainHero, permaBuffs]);
+    const extraHit=(rate)=>{
+      const raw=Math.floor(baseDmg*rate);
+      return guaranteedCrit?Math.floor(raw*critMult):raw;
+    };
+    let total = mainDmg;
+    if (mainHero?.id==='Zan' && mon?.id==='Zan') total += extraHit(0.3+comboDmgBonus); // 勇者特性「連撃」
+    if (card.type==='unique' && card.monId==='Zan') total += extraHit(0.2+comboDmgBonus); // 固有技「連斬」
+    total += extraHit(getPermaBuff('globalComboDmgPct')); // きき由来の全体連撃は全モンスター共通の別ヒット
+    // 贖罪の追撃はメインヒットの確定値を基準にする（ランダム会心は予測しない）。
+    if (card.type==='unique' && (card.monId==='Ark'||card.monId==='Iblis')) total += Math.floor(mainDmg*0.2);
+    return total;
+  }, [mainHero, turnBuffs, permaBuffs]);
 
   // ダメージ源に依存しない敵撃破処理。呼び出し側はstate更新後の古いenemy.hpではなく、
   // ダメージ前HPから算出した確定remainingHpと、今回加算済みのダメージを渡す。
@@ -8083,7 +8380,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (didRegen) { await battleWait(500); }
     // 次ターン予約分(nextTurnBuffs)をそのまま今ターンの一時バフ(turnBuffs)へ入れ替える(新しい一時効果を追加してもここは変更不要)
     // 関数更新式で読むことで、このターン中に予約された最新のnextTurnBuffsを確実に反映する(古いクロージャ値を使わない)
-    setNextTurnBuffs(latestNextTurnBuffs => { setTurnBuffs(latestNextTurnBuffs); return {}; });
+    setNextTurnBuffs(latestNextTurnBuffs => {
+      const recoveryMult=latestNextTurnBuffs.melosoFullRecoveryMult||0;
+      if(recoveryMult>0) {
+        setHp(p=>Math.min(effectiveMaxHp,p+Math.floor((effectiveMaxHp-p)*recoveryMult)));
+        setGuts(p=>Math.min(effectiveMaxGuts,p+Math.floor((effectiveMaxGuts-p)*recoveryMult)));
+        addPopup(recoveryMult===1?'ライフ・ガッツ全回復!':'ライフ・ガッツ回復!','hero','text-rose-300 text-lg font-bold');
+      }
+      const {melosoFullRecoveryMult, ...activeTurnBuffs}=latestNextTurnBuffs;
+      setTurnBuffs(activeTurnBuffs); return {};
+    });
     const nextTurn=turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){setHp(0);} setIsBusy(false);
   };
 
@@ -8125,7 +8431,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // Fallback slot for cards without assignment (buffs etc.)
     const defaultSlot=slots.findIndex(s=>s!==null);
     setIsBusy(true);
-    let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, localOryoAdd=0, localDmgModAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardFlat=0, currentTurnGuardMult=0;
+    let lastType='none', guardTypeInTurn='none', totalDmg=0, totalHeal=0, localOryoAdd=0, localDmgModAdd=0, localGlobalComboAdd=0, attackCount=0, hasCrit=false, immediateInvincible=false, immediateStun=false, currentTurnGuardFlat=0, currentTurnGuardMult=0;
     let hpBeforeEnemyAttack=hp;
     let activatedIceLockThisTurn=false;
     let forcedMoveTarget=null; // 最後に使った距離撃の指定距離を、敵行動後にも最終距離として再適用する
@@ -8171,14 +8477,36 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               attackHits.push({dmg:comboFinal, isCrit:comboCrit, slotIdx, isSpecial:true, skillName:'連撃', isUnique:false});
             }
           }
+          const globalComboRate=getPermaBuff('globalComboDmgPct')+localGlobalComboAdd;
+          if(globalComboRate>0){
+            const comboBase=Math.floor(d*globalComboRate);
+            if(comboBase>0){const comboCrit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+getPermaBuff('critRatePct'))); const comboFinal=comboCrit?Math.floor(comboBase*(1.5+getPermaBuff('critDmgPct'))):comboBase; if(comboCrit)hasCrit=true; totalDmg+=comboFinal; attackHits.push({dmg:comboFinal,isCrit:comboCrit,slotIdx,isSpecial:true,skillName:'全体連撃',isUnique:false,noAnim:true});}
+          }
         }
-        else if (card.subType==='buff_myaru') { setNextTurnBuff('atkMult',1+(card.baseValue-1)*effMul); const selfDmgAmt=Math.floor(hpBeforeEnemyAttack*card.selfDmg*effMul); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black'); hpBeforeEnemyAttack=Math.max(1,hpBeforeEnemyAttack-selfDmgAmt); setHp(hpBeforeEnemyAttack); }
+        else if (card.subType==='buff_myaru') { setNextTurnBuff('atkMult',1+(card.baseValue-1)*effMul); const selfDmgAmt=Math.floor(hpBeforeEnemyAttack*myaruSelfDamageRate(card)*effMul); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black'); hpBeforeEnemyAttack=Math.max(1,hpBeforeEnemyAttack-selfDmgAmt); setHp(hpBeforeEnemyAttack); }
+        else if (card.subType==='buff_kiki') { const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=Math.min(owned?owned.evoLevel:0,2); const comboAdd=(0.03+level*0.02)*effMul; localGlobalComboAdd+=comboAdd; addPermaBuff('globalComboDmgPct',comboAdd); setPermaBuffs(p=>({...p,kikiCardBonusTurns:Math.max(1,(level+1)*effMul)+1})); addPopup(`全体連撃+${((3+level*2)*effMul).toFixed(effMul===1?0:1)}%!`,'hero','text-sky-300 text-lg font-bold'); }
       }
       else if (card.type==='heal') {
         Audio_.se.heal();
         fireTeachingFx(card.id);
         const owned=ownedTeachings.find(t=>t.id===card.id); const level=owned?owned.evoLevel:0;
-        if (card.id==='mua') {
+        if (card.id==='meloso') {
+          const healVal=Math.floor(effectiveMaxHp*0.3*effMul); totalHeal+=healVal;
+          const gutsVal=Math.floor(effectiveMaxGuts*0.3*effMul);
+          setGuts(p=>Math.min(effectiveMaxGuts,p+gutsVal));
+          currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul;
+          currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul;
+          guardTypeInTurn='guard';
+          addPopup(`⚡ ガッツ +${gutsVal}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
+          if(level>=1 && usedCards.length>=2) {
+            setNextTurnBuff('takenDamageMult',1-0.5*effMul);
+            addPopup('次ターン被ダメ50%減 予約!','hero','text-cyan-300 text-lg font-bold');
+          }
+          if(level>=2 && usedCards.length>=3) {
+            setNextTurnBuff('melosoFullRecoveryMult',effMul);
+            addPopup('次ターンライフ・ガッツ全回復 予約!','hero','text-rose-300 text-lg font-bold');
+          }
+        } else if (card.id==='mua') {
           let hpRecRate=level===1?0.7:(level>=2?0.9:0.5), gutsRecRate=level>=1?(level>=2?0.9:0.7):0;
           let hpB=level===1?0.05:(level>=2?0.08:0.03), atkB=level>=2?0.05:0.03, gutsB=level>=2?0.05:0.03;
           const healVal=Math.floor(effectiveMaxHp*hpRecRate*effMul); totalHeal+=healVal;
@@ -8224,6 +8552,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           if (mainHero?.id==='Zan' && activeMon.id==='Zan') rollCombo(0.3+comboDmgBonus);
           // 固有技「連斬」自体の連撃: 技の出自(card.monId)がザンなら、誰が使っても発生する(合体で引き継いだ場合も含む)
           if (card.type==='unique' && card.monId==='Zan') rollCombo(0.2+comboDmgBonus);
+        }
+        const globalComboRate=getPermaBuff('globalComboDmgPct')+localGlobalComboAdd;
+        if(globalComboRate>0){
+          const base=Math.floor(d*globalComboRate);
+          if(base>0){const crit=getTurnBuff('guaranteedCrit',false)||(Math.random()<((card.crit||0.1)+critRateBonus)); const final=crit?Math.floor(base*(1.5+critDmgBonus)):base; if(crit)hasCrit=true; totalDmg+=final; attackHits.push({dmg:final,isCrit:crit,slotIdx,isSpecial:true,skillName:'全体連撃',isUnique:false,noAnim:true});}
         }
         if (rangeMoveTarget!=null) { forcedMoveTarget=rangeMoveTarget; attackDistance=rangeMoveTarget; }
         if (card.type==='unique') {
@@ -8360,6 +8693,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     replenish(selectedCards.length+drawCount);
     while(nextHand.length<5&&(nextDeck.length>0||nextGraveyard.length>0))replenish(1);
     if(getTurnBuff('zeroGuts',false)) setImmediateTurnBuff('zeroGuts',false);
+    setPermaBuffs(p=>p.kikiCardBonusTurns>0?({...p,kikiCardBonusTurns:Math.max(0,p.kikiCardBonusTurns-1)}):p);
     setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
 
     const attackDistDamage=[0,0,0,0];
@@ -9133,7 +9467,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     }
     if(t.id==='mua') return level===0?"ライフ 50%回復・ライフ/攻撃/ガッツ上限 3%アップ":(level===1?"ライフ・ガッツ 70%回復・ライフ上限 5%アップ・攻撃 3%アップ・ガッツ上限 3%アップ":"ライフ・ガッツ 90%回復・ライフ上限 8%アップ・攻撃 5%アップ・ガッツ上限 5%アップ");
     if(t.id==='atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue+level*t.step).toFixed(1)}倍`;
-    if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=pct(Math.max(0.1,t.selfDmg-level*t.dmgStep)); return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;}
+    if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=pct(myaruSelfDamageRate(t,level)); return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;}
+    if(t.id==='kiki') return `次の${level+1}ターン 使用可能カード枚数 +1・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;
+    if(t.id==='meloso') return level===0?'ライフ・ガッツ30%回復・現在ガード':(level===1?'ライフ・ガッツ30%回復・現在ガード・合計2枚使用で次ターン被ダメージ50%減':'ライフ・ガッツ30%回復・現在ガード・合計2枚で次ターン被ダメージ50%減・合計3枚で次ターン開始時ライフ・ガッツ全回復');
     return t.desc;
   };
   const getFullEvolutionDetails = (t) => [0,1,2].map(lvl=>({lvl,name:BREEDER_EVO_NAMES[t.id][lvl],desc:getDynamicDesc(t,true,lvl)}));
@@ -9182,6 +9518,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const draft = uniqueSkillPointDrafts[String(masu.id)] || {};
     const allocated = Object.values(draft).reduce((sum,value)=>sum+Math.max(0,Math.floor(Number(value)||0)),0);
     const remaining = Math.max(0,normalized.uniqueSkillPoints-allocated);
+    const resetTicketCount = ownedItemCount(ownedItems, 'unique_skill_reset_ticket');
+    const resetPointCount = Object.values(normalized.uniqueSkillLevels).reduce((sum,level)=>sum+Math.max(0,Math.floor(Number(level)||0)),0);
     const changeDraft = (skillKey,delta) => setUniqueSkillPointDrafts(prev=>{
       const id=String(masu.id),current={...(prev[id]||{})},choice=choices.find(item=>item.key===skillKey);
       if(!choice)return prev;
@@ -9201,6 +9539,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div key={choice.key} className="rounded-lg border border-white/10 bg-slate-900/80 px-2 py-1.5 min-w-0"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[10px] font-black text-white">{current?.name||choice.name}</span><span className="shrink-0 text-[9px] font-mono font-black text-amber-300">{maxed?`Lv.${choice.level} MAX`:`Lv.${choice.level} → Lv.${after}`}</span></div>{!maxed&&<div className="mt-1 flex items-center justify-end gap-2"><button aria-label={`${current?.name||choice.name}の仮配分を減らす`} disabled={amount<=0} onClick={()=>changeDraft(choice.key,-1)} className="w-9 min-h-[36px] rounded-lg bg-slate-700 text-base font-black disabled:opacity-30">−</button><span className="w-8 text-center text-[11px] font-mono font-black text-amber-200">＋{amount}</span><button aria-label={`${current?.name||choice.name}の仮配分を増やす`} disabled={remaining<=0||after>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>changeDraft(choice.key,1)} className="w-9 min-h-[36px] rounded-lg bg-amber-700 text-base font-black disabled:opacity-30">＋</button></div>}</div>
         );})}</div>
         <div className="mt-2 flex items-center justify-between text-[10px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining}</span></div><div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 mt-2"><button disabled={allocated<=0} onClick={clearDraft} className="min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30">キャンセル</button><button disabled={allocated<=0} onClick={()=>{const updated=spendUniqueSkillPoint(masu.id,draft);if(updated){clearDraft();if(onUpdated)onUpdated(updated);}}} className="min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30">強化を確定</button></div></>}
+        <div className="mt-2 border-t border-white/10 pt-2 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2 text-[9px] font-black"><span className="text-slate-400">スキルポイントリセット券</span><span className={resetTicketCount>0?'text-cyan-300':'text-slate-500'}>所持 {resetTicketCount}枚</span></div>
+          <button disabled={resetTicketCount<=0||resetPointCount<=0} onClick={()=>{if(!window.confirm(`このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`))return;const result=useUniqueSkillResetTicket(masu.id);if(result){clearDraft();if(onUpdated)onUpdated(result.nextMasu);}}} className="w-full min-h-[42px] px-2 rounded-xl bg-cyan-700 text-[10px] font-black leading-tight disabled:opacity-30 disabled:bg-slate-700">配分済み固有技Pをリセット</button>
+          {resetPointCount<=0&&<div className="text-[8px] text-slate-500 font-bold text-center">配分済み固有技Pがないため使用できません</div>}
+        </div>
       </div>
     );
   };
@@ -9684,9 +10027,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {gameState==='MASU_REBIRTH'&&(()=>{
           const selected=masuMons.find(m=>String(m.id)===String(rebirthSelectedId));
-          if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが限界突破できます。レベルはそのままで、上限だけ+{BREAKTHROUGH_LEVEL_CAP_GAIN}されます。{BREAKTHROUGH_MAX_COUNT}回目で上限Lv.{BREAKTHROUGH_FINAL_LEVEL_CAP}・★は金になり、その次の「最終限界突破」で上限が一気にLv.{MAX_MASU_LEVEL_CAP}・★は虹になります（そこで打ち止めです）。</div><div className="flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"><span className="text-[10px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span><span className="text-[11px] font-mono font-black text-white">所持 {ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div><div className="text-[9px] text-slate-500 font-bold mb-2">限界突破には虹のプシュケーが必要です（1回目{BREAKTHROUGH_ITEM_BASE}個・以降1回ごとに+{BREAKTHROUGH_ITEM_STEP}個）。チャレンジ／クイックをクリアするともらえます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const need=breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount+1);const enoughPsyche=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)>=need;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP&&enoughPsyche;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey(null);}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div><div className={`text-[8px] font-black ${enoughPsyche?'text-fuchsia-300':'text-red-400'}`}>🌈{need}</div></button>})}</div></div>; }
+          if (!selected) { const entries=sortMonsterEntries(buildUnifiedMonsterEntries([],masuMons,monsterRosterIds)).filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e,monsterDisplayFlags)); return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="rebirth" compact/></div><div className="text-[10px] text-slate-400 mb-3">現在のレベル上限に到達したマスモンだけが限界突破できます。30凸までは上限+{BREAKTHROUGH_LEVEL_CAP_GAIN}、31～35凸はLv.200・230・270・330・400へ上がり、金★が虹★へ1個ずつ置き換わります。虹★4はLvUP強化ポイント×2、虹★5は×3です。</div><div className="flex items-center justify-between gap-2 rounded-xl border border-fuchsia-500/40 bg-fuchsia-950/30 px-3 py-2 mb-3 shrink-0"><span className="text-[10px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span><span className="text-[11px] font-mono font-black text-white">所持 {ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID).toLocaleString()}</span></div><div className="text-[9px] text-slate-500 font-bold mb-2">限界突破には虹のプシュケーが必要です（1回目{BREAKTHROUGH_ITEM_BASE}個・以降1回ごとに+{BREAKTHROUGH_ITEM_STEP}個）。チャレンジ／クイックをクリアするともらえます。</div>{renderMonsterSortFilterBar({singleType:true})}<div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{const base=ALL_PLAYER_MONSTERS[masu.baseId];if(!base)return null;const lvl=masuBondLevelInfo(masu);const cap=normalizeMasuProgression(masu).levelCap;const need=breakthroughItemCost(normalizeMasuProgression(masu).rebirthCount+1);const enoughPsyche=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)>=need;const can=lvl.level===cap&&cap<MAX_MASU_LEVEL_CAP&&enoughPsyche;return <button key={masu.id} disabled={!can} onClick={()=>{setRebirthSelectedId(masu.id);setRebirthSkillKey(null);}} className="relative rounded-2xl border border-violet-500/40 bg-slate-900 p-2 disabled:opacity-35"><div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="text-[9px] font-black truncate">{masu.name}</div><div className="text-[8px] text-pink-300">Lv.{lvl.level}/{masu.levelCap||30}</div><div className={`text-[8px] font-black ${enoughPsyche?'text-fuchsia-300':'text-red-400'}`}>🌈{need}</div></button>})}</div></div>; }
           const normalized=normalizeMasuProgression(selected), base=ALL_PLAYER_MONSTERS[selected.baseId], lvl=masuBondLevelInfo(selected), cost=masuRebirthCost(lvl.level), skills=getRebirthSkillChoices(selected);
-          return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">{normalized.levelCap>=BREAKTHROUGH_FINAL_LEVEL_CAP?`最終限界突破：上限が一気にLv.${MAX_MASU_LEVEL_CAP}へ上がり、★は虹になります（これが最後の限界突破です）`:`星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`}</div><div className="text-amber-300 text-[10px] font-black">強化ポイント +{normalized.rebirthCount===0?BREAKTHROUGH_FIRST_POINTS:BREAKTHROUGH_POINTS}</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div>{/* 限界突破には虹のプシュケーも要る。必要数と所持数を必ず並べて出す */}{(()=>{const need=breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1);const have=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID);return <div className="bg-black/40 p-3 rounded-xl border border-fuchsia-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要な虹のプシュケー</span><span className={`font-black flex items-center gap-1 ${have>=need?'text-fuchsia-300':'text-red-400'}`}><span aria-hidden="true">🌈</span>{need.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（{normalizeMasuProgression(selected).rebirthCount+1}回目の限界突破：{BREAKTHROUGH_ITEM_BASE} +（回数-1）×{BREAKTHROUGH_ITEM_STEP}）</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持数</span><span className="text-slate-300 font-black">{have.toLocaleString()}</span></div>{have<need&&<div className="text-[8px] text-red-400 font-black">虹のプシュケーが足りません（あと {(need-have).toLocaleString()}）</div>}</div>;})()}<div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}
+          return <div className="flex-1 flex flex-col h-full p-4"><div className="flex items-center gap-2 mb-3"><button disabled={rebirthProcessingRef.current} onClick={()=>setRebirthSelectedId(null)} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">限界突破・固有技選択</h2></div><div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3 mb-3"><div className="relative w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div><b>{selected.name}</b><div className="text-pink-300 text-xs">Lv.{lvl.level} / 上限Lv.{normalized.levelCap}</div><div className="text-slate-400 text-[10px]">{normalized.rebirthCount>=BREAKTHROUGH_MAX_COUNT?`次は${normalized.rebirthCount+1}凸：上限Lv.${breakthroughLevelCap(normalized.rebirthCount+1)}、虹★が1個増えます${normalized.rebirthCount+1>=34?`（LvUP強化ポイント×${levelUpPointMultiplier(normalized.rebirthCount+1)}）`:''}`:`星が1つ増えて上限が+${BREAKTHROUGH_LEVEL_CAP_GAIN}。レベルと強化はそのまま残ります`}</div><div className="text-amber-300 text-[10px] font-black">強化ポイント +{normalized.rebirthCount===0?BREAKTHROUGH_FIRST_POINTS:BREAKTHROUGH_POINTS}</div></div></div>{/* 必要ダイヤは合体の確認画面と同じように、独立した枠で目立たせる */}<div className="bg-black/40 p-3 rounded-xl border border-violet-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${gold>=cost?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{cost.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（絆Lv.{lvl.level}）× {REBIRTH_COST_PER_LEVEL}</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>{gold<cost&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {(cost-gold).toLocaleString()}）</div>}</div>{/* 限界突破には虹のプシュケーも要る。必要数と所持数を必ず並べて出す */}{(()=>{const need=breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1);const have=ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID);return <div className="bg-black/40 p-3 rounded-xl border border-fuchsia-500/30 mb-3 space-y-1.5"><div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要な虹のプシュケー</span><span className={`font-black flex items-center gap-1 ${have>=need?'text-fuchsia-300':'text-red-400'}`}><span aria-hidden="true">🌈</span>{need.toLocaleString()}</span></div><div className="text-[8px] text-slate-400">（{normalizeMasuProgression(selected).rebirthCount+1}回目の限界突破：{BREAKTHROUGH_ITEM_BASE} +（回数-1）×{BREAKTHROUGH_ITEM_STEP}）</div><div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持数</span><span className="text-slate-300 font-black">{have.toLocaleString()}</span></div>{have<need&&<div className="text-[8px] text-red-400 font-black">虹のプシュケーが足りません（あと {(need-have).toLocaleString()}）</div>}</div>;})()}<div className="text-[10px] text-slate-300 mb-2">LvUPする固有技を1つ選べます（最大Lv.8）。選ばないときは「あとで決める」でポイントとして残せます</div><div className="space-y-2 flex-1 overflow-y-auto mh-scroll">{skills.map(skill=><button key={skill.key} disabled={skill.level>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>setRebirthSkillKey(skill.key)} className={`w-full p-3 rounded-xl border text-left disabled:opacity-30 ${rebirthSkillKey===skill.key?'bg-violet-700 border-white':'bg-slate-900 border-violet-500/40'}`}><div className="font-black text-xs">{skill.name}</div><div className="text-[10px] text-amber-300">現在Lv.{skill.level} → Lv.{Math.min(MAX_UNIQUE_SKILL_LEVEL,skill.level+1)}</div></button>)}
 {/* 固有技を上げずに突破する道。全部の技が最大まで育っていても限界突破できるようにするためのもの。
     残したぶんはマスモンの詳細からいつでも使える */}
 <button onClick={()=>setRebirthSkillKey('')} className={`w-full p-3 rounded-xl border text-left ${rebirthSkillKey===''?'bg-amber-700 border-white':'bg-slate-900 border-amber-500/40'}`}><div className="font-black text-xs">あとで決める（ポイントとして残す）</div><div className="text-[10px] text-amber-300">固有技ポイント +1（いまの所持 {normalized.uniqueSkillPoints}）</div><div className="text-[9px] text-slate-300 mt-1">保留したポイントはマスモン詳細の「固有技強化」から使用できます</div></button></div>{rebirthError&&<div className="text-red-300 text-[10px] my-2">{rebirthError}</div>}<button disabled={rebirthSkillKey==null||gold<cost||ownedItemCount(ownedItems,BREAKTHROUGH_ITEM_ID)<breakthroughItemCost(normalizeMasuProgression(selected).rebirthCount+1)||rebirthProcessingRef.current} onClick={executeMasuBreakthrough} className="w-full py-3.5 bg-violet-600 rounded-2xl font-black disabled:opacity-30">限界突破する</button></div>;
@@ -9756,7 +10099,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="mh-breakthrough-cap">レベル上限<b>Lv.{rebirthAnimation.masu.levelCap}</b></div>
             <div className="mh-breakthrough-mon"><DyedMonsterImage baseId={rebirthAnimation.masu.baseId} src={rebirthAnimation.base?.iconUrl} alt={rebirthAnimation.masu.name} masuColors={getMasuColors(rebirthAnimation.masu)} className="w-full h-full object-contain"/></div>
             {/* 新しく増えた★は先頭。最終限界突破では5個とも虹になるので全部を「増えた★」として光らせる */}
-            <div className="mh-breakthrough-stars" aria-hidden="true">{starList.map((s,i)=><i key={i} className={(finalBreak||i===0)?'is-new':'is-old'} style={breakthroughStarStyle(s)}>★</i>)}</div>
+            <div className="mh-breakthrough-stars" aria-hidden="true">{starList.map((s,i)=>renderBreakthroughStar(s,i,{ className:`${s.image?'mh-rainbow-breakthrough-star ':''}${(finalBreak||i===0)?'is-new':'is-old'}` }))}</div>
             <div className="mh-breakthrough-copy"><b>{finalBreak?'最終限界突破！':'限界突破！'}</b><span>{finalBreak?'★ が虹になりました':'★ が1つ増えました'}</span><span>{rebirthAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${rebirthAnimation.keptSkillPoints}）`:`${rebirthAnimation.skillName} Lv.${rebirthAnimation.skillLevel}へ進化`}</span><span>強化ポイント +{rebirthAnimation.gainedPoints}</span></div>
           </div>;
         })()}
@@ -10118,6 +10461,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
+        {dyeMaskEditorOpened&&<DyeMaskTouchEditor active={gameState==='DYE_MASK_POSITION_DEBUG'} onClose={()=>{setDyeMaskEditorOpened(false);setGameState('DEBUG_SETTINGS');}} onTryInGame={tryTemporaryDyeMask} onReleaseTemporary={releaseTemporaryDyeMask} onReleaseAllTemporary={releaseAllTemporaryDyeMasks} temporaryMasks={temporaryDyeMasks}/>}
+
         {gameState==='BREEDER_ICON_DEBUG'&&(()=>{
           const item=debugIconItems.find(entry=>entry.id===iconAdjustId)||debugIconItems[0];
           if(!item)return <div className="p-4 text-slate-400">調整できるアイコンがありません。</div>;
@@ -10146,8 +10491,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <main className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-amber-400">DEBUG・本番と同じ RebirthStars</small><h2 className="text-sm font-black">限界突破★表示確認</h2></div></header>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-4">
-              <section><h3 className="mb-2 text-[9px] font-black text-amber-300">黄色・金・虹 比較</h3><div className="grid grid-cols-3 gap-1.5">{[10,30,31].map(count=><BreakthroughStarDebugCard key={count} count={count} compact/>)}</div></section>
-              <section><h3 className="mb-2 text-[9px] font-black text-slate-300">完成状態</h3><div className="grid grid-cols-2 gap-2">{[0,5,10,15,20,25,30,31].map(count=><BreakthroughStarDebugCard key={count} count={count}/>)}</div></section>
+              <section><h3 className="mb-2 text-[9px] font-black text-amber-300">黄色・金・虹 比較</h3><div className="grid grid-cols-3 gap-1.5">{[10,30,35].map(count=><BreakthroughStarDebugCard key={count} count={count} compact/>)}</div></section>
+              <section><h3 className="mb-2 text-[9px] font-black text-slate-300">完成状態</h3><div className="grid grid-cols-2 gap-2">{[0,5,10,15,20,25,30,31,32,33,34,35].map(count=><BreakthroughStarDebugCard key={count} count={count}/>)}</div></section>
               <section><h3 className="mb-2 text-[9px] font-black text-slate-300">色の切り替わり</h3><div className="grid grid-cols-2 gap-2">{[1,6,11,16,21,26].map(count=><BreakthroughStarDebugCard key={count} count={count}/>)}</div></section>
             </div>
           </main>
@@ -10169,7 +10514,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='DEBUG_SETTINGS'&&(
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
-            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
+            <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🖌️ 染色マスク編集<small className="block text-[8px] text-cyan-300">全ベースモンを選択して直接描画・PNG出力</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
               <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} className="w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black">⚔️ バトルモード<small className="block text-[8px] text-fuchsia-300">極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
               {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
               <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
@@ -10214,7 +10559,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         )}
 
         {gameState==='MONSTER_IMAGE_DEBUG'&&(()=>{
-          const owned=masuMons.filter(m=>ALL_PLAYER_MONSTERS[m.baseId]);
+          const owned=[...masuMons.filter(m=>ALL_PLAYER_MONSTERS[m.baseId])];
+          Object.keys(temporaryDyeMasks).forEach(baseId=>{if(!owned.some(m=>m.baseId===baseId)&&ALL_PLAYER_MONSTERS[baseId])owned.push({id:`temporary-dye-${baseId}`,baseId,name:`${ALL_PLAYER_MONSTERS[baseId].name}（一時確認）`,colors:[]});});
           const selected=owned.find(m=>String(m.id)===String(monsterImageDebugId))||owned[0];
           if(!selected)return <main className="flex-1 p-4"><header className="flex items-center"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3"><ArrowLeft/></button><h2 className="font-black">モンスター画像・染色確認</h2></header><p className="p-6 text-center text-slate-400">確認できる所持モンスター個体がありません。</p></main>;
           const base=ALL_PLAYER_MONSTERS[selected.baseId];
@@ -10230,7 +10576,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const renderCurrent=(label,sourceKey,palette,frameClass='h-32',fit='object-contain')=>{if(isTiger)return renderPair(label,sourceKey,palette,frameClass,fit);const src=oldSources[sourceKey];return <section className="rounded-xl bg-black/30 p-2 text-center"><b className="block mb-2 text-[9px] text-cyan-200">{label}</b><div className={`${frameClass} overflow-hidden border border-white/20`} style={bgStyle}>{palette===null?<img src={src} alt={label} className={`w-full h-full ${fit}`}/>:<DyedMonsterImage baseId={base.id} src={src} alt={label} masuColors={palette} className={`w-full h-full ${fit}`}/>}</div></section>};
           const colorText=(c)=>{if(!c)return '元の色';const{base,alpha}=splitColorAlpha(c);const name=_parseCustomColorId(base)?`カスタム(${base})`:(MASU_COLOR_LABELS[base]||base);return alpha<MASU_COLOR_ALPHA_MAX?`${name} 濃さ${alpha}%`:name;};
           return <main className="flex-1 flex flex-col h-full min-h-0 p-3" style={{paddingTop:'calc(.75rem + env(safe-area-inset-top))',paddingBottom:'calc(.75rem + env(safe-area-inset-bottom))'}}>
-            <header className="flex items-center gap-2 mb-2"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-400">DEBUG・保存されません</small><h2 className="text-sm font-black">モンスター画像・染色確認</h2></div></header>
+            <header className="flex items-center gap-2 mb-2"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-400">DEBUG・保存されません</small><h2 className="text-sm font-black">モンスター画像・染色確認</h2></div>{temporaryDyeMasks[selected.baseId]&&<span className="ml-auto rounded-full bg-fuchsia-800 px-2 py-1 text-[8px] font-black">一時反映中</span>}</header>
+            {temporaryDyeMasks[selected.baseId]&&dyeMaskEditorOpened&&<button onClick={()=>setGameState('DYE_MASK_POSITION_DEBUG')} className="mb-2 min-h-[42px] shrink-0 rounded-xl border border-fuchsia-300 bg-fuchsia-800 text-[10px] font-black">マスク編集へ戻る</button>}
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-3 pb-3">
               <select value={selected.id} onChange={e=>{const m=owned.find(x=>String(x.id)===e.target.value);setMonsterImageDebugId(e.target.value);setMonsterImageDebugColors(m?getMasuColors(m):[]);setMonsterImageDebugTigerMode('old');}} className="w-full min-h-[50px] rounded-xl bg-slate-900 border border-white/10 px-3 text-[10px] font-black">{owned.map(m=>{const b=ALL_PLAYER_MONSTERS[m.baseId];return <option key={m.id} value={m.id}>{m.name}／{b.name}／{m.baseId}／①{colorText(getMasuColors(m)[0])} ②{colorText(getMasuColors(m)[1])} ③{colorText(getMasuColors(m)[2])}</option>})}</select>
               {isTiger&&<div className="grid grid-cols-3 gap-1">{[['old','旧画像／ロールバック用'],['new','高画質版／現在の本番構成'],['compare','旧画像と高画質版の比較表示']].map(([id,label])=><button key={id} onClick={()=>setMonsterImageDebugTigerMode(id)} className={`min-h-[54px] rounded-xl px-1 text-[8px] font-black border ${monsterImageDebugTigerMode===id?'bg-amber-700 border-amber-300':'bg-slate-900 border-white/10'}`}>{label}</button>)}</div>}
@@ -10407,7 +10754,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     // 高さを決めた枠に入れて並びを崩さない。購入ボタンはmt-autoでカード下端に揃える
                     <div key={item.id} className={`rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
                       {/* 1行に4つ並べているぶん小さいので、タップすると大きく見られるようにしている */}
-                      <button type="button" onClick={()=>setMarketIconZoom(item)} aria-label={`${item.name}を大きく見る`} className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>}</button>
+                      <button type="button" onClick={()=>setMarketIconZoom(item)} aria-label={`${item.name}を大きく見る`} className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='breeder'&&BREEDER_CARD_ICON_STYLES[item.id]?<BreederCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>}</button>
                       {/* 名前の枠は3行ぶん。細い端末で長い名前が3行になっても、
                           カードの高さが商品ごとにばらつかないようにしている */}
                       <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'36px'}}>{item.name}</div>
@@ -10528,7 +10875,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       const t = TEACHING_CARDS.find(tc=>tc.id===id);
                       if (!t) return null;
                       return (
-                        <button key={id} onClick={()=>toggleDraftTeaching(id)} className="shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-purple-400 active:scale-90 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,32)}</button>
+                        <button key={id} onClick={()=>toggleDraftTeaching(id)} className="shrink-0 w-9 h-9 rounded-full overflow-hidden border-2 border-purple-400 active:scale-90 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,32,t.id)}</button>
                       );
                     }))}
                   </div>
@@ -10541,7 +10888,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       return (
                         <div key={t.id} className="relative">
                           <button onClick={()=>toggleDraftTeaching(t.id)} className={`w-full rounded-2xl border-2 p-2 flex flex-col items-center gap-1.5 active:scale-95 select-none ${selected?'bg-purple-900/40 border-purple-400 ring-2 ring-purple-400':'bg-slate-900 border-slate-800'}`}>
-                            <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 shrink-0 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,40)}</div>
+                            <div className="w-10 h-10 rounded-full overflow-hidden border border-white/10 shrink-0 flex items-center justify-center bg-black/30">{cardIconNode(t.icon,40,t.id)}</div>
                             <div className="text-[10px] font-black text-white truncate w-full text-center">{t.baseName}</div>
                             <div className={`text-[8px] font-black px-2 py-0.5 rounded-full ${selected?'bg-purple-500 text-white':'bg-slate-800 text-slate-500'}`}>{selected?'選択中':'未選択'}</div>
                           </button>
@@ -10571,7 +10918,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {rosterDetailTeaching&&(()=>{const owned=ownedTeachings.find(ot=>ot.id===rosterDetailTeaching.id); const currentLvl=owned?owned.evoLevel:-1; return(
           <div className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:31000}}>
             <div className="bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full">
-              <div className="text-6xl mb-2 shrink-0">{cardIconNode(rosterDetailTeaching.icon,76)}</div>
+              <div className="text-6xl mb-2 shrink-0">{cardIconNode(rosterDetailTeaching.icon,76,rosterDetailTeaching.id)}</div>
               <h3 className="text-lg font-black text-white mb-4 shrink-0">{BREEDER_EVO_NAMES[rosterDetailTeaching.id][Math.max(currentLvl,0)]}</h3>
               <div className="w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
                 {getFullEvolutionDetails(rosterDetailTeaching).map(info=>{const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
@@ -10840,6 +11187,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             const afterXp = cappedBondXp(main, subXp);
             const afterLvl = bondLevelInfo(afterXp);
             const gainedLevels = afterLvl.level - mainLvl.level;
+            const gainedLevelPoints = gainedLevels * levelUpPointMultiplier(main.rebirthCount);
             const reincarnateTransfer = transferableReincarnateBonus(sub);
             // 上限で切り捨てられる絆経験値。あるときは事前に知らせる
             const wastedXp = Math.max(0, (beforeXp + subXp) - afterXp);
@@ -10883,7 +11231,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">絆レベル</span><span className={`font-black ${gainedLevels>0?'text-pink-300':'text-slate-400'}`}>{gainedLevels>0?`+${gainedLevels}`:'変化なし'}</span></div>
                       <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">絆経験値</span><span className="text-white font-black">{(main.bondXp||0).toLocaleString()} → {afterXp.toLocaleString()} XP</span></div>
                       <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">次のレベルまで</span><span className="text-slate-300 font-black">{afterLvl.xpIntoLevel.toLocaleString()} / {afterLvl.xpForNext.toLocaleString()} XP</span></div>
-                      <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">強化ポイント</span><span className={`font-black ${gainedLevels+reincarnateTransfer.points>0?'text-amber-300':'text-slate-400'}`}>{mainPointsNow} → {mainPointsNow + gainedLevels + reincarnateTransfer.points}{gainedLevels+reincarnateTransfer.points>0&&<span className="text-amber-200"> (+{gainedLevels+reincarnateTransfer.points})</span>}</span></div>
+                      <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">強化ポイント</span><span className={`font-black ${gainedLevelPoints+reincarnateTransfer.points>0?'text-amber-300':'text-slate-400'}`}>{mainPointsNow} → {mainPointsNow + gainedLevelPoints + reincarnateTransfer.points}{gainedLevelPoints+reincarnateTransfer.points>0&&<span className="text-amber-200"> (+{gainedLevelPoints+reincarnateTransfer.points})</span>}</span></div>
                     </div>
                     {gainedLevels===0&&wastedXp===0&&<div className="text-[8px] text-slate-500 leading-relaxed mt-2">※ 絆経験値は加算されますが、次のレベルには届きません(強化ポイントは増えません)</div>}
                     {/* 主のレベル上限を超えるぶんは入らない。押す前に分かるようにしておく */}
@@ -11019,6 +11367,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         ? <div className="shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2">バトルの<br/>{DIFFICULTY_SETTINGS[item.skipDifficulty]?.label}<br/>スキップで使用</div>
                         : item.usage==='breakthrough'
                         ? <div className="shrink-0 text-[9px] font-black text-fuchsia-300 text-center leading-tight px-2">神殿の<br/>限界突破で<br/>使用</div>
+                        : item.usage==='uniqueSkillReset'
+                        ? <div className="shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2">マスモン詳細の<br/>固有技強化で<br/>使用</div>
                         : <button onClick={()=>setPendingItemUse(item.id)} className="shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase">使う</button>}
                     </div>
                   ))}
@@ -11134,7 +11484,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <span className="text-emerald-400 font-mono text-base">+{gain.toLocaleString()}</span>
                     </div>
                     <div className="text-[9px] text-slate-500 font-bold mb-1">絆Lv.{before.level} → <span className="text-white font-black">Lv.{after.level}</span>{after.level>before.level&&<span className="text-emerald-400 font-black"> (+{after.level-before.level})</span>}</div>
-                    <div className="text-[10px] text-amber-300 font-black mb-2">強化ポイント +{preview.gainedLevels}</div>
+                    <div className="text-[10px] text-amber-300 font-black mb-2">強化ポイント +{preview.gainedPoints}{preview.pointMultiplier>1?`（×${preview.pointMultiplier}）`:``}</div>
                     <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-pink-500/20 relative">
                       <div className="h-full bg-slate-600 absolute inset-y-0 left-0" style={{width:`${gaugePct(before)}%`}}></div>
                       <div className="h-full bg-gradient-to-r from-pink-500 to-rose-400 absolute inset-y-0 left-0" style={{width:`${gaugePct(after)}%`}}></div>
@@ -11847,12 +12197,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {enemy&&enemyIntent&&!isBusy&&(()=>{
                 // ためる・待機・移動はダメージが無いので「予測」を出さない。
                 // 出すと必ず0になり、ガードを構える判断の邪魔になる
-                const dmg=getPredictedDamage(enemyIntent);
+                const rawDmg=getPredictedDamage(enemyIntent);
+                let previewGuardFlat=0, previewGuardMult=0, previewPenaltyCnt=0;
+                selectedCards.forEach(idx=>{
+                  const card=hand[idx];
+                  const isPenalty=!isBreederCard(card);
+                  const halved=isPenalty&&previewPenaltyCnt>0;
+                  const weight=guardCardWeight(card);
+                  if(weight>0){const effect=cardEffectMultiplier(card,halved); previewGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*weight*effect; previewGuardMult+=GUARD_EVOLUTION[guardLevel].mult*weight*effect;}
+                  if(isPenalty) previewPenaltyCnt++;
+                });
+                const plannedDmg=Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult));
                 const tone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300'
                   :enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400'
                   :enemyIntent.type==='MOVE'?'bg-cyan-950 border-cyan-500/60 text-cyan-300'
                   :'bg-red-950 border-red-600/50 text-red-400';
-                return <div className={`mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[9px] font-black uppercase tracking-tight">{enemyIntent.label}{dmg>0?` (予測: ${dmg})`:''}</div></div>;
+                return <div className={`mt-auto mb-1 border p-1 px-4 rounded-full flex items-center gap-1.5 animate-pulse z-[45] shadow-lg shrink-0${battleTutorialSpotClass('enemyIntent')} ${focusedCard?'invisible':'visible'} ${tone}`}><Target size={12}/><div className="text-[9px] font-black uppercase tracking-tight">{enemyIntent.label}{rawDmg>0?` (予定: ${plannedDmg})`:''}</div></div>;
               })()}
               <div className={`flex flex-wrap justify-center gap-1 max-w-[340px] mt-auto mb-1 shrink-0 relative z-[40] ${focusedCard?'invisible':'visible'}`}>
                 {/* === 永続バフ（常時表示・数値が増減） === */}
@@ -11864,9 +12224,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"><Sparkles size={7}/> クリ率 +{Math.round(getPermaBuff('critRatePct')*100)}%</div>
                 <div className="text-[7px] font-black text-yellow-400 bg-black/60 px-2 py-0.5 rounded border border-yellow-400/50 flex items-center gap-1 shadow-lg uppercase"><Sparkles size={7}/> クリダメ +{Math.round(getPermaBuff('critDmgPct')*100)}%</div>
                 <div className="text-[7px] font-black text-cyan-400 bg-black/60 px-2 py-0.5 rounded border border-cyan-400/50 flex items-center gap-1 shadow-lg uppercase"><Sword size={7}/> 連撃 +{Math.round(getPermaBuff('comboDmgPct')*100)}%</div>
+                {getPermaBuff('globalComboDmgPct')>0&&<div className="text-[7px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"><Sword size={7}/> 全体連撃 +{Math.round(getPermaBuff('globalComboDmgPct')*100)}%</div>}
+                {kikiCardBonus>0&&<div className="text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"><PlusCircle size={7}/> カード上限 +1（残り{Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）</div>}
                 <div className={`text-[7px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery',0.1)>=0.1?'text-rose-400 border-rose-400/50':'text-red-400 border-red-400/50'}`}><Heart size={7}/> ライフ回復 {Math.round(getPermaBuff('autoHpRecovery',0.1)*100)}%</div>
                 <div className="text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"><Zap size={7}/> ガッツ回復 {Math.round((Math.max(0,0.05+(getPermaBuff('autoHpRecovery',0.1)-0.1))+getPermaBuff('gutsRecoverPct'))*100)}%</div>
                 {/* === ターン限定バフ（都度表示） === */}
+                {getNextTurnBuff('melosoFullRecoveryMult',0)>0&&<div className="text-[7px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"><Heart size={8}/> 次ターン全回復</div>}
                 {getTurnBuff('atkMult',1.0)>1&&<div className="text-[7px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"><Sparkles size={8}/> Boost x{getTurnBuff('atkMult',1.0).toFixed(1)}</div>}
                 {getTurnBuff('stunEnemy',false)&&<div className="text-[7px] font-black text-yellow-400 bg-yellow-950/60 px-2 py-1 rounded-full border border-yellow-500/50 animate-pulse uppercase flex items-center gap-1"><Zap size={8}/> スタン予約</div>}
                 {getTurnBuff('guaranteedCrit',false)&&<div className="text-[7px] font-black text-orange-400 bg-orange-950/60 px-2 py-1 rounded-full border border-orange-500/50 animate-pulse uppercase flex items-center gap-1"><Target size={8}/> 会心予約</div>}
@@ -11903,17 +12266,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   const card=hand[idx]; const slotIdx=cardAssignments[idx];
                   const isPenalty=!isBreederCard(card);
                   const halved=isPenalty&&committedPenaltyCnt>0;
-                  if(slotIdx!=null&&isAttackCard(card)) committedTotal+=getDmg(card,slotIdx,slots[slotIdx],0,0,halved);
+                  if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],0,0,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg);}
                   const gw=guardCardWeight(card);
-                  if(gw>0){ const e=halved?0.5:1; guardFlat+=GUARD_EVOLUTION[guardLevel].flat*gw*e; guardMult+=GUARD_EVOLUTION[guardLevel].mult*gw*e; }
+                  if(gw>0){ const e=cardEffectMultiplier(card,halved); guardFlat+=GUARD_EVOLUTION[guardLevel].flat*gw*e; guardMult+=GUARD_EVOLUTION[guardLevel].mult*gw*e; }
                   if(isPenalty) committedPenaltyCnt++;
                 });
                 const committedGuard=guardValueOf(guardFlat,guardMult);
                 // 保留カードがガードなら、置いたあとの合計軽減も出す
                 const pendingGuardWeight=guardCardWeight(pendingCardObj);
-                const pendingGuardHalved=pendingGuardWeight>0&&committedPenaltyCnt>0;
+                const pendingGuardHalved=pendingGuardWeight>0&&!isBreederCard(pendingCardObj)&&committedPenaltyCnt>0;
+                const pendingGuardEffect=cardEffectMultiplier(pendingCardObj,pendingGuardHalved);
                 const projectedGuard=pendingGuardWeight>0
-                  ? guardValueOf(guardFlat+GUARD_EVOLUTION[guardLevel].flat*pendingGuardWeight*(pendingGuardHalved?0.5:1), guardMult+GUARD_EVOLUTION[guardLevel].mult*pendingGuardWeight*(pendingGuardHalved?0.5:1))
+                  ? guardValueOf(guardFlat+GUARD_EVOLUTION[guardLevel].flat*pendingGuardWeight*pendingGuardEffect, guardMult+GUARD_EVOLUTION[guardLevel].mult*pendingGuardWeight*pendingGuardEffect)
                   : committedGuard;
                 const pendingIsAtk=isAttackCard(pendingCardObj);
                 // projected damage the pending card would add (as the next attack in order)
@@ -11925,7 +12289,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
                     const maxUses=(mainHero?.id==='Ham'&&s?.id==='Ham')?cardLimit:1; if(assignedCount>=maxUses) continue;
                     if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                    pendingValidSlot=i; pendingAdd=getDmg(pendingCardObj,i,s,0,0,!isBreederCard(pendingCardObj)&&committedPenaltyCnt>0); break;
+                    pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,0,0,!isBreederCard(pendingCardObj)&&committedPenaltyCnt>0); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg); break;
                   }
                 }
                 const projectedTotal=committedTotal+pendingAdd;
@@ -12006,7 +12370,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     selectedCards.forEach(idx=>{if(idx!==pendingIdx&&!isBreederCard(hand[idx]))committedPenalty++;});
                     const isSecondOrLater = committedPenalty>=1 && !isBreederCard(pendingCardObj);
                     const baseDmg=getDmg(pendingCardObj,i,s,0,0,isSecondOrLater);
-                    previewDmg=baseDmg+getComboBonusDmg(pendingCardObj,s,baseDmg);
+                    previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg);
                     isPendingPreview=true; isPendingHalved=isSecondOrLater;
                   } else if(s){
                     // 選択順で「ブリーダーカード以外」を数え、2枚目以降は半減として予測する
@@ -12018,7 +12382,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       const halved=isPenalty&&globalPenaltyCnt>0;
                       if(cardAssignments[idx]===i){
                         const baseDmg=getDmg(card,i,s,0,0,halved);
-                        previewDmg+=baseDmg+getComboBonusDmg(card,s,baseDmg);
+                        previewDmg+=getAttackPredictedDmg(card,s,baseDmg);
                       }
                       if(isPenalty)globalPenaltyCnt++;
                     });
@@ -12064,11 +12428,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         <div className="absolute top-0 left-0 right-0 flex flex-col gap-px items-center z-[55] pointer-events-none px-0.5">
                           {slotAssignedCards.map(({idx,card})=>{
                             // ガードは軽減量をその場で出す。2枚目以降なら半分になった値をそのまま表示する
-                            const gw=guardCardWeight(card), ge=halvedByIdx[idx]?0.5:1;
+                            const gw=guardCardWeight(card), ge=cardEffectMultiplier(card,halvedByIdx[idx]);
                             const gv=gw>0?guardValueOf(GUARD_EVOLUTION[guardLevel].flat*gw*ge,GUARD_EVOLUTION[guardLevel].mult*gw*ge):0;
                             return(
                             <div key={idx} className={`flex items-center gap-0.5 px-1 rounded w-full justify-center min-w-0 ${cardNeedsMonster(card)?'bg-red-600/85':'bg-emerald-600/85'}`}>
-                              <span style={{fontSize:'7px'}} className="leading-none shrink-0">{cardIconNode(card.icon,9)}</span>
+                              <span style={{fontSize:'7px'}} className="leading-none shrink-0">{cardIconNode(card.icon,9,card.id)}</span>
                               <span style={{fontSize:'7px'}} className="font-black text-white leading-none truncate min-w-0">{halvedByIdx[idx]?'½':''}{card.name}</span>
                               {gv>0&&<span style={{fontSize:'7px'}} className="font-black text-emerald-100 leading-none shrink-0">-{gv}</span>}
                             </div>
@@ -12099,7 +12463,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="text-[7px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1 flex justify-between px-2 items-center gap-2">
                 {/* 勇者モンの特性で枚数が増えているときは、その分を王冠付きで出す。
                     「勇者モンに選んだときだけ効く特性」が今効いていることを確かめられるようにする */}
-                <span className={`shrink-0 flex items-center gap-1${battleTutorialSpotClass('cardCount')}`}>Action Cards <span className="bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}</span>
+                <span className={`shrink-0 flex items-center gap-1${battleTutorialSpotClass('cardCount')}`}>Action Cards <span className="bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}</span>
                 <div className="flex items-center gap-2 shrink-0">
                   <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={10}/><span className="text-[7px]">VIEW</span></button>
                   {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={processTurn} disabled={!canAct} className={`h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={13}/> Action</button>);})()}
@@ -12125,7 +12489,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none'}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
                     {isSel&&!assignedMon&&(<div className="absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                     {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[9px]">{assignedMon.emoji}</span>}</div>)}
-                    <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div>)}<div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button></div>);
+                    <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div>)}<div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button></div>);
                 })}
               </div>
             </div>
@@ -12142,7 +12506,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div onClick={e=>e.stopPropagation()} className="w-full max-w-[280px] rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col items-center gap-3">
             <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`}>
               {item.icon
-                ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
+                ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='breeder'&&BREEDER_CARD_ICON_STYLES[item.id]?<BreederCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
                 : <span style={{fontSize:'96px'}}>{item.emoji}</span>}
             </div>
             <div className="text-center text-sm font-black text-white leading-tight">{item.name}</div>
@@ -12582,7 +12946,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto overflow-y-auto min-h-0 p-1 flex-1 content-center">
             {teachingPool.map(t=>{const owned=ownedTeachings.find(ot=>ot.id===t.id); const level=owned?owned.evoLevel:0; const isMax=level>=2;
               return(<button key={t.id} disabled={!scenarioPicksTeaching(t.id)} onClick={()=>setSelectedTeachingCard(t)} className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center text-center gap-2 transition-all aspect-square disabled:opacity-20${scenarioPicksTeaching(t.id)?battleTutorialSpotClass('teachings'):''} ${owned?'bg-purple-900/40 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]':'bg-slate-900 border-slate-800 active:scale-95'}`}>
-                <span style={{fontSize:'44px'}}>{cardIconNode(t.icon,52)}</span>
+                <span style={{fontSize:'44px'}}>{cardIconNode(t.icon,52,t.id)}</span>
                 <div className="text-[11px] font-black leading-tight flex flex-col items-center justify-center">{owned&&!isMax&&<div className="text-[8px] text-amber-400 mb-0.5 line-through">{BREEDER_EVO_NAMES[t.id][level]}</div>}<div className={owned?"text-white":""}>{owned?(isMax?BREEDER_EVO_NAMES[t.id][level]:BREEDER_EVO_NAMES[t.id][level+1]):BREEDER_EVO_NAMES[t.id][0]}</div></div>
                 <div className="text-[8px] text-slate-200 bg-black/20 px-2 py-1 rounded-full">{owned?(isMax?"MAXレベル":"進化：効果上昇"):"新規習得"}</div>
               </button>);
@@ -12591,7 +12955,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {selectedTeachingCard&&(
             <div className="fixed inset-0 z-[3100] flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.85)',zIndex:31000}}>
               <div className="bg-slate-900 border-2 border-purple-500 rounded-3xl p-6 w-full max-w-xs flex flex-col items-center gap-4 shadow-2xl h-auto max-h-full">
-                <div className="text-6xl mb-2 shrink-0">{cardIconNode(selectedTeachingCard.icon,76)}</div>
+                <div className="text-6xl mb-2 shrink-0">{cardIconNode(selectedTeachingCard.icon,76,selectedTeachingCard.id)}</div>
                 <h3 className="text-lg font-black text-white mb-4 shrink-0">{(()=>{const t=selectedTeachingCard; const owned=ownedTeachings.find(ot=>ot.id===t.id); return BREEDER_EVO_NAMES[t.id][owned?owned.evoLevel:0];})()}</h3>
                 <div className="w-full space-y-2 mb-4 overflow-y-auto min-h-0 flex-1">
                   {getFullEvolutionDetails(selectedTeachingCard).map(info=>{const owned=ownedTeachings.find(ot=>ot.id===selectedTeachingCard.id); const currentLvl=owned?owned.evoLevel:-1; const isCurrent=info.lvl===currentLvl; const isNext=info.lvl===currentLvl+1;
@@ -13285,7 +13649,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
       {/* DECK INFO */}
       {showDeckInfo&&(<div className="fixed inset-0 z-[40000] p-4 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:40000,paddingTop:'calc(1rem + env(safe-area-inset-top))'}}><div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2"><h3 className="font-black italic uppercase text-indigo-400 text-base">Deck View</h3><button onClick={()=>setShowDeckInfo(false)} className="px-4 py-2 bg-white/10 rounded-full text-[11px] active:scale-90 text-white">閉じる</button></div><div className="flex-1 overflow-y-auto">{(()=>{
-        const renderCard=(c,isUsed)=>(<button key={c.uid} onClick={()=>setFocusedCard(c)} style={TYPE_INLINE_STYLE[c.type]||{}} className={`relative w-full aspect-square rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b active:scale-95 transition-all ${TYPE_COLORS[c.type]} ${isUsed?'opacity-35 grayscale':''}`}>{isUsed&&<div className="absolute top-1 right-1 text-[6px] font-black text-white bg-black/60 px-1 rounded uppercase z-10">済</div>}<div className="text-3xl mt-1.5">{cardIconNode(c.icon,32)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5"><div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div><div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{getCardGuts(c)}</div></div></button>);
+        const renderCard=(c,isUsed)=>(<button key={c.uid} onClick={()=>setFocusedCard(c)} style={TYPE_INLINE_STYLE[c.type]||{}} className={`relative w-full aspect-square rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b active:scale-95 transition-all ${TYPE_COLORS[c.type]} ${isUsed?'opacity-35 grayscale':''}`}>{isUsed&&<div className="absolute top-1 right-1 text-[6px] font-black text-white bg-black/60 px-1 rounded uppercase z-10">済</div>}<div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5"><div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div><div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{getCardGuts(c)}</div></div></button>);
         return(<>
           {hand.length>0&&(<div className="mb-4"><div className="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-2">手札 ({hand.length})</div><div className="grid gap-1.5" style={{gridTemplateColumns:'repeat(5, minmax(0, 1fr))'}}>{hand.map(c=>renderCard(c,false))}</div></div>)}
           {deck.length>0&&(<div className="mb-4"><div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">山札 ({deck.length})</div><div className="grid gap-1.5" style={{gridTemplateColumns:'repeat(5, minmax(0, 1fr))'}}>{deck.map(c=>renderCard(c,false))}</div></div>)}
@@ -13402,7 +13766,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       })()}
       {focusedCard&&(
         <div className="fixed left-1/2 -translate-x-1/2 bg-slate-900/98 border-2 border-indigo-400 p-2.5 rounded-2xl w-[90%] max-w-[260px] shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-md" style={{bottom:'calc(34% + 80px)',zIndex:110000}} onClick={()=>setFocusedCard(null)}>
-          <div className="flex items-center gap-2.5 mb-1 border-b border-white/10 pb-1"><span className="text-xl bg-indigo-500/20 p-1 rounded-xl">{cardIconNode(focusedCard.icon,22)}</span><div className="text-left flex-1 overflow-hidden"><div className="text-[9px] font-black text-white uppercase truncate">{focusedCard.name||focusedCard.baseName}</div><div className="text-[7px] font-bold text-indigo-400 flex items-center gap-1"><Zap size={7}/> {getCardGuts(focusedCard)} Guts</div></div></div>
+          <div className="flex items-center gap-2.5 mb-1 border-b border-white/10 pb-1"><span className="text-xl bg-indigo-500/20 p-1 rounded-xl">{cardIconNode(focusedCard.icon,22,focusedCard.id)}</span><div className="text-left flex-1 overflow-hidden"><div className="text-[9px] font-black text-white uppercase truncate">{focusedCard.name||focusedCard.baseName}</div><div className="text-[7px] font-bold text-indigo-400 flex items-center gap-1"><Zap size={7}/> {getCardGuts(focusedCard)} Guts</div></div></div>
           <div className="text-[8px] text-slate-200 font-medium leading-relaxed bg-black/50 p-1.5 rounded-lg border border-white/5 space-y-1">
             {['atk','range_atk','unique'].includes(focusedCard.type)&&(<div className="flex justify-between items-center text-xs"><span>技威力:</span><span className="text-red-400 font-black">{focusedCard.type==='range_atk'?`${Math.floor(focusedCard.mult*100)} / ${Math.floor(focusedCard.mult*0.4*100)}`:Math.floor((focusedCard.type==='unique'?(focusedCard.baseMult+(focusedCard.evoLevel||0)*0.5+((focusedCard.monId==='Ark'||focusedCard.monId==='Iblis')?0.1*getPermaBuff('chuuniUniqueStack'):0)):(focusedCard.mult||focusedCard.baseMult||1.0))*100)}</span></div>)}
             {['atk','range_atk','unique'].includes(focusedCard.type)&&(<div className="flex justify-between items-center text-xs"><span>会心率:</span><span className="text-yellow-400 font-black">{Math.round(((focusedCard.crit||0.1)+getPermaBuff('critRatePct'))*100)}%{getPermaBuff('critRatePct')>0&&<span className="text-yellow-200 text-[8px]"> (+{Math.round(getPermaBuff('critRatePct')*100)})</span>} <span className="text-yellow-200/70 text-[8px]">×{(1.5+getPermaBuff('critDmgPct')).toFixed(2)}</span></span></div>)}
@@ -13538,7 +13902,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {effect.imgUrl?(effect.baseId?<DyedMonsterImage baseId={effect.baseId} src={effect.imgUrl} alt="effect" masuColors={effect.colors} style={{width:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),height:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':(effect.type==='enhance'?'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]')}`}/>:<img src={effect.imgUrl} alt="effect" style={{width:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),height:effect.type==='unique'?'180px':(effect.type==='enhance'?'160px':'150px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className={`mb-6 object-contain relative ${effect.type==='unique'?'drop-shadow-[0_0_45px_rgba(168,85,247,0.95)]':(effect.type==='enhance'?'drop-shadow-[0_0_45px_rgba(251,191,36,0.9)]':'drop-shadow-[0_0_50px_rgba(255,255,255,0.4)]')}`}/>):(<div style={{fontSize:effect.type==='unique'?'128px':(effect.type==='enhance'?'120px':'112px'),animation:(effect.type==='unique'||effect.type==='enhance')?'specialThrob 500ms ease-in-out infinite':undefined}} className="mb-6 relative">{effect.monEmoji}</div>)}
         <h2 className={`text-2xl font-black italic uppercase px-8 py-3 rounded-2xl border relative ${effect.type==='unique'?'text-purple-100 bg-purple-600/30 border-purple-400/60 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]':(effect.type==='enhance'?'text-amber-100 bg-amber-600/30 border-amber-400/60 drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]':'text-white bg-white/10 border-white/20')}`}>{effect.label}</h2>
         {effect.subLabel&&<p className={`font-mono text-[10px] mt-4 font-black whitespace-pre-line relative ${effect.type==='enhance'?'text-amber-300':'text-indigo-400'}`}>{effect.subLabel}</p>}
-        <div style={{fontSize:effect.type==='unique'?'60px':'48px'}} className="mt-8 animate-bounce relative">{cardIconNode(effect.icon,effect.type==='unique'?60:48)}</div>
+        <div style={{fontSize:effect.type==='unique'?'60px':'48px'}} className="mt-8 animate-bounce relative">{cardIconNode(effect.icon,effect.type==='unique'?60:48,effect.id)}</div>
       </div>)}
         {rosterSkillDetail&&(()=>{const mon=rosterSkillDetail.mon; const isUnique=rosterSkillDetail.kind==='unique'; const levels=isUnique?getUniqueSkillLevels(mon):getAtkSkillLevels(mon); const currentLevel=isUnique?Math.max(0,Number(mon.unique?.evoLevel)||0):0; const title=isUnique?`固有技 Lv.${currentLevel}: ${mon.unique.names?.[currentLevel]||mon.unique.name}`:`通常技: ${(HERO_ATK_NAMES[mon.id]||HERO_ATK_NAMES['Mocchi'])[0]}`; return(
           <div className="fixed inset-0 flex items-center justify-center p-4" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:32000}}>
@@ -13923,7 +14287,7 @@ const createAnimationStyle = () => {
     .mh-game-over-screen{padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom))}.mh-game-over-head{width:100%}.mh-game-over-actions{padding-bottom:0}
     @media(max-height:620px){.mh-game-over-screen{padding-top:calc(14px + env(safe-area-inset-top));padding-bottom:calc(12px + env(safe-area-inset-bottom))}.mh-game-over-head>svg{width:38px;height:38px;margin-bottom:6px}.mh-game-over-head h2{font-size:20px}.mh-game-over-head>div{padding:10px;margin-top:7px;margin-bottom:7px}.mh-game-over-actions{gap:7px;margin-top:5px}.mh-game-over-actions button:first-child{padding-top:10px;padding-bottom:10px}.mh-game-over-actions button:last-child{padding-top:8px;padding-bottom:8px}}
     .mh-regeneration-animation{position:fixed;inset:0;z-index:52000;display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));background:radial-gradient(circle,#4c1d95,#020617 65%)}.mh-regeneration-disc{position:absolute;width:170px;height:170px;object-fit:contain;animation:mhRegenerationDisc 1.5s ease-in forwards}.mh-regeneration-born{position:relative;width:min(330px,100%);padding:20px;border:2px solid #fbbf24;border-radius:24px;background:#0f172a;text-align:center;opacity:0;animation:mhRegenerationBorn .6s 1.4s ease-out forwards}.mh-regeneration-born h3{font-size:20px;font-weight:1000;color:#fde68a}.mh-regeneration-born b{float:right;color:#f9a8d4}@keyframes mhRegenerationDisc{0%{transform:rotate(0) scale(.7);opacity:1}85%{transform:rotate(1080deg) scale(1.15);opacity:1}100%{transform:rotate(1260deg) scale(.1);opacity:0}}@keyframes mhRegenerationBorn{to{opacity:1;transform:none}}
-    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
+    .mh-home-scene{position:relative;isolation:isolate;flex:1;min-height:0;overflow:hidden;background:#263f35;color:#fff}.mh-home-background{position:absolute;z-index:-2;inset:0;display:block;opacity:0;transition:opacity .45s ease;background:#263f35;pointer-events:none}.mh-home-background.is-ready{opacity:1}.mh-home-background img{display:block;width:100%;height:100%;object-fit:contain;object-position:50% 50%}.mh-home-masumon-layer{position:absolute;z-index:0;left:18%;right:18%;top:34%;bottom:29%;pointer-events:none}.mh-home-masumon{position:absolute;width:clamp(48px,14vw,72px);aspect-ratio:1;transform:translate(-50%,-72%);transition-property:left,top;transition-timing-function:linear;will-change:left,top}.mh-home-masumon-bob{position:relative;width:100%;height:100%;transform-origin:center bottom}.mh-home-masumon-bob>div:first-child,.mh-home-masumon-bob>img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 4px #0008)}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:mhHomeMasumonWalk .42s ease-in-out infinite}.mh-home-masumon-stars{position:absolute;left:0;right:0;bottom:1px;color:#fde68a;text-shadow:0 1px 3px #000}.mh-home-status{position:relative;z-index:5;display:flex;gap:7px;justify-content:space-between;padding:calc(8px + env(safe-area-inset-top)) 9px 0;pointer-events:none}.mh-home-player,.mh-home-wallet{border:1px solid #f7df9a88;background:#102522e8;box-shadow:0 4px 14px #071613cc,inset 0 1px #fff3;backdrop-filter:blur(3px);pointer-events:auto}.mh-home-player{display:flex;align-items:center;gap:6px;min-width:0;flex:1;padding:5px;border-radius:14px;text-align:left;color:#fff;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-player:active{transform:scale(.97);filter:brightness(1.2);box-shadow:0 0 18px #f5d879aa}.mh-home-profile-arrow{flex:0 0 auto;color:#f8dc8d}.mh-home-avatar{flex:0 0 40px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;color:#ffe18c;background:#142728;border:2px solid #eaca72}.mh-home-avatar>span{width:100%;height:100%}.mh-home-player-copy{min-width:0;flex:1}.mh-home-player-copy strong{display:block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.mh-home-player-copy span{display:block;color:#f8dc8d;font-size:7px;font-weight:900}.mh-home-player-copy small{display:block;text-align:right;color:#d7e3dc;font:6px monospace}.mh-home-xp{height:4px;margin-top:2px;overflow:hidden;border-radius:9px;background:#071b1c}.mh-home-xp i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#5dd79c,#f5e16d)}.mh-home-wallet{display:grid;grid-template-columns:auto 43px;grid-template-rows:1fr 1fr;width:139px;padding:4px;border-radius:14px}.mh-home-wallet>div{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:2px;padding:1px 3px;color:#ffe08a}.mh-home-wallet>div b{font-size:8px;text-align:right}.mh-home-wallet>div small{font-size:6px;color:#f4e7c3}.mh-home-wallet>button{grid-column:2;grid-row:1/3;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #fff2;color:#fce6ab;font-size:7px;font-weight:900;min-width:42px}.mh-home-facilities{position:absolute;z-index:3;inset:0;pointer-events:none}.mh-home-facility{position:absolute;pointer-events:auto;border:0;background:transparent;color:#fff;touch-action:manipulation}.mh-home-facility>span{position:absolute;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 13px;border:2px solid #ffe6a7a8;border-radius:14px;background:#10211df2;box-shadow:0 3px 12px #0009,inset 0 0 12px #ffe09822;text-shadow:0 2px 4px #000;font-size:11px;font-weight:1000;white-space:nowrap;transition:transform .1s,filter .1s,box-shadow .1s}.mh-home-facility:active>span{transform:scale(.92);filter:brightness(1.4);box-shadow:0 0 22px #ffe7a8}.mh-home-facility.management{left:0;top:14%;width:42%;height:34%}.mh-home-facility.management>span{left:6%;top:37%;border-color:#67e8f9dd;background:linear-gradient(135deg,#082f49f2,#123b3cf2);box-shadow:0 3px 12px #0009,0 0 15px #22d3ee66,inset 0 0 12px #38bdf833}.mh-home-facility.temple{right:0;top:14%;width:42%;height:34%}.mh-home-facility.temple>span{right:7%;top:35%;border-color:#d8b4fedd;background:linear-gradient(135deg,#2e1065f2,#44301cf2);box-shadow:0 3px 12px #0009,0 0 15px #c084fc66,inset 0 0 12px #fbbf2433}.mh-home-facility.market{right:0;top:45%;width:39%;height:30%}.mh-home-facility.market>span{right:5%;top:40%;border-color:#86efacdd;background:linear-gradient(135deg,#052e24f2,#3b3518f2);box-shadow:0 3px 12px #0009,0 0 15px #4ade8066,inset 0 0 12px #facc1533}.mh-home-facility.battle{left:16%;right:16%;bottom:0;height:31%}.mh-home-facility.battle>span{left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);min-width:156px;padding:10px 17px;border:2px solid #ffe3a8;border-radius:18px;background:linear-gradient(135deg,#4c1d95e8,#8b301ae8);box-shadow:0 0 23px #c084fcbb,inset 0 0 20px #ffcb6255;font-size:20px;letter-spacing:.08em;animation:mhHomeBattlePulse 2.3s ease-in-out infinite}.mh-home-facility.battle>span small{font-size:7px;letter-spacing:0;color:#ffe4b2}.mh-home-facility.battle:active>span{transform:translateX(-50%) scale(.94)}.mh-home-gift{position:absolute;z-index:5;right:5%;top:73%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #67e8f9aa;border-radius:13px;background:#083344e8;color:#cffafe;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-gift em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-gift:active{transform:scale(.94);filter:brightness(1.25)}.mh-home-update{position:absolute;z-index:5;right:9px;top:calc(69px + env(safe-area-inset-top));display:flex;align-items:center;gap:4px;min-height:32px;padding:6px 11px;border:1px solid #eed995aa;border-radius:13px;background:#102c29e8;color:#f9eac2;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-update:active{transform:scale(.94);filter:brightness(1.25)}.mh-management-link{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:64px;padding:16px;border:1px solid #818cf877;border-radius:16px;background:#172554aa;color:#fff;font-weight:900;box-shadow:0 5px 16px #0005}.mh-management-link:active{transform:scale(.98);filter:brightness(1.2)}.mh-temple-link{border-color:#a78bfa99;background:#2e1065aa}.mh-rebirth-stars{display:flex;justify-content:center;align-items:center;gap:0;font-size:8px;line-height:1;font-weight:1000;pointer-events:none}.mh-rainbow-breakthrough-star{display:block;width:1em;height:1em;object-fit:contain;transform:scale(1.07) translateY(-.06em)}.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}/* 転生した回数を示す「+N」バッジ。もとは合体の回数に使っていた見た目をそのまま移した */
     /* 転生オーラ画像。同じPNGの主炎・残光・足元炎を別周期で動かし、本体とUIには発光を掛けない。 */
     .mh-reincarnate-stack{isolation:isolate}.mh-reincarnate-aura{position:absolute;z-index:-1;inset:-34%;display:block;pointer-events:none;overflow:visible;contain:layout style}
     .mh-reincarnate-flame{position:absolute;inset:0;display:block;transform-origin:center bottom;will-change:transform,opacity}
@@ -13957,9 +14321,9 @@ const createAnimationStyle = () => {
     @keyframes mhExtremeRuleIn{from{opacity:0;transform:scale(.82)}60%{transform:scale(1.03)}}
     @media(prefers-reduced-motion:reduce){.mh-extreme-enemy-image,.mh-extreme-enemy-aura-shell::before,.mh-extreme-enemy-aura-shell::after,.mh-nightmare-enemy-image,.mh-nightmare-enemy-aura-shell::before,.mh-nightmare-enemy-aura-shell::after{animation:none;will-change:auto}}
     .mh-breakthrough-stars{position:absolute;top:calc(46% + 0px);display:flex;gap:4px;font-size:22px;color:#fde047;text-shadow:0 0 8px #ca8a04}
-    .mh-breakthrough-stars i{opacity:.35;font-style:normal}
-    .mh-breakthrough-stars i.is-new{animation:mhBreakStar 3.6s ease-out forwards}
-    .mh-breakthrough-stars i.is-old{animation:mhBreakOldStar 3.6s ease-out forwards}
+    .mh-breakthrough-stars>*{opacity:.35;font-style:normal}
+    .mh-breakthrough-stars>.is-new{animation:mhBreakStar 3.6s ease-out forwards}
+    .mh-breakthrough-stars>.is-old{animation:mhBreakOldStar 3.6s ease-out forwards}
     .mh-breakthrough-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 3.6s ease-out forwards}
     .mh-breakthrough-copy b{font-size:20px;color:#fcd34d}
     .mh-breakthrough-copy span{margin-top:2px}
@@ -13969,7 +14333,7 @@ const createAnimationStyle = () => {
     @keyframes mhBreakCap{0%,25%{opacity:0;transform:translateY(10px)}45%{opacity:1;transform:translateY(0)}100%{opacity:1}}
     @keyframes mhBreakStar{0%,55%{opacity:0;transform:scale(0) rotate(-90deg)}70%{opacity:1;transform:scale(2.1) rotate(20deg)}85%{transform:scale(.9) rotate(0)}100%{opacity:1;transform:scale(1.25)}}
     @keyframes mhBreakOldStar{0%,55%{opacity:.35}100%{opacity:1}}
-    @media(prefers-reduced-motion:reduce){.mh-breakthrough-ring,.mh-breakthrough-ring::after,.mh-breakthrough-beam,.mh-breakthrough-mon,.mh-breakthrough-cap,.mh-breakthrough-stars i,.mh-breakthrough-copy{animation:none}.mh-breakthrough-stars i{opacity:1}}
+    @media(prefers-reduced-motion:reduce){.mh-breakthrough-ring,.mh-breakthrough-ring::after,.mh-breakthrough-beam,.mh-breakthrough-mon,.mh-breakthrough-cap,.mh-breakthrough-stars>*,.mh-breakthrough-copy{animation:none}.mh-breakthrough-stars>*{opacity:1}}
     .mh-rebirth-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle,#7c3aed88,#020617 62%);pointer-events:auto;touch-action:none}.mh-rebirth-circle{position:absolute;width:240px;height:240px;border:3px solid #c4b5fd;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fde68a;font-size:150px;animation:mhRebirthCircle 4s ease-in-out forwards}.mh-rebirth-glow{position:absolute;width:100%;height:42%;background:linear-gradient(90deg,transparent,#fff8,transparent);filter:blur(14px);animation:mhRebirthGlow 4s ease-in-out forwards}.mh-rebirth-mon{position:relative;width:145px;height:145px;animation:mhRebirthFloat 4s ease-in-out forwards}.mh-rebirth-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;color:#fff;font-size:11px;font-weight:900;animation:mhRebirthCopy 4s ease-out forwards}.mh-rebirth-copy b{font-size:20px;color:#fde68a}.mh-rebirth-copy span{margin-top:2px}@keyframes mhRebirthCircle{0%{opacity:0;transform:scale(.3) rotate(0)}25%{opacity:1}100%{opacity:.25;transform:scale(1.5) rotate(180deg)}}@keyframes mhRebirthGlow{0%,20%{opacity:0}40%,70%{opacity:1}100%{opacity:0}}@keyframes mhRebirthFloat{0%{transform:translateY(30px);filter:brightness(1)}45%{transform:translateY(-25px);filter:brightness(2)}60%{filter:brightness(0)}78%{filter:brightness(3)}100%{transform:translateY(0);filter:brightness(1)}}@keyframes mhRebirthCopy{0%,55%{opacity:0;transform:translateY(20px)}68%,100%{opacity:1;transform:none}}.mh-donation-animation{position:fixed;inset:0;z-index:33000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at center,#7c3aed55 0,#020617 58%);pointer-events:auto;touch-action:none}.mh-donation-beam{position:absolute;width:150px;height:110%;background:linear-gradient(90deg,transparent,#fff9c477,transparent);filter:blur(8px);animation:mhDonationBeam 1.5s ease-in-out forwards}.mh-donation-monster{position:absolute;width:96px;height:96px;filter:drop-shadow(0 0 22px #fff);animation:mhDonationRise 1.25s ease-in forwards}.mh-donation-gem{position:absolute;color:#fde68a;opacity:0;filter:drop-shadow(0 0 18px #fbbf24);animation:mhDonationGem .55s 1s ease-out forwards}.mh-donation-particles i{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#fde68a;box-shadow:0 0 8px #fff;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-20px);animation:mhDonationParticle .55s 1s ease-out forwards}.mh-donation-copy{position:absolute;bottom:calc(15% + env(safe-area-inset-bottom));font-size:14px;font-weight:1000;color:#f5d0fe;text-shadow:0 0 12px #a855f7}@keyframes mhDonationRise{0%{transform:translateY(25px) scale(1);opacity:1}55%{transform:translateY(-28px) scale(1.08);opacity:1}100%{transform:translateY(-55px) scale(.05);opacity:0;filter:drop-shadow(0 0 50px #fff)}}@keyframes mhDonationBeam{0%{opacity:0;transform:scaleX(.2)}35%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(.1)}}@keyframes mhDonationGem{to{opacity:1;transform:scale(1.2)}}@keyframes mhDonationParticle{0%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-95px) scale(.2)}}@keyframes mhHomeMasumonWalk{0%,100%{translate:0 0}50%{translate:0 -5px}}@keyframes mhHomeBattlePulse{50%{filter:brightness(1.16);box-shadow:0 0 34px #d8b4fddd,inset 0 0 26px #ffdc8366}}@media(max-width:350px){.mh-home-player-copy strong{max-width:80px}.mh-home-wallet{width:124px}.mh-home-facility>span{font-size:9px;padding:6px 8px}.mh-home-facility.battle>span{min-width:140px;font-size:18px}}@media(max-height:620px){.mh-home-facility.management,.mh-home-facility.temple{top:13%;height:32%}/* 背の低い端末では、みゅあの吹き出しがM/B管理の看板にかからないよう少し下げる */.mh-home-facility.management>span,.mh-home-facility.temple>span{top:45%}.mh-home-facility.market{top:43%}.mh-home-facility.battle{height:30%}}@media(prefers-reduced-motion:reduce){.mh-home-background,.mh-home-player,.mh-home-facility>span{transition:none}.mh-home-facility.battle>span{animation:none}.mh-home-masumon.is-walking .mh-home-masumon-bob{animation:none}}
     .mh-home-mission{position:absolute;z-index:5;right:5%;top:65%;display:flex;align-items:center;justify-content:center;gap:4px;width:112px;min-height:44px;padding:7px 8px;border:1px solid #fbbf24aa;border-radius:13px;background:#422006e8;color:#fef3c7;font-size:9px;font-weight:900;box-shadow:0 3px 8px #0007}.mh-home-mission em{display:flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;font-style:normal;font-size:9px}.mh-home-mission:active{transform:scale(.94);filter:brightness(1.25)}/* はじめての案内で説明中の場所だけを明るく浮かび上がらせる。暗幕(z-index:90000)より前に出す。
    施設だけでなく、ミッション/ギフトの本体・みゅあの吹き出しも対象にする(そこも案内するため) */.is-tutorial-spot{z-index:90001}.mh-home-facility.is-tutorial-spot>span,.mh-home-mission.is-tutorial-spot,.mh-home-gift.is-tutorial-spot,.mh-home-assistant.is-tutorial-spot,.mh-home-settings.is-tutorial-spot{border-color:#fce7f3;filter:brightness(1.5) saturate(1.15);box-shadow:0 0 0 4px #f472b6,0 0 0 10px #f472b655,0 0 46px 12px #f472b6cc;animation:mhTutorialSpot 1.35s ease-in-out infinite}.mh-home-assistant.is-tutorial-spot{border-radius:18px}.mh-home-settings.is-tutorial-spot{position:relative;border-radius:11px}/* どこを指しているかが一目で分かるように、光る枠の上に矢印を出す */.mh-home-facility.is-tutorial-spot>span::before,.mh-home-mission.is-tutorial-spot::before,.mh-home-gift.is-tutorial-spot::before,.mh-home-assistant.is-tutorial-spot::before,.mh-home-settings.is-tutorial-spot::before{content:'▼';position:absolute;left:50%;bottom:100%;margin-bottom:5px;transform:translateX(-50%);color:#fbcfe8;font-size:19px;line-height:1;text-shadow:0 0 12px #f472b6,0 2px 4px #000;animation:mhTutorialArrow .9s ease-in-out infinite;pointer-events:none}/* 設定は画面のいちばん上にあるので、矢印は下側から上を指す */.mh-home-settings.is-tutorial-spot::before{content:'▲';top:100%;bottom:auto;margin:5px 0 0}@keyframes mhTutorialSpot{50%{box-shadow:0 0 0 6px #fbcfe8,0 0 0 15px #f472b644,0 0 62px 18px #f472b6}}@keyframes mhTutorialArrow{50%{transform:translateX(-50%) translateY(-7px)}}/* バトルチュートリアルで「ここを操作して」と示す枠。ふだんの画面の上に重ねるので、   暗幕は張らず、光る枠だけで示す(押せる場所はそのまま押せる) */.is-battle-tutorial-spot{border-radius:18px;outline:3px solid #f472b6;outline-offset:3px;box-shadow:0 0 0 7px #f472b644,0 0 34px 6px #f472b6aa;animation:mhBattleSpot 1.3s ease-in-out infinite}@keyframes mhBattleSpot{50%{outline-color:#fbcfe8;box-shadow:0 0 0 10px #f472b633,0 0 46px 10px #f472b6}}@media(prefers-reduced-motion:reduce){.is-battle-tutorial-spot{animation:none}}@media(prefers-reduced-motion:reduce){.is-tutorial-spot,.is-tutorial-spot>span,.is-tutorial-spot::before,.is-tutorial-spot>span::before{animation:none}}.mh-home-assistant{position:absolute;z-index:5;left:3%;width:70%;top:calc(72px + env(safe-area-inset-top));pointer-events:auto}@media(max-width:350px){.mh-home-assistant{width:62%}}
