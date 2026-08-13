@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 11:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-13 11:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -559,6 +559,21 @@ const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
   const uniqueSkillLevels = { ...normalized.uniqueSkillLevels };
   Object.entries(allocations).forEach(([key, amount]) => { uniqueSkillLevels[key] = Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.max(0, Math.floor(Number(uniqueSkillLevels[key]) || 0)) + amount); });
   return { ...normalized, uniqueSkillLevels, uniqueSkillPoints: normalized.uniqueSkillPoints - total };
+};
+// 固有技へ配分済みのポイントだけを未使用へ戻す。個体のほかの育成情報はスプレッドでそのまま維持する。
+const buildUniqueSkillPointReset = (masu) => {
+  const normalized = normalizeMasuProgression(masu);
+  const refundedPoints = Object.values(normalized.uniqueSkillLevels)
+    .reduce((sum, level) => sum + Math.max(0, Math.floor(Number(level) || 0)), 0);
+  if (refundedPoints <= 0) return null;
+  return {
+    refundedPoints,
+    nextMasu: {
+      ...normalized,
+      uniqueSkillLevels: Object.fromEntries(Object.keys(normalized.uniqueSkillLevels).map(key => [key, 0])),
+      uniqueSkillPoints: normalized.uniqueSkillPoints + refundedPoints,
+    },
+  };
 };
 // 転生では個体の識別情報・外見・固有技・履歴だけを残し、振った強化は白紙に戻す。
 // オブジェクトスプレッドで旧育成値を残さないよう、維持対象を明示して新しい保存形を組み立てる。
@@ -6768,6 +6783,23 @@ function MonsterHeroGame() {
     Audio_.se.levelUp();
     return updatedMasu;
   };
+  const useUniqueSkillResetTicket = (masuId) => {
+    if (ownedItemCount(ownedItems, 'unique_skill_reset_ticket') <= 0) return null;
+    const result = buildUniqueSkillPointReset(getMasuMon(masuId));
+    if (!result) return null;
+    setMasuMons(prev => {
+      const next = prev.map(m => String(m.id) === String(masuId) ? result.nextMasu : m);
+      storeSet('mh_masu_mons', next, false);
+      return next;
+    });
+    setOwnedItems(prev => {
+      const next = { ...prev, unique_skill_reset_ticket: Math.max(0, ownedItemCount(prev, 'unique_skill_reset_ticket') - 1) };
+      storeSet('mh_owned_items', next, false);
+      return next;
+    });
+    Audio_.se.tap();
+    return result;
+  };
   // 強化ポイントリセットの書: 使用済みの強化ポイント(間合い適性・ステータス強化)をすべて未使用に戻す。
   // 絆レベル・絆経験値そのものは変更しない
   const useBondResetScroll = (masuId) => {
@@ -9351,6 +9383,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const draft = uniqueSkillPointDrafts[String(masu.id)] || {};
     const allocated = Object.values(draft).reduce((sum,value)=>sum+Math.max(0,Math.floor(Number(value)||0)),0);
     const remaining = Math.max(0,normalized.uniqueSkillPoints-allocated);
+    const resetTicketCount = ownedItemCount(ownedItems, 'unique_skill_reset_ticket');
+    const resetPointCount = Object.values(normalized.uniqueSkillLevels).reduce((sum,level)=>sum+Math.max(0,Math.floor(Number(level)||0)),0);
     const changeDraft = (skillKey,delta) => setUniqueSkillPointDrafts(prev=>{
       const id=String(masu.id),current={...(prev[id]||{})},choice=choices.find(item=>item.key===skillKey);
       if(!choice)return prev;
@@ -9370,6 +9404,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div key={choice.key} className="rounded-lg border border-white/10 bg-slate-900/80 px-2 py-1.5 min-w-0"><div className="flex items-center justify-between gap-2"><span className="min-w-0 truncate text-[10px] font-black text-white">{current?.name||choice.name}</span><span className="shrink-0 text-[9px] font-mono font-black text-amber-300">{maxed?`Lv.${choice.level} MAX`:`Lv.${choice.level} → Lv.${after}`}</span></div>{!maxed&&<div className="mt-1 flex items-center justify-end gap-2"><button aria-label={`${current?.name||choice.name}の仮配分を減らす`} disabled={amount<=0} onClick={()=>changeDraft(choice.key,-1)} className="w-9 min-h-[36px] rounded-lg bg-slate-700 text-base font-black disabled:opacity-30">−</button><span className="w-8 text-center text-[11px] font-mono font-black text-amber-200">＋{amount}</span><button aria-label={`${current?.name||choice.name}の仮配分を増やす`} disabled={remaining<=0||after>=MAX_UNIQUE_SKILL_LEVEL} onClick={()=>changeDraft(choice.key,1)} className="w-9 min-h-[36px] rounded-lg bg-amber-700 text-base font-black disabled:opacity-30">＋</button></div>}</div>
         );})}</div>
         <div className="mt-2 flex items-center justify-between text-[10px] font-black"><span className="text-slate-400">残りP</span><span className="text-amber-300">{remaining}</span></div><div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2 mt-2"><button disabled={allocated<=0} onClick={clearDraft} className="min-h-[42px] rounded-xl bg-slate-700 text-[10px] font-black disabled:opacity-30">キャンセル</button><button disabled={allocated<=0} onClick={()=>{const updated=spendUniqueSkillPoint(masu.id,draft);if(updated){clearDraft();if(onUpdated)onUpdated(updated);}}} className="min-h-[42px] rounded-xl bg-amber-600 text-[11px] font-black disabled:opacity-30">強化を確定</button></div></>}
+        <div className="mt-2 border-t border-white/10 pt-2 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2 text-[9px] font-black"><span className="text-slate-400">スキルポイントリセット券</span><span className={resetTicketCount>0?'text-cyan-300':'text-slate-500'}>所持 {resetTicketCount}枚</span></div>
+          <button disabled={resetTicketCount<=0||resetPointCount<=0} onClick={()=>{if(!window.confirm(`このマスモンの固有技に配分した${resetPointCount}ポイントをリセットし、未使用の固有技Pへ戻します。スキルポイントリセット券を1枚消費します。`))return;const result=useUniqueSkillResetTicket(masu.id);if(result){clearDraft();if(onUpdated)onUpdated(result.nextMasu);}}} className="w-full min-h-[42px] px-2 rounded-xl bg-cyan-700 text-[10px] font-black leading-tight disabled:opacity-30 disabled:bg-slate-700">配分済み固有技Pをリセット</button>
+          {resetPointCount<=0&&<div className="text-[8px] text-slate-500 font-bold text-center">配分済み固有技Pがないため使用できません</div>}
+        </div>
       </div>
     );
   };
@@ -11192,6 +11231,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         ? <div className="shrink-0 text-[9px] font-black text-teal-300 text-center leading-tight px-2">バトルの<br/>{DIFFICULTY_SETTINGS[item.skipDifficulty]?.label}<br/>スキップで使用</div>
                         : item.usage==='breakthrough'
                         ? <div className="shrink-0 text-[9px] font-black text-fuchsia-300 text-center leading-tight px-2">神殿の<br/>限界突破で<br/>使用</div>
+                        : item.usage==='uniqueSkillReset'
+                        ? <div className="shrink-0 text-[9px] font-black text-cyan-300 text-center leading-tight px-2">マスモン詳細の<br/>固有技強化で<br/>使用</div>
                         : <button onClick={()=>setPendingItemUse(item.id)} className="shrink-0 bg-teal-600 text-white text-[10px] font-black px-4 py-2 rounded-xl active:scale-95 uppercase">使う</button>}
                     </div>
                   ))}
