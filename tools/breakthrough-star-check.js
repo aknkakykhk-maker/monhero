@@ -173,6 +173,12 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   check(`${label}: 虹★は文字ではなくimg要素として描画する`,
     /const renderBreakthroughStar = \(star,\s*key,\s*props = \{\}\) => star\.image\s*\?\s*<img/.test(code)
     || /const renderBreakthroughStar = \(star, key, props = \{\}\) => star\.image \?[^;]*React\.createElement\("img"/.test(code));
+  check(`${label}: 虹★を起動完了条件にせずImageとdecodeで先読みする`,
+    /const image = new Image\(\);[\s\S]{0,240}image\.src = RAINBOW_STAR_IMAGE;/.test(code)
+    && /if \(image\.decode\) image\.decode\(\)\.catch/.test(code));
+  check(`${label}: 虹★だけを上へ補正し、星列を負のmarginで動かさない`,
+    /\.mh-rainbow-breakthrough-star\{[^}]*translateY\(-\.06em\)/.test(code)
+    && !/\.mh-rebirth-stars\{[^}]*margin:-/.test(code));
   check(`${label}: 限界突破の説明に虹5段階がある`, code.includes('31～35凸'));
   check(`${label}: 固定上限の共通関数を使う`,
     /const isFinal = nextCount === FINAL_BREAKTHROUGH_COUNT;/.test(code)
