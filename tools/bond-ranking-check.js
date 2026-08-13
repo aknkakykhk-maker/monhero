@@ -13,7 +13,7 @@ assert(src.includes('const [bondRankingData, setBondRankingData]')&&src.includes
 // 絆Lvは「新しい記録」から取る。rankings.id が uuid だと id.desc は作成順にならず、
 // 毎回ばらばらの記録を拾って「プレイしても更新されない」ように見えるため、記録時刻で並べる
 assert(src.includes("const BOND_RANKING_ORDERS = ['created_at.desc.nullslast', 'id.desc'];"));
-assert(src.includes("const orders = levelKind === 'bond' ? BOND_RANKING_ORDERS : ['level.desc.nullslast'];"));
+assert(/if \(levelKind === 'bond'\)[\s\S]{0,200}for \(const order of BOND_RANKING_ORDERS\)/.test(src));
 assert(!src.includes("levelKind === 'bond' ? 'id.desc'"));
 assert(src.includes('await Promise.allSettled(diffs.map(loadOne))'));
 assert(src.includes('finishRankingStatus(levelStatusKey, levelGeneration'));

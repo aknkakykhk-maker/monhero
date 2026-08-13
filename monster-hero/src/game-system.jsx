@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-13 18:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 02:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3984,8 +3984,8 @@ const rankingDifficultyKey = (value) => normalizeRankingDifficulty(value);
 const RANKING_SCORE_LIMIT = 50;
 // 難易度を指定せずにまとめて取りにいくとき(いまは呼ぶ場所が無い)の1難易度あたりの件数。
 // ここで50件にすると9難易度ぶん=450行(約367KB)になるので、控えめにしておく。
-// ブリーダーLv・絆Lvは難易度で絞らない専用の1回取得(RANKING_LEVEL_FETCH_LIMIT /
-// RANKING_BREEDER_FETCH_LIMIT)なので、この値の影響は受けない
+// ブリーダーLv・絆Lvは難易度で絞らない専用の取得(絆Lvは RANKING_LEVEL_FETCH_LIMIT の1回、
+// ブリーダーLvは sbFetchAllBreederRows のページ送り)なので、この値の影響は受けない
 const RANKING_BULK_LIMIT = 20;
 // 取得ごとの詳細ログは切り分け用。常時出すと件数ぶんの文字列生成が毎回走るので、
 // 必要なときだけ localStorage の mh_ranking_debug='1' で有効にする(エラーは常に出す)。
@@ -4002,15 +4002,24 @@ const RANKING_LEVEL_FETCH_LIMIT = 120;
 //  「プレイしても更新されない」ように見えていた)。
 // 記録した時刻で並べ、その列が使えない環境では従来どおり id.desc へ落とす。
 const BOND_RANKING_ORDERS = ['created_at.desc.nullslast', 'id.desc'];
-// ブリーダーLvは「1人1行」ではなく、プレイのたびに増える記録から名前ごとにまとめて出す。
-// そのため、よく遊ぶ人の記録が取得枠を食いつぶし、下位の人が1行も取れずに
-// 一覧から消えてしまっていた(60行しか取らないと、7人いても3人しか出ない状態だった)。
-// 編成(party)を含めない軽い列だけを取るので、多めに取っても通信は重くならない。
-const RANKING_BREEDER_FETCH_LIMIT = 400;
+// ブリーダーLvは「1人1行」ではなく、プレイのたびに増える記録(1プレイ=1行)から
+// 名前ごとにまとめて出す。そのため「上位N行」を取る作りだと、よく遊ぶ人の過去の記録が
+// 枠を食いつぶし、Lvの低い人は1行も取れずに一覧から丸ごと消えてしまう。
+// (60行では7人いても3人しか出ず、400行へ増やしたあとも記録が貯まって再発した)
+// 行数を増やして誤魔化すのではなく、行が尽きるまでページ送りして全員を必ず集計する。
+// 取るのは name/level/icon の3列だけなので1行は数十バイトで、1万行でも数百KBに収まる。
+const RANKING_BREEDER_PAGE_SIZE = 2000;
+// 万一記録が想定以上に増えても通信が止まらないようにする上限。
+// ここに達したときはLvの高い側から読めたぶんだけで集計する
+const RANKING_BREEDER_MAX_ROWS = 24000;
+const RANKING_BREEDER_MAX_PAGES = 12;
 // ブリーダーLvは編成(party)を使わない。partyはJSONで1行あたりが大きいため、
 // 使わない場面では取得しないだけで転送量と待ち時間がはっきり減る
 const RANKING_SELECT_FULL = 'user_name,hero,party,score,level,icon';
 const RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon';
+// ブリーダーLvの一覧は名前・レベル・アイコンしか出さない。全件をページ送りで読むので、
+// 使わない列(hero/score)まで運ばない
+const RANKING_SELECT_BREEDER = 'user_name,level,icon';
 const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.desc.nullslast', offset=0, requestId='untracked', selectColumns=RANKING_SELECT_FULL) => {
   // diff を省略(null)すると難易度で絞らず、全難易度をまとめて取る
   const normalizedDifficulty = diff == null ? null : normalizeRankingDifficulty(diff);
@@ -4050,6 +4059,40 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
   } finally {
     clearTimeout(timer);
   }
+};
+// ブリーダーLvの記録を名前ごとに1件へまとめ、最も高いレベルを採用する。
+// 1プレイ=1行なので同じ人が何行も持つ。取得直後にここでまとめておくと、
+// 端末へ残すキャッシュも人数ぶんの大きさで収まる
+const aggregateBreederLevels = (rows) => {
+  const byName = new Map();
+  (rows || []).forEach(r => {
+    const name = r?.userName || '名無しのブリーダー';
+    const lv = Number(r?.level) || 0;
+    const cur = byName.get(name);
+    if (!cur || lv > cur.level) byName.set(name, { ...r, userName: name, level: lv });
+  });
+  return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level);
+};
+// ブリーダーLv用に、rankingsの全行をページ送りで読む。
+// 1プレイ=1行なので同じ人が何行も持つ。「上位N行」では下位の人が消えるため、
+// 行が尽きる(空のページが返る)まで読み進めてから名前ごとにまとめる。
+const sbFetchAllBreederRows = async (requestId='untracked') => {
+  const all = [];
+  // 1ページの実際の件数はサーバー側の上限で要求より少なくなることがある。
+  // 1ページ目の件数を「そのサーバーでの1ページ分」とみなし、それより少なくなったら最後のページとする
+  let pageSize = RANKING_BREEDER_PAGE_SIZE;
+  let offset = 0;
+  for (let page = 0; page < RANKING_BREEDER_MAX_PAGES && offset < RANKING_BREEDER_MAX_ROWS; page++) {
+    const got = await sbFetchRankings(null, pageSize, 'level.desc.nullslast', offset, requestId, RANKING_SELECT_BREEDER);
+    const rows = Array.isArray(got) ? got : [];
+    all.push(...rows);
+    rankingLog(requestId, 'breeder-page', { page, offset, pageSize, received: rows.length, total: all.length });
+    if (rows.length === 0) break;
+    if (page === 0 && rows.length < pageSize) pageSize = rows.length;
+    if (rows.length < pageSize) break;
+    offset += rows.length;
+  }
+  return all;
 };
 // 記録を1件挿入する(1プレイ=1件)
 const sbInsertScore = async (row) => {
@@ -5079,16 +5122,9 @@ function MonsterHeroGame() {
   // ブリーダーレベルのランキング。ランキング行は難易度ごとに保存されているので、
   // 同じプレイヤーが複数の難易度に現れる。名前で1件にまとめ、最も高いレベルを採用する。
   // (専用の列を増やさず、スコア送信時に一緒に保存しているlevelから集計している)
-  const breederRanking = useMemo(() => {
-    const byName = new Map();
-    Object.values(breederRankingPool).forEach(rows => (rows || []).forEach(r => {
-      const name = r.userName || '名無しのブリーダー';
-      const lv = r.level || 0;
-      const cur = byName.get(name);
-      if (!cur || lv > cur.level) byName.set(name, { ...r, userName: name, level: lv });
-    }));
-    return [...byName.values()].filter(x => x.level > 0).sort((a, b) => b.level - a.level).slice(0, 50);
-  }, [breederRankingPool]);
+  const breederRanking = useMemo(
+    () => aggregateBreederLevels(Object.values(breederRankingPool).flatMap(rows => rows || [])).slice(0, 50),
+    [breederRankingPool]);
 
   // party内の全マスモンを対象にし、新形式はmasuId、旧形式は種族ID/名前で個体を互換集計する。
   const bondRankingAll = useMemo(() => collectBondRankingEntries(bondRankingData || {}), [bondRankingData]);
@@ -5222,18 +5258,20 @@ function MonsterHeroGame() {
         try {
           // ブリーダーLvはレベル上位、絆Lvは編成(party)を見るので新しい記録から取る。
           // 絆Lvは並べ方を順に試す(created_at が無い環境でも id.desc で取れるようにする)
-          const orders = levelKind === 'bond' ? BOND_RANKING_ORDERS : ['level.desc.nullslast'];
-          const columns = levelKind === 'bond' ? RANKING_SELECT_FULL : RANKING_SELECT_NO_PARTY;
-          const levelLimit = levelKind === 'bond' ? RANKING_LEVEL_FETCH_LIMIT : RANKING_BREEDER_FETCH_LIMIT;
-          let orderError = null;
-          for (const order of orders) {
-            try { rows = await sbFetchRankings(null, levelLimit, order, 0, requestId, columns); orderError = null; break; }
-            catch (orderErr) {
-              orderError = orderErr;
-              console.error('[ranking] level fetch failed for order', order, orderErr && orderErr.message ? orderErr.message : orderErr);
+          if (levelKind === 'bond') {
+            let orderError = null;
+            for (const order of BOND_RANKING_ORDERS) {
+              try { rows = await sbFetchRankings(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId, RANKING_SELECT_FULL); orderError = null; break; }
+              catch (orderErr) {
+                orderError = orderErr;
+                console.error('[ranking] level fetch failed for order', order, orderErr && orderErr.message ? orderErr.message : orderErr);
+              }
             }
+            if (orderError) throw orderError;
+          } else {
+            // ブリーダーLvは全行をページ送りで読む(上位N行では下位の人が消えるため)
+            rows = await sbFetchAllBreederRows(requestId);
           }
-          if (orderError) throw orderError;
         } catch (e) {
           const message = e?.message || String(e);
           console.error('[ranking] level fetch failed:', message);
@@ -5241,7 +5279,9 @@ function MonsterHeroGame() {
         }
         // 取得中に新しい要求が始まっていたら、そちらに任せて古い結果は捨てる
         if (rankingLatestRequestRef.current.get(cacheKey) !== requestId) return;
-        const entries = mergeRows([], Array.isArray(rows) ? rows : []).map(toEntry);
+        const fetched = mergeRows([], Array.isArray(rows) ? rows : []).map(toEntry);
+        // ブリーダーLvはここで名前ごとにまとめる(全行を読むので、そのまま持つと無駄に大きい)
+        const entries = levelKind === 'bond' ? fetched : aggregateBreederLevels(fetched);
         if (entries.length) {
           if (levelKind === 'bond') setBondRankingData({ all: entries });
           else setBreederRankingPool({ all: entries });

@@ -96,10 +96,22 @@ check('絆Lvの取得は記録時刻で並べる',
 check('絆Lvの取得が id.desc だけに戻っていない',
   !/levelKind === 'bond' \? 'id\.desc'/.test(source));
 check('並べ方が使えない環境では順に試して落とす',
-  /for \(const order of orders\)[\s\S]{0,400}sbFetchRankings\(null, levelLimit, order/.test(source));
+  /for \(const order of BOND_RANKING_ORDERS\)[\s\S]{0,400}sbFetchRankings\(null, RANKING_LEVEL_FETCH_LIMIT, order/.test(source));
 const limitMatch = source.match(/const RANKING_LEVEL_FETCH_LIMIT = (\d+);/);
 check('絆Lvの取得枠が狭すぎない', limitMatch && Number(limitMatch[1]) >= 100, limitMatch ? `${limitMatch[1]}件` : '見つからない');
-check('絆Lvだけ編成(party)を取る', /levelKind === 'bond' \? RANKING_SELECT_FULL : RANKING_SELECT_NO_PARTY/.test(source));
+check('絆Lvだけ編成(party)を取る',
+  /sbFetchRankings\(null, RANKING_LEVEL_FETCH_LIMIT, order, 0, requestId, RANKING_SELECT_FULL\)/.test(source)
+    && /const RANKING_SELECT_BREEDER = 'user_name,level,icon';/.test(source));
+// ブリーダーLvは1プレイ=1行の記録から集計するため、「上位N行」を取る作りだと
+// よく遊ぶ人の記録が枠を食いつぶし、Lvの低い人が一覧から丸ごと消える(実際に2度起きた)。
+// 行が尽きるまでページ送りして全員を必ず集計する
+check('ブリーダーLvは全行をページ送りで読む',
+  /const sbFetchAllBreederRows = async/.test(source)
+    && /rows = await sbFetchAllBreederRows\(requestId\)/.test(source)
+    && !/RANKING_BREEDER_FETCH_LIMIT/.test(source));
+check('ページ送りはサーバー側の1ページ上限に合わせて続きを読む',
+  /if \(page === 0 && rows\.length < pageSize\) pageSize = rows\.length;/.test(source)
+    && /offset \+= rows\.length;/.test(source));
 
 // ===== 3. 集計側は送った値をそのまま拾えるか =====
 // collectBondRankingEntries を取り出して、実際の記録の形で通す

@@ -69,6 +69,7 @@ node tools/build.js --check
 | `node audio-route-check.js` | BGMのaudio要素が再生前にWeb Audioへ接続され、iOSのメディア再生経路へ漏れないことを確認する。 |
 | `node emergency-audio-breeder-check.js` | 起動タップ内の音声有効化、保存ミュート保護、ブリーダーLvランキングの独立取得と表示状態を確認する。 |
 | `node breeder-ranking-browser-check.js` | Supabaseをスタブした実ブラウザで、全難易度のブリーダーLv集約、重複排除、複数件のDOM表示、タブ往復後の保持を確認する。 |
+| `node breeder-ranking-paging-check.js` | ブリーダーLvランキングが「よく遊ぶ人の記録に取得枠を食われて下位の人が消える」状態に戻っていないかを、Supabaseをスタブした実ブラウザで確認する。記録が数百件ある人と1件しかない人を混ぜ、全員が並ぶこと・1人1件にまとまること・ページ送りしていることを見る(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
 | `node bgm-arrangement-check.js` | BGMトラック登録、場面別アレンジ保存、最終ボス後のクリア曲、試聴、曲別音量補正を確認する。 |
 | `node ranking-member-level-check.js` | スコアランキングの編成に、そのプレイ時点の絆Lvが表示されるか確認する。 |
 | `node ranking-monster-icon-check.js` | ランキングのモンスターアイコンがID・名前・旧記録から解決できるか確認する。 |
