@@ -120,6 +120,7 @@ node tools/build.js --check
 | `node help-render-check.js` | ヘルプ画面のJSXを切り出してReactで実際に描画し、カテゴリ一覧・項目一覧・全項目の本文が最後まで描けることを確認する(未定義の変数を参照していれば失敗する)。 |
 | `node help-guide-check.js` | ヘルプ(攻略情報局)を確認する。data/help.js のデータの形、全項目に助手のひとことがあること、カテゴリ→項目→本文の3階層で描かれていること、本文の数値が実際の計算と一致することを見る。 |
 | `node data-cache-key-check.js` | index.htmlが読み込むdata/*.jsのキャッシュキーが中身と一致しているか確認する(古いデータが読まれて画面が真っ暗になるのを防ぐ)。 |
+| `node meloso-breeder-check.js` | メロソのカード定義、マーケット解放、6枠維持、回復・ガード・枚数条件・次ターン予約・予測共通化を確認する。 |
 | `node balance-second-card-check.js` | 同じターンの2枚目以降のカードが効果半減になるか(ブリーダーカードは対象外)と、かどみうむの効果量・説明文を確認する。 |
 | `node pasture-check.js` | HOME放牧設定の0体・1体・5体保存、旧セーブ互換、削除済みID除外、歩行タイマーの停止を確認する。 |
 | `node feature-check.js` | 実ブラウザでゲームを起動し、主要機能が動くかを確認する。 |
