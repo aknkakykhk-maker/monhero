@@ -66,6 +66,7 @@ check('ききのアイコンが正式名称・価格で並ぶ', kiki?.name === '
 check('ききの画像はブリーダーアイコン専用フォルダにある', stripCacheKey(kiki?.icon || '') === 'images/breeder-icons/kiki.PNG');
 check('対象アイコンを共通部品で拡大・位置調整する',
   source.includes('const MARKET_PROFILE_ICON_STYLES = {')
+    && source.includes('ark_icon: { scale: 0.95, x: -8, y: 0 }')
     && source.includes('snegurochka_icon: { scale: 4.28, x: 11, y: 111 }')
     && source.includes('snegurochka_awakened_icon: { scale: 4.28, x: 9, y: 100 }')
     && source.includes('iblis_icon: { scale: 1.42, x: 2, y: -10 }')
