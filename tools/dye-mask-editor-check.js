@@ -29,7 +29,10 @@ assert(source.includes('warning.data[i]=255;warning.data[i+1]=0;warning.data[i+2
 assert(source.includes('aspectRatio:`${imageSize.width} / ${imageSize.height}`'),'表示枠を元画像の縦横比に合わせる');
 assert(source.includes('b.width=m.width=wc.width=w;b.height=m.height=wc.height=h'),'本体・マスク・警告Canvasの画像座標を一致させる');
 assert(source.includes('debugMaskPlacement={{maskUrl:previewMaskUrl}}'),'合成表示は編集マスクを本番のDyedMonsterImageへ渡す');
-assert(source.includes("style={{display:view==='body'||view==='composite'?'none':'block'"),'合成表示では独自Canvasマスクを表示しない');
+assert(source.includes("style={{display:view==='body'?'none':'block',opacity:view==='composite'?0"),'合成表示でも編集Canvasの座標領域を維持し、補助マスクだけ透明にする');
+assert(source.includes("requestAnimationFrame(()=>{previewFrameRef.current=null;setPreviewRevision")&&source.includes('flushCompositePreview();'),'合成表示を描画中はフレーム単位で更新し、pointerupで確定する');
+assert(!source.includes("{view==='composite'&&<div className=\"grid shrink-0 grid-cols-3"),'色選択UIで合成時だけviewportを縮めない');
+assert(source.includes("<section className=\"relative m-2 min-h-0 flex-1")&&source.includes("transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`"),'4表示モードで単一viewportとzoom/panを共有する');
 assert(source.includes('debugMaskPlacement?.maskUrl, debugMaskPlacement?.xPx'),'一時マスクURLの変更時に本番マスクを再読込する');
 assert(source.includes('onTryInGame(target,blob,previewColors)')&&source.includes('setMonsterImageDebugColors(colors||getMasuColors(preview))'),'合成とゲーム内確認で同じ色設定を引き継ぐ');
-console.log('OK: マスク編集制限・外部連結領域・掃除/Undo・警告・PNG正規化・縦横比を確認しました');
+console.log('OK: 合成中の逐次編集・共通viewport・マスク編集制限・外部連結領域・掃除/Undo・警告・PNG正規化・縦横比を確認しました');
