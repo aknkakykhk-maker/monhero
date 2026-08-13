@@ -85,7 +85,7 @@ check('現在技・解放済み・未解放を固有技詳細に表示',source.i
 check('星は6段階＋虹で、常に5個まで',
   source.includes("{ key:'blue',")&&source.includes("{ key:'gold',")
   &&source.includes('const BREAKTHROUGH_STARS_PER_TIER = 5;')
-  &&source.includes('const RAINBOW_STAR_COLORS')
+  &&source.includes("const RAINBOW_STAR_IMAGE = 'images/ui/breakthrough-rainbow-star.PNG'")
   &&source.includes('const breakthroughStars = (count)')
   &&!source.includes("['#fde047','#f472b6','#ef4444','#ffffff']"));
 check('35凸でLv.400・虹★5になる',
