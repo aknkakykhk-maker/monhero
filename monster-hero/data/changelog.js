@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-13 13:50",
+    date: "2026-08-13 14:01",
     type: "update",
     title: "限界突破の虹★を5段階へ拡張しました",
     items: [
@@ -11,7 +11,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-13 13:50",
+    date: "2026-08-13 14:01",
     type: "update",
     title: "スキルポイントリセット券を追加しました",
     assistantNotice: { id:'update_notice_unique_skill_reset_ticket_v1', type:'market' },
