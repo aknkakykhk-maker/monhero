@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 02:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 03:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8383,8 +8383,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setNextTurnBuffs(latestNextTurnBuffs => {
       const recoveryMult=latestNextTurnBuffs.melosoFullRecoveryMult||0;
       if(recoveryMult>0) {
-        setHp(p=>Math.min(effectiveMaxHp,p+Math.floor((effectiveMaxHp-p)*recoveryMult)));
-        setGuts(p=>Math.min(effectiveMaxGuts,p+Math.floor((effectiveMaxGuts-p)*recoveryMult)));
+        setHp(p=>Math.min(effectiveMaxHp,p+Math.floor(effectiveMaxHp*recoveryMult)));
+        setGuts(p=>Math.min(effectiveMaxGuts,p+Math.floor(effectiveMaxGuts*recoveryMult)));
         addPopup(recoveryMult===1?'ライフ・ガッツ全回復!':'ライフ・ガッツ回復!','hero','text-rose-300 text-lg font-bold');
       }
       const {melosoFullRecoveryMult, ...activeTurnBuffs}=latestNextTurnBuffs;
