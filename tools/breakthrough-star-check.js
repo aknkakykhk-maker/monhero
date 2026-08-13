@@ -15,7 +15,7 @@ const compiled = fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/game-system.
 const {
   breakthroughStars, isFinalBreakthroughCount,
   BREAKTHROUGH_STAR_TIERS, BREAKTHROUGH_STARS_PER_TIER, BREAKTHROUGH_MAX_COUNT,
-  BREAKTHROUGH_FINAL_LEVEL_CAP, FINAL_BREAKTHROUGH_COUNT, RAINBOW_STAR_COLORS,
+  BREAKTHROUGH_FINAL_LEVEL_CAP, FINAL_BREAKTHROUGH_COUNT, RAINBOW_STAR_IMAGE,
   breakthroughLevelCap, levelUpPointMultiplier,
   MAX_MASU_LEVEL_CAP, INITIAL_MASU_LEVEL_CAP, BREAKTHROUGH_LEVEL_CAP_GAIN,
   buildMasuBreakthrough, normalizeMasuProgression, totalBondXpForLevel, masuRebirthCost,
@@ -34,13 +34,7 @@ check('段階は 青→黄→ピンク→紫→赤→金 の6段階',
 check('1段階は5凸で完成する', BREAKTHROUGH_STARS_PER_TIER === 5);
 check('通常の限界突破は30回まで', BREAKTHROUGH_MAX_COUNT === 30, String(BREAKTHROUGH_MAX_COUNT));
 check('最終限界突破は35回目', FINAL_BREAKTHROUGH_COUNT === 35, String(FINAL_BREAKTHROUGH_COUNT));
-check('虹は5個ぶん用意されている', Array.isArray(RAINBOW_STAR_COLORS) && RAINBOW_STAR_COLORS.length === 5);
-check('虹の各★そのものに全色の静的グラデーションが入る', RAINBOW_STAR_COLORS.every(background =>
-  /linear-gradient\(90deg/.test(background)
-  && ['#ff355d','#ff8a24','#ffe84a','#43ef78','#38e8ee','#4388ff','#a855f7','#ff4fb8'].every(color => background.includes(color))));
-check('虹の中心を含む★全体は明色だけで塗り、暗色・透明の層を使わない', RAINBOW_STAR_COLORS.every(background =>
-  !/(#000|#111|#222|#333|#444|#555|#666|transparent|rgba\([^)]*,0\))/i.test(background)));
-check('虹の5個は別色にせず、同じ全色グラデーションを使う', new Set(RAINBOW_STAR_COLORS).size === 1);
+check('虹★画像の参照先が専用PNG', RAINBOW_STAR_IMAGE === 'images/ui/breakthrough-rainbow-star.PNG');
 // 黄色と金が見分けにくくならないこと
 const yellow = BREAKTHROUGH_STAR_TIERS.find(t => t.key === 'yellow');
 const gold = BREAKTHROUGH_STAR_TIERS.find(t => t.key === 'gold');
@@ -51,13 +45,8 @@ check('金は暗金・明金・白金の静的グラデーションを持つ',
   /linear-gradient/.test(gold.background || '') && /#fff/.test(gold.background) && /#7a3d05/.test(gold.background), gold.background);
 check('金は濃い輪郭を持つ', /#6b3605/.test(gold.stroke || ''), gold.stroke);
 const rainbow = breakthroughStars(FINAL_BREAKTHROUGH_COUNT);
-check('虹はくっきりした白い輪郭を持つ', rainbow.every(star =>
-  /rgba\(255,255,255,1\)/.test(star.stroke || '')));
-check('虹は白・赤・黄・緑・水色・青・ピンクの多色発光を持つ', rainbow.every(star =>
-  /255,255,255/.test(star.shadow || '') && /255,53,93/.test(star.shadow || '')
-  && /255,232,74/.test(star.shadow || '') && /67,239,120/.test(star.shadow || '')
-  && /56,232,238/.test(star.shadow || '') && /67,136,255/.test(star.shadow || '')
-  && /255,79,184/.test(star.shadow || '')));
+check('虹は専用の虹★画像を使う', rainbow.every(star =>
+  star.image === 'images/ui/breakthrough-rainbow-star.PNG'));
 
 // ===== 2. 凸数ごとの表示（仕様の確認項目をそのまま並べる） =====
 const nameOf = { blue:'青', yellow:'黄色', pink:'ピンク', purple:'紫', red:'赤', gold:'金', rainbow:'虹' };
@@ -172,8 +161,8 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
     && /const stars = breakthroughStars\(value\);/.test(code)
     && !/Math\.floor\(\(value - 1\) \/ 5\) % 4/.test(code));
   check(`${label}: 演出でも同じ色を使う`, /starList\.map\(\(s,i\)=>/.test(code) || /starList\.map\(\(s, i\) =>/.test(code));
-  check(`${label}: 本番表示と限界突破演出は同じ★スタイルを使う`,
-    (code.match(/breakthroughStarStyle\(s\)/g) || []).length === 2);
+  check(`${label}: 本番表示と限界突破演出は同じ★描画を使う`,
+    (code.match(/renderBreakthroughStar\(s,\s*i/g) || []).length === 2);
   check(`${label}: 限界突破の説明に虹5段階がある`, code.includes('31～35凸'));
   check(`${label}: 固定上限の共通関数を使う`,
     /const isFinal = nextCount === FINAL_BREAKTHROUGH_COUNT;/.test(code)
