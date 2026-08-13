@@ -1,6 +1,7 @@
 // バランス調整の検証:
 //   ① 同じターンの2枚目以降のカードは効果半減(ブリーダーカードは対象外・ガードも半減)
 //   ② かどみうむカードの効果量(CADMIUM_TIERS)と、そこから作られる説明文
+//   ③ みゃるの薬系の進化段階ごとの自傷率と表示
 // 効果量と説明文は実際の定義・関数をNode上で動かして確かめ、画面側の結線はソースで確認する。
 const fs = require('fs');
 const vm = require('vm');
@@ -51,7 +52,8 @@ check('ブリーダーカードを挟んでも攻撃の順番は変わらない'
 
 // 画面側の結線
 check('processTurnで2枚目以降を判定している',
-  has('const halved=!isBreeder&&penaltyCardCount>0;') && has('const effMul=halved?0.5:1;'));
+  has('const halved=!isBreeder&&penaltyCardCount>0;')
+    && has("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'breederCardEffect'):(halved?0.5:1);"));
 check('ブリーダーカードは枚数に数えない(実処理)', has('if(!isBreeder) penaltyCardCount++;'));
 check('ガードの軽減量を半減する',
   has('currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul') && has('currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul'));
@@ -124,11 +126,13 @@ check('理論: ライフ/ガッツ自動回復0.5%・上限5%', same(tiers[1], {
 check('叡智: ライフ/ガッツ自動回復1%・上限7%', same(tiers[2], { autoHp: 0.01, autoGuts: 0.01, hpLimit: 0.07, gutsLimit: 0.07 }), JSON.stringify(tiers[2]));
 
 // 説明文は本番のgetDynamicDescをそのまま動かす
+const myaruRateSrc = source.match(/const myaruSelfDamageRate = [\s\S]+?;\n/);
+check('みゃるの自傷率を共通計算する', !!myaruRateSrc);
 const descCtx = { CADMIUM_TIERS: tiers };
 vm.createContext(descCtx);
 const descStart = source.indexOf('const getDynamicDesc');
 const descEnd = source.indexOf('const getFullEvolutionDetails');
-vm.runInContext(`${source.slice(descStart, descEnd)}\nglobalThis.__d = getDynamicDesc;`, descCtx);
+vm.runInContext(`${myaruRateSrc[0]}${source.slice(descStart, descEnd)}\nglobalThis.__d = getDynamicDesc; globalThis.__r = myaruSelfDamageRate;`, descCtx);
 const desc = (level) => descCtx.__d({ id: 'cadmium' }, true, level);
 
 check('計算の説明文', desc(0) === 'ガッツ自動回復 0.5%アップ・ガッツ上限 3%アップ', desc(0));
@@ -141,8 +145,21 @@ const otherDesc = (id, level, extra = {}) => descCtx.__d({ id, ...extra }, true,
 check('おりょうの説明文は整数のまま', otherDesc('oryo', 0) === '攻撃 10%アップ' && otherDesc('oryo', 2) === '攻撃 30%アップ');
 check('みゃるの説明文は整数のまま', otherDesc('myaru', 0, { baseValue: 2.0, step: 0.5, selfDmg: 0.5, dmgStep: 0.1 }) === '次ターン攻撃 2.0倍・自傷 50%');
 
+// --- ③ みゃる ---
+const myaruRate = descCtx.__r;
+const myaruCard = { selfDmg: 0.5, dmgStep: 0.1 };
+check('みゃるの薬の自傷率は現在ライフの50%', myaruRate({ ...myaruCard, evoLevel: 0 }) === 0.5);
+check('みゃるの怪薬の自傷率は現在ライフの40%', myaruRate({ ...myaruCard, evoLevel: 1 }) === 0.4);
+check('みゃるの禁薬の自傷率は現在ライフの30%', myaruRate({ ...myaruCard, evoLevel: 2 }) === 0.3);
+check('みゃるの実戦処理は進化後の自傷率と既存の特殊ルール倍率を使う',
+  has('hpBeforeEnemyAttack*myaruSelfDamageRate(card)*effMul'));
+check('みゃるの表示は実戦処理と同じ自傷率を使う', has('pct(myaruSelfDamageRate(t,level))'));
+check('みゃるのLv1～Lv3表示',
+  [0, 1, 2].map(level => otherDesc('myaru', level, { baseValue: 2.0, step: 0.5, selfDmg: 0.5, dmgStep: 0.1 }))
+    .join('|') === '次ターン攻撃 2.0倍・自傷 50%|次ターン攻撃 2.5倍・自傷 40%|次ターン攻撃 3.0倍・自傷 30%');
+
 // 効果が0の項目はバフを積まず、ポップアップの文言も実際の効果に合わせる
-check('効果が0の上限アップはバフを積まない', has('if(tier.gutsLimit>0) addPermaBuff(\'muaGutsPct\',tier.gutsLimit)'));
+check('効果が0の上限アップはバフを積まない', has("if(tier.gutsLimit>0) addPermaBuff('muaGutsPct',tier.gutsLimit*effMul)"));
 check('ポップアップは上限アップの有無で出し分ける', has('tier.gutsLimit>0?`⚡ ガッツ上限UP!`:`⚡ ガッツ回復UP!`'));
 check('計算にもガッツ上限アップがある', tiers[0].gutsLimit === 0.03 && desc(0).includes('ガッツ上限 3%アップ'));
 
