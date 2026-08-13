@@ -13,6 +13,7 @@ const notices = context.notices;
 const officialNotices = notices.filter(n => n.enabled === true && n.debugOnly !== true);
 const annotatedEntries = changelog.filter(entry => entry.assistantNotice);
 
+assert(changelog.every(entry => ['update', 'issue'].includes(entry.type)), '更新履歴の種別は update / issue だけを使用する必要があります');
 assert(annotatedEntries.length, 'assistantNotice 付きの更新履歴が必要です');
 assert.strictEqual(officialNotices.length, annotatedEntries.length, '通常通知は changelog のメタデータからだけ生成する必要があります');
 assert.strictEqual(new Set(notices.map(n => n.id)).size, notices.length, '通知IDは一意である必要があります');
@@ -24,13 +25,22 @@ annotatedEntries.forEach(entry => {
   assert.deepStrictEqual(Array.from(notice.pages), Array.from(entry.items), '通知本文は changelog.items から生成する必要があります');
 });
 assert(notices.filter(n => n.debugOnly !== true).every(n => n.id !== 'update_notice_debug_v1'), 'テスト通知を通常配信してはいけません');
-assert(changelog.filter(entry => entry.type === 'fix').every(entry => !entry.assistantNotice), '通常の fix を助手通知にしてはいけません');
+assert(changelog.filter(entry => entry.type === 'issue').every(entry => !entry.assistantNotice), '通常の不具合修正を助手通知にしてはいけません');
 assert(changelog.find(entry => entry.title === '転生オーラを専用画像へ変更しました' && !entry.assistantNotice), '細かな更新は通知対象外にする必要があります');
 
 const marketNotice = officialNotices.find(n => n.id === 'update_notice_undine_yaobikuni_market_v1');
 assert(marketNotice, 'ウンディーネ・ヤオビクニのマーケット通知が必要です');
 assert.strictEqual(marketNotice.destination, 'market');
 assert.strictEqual(marketNotice.buttonLabel, 'マーケットを見る');
+const resetTicketEntry = changelog.find(entry => entry.title === 'スキルポイントリセット券を追加しました');
+assert(resetTicketEntry, 'スキルポイントリセット券の更新履歴が必要です');
+assert.strictEqual(resetTicketEntry.type, 'update', 'スキルポイントリセット券は更新情報へ掲載する必要があります');
+assert(resetTicketEntry.items.some(item => item.includes('1000ダイヤ')), '既存の販売価格1000ダイヤを更新履歴へ掲載する必要があります');
+assert.strictEqual(resetTicketEntry.assistantNotice?.type, 'market', 'マーケット新商品は market 通知にする必要があります');
+const resetTicketNotice = officialNotices.find(n => n.id === resetTicketEntry.assistantNotice?.id);
+assert(resetTicketNotice, 'スキルポイントリセット券のみゅあ通知が必要です');
+assert.strictEqual(resetTicketNotice.destination, 'market');
+assert.strictEqual(resetTicketNotice.buttonLabel, 'マーケットを見る');
 const modeNotices = officialNotices.filter(n => annotatedEntries.find(entry => entry.assistantNotice.id === n.id)?.assistantNotice.type === 'mode');
 assert(modeNotices.length && modeNotices.every(n => n.destination === 'battle'), 'mode 通知はバトルへ遷移する必要があります');
 const featureEntry = annotatedEntries.find(entry => entry.assistantNotice.type === 'feature' && entry.assistantNotice.destination);
@@ -40,6 +50,8 @@ assert.strictEqual(featureNotice.destination, featureEntry.assistantNotice.desti
 const unseenNotices = seenIds => officialNotices.filter(n => !seenIds.includes(n.id));
 assert(unseenNotices([]).some(n => n.id === marketNotice.id), '未読通知だけを表示候補にする必要があります');
 assert(!unseenNotices([marketNotice.id]).some(n => n.id === marketNotice.id), '既読後は同じ通知を再表示してはいけません');
+assert(unseenNotices([]).some(n => n.id === resetTicketNotice.id), '未読のスキルポイントリセット券通知を表示する必要があります');
+assert(!unseenNotices([resetTicketNotice.id]).some(n => n.id === resetTicketNotice.id), '既読後はスキルポイントリセット券通知を再表示してはいけません');
 assert(game.includes("const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1'"));
 assert(game.includes('new Set((Array.isArray(value) ? value : [])'), '不正値の正規化と重複除去が必要です');
 assert(game.includes('else await storeSet(UPDATE_NOTICE_SEEN_KEY'), '新規プレイヤーの既存通知seedが必要です');
