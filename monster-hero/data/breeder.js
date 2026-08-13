@@ -9,6 +9,7 @@ const MOCCHI_PET_ICON = "images/breeder-icons/mocchi-pet.png?v=b0e61758fca4";
 const GEZUDERO_ICON = "images/breeder-icons/gezudero.png?v=d79a38ee0679";
 const MELOPANMAN_ICON = "images/breeder-icons/melopanman.png?v=1eba631f1832";
 const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
+const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
 
 // ==================== モンスター円盤石アイコン ====================
 // DISC_STONE_BASE: 円盤石の土台画像(全モンスター共通)。作り方の詳細はBREEDER_MARKET_ITEMS手前のコメント参照。
@@ -27,7 +28,8 @@ const BREEDER_EVO_NAMES = {
   cadmium: ["かどみうむの計算", "かどみうむの理論", "かどみうむの叡智"],
   mua: ["みゅあの愛", "みゅあの深愛", "みゅあの慈愛"],
   atsu: ["あつの挑発", "あつの暴言", "あつの怒号"],
-  myaru: ["みゃるの薬", "みゃるの怪薬", "みゃるの禁薬"]
+  myaru: ["みゃるの薬", "みゃるの怪薬", "みゃるの禁薬"],
+  kiki: ["ききの応援", "ききの本気", "ききの全力全開"]
 };
 
 // かどみうむ(guts_buff)の進化段階ごとの効果量。
@@ -49,7 +51,8 @@ const TEACHING_CARDS = [
   { id:'cadmium', baseName:"かどみうむの計算", icon:CADMIUM_FACE_ICON, type:'buff',   subType:'guts_buff',   baseValue:1.3, step:0.2,  desc:"自動回復・上限アップ",   evoLevel:0, guts:20 },
   { id:'mua',     baseName:"みゅあの愛",      icon:MUA_FACE_ICON,     type:'heal',   subType:'heal_mua',    baseValue:0.5, step:0.2,  desc:"回復・能力永続アップ",   evoLevel:0, guts:20 },
   { id:'atsu',    baseName:"あつの挑発",      icon:ATSU_FACE_ICON,    type:'debuff', subType:'stun_atsu',   baseValue:1.5, step:1.5,  desc:"敵の行動を無効・攻撃", evoLevel:0, guts:20 },
-  { id:'myaru',   baseName:"みゃるの薬",      icon:MYARU_FACE_ICON,   type:'buff',   subType:'buff_myaru',  baseValue:2.0, step:0.5, selfDmg:0.5, dmgStep:0.1, desc:"次ターン攻撃2倍・自傷", evoLevel:0, guts:20 }
+  { id:'myaru',   baseName:"みゃるの薬",      icon:MYARU_FACE_ICON,   type:'buff',   subType:'buff_myaru',  baseValue:2.0, step:0.5, selfDmg:0.5, dmgStep:0.1, desc:"次ターン攻撃2倍・自傷", evoLevel:0, guts:20 },
+  { id:'kiki',    baseName:"ききの応援",      icon:KIKI_FACE_ICON,    type:'buff',   subType:'buff_kiki',   baseValue:0.03, step:0.02, desc:"次ターンからカード上限アップ・全体連撃", evoLevel:0, guts:20 }
 ];
 
 // 初期から無料で使えるブリーダーカード(教えカード)のid一覧(固定)。
@@ -100,6 +103,7 @@ const MYUA_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:'images/breeder-icons/kiki.PNG?v=35362d7b6e3e', cost:1 },
+  { id:'kiki', name:"ブリーダーカード「きき」", type:'breeder', icon:KIKI_FACE_ICON, cost:1500, desc:"次ターンから使用可能カード枚数+1・バトル中永続で全体連撃を強化" },
   { id:'oryo',    name:"おりょうのアイコン",     type:'icon', icon:ORYO_FACE_ICON,    cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
   { id:'cadmium', name:"かどみうむのアイコン",   type:'icon', icon:CADMIUM_FACE_ICON, cost:1 },
