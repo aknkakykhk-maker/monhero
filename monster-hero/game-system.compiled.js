@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 60702289b7b1d348
+// source-sha256: c0f7bfac5f660b12
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 14:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 14:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1038,6 +1038,101 @@ const diagnoseLegacyRegenerationStatBaseline = masu => {
     result.individualStatOffsets = Object.fromEntries(statKeys.map(key => [key, Number(masu.individualStats[key]) - candidate[key]]));
   }
   return result;
+};
+// 第6B-2段階の距離適性判定。候補を返すだけで、保存データへの補完・書込みは行わない。
+// ゴーレムの旧形式は過去のベース変更前後を保存値だけでは区別できないため保留する。
+const diagnoseLegacyDistAptBoosts = masu => {
+  const checks = {
+    validGrades: false,
+    notBelowBase: false,
+    withinCap: false,
+    pointsConsistent: false,
+    totalPointsPreserved: false,
+    aptitudePreserved: false,
+    powerPreserved: false
+  };
+  const reasons = [];
+  const base = ALL_PLAYER_MONSTERS[masu?.baseId];
+  const validAptitudes = value => Array.isArray(value) && value.length === 4 && value.every(grade => DIST_APTITUDE_GRADES.includes(grade));
+  const validBoosts = value => Array.isArray(value) && value.length === 4 && value.every(boost => Number.isInteger(Number(boost)) && Number(boost) >= 0);
+  if (!masu || typeof masu !== 'object' || !base || !validAptitudes(base.distAptitude) || !validAptitudes(masu.distApt)) {
+    reasons.push('ベースまたは保存済みdistAptが有効な4距離の等級ではない');
+    return {
+      status: 'BLOCKED',
+      reasons,
+      proposed: {},
+      checks
+    };
+  }
+  checks.validGrades = true;
+  const hasBoosts = Object.prototype.hasOwnProperty.call(masu, 'distAptBoosts');
+  if (hasBoosts && !validBoosts(masu.distAptBoosts)) {
+    reasons.push('distAptBoostsが0以上の整数4要素ではない');
+    return {
+      status: 'BLOCKED',
+      reasons,
+      proposed: {},
+      checks
+    };
+  }
+  if (!hasBoosts && masu.baseId === 'Golem') {
+    reasons.push('ゴーレムは旧ベース適性A/C/E/Gと現行A/E/G/Gのどちらから強化されたか断定できない');
+    return {
+      status: 'AMBIGUOUS',
+      reasons,
+      proposed: {},
+      checks
+    };
+  }
+  const boosts = hasBoosts ? masu.distAptBoosts.map(Number) : masu.distApt.map((grade, index) => DIST_APTITUDE_GRADES.indexOf(grade) - DIST_APTITUDE_GRADES.indexOf(base.distAptitude[index]));
+  checks.notBelowBase = boosts.every(boost => boost >= 0);
+  checks.withinCap = boosts.every((boost, index) => DIST_APTITUDE_GRADES.indexOf(base.distAptitude[index]) + boost < DIST_APTITUDE_GRADES.length);
+  const available = Number(masu.distAptPoints);
+  checks.pointsConsistent = Number.isInteger(available) && available >= 0;
+  if (!checks.notBelowBase) reasons.push('保存済みdistAptが現在のベースより低い');
+  if (!checks.withinCap) reasons.push('投入段階を適用するとMを超える');
+  if (!checks.pointsConsistent) reasons.push('distAptPointsが0以上の整数ではない');
+  if (hasBoosts) {
+    const resolvedGrades = base.distAptitude.map((grade, index) => DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.indexOf(grade) + boosts[index]]);
+    if (JSON.stringify(resolvedGrades) !== JSON.stringify(masu.distApt)) {
+      reasons.push('distAptとdistAptBoostsが一致しない');
+    }
+  }
+  if (reasons.length) return {
+    status: 'BLOCKED',
+    reasons,
+    proposed: {},
+    checks
+  };
+  const proposed = hasBoosts ? {} : {
+    distAptBoosts: boosts
+  };
+  const candidate = {
+    ...masu,
+    ...proposed
+  };
+  const before = mergeMasuIntoMon(masu);
+  const after = mergeMasuIntoMon(candidate);
+  const beforePointTotal = available + (hasBoosts ? masu.distAptBoosts.reduce((sum, value) => sum + Number(value), 0) : boosts.reduce((sum, value) => sum + value, 0));
+  const afterPointTotal = available + boosts.reduce((sum, value) => sum + value, 0);
+  checks.totalPointsPreserved = beforePointTotal === afterPointTotal;
+  checks.aptitudePreserved = !!before && !!after && JSON.stringify(before.distAptitude) === JSON.stringify(after.distAptitude);
+  checks.powerPreserved = !!before && !!after && monsterPowerOf(before) === monsterPowerOf(after);
+  if (!checks.totalPointsPreserved || !checks.aptitudePreserved || !checks.powerPreserved) {
+    reasons.push('候補適用前後で強化ポイント総量・距離適性・総合力を維持できない');
+    return {
+      status: 'BLOCKED',
+      reasons,
+      proposed,
+      checks
+    };
+  }
+  return {
+    status: 'SAFE_EXACT',
+    reasons,
+    proposed,
+    checks
+  };
 };
 // 第4段階の既存個体ドライラン。候補を新しいオブジェクトとして組み立てるだけで、保存・補完は行わない。
 // 旧形式は生成時点のベース定義を持たないため、現在ベースとの差が計算できても SAFE にはしない。
