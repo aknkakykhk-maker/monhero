@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: fb9f678bc8fc6d1b
+// source-sha256: dd6fc0e01c953c02
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 16:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 17:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7178,6 +7178,10 @@ const formatAptBonus = mon => getMonsterAptPct(mon).map((d, i) => d !== 0 ? `${R
 const reconcileMasuPoints = masu => {
   const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
   if (!base) return masu;
+  // 旧ゴーレムはベース適性が A/C/E/G から A/E/G/G へ変わっており、完成値の distApt だけでは
+  // 実際に何段階強化したかを一意に戻せない。現在ベースとの差を使用済みポイントとして推測すると
+  // 不足補填を誤るため、新形式になるまでは既存の能力・適性・ポイントを丸ごと保留する。
+  if (masu.baseId === 'Golem' && !Object.prototype.hasOwnProperty.call(masu, 'distAptBoosts')) return masu;
   const baseApt = base.distAptitude || ['C', 'C', 'C', 'C'];
   const aptSpent = Array.isArray(masu.distAptBoosts) ? masu.distAptBoosts.reduce((sum, value) => sum + Math.max(0, Math.floor(Number(value) || 0)), 0) : (masu.distApt || baseApt).reduce((sum, g, i) => sum + Math.max(0, DIST_APTITUDE_GRADES.indexOf(g) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])), 0);
   const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, val]) => sum + Math.ceil((val || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
