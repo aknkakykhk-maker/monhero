@@ -171,8 +171,7 @@
 ## 10. 第6B-3段階の実装状況（2026-08-14）
 
 `diagnoseLegacyMasuBaselineMigration` は、第6B-1の能力診断と第6B-2の距離適性診断を個体単位で統合し、
-`individualStats` と `aptitude` を独立分類する。両方の安全候補をコピーへ適用した前後で、4能力、4距離適性、
-総合力、既存 `statPoints`、`distAptPoints` がすべて不変の場合だけ `SAFE_EXACT` の材料にする。
+`individualStats` と `aptitude` を独立分類する。能力側は確定した生成時ベースから個体差を求め、現行ベースと既存 `statPoints` へ適用する。能力変化量が新旧ベース差と合い、総合力を新能力から再計算できる場合に `SAFE_EXACT` の材料にする。能力と総合力の移行前後一致は要求しない。
 
 - 両方が安全候補なら `SAFE_EXACT`、片方だけ安全で他方が曖昧なら `PARTIAL`。
 - どちらかが不正または不整合なら `BLOCKED`。両方曖昧なら `AMBIGUOUS`。

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 44e32bc88aa0c9e9
+// source-sha256: 1929ac5c832fd9df
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 14:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 14:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1135,7 +1135,8 @@ const diagnoseLegacyDistAptBoosts = masu => {
   };
 };
 // 第6B-3段階の個体全体診断。能力と間合いを独立分類したうえで、安全と判定した候補だけを
-// コピーへ適用し、4能力・4適性・総合力・既存ポイントが一切変わらないことを再確認する。
+// コピーへ適用し、能力は確定した生成時ベースとの個体差を現行ベースへ足し、
+// 間合いは従来値を保つことを独立に再確認する。既存ポイントはどちらも変更しない。
 // 通常個体は individualStats を持たないのが正常なので、能力側は移行済み相当として扱う。
 const diagnoseLegacyMasuBaselineMigration = masu => {
   const statKeys = ['hp', 'atk', 'def', 'guts'];
@@ -1152,9 +1153,11 @@ const diagnoseLegacyMasuBaselineMigration = masu => {
     reasons: []
   };
   const checks = {
-    statsPreserved: false,
+    statOffsetsCorrect: false,
+    statsMatchCurrentBase: false,
+    statDeltaMatchesBaseline: false,
     aptitudePreserved: false,
-    powerPreserved: false,
+    powerRecalculated: false,
     statPointsPreserved: false,
     distAptPointsPreserved: false
   };
@@ -1203,6 +1206,9 @@ const diagnoseLegacyMasuBaselineMigration = masu => {
       proposed.individualStatOffsets = {
         ...result.individualStatOffsets
       };
+      individualStats.confirmedBaseline = {
+        ...result.candidates[0]
+      };
     }
   }
   const aptResult = diagnoseLegacyDistAptBoosts(masu);
@@ -1213,20 +1219,12 @@ const diagnoseLegacyMasuBaselineMigration = masu => {
     proposed.distAptBoosts = [...aptResult.proposed.distAptBoosts];
   }
   const before = mergeMasuIntoMon(masu);
-  const preservesCandidate = candidate => {
+  const preservesAptitudeCandidate = candidate => {
     const resolved = mergeMasuIntoMon(candidate);
     const statField = key => `base${key === 'hp' ? 'Hp' : key[0].toUpperCase() + key.slice(1)}`;
     return !!before && !!resolved && statKeys.every(key => before[statField(key)] === resolved[statField(key)]) && JSON.stringify(before.distAptitude) === JSON.stringify(resolved.distAptitude) && monsterPowerOf(before) === monsterPowerOf(resolved) && JSON.stringify(masu.statPoints) === JSON.stringify(candidate.statPoints) && masu.distAptPoints === candidate.distAptPoints;
   };
-  if (individualStats.status === 'SAFE_EXACT' && !preservesCandidate({
-    ...masu,
-    individualStatOffsets: proposed.individualStatOffsets
-  })) {
-    individualStats.status = 'BLOCKED';
-    individualStats.proposedOffsets = {};
-    individualStats.reasons.push('能力候補の適用前後で能力・適性・総合力・既存ポイントを維持できない');
-  }
-  if (aptitude.status === 'SAFE_EXACT' && !preservesCandidate({
+  if (aptitude.status === 'SAFE_EXACT' && !preservesAptitudeCandidate({
     ...masu,
     distAptBoosts: proposed.distAptBoosts
   })) {
@@ -1243,11 +1241,21 @@ const diagnoseLegacyMasuBaselineMigration = masu => {
   };
   const after = mergeMasuIntoMon(candidate);
   const statField = key => `base${key === 'hp' ? 'Hp' : key[0].toUpperCase() + key.slice(1)}`;
-  checks.statsPreserved = !!before && !!after && statKeys.every(key => before[statField(key)] === after[statField(key)]);
+  const currentBaseStat = key => Number(base[statField(key)]);
+  const spentStat = key => Number(masu.statPoints[key]);
+  const confirmedBaseline = individualStats.confirmedBaseline;
+  checks.statOffsetsCorrect = individualStats.status !== 'SAFE_EXACT' || !!confirmedBaseline && statKeys.every(key => proposed.individualStatOffsets[key] === Number(masu.individualStats[key]) - Number(confirmedBaseline[key]));
+  checks.statsMatchCurrentBase = !!after && (individualStats.status !== 'SAFE_EXACT' || statKeys.every(key => after[statField(key)] === currentBaseStat(key) + proposed.individualStatOffsets[key] + spentStat(key)));
+  checks.statDeltaMatchesBaseline = !!before && !!after && (individualStats.status !== 'SAFE_EXACT' || statKeys.every(key => after[statField(key)] - before[statField(key)] === currentBaseStat(key) - Number(confirmedBaseline[key])));
   checks.aptitudePreserved = !!before && !!after && JSON.stringify(before.distAptitude) === JSON.stringify(after.distAptitude);
-  checks.powerPreserved = !!before && !!after && monsterPowerOf(before) === monsterPowerOf(after);
+  checks.powerRecalculated = !!after && monsterPowerOf(after) === Math.round(monsterPowerParts(after).total);
   checks.statPointsPreserved = JSON.stringify(masu.statPoints) === JSON.stringify(candidate.statPoints);
   checks.distAptPointsPreserved = masu.distAptPoints === candidate.distAptPoints;
+  if (individualStats.status === 'SAFE_EXACT' && (!checks.statOffsetsCorrect || !checks.statsMatchCurrentBase || !checks.statDeltaMatchesBaseline || !checks.statPointsPreserved || !checks.powerRecalculated)) {
+    individualStats.status = 'BLOCKED';
+    individualStats.proposedOffsets = {};
+    individualStats.reasons.push('能力候補が個体差・現行ベース・能力変化量・既存statPoints・総合力と一致しない');
+  }
   const statuses = [individualStats.status, aptitude.status];
   const overallStatus = statuses.includes('BLOCKED') ? 'BLOCKED' : statuses.every(status => status === 'ALREADY_MODERN') ? 'ALREADY_MODERN' : statuses.every(status => status === 'AMBIGUOUS') ? 'AMBIGUOUS' : statuses.includes('AMBIGUOUS') ? 'PARTIAL' : 'SAFE_EXACT';
   return {
