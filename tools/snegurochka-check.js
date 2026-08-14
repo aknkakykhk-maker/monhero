@@ -6,7 +6,19 @@ const game = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const help = fs.readFileSync('monster-hero/data/help.js', 'utf8');
 const images = fs.readFileSync('monster-hero/data/images/images-ally.js', 'utf8');
 const faceIcons = fs.readFileSync('tools/make-face-icons.js', 'utf8');
+const iceRulerRate = (currentRate, heroId) => ['Snegurochka', 'Undine', 'Yaobikuni'].includes(heroId)
+  ? Math.min(1, currentRate + 0.5)
+  : currentRate;
+const rateCases = [
+  [0.05, 'Snegurochka', 0.55],
+  [0.5, 'Undine', 1],
+  [0.8, 'Yaobikuni', 1],
+  [0.05, 'Mocchi', 0.05],
+  [0.05, undefined, 0.05],
+];
 const checks = [
+  ['自動ガッツ回復率の加算・上限・勇者限定', rateCases.every(([current, hero, expected]) => iceRulerRate(current, hero) === expected)],
+  ['対象3体のtraitDesc', (ally.match(/traitDesc:"勇者モン選択時：自動ガッツ回復率\+50%（上限100%）"/g) || []).length === 3],
   ['基礎能力・適性・合流値', /Snegurochka:[\s\S]*?baseHp:400, baseGuts:150, baseAtk:135, baseDef:80[\s\S]*?plusStats:\{hp:150,atk:40,def:10,guts:40\}[\s\S]*?distAptitude:\['D','E','B','A'\]/.test(ally)],
   ['通常技9段階', /Snegurochka: \["アイスブレード"[\s\S]*?"ジングルベル"\]/.test(ally)],
   ['固有技9段階・倍率・消費', /name:"アイスアロー"[\s\S]*?baseMult:2\.2,baseGuts:44[\s\S]*?"メリークリスマス"/.test(ally)],
@@ -18,12 +30,13 @@ const checks = [
   ['初回付与ターンは準備中として次ターンに解除', /iceLockPreparing:\(p\.iceLockTurns\|\|0\)<=0/.test(game) && /iceLockRefreshed\) setWaveBuffs\(p=>\(\{\.\.\.p,iceLockPreparing:false\}\)\)/.test(game)],
   ['消費ガッツ3%累積・安全な下限', /Math\.max\(0\.1, 1 - 0\.03\*getPermaBuff\('snegurochkaGutsDiscountStacks'\)\)/.test(game)],
   ['発動中だけ敵の最終与ダメージを30%減少', /iceLockActive = iceLockTurns>0 && !iceLockPreparing/.test(game) && /iceLockEnemyDamageMult = iceLockActive \? 0\.7 : 1\.0/.test(game) && /dmgBase[\s\S]*?getPermaBuff\('dmgCutPct'\)[\s\S]*?\*iceLockEnemyDamageMult/.test(game)],
-  // 絶氷の楔・氷海の支配者は同じ効果を持つ人魚たちで実装を共有する(ID一覧で判定)
-  ['勇者限定AND条件・既存距離倍率と別乗算', game.includes("const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni'])")
-    && game.includes('isIceLockMonster(mainHero?.id)') && game.includes('isIceLockMonster(card.monId)') && game.includes('iceLockTurns>0') && game.includes('slotIdx===targetDist') && /traitMult=[^\n]*\*iceRulerMult/.test(game)],
+  // 絶氷の楔と氷海の支配者は対象IDだけを共有し、効果処理は分離する。
+  ['氷海の支配者は対象3体の勇者だけに自動ガッツ回復率+50%', game.includes("const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni'])")
+    && game.includes('applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id)')
+    && game.includes('? Math.min(1, currentRate + 0.5)')],
+  ['旧与ダメージ1.5倍処理を削除', !game.includes('iceRulerMult') && !game.includes('isIceRulerActive') && !game.includes('data-ice-ruler-active')],
   ['付与中フラグを特性判定へ混ぜない', !game.includes('activatesIceLock') && !/getDmg\([^\n]*activatedIceLockThisTurn/.test(game)],
-  ['特性の実効果と表示は共通発動判定を使用', game.includes('const isIceRulerActive = (slotIdx, targetDist)') && game.includes('&& iceLockActive') && game.includes('iceRulerMult=isIceRulerActive(slotIdx,attackStartDist)') && /isIceRulerActive\(slots\.findIndex\(isHeroSlotMon\),enemyDist\)[\s\S]*?data-ice-ruler-active/.test(game)],
-  ['敵情報欄に準備・残りターン・軽減・特性の小型バッジ', /data-ice-lock-status[\s\S]*?iceLockPreparing\?'準備':[\s\S]*?iceLockTurns\}T　⬇30%/.test(game) && /data-ice-lock-status[\s\S]*?data-ice-ruler-active[\s\S]*?⚔️特性/.test(game) && /text-\[7px\][\s\S]*?❄️絶氷/.test(game)],
+  ['敵情報欄に絶氷の準備・残りターン・軽減を維持', /data-ice-lock-status[\s\S]*?iceLockPreparing\?'準備':[\s\S]*?iceLockTurns\}T　⬇30%/.test(game) && /text-\[7px\][\s\S]*?❄️絶氷/.test(game)],
   ['専用水攻撃モーション', /atkMotion:'waterBurst'/.test(ally) && /@keyframes waterBurstAttack/.test(game) && /@keyframes waterBurstLunge/.test(game)],
   ['ヘルプに特性・固有効果', help.includes('勇者特性「氷海の支配者」') && help.includes('「絶氷の楔」')],
   // 立ち絵は他のモンスターと同じ正方形・同じ余白へそろえる(import-monster-art.jsの出力)。
