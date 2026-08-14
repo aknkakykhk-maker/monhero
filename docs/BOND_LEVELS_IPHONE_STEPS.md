@@ -83,10 +83,21 @@ PostgreSQL 16 のローカル環境に、Supabaseと同じ前提（`anon` / `aut
 - **転生すると絆Lvは下がります。** そのため「高い方を残す」ではなく最新値で上書きします（いまの状態を映すため）。
 - 削除の権限は誰にも与えません。消えたら復旧できないためです。
 
-## このあとのアプリ側の作業（参考）
+## このあとのアプリ側の作業（すべて完了）
 
-1. プレイ終了時、いまの `rankings` への送信に加えて `bond_levels` へ upsert する
+1. ✅ プレイ終了時、いまの `rankings` への送信に加えて `bond_levels` へ upsert する
    （`POST /rest/v1/bond_levels?on_conflict=user_name,individual_id` ＋ `Prefer: resolution=merge-duplicates`）
-2. 絆Lvランキングの取得を `bond_levels` の1回取得（`order=bond_level.desc&limit=50`）へ切り替える
-3. **しばらくは新旧併用**にする。テーブルは最初空なので、`bond_levels` に記録がある人はそちらを使い、無い人は今までどおり `rankings` から集計して表示する
-4. 併せて、絆Lvランキングにも「詳細 ›」ボタンを追加する（`detail` を持たない古い記録は押せない状態にする）
+2. ✅ 絆Lvランキングの取得を `bond_levels` の1回取得へ切り替える
+3. ✅ **しばらくは新旧併用**にする。テーブルは最初空なので、`bond_levels` に記録がある人はそちらを使い、無い人は今までどおり `rankings` から集計して表示する
+4. ✅ 併せて、絆Lvランキングにも「詳細 ›」ボタンを追加する（`detail` を持たない古い記録は押せない状態にする）
+
+### 適用の記録
+
+2026-08-14、iPhoneのSupabase SQL Editorから `BOND_LEVELS_APPLY_TEST.sql` → `BOND_LEVELS_APPLY.sql` → `BOND_LEVELS_VERIFY.sql` の順に実行し、適用済み。`rankings` の件数は前後とも504で変化なし。
+
+適用の過程で、Supabaseがテーブル作成時に `anon` / `authenticated` へ全権限（DELETEを含む）を自動付与することが分かったため、`grant` の前に `revoke all` を入れる修正を加えている。最初の予行演習では権限に `anon:DELETE` が出ていたが、修正後は `INSERT` / `SELECT` / `UPDATE` の3つだけになることを確認済み。
+
+### 検査
+
+- `node tools/bond-levels-table-check.js` … Supabaseをスタブした実ブラウザで、テーブルあり／無しの両方と「詳細 ›」の挙動を確認する
+- `node tools/bond-levels-schema-match-check.js` … アプリが送るリクエストの形（列名・`on_conflict`・`Prefer`）と、このディレクトリの `BOND_LEVELS_APPLY.sql` が食い違っていないかを突き合わせる。スタブでは列名の打ち間違いを検出できないため、`bond_levels` に削除の権限が無い（消せない）ことを踏まえて機械的に止める
