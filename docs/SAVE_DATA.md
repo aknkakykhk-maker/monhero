@@ -73,7 +73,8 @@
 
 - `colors`: 部位別色ID。旧 `color` は読み取り互換あり。
 - `fusionHistory[]`: `{subName, subBaseId, subBondLevel, xpGained, inherited, timestamp}`。
-- `inheritedUniques[]`: 副の固有技データと `sourceMasuName`。
+- `inheritedUniques[]`: 副の固有技データ、`sourceMasuName`、継承技1件ごとの永久一意な `inheritedUniqueId`。`lineageId` は血統・継承元情報として別に保持する。
+- `uniqueSkillLevels`: 自前技は `own`、継承技は `inhId:<inheritedUniqueId>` が恒久Lvの正本。旧 `inh:0`, `inh:1` … は互換用に削除せず残す。
 - `fusionBondLevels`: 合体XPによるレベル上昇数。ロード時の強化ポイント不足補填から除外するための累計値。
 - `reincarnateBonusPoints`: その個体自身が転生で実際に獲得した強化ポイント累計。欠損する旧個体だけ `reincarnateCount × 10` で補完し、保存値があれば回数から再計算しない。
 - `inheritedReincarnateBonusPoints`: 合体で受け継いだ転生由来の強化ポイント累計。欠損時は0。
@@ -82,6 +83,11 @@
 - `distAptBoosts`: 第3段階以降に新規登録・新規再生した個体が持つ、零・近・中・遠の順の上昇段階数。生成直後は `[0,0,0,0]` で、最新の種適性へ加え、上限Mで解決する。互換用の完成値 `distApt` も併記・同期する。
 
 第3段階では新規生成個体から新旧形式の併記を開始した。既存 `mh_masu_mons` は未移行であり、ロード時の一括書換えや新フィールドの自動追加は行わない。旧フィールドの `individualStats` と `distApt` も削除せず、欠損は正常な旧データとして扱う。したがって基礎値追従化はまだ完了していない。
+
+継承固有技Lvについては別の構造ベース移行を起動時に行う。`inheritedUniqueId` または対応する安定Lvキーが欠けた
+有効な継承技だけを、現在の配列順と旧 `inh:N` を対応させて補完する。専用トップレベルフラグは持たず、2回目は変更せず、
+古いバックアップを復元すれば同じ規則で再移行する。解決順は安定IDキー、旧 `inh:N`、`evoLevel` の順である。
+配列は表示順にすぎず、ID移行後の本人確認には使わない。継承技削除UI・削除処理・返却処理は未実装である。
 
 第4段階では純粋なドライラン診断だけを追加した。`diagnoseMasuBaselineMigration` は候補と保全検査を返し、一覧版は3分類を集計するが、いずれも保存処理や起動処理から呼ばれない。**第4段階：既存個体の移行可否をドライラン診断可能。実データは未移行。** `mh_masu_mons`、旧個体の各フィールド、移行完了フラグは一切変更しない。
 

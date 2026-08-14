@@ -75,13 +75,18 @@ max(1, round(50 × level^1.4 × 0.05))
   createdAt,
   colors,              // 任意。部位別の色ID配列
   fusionHistory,       // 任意。融合履歴配列
-  inheritedUniques,    // 任意。継承固有技配列
+  inheritedUniques,    // 任意。継承固有技配列。各要素にinheritedUniqueIdを持つ
   uniqueSkillLevels,   // 任意。自前・継承固有技の強化Lv
   uniqueSkillPoints    // 任意。保留中の未使用固有技ポイント（未保存時は0）
 }
 ```
 
 旧染色の単一 `color` は読み取り時に `[color]` として扱う。旧種別絆データから移行した個体IDは `masu_migrated_<種ID>`、通常登録IDは時刻と乱数を含む `masu_...` である。IDの永続的な一意性保証範囲は**未確認**（サーバー採番はない）。
+
+継承固有技1件の本人確認には、血統情報の `lineageId` とは別の永久一意な `inheritedUniqueId` を使う。
+恒久Lvの正本は `uniqueSkillLevels['inhId:<inheritedUniqueId>']` で、表示順である
+`inheritedUniques` の並び替えに依存しない。旧 `inh:N` は既存セーブ互換用に削除せず保持するが、ID移行済みの技では
+安定ID側を優先する。継承技を削除する機能自体はまだ実装していない。
 
 ## 5.5. 総合力
 
@@ -234,7 +239,7 @@ WAVE1で諦めた場合だけはクリアWAVEが0で絆経験値の加算が起�
 - 副の全 `bondXp` を主へ加え、副個体を削除する。副の通常の能力値、距離適性、使用済み・未使用の強化ポイントは合体で増減しない。
 - 副の `reincarnateBonusPoints` と `inheritedReincarnateBonusPoints` は転生由来の育成価値として主の未使用強化ポイントへ全量加算する。表示用回数も `副.reincarnateCount + 副.inheritedReincarnateCount` を主の `inheritedReincarnateCount` へ累積するが、主自身の `reincarnateCount`、Lv、転生履歴は変更しない。副の通常育成値は従来どおり移さない。
 - 合体XPが主の現在上限を超える場合は、既存の `breakthroughItemCost`・`masuRebirthCost` と上限上昇規則で必要な限界突破を事前計算する。素材が足りれば必要回数をまとめて突破してから合体でき、その回数ぶんの固有技ポイントは未使用ポイントとして保持する。通常合体も残し、その場合は上限超過XPを従来どおり切り捨てる。
-- 技を継承しない合体は0ダイヤ。副が絆Lv30以上で継承を選択した場合は3000ダイヤを消費し、副の種の固有技を `inheritedUniques` へ追加する。主の絆Lvに条件はない。
+- 技を継承しない合体は0ダイヤ。副が絆Lv30以上で継承を選択した場合は3000ダイヤを消費し、副の種の固有技を `inheritedUniques` へ追加する。その時点で専用の `inheritedUniqueId` を生成し、現在Lvを安定IDキーへ保存する。主の絆Lvに条件はない。
 - 融合履歴には副名、種ID、融合時絆Lv、獲得XP、継承有無、時刻を残す。
 - 副が編成中なら編成から除く。主の種、名前、強化、染色は維持される。
 

@@ -21,7 +21,7 @@ const check = (name, ok, detail = '') => {
 
 // --- 実装から総合力まわりだけを切り出して動かす ---
 const source = read('monster-hero/src/game-system.jsx');
-const from = source.indexOf('const resolveInheritedUniqueDefinition');
+const from = source.indexOf('const INHERITED_UNIQUE_LEVEL_KEY_PREFIX');
 const uniqueFrom = source.indexOf('const uniqueSkillAtLevel', from);
 const to = source.indexOf('\n};', uniqueFrom) + 3; // uniqueSkillAtLevel の閉じ(行頭の }; )まで
 const powerFrom = source.indexOf('const masuBondLevelInfo = (masu) => bondLevelInfo(cappedBondXp(masu));');
