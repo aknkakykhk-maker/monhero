@@ -12,6 +12,9 @@ const context = {
     Golem:{id:'Golem',baseHp:600,baseAtk:220,baseDef:150,baseGuts:70,distAptitude:['A','E','G','G'],plusStats:{},unique:null},
   },
   DIST_APTITUDE_GRADES:['G','F','E','D','C','B','A','S','S+','SS','SS+','M'],
+  STAT_POINT_GAIN:{hp:10,atk:3,def:3,guts:3},
+  masuBondLevelInfo:masu=>({level:Number(masu.bondXp||0)+1}), totalBreakthroughPoints:()=>0,
+  ownReincarnateBonusPoints:()=>0, inheritedReincarnateBonusPointsOf:()=>0,
   uniqueSkillAtLevel:value=>value,
 };
 vm.createContext(context);
@@ -19,13 +22,13 @@ vm.runInContext(`${source.slice(from, to)}\nglobalThis.diagnose=diagnoseLegacyDi
 const diagnose = context.diagnose;
 const check = (label, ok) => { if (!ok) throw new Error(`NG: ${label}`); console.log(`OK: ${label}`); };
 const snapshot = value => JSON.stringify(value);
-const normal = {id:'normal',baseId:'Test',name:'通常',distApt:['A','S','C','D'],distAptPoints:3,statPoints:{hp:10}};
+const normal = {id:'normal',baseId:'Test',name:'通常',bondXp:6,distApt:['A','S','C','D'],distAptPoints:3,statPoints:{hp:10}};
 const original = snapshot(normal);
 let result = diagnose(normal);
 check('通常種の強化済み候補はSAFE_EXACT', result.status === 'SAFE_EXACT' && snapshot(result.proposed.distAptBoosts) === '[0,2,0,0]');
 check('全安全条件を満たす', Object.values(result.checks).every(Boolean));
 check('入力を変更しない', snapshot(normal) === original);
-result = diagnose({...normal,distApt:['A','B','C','D']});
+result = diagnose({...normal,bondXp:4,distApt:['A','B','C','D']});
 check('通常種の未強化候補はSAFE_EXACT', result.status === 'SAFE_EXACT' && snapshot(result.proposed.distAptBoosts) === '[0,0,0,0]');
 check('不正等級と4距離未満をBLOCKED', [['A','X','C','D'],['A','B','C']].every(distApt => diagnose({...normal,distApt}).status === 'BLOCKED'));
 check('ベースより低い値をBLOCKED', diagnose({...normal,distApt:['B','S','C','D']}).status === 'BLOCKED');
@@ -35,7 +38,8 @@ const oldGolem = {id:'old-golem',baseId:'Golem',distApt:['A','C','E','G'],distAp
 check('旧形式ゴーレムはAMBIGUOUS', diagnose(oldGolem).status === 'AMBIGUOUS');
 const newGolem = {...oldGolem,distApt:['A','E','G','G'],distAptBoosts:[0,0,0,0]};
 check('新形式ゴーレムはSAFE_EXACT', diagnose(newGolem).status === 'SAFE_EXACT');
-check('新形式のdistAptとboostの矛盾はBLOCKED', diagnose({...newGolem,distApt:['M','E','G','G']}).status === 'BLOCKED');
+check('新形式の旧distApt不一致は許容', diagnose({...newGolem,distApt:['M','E','G','G']}).status === 'SAFE_EXACT');
+check('旧形式のポイント総量不整合をBLOCKED', diagnose({...normal,bondXp:99}).status === 'BLOCKED');
 const diagnosticSource = source.slice(source.indexOf('const diagnoseLegacyDistAptBoosts ='), to);
 check('判定に保存処理がない', !/localStorage|mh_masu_mons|setMasuMons/.test(diagnosticSource));
 console.log('\nすべてOK');

@@ -14,6 +14,9 @@ const context = {
     Golem:{id:'Golem',baseHp:600,baseAtk:220,baseDef:150,baseGuts:70,distAptitude:['A','E','G','G'],plusStats:{},unique:null},
   },
   DIST_APTITUDE_GRADES:['G','F','E','D','C','B','A','S','S+','SS','SS+','M'],
+  STAT_POINT_GAIN:{hp:10,atk:3,def:3,guts:3},
+  masuBondLevelInfo:masu=>({level:Number(masu.bondXp||0)+1}), totalBreakthroughPoints:()=>0,
+  ownReincarnateBonusPoints:()=>0, inheritedReincarnateBonusPointsOf:()=>0,
   uniqueSkillAtLevel:value=>value,
 };
 vm.createContext(context);
@@ -21,10 +24,13 @@ vm.runInContext(`${source.slice(from, to)}\nglobalThis.diagnose=diagnoseLegacyMa
 const diagnose = context.diagnose;
 const check = (label, ok) => { if (!ok) throw new Error(`NG: ${label}`); console.log(`OK: ${label}`); };
 const snapshot = value => JSON.stringify(value);
-const baseMasu = (baseId, distApt) => ({
-  id:`test-${baseId}`, baseId, name:'検査', bondXp:0, distAptPoints:3, distApt:[...distApt],
+const baseMasu = (baseId, distApt) => {
+  const bases = context.ALL_PLAYER_MONSTERS[baseId].distAptitude;
+  const aptSpent = distApt.reduce((sum, grade, index) => sum + context.DIST_APTITUDE_GRADES.indexOf(grade) - context.DIST_APTITUDE_GRADES.indexOf(bases[index]), 0);
+  return ({
+  id:`test-${baseId}`, baseId, name:'検査', bondXp:aptSpent+7, distAptPoints:3, distApt:[...distApt],
   statPoints:{hp:10,atk:3,def:0,guts:6}, uniqueSkillLevels:{}, inheritedUniques:[],
-});
+}); };
 const run = (label, input, overallStatus, individualStatus, aptitudeStatus) => {
   const before = snapshot(input);
   const result = diagnose(input);
@@ -64,7 +70,13 @@ run('旧ゴーレム', baseMasu('Golem',['A','C','E','G']), 'PARTIAL', 'ALREADY_
 const modern = {...oldRegenerated,individualStatOffsets:{hp:-50,atk:10,def:0,guts:-12},distAptBoosts:[0,0,0,0]};
 run('新形式個体', modern, 'ALREADY_MODERN', 'ALREADY_MODERN', 'ALREADY_MODERN');
 run('壊れたデータ', {...oldNormal,statPoints:{hp:'broken'}}, 'BLOCKED', 'BLOCKED', 'BLOCKED');
-run('新旧能力表現の矛盾', {...modern,individualStatOffsets:{hp:999,atk:10,def:0,guts:-12}}, 'BLOCKED', 'BLOCKED', 'ALREADY_MODERN');
+run('新形式の旧能力スナップショット不一致', {...modern,individualStatOffsets:{hp:999,atk:10,def:0,guts:-12}}, 'ALREADY_MODERN', 'ALREADY_MODERN', 'ALREADY_MODERN');
+['hp','atk','def','guts'].forEach(key => run(`statPoints ${key}不正刻み`, {...oldNormal,statPoints:{...oldNormal.statPoints,[key]:1}}, 'BLOCKED', 'BLOCKED', 'BLOCKED'));
+
+const futureModern = {...modern,individualStats:{hp:-999,atk:-999,def:-999,guts:-999},distApt:['M','M','M','M']};
+context.ALL_PLAYER_MONSTERS.Mocchi.baseHp += 100;
+context.ALL_PLAYER_MONSTERS.Mocchi.distAptitude = ['S','C','B','E'];
+run('将来ベース変更後の新形式個体', futureModern, 'ALREADY_MODERN', 'ALREADY_MODERN', 'ALREADY_MODERN');
 
 const diagnosticSource = source.slice(source.indexOf('const diagnoseLegacyMasuBaselineMigration ='), to);
 check('統合診断に保存処理がない', !/localStorage|mh_masu_mons|storeSet|setMasuMons/.test(diagnosticSource));
