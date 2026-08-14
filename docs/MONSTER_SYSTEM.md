@@ -70,6 +70,7 @@ max(1, round(50 × level^1.4 × 0.05))
   id, baseId, name, bondXp,
   distAptPoints,
   distApt: [grade0, grade1, grade2, grade3],
+  distAptBoosts: [boost0, boost1, boost2, boost3], // 第3段階以降の新規個体
   statPoints: { hp, atk, def, guts },
   createdAt,
   colors,              // 任意。部位別の色ID配列
@@ -370,8 +371,9 @@ HOMEの放牧マスモン・ランキングの詳細まで、すべて同じ実�
 ## 8. 神殿の再生と寄付報酬
 
 - 再生は解放済みベースモンから新規マスモンを作る。専用保存値 `mh_temple_regeneration_used_v1` が未設定の初回だけ無料で、以降は100ダイヤ。
-- 再生個体は `individualStats` にライフ・ちから・丈夫さ・ガッツの固有基礎値を保存する。各値はベース基礎値へ独立な0.90～1.10倍を掛けて四捨五入し、既存個体や間合い適性には適用しない。
-- 第2段階の互換受け皿として、`mergeMasuIntoMon` は `individualStatOffsets`（最新基礎値への個体差）と `distAptBoosts`（最新基礎適性からの上昇段階数）も解決できる。新形式がある場合だけ新形式を優先し、無ければ従来の `individualStats` / `distApt`、さらに欠損時は最新ベースへ戻る。既存データと新規再生の保存形式はまだ切り替えておらず、移行完了ではない。
+- 再生個体は `individualStats` にライフ・ちから・丈夫さ・ガッツの固有基礎値を保存する。各値はベース基礎値へ独立な0.90～1.10倍を掛けて四捨五入する。第3段階以降の新規再生個体は、同じ一度だけの抽選結果から生成時ベースとの差 `individualStatOffsets` も併記し、offset用の再抽選はしない。
+- 第3段階以降に新規登録・新規再生する個体は `distAptBoosts:[0,0,0,0]` を開始値として併記する。強化時は上昇段階数と互換用完成値 `distApt` を同期し、リセット・転生時はboostを0、`distApt` をその時点の最新ベース適性へ戻す。
+- `mergeMasuIntoMon` は新形式がある場合だけ新形式を優先し、無ければ従来の `individualStats` / `distApt`、さらに欠損時は最新ベースへ戻る。第3段階は新規生成個体から新旧形式を併記する段階であり、既存個体は未移行、基礎値追従化も未完了である。
 - 寄付では従来どおり累計絆XPと同数のダイヤに加え、`floor(絆Lv / 5)` 個の虹のプシュケーを `mh_owned_items.rainbow_psyche` へ加算する。
 
 ## 9. 染色

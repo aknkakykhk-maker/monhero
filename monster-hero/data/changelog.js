@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-14 10:57",
+    date: "2026-08-14 11:09",
     type: 'update',
     title: 'マスモン保存データの互換性を強化',
     items: [
