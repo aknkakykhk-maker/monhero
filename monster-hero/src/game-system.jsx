@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 18:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 18:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -332,16 +332,35 @@ const MAX_BOND_LEVEL_ITERATIONS = 400;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
 const MAX_UNIQUE_SKILL_LEVEL = 8;
+// 継承固有技は保存時点の技定義をスナップショットとして持つが、元種が分かる記録は
+// 現在の定義へ追従させる。古い記録や削除済みの種は、保存済みスナップショットを使い続ける。
+// evoLevel は個体の育成結果なので、定義を更新しても必ず保存値を維持する。
+const resolveInheritedUniqueDefinition = (unique) => {
+  if (!unique || typeof unique !== 'object') return unique || null;
+  const monId = unique.monId;
+  const latest = monId && typeof ALL_PLAYER_MONSTERS !== 'undefined'
+    ? ALL_PLAYER_MONSTERS[monId]?.unique
+    : null;
+  if (!latest) return unique;
+  return {
+    ...latest,
+    monId,
+    ...(unique.lineageId != null ? { lineageId:unique.lineageId } : {}),
+    ...(unique.sourceMasuName != null ? { sourceMasuName:unique.sourceMasuName } : {}),
+    evoLevel: unique.evoLevel,
+  };
+};
 const uniqueSkillAtLevel = (unique, level = 0) => {
   if (!unique) return null;
+  const definition = resolveInheritedUniqueDefinition(unique);
   const lvl = Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.floor(Number(level) || 0)));
-  const mult = unique.baseMult + lvl * 0.5;
+  const mult = definition.baseMult + lvl * 0.5;
   return {
-    ...unique,
-    name: unique.names?.[lvl] || unique.name,
+    ...definition,
+    name: definition.names?.[lvl] || definition.name,
     evoLevel: lvl,
     mult,
-    guts: Math.floor(unique.baseGuts * (mult / unique.baseMult)),
+    guts: Math.floor(definition.baseGuts * (mult / definition.baseMult)),
     crit: 0.10 + 0.05 * lvl,
   };
 };

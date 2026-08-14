@@ -55,6 +55,7 @@ const EXPORTED_NAMES = [
   'masuPowerOf',
   'masuBondLevelInfo',
   'uniqueSkillAtLevel',
+  'resolveInheritedUniqueDefinition',
   'inheritedUniqueRunLevel',
   'MAX_UNIQUE_SKILL_LEVEL',
   'getMonsterAptPct',
