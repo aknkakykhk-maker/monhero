@@ -58,6 +58,7 @@
 | `mh_points_base_granted` | false時、全プレイヤーへ初期1ポイントを一度付与 |
 | `mh_breeder_points_granted` | XPカーブ緩和後の不足ポイント補填と二重付与防止 |
 | `mh_masu_rebirth_full_reset_migrated_v1` | 旧仕様で転生済みの個体をLv1・未使用強化ポイント5へ一度だけ補正 |
+| `mh_masu_baseline_relative_migrated_v1` | 第6Cの基礎値追従形式への安全移行を記録。trueでも未移行個体を再診断する |
 
 旧形式として `mh_bond_xp`（種ID→XP）、`mh_dist_apt_points`（種ID→未使用点）、`mh_dist_apt_overrides`（種ID→適性配列）を読み込む。XPが正の既知種だけ `masu_migrated_<種ID>` として追加する。旧キーは削除しない。
 
@@ -77,6 +78,26 @@
 - `reincarnateBonusPoints`: その個体自身が転生で実際に獲得した強化ポイント累計。欠損する旧個体だけ `reincarnateCount × 10` で補完し、保存値があれば回数から再計算しない。
 - `inheritedReincarnateBonusPoints`: 合体で受け継いだ転生由来の強化ポイント累計。欠損時は0。
 - `inheritedReincarnateCount`: 合体で受け継いだ転生育成の表示用回数分。自身の転生回数・条件判定には使わず、欠損時は0。
+- `individualStatOffsets`: 第3段階以降に新規再生した個体が持つ `{hp,atk,def,guts}`。同時に保存する `individualStats` と生成時点の種基礎値との差で、最新の種基礎値へ加算して解決する。存在時は `individualStats` より優先する。
+- `distAptBoosts`: 第3段階以降に新規登録・新規再生した個体が持つ、零・近・中・遠の順の上昇段階数。生成直後は `[0,0,0,0]` で、最新の種適性へ加え、上限Mで解決する。互換用の完成値 `distApt` も併記・同期する。
+
+第3段階では新規生成個体から新旧形式の併記を開始した。既存 `mh_masu_mons` は未移行であり、ロード時の一括書換えや新フィールドの自動追加は行わない。旧フィールドの `individualStats` と `distApt` も削除せず、欠損は正常な旧データとして扱う。したがって基礎値追従化はまだ完了していない。
+
+第4段階では純粋なドライラン診断だけを追加した。`diagnoseMasuBaselineMigration` は候補と保全検査を返し、一覧版は3分類を集計するが、いずれも保存処理や起動処理から呼ばれない。**第4段階：既存個体の移行可否をドライラン診断可能。実データは未移行。** `mh_masu_mons`、旧個体の各フィールド、移行完了フラグは一切変更しない。
+
+第6Cでは起動時診断が個体全体を `SAFE_EXACT` と確定した場合だけ実移行し、`individualStatOffsets` /
+`distAptBoosts` を追加する。`individualStats`、`distApt` とその他の既存フィールドは削除・変更しない。能力は確定した
+生成時ベースとの個体差と `statPoints` を維持したまま最新ベースへ追従するため、旧ベース由来個体では基礎値変更分だけ
+移行前から変化し、総合力も移行後の能力・4距離適性・固有技Lv等から現行式で再計算される。
+
+保存直前に個体差、能力変化量、4距離適性、ポイント、既存フィールド、総合力を検証し、候補の再診断が
+`ALREADY_MODERN` になることまで確認する。少しでも不整合なら元個体をそのまま残す。専用キーは
+`mh_masu_baseline_relative_migrated_v1` で、trueでも前回保留個体を再診断する。`PARTIAL` / `AMBIGUOUS` /
+`BLOCKED` は推測移行せず完全に未変更とする。
+
+旧形式のゴーレムは、歴代ベース適性の差から実際の間合い適性への投入段階数を一意に復元できないため、
+ポイント不足補填でも現在ベースとの差を推測しない。`statPoints`、`distAptPoints`、`distApt` をそのまま保留し、
+`distAptBoosts` を持つ新形式のゴーレムだけを通常の不足補填対象とする。
 
 明示的な `schemaVersion` は存在しない。未知フィールドはオブジェクトスプレッドにより多くの更新で維持されるが、全経路での保証は**未確認**。
 
