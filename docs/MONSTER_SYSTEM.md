@@ -1,5 +1,8 @@
 # モンスターシステム設計書
 
+マスモンの基礎値追従方式に関する現状調査と段階的な移行案は、
+[`MASU_BASELINE_MIGRATION_AUDIT.md`](MASU_BASELINE_MIGRATION_AUDIT.md) を参照する。
+
 ## 1. 用語とデータモデル
 
 - **ベースモン（種）**: `ALL_PLAYER_MONSTERS` にある不変の定義。ID、表示名、画像、特性、基礎能力、合流能力、距離適性、固有技を持つ。
