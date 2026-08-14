@@ -83,6 +83,7 @@ const EXPORTED_NAMES = [
   'applyBondXpGain',
   'diagnoseLegacyDistAptBoosts',
   'diagnoseLegacyMasuBaselineMigration',
+  'migrateSafeMasuBaselineRepresentations',
   'regenerationStatCouldBeGenerated',
   'ALL_PLAYER_MONSTERS',
   'BREAKTHROUGH_STAR_TIERS',

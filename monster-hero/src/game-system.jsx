@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 14:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 15:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1004,6 +1004,64 @@ const diagnoseLegacyMasuBaselineMigration = (masu) => {
     : statuses.includes('AMBIGUOUS') ? 'PARTIAL'
     : 'SAFE_EXACT';
   return { individualStats, aptitude, overallStatus, checks };
+};
+// 第6C段階の実移行。第6B診断が個体全体をSAFE_EXACTとした場合だけ、診断済みの
+// 差分表現をコピーへ追加する。旧フィールドは残し、保存対象にする直前にも表示値・
+// 総合力・既存ポイントが完全一致することを再確認する。
+const migrateSafeMasuBaselineRepresentations = (masuMons, diagnose = diagnoseLegacyMasuBaselineMigration) => {
+  const summary = { migrated:0, alreadyModern:0, partial:0, ambiguous:0, blocked:0, validationFailed:0 };
+  if (!Array.isArray(masuMons)) return { nextMasuMons:masuMons, summary, changed:false };
+  const statFields = ['baseHp','baseAtk','baseDef','baseGuts'];
+  const representation = masu => {
+    const mon = mergeMasuIntoMon(masu);
+    if (!mon) return null;
+    return {
+      stats: statFields.map(key => mon[key]),
+      aptitude: Array.isArray(mon.distAptitude) ? mon.distAptitude.slice(0, 4) : [],
+      power: monsterPowerOf(mon),
+      statPoints: JSON.stringify(masu.statPoints),
+      distAptPoints: masu.distAptPoints,
+    };
+  };
+  let changed = false;
+  const nextMasuMons = masuMons.map(masu => {
+    const diagnosis = diagnose(masu);
+    if (diagnosis.overallStatus !== 'SAFE_EXACT') {
+      const key = diagnosis.overallStatus === 'ALREADY_MODERN' ? 'alreadyModern'
+        : diagnosis.overallStatus === 'PARTIAL' ? 'partial'
+          : diagnosis.overallStatus === 'AMBIGUOUS' ? 'ambiguous' : 'blocked';
+      summary[key] += 1;
+      return masu;
+    }
+    const candidate = { ...masu };
+    if (diagnosis.individualStats.status === 'SAFE_EXACT') {
+      candidate.individualStatOffsets = { ...diagnosis.individualStats.proposedOffsets };
+    }
+    if (diagnosis.aptitude.status === 'SAFE_EXACT') {
+      candidate.distAptBoosts = [...diagnosis.aptitude.proposedBoosts];
+    }
+    const before = representation(masu);
+    const after = representation(candidate);
+    const matches = !!before && !!after
+      && JSON.stringify(before.stats) === JSON.stringify(after.stats)
+      && JSON.stringify(before.aptitude) === JSON.stringify(after.aptitude)
+      && before.power === after.power
+      && before.statPoints === after.statPoints
+      && before.distAptPoints === after.distAptPoints;
+    if (!matches) {
+      summary.blocked += 1;
+      summary.validationFailed += 1;
+      return masu;
+    }
+    if (JSON.stringify(candidate) === JSON.stringify(masu)) {
+      summary.alreadyModern += 1;
+      return masu;
+    }
+    summary.migrated += 1;
+    changed = true;
+    return candidate;
+  });
+  return { nextMasuMons, summary, changed };
 };
 // 第4段階の既存個体ドライラン。候補を新しいオブジェクトとして組み立てるだけで、保存・補完は行わない。
 // 旧形式は生成時点のベース定義を持たないため、現在ベースとの差が計算できても SAFE にはしない。
@@ -6361,6 +6419,17 @@ function MonsterHeroGame() {
       if (reconciledMasuMons.some((m, i) => m !== savedMasuMons[i])) {
         savedMasuMons = reconciledMasuMons;
         await storeSet('mh_masu_mons', savedMasuMons, false);
+      }
+      // 旧ポイント補正を済ませた個体だけを第6B診断へ渡す。完了フラグがあっても、古い
+      // バックアップが復元されて実際に差分が生じた場合は、冪等な安全移行を再適用する。
+      const baselineRelativeMigrated = await storeGet('mh_masu_baseline_relative_migrated_v1', false, false);
+      const baselineMigration = migrateSafeMasuBaselineRepresentations(savedMasuMons);
+      if (baselineMigration.changed) {
+        savedMasuMons = baselineMigration.nextMasuMons;
+        await storeSet('mh_masu_mons', savedMasuMons, false);
+      }
+      if (!baselineRelativeMigrated || baselineMigration.changed) {
+        await storeSet('mh_masu_baseline_relative_migrated_v1', true, false);
       }
       setMasuMons(savedMasuMons);
       // 放牧設定導入前のセーブは、従来どおり所持マスモン1体を初期表示にして互換性を保つ。
