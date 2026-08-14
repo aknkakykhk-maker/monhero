@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 19:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 19:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3926,6 +3926,62 @@ const HomeProfileIcon = ({ src, id, adjustment }) => (
   <div className="mh-home-avatar">{src?<BreederIcon src={src} id={id} adjustment={adjustment} alt="プロフィール画像" className="w-full h-full"/>:<User size={24}/>}</div>
 );
 
+// 表示を待たせず、ブラウザキャッシュとデコードだけを少しずつ先へ進める画像キュー。
+// URLそのものをキーにして、Reactの再描画や複数の優先グループに同じ画像が含まれても1回だけ取得する。
+const imagePreloadQueue = (() => {
+  const queued = new Set();
+  const pending = [];
+  let active = 0;
+  let scheduled = false;
+  const MAX_CONCURRENT = 2;
+  const scheduleIdle = (callback) => {
+    if (typeof window.requestIdleCallback === 'function') return window.requestIdleCallback(callback, { timeout: 500 });
+    return window.setTimeout(() => callback({ didTimeout:true, timeRemaining:()=>0 }), 32);
+  };
+  const run = () => {
+    scheduled = false;
+    while (active < MAX_CONCURRENT && pending.length) {
+      const url = pending.shift();
+      active += 1;
+      const image = new Image();
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        image.onload = null;
+        image.onerror = null;
+        active -= 1;
+        requestRun();
+      };
+      image.onload = () => {
+        if (typeof image.decode === 'function') image.decode().catch(()=>{}).then(finish);
+        else finish();
+      };
+      image.onerror = finish;
+      image.src = url;
+      if (image.complete) image.onload();
+    }
+  };
+  const requestRun = () => {
+    if (scheduled || active >= MAX_CONCURRENT || !pending.length) return;
+    scheduled = true;
+    scheduleIdle(run);
+  };
+  return {
+    add(urls, { urgent=false }={}) {
+      const additions = [];
+      (Array.isArray(urls) ? urls : [urls]).forEach(url => {
+        if (typeof url !== 'string' || !url || queued.has(url)) return;
+        queued.add(url);
+        additions.push(url);
+      });
+      if (urgent) pending.unshift(...additions);
+      else pending.push(...additions);
+      requestRun();
+    },
+  };
+})();
+
 // 初回チュートリアルを見たかどうか。既存の保存キーには触らず、新しいキーへ分けて持つ
 const TUTORIAL_SEEN_KEY = 'mh_tutorial_seen_v1';
 // バトルの練習を完了した状態と、初回案内を一度表示した状態は別々に保存する。
@@ -6160,6 +6216,48 @@ function MonsterHeroGame() {
     }
   }, [masuMons, homePastureIds, pastureLoaded]);
   const homePastureMasumons = homePastureIds.map(id=>masuMons.find(m=>String(m.id)===String(id))).filter(m=>m&&ALL_PLAYER_MONSTERS[m.baseId]);
+  // セーブ読込後のタイトル中に、最初のHOMEで必ず使う画像だけを最優先で先読みする。
+  // 完了をタイトル操作やHOME遷移の条件にはせず、失敗時も通常のimg読込へそのまま任せる。
+  useEffect(() => {
+    if (bootPhase !== 'TITLE' || !dataLoaded) return;
+    const pastureUrls = homePastureMasumons.map(masu => {
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      return base?.imgUrl || base?.iconUrl;
+    });
+    imagePreloadQueue.add([...pastureUrls, resolveIconUrl(breederIcon)], { urgent:true });
+  }, [bootPhase, dataLoaded, homePastureIds, masuMons, breederIcon]);
+
+  // HOMEが操作可能になってから、ランキング用アイコン→編成→所持→その他の順に低優先度で送る。
+  // キュー側が同一URLを除外し、同時取得を2件に抑えるため、低速通信でも一斉取得しない。
+  useEffect(() => {
+    if (bootPhase !== 'GAME' || gameState !== 'HOME') return;
+    const rankingEntries = [
+      ...Object.values(localRankings).flat(),
+      ...Object.values(breederRankingPool).flat(),
+      ...(Array.isArray(bondLevelRows) ? bondLevelRows : []),
+      ...Object.values(bondRankingData || {}).flat(),
+    ];
+    const rankingIconUrls = [
+      ...breederIconOptions({ includeUnowned:true }).map(option=>option.src),
+      ...rankingEntries.map(entry=>resolveIconUrl(entry?.icon)),
+    ];
+    imagePreloadQueue.add(rankingIconUrls);
+
+    const rosterBaseIds = monsterRosterIds.map(id => {
+      const value = String(id || '');
+      if (!value.startsWith('masu:')) return value;
+      return masuMons.find(masu=>String(masu.id)===value.slice(5))?.baseId;
+    }).filter(Boolean);
+    const allIds = Object.keys(ALL_PLAYER_MONSTERS);
+    const ownedBaseIds = [...new Set([...unlockedMonsterIds, ...masuMons.map(masu=>masu.baseId)])].filter(id=>ALL_PLAYER_MONSTERS[id]);
+    const imageUrlsFor = ids => ids.flatMap(id => {
+      const monster = ALL_PLAYER_MONSTERS[id];
+      return monster ? [monster.imgUrl, monster.iconUrl] : [];
+    });
+    imagePreloadQueue.add(imageUrlsFor(rosterBaseIds));
+    imagePreloadQueue.add(imageUrlsFor(ownedBaseIds));
+    imagePreloadQueue.add(imageUrlsFor(allIds));
+  }, [bootPhase, gameState, localRankings, breederRankingPool, bondLevelRows, bondRankingData, monsterRosterIds, unlockedMonsterIds, masuMons]);
   const openPastureSettings = () => { setDraftHomePastureIds([...homePastureIds]); setGameState('PASTURE_SETTINGS'); };
   const toggleDraftPasture = (id) => setDraftHomePastureIds(prev => {
     const key=String(id);
