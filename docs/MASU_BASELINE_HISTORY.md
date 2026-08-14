@@ -1,149 +1,154 @@
-# マスモン生成時ベース値の履歴監査（第5段階）
+# マスモン生成時ベース値の履歴監査（第6A段階）
 
 ## 1. 結論
 
-この監査で参照できた Git オブジェクトだけでは、**全旧個体の生成時ベースを SAFE に一意復元できない**。
-確認できた変更はピクシー 1 項目、ミタラシ 4 項目の計 5 項目で、変更前後の値自体は確定できる。一方、
-この checkout は shallow clone で、履歴の境界は 2026-08-11 の 4 コミット
-（`a0385f6`, `053e71b`, `2670572`, `4a87672`）である。`ally-monsters.js` は境界で新規ファイルに見えるため、
-それ以前に同等定義が別ファイルにあったか、以前の値変更があったかを検証できない。
+第6A段階では完全履歴の取得を再試行したが、**完全 Git 履歴は取得できなかった**。作業開始時の
+checkout は shallow clone（`git rev-parse --is-shallow-repository` が `true`）で remote は未設定だった。
+remote 設定を変更せず、公開リポジトリ URL を直接指定して次を実行したが、実行環境の outbound proxy が
+GitHub への CONNECT を HTTP 403 で拒否した。
 
-また、変更コミットには `BUILD_DATE`、`version.json`、changelog の一致した `2026-08-14 10:24` (JST) があるが、
-これはビルド識別日時であり公開完了日時ではない。main への merge commit は `33ace5e`（commit 時刻
-`2026-08-14T10:26:57+09:00`）まで確認できるものの、GitHub Pages workflow の開始・完了・実反映時刻は
-リポジトリ履歴に保存されない。したがって生成時刻との公開境界は `EXACT` にできない。
+```text
+git fetch --unshallow https://github.com/aknkakykhk-maker/monhero.git \
+  '+refs/heads/*:refs/remotes/audit/*' '+refs/tags/*:refs/tags/*'
+```
 
-### 信頼度の集計
+GitHub REST API、raw.githubusercontent.com、GitHub Pages に対する HTTPS 取得も同じ 403 で失敗し、
+GitHub Actions / Pages deployment 履歴も取得できなかった。したがって本書は、取得済み Git オブジェクトで
+再監査できた事実と、取得不能な範囲を明確に分ける。**2026-08-10 以前を推測で補完せず、全期間監査完了、
+全旧個体 SAFE、第6B段階へ進行可能とは判定しない。**
 
-以下の履歴表の**行数**を集計単位とする。
+## 2. 調査範囲と方法
 
-| 信頼度 | 件数 | 意味 |
-| --- | ---: | --- |
-| EXACT | 0 | 公開境界まで一意に確定できる変更はない |
-| UNCERTAIN | 5 | 変更前後の値は確定したが、公開時刻境界を一意に決められない |
-| UNRECOVERABLE | 1 | shallow 境界以前の旧値・時系列をこの checkout から復元できない監査ギャップ |
+### 2.1 取得できた範囲
 
-`UNRECOVERABLE` の 1 件は「1 個体」や「1 能力」ではなく、境界以前に関する監査ギャップ 1 件である。
-未知の変更数を推測して水増ししていない。
+- ローカルに存在する最古のスナップショットは shallow 境界 `3325cfc`（commit 時刻
+  `2026-08-10T19:56:52+09:00`、PR #486 の merge commit）である。
+- main 相当の連続した履歴として走査できる最古は shallow 境界 `6f3764b`
+  （`2026-08-11T03:20:43+09:00`、PR #491 の merge commit）である。
+- `.git/shallow` には `21a2026`, `3325cfc`, `4a36b9d`, `6f3764b` の 4 境界があり、いずれも親 commit を
+  ローカルでは参照できない。従って最古スナップショットより前の変更経緯や、4 系統が合流する前の連続性はない。
+- 作業基準 HEAD は `d540679`（PR #579 merge）である。remote がないため最新 main との照合はできていない。
 
-## 2. 調査方法と履歴の限界
+### 2.2 再監査方法
 
-基準は作業開始時 HEAD `f77af2d`（merge PR #578）。remote は設定されておらず、ローカルには `work` ブランチしかない。
-このため「最新 main」はネットワーク上の branch と照合できず、手元の直近 main merge 相当スナップショットを基準にした。
+取得済み全 commit を対象に、次を組み合わせて確認した。
 
-実施した履歴確認は次のとおり。
+1. `git log --all --follow`、`git log -S`、`git log -G` で
+   `baseHp/baseAtk/baseDef/baseGuts/distAptitude` と `ALL_PLAYER_MONSTERS` を検索。
+2. 各 main 相当スナップショットに存在する `.js` / `.jsx` / `.html` を走査し、現行
+   `monster-hero/data/ally-monsters.js` だけでなく、分割前の `game-system.jsx`、生成済み JS、単一 HTML、
+   別 data ファイル、削除・改名候補を比較。
+3. モンスターの新規追加は「既存モンスターの値変更」と分け、同一 ID が前後のスナップショットにある場合だけ
+   変更前後として集計。
+4. `masu_`, `masu_regenerated_`, `masu_migrated_`, `individualStats`, `individualStatOffsets`,
+   `distApt`, `distAptBoosts`, `createdAt` の導入・更新経路を `git log -S` とコードで確認。
+5. commit / merge 時刻、`BUILD_DATE`、`version.json`、changelog、Pages workflow 定義を比較。
 
-- `git rev-parse --is-shallow-repository` と `.git/shallow` で履歴境界を確認。
-- `git log --all --follow -- monster-hero/data/ally-monsters.js` で分割後の履歴を確認。
-- main 相当の first-parent 全 100 コミットを古い順に走査し、`ALL_PLAYER_MONSTERS` を含む `.js` / `.jsx` / `.html`
-  から 5 対象項目を抽出して直前スナップショットと比較。
-- `git log -S'distAptitude'`、`git log -G'base(Hp|Atk|Def|Guts)|distAptitude'` で別ファイル・変更差分を確認。
-- 各変更について commit/merge 時刻、`BUILD_DATE`、`version.json`、changelog、Pages workflow を相互比較。
+この方法は取得済み範囲内ではファイル分割・改名をまたいで監査できるが、取得できていない親 commit や削除済み
+blob の不存在を証明するものではない。
 
-境界コミット `a0385f6` では `monster-hero/data/ally-monsters.js` が追加扱いになっており、その親を取得できない。
-したがって「2026-08-11 以前は変更なし」「別ファイルには存在しなかった」とは結論しない。
+## 3. 基礎値・距離適性の変更履歴
 
-## 3. 履歴表
-
-| モンスター | 変更項目 | 変更前 | 変更後 | 基準コミット | BUILD_DATE等 | 信頼度 | 備考 |
+| モンスター | 変更項目 | 変更前 | 変更後 | コミット | 時期 | 信頼度 | 備考 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| ピクシー (`Pixie`) | `baseGuts` | 140 | 170 | 実変更 `bc40d5e`; main merge `33ace5e` | BUILD_DATE / version / changelog: `2026-08-14 10:24` JST; 実変更 commit `2026-08-14T10:26:46+09:00`; merge `10:26:57+09:00` | UNCERTAIN | 値とリポジトリ内リリース表示は一致。Pages deploy 完了・CDN/ブラウザ反映境界は不明 |
+| ピクシー (`Pixie`) | `baseGuts` | 140 | 170 | 実変更 `bc40d5e`; main merge `33ace5e` | BUILD_DATE / version / changelog `2026-08-14 10:24` JST; commit `10:26:46`; merge `10:26:57` | UNCERTAIN | 値変更は確定。公開完了・端末反映時刻は不明 |
 | ミタラシ (`Mitarashi`) | `baseHp` | 600 | 630 | 実変更 `bc40d5e`; main merge `33ace5e` | 同上 | UNCERTAIN | 同一リリースの調整 |
 | ミタラシ (`Mitarashi`) | `baseAtk` | 120 | 140 | 実変更 `bc40d5e`; main merge `33ace5e` | 同上 | UNCERTAIN | 同一リリースの調整 |
 | ミタラシ (`Mitarashi`) | `baseDef` | 120 | 105 | 実変更 `bc40d5e`; main merge `33ace5e` | 同上 | UNCERTAIN | 同一リリースの調整 |
 | ミタラシ (`Mitarashi`) | `baseGuts` | 100 | 90 | 実変更 `bc40d5e`; main merge `33ace5e` | 同上 | UNCERTAIN | 同一リリースの調整 |
-| 全モンスター（shallow 境界以前） | `baseHp`, `baseAtk`, `baseDef`, `baseGuts`, `distAptitude` | 不明 | 境界時点の値は取得可 | shallow 境界: `a0385f6` ほか | 境界以前の BUILD_DATE / version / 公開時系列は未取得 | UNRECOVERABLE | 完全履歴を取得するまで、境界以前の変更有無・旧値・別ファイル所在を確定不能 |
+| 全モンスター（未取得範囲） | `baseHp`, `baseAtk`, `baseDef`, `baseGuts`, `distAptitude` | 不明 | 最古スナップショットの値は取得済み | shallow 境界より前 | `2026-08-10T19:56:52+09:00` より前 | UNRECOVERABLE | 完全履歴を取得できず、未知の変更件数・旧定義ファイルを断定不能 |
 
-### 距離適性の変更履歴
+信頼度は、値と変更 commit に加えて利用者への公開境界まで一意なら `EXACT`、値変更は確定しても公開境界が
+一意でなければ `UNCERTAIN`、Git オブジェクト不足で値・変更有無を復元できなければ `UNRECOVERABLE` とする。
+表の集計は `EXACT` 0 行、`UNCERTAIN` 5 行、監査ギャップ `UNRECOVERABLE` 1 行である。
 
-取得済み first-parent 100 コミット内では、既存モンスターの `distAptitude` の変更は **0 件**だった。
-ウンディーネとヤオビクニの追加は新規定義であり「変更前→変更後」ではないため表に数えていない。
-ただし shallow 境界以前は未監査なので、全期間 0 件とは断定できない。
+### 3.1 基礎ステータス
 
-### 基礎ステータスの変更履歴
+取得済み範囲で検出した既存モンスターの変更は上表の 5 項目だけである。内訳は `baseHp` 1 件、`baseAtk`
+1 件、`baseDef` 1 件、`baseGuts` 2 件で、すべてピクシーまたはミタラシである。新モンスター追加時の初期値は
+変更に数えていない。**ピクシー・ミタラシ以外は取得済み範囲で 0 件だが、全期間 0 件とは断定しない。**
 
-取得済み範囲では上表の 5 件だけである。`baseHp` 1 件、`baseAtk` 1 件、`baseDef` 1 件、`baseGuts` 2 件。
-他モンスターの変更は取得済み範囲で検出されなかったが、境界以前については未確認である。
+### 3.2 距離適性
 
-## 4. `createdAt` の信頼性
+取得済み範囲では、既存モンスターの `distAptitude` 変更は 0 件である。ウンディーネ、ヤオビクニ等の新規定義は
+既存値の変更ではない。完全履歴を取得できなかったため、要求された「完全履歴上、既存モンスターの距離適性変更は
+0件」という断定はできない。
 
-`createdAt` は保存形式上の必須値として正規化・検証されていない。数値として使う箇所も
-`Number(masu.createdAt) || Number(masu.id) || 0` とフォールバックしており、欠損が想定されている。
-また値はクライアントの `Date.now()` なので、端末時計のずれ・変更を検知しない。よって、値が存在しても
-GitHub Pages の公開境界と比較できる信頼できるサーバー時刻ではない。
+## 4. 公開境界と `createdAt`
 
-| 経路 | `createdAt` の扱い | 生成時刻としての評価 | SAFE 判定への利用 |
-| --- | --- | --- | --- |
-| 通常マスモン登録 | 新規オブジェクトへ `Date.now()` を設定 | 経路内では登録時刻。ただし端末時計であり絶対時刻は保証不能 | 公開境界が別途確定し、端末時刻も信頼できる証拠がある場合だけ条件付き |
-| 再生 | `buildRegeneratedMasu` の `now`（既定 `Date.now()`）を設定 | 経路内では個体差抽選・生成時刻。端末時計制約あり | 同上。新形式 offset 保有個体には履歴推定自体が不要 |
-| 旧・種別絆セーブからの一度きり移行 | 移行実行時に `Date.now()` を新規設定 | **元の育成開始・個体生成時刻ではない** | 不可。移行時刻を生成時刻として扱わない |
-| 既存 `mh_masu_mons` のロード | 生データを読み、通常の正規化は `createdAt` を補完しない | 欠損個体が存在し得る | 欠損・非数値は不可 |
-| バックアップ復元 / データ引き継ぎ | 保存データを復元し、生成時刻をサーバー証明しない | 値は持ち越せるが真正性・端末時計は保証不能 | `createdAt` 単独では不可 |
-| 合体 | 主個体をスプレッドして更新し、副個体を削除。主の値を維持 | 主の元の値が正しければ維持。合体時刻へ更新しない | 主の由来に従う。副の日時から主を判定しない |
-| 限界突破 | `nextMasu` に正規化済み個体をスプレッド | 値または欠損を維持 | 元経路に従う |
-| 転生 | `resetMasuForRebirth` が `masu?.createdAt` を明示コピー | 値または欠損を維持。転生時刻へ更新しない | 元経路に従う |
-| 絆/固有技強化・リセット、染色、XP付与 | 個体のスプレッド更新 | 値または欠損を維持 | 元経路に従う |
-| ランキング詳細の再構築 | `rankingDetailToMasu` は表示計算用オブジェクトを組み立てるが `createdAt` を持たない | 所有個体の生成経路ではなく、時刻復元不能 | 不可。セーブ移行根拠にしない |
-| 破損・手編集・旧版由来データ | 必須検証、署名、サーバー照合なし | 欠損・任意値があり得る | 不可 |
+`bc40d5e` のリポジトリ内時系列は、BUILD_DATE / `version.json` / changelog の `2026-08-14 10:24` JST、
+実変更 commit の `10:26:46`、main merge の `10:26:57` の順である。workflow は main push 後に check、artifact
+upload、Pages deploy を行うが、run/deployment の開始・完了時刻は Git 履歴に含まれず、今回は GitHub API からも
+取得できなかった。仮に deployment 完了時刻を取得できても、CDN、PWA、Safari を含むブラウザキャッシュによる
+端末反映時刻は一意にならない。
 
-したがって「`createdAt` がある旧個体は SAFE」と一括判定してはならない。特に `masu_migrated_*` は、
-IDからも旧セーブ移行由来と識別でき、`createdAt` は後付けである。
+`createdAt` は次の理由で公開境界との自動比較に使えない。
 
-## 5. 正確な移行が可能になる条件
+- 通常登録・再生ではクライアントの `Date.now()` であり、端末時計のずれ・変更を検証しない。
+- `masu_migrated_<種ID>` では旧種別セーブの生成時ではなく、移行実行時に後付けされる。
+- 既存 `mh_masu_mons` のロードは欠損値を補完せず、並び替えも
+  `Number(createdAt) || Number(id) || 0` へフォールバックする。
+- 合体、限界突破、転生、強化、リセット、染色等は元個体の値または欠損を維持し、操作時刻を記録しない。
+- バックアップ復元は値を持ち越すだけで、サーバー時刻による真正性を付与しない。
 
-### 5.1 旧再生個体を正確に offset 化する条件
+従って `createdAt` の存在だけで個体を SAFE にせず、公開境界付近の曖昧帯を時刻比較だけで解除しない。
 
-次のすべてを満たす必要がある。
+## 5. 保存データから確実に判別できること
 
-1. 対象が再生個体で、保存済み `individualStats` の 4 値が妥当である。
-2. その個体の**実際の生成時に配信されていた**種の `baseHp/baseAtk/baseDef/baseGuts` を一意に選べる。
-3. 生成時刻の根拠が後付け移行時刻でなく、欠損・改変・端末時計ずれがない。
-4. 完全 Git 履歴と Pages deployment 記録等で公開境界が一意に確定するか、個体自身に生成時 baseline/version
-   スナップショットが保存されている。
-5. 算出後に `offset = individualStats - generationBaseline` とし、4 能力・総合力が移行前後で一致する。
+| 判別材料 | 確実に分かること | 分からないこと |
+| --- | --- | --- |
+| `individualStatOffsets` と `distAptBoosts` がともに妥当 | 第3段階以降の新表現を持ち、最新 baseline への追従計算が可能 | フィールドの真正性、端末上での厳密な生成時刻 |
+| `masu_regenerated_<時刻>_<乱数>` | コードが発行したものなら再生経路の ID 形式 | IDだけでは旧/新 offset 形式の別、公開版、端末時計の正確さ |
+| `masu_migrated_<種ID>` | 旧 `mh_bond_xp` 等からの一度きり移行経路 | 元個体の生成時刻・当時 baseline。`createdAt` は移行時刻 |
+| 通常の `masu_<時刻>_<乱数>` | コードが発行したものなら通常登録経路の ID 形式 | 公開版、キャッシュ世代、時刻の真正性 |
+| `individualStats` のみ | 旧再生個体の完成 4 能力値を維持できる | 生成時 baseline と正確な offset |
+| `distApt` のみ | 旧個体の現在の 4 距離適性を維持できる | 生成時 baseline、投入段階、リセット履歴 |
+| フィールド欠損 | 旧形式として許容される可能性 | 欠損だけから導入前のどの版かを一意に特定すること |
 
-現状は 2～4 を全旧個体について保証できない。境界をまたぐ個体、旧セーブ移行個体、`createdAt` 欠損・不正個体は SAFE にできない。
+`masu_regenerated_` と `masu_migrated_` は取得済み最古境界にも存在し、それより前の導入 commit は取得不能である。
+第3段階の新フィールド導入 commit は `individualStatOffsets` の解決が `1effdfd`、新規個体への併記が
+`4c5bdc4` で確認できる。新フィールドそのものが A 判定の根拠であり、ID や `createdAt` はその代用にならない。
 
-### 5.2 旧距離適性を正確に boost 化する条件
+## 6. 最終分類（変換は行わない）
 
-次のすべてを満たす必要がある。
+### A. 新形式なのでそのまま SAFE
 
-1. 生成時 baseline の 4 距離 `distAptitude` を一意に選べる。
-2. 保存済み `distApt[4]` が妥当で、各距離について baseline から上方向へ到達可能である。
-3. 転生・絆ポイントリセット等で baseline が再同期された履歴を判別できる。単なる `createdAt` では操作時点を表せない。
-4. 使用済み強化段階数、未使用 `distAptPoints`、獲得総ポイントが矛盾せず、上限 M による投入打切りも考慮できる。
-5. 移行前後の 4 適性、ポイント総数、総合力が一致する。
+`individualStatOffsets` の 4 有限数と `distAptBoosts` の 4 非負整数を持ち、旧完成値表現との一致検査、種 ID、
+距離等級、総合力の整合検査をすべて通る個体。最新 baseline へ差分を適用できるため、生成時刻推定は不要である。
 
-取得済み範囲には距離適性変更がないため、その期間内に生成され、後付け移行でなく、他の整合条件も満たす個体なら
-最新 baseline と旧 baseline は同じである。しかし shallow 境界以前の個体や操作履歴を識別できない個体へ、この推論を拡張しない。
+### B. 旧形式だが正確なベースを一意に復元可能
 
-## 6. 公開時刻の評価
+個体自身に信頼できる版/baseline snapshot がある、または別の検証済み証拠で生成時に端末へ配信されていた版を
+一意に特定でき、その版の完全履歴上の baseline を取得できる個体。**現行の旧保存フィールド、ID、`createdAt`
+だけで B に確定できる条件は見つからなかった。**
 
-リポジトリ内で確認できる順序は次のとおり。
+### C. 現在値維持はできるが生成時ベース不明
 
-1. BUILD_DATE / `version.json` / changelog: `2026-08-14 10:24` JST。
-2. 実変更 commit `bc40d5e`: `2026-08-14T10:26:46+09:00`。
-3. main merge `33ace5e`: `2026-08-14T10:26:57+09:00`。
-4. workflow は main push 後に build/check を通し、artifact upload 後に Pages deploy を行う設計。
+妥当な `individualStats` または `distApt` により現在の完成値は読める一方、生成時 baseline、投入段階、公開版を
+一意に復元できない旧個体。現在値を維持する読み込みは可能だが、推測した offset / boost を保存してはならない。
 
-1 は実時刻より前に埋められた識別値で、2 と 3 も公開完了ではない。4 の run/deployment ID と完了時刻は Git 履歴にない。
-さらにブラウザ/PWA がいつ新資産を取得したかも個体データに保存されない。このため `10:24`、`10:26:46`、
-`10:26:57` のいずれも移行境界に採用しない。
+### D. 自動移行禁止
 
-## 7. 第6段階への判定
+値・配列・種 ID が不正、旧完成値と候補差分が不一致、距離適性が baseline より低く投入段階として表現不能、
+ポイント総数や上限 M と矛盾、由来不明、または完全履歴・公開境界不足により B を証明できない個体。
+`masu_migrated_*`、`createdAt` 欠損/非数値、境界付近、端末時計を信頼できない個体は、他の確実な証拠がない限り
+D として自動変換しない。C は読み込み時の現状維持分類であり、自動変換可を意味しない。
 
-**全旧個体を自動 SAFE 化する第6段階へは進めない。** 先に以下が必要である。
+## 7. offset / boost 化できる範囲と第6B判定
 
-- shallow でない完全 Git 履歴（削除・改名前ファイルと全 main 履歴を含む）の取得と本表の再監査。
-- GitHub Actions / Pages deployment の実行記録取得。ただし PWA/端末反映差まで解消できないなら時刻境界方式は
-  `UNCERTAIN` のままとし、曖昧帯を BLOCKED にする。
-- `masu_migrated_*`、`createdAt` 欠損・非数値・境界付近・端末時計不可信個体を SAFE 対象外にする仕様。
-- SAFE と一意に証明できる個体だけを allowlist し、それ以外を無変更で残す設計と回帰テスト。
+- **旧再生個体の offset 化:** A は既に offset を持つため変換不要。B の条件を満たす個体だけ
+  `individualStats - generationBaseline` を計算し、4 能力と総合力の不変を検証できる。現行フィールドだけで
+  B と証明できる旧個体はなく、旧再生個体の一括 offset 化はできない。
+- **旧距離適性の boost 化:** B の条件に加え、生成時の 4 baseline、保存 `distApt`、投入/未使用ポイント、
+  リセット・転生履歴、上限 M の整合を一意に証明できる個体だけ変換候補になり得る。取得済み範囲の変更 0 件を
+  未取得期間へ外挿できないため、旧個体の一括 boost 化はできない。
+- **自動移行禁止:** C/D、`masu_migrated_*`、旧版を一意に識別できない ID、`createdAt` だけを根拠にする個体、
+  未取得期間または公開曖昧帯に属し得る個体は引き続き禁止する。
 
-今後の新規個体は、第3段階で追加済みの `individualStatOffsets` / `distAptBoosts` を根拠に追従できる。
-この監査結果を理由に旧 `mh_masu_mons` を書き換えてはならない。
+以上から、**完全履歴を取得して本表を再監査するまで第6B段階へは進めない**。完全履歴取得後も Pages/PWA の
+端末反映境界が一意でなければ、時刻推定ではなく A または確実に証明できる B の allowlist だけを対象とする。
 
 ## 8. 今回の非変更範囲
 
-この第5段階では文書だけを追加した。`mh_masu_mons`、保存形式、起動時処理、診断保存、ゲームロジック、UI、
-バランス、継承固有技、`changelog.js`、`help.js` は変更していない。
+第6A段階ではこの監査文書だけを更新した。`mh_masu_mons`、ゲームロジック、保存形式、自動マイグレーション、UI、
+バランス、`monster-hero/data/changelog.js`、`monster-hero/data/help.js` は変更していない。
