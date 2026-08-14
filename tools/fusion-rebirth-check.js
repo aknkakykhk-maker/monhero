@@ -49,7 +49,7 @@ check('ダイヤ不足なら転生できない', m.buildMasuBreakthrough({ masu:
 check('転生後は強化ポイント5で始まる', rebirth.ok && rebirth.nextMasu.distAptPoints === 5);
 
 // --- ① 合体で上がったレベルぶんの強化ポイント ---
-const lv10 = { id: 2, baseId: 'Golem', bondXp: m.totalBondXpForLevel(10), levelCap: 30, rebirthCount: 0, distAptPoints: 0, statPoints: {}, uniqueSkillLevels: { own: 0 } };
+const lv10 = { id: 2, baseId: 'Golem', bondXp: m.totalBondXpForLevel(10), levelCap: 30, rebirthCount: 0, distAptPoints: 0, distAptBoosts:[0,0,0,0], statPoints: {}, uniqueSkillLevels: { own: 0 } };
 check('絆Lv10なら未使用ポイントは9まで補填される', m.reconcileMasuPoints(lv10).distAptPoints === 9, `${m.reconcileMasuPoints(lv10).distAptPoints}pt`);
 
 // 合体でレベルが上がった記録(fusionBondLevels)があっても、その分を差し引かない
@@ -62,7 +62,7 @@ check('すでに足りているなら増やさない',
     && m.reconcileMasuPoints({ ...lv10, distAptPoints: 20 }).distAptPoints === 20);
 // 振り済みのポイントは二重に配らない
 check('振り済みのぶんは重複して配らない',
-  m.reconcileMasuPoints({ ...lv10, distApt: ['B', 'C', 'C', 'C'], statPoints: { hp: 10 }, distAptPoints: 0 }).distAptPoints === 7);
+  m.reconcileMasuPoints({ ...lv10, distAptBoosts:[1,0,0,0], distApt: ['B', 'C', 'C', 'C'], statPoints: { hp: 10 }, distAptPoints: 0 }).distAptPoints === 7);
 
 // --- 画面・実処理の結線 ---
 // 上がったレベルぶんの強化ポイントは applyBondXpGain がまとめて配る。合体もそこを通す

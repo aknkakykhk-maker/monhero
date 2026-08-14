@@ -29,9 +29,9 @@
 | 再生モンスターの `individualStats` | 生成時点のベース値から乱数で作った値 | HP / 攻 / 防 / G の**完成基礎値** | **しない**。`individualStats` が現在のベース値より優先される | **高い**。生成時点の旧ベース値を内包し続ける | 生成時点ベースとの差分（例 `+10/-3/+3/-3`）を版付きで保存する |
 | 再生時の個体差生成 | 生成時点の `baseHp/baseAtk/baseDef/baseGuts` | 各値を独立に 90%～110% へ線形乱数化し四捨五入した完成値 | 生成後は追従しない | **高い**。基礎値の改定後も旧完成値のまま | 乱数結果を差分へ変換して確定保存し、再抽選はしない |
 | 合体・融合 | 主個体の保存値、双方の絆XP、現在の副種定義 | 主へ副のXP、合体履歴、転生由来ポイント、任意で継承技を追加し、副を削除。副の能力・距離適性・通常強化は移さない | 主の通常基礎値と、`monId` を解決できる継承技定義は追従する。合体履歴・獲得XP・転生成果・継承元情報・継承Lvは確定値として保持 | 主が再生個体なら `individualStats` に旧値が残る。継承技は元種を解決できない旧記録だけ保存スナップショットが残る | XP・履歴・転生成果・継承元情報・継承Lvを現行どおり保持し、技定義は最新元種へ追従させる |
-| `inheritedUniques` | `resolveInheritedUniqueDefinition` が `monId` から解決する `ALL_PLAYER_MONSTERS[monId].unique`。解決不能時は保存スナップショット | `name`, `baseMult`, `cost`, 効果用フィールド、画像、進化名等を含む**旧技スナップショット**に `monId`, `lineageId`, `sourceMasuName` を付けて保持 | **する**。`monId` から元種の現行 `unique` を解決し、保存Lvを適用する | `monId` 欠損、または現行定義から元種・`unique` を解決できない旧記録では、互換fallbackとして保存スナップショットをそのまま使う | 現行の最新定義参照と非破壊fallbackを維持する。将来、Lvの位置キーは安定した `lineageId` キーへ移行を検討する |
+| `inheritedUniques` | `resolveInheritedUniqueDefinition` が `monId` から解決する `ALL_PLAYER_MONSTERS[monId].unique`。解決不能時は保存スナップショット | 旧技スナップショットに `monId`, `lineageId`, `sourceMasuName` と1件専用の `inheritedUniqueId` を付けて保持 | **する**。`monId` から元種の現行 `unique` を解決し、保存Lvを適用する | `monId` 欠損時は保存スナップショットを使う。`lineageId` は1件一意とは見なさない | 最新定義参照と非破壊fallbackを維持し、恒久Lvの本人確認には `inheritedUniqueId` を使う |
 | 自前固有技 | 現在の `ALL_PLAYER_MONSTERS[baseId].unique` | 技本体は保存せず、Lvだけ `uniqueSkillLevels.own` | **する**。現在の自前技定義へ保存Lvを適用 | 低い。技系統ID自体を変更する場合は意味の継続性に注意 | 現行方式を維持し、安定した技系統IDを必須にする |
-| 固有技Lv | 個体の `uniqueSkillLevels` | `own`, `inh:0`, `inh:1` … の数値。未使用分は `uniqueSkillPoints` | Lvは保持。自前技・継承技とも最新定義へ適用し、継承元を解決できない場合だけ保存スナップショットへ適用する | 継承配列の位置キーなので、並べ替え・削除・重複整理時にLv対応を壊す危険がある | **将来改善**として、位置ではなく安定した `lineageId` をキーにする。旧位置キーは移行時に厳密に対応付ける |
+| 固有技Lv | 個体の `uniqueSkillLevels` | `own` と `inhId:<inheritedUniqueId>`。旧 `inh:N` と未使用分 `uniqueSkillPoints` も保持 | 安定IDキーを優先し、欠損時だけ旧位置、最後に `evoLevel` を使う | 旧位置キーだけの個体は移行前に並びを変えられない | 起動時に現在配列と旧位置を厳密に対応させて冪等移行し、旧キーは削除しない |
 | `plusStats` | 常に最新 `ALL_PLAYER_MONSTERS[baseId].plusStats` | 保存しない。解決時に `statPoints` を同じ能力へ加算 | **する**。再生個体でも `individualStats` は `plusStats` に影響しない | 旧値残存は低い。ただし「個体差を供モン能力へ反映しない」という現仕様を移行で誤って変える危険がある | 現仕様を固定し、最新 `plusStats` + 通常育成差分として解決する |
 | 勇者特性 | `ALL_PLAYER_MONSTERS` の表示定義と `game-system.jsx` の種ID分岐 | 保存しない | **する**。マスモンも種IDを保ったまま最新ベースを展開する | 旧値残存は低い。説明と実効果が別正本であることが保守リスク | 保存対象にせず、種IDから常に最新定義・効果を使う |
 | 総合力 | `monsterPowerOf(mergeMasuIntoMon(masu))` | 通常セーブには保存しない。ランキングにだけ記録時点の `detail.power` を保存 | 通常表示は解決結果へ追従。ランキングの過去記録は意図的に追従しない | 通常表示には完成値保存中の `distApt`、`individualStats` が波及する。継承技は所持数と恒久Lvだけを使うため、元種の倍率・消費G・名称変更自体では変動しない | 保存しない派生値のまま維持。移行前後で個体成果が不変になる照合指標として使う |
@@ -73,10 +73,10 @@
 `monId` がない記録、または現在の `ALL_PLAYER_MONSTERS` で元種・`unique` を解決できない旧記録では、保存済み
 `inheritedUniques` のスナップショットを互換fallbackとしてそのまま使用する。技を削除・無効化はしない。
 
-技定義の解決方法と個体の育成成果は分離する。`uniqueSkillLevels` の `inh:0`, `inh:1` … と、各スナップショットに
-残る既存の恒久Lvは維持し、最新またはfallbackの技定義へ適用する。合体履歴、獲得XP、転生成果、継承元情報も
-確定済みの個体成果として変更しない。なお、継承Lvが配列位置ベースである点は現仕様であり、安定した `lineageId` を
-キーにする方式は未実装の将来改善である。
+技定義の解決方法と個体の育成成果は分離する。各技に `inheritedUniqueId` を付け、恒久Lvは
+`uniqueSkillLevels['inhId:<inheritedUniqueId>']` を正本にする。旧個体は現在配列と `inh:N` を厳密に対応させて一度だけ
+コピーし、旧キー自体は互換用に残す。安定キーがある技は並び替え後に旧位置を参照しない。`lineageId` は血統情報であり、
+恒久Lvの本人確認には流用しない。現時点では削除UI・実際の削除・ポイント返却は実装していない。
 
 総合力は引き続き継承技の「所持数」と「恒久Lv」で計算する。最新定義へ追従して倍率、消費G、名称等が変わっても、
 その変更自体を別の点数として計算しない。ランキング詳細も継承元 `monId` とLvを送り、閲覧端末の最新定義から再構築する。
@@ -150,8 +150,8 @@
 専用回帰検査は `node tools/masu-baseline-resolution-check.js`。
 
 これは新旧両形式を安全に読み取る**受け皿**のみである。既存データは未移行で、起動時一括書換え、新規生成の本番切替、
-旧フィールド削除はいまだ未実施であり、基礎値追従方式への移行完了ではない。継承固有技の定義は現在すでに
-`monId` から最新元種を参照するが、`uniqueSkillLevels` の安定した `lineageId` キー化は未実装の将来改善である。
+旧フィールド削除はいまだ未実施であり、基礎値追従方式への移行完了ではない。継承固有技の定義は
+`monId` から最新元種を参照し、恒久Lvは別途 `inheritedUniqueId` の安定キーで解決する。
 
 ## 8. 第3段階の実装状況（2026-08-14）
 
