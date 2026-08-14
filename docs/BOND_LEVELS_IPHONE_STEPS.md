@@ -2,6 +2,11 @@
 
 `public.bond_levels` を新しく1つ追加する作業です。**既存の `rankings` には触りません**（DROP・DELETE・ALTER・RLS/権限の変更をしません）。各SQLは新しいクエリにファイル全体を貼り付けて実行します。エラーが出た工程では次へ進まず、結果を保存して共有してください。
 
+> **Supabase の SQL Editor は、ファイル全体を実行すると「最後の1文」の結果しか表示しません。**
+> そのため4本とも、**最後の1文が「まとめ」**になっています。確認したい値はすべてそこに縦に並ぶので、
+> 1回 Run して出てきた表をスクリーンショットするだけで大丈夫です。個別の結果を見たいときだけ、
+> その文を選択して Run してください。
+
 ## なぜ追加するのか
 
 絆Lvは編成（`party`）のJSONの中に入っているため、**DB側で「絆Lvの高い順」に並べられません**。そのため新着順に120行だけ取ってアプリ側で開いて集計しており、よく遊ぶ人の記録で枠が埋まると、しばらく遊んでいない人が一覧から丸ごと消えます（ブリーダーLvで2度起きたのと同じ構造の問題）。
@@ -13,9 +18,9 @@
 1. **Safari で Supabase Dashboard を開く**
    プロジェクト `zrzevudkbgtxlbvmuziy` を選び、左のメニューから **SQL Editor** → **New query**。
 2. **`BOND_LEVELS_AUDIT.sql` を実行**（読み取り専用）
-   追加先の名前が空いているか、既存 `rankings` の件数・RLS・ポリシー・権限を確認します。A-1が**0行**であること（＝`bond_levels` がまだ無いこと）を必ず確認してください。
-3. **結果を保存**
-   各結果表をスクリーンショットまたはCSVで残します。とくに **A-4の件数** は後で比べるので必ず残します。保存できなければ次へ進みません。
+   最後に出る「まとめ」の表で、**`bond_levels が既に在るか` が `0`（判定が「OK: 空いている」）**であることを必ず確認します。1以上なら同名の何かが既にあるので、そこで停止してください。
+3. **まとめの表をスクリーンショット**
+   とくに **`rankings の件数`** は適用後に比べるので必ず残します。保存できなければ次へ進みません。
 4. **`BOND_LEVELS_APPLY_TEST.sql` を実行**（末尾が `rollback;`）
    実適用と同じSQLを一度通す予行演習です。**この実行では何も保存されません**。成功すると、追加予定のカラム一覧・索引（`is_valid` と `is_ready` が `true`）・ポリシー3件が表示されます。
 5. **エラーがないことを確認**
@@ -23,19 +28,20 @@
 6. **`BOND_LEVELS_APPLY.sql` を実行**（末尾が `commit;`）
    同じ安全確認を通ったうえで変更を保存します。最後に `notify pgrst, 'reload schema';` が走り、Data APIが新しいテーブルを認識します。
 7. **`BOND_LEVELS_VERIFY.sql` を実行**（読み取り専用）
-   次をすべて確認します。
-   - `bond_levels` のカラムが揃っている（V-1）
-   - 主キーが `(user_name, individual_id)`（V-2）
-   - 索引2つが `is_valid` / `is_ready` とも `true`（V-3）
-   - `updated_at` のトリガーが付いている（V-4）
-   - RLSが有効で、ポリシーが `select` / `insert` / `update` の3つ（V-5・V-6）
-   - `bond_levels` の権限に **DELETE が無い**（V-7）
-   - `rankings` の件数が手順3のA-4と同じ（V-8）
-   - `bond_levels` はまだ0件（V-9。この時点では空で正常）
+   最後の「まとめ」の表で、次をすべて確認します。
+   - `テーブル` が `1`
+   - `主キー` が `PRIMARY KEY (user_name, individual_id)`
+   - `索引(valid/ready)` が3つとも `true/true`
+   - `RLS` が `有効`
+   - `ポリシー` が `insert` / `select` / `update` の3つ
+   - `権限` に **DELETE が無い**（`INSERT` / `SELECT` / `UPDATE` だけ）
+   - `updated_atのトリガー` が `bond_levels_set_updated_at`
+   - `rankings の件数` が手順3と同じ
+   - `bond_levels の件数` は `0`（この時点では空で正常）
 8. **ここまでの結果を共有**
    問題がなければ、アプリ側を新テーブル対応にする作業（担当: Claude）へ進みます。
 9. **アプリ公開後にもう一度 `BOND_LEVELS_VERIFY.sql`**
-   ゲームを1周してから実行し、V-9の件数が増え、V-10に自分の記録が並ぶことを確認します。
+   ゲームを1周してから実行し、まとめの `bond_levels の件数` が増え、`絆Lv上位5件` に自分の記録が並ぶことを確認します。
 
 ## 成功判定
 
@@ -61,7 +67,7 @@ Supabase の管理者接続情報はリポジトリに保存しません。SQL E
 
 PostgreSQL 16 のローカル環境に、Supabaseと同じ前提（`anon` / `authenticated` ロール、RLS付きの `rankings`、既存データ5件）を用意し、この4本のSQLをそのまま流して確認済みです。
 
-- `BOND_LEVELS_AUDIT.sql` … エラーなく全結果表が出る
+- `BOND_LEVELS_AUDIT.sql` … エラーなく「まとめ」の表が出る
 - `BOND_LEVELS_APPLY_TEST.sql` … 最後に `ROLLBACK` され、`bond_levels` は**残らない**（0件）
 - `BOND_LEVELS_APPLY.sql` … `COMMIT` → `NOTIFY` まで通り、主キー・索引2つ・ポリシー3つが作られる
 - `BOND_LEVELS_VERIFY.sql` … 期待どおりの結果。`rankings` の件数・ポリシー・権限は適用前と同一
