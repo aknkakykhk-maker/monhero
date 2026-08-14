@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 14:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 14:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8415,14 +8415,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const iceLockActive = iceLockTurns>0 && !iceLockPreparing;
   const iceLockEnemyDamageMult = iceLockActive ? 0.7 : 1.0;
 
-  const getPredictedDamage = useCallback((intent) => {
+  const getIncomingDamageBeforeTurnReduction = useCallback((intent) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='SPECIAL')) return 0;
     const atkVal = Math.floor(intent.value*(1.0-getWaveBuff('enemyAtkDebuffPct')));
     const chuuniCutActive = (mainHero?.id==='Ark'||mainHero?.id==='Iblis') && getWaveBuff('chuuniDmgCutUses')<2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
-    const dmgBase = Math.max(30,(atkVal*getTurnBuff('takenDamageMult',1.0))-(effectiveDef*0.15))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
+    const dmgBase = Math.max(30,atkVal-(effectiveDef*0.15))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
     return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult));
-  }, [effectiveDef, turnBuffs, mainHero, permaBuffs, waveBuffs]);
+  }, [effectiveDef, mainHero, permaBuffs, waveBuffs]);
+  // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
+  // 適用したあとの実ダメージへ最後に掛ける。敵攻撃力へ途中適用すると丈夫さやガードとの
+  // 順序で50%にならないため、実処理と予測表示の双方がこの入口を使う。
+  const applyTurnDamageReduction = useCallback((damage) => damage>0
+    ? Math.max(1,Math.floor(damage*getTurnBuff('takenDamageMult',1.0)))
+    : 0, [turnBuffs]);
+  const getPredictedDamage = useCallback((intent) => applyTurnDamageReduction(
+    getIncomingDamageBeforeTurnReduction(intent)
+  ), [getIncomingDamageBeforeTurnReduction,applyTurnDamageReduction]);
 
   const addPopup = (text, side, color) => {
     const id = Date.now()+Math.random();
@@ -8679,7 +8688,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       } else if (intent.type==='ATTACK'||intent.type==='SPECIAL') {
         // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」(GUARD_EVOLUTIONのflat/mult参照)
         const guardValue = (immediateEffects.guardFlat>0||immediateEffects.guardMult>0) ? Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult) : 0;
-        const incomingDmg = getPredictedDamage(intent);
+        const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(intent);
+        const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
         if ((mainHero?.id==='Ark'||mainHero?.id==='Iblis') && getWaveBuff('chuuniDmgCutUses')<2) {
           addWaveBuff('chuuniDmgCutUses',1);
           addPopup('中二病発動!被ダメ50%カット','hero','text-pink-400 text-sm font-bold');
@@ -8716,11 +8726,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         } else if (mainHero?.id==='Tiger'&&Math.random()<0.5) {
           addPopup("回避！",'hero','text-blue-400 font-black text-xl drop-shadow-lg'); await battleWait(1000);
         } else if (guardValue>0) {
-          const diff=guardValue-incomingDmg;
+          const diff=guardValue-incomingBeforeTurnReduction;
           // キーンと弾くガード演出
           setGuardFx(true); Audio_.se.guard(); triggerShake();
           await battleWait(550); setGuardFx(false);
-          if (diff<0) { const fd=Math.abs(diff); addPopup(`貫通! -${fd}`,'hero','text-pink-600 text-3xl font-black drop-shadow-lg'); await battleWait(1000); const remainingHp=calculateRemainingHp(currentHp,fd); currentHp=remainingHp; setHp(remainingHp); await battleWait(1000); }
+          if (diff<0) { const fd=applyTurnDamageReduction(Math.abs(diff)); addPopup(`貫通! -${fd}`,'hero','text-pink-600 text-3xl font-black drop-shadow-lg'); await battleWait(1000); const remainingHp=calculateRemainingHp(currentHp,fd); currentHp=remainingHp; setHp(remainingHp); await battleWait(1000); }
           else { const gGain=Math.floor(diff*0.1); addPopup(`🛡 ガード成功`,'hero','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`💚 ライフ +${diff}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gGain}`,'guts','text-amber-400 text-xl font-bold drop-shadow-md'); await battleWait(1000); currentHp=Math.min(effectiveMaxHp,currentHp+diff); setHp(currentHp); setGuts(p=>Math.min(effectiveMaxGuts,p+gGain)); await battleWait(1000); }
         } else {
           addPopup(`-${incomingDmg}`,'hero','text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce'); triggerShake(); await battleWait(1000);
@@ -12564,7 +12574,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {enemy&&enemyIntent&&!isBusy&&(()=>{
                 // ためる・待機・移動はダメージが無いので「予測」を出さない。
                 // 出すと必ず0になり、ガードを構える判断の邪魔になる
-                const rawDmg=getPredictedDamage(enemyIntent);
+                const rawDmg=getIncomingDamageBeforeTurnReduction(enemyIntent);
                 let previewGuardFlat=0, previewGuardMult=0, previewPenaltyCnt=0;
                 selectedCards.forEach(idx=>{
                   const card=hand[idx];
@@ -12574,7 +12584,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   if(weight>0){const effect=cardEffectMultiplier(card,halved); previewGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*weight*effect; previewGuardMult+=GUARD_EVOLUTION[guardLevel].mult*weight*effect;}
                   if(isPenalty) previewPenaltyCnt++;
                 });
-                const plannedDmg=Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult));
+                const plannedDmg=applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf(previewGuardFlat,previewGuardMult)));
                 const tone=enemyIntent.type==='SPECIAL'?'bg-fuchsia-950 border-fuchsia-500 text-fuchsia-300'
                   :enemyIntent.type==='CHARGE'?'bg-amber-950 border-amber-500 text-amber-400'
                   :enemyIntent.type==='MOVE'?'bg-cyan-950 border-cyan-500/60 text-cyan-300'
