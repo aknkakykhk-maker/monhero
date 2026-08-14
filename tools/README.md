@@ -101,6 +101,7 @@ node tools/build.js --check
 | `node masu-baseline-resolution-check.js` | マスモンの旧形式を非変更で維持すること、新規通常・再生個体の新旧表現と総合力、再生乱数回数、適性強化・リセット・転生、最新ベースへの新形式だけの追従、適性上限Mに加え、第4段階の非保存ドライラン分類・候補・保全・一覧集計を確認する。 |
 | `node legacy-dist-apt-boosts-check.js` | 第6B-2の旧距離適性候補について、通常種の安全判定・不正値拒否・旧ゴーレム保留・新形式ゴーレム正常・入力非変更・保存処理不在を確認する。 |
 | `node legacy-masu-migration-diagnosis-check.js` | 第6B-3の個体全体診断について、能力・間合いの独立分類、SAFE_EXACT/PARTIAL/AMBIGUOUS/BLOCKED/ALREADY_MODERN、歴代ベースからの個体差と能力変化量、間合い・既存ポイントの保全、総合力再計算、入力非変更、保存処理不在を確認する。 |
+| `node safe-masu-baseline-migration-check.js` | 第6Cの実移行について、SAFE_EXACTだけへの診断候補追加、全非対象分類の無変更、保存直前の能力・4距離・総合力・ポイント一致、旧フィールド保持、冪等性、歴代ベース、34凸・35凸、旧保存への再適用を確認する。 |
 | `node monster-detail-unified-check.js` | モンスター詳細(編成・ベースモン一覧・マスモン一覧・勇者モン選択・ランキング)が、外枠・上部サマリー・本文まで1つのマスターUIを通っているか確認する。呼び出し元固有の操作だけを引数で受け取っていること、上部サマリーの並び(総合力・絆Lv/上限・限界突破・転生)、限界突破(rebirthCount)と転生(reincarnateCount)を取り違えていないことも見る。 |
 | `node dist-aptitude-check.js` | 間合い適性が距離ごとの補正値(%)として扱われ、編成全員ぶんが置いた距離に関係なく4距離すべてへ加算されるか確認する。 |
 | `node fusion-rebirth-check.js` | 合体で上がったレベルぶんの強化ポイントが配られるか、合体・転生の消費ダイヤ単価(絆レベル1あたり50)を確認する。 |
