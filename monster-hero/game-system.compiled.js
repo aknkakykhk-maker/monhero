@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 0212af1de52a8520
+// source-sha256: 340bb28c2a8497dc
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 19:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 21:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16333,19 +16333,17 @@ function MonsterHeroGame() {
           setGuardFx(false);
           if (diff < 0) {
             const fd = applyTurnDamageReduction(Math.abs(diff));
-            addPopup(`貫通! -${fd}`, 'hero', 'text-pink-600 text-3xl font-black drop-shadow-lg');
-            await battleWait(1000);
             const remainingHp = calculateRemainingHp(currentHp, fd);
             currentHp = remainingHp;
+            addPopup(`貫通! -${fd}`, 'hero', 'text-pink-600 text-3xl font-black drop-shadow-lg');
             setHp(remainingHp);
             await battleWait(1000);
           } else {
             const gGain = Math.floor(diff * 0.1);
+            currentHp = Math.min(effectiveMaxHp, currentHp + diff);
             addPopup(`🛡 ガード成功`, 'hero', 'text-emerald-400 text-2xl font-black drop-shadow-md');
             addPopup(`💚 ライフ +${diff}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
             addPopup(`⚡ ガッツ +${gGain}`, 'guts', 'text-amber-400 text-xl font-bold drop-shadow-md');
-            await battleWait(1000);
-            currentHp = Math.min(effectiveMaxHp, currentHp + diff);
             setHp(currentHp);
             setGuts(p => Math.min(effectiveMaxGuts, p + gGain));
             await battleWait(1000);
@@ -16353,7 +16351,6 @@ function MonsterHeroGame() {
         } else {
           addPopup(`-${incomingDmg}`, 'hero', 'text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce');
           triggerShake();
-          await battleWait(1000);
           const remainingHp = calculateRemainingHp(currentHp, incomingDmg);
           currentHp = remainingHp;
           setHp(remainingHp);
@@ -16441,7 +16438,6 @@ function MonsterHeroGame() {
     const recoverGuts = Math.floor(effectiveMaxGuts * 0.3);
     addPopup(`💚 ライフ +${recoverHp}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
     addPopup(`⚡ ガッツ +${recoverGuts}`, 'guts', 'text-amber-400 text-2xl font-black drop-shadow-md');
-    await battleWait(1000);
     setHp(p => Math.min(effectiveMaxHp, p + recoverHp));
     setGuts(p => Math.min(effectiveMaxGuts, p + recoverGuts));
     await battleWait(1000);
@@ -16501,6 +16497,7 @@ function MonsterHeroGame() {
     let penaltyCardCount = 0; // ブリーダーカード以外を何枚使ったか(2枚目以降は効果半減)
     for (const entry of usedCardEntries) {
       const card = entry.card;
+      const totalHealBeforeCard = totalHeal;
       // 2枚目以降のカードは効果が半減する。ブリーダーカードは対象外で、枚数にも数えない。
       const isBreeder = isBreederCard(card);
       const halved = !isBreeder && penaltyCardCount > 0;
@@ -16522,6 +16519,8 @@ function MonsterHeroGame() {
         currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * 0.5 * effMul;
       }
       setGuts(p => Math.max(0, p - getCardGuts(card)));
+      // 消費と直後の回復を同じ描画へまとめず、カードを支払った値をゲージ・数値に先に出す。
+      await battleWait(250);
       if (card.type === 'draw') continue;
       if (card.type === 'buff' || card.type === 'debuff') {
         fireTeachingFx(card.id);
@@ -16825,15 +16824,16 @@ function MonsterHeroGame() {
           }
         }
       }
-    }
-    if (totalDmg > 0 || totalHeal > 0) {
-      if (totalHeal > 0) {
-        addPopup(`💚 回復 +${totalHeal}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
-        await battleWait(600);
-        hpBeforeEnemyAttack = Math.min(effectiveMaxHp, hpBeforeEnemyAttack + totalHeal);
+      const cardHeal = totalHeal - totalHealBeforeCard;
+      if (cardHeal > 0) {
+        addPopup(`💚 回復 +${cardHeal}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
+        hpBeforeEnemyAttack = Math.min(effectiveMaxHp, hpBeforeEnemyAttack + cardHeal);
         setHp(hpBeforeEnemyAttack);
-        await battleWait(400);
       }
+      // 回復・自傷など、このカード自身の増減を次のカード消費より先に描画する。
+      await battleWait(250);
+    }
+    if (totalDmg > 0) {
       if (totalDmg > 0) {
         const fallbackSlot = lastActionSlot !== null ? lastActionSlot : slots.findIndex(s => s !== null);
         const multiHit = attackHits.length > 1;
