@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 18:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 19:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -332,6 +332,74 @@ const MAX_BOND_LEVEL_ITERATIONS = 400;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
 const MAX_UNIQUE_SKILL_LEVEL = 8;
+const INHERITED_UNIQUE_LEVEL_KEY_PREFIX = 'inhId:';
+let inheritedUniqueIdSequence = 0;
+const createInheritedUniqueId = () => {
+  inheritedUniqueIdSequence += 1;
+  const random = Math.floor(Math.random() * 0x100000000).toString(36);
+  return `iu_${Date.now().toString(36)}_${inheritedUniqueIdSequence.toString(36)}_${random}`;
+};
+const inheritedUniqueLevelKey = (unique) => {
+  const id = typeof unique?.inheritedUniqueId === 'string' ? unique.inheritedUniqueId.trim() : '';
+  return id ? `${INHERITED_UNIQUE_LEVEL_KEY_PREFIX}${id}` : null;
+};
+// 恒久Lvは継承技自身のIDを正本にする。ID移行前だけ旧配列位置を読み、最後に従来どおり
+// スナップショットのevoLevelへフォールバックする。
+const resolveInheritedUniqueLevel = (masu, unique, index) => {
+  const levels = masu?.uniqueSkillLevels && typeof masu.uniqueSkillLevels === 'object' ? masu.uniqueSkillLevels : {};
+  const stableKey = inheritedUniqueLevelKey(unique);
+  const value = stableKey && Object.prototype.hasOwnProperty.call(levels, stableKey)
+    ? levels[stableKey]
+    : (Object.prototype.hasOwnProperty.call(levels, `inh:${index}`) ? levels[`inh:${index}`] : unique?.evoLevel);
+  return Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.floor(Number(value) || 0)));
+};
+const isValidInheritedUnique = (unique) => unique && typeof unique === 'object'
+  && typeof unique.name === 'string' && unique.name.trim();
+// 構造ベースの冪等移行。旧inh:Nは互換用に残し、現在の配列対応を一度だけ安定ID側へ写す。
+const migrateInheritedUniqueLevelIds = (masuMons, makeId = createInheritedUniqueId) => {
+  let changed = false;
+  const usedIds = new Set();
+  const nextMasuMons = (Array.isArray(masuMons) ? masuMons : []).map(raw => {
+    const inherited = Array.isArray(raw?.inheritedUniques) ? raw.inheritedUniques : [];
+    const levels = raw?.uniqueSkillLevels && typeof raw.uniqueSkillLevels === 'object' ? { ...raw.uniqueSkillLevels } : {};
+    let monsterChanged = false;
+    const inheritedUniques = inherited.map((unique, index) => {
+      if (!isValidInheritedUnique(unique)) return unique;
+      let id = typeof unique.inheritedUniqueId === 'string' ? unique.inheritedUniqueId.trim() : '';
+      if (!id || usedIds.has(id)) {
+        do { id = String(makeId()); } while (!id || usedIds.has(id));
+        monsterChanged = true;
+      }
+      usedIds.add(id);
+      const nextUnique = id === unique.inheritedUniqueId ? unique : { ...unique, inheritedUniqueId:id };
+      const stableKey = inheritedUniqueLevelKey(nextUnique);
+      if (!Object.prototype.hasOwnProperty.call(levels, stableKey)) {
+        levels[stableKey] = resolveInheritedUniqueLevel({ ...raw, uniqueSkillLevels:levels }, unique, index);
+        monsterChanged = true;
+      }
+      return nextUnique;
+    });
+    if (!monsterChanged) return raw;
+    changed = true;
+    return { ...raw, inheritedUniques, uniqueSkillLevels:levels };
+  });
+  return { changed, nextMasuMons };
+};
+const appendInheritedUnique = (masu, unique, level, makeId = createInheritedUniqueId) => {
+  const existingIds = new Set((Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : [])
+    .map(entry => entry?.inheritedUniqueId).filter(Boolean));
+  let inheritedUniqueId;
+  do { inheritedUniqueId = String(makeId()); } while (!inheritedUniqueId || existingIds.has(inheritedUniqueId));
+  const inheritedUnique = { ...unique, inheritedUniqueId };
+  return {
+    ...masu,
+    inheritedUniques:[...(Array.isArray(masu?.inheritedUniques) ? masu.inheritedUniques : []), inheritedUnique],
+    uniqueSkillLevels:{
+      ...(masu?.uniqueSkillLevels && typeof masu.uniqueSkillLevels === 'object' ? masu.uniqueSkillLevels : {}),
+      [inheritedUniqueLevelKey(inheritedUnique)]:Math.max(0, Math.min(MAX_UNIQUE_SKILL_LEVEL, Math.floor(Number(level) || 0))),
+    },
+  };
+};
 // 継承固有技は保存時点の技定義をスナップショットとして持つが、元種が分かる記録は
 // 現在の定義へ追従させる。古い記録や削除済みの種は、保存済みスナップショットを使い続ける。
 // evoLevel は個体の育成結果なので、定義を更新しても必ず保存値を維持する。
@@ -346,6 +414,7 @@ const resolveInheritedUniqueDefinition = (unique) => {
     ...latest,
     monId,
     ...(unique.lineageId != null ? { lineageId:unique.lineageId } : {}),
+    ...(unique.inheritedUniqueId != null ? { inheritedUniqueId:unique.inheritedUniqueId } : {}),
     ...(unique.sourceMasuName != null ? { sourceMasuName:unique.sourceMasuName } : {}),
     evoLevel: unique.evoLevel,
   };
@@ -386,7 +455,7 @@ const normalizeInheritedUniqueLineages = (masuMons) => (Array.isArray(masuMons) 
   (Array.isArray(masu.inheritedUniques) ? masu.inheritedUniques : []).forEach((unique, index) => {
     const lineageId = uniqueLineageId(unique);
     if (!lineageId || ownedLineages.has(lineageId)) return;
-    const level = Math.max(0, Math.floor(Math.max(Number(masu.uniqueSkillLevels?.[`inh:${index}`]) || 0, Number(unique?.evoLevel) || 0)));
+    const level = resolveInheritedUniqueLevel(masu, unique, index);
     const existingIndex = kept.findIndex(entry => uniqueLineageId(entry) === lineageId);
     if (existingIndex < 0) {
       kept.push({ ...unique, lineageId });
@@ -397,8 +466,10 @@ const normalizeInheritedUniqueLineages = (masuMons) => (Array.isArray(masuMons) 
     }
   });
   const uniqueSkillLevels = { ...masu.uniqueSkillLevels };
-  Object.keys(uniqueSkillLevels).filter(key => key.startsWith('inh:')).forEach(key => delete uniqueSkillLevels[key]);
-  keptLevels.forEach((level, index) => { uniqueSkillLevels[`inh:${index}`] = level; });
+  kept.forEach((unique, index) => {
+    const key = inheritedUniqueLevelKey(unique);
+    if (key && !Object.prototype.hasOwnProperty.call(uniqueSkillLevels, key)) uniqueSkillLevels[key] = keptLevels[index];
+  });
   return { ...masu, inheritedUniques:kept, uniqueSkillLevels };
 });
 const totalBondXpForLevel = (level) => {
@@ -596,8 +667,13 @@ const applyUniqueSkillPointPlan = (masu, plan, allowedSkillKeys) => {
 // 固有技へ配分済みのポイントだけを未使用へ戻す。個体のほかの育成情報はスプレッドでそのまま維持する。
 const buildUniqueSkillPointReset = (masu) => {
   const normalized = normalizeMasuProgression(masu);
-  const refundedPoints = Object.values(normalized.uniqueSkillLevels)
-    .reduce((sum, level) => sum + Math.max(0, Math.floor(Number(level) || 0)), 0);
+  const refundedPoints = Object.entries(normalized.uniqueSkillLevels)
+    .reduce((sum, [key, level]) => {
+      const legacyMatch = /^inh:(\d+)$/.exec(key);
+      const stableShadowExists = legacyMatch && inheritedUniqueLevelKey(normalized.inheritedUniques?.[Number(legacyMatch[1])])
+        && Object.prototype.hasOwnProperty.call(normalized.uniqueSkillLevels, inheritedUniqueLevelKey(normalized.inheritedUniques[Number(legacyMatch[1])]));
+      return sum + (stableShadowExists ? 0 : Math.max(0, Math.floor(Number(level) || 0)));
+    }, 0);
   if (refundedPoints <= 0) return null;
   return {
     refundedPoints,
@@ -753,8 +829,7 @@ const mergeMasuIntoMon = (masu) => {
     colors: getMasuColors(masu),
     unique: uniqueSkillAtLevel(base.unique, masu.uniqueSkillLevels?.own),
     // 壊れた保存データ(null や技の体を成さない要素)が混ざっていても落ちないようにする。
-    // 位置で強化Lvを引く(inh:0, inh:1 …)ので、詰めずにそのまま null を残す
-    inheritedUniques: (masu.inheritedUniques || []).map((unique, index) => uniqueSkillAtLevel(unique, Math.max(Number(unique?.evoLevel) || 0, Number(masu.uniqueSkillLevels?.[`inh:${index}`]) || 0))),
+    inheritedUniques: (masu.inheritedUniques || []).map((unique, index) => uniqueSkillAtLevel(unique, resolveInheritedUniqueLevel(masu, unique, index))),
   };
 };
 
@@ -3010,7 +3085,7 @@ const rankingMasuDetail = (masu) => {
   const inherited = (Array.isArray(masu.inheritedUniques) ? masu.inheritedUniques : []).map((unique, index) => {
     const monId = unique && unique.monId;
     if (!monId) return null;
-    return { monId, level: Math.max(num(unique.evoLevel), num(masu.uniqueSkillLevels?.[`inh:${index}`])) };
+    return { monId, level: resolveInheritedUniqueLevel(masu, unique, index) };
   }).filter(Boolean);
   return {
     v: RANKING_DETAIL_VERSION,
@@ -6585,6 +6660,11 @@ function MonsterHeroGame() {
       // 表示名ではなく固有技系統IDで既存の重複継承を整理する。最高Lvだけを残す正規化は
       // 冪等だが、過去の移行済みフラグに阻まれないよう今回専用のバージョンを持つ。
       const uniqueLineageMigrated = await storeGet('mh_unique_lineage_dedupe_migrated_v1', false, false);
+      const inheritedUniqueIdMigration = migrateInheritedUniqueLevelIds(savedMasuMons);
+      if (inheritedUniqueIdMigration.changed) {
+        savedMasuMons = inheritedUniqueIdMigration.nextMasuMons;
+        await storeSet('mh_masu_mons', savedMasuMons, false);
+      }
       const normalizedUniqueLineages = normalizeInheritedUniqueLineages(savedMasuMons);
       if (!uniqueLineageMigrated || JSON.stringify(normalizedUniqueLineages) !== JSON.stringify(savedMasuMons)) {
         savedMasuMons = normalizedUniqueLineages;
@@ -7658,7 +7738,7 @@ function MonsterHeroGame() {
           if (m.id !== main.id) return m;
           const prepared = withBreakthrough ? { ...m, ...breakthroughPlan.nextMasu } : m;
           const advanced = applyBondXpGain(prepared, gainedXp);
-          return {
+          const nextMain = {
             ...advanced.masu,
             // 副の通常強化は移さず、転生で獲得済みの強化ポイントだけを未使用Pとして全量加算する。
             // 自身の転生回数・Lv・固有技・限界突破は変更しない。
@@ -7667,8 +7747,8 @@ function MonsterHeroGame() {
             inheritedReincarnateCount: inheritedReincarnateCountOf(m) + reincarnateTransfer.count,
             fusionBondLevels: donationDiamondValue(m.fusionBondLevels) + advanced.gainedLevels,
             fusionHistory: [...(m.fusionHistory || []), historyEntry],
-            ...(inheritedUnique ? { inheritedUniques: [...(m.inheritedUniques || []), inheritedUnique] } : {}),
           };
+          return inheritedUnique ? appendInheritedUnique(nextMain, inheritedUnique, inheritedLevel) : nextMain;
         });
     const goldAfter = withBreakthrough ? diamondSummary.diamondAfter : diamondSummary.normalDiamondAfter;
     const nextItems = withBreakthrough
@@ -7705,7 +7785,7 @@ function MonsterHeroGame() {
   const getRebirthSkillChoices = (masu) => {
     const base = ALL_PLAYER_MONSTERS[masu.baseId];
     const own = base?.unique ? [{ key:'own', name:base.unique.name, unique:base.unique }] : [];
-    return [...own, ...(masu.inheritedUniques || []).map((unique,index)=>({ key:`inh:${index}`, name:unique.name, unique }))]
+    return [...own, ...(masu.inheritedUniques || []).map((unique,index)=>({ key:inheritedUniqueLevelKey(unique)||`inh:${index}`, name:unique.name, unique }))]
       .map(choice=>{const level=Math.max(0,Math.floor(Number(masu.uniqueSkillLevels?.[choice.key])||0));return { ...choice, name:uniqueSkillAtLevel(choice.unique,Math.min(MAX_UNIQUE_SKILL_LEVEL,level+1))?.name||choice.name, level };});
   };
   // 限界突破: レベルはそのままで上限だけ上げる
@@ -10414,7 +10494,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {detailOpts.marketDiscIcon && <section className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-2 flex items-center gap-3"><img src={detailOpts.marketDiscIcon} alt={detailOpts.marketDiscName||'円盤石'} className="w-12 h-12 rounded-full object-cover border-2 border-white/10 shrink-0"/><div className="min-w-0"><div className="text-[8px] font-black text-amber-400">マーケット販売中の円盤石</div><div className="text-[11px] font-black text-white leading-tight break-words">{detailOpts.marketDiscName}</div></div></section>}
             {renderDetailSectionLabel('この個体の強さ', '総合力に反映されます')}
             {renderMonsterDetailInfo(mon, detailOpts)}
-            {masu && (masu.inheritedUniques||[]).length>0 && <section className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-3"><div className="text-[10px] font-black text-amber-300 mb-1">継承した固有技</div>{masu.inheritedUniques.map((u,i)=><div key={i} className="text-[10px] text-white font-bold">{u?.name||'固有技'} <span className="text-slate-400">Lv.{Math.max(Number(u?.evoLevel)||0,Number(masu.uniqueSkillLevels?.[`inh:${i}`])||0)}</span></div>)}</section>}
+            {masu && (masu.inheritedUniques||[]).length>0 && <section className="rounded-xl border border-amber-500/40 bg-amber-950/30 p-3"><div className="text-[10px] font-black text-amber-300 mb-1">継承した固有技</div>{masu.inheritedUniques.map((u,i)=><div key={u?.inheritedUniqueId||i} className="text-[10px] text-white font-bold">{u?.name||'固有技'} <span className="text-slate-400">Lv.{resolveInheritedUniqueLevel(masu,u,i)}</span></div>)}</section>}
             {masu && renderFusionSection(masu, { mon, power, readOnly, zIndex })}
             {bodyExtra}
           </div>

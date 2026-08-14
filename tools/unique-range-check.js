@@ -9,9 +9,10 @@ const check = (label, ok) => {
   if (!ok) failed++;
 };
 
-const uniqueChunk = source.slice(source.indexOf('const uniqueSkillAtLevel'), source.indexOf('// 転生では個体'));
+const uniqueChunk = source.slice(source.indexOf('const INHERITED_UNIQUE_LEVEL_KEY_PREFIX'), source.indexOf('// 転生では個体'));
 const uniqueContext = {
   INITIAL_MASU_LEVEL_CAP:30,
+  MAX_UNIQUE_SKILL_LEVEL:8,
   // 切り出した範囲に限界突破の★の定数が含まれるので、外にある値だけ補う
   BREAKTHROUGH_LEVEL_CAP_GAIN:5,
   ALL_PLAYER_MONSTERS: {
@@ -21,8 +22,8 @@ const uniqueContext = {
   },
 };
 vm.createContext(uniqueContext);
-vm.runInContext(`${uniqueChunk};globalThis.out={uniqueLineageId,normalizeInheritedUniqueLineages};`, uniqueContext);
-const { uniqueLineageId, normalizeInheritedUniqueLineages } = uniqueContext.out;
+vm.runInContext(`${uniqueChunk};globalThis.out={uniqueLineageId,normalizeInheritedUniqueLineages,migrateInheritedUniqueLevelIds,resolveInheritedUniqueLevel};`, uniqueContext);
+const { uniqueLineageId, normalizeInheritedUniqueLineages, migrateInheritedUniqueLevelIds, resolveInheritedUniqueLevel } = uniqueContext.out;
 
 check('表示名ではなく固有技系統ID(monId/lineageId)を使う',
   uniqueLineageId({name:'合掌',monId:'Golem'}) === 'Golem'
@@ -37,9 +38,15 @@ const legacy = [{
   ],
   uniqueSkillLevels:{own:3,'inh:0':0,'inh:1':1,'inh:2':1,'inh:3':8},
 }];
-const normalized = normalizeInheritedUniqueLineages(legacy);
+let nextId = 0;
+const migrated = migrateInheritedUniqueLevelIds(legacy, () => `range_${++nextId}`).nextMasuMons;
+const normalized = normalizeInheritedUniqueLineages(migrated);
 check('本来の固有技と同系統の継承を除去する', !normalized[0].inheritedUniques.some(u => u.lineageId === 'Ham'));
-check('重複系統は最高固有技Lvの1件だけ残す', normalized[0].inheritedUniques.filter(u => u.lineageId === 'Golem').length === 1 && normalized[0].uniqueSkillLevels['inh:0'] === 2);
+const keptGolemIndex = normalized[0].inheritedUniques.findIndex(u => u.lineageId === 'Golem');
+check('重複系統は最高固有技Lvの1件だけ残す', keptGolemIndex >= 0
+  && normalized[0].inheritedUniques.filter(u => u.lineageId === 'Golem').length === 1
+  && resolveInheritedUniqueLevel(normalized[0], normalized[0].inheritedUniques[keptGolemIndex], keptGolemIndex) === 1);
+check('重複整理でも旧位置Lvを削除・改名しない', normalized[0].uniqueSkillLevels['inh:0'] === 0 && normalized[0].uniqueSkillLevels['inh:2'] === 1);
 check('別系統の固有技を残す', normalized[0].inheritedUniques.some(u => u.lineageId === 'Suezo'));
 check('正規化は冪等', JSON.stringify(normalizeInheritedUniqueLineages(normalized)) === JSON.stringify(normalized));
 check('今回専用の移行フラグを使う', source.includes("mh_unique_lineage_dedupe_migrated_v1"));
