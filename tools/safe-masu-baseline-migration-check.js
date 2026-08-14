@@ -2,7 +2,7 @@ const fs = require('fs');
 const { loadDyeModule } = require('./harness');
 const m = loadDyeModule();
 const { ALL_PLAYER_MONSTERS, DIST_APTITUDE_GRADES, diagnoseLegacyMasuBaselineMigration:diagnose,
-  migrateSafeMasuBaselineRepresentations:migrate, mergeMasuIntoMon, masuPowerOf,
+  migrateSafeMasuBaselineRepresentations:migrate, mergeMasuIntoMon, masuPowerOf, monsterPowerOf, monsterPowerParts,
   totalBondXpForLevel } = m;
 let failed = 0;
 const check = (label, ok) => { console.log(`${ok ? 'OK' : 'NG'}: ${label}`); if (!ok) failed++; };
@@ -32,14 +32,29 @@ check('AMBIGUOUSは完全無変更',ambiguousResult.nextMasuMons[0]===ambiguousI
 const once=migrate([boosted]).nextMasuMons; const twice=migrate(once).nextMasuMons;
 check('2回実行しても同一',snap(once)===snap(twice));
 check('古い保存の再読込へ再適用可能',migrate([boosted]).changed&&snap(migrate([boosted]).nextMasuMons)===snap(once));
-for (const [baseId,individualStats] of [['Pixie',{hp:250,atk:160,def:50,guts:130}],['Mitarashi',{hp:550,atk:110,def:110,guts:100}]]) {
-  const legacy={...baseMasu(baseId),individualStats}; const result=migrate([legacy]);
-  check(`${baseId}歴代ベースは保存前一致検査で保留`,diagnose(legacy).overallStatus==='SAFE_EXACT'&&!result.changed&&result.summary.validationFailed===1);
-}
+const oldPixie={...baseMasu('Pixie'),individualStats:{hp:250,atk:160,def:50,guts:130}};
+const pixieDiagnosis=diagnose(oldPixie); const pixieOnce=migrate([oldPixie]); const migratedPixie=pixieOnce.nextMasuMons[0];
+check('旧PixieはSAFE_EXACTから実移行',pixieDiagnosis.overallStatus==='SAFE_EXACT'&&pixieOnce.changed&&pixieOnce.summary.migrated===1);
+check('旧Pixieは個体差-10を保持し現行G170の基礎部分G160へ追従',migratedPixie.individualStatOffsets.guts===-10&&mergeMasuIntoMon(migratedPixie).baseGuts-migratedPixie.statPoints.guts===160);
+check('旧PixieはstatPointsも加算',mergeMasuIntoMon(migratedPixie).baseGuts===163);
+check('旧Pixieは2回目無変更',!migrate(pixieOnce.nextMasuMons).changed&&snap(migrate(pixieOnce.nextMasuMons).nextMasuMons)===snap(pixieOnce.nextMasuMons));
+
+const oldMitarashi={...baseMasu('Mitarashi'),individualStats:{hp:600,atk:120,def:120,guts:100}};
+const mitarashiBefore=mergeMasuIntoMon(oldMitarashi); const mitarashiResult=migrate([oldMitarashi]); const migratedMitarashi=mitarashiResult.nextMasuMons[0]; const mitarashiAfter=mergeMasuIntoMon(migratedMitarashi);
+check('旧MitarashiはSAFE_EXACTから実移行',diagnose(oldMitarashi).overallStatus==='SAFE_EXACT'&&mitarashiResult.changed&&mitarashiResult.summary.migrated===1);
+check('旧Mitarashiは個体差を保持',snap(migratedMitarashi.individualStatOffsets)===snap({hp:0,atk:0,def:0,guts:0}));
+check('旧Mitarashiの能力変化量はHP+30/攻+20/防-15/G-10',[30,20,-15,-10].every((delta,index)=>delta===[mitarashiAfter.baseHp-mitarashiBefore.baseHp,mitarashiAfter.baseAtk-mitarashiBefore.baseAtk,mitarashiAfter.baseDef-mitarashiBefore.baseDef,mitarashiAfter.baseGuts-mitarashiBefore.baseGuts][index]));
+check('旧Mitarashiの総合力は移行後能力から現行式で再計算',masuPowerOf(migratedMitarashi)===monsterPowerOf(mitarashiAfter)&&monsterPowerOf(mitarashiAfter)===Math.round(monsterPowerParts(mitarashiAfter).total));
+
+const currentPixie={...baseMasu('Pixie'),individualStats:{hp:250,atk:160,def:50,guts:170}};
+const currentBefore=stats(currentPixie); const currentResult=migrate([currentPixie]);
+check('現行ベース由来の再生個体は能力・総合力不変',currentResult.changed&&snap(stats(currentResult.nextMasuMons[0]))===snap(currentBefore));
+const previouslyDeferred={...oldPixie};
 for (const count of [34,35]) {
   const masu={...boosted,id:`bt-${count}`,breakthroughCount:count,bondXp:totalBondXpForLevel(40),distAptPoints:40};
   check(`${count}凸ポイント倍率ケース`,diagnose(masu).overallStatus==='SAFE_EXACT'&&migrate([masu]).summary.migrated===1);
 }
 const source=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
 check('reconcile後に移行し専用フラグを使う',source.indexOf('migrateSafeMasuBaselineRepresentations(savedMasuMons)')>source.indexOf('savedMasuMons.map(reconcileMasuPoints)')&&source.includes('mh_masu_baseline_relative_migrated_v1'));
+check('旧フラグtrue相当の前回保留個体も再診断して移行',migrate([previouslyDeferred]).changed&&source.includes("storeGet('mh_masu_baseline_relative_migrated_v1', false, false)"));
 if (failed) process.exit(1); console.log('\nすべてOK');

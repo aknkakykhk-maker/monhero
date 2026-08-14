@@ -51,6 +51,7 @@ const EXPORTED_NAMES = [
   'fusionHistoryHasDetail',
   'mergeMasuIntoMon',
   'monsterPowerOf',
+  'monsterPowerParts',
   'masuPowerOf',
   'masuBondLevelInfo',
   'uniqueSkillAtLevel',

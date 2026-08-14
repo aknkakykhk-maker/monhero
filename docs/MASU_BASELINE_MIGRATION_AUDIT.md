@@ -178,4 +178,17 @@
 - 新形式の新旧表現が一致する個体は `ALREADY_MODERN`。通常個体は能力完成値を持たないため能力移行不要として扱う。
 - 旧ゴーレムの距離適性は生成時ベースを断定できず、引き続き `AMBIGUOUS` とする。
 
-これは純粋な診断の追加だけである。`mh_masu_mons` への保存、自動移行、起動時接続、移行フラグは追加していない。
+## 11. 第6C段階の実装状況（2026-08-14）
+
+起動時に `diagnoseLegacyMasuBaselineMigration` が個体全体を `SAFE_EXACT` と確定した場合だけ、候補の
+`individualStatOffsets` / `distAptBoosts` を追加する。旧 `individualStats` / `distApt` とその他の既存フィールド、
+`statPoints` / `distAptPoints` は変更も削除もしない。`PARTIAL` / `AMBIGUOUS` / `BLOCKED` と旧ゴーレムは未変更である。
+
+保存直前検証では能力の移行前後一致を要求しない。能力側が `SAFE_EXACT` なら、各能力が
+「現行ベース + 確定した個体差 + statPoints」であることと、移行前からの変化量が
+「現行ベース - 確定した生成時ベース」であることを検証する。
+距離適性は4距離すべてを維持し、総合力は移行後の能力・距離適性・固有技Lv等を `monsterPowerParts` /
+`monsterPowerOf` の現行式へ渡して再計算する。最後に候補を再診断して `ALREADY_MODERN` になる場合だけ保存する。
+
+専用キーは `mh_masu_baseline_relative_migrated_v1`。trueでも一覧を再診断するため、以前の第6Cで保存直前検証により
+保留された `SAFE_EXACT` 個体も修正版で再び安全判定される。処理は冪等であり、移行済み個体は変更しない。
