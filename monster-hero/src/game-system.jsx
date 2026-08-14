@@ -841,12 +841,16 @@ const diagnoseLegacyDistAptBoosts = (masu) => {
     && value.every(grade => DIST_APTITUDE_GRADES.includes(grade));
   const validBoosts = value => Array.isArray(value) && value.length === 4
     && value.every(boost => Number.isInteger(Number(boost)) && Number(boost) >= 0);
-  if (!masu || typeof masu !== 'object' || !base || !validAptitudes(base.distAptitude) || !validAptitudes(masu.distApt)) {
-    reasons.push('ベースまたは保存済みdistAptが有効な4距離の等級ではない');
+  if (!masu || typeof masu !== 'object' || !base || !validAptitudes(base.distAptitude)) {
+    reasons.push('ベースの距離適性が有効な4距離の等級ではない');
+    return { status:'BLOCKED', reasons, proposed:{}, checks };
+  }
+  const hasBoosts = Object.prototype.hasOwnProperty.call(masu, 'distAptBoosts');
+  if (!hasBoosts && !validAptitudes(masu.distApt)) {
+    reasons.push('保存済みdistAptが有効な4距離の等級ではない');
     return { status:'BLOCKED', reasons, proposed:{}, checks };
   }
   checks.validGrades = true;
-  const hasBoosts = Object.prototype.hasOwnProperty.call(masu, 'distAptBoosts');
   if (hasBoosts && !validBoosts(masu.distAptBoosts)) {
     reasons.push('distAptBoostsが0以上の整数4要素ではない');
     return { status:'BLOCKED', reasons, proposed:{}, checks };
@@ -861,17 +865,17 @@ const diagnoseLegacyDistAptBoosts = (masu) => {
   checks.withinCap = boosts.every((boost, index) =>
     DIST_APTITUDE_GRADES.indexOf(base.distAptitude[index]) + boost < DIST_APTITUDE_GRADES.length);
   const available = Number(masu.distAptPoints);
-  checks.pointsConsistent = Number.isInteger(available) && available >= 0;
+  const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, value]) =>
+    sum + Number(value) / (STAT_POINT_GAIN[key] || 1), 0);
+  const earned = Math.max(0, masuBondLevelInfo(masu).level - 1)
+    + totalBreakthroughPoints(masu.rebirthCount)
+    + ownReincarnateBonusPoints(masu)
+    + inheritedReincarnateBonusPointsOf(masu);
+  checks.pointsConsistent = Number.isInteger(available) && available >= 0
+    && earned === available + statSpent + boosts.reduce((sum, value) => sum + value, 0);
   if (!checks.notBelowBase) reasons.push('保存済みdistAptが現在のベースより低い');
   if (!checks.withinCap) reasons.push('投入段階を適用するとMを超える');
   if (!checks.pointsConsistent) reasons.push('distAptPointsが0以上の整数ではない');
-  if (hasBoosts) {
-    const resolvedGrades = base.distAptitude.map((grade, index) =>
-      DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.indexOf(grade) + boosts[index]]);
-    if (JSON.stringify(resolvedGrades) !== JSON.stringify(masu.distApt)) {
-      reasons.push('distAptとdistAptBoostsが一致しない');
-    }
-  }
   if (reasons.length) return { status:'BLOCKED', reasons, proposed:{}, checks };
 
   const proposed = hasBoosts ? {} : { distAptBoosts:boosts };
@@ -881,8 +885,9 @@ const diagnoseLegacyDistAptBoosts = (masu) => {
   const beforePointTotal = available + (hasBoosts ? masu.distAptBoosts.reduce((sum, value) => sum + Number(value), 0) : boosts.reduce((sum, value) => sum + value, 0));
   const afterPointTotal = available + boosts.reduce((sum, value) => sum + value, 0);
   checks.totalPointsPreserved = beforePointTotal === afterPointTotal;
-  checks.aptitudePreserved = !!before && !!after && JSON.stringify(before.distAptitude) === JSON.stringify(after.distAptitude);
-  checks.powerPreserved = !!before && !!after && monsterPowerOf(before) === monsterPowerOf(after);
+  checks.aptitudePreserved = !!after && (hasBoosts || (!!before && JSON.stringify(before.distAptitude) === JSON.stringify(after.distAptitude)));
+  checks.powerPreserved = !!after && Number.isFinite(monsterPowerOf(after))
+    && (hasBoosts || (!!before && monsterPowerOf(before) === monsterPowerOf(after)));
   if (!checks.totalPointsPreserved || !checks.aptitudePreserved || !checks.powerPreserved) {
     reasons.push('候補適用前後で強化ポイント総量・距離適性・総合力を維持できない');
     return { status:'BLOCKED', reasons, proposed, checks };
@@ -912,7 +917,8 @@ const diagnoseLegacyMasuBaselineMigration = (masu) => {
   const validStatObject = value => value && typeof value === 'object' && !Array.isArray(value)
     && statKeys.every(key => Number.isFinite(Number(value[key])));
   const validStoredStatPoints = value => value && typeof value === 'object' && !Array.isArray(value)
-    && statKeys.every(key => Number.isFinite(Number(value[key])) && Number(value[key]) >= 0);
+    && statKeys.every(key => Number.isInteger(Number(value[key])) && Number(value[key]) >= 0
+      && Number(value[key]) % STAT_POINT_GAIN[key] === 0);
   if (!masu || typeof masu !== 'object' || !base || !validStoredStatPoints(masu.statPoints)
     || !Number.isInteger(Number(masu.distAptPoints)) || Number(masu.distAptPoints) < 0) {
     const reason = '個体・ベース・statPoints・distAptPointsのいずれかが不正';
@@ -926,19 +932,12 @@ const diagnoseLegacyMasuBaselineMigration = (masu) => {
   if (!hasIndividualStats && !hasOffsets) {
     individualStats.status = 'ALREADY_MODERN';
     individualStats.reasons.push('通常個体は能力の移行が不要');
-  } else if (!validStatObject(masu.individualStats) || (hasOffsets && !validStatObject(masu.individualStatOffsets))) {
+  } else if ((!hasOffsets && !validStatObject(masu.individualStats)) || (hasOffsets && !validStatObject(masu.individualStatOffsets))) {
     individualStats.reasons.push('individualStatsまたはindividualStatOffsetsの4能力が不正');
   } else if (hasOffsets) {
-    const legacy = { ...masu };
-    delete legacy.individualStatOffsets;
-    const oldResolved = mergeMasuIntoMon(legacy);
     const newResolved = mergeMasuIntoMon(masu);
-    const matches = !!oldResolved && !!newResolved && statKeys.every(key => {
-      const field = `base${key === 'hp' ? 'Hp' : key[0].toUpperCase() + key.slice(1)}`;
-      return oldResolved[field] === newResolved[field];
-    });
-    individualStats.status = matches ? 'ALREADY_MODERN' : 'BLOCKED';
-    if (!matches) individualStats.reasons.push('individualStatsとindividualStatOffsetsが一致しない');
+    individualStats.status = newResolved && Number.isFinite(monsterPowerOf(newResolved)) ? 'ALREADY_MODERN' : 'BLOCKED';
+    if (individualStats.status === 'BLOCKED') individualStats.reasons.push('現在ベースとindividualStatOffsetsから能力を解決できない');
   } else {
     const result = diagnoseLegacyRegenerationStatBaseline(masu);
     individualStats.status = result.status;
