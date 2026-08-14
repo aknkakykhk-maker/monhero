@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 00:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 01:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4363,7 +4363,9 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
 // 固有効果と勇者特性は別の処理だが、対象種の一覧だけを共有する。
 const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni']);
 const isIceLockMonster = (id) => ICE_LOCK_MONSTER_IDS.includes(id);
-const applyIceRulerAutoGutsRecovery = (currentRate, heroId) => isIceLockMonster(heroId)
+const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroDist, enemyDist) => isIceLockMonster(heroId)
+  && iceLockActive
+  && heroDist===enemyDist
   ? Math.min(1, currentRate + 0.5)
   : currentRate;
 const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null) => {
@@ -8857,6 +8859,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const iceLockPreparing = !!getWaveBuff('iceLockPreparing', false);
   const iceLockActive = iceLockTurns>0 && !iceLockPreparing;
   const iceLockEnemyDamageMult = iceLockActive ? 0.7 : 1.0;
+  const heroDist = slots.findIndex(isHeroSlotMon);
 
   const getIncomingDamageBeforeTurnReduction = useCallback((intent) => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
@@ -9190,8 +9193,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (currentHp<=0) { setIsBusy(false); return; }
     const autoHpRecoveryRate=getPermaBuff('autoHpRecovery',0.1);
     const currentAutoGutsRecovery=Math.max(0,0.05+(autoHpRecoveryRate-0.1))+getPermaBuff('gutsRecoverPct');
-    // 氷海の支配者は既存効果の集計後に50パーセントポイントを足す。勇者以外の編成メンバーは見ない。
-    const gutsRecoveryRate=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id);
+    // 氷海の支配者は、絶氷の楔発動中かつ勇者と敵が同じ距離の場合だけ50パーセントポイントを足す。
+    const gutsRecoveryRate=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id,iceLockActive,heroDist,enemyDist);
     const gutsRegen=Math.floor(effectiveMaxGuts*gutsRecoveryRate);
     setGuts(p=>Math.min(effectiveMaxGuts,p+gutsRegen));
     let didRegen=false;
@@ -13064,7 +13067,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {getPermaBuff('globalComboDmgPct')>0&&<div className="text-[7px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"><Sword size={7}/> 全体連撃 +{Math.round(getPermaBuff('globalComboDmgPct')*100)}%</div>}
                 {kikiCardBonus>0&&<div className="text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"><PlusCircle size={7}/> カード上限 +1（残り{Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）</div>}
                 <div className={`text-[7px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery',0.1)>=0.1?'text-rose-400 border-rose-400/50':'text-red-400 border-red-400/50'}`}><Heart size={7}/> ライフ回復 {Math.round(getPermaBuff('autoHpRecovery',0.1)*100)}%</div>
-                <div className="text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"><Zap size={7}/> ガッツ回復 {Math.round(applyIceRulerAutoGutsRecovery(Math.max(0,0.05+(getPermaBuff('autoHpRecovery',0.1)-0.1))+getPermaBuff('gutsRecoverPct'),mainHero?.id)*100)}%</div>
+                <div className="text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"><Zap size={7}/> ガッツ回復 {Math.round(applyIceRulerAutoGutsRecovery(Math.max(0,0.05+(getPermaBuff('autoHpRecovery',0.1)-0.1))+getPermaBuff('gutsRecoverPct'),mainHero?.id,iceLockActive,heroDist,enemyDist)*100)}%</div>
                 {/* === ターン限定バフ（都度表示） === */}
                 {getNextTurnBuff('melosoFullRecoveryMult',0)>0&&<div className="text-[7px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"><Heart size={8}/> 次ターン全回復</div>}
                 {getTurnBuff('atkMult',1.0)>1&&<div className="text-[7px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"><Sparkles size={8}/> Boost x{getTurnBuff('atkMult',1.0).toFixed(1)}</div>}
