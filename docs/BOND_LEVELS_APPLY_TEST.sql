@@ -163,24 +163,56 @@ begin
   ) then raise exception 'rankings のData API権限が変化しました'; end if;
 end $$;
 
--- 追加した内容が期待どおりか、その場で表示して確認できるようにする。
-select column_name, data_type, is_nullable, column_default
-from information_schema.columns
-where table_schema = 'public' and table_name = 'bond_levels'
-order by ordinal_position;
-
-select i.relname as index_name, ix.indisunique as is_unique,
-       ix.indisvalid as is_valid, ix.indisready as is_ready,
-       pg_get_indexdef(i.oid) as definition
-from pg_class t join pg_namespace n on n.oid = t.relnamespace
-join pg_index ix on ix.indrelid = t.oid
-join pg_class i on i.oid = ix.indexrelid
-where n.nspname = 'public' and t.relname = 'bond_levels'
-order by i.relname;
-
-select policyname, cmd, roles::text from pg_policies
-where schemaname = 'public' and tablename = 'bond_levels'
-order by policyname;
+-- 追加した内容が期待どおりかを、1つの結果表にまとめて表示する。
+-- Supabase の SQL Editor はファイル全体を実行すると「最後の1文」の結果しか出さないため、
+-- 見たい項目を縦に並べた1文にしてある。
+with facts as (
+  select 1 as sort, 'テーブル' as item,
+         (select count(*)::text from information_schema.tables
+          where table_schema='public' and table_name='bond_levels') || ' (1なら作成済み)' as value
+  union all
+  select 2, 'カラム',
+         (select string_agg(column_name, ', ' order by ordinal_position)
+          from information_schema.columns
+          where table_schema='public' and table_name='bond_levels')
+  union all
+  select 3, '主キー',
+         (select coalesce(string_agg(pg_get_constraintdef(c.oid), ' / '), 'なし')
+          from pg_constraint c join pg_class t on t.oid=c.conrelid
+          join pg_namespace n on n.oid=t.relnamespace
+          where n.nspname='public' and t.relname='bond_levels' and c.contype='p')
+  union all
+  select 4, '索引(valid/readyがすべてtrueであること)',
+         (select string_agg(i.relname||':'||ix.indisvalid||'/'||ix.indisready, ', ' order by i.relname)
+          from pg_class t join pg_namespace n on n.oid=t.relnamespace
+          join pg_index ix on ix.indrelid=t.oid join pg_class i on i.oid=ix.indexrelid
+          where n.nspname='public' and t.relname='bond_levels')
+  union all
+  select 5, 'RLS',
+         (select case when c.relrowsecurity then '有効' else '無効(要確認)' end
+          from pg_class c join pg_namespace n on n.oid=c.relnamespace
+          where n.nspname='public' and c.relname='bond_levels')
+  union all
+  select 6, 'ポリシー(select/insert/updateの3つ)',
+         (select coalesce(string_agg(policyname||'('||cmd||')', ', ' order by policyname), 'なし')
+          from pg_policies where schemaname='public' and tablename='bond_levels')
+  union all
+  select 7, '権限(DELETEが無いこと)',
+         (select coalesce(string_agg(distinct grantee||':'||privilege_type, ', '), 'なし')
+          from information_schema.role_table_grants
+          where table_schema='public' and table_name='bond_levels'
+            and grantee in ('anon','authenticated'))
+  union all
+  select 8, 'updated_atのトリガー',
+         (select coalesce(string_agg(tgname, ', '), 'なし')
+          from pg_trigger tg join pg_class c on c.oid=tg.tgrelid
+          join pg_namespace n on n.oid=c.relnamespace
+          where n.nspname='public' and c.relname='bond_levels' and not tg.tgisinternal)
+  union all
+  select 9, 'rankings の件数(調査時と同じであること)',
+         (select count(*)::text from public.rankings)
+)
+select item as "項目", value as "値" from facts order by sort;
 
 -- 予行演習なので必ず取り消す。実適用は BOND_LEVELS_APPLY.sql を使う。
 rollback;

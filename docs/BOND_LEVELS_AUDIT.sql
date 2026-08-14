@@ -65,3 +65,63 @@ cross join lateral jsonb_array_elements(
   case when jsonb_typeof(to_jsonb(r.party)) = 'array' then to_jsonb(r.party) else '[]'::jsonb end
 ) as member
 where member is not null and jsonb_typeof(member) = 'object';
+
+-- ===========================================================================
+-- A-9. まとめ(この1文だけで、上のA-1〜A-8の要点がすべて分かる)
+--
+--      Supabase の SQL Editor は、ファイル全体を実行すると「最後の1文」の結果しか
+--      表示しない。iPhoneで1文ずつ選んで実行するのは手間なので、必要な値を
+--      縦1列(項目・値・判定)にまとめてここへ置く。全体を Run すればこれが出る。
+-- ===========================================================================
+with facts as (
+  select 1 as sort, 'bond_levels が既に在るか' as item,
+         (select count(*)::text from information_schema.tables
+          where table_schema='public' and table_name='bond_levels') as value,
+         case when exists (select 1 from information_schema.tables
+                           where table_schema='public' and table_name='bond_levels')
+              then '要確認: 同名の何かが既にある。適用へ進まない'
+              else 'OK: 空いている' end as judgement
+  union all
+  select 2, 'rankings の件数(適用後に同じ数か確かめる)',
+         (select count(*)::text from public.rankings), '記録: この数を控える'
+  union all
+  select 3, 'rankings のRLS',
+         (select case when c.relrowsecurity then '有効' else '無効' end
+          from pg_class c join pg_namespace n on n.oid=c.relnamespace
+          where n.nspname='public' and c.relname='rankings'),
+         'この作業では変更しない'
+  union all
+  select 4, 'rankings のポリシー',
+         (select coalesce(string_agg(policyname||'('||cmd||')', ', ' order by policyname), 'なし')
+          from pg_policies where schemaname='public' and tablename='rankings'),
+         'この作業では変更しない'
+  union all
+  select 5, 'rankings の権限(anon)',
+         (select coalesce(string_agg(distinct privilege_type, ', '), 'なし')
+          from information_schema.role_table_grants
+          where table_schema='public' and table_name='rankings' and grantee='anon'),
+         'この作業では変更しない'
+  union all
+  select 6, 'rankings の権限(authenticated)',
+         (select coalesce(string_agg(distinct privilege_type, ', '), 'なし')
+          from information_schema.role_table_grants
+          where table_schema='public' and table_name='rankings' and grantee='authenticated'),
+         'この作業では変更しない'
+  union all
+  select 7, '編成メンバーの延べ数',
+         (select count(*)::text from public.rankings r
+          cross join lateral jsonb_array_elements(
+            case when jsonb_typeof(to_jsonb(r.party))='array' then to_jsonb(r.party) else '[]'::jsonb end
+          ) as m where jsonb_typeof(m)='object'),
+         '参考: 移行対象の目安'
+  union all
+  select 8, 'うち個体ID(masuId)を持つもの',
+         (select count(*)::text from public.rankings r
+          cross join lateral jsonb_array_elements(
+            case when jsonb_typeof(to_jsonb(r.party))='array' then to_jsonb(r.party) else '[]'::jsonb end
+          ) as m where jsonb_typeof(m)='object'
+            and m->>'masuId' is not null and m->>'masuId' <> ''),
+         '参考: 残りは legacy:種ID でまとめる'
+)
+select item as "項目", value as "値", judgement as "判定"
+from facts order by sort;
