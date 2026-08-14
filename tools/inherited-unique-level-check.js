@@ -21,7 +21,7 @@ assert.deepStrictEqual(
   'カード名・威力・ガッツ・会心率にLv.8を使う',
 );
 
-assert(source.includes('const cur=inheritedUniqueRunLevel(slots[slotIdx]?.inheritedUniques?.[inhIdx], inheritedUniqueEvo[key]);'), '強化処理が恒久Lvへフォールバックする');
+assert(source.includes('const cur=inheritedUniqueRunLevel(resolveInheritedUniqueDefinition(slots[slotIdx]?.inheritedUniques?.[inhIdx]), inheritedUniqueEvo[key]);'), '強化処理が最新定義を解決して恒久Lvへフォールバックする');
 assert(source.includes('if(diff>0&&(upgradePoints<=0||cur>=8)) return;'), 'Lv.8ではポイントを消費しない');
 assert(source.includes('evoLevel:inheritedUniqueRunLevel(iu, slotIdx!=null ? evoMap[inhEvoKey(slotIdx,ii)] : null)'), '表示・固有技切替・buildDeckが共通Lv解決を使う');
 assert(source.includes("mh_inherited_unique_level_compensation_pending_v1"), '補填の再開用pendingを保存する');

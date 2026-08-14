@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dd6fc0e01c953c02
+// source-sha256: f771d81461bf5578
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 17:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 18:08"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -393,6 +393,20 @@ const uniqueSkillAtLevel = (unique, level = 0) => {
     guts: Math.floor(unique.baseGuts * (mult / unique.baseMult)),
     crit: 0.10 + 0.05 * lvl
   };
+};
+// 継承技の性能・表示は継承元の現在の定義を正本にする。保存済みオブジェクトは旧セーブの
+// fallbackと出自・個体履歴の保持にだけ使い、古い技フィールドで最新定義を上書きしない。
+const resolveInheritedUniqueDefinition = savedUnique => {
+  if (!savedUnique || typeof savedUnique !== 'object') return savedUnique;
+  const current = savedUnique.monId && typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[savedUnique.monId]?.unique : null;
+  if (!current || typeof current !== 'object') return savedUnique;
+  const resolved = {
+    ...current
+  };
+  ['monId', 'lineageId', 'sourceMasuName', 'evoLevel'].forEach(key => {
+    if (savedUnique[key] !== undefined) resolved[key] = savedUnique[key];
+  });
+  return resolved;
 };
 // 継承固有技は、ラン内stateがまだ無い間もマスモンに保存された恒久Lvから始める。
 // 0も有効なラン内値なので truthy 判定ではなく null/undefined のときだけ恒久Lvへ戻す。
@@ -898,7 +912,7 @@ const mergeMasuIntoMon = masu => {
     unique: uniqueSkillAtLevel(base.unique, masu.uniqueSkillLevels?.own),
     // 壊れた保存データ(null や技の体を成さない要素)が混ざっていても落ちないようにする。
     // 位置で強化Lvを引く(inh:0, inh:1 …)ので、詰めずにそのまま null を残す
-    inheritedUniques: (masu.inheritedUniques || []).map((unique, index) => uniqueSkillAtLevel(unique, Math.max(Number(unique?.evoLevel) || 0, Number(masu.uniqueSkillLevels?.[`inh:${index}`]) || 0)))
+    inheritedUniques: (masu.inheritedUniques || []).map((unique, index) => uniqueSkillAtLevel(resolveInheritedUniqueDefinition(unique), Math.max(Number(unique?.evoLevel) || 0, Number(masu.uniqueSkillLevels?.[`inh:${index}`]) || 0)))
   };
 };
 
@@ -5904,7 +5918,7 @@ const normalizeFusionHistory = masu => {
     if (inherited && subBaseId) {
       // 主が今も持っている継承技のうち、同じ種から来たもの。見つかればそのときの名前・Lvが分かる
       const owned = inheritedList.find(u => u && u.monId === subBaseId && (!subName || !u.sourceMasuName || u.sourceMasuName === subName)) || inheritedList.find(u => u && u.monId === subBaseId);
-      inheritedUnique = owned || ALL_PLAYER_MONSTERS[subBaseId]?.unique || null;
+      inheritedUnique = owned ? resolveInheritedUniqueDefinition(owned) : ALL_PLAYER_MONSTERS[subBaseId]?.unique || null;
     }
     const subBondLevel = posNum(e.subBondLevel);
     const xpGained = posNum(e.xpGained);
@@ -14002,11 +14016,14 @@ function MonsterHeroGame() {
       name: base.unique.name,
       unique: base.unique
     }] : [];
-    return [...own, ...(masu.inheritedUniques || []).map((unique, index) => ({
-      key: `inh:${index}`,
-      name: unique.name,
-      unique
-    }))].map(choice => {
+    return [...own, ...(masu.inheritedUniques || []).map((savedUnique, index) => {
+      const unique = resolveInheritedUniqueDefinition(savedUnique);
+      return {
+        key: `inh:${index}`,
+        name: unique?.name,
+        unique
+      };
+    })].map(choice => {
       const level = Math.max(0, Math.floor(Number(masu.uniqueSkillLevels?.[choice.key]) || 0));
       return {
         ...choice,
@@ -16792,7 +16809,7 @@ function MonsterHeroGame() {
   const getAvailableUniquesForSlot = (mon, cUniques, slotIdx, cInhEvo) => {
     if (!mon) return [];
     const own = (cUniques || ownedUniques).find(uq => uq.monId === mon.id);
-    const inherited = mon.inheritedUniques || [];
+    const inherited = (mon.inheritedUniques || []).map(resolveInheritedUniqueDefinition);
     // 引き継いだ固有技も自分の固有技と同じく、このランでの強化到達レベルを持たせる
     const evoMap = cInhEvo || inheritedUniqueEvo;
     return [...(own ? [{
@@ -17716,7 +17733,7 @@ function MonsterHeroGame() {
   // 上げ下げの範囲・1回あたりの消費もまったく同じにしている
   const upgradeInheritedUnique = (slotIdx, inhIdx, diff) => {
     const key = inhEvoKey(slotIdx, inhIdx);
-    const cur = inheritedUniqueRunLevel(slots[slotIdx]?.inheritedUniques?.[inhIdx], inheritedUniqueEvo[key]);
+    const cur = inheritedUniqueRunLevel(resolveInheritedUniqueDefinition(slots[slotIdx]?.inheritedUniques?.[inhIdx]), inheritedUniqueEvo[key]);
     if (diff > 0 && (upgradePoints <= 0 || cur >= 8)) return;
     if (diff < 0 && cur <= 0) return;
     const nextEvo = Math.max(0, Math.min(8, cur + diff));
@@ -17829,7 +17846,7 @@ function MonsterHeroGame() {
       onStep: d => upgradeUnique(u.monId, d)
     }));
     slots.forEach((mon, idx) => {
-      (mon?.inheritedUniques || []).forEach((iu, ii) => {
+      (mon?.inheritedUniques || []).map(resolveInheritedUniqueDefinition).forEach((iu, ii) => {
         const lvl = inheritedUniqueRunLevel(iu, inheritedUniqueEvo[inhEvoKey(idx, ii)]);
         rows.push({
           rowKey: `inh:${idx}:${ii}`,
@@ -18540,12 +18557,15 @@ function MonsterHeroGame() {
       className: "rounded-xl border border-amber-500/40 bg-amber-950/30 p-3"
     }, /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] font-black text-amber-300 mb-1"
-    }, "\u7D99\u627F\u3057\u305F\u56FA\u6709\u6280"), masu.inheritedUniques.map((u, i) => /*#__PURE__*/React.createElement("div", {
-      key: i,
-      className: "text-[10px] text-white font-bold"
-    }, u?.name || '固有技', " ", /*#__PURE__*/React.createElement("span", {
-      className: "text-slate-400"
-    }, "Lv.", Math.max(Number(u?.evoLevel) || 0, Number(masu.uniqueSkillLevels?.[`inh:${i}`]) || 0))))), masu && renderFusionSection(masu, {
+    }, "\u7D99\u627F\u3057\u305F\u56FA\u6709\u6280"), masu.inheritedUniques.map((savedUnique, i) => {
+      const u = resolveInheritedUniqueDefinition(savedUnique);
+      return /*#__PURE__*/React.createElement("div", {
+        key: i,
+        className: "text-[10px] text-white font-bold"
+      }, u?.name || '固有技', " ", /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "Lv.", Math.max(Number(savedUnique?.evoLevel) || 0, Number(masu.uniqueSkillLevels?.[`inh:${i}`]) || 0)));
+    })), masu && renderFusionSection(masu, {
       mon,
       power,
       readOnly,
@@ -25093,12 +25113,15 @@ function MonsterHeroGame() {
           className: "text-[7px] text-amber-400 uppercase font-bold mb-1"
         }, "\u7D99\u627F\u3057\u305F\u56FA\u6709\u6280(\u30D0\u30C8\u30EB\u4E2D\u306B\u30B9\u30ED\u30C3\u30C8\u306E\u30D0\u30C3\u30B8\u3092\u30BF\u30C3\u30D7\u3067\u5207\u66FF\u53EF\u80FD)"), /*#__PURE__*/React.createElement("div", {
           className: "space-y-1"
-        }, masu.inheritedUniques.map((u, idx) => /*#__PURE__*/React.createElement("div", {
-          key: idx,
-          className: "text-[8px] text-amber-200 font-bold bg-black/30 rounded-lg px-2 py-1"
-        }, u.name, /*#__PURE__*/React.createElement("span", {
-          className: "text-slate-500 font-normal"
-        }, "(\u5143", u.sourceMasuName, ")"))))), /*#__PURE__*/React.createElement("div", {
+        }, masu.inheritedUniques.map((savedUnique, idx) => {
+          const u = resolveInheritedUniqueDefinition(savedUnique);
+          return /*#__PURE__*/React.createElement("div", {
+            key: idx,
+            className: "text-[8px] text-amber-200 font-bold bg-black/30 rounded-lg px-2 py-1"
+          }, u?.name, /*#__PURE__*/React.createElement("span", {
+            className: "text-slate-500 font-normal"
+          }, "(\u5143", savedUnique?.sourceMasuName, ")"));
+        }))), /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-slate-500 font-bold text-center px-2"
         }, inRoster ? '現在、編成に入っています' : '編成画面で選ぶと、次の周回でこのマスモンを使えます'), /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-teal-400/80 font-bold text-center px-2"
