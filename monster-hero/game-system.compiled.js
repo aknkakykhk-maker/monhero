@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: efe2fc1decc58dbd
+// source-sha256: fb9f678bc8fc6d1b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 15:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 16:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1273,8 +1273,8 @@ const diagnoseLegacyMasuBaselineMigration = masu => {
   };
 };
 // 第6C段階の実移行。第6B診断が個体全体をSAFE_EXACTとした場合だけ、診断済みの
-// 差分表現をコピーへ追加する。旧フィールドは残し、保存対象にする直前にも表示値・
-// 総合力・既存ポイントが完全一致することを再確認する。
+// 差分表現をコピーへ追加する。旧フィールドは残し、保存対象にする直前にも個体差、
+// 基礎値差ぶんの能力変化、距離適性、既存ポイント、現行式による総合力を再確認する。
 const migrateSafeMasuBaselineRepresentations = (masuMons, diagnose = diagnoseLegacyMasuBaselineMigration) => {
   const summary = {
     migrated: 0,
@@ -1289,14 +1289,16 @@ const migrateSafeMasuBaselineRepresentations = (masuMons, diagnose = diagnoseLeg
     summary,
     changed: false
   };
-  const statFields = ['baseHp', 'baseAtk', 'baseDef', 'baseGuts'];
+  const statKeys = ['hp', 'atk', 'def', 'guts'];
+  const statField = key => `base${key === 'hp' ? 'Hp' : key[0].toUpperCase() + key.slice(1)}`;
   const representation = masu => {
     const mon = mergeMasuIntoMon(masu);
     if (!mon) return null;
     return {
-      stats: statFields.map(key => mon[key]),
+      stats: Object.fromEntries(statKeys.map(key => [key, mon[statField(key)]])),
       aptitude: Array.isArray(mon.distAptitude) ? mon.distAptitude.slice(0, 4) : [],
       power: monsterPowerOf(mon),
+      powerPartsTotal: monsterPowerParts(mon).total,
       statPoints: JSON.stringify(masu.statPoints),
       distAptPoints: masu.distAptPoints
     };
@@ -1322,7 +1324,14 @@ const migrateSafeMasuBaselineRepresentations = (masuMons, diagnose = diagnoseLeg
     }
     const before = representation(masu);
     const after = representation(candidate);
-    const matches = !!before && !!after && JSON.stringify(before.stats) === JSON.stringify(after.stats) && JSON.stringify(before.aptitude) === JSON.stringify(after.aptitude) && before.power === after.power && before.statPoints === after.statPoints && before.distAptPoints === after.distAptPoints;
+    const base = ALL_PLAYER_MONSTERS[masu?.baseId];
+    const confirmedBaseline = diagnosis.individualStats.confirmedBaseline;
+    const offsets = diagnosis.individualStats.proposedOffsets;
+    const statPoints = masu.statPoints || {};
+    const statsValid = diagnosis.individualStats.status !== 'SAFE_EXACT' || !!base && !!confirmedBaseline && statKeys.every(key => after?.stats[key] === Number(base[statField(key)]) + Number(offsets[key]) + Number(statPoints[key]) && after.stats[key] - before?.stats[key] === Number(base[statField(key)]) - Number(confirmedBaseline[key]));
+    const existingFieldsPreserved = Object.keys(masu).every(key => JSON.stringify(candidate[key]) === JSON.stringify(masu[key]));
+    const candidateDiagnosis = diagnoseLegacyMasuBaselineMigration(candidate);
+    const matches = !!before && !!after && statsValid && JSON.stringify(before.aptitude) === JSON.stringify(after.aptitude) && after.power === Math.round(after.powerPartsTotal) && before.statPoints === after.statPoints && before.distAptPoints === after.distAptPoints && existingFieldsPreserved && candidateDiagnosis.overallStatus === 'ALREADY_MODERN';
     if (!matches) {
       summary.blocked += 1;
       summary.validationFailed += 1;
