@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1cdbd23e0994a1fb
+// source-sha256: 237c42688c02a4d8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 14:47"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 14:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -979,7 +979,7 @@ const masuBaselineRepresentationsMatch = masu => {
 };
 // 第6B-1段階の旧再生個体判定。createdAtには頼らず、保存済みの4能力が再生時の
 // Math.round(base * (0.9～1.1)) で実際に生成できた歴代ベースだけを候補にする。
-// 0.9倍・1.1倍の端点を含む実装どおり、丸め前の生成区間との重なりを厳密に調べる。
+// Math.random() による0.9倍以上・1.1倍未満の生成区間と、Math.roundの区間が重なるか調べる。
 const LEGACY_REGENERATION_STAT_BASELINES = {
   Pixie: [{
     id: 'pre-2026-08-14',
@@ -1014,7 +1014,7 @@ const regenerationStatCouldBeGenerated = (value, baseValue) => {
   if (!Number.isInteger(stat) || !Number.isInteger(base) || base <= 0) return false;
   // 正数に対するMath.round(value)===statの区間は [stat-0.5, stat+0.5)。
   // 小数誤差を避けるため全境界を20倍した整数で比較する。
-  return base * 18 < stat * 20 + 10 && base * 22 >= stat * 20 - 10;
+  return base * 18 < stat * 20 + 10 && base * 22 > stat * 20 - 10;
 };
 const diagnoseLegacyRegenerationStatBaseline = masu => {
   const statKeys = ['hp', 'atk', 'def', 'guts'];
@@ -1097,12 +1097,9 @@ const diagnoseLegacyDistAptBoosts = masu => {
   checks.notBelowBase = boosts.every(boost => boost >= 0);
   checks.withinCap = boosts.every((boost, index) => DIST_APTITUDE_GRADES.indexOf(base.distAptitude[index]) + boost < DIST_APTITUDE_GRADES.length);
   const available = Number(masu.distAptPoints);
-  const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, value]) => sum + Number(value) / (STAT_POINT_GAIN[key] || 1), 0);
-  const earned = Math.max(0, masuBondLevelInfo(masu).level - 1) + totalBreakthroughPoints(masu.rebirthCount) + ownReincarnateBonusPoints(masu) + inheritedReincarnateBonusPointsOf(masu);
-  checks.pointsConsistent = Number.isInteger(available) && available >= 0 && earned === available + statSpent + boosts.reduce((sum, value) => sum + value, 0);
   if (!checks.notBelowBase) reasons.push('保存済みdistAptが現在のベースより低い');
   if (!checks.withinCap) reasons.push('投入段階を適用するとMを超える');
-  if (!checks.pointsConsistent) reasons.push('distAptPointsが0以上の整数ではない');
+  if (!Number.isInteger(available) || available < 0) reasons.push('distAptPointsが0以上の整数ではない');
   if (reasons.length) return {
     status: 'BLOCKED',
     reasons,
@@ -1118,9 +1115,22 @@ const diagnoseLegacyDistAptBoosts = masu => {
   };
   const before = mergeMasuIntoMon(masu);
   const after = mergeMasuIntoMon(candidate);
-  const beforePointTotal = available + (hasBoosts ? masu.distAptBoosts.reduce((sum, value) => sum + Number(value), 0) : boosts.reduce((sum, value) => sum + value, 0));
-  const afterPointTotal = available + boosts.reduce((sum, value) => sum + value, 0);
-  checks.totalPointsPreserved = beforePointTotal === afterPointTotal;
+  const recoveredBoostTotal = boosts.reduce((sum, value) => sum + value, 0);
+  const proposedBoostTotal = (candidate.distAptBoosts || []).reduce((sum, value) => sum + Number(value), 0);
+  const beforeReconciled = reconcileMasuPoints({
+    ...masu,
+    statPoints: {
+      ...masu.statPoints
+    }
+  });
+  const afterReconciled = reconcileMasuPoints({
+    ...candidate,
+    statPoints: {
+      ...candidate.statPoints
+    }
+  });
+  checks.pointsConsistent = beforeReconciled.distAptPoints === afterReconciled.distAptPoints;
+  checks.totalPointsPreserved = recoveredBoostTotal === proposedBoostTotal && JSON.stringify(masu.statPoints) === JSON.stringify(candidate.statPoints) && masu.distAptPoints === candidate.distAptPoints;
   checks.aptitudePreserved = !!after && (hasBoosts || !!before && JSON.stringify(before.distAptitude) === JSON.stringify(after.distAptitude));
   checks.powerPreserved = !!after && Number.isFinite(monsterPowerOf(after)) && (hasBoosts || !!before && monsterPowerOf(before) === monsterPowerOf(after));
   if (!checks.totalPointsPreserved || !checks.aptitudePreserved || !checks.powerPreserved) {
@@ -1168,6 +1178,7 @@ const diagnoseLegacyMasuBaselineMigration = masu => {
   };
   const base = ALL_PLAYER_MONSTERS[masu?.baseId];
   const validStatObject = value => value && typeof value === 'object' && !Array.isArray(value) && statKeys.every(key => Number.isFinite(Number(value[key])));
+  const validIntegerStatOffsets = value => value && typeof value === 'object' && !Array.isArray(value) && statKeys.every(key => Number.isInteger(value[key]));
   const validStoredStatPoints = value => value && typeof value === 'object' && !Array.isArray(value) && statKeys.every(key => Number.isInteger(Number(value[key])) && Number(value[key]) >= 0 && Number(value[key]) % STAT_POINT_GAIN[key] === 0);
   if (!masu || typeof masu !== 'object' || !base || !validStoredStatPoints(masu.statPoints) || !Number.isInteger(Number(masu.distAptPoints)) || Number(masu.distAptPoints) < 0) {
     const reason = '個体・ベース・statPoints・distAptPointsのいずれかが不正';
@@ -1185,7 +1196,7 @@ const diagnoseLegacyMasuBaselineMigration = masu => {
   if (!hasIndividualStats && !hasOffsets) {
     individualStats.status = 'ALREADY_MODERN';
     individualStats.reasons.push('通常個体は能力の移行が不要');
-  } else if (!hasOffsets && !validStatObject(masu.individualStats) || hasOffsets && !validStatObject(masu.individualStatOffsets)) {
+  } else if (!hasOffsets && !validStatObject(masu.individualStats) || hasOffsets && !validIntegerStatOffsets(masu.individualStatOffsets)) {
     individualStats.reasons.push('individualStatsまたはindividualStatOffsetsの4能力が不正');
   } else if (hasOffsets) {
     const newResolved = mergeMasuIntoMon(masu);

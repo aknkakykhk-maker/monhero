@@ -42,5 +42,7 @@ run('ミタラシ不成立', 'Mitarashi', { hp:700, atk:130, def:110, guts:95 },
 
 run('その他の現行ベース成立', 'Mocchi', { hp:450, atk:110, def:100, guts:108 }, 'SAFE_EXACT');
 run('その他の生成不可能値', 'Mocchi', { hp:449, atk:110, def:100, guts:108 }, 'BLOCKED');
-check('1.1倍端点のMath.round結果を含む', context.out.regenerationStatCouldBeGenerated(116, 105));
+check('base=105から116は1.1倍上端で生成不能', !context.out.regenerationStatCouldBeGenerated(116, 105));
+check('0.9倍側境界は生成可能', context.out.regenerationStatCouldBeGenerated(95, 105));
+check('1.1未満から四捨五入で届く値は生成可能', context.out.regenerationStatCouldBeGenerated(115, 105));
 check('localStorage書込み処理を含まない', !source.slice(start, end).includes('localStorage') && !source.slice(start, end).includes('mh_masu_mons'));
