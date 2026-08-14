@@ -196,8 +196,9 @@ check('詳細の上部サマリーが共通関数を使う',
 check('並べ替えが共通関数を使う', /power: masuPowerOf\(masu\)/.test(source) && /power: monsterPowerOf\(base\)/.test(source));
 check('並べ替えに総合力がある', /\{ key: 'power', label: '総合力' \}/.test(source) && /monsterSortKey === 'power'/.test(source));
 check('強化画面が共通関数を使う', /const currentPower = masuPowerOf\(masu\);/.test(source) && /plannedMasuPowerOf\(masu, plan\)/.test(source));
-check('強化画面の現在値が再生個体の individualStats を優先する',
-  ['hp', 'atk', 'def', 'guts'].every(key => source.includes(`${key}:masu.individualStats?.${key} ?? base.base${key === 'hp' ? 'Hp' : key === 'atk' ? 'Atk' : key === 'def' ? 'Def' : 'Guts'}`)));
+check('強化画面の現在値が共通の個体基礎値解決を使う',
+  /const resolvedIndividualStats = resolveMasuIndividualStats\(masu, base\);/.test(source)
+  && /const currentStatValue = \(key\) => \(resolvedIndividualStats\[key\]\|\|0\)/.test(source));
 check('確定処理も下書き適用の共通関数を通る', /const applied = applyEnhancePlanToMasu\(masu, plan\);/.test(source));
 check('総合力をセーブデータへ保存していない', !/storeSet\([^)]*power/i.test(source) && !/power:\s*masuPowerOf[^)]*\}\s*;\s*\n\s*storeSet/.test(source));
 

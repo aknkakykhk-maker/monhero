@@ -77,6 +77,10 @@
 - `reincarnateBonusPoints`: その個体自身が転生で実際に獲得した強化ポイント累計。欠損する旧個体だけ `reincarnateCount × 10` で補完し、保存値があれば回数から再計算しない。
 - `inheritedReincarnateBonusPoints`: 合体で受け継いだ転生由来の強化ポイント累計。欠損時は0。
 - `inheritedReincarnateCount`: 合体で受け継いだ転生育成の表示用回数分。自身の転生回数・条件判定には使わず、欠損時は0。
+- `individualStatOffsets`: 将来形式の任意フィールド。`{hp,atk,def,guts}` を最新の種基礎値へ加算して解決する。存在時は `individualStats` より優先する。
+- `distAptBoosts`: 将来形式の任意フィールド。零・近・中・遠の順の上昇段階数を最新の種適性へ加え、上限Mで解決する。存在時は `distApt` より優先する。
+
+上記2フィールドは新旧両形式を読める第2段階の受け皿であり、既存 `mh_masu_mons` の一括書換えも通常・再生個体の生成形式切替もまだ行っていない。旧フィールドの `individualStats` と `distApt` は削除せず、欠損は正常な旧データとして扱う。
 
 明示的な `schemaVersion` は存在しない。未知フィールドはオブジェクトスプレッドにより多くの更新で維持されるが、全経路での保証は**未確認**。
 

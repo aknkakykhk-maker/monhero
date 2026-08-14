@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 95c583e121e0ead6
+// source-sha256: 0911aab75055fa7b
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 10:24"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 10:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -759,6 +759,10 @@ const resetMasuForRebirth = (masu, {
   if (masu?.individualStats && typeof masu.individualStats === 'object') reset.individualStats = {
     ...masu.individualStats
   };
+  if (masu?.individualStatOffsets && typeof masu.individualStatOffsets === 'object') reset.individualStatOffsets = {
+    ...masu.individualStatOffsets
+  };
+  if (Array.isArray(masu?.distAptBoosts)) reset.distAptBoosts = [0, 0, 0, 0];
   return reset;
 };
 const migrateRebornMasuToFullReset = masuMons => (Array.isArray(masuMons) ? masuMons : []).map(raw => {
@@ -835,6 +839,36 @@ const buildRunBondAwards = ({
 const masuBondLevelInfo = masu => bondLevelInfo(cappedBondXp(masu));
 // 旧セーブは単色の color を持っている。染色もどきの部位別対応より前に染めた分を染色①へ読み替える
 const getMasuColors = masu => masu && masu.colors || (masu && masu.color ? [masu.color] : []);
+// マスモンの個体基礎値を新旧どちらの保存形式からも解決する。
+// 新形式があれば最新ベースへ差分を足し、無ければ完成値保存の individualStats をそのまま優先する。
+const resolveMasuIndividualStats = (masu, base) => {
+  const offsets = masu?.individualStatOffsets;
+  if (offsets && typeof offsets === 'object' && !Array.isArray(offsets)) {
+    const offset = key => Number.isFinite(Number(offsets[key])) ? Number(offsets[key]) : 0;
+    return {
+      hp: base.baseHp + offset('hp'),
+      atk: base.baseAtk + offset('atk'),
+      def: base.baseDef + offset('def'),
+      guts: base.baseGuts + offset('guts')
+    };
+  }
+  return {
+    hp: masu?.individualStats?.hp ?? base.baseHp,
+    atk: masu?.individualStats?.atk ?? base.baseAtk,
+    def: masu?.individualStats?.def ?? base.baseDef,
+    guts: masu?.individualStats?.guts ?? base.baseGuts
+  };
+};
+// 間合い適性も同様に、新形式の上昇段階数を最新ベースへ適用する。各値は0以上の整数としMで止める。
+const resolveMasuDistAptitude = (masu, base) => {
+  const baseApt = Array.isArray(base?.distAptitude) ? base.distAptitude : ['C', 'C', 'C', 'C'];
+  if (Array.isArray(masu?.distAptBoosts)) return baseApt.slice(0, 4).map((grade, index) => {
+    const current = Math.max(0, DIST_APTITUDE_GRADES.indexOf(grade));
+    const boost = Math.max(0, Math.floor(Number(masu.distAptBoosts[index]) || 0));
+    return DIST_APTITUDE_GRADES[Math.min(DIST_APTITUDE_GRADES.length - 1, current + boost)];
+  });
+  return masu?.distApt || baseApt;
+};
 // マスモンの保存データへ、種の基礎データ(ALL_PLAYER_MONSTERS)と強化ポイントぶんを合成して
 // 「モンスターらしいオブジェクト」を作る。詳細画面の表示も総合力の計算もこの結果を使うので、
 // 画面に出ている現在値と総合力の元になる値が必ず一致する。
@@ -843,22 +877,23 @@ const mergeMasuIntoMon = masu => {
   const base = ALL_PLAYER_MONSTERS[masu?.baseId];
   if (!base) return null;
   const sp = masu.statPoints || {};
+  const individual = resolveMasuIndividualStats(masu, base);
   return {
     ...base,
     masuId: masu.id,
     masuName: masu.name,
     name: masu.name,
-    baseHp: (masu.individualStats?.hp ?? base.baseHp) + (sp.hp || 0),
-    baseAtk: (masu.individualStats?.atk ?? base.baseAtk) + (sp.atk || 0),
-    baseDef: (masu.individualStats?.def ?? base.baseDef) + (sp.def || 0),
-    baseGuts: (masu.individualStats?.guts ?? base.baseGuts) + (sp.guts || 0),
+    baseHp: individual.hp + (sp.hp || 0),
+    baseAtk: individual.atk + (sp.atk || 0),
+    baseDef: individual.def + (sp.def || 0),
+    baseGuts: individual.guts + (sp.guts || 0),
     plusStats: {
       hp: (base.plusStats?.hp || 0) + (sp.hp || 0),
       atk: (base.plusStats?.atk || 0) + (sp.atk || 0),
       def: (base.plusStats?.def || 0) + (sp.def || 0),
       guts: (base.plusStats?.guts || 0) + (sp.guts || 0)
     },
-    distAptitude: masu.distApt || base.distAptitude,
+    distAptitude: resolveMasuDistAptitude(masu, base),
     colors: getMasuColors(masu),
     unique: uniqueSkillAtLevel(base.unique, masu.uniqueSkillLevels?.own),
     // 壊れた保存データ(null や技の体を成さない要素)が混ざっていても落ちないようにする。
@@ -955,13 +990,16 @@ const applyEnhancePlanToMasu = (masu, plan) => {
   const statPlan = plan && plan.stat || {};
   const wanted = aptPlan.reduce((a, b) => a + (b || 0), 0) + Object.values(statPlan).reduce((a, b) => a + (b || 0), 0);
   if (wanted <= 0 || wanted > available) return null;
-  const distApt = [...(masu.distApt || ['C', 'C', 'C', 'C'])];
+  const base = ALL_PLAYER_MONSTERS[masu.baseId];
+  const distApt = [...resolveMasuDistAptitude(masu, base || {})];
+  const distAptBoosts = Array.isArray(masu.distAptBoosts) ? masu.distAptBoosts.slice(0, 4).map(v => Math.max(0, Math.floor(Number(v) || 0))) : null;
   let used = 0;
   aptPlan.forEach((n, idx) => {
     for (let i = 0; i < (n || 0); i++) {
       const cur = DIST_APTITUDE_GRADES.indexOf(distApt[idx] || 'C');
       if (cur < 0 || cur >= DIST_APTITUDE_GRADES.length - 1) break; // 上限Mに達したらそこで止める
       distApt[idx] = DIST_APTITUDE_GRADES[cur + 1];
+      if (distAptBoosts) distAptBoosts[idx] = (distAptBoosts[idx] || 0) + 1;
       used++;
     }
   });
@@ -980,6 +1018,9 @@ const applyEnhancePlanToMasu = (masu, plan) => {
     masu: {
       ...masu,
       distApt,
+      ...(distAptBoosts ? {
+        distAptBoosts
+      } : {}),
       statPoints,
       distAptPoints: available - used
     },
@@ -6581,7 +6622,7 @@ const reconcileMasuPoints = masu => {
   const base = typeof ALL_PLAYER_MONSTERS !== 'undefined' ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
   if (!base) return masu;
   const baseApt = base.distAptitude || ['C', 'C', 'C', 'C'];
-  const aptSpent = (masu.distApt || baseApt).reduce((sum, g, i) => sum + Math.max(0, DIST_APTITUDE_GRADES.indexOf(g) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])), 0);
+  const aptSpent = Array.isArray(masu.distAptBoosts) ? masu.distAptBoosts.reduce((sum, value) => sum + Math.max(0, Math.floor(Number(value) || 0)), 0) : (masu.distApt || baseApt).reduce((sum, g, i) => sum + Math.max(0, DIST_APTITUDE_GRADES.indexOf(g) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])), 0);
   const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, val]) => sum + Math.ceil((val || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
   // 合体で上がったレベルも「絆レベルが上がった」ことに変わりはないので、強化ポイントの
   // 付与対象に含める(合体の確認画面も「強化ポイント +N」と出しており、実際に増えていなかった)。
@@ -12639,17 +12680,13 @@ function MonsterHeroGame() {
   const spendAptPoint = (masuId, slotIdx) => {
     const masu = getMasuMon(masuId);
     if (!masu || (masu.distAptPoints || 0) <= 0) return null;
-    const current = masu.distApt && masu.distApt[slotIdx] || 'C';
-    const idx = DIST_APTITUDE_GRADES.indexOf(current);
-    if (idx < 0 || idx >= DIST_APTITUDE_GRADES.length - 1) return null; // 既にM(上限)
-    const nextGrade = DIST_APTITUDE_GRADES[idx + 1];
-    const distApt = [...(masu.distApt || ['C', 'C', 'C', 'C'])];
-    distApt[slotIdx] = nextGrade;
-    const updatedMasu = {
-      ...masu,
-      distApt,
-      distAptPoints: (masu.distAptPoints || 0) - 1
+    const plan = {
+      apt: [0, 1, 2, 3].map(idx => idx === slotIdx ? 1 : 0),
+      stat: {}
     };
+    const applied = applyEnhancePlanToMasu(masu, plan);
+    if (!applied) return null;
+    const updatedMasu = applied.masu;
     setMasuMons(prev => {
       const next = prev.map(m => m.id === masuId ? updatedMasu : m);
       storeSet('mh_masu_mons', next, false);
@@ -12745,7 +12782,7 @@ function MonsterHeroGame() {
     const base = ALL_PLAYER_MONSTERS[masu.baseId];
     if (!base) return;
     const baseApt = base.distAptitude || ['C', 'C', 'C', 'C'];
-    const aptSpent = (masu.distApt || baseApt).reduce((sum, g, i) => sum + Math.max(0, DIST_APTITUDE_GRADES.indexOf(g) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])), 0);
+    const aptSpent = Array.isArray(masu.distAptBoosts) ? masu.distAptBoosts.reduce((sum, value) => sum + Math.max(0, Math.floor(Number(value) || 0)), 0) : (masu.distApt || baseApt).reduce((sum, g, i) => sum + Math.max(0, DIST_APTITUDE_GRADES.indexOf(g) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])), 0);
     const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, val]) => sum + Math.ceil((val || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
     const totalRefund = aptSpent + statSpent;
     if (totalRefund <= 0) return; // 使った強化ポイントが無ければ意味が無いので何もしない
@@ -12753,6 +12790,9 @@ function MonsterHeroGame() {
       const next = prev.map(m => m.id === masuId ? {
         ...m,
         distApt: [...baseApt],
+        ...(Array.isArray(m.distAptBoosts) ? {
+          distAptBoosts: [0, 0, 0, 0]
+        } : {}),
         statPoints: {
           hp: 0,
           atk: 0,
@@ -24562,12 +24602,9 @@ function MonsterHeroGame() {
       const lvl = masuBondLevelInfo(masu);
       const pct = Math.max(0, Math.min(100, lvl.xpIntoLevel / Math.max(1, lvl.xpForNext) * 100));
       const points = masu.distAptPoints || 0;
-      const currentStatValue = key => ({
-        hp: masu.individualStats?.hp ?? base.baseHp,
-        atk: masu.individualStats?.atk ?? base.baseAtk,
-        def: masu.individualStats?.def ?? base.baseDef,
-        guts: masu.individualStats?.guts ?? base.baseGuts
-      }[key] || 0) + (masu.statPoints?.[key] || 0);
+      const resolvedIndividualStats = resolveMasuIndividualStats(masu, base);
+      const resolvedDistAptitude = resolveMasuDistAptitude(masu, base);
+      const currentStatValue = key => (resolvedIndividualStats[key] || 0) + (masu.statPoints?.[key] || 0);
       // 総合力は共通関数から都度出す。1ポイント強化も一括強化も、強化前と強化後を
       // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
       const currentPower = masuPowerOf(masu);
@@ -24610,7 +24647,7 @@ function MonsterHeroGame() {
       const planLeft = points - planUsed;
       // 下書き段階での間合い適性(何段階上がるか)。上限Mを超えないようにする
       const plannedGrade = idx => {
-        const cur = DIST_APTITUDE_GRADES.indexOf(masu.distApt && masu.distApt[idx] || 'C');
+        const cur = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[idx] || 'C');
         return DIST_APTITUDE_GRADES[Math.min(DIST_APTITUDE_GRADES.length - 1, Math.max(0, cur + plan.apt[idx]))];
       };
       const canPlanApt = idx => planLeft > 0 && DIST_APTITUDE_GRADES.indexOf(plannedGrade(idx)) < DIST_APTITUDE_GRADES.length - 1;
@@ -24884,7 +24921,7 @@ function MonsterHeroGame() {
       }, "\u9593\u5408\u3044\u9069\u6027\u3092\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-4 gap-2"
       }, RANGE_LABELS.map((label, idx) => {
-        const grade = masu.distApt && masu.distApt[idx] || 'C';
+        const grade = resolvedDistAptitude[idx] || 'C';
         const gIdx = DIST_APTITUDE_GRADES.indexOf(grade);
         const nextGrade = gIdx < DIST_APTITUDE_GRADES.length - 1 ? DIST_APTITUDE_GRADES[gIdx + 1] : null;
         const canUp = points > 0 && nextGrade;
@@ -24909,7 +24946,7 @@ function MonsterHeroGame() {
             if (!updated) return;
             setMasuMonDetail(updated);
             saveMissionProgress('enhance');
-            const afterGrade = updated.distApt && updated.distApt[idx] || beforeGrade;
+            const afterGrade = resolveMasuDistAptitude(updated, base)[idx] || beforeGrade;
             setEffect({
               type: 'enhance',
               label: `${label}距離適性 強化！`,
