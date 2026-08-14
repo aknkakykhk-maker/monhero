@@ -114,6 +114,11 @@ begin
   end if;
 end $$;
 
+-- Supabaseは既定で「テーブル作成時に anon/authenticated へ全権限(DELETEを含む)を
+-- 自動付与する」設定になっていることがあるため、grantの前にいったん全て外してから
+-- 必要な3つだけを与え直す。これをしないと、grantで書いていないDELETEが
+-- 自動付与されたまま残ってしまう。
+revoke all on public.bond_levels from anon, authenticated;
 grant select, insert, update on public.bond_levels to anon, authenticated;
 
 -- ここから先は「既存の rankings に触っていないこと」の検査。1つでも違えば例外で止まる。
