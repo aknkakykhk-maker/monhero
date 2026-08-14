@@ -15,15 +15,20 @@ const results = [];
 const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok ? 'OK' : 'NG'}  ${name}${detail ? ' — ' + detail : ''}`); };
 
 // 正本テーブルにいる人(よく遊ぶ人も、記録が1件だけの人も1行ずつ)
+// ヘビー太郎だけ育て方(detail)が残っている＝「詳細 ›」が押せる。
+// 花子・三郎は古い記録で detail が無く、「情報なし」になる
 const BOND_ROWS = [
-  { user_name: 'ヘビー太郎', individual_id: 'm-1', monster_id: 'Mocchi', mon_name: 'モッチー', bond_level: 88, icon: null, detail: { v: 2 }, colors: [] },
+  { user_name: 'ヘビー太郎', individual_id: 'm-1', monster_id: 'Mocchi', mon_name: 'モッチー', bond_level: 88, icon: null,
+    detail: { v: 2, name: 'たろモッチ', bondXp: 9000, levelCap: 35, statPoints: { hp: 3, atk: 4, def: 1, guts: 2 } }, colors: [] },
   { user_name: 'ライト花子', individual_id: 'm-2', monster_id: 'Suezo', mon_name: 'スエゾー', bond_level: 12, icon: null, detail: null, colors: [] },
   { user_name: 'ライト三郎', individual_id: 'legacy:Golem', monster_id: 'Golem', mon_name: 'ゴーレム', bond_level: 3, icon: null, detail: null, colors: [] },
 ];
-// rankings 側にしかいない人(正本へまだ書き込んでいない＝適用直後の状態)
+// rankings 側にしかいない人(正本へまだ書き込んでいない＝適用直後の状態)。
+// こちらにも detail を持たせ、記録から補った人でも「詳細 ›」が押せることを見る
 const RANKING_ROWS = [
   { user_name: '記録だけ次郎', hero: 'モッチー', score: 100, level: 5, icon: null,
-    party: [{ role: 'hero', baseId: 'Pixie', masuId: 'm-9', name: 'ピクシー', bondLevel: 21 }] },
+    party: [{ role: 'hero', baseId: 'Pixie', masuId: 'm-9', name: 'ピクシー', bondLevel: 21,
+      detail: { v: 2, name: 'じろピク', bondXp: 1200, levelCap: 30, statPoints: { hp: 1, atk: 2, def: 0, guts: 1 } } }] },
 ];
 
 const seed = () => {
@@ -88,7 +93,30 @@ async function openBondRanking(page, { bondTableExists }) {
   await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.trim() === '絆Lv'); if (b) b.click(); });
   await page.waitForTimeout(4000);
   const names = await page.evaluate(() => [...document.querySelectorAll('[data-ranking-kind="bond"]')].map(el => el.innerText.replace(/\s+/g, ' ')));
-  return { names, calls };
+  // 「詳細 ›」は育て方(detail)が残っている個体だけ押せる。押せる/押せないの内訳も持ち帰る
+  const detailButtons = await page.evaluate(() => [...document.querySelectorAll('[data-ranking-kind="bond"]')].map(card => {
+    const b = card.querySelector('button[data-bond-detail]');
+    return { name: card.innerText.replace(/\s+/g, ' '), state: b ? b.dataset.bondDetail : 'なし', disabled: b ? b.disabled : null };
+  }));
+  return { names, calls, detailButtons, page };
+}
+
+// 押せる「詳細 ›」を1つ押し、1体ぶんの詳細が実際に開くところまで見る
+async function openFirstDetail(page) {
+  const clicked = await page.evaluate(() => {
+    const card = [...document.querySelectorAll('[data-ranking-kind="bond"]')]
+      .find(c => c.querySelector('button[data-bond-detail="open"]'));
+    if (!card) return false;
+    card.querySelector('button[data-bond-detail="open"]').click();
+    return true;
+  });
+  if (!clicked) return { clicked: false, text: '' };
+  await page.waitForTimeout(1500);
+  const text = await page.evaluate(() => {
+    const dlg = document.querySelector('[role="dialog"]');
+    return dlg ? dlg.innerText.replace(/\s+/g, ' ') : '';
+  });
+  return { clicked: true, text };
 }
 
 (async () => {
@@ -108,8 +136,9 @@ async function openBondRanking(page, { bondTableExists }) {
     page.on('pageerror', e => fatal.push(e.message));
     await page.route('**cdn.tailwindcss.com**', r => r.abort()).catch(() => {});
     await page.addInitScript(seed);
-    const { names, calls } = await openBondRanking(page, { bondTableExists });
+    const { names, calls, detailButtons } = await openBondRanking(page, { bondTableExists });
     const has = (n) => names.some(t => t.includes(n));
+    const stateOf = (n) => (detailButtons.find(b => b.name.includes(n)) || {}).state;
     const askedBond = calls.some(c => c.path.endsWith('/bond_levels') && c.method === 'GET');
     check(`${label}: bond_levels を読みにいく`, askedBond);
     if (bondTableExists) {
@@ -117,9 +146,23 @@ async function openBondRanking(page, { bondTableExists }) {
       check(`${label}: 正本にまだ無い人は記録から補う`, has('記録だけ次郎'), names.join(' / '));
       check(`${label}: 絆Lvの高い順に並ぶ`, /ヘビー太郎/.test(names[0] || ''), names[0] || '');
       check(`${label}: 同じ個体が重複しない`, names.filter(t => t.includes('ヘビー太郎')).length === 1);
+      // 育て方が残っている個体だけ「詳細 ›」を押せる
+      check(`${label}: 育て方がある人は「詳細 ›」を押せる`, stateOf('ヘビー太郎') === 'open', `ヘビー太郎=${stateOf('ヘビー太郎')}`);
+      check(`${label}: 古い記録は「情報なし」で押せない`,
+        stateOf('ライト花子') === 'none' && stateOf('ライト三郎') === 'none',
+        `花子=${stateOf('ライト花子')} / 三郎=${stateOf('ライト三郎')}`);
+      // 記録側から補った人も、育て方が残っていれば同じように開ける
+      check(`${label}: 記録から補った人も「詳細 ›」を押せる`, stateOf('記録だけ次郎') === 'open', `次郎=${stateOf('記録だけ次郎')}`);
+      const opened = await openFirstDetail(page);
+      check(`${label}: 「詳細 ›」から1体ぶんの詳細が開く`,
+        opened.clicked && /たろモッチ/.test(opened.text), opened.text.slice(0, 80));
     } else {
       check(`${label}: 記録からの集計だけで一覧が出る`, has('記録だけ次郎'), names.join(' / '));
       check(`${label}: 正本の人は出ない(まだ書かれていないため)`, !has('ヘビー太郎'));
+      check(`${label}: 適用前でも「詳細 ›」は押せる`, stateOf('記録だけ次郎') === 'open', `次郎=${stateOf('記録だけ次郎')}`);
+      const opened = await openFirstDetail(page);
+      check(`${label}: 「詳細 ›」から1体ぶんの詳細が開く`,
+        opened.clicked && /じろピク/.test(opened.text), opened.text.slice(0, 80));
     }
     check(`${label}: 致命的なJSエラーが出ない`, fatal.length === 0, fatal.slice(0, 2).join(' / '));
     await page.close();

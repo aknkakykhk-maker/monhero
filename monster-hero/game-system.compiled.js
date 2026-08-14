@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 1c6489ed03e93459
+// source-sha256: 64498869d45a9530
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 18:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 00:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8403,6 +8403,8 @@ const collectBondRankingEntries = rankingPool => {
       if (!monName) return;
       const individualId = member.masuId != null && String(member.masuId) !== '' ? `masu:${String(member.masuId)}` : `legacy:${monsterId || monName}`;
       const key = `${userName}\u0000${individualId}`;
+      // detail / colors は「詳細 ›」で1体ぶんの中身を開くために持ち回る。
+      // 育て方を記録するようになる前の古い記録には入っていないので、その場合はnullのまま。
       const entry = {
         userName,
         icon: record.icon,
@@ -8411,7 +8413,9 @@ const collectBondRankingEntries = rankingPool => {
         imgUrl: ALL_PLAYER_MONSTERS[monsterId]?.iconUrl || member.imgUrl || null,
         emoji: member.emoji || ALL_PLAYER_MONSTERS[monsterId]?.emoji || null,
         masuId: member.masuId ?? null,
-        monsterId
+        monsterId,
+        detail: member.detail ?? null,
+        colors: Array.isArray(member.colors) ? member.colors : []
       };
       const current = byIndividual.get(key);
       if (!current) byIndividual.set(key, entry);else byIndividual.set(key, {
@@ -19084,6 +19088,17 @@ function MonsterHeroGame() {
   // 絆Lv専用カード。スコアや編成・役割は表示せず、ブリーダーと個体だけを表示する。
   const renderBondRankingEntry = (entry, index) => {
     const level = Number(entry?.bondLevel);
+    // 「詳細 ›」で開くのは、スコアランキングの編成から開くのとまったく同じ1体ぶんの画面。
+    // 向こうは編成の1人(party のメンバー)を渡しているので、こちらも同じ形に整えて渡す。
+    const detailMember = entry?.detail ? {
+      baseId: entry.monsterId,
+      monsterId: entry.monsterId,
+      name: entry.monName,
+      masuId: entry.masuId,
+      bondLevel: level,
+      detail: entry.detail,
+      colors: Array.isArray(entry.colors) ? entry.colors : []
+    } : null;
     return /*#__PURE__*/React.createElement("article", {
       key: `bond-${entry?.userName || 'unknown'}-${entry?.masuId || entry?.monsterId || entry?.monName}-${index}`,
       "data-ranking-kind": "bond",
@@ -19103,8 +19118,15 @@ function MonsterHeroGame() {
     }) : /*#__PURE__*/React.createElement("span", {
       className: "w-7 text-center shrink-0"
     }, entry?.emoji || '❓'), /*#__PURE__*/React.createElement("b", {
-      className: "truncate text-[10px]"
-    }, entry.monName)));
+      className: "truncate flex-1 text-[10px]"
+    }, entry.monName), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        if (detailMember) setRankingMonsterDetail(detailMember);
+      },
+      disabled: !detailMember,
+      "data-bond-detail": detailMember ? 'open' : 'none',
+      className: `shrink-0 px-2 py-1 rounded-lg border text-[9px] font-black leading-none ${detailMember ? 'border-indigo-400/60 bg-indigo-500/20 text-indigo-100 active:scale-95' : 'border-white/10 bg-black/20 text-slate-600'}`
+    }, detailMember ? '詳細 ›' : '情報なし')));
   };
   // そのモード・難易度の端末記録。画面のあちこちで if を並べないための小さな入口。
   // 保存先はモードごとに分かれている(mh_ / mh_quick_ / mh_pro_)
