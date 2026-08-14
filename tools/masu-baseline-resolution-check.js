@@ -24,7 +24,7 @@ vm.createContext(context);
 const resolution = slice('const getMasuColors =', 'const migrateMasuLevelCaps');
 const regeneration = slice('const randomRegenerationStat =', 'const rosterBaseId =');
 const rebirthReset = slice('const resetMasuForRebirth =', 'const migrateRebornMasuToFullReset');
-vm.runInContext(`${rebirthReset}\n${resolution}\n${regeneration}\nglobalThis.api={resolveMasuIndividualStats,resolveMasuDistAptitude,mergeMasuIntoMon,masuPowerOf,masuBaselineRepresentationsMatch,applyEnhancePlanToMasu,buildMasuBondPointReset,buildRegeneratedMasu,resetMasuForRebirth};`, context);
+vm.runInContext(`${rebirthReset}\n${resolution}\n${regeneration}\nglobalThis.api={resolveMasuIndividualStats,resolveMasuDistAptitude,mergeMasuIntoMon,masuPowerOf,masuBaselineRepresentationsMatch,diagnoseMasuBaselineMigration,diagnoseMasuBaselineMigrationList,applyEnhancePlanToMasu,buildMasuBondPointReset,buildRegeneratedMasu,resetMasuForRebirth};`, context);
 const api = context.api;
 const check = (label, ok) => { if (!ok) throw new Error(`NG: ${label}`); console.log(`OK: ${label}`); };
 const snapshot = value => JSON.stringify(value);
@@ -49,6 +49,8 @@ const regenerated=api.buildRegeneratedMasu(base,()=>{ const value=draws[randomCa
 check('新規再生は乱数を4能力につき一度だけ使う', randomCalls===4);
 check('新規再生の完成値とbase+offsetが一致', snapshot(regenerated.individualStats)===snapshot({hp:105,atk:47,def:86,guts:37}) && api.masuBaselineRepresentationsMatch(regenerated));
 check('新規再生の距離適性はboost=0で旧表現と一致', snapshot(regenerated.distAptBoosts)===snapshot([0,0,0,0]) && snapshot(regenerated.distApt)===snapshot(base.distAptitude));
+const newDiagnosis=api.diagnoseMasuBaselineMigration({...regenerated,distAptPoints:5});
+check('第3段階以降の正常な新形式個体はSAFE', newDiagnosis.status==='SAFE' && Object.values(newDiagnosis.checks).every(Boolean));
 const legacyRegen={...regenerated}; delete legacyRegen.individualStatOffsets; delete legacyRegen.distAptBoosts;
 check('生成直後の4能力・4適性・総合力が新旧で一致', snapshot(stats(api.mergeMasuIntoMon(regenerated)))===snapshot(stats(api.mergeMasuIntoMon(legacyRegen))) && snapshot(api.mergeMasuIntoMon(regenerated).distAptitude)===snapshot(api.mergeMasuIntoMon(legacyRegen).distAptitude) && api.masuPowerOf(regenerated)===api.masuPowerOf(legacyRegen));
 
@@ -64,6 +66,25 @@ const oldReset=api.buildMasuBondPointReset(oldNormal,base);
 check('旧形式リセットは新フィールドを追加しない', oldReset && !Object.hasOwn(oldReset.nextMasu,'distAptBoosts'));
 const reincarnated=api.resetMasuForRebirth({...enhancedMany,individualStats:regenerated.individualStats,individualStatOffsets:regenerated.individualStatOffsets,colors:['red'],fusionHistory:[{id:1}],inheritedUniques:[{name:'技'}]}, {toLevel:2,distAptPoints:9});
 check('転生は育成成果を維持して新旧適性を基礎値へ戻す', snapshot(reincarnated.distAptBoosts)===snapshot([0,0,0,0]) && snapshot(reincarnated.distApt)===snapshot(base.distAptitude) && snapshot(reincarnated.individualStats)===snapshot(regenerated.individualStats) && snapshot(reincarnated.individualStatOffsets)===snapshot(regenerated.individualStatOffsets) && reincarnated.distAptPoints===9 && reincarnated.inheritedUniques.length===1 && reincarnated.fusionHistory.length===1);
+
+const legacyNormalForDiagnosis={...oldNormal,distAptPoints:4,bondXp:300,rebirthCount:1,reincarnateCount:1,reincarnateBonusPoints:5};
+const legacyNormalSnapshot=snapshot(legacyNormalForDiagnosis);
+const legacyNormalDiagnosis=api.diagnoseMasuBaselineMigration(legacyNormalForDiagnosis);
+check('旧通常個体は最新ベースとの差から距離適性候補を計算できる', legacyNormalDiagnosis.status==='ESTIMATED' && snapshot(legacyNormalDiagnosis.proposed.distAptBoosts)===snapshot([0,2,0,0]));
+check('生成時ベース不明ならポイントを断定せずSAFEにしない', legacyNormalDiagnosis.checks.pointsPreserved===false);
+check('仮想候補で4能力・4距離適性・総合力を維持する', legacyNormalDiagnosis.checks.statsPreserved && legacyNormalDiagnosis.checks.aptitudePreserved && legacyNormalDiagnosis.checks.powerPreserved);
+check('診断は入力オブジェクトを変更しない', snapshot(legacyNormalForDiagnosis)===legacyNormalSnapshot);
+const legacyRegenDiagnosis=api.diagnoseMasuBaselineMigration({...oldRegen,distAptPoints:2});
+check('旧再生個体は完成値からoffset候補を計算するがSAFEにしない', legacyRegenDiagnosis.status==='ESTIMATED' && snapshot(legacyRegenDiagnosis.proposed.individualStatOffsets)===snapshot({hp:-7,atk:4,def:-3,guts:2}));
+check('旧再生個体の候補でも完成4能力と総合力を維持する', legacyRegenDiagnosis.checks.statsPreserved && legacyRegenDiagnosis.checks.powerPreserved);
+const malformedDiagnosis=api.diagnoseMasuBaselineMigration({...oldNormal,distApt:['B','S','C','D']});
+check('最新ベースより低い旧適性はBLOCKED', malformedDiagnosis.status==='BLOCKED');
+check('不正等級・配列欠損・4距離でない適性はBLOCKED', [null,['A','B','C'],['A','B','C','X']].every(distApt=>api.diagnoseMasuBaselineMigration({...oldNormal,distApt}).status==='BLOCKED'));
+const inconsistentNew=api.diagnoseMasuBaselineMigration({...newNormal,distApt:['M','B','C','D'],distAptPoints:0});
+check('新形式でも旧フィールドと不一致ならBLOCKED', inconsistentNew.status==='BLOCKED');
+const summary=api.diagnoseMasuBaselineMigrationList([{...regenerated,distAptPoints:5},legacyNormalForDiagnosis,{...oldNormal,distApt:['B','S','C','D']}]);
+check('全個体ドライランは3分類を集計する', snapshot(summary.counts)===snapshot({SAFE:1,ESTIMATED:1,BLOCKED:1}) && summary.results.length===3);
+check('診断ロジックにmh_masu_mons書込みが無い', !slice('const diagnoseMasuBaselineMigration =', '// 一覧・詳細で出す桁区切りの表記').includes('localStorage') && !slice('const diagnoseMasuBaselineMigration =', '// 一覧・詳細で出す桁区切りの表記').includes('mh_masu_mons'));
 
 const beforeOld=stats(api.mergeMasuIntoMon(oldRegen));
 base.baseHp=120; base.baseAtk=60; base.baseDef=90; base.baseGuts=45; base.distAptitude=['S','C','B','SS+'];

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 94130fb87141685b
+// source-sha256: 0fc02e75942614b2
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 11:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 11:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -976,6 +976,137 @@ const masuBaselineRepresentationsMatch = masu => {
   if (!oldResolved || !newResolved) return false;
   const values = mon => [mon.baseHp, mon.baseAtk, mon.baseDef, mon.baseGuts, ...mon.distAptitude];
   return JSON.stringify(values(oldResolved)) === JSON.stringify(values(newResolved)) && monsterPowerOf(oldResolved) === monsterPowerOf(newResolved);
+};
+// 第4段階の既存個体ドライラン。候補を新しいオブジェクトとして組み立てるだけで、保存・補完は行わない。
+// 旧形式は生成時点のベース定義を持たないため、現在ベースとの差が計算できても SAFE にはしない。
+const diagnoseMasuBaselineMigration = masu => {
+  const reasons = [];
+  const proposed = {};
+  const checks = {
+    statsPreserved: false,
+    aptitudePreserved: false,
+    powerPreserved: false,
+    pointsPreserved: false
+  };
+  const base = ALL_PLAYER_MONSTERS[masu?.baseId];
+  const statKeys = ['hp', 'atk', 'def', 'guts'];
+  const validFiniteObject = (value, keys) => value && typeof value === 'object' && !Array.isArray(value) && keys.every(key => Number.isFinite(Number(value[key])));
+  const validAptitudes = value => Array.isArray(value) && value.length === 4 && value.every(grade => DIST_APTITUDE_GRADES.includes(grade));
+  const validBoosts = value => Array.isArray(value) && value.length === 4 && value.every(boost => Number.isInteger(Number(boost)) && Number(boost) >= 0);
+  if (!masu || typeof masu !== 'object' || !base || !validAptitudes(base.distAptitude)) {
+    reasons.push('個体または最新ベース定義を正しく解決できない');
+    return {
+      status: 'BLOCKED',
+      reasons,
+      proposed,
+      checks
+    };
+  }
+  const hasOffsets = Object.prototype.hasOwnProperty.call(masu, 'individualStatOffsets');
+  const hasBoosts = Object.prototype.hasOwnProperty.call(masu, 'distAptBoosts');
+  const hasIndividualStats = Object.prototype.hasOwnProperty.call(masu, 'individualStats');
+  if (!validAptitudes(masu.distApt)) reasons.push('distAptが正しい4距離の等級配列ではない');
+  if (hasBoosts && !validBoosts(masu.distAptBoosts)) reasons.push('distAptBoostsが0以上の整数4要素ではない');
+  if (hasOffsets && !validFiniteObject(masu.individualStatOffsets, statKeys)) reasons.push('individualStatOffsetsの4能力が有限数ではない');
+  if (hasIndividualStats && !validFiniteObject(masu.individualStats, statKeys)) reasons.push('individualStatsの4能力が有限数ではない');
+  if (reasons.length) return {
+    status: 'BLOCKED',
+    reasons,
+    proposed,
+    checks
+  };
+  if (!hasBoosts) {
+    const boosts = masu.distApt.map((grade, index) => DIST_APTITUDE_GRADES.indexOf(grade) - DIST_APTITUDE_GRADES.indexOf(base.distAptitude[index]));
+    if (boosts.some(boost => boost < 0)) {
+      reasons.push('保存済みdistAptが最新ベースより低く、投入段階として復元できない');
+      return {
+        status: 'BLOCKED',
+        reasons,
+        proposed,
+        checks
+      };
+    }
+    proposed.distAptBoosts = boosts;
+    reasons.push('生成時点のベース適性が無いため、最新ベースとの差を投入ポイントと断定できない');
+  }
+  if (hasIndividualStats && !hasOffsets) {
+    proposed.individualStatOffsets = {
+      hp: Number(masu.individualStats.hp) - base.baseHp,
+      atk: Number(masu.individualStats.atk) - base.baseAtk,
+      def: Number(masu.individualStats.def) - base.baseDef,
+      guts: Number(masu.individualStats.guts) - base.baseGuts
+    };
+    reasons.push('再生時点のベース能力が無いため、最新ベースとの差を個体差と断定できない');
+  }
+  const candidate = {
+    ...masu,
+    ...proposed
+  };
+  const before = mergeMasuIntoMon(masu);
+  const after = mergeMasuIntoMon(candidate);
+  checks.statsPreserved = !!before && !!after && statKeys.every(key => before[`base${key === 'hp' ? 'Hp' : key[0].toUpperCase() + key.slice(1)}`] === after[`base${key === 'hp' ? 'Hp' : key[0].toUpperCase() + key.slice(1)}`]);
+  checks.aptitudePreserved = !!before && !!after && JSON.stringify(before.distAptitude) === JSON.stringify(after.distAptitude);
+  checks.powerPreserved = !!before && !!after && monsterPowerOf(before) === monsterPowerOf(after);
+  const validStoredPoints = Number.isFinite(Number(masu.distAptPoints ?? 0)) && Number(masu.distAptPoints ?? 0) >= 0 && statKeys.every(key => Number.isFinite(Number(masu.statPoints?.[key] ?? 0)) && Number(masu.statPoints?.[key] ?? 0) >= 0 && Number(masu.statPoints?.[key] ?? 0) % STAT_POINT_GAIN[key] === 0) && ['bondXp', 'rebirthCount', 'reincarnateCount', 'reincarnateBonusPoints', 'inheritedReincarnateBonusPoints'].every(key => Number.isFinite(Number(masu[key] ?? 0)) && Number(masu[key] ?? 0) >= 0);
+  checks.pointsPreserved = hasBoosts && validStoredPoints;
+  if (!checks.statsPreserved || !checks.aptitudePreserved || !checks.powerPreserved) {
+    reasons.push('候補適用後に能力・適性・総合力のいずれかを維持できない');
+    return {
+      status: 'BLOCKED',
+      reasons,
+      proposed,
+      checks
+    };
+  }
+  if (!validStoredPoints) {
+    reasons.push('保存済みの未使用ポイント・能力強化・絆・転生成果に不正な値がある');
+    return {
+      status: 'BLOCKED',
+      reasons,
+      proposed,
+      checks
+    };
+  }
+  if (!hasBoosts || hasIndividualStats && !hasOffsets) {
+    return {
+      status: 'ESTIMATED',
+      reasons,
+      proposed,
+      checks
+    };
+  }
+  if (!masuBaselineRepresentationsMatch(masu)) {
+    reasons.push('新旧フィールドの能力・適性・総合力が一致しない');
+    return {
+      status: 'BLOCKED',
+      reasons,
+      proposed,
+      checks
+    };
+  }
+  checks.pointsPreserved = true;
+  reasons.push('第3段階以降の新形式で、新旧表現とポイント量が一致する');
+  return {
+    status: 'SAFE',
+    reasons,
+    proposed,
+    checks
+  };
+};
+const diagnoseMasuBaselineMigrationList = masuMons => {
+  const results = (Array.isArray(masuMons) ? masuMons : []).map(diagnoseMasuBaselineMigration);
+  const counts = {
+    SAFE: 0,
+    ESTIMATED: 0,
+    BLOCKED: 0
+  };
+  results.forEach(result => {
+    counts[result.status] += 1;
+  });
+  return {
+    counts,
+    results
+  };
 };
 // 一覧・詳細で出す桁区切りの表記
 const formatMonsterPower = power => Number(power || 0).toLocaleString();
