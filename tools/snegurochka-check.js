@@ -6,19 +6,29 @@ const game = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const help = fs.readFileSync('monster-hero/data/help.js', 'utf8');
 const images = fs.readFileSync('monster-hero/data/images/images-ally.js', 'utf8');
 const faceIcons = fs.readFileSync('tools/make-face-icons.js', 'utf8');
-const iceRulerRate = (currentRate, heroId) => ['Snegurochka', 'Undine', 'Yaobikuni'].includes(heroId)
+const iceRulerRate = (currentRate, heroId, iceLockActive, heroDist, enemyDist) => ['Snegurochka', 'Undine', 'Yaobikuni'].includes(heroId)
+  && iceLockActive
+  && heroDist === enemyDist
   ? Math.min(1, currentRate + 0.5)
   : currentRate;
+const targetHeroes = ['Snegurochka', 'Undine', 'Yaobikuni'];
+const conditionCasesPass = targetHeroes.every(heroId => [
+  [0.05, heroId, false, 1, 1, 0.05], // 楔なし
+  [0.05, heroId, false, 1, 1, 0.05], // 楔準備中（iceLockActive=false）
+  [0.05, heroId, true, 1, 2, 0.05],  // 楔発動中・別距離
+  [0.05, heroId, true, 1, 1, 0.55],  // 楔発動中・同距離
+].every(([current, id, active, heroDist, enemyDist, expected]) => iceRulerRate(current, id, active, heroDist, enemyDist) === expected));
 const rateCases = [
-  [0.05, 'Snegurochka', 0.55],
-  [0.5, 'Undine', 1],
-  [0.8, 'Yaobikuni', 1],
-  [0.05, 'Mocchi', 0.05],
-  [0.05, undefined, 0.05],
+  [0.05, 'Snegurochka', true, 1, 1, 0.55],
+  [0.5, 'Undine', true, 2, 2, 1],
+  [0.8, 'Yaobikuni', true, 3, 3, 1],
+  [0.05, 'Mocchi', true, 1, 1, 0.05], // 供モンに対象種がいても勇者IDが対象外なら発動しない
+  [0.05, undefined, true, 1, 1, 0.05],
 ];
 const checks = [
-  ['自動ガッツ回復率の加算・上限・勇者限定', rateCases.every(([current, hero, expected]) => iceRulerRate(current, hero) === expected)],
-  ['対象3体のtraitDesc', (ally.match(/traitDesc:"勇者モン選択時：自動ガッツ回復率\+50%（上限100%）"/g) || []).length === 3],
+  ['対象3体の楔状態・距離条件', conditionCasesPass],
+  ['自動ガッツ回復率の加算・上限・勇者限定', rateCases.every(([current, hero, active, heroDist, enemyDist, expected]) => iceRulerRate(current, hero, active, heroDist, enemyDist) === expected)],
+  ['対象3体のtraitDesc', (ally.match(/traitDesc:"勇者モン選択時：絶氷の楔発動中かつ敵と同じ距離の場合、自動ガッツ回復率\+50%（上限100%）"/g) || []).length === 3],
   ['基礎能力・適性・合流値', /Snegurochka:[\s\S]*?baseHp:400, baseGuts:150, baseAtk:135, baseDef:80[\s\S]*?plusStats:\{hp:150,atk:40,def:10,guts:40\}[\s\S]*?distAptitude:\['D','E','B','A'\]/.test(ally)],
   ['通常技9段階', /Snegurochka: \["アイスブレード"[\s\S]*?"ジングルベル"\]/.test(ally)],
   ['固有技9段階・倍率・消費', /name:"アイスアロー"[\s\S]*?baseMult:2\.2,baseGuts:44[\s\S]*?"メリークリスマス"/.test(ally)],
@@ -32,13 +42,15 @@ const checks = [
   ['発動中だけ敵の最終与ダメージを30%減少', /iceLockActive = iceLockTurns>0 && !iceLockPreparing/.test(game) && /iceLockEnemyDamageMult = iceLockActive \? 0\.7 : 1\.0/.test(game) && /dmgBase[\s\S]*?getPermaBuff\('dmgCutPct'\)[\s\S]*?\*iceLockEnemyDamageMult/.test(game)],
   // 絶氷の楔と氷海の支配者は対象IDだけを共有し、効果処理は分離する。
   ['氷海の支配者は対象3体の勇者だけに自動ガッツ回復率+50%', game.includes("const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni'])")
-    && game.includes('applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id)')
+    && game.includes('applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id,iceLockActive,heroDist,enemyDist)')
+    && game.includes('&& iceLockActive')
+    && game.includes('&& heroDist===enemyDist')
     && game.includes('? Math.min(1, currentRate + 0.5)')],
   ['旧与ダメージ1.5倍処理を削除', !game.includes('iceRulerMult') && !game.includes('isIceRulerActive') && !game.includes('data-ice-ruler-active')],
-  ['付与中フラグを特性判定へ混ぜない', !game.includes('activatesIceLock') && !/getDmg\([^\n]*activatedIceLockThisTurn/.test(game)],
+  ['準備中は特性を発動しない', game.includes('const iceLockActive = iceLockTurns>0 && !iceLockPreparing') && !game.includes('activatesIceLock') && !/getDmg\([^\n]*activatedIceLockThisTurn/.test(game)],
   ['敵情報欄に絶氷の準備・残りターン・軽減を維持', /data-ice-lock-status[\s\S]*?iceLockPreparing\?'準備':[\s\S]*?iceLockTurns\}T　⬇30%/.test(game) && /text-\[7px\][\s\S]*?❄️絶氷/.test(game)],
   ['専用水攻撃モーション', /atkMotion:'waterBurst'/.test(ally) && /@keyframes waterBurstAttack/.test(game) && /@keyframes waterBurstLunge/.test(game)],
-  ['ヘルプに特性・固有効果', help.includes('勇者特性「氷海の支配者」') && help.includes('「絶氷の楔」')],
+  ['ヘルプに特性・固有効果と全発動条件', help.includes('勇者特性「氷海の支配者」') && help.includes('「絶氷の楔」が発動中（準備中を除く）かつ勇者モンと敵が同じ距離')],
   // 立ち絵は他のモンスターと同じ正方形・同じ余白へそろえる(import-monster-art.jsの出力)。
   // 元絵は縦長(1024x1536)のままだったため、丸いアイコンや一覧では上下が切れ、
   // ほかのモンスターと頭身がそろわなかった

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6658a71885342565
+// source-sha256: 4aa0affaf24920ce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 00:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 01:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8523,7 +8523,7 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
 // 固有効果と勇者特性は別の処理だが、対象種の一覧だけを共有する。
 const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni']);
 const isIceLockMonster = id => ICE_LOCK_MONSTER_IDS.includes(id);
-const applyIceRulerAutoGutsRecovery = (currentRate, heroId) => isIceLockMonster(heroId) ? Math.min(1, currentRate + 0.5) : currentRate;
+const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroDist, enemyDist) => isIceLockMonster(heroId) && iceLockActive && heroDist === enemyDist ? Math.min(1, currentRate + 0.5) : currentRate;
 const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null, powerOverride = null) => {
   const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
   const base = ENEMY_DATA[enemyKey];
@@ -15912,6 +15912,7 @@ function MonsterHeroGame() {
   const iceLockPreparing = !!getWaveBuff('iceLockPreparing', false);
   const iceLockActive = iceLockTurns > 0 && !iceLockPreparing;
   const iceLockEnemyDamageMult = iceLockActive ? 0.7 : 1.0;
+  const heroDist = slots.findIndex(isHeroSlotMon);
   const getIncomingDamageBeforeTurnReduction = useCallback(intent => {
     // ためる(CHARGE)ターンはダメージが無い。必殺技のダメージは発動(SPECIAL)ターンに出る
     if (!intent || intent.type !== 'ATTACK' && intent.type !== 'SPECIAL') return 0;
@@ -16380,8 +16381,8 @@ function MonsterHeroGame() {
     }
     const autoHpRecoveryRate = getPermaBuff('autoHpRecovery', 0.1);
     const currentAutoGutsRecovery = Math.max(0, 0.05 + (autoHpRecoveryRate - 0.1)) + getPermaBuff('gutsRecoverPct');
-    // 氷海の支配者は既存効果の集計後に50パーセントポイントを足す。勇者以外の編成メンバーは見ない。
-    const gutsRecoveryRate = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, mainHero?.id);
+    // 氷海の支配者は、絶氷の楔発動中かつ勇者と敵が同じ距離の場合だけ50パーセントポイントを足す。
+    const gutsRecoveryRate = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, mainHero?.id, iceLockActive, heroDist, enemyDist);
     const gutsRegen = Math.floor(effectiveMaxGuts * gutsRecoveryRate);
     setGuts(p => Math.min(effectiveMaxGuts, p + gutsRegen));
     let didRegen = false;
@@ -26973,7 +26974,7 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 7
-    }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id) * 100), "%"), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
+    }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100), "%"), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 8
