@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 14:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 14:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -890,7 +890,8 @@ const diagnoseLegacyDistAptBoosts = (masu) => {
   return { status:'SAFE_EXACT', reasons, proposed, checks };
 };
 // 第6B-3段階の個体全体診断。能力と間合いを独立分類したうえで、安全と判定した候補だけを
-// コピーへ適用し、4能力・4適性・総合力・既存ポイントが一切変わらないことを再確認する。
+// コピーへ適用し、能力は確定した生成時ベースとの個体差を現行ベースへ足し、
+// 間合いは従来値を保つことを独立に再確認する。既存ポイントはどちらも変更しない。
 // 通常個体は individualStats を持たないのが正常なので、能力側は移行済み相当として扱う。
 const diagnoseLegacyMasuBaselineMigration = (masu) => {
   const statKeys = ['hp','atk','def','guts'];
@@ -899,9 +900,11 @@ const diagnoseLegacyMasuBaselineMigration = (masu) => {
   const individualStats = { status:'BLOCKED', proposedOffsets:{}, reasons:[] };
   const aptitude = { status:'BLOCKED', proposedBoosts:{}, reasons:[] };
   const checks = {
-    statsPreserved:false,
+    statOffsetsCorrect:false,
+    statsMatchCurrentBase:false,
+    statDeltaMatchesBaseline:false,
     aptitudePreserved:false,
-    powerPreserved:false,
+    powerRecalculated:false,
     statPointsPreserved:false,
     distAptPointsPreserved:false,
   };
@@ -943,6 +946,7 @@ const diagnoseLegacyMasuBaselineMigration = (masu) => {
     if (result.status === 'SAFE_EXACT') {
       individualStats.proposedOffsets = { ...result.individualStatOffsets };
       proposed.individualStatOffsets = { ...result.individualStatOffsets };
+      individualStats.confirmedBaseline = { ...result.candidates[0] };
     }
   }
 
@@ -955,7 +959,7 @@ const diagnoseLegacyMasuBaselineMigration = (masu) => {
   }
 
   const before = mergeMasuIntoMon(masu);
-  const preservesCandidate = candidate => {
+  const preservesAptitudeCandidate = candidate => {
     const resolved = mergeMasuIntoMon(candidate);
     const statField = key => `base${key === 'hp' ? 'Hp' : key[0].toUpperCase() + key.slice(1)}`;
     return !!before && !!resolved
@@ -965,12 +969,7 @@ const diagnoseLegacyMasuBaselineMigration = (masu) => {
       && JSON.stringify(masu.statPoints) === JSON.stringify(candidate.statPoints)
       && masu.distAptPoints === candidate.distAptPoints;
   };
-  if (individualStats.status === 'SAFE_EXACT' && !preservesCandidate({ ...masu, individualStatOffsets:proposed.individualStatOffsets })) {
-    individualStats.status = 'BLOCKED';
-    individualStats.proposedOffsets = {};
-    individualStats.reasons.push('能力候補の適用前後で能力・適性・総合力・既存ポイントを維持できない');
-  }
-  if (aptitude.status === 'SAFE_EXACT' && !preservesCandidate({ ...masu, distAptBoosts:proposed.distAptBoosts })) {
+  if (aptitude.status === 'SAFE_EXACT' && !preservesAptitudeCandidate({ ...masu, distAptBoosts:proposed.distAptBoosts })) {
     aptitude.status = 'BLOCKED';
     aptitude.proposedBoosts = {};
     aptitude.reasons.push('間合い候補の適用前後で能力・適性・総合力・既存ポイントを維持できない');
@@ -981,11 +980,25 @@ const diagnoseLegacyMasuBaselineMigration = (masu) => {
   const candidate = { ...masu, ...safeProposed };
   const after = mergeMasuIntoMon(candidate);
   const statField = key => `base${key === 'hp' ? 'Hp' : key[0].toUpperCase() + key.slice(1)}`;
-  checks.statsPreserved = !!before && !!after && statKeys.every(key => before[statField(key)] === after[statField(key)]);
+  const currentBaseStat = key => Number(base[statField(key)]);
+  const spentStat = key => Number(masu.statPoints[key]);
+  const confirmedBaseline = individualStats.confirmedBaseline;
+  checks.statOffsetsCorrect = individualStats.status !== 'SAFE_EXACT' || (!!confirmedBaseline && statKeys.every(key =>
+    proposed.individualStatOffsets[key] === Number(masu.individualStats[key]) - Number(confirmedBaseline[key])));
+  checks.statsMatchCurrentBase = !!after && (individualStats.status !== 'SAFE_EXACT' || statKeys.every(key =>
+    after[statField(key)] === currentBaseStat(key) + proposed.individualStatOffsets[key] + spentStat(key)));
+  checks.statDeltaMatchesBaseline = !!before && !!after && (individualStats.status !== 'SAFE_EXACT' || statKeys.every(key =>
+    after[statField(key)] - before[statField(key)] === currentBaseStat(key) - Number(confirmedBaseline[key])));
   checks.aptitudePreserved = !!before && !!after && JSON.stringify(before.distAptitude) === JSON.stringify(after.distAptitude);
-  checks.powerPreserved = !!before && !!after && monsterPowerOf(before) === monsterPowerOf(after);
+  checks.powerRecalculated = !!after && monsterPowerOf(after) === Math.round(monsterPowerParts(after).total);
   checks.statPointsPreserved = JSON.stringify(masu.statPoints) === JSON.stringify(candidate.statPoints);
   checks.distAptPointsPreserved = masu.distAptPoints === candidate.distAptPoints;
+  if (individualStats.status === 'SAFE_EXACT' && (!checks.statOffsetsCorrect || !checks.statsMatchCurrentBase
+    || !checks.statDeltaMatchesBaseline || !checks.statPointsPreserved || !checks.powerRecalculated)) {
+    individualStats.status = 'BLOCKED';
+    individualStats.proposedOffsets = {};
+    individualStats.reasons.push('能力候補が個体差・現行ベース・能力変化量・既存statPoints・総合力と一致しない');
+  }
   const statuses = [individualStats.status, aptitude.status];
   const overallStatus = statuses.includes('BLOCKED') ? 'BLOCKED'
     : statuses.every(status => status === 'ALREADY_MODERN') ? 'ALREADY_MODERN'

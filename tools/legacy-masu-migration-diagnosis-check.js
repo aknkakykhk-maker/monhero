@@ -38,21 +38,22 @@ const run = (label, input, overallStatus, individualStatus, aptitudeStatus) => {
 const oldNormal = baseMasu('Mocchi', ['A','S','C','D']);
 let result = run('旧通常個体', oldNormal, 'SAFE_EXACT', 'ALREADY_MODERN', 'SAFE_EXACT');
 check('旧通常個体: 移行不要な能力候補は空', snapshot(result.individualStats.proposedOffsets) === '{}');
-check('旧通常個体: 4能力・4適性・総合力・ポイントを保全', Object.values(result.checks).every(Boolean));
+check('旧通常個体: 間合い・ポイントを保全し総合力を再計算', Object.values(result.checks).every(Boolean));
 
 const oldRegenerated = {...baseMasu('Mocchi',['A','B','C','D']),individualStats:{hp:450,atk:110,def:100,guts:108}};
 result = run('旧再生個体', oldRegenerated, 'SAFE_EXACT', 'SAFE_EXACT', 'SAFE_EXACT');
 check('旧再生個体: 4能力候補を返す', snapshot(result.individualStats.proposedOffsets) === '{"hp":-50,"atk":10,"def":0,"guts":-12}');
+check('旧再生個体: 個体差を現行ベースへ適用', result.checks.statOffsetsCorrect && result.checks.statsMatchCurrentBase && result.checks.statDeltaMatchesBaseline);
 
 const pixieCases = [
-  ['旧', {hp:250,atk:160,def:50,guts:130}, 'BLOCKED'],
+  ['旧', {hp:250,atk:160,def:50,guts:130}, 'SAFE_EXACT'],
   ['新', {hp:250,atk:160,def:50,guts:180}, 'SAFE_EXACT'],
   ['曖昧', {hp:250,atk:160,def:50,guts:154}, 'AMBIGUOUS'],
 ];
 pixieCases.forEach(([label, individualStats, status]) => run(`ピクシー${label}`,
   {...baseMasu('Pixie',['C','A','B','C']),individualStats}, status === 'AMBIGUOUS' ? 'PARTIAL' : status === 'BLOCKED' ? 'BLOCKED' : 'SAFE_EXACT', status, 'SAFE_EXACT'));
 const mitarashiCases = [
-  ['旧', {hp:550,atk:110,def:110,guts:100}, 'BLOCKED'],
+  ['旧', {hp:550,atk:110,def:110,guts:100}, 'SAFE_EXACT'],
   ['新', {hp:680,atk:150,def:100,guts:85}, 'SAFE_EXACT'],
   ['曖昧', {hp:620,atk:130,def:110,guts:95}, 'AMBIGUOUS'],
 ];
