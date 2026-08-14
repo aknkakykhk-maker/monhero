@@ -78,6 +78,7 @@ node tools/build.js --check
 | `node ranking-normal-display-check.js` | NormalのGET 3件が変換・絞り込み・並べ替え・重複排除を経て、正規化済みの同一stateキーで画面へ3件表示されることを確認する。 |
 | `node enemy-scan-check.js` | ENEMY SCANと実戦の行動定義・確率・威力倍率の共有、表示時に乱数を消費しないことを確認する。 |
 | `node bond-ranking-dedupe-check.js` | 同じ人・同じ種類のマスモンが、個体ID付きの記録と古い記録に分かれて二重に並ばないことを確認する。 |
+| `node bond-levels-table-check.js` | 絆Lvの正本テーブル(`bond_levels`)まわりを、Supabaseをスタブした実ブラウザで確認する。テーブルがある場合は正本の全員が並び、正本にまだ載っていない人は記録側の集計で補われること、テーブルが無い場合(適用前)は404を受けても壊れず従来どおり表示されることを見る(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
 | `node bond-ranking-check.js` | 絆ランキングの全party集計、新旧個体識別、最高Lv重複排除、空・失敗表示を確認する。 |
 | `node battle-check.js` | 実際にWAVEを自動で戦い、距離撃の取得・撃破ファンファーレ・引き継ぎ技の強化を確認する。 |
 | `node battle-damage-preview-check.js` | 味方の連撃・追撃を含む共通予測と、選択中ガードを反映した敵の予定ダメージ表示を静的に確認する。 |

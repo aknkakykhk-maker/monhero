@@ -13,7 +13,10 @@ assert(src.includes('const [bondRankingData, setBondRankingData]')&&src.includes
 // 絆Lvは「新しい記録」から取る。rankings.id が uuid だと id.desc は作成順にならず、
 // 毎回ばらばらの記録を拾って「プレイしても更新されない」ように見えるため、記録時刻で並べる
 assert(src.includes("const BOND_RANKING_ORDERS = ['created_at.desc.nullslast', 'id.desc'];"));
-assert(/if \(levelKind === 'bond'\)[\s\S]{0,200}for \(const order of BOND_RANKING_ORDERS\)/.test(src));
+assert(/if \(levelKind === 'bond'\)[\s\S]{0,900}for \(const order of BOND_RANKING_ORDERS\)/.test(src));
+// 絆Lvの正本テーブル(bond_levels)があればそちらを先に読み、無い環境では記録側の集計だけで出す
+assert(/if \(levelKind === 'bond'\)[\s\S]{0,400}await sbFetchBondLevels\(requestId\)/.test(src));
+assert(src.includes('const mergeBondRankingEntries') && src.includes('mergeBondRankingEntries(primary, legacy)'));
 assert(!src.includes("levelKind === 'bond' ? 'id.desc'"));
 assert(src.includes('await Promise.allSettled(diffs.map(loadOne))'));
 assert(src.includes('finishRankingStatus(levelStatusKey, levelGeneration'));
