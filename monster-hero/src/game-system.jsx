@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 10:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 11:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -778,6 +778,20 @@ const monsterPowerOf = (mon) => Math.round(monsterPowerParts(mon).total);
 // 保存データのマスモンから総合力を出す。詳細画面と同じ解決(mergeMasuIntoMon)を通してから
 // 同じ式へ渡すので、ベース値と強化値の二重加算は起きない
 const masuPowerOf = (masu) => monsterPowerOf(mergeMasuIntoMon(masu));
+// 第3段階で新旧表現を併記する新規個体は、保存前に能力・適性・総合力が一致することを確認する。
+// 既存個体のロードには使わないため、旧データを補完・書換えする処理にはならない。
+const masuBaselineRepresentationsMatch = (masu) => {
+  if (!masu || !Array.isArray(masu.distAptBoosts)) return false;
+  const legacy = { ...masu };
+  delete legacy.individualStatOffsets;
+  delete legacy.distAptBoosts;
+  const oldResolved = mergeMasuIntoMon(legacy);
+  const newResolved = mergeMasuIntoMon(masu);
+  if (!oldResolved || !newResolved) return false;
+  const values = mon => [mon.baseHp, mon.baseAtk, mon.baseDef, mon.baseGuts, ...mon.distAptitude];
+  return JSON.stringify(values(oldResolved)) === JSON.stringify(values(newResolved))
+    && monsterPowerOf(oldResolved) === monsterPowerOf(newResolved);
+};
 // 一覧・詳細で出す桁区切りの表記
 const formatMonsterPower = (power) => Number(power || 0).toLocaleString();
 
@@ -834,6 +848,28 @@ const applyEnhancePlanToMasu = (masu, plan) => {
   });
   if (used <= 0) return null;
   return { masu: { ...masu, distApt, ...(distAptBoosts ? { distAptBoosts } : {}), statPoints, distAptPoints: available - used }, used };
+};
+// 絆ポイントリセットの保存値計算。新形式は投入段階数を直接返却し、新旧の適性表現を同時に戻す。
+// 旧形式は従来どおり完成適性と最新ベースとの差から返却数を求める。
+const buildMasuBondPointReset = (masu, base) => {
+  if (!masu || !base) return null;
+  const baseApt = base.distAptitude || ['C','C','C','C'];
+  const aptSpent = Array.isArray(masu.distAptBoosts)
+    ? masu.distAptBoosts.reduce((sum, value) => sum + Math.max(0, Math.floor(Number(value) || 0)), 0)
+    : (masu.distApt || baseApt).reduce((sum, g, i) => sum + Math.max(0, DIST_APTITUDE_GRADES.indexOf(g) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])), 0);
+  const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, val]) => sum + Math.ceil((val || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
+  const totalRefund = aptSpent + statSpent;
+  if (totalRefund <= 0) return null;
+  return {
+    refundedPoints: totalRefund,
+    nextMasu: {
+      ...masu,
+      distApt: [...baseApt],
+      ...(Array.isArray(masu.distAptBoosts) ? { distAptBoosts:[0,0,0,0] } : {}),
+      statPoints: { hp:0, atk:0, def:0, guts:0 },
+      distAptPoints: (masu.distAptPoints || 0) + totalRefund,
+    },
+  };
 };
 // 下書きを当てはめたあとの総合力。当てはめられない(ポイント不足など)ときは現在の総合力を返す
 const plannedMasuPowerOf = (masu, plan) => {
@@ -975,13 +1011,18 @@ const donationPsycheValue = (masu) => Math.floor(masuBondLevelInfo(masu).level /
 const randomRegenerationStat = (baseValue, random = Math.random) => Math.round(baseValue * (0.9 + Math.max(0, Math.min(1, Number(random()) || 0)) * 0.2));
 const buildRegeneratedMasu = (base, random = Math.random, now = Date.now()) => {
   if (!base) return null;
-  return {
+  // 乱数は完成値の4回だけ引き、offsetは確定した同じ値から算出する（再抽選しない）。
+  const individualStats = { hp:randomRegenerationStat(base.baseHp,random), atk:randomRegenerationStat(base.baseAtk,random), def:randomRegenerationStat(base.baseDef,random), guts:randomRegenerationStat(base.baseGuts,random) };
+  const masu = {
     id:`masu_regenerated_${now}_${Math.random().toString(36).slice(2,8)}`, baseId:base.id, name:base.name,
     bondXp:0, distAptPoints:0, distApt:[...(base.distAptitude || ['C','C','C','C'])],
+    distAptBoosts:[0,0,0,0],
     statPoints:{hp:0,atk:0,def:0,guts:0},
-    individualStats:{ hp:randomRegenerationStat(base.baseHp,random), atk:randomRegenerationStat(base.baseAtk,random), def:randomRegenerationStat(base.baseDef,random), guts:randomRegenerationStat(base.baseGuts,random) },
+    individualStats,
+    individualStatOffsets:{ hp:individualStats.hp-base.baseHp, atk:individualStats.atk-base.baseAtk, def:individualStats.def-base.baseDef, guts:individualStats.guts-base.baseGuts },
     createdAt:now,
   };
+  return masuBaselineRepresentationsMatch(masu) ? masu : null;
 };
 const rosterBaseId = (entryId, masuMons) => {
   if (typeof entryId !== 'string') return null;
@@ -6924,15 +6965,10 @@ function MonsterHeroGame() {
     if (!masu) return;
     const base = ALL_PLAYER_MONSTERS[masu.baseId];
     if (!base) return;
-    const baseApt = base.distAptitude || ['C','C','C','C'];
-    const aptSpent = Array.isArray(masu.distAptBoosts)
-      ? masu.distAptBoosts.reduce((sum, value) => sum + Math.max(0, Math.floor(Number(value) || 0)), 0)
-      : (masu.distApt || baseApt).reduce((sum, g, i) => sum + Math.max(0, DIST_APTITUDE_GRADES.indexOf(g) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])), 0);
-    const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, val]) => sum + Math.ceil((val || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
-    const totalRefund = aptSpent + statSpent;
-    if (totalRefund <= 0) return; // 使った強化ポイントが無ければ意味が無いので何もしない
+    const reset = buildMasuBondPointReset(masu, base);
+    if (!reset) return; // 使った強化ポイントが無ければ意味が無いので何もしない
     setMasuMons(prev => {
-      const next = prev.map(m => m.id === masuId ? { ...m, distApt: [...baseApt], ...(Array.isArray(m.distAptBoosts) ? { distAptBoosts:[0,0,0,0] } : {}), statPoints: { hp:0, atk:0, def:0, guts:0 }, distAptPoints: (m.distAptPoints || 0) + totalRefund } : m);
+      const next = prev.map(m => m.id === masuId ? reset.nextMasu : m);
       storeSet('mh_masu_mons', next, false);
       return next;
     });
@@ -7269,9 +7305,11 @@ function MonsterHeroGame() {
       uniqueSkillLevels: {},
       distAptPoints: Math.max(0, startLevel.level - 1),
       distApt: [...(base.distAptitude || ['C','C','C','C'])],
+      distAptBoosts: [0,0,0,0],
       statPoints: { hp: 0, atk: 0, def: 0, guts: 0 },
       createdAt: Date.now(),
     };
+    if (!masuBaselineRepresentationsMatch(masu)) return null;
     setMasuMons(prev => { const next = [...prev, masu]; storeSet('mh_masu_mons', next, false); return next; });
     setMasuRegisteredThisRun(true);
     return masu;
