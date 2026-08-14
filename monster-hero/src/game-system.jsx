@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 03:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 09:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3760,9 +3760,12 @@ const chooseEnemyAction = (ent,currentDist,random=Math.random,state={}) => {
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
 // 絶氷の楔(固有効果)と氷海の支配者(勇者特性)を持つ人魚たち。
-// 実装は1つを共有するので、同じ効果のモンスターを足すときはここへIDを足すだけでよい
+// 固有効果と勇者特性は別の処理だが、対象種の一覧だけを共有する。
 const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni']);
 const isIceLockMonster = (id) => ICE_LOCK_MONSTER_IDS.includes(id);
+const applyIceRulerAutoGutsRecovery = (currentRate, heroId) => isIceLockMonster(heroId)
+  ? Math.min(1, currentRate + 0.5)
+  : currentRate;
 const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null) => {
   const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
   const base = ENEMY_DATA[enemyKey];
@@ -8163,10 +8166,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
   // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」。handleEnemyTurnの計算と同じ式にする。
   const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + effectiveDef * mult) : 0;
-  // 氷海の支配者も、絶氷の楔の実効果と同じ発動状態を使う。
-  const isIceRulerActive = (slotIdx, targetDist) => isIceLockMonster(mainHero?.id)
-    && iceLockActive
-    && slotIdx===targetDist;
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx-attackStartDist);
@@ -8176,10 +8175,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     else if (card.type==='unique') { const level=card.evoLevel||0; const chuuniBonus=(card.monId==='Ark'||card.monId==='Iblis')?0.1*getPermaBuff('chuuniUniqueStack'):0; baseDmgMult=card.baseMult+(level*0.5)+chuuniBonus; }
     else if (card.type==='range_atk') { baseDmgMult=rangeAttackDamageMultiplier(card,attackStartDist); }
     else { baseDmgMult=card.mult||card.baseMult||1.0; }
-    // 氷海の支配者は勇者モンがスネグーラチカの場合だけ発動する。供モンの種は見ない。
-    // distMult（既存の距離一致×1.5）とは別項なので、両条件成立時は1.5×1.5になる。
-    const iceRulerMult=isIceRulerActive(slotIdx,attackStartDist) ? 1.5 : 1.0;
-    let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0)*iceRulerMult;
+    let traitMult=(mainHero?.id==='Golem'?1.2:1.0)*(mainHero?.id==='Pixie'&&card.type==='unique'?2.0:1.0);
     // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
     // 攻撃したモンスター自身のグレードだけを見るのではない
     const distBonusMult=1.0+(distDmgBonus[slotIdx]||0)+(distAptPct[slotIdx]||0);
@@ -8368,7 +8364,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (immediateEffects.iceLockRefreshed) setWaveBuffs(p=>({...p,iceLockPreparing:false}));
     if (currentHp<=0) { setIsBusy(false); return; }
     const autoHpRecoveryRate=getPermaBuff('autoHpRecovery',0.1);
-    const gutsRecoveryRate=Math.max(0,0.05+(autoHpRecoveryRate-0.1))+getPermaBuff('gutsRecoverPct');
+    const currentAutoGutsRecovery=Math.max(0,0.05+(autoHpRecoveryRate-0.1))+getPermaBuff('gutsRecoverPct');
+    // 氷海の支配者は既存効果の集計後に50パーセントポイントを足す。勇者以外の編成メンバーは見ない。
+    const gutsRecoveryRate=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id);
     const gutsRegen=Math.floor(effectiveMaxGuts*gutsRecoveryRate);
     setGuts(p=>Math.min(effectiveMaxGuts,p+gutsRegen));
     let didRegen=false;
@@ -11987,7 +11985,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {enemy&&(
               <div className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
                 <div className="flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1">
-                  <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/><span className="max-w-[34vw] truncate">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[8px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{iceLockTurns>0&&<span data-ice-lock-status className="shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[7px] not-italic tracking-tighter whitespace-nowrap text-cyan-100">❄️絶氷 {iceLockPreparing?'準備':<>{iceLockTurns}T　⬇30%{isIceRulerActive(slots.findIndex(isHeroSlotMon),enemyDist)&&<>　<span data-ice-ruler-active className="text-amber-100">⚔️特性</span></>}</>}</span>}</span>
+                  <span className={`flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-none ${wave===10?'text-red-500 animate-pulse':'text-slate-200'}`}><Skull size={11} className="shrink-0"/><span className="max-w-[34vw] truncate">{enemy.name}</span><span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[8px] text-white font-bold border ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`}>{RANGE_LABELS[enemyDist]}</span>{iceLockTurns>0&&<span data-ice-lock-status className="shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[7px] not-italic tracking-tighter whitespace-nowrap text-cyan-100">❄️絶氷 {iceLockPreparing?'準備':<>{iceLockTurns}T　⬇30%</>}</span>}</span>
                   <span className="text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]">{Math.max(0,enemy.hp).toLocaleString()} / {enemy.maxHp.toLocaleString()}</span>
                 </div>
                 <div className="h-2.5 bg-slate-900 rounded-full overflow-hidden border border-white/20 relative shadow-inner">
@@ -12227,7 +12225,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {getPermaBuff('globalComboDmgPct')>0&&<div className="text-[7px] font-black text-sky-300 bg-black/60 px-2 py-0.5 rounded border border-sky-300/50 flex items-center gap-1 shadow-lg"><Sword size={7}/> 全体連撃 +{Math.round(getPermaBuff('globalComboDmgPct')*100)}%</div>}
                 {kikiCardBonus>0&&<div className="text-[7px] font-black text-violet-300 bg-black/60 px-2 py-0.5 rounded border border-violet-300/50 flex items-center gap-1 shadow-lg"><PlusCircle size={7}/> カード上限 +1（残り{Math.ceil(getPermaBuff('kikiCardBonusTurns'))}T）</div>}
                 <div className={`text-[7px] font-black bg-black/60 px-2 py-0.5 rounded border flex items-center gap-1 shadow-lg uppercase ${getPermaBuff('autoHpRecovery',0.1)>=0.1?'text-rose-400 border-rose-400/50':'text-red-400 border-red-400/50'}`}><Heart size={7}/> ライフ回復 {Math.round(getPermaBuff('autoHpRecovery',0.1)*100)}%</div>
-                <div className="text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"><Zap size={7}/> ガッツ回復 {Math.round((Math.max(0,0.05+(getPermaBuff('autoHpRecovery',0.1)-0.1))+getPermaBuff('gutsRecoverPct'))*100)}%</div>
+                <div className="text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"><Zap size={7}/> ガッツ回復 {Math.round(applyIceRulerAutoGutsRecovery(Math.max(0,0.05+(getPermaBuff('autoHpRecovery',0.1)-0.1))+getPermaBuff('gutsRecoverPct'),mainHero?.id)*100)}%</div>
                 {/* === ターン限定バフ（都度表示） === */}
                 {getNextTurnBuff('melosoFullRecoveryMult',0)>0&&<div className="text-[7px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"><Heart size={8}/> 次ターン全回復</div>}
                 {getTurnBuff('atkMult',1.0)>1&&<div className="text-[7px] font-black text-red-500 bg-red-950/60 px-2 py-1 rounded-full border border-red-500/50 animate-pulse uppercase flex items-center gap-1"><Sparkles size={8}/> Boost x{getTurnBuff('atkMult',1.0).toFixed(1)}</div>}

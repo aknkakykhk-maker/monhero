@@ -62,6 +62,7 @@ for (const [id, spec] of Object.entries(SPEC)) {
   check(`${spec.name}の固有技は倍率2.2・消費44`, m.unique.baseMult === 2.2 && m.unique.baseGuts === 44);
   check(`${spec.name}は専用モーション waterBurst`, m.atkMotion === 'waterBurst');
   check(`${spec.name}の勇者特性は氷海の支配者`, m.trait === '氷海の支配者');
+  check(`${spec.name}の勇者特性説明`, m.traitDesc === '勇者モン選択時：自動ガッツ回復率+50%（上限100%）');
   check(`${spec.name}の固有効果は絶氷の楔`, /絶氷の楔/.test(m.unique.effectDesc) && /30%減少/.test(m.unique.effectDesc) && /消費ガッツ3%減/.test(m.unique.effectDesc));
   check(`${spec.name}の固有技IDが自分を指す`, m.unique.monId === id);
 }
@@ -69,7 +70,7 @@ for (const [id, spec] of Object.entries(SPEC)) {
 // --- ③ 絶氷の楔・氷海の支配者はスネグーラチカと実装を共有する ---
 check('絶氷の楔を持つ人魚を1か所のID一覧で持つ',
   source.includes("const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni'])")
-    && source.includes('isIceLockMonster(mainHero?.id)') && source.includes('isIceLockMonster(card.monId)'));
+    && source.includes('isIceLockMonster(heroId)') && source.includes('isIceLockMonster(card.monId)'));
 check('絶氷の楔の実処理を増やしていない(共有のまま)', (source.match(/iceLockTurns:5/g) || []).length === 1);
 
 // --- ④ マーケット6商品 ---

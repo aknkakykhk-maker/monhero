@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7972680e6446afd4
+// source-sha256: b781cf3602915c2a
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 03:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 09:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7744,9 +7744,10 @@ const chooseEnemyAction = (ent, currentDist, random = Math.random, state = {}) =
 
 // 難易度選択プレビューと本番の敵生成が必ず同じ値になるための唯一の生成ヘルパー。
 // 絶氷の楔(固有効果)と氷海の支配者(勇者特性)を持つ人魚たち。
-// 実装は1つを共有するので、同じ効果のモンスターを足すときはここへIDを足すだけでよい
+// 固有効果と勇者特性は別の処理だが、対象種の一覧だけを共有する。
 const ICE_LOCK_MONSTER_IDS = Object.freeze(['Snegurochka', 'Undine', 'Yaobikuni']);
 const isIceLockMonster = id => ICE_LOCK_MONSTER_IDS.includes(id);
+const applyIceRulerAutoGutsRecovery = (currentRate, heroId) => isIceLockMonster(heroId) ? Math.min(1, currentRate + 0.5) : currentRate;
 const createBattleEnemy = (wave, difficulty, forcedEnemyKey = null, powerOverride = null) => {
   const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
   const base = ENEMY_DATA[enemyKey];
@@ -15083,8 +15084,6 @@ function MonsterHeroGame() {
   };
   // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」。handleEnemyTurnの計算と同じ式にする。
   const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + effectiveDef * mult) : 0;
-  // 氷海の支配者も、絶氷の楔の実効果と同じ発動状態を使う。
-  const isIceRulerActive = (slotIdx, targetDist) => isIceLockMonster(mainHero?.id) && iceLockActive && slotIdx === targetDist;
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx - attackStartDist);
@@ -15101,10 +15100,7 @@ function MonsterHeroGame() {
     } else {
       baseDmgMult = card.mult || card.baseMult || 1.0;
     }
-    // 氷海の支配者は勇者モンがスネグーラチカの場合だけ発動する。供モンの種は見ない。
-    // distMult（既存の距離一致×1.5）とは別項なので、両条件成立時は1.5×1.5になる。
-    const iceRulerMult = isIceRulerActive(slotIdx, attackStartDist) ? 1.5 : 1.0;
-    let traitMult = (mainHero?.id === 'Golem' ? 1.2 : 1.0) * (mainHero?.id === 'Pixie' && card.type === 'unique' ? 2.0 : 1.0) * iceRulerMult;
+    let traitMult = (mainHero?.id === 'Golem' ? 1.2 : 1.0) * (mainHero?.id === 'Pixie' && card.type === 'unique' ? 2.0 : 1.0);
     // 間合い適性は「その距離枠の補正値」。編成全員のぶんが合算済み(distAptPct)で、
     // 攻撃したモンスター自身のグレードだけを見るのではない
     const distBonusMult = 1.0 + (distDmgBonus[slotIdx] || 0) + (distAptPct[slotIdx] || 0);
@@ -15386,7 +15382,9 @@ function MonsterHeroGame() {
       return;
     }
     const autoHpRecoveryRate = getPermaBuff('autoHpRecovery', 0.1);
-    const gutsRecoveryRate = Math.max(0, 0.05 + (autoHpRecoveryRate - 0.1)) + getPermaBuff('gutsRecoverPct');
+    const currentAutoGutsRecovery = Math.max(0, 0.05 + (autoHpRecoveryRate - 0.1)) + getPermaBuff('gutsRecoverPct');
+    // 氷海の支配者は既存効果の集計後に50パーセントポイントを足す。勇者以外の編成メンバーは見ない。
+    const gutsRecoveryRate = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, mainHero?.id);
     const gutsRegen = Math.floor(effectiveMaxGuts * gutsRecoveryRate);
     setGuts(p => Math.min(effectiveMaxGuts, p + gutsRegen));
     let didRegen = false;
@@ -25390,10 +25388,7 @@ function MonsterHeroGame() {
     }, RANGE_LABELS[enemyDist]), iceLockTurns > 0 && /*#__PURE__*/React.createElement("span", {
       "data-ice-lock-status": true,
       className: "shrink-0 px-1 py-0.5 rounded-full border border-cyan-400/60 bg-cyan-950/80 text-[7px] not-italic tracking-tighter whitespace-nowrap text-cyan-100"
-    }, "\u2744\uFE0F\u7D76\u6C37 ", iceLockPreparing ? '準備' : /*#__PURE__*/React.createElement(React.Fragment, null, iceLockTurns, "T\u3000\u2B0730%", isIceRulerActive(slots.findIndex(isHeroSlotMon), enemyDist) && /*#__PURE__*/React.createElement(React.Fragment, null, "\u3000", /*#__PURE__*/React.createElement("span", {
-      "data-ice-ruler-active": true,
-      className: "text-amber-100"
-    }, "\u2694\uFE0F\u7279\u6027"))))), /*#__PURE__*/React.createElement("span", {
+    }, "\u2744\uFE0F\u7D76\u6C37 ", iceLockPreparing ? '準備' : /*#__PURE__*/React.createElement(React.Fragment, null, iceLockTurns, "T\u3000\u2B0730%"))), /*#__PURE__*/React.createElement("span", {
       className: "text-red-500 flex items-center gap-1 font-mono drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
     }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
       className: "h-2.5 bg-slate-900 rounded-full overflow-hidden border border-white/20 relative shadow-inner"
@@ -25963,7 +25958,7 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 7
-    }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round((Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct')) * 100), "%"), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
+    }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id) * 100), "%"), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 8
