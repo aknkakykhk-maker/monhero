@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: dd6fc0e01c953c02
+// source-sha256: 36e670dcdbfef725
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 17:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 18:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8689,6 +8689,155 @@ const RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon';
 // ブリーダーLvの一覧は名前・レベル・アイコンしか出さない。全件をページ送りで読むので、
 // 使わない列(hero/score)まで運ばない
 const RANKING_SELECT_BREEDER = 'user_name,level,icon';
+// bond_levels の1行を、rankings から集計したものと同じ形のエントリへ直す。
+// 表示側(renderBondRankingEntry)はどちらから来た行かを知らなくてよい
+const bondLevelRowToEntry = row => {
+  const monsterId = row?.monster_id || null;
+  const monName = ALL_PLAYER_MONSTERS[monsterId]?.name || row?.mon_name || null;
+  const bondLevel = Number(row?.bond_level);
+  if (!monName || !Number.isFinite(bondLevel) || bondLevel <= 0) return null;
+  const individualId = String(row?.individual_id || '');
+  return {
+    userName: row?.user_name || '名無しのブリーダー',
+    icon: row?.icon ?? null,
+    monName,
+    bondLevel,
+    monsterId,
+    imgUrl: ALL_PLAYER_MONSTERS[monsterId]?.iconUrl || null,
+    emoji: ALL_PLAYER_MONSTERS[monsterId]?.emoji || null,
+    masuId: individualId.startsWith('legacy:') ? null : individualId || null,
+    // 詳細表示に使う育成スナップショット(古い記録には無い)
+    detail: row?.detail ?? null,
+    colors: Array.isArray(row?.colors) ? row.colors : [],
+    individualId
+  };
+};
+// 正本テーブルの結果と、rankings から集計した結果を1つに束ねる。
+// 同じ「人 × 個体」は正本テーブル側を採用し、正本にまだ載っていない人だけ
+// 従来どおり rankings の集計で補う(テーブルを作った直後から一覧が欠けないようにするため)
+const mergeBondRankingEntries = (primaryEntries, legacyEntries) => {
+  const keyOf = e => `${e?.userName}\u0000${e?.individualId || (e?.masuId != null && String(e.masuId) !== '' ? String(e.masuId) : `legacy:${e?.monsterId || e?.monName}`)}`;
+  const merged = new Map();
+  (primaryEntries || []).forEach(e => {
+    if (e) merged.set(keyOf(e), e);
+  });
+  (legacyEntries || []).forEach(e => {
+    if (e && !merged.has(keyOf(e))) merged.set(keyOf(e), e);
+  });
+  return [...merged.values()].sort((a, b) => b.bondLevel - a.bondLevel);
+};
+// ==================== 絆Lvの正本テーブル(bond_levels) ====================
+// 絆Lvは編成(party)のJSONの中にあるため、rankings からはDB側で「絆Lvの高い順」に
+// 並べられない。そのため新着順に RANKING_LEVEL_FETCH_LIMIT 行だけ取ってアプリ側で
+// 集計しており、よく遊ぶ人の記録で枠が埋まると、しばらく遊んでいない人が一覧から
+// 丸ごと消える(ブリーダーLvで2度起きたのと同じ構造の問題)。
+// そこで「1人 × 1個体で必ず1行」の専用テーブルへ、プレイ終了時に上書き保存する。
+//
+// テーブルがまだ無い環境でも動くようにしてある(適用前・適用中でも壊れない)。
+// 1度でも「テーブルが無い」と分かったら、そのセッションでは以後アクセスしない。
+const BOND_LEVELS_TABLE = 'bond_levels';
+const BOND_LEVELS_SELECT = 'user_name,individual_id,monster_id,mon_name,bond_level,icon,detail,colors';
+// 1行が数百バイトなので、種類別タブぶんまで含めて1回で取り切れる余裕を持たせる
+const BOND_LEVELS_FETCH_LIMIT = 1000;
+// 「テーブルが無い」と分かったあとは、毎回404を出しにいかない
+let _bondLevelsUnavailable = false;
+const bondLevelsUnavailable = () => _bondLevelsUnavailable;
+// PostgRESTはテーブルが無いとき404 + PGRST205 を返す。権限や通信の失敗と取り違えない
+const _isMissingTableError = (status, body) => {
+  if (status !== 404) return false;
+  return /PGRST205|Could not find the table|does not exist/i.test(String(body || ''));
+};
+// 絆Lvの正本を読む。テーブルが無ければ null を返し、呼び出し側は今までどおり
+// rankings から集計する(新旧併用)
+const sbFetchBondLevels = async (requestId = 'untracked') => {
+  if (_bondLevelsUnavailable) return null;
+  const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?select=${BOND_LEVELS_SELECT}` + `&order=bond_level.desc.nullslast&limit=${BOND_LEVELS_FETCH_LIMIT}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, {
+      headers: SB_HEADERS,
+      signal: controller.signal
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      if (_isMissingTableError(res.status, body)) {
+        _bondLevelsUnavailable = true;
+        rankingLog(requestId, 'bond-levels-missing', {
+          status: res.status
+        });
+        return null;
+      }
+      throw new Error(`bond_levels ${res.status}: ${body || res.statusText}`);
+    }
+    const rows = JSON.parse(body || '[]');
+    rankingLog(requestId, 'bond-levels-fetched', {
+      received: Array.isArray(rows) ? rows.length : 0
+    });
+    return Array.isArray(rows) ? rows : [];
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// 絆Lvの正本を書く。同じ個体は何度書いても1行のまま、最新の絆Lvで上書きされる
+// (転生で下がった場合もそのまま反映する。いまの状態を映すのが正しいため)。
+// ランキング送信の付随処理なので、失敗しても周回の進行は止めない。
+const sbUpsertBondLevels = async rows => {
+  if (_bondLevelsUnavailable || !Array.isArray(rows) || rows.length === 0) return false;
+  const url = `${SUPABASE_URL}/rest/v1/${BOND_LEVELS_TABLE}?on_conflict=user_name,individual_id`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...SB_HEADERS,
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify(rows),
+      signal: controller.signal
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      if (_isMissingTableError(res.status, body)) {
+        _bondLevelsUnavailable = true;
+        return false;
+      }
+      throw new Error(`bond_levels upsert ${res.status}: ${body || res.statusText}`);
+    }
+    return true;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+// ランキングへ送る編成から、絆Lvの正本へ入れる行を作る。
+// 個体が特定できる記録は masuId、できない古い形は legacy:種ID でまとめる
+// (どちらも rankings 側の集計と同じ考え方)。
+const bondLevelRowsFromParty = (userName, icon, party) => {
+  const byIndividual = new Map();
+  (Array.isArray(party) ? party : []).forEach(member => {
+    const bondLevel = Number(member?.bondLevel);
+    if (!member || !Number.isFinite(bondLevel) || bondLevel <= 0) return;
+    const monsterId = member.baseId || member.monsterId || member.id || null;
+    const monName = ALL_PLAYER_MONSTERS[monsterId]?.name || member.name || null;
+    if (!monName) return;
+    const individualId = member.masuId != null && String(member.masuId) !== '' ? String(member.masuId) : `legacy:${monsterId || monName}`;
+    // 同じ周回に同じ個体が2枠入ることは無いが、万一重なったら高い方を残す
+    const current = byIndividual.get(individualId);
+    if (current && current.bond_level >= bondLevel) return;
+    byIndividual.set(individualId, {
+      user_name: userName || '名無しのブリーダー',
+      individual_id: individualId,
+      monster_id: monsterId,
+      mon_name: monName,
+      bond_level: Math.floor(bondLevel),
+      icon: icon ?? null,
+      detail: member.detail ?? null,
+      colors: Array.isArray(member.colors) ? member.colors : null
+    });
+  });
+  return [...byIndividual.values()];
+};
 const sbFetchRankings = async (diff, limit = RANKING_SCORE_LIMIT, order = 'score.desc.nullslast', offset = 0, requestId = 'untracked', selectColumns = RANKING_SELECT_FULL) => {
   // diff を省略(null)すると難易度で絞らず、全難易度をまとめて取る
   const normalizedDifficulty = diff == null ? null : normalizeRankingDifficulty(diff);
@@ -10280,6 +10429,8 @@ function MonsterHeroGame() {
   // ブリーダーLv・絆Lvの集計に使う記録。スコア上位に入らなかった直近のプレイも含むので、
   // スコアランキングの表示(localRankings)とは別に持つ
   const [bondRankingData, setBondRankingData] = useState(null);
+  // 絆Lvの正本テーブル(bond_levels)から取った一覧。テーブルがまだ無い環境ではnullのまま
+  const [bondLevelRows, setBondLevelRows] = useState(null);
   const [bondRankingLoading, setBondRankingLoading] = useState(false);
   const [bondRankingError, setBondRankingError] = useState(null);
   const [rankingSourceByDiff, setRankingSourceByDiff] = useState({}); // {[diff]: 'global'|'local'} 表示中データの取得元
@@ -11035,7 +11186,12 @@ function MonsterHeroGame() {
   const breederRanking = useMemo(() => aggregateBreederLevels(Object.values(breederRankingPool).flatMap(rows => rows || [])).slice(0, 50), [breederRankingPool]);
 
   // party内の全マスモンを対象にし、新形式はmasuId、旧形式は種族ID/名前で個体を互換集計する。
-  const bondRankingAll = useMemo(() => collectBondRankingEntries(bondRankingData || {}), [bondRankingData]);
+  const bondRankingAll = useMemo(() => {
+    const legacy = collectBondRankingEntries(bondRankingData || {});
+    if (!Array.isArray(bondLevelRows)) return legacy;
+    const primary = bondLevelRows.map(bondLevelRowToEntry).filter(Boolean);
+    return mergeBondRankingEntries(primary, legacy);
+  }, [bondRankingData, bondLevelRows]);
 
   // 種類別フィルタの選択肢。まだ誰も記録を出していないモンスターもタブに出したいので、
   // 記録から拾った名前ではなく、全モンスターの名前を並べる(記録が無い種は「まだいません」になる)
@@ -11258,6 +11414,14 @@ function MonsterHeroGame() {
           // ブリーダーLvはレベル上位、絆Lvは編成(party)を見るので新しい記録から取る。
           // 絆Lvは並べ方を順に試す(created_at が無い環境でも id.desc で取れるようにする)
           if (levelKind === 'bond') {
+            // 絆Lvの正本テーブルがあればそれを先に読む(1人1個体1行なので人が消えない)。
+            // 失敗しても記録側の集計で表示できるので、ここで周回や画面を止めない
+            try {
+              const bondRows = await sbFetchBondLevels(requestId);
+              if (Array.isArray(bondRows)) setBondLevelRows(bondRows);
+            } catch (bondErr) {
+              console.error('[ranking] bond_levels fetch failed:', bondErr && bondErr.message ? bondErr.message : bondErr);
+            }
             let orderError = null;
             for (const order of BOND_RANKING_ORDERS) {
               try {
@@ -12503,6 +12667,20 @@ function MonsterHeroGame() {
       icon,
       clear_id: clearId
     };
+    // 絆Lvの正本テーブルへも同じ内容を書く(1人1個体1行で上書き)。
+    // 結果画面はスコア送信の完了を待つので、こちらは待たせない(待つと最大8秒ぶん
+    // リザルトが遅れる)。書けなくても次の周回で書き直されるし、一覧は記録側の
+    // 集計で補われる。テーブルがまだ無い環境ではsbUpsertBondLevels側が気付いて以後スキップする
+    try {
+      const bondRows = bondLevelRowsFromParty(name, icon, party);
+      if (bondRows.length) {
+        Promise.resolve(sbUpsertBondLevels(bondRows)).catch(bondErr => {
+          console.error('[ranking] bond_levels upsert failed:', bondErr && bondErr.message ? bondErr.message : bondErr);
+        });
+      }
+    } catch (bondErr) {
+      console.error('[ranking] bond_levels rows build failed:', bondErr && bondErr.message ? bondErr.message : bondErr);
+    }
     const result = await persistRankingScore({
       row,
       saveLocal: async error => {

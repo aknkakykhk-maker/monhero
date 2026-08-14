@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-14 17:13",
+    date: "2026-08-14 18:09",
     type: 'update',
     title: '既存マスモンの安全移行を開始',
     items: [
