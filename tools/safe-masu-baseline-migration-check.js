@@ -3,12 +3,13 @@ const { loadDyeModule } = require('./harness');
 const m = loadDyeModule();
 const { ALL_PLAYER_MONSTERS, DIST_APTITUDE_GRADES, diagnoseLegacyMasuBaselineMigration:diagnose,
   migrateSafeMasuBaselineRepresentations:migrate, mergeMasuIntoMon, masuPowerOf, monsterPowerOf, monsterPowerParts,
-  totalBondXpForLevel } = m;
+  totalBondXpForLevel, reconcileMasuPoints } = m;
 let failed = 0;
 const check = (label, ok) => { console.log(`${ok ? 'OK' : 'NG'}: ${label}`); if (!ok) failed++; };
 const snap = value => JSON.stringify(value);
 const stats = masu => { const mon=mergeMasuIntoMon(masu); return [mon.baseHp,mon.baseAtk,mon.baseDef,mon.baseGuts,...mon.distAptitude,masuPowerOf(masu),snap(masu.statPoints),masu.distAptPoints]; };
 const baseMasu = (baseId='Mocchi') => ({ id:`${baseId}-1`,baseId,name:baseId,bondXp:totalBondXpForLevel(10),distAptPoints:8,distApt:[...ALL_PLAYER_MONSTERS[baseId].distAptitude],statPoints:{hp:10,atk:3,def:3,guts:3},createdAt:1,rebirthCount:2,breakthroughCount:1 });
+const boot = masu => migrate([reconcileMasuPoints(masu)]).nextMasuMons[0];
 const boosted = baseMasu(); boosted.distApt[0]=DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.indexOf(boosted.distApt[0])+1]; boosted.distAptPoints--;
 const mocchi=ALL_PLAYER_MONSTERS.Mocchi;
 const regenerated = {...baseMasu(),id:'regen',individualStats:{hp:Math.round(mocchi.baseHp*.9),atk:Math.round(mocchi.baseAtk*.9),def:Math.round(mocchi.baseDef*.9),guts:Math.round(mocchi.baseGuts*.9)}};
@@ -32,15 +33,28 @@ check('AMBIGUOUSは完全無変更',ambiguousResult.nextMasuMons[0]===ambiguousI
 const once=migrate([boosted]).nextMasuMons; const twice=migrate(once).nextMasuMons;
 check('2回実行しても同一',snap(once)===snap(twice));
 check('古い保存の再読込へ再適用可能',migrate([boosted]).changed&&snap(migrate([boosted]).nextMasuMons)===snap(once));
+for (const [label,distApt] of [
+  ['旧ゴーレム未強化相当',['A','C','E','G']],
+  ['旧ゴーレム強化済みの可能性あり',['A','B','E','G']],
+]) {
+  const legacy={...baseMasu('Golem'),id:label,distApt,distAptPoints:3,statPoints:{hp:20,atk:6,def:3,guts:0}};
+  const afterOnce=boot(legacy); const afterTwice=boot(afterOnce);
+  check(`${label}は起動順でもポイント・適性・旧形式を完全保留`,snap(afterOnce)===snap(legacy)&&!Object.hasOwn(afterOnce,'distAptBoosts'));
+  check(`${label}の6C診断はPARTIAL/AMBIGUOUSのまま`,['PARTIAL','AMBIGUOUS'].includes(diagnose(afterOnce).overallStatus));
+  check(`${label}は2回起動でも二重適用なし`,snap(afterTwice)===snap(afterOnce));
+}
+const modernGolem={...baseMasu('Golem'),id:'modern-golem',bondXp:totalBondXpForLevel(10),distAptPoints:0,distAptBoosts:[0,0,0,0],statPoints:{hp:0,atk:0,def:0,guts:0},rebirthCount:0,breakthroughCount:0};
+const reconciledModernGolem=reconcileMasuPoints(modernGolem);
+check('新形式ゴーレムは従来どおりreconcile対象',reconciledModernGolem.distAptPoints===9&&diagnose(reconciledModernGolem).overallStatus==='ALREADY_MODERN');
 const oldPixie={...baseMasu('Pixie'),individualStats:{hp:250,atk:160,def:50,guts:130}};
-const pixieDiagnosis=diagnose(oldPixie); const pixieOnce=migrate([oldPixie]); const migratedPixie=pixieOnce.nextMasuMons[0];
+const pixieDiagnosis=diagnose(reconcileMasuPoints(oldPixie)); const pixieOnce=migrate([reconcileMasuPoints(oldPixie)]); const migratedPixie=pixieOnce.nextMasuMons[0];
 check('旧PixieはSAFE_EXACTから実移行',pixieDiagnosis.overallStatus==='SAFE_EXACT'&&pixieOnce.changed&&pixieOnce.summary.migrated===1);
 check('旧Pixieは個体差-10を保持し現行G170の基礎部分G160へ追従',migratedPixie.individualStatOffsets.guts===-10&&mergeMasuIntoMon(migratedPixie).baseGuts-migratedPixie.statPoints.guts===160);
 check('旧PixieはstatPointsも加算',mergeMasuIntoMon(migratedPixie).baseGuts===163);
 check('旧Pixieは2回目無変更',!migrate(pixieOnce.nextMasuMons).changed&&snap(migrate(pixieOnce.nextMasuMons).nextMasuMons)===snap(pixieOnce.nextMasuMons));
 
 const oldMitarashi={...baseMasu('Mitarashi'),individualStats:{hp:600,atk:120,def:120,guts:100}};
-const mitarashiBefore=mergeMasuIntoMon(oldMitarashi); const mitarashiResult=migrate([oldMitarashi]); const migratedMitarashi=mitarashiResult.nextMasuMons[0]; const mitarashiAfter=mergeMasuIntoMon(migratedMitarashi);
+const reconciledMitarashi=reconcileMasuPoints(oldMitarashi); const mitarashiBefore=mergeMasuIntoMon(reconciledMitarashi); const mitarashiResult=migrate([reconciledMitarashi]); const migratedMitarashi=mitarashiResult.nextMasuMons[0]; const mitarashiAfter=mergeMasuIntoMon(migratedMitarashi);
 check('旧MitarashiはSAFE_EXACTから実移行',diagnose(oldMitarashi).overallStatus==='SAFE_EXACT'&&mitarashiResult.changed&&mitarashiResult.summary.migrated===1);
 check('旧Mitarashiは個体差を保持',snap(migratedMitarashi.individualStatOffsets)===snap({hp:0,atk:0,def:0,guts:0}));
 check('旧Mitarashiの能力変化量はHP+30/攻+20/防-15/G-10',[30,20,-15,-10].every((delta,index)=>delta===[mitarashiAfter.baseHp-mitarashiBefore.baseHp,mitarashiAfter.baseAtk-mitarashiBefore.baseAtk,mitarashiAfter.baseDef-mitarashiBefore.baseDef,mitarashiAfter.baseGuts-mitarashiBefore.baseGuts][index]));
@@ -52,7 +66,8 @@ check('現行ベース由来の再生個体は能力・総合力不変',currentR
 const previouslyDeferred={...oldPixie};
 for (const count of [34,35]) {
   const masu={...boosted,id:`bt-${count}`,breakthroughCount:count,bondXp:totalBondXpForLevel(40),distAptPoints:40};
-  check(`${count}凸ポイント倍率ケース`,diagnose(masu).overallStatus==='SAFE_EXACT'&&migrate([masu]).summary.migrated===1);
+  const reconciled=reconcileMasuPoints(masu); const migrated=migrate([reconciled]);
+  check(`${count}凸ポイント倍率ケース`,diagnose(reconciled).overallStatus==='SAFE_EXACT'&&migrated.summary.migrated===1&&migrated.nextMasuMons[0].distAptPoints===reconciled.distAptPoints);
 }
 const source=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
 check('reconcile後に移行し専用フラグを使う',source.indexOf('migrateSafeMasuBaselineRepresentations(savedMasuMons)')>source.indexOf('savedMasuMons.map(reconcileMasuPoints)')&&source.includes('mh_masu_baseline_relative_migrated_v1'));

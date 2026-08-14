@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 16:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 17:13"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3603,6 +3603,10 @@ const formatAptBonus = (mon) => getMonsterAptPct(mon)
 const reconcileMasuPoints = (masu) => {
   const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[masu.baseId] : null;
   if (!base) return masu;
+  // 旧ゴーレムはベース適性が A/C/E/G から A/E/G/G へ変わっており、完成値の distApt だけでは
+  // 実際に何段階強化したかを一意に戻せない。現在ベースとの差を使用済みポイントとして推測すると
+  // 不足補填を誤るため、新形式になるまでは既存の能力・適性・ポイントを丸ごと保留する。
+  if (masu.baseId === 'Golem' && !Object.prototype.hasOwnProperty.call(masu, 'distAptBoosts')) return masu;
   const baseApt = base.distAptitude || ['C','C','C','C'];
   const aptSpent = Array.isArray(masu.distAptBoosts)
     ? masu.distAptBoosts.reduce((sum, value) => sum + Math.max(0, Math.floor(Number(value) || 0)), 0)
