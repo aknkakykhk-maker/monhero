@@ -7,6 +7,6 @@ assert(source.includes("mainHero?.id==='Zan' && mon?.id==='Zan'"), 'ザン勇者
 assert(source.includes("card.type==='unique' && card.monId==='Zan'"), '連斬の連撃を予測する');
 assert(source.includes("card.monId==='Ark'||card.monId==='Iblis'"), '贖罪の追撃を予測する');
 assert((source.match(/getAttackPredictedDmg\(/g)||[]).length >= 4, '合計と個別表示が共通予測関数を使う');
-assert(source.includes('const plannedDmg=Math.max(0,rawDmg-guardValueOf'), '敵の予定ダメージへガードを反映する');
+assert(source.includes('const plannedDmg=applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf'), '敵の予定ダメージへガードとターン軽減を実処理と同じ順で反映する');
 assert(source.includes('(予定: ${plannedDmg})'), '敵予告は軽減後の予定値を表示する');
 console.log('battle damage preview checks passed');
