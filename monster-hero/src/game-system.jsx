@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-14 11:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-14 14:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -791,6 +791,45 @@ const masuBaselineRepresentationsMatch = (masu) => {
   const values = mon => [mon.baseHp, mon.baseAtk, mon.baseDef, mon.baseGuts, ...mon.distAptitude];
   return JSON.stringify(values(oldResolved)) === JSON.stringify(values(newResolved))
     && monsterPowerOf(oldResolved) === monsterPowerOf(newResolved);
+};
+// 第6B-1段階の旧再生個体判定。createdAtには頼らず、保存済みの4能力が再生時の
+// Math.round(base * (0.9～1.1)) で実際に生成できた歴代ベースだけを候補にする。
+// 0.9倍・1.1倍の端点を含む実装どおり、丸め前の生成区間との重なりを厳密に調べる。
+const LEGACY_REGENERATION_STAT_BASELINES = {
+  Pixie: [
+    { id:'pre-2026-08-14', hp:250, atk:160, def:50, guts:140 },
+    { id:'current', hp:250, atk:160, def:50, guts:170 },
+  ],
+  Mitarashi: [
+    { id:'pre-2026-08-14', hp:600, atk:120, def:120, guts:100 },
+    { id:'current', hp:630, atk:140, def:105, guts:90 },
+  ],
+};
+const regenerationStatCouldBeGenerated = (value, baseValue) => {
+  const stat = Number(value);
+  const base = Number(baseValue);
+  if (!Number.isInteger(stat) || !Number.isInteger(base) || base <= 0) return false;
+  // 正数に対するMath.round(value)===statの区間は [stat-0.5, stat+0.5)。
+  // 小数誤差を避けるため全境界を20倍した整数で比較する。
+  return base * 18 < stat * 20 + 10 && base * 22 >= stat * 20 - 10;
+};
+const diagnoseLegacyRegenerationStatBaseline = (masu) => {
+  const statKeys = ['hp','atk','def','guts'];
+  const base = ALL_PLAYER_MONSTERS[masu?.baseId];
+  const historical = LEGACY_REGENERATION_STAT_BASELINES[masu?.baseId]
+    || (base ? [{ id:'current', hp:base.baseHp, atk:base.baseAtk, def:base.baseDef, guts:base.baseGuts }] : []);
+  const candidates = historical.filter(candidate => statKeys.every(key =>
+    regenerationStatCouldBeGenerated(masu?.individualStats?.[key], candidate[key])));
+  const result = {
+    status: candidates.length === 1 ? 'SAFE_EXACT' : candidates.length > 1 ? 'AMBIGUOUS' : 'BLOCKED',
+    candidates: candidates.map(candidate => ({ ...candidate })),
+  };
+  if (candidates.length === 1) {
+    const candidate = candidates[0];
+    result.individualStatOffsets = Object.fromEntries(statKeys.map(key =>
+      [key, Number(masu.individualStats[key]) - candidate[key]]));
+  }
+  return result;
 };
 // 第4段階の既存個体ドライラン。候補を新しいオブジェクトとして組み立てるだけで、保存・補完は行わない。
 // 旧形式は生成時点のベース定義を持たないため、現在ベースとの差が計算できても SAFE にはしない。

@@ -5,7 +5,7 @@ const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 const grab = (a, b) => source.slice(source.indexOf(a), source.indexOf(b));
 const code = `${grab('const donationDiamondValue =', 'const rosterBaseId =')}\n${grab('const getMasuColors =', '// ==================== 総合力')}\nglobalThis.out={donationDiamondValue,donationPsycheValue,randomRegenerationStat,buildRegeneratedMasu,mergeMasuIntoMon};`;
 const base = { id:'Test', name:'Test', baseHp:100, baseAtk:50, baseDef:80, baseGuts:40, distAptitude:['A','B','C','D'], plusStats:{}, unique:{name:'技'} };
-const context = { Math, Date, ALL_PLAYER_MONSTERS:{Test:base}, DIST_APTITUDE_GRADES:['G','F','E','D','C','B','A','S','S+','SS','SS+','M'], masuBondLevelInfo:masu=>({level:masu.bondXp}), uniqueSkillAtLevel:value=>value };
+const context = { Math, Date, ALL_PLAYER_MONSTERS:{Test:base}, DIST_APTITUDE_GRADES:['G','F','E','D','C','B','A','S','S+','SS','SS+','M'], masuBondLevelInfo:masu=>({level:masu.bondXp}), uniqueSkillAtLevel:value=>value, masuBaselineRepresentationsMatch:()=>true };
 vm.createContext(context); vm.runInContext(code, context);
 const check = (label, value) => { if (!value) throw new Error(`FAIL: ${label}`); console.log(`OK: ${label}`); };
 const x=context.out;
