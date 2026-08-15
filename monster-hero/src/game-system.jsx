@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 14:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 14:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5584,9 +5584,23 @@ function MonsterHeroGame() {
   const getWaveBuff = (key, def = 0) => waveBuffs[key] ?? def;
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
+  // 次ターン予約(nextTurnBuffs)は敵ターンの終わりに「読んで→効果を出して→消す」を行う。
+  // これを setNextTurnBuffs の更新関数の中でやると、レンダーが中断・再実行されたときに
+  // 更新関数がもう一度呼ばれ、回復が二重に適用されることがある
+  // (メロソLv3の回復はEXTREMEだと最大値の50%なので、二重に入ると100%になってしまう)。
+  // Reactの更新関数は「同じ入力なら同じ結果を返すだけ」でなければならないため、
+  // 最新値はこのrefにも持ち、回復・表示のような副作用は更新関数の外で行う。
+  // 読み書きは必ず writeNextTurnBuffs / nextTurnBuffsRef を通し、stateとrefがずれないようにする。
+  const nextTurnBuffsRef = useRef({});
+  const writeNextTurnBuffs = (next) => {
+    const value = typeof next === 'function' ? next(nextTurnBuffsRef.current) : (next || {});
+    nextTurnBuffsRef.current = value;
+    setNextTurnBuffs(value);
+    return value;
+  };
   const getTurnBuff = (key, def) => turnBuffs[key] ?? def;
   const getNextTurnBuff = (key, def) => nextTurnBuffs[key] ?? def;
-  const setNextTurnBuff = (key, value) => setNextTurnBuffs(p => ({ ...p, [key]: value }));
+  const setNextTurnBuff = (key, value) => writeNextTurnBuffs(p => ({ ...p, [key]: value }));
   const setImmediateTurnBuff = (key, value) => setTurnBuffs(p => ({ ...p, [key]: value })); // 次ターンへ持ち越さない、このターン限りの即時効果
   // 丈夫さのバフは permaBuffs の 'defPct' に積む(基礎ステータスの def は書き換えない)。
   // 実際に計算へ使う値は effectiveDef で、被ダメージの軽減量とガードの軽減量の両方に効く。
@@ -8767,7 +8781,7 @@ function MonsterHeroGame() {
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount); setTotalTurnCount(s.totalTurnCount);
     ultimateWeakenedDistancesRef.current=s.ultimateWeakenedDistances; setUltimateWeakenedDistances(s.ultimateWeakenedDistances);
     ultimateDistanceBreakPendingRef.current=s.ultimateDistanceBreakPending; setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending); setUltimateDistanceBreakReveal(null);
-    setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
+    setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
     setPendingReward(null); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
@@ -8955,7 +8969,7 @@ function MonsterHeroGame() {
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount); setTotalTurnCount(s.totalTurnCount);
     ultimateWeakenedDistancesRef.current=s.ultimateWeakenedDistances; setUltimateWeakenedDistances(s.ultimateWeakenedDistances);
     ultimateDistanceBreakPendingRef.current=s.ultimateDistanceBreakPending; setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending); setUltimateDistanceBreakReveal(null);
-    setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
+    setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
     setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
@@ -9376,17 +9390,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (gutsRegen>0) { addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     if (didRegen) { await battleWait(500); }
     // 次ターン予約分(nextTurnBuffs)をそのまま今ターンの一時バフ(turnBuffs)へ入れ替える(新しい一時効果を追加してもここは変更不要)
-    // 関数更新式で読むことで、このターン中に予約された最新のnextTurnBuffsを確実に反映する(古いクロージャ値を使わない)
-    setNextTurnBuffs(latestNextTurnBuffs => {
-      const recoveryMult=latestNextTurnBuffs.melosoFullRecoveryMult||0;
-      if(recoveryMult>0) {
-        setHp(p=>Math.min(effectiveMaxHp,p+Math.floor(effectiveMaxHp*recoveryMult)));
-        setGuts(p=>Math.min(effectiveMaxGuts,p+Math.floor(effectiveMaxGuts*recoveryMult)));
-        addPopup(recoveryMult===1?'ライフ・ガッツ全回復!':'ライフ・ガッツ回復!','hero','text-rose-300 text-lg font-bold');
-      }
-      const {melosoFullRecoveryMult, ...activeTurnBuffs}=latestNextTurnBuffs;
-      setTurnBuffs(activeTurnBuffs); return {};
-    });
+    // refから読むことで、このターン中に予約された最新の値を確実に反映する(古いクロージャ値を使わない)。
+    // 以前はここを setNextTurnBuffs の更新関数の中で行っていたが、更新関数は
+    // レンダーが中断・再実行されるともう一度呼ばれることがあり、そのたびに回復が
+    // 二重に適用されてしまう(EXTREMEのメロソLv3が50%回復のはずが100%回復になる)。
+    // 回復・表示は更新関数の外で1回だけ行う。
+    const pendingNextTurnBuffs = nextTurnBuffsRef.current;
+    const recoveryMult = pendingNextTurnBuffs.melosoFullRecoveryMult || 0;
+    if (recoveryMult>0) {
+      setHp(p=>Math.min(effectiveMaxHp,p+Math.floor(effectiveMaxHp*recoveryMult)));
+      setGuts(p=>Math.min(effectiveMaxGuts,p+Math.floor(effectiveMaxGuts*recoveryMult)));
+      addPopup(recoveryMult===1?'ライフ・ガッツ全回復!':'ライフ・ガッツ回復!','hero','text-rose-300 text-lg font-bold');
+    }
+    const {melosoFullRecoveryMult, ...activeTurnBuffs}=pendingNextTurnBuffs;
+    setTurnBuffs(activeTurnBuffs);
+    writeNextTurnBuffs({});
     const nextTurn=turnCount+1; setTurnCount(nextTurn); if(nextTurn>20){setHp(0);} setIsBusy(false);
   };
 
@@ -10080,7 +10098,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         setTimeout(()=>{setUltimateDistanceBreakReveal(null);setIsBusy(false);},battleMs(1400));
       }
     }
-    setTurnBuffs({}); setNextTurnBuffs({}); // WAVE毎リセットの一時バフ・デバフを全てクリア
+    setTurnBuffs({}); writeNextTurnBuffs({}); // WAVE毎リセットの一時バフ・デバフを全てクリア
   };
 
   // 通常の敵順と敵定義の両方に存在するものだけを候補にする。敵名・能力値を複製せず、
@@ -10106,7 +10124,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     debugResultRef.current = false;
     setDebugBattle(true); setExtremeRun(false); setDebugOutcome(null); setGaveUp(false);
     setScore(0); setWaveHistory([]); setFinalRewardSummary(null);
-    setPermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); setNextTurnBuffs({});
+    setPermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
     setMainHero(null); setSlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
@@ -10283,7 +10301,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     extremeRunRef.current = extreme;
     debugResultRef.current = false;
     setDebugBattle(true); setExtremeRun(extreme); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
-    setPermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); setNextTurnBuffs({});
+    setPermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     setMainHero(hero); setSlots(debugSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
