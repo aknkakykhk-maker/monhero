@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 01:07"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 08:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5862,6 +5862,12 @@ function MonsterHeroGame() {
   const [showCallStylePicker, setShowCallStylePicker] = useState(false);
   const [tempCallStyle, setTempCallStyle] = useState(''); // 呼び方入力欄の一時値(保存を押すまで確定しない)
   const [showAssistantPicker, setShowAssistantPicker] = useState(false); // プロフィールからの助手変更
+  // きき加入の会話を見たことがあるか(イベント回想の解放判定に使う。値そのものはKIKI_INTRO_SEEN_KEYの読み取り専用ミラー)
+  const [kikiIntroSeenFlag, setKikiIntroSeenFlag] = useState(false);
+  // イベント回想: プロフィールから見返す一覧の開閉と、再生中のイベント({id,step}、nullなら非表示)。
+  // どちらもセーブデータには一切書かない(見るだけ)
+  const [showEventReplayList, setShowEventReplayList] = useState(false);
+  const [eventReplay, setEventReplay] = useState(null);
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
@@ -7246,10 +7252,12 @@ function MonsterHeroGame() {
       // きき加入の会話は「すでに遊んでいた人」で「まだ見ていない」ときだけ。
       // 未閲覧フラグだけで決めると、新しく始めた人にも出てしまうので wasOnboarded と合わせて見る
       const kikiIntroSeen = await storeGet(KIKI_INTRO_SEEN_KEY, false, false);
+      // イベント回想(プロフィール)の解放判定に使う読み取り専用ミラー。会話を見た瞬間はmarkKikiIntroSeen側で更新する
+      setKikiIntroSeenFlag(kikiIntroSeen === true);
       if (wasOnboarded && kikiIntroSeen !== true) setKikiIntroStep(0);
       // 新しく始めた人は、この時点で見たことにしておく(助手選択を通るので会話は不要)。
       // ここで書いておかないと、プロフィールを決め終わったあとに流れてしまう
-      else if (!wasOnboarded && kikiIntroSeen !== true) { try { await storeSet(KIKI_INTRO_SEEN_KEY, true, false); } catch {} }
+      else if (!wasOnboarded && kikiIntroSeen !== true) { try { await storeSet(KIKI_INTRO_SEEN_KEY, true, false); setKikiIntroSeenFlag(true); } catch {} }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
       // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
@@ -7787,8 +7795,14 @@ function MonsterHeroGame() {
   // 助手の選択にも仲良し度にも触れない(会話を見ただけで助手が変わることはない)
   const markKikiIntroSeen = useCallback(() => {
     setKikiIntroStep(null);
+    setKikiIntroSeenFlag(true);
     try { storeSet(KIKI_INTRO_SEEN_KEY, true, false); } catch {}
   }, []);
+  // イベント回想の解放判定。EVENT_REPLAYS側はunlockedKeyという「呼び名」しか持たないので、
+  // その名前→実際のstateの対応をここで持つ(データファイルはgame-system.jsxの状態を見られないため)。
+  // 今後イベントを増やすときは、そのイベントの既読フラグをここへ1行足すだけでよい
+  const EVENT_REPLAY_UNLOCK_FLAGS = { kikiIntroSeen: kikiIntroSeenFlag };
+  const isEventReplayUnlocked = (event) => !!EVENT_REPLAY_UNLOCK_FLAGS[event && event.unlockedKey];
   // 助手を切り替える。仲良し度も呼び方も助手ごとに分けてあるので、切り替えても何も失われない
   const chooseAssistant = useCallback((id) => {
     const next = normalizeAssistantId(id);
@@ -12076,6 +12090,23 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 )}
               </section>;
             })()}
+            {/* イベント回想: 見たことのある会話イベントを、あとから何度でも見返せる。
+                見るだけで、初回閲覧フラグ・助手選択・仲良し度・通常のアップデート通知には一切影響しない */}
+            {onboarded&&!onboardingPreview&&(()=>{
+              const list=(typeof EVENT_REPLAYS!=='undefined'&&EVENT_REPLAYS)||[];
+              if(list.length===0) return null;
+              const unlockedCount=list.filter(isEventReplayUnlocked).length;
+              return (
+                <button type="button" onClick={()=>setShowEventReplayList(true)} className="w-full mb-4 flex items-center gap-2 bg-fuchsia-950/40 border border-fuchsia-500/40 px-4 py-3 rounded-2xl active:scale-[.98]">
+                  <Sparkles size={14} className="text-fuchsia-300 shrink-0"/>
+                  <span className="flex-1 min-w-0 text-left">
+                    <b className="block text-[11px] font-black text-fuchsia-100">イベント回想</b>
+                    <small className="block text-[9px] text-fuchsia-300/70">見たことのある会話をもう一度見られます（{unlockedCount}/{list.length}）</small>
+                  </span>
+                  <ChevronRight size={16} className="shrink-0 text-fuchsia-400"/>
+                </button>
+              );
+            })()}
             </div>
           </div>
         )}
@@ -13337,6 +13368,44 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
+        {/* イベント回想の一覧。未閲覧のイベントは「？？？」で伏せ、タップできない。
+            ここではセーブ状態には一切触れず、再生を始めるときだけeventReplayをセットする */}
+        {showEventReplayList&&(
+          <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-5" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
+              <h3 className="text-base font-black text-white mb-1 text-center">イベント回想</h3>
+              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">見たことのある会話イベントを、何度でも見返せます。</p>
+              <div className="space-y-2 mb-3">
+                {((typeof EVENT_REPLAYS!=='undefined'&&EVENT_REPLAYS)||[]).map(event=>{
+                  const unlocked=isEventReplayUnlocked(event);
+                  if(!unlocked){
+                    return (
+                      <div key={event.id} className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60">
+                        <span className="text-lg" aria-hidden="true">🔒</span>
+                        <span className="min-w-0 flex-1">
+                          <b className="block text-[12px] font-black text-slate-400">？？？</b>
+                          <small className="block text-[9px] text-slate-600">まだ見ていません</small>
+                        </span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <button key={event.id} type="button" onClick={()=>{setEventReplay({id:event.id,step:0});setShowEventReplayList(false);}}
+                      className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97] border border-fuchsia-400/50 bg-fuchsia-950/30">
+                      <Play size={16} className="text-fuchsia-300 shrink-0"/>
+                      <span className="min-w-0 flex-1">
+                        <b className="block text-[12px] font-black text-white">{event.title}</b>
+                        <small className="block text-[9px] text-fuchsia-300/70">タップして見返す</small>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button onClick={()=>setShowEventReplayList(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+            </div>
+          </div>
+        )}
+
         {showIconPicker&&(
           <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
@@ -14520,6 +14589,51 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {!last?<button onClick={()=>setUpdateGuidePage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>:<div className={`mt-4 grid ${notice.destination?'grid-cols-2':'grid-cols-1'} gap-2`}>{notice.destination&&<button onClick={()=>finishUpdateGuide(notice.destination)} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950">{notice.buttonLabel||'見に行く'}</button>}<button onClick={()=>finishUpdateGuide()} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white">{notice.destination?'あとで':'閉じる'}</button></div>}
           </div>
         </div>);})()}
+
+      {/* イベント回想の再生。プロフィールの「イベント回想」から開始する、見るだけの表示。
+          きき加入の会話と見た目は同じだが、閉じても保存には一切触れない
+          (初回閲覧フラグ・助手選択・仲良し度・アップデート通知のどれも変えない)。
+          gameStateを問わず(プロフィールから開くため)eventReplayの有無だけで出す */}
+      {eventReplay!=null&&(()=>{
+        const list=(typeof EVENT_REPLAYS!=='undefined'&&EVENT_REPLAYS)||[];
+        const event=list.find(ev=>ev.id===eventReplay.id);
+        const script=(event&&event.script)||[];
+        if(script.length===0) return null;
+        const step=Math.max(0,Math.min(eventReplay.step,script.length-1));
+        const line=script[step];
+        const speaker=assistantById(line.who);
+        const last=step===script.length-1;
+        const calls=(event&&event.calls)||{};
+        const next=()=>{ if(last) setEventReplay(null); else setEventReplay(r=>r&&({...r,step:r.step+1})); };
+        return(
+        <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label={`イベント回想: ${event?.title||''}`}>
+          <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
+          <div className="relative w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-fuchsia-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'none'}}>
+            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-fuchsia-300">回想・{event?.title||''}</p>
+            <div className="mb-3 flex items-end justify-center gap-3">
+              {ASSISTANT_LIST.map(who=>{
+                const talking=who.id===line.who;
+                return(
+                  <div key={who.id} className={`flex flex-col items-center gap-1 ${talking?'':'opacity-35'}`} style={{transform:talking?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
+                    <AssistantFace who={who} size={talking?84:64} accent={who.accent} expression={talking?line.e:'normal'}/>
+                    <span className="text-[9px] font-black" style={{color:talking?who.accent:'#64748b'}}>{who.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
+              <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+            </div>
+            <p className="mt-2 text-center text-[8px] text-slate-500">
+              {step+1} / {script.length}
+              {Object.keys(calls).length>0&&`　／　${ASSISTANT_LIST.filter(who=>calls[who.id]).map(who=>`${who.name}は「${calls[who.id]}」`).join('、')}と呼び合います`}
+            </p>
+            <button onClick={next} className="mt-3 min-h-[50px] w-full rounded-2xl bg-fuchsia-500 text-sm font-black text-slate-950 active:scale-[.98]" style={{pointerEvents:'auto'}}>{last?'とじる':'つぎへ'}</button>
+          </div>
+        </div>);
+      })()}
+
       {dailyMasuAdvice&&(()=>{const who=activeAssistant;const lines=assistantSceneLinesFor('dailyMasuAdvice');const eligible=dailyMasuAdvice.eligible!==false;return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="みゅあのワンポイントアドバイス">
           <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
