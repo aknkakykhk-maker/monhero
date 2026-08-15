@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 4aa0affaf24920ce
+// source-sha256: 99b8ed6876b581ba
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 01:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 09:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10777,6 +10777,8 @@ function MonsterHeroGame() {
   const [pendingCard, setPendingCard] = useState(null); // cardHandIndex awaiting monster assignment
   const [upgradePoints, setUpgradePoints] = useState(0);
   const [turnCount, setTurnCount] = useState(1);
+  // WAVEごとのturnCountを撃破確定時にだけ足す、現在のラン内の累計。永続保存はしない。
+  const [totalTurnCount, setTotalTurnCount] = useState(0);
   // バトル速度は演出待機だけに使い、ダメージ計算・抽選・報酬には渡さない。
   // refを参照することで、演出途中の変更も次の待機から即時に反映される。
   const [battleSpeed, setBattleSpeed] = useState(1);
@@ -15240,6 +15242,7 @@ function MonsterHeroGame() {
     guardBonusCount: 0,
     upgradePoints: 0,
     turnCount: 1,
+    totalTurnCount: 0,
     permaBuffs: {
       autoHpRecovery: 0.1
     },
@@ -15503,6 +15506,7 @@ function MonsterHeroGame() {
     setGuardBonusCount(s.guardBonusCount);
     setUpgradePoints(s.upgradePoints);
     setTurnCount(s.turnCount);
+    setTotalTurnCount(s.totalTurnCount);
     setPermaBuffs(s.permaBuffs);
     setWaveBuffs(s.waveBuffs);
     setTurnBuffs(s.turnBuffs);
@@ -15818,6 +15822,7 @@ function MonsterHeroGame() {
     setGuardBonusCount(s.guardBonusCount);
     setUpgradePoints(s.upgradePoints);
     setTurnCount(s.turnCount);
+    setTotalTurnCount(s.totalTurnCount);
     setPermaBuffs(s.permaBuffs);
     setWaveBuffs(s.waveBuffs);
     setTurnBuffs(s.turnBuffs);
@@ -16148,6 +16153,9 @@ function MonsterHeroGame() {
     const waveMult = 1.0 + wave * 0.1;
     const remainingTurns = Math.max(0, 21 - turnCount);
     const turnMult = Math.max(1.0, 2.0 - (20 - remainingTurns) * 0.05);
+    // enemyDefeatResolvedRefの同期ロック後に確定するため、同じWAVEの勝利処理が重なっても1回だけ加算される。
+    const newTotalTurnCount = totalTurnCount + turnCount;
+    setTotalTurnCount(newTotalTurnCount);
     const finalRoundScore = Math.floor((totalWaveDamage * waveMult + totalWaveDamage * turnMult) * scoreMultiplier);
     setScore(s => s + finalRoundScore);
     const finalDistDamage = waveDistDamage.map((value, index) => (value || 0) + (distDamage[index] || 0));
@@ -16173,6 +16181,7 @@ function MonsterHeroGame() {
       wave,
       waveMult,
       turn: turnCount,
+      totalTurnCount: newTotalTurnCount,
       remainingTurns,
       turnMult,
       totalDamage: totalWaveDamage,
@@ -17513,6 +17522,8 @@ function MonsterHeroGame() {
   // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
   // 必ず呼び出し元が保持している最新のローカル値を渡す
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey = null, heroForDeck = null, aptPctOverride = null, restoredStats = null) => {
+    // 通常・クイック・プロ・極限・練習/デバッグの共通開始点で、新しいランだけ累計を初期化する。
+    if (w === 1) setTotalTurnCount(0);
     // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
     if (w === 1 && !forcedEnemyKey) {
       addAssistantBond('battle');
@@ -29472,6 +29483,16 @@ function MonsterHeroGame() {
     }, "WAVE ", waveResult.wave, " \u30EA\u30B6\u30EB\u30C8")), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-3 space-y-1.5 mb-3 shadow-2xl shrink-0"
     }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-2 gap-1 rounded-xl bg-indigo-950/60 border border-indigo-400/20 px-2 py-1"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black text-indigo-200"
+    }, "\u4ECA\u56DE\uFF1A", /*#__PURE__*/React.createElement("b", {
+      className: "font-mono text-sm text-white"
+    }, waveResult.turn), "\u30BF\u30FC\u30F3"), /*#__PURE__*/React.createElement("span", {
+      className: "text-[10px] font-black text-amber-200"
+    }, "\u7D2F\u8A08\uFF1A", /*#__PURE__*/React.createElement("b", {
+      className: "font-mono text-sm text-white"
+    }, waveResult.totalTurnCount), "\u30BF\u30FC\u30F3")), /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center border-b border-white/10 pb-0.5"
     }, /*#__PURE__*/React.createElement("span", {
       className: "text-slate-400 text-[11px] font-bold uppercase"
