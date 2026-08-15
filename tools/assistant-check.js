@@ -365,7 +365,7 @@ check('連打のあとは笑って元に戻す',
 check('場面が変わったら送ったセリフも連打もリセットする',
   has('useEffect(() => { setTapped(null); setSpam(null); tapTimesRef.current = []; }, [pickKey]);'));
 check('場面キーだけでも、直接指定でも呼べる',
-  has('const sceneDef = assistantSceneById(scene);') && has("const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level);") && has('const paragraphs = detail || sceneDef?.detail || null;'));
+  has('const sceneDef = assistantSceneById(scene);') && has("const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level, bond.callStyle);") && has('const paragraphs = detail || sceneDef?.detail || null;'));
 check('詳細はヘルプ本文をそのまま出せる', has('const ref = helpRef || sceneDef?.help || null;') && has('renderHelpBlocks(topic.blocks, color)'));
 check('吹き出し風の見た目(しっぽ付き)', has('{/* 吹き出しのしっぽ(左向き) */}') && has("borderRight:`9px solid ${color}`"));
 check('タップで詳細が開く', has('onClick:()=>setOpen(true)') && has('タップで詳しく'));
