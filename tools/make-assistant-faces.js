@@ -29,6 +29,13 @@ const HEAD_TOP_SKIP = 0.09;
 // 書かなければ上の既定値をそのまま使う
 const PER_ASSISTANT = {
   // myua: { headRatio: 0.46, headTopSkip: 0.09 },
+  // ききは頭上のリボンがみゅあのうさ耳よりさらに高く伸びているため、既定の
+  // headTopSkip(0.09)のままだとリボンの分量に押し出されて顔が下へ寄り、
+  // 丸く切ったときに顎が枠外へ出てしまう。skipを広げてリボンの先まで
+  // 読み飛ばし、ratioも広げてみゅあと同じくらい引いた(=顔が枠に占める
+  // 割合が近い)構図にした。数値はheadFill/headCx/headCyをみゅあの
+  // 実測値(63%/45%/53%)と突き合わせて選んだ
+  kiki: { headRatio: 0.60, headTopSkip: 0.14 },
 };
 
 // どの接頭辞を処理するかは data/assistants.js の ASSISTANTS から取る。

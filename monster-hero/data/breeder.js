@@ -104,6 +104,18 @@ const MYUA_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
   cost: 1,
 }));
 
+// 助手ききの顔アイコンも、みゅあと同じ仕様(8表情・各1pt)でプロフィール画像として選べるようにする。
+// 表情の並び・ラベルはみゅあと共通(MYUA_ICON_EXPRESSIONS)のものをそのまま使う。
+// 既存の「ききのアイコン」(id:'kiki_icon', images/breeder-icons/kiki.PNG)は別の絵で、
+// 購入済みの人がいるのでそのまま残す。こちらは id を kiki_* に分けているので影響しない。
+const KIKI_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
+  id: `kiki_${key}`,
+  name: `きき（${label}）のアイコン`,
+  type: 'icon',
+  icon: `images/assistant/face/kiki_${key}.PNG`,
+  cost: 1,
+}));
+
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:'images/breeder-icons/kiki.PNG?v=35362d7b6e3e', cost:1 },
@@ -164,7 +176,9 @@ const BREEDER_MARKET_ITEMS = [
   { id:'rainbow_psyche', name:"虹のプシュケー", type:'item', emoji:"🌈", cost:0, shop:false, usage:'breakthrough',
     desc:"マスモンの限界突破に使う。必要数は1回目が5個で、限界突破1回ごとに1個ずつ増える(2回目6個、3回目7個…)。チャレンジモード・クイックモードをクリアすると、選んだ難易度に応じてもらえる。" },
   // 助手みゅあの表情アイコン(8種)。アイコンタブの最後に並ぶ
-  ...MYUA_MARKET_ICONS
+  ...MYUA_MARKET_ICONS,
+  // 助手ききの表情アイコン(8種)。みゅあと同じ並びで続ける
+  ...KIKI_MARKET_ICONS
 ];
 // 難易度キー → その難易度で使えるスキップチケットのid
 const SKIP_TICKET_BY_DIFFICULTY = Object.freeze(Object.fromEntries(
