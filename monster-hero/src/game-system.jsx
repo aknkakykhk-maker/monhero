@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 13:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 13:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8938,10 +8938,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='SPECIAL')) return 0;
     const atkVal = Math.floor(intent.value*(1.0-getWaveBuff('enemyAtkDebuffPct')));
     const chuuniCutActive = (mainHero?.id==='Ark'||mainHero?.id==='Iblis') && getWaveBuff('chuuniDmgCutUses')<2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
-    // 丈夫さは固定軽減(×0.75)のあと、0.015%/pt（上限50%）を乗算する。
+    // 丈夫さは固定軽減(×0.5)のあと、0.015%/pt（上限50%）を乗算する。
     // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
     const defenseRate = Math.min(0.5,effectiveDef*0.00015);
-    const dmgBase = Math.max(30,(atkVal-effectiveDef*0.75)*(1-defenseRate))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
+    const dmgBase = Math.max(30,(atkVal-effectiveDef*0.5)*(1-defenseRate))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
     return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs]);
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて

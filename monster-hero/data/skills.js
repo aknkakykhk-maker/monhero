@@ -14,15 +14,15 @@ const BASE_ATK_EVOLUTION = [
 // flat は既存の集計構造との互換性のため残すが、全段階0とする。
 // 段階判定は基礎丈夫さ、軽減量は丈夫さバフ込みの実効丈夫さを使う。
 const GUARD_EVOLUTION = [
-  {name:"ガード",       flat:0, mult:2.40, icon:"🛡️",guts:0},
-  {name:"ハイガード",   flat:0, mult:2.60, icon:"🔰",guts:0},
-  {name:"鉄壁ガード",   flat:0, mult:2.80, icon:"🏰",guts:0},
-  {name:"金剛不壊",     flat:0, mult:3.00, icon:"💎",guts:0},
-  {name:"絶対防御",     flat:0, mult:3.40, icon:"🌌",guts:0},
-  {name:"聖域展開",     flat:0, mult:3.70, icon:"⛪",guts:0},
-  {name:"因果遮断",     flat:0, mult:4.45, icon:"💠",guts:0},
-  {name:"不変の真理",   flat:0, mult:5.35, icon:"♾️",guts:0},
-  {name:"万象拒絶",     flat:0, mult:6.75, icon:"⛩️",guts:0}
+  {name:"ガード",       flat:0, mult:2.65, icon:"🛡️",guts:0},
+  {name:"ハイガード",   flat:0, mult:2.85, icon:"🔰",guts:0},
+  {name:"鉄壁ガード",   flat:0, mult:3.04, icon:"🏰",guts:0},
+  {name:"金剛不壊",     flat:0, mult:3.24, icon:"💎",guts:0},
+  {name:"絶対防御",     flat:0, mult:3.64, icon:"🌌",guts:0},
+  {name:"聖域展開",     flat:0, mult:3.93, icon:"⛪",guts:0},
+  {name:"因果遮断",     flat:0, mult:4.68, icon:"💠",guts:0},
+  {name:"不変の真理",   flat:0, mult:5.57, icon:"♾️",guts:0},
+  {name:"万象拒絶",     flat:0, mult:6.97, icon:"⛩️",guts:0}
 ];
 
 const RANGE_EVOLUTION = [
