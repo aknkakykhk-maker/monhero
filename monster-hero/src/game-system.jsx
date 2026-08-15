@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 00:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 00:57"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3475,6 +3475,11 @@ const loginBonusPeriodKey = (now=Date.now()) => new Date(Number(now) + 5 * 60 * 
 // この保存キーが無い人は、これまでどおり「みゅあ」を選んでいる扱いにする。
 // 助手選択の画面も出さない(いままで遊んできた人に選び直しを迫らない)。
 const ASSISTANT_SELECTED_KEY = 'mh_assistant_selected_v1';
+// ききが増える前から遊んでいた人へ、1回だけ見せる加入の会話。
+// 「フラグが無い人＝既存プレイヤー」ではない(新しく始めた人も持っていない)ので、
+// 既にオンボーディングを終えている(mh_onboarded)ことと合わせて判定する。
+// 新しく始めた人は助手選択を通った時点で見たことにして、あとから誤って流れないようにする。
+const KIKI_INTRO_SEEN_KEY = 'mh_kiki_intro_seen_v1';
 const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
   ? assistantIdOrDefault(typeof value === 'string' ? value : null)
   : ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua');
@@ -5762,6 +5767,8 @@ function MonsterHeroGame() {
   const selectedAssistantIdRef = useRef(normalizeAssistantId(null));
   // 助手選択の画面を出すかどうか(はじめて遊ぶ人にだけ、名前を決めるより前に出す)
   const [assistantChosen, setAssistantChosen] = useState(true);
+  // きき加入の会話。null=出さない / 0以上=その位置のセリフを表示中
+  const [kikiIntroStep, setKikiIntroStep] = useState(null);
   // 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
   // 助手ごとに完全に分けて持つので、切り替えてももう片方の進捗は消えない
   const [assistantBonds, setAssistantBonds] = useState({});
@@ -7236,6 +7243,13 @@ function MonsterHeroGame() {
       // 助手選択は、はじめて遊ぶ人にだけ出す。
       // 既に遊んでいる人は、選択の保存が無くても「みゅあを選んでいる」扱いのまま進める
       setAssistantChosen(!!savedAssistant || wasOnboarded);
+      // きき加入の会話は「すでに遊んでいた人」で「まだ見ていない」ときだけ。
+      // 未閲覧フラグだけで決めると、新しく始めた人にも出てしまうので wasOnboarded と合わせて見る
+      const kikiIntroSeen = await storeGet(KIKI_INTRO_SEEN_KEY, false, false);
+      if (wasOnboarded && kikiIntroSeen !== true) setKikiIntroStep(0);
+      // 新しく始めた人は、この時点で見たことにしておく(助手選択を通るので会話は不要)。
+      // ここで書いておかないと、プロフィールを決め終わったあとに流れてしまう
+      else if (!wasOnboarded && kikiIntroSeen !== true) { try { await storeSet(KIKI_INTRO_SEEN_KEY, true, false); } catch {} }
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
       // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
@@ -7769,6 +7783,12 @@ function MonsterHeroGame() {
   // いま選んでいる助手のぶんだけを返すので、画面側に助手ごとの分岐を書かなくてよい
   const assistantSceneLinesFor = (scene) => (typeof assistantSceneLines === 'function')
     ? assistantSceneLines(scene, null, assistantBondLevelNow, selectedAssistantId) : [];
+  // きき加入の会話を見終わったことを覚える。以降は二度と自動再生しない。
+  // 助手の選択にも仲良し度にも触れない(会話を見ただけで助手が変わることはない)
+  const markKikiIntroSeen = useCallback(() => {
+    setKikiIntroStep(null);
+    try { storeSet(KIKI_INTRO_SEEN_KEY, true, false); } catch {}
+  }, []);
   // 助手を切り替える。仲良し度も呼び方も助手ごとに分けてあるので、切り替えても何も失われない
   const chooseAssistant = useCallback((id) => {
     const next = normalizeAssistantId(id);
@@ -11806,6 +11826,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button onClick={startOnboardingPreview} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">名前入力から通しで見る（保存されません）</button>
                   <button onClick={()=>{returnToHome();startTutorial('intro');}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">みゅあのあいさつだけ再生</button>
                   <button onClick={()=>{returnToHome();startTutorial('tour');}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">村の案内だけ再生</button>
+                  <button onClick={()=>{returnToHome();setKikiIntroStep(0);}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">きき加入の会話を再生</button>
                   <button onClick={()=>setAssistantDebug('lines')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全助手コメント確認</button>
                   <button onClick={()=>setAssistantDebug('expressions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">全表情確認</button>
                   <button onClick={()=>setAssistantDebug('conditions')} className="min-h-[46px] rounded-xl bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-black active:scale-95">条件コメント確認</button>
@@ -11886,7 +11907,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
               <div className="w-full max-w-md mx-auto grid grid-cols-2 gap-2.5 pb-3">
                 {ASSISTANT_LIST.map(who=>(
-                  <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
+                  <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
                     aria-label={`${who.name}をえらぶ`}
                     className={`rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id===selectedAssistantId?'':'opacity-95'}`}
                     style={{border:`2px solid ${who.id===selectedAssistantId?who.accent:'rgba(255,255,255,.14)'}`,backgroundColor:who.id===selectedAssistantId?`${who.accent}1f`:'rgba(15,23,42,.75)'}}>
@@ -14446,8 +14467,51 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         </QuickStepScreen>
       )}
 
+      {/* きき加入の会話。ききが増える前から遊んでいた人へ、初回ログインで1回だけ。
+          ふだんの吹き出しとは別の「2人が並んで話す」表示にして、掛け合いだと分かるようにする。
+          本文は2人がお互いを呼び合う会話なので、プレイヤーへの呼び方(親密度で変わるもの)は通さず
+          そのまま出す(assistantSpeakTextを使わない) */}
+      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep!=null&&(()=>{
+        const script=(typeof ASSISTANT_KIKI_INTRO!=='undefined'&&ASSISTANT_KIKI_INTRO)||[];
+        if(script.length===0) return null;
+        const step=Math.max(0,Math.min(kikiIntroStep,script.length-1));
+        const line=script[step];
+        const speaker=assistantById(line.who);
+        const last=step===script.length-1;
+        const calls=(typeof ASSISTANT_KIKI_INTRO_CALLS!=='undefined'&&ASSISTANT_KIKI_INTRO_CALLS)||{};
+        const next=()=>{ if(last) markKikiIntroSeen(); else setKikiIntroStep(step+1); };
+        return(
+        <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:77000,backgroundColor:'rgba(2,6,23,.95)'}} role="dialog" aria-modal="true" aria-label="ききが助手に加わりました">
+          {/* どこを押しても次へ進む。最後の1回で見たことにする */}
+          <button type="button" onClick={next} aria-label="次へ" className="absolute inset-0 w-full h-full" style={{background:'transparent'}}/>
+          <div className="relative w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto mh-scroll rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))',pointerEvents:'none'}}>
+            <p className="mb-2 text-center text-[10px] font-black tracking-widest text-pink-300">あたらしい助手</p>
+            {/* 2人を並べて出し、いま話しているほうを明るくする */}
+            <div className="mb-3 flex items-end justify-center gap-3">
+              {ASSISTANT_LIST.map(who=>{
+                const talking=who.id===line.who;
+                return(
+                  <div key={who.id} className={`flex flex-col items-center gap-1 ${talking?'':'opacity-35'}`} style={{transform:talking?'scale(1)':'scale(.86)',transition:'opacity .18s, transform .18s'}}>
+                    <AssistantFace who={who} size={talking?84:64} accent={who.accent} expression={talking?line.e:'normal'}/>
+                    <span className="text-[9px] font-black" style={{color:talking?who.accent:'#64748b'}}>{who.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="rounded-2xl border-2 bg-slate-900 px-3 py-3" style={{borderColor:speaker.accent}}>
+              <span className="block text-[9px] font-black tracking-widest" style={{color:speaker.accent}}>{speaker.name}</span>
+              <span className="block text-[13px] font-bold leading-relaxed text-white mt-1">{line.t}</span>
+            </div>
+            <p className="mt-2 text-center text-[8px] text-slate-500">
+              {step+1} / {script.length}　／　みゅあは「{calls.mua||''}」、ききは「{calls.kiki||''}」と呼び合います
+            </p>
+            <button onClick={next} className="mt-3 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]" style={{pointerEvents:'auto'}}>{last?'とじる':'つぎへ'}</button>
+          </div>
+        </div>);
+      })()}
+
       {/* 助手(みゅあ)のデバッグ表示。デバッグ設定からだけ開ける。通常のプレイでは出ない */}
-      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&updateGuideQueue.length>0&&(()=>{const notice=updateGuideQueue[0];const pages=Array.isArray(notice.pages)&&notice.pages.length?notice.pages:['新しいアップデートがあるよ♪'];const page=Math.min(updateGuidePage,pages.length-1);const last=page===pages.length-1;const who=activeAssistant;return(
+      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&kikiIntroStep==null&&updateGuideQueue.length>0&&(()=>{const notice=updateGuideQueue[0];const pages=Array.isArray(notice.pages)&&notice.pages.length?notice.pages:['新しいアップデートがあるよ♪'];const page=Math.min(updateGuidePage,pages.length-1);const last=page===pages.length-1;const who=activeAssistant;return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label={notice.title}>
           <div className="w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             {notice.debugOnly&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・通常ログインでは表示されません</div>}
