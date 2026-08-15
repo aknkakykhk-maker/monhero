@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 09:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 10:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3766,7 +3766,7 @@ const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
 const CHAOS_SETTING = EXTREME_DIFFICULTIES[2];
 // 公開定義へ報酬等を混ぜず、デバッグ戦でULTIMATEルールだけを検証する設定。
-const ULTIMATE_DEBUG_SETTING = Object.freeze({ id:'ULTIMATE', label:'ULTIMATE', power:25, description:'デバッグ限定：累計ターンで敵が強化され、直前WAVEのターン数で能力覚醒が低下する。', specialRules:Object.freeze({ ultimateTurnRules:true }) });
+const ULTIMATE_DEBUG_SETTING = Object.freeze({ id:'ULTIMATE', label:'ULTIMATE', power:25, description:'デバッグ限定：累計ターンで敵が強化され、能力覚醒が低下し、50ターンごとに距離が永久弱体化する。', specialRules:Object.freeze({ ultimateTurnRules:true }) });
 const extremeRuleSetting = (difficultyId) => difficultyId===ULTIMATE_DEBUG_SETTING.id ? ULTIMATE_DEBUG_SETTING : EXTREME_DIFFICULTIES.find(setting=>setting.id===difficultyId)||null;
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
@@ -3817,6 +3817,24 @@ const applyNightmareWaveEnhancement = (value, specialDifficulty=null) => value *
 const applyNightmareStatGain = (before, normalAfter, specialDifficulty=null) => before
   + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, specialDifficulty));
 const ultimateEnemyTurnMultiplier = (turns) => 1 + Math.max(0,Number(turns)||0)*0.005;
+const ULTIMATE_DISTANCE_BREAK_TURNS=Object.freeze([50,100,150]);
+const pendingUltimateDistanceBreak = (totalTurns, weakenedDistances, waveNumber, specialDifficulty=null) => {
+  if(specialDifficulty!==ULTIMATE_DEBUG_SETTING.id||Number(waveNumber)>=10)return null;
+  const weakenedCount=Array.isArray(weakenedDistances)?weakenedDistances.length:0;
+  return ULTIMATE_DISTANCE_BREAK_TURNS.find((threshold,index)=>index>=weakenedCount&&(Number(totalTurns)||0)>=threshold)||null;
+};
+const drawUltimateDistanceBreak = (weakenedDistances, random=Math.random) => {
+  const used=new Set(Array.isArray(weakenedDistances)?weakenedDistances:[]);
+  const candidates=RANGE_LABELS.map((_,index)=>index).filter(index=>!used.has(index));
+  if(!candidates.length)return null;
+  const roll=Math.max(0,Math.min(0.999999999999,Number(random())||0));
+  return candidates[Math.floor(roll*candidates.length)];
+};
+const applyUltimateDistanceBreak = (damage, slotIndex, weakenedDistances, specialDifficulty=null, cardType=null) => {
+  const isMonsterAttack=['atk','range_atk','unique'].includes(cardType);
+  return specialDifficulty===ULTIMATE_DEBUG_SETTING.id&&isMonsterAttack&&weakenedDistances.includes(slotIndex)
+    ? Math.floor((Number(damage)||0)*0.5) : damage;
+};
 const resolveUltimateWaveStats = (stats, turns, specialDifficulty=null) => {
   const before={atk:Number(stats?.atk)||0,def:Number(stats?.def)||0,hp:Number(stats?.hp)||0,guts:Number(stats?.guts)||0};
   if(specialDifficulty!==ULTIMATE_DEBUG_SETTING.id)return {atk:applyNightmareStatGain(before.atk,Math.floor(before.atk*1.10),specialDifficulty),def:applyNightmareStatGain(before.def,Math.floor((before.def+20)*1.10),specialDifficulty),hp:applyNightmareStatGain(before.hp,Math.floor(before.hp*1.20),specialDifficulty),guts:applyNightmareStatGain(before.guts,Math.floor((before.guts+10)*1.10),specialDifficulty)};
@@ -5445,6 +5463,12 @@ function MonsterHeroGame() {
   const [turnCount, setTurnCount] = useState(1);
   // WAVEごとのturnCountを撃破確定時にだけ足す、現在のラン内の累計。永続保存はしない。
   const [totalTurnCount, setTotalTurnCount] = useState(0);
+  // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
+  const [ultimateWeakenedDistances,setUltimateWeakenedDistances]=useState([]);
+  const ultimateWeakenedDistancesRef=useRef([]);
+  const [ultimateDistanceBreakPending,setUltimateDistanceBreakPending]=useState(null);
+  const ultimateDistanceBreakPendingRef=useRef(null);
+  const [ultimateDistanceBreakReveal,setUltimateDistanceBreakReveal]=useState(null);
   // バトル速度は演出待機だけに使い、ダメージ計算・抽選・報酬には渡さない。
   // refを参照することで、演出途中の変更も次の待機から即時に反映される。
   const [battleSpeed, setBattleSpeed] = useState(1);
@@ -8452,6 +8476,7 @@ function MonsterHeroGame() {
     enemy:null, enemyDist:2, selectedCards:[], isBusy:false,
     monSelection:getActiveMonsterList(), ownedUniques:[], slotUniqueChoice:{}, slotUniqueLevelChoice:{}, inheritedUniqueEvo:{}, ownedTeachings:[],
     atkLevel:0, guardLevel:0, guardBonusCount:0, upgradePoints:0, turnCount:1, totalTurnCount:0,
+    ultimateWeakenedDistances:[], ultimateDistanceBreakPending:null,
     permaBuffs:{ autoHpRecovery:0.1 }, waveBuffs:{}, turnBuffs:{}, nextTurnBuffs:{},
     currentWaveDamage:0, waveDistDamage:[0,0,0,0], distDmgBonus:[0,0,0,0], distAptPct:[0,0,0,0], totalDistDamage:[0,0,0,0], totalAllDamage:0, totalRecoveryDelta:0, waveResult:null,
     focusedCard:null, enemyIntent:null, enemyLastIntent:null, enemyNextIntent:null, effect:null, finalRewardSummary:null, waveHistory:[], gaveUp:false
@@ -8626,6 +8651,8 @@ function MonsterHeroGame() {
     setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{}); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice||{}); setInheritedUniqueEvo(s.inheritedUniqueEvo||{});
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount); setTotalTurnCount(s.totalTurnCount);
+    ultimateWeakenedDistancesRef.current=s.ultimateWeakenedDistances; setUltimateWeakenedDistances(s.ultimateWeakenedDistances);
+    ultimateDistanceBreakPendingRef.current=s.ultimateDistanceBreakPending; setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending); setUltimateDistanceBreakReveal(null);
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
@@ -8809,6 +8836,8 @@ function MonsterHeroGame() {
     setIsBusy(s.isBusy); setMonSelection(s.monSelection); setOwnedUniques(s.ownedUniques); setSlotUniqueChoice(s.slotUniqueChoice||{}); setSlotUniqueLevelChoice(s.slotUniqueLevelChoice||{}); setInheritedUniqueEvo(s.inheritedUniqueEvo||{});
     setOwnedTeachings(s.ownedTeachings); setAtkLevel(s.atkLevel); setGuardLevel(s.guardLevel);
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount); setTotalTurnCount(s.totalTurnCount);
+    ultimateWeakenedDistancesRef.current=s.ultimateWeakenedDistances; setUltimateWeakenedDistances(s.ultimateWeakenedDistances);
+    ultimateDistanceBreakPendingRef.current=s.ultimateDistanceBreakPending; setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending); setUltimateDistanceBreakReveal(null);
     setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); setNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
@@ -9022,8 +9051,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     let finalDmg=Math.floor(atk*distMult*baseDmgMult*totalBuffMult*(1.0+getWaveBuff('enemyTakenDmgBonus')+additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg=Math.floor(finalDmg*0.5);
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    return applyExtremeIntegerRule(finalDmg,specialRuleDifficulty,'damageDealt');
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, runMode, difficulty, extremeDifficulty]);
+    const distanceBrokenDmg=applyUltimateDistanceBreak(finalDmg,slotIdx,ultimateWeakenedDistances,specialRuleDifficulty,card.type);
+    return applyExtremeIntegerRule(distanceBrokenDmg,specialRuleDifficulty,'damageDealt');
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateWeakenedDistances, runMode, difficulty, extremeDifficulty]);
 
   // 確定している追加ヒットまで含めた攻撃1枚の予測値。中央合計と各スロットで必ず同じ入口を使う。
   // ランダム会心は含めず、会心予約だけは実処理と同じ倍率を適用する。
@@ -9060,10 +9090,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // enemyDefeatResolvedRefの同期ロック後に確定するため、同じWAVEの勝利処理が重なっても1回だけ加算される。
     const newTotalTurnCount=totalTurnCount+turnCount;
     setTotalTurnCount(newTotalTurnCount);
+    const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
+    const distanceBreakThreshold=pendingUltimateDistanceBreak(newTotalTurnCount,ultimateWeakenedDistancesRef.current,wave,specialRuleDifficulty);
+    if(distanceBreakThreshold){
+      ultimateDistanceBreakPendingRef.current=distanceBreakThreshold;
+      setUltimateDistanceBreakPending(distanceBreakThreshold);
+    }
     const finalRoundScore=Math.floor(((totalWaveDamage*waveMult)+(totalWaveDamage*turnMult))*scoreMultiplier);
     setScore(s=>s+finalRoundScore);
     const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
-    const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
     const gainedDistBonus=finalDistDamage.map(d=>applyNightmareWaveEnhancement(d*0.001/100,specialRuleDifficulty));
     const newDistBonus=distDmgBonus.map((b,i)=>b+gainedDistBonus[i]);
@@ -9077,7 +9112,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const newTotalRecoveryDelta=totalRecoveryDelta+recoveryDelta;
     setPermaBuffs(p=>({...p, autoHpRecovery:Math.max(0,(p.autoHpRecovery??0.1)+recoveryDelta)}));
     setTotalRecoveryDelta(newTotalRecoveryDelta);
-    setWaveResult({wave,waveMult,turn:turnCount,totalTurnCount:newTotalTurnCount,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,gainedDistBonus,newDistBonus,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
+    setWaveResult({wave,waveMult,turn:turnCount,totalTurnCount:newTotalTurnCount,pendingUltimateDistanceBreak:!!distanceBreakThreshold,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,gainedDistBonus,newDistBonus,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
@@ -9870,7 +9905,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 必ず呼び出し元が保持している最新のローカル値を渡す
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey=null, heroForDeck=null, aptPctOverride=null, restoredStats=null) => {
     // 通常・クイック・プロ・極限・練習/デバッグの共通開始点で、新しいランだけ累計を初期化する。
-    if (w === 1) setTotalTurnCount(0);
+    if (w === 1) {
+      setTotalTurnCount(0);
+      ultimateWeakenedDistancesRef.current=[]; setUltimateWeakenedDistances([]);
+      ultimateDistanceBreakPendingRef.current=null; setUltimateDistanceBreakPending(null); setUltimateDistanceBreakReveal(null);
+    }
     // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
     if (w === 1 && !forcedEnemyKey) { addAssistantBond('battle'); addAssistantBond(modeBondAction(runMode)); }
     setWave(w);
@@ -9901,7 +9940,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setAtkLevel(nAtkL); setGuardLevel(nGrdL); setGuardBonusCount(nGB);
     const pool=buildDeck(currentSlots,nAtkL,nGrdL,u||ownedUniques,t||ownedTeachings,nGB,slotUniqueChoice,slotUniqueLevelChoice,inheritedUniqueEvo,heroForDeck);
     const showExtremeRule = w === 1 && !!specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    setHand(pool.slice(0,5)); setDeck(pool.slice(5)); setGraveyard([]); setGameState('BATTLE'); setExtremeRuleOpen(showExtremeRule); setIsBusy(showExtremeRule);
+    const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&extremeRunRef.current&&extremeDifficulty===ULTIMATE_DEBUG_SETTING.id;
+    setHand(pool.slice(0,5)); setDeck(pool.slice(5)); setGraveyard([]); setGameState('BATTLE'); setExtremeRuleOpen(showExtremeRule); setIsBusy(showExtremeRule||!!breakPending);
+    if(breakPending){
+      const picked=drawUltimateDistanceBreak(ultimateWeakenedDistancesRef.current);
+      if(picked!=null){
+        const next=[...ultimateWeakenedDistancesRef.current,picked];
+        ultimateWeakenedDistancesRef.current=next; setUltimateWeakenedDistances(next);
+        ultimateDistanceBreakPendingRef.current=null; setUltimateDistanceBreakPending(null);
+        setUltimateDistanceBreakReveal(picked);
+        setTimeout(()=>{setUltimateDistanceBreakReveal(null);setIsBusy(false);},battleMs(1400));
+      }
+    }
     setTurnBuffs({}); setNextTurnBuffs({}); // WAVE毎リセットの一時バフ・デバフを全てクリア
   };
 
@@ -13260,7 +13310,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     if(cardNeedsMonster(card)) return cardAssignments[idx]===i;
                     return true; // 全体系は全スロット
                   }).map(idx=>({idx,card:hand[idx]}));
-                  return(<button key={i} data-slot-index={i} onClick={()=>{
+                  const distanceBroken=ultimateWeakenedDistances.includes(i);
+                  return(<button key={i} data-slot-index={i} data-distance-broken={distanceBroken?'true':undefined} onClick={()=>{
                     if(isBusy)return;
                     if(pendingCard!=null && canAssign){
                       setCardAssignments(p=>({...p,[pendingCard]:i}));
@@ -13270,7 +13321,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       setSlotSettle(i);
                       setTimeout(()=>{ setSlotSettle(null); }, 500);
                     }
-                  }} disabled={isBusy} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards')):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards')))))}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined)}>
+                  }} disabled={isBusy} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards')):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards')))))}:(distanceBroken?{boxShadow:'inset 0 0 0 2px rgba(248,113,113,.9), inset 0 0 28px rgba(88,28,135,.85)'}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined))}>
+                    {distanceBroken&&<><div className="absolute inset-0 rounded-lg pointer-events-none z-[15]" style={{background:'linear-gradient(180deg,rgba(76,29,149,.34),rgba(127,29,29,.48))'}}></div><div className="absolute -top-2 left-1/2 -translate-x-1/2 z-[35] whitespace-nowrap rounded-full border border-red-300 bg-purple-950 px-1.5 py-0.5 text-[7px] font-black text-red-100 shadow-lg">与ダメ ↓50%</div></>}
                     {/* 名前の行。勇者モンには王冠を付ける。どれが勇者モンか分からないと
                         「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
                     <div className={`h-[25%] flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[7px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[7px] font-black text-indigo-300">×{assignedCount}</span>}</div>
@@ -14095,6 +14147,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       })()}
 
       {/* WAVE 1で操作可能になる前に一度だけ出す極限ルール発動テロップ。 */}
+      {gameState==='BATTLE'&&ultimateDistanceBreakReveal!=null&&<div data-ultimate-distance-break-reveal className="fixed inset-0 flex items-center justify-center p-5 text-center" style={{zIndex:91000,background:'radial-gradient(circle,rgba(127,29,29,.72),rgba(2,6,23,.97))'}} role="dialog" aria-modal="true" aria-label="距離弱体化発動">
+        <div className="w-full max-w-xs rounded-3xl border-2 border-red-300 bg-purple-950/95 px-5 py-7 shadow-[0_0_48px_rgba(239,68,68,.65)]" style={{animation:'mhExtremeRuleIn .38s ease-out'}}>
+          <div className="text-xs font-black tracking-[.24em] text-amber-300">ULTIMATE</div>
+          <div className="mt-2 text-2xl font-black italic tracking-wider text-red-100">DISTANCE BREAK</div>
+          <div className="mt-5 text-xl font-black text-white">{RANGE_LABELS[ultimateDistanceBreakReveal]}距離 弱体化</div>
+          <div className="mt-2 rounded-xl border border-red-300/50 bg-black/40 py-2 text-sm font-black text-red-200">与ダメージ 50%</div>
+        </div>
+      </div>}
       {gameState==='BATTLE'&&extremeRuleOpen&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:90500,background:'radial-gradient(circle,rgba(112,26,117,.58),rgba(2,6,23,.9))'}} onClick={()=>{setExtremeRuleOpen(false);setIsBusy(false);}} role="dialog" aria-modal="true" aria-label="極限ルール発動">
         <div className="w-full max-w-xs rounded-3xl border-2 border-fuchsia-300 bg-slate-950/95 px-5 py-6 text-center shadow-[0_0_42px_rgba(217,70,239,.65)]" style={{animation:'mhExtremeRuleIn .38s ease-out'}}>
           {(()=>{const specialDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);return <>
@@ -14204,6 +14264,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <span className="text-[10px] font-black text-indigo-200">今回：<b className="font-mono text-sm text-white">{waveResult.turn}</b>ターン</span>
               <span className="text-[10px] font-black text-amber-200">累計：<b className="font-mono text-sm text-white">{waveResult.totalTurnCount}</b>ターン</span>
             </div>
+            {waveResult.pendingUltimateDistanceBreak&&<div data-ultimate-distance-break-warning className="rounded-lg border border-red-400/60 bg-purple-950/80 px-2 py-1 text-[10px] font-black text-red-200">⚠ 次WAVEで距離弱体化が発動</div>}
             <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">WAVE 与ダメージ</span><span className="text-red-400 font-mono font-black text-base">{waveResult.totalDamage.toLocaleString()}</span></div>
             {waveResult.totalAllDamage!=null&&(<div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">全WAVE累計ダメージ</span><span className="text-orange-400 font-mono font-black text-base">{waveResult.totalAllDamage.toLocaleString()}</span></div>)}
             {waveResult.distDamage&&(<div className="border-b border-white/10 pb-1.5">
