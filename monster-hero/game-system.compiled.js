@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 97c17b8a687f47aa
+// source-sha256: 5a39192435b0c298
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 10:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 10:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -27456,6 +27456,7 @@ function MonsterHeroGame() {
         key: i,
         "data-slot-index": i,
         "data-distance-broken": distanceBroken ? 'true' : undefined,
+        "aria-label": `${RANGE_LABELS[i]}距離${distanceBroken ? '（与ダメージ50%に弱体化中）' : ''}`,
         onClick: () => {
           if (isBusy) return;
           if (pendingCard != null && canAssign) {
@@ -27473,23 +27474,33 @@ function MonsterHeroGame() {
           }
         },
         disabled: isBusy,
-        className: `relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
+        className: `relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
         style: isAnimating ? {
           zIndex: 9999,
           animation: attackAnim.zanCombo ? 'zanComboDash 320ms ease-out forwards' : attackAnim.charge ? 'specialCharge 650ms ease-out forwards' : attackAnim.charge === false ? attackAnim.motion === 'floatStab' ? 'floatStabLunge 700ms ease-in forwards' : attackAnim.motion === 'waterBurst' ? 'waterBurstLunge 520ms ease-out forwards' : 'specialLunge 500ms ease-in forwards' : attackAnim.motion === 'floatStab' ? 'floatStabAttack 650ms ease-in forwards' : attackAnim.motion === 'waterBurst' ? 'waterBurstAttack 520ms ease-out forwards' : 'attackFly 450ms ease-in forwards'
         } : distanceBroken ? {
-          boxShadow: 'inset 0 0 0 2px rgba(248,113,113,.9), inset 0 0 28px rgba(88,28,135,.85)'
+          backgroundColor: 'rgb(24,5,25)',
+          boxShadow: 'inset 0 0 0 2px rgba(248,113,113,.95), inset 0 0 34px rgba(76,5,25,.95), 0 0 13px rgba(220,38,38,.5)'
         } : slotSettle === i ? {
           animation: 'slotSettle 400ms ease-out'
         } : undefined
       }, distanceBroken && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "absolute inset-0 rounded-lg pointer-events-none z-[15]",
         style: {
-          background: 'linear-gradient(180deg,rgba(76,29,149,.34),rgba(127,29,29,.48))'
+          background: 'repeating-linear-gradient(135deg,rgba(0,0,0,.05) 0 7px,rgba(127,29,29,.36) 8px 9px),radial-gradient(circle at 50% 40%,rgba(88,28,135,.42),rgba(24,5,25,.78))'
         }
       }), /*#__PURE__*/React.createElement("div", {
-        className: "absolute -top-2 left-1/2 -translate-x-1/2 z-[35] whitespace-nowrap rounded-full border border-red-300 bg-purple-950 px-1.5 py-0.5 text-[7px] font-black text-red-100 shadow-lg"
-      }, "\u4E0E\u30C0\u30E1 \u219350%")), /*#__PURE__*/React.createElement("div", {
+        className: "absolute inset-[2px] rounded-lg border border-red-300/80 pointer-events-none z-[45]",
+        style: {
+          boxShadow: 'inset 0 0 12px rgba(239,68,68,.7)'
+        }
+      }), /*#__PURE__*/React.createElement("div", {
+        className: "absolute -top-2 left-1/2 -translate-x-1/2 z-[65] whitespace-nowrap rounded-full border-2 border-red-200 bg-red-950 px-1.5 py-0.5 text-[7px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,.9)]"
+      }, "\u26A0 \u4E0E\u30C0\u30E1 \u219350%"), !s && /*#__PURE__*/React.createElement("div", {
+        className: "absolute inset-0 z-[25] flex items-center justify-center pointer-events-none text-red-200/80"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-2xl font-black"
+      }, "\u26A0"))), /*#__PURE__*/React.createElement("div", {
         className: `h-[25%] flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s) ? 'bg-amber-500/25 border-amber-300/50' : 'bg-black/60 border-white/10'}`
       }, isHeroSlotMon(s) && /*#__PURE__*/React.createElement(Crown, {
         size: 8,
@@ -29397,7 +29408,13 @@ function MonsterHeroGame() {
       className: "mt-5 text-xl font-black text-white"
     }, RANGE_LABELS[ultimateDistanceBreakReveal], "\u8DDD\u96E2 \u5F31\u4F53\u5316"), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 rounded-xl border border-red-300/50 bg-black/40 py-2 text-sm font-black text-red-200"
-    }, "\u4E0E\u30C0\u30E1\u30FC\u30B8 50%"))), gameState === 'BATTLE' && extremeRuleOpen && /*#__PURE__*/React.createElement("div", {
+    }, "\u4E0E\u30C0\u30E1\u30FC\u30B8 50%"), /*#__PURE__*/React.createElement("div", {
+      className: "mt-4 border-t border-red-300/20 pt-3 text-[10px] text-purple-100"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "font-black text-slate-400"
+    }, "\u73FE\u5728\u306E\u5F31\u4F53\u8DDD\u96E2\uFF1A"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+      className: "font-black"
+    }, ultimateWeakenedDistances.map(index => `${RANGE_LABELS[index]}距離`).join(' / ') || 'なし')))), gameState === 'BATTLE' && extremeRuleOpen && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
         zIndex: 90500,
@@ -29417,7 +29434,30 @@ function MonsterHeroGame() {
       }
     }, (() => {
       const specialDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      return specialDifficulty === ULTIMATE_DEBUG_SETTING.id ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[11px] font-black tracking-[.12em] text-amber-300"
+      }, "ULTIMATE \u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
+        className: "mt-3 grid gap-1.5 text-left"
+      }, [['1', '累計ターン圧', '累計ターン×0.5% 次WAVEの敵が強化'], ['2', '覚醒低下', 'このWAVEのターン数×0.5% 次回の攻撃/防御/精神覚醒が低下'], ['3', 'DISTANCE BREAK', '累計50ターンごとに、未弱体の距離が1つ追加で与ダメージ50%']].map(([number, title, text]) => /*#__PURE__*/React.createElement("div", {
+        key: number,
+        className: "rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black text-fuchsia-300"
+      }, "RULE ", number, "\uFF5C", title), /*#__PURE__*/React.createElement("div", {
+        className: "mt-0.5 text-[10px] font-bold leading-snug text-white"
+      }, text), number === '2' && /*#__PURE__*/React.createElement("div", {
+        className: "mt-0.5 text-[8px] font-black text-amber-300"
+      }, "\u203B\u8DDD\u96E2\u5F37\u5316\u306F\u5BFE\u8C61\u5916")))), /*#__PURE__*/React.createElement("div", {
+        className: "mt-2 rounded-xl border border-amber-300/40 bg-black/45 px-3 py-2 text-left text-[10px] leading-relaxed text-slate-200"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "\u73FE\u5728\u306E\u7D2F\u8A08\u30BF\u30FC\u30F3\uFF1A"), /*#__PURE__*/React.createElement("b", {
+        className: "text-white"
+      }, totalTurnCount)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-400"
+      }, "\u73FE\u5728\u306E\u5F31\u4F53\u8DDD\u96E2\uFF1A"), /*#__PURE__*/React.createElement("b", {
+        className: ultimateWeakenedDistances.length ? 'text-red-200' : 'text-white'
+      }, ultimateWeakenedDistances.map(index => `${RANGE_LABELS[index]}距離`).join(' / ') || 'なし')))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black tracking-[.16em] text-amber-300"
       }, "\u26A0 ", specialDifficulty, "\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 space-y-2 text-left text-[11px] text-slate-200"
