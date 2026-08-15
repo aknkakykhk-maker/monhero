@@ -227,10 +227,12 @@ const ASSISTANT_BOND_ACTIONS = {
   proClear:     { amount:2, dailyMax:8,  label:'プロモードをクリア' },
   extremeClear: { amount:4, dailyMax:12, label:'極限チャレンジをクリア' },
 };
-// 1日に増やせる合計。上の dailyMax を全部足すと100を超えるが、
-// ここで頭打ちにして「1日で一気に仲良くなる」ことがないようにしている。
-// 行動の種類を増やしたぶん、いろんな遊び方をすれば無理なく届く程度に40へ調整した
-const ASSISTANT_BOND_DAILY_MAX = 40;
+// 1日に増やせる合計。行動の種類が増えるほど「1日でどれだけ遊んでも上限40で頭打ち」が
+// きつくなりすぎたため、行動ごとの上限をすべて合わせた理論上の最大値まで引き上げた。
+// 「1日で一気に仲良くなる」ことを防ぐ役目は、行動ごとの1日上限(dailyMax)がすでに
+// 担っているので、全体の頭打ちは「これ以上は増えない」という安全弁としてだけ残す。
+// ASSISTANT_BOND_ACTIONSへ行動を足し引きしても、ここは自動で追随する
+const ASSISTANT_BOND_DAILY_MAX = Object.values(ASSISTANT_BOND_ACTIONS).reduce((sum, a) => sum + (Number(a.dailyMax) || 0), 0);
 
 // そのセリフが、いまの仲良し度で出せるか。bond を書いていなければどのLvでも出る
 const assistantLineMatchesBond = (line, level) => {
