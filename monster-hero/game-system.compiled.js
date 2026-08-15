@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ffd377d49693c467
+// source-sha256: ffa7c70cf82812e8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 16:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 17:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -29667,7 +29667,7 @@ function MonsterHeroGame() {
         className: "text-[11px] font-black tracking-[.12em] text-amber-300"
       }, "ULTIMATE \u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 grid gap-1.5 text-left"
-      }, [['1', '累計ターン圧', /*#__PURE__*/React.createElement(React.Fragment, null, "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u6B21WAVE\u306E\u6575\u304C\u5F37\u5316", /*#__PURE__*/React.createElement("br", null), "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4F9B\u30E2\u30F3\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\u304C\u4F4E\u4E0B", /*#__PURE__*/React.createElement("br", null), "\u7D4C\u904E\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4E0E\u30C0\u30E1\u30FC\u30B8\u4F4E\u4E0B\uFF08\u6700\u4F4E25%\uFF09")], ['2', '覚醒低下', 'このWAVEのターン数×0.75% 次回の攻撃/防御/精神覚醒が低下'], ['3', 'DISTANCE BREAK', '累計35ターンごとに、安全距離以外の3距離をLv1→Lv2→Lv3…と段階強化']].map(([number, title, text]) => /*#__PURE__*/React.createElement("div", {
+      }, [['1', '累計ターン圧', /*#__PURE__*/React.createElement(React.Fragment, null, "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u6B21WAVE\u306E\u6575\u304C\u5F37\u5316", /*#__PURE__*/React.createElement("br", null), "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4F9B\u30E2\u30F3\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\u304C\u4F4E\u4E0B", /*#__PURE__*/React.createElement("br", null), "\u7D4C\u904E\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4E0E\u30C0\u30E1\u30FC\u30B8\u4F4E\u4E0B\uFF08\u6700\u4F4E25%\uFF09")], ['2', '覚醒低下', 'このWAVEのターン数×0.75% 次回の攻撃覚醒/防御覚醒/精神強化が低下'], ['3', 'DISTANCE BREAK', '累計35ターンごとに、安全距離以外の3距離をLv1→Lv2→Lv3…と段階強化']].map(([number, title, text]) => /*#__PURE__*/React.createElement("div", {
         key: number,
         className: "rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"
       }, /*#__PURE__*/React.createElement("div", {
