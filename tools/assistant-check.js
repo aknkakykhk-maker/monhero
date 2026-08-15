@@ -163,7 +163,31 @@ check('直近3件が続けて出ない', (() => {
   }
   return true;
 })());
-check('一人称は「あたし」でそろえる', !/わたし|私は/.test(assistantsSrc));
+// 一人称は助手ごとに決める。みゅあは「あたし」、ききは「私」。
+// 混ざると誰が話しているのか分からなくなるので、セリフ単位で見る
+const linesOf = (whoId) => SCENES.flatMap(([k, def]) => [
+  ...(def.lines || []), ...Object.values(def.when || {}).flat(),
+].filter(l => (l.who || 'mua') === whoId).map(l => ({ k, t: l.t })));
+check('みゅあの一人称は「あたし」', (() => {
+  const bad = linesOf('mua').filter(l => /わたし|私/.test(l.t));
+  return bad.length === 0;
+})(), linesOf('mua').filter(l => /わたし|私/.test(l.t)).map(l => l.k).join(', '));
+check('ききの一人称は「私」', (() => {
+  const bad = linesOf('kiki').filter(l => /あたし/.test(l.t));
+  return bad.length === 0;
+})(), linesOf('kiki').filter(l => /あたし/.test(l.t)).map(l => l.k).join(', '));
+check('ききらしい言葉の崩し方が入っている', (() => {
+  const k = linesOf('kiki');
+  const soft = k.filter(l => /でつ|まつ|おはゆ/.test(l.t)).length;
+  // 全部を崩すと幼児語になってしまう。ほどよく混ざっている状態を保つ
+  return soft >= 20 && soft < k.length;
+})(), (() => { const k = linesOf('kiki'); return `${k.filter(l => /でつ|まつ|おはゆ/.test(l.t)).length} / ${k.length}件`; })());
+check('ききのセリフはみゅあの語尾変換ではない', (() => {
+  // みゅあの本文の「です/ます」を置換しただけの文が混ざっていないか
+  const mua = new Set(linesOf('mua').map(l => l.t));
+  const collide = linesOf('kiki').filter(l => mua.has(l.t.replace(/でつ/g, 'です').replace(/まつ/g, 'ます')));
+  return collide.length === 0;
+})());
 
 // --- ⑦ 初回チュートリアルとデバッグ ---
 check('チュートリアルの台本はデータで持つ', (() => {
@@ -193,10 +217,11 @@ check('はじめての設定のセリフもデータで持つ', (() => {
     && find(false, true) === map.icon && find(true, true) === map.ready;
 })());
 // 初回はプロフィール画面で名前とアイコンを決める(専用画面は作らない)
-check('初回はプロフィール画面から始まる',
-  has("setGameState(onboarded ? 'HOME' : 'PROFILE');") && !has("gameState==='ONBOARDING'"));
+check('初回は助手選択から始まり、プロフィールへ続く',
+  has("setGameState(needsAssistantChoice ? 'ASSISTANT_SELECT' : (onboarded ? 'HOME' : 'PROFILE'));")
+    && !has("gameState==='ONBOARDING'"));
 check('プロフィールで名前・アイコン・決定がそろっている',
-  has('findAssistantOnboarding(hasName,hasIcon)') && has('なまえを決める') && has('アイコンを選ぶ')
+  has('findAssistantOnboarding(hasName,hasIcon,selectedAssistantId)') && has('なまえを決める') && has('アイコンを選ぶ')
     && has('けってい！</button>') && has('disabled={!ready} onClick={finishOnboarding}'));
 check('決め終わるまでは戻るボタンを出さない',
   has('{/* はじめての設定が終わるまでは、まだ帰る場所(HOME)が無いので戻るボタンを出さない */}'));
@@ -218,8 +243,8 @@ check('あいさつの台本をデータで持つ', (() => {
   const i = c.__i;
   return Array.isArray(i) && i.length >= 3 && i.every(p => p.t && p.e) && /はじめまして/.test(i[0].t);
 })());
-check('初回はあいさつから始まる',
-  has("if (!onboarded) { setTutorialKind('intro'); setTutorialStep(0); }"));
+check('助手を選んだあとにあいさつが始まる',
+  has("if (!onboarded && !needsAssistantChoice) { setTutorialKind('intro'); setTutorialStep(0); }"));
 check('あいさつを読み終えるとプロフィールへ進む',
   has("if (kind === 'intro') { setGameState('PROFILE'); return; }")
     && has("{last?(intro?'名前を決める！':(page.offer==='battle'?'あとでやる':'はじめる！')):'つぎへ'}"));
@@ -347,11 +372,11 @@ check('吹き出しは1つの共通コンポーネント', has('const AssistantB
 check('選んだセリフの表情がそのまま顔に渡る', has('const face = expression || shown?.e || null;') && has('<AssistantFace who={who} size={size} accent={color} expression={face}/>'));
 // 場面や条件が変わったときだけ選び直す。ほかの再描画でセリフが入れ替わると読めない
 check('セリフは場面と条件が変わったときだけ選び直す',
-  has('const pickKey = `${scene || \'\'}|${condition || \'\'}|${bond.level}`;') && has("if (pickedRef.current?.key !== pickKey) {"));
+  has('const pickKey = `${who.id}|${scene || \'\'}|${condition || \'\'}|${bond.level}`;') && has("if (pickedRef.current?.key !== pickKey) {"));
 check('画面から条件を渡せる', has('condition=null') && /condition=\{[^}]+\}/.test(source));
 // 顔をタップすると次のセリフへ。詳細は吹き出し側なので、操作が分かれている
 check('顔をタップすると次のセリフへ送れる',
-  has('const onFaceTap = () => {') && has("aria-label={`${who.name}にはなしかける`}") && has('if (typeof pickAssistantLine === \'function\') setTapped(pickAssistantLine(scene, condition, bond.level));'));
+  has('const onFaceTap = () => {') && has("aria-label={`${who.name}にはなしかける`}") && has('if (typeof pickAssistantLine === \'function\') setTapped(pickAssistantLine(scene, condition, bond.level, who.id));'));
 check('詳細は吹き出し側の操作のまま', has("onClick:()=>setOpen(true), 'aria-label':`${who.name}の説明を開く`"));
 check('連打には専用のリアクションを出す',
   has('const spamLine = spam ? (spam.recovering ? spamRecover : spamLines[spam.step]) : null;')
@@ -365,7 +390,7 @@ check('連打のあとは笑って元に戻す',
 check('場面が変わったら送ったセリフも連打もリセットする',
   has('useEffect(() => { setTapped(null); setSpam(null); tapTimesRef.current = []; }, [pickKey]);'));
 check('場面キーだけでも、直接指定でも呼べる',
-  has('const sceneDef = assistantSceneById(scene);') && has("const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level, bond.callStyle);") && has('const paragraphs = detail || sceneDef?.detail || null;'));
+  has('const sceneDef = assistantSceneById(scene);') && has("const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level, bond.callStyle, who.id);") && has('const paragraphs = detail || sceneDef?.detail || null;'));
 check('詳細はヘルプ本文をそのまま出せる', has('const ref = helpRef || sceneDef?.help || null;') && has('renderHelpBlocks(topic.blocks, color)'));
 check('吹き出し風の見た目(しっぽ付き)', has('{/* 吹き出しのしっぽ(左向き) */}') && has("borderRight:`9px solid ${color}`"));
 check('タップで詳細が開く', has('onClick:()=>setOpen(true)') && has('タップで詳しく'));

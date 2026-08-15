@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 23:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 00:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3468,14 +3468,42 @@ const LOGIN_BONUS_DEFAULT = { currentDay:1, lastGrantedPeriod:null, totalLoginDa
 // 日本時間へ直した後に4時間戻した暦日を期間キーにする。03:59と04:00は別の日、
 // 04:00から翌03:59までは同じ日として扱える、比較・保存しやすい YYYY-MM-DD 形式。
 const loginBonusPeriodKey = (now=Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
-// ---------- みゅあとの仲良し度(親密度) ----------
-// 遊ぶほどみゅあと打ち解けていく。段階と呼び方・セリフは data/assistants.js が持ち、
+// ---------- どの助手と一緒に遊ぶか ----------
+// 助手は「みゅあ」「きき」から選ぶ。どちらも最初から解放されていて、解放条件は無い。
+//
+// 【既存プレイヤーの互換】★重要
+// この保存キーが無い人は、これまでどおり「みゅあ」を選んでいる扱いにする。
+// 助手選択の画面も出さない(いままで遊んできた人に選び直しを迫らない)。
+const ASSISTANT_SELECTED_KEY = 'mh_assistant_selected_v1';
+const normalizeAssistantId = (value) => (typeof assistantIdOrDefault === 'function')
+  ? assistantIdOrDefault(typeof value === 'string' ? value : null)
+  : ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua');
+
+// ---------- 助手との仲良し度(親密度) ----------
+// 遊ぶほど助手と打ち解けていく。段階と呼び方・セリフは data/assistants.js が持ち、
 // ここは「どれだけ貯まったか」を数えて端末に残すだけ。
 //
 // 既存の保存キーには一切触れず、新しいキーへ分けて持つ。読み込みは必ず normalize を
 // 通すので、値が無い・壊れている場合もLv1から始まるだけで、ほかのデータには影響しない。
 // 放置しても減らない(久しぶりに開いた人が冷たくされないようにするため)。
+//
+// 【助手ごとに完全に分ける】★重要
+// みゅあとききの仲良し度は別のキーへ保存し、片方を進めてももう片方は変わらない。
+// みゅあのぶんは今までのキーをそのまま使い続ける(既存プレイヤーの進捗を守るため)。
+// 助手を増やしたときは mh_assistant_bond_<id>_v1 が自動で割り当たる。
 const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
+const assistantBondKeyFor = (assistantId) => {
+  const id = normalizeAssistantId(assistantId);
+  return id === ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua')
+    ? ASSISTANT_BOND_KEY : `mh_assistant_bond_${id}_v1`;
+};
+// 呼び方の上書きも助手ごとに分ける。みゅあのぶんは今までのキーのまま
+const ASSISTANT_CALL_STYLE_KEY = 'mh_assistant_call_style';
+const assistantCallStyleKeyFor = (assistantId) => {
+  const id = normalizeAssistantId(assistantId);
+  return id === ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua')
+    ? ASSISTANT_CALL_STYLE_KEY : `mh_assistant_call_style_${id}`;
+};
 const ASSISTANT_BOND_EMPTY = { points: 0, day: null, daily: {}, dailyTotal: 0 };
 const normalizeAssistantBond = (value) => {
   const raw = (value && typeof value === 'object') ? value : {};
@@ -4095,11 +4123,25 @@ const helpDataRows = (id) => {
       ];
     // みゅあとの仲良し度。段階も増える行動も data/assistants.js の実データから作るので、
     // 値を変えたときにヘルプだけ古くなることがない
+    // 助手ごとに段階の名前も呼び方も違うので、両方を同じ表へ並べる。
+    // 必要な仲良し度(need)はどの助手も同じなので、Lvを1行にまとめられる
     case 'assistantBond': {
       const callUnlockLv = (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL) || 6;
-      return ((typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || [])
-        .map(s => [`Lv.${s.level} ${s.title}`, `${s.need} から ／ 呼び方「${s.level >= callUnlockLv ? 'プレイヤーが自由に設定' : String(s.call).replace('{name}', 'あなたの名前')}」 ／ ${s.tone}`]);
+      const list = (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.length) ? ASSISTANT_LIST : [];
+      const base = (typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || [];
+      return base.map(s => {
+        const per = list.map(who => {
+          const stage = (typeof assistantBondStageByLevel === 'function') ? assistantBondStageByLevel(s.level, who.id) : s;
+          const call = s.level >= callUnlockLv ? '自由に設定' : String(stage.call).replace('{name}', 'あなたの名前');
+          return `${who.name}「${stage.title}」呼び方 ${call}`;
+        }).join(' ／ ');
+        return [`Lv.${s.level}`, `${s.need} から ／ ${per}`];
+      });
     }
+    // 助手の一覧。名前と性格の違いを実データから出す
+    case 'assistants':
+      return ((typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST) || [])
+        .map(who => [who.name, `${who.tagline || ''}${who.intro ? ` ／ ${who.intro}` : ''}`]);
     case 'monsterPower':
       // 総合力の内訳は、実際の計算に使っている定数から作る(ヘルプへ数字を手で書き写さない)
       return [
@@ -4134,7 +4176,8 @@ const HELP_DATA_TITLES = {
   missionsDaily: 'デイリーミッション',
   missionsWeekly: 'ウィークリーミッション',
   masuCosts: '神殿でかかるダイヤ',
-  assistantBond: 'みゅあとの仲良し度の段階',
+  assistants: '助手の種類',
+  assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
   monsterPower: '総合力の内訳',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー',
@@ -4209,17 +4252,19 @@ const renderHelpBlocks = (blocks, accent) => (blocks || []).map((b, i) => {
 const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null, helpRef=null, condition=null, expression=null, accent=null, faceSize=null, compact=false, defaultOpen=false }) => {
   const [open, setOpen] = useState(defaultOpen);
   const sceneDef = assistantSceneById(scene);
-  const who = assistantById(assistantId || sceneDef?.assistantId);
-  const color = accent || who.accent || ASSISTANT_FALLBACK.accent;
   // 親密度。呼び方と、候補に入るセリフがこれで変わる
   const bond = useAssistantBond();
+  // だれが話すか。画面から指定が無ければ、いま選んでいる助手がそのまま話す
+  const activeId = assistantId || sceneDef?.assistantId || bond.assistantId || null;
+  const who = assistantById(activeId);
+  const color = accent || who.accent || ASSISTANT_FALLBACK.accent;
   // 場面ごとに用意した複数のセリフから1つ選ぶ。同じ画面でも毎回ちがうことを話す。
-  // 選び直すのは「場面」「条件」「親密度Lv」が変わったときだけ。ほかの理由で再描画される
-  // たびにセリフが入れ替わると、読んでいる途中で文が変わってしまう
+  // 選び直すのは「場面」「条件」「親密度Lv」「助手」が変わったときだけ。ほかの理由で再描画
+  // されるたびにセリフが入れ替わると、読んでいる途中で文が変わってしまう
   const pickedRef = useRef(null);
-  const pickKey = `${scene || ''}|${condition || ''}|${bond.level}`;
+  const pickKey = `${who.id}|${scene || ''}|${condition || ''}|${bond.level}`;
   if (pickedRef.current?.key !== pickKey) {
-    pickedRef.current = { key: pickKey, value: (typeof pickAssistantLine === 'function') ? pickAssistantLine(scene, condition, bond.level) : null };
+    pickedRef.current = { key: pickKey, value: (typeof pickAssistantLine === 'function') ? pickAssistantLine(scene, condition, bond.level, who.id) : null };
   }
   // 顔をタップすると次のセリフへ送る。短い間に何度も押されたら連打リアクションに入る。
   // spam は { step, recovering } で、null のときは通常のセリフを話している
@@ -4254,13 +4299,13 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
       return;
     }
     // ふつうのタップ: 次のセリフへ切り替える(表情も変わる)
-    if (typeof pickAssistantLine === 'function') setTapped(pickAssistantLine(scene, condition, bond.level));
+    if (typeof pickAssistantLine === 'function') setTapped(pickAssistantLine(scene, condition, bond.level, who.id));
   };
   const spamLine = spam ? (spam.recovering ? spamRecover : spamLines[spam.step]) : null;
   const shown = spamLine || tapped || pickedRef.current.value;
   const picked = pickedRef.current.value;
-  // セリフの中の {name} は、そのときの呼び方(さん付け・呼び捨て・ちん付け)になる
-  const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level, bond.callStyle);
+  // セリフの中の {name} は、そのときの呼び方(さん付け・呼び捨て・ちん付けなど)になる
+  const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level, bond.callStyle, who.id);
   const face = expression || shown?.e || null;
   const paragraphs = detail || sceneDef?.detail || null;
   const ref = helpRef || sceneDef?.help || null;
@@ -5712,10 +5757,17 @@ function MonsterHeroGame() {
   missionsRef.current = missions;
   const [missionTab, setMissionTab] = useState('daily');
   const missionClaimingRef = useRef(false);
-  // みゅあとの仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる
-  const [assistantBond, setAssistantBond] = useState(ASSISTANT_BOND_EMPTY);
-  const assistantBondRef = useRef(ASSISTANT_BOND_EMPTY);
-  // 親密度Lvが上がった直後かどうか。次にHOMEを開いたときだけ、みゅあがそのことに触れる
+  // いま一緒に遊んでいる助手。保存が無い既存プレイヤーは「みゅあ」のまま変わらない
+  const [selectedAssistantId, setSelectedAssistantId] = useState(() => normalizeAssistantId(null));
+  const selectedAssistantIdRef = useRef(normalizeAssistantId(null));
+  // 助手選択の画面を出すかどうか(はじめて遊ぶ人にだけ、名前を決めるより前に出す)
+  const [assistantChosen, setAssistantChosen] = useState(true);
+  // 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
+  // 助手ごとに完全に分けて持つので、切り替えてももう片方の進捗は消えない
+  const [assistantBonds, setAssistantBonds] = useState({});
+  const assistantBondsRef = useRef({});
+  const assistantBond = normalizeAssistantBond(assistantBonds[selectedAssistantId]);
+  // 親密度Lvが上がった直後かどうか。次にHOMEを開いたときだけ、助手がそのことに触れる
   const [assistantBondUp, setAssistantBondUp] = useState(false);
   const [loginBonusPopup, setLoginBonusPopup] = useState(null);
   const [loginBonusState, setLoginBonusState] = useState(LOGIN_BONUS_DEFAULT); // 7日周期の進み具合(一覧表示用)
@@ -5797,9 +5849,12 @@ function MonsterHeroGame() {
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [assistantCallStyle, setAssistantCallStyleState] = useState(null); // みゅあの呼び方の上書き(絆Lv6から自由入力・未入力はnullで絆Lvの既定のまま)
+  // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
+  const [assistantCallStyles, setAssistantCallStylesState] = useState({});
+  const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
   const [showCallStylePicker, setShowCallStylePicker] = useState(false);
   const [tempCallStyle, setTempCallStyle] = useState(''); // 呼び方入力欄の一時値(保存を押すまで確定しない)
+  const [showAssistantPicker, setShowAssistantPicker] = useState(false); // プロフィールからの助手変更
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
@@ -6687,9 +6742,12 @@ function MonsterHeroGame() {
     if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showAudioSettings || showBackup) return;
     titleStartingRef.current = true;
     setTitleStarting(true);
-    // 初回はみゅあのあいさつから始め、読み終えるとプロフィール画面(名前とアイコン)へ進む
-    setGameState(onboarded ? 'HOME' : 'PROFILE');
-    if (!onboarded) { setTutorialKind('intro'); setTutorialStep(0); }
+    // はじめて遊ぶ人は「助手をえらぶ」→ 選んだ助手のあいさつ → プロフィール(名前とアイコン)の順。
+    // 助手を選ぶ前に、みゅあ固定のあいさつを出さないこと(選んでいない助手が話してしまうため)。
+    // 既存プレイヤー(assistantChosen)は、これまでどおりHOMEかプロフィールへそのまま進む
+    const needsAssistantChoice = !onboarded && !assistantChosen;
+    setGameState(needsAssistantChoice ? 'ASSISTANT_SELECT' : (onboarded ? 'HOME' : 'PROFILE'));
+    if (!onboarded && !needsAssistantChoice) { setTutorialKind('intro'); setTutorialStep(0); }
     setShowChangelog(false); setShowTitleSettings(false); setShowAudioSettings(false); setShowBackup(false);
     setBootPhase('ENTERING_GAME');
     const slow = setTimeout(() => setEnteringSlow(true), 1200);
@@ -6872,8 +6930,13 @@ function MonsterHeroGame() {
       setBreederName(savedName);
       const savedIcon = await storeGet('mh_breeder_icon', null, false);
       setBreederIcon(savedIcon);
-      const savedCallStyle = await storeGet('mh_assistant_call_style', null, false);
-      setAssistantCallStyleState(savedCallStyle || null);
+      // 呼び方の上書きは助手ごとに別のキーへ。みゅあのぶんは今までのキーをそのまま読む
+      const loadedCallStyles = {};
+      for (const who of ASSISTANT_LIST) {
+        const saved = await storeGet(assistantCallStyleKeyFor(who.id), null, false);
+        if (typeof saved === 'string' && saved.trim()) loadedCallStyles[who.id] = saved;
+      }
+      setAssistantCallStylesState(loadedCallStyles);
       const savedXp = await storeGet('mh_breeder_xp', 0, false);
       setBreederXp(savedXp);
       const savedGold = await storeGet('mh_gold', 0, false);
@@ -7052,12 +7115,22 @@ function MonsterHeroGame() {
       }
       setOwnedItems(savedOwnedItems);
       const savedGifts = await storeGet('mh_gifts', [], false);
-      // みゅあとの仲良し度。開いた日のぶんをここで1回だけ足す
-      const savedBond = normalizeAssistantBond(await storeGet(ASSISTANT_BOND_KEY, null, false));
-      const bondLogin = gainAssistantBond(savedBond, 'login');
-      assistantBondRef.current = bondLogin.state;
-      setAssistantBond(bondLogin.state);
-      if (bondLogin.changed) await storeSet(ASSISTANT_BOND_KEY, bondLogin.state, false);
+      // どの助手と遊ぶか。保存が無い既存プレイヤーは、これまでどおり「みゅあ」のまま。
+      // 選択済みかどうかも覚えておき、はじめての人にだけ助手選択の画面を出す
+      const savedAssistant = await storeGet(ASSISTANT_SELECTED_KEY, null, false);
+      const activeAssistant = normalizeAssistantId(savedAssistant);
+      selectedAssistantIdRef.current = activeAssistant;
+      setSelectedAssistantId(activeAssistant);
+      // 助手ごとの仲良し度をまとめて読む。開いた日のぶんは、いま選んでいる助手にだけ足す
+      const loadedBonds = {};
+      for (const who of ASSISTANT_LIST) {
+        loadedBonds[who.id] = normalizeAssistantBond(await storeGet(assistantBondKeyFor(who.id), null, false));
+      }
+      const bondLogin = gainAssistantBond(loadedBonds[activeAssistant], 'login');
+      loadedBonds[activeAssistant] = bondLogin.state;
+      assistantBondsRef.current = loadedBonds;
+      setAssistantBonds(loadedBonds);
+      if (bondLogin.changed) await storeSet(assistantBondKeyFor(activeAssistant), bondLogin.state, false);
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
       // 不具合のお詫びも同じギフトボックスへ入れる。既に届いていれば何もしない
@@ -7160,16 +7233,20 @@ function MonsterHeroGame() {
       }
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
+      // 助手選択は、はじめて遊ぶ人にだけ出す。
+      // 既に遊んでいる人は、選択の保存が無くても「みゅあを選んでいる」扱いのまま進める
+      setAssistantChosen(!!savedAssistant || wasOnboarded);
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
       // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
       if (wasOnboarded) setUpdateGuideQueue(availableUpdateNotices().filter(notice => !seenUpdateIds.includes(notice.id)));
       else await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seenUpdateIds, ...availableUpdateNotices().map(n=>n.id)]), false);
       if (!wasOnboarded) {
-        // 決め終わっていない項目はプロフィール画面で続きから設定してもらう
+        // 決め終わっていない項目はプロフィール画面で続きから設定してもらう。
+        // まだ助手を選んでいなければ、名前を決めるより前に助手選択から始める
         setOnboardingName(hasSavedName ? savedName.trim().slice(0,10) : '');
         setOnboardingIcon(hasSavedIcon ? savedIcon : null);
-        setGameState('PROFILE');
+        setGameState(savedAssistant ? 'PROFILE' : 'ASSISTANT_SELECT');
       }
       setDataLoaded(true); // ここまでで起動に必要なセーブデータは揃っている
       // タイトル表示を待たせず、選んでいる難易度のスコアランキングだけを裏で取得する。
@@ -7670,19 +7747,37 @@ function MonsterHeroGame() {
 
   // マーケットアイテムが購入済み(=解放済み)かどうか。typeによって参照する解放リストが異なる。
   // type:'item'の消耗品は何度でも買えるため、常にfalse(所持数はownedItemsで別途表示)
-  // 行動に応じてみゅあとの仲良し度を増やす。上限に達していれば何も起きない。
-  // 続けて呼ばれても取りこぼさないよう、いまの値は ref から読む
+  // 行動に応じて助手との仲良し度を増やす。上限に達していれば何も起きない。
+  // 続けて呼ばれても取りこぼさないよう、いまの値は ref から読む。
+  // 増えるのは「いま選んでいる助手」のぶんだけ。もう片方の助手の値には触れない
   const addAssistantBond = useCallback((actionKey) => {
-    const before = assistantBondLevelOf(assistantBondRef.current.points);
-    const result = gainAssistantBond(assistantBondRef.current, actionKey);
+    const id = selectedAssistantIdRef.current;
+    const current = normalizeAssistantBond(assistantBondsRef.current[id]);
+    const before = assistantBondLevelOf(current.points);
+    const result = gainAssistantBond(current, actionKey);
     if (!result.changed) return;
-    assistantBondRef.current = result.state;
-    setAssistantBond(result.state);
-    // Lvが上がったら、次にHOMEを開いたときにみゅあがそのことに触れる
+    assistantBondsRef.current = { ...assistantBondsRef.current, [id]: result.state };
+    setAssistantBonds(prev => ({ ...prev, [id]: result.state }));
+    // Lvが上がったら、次にHOMEを開いたときに助手がそのことに触れる
     if (assistantBondLevelOf(result.state.points) > before) setAssistantBondUp(true);
-    try { storeSet(ASSISTANT_BOND_KEY, result.state, false); } catch {}
+    try { storeSet(assistantBondKeyFor(id), result.state, false); } catch {}
   }, []);
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
+  // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
+  const activeAssistant = assistantById(selectedAssistantId);
+  // 吹き出しを使わず、その場面のセリフを直接並べたいとき(日次アドバイスなど)。
+  // いま選んでいる助手のぶんだけを返すので、画面側に助手ごとの分岐を書かなくてよい
+  const assistantSceneLinesFor = (scene) => (typeof assistantSceneLines === 'function')
+    ? assistantSceneLines(scene, null, assistantBondLevelNow, selectedAssistantId) : [];
+  // 助手を切り替える。仲良し度も呼び方も助手ごとに分けてあるので、切り替えても何も失われない
+  const chooseAssistant = useCallback((id) => {
+    const next = normalizeAssistantId(id);
+    selectedAssistantIdRef.current = next;
+    setSelectedAssistantId(next);
+    setAssistantChosen(true);
+    setAssistantBondUp(false);
+    try { storeSet(ASSISTANT_SELECTED_KEY, next, false); } catch {}
+  }, []);
   // 「Lvが上がった」お知らせは、HOMEで1回見せたら終わりにする。
   // HOME以外で上がったときも、次にHOMEへ帰ってきたときに出るようにしている
   const assistantBondUpShownRef = useRef(false);
@@ -7690,21 +7785,25 @@ function MonsterHeroGame() {
     if (gameState === 'HOME') { if (assistantBondUp) assistantBondUpShownRef.current = true; return; }
     if (assistantBondUpShownRef.current) { assistantBondUpShownRef.current = false; setAssistantBondUp(false); }
   }, [gameState, assistantBondUp]);
-  // デバッグ専用。仲良し度を直接書き換える(セーブデータのほかの項目には触らない)
+  // デバッグ専用。仲良し度を直接書き換える(セーブデータのほかの項目には触らない)。
+  // 書き換わるのは、いま選んでいる助手のぶんだけ
   const debugSetAssistantBond = useCallback((points) => {
-    const cur = normalizeAssistantBond(assistantBondRef.current);
+    const id = selectedAssistantIdRef.current;
+    const cur = normalizeAssistantBond(assistantBondsRef.current[id]);
     const next = { ...cur, points: Math.max(0, Math.floor(Number(points) || 0)) };
-    assistantBondRef.current = next;
-    setAssistantBond(next);
-    try { storeSet(ASSISTANT_BOND_KEY, next, false); } catch {}
+    assistantBondsRef.current = { ...assistantBondsRef.current, [id]: next };
+    setAssistantBonds(prev => ({ ...prev, [id]: next }));
+    try { storeSet(assistantBondKeyFor(id), next, false); } catch {}
   }, []);
-  // みゅあの呼び方を自由な文字で決める(絆Lv6から)。空にすれば絆Lvどおりの既定へ戻る
+  // 助手の呼び方を自由な文字で決める(絆Lv6から)。空にすれば絆Lvどおりの既定へ戻る。
+  // 助手ごとに別のキーへ保存するので、みゅあとききで別々に決められる
   const chooseAssistantCallStyle = useCallback((text) => {
+    const id = selectedAssistantIdRef.current;
     const maxLen = (typeof ASSISTANT_CALL_STYLE_MAX_LEN !== 'undefined' && ASSISTANT_CALL_STYLE_MAX_LEN) || 16;
     const trimmed = String(text || '').trim().slice(0, maxLen);
     const next = trimmed || null;
-    setAssistantCallStyleState(next);
-    try { storeSet('mh_assistant_call_style', next, false); } catch {}
+    setAssistantCallStylesState(prev => ({ ...prev, [id]: next }));
+    try { storeSet(assistantCallStyleKeyFor(id), next, false); } catch {}
   }, []);
   // 吹き出しへ配る値。画面側は <AssistantBubble scene="…"/> のままでよい
   const assistantBondValue = useMemo(() => ({
@@ -7712,8 +7811,9 @@ function MonsterHeroGame() {
     level: assistantBondLevelNow,
     name: breederName,
     callStyle: assistantCallStyle,
+    assistantId: selectedAssistantId,
     onTalk: () => addAssistantBond('talk'),
-  }), [assistantBond.points, assistantBondLevelNow, breederName, assistantCallStyle, addAssistantBond]);
+  }), [assistantBond.points, assistantBondLevelNow, breederName, assistantCallStyle, selectedAssistantId, addAssistantBond]);
 
   const isMarketItemOwned = (item) => {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
@@ -8696,7 +8796,7 @@ function MonsterHeroGame() {
   // いま案内しているページが指している施設。HOMEでその建物だけを明るく強調する
   const tutorialSpot = (() => {
     if (tutorialStep == null || tutorialKind !== 'tour') return null;
-    const pages = (typeof ASSISTANT_TUTORIAL !== 'undefined' && ASSISTANT_TUTORIAL) || [];
+    const pages = (typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current)) || [];
     return pages[tutorialStep]?.spot || null;
   })();
   const spotClass = (name) => (tutorialSpot === name ? ' is-tutorial-spot' : '');
@@ -11774,6 +11874,37 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </main>;
         })()}
 
+        {/* ASSISTANT_SELECT: はじめて遊ぶ人が、名前を決めるより前にどの助手と遊ぶかを選ぶ。
+            ここを通っていない既存プレイヤーには一切出さない(自動的に「みゅあ」扱い)。
+            スマホの縦画面で2枚が並んで収まるよう、カードは横並びの高さ控えめにしている */}
+        {gameState==='ASSISTANT_SELECT'&&(
+          <div className="flex-1 flex flex-col h-full min-h-0 p-4">
+            <div className="shrink-0 text-center mb-3" style={{paddingTop:'env(safe-area-inset-top)'}}>
+              <h2 className="text-lg font-black italic text-indigo-300 uppercase tracking-widest">助手をえらぶ</h2>
+              <p className="text-[10px] text-slate-400 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。<br/>あとからプロフィールでいつでも変えられます。</p>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
+              <div className="w-full max-w-md mx-auto grid grid-cols-2 gap-2.5 pb-3">
+                {ASSISTANT_LIST.map(who=>(
+                  <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}
+                    aria-label={`${who.name}をえらぶ`}
+                    className={`rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id===selectedAssistantId?'':'opacity-95'}`}
+                    style={{border:`2px solid ${who.id===selectedAssistantId?who.accent:'rgba(255,255,255,.14)'}`,backgroundColor:who.id===selectedAssistantId?`${who.accent}1f`:'rgba(15,23,42,.75)'}}>
+                    <AssistantFace who={who} size={88} accent={who.accent} expression="happy"/>
+                    <span className="text-[13px] font-black text-white">{who.name}</span>
+                    <span className="text-[9px] font-black leading-tight text-center" style={{color:who.accent}}>{who.tagline||''}</span>
+                    <span className="text-[9px] text-slate-400 leading-tight text-center">{who.intro||''}</span>
+                    <span className="mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950" style={{backgroundColor:who.accent}}>この子にする</span>
+                  </button>
+                ))}
+              </div>
+              <p className="w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2">
+                どちらも最初から選べます。仲良し度は助手ごとに別々に貯まるので、あとで変えても消えません。
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* PROFILE */}
         {gameState==='PROFILE'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
@@ -11792,7 +11923,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const hasName=!!(onboardingName||'').trim();
               const hasIcon=!!onboardingIcon;
               const ready=hasName&&hasIcon;
-              const step=(typeof findAssistantOnboarding==='function')?findAssistantOnboarding(hasName,hasIcon):null;
+              const step=(typeof findAssistantOnboarding==='function')?findAssistantOnboarding(hasName,hasIcon,selectedAssistantId):null;
               return(
               <div className="mb-4 rounded-2xl border-2 border-indigo-400/60 bg-indigo-950/50 p-3 shrink-0">
                 {onboardingPreview&&<div className="-mx-3 -mt-3 mb-2 px-3 py-1.5 rounded-t-xl bg-fuchsia-700 text-white text-[10px] font-black tracking-widest">DEBUG・見るだけの表示です。名前もアイコンも保存されません</div>}
@@ -11831,31 +11962,58 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <Package size={12} className="text-teal-400"/><span className="text-[10px] font-black text-teal-200">アイテム（{Object.values(ownedItems).reduce((sum,n)=>sum+(n||0),0)}個）</span>
               </button>
             </div>
-            {/* みゅあとの仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる */}
+            {/* 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
+                助手ごとに別々に貯まるので、切り替えても片方が消えることはない */}
             {onboarded&&!onboardingPreview&&(()=>{
-              const stage=(typeof assistantBondStageByLevel==='function')?assistantBondStageByLevel(assistantBondLevelNow):null;
+              const stage=(typeof assistantBondStageByLevel==='function')?assistantBondStageByLevel(assistantBondLevelNow,selectedAssistantId):null;
               const next=(typeof assistantBondNext==='function')?assistantBondNext(assistantBond.points):null;
               const from=stage?stage.need:0;
               const width=next?Math.max(0,Math.min(100,((assistantBond.points-from)/Math.max(1,next.need-from))*100)):100;
+              const accent=activeAssistant.accent||'#f472b6';
               return(
-                <div className="bg-slate-900/60 border border-pink-500/30 rounded-2xl p-3 mb-4">
+                <div className="bg-slate-900/60 rounded-2xl p-3 mb-4" style={{border:`1px solid ${accent}4d`}}>
                   <div className="flex items-center gap-2">
-                    <AssistantFace who={assistantById()} size={40} accent="#f472b6" expression={assistantBondLevelNow>=4?'excited':assistantBondLevelNow>=2?'happy':'normal'}/>
+                    <AssistantFace who={activeAssistant} size={40} accent={accent} expression={assistantBondLevelNow>=4?'excited':assistantBondLevelNow>=2?'happy':'normal'}/>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[9px] font-black text-pink-300 tracking-widest">みゅあとの仲良し度</div>
+                      <div className="text-[9px] font-black tracking-widest" style={{color:accent}}>{activeAssistant.name}との仲良し度</div>
                       <div className="text-[11px] font-black text-white">Lv.{assistantBondLevelNow}　{stage?stage.title:''}</div>
                     </div>
                     {assistantBondLevelNow>=((typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL!=='undefined'&&ASSISTANT_CALL_STYLE_UNLOCK_LEVEL)||6)?(
                       <button type="button" onClick={()=>{setTempCallStyle(assistantCallStyle||'');setShowCallStylePicker(true);}} className="shrink-0 text-right active:scale-95">
                         <div className="text-[8px] text-slate-500 flex items-center justify-end gap-0.5">呼び方<Edit3 size={8}/></div>
-                        <div className="text-[11px] font-black text-pink-200">{assistantSpeakText('{name}',breederName,assistantBondLevelNow,assistantCallStyle)}</div>
+                        <div className="text-[11px] font-black" style={{color:accent}}>{assistantSpeakText('{name}',breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div>
                       </button>
                     ):(
-                      <div className="shrink-0 text-right"><div className="text-[8px] text-slate-500">呼び方</div><div className="text-[11px] font-black text-pink-200">{assistantSpeakText('{name}',breederName,assistantBondLevelNow,assistantCallStyle)}</div></div>
+                      <div className="shrink-0 text-right"><div className="text-[8px] text-slate-500">呼び方</div><div className="text-[11px] font-black" style={{color:accent}}>{assistantSpeakText('{name}',breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div></div>
                     )}
                   </div>
-                  <div className="h-1.5 mt-2 rounded-full bg-black/50 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:'linear-gradient(90deg,#f472b6,#fbbf24)'}}/></div>
+                  <div className="h-1.5 mt-2 rounded-full bg-black/50 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:`linear-gradient(90deg,${accent},#fbbf24)`}}/></div>
                   <div className="text-[8px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'いちばん仲良し！'}</div>
+                  {/* 助手の切り替え。もう片方の仲良し度Lvもここで確認できる */}
+                  {ASSISTANT_LIST.length>1&&(
+                    <div className="mt-2.5 pt-2.5 border-t border-white/10">
+                      <div className="text-[8px] font-black text-slate-500 tracking-widest mb-1.5">いっしょに遊ぶ助手</div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {ASSISTANT_LIST.map(who=>{
+                          const active=who.id===selectedAssistantId;
+                          const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
+                          const t=(typeof assistantBondStageByLevel==='function')?assistantBondStageByLevel(lv,who.id):null;
+                          return(
+                            <button key={who.id} type="button" onClick={()=>{ if(!active) setShowAssistantPicker(true); }} aria-pressed={active}
+                              className={`min-h-[52px] rounded-xl px-2 py-1.5 flex items-center gap-1.5 text-left active:scale-95 ${active?'':'opacity-60'}`}
+                              style={{border:`2px solid ${active?who.accent:'rgba(255,255,255,.1)'}`,backgroundColor:active?`${who.accent}22`:'rgba(15,23,42,.6)'}}>
+                              <AssistantFace who={who} size={30} accent={who.accent} expression={active?'happy':'normal'}/>
+                              <span className="min-w-0 flex-1">
+                                <b className="block text-[10px] font-black text-white truncate">{who.name}{active&&'（選択中）'}</b>
+                                <small className="block text-[8px] text-slate-400 truncate">Lv.{lv} {t?t.title:''}</small>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="text-[8px] text-slate-500 mt-1">仲良し度は助手ごとに別々に貯まります。切り替えても消えません。</div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -13108,21 +13266,52 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
         {showCallStylePicker&&(
           <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
-            <div className="bg-slate-900 border border-pink-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
-              <h3 className="text-lg font-black text-white mb-1 text-center">みゅあの呼び方</h3>
-              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">絆Lv6になったので、みゅあの呼び方を自由に決められるよ。「{'{name}'}」と書くと、そこがあなたの名前に置き換わるよ。</p>
+            <div className="bg-slate-900 rounded-3xl p-6 w-full max-w-xs shadow-2xl" style={{border:`1px solid ${activeAssistant.accent}`}}>
+              <h3 className="text-lg font-black text-white mb-1 text-center">{activeAssistant.name}の呼び方</h3>
+              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">絆Lv6になったので、呼び方を自由に決められます。「{'{name}'}」と書くと、そこがあなたの名前に置き換わります。</p>
               <input type="text" value={tempCallStyle} onChange={e=>setTempCallStyle(e.target.value)} maxLength={(typeof ASSISTANT_CALL_STYLE_MAX_LEN!=='undefined'&&ASSISTANT_CALL_STYLE_MAX_LEN)||16} placeholder={`例: {name}さん`} className="w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-2"/>
               <div className="flex flex-wrap gap-1.5 justify-center mb-4">
-                {((typeof ASSISTANT_CALL_STYLES!=='undefined'&&ASSISTANT_CALL_STYLES)||[]).map(style=>(
+                {((typeof assistantCallStylesOf==='function'&&assistantCallStylesOf(selectedAssistantId))||[]).map(style=>(
                   <button key={style.id} type="button" onClick={()=>setTempCallStyle(style.template)} className="px-2.5 min-h-[30px] rounded-full text-[10px] font-black bg-slate-800 border border-slate-700 text-slate-300 active:scale-95">{style.label}</button>
                 ))}
               </div>
-              <p className="text-[9px] text-slate-500 text-center mb-3">いまの呼び方プレビュー: <span className="text-pink-200 font-black">{(tempCallStyle||'').includes('{name}')?tempCallStyle.replace('{name}',breederName||'あなた'):(tempCallStyle||assistantSpeakText('{name}',breederName,assistantBondLevelNow))}</span></p>
+              <p className="text-[9px] text-slate-500 text-center mb-3">いまの呼び方プレビュー: <span className="font-black" style={{color:activeAssistant.accent}}>{(tempCallStyle||'').includes('{name}')?tempCallStyle.replace('{name}',breederName||'あなた'):(tempCallStyle||assistantSpeakText('{name}',breederName,assistantBondLevelNow,null,selectedAssistantId))}</span></p>
               <div className="flex gap-2 mb-2">
                 <button onClick={()=>setShowCallStylePicker(false)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
-                <button onClick={()=>{chooseAssistantCallStyle(tempCallStyle);setShowCallStylePicker(false);}} className="flex-1 bg-pink-600 text-white py-3 rounded-xl font-black text-xs">保存</button>
+                <button onClick={()=>{chooseAssistantCallStyle(tempCallStyle);setShowCallStylePicker(false);}} className="flex-1 text-white py-3 rounded-xl font-black text-xs" style={{backgroundColor:activeAssistant.accent}}>保存</button>
               </div>
               <button onClick={()=>{chooseAssistantCallStyle('');setTempCallStyle('');setShowCallStylePicker(false);}} className="w-full text-[10px] text-slate-500 font-bold py-1 active:scale-95">絆Lvの呼び方に戻す</button>
+            </div>
+          </div>
+        )}
+
+        {/* プロフィールからの助手変更。仲良し度も呼び方も助手ごとに分けてあるので、
+            切り替えても、もう片方のぶんは何も失われない */}
+        {showAssistantPicker&&(
+          <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-5" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll">
+              <h3 className="text-base font-black text-white mb-1 text-center">いっしょに遊ぶ助手</h3>
+              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">いつでも変えられます。仲良し度と呼び方は助手ごとに分かれているので、切り替えても消えません。</p>
+              <div className="space-y-2 mb-3">
+                {ASSISTANT_LIST.map(who=>{
+                  const active=who.id===selectedAssistantId;
+                  const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
+                  const t=(typeof assistantBondStageByLevel==='function')?assistantBondStageByLevel(lv,who.id):null;
+                  return(
+                    <button key={who.id} type="button" onClick={()=>{chooseAssistant(who.id);setShowAssistantPicker(false);}} aria-pressed={active}
+                      className="w-full min-h-[76px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97]"
+                      style={{border:`2px solid ${active?who.accent:'rgba(255,255,255,.12)'}`,backgroundColor:active?`${who.accent}22`:'rgba(15,23,42,.7)'}}>
+                      <AssistantFace who={who} size={52} accent={who.accent} expression={active?'happy':'normal'}/>
+                      <span className="min-w-0 flex-1">
+                        <b className="block text-[12px] font-black text-white">{who.name}{active&&<span className="ml-1 text-[9px]" style={{color:who.accent}}>選択中</span>}</b>
+                        <small className="block text-[9px] text-slate-400 leading-tight">{who.tagline||''}</small>
+                        <small className="block text-[9px] font-black mt-0.5" style={{color:who.accent}}>Lv.{lv} {t?t.title:''}</small>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button onClick={()=>setShowAssistantPicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
             </div>
           </div>
         )}
@@ -14258,38 +14447,38 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       )}
 
       {/* 助手(みゅあ)のデバッグ表示。デバッグ設定からだけ開ける。通常のプレイでは出ない */}
-      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&updateGuideQueue.length>0&&(()=>{const notice=updateGuideQueue[0];const pages=Array.isArray(notice.pages)&&notice.pages.length?notice.pages:['新しいアップデートがあるよ♪'];const page=Math.min(updateGuidePage,pages.length-1);const last=page===pages.length-1;const who=assistantById();return(
+      {bootPhase==='GAME'&&gameState==='HOME'&&onboarded&&tutorialStep==null&&updateGuideQueue.length>0&&(()=>{const notice=updateGuideQueue[0];const pages=Array.isArray(notice.pages)&&notice.pages.length?notice.pages:['新しいアップデートがあるよ♪'];const page=Math.min(updateGuidePage,pages.length-1);const last=page===pages.length-1;const who=activeAssistant;return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:76000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label={notice.title}>
           <div className="w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             {notice.debugOnly&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・通常ログインでは表示されません</div>}
             <h2 className="mb-1 text-center text-base font-black text-pink-200">{notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
-            <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={notice.expression||'happy'}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pages[page],breederName,assistantBondLevelNow,assistantCallStyle)}</div></div>
+            <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={notice.expression||'happy'}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pages[page],breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div></div>
             {!last?<button onClick={()=>setUpdateGuidePage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>:<div className={`mt-4 grid ${notice.destination?'grid-cols-2':'grid-cols-1'} gap-2`}>{notice.destination&&<button onClick={()=>finishUpdateGuide(notice.destination)} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950">{notice.buttonLabel||'見に行く'}</button>}<button onClick={()=>finishUpdateGuide()} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white">{notice.destination?'あとで':'閉じる'}</button></div>}
           </div>
         </div>);})()}
-      {dailyMasuAdvice&&(()=>{const who=assistantById();const lines=assistantSceneById('dailyMasuAdvice')?.lines||[];const eligible=dailyMasuAdvice.eligible!==false;return(
+      {dailyMasuAdvice&&(()=>{const who=activeAssistant;const lines=assistantSceneLinesFor('dailyMasuAdvice');const eligible=dailyMasuAdvice.eligible!==false;return(
         <div className="fixed inset-0 flex items-end justify-center" style={{position:'fixed',inset:0,zIndex:75000,backgroundColor:'rgba(2,6,23,.94)'}} role="dialog" aria-modal="true" aria-label="みゅあのワンポイントアドバイス">
           <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             {dailyMasuAdvice.debugCount!=null&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・登録数{dailyMasuAdvice.debugCount}体を想定</div>}
             <h2 className="mb-3 text-center text-base font-black text-pink-200">みゅあのワンポイントアドバイス</h2>
-            {eligible?<div className="flex items-end gap-2"><AssistantFace who={who} size={72} accent={who.accent} expression={lines[0]?.e||'wink'}/><div className="flex-1 space-y-2" style={{minHeight:'44px',color:'#ffffff',visibility:'visible'}}>{lines.slice(0,3).map((line,i)=><div key={i} className="relative rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-2 text-[12px] font-bold leading-relaxed text-white whitespace-pre-line" style={{minHeight:'36px',color:'#ffffff',backgroundColor:'#0f172a',display:'block'}}>{assistantSpeakText(line.t,breederName,assistantBondLevelNow,assistantCallStyle)}</div>)}</div></div>
+            {eligible?<div className="flex items-end gap-2"><AssistantFace who={who} size={72} accent={who.accent} expression={lines[0]?.e||'wink'}/><div className="flex-1 space-y-2" style={{minHeight:'44px',color:'#ffffff',visibility:'visible'}}>{lines.slice(0,3).map((line,i)=><div key={i} className="relative rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-2 text-[12px] font-bold leading-relaxed text-white whitespace-pre-line" style={{minHeight:'36px',color:'#ffffff',backgroundColor:'#0f172a',display:'block'}}>{assistantSpeakText(line.t,breederName,assistantBondLevelNow,assistantCallStyle,selectedAssistantId)}</div>)}</div></div>
             :<div className="rounded-2xl border-2 border-slate-600 bg-slate-900 px-4 py-5 text-center text-sm font-black text-slate-100" style={{minHeight:'64px',color:'#f1f5f9',backgroundColor:'#0f172a'}}>表示条件の対象外です。<br/><small>登録数8体以上では、通常プレイ中にこの案内は表示されません。</small></div>}
             <div className={`mt-4 grid ${eligible?'grid-cols-2':'grid-cols-1'} gap-2`}>{eligible&&<button onClick={tryDailyMasuAdvice} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]">やってみる</button>}<button onClick={closeDailyMasuAdvice} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">閉じる</button></div>
           </div>
         </div>);})()}
 
       {assistantDebug&&(()=>{
-        const who=assistantById();
+        const who=activeAssistant;
         const scenes=(typeof ASSISTANT_SCENES!=='undefined'&&ASSISTANT_SCENES)||{};
         const exprs=(typeof ASSISTANT_EXPRESSIONS!=='undefined'&&ASSISTANT_EXPRESSIONS)||[];
         const spam=[...((typeof ASSISTANT_SPAM_LINES!=='undefined'&&ASSISTANT_SPAM_LINES)||[]),
                     ...((typeof ASSISTANT_SPAM_RECOVER!=='undefined'&&ASSISTANT_SPAM_RECOVER)?[ASSISTANT_SPAM_RECOVER]:[])];
         const titles={lines:'全助手コメント',expressions:'全表情',conditions:'条件コメント',spam:'連打リアクション',bond:'親密度と呼び方',random:'ランダムテスト'};
-        const stages=(typeof ASSISTANT_BOND_LEVELS!=='undefined'&&ASSISTANT_BOND_LEVELS)||[];
+        const stages=(typeof assistantBondLevelsOf==='function'&&assistantBondLevelsOf(selectedAssistantId))||[];
         // 見ているLv。切り替えるとセリフの絞り込みも呼び方も、そのLvのものになる
         const viewLevel=assistantDebugLevel!=null?assistantDebugLevel:assistantBondLevelNow;
-        const speak=(t)=>assistantSpeakText(t,breederName,viewLevel);
-        const matches=(l)=>(typeof assistantLineMatchesBond==='function')?assistantLineMatchesBond(l,viewLevel):true;
+        const speak=(t)=>assistantSpeakText(t,breederName,viewLevel,assistantCallStyle,selectedAssistantId);
+        const matches=(l)=>((l.who||'mua')===selectedAssistantId)&&((typeof assistantLineMatchesBond==='function')?assistantLineMatchesBond(l,viewLevel):true);
         const bondText=(l)=>Array.isArray(l.bond)?`Lv${l.bond[0]}〜${l.bond[1]}`:(l.bond!=null?`Lv${l.bond}以上`:'全Lv');
         const row=(l,i)=>{
           const on=matches(l);
@@ -14310,7 +14499,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {stages.map(s=>(
               <button key={s.level} onClick={()=>setAssistantDebugLevel(s.level)} className={`px-2 min-h-[26px] rounded-full text-[9px] font-black ${assistantDebugLevel===s.level?'bg-pink-600 text-white':'bg-slate-900 border border-white/10 text-slate-400'}`}>Lv{s.level}</button>
             ))}
-            <span className="text-[9px] font-black text-pink-200 ml-auto">呼び方: {assistantSpeakText('{name}',breederName,viewLevel)}</span>
+            <span className="text-[9px] font-black text-pink-200 ml-auto">呼び方: {assistantSpeakText('{name}',breederName,viewLevel,assistantCallStyle,selectedAssistantId)}</span>
           </div>);
         return(
         <div className="fixed inset-0 flex flex-col" style={{position:'fixed',inset:0,backgroundColor:'#020617',zIndex:95000,paddingTop:'calc(.75rem + env(safe-area-inset-top))'}} role="dialog" aria-modal="true">
@@ -14345,7 +14534,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               return(<div className="p-3 space-y-3">
                 <div className="rounded-2xl border border-pink-500/40 bg-slate-900 p-3">
                   <div className="text-[10px] font-black text-pink-300 mb-1">いまの仲良し度</div>
-                  <div className="text-[12px] text-white font-black">{points} ポイント ／ Lv{assistantBondLevelNow}（{(typeof assistantBondStageByLevel==='function'?assistantBondStageByLevel(assistantBondLevelNow):{}).title||''}）</div>
+                  <div className="text-[12px] text-white font-black">{points} ポイント ／ Lv{assistantBondLevelNow}（{(typeof assistantBondStageByLevel==='function'?assistantBondStageByLevel(assistantBondLevelNow,selectedAssistantId):{}).title||''}）</div>
                   <div className="text-[9px] text-slate-400 mt-1">{next?`次のLv${next.level}まで あと${next.remain}`:'いちばん上まで来ています'}</div>
                   <div className="text-[9px] text-slate-400">今日ぶん: {assistantBond.dailyTotal} / {(typeof ASSISTANT_BOND_DAILY_MAX!=='undefined'&&ASSISTANT_BOND_DAILY_MAX)||0}（{assistantBond.day||'未記録'}）</div>
                 </div>
@@ -14360,7 +14549,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="rounded-2xl bg-black/40 border border-white/5 overflow-hidden">{stages.map(s=>(
                     <div key={s.level} className="flex gap-2 px-3 py-2 border-t border-white/5 first:border-t-0">
                       <span className="shrink-0 w-8 text-[10px] font-black text-pink-300">Lv{s.level}</span>
-                      <span className="flex-1 min-w-0"><b className="text-[11px] text-white">{assistantSpeakText('{name}',breederName,s.level)}</b><span className="block text-[9px] text-slate-400">{s.tone}</span></span>
+                      <span className="flex-1 min-w-0"><b className="text-[11px] text-white">{assistantSpeakText('{name}',breederName,s.level,null,selectedAssistantId)}</b><span className="block text-[9px] text-slate-400">{s.tone}</span></span>
                       <span className="shrink-0 text-[9px] text-slate-500">{s.need}〜</span>
                     </div>
                   ))}</div>
@@ -14374,7 +14563,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     </div>
                   ))}</div>
                 </div>
-                <button onClick={()=>{ if(!window.confirm('みゅあとの仲良し度を0に戻します。ほかのセーブデータは消えません。よろしいですか？')) return; debugSetAssistantBond(0); }} className="w-full min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">親密度をリセット（セーブは消えません）</button>
+                <button onClick={()=>{ if(!window.confirm('いま選んでいる助手との仲良し度を0に戻します。ほかのセーブデータは消えません。よろしいですか？')) return; debugSetAssistantBond(0); }} className="w-full min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95">親密度をリセット（セーブは消えません）</button>
               </div>);
             })()}
             {/* ランダムテスト。同じ場面を何度も引いて、続けて同じセリフが出ないかを見る */}
@@ -14383,7 +14572,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const roll=()=>{
                 const out=[];
                 for(let i=0;i<20;i++){
-                  const l=(typeof pickAssistantLine==='function')?pickAssistantLine(assistantDebugScene,null,viewLevel):null;
+                  const l=(typeof pickAssistantLine==='function')?pickAssistantLine(assistantDebugScene,null,viewLevel,selectedAssistantId):null;
                   if(l) out.push(l);
                 }
                 setAssistantDebugRolls(out);
@@ -14421,7 +14610,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             操作中(wait:'act')        … 暗幕も吹き出しも消し、光っているところを自由に操作できる
           光らせる場所は各画面の battleTutorialSpotClass('キー') が受け持つ */}
       {battleTutorial&&(()=>{
-        const who=assistantById();
+        const who=activeAssistant;
         const acting=battleTutorial.wait==='act'||battleTutorial.wait==='do';
         const last=battleTutorial.wait==='end';
         const total=battleTutorialSteps.length;
@@ -14453,7 +14642,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span className="absolute" style={{left:'-9px',bottom:'14px',width:0,height:0,borderTop:'7px solid transparent',borderBottom:'7px solid transparent',borderRight:`9px solid ${who.accent}`}}/>
                     <span className="block text-[9px] font-black tracking-widest" style={{color:who.accent}}>{who.name}</span>
                     {battleTutorial.title&&<span className="block text-[11px] font-black text-white mt-0.5">{battleTutorial.title}</span>}
-                    <span className="block text-[12px] text-white leading-relaxed mt-0.5">{assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow, assistantCallStyle)}</span>
+                    <span className="block text-[12px] text-white leading-relaxed mt-0.5">{assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)}</span>
                   </div>
                 </div>
                 <button onClick={()=>{ if(last) endBattleTutorial(true); else setBattleTutorialStep(v=>Math.min(total-1,(v||0)+1)); }} className="w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'おわる':'つぎへ'}</button>
@@ -14500,13 +14689,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         const intro=tutorialKind==='intro';
         const battleGuide=tutorialKind==='battleGuide';
         const pages=(battleGuide
-          ? ((typeof ASSISTANT_BATTLE_TUTORIAL_GUIDE!=='undefined'&&ASSISTANT_BATTLE_TUTORIAL_GUIDE)||[])
+          ? ((typeof assistantBattleGuidePages==='function'&&assistantBattleGuidePages(selectedAssistantId))||[])
           : intro
-          ? ((typeof ASSISTANT_INTRO!=='undefined'&&ASSISTANT_INTRO)||[])
-          : ((typeof ASSISTANT_TUTORIAL!=='undefined'&&ASSISTANT_TUTORIAL)||[]));
+          ? ((typeof assistantIntroPages==='function'&&assistantIntroPages(selectedAssistantId))||[])
+          : ((typeof assistantTutorialPages==='function'&&assistantTutorialPages(selectedAssistantId))||[]));
         const page=pages[Math.max(0,Math.min(tutorialStep,pages.length-1))];
         if(!page) return null;
-        const who=assistantById();
+        const who=activeAssistant;
         const last=tutorialStep>=pages.length-1;
         const topicRef=page.help&&page.help.includes('/')?helpTopicById(page.help.split('/')[0],page.help.split('/')[1]):null;
         return(
@@ -14681,7 +14870,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <header className="shrink-0 px-3 py-3 border-b border-white/10 flex items-center gap-2 bg-slate-900 shadow-xl" style={{backgroundColor:'#0f172a',paddingTop:'calc(0.75rem + env(safe-area-inset-top))'}}>
             <button onClick={goBack} className="shrink-0 max-w-[34%] flex items-center gap-0.5 text-[11px] font-black text-sky-300 active:scale-95"><ArrowLeft size={16}/><span className="truncate">{backLabel}</span></button>
             <div className="flex-1 min-w-0 flex items-center justify-center gap-1.5"><span className="text-base shrink-0">{headEmoji}</span><h2 className="text-[13px] font-black truncate" style={{color:accent}}>{headTitle}</h2></div>
-            <button onClick={()=>setHelpAssistantOpen(v=>!v)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={assistantById()} size={48} accent={accent} expression={assistantExpression}/></button>
+            <button onClick={()=>setHelpAssistantOpen(v=>!v)} aria-label="助手のひとことを開く" className={`shrink-0 active:scale-90 ${helpAssistantOpen?'':'opacity-40'}`}><AssistantFace who={activeAssistant} size={48} accent={accent} expression={assistantExpression}/></button>
           </header>
           {helpAssistantOpen&&(
             <div className="shrink-0 px-3 py-3 border-b border-white/5" style={{backgroundColor:'rgba(15,23,42,0.75)'}}>

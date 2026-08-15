@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 000d417445c58969
+// source-sha256: 7b4d0526bb2fbb96
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 23:22"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 00:01"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6747,14 +6747,38 @@ const LOGIN_BONUS_DEFAULT = {
 // 日本時間へ直した後に4時間戻した暦日を期間キーにする。03:59と04:00は別の日、
 // 04:00から翌03:59までは同じ日として扱える、比較・保存しやすい YYYY-MM-DD 形式。
 const loginBonusPeriodKey = (now = Date.now()) => new Date(Number(now) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
-// ---------- みゅあとの仲良し度(親密度) ----------
-// 遊ぶほどみゅあと打ち解けていく。段階と呼び方・セリフは data/assistants.js が持ち、
+// ---------- どの助手と一緒に遊ぶか ----------
+// 助手は「みゅあ」「きき」から選ぶ。どちらも最初から解放されていて、解放条件は無い。
+//
+// 【既存プレイヤーの互換】★重要
+// この保存キーが無い人は、これまでどおり「みゅあ」を選んでいる扱いにする。
+// 助手選択の画面も出さない(いままで遊んできた人に選び直しを迫らない)。
+const ASSISTANT_SELECTED_KEY = 'mh_assistant_selected_v1';
+const normalizeAssistantId = value => typeof assistantIdOrDefault === 'function' ? assistantIdOrDefault(typeof value === 'string' ? value : null) : typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua';
+
+// ---------- 助手との仲良し度(親密度) ----------
+// 遊ぶほど助手と打ち解けていく。段階と呼び方・セリフは data/assistants.js が持ち、
 // ここは「どれだけ貯まったか」を数えて端末に残すだけ。
 //
 // 既存の保存キーには一切触れず、新しいキーへ分けて持つ。読み込みは必ず normalize を
 // 通すので、値が無い・壊れている場合もLv1から始まるだけで、ほかのデータには影響しない。
 // 放置しても減らない(久しぶりに開いた人が冷たくされないようにするため)。
+//
+// 【助手ごとに完全に分ける】★重要
+// みゅあとききの仲良し度は別のキーへ保存し、片方を進めてももう片方は変わらない。
+// みゅあのぶんは今までのキーをそのまま使い続ける(既存プレイヤーの進捗を守るため)。
+// 助手を増やしたときは mh_assistant_bond_<id>_v1 が自動で割り当たる。
 const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';
+const assistantBondKeyFor = assistantId => {
+  const id = normalizeAssistantId(assistantId);
+  return id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua') ? ASSISTANT_BOND_KEY : `mh_assistant_bond_${id}_v1`;
+};
+// 呼び方の上書きも助手ごとに分ける。みゅあのぶんは今までのキーのまま
+const ASSISTANT_CALL_STYLE_KEY = 'mh_assistant_call_style';
+const assistantCallStyleKeyFor = assistantId => {
+  const id = normalizeAssistantId(assistantId);
+  return id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua') ? ASSISTANT_CALL_STYLE_KEY : `mh_assistant_call_style_${id}`;
+};
 const ASSISTANT_BOND_EMPTY = {
   points: 0,
   day: null,
@@ -7981,11 +8005,25 @@ const helpDataRows = id => {
       return [['再生', `初回無料・2回目以降 ${REGENERATION_COST} ダイヤ`], ['合体（技継承なし）', '0 ダイヤ'], ['合体（技継承あり）', `${FUSION_INHERIT_COST} ダイヤ`], ['限界突破', `絆Lv × ${REBIRTH_COST_PER_LEVEL} ダイヤ`], ['転生', `絆Lv × ${REBIRTH_COST_PER_LEVEL} ダイヤ`], ['寄付', 'かからない（逆に累計絆経験値と同じ数のダイヤを受け取れる）']];
     // みゅあとの仲良し度。段階も増える行動も data/assistants.js の実データから作るので、
     // 値を変えたときにヘルプだけ古くなることがない
+    // 助手ごとに段階の名前も呼び方も違うので、両方を同じ表へ並べる。
+    // 必要な仲良し度(need)はどの助手も同じなので、Lvを1行にまとめられる
     case 'assistantBond':
       {
         const callUnlockLv = typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6;
-        return (typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS || []).map(s => [`Lv.${s.level} ${s.title}`, `${s.need} から ／ 呼び方「${s.level >= callUnlockLv ? 'プレイヤーが自由に設定' : String(s.call).replace('{name}', 'あなたの名前')}」 ／ ${s.tone}`]);
+        const list = typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST.length ? ASSISTANT_LIST : [];
+        const base = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS || [];
+        return base.map(s => {
+          const per = list.map(who => {
+            const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(s.level, who.id) : s;
+            const call = s.level >= callUnlockLv ? '自由に設定' : String(stage.call).replace('{name}', 'あなたの名前');
+            return `${who.name}「${stage.title}」呼び方 ${call}`;
+          }).join(' ／ ');
+          return [`Lv.${s.level}`, `${s.need} から ／ ${per}`];
+        });
       }
+    // 助手の一覧。名前と性格の違いを実データから出す
+    case 'assistants':
+      return (typeof ASSISTANT_LIST !== 'undefined' && ASSISTANT_LIST || []).map(who => [who.name, `${who.tagline || ''}${who.intro ? ` ／ ${who.intro}` : ''}`]);
     case 'monsterPower':
       // 総合力の内訳は、実際の計算に使っている定数から作る(ヘルプへ数字を手で書き写さない)
       return [['ライフ 1', `+${MONSTER_POWER_STAT_WEIGHT.hp}`], ['ちから 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.atk * 100) / 100}（強化P1つ=ちから+${STAT_POINT_GAIN.atk} で +10）`], ['丈夫さ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.def * 100) / 100}（強化P1つ=丈夫さ+${STAT_POINT_GAIN.def} で +10）`], ['ガッツ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.guts * 100) / 100}（強化P1つ=ガッツ+${STAT_POINT_GAIN.guts} で +10）`], ['間合い適性', DIST_APTITUDE_GRADES.slice().reverse().map(g => `${g} ${MONSTER_POWER_APTITUDE[g] > 0 ? '+' : ''}${MONSTER_POWER_APTITUDE[g]}`).join(' ／ ') + '（4距離すべてを合計）'], ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`], ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`]];
@@ -8012,7 +8050,8 @@ const HELP_DATA_TITLES = {
   missionsDaily: 'デイリーミッション',
   missionsWeekly: 'ウィークリーミッション',
   masuCosts: '神殿でかかるダイヤ',
-  assistantBond: 'みゅあとの仲良し度の段階',
+  assistants: '助手の種類',
+  assistantBond: '仲良し度の段階と呼び方',
   assistantBondActions: '仲良し度が増える行動',
   monsterPower: '総合力の内訳',
   psycheRewards: '難易度ごとにもらえる虹のプシュケー'
@@ -8185,19 +8224,21 @@ const AssistantBubble = ({
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const sceneDef = assistantSceneById(scene);
-  const who = assistantById(assistantId || sceneDef?.assistantId);
-  const color = accent || who.accent || ASSISTANT_FALLBACK.accent;
   // 親密度。呼び方と、候補に入るセリフがこれで変わる
   const bond = useAssistantBond();
+  // だれが話すか。画面から指定が無ければ、いま選んでいる助手がそのまま話す
+  const activeId = assistantId || sceneDef?.assistantId || bond.assistantId || null;
+  const who = assistantById(activeId);
+  const color = accent || who.accent || ASSISTANT_FALLBACK.accent;
   // 場面ごとに用意した複数のセリフから1つ選ぶ。同じ画面でも毎回ちがうことを話す。
-  // 選び直すのは「場面」「条件」「親密度Lv」が変わったときだけ。ほかの理由で再描画される
-  // たびにセリフが入れ替わると、読んでいる途中で文が変わってしまう
+  // 選び直すのは「場面」「条件」「親密度Lv」「助手」が変わったときだけ。ほかの理由で再描画
+  // されるたびにセリフが入れ替わると、読んでいる途中で文が変わってしまう
   const pickedRef = useRef(null);
-  const pickKey = `${scene || ''}|${condition || ''}|${bond.level}`;
+  const pickKey = `${who.id}|${scene || ''}|${condition || ''}|${bond.level}`;
   if (pickedRef.current?.key !== pickKey) {
     pickedRef.current = {
       key: pickKey,
-      value: typeof pickAssistantLine === 'function' ? pickAssistantLine(scene, condition, bond.level) : null
+      value: typeof pickAssistantLine === 'function' ? pickAssistantLine(scene, condition, bond.level, who.id) : null
     };
   }
   // 顔をタップすると次のセリフへ送る。短い間に何度も押されたら連打リアクションに入る。
@@ -8251,13 +8292,13 @@ const AssistantBubble = ({
       return;
     }
     // ふつうのタップ: 次のセリフへ切り替える(表情も変わる)
-    if (typeof pickAssistantLine === 'function') setTapped(pickAssistantLine(scene, condition, bond.level));
+    if (typeof pickAssistantLine === 'function') setTapped(pickAssistantLine(scene, condition, bond.level, who.id));
   };
   const spamLine = spam ? spam.recovering ? spamRecover : spamLines[spam.step] : null;
   const shown = spamLine || tapped || pickedRef.current.value;
   const picked = pickedRef.current.value;
-  // セリフの中の {name} は、そのときの呼び方(さん付け・呼び捨て・ちん付け)になる
-  const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level, bond.callStyle);
+  // セリフの中の {name} は、そのときの呼び方(さん付け・呼び捨て・ちん付けなど)になる
+  const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level, bond.callStyle, who.id);
   const face = expression || shown?.e || null;
   const paragraphs = detail || sceneDef?.detail || null;
   const ref = helpRef || sceneDef?.help || null;
@@ -11149,10 +11190,17 @@ function MonsterHeroGame() {
   missionsRef.current = missions;
   const [missionTab, setMissionTab] = useState('daily');
   const missionClaimingRef = useRef(false);
-  // みゅあとの仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる
-  const [assistantBond, setAssistantBond] = useState(ASSISTANT_BOND_EMPTY);
-  const assistantBondRef = useRef(ASSISTANT_BOND_EMPTY);
-  // 親密度Lvが上がった直後かどうか。次にHOMEを開いたときだけ、みゅあがそのことに触れる
+  // いま一緒に遊んでいる助手。保存が無い既存プレイヤーは「みゅあ」のまま変わらない
+  const [selectedAssistantId, setSelectedAssistantId] = useState(() => normalizeAssistantId(null));
+  const selectedAssistantIdRef = useRef(normalizeAssistantId(null));
+  // 助手選択の画面を出すかどうか(はじめて遊ぶ人にだけ、名前を決めるより前に出す)
+  const [assistantChosen, setAssistantChosen] = useState(true);
+  // 助手との仲良し度。遊ぶほど増えて、呼び方と話す内容が変わる。
+  // 助手ごとに完全に分けて持つので、切り替えてももう片方の進捗は消えない
+  const [assistantBonds, setAssistantBonds] = useState({});
+  const assistantBondsRef = useRef({});
+  const assistantBond = normalizeAssistantBond(assistantBonds[selectedAssistantId]);
+  // 親密度Lvが上がった直後かどうか。次にHOMEを開いたときだけ、助手がそのことに触れる
   const [assistantBondUp, setAssistantBondUp] = useState(false);
   const [loginBonusPopup, setLoginBonusPopup] = useState(null);
   const [loginBonusState, setLoginBonusState] = useState(LOGIN_BONUS_DEFAULT); // 7日周期の進み具合(一覧表示用)
@@ -11234,9 +11282,12 @@ function MonsterHeroGame() {
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [assistantCallStyle, setAssistantCallStyleState] = useState(null); // みゅあの呼び方の上書き(絆Lv6から自由入力・未入力はnullで絆Lvの既定のまま)
+  // 呼び方の上書き(絆Lv6から自由入力)。助手ごとに分けて持つので、みゅあとききで別々に決められる
+  const [assistantCallStyles, setAssistantCallStylesState] = useState({});
+  const assistantCallStyle = assistantCallStyles[selectedAssistantId] || null;
   const [showCallStylePicker, setShowCallStylePicker] = useState(false);
   const [tempCallStyle, setTempCallStyle] = useState(''); // 呼び方入力欄の一時値(保存を押すまで確定しない)
+  const [showAssistantPicker, setShowAssistantPicker] = useState(false); // プロフィールからの助手変更
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
@@ -12476,9 +12527,12 @@ function MonsterHeroGame() {
     if (titleStartingRef.current || bootPhase !== 'TITLE' || showChangelog || showTitleSettings || showAudioSettings || showBackup) return;
     titleStartingRef.current = true;
     setTitleStarting(true);
-    // 初回はみゅあのあいさつから始め、読み終えるとプロフィール画面(名前とアイコン)へ進む
-    setGameState(onboarded ? 'HOME' : 'PROFILE');
-    if (!onboarded) {
+    // はじめて遊ぶ人は「助手をえらぶ」→ 選んだ助手のあいさつ → プロフィール(名前とアイコン)の順。
+    // 助手を選ぶ前に、みゅあ固定のあいさつを出さないこと(選んでいない助手が話してしまうため)。
+    // 既存プレイヤー(assistantChosen)は、これまでどおりHOMEかプロフィールへそのまま進む
+    const needsAssistantChoice = !onboarded && !assistantChosen;
+    setGameState(needsAssistantChoice ? 'ASSISTANT_SELECT' : onboarded ? 'HOME' : 'PROFILE');
+    if (!onboarded && !needsAssistantChoice) {
       setTutorialKind('intro');
       setTutorialStep(0);
     }
@@ -12680,8 +12734,13 @@ function MonsterHeroGame() {
       setBreederName(savedName);
       const savedIcon = await storeGet('mh_breeder_icon', null, false);
       setBreederIcon(savedIcon);
-      const savedCallStyle = await storeGet('mh_assistant_call_style', null, false);
-      setAssistantCallStyleState(savedCallStyle || null);
+      // 呼び方の上書きは助手ごとに別のキーへ。みゅあのぶんは今までのキーをそのまま読む
+      const loadedCallStyles = {};
+      for (const who of ASSISTANT_LIST) {
+        const saved = await storeGet(assistantCallStyleKeyFor(who.id), null, false);
+        if (typeof saved === 'string' && saved.trim()) loadedCallStyles[who.id] = saved;
+      }
+      setAssistantCallStylesState(loadedCallStyles);
       const savedXp = await storeGet('mh_breeder_xp', 0, false);
       setBreederXp(savedXp);
       const savedGold = await storeGet('mh_gold', 0, false);
@@ -12875,12 +12934,22 @@ function MonsterHeroGame() {
       }
       setOwnedItems(savedOwnedItems);
       const savedGifts = await storeGet('mh_gifts', [], false);
-      // みゅあとの仲良し度。開いた日のぶんをここで1回だけ足す
-      const savedBond = normalizeAssistantBond(await storeGet(ASSISTANT_BOND_KEY, null, false));
-      const bondLogin = gainAssistantBond(savedBond, 'login');
-      assistantBondRef.current = bondLogin.state;
-      setAssistantBond(bondLogin.state);
-      if (bondLogin.changed) await storeSet(ASSISTANT_BOND_KEY, bondLogin.state, false);
+      // どの助手と遊ぶか。保存が無い既存プレイヤーは、これまでどおり「みゅあ」のまま。
+      // 選択済みかどうかも覚えておき、はじめての人にだけ助手選択の画面を出す
+      const savedAssistant = await storeGet(ASSISTANT_SELECTED_KEY, null, false);
+      const activeAssistant = normalizeAssistantId(savedAssistant);
+      selectedAssistantIdRef.current = activeAssistant;
+      setSelectedAssistantId(activeAssistant);
+      // 助手ごとの仲良し度をまとめて読む。開いた日のぶんは、いま選んでいる助手にだけ足す
+      const loadedBonds = {};
+      for (const who of ASSISTANT_LIST) {
+        loadedBonds[who.id] = normalizeAssistantBond(await storeGet(assistantBondKeyFor(who.id), null, false));
+      }
+      const bondLogin = gainAssistantBond(loadedBonds[activeAssistant], 'login');
+      loadedBonds[activeAssistant] = bondLogin.state;
+      assistantBondsRef.current = loadedBonds;
+      setAssistantBonds(loadedBonds);
+      if (bondLogin.changed) await storeSet(assistantBondKeyFor(activeAssistant), bondLogin.state, false);
       const savedLoginBonus = await storeGet('mh_login_bonus', LOGIN_BONUS_DEFAULT, false);
       const loginGrant = grantLoginBonus(savedLoginBonus, savedGifts);
       // 不具合のお詫びも同じギフトボックスへ入れる。既に届いていれば何もしない
@@ -12993,15 +13062,19 @@ function MonsterHeroGame() {
       }
       if (wasOnboarded && !(hasSavedName && hasSavedIcon)) wasOnboarded = false;
       setOnboarded(wasOnboarded);
+      // 助手選択は、はじめて遊ぶ人にだけ出す。
+      // 既に遊んでいる人は、選択の保存が無くても「みゅあを選んでいる」扱いのまま進める
+      setAssistantChosen(!!savedAssistant || wasOnboarded);
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
       // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
       if (wasOnboarded) setUpdateGuideQueue(availableUpdateNotices().filter(notice => !seenUpdateIds.includes(notice.id)));else await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seenUpdateIds, ...availableUpdateNotices().map(n => n.id)]), false);
       if (!wasOnboarded) {
-        // 決め終わっていない項目はプロフィール画面で続きから設定してもらう
+        // 決め終わっていない項目はプロフィール画面で続きから設定してもらう。
+        // まだ助手を選んでいなければ、名前を決めるより前に助手選択から始める
         setOnboardingName(hasSavedName ? savedName.trim().slice(0, 10) : '');
         setOnboardingIcon(hasSavedIcon ? savedIcon : null);
-        setGameState('PROFILE');
+        setGameState(savedAssistant ? 'PROFILE' : 'ASSISTANT_SELECT');
       }
       setDataLoaded(true); // ここまでで起動に必要なセーブデータは揃っている
       // タイトル表示を待たせず、選んでいる難易度のスコアランキングだけを裏で取得する。
@@ -13699,21 +13772,46 @@ function MonsterHeroGame() {
 
   // マーケットアイテムが購入済み(=解放済み)かどうか。typeによって参照する解放リストが異なる。
   // type:'item'の消耗品は何度でも買えるため、常にfalse(所持数はownedItemsで別途表示)
-  // 行動に応じてみゅあとの仲良し度を増やす。上限に達していれば何も起きない。
-  // 続けて呼ばれても取りこぼさないよう、いまの値は ref から読む
+  // 行動に応じて助手との仲良し度を増やす。上限に達していれば何も起きない。
+  // 続けて呼ばれても取りこぼさないよう、いまの値は ref から読む。
+  // 増えるのは「いま選んでいる助手」のぶんだけ。もう片方の助手の値には触れない
   const addAssistantBond = useCallback(actionKey => {
-    const before = assistantBondLevelOf(assistantBondRef.current.points);
-    const result = gainAssistantBond(assistantBondRef.current, actionKey);
+    const id = selectedAssistantIdRef.current;
+    const current = normalizeAssistantBond(assistantBondsRef.current[id]);
+    const before = assistantBondLevelOf(current.points);
+    const result = gainAssistantBond(current, actionKey);
     if (!result.changed) return;
-    assistantBondRef.current = result.state;
-    setAssistantBond(result.state);
-    // Lvが上がったら、次にHOMEを開いたときにみゅあがそのことに触れる
+    assistantBondsRef.current = {
+      ...assistantBondsRef.current,
+      [id]: result.state
+    };
+    setAssistantBonds(prev => ({
+      ...prev,
+      [id]: result.state
+    }));
+    // Lvが上がったら、次にHOMEを開いたときに助手がそのことに触れる
     if (assistantBondLevelOf(result.state.points) > before) setAssistantBondUp(true);
     try {
-      storeSet(ASSISTANT_BOND_KEY, result.state, false);
+      storeSet(assistantBondKeyFor(id), result.state, false);
     } catch {}
   }, []);
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
+  // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
+  const activeAssistant = assistantById(selectedAssistantId);
+  // 吹き出しを使わず、その場面のセリフを直接並べたいとき(日次アドバイスなど)。
+  // いま選んでいる助手のぶんだけを返すので、画面側に助手ごとの分岐を書かなくてよい
+  const assistantSceneLinesFor = scene => typeof assistantSceneLines === 'function' ? assistantSceneLines(scene, null, assistantBondLevelNow, selectedAssistantId) : [];
+  // 助手を切り替える。仲良し度も呼び方も助手ごとに分けてあるので、切り替えても何も失われない
+  const chooseAssistant = useCallback(id => {
+    const next = normalizeAssistantId(id);
+    selectedAssistantIdRef.current = next;
+    setSelectedAssistantId(next);
+    setAssistantChosen(true);
+    setAssistantBondUp(false);
+    try {
+      storeSet(ASSISTANT_SELECTED_KEY, next, false);
+    } catch {}
+  }, []);
   // 「Lvが上がった」お知らせは、HOMEで1回見せたら終わりにする。
   // HOME以外で上がったときも、次にHOMEへ帰ってきたときに出るようにしている
   const assistantBondUpShownRef = useRef(false);
@@ -13727,27 +13825,40 @@ function MonsterHeroGame() {
       setAssistantBondUp(false);
     }
   }, [gameState, assistantBondUp]);
-  // デバッグ専用。仲良し度を直接書き換える(セーブデータのほかの項目には触らない)
+  // デバッグ専用。仲良し度を直接書き換える(セーブデータのほかの項目には触らない)。
+  // 書き換わるのは、いま選んでいる助手のぶんだけ
   const debugSetAssistantBond = useCallback(points => {
-    const cur = normalizeAssistantBond(assistantBondRef.current);
+    const id = selectedAssistantIdRef.current;
+    const cur = normalizeAssistantBond(assistantBondsRef.current[id]);
     const next = {
       ...cur,
       points: Math.max(0, Math.floor(Number(points) || 0))
     };
-    assistantBondRef.current = next;
-    setAssistantBond(next);
+    assistantBondsRef.current = {
+      ...assistantBondsRef.current,
+      [id]: next
+    };
+    setAssistantBonds(prev => ({
+      ...prev,
+      [id]: next
+    }));
     try {
-      storeSet(ASSISTANT_BOND_KEY, next, false);
+      storeSet(assistantBondKeyFor(id), next, false);
     } catch {}
   }, []);
-  // みゅあの呼び方を自由な文字で決める(絆Lv6から)。空にすれば絆Lvどおりの既定へ戻る
+  // 助手の呼び方を自由な文字で決める(絆Lv6から)。空にすれば絆Lvどおりの既定へ戻る。
+  // 助手ごとに別のキーへ保存するので、みゅあとききで別々に決められる
   const chooseAssistantCallStyle = useCallback(text => {
+    const id = selectedAssistantIdRef.current;
     const maxLen = typeof ASSISTANT_CALL_STYLE_MAX_LEN !== 'undefined' && ASSISTANT_CALL_STYLE_MAX_LEN || 16;
     const trimmed = String(text || '').trim().slice(0, maxLen);
     const next = trimmed || null;
-    setAssistantCallStyleState(next);
+    setAssistantCallStylesState(prev => ({
+      ...prev,
+      [id]: next
+    }));
     try {
-      storeSet('mh_assistant_call_style', next, false);
+      storeSet(assistantCallStyleKeyFor(id), next, false);
     } catch {}
   }, []);
   // 吹き出しへ配る値。画面側は <AssistantBubble scene="…"/> のままでよい
@@ -13756,8 +13867,9 @@ function MonsterHeroGame() {
     level: assistantBondLevelNow,
     name: breederName,
     callStyle: assistantCallStyle,
+    assistantId: selectedAssistantId,
     onTalk: () => addAssistantBond('talk')
-  }), [assistantBond.points, assistantBondLevelNow, breederName, assistantCallStyle, addAssistantBond]);
+  }), [assistantBond.points, assistantBondLevelNow, breederName, assistantCallStyle, selectedAssistantId, addAssistantBond]);
   const isMarketItemOwned = item => {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
     if (item.type === 'breeder') return unlockedTeachingIds.includes(item.id);
@@ -15588,7 +15700,7 @@ function MonsterHeroGame() {
   // いま案内しているページが指している施設。HOMEでその建物だけを明るく強調する
   const tutorialSpot = (() => {
     if (tutorialStep == null || tutorialKind !== 'tour') return null;
-    const pages = typeof ASSISTANT_TUTORIAL !== 'undefined' && ASSISTANT_TUTORIAL || [];
+    const pages = typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantIdRef.current) || [];
     return pages[tutorialStep]?.spot || null;
   })();
   const spotClass = name => tutorialSpot === name ? ' is-tutorial-spot' : '';
@@ -23939,7 +24051,58 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement("b", null, "baseId: ", selected.baseId), variants.map(([name, v]) => /*#__PURE__*/React.createElement("div", {
         key: name
       }, name, ": imgUrl=", v.imgUrl, " / iconUrl=", v.iconUrl, " / faceIconUrl=", v.faceIconUrl)))));
-    })(), gameState === 'PROFILE' && /*#__PURE__*/React.createElement("div", {
+    })(), gameState === 'ASSISTANT_SELECT' && /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 flex flex-col h-full min-h-0 p-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 text-center mb-3",
+      style: {
+        paddingTop: 'env(safe-area-inset-top)'
+      }
+    }, /*#__PURE__*/React.createElement("h2", {
+      className: "text-lg font-black italic text-indigo-300 uppercase tracking-widest"
+    }, "\u52A9\u624B\u3092\u3048\u3089\u3076"), /*#__PURE__*/React.createElement("p", {
+      className: "text-[10px] text-slate-400 mt-1 leading-tight"
+    }, "\u5192\u967A\u306B\u4ED8\u304D\u6DFB\u3063\u3066\u304F\u308C\u308B\u52A9\u624B\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002", /*#__PURE__*/React.createElement("br", null), "\u3042\u3068\u304B\u3089\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3067\u3044\u3064\u3067\u3082\u5909\u3048\u3089\u308C\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 overflow-y-auto mh-scroll"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "w-full max-w-md mx-auto grid grid-cols-2 gap-2.5 pb-3"
+    }, ASSISTANT_LIST.map(who => /*#__PURE__*/React.createElement("button", {
+      key: who.id,
+      type: "button",
+      onClick: () => {
+        chooseAssistant(who.id);
+        setGameState('PROFILE');
+        setTutorialKind('intro');
+        setTutorialStep(0);
+      },
+      "aria-label": `${who.name}をえらぶ`,
+      className: `rounded-2xl p-3 flex flex-col items-center gap-2 active:scale-[.97] ${who.id === selectedAssistantId ? '' : 'opacity-95'}`,
+      style: {
+        border: `2px solid ${who.id === selectedAssistantId ? who.accent : 'rgba(255,255,255,.14)'}`,
+        backgroundColor: who.id === selectedAssistantId ? `${who.accent}1f` : 'rgba(15,23,42,.75)'
+      }
+    }, /*#__PURE__*/React.createElement(AssistantFace, {
+      who: who,
+      size: 88,
+      accent: who.accent,
+      expression: "happy"
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-[13px] font-black text-white"
+    }, who.name), /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] font-black leading-tight text-center",
+      style: {
+        color: who.accent
+      }
+    }, who.tagline || ''), /*#__PURE__*/React.createElement("span", {
+      className: "text-[9px] text-slate-400 leading-tight text-center"
+    }, who.intro || ''), /*#__PURE__*/React.createElement("span", {
+      className: "mt-auto w-full min-h-[38px] rounded-xl flex items-center justify-center text-[11px] font-black text-slate-950",
+      style: {
+        backgroundColor: who.accent
+      }
+    }, "\u3053\u306E\u5B50\u306B\u3059\u308B")))), /*#__PURE__*/React.createElement("p", {
+      className: "w-full max-w-md mx-auto text-[9px] text-slate-500 text-center leading-tight pb-2"
+    }, "\u3069\u3061\u3089\u3082\u6700\u521D\u304B\u3089\u9078\u3079\u307E\u3059\u3002\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308B\u306E\u3067\u3001\u3042\u3068\u3067\u5909\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002"))), gameState === 'PROFILE' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4"
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex items-center gap-2 mb-4 shrink-0"
@@ -23962,7 +24125,7 @@ function MonsterHeroGame() {
       const hasName = !!(onboardingName || '').trim();
       const hasIcon = !!onboardingIcon;
       const ready = hasName && hasIcon;
-      const step = typeof findAssistantOnboarding === 'function' ? findAssistantOnboarding(hasName, hasIcon) : null;
+      const step = typeof findAssistantOnboarding === 'function' ? findAssistantOnboarding(hasName, hasIcon, selectedAssistantId) : null;
       return /*#__PURE__*/React.createElement("div", {
         className: "mb-4 rounded-2xl border-2 border-indigo-400/60 bg-indigo-950/50 p-3 shrink-0"
       }, onboardingPreview && /*#__PURE__*/React.createElement("div", {
@@ -24067,24 +24230,31 @@ function MonsterHeroGame() {
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[10px] font-black text-teal-200"
     }, "\u30A2\u30A4\u30C6\u30E0\uFF08", Object.values(ownedItems).reduce((sum, n) => sum + (n || 0), 0), "\u500B\uFF09"))), onboarded && !onboardingPreview && (() => {
-      const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow) : null;
+      const stage = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow, selectedAssistantId) : null;
       const next = typeof assistantBondNext === 'function' ? assistantBondNext(assistantBond.points) : null;
       const from = stage ? stage.need : 0;
       const width = next ? Math.max(0, Math.min(100, (assistantBond.points - from) / Math.max(1, next.need - from) * 100)) : 100;
+      const accent = activeAssistant.accent || '#f472b6';
       return /*#__PURE__*/React.createElement("div", {
-        className: "bg-slate-900/60 border border-pink-500/30 rounded-2xl p-3 mb-4"
+        className: "bg-slate-900/60 rounded-2xl p-3 mb-4",
+        style: {
+          border: `1px solid ${accent}4d`
+        }
       }, /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-2"
       }, /*#__PURE__*/React.createElement(AssistantFace, {
-        who: assistantById(),
+        who: activeAssistant,
         size: 40,
-        accent: "#f472b6",
+        accent: accent,
         expression: assistantBondLevelNow >= 4 ? 'excited' : assistantBondLevelNow >= 2 ? 'happy' : 'normal'
       }), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 min-w-0"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] font-black text-pink-300 tracking-widest"
-      }, "\u307F\u3085\u3042\u3068\u306E\u4EF2\u826F\u3057\u5EA6"), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] font-black tracking-widest",
+        style: {
+          color: accent
+        }
+      }, activeAssistant.name, "\u3068\u306E\u4EF2\u826F\u3057\u5EA6"), /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black text-white"
       }, "Lv.", assistantBondLevelNow, "\u3000", stage ? stage.title : '')), assistantBondLevelNow >= (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6) ? /*#__PURE__*/React.createElement("button", {
         type: "button",
@@ -24098,24 +24268,66 @@ function MonsterHeroGame() {
       }, "\u547C\u3073\u65B9", /*#__PURE__*/React.createElement(Edit3, {
         size: 8
       })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black text-pink-200"
-      }, assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle))) : /*#__PURE__*/React.createElement("div", {
+        className: "text-[11px] font-black",
+        style: {
+          color: accent
+        }
+      }, assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))) : /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 text-right"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500"
       }, "\u547C\u3073\u65B9"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[11px] font-black text-pink-200"
-      }, assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle)))), /*#__PURE__*/React.createElement("div", {
+        className: "text-[11px] font-black",
+        style: {
+          color: accent
+        }
+      }, assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)))), /*#__PURE__*/React.createElement("div", {
         className: "h-1.5 mt-2 rounded-full bg-black/50 overflow-hidden"
       }, /*#__PURE__*/React.createElement("i", {
         className: "block h-full rounded-full",
         style: {
           width: `${width}%`,
-          background: 'linear-gradient(90deg,#f472b6,#fbbf24)'
+          background: `linear-gradient(90deg,${accent},#fbbf24)`
         }
       })), /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-400 font-bold mt-1 text-right"
-      }, next ? `次のLv.${next.level}まで あと${next.remain}` : 'いちばん仲良し！'));
+      }, next ? `次のLv.${next.level}まで あと${next.remain}` : 'いちばん仲良し！'), ASSISTANT_LIST.length > 1 && /*#__PURE__*/React.createElement("div", {
+        className: "mt-2.5 pt-2.5 border-t border-white/10"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] font-black text-slate-500 tracking-widest mb-1.5"
+      }, "\u3044\u3063\u3057\u3087\u306B\u904A\u3076\u52A9\u624B"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-1.5"
+      }, ASSISTANT_LIST.map(who => {
+        const active = who.id === selectedAssistantId;
+        const lv = assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
+        const t = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, who.id) : null;
+        return /*#__PURE__*/React.createElement("button", {
+          key: who.id,
+          type: "button",
+          onClick: () => {
+            if (!active) setShowAssistantPicker(true);
+          },
+          "aria-pressed": active,
+          className: `min-h-[52px] rounded-xl px-2 py-1.5 flex items-center gap-1.5 text-left active:scale-95 ${active ? '' : 'opacity-60'}`,
+          style: {
+            border: `2px solid ${active ? who.accent : 'rgba(255,255,255,.1)'}`,
+            backgroundColor: active ? `${who.accent}22` : 'rgba(15,23,42,.6)'
+          }
+        }, /*#__PURE__*/React.createElement(AssistantFace, {
+          who: who,
+          size: 30,
+          accent: who.accent,
+          expression: active ? 'happy' : 'normal'
+        }), /*#__PURE__*/React.createElement("span", {
+          className: "min-w-0 flex-1"
+        }, /*#__PURE__*/React.createElement("b", {
+          className: "block text-[10px] font-black text-white truncate"
+        }, who.name, active && '（選択中）'), /*#__PURE__*/React.createElement("small", {
+          className: "block text-[8px] text-slate-400 truncate"
+        }, "Lv.", lv, " ", t ? t.title : '')));
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-slate-500 mt-1"
+      }, "\u4EF2\u826F\u3057\u5EA6\u306F\u52A9\u624B\u3054\u3068\u306B\u5225\u3005\u306B\u8CAF\u307E\u308A\u307E\u3059\u3002\u5207\u308A\u66FF\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002")));
     })(), (() => {
       const difficultyIds = Object.keys(DIFFICULTY_SETTINGS);
       const modes = [...PUBLIC_BATTLE_MODES, EXTREME_MODE];
@@ -26723,12 +26935,15 @@ function MonsterHeroGame() {
         zIndex: 90000
       }
     }, /*#__PURE__*/React.createElement("div", {
-      className: "bg-slate-900 border border-pink-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl"
+      className: "bg-slate-900 rounded-3xl p-6 w-full max-w-xs shadow-2xl",
+      style: {
+        border: `1px solid ${activeAssistant.accent}`
+      }
     }, /*#__PURE__*/React.createElement("h3", {
       className: "text-lg font-black text-white mb-1 text-center"
-    }, "\u307F\u3085\u3042\u306E\u547C\u3073\u65B9"), /*#__PURE__*/React.createElement("p", {
+    }, activeAssistant.name, "\u306E\u547C\u3073\u65B9"), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
-    }, "\u7D46Lv6\u306B\u306A\u3063\u305F\u306E\u3067\u3001\u307F\u3085\u3042\u306E\u547C\u3073\u65B9\u3092\u81EA\u7531\u306B\u6C7A\u3081\u3089\u308C\u308B\u3088\u3002\u300C", '{name}', "\u300D\u3068\u66F8\u304F\u3068\u3001\u305D\u3053\u304C\u3042\u306A\u305F\u306E\u540D\u524D\u306B\u7F6E\u304D\u63DB\u308F\u308B\u3088\u3002"), /*#__PURE__*/React.createElement("input", {
+    }, "\u7D46Lv6\u306B\u306A\u3063\u305F\u306E\u3067\u3001\u547C\u3073\u65B9\u3092\u81EA\u7531\u306B\u6C7A\u3081\u3089\u308C\u307E\u3059\u3002\u300C", '{name}', "\u300D\u3068\u66F8\u304F\u3068\u3001\u305D\u3053\u304C\u3042\u306A\u305F\u306E\u540D\u524D\u306B\u7F6E\u304D\u63DB\u308F\u308A\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("input", {
       type: "text",
       value: tempCallStyle,
       onChange: e => setTempCallStyle(e.target.value),
@@ -26737,7 +26952,7 @@ function MonsterHeroGame() {
       className: "w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-2"
     }), /*#__PURE__*/React.createElement("div", {
       className: "flex flex-wrap gap-1.5 justify-center mb-4"
-    }, (typeof ASSISTANT_CALL_STYLES !== 'undefined' && ASSISTANT_CALL_STYLES || []).map(style => /*#__PURE__*/React.createElement("button", {
+    }, (typeof assistantCallStylesOf === 'function' && assistantCallStylesOf(selectedAssistantId) || []).map(style => /*#__PURE__*/React.createElement("button", {
       key: style.id,
       type: "button",
       onClick: () => setTempCallStyle(style.template),
@@ -26745,8 +26960,11 @@ function MonsterHeroGame() {
     }, style.label))), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-slate-500 text-center mb-3"
     }, "\u3044\u307E\u306E\u547C\u3073\u65B9\u30D7\u30EC\u30D3\u30E5\u30FC: ", /*#__PURE__*/React.createElement("span", {
-      className: "text-pink-200 font-black"
-    }, (tempCallStyle || '').includes('{name}') ? tempCallStyle.replace('{name}', breederName || 'あなた') : tempCallStyle || assistantSpeakText('{name}', breederName, assistantBondLevelNow))), /*#__PURE__*/React.createElement("div", {
+      className: "font-black",
+      style: {
+        color: activeAssistant.accent
+      }
+    }, (tempCallStyle || '').includes('{name}') ? tempCallStyle.replace('{name}', breederName || 'あなた') : tempCallStyle || assistantSpeakText('{name}', breederName, assistantBondLevelNow, null, selectedAssistantId))), /*#__PURE__*/React.createElement("div", {
       className: "flex gap-2 mb-2"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowCallStylePicker(false),
@@ -26756,7 +26974,10 @@ function MonsterHeroGame() {
         chooseAssistantCallStyle(tempCallStyle);
         setShowCallStylePicker(false);
       },
-      className: "flex-1 bg-pink-600 text-white py-3 rounded-xl font-black text-xs"
+      className: "flex-1 text-white py-3 rounded-xl font-black text-xs",
+      style: {
+        backgroundColor: activeAssistant.accent
+      }
     }, "\u4FDD\u5B58")), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
         chooseAssistantCallStyle('');
@@ -26764,7 +26985,65 @@ function MonsterHeroGame() {
         setShowCallStylePicker(false);
       },
       className: "w-full text-[10px] text-slate-500 font-bold py-1 active:scale-95"
-    }, "\u7D46Lv\u306E\u547C\u3073\u65B9\u306B\u623B\u3059"))), showIconPicker && /*#__PURE__*/React.createElement("div", {
+    }, "\u7D46Lv\u306E\u547C\u3073\u65B9\u306B\u623B\u3059"))), showAssistantPicker && /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-5",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.92)',
+        zIndex: 90000
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "bg-slate-900 border border-white/15 rounded-3xl p-5 w-full max-w-xs shadow-2xl max-h-full overflow-y-auto mh-scroll"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-base font-black text-white mb-1 text-center"
+    }, "\u3044\u3063\u3057\u3087\u306B\u904A\u3076\u52A9\u624B"), /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
+    }, "\u3044\u3064\u3067\u3082\u5909\u3048\u3089\u308C\u307E\u3059\u3002\u4EF2\u826F\u3057\u5EA6\u3068\u547C\u3073\u65B9\u306F\u52A9\u624B\u3054\u3068\u306B\u5206\u304B\u308C\u3066\u3044\u308B\u306E\u3067\u3001\u5207\u308A\u66FF\u3048\u3066\u3082\u6D88\u3048\u307E\u305B\u3093\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 mb-3"
+    }, ASSISTANT_LIST.map(who => {
+      const active = who.id === selectedAssistantId;
+      const lv = assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);
+      const t = typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(lv, who.id) : null;
+      return /*#__PURE__*/React.createElement("button", {
+        key: who.id,
+        type: "button",
+        onClick: () => {
+          chooseAssistant(who.id);
+          setShowAssistantPicker(false);
+        },
+        "aria-pressed": active,
+        className: "w-full min-h-[76px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 text-left active:scale-[.97]",
+        style: {
+          border: `2px solid ${active ? who.accent : 'rgba(255,255,255,.12)'}`,
+          backgroundColor: active ? `${who.accent}22` : 'rgba(15,23,42,.7)'
+        }
+      }, /*#__PURE__*/React.createElement(AssistantFace, {
+        who: who,
+        size: 52,
+        accent: who.accent,
+        expression: active ? 'happy' : 'normal'
+      }), /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0 flex-1"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-[12px] font-black text-white"
+      }, who.name, active && /*#__PURE__*/React.createElement("span", {
+        className: "ml-1 text-[9px]",
+        style: {
+          color: who.accent
+        }
+      }, "\u9078\u629E\u4E2D")), /*#__PURE__*/React.createElement("small", {
+        className: "block text-[9px] text-slate-400 leading-tight"
+      }, who.tagline || ''), /*#__PURE__*/React.createElement("small", {
+        className: "block text-[9px] font-black mt-0.5",
+        style: {
+          color: who.accent
+        }
+      }, "Lv.", lv, " ", t ? t.title : '')));
+    })), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowAssistantPicker(false),
+      className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+    }, "\u9589\u3058\u308B"))), showIconPicker && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
@@ -29379,7 +29658,7 @@ function MonsterHeroGame() {
       const pages = Array.isArray(notice.pages) && notice.pages.length ? notice.pages : ['新しいアップデートがあるよ♪'];
       const page = Math.min(updateGuidePage, pages.length - 1);
       const last = page === pages.length - 1;
-      const who = assistantById();
+      const who = activeAssistant;
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-end justify-center",
         style: {
@@ -29411,7 +29690,7 @@ function MonsterHeroGame() {
         expression: notice.expression || 'happy'
       }), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white"
-      }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle))), !last ? /*#__PURE__*/React.createElement("button", {
+      }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))), !last ? /*#__PURE__*/React.createElement("button", {
         onClick: () => setUpdateGuidePage(page + 1),
         className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
       }, "\u6B21\u3078") : /*#__PURE__*/React.createElement("div", {
@@ -29424,8 +29703,8 @@ function MonsterHeroGame() {
         className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white"
       }, notice.destination ? 'あとで' : '閉じる'))));
     })(), dailyMasuAdvice && (() => {
-      const who = assistantById();
-      const lines = assistantSceneById('dailyMasuAdvice')?.lines || [];
+      const who = activeAssistant;
+      const lines = assistantSceneLinesFor('dailyMasuAdvice');
       const eligible = dailyMasuAdvice.eligible !== false;
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex items-end justify-center",
@@ -29470,7 +29749,7 @@ function MonsterHeroGame() {
           backgroundColor: '#0f172a',
           display: 'block'
         }
-      }, assistantSpeakText(line.t, breederName, assistantBondLevelNow, assistantCallStyle))))) : /*#__PURE__*/React.createElement("div", {
+      }, assistantSpeakText(line.t, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId))))) : /*#__PURE__*/React.createElement("div", {
         className: "rounded-2xl border-2 border-slate-600 bg-slate-900 px-4 py-5 text-center text-sm font-black text-slate-100",
         style: {
           minHeight: '64px',
@@ -29487,7 +29766,7 @@ function MonsterHeroGame() {
         className: "min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]"
       }, "\u9589\u3058\u308B"))));
     })(), assistantDebug && (() => {
-      const who = assistantById();
+      const who = activeAssistant;
       const scenes = typeof ASSISTANT_SCENES !== 'undefined' && ASSISTANT_SCENES || {};
       const exprs = typeof ASSISTANT_EXPRESSIONS !== 'undefined' && ASSISTANT_EXPRESSIONS || [];
       const spam = [...(typeof ASSISTANT_SPAM_LINES !== 'undefined' && ASSISTANT_SPAM_LINES || []), ...(typeof ASSISTANT_SPAM_RECOVER !== 'undefined' && ASSISTANT_SPAM_RECOVER ? [ASSISTANT_SPAM_RECOVER] : [])];
@@ -29499,11 +29778,11 @@ function MonsterHeroGame() {
         bond: '親密度と呼び方',
         random: 'ランダムテスト'
       };
-      const stages = typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS || [];
+      const stages = typeof assistantBondLevelsOf === 'function' && assistantBondLevelsOf(selectedAssistantId) || [];
       // 見ているLv。切り替えるとセリフの絞り込みも呼び方も、そのLvのものになる
       const viewLevel = assistantDebugLevel != null ? assistantDebugLevel : assistantBondLevelNow;
-      const speak = t => assistantSpeakText(t, breederName, viewLevel);
-      const matches = l => typeof assistantLineMatchesBond === 'function' ? assistantLineMatchesBond(l, viewLevel) : true;
+      const speak = t => assistantSpeakText(t, breederName, viewLevel, assistantCallStyle, selectedAssistantId);
+      const matches = l => (l.who || 'mua') === selectedAssistantId && (typeof assistantLineMatchesBond === 'function' ? assistantLineMatchesBond(l, viewLevel) : true);
       const bondText = l => Array.isArray(l.bond) ? `Lv${l.bond[0]}〜${l.bond[1]}` : l.bond != null ? `Lv${l.bond}以上` : '全Lv';
       const row = (l, i) => {
         const on = matches(l);
@@ -29539,7 +29818,7 @@ function MonsterHeroGame() {
         className: `px-2 min-h-[26px] rounded-full text-[9px] font-black ${assistantDebugLevel === s.level ? 'bg-pink-600 text-white' : 'bg-slate-900 border border-white/10 text-slate-400'}`
       }, "Lv", s.level)), /*#__PURE__*/React.createElement("span", {
         className: "text-[9px] font-black text-pink-200 ml-auto"
-      }, "\u547C\u3073\u65B9: ", assistantSpeakText('{name}', breederName, viewLevel)));
+      }, "\u547C\u3073\u65B9: ", assistantSpeakText('{name}', breederName, viewLevel, assistantCallStyle, selectedAssistantId)));
       return /*#__PURE__*/React.createElement("div", {
         className: "fixed inset-0 flex flex-col",
         style: {
@@ -29599,7 +29878,7 @@ function MonsterHeroGame() {
           className: "text-[10px] font-black text-pink-300 mb-1"
         }, "\u3044\u307E\u306E\u4EF2\u826F\u3057\u5EA6"), /*#__PURE__*/React.createElement("div", {
           className: "text-[12px] text-white font-black"
-        }, points, " \u30DD\u30A4\u30F3\u30C8 \uFF0F Lv", assistantBondLevelNow, "\uFF08", (typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow) : {}).title || '', "\uFF09"), /*#__PURE__*/React.createElement("div", {
+        }, points, " \u30DD\u30A4\u30F3\u30C8 \uFF0F Lv", assistantBondLevelNow, "\uFF08", (typeof assistantBondStageByLevel === 'function' ? assistantBondStageByLevel(assistantBondLevelNow, selectedAssistantId) : {}).title || '', "\uFF09"), /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-slate-400 mt-1"
         }, next ? `次のLv${next.level}まで あと${next.remain}` : 'いちばん上まで来ています'), /*#__PURE__*/React.createElement("div", {
           className: "text-[9px] text-slate-400"
@@ -29626,7 +29905,7 @@ function MonsterHeroGame() {
           className: "flex-1 min-w-0"
         }, /*#__PURE__*/React.createElement("b", {
           className: "text-[11px] text-white"
-        }, assistantSpeakText('{name}', breederName, s.level)), /*#__PURE__*/React.createElement("span", {
+        }, assistantSpeakText('{name}', breederName, s.level, null, selectedAssistantId)), /*#__PURE__*/React.createElement("span", {
           className: "block text-[9px] text-slate-400"
         }, s.tone)), /*#__PURE__*/React.createElement("span", {
           className: "shrink-0 text-[9px] text-slate-500"
@@ -29643,7 +29922,7 @@ function MonsterHeroGame() {
           className: "shrink-0 text-[9px] text-slate-400"
         }, "1\u56DE+", a.amount, " \uFF0F 1\u65E5", a.dailyMax, "\u307E\u3067\uFF08\u4ECA\u65E5 ", assistantBond.daily[k] || 0, "\uFF09"))))), /*#__PURE__*/React.createElement("button", {
           onClick: () => {
-            if (!window.confirm('みゅあとの仲良し度を0に戻します。ほかのセーブデータは消えません。よろしいですか？')) return;
+            if (!window.confirm('いま選んでいる助手との仲良し度を0に戻します。ほかのセーブデータは消えません。よろしいですか？')) return;
             debugSetAssistantBond(0);
           },
           className: "w-full min-h-[46px] rounded-xl bg-amber-950/60 border border-amber-500/50 text-amber-100 text-[10px] font-black active:scale-95"
@@ -29653,7 +29932,7 @@ function MonsterHeroGame() {
         const roll = () => {
           const out = [];
           for (let i = 0; i < 20; i++) {
-            const l = typeof pickAssistantLine === 'function' ? pickAssistantLine(assistantDebugScene, null, viewLevel) : null;
+            const l = typeof pickAssistantLine === 'function' ? pickAssistantLine(assistantDebugScene, null, viewLevel, selectedAssistantId) : null;
             if (l) out.push(l);
           }
           setAssistantDebugRolls(out);
@@ -29688,7 +29967,7 @@ function MonsterHeroGame() {
         }, "\u7D9A\u3051\u3066\u540C\u3058\u30BB\u30EA\u30D5\u304C\u51FA\u305F\u884C\u306F\u8D64\u304F\u306A\u308A\u307E\u3059\uFF08\u3053\u3053\u304C\u8D64\u304F\u306A\u3089\u306A\u3044\u306E\u304C\u6B63\u3057\u3044\u72B6\u614B\u3067\u3059\uFF09\u3002")));
       })()));
     })(), battleTutorial && (() => {
-      const who = assistantById();
+      const who = activeAssistant;
       const acting = battleTutorial.wait === 'act' || battleTutorial.wait === 'do';
       const last = battleTutorial.wait === 'end';
       const total = battleTutorialSteps.length;
@@ -29797,7 +30076,7 @@ function MonsterHeroGame() {
         className: "block text-[11px] font-black text-white mt-0.5"
       }, battleTutorial.title), /*#__PURE__*/React.createElement("span", {
         className: "block text-[12px] text-white leading-relaxed mt-0.5"
-      }, assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow, assistantCallStyle)))), /*#__PURE__*/React.createElement("button", {
+      }, assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow, assistantCallStyle, selectedAssistantId)))), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           if (last) endBattleTutorial(true);else setBattleTutorialStep(v => Math.min(total - 1, (v || 0) + 1));
         },
@@ -29893,10 +30172,10 @@ function MonsterHeroGame() {
     }, "\u30BF\u30C3\u30D7\u3057\u3066\u30D0\u30C8\u30EB\u958B\u59CB"))), tutorialStep != null && (() => {
       const intro = tutorialKind === 'intro';
       const battleGuide = tutorialKind === 'battleGuide';
-      const pages = battleGuide ? typeof ASSISTANT_BATTLE_TUTORIAL_GUIDE !== 'undefined' && ASSISTANT_BATTLE_TUTORIAL_GUIDE || [] : intro ? typeof ASSISTANT_INTRO !== 'undefined' && ASSISTANT_INTRO || [] : typeof ASSISTANT_TUTORIAL !== 'undefined' && ASSISTANT_TUTORIAL || [];
+      const pages = battleGuide ? typeof assistantBattleGuidePages === 'function' && assistantBattleGuidePages(selectedAssistantId) || [] : intro ? typeof assistantIntroPages === 'function' && assistantIntroPages(selectedAssistantId) || [] : typeof assistantTutorialPages === 'function' && assistantTutorialPages(selectedAssistantId) || [];
       const page = pages[Math.max(0, Math.min(tutorialStep, pages.length - 1))];
       if (!page) return null;
-      const who = assistantById();
+      const who = activeAssistant;
       const last = tutorialStep >= pages.length - 1;
       const topicRef = page.help && page.help.includes('/') ? helpTopicById(page.help.split('/')[0], page.help.split('/')[1]) : null;
       return /*#__PURE__*/React.createElement("div", {
@@ -30495,7 +30774,7 @@ function MonsterHeroGame() {
         "aria-label": "\u52A9\u624B\u306E\u3072\u3068\u3053\u3068\u3092\u958B\u304F",
         className: `shrink-0 active:scale-90 ${helpAssistantOpen ? '' : 'opacity-40'}`
       }, /*#__PURE__*/React.createElement(AssistantFace, {
-        who: assistantById(),
+        who: activeAssistant,
         size: 48,
         accent: accent,
         expression: assistantExpression
