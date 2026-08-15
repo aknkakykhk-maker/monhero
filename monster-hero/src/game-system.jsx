@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 12:59"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 13:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8938,7 +8938,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (!intent||(intent.type!=='ATTACK'&&intent.type!=='SPECIAL')) return 0;
     const atkVal = Math.floor(intent.value*(1.0-getWaveBuff('enemyAtkDebuffPct')));
     const chuuniCutActive = (mainHero?.id==='Ark'||mainHero?.id==='Iblis') && getWaveBuff('chuuniDmgCutUses')<2; // 中二病特性: WAVE毎2回まで被ダメ50%カット
-    const dmgBase = Math.max(30,atkVal-(effectiveDef*0.15))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
+    // 丈夫さは固定軽減(×1.5)のあと、0.02%/pt（上限50%）を乗算する。
+    // 最低30はこの基本防御部分だけに適用し、後続の既存軽減順は変えない。
+    const defenseRate = Math.min(0.5,effectiveDef*0.0002);
+    const dmgBase = Math.max(30,(atkVal-effectiveDef*1.5)*(1-defenseRate))*((mainHero?.id==='Mocchi'||mainHero?.id==='Mitarashi')?0.8:1.0)*(chuuniCutActive?0.5:1.0);
     return Math.max(1,Math.floor(dmgBase*Math.max(0.01,(1.0-getPermaBuff('dmgCutPct')))*iceLockEnemyDamageMult));
   }, [effectiveDef, mainHero, permaBuffs, waveBuffs]);
   // 次ターン被ダメージ倍率は、丈夫さ・勇者特性・永続軽減・氷結・ガードをすべて
@@ -9063,7 +9066,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     return isBreederCard(card)&&specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty,'breederCardEffect') : (halved?0.5:1);
   };
-  // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」。handleEnemyTurnの計算と同じ式にする。
+  // flat は互換用（現行定義は0）。実質は「実効丈夫さ × 倍率の合計」。
   const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + effectiveDef * mult) : 0;
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
@@ -9213,7 +9216,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         await battleWait(200);
         setEnemyAttackFx(null);
       } else if (intent.type==='ATTACK'||intent.type==='SPECIAL') {
-        // 軽減量は「固定値の合計 + 丈夫さ × 倍率の合計」(GUARD_EVOLUTIONのflat/mult参照)
+        // 表示と同じ guardFlat / guardMult 集計を実効丈夫さへ適用する。
         const guardValue = (immediateEffects.guardFlat>0||immediateEffects.guardMult>0) ? Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult) : 0;
         const incomingBeforeTurnReduction = getIncomingDamageBeforeTurnReduction(intent);
         const incomingDmg = applyTurnDamageReduction(incomingBeforeTurnReduction);
