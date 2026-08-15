@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: ffa7c70cf82812e8
+// source-sha256: afab2a059d12b3c1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 17:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 19:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16369,6 +16369,76 @@ function MonsterHeroGame() {
   };
   // flat は互換用（現行定義は0）。実質は「実効丈夫さ × 倍率の合計」。
   const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + effectiveDef * mult) : 0;
+  // このカードを使うと、同じターンの「あとに続くカード」へ即座に乗る補正の生値(effMul適用前)。
+  // おりょうの力・ゴーレム・モッチー/ミタラシ・ききの応援は、説明どおり使ったターンから効く
+  // (他の永続バフは次のターンから効く。詳細はヘルプ「ずっと続く効果は次のターンから」を参照)。
+  // processTurn(実行)とpreviewLocalBoosts(カード選択中の予測)の両方がここを通ることで、
+  // 効果量を変えるときに直すのはこの1箇所だけで済み、表示と実際の計算がずれなくなる。
+  const localBoostFromCard = card => {
+    if (!card) return null;
+    if (card.subType === 'atk_buff') return {
+      oryo: card.baseValue
+    };
+    if (card.subType === 'buff_kiki') {
+      const owned = ownedTeachings.find(ot => ot.id === card.id);
+      const level = Math.min(owned ? owned.evoLevel : 0, 2);
+      return {
+        combo: 0.03 + level * 0.02
+      };
+    }
+    if (card.type === 'unique' && card.monId === 'Golem') return {
+      oryo: 0.075
+    };
+    if (card.type === 'unique' && (card.monId === 'Mocchi' || card.monId === 'Mitarashi')) return {
+      dmgMod: 0.1
+    };
+    return null;
+  };
+  // カード選択中のプレビュー専用。選択順に並べて、指定した1枚(excludeIdx、保留中のカード)の
+  // 「手前まで」に積み上がる即時補正を求める。processTurnの数え方(2枚目以降半減・EXTREME倍率)と
+  // 同じ式(cardEffectMultiplier)を使うため、この並びで実行したときの結果と必ず一致する。
+  const previewLocalBoosts = (excludeIdx = null) => {
+    let oryo = 0,
+      dmgMod = 0,
+      combo = 0,
+      penaltyCnt = 0;
+    const perCard = {};
+    selectedCards.forEach(idx => {
+      if (idx === excludeIdx) {
+        perCard[idx] = {
+          oryo,
+          dmgMod,
+          combo
+        };
+        return;
+      }
+      const card = hand[idx];
+      perCard[idx] = {
+        oryo,
+        dmgMod,
+        combo
+      };
+      if (!card) return;
+      const isPenalty = !isBreederCard(card);
+      const halved = isPenalty && penaltyCnt > 0;
+      const effMul = cardEffectMultiplier(card, halved);
+      const boost = localBoostFromCard(card);
+      if (boost) {
+        oryo += (boost.oryo || 0) * effMul;
+        dmgMod += (boost.dmgMod || 0) * effMul;
+        combo += (boost.combo || 0) * effMul;
+      }
+      if (isPenalty) penaltyCnt++;
+    });
+    return {
+      perCard,
+      final: {
+        oryo,
+        dmgMod,
+        combo
+      }
+    };
+  };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist) => {
     if (!mon || !card || ['guard', 'draw', 'buff', 'heal', 'weak_guard'].includes(card.type)) return 0;
     const distDiff = Math.abs(slotIdx - attackStartDist);
@@ -16401,7 +16471,10 @@ function MonsterHeroGame() {
 
   // 確定している追加ヒットまで含めた攻撃1枚の予測値。中央合計と各スロットで必ず同じ入口を使う。
   // ランダム会心は含めず、会心予約だけは実処理と同じ倍率を適用する。
-  const getAttackPredictedDmg = useCallback((card, mon, baseDmg) => {
+  // additionalGlobalCombo: カード選択中のプレビュー専用。previewLocalBoostsが計算した、
+  // このカードより手前で使ったききの応援ぶんの全体連撃(まだstateに乗っていない同ターン分)。
+  // processTurnの実行では渡さない(getPermaBuff('globalComboDmgPct')が既に確定値を持つため)。
+  const getAttackPredictedDmg = useCallback((card, mon, baseDmg, additionalGlobalCombo = 0) => {
     if (baseDmg <= 0) return 0;
     const guaranteedCrit = getTurnBuff('guaranteedCrit', false);
     const critMult = 1.5 + getPermaBuff('critDmgPct');
@@ -16414,7 +16487,7 @@ function MonsterHeroGame() {
     let total = mainDmg;
     if (mainHero?.id === 'Zan' && mon?.id === 'Zan') total += extraHit(0.3 + comboDmgBonus); // 勇者特性「連撃」
     if (card.type === 'unique' && card.monId === 'Zan') total += extraHit(0.2 + comboDmgBonus); // 固有技「連斬」
-    total += extraHit(getPermaBuff('globalComboDmgPct')); // きき由来の全体連撃は全モンスター共通の別ヒット
+    total += extraHit(getPermaBuff('globalComboDmgPct') + additionalGlobalCombo); // きき由来の全体連撃は全モンスター共通の別ヒット
     // 贖罪の追撃はメインヒットの確定値を基準にする（ランダム会心は予測しない）。
     if (card.type === 'unique' && (card.monId === 'Ark' || card.monId === 'Iblis')) total += Math.floor(mainDmg * 0.2);
     return total;
@@ -16833,8 +16906,9 @@ function MonsterHeroGame() {
         fireTeachingFx(card.id);
         if (card.subType === 'atk_buff') {
           addPopup(`攻撃UP!`, 'hero', 'text-red-400 font-black text-2xl drop-shadow-md');
-          addPermaBuff('atkPct', card.baseValue * effMul);
-          localOryoAdd += card.baseValue * effMul;
+          const boost = localBoostFromCard(card).oryo * effMul;
+          addPermaBuff('atkPct', boost);
+          localOryoAdd += boost;
         } else if (card.subType === 'dmg_cut_buff') {
           addPopup(`防御UP!`, 'hero', 'text-emerald-400 font-black text-2xl drop-shadow-md');
           const owned = ownedTeachings.find(ot => ot.id === card.id);
@@ -16915,7 +16989,7 @@ function MonsterHeroGame() {
         } else if (card.subType === 'buff_kiki') {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = Math.min(owned ? owned.evoLevel : 0, 2);
-          const comboAdd = (0.03 + level * 0.02) * effMul;
+          const comboAdd = localBoostFromCard(card).combo * effMul;
           localGlobalComboAdd += comboAdd;
           addPermaBuff('globalComboDmgPct', comboAdd);
           writePermaBuffs(p => ({
@@ -16984,12 +17058,14 @@ function MonsterHeroGame() {
           // 説明文(effectDesc)と食い違っていないかは tools/unique-effect-check.js が見張る
           if (card.monId === 'Mocchi' || card.monId === 'Mitarashi') {
             addPermaBuff('dmgCutPct', 0.03 * effMul);
-            addWaveBuff('enemyTakenDmgBonus', 0.1 * effMul);
-            localDmgModAdd += 0.1 * effMul;
+            const boost = localBoostFromCard(card).dmgMod * effMul;
+            addWaveBuff('enemyTakenDmgBonus', boost);
+            localDmgModAdd += boost;
             addPopup('被ダメ軽減UP!', 'hero', 'text-emerald-400 text-lg font-bold');
           } else if (card.monId === 'Golem') {
-            addPermaBuff('atkPct', 0.075 * effMul);
-            localOryoAdd += 0.075 * effMul;
+            const boost = localBoostFromCard(card).oryo * effMul;
+            addPermaBuff('atkPct', boost);
+            localOryoAdd += boost;
             addPopup('闘志UP!', 'hero', 'text-red-600 text-lg font-bold');
           } else if (card.monId === 'Zan') {
             addPermaBuff('comboDmgPct', 0.03 * effMul);
@@ -27494,6 +27570,10 @@ function MonsterHeroGame() {
       // ここを数えてしまうと、1枚目なのに自分自身を2枚目とみなして半減表示になる。
       const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
       const pendingIdx = pendingCard != null ? pendingCard : dragState && dragState.active ? dragState.cardIndex : null;
+      // おりょう・ゴーレム・モッチー/ミタラシ・ききは使ったターンからすぐ効くため、
+      // 先に選んだカードぶんの補正を、あとに続くカードの予測へも反映する
+      // (processTurnの実行順序と同じ数え方。localBoostFromCard/previewLocalBoosts参照)。
+      const boosts = previewLocalBoosts(pendingIdx);
       let committedTotal = 0;
       let committedPenaltyCnt = 0;
       let guardFlat = 0;
@@ -27504,9 +27584,14 @@ function MonsterHeroGame() {
         const slotIdx = cardAssignments[idx];
         const isPenalty = !isBreederCard(card);
         const halved = isPenalty && committedPenaltyCnt > 0;
+        const b = boosts.perCard[idx] || {
+          oryo: 0,
+          dmgMod: 0,
+          combo: 0
+        };
         if (slotIdx != null && isAttackCard(card)) {
-          const baseDmg = getDmg(card, slotIdx, slots[slotIdx], 0, 0, halved);
-          committedTotal += getAttackPredictedDmg(card, slots[slotIdx], baseDmg);
+          const baseDmg = getDmg(card, slotIdx, slots[slotIdx], b.oryo, b.dmgMod, halved);
+          committedTotal += getAttackPredictedDmg(card, slots[slotIdx], baseDmg, b.combo);
         }
         const gw = guardCardWeight(card);
         if (gw > 0) {
@@ -27536,8 +27621,8 @@ function MonsterHeroGame() {
           if (assignedCount >= maxUses) continue;
           if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
           pendingValidSlot = i;
-          const baseDmg = getDmg(pendingCardObj, i, s, 0, 0, !isBreederCard(pendingCardObj) && committedPenaltyCnt > 0);
-          pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg);
+          const baseDmg = getDmg(pendingCardObj, i, s, boosts.final.oryo, boosts.final.dmgMod, !isBreederCard(pendingCardObj) && committedPenaltyCnt > 0);
+          pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg, boosts.final.combo);
           break;
         }
       }
@@ -27633,6 +27718,9 @@ function MonsterHeroGame() {
       // - if a card is pending assignment, show what THIS card would do on this monster
       // - otherwise show the sum of damage from cards already assigned to this slot,
       //   using the GLOBAL attack order (2nd+ attack = half damage), matching processTurn
+      // おりょう・ゴーレム・モッチー/ミタラシ・ききの同ターン即時効果を、
+      // このスロットの予測にも反映する(合計DMG欄と同じpreviewLocalBoosts)。
+      const slotBoosts = previewLocalBoosts(pendingIdx);
       let previewDmg = 0;
       let isPendingPreview = false;
       let isPendingHalved = false;
@@ -27643,8 +27731,8 @@ function MonsterHeroGame() {
           if (idx !== pendingIdx && !isBreederCard(hand[idx])) committedPenalty++;
         });
         const isSecondOrLater = committedPenalty >= 1 && !isBreederCard(pendingCardObj);
-        const baseDmg = getDmg(pendingCardObj, i, s, 0, 0, isSecondOrLater);
-        previewDmg = getAttackPredictedDmg(pendingCardObj, s, baseDmg);
+        const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.final.oryo, slotBoosts.final.dmgMod, isSecondOrLater);
+        previewDmg = getAttackPredictedDmg(pendingCardObj, s, baseDmg, slotBoosts.final.combo);
         isPendingPreview = true;
         isPendingHalved = isSecondOrLater;
       } else if (s) {
@@ -27656,8 +27744,13 @@ function MonsterHeroGame() {
           const isPenalty = !isBreederCard(card);
           const halved = isPenalty && globalPenaltyCnt > 0;
           if (cardAssignments[idx] === i) {
-            const baseDmg = getDmg(card, i, s, 0, 0, halved);
-            previewDmg += getAttackPredictedDmg(card, s, baseDmg);
+            const b = slotBoosts.perCard[idx] || {
+              oryo: 0,
+              dmgMod: 0,
+              combo: 0
+            };
+            const baseDmg = getDmg(card, i, s, b.oryo, b.dmgMod, halved);
+            previewDmg += getAttackPredictedDmg(card, s, baseDmg, b.combo);
           }
           if (isPenalty) globalPenaltyCnt++;
         });

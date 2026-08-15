@@ -62,9 +62,13 @@ const RULES = [
     monId: 'Mocchi', label: 'モッチー(モッチ砲)',
     impl: [
       { re: /addPermaBuff\('dmgCutPct',([\d.]+)\*effMul\)/, mustSay: '被ダメージ', unit: '%', note: '被ダメージの割合軽減' },
-      { re: /addWaveBuff\('enemyTakenDmgBonus',([\d.]+)\*effMul\)/, mustSay: '敵被ダメ', unit: '%', note: '敵の被ダメージ増加' },
+      // 敵被ダメ増は「使ったターンからすぐ効く」ため、値は共有関数 localBoostFromCard に
+      // 集約されている(processTurnとカード選択中のプレビューの両方がここを参照する)。
+      // branch(processTurnのモッチー分岐)ではなく、その定義側で値を確かめる
+      { re: /monId==='Mocchi'\|\|card\.monId==='Mitarashi'\)\) return \{ dmgMod: ([\d.]+) \};/, mustSay: '敵被ダメ', unit: '%', note: '敵の被ダメージ増加', target: 'source' },
     ],
     forbid: [{ re: /addPermaBuff\('defPct'/, why: 'モッチーは丈夫さは上げない(被ダメージ軽減)' }],
+    usesSharedBoost: 'dmgMod',
   },
   {
     monId: 'Monol', label: 'モノリス(トリオビームX)',
@@ -79,8 +83,10 @@ const RULES = [
   },
   {
     monId: 'Golem', label: 'ゴーレム(合掌)',
-    impl: [{ re: /addPermaBuff\('atkPct',([\d.]+)\*effMul\)/, mustSay: '与ダメージ', unit: '%', note: '与ダメージの増加' }],
+    // 与ダメージ増も「使ったターンからすぐ効く」ため、モッチーと同じく localBoostFromCard 側で確かめる
+    impl: [{ re: /monId==='Golem'\) return \{ oryo: ([\d.]+) \};/, mustSay: '与ダメージ', unit: '%', note: '与ダメージの増加', target: 'source' }],
     forbid: [],
+    usesSharedBoost: 'oryo',
   },
   {
     monId: 'Zan', label: 'ザン(リバースレイド)',
@@ -105,7 +111,7 @@ for (const rule of RULES) {
   if (!branch) continue;
   console.log(`  説明文「${desc}」`);
   for (const one of rule.impl) {
-    const m = branch.match(one.re);
+    const m = (one.target === 'source' ? source : branch).match(one.re);
     check(`${rule.label}: ${one.note}が実装されている`, !!m, m ? `${(Number(m[1]) * 100)}%` : '見つからない');
     if (!m) continue;
     const value = Number(m[1]);
@@ -115,6 +121,12 @@ for (const rule of RULES) {
   for (const f of rule.forbid) {
     check(`${rule.label}: ${f.why}`, !f.re.test(branch), branch.match(f.re)?.[0] || '');
   }
+  // 値の定義元(localBoostFromCard)を、processTurnのこの分岐が実際に参照していること。
+  // 定義と参照が別の場所にあるので、繋がりが切れていないかをここで確かめる
+  if (rule.usesSharedBoost) {
+    check(`${rule.label}: localBoostFromCardの値を使っている(繋がりが切れていない)`,
+      new RegExp(`localBoostFromCard\\(card\\)\\.${rule.usesSharedBoost}`).test(branch), branch);
+  }
 }
 
 // --- 2枚目以降の半減(effMul)が全ての固有技効果へ掛かっていること ---
@@ -123,9 +135,16 @@ for (const rule of RULES) {
 const NOT_HALVED = new Set(['chuuniUniqueStack']);
 const buffCalls = [...effectRegion.matchAll(/add(?:PermaBuff|WaveBuff)\('(\w+)',([^)]+)\)/g)];
 check('固有技の効果に効果量がある', buffCalls.length > 0, `${buffCalls.length}件`);
-for (const [, key, arg] of buffCalls) {
+for (const m of buffCalls) {
+  const [, key, arg] = m;
   if (NOT_HALVED.has(key)) continue;
-  check(`2枚目以降の半減が効く: ${key}`, /\*effMul/.test(arg), arg);
+  // 呼び出しへ直接 `値*effMul` を渡す形と、先に
+  // `const boost=localBoostFromCard(card).x*effMul` を作ってから渡す形の両方を認める。
+  // どちらでも、その呼び出しを含む行のどこかに `*effMul` があるはず
+  const lineStart = effectRegion.lastIndexOf('\n', m.index) + 1;
+  const lineEndIdx = effectRegion.indexOf('\n', m.index);
+  const line = effectRegion.slice(lineStart, lineEndIdx < 0 ? undefined : lineEndIdx);
+  check(`2枚目以降の半減が効く: ${key}`, /\*effMul/.test(arg) || /\*effMul/.test(line), arg);
 }
 // --- 丈夫さバフが「基礎ステータスを書き換えない」こと ---
 // def を直接いじると、能力報酬の計算((丈夫さ+20)×1.1)やガード段階まで巻き込み、
