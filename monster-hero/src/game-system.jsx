@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 22:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 23:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8557,12 +8557,14 @@ function MonsterHeroGame() {
       setExtremeClearCounts(prev => ({ ...prev, [extremeDifficulty]: Math.max(Number(prev[extremeDifficulty]) || 0, nextExtreme) }));
       setExtremeDifficultyClearCounts(prev => ({ ...prev, [extremeDifficulty]: Math.max(Number(prev[extremeDifficulty]) || 0, nextExtreme) }));
       await storeSet(extremeClearCountKey(extremeDifficulty), nextExtreme, false);
+      addAssistantBond('extremeClear');
       return;
     }
     if (isQuickMode(runMode)) {
       const nextQuick = (quickClearCounts[difficulty] || 0) + 1;
       setQuickClearCounts(prev => ({ ...prev, [difficulty]: Math.max(prev[difficulty] || 0, nextQuick) }));
       await storeSet(clearCountKey(BATTLE_MODE_QUICK, difficulty), nextQuick, false);
+      addAssistantBond('quickClear');
       return;
     }
     // プロモードのクリア回数も専用キーへ。チャレンジの通算クリア数(初勝利判定にも使う)は動かさない
@@ -8570,6 +8572,7 @@ function MonsterHeroGame() {
       const nextPro = (proClearCounts[difficulty] || 0) + 1;
       setProClearCounts(prev => ({ ...prev, [difficulty]: Math.max(prev[difficulty] || 0, nextPro) }));
       await storeSet(clearCountKey(BATTLE_MODE_PRO, difficulty), nextPro, false);
+      addAssistantBond('proClear');
       return;
     }
     // 通算ではじめての優勝かどうか(どの難易度も1度もクリアしていない状態からの1勝目)
@@ -8579,6 +8582,7 @@ function MonsterHeroGame() {
     setClearCounts(prev => ({ ...prev, [difficulty]: Math.max(prev[difficulty] || 0, nextCount) }));
     if (nextCount === 1) setRunHighlights(prev => ({ ...prev, firstClear: true }));
     await storeSet(`mh_clears_${difficulty}`, nextCount, false);
+    addAssistantBond('clear');
   };
 
   // はじめての敗北かどうか。どの難易度も1度もクリアしていなければ「まだ勝ったことがない」
@@ -10160,7 +10164,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ultimateDistanceBreakPendingRef.current=null; setUltimateDistanceBreakPending(null); setUltimateDistanceBreakReveal(null);
     }
     // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
-    if (w === 1 && !forcedEnemyKey) { addAssistantBond('battle'); addAssistantBond(modeBondAction(runMode)); }
+    if (w === 1 && !forcedEnemyKey) { addAssistantBond('battle'); addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode)); }
     setWave(w);
     // クイック成長で確定した最大値を明示的に引き継ぎ、次WAVE開始時も同じ値で全回復する。
     // setMax*直後の古いstateやモンスター初期値は参照しない。
