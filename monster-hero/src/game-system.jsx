@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 16:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 17:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14371,7 +14371,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="mt-3 grid gap-1.5 text-left">
               {[
                 ['1','累計ターン圧',<>累計ターン×0.75% 次WAVEの敵が強化<br/>累計ターン×0.75% 供モン加入ボーナスが低下<br/>経過累計ターン×0.75% 与ダメージ低下（最低25%）</>],
-                ['2','覚醒低下','このWAVEのターン数×0.75% 次回の攻撃/防御/精神覚醒が低下'],
+                ['2','覚醒低下','このWAVEのターン数×0.75% 次回の攻撃覚醒/防御覚醒/精神強化が低下'],
                 ['3','DISTANCE BREAK','累計35ターンごとに、安全距離以外の3距離をLv1→Lv2→Lv3…と段階強化'],
               ].map(([number,title,text])=><div key={number} className="rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"><div className="text-[9px] font-black text-fuchsia-300">RULE {number}｜{title}</div><div className="mt-0.5 text-[10px] font-bold leading-snug text-white">{text}</div>{number==='2'&&<div className="mt-0.5 text-[8px] font-black text-amber-300">※距離強化は対象外</div>}</div>)}
             </div>
