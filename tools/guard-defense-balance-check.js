@@ -12,7 +12,7 @@ const guards = ctx.guards;
 
 const effectiveDefense = (baseDef, defPct=0) => Math.floor(baseDef*(1+defPct));
 const guardLevel = baseDef => Math.max(0,Math.min(guards.length-1,Math.floor(baseDef/100)));
-const baseDamage = (attack, def) => Math.max(30,(attack-def*1.5)*(1-Math.min(0.5,def*0.0002)));
+const baseDamage = (attack, def) => Math.max(30,(attack-def*0.75)*(1-Math.min(0.5,def*0.00015)));
 const incoming = ({attack,def,trait=1,dmgCut=0,ice=1}) =>
   Math.max(1,Math.floor(baseDamage(attack,def)*trait*Math.max(0.01,1-dmgCut)*ice));
 const guardValue = (def, level, weight=1, effect=1) => Math.floor(def*guards[level].mult*weight*effect);
@@ -25,11 +25,11 @@ const resolved = ({attack,baseDef,defPct=0,level=guardLevel(baseDef),weights=[],
 };
 
 assert.strictEqual(JSON.stringify(guards.map(g=>g.flat)),JSON.stringify(Array(9).fill(0)));
-assert.strictEqual(JSON.stringify(guards.map(g=>g.mult)),JSON.stringify([2.1,2.2,2.25,2.3,2.65,2.85,3.6,4.4,5.7]));
-for (const [def,rate] of [[0,0],[100,.02],[400,.08],[800,.16],[900,.18],[1000,.2],[1200,.24],[2500,.5],[3000,.5]]) {
-  assert(Math.abs(Math.min(.5,def*.0002)-rate)<1e-12,`丈夫さ${def}の割合軽減`);
+assert.strictEqual(JSON.stringify(guards.map(g=>g.mult)),JSON.stringify([2.4,2.6,2.8,3,3.4,3.7,4.45,5.35,6.75]));
+for (const [def,rate] of [[0,0],[100,.015],[400,.06],[800,.12],[900,.135],[1000,.15],[1200,.18],[10000/3,.5],[4000,.5]]) {
+  assert(Math.abs(Math.min(.5,def*.00015)-rate)<1e-12,`丈夫さ${def}の割合軽減`);
 }
-assert.strictEqual(baseDamage(999999,3000),(999999-4500)*.5,'割合軽減は50%上限');
+assert.strictEqual(baseDamage(999999,4000),(999999-3000)*.5,'割合軽減は50%上限');
 assert.strictEqual(baseDamage(10,1000),30,'丈夫さ基本防御は最低30');
 
 // 全段階を基礎丈夫さで解放し、その段階の実効丈夫さ倍率を使う。
@@ -40,26 +40,40 @@ for (let level=0;level<guards.length;level++) {
 }
 assert.strictEqual(guardLevel(800),8);
 assert.strictEqual(guardLevel(1200),8);
-for (const [def,value] of [[800,4560],[900,5130],[1000,5700],[1200,6840]]) {
+for (const [def,value] of [[800,5400],[900,6075],[1000,6750],[1200,8100]]) {
   assert.strictEqual(guardValue(def,8),value,`万象拒絶は丈夫さ${def}でも伸びる`);
 }
 
 // バフは段階を解放せず、基本防御とガード量の実効丈夫さだけを伸ばす。
 const buffed=resolved({attack:2000,baseDef:400,defPct:.25,weights:[{}]});
-assert.deepStrictEqual([buffed.def,buffed.level,buffed.guard],[500,4,1325]);
+assert.deepStrictEqual([buffed.def,buffed.level,buffed.guard],[500,4,1700]);
 
 // 複数枚・弱ガード・2枚目以降半減。ブリーダーカードは特殊倍率だけを受ける。
-assert.strictEqual(resolved({attack:9999,baseDef:400,weights:[{},{}]}).guard,2120);
-assert.strictEqual(resolved({attack:9999,baseDef:400,weights:[{weight:.5}]}).guard,530);
-assert.strictEqual(resolved({attack:9999,baseDef:400,weights:[{},{effect:.5}]}).guard,1590);
-assert.strictEqual(resolved({attack:9999,baseDef:400,weights:[{effect:.5}]}).guard,530);
+assert.strictEqual(resolved({attack:9999,baseDef:400,weights:[{},{}]}).guard,2720);
+assert.strictEqual(resolved({attack:9999,baseDef:400,weights:[{weight:.5}]}).guard,680);
+assert.strictEqual(resolved({attack:9999,baseDef:400,weights:[{},{effect:.5}]}).guard,2040);
+assert.strictEqual(resolved({attack:9999,baseDef:400,weights:[{effect:.5}]}).guard,680);
 
 // 永続軽減と次ターン軽減は、丈夫さ基本防御・ガードの後という実戦順を維持する。
-const combined=resolved({attack:3500,baseDef:500,dmgCut:.2,weights:[{}],turn:.5});
-assert.strictEqual(combined.damage,277);
+const combined=resolved({attack:7000,baseDef:500,trait:.8,dmgCut:.2,ice:.7,weights:[{}],turn:.5});
+assert.strictEqual(combined.damage,447);
+
+// ガードなしでは直前仕様より抑えつつ、旧仕様（固定軽減0.15/pt）より丈夫さの価値を残す。
+assert.strictEqual(Math.floor(baseDamage(1050,400)),705);
+assert.strictEqual(Math.floor(Math.max(30,(1050-400*1.5)*(1-Math.min(.5,400*.0002)))),414);
+assert.strictEqual(Math.floor(Math.max(30,1050-400*.15)),990);
+assert.strictEqual(guardValue(400,4)-Math.floor(baseDamage(1050,400)),655);
+
+// 低丈夫さ帯でも、段階上昇によってガード値が逆に下がらない。
+let previousGuard=0;
+for (let def=50;def<=150;def++) {
+  const value=guardValue(def,guardLevel(def));
+  assert(value>=previousGuard,`丈夫さ${def}のガード値が逆転しない`);
+  previousGuard=value;
+}
 
 // 代表値（補正なし・ガード1枚）。予測と実処理は同じ resolved の結果になる。
-const cases=[[400,1050,0],[500,3500,1050],[600,4550,1052],[700,7000,2037],[800,9100,2076],[900,9100,1225],[1000,9100,380],[1200,9100,0]];
+const cases=[[400,1050,0],[500,3500,1040],[600,4550,1061],[700,7000,2051],[800,9100,2080],[900,9100,1212],[1000,9100,347],[1200,9100,0]];
 for (const [def,attack,expected] of cases) {
   const preview=resolved({attack,baseDef:def,weights:[{}]}).damage;
   const actual=resolved({attack,baseDef:def,weights:[{}]}).damage;
@@ -68,8 +82,8 @@ for (const [def,attack,expected] of cases) {
 }
 
 // 本番の表示と実処理が同じ実効丈夫さ・集計値を参照する結線も固定する。
-assert(game.includes('const defenseRate = Math.min(0.5,effectiveDef*0.0002);'));
-assert(game.includes('Math.max(30,(atkVal-effectiveDef*1.5)*(1-defenseRate))'));
+assert(game.includes('const defenseRate = Math.min(0.5,effectiveDef*0.00015);'));
+assert(game.includes('Math.max(30,(atkVal-effectiveDef*0.75)*(1-defenseRate))'));
 assert(game.includes('Math.floor(flat + effectiveDef * mult)'));
 assert(game.includes('Math.floor(immediateEffects.guardFlat + effectiveDef*immediateEffects.guardMult)'));
 assert(game.includes('applyTurnDamageReduction(Math.max(0,rawDmg-guardValueOf'));

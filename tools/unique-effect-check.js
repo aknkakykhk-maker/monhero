@@ -134,7 +134,7 @@ check('丈夫さバフは基礎ステータスを書き換えない', !/setDef\(
 check('丈夫さバフを乗せた実効値がある',
   /const effectiveDef = useMemo\(\(\) => resolveEffectiveMaxStat\(def, getPermaBuff\('defPct'\)\), \[def, permaBuffs\]\);/.test(source));
 check('被ダメージの固定・割合軽減に実効の丈夫さを使う',
-  /effectiveDef\*1\.5/.test(source) && /effectiveDef\*0\.0002/.test(source));
+  /effectiveDef\*0\.75/.test(source) && /effectiveDef\*0\.00015/.test(source));
 check('ガードの軽減量(表示)に実効の丈夫さを使う', /Math\.floor\(flat \+ effectiveDef \* mult\)/.test(source));
 check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.floor\(immediateEffects\.guardFlat \+ effectiveDef\*immediateEffects\.guardMult\)/.test(source));
 
