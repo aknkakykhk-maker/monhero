@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e730ebcebb1cefb9
+// source-sha256: 97c17b8a687f47aa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 10:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 10:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11376,6 +11376,7 @@ function MonsterHeroGame() {
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
+  const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
 
@@ -13472,6 +13473,23 @@ function MonsterHeroGame() {
     const list = monsterRosterIds.map(resolveRosterEntryToMon).filter(Boolean);
     return list.length > 0 ? list : Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
   };
+  // 正式データや保存済み編成へ混ぜず、デバッグ戦の勇者選択時だけ生成する検証用個体。
+  // 技・画像・ID依存の既存処理はMocchiを再利用し、debugOnlyで保存経路からも判別できる。
+  const makeDebugStrongestMonster = () => ({
+    ...ALL_PLAYER_MONSTERS.Mocchi,
+    name: '🛠 デバッグ最強モン',
+    baseHp: 9999,
+    baseAtk: 9999,
+    baseDef: 9999,
+    baseGuts: 9999,
+    distAptitude: ['M', 'M', 'M', 'M'],
+    debugOnly: true
+  });
+  const debugHeroMonsterList = list => {
+    if (!debugBattleRef.current) return list;
+    const debugMon = makeDebugStrongestMonster();
+    return [debugMon, ...list.filter(mon => mon?.id !== debugMon.id)];
+  };
   // 勇者モン選択の「ベースモン」タブ用。解放済みの種は編成に入れていなくても選べる。
   // マスモン登録のためだけに編成を入れ替える手間を無くすためのもの。
   const getUnlockedBaseMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
@@ -14684,6 +14702,7 @@ function MonsterHeroGame() {
   // 今回のランで得た絆経験値をそのまま初期値として、名前を付けてマスモンとして登録する
   // ラン終了画面(CHAMPION/敗北/リタイア)共通: マスモン登録ボタン・登録済み表示
   const masuRegisterButtonNode = () => {
+    if (debugBattle || mainHero?.debugOnly) return null;
     if (!finalRewardSummary?.heroBondGain || finalRewardSummary.heroBondGain.masuId) return null;
     if (masuRegisteredThisRun) return /*#__PURE__*/React.createElement("div", {
       className: "text-[10px] text-pink-300 font-black mt-1 flex items-center justify-center gap-1 shrink-0"
@@ -14724,7 +14743,7 @@ function MonsterHeroGame() {
     }), "\u30DE\u30B9\u30E2\u30F3\u3068\u3057\u3066\u767B\u9332\u3059\u308B"));
   };
   const registerMasuMon = name => {
-    if (!mainHero || mainHero.masuId) return null; // 既にマスモンの勇者は登録不要(既存インスタンスに加算済み)
+    if (!mainHero || mainHero.masuId || mainHero.debugOnly || debugBattleRef.current) return null; // 既にマスモンの勇者・デバッグ個体は登録不要
     const base = ALL_PLAYER_MONSTERS[mainHero.id];
     if (!base) return null;
     const startXp = Math.min(finalRewardSummary?.heroBondGain?.xpGain || 0, totalBondXpForLevel(INITIAL_MASU_LEVEL_CAP));
@@ -17915,7 +17934,8 @@ function MonsterHeroGame() {
   }, [battleTutorialStep, gameState, currentPickingMon]);
   const startDebugBattle = (extreme = false) => {
     const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
-    const party = getActiveMonsterList().slice(0, 4);
+    const savedParty = getActiveMonsterList();
+    const party = (debugStrongestHero ? [makeDebugStrongestMonster(), ...savedParty.filter(mon => mon?.id !== 'Mocchi')] : savedParty).slice(0, 4);
     if (!option || party.length === 0) return;
     const hero = party[0];
     const debugSlots = [party[0] || null, party[1] || null, party[2] || null, party[3] || null];
@@ -23365,11 +23385,23 @@ function MonsterHeroGame() {
       key: key,
       onClick: () => setDebugEnemyKey(key),
       className: `min-h-[46px] px-3 rounded-xl text-[11px] font-black ${debugEnemyKey === key ? 'bg-purple-950 border-2 border-purple-400 text-purple-100' : 'bg-slate-900 border border-white/10 text-slate-400'}`
-    }, debugEnemy.emoji, " ", debugEnemy.name)))), /*#__PURE__*/React.createElement("button", {
-      disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || getActiveMonsterList().length === 0,
+    }, debugEnemy.emoji, " ", debugEnemy.name)))), /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("div", {
+      className: "text-[10px] text-slate-500 font-black mb-2"
+    }, "3. \u52C7\u8005\u30E2\u30F3"), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      "data-debug-strongest-monster": true,
+      "aria-pressed": debugStrongestHero,
+      onClick: () => setDebugStrongestHero(v => !v),
+      className: `w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero ? 'border-fuchsia-300 bg-fuchsia-800 text-white' : 'border-white/15 bg-slate-900 text-slate-300'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, "\uD83D\uDEE0 \u30C7\u30D0\u30C3\u30B0\u6700\u5F37\u30E2\u30F3"), /*#__PURE__*/React.createElement("small", {
+      className: "block text-[8px] opacity-80"
+    }, "DEBUG\u5C02\u7528\u30FB\u30E9\u30A4\u30D5/\u3061\u304B\u3089/\u4E08\u592B\u3055/\u6700\u5927\u30AC\u30C3\u30C4 9999\u30FB\u5168\u8DDD\u96E2M"))), /*#__PURE__*/React.createElement("button", {
+      disabled: !getDebugEnemyOptions(difficulty).some(o => o.key === debugEnemyKey) || !debugStrongestHero && getActiveMonsterList().length === 0,
       onClick: startDebugBattle,
       className: "w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30"
-    }, "3. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'MONSTER_IMAGE_DEBUG' && (() => {
+    }, "4. \u30C7\u30D0\u30C3\u30B0\u6226\u958B\u59CB"))), gameState === 'MONSTER_IMAGE_DEBUG' && (() => {
       const owned = [...masuMons.filter(m => ALL_PLAYER_MONSTERS[m.baseId])];
       Object.keys(temporaryDyeMasks).forEach(baseId => {
         if (!owned.some(m => m.baseId === baseId) && ALL_PLAYER_MONSTERS[baseId]) owned.push({
@@ -28176,7 +28208,8 @@ function MonsterHeroGame() {
       const allyCarousel = gameState === 'PICK_ALLY' && isProMode(runMode);
       // 念のため、すでに編成にいる子は一覧にも出さない(勇者モンがもう一度出ないようにする)
       const inParty = slots.filter(x => x).map(x => x.id);
-      const rawList = gameState === 'PICK_HERO' && (heroPickTab === 'base' || isProMode(runMode)) ? getUnlockedBaseMonsterList() : monSelection;
+      const savedRawList = gameState === 'PICK_HERO' && (heroPickTab === 'base' || isProMode(runMode)) ? getUnlockedBaseMonsterList() : monSelection;
+      const rawList = gameState === 'PICK_HERO' ? debugHeroMonsterList(savedRawList) : savedRawList;
       const list = (gameState === 'PICK_ALLY' ? rawList.filter(m => m && !inParty.includes(m.id)) : rawList) || [];
       const stepAlly = delta => {
         const root = allyCarouselRef.current;
@@ -28236,7 +28269,7 @@ function MonsterHeroGame() {
         // 同じマスモンが画面によって違う見た目になっていた。
         // この画面だけの情報(固有技名・ステータス・詳細への案内)はextraで足す。
         const pickMasu = m.masuId ? getMasuMon(m.masuId) : null;
-        const pickBase = ALL_PLAYER_MONSTERS[m.id] || m;
+        const pickBase = m.debugOnly ? m : ALL_PLAYER_MONSTERS[m.id] || m;
         if (gameState === 'PICK_HERO' && isProMode(runMode)) return /*#__PURE__*/React.createElement("article", {
           key: m.id,
           className: "relative min-h-[112px] rounded-2xl border border-slate-700 bg-slate-900 overflow-hidden flex shadow-lg"
@@ -28327,7 +28360,9 @@ function MonsterHeroGame() {
           masu: pickMasu,
           base: pickBase,
           mon: m,
-          badge: isSel ? /*#__PURE__*/React.createElement("div", {
+          badge: m.debugOnly ? /*#__PURE__*/React.createElement("div", {
+            className: "absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white"
+          }, "DEBUG\u5C02\u7528") : isSel ? /*#__PURE__*/React.createElement("div", {
             className: "absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"
           }, /*#__PURE__*/React.createElement(Check, {
             size: 12,
@@ -28431,9 +28466,11 @@ function MonsterHeroGame() {
           className: "text-[7px] text-emerald-300 font-black"
         }, label), /*#__PURE__*/React.createElement("span", {
           className: "text-[10px] text-white font-black"
-        }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && /*#__PURE__*/React.createElement("div", {
+        }, "+", STAT_POINT_GAIN[key] || 1))))), !currentPickingMon.masuId && !currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
           className: "bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center"
-        }, gameState === 'PICK_HERO' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'))
+        }, gameState === 'PICK_HERO' ? '勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます' : '絆レベルの強化は勇者モン(マスモン)のみ対象です'), currentPickingMon.debugOnly && /*#__PURE__*/React.createElement("div", {
+          className: "rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/50 p-2 text-center text-[9px] font-black text-fuchsia-200"
+        }, "DEBUG\u5C02\u7528\u30FB\u4FDD\u5B58\u3001\u80B2\u6210\u3001\u30DE\u30B9\u30E2\u30F3\u767B\u9332\u306E\u5BFE\u8C61\u5916"))
       },
       footer: /*#__PURE__*/React.createElement("div", {
         className: "flex gap-2 shrink-0"

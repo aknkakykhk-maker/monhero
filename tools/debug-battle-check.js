@@ -35,4 +35,15 @@ assert(/debugBattleRef\.current = false;[\s\S]{0,120}debugResultRef\.current = f
 assert(source.includes("debugBattle&&<span") && source.includes('>DEBUG</span>'), 'battle HUD must identify debug mode');
 assert(source.includes('同じ条件でもう一度') && source.includes('デバッグ設定へ戻る') && source.includes('ヘルプへ戻る'), 'debug result actions must all be present');
 assert(source.includes('>💊</button>'), 'hidden help entry must use the pill emoji');
+assert(source.includes("name:'🛠 デバッグ最強モン'"), 'debug battle must provide the strongest runtime monster');
+for (const stat of ['baseHp','baseAtk','baseDef','baseGuts']) {
+  assert(new RegExp(`${stat}:9999`).test(source), `${stat} must be 9999 on the debug monster`);
+}
+assert(source.includes("distAptitude:['M','M','M','M']"), 'all debug monster distance aptitudes must be M');
+assert(source.includes('...ALL_PLAYER_MONSTERS.Mocchi') && source.includes('debugOnly:true'), 'debug monster must reuse a formal monster only at runtime');
+assert(source.includes("const rawList=gameState==='PICK_HERO'?debugHeroMonsterList(savedRawList):savedRawList"), 'ULTIMATE debug hero selection must include the debug monster');
+assert(source.includes('data-debug-strongest-monster'), 'direct debug battle must allow selecting the debug monster');
+assert(source.includes('if (!debugBattleRef.current) return list'), 'normal hero selection must not include the debug monster');
+assert(source.includes('if (debugBattle || mainHero?.debugOnly) return null'), 'debug monster must not expose Masu registration');
+assert(!enemySource.includes('デバッグ最強モン'), 'debug monster must not enter formal enemy data');
 console.log('OK: debug battle isolation, enemy reuse, BGM routes, navigation, and normal-mode reset');
