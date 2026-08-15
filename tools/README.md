@@ -111,6 +111,7 @@ node tools/build.js --check
 | `node layout-consistency-check.js` | モンスターカードの大きさ統一・難易度カードの高さ・マーケットの商品カードの並び・Masterの文字色・各画面に縦スクロールがあるかを確認する。 |
 | `node extreme-challenge-check.js` | 極限チャレンジ(正式版)を確認する。EXTREMEの倍率と未実装段階、Grand Master以上クリアの解放条件、ブリーダーカード50%がEXTREME固有ルールに閉じていること、正式プレイは報酬・クリア記録を保存しデバッグプレイでは保存しないこと、既存の保存キーと全国ランキングへ混ぜていないことを見る。 |
 | `node nightmare-rules-check.js` | NIGHTMAREのWAVE後強化50%、自動回復率・距離適性のプラス50%／マイナス200%を代表値で確認し、WAVE後距離強化との分離、EXTREMEと通常モードへの非適用も確認する。 |
+| `node ultimate-rules-check.js` | 未公開ULTIMATEのデバッグ限定ルール①（累計ターンによる敵強化、直前WAVEターンによる能力覚醒低下、表示と実適用の一致、既存難易度との分離）を代表値で確認する。 |
 | `node quick-extreme-special-rules-check.js` | クイック極限難易度が極限本体の `specialRules` を共用し、EXTREME/NIGHTMAREの相互混入や通常クイックへの誤適用がないこと、開始表示・カード表示・固定カード高・ランキング除外を確認する。 |
 | `node quick-chaos-check.js` | クイックCHAOSの3報酬方針、同難易度解放、特殊ルール共有、ランキング除外、デバッグ保存なし、既存記録キー、カード構成、一度きり通知を確認する。 |
 | `node extreme-reward-check.js` | 極限チャレンジの数値を本番の定義で計算して確かめる。EXTREMEの敵×13と報酬倍率、通常難易度(Beginner〜Legend)の敵性能に回帰がないこと(powerOverride=nullを0と取り違えない)、解放判定の境界を見る。 |

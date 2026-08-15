@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+const fs=require('fs');
+const assert=require('assert');
+const source=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
+const enemySource=fs.readFileSync('monster-hero/data/enemy-monsters.js','utf8');
+const enemy=(hp,atk,total)=>({hp:Math.floor(hp*25*(1+total*.005)),atk:Math.floor(atk*25*(1+total*.005))});
+assert.deepStrictEqual(enemy(550,70,0),{hp:13750,atk:1750});
+assert.deepStrictEqual(enemy(550,70,10),{hp:14437,atk:1837});
+assert.deepStrictEqual(enemy(550,70,18),{hp:14987,atk:1907});
+assert.deepStrictEqual(enemy(550,70,50),{hp:17187,atk:2187});
+assert.notStrictEqual(enemy(550,70,18).hp,Math.floor(enemy(550,70,10).hp*1.09),'enemy correction must not multiply the previous WAVE');
+const stats=(v,t)=>{const p=t*.005,f=1-t/20;return {atk:Math.floor(v.atk*(1+Math.max(0,.1-p))),def:Math.floor((v.def+20*f)*(1+Math.max(0,.1-p))),hp:Math.floor(v.hp*(1+Math.max(0,.2-p))),guts:Math.floor((v.guts+10*f)*(1+Math.max(0,.1-p)))};};
+const base={atk:100,def:100,hp:500,guts:100};
+assert.deepStrictEqual(stats(base,5),{atk:107,def:123,hp:587,guts:115});
+assert.deepStrictEqual(stats(base,10),{atk:105,def:115,hp:575,guts:110});
+assert.deepStrictEqual(stats(base,20),{atk:100,def:100,hp:550,guts:100});
+assert(source.includes("{ id:'ULTIMATE', label:'ULTIMATE', available:false }"),'public ULTIMATE must stay unavailable');
+assert(/ULTIMATE_DEBUG_SETTING[^\n]+power:25/.test(source),'debug-only ULTIMATE must use x25');
+assert(source.includes('baseHp*mod*enemyTurnMultiplier')&&source.includes('baseAtk*mod*enemyTurnMultiplier'),'HP and attack must share the turn multiplier');
+assert(source.includes('ultimateEnemyTurnMultiplier(totalTurnCount)'),'enemy correction must use existing cumulative total');
+assert(source.includes('waveResult?.turn,specialRuleDifficulty'),'stat reduction must use the completed WAVE turn');
+assert(source.includes('const gainedDistBonus=finalDistDamage.map(d=>applyNightmareWaveEnhancement'),'distance gain route must remain unchanged');
+assert(source.includes("specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 })"),'NIGHTMARE 50% rule must remain');
+assert(source.includes('setTotalTurnCount(newTotalTurnCount)')&&source.includes('const newTotalTurnCount=totalTurnCount+turnCount'),'existing cumulative counting must remain');
+assert(source.includes('Math.max(0,21-turnCount)'),'20-turn scoring boundary must remain');
+assert(/Gel:[^\n]+baseHp:550[^\n]+baseAtk:70/.test(enemySource),'Gel baseline must remain in enemy data');
+console.log('OK: ULTIMATE特殊ルール①（累計ターン敵強化、WAVEターン能力低下、デバッグ限定、既存ルール分離）');

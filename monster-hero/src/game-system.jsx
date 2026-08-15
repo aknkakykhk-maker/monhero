@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 09:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 09:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3765,6 +3765,9 @@ const EXTREME_DIFFICULTIES = Object.freeze([
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
 const CHAOS_SETTING = EXTREME_DIFFICULTIES[2];
+// 公開定義へ報酬等を混ぜず、デバッグ戦でULTIMATEルールだけを検証する設定。
+const ULTIMATE_DEBUG_SETTING = Object.freeze({ id:'ULTIMATE', label:'ULTIMATE', power:25, description:'デバッグ限定：累計ターンで敵が強化され、直前WAVEのターン数で能力覚醒が低下する。', specialRules:Object.freeze({ ultimateTurnRules:true }) });
+const extremeRuleSetting = (difficultyId) => difficultyId===ULTIMATE_DEBUG_SETTING.id ? ULTIMATE_DEBUG_SETTING : EXTREME_DIFFICULTIES.find(setting=>setting.id===difficultyId)||null;
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
 const QUICK_EXTREME_SETTINGS = Object.freeze({
@@ -3776,8 +3779,7 @@ const QUICK_DIFFICULTY_SETTINGS = Object.freeze({
   ...DIFFICULTY_SETTINGS,
   ...QUICK_EXTREME_SETTINGS,
 });
-const extremeDifficultySetting = (difficultyId) =>
-  EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId) || null;
+const extremeDifficultySetting = (difficultyId) => extremeRuleSetting(difficultyId);
 const extremeSpecialRule = (difficultyId, rule) =>
   extremeDifficultySetting(difficultyId)?.specialRules?.[rule] ?? 1;
 const hasExtremeSpecialRules = (difficultyId) => {
@@ -3814,6 +3816,13 @@ const applyNightmareWaveEnhancement = (value, specialDifficulty=null) => value *
   ? extremeSpecialRule(specialDifficulty, 'waveEnhancement') : 1);
 const applyNightmareStatGain = (before, normalAfter, specialDifficulty=null) => before
   + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, specialDifficulty));
+const ultimateEnemyTurnMultiplier = (turns) => 1 + Math.max(0,Number(turns)||0)*0.005;
+const resolveUltimateWaveStats = (stats, turns, specialDifficulty=null) => {
+  const before={atk:Number(stats?.atk)||0,def:Number(stats?.def)||0,hp:Number(stats?.hp)||0,guts:Number(stats?.guts)||0};
+  if(specialDifficulty!==ULTIMATE_DEBUG_SETTING.id)return {atk:applyNightmareStatGain(before.atk,Math.floor(before.atk*1.10),specialDifficulty),def:applyNightmareStatGain(before.def,Math.floor((before.def+20)*1.10),specialDifficulty),hp:applyNightmareStatGain(before.hp,Math.floor(before.hp*1.20),specialDifficulty),guts:applyNightmareStatGain(before.guts,Math.floor((before.guts+10)*1.10),specialDifficulty)};
+  const safeTurns=Math.max(0,Math.min(20,Number(turns)||0)),penalty=safeTurns*0.005,fixedScale=Math.max(0,1-safeTurns/20);
+  return {atk:Math.floor(before.atk*(1+Math.max(0,.10-penalty))),def:Math.floor((before.def+20*fixedScale)*(1+Math.max(0,.10-penalty))),hp:Math.floor(before.hp*(1+Math.max(0,.20-penalty))),guts:Math.floor((before.guts+10*fixedScale)*(1+Math.max(0,.10-penalty)))};
+};
 // 整数で扱うバトル値の特殊ルール倍率はここでだけ丸める。対象ルールがない難易度は
 // extremeSpecialRule が1を返すため、EXTREME / NIGHTMAREを含む既存値は変化しない。
 const applyExtremeIntegerRule = (value, specialDifficulty=null, rule) => Math.floor(
@@ -4368,7 +4377,7 @@ const applyIceRulerAutoGutsRecovery = (currentRate, heroId, iceLockActive, heroD
   && heroDist===enemyDist
   ? Math.min(1, currentRate + 0.5)
   : currentRate;
-const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null) => {
+const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=null, enemyTurnMultiplier=1) => {
   const enemyKey = forcedEnemyKey || ENEMY_SEQUENCE[wave - 1];
   const base = ENEMY_DATA[enemyKey];
   const safeDifficulty = normalizeBattleDifficulty(difficulty);
@@ -4382,9 +4391,9 @@ const createBattleEnemy = (wave, difficulty, forcedEnemyKey=null, powerOverride=
     name:base?.name || '敵データ未設定',
     imgUrl:base?.imgUrl || '',
     emoji:base?.emoji || '❓',
-    hp:Math.floor(baseHp*mod),
-    maxHp:Math.floor(baseHp*mod),
-    atk:Math.floor(baseAtk*mod),
+    hp:Math.floor(baseHp*mod*enemyTurnMultiplier),
+    maxHp:Math.floor(baseHp*mod*enemyTurnMultiplier),
+    atk:Math.floor(baseAtk*mod*enemyTurnMultiplier),
   };
 };
 
@@ -5842,12 +5851,13 @@ function MonsterHeroGame() {
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
+  const activeExtremeBattleSetting = debugBattle && extremeDifficulty===ULTIMATE_DEBUG_SETTING.id ? ULTIMATE_DEBUG_SETTING : activeExtremeSetting;
   // クイックのEXTREME/NIGHTMAREは通常難易度表に存在しない。カルーセルのonScrollで
   // difficultyが切り替わった直後の再描画でも、クイック用の表から倍率を解決する。
   const activeDifficultySetting = QUICK_DIFFICULTY_SETTINGS[safeDifficulty];
-  const scoreMultiplier = extremeRun ? activeExtremeSetting.score : (isQuickMode(runMode) ? (activeDifficultySetting.xp ?? activeDifficultySetting.score) : activeDifficultySetting.score);
-  const xpMultiplier = extremeRun ? activeExtremeSetting.xp : scoreMultiplier;
-  const goldMultiplier = extremeRun ? activeExtremeSetting.gold : activeDifficultySetting.gold;
+  const scoreMultiplier = extremeRun ? (activeExtremeBattleSetting.score||1) : (isQuickMode(runMode) ? (activeDifficultySetting.xp ?? activeDifficultySetting.score) : activeDifficultySetting.score);
+  const xpMultiplier = extremeRun ? (activeExtremeBattleSetting.xp||1) : scoreMultiplier;
+  const goldMultiplier = extremeRun ? (activeExtremeBattleSetting.gold||1) : activeDifficultySetting.gold;
   const effectiveMaxHp = useMemo(() => resolveEffectiveMaxStat(maxHp, getPermaBuff('muaHpPct')), [maxHp, permaBuffs]);
   const effectiveMaxGuts = useMemo(() => resolveEffectiveMaxStat(maxGuts, getPermaBuff('muaGutsPct')), [maxGuts, permaBuffs]);
   // 丈夫さのバフ(defPct)を乗せた「実際に計算へ使う丈夫さ」。ライフ・ガッツと同じ考え方で、
@@ -9564,11 +9574,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const handleNextWave = async () => {
     // 練習の台本があるときは、強化フェーズまで通して見せたいので
     // デバッグ戦の打ち切り(勝ち表示を出して止まる)を通さない
-    if (debugBattleRef.current && !battleScenarioRef.current) {
+    if (debugBattleRef.current && !battleScenarioRef.current && !(extremeRunRef.current&&extremeDifficulty===ULTIMATE_DEBUG_SETTING.id)) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setDebugOutcome('win');
       return;
+    }
+    if (debugBattleRef.current && extremeRunRef.current && extremeDifficulty===ULTIMATE_DEBUG_SETTING.id && wave===10) {
+      if (debugResultRef.current) return;
+      debugResultRef.current=true; setDebugOutcome('win'); return;
     }
     if (runFinalizingRef.current) return;
     setEffect(null);
@@ -9806,7 +9820,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const computeGuardLevel = (defVal) => Math.max(0, Math.min(GUARD_EVOLUTION.length - 1, Math.floor((defVal || 0) / 100)));
 
   const spawnEnemy = useCallback((w, forcedEnemyKey=null, initialDistance=null) => {
-    const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,extremeRunRef.current?(EXTREME_DIFFICULTIES.find(setting=>setting.id===extremeDifficulty)||EXTREME_SETTING).power:null);
+    const battleSetting=extremeRunRef.current?extremeRuleSetting(extremeDifficulty):null;
+    const enemyTurnMultiplier=battleSetting?.id===ULTIMATE_DEBUG_SETTING.id?ultimateEnemyTurnMultiplier(totalTurnCount):1;
+    const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier);
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する。
     // 極限チャレンジは難易度が別表(内部の difficulty は Normal のまま)なので、ここへ入れると
@@ -9846,7 +9862,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     reserveEnemyNextIntent(getNextEnemyAction(newEnemy,distAfterIntent(firstIntent,dist),firstIntent));
     setTurnCount(1); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setCurrentWaveDamage(0); setWaveDistDamage([0,0,0,0]); setWaveBuffs({}); // WAVE毎リセットのバフ・デバフ(waveEnemyAtkDebuff/chuuniDmgCutUses/enemyTakenDmgBonus等)を全てクリア
     return dist;
-  }, [getNextEnemyAction, difficulty, extremeDifficulty, highestWaves, quickHighestWaves, proHighestWaves, runMode]);
+  }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, runMode]);
 
   // defValは呼び出し元が直前に算出したばかりの丈夫さ(setDefで更新中の値)を明示的に渡すための引数。
   // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
@@ -10186,9 +10202,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 自動算出されるため、ここでは直接いじらない)
     let nMaxHp=maxHp, nAtk=atk, nDef=def, nMaxGuts=maxGuts;
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    if(type==='atk'){nAtk=applyNightmareStatGain(atk,Math.floor(atk*1.10),specialRuleDifficulty);}
-    else if(type==='def'){nDef=applyNightmareStatGain(def,Math.floor((def+20)*1.10),specialRuleDifficulty); nMaxHp=applyNightmareStatGain(maxHp,Math.floor(maxHp*1.20),specialRuleDifficulty);}
-    else if(type==='hp'){nMaxGuts=applyNightmareStatGain(maxGuts,Math.floor((maxGuts+10)*1.1),specialRuleDifficulty);}
+    const nextStats=resolveUltimateWaveStats({atk,def,hp:maxHp,guts:maxGuts},waveResult?.turn,specialRuleDifficulty);
+    if(type==='atk'){nAtk=nextStats.atk;}
+    else if(type==='def'){nDef=nextStats.def; nMaxHp=nextStats.hp;}
+    else if(type==='hp'){nMaxGuts=nextStats.guts;}
     setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts);
     const nGrdL=computeGuardLevel(nDef);
     const currentGuardLevel=computeGuardLevel(def);
@@ -11136,7 +11153,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:false);const previewable=setting.available&&unlocked;return (
+                    {difficulties.map(publicSetting=>{const setting=debugBattle&&publicSetting.id===ULTIMATE_DEBUG_SETTING.id?ULTIMATE_DEBUG_SETTING:publicSetting;const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:false);const previewable=(publicSetting.available||debugBattle&&setting.id===ULTIMATE_DEBUG_SETTING.id)&&unlocked;return (
                       <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[382px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?'#f0abfc':'rgba(255,255,255,.12)',background:previewable?'linear-gradient(180deg,#34133f,#160d2b)':'linear-gradient(180deg,#1e293b,#0d142b)',boxShadow:active?'0 0 30px rgba(232,121,249,.35)':'none'}}>
                         <div className="text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
                         <h3 className="text-center text-lg font-black leading-tight text-fuchsia-200">{setting.label}</h3>
@@ -11146,8 +11163,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':'未実装・選択できません'}</span>
                         </div>
                         {previewable?<>
-                          <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',`×${setting.score}`],['ダイヤ',`×${setting.gold}`]].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
-                          <div className="grid grid-cols-2 gap-1 mt-1">{[['経験値',`×${setting.xp}`],['虹のプシュケー',setting.psyche]].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
+                          <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
+                          <div className="grid grid-cols-2 gap-1 mt-1">{[['経験値',setting.xp?`×${setting.xp}`:'対象外'],['虹のプシュケー',setting.psyche??'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <p className="mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200">{setting.description}</p>
                           {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div className="mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"><small className="block text-center text-[8px] leading-tight font-black text-amber-300">⚠ {setting.label}特殊ルール</small>{extremeSpecialRuleLines(setting.id).map(([label,value])=><div key={label} className="grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[12px] whitespace-nowrap"><span className="text-slate-300">{label}</span><b className="text-right text-white">{value}</b></div>)}</div>}
                         </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
@@ -11157,7 +11174,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               debugBattleRef はここで書き換えないこと。デバッグ設定から入ったときだけ true のままになり、
                               その周回は今までどおり報酬もクリア記録も保存されない(正式プレイと混ざらない) */}
                           <button disabled={!previewable} onClick={()=>{battleEntryStateRef.current='EXTREME_DIFFICULTY_SELECT';setDifficulty('Normal');setRunMode(BATTLE_MODE_CHALLENGE);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;extremeRunRef.current=true;setExtremeRun(true);setDebugOutcome(null);setProAllyPool([]);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[44px] rounded-xl bg-fuchsia-600 text-white font-black text-sm disabled:bg-slate-800 disabled:text-slate-500">{previewable?'この難易度で挑戦':'選択できません'}</button>
-                          <button disabled={!setting.available||!unlocked} onClick={()=>openModeScoreRanking(EXTREME_MODE.id,setting.id,'EXTREME_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={14}/></button>
+                          <button disabled={!publicSetting.available||!unlocked} onClick={()=>openModeScoreRanking(EXTREME_MODE.id,setting.id,'EXTREME_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={14}/></button>
                         </div>
                       </article>
                     );})}
@@ -14224,17 +14241,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className={`w-full max-w-sm space-y-3 mb-3 shrink-0 flex-1 min-h-0 overflow-y-auto mh-scroll flex flex-col justify-center${battleTutorialSpotClass('rewards')}`}>
             <button disabled={!!effect} onClick={()=>setPendingReward('atk')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='atk'?'bg-red-900/40 border-red-400 scale-[1.03] ring-4 ring-red-500/50 shadow-[0_0_25px_rgba(248,113,113,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
               <div className="p-2 bg-red-600/20 rounded-xl text-red-500 relative"><Sword size={18}/>{pendingReward==='atk'&&<div className="absolute -top-1.5 -right-1.5 bg-red-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
-              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>攻撃覚醒</div><div className="flex flex-wrap justify-between gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ちから {atk} → <span className="text-red-400 font-bold">{applyNightmareStatGain(atk,Math.floor(atk*1.10),extremeRun&&extremeDifficulty===NIGHTMARE_SETTING.id)}</span></div></div><div className="text-slate-500 mt-1" style={{fontSize:'8px'}}>※技レベルは距離適性、防御カードは丈夫さに応じて自動で決まります</div></div>
+              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>攻撃覚醒</div><div className="flex flex-wrap justify-between gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ちから {atk} → <span className="text-red-400 font-bold">{resolveUltimateWaveStats({atk,def,hp:maxHp,guts:maxGuts},waveResult?.turn,specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty)).atk}</span></div></div><div className="text-slate-500 mt-1" style={{fontSize:'8px'}}>※技レベルは距離適性、防御カードは丈夫さに応じて自動で決まります</div></div>
             </button>
             <button disabled={!!effect} onClick={()=>setPendingReward('def')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='def'?'bg-emerald-900/40 border-emerald-400 scale-[1.03] ring-4 ring-emerald-500/50 shadow-[0_0_25px_rgba(52,211,153,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
               <div className="p-2 bg-emerald-600/20 rounded-xl text-emerald-500 relative"><ShieldCheck size={18}/>{pendingReward==='def'&&<div className="absolute -top-1.5 -right-1.5 bg-emerald-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
-              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>防御覚醒</div><div className="grid grid-cols-2 gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ライフ {maxHp} → <span className="text-pink-400 font-bold">{applyNightmareStatGain(maxHp,Math.floor(maxHp*1.20),extremeRun&&extremeDifficulty===NIGHTMARE_SETTING.id)}</span></div><div>丈夫さ {def} → <span className="text-emerald-400 font-bold">{applyNightmareStatGain(def,Math.floor((def+20)*1.10),extremeRun&&extremeDifficulty===NIGHTMARE_SETTING.id)}</span></div></div>
-              {(()=>{const nextDef=applyNightmareStatGain(def,Math.floor((def+20)*1.10),extremeRun&&extremeDifficulty===NIGHTMARE_SETTING.id); const curGL=computeGuardLevel(def); const nextGL=computeGuardLevel(nextDef); return nextGL>curGL&&(<div className="text-emerald-400 font-mono font-bold mt-1" style={{fontSize:'9px'}}>丈夫さ100到達で [{GUARD_EVOLUTION[nextGL].name}] 解放！ガード枚数 {guardCardCount(curGL)} → {guardCardCount(nextGL)}</div>);})()}
+              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>防御覚醒</div><div className="grid grid-cols-2 gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ライフ {maxHp} → <span className="text-pink-400 font-bold">{resolveUltimateWaveStats({atk,def,hp:maxHp,guts:maxGuts},waveResult?.turn,specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty)).hp}</span></div><div>丈夫さ {def} → <span className="text-emerald-400 font-bold">{resolveUltimateWaveStats({atk,def,hp:maxHp,guts:maxGuts},waveResult?.turn,specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty)).def}</span></div></div>
+              {(()=>{const nextDef=resolveUltimateWaveStats({atk,def,hp:maxHp,guts:maxGuts},waveResult?.turn,specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty)).def; const curGL=computeGuardLevel(def); const nextGL=computeGuardLevel(nextDef); return nextGL>curGL&&(<div className="text-emerald-400 font-mono font-bold mt-1" style={{fontSize:'9px'}}>丈夫さ100到達で [{GUARD_EVOLUTION[nextGL].name}] 解放！ガード枚数 {guardCardCount(curGL)} → {guardCardCount(nextGL)}</div>);})()}
               </div>
             </button>
             <button disabled={!!effect} onClick={()=>setPendingReward('hp')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='hp'?'bg-pink-900/40 border-pink-400 scale-[1.03] ring-4 ring-pink-500/50 shadow-[0_0_25px_rgba(244,114,182,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
               <div className="p-2 bg-pink-600/20 rounded-xl text-pink-500 relative"><Heart size={18}/>{pendingReward==='hp'&&<div className="absolute -top-1.5 -right-1.5 bg-pink-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
-              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-1" style={{fontSize:'13px'}}>精神強化 <Sparkles size={10} className="text-amber-400"/> 最大GUTS +10 & 10% UP</div><div className="text-amber-300 font-mono font-bold mt-1.5 text-center" style={{fontSize:'10px'}}>ガッツ {maxGuts} → {applyNightmareStatGain(maxGuts,Math.floor((maxGuts+10)*1.1),extremeRun&&extremeDifficulty===NIGHTMARE_SETTING.id)}</div></div>
+              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-1" style={{fontSize:'13px'}}>精神強化 <Sparkles size={10} className="text-amber-400"/> 最大GUTS +10 & 10% UP</div><div className="text-amber-300 font-mono font-bold mt-1.5 text-center" style={{fontSize:'10px'}}>ガッツ {maxGuts} → {resolveUltimateWaveStats({atk,def,hp:maxHp,guts:maxGuts},waveResult?.turn,specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty)).guts}</div></div>
             </button>
           </div>
           <button disabled={!pendingReward||!!effect} onClick={()=>{const r=pendingReward; setPendingReward(null); handleReward(r);}} className={`w-full max-w-sm py-4 rounded-2xl font-black text-lg uppercase shadow-lg active:scale-95 transition-all shrink-0 mt-auto ${pendingReward&&!effect?'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]':'bg-slate-800 text-slate-600'}`}>{pendingReward?'決定する':'強化を選択'}</button>
