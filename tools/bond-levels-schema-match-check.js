@@ -150,11 +150,66 @@ check('upsertは周回の進行を止めない(結果を待たない)',
   /sbUpsertBondLevels\(bondRows\)[\s\S]{0,200}?\.catch\(/.test(src),
   '投げっぱなし + catchで握りつぶし');
 
+// ---- ④ rankings へ後から足した列(ターン数・到達WAVE)も同じ考え方で照合する ----
+// 足した列を送る/選ぶと、SQLをまだ適用していない環境では400になる。
+// insertが400のまま終わるとスコアが1件も残らないので、外して送り直すことまで見る
+const RUN_STATS_SQL = path.join(REPO_ROOT, 'docs', 'RUN_STATS_APPLY.sql');
+if (fs.existsSync(RUN_STATS_SQL)) {
+  console.log('\n== rankings に足した列(ターン数・到達WAVE) ==');
+  const runSql = fs.readFileSync(RUN_STATS_SQL, 'utf8');
+  const addedColumns = [...runSql.matchAll(/alter table public\.rankings add column if not exists ([a-z_]+) ([a-z]+)/g)]
+    .map(m => ({ name: m[1], type: m[2] }));
+  const appColumns = (src.match(/const RANKING_RUN_STATS_COLUMNS = '([^']+)';/) || [, ''])[1]
+    .split(',').map(s => s.trim()).filter(Boolean);
+  console.log(`  SQLが足す列: ${addedColumns.map(c => `${c.name}(${c.type})`).join(', ')}`);
+  console.log(`  アプリが使う列: ${appColumns.join(', ')}`);
+
+  const sqlNames = addedColumns.map(c => c.name);
+  check('アプリが使う列がSQLで足す列と一致する',
+    appColumns.length > 0 && appColumns.length === sqlNames.length && appColumns.every(c => sqlNames.includes(c)),
+    `アプリ=${appColumns.join(',')} / SQL=${sqlNames.join(',')}`);
+
+  check('どちらもNULL許容(既存の記録を書き換えない)',
+    addedColumns.length > 0 && !/alter table public\.rankings add column if not exists [a-z_]+ [a-z]+ not null/.test(runSql),
+    addedColumns.map(c => c.type).join(', '));
+
+  check('既存の記録を書き換えるSQLが混ざっていない',
+    !/\b(update|delete from|drop column|truncate)\b/i.test(runSql.replace(/--.*$/gm, '')),
+    'update / delete / drop column / truncate なし');
+
+  // 送信側: 列が無いと分かったら外して送り直す(ここが無いとスコアが保存できない)
+  check('送信は400を受けたら列を外して送り直す',
+    /_rankingRunStatsUnavailable = true;[\s\S]{0,300}?return sbInsertScore\(withoutRunStats\);/.test(src),
+    '400 → フラグ → 列を外して再送');
+  check('取得も400を受けたら列を外して取り直す',
+    /_rankingRunStatsUnavailable = true;[\s\S]{0,300}?return sbFetchRankings\(/.test(src),
+    '400 → フラグ → 列を外して再取得');
+  check('無いと分かったあとは最初から列を外して送る',
+    /if \(_rankingRunStatsUnavailable\) \{ delete normalizedRow\.turns; delete normalizedRow\.reached_wave; \}/.test(src));
+
+  // ターン数はクリアした周回にだけ入れる(途中で終わった周回のターン数と混ざらないこと)
+  check('ターン数はクリアした周回にだけ入れる',
+    /runClearTurnsRef\.current = totalTurnCountRef\.current;/.test(src)
+    && (src.match(/runClearTurnsRef\.current = null;/g) || []).length >= 3,
+    'クリアで代入 / 敗北・リタイア・ラン開始でnull');
+
+  // 制約に引っかかってPOSTごと落ちないこと(1WAVE最大20ターン×10WAVE=200 < 上限)
+  const turnsMax = Number((runSql.match(/turns > 0 and turns <= (\d+)/) || [])[1]);
+  const waveMax = Number((runSql.match(/reached_wave > 0 and reached_wave <= (\d+)/) || [])[1]);
+  check('ありうるターン数・WAVEが検査制約の範囲に収まる',
+    Number.isFinite(turnsMax) && turnsMax >= 200 && Number.isFinite(waveMax) && waveMax >= 10,
+    `ターン数の上限=${turnsMax} / WAVEの上限=${waveMax} (実際は最大200ターン・10WAVE)`);
+
+  check('0以下はそもそも送らない(制約の下限と噛み合う)',
+    /Number\(runClearTurnsRef\.current\) > 0/.test(src), '下限は0より大きい');
+}
+
 const ng = results.filter(r => !r).length;
 console.log(`\n${results.length - ng}/${results.length} 項目が一致`);
 if (ng) {
   console.error('\nNG: アプリが送る形と本番のテーブル定義が食い違っています。');
   console.error('    bond_levels は削除の権限を与えていないため、間違った形で書き始めると後始末ができません。');
+  console.error('    rankings の列は、食い違うとスコアの保存そのものが落ちます。');
   process.exit(1);
 }
 console.log('すべてOK');
