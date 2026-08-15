@@ -3,6 +3,8 @@ const fs=require('fs');
 const assert=require('assert');
 const source=fs.readFileSync('monster-hero/src/game-system.jsx','utf8');
 const enemySource=fs.readFileSync('monster-hero/data/enemy-monsters.js','utf8');
+const changelog=fs.readFileSync('monster-hero/data/changelog.js','utf8');
+const help=fs.readFileSync('monster-hero/data/help.js','utf8');
 const enemy=(hp,atk,total)=>({hp:Math.floor(hp*25*(1+total*.005)),atk:Math.floor(atk*25*(1+total*.005))});
 assert.deepStrictEqual(enemy(550,70,0),{hp:13750,atk:1750});
 assert.deepStrictEqual(enemy(550,70,10),{hp:14437,atk:1837});
@@ -48,6 +50,11 @@ assert(source.includes('ultimateWeakenedDistancesRef.current=[]; setUltimateWeak
 assert(source.includes('setWaveBuffs({}); // WAVE毎リセット')&&!source.includes("addWaveBuff('ultimateDistance"),'distance breaks must not be WAVE buffs');
 assert(source.includes('data-distance-broken')&&source.includes('与ダメ ↓50%'),'empty and occupied broken slots must stay visibly marked');
 assert(source.includes('data-ultimate-distance-break-warning')&&source.includes('data-ultimate-distance-break-reveal'),'result warning and one-time reveal must exist');
+for(const [label,value] of [['敵強化','累計T ×0.5%'],['能力覚醒低下','WAVE T ×0.5%'],['距離弱体','50Tごと / 与ダメ50%']]) {
+  assert(source.includes(`['${label}','${value}']`),`ULTIMATE difficulty card must show: ${label} ${value}`);
+}
+assert(source.indexOf("if (difficultyId===ULTIMATE_DEBUG_SETTING.id) return [")<source.indexOf("const rules=extremeDifficultySetting(difficultyId)?.specialRules || {};"),'ULTIMATE card labels must bypass generic special-rule rendering');
+assert(!changelog.includes('ULTIMATEデバッグ表示を改善')&&!help.includes('未公開ULTIMATEのデバッグ表示'),'unreleased debug UI must not be announced in public changelog or help');
 for(const text of ['ULTIMATE 特殊ルール','累計ターン圧','覚醒低下','DISTANCE BREAK','現在の累計ターン：','現在の弱体距離：','※距離強化は対象外']) {
   assert(source.includes(text),`ULTIMATE rule overlay must show: ${text}`);
 }

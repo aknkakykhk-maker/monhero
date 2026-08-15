@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 10:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 11:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3794,6 +3794,11 @@ const specialRuleDifficultyForRun = (runMode, difficultyId, extremeRun=false, ex
 };
 const specialRulePercent = (value) => `${Math.round((Number(value)||0)*100)}%`;
 const extremeSpecialRuleLines = (difficultyId) => {
+  if (difficultyId===ULTIMATE_DEBUG_SETTING.id) return [
+    ['敵強化','累計T ×0.5%'],
+    ['能力覚醒低下','WAVE T ×0.5%'],
+    ['距離弱体','50Tごと / 与ダメ50%'],
+  ];
   const rules=extremeDifficultySetting(difficultyId)?.specialRules || {};
   const lines=[];
   if (rules.breederCardEffect != null) lines.push(['ブリーダーカード効果',specialRulePercent(rules.breederCardEffect)]);
