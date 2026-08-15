@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 20:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 22:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4098,7 +4098,7 @@ const helpDataRows = (id) => {
     case 'assistantBond': {
       const callUnlockLv = (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL) || 6;
       return ((typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || [])
-        .map(s => [`Lv.${s.level} ${s.title}`, `${s.need} から ／ 呼び方「${s.level >= callUnlockLv ? 'プレイヤーが選択（さん付け／呼び捨て／ちん付け）' : String(s.call).replace('{name}', 'あなたの名前')}」 ／ ${s.tone}`]);
+        .map(s => [`Lv.${s.level} ${s.title}`, `${s.need} から ／ 呼び方「${s.level >= callUnlockLv ? 'プレイヤーが自由に設定' : String(s.call).replace('{name}', 'あなたの名前')}」 ／ ${s.tone}`]);
     }
     case 'monsterPower':
       // 総合力の内訳は、実際の計算に使っている定数から作る(ヘルプへ数字を手で書き写さない)
@@ -5797,8 +5797,9 @@ function MonsterHeroGame() {
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [assistantCallStyle, setAssistantCallStyleState] = useState(null); // みゅあの呼び方の上書き(絆Lv6から選択可・未選択はnullで絆Lvの既定のまま)
+  const [assistantCallStyle, setAssistantCallStyleState] = useState(null); // みゅあの呼び方の上書き(絆Lv6から自由入力・未入力はnullで絆Lvの既定のまま)
   const [showCallStylePicker, setShowCallStylePicker] = useState(false);
+  const [tempCallStyle, setTempCallStyle] = useState(''); // 呼び方入力欄の一時値(保存を押すまで確定しない)
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
@@ -7697,10 +7698,13 @@ function MonsterHeroGame() {
     setAssistantBond(next);
     try { storeSet(ASSISTANT_BOND_KEY, next, false); } catch {}
   }, []);
-  // みゅあの呼び方を選ぶ(絆Lv6から)。選ばなければ絆Lvどおりの既定のまま変わらない
-  const chooseAssistantCallStyle = useCallback((id) => {
-    setAssistantCallStyleState(id);
-    try { storeSet('mh_assistant_call_style', id, false); } catch {}
+  // みゅあの呼び方を自由な文字で決める(絆Lv6から)。空にすれば絆Lvどおりの既定へ戻る
+  const chooseAssistantCallStyle = useCallback((text) => {
+    const maxLen = (typeof ASSISTANT_CALL_STYLE_MAX_LEN !== 'undefined' && ASSISTANT_CALL_STYLE_MAX_LEN) || 16;
+    const trimmed = String(text || '').trim().slice(0, maxLen);
+    const next = trimmed || null;
+    setAssistantCallStyleState(next);
+    try { storeSet('mh_assistant_call_style', next, false); } catch {}
   }, []);
   // 吹き出しへ配る値。画面側は <AssistantBubble scene="…"/> のままでよい
   const assistantBondValue = useMemo(() => ({
@@ -11830,7 +11834,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <div className="text-[11px] font-black text-white">Lv.{assistantBondLevelNow}　{stage?stage.title:''}</div>
                     </div>
                     {assistantBondLevelNow>=((typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL!=='undefined'&&ASSISTANT_CALL_STYLE_UNLOCK_LEVEL)||6)?(
-                      <button type="button" onClick={()=>setShowCallStylePicker(true)} className="shrink-0 text-right active:scale-95">
+                      <button type="button" onClick={()=>{setTempCallStyle(assistantCallStyle||'');setShowCallStylePicker(true);}} className="shrink-0 text-right active:scale-95">
                         <div className="text-[8px] text-slate-500 flex items-center justify-end gap-0.5">呼び方<Edit3 size={8}/></div>
                         <div className="text-[11px] font-black text-pink-200">{assistantSpeakText('{name}',breederName,assistantBondLevelNow,assistantCallStyle)}</div>
                       </button>
@@ -13091,19 +13095,19 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 border border-pink-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
               <h3 className="text-lg font-black text-white mb-1 text-center">みゅあの呼び方</h3>
-              <p className="text-[9px] text-slate-500 text-center mb-4 leading-tight">絆Lv6になったので、みゅあの呼び方を選べるよ。選ばなければ、これまでどおりの呼び方のままだよ。</p>
-              <div className="space-y-2 mb-4">
-                {((typeof ASSISTANT_CALL_STYLES!=='undefined'&&ASSISTANT_CALL_STYLES)||[]).map(style=>{
-                  const active=assistantCallStyle===style.id;
-                  return (
-                    <button key={style.id} onClick={()=>chooseAssistantCallStyle(style.id)} className={`w-full min-h-[52px] rounded-xl border-2 px-4 flex items-center justify-between active:scale-95 ${active?'bg-pink-950/60 border-pink-400 text-pink-100':'bg-slate-800 border-slate-700 text-white'}`}>
-                      <span className="font-black text-[12px]">{style.label}</span>
-                      <span className="text-[11px] font-bold opacity-80">{style.template.replace('{name}',breederName||'あなた')}</span>
-                    </button>
-                  );
-                })}
+              <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">絆Lv6になったので、みゅあの呼び方を自由に決められるよ。「{'{name}'}」と書くと、そこがあなたの名前に置き換わるよ。</p>
+              <input type="text" value={tempCallStyle} onChange={e=>setTempCallStyle(e.target.value)} maxLength={(typeof ASSISTANT_CALL_STYLE_MAX_LEN!=='undefined'&&ASSISTANT_CALL_STYLE_MAX_LEN)||16} placeholder={`例: {name}さん`} className="w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-2"/>
+              <div className="flex flex-wrap gap-1.5 justify-center mb-4">
+                {((typeof ASSISTANT_CALL_STYLES!=='undefined'&&ASSISTANT_CALL_STYLES)||[]).map(style=>(
+                  <button key={style.id} type="button" onClick={()=>setTempCallStyle(style.template)} className="px-2.5 min-h-[30px] rounded-full text-[10px] font-black bg-slate-800 border border-slate-700 text-slate-300 active:scale-95">{style.label}</button>
+                ))}
               </div>
-              <button onClick={()=>setShowCallStylePicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+              <p className="text-[9px] text-slate-500 text-center mb-3">いまの呼び方プレビュー: <span className="text-pink-200 font-black">{(tempCallStyle||'').includes('{name}')?tempCallStyle.replace('{name}',breederName||'あなた'):(tempCallStyle||assistantSpeakText('{name}',breederName,assistantBondLevelNow))}</span></p>
+              <div className="flex gap-2 mb-2">
+                <button onClick={()=>setShowCallStylePicker(false)} className="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+                <button onClick={()=>{chooseAssistantCallStyle(tempCallStyle);setShowCallStylePicker(false);}} className="flex-1 bg-pink-600 text-white py-3 rounded-xl font-black text-xs">保存</button>
+              </div>
+              <button onClick={()=>{chooseAssistantCallStyle('');setTempCallStyle('');setShowCallStylePicker(false);}} className="w-full text-[10px] text-slate-500 font-bold py-1 active:scale-95">絆Lvの呼び方に戻す</button>
             </div>
           </div>
         )}

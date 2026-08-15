@@ -148,16 +148,18 @@ const ASSISTANT_BOND_MIN_LEVEL = ASSISTANT_BOND_LEVELS[0].level;
 const ASSISTANT_BOND_MAX_LEVEL = ASSISTANT_BOND_LEVELS[ASSISTANT_BOND_LEVELS.length - 1].level;
 
 // ---------- 呼び方の設定(絆Lv6から) ----------
-// Lv6になると、それまで絆Lvが自動で決めていた呼び方(さん付け→呼び捨て→ちん付け)を
-// プレイヤーが自分で選べるようになる。選ばなければ(null のままなら)、
-// これまでどおり ASSISTANT_BOND_LEVELS の call がそのまま使われる(挙動は変わらない)。
+// Lv6になると、それまで絆Lvが自動で決めていた呼び方(さん付け→呼び捨て→ちん付け)を、
+// プレイヤーが自由な文字で決められるようになる。「{name}」と書くとそこがプレイヤー名に
+// 置き換わる(書かなければ、入力した文字がそのままみゅあの呼び方になる)。
+// 決めなければ(空のままなら)、これまでどおり ASSISTANT_BOND_LEVELS の call がそのまま使われる。
+// クイック入力用のよくある例。あくまで下書きを差し込むだけで、選択肢を制限するものではない
 const ASSISTANT_CALL_STYLES = [
   { id:'san',   label:'さん付け', template:'{name}さん' },
   { id:'plain', label:'呼び捨て', template:'{name}' },
   { id:'chin',  label:'ちん付け', template:'{name}ちん' },
 ];
 const ASSISTANT_CALL_STYLE_UNLOCK_LEVEL = 6;
-const assistantCallStyleById = (id) => ASSISTANT_CALL_STYLES.find(s => s.id === id) || null;
+const ASSISTANT_CALL_STYLE_MAX_LEN = 16;
 
 // 仲良し度(数値) → その段階の定義。壊れた値でも必ず最初の段階へ落ちる
 const assistantBondStage = (points) => {
@@ -177,20 +179,22 @@ const assistantBondStageByLevel = (level) =>
   ASSISTANT_BOND_LEVELS.find(s => s.level === level) || ASSISTANT_BOND_LEVELS[0];
 
 // プレイヤーをなんと呼ぶか。名前が無いときは呼びかけを省いても文が成り立つ言葉にする
-// callStyleId … Lv6から選べる呼び方の上書き。未指定・Lv6未満なら絆Lvの既定(stage.call)のまま
+// customCall … Lv6から自由に決められる呼び方の上書き。「{name}」を含めればプレイヤー名に
+//              置き換わり、含めなければ入力した文字がそのまま呼び方になる。
+//              未入力・Lv6未満なら絆Lvの既定(stage.call)のまま
 const ASSISTANT_NO_NAME = 'キミ';
-const assistantCallName = (name, level, callStyleId) => {
+const assistantCallName = (name, level, customCall) => {
   const raw = String(name || '').trim();
   if (!raw) return ASSISTANT_NO_NAME;
   const lv = Number.isFinite(level) ? level : ASSISTANT_BOND_MIN_LEVEL;
-  const style = lv >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL ? assistantCallStyleById(callStyleId) : null;
+  const custom = (lv >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL && typeof customCall === 'string') ? customCall.trim() : '';
+  if (custom) return custom.includes('{name}') ? custom.replace('{name}', raw) : custom;
   const stage = assistantBondStageByLevel(lv);
-  const template = style ? style.template : (stage.call || '{name}');
-  return String(template).replace('{name}', raw);
+  return String(stage.call || '{name}').replace('{name}', raw);
 };
 // セリフの中の {name} を、そのときの呼び方へ置き換える
-const assistantSpeak = (text, name, level, callStyleId) =>
-  String(text == null ? '' : text).replace(/\{name\}/g, assistantCallName(name, level, callStyleId));
+const assistantSpeak = (text, name, level, customCall) =>
+  String(text == null ? '' : text).replace(/\{name\}/g, assistantCallName(name, level, customCall));
 
 // 仲良し度が増える行動。1日に増える量は行動ごとと合計の両方で頭打ちにする。
 // 放置しても減らない(久しぶりに開いた人が冷たくされないため)。
