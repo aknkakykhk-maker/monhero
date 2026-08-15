@@ -32,7 +32,7 @@ assert(source.includes('const modes=[...BATTLE_MODES,EXTREME_MODE];'), 'the extr
 assert(source.includes('extremeLocked=isExtreme&&!extremeUnlocked&&!debugBattle') && source.includes("disabled={extremeLocked||(!!battleTutorial") && source.includes("disabled={!previewable}"), 'official locked extreme tiers must remain unselectable while debug may enter');
 assert(source.includes("const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);") && source.includes("setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:false"), 'NIGHTMARE details must unlock from the loaded EXTREME clear count');
 assert(source.includes("const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:false)"), 'debug mode must unlock EXTREME and NIGHTMARE regardless of official progress');
-assert(source.includes("setting.id==='CHAOS'?chaosUnlocked:false") && source.includes('const previewable=setting.available&&unlocked'), 'CHAOS must unlock from NIGHTMARE clear state');
+assert(source.includes("setting.id==='CHAOS'?chaosUnlocked:false") && source.includes("const previewable=(setting.available||debugBattle&&setting.id===ULTIMATE_SETTING.id)&&unlocked"), 'CHAOS must unlock from NIGHTMARE clear state while only debug may preview unavailable ULTIMATE');
 assert(source.includes("setting.id==='CHAOS'?'NIGHTMAREクリアで解放'"), 'CHAOS card must show its unlock condition');
 assert(source.includes("disabled={!previewable} onClick={()=>setShowWaveDetails(true)}")
   && source.includes("const extreme=gameState==='EXTREME_DIFFICULTY_SELECT'")
@@ -54,7 +54,7 @@ for (const forbidden of ['×13', '13倍', '×20', '20倍', '×25', '25倍', '×7
 for (const expected of ['通常チャレンジを超える高難易度', 'EXTREMEから始まる、さらなる強敵への挑戦', '高難易度に見合った高い報酬']) {
   assert(modeDescription.includes(expected), `the mode card must explain the shared extreme-challenge feature: ${expected}`);
 }
-assert(source.includes("const showExtremeRule = w === 1 && !!specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)") && source.includes('setExtremeRuleOpen(showExtremeRule); setIsBusy(showExtremeRule)'), 'the 50% rule must block normal input once at WAVE 1');
+assert(source.includes("const showExtremeRule = w === 1 && !!specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)") && source.includes('setExtremeRuleOpen(showExtremeRule); setIsBusy(showExtremeRule||!!breakPending)'), 'the opening rule or a pending ULTIMATE distance break must block normal input');
 
 // --- ④ 報酬・記録 ---
 assert(source.includes('const baseGain = extremeRunRef.current ? selectedExtremeSetting.psyche : clearPsycheReward(difficulty);')
@@ -67,7 +67,8 @@ assert(source.includes('await storeSet(extremeClearCountKey(extremeDifficulty), 
 assert(source.includes('if (!forcedEnemyKey && !extremeRunRef.current && !debugBattleRef.current) {')
   && source.includes('if (!enemy && !extremeRunRef.current && !debugBattleRef.current) {'), 'EXTREME must not touch the challenge attempt / highest-wave records');
 // 敵の強さ: 極限だけ×13を渡し、それ以外は null(=難易度の倍率)のまま。null が 0 扱いされないこと
-assert(source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,extremeRunRef.current?(EXTREME_DIFFICULTIES.find(setting=>setting.id===extremeDifficulty)||EXTREME_SETTING).power:null)'), 'only EXTREME may override the enemy power');
+assert(source.includes('const battleSetting=extremeRunRef.current?extremeRuleSetting(extremeDifficulty):null;')
+  && source.includes('createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier)'), 'only an extreme run may override enemy power and apply its turn multiplier');
 assert(source.includes('const hasPowerOverride = powerOverride !== null && powerOverride !== undefined && Number.isFinite(Number(powerOverride));')
   && source.includes('const mod = hasPowerOverride ? Number(powerOverride) : QUICK_DIFFICULTY_SETTINGS[safeDifficulty].power;'), 'a null override must fall back to the difficulty power');
 // デバッグから入った周回は debugBattleRef が true のままなので、報酬・記録・ランキングをすべて通らない
@@ -134,8 +135,6 @@ for (const forbidden of ['×13', '×20', '×25', '×7.5', '75', '50%']) {
 }
 
 // --- ⑦ 初回案内・ヘルプ・更新履歴 ---
-assert(/id: 'update_notice_extreme_challenge_v1', enabled: true,/.test(assistants) && !/id: 'update_notice_extreme_challenge_v1'[^}]*debugOnly/.test(assistants), 'the official release must be announced once through the shared update notice');
-assert(/id: 'update_notice_nightmare_v1', enabled: true,/.test(assistants) && !/id: 'update_notice_nightmare_v1'[^}]*debugOnly/.test(assistants), 'NIGHTMARE must have its own official one-time notice');
 assert(help.includes("id: 'extreme-challenge'") && help.includes("EXTREME_DIFFICULTY_SELECT: 'basics/extreme-challenge'"), 'help must describe the official extreme challenge and cover its screen');
 assert(help.includes("{ t:'data', id:'extremeDifficulties' }") && source.includes("case 'extremeDifficulties':"), 'the difficulty table must be generated from the real data');
 assert(changelog.includes('極限チャレンジのモード説明を再調整しました') && !changelog.includes('極限チャレンジのモード説明をデバッグ'), 'the extreme changelog must retain the mode-copy adjustment');

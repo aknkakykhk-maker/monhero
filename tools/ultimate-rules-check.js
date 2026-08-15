@@ -18,6 +18,10 @@ assert.deepStrictEqual(stats(base,10),{atk:105,def:115,hp:575,guts:110});
 assert.deepStrictEqual(stats(base,20),{atk:100,def:100,hp:550,guts:100});
 assert(/\{ id:'ULTIMATE', label:'ULTIMATE', available:false, power:25, score:20, xp:40, gold:20, psyche:60,/.test(source),'formal ULTIMATE values must exist and stay unavailable');
 assert(source.includes('const ULTIMATE_SETTING = EXTREME_DIFFICULTIES[3]'),'ULTIMATE_SETTING must reference the formal difficulty definition');
+assert(source.includes("const ULTIMATE_BEST_SCORE_KEY = extremeBestScoreKey('ULTIMATE');")&&source.includes("const ULTIMATE_CLEAR_COUNT_KEY = extremeClearCountKey('ULTIMATE');"),'ULTIMATE records must use the shared extreme key format');
+assert(source.includes('EXTREME_DIFFICULTIES.map(async setting =>')&&source.includes('normalizeExtremeRecordValue(await storeGet(extremeBestScoreKey(setting.id), 0, false))')&&source.includes('normalizeExtremeRecordValue(await storeGet(extremeClearCountKey(setting.id), 0, false))'),'all extreme records, including missing ULTIMATE saves, must load through shared normalization');
+assert(source.includes('setExtremeBestScores(prev => ({ ...prev, [extremeDifficulty]: score }))')&&source.includes('setExtremeClearCounts(prev => ({ ...prev, [extremeDifficulty]:'),'future official ULTIMATE runs must update the selected difficulty record without dedicated branches');
+assert(source.includes('EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>')&&source.includes('EXTREME_DIFFICULTIES.filter(item=>item.available).map(item=>item.id)'),'unavailable ULTIMATE must stay hidden from ranking and profile views');
 assert(!source.includes('ULTIMATE_DEBUG_SETTING'),'ULTIMATE must not keep a separate debug setting');
 for(const rule of ["enemyTurnRate:0.005","awakeningPenaltyRate:0.005","awakeningPenaltyExcludes:Object.freeze(['distance'])","turns:Object.freeze([50,100,150])","damageDealt:0.5","rerollSameDistance:false","persistsForRun:true"]) {
   assert(source.includes(rule),`formal ULTIMATE rules must include: ${rule}`);
