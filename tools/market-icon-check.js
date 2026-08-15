@@ -47,16 +47,26 @@ check('ファイルを指すアイコンは実在する', missing.length === 0, 
 check('ファイルを指すアイコンがある', fileIcons.length > 0, `${fileIcons.length}件`);
 
 // --- 助手の表情アイコンが全種そろっているか ---
-// 表情を足したら商品も足す。片方だけ増えて「買えない表情」が出るのを防ぐ
-const myua = ASSISTANTS.find(a => a.id === 'mua');
-const wantedFaces = ASSISTANT_EXPRESSIONS.map(e => assistantFaceImage(myua, e));
+// 表情を足したら商品も足す。片方だけ増えて「買えない表情」が出るのを防ぐ。
+// 助手を増やしたときも同じ仕様(8表情・各1pt)で追随しているかをここでまとめて見る
 const soldFaces = new Set(fileIcons.map(i => stripCacheKey(i.icon)));
-const notSold = wantedFaces.filter(p => !soldFaces.has(stripCacheKey(p)));
-check('みゅあの表情はすべてマーケットに並んでいる', notSold.length === 0, notSold.join(', '));
+for (const who of ASSISTANTS) {
+  const wantedFaces = ASSISTANT_EXPRESSIONS.map(e => assistantFaceImage(who, e));
+  const notSold = wantedFaces.filter(p => !soldFaces.has(stripCacheKey(p)));
+  check(`${who.name}の表情はすべてマーケットに並んでいる`, notSold.length === 0, notSold.join(', '));
+}
 
 // --- 値段と名前 ---
 const icons = items.filter(i => i.type === 'icon');
 check('アイコンはすべてptで買える安さにそろえる', icons.every(i => i.cost === 1), `${icons.length}件`);
+// 価格・商品名の付け方も助手ごとにそろっていること(みゅあだけ安い・名前の形が違う、を防ぐ)
+for (const who of ASSISTANTS) {
+  const own = icons.filter(i => typeof i.icon === 'string'
+    && ASSISTANT_EXPRESSIONS.some(e => stripCacheKey(i.icon) === stripCacheKey(assistantFaceImage(who, e))));
+  check(`${who.name}の表情アイコンは8種・各1ptで並ぶ`,
+    own.length === ASSISTANT_EXPRESSIONS.length && own.every(i => i.cost === 1 && i.name.includes(who.name)),
+    `${own.length}件`);
+}
 const longName = icons.filter(i => (i.name || '').length > 16);
 check('名前は16文字まで(カードの枠に収まる長さ)', longName.length === 0, longName.map(i => `${i.name}(${i.name.length})`).join(', '));
 
