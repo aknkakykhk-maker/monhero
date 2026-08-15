@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7726f0d36a57c6d1
+// source-sha256: 7ce7936f4ed04152
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 12:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7680,6 +7680,9 @@ const NIGHTMARE_BEST_SCORE_KEY = extremeBestScoreKey('NIGHTMARE');
 const NIGHTMARE_CLEAR_COUNT_KEY = extremeClearCountKey('NIGHTMARE');
 const CHAOS_BEST_SCORE_KEY = extremeBestScoreKey('CHAOS');
 const CHAOS_CLEAR_COUNT_KEY = extremeClearCountKey('CHAOS');
+const ULTIMATE_BEST_SCORE_KEY = extremeBestScoreKey('ULTIMATE');
+const ULTIMATE_CLEAR_COUNT_KEY = extremeClearCountKey('ULTIMATE');
+const normalizeExtremeRecordValue = value => Math.max(0, Math.floor(Number(value) || 0));
 // NIGHTMAREの解放には既存のEXTREMEクリア回数を再利用する。
 const isNightmareUnlocked = extremeClearCount => (Number(extremeClearCount) || 0) > 0;
 const isChaosUnlocked = nightmareClearCount => (Number(nightmareClearCount) || 0) > 0;
@@ -10594,12 +10597,8 @@ function MonsterHeroGame() {
   const [clearCounts, setClearCounts] = useState({}); // 難易度別 クリア回数(端末保存)
   const [highestWaves, setHighestWaves] = useState({});
   // 極限チャレンジ(EXTREME)の記録。チャレンジの mh_hs_* / mh_clears_* とは別のキーへ持つ
-  const [extremeBestScore, setExtremeBestScore] = useState(0);
-  const [extremeClearCount, setExtremeClearCount] = useState(0);
-  const [nightmareBestScore, setNightmareBestScore] = useState(0);
-  const [nightmareClearCount, setNightmareClearCount] = useState(0);
-  const [chaosBestScore, setChaosBestScore] = useState(0);
-  const [chaosClearCount, setChaosClearCount] = useState(0);
+  const [extremeBestScores, setExtremeBestScores] = useState({});
+  const [extremeClearCounts, setExtremeClearCounts] = useState({});
   const [extremeDifficultyClearCounts, setExtremeDifficultyClearCounts] = useState({});
   const [onboarded, setOnboarded] = useState(true); // false=初回起動(プロフィール設定へ誘導)
   const [onboardingName, setOnboardingName] = useState('');
@@ -11391,18 +11390,10 @@ function MonsterHeroGame() {
 
   // 極限チャレンジの解放判定。チャレンジのクリア記録(mh_clears_*)をそのまま見る
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
+  const extremeClearCount = extremeClearCounts[EXTREME_SETTING.id] || 0;
+  const nightmareClearCount = extremeClearCounts[NIGHTMARE_SETTING.id] || 0;
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
   const chaosUnlocked = useMemo(() => isChaosUnlocked(nightmareClearCount), [nightmareClearCount]);
-  const extremeBestScores = {
-    EXTREME: extremeBestScore,
-    NIGHTMARE: nightmareBestScore,
-    CHAOS: chaosBestScore
-  };
-  const extremeClearCounts = {
-    EXTREME: extremeClearCount,
-    NIGHTMARE: nightmareClearCount,
-    CHAOS: chaosClearCount
-  };
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
@@ -12804,13 +12795,16 @@ function MonsterHeroGame() {
         proWaves[d] = await storeGet(bestWaveKey(BATTLE_MODE_PRO, d), 0, false);
         extremeDifficultyClears[d] = await storeGet(extremeClearCountKey(d), 0, false);
       }));
-      // 極限チャレンジの記録。まだ遊んだことがなければ0のまま(既存セーブでも安全に読める)
-      setExtremeBestScore(Math.max(0, Math.floor(Number(await storeGet(EXTREME_BEST_SCORE_KEY, 0, false)) || 0)));
-      setExtremeClearCount(Math.max(0, Math.floor(Number(await storeGet(EXTREME_CLEAR_COUNT_KEY, 0, false)) || 0)));
-      setNightmareBestScore(Math.max(0, Math.floor(Number(await storeGet(NIGHTMARE_BEST_SCORE_KEY, 0, false)) || 0)));
-      setNightmareClearCount(Math.max(0, Math.floor(Number(await storeGet(NIGHTMARE_CLEAR_COUNT_KEY, 0, false)) || 0)));
-      setChaosBestScore(Math.max(0, Math.floor(Number(await storeGet(CHAOS_BEST_SCORE_KEY, 0, false)) || 0)));
-      setChaosClearCount(Math.max(0, Math.floor(Number(await storeGet(CHAOS_CLEAR_COUNT_KEY, 0, false)) || 0)));
+      // 極限チャレンジの記録は難易度定義から共通生成する。未公開段階も先に読み込むが、
+      // ランキングとプロフィールの表示対象は available の難易度だけに限定する。
+      const loadedExtremeScores = {};
+      const loadedExtremeClears = {};
+      await Promise.all(EXTREME_DIFFICULTIES.map(async setting => {
+        loadedExtremeScores[setting.id] = normalizeExtremeRecordValue(await storeGet(extremeBestScoreKey(setting.id), 0, false));
+        loadedExtremeClears[setting.id] = normalizeExtremeRecordValue(await storeGet(extremeClearCountKey(setting.id), 0, false));
+      }));
+      setExtremeBestScores(loadedExtremeScores);
+      setExtremeClearCounts(loadedExtremeClears);
       setHighScores(scores);
       highScoresRef.current = scores;
       setAttemptCounts(attempts);
@@ -13063,7 +13057,10 @@ function MonsterHeroGame() {
         const currentBest = extremeBestScores[extremeDifficulty] || 0;
         if (score > (Number(currentBest) || 0)) {
           await storeSet(extremeBestScoreKey(extremeDifficulty), score, false);
-          if (extremeDifficulty === CHAOS_SETTING.id) setChaosBestScore(score);else if (extremeDifficulty === NIGHTMARE_SETTING.id) setNightmareBestScore(score);else setExtremeBestScore(score);
+          setExtremeBestScores(prev => ({
+            ...prev,
+            [extremeDifficulty]: score
+          }));
           setRunHighlights(prev => ({
             ...prev,
             newRecord: true
@@ -15166,7 +15163,10 @@ function MonsterHeroGame() {
     if (extremeRunRef.current) {
       const currentCount = extremeClearCounts[extremeDifficulty] || 0;
       const nextExtreme = (Number(currentCount) || 0) + 1;
-      if (extremeDifficulty === CHAOS_SETTING.id) setChaosClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));else if (extremeDifficulty === NIGHTMARE_SETTING.id) setNightmareClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));else setExtremeClearCount(prev => Math.max(Number(prev) || 0, nextExtreme));
+      setExtremeClearCounts(prev => ({
+        ...prev,
+        [extremeDifficulty]: Math.max(Number(prev[extremeDifficulty]) || 0, nextExtreme)
+      }));
       setExtremeDifficultyClearCounts(prev => ({
         ...prev,
         [extremeDifficulty]: Math.max(Number(prev[extremeDifficulty]) || 0, nextExtreme)

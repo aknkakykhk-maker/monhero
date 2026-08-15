@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-15 12:00",
+    date: "2026-08-15 12:09",
     type: 'update',
     title: 'WAVEリザルトにターン数を追加',
     items: [
