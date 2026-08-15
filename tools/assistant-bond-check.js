@@ -207,7 +207,7 @@ check('親密度はContextで配る',
 check('吹き出しは渡されたLvでセリフを選ぶ',
   has('pickAssistantLine(scene, condition, bond.level)'));
 check('セリフの{name}を呼び方へ置き換えて出す',
-  has('const text = assistantSpeakText(line || shown?.t || who.greeting || \'\', bond.name, bond.level);'));
+  has('const text = assistantSpeakText(line || shown?.t || who.greeting || \'\', bond.name, bond.level, bond.callStyle);'));
 check('画面側はこれまでどおり scene を渡すだけ',
   !/<AssistantBubble[^>]*bondLevel=/.test(source));
 for (const [key, wired] of Object.entries({

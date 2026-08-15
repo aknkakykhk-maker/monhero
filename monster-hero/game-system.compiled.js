@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: afab2a059d12b3c1
+// source-sha256: bf427c930698caca
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 19:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 20:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7982,7 +7982,10 @@ const helpDataRows = id => {
     // みゅあとの仲良し度。段階も増える行動も data/assistants.js の実データから作るので、
     // 値を変えたときにヘルプだけ古くなることがない
     case 'assistantBond':
-      return (typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS || []).map(s => [`Lv.${s.level} ${s.title}`, `${s.need} から ／ 呼び方「${String(s.call).replace('{name}', 'あなたの名前')}」 ／ ${s.tone}`]);
+      {
+        const callUnlockLv = typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6;
+        return (typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS || []).map(s => [`Lv.${s.level} ${s.title}`, `${s.need} から ／ 呼び方「${s.level >= callUnlockLv ? 'プレイヤーが選択（さん付け／呼び捨て／ちん付け）' : String(s.call).replace('{name}', 'あなたの名前')}」 ／ ${s.tone}`]);
+      }
     case 'monsterPower':
       // 総合力の内訳は、実際の計算に使っている定数から作る(ヘルプへ数字を手で書き写さない)
       return [['ライフ 1', `+${MONSTER_POWER_STAT_WEIGHT.hp}`], ['ちから 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.atk * 100) / 100}（強化P1つ=ちから+${STAT_POINT_GAIN.atk} で +10）`], ['丈夫さ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.def * 100) / 100}（強化P1つ=丈夫さ+${STAT_POINT_GAIN.def} で +10）`], ['ガッツ 1', `+${Math.round(MONSTER_POWER_STAT_WEIGHT.guts * 100) / 100}（強化P1つ=ガッツ+${STAT_POINT_GAIN.guts} で +10）`], ['間合い適性', DIST_APTITUDE_GRADES.slice().reverse().map(g => `${g} ${MONSTER_POWER_APTITUDE[g] > 0 ? '+' : ''}${MONSTER_POWER_APTITUDE[g]}`).join(' ／ ') + '（4距離すべてを合計）'], ['固有技を1つ持つ', `+${MONSTER_POWER_UNIQUE_OWNED}（Lv0でも付く。継承した固有技も同じ）`], ['固有技の強化Lv 1段階', `+${Math.round(MONSTER_POWER_UNIQUE_PER_LEVEL * 100) / 100}（3段階でちょうど+200）`]];
@@ -8041,13 +8044,15 @@ const ASSISTANT_BOND_FALLBACK = {
   points: 0,
   level: 1,
   name: '',
+  callStyle: null,
   onTalk: null
 };
 const AssistantBondContext = React.createContext(ASSISTANT_BOND_FALLBACK);
 const useAssistantBond = () => useContext(AssistantBondContext) || ASSISTANT_BOND_FALLBACK;
 // セリフの中の {name} を、そのときの呼び方へ置き換える。
 // data/assistants.js が読めなかった場合でも、文が壊れないように {name} だけは消す
-const assistantSpeakText = (text, name, level) => typeof assistantSpeak === 'function' ? assistantSpeak(text, name, level) : String(text == null ? '' : text).replace(/\{name\}/g, String(name || 'キミ'));
+// callStyleId … 絆Lv6から選べる呼び方の上書き(省略時は絆Lvの既定のまま)
+const assistantSpeakText = (text, name, level, callStyleId) => typeof assistantSpeak === 'function' ? assistantSpeak(text, name, level, callStyleId) : String(text == null ? '' : text).replace(/\{name\}/g, String(name || 'キミ'));
 // 表情ごとの顔画像のパスを決める。用意されていない表情は data/assistants.js 側で
 // 既定の表情(normal)へ落ちる。この関数が無い(古いデータの)ときは画像なし扱いにする
 const assistantFaceSrc = (who, expression) => typeof assistantFaceImage === 'function' ? assistantFaceImage(who, expression) || who.image || null : who.image || null;
@@ -8252,7 +8257,7 @@ const AssistantBubble = ({
   const shown = spamLine || tapped || pickedRef.current.value;
   const picked = pickedRef.current.value;
   // セリフの中の {name} は、そのときの呼び方(さん付け・呼び捨て・ちん付け)になる
-  const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level);
+  const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level, bond.callStyle);
   const face = expression || shown?.e || null;
   const paragraphs = detail || sceneDef?.detail || null;
   const ref = helpRef || sceneDef?.help || null;
@@ -11229,6 +11234,8 @@ function MonsterHeroGame() {
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [assistantCallStyle, setAssistantCallStyleState] = useState(null); // みゅあの呼び方の上書き(絆Lv6から選択可・未選択はnullで絆Lvの既定のまま)
+  const [showCallStylePicker, setShowCallStylePicker] = useState(false);
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
@@ -12672,6 +12679,8 @@ function MonsterHeroGame() {
       setBreederName(savedName);
       const savedIcon = await storeGet('mh_breeder_icon', null, false);
       setBreederIcon(savedIcon);
+      const savedCallStyle = await storeGet('mh_assistant_call_style', null, false);
+      setAssistantCallStyleState(savedCallStyle || null);
       const savedXp = await storeGet('mh_breeder_xp', 0, false);
       setBreederXp(savedXp);
       const savedGold = await storeGet('mh_gold', 0, false);
@@ -13730,13 +13739,21 @@ function MonsterHeroGame() {
       storeSet(ASSISTANT_BOND_KEY, next, false);
     } catch {}
   }, []);
+  // みゅあの呼び方を選ぶ(絆Lv6から)。選ばなければ絆Lvどおりの既定のまま変わらない
+  const chooseAssistantCallStyle = useCallback(id => {
+    setAssistantCallStyleState(id);
+    try {
+      storeSet('mh_assistant_call_style', id, false);
+    } catch {}
+  }, []);
   // 吹き出しへ配る値。画面側は <AssistantBubble scene="…"/> のままでよい
   const assistantBondValue = useMemo(() => ({
     points: assistantBond.points,
     level: assistantBondLevelNow,
     name: breederName,
+    callStyle: assistantCallStyle,
     onTalk: () => addAssistantBond('talk')
-  }), [assistantBond.points, assistantBondLevelNow, breederName, addAssistantBond]);
+  }), [assistantBond.points, assistantBondLevelNow, breederName, assistantCallStyle, addAssistantBond]);
   const isMarketItemOwned = item => {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
     if (item.type === 'breeder') return unlockedTeachingIds.includes(item.id);
@@ -24052,13 +24069,23 @@ function MonsterHeroGame() {
         className: "text-[9px] font-black text-pink-300 tracking-widest"
       }, "\u307F\u3085\u3042\u3068\u306E\u4EF2\u826F\u3057\u5EA6"), /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black text-white"
-      }, "Lv.", assistantBondLevelNow, "\u3000", stage ? stage.title : '')), /*#__PURE__*/React.createElement("div", {
+      }, "Lv.", assistantBondLevelNow, "\u3000", stage ? stage.title : '')), assistantBondLevelNow >= (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6) ? /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: () => setShowCallStylePicker(true),
+        className: "shrink-0 text-right active:scale-95"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-slate-500 flex items-center justify-end gap-0.5"
+      }, "\u547C\u3073\u65B9", /*#__PURE__*/React.createElement(Edit3, {
+        size: 8
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "text-[11px] font-black text-pink-200"
+      }, assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle))) : /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 text-right"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500"
       }, "\u547C\u3073\u65B9"), /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black text-pink-200"
-      }, assistantSpeakText('{name}', breederName, assistantBondLevelNow)))), /*#__PURE__*/React.createElement("div", {
+      }, assistantSpeakText('{name}', breederName, assistantBondLevelNow, assistantCallStyle)))), /*#__PURE__*/React.createElement("div", {
         className: "h-1.5 mt-2 rounded-full bg-black/50 overflow-hidden"
       }, /*#__PURE__*/React.createElement("i", {
         className: "block h-full rounded-full",
@@ -26664,7 +26691,37 @@ function MonsterHeroGame() {
     }, "\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
       onClick: handleSaveName,
       className: "flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs"
-    }, "\u4FDD\u5B58")))), showIconPicker && /*#__PURE__*/React.createElement("div", {
+    }, "\u4FDD\u5B58")))), showCallStylePicker && /*#__PURE__*/React.createElement("div", {
+      className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
+      style: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.92)',
+        zIndex: 90000
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "bg-slate-900 border border-pink-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl"
+    }, /*#__PURE__*/React.createElement("h3", {
+      className: "text-lg font-black text-white mb-1 text-center"
+    }, "\u307F\u3085\u3042\u306E\u547C\u3073\u65B9"), /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-slate-500 text-center mb-4 leading-tight"
+    }, "\u7D46Lv6\u306B\u306A\u3063\u305F\u306E\u3067\u3001\u307F\u3085\u3042\u306E\u547C\u3073\u65B9\u3092\u9078\u3079\u308B\u3088\u3002\u9078\u3070\u306A\u3051\u308C\u3070\u3001\u3053\u308C\u307E\u3067\u3069\u304A\u308A\u306E\u547C\u3073\u65B9\u306E\u307E\u307E\u3060\u3088\u3002"), /*#__PURE__*/React.createElement("div", {
+      className: "space-y-2 mb-4"
+    }, (typeof ASSISTANT_CALL_STYLES !== 'undefined' && ASSISTANT_CALL_STYLES || []).map(style => {
+      const active = assistantCallStyle === style.id;
+      return /*#__PURE__*/React.createElement("button", {
+        key: style.id,
+        onClick: () => chooseAssistantCallStyle(style.id),
+        className: `w-full min-h-[52px] rounded-xl border-2 px-4 flex items-center justify-between active:scale-95 ${active ? 'bg-pink-950/60 border-pink-400 text-pink-100' : 'bg-slate-800 border-slate-700 text-white'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "font-black text-[12px]"
+      }, style.label), /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-bold opacity-80"
+      }, style.template.replace('{name}', breederName || 'あなた')));
+    })), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowCallStylePicker(false),
+      className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+    }, "\u9589\u3058\u308B"))), showIconPicker && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
@@ -29311,7 +29368,7 @@ function MonsterHeroGame() {
         expression: notice.expression || 'happy'
       }), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white"
-      }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow))), !last ? /*#__PURE__*/React.createElement("button", {
+      }, assistantSpeakText(pages[page], breederName, assistantBondLevelNow, assistantCallStyle))), !last ? /*#__PURE__*/React.createElement("button", {
         onClick: () => setUpdateGuidePage(page + 1),
         className: "mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950"
       }, "\u6B21\u3078") : /*#__PURE__*/React.createElement("div", {
@@ -29370,7 +29427,7 @@ function MonsterHeroGame() {
           backgroundColor: '#0f172a',
           display: 'block'
         }
-      }, assistantSpeakText(line.t, breederName, assistantBondLevelNow))))) : /*#__PURE__*/React.createElement("div", {
+      }, assistantSpeakText(line.t, breederName, assistantBondLevelNow, assistantCallStyle))))) : /*#__PURE__*/React.createElement("div", {
         className: "rounded-2xl border-2 border-slate-600 bg-slate-900 px-4 py-5 text-center text-sm font-black text-slate-100",
         style: {
           minHeight: '64px',
@@ -29697,7 +29754,7 @@ function MonsterHeroGame() {
         className: "block text-[11px] font-black text-white mt-0.5"
       }, battleTutorial.title), /*#__PURE__*/React.createElement("span", {
         className: "block text-[12px] text-white leading-relaxed mt-0.5"
-      }, assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow)))), /*#__PURE__*/React.createElement("button", {
+      }, assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow, assistantCallStyle)))), /*#__PURE__*/React.createElement("button", {
         onClick: () => {
           if (last) endBattleTutorial(true);else setBattleTutorialStep(v => Math.min(total - 1, (v || 0) + 1));
         },

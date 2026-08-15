@@ -121,14 +121,43 @@ const assistantFullImage = (who, expression) => (who && who.imagePrefix)
 //     bond:3      … Lv3以上で出る
 //     bond:[1,2]  … Lv1〜Lv2のあいだだけ出る
 const ASSISTANT_BOND_LEVELS = [
-  { level:1, need:0,   title:'はじめまして',   call:'{name}さん', tone:'少していねい。初対面の距離感' },
-  { level:2, need:60,  title:'顔なじみ',       call:'{name}さん', tone:'笑顔が増えて、少しフレンドリー' },
-  { level:3, need:180, title:'なかよし',       call:'{name}',     tone:'呼び捨てになって、雑談も増える' },
-  { level:4, need:400, title:'相棒',           call:'{name}',     tone:'かなり打ち解けた話し方' },
-  { level:5, need:800, title:'ベストバディ',   call:'{name}ちん', tone:'特別な距離感。ただし馴れ馴れしくはしない' },
+  { level:1,  need:0,     title:'はじめまして',       call:'{name}さん', tone:'少していねい。初対面の距離感' },
+  { level:2,  need:60,    title:'顔なじみ',           call:'{name}さん', tone:'笑顔が増えて、少しフレンドリー' },
+  { level:3,  need:180,   title:'なかよし',           call:'{name}',     tone:'呼び捨てになって、雑談も増える' },
+  { level:4,  need:400,   title:'相棒',               call:'{name}',     tone:'かなり打ち解けた話し方' },
+  { level:5,  need:800,   title:'ベストバディ',       call:'{name}ちん', tone:'特別な距離感。ただし馴れ馴れしくはしない' },
+  // Lv6以降は呼び方(call)を上書きせず据え置き。ここから先はASSISTANT_CALL_STYLESを
+  // プレイヤーが自分で選べるようになるため、call はあくまで「選ばなかったときの既定」
+  { level:6,  need:1250,  title:'あうんの仲',         call:'{name}ちん', tone:'あうんの仲。呼び方を自分で選べるようになる' },
+  { level:7,  need:1750,  title:'頼れる相方',         call:'{name}ちん', tone:'頼れる相方として、軽い冗談も増える' },
+  { level:8,  need:2300,  title:'いつメン',           call:'{name}ちん', tone:'気心の知れた友達みたいな距離感' },
+  { level:9,  need:2900,  title:'戦友',               call:'{name}ちん', tone:'戦友っぽい、頼れる掛け合い' },
+  { level:10, need:3550,  title:'腐れ縁',             call:'{name}ちん', tone:'軽口を言い合えるくらいの仲' },
+  { level:11, need:4250,  title:'阿吽の呼吸',         call:'{name}ちん', tone:'言葉にしなくても伝わる感じ' },
+  { level:12, need:5000,  title:'唯一無二',           call:'{name}ちん', tone:'他の誰とも違う、特別な相手として話す' },
+  { level:13, need:5800,  title:'一心同体',           call:'{name}ちん', tone:'一心同体みたいに息が合う' },
+  { level:14, need:6650,  title:'最高の相方',         call:'{name}ちん', tone:'掛け合いに迷いがなくなってくる' },
+  { level:15, need:7550,  title:'伝説のコンビ',       call:'{name}ちん', tone:'伝説のコンビと呼べるくらいの掛け合い' },
+  { level:16, need:8500,  title:'運命共同体',         call:'{name}ちん', tone:'運命共同体みたいな頼もしさ' },
+  { level:17, need:9500,  title:'生涯のパートナー',   call:'{name}ちん', tone:'ずっと隣にいる相棒という感じ' },
+  { level:18, need:10550, title:'かけがえのない存在', call:'{name}ちん', tone:'かけがえのない相手として大切に話す' },
+  { level:19, need:11650, title:'唯一の理解者',       call:'{name}ちん', tone:'いちばんの理解者として接する' },
+  { level:20, need:12800, title:'永遠の相棒',         call:'{name}ちん', tone:'永遠の相棒。いちばん自然体な話し方' },
 ];
 const ASSISTANT_BOND_MIN_LEVEL = ASSISTANT_BOND_LEVELS[0].level;
 const ASSISTANT_BOND_MAX_LEVEL = ASSISTANT_BOND_LEVELS[ASSISTANT_BOND_LEVELS.length - 1].level;
+
+// ---------- 呼び方の設定(絆Lv6から) ----------
+// Lv6になると、それまで絆Lvが自動で決めていた呼び方(さん付け→呼び捨て→ちん付け)を
+// プレイヤーが自分で選べるようになる。選ばなければ(null のままなら)、
+// これまでどおり ASSISTANT_BOND_LEVELS の call がそのまま使われる(挙動は変わらない)。
+const ASSISTANT_CALL_STYLES = [
+  { id:'san',   label:'さん付け', template:'{name}さん' },
+  { id:'plain', label:'呼び捨て', template:'{name}' },
+  { id:'chin',  label:'ちん付け', template:'{name}ちん' },
+];
+const ASSISTANT_CALL_STYLE_UNLOCK_LEVEL = 6;
+const assistantCallStyleById = (id) => ASSISTANT_CALL_STYLES.find(s => s.id === id) || null;
 
 // 仲良し度(数値) → その段階の定義。壊れた値でも必ず最初の段階へ落ちる
 const assistantBondStage = (points) => {
@@ -148,16 +177,20 @@ const assistantBondStageByLevel = (level) =>
   ASSISTANT_BOND_LEVELS.find(s => s.level === level) || ASSISTANT_BOND_LEVELS[0];
 
 // プレイヤーをなんと呼ぶか。名前が無いときは呼びかけを省いても文が成り立つ言葉にする
+// callStyleId … Lv6から選べる呼び方の上書き。未指定・Lv6未満なら絆Lvの既定(stage.call)のまま
 const ASSISTANT_NO_NAME = 'キミ';
-const assistantCallName = (name, level) => {
-  const stage = assistantBondStageByLevel(level);
+const assistantCallName = (name, level, callStyleId) => {
   const raw = String(name || '').trim();
   if (!raw) return ASSISTANT_NO_NAME;
-  return String(stage.call || '{name}').replace('{name}', raw);
+  const lv = Number.isFinite(level) ? level : ASSISTANT_BOND_MIN_LEVEL;
+  const style = lv >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL ? assistantCallStyleById(callStyleId) : null;
+  const stage = assistantBondStageByLevel(lv);
+  const template = style ? style.template : (stage.call || '{name}');
+  return String(template).replace('{name}', raw);
 };
 // セリフの中の {name} を、そのときの呼び方へ置き換える
-const assistantSpeak = (text, name, level) =>
-  String(text == null ? '' : text).replace(/\{name\}/g, assistantCallName(name, level));
+const assistantSpeak = (text, name, level, callStyleId) =>
+  String(text == null ? '' : text).replace(/\{name\}/g, assistantCallName(name, level, callStyleId));
 
 // 仲良し度が増える行動。1日に増える量は行動ごとと合計の両方で頭打ちにする。
 // 放置しても減らない(久しぶりに開いた人が冷たくされないため)。
@@ -887,6 +920,33 @@ addAssistantLinePack({
       // たまにしか出ない、ひとりごとみたいなセリフ
       { e:'surprise', t:'あ、いま向こうでマスモンが転んだ気がする…気のせいかな？', w:0.25 },
       { e:'wink',     t:'ひみつだけど、あたし雨の日の村がいちばん好きなんだよね♪', w:0.25 },
+    ],
+  },
+});
+
+// ===== 親密度ぶんのセリフ(HOME・Lv6以降) =====
+// Lv6からは呼び方が自動で変わらなくなる代わりに、プレイヤーが自分で選べるようになる。
+// そのぶん、呼び方の変化に頼らず「どれだけ一緒にやってきたか」を話の中身で示す
+addAssistantLinePack({
+  id: 'bondHomeHighLevel',
+  label: '親密度・HOME(Lv6以降)',
+  lines: {
+    home: [
+      { e:'excited', t:'{name}、呼び方あたし任せじゃなく自分で選べるようになったよ♪', bond:6 },
+      { e:'happy',   t:'{name}とは息ぴったり！ 言わなくても分かる気がする。', bond:7 },
+      { e:'wink',    t:'{name}になら、なんでも話せる気がするよ♪', bond:8 },
+      { e:'excited', t:'{name}とはもう戦友だね！ 一緒に乗り越えよ♪', bond:9 },
+      { e:'happy',   t:'{name}とはいい腐れ縁になってきたかも(笑)', bond:10 },
+      { e:'wink',    t:'{name}の次の一手、なんとなく分かるようになってきたよ♪', bond:11 },
+      { e:'excited', t:'{name}みたいな人、あたしには他にいないよ♪', bond:12 },
+      { e:'happy',   t:'{name}と一緒だと、なんか一心同体って感じ♪', bond:13 },
+      { e:'excited', t:'{name}とあたし、伝説のコンビになれそう♪', bond:14 },
+      { e:'wink',    t:'{name}とは運命共同体だと思ってる♪', bond:15 },
+      { e:'happy',   t:'{name}が困ってたら、あたし絶対気づくからね！', bond:16 },
+      { e:'excited', t:'{name}は、あたしの生涯のパートナーって感じ♪', bond:17 },
+      { e:'happy',   t:'{name}は、あたしのかけがえのない存在だよ♪', bond:18 },
+      { e:'wink',    t:'{name}のことなら、あたしがいちばん分かってるよ♪', bond:19 },
+      { e:'excited', t:'{name}とはこれからもずっと一緒！ 永遠の相棒だよ♪', bond:20 },
     ],
   },
 });

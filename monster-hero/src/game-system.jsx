@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 19:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 20:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4095,9 +4095,11 @@ const helpDataRows = (id) => {
       ];
     // みゅあとの仲良し度。段階も増える行動も data/assistants.js の実データから作るので、
     // 値を変えたときにヘルプだけ古くなることがない
-    case 'assistantBond':
+    case 'assistantBond': {
+      const callUnlockLv = (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL) || 6;
       return ((typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS) || [])
-        .map(s => [`Lv.${s.level} ${s.title}`, `${s.need} から ／ 呼び方「${String(s.call).replace('{name}', 'あなたの名前')}」 ／ ${s.tone}`]);
+        .map(s => [`Lv.${s.level} ${s.title}`, `${s.need} から ／ 呼び方「${s.level >= callUnlockLv ? 'プレイヤーが選択（さん付け／呼び捨て／ちん付け）' : String(s.call).replace('{name}', 'あなたの名前')}」 ／ ${s.tone}`]);
+    }
     case 'monsterPower':
       // 総合力の内訳は、実際の計算に使っている定数から作る(ヘルプへ数字を手で書き写さない)
       return [
@@ -4155,13 +4157,14 @@ const assistantSceneById = (key) => (key && ASSISTANT_SCENE_MAP[key]) || null;
 //   level  … いまの親密度Lv(呼び方と、出るセリフが変わる)
 //   name   … プレイヤー名。セリフの中の {name} が呼び方に置き換わる
 //   onTalk … 顔をタップして話しかけたときに呼ぶ(仲良し度が少し増える)
-const ASSISTANT_BOND_FALLBACK = { points: 0, level: 1, name: '', onTalk: null };
+const ASSISTANT_BOND_FALLBACK = { points: 0, level: 1, name: '', callStyle: null, onTalk: null };
 const AssistantBondContext = React.createContext(ASSISTANT_BOND_FALLBACK);
 const useAssistantBond = () => useContext(AssistantBondContext) || ASSISTANT_BOND_FALLBACK;
 // セリフの中の {name} を、そのときの呼び方へ置き換える。
 // data/assistants.js が読めなかった場合でも、文が壊れないように {name} だけは消す
-const assistantSpeakText = (text, name, level) => (typeof assistantSpeak === 'function')
-  ? assistantSpeak(text, name, level)
+// callStyleId … 絆Lv6から選べる呼び方の上書き(省略時は絆Lvの既定のまま)
+const assistantSpeakText = (text, name, level, callStyleId) => (typeof assistantSpeak === 'function')
+  ? assistantSpeak(text, name, level, callStyleId)
   : String(text == null ? '' : text).replace(/\{name\}/g, String(name || 'キミ'));
 // 表情ごとの顔画像のパスを決める。用意されていない表情は data/assistants.js 側で
 // 既定の表情(normal)へ落ちる。この関数が無い(古いデータの)ときは画像なし扱いにする
@@ -4257,7 +4260,7 @@ const AssistantBubble = ({ scene=null, assistantId=null, line=null, detail=null,
   const shown = spamLine || tapped || pickedRef.current.value;
   const picked = pickedRef.current.value;
   // セリフの中の {name} は、そのときの呼び方(さん付け・呼び捨て・ちん付け)になる
-  const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level);
+  const text = assistantSpeakText(line || shown?.t || who.greeting || '', bond.name, bond.level, bond.callStyle);
   const face = expression || shown?.e || null;
   const paragraphs = detail || sceneDef?.detail || null;
   const ref = helpRef || sceneDef?.help || null;
@@ -5794,6 +5797,8 @@ function MonsterHeroGame() {
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [assistantCallStyle, setAssistantCallStyleState] = useState(null); // みゅあの呼び方の上書き(絆Lv6から選択可・未選択はnullで絆Lvの既定のまま)
+  const [showCallStylePicker, setShowCallStylePicker] = useState(false);
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
@@ -6866,6 +6871,8 @@ function MonsterHeroGame() {
       setBreederName(savedName);
       const savedIcon = await storeGet('mh_breeder_icon', null, false);
       setBreederIcon(savedIcon);
+      const savedCallStyle = await storeGet('mh_assistant_call_style', null, false);
+      setAssistantCallStyleState(savedCallStyle || null);
       const savedXp = await storeGet('mh_breeder_xp', 0, false);
       setBreederXp(savedXp);
       const savedGold = await storeGet('mh_gold', 0, false);
@@ -7690,13 +7697,19 @@ function MonsterHeroGame() {
     setAssistantBond(next);
     try { storeSet(ASSISTANT_BOND_KEY, next, false); } catch {}
   }, []);
+  // みゅあの呼び方を選ぶ(絆Lv6から)。選ばなければ絆Lvどおりの既定のまま変わらない
+  const chooseAssistantCallStyle = useCallback((id) => {
+    setAssistantCallStyleState(id);
+    try { storeSet('mh_assistant_call_style', id, false); } catch {}
+  }, []);
   // 吹き出しへ配る値。画面側は <AssistantBubble scene="…"/> のままでよい
   const assistantBondValue = useMemo(() => ({
     points: assistantBond.points,
     level: assistantBondLevelNow,
     name: breederName,
+    callStyle: assistantCallStyle,
     onTalk: () => addAssistantBond('talk'),
-  }), [assistantBond.points, assistantBondLevelNow, breederName, addAssistantBond]);
+  }), [assistantBond.points, assistantBondLevelNow, breederName, assistantCallStyle, addAssistantBond]);
 
   const isMarketItemOwned = (item) => {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
@@ -11816,7 +11829,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       <div className="text-[9px] font-black text-pink-300 tracking-widest">みゅあとの仲良し度</div>
                       <div className="text-[11px] font-black text-white">Lv.{assistantBondLevelNow}　{stage?stage.title:''}</div>
                     </div>
-                    <div className="shrink-0 text-right"><div className="text-[8px] text-slate-500">呼び方</div><div className="text-[11px] font-black text-pink-200">{assistantSpeakText('{name}',breederName,assistantBondLevelNow)}</div></div>
+                    {assistantBondLevelNow>=((typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL!=='undefined'&&ASSISTANT_CALL_STYLE_UNLOCK_LEVEL)||6)?(
+                      <button type="button" onClick={()=>setShowCallStylePicker(true)} className="shrink-0 text-right active:scale-95">
+                        <div className="text-[8px] text-slate-500 flex items-center justify-end gap-0.5">呼び方<Edit3 size={8}/></div>
+                        <div className="text-[11px] font-black text-pink-200">{assistantSpeakText('{name}',breederName,assistantBondLevelNow,assistantCallStyle)}</div>
+                      </button>
+                    ):(
+                      <div className="shrink-0 text-right"><div className="text-[8px] text-slate-500">呼び方</div><div className="text-[11px] font-black text-pink-200">{assistantSpeakText('{name}',breederName,assistantBondLevelNow,assistantCallStyle)}</div></div>
+                    )}
                   </div>
                   <div className="h-1.5 mt-2 rounded-full bg-black/50 overflow-hidden"><i className="block h-full rounded-full" style={{width:`${width}%`,background:'linear-gradient(90deg,#f472b6,#fbbf24)'}}/></div>
                   <div className="text-[8px] text-slate-400 font-bold mt-1 text-right">{next?`次のLv.${next.level}まで あと${next.remain}`:'いちばん仲良し！'}</div>
@@ -13067,6 +13087,27 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           </div>
         )}
 
+        {showCallStylePicker&&(
+          <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
+            <div className="bg-slate-900 border border-pink-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
+              <h3 className="text-lg font-black text-white mb-1 text-center">みゅあの呼び方</h3>
+              <p className="text-[9px] text-slate-500 text-center mb-4 leading-tight">絆Lv6になったので、みゅあの呼び方を選べるよ。選ばなければ、これまでどおりの呼び方のままだよ。</p>
+              <div className="space-y-2 mb-4">
+                {((typeof ASSISTANT_CALL_STYLES!=='undefined'&&ASSISTANT_CALL_STYLES)||[]).map(style=>{
+                  const active=assistantCallStyle===style.id;
+                  return (
+                    <button key={style.id} onClick={()=>chooseAssistantCallStyle(style.id)} className={`w-full min-h-[52px] rounded-xl border-2 px-4 flex items-center justify-between active:scale-95 ${active?'bg-pink-950/60 border-pink-400 text-pink-100':'bg-slate-800 border-slate-700 text-white'}`}>
+                      <span className="font-black text-[12px]">{style.label}</span>
+                      <span className="text-[11px] font-bold opacity-80">{style.template.replace('{name}',breederName||'あなた')}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button onClick={()=>setShowCallStylePicker(false)} className="w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs">閉じる</button>
+            </div>
+          </div>
+        )}
+
         {showIconPicker&&(
           <div className="fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.92)',zIndex:90000}}>
             <div className="bg-slate-900 border border-indigo-500 rounded-3xl p-6 w-full max-w-xs shadow-2xl">
@@ -14203,7 +14244,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="w-full max-w-md max-h-[calc(100dvh-env(safe-area-inset-top))] overflow-y-auto rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             {notice.debugOnly&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・通常ログインでは表示されません</div>}
             <h2 className="mb-1 text-center text-base font-black text-pink-200">{notice.title}</h2><p className="mb-3 text-center text-[10px] font-bold text-slate-400">{page+1} / {pages.length}</p>
-            <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={notice.expression||'happy'}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pages[page],breederName,assistantBondLevelNow)}</div></div>
+            <div className="flex items-end gap-2"><AssistantFace who={who} size={76} accent={who.accent} expression={notice.expression||'happy'}/><div className="flex-1 rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-3 text-[13px] font-bold leading-relaxed text-white">{assistantSpeakText(pages[page],breederName,assistantBondLevelNow,assistantCallStyle)}</div></div>
             {!last?<button onClick={()=>setUpdateGuidePage(page+1)} className="mt-4 min-h-[50px] w-full rounded-2xl bg-pink-500 text-sm font-black text-slate-950">次へ</button>:<div className={`mt-4 grid ${notice.destination?'grid-cols-2':'grid-cols-1'} gap-2`}>{notice.destination&&<button onClick={()=>finishUpdateGuide(notice.destination)} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950">{notice.buttonLabel||'見に行く'}</button>}<button onClick={()=>finishUpdateGuide()} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white">{notice.destination?'あとで':'閉じる'}</button></div>}
           </div>
         </div>);})()}
@@ -14212,7 +14253,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="w-full max-w-md rounded-t-3xl border-t-2 border-x-2 border-pink-400 bg-slate-950 p-4" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             {dailyMasuAdvice.debugCount!=null&&<div className="mb-2 rounded-lg bg-fuchsia-700 px-2 py-1 text-center text-[9px] font-black text-white">DEBUG・登録数{dailyMasuAdvice.debugCount}体を想定</div>}
             <h2 className="mb-3 text-center text-base font-black text-pink-200">みゅあのワンポイントアドバイス</h2>
-            {eligible?<div className="flex items-end gap-2"><AssistantFace who={who} size={72} accent={who.accent} expression={lines[0]?.e||'wink'}/><div className="flex-1 space-y-2" style={{minHeight:'44px',color:'#ffffff',visibility:'visible'}}>{lines.slice(0,3).map((line,i)=><div key={i} className="relative rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-2 text-[12px] font-bold leading-relaxed text-white whitespace-pre-line" style={{minHeight:'36px',color:'#ffffff',backgroundColor:'#0f172a',display:'block'}}>{assistantSpeakText(line.t,breederName,assistantBondLevelNow)}</div>)}</div></div>
+            {eligible?<div className="flex items-end gap-2"><AssistantFace who={who} size={72} accent={who.accent} expression={lines[0]?.e||'wink'}/><div className="flex-1 space-y-2" style={{minHeight:'44px',color:'#ffffff',visibility:'visible'}}>{lines.slice(0,3).map((line,i)=><div key={i} className="relative rounded-2xl border-2 border-pink-400 bg-slate-900 px-3 py-2 text-[12px] font-bold leading-relaxed text-white whitespace-pre-line" style={{minHeight:'36px',color:'#ffffff',backgroundColor:'#0f172a',display:'block'}}>{assistantSpeakText(line.t,breederName,assistantBondLevelNow,assistantCallStyle)}</div>)}</div></div>
             :<div className="rounded-2xl border-2 border-slate-600 bg-slate-900 px-4 py-5 text-center text-sm font-black text-slate-100" style={{minHeight:'64px',color:'#f1f5f9',backgroundColor:'#0f172a'}}>表示条件の対象外です。<br/><small>登録数8体以上では、通常プレイ中にこの案内は表示されません。</small></div>}
             <div className={`mt-4 grid ${eligible?'grid-cols-2':'grid-cols-1'} gap-2`}>{eligible&&<button onClick={tryDailyMasuAdvice} className="min-h-[50px] rounded-2xl bg-pink-500 text-sm font-black text-slate-950 active:scale-[.98]">やってみる</button>}<button onClick={closeDailyMasuAdvice} className="min-h-[50px] rounded-2xl bg-slate-700 text-sm font-black text-white active:scale-[.98]">閉じる</button></div>
           </div>
@@ -14393,7 +14434,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <span className="absolute" style={{left:'-9px',bottom:'14px',width:0,height:0,borderTop:'7px solid transparent',borderBottom:'7px solid transparent',borderRight:`9px solid ${who.accent}`}}/>
                     <span className="block text-[9px] font-black tracking-widest" style={{color:who.accent}}>{who.name}</span>
                     {battleTutorial.title&&<span className="block text-[11px] font-black text-white mt-0.5">{battleTutorial.title}</span>}
-                    <span className="block text-[12px] text-white leading-relaxed mt-0.5">{assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow)}</span>
+                    <span className="block text-[12px] text-white leading-relaxed mt-0.5">{assistantSpeakText(battleTutorial.t, breederName, assistantBondLevelNow, assistantCallStyle)}</span>
                   </div>
                 </div>
                 <button onClick={()=>{ if(last) endBattleTutorial(true); else setBattleTutorialStep(v=>Math.min(total-1,(v||0)+1)); }} className="w-full mt-2 min-h-[44px] rounded-2xl font-black text-sm text-black active:scale-[.98]" style={{backgroundColor:who.accent}}>{last?'おわる':'つぎへ'}</button>
