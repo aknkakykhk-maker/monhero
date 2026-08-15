@@ -28,8 +28,11 @@ check('はじめての人は助手選択から始まる',
 check('助手を選ぶ前にあいさつを出さない',
   has("if (!onboarded && !needsAssistantChoice) { setTutorialKind('intro'); setTutorialStep(0); }"));
 check('助手を選ぶとあいさつ→プロフィールへ続く',
-  has("onClick={()=>{chooseAssistant(who.id);setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}")
+  has("onClick={()=>{chooseAssistant(who.id);markKikiIntroSeen();setGameState('PROFILE');setTutorialKind('intro');setTutorialStep(0);}}")
     && has("if (kind === 'intro') { setGameState('PROFILE'); return; }"));
+// 新しく始めた人へ、既存プレイヤー向けの「きき加入の会話」が後から流れないようにする
+check('助手選択を通ったら、きき加入の会話は見たことにする',
+  has('chooseAssistant(who.id);markKikiIntroSeen();'));
 check('中断して開き直しても助手選択から再開する',
   has("setGameState(savedAssistant ? 'PROFILE' : 'ASSISTANT_SELECT');"));
 check('助手選択の画面がある',
