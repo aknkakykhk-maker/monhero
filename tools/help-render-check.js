@@ -68,7 +68,9 @@ const transformed = babel.transformSync(
   'const helpCategoryById = (id) => HELP_GUIDE.find(c => c.id === id) || null;\n' +
   'const helpTopicById = (categoryId, topicId) => ((helpCategoryById(categoryId) || {}).topics || []).find(t => t.id === topicId) || null;\n' +
   'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
-  '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState }) => (<>\n' +
+  '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState,\n' +
+  // ヘルプの見出しに出す助手。本体では「いま選んでいる助手」がそのまま入る
+  '  activeAssistant }) => (<>\n' +
   helpJsx + '\n</>);\nmodule.exports = { HelpScreen, HELP_GUIDE, dataRows: helpDataRows, helpTopicById, AssistantBubble };',
   { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'help-render-check.jsx' }
 );
@@ -76,6 +78,8 @@ const transformed = babel.transformSync(
 const moduleScope = { exports: {} };
 new Function('module', 'exports', 'React', transformed.code)(moduleScope, moduleScope.exports, React);
 const { HelpScreen, HELP_GUIDE, dataRows, helpTopicById } = moduleScope.exports;
+// 助手の顔は data/assistants.js の一覧から先頭(既定の助手)を使う
+const defaultAssistant = (typeof ASSISTANTS_FOR_HELP !== 'undefined' && ASSISTANTS_FOR_HELP[0]) || { id:'mua', name:'みゅあ', accent:'#f472b6', emoji:'💖', imageDir:'images/assistant', imagePrefix:'myua' };
 
 const noop = () => {};
 const render = (state) => ReactDOMServer.renderToStaticMarkup(React.createElement(HelpScreen, {
@@ -84,6 +88,7 @@ const render = (state) => ReactDOMServer.renderToStaticMarkup(React.createElemen
   ArrowLeft: stubIcon, ChevronRight: stubIcon,
   getDebugEnemyOptions: () => [], difficulty: 'Normal',
   setDebugEnemyKey: noop, debugBattleRef: { current:false }, setDebugBattle: noop, setDebugOutcome: noop, setGameState: noop,
+  activeAssistant: (typeof moduleScope.exports.assistantById === 'function' ? moduleScope.exports.assistantById() : null) || defaultAssistant,
   ...state,
 }));
 const text = (html) => html.replace(/<[^>]*>/g, '');
@@ -177,7 +182,9 @@ const emptyTransformed = babel.transformSync(
   'const HELP_GUIDE = [];\nconst HELP_GUIDE_INTRO = "";\n' +
   'const helpCategoryById = () => null;\nconst helpTopicById = () => null;\n' +
   'const HelpScreen = ({ showHelp, helpCatId, helpTopicId, helpAssistantOpen, setShowHelp, setHelpCatId, setHelpTopicId, setHelpAssistantOpen,\n' +
-  '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState }) => (<>\n' +
+  '  ArrowLeft, ChevronRight, getDebugEnemyOptions, difficulty, setDebugEnemyKey, debugBattleRef, setDebugBattle, setDebugOutcome, setGameState,\n' +
+  // ヘルプの見出しに出す助手。本体では「いま選んでいる助手」がそのまま入る
+  '  activeAssistant }) => (<>\n' +
   helpJsx + '\n</>);\nmodule.exports = { HelpScreen };',
   { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'help-empty-check.jsx' }
 );
@@ -189,6 +196,7 @@ const emptyHtml = ReactDOMServer.renderToStaticMarkup(React.createElement(emptyS
   ArrowLeft: stubIcon, ChevronRight: stubIcon,
   getDebugEnemyOptions: () => [], difficulty: 'Normal',
   setDebugEnemyKey: noop, debugBattleRef: { current:false }, setDebugBattle: noop, setDebugOutcome: noop, setGameState: noop,
+  activeAssistant: (typeof moduleScope.exports.assistantById === 'function' ? moduleScope.exports.assistantById() : null) || defaultAssistant,
 }));
 check('ヘルプの中身が読めなくても落ちず、案内を出す', text(emptyHtml).includes('ヘルプの内容を読み込めませんでした'));
 

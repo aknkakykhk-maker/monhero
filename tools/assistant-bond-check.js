@@ -31,7 +31,8 @@ globalThis.__a = {
   ASSISTANT_BOND_LEVELS, ASSISTANT_BOND_ACTIONS, ASSISTANT_BOND_DAILY_MAX,
   ASSISTANT_SCENES, assistantBondLevel, assistantBondNext, assistantCallName,
   assistantSpeak, assistantSceneLines, pickAssistantLine, assistantLineMatchesBond,
-  ASSISTANT_LINE_PACKS,
+  ASSISTANT_LINE_PACKS, ASSISTANTS, assistantBondLevelsOf, assistantBondStageByLevel,
+  assistantCallStylesOf, ASSISTANT_CALL_STYLE_UNLOCK_LEVEL,
 };`, ctx);
 const A = ctx.__a;
 
@@ -216,14 +217,14 @@ check('知らない行動では増えない', G.gainAssistantBond(G.ASSISTANT_BO
 check('親密度はContextで配る',
   has('const AssistantBondContext = React.createContext(ASSISTANT_BOND_FALLBACK);')
     && has('<AssistantBondContext.Provider value={assistantBondValue}>'));
-check('吹き出しは渡されたLvでセリフを選ぶ',
-  has('pickAssistantLine(scene, condition, bond.level)'));
+check('吹き出しは渡されたLvと助手でセリフを選ぶ',
+  has('pickAssistantLine(scene, condition, bond.level, who.id)'));
 check('セリフの{name}を呼び方へ置き換えて出す',
-  has('const text = assistantSpeakText(line || shown?.t || who.greeting || \'\', bond.name, bond.level, bond.callStyle);'));
+  has('const text = assistantSpeakText(line || shown?.t || who.greeting || \'\', bond.name, bond.level, bond.callStyle, who.id);'));
 check('画面側はこれまでどおり scene を渡すだけ',
   !/<AssistantBubble[^>]*bondLevel=/.test(source));
 for (const [key, wired] of Object.entries({
-  login: "gainAssistantBond(savedBond, 'login')",
+  login: "gainAssistantBond(loadedBonds[activeAssistant], 'login')",
   battle: "addAssistantBond('battle')",
   challenge: "addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode))",
   ranking: "addAssistantBond('ranking')",
@@ -262,12 +263,122 @@ for (const [label, needle] of Object.entries({
   'ランダムテスト': "setAssistantDebug('random')",
   'Lvの切替': 'setAssistantDebugLevel(',
   '親密度リセット': 'debugSetAssistantBond(0)',
-  '呼び方の一覧': "assistantSpeakText('{name}',breederName,s.level)",
+  '呼び方の一覧': "assistantSpeakText('{name}',breederName,s.level,null,selectedAssistantId)",
   '全コメント確認': "setAssistantDebug('lines')",
   '画面別の件数表示': 'このLvで{usable}件',
 })) check(`デバッグ: ${label}`, has(needle));
 check('デバッグはデバッグ設定からだけ開ける',
   source.indexOf('💖 みゅあデバッグ') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
+
+
+// ==========================================================================
+// 第2助手「きき」。みゅあの回帰を壊さずに、ききも同じ仕組みで動くことを見る
+// ==========================================================================
+const KIKI = 'kiki';
+check('ききが助手として定義されている', A.ASSISTANTS.some(x => x.id === KIKI));
+// --- 段階(必要量は共通・タイトルと呼び方は専用) ---
+const kikiLevels = A.assistantBondLevelsOf(KIKI);
+check('ききもLv20まである', kikiLevels.length === A.ASSISTANT_BOND_LEVELS.length, `${kikiLevels.length}段階`);
+check('必要な仲良し度はみゅあと同じ',
+  kikiLevels.every((s, i) => s.need === A.ASSISTANT_BOND_LEVELS[i].need));
+check('ききのタイトルは指定どおり', (() => {
+  const want = ['はじめまして','顔なじみ','気になる存在','なかよし','お気に入り','心を許せる仲','頼れる相方',
+    '気の合うふたり','いつもの相棒','腐れ縁','阿吽の呼吸','特別な存在','一心同体','最高の相方','伝説のコンビ',
+    '運命共同体','生涯のパートナー','かけがえのない存在','唯一の理解者','永遠の相棒'];
+  return want.every((t, i) => kikiLevels[i].title === t);
+})(), kikiLevels.map(s => s.title).join('/'));
+check('タイトルはみゅあと別物', (() => {
+  const diff = kikiLevels.filter((s, i) => s.title !== A.ASSISTANT_BOND_LEVELS[i].title);
+  return diff.length > 0;
+})());
+// --- 呼び方 ---
+const kcall = (lv, custom) => A.assistantCallName('あつ', lv, custom, KIKI);
+check('ききはLv1〜3が「さん」付け',
+  [1, 2, 3].every(lv => kcall(lv) === 'あつさん'), [1, 2, 3].map(kcall).join(' / '));
+check('ききはLv4〜5が「ちー」付け',
+  [4, 5].every(lv => kcall(lv) === 'あつちー'), [4, 5].map(kcall).join(' / '));
+check('ききはLv6以降の既定も「ちー」付け',
+  [6, 10, 20].every(lv => kcall(lv) === 'あつちー'), [6, 10, 20].map(kcall).join(' / '));
+check('ききもLv6から自由入力が効く',
+  kcall(6, '{name}先輩') === 'あつ先輩' && kcall(6, 'せんせい') === 'せんせい');
+check('Lv5以下では自由入力を受け付けない', kcall(5, '{name}先輩') === 'あつちー');
+check('ききの自由入力の候補は「ちー」付けを含む',
+  A.assistantCallStylesOf(KIKI).some(x => x.template === '{name}ちー'));
+check('みゅあの呼び方はこれまでどおり(ききの影響を受けない)',
+  A.assistantCallName('あつ', 1, null, 'mua') === 'あつさん'
+    && A.assistantCallName('あつ', 3, null, 'mua') === 'あつ'
+    && A.assistantCallName('あつ', 5, null, 'mua') === 'あつちん');
+// --- セリフ ---
+const kikiLines = (key, cond, lv) => A.assistantSceneLines(key, cond || null, lv, KIKI);
+const sceneKeys = Object.keys(A.ASSISTANT_SCENES);
+check('全部の場面にききのセリフが5件以上ある', (() => {
+  const few = sceneKeys.filter(k => kikiLines(k, null, 1).length < 5);
+  return few.length === 0;
+})(), sceneKeys.filter(k => kikiLines(k, null, 1).length < 5).map(k => `${k}(${kikiLines(k, null, 1).length})`).join(', '));
+check('ききもどのLvでも候補が3件以上ある', (() => {
+  const thinK = [];
+  for (const k of sceneKeys) for (let lv = 1; lv <= 20; lv++) if (kikiLines(k, null, lv).length < 3) thinK.push(`${k}/Lv${lv}`);
+  return thinK.length === 0;
+})());
+check('ききの条件つきセリフも用意されている', (() => {
+  const missing = [];
+  for (const k of sceneKeys) for (const cond of Object.keys(A.ASSISTANT_SCENES[k].when || {})) {
+    const list = kikiLines(k, cond, 1);
+    if (!list.length || !list.some(l => l.who === KIKI)) missing.push(`${k}/${cond}`);
+  }
+  return missing.length === 0;
+})());
+// ★ここが混ざると、選んでいない助手のセリフを話してしまう
+check('みゅあとききのセリフが混ざらない', (() => {
+  for (const k of sceneKeys) for (const lv of [1, 5, 10, 20]) {
+    if (kikiLines(k, null, lv).some(l => l.who !== KIKI)) return false;
+    if (A.assistantSceneLines(k, null, lv, 'mua').some(l => (l.who || 'mua') !== 'mua')) return false;
+  }
+  return true;
+})());
+check('ききも仲良し度で距離感が変わる', (() => {
+  const at = (lv) => kikiLines('home', null, lv).map(l => l.t).join('\n');
+  return at(1) !== at(4) && at(4) !== at(20);
+})());
+check('ききのセリフは一人称が「私」', (() => {
+  const all = sceneKeys.flatMap(k => [...(A.ASSISTANT_SCENES[k].lines || []),
+    ...Object.values(A.ASSISTANT_SCENES[k].when || {}).flat()]).filter(l => l.who === KIKI);
+  return all.length > 0 && !all.some(l => /あたし/.test(l.t));
+})());
+
+// --- 画面側の結線(助手ごとに分ける) ---
+check('助手の選択を新しいキーへ保存する',
+  has("const ASSISTANT_SELECTED_KEY = 'mh_assistant_selected_v1';"));
+check('仲良し度の保存キーを助手ごとに分ける',
+  has('const assistantBondKeyFor = (assistantId) => {')
+    && has("? ASSISTANT_BOND_KEY : `mh_assistant_bond_${id}_v1`;"));
+check('みゅあの保存キーは今までのまま',
+  has("const ASSISTANT_BOND_KEY = 'mh_assistant_bond_v1';")
+    && has("const ASSISTANT_CALL_STYLE_KEY = 'mh_assistant_call_style';"));
+check('呼び方の保存キーも助手ごとに分ける',
+  has('const assistantCallStyleKeyFor = (assistantId) => {')
+    && has('? ASSISTANT_CALL_STYLE_KEY : `mh_assistant_call_style_${id}`;'));
+check('仲良し度は助手ごとに持つ',
+  has('const [assistantBonds, setAssistantBonds] = useState({});')
+    && has('const assistantBond = normalizeAssistantBond(assistantBonds[selectedAssistantId]);'));
+// ★増えるのは選んでいる助手のぶんだけ。ここが崩れると両方が同時に上がってしまう
+check('増えるのは選んでいる助手のぶんだけ',
+  has('const id = selectedAssistantIdRef.current;')
+    && has('setAssistantBonds(prev => ({ ...prev, [id]: result.state }));')
+    && has('try { storeSet(assistantBondKeyFor(id), result.state, false); } catch {}'));
+check('助手を切り替えても、もう片方の仲良し度に触れない',
+  has('const chooseAssistant = useCallback((id) => {')
+    && !/chooseAssistant[\s\S]{0,400}setAssistantBonds\(\{\}\)/.test(source));
+check('吹き出しへ、いま選んでいる助手を配る',
+  has('assistantId: selectedAssistantId,') && has('const activeId = assistantId || sceneDef?.assistantId || bond.assistantId || null;'));
+check('プロフィールから助手を変更できる',
+  has('const [showAssistantPicker, setShowAssistantPicker] = useState(false);')
+    && has('いっしょに遊ぶ助手'));
+check('プロフィールで両方の助手のLvとタイトルを確認できる',
+  has('const lv=assistantBondLevelOf(normalizeAssistantBond(assistantBonds[who.id]).points);')
+    && has('assistantBondStageByLevel(lv,who.id)'));
+check('アップデート通知も、いま選んでいる助手が出す',
+  has("const last=page===pages.length-1;const who=activeAssistant;return("));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

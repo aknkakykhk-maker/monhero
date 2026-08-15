@@ -56,9 +56,27 @@ const ASSISTANTS = [
     emoji: '💖',        // 画像が無いときの代わり
     accent: '#f472b6',  // 吹き出しの縁・名前・ボタンの色
     greeting: '困ったことがあったら、あたしに聞いてね♪',
+    // 助手選択の画面に出す一言紹介(短く、性格の違いが分かるように)
+    tagline: '明るく元気なムードメーカー',
+    intro: '一緒に盛り上がりながら遊びたい人向け。テンション高めで背中を押してくれる。',
+  },
+  {
+    id: 'kiki',
+    name: 'きき',
+    role: '助手',
+    imageDir: 'images/assistant',
+    imagePrefix: 'kiki',
+    expressions: ASSISTANT_EXPRESSIONS,
+    defaultExpression: ASSISTANT_DEFAULT_EXPRESSION,
+    emoji: '🌹',
+    accent: '#f43f5e',
+    greeting: '困ったことがあったら、いつでも私に聞いてくださいね。',
+    tagline: '落ち着いた気配り上手なお姉さん',
+    intro: 'じっくり考えて遊びたい人向け。冷静に、そっと支えてくれる。',
   },
 ];
 const DEFAULT_ASSISTANT_ID = 'mua';
+const assistantIdOrDefault = (id) => (ASSISTANTS.some(a => a.id === id) ? id : DEFAULT_ASSISTANT_ID);
 
 // ---------- 正式アップデートの初回案内 ----------
 // 通常通知の本文は更新履歴を正本とし、assistantNotice を付けた主要更新だけを案内する。
@@ -147,6 +165,60 @@ const ASSISTANT_BOND_LEVELS = [
 const ASSISTANT_BOND_MIN_LEVEL = ASSISTANT_BOND_LEVELS[0].level;
 const ASSISTANT_BOND_MAX_LEVEL = ASSISTANT_BOND_LEVELS[ASSISTANT_BOND_LEVELS.length - 1].level;
 
+// ---------- 助手ごとの段階(タイトル・呼び方・話し方) ----------
+// 必要な仲良し度(need)はどの助手も同じにして、貯まり方の感覚をそろえる。
+// 変わるのは「その段階をなんと呼ぶか」「プレイヤーをどう呼ぶか」「どんな話し方か」。
+//
+// 【助手を増やすとき】
+//   ASSISTANT_BOND_STYLES に1件足す。titles は20段階ぶん、call は level を受け取って
+//   呼び方のひな形を返す関数。書かなければ、みゅあと同じ段階がそのまま使われる。
+const ASSISTANT_BOND_STYLES = {
+  // きき: Lv1〜3は「さん」付けのまま少し距離があり、Lv4から「ちー」付けで打ち解ける。
+  // Lv6からは、みゅあと同じようにプレイヤーが呼び方を自由に決められる(既定は「ちー」)
+  kiki: {
+    titles: [
+      'はじめまして', '顔なじみ', '気になる存在', 'なかよし', 'お気に入り',
+      '心を許せる仲', '頼れる相方', '気の合うふたり', 'いつもの相棒', '腐れ縁',
+      '阿吽の呼吸', '特別な存在', '一心同体', '最高の相方', '伝説のコンビ',
+      '運命共同体', '生涯のパートナー', 'かけがえのない存在', '唯一の理解者', '永遠の相棒',
+    ],
+    call: (level) => (level <= 3 ? '{name}さん' : '{name}ちー'),
+    tones: [
+      'ていねいで、少し遠慮がある。初対面の距離感',
+      'ていねいなまま、やわらかさが出てくる',
+      '少し打ち解けて、雑談も混ざりはじめる',
+      '「ちー」付けになって、ぐっと親しくなる',
+      'お気に入りとして、気にかけてくれる',
+      '心を許した相手として、素の顔も見せる',
+      '頼れる相方。軽い冗談も言うようになる',
+      '気の合うふたり。会話のテンポが合ってくる',
+      'いつもの相棒として、安心して任せてくれる',
+      '腐れ縁。遠慮のない軽口も出る',
+      '言葉にしなくても伝わる感じ',
+      '他の誰とも違う、特別な相手として話す',
+      '一心同体みたいに息が合う',
+      '最高の相方。掛け合いに迷いがない',
+      '伝説のコンビと呼べるくらいの掛け合い',
+      '運命共同体みたいな頼もしさ',
+      'ずっと隣にいるパートナーという感じ',
+      'かけがえのない相手として大切に話す',
+      'いちばんの理解者として寄り添う',
+      '永遠の相棒。いちばん自然体な話し方',
+    ],
+  },
+};
+// その助手の20段階を作る。need はみゅあと共通、タイトル・呼び方・話し方だけ差し替える
+const buildAssistantBondLevels = (style) => ASSISTANT_BOND_LEVELS.map((base, i) => ({
+  ...base,
+  title: (style.titles && style.titles[i]) || base.title,
+  call: (typeof style.call === 'function' ? style.call(base.level) : null) || base.call,
+  tone: (style.tones && style.tones[i]) || base.tone,
+}));
+const ASSISTANT_BOND_LEVEL_SETS = Object.fromEntries(
+  Object.entries(ASSISTANT_BOND_STYLES).map(([id, style]) => [id, buildAssistantBondLevels(style)]));
+// 助手idから段階の一覧を引く。知らないidや未指定は、これまでどおりみゅあの段階になる
+const assistantBondLevelsOf = (assistantId) => ASSISTANT_BOND_LEVEL_SETS[assistantId] || ASSISTANT_BOND_LEVELS;
+
 // ---------- 呼び方の設定(絆Lv6から) ----------
 // Lv6になると、それまで絆Lvが自動で決めていた呼び方(さん付け→呼び捨て→ちん付け)を、
 // プレイヤーが自由な文字で決められるようになる。「{name}」と書くとそこがプレイヤー名に
@@ -158,6 +230,15 @@ const ASSISTANT_CALL_STYLES = [
   { id:'plain', label:'呼び捨て', template:'{name}' },
   { id:'chin',  label:'ちん付け', template:'{name}ちん' },
 ];
+// 助手ごとのクイック入力。書かなければ上の既定(みゅあ用)を使う
+const ASSISTANT_CALL_STYLE_SETS = {
+  kiki: [
+    { id:'san',   label:'さん付け', template:'{name}さん' },
+    { id:'plain', label:'呼び捨て', template:'{name}' },
+    { id:'chi',   label:'ちー付け', template:'{name}ちー' },
+  ],
+};
+const assistantCallStylesOf = (assistantId) => ASSISTANT_CALL_STYLE_SETS[assistantId] || ASSISTANT_CALL_STYLES;
 const ASSISTANT_CALL_STYLE_UNLOCK_LEVEL = 6;
 const ASSISTANT_CALL_STYLE_MAX_LEN = 16;
 
@@ -175,26 +256,30 @@ const assistantBondNext = (points) => {
   const next = ASSISTANT_BOND_LEVELS.find(s => p < s.need);
   return next ? { level: next.level, need: next.need, remain: next.need - p } : null;
 };
-const assistantBondStageByLevel = (level) =>
-  ASSISTANT_BOND_LEVELS.find(s => s.level === level) || ASSISTANT_BOND_LEVELS[0];
+// 段階(タイトル・呼び方・話し方)は助手ごとに違う。assistantId を省くとみゅあ扱い
+const assistantBondStageByLevel = (level, assistantId) => {
+  const levels = assistantBondLevelsOf(assistantId);
+  return levels.find(s => s.level === level) || levels[0];
+};
 
 // プレイヤーをなんと呼ぶか。名前が無いときは呼びかけを省いても文が成り立つ言葉にする
 // customCall … Lv6から自由に決められる呼び方の上書き。「{name}」を含めればプレイヤー名に
 //              置き換わり、含めなければ入力した文字がそのまま呼び方になる。
 //              未入力・Lv6未満なら絆Lvの既定(stage.call)のまま
+// assistantId … 助手ごとに既定の呼び方が違う(みゅあは「ちん」、ききは「ちー」)
 const ASSISTANT_NO_NAME = 'キミ';
-const assistantCallName = (name, level, customCall) => {
+const assistantCallName = (name, level, customCall, assistantId) => {
   const raw = String(name || '').trim();
   if (!raw) return ASSISTANT_NO_NAME;
   const lv = Number.isFinite(level) ? level : ASSISTANT_BOND_MIN_LEVEL;
   const custom = (lv >= ASSISTANT_CALL_STYLE_UNLOCK_LEVEL && typeof customCall === 'string') ? customCall.trim() : '';
   if (custom) return custom.includes('{name}') ? custom.replace('{name}', raw) : custom;
-  const stage = assistantBondStageByLevel(lv);
+  const stage = assistantBondStageByLevel(lv, assistantId);
   return String(stage.call || '{name}').replace('{name}', raw);
 };
 // セリフの中の {name} を、そのときの呼び方へ置き換える
-const assistantSpeak = (text, name, level, customCall) =>
-  String(text == null ? '' : text).replace(/\{name\}/g, assistantCallName(name, level, customCall));
+const assistantSpeak = (text, name, level, customCall, assistantId) =>
+  String(text == null ? '' : text).replace(/\{name\}/g, assistantCallName(name, level, customCall, assistantId));
 
 // 仲良し度が増える行動。1日に増える量は行動ごとと合計の両方で頭打ちにする。
 // 放置しても減らない(久しぶりに開いた人が冷たくされないため)。
@@ -817,7 +902,7 @@ const ASSISTANT_SCENES = {
 const ASSISTANT_LINE_PACKS = [];
 
 // 束を1つ足す。読み込み順は問わない(合流は下の applyAssistantLinePacks でまとめて行う)
-const addAssistantLinePack = (pack) => { if (pack && pack.id && pack.lines) ASSISTANT_LINE_PACKS.push(pack); };
+const addAssistantLinePack = (pack) => { if (pack && pack.id && (pack.lines || pack.conditions)) ASSISTANT_LINE_PACKS.push(pack); };
 
 // 極限チャレンジ。モード選択(extremeChallenge)ではモード全体に共通する特徴を案内し、
 // EXTREME固有の倍率やブリーダーカード50%は難易度側(extremeDifficulty)でだけ触れる。
@@ -1314,17 +1399,523 @@ addAssistantLinePack({
   },
 });
 
+// ===== きき(第2助手)のセリフ =====
+// ---------- ききの話し方(セリフを足すときの決まりごと) ----------
+// ・一人称は「私」。役割は「助手」
+// ・優しくて気配り上手。落ち着いたお姉さん寄りで、みゅあより冷静
+// ・基本はていねい口調。ただし堅すぎず、ほんのりゆるくて可愛い
+// ・ききらしい言葉の崩し方として「です」→「でつ」、「ます」→「まつ」、
+//   「おはよ」→「おはゆ」を自然に混ぜる。★ただし全部を機械的に変換しないこと。
+//   毎文「でつ」「まつ」にすると幼児語のキャラになってしまう。
+//   ていねいで落ち着いた話し方の中に、ときどき混ざるのが「きき」
+// ・たまに天然っぽさや軽いツッコミも入れる。上から目線にはしない
+// ・みゅあのセリフを語尾だけ変えた文にしない。反応の中身から性格の違いを出す
+//   (みゅあ=一緒に盛り上がる／きき=落ち着いて支える)
+// ・説明書のような言い回し(「〜してください」「〜しましょう」)は使わない
+// ・1〜2文で、スマホでも一目で読める長さにする
+addAssistantLinePack({
+  id: 'kikiCore',
+  assistantId: 'kiki',
+  label: 'きき・全画面の基本セリフ',
+  lines: {
+    // ---- 日次アドバイス ----
+    dailyMasuAdvice: [
+      { e:'normal',  t:'マスモンを早く増やしたいなら、いい方法がありますよ。' },
+      { e:'happy',   t:'クイックのBeginnerでWAVE2まで進んで、\n「あきらめる」を選ぶんでつ。' },
+      { e:'wink',    t:'これが今のところ、いちばん早い増やし方ですね。' },
+      { e:'normal',  t:'WAVE2まで進むのが大事。そこから登録できまつ。' },
+      { e:'happy',   t:'短い時間で仲間を増やしたいときに、どうぞ♪' },
+    ],
+    // ---- 極限チャレンジ ----
+    extremeChallenge: [
+      { e:'surprise', t:'ここから先は極限チャレンジ。かなり手強いですよ。' },
+      { e:'normal',   t:'育てた子の本気を試すなら、ここが舞台ですね。' },
+      { e:'troubled', t:'正直に言うと、生半可な育成だと厳しいと思いまつ。' },
+      { e:'happy',    t:'専用ランキングもあるので、記録に残せまつよ♪' },
+      { e:'normal',   t:'無理そうなら育ててから出直すのも、立派な作戦でつ。' },
+      { e:'wink',     t:'準備が整っているなら、思いきって挑んでみましょ。' },
+    ],
+    extremeDifficulty: [
+      { e:'troubled', t:'EXTREMEはブリーダーカードの効果が半分。ご注意を。' },
+      { e:'surprise', t:'敵の強さは×13。いつもの感覚だと危ないでつ。' },
+      { e:'normal',   t:'虹のプシュケー報酬と全WAVE詳細、先に見ると安心ですよ。' },
+      { e:'happy',    t:'準備が整っているなら、いってらっしゃい♪' },
+      { e:'normal',   t:'厳しそうなら、もうひと育成してからでも遅くないでつ。' },
+      { e:'wink',     t:'私も見てまつから、落ち着いていきましょ。' },
+    ],
+    nightmareDifficulty: [
+      { e:'surprise', t:'NIGHTMAREはEXTREMEの次。もっと手強い悪夢でつ。' },
+      { e:'troubled', t:'有利な補正が弱くなって、不利な補正は重くなりまつ。' },
+      { e:'normal',   t:'距離適性が、いつも以上に大事になりますね。' },
+      { e:'normal',   t:'全WAVE詳細で敵の順番を見ると、作戦を立てやすいでつ。' },
+      { e:'wink',     t:'補正のかかり方が変わるので、編成はじっくり考えましょ。' },
+    ],
+    chaosDifficulty: [
+      { e:'surprise', t:'CHAOSは敵の強さが×20。本当に極限の戦いでつ…！' },
+      { e:'normal',   t:'NIGHTMAREを1回クリアすると挑めるようになりまつ。' },
+      { e:'excited',  t:'スコア×20、経験値×35、ダイヤ×15。報酬も破格ですね♪' },
+      { e:'troubled', t:'与ダメージと加入ボーナスは半分、消費ガッツは1.5倍でつ。' },
+      { e:'happy',    t:'クリアで虹のプシュケー50個。応援してまつ♪' },
+    ],
+    ultimateDifficulty: [
+      { e:'surprise', t:'ULTIMATEは敵強度×35。CHAOSを越えた人だけの舞台でつ。' },
+      { e:'normal',   t:'累計ターンが増えるほど、次の敵が強くなりまつ。' },
+      { e:'excited',  t:'スコア×20、経験値×40、ダイヤ×20。プシュケーは60個でつ♪' },
+      { e:'troubled', t:'能力覚醒もターン数で下がるので、速い勝利が大切ですね。' },
+      { e:'wink',     t:'35ターンごとのDISTANCE BREAKにも備えておきましょ。' },
+    ],
+    infinityDifficulty: [
+      { e:'normal',   t:'最後に控えているのがINFINITY。まだ準備中でつ。' },
+      { e:'surprise', t:'無限、ですか…。どんな難易度になるんでしょうね。' },
+      { e:'happy',    t:'いつか挑める日が来るのが、今から楽しみでつ♪' },
+      { e:'troubled', t:'極限の果て…想像するだけで、少し緊張しまつね。' },
+      { e:'normal',   t:'その日まで、のんびり育成を楽しみましょ。' },
+    ],
+    // ---- はじめて ----
+    onboarding: [
+      { e:'happy',   t:'はじめまして。私はきき、このゲームの助手でつ。' },
+      { e:'normal',  t:'まずはお名前とアイコンを決めましょ。あとから変えられまつ。' },
+      { e:'wink',    t:'お名前はランキングにも出るので、気に入ったものを♪' },
+      { e:'happy',   t:'困ったことがあったら、いつでも私に声をかけてほしいでつ。' },
+      { e:'normal',  t:'準備が整ったら、いよいよ冒険のはじまりでつ。' },
+    ],
+    // ---- ホーム ----
+    home: [
+      // どのLvでも出る、村のようすや案内
+      { e:'happy',    t:'今日も一緒に育てていきましょ♪' },
+      { e:'normal',   t:'マスモンの絆レベル、ときどき見てあげたいですね。' },
+      { e:'wink',     t:'ミッションとギフト、覗いてみると何かあるかも♪' },
+      { e:'normal',   t:'放牧に出した子が、村を歩いてまつよ。見えまつか？' },
+      { e:'happy',    t:'今日はどこから回りまつか？ 私は神殿がおすすめでつ。' },
+      { e:'normal',   t:'編成を見直すだけでも、けっこう変わりまつよ。' },
+      { e:'happy',    t:'更新履歴、たまに読むと発見がありまつ♪' },
+      { e:'normal',   t:'今日のぶんのログインボーナス、受け取りましたか？' },
+      { e:'troubled', t:'ダイヤの使いどころ、悩みまつよね。私も悩みまつ。', w:0.5 },
+      { e:'happy',    t:'少し休むのも大事でつ。ゲームは逃げませんから。', w:0.5 },
+      { e:'surprise', t:'あ、いま向こうでマスモンが転んだような…気のせい？', w:0.25 },
+      { e:'wink',     t:'内緒ですけど、私は夕方の村がいちばん好きでつ♪', w:0.25 },
+      // Lv1〜3: ていねいで、少し距離がある
+      { e:'happy',    t:'{name}、今日もよろしくお願いしまつ。', bond:[1,3] },
+      { e:'normal',   t:'{name}、まずは編成の確認からいきまつか？', bond:[1,3] },
+      { e:'normal',   t:'{name}、無理のない範囲で楽しんでいきましょ。', bond:[1,3] },
+      { e:'happy',    t:'{name}のペースで大丈夫でつよ。', bond:[1,3] },
+      { e:'wink',     t:'{name}、育成がいい感じに進んでまつね。', bond:[1,3] },
+      // Lv4〜5: 「ちー」付けになって、ぐっと打ち解ける
+      { e:'happy',    t:'{name}、おかえりなさい♪ 待ってましたよ。', bond:[4,5] },
+      { e:'excited',  t:'{name}、その育成いい感じ！ センスありまつね。', bond:[4,5] },
+      { e:'normal',   t:'なんだか今日は調子よさそう。気のせいでつか？', bond:[4,5] },
+      { e:'happy',    t:'{name}、今日は何をしまつ？ お付き合いしまつよ♪', bond:[4,5] },
+      // Lv6以降: 呼び方を自分で決められる。距離はさらに近づく
+      { e:'happy',    t:'{name}、呼び方を自分で決められるようになりまつよ♪', bond:6 },
+      { e:'wink',     t:'{name}とは、もう気を使わずに話せまつね。', bond:7 },
+      { e:'excited',  t:'{name}となら、どんな難易度でも越えられそうでつ♪', bond:9 },
+      { e:'happy',    t:'{name}が来ると、なんだか安心しまつ。', bond:11 },
+      { e:'normal',   t:'{name}、私はずっとここにいまつからね。', bond:13, w:0.5 },
+      { e:'excited',  t:'{name}とは、もう阿吽の呼吸でつね♪', bond:15 },
+      { e:'happy',    t:'{name}とここまで来られて、私は幸せでつ♪', bond:18, w:0.5 },
+      { e:'excited',  t:'{name}とは永遠の相棒でつ。これからもよろしく♪', bond:20 },
+    ],
+    // ---- バトルメニュー ----
+    battleChallenge: [
+      { e:'normal',   t:'スコアを競うならチャレンジでつ。上のタブも見てみて♪' },
+      { e:'wink',     t:'強化の選び方で、かなり変わりまつよ。' },
+      { e:'normal',   t:'終盤まで見据えて強化するのがコツですね。' },
+      { e:'excited',  t:'自己ベスト、更新できそうな気がしまつ♪' },
+      { e:'normal',   t:'難易度カードから、虹のプシュケー報酬も見られまつ。' },
+      { e:'happy',    t:'迷ったら、弱いところを埋めるのがおすすめでつ。' },
+    ],
+    battleQuick: [
+      { e:'wink',     t:'テンポ重視ならクイックでつね。' },
+      { e:'happy',    t:'サクサク育成していきましょ♪' },
+      { e:'normal',   t:'自動成長をうまく活かすのがコツでつ。' },
+      { e:'normal',   t:'強化は選べないので、編成で勝負ですね。' },
+      { e:'excited',  t:'経験値もダイヤも1.5倍。おいしいでつ♪' },
+      { e:'happy',    t:'難易度カードから、報酬も確認できまつよ。' },
+    ],
+    battlePro: [
+      { e:'excited',  t:'ここはベースモンだけの世界。腕の見せどころでつ♪' },
+      { e:'wink',     t:'絆経験値3倍。新しい子を育てるなら、ここですね。' },
+      { e:'happy',    t:'ブリーダー経験値も1.5倍でつよ♪' },
+      { e:'normal',   t:'育てたマスモンは連れていけません。素の力で勝負でつ。' },
+      { e:'normal',   t:'供モンは5体選んで、その中から3体が来まつ。' },
+      { e:'happy',    t:'上のタブから、プロだけの記録も見られまつ♪' },
+      { e:'troubled', t:'きびしいモードですけど、そのぶん伸びまつよ。' },
+    ],
+    ranking: [
+      { e:'excited',  t:'上位、目指してみまつか♪' },
+      { e:'happy',    t:'みなさん強いでつね…！' },
+      { e:'wink',     t:'編成を見るだけでも、勉強になりまつよ。' },
+      { e:'normal',   t:'次はこの方を超えるのが目標ですね。' },
+      { e:'happy',    t:'あと少しで順位が上がりそうでつ♪' },
+      { e:'normal',   t:'難易度を切り替えると、狙い目が見えてきまつ。' },
+    ],
+    rankingParty: [
+      { e:'happy',    t:'この方が使っていた編成でつ。染めた色もそのままですよ♪' },
+      { e:'excited',  t:'どの距離に置いていたかも分かりまつ。真似してみまつか？' },
+      { e:'normal',   t:'王冠が付いているのが勇者モン。主役になった子ですね。' },
+      { e:'wink',     t:'絆レベルが高い子ほど、大事に育てられた子でつ♪' },
+      { e:'normal',   t:'染めた色が残るのは、この画面ができたあとの記録からでつ。' },
+      { e:'surprise', t:'強い方の編成、けっこう参考になりまつよね。' },
+    ],
+    // ---- ランの準備・進行 ----
+    pickHero: [
+      { e:'normal',   t:'最初の1体はとても大事。勇者特性を見て決めましょ。' },
+      { e:'happy',    t:'今日はどの子でいきまつか？ 私も楽しみでつ♪' },
+      { e:'wink',     t:'固有技も見ておくと、戦い方がガラッと変わりまつよ。' },
+      { e:'excited',  t:'育っている子で挑むと、けっこう気持ちいいでつ♪' },
+      { e:'normal',   t:'迷ったら詳細を開いてみて。特性が決め手ですね。' },
+    ],
+    pickSlot: [
+      { e:'wink',     t:'敵と同じ距離から殴ると強いでつよ。' },
+      { e:'normal',   t:'得意な距離と、いまの補正を見て置きましょ。' },
+      { e:'happy',    t:'ここ、地味に勝敗を分けるところでつ。' },
+      { e:'excited',  t:'補正が高い距離に寄せると、気持ちいいでつ♪' },
+      { e:'normal',   t:'置いた距離以外にも補正はかかるので、安心して選べまつ。' },
+    ],
+    pickAlly: [
+      { e:'happy',    t:'仲間が増えまつよ♪ どの子にしまつか？' },
+      { e:'wink',     t:'ステータスだけでなく、距離の補正も見てみて。' },
+      { e:'excited',  t:'ここで一気に強くなるチャンスでつ。' },
+      { e:'normal',   t:'足りない距離を埋めると、安定しまつよ。' },
+      { e:'happy',    t:'心強い仲間が来たら、あと半分いけそうですね♪' },
+    ],
+    pickProAllies: [
+      { e:'excited',  t:'ここで選んだ子の中からしか来ません。よく考えて♪' },
+      { e:'wink',     t:'合流で出るのは、この中からランダムで3体だけでつ。' },
+      { e:'normal',   t:'誰が来てもいいように組むのが、コツですね。' },
+      { e:'happy',    t:'間合いをばらけさせておくと安心でつ♪' },
+      { e:'troubled', t:'全員同じ距離だと、届かない相手が出るかもしれません。' },
+      { e:'normal',   t:'ステータスの合流ボーナスも、見ておきましょ。' },
+    ],
+    pickTeaching: [
+      { e:'wink',     t:'同じ教えを重ねると、Lv2に進化しまつよ。' },
+      { e:'normal',   t:'今の強さを取るか、完成形を狙うか…作戦しだいですね。' },
+      { e:'happy',    t:'私は、とりあえず重ねる派でつ♪' },
+      { e:'excited',  t:'進化すると、けっこう跳ね上がりまつ。' },
+      { e:'normal',   t:'ブリーダーカードは効果が半減しないのが強みでつ。' },
+    ],
+    rewardPick: [
+      { e:'happy',    t:'WAVEクリアお疲れさまでつ♪ どれを伸ばしまつか？' },
+      { e:'wink',     t:'弱点を埋めるか、強みを伸ばすか…悩みまつね。' },
+      { e:'excited',  t:'いい感じでつ♪ この調子でいきましょ。' },
+      { e:'normal',   t:'ライフが心もとないなら、先に固くするのもアリでつ。' },
+      { e:'happy',    t:'ここの積み重ねで、終盤がラクになりまつよ。' },
+    ],
+    battleHelp: [
+      { e:'wink',     t:'迷ったら、まず解析。敵の必殺技が読めまつよ。' },
+      { e:'normal',   t:'いちばん効かせたいカードは、最初に置くのがコツでつ。' },
+      { e:'happy',    t:'落ち着いていきましょ。ガードも立派な一手でつ。' },
+      { e:'excited',  t:'あと少しで勝てそう…！ ここ、踏ん張りどころでつ。' },
+      { e:'normal',   t:'ガッツが足りないときは、1枚だけでも大丈夫でつ。' },
+    ],
+    // ---- リザルト ----
+    resultWin: [
+      { e:'excited',  t:'優勝おめでとうございまつ♪' },
+      { e:'happy',    t:'お見事でつ。育った勇者モンは登録しておきましょ。' },
+      { e:'excited',  t:'完璧でつね♪ このまま上の難易度も狙えまつ。' },
+      { e:'happy',    t:'お疲れさまでつ。報酬も受け取っておきましょ。' },
+      { e:'wink',     t:'今の編成、けっこう強かったでつね。覚えておきましょ♪' },
+    ],
+    resultLose: [
+      { e:'crying',   t:'今回はここまででつ…。報酬はちゃんと入りまつよ。' },
+      { e:'troubled', t:'惜しかったでつね。次はいけそうな気がしまつ。' },
+      { e:'normal',   t:'負けても経験値は入りまつ。育て直して、また挑みましょ。' },
+      { e:'crying',   t:'悔しいでつ…。でも、ここまで来たのはすごいでつよ。' },
+      { e:'happy',    t:'切り替えていきましょ♪ 編成を変えると景色が変わりまつ。' },
+    ],
+    resultRetire: [
+      { e:'troubled', t:'お疲れさまでつ。クリア済みWAVE分の報酬は入りまつ。' },
+      { e:'normal',   t:'休憩も大事でつね。結果だけ確認しておきましょ。' },
+      { e:'happy',    t:'また遊びましょ♪ いつでも待ってまつよ。' },
+      { e:'troubled', t:'今回はここまででつね。もらえるものは受け取っておきましょ。' },
+      { e:'wink',     t:'仕切り直しもアリでつ。次にいきましょ♪' },
+    ],
+    // ---- スキップチケット ----
+    skipPick: [
+      { e:'happy',    t:'スキップで一気に育成でつ♪ 使う枚数も選べまつよ。' },
+      { e:'normal',   t:'時間がないときの味方でつね。' },
+      { e:'wink',     t:'勇者モンと供モンを決めたら、あとはおまかせでつ。' },
+      { e:'excited',  t:'まとめて使うと、もらえる量もぐっと増えまつ♪' },
+      { e:'normal',   t:'ランキングには入らないので、そこだけ覚えておきましょ。' },
+    ],
+    skipResult: [
+      { e:'happy',    t:'受け取り完了でつ♪ 一気に育ちましたね。' },
+      { e:'surprise', t:'おおっ、ごっそり入りまつね…！' },
+      { e:'normal',   t:'スキップ分はランキングとクリア回数には入りません。' },
+      { e:'excited',  t:'育成が進みまつね。次のバトルが楽しみでつ♪' },
+      { e:'wink',     t:'浮いた時間で、別のことをするのもいいですね。' },
+    ],
+    // ---- M/B管理 ----
+    mbManagement: [
+      { e:'normal',   t:'編成もベースモンもマスモンも、ここから見られまつ。' },
+      { e:'wink',     t:'解放しただけでは出てこないので、編成に入れましょ。' },
+      { e:'happy',    t:'最後に「決定」を押すのだけ、お忘れなく♪' },
+      { e:'normal',   t:'ブリーダーカードの編成も、ここからでつ。' },
+      { e:'excited',  t:'編成を整えると、戦いがぐっとラクになりまつよ♪' },
+    ],
+    roster: [
+      { e:'normal',   t:'ここで使う子を選びまつ。' },
+      { e:'wink',     t:'間合いをばらけさせておくと、どんな敵にも届きまつ♪' },
+      { e:'happy',    t:'お気に入りの子を入れると、気分が上がりまつね。' },
+      { e:'normal',   t:'「決定」を押すまで反映されないので、ご注意を。' },
+      { e:'excited',  t:'編成を変えると、戦い方もガラッと変わりまつ♪' },
+      { e:'normal',   t:'ブリーダーカードの編成も、同じように選べまつよ。' },
+    ],
+    monsterList: [
+      { e:'normal',   t:'ベースモンは種類の基本、マスモンは育てた個体でつ。' },
+      { e:'happy',    t:'見たい方を選んでみましょ♪' },
+      { e:'wink',     t:'気になる子は詳細を開いてみて。特性が面白いでつよ。' },
+      { e:'normal',   t:'間合い適性も、ここから確認できまつ。' },
+      { e:'excited',  t:'集めた子が並ぶと、なんだか嬉しくなりまつね♪' },
+    ],
+    masuList: [
+      { e:'normal',   t:'育てたマスモンの一覧でつ。絞り込みも使えまつよ。' },
+      { e:'happy',    t:'お気に入りの子、増えてきましたね♪' },
+      { e:'wink',     t:'総合力の順に並べると、育ち具合が分かりやすいでつ。' },
+      { e:'normal',   t:'名前は変えられまつよ。愛着がわきまつね。' },
+      { e:'excited',  t:'コンプリート、目指してみまつか♪' },
+      { e:'normal',   t:'絞り込みと並べ替えで、探しやすくなりまつ。' },
+    ],
+    masuEnhance: [
+      { e:'normal',   t:'ポイントは適性か能力値に使えまつ♪' },
+      { e:'wink',     t:'得意な戦い方に合わせて伸ばしましょ。' },
+      { e:'happy',    t:'まとめて強化もできるので、ラクでつよ。' },
+      { e:'excited',  t:'一気に振ると、強くなった感じがしまつ♪' },
+      { e:'normal',   t:'迷ったら、足りないところから埋めるのが無難でつ。' },
+    ],
+    // ---- 神殿 ----
+    temple: [
+      { e:'normal',   t:'神殿では合体・転生・寄付ができまつ。' },
+      { e:'wink',     t:'育成の土台になる場所ですね。' },
+      { e:'happy',    t:'どれも取り返しがつかないので、落ち着いて選びましょ。' },
+      { e:'normal',   t:'限界突破と転生は、絆Lvぶんのダイヤがかかりまつ。' },
+      { e:'excited',  t:'合体は、ここのいちばんの楽しみでつ♪' },
+      { e:'normal',   t:'再生は初回無料でつよ。試してみるのもいいですね。' },
+    ],
+    fusion: [
+      { e:'excited',  t:'合体でつ♪ どの子とどの子を組み合わせまつか？' },
+      { e:'normal',   t:'技を継承するかどうかで、かかるダイヤが変わりまつ。' },
+      { e:'wink',     t:'合体後の経験値とレベルも、先に確認できまつよ。' },
+      { e:'troubled', t:'素材にした子は戻ってきません。よく確かめてから♪' },
+      { e:'happy',    t:'思わぬ組み合わせが、当たりだったりしまつ。' },
+    ],
+    rebirth: [
+      { e:'normal',   t:'限界突破でつ。絆Lvの上限を超えられまつよ。' },
+      { e:'wink',     t:'かかるダイヤは絆Lvぶん。育った子ほど高くなりまつ。' },
+      { e:'happy',    t:'お気に入りの子を、さらに先へ連れていけまつね♪' },
+      { e:'normal',   t:'継承する技も、ここで選べまつよ。' },
+      { e:'excited',  t:'星が増えると、見た目にも育ちが分かりまつ♪' },
+    ],
+    reincarnate: [
+      { e:'normal',   t:'転生でつ。別の姿へ生まれ変わらせられまつ。' },
+      { e:'troubled', t:'元の姿には戻せません。よく考えてから決めましょ。' },
+      { e:'wink',     t:'継承する技を選べるので、強みは引き継げまつよ。' },
+      { e:'happy',    t:'新しい姿になる瞬間、私はいつもドキドキしまつ♪' },
+      { e:'normal',   t:'かかるダイヤは、絆Lvぶんでつ。' },
+    ],
+    donation: [
+      { e:'normal',   t:'寄付でつ。累計絆経験値と同じ数のダイヤを受け取れまつ。' },
+      { e:'troubled', t:'寄付した子は戻ってきません。本当によろしいでつか？' },
+      { e:'wink',     t:'まとめて選べまつが、編成が崩れないかだけご確認を。' },
+      { e:'happy',    t:'虹のプシュケーも、もらえまつよ♪' },
+      { e:'normal',   t:'迷っているなら、今日は見送るのも手でつ。' },
+    ],
+    pasture: [
+      { e:'happy',    t:'お気に入りを最大5体まで、HOMEに出せまつ♪' },
+      { e:'normal',   t:'強さには影響しないので、見た目で選んで大丈夫でつ。' },
+      { e:'excited',  t:'みんなが歩いているところ、かわいいでつよね♪' },
+      { e:'wink',     t:'気分で入れ替えても大丈夫でつ。' },
+      { e:'happy',    t:'村がにぎやかになると、私も嬉しいでつ。' },
+    ],
+    // ---- マーケット・アイテム ----
+    market: [
+      { e:'normal',   t:'マーケットでつ。円盤石もカードもアイコンも並んでまつ。' },
+      { e:'wink',     t:'ダイヤは大事に使いましょ。' },
+      { e:'happy',    t:'新しい商品、来ているかもしれませんよ♪' },
+      { e:'excited',  t:'アイコンを集めるのも、楽しいでつよね。' },
+      { e:'normal',   t:'虹のプシュケーはここでは買えません。クリア報酬でつ。' },
+      { e:'happy',    t:'欲しいものがあるなら、少し貯めてからでも♪' },
+    ],
+    inventory: [
+      { e:'normal',   t:'持っているアイテムは、ここでつ。' },
+      { e:'wink',     t:'効果と使う相手を見て、いいタイミングで使いましょ♪' },
+      { e:'happy',    t:'貯めすぎても意味がないので、使ってしまいましょ。' },
+      { e:'normal',   t:'絆ポイントリセットの書は、振り直したいときに便利でつ。' },
+      { e:'excited',  t:'虹のプシュケーは、限界突破に使えまつよ♪' },
+    ],
+    giftClaimable: [
+      { e:'excited',  t:'ギフトが届いてまつ♪ 受け取っておきましょ。' },
+      { e:'happy',    t:'まとめて受け取れまつよ。' },
+      { e:'wink',     t:'受け取り忘れがないか、たまに覗いてみて♪' },
+      { e:'normal',   t:'ログインボーナスも、ここに届きまつ。' },
+      { e:'happy',    t:'嬉しい知らせでつね♪' },
+    ],
+    giftEmpty: [
+      { e:'normal',   t:'いまは届いているギフトは、ないみたいでつ。' },
+      { e:'happy',    t:'また明日、覗いてみましょ♪' },
+      { e:'wink',     t:'ミッションを達成すると、ここに届きまつよ。' },
+      { e:'troubled', t:'空っぽでつね…。少し寂しいでつ。' },
+      { e:'normal',   t:'ログインを続けると、順番にもらえまつ。' },
+    ],
+    missionsClaimable: [
+      { e:'excited',  t:'達成したミッションがありまつ♪ 受け取りましょ。' },
+      { e:'happy',    t:'まとめて受け取れまつよ。' },
+      { e:'wink',     t:'受け取ると、仲良し度も少し増えまつ♪' },
+      { e:'normal',   t:'デイリーは毎日、ウィークリーは毎週でつ。' },
+      { e:'happy',    t:'こつこつ進んでいまつね♪' },
+    ],
+    missionsNormal: [
+      { e:'normal',   t:'ミッションの進み具合は、ここで見られまつ。' },
+      { e:'wink',     t:'ふつうに遊んでいれば、自然と進みまつよ♪' },
+      { e:'happy',    t:'デイリーは毎日リセットされまつ。' },
+      { e:'normal',   t:'ウィークリーは、少し大きめの報酬でつ。' },
+      { e:'excited',  t:'あと少しで達成できそうなものも、ありまつね♪' },
+    ],
+    // ---- プロフィール・設定・ヘルプ ----
+    profile: [
+      { e:'normal',   t:'名前・アイコン・これまでの記録は、ここでつ。' },
+      { e:'happy',    t:'自分らしいプロフィールにしましょ♪' },
+      { e:'wink',     t:'アイコンはptで買えまつよ。集めるの、楽しいでつよね。' },
+      { e:'excited',  t:'記録を見返すと、成長がわかって面白いでつ♪' },
+      { e:'normal',   t:'助手の変更も、この画面からできまつよ。' },
+      { e:'happy',    t:'私との仲良し度も、ここで見られまつ♪' },
+    ],
+    settings: [
+      { e:'normal',   t:'音量やBGMは、ここで調整できまつ。' },
+      { e:'wink',     t:'BGMアレンジで、曲の雰囲気も変えられまつよ♪' },
+      { e:'happy',    t:'引き継ぎコード、ときどき控えておくと安心でつ。' },
+      { e:'normal',   t:'好みの音量にして、快適に遊びましょ♪' },
+      { e:'excited',  t:'ヘルプも、ここから開けまつよ。' },
+    ],
+    helpTop: [
+      { e:'normal',   t:'ヘルプでつ。気になるカテゴリから開いてみましょ。' },
+      { e:'wink',     t:'私の吹き出しをタップすると、詳しい説明が出まつよ♪' },
+      { e:'happy',    t:'分からないことがあったら、まずはここでつ。' },
+      { e:'normal',   t:'カテゴリ → 項目 → 説明の、3段階になってまつ。' },
+      { e:'excited',  t:'読んでいると、新しい発見があるかもしれません♪' },
+      { e:'happy',    t:'右上のボタンで、私の吹き出しを閉じられまつ。' },
+    ],
+  },
+  // 条件つきのセリフ(初回・記録更新・受け取り可能など)
+  conditions: {
+    home: {
+      firstRun: [
+        { e:'excited',  t:'いよいよ冒険のはじまり。まずはバトルへ行ってみましょ♪' },
+        { e:'happy',    t:'最初は難易度Beginnerで、じゅうぶんでつよ。' },
+        { e:'wink',     t:'1回遊ぶとマスモンを登録できまつ。そこからが本番ですね。' },
+        { e:'normal',   t:'迷ったらバトルへ。やってみるのが一番わかりまつ。' },
+        { e:'happy',    t:'私がついてまつから、安心して行ってらっしゃい♪' },
+      ],
+      bondUp: [
+        { e:'happy',    t:'{name}、なんだか前より話しやすくなりまつね♪' },
+        { e:'excited',  t:'{name}、これからもよろしくお願いしまつ！' },
+        { e:'wink',     t:'{name}、たくさん遊んでくれてありがとうでつ♪' },
+        { e:'happy',    t:'{name}…うん、この呼び方がしっくりきまつ。', bond:4 },
+        { e:'normal',   t:'{name}、私はちゃんと見てまつからね。' },
+      ],
+    },
+    resultWin: {
+      newRecord: [
+        { e:'excited',  t:'自己ベスト更新、おめでとうございまつ♪' },
+        { e:'excited',  t:'記録更新でつ！ ランキングも見てみましょ。' },
+        { e:'happy',    t:'新記録でつね。この編成、当たりでつ♪' },
+        { e:'surprise', t:'すごい…！ 次はどこまで伸びるんでしょうね。' },
+        { e:'happy',    t:'ベスト更新、私も嬉しいでつ♪' },
+      ],
+      firstWin: [
+        { e:'excited',  t:'はじめての優勝、おめでとうございまつ♪' },
+        { e:'excited',  t:'やりましたね…！ 記念すべき1勝目でつ。' },
+        { e:'happy',    t:'ついにクリアでつね。ここまでよく頑張りました♪' },
+        { e:'surprise', t:'えっ、もう勝ってしまいまつか。すごいでつ…！' },
+        { e:'happy',    t:'初優勝でつ。この子は登録しておきましょ♪' },
+      ],
+      firstClear: [
+        { e:'excited',  t:'この難易度、初クリアでつね。おめでとうございまつ♪' },
+        { e:'happy',    t:'初制覇でつ。大きな一歩ですね♪' },
+        { e:'excited',  t:'やりましたね！ 次の難易度も見えてきまつ。' },
+        { e:'happy',    t:'はじめてのクリア。ちゃんと強くなってまつよ。' },
+        { e:'wink',     t:'初クリア記念でつ。この勇者モン、大事にしましょ♪' },
+      ],
+    },
+    resultLose: {
+      firstLose: [
+        { e:'troubled', t:'はじめての負けでつね。でも大丈夫、みんな通る道でつ。' },
+        { e:'happy',    t:'負けても経験値は入りまつよ。ここからが本番でつ♪' },
+        { e:'crying',   t:'悔しいでつね…。でも、けっこう惜しかったと思いまつ。' },
+        { e:'normal',   t:'次はどこを直しまつか？ 一緒に考えましょ。' },
+        { e:'wink',     t:'一回負けたくらいで終わりませんよね。リベンジでつ♪' },
+      ],
+    },
+    market: {
+      lowGold: [
+        { e:'troubled', t:'ダイヤが心もとないでつね…。' },
+        { e:'normal',   t:'ミッションとログインボーナスで、少しずつ貯まりまつよ。' },
+        { e:'happy',    t:'寄付でも、ダイヤは手に入りまつ♪' },
+        { e:'wink',     t:'今日は見るだけにしておきまつか？' },
+        { e:'normal',   t:'焦らなくて大丈夫。少しずつでいきましょ。' },
+      ],
+    },
+    missionsClaimable: {
+      allDone: [
+        { e:'excited',  t:'ぜんぶ達成でつ…！ お見事でつね♪' },
+        { e:'happy',    t:'完璧でつ。今日はよく遊びましたね♪' },
+        { e:'surprise', t:'全部…！ すごいでつ。' },
+        { e:'wink',     t:'また明日、新しいミッションが来まつよ♪' },
+        { e:'happy',    t:'お疲れさまでつ。ゆっくり休みましょ。' },
+      ],
+    },
+  },
+});
+
+// ---------- セリフが「どの助手のものか」を決める ----------
+// 助手が増えても画面側は何も変えなくて済むよう、セリフ1件ずつに who(助手id)を持たせ、
+// 抽選するときに、いま選ばれている助手のものだけへ絞る。
+//
+//   ・ASSISTANT_SCENES へ直接書いたセリフ … みゅあのもの(これまでの資産をそのまま活かす)
+//   ・束(line pack)で足したセリフ        … 束の assistantId のもの。書かなければみゅあ
+//
+// who を後から書き換えないこと。みゅあのセリフをききが話すと、性格が混ざって台無しになる。
+const stampAssistantOnLines = (lines, assistantId) =>
+  (Array.isArray(lines) ? lines : []).map(line => (line && line.who) ? line : { ...line, who: assistantId });
+// ASSISTANT_SCENES へ直接書いてあるぶんへ、みゅあの印をつける(束より先に1回だけ)
+const stampSceneAuthoredLines = () => {
+  for (const def of Object.values(ASSISTANT_SCENES)) {
+    if (!def) continue;
+    if (Array.isArray(def.lines)) def.lines = stampAssistantOnLines(def.lines, DEFAULT_ASSISTANT_ID);
+    if (def.when) {
+      for (const [cond, list] of Object.entries(def.when)) {
+        if (Array.isArray(list)) def.when[cond] = stampAssistantOnLines(list, DEFAULT_ASSISTANT_ID);
+      }
+    }
+  }
+};
+stampSceneAuthoredLines();
+
 // 束を ASSISTANT_SCENES へ合流させる。二重に合流しないよう、済んだ束は覚えておく
+//   lines      … { 場面キー: [ …セリフ… ] } を通常のセリフへ足す
+//   conditions … { 場面キー: { 条件キー: [ …セリフ… ] } } を条件つきのセリフへ足す
+//   assistantId… その束が誰のセリフか(省略するとみゅあ)
 const ASSISTANT_PACKS_APPLIED = {};
 const applyAssistantLinePacks = () => {
   for (const pack of ASSISTANT_LINE_PACKS) {
     if (ASSISTANT_PACKS_APPLIED[pack.id]) continue;
     if (typeof pack.when === 'function') { try { if (!pack.when()) continue; } catch { continue; } }
+    const who = pack.assistantId || DEFAULT_ASSISTANT_ID;
     for (const [sceneKey, lines] of Object.entries(pack.lines)) {
       const def = ASSISTANT_SCENES[sceneKey];
       if (!def || !Array.isArray(lines)) continue;
       if (!Array.isArray(def.lines)) def.lines = [];
-      def.lines = def.lines.concat(lines.map(line => ({ ...line, pack: pack.id })));
+      def.lines = def.lines.concat(stampAssistantOnLines(lines, who).map(line => ({ ...line, pack: pack.id })));
+    }
+    for (const [sceneKey, byCondition] of Object.entries(pack.conditions || {})) {
+      const def = ASSISTANT_SCENES[sceneKey];
+      if (!def || !byCondition) continue;
+      if (!def.when) def.when = {};
+      for (const [cond, lines] of Object.entries(byCondition)) {
+        if (!Array.isArray(lines)) continue;
+        if (!Array.isArray(def.when[cond])) def.when[cond] = [];
+        def.when[cond] = def.when[cond].concat(stampAssistantOnLines(lines, who).map(line => ({ ...line, pack: pack.id })));
+      }
     }
     ASSISTANT_PACKS_APPLIED[pack.id] = true;
   }
@@ -1366,12 +1957,23 @@ const ASSISTANT_ONBOARDING = {
   // 両方そろった
   ready: { e:'wink',    t:'バッチリ！ 「けってい」を押したら、村を案内するよ♪' },
 };
+// 助手ごとの台本。書かなければ上のみゅあのぶんがそのまま使われる
+const ASSISTANT_ONBOARDING_SETS = {
+  kiki: {
+    intro: { e:'happy',   t:'はじめまして。私はきき、このゲームの助手でつ。まずはお名前を教えてもらえまつか？' },
+    name:  { e:'excited', t:'すてきなお名前ですね♪ 次はアイコンを選びましょ。' },
+    icon:  { e:'normal',  t:'アイコン、いい感じでつ。あとはお名前だけですね。' },
+    ready: { e:'wink',    t:'ばっちりでつ♪ 「けってい」を押したら、村を案内しまつね。' },
+  },
+};
+const assistantOnboardingOf = (assistantId) => ASSISTANT_ONBOARDING_SETS[assistantId] || ASSISTANT_ONBOARDING;
 // 決まっているものから、いま話す内容を選ぶ
-const findAssistantOnboarding = (hasName, hasIcon) => {
-  if (hasName && hasIcon) return ASSISTANT_ONBOARDING.ready;
-  if (hasName) return ASSISTANT_ONBOARDING.name;
-  if (hasIcon) return ASSISTANT_ONBOARDING.icon;
-  return ASSISTANT_ONBOARDING.intro;
+const findAssistantOnboarding = (hasName, hasIcon, assistantId) => {
+  const set = assistantOnboardingOf(assistantId);
+  if (hasName && hasIcon) return set.ready;
+  if (hasName) return set.name;
+  if (hasIcon) return set.icon;
+  return set.intro;
 };
 
 // ---------- 最初のあいさつ ----------
@@ -1400,6 +2002,34 @@ const ASSISTANT_TUTORIAL = [
   { e:'happy',   t:'あたしはここにいるよ。困ったらいつでもタップしてね♪', title:'それじゃあ、いってらっしゃい！', spot:'assistant' },
 ];
 
+// ---------- 助手ごとのあいさつ・村の案内 ----------
+// 光らせる場所(spot)とヘルプ参照(help)は案内の骨組みなので、どの助手でも同じにする。
+// 変えるのは言い回しだけ。ここがずれると、説明している場所と光る場所が食い違う。
+const ASSISTANT_INTRO_SETS = {
+  kiki: [
+    { e:'happy',   t:'はじめまして。私はきき、このゲームの助手でつ。', title:'はじめまして' },
+    { e:'normal',  t:'これから一緒にモンスターを育てて、強いチームを作っていきましょ。', title:'よろしくお願いしまつ' },
+    { e:'wink',    t:'まずはあなたのことを教えてほしいでつ。お名前とアイコンを決めましょ♪', title:'まずは自己紹介から' },
+  ],
+};
+const ASSISTANT_TUTORIAL_SETS = {
+  kiki: [
+    { e:'happy',   t:'{name}、あらためてよろしくお願いしまつ。さっそく村を案内しまつね♪', title:'あらためて、よろしく' },
+    { e:'normal',  t:'目標はWAVE10のラスボス「ムー」を倒すこと。カードで戦っていきまつ。', title:'このゲームの目的', help:'basics/goal' },
+    { e:'normal',  t:'ここがHOMEでつ。建物をタップすると、いろんなことができまつよ。', title:'HOMEのこと', help:'home/roster' },
+    { e:'wink',    t:'神殿では合体・転生・寄付ができまつ。育成の土台になる場所ですね。', title:'神殿', help:'masu/fusion', spot:'temple' },
+    { e:'excited', t:'バトルで活躍した子は「マスモン」として登録できまつ。育つほど強くなりまつよ♪', title:'勇者モンを育てる', help:'masu/masumon', spot:'management' },
+    { e:'happy',   t:'バトルは勇者モンを選んで、カードで戦いまつ。距離がとても大事でつ。', title:'バトル', help:'battle/distance', spot:'battle' },
+    { e:'normal',  t:'ランキングは「バトル」の中。モード切替のすぐ下のボタンから見られまつ。', title:'ランキングはバトルの中', help:'basics/ranking', spot:'battle' },
+    { e:'happy',   t:'マーケットではモンスターやカードを買えまつ。ダイヤは大事に使いましょ♪', title:'マーケット', help:'home/market', spot:'market' },
+    { e:'surprise', t:'ミッションとギフトはこのあたりでつ。受け取り忘れにご注意を♪', title:'ミッションとギフト', help:'items/missions', spot:'reward' },
+    { e:'normal',  t:'ヘルプは右上の「設定」の中でつ。遊び方に迷ったら、ここを開いてみて。', title:'ヘルプは設定の中', help:'tips/assistant', spot:'settings' },
+    { e:'happy',   t:'私はここにいまつ。困ったら、いつでもタップしてほしいでつ♪', title:'それでは、いってらっしゃい', spot:'assistant' },
+  ],
+};
+const assistantIntroPages = (assistantId) => ASSISTANT_INTRO_SETS[assistantId] || ASSISTANT_INTRO;
+const assistantTutorialPages = (assistantId) => ASSISTANT_TUTORIAL_SETS[assistantId] || ASSISTANT_TUTORIAL;
+
 // ---------- バトルチュートリアルの初回案内 ----------
 // バトルの練習を未完了の人へ、ログイン後のHOMEで一度だけ見せる。
 // 実際の練習台本とは分け、断った場合も「視聴済み」にはしない。
@@ -1409,6 +2039,17 @@ const ASSISTANT_BATTLE_TUTORIAL_GUIDE = [
   { e:'wink', t:'今から一緒にやってみる？', title:'どうする？', offer:'battleGuide' },
   { e:'happy', t:'わかったよ♪ あとからでも「設定 → ヘルプ」からいつでも見られるから、分からなくなったら見てみてね！', title:'いつでも待ってるね', declined:true },
 ];
+// 助手ごとの案内。offer / declined の役割は変えず、言い回しだけ差し替える
+const ASSISTANT_BATTLE_TUTORIAL_GUIDE_SETS = {
+  kiki: [
+    { e:'excited', t:'バトルチュートリアルが新しく追加されまつた♪', title:'新しいれんしゅうがありまつ' },
+    { e:'normal', t:'Monster Heroのバトルは少し特殊なので、先にやっておくと分かりやすいと思いまつ。', title:'動かして覚えましょ' },
+    { e:'wink', t:'今から一緒に、やってみまつか？', title:'どうしまつか？', offer:'battleGuide' },
+    { e:'happy', t:'わかりまつた♪ あとからでも「設定 → ヘルプ」からいつでも見られまつから、迷ったら覗いてみて。', title:'いつでも待ってまつ', declined:true },
+  ],
+};
+const assistantBattleGuidePages = (assistantId) =>
+  ASSISTANT_BATTLE_TUTORIAL_GUIDE_SETS[assistantId] || ASSISTANT_BATTLE_TUTORIAL_GUIDE;
 
 // ---------- バトルチュートリアル(操作しながら覚える) ----------
 // 専用の画面は作らず、ふだんのバトル画面の上にみゅあの吹き出しとハイライトを重ねて進める。
@@ -1590,15 +2231,32 @@ const assistantRecentLimit = (total) => Math.max(1, Math.min(3, total - 2));
 //   ② そこから、いまの仲良し度で出せるものだけに絞る
 // 仲良し度で絞った結果が空になったときは、絞る前の一覧をそのまま使う
 // (Lvを増やしたときに「話すことが無い」画面ができないようにするための安全弁)
-const assistantSceneLines = (scene, condition, bondLevel) => {
+// いま選ばれている助手のセリフだけに絞る。
+// その助手のセリフが1つも無い場面では、みゅあのぶんへ落として黙り込まないようにする
+// (助手を増やした直後に、まだセリフを書いていない場面があっても画面が止まらない)
+const filterAssistantLines = (list, assistantId) => {
+  if (!Array.isArray(list) || !list.length) return [];
+  const id = assistantId || DEFAULT_ASSISTANT_ID;
+  const mine = list.filter(line => (line.who || DEFAULT_ASSISTANT_ID) === id);
+  if (mine.length > 0) return mine;
+  return list.filter(line => (line.who || DEFAULT_ASSISTANT_ID) === DEFAULT_ASSISTANT_ID);
+};
+
+const assistantSceneLines = (scene, condition, bondLevel, assistantId) => {
   // line pack だけで追加されたデバッグ用の場面も取得できるようにする。
   // これが無いと pack のセリフは読み込み時に捨てられ、案内待ちのまま画面が止まる。
-  const packedLines = scene ? ASSISTANT_LINE_PACKS.flatMap(pack => Array.isArray(pack.lines?.[scene]) ? pack.lines[scene] : []) : [];
+  const packedLines = scene ? ASSISTANT_LINE_PACKS.flatMap(pack => Array.isArray(pack.lines?.[scene])
+    ? stampAssistantOnLines(pack.lines[scene], pack.assistantId || DEFAULT_ASSISTANT_ID) : []) : [];
   const def = (scene && ASSISTANT_SCENES[scene]) || (packedLines.length ? { lines:packedLines } : null);
   if (!def) return [];
-  const conditional = (condition && def.when && Array.isArray(def.when[condition])) ? def.when[condition] : null;
-  const list = (conditional && conditional.length) ? conditional : def.lines;
-  if (!Array.isArray(list)) return [];
+  const conditionalAll = (condition && def.when && Array.isArray(def.when[condition])) ? def.when[condition] : null;
+  // 条件つきのセリフは、その助手のものが無ければ通常のセリフへ落とす
+  // (みゅあ用の条件セリフを、ききが代わりに話してしまわないようにするため)
+  const conditional = conditionalAll ? filterAssistantLines(conditionalAll, assistantId) : null;
+  const useConditional = conditional && conditional.length
+    && conditional.some(line => (line.who || DEFAULT_ASSISTANT_ID) === (assistantId || DEFAULT_ASSISTANT_ID));
+  const list = useConditional ? conditional : filterAssistantLines(def.lines, assistantId);
+  if (!Array.isArray(list) || !list.length) return [];
   const lv = Number.isFinite(bondLevel) ? bondLevel : ASSISTANT_BOND_MIN_LEVEL;
   const matched = list.filter(line => assistantLineMatchesBond(line, lv));
   return matched.length > 0 ? matched : list;
@@ -1618,13 +2276,14 @@ const pickWeighted = (pool) => {
 };
 
 // 候補から1つ選ぶ。直近に出したものは候補から外す(候補が少ないときは可能な範囲で)
-const pickAssistantLine = (scene, condition, bondLevel) => {
-  const list = assistantSceneLines(scene, condition, bondLevel);
+const pickAssistantLine = (scene, condition, bondLevel, assistantId) => {
+  const list = assistantSceneLines(scene, condition, bondLevel, assistantId);
   if (list.length === 0) return null;
   if (list.length === 1) return list[0];
-  // 仲良し度で候補が変わるので、覚えておく履歴もLvごとに分ける
+  // 仲良し度で候補が変わるので、覚えておく履歴もLvごとに分ける。
+  // 助手ごとにも候補が違うため、履歴も助手ごとに分ける
   const lv = Number.isFinite(bondLevel) ? bondLevel : ASSISTANT_BOND_MIN_LEVEL;
-  const key = `${scene || ''}|${condition || ''}|${lv}`;
+  const key = `${assistantId || DEFAULT_ASSISTANT_ID}|${scene || ''}|${condition || ''}|${lv}`;
   const recent = ASSISTANT_RECENT[key] || [];
   const fresh = list.filter((_, i) => !recent.includes(i));
   const pool = fresh.length > 0 ? fresh : list;

@@ -94,7 +94,8 @@ node tools/build.js --check
 | `node battle-carousel-check.js` | 難易度カードの順序・スワイプ/矢印・敵生成共通化・全WAVE詳細・挑戦導線を確認する。 |
 | `node battle-menu-browser-check.js` | 390×844の実ブラウザでHOMEから難易度画面へ入り、例外ゼロ・矢印/スワイプ・全WAVE詳細・戻る/再入場・勇者選択を確認する。 |
 | `node ranking-party-check.js` | ランキングpartyの役割保存、旧記録互換、供モン人数と勇者重複防止を確認する。 |
-| `node new-player-onboarding-check.js` | 空の保存領域から始まる新規プレイヤー専用の説明・プロフィール設定・途中再開導線を確認する。 |
+| `node new-player-onboarding-check.js` | 空の保存領域から始まる新規プレイヤーの流れ(助手をえらぶ → 選んだ助手のあいさつ → プロフィール設定 → 村の案内)と、途中再開導線・既存プレイヤーへ助手選択を出さないことを確認する。 |
+| `node assistant-select-render-check.js` | 「助手をえらぶ」画面のJSXだけを取り出してReactで描き、落ちずに全助手が並ぶこと・顔と紹介と選ぶボタンが出ること・縦画面向けに2列でスクロールできることを確認する(BGMの事前ロードが終わらないサンドボックスでも、この画面だけは実際に描いて確かめられる)。 |
 | `node training-check.js` | 修行の難易度・参加券・24マスマップ・一時保存・道具・報酬・BGM/SE・二重確定防止を確認する。 |
 | `node tap-sound-trace.js` | 起動画面のタップからの出来事(イベント・再生・Web Audioの接続)を時系列で並べる。音まわりの調査用。 |
 | `node build.js` | **BUILD_DATE・version.json・更新履歴の最新日時を揃え、game-system.jsx を配信用JSへ変換して `monster-hero/game-system.compiled.js` を書き出す。改修したら必ず実行する。** |

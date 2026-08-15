@@ -1,6 +1,6 @@
-// 助手(みゅあ)の表情画像から、吹き出し用の小さい顔アイコンを作る。
+// 助手(みゅあ・きき…)の表情画像から、吹き出し用の小さい顔アイコンを作る。
 //
-// monster-hero/images/assistant/myua_*.PNG は 1536x1024 の全身絵で1枚1.5MBある。
+// monster-hero/images/assistant/<prefix>_*.PNG は 1536x1024 の全身絵で1枚1.5MBある。
 // 吹き出しの顔は48〜72pxしかないので、そのまま読むと表情を変えるたびに1.5MBを
 // 取りに行くことになり、モバイル回線では待たされる。そこで顔まわりだけを正方形に
 // 切り出し、256pxへ縮めたものを images/assistant/face/ へ書き出しておく。
@@ -12,6 +12,7 @@
 // 立ち位置が多少違ってもそのまま使える。
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 const { createCanvas, loadImage } = require('canvas');
 
 const root = path.resolve(__dirname, '..');
@@ -24,6 +25,26 @@ const HEAD_RATIO = 0.46;   // キャラ全体の高さに対する「顔まわ�
 // みゅあはうさ耳が高く伸びているため、上端から切ると耳が枠の真ん中に来て顔が下へ押し出され、
 // 丸く切ったときに顔が中心から外れてしまう。少し下げて顔が真ん中に来るようにする
 const HEAD_TOP_SKIP = 0.09;
+// 助手ごとに切り出し方が違うとき(髪や耳の伸び方が違う)は、ここへ上書きを足す。
+// 書かなければ上の既定値をそのまま使う
+const PER_ASSISTANT = {
+  // myua: { headRatio: 0.46, headTopSkip: 0.09 },
+};
+
+// どの接頭辞を処理するかは data/assistants.js の ASSISTANTS から取る。
+// 助手を増やしたとき、このツール側を書き換えなくても顔が作られるようにするため
+const assistantPrefixes = () => {
+  try {
+    const src = fs.readFileSync(path.join(root, 'monster-hero/data/assistants.js'), 'utf8');
+    const ctx = {};
+    vm.createContext(ctx);
+    vm.runInContext(`${src}\nglobalThis.__p = ASSISTANTS.map(a => a.imagePrefix).filter(Boolean);`, ctx);
+    return [...new Set(ctx.__p)];
+  } catch (e) {
+    console.log(`data/assistants.js を読めませんでした(${e.message})。myua だけを処理します`);
+    return ['myua'];
+  }
+};
 
 // 透明でない画素の範囲(左右上下)を返す
 const opaqueBounds = (ctx, w, h) => {
@@ -59,9 +80,16 @@ const headCenterX = (ctx, w, top, side) => {
 
 const run = async () => {
   fs.mkdirSync(outDir, { recursive: true });
-  const files = fs.readdirSync(srcDir).filter(f => /^myua_.+\.png$/i.test(f)).sort();
+  const prefixes = assistantPrefixes();
+  const pattern = new RegExp(`^(${prefixes.join('|')})_.+\\.png$`, 'i');
+  const files = fs.readdirSync(srcDir).filter(f => pattern.test(f)).sort();
   if (files.length === 0) { console.log('切り出す画像がありません'); return; }
+  console.log(`対象の助手: ${prefixes.join(', ')}`);
   for (const file of files) {
+    const prefix = prefixes.find(p => file.toLowerCase().startsWith(`${p.toLowerCase()}_`));
+    const tune = PER_ASSISTANT[prefix] || {};
+    const headRatio = Number.isFinite(tune.headRatio) ? tune.headRatio : HEAD_RATIO;
+    const headTopSkip = Number.isFinite(tune.headTopSkip) ? tune.headTopSkip : HEAD_TOP_SKIP;
     const img = await loadImage(path.join(srcDir, file));
     const src = createCanvas(img.width, img.height);
     const sctx = src.getContext('2d');
@@ -69,8 +97,8 @@ const run = async () => {
     const bounds = opaqueBounds(sctx, img.width, img.height);
     if (!bounds) { console.log(`NG: ${file} は全部透明です`); continue; }
     const height = bounds.bottom - bounds.top + 1;
-    const side = Math.round(height * HEAD_RATIO);
-    let sy = Math.round(bounds.top + height * HEAD_TOP_SKIP);
+    const side = Math.round(height * headRatio);
+    let sy = Math.round(bounds.top + height * headTopSkip);
     const cx = headCenterX(sctx, img.width, sy, side);
     let sx = Math.round(cx - side / 2);
     sx = Math.max(0, Math.min(img.width - side, sx));

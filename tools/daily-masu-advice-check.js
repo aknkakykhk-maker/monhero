@@ -1,4 +1,5 @@
-// みゅあの日次ワンポイント案内について、本文データと通常・DEBUGの表示経路を確認する。
+// 助手の日次ワンポイント案内について、本文データと通常・DEBUGの表示経路を確認する。
+// 本文は助手ごとに用意するので、どの助手を選んでいても5件そろっていることを見る。
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -14,16 +15,26 @@ const check = (name, ok, detail = '') => {
 
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(`${assistantsSrc}\nglobalThis.__scene = ASSISTANT_SCENES.dailyMasuAdvice;`, ctx);
-const scene = ctx.__scene;
+vm.runInContext(`${assistantsSrc}\nglobalThis.__d = { scene: ASSISTANT_SCENES.dailyMasuAdvice, ASSISTANTS, assistantSceneLines };`, ctx);
+const { scene, ASSISTANTS, assistantSceneLines } = ctx.__d;
+// その助手が実際に話す本文だけを取り出す(ほかの助手のぶんは混ざらない)
+const linesFor = (id) => assistantSceneLines('dailyMasuAdvice', null, 1, id);
 
 check('ワンポイント本文のsceneが登録されている', !!scene);
-check('本文5件がline packからsceneへ渡されている', scene?.lines?.length === 5, `${scene?.lines?.length || 0}件`);
+check('助手ごとに本文5件がline packからsceneへ渡されている',
+  ASSISTANTS.every(who => linesFor(who.id).length === 5),
+  ASSISTANTS.map(who => `${who.name}=${linesFor(who.id).length}件`).join(' / '));
 check('本文がすべて空でない', scene?.lines?.every(line => typeof line.t === 'string' && line.t.trim().length > 0));
+check('助手ごとに別の本文になっている',
+  ASSISTANTS.length < 2 || new Set(ASSISTANTS.map(who => linesFor(who.id).map(l => l.t).join('|'))).size === ASSISTANTS.length);
 check('登録数7体は表示条件を満たす', source.includes('eligible:count < 8'));
 check('登録数8体以上は通常表示しない', source.includes('masuMons.length >= 8'));
 check('通常表示とDEBUG表示が同じsceneを参照する',
-  (source.match(/assistantSceneById\('dailyMasuAdvice'\)/g) || []).length === 1);
+  (source.match(/assistantSceneLinesFor\('dailyMasuAdvice'\)/g) || []).length === 1);
+// 本文は「いま選んでいる助手」のものを出す。ここが固定だと、ききを選んでもみゅあが話してしまう
+check('本文は選んでいる助手のものを出す',
+  source.includes("const assistantSceneLinesFor = (scene) =>")
+    && source.includes('assistantSceneLines(scene, null, assistantBondLevelNow, selectedAssistantId)'));
 check('DEBUGの8体確認は対象外モーダルを表示する',
   source.includes('表示条件の対象外です。') && source.includes('eligible=dailyMasuAdvice.eligible!==false'));
 check('本文領域に可視色と最小高さがある',
