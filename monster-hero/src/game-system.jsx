@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 13:44"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 14:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4672,6 +4672,32 @@ const RANKING_SELECT_NO_PARTY = 'user_name,hero,score,level,icon';
 // ブリーダーLvの一覧は名前・レベル・アイコンしか出さない。全件をページ送りで読むので、
 // 使わない列(hero/score)まで運ばない
 const RANKING_SELECT_BREEDER = 'user_name,level,icon';
+
+// ==================== 周回の結果(ターン数・到達WAVE) ====================
+// 「クリアしたときの累計ターン数」と「どのWAVEで終わったか」をスコアランキングに出すための列。
+// rankings へ後から足す列なので、SQLをまだ適用していない環境が必ず存在する。
+//
+// 【なぜ気を付けるか】
+// PostgRESTは知らない列を送る/選ぶと400を返す。ここを素通しにすると、列が無い環境では
+// スコアの保存そのものが失敗し、ランキングも開けなくなる(既存の記録を壊しはしないが、
+// 新しい記録が1件も残らなくなる)。そこで、一度400で気付いたらその後は列を外して動く。
+// SQLを適用すればアプリ側は何もしなくても自動的に載りはじめる。
+const RANKING_RUN_STATS_COLUMNS = 'turns,reached_wave';
+let _rankingRunStatsUnavailable = false;
+const rankingRunStatsUnavailable = () => _rankingRunStatsUnavailable;
+// 「その列は無い」という応答かどうか。通信の失敗や権限の失敗と取り違えない
+//   選ぶとき  … 400 + 42703 (column rankings.turns does not exist)
+//   送るとき  … 400 + PGRST204 (Could not find the 'turns' column of 'rankings')
+const _isMissingColumnError = (status, body) => {
+  if (status !== 400) return false;
+  const text = String(body || '');
+  if (!/turns|reached_wave/i.test(text)) return false;
+  return /PGRST204|PGRST100|42703|does not exist|Could not find the/i.test(text);
+};
+// 取得する列。ターン数を使う一覧(スコア)にだけ足す。ブリーダーLvの一覧は
+// 全件をページ送りで読むので、使わない列を運ばせない
+const rankingSelectWithRunStats = (base) =>
+  (_rankingRunStatsUnavailable || !base || !base.includes('score')) ? base : `${base},${RANKING_RUN_STATS_COLUMNS}`;
 // bond_levels の1行を、rankings から集計したものと同じ形のエントリへ直す。
 // 表示側(renderBondRankingEntry)はどちらから来た行かを知らなくてよい
 const bondLevelRowToEntry = (row) => {
@@ -4806,7 +4832,9 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
   // diff を省略(null)すると難易度で絞らず、全難易度をまとめて取る
   const normalizedDifficulty = diff == null ? null : normalizeRankingDifficulty(diff);
   // 必要な列だけを受け取り、過去記録が多い難易度でもレスポンスを不用意に大きくしない。
-  const select = selectColumns || RANKING_SELECT_FULL;
+  // ターン数・到達WAVEはSQLをまだ適用していない環境では選べないので、そのときは外れる。
+  const baseSelect = selectColumns || RANKING_SELECT_FULL;
+  const select = rankingSelectWithRunStats(baseSelect);
   // DBに保存する正規keyと同じ値をeqで取得する。ilikeによる別系統の
   // 取得条件を残さず、NormalもHardと完全に同じSELECT経路にする。
   const difficultyFilter = normalizedDifficulty == null ? '' : `&difficulty=eq.${encodeURIComponent(normalizedDifficulty)}`;
@@ -4826,7 +4854,16 @@ const sbFetchRankings = async (diff, limit=RANKING_SCORE_LIMIT, order='score.des
     const res = await fetch(url, { headers: SB_HEADERS, signal: controller.signal });
     const body = await res.text();
     rankingLog(requestId, 'supabase-response', { difficulty: normalizedDifficulty, endedAt: new Date().toISOString(), elapsedMs: Date.now() - startedAt, status: res.status, statusText: res.statusText, ok: res.ok, dataCount: res.ok ? (() => { try { const parsed = JSON.parse(body); return Array.isArray(parsed) ? parsed.length : null; } catch { return null; } })() : null, error: res.ok ? null : body });
-    if (!res.ok) throw new Error(`fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    if (!res.ok) {
+      // ターン数・到達WAVEの列がまだ無い環境。列を外して取り直せば今までどおり表示できる。
+      // 一度気付いたら以後は最初から外して送るので、この寄り道は多くても1回きり
+      if (select !== baseSelect && _isMissingColumnError(res.status, body)) {
+        _rankingRunStatsUnavailable = true;
+        rankingLog(requestId, 'run-stats-columns-missing', { status: res.status });
+        return sbFetchRankings(diff, limit, order, offset, requestId, baseSelect);
+      }
+      throw new Error(`fetch ${res.status} ${res.statusText}; url=${url}; response=${body || '(empty)'}`);
+    }
     try {
       return JSON.parse(body);
     } catch (e) {
@@ -4884,6 +4921,9 @@ const sbInsertScore = async (row) => {
     throw new Error('ranking clear_id is required; unsafe insert skipped');
   }
   const normalizedRow = { ...row, difficulty: normalizeRankingDifficulty(row?.difficulty) };
+  // ターン数・到達WAVEの列がまだ無い環境では、その2つを送ると400になり
+  // 記録そのものが保存できない。無いと分かっている間は最初から外して送る
+  if (_rankingRunStatsUnavailable) { delete normalizedRow.turns; delete normalizedRow.reached_wave; }
   const requestId = `insert-${normalizedRow.difficulty}-${Date.now()}`;
   const query = '?on_conflict=clear_id';
   const prefer = 'resolution=ignore-duplicates,return=minimal';
@@ -4911,6 +4951,17 @@ const sbInsertScore = async (row) => {
       errorCode, isUniqueViolation, error: res.ok ? null : (body || res.statusText)
     });
     if (!res.ok) {
+      // ターン数・到達WAVEの列がまだ無い環境。ここで諦めるとスコアが1件も残らなくなるので、
+      // その2つを外して必ず送り直す(記録を落とさないことを最優先にする)。
+      // 一度気付けば以後は最初から外して送るので、この寄り道は多くても1回きり
+      if (!_rankingRunStatsUnavailable
+          && (normalizedRow.turns !== undefined || normalizedRow.reached_wave !== undefined)
+          && _isMissingColumnError(res.status, body)) {
+        _rankingRunStatsUnavailable = true;
+        rankingLog(requestId, 'run-stats-columns-missing', { status: res.status });
+        const { turns, reached_wave, ...withoutRunStats } = normalizedRow;
+        return sbInsertScore(withoutRunStats);
+      }
       const error = new Error(`insert ${res.status}: ${body || res.statusText}`);
       error.status = res.status;
       error.body = body;
@@ -4926,6 +4977,13 @@ const sbInsertScore = async (row) => {
     clearTimeout(timer);
   }
 };
+
+// 検査(tools/ranking-run-stats-check.js)からスコア送信だけを呼べるようにしておく。
+// 「turns/reached_wave の列がまだ無い環境でもスコアが保存できること」は、
+// 実際に1周遊ばないと通らない経路だと確かめるのに何分もかかるうえ、
+// 落ちたときの被害(記録が1件も残らない)が大きいので、ここだけ直接叩けるようにする。
+// 読み出し専用の参照を1つ足すだけで、ゲーム側の動きは何も変わらない。
+try { if (typeof window !== 'undefined') window.__mhTestHooks = { ...(window.__mhTestHooks || {}), sbInsertScore, rankingRunStatsUnavailable }; } catch {}
 
 // 全国保存と端末内フォールバックの成否を混同しない共通送信経路。
 // insertが失敗しても診断情報を端末側の行へ残すが、全国保存成功としては返さない。
@@ -5684,6 +5742,16 @@ function MonsterHeroGame() {
   // 登録後の個体が到達する絆Lvと同じ値になる。
   // これが無いと、ベースモンで遊んだランは絆Lvランキングへ1件も載らなかった
   const runHeroBondLevelRef = useRef(null);
+  // その周回が「どのWAVEで終わったか」と「クリアしたときの累計ターン数」。
+  // スコアランキングへはこの2つを載せる。ターン数はクリアしたときだけ入れる:
+  // totalTurnCount はWAVEを倒しきった瞬間にだけ足されるので、負け・リタイアの周回では
+  // 最後に挑んでいたWAVEのぶんが入らない。それをクリアの記録と同じ列へ並べると
+  // 「少ないターンで終えた」ように見えてしまうため、クリア以外は入れない。
+  const runEndWaveRef = useRef(null);
+  const runClearTurnsRef = useRef(null);
+  // totalTurnCount のstateは描画のため。送信はレンダーを挟まず読むことがあるので、
+  // 加算のたびに同じ値をこのrefへも書き、1周ぶん古い値を送らないようにする
+  const totalTurnCountRef = useRef(0);
   const [finalRewardSummary, setFinalRewardSummary] = useState(null); // 最終リザルト画面に出す今回の獲得内訳
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
@@ -5989,7 +6057,10 @@ function MonsterHeroGame() {
     // 同梱の絵で置き換えられる相手だけ落とす。どのモンスターか分からない古い記録は、
     // 埋め込まれた絵をそのまま残す(消すと絵文字表示に落ちてしまうため)
     const stripPartyImages = (party) => (Array.isArray(party) ? party.map(m => (m && m.imgUrl && rankingMonsterIdOf(m)) ? { ...m, imgUrl: undefined } : m) : party);
-    const toEntry = (r) => ({ userName: r.user_name, hero: r.hero, party: stripPartyImages(r.party), score: r.score, level: r.level, icon: r.icon });
+    // turns / reachedWave は列を足す前の記録には無いので、そのときはundefinedのまま渡す。
+    // 端末内へ退避した記録は最初から画面用の名前(reachedWave)で持っているため、両方を見る
+    const toEntry = (r) => ({ userName: r.user_name, hero: r.hero, party: stripPartyImages(r.party), score: r.score, level: r.level, icon: r.icon,
+      turns: r.turns ?? undefined, reachedWave: r.reached_wave ?? r.reachedWave ?? undefined });
     // 過去の多重送信はidが異なるため、プレイ内容そのものをキーにして畳む。
     const rowKey = (r) => `v:${r?.user_name}|${r?.score}|${r?.level}|${r?.hero}|${JSON.stringify(r?.party || null)}|${r?.icon || ''}`;
     const mergeRows = (a, b) => {
@@ -7119,7 +7190,14 @@ function MonsterHeroGame() {
     const heroName = (mainHero && (ALL_PLAYER_MONSTERS[mainHero.id]?.name || mainHero.name)) || 'Unknown';
     const level = breederLevel.level;
     const icon = breederIcon;
-    const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level, icon, clear_id: clearId };
+    // どのWAVEで終わったか(常に)と、クリアしたときの累計ターン数(クリア時だけ)。
+    // 値が取れないときは列ごと付けない(0を入れて「0ターンでクリア」に見せない)
+    const reachedWave = Number.isFinite(Number(runEndWaveRef.current)) ? Number(runEndWaveRef.current) : null;
+    const clearTurns = Number.isFinite(Number(runClearTurnsRef.current)) && Number(runClearTurnsRef.current) > 0
+      ? Number(runClearTurnsRef.current) : null;
+    const row = { difficulty: diff, user_name: name, hero: heroName, party, score: finalScore, level, icon, clear_id: clearId,
+      ...(reachedWave != null ? { reached_wave: reachedWave } : {}),
+      ...(clearTurns != null ? { turns: clearTurns } : {}) };
     // 絆Lvの正本テーブルへも同じ内容を書く(1人1個体1行で上書き)。
     // 結果画面はスコア送信の完了を待つので、こちらは待たせない(待つと最大8秒ぶん
     // リザルトが遅れる)。書けなくても次の周回で書き直されるし、一覧は記録側の
@@ -7138,7 +7216,9 @@ function MonsterHeroGame() {
       row,
       saveLocal: async (error) => {
         console.error('[ranking] supabase submit failed, falling back to local:', error && error.message ? error.message : error);
-        const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, clearId, at: Date.now(), nationalSaved: false, nationalError: { message: error?.message || String(error), status: error?.status || null, code: error?.code || null, body: error?.body || null } };
+        const entry = { userName: name, hero: heroName, party, score: finalScore, diff, level, icon, clearId, at: Date.now(),
+          ...(reachedWave != null ? { reachedWave } : {}), ...(clearTurns != null ? { turns: clearTurns } : {}),
+          nationalSaved: false, nationalError: { message: error?.message || String(error), status: error?.status || null, code: error?.code || null, body: error?.body || null } };
         const rows = await storeGet(`mh_rank_${diff}`, [], false);
         const list = Array.isArray(rows) ? rows.slice() : [];
         // サーバー側と同じく、1プレイごとに1件として積む
@@ -8453,6 +8533,9 @@ function MonsterHeroGame() {
         // 以前はスコア送信(全国ランキングへの通信)の完了を待ってから付与していたため、
         // 通信が遅い・不安定なときにリザルトの獲得内訳がなかなか表示されなかった。
         try {
+          // 敗北。倒しきれなかったWAVEがあるのでターン数は残さず、どこまで来たかだけ残す
+          runEndWaveRef.current = wave;
+          runClearTurnsRef.current = null;
           await awardRunRewards(Math.max(0, wave - 1));
         } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
         // リザルト自体は背面に表示するが、ランキング保存の成否が確定するまでは全面ロックを
@@ -8850,6 +8933,9 @@ function MonsterHeroGame() {
     setResultProcessing(true);
     // 敗北時と同じく、端末内で完結する経験値・ダイヤの付与とリザルト表示を先に済ませる。
     // ランキング保存中は全面ロックを維持するが、POSTには8秒の上限がある。
+    // リタイア。敗北と同じく、到達WAVEだけを残す
+    runEndWaveRef.current = wave;
+    runClearTurnsRef.current = null;
     try { await awardRunRewards(Math.max(0, wave - 1)); } catch {}
     setShowQuitConfirm(false);
     setGaveUp(true);
@@ -9124,6 +9210,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // enemyDefeatResolvedRefの同期ロック後に確定するため、同じWAVEの勝利処理が重なっても1回だけ加算される。
     const newTotalTurnCount=totalTurnCount+turnCount;
     setTotalTurnCount(newTotalTurnCount);
+    totalTurnCountRef.current=newTotalTurnCount;
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
     const distanceBreakThreshold=pendingUltimateDistanceBreak(newTotalTurnCount,ultimateWeakenedDistancesRef.current,wave,specialRuleDifficulty);
     if(distanceBreakThreshold){
@@ -9661,6 +9748,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setRunFinalizing(true);
       setResultProcessing(true);
       try {
+        // クリア。全WAVEを倒しきったので、かかった累計ターン数を記録に残す
+        runEndWaveRef.current = 10;
+        runClearTurnsRef.current = totalTurnCountRef.current;
         await awardRunRewards(10);
         await recordClearOnce();
       } catch (e) { console.error('[result] award rewards failed:', e && e.message ? e.message : e); }
@@ -9941,6 +10031,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 通常・クイック・プロ・極限・練習/デバッグの共通開始点で、新しいランだけ累計を初期化する。
     if (w === 1) {
       setTotalTurnCount(0);
+      // 前のランの値がランキングへ紛れ込まないよう、送信用の控えもここで消す
+      totalTurnCountRef.current = 0;
+      runEndWaveRef.current = null;
+      runClearTurnsRef.current = null;
       ultimateWeakenedDistancesRef.current=[]; setUltimateWeakenedDistances([]);
       ultimateDistanceBreakPendingRef.current=null; setUltimateDistanceBreakPending(null); setUltimateDistanceBreakReveal(null);
     }
@@ -10783,6 +10877,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const breederLevelValue = finiteNumber(entry?.level);
     const scoreLabel = Number.isFinite(scoreValue) ? `${scoreValue.toLocaleString()} pt` : 'スコア情報なし';
     const breederLevelLabel = Number.isFinite(breederLevelValue) && breederLevelValue>0 ? `ブリーダーLv.${breederLevelValue}` : 'ブリーダーLv情報なし';
+    // クリアした記録は「何ターンで終えたか」、途中で終わった記録は「どのWAVEまで行ったか」。
+    // ターン数はクリアしたときだけ入るので、この2つが同じ意味で混ざることはない。
+    // どちらも入っていない古い記録では、その場所に何も出さない(0や「—」を作らない)
+    const turnsValue = finiteNumber(entry?.turns);
+    const reachedWaveValue = finiteNumber(entry?.reachedWave);
+    const runStat = (Number.isFinite(turnsValue) && turnsValue>0) ? { text: `${turnsValue}ターンでクリア`, cleared: true }
+      : (Number.isFinite(reachedWaveValue) && reachedWaveValue>0) ? { text: `WAVE ${reachedWaveValue} で終了`, cleared: false }
+      : null;
     return (
       <article key={`score-${entry?.userName||'unknown'}-${index}`} data-ranking-kind="score" role="button" tabIndex={0} aria-label={`${entry?.userName||'名無しのブリーダー'}のパーティー詳細を見る`} onClick={()=>setRankingPartyDetail(entry)} className={`${rankingCardClass(index)} px-2 py-1.5 active:scale-[.99] cursor-pointer`}>
         <div className="flex items-center gap-1.5 min-w-0">
@@ -10790,6 +10892,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="flex flex-1 items-baseline gap-1 min-w-0"><span className="text-[10px] font-black text-white truncate">{entry?.userName||'名無しのブリーダー'}</span><span className="text-[7px] text-indigo-300 whitespace-nowrap shrink-0">{breederLevelLabel}</span></div>
           <div className="text-right text-[10px] font-black whitespace-nowrap text-indigo-300">{scoreLabel}</div>
         </div>
+        {runStat&&<div data-ranking-run-stat={runStat.cleared?'turns':'wave'} className={`mt-0.5 text-right text-[8px] font-black whitespace-nowrap ${runStat.cleared?'text-amber-300':'text-slate-400'}`}>{runStat.cleared&&<Crown size={8} className="inline mr-0.5 mb-px"/>}{runStat.text}</div>}
         {/* 使っていたモンスターは詳細でだけ見せる。一覧に絵を並べると、
             50件ぶんで200枚になり開いた瞬間に引っかかる(実測 tools/ranking-dye-cost-check.js)。
             何が開くのかが分かるよう、記号ではなく言葉で出す */}
