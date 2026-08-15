@@ -16,13 +16,42 @@ const help = fs.readFileSync('monster-hero/data/help.js', 'utf8');
 // ---- カード定義 ----
 assert(breeder.includes(`meloso: ["メロソの解析", "メロソの予測", "メロソの最適解"]`));
 assert(breeder.includes(`id:'meloso',  baseName:"メロソの解析"`));
+// 強化のたびに baseValue+step を計算するため、stepが無いとNaNになる。
+// メロソは回復量が変わらないカードなので step:0 を明示しておく
+assert(/id:'meloso',[^\n]*step:0[,\s]/.test(breeder), 'メロソに step が無い(強化するとbaseValueがNaNになる)');
 assert(breeder.includes(`icon:MELOPANMAN_ICON`) && breeder.includes(`subType:'heal_guard_meloso'`));
 const starter = breeder.match(/const STARTER_TEACHING_IDS = \[([^\n]+)\]/)[1];
 assert(!starter.includes('meloso') && starter.split(',').length === 6);
 assert(breeder.includes(`id:'meloso', name:"ブリーダーカード「メロソ」", type:'breeder', icon:MELOPANMAN_ICON, cost:1500`));
 
 // ---- 実処理 ----
-assert(game.includes(`effectiveMaxHp*0.3*effMul`) && game.includes(`effectiveMaxGuts*0.3*effMul`));
+assert(game.includes(`liveEffectiveMaxHp()*0.3*effMul`) && game.includes(`liveEffectiveMaxGuts()*0.3*effMul`));
+
+// ---- ターン中の実効最大値は「いまの値」を読む ----
+// みゅあ・かどみうむ・回復カードは同じターンにライフ/ガッツの上限を上げる。
+// stateから作った effectiveMaxHp はレンダー時点の値なので、進行中のターンには反映されない。
+// そのまま使うと回復が古い上限で頭打ちになり、新しい上限で描かれるゲージが満タンにならない
+// (「みゅあ＋メロソ(3枚)で次ターン全回復にならない」不具合)。
+assert(game.includes(`const liveEffectiveMaxHp = () => resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct'));`));
+assert(game.includes(`const liveEffectiveMaxGuts = () => resolveEffectiveMaxStat(maxGutsRef.current, livePermaBuff('muaGutsPct'));`));
+{
+  // handleEnemyTurn の先頭から handleNextWave の手前まで(=ターン処理の本体)には、
+  // stateから作った effectiveMaxHp / effectiveMaxGuts を残さない
+  const turnStart = game.indexOf('const handleEnemyTurn = async (lastActionType');
+  const turnEnd = game.indexOf('const handleNextWave = async ()');
+  assert(turnStart > 0 && turnEnd > turnStart);
+  const turnCode = game.slice(turnStart, turnEnd);
+  const staleHp = /(?<!live)effectiveMaxHp(?!\s*:)/.exec(turnCode);
+  const staleGuts = /(?<!live)effectiveMaxGuts(?!\s*:)/.exec(turnCode);
+  assert(!staleHp, `ターン処理でレンダー時点の effectiveMaxHp を使っている: ${staleHp && turnCode.slice(Math.max(0,staleHp.index-60), staleHp.index+60)}`);
+  assert(!staleGuts, `ターン処理でレンダー時点の effectiveMaxGuts を使っている: ${staleGuts && turnCode.slice(Math.max(0,staleGuts.index-60), staleGuts.index+60)}`);
+}
+// permaBuffs の書き込みは writePermaBuffs に集約し、refとstateがずれないようにする
+{
+  const rawPermaCalls = (game.match(/setPermaBuffs\(/g) || []).length;
+  assert.strictEqual(rawPermaCalls, 1,
+    `setPermaBuffs を直接呼んでいる箇所が${rawPermaCalls}件ある(writePermaBuffs の中だけにすること)`);
+}
 assert(game.includes(`currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul`));
 assert(game.includes(`level>=1 && usedCards.length>=2`) && game.includes(`setNextTurnBuff('takenDamageMult',1-0.5*effMul)`));
 assert(game.includes(`level>=2 && usedCards.length>=3`) && game.includes(`setNextTurnBuff('melosoFullRecoveryMult',effMul)`));
@@ -34,7 +63,7 @@ const gutsCostAt = game.indexOf(`setGuts(p=>Math.max(0,p-getCardGuts(card)));`);
 const melosoAt = game.indexOf(`if (card.id==='meloso')`);
 assert(gutsCostAt > 0 && melosoAt > gutsCostAt, 'ガッツの消費より先にメロソの回復が走っている');
 // 回復後のライフはローカル値で持ち回り、敵ターンへ引数で渡す(古いstateを読ませない)
-assert(game.includes(`hpBeforeEnemyAttack=Math.min(effectiveMaxHp,hpBeforeEnemyAttack+cardHeal)`));
+assert(game.includes(`hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+cardHeal)`));
 assert(/await handleEnemyTurn\([^)]*hpBeforeEnemyAttack\)/.test(game));
 
 // ---- 次ターン予約の消費は「更新関数の外」で1回だけ行う ----
@@ -164,9 +193,9 @@ exTurn=advanceCombatTurn(exAfter);
 assert.strictEqual(exTurn.damage,88); // 118の25%減
 
 // 回復量は「不足分の割合」ではなく「最大値の割合」を現在値へ加える
-assert(game.includes(`p+Math.floor(effectiveMaxHp*recoveryMult)`));
-assert(game.includes(`p+Math.floor(effectiveMaxGuts*recoveryMult)`));
-assert(!game.includes(`(effectiveMaxHp-p)*recoveryMult`) && !game.includes(`(effectiveMaxGuts-p)*recoveryMult`));
+assert(game.includes(`p+Math.floor(liveEffectiveMaxHp()*recoveryMult)`));
+assert(game.includes(`p+Math.floor(liveEffectiveMaxGuts()*recoveryMult)`));
+assert(!game.includes(`(liveEffectiveMaxHp()-p)*recoveryMult`) && !game.includes(`(liveEffectiveMaxGuts()-p)*recoveryMult`));
 for (const [before, after] of [[20,70],[50,100],[80,100]]) {
   const r = startPlayerTurn({...base,hp:before,guts:before,turnBuffs:{melosoFullRecoveryMult:0.5}});
   assert.strictEqual(r.hp, after);
