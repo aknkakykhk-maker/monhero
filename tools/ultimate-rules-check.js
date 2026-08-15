@@ -48,4 +48,9 @@ assert(source.includes('ultimateWeakenedDistancesRef.current=[]; setUltimateWeak
 assert(source.includes('setWaveBuffs({}); // WAVE毎リセット')&&!source.includes("addWaveBuff('ultimateDistance"),'distance breaks must not be WAVE buffs');
 assert(source.includes('data-distance-broken')&&source.includes('与ダメ ↓50%'),'empty and occupied broken slots must stay visibly marked');
 assert(source.includes('data-ultimate-distance-break-warning')&&source.includes('data-ultimate-distance-break-reveal'),'result warning and one-time reveal must exist');
+for(const text of ['ULTIMATE 特殊ルール','累計ターン圧','覚醒低下','DISTANCE BREAK','現在の累計ターン：','現在の弱体距離：','※距離強化は対象外']) {
+  assert(source.includes(text),`ULTIMATE rule overlay must show: ${text}`);
+}
+assert(source.includes("join(' / ')||'なし'"),'rule and reveal overlays must name active distances or explicitly show none');
+assert(source.includes('repeating-linear-gradient')&&source.includes('border-red-400')&&source.includes('⚠ 与ダメ ↓50%'),'broken slots must combine warning badge, corrupted texture, and danger border');
 console.log('OK: ULTIMATE特殊ルール①・②（ターン強化、能力低下、距離弱体化、予測一致、デバッグ限定、既存ルール分離）');

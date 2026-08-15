@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 10:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 10:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13331,7 +13331,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     return true; // 全体系は全スロット
                   }).map(idx=>({idx,card:hand[idx]}));
                   const distanceBroken=ultimateWeakenedDistances.includes(i);
-                  return(<button key={i} data-slot-index={i} data-distance-broken={distanceBroken?'true':undefined} onClick={()=>{
+                  return(<button key={i} data-slot-index={i} data-distance-broken={distanceBroken?'true':undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?'（与ダメージ50%に弱体化中）':''}`} onClick={()=>{
                     if(isBusy)return;
                     if(pendingCard!=null && canAssign){
                       setCardAssignments(p=>({...p,[pendingCard]:i}));
@@ -13341,8 +13341,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       setSlotSettle(i);
                       setTimeout(()=>{ setSlotSettle(null); }, 500);
                     }
-                  }} disabled={isBusy} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards')):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards')))))}:(distanceBroken?{boxShadow:'inset 0 0 0 2px rgba(248,113,113,.9), inset 0 0 28px rgba(88,28,135,.85)'}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined))}>
-                    {distanceBroken&&<><div className="absolute inset-0 rounded-lg pointer-events-none z-[15]" style={{background:'linear-gradient(180deg,rgba(76,29,149,.34),rgba(127,29,29,.48))'}}></div><div className="absolute -top-2 left-1/2 -translate-x-1/2 z-[35] whitespace-nowrap rounded-full border border-red-300 bg-purple-950 px-1.5 py-0.5 text-[7px] font-black text-red-100 shadow-lg">与ダメ ↓50%</div></>}
+                  }} disabled={isBusy} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards')):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards')))))}:(distanceBroken?{backgroundColor:'rgb(24,5,25)',boxShadow:'inset 0 0 0 2px rgba(248,113,113,.95), inset 0 0 34px rgba(76,5,25,.95), 0 0 13px rgba(220,38,38,.5)'}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined))}>
+                    {distanceBroken&&<>
+                      <div className="absolute inset-0 rounded-lg pointer-events-none z-[15]" style={{background:'repeating-linear-gradient(135deg,rgba(0,0,0,.05) 0 7px,rgba(127,29,29,.36) 8px 9px),radial-gradient(circle at 50% 40%,rgba(88,28,135,.42),rgba(24,5,25,.78))'}}></div>
+                      <div className="absolute inset-[2px] rounded-lg border border-red-300/80 pointer-events-none z-[45]" style={{boxShadow:'inset 0 0 12px rgba(239,68,68,.7)'}}></div>
+                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-[65] whitespace-nowrap rounded-full border-2 border-red-200 bg-red-950 px-1.5 py-0.5 text-[7px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,.9)]">⚠ 与ダメ ↓50%</div>
+                      {!s&&<div className="absolute inset-0 z-[25] flex items-center justify-center pointer-events-none text-red-200/80"><span className="text-2xl font-black">⚠</span></div>}
+                    </>}
                     {/* 名前の行。勇者モンには王冠を付ける。どれが勇者モンか分からないと
                         「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
                     <div className={`h-[25%] flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[7px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[7px] font-black text-indigo-300">×{assignedCount}</span>}</div>
@@ -14175,11 +14180,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="mt-2 text-2xl font-black italic tracking-wider text-red-100">DISTANCE BREAK</div>
           <div className="mt-5 text-xl font-black text-white">{RANGE_LABELS[ultimateDistanceBreakReveal]}距離 弱体化</div>
           <div className="mt-2 rounded-xl border border-red-300/50 bg-black/40 py-2 text-sm font-black text-red-200">与ダメージ 50%</div>
+          <div className="mt-4 border-t border-red-300/20 pt-3 text-[10px] text-purple-100"><span className="font-black text-slate-400">現在の弱体距離：</span><br/><span className="font-black">{ultimateWeakenedDistances.map(index=>`${RANGE_LABELS[index]}距離`).join(' / ')||'なし'}</span></div>
         </div>
       </div>}
       {gameState==='BATTLE'&&extremeRuleOpen&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:90500,background:'radial-gradient(circle,rgba(112,26,117,.58),rgba(2,6,23,.9))'}} onClick={()=>{setExtremeRuleOpen(false);setIsBusy(false);}} role="dialog" aria-modal="true" aria-label="極限ルール発動">
         <div className="w-full max-w-xs rounded-3xl border-2 border-fuchsia-300 bg-slate-950/95 px-5 py-6 text-center shadow-[0_0_42px_rgba(217,70,239,.65)]" style={{animation:'mhExtremeRuleIn .38s ease-out'}}>
-          {(()=>{const specialDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);return <>
+          {(()=>{const specialDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);return specialDifficulty===ULTIMATE_DEBUG_SETTING.id?<>
+            <div className="text-[11px] font-black tracking-[.12em] text-amber-300">ULTIMATE 特殊ルール</div>
+            <div className="mt-3 grid gap-1.5 text-left">
+              {[
+                ['1','累計ターン圧','累計ターン×0.5% 次WAVEの敵が強化'],
+                ['2','覚醒低下','このWAVEのターン数×0.5% 次回の攻撃/防御/精神覚醒が低下'],
+                ['3','DISTANCE BREAK','累計50ターンごとに、未弱体の距離が1つ追加で与ダメージ50%'],
+              ].map(([number,title,text])=><div key={number} className="rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"><div className="text-[9px] font-black text-fuchsia-300">RULE {number}｜{title}</div><div className="mt-0.5 text-[10px] font-bold leading-snug text-white">{text}</div>{number==='2'&&<div className="mt-0.5 text-[8px] font-black text-amber-300">※距離強化は対象外</div>}</div>)}
+            </div>
+            <div className="mt-2 rounded-xl border border-amber-300/40 bg-black/45 px-3 py-2 text-left text-[10px] leading-relaxed text-slate-200">
+              <div><span className="text-slate-400">現在の累計ターン：</span><b className="text-white">{totalTurnCount}</b></div>
+              <div><span className="text-slate-400">現在の弱体距離：</span><b className={ultimateWeakenedDistances.length?'text-red-200':'text-white'}>{ultimateWeakenedDistances.map(index=>`${RANGE_LABELS[index]}距離`).join(' / ')||'なし'}</b></div>
+            </div>
+          </>:<>
             <div className="text-[11px] font-black tracking-[.16em] text-amber-300">⚠ {specialDifficulty}特殊ルール</div>
             <div className="mt-3 space-y-2 text-left text-[11px] text-slate-200">{extremeSpecialRuleLines(specialDifficulty).map(([label,value])=><div key={label}>・{label} <b className="text-white">{value}</b></div>)}</div>
           </>;})()}
