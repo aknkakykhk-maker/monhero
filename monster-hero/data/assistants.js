@@ -2035,6 +2035,22 @@ const ASSISTANT_KIKI_INTRO = [
 // この会話の中だけで使う、2人がお互いを呼ぶ名前。画面の見出しにも使う
 const ASSISTANT_KIKI_INTRO_CALLS = { mua: 'ひめちん', kiki: 'みゅあちん' };
 
+// ---------- イベント回想 ----------
+// 一度見た会話イベントを、プロフィール画面から何度でも見返せるようにするための一覧。
+// 台本(script)は既存のシーン定義をそのまま参照し、ここで二重に持たない。
+// 助手加入・特別会話などが増えたら、この配列へ1件足すだけで回想一覧に並ぶ(画面側は共通)。
+//
+//   id          … イベントの識別子
+//   title       … 回想一覧・再生画面に出すタイトル
+//   script      … 再生する台本({who,e,t}の配列)。既存のASSISTANT_KIKI_INTROなどをそのまま渡す
+//   calls       … 会話の中だけで使う呼び名(あれば)。無いイベントは省略してよい
+//   unlockedKey … 「見たことがあるか」を判定する保存キーの呼び名。実際の値はgame-system.jsx側で
+//                 解決する(データファイルはgame-system.jsxの定数を参照できないため、ここでは
+//                 文字列の名前だけを持つ)
+const EVENT_REPLAYS = [
+  { id: 'kiki_intro', title: 'きき加入 ～ふたりの助手～', script: ASSISTANT_KIKI_INTRO, calls: ASSISTANT_KIKI_INTRO_CALLS, unlockedKey: 'kikiIntroSeen' },
+];
+
 // ---------- 助手ごとのあいさつ・村の案内 ----------
 // 光らせる場所(spot)とヘルプ参照(help)は案内の骨組みなので、どの助手でも同じにする。
 // 変えるのは言い回しだけ。ここがずれると、説明している場所と光る場所が食い違う。

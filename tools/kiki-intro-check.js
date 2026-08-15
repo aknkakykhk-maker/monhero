@@ -79,7 +79,7 @@ check('専用の新しい保存キーで覚える',
 check('未閲覧フラグだけでは判定しない(オンボーディング完了と合わせて見る)',
   has('if (wasOnboarded && kikiIntroSeen !== true) setKikiIntroStep(0);'));
 check('新しく始めた人は見たことにして、あとから流れないようにする',
-  has("else if (!wasOnboarded && kikiIntroSeen !== true) { try { await storeSet(KIKI_INTRO_SEEN_KEY, true, false); } catch {} }"));
+  has("else if (!wasOnboarded && kikiIntroSeen !== true) { try { await storeSet(KIKI_INTRO_SEEN_KEY, true, false); setKikiIntroSeenFlag(true); } catch {} }"));
 check('助手選択を通ったら見たことにする',
   has('chooseAssistant(who.id);markKikiIntroSeen();'));
 check('見終わったら保存して、二度と自動再生しない',
