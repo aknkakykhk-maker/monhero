@@ -16,8 +16,12 @@ const base={atk:100,def:100,hp:500,guts:100};
 assert.deepStrictEqual(stats(base,5),{atk:107,def:123,hp:587,guts:115});
 assert.deepStrictEqual(stats(base,10),{atk:105,def:115,hp:575,guts:110});
 assert.deepStrictEqual(stats(base,20),{atk:100,def:100,hp:550,guts:100});
-assert(source.includes("{ id:'ULTIMATE', label:'ULTIMATE', available:false }"),'public ULTIMATE must stay unavailable');
-assert(/ULTIMATE_DEBUG_SETTING[^\n]+power:25/.test(source),'debug-only ULTIMATE must use x25');
+assert(/\{ id:'ULTIMATE', label:'ULTIMATE', available:false, power:25, score:20, xp:40, gold:20, psyche:60,/.test(source),'formal ULTIMATE values must exist and stay unavailable');
+assert(source.includes('const ULTIMATE_SETTING = EXTREME_DIFFICULTIES[3]'),'ULTIMATE_SETTING must reference the formal difficulty definition');
+assert(!source.includes('ULTIMATE_DEBUG_SETTING'),'ULTIMATE must not keep a separate debug setting');
+for(const rule of ["enemyTurnRate:0.005","awakeningPenaltyRate:0.005","awakeningPenaltyExcludes:Object.freeze(['distance'])","turns:Object.freeze([50,100,150])","damageDealt:0.5","rerollSameDistance:false","persistsForRun:true"]) {
+  assert(source.includes(rule),`formal ULTIMATE rules must include: ${rule}`);
+}
 assert(source.includes('baseHp*mod*enemyTurnMultiplier')&&source.includes('baseAtk*mod*enemyTurnMultiplier'),'HP and attack must share the turn multiplier');
 assert(source.includes('ultimateEnemyTurnMultiplier(totalTurnCount)'),'enemy correction must use existing cumulative total');
 assert(source.includes('waveResult?.turn,specialRuleDifficulty'),'stat reduction must use the completed WAVE turn');
@@ -53,7 +57,7 @@ assert(source.includes('data-ultimate-distance-break-warning')&&source.includes(
 for(const [label,value] of [['敵強化','累計T ×0.5%'],['能力覚醒低下','WAVE T ×0.5%'],['距離弱体','50Tごと / 与ダメ50%']]) {
   assert(source.includes(`['${label}','${value}']`),`ULTIMATE difficulty card must show: ${label} ${value}`);
 }
-assert(source.indexOf("if (difficultyId===ULTIMATE_DEBUG_SETTING.id) return [")<source.indexOf("const rules=extremeDifficultySetting(difficultyId)?.specialRules || {};"),'ULTIMATE card labels must bypass generic special-rule rendering');
+assert(source.indexOf("if (difficultyId===ULTIMATE_SETTING.id) return [")<source.indexOf("const rules=extremeDifficultySetting(difficultyId)?.specialRules || {};"),'ULTIMATE card labels must bypass generic special-rule rendering');
 assert(!changelog.includes('ULTIMATEデバッグ表示を改善')&&!help.includes('未公開ULTIMATEのデバッグ表示'),'unreleased debug UI must not be announced in public changelog or help');
 for(const text of ['ULTIMATE 特殊ルール','累計ターン圧','覚醒低下','DISTANCE BREAK','現在の累計ターン：','現在の弱体距離：','※距離強化は対象外']) {
   assert(source.includes(text),`ULTIMATE rule overlay must show: ${text}`);

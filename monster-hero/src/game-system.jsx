@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 11:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3759,15 +3759,15 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ breederCardEffect:0.5 }) },
   { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
   { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:true, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
-  { id:'ULTIMATE', label:'ULTIMATE', available:false },
+  { id:'ULTIMATE', label:'ULTIMATE', available:false, power:25, score:20, xp:40, gold:20, psyche:60, description:'累計ターンで敵が強化され、能力覚醒が低下し、50ターンごとに距離が永久弱体化する最高難易度。', specialRules:Object.freeze({ enemyTurnRate:0.005, awakeningPenaltyRate:0.005, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ turns:Object.freeze([50,100,150]), damageDealt:0.5, rerollSameDistance:false, persistsForRun:true }) }) },
   { id:'INFINITY', label:'INFINITY', available:false },
 ]);
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
 const CHAOS_SETTING = EXTREME_DIFFICULTIES[2];
-// 公開定義へ報酬等を混ぜず、デバッグ戦でULTIMATEルールだけを検証する設定。
-const ULTIMATE_DEBUG_SETTING = Object.freeze({ id:'ULTIMATE', label:'ULTIMATE', power:25, description:'デバッグ限定：累計ターンで敵が強化され、能力覚醒が低下し、50ターンごとに距離が永久弱体化する。', specialRules:Object.freeze({ ultimateTurnRules:true }) });
-const extremeRuleSetting = (difficultyId) => difficultyId===ULTIMATE_DEBUG_SETTING.id ? ULTIMATE_DEBUG_SETTING : EXTREME_DIFFICULTIES.find(setting=>setting.id===difficultyId)||null;
+// 未公開の正式設定もデバッグ戦から同じ定義を参照し、数値と特殊ルールを二重管理しない。
+const ULTIMATE_SETTING = EXTREME_DIFFICULTIES[3];
+const extremeRuleSetting = (difficultyId) => EXTREME_DIFFICULTIES.find(setting=>setting.id===difficultyId)||null;
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
 const QUICK_EXTREME_SETTINGS = Object.freeze({
@@ -3794,7 +3794,7 @@ const specialRuleDifficultyForRun = (runMode, difficultyId, extremeRun=false, ex
 };
 const specialRulePercent = (value) => `${Math.round((Number(value)||0)*100)}%`;
 const extremeSpecialRuleLines = (difficultyId) => {
-  if (difficultyId===ULTIMATE_DEBUG_SETTING.id) return [
+  if (difficultyId===ULTIMATE_SETTING.id) return [
     ['敵強化','累計T ×0.5%'],
     ['能力覚醒低下','WAVE T ×0.5%'],
     ['距離弱体','50Tごと / 与ダメ50%'],
@@ -3821,12 +3821,11 @@ const applyNightmareWaveEnhancement = (value, specialDifficulty=null) => value *
   ? extremeSpecialRule(specialDifficulty, 'waveEnhancement') : 1);
 const applyNightmareStatGain = (before, normalAfter, specialDifficulty=null) => before
   + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, specialDifficulty));
-const ultimateEnemyTurnMultiplier = (turns) => 1 + Math.max(0,Number(turns)||0)*0.005;
-const ULTIMATE_DISTANCE_BREAK_TURNS=Object.freeze([50,100,150]);
+const ultimateEnemyTurnMultiplier = (turns) => 1 + Math.max(0,Number(turns)||0)*ULTIMATE_SETTING.specialRules.enemyTurnRate;
 const pendingUltimateDistanceBreak = (totalTurns, weakenedDistances, waveNumber, specialDifficulty=null) => {
-  if(specialDifficulty!==ULTIMATE_DEBUG_SETTING.id||Number(waveNumber)>=10)return null;
+  if(specialDifficulty!==ULTIMATE_SETTING.id||Number(waveNumber)>=10)return null;
   const weakenedCount=Array.isArray(weakenedDistances)?weakenedDistances.length:0;
-  return ULTIMATE_DISTANCE_BREAK_TURNS.find((threshold,index)=>index>=weakenedCount&&(Number(totalTurns)||0)>=threshold)||null;
+  return ULTIMATE_SETTING.specialRules.distanceBreak.turns.find((threshold,index)=>index>=weakenedCount&&(Number(totalTurns)||0)>=threshold)||null;
 };
 const drawUltimateDistanceBreak = (weakenedDistances, random=Math.random) => {
   const used=new Set(Array.isArray(weakenedDistances)?weakenedDistances:[]);
@@ -3837,13 +3836,13 @@ const drawUltimateDistanceBreak = (weakenedDistances, random=Math.random) => {
 };
 const applyUltimateDistanceBreak = (damage, slotIndex, weakenedDistances, specialDifficulty=null, cardType=null) => {
   const isMonsterAttack=['atk','range_atk','unique'].includes(cardType);
-  return specialDifficulty===ULTIMATE_DEBUG_SETTING.id&&isMonsterAttack&&weakenedDistances.includes(slotIndex)
-    ? Math.floor((Number(damage)||0)*0.5) : damage;
+  return specialDifficulty===ULTIMATE_SETTING.id&&isMonsterAttack&&weakenedDistances.includes(slotIndex)
+    ? Math.floor((Number(damage)||0)*ULTIMATE_SETTING.specialRules.distanceBreak.damageDealt) : damage;
 };
 const resolveUltimateWaveStats = (stats, turns, specialDifficulty=null) => {
   const before={atk:Number(stats?.atk)||0,def:Number(stats?.def)||0,hp:Number(stats?.hp)||0,guts:Number(stats?.guts)||0};
-  if(specialDifficulty!==ULTIMATE_DEBUG_SETTING.id)return {atk:applyNightmareStatGain(before.atk,Math.floor(before.atk*1.10),specialDifficulty),def:applyNightmareStatGain(before.def,Math.floor((before.def+20)*1.10),specialDifficulty),hp:applyNightmareStatGain(before.hp,Math.floor(before.hp*1.20),specialDifficulty),guts:applyNightmareStatGain(before.guts,Math.floor((before.guts+10)*1.10),specialDifficulty)};
-  const safeTurns=Math.max(0,Math.min(20,Number(turns)||0)),penalty=safeTurns*0.005,fixedScale=Math.max(0,1-safeTurns/20);
+  if(specialDifficulty!==ULTIMATE_SETTING.id)return {atk:applyNightmareStatGain(before.atk,Math.floor(before.atk*1.10),specialDifficulty),def:applyNightmareStatGain(before.def,Math.floor((before.def+20)*1.10),specialDifficulty),hp:applyNightmareStatGain(before.hp,Math.floor(before.hp*1.20),specialDifficulty),guts:applyNightmareStatGain(before.guts,Math.floor((before.guts+10)*1.10),specialDifficulty)};
+  const safeTurns=Math.max(0,Math.min(20,Number(turns)||0)),penalty=safeTurns*ULTIMATE_SETTING.specialRules.awakeningPenaltyRate,fixedScale=Math.max(0,1-safeTurns/20);
   return {atk:Math.floor(before.atk*(1+Math.max(0,.10-penalty))),def:Math.floor((before.def+20*fixedScale)*(1+Math.max(0,.10-penalty))),hp:Math.floor(before.hp*(1+Math.max(0,.20-penalty))),guts:Math.floor((before.guts+10*fixedScale)*(1+Math.max(0,.10-penalty)))};
 };
 // 整数で扱うバトル値の特殊ルール倍率はここでだけ丸める。対象ルールがない難易度は
@@ -5881,7 +5880,7 @@ function MonsterHeroGame() {
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
-  const activeExtremeBattleSetting = debugBattle && extremeDifficulty===ULTIMATE_DEBUG_SETTING.id ? ULTIMATE_DEBUG_SETTING : activeExtremeSetting;
+  const activeExtremeBattleSetting = activeExtremeSetting;
   // クイックのEXTREME/NIGHTMAREは通常難易度表に存在しない。カルーセルのonScrollで
   // difficultyが切り替わった直後の再描画でも、クイック用の表から倍率を解決する。
   const activeDifficultySetting = QUICK_DIFFICULTY_SETTINGS[safeDifficulty];
@@ -9630,13 +9629,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const handleNextWave = async () => {
     // 練習の台本があるときは、強化フェーズまで通して見せたいので
     // デバッグ戦の打ち切り(勝ち表示を出して止まる)を通さない
-    if (debugBattleRef.current && !battleScenarioRef.current && !(extremeRunRef.current&&extremeDifficulty===ULTIMATE_DEBUG_SETTING.id)) {
+    if (debugBattleRef.current && !battleScenarioRef.current && !(extremeRunRef.current&&extremeDifficulty===ULTIMATE_SETTING.id)) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setDebugOutcome('win');
       return;
     }
-    if (debugBattleRef.current && extremeRunRef.current && extremeDifficulty===ULTIMATE_DEBUG_SETTING.id && wave===10) {
+    if (debugBattleRef.current && extremeRunRef.current && extremeDifficulty===ULTIMATE_SETTING.id && wave===10) {
       if (debugResultRef.current) return;
       debugResultRef.current=true; setDebugOutcome('win'); return;
     }
@@ -9877,7 +9876,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   const spawnEnemy = useCallback((w, forcedEnemyKey=null, initialDistance=null) => {
     const battleSetting=extremeRunRef.current?extremeRuleSetting(extremeDifficulty):null;
-    const enemyTurnMultiplier=battleSetting?.id===ULTIMATE_DEBUG_SETTING.id?ultimateEnemyTurnMultiplier(totalTurnCount):1;
+    const enemyTurnMultiplier=battleSetting?.id===ULTIMATE_SETTING.id?ultimateEnemyTurnMultiplier(totalTurnCount):1;
     const newEnemy=createBattleEnemy(w,difficulty,forcedEnemyKey,battleSetting?.power??null,enemyTurnMultiplier);
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する。
@@ -9961,7 +9960,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setAtkLevel(nAtkL); setGuardLevel(nGrdL); setGuardBonusCount(nGB);
     const pool=buildDeck(currentSlots,nAtkL,nGrdL,u||ownedUniques,t||ownedTeachings,nGB,slotUniqueChoice,slotUniqueLevelChoice,inheritedUniqueEvo,heroForDeck);
     const showExtremeRule = w === 1 && !!specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&extremeRunRef.current&&extremeDifficulty===ULTIMATE_DEBUG_SETTING.id;
+    const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&extremeRunRef.current&&extremeDifficulty===ULTIMATE_SETTING.id;
     setHand(pool.slice(0,5)); setDeck(pool.slice(5)); setGraveyard([]); setGameState('BATTLE'); setExtremeRuleOpen(showExtremeRule); setIsBusy(showExtremeRule||!!breakPending);
     if(breakPending){
       const picked=drawUltimateDistanceBreak(ultimateWeakenedDistancesRef.current);
@@ -11227,7 +11226,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(publicSetting=>{const setting=debugBattle&&publicSetting.id===ULTIMATE_DEBUG_SETTING.id?ULTIMATE_DEBUG_SETTING:publicSetting;const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:false);const previewable=(publicSetting.available||debugBattle&&setting.id===ULTIMATE_DEBUG_SETTING.id)&&unlocked;return (
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:false);const previewable=(setting.available||debugBattle&&setting.id===ULTIMATE_SETTING.id)&&unlocked;return (
                       <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[382px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?'#f0abfc':'rgba(255,255,255,.12)',background:previewable?'linear-gradient(180deg,#34133f,#160d2b)':'linear-gradient(180deg,#1e293b,#0d142b)',boxShadow:active?'0 0 30px rgba(232,121,249,.35)':'none'}}>
                         <div className="text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
                         <h3 className="text-center text-lg font-black leading-tight text-fuchsia-200">{setting.label}</h3>
@@ -11248,7 +11247,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               debugBattleRef はここで書き換えないこと。デバッグ設定から入ったときだけ true のままになり、
                               その周回は今までどおり報酬もクリア記録も保存されない(正式プレイと混ざらない) */}
                           <button disabled={!previewable} onClick={()=>{battleEntryStateRef.current='EXTREME_DIFFICULTY_SELECT';setDifficulty('Normal');setRunMode(BATTLE_MODE_CHALLENGE);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;extremeRunRef.current=true;setExtremeRun(true);setDebugOutcome(null);setProAllyPool([]);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className="min-h-[44px] rounded-xl bg-fuchsia-600 text-white font-black text-sm disabled:bg-slate-800 disabled:text-slate-500">{previewable?'この難易度で挑戦':'選択できません'}</button>
-                          <button disabled={!publicSetting.available||!unlocked} onClick={()=>openModeScoreRanking(EXTREME_MODE.id,setting.id,'EXTREME_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={14}/></button>
+                          <button disabled={!setting.available||!unlocked} onClick={()=>openModeScoreRanking(EXTREME_MODE.id,setting.id,'EXTREME_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={14}/></button>
                         </div>
                       </article>
                     );})}
@@ -14190,7 +14189,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       </div>}
       {gameState==='BATTLE'&&extremeRuleOpen&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{zIndex:90500,background:'radial-gradient(circle,rgba(112,26,117,.58),rgba(2,6,23,.9))'}} onClick={()=>{setExtremeRuleOpen(false);setIsBusy(false);}} role="dialog" aria-modal="true" aria-label="極限ルール発動">
         <div className="w-full max-w-xs rounded-3xl border-2 border-fuchsia-300 bg-slate-950/95 px-5 py-6 text-center shadow-[0_0_42px_rgba(217,70,239,.65)]" style={{animation:'mhExtremeRuleIn .38s ease-out'}}>
-          {(()=>{const specialDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);return specialDifficulty===ULTIMATE_DEBUG_SETTING.id?<>
+          {(()=>{const specialDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);return specialDifficulty===ULTIMATE_SETTING.id?<>
             <div className="text-[11px] font-black tracking-[.12em] text-amber-300">ULTIMATE 特殊ルール</div>
             <div className="mt-3 grid gap-1.5 text-left">
               {[

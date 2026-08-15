@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3104ebf459f2bbea
+// source-sha256: 7726f0d36a57c6d1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 11:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7511,7 +7511,24 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
 }, {
   id: 'ULTIMATE',
   label: 'ULTIMATE',
-  available: false
+  available: false,
+  power: 25,
+  score: 20,
+  xp: 40,
+  gold: 20,
+  psyche: 60,
+  description: '累計ターンで敵が強化され、能力覚醒が低下し、50ターンごとに距離が永久弱体化する最高難易度。',
+  specialRules: Object.freeze({
+    enemyTurnRate: 0.005,
+    awakeningPenaltyRate: 0.005,
+    awakeningPenaltyExcludes: Object.freeze(['distance']),
+    distanceBreak: Object.freeze({
+      turns: Object.freeze([50, 100, 150]),
+      damageDealt: 0.5,
+      rerollSameDistance: false,
+      persistsForRun: true
+    })
+  })
 }, {
   id: 'INFINITY',
   label: 'INFINITY',
@@ -7520,17 +7537,9 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
 const NIGHTMARE_SETTING = EXTREME_DIFFICULTIES[1];
 const CHAOS_SETTING = EXTREME_DIFFICULTIES[2];
-// 公開定義へ報酬等を混ぜず、デバッグ戦でULTIMATEルールだけを検証する設定。
-const ULTIMATE_DEBUG_SETTING = Object.freeze({
-  id: 'ULTIMATE',
-  label: 'ULTIMATE',
-  power: 25,
-  description: 'デバッグ限定：累計ターンで敵が強化され、能力覚醒が低下し、50ターンごとに距離が永久弱体化する。',
-  specialRules: Object.freeze({
-    ultimateTurnRules: true
-  })
-});
-const extremeRuleSetting = difficultyId => difficultyId === ULTIMATE_DEBUG_SETTING.id ? ULTIMATE_DEBUG_SETTING : EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId) || null;
+// 未公開の正式設定もデバッグ戦から同じ定義を参照し、数値と特殊ルールを二重管理しない。
+const ULTIMATE_SETTING = EXTREME_DIFFICULTIES[3];
+const extremeRuleSetting = difficultyId => EXTREME_DIFFICULTIES.find(setting => setting.id === difficultyId) || null;
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
 const QUICK_EXTREME_SETTINGS = Object.freeze({
@@ -7580,7 +7589,7 @@ const specialRuleDifficultyForRun = (runMode, difficultyId, extremeRun = false, 
 };
 const specialRulePercent = value => `${Math.round((Number(value) || 0) * 100)}%`;
 const extremeSpecialRuleLines = difficultyId => {
-  if (difficultyId === ULTIMATE_DEBUG_SETTING.id) return [['敵強化', '累計T ×0.5%'], ['能力覚醒低下', 'WAVE T ×0.5%'], ['距離弱体', '50Tごと / 与ダメ50%']];
+  if (difficultyId === ULTIMATE_SETTING.id) return [['敵強化', '累計T ×0.5%'], ['能力覚醒低下', 'WAVE T ×0.5%'], ['距離弱体', '50Tごと / 与ダメ50%']];
   const rules = extremeDifficultySetting(difficultyId)?.specialRules || {};
   const lines = [];
   if (rules.breederCardEffect != null) lines.push(['ブリーダーカード効果', specialRulePercent(rules.breederCardEffect)]);
@@ -7600,12 +7609,11 @@ const extremeSpecialRuleLines = difficultyId => {
 const applyNightmareSignedModifier = (value, specialDifficulty = null) => value * (specialDifficulty ? extremeSpecialRule(specialDifficulty, value >= 0 ? 'positiveModifier' : 'negativeModifier') : 1);
 const applyNightmareWaveEnhancement = (value, specialDifficulty = null) => value * (specialDifficulty ? extremeSpecialRule(specialDifficulty, 'waveEnhancement') : 1);
 const applyNightmareStatGain = (before, normalAfter, specialDifficulty = null) => before + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, specialDifficulty));
-const ultimateEnemyTurnMultiplier = turns => 1 + Math.max(0, Number(turns) || 0) * 0.005;
-const ULTIMATE_DISTANCE_BREAK_TURNS = Object.freeze([50, 100, 150]);
+const ultimateEnemyTurnMultiplier = turns => 1 + Math.max(0, Number(turns) || 0) * ULTIMATE_SETTING.specialRules.enemyTurnRate;
 const pendingUltimateDistanceBreak = (totalTurns, weakenedDistances, waveNumber, specialDifficulty = null) => {
-  if (specialDifficulty !== ULTIMATE_DEBUG_SETTING.id || Number(waveNumber) >= 10) return null;
+  if (specialDifficulty !== ULTIMATE_SETTING.id || Number(waveNumber) >= 10) return null;
   const weakenedCount = Array.isArray(weakenedDistances) ? weakenedDistances.length : 0;
-  return ULTIMATE_DISTANCE_BREAK_TURNS.find((threshold, index) => index >= weakenedCount && (Number(totalTurns) || 0) >= threshold) || null;
+  return ULTIMATE_SETTING.specialRules.distanceBreak.turns.find((threshold, index) => index >= weakenedCount && (Number(totalTurns) || 0) >= threshold) || null;
 };
 const drawUltimateDistanceBreak = (weakenedDistances, random = Math.random) => {
   const used = new Set(Array.isArray(weakenedDistances) ? weakenedDistances : []);
@@ -7616,7 +7624,7 @@ const drawUltimateDistanceBreak = (weakenedDistances, random = Math.random) => {
 };
 const applyUltimateDistanceBreak = (damage, slotIndex, weakenedDistances, specialDifficulty = null, cardType = null) => {
   const isMonsterAttack = ['atk', 'range_atk', 'unique'].includes(cardType);
-  return specialDifficulty === ULTIMATE_DEBUG_SETTING.id && isMonsterAttack && weakenedDistances.includes(slotIndex) ? Math.floor((Number(damage) || 0) * 0.5) : damage;
+  return specialDifficulty === ULTIMATE_SETTING.id && isMonsterAttack && weakenedDistances.includes(slotIndex) ? Math.floor((Number(damage) || 0) * ULTIMATE_SETTING.specialRules.distanceBreak.damageDealt) : damage;
 };
 const resolveUltimateWaveStats = (stats, turns, specialDifficulty = null) => {
   const before = {
@@ -7625,14 +7633,14 @@ const resolveUltimateWaveStats = (stats, turns, specialDifficulty = null) => {
     hp: Number(stats?.hp) || 0,
     guts: Number(stats?.guts) || 0
   };
-  if (specialDifficulty !== ULTIMATE_DEBUG_SETTING.id) return {
+  if (specialDifficulty !== ULTIMATE_SETTING.id) return {
     atk: applyNightmareStatGain(before.atk, Math.floor(before.atk * 1.10), specialDifficulty),
     def: applyNightmareStatGain(before.def, Math.floor((before.def + 20) * 1.10), specialDifficulty),
     hp: applyNightmareStatGain(before.hp, Math.floor(before.hp * 1.20), specialDifficulty),
     guts: applyNightmareStatGain(before.guts, Math.floor((before.guts + 10) * 1.10), specialDifficulty)
   };
   const safeTurns = Math.max(0, Math.min(20, Number(turns) || 0)),
-    penalty = safeTurns * 0.005,
+    penalty = safeTurns * ULTIMATE_SETTING.specialRules.awakeningPenaltyRate,
     fixedScale = Math.max(0, 1 - safeTurns / 20);
   return {
     atk: Math.floor(before.atk * (1 + Math.max(0, .10 - penalty))),
@@ -11398,7 +11406,7 @@ function MonsterHeroGame() {
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
-  const activeExtremeBattleSetting = debugBattle && extremeDifficulty === ULTIMATE_DEBUG_SETTING.id ? ULTIMATE_DEBUG_SETTING : activeExtremeSetting;
+  const activeExtremeBattleSetting = activeExtremeSetting;
   // クイックのEXTREME/NIGHTMAREは通常難易度表に存在しない。カルーセルのonScrollで
   // difficultyが切り替わった直後の再描画でも、クイック用の表から倍率を解決する。
   const activeDifficultySetting = QUICK_DIFFICULTY_SETTINGS[safeDifficulty];
@@ -17158,13 +17166,13 @@ function MonsterHeroGame() {
   const handleNextWave = async () => {
     // 練習の台本があるときは、強化フェーズまで通して見せたいので
     // デバッグ戦の打ち切り(勝ち表示を出して止まる)を通さない
-    if (debugBattleRef.current && !battleScenarioRef.current && !(extremeRunRef.current && extremeDifficulty === ULTIMATE_DEBUG_SETTING.id)) {
+    if (debugBattleRef.current && !battleScenarioRef.current && !(extremeRunRef.current && extremeDifficulty === ULTIMATE_SETTING.id)) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setDebugOutcome('win');
       return;
     }
-    if (debugBattleRef.current && extremeRunRef.current && extremeDifficulty === ULTIMATE_DEBUG_SETTING.id && wave === 10) {
+    if (debugBattleRef.current && extremeRunRef.current && extremeDifficulty === ULTIMATE_SETTING.id && wave === 10) {
       if (debugResultRef.current) return;
       debugResultRef.current = true;
       setDebugOutcome('win');
@@ -17558,7 +17566,7 @@ function MonsterHeroGame() {
   const computeGuardLevel = defVal => Math.max(0, Math.min(GUARD_EVOLUTION.length - 1, Math.floor((defVal || 0) / 100)));
   const spawnEnemy = useCallback((w, forcedEnemyKey = null, initialDistance = null) => {
     const battleSetting = extremeRunRef.current ? extremeRuleSetting(extremeDifficulty) : null;
-    const enemyTurnMultiplier = battleSetting?.id === ULTIMATE_DEBUG_SETTING.id ? ultimateEnemyTurnMultiplier(totalTurnCount) : 1;
+    const enemyTurnMultiplier = battleSetting?.id === ULTIMATE_SETTING.id ? ultimateEnemyTurnMultiplier(totalTurnCount) : 1;
     const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier);
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する。
@@ -17675,7 +17683,7 @@ function MonsterHeroGame() {
     setGuardBonusCount(nGB);
     const pool = buildDeck(currentSlots, nAtkL, nGrdL, u || ownedUniques, t || ownedTeachings, nGB, slotUniqueChoice, slotUniqueLevelChoice, inheritedUniqueEvo, heroForDeck);
     const showExtremeRule = w === 1 && !!specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    const breakPending = w > 1 && ultimateDistanceBreakPendingRef.current && extremeRunRef.current && extremeDifficulty === ULTIMATE_DEBUG_SETTING.id;
+    const breakPending = w > 1 && ultimateDistanceBreakPendingRef.current && extremeRunRef.current && extremeDifficulty === ULTIMATE_SETTING.id;
     setHand(pool.slice(0, 5));
     setDeck(pool.slice(5));
     setGraveyard([]);
@@ -21984,11 +21992,10 @@ function MonsterHeroGame() {
           paddingRight: '11%',
           touchAction: 'pan-x pinch-zoom'
         }
-      }, difficulties.map(publicSetting => {
-        const setting = debugBattle && publicSetting.id === ULTIMATE_DEBUG_SETTING.id ? ULTIMATE_DEBUG_SETTING : publicSetting;
+      }, difficulties.map(setting => {
         const active = setting.id === extremeDifficulty;
         const unlocked = debugBattle || (setting.id === 'EXTREME' ? extremeUnlocked : setting.id === 'NIGHTMARE' ? nightmareUnlocked : setting.id === 'CHAOS' ? chaosUnlocked : false);
-        const previewable = (publicSetting.available || debugBattle && setting.id === ULTIMATE_DEBUG_SETTING.id) && unlocked;
+        const previewable = (setting.available || debugBattle && setting.id === ULTIMATE_SETTING.id) && unlocked;
         return /*#__PURE__*/React.createElement("article", {
           key: setting.id,
           "aria-disabled": !previewable,
@@ -22070,7 +22077,7 @@ function MonsterHeroGame() {
           },
           className: "min-h-[44px] rounded-xl bg-fuchsia-600 text-white font-black text-sm disabled:bg-slate-800 disabled:text-slate-500"
         }, previewable ? 'この難易度で挑戦' : '選択できません'), /*#__PURE__*/React.createElement("button", {
-          disabled: !publicSetting.available || !unlocked,
+          disabled: !setting.available || !unlocked,
           onClick: () => openModeScoreRanking(EXTREME_MODE.id, setting.id, 'EXTREME_DIFFICULTY_SELECT'),
           className: "min-h-[40px] rounded-xl bg-slate-800 border border-fuchsia-400/40 text-fuchsia-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"
         }, /*#__PURE__*/React.createElement("span", {
@@ -29435,7 +29442,7 @@ function MonsterHeroGame() {
       }
     }, (() => {
       const specialDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      return specialDifficulty === ULTIMATE_DEBUG_SETTING.id ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      return specialDifficulty === ULTIMATE_SETTING.id ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black tracking-[.12em] text-amber-300"
       }, "ULTIMATE \u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 grid gap-1.5 text-left"
