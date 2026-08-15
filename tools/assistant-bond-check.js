@@ -153,8 +153,11 @@ const WANTED_ACTIONS = ['login', 'battle', 'challenge', 'quick', 'ranking', 'tem
 check('仕様どおりの行動がそろっている', WANTED_ACTIONS.every(k => actions[k]), WANTED_ACTIONS.filter(k => !actions[k]).join(', '));
 check('行動ごとに1日の上限がある', Object.values(actions).every(a => a.amount > 0 && a.dailyMax >= a.amount));
 check('1日の合計にも上限がある', Number.isFinite(A.ASSISTANT_BOND_DAILY_MAX) && A.ASSISTANT_BOND_DAILY_MAX > 0, `${A.ASSISTANT_BOND_DAILY_MAX}`);
-check('1日の合計上限は、行動ごとの合計より小さい',
-  A.ASSISTANT_BOND_DAILY_MAX < Object.values(actions).reduce((a, x) => a + x.dailyMax, 0));
+// 全体の頭打ちは、行動ごとの上限をすべて合わせた理論上の最大値と一致させている
+// (行動ごとの1日上限がすでに「連打で稼げない」役目を担うため、全体側で二重に絞らない)
+const actionDailyMaxSum = Object.values(actions).reduce((a, x) => a + x.dailyMax, 0);
+check('1日の合計上限は、行動ごとの上限の合計(理論値)と一致する',
+  A.ASSISTANT_BOND_DAILY_MAX === actionDailyMaxSum, `上限${A.ASSISTANT_BOND_DAILY_MAX} / 理論値${actionDailyMaxSum}`);
 
 // --- 加算の計算を実際に動かす ---
 const gainCtx = {};
@@ -183,16 +186,25 @@ check('行動ごとの1日上限で止まる', (() => {
   for (let i = 0; i < 50; i++) s = G.gainAssistantBond(s, 'ranking', day1).state;
   return s.daily.ranking === actions.ranking.dailyMax;
 })());
-// いろいろな行動を混ぜても、1日の合計で止まる
-check('1日の合計上限で止まる', (() => {
+// ぜんぶの行動を混ぜても、行動ごとの上限を合わせた理論値(=全体の頭打ち)で止まる
+const ALL_ACTION_KEYS = Object.keys(actions);
+check('1日の合計上限(理論値)で止まる', (() => {
+  let s = G.ASSISTANT_BOND_EMPTY;
+  for (let i = 0; i < 100; i++) for (const k of ALL_ACTION_KEYS) s = G.gainAssistantBond(s, k, day1).state;
+  return s.points === A.ASSISTANT_BOND_DAILY_MAX && s.dailyTotal === A.ASSISTANT_BOND_DAILY_MAX;
+})());
+// 一部の行動だけを連打しても、それらの行動ごとの上限の合計より先へは増えない
+// (全体の頭打ちが理論値と一致していても、少数の行動だけでは理論値まで届かないことの確認)
+check('一部の行動だけでは全体の頭打ちまで届かない', (() => {
   let s = G.ASSISTANT_BOND_EMPTY;
   for (let i = 0; i < 100; i++) for (const k of WANTED_ACTIONS) s = G.gainAssistantBond(s, k, day1).state;
-  return s.points === A.ASSISTANT_BOND_DAILY_MAX && s.dailyTotal === A.ASSISTANT_BOND_DAILY_MAX;
+  const wantedSum = WANTED_ACTIONS.reduce((a, k) => a + actions[k].dailyMax, 0);
+  return s.points === wantedSum && wantedSum < A.ASSISTANT_BOND_DAILY_MAX;
 })());
 // 日付が変われば、その日の集計だけ戻る(貯めた量は減らない)
 check('日付が変わると、その日ぶんだけ戻る', (() => {
   let s = G.ASSISTANT_BOND_EMPTY;
-  for (let i = 0; i < 100; i++) for (const k of WANTED_ACTIONS) s = G.gainAssistantBond(s, k, day1).state;
+  for (let i = 0; i < 100; i++) for (const k of ALL_ACTION_KEYS) s = G.gainAssistantBond(s, k, day1).state;
   const before = s.points;
   const after = G.gainAssistantBond(s, 'login', day2).state;
   return after.points === before + actions.login.amount && after.dailyTotal === actions.login.amount;
