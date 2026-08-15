@@ -31,7 +31,7 @@ vm.runInContext([
   grab('const DIFFICULTY_SETTINGS', 'const CLEAR_PSYCHE_REWARD'),
   grab('const createBattleEnemy', 'const collectBondRankingEntries'),
   'globalThis.__m={DIFFICULTY_SETTINGS,EXTREME_DIFFICULTIES,EXTREME_SETTING,extremeSpecialRule,'
-  + 'EXTREME_UNLOCK_DIFFICULTIES,isExtremeUnlocked,NIGHTMARE_SETTING,isNightmareUnlocked,isChaosUnlocked,normalizeBattleDifficulty,createBattleEnemy};',
+  + 'EXTREME_UNLOCK_DIFFICULTIES,isExtremeUnlocked,NIGHTMARE_SETTING,isNightmareUnlocked,isChaosUnlocked,isUltimateUnlocked,normalizeBattleDifficulty,createBattleEnemy};',
 ].join('\n'), ctx);
 const m = ctx.__m;
 
@@ -80,13 +80,20 @@ check('CHAOSは正式公開の数値を持つ',
 check('CHAOS特殊ルールを持つ',
   chaos.specialRules.damageDealt === 0.5 && chaos.specialRules.allyJoinBonus === 0.5
     && chaos.specialRules.gutsCost === 1.5);
-check('ULTIMATEとINFINITYは未実装のまま数値を持たない',
-  m.EXTREME_DIFFICULTIES.slice(3).every(s => s.available === false && s.power === undefined && s.score === undefined));
+const ultimate = m.EXTREME_DIFFICULTIES.find(s => s.id === 'ULTIMATE');
+check('ULTIMATEは正式公開の数値を持つ',
+  ultimate.available === true && ultimate.power === 25 && ultimate.score === 20
+    && ultimate.xp === 40 && ultimate.gold === 20 && ultimate.psyche === 60
+    && ultimate.unlockRequirement === 'CHAOS');
+const infinity = m.EXTREME_DIFFICULTIES.find(s => s.id === 'INFINITY');
+check('INFINITYは未実装のまま数値を持たない',
+  infinity.available === false && infinity.power === undefined && infinity.score === undefined);
 check('NIGHTMAREはEXTREMEを1回以上クリア済みなら解放判定',
   m.isNightmareUnlocked(1) === true && m.isNightmareUnlocked('2') === true);
 check('NIGHTMAREはEXTREME未クリアなら未解放判定',
   m.isNightmareUnlocked(0) === false && m.isNightmareUnlocked(undefined) === false);
 check('CHAOSはNIGHTMAREを1回以上クリア済みなら解放判定', m.isChaosUnlocked(1) === true && m.isChaosUnlocked(0) === false);
+check('ULTIMATEはCHAOSを1回以上クリア済みなら解放判定', m.isUltimateUnlocked(1) === true && m.isUltimateUnlocked(0) === false);
 check('難易度の並びは EXTREME → NIGHTMARE → CHAOS → ULTIMATE → INFINITY',
   m.EXTREME_DIFFICULTIES.map(s => s.id).join(',') === 'EXTREME,NIGHTMARE,CHAOS,ULTIMATE,INFINITY');
 

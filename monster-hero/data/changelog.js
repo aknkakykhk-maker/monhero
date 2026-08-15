@@ -1,5 +1,16 @@
 const CHANGELOG = [
   {
+    date: "2026-08-15 12:59",
+    type: 'update',
+    title: '極限チャレンジにULTIMATEを追加しました',
+    items: [
+      'CHAOSを1回クリアすると解放されます。敵強度×25・経験値×40・ダイヤ×20となり、クリアで虹のプシュケー60個を獲得できます。',
+      '累計ターンが長いほど、次WAVEの敵が強化され、供モン加入時のステータスボーナスが低下します。',
+      '各WAVEのターン数に応じて能力覚醒が低下し、累計50ターンごとにDISTANCE BREAKが発生します。',
+    ],
+    assistantNotice: { id:'update_notice_ultimate_v1', type:'mode' },
+  },
+  {
     date: "2026-08-15 12:29",
     type: 'update',
     title: 'WAVEリザルトにターン数を追加',
