@@ -17,6 +17,7 @@ assert.deepStrictEqual(stats(base,5),{atk:107,def:123,hp:587,guts:115});
 assert.deepStrictEqual(stats(base,10),{atk:105,def:115,hp:575,guts:110});
 assert.deepStrictEqual(stats(base,20),{atk:100,def:100,hp:550,guts:100});
 assert(/\{ id:'ULTIMATE', label:'ULTIMATE', available:false, power:25, score:20, xp:40, gold:20, psyche:60,/.test(source),'formal ULTIMATE values must exist and stay unavailable');
+assert(source.includes("unlockRequirement:'CHAOS'")&&source.includes('allyJoinPenaltyRate:0.005'),'ULTIMATE must define its CHAOS unlock prerequisite and ally penalty rate');
 assert(source.includes('const ULTIMATE_SETTING = EXTREME_DIFFICULTIES[3]'),'ULTIMATE_SETTING must reference the formal difficulty definition');
 assert(source.includes("const ULTIMATE_BEST_SCORE_KEY = extremeBestScoreKey('ULTIMATE');")&&source.includes("const ULTIMATE_CLEAR_COUNT_KEY = extremeClearCountKey('ULTIMATE');"),'ULTIMATE records must use the shared extreme key format');
 assert(source.includes('EXTREME_DIFFICULTIES.map(async setting =>')&&source.includes('normalizeExtremeRecordValue(await storeGet(extremeBestScoreKey(setting.id), 0, false))')&&source.includes('normalizeExtremeRecordValue(await storeGet(extremeClearCountKey(setting.id), 0, false))'),'all extreme records, including missing ULTIMATE saves, must load through shared normalization');
@@ -32,6 +33,8 @@ assert(source.includes('waveResult?.turn,specialRuleDifficulty'),'stat reduction
 assert(source.includes('const gainedDistBonus=finalDistDamage.map(d=>applyNightmareWaveEnhancement'),'distance gain route must remain unchanged');
 assert(source.includes("specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 })"),'NIGHTMARE 50% rule must remain');
 assert(source.includes('setTotalTurnCount(newTotalTurnCount)')&&source.includes('const newTotalTurnCount=totalTurnCount+turnCount'),'existing cumulative counting must remain');
+assert(source.includes("applyAllyJoinBonus(bonus[key]||0,specialRuleDifficulty,waveResult?.totalTurnCount)"),'ally joins must use the completed WAVE cumulative total, not stale React state');
+assert(!/allyJoin(?:Total)?TurnCount/.test(source),'ULTIMATE must not introduce a separate ally-join turn counter');
 assert(source.includes('Math.max(0,21-turnCount)'),'20-turn scoring boundary must remain');
 assert(/Gel:[^\n]+baseHp:550[^\n]+baseAtk:70/.test(enemySource),'Gel baseline must remain in enemy data');
 const thresholds=[50,100,150];
@@ -58,7 +61,7 @@ assert(source.includes('ultimateWeakenedDistancesRef.current=[]; setUltimateWeak
 assert(source.includes('setWaveBuffs({}); // WAVE毎リセット')&&!source.includes("addWaveBuff('ultimateDistance"),'distance breaks must not be WAVE buffs');
 assert(source.includes('data-distance-broken')&&source.includes('与ダメ ↓50%'),'empty and occupied broken slots must stay visibly marked');
 assert(source.includes('data-ultimate-distance-break-warning')&&source.includes('data-ultimate-distance-break-reveal'),'result warning and one-time reveal must exist');
-for(const [label,value] of [['敵強化','累計T ×0.5%'],['能力覚醒低下','WAVE T ×0.5%'],['距離弱体','50Tごと / 与ダメ50%']]) {
+for(const [label,value] of [['敵強化','累計T ×0.5%'],['供モン加入B低下','累計T ×0.5%'],['能力覚醒低下','WAVE T ×0.5%'],['距離弱体','50Tごと / 与ダメ50%']]) {
   assert(source.includes(`['${label}','${value}']`),`ULTIMATE difficulty card must show: ${label} ${value}`);
 }
 assert(source.indexOf("if (difficultyId===ULTIMATE_SETTING.id) return [")<source.indexOf("const rules=extremeDifficultySetting(difficultyId)?.specialRules || {};"),'ULTIMATE card labels must bypass generic special-rule rendering');
@@ -68,4 +71,20 @@ for(const text of ['ULTIMATE 特殊ルール','累計ターン圧','覚醒低下
 }
 assert(source.includes("join(' / ')||'なし'"),'rule and reveal overlays must name active distances or explicitly show none');
 assert(source.includes('repeating-linear-gradient')&&source.includes('border-red-400')&&source.includes('⚠ 与ダメ ↓50%'),'broken slots must combine warning badge, corrupted texture, and danger border');
-console.log('OK: ULTIMATE特殊ルール①・②（ターン強化、能力低下、距離弱体化、予測一致、デバッグ限定、既存ルール分離）');
+const allyJoin=(value,total,difficulty='ULTIMATE')=>difficulty==='ULTIMATE'
+  ? Math.floor(value*Math.max(0,1-total*.005))
+  : difficulty==='CHAOS'?Math.floor(value*.5):value;
+for(const [turns,percent] of [[0,1],[20,.9],[40,.8],[50,.75],[80,.6],[100,.5],[120,.4]]) {
+  assert.strictEqual(allyJoin(100,turns),Math.floor(100*percent),`${turns}T ally multiplier must be ${percent*100}%`);
+}
+assert.strictEqual(allyJoin(31,50),23,'ULTIMATE 31 at 50T must floor to 23');
+assert.strictEqual(allyJoin(31,100),15,'ULTIMATE 31 at 100T must floor to 15');
+assert.strictEqual(allyJoin(31,50,'CHAOS'),15,'CHAOS must remain a single fixed 50% reduction');
+assert.strictEqual(allyJoin(31,50,null),31,'normal ally bonuses must remain unchanged');
+assert(source.includes('const aptDelta=getMonsterAptPct(m,specialRuleDifficulty)')&&source.includes('const newAllyUnique={...m.unique'),'aptitude and unique acquisition must stay outside the ally bonus helper');
+assert(source.includes('nextSlots[slotIdx]={...m}')&&source.indexOf('nextSlots[slotIdx]={...m}')<source.indexOf('applyAllyJoinBonus(bonus[key]'),'the ally must join independently before its stat bonus is calculated');
+assert(source.includes('const chaosClearCount = extremeClearCounts[CHAOS_SETTING.id] || 0;')&&source.includes('const ultimateUnlocked = useMemo(() => isUltimateUnlocked(chaosClearCount)'),'ULTIMATE unlock must reuse CHAOS clear counts');
+assert(source.includes('const isUltimateUnlocked = (chaosClearCount) => (Number(chaosClearCount) || 0) > 0;'),'zero CHAOS clears must be locked and one or more must unlock');
+assert(source.includes("const previewable=(setting.available||debugBattle&&setting.id===ULTIMATE_SETTING.id)&&unlocked"),'unavailable ULTIMATE must only be previewable through debug');
+assert(source.includes('h-[382px]')&&source.includes('h-[51px]'),'difficulty card and special-rule box dimensions must remain fixed');
+console.log('OK: ULTIMATE特殊ルール①・②（解放準備、加入ボーナス低下、ターン強化、能力低下、距離弱体化、デバッグ限定、既存ルール分離）');

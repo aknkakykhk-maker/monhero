@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 12:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 12:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3759,7 +3759,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ breederCardEffect:0.5 }) },
   { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
   { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:true, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
-  { id:'ULTIMATE', label:'ULTIMATE', available:false, power:25, score:20, xp:40, gold:20, psyche:60, description:'累計ターンで敵が強化され、能力覚醒が低下し、50ターンごとに距離が永久弱体化する最高難易度。', specialRules:Object.freeze({ enemyTurnRate:0.005, awakeningPenaltyRate:0.005, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ turns:Object.freeze([50,100,150]), damageDealt:0.5, rerollSameDistance:false, persistsForRun:true }) }) },
+  { id:'ULTIMATE', label:'ULTIMATE', available:false, power:25, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナスと能力覚醒が低下し、50ターンごとに距離が永久弱体化する最高難易度。', specialRules:Object.freeze({ enemyTurnRate:0.005, allyJoinPenaltyRate:0.005, awakeningPenaltyRate:0.005, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ turns:Object.freeze([50,100,150]), damageDealt:0.5, rerollSameDistance:false, persistsForRun:true }) }) },
   { id:'INFINITY', label:'INFINITY', available:false },
 ]);
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
@@ -3796,6 +3796,7 @@ const specialRulePercent = (value) => `${Math.round((Number(value)||0)*100)}%`;
 const extremeSpecialRuleLines = (difficultyId) => {
   if (difficultyId===ULTIMATE_SETTING.id) return [
     ['敵強化','累計T ×0.5%'],
+    ['供モン加入B低下','累計T ×0.5%'],
     ['能力覚醒低下','WAVE T ×0.5%'],
     ['距離弱体','50Tごと / 与ダメ50%'],
   ];
@@ -3849,6 +3850,15 @@ const resolveUltimateWaveStats = (stats, turns, specialDifficulty=null) => {
 // extremeSpecialRule が1を返すため、EXTREME / NIGHTMAREを含む既存値は変化しない。
 const applyExtremeIntegerRule = (value, specialDifficulty=null, rule) => Math.floor(
   (Number(value)||0) * (specialDifficulty ? extremeSpecialRule(specialDifficulty,rule) : 1));
+// 供モン加入時のステータス加算だけを難易度別に丸める。ULTIMATEは加入直前の
+// WAVE結果に確定済みの累計ターンを使い、CHAOSの固定50%とは重ねない。
+const applyAllyJoinBonus = (value, specialDifficulty=null, totalTurns=0) => {
+  if(specialDifficulty===ULTIMATE_SETTING.id){
+    const multiplier=Math.max(0,1-Math.max(0,Number(totalTurns)||0)*ULTIMATE_SETTING.specialRules.allyJoinPenaltyRate);
+    return Math.floor((Number(value)||0)*multiplier);
+  }
+  return applyExtremeIntegerRule(value,specialDifficulty,'allyJoinBonus');
+};
 // 極限チャレンジの説明にはモード全体に共通する特徴を十分に載せる。EXTREME固有の倍率や
 // ブリーダーカード50%は、ここではなく難易度カード側で案内する
 const EXTREME_MODE = Object.freeze({
@@ -3885,6 +3895,7 @@ const normalizeExtremeRecordValue = (value) => Math.max(0, Math.floor(Number(val
 // NIGHTMAREの解放には既存のEXTREMEクリア回数を再利用する。
 const isNightmareUnlocked = (extremeClearCount) => (Number(extremeClearCount) || 0) > 0;
 const isChaosUnlocked = (nightmareClearCount) => (Number(nightmareClearCount) || 0) > 0;
+const isUltimateUnlocked = (chaosClearCount) => (Number(chaosClearCount) || 0) > 0;
 const normalizeBattleDifficulty = (value) => Object.prototype.hasOwnProperty.call(QUICK_DIFFICULTY_SETTINGS, value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
@@ -5874,8 +5885,10 @@ function MonsterHeroGame() {
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
   const extremeClearCount = extremeClearCounts[EXTREME_SETTING.id] || 0;
   const nightmareClearCount = extremeClearCounts[NIGHTMARE_SETTING.id] || 0;
+  const chaosClearCount = extremeClearCounts[CHAOS_SETTING.id] || 0;
   const nightmareUnlocked = useMemo(() => isNightmareUnlocked(extremeClearCount), [extremeClearCount]);
   const chaosUnlocked = useMemo(() => isChaosUnlocked(nightmareClearCount), [nightmareClearCount]);
+  const ultimateUnlocked = useMemo(() => isUltimateUnlocked(chaosClearCount), [chaosClearCount]);
   // 解放状態ではなく、中央に見えているカードだけで案内を切り替える。
   const extremeDifficultyAssistantScene = `${extremeDifficulty.toLowerCase()}Difficulty`;
   const activeExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
@@ -10210,7 +10223,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const bonus=m.plusStats||{};
       const bHp=maxHp, bAtk=atk, bDef=def, bGuts=maxGuts;
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-      const joinBonus=(key)=>applyExtremeIntegerRule(bonus[key]||0,specialRuleDifficulty,'allyJoinBonus');
+      const joinBonus=(key)=>applyAllyJoinBonus(bonus[key]||0,specialRuleDifficulty,waveResult?.totalTurnCount);
       const nMaxHp=maxHp+joinBonus('hp'), nAtk=atk+joinBonus('atk'), nDef=def+joinBonus('def'), nMaxGuts=maxGuts+joinBonus('guts');
       setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts); setHp(p=>p+(nMaxHp-bHp));
       // 合流ボーナスに間合い適性も加算する。合流したモンスターの4距離ぶんの補正値(%)を
@@ -11224,20 +11237,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <div className="relative shrink-0">
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
-                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:false);const previewable=(setting.available||debugBattle&&setting.id===ULTIMATE_SETTING.id)&&unlocked;return (
+                    {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:false);const previewable=(setting.available||debugBattle&&setting.id===ULTIMATE_SETTING.id)&&unlocked;return (
                       <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[382px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?'#f0abfc':'rgba(255,255,255,.12)',background:previewable?'linear-gradient(180deg,#34133f,#160d2b)':'linear-gradient(180deg,#1e293b,#0d142b)',boxShadow:active?'0 0 30px rgba(232,121,249,.35)':'none'}}>
                         <div className="text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
                         <h3 className="text-center text-lg font-black leading-tight text-fuchsia-200">{setting.label}</h3>
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/45 px-2.5 py-1">
                           <small className="block text-[8px] text-slate-400 font-black">{setting.available?`${setting.label}の記録`:'難易度情報'}</small>
                           <b className="block text-right text-base leading-tight text-fuchsia-200">{setting.available&&unlocked?`${(extremeBestScores[setting.id]||0).toLocaleString()} pt`:'？？？'}</b>
-                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':'未実装・選択できません'}</span>
+                          <span className="block text-right text-[9px] text-amber-300">{setting.available&&unlocked?`クリア ${extremeClearCounts[setting.id]||0}回`:setting.id==='NIGHTMARE'?'EXTREMEクリアで解放':setting.id==='CHAOS'?'NIGHTMAREクリアで解放':setting.id==='ULTIMATE'&&!ultimateUnlocked?'CHAOSクリアで解放':'未実装・選択できません'}</span>
                         </div>
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <div className="grid grid-cols-2 gap-1 mt-1">{[['経験値',setting.xp?`×${setting.xp}`:'対象外'],['虹のプシュケー',setting.psyche??'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <p className="mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200">{setting.description}</p>
-                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div className="mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"><small className="block text-center text-[8px] leading-tight font-black text-amber-300">⚠ {setting.label}特殊ルール</small>{extremeSpecialRuleLines(setting.id).map(([label,value])=><div key={label} className="grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[12px] whitespace-nowrap"><span className="text-slate-300">{label}</span><b className="text-right text-white">{value}</b></div>)}</div>}
+                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div className="mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"><small className="block text-center text-[8px] leading-tight font-black text-amber-300">⚠ {setting.label}特殊ルール</small>{extremeSpecialRuleLines(setting.id).map(([label,value])=><div key={label} className="grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[10px] whitespace-nowrap"><span className="text-slate-300">{label}</span><b className="text-right text-white">{value}</b></div>)}</div>}
                         </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
                         <div className="grid gap-1.5 mt-auto pt-1.5">
                           <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
@@ -14191,7 +14204,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="text-[11px] font-black tracking-[.12em] text-amber-300">ULTIMATE 特殊ルール</div>
             <div className="mt-3 grid gap-1.5 text-left">
               {[
-                ['1','累計ターン圧','累計ターン×0.5% 次WAVEの敵が強化'],
+                ['1','累計ターン圧',<>累計ターン×0.5% 次WAVEの敵が強化<br/>累計ターン×0.5% 供モン加入ボーナスが低下</>],
                 ['2','覚醒低下','このWAVEのターン数×0.5% 次回の攻撃/防御/精神覚醒が低下'],
                 ['3','DISTANCE BREAK','累計50ターンごとに、未弱体の距離が1つ追加で与ダメージ50%'],
               ].map(([number,title,text])=><div key={number} className="rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"><div className="text-[9px] font-black text-fuchsia-300">RULE {number}｜{title}</div><div className="mt-0.5 text-[10px] font-bold leading-snug text-white">{text}</div>{number==='2'&&<div className="mt-0.5 text-[8px] font-black text-amber-300">※距離強化は対象外</div>}</div>)}
