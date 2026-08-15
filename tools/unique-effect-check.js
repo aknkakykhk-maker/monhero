@@ -133,10 +133,59 @@ for (const [, key, arg] of buffCalls) {
 check('丈夫さバフは基礎ステータスを書き換えない', !/setDef\(d => d \+/.test(source));
 check('丈夫さバフを乗せた実効値がある',
   /const effectiveDef = useMemo\(\(\) => resolveEffectiveMaxStat\(def, getPermaBuff\('defPct'\)\), \[def, permaBuffs\]\);/.test(source));
-check('被ダメージの固定・割合軽減に実効の丈夫さを使う',
-  /effectiveDef\*0\.75/.test(source) && /effectiveDef\*0\.00015/.test(source));
+// 丈夫さの固定軽減の係数は 0.75 → 0.5 と調整されている。係数そのものを固定すると
+// バランス調整のたびにここが落ちるだけなので、「実効の丈夫さを使っているか」を見る。
+// 係数を変えたときは meloso-breeder-check.js のモデルも直す必要があるため、
+// あちらのDRIFT GUARDが係数を見張っている
+check('被ダメージの固定軽減に実効の丈夫さを使う',
+  /Math\.max\(30,\(atkVal-effectiveDef\*[\d.]+\)\*\(1-defenseRate\)\)/.test(source));
+check('被ダメージの割合軽減に実効の丈夫さを使う',
+  /const defenseRate = Math\.min\(0\.5,effectiveDef\*[\d.]+\);/.test(source));
 check('ガードの軽減量(表示)に実効の丈夫さを使う', /Math\.floor\(flat \+ effectiveDef \* mult\)/.test(source));
 check('ガードの軽減量(実処理)に実効の丈夫さを使う', /Math\.floor\(immediateEffects\.guardFlat \+ effectiveDef\*immediateEffects\.guardMult\)/.test(source));
+
+// --- 「そのターンから効く」か「次のターンから効く」かが説明文と合っていること ---
+// processTurn / handleEnemyTurn は await を挟んで進むため、途中で付けた permaBuffs /
+// waveBuffs は state から読み直せない(そのターンが始まった時点の値を掴み続ける)。
+// そのため「ずっと続く効果」は原則そのターンには乗らず、次のターンから効く。
+// 一部だけローカル変数へ控えて同じターンから効かせているので、
+// どちらなのかをここで固定し、説明文と食い違わないようにする。
+// ＊即時にしたい効果を増やすときは、必ずローカル変数での持ち回りとセットで行うこと。
+{
+  // 同じターンから効くもの(ローカル変数で持ち回っている)
+  const immediatePairs = [
+    ["攻撃アップ(おりょう・ゴーレム)", /localOryoAdd\+=/, /getPermaBuff\('atkPct'\)\+getPermaBuff\('muaAtkPct'\)\+additionalOryo/],
+    ["敵の被ダメージ増(モッチー・ミタラシ)", /localDmgModAdd\+=/, /getWaveBuff\('enemyTakenDmgBonus'\)\+additionalDmgMod/],
+    ["全体連撃(きき)", /localGlobalComboAdd\+=/, /getPermaBuff\('globalComboDmgPct'\)\+localGlobalComboAdd/],
+  ];
+  for (const [name, add, use] of immediatePairs) {
+    check(`同じターンから効く: ${name}`, add.test(source) && use.test(source));
+  }
+  // ライフ・ガッツの上限は、ゲージがその場で新しい上限を描くので即時でなければならない
+  check('同じターンから効く: ライフ・ガッツの上限アップ',
+    /const liveEffectiveMaxHp = \(\) => resolveEffectiveMaxStat\(maxHpRef\.current, livePermaBuff\('muaHpPct'\)\);/.test(source)
+    && /const liveEffectiveMaxGuts = \(\) => resolveEffectiveMaxStat\(maxGutsRef\.current, livePermaBuff\('muaGutsPct'\)\);/.test(source));
+
+  // 次のターンから効くもの(持ち回っていない＝そのターンの計算には乗らない)。
+  // 説明文へ「次のターンから」と書いてあることまで確かめる
+  const monsters = fs.readFileSync('monster-hero/data/ally-monsters.js', 'utf8');
+  const help = fs.readFileSync('monster-hero/data/help.js', 'utf8');
+  const nextTurnKeys = ['defPct','dmgCutPct','critRatePct','critDmgPct','comboDmgPct',
+    'muaAtkPct','autoHpRecovery','gutsRecoverPct','snegurochkaGutsDiscountStacks','chuuniUniqueStack'];
+  for (const key of nextTurnKeys) {
+    check(`次のターンから効く(持ち回っていない): ${key}`, !new RegExp(`local[A-Za-z]*\\+=[^\\n]*${key}`).test(source));
+  }
+  check('モノリスの障壁が「次のターンから」と書いてある', /障壁：次のターンから/.test(monsters));
+  check('モッチー・ミタラシの被ダメ軽減が「次のターンから」と書いてある', /味方の被ダメージ3%軽減\(永続\/次のターンから\)/.test(monsters));
+  check('ライガーの会心アップが「次のターンから」と書いてある', /会心ダメージ\+2%\(永続\/重複可\/次のターンから\)/.test(monsters));
+  check('ザンの連撃ダメージが「次のターンから」と書いてある', /連撃ダメージ\+3%\(永続\/重複可\/次のターンから\)/.test(monsters));
+  check('絶氷の楔の消費ガッツ減が「次のターンから」と書いてある', /消費ガッツ3%減（永続・重複可・次のターンから）/.test(monsters));
+  check('中二病の消費ガッツ増が「次のターンから」と書いてある', /ダメージ倍率\+0\.1\(永続\/重複可\/次のターンから\)/.test(monsters));
+  check('ドラの被ダメージダウンが「次のターンから」と書いてある', /%ダウン（次のターンから）/.test(source));
+  check('かどみうむの自動回復が「次のターンから」と書いてある', /自動回復 \$\{pct\(tier\.auto(Hp|Guts)\)\}%アップ（次のターンから）/.test(source));
+  check('みゅあの攻撃アップが「次のターンから」と書いてある', /攻撃 \d%アップ（次のターンから）/.test(source));
+  check('ヘルプに全体のルールが書いてある', /ずっと続く効果は「次のターンから」です/.test(help));
+}
 
 // --- 画面の表示が意味と合っていること ---
 // 「被ダメージ軽減」を「DEF +3%」と出していたため、丈夫さが増えたように見えていた

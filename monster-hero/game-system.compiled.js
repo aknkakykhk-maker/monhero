@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 52753319e2990b52
+// source-sha256: 8908e6fc1c3edc6e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 15:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 15:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18593,19 +18593,19 @@ function MonsterHeroGame() {
     // 0.5%のような小数の効果量があるため、小数第1位まで残す(整数のときは「1」「10」と表示する)
     const pct = v => String(Math.round(v * 1000) / 10);
     if (t.id === 'oryo') return `攻撃 ${pct(0.1 + level * 0.1)}%アップ`;
-    if (t.id === 'dra') return `被ダメージ ${[3, 6, 10][level]}%ダウン`;
+    if (t.id === 'dra') return `被ダメージ ${[3, 6, 10][level]}%ダウン（次のターンから）`;
     if (t.id === 'cadmium') {
       const tier = CADMIUM_TIERS[Math.min(level, CADMIUM_TIERS.length - 1)];
       const parts = [];
-      if (tier.autoHp > 0) parts.push(`ライフ自動回復 ${pct(tier.autoHp)}%アップ`);
-      if (tier.autoGuts > 0) parts.push(`ガッツ自動回復 ${pct(tier.autoGuts)}%アップ`);
+      if (tier.autoHp > 0) parts.push(`ライフ自動回復 ${pct(tier.autoHp)}%アップ（次のターンから）`);
+      if (tier.autoGuts > 0) parts.push(`ガッツ自動回復 ${pct(tier.autoGuts)}%アップ（次のターンから）`);
       if (tier.hpLimit > 0 && tier.hpLimit === tier.gutsLimit) parts.push(`ライフ/ガッツ上限 ${pct(tier.gutsLimit)}%アップ`);else {
         if (tier.hpLimit > 0) parts.push(`ライフ上限 ${pct(tier.hpLimit)}%アップ`);
         if (tier.gutsLimit > 0) parts.push(`ガッツ上限 ${pct(tier.gutsLimit)}%アップ`);
       }
       return parts.join('・');
     }
-    if (t.id === 'mua') return level === 0 ? "ライフ 50%回復・ライフ/攻撃/ガッツ上限 3%アップ" : level === 1 ? "ライフ・ガッツ 70%回復・ライフ上限 5%アップ・攻撃 3%アップ・ガッツ上限 3%アップ" : "ライフ・ガッツ 90%回復・ライフ上限 8%アップ・攻撃 5%アップ・ガッツ上限 5%アップ";
+    if (t.id === 'mua') return level === 0 ? "ライフ 50%回復・ライフ/ガッツ上限 3%アップ・攻撃 3%アップ（次のターンから）" : level === 1 ? "ライフ・ガッツ 70%回復・ライフ上限 5%アップ・ガッツ上限 3%アップ・攻撃 3%アップ（次のターンから）" : "ライフ・ガッツ 90%回復・ライフ上限 8%アップ・ガッツ上限 5%アップ・攻撃 5%アップ（次のターンから）";
     if (t.id === 'atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue + level * t.step).toFixed(1)}倍`;
     if (t.id === 'myaru') {
       const v = t.baseValue + level * t.step,
