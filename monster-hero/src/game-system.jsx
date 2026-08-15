@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 10:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 10:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5863,6 +5863,7 @@ function MonsterHeroGame() {
   const [extremeRuleOpen, setExtremeRuleOpen] = useState(false);
   const [extremeDifficulty, setExtremeDifficulty] = useState('EXTREME');
   const [debugEnemyKey, setDebugEnemyKey] = useState(null);
+  const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
 
@@ -7479,6 +7480,20 @@ function MonsterHeroGame() {
     const list = monsterRosterIds.map(resolveRosterEntryToMon).filter(Boolean);
     return list.length > 0 ? list : Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
   };
+  // 正式データや保存済み編成へ混ぜず、デバッグ戦の勇者選択時だけ生成する検証用個体。
+  // 技・画像・ID依存の既存処理はMocchiを再利用し、debugOnlyで保存経路からも判別できる。
+  const makeDebugStrongestMonster = () => ({
+    ...ALL_PLAYER_MONSTERS.Mocchi,
+    name:'🛠 デバッグ最強モン',
+    baseHp:9999, baseAtk:9999, baseDef:9999, baseGuts:9999,
+    distAptitude:['M','M','M','M'],
+    debugOnly:true,
+  });
+  const debugHeroMonsterList = (list) => {
+    if (!debugBattleRef.current) return list;
+    const debugMon=makeDebugStrongestMonster();
+    return [debugMon,...list.filter(mon=>mon?.id!==debugMon.id)];
+  };
   // 勇者モン選択の「ベースモン」タブ用。解放済みの種は編成に入れていなくても選べる。
   // マスモン登録のためだけに編成を入れ替える手間を無くすためのもの。
   const getUnlockedBaseMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
@@ -8048,6 +8063,7 @@ function MonsterHeroGame() {
   // 今回のランで得た絆経験値をそのまま初期値として、名前を付けてマスモンとして登録する
   // ラン終了画面(CHAMPION/敗北/リタイア)共通: マスモン登録ボタン・登録済み表示
   const masuRegisterButtonNode = () => {
+    if (debugBattle || mainHero?.debugOnly) return null;
     if (!finalRewardSummary?.heroBondGain || finalRewardSummary.heroBondGain.masuId) return null;
     if (masuRegisteredThisRun) return <div className="text-[10px] text-pink-300 font-black mt-1 flex items-center justify-center gap-1 shrink-0"><Heart size={11}/>マスモンとして登録しました！</div>;
     // 見落とされやすいので、ただのボタンではなく枠つきの案内にして光らせる
@@ -8070,7 +8086,7 @@ function MonsterHeroGame() {
     );
   };
   const registerMasuMon = (name) => {
-    if (!mainHero || mainHero.masuId) return null; // 既にマスモンの勇者は登録不要(既存インスタンスに加算済み)
+    if (!mainHero || mainHero.masuId || mainHero.debugOnly || debugBattleRef.current) return null; // 既にマスモンの勇者・デバッグ個体は登録不要
     const base = ALL_PLAYER_MONSTERS[mainHero.id];
     if (!base) return null;
     const startXp = Math.min(finalRewardSummary?.heroBondGain?.xpGain || 0, totalBondXpForLevel(INITIAL_MASU_LEVEL_CAP));
@@ -10136,7 +10152,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   const startDebugBattle = (extreme=false) => {
     const option = getDebugEnemyOptions(difficulty).find(item => item.key === debugEnemyKey);
-    const party = getActiveMonsterList().slice(0, 4);
+    const savedParty = getActiveMonsterList();
+    const party = (debugStrongestHero
+      ? [makeDebugStrongestMonster(),...savedParty.filter(mon=>mon?.id!=='Mocchi')]
+      : savedParty).slice(0, 4);
     if (!option || party.length === 0) return;
     const hero = party[0];
     const debugSlots = [party[0]||null, party[1]||null, party[2]||null, party[3]||null];
@@ -11470,7 +11489,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </section>
               <section><div className="text-[10px] text-slate-500 font-black mb-2">1. 難易度</div><div className="grid grid-cols-3 gap-2">{Object.entries(DIFFICULTY_SETTINGS).map(([key,setting])=><button key={key} onClick={()=>{setDifficulty(key);const options=getDebugEnemyOptions(key);if(!options.some(o=>o.key===debugEnemyKey))setDebugEnemyKey(options[0]?.key||null);}} className={`min-h-[48px] rounded-xl text-[9px] font-black ${difficulty===key?'ring-2 ring-white':'border border-white/10'}`} style={difficultyStyle(setting,difficulty===key)}>{setting.label}</button>)}</div></section>
               <section><div className="text-[10px] text-slate-500 font-black mb-2">2. 敵</div><div className="grid grid-cols-2 gap-2">{getDebugEnemyOptions(difficulty).map(({key,enemy:debugEnemy})=><button key={key} onClick={()=>setDebugEnemyKey(key)} className={`min-h-[46px] px-3 rounded-xl text-[11px] font-black ${debugEnemyKey===key?'bg-purple-950 border-2 border-purple-400 text-purple-100':'bg-slate-900 border border-white/10 text-slate-400'}`}>{debugEnemy.emoji} {debugEnemy.name}</button>)}</div></section>
-              <button disabled={!getDebugEnemyOptions(difficulty).some(o=>o.key===debugEnemyKey)||getActiveMonsterList().length===0} onClick={startDebugBattle} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">3. デバッグ戦開始</button>
+              <section><div className="text-[10px] text-slate-500 font-black mb-2">3. 勇者モン</div><button type="button" data-debug-strongest-monster aria-pressed={debugStrongestHero} onClick={()=>setDebugStrongestHero(v=>!v)} className={`w-full min-h-[58px] rounded-2xl border-2 px-3 font-black ${debugStrongestHero?'border-fuchsia-300 bg-fuchsia-800 text-white':'border-white/15 bg-slate-900 text-slate-300'}`}><span className="block">🛠 デバッグ最強モン</span><small className="block text-[8px] opacity-80">DEBUG専用・ライフ/ちから/丈夫さ/最大ガッツ 9999・全距離M</small></button></section>
+              <button disabled={!getDebugEnemyOptions(difficulty).some(o=>o.key===debugEnemyKey)||(!debugStrongestHero&&getActiveMonsterList().length===0)} onClick={startDebugBattle} className="w-full min-h-[58px] bg-slate-200 text-slate-950 rounded-2xl font-black disabled:opacity-30">4. デバッグ戦開始</button>
             </div>
           </div>
         )}
@@ -13623,7 +13643,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {(()=>{const allyCarousel=gameState==='PICK_ALLY'&&isProMode(runMode);
               // 念のため、すでに編成にいる子は一覧にも出さない(勇者モンがもう一度出ないようにする)
               const inParty=slots.filter(x=>x).map(x=>x.id);
-              const rawList=gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;
+              const savedRawList=gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;
+              const rawList=gameState==='PICK_HERO'?debugHeroMonsterList(savedRawList):savedRawList;
               const list=(gameState==='PICK_ALLY'?rawList.filter(m=>m&&!inParty.includes(m.id)):rawList)||[];
               const stepAlly=(delta)=>{const root=allyCarouselRef.current;if(!root)return;const next=Math.max(0,Math.min(list.length-1,allyCardIndex+delta));setAllyCardIndex(next);root.children[next]?.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});};
               return (<>
@@ -13641,7 +13662,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // 同じマスモンが画面によって違う見た目になっていた。
               // この画面だけの情報(固有技名・ステータス・詳細への案内)はextraで足す。
               const pickMasu=m.masuId?getMasuMon(m.masuId):null;
-              const pickBase=ALL_PLAYER_MONSTERS[m.id]||m;
+              const pickBase=m.debugOnly?m:(ALL_PLAYER_MONSTERS[m.id]||m);
               if(gameState==='PICK_HERO'&&isProMode(runMode)) return (
                 <article key={m.id} className="relative min-h-[112px] rounded-2xl border border-slate-700 bg-slate-900 overflow-hidden flex shadow-lg">
                   <button disabled={gameState==='PICK_HERO'&&!scenarioPicksHero(m.id)} onClick={()=>{setCurrentPickingMon(m);setGameState('PICK_SLOT');}} aria-label={`${m.name}を勇者モンに選ぶ`} className={`min-w-0 flex-1 grid grid-cols-[64px_minmax(0,1fr)_74px] gap-2 items-center p-2 pr-1 text-left active:bg-indigo-900/30 disabled:opacity-25${scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}`}>
@@ -13671,7 +13692,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               return(<button key={m.id} disabled={gameState==='PICK_HERO'&&!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} style={allyCarousel?{...MONSTER_CARD_STYLE,flex:'0 0 64%'}:MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25${gameState!=='PICK_HERO'||scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}${allyCarousel?` snap-center shrink-0 ${focused?'scale-100 opacity-100':'scale-[.92] opacity-55'}`:''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`}>
               {renderMonsterCardBody({
                 masu: pickMasu, base: pickBase, mon: m,
-                badge: isSel?<div className="absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>:null,
+                badge: m.debugOnly?<div className="absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white">DEBUG専用</div>:isSel?<div className="absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>:null,
                 extra: (<>
                   <div className="text-amber-400 font-black flex items-center gap-1 leading-tight" style={{fontSize:'9px'}}><Zap size={9}/> {m.unique.name}</div>
                   <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono" style={{fontSize:'9px'}}>
@@ -13723,11 +13744,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         </div>
       </div>
     )}
-    {!currentPickingMon.masuId&&(
+    {!currentPickingMon.masuId&&!currentPickingMon.debugOnly&&(
       <div className="bg-black/30 p-2 rounded-xl border border-white/5 text-[8px] text-slate-500 font-bold text-center">
         {gameState==='PICK_HERO'?'勇者モンとして選び、ラン終了時に登録すると「マスモン」として絆レベル・ステータスを強化できます':'絆レベルの強化は勇者モン(マスモン)のみ対象です'}
       </div>
     )}
+    {currentPickingMon.debugOnly&&<div className="rounded-xl border border-fuchsia-400/50 bg-fuchsia-950/50 p-2 text-center text-[9px] font-black text-fuchsia-200">DEBUG専用・保存、育成、マスモン登録の対象外</div>}
   </>),
             },
             footer: (
