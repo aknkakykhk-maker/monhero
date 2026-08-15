@@ -19,7 +19,7 @@ for (const name of ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY']) assert
 assert(/EXTREME[^\n]+available:true[^\n]+power:13[^\n]+score:20[^\n]+xp:25[^\n]+gold:7\.5[^\n]+psyche:30[^\n]+specialRules:Object\.freeze\(\{ breederCardEffect:0\.5 \}\)/.test(config), 'EXTREME settings and its difficulty-specific rule must match the official specification');
 assert(/NIGHTMARE[^\n]+available:true[^\n]+power:15[^\n]+score:20[^\n]+xp:30[^\n]+gold:10[^\n]+psyche:40[^\n]+specialRules/.test(config), 'NIGHTMARE must expose its official values and rules for battle');
 assert(/CHAOS[^\n]+available:true[^\n]+power:20[^\n]+score:20[^\n]+xp:35[^\n]+gold:15[^\n]+psyche:50[^\n]+unlockRequirement:'NIGHTMARE'[^\n]+specialRules:Object\.freeze\(\{ damageDealt:0\.5, allyJoinBonus:0\.5, gutsCost:1\.5 \}\)/.test(config), 'CHAOS must expose its official specification');
-assert(/ULTIMATE[^\n]+available:true[^\n]+power:25[^\n]+score:20[^\n]+xp:40[^\n]+gold:20[^\n]+psyche:60[^\n]+unlockRequirement:'CHAOS'[^\n]+specialRules/.test(config), 'ULTIMATE must expose its official specification');
+assert(/ULTIMATE[^\n]+available:true[^\n]+power:35[^\n]+score:20[^\n]+xp:40[^\n]+gold:20[^\n]+psyche:60[^\n]+unlockRequirement:'CHAOS'[^\n]+specialRules/.test(config), 'ULTIMATE must expose its official specification');
 assert(/INFINITY[^\n]+available:false/.test(config), 'INFINITY must remain unavailable without placeholder values');
 assert(config.includes('const isNightmareUnlocked = (extremeClearCount) => (Number(extremeClearCount) || 0) > 0;'), 'NIGHTMARE unlock must reuse the existing EXTREME clear count');
 assert(source.includes("{previewable?'この難易度で挑戦':'選択できません'}"), 'previewable EXTREME tiers must be selectable');

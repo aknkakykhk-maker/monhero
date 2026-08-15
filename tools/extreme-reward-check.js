@@ -82,7 +82,7 @@ check('CHAOS特殊ルールを持つ',
     && chaos.specialRules.gutsCost === 1.5);
 const ultimate = m.EXTREME_DIFFICULTIES.find(s => s.id === 'ULTIMATE');
 check('ULTIMATEは正式公開の数値を持つ',
-  ultimate.available === true && ultimate.power === 25 && ultimate.score === 20
+  ultimate.available === true && ultimate.power === 35 && ultimate.score === 20
     && ultimate.xp === 40 && ultimate.gold === 20 && ultimate.psyche === 60
     && ultimate.unlockRequirement === 'CHAOS');
 const infinity = m.EXTREME_DIFFICULTIES.find(s => s.id === 'INFINITY');
