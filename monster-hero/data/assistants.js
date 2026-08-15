@@ -221,6 +221,11 @@ const ASSISTANT_BOND_ACTIONS = {
   enhance:     { amount:1, dailyMax:6, label:'マスモンを強化する' },
   dye:         { amount:1, dailyMax:3, label:'染色する' },
   partySet:    { amount:1, dailyMax:3, label:'編成を保存する' },
+  extreme:      { amount:3, dailyMax:9,  label:'極限チャレンジに挑む' },
+  clear:        { amount:2, dailyMax:8,  label:'チャレンジモードをクリア' },
+  quickClear:   { amount:1, dailyMax:6,  label:'クイックモードをクリア' },
+  proClear:     { amount:2, dailyMax:8,  label:'プロモードをクリア' },
+  extremeClear: { amount:4, dailyMax:12, label:'極限チャレンジをクリア' },
 };
 // 1日に増やせる合計。上の dailyMax を全部足すと100を超えるが、
 // ここで頭打ちにして「1日で一気に仲良くなる」ことがないようにしている。

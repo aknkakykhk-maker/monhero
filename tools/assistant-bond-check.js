@@ -213,7 +213,7 @@ check('画面側はこれまでどおり scene を渡すだけ',
 for (const [key, wired] of Object.entries({
   login: "gainAssistantBond(savedBond, 'login')",
   battle: "addAssistantBond('battle')",
-  challenge: "addAssistantBond(modeBondAction(runMode))",
+  challenge: "addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode))",
   ranking: "addAssistantBond('ranking')",
   temple: "addAssistantBond('temple')",
   market: "addAssistantBond('market')",
@@ -229,6 +229,11 @@ for (const [key, wired] of Object.entries({
   enhance: "addAssistantBond('enhance')",
   dye: "addAssistantBond('dye')",
   partySet: "addAssistantBond('partySet')",
+  extreme: "addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode))",
+  clear: "addAssistantBond('clear')",
+  quickClear: "addAssistantBond('quickClear')",
+  proClear: "addAssistantBond('proClear')",
+  extremeClear: "addAssistantBond('extremeClear')",
 })) check(`${key} で仲良し度が増える`, has(wired));
 
 // --- 既存データを壊していないか ---
