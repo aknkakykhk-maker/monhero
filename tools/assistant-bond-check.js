@@ -220,6 +220,15 @@ for (const [key, wired] of Object.entries({
   mission: "addAssistantBond('mission')",
   gift: "addAssistantBond('gift')",
   talk: "if (typeof bond.onTalk === 'function') bond.onTalk();",
+  management: "addAssistantBond('management')",
+  fusion: "addAssistantBond('fusion')",
+  breakthrough: "addAssistantBond('breakthrough')",
+  reincarnate: "addAssistantBond('reincarnate')",
+  regenerate: "addAssistantBond('regenerate')",
+  donate: "addAssistantBond('donate')",
+  enhance: "addAssistantBond('enhance')",
+  dye: "addAssistantBond('dye')",
+  partySet: "addAssistantBond('partySet')",
 })) check(`${key} で仲良し度が増える`, has(wired));
 
 // --- 既存データを壊していないか ---

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 762a74b71dbf0d2e
+// source-sha256: bac2381cfcfa238f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 22:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 22:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13908,6 +13908,7 @@ function MonsterHeroGame() {
       activeIndex: editingPartySetIndex,
       rosters
     });
+    addAssistantBond('partySet');
     // 決定したらM/B管理のモンスタータブへ戻る(古い編成メニューは経由しない)
     setManagementTab('monster');
     setGameState('MB_MANAGEMENT');
@@ -13916,6 +13917,7 @@ function MonsterHeroGame() {
     if (draftTeachingRoster.length !== STARTER_TEACHING_IDS.length) return;
     setTeachingRosterIds(draftTeachingRoster);
     storeSet('mh_teaching_roster', draftTeachingRoster, false);
+    addAssistantBond('partySet');
     // 決定したらM/B管理のブリーダーカードタブへ戻る(古い編成メニューは経由しない)
     setManagementTab('breeder');
     setGameState('MB_MANAGEMENT');
@@ -14507,6 +14509,7 @@ function MonsterHeroGame() {
       storeSet('mh_owned_items', next, false);
       return next;
     });
+    addAssistantBond('dye');
     Audio_.se.tap();
   };
   // マスモンの名前を変更する(12文字まで)
@@ -14630,6 +14633,7 @@ function MonsterHeroGame() {
     setGold(goldAfter);
     if (withBreakthrough) setOwnedItems(nextItems);
     removeMasuFromAllPartySets(sub.id);
+    addAssistantBond('fusion');
     return {
       mainName: main.name,
       mainIconUrl: mainBase?.iconUrl,
@@ -14721,6 +14725,7 @@ function MonsterHeroGame() {
       setMasuMons(next);
       setGold(result.nextGold);
       setOwnedItems(nextItems);
+      addAssistantBond('breakthrough');
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       const skill = result.raisesSkill ? getRebirthSkillChoices(masu).find(choice => choice.key === result.skillKey) : null;
       setRebirthAnimation({
@@ -14765,6 +14770,7 @@ function MonsterHeroGame() {
       masuMonsRef.current = next;
       setMasuMons(next);
       setGold(result.nextGold);
+      addAssistantBond('reincarnate');
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       const skill = result.raisesSkill ? getRebirthSkillChoices(masu).find(choice => choice.key === result.skillKey) : null;
       setReincarnateAnimation({
@@ -14806,6 +14812,7 @@ function MonsterHeroGame() {
       setMasuMons(next);
       setGold(gold - cost);
       setRegenerationUsed(true);
+      addAssistantBond('regenerate');
       setRegenerationResult({
         masu,
         base,
@@ -14869,6 +14876,7 @@ function MonsterHeroGame() {
         rosters: repairedRosters
       });
       if (result.donated.some(m => fusionMainId === m.id || fusionSubId === m.id)) resetFusionFlow();
+      addAssistantBond('donate');
       setMasuMonDetail(null);
       setDonationSelectedIds([]);
       setDonationConfirmOpen(false);
@@ -20022,6 +20030,7 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("button", {
       className: `mh-home-facility management${spotClass('management')}`,
       onClick: () => {
+        addAssistantBond('management');
         setManagementTab('monster');
         setGameState('MB_MANAGEMENT');
       },
@@ -26164,6 +26173,7 @@ function MonsterHeroGame() {
         if (!updated) return;
         setMasuMonDetail(updated);
         saveMissionProgress('enhance');
+        addAssistantBond('enhance');
         setBulkPlan(null);
         const lines = [];
         plan.apt.forEach((n, i) => {
@@ -26418,6 +26428,7 @@ function MonsterHeroGame() {
             if (!updated) return;
             setMasuMonDetail(updated);
             saveMissionProgress('enhance');
+            addAssistantBond('enhance');
             const afterGrade = resolveMasuDistAptitude(updated, base)[idx] || beforeGrade;
             setEffect({
               type: 'enhance',
@@ -26451,6 +26462,7 @@ function MonsterHeroGame() {
             if (!updated) return;
             setMasuMonDetail(updated);
             saveMissionProgress('enhance');
+            addAssistantBond('enhance');
             setEffect({
               type: 'enhance',
               label: `${label}強化！`,

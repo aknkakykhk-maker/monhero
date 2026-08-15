@@ -212,10 +212,20 @@ const ASSISTANT_BOND_ACTIONS = {
   gift:      { amount:1, dailyMax:4,  label:'ギフトを受け取る' },
   market:    { amount:1, dailyMax:3,  label:'マーケットを見る' },
   talk:      { amount:1, dailyMax:5,  label:'みゅあと話す' },
+  management:  { amount:1, dailyMax:4, label:'M/B管理を見る' },
+  fusion:      { amount:2, dailyMax:6, label:'合体する' },
+  breakthrough:{ amount:2, dailyMax:6, label:'限界突破する' },
+  reincarnate: { amount:2, dailyMax:6, label:'転生する' },
+  regenerate:  { amount:1, dailyMax:3, label:'再生する' },
+  donate:      { amount:2, dailyMax:6, label:'寄付する' },
+  enhance:     { amount:1, dailyMax:6, label:'マスモンを強化する' },
+  dye:         { amount:1, dailyMax:3, label:'染色する' },
+  partySet:    { amount:1, dailyMax:3, label:'編成を保存する' },
 };
-// 1日に増やせる合計。上の dailyMax を全部足すと 73 になるが、
-// ここで頭打ちにして「1日で一気に仲良くなる」ことがないようにしている
-const ASSISTANT_BOND_DAILY_MAX = 30;
+// 1日に増やせる合計。上の dailyMax を全部足すと100を超えるが、
+// ここで頭打ちにして「1日で一気に仲良くなる」ことがないようにしている。
+// 行動の種類を増やしたぶん、いろんな遊び方をすれば無理なく届く程度に40へ調整した
+const ASSISTANT_BOND_DAILY_MAX = 40;
 
 // そのセリフが、いまの仲良し度で出せるか。bond を書いていなければどのLvでも出る
 const assistantLineMatchesBond = (line, level) => {
