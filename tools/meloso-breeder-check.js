@@ -53,7 +53,7 @@ assert(!game.includes(`(effectiveMaxHp-p)*recoveryMult`) && !game.includes(`(eff
 // カード使用から敵ターン、次プレイヤーターン、効果消費後までを通す実戦相当モデル。
 // 被ダメ軽減は防御・永続軽減・ガードの後に適用し、予約ターンだけ有効にする。
 const enemyDamageBeforeTurnReduction = ({ attack, defense, permanentReduction=0 }) =>
-  Math.max(1, Math.floor(Math.max(30, attack-defense*0.15)*(1-permanentReduction)));
+  Math.max(1, Math.floor(Math.max(30,(attack-defense*1.5)*(1-Math.min(0.5,defense*0.0002)))*(1-permanentReduction)));
 const applyTurnDamageReduction = (damage, multiplier=1) => damage>0
   ? Math.max(1,Math.floor(damage*multiplier)) : 0;
 const advanceCombatTurn = (state, { guard=0 }={}) => {
@@ -90,17 +90,17 @@ const base={hp:40,guts:20,maxHp:100,maxGuts:100,attack:200,defense:100,permanent
 const lv1=useMeloso(base,{level:0,usedCardCount:1,guard:25});
 assert.deepStrictEqual([lv1.hp,lv1.guts,lv1.immediateGuard],[70,50,25]);
 const lv1Enemy=advanceCombatTurn(lv1,{guard:lv1.immediateGuard});
-assert.strictEqual(lv1Enemy.damage,123); // ガードなし148、ガード25を既存最終軽減の前に適用
+assert.strictEqual(lv1Enemy.damage,14); // ガードなし39、ガード25を次ターン軽減の前に適用
 const lv2Miss=advanceCombatTurn(useMeloso(base,{level:1,usedCardCount:1}));
 assert.strictEqual(lv2Miss.turnBuffs.takenDamageMult,undefined);
 let lv2=advanceCombatTurn(useMeloso(base,{level:1,usedCardCount:2}));
-assert.strictEqual(lv2.damage,148); // 予約したターンの敵攻撃にはまだ適用しない
+assert.strictEqual(lv2.damage,39); // 予約したターンの敵攻撃にはまだ適用しない
 lv2=advanceCombatTurn(lv2);
-assert.strictEqual(lv2.damage,74); // 防御・永続軽減後の148を50%軽減
+assert.strictEqual(lv2.damage,19); // 防御・永続軽減後の39を50%軽減
 lv2=advanceCombatTurn(lv2);
-assert.strictEqual(lv2.damage,148); // 消費後は元へ戻る
+assert.strictEqual(lv2.damage,39); // 消費後は元へ戻る
 const guardedLv2=advanceCombatTurn({...base,turnBuffs:{takenDamageMult:0.5}},{guard:40});
-assert.strictEqual(guardedLv2.damage,54); // (148-40)×50%。攻撃力半減ではない
+assert.strictEqual(guardedLv2.damage,0); // 基本防御後の39をガード40で完全軽減
 let lv3=advanceCombatTurn(useMeloso(base,{level:2,usedCardCount:3}));
 lv3=startPlayerTurn(lv3);
 assert.deepStrictEqual([lv3.hp,lv3.guts,lv3.turnBuffs.melosoFullRecoveryMult],[100,100,undefined]);

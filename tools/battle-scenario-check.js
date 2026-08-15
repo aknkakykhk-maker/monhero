@@ -141,7 +141,8 @@ check('③ 固有技で必ず倒しきれる', sc.enemyHp <= minBefore + uniqueD
 // --- ④ こちらは倒れない・ガッツも足りる ---
 // 被ダメージ(getPredictedDamage と同じ式)。モッチー/ミタラシは特性で20%軽減
 const traitCut = (sc.heroId === 'Mocchi' || sc.heroId === 'Mitarashi') ? 0.8 : 1.0;
-const incoming = (mult) => Math.max(1, Math.floor(Math.max(30, sc.enemyAtk * mult - defStat * 0.15) * traitCut));
+const incoming = (mult) => Math.max(1, Math.floor(Math.max(30,
+  (sc.enemyAtk * mult - defStat * 1.5) * (1 - Math.min(0.5, defStat * 0.0002))) * traitCut));
 const guard = d.GUARD_EVOLUTION[0];
 const guardCut = Math.floor(guard.flat + defStat * guard.mult);
 const ATTACK_MULT = num(/id:'normal',type:'ATTACK',category:'通常攻撃',weight:\d+,multiplier:(\d+(?:\.\d+)?)/, '通常攻撃の倍率');
