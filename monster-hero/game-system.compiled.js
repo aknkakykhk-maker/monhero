@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bf427c930698caca
+// source-sha256: 762a74b71dbf0d2e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 20:23"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 22:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7984,7 +7984,7 @@ const helpDataRows = id => {
     case 'assistantBond':
       {
         const callUnlockLv = typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6;
-        return (typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS || []).map(s => [`Lv.${s.level} ${s.title}`, `${s.need} から ／ 呼び方「${s.level >= callUnlockLv ? 'プレイヤーが選択（さん付け／呼び捨て／ちん付け）' : String(s.call).replace('{name}', 'あなたの名前')}」 ／ ${s.tone}`]);
+        return (typeof ASSISTANT_BOND_LEVELS !== 'undefined' && ASSISTANT_BOND_LEVELS || []).map(s => [`Lv.${s.level} ${s.title}`, `${s.need} から ／ 呼び方「${s.level >= callUnlockLv ? 'プレイヤーが自由に設定' : String(s.call).replace('{name}', 'あなたの名前')}」 ／ ${s.tone}`]);
       }
     case 'monsterPower':
       // 総合力の内訳は、実際の計算に使っている定数から作る(ヘルプへ数字を手で書き写さない)
@@ -11234,8 +11234,9 @@ function MonsterHeroGame() {
   const [waveHistory, setWaveHistory] = useState([]); // 今回のプレイでWAVEをクリアするたびに記録するスコア・経験値ログ(最終リザルト画面表示用)
   const [breederIcon, setBreederIcon] = useState(null); // 選択中アイコンのモンスターid、またはマーケットで購入したアイコンid(未選択はnull)
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [assistantCallStyle, setAssistantCallStyleState] = useState(null); // みゅあの呼び方の上書き(絆Lv6から選択可・未選択はnullで絆Lvの既定のまま)
+  const [assistantCallStyle, setAssistantCallStyleState] = useState(null); // みゅあの呼び方の上書き(絆Lv6から自由入力・未入力はnullで絆Lvの既定のまま)
   const [showCallStylePicker, setShowCallStylePicker] = useState(false);
+  const [tempCallStyle, setTempCallStyle] = useState(''); // 呼び方入力欄の一時値(保存を押すまで確定しない)
   const [breederPoints, setBreederPoints] = useState(0); // レベルアップ毎に+1、ブリーダーマーケットで消費(端末保存)
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
@@ -13739,11 +13740,14 @@ function MonsterHeroGame() {
       storeSet(ASSISTANT_BOND_KEY, next, false);
     } catch {}
   }, []);
-  // みゅあの呼び方を選ぶ(絆Lv6から)。選ばなければ絆Lvどおりの既定のまま変わらない
-  const chooseAssistantCallStyle = useCallback(id => {
-    setAssistantCallStyleState(id);
+  // みゅあの呼び方を自由な文字で決める(絆Lv6から)。空にすれば絆Lvどおりの既定へ戻る
+  const chooseAssistantCallStyle = useCallback(text => {
+    const maxLen = typeof ASSISTANT_CALL_STYLE_MAX_LEN !== 'undefined' && ASSISTANT_CALL_STYLE_MAX_LEN || 16;
+    const trimmed = String(text || '').trim().slice(0, maxLen);
+    const next = trimmed || null;
+    setAssistantCallStyleState(next);
     try {
-      storeSet('mh_assistant_call_style', id, false);
+      storeSet('mh_assistant_call_style', next, false);
     } catch {}
   }, []);
   // 吹き出しへ配る値。画面側は <AssistantBubble scene="…"/> のままでよい
@@ -24071,7 +24075,10 @@ function MonsterHeroGame() {
         className: "text-[11px] font-black text-white"
       }, "Lv.", assistantBondLevelNow, "\u3000", stage ? stage.title : '')), assistantBondLevelNow >= (typeof ASSISTANT_CALL_STYLE_UNLOCK_LEVEL !== 'undefined' && ASSISTANT_CALL_STYLE_UNLOCK_LEVEL || 6) ? /*#__PURE__*/React.createElement("button", {
         type: "button",
-        onClick: () => setShowCallStylePicker(true),
+        onClick: () => {
+          setTempCallStyle(assistantCallStyle || '');
+          setShowCallStylePicker(true);
+        },
         className: "shrink-0 text-right active:scale-95"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[8px] text-slate-500 flex items-center justify-end gap-0.5"
@@ -26704,24 +26711,44 @@ function MonsterHeroGame() {
     }, /*#__PURE__*/React.createElement("h3", {
       className: "text-lg font-black text-white mb-1 text-center"
     }, "\u307F\u3085\u3042\u306E\u547C\u3073\u65B9"), /*#__PURE__*/React.createElement("p", {
-      className: "text-[9px] text-slate-500 text-center mb-4 leading-tight"
-    }, "\u7D46Lv6\u306B\u306A\u3063\u305F\u306E\u3067\u3001\u307F\u3085\u3042\u306E\u547C\u3073\u65B9\u3092\u9078\u3079\u308B\u3088\u3002\u9078\u3070\u306A\u3051\u308C\u3070\u3001\u3053\u308C\u307E\u3067\u3069\u304A\u308A\u306E\u547C\u3073\u65B9\u306E\u307E\u307E\u3060\u3088\u3002"), /*#__PURE__*/React.createElement("div", {
-      className: "space-y-2 mb-4"
-    }, (typeof ASSISTANT_CALL_STYLES !== 'undefined' && ASSISTANT_CALL_STYLES || []).map(style => {
-      const active = assistantCallStyle === style.id;
-      return /*#__PURE__*/React.createElement("button", {
-        key: style.id,
-        onClick: () => chooseAssistantCallStyle(style.id),
-        className: `w-full min-h-[52px] rounded-xl border-2 px-4 flex items-center justify-between active:scale-95 ${active ? 'bg-pink-950/60 border-pink-400 text-pink-100' : 'bg-slate-800 border-slate-700 text-white'}`
-      }, /*#__PURE__*/React.createElement("span", {
-        className: "font-black text-[12px]"
-      }, style.label), /*#__PURE__*/React.createElement("span", {
-        className: "text-[11px] font-bold opacity-80"
-      }, style.template.replace('{name}', breederName || 'あなた')));
-    })), /*#__PURE__*/React.createElement("button", {
+      className: "text-[9px] text-slate-500 text-center mb-3 leading-tight"
+    }, "\u7D46Lv6\u306B\u306A\u3063\u305F\u306E\u3067\u3001\u307F\u3085\u3042\u306E\u547C\u3073\u65B9\u3092\u81EA\u7531\u306B\u6C7A\u3081\u3089\u308C\u308B\u3088\u3002\u300C", '{name}', "\u300D\u3068\u66F8\u304F\u3068\u3001\u305D\u3053\u304C\u3042\u306A\u305F\u306E\u540D\u524D\u306B\u7F6E\u304D\u63DB\u308F\u308B\u3088\u3002"), /*#__PURE__*/React.createElement("input", {
+      type: "text",
+      value: tempCallStyle,
+      onChange: e => setTempCallStyle(e.target.value),
+      maxLength: typeof ASSISTANT_CALL_STYLE_MAX_LEN !== 'undefined' && ASSISTANT_CALL_STYLE_MAX_LEN || 16,
+      placeholder: `例: {name}さん`,
+      className: "w-full bg-black/50 border border-slate-700 rounded-xl p-3 text-white font-bold text-center mb-2"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "flex flex-wrap gap-1.5 justify-center mb-4"
+    }, (typeof ASSISTANT_CALL_STYLES !== 'undefined' && ASSISTANT_CALL_STYLES || []).map(style => /*#__PURE__*/React.createElement("button", {
+      key: style.id,
+      type: "button",
+      onClick: () => setTempCallStyle(style.template),
+      className: "px-2.5 min-h-[30px] rounded-full text-[10px] font-black bg-slate-800 border border-slate-700 text-slate-300 active:scale-95"
+    }, style.label))), /*#__PURE__*/React.createElement("p", {
+      className: "text-[9px] text-slate-500 text-center mb-3"
+    }, "\u3044\u307E\u306E\u547C\u3073\u65B9\u30D7\u30EC\u30D3\u30E5\u30FC: ", /*#__PURE__*/React.createElement("span", {
+      className: "text-pink-200 font-black"
+    }, (tempCallStyle || '').includes('{name}') ? tempCallStyle.replace('{name}', breederName || 'あなた') : tempCallStyle || assistantSpeakText('{name}', breederName, assistantBondLevelNow))), /*#__PURE__*/React.createElement("div", {
+      className: "flex gap-2 mb-2"
+    }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowCallStylePicker(false),
-      className: "w-full bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
-    }, "\u9589\u3058\u308B"))), showIconPicker && /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold text-xs"
+    }, "\u9589\u3058\u308B"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        chooseAssistantCallStyle(tempCallStyle);
+        setShowCallStylePicker(false);
+      },
+      className: "flex-1 bg-pink-600 text-white py-3 rounded-xl font-black text-xs"
+    }, "\u4FDD\u5B58")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        chooseAssistantCallStyle('');
+        setTempCallStyle('');
+        setShowCallStylePicker(false);
+      },
+      className: "w-full text-[10px] text-slate-500 font-bold py-1 active:scale-95"
+    }, "\u7D46Lv\u306E\u547C\u3073\u65B9\u306B\u623B\u3059"))), showIconPicker && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 z-[9000] flex flex-col items-center justify-center p-6",
       style: {
         position: 'fixed',
