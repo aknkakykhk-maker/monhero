@@ -813,11 +813,11 @@ addAssistantLinePack({
       { e:'wink', t:'CHAOSクリアで虹のプシュケー50個！ あたしも全力で応援するよ♪' },
     ],
     ultimateDifficulty: [
-      { e:'surprise', t:'ULTIMATEは敵強度×25！ CHAOSをクリアした猛者だけの究極戦だよ！' },
+      { e:'surprise', t:'ULTIMATEは敵強度×35！ CHAOSをクリアした猛者だけの究極戦だよ！' },
       { e:'normal', t:'累計ターンが増えるほど、次WAVEの敵は強く、加入ボーナスは低くなるよ。' },
       { e:'excited', t:'スコア×20、経験値×40、ダイヤ×20！ 虹のプシュケーは60個だよ♪' },
       { e:'troubled', t:'能力覚醒もWAVEのターン数で低下するから、素早い勝利が大切だね。' },
-      { e:'wink', t:'50ターンごとのDISTANCE BREAKに備えて、いろんな距離で戦お♪' },
+      { e:'wink', t:'35ターンごとの段階的なDISTANCE BREAKに備えて、いろんな距離で戦お♪' },
     ],
     infinityDifficulty: [
       { e:'excited', t:'最後に待ってるのはINFINITY…いつか挑める日が楽しみだね！' },

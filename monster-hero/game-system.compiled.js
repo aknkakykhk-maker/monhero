@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8908e6fc1c3edc6e
+// source-sha256: ffd377d49693c467
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 15:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 16:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7512,22 +7512,24 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   id: 'ULTIMATE',
   label: 'ULTIMATE',
   available: true,
-  power: 25,
+  power: 35,
   score: 20,
   xp: 40,
   gold: 20,
   psyche: 60,
   unlockRequirement: 'CHAOS',
-  description: '累計ターンで敵が強化され、供モン加入ボーナスと能力覚醒が低下し、50ターンごとに距離が永久弱体化する最高難易度。',
+  description: '累計ターンで敵が強化され、供モン加入ボーナス・能力覚醒・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。',
   specialRules: Object.freeze({
-    enemyTurnRate: 0.005,
-    allyJoinPenaltyRate: 0.005,
-    awakeningPenaltyRate: 0.005,
+    enemyTurnRate: 0.0075,
+    allyJoinPenaltyRate: 0.0075,
+    damageTurnRate: 0.0075,
+    minimumDamageDealt: 0.25,
+    awakeningPenaltyRate: 0.0075,
     awakeningPenaltyExcludes: Object.freeze(['distance']),
     distanceBreak: Object.freeze({
-      turns: Object.freeze([50, 100, 150]),
-      damageDealt: 0.5,
-      rerollSameDistance: false,
+      interval: 35,
+      damageDealtPerLevel: 0.5,
+      safeDistanceCount: 1,
       persistsForRun: true
     })
   })
@@ -7591,7 +7593,7 @@ const specialRuleDifficultyForRun = (runMode, difficultyId, extremeRun = false, 
 };
 const specialRulePercent = value => `${Math.round((Number(value) || 0) * 100)}%`;
 const extremeSpecialRuleLines = difficultyId => {
-  if (difficultyId === ULTIMATE_SETTING.id) return [['敵強化', '累計T ×0.5%'], ['供モン加入B低下', '累計T ×0.5%'], ['能力覚醒低下', 'WAVE T ×0.5%'], ['距離弱体', '50Tごと / 与ダメ50%']];
+  if (difficultyId === ULTIMATE_SETTING.id) return [['敵強化', '累計T ×0.75%'], ['供モン加入B低下', '累計T ×0.75%'], ['与ダメ低下', '経過累計T ×0.75%（最低25%）'], ['能力覚醒低下', 'WAVE T ×0.75%'], ['距離BREAK', '35Tごと / 3距離を段階強化']];
   const rules = extremeDifficultySetting(difficultyId)?.specialRules || {};
   const lines = [];
   if (rules.breederCardEffect != null) lines.push(['ブリーダーカード効果', specialRulePercent(rules.breederCardEffect)]);
@@ -7612,22 +7614,27 @@ const applyNightmareSignedModifier = (value, specialDifficulty = null) => value 
 const applyNightmareWaveEnhancement = (value, specialDifficulty = null) => value * (specialDifficulty ? extremeSpecialRule(specialDifficulty, 'waveEnhancement') : 1);
 const applyNightmareStatGain = (before, normalAfter, specialDifficulty = null) => before + Math.floor(applyNightmareWaveEnhancement(normalAfter - before, specialDifficulty));
 const ultimateEnemyTurnMultiplier = turns => 1 + Math.max(0, Number(turns) || 0) * ULTIMATE_SETTING.specialRules.enemyTurnRate;
-const pendingUltimateDistanceBreak = (totalTurns, weakenedDistances, waveNumber, specialDifficulty = null) => {
+const pendingUltimateDistanceBreak = (totalTurns, breakLevels, waveNumber, specialDifficulty = null) => {
   if (specialDifficulty !== ULTIMATE_SETTING.id || Number(waveNumber) >= 10) return null;
-  const weakenedCount = Array.isArray(weakenedDistances) ? weakenedDistances.length : 0;
-  return ULTIMATE_SETTING.specialRules.distanceBreak.turns.find((threshold, index) => index >= weakenedCount && (Number(totalTurns) || 0) >= threshold) || null;
+  const appliedCount = Array.isArray(breakLevels) ? breakLevels.reduce((sum, level) => sum + (Number(level) || 0), 0) : 0;
+  const threshold = (appliedCount + 1) * ULTIMATE_SETTING.specialRules.distanceBreak.interval;
+  return (Number(totalTurns) || 0) >= threshold ? threshold : null;
 };
-const drawUltimateDistanceBreak = (weakenedDistances, random = Math.random) => {
-  const used = new Set(Array.isArray(weakenedDistances) ? weakenedDistances : []);
-  const candidates = RANGE_LABELS.map((_, index) => index).filter(index => !used.has(index));
+const drawUltimateDistanceBreak = (breakLevels, random = Math.random) => {
+  const levels = RANGE_LABELS.map((_, index) => Math.max(0, Number(breakLevels?.[index]) || 0));
+  const activeCount = levels.filter(level => level > 0).length;
+  const minimumActiveLevel = activeCount ? Math.min(...levels.filter(level => level > 0)) : 0;
+  const candidates = RANGE_LABELS.map((_, index) => index).filter(index => activeCount < 3 ? levels[index] === 0 : levels[index] === minimumActiveLevel);
   if (!candidates.length) return null;
   const roll = Math.max(0, Math.min(0.999999999999, Number(random()) || 0));
   return candidates[Math.floor(roll * candidates.length)];
 };
-const applyUltimateDistanceBreak = (damage, slotIndex, weakenedDistances, specialDifficulty = null, cardType = null) => {
+const applyUltimateDistanceBreak = (damage, slotIndex, breakLevels, specialDifficulty = null, cardType = null) => {
   const isMonsterAttack = ['atk', 'range_atk', 'unique'].includes(cardType);
-  return specialDifficulty === ULTIMATE_SETTING.id && isMonsterAttack && weakenedDistances.includes(slotIndex) ? Math.floor((Number(damage) || 0) * ULTIMATE_SETTING.specialRules.distanceBreak.damageDealt) : damage;
+  const level = Math.max(0, Number(breakLevels?.[slotIndex]) || 0);
+  return specialDifficulty === ULTIMATE_SETTING.id && isMonsterAttack && level > 0 ? Math.floor((Number(damage) || 0) * ULTIMATE_SETTING.specialRules.distanceBreak.damageDealtPerLevel ** level) : damage;
 };
+const ultimateDamageTurnMultiplier = (turns, specialDifficulty = null) => specialDifficulty === ULTIMATE_SETTING.id ? Math.max(ULTIMATE_SETTING.specialRules.minimumDamageDealt, 1 - Math.max(0, Number(turns) || 0) * ULTIMATE_SETTING.specialRules.damageTurnRate) : 1;
 const resolveUltimateWaveStats = (stats, turns, specialDifficulty = null) => {
   const before = {
     atk: Number(stats?.atk) || 0,
@@ -10924,8 +10931,8 @@ function MonsterHeroGame() {
   // WAVEごとのturnCountを撃破確定時にだけ足す、現在のラン内の累計。永続保存はしない。
   const [totalTurnCount, setTotalTurnCount] = useState(0);
   // ULTIMATEのラン内だけで持つ永久弱体と、次WAVE開始時に一度だけ消費する発動予約。
-  const [ultimateWeakenedDistances, setUltimateWeakenedDistances] = useState([]);
-  const ultimateWeakenedDistancesRef = useRef([]);
+  const [ultimateDistanceBreakLevels, setUltimateDistanceBreakLevels] = useState([0, 0, 0, 0]);
+  const ultimateDistanceBreakLevelsRef = useRef([0, 0, 0, 0]);
   const [ultimateDistanceBreakPending, setUltimateDistanceBreakPending] = useState(null);
   const ultimateDistanceBreakPendingRef = useRef(null);
   const [ultimateDistanceBreakReveal, setUltimateDistanceBreakReveal] = useState(null);
@@ -15498,7 +15505,7 @@ function MonsterHeroGame() {
     upgradePoints: 0,
     turnCount: 1,
     totalTurnCount: 0,
-    ultimateWeakenedDistances: [],
+    ultimateDistanceBreakLevels: [0, 0, 0, 0],
     ultimateDistanceBreakPending: null,
     permaBuffs: {
       autoHpRecovery: 0.1
@@ -15764,8 +15771,8 @@ function MonsterHeroGame() {
     setUpgradePoints(s.upgradePoints);
     setTurnCount(s.turnCount);
     setTotalTurnCount(s.totalTurnCount);
-    ultimateWeakenedDistancesRef.current = s.ultimateWeakenedDistances;
-    setUltimateWeakenedDistances(s.ultimateWeakenedDistances);
+    ultimateDistanceBreakLevelsRef.current = s.ultimateDistanceBreakLevels;
+    setUltimateDistanceBreakLevels(s.ultimateDistanceBreakLevels);
     ultimateDistanceBreakPendingRef.current = s.ultimateDistanceBreakPending;
     setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending);
     setUltimateDistanceBreakReveal(null);
@@ -16088,8 +16095,8 @@ function MonsterHeroGame() {
     setUpgradePoints(s.upgradePoints);
     setTurnCount(s.turnCount);
     setTotalTurnCount(s.totalTurnCount);
-    ultimateWeakenedDistancesRef.current = s.ultimateWeakenedDistances;
-    setUltimateWeakenedDistances(s.ultimateWeakenedDistances);
+    ultimateDistanceBreakLevelsRef.current = s.ultimateDistanceBreakLevels;
+    setUltimateDistanceBreakLevels(s.ultimateDistanceBreakLevels);
     ultimateDistanceBreakPendingRef.current = s.ultimateDistanceBreakPending;
     setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending);
     setUltimateDistanceBreakReveal(null);
@@ -16386,9 +16393,11 @@ function MonsterHeroGame() {
     let finalDmg = Math.floor(atk * distMult * baseDmgMult * totalBuffMult * (1.0 + getWaveBuff('enemyTakenDmgBonus') + additionalDmgMod));
     if (isSecondOrLaterAtk) finalDmg = Math.floor(finalDmg * 0.5);
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    const distanceBrokenDmg = applyUltimateDistanceBreak(finalDmg, slotIdx, ultimateWeakenedDistances, specialRuleDifficulty, card.type);
+    const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
+    const turnPressedDmg = Math.floor(finalDmg * ultimateDamageTurnMultiplier(elapsedTotalTurns, specialRuleDifficulty));
+    const distanceBrokenDmg = applyUltimateDistanceBreak(turnPressedDmg, slotIdx, ultimateDistanceBreakLevels, specialRuleDifficulty, card.type);
     return applyExtremeIntegerRule(distanceBrokenDmg, specialRuleDifficulty, 'damageDealt');
-  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateWeakenedDistances, runMode, difficulty, extremeDifficulty]);
+  }, [enemyDist, mainHero, atk, turnBuffs, permaBuffs, waveBuffs, distDmgBonus, distAptPct, ultimateDistanceBreakLevels, totalTurnCount, turnCount, runMode, difficulty, extremeDifficulty]);
 
   // 確定している追加ヒットまで含めた攻撃1枚の予測値。中央合計と各スロットで必ず同じ入口を使う。
   // ランダム会心は含めず、会心予約だけは実処理と同じ倍率を適用する。
@@ -16432,7 +16441,7 @@ function MonsterHeroGame() {
     setTotalTurnCount(newTotalTurnCount);
     totalTurnCountRef.current = newTotalTurnCount;
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    const distanceBreakThreshold = pendingUltimateDistanceBreak(newTotalTurnCount, ultimateWeakenedDistancesRef.current, wave, specialRuleDifficulty);
+    const distanceBreakThreshold = pendingUltimateDistanceBreak(newTotalTurnCount, ultimateDistanceBreakLevelsRef.current, wave, specialRuleDifficulty);
     if (distanceBreakThreshold) {
       ultimateDistanceBreakPendingRef.current = distanceBreakThreshold;
       setUltimateDistanceBreakPending(distanceBreakThreshold);
@@ -17824,8 +17833,8 @@ function MonsterHeroGame() {
       totalTurnCountRef.current = 0;
       runEndWaveRef.current = null;
       runClearTurnsRef.current = null;
-      ultimateWeakenedDistancesRef.current = [];
-      setUltimateWeakenedDistances([]);
+      ultimateDistanceBreakLevelsRef.current = [0, 0, 0, 0];
+      setUltimateDistanceBreakLevels([0, 0, 0, 0]);
       ultimateDistanceBreakPendingRef.current = null;
       setUltimateDistanceBreakPending(null);
       setUltimateDistanceBreakReveal(null);
@@ -17876,14 +17885,18 @@ function MonsterHeroGame() {
     setExtremeRuleOpen(showExtremeRule);
     setIsBusy(showExtremeRule || !!breakPending);
     if (breakPending) {
-      const picked = drawUltimateDistanceBreak(ultimateWeakenedDistancesRef.current);
+      const picked = drawUltimateDistanceBreak(ultimateDistanceBreakLevelsRef.current);
       if (picked != null) {
-        const next = [...ultimateWeakenedDistancesRef.current, picked];
-        ultimateWeakenedDistancesRef.current = next;
-        setUltimateWeakenedDistances(next);
+        const previousLevel = ultimateDistanceBreakLevelsRef.current[picked] || 0;
+        const next = ultimateDistanceBreakLevelsRef.current.map((level, index) => index === picked ? previousLevel + 1 : level);
+        ultimateDistanceBreakLevelsRef.current = next;
+        setUltimateDistanceBreakLevels(next);
         ultimateDistanceBreakPendingRef.current = null;
         setUltimateDistanceBreakPending(null);
-        setUltimateDistanceBreakReveal(picked);
+        setUltimateDistanceBreakReveal({
+          distance: picked,
+          level: previousLevel + 1
+        });
         setTimeout(() => {
           setUltimateDistanceBreakReveal(null);
           setIsBusy(false);
@@ -27662,12 +27675,16 @@ function MonsterHeroGame() {
         idx,
         card: hand[idx]
       }));
-      const distanceBroken = ultimateWeakenedDistances.includes(i);
+      const distanceBreakLevel = ultimateDistanceBreakLevels[i] || 0;
+      const distanceBroken = distanceBreakLevel > 0;
+      const distanceBreakPercent = 100 * 0.5 ** distanceBreakLevel;
+      const distanceBreakRoman = ['', 'I', 'II', 'III', 'IV'][distanceBreakLevel] || String(distanceBreakLevel);
       return /*#__PURE__*/React.createElement("button", {
         key: i,
         "data-slot-index": i,
         "data-distance-broken": distanceBroken ? 'true' : undefined,
-        "aria-label": `${RANGE_LABELS[i]}距離${distanceBroken ? '（与ダメージ50%に弱体化中）' : ''}`,
+        "data-distance-break-level": distanceBroken ? distanceBreakLevel : undefined,
+        "aria-label": `${RANGE_LABELS[i]}距離${distanceBroken ? `（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）` : ''}`,
         onClick: () => {
           if (isBusy) return;
           if (pendingCard != null && canAssign) {
@@ -27690,15 +27707,15 @@ function MonsterHeroGame() {
           zIndex: 9999,
           animation: attackAnim.zanCombo ? 'zanComboDash 320ms ease-out forwards' : attackAnim.charge ? 'specialCharge 650ms ease-out forwards' : attackAnim.charge === false ? attackAnim.motion === 'floatStab' ? 'floatStabLunge 700ms ease-in forwards' : attackAnim.motion === 'waterBurst' ? 'waterBurstLunge 520ms ease-out forwards' : 'specialLunge 500ms ease-in forwards' : attackAnim.motion === 'floatStab' ? 'floatStabAttack 650ms ease-in forwards' : attackAnim.motion === 'waterBurst' ? 'waterBurstAttack 520ms ease-out forwards' : 'attackFly 450ms ease-in forwards'
         } : distanceBroken ? {
-          backgroundColor: 'rgb(24,5,25)',
-          boxShadow: 'inset 0 0 0 2px rgba(248,113,113,.95), inset 0 0 34px rgba(76,5,25,.95), 0 0 13px rgba(220,38,38,.5)'
+          backgroundColor: distanceBreakLevel >= 2 ? 'rgb(12,2,5)' : 'rgb(24,5,25)',
+          boxShadow: `inset 0 0 0 ${Math.min(4, distanceBreakLevel + 1)}px rgba(248,113,113,.95), inset 0 0 ${28 + distanceBreakLevel * 8}px rgba(76,5,25,.98), 0 0 ${9 + distanceBreakLevel * 4}px rgba(220,38,38,.65)`
         } : slotSettle === i ? {
           animation: 'slotSettle 400ms ease-out'
         } : undefined
       }, distanceBroken && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "absolute inset-0 rounded-lg pointer-events-none z-[15]",
         style: {
-          background: 'repeating-linear-gradient(135deg,rgba(0,0,0,.05) 0 7px,rgba(127,29,29,.36) 8px 9px),radial-gradient(circle at 50% 40%,rgba(88,28,135,.42),rgba(24,5,25,.78))'
+          background: `repeating-linear-gradient(${135 + distanceBreakLevel * 12}deg,rgba(0,0,0,.12) 0 ${Math.max(3, 8 - distanceBreakLevel)}px,rgba(127,29,29,${Math.min(.8, .28 + distanceBreakLevel * .14)}) ${Math.max(4, 9 - distanceBreakLevel)}px ${Math.max(5, 10 - distanceBreakLevel)}px),radial-gradient(circle at 50% 40%,rgba(${distanceBreakLevel >= 2 ? '69,10,10' : '88,28,135'},.55),rgba(5,0,2,.9))`
         }
       }), /*#__PURE__*/React.createElement("div", {
         className: "absolute inset-[2px] rounded-lg border border-red-300/80 pointer-events-none z-[45]",
@@ -27707,7 +27724,7 @@ function MonsterHeroGame() {
         }
       }), /*#__PURE__*/React.createElement("div", {
         className: "absolute -top-2 left-1/2 -translate-x-1/2 z-[65] whitespace-nowrap rounded-full border-2 border-red-200 bg-red-950 px-1.5 py-0.5 text-[7px] font-black text-white shadow-[0_0_10px_rgba(239,68,68,.9)]"
-      }, "\u26A0 \u4E0E\u30C0\u30E1 \u219350%"), !s && /*#__PURE__*/React.createElement("div", {
+      }, distanceBreakLevel === 1 ? '⚠' : '☠', " BREAK ", distanceBreakRoman, "\uFF5C\u4E0E\u30C0\u30E1 ", distanceBreakPercent, "%"), !s && /*#__PURE__*/React.createElement("div", {
         className: "absolute inset-0 z-[25] flex items-center justify-center pointer-events-none text-red-200/80"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-2xl font-black"
@@ -29598,16 +29615,17 @@ function MonsterHeroGame() {
       }, last ? 'おわる' : 'つぎへ'))));
     })(), gameState === 'BATTLE' && ultimateDistanceBreakReveal != null && /*#__PURE__*/React.createElement("div", {
       "data-ultimate-distance-break-reveal": true,
+      "data-distance-break-overwrite": ultimateDistanceBreakReveal.level >= 2 ? 'true' : undefined,
       className: "fixed inset-0 flex items-center justify-center p-5 text-center",
       style: {
         zIndex: 91000,
-        background: 'radial-gradient(circle,rgba(127,29,29,.72),rgba(2,6,23,.97))'
+        background: ultimateDistanceBreakReveal.level >= 2 ? 'radial-gradient(circle,rgba(69,10,10,.9),rgba(0,0,0,.99))' : 'radial-gradient(circle,rgba(127,29,29,.72),rgba(2,6,23,.97))'
       },
       role: "dialog",
       "aria-modal": "true",
       "aria-label": "\u8DDD\u96E2\u5F31\u4F53\u5316\u767A\u52D5"
     }, /*#__PURE__*/React.createElement("div", {
-      className: "w-full max-w-xs rounded-3xl border-2 border-red-300 bg-purple-950/95 px-5 py-7 shadow-[0_0_48px_rgba(239,68,68,.65)]",
+      className: `w-full max-w-xs rounded-3xl border-2 border-red-300 px-5 py-7 ${ultimateDistanceBreakReveal.level >= 2 ? 'bg-black/95 shadow-[0_0_64px_rgba(220,38,38,.9)]' : 'bg-purple-950/95 shadow-[0_0_48px_rgba(239,68,68,.65)]'}`,
       style: {
         animation: 'mhExtremeRuleIn .38s ease-out'
       }
@@ -29615,17 +29633,17 @@ function MonsterHeroGame() {
       className: "text-xs font-black tracking-[.24em] text-amber-300"
     }, "ULTIMATE"), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 text-2xl font-black italic tracking-wider text-red-100"
-    }, "DISTANCE BREAK"), /*#__PURE__*/React.createElement("div", {
+    }, ultimateDistanceBreakReveal.level >= 2 ? 'DISTANCE BREAK OVERWRITE' : 'DISTANCE BREAK'), /*#__PURE__*/React.createElement("div", {
       className: "mt-5 text-xl font-black text-white"
-    }, RANGE_LABELS[ultimateDistanceBreakReveal], "\u8DDD\u96E2 \u5F31\u4F53\u5316"), /*#__PURE__*/React.createElement("div", {
+    }, RANGE_LABELS[ultimateDistanceBreakReveal.distance], "\u8DDD\u96E2 BREAK Lv", ultimateDistanceBreakReveal.level), /*#__PURE__*/React.createElement("div", {
       className: "mt-2 rounded-xl border border-red-300/50 bg-black/40 py-2 text-sm font-black text-red-200"
-    }, "\u4E0E\u30C0\u30E1\u30FC\u30B8 50%"), /*#__PURE__*/React.createElement("div", {
+    }, "\u4E0E\u30C0\u30E1\u30FC\u30B8 ", 100 * 0.5 ** ultimateDistanceBreakReveal.level, "%"), /*#__PURE__*/React.createElement("div", {
       className: "mt-4 border-t border-red-300/20 pt-3 text-[10px] text-purple-100"
     }, /*#__PURE__*/React.createElement("span", {
       className: "font-black text-slate-400"
-    }, "\u73FE\u5728\u306E\u5F31\u4F53\u8DDD\u96E2\uFF1A"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
+    }, "\u73FE\u5728\u306EBREAK\uFF1A"), /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("span", {
       className: "font-black"
-    }, ultimateWeakenedDistances.map(index => `${RANGE_LABELS[index]}距離`).join(' / ') || 'なし')))), gameState === 'BATTLE' && extremeRuleOpen && /*#__PURE__*/React.createElement("div", {
+    }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし')))), gameState === 'BATTLE' && extremeRuleOpen && /*#__PURE__*/React.createElement("div", {
       className: "fixed inset-0 flex items-center justify-center p-5",
       style: {
         zIndex: 90500,
@@ -29649,7 +29667,7 @@ function MonsterHeroGame() {
         className: "text-[11px] font-black tracking-[.12em] text-amber-300"
       }, "ULTIMATE \u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 grid gap-1.5 text-left"
-      }, [['1', '累計ターン圧', /*#__PURE__*/React.createElement(React.Fragment, null, "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.5% \u6B21WAVE\u306E\u6575\u304C\u5F37\u5316", /*#__PURE__*/React.createElement("br", null), "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.5% \u4F9B\u30E2\u30F3\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\u304C\u4F4E\u4E0B")], ['2', '覚醒低下', 'このWAVEのターン数×0.5% 次回の攻撃/防御/精神覚醒が低下'], ['3', 'DISTANCE BREAK', '累計50ターンごとに、未弱体の距離が1つ追加で与ダメージ50%']].map(([number, title, text]) => /*#__PURE__*/React.createElement("div", {
+      }, [['1', '累計ターン圧', /*#__PURE__*/React.createElement(React.Fragment, null, "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u6B21WAVE\u306E\u6575\u304C\u5F37\u5316", /*#__PURE__*/React.createElement("br", null), "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4F9B\u30E2\u30F3\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\u304C\u4F4E\u4E0B", /*#__PURE__*/React.createElement("br", null), "\u7D4C\u904E\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4E0E\u30C0\u30E1\u30FC\u30B8\u4F4E\u4E0B\uFF08\u6700\u4F4E25%\uFF09")], ['2', '覚醒低下', 'このWAVEのターン数×0.75% 次回の攻撃/防御/精神覚醒が低下'], ['3', 'DISTANCE BREAK', '累計35ターンごとに、安全距離以外の3距離をLv1→Lv2→Lv3…と段階強化']].map(([number, title, text]) => /*#__PURE__*/React.createElement("div", {
         key: number,
         className: "rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"
       }, /*#__PURE__*/React.createElement("div", {
@@ -29666,9 +29684,9 @@ function MonsterHeroGame() {
         className: "text-white"
       }, totalTurnCount)), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
         className: "text-slate-400"
-      }, "\u73FE\u5728\u306E\u5F31\u4F53\u8DDD\u96E2\uFF1A"), /*#__PURE__*/React.createElement("b", {
-        className: ultimateWeakenedDistances.length ? 'text-red-200' : 'text-white'
-      }, ultimateWeakenedDistances.map(index => `${RANGE_LABELS[index]}距離`).join(' / ') || 'なし')))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      }, "\u73FE\u5728\u306EBREAK\uFF1A"), /*#__PURE__*/React.createElement("b", {
+        className: ultimateDistanceBreakLevels.some(level => level > 0) ? 'text-red-200' : 'text-white'
+      }, ultimateDistanceBreakLevels.map((level, index) => level > 0 ? `${RANGE_LABELS[index]} Lv${level}` : null).filter(Boolean).join(' / ') || 'なし')))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black tracking-[.16em] text-amber-300"
       }, "\u26A0 ", specialDifficulty, "\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 space-y-2 text-left text-[11px] text-slate-200"
