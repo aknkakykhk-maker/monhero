@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 993dcb151ba30088
+// source-sha256: 5fb2b4d6010443ab
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 14:26"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 14:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10980,9 +10980,23 @@ function MonsterHeroGame() {
   const getWaveBuff = (key, def = 0) => waveBuffs[key] ?? def;
   const [turnBuffs, setTurnBuffs] = useState({});
   const [nextTurnBuffs, setNextTurnBuffs] = useState({});
+  // 次ターン予約(nextTurnBuffs)は敵ターンの終わりに「読んで→効果を出して→消す」を行う。
+  // これを setNextTurnBuffs の更新関数の中でやると、レンダーが中断・再実行されたときに
+  // 更新関数がもう一度呼ばれ、回復が二重に適用されることがある
+  // (メロソLv3の回復はEXTREMEだと最大値の50%なので、二重に入ると100%になってしまう)。
+  // Reactの更新関数は「同じ入力なら同じ結果を返すだけ」でなければならないため、
+  // 最新値はこのrefにも持ち、回復・表示のような副作用は更新関数の外で行う。
+  // 読み書きは必ず writeNextTurnBuffs / nextTurnBuffsRef を通し、stateとrefがずれないようにする。
+  const nextTurnBuffsRef = useRef({});
+  const writeNextTurnBuffs = next => {
+    const value = typeof next === 'function' ? next(nextTurnBuffsRef.current) : next || {};
+    nextTurnBuffsRef.current = value;
+    setNextTurnBuffs(value);
+    return value;
+  };
   const getTurnBuff = (key, def) => turnBuffs[key] ?? def;
   const getNextTurnBuff = (key, def) => nextTurnBuffs[key] ?? def;
-  const setNextTurnBuff = (key, value) => setNextTurnBuffs(p => ({
+  const setNextTurnBuff = (key, value) => writeNextTurnBuffs(p => ({
     ...p,
     [key]: value
   }));
@@ -15723,7 +15737,7 @@ function MonsterHeroGame() {
     setPermaBuffs(s.permaBuffs);
     setWaveBuffs(s.waveBuffs);
     setTurnBuffs(s.turnBuffs);
-    setNextTurnBuffs(s.nextTurnBuffs);
+    writeNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage);
     setWaveDistDamage(s.waveDistDamage || [0, 0, 0, 0]);
     setDistDmgBonus(s.distDmgBonus || [0, 0, 0, 0]);
@@ -16047,7 +16061,7 @@ function MonsterHeroGame() {
     setPermaBuffs(s.permaBuffs);
     setWaveBuffs(s.waveBuffs);
     setTurnBuffs(s.turnBuffs);
-    setNextTurnBuffs(s.nextTurnBuffs);
+    writeNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage);
     setWaveDistDamage(s.waveDistDamage || [0, 0, 0, 0]);
     setDistDmgBonus(s.distDmgBonus || [0, 0, 0, 0]);
@@ -16643,21 +16657,24 @@ function MonsterHeroGame() {
       await battleWait(500);
     }
     // 次ターン予約分(nextTurnBuffs)をそのまま今ターンの一時バフ(turnBuffs)へ入れ替える(新しい一時効果を追加してもここは変更不要)
-    // 関数更新式で読むことで、このターン中に予約された最新のnextTurnBuffsを確実に反映する(古いクロージャ値を使わない)
-    setNextTurnBuffs(latestNextTurnBuffs => {
-      const recoveryMult = latestNextTurnBuffs.melosoFullRecoveryMult || 0;
-      if (recoveryMult > 0) {
-        setHp(p => Math.min(effectiveMaxHp, p + Math.floor(effectiveMaxHp * recoveryMult)));
-        setGuts(p => Math.min(effectiveMaxGuts, p + Math.floor(effectiveMaxGuts * recoveryMult)));
-        addPopup(recoveryMult === 1 ? 'ライフ・ガッツ全回復!' : 'ライフ・ガッツ回復!', 'hero', 'text-rose-300 text-lg font-bold');
-      }
-      const {
-        melosoFullRecoveryMult,
-        ...activeTurnBuffs
-      } = latestNextTurnBuffs;
-      setTurnBuffs(activeTurnBuffs);
-      return {};
-    });
+    // refから読むことで、このターン中に予約された最新の値を確実に反映する(古いクロージャ値を使わない)。
+    // 以前はここを setNextTurnBuffs の更新関数の中で行っていたが、更新関数は
+    // レンダーが中断・再実行されるともう一度呼ばれることがあり、そのたびに回復が
+    // 二重に適用されてしまう(EXTREMEのメロソLv3が50%回復のはずが100%回復になる)。
+    // 回復・表示は更新関数の外で1回だけ行う。
+    const pendingNextTurnBuffs = nextTurnBuffsRef.current;
+    const recoveryMult = pendingNextTurnBuffs.melosoFullRecoveryMult || 0;
+    if (recoveryMult > 0) {
+      setHp(p => Math.min(effectiveMaxHp, p + Math.floor(effectiveMaxHp * recoveryMult)));
+      setGuts(p => Math.min(effectiveMaxGuts, p + Math.floor(effectiveMaxGuts * recoveryMult)));
+      addPopup(recoveryMult === 1 ? 'ライフ・ガッツ全回復!' : 'ライフ・ガッツ回復!', 'hero', 'text-rose-300 text-lg font-bold');
+    }
+    const {
+      melosoFullRecoveryMult,
+      ...activeTurnBuffs
+    } = pendingNextTurnBuffs;
+    setTurnBuffs(activeTurnBuffs);
+    writeNextTurnBuffs({});
     const nextTurn = turnCount + 1;
     setTurnCount(nextTurn);
     if (nextTurn > 20) {
@@ -17839,7 +17856,7 @@ function MonsterHeroGame() {
       }
     }
     setTurnBuffs({});
-    setNextTurnBuffs({}); // WAVE毎リセットの一時バフ・デバフを全てクリア
+    writeNextTurnBuffs({}); // WAVE毎リセットの一時バフ・デバフを全てクリア
   };
 
   // 通常の敵順と敵定義の両方に存在するものだけを候補にする。敵名・能力値を複製せず、
@@ -17877,7 +17894,7 @@ function MonsterHeroGame() {
     });
     setWaveBuffs({});
     setTurnBuffs({});
-    setNextTurnBuffs({});
+    writeNextTurnBuffs({});
     setDistDmgBonus([0, 0, 0, 0]);
     setTotalDistDamage([0, 0, 0, 0]);
     setTotalAllDamage(0);
@@ -18110,7 +18127,7 @@ function MonsterHeroGame() {
     });
     setWaveBuffs({});
     setTurnBuffs({});
-    setNextTurnBuffs({});
+    writeNextTurnBuffs({});
     setDistDmgBonus([0, 0, 0, 0]);
     setTotalDistDamage([0, 0, 0, 0]);
     setTotalAllDamage(0);
