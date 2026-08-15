@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 22:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 22:52"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7815,6 +7815,7 @@ function MonsterHeroGame() {
     if (draftMonsterRoster.length !== STARTER_MONSTER_IDS.length) return;
     const rosters = monsterPartySets.rosters.map((roster,index)=>index===editingPartySetIndex?[...draftMonsterRoster]:roster);
     saveMonsterPartySets({ ...monsterPartySets, activeIndex:editingPartySetIndex, rosters });
+    addAssistantBond('partySet');
     // 決定したらM/B管理のモンスタータブへ戻る(古い編成メニューは経由しない)
     setManagementTab('monster');
     setGameState('MB_MANAGEMENT');
@@ -7823,6 +7824,7 @@ function MonsterHeroGame() {
     if (draftTeachingRoster.length !== STARTER_TEACHING_IDS.length) return;
     setTeachingRosterIds(draftTeachingRoster);
     storeSet('mh_teaching_roster', draftTeachingRoster, false);
+    addAssistantBond('partySet');
     // 決定したらM/B管理のブリーダーカードタブへ戻る(古い編成メニューは経由しない)
     setManagementTab('breeder');
     setGameState('MB_MANAGEMENT');
@@ -7994,6 +7996,7 @@ function MonsterHeroGame() {
       return next;
     });
     setOwnedItems(prev => { const next = { ...prev, dye_mock: (prev.dye_mock || 0) - 1 }; storeSet('mh_owned_items', next, false); return next; });
+    addAssistantBond('dye');
     Audio_.se.tap();
   };
   // マスモンの名前を変更する(12文字まで)
@@ -8086,6 +8089,7 @@ function MonsterHeroGame() {
     setMasuMons(next); setGold(goldAfter);
     if (withBreakthrough) setOwnedItems(nextItems);
     removeMasuFromAllPartySets(sub.id);
+    addAssistantBond('fusion');
     return {
       mainName: main.name, mainIconUrl: mainBase?.iconUrl, mainBaseId: main.baseId, mainEmoji: mainBase?.emoji, mainColors: getMasuColors(main),
       subName: sub.name, subIconUrl: subBase?.iconUrl, subBaseId: sub.baseId, subEmoji: subBase?.emoji, subColors: getMasuColors(sub),
@@ -8124,6 +8128,7 @@ function MonsterHeroGame() {
       masuMonsRef.current = next;
       ownedItemsRef.current = nextItems;
       setMasuMons(next); setGold(result.nextGold); setOwnedItems(nextItems);
+      addAssistantBond('breakthrough');
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       const skill = result.raisesSkill ? getRebirthSkillChoices(masu).find(choice=>choice.key===result.skillKey) : null;
       setRebirthAnimation({ masu:result.nextMasu, base, raisesSkill:result.raisesSkill, keptSkillPoints:result.keptSkillPoints,
@@ -8148,6 +8153,7 @@ function MonsterHeroGame() {
       await storeSet('mh_gold', result.nextGold, false);
       masuMonsRef.current = next;
       setMasuMons(next); setGold(result.nextGold);
+      addAssistantBond('reincarnate');
       const base = ALL_PLAYER_MONSTERS[masu.baseId];
       const skill = result.raisesSkill ? getRebirthSkillChoices(masu).find(choice=>choice.key===result.skillKey) : null;
       setReincarnateAnimation({ masu:result.nextMasu, base, raisesSkill:result.raisesSkill, keptSkillPoints:result.keptSkillPoints, skillName:skill?.name || '固有技', skillLevel:result.skillLevel, fromLevel:result.fromLevel, nextLevel:result.nextLevel, nextPoints:result.nextPoints });
@@ -8170,6 +8176,7 @@ function MonsterHeroGame() {
       await storeSet('mh_gold',gold-cost,false);
       await storeSet('mh_temple_regeneration_used_v1',true,false);
       masuMonsRef.current=next; setMasuMons(next); setGold(gold-cost); setRegenerationUsed(true);
+      addAssistantBond('regenerate');
       setRegenerationResult({masu,base,cost});
     } finally { regenerationProcessingRef.current=false; setRegenerationProcessing(false); }
   };
@@ -8209,6 +8216,7 @@ function MonsterHeroGame() {
       });
       saveMonsterPartySets({ ...monsterPartySets, rosters:repairedRosters });
       if (result.donated.some(m=>fusionMainId === m.id || fusionSubId === m.id)) resetFusionFlow();
+      addAssistantBond('donate');
       setMasuMonDetail(null);
       setDonationSelectedIds([]); setDonationConfirmOpen(false);
       const animationMasu=result.donated[0];
@@ -11115,7 +11123,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </section>
             </header>
             <nav className="mh-home-facilities" aria-label="拠点施設">
-              <button className={`mh-home-facility management${spotClass('management')}`} onClick={()=>{setManagementTab('monster');setGameState('MB_MANAGEMENT');}} aria-label="M/B管理"><span><Layers size={18}/>M/B管理</span></button>
+              <button className={`mh-home-facility management${spotClass('management')}`} onClick={()=>{addAssistantBond('management');setManagementTab('monster');setGameState('MB_MANAGEMENT');}} aria-label="M/B管理"><span><Layers size={18}/>M/B管理</span></button>
               <button className={`mh-home-facility temple${spotClass('temple')}`} onClick={()=>{addAssistantBond('temple');setGameState('TEMPLE');}} aria-label="神殿"><span><Sparkles size={18}/>神殿</span></button>
               <button className={`mh-home-facility market${spotClass('market')}`} onClick={()=>{addAssistantBond('market');setGameState('BREEDER_MARKET');}} aria-label="マーケット"><span><ShoppingBag size={17}/>マーケット</span></button>
               <button className="mh-home-facility training" onClick={openTrainingInfo} aria-label="修行（準備中）"><span>🎲 修行<small>準備中</small></span></button>
@@ -12836,6 +12844,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             if (!updated) return;
             setMasuMonDetail(updated);
             saveMissionProgress('enhance');
+            addAssistantBond('enhance');
             setBulkPlan(null);
             const lines = [];
             plan.apt.forEach((n,i)=>{ if(n>0) lines.push(`${RANGE_LABELS[i]}距離適性 +${n}`); });
@@ -12958,6 +12967,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                             if(!updated) return;
                             setMasuMonDetail(updated);
                             saveMissionProgress('enhance');
+                            addAssistantBond('enhance');
                             const afterGrade=resolveMasuDistAptitude(updated,base)[idx]||beforeGrade;
                             setEffect({type:'enhance',label:`${label}距離適性 強化！`,icon:'📈',monEmoji:base.emoji,imgUrl:base.iconUrl,baseId:masu.baseId,colors:getMasuColors(updated),subLabel:`${label}距離適性 ${beforeGrade} → ${afterGrade}`});
                             setTimeout(()=>setEffect(null),900);
@@ -12980,6 +12990,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           if(!updated) return;
                           setMasuMonDetail(updated);
                           saveMissionProgress('enhance');
+                          addAssistantBond('enhance');
                           setEffect({type:'enhance',label:`${label}強化！`,icon:'💪',monEmoji:base.emoji,imgUrl:base.iconUrl,baseId:masu.baseId,colors:getMasuColors(updated),subLabel:`${label} ${before} → ${after}`});
                           setTimeout(()=>setEffect(null),900);
                         }} className="flex flex-col items-center gap-1 bg-emerald-950/50 border border-emerald-500/30 rounded-xl py-2.5 active:scale-95 disabled:opacity-20">
