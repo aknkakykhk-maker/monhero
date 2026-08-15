@@ -16,13 +16,13 @@ const base={atk:100,def:100,hp:500,guts:100};
 assert.deepStrictEqual(stats(base,5),{atk:107,def:123,hp:587,guts:115});
 assert.deepStrictEqual(stats(base,10),{atk:105,def:115,hp:575,guts:110});
 assert.deepStrictEqual(stats(base,20),{atk:100,def:100,hp:550,guts:100});
-assert(/\{ id:'ULTIMATE', label:'ULTIMATE', available:false, power:25, score:20, xp:40, gold:20, psyche:60,/.test(source),'formal ULTIMATE values must exist and stay unavailable');
+assert(/\{ id:'ULTIMATE', label:'ULTIMATE', available:true, power:25, score:20, xp:40, gold:20, psyche:60,/.test(source),'formal ULTIMATE values must be available');
 assert(source.includes("unlockRequirement:'CHAOS'")&&source.includes('allyJoinPenaltyRate:0.005'),'ULTIMATE must define its CHAOS unlock prerequisite and ally penalty rate');
 assert(source.includes('const ULTIMATE_SETTING = EXTREME_DIFFICULTIES[3]'),'ULTIMATE_SETTING must reference the formal difficulty definition');
 assert(source.includes("const ULTIMATE_BEST_SCORE_KEY = extremeBestScoreKey('ULTIMATE');")&&source.includes("const ULTIMATE_CLEAR_COUNT_KEY = extremeClearCountKey('ULTIMATE');"),'ULTIMATE records must use the shared extreme key format');
 assert(source.includes('EXTREME_DIFFICULTIES.map(async setting =>')&&source.includes('normalizeExtremeRecordValue(await storeGet(extremeBestScoreKey(setting.id), 0, false))')&&source.includes('normalizeExtremeRecordValue(await storeGet(extremeClearCountKey(setting.id), 0, false))'),'all extreme records, including missing ULTIMATE saves, must load through shared normalization');
 assert(source.includes('setExtremeBestScores(prev => ({ ...prev, [extremeDifficulty]: score }))')&&source.includes('setExtremeClearCounts(prev => ({ ...prev, [extremeDifficulty]:'),'future official ULTIMATE runs must update the selected difficulty record without dedicated branches');
-assert(source.includes('EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>')&&source.includes('EXTREME_DIFFICULTIES.filter(item=>item.available).map(item=>item.id)'),'unavailable ULTIMATE must stay hidden from ranking and profile views');
+assert(source.includes('EXTREME_DIFFICULTIES.filter(setting=>setting.available).map(setting=>')&&source.includes('EXTREME_DIFFICULTIES.filter(item=>item.available).map(item=>item.id)'),'available ULTIMATE must use the shared ranking and profile filters');
 assert(!source.includes('ULTIMATE_DEBUG_SETTING'),'ULTIMATE must not keep a separate debug setting');
 for(const rule of ["enemyTurnRate:0.005","awakeningPenaltyRate:0.005","awakeningPenaltyExcludes:Object.freeze(['distance'])","turns:Object.freeze([50,100,150])","damageDealt:0.5","rerollSameDistance:false","persistsForRun:true"]) {
   assert(source.includes(rule),`formal ULTIMATE rules must include: ${rule}`);
@@ -85,6 +85,8 @@ assert(source.includes('const aptDelta=getMonsterAptPct(m,specialRuleDifficulty)
 assert(source.includes('nextSlots[slotIdx]={...m}')&&source.indexOf('nextSlots[slotIdx]={...m}')<source.indexOf('applyAllyJoinBonus(bonus[key]'),'the ally must join independently before its stat bonus is calculated');
 assert(source.includes('const chaosClearCount = extremeClearCounts[CHAOS_SETTING.id] || 0;')&&source.includes('const ultimateUnlocked = useMemo(() => isUltimateUnlocked(chaosClearCount)'),'ULTIMATE unlock must reuse CHAOS clear counts');
 assert(source.includes('const isUltimateUnlocked = (chaosClearCount) => (Number(chaosClearCount) || 0) > 0;'),'zero CHAOS clears must be locked and one or more must unlock');
-assert(source.includes("const previewable=(setting.available||debugBattle&&setting.id===ULTIMATE_SETTING.id)&&unlocked"),'unavailable ULTIMATE must only be previewable through debug');
+assert(source.includes("const previewable=(setting.available||debugBattle&&setting.id===ULTIMATE_SETTING.id)&&unlocked"),'official ULTIMATE must be previewable when unlocked while debug remains available');
+assert(help.includes('CHAOSを1回以上クリアすると解放')&&help.includes('敵強度×25・スコア×20・経験値×40・ダイヤ×20')&&help.includes('虹のプシュケー60個'),'help must describe ULTIMATE unlock and rewards');
+assert(changelog.includes('極限チャレンジにULTIMATEを追加しました')&&changelog.includes("assistantNotice: { id:'update_notice_ultimate_v1', type:'mode' }"),'ULTIMATE release must have a linked assistant notice');
 assert(source.includes('h-[382px]')&&source.includes('h-[51px]'),'difficulty card and special-rule box dimensions must remain fixed');
-console.log('OK: ULTIMATE特殊ルール①・②（解放準備、加入ボーナス低下、ターン強化、能力低下、距離弱体化、デバッグ限定、既存ルール分離）');
+console.log('OK: ULTIMATE正式公開（解放、加入ボーナス低下、ターン強化、能力低下、距離弱体化、記録共通経路、デバッグ分離）');
