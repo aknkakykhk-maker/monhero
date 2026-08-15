@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 5fb2b4d6010443ab
+// source-sha256: 52753319e2990b52
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 14:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 15:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10967,11 +10967,30 @@ function MonsterHeroGame() {
   const [permaBuffs, setPermaBuffs] = useState({
     autoHpRecovery: 0.1
   });
-  const addPermaBuff = (key, delta) => setPermaBuffs(p => ({
+  // permaBuffs は「同じターンの中で」カードによって増える。とくに
+  // みゅあ・かどみうむ・回復カードは muaHpPct / muaGutsPct を上げ、ライフとガッツの上限が
+  // その場で伸びる。ところが processTurn / handleEnemyTurn は await を挟みながら進むため、
+  // stateから読むと「そのターンが始まった時点のレンダーの値」を最後まで掴み続けてしまう。
+  // その結果、同じターンに上限を上げても回復は古い上限までしか届かず、
+  // 画面のゲージ(新しい上限で描画される)は満タンにならない。
+  // 実際に「みゅあ＋メロソ(3枚)で次ターン全回復にならない」という不具合が出た。
+  // 書き込みは writePermaBuffs に集約し、ターン中に使う値はこのrefから読む。
+  const permaBuffsRef = useRef({
+    autoHpRecovery: 0.1
+  });
+  const writePermaBuffs = next => {
+    const value = typeof next === 'function' ? next(permaBuffsRef.current) : next || {};
+    permaBuffsRef.current = value;
+    setPermaBuffs(value);
+    return value;
+  };
+  const addPermaBuff = (key, delta) => writePermaBuffs(p => ({
     ...p,
     [key]: (p[key] || 0) + delta
   }));
   const getPermaBuff = (key, def = 0) => permaBuffs[key] ?? def;
+  // ターン処理の途中で読むためのもの。描画は従来どおり上のstate側を使う
+  const livePermaBuff = (key, def = 0) => permaBuffsRef.current[key] ?? def;
   const [waveBuffs, setWaveBuffs] = useState({});
   const addWaveBuff = (key, delta) => setWaveBuffs(p => ({
     ...p,
@@ -11528,6 +11547,22 @@ function MonsterHeroGame() {
   useEffect(() => {
     setGuts(current => Math.min(current, effectiveMaxGuts));
   }, [effectiveMaxGuts]);
+  // ターン処理(processTurn / handleEnemyTurn / useEmergency)の途中で使う実効最大値。
+  // 上のuseMemoはレンダー時点の値なので、同じターンにみゅあ・かどみうむ・回復カードで
+  // 上限を上げても、進行中のターンには最後まで反映されない。回復がその古い上限で頭打ちになり、
+  // 新しい上限で描かれるゲージが満タンにならないため、ターン中はこちらを使う。
+  // 基礎値(maxHp/maxGuts)はターンの途中では変わらない(報酬・合流はWAVEの切れ目だけ)ので、
+  // 変わりうる muaHpPct / muaGutsPct だけをrefから読み直す。
+  const maxHpRef = useRef(500);
+  const maxGutsRef = useRef(100);
+  useEffect(() => {
+    maxHpRef.current = maxHp;
+  }, [maxHp]);
+  useEffect(() => {
+    maxGutsRef.current = maxGuts;
+  }, [maxGuts]);
+  const liveEffectiveMaxHp = () => resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct'));
+  const liveEffectiveMaxGuts = () => resolveEffectiveMaxStat(maxGutsRef.current, livePermaBuff('muaGutsPct'));
 
   // 全国ランキングをSupabaseから取得。失敗時は端末内保存の値にフォールバック
   // ブリーダーレベルのランキング。ランキング行は難易度ごとに保存されているので、
@@ -15734,7 +15769,7 @@ function MonsterHeroGame() {
     ultimateDistanceBreakPendingRef.current = s.ultimateDistanceBreakPending;
     setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending);
     setUltimateDistanceBreakReveal(null);
-    setPermaBuffs(s.permaBuffs);
+    writePermaBuffs(s.permaBuffs);
     setWaveBuffs(s.waveBuffs);
     setTurnBuffs(s.turnBuffs);
     writeNextTurnBuffs(s.nextTurnBuffs);
@@ -16058,7 +16093,7 @@ function MonsterHeroGame() {
     ultimateDistanceBreakPendingRef.current = s.ultimateDistanceBreakPending;
     setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending);
     setUltimateDistanceBreakReveal(null);
-    setPermaBuffs(s.permaBuffs);
+    writePermaBuffs(s.permaBuffs);
     setWaveBuffs(s.waveBuffs);
     setTurnBuffs(s.turnBuffs);
     writeNextTurnBuffs(s.nextTurnBuffs);
@@ -16417,7 +16452,7 @@ function MonsterHeroGame() {
     // 既存式と上限・下限を適用した後、符号に応じたNIGHTMARE倍率を掛ける。
     const recoveryDelta = applyNightmareSignedModifier(baseRecoveryDelta, specialRuleDifficulty);
     const newTotalRecoveryDelta = totalRecoveryDelta + recoveryDelta;
-    setPermaBuffs(p => ({
+    writePermaBuffs(p => ({
       ...p,
       autoHpRecovery: Math.max(0, (p.autoHpRecovery ?? 0.1) + recoveryDelta)
     }));
@@ -16576,9 +16611,9 @@ function MonsterHeroGame() {
           const gutsGain = Math.floor(incomingDmg * 0.1);
           addPopup(`💚 ライフ +${hpGain}`, 'life', 'text-emerald-400 font-black text-2xl drop-shadow-md');
           addPopup(`⚡ ガッツ +${gutsGain}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
-          currentHp = Math.min(effectiveMaxHp, currentHp + hpGain);
+          currentHp = Math.min(liveEffectiveMaxHp(), currentHp + hpGain);
           setHp(currentHp);
-          setGuts(p => Math.min(effectiveMaxGuts, p + gutsGain));
+          setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsGain));
           await battleWait(1000);
         } else if (mainHero?.id === 'Tiger' && Math.random() < 0.5) {
           addPopup("回避！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
@@ -16600,12 +16635,12 @@ function MonsterHeroGame() {
             await battleWait(1000);
           } else {
             const gGain = Math.floor(diff * 0.1);
-            currentHp = Math.min(effectiveMaxHp, currentHp + diff);
+            currentHp = Math.min(liveEffectiveMaxHp(), currentHp + diff);
             addPopup(`🛡 ガード成功`, 'hero', 'text-emerald-400 text-2xl font-black drop-shadow-md');
             addPopup(`💚 ライフ +${diff}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
             addPopup(`⚡ ガッツ +${gGain}`, 'guts', 'text-amber-400 text-xl font-bold drop-shadow-md');
             setHp(currentHp);
-            setGuts(p => Math.min(effectiveMaxGuts, p + gGain));
+            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gGain));
             await battleWait(1000);
           }
         } else {
@@ -16638,13 +16673,13 @@ function MonsterHeroGame() {
     const currentAutoGutsRecovery = Math.max(0, 0.05 + (autoHpRecoveryRate - 0.1)) + getPermaBuff('gutsRecoverPct');
     // 氷海の支配者は、絶氷の楔発動中かつ勇者と敵が同じ距離の場合だけ50パーセントポイントを足す。
     const gutsRecoveryRate = applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery, mainHero?.id, iceLockActive, heroDist, enemyDist);
-    const gutsRegen = Math.floor(effectiveMaxGuts * gutsRecoveryRate);
-    setGuts(p => Math.min(effectiveMaxGuts, p + gutsRegen));
+    const gutsRegen = Math.floor(liveEffectiveMaxGuts() * gutsRecoveryRate);
+    setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsRegen));
     let didRegen = false;
     if (autoHpRecoveryRate > 0) {
-      const autoHealVal = Math.floor(effectiveMaxHp * autoHpRecoveryRate);
+      const autoHealVal = Math.floor(liveEffectiveMaxHp() * autoHpRecoveryRate);
       if (autoHealVal > 0) {
-        setHp(p => Math.min(effectiveMaxHp, p + autoHealVal));
+        setHp(p => Math.min(liveEffectiveMaxHp(), p + autoHealVal));
         addPopup(`🌿 自動再生 +${autoHealVal}`, 'life', 'text-teal-300 font-black text-lg italic drop-shadow-md');
         didRegen = true;
       }
@@ -16665,8 +16700,8 @@ function MonsterHeroGame() {
     const pendingNextTurnBuffs = nextTurnBuffsRef.current;
     const recoveryMult = pendingNextTurnBuffs.melosoFullRecoveryMult || 0;
     if (recoveryMult > 0) {
-      setHp(p => Math.min(effectiveMaxHp, p + Math.floor(effectiveMaxHp * recoveryMult)));
-      setGuts(p => Math.min(effectiveMaxGuts, p + Math.floor(effectiveMaxGuts * recoveryMult)));
+      setHp(p => Math.min(liveEffectiveMaxHp(), p + Math.floor(liveEffectiveMaxHp() * recoveryMult)));
+      setGuts(p => Math.min(liveEffectiveMaxGuts(), p + Math.floor(liveEffectiveMaxGuts() * recoveryMult)));
       addPopup(recoveryMult === 1 ? 'ライフ・ガッツ全回復!' : 'ライフ・ガッツ回復!', 'hero', 'text-rose-300 text-lg font-bold');
     }
     const {
@@ -16686,7 +16721,7 @@ function MonsterHeroGame() {
     if (isBusy || hp <= 0) return;
     setIsBusy(true);
     Audio_.se.heal();
-    const recoverHp = Math.floor(effectiveMaxHp * 0.3);
+    const recoverHp = Math.floor(liveEffectiveMaxHp() * 0.3);
     setEffect({
       type: 'heal',
       label: "緊急回復",
@@ -16698,17 +16733,17 @@ function MonsterHeroGame() {
     });
     await battleWait(500);
     setEffect(null);
-    const recoverGuts = Math.floor(effectiveMaxGuts * 0.3);
+    const recoverGuts = Math.floor(liveEffectiveMaxGuts() * 0.3);
     addPopup(`💚 ライフ +${recoverHp}`, 'life', 'text-emerald-400 text-2xl font-black drop-shadow-md');
     addPopup(`⚡ ガッツ +${recoverGuts}`, 'guts', 'text-amber-400 text-2xl font-black drop-shadow-md');
-    setHp(p => Math.min(effectiveMaxHp, p + recoverHp));
-    setGuts(p => Math.min(effectiveMaxGuts, p + recoverGuts));
+    setHp(p => Math.min(liveEffectiveMaxHp(), p + recoverHp));
+    setGuts(p => Math.min(liveEffectiveMaxGuts(), p + recoverGuts));
     await battleWait(1000);
     // 画面に予告済みの行動をそのまま実行する。ここで敵AIを再抽選すると、緊急回復で予告を
     // 別の技へ変えられてしまうため、技・対象・順番・予測値を保持した予約だけを参照する。
     const scenario = battleScenarioRef.current;
     const acting = enemyIntent;
-    const hpAfterRecovery = Math.min(effectiveMaxHp, hp + recoverHp);
+    const hpAfterRecovery = Math.min(liveEffectiveMaxHp(), hp + recoverHp);
     await handleEnemyTurn('none', {}, acting, hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const moveWasFrozen = acting && acting.type === 'MOVE' && getWaveBuff('iceLockTurns') > 0;
@@ -16796,7 +16831,7 @@ function MonsterHeroGame() {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = owned ? owned.evoLevel : 0;
           let cutValue = (level === 0 ? 0.03 : level === 1 ? 0.06 : 0.10) * effMul;
-          setPermaBuffs(p => ({
+          writePermaBuffs(p => ({
             ...p,
             dmgCutPct: Math.min(0.9, (p.dmgCutPct || 0) + cutValue)
           }));
@@ -16874,7 +16909,7 @@ function MonsterHeroGame() {
           const comboAdd = (0.03 + level * 0.02) * effMul;
           localGlobalComboAdd += comboAdd;
           addPermaBuff('globalComboDmgPct', comboAdd);
-          setPermaBuffs(p => ({
+          writePermaBuffs(p => ({
             ...p,
             kikiCardBonusTurns: Math.max(1, (level + 1) * effMul) + 1
           }));
@@ -16886,10 +16921,10 @@ function MonsterHeroGame() {
         const owned = ownedTeachings.find(t => t.id === card.id);
         const level = owned ? owned.evoLevel : 0;
         if (card.id === 'meloso') {
-          const healVal = Math.floor(effectiveMaxHp * 0.3 * effMul);
+          const healVal = Math.floor(liveEffectiveMaxHp() * 0.3 * effMul);
           totalHeal += healVal;
-          const gutsVal = Math.floor(effectiveMaxGuts * 0.3 * effMul);
-          setGuts(p => Math.min(effectiveMaxGuts, p + gutsVal));
+          const gutsVal = Math.floor(liveEffectiveMaxGuts() * 0.3 * effMul);
+          setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsVal));
           currentTurnGuardFlat += GUARD_EVOLUTION[guardLevel].flat * effMul;
           currentTurnGuardMult += GUARD_EVOLUTION[guardLevel].mult * effMul;
           guardTypeInTurn = 'guard';
@@ -16908,25 +16943,25 @@ function MonsterHeroGame() {
           let hpB = level === 1 ? 0.05 : level >= 2 ? 0.08 : 0.03,
             atkB = level >= 2 ? 0.05 : 0.03,
             gutsB = level >= 2 ? 0.05 : 0.03;
-          const healVal = Math.floor(effectiveMaxHp * hpRecRate * effMul);
+          const healVal = Math.floor(liveEffectiveMaxHp() * hpRecRate * effMul);
           totalHeal += healVal;
           addPermaBuff('muaHpPct', hpB * effMul);
           addPermaBuff('muaAtkPct', atkB * effMul);
           addPermaBuff('muaGutsPct', gutsB * effMul);
           if (gutsRecRate > 0) {
-            const gv = Math.floor(effectiveMaxGuts * gutsRecRate * effMul);
-            setGuts(p => Math.min(effectiveMaxGuts, p + gv));
+            const gv = Math.floor(liveEffectiveMaxGuts() * gutsRecRate * effMul);
+            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gv));
             addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           }
         } else {
-          const healVal = Math.floor(effectiveMaxHp * (0.5 + level * 0.2) * effMul);
+          const healVal = Math.floor(liveEffectiveMaxHp() * (0.5 + level * 0.2) * effMul);
           totalHeal += healVal;
           addPermaBuff('muaHpPct', 0.10 * effMul);
           addPermaBuff('muaAtkPct', 0.05 * effMul);
           addPermaBuff('muaGutsPct', 0.10 * effMul);
           if (level >= 1) {
-            const gv = Math.floor(effectiveMaxGuts * (0.5 + level * 0.2) * effMul);
-            setGuts(p => Math.min(effectiveMaxGuts, p + gv));
+            const gv = Math.floor(liveEffectiveMaxGuts() * (0.5 + level * 0.2) * effMul);
+            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gv));
             addPopup(`⚡ ガッツ +${gv}`, 'guts', 'text-amber-400 font-black text-2xl drop-shadow-md');
           }
         }
@@ -17026,8 +17061,8 @@ function MonsterHeroGame() {
             setImmediateTurnBuff('stunEnemy', true);
             addPopup('スタン!', 'enemy', 'text-yellow-400 text-lg font-bold');
           } else if (card.monId === 'Suezo') {
-            const gRec = Math.floor(effectiveMaxGuts * 0.5 * effMul);
-            setGuts(p => Math.min(effectiveMaxGuts, p + gRec));
+            const gRec = Math.floor(liveEffectiveMaxGuts() * 0.5 * effMul);
+            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gRec));
             addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-xl font-black drop-shadow-md');
           } else if (card.monId === 'Pixie') {
             setNextTurnBuff('zeroGuts', true);
@@ -17047,9 +17082,9 @@ function MonsterHeroGame() {
           } else if (card.monId === 'Oboro') {
             const hRec = Math.floor(finalD * 0.5);
             const gRec = Math.floor(finalD * 0.05);
-            hpBeforeEnemyAttack = Math.min(effectiveMaxHp, hpBeforeEnemyAttack + hRec);
+            hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + hRec);
             setHp(hpBeforeEnemyAttack);
-            setGuts(p => Math.min(effectiveMaxGuts, p + gRec));
+            setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gRec));
             addPopup(`💚 ドレイン +${hRec}`, 'life', 'text-emerald-400 text-xl font-black drop-shadow-md');
             addPopup(`⚡ ガッツ +${gRec}`, 'guts', 'text-amber-400 text-base font-bold drop-shadow-md');
           } else if (card.monId === 'Ark' || card.monId === 'Iblis') {
@@ -17090,7 +17125,7 @@ function MonsterHeroGame() {
       const cardHeal = totalHeal - totalHealBeforeCard;
       if (cardHeal > 0) {
         addPopup(`💚 回復 +${cardHeal}`, 'life', 'text-emerald-400 text-4xl font-black drop-shadow-lg');
-        hpBeforeEnemyAttack = Math.min(effectiveMaxHp, hpBeforeEnemyAttack + cardHeal);
+        hpBeforeEnemyAttack = Math.min(liveEffectiveMaxHp(), hpBeforeEnemyAttack + cardHeal);
         setHp(hpBeforeEnemyAttack);
       }
       // 回復・自傷など、このカード自身の増減を次のカード消費より先に描画する。
@@ -17252,7 +17287,7 @@ function MonsterHeroGame() {
     replenish(selectedCards.length + drawCount);
     while (nextHand.length < 5 && (nextDeck.length > 0 || nextGraveyard.length > 0)) replenish(1);
     if (getTurnBuff('zeroGuts', false)) setImmediateTurnBuff('zeroGuts', false);
-    setPermaBuffs(p => p.kikiCardBonusTurns > 0 ? {
+    writePermaBuffs(p => p.kikiCardBonusTurns > 0 ? {
       ...p,
       kikiCardBonusTurns: Math.max(0, p.kikiCardBonusTurns - 1)
     } : p);
@@ -17889,7 +17924,7 @@ function MonsterHeroGame() {
     setScore(0);
     setWaveHistory([]);
     setFinalRewardSummary(null);
-    setPermaBuffs({
+    writePermaBuffs({
       autoHpRecovery: 0.1
     });
     setWaveBuffs({});
@@ -18122,7 +18157,7 @@ function MonsterHeroGame() {
     setGaveUp(false);
     setScore(0);
     setWaveHistory([]);
-    setPermaBuffs({
+    writePermaBuffs({
       autoHpRecovery: 0.1
     });
     setWaveBuffs({});

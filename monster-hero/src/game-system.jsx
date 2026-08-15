@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-15 14:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-15 15:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5577,8 +5577,25 @@ function MonsterHeroGame() {
   // - turnBuffs / nextTurnBuffs: 今ターンだけ有効な一時バフ・デバフ。次ターン分はnextTurnBuffsに
   //   予約し、ターン開始時にnextTurnBuffsの中身がそのままturnBuffsへ入れ替わる(=1ターンのみ持続)
   const [permaBuffs, setPermaBuffs] = useState({ autoHpRecovery: 0.1 });
-  const addPermaBuff = (key, delta) => setPermaBuffs(p => ({ ...p, [key]: (p[key] || 0) + delta }));
+  // permaBuffs は「同じターンの中で」カードによって増える。とくに
+  // みゅあ・かどみうむ・回復カードは muaHpPct / muaGutsPct を上げ、ライフとガッツの上限が
+  // その場で伸びる。ところが processTurn / handleEnemyTurn は await を挟みながら進むため、
+  // stateから読むと「そのターンが始まった時点のレンダーの値」を最後まで掴み続けてしまう。
+  // その結果、同じターンに上限を上げても回復は古い上限までしか届かず、
+  // 画面のゲージ(新しい上限で描画される)は満タンにならない。
+  // 実際に「みゅあ＋メロソ(3枚)で次ターン全回復にならない」という不具合が出た。
+  // 書き込みは writePermaBuffs に集約し、ターン中に使う値はこのrefから読む。
+  const permaBuffsRef = useRef({ autoHpRecovery: 0.1 });
+  const writePermaBuffs = (next) => {
+    const value = typeof next === 'function' ? next(permaBuffsRef.current) : (next || {});
+    permaBuffsRef.current = value;
+    setPermaBuffs(value);
+    return value;
+  };
+  const addPermaBuff = (key, delta) => writePermaBuffs(p => ({ ...p, [key]: (p[key] || 0) + delta }));
   const getPermaBuff = (key, def = 0) => permaBuffs[key] ?? def;
+  // ターン処理の途中で読むためのもの。描画は従来どおり上のstate側を使う
+  const livePermaBuff = (key, def = 0) => permaBuffsRef.current[key] ?? def;
   const [waveBuffs, setWaveBuffs] = useState({});
   const addWaveBuff = (key, delta) => setWaveBuffs(p => ({ ...p, [key]: (p[key] || 0) + delta }));
   const getWaveBuff = (key, def = 0) => waveBuffs[key] ?? def;
@@ -5991,6 +6008,18 @@ function MonsterHeroGame() {
   // バフが外れて実効最大値が下がった場合も、現在値だけが新しい上限を超えた状態を残さない。
   useEffect(() => { setHp(current => Math.min(current, effectiveMaxHp)); }, [effectiveMaxHp]);
   useEffect(() => { setGuts(current => Math.min(current, effectiveMaxGuts)); }, [effectiveMaxGuts]);
+  // ターン処理(processTurn / handleEnemyTurn / useEmergency)の途中で使う実効最大値。
+  // 上のuseMemoはレンダー時点の値なので、同じターンにみゅあ・かどみうむ・回復カードで
+  // 上限を上げても、進行中のターンには最後まで反映されない。回復がその古い上限で頭打ちになり、
+  // 新しい上限で描かれるゲージが満タンにならないため、ターン中はこちらを使う。
+  // 基礎値(maxHp/maxGuts)はターンの途中では変わらない(報酬・合流はWAVEの切れ目だけ)ので、
+  // 変わりうる muaHpPct / muaGutsPct だけをrefから読み直す。
+  const maxHpRef = useRef(500);
+  const maxGutsRef = useRef(100);
+  useEffect(() => { maxHpRef.current = maxHp; }, [maxHp]);
+  useEffect(() => { maxGutsRef.current = maxGuts; }, [maxGuts]);
+  const liveEffectiveMaxHp = () => resolveEffectiveMaxStat(maxHpRef.current, livePermaBuff('muaHpPct'));
+  const liveEffectiveMaxGuts = () => resolveEffectiveMaxStat(maxGutsRef.current, livePermaBuff('muaGutsPct'));
 
   // 全国ランキングをSupabaseから取得。失敗時は端末内保存の値にフォールバック
   // ブリーダーレベルのランキング。ランキング行は難易度ごとに保存されているので、
@@ -8781,7 +8810,7 @@ function MonsterHeroGame() {
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount); setTotalTurnCount(s.totalTurnCount);
     ultimateWeakenedDistancesRef.current=s.ultimateWeakenedDistances; setUltimateWeakenedDistances(s.ultimateWeakenedDistances);
     ultimateDistanceBreakPendingRef.current=s.ultimateDistanceBreakPending; setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending); setUltimateDistanceBreakReveal(null);
-    setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
+    writePermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
     setPendingReward(null); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
@@ -8969,7 +8998,7 @@ function MonsterHeroGame() {
     setGuardBonusCount(s.guardBonusCount); setUpgradePoints(s.upgradePoints); setTurnCount(s.turnCount); setTotalTurnCount(s.totalTurnCount);
     ultimateWeakenedDistancesRef.current=s.ultimateWeakenedDistances; setUltimateWeakenedDistances(s.ultimateWeakenedDistances);
     ultimateDistanceBreakPendingRef.current=s.ultimateDistanceBreakPending; setUltimateDistanceBreakPending(s.ultimateDistanceBreakPending); setUltimateDistanceBreakReveal(null);
-    setPermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
+    writePermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
     setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
@@ -9245,7 +9274,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 既存式と上限・下限を適用した後、符号に応じたNIGHTMARE倍率を掛ける。
     const recoveryDelta=applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty);
     const newTotalRecoveryDelta=totalRecoveryDelta+recoveryDelta;
-    setPermaBuffs(p=>({...p, autoHpRecovery:Math.max(0,(p.autoHpRecovery??0.1)+recoveryDelta)}));
+    writePermaBuffs(p=>({...p, autoHpRecovery:Math.max(0,(p.autoHpRecovery??0.1)+recoveryDelta)}));
     setTotalRecoveryDelta(newTotalRecoveryDelta);
     setWaveResult({wave,waveMult,turn:turnCount,totalTurnCount:newTotalTurnCount,pendingUltimateDistanceBreak:!!distanceBreakThreshold,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,gainedDistBonus,newDistBonus,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
     await saveMissionProgress('battle');
@@ -9352,8 +9381,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const hpGain=incomingDmg; const gutsGain=Math.floor(incomingDmg*0.1);
           addPopup(`💚 ライフ +${hpGain}`,'life','text-emerald-400 font-black text-2xl drop-shadow-md');
           addPopup(`⚡ ガッツ +${gutsGain}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');
-          currentHp=Math.min(effectiveMaxHp,currentHp+hpGain); setHp(currentHp);
-          setGuts(p=>Math.min(effectiveMaxGuts,p+gutsGain)); await battleWait(1000);
+          currentHp=Math.min(liveEffectiveMaxHp(),currentHp+hpGain); setHp(currentHp);
+          setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gutsGain)); await battleWait(1000);
         } else if (mainHero?.id==='Tiger'&&Math.random()<0.5) {
           addPopup("回避！",'hero','text-blue-400 font-black text-xl drop-shadow-lg'); await battleWait(1000);
         } else if (guardValue>0) {
@@ -9362,7 +9391,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           setGuardFx(true); Audio_.se.guard(); triggerShake();
           await battleWait(550); setGuardFx(false);
           if (diff<0) { const fd=applyTurnDamageReduction(Math.abs(diff)); const remainingHp=calculateRemainingHp(currentHp,fd); currentHp=remainingHp; addPopup(`貫通! -${fd}`,'hero','text-pink-600 text-3xl font-black drop-shadow-lg'); setHp(remainingHp); await battleWait(1000); }
-          else { const gGain=Math.floor(diff*0.1); currentHp=Math.min(effectiveMaxHp,currentHp+diff); addPopup(`🛡 ガード成功`,'hero','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`💚 ライフ +${diff}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gGain}`,'guts','text-amber-400 text-xl font-bold drop-shadow-md'); setHp(currentHp); setGuts(p=>Math.min(effectiveMaxGuts,p+gGain)); await battleWait(1000); }
+          else { const gGain=Math.floor(diff*0.1); currentHp=Math.min(liveEffectiveMaxHp(),currentHp+diff); addPopup(`🛡 ガード成功`,'hero','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`💚 ライフ +${diff}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gGain}`,'guts','text-amber-400 text-xl font-bold drop-shadow-md'); setHp(currentHp); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gGain)); await battleWait(1000); }
         } else {
           addPopup(`-${incomingDmg}`,'hero','text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce'); triggerShake();
           const remainingHp=calculateRemainingHp(currentHp,incomingDmg); currentHp=remainingHp; setHp(remainingHp); await battleWait(1000);
@@ -9380,12 +9409,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const currentAutoGutsRecovery=Math.max(0,0.05+(autoHpRecoveryRate-0.1))+getPermaBuff('gutsRecoverPct');
     // 氷海の支配者は、絶氷の楔発動中かつ勇者と敵が同じ距離の場合だけ50パーセントポイントを足す。
     const gutsRecoveryRate=applyIceRulerAutoGutsRecovery(currentAutoGutsRecovery,mainHero?.id,iceLockActive,heroDist,enemyDist);
-    const gutsRegen=Math.floor(effectiveMaxGuts*gutsRecoveryRate);
-    setGuts(p=>Math.min(effectiveMaxGuts,p+gutsRegen));
+    const gutsRegen=Math.floor(liveEffectiveMaxGuts()*gutsRecoveryRate);
+    setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gutsRegen));
     let didRegen=false;
     if (autoHpRecoveryRate>0) {
-      const autoHealVal=Math.floor(effectiveMaxHp*autoHpRecoveryRate);
-      if (autoHealVal>0) { setHp(p=>Math.min(effectiveMaxHp,p+autoHealVal)); addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
+      const autoHealVal=Math.floor(liveEffectiveMaxHp()*autoHpRecoveryRate);
+      if (autoHealVal>0) { setHp(p=>Math.min(liveEffectiveMaxHp(),p+autoHealVal)); addPopup(`🌿 自動再生 +${autoHealVal}`,'life','text-teal-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     }
     if (gutsRegen>0) { addPopup(`🌿 自動ガッツ +${gutsRegen}`,'guts','text-cyan-300 font-black text-lg italic drop-shadow-md'); didRegen=true; }
     if (didRegen) { await battleWait(500); }
@@ -9398,8 +9427,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const pendingNextTurnBuffs = nextTurnBuffsRef.current;
     const recoveryMult = pendingNextTurnBuffs.melosoFullRecoveryMult || 0;
     if (recoveryMult>0) {
-      setHp(p=>Math.min(effectiveMaxHp,p+Math.floor(effectiveMaxHp*recoveryMult)));
-      setGuts(p=>Math.min(effectiveMaxGuts,p+Math.floor(effectiveMaxGuts*recoveryMult)));
+      setHp(p=>Math.min(liveEffectiveMaxHp(),p+Math.floor(liveEffectiveMaxHp()*recoveryMult)));
+      setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+Math.floor(liveEffectiveMaxGuts()*recoveryMult)));
       addPopup(recoveryMult===1?'ライフ・ガッツ全回復!':'ライフ・ガッツ回復!','hero','text-rose-300 text-lg font-bold');
     }
     const {melosoFullRecoveryMult, ...activeTurnBuffs}=pendingNextTurnBuffs;
@@ -9411,18 +9440,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const useEmergency = async () => {
     if (isBusy||hp<=0) return; setIsBusy(true);
     Audio_.se.heal();
-    const recoverHp=Math.floor(effectiveMaxHp*0.3);
+    const recoverHp=Math.floor(liveEffectiveMaxHp()*0.3);
     setEffect({type:'heal',label:"緊急回復",icon:"💊",monEmoji:mainHero?.emoji||"🏥",imgUrl:mainHero?.imgUrl,baseId:mainHero?.id,colors:mainHero?.colors});
     await battleWait(500); setEffect(null);
-    const recoverGuts=Math.floor(effectiveMaxGuts*0.3);
+    const recoverGuts=Math.floor(liveEffectiveMaxGuts()*0.3);
     addPopup(`💚 ライフ +${recoverHp}`,'life','text-emerald-400 text-2xl font-black drop-shadow-md');
     addPopup(`⚡ ガッツ +${recoverGuts}`,'guts','text-amber-400 text-2xl font-black drop-shadow-md');
-    setHp(p=>Math.min(effectiveMaxHp,p+recoverHp)); setGuts(p=>Math.min(effectiveMaxGuts,p+recoverGuts)); await battleWait(1000);
+    setHp(p=>Math.min(liveEffectiveMaxHp(),p+recoverHp)); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+recoverGuts)); await battleWait(1000);
     // 画面に予告済みの行動をそのまま実行する。ここで敵AIを再抽選すると、緊急回復で予告を
     // 別の技へ変えられてしまうため、技・対象・順番・予測値を保持した予約だけを参照する。
     const scenario=battleScenarioRef.current;
     const acting=enemyIntent;
-    const hpAfterRecovery=Math.min(effectiveMaxHp,hp+recoverHp);
+    const hpAfterRecovery=Math.min(liveEffectiveMaxHp(),hp+recoverHp);
     await handleEnemyTurn('none',{},acting,hpAfterRecovery);
     // 敵の行動後にだけ次ターン分を1回予約する。移動した場合は移動先を次の抽選基準にする。
     const moveWasFrozen=acting&&acting.type==='MOVE'&&getWaveBuff('iceLockTurns')>0;
@@ -9478,7 +9507,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if (card.type==='buff'||card.type==='debuff') {
         fireTeachingFx(card.id);
         if (card.subType==='atk_buff') { addPopup(`攻撃UP!`,'hero','text-red-400 font-black text-2xl drop-shadow-md'); addPermaBuff('atkPct',card.baseValue*effMul); localOryoAdd+=card.baseValue*effMul; }
-        else if (card.subType==='dmg_cut_buff') { addPopup(`防御UP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=(level===0?0.03:(level===1?0.06:0.10))*effMul; setPermaBuffs(p=>({...p, dmgCutPct:Math.min(0.9,(p.dmgCutPct||0)+cutValue)})); }
+        else if (card.subType==='dmg_cut_buff') { addPopup(`防御UP!`,'hero','text-emerald-400 font-black text-2xl drop-shadow-md'); const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=owned?owned.evoLevel:0; let cutValue=(level===0?0.03:(level===1?0.06:0.10))*effMul; writePermaBuffs(p=>({...p, dmgCutPct:Math.min(0.9,(p.dmgCutPct||0)+cutValue)})); }
         // かどみうむ: 効果量はdata/breeder.jsのCADMIUM_TIERSに集約している(説明文の生成も同じ値を見る)
         else if (card.subType==='guts_buff') { const owned=ownedTeachings.find(ot=>ot.id===card.id); const tier=CADMIUM_TIERS[Math.min(owned?owned.evoLevel:0,CADMIUM_TIERS.length-1)]; addPopup(tier.gutsLimit>0?`⚡ ガッツ上限UP!`:`⚡ ガッツ回復UP!`,'guts','text-amber-400 font-black text-2xl drop-shadow-md'); if(tier.autoGuts>0) addPermaBuff('gutsRecoverPct',tier.autoGuts*effMul); if(tier.gutsLimit>0) addPermaBuff('muaGutsPct',tier.gutsLimit*effMul); if(tier.hpLimit>0) addPermaBuff('muaHpPct',tier.hpLimit*effMul); if(tier.autoHp>0){ addPermaBuff('autoHpRecovery',tier.autoHp*effMul); addPopup(`💚 再生強化`,'life','text-emerald-400 font-black text-xl drop-shadow-md'); } }
         else if (card.subType==='stun_atsu') {
@@ -9502,16 +9531,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           }
         }
         else if (card.subType==='buff_myaru') { setNextTurnBuff('atkMult',1+(card.baseValue-1)*effMul); const selfDmgAmt=Math.floor(hpBeforeEnemyAttack*myaruSelfDamageRate(card)*effMul); addPopup(`自傷-${selfDmgAmt}`,'hero','text-red-600 text-2xl font-black'); hpBeforeEnemyAttack=Math.max(1,hpBeforeEnemyAttack-selfDmgAmt); setHp(hpBeforeEnemyAttack); }
-        else if (card.subType==='buff_kiki') { const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=Math.min(owned?owned.evoLevel:0,2); const comboAdd=(0.03+level*0.02)*effMul; localGlobalComboAdd+=comboAdd; addPermaBuff('globalComboDmgPct',comboAdd); setPermaBuffs(p=>({...p,kikiCardBonusTurns:Math.max(1,(level+1)*effMul)+1})); addPopup(`全体連撃+${((3+level*2)*effMul).toFixed(effMul===1?0:1)}%!`,'hero','text-sky-300 text-lg font-bold'); }
+        else if (card.subType==='buff_kiki') { const owned=ownedTeachings.find(ot=>ot.id===card.id); const level=Math.min(owned?owned.evoLevel:0,2); const comboAdd=(0.03+level*0.02)*effMul; localGlobalComboAdd+=comboAdd; addPermaBuff('globalComboDmgPct',comboAdd); writePermaBuffs(p=>({...p,kikiCardBonusTurns:Math.max(1,(level+1)*effMul)+1})); addPopup(`全体連撃+${((3+level*2)*effMul).toFixed(effMul===1?0:1)}%!`,'hero','text-sky-300 text-lg font-bold'); }
       }
       else if (card.type==='heal') {
         Audio_.se.heal();
         fireTeachingFx(card.id);
         const owned=ownedTeachings.find(t=>t.id===card.id); const level=owned?owned.evoLevel:0;
         if (card.id==='meloso') {
-          const healVal=Math.floor(effectiveMaxHp*0.3*effMul); totalHeal+=healVal;
-          const gutsVal=Math.floor(effectiveMaxGuts*0.3*effMul);
-          setGuts(p=>Math.min(effectiveMaxGuts,p+gutsVal));
+          const healVal=Math.floor(liveEffectiveMaxHp()*0.3*effMul); totalHeal+=healVal;
+          const gutsVal=Math.floor(liveEffectiveMaxGuts()*0.3*effMul);
+          setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gutsVal));
           currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul;
           currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul;
           guardTypeInTurn='guard';
@@ -9527,13 +9556,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         } else if (card.id==='mua') {
           let hpRecRate=level===1?0.7:(level>=2?0.9:0.5), gutsRecRate=level>=1?(level>=2?0.9:0.7):0;
           let hpB=level===1?0.05:(level>=2?0.08:0.03), atkB=level>=2?0.05:0.03, gutsB=level>=2?0.05:0.03;
-          const healVal=Math.floor(effectiveMaxHp*hpRecRate*effMul); totalHeal+=healVal;
+          const healVal=Math.floor(liveEffectiveMaxHp()*hpRecRate*effMul); totalHeal+=healVal;
           addPermaBuff('muaHpPct',hpB*effMul); addPermaBuff('muaAtkPct',atkB*effMul); addPermaBuff('muaGutsPct',gutsB*effMul);
-          if(gutsRecRate>0){const gv=Math.floor(effectiveMaxGuts*gutsRecRate*effMul); setGuts(p=>Math.min(effectiveMaxGuts,p+gv)); addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
+          if(gutsRecRate>0){const gv=Math.floor(liveEffectiveMaxGuts()*gutsRecRate*effMul); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gv)); addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
         } else {
-          const healVal=Math.floor(effectiveMaxHp*(0.5+level*0.2)*effMul); totalHeal+=healVal;
+          const healVal=Math.floor(liveEffectiveMaxHp()*(0.5+level*0.2)*effMul); totalHeal+=healVal;
           addPermaBuff('muaHpPct',0.10*effMul); addPermaBuff('muaAtkPct',0.05*effMul); addPermaBuff('muaGutsPct',0.10*effMul);
-          if(level>=1){const gv=Math.floor(effectiveMaxGuts*(0.5+level*0.2)*effMul); setGuts(p=>Math.min(effectiveMaxGuts,p+gv)); addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
+          if(level>=1){const gv=Math.floor(liveEffectiveMaxGuts()*(0.5+level*0.2)*effMul); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gv)); addPopup(`⚡ ガッツ +${gv}`,'guts','text-amber-400 font-black text-2xl drop-shadow-md');}
         }
       }
       else if (card.type!=='guard'&&card.type!=='weak_guard') {
@@ -9580,11 +9609,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (card.type==='unique') {
           // 固有技の効果は技の出自(card.monId)で判定する(activeMon.idではない)。理由は上のコメントと同じ
           if(card.monId==='Ham'){immediateStun=true; setImmediateTurnBuff('stunEnemy',true); addPopup('スタン!','enemy','text-yellow-400 text-lg font-bold');}
-          else if(card.monId==='Suezo'){const gRec=Math.floor(effectiveMaxGuts*0.5*effMul); setGuts(p=>Math.min(effectiveMaxGuts,p+gRec)); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
+          else if(card.monId==='Suezo'){const gRec=Math.floor(liveEffectiveMaxGuts()*0.5*effMul); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gRec)); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-xl font-black drop-shadow-md');}
           else if(card.monId==='Pixie'){setNextTurnBuff('zeroGuts',true); addPopup('次ターン消費0!','hero','text-blue-400 text-lg font-bold');}
           else if(card.monId==='Tiger'){setNextTurnBuff('guaranteedCrit',true); addPermaBuff('critRatePct',0.02*effMul); addPermaBuff('critDmgPct',0.02*effMul); addPopup('次ターン会心確定!','hero','text-red-400 text-lg font-bold'); addPopup(`会心率+${(2*effMul).toFixed(effMul===1?0:1)}% 会心ダメ+${(2*effMul).toFixed(effMul===1?0:1)}%`,'hero','text-yellow-400 text-sm font-bold');}
           else if(card.monId==='Monol'){addPermaBuff('defPct',0.03*effMul); addWaveBuff('enemyAtkDebuffPct',0.10*effMul); setNextTurnBuff('reflect',true); addPopup('丈夫さUP!','hero','text-emerald-400 text-lg font-bold'); addPopup('次ターン反射！','hero','text-purple-400 text-lg font-bold');}
-          else if(card.monId==='Oboro'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05); hpBeforeEnemyAttack=Math.min(effectiveMaxHp,hpBeforeEnemyAttack+hRec); setHp(hpBeforeEnemyAttack); setGuts(p=>Math.min(effectiveMaxGuts,p+gRec)); addPopup(`💚 ドレイン +${hRec}`,'life','text-emerald-400 text-xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');}
+          else if(card.monId==='Oboro'){const hRec=Math.floor(finalD*0.5); const gRec=Math.floor(finalD*0.05); hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+hRec); setHp(hpBeforeEnemyAttack); setGuts(p=>Math.min(liveEffectiveMaxGuts(),p+gRec)); addPopup(`💚 ドレイン +${hRec}`,'life','text-emerald-400 text-xl font-black drop-shadow-md'); addPopup(`⚡ ガッツ +${gRec}`,'guts','text-amber-400 text-base font-bold drop-shadow-md');}
           else if(card.monId==='Ark'||card.monId==='Iblis'){
             // 贖罪: 与ダメの20%で追撃(ザンの「連撃」とは別名にして、ザン専用の連撃モーション判定と衝突しないようにする)
             // noAnim:true → 専用モーションを2回連続再生させず、直前のヒットに続けてダメージ数値だけ表示する
@@ -9608,7 +9637,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const cardHeal=totalHeal-totalHealBeforeCard;
       if(cardHeal>0){
         addPopup(`💚 回復 +${cardHeal}`,'life','text-emerald-400 text-4xl font-black drop-shadow-lg');
-        hpBeforeEnemyAttack=Math.min(effectiveMaxHp,hpBeforeEnemyAttack+cardHeal);
+        hpBeforeEnemyAttack=Math.min(liveEffectiveMaxHp(),hpBeforeEnemyAttack+cardHeal);
         setHp(hpBeforeEnemyAttack);
       }
       // 回復・自傷など、このカード自身の増減を次のカード消費より先に描画する。
@@ -9718,7 +9747,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     replenish(selectedCards.length+drawCount);
     while(nextHand.length<5&&(nextDeck.length>0||nextGraveyard.length>0))replenish(1);
     if(getTurnBuff('zeroGuts',false)) setImmediateTurnBuff('zeroGuts',false);
-    setPermaBuffs(p=>p.kikiCardBonusTurns>0?({...p,kikiCardBonusTurns:Math.max(0,p.kikiCardBonusTurns-1)}):p);
+    writePermaBuffs(p=>p.kikiCardBonusTurns>0?({...p,kikiCardBonusTurns:Math.max(0,p.kikiCardBonusTurns-1)}):p);
     setHand(nextHand); setDeck(nextDeck); setGraveyard(nextGraveyard); setSelectedCards([]); setLastActionSlot(null); setCardAssignments({}); setPendingCard(null); setFocusedCard(null);
 
     const attackDistDamage=[0,0,0,0];
@@ -10124,7 +10153,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     debugResultRef.current = false;
     setDebugBattle(true); setExtremeRun(false); setDebugOutcome(null); setGaveUp(false);
     setScore(0); setWaveHistory([]); setFinalRewardSummary(null);
-    setPermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0);
     setMainHero(null); setSlots([null,null,null,null]); setOwnedUniques([]); setOwnedTeachings([]);
@@ -10301,7 +10330,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     extremeRunRef.current = extreme;
     debugResultRef.current = false;
     setDebugBattle(true); setExtremeRun(extreme); setDebugOutcome(null); setGaveUp(false); setScore(0); setWaveHistory([]);
-    setPermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
+    writePermaBuffs({autoHpRecovery:0.1}); setWaveBuffs({}); setTurnBuffs({}); writeNextTurnBuffs({});
     setDistDmgBonus([0,0,0,0]); setTotalDistDamage([0,0,0,0]); setTotalAllDamage(0); setTotalRecoveryDelta(0);
     setUpgradePoints(0); setAtkLevel(0); setGuardLevel(0); setGuardBonusCount(0); setFinalRewardSummary(null);
     setMainHero(hero); setSlots(debugSlots); setOwnedUniques(uniques); setOwnedTeachings(teachings);
