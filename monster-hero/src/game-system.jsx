@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 14:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 15:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6017,7 +6017,7 @@ function MonsterHeroGame() {
           {masu
             ? <DyedMonsterImage baseId={masu.baseId} src={iconSrc} alt={masu.name} draggable={false} masuColors={getMasuColors(masu)} style={MONSTER_CARD_NO_SELECT} className="w-full h-full object-cover"/>
             : (iconSrc
-              ? <img src={iconSrc} alt={base.name} draggable={false} style={MONSTER_CARD_NO_SELECT} className="w-full h-full object-cover"/>
+              ? <img src={iconSrc} alt={base.name} draggable={false} style={monsterArtFitStyle(base.id, MONSTER_CARD_NO_SELECT)} className="w-full h-full object-cover"/>
               : <div className="w-full h-full flex items-center justify-center text-2xl">{base.emoji}</div>)}
         </div>
         {masu&&<RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>}

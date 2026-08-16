@@ -1,6 +1,14 @@
 const CHANGELOG = [
   {
-    date: "2026-08-16 14:50",
+    date: "2026-08-16 15:10",
+    type: 'issue',
+    title: 'ウンディーネ・ヤオビクニの頭が切れて表示される不具合を修正',
+    items: [
+      '「供モンを選択」などの一覧で、ウンディーネ・ヤオビクニ(縦長の立ち絵を持つ2体)の頭のてっぺんが切れて表示されることがありました。一覧共通のカード表示が、マスモン化していない個体では絵を全身収める処理を通していなかったためです。絵そのものは変更せず、表示側の処理を直しました。',
+    ],
+  },
+  {
+    date: "2026-08-16 15:10",
     type: 'issue',
     title: 'ききのカード上限+1が同じモンスターへ重ねて使えない不具合を修正',
     items: [
@@ -9,7 +17,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-16 14:50",
+    date: "2026-08-16 15:10",
     type: 'update',
     title: 'ブリーダーカード「きき」「メロソ」を調整しました',
     items: [
@@ -19,7 +27,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-16 14:50",
+    date: "2026-08-16 15:10",
     type: 'issue',
     title: 'タップした場所に出る波紋が表示されなくなっていた不具合を修正',
     items: [
@@ -28,7 +36,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-16 14:50",
+    date: "2026-08-16 15:10",
     type: 'update',
     title: '第2助手「きき」を追加しました',
     assistantNotice: { id:'update_notice_assistant_kiki_v1', type:'feature', destination:'profile', buttonLabel:'プロフィールを見る' },
@@ -45,7 +53,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-16 14:50",
+    date: "2026-08-16 15:10",
     type: 'update',
     title: 'みゅあとの仲良し度が増える場面を増やしました',
     items: [
@@ -56,7 +64,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-16 14:50",
+    date: "2026-08-16 15:10",
     type: 'update',
     title: 'みゅあとの仲良し度をLv20まで拡張し、呼び方を自由に決められるようにしました',
     items: [
@@ -66,7 +74,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-16 14:50",
+    date: "2026-08-16 15:10",
     type: 'issue',
     title: 'カード選択中の「合計DMG」が実際の与ダメージとズレる不具合を修正',
     items: [
@@ -75,7 +83,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-16 14:50",
+    date: "2026-08-16 15:10",
     type: 'update',
     title: 'ULTIMATEの難易度を調整しました',
     items: [
