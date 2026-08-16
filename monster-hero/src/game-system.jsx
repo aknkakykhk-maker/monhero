@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 08:40"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 13:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5488,6 +5488,29 @@ function MonsterHeroGame() {
     setRipples(prev => [...prev, { id, x, y }]);
     setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 650);
   }, []);
+  // タップ中(押している間)は指を離すまでスライドしても波紋が付いてくるようにする。
+  // 動くたびに出すと出過ぎるので、時間と距離の両方で間引く
+  const rippleDragRef = useRef(false);
+  const rippleLastAtRef = useRef(0);
+  const rippleLastPosRef = useRef({ x: 0, y: 0 });
+  const rippleOnPointerDown = useCallback((e) => {
+    rippleDragRef.current = true;
+    rippleLastAtRef.current = performance.now();
+    rippleLastPosRef.current = { x: e.clientX, y: e.clientY };
+    const rect = e.currentTarget.getBoundingClientRect();
+    spawnRipple(e.clientX - rect.left, e.clientY - rect.top);
+  }, [spawnRipple]);
+  const rippleOnPointerMove = useCallback((e) => {
+    if (!rippleDragRef.current) return;
+    const now = performance.now();
+    const moved = Math.hypot(e.clientX - rippleLastPosRef.current.x, e.clientY - rippleLastPosRef.current.y);
+    if (now - rippleLastAtRef.current < 70 || moved < 24) return;
+    rippleLastAtRef.current = now;
+    rippleLastPosRef.current = { x: e.clientX, y: e.clientY };
+    const rect = e.currentTarget.getBoundingClientRect();
+    spawnRipple(e.clientX - rect.left, e.clientY - rect.top);
+  }, [spawnRipple]);
+  const rippleOnPointerEnd = useCallback(() => { rippleDragRef.current = false; }, []);
   const [rankingViewDiff, setRankingViewDiff] = useState('Normal');
   // 旧バトル画面(BATTLE_MENU)のランキングはチャレンジ固定。極限の段階ID(EXTREMEなど)が
   // 選ばれたまま来ても normalizeRankingDifficulty を落とさないよう、通常の難易度へ寄せる
@@ -11239,7 +11262,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   return (
     // みゅあとの仲良し度をここから配る。各画面は <AssistantBubble scene="…"/> を置くだけでよい
     <AssistantBondContext.Provider value={assistantBondValue}>
-    <div onPointerDown={(e)=>{const rect=e.currentTarget.getBoundingClientRect(); spawnRipple(e.clientX-rect.left, e.clientY-rect.top);}} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={{height:'100%'}}>
+    <div onPointerDown={rippleOnPointerDown} onPointerMove={rippleOnPointerMove} onPointerUp={rippleOnPointerEnd} onPointerCancel={rippleOnPointerEnd} className="h-full w-full bg-slate-950 text-white overflow-hidden relative select-none font-sans" style={{height:'100%'}}>
+      {/* タップ・スライドの波紋。押している場所を指すだけの見た目なのでタップ判定は奪わない */}
+      <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2147483647,overflow:'hidden'}}>
+        {ripples.map(r=>(
+          <span key={r.id} style={{position:'absolute',left:r.x,top:r.y,width:'48px',height:'48px',marginLeft:'-24px',marginTop:'-24px',borderRadius:'9999px',border:'2px solid rgba(255,255,255,0.9)',boxShadow:'0 0 10px rgba(255,255,255,0.6)',transformOrigin:'center',animation:'mhRipple 550ms ease-out forwards'}}/>
+        ))}
+      </div>
       {updateNotice}
       <div className="relative z-10 h-full flex flex-col" style={screenShake?{animation:bigShake?'mooQuake 750ms ease-in-out':'screenShake 450ms ease-in-out'}:undefined}>
 

@@ -1,6 +1,15 @@
 const CHANGELOG = [
   {
-    date: "2026-08-16 08:40",
+    date: "2026-08-16 13:19",
+    type: 'issue',
+    title: 'タップした場所に出る波紋が表示されなくなっていた不具合を修正',
+    items: [
+      '過去の改修で波紋(タップした場所に広がる白い輪)を描く部分が消えてしまっており、タップしても何も出ない状態になっていました。もう一度出るように直しました。',
+      'あわせて、画面を押したまま指をスライドさせている間も、動かした場所へ波紋が付いてくるようにしました。',
+    ],
+  },
+  {
+    date: "2026-08-16 13:19",
     type: 'update',
     title: '第2助手「きき」を追加しました',
     assistantNotice: { id:'update_notice_assistant_kiki_v1', type:'feature', destination:'profile', buttonLabel:'プロフィールを見る' },
@@ -17,7 +26,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-16 08:40",
+    date: "2026-08-16 13:19",
     type: 'update',
     title: 'みゅあとの仲良し度が増える場面を増やしました',
     items: [
@@ -28,7 +37,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-16 08:40",
+    date: "2026-08-16 13:19",
     type: 'update',
     title: 'みゅあとの仲良し度をLv20まで拡張し、呼び方を自由に決められるようにしました',
     items: [
@@ -38,7 +47,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-16 08:40",
+    date: "2026-08-16 13:19",
     type: 'issue',
     title: 'カード選択中の「合計DMG」が実際の与ダメージとズレる不具合を修正',
     items: [
@@ -47,7 +56,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-16 08:40",
+    date: "2026-08-16 13:19",
     type: 'update',
     title: 'ULTIMATEの難易度を調整しました',
     items: [
