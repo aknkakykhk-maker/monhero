@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 19:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 19:54"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -15106,8 +15106,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
           </div>
           <div className="shrink-0 w-full max-w-sm my-2 text-left"><AssistantBubble scene="rewardPick" compact/></div>
-          {/* 4項目。1画面に収めるため2列。同じ項目をもう一度タップすると2回目として積める */}
-          <div className={`w-full max-w-sm grid grid-cols-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll content-start${battleTutorialSpotClass('rewards')}`}>
+          {/* いま選んでいるぶんを反映した4ステータス。選ぶ前は現在値だけ、選ぶと増える量も出る。
+              各項目のカードは自分のステータスしか出さないので、ここで全体を見比べられるようにする */}
+          <div className="shrink-0 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5 mb-2" data-training-status>
+            <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス{trainingPicks.length>0&&<span className="text-amber-300">（選択中の変化）</span>}</div>
+            <div className="grid grid-cols-4 gap-1">
+              {TRAINING_OPTIONS.map(option=>{
+                const st=STYLES[option.id]||STYLES.hp;
+                const beforeAll=baseStats[option.stat];
+                const afterAll=current[option.stat];
+                const diff=afterAll-beforeAll;
+                return (
+                  <div key={option.id} className="rounded-lg bg-black/40 px-1 py-1 text-center">
+                    <span className="block text-[8px] font-black text-slate-500 leading-none">{option.statLabel}</span>
+                    <span className={`block text-[13px] font-black font-mono leading-tight ${diff>0?st.tint:'text-slate-300'}`}>{afterAll}</span>
+                    <span className={`block text-[8px] font-black font-mono leading-none ${diff>0?'text-emerald-400':'text-slate-700'}`}>{diff>0?`+${diff}`:'±0'}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {/* 4項目。1画面に収めるため2列2行。空きがあればカードが伸びて画面を埋める。
+              同じ項目をもう一度タップすると2回目として積める */}
+          <div className={`w-full max-w-sm grid grid-cols-2 grid-rows-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll${battleTutorialSpotClass('rewards')}`}>
             {TRAINING_OPTIONS.map(option=>{
               const count=trainingPicks.filter(id=>id===option.id).length;
               const st=STYLES[option.id]||STYLES.hp;
@@ -15118,12 +15139,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <button key={option.id} type="button" disabled={full||!!effect}
                   onClick={()=>setTrainingPicks(prev=>prev.length>=TRAINING_PICK_COUNT?prev:[...prev,option.id])}
                   aria-label={`${option.name} ${option.effect}${count>0?` 選択中${count}回`:''}`}
-                  className={`relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start gap-1 text-left transition-all active:scale-95 disabled:opacity-40 ${count>0?`${st.bg} ${st.ring}`:'bg-slate-900/60 border-slate-800'}`}>
+                  className={`relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start justify-center gap-2 text-left transition-all active:scale-95 disabled:opacity-40 ${count>0?`${st.bg} ${st.ring}`:'bg-slate-900/60 border-slate-800'}`}>
                   {/* 何回選んだかを ×1 / ×2 で明確に出す */}
-                  {count>0&&<span className={`absolute -top-2 -right-2 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
+                  {count>0&&<span className={`absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
                   <span className={`flex items-center gap-1.5 ${st.tint}`}>{st.icon}<b className="text-[13px] font-black text-white leading-none">{option.name}</b></span>
                   <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}</span>
-                  <span className="mt-auto w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight">
+                  <span className="w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight">
                     <span className="block text-[8px] text-slate-500 font-black">{option.statLabel}</span>
                     <span className="block text-[11px] font-black text-slate-300">{before} <span className="text-slate-600">→</span> <b className={st.tint}>{after}</b></span>
                   </span>
