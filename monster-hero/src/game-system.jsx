@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 18:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 18:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6036,6 +6036,45 @@ function MonsterHeroGame() {
   // どちらの場合もmon.distAptitudeを見るだけでよい(マスモンの場合はresolve時にdistApt配列が既に反映されている)
   // そのモンスター自身のグレード。編成全員の合計はdistAptPctが持つので、ここでは加算しない
   const getDistAptitude = (mon, slotIdx) => (mon && mon.distAptitude && mon.distAptitude[slotIdx]) || 'C';
+  // プロモードの「勇者モンを選択」と「供モンの候補」で使う横長カード。★重要
+  // 以前はこの2画面がほぼ同じJSXを別々に持っていたため、片方だけ直すと
+  // もう片方が古いままになっていた(実際にウンディーネ・ヤオビクニの表示サイズを
+  // 勇者モン側だけ直してしまい、供モン側が直っていなかった)。
+  // 見た目に関わるところは必ずここを通し、画面ごとの違い(色・選択状態・押したときの動き)
+  // だけを引数で受け取る。
+  //
+  //   絵を収める箱は正方形(64x64)にする。立ち絵はほとんどが正方形なので contain だと
+  //   幅で頭打ちになるが、元絵が縦長(2:3)のウンディーネ・ヤオビクニだけ縦長の箱では
+  //   高さを使い切って他より約1.5倍大きく描かれてしまうため。
+  const PRO_MON_ROW_ART_BOX = { width: '64px', height: '64px' };
+  const renderProMonsterRow = ({ mon, selected = false, disabled = false, onSelect, onDetail, selectLabel, activeClass, extraButtonClass = '' }) => (
+    <article className={`relative min-h-[112px] rounded-2xl border overflow-hidden flex shadow-lg transition-all ${selected ? 'border-pink-300 bg-pink-900/30 ring-2 ring-pink-500/60 shadow-[0_0_20px_rgba(244,114,182,0.45)]' : 'border-slate-700 bg-slate-900'}`}>
+      <button disabled={disabled} onClick={onSelect} aria-label={selectLabel} aria-pressed={selected || undefined}
+        className={`relative min-w-0 flex-1 grid grid-cols-[64px_minmax(0,1fr)_74px] gap-2 items-center p-2 pr-1 text-left ${activeClass} disabled:opacity-25${extraButtonClass}`}>
+        {selected&&<div className="absolute top-1 right-1 z-10 bg-pink-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>}
+        <div className="w-16 h-[88px] flex items-center justify-center overflow-hidden shrink-0">
+          {mon.imgUrl?<DyedMonsterImage baseId={mon.id} src={mon.imgUrl} alt={mon.name} masuColors={mon.colors} style={PRO_MON_ROW_ART_BOX} className="object-contain"/>:<span className="text-5xl">{mon.emoji}</span>}
+        </div>
+        <div className="min-w-0 self-stretch flex flex-col justify-center gap-1">
+          <div className="font-black text-[13px] text-white leading-tight truncate">{mon.name}</div>
+          <div className="font-black text-[10px] text-amber-300 leading-tight truncate"><Zap size={10} className="inline mr-0.5"/>{mon.unique.name}</div>
+          <div className="grid grid-cols-2 gap-x-2 text-[10px] font-mono leading-tight">
+            <span className="flex justify-between text-slate-400">HP <b className="text-pink-300">{mon.baseHp}</b></span><span className="flex justify-between text-slate-400">ちから <b className="text-red-300">{mon.baseAtk}</b></span>
+            <span className="flex justify-between text-slate-400">丈夫さ <b className="text-emerald-300">{mon.baseDef}</b></span><span className="flex justify-between text-slate-400">ガッツ <b className="text-amber-300">{mon.baseGuts}</b></span>
+          </div>
+        </div>
+        <div className="min-w-0 self-stretch flex flex-col justify-center gap-1 border-l border-white/10 pl-2">
+          <div className="grid grid-cols-4 gap-0.5 text-center">{RANGE_LABELS.map((label,idx)=><div key={label}><div className="text-[8px] text-slate-500 font-black">{label}</div><div className={`text-[11px] font-black rounded ${DIST_APTITUDE_COLOR[getDistAptitude(mon,idx)]}`}>{getDistAptitude(mon,idx)}</div></div>)}</div>
+          <div className="text-[8px] text-indigo-400 font-black">勇者特性</div>
+          <div className="text-[10px] text-indigo-200 font-black leading-tight line-clamp-2">{mon.trait||'特性なし'}</div>
+        </div>
+      </button>
+      <div className="w-[74px] shrink-0 border-l border-white/10 flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center bg-black/25 px-1"><span className="text-[8px] text-slate-500 font-black">総合力</span><b className="text-[14px] text-amber-300 font-mono leading-tight">{formatMonsterPower(monsterPowerOf(mon))}</b></div>
+        <button onClick={onDetail} aria-label={`${mon.name}の詳細を見る`} className="min-h-[46px] border-t border-indigo-400/30 bg-indigo-950/60 text-[10px] leading-tight text-indigo-200 font-black flex items-center justify-center active:bg-indigo-800/60">詳細を見る<ChevronRight size={12}/></button>
+      </div>
+    </article>
+  );
   // タブ別の既読ID集合を比較するため、再ビルドやBUILD_DATE変更で過去項目は復活しない。
   const changelogUnreadIds = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, CHANGELOG_IDS_BY_TYPE[type].filter(id=>!(changelogSeen[type]||[]).includes(id))]));
   const changelogUnread = Object.fromEntries(CHANGELOG_TYPES.map(type => [type, changelogUnreadIds[type].length>0]));
@@ -14276,38 +14315,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               // この画面だけの情報(固有技名・ステータス・詳細への案内)はextraで足す。
               const pickMasu=m.masuId?getMasuMon(m.masuId):null;
               const pickBase=m.debugOnly?m:(ALL_PLAYER_MONSTERS[m.id]||m);
+              // カードの見た目は「供モンの候補」と同じ共通部品(renderProMonsterRow)を通す
               if(gameState==='PICK_HERO'&&isProMode(runMode)) return (
-                <article key={m.id} className="relative min-h-[112px] rounded-2xl border border-slate-700 bg-slate-900 overflow-hidden flex shadow-lg">
-                  <button disabled={gameState==='PICK_HERO'&&!scenarioPicksHero(m.id)} onClick={()=>{setCurrentPickingMon(m);setGameState('PICK_SLOT');}} aria-label={`${m.name}を勇者モンに選ぶ`} className={`min-w-0 flex-1 grid grid-cols-[64px_minmax(0,1fr)_74px] gap-2 items-center p-2 pr-1 text-left active:bg-indigo-900/30 disabled:opacity-25${scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}`}>
-                    <div className="w-16 h-[88px] flex items-center justify-center overflow-hidden shrink-0">
-                      {/* 絵を収める箱は、枠(64x88)ではなく正方形(64x64)にする。★重要
-                          立ち絵はほとんどが正方形なので、縦長の枠へ contain で収めると幅で頭打ちになり
-                          64x64相当で表示される。ところがウンディーネ・ヤオビクニだけ元絵が縦長(2:3)のため、
-                          同じ条件で高さ88pxを使い切り、他より約1.5倍大きく描かれていた
-                          (実測: スネグーラチカ 57px に対し 85px)。
-                          箱を正方形にそろえると縦長の絵も幅で頭打ちになり、他と同じ大きさで並ぶ。
-                          正方形の絵はもともと幅で決まっているので、この変更で見た目は変わらない */}
-                      {m.imgUrl?<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt={m.name} masuColors={m.colors} style={{width:'64px',height:'64px'}} className="object-contain"/>:<span className="text-5xl">{m.emoji}</span>}
-                    </div>
-                    <div className="min-w-0 self-stretch flex flex-col justify-center gap-1">
-                      <div className="font-black text-[13px] text-white leading-tight truncate">{m.name}</div>
-                      <div className="font-black text-[10px] text-amber-300 leading-tight truncate"><Zap size={10} className="inline mr-0.5"/>{m.unique.name}</div>
-                      <div className="grid grid-cols-2 gap-x-2 text-[10px] font-mono leading-tight">
-                        <span className="flex justify-between text-slate-400">HP <b className="text-pink-300">{m.baseHp}</b></span><span className="flex justify-between text-slate-400">ちから <b className="text-red-300">{m.baseAtk}</b></span>
-                        <span className="flex justify-between text-slate-400">丈夫さ <b className="text-emerald-300">{m.baseDef}</b></span><span className="flex justify-between text-slate-400">ガッツ <b className="text-amber-300">{m.baseGuts}</b></span>
-                      </div>
-                    </div>
-                    <div className="min-w-0 self-stretch flex flex-col justify-center gap-1 border-l border-white/10 pl-2">
-                      <div className="grid grid-cols-4 gap-0.5 text-center">{RANGE_LABELS.map((label,idx)=><div key={label}><div className="text-[8px] text-slate-500 font-black">{label}</div><div className={`text-[11px] font-black rounded ${DIST_APTITUDE_COLOR[getDistAptitude(m,idx)]}`}>{getDistAptitude(m,idx)}</div></div>)}</div>
-                      <div className="text-[8px] text-indigo-400 font-black">勇者特性</div>
-                      <div className="text-[10px] text-indigo-200 font-black leading-tight line-clamp-2">{m.trait||'特性なし'}</div>
-                    </div>
-                  </button>
-                  <div className="w-[74px] shrink-0 border-l border-white/10 flex flex-col">
-                    <div className="flex-1 flex flex-col items-center justify-center bg-black/25 px-1"><span className="text-[8px] text-slate-500 font-black">総合力</span><b className="text-[14px] text-amber-300 font-mono leading-tight">{formatMonsterPower(monsterPowerOf(m))}</b></div>
-                    <button onClick={()=>setCurrentPickingMon(m)} aria-label={`${m.name}の詳細を見る`} className="min-h-[46px] border-t border-indigo-400/30 bg-indigo-950/60 text-[10px] leading-tight text-indigo-200 font-black flex items-center justify-center active:bg-indigo-800/60">詳細を見る<ChevronRight size={12}/></button>
-                  </div>
-                </article>
+                <React.Fragment key={m.id}>{renderProMonsterRow({
+                  mon: m,
+                  disabled: !scenarioPicksHero(m.id),
+                  onSelect: ()=>{setCurrentPickingMon(m);setGameState('PICK_SLOT');},
+                  onDetail: ()=>setCurrentPickingMon(m),
+                  selectLabel: `${m.name}を勇者モンに選ぶ`,
+                  activeClass: 'active:bg-indigo-900/30',
+                  extraButtonClass: scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):'',
+                })}</React.Fragment>
               );
               return(<button key={m.id} disabled={gameState==='PICK_HERO'&&!scenarioPicksHero(m.id)} onClick={()=>setCurrentPickingMon(m)} style={allyCarousel?{...MONSTER_CARD_STYLE,flex:'0 0 64%'}:MONSTER_CARD_STYLE} className={`${MONSTER_CARD_CLASS} bg-slate-900 transition-all disabled:opacity-25${gameState!=='PICK_HERO'||scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}${allyCarousel?` snap-center shrink-0 ${focused?'scale-100 opacity-100':'scale-[.92] opacity-55'}`:''} ${isSel?'border-indigo-400 bg-indigo-900/30 ring-4 ring-indigo-500/50 scale-[1.03] shadow-[0_0_25px_rgba(99,102,241,0.6)]':'border-slate-800'}`}>
               {renderMonsterCardBody({
@@ -14425,32 +14443,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex-1 overflow-y-auto mh-scroll pb-2 min-h-0">
               {/* 第1弾のプロ勇者モン選択と同じ横長カード。カード本体は選択、右端は詳細だけに分ける。 */}
               <div className="flex flex-col gap-2.5">
+                {/* カードの見た目は「勇者モンを選択」と同じ共通部品(renderProMonsterRow)を通す */}
                 {candidates.map(m=>{const isSel=chosenIds.includes(m.id);const full=!isSel&&proAllyPool.length>=need;return (
-                  <article key={m.id} className={`relative min-h-[112px] rounded-2xl border overflow-hidden flex shadow-lg transition-all ${isSel?'border-pink-300 bg-pink-900/30 ring-2 ring-pink-500/60 shadow-[0_0_20px_rgba(244,114,182,0.45)]':'border-slate-700 bg-slate-900'}`}>
-                    <button disabled={full} onClick={()=>toggle(m)} aria-label={`${m.name}を供モン候補${isSel?'から解除':'に追加'}`} aria-pressed={isSel} className="relative min-w-0 flex-1 grid grid-cols-[64px_minmax(0,1fr)_74px] gap-2 items-center p-2 pr-1 text-left active:bg-pink-900/30 disabled:opacity-35">
-                      {isSel&&<div className="absolute top-1 right-1 z-10 bg-pink-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>}
-                      <div className="w-16 h-[88px] flex items-center justify-center overflow-hidden shrink-0">
-                        {m.imgUrl?<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt={m.name} masuColors={m.colors} className="w-full h-full object-contain"/>:<span className="text-5xl">{m.emoji}</span>}
-                      </div>
-                      <div className="min-w-0 self-stretch flex flex-col justify-center gap-1">
-                        <div className="font-black text-[13px] text-white leading-tight truncate">{m.name}</div>
-                        <div className="font-black text-[10px] text-amber-300 leading-tight truncate"><Zap size={10} className="inline mr-0.5"/>{m.unique.name}</div>
-                        <div className="grid grid-cols-2 gap-x-2 text-[10px] font-mono leading-tight">
-                          <span className="flex justify-between text-slate-400">HP <b className="text-pink-300">{m.baseHp}</b></span><span className="flex justify-between text-slate-400">ちから <b className="text-red-300">{m.baseAtk}</b></span>
-                          <span className="flex justify-between text-slate-400">丈夫さ <b className="text-emerald-300">{m.baseDef}</b></span><span className="flex justify-between text-slate-400">ガッツ <b className="text-amber-300">{m.baseGuts}</b></span>
-                        </div>
-                      </div>
-                      <div className="min-w-0 self-stretch flex flex-col justify-center gap-1 border-l border-white/10 pl-2">
-                        <div className="grid grid-cols-4 gap-0.5 text-center">{RANGE_LABELS.map((label,idx)=><div key={label}><div className="text-[8px] text-slate-500 font-black">{label}</div><div className={`text-[11px] font-black rounded ${DIST_APTITUDE_COLOR[getDistAptitude(m,idx)]}`}>{getDistAptitude(m,idx)}</div></div>)}</div>
-                        <div className="text-[8px] text-indigo-400 font-black">勇者特性</div>
-                        <div className="text-[10px] text-indigo-200 font-black leading-tight line-clamp-2">{m.trait||'特性なし'}</div>
-                      </div>
-                    </button>
-                    <div className="w-[74px] shrink-0 border-l border-white/10 flex flex-col">
-                      <div className="flex-1 flex flex-col items-center justify-center bg-black/25 px-1"><span className="text-[8px] text-slate-500 font-black">総合力</span><b className="text-[14px] text-amber-300 font-mono leading-tight">{formatMonsterPower(monsterPowerOf(m))}</b></div>
-                      <button onClick={()=>setProAllyDetail(m)} aria-label={`${m.name}の詳細を見る`} className="min-h-[46px] border-t border-indigo-400/30 bg-indigo-950/60 text-[10px] leading-tight text-indigo-200 font-black flex items-center justify-center active:bg-indigo-800/60">詳細を見る<ChevronRight size={12}/></button>
-                    </div>
-                  </article>
+                  <React.Fragment key={m.id}>{renderProMonsterRow({
+                    mon: m,
+                    selected: isSel,
+                    disabled: full,
+                    onSelect: ()=>toggle(m),
+                    onDetail: ()=>setProAllyDetail(m),
+                    selectLabel: `${m.name}を供モン候補${isSel?'から解除':'に追加'}`,
+                    activeClass: 'active:bg-pink-900/30',
+                  })}</React.Fragment>
                 );})}
               </div>
             </div>

@@ -58,18 +58,31 @@ check('教え(固有技の元モンスター)アイコンがmonsterArtFitStyle�
 check('マスモン一覧などのベース種分岐がmonsterArtFitStyleを通す',
   has('<img src={base.iconUrl} alt={base.name} style={monsterArtFitStyle(base.id)} className="w-full h-full object-cover"/>'));
 
-// --- 「勇者モンを選択」(プロモード一覧)の絵を収める箱 ---
+// --- プロモードの横長カード(「勇者モンを選択」と「供モンの候補」)の絵を収める箱 ---
 // 立ち絵はほとんどが正方形なので、縦長の箱へcontainで収めると幅で頭打ちになる。
 // ところが元絵が縦長(2:3)のウンディーネ・ヤオビクニだけ高さを使い切ってしまい、
 // 他より約1.5倍大きく表示されていた。箱を正方形にそろえて全員を幅基準にする。
+//
+// ★この2画面は以前ほぼ同じJSXを別々に持っていて、片方だけ直した結果
+//   もう片方が古いまま残る事故が起きた。共通部品(renderProMonsterRow)へ
+//   まとめてあること自体もここで見張る。
+check('プロモードの横長カードが共通部品にまとまっている',
+  has('const renderProMonsterRow = ({ mon, selected = false, disabled = false, onSelect, onDetail, selectLabel, activeClass, extraButtonClass = \'\' }) => ('));
+{
+  // カード本体のJSX(3カラムのグリッド)が2か所以上に書かれていたら、また重複している
+  const rowMarkup = (source.match(/grid grid-cols-\[64px_minmax\(0,1fr\)_74px\]/g) || []).length;
+  check('カード本体のJSXが1か所だけ(画面ごとに複製していない)', rowMarkup === 1, `${rowMarkup}か所`);
+}
+check('勇者モンを選択が共通部品を使っている',
+  has("onSelect: ()=>{setCurrentPickingMon(m);setGameState('PICK_SLOT');},"));
+check('供モンの候補が共通部品を使っている',
+  has('onSelect: ()=>toggle(m),') && has('onDetail: ()=>setProAllyDetail(m),'));
+
 const PICK_HERO_BOX = (() => {
-  const at = source.indexOf("if(gameState==='PICK_HERO'&&isProMode(runMode)) return (");
-  if (at < 0) return null;
-  const block = source.slice(at, source.indexOf('</article>', at));
-  const m = block.match(/style=\{\{width:'(\d+)px',height:'(\d+)px'\}\}/);
+  const m = source.match(/const PRO_MON_ROW_ART_BOX = \{ width: '(\d+)px', height: '(\d+)px' \};/);
   return m ? { w: Number(m[1]), h: Number(m[2]) } : null;
 })();
-check('勇者モンを選択(プロモード一覧)の絵の箱をpx指定で取り出せる', !!PICK_HERO_BOX,
+check('プロモードの横長カードの絵の箱をpx指定で取り出せる', !!PICK_HERO_BOX,
   PICK_HERO_BOX ? `${PICK_HERO_BOX.w}x${PICK_HERO_BOX.h}` : '');
 check('その箱が正方形になっている(縦長だと縦長の絵だけ大きくなる)',
   !!PICK_HERO_BOX && PICK_HERO_BOX.w === PICK_HERO_BOX.h,
@@ -102,7 +115,7 @@ const drawnCharHeight = async (rel, box) => {
 
 const run = async () => {
   if (PICK_HERO_BOX && artFiles.length > 0) {
-    console.log(`\n[勇者モンを選択(プロモード一覧) ${PICK_HERO_BOX.w}x${PICK_HERO_BOX.h} での見た目の高さ]`);
+    console.log(`\n[プロモードの横長カード ${PICK_HERO_BOX.w}x${PICK_HERO_BOX.h} での見た目の高さ]`);
     const measured = [];
     for (const { name, rel } of artFiles) {
       measured.push({ name, h: await drawnCharHeight(rel, PICK_HERO_BOX) });
