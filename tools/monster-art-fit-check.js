@@ -58,5 +58,17 @@ check('教え(固有技の元モンスター)アイコンがmonsterArtFitStyle�
 check('マスモン一覧などのベース種分岐がmonsterArtFitStyleを通す',
   has('<img src={base.iconUrl} alt={base.name} style={monsterArtFitStyle(base.id)} className="w-full h-full object-cover"/>'));
 
+// --- 正方形ではない枠(縦長)は、%指定(w-full h-full)だと環境によって高さが
+//     正しく解決されずウンディーネ・ヤオビクニだけ枠より大きく表示されることがあった。
+//     px指定に直してあることを確認する(「勇者モンを選択」プロモード一覧で発生) ---
+check('勇者モンを選択(プロモード一覧)のアイコンはpx指定で枠に収めている(%指定に戻していない)', (() => {
+  const at = source.indexOf("if(gameState==='PICK_HERO'&&isProMode(runMode)) return (");
+  if (at < 0) return false;
+  const end = source.indexOf('</article>', at);
+  const block = source.slice(at, end);
+  return block.includes("style={{width:'64px',height:'88px'}}")
+    && !block.includes('className="w-full h-full object-contain"');
+})());
+
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
