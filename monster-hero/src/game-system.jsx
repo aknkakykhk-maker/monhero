@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 14:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 14:50"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -8800,6 +8800,12 @@ function MonsterHeroGame() {
     limit += heroCardBonus + kikiCardBonus;
     return limit;
   }, [effectiveMaxGuts, slots, heroCardBonus, kikiCardBonus]);
+  // 1つのスロット(モンスター)へ同じターンに割り当てられる枚数の上限。
+  // 通常は1枠1枚。ハムが勇者モンのときはハム自身の連続攻撃で複数枚OK、
+  // ききのカード上限+1が効いているときは、その+1ぶんをどのモンスターへ重ねても使えるようにする
+  // (どちらも実処理(processTurn)ではなく枚数の上限だけの話なので、cardLimitまで許す)。
+  // 割当のチェックと予測表示の両方がここを通ることで、判定がずれない
+  const slotMaxUses = (mon) => ((mainHero?.id==='Ham'&&mon?.id==='Ham')||kikiCardBonus>0) ? cardLimit : 1;
 
   const getCardGuts = (card) => {
     if (!card) return 0;
@@ -9348,9 +9354,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // uniqueは自分のモンスターのスロットのみ(合体で引き継いだ固有技はownerSlotIdxで判定する。
       // monIdは技の出自(元モンスター)を表すため、継承技だとtargetMon.idとは一致しない)
       if(c.type==='unique' && c.ownerSlotIdx!==slotIdx){ setFocusedCard(null); return; }
-      // 既存の割当数チェック(ハム勇者時は複数可)
+      // 既存の割当数チェック(ハム勇者時・ききのカード上限+1が効いているときは複数可)
       const assignedCount=Object.values(cardAssignments).filter(v=>v===slotIdx).length;
-      const maxUses=(mainHero?.id==='Ham'&&targetMon?.id==='Ham')?cardLimit:1;
+      const maxUses=slotMaxUses(targetMon);
       const alreadySelected=selectedCards.includes(cardIndex);
       // 未選択なら選択枠とガッツを確認
       if(!alreadySelected){
@@ -10795,8 +10801,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if(t.id==='mua') return level===0?"ライフ 50%回復・ライフ/ガッツ上限 3%アップ・攻撃 3%アップ（次のターンから）":(level===1?"ライフ・ガッツ 70%回復・ライフ上限 5%アップ・ガッツ上限 3%アップ・攻撃 3%アップ（次のターンから）":"ライフ・ガッツ 90%回復・ライフ上限 8%アップ・ガッツ上限 5%アップ・攻撃 5%アップ（次のターンから）");
     if(t.id==='atsu') return `このターン敵の行動を無効・攻撃 ${(t.baseValue+level*t.step).toFixed(1)}倍`;
     if(t.id==='myaru'){const v=t.baseValue+level*t.step, d=pct(myaruSelfDamageRate(t,level)); return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;}
-    if(t.id==='kiki') return `次の${level+1}ターン 使用可能カード枚数 +1・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;
-    if(t.id==='meloso') return level===0?'ライフ・ガッツ30%回復・現在ガード':(level===1?'ライフ・ガッツ30%回復・現在ガード・合計2枚使用で次ターン被ダメージ50%減':'ライフ・ガッツ30%回復・現在ガード・合計2枚で次ターン被ダメージ50%減・合計3枚で次ターン開始時ライフ・ガッツ全回復');
+    if(t.id==='kiki') return `次の${level+2}ターン 使用可能カード枚数 +1・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;
+    if(t.id==='meloso') return level===0?'ライフ・ガッツ30%回復・現在ガード':(level===1?'ライフ・ガッツ30%回復・現在ガード・1枚使用で次ターン被ダメージ25%減・合計2枚以上で50%減':'ライフ・ガッツ30%回復・現在ガード・1枚使用で次ターン被ダメージ25%減・合計2枚で50%減・合計3枚以上で50%減+次ターン開始時ライフ・ガッツ全回復');
     return t.desc;
   };
   const getFullEvolutionDetails = (t) => [0,1,2].map(lvl=>({lvl,name:BREEDER_EVO_NAMES[t.id][lvl],desc:getDynamicDesc(t,true,lvl)}));
@@ -13815,7 +13821,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   for(let i=0;i<slots.length;i++){
                     const s=slots[i]; if(!s) continue;
                     const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
-                    const maxUses=(mainHero?.id==='Ham'&&s?.id==='Ham')?cardLimit:1; if(assignedCount>=maxUses) continue;
+                    const maxUses=slotMaxUses(s); if(assignedCount>=maxUses) continue;
                     if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
                     pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.final.oryo,boosts.final.dmgMod,!isBreederCard(pendingCardObj)&&committedPenaltyCnt>0); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.final.combo); break;
                   }
@@ -13868,8 +13874,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {slots.map((s,i)=>{
                   // Count how many cards already assigned to this slot
                   const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
-                  // 通常は1枠1枚。ハム勇者モンが居る『ハムのスロット』のみ連続攻撃で複数枚OK
-                  const maxUses=(mainHero?.id==='Ham'&&s?.id==='Ham')?cardLimit:1;
+                  // 通常は1枠1枚。ハム勇者モンが居る『ハムのスロット』は連続攻撃で複数枚OK。
+                  // ききのカード上限+1が効いているときも、その+1ぶんはどのスロットへ重ねてよい
+                  const maxUses=slotMaxUses(s);
                   const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);
                   // 保留中のカードはまだ使っていないので、「何枚目か」の枚数には数えない
                   const pendingIdx=pendingCard!=null?pendingCard:((dragState&&dragState.active)?dragState.cardIndex:null);

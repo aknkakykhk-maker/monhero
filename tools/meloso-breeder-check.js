@@ -58,6 +58,11 @@ assert(game.includes(`level>=1 && usedCards.length>=2`) && game.includes(`setNex
 assert(game.includes(`level>=1 && usedCards.length===1`) && game.includes(`setNextTurnBuff('takenDamageMult',1-0.25*effMul)`),
   'メロソ1枚使用時の被ダメ25%減予約が無い');
 assert(game.includes(`level>=2 && usedCards.length>=3`) && game.includes(`setNextTurnBuff('melosoFullRecoveryMult',effMul)`));
+// カードをタップしたときの説明文(getDynamicDesc)も、1枚使用時の恩恵に追随していること
+assert(game.includes(`'ライフ・ガッツ30%回復・現在ガード・1枚使用で次ターン被ダメージ25%減・合計2枚以上で50%減'`),
+  'メロソLv2の説明文(getDynamicDesc)が1枚使用時の恩恵に追随していない');
+assert(game.includes(`'ライフ・ガッツ30%回復・現在ガード・1枚使用で次ターン被ダメージ25%減・合計2枚で50%減・合計3枚以上で50%減+次ターン開始時ライフ・ガッツ全回復'`),
+  'メロソLv3の説明文(getDynamicDesc)が1枚使用時の恩恵に追随していない');
 assert(game.includes(`card?.subType === 'heal_guard_meloso'`) && game.includes(`cardEffectMultiplier(card,halved)`));
 assert(game.includes(`getTurnBuff('takenDamageMult',1.0)`) && game.includes(`getNextTurnBuff('melosoFullRecoveryMult',0)`));
 assert(game.includes(`prev.length >= STARTER_TEACHING_IDS.length`));
