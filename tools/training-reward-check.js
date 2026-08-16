@@ -170,6 +170,17 @@ if (from >= 0 && to > from) {
   const twoMixed = render(['hp', 'atk']);
   check('異なる2項目でも決定できる', text(twoMixed).includes('決定する'));
 
+  // 4ステータスの現在値と変動値を上部にまとめて出す(下に余白が余らないよう画面を埋める)
+  check('4ステータスの現在値をまとめて出す欄がある', jsx.includes('data-training-status'));
+  check('その欄に4項目すべてのステータス名が出る',
+    ['ライフ', 'ちから', '丈夫さ', 'ガッツ'].every(n => text(render([])).includes(n)));
+  check('選ぶ前は増減が ±0 と出る', text(render([])).includes('±0'));
+  check('選ぶと増えた量が +n で出る', /\+\d/.test(text(render(['hp', 'hp']))));
+  check('4項目は2列2行で画面を埋める(下に余白を残さない)',
+    /grid-cols-2 grid-rows-2/.test(jsx) && !/content-start/.test(jsx));
+  check('×2バッジは枠の内側に置く(スクロール上端で見切れない)',
+    /absolute top-1\.5 right-1\.5/.test(jsx) && !/-top-2 -right-2/.test(jsx));
+
   // iPhone縦画面で見切れない作り
   check('縦画面ではみ出さない作りになっている',
     /overflow-y-auto/.test(jsx) && /flex-1 min-h-0/.test(jsx)
