@@ -71,9 +71,9 @@ check('未閲覧は「？？？」でロック表示になる(タップできな
   if (at < 0) return false;
   const end = source.indexOf('{showIconPicker&&(', at);
   const block = source.slice(at, end);
-  if (!(block.includes('？？？') && block.includes('まだ見ていません') && block.includes('if(!unlocked){'))) return false;
+  if (!(block.includes('？？？') && block.includes('まだ見ていません') && block.includes('if(!eventUnlocked){'))) return false;
   // ロック表示のdivブロックだけを取り出し、そこにonClick(=再生できてしまう)が無いことを確かめる
-  const lockAt = block.indexOf('if(!unlocked){');
+  const lockAt = block.indexOf('if(!eventUnlocked){');
   const lockEnd = block.indexOf('return (', lockAt) >= 0 ? block.indexOf('}\n', block.indexOf('まだ見ていません', lockAt)) : -1;
   const lockBlock = lockEnd > lockAt ? block.slice(lockAt, lockEnd) : block.slice(lockAt, lockAt + 400);
   return !lockBlock.includes('onClick');

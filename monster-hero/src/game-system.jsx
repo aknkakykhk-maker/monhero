@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 15:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 15:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -13415,8 +13415,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <p className="text-[9px] text-slate-500 text-center mb-3 leading-tight">見たことのある会話イベントを、何度でも見返せます。</p>
               <div className="space-y-2 mb-3">
                 {((typeof EVENT_REPLAYS!=='undefined'&&EVENT_REPLAYS)||[]).map(event=>{
-                  const unlocked=isEventReplayUnlocked(event);
-                  if(!unlocked){
+                  const eventUnlocked=isEventReplayUnlocked(event);
+                  if(!eventUnlocked){
                     return (
                       <div key={event.id} className="w-full min-h-[56px] rounded-2xl px-3 py-2.5 flex items-center gap-2.5 border border-white/10 bg-slate-950/60 opacity-60">
                         <span className="text-lg" aria-hidden="true">🔒</span>
