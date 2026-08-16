@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: de9c80eddc7b6e08
+// source-sha256: 1a67aebf1aad1996
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 18:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 19:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7547,7 +7547,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   gold: 20,
   psyche: 60,
   unlockRequirement: 'CHAOS',
-  description: '累計ターンで敵が強化され、供モン加入ボーナス・能力覚醒・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。',
+  description: '累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。',
   specialRules: Object.freeze({
     enemyTurnRate: 0.0075,
     allyJoinPenaltyRate: 0.0075,
@@ -7622,7 +7622,7 @@ const specialRuleDifficultyForRun = (runMode, difficultyId, extremeRun = false, 
 };
 const specialRulePercent = value => `${Math.round((Number(value) || 0) * 100)}%`;
 const extremeSpecialRuleLines = difficultyId => {
-  if (difficultyId === ULTIMATE_SETTING.id) return [['敵強化', '累計T ×0.75%'], ['供モン加入B低下', '累計T ×0.75%'], ['与ダメ低下', '経過累計T ×0.75%（最低25%）'], ['能力覚醒低下', 'WAVE T ×0.75%'], ['距離BREAK', '35Tごと / 3距離を段階強化']];
+  if (difficultyId === ULTIMATE_SETTING.id) return [['敵強化', '累計T ×0.75%'], ['供モン加入B低下', '累計T ×0.75%'], ['与ダメ低下', '経過累計T ×0.75%（最低25%）'], ['トレーニング低下', 'WAVE T ×0.75%'], ['距離BREAK', '35Tごと / 3距離を段階強化']];
   const rules = extremeDifficultySetting(difficultyId)?.specialRules || {};
   const lines = [];
   if (rules.breederCardEffect != null) lines.push(['ブリーダーカード効果', specialRulePercent(rules.breederCardEffect)]);
@@ -7664,29 +7664,77 @@ const applyUltimateDistanceBreak = (damage, slotIndex, breakLevels, specialDiffi
   return specialDifficulty === ULTIMATE_SETTING.id && isMonsterAttack && level > 0 ? Math.floor((Number(damage) || 0) * ULTIMATE_SETTING.specialRules.distanceBreak.damageDealtPerLevel ** level) : damage;
 };
 const ultimateDamageTurnMultiplier = (turns, specialDifficulty = null) => specialDifficulty === ULTIMATE_SETTING.id ? Math.max(ULTIMATE_SETTING.specialRules.minimumDamageDealt, 1 - Math.max(0, Number(turns) || 0) * ULTIMATE_SETTING.specialRules.damageTurnRate) : 1;
-const resolveUltimateWaveStats = (stats, turns, specialDifficulty = null) => {
+// ===== トレーニング(WAVEクリアごとの強化。旧「能力覚醒」) =====
+// 4種類から2回選ぶ。同じ項目を2回選んでもよく、その場合は1回目を適用した結果へ
+// 2回目をかける(2回分をまとめて足す別計算にはしない)。
+// クイックモードはこの画面を通らず自動成長するため、ここは影響しない。
+const TRAINING_PICK_COUNT = 2;
+const TRAINING_OPTIONS = Object.freeze([Object.freeze({
+  id: 'hp',
+  name: '走り込み',
+  stat: 'hp',
+  flat: 0,
+  rate: 0.20,
+  statLabel: 'ライフ',
+  effect: 'ライフ +20%'
+}), Object.freeze({
+  id: 'atk',
+  name: 'ドミノ倒し',
+  stat: 'atk',
+  flat: 0,
+  rate: 0.05,
+  statLabel: 'ちから',
+  effect: 'ちから +5%'
+}), Object.freeze({
+  id: 'def',
+  name: '丸太うけ',
+  stat: 'def',
+  flat: 0,
+  rate: 0.20,
+  statLabel: '丈夫さ',
+  effect: '丈夫さ +20%'
+}), Object.freeze({
+  id: 'guts',
+  name: '猛勉強',
+  stat: 'guts',
+  flat: 5,
+  rate: 0.05,
+  statLabel: 'ガッツ',
+  effect: 'ガッツ +5 ＆ +5%'
+})]);
+const trainingOptionOf = id => TRAINING_OPTIONS.find(option => option.id === id) || null;
+// トレーニング1回ぶんを適用する。丸め方と特殊ルールの掛かり方は旧「能力覚醒」と同じ:
+//   ・割合はULTIMATEのペナルティぶんだけ下がる(max(0, 効果 - ペナルティ))
+//   ・固定値(猛勉強の+5)はULTIMATEのfixedScaleで減る
+//   ・NIGHTMAREは増えたぶんだけをapplyNightmareStatGainで調整する
+//   ・最後にMath.floorで整数へ落とす
+const resolveTrainingStep = (stats, optionId, turns, specialDifficulty = null) => {
   const before = {
     atk: Number(stats?.atk) || 0,
     def: Number(stats?.def) || 0,
     hp: Number(stats?.hp) || 0,
     guts: Number(stats?.guts) || 0
   };
-  if (specialDifficulty !== ULTIMATE_SETTING.id) return {
-    atk: applyNightmareStatGain(before.atk, Math.floor(before.atk * 1.10), specialDifficulty),
-    def: applyNightmareStatGain(before.def, Math.floor((before.def + 20) * 1.10), specialDifficulty),
-    hp: applyNightmareStatGain(before.hp, Math.floor(before.hp * 1.20), specialDifficulty),
-    guts: applyNightmareStatGain(before.guts, Math.floor((before.guts + 10) * 1.10), specialDifficulty)
-  };
-  const safeTurns = Math.max(0, Math.min(20, Number(turns) || 0)),
-    penalty = safeTurns * ULTIMATE_SETTING.specialRules.awakeningPenaltyRate,
-    fixedScale = Math.max(0, 1 - safeTurns / 20);
+  const option = trainingOptionOf(optionId);
+  if (!option) return before;
+  const ultimate = specialDifficulty === ULTIMATE_SETTING.id;
+  const safeTurns = Math.max(0, Math.min(20, Number(turns) || 0));
+  const penalty = ultimate ? safeTurns * ULTIMATE_SETTING.specialRules.awakeningPenaltyRate : 0;
+  const fixedScale = ultimate ? Math.max(0, 1 - safeTurns / 20) : 1;
+  const base = before[option.stat];
+  const after = Math.floor((base + option.flat * fixedScale) * (1 + Math.max(0, option.rate - penalty)));
   return {
-    atk: Math.floor(before.atk * (1 + Math.max(0, .10 - penalty))),
-    def: Math.floor((before.def + 20 * fixedScale) * (1 + Math.max(0, .10 - penalty))),
-    hp: Math.floor(before.hp * (1 + Math.max(0, .20 - penalty))),
-    guts: Math.floor((before.guts + 10 * fixedScale) * (1 + Math.max(0, .10 - penalty)))
+    ...before,
+    [option.stat]: applyNightmareStatGain(base, after, specialDifficulty)
   };
 };
+// 選んだ順に1回ずつ重ねてかける。同じ項目を2回選んだときも、この積み重ねで自然に複利になる
+const resolveTrainingStats = (stats, picks, turns, specialDifficulty = null) => (Array.isArray(picks) ? picks : []).reduce((acc, id) => resolveTrainingStep(acc, id, turns, specialDifficulty), {
+  atk: Number(stats?.atk) || 0,
+  def: Number(stats?.def) || 0,
+  hp: Number(stats?.hp) || 0,
+  guts: Number(stats?.guts) || 0
+});
 // 整数で扱うバトル値の特殊ルール倍率はここでだけ丸める。対象ルールがない難易度は
 // extremeSpecialRule が1を返すため、EXTREME / NIGHTMAREを含む既存値は変化しない。
 const applyExtremeIntegerRule = (value, specialDifficulty = null, rule) => Math.floor((Number(value) || 0) * (specialDifficulty ? extremeSpecialRule(specialDifficulty, rule) : 1));
@@ -11717,7 +11765,9 @@ function MonsterHeroGame() {
     setHelpAssistantOpen(true);
     setShowHelp(true);
   };
-  const [pendingReward, setPendingReward] = useState(null);
+  // トレーニングで選んだ項目。選んだ順のオプションid配列で、同じidを2つ入れてよい。
+  // 決定するまでは何も反映せず、「選び直す」でいつでも空に戻せる
+  const [trainingPicks, setTrainingPicks] = useState([]);
   // 隠しデバッグ戦は通常周回と結果処理を共有しない。stateに加えて同期的なrefを持ち、
   // 敗北・諦め・勝利の非同期処理が通常の保存処理へ入る前に必ず判定できるようにする。
   const [debugBattle, setDebugBattle] = useState(false);
@@ -16119,7 +16169,7 @@ function MonsterHeroGame() {
     setTotalAllDamage(s.totalAllDamage || 0);
     setTotalRecoveryDelta(s.totalRecoveryDelta || 0);
     setWaveResult(s.waveResult);
-    setPendingReward(null);
+    setTrainingPicks([]);
     setFocusedCard(s.focusedCard);
     setSkillPicker(null);
     setShowQuitConfirm(false);
@@ -16449,7 +16499,7 @@ function MonsterHeroGame() {
     setEnemyLastIntent(s.enemyLastIntent || null);
     reserveEnemyNextIntent(s.enemyNextIntent || null);
     setEffect(s.effect);
-    setPendingReward(null);
+    setTrainingPicks([]);
     setFinalRewardSummary(s.finalRewardSummary);
     setWaveHistory(s.waveHistory || []);
     setGaveUp(s.gaveUp);
@@ -17798,6 +17848,8 @@ function MonsterHeroGame() {
       // クイックモードは強化フェーズを行わず、味方を自動成長させてから次のWAVEへ進む
       beginQuickGrowth();
     } else {
+      // 前のWAVEで選んだ内容が残らないよう、毎回まっさらにしてから開く
+      setTrainingPicks([]);
       setGameState('REWARD_PICK');
     }
   };
@@ -18232,7 +18284,7 @@ function MonsterHeroGame() {
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, runMode]);
 
   // defValは呼び出し元が直前に算出したばかりの丈夫さ(setDefで更新中の値)を明示的に渡すための引数。
-  // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
+  // handleTraining等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
   // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
   // 必ず呼び出し元が保持している最新のローカル値を渡す
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey = null, heroForDeck = null, aptPctOverride = null, restoredStats = null) => {
@@ -18790,42 +18842,36 @@ function MonsterHeroGame() {
       setSelectedTeachingCard(null);
     }, battleMs(150));
   };
-  const handleReward = type => {
+
+  // トレーニング(旧「能力覚醒」)を確定する。picksは選んだ順のオプションid配列で、
+  // 同じidが2つ入っていれば1回目の結果へ2回目を重ねてかける。
+  // ステータスだけを上げる(技レベルは距離適性、防御カード枚数は丈夫さから自動算出されるため触らない)
+  const handleTraining = picks => {
     if (effect) return;
-    // 攻撃強化・防御強化はステータスのみ上昇させる(技レベル・防御カード枚数は距離適性/丈夫さから
-    // 自動算出されるため、ここでは直接いじらない)
-    let nMaxHp = maxHp,
-      nAtk = atk,
-      nDef = def,
-      nMaxGuts = maxGuts;
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    const nextStats = resolveUltimateWaveStats({
+    const nextStats = resolveTrainingStats({
       atk,
       def,
       hp: maxHp,
       guts: maxGuts
-    }, waveResult?.turn, specialRuleDifficulty);
-    if (type === 'atk') {
-      nAtk = nextStats.atk;
-    } else if (type === 'def') {
-      nDef = nextStats.def;
-      nMaxHp = nextStats.hp;
-    } else if (type === 'hp') {
+    }, picks, waveResult?.turn, specialRuleDifficulty);
+    const nMaxHp = nextStats.hp,
+      nAtk = nextStats.atk,
+      nDef = nextStats.def,
       nMaxGuts = nextStats.guts;
-    }
     setMaxHp(nMaxHp);
     setAtk(nAtk);
     setDef(nDef);
     setMaxGuts(nMaxGuts);
     const nGrdL = computeGuardLevel(nDef);
     const currentGuardLevel = computeGuardLevel(def);
-    const guardLevelUp = type === 'def' && nGrdL > currentGuardLevel;
+    const guardLevelUp = nGrdL > currentGuardLevel;
     const guardCountUp = guardLevelUp && guardCardCount(nGrdL) > guardCardCount(currentGuardLevel);
     const guardName = GUARD_EVOLUTION[nGrdL].name;
     setEffect({
       type: 'heal',
-      label: guardLevelUp ? `${guardName}解放！${guardCountUp ? ' 枚数UP' : ''}` : type === 'def' ? "丈夫さUP" : "能力覚醒完了",
-      icon: type === 'def' ? "🛡️" : "⚡",
+      label: guardLevelUp ? `${guardName}解放！${guardCountUp ? ' 枚数UP' : ''}` : "トレーニング完了",
+      icon: guardLevelUp ? "🛡️" : "⚡",
       monEmoji: "🆙",
       subLabel: guardLevelUp ? `丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数はガードが2段階進化するごとに1枚増え、最大${MAX_GUARD_CARD_COUNT}枚です。` : ''
     });
@@ -30474,7 +30520,7 @@ function MonsterHeroGame() {
         className: "text-[11px] font-black tracking-[.12em] text-amber-300"
       }, "ULTIMATE \u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 grid gap-1.5 text-left"
-      }, [['1', '累計ターン圧', /*#__PURE__*/React.createElement(React.Fragment, null, "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u6B21WAVE\u306E\u6575\u304C\u5F37\u5316", /*#__PURE__*/React.createElement("br", null), "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4F9B\u30E2\u30F3\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\u304C\u4F4E\u4E0B", /*#__PURE__*/React.createElement("br", null), "\u7D4C\u904E\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4E0E\u30C0\u30E1\u30FC\u30B8\u4F4E\u4E0B\uFF08\u6700\u4F4E25%\uFF09")], ['2', '覚醒低下', 'このWAVEのターン数×0.75% 次回の攻撃覚醒/防御覚醒/精神強化が低下'], ['3', 'DISTANCE BREAK', '累計35ターンごとに、安全距離以外の3距離をLv1→Lv2→Lv3…と段階強化']].map(([number, title, text]) => /*#__PURE__*/React.createElement("div", {
+      }, [['1', '累計ターン圧', /*#__PURE__*/React.createElement(React.Fragment, null, "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u6B21WAVE\u306E\u6575\u304C\u5F37\u5316", /*#__PURE__*/React.createElement("br", null), "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4F9B\u30E2\u30F3\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\u304C\u4F4E\u4E0B", /*#__PURE__*/React.createElement("br", null), "\u7D4C\u904E\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4E0E\u30C0\u30E1\u30FC\u30B8\u4F4E\u4E0B\uFF08\u6700\u4F4E25%\uFF09")], ['2', 'トレーニング低下', 'このWAVEのターン数×0.75% 次回のトレーニング4種すべてが低下'], ['3', 'DISTANCE BREAK', '累計35ターンごとに、安全距離以外の3距離をLv1→Lv2→Lv3…と段階強化']].map(([number, title, text]) => /*#__PURE__*/React.createElement("div", {
         key: number,
         className: "rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"
       }, /*#__PURE__*/React.createElement("div", {
@@ -30897,163 +30943,154 @@ function MonsterHeroGame() {
     }, runFinalizing ? '処理中…' : /*#__PURE__*/React.createElement(React.Fragment, null, "\u6B21\u3078\u9032\u3080 ", /*#__PURE__*/React.createElement(ChevronRight, {
       className: "inline",
       size: 20
-    })))), gameState === 'REWARD_PICK' && /*#__PURE__*/React.createElement("div", {
-      style: {
-        position: "absolute",
-        inset: 0,
-        backgroundColor: "#020617",
-        zIndex: 30000
-      },
-      className: "absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-8 text-center overflow-hidden"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "mb-2 shrink-0"
-    }, /*#__PURE__*/React.createElement(Trophy, {
-      className: "text-amber-400 mx-auto mb-1",
-      size: 32
-    }), /*#__PURE__*/React.createElement("h2", {
-      className: "text-xl font-black italic uppercase tracking-tighter text-white leading-none"
-    }, "\u80FD\u529B\u899A\u9192"), /*#__PURE__*/React.createElement("p", {
-      className: "text-[9px] text-slate-400 uppercase mt-1 tracking-widest"
-    }, "\u5F37\u5316\u30921\u3064\u9078\u3093\u3067\u6C7A\u5B9A")), /*#__PURE__*/React.createElement("div", {
-      className: "shrink-0 w-full max-w-sm mb-2 text-left"
-    }, /*#__PURE__*/React.createElement(AssistantBubble, {
-      scene: "rewardPick",
-      compact: true
-    })), /*#__PURE__*/React.createElement("div", {
-      className: `w-full max-w-sm space-y-3 mb-3 shrink-0 flex-1 min-h-0 overflow-y-auto mh-scroll flex flex-col justify-center${battleTutorialSpotClass('rewards')}`
-    }, /*#__PURE__*/React.createElement("button", {
-      disabled: !!effect,
-      onClick: () => setPendingReward('atk'),
-      className: `w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward === 'atk' ? 'bg-red-900/40 border-red-400 scale-[1.03] ring-4 ring-red-500/50 shadow-[0_0_25px_rgba(248,113,113,0.5)]' : 'bg-slate-900/50 border-slate-800'}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "p-2 bg-red-600/20 rounded-xl text-red-500 relative"
-    }, /*#__PURE__*/React.createElement(Sword, {
-      size: 18
-    }), pendingReward === 'atk' && /*#__PURE__*/React.createElement("div", {
-      className: "absolute -top-1.5 -right-1.5 bg-red-500 rounded-full p-0.5"
-    }, /*#__PURE__*/React.createElement(Check, {
-      size: 10,
-      className: "text-white"
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "text-left flex-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "font-black text-white uppercase flex items-center gap-2",
-      style: {
-        fontSize: '13px'
-      }
-    }, "\u653B\u6483\u899A\u9192"), /*#__PURE__*/React.createElement("div", {
-      className: "flex flex-wrap justify-between gap-x-2 text-slate-300 font-mono mt-1.5",
-      style: {
-        fontSize: '9px'
-      }
-    }, /*#__PURE__*/React.createElement("div", null, "\u3061\u304B\u3089 ", atk, " \u2192 ", /*#__PURE__*/React.createElement("span", {
-      className: "text-red-400 font-bold"
-    }, resolveUltimateWaveStats({
-      atk,
-      def,
-      hp: maxHp,
-      guts: maxGuts
-    }, waveResult?.turn, specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty)).atk))), /*#__PURE__*/React.createElement("div", {
-      className: "text-slate-500 mt-1",
-      style: {
-        fontSize: '8px'
-      }
-    }, "\u203B\u6280\u30EC\u30D9\u30EB\u306F\u8DDD\u96E2\u9069\u6027\u3001\u9632\u5FA1\u30AB\u30FC\u30C9\u306F\u4E08\u592B\u3055\u306B\u5FDC\u3058\u3066\u81EA\u52D5\u3067\u6C7A\u307E\u308A\u307E\u3059"))), /*#__PURE__*/React.createElement("button", {
-      disabled: !!effect,
-      onClick: () => setPendingReward('def'),
-      className: `w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward === 'def' ? 'bg-emerald-900/40 border-emerald-400 scale-[1.03] ring-4 ring-emerald-500/50 shadow-[0_0_25px_rgba(52,211,153,0.5)]' : 'bg-slate-900/50 border-slate-800'}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "p-2 bg-emerald-600/20 rounded-xl text-emerald-500 relative"
-    }, /*#__PURE__*/React.createElement(ShieldCheck, {
-      size: 18
-    }), pendingReward === 'def' && /*#__PURE__*/React.createElement("div", {
-      className: "absolute -top-1.5 -right-1.5 bg-emerald-500 rounded-full p-0.5"
-    }, /*#__PURE__*/React.createElement(Check, {
-      size: 10,
-      className: "text-white"
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "text-left flex-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "font-black text-white uppercase flex items-center gap-2",
-      style: {
-        fontSize: '13px'
-      }
-    }, "\u9632\u5FA1\u899A\u9192"), /*#__PURE__*/React.createElement("div", {
-      className: "grid grid-cols-2 gap-x-2 text-slate-300 font-mono mt-1.5",
-      style: {
-        fontSize: '9px'
-      }
-    }, /*#__PURE__*/React.createElement("div", null, "\u30E9\u30A4\u30D5 ", maxHp, " \u2192 ", /*#__PURE__*/React.createElement("span", {
-      className: "text-pink-400 font-bold"
-    }, resolveUltimateWaveStats({
-      atk,
-      def,
-      hp: maxHp,
-      guts: maxGuts
-    }, waveResult?.turn, specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty)).hp)), /*#__PURE__*/React.createElement("div", null, "\u4E08\u592B\u3055 ", def, " \u2192 ", /*#__PURE__*/React.createElement("span", {
-      className: "text-emerald-400 font-bold"
-    }, resolveUltimateWaveStats({
-      atk,
-      def,
-      hp: maxHp,
-      guts: maxGuts
-    }, waveResult?.turn, specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty)).def))), (() => {
-      const nextDef = resolveUltimateWaveStats({
+    })))), gameState === 'REWARD_PICK' && (() => {
+      const specialRule = specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty);
+      const baseStats = {
         atk,
         def,
         hp: maxHp,
         guts: maxGuts
-      }, waveResult?.turn, specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty)).def;
-      const curGL = computeGuardLevel(def);
-      const nextGL = computeGuardLevel(nextDef);
-      return nextGL > curGL && /*#__PURE__*/React.createElement("div", {
-        className: "text-emerald-400 font-mono font-bold mt-1",
-        style: {
-          fontSize: '9px'
+      };
+      // いま選んでいるぶんまでを適用した値。次の1回はこの値からさらに伸びる
+      const current = resolveTrainingStats(baseStats, trainingPicks, waveResult?.turn, specialRule);
+      const remaining = TRAINING_PICK_COUNT - trainingPicks.length;
+      const ready = trainingPicks.length === TRAINING_PICK_COUNT;
+      const STYLES = {
+        hp: {
+          icon: /*#__PURE__*/React.createElement(Heart, {
+            size: 16
+          }),
+          ring: 'border-pink-400',
+          bg: 'bg-pink-900/40',
+          tint: 'text-pink-300',
+          chip: 'bg-pink-500'
+        },
+        atk: {
+          icon: /*#__PURE__*/React.createElement(Sword, {
+            size: 16
+          }),
+          ring: 'border-red-400',
+          bg: 'bg-red-900/40',
+          tint: 'text-red-300',
+          chip: 'bg-red-500'
+        },
+        def: {
+          icon: /*#__PURE__*/React.createElement(ShieldCheck, {
+            size: 16
+          }),
+          ring: 'border-emerald-400',
+          bg: 'bg-emerald-900/40',
+          tint: 'text-emerald-300',
+          chip: 'bg-emerald-500'
+        },
+        guts: {
+          icon: /*#__PURE__*/React.createElement(Sparkles, {
+            size: 16
+          }),
+          ring: 'border-amber-400',
+          bg: 'bg-amber-900/40',
+          tint: 'text-amber-300',
+          chip: 'bg-amber-500'
         }
-      }, "\u4E08\u592B\u3055100\u5230\u9054\u3067 [", GUARD_EVOLUTION[nextGL].name, "] \u89E3\u653E\uFF01\u30AC\u30FC\u30C9\u679A\u6570 ", guardCardCount(curGL), " \u2192 ", guardCardCount(nextGL));
-    })())), /*#__PURE__*/React.createElement("button", {
-      disabled: !!effect,
-      onClick: () => setPendingReward('hp'),
-      className: `w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward === 'hp' ? 'bg-pink-900/40 border-pink-400 scale-[1.03] ring-4 ring-pink-500/50 shadow-[0_0_25px_rgba(244,114,182,0.5)]' : 'bg-slate-900/50 border-slate-800'}`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "p-2 bg-pink-600/20 rounded-xl text-pink-500 relative"
-    }, /*#__PURE__*/React.createElement(Heart, {
-      size: 18
-    }), pendingReward === 'hp' && /*#__PURE__*/React.createElement("div", {
-      className: "absolute -top-1.5 -right-1.5 bg-pink-500 rounded-full p-0.5"
-    }, /*#__PURE__*/React.createElement(Check, {
-      size: 10,
-      className: "text-white"
-    }))), /*#__PURE__*/React.createElement("div", {
-      className: "text-left flex-1"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "font-black text-white uppercase flex items-center gap-1",
-      style: {
-        fontSize: '13px'
-      }
-    }, "\u7CBE\u795E\u5F37\u5316 ", /*#__PURE__*/React.createElement(Sparkles, {
-      size: 10,
-      className: "text-amber-400"
-    }), " \u6700\u5927GUTS +10 & 10% UP"), /*#__PURE__*/React.createElement("div", {
-      className: "text-amber-300 font-mono font-bold mt-1.5 text-center",
-      style: {
-        fontSize: '10px'
-      }
-    }, "\u30AC\u30C3\u30C4 ", maxGuts, " \u2192 ", resolveUltimateWaveStats({
-      atk,
-      def,
-      hp: maxHp,
-      guts: maxGuts
-    }, waveResult?.turn, specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty)).guts)))), /*#__PURE__*/React.createElement("button", {
-      disabled: !pendingReward || !!effect,
-      onClick: () => {
-        const r = pendingReward;
-        setPendingReward(null);
-        handleReward(r);
-      },
-      className: `w-full max-w-sm py-4 rounded-2xl font-black text-lg uppercase shadow-lg active:scale-95 transition-all shrink-0 mt-auto ${pendingReward && !effect ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'bg-slate-800 text-slate-600'}`
-    }, pendingReward ? '決定する' : '強化を選択')), showHelp && (() => {
+      };
+      return /*#__PURE__*/React.createElement("div", {
+        style: {
+          position: "absolute",
+          inset: 0,
+          backgroundColor: "#020617",
+          zIndex: 30000
+        },
+        className: "absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden",
+        "data-screen": "training"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full max-w-sm",
+        style: {
+          paddingTop: 'calc(.25rem + env(safe-area-inset-top))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-center gap-2"
+      }, /*#__PURE__*/React.createElement(Trophy, {
+        className: "text-amber-400",
+        size: 22
+      }), /*#__PURE__*/React.createElement("h2", {
+        className: "text-xl font-black italic uppercase tracking-tighter text-white leading-none"
+      }, "\u30C8\u30EC\u30FC\u30CB\u30F3\u30B0")), /*#__PURE__*/React.createElement("div", {
+        className: "mt-1.5 flex items-center justify-center gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black text-slate-300"
+      }, "4\u7A2E\u985E\u304B\u30892\u3064\u9078\u3076"), /*#__PURE__*/React.createElement("span", {
+        className: "flex items-center gap-1"
+      }, Array.from({
+        length: TRAINING_PICK_COUNT
+      }).map((_, i) => /*#__PURE__*/React.createElement("i", {
+        key: i,
+        className: `block rounded-full ${i < trainingPicks.length ? 'bg-amber-400' : 'bg-slate-700'}`,
+        style: {
+          width: '9px',
+          height: '9px'
+        }
+      }))), /*#__PURE__*/React.createElement("span", {
+        className: "text-[11px] font-black font-mono text-amber-300"
+      }, trainingPicks.length, " / ", TRAINING_PICK_COUNT))), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full max-w-sm my-2 text-left"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "rewardPick",
+        compact: true
+      })), /*#__PURE__*/React.createElement("div", {
+        className: `w-full max-w-sm grid grid-cols-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll content-start${battleTutorialSpotClass('rewards')}`
+      }, TRAINING_OPTIONS.map(option => {
+        const count = trainingPicks.filter(id => id === option.id).length;
+        const st = STYLES[option.id] || STYLES.hp;
+        const before = current[option.stat];
+        const after = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
+        const full = remaining <= 0;
+        return /*#__PURE__*/React.createElement("button", {
+          key: option.id,
+          type: "button",
+          disabled: full || !!effect,
+          onClick: () => setTrainingPicks(prev => prev.length >= TRAINING_PICK_COUNT ? prev : [...prev, option.id]),
+          "aria-label": `${option.name} ${option.effect}${count > 0 ? ` 選択中${count}回` : ''}`,
+          className: `relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start gap-1 text-left transition-all active:scale-95 disabled:opacity-40 ${count > 0 ? `${st.bg} ${st.ring}` : 'bg-slate-900/60 border-slate-800'}`
+        }, count > 0 && /*#__PURE__*/React.createElement("span", {
+          className: `absolute -top-2 -right-2 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`
+        }, "\xD7", count), /*#__PURE__*/React.createElement("span", {
+          className: `flex items-center gap-1.5 ${st.tint}`
+        }, st.icon, /*#__PURE__*/React.createElement("b", {
+          className: "text-[13px] font-black text-white leading-none"
+        }, option.name)), /*#__PURE__*/React.createElement("span", {
+          className: `text-[10px] font-black ${st.tint} leading-tight`
+        }, option.effect), /*#__PURE__*/React.createElement("span", {
+          className: "mt-auto w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "block text-[8px] text-slate-500 font-black"
+        }, option.statLabel), /*#__PURE__*/React.createElement("span", {
+          className: "block text-[11px] font-black text-slate-300"
+        }, before, " ", /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-600"
+        }, "\u2192"), " ", /*#__PURE__*/React.createElement("b", {
+          className: st.tint
+        }, after))));
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full max-w-sm mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-2",
+        style: {
+          paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        disabled: trainingPicks.length === 0 || !!effect,
+        onClick: () => setTrainingPicks([]),
+        className: "min-h-[52px] px-4 rounded-2xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30"
+      }, "\u9078\u3073\u76F4\u3059"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        disabled: !ready || !!effect,
+        onClick: () => {
+          const picks = trainingPicks;
+          setTrainingPicks([]);
+          handleTraining(picks);
+        },
+        className: `min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready && !effect ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'bg-slate-800 text-slate-600'}`
+      }, ready ? '決定する' : `あと${remaining}つ選ぶ`)));
+    })(), showHelp && (() => {
       const cat = helpCatId ? helpCategoryById(helpCatId) : null;
       const topic = cat && helpTopicId ? helpTopicById(cat.id, helpTopicId) : null;
       const accent = cat ? cat.color : '#34d399';

@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 18:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 19:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3792,7 +3792,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ breederCardEffect:0.5 }) },
   { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
   { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:true, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
-  { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・能力覚醒・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
+  { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
   { id:'INFINITY', label:'INFINITY', available:false },
 ]);
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
@@ -3831,7 +3831,7 @@ const extremeSpecialRuleLines = (difficultyId) => {
     ['敵強化','累計T ×0.75%'],
     ['供モン加入B低下','累計T ×0.75%'],
     ['与ダメ低下','経過累計T ×0.75%（最低25%）'],
-    ['能力覚醒低下','WAVE T ×0.75%'],
+    ['トレーニング低下','WAVE T ×0.75%'],
     ['距離BREAK','35Tごと / 3距離を段階強化'],
   ];
   const rules=extremeDifficultySetting(difficultyId)?.specialRules || {};
@@ -3880,12 +3880,39 @@ const applyUltimateDistanceBreak = (damage, slotIndex, breakLevels, specialDiffi
 };
 const ultimateDamageTurnMultiplier = (turns, specialDifficulty=null) => specialDifficulty===ULTIMATE_SETTING.id
   ? Math.max(ULTIMATE_SETTING.specialRules.minimumDamageDealt,1-Math.max(0,Number(turns)||0)*ULTIMATE_SETTING.specialRules.damageTurnRate) : 1;
-const resolveUltimateWaveStats = (stats, turns, specialDifficulty=null) => {
+// ===== トレーニング(WAVEクリアごとの強化。旧「能力覚醒」) =====
+// 4種類から2回選ぶ。同じ項目を2回選んでもよく、その場合は1回目を適用した結果へ
+// 2回目をかける(2回分をまとめて足す別計算にはしない)。
+// クイックモードはこの画面を通らず自動成長するため、ここは影響しない。
+const TRAINING_PICK_COUNT = 2;
+const TRAINING_OPTIONS = Object.freeze([
+  Object.freeze({ id:'hp',   name:'走り込み',   stat:'hp',   flat:0, rate:0.20, statLabel:'ライフ',  effect:'ライフ +20%' }),
+  Object.freeze({ id:'atk',  name:'ドミノ倒し', stat:'atk',  flat:0, rate:0.05, statLabel:'ちから',  effect:'ちから +5%' }),
+  Object.freeze({ id:'def',  name:'丸太うけ',   stat:'def',  flat:0, rate:0.20, statLabel:'丈夫さ',  effect:'丈夫さ +20%' }),
+  Object.freeze({ id:'guts', name:'猛勉強',     stat:'guts', flat:5, rate:0.05, statLabel:'ガッツ',  effect:'ガッツ +5 ＆ +5%' }),
+]);
+const trainingOptionOf = (id) => TRAINING_OPTIONS.find(option=>option.id===id) || null;
+// トレーニング1回ぶんを適用する。丸め方と特殊ルールの掛かり方は旧「能力覚醒」と同じ:
+//   ・割合はULTIMATEのペナルティぶんだけ下がる(max(0, 効果 - ペナルティ))
+//   ・固定値(猛勉強の+5)はULTIMATEのfixedScaleで減る
+//   ・NIGHTMAREは増えたぶんだけをapplyNightmareStatGainで調整する
+//   ・最後にMath.floorで整数へ落とす
+const resolveTrainingStep = (stats, optionId, turns, specialDifficulty=null) => {
   const before={atk:Number(stats?.atk)||0,def:Number(stats?.def)||0,hp:Number(stats?.hp)||0,guts:Number(stats?.guts)||0};
-  if(specialDifficulty!==ULTIMATE_SETTING.id)return {atk:applyNightmareStatGain(before.atk,Math.floor(before.atk*1.10),specialDifficulty),def:applyNightmareStatGain(before.def,Math.floor((before.def+20)*1.10),specialDifficulty),hp:applyNightmareStatGain(before.hp,Math.floor(before.hp*1.20),specialDifficulty),guts:applyNightmareStatGain(before.guts,Math.floor((before.guts+10)*1.10),specialDifficulty)};
-  const safeTurns=Math.max(0,Math.min(20,Number(turns)||0)),penalty=safeTurns*ULTIMATE_SETTING.specialRules.awakeningPenaltyRate,fixedScale=Math.max(0,1-safeTurns/20);
-  return {atk:Math.floor(before.atk*(1+Math.max(0,.10-penalty))),def:Math.floor((before.def+20*fixedScale)*(1+Math.max(0,.10-penalty))),hp:Math.floor(before.hp*(1+Math.max(0,.20-penalty))),guts:Math.floor((before.guts+10*fixedScale)*(1+Math.max(0,.10-penalty)))};
+  const option=trainingOptionOf(optionId);
+  if(!option)return before;
+  const ultimate=specialDifficulty===ULTIMATE_SETTING.id;
+  const safeTurns=Math.max(0,Math.min(20,Number(turns)||0));
+  const penalty=ultimate?safeTurns*ULTIMATE_SETTING.specialRules.awakeningPenaltyRate:0;
+  const fixedScale=ultimate?Math.max(0,1-safeTurns/20):1;
+  const base=before[option.stat];
+  const after=Math.floor((base+option.flat*fixedScale)*(1+Math.max(0,option.rate-penalty)));
+  return {...before,[option.stat]:applyNightmareStatGain(base,after,specialDifficulty)};
 };
+// 選んだ順に1回ずつ重ねてかける。同じ項目を2回選んだときも、この積み重ねで自然に複利になる
+const resolveTrainingStats = (stats, picks, turns, specialDifficulty=null) =>
+  (Array.isArray(picks)?picks:[]).reduce((acc,id)=>resolveTrainingStep(acc,id,turns,specialDifficulty),
+    {atk:Number(stats?.atk)||0,def:Number(stats?.def)||0,hp:Number(stats?.hp)||0,guts:Number(stats?.guts)||0});
 // 整数で扱うバトル値の特殊ルール倍率はここでだけ丸める。対象ルールがない難易度は
 // extremeSpecialRule が1を返すため、EXTREME / NIGHTMAREを含む既存値は変化しない。
 const applyExtremeIntegerRule = (value, specialDifficulty=null, rule) => Math.floor(
@@ -6109,7 +6136,9 @@ function MonsterHeroGame() {
   // HELP_ASSISTANT(data/help.js)に絵や音声を足すだけでここはそのまま使える
   const [helpAssistantOpen, setHelpAssistantOpen] = useState(true);
   const openHelp = () => { setHelpCatId(null); setHelpTopicId(null); setHelpAssistantOpen(true); setShowHelp(true); };
-  const [pendingReward, setPendingReward] = useState(null);
+  // トレーニングで選んだ項目。選んだ順のオプションid配列で、同じidを2つ入れてよい。
+  // 決定するまでは何も反映せず、「選び直す」でいつでも空に戻せる
+  const [trainingPicks, setTrainingPicks] = useState([]);
   // 隠しデバッグ戦は通常周回と結果処理を共有しない。stateに加えて同期的なrefを持ち、
   // 敗北・諦め・勝利の非同期処理が通常の保存処理へ入る前に必ず判定できるようにする。
   const [debugBattle, setDebugBattle] = useState(false);
@@ -9051,7 +9080,7 @@ function MonsterHeroGame() {
     writePermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
-    setPendingReward(null); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
+    setTrainingPicks([]); setFocusedCard(s.focusedCard); setSkillPicker(null); setShowQuitConfirm(false); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
     setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
     setSkipFlow(null); setSkipConfirmOpen(false); setSkipResult(null); setSkipInfoItemId(null);
@@ -9239,7 +9268,7 @@ function MonsterHeroGame() {
     writePermaBuffs(s.permaBuffs); setWaveBuffs(s.waveBuffs); setTurnBuffs(s.turnBuffs); writeNextTurnBuffs(s.nextTurnBuffs);
     setCurrentWaveDamage(s.currentWaveDamage); setWaveDistDamage(s.waveDistDamage||[0,0,0,0]); setDistDmgBonus(s.distDmgBonus||[0,0,0,0]); setDistAptPct(s.distAptPct||[0,0,0,0]); setTotalDistDamage(s.totalDistDamage||[0,0,0,0]); setTotalAllDamage(s.totalAllDamage||0); setTotalRecoveryDelta(s.totalRecoveryDelta||0);
     setWaveResult(s.waveResult);
-    setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setPendingReward(null); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
+    setFocusedCard(s.focusedCard); setSkillPicker(null); setEnemyIntent(s.enemyIntent); setEnemyLastIntent(s.enemyLastIntent||null); reserveEnemyNextIntent(s.enemyNextIntent||null); setEffect(s.effect); setTrainingPicks([]); setFinalRewardSummary(s.finalRewardSummary); setWaveHistory(s.waveHistory||[]); setGaveUp(s.gaveUp);
     setMasuRegisteredThisRun(false); setShowMasuRegisterModal(false); setMasuNameInput('');
     setRunHighlights({ newRecord: false, firstClear: false, firstWin: false, firstLose: false });
     setGameState('PICK_HERO');
@@ -10091,6 +10120,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // クイックモードは強化フェーズを行わず、味方を自動成長させてから次のWAVEへ進む
       beginQuickGrowth();
     } else {
+      // 前のWAVEで選んだ内容が残らないよう、毎回まっさらにしてから開く
+      setTrainingPicks([]);
       setGameState('REWARD_PICK');
     }
   };
@@ -10354,7 +10385,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   }, [getNextEnemyAction, difficulty, extremeDifficulty, totalTurnCount, highestWaves, quickHighestWaves, proHighestWaves, runMode]);
 
   // defValは呼び出し元が直前に算出したばかりの丈夫さ(setDefで更新中の値)を明示的に渡すための引数。
-  // handleReward等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
+  // handleTraining等のsetTimeout内からdef(state)を直接読むと、同じ関数呼び出し内で行ったsetDefの
   // 結果がまだ反映されていない「一つ前のレンダーの値」を掴んでしまう(クロージャの陳腐化)ため、
   // 必ず呼び出し元が保持している最新のローカル値を渡す
   const initBattle = (w, s, u, t, defVal, forcedEnemyKey=null, heroForDeck=null, aptPctOverride=null, restoredStats=null) => {
@@ -10708,23 +10739,21 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setTimeout(()=>{setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},battleMs(150));
   };
 
-  const handleReward = (type) => {
+  // トレーニング(旧「能力覚醒」)を確定する。picksは選んだ順のオプションid配列で、
+  // 同じidが2つ入っていれば1回目の結果へ2回目を重ねてかける。
+  // ステータスだけを上げる(技レベルは距離適性、防御カード枚数は丈夫さから自動算出されるため触らない)
+  const handleTraining = (picks) => {
     if (effect) return;
-    // 攻撃強化・防御強化はステータスのみ上昇させる(技レベル・防御カード枚数は距離適性/丈夫さから
-    // 自動算出されるため、ここでは直接いじらない)
-    let nMaxHp=maxHp, nAtk=atk, nDef=def, nMaxGuts=maxGuts;
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    const nextStats=resolveUltimateWaveStats({atk,def,hp:maxHp,guts:maxGuts},waveResult?.turn,specialRuleDifficulty);
-    if(type==='atk'){nAtk=nextStats.atk;}
-    else if(type==='def'){nDef=nextStats.def; nMaxHp=nextStats.hp;}
-    else if(type==='hp'){nMaxGuts=nextStats.guts;}
+    const nextStats=resolveTrainingStats({atk,def,hp:maxHp,guts:maxGuts},picks,waveResult?.turn,specialRuleDifficulty);
+    const nMaxHp=nextStats.hp, nAtk=nextStats.atk, nDef=nextStats.def, nMaxGuts=nextStats.guts;
     setMaxHp(nMaxHp); setAtk(nAtk); setDef(nDef); setMaxGuts(nMaxGuts);
     const nGrdL=computeGuardLevel(nDef);
     const currentGuardLevel=computeGuardLevel(def);
-    const guardLevelUp=type==='def'&&nGrdL>currentGuardLevel;
+    const guardLevelUp=nGrdL>currentGuardLevel;
     const guardCountUp=guardLevelUp&&guardCardCount(nGrdL)>guardCardCount(currentGuardLevel);
     const guardName=GUARD_EVOLUTION[nGrdL].name;
-    setEffect({type:'heal',label:guardLevelUp?`${guardName}解放！${guardCountUp?' 枚数UP':''}`:(type==='def'?"丈夫さUP":"能力覚醒完了"),icon:type==='def'?"🛡️":"⚡",monEmoji:"🆙",subLabel:guardLevelUp?`丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数はガードが2段階進化するごとに1枚増え、最大${MAX_GUARD_CARD_COUNT}枚です。`:''});
+    setEffect({type:'heal',label:guardLevelUp?`${guardName}解放！${guardCountUp?' 枚数UP':''}`:"トレーニング完了",icon:guardLevelUp?"🛡️":"⚡",monEmoji:"🆙",subLabel:guardLevelUp?`丈夫さが100上がるごとに、デッキの防御カードが自動で [${guardName}] へ進化します。カード枚数はガードが2段階進化するごとに1枚増え、最大${MAX_GUARD_CARD_COUNT}枚です。`:''});
     setTimeout(()=>{
       setEffect(null);
       const joinWaves=[2,4,6];
@@ -14896,7 +14925,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="mt-3 grid gap-1.5 text-left">
               {[
                 ['1','累計ターン圧',<>累計ターン×0.75% 次WAVEの敵が強化<br/>累計ターン×0.75% 供モン加入ボーナスが低下<br/>経過累計ターン×0.75% 与ダメージ低下（最低25%）</>],
-                ['2','覚醒低下','このWAVEのターン数×0.75% 次回の攻撃覚醒/防御覚醒/精神強化が低下'],
+                ['2','トレーニング低下','このWAVEのターン数×0.75% 次回のトレーニング4種すべてが低下'],
                 ['3','DISTANCE BREAK','累計35ターンごとに、安全距離以外の3距離をLv1→Lv2→Lv3…と段階強化'],
               ].map(([number,title,text])=><div key={number} className="rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"><div className="text-[9px] font-black text-fuchsia-300">RULE {number}｜{title}</div><div className="mt-0.5 text-[10px] font-bold leading-snug text-white">{text}</div>{number==='2'&&<div className="mt-0.5 text-[8px] font-black text-amber-300">※距離強化は対象外</div>}</div>)}
             </div>
@@ -15042,29 +15071,75 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       )}
 
       {/* REWARD PICK */}
-      {gameState==='REWARD_PICK'&&(
-        <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center justify-start p-4 pt-8 text-center overflow-hidden">
-          <div className="mb-2 shrink-0"><Trophy className="text-amber-400 mx-auto mb-1" size={32}/><h2 className="text-xl font-black italic uppercase tracking-tighter text-white leading-none">能力覚醒</h2><p className="text-[9px] text-slate-400 uppercase mt-1 tracking-widest">強化を1つ選んで決定</p></div>
-          <div className="shrink-0 w-full max-w-sm mb-2 text-left"><AssistantBubble scene="rewardPick" compact/></div>
-          <div className={`w-full max-w-sm space-y-3 mb-3 shrink-0 flex-1 min-h-0 overflow-y-auto mh-scroll flex flex-col justify-center${battleTutorialSpotClass('rewards')}`}>
-            <button disabled={!!effect} onClick={()=>setPendingReward('atk')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='atk'?'bg-red-900/40 border-red-400 scale-[1.03] ring-4 ring-red-500/50 shadow-[0_0_25px_rgba(248,113,113,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
-              <div className="p-2 bg-red-600/20 rounded-xl text-red-500 relative"><Sword size={18}/>{pendingReward==='atk'&&<div className="absolute -top-1.5 -right-1.5 bg-red-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
-              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>攻撃覚醒</div><div className="flex flex-wrap justify-between gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ちから {atk} → <span className="text-red-400 font-bold">{resolveUltimateWaveStats({atk,def,hp:maxHp,guts:maxGuts},waveResult?.turn,specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty)).atk}</span></div></div><div className="text-slate-500 mt-1" style={{fontSize:'8px'}}>※技レベルは距離適性、防御カードは丈夫さに応じて自動で決まります</div></div>
-            </button>
-            <button disabled={!!effect} onClick={()=>setPendingReward('def')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='def'?'bg-emerald-900/40 border-emerald-400 scale-[1.03] ring-4 ring-emerald-500/50 shadow-[0_0_25px_rgba(52,211,153,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
-              <div className="p-2 bg-emerald-600/20 rounded-xl text-emerald-500 relative"><ShieldCheck size={18}/>{pendingReward==='def'&&<div className="absolute -top-1.5 -right-1.5 bg-emerald-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
-              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-2" style={{fontSize:'13px'}}>防御覚醒</div><div className="grid grid-cols-2 gap-x-2 text-slate-300 font-mono mt-1.5" style={{fontSize:'9px'}}><div>ライフ {maxHp} → <span className="text-pink-400 font-bold">{resolveUltimateWaveStats({atk,def,hp:maxHp,guts:maxGuts},waveResult?.turn,specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty)).hp}</span></div><div>丈夫さ {def} → <span className="text-emerald-400 font-bold">{resolveUltimateWaveStats({atk,def,hp:maxHp,guts:maxGuts},waveResult?.turn,specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty)).def}</span></div></div>
-              {(()=>{const nextDef=resolveUltimateWaveStats({atk,def,hp:maxHp,guts:maxGuts},waveResult?.turn,specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty)).def; const curGL=computeGuardLevel(def); const nextGL=computeGuardLevel(nextDef); return nextGL>curGL&&(<div className="text-emerald-400 font-mono font-bold mt-1" style={{fontSize:'9px'}}>丈夫さ100到達で [{GUARD_EVOLUTION[nextGL].name}] 解放！ガード枚数 {guardCardCount(curGL)} → {guardCardCount(nextGL)}</div>);})()}
-              </div>
-            </button>
-            <button disabled={!!effect} onClick={()=>setPendingReward('hp')} className={`w-full p-4 rounded-2xl border-2 flex items-center gap-3 shrink-0 shadow-lg transition-all disabled:opacity-40 ${pendingReward==='hp'?'bg-pink-900/40 border-pink-400 scale-[1.03] ring-4 ring-pink-500/50 shadow-[0_0_25px_rgba(244,114,182,0.5)]':'bg-slate-900/50 border-slate-800'}`}>
-              <div className="p-2 bg-pink-600/20 rounded-xl text-pink-500 relative"><Heart size={18}/>{pendingReward==='hp'&&<div className="absolute -top-1.5 -right-1.5 bg-pink-500 rounded-full p-0.5"><Check size={10} className="text-white"/></div>}</div>
-              <div className="text-left flex-1"><div className="font-black text-white uppercase flex items-center gap-1" style={{fontSize:'13px'}}>精神強化 <Sparkles size={10} className="text-amber-400"/> 最大GUTS +10 & 10% UP</div><div className="text-amber-300 font-mono font-bold mt-1.5 text-center" style={{fontSize:'10px'}}>ガッツ {maxGuts} → {resolveUltimateWaveStats({atk,def,hp:maxHp,guts:maxGuts},waveResult?.turn,specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty)).guts}</div></div>
-            </button>
+      {/* トレーニング(旧「能力覚醒」)。4種類から2回えらぶ。同じ項目を2回えらんでもよく、
+          その場合は1回目を適用した結果へ2回目をかける。決定するまで何も反映しない。
+          クイックモードはこの画面を通らない(自動成長のため) */}
+      {gameState==='REWARD_PICK'&&(()=>{
+        const specialRule=specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty);
+        const baseStats={atk,def,hp:maxHp,guts:maxGuts};
+        // いま選んでいるぶんまでを適用した値。次の1回はこの値からさらに伸びる
+        const current=resolveTrainingStats(baseStats,trainingPicks,waveResult?.turn,specialRule);
+        const remaining=TRAINING_PICK_COUNT-trainingPicks.length;
+        const ready=trainingPicks.length===TRAINING_PICK_COUNT;
+        const STYLES={
+          hp:  {icon:<Heart size={16}/>,      ring:'border-pink-400',    bg:'bg-pink-900/40',    tint:'text-pink-300',    chip:'bg-pink-500'},
+          atk: {icon:<Sword size={16}/>,      ring:'border-red-400',     bg:'bg-red-900/40',     tint:'text-red-300',     chip:'bg-red-500'},
+          def: {icon:<ShieldCheck size={16}/>,ring:'border-emerald-400', bg:'bg-emerald-900/40', tint:'text-emerald-300', chip:'bg-emerald-500'},
+          guts:{icon:<Sparkles size={16}/>,   ring:'border-amber-400',   bg:'bg-amber-900/40',   tint:'text-amber-300',   chip:'bg-amber-500'},
+        };
+        return (
+        <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col items-center p-3 overflow-hidden" data-screen="training">
+          <div className="shrink-0 w-full max-w-sm" style={{paddingTop:'calc(.25rem + env(safe-area-inset-top))'}}>
+            <div className="flex items-center justify-center gap-2">
+              <Trophy className="text-amber-400" size={22}/>
+              <h2 className="text-xl font-black italic uppercase tracking-tighter text-white leading-none">トレーニング</h2>
+            </div>
+            {/* 「4種類から2つ選ぶ」ことと、いま何回選んだかを一目で分かるようにする */}
+            <div className="mt-1.5 flex items-center justify-center gap-2">
+              <span className="text-[10px] font-black text-slate-300">4種類から2つ選ぶ</span>
+              <span className="flex items-center gap-1">
+                {Array.from({length:TRAINING_PICK_COUNT}).map((_,i)=>(
+                  <i key={i} className={`block rounded-full ${i<trainingPicks.length?'bg-amber-400':'bg-slate-700'}`} style={{width:'9px',height:'9px'}}/>
+                ))}
+              </span>
+              <span className="text-[11px] font-black font-mono text-amber-300">{trainingPicks.length} / {TRAINING_PICK_COUNT}</span>
+            </div>
           </div>
-          <button disabled={!pendingReward||!!effect} onClick={()=>{const r=pendingReward; setPendingReward(null); handleReward(r);}} className={`w-full max-w-sm py-4 rounded-2xl font-black text-lg uppercase shadow-lg active:scale-95 transition-all shrink-0 mt-auto ${pendingReward&&!effect?'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]':'bg-slate-800 text-slate-600'}`}>{pendingReward?'決定する':'強化を選択'}</button>
-        </div>
-      )}
+          <div className="shrink-0 w-full max-w-sm my-2 text-left"><AssistantBubble scene="rewardPick" compact/></div>
+          {/* 4項目。1画面に収めるため2列。同じ項目をもう一度タップすると2回目として積める */}
+          <div className={`w-full max-w-sm grid grid-cols-2 gap-2 flex-1 min-h-0 overflow-y-auto mh-scroll content-start${battleTutorialSpotClass('rewards')}`}>
+            {TRAINING_OPTIONS.map(option=>{
+              const count=trainingPicks.filter(id=>id===option.id).length;
+              const st=STYLES[option.id]||STYLES.hp;
+              const before=current[option.stat];
+              const after=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
+              const full=remaining<=0;
+              return (
+                <button key={option.id} type="button" disabled={full||!!effect}
+                  onClick={()=>setTrainingPicks(prev=>prev.length>=TRAINING_PICK_COUNT?prev:[...prev,option.id])}
+                  aria-label={`${option.name} ${option.effect}${count>0?` 選択中${count}回`:''}`}
+                  className={`relative min-h-[112px] rounded-2xl border-2 p-2.5 flex flex-col items-start gap-1 text-left transition-all active:scale-95 disabled:opacity-40 ${count>0?`${st.bg} ${st.ring}`:'bg-slate-900/60 border-slate-800'}`}>
+                  {/* 何回選んだかを ×1 / ×2 で明確に出す */}
+                  {count>0&&<span className={`absolute -top-2 -right-2 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
+                  <span className={`flex items-center gap-1.5 ${st.tint}`}>{st.icon}<b className="text-[13px] font-black text-white leading-none">{option.name}</b></span>
+                  <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}</span>
+                  <span className="mt-auto w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight">
+                    <span className="block text-[8px] text-slate-500 font-black">{option.statLabel}</span>
+                    <span className="block text-[11px] font-black text-slate-300">{before} <span className="text-slate-600">→</span> <b className={st.tint}>{after}</b></span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {/* 決定は2回そろうまで押せない。確定前ならいつでも選び直せる */}
+          <div className="shrink-0 w-full max-w-sm mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-2" style={{paddingBottom:'calc(.25rem + env(safe-area-inset-bottom))'}}>
+            <button type="button" disabled={trainingPicks.length===0||!!effect} onClick={()=>setTrainingPicks([])}
+              className="min-h-[52px] px-4 rounded-2xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30">選び直す</button>
+            <button type="button" disabled={!ready||!!effect} onClick={()=>{const picks=trainingPicks; setTrainingPicks([]); handleTraining(picks);}}
+              className={`min-h-[52px] rounded-2xl font-black text-base uppercase shadow-lg active:scale-95 transition-all ${ready&&!effect?'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]':'bg-slate-800 text-slate-600'}`}>{ready?'決定する':`あと${remaining}つ選ぶ`}</button>
+          </div>
+        </div>);
+      })()}
 
       {/* HELP */}
       {/* ヘルプ(攻略情報局)。中身は data/help.js のデータから組み立てる。

@@ -540,10 +540,10 @@ const ASSISTANT_SCENES = {
   rewardPick: {
     help: 'growth/awaken',
     lines: [
-      { e:'happy',   t:'WAVEクリアおつかれ♪ どれ伸ばす？' },
+      { e:'happy',   t:'WAVEクリアおつかれ♪ トレーニングを2つえらぼ！' },
       { e:'wink',    t:'弱点を埋めるか、強みを伸ばすか…悩むとこだね！' },
       { e:'excited', t:'いい感じじゃーん♪ この調子でいこ！' },
-      { e:'normal',  t:'ライフが心もとないなら、先に固くするのもアリかも。' },
+      { e:'normal',  t:'同じトレーニングを2回えらんで、一気に伸ばすのもアリだよ♪' },
       { e:'happy',   t:'ここの積み重ねで終盤がラクになるよ！' },
     ],
   },
@@ -955,7 +955,7 @@ addAssistantLinePack({
       { e:'surprise', t:'ULTIMATEは敵強度×35！ CHAOSをクリアした猛者だけの究極戦だよ！' },
       { e:'normal', t:'累計ターンが増えるほど、次WAVEの敵は強く、加入ボーナスは低くなるよ。' },
       { e:'excited', t:'スコア×20、経験値×40、ダイヤ×20！ 虹のプシュケーは60個だよ♪' },
-      { e:'troubled', t:'能力覚醒もWAVEのターン数で低下するから、素早い勝利が大切だね。' },
+      { e:'troubled', t:'トレーニングもWAVEのターン数で低下するから、素早い勝利が大切だね。' },
       { e:'wink', t:'35ターンごとの段階的なDISTANCE BREAKに備えて、いろんな距離で戦お♪' },
     ],
     infinityDifficulty: [
@@ -1461,7 +1461,7 @@ addAssistantLinePack({
       { e:'surprise', t:'ULTIMATEは敵強度×35。CHAOSを越えた人だけの舞台でつ。' },
       { e:'normal',   t:'累計ターンが増えるほど、次の敵が強くなりまつ。' },
       { e:'excited',  t:'スコア×20、経験値×40、ダイヤ×20。プシュケーは60個でつ♪' },
-      { e:'troubled', t:'能力覚醒もターン数で下がるので、速い勝利が大切ですね。' },
+      { e:'troubled', t:'トレーニングもターン数で下がるので、速い勝利が大切ですね。' },
       { e:'wink',     t:'35ターンごとのDISTANCE BREAKにも備えておきましょ。' },
     ],
     infinityDifficulty: [
@@ -1595,10 +1595,10 @@ addAssistantLinePack({
       { e:'normal',   t:'ブリーダーカードは効果が半減しないのが強みでつ。' },
     ],
     rewardPick: [
-      { e:'happy',    t:'WAVEクリアお疲れさまでつ♪ どれを伸ばしまつか？' },
+      { e:'happy',    t:'WAVEクリアお疲れさまでつ♪ トレーニングを2つえらびましょ。' },
       { e:'wink',     t:'弱点を埋めるか、強みを伸ばすか…悩みまつね。' },
       { e:'excited',  t:'いい感じでつ♪ この調子でいきましょ。' },
-      { e:'normal',   t:'ライフが心もとないなら、先に固くするのもアリでつ。' },
+      { e:'normal',   t:'同じトレーニングを2回えらぶと、その分ぐっと伸びまつよ。' },
       { e:'happy',    t:'ここの積み重ねで、終盤がラクになりまつよ。' },
     ],
     battleHelp: [

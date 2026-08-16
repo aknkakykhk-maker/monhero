@@ -9,8 +9,12 @@ assert.deepStrictEqual(enemy(550,70,0),{hp:19250,atk:2450});
 assert.deepStrictEqual(enemy(550,70,10),{hp:20693,atk:2633});
 assert.deepStrictEqual(enemy(550,70,50),{hp:26468,atk:3368});
 assert.notStrictEqual(enemy(550,70,18).hp,Math.floor(enemy(550,70,10).hp*1.06),'enemy correction must use the baseline');
-const stats=(v,t)=>{const p=t*.0075,f=1-t/20;return {atk:Math.floor(v.atk*(1+Math.max(0,.1-p))),def:Math.floor((v.def+20*f)*(1+Math.max(0,.1-p))),hp:Math.floor(v.hp*(1+Math.max(0,.2-p))),guts:Math.floor((v.guts+10*f)*(1+Math.max(0,.1-p)))};};
-assert.deepStrictEqual(stats({atk:100,def:100,hp:500,guts:100},10),{atk:102,def:112,hp:562,guts:107});
+// トレーニング(旧・能力覚醒)のULTIMATE低下。割合は max(0, 効果 - T×0.75%)、固定値は 1-T/20 で縮む。
+// 4種の内訳と同一項目2回の複利は tools/training-reward-check.js が本体の関数を動かして見る。
+const training=(v,t)=>{const p=t*.0075,f=1-t/20;return {hp:Math.floor(v.hp*(1+Math.max(0,.20-p))),atk:Math.floor(v.atk*(1+Math.max(0,.05-p))),def:Math.floor(v.def*(1+Math.max(0,.20-p))),guts:Math.floor((v.guts+5*f)*(1+Math.max(0,.05-p)))};};
+assert.deepStrictEqual(training({atk:100,def:100,hp:500,guts:100},0),{hp:600,atk:105,def:120,guts:110});
+assert.deepStrictEqual(training({atk:100,def:100,hp:500,guts:100},10),{hp:562,atk:100,def:112,guts:102});
+assert(source.includes('const TRAINING_PICK_COUNT = 2;')&&source.includes('resolveTrainingStep'),'training resolver must exist');
 assert(/ULTIMATE[^\n]+available:true[^\n]+power:35[^\n]+score:20[^\n]+xp:40[^\n]+gold:20[^\n]+psyche:60/.test(source),'ULTIMATE multipliers must match');
 for(const rule of ['enemyTurnRate:0.0075','allyJoinPenaltyRate:0.0075','damageTurnRate:0.0075','minimumDamageDealt:0.25','awakeningPenaltyRate:0.0075','interval:35','damageDealtPerLevel:0.5','safeDistanceCount:1']) assert(source.includes(rule),`missing rule: ${rule}`);
 const pending=(total,levels,wave=1,difficulty='ULTIMATE')=>difficulty==='ULTIMATE'&&wave<10&&total>=(levels.reduce((a,b)=>a+b,0)+1)*35?(levels.reduce((a,b)=>a+b,0)+1)*35:null;
