@@ -11,6 +11,16 @@ const starter=breederSource.match(/const STARTER_TEACHING_IDS = \[([^\n]+)\]/)[1
 assert(!starter.includes('kiki') && starter.split(',').length===6, '初期6人を維持し、ききを含めない');
 assert(breederSource.includes(`id:'kiki', name:"ブリーダーカード「きき」", type:'breeder', icon:KIKI_FACE_ICON, cost:1500`));
 assert(breederSource.includes(`images/breeder-icons/kiki.PNG?v=35362d7b6e3e`));
+// ききのカード上限+1は、その+1ぶんをどのモンスターへ重ねて使ってもよい
+// (以前はハムの連続攻撃だけが同じスロットへの複数割当を許していて、
+//  ききの+1は「違うモンスターにしか使えない」状態になっていた)
+assert(gameSource.includes("const slotMaxUses = (mon) => ((mainHero?.id==='Ham'&&mon?.id==='Ham')||kikiCardBonus>0) ? cardLimit : 1;"),
+  'ききのカード上限+1が同じモンスターへ重ねて使えない(slotMaxUsesが古いまま)');
+assert((gameSource.match(/=slotMaxUses\((?:targetMon|s)\);/g)||[]).length===3,
+  'カード割当のチェック箇所(ドラッグ・予測・スロット表示)がslotMaxUsesに揃っていない');
+// カードをタップしたときの説明文(getDynamicDesc)も、バランス調整後の継続ターン数と一致していること
+assert(gameSource.includes("if(t.id==='kiki') return `次の${level+2}ターン 使用可能カード枚数 +1・全体連撃 ${3+level*2}%アップ（バトル中永続・使用ごとに加算）`;"),
+  'ききのカード説明(getDynamicDesc)が継続ターン数の変更に追随していない');
 [
   "getPermaBuff('globalComboDmgPct')",
   "addPermaBuff('globalComboDmgPct',comboAdd)",
