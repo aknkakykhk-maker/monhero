@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 42aa0884711e45ce
+// source-sha256: 43ee5bba38fd9324
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 13:19"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 14:17"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17216,7 +17216,7 @@ function MonsterHeroGame() {
           addPermaBuff('globalComboDmgPct', comboAdd);
           writePermaBuffs(p => ({
             ...p,
-            kikiCardBonusTurns: Math.max(1, (level + 1) * effMul) + 1
+            kikiCardBonusTurns: Math.max(1, (level + 1) * effMul) + 2
           }));
           addPopup(`全体連撃+${((3 + level * 2) * effMul).toFixed(effMul === 1 ? 0 : 1)}%!`, 'hero', 'text-sky-300 text-lg font-bold');
         }
@@ -17237,6 +17237,9 @@ function MonsterHeroGame() {
           if (level >= 1 && usedCards.length >= 2) {
             setNextTurnBuff('takenDamageMult', 1 - 0.5 * effMul);
             addPopup('次ターン被ダメ50%減 予約!', 'hero', 'text-cyan-300 text-lg font-bold');
+          } else if (level >= 1 && usedCards.length === 1) {
+            setNextTurnBuff('takenDamageMult', 1 - 0.25 * effMul);
+            addPopup('次ターン被ダメ25%減 予約!', 'hero', 'text-cyan-300 text-lg font-bold');
           }
           if (level >= 2 && usedCards.length >= 3) {
             setNextTurnBuff('melosoFullRecoveryMult', effMul);

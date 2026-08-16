@@ -54,6 +54,9 @@ assert(game.includes(`const liveEffectiveMaxGuts = () => resolveEffectiveMaxStat
 }
 assert(game.includes(`currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul`));
 assert(game.includes(`level>=1 && usedCards.length>=2`) && game.includes(`setNextTurnBuff('takenDamageMult',1-0.5*effMul)`));
+// Lv2以降、メロソ1枚だけ(合計1枚)使った場合にも次ターン被ダメ25%減を予約する
+assert(game.includes(`level>=1 && usedCards.length===1`) && game.includes(`setNextTurnBuff('takenDamageMult',1-0.25*effMul)`),
+  'メロソ1枚使用時の被ダメ25%減予約が無い');
 assert(game.includes(`level>=2 && usedCards.length>=3`) && game.includes(`setNextTurnBuff('melosoFullRecoveryMult',effMul)`));
 assert(game.includes(`card?.subType === 'heal_guard_meloso'`) && game.includes(`cardEffectMultiplier(card,halved)`));
 assert(game.includes(`getTurnBuff('takenDamageMult',1.0)`) && game.includes(`getNextTurnBuff('melosoFullRecoveryMult',0)`));
@@ -81,10 +84,12 @@ assert.strictEqual(rawSetCalls, 1,
 
 // ---- ヘルプ ----
 // 数えているのは「使った枚数」であって成立判定ではない。実装と文言を食い違わせない
-assert(help.includes('そのターンに使ったカードが合計2枚・3枚になったとき'));
+assert(help.includes('そのターンに使ったカードの合計枚数(1枚・2枚・3枚以上)に応じて次ターン効果を予約します'));
 assert(!help.includes('実際に使用成立したカードが合計2枚・3枚'));
-// EXTREMEでは被ダメージ軽減も半分(50%減ではなく25%減)になることを明記する
-assert(help.includes('50%減ではなく25%減'));
+// メロソ1枚だけでも次ターン被ダメ25%減が予約されることを明記する
+assert(help.includes('メロソだけ(合計1枚)使った場合でも次の1ターン被ダメージ25%減を予約し'));
+// EXTREMEでは被ダメージ軽減も半分(1枚=12.5%減・2枚以上=25%減)になることを明記する
+assert(help.includes('1枚使用時は25%減ではなく12.5%減、2枚以上使用時は50%減ではなく25%減'));
 // 予約したターンにWAVEが終わると効果が消えることを明記する
 assert(help.includes('次のWAVEへ持ち越されません'));
 
@@ -140,7 +145,8 @@ const useMeloso = (state, { level, usedCardCount, guard=0, effMul=1 }) => ({
   guts:Math.min(state.maxGuts,state.guts+Math.floor(state.maxGuts*0.3*effMul)),
   immediateGuard:guard,
   nextTurnBuffs:{
-    ...(level>=1&&usedCardCount>=2?{takenDamageMult:1-0.5*effMul}:{}),
+    ...(level>=1&&usedCardCount>=2?{takenDamageMult:1-0.5*effMul}
+      :level>=1&&usedCardCount===1?{takenDamageMult:1-0.25*effMul}:{}),
     ...(level>=2&&usedCardCount>=3?{melosoFullRecoveryMult:effMul}:{}),
   },
 });
@@ -155,9 +161,18 @@ assert.deepStrictEqual([lv1.hp,lv1.guts,lv1.immediateGuard],[70,50,25]);
 const lv1Enemy=advanceCombatTurn(lv1,{guard:lv1.immediateGuard});
 assert.strictEqual(lv1Enemy.damage,93); // ガードなし118、ガード25を引いて93
 
-// Lv2: 2枚に満たなければ予約しない
-const lv2Miss=advanceCombatTurn(useMeloso(base,{level:1,usedCardCount:1}));
-assert.strictEqual(lv2Miss.turnBuffs.takenDamageMult,undefined);
+// Lv2: メロソ1枚だけ(合計1枚)でも次ターン被ダメ25%減を予約する
+let lv2Solo=advanceCombatTurn(useMeloso(base,{level:1,usedCardCount:1}));
+assert.strictEqual(lv2Solo.damage,118); // 予約したターンの敵攻撃にはまだ適用しない
+lv2Solo=advanceCombatTurn(lv2Solo);
+assert.strictEqual(lv2Solo.damage,88);  // 118の25%減
+lv2Solo=advanceCombatTurn(lv2Solo);
+assert.strictEqual(lv2Solo.damage,118); // 消費後は元へ戻る
+// Lv1(予約なし)は1枚使用でも影響を受けない
+const lv1Miss=advanceCombatTurn(useMeloso(base,{level:0,usedCardCount:1}));
+assert.strictEqual(lv1Miss.turnBuffs.takenDamageMult,undefined);
+
+// Lv2: 2枚以上なら被ダメ50%減(1枚のときより強い)
 let lv2=advanceCombatTurn(useMeloso(base,{level:1,usedCardCount:2}));
 assert.strictEqual(lv2.damage,118); // 予約したターンの敵攻撃にはまだ適用しない
 lv2=advanceCombatTurn(lv2);
@@ -191,6 +206,12 @@ const exAfter=startPlayerTurn(exTurn);
 assert.deepStrictEqual([exAfter.hp,exAfter.guts],[50,85]);
 exTurn=advanceCombatTurn(exAfter);
 assert.strictEqual(exTurn.damage,88); // 118の25%減
+
+// EXTREME・1枚使用: 25%減ではなく12.5%減になる
+const exSolo=useMeloso(base,{level:1,usedCardCount:1,effMul:0.5});
+assert.strictEqual(exSolo.nextTurnBuffs.takenDamageMult,0.875);
+let exSoloTurn=advanceCombatTurn(advanceCombatTurn(exSolo));
+assert.strictEqual(exSoloTurn.damage,103); // 118の12.5%減(floor)
 
 // 回復量は「不足分の割合」ではなく「最大値の割合」を現在値へ加える
 assert(game.includes(`p+Math.floor(liveEffectiveMaxHp()*recoveryMult)`));
