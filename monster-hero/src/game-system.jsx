@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 15:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 18:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14280,10 +14280,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <article key={m.id} className="relative min-h-[112px] rounded-2xl border border-slate-700 bg-slate-900 overflow-hidden flex shadow-lg">
                   <button disabled={gameState==='PICK_HERO'&&!scenarioPicksHero(m.id)} onClick={()=>{setCurrentPickingMon(m);setGameState('PICK_SLOT');}} aria-label={`${m.name}を勇者モンに選ぶ`} className={`min-w-0 flex-1 grid grid-cols-[64px_minmax(0,1fr)_74px] gap-2 items-center p-2 pr-1 text-left active:bg-indigo-900/30 disabled:opacity-25${scenarioPicksHero(m.id)?battleTutorialSpotClass('monCards'):''}`}>
                     <div className="w-16 h-[88px] flex items-center justify-center overflow-hidden shrink-0">
-                      {/* %指定(w-full h-full)だとimgの高さが親のflexサイズへ正しく解決されない環境があり、
-                          縦長のウンディーネ・ヤオビクニだけ枠を大きくはみ出して表示されていた。
-                          バトルのスロット表示(style={{width,height}})と同じく、px指定で確実に収める */}
-                      {m.imgUrl?<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt={m.name} masuColors={m.colors} style={{width:'64px',height:'88px'}} className="object-contain"/>:<span className="text-5xl">{m.emoji}</span>}
+                      {/* 絵を収める箱は、枠(64x88)ではなく正方形(64x64)にする。★重要
+                          立ち絵はほとんどが正方形なので、縦長の枠へ contain で収めると幅で頭打ちになり
+                          64x64相当で表示される。ところがウンディーネ・ヤオビクニだけ元絵が縦長(2:3)のため、
+                          同じ条件で高さ88pxを使い切り、他より約1.5倍大きく描かれていた
+                          (実測: スネグーラチカ 57px に対し 85px)。
+                          箱を正方形にそろえると縦長の絵も幅で頭打ちになり、他と同じ大きさで並ぶ。
+                          正方形の絵はもともと幅で決まっているので、この変更で見た目は変わらない */}
+                      {m.imgUrl?<DyedMonsterImage baseId={m.id} src={m.imgUrl} alt={m.name} masuColors={m.colors} style={{width:'64px',height:'64px'}} className="object-contain"/>:<span className="text-5xl">{m.emoji}</span>}
                     </div>
                     <div className="min-w-0 self-stretch flex flex-col justify-center gap-1">
                       <div className="font-black text-[13px] text-white leading-tight truncate">{m.name}</div>
