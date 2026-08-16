@@ -115,6 +115,7 @@ node tools/build.js --check
 | `node extreme-challenge-check.js` | 極限チャレンジ(正式版)を確認する。EXTREMEの倍率と未実装段階、Grand Master以上クリアの解放条件、ブリーダーカード50%がEXTREME固有ルールに閉じていること、正式プレイは報酬・クリア記録を保存しデバッグプレイでは保存しないこと、既存の保存キーと全国ランキングへ混ぜていないことを見る。 |
 | `node nightmare-rules-check.js` | NIGHTMAREのWAVE後強化50%、自動回復率・距離適性のプラス50%／マイナス200%を代表値で確認し、WAVE後距離強化との分離、EXTREMEと通常モードへの非適用も確認する。 |
 | `node training-reward-check.js` | WAVE後のトレーニング（4種×2回選択）の計算・同一項目2回の複利・ULTIMATE低下・クイック非適用・2回そろうまで決定できないUIを確認する。 |
+| `node ally-join-view-check.js` | 供モン合流(PICK_ALLY)の画面を確認する。「現在のステータス」パネル(4ステータス＋間合い適性4距離)、候補カードが加算量ではなく合流後の値と変化量を出すこと、あふれても上側へ届くこと、そして本体の `allyJoinPreview` をそのまま動かして通常／ULTIMATE(累計ターンで加算低下)／NIGHTMARE(適性半減)の数値が実際の合流処理と一致することを見る。 |
 | `node masu-register-check.js` | ラン終了画面(優勝/敗北/リタイア)の「マスモンとして登録する」にたどり着けるかを確認する。1WAVE以上クリアしたときだけ案内が出ること、リタイアでも獲得内訳を作ってから結果を出すこと、3画面とも中央のスクロール領域が `justify-center` ではなく(はみ出すと上側へ永久に届かなくなるため)内側を `m-auto` で寄せていること、登録の案内を獲得内訳より前に置いていることを見る。 |
 | `node ultimate-rules-check.js` | 正式ULTIMATEの解放・報酬・記録共通経路と、累計ターンによる敵強化・供モン加入ボーナス低下、WAVEターンによるトレーニング低下、DISTANCE BREAK、デバッグ戦との分離を代表値で確認する。 |
 | `node quick-extreme-special-rules-check.js` | クイック極限難易度が極限本体の `specialRules` を共用し、EXTREME/NIGHTMAREの相互混入や通常クイックへの誤適用がないこと、開始表示・カード表示・固定カード高・ランキング除外を確認する。 |

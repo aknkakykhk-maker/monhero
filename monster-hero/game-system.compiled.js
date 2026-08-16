@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b897f7a96f337fcf
+// source-sha256: 34f00d8978783115
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 20:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 20:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11781,6 +11781,66 @@ function MonsterHeroGame() {
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
 
+  // 供モンが合流したときの「いまの値 → 合流後の値」をまとめて作る。★重要
+  // 実際に合流させる confirmPick と同じ applyAllyJoinBonus / getMonsterAptPct を通すので、
+  // ULTIMATEの累計ターンによる加算低下も、NIGHTMAREの適性半減も、そのまま画面の数値に出る。
+  // 以前はここだけ plusStats をそのまま足していたため、これらの難易度では
+  // 画面に出ていた数値と実際に増える量が食い違っていた。
+  const allyJoinPreview = mon => {
+    const bonus = mon && mon.plusStats || {};
+    const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    const add = key => applyAllyJoinBonus(bonus[key] || 0, rule, waveResult?.totalTurnCount);
+    const stats = [{
+      key: 'hp',
+      label: 'ライフ',
+      short: 'HP',
+      before: maxHp,
+      diff: add('hp'),
+      tint: 'text-pink-300'
+    }, {
+      key: 'atk',
+      label: 'ちから',
+      short: '力',
+      before: atk,
+      diff: add('atk'),
+      tint: 'text-red-300'
+    }, {
+      key: 'def',
+      label: '丈夫さ',
+      short: '防',
+      before: def,
+      diff: add('def'),
+      tint: 'text-emerald-300'
+    }, {
+      key: 'guts',
+      label: 'ガッツ',
+      short: 'G',
+      before: maxGuts,
+      diff: add('guts'),
+      tint: 'text-amber-300'
+    }].map(stat => ({
+      ...stat,
+      after: stat.before + stat.diff
+    }));
+    // 間合い適性は「置いた距離に関係なく4距離すべてへ加算される」ので、距離ごとの合計補正で見せる
+    const aptDelta = getMonsterAptPct(mon, rule);
+    const apt = RANGE_LABELS.map((label, idx) => {
+      const before = distTotalBonus(idx),
+        diff = aptDelta[idx] || 0;
+      return {
+        label,
+        idx,
+        before,
+        diff,
+        after: before + diff
+      };
+    });
+    return {
+      stats,
+      apt,
+      changed: stats.some(s => s.diff !== 0) || apt.some(a => a.diff !== 0)
+    };
+  };
   // 極限チャレンジの解放判定。チャレンジのクリア記録(mh_clears_*)をそのまま見る
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
   const extremeClearCount = extremeClearCounts[EXTREME_SETTING.id] || 0;
@@ -19121,13 +19181,16 @@ function MonsterHeroGame() {
   // 画面ごとの操作(強化ポイントの割り振りなど)は、呼び出し側が statValues / aptExtra / aptPointsLabel で足す。
   const renderMonsterDetailInfo = (mon, opts = {}) => {
     if (!mon) return null;
+    // aptDeltaPct を渡すと、グレードから引いた素の補正値ではなくその配列を「このモンスターが足す量」として使う。
+    // NIGHTMAREのように適性そのものへ倍率がかかる難易度で、実際に足される量と表示を合わせるため。
     const {
       statTitle = '基本ステータス',
       statValues = null,
       aptExtra = null,
       aptPointsLabel = null,
       extraAfterApt = null,
-      aptCurrentPct = null
+      aptCurrentPct = null,
+      aptDeltaPct = null
     } = opts;
     const plus = mon.plusStats || {};
     const rows = statValues || [['ライフ', mon.baseHp, 'text-pink-400'], ['ちから', mon.baseAtk, 'text-red-400'], ['丈夫さ', mon.baseDef, 'text-emerald-400'], ['ガッツ', mon.baseGuts, 'text-amber-400']];
@@ -19154,7 +19217,7 @@ function MonsterHeroGame() {
       className: "grid grid-cols-4 gap-1 mt-1"
     }, RANGE_LABELS.map((label, idx) => {
       const grade = getDistAptitude(mon, idx);
-      const pct = aptGradeToPct(grade);
+      const pct = aptDeltaPct ? aptDeltaPct[idx] || 0 : aptGradeToPct(grade);
       const cur = aptCurrentPct ? aptCurrentPct[idx] || 0 : null;
       return /*#__PURE__*/React.createElement("div", {
         key: idx,
@@ -29244,7 +29307,35 @@ function MonsterHeroGame() {
       key: gameState,
       scene: gameState === 'PICK_HERO' ? 'pickHero' : 'pickAlly',
       compact: true
-    })), gameState === 'PICK_HERO' && /*#__PURE__*/React.createElement("div", {
+    })), gameState === 'PICK_ALLY' && /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5",
+      "data-join-status": true
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
+    }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-4 gap-1"
+    }, [['ライフ', maxHp, 'text-pink-300'], ['ちから', atk, 'text-red-300'], ['丈夫さ', def, 'text-emerald-300'], ['ガッツ', maxGuts, 'text-amber-300']].map(([label, value, tint]) => /*#__PURE__*/React.createElement("div", {
+      key: label,
+      className: "rounded-lg bg-black/40 px-1 py-1 text-center"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[8px] font-black text-slate-500 leading-none"
+    }, label), /*#__PURE__*/React.createElement("span", {
+      className: `block text-[13px] font-black font-mono leading-tight ${tint}`
+    }, value)))), /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] font-black tracking-widest text-slate-500 text-left mt-1.5 mb-1"
+    }, "\u9593\u5408\u3044\u9069\u6027\uFF08\u8DDD\u96E2\u88DC\u6B63\uFF09"), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-4 gap-1"
+    }, RANGE_LABELS.map((label, idx) => {
+      const cur = distTotalBonus(idx);
+      return /*#__PURE__*/React.createElement("div", {
+        key: label,
+        className: "rounded-lg bg-black/40 px-1 py-1 text-center"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block text-[8px] font-black text-slate-500 leading-none"
+      }, label), /*#__PURE__*/React.createElement("span", {
+        className: `block text-[12px] font-black font-mono leading-tight ${cur > 0 ? 'text-cyan-300' : cur < 0 ? 'text-red-300' : 'text-slate-400'}`
+      }, formatAptPct(cur)));
+    }))), gameState === 'PICK_HERO' && /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
     }, !isProMode(runMode) && /*#__PURE__*/React.createElement("div", {
       className: "flex gap-1.5"
@@ -29259,7 +29350,9 @@ function MonsterHeroGame() {
     }, label))), /*#__PURE__*/React.createElement("div", {
       className: "text-[9px] text-slate-500 font-bold mt-1 px-1 text-center"
     }, isProMode(runMode) ? 'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません' : heroPickTab === 'base' ? '解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます' : 'M/B管理で組んだ編成から選びます')), /*#__PURE__*/React.createElement("div", {
-      className: `flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col ${gameState === 'PICK_ALLY' ? 'justify-center' : ''}`
+      className: "flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: `w-full${gameState === 'PICK_ALLY' ? ' m-auto' : ''}`
     }, (() => {
       const allyCarousel = gameState === 'PICK_ALLY' && isProMode(runMode);
       // 念のため、すでに編成にいる子は一覧にも出さない(勇者モンがもう一度出ないようにする)
@@ -29369,7 +29462,7 @@ function MonsterHeroGame() {
             }
           }, /*#__PURE__*/React.createElement(Zap, {
             size: 9
-          }), " ", m.unique.name), /*#__PURE__*/React.createElement("div", {
+          }), " ", m.unique.name), gameState === 'PICK_HERO' ? /*#__PURE__*/React.createElement("div", {
             className: "grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono",
             style: {
               fontSize: '9px'
@@ -29380,25 +29473,59 @@ function MonsterHeroGame() {
             className: "text-slate-500"
           }, "HP"), /*#__PURE__*/React.createElement("span", {
             className: "text-pink-400 font-bold"
-          }, gameState === 'PICK_HERO' ? m.baseHp : `+${m.plusStats?.hp || 0}`)), /*#__PURE__*/React.createElement("div", {
+          }, m.baseHp)), /*#__PURE__*/React.createElement("div", {
             className: "flex justify-between"
           }, /*#__PURE__*/React.createElement("span", {
             className: "text-slate-500"
           }, "\u529B"), /*#__PURE__*/React.createElement("span", {
             className: "text-red-400 font-bold"
-          }, gameState === 'PICK_HERO' ? m.baseAtk : `+${m.plusStats?.atk || 0}`)), /*#__PURE__*/React.createElement("div", {
+          }, m.baseAtk)), /*#__PURE__*/React.createElement("div", {
             className: "flex justify-between"
           }, /*#__PURE__*/React.createElement("span", {
             className: "text-slate-500"
           }, "\u9632"), /*#__PURE__*/React.createElement("span", {
             className: "text-emerald-400 font-bold"
-          }, gameState === 'PICK_HERO' ? m.baseDef : `+${m.plusStats?.def || 0}`)), /*#__PURE__*/React.createElement("div", {
+          }, m.baseDef)), /*#__PURE__*/React.createElement("div", {
             className: "flex justify-between"
           }, /*#__PURE__*/React.createElement("span", {
             className: "text-slate-500"
           }, "G"), /*#__PURE__*/React.createElement("span", {
             className: "text-amber-400 font-bold"
-          }, gameState === 'PICK_HERO' ? m.baseGuts : `+${m.plusStats?.guts || 0}`))), /*#__PURE__*/React.createElement("div", {
+          }, m.baseGuts))) : (() => {
+            const preview = allyJoinPreview(m);
+            return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+              className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
+              style: {
+                fontSize: '8px'
+              }
+            }, preview.stats.map(stat => /*#__PURE__*/React.createElement("span", {
+              key: stat.key,
+              className: "min-w-0 block"
+            }, /*#__PURE__*/React.createElement("span", {
+              className: "block text-slate-500 font-black leading-none"
+            }, stat.short), /*#__PURE__*/React.createElement("b", {
+              className: `block leading-tight ${stat.diff > 0 ? stat.tint : 'text-slate-400'}`,
+              style: {
+                fontSize: '9px'
+              }
+            }, stat.after), /*#__PURE__*/React.createElement("span", {
+              className: `block leading-none ${stat.diff > 0 ? 'text-emerald-400' : 'text-slate-700'}`
+            }, stat.diff > 0 ? `+${stat.diff}` : '±0')))), /*#__PURE__*/React.createElement("div", {
+              className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
+              style: {
+                fontSize: '8px'
+              }
+            }, preview.apt.map(range => /*#__PURE__*/React.createElement("span", {
+              key: range.idx,
+              className: "min-w-0 block"
+            }, /*#__PURE__*/React.createElement("span", {
+              className: "block text-slate-500 font-black leading-none"
+            }, range.label), /*#__PURE__*/React.createElement("b", {
+              className: `block leading-tight ${range.diff > 0 ? 'text-cyan-300' : range.diff < 0 ? 'text-red-300' : 'text-slate-400'}`
+            }, formatAptPct(range.after)), /*#__PURE__*/React.createElement("span", {
+              className: `block leading-none ${range.diff > 0 ? 'text-emerald-400' : range.diff < 0 ? 'text-red-400' : 'text-slate-700'}`
+            }, range.diff !== 0 ? formatAptPct(range.diff) : '±0')))));
+          })(), /*#__PURE__*/React.createElement("div", {
             className: "min-h-[32px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black mt-1 flex items-center justify-center gap-1",
             style: {
               fontSize: '10px'
@@ -29415,7 +29542,7 @@ function MonsterHeroGame() {
         onClick: () => stepAlly(i - allyCardIndex),
         className: `w-1.5 h-1.5 rounded-full ${i === allyCardIndex ? 'bg-indigo-300 scale-125' : 'bg-slate-700'}`
       }))));
-    })()), currentPickingMon && renderMonsterDetailModal({
+    })())), currentPickingMon && renderMonsterDetailModal({
       mon: currentPickingMon,
       masu: currentPickingMon.masuId ? getMasuMon(currentPickingMon.masuId) : null,
       onClose: () => setCurrentPickingMon(null),
@@ -29423,10 +29550,14 @@ function MonsterHeroGame() {
       // 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする
       paddingTop: battleTutorial ? 'calc(4.25rem + env(safe-area-inset-top))' : undefined,
       detailOpts: {
-        statValues: gameState === 'PICK_HERO' ? null : [['ライフ', `${maxHp} → ${maxHp + (currentPickingMon.plusStats?.hp || 0)}`, 'text-pink-400'], ['ちから', `${atk} → ${atk + (currentPickingMon.plusStats?.atk || 0)}`, 'text-red-400'], ['丈夫さ', `${def} → ${def + (currentPickingMon.plusStats?.def || 0)}`, 'text-emerald-400'], ['ガッツ', `${maxGuts} → ${maxGuts + (currentPickingMon.plusStats?.guts || 0)}`, 'text-amber-400']],
+        // 一覧カードと同じ allyJoinPreview を通す。以前はここだけ plusStats をそのまま足していたため、
+        // ULTIMATE(累計ターンで加算が下がる)では詳細の数値と実際に増える量が食い違っていた
+        statValues: gameState === 'PICK_HERO' ? null : allyJoinPreview(currentPickingMon).stats.map(stat => [stat.label, `${stat.before} → ${stat.after}${stat.diff > 0 ? `（+${stat.diff}）` : ''}`, stat.diff > 0 ? stat.tint : 'text-slate-400']),
         statTitle: gameState === 'PICK_HERO' ? '基本ステータス' : '基本ステータス(現在 → 合流後)',
         // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる
         aptCurrentPct: [0, 1, 2, 3].map(i => distTotalBonus(i)),
+        // 加算量も実際に足される値(NIGHTMAREの半減込み)で出す
+        aptDeltaPct: gameState === 'PICK_HERO' ? null : allyJoinPreview(currentPickingMon).apt.map(range => range.diff),
         aptPointsLabel: currentPickingMon.masuId ? /*#__PURE__*/React.createElement("div", {
           className: "text-[8px] text-amber-300 font-black flex items-center gap-1"
         }, /*#__PURE__*/React.createElement(Sparkles, {
