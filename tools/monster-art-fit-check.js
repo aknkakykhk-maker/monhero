@@ -58,17 +58,75 @@ check('教え(固有技の元モンスター)アイコンがmonsterArtFitStyle�
 check('マスモン一覧などのベース種分岐がmonsterArtFitStyleを通す',
   has('<img src={base.iconUrl} alt={base.name} style={monsterArtFitStyle(base.id)} className="w-full h-full object-cover"/>'));
 
-// --- 正方形ではない枠(縦長)は、%指定(w-full h-full)だと環境によって高さが
-//     正しく解決されずウンディーネ・ヤオビクニだけ枠より大きく表示されることがあった。
-//     px指定に直してあることを確認する(「勇者モンを選択」プロモード一覧で発生) ---
-check('勇者モンを選択(プロモード一覧)のアイコンはpx指定で枠に収めている(%指定に戻していない)', (() => {
+// --- 「勇者モンを選択」(プロモード一覧)の絵を収める箱 ---
+// 立ち絵はほとんどが正方形なので、縦長の箱へcontainで収めると幅で頭打ちになる。
+// ところが元絵が縦長(2:3)のウンディーネ・ヤオビクニだけ高さを使い切ってしまい、
+// 他より約1.5倍大きく表示されていた。箱を正方形にそろえて全員を幅基準にする。
+const PICK_HERO_BOX = (() => {
   const at = source.indexOf("if(gameState==='PICK_HERO'&&isProMode(runMode)) return (");
-  if (at < 0) return false;
-  const end = source.indexOf('</article>', at);
-  const block = source.slice(at, end);
-  return block.includes("style={{width:'64px',height:'88px'}}")
-    && !block.includes('className="w-full h-full object-contain"');
-})());
+  if (at < 0) return null;
+  const block = source.slice(at, source.indexOf('</article>', at));
+  const m = block.match(/style=\{\{width:'(\d+)px',height:'(\d+)px'\}\}/);
+  return m ? { w: Number(m[1]), h: Number(m[2]) } : null;
+})();
+check('勇者モンを選択(プロモード一覧)の絵の箱をpx指定で取り出せる', !!PICK_HERO_BOX,
+  PICK_HERO_BOX ? `${PICK_HERO_BOX.w}x${PICK_HERO_BOX.h}` : '');
+check('その箱が正方形になっている(縦長だと縦長の絵だけ大きくなる)',
+  !!PICK_HERO_BOX && PICK_HERO_BOX.w === PICK_HERO_BOX.h,
+  PICK_HERO_BOX ? `${PICK_HERO_BOX.w}x${PICK_HERO_BOX.h}` : '');
 
-console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
-process.exit(failed ? 1 : 0);
+// --- 文字列ではなく実際の絵から「見た目の大きさ」を測って比べる ---
+// 立ち絵ごとに余白の量が違うので、画像の寸法だけでは実際の見え方が分からない。
+// 透明でない部分(キャラ本体)の高さが、その箱へcontainで収めたとき何pxになるかを実測し、
+// ウンディーネ・ヤオビクニだけ極端に大きく(小さく)なっていないかを見る。
+const { createCanvas, loadImage } = require('canvas');
+const web = path.join(root, 'monster-hero');
+const allySrc = fs.readFileSync(path.join(web, 'data/images/images-ally.js'), 'utf8');
+const artFiles = [...allySrc.matchAll(/const\s+(\w+_IMG)\s*=\s*"(images\/[^"?]+)/g)].map(m => ({ name: m[1], rel: m[2] }));
+
+// containで箱へ収めたときの、キャラ本体(透明でない部分)の高さ
+const drawnCharHeight = async (rel, box) => {
+  const img = await loadImage(path.join(web, rel));
+  const cv = createCanvas(img.width, img.height);
+  const g = cv.getContext('2d');
+  g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, img.width, img.height).data;
+  let top = img.height, bottom = 0;
+  for (let y = 0; y < img.height; y++) {
+    for (let x = 0; x < img.width; x++) {
+      if (d[(y * img.width + x) * 4 + 3] > 20) { if (y < top) top = y; if (y > bottom) bottom = y; break; }
+    }
+  }
+  return (bottom - top) * Math.min(box.w / img.width, box.h / img.height);
+};
+
+const run = async () => {
+  if (PICK_HERO_BOX && artFiles.length > 0) {
+    console.log(`\n[勇者モンを選択(プロモード一覧) ${PICK_HERO_BOX.w}x${PICK_HERO_BOX.h} での見た目の高さ]`);
+    const measured = [];
+    for (const { name, rel } of artFiles) {
+      measured.push({ name, h: await drawnCharHeight(rel, PICK_HERO_BOX) });
+    }
+    const sorted = [...measured].sort((a, b) => a.h - b.h);
+    const median = sorted[Math.floor(sorted.length / 2)].h;
+    for (const m of sorted) console.log(`   ${m.name.padEnd(22)} ${m.h.toFixed(1)}px  (中央値比 ${(m.h / median).toFixed(2)}倍)`);
+    // 元絵の余白の差でどうしても多少はばらつくので、極端なものだけを弾く。
+    // 直す前のウンディーネ・ヤオビクニは1.51倍で、ここに引っかかっていた
+    const MAX_RATIO = 1.25;
+    const tooBig = sorted.filter(m => m.h / median > MAX_RATIO);
+    check(`どの立ち絵も中央値の${MAX_RATIO}倍より大きくならない`, tooBig.length === 0,
+      tooBig.map(m => `${m.name}=${(m.h / median).toFixed(2)}倍`).join(', '));
+    // ★今回の対象2体を名指しでも見る(将来また縦長の絵を足したときに気づけるように)
+    for (const id of ['UNDINE_IMG', 'YAOBIKUNI_IMG']) {
+      const target = measured.find(m => m.name === id);
+      const ratio = target ? target.h / median : 0;
+      check(`${id} が他と同じくらいの大きさで並ぶ`, !!target && ratio <= MAX_RATIO,
+        target ? `${target.h.toFixed(1)}px / 中央値${median.toFixed(1)}px = ${ratio.toFixed(2)}倍` : '見つからない');
+    }
+  }
+
+  console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
+  process.exit(failed ? 1 : 0);
+};
+
+run().catch(e => { console.error(e); process.exit(1); });
