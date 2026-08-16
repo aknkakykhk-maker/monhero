@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 20:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-16 20:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6152,6 +6152,29 @@ function MonsterHeroGame() {
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
 
+  // 供モンが合流したときの「いまの値 → 合流後の値」をまとめて作る。★重要
+  // 実際に合流させる confirmPick と同じ applyAllyJoinBonus / getMonsterAptPct を通すので、
+  // ULTIMATEの累計ターンによる加算低下も、NIGHTMAREの適性半減も、そのまま画面の数値に出る。
+  // 以前はここだけ plusStats をそのまま足していたため、これらの難易度では
+  // 画面に出ていた数値と実際に増える量が食い違っていた。
+  const allyJoinPreview = (mon) => {
+    const bonus = (mon && mon.plusStats) || {};
+    const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    const add = (key) => applyAllyJoinBonus(bonus[key]||0, rule, waveResult?.totalTurnCount);
+    const stats = [
+      { key:'hp',   label:'ライフ', short:'HP', before:maxHp,   diff:add('hp'),   tint:'text-pink-300' },
+      { key:'atk',  label:'ちから', short:'力', before:atk,     diff:add('atk'),  tint:'text-red-300' },
+      { key:'def',  label:'丈夫さ', short:'防', before:def,     diff:add('def'),  tint:'text-emerald-300' },
+      { key:'guts', label:'ガッツ', short:'G',  before:maxGuts, diff:add('guts'), tint:'text-amber-300' },
+    ].map(stat => ({ ...stat, after: stat.before + stat.diff }));
+    // 間合い適性は「置いた距離に関係なく4距離すべてへ加算される」ので、距離ごとの合計補正で見せる
+    const aptDelta = getMonsterAptPct(mon, rule);
+    const apt = RANGE_LABELS.map((label, idx) => {
+      const before = distTotalBonus(idx), diff = aptDelta[idx] || 0;
+      return { label, idx, before, diff, after: before + diff };
+    });
+    return { stats, apt, changed: stats.some(s=>s.diff!==0) || apt.some(a=>a.diff!==0) };
+  };
   // 極限チャレンジの解放判定。チャレンジのクリア記録(mh_clears_*)をそのまま見る
   const extremeUnlocked = useMemo(() => isExtremeUnlocked(clearCounts), [clearCounts]);
   const extremeClearCount = extremeClearCounts[EXTREME_SETTING.id] || 0;
@@ -10884,7 +10907,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 画面ごとの操作(強化ポイントの割り振りなど)は、呼び出し側が statValues / aptExtra / aptPointsLabel で足す。
   const renderMonsterDetailInfo = (mon, opts = {}) => {
     if (!mon) return null;
-    const { statTitle = '基本ステータス', statValues = null, aptExtra = null, aptPointsLabel = null, extraAfterApt = null, aptCurrentPct = null } = opts;
+    // aptDeltaPct を渡すと、グレードから引いた素の補正値ではなくその配列を「このモンスターが足す量」として使う。
+    // NIGHTMAREのように適性そのものへ倍率がかかる難易度で、実際に足される量と表示を合わせるため。
+    const { statTitle = '基本ステータス', statValues = null, aptExtra = null, aptPointsLabel = null, extraAfterApt = null, aptCurrentPct = null, aptDeltaPct = null } = opts;
     const plus = mon.plusStats || {};
     const rows = statValues || [
       ['ライフ', mon.baseHp, 'text-pink-400'],
@@ -10899,7 +10924,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       <div className="bg-black/40 p-2 rounded-xl border border-white/5 shrink-0"><div className="text-[7px] text-slate-500 uppercase font-bold">{statTitle}</div><div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-1">{rows.map(([label,value,color])=><div key={label} className="flex justify-between text-[10px] font-mono"><span>{label}:</span><span className={`${color} font-bold`}>{value}</span></div>)}</div></div>
       {/* 間合い適性は「距離ごとの与ダメージ補正(%)」。グレードは目安で、実際に効くのは%のほう。
           aptCurrentPctを渡すと、いまの距離補正値からこのモンスターを加えた後の値まで出す。 */}
-      <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性（距離補正）</div>{aptPointsLabel}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(mon,idx); const pct=aptGradeToPct(grade); const cur=aptCurrentPct?(aptCurrentPct[idx]||0):null; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span><span className={`text-[9px] font-mono font-black leading-none ${pct>0?'text-cyan-300':pct<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(pct)}</span>{cur!=null&&(<span className="w-full text-center leading-tight mt-0.5"><span className="block text-[7px] text-slate-400 font-mono">現在 {formatAptPct(cur)}</span><span className={`block text-[10px] font-mono font-black ${pct>0?'text-emerald-300':pct<0?'text-red-300':'text-slate-400'}`}>→ {formatAptPct(cur+pct)}</span></span>)}{aptExtra?aptExtra(idx,grade):null}</div>);})}</div><div className="text-[7px] text-slate-500 font-bold mt-1 leading-tight">置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます</div></div>
+      <div className="bg-black/40 p-2 rounded-xl border border-cyan-500/30"><div className="flex items-center justify-between mb-0.5"><div className="text-[7px] text-cyan-400 uppercase font-bold">間合い適性（距離補正）</div>{aptPointsLabel}</div><div className="grid grid-cols-4 gap-1 mt-1">{RANGE_LABELS.map((label,idx)=>{const grade=getDistAptitude(mon,idx); const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade); const cur=aptCurrentPct?(aptCurrentPct[idx]||0):null; return(<div key={idx} className="flex flex-col items-center gap-0.5"><span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span><span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span><span className={`text-[9px] font-mono font-black leading-none ${pct>0?'text-cyan-300':pct<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(pct)}</span>{cur!=null&&(<span className="w-full text-center leading-tight mt-0.5"><span className="block text-[7px] text-slate-400 font-mono">現在 {formatAptPct(cur)}</span><span className={`block text-[10px] font-mono font-black ${pct>0?'text-emerald-300':pct<0?'text-red-300':'text-slate-400'}`}>→ {formatAptPct(cur+pct)}</span></span>)}{aptExtra?aptExtra(idx,grade):null}</div>);})}</div><div className="text-[7px] text-slate-500 font-bold mt-1 leading-tight">置く距離に関係なく、このモンスターの補正が4距離すべてに加算されます</div></div>
       {renderSkillSection(mon)}
       {/* ② 選び方で決まる効果。個体そのものの強さ(総合力)とは別物なので見出しで分ける */}
       {renderDetailSectionLabel('選び方で決まる効果', '総合力には含みません')}
@@ -14305,6 +14330,31 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0"><button disabled={!!battleTutorial} onClick={()=>{if(gameState==='PICK_HERO'){setCurrentPickingMon(null);setBattleMenuTab('difficulty');setGameState(battleEntryStateRef.current);return;}returnToHome();}} className="p-3 text-slate-400 active:scale-90 disabled:opacity-25"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{gameState==='PICK_HERO'?'勇者モンを選択':'供モンを選択'}</h2><div className="w-10"></div></div>
           {/* 勇者モンは編成に入れていないベースモンからも選べる(マスモン登録のためだけに編成を入れ替えなくてよい) */}
           <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble key={gameState} scene={gameState==='PICK_HERO'?'pickHero':'pickAlly'} compact/></div>
+          {/* 供モン合流は「いま何がどれだけ増えるか」を選ぶ場面なので、トレーニング画面と同じ形で
+              基準になる現在値をここに固定表示する。各カードは自分の変動しか出さないため、
+              ここが無いと「合流後の値」だけを見て比べることになり、どれが得か分からなかった */}
+          {gameState==='PICK_ALLY'&&(
+            <div className="shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5" data-join-status>
+              <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス</div>
+              <div className="grid grid-cols-4 gap-1">
+                {[['ライフ',maxHp,'text-pink-300'],['ちから',atk,'text-red-300'],['丈夫さ',def,'text-emerald-300'],['ガッツ',maxGuts,'text-amber-300']].map(([label,value,tint])=>(
+                  <div key={label} className="rounded-lg bg-black/40 px-1 py-1 text-center">
+                    <span className="block text-[8px] font-black text-slate-500 leading-none">{label}</span>
+                    <span className={`block text-[13px] font-black font-mono leading-tight ${tint}`}>{value}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mt-1.5 mb-1">間合い適性（距離補正）</div>
+              <div className="grid grid-cols-4 gap-1">
+                {RANGE_LABELS.map((label,idx)=>{const cur=distTotalBonus(idx); return (
+                  <div key={label} className="rounded-lg bg-black/40 px-1 py-1 text-center">
+                    <span className="block text-[8px] font-black text-slate-500 leading-none">{label}</span>
+                    <span className={`block text-[12px] font-black font-mono leading-tight ${cur>0?'text-cyan-300':cur<0?'text-red-300':'text-slate-400'}`}>{formatAptPct(cur)}</span>
+                  </div>
+                );})}
+              </div>
+            </div>
+          )}
           {gameState==='PICK_HERO'&&(
             <div className="shrink-0 w-full max-w-md mx-auto mb-2">
               {/* プロモードはベースモンだけなので、編成との切替は出さない */}
@@ -14316,7 +14366,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <div className="text-[9px] text-slate-500 font-bold mt-1 px-1 text-center">{isProMode(runMode)?'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません':heroPickTab==='base'?'解放済みのベースモンから選べます。編成に入れていなくても、ラン終了時にマスモン登録できます':'M/B管理で組んだ編成から選びます'}</div>
             </div>
           )}
-          <div className={`flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col ${gameState==='PICK_ALLY'?'justify-center':''}`}>
+          {/* あふれる可能性のあるスクロール領域へ justify-center を付けると、あふれたぶんが
+              上下へはみ出し、スクロールで追える下側と違って上側は永久に届かなくなる。
+              内側を m-auto で寄せておけば、余っているときだけ中央、あふれたら先頭からたどれる */}
+          <div className="flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0 flex flex-col">
+           <div className={`w-full${gameState==='PICK_ALLY'?' m-auto':''}`}>
             {/* バトルチュートリアル中は一覧の外枠ではなくカード1枚ずつを光らせる。
                 外枠だと画面からはみ出して「どこを押すのか」が分からなかった */}
             {/* プロの供モン合流だけ、バトルモード選択と同じ横スライドで1体ずつ見せる。
@@ -14362,12 +14416,39 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 badge: m.debugOnly?<div className="absolute top-0 left-0 z-10 rounded-br-lg bg-fuchsia-700 px-1.5 py-0.5 text-[7px] font-black text-white">DEBUG専用</div>:isSel?<div className="absolute -top-1 -right-1 z-10 bg-indigo-500 rounded-full p-1 shadow-lg"><Check size={12} className="text-white"/></div>:null,
                 extra: (<>
                   <div className="text-amber-400 font-black flex items-center gap-1 leading-tight" style={{fontSize:'9px'}}><Zap size={9}/> {m.unique.name}</div>
+                  {/* 勇者モン選択はその子自身の基礎値、供モン合流は「いまの値 → 合流後の値」。
+                      合流は加算量(+50など)だけ出しても得かどうか分からないので、
+                      トレーニング画面と同じく変化そのものを見せる */}
+                  {gameState==='PICK_HERO'?(
                   <div className="grid grid-cols-2 gap-x-2 gap-y-0 w-full px-1 font-mono" style={{fontSize:'9px'}}>
-                    <div className="flex justify-between"><span className="text-slate-500">HP</span><span className="text-pink-400 font-bold">{gameState==='PICK_HERO'?m.baseHp:`+${m.plusStats?.hp||0}`}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">力</span><span className="text-red-400 font-bold">{gameState==='PICK_HERO'?m.baseAtk:`+${m.plusStats?.atk||0}`}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">防</span><span className="text-emerald-400 font-bold">{gameState==='PICK_HERO'?m.baseDef:`+${m.plusStats?.def||0}`}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">G</span><span className="text-amber-400 font-bold">{gameState==='PICK_HERO'?m.baseGuts:`+${m.plusStats?.guts||0}`}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">HP</span><span className="text-pink-400 font-bold">{m.baseHp}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">力</span><span className="text-red-400 font-bold">{m.baseAtk}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">防</span><span className="text-emerald-400 font-bold">{m.baseDef}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">G</span><span className="text-amber-400 font-bold">{m.baseGuts}</span></div>
                   </div>
+                  ):(()=>{const preview=allyJoinPreview(m); return (<>
+                    {/* 上の「現在のステータス」が今の値を出しているので、カードは合流後の値と
+                        変化量だけを4列で並べる。「1480→1600」のように両方を1つの枠へ入れると
+                        iPhone SEの幅では数字が切れてしまう */}
+                    <div className="w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
+                      {preview.stats.map(stat=>(
+                        <span key={stat.key} className="min-w-0 block">
+                          <span className="block text-slate-500 font-black leading-none">{stat.short}</span>
+                          <b className={`block leading-tight ${stat.diff>0?stat.tint:'text-slate-400'}`} style={{fontSize:'9px'}}>{stat.after}</b>
+                          <span className={`block leading-none ${stat.diff>0?'text-emerald-400':'text-slate-700'}`}>{stat.diff>0?`+${stat.diff}`:'±0'}</span>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono" style={{fontSize:'8px'}}>
+                      {preview.apt.map(range=>(
+                        <span key={range.idx} className="min-w-0 block">
+                          <span className="block text-slate-500 font-black leading-none">{range.label}</span>
+                          <b className={`block leading-tight ${range.diff>0?'text-cyan-300':range.diff<0?'text-red-300':'text-slate-400'}`}>{formatAptPct(range.after)}</b>
+                          <span className={`block leading-none ${range.diff>0?'text-emerald-400':range.diff<0?'text-red-400':'text-slate-700'}`}>{range.diff!==0?formatAptPct(range.diff):'±0'}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </>);})()}
                   <div className="min-h-[32px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black mt-1 flex items-center justify-center gap-1" style={{fontSize:'10px'}}>詳細を見る <ChevronRight size={11}/></div>
                 </>),
               })}
@@ -14375,6 +14456,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             {allyCarousel&&<div className="flex justify-center gap-1 py-1 shrink-0">{list.map((m,i)=><button key={m.id} aria-label={`${i+1}体目`} onClick={()=>stepAlly(i-allyCardIndex)} className={`w-1.5 h-1.5 rounded-full ${i===allyCardIndex?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>}
               </>);})()}
+           </div>
           </div>
           {/* 勇者モン選択・供モン合流の詳細。外枠と上部サマリーは他の画面と同じマスターUIで、
               この画面だけの違いは「現在値 → 合流後」のステータス表記と強化Pの割り振りボタン */}
@@ -14386,15 +14468,16 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             // 練習中は上にみゅあの帯が出るので、その高さぶん下げて名前と重ならないようにする
             paddingTop: battleTutorial?'calc(4.25rem + env(safe-area-inset-top))':undefined,
             detailOpts: {
-  statValues: gameState==='PICK_HERO' ? null : [
-    ['ライフ', `${maxHp} → ${maxHp+(currentPickingMon.plusStats?.hp||0)}`, 'text-pink-400'],
-    ['ちから', `${atk} → ${atk+(currentPickingMon.plusStats?.atk||0)}`, 'text-red-400'],
-    ['丈夫さ', `${def} → ${def+(currentPickingMon.plusStats?.def||0)}`, 'text-emerald-400'],
-    ['ガッツ', `${maxGuts} → ${maxGuts+(currentPickingMon.plusStats?.guts||0)}`, 'text-amber-400'],
-  ],
+  // 一覧カードと同じ allyJoinPreview を通す。以前はここだけ plusStats をそのまま足していたため、
+  // ULTIMATE(累計ターンで加算が下がる)では詳細の数値と実際に増える量が食い違っていた
+  statValues: gameState==='PICK_HERO' ? null : allyJoinPreview(currentPickingMon).stats.map(stat=>[
+    stat.label, `${stat.before} → ${stat.after}${stat.diff>0?`（+${stat.diff}）`:''}`, stat.diff>0?stat.tint:'text-slate-400',
+  ]),
   statTitle: gameState==='PICK_HERO' ? '基本ステータス' : '基本ステータス(現在 → 合流後)',
   // 距離補正は「いまの値 → このモンスターを加えた後の値」で見せる
   aptCurrentPct: [0,1,2,3].map(i=>distTotalBonus(i)),
+  // 加算量も実際に足される値(NIGHTMAREの半減込み)で出す
+  aptDeltaPct: gameState==='PICK_HERO' ? null : allyJoinPreview(currentPickingMon).apt.map(range=>range.diff),
   aptPointsLabel: currentPickingMon.masuId?<div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {getMasuMon(currentPickingMon.masuId)?.distAptPoints||0}</div>:null,
   aptExtra: (idx,grade)=>{const pts=currentPickingMon.masuId?(getMasuMon(currentPickingMon.masuId)?.distAptPoints||0):0; const canUp=pts>0 && DIST_APTITUDE_GRADES.indexOf(grade)<DIST_APTITUDE_GRADES.length-1; return canUp?<button onClick={()=>{const updated=spendAptPoint(currentPickingMon.masuId,idx); if(updated) setCurrentPickingMon(mergeMasuIntoMon(updated));}} className="w-full text-[8px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-95">+1</button>:null;},
   extraAfterApt: (<>

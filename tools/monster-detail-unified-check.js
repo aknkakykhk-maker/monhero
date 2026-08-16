@@ -103,8 +103,11 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
   const pick = pickStart > 0 && pickEnd > 0 ? code.slice(pickStart, pickEnd) : '';
   check(`${label}: 勇者モン選択・供モン選択も共通カードを通す`,
     /renderMonsterCardBody\(\{[\s\S]{0,200}masu:\s*pickMasu/.test(pick));
+  // 共通カードへまとめたあとも、この画面だけの情報(固有技名・ステータス)が消えていないこと。
+  // 供モン側は加算量(m.plusStats)をそのまま出すのをやめ、実際の合流計算を通した
+  // allyJoinPreview の「合流後の値と変化量」に変わっているので、そちらを見る。
   check(`${label}: 勇者モン選択の固有技名とステータスが残っている`,
-    pick.includes('m.unique.name') && pick.includes('m.baseHp') && pick.includes('m.plusStats?.guts'));
+    pick.includes('m.unique.name') && pick.includes('m.baseHp') && pick.includes('allyJoinPreview(m)'));
 
   // マスモンの絆XPゲージは共通サマリーの中だけ(ブリーダーLvのゲージは別物なので数えない)
   check(`${label}: マスモンの絆XPゲージは共通サマリーの中に1つだけ`,
