@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-18 22:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-18 23:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -303,16 +303,25 @@ const legacyLevelBefore160 = (totalXp, discount) => {
 const BREEDER_XP_DISCOUNT = 0.08;
 const xpForBreederLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * BREEDER_XP_DISCOUNT));
 // ブリーダーレベルに意図した上限は無い。以前は200回で打ち切っていたため、
-// Lv.201以降は経験値が貯まってもレベルが上がらなくなっていた
-// (xpForBreederLevelは必ず1以上を返すため、xpは有限回で必ず尽きる。無限ループの心配は無い)。
+// Lv.201以降は経験値が貯まってもレベルが上がらなくなっていた。
+//
+// ただしその打ち切りは「壊れた保存値が来ても必ず止まる」安全弁も兼ねていた。
+// NaN・Infinityは「xp < need」がいつまでも偽になるため、素直にwhileへ変えると
+// その場で無限ループして画面が固まる。上限ではなく入力側で守る。
+// MAX_SAFE_INTEGERはLv.360万ぶんに相当し、遊んで届く値ではないので実質的な上限にはならない。
+const safeBreederXp = (totalXp) => {
+  const value = Number(totalXp);
+  return Number.isFinite(value) ? Math.min(Math.max(0, value), Number.MAX_SAFE_INTEGER) : 0;
+};
 const levelInfo = (totalXp) => {
-  let level = 1, xp = totalXp;
+  const safeTotal = safeBreederXp(totalXp);
+  let level = 1, xp = safeTotal;
   while (true) {
     const need = xpForBreederLevel(level);
     if (xp < need) break;
     xp -= need; level++;
   }
-  return { level, xpIntoLevel: xp, xpForNext: xpForBreederLevel(level), totalXp };
+  return { level, xpIntoLevel: xp, xpForNext: xpForBreederLevel(level), totalXp: safeTotal };
 };
 // --- マスモンの絆レベル: ブリーダーレベルより上げやすくするため、必要XPを基準値から大幅に割り引く
 // (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く。

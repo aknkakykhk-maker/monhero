@@ -37,8 +37,8 @@ check('levelInfo は need を満たせなくなるまで回す while ループ�
 const calcSrc = `
 const XP_CURVE_EXPONENT = 1.4;
 ${slice('const xpForLevel', 'const legacyLevelBefore160')}
-${slice('const BREEDER_XP_DISCOUNT', 'const levelInfo')}
-${levelInfoSrc}
+${slice('const BREEDER_XP_DISCOUNT', 'const safeBreederXp')}
+${slice('const safeBreederXp', 'const bondLevelInfo')}
 module.exports={xpForBreederLevel,levelInfo};`;
 const mod = { exports: {} };
 new Function('module', 'exports', calcSrc)(mod, mod.exports);
@@ -56,6 +56,26 @@ const t0 = Date.now();
 const big = L.levelInfo(1e13);
 check('極端に大きい経験値でも短時間で計算が終わる(無限ループしない)',
   Date.now() - t0 < 2000 && Number.isFinite(big.level) && big.level > 1000, `Lv.${big.level} / ${Date.now() - t0}ms`);
+
+// ★重要: 上限撤廃で失われた安全弁の代わり。
+// NaN・Infinityは「xp < need」がいつまでも偽になるため、守りが無いとここで固まる。
+// 以前は「200回まで」のループ上限がたまたまこれを防いでいた。
+for (const [label, value] of [['NaN', NaN], ['Infinity', Infinity], ['-Infinity', -Infinity],
+  ['文字列', 'こわれた値'], ['null', null], ['undefined', undefined], ['マイナス', -5000]]) {
+  const start = Date.now();
+  let result = null, hung = false;
+  try {
+    result = L.levelInfo(value);
+  } catch (e) {
+    result = { level: `例外: ${e.message}` };
+  }
+  hung = Date.now() - start > 1000;
+  check(`壊れた保存値(${label})でも固まらずLv.1に落ち着く`,
+    !hung && result && result.level === 1 && result.xpIntoLevel === 0,
+    hung ? '1秒以上かかった(無限ループの疑い)' : `Lv.${result && result.level} / 端数${result && result.xpIntoLevel}`);
+}
+check('正しい数値の文字列は数値として扱う(既存の保存値を壊さない)',
+  L.levelInfo('1000').level === L.levelInfo(1000).level, `文字列Lv.${L.levelInfo('1000').level} / 数値Lv.${L.levelInfo(1000).level}`);
 
 // ---- ヘルプ・更新履歴 ----
 check('ヘルプに「ブリーダーレベルに上限はない」旨がある', help.includes('ブリーダーレベルに上限はありません'));
