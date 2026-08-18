@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-16 20:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-18 22:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -302,9 +302,12 @@ const legacyLevelBefore160 = (totalXp, discount) => {
 // 0.25 → 0.15 → 0.08 と緩和してきている)
 const BREEDER_XP_DISCOUNT = 0.08;
 const xpForBreederLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * BREEDER_XP_DISCOUNT));
+// ブリーダーレベルに意図した上限は無い。以前は200回で打ち切っていたため、
+// Lv.201以降は経験値が貯まってもレベルが上がらなくなっていた
+// (xpForBreederLevelは必ず1以上を返すため、xpは有限回で必ず尽きる。無限ループの心配は無い)。
 const levelInfo = (totalXp) => {
   let level = 1, xp = totalXp;
-  for (let i = 0; i < 200; i++) {
+  while (true) {
     const need = xpForBreederLevel(level);
     if (xp < need) break;
     xp -= need; level++;
