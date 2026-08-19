@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-18 23:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-19 10:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3513,6 +3513,15 @@ const assistantBondKeyFor = (assistantId) => {
   const id = normalizeAssistantId(assistantId);
   return id === ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua')
     ? ASSISTANT_BOND_KEY : `mh_assistant_bond_${id}_v1`;
+};
+// そのブリーダーカードが助手本人のカードなら、その助手のIDを返す(違えばnull)。★重要
+// ブリーダーカードのIDと助手のIDは同じ綴り('mua'/'kiki')なので、そのまま本人へ結び付く。
+// カード名の文字列で見ると、進化で名前が変わったとき(みゅあの愛→深愛→慈愛)に外れるため、
+// 必ずIDで判定する。助手を増やしてもカードIDを合わせておけば、ここは書き換え不要
+const assistantIdOfBreederCard = (cardId) => {
+  const id = String(cardId == null ? '' : cardId);
+  const list = (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS)) ? ASSISTANTS : [];
+  return list.some(a => a && a.id === id) ? id : null;
 };
 // 呼び方の上書きも助手ごとに分ける。みゅあのぶんは今までのキーのまま
 const ASSISTANT_CALL_STYLE_KEY = 'mh_assistant_call_style';
@@ -7895,21 +7904,40 @@ function MonsterHeroGame() {
 
   // マーケットアイテムが購入済み(=解放済み)かどうか。typeによって参照する解放リストが異なる。
   // type:'item'の消耗品は何度でも買えるため、常にfalse(所持数はownedItemsで別途表示)
-  // 行動に応じて助手との仲良し度を増やす。上限に達していれば何も起きない。
+  // 指定した助手の仲良し度を、行動に応じて増やす。上限に達していれば何も起きない。
   // 続けて呼ばれても取りこぼさないよう、いまの値は ref から読む。
-  // 増えるのは「いま選んでいる助手」のぶんだけ。もう片方の助手の値には触れない
-  const addAssistantBond = useCallback((actionKey) => {
-    const id = selectedAssistantIdRef.current;
+  // 触るのは渡された助手のぶんだけで、もう片方の助手の値には一切触れない。
+  // 助手のブリーダーカードのように「いま選んでいる助手とは別の本人へ入れたい」場面から使う
+  const addAssistantBondFor = useCallback((assistantId, actionKey) => {
+    const id = normalizeAssistantId(assistantId);
     const current = normalizeAssistantBond(assistantBondsRef.current[id]);
     const before = assistantBondLevelOf(current.points);
     const result = gainAssistantBond(current, actionKey);
     if (!result.changed) return;
     assistantBondsRef.current = { ...assistantBondsRef.current, [id]: result.state };
     setAssistantBonds(prev => ({ ...prev, [id]: result.state }));
-    // Lvが上がったら、次にHOMEを開いたときに助手がそのことに触れる
-    if (assistantBondLevelOf(result.state.points) > before) setAssistantBondUp(true);
+    // Lvが上がったら、次にHOMEを開いたときに助手がそのことに触れる。
+    // ただし、いま選んでいる助手のときだけ(選んでいない助手のLvアップを本人以外に言わせない)
+    if (id === selectedAssistantIdRef.current && assistantBondLevelOf(result.state.points) > before) setAssistantBondUp(true);
     try { storeSet(assistantBondKeyFor(id), result.state, false); } catch {}
   }, []);
+  // 行動に応じて助手との仲良し度を増やす。
+  // 増えるのは「いま選んでいる助手」のぶんだけ。もう片方の助手の値には触れない
+  const addAssistantBond = useCallback((actionKey) => {
+    const id = selectedAssistantIdRef.current;
+    addAssistantBondFor(id, actionKey);
+  }, [addAssistantBondFor]);
+  // いま編成しているブリーダーカードのうち、助手本人のカード(みゅあ・きき)を探して
+  // 「そのカード本人」の仲良し度を増やす。★重要
+  // ここだけは、いま選んでいる助手ではなくカード本人へ入る。
+  // 例) 助手＝みゅあ・カード＝きき なら、増えるのは「きき」の仲良し度
+  // 両方を編成していれば、それぞれ本人へ1回ずつ入る
+  const grantEquippedAssistantCardBond = (actionKey) => {
+    getActiveTeachingCards().forEach(card => {
+      const who = assistantIdOfBreederCard(card && card.id);
+      if (who) addAssistantBondFor(who, actionKey);
+    });
+  };
   const assistantBondLevelNow = assistantBondLevelOf(assistantBond.points);
   // いま選んでいる助手そのもの。画面はこれを見て顔・名前・色を出す
   const activeAssistant = assistantById(selectedAssistantId);
@@ -9834,6 +9862,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       const totalHealBeforeCard=totalHeal;
       // 2枚目以降のカードは効果が半減する。ブリーダーカードは対象外で、枚数にも数えない。
       const isBreeder=isBreederCard(card);
+      // 助手のブリーダーカード(みゅあ・きき)を実際に切ったぶん。
+      // 手札にあるだけ・編成しているだけでは増えず、使ったここでだけ数える。
+      // 増えるのは、いま選んでいる助手ではなく「そのカード本人」の仲良し度
+      if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfBreederCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }
       const halved=!isBreeder&&penaltyCardCount>0;
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
@@ -10435,7 +10467,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       ultimateDistanceBreakPendingRef.current=null; setUltimateDistanceBreakPending(null); setUltimateDistanceBreakReveal(null);
     }
     // 1周のはじめだけ、みゅあとの仲良し度を増やす(WAVEごとには数えない)
-    if (w === 1 && !forcedEnemyKey) { addAssistantBond('battle'); addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode)); }
+    if (w === 1 && !forcedEnemyKey) {
+      addAssistantBond('battle');
+      addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode));
+      // 助手のブリーダーカードを編成して挑んだぶん。編成を保存しただけでは増えず、
+      // 実際にバトルを始めたここでだけ数える(付け外しをくり返して稼げないようにするため)。
+      // デバッグ戦は報酬も記録も残さないので、ここでも数えない
+      if (!debugBattleRef.current) grantEquippedAssistantCardBond('assistantCardEquip');
+    }
     setWave(w);
     // クイック成長で確定した最大値を明示的に引き継ぎ、次WAVE開始時も同じ値で全回復する。
     // setMax*直後の古いstateやモンスター初期値は参照しない。

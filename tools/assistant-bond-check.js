@@ -152,6 +152,40 @@ check('二重に合流しない', assistantsSrc.includes('ASSISTANT_PACKS_APPLIE
 const actions = A.ASSISTANT_BOND_ACTIONS;
 const WANTED_ACTIONS = ['login', 'battle', 'challenge', 'quick', 'ranking', 'temple', 'mission', 'gift', 'market', 'talk'];
 check('仕様どおりの行動がそろっている', WANTED_ACTIONS.every(k => actions[k]), WANTED_ACTIONS.filter(k => !actions[k]).join(', '));
+
+// --- 獲得量と1日上限が指定どおりか(1つずつ突き合わせる) ---
+// ここを表で持っておくと、あとから誰かが1行だけ書き換えたときに必ず落ちる
+const WANT_AMOUNTS = {
+  login: [10, 10], battle: [6, 30], challenge: [4, 20], quick: [2, 12], pro: [4, 20],
+  ranking: [2, 6], temple: [2, 8], mission: [4, 16], gift: [2, 8], market: [2, 6],
+  talk: [2, 10], management: [2, 8], fusion: [4, 12], breakthrough: [4, 12],
+  reincarnate: [4, 12], regenerate: [2, 6], donate: [4, 12], enhance: [2, 12],
+  dye: [2, 6], partySet: [2, 6], extreme: [6, 18], clear: [4, 16],
+  quickClear: [2, 12], proClear: [4, 16], extremeClear: [8, 24],
+  // 助手のブリーダーカード専用
+  assistantCardEquip: [4, 20], assistantCardUse: [6, 24],
+};
+const wrongAmounts = Object.entries(WANT_AMOUNTS)
+  .filter(([k, [amount, dailyMax]]) => !actions[k] || actions[k].amount !== amount || actions[k].dailyMax !== dailyMax)
+  .map(([k, [amount, dailyMax]]) => `${k}: ${actions[k] ? `${actions[k].amount}/${actions[k].dailyMax}` : 'なし'} (期待 ${amount}/${dailyMax})`);
+check('すべての行動の獲得量と1日上限が指定どおり', wrongAmounts.length === 0, wrongAmounts.join(' 、 '));
+check('表にない行動が増えていない',
+  Object.keys(actions).every(k => WANT_AMOUNTS[k]), Object.keys(actions).filter(k => !WANT_AMOUNTS[k]).join(', '));
+// 既存行動だけの理論上限(=カード分を足す前の値)。仕様の318と一致すること
+const LEGACY_KEYS = Object.keys(WANT_AMOUNTS).filter(k => !k.startsWith('assistantCard'));
+const legacySum = LEGACY_KEYS.reduce((a, k) => a + actions[k].dailyMax, 0);
+check('既存行動だけの1日理論上限は318', legacySum === 318, `${legacySum}`);
+check('カード分を足した理論上限が全体の上限と一致する(手入力していない)',
+  A.ASSISTANT_BOND_DAILY_MAX === legacySum + actions.assistantCardEquip.dailyMax + actions.assistantCardUse.dailyMax,
+  `${A.ASSISTANT_BOND_DAILY_MAX} / 318+20+24=${legacySum + 44}`);
+// Lvアップに必要な累積量は変えていない(増やしたのは1回の獲得量だけ)。
+// 獲得量をいじるときにここまで一緒に動かすと、既存プレイヤーのLvが勝手に変わってしまう
+const WANT_NEEDS = [0, 60, 180, 400, 800, 1250, 1750, 2300, 2900, 3550,
+  4250, 5000, 5800, 6650, 7550, 8500, 9500, 10550, 11650, 12800];
+check('Lvアップに必要な累積仲良し度は変えていない',
+  A.ASSISTANT_BOND_LEVELS.length === WANT_NEEDS.length
+    && WANT_NEEDS.every((n, i) => A.ASSISTANT_BOND_LEVELS[i].need === n),
+  A.ASSISTANT_BOND_LEVELS.map(s => s.need).join('/'));
 check('行動ごとに1日の上限がある', Object.values(actions).every(a => a.amount > 0 && a.dailyMax >= a.amount));
 check('1日の合計にも上限がある', Number.isFinite(A.ASSISTANT_BOND_DAILY_MAX) && A.ASSISTANT_BOND_DAILY_MAX > 0, `${A.ASSISTANT_BOND_DAILY_MAX}`);
 // 全体の頭打ちは、行動ごとの上限をすべて合わせた理論上の最大値と一致させている
@@ -361,11 +395,18 @@ check('呼び方の保存キーも助手ごとに分ける',
 check('仲良し度は助手ごとに持つ',
   has('const [assistantBonds, setAssistantBonds] = useState({});')
     && has('const assistantBond = normalizeAssistantBond(assistantBonds[selectedAssistantId]);'));
-// ★増えるのは選んでいる助手のぶんだけ。ここが崩れると両方が同時に上がってしまう
-check('増えるのは選んでいる助手のぶんだけ',
+// ★通常の加算で増えるのは選んでいる助手のぶんだけ。ここが崩れると両方が同時に上がってしまう
+check('通常の加算で増えるのは選んでいる助手のぶんだけ',
   has('const id = selectedAssistantIdRef.current;')
+    && has('addAssistantBondFor(id, actionKey);')
     && has('setAssistantBonds(prev => ({ ...prev, [id]: result.state }));')
     && has('try { storeSet(assistantBondKeyFor(id), result.state, false); } catch {}'));
+check('指定した助手へ加算できる共通処理がある(既存処理はこれを使い回す)',
+  has('const addAssistantBondFor = useCallback((assistantId, actionKey) => {')
+    && has('const id = normalizeAssistantId(assistantId);'));
+// 選んでいない助手のLvが上がっても「Lvが上がった」とは言わせない(本人以外が言ってしまうため)
+check('Lvアップの通知は、いま選んでいる助手のときだけ出す',
+  has("if (id === selectedAssistantIdRef.current && assistantBondLevelOf(result.state.points) > before) setAssistantBondUp(true);"));
 check('助手を切り替えても、もう片方の仲良し度に触れない',
   has('const chooseAssistant = useCallback((id) => {')
     && !/chooseAssistant[\s\S]{0,400}setAssistantBonds\(\{\}\)/.test(source));
@@ -379,6 +420,207 @@ check('プロフィールで両方の助手のLvとタイトルを確認でき�
     && has('assistantBondStageByLevel(lv,who.id)'));
 check('アップデート通知も、いま選んでいる助手が出す',
   has("const last=page===pages.length-1;const who=activeAssistant;return("));
+
+
+// ==========================================================================
+// 助手のブリーダーカード(みゅあ・きき)で仲良し度が増える。★重要
+// ここだけは「いま選んでいる助手」ではなく「そのカード本人」へ入る。
+// 混ざると、みゅあを選んだままききカードを使って、みゅあの仲良し度が上がってしまう
+// ==========================================================================
+
+// --- カードIDから本人を引く処理を、本体から取り出して実際に動かす ---
+const cardCtx = {};
+vm.createContext(cardCtx);
+vm.runInContext([
+  `const ASSISTANTS = ${JSON.stringify(A.ASSISTANTS.map(a => ({ id: a.id, name: a.name })))};`,
+  grab(source, 'const assistantIdOfBreederCard = (cardId) => {', '// 呼び方の上書きも助手ごとに分ける'),
+  'globalThis.__c = { assistantIdOfBreederCard };',
+].join('\n'), cardCtx);
+const C = cardCtx.__c;
+
+check('みゅあカード(id:mua)はみゅあ本人へ結び付く', C.assistantIdOfBreederCard('mua') === 'mua', String(C.assistantIdOfBreederCard('mua')));
+check('ききカード(id:kiki)はきき本人へ結び付く', C.assistantIdOfBreederCard('kiki') === 'kiki', String(C.assistantIdOfBreederCard('kiki')));
+check('助手以外のブリーダーカードは結び付かない',
+  ['oryo', 'dra', 'atsu', 'cadmium', 'meloso', 'mocchi'].every(id => C.assistantIdOfBreederCard(id) === null));
+check('壊れた値でも落ちずにnullを返す',
+  [null, undefined, '', 0, {}, []].every(v => C.assistantIdOfBreederCard(v) === null));
+// カード名は進化で変わる(みゅあの愛→深愛→慈愛)。名前で判定していたら、ここで外れる
+check('カード名ではなくIDで判定している(進化で名前が変わっても外れない)',
+  !/assistantIdOfBreederCard[\s\S]{0,300}(baseName|BREEDER_EVO_NAMES|みゅあの愛)/.test(source)
+    && has('const assistantIdOfBreederCard = (cardId) => {'));
+
+// --- 誰の仲良し度に入るか。両助手ぶんの保存を並べて実際に加算してみる ---
+// 本体と同じ「助手ごとに別の入れ物へ持つ」形を作り、addAssistantBondFor と同じ手順で動かす
+const bondsOf = () => ({ mua: G.ASSISTANT_BOND_EMPTY, kiki: G.ASSISTANT_BOND_EMPTY });
+const addFor = (bonds, assistantId, actionKey, now = day1) => {
+  const r = G.gainAssistantBond(bonds[assistantId], actionKey, now);
+  return { ...bonds, [assistantId]: r.state };
+};
+const pointsOf = (bonds, id) => G.normalizeAssistantBond(bonds[id]).points;
+
+check('ききカードを使うと、ききだけが増える(みゅあは0のまま)', (() => {
+  const after = addFor(bondsOf(), 'kiki', 'assistantCardUse');
+  return pointsOf(after, 'kiki') === actions.assistantCardUse.amount && pointsOf(after, 'mua') === 0;
+})());
+check('みゅあカードを使うと、みゅあだけが増える(ききは0のまま)', (() => {
+  const after = addFor(bondsOf(), 'mua', 'assistantCardUse');
+  return pointsOf(after, 'mua') === actions.assistantCardUse.amount && pointsOf(after, 'kiki') === 0;
+})());
+check('両方のカードを編成していれば、それぞれ本人へ1回ずつ入る', (() => {
+  let b = bondsOf();
+  b = addFor(b, 'mua', 'assistantCardEquip');
+  b = addFor(b, 'kiki', 'assistantCardEquip');
+  const want = actions.assistantCardEquip.amount;
+  return pointsOf(b, 'mua') === want && pointsOf(b, 'kiki') === want;
+})());
+check('カード分を足しても、両助手の保存データは混ざらない', (() => {
+  let b = bondsOf();
+  // みゅあを選んで通常行動 → みゅあだけ増える
+  b = addFor(b, 'mua', 'battle');
+  // ききカードを使用 → ききだけ増える
+  b = addFor(b, 'kiki', 'assistantCardUse');
+  return pointsOf(b, 'mua') === actions.battle.amount && pointsOf(b, 'kiki') === actions.assistantCardUse.amount;
+})());
+// 指示の例そのまま: ききを選択中＋ききカード編成＋チャレンジクリア＋カード使用
+check('仕様の例どおりに積み上がる(きき選択＋ききカード＋チャレンジクリア＋カード使用)', (() => {
+  let b = bondsOf();
+  for (const k of ['battle', 'challenge', 'clear']) b = addFor(b, 'kiki', k);      // 通常分は選択中の助手へ
+  for (const k of ['assistantCardEquip', 'assistantCardUse']) b = addFor(b, 'kiki', k); // カード分も本人へ
+  const want = actions.battle.amount + actions.challenge.amount + actions.clear.amount
+    + actions.assistantCardEquip.amount + actions.assistantCardUse.amount;
+  return pointsOf(b, 'kiki') === want && pointsOf(b, 'mua') === 0;
+})(), `期待 ${actions.battle.amount}+${actions.challenge.amount}+${actions.clear.amount}+${actions.assistantCardEquip.amount}+${actions.assistantCardUse.amount}`);
+// 行動ごとの1日上限
+check('カード編成は1日20で止まる', (() => {
+  let b = bondsOf();
+  for (let i = 0; i < 50; i++) b = addFor(b, 'kiki', 'assistantCardEquip');
+  return pointsOf(b, 'kiki') === actions.assistantCardEquip.dailyMax;
+})());
+check('カード使用は1日24で止まる', (() => {
+  let b = bondsOf();
+  for (let i = 0; i < 50; i++) b = addFor(b, 'kiki', 'assistantCardUse');
+  return pointsOf(b, 'kiki') === actions.assistantCardUse.dailyMax;
+})());
+check('上限はみゅあ・ききで別々に数える(片方が上限でももう片方は増える)', (() => {
+  let b = bondsOf();
+  for (let i = 0; i < 50; i++) b = addFor(b, 'kiki', 'assistantCardUse');
+  b = addFor(b, 'mua', 'assistantCardUse');
+  return pointsOf(b, 'kiki') === actions.assistantCardUse.dailyMax && pointsOf(b, 'mua') === actions.assistantCardUse.amount;
+})());
+
+// --- 編成→加算の経路そのものを動かす ---
+// 本体の grantEquippedAssistantCardBond / addAssistantBondFor を取り出し、
+// 「いま選んでいる助手」と「編成しているカード」を差し替えて実際に走らせる。
+// 文字列の一致だけでは「本人へ入っているか」までは分からないため、ここで通しで確かめる
+const runEquip = ({ selected, equippedCardIds, actionKey = 'assistantCardEquip' }) => {
+  const bonds = bondsOf();
+  const wireCtx = {};
+  vm.createContext(wireCtx);
+  wireCtx.__bonds = bonds;
+  wireCtx.__selected = selected;
+  vm.runInContext([
+    `const ASSISTANTS = ${JSON.stringify(A.ASSISTANTS.map(a => ({ id: a.id })))};`,
+    `const ASSISTANT_BOND_ACTIONS = ${JSON.stringify(actions)};`,
+    `const ASSISTANT_BOND_DAILY_MAX = ${A.ASSISTANT_BOND_DAILY_MAX};`,
+    `const DEFAULT_ASSISTANT_ID = 'mua';`,
+    // normalizeAssistantId は本体側(下のslice)の実装をそのまま使う。ここでは土台だけ用意する
+    `const assistantIdOrDefault = (id) => ASSISTANTS.some(a => a.id === id) ? id : DEFAULT_ASSISTANT_ID;`,
+    // このsliceの中に normalizeAssistantId・assistantIdOfBreederCard・仲良し度の計算がまとめて入っている
+    grab(source, 'const loginBonusPeriodKey =', 'const assistantBondLevelOf'),
+    // 本体の中身をそのまま持ってくる(refやsetStateの部分だけ、この場の入れ物へ差し替える)
+    `const selectedAssistantIdRef = { current: __selected };`,
+    `let bondUp = false;`,
+    `const addAssistantBondFor = (assistantId, actionKey) => {
+       const id = normalizeAssistantId(assistantId);
+       const current = normalizeAssistantBond(__bonds[id]);
+       const before = ((p) => p >= 60 ? 2 : 1)(current.points);
+       const result = gainAssistantBond(current, actionKey);
+       if (!result.changed) return;
+       __bonds[id] = result.state;
+       if (id === selectedAssistantIdRef.current && ((p) => p >= 60 ? 2 : 1)(result.state.points) > before) bondUp = true;
+     };`,
+    `const getActiveTeachingCards = () => ${JSON.stringify(equippedCardIds.map(id => ({ id })))};`,
+    grab(source, 'const grantEquippedAssistantCardBond = (actionKey) => {', '  const assistantBondLevelNow ='),
+    `grantEquippedAssistantCardBond(${JSON.stringify(actionKey)});`,
+    `globalThis.__out = { mua: __bonds.mua.points, kiki: __bonds.kiki.points, bondUp };`,
+  ].join('\n'), wireCtx);
+  return wireCtx.__out;
+};
+
+const EQUIP = actions.assistantCardEquip.amount;
+check('【通し】みゅあカードを編成して開始 → みゅあ本人へ入る', (() => {
+  const r = runEquip({ selected: 'mua', equippedCardIds: ['oryo', 'mua', 'dra'] });
+  return r.mua === EQUIP && r.kiki === 0;
+})(), JSON.stringify(runEquip({ selected: 'mua', equippedCardIds: ['oryo', 'mua', 'dra'] })));
+check('【通し】ききカードを編成して開始 → きき本人へ入る', (() => {
+  const r = runEquip({ selected: 'kiki', equippedCardIds: ['kiki', 'atsu'] });
+  return r.kiki === EQUIP && r.mua === 0;
+})(), JSON.stringify(runEquip({ selected: 'kiki', equippedCardIds: ['kiki', 'atsu'] })));
+// ★指示の中心。助手＝みゅあ／カード＝きき なら、増えるのは「きき」でなければならない
+check('【通し】選択中がみゅあでも、ききカードならききへ入る(みゅあは0のまま)', (() => {
+  const r = runEquip({ selected: 'mua', equippedCardIds: ['kiki'] });
+  return r.kiki === EQUIP && r.mua === 0;
+})(), JSON.stringify(runEquip({ selected: 'mua', equippedCardIds: ['kiki'] })));
+check('【通し】選択中がききでも、みゅあカードならみゅあへ入る(ききは0のまま)', (() => {
+  const r = runEquip({ selected: 'kiki', equippedCardIds: ['mua'] });
+  return r.mua === EQUIP && r.kiki === 0;
+})(), JSON.stringify(runEquip({ selected: 'kiki', equippedCardIds: ['mua'] })));
+check('【通し】両方編成していれば、それぞれ本人へ1回ずつ入る', (() => {
+  const r = runEquip({ selected: 'mua', equippedCardIds: ['mua', 'kiki', 'oryo'] });
+  return r.mua === EQUIP && r.kiki === EQUIP;
+})(), JSON.stringify(runEquip({ selected: 'mua', equippedCardIds: ['mua', 'kiki', 'oryo'] })));
+check('【通し】助手カードを編成していなければ、どちらも増えない', (() => {
+  const r = runEquip({ selected: 'mua', equippedCardIds: ['oryo', 'dra', 'atsu', 'cadmium'] });
+  return r.mua === 0 && r.kiki === 0;
+})(), JSON.stringify(runEquip({ selected: 'mua', equippedCardIds: ['oryo', 'dra', 'atsu', 'cadmium'] })));
+check('【通し】選んでいない助手が上がっても、Lvアップ通知は出さない', (() => {
+  // ききだけが上がる状況で、選択中はみゅあ。bondUp が立つと、みゅあが他人のLvアップを話してしまう
+  const r = runEquip({ selected: 'mua', equippedCardIds: ['kiki'] });
+  return r.bondUp === false;
+})());
+
+// --- 画面側の結線。いつ数えるかがここでずれると、付け外しで稼げてしまう ---
+check('編成を保存しただけではカード分が増えない', (() => {
+  // 編成保存(confirmRoster付近)には partySet しか結線しない
+  const at = source.indexOf("addAssistantBond('partySet')");
+  if (at < 0) return false;
+  const around = source.slice(Math.max(0, at - 1500), at + 1500);
+  return !around.includes('assistantCardEquip');
+})());
+check('カード編成分は、実際にバトルを始めた時だけ数える',
+  has("if (!debugBattleRef.current) grantEquippedAssistantCardBond('assistantCardEquip');")
+    && /if \(w === 1 && !forcedEnemyKey\) \{[\s\S]{0,600}grantEquippedAssistantCardBond\('assistantCardEquip'\);/.test(source));
+check('編成中のカードから本人を引いて加算する',
+  has('const grantEquippedAssistantCardBond = (actionKey) => {')
+    && has('getActiveTeachingCards().forEach(card => {')
+    && has('const who = assistantIdOfBreederCard(card && card.id);')
+    && has('if (who) addAssistantBondFor(who, actionKey);'));
+check('カード使用分は、実際にカードを使った時だけ数える',
+  has("if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfBreederCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }"));
+check('カード使用の加算は、実際に使ったカードを回すループの中にある', (() => {
+  const at = source.indexOf('for (const entry of usedCardEntries) {');
+  if (at < 0) return false;
+  const use = source.indexOf("addAssistantBondFor(cardAssistant,'assistantCardUse')");
+  return use > at && use - at < 1200;
+})());
+check('デバッグ戦では、カード分を数えない',
+  /if\(isBreeder&&!debugBattleRef\.current\)/.test(source)
+    && /if \(!debugBattleRef\.current\) grantEquippedAssistantCardBond/.test(source));
+// 通常の加算はこれまでどおり選択中の助手へ入る(カード分を足したせいで壊れていないこと)
+check('通常のバトル・モード・クリア分は、これまでどおり選択中の助手へ入る',
+  has("addAssistantBond('battle');")
+    && has("addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode));")
+    && has("addAssistantBond('clear');"));
+
+// --- ヘルプ・更新履歴 ---
+const helpSrc = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');
+const changelogSrc = fs.readFileSync(path.join(root, 'monster-hero/data/changelog.js'), 'utf8');
+check('ヘルプは獲得量を実データから表にしている(手で書き写していない)',
+  /\{ t:'data', id:'assistantBondActions' \}/.test(helpSrc));
+check('ヘルプに助手カードで仲良し度が増えることが書いてある',
+  helpSrc.includes('助手のブリーダーカード'));
+check('更新履歴に書いてある',
+  changelogSrc.includes('仲良し度') && changelogSrc.includes('助手のブリーダーカード'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);
