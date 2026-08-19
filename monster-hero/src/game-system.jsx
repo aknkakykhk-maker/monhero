@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-19 13:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 07:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9699,7 +9699,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return true;
   };
 
-  const handleEnemyTurn = async (lastActionType, immediateEffects={}, overrideIntent=null, hpAtAttackStart=hp) => {
+  // enemyHpAtAttackStart: 敵が動き出す時点の、敵の本当のライフ。★重要
+  // このクロージャが持つ enemy は「ターンが始まった時点」の値で固定されており、
+  // 同じターンにこちらが与えたダメージ(setEnemyの関数型更新)は反映されていない。
+  // 反射はライフを絶対値で書き戻すため、ここで古い値を使うと
+  // そのターンに削ったぶんがまるごと元に戻り、敵が回復したように見えてしまう。
+  // 味方のライフ(hpAtAttackStart)と同じく、呼び出し側から最新の値をもらう。
+  const handleEnemyTurn = async (lastActionType, immediateEffects={}, overrideIntent=null, hpAtAttackStart=hp, enemyHpAtAttackStart=enemy?.hp??0) => {
     if (!enemy) return;
     const intent = overrideIntent||enemyIntent;
     setEnemySkillName({label:intent.label, icon:intent.icon});
@@ -9786,7 +9792,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         if (isReflect) {
           addPopup("反射！",'hero','text-purple-400 font-black text-2xl drop-shadow-lg'); await battleWait(600);
           addPopup(`反射 ${incomingDmg}!!`,'enemy','text-purple-400 font-black text-4xl drop-shadow-lg');
-          const reflectedHp=Math.max(0,enemy.hp-incomingDmg);
+          const reflectedHp=Math.max(0,enemyHpAtAttackStart-incomingDmg);
           setCurrentWaveDamage(p=>p+incomingDmg);
           setEnemy(prev=>({...prev,hp:reflectedHp})); await battleWait(1000);
           // 反射演出が終わってから撃破を確定し、回復・次ターン処理へは進ませない。
@@ -10174,12 +10180,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
     const attackDistDamage=[0,0,0,0];
     { const fbSlot = lastActionSlot!==null?lastActionSlot:slots.findIndex(s=>s!==null); for(const h of attackHits){ const si=(h.slotIdx!=null)?h.slotIdx:fbSlot; if(si>=0&&si<4) attackDistDamage[si]+=h.dmg; } }
-    if (enemy && await resolveEnemyDefeat({remainingHp:Math.max(0,enemy.hp-totalDmg),damage:totalDmg,distDamage:attackDistDamage})) return;
+    // このターンに削ったぶんを引いた、敵の本当のライフ。撃破判定と敵の行動へ同じ値を渡す。
+    // (enemy はターン開始時の値で止まっているので、必ずここを通してから使う)
+    const enemyHpAfterOurAttacks=Math.max(0,(enemy?.hp??0)-totalDmg);
+    if (enemy && await resolveEnemyDefeat({remainingHp:enemyHpAfterOurAttacks,damage:totalDmg,distDamage:attackDistDamage})) return;
     // 予測表示している enemyIntent をそのまま実行する（再抽選しない）
     const finalActionType=guardTypeInTurn!=='none'?guardTypeInTurn:lastType;
     const executedIntent=enemyIntent;
     // distLocked: このターン距離撃を撃ったか。敵の移動は距離撃で上書きされるため、行動しなかった扱いにする
-    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,distLocked:forcedMoveTarget!=null,iceLockRefreshed:activatedIceLockThisTurn},executedIntent,hpBeforeEnemyAttack);
+    await handleEnemyTurn(finalActionType,{invincible:immediateInvincible,stun:immediateStun,guardFlat:currentTurnGuardFlat,guardMult:currentTurnGuardMult,distLocked:forcedMoveTarget!=null,iceLockRefreshed:activatedIceLockThisTurn},executedIntent,hpBeforeEnemyAttack,enemyHpAfterOurAttacks);
     // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
     if (forcedMoveTarget!=null) {
       setEnemyDist(forcedMoveTarget);

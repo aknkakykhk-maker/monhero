@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c997f7d2a0e01443
+// source-sha256: 492786ef48fc6e23
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-19 13:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 07:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -17096,7 +17096,14 @@ function MonsterHeroGame() {
     setTimeout(() => setGameState('WAVE_RESULT'), battleMs(500));
     return true;
   };
-  const handleEnemyTurn = async (lastActionType, immediateEffects = {}, overrideIntent = null, hpAtAttackStart = hp) => {
+
+  // enemyHpAtAttackStart: 敵が動き出す時点の、敵の本当のライフ。★重要
+  // このクロージャが持つ enemy は「ターンが始まった時点」の値で固定されており、
+  // 同じターンにこちらが与えたダメージ(setEnemyの関数型更新)は反映されていない。
+  // 反射はライフを絶対値で書き戻すため、ここで古い値を使うと
+  // そのターンに削ったぶんがまるごと元に戻り、敵が回復したように見えてしまう。
+  // 味方のライフ(hpAtAttackStart)と同じく、呼び出し側から最新の値をもらう。
+  const handleEnemyTurn = async (lastActionType, immediateEffects = {}, overrideIntent = null, hpAtAttackStart = hp, enemyHpAtAttackStart = enemy?.hp ?? 0) => {
     if (!enemy) return;
     const intent = overrideIntent || enemyIntent;
     setEnemySkillName({
@@ -17196,7 +17203,7 @@ function MonsterHeroGame() {
           addPopup("反射！", 'hero', 'text-purple-400 font-black text-2xl drop-shadow-lg');
           await battleWait(600);
           addPopup(`反射 ${incomingDmg}!!`, 'enemy', 'text-purple-400 font-black text-4xl drop-shadow-lg');
-          const reflectedHp = Math.max(0, enemy.hp - incomingDmg);
+          const reflectedHp = Math.max(0, enemyHpAtAttackStart - incomingDmg);
           setCurrentWaveDamage(p => p + incomingDmg);
           setEnemy(prev => ({
             ...prev,
@@ -17924,8 +17931,11 @@ function MonsterHeroGame() {
         if (si >= 0 && si < 4) attackDistDamage[si] += h.dmg;
       }
     }
+    // このターンに削ったぶんを引いた、敵の本当のライフ。撃破判定と敵の行動へ同じ値を渡す。
+    // (enemy はターン開始時の値で止まっているので、必ずここを通してから使う)
+    const enemyHpAfterOurAttacks = Math.max(0, (enemy?.hp ?? 0) - totalDmg);
     if (enemy && (await resolveEnemyDefeat({
-      remainingHp: Math.max(0, enemy.hp - totalDmg),
+      remainingHp: enemyHpAfterOurAttacks,
       damage: totalDmg,
       distDamage: attackDistDamage
     }))) return;
@@ -17940,7 +17950,7 @@ function MonsterHeroGame() {
       guardMult: currentTurnGuardMult,
       distLocked: forcedMoveTarget != null,
       iceLockRefreshed: activatedIceLockThisTurn
-    }, executedIntent, hpBeforeEnemyAttack);
+    }, executedIntent, hpBeforeEnemyAttack, enemyHpAfterOurAttacks);
     // 通常の距離変更を先に処理した後、最後の距離撃の指定距離を再適用して最終距離を確定する。
     if (forcedMoveTarget != null) {
       setEnemyDist(forcedMoveTarget);
