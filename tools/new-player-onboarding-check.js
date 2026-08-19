@@ -88,8 +88,11 @@ check('見るだけでは名前もアイコンも保存しない',
     && has("if(!onboardingPreview) storeSet('mh_breeder_icon', m.id, false);"));
 
 // --- 決定したあと ---
+// 既読(TUTORIAL_SEEN_KEY)を見て、まだなら村の案内へ続ける。
+// デバッグの初回プレイ再生中だけは本物の既読を見ない(見ると、案内済みの人が再生したときに
+// 村の案内だけ飛ばされてしまうため)。通常プレイの経路はこれまでどおり
 check('決定するとそのまま村の案内へ続く',
-  has('const seenTutorial = await storeGet(TUTORIAL_SEEN_KEY, false, false);')
+  has('const seenTutorial = onboardingPreview ? false : await storeGet(TUTORIAL_SEEN_KEY, false, false);')
     && has("if (seenTutorial !== true) { tutorialShownRef.current = true; setTutorialKind('tour'); setTutorialStep(0); }"));
 
 // --- 案内は「選んだ助手」が担当する ---

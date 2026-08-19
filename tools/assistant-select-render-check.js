@@ -47,7 +47,7 @@ const AssistantFace = ({ who, size }) => React.createElement('img', {
 });
 
 const transformed = babel.transformSync(
-  'const Screen = ({ gameState, ASSISTANT_LIST, selectedAssistantId, chooseAssistant, setGameState, setTutorialKind, setTutorialStep, AssistantFace }) => (<>\n'
+  'const Screen = ({ gameState, ASSISTANT_LIST, selectedAssistantId, chooseAssistant, markKikiIntroSeen, setGameState, setTutorialKind, setTutorialStep, AssistantFace, onboardingPreview }) => (<>\n'
   + jsx + '\n</>);\nmodule.exports = { Screen };',
   { presets: [[PRESET_REACT, { runtime: 'classic' }]], filename: 'assistant-select-render-check.jsx' },
 );
@@ -62,8 +62,11 @@ const html = ReactDOMServer.renderToStaticMarkup(React.createElement(Screen, {
   ASSISTANT_LIST: ASSISTANTS,
   selectedAssistantId: 'mua',
   chooseAssistant: (id) => picked.push(id),
+  markKikiIntroSeen: noop,
   setGameState: noop, setTutorialKind: noop, setTutorialStep: noop,
   AssistantFace,
+  // 通常のプレイと同じ状態で描く(デバッグの初回プレイ再生中だけ上に帯が出て、見出しが下がる)
+  onboardingPreview: false,
 }));
 const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 

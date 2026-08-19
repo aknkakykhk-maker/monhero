@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-19 10:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-19 13:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4661,7 +4661,17 @@ const storeGet = async (key, def, shared=false) => {
   } catch { /* fall through to memory */ }
   return key in _memStore ? _memStore[key] : def;
 };
+// 初回プレイのプレビュー中だけ、保存を丸ごと止めるための鍵。★重要
+// 画面ごとに「プレビューなら保存しない」を書き分ける方式だと、必ず書き忘れが出る
+// (助手の選択・きき加入フラグ・村案内の既読・名前・アイコンは、それぞれ別の場所で保存している)。
+// 保存の入口は storeSet ひとつなので、ここで止めれば経路を問わず取りこぼしがない。
+// 読み込み(storeGet)は止めない。プレビュー中も本物のデータを見て画面を組み立てる。
+let _storageWriteBlocked = false;
+const setStorageWriteBlocked = (blocked) => { _storageWriteBlocked = !!blocked; };
+const isStorageWriteBlocked = () => _storageWriteBlocked;
 const storeSet = async (key, val, shared=false) => {
+  // メモリの控えにも書かない。ここへ残すと、プレビューを終えたあとも古い値が読めてしまう
+  if (_storageWriteBlocked) return;
   _memStore[key] = val;
   try {
     if (hasWinStorage()) { await window.storage.set(key, JSON.stringify(val), shared); return; }
@@ -7632,17 +7642,8 @@ function MonsterHeroGame() {
   const finishOnboarding = async () => {
     const name=(onboardingName||'').trim().slice(0,10);
     if(!name||!onboardingIcon)return;
-    // デバッグの「見るだけ」表示。何も保存せず、元の名前とアイコンへ戻してから案内だけ出す
-    if (onboardingPreview) {
-      const backup = onboardingPreviewBackupRef.current;
-      if (backup) { setBreederName(backup.name); setBreederIcon(backup.icon); }
-      setOnboardingPreview(false);
-      onboardingPreviewBackupRef.current = null;
-      setGameState('HOME');
-      setTutorialKind('tour');
-      setTutorialStep(0);
-      return;
-    }
+    // デバッグのプレビュー中も、本番とまったく同じこの経路を通す(専用の分岐で作り直さない)。
+    // storeSet は鍵で止めてあるので、下の保存はすべて素通りする
     // プロフィールの両方を保存し終えた後でのみ完了フラグを立てる。
     await storeSet('mh_breeder_name',name,false);
     await storeSet('mh_breeder_icon',onboardingIcon,false);
@@ -7653,8 +7654,10 @@ function MonsterHeroGame() {
     await storeSet('mh_onboarding_step',null,false);
     setOnboarded(true);setGameState('HOME');
     // 名前とアイコンが決まったら、そのままみゅあの村案内へ続ける。
-    // HOMEを開いたときの自動起動と重ならないよう、ここで見たことにしてから開く
-    const seenTutorial = await storeGet(TUTORIAL_SEEN_KEY, false, false);
+    // HOMEを開いたときの自動起動と重ならないよう、ここで見たことにしてから開く。
+    // プレビューでは本物の既読(TUTORIAL_SEEN_KEY)を見ない。見てしまうと、
+    // すでに案内を終えている人が再生したときに村の案内だけ飛ばされてしまう
+    const seenTutorial = onboardingPreview ? false : await storeGet(TUTORIAL_SEEN_KEY, false, false);
     if (seenTutorial !== true) { tutorialShownRef.current = true; setTutorialKind('tour'); setTutorialStep(0); }
   };
 
@@ -8974,18 +8977,58 @@ function MonsterHeroGame() {
 
   // 初回チュートリアル。HOMEを最初に開いたときだけ自動で始める。
   // デバッグから何度でも呼べるよう、開始と終了を関数に分けている
-  // デバッグ: 名前入力のところから、はじめての案内を通しで見る(保存はしない)
+  // デバッグ: 初回プレイを最初から通しで再生する(保存は一切しない)。★重要
+  //   助手選択 → 選んだ助手のあいさつ → プロフィール設定 → 村の案内 → HOME
+  // 画面も台本も本番と同じものをそのまま使い、デバッグ専用の作り直しはしない。
+  // 「保存しない」は storeSet 側の鍵(setStorageWriteBlocked)で丸ごと止めるので、
+  // ここでは本物のセーブから読んだ値を控えて、終了時に画面上の状態を戻すだけでよい。
   const startOnboardingPreview = () => {
-    onboardingPreviewBackupRef.current = { name: breederName, icon: breederIcon };
+    onboardingPreviewBackupRef.current = {
+      name: breederName, icon: breederIcon,
+      assistantId: selectedAssistantIdRef.current,
+      assistantChosen, onboarded,
+      kikiIntroSeen: kikiIntroSeenFlag,
+      tutorialShown: tutorialShownRef.current,
+    };
+    setStorageWriteBlocked(true); // ここから先、どの経路からの保存も通らない
     setOnboardingPreview(true);
-    // 名前もアイコンもまだ決まっていない状態から見られるようにする
+    // まだ何も決めていない、新規プレイヤーとまったく同じ状態から始める
     setOnboardingName('');
     setOnboardingIcon(null);
+    setAssistantChosen(false);
+    setOnboarded(false);
+    setKikiIntroSeenFlag(false);
     setAssistantDebug(null);
     setShowHelp(false);
-    setGameState('PROFILE');
+    setTutorialStep(null);
     setTutorialKind('intro');
-    setTutorialStep(0);
+    // HOMEの自動チュートリアルが割り込まないようにしておく(村の案内は流れの中で自分で出す)
+    tutorialShownRef.current = true;
+    setGameState('ASSISTANT_SELECT');
+  };
+  // プレビューを終える。途中でも最後まで見たあとでも、ここを通れば必ず元へ戻る
+  const endOnboardingPreview = () => {
+    const backup = onboardingPreviewBackupRef.current;
+    if (backup) {
+      setBreederName(backup.name);
+      setBreederIcon(backup.icon);
+      selectedAssistantIdRef.current = backup.assistantId;
+      setSelectedAssistantId(backup.assistantId);
+      setAssistantChosen(backup.assistantChosen);
+      setOnboarded(backup.onboarded);
+      setKikiIntroSeenFlag(backup.kikiIntroSeen);
+      tutorialShownRef.current = backup.tutorialShown;
+    }
+    onboardingPreviewBackupRef.current = null;
+    setOnboardingPreview(false);
+    setOnboardingName('');
+    setOnboardingIcon(null);
+    setTutorialStep(null);
+    setTutorialKind('tour');
+    setKikiIntroStep(null);
+    setAssistantBondUp(false);
+    setStorageWriteBlocked(false); // 保存を元どおり通す
+    setGameState('DEBUG_SETTINGS');
   };
   // いま案内しているページが指している施設。HOMEでその建物だけを明るく強調する
   const tutorialSpot = (() => {
@@ -12019,7 +12062,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
                 <div className="text-[10px] text-pink-300 font-black mb-2">💖 みゅあデバッグ</div>
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={startOnboardingPreview} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">名前入力から通しで見る（保存されません）</button>
+                  {/* 初回導線の通し確認。助手選択から村の案内まで、本番と同じ画面・同じ台本を順に出す。
+                      再生中は保存を丸ごと止めるので、何度くり返しても本物のセーブは変わらない */}
+                  <button data-debug-onboarding-preview onClick={startOnboardingPreview} className="col-span-2 min-h-[46px] rounded-xl bg-pink-700/70 border border-pink-300/60 text-white text-[10px] font-black active:scale-95">初回プレイを最初から再生<small className="block text-[8px] font-bold opacity-80">助手選択→あいさつ→プロフィール→村の案内→HOME・保存されません</small></button>
                   <button onClick={()=>{returnToHome();startTutorial('intro');}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">みゅあのあいさつだけ再生</button>
                   <button onClick={()=>{returnToHome();startTutorial('tour');}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">村の案内だけ再生</button>
                   <button onClick={()=>{returnToHome();setKikiIntroStep(0);}} className="min-h-[46px] rounded-xl bg-pink-900/60 border border-pink-400/50 text-pink-100 text-[10px] font-black active:scale-95">きき加入の会話を再生</button>
@@ -12096,7 +12141,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             スマホの縦画面で2枚が並んで収まるよう、カードは横並びの高さ控えめにしている */}
         {gameState==='ASSISTANT_SELECT'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
-            <div className="shrink-0 text-center mb-3" style={{paddingTop:'env(safe-area-inset-top)'}}>
+            {/* プレビュー中は上に帯が出るので、見出しが隠れないぶんだけ下げる */}
+            <div className="shrink-0 text-center mb-3" style={{paddingTop:onboardingPreview?'calc(2.75rem + env(safe-area-inset-top))':'env(safe-area-inset-top)'}}>
               <h2 className="text-lg font-black italic text-indigo-300 uppercase tracking-widest">助手をえらぶ</h2>
               <p className="text-[10px] text-slate-400 mt-1 leading-tight">冒険に付き添ってくれる助手を選んでください。<br/>あとからプロフィールでいつでも変えられます。</p>
             </div>
@@ -12125,7 +12171,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {/* PROFILE */}
         {gameState==='PROFILE'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
-            <div className="flex items-center gap-2 mb-4 shrink-0">
+            {/* プレビュー中は上に帯が出るので、見出しが隠れないぶんだけ下げる */}
+            <div className="flex items-center gap-2 mb-4 shrink-0" style={onboardingPreview?{paddingTop:'calc(2.25rem + env(safe-area-inset-top))'}:undefined}>
               {/* はじめての設定が終わるまでは、まだ帰る場所(HOME)が無いので戻るボタンを出さない */}
               {(onboarded&&!onboardingPreview)
                 ? <button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
@@ -15730,6 +15777,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           onClick={e=>e.preventDefault()}
         >
           <div className="rounded-2xl border border-white/20 bg-slate-950/90 px-6 py-4 text-sm font-black text-white shadow-2xl">処理中…</div>
+        </div>
+      )}
+
+      {/* 初回プレイのプレビュー中は、どの画面にいても分かるように帯を出しておく。★重要
+          「途中でやめても本物のセーブに影響しない」ことを成立させるには、
+          いつでも押せる終了口が必要なので、案内(z:90000)より前へ重ねている。
+          高さは細くし、iPhoneのノッチぶんだけ下げて画面の見出しと重ならないようにする */}
+      {onboardingPreview&&(
+        <div data-onboarding-preview-bar
+          className="fixed left-0 right-0 top-0 flex items-center gap-2 px-3 py-1"
+          style={{position:'fixed',zIndex:96000,backgroundColor:'#a21caf',paddingTop:'calc(.25rem + env(safe-area-inset-top))'}}>
+          <span className="flex-1 min-w-0 text-[9px] font-black text-white leading-tight">DEBUG・初回プレイの再生中<small className="block text-[8px] font-bold opacity-90">名前も助手も仲良し度も保存されません</small></span>
+          <button type="button" onClick={endOnboardingPreview}
+            className="shrink-0 min-h-[32px] px-3 rounded-full bg-white text-fuchsia-800 text-[10px] font-black active:scale-95">再生をやめる</button>
         </div>
       )}
 
