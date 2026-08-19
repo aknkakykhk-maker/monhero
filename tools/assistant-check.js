@@ -228,8 +228,10 @@ check('決め終わるまでは戻るボタンを出さない',
 check('名前とアイコンを決めたことを覚える',
   has('setOnboardingName(n); // はじめての設定で「名前が決まった」判定に使う')
     && has("setBreederIcon(m.id); setOnboardingIcon(m.id);"));
+// デバッグの初回プレイ再生中だけは本物の既読を見ない(見ると、案内済みの人が再生したときに
+// 村の案内だけ飛ばされてしまう)。通常プレイの経路はこれまでどおり
 check('名前・アイコンを決めたらそのまま案内へ続く',
-  has('const seenTutorial = await storeGet(TUTORIAL_SEEN_KEY, false, false);')
+  has('const seenTutorial = onboardingPreview ? false : await storeGet(TUTORIAL_SEEN_KEY, false, false);')
     && has("if (seenTutorial !== true) { tutorialShownRef.current = true; setTutorialKind('tour'); setTutorialStep(0); }"));
 check('案内の最初で決めた名前を呼ぶ', (() => {
   const c = {}; require('vm').createContext(c);
@@ -301,20 +303,25 @@ check('デバッグはデバッグ設定からだけ開ける',
   has('💖 みゅあデバッグ') && source.indexOf('💖 みゅあデバッグ') > source.indexOf("gameState==='DEBUG_SETTINGS'"));
 // デバッグから「名前入力のところ」を含めて通しで見られること。
 // 見るだけなので、名前・アイコン・完了フラグのどれも保存しない
-check('名前入力から通しで見られる',
-  has('const startOnboardingPreview = () => {') && has('名前入力から通しで見る（保存されません）')
-    && has("setOnboardingName('');") && has("setOnboardingIcon(null);") && has("setGameState('PROFILE');"));
-check('見るだけの表示では何も保存しない', (() => {
-  const start = source.indexOf('  const finishOnboarding = async () => {');
-  const end = source.indexOf('\n  };', source.indexOf('if (seenTutorial !== true)', start));
-  const body = source.slice(start, end);
-  const preview = body.slice(body.indexOf('if (onboardingPreview)'), body.indexOf('return;\n    }') + 12);
-  return preview.includes('setBreederName(backup.name)') && preview.includes('setTutorialStep(0)') && !preview.includes('storeSet');
-})());
+// 初回導線は「助手えらび」から通しで再生できる(以前は名前入力からだけだったのを統合した)
+check('初回プレイを最初から通しで見られる',
+  has('const startOnboardingPreview = () => {') && has('初回プレイを最初から再生')
+    && has("setOnboardingName('');") && has("setOnboardingIcon(null);")
+    && has("setGameState('ASSISTANT_SELECT');"));
+// 「保存しない」は画面ごとの分岐ではなく、保存の入口(storeSet)を丸ごと止めて実現している。
+// 画面ごとに書き分けると必ず書き忘れが出るため、鍵ひとつに集約した
+// (詳しい動作確認は tools/onboarding-preview-check.js が実際に storeSet を動かして行う)
+check('見るだけの表示では何も保存しない',
+  has('  if (_storageWriteBlocked) return;')
+    && /const startOnboardingPreview = \(\) => \{[\s\S]{0,900}setStorageWriteBlocked\(true\)/.test(source)
+    && /const endOnboardingPreview = \(\) => \{[\s\S]{0,900}setStorageWriteBlocked\(false\)/.test(source));
+check('見るだけをやめたら、名前も助手も元へ戻す',
+  has('setBreederName(backup.name);') && has('setSelectedAssistantId(backup.assistantId);')
+    && has('setKikiIntroSeenFlag(backup.kikiIntroSeen);'));
 check('見るだけでは段階を保存する仕組みごと残していない', !has('moveOnboarding') && !has('onboardingStep'));
 check('見るだけと分かる表示を出す', has('DEBUG・見るだけの表示です。名前もアイコンも保存されません'));
 check('デバッグに必要な項目がそろっている',
-  ['名前入力から通しで見る','みゅあのあいさつだけ再生','村の案内だけ再生','全助手コメント確認','全表情確認','条件コメント確認','連打リアクション確認','初回状態へ戻す','バトル練習を未視聴へ戻す','初回案内を未表示へ戻す','バトル初回案内を再生']
+  ['初回プレイを最初から再生','みゅあのあいさつだけ再生','村の案内だけ再生','全助手コメント確認','全表情確認','条件コメント確認','連打リアクション確認','初回状態へ戻す','バトル練習を未視聴へ戻す','初回案内を未表示へ戻す','バトル初回案内を再生']
     .every(label => source.includes(label)));
 check('初回状態へ戻してもセーブデータは消さない',
   has('モンスターやダイヤなどのセーブデータは消えません') && has('await storeSet(TUTORIAL_SEEN_KEY,false,false);'));
