@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 492786ef48fc6e23
+// source-sha256: 53ea363362f45191
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 07:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 11:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -393,6 +393,11 @@ const MAX_BOND_LEVEL_ITERATIONS = 400;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
 const MAX_UNIQUE_SKILL_LEVEL = 8;
+// 固有技の強化ポイントは、技を上げるほかに「いまのガッツを戻す」ことにも使える。
+// 育てきって技がすべてMAXになったあともポイントが余らないようにするための使い道。
+// 最大ガッツそのものは増やさず、最大までの範囲で現在値だけを回復する。
+const GUTS_RECOVERY_POINT_COST = 1; // 1回に使う強化ポイント
+const GUTS_RECOVERY_AMOUNT = 10; // 1回で戻る現在ガッツ
 const INHERITED_UNIQUE_LEVEL_KEY_PREFIX = 'inhId:';
 let inheritedUniqueIdSequence = 0;
 const createInheritedUniqueId = () => {
@@ -19080,6 +19085,27 @@ function MonsterHeroGame() {
       return u;
     }));
   };
+  // 強化ポイントを使って、いまのガッツを戻す。★重要
+  // 最大ガッツ(effectiveMaxGuts)そのものは増やさず、最大までの範囲で現在値だけを回復する。
+  // 技の強化(＋／－)と違って取り消せない。ここで使ったポイントは戻らないので、
+  // 「実際にガッツが増える」ときだけポイントを減らす(満タン・ポイント不足なら何もしない)。
+  const gutsRecoveryLockRef = useRef(false);
+  // 錠は描画が追いついた時点で開ける。押した瞬間から次の描画までの間だけ止めればよく、
+  // ここが無いと素早く2回押したときに、1ポイントで2回ぶん回復できてしまう
+  useEffect(() => {
+    gutsRecoveryLockRef.current = false;
+  });
+  const canRecoverGutsWithPoint = upgradePoints >= GUTS_RECOVERY_POINT_COST && guts < effectiveMaxGuts;
+  const recoverGutsWithPoint = () => {
+    if (gutsRecoveryLockRef.current) return;
+    if (!canRecoverGutsWithPoint) return;
+    const next = Math.min(effectiveMaxGuts, guts + GUTS_RECOVERY_AMOUNT);
+    if (next <= guts) return;
+    gutsRecoveryLockRef.current = true;
+    setGuts(next);
+    setUpgradePoints(p => Math.max(0, p - GUTS_RECOVERY_POINT_COST));
+    Audio_.se.heal();
+  };
   // 合体で引き継いだ固有技の強化。自分の固有技(upgradeUnique)と同じポイントを使い、
   // 上げ下げの範囲・1回あたりの消費もまったく同じにしている
   const upgradeInheritedUnique = (slotIdx, inhIdx, diff) => {
@@ -31001,7 +31027,52 @@ function MonsterHeroGame() {
       className: "text-[9px] text-slate-400 mt-1 uppercase tracking-widest flex items-center justify-center gap-2"
     }, "Remaining Points: ", /*#__PURE__*/React.createElement("span", {
       className: "text-white bg-amber-600 px-2 rounded-full font-mono"
-    }, upgradePoints))), /*#__PURE__*/React.createElement("div", {
+    }, upgradePoints))), (() => {
+      const gutsFull = guts >= effectiveMaxGuts;
+      const noPoint = upgradePoints < GUTS_RECOVERY_POINT_COST;
+      return /*#__PURE__*/React.createElement("div", {
+        "data-guts-recovery": true,
+        className: "w-full max-w-sm shrink-0 mb-2 rounded-2xl border border-amber-500/40 bg-amber-950/25 px-3 py-2 flex items-center gap-2"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-w-0 text-left"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block text-[8px] font-black tracking-widest text-amber-300/80 leading-none"
+      }, "\u73FE\u5728\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("span", {
+        className: "block font-mono font-black leading-tight"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: gutsFull ? 'text-amber-300' : 'text-white',
+        style: {
+          fontSize: '17px'
+        }
+      }, guts), /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500",
+        style: {
+          fontSize: '12px'
+        }
+      }, " / ", effectiveMaxGuts))), /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        "data-guts-recovery-button": true,
+        disabled: !canRecoverGutsWithPoint,
+        onClick: recoverGutsWithPoint,
+        "aria-label": `強化ポイント${GUTS_RECOVERY_POINT_COST}つでガッツを${GUTS_RECOVERY_AMOUNT}回復する`,
+        className: "shrink-0 min-h-[44px] px-3 rounded-xl bg-amber-600 text-white font-black leading-tight active:scale-95 disabled:opacity-30"
+      }, gutsFull ? /*#__PURE__*/React.createElement("span", {
+        className: "block",
+        style: {
+          fontSize: '13px'
+        }
+      }, "MAX") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("span", {
+        className: "block",
+        style: {
+          fontSize: '12px'
+        }
+      }, GUTS_RECOVERY_POINT_COST, "P \u3067 +", GUTS_RECOVERY_AMOUNT), /*#__PURE__*/React.createElement("span", {
+        className: "block text-amber-100/90",
+        style: {
+          fontSize: '8px'
+        }
+      }, noPoint ? 'ポイント不足' : 'ガッツ回復'))));
+    })(), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-sm space-y-3 mb-2 min-h-0 overflow-y-auto mh-scroll flex-1 p-1 flex flex-col justify-start pt-2"
     }, uniqueUpgradeEntries().map(e => uniqueUpgradeRow(e))), /*#__PURE__*/React.createElement("button", {
       onClick: () => {
