@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: bfc40086d3c2d05c
+// source-sha256: 6d8e1a2e502cfab1
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 19:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 19:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -16955,9 +16955,28 @@ function MonsterHeroGame() {
     };
     return null;
   };
+  // 固有技は「自分の効果を乗せてから、その同じカードで攻撃する」(processTurnの並び。
+  // 効果を足す if(card.type==='unique'){…} のあとで getDmg を呼んでいる)。
+  // おりょう・きき・かどみうむのようなバフカードは自分では攻撃しないので、ここには入らない。
+  const localBoostAppliesToSelf = card => card?.type === 'unique';
+  // このカードのダメージを出すときに使う即時補正。自分の効果が自分に乗るカード(固有技)は
+  // 自分のぶんも足す。これを忘れると、カード選択中の予測より実行後のダメージが増える
+  // (ゴーレムなら+7.5%、モッチー/ミタラシなら+10%)。
+  const boostsForCardDamage = (base, card, halved) => {
+    const boost = localBoostAppliesToSelf(card) ? localBoostFromCard(card) : null;
+    if (!boost) return base;
+    const effMul = cardEffectMultiplier(card, halved);
+    return {
+      oryo: base.oryo + (boost.oryo || 0) * effMul,
+      dmgMod: base.dmgMod + (boost.dmgMod || 0) * effMul,
+      combo: base.combo + (boost.combo || 0) * effMul
+    };
+  };
   // カード選択中のプレビュー専用。選択順に並べて、指定した1枚(excludeIdx、保留中のカード)の
   // 「手前まで」に積み上がる即時補正を求める。processTurnの数え方(2枚目以降半減・EXTREME倍率)と
   // 同じ式(cardEffectMultiplier)を使うため、この並びで実行したときの結果と必ず一致する。
+  // perCard[idx] は「そのカードのダメージを出すときに使う値」で、固有技は自分のぶんを含む。
+  // forPending は保留中のカードぶん(同じく自分のぶんを含む)。
   const previewLocalBoosts = (excludeIdx = null) => {
     let oryo = 0,
       dmgMod = 0,
@@ -16965,23 +16984,17 @@ function MonsterHeroGame() {
       penaltyCnt = 0;
     const perCard = {};
     selectedCards.forEach(idx => {
-      if (idx === excludeIdx) {
-        perCard[idx] = {
-          oryo,
-          dmgMod,
-          combo
-        };
-        return;
-      }
       const card = hand[idx];
-      perCard[idx] = {
+      const isPenalty = !isBreederCard(card);
+      const halved = isPenalty && penaltyCnt > 0;
+      perCard[idx] = boostsForCardDamage({
         oryo,
         dmgMod,
         combo
-      };
+      }, card, halved);
+      // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので積み上げにも枚数にも数えない
+      if (idx === excludeIdx) return;
       if (!card) return;
-      const isPenalty = !isBreederCard(card);
-      const halved = isPenalty && penaltyCnt > 0;
       const effMul = cardEffectMultiplier(card, halved);
       const boost = localBoostFromCard(card);
       if (boost) {
@@ -16991,13 +17004,20 @@ function MonsterHeroGame() {
       }
       if (isPenalty) penaltyCnt++;
     });
+    const pendingCard = excludeIdx != null ? hand[excludeIdx] : null;
+    const pendingHalved = !!pendingCard && !isBreederCard(pendingCard) && penaltyCnt > 0;
     return {
       perCard,
       final: {
         oryo,
         dmgMod,
         combo
-      }
+      },
+      forPending: boostsForCardDamage({
+        oryo,
+        dmgMod,
+        combo
+      }, pendingCard, pendingHalved)
     };
   };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo = 0, additionalDmgMod = 0, isSecondOrLaterAtk = false, attackStartDist = enemyDist) => {
@@ -28578,8 +28598,8 @@ function MonsterHeroGame() {
           if (assignedCount >= maxUses) continue;
           if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
           pendingValidSlot = i;
-          const baseDmg = getDmg(pendingCardObj, i, s, boosts.final.oryo, boosts.final.dmgMod, !isBreederCard(pendingCardObj) && committedPenaltyCnt > 0);
-          pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg, boosts.final.combo);
+          const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, !isBreederCard(pendingCardObj) && committedPenaltyCnt > 0);
+          pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg, boosts.forPending.combo);
           break;
         }
       }
@@ -28689,8 +28709,8 @@ function MonsterHeroGame() {
           if (idx !== pendingIdx && !isBreederCard(hand[idx])) committedPenalty++;
         });
         const isSecondOrLater = committedPenalty >= 1 && !isBreederCard(pendingCardObj);
-        const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.final.oryo, slotBoosts.final.dmgMod, isSecondOrLater);
-        previewDmg = getAttackPredictedDmg(pendingCardObj, s, baseDmg, slotBoosts.final.combo);
+        const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.forPending.oryo, slotBoosts.forPending.dmgMod, isSecondOrLater);
+        previewDmg = getAttackPredictedDmg(pendingCardObj, s, baseDmg, slotBoosts.forPending.combo);
         isPendingPreview = true;
         isPendingHalved = isSecondOrLater;
       } else if (s) {
