@@ -41,6 +41,8 @@ for (const use of [
 ]) assert(source.includes(use), `${use} must use the shared run rule difficulty`);
 assert(source.includes('quick&&hasExtremeSpecialRules(key)') && source.includes('特殊ルールあり'));
 assert(source.includes("isQuickMode(runMode)?'自動成長低下':'トレーニング低下'"), 'Quick ULTIMATE intro must describe automatic growth without changing the extreme training label');
+assert(source.includes("[quick?'自動成長':'トレーニング','WAVE Tごと-0.75pt']"), 'Quick ULTIMATE card must call the WAVE effect automatic growth');
+assert(source.includes("['与ダメ倍率','経過Tごと-0.75pt（25%で停止）']")&&!source.includes('経過累計T×0.75%（最低25%）'), 'Quick ULTIMATE card must explain the damage floor as a stopping point');
 assert(source.includes('extremeSpecialRuleLines(setting.id).map'), 'official card must share the same rule presentation');
 assert(source.includes('const enemyTurnMultiplier=specialRuleDifficulty===ULTIMATE_SETTING.id?ultimateEnemyTurnMultiplier(totalTurnCount):1;'), 'ULTIMATE enemy turn scaling must use the shared run rule difficulty');
 assert(source.includes('const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&specialRuleDifficulty===ULTIMATE_SETTING.id;'), 'ULTIMATE BREAK reveal must use the shared run rule difficulty');

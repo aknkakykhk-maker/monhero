@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-21 07:43",
+    date: "2026-08-21 07:29",
     type: 'issue',
     title: 'ULTIMATE難易度カードの表示崩れを修正',
     items: [

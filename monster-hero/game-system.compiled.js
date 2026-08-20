@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b0679fd095f978ae
+// source-sha256: 7d4fa9f2d2623d24
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 07:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 08:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7595,6 +7595,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   psyche: 60,
   unlockRequirement: 'CHAOS',
   description: '累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。',
+  cardDescription: '累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。',
   specialRules: Object.freeze({
     enemyTurnRate: 0.0075,
     allyJoinPenaltyRate: 0.0075,
@@ -7689,7 +7690,7 @@ const specialRulePercent = value => `${Math.round((Number(value) || 0) * 100)}%`
 const compactPercent = value => `${Number(((Number(value) || 0) * 100).toFixed(1))}%`;
 const precisePercent = value => `${Number(((Number(value) || 0) * 100).toFixed(2))}%`;
 const extremeSpecialRuleLines = (difficultyId, quick = false) => {
-  if (difficultyId === ULTIMATE_SETTING.id) return [['敵強化', '累計T×0.75%'], ['加入B低下', '累計T×0.75%'], ['与ダメ低下', '経過累計T×0.75%（最低25%）'], [quick ? '自動成長低下' : 'トレ低下', 'WAVE T×0.75%'], ['距離BREAK', '35TごとLv強化（3距離）']];
+  if (difficultyId === ULTIMATE_SETTING.id) return [['敵HP/攻撃', '累計Tごと+0.75%'], ['加入B倍率', '累計Tごと-0.75pt'], ['与ダメ倍率', '経過Tごと-0.75pt（25%で停止）'], [quick ? '自動成長' : 'トレーニング', 'WAVE Tごと-0.75pt'], ['距離BREAK', '35Tごと1距離の弱体Lv上昇']];
   if (difficultyId === NIGHTMARE_SETTING.id) return [['強化', specialRulePercent(extremeSpecialRule(difficultyId, 'waveEnhancement'))], ['＋補正', specialRulePercent(extremeSpecialRule(difficultyId, 'positiveModifier'))], ['－補正', specialRulePercent(extremeSpecialRule(difficultyId, 'negativeModifier'))]];
   if (difficultyId === CHAOS_SETTING.id) return [['与ダメ', specialRulePercent(extremeSpecialRule(difficultyId, 'damageDealt'))], ['消費ガッツ', specialRulePercent(extremeSpecialRule(difficultyId, 'gutsCost'))], ['加入B', specialRulePercent(extremeSpecialRule(difficultyId, 'allyJoinBonus'))]];
   const rules = extremeDifficultySetting(difficultyId)?.specialRules || {};
@@ -23031,8 +23032,9 @@ function MonsterHeroGame() {
         }, label, /*#__PURE__*/React.createElement("b", {
           className: "block text-[11px] leading-tight text-white"
         }, value)))), /*#__PURE__*/React.createElement("p", {
-          className: "mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200"
-        }, setting.description), setting.id === 'EXTREME' ? /*#__PURE__*/React.createElement("div", {
+          "data-extreme-card-description": setting.id,
+          className: `${setting.id === 'ULTIMATE' ? 'mt-1 h-[32px] shrink-0' : 'mt-1 min-h-[35px]'} rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200`
+        }, setting.cardDescription || setting.description), setting.id === 'EXTREME' ? /*#__PURE__*/React.createElement("div", {
           className: "mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] font-black text-amber-300"
@@ -23040,14 +23042,12 @@ function MonsterHeroGame() {
           className: "block text-[11px] text-white whitespace-nowrap"
         }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u52B9\u679C 50%")) : /*#__PURE__*/React.createElement("div", {
           "data-extreme-special-rules": setting.id,
-          className: "mt-1 h-[51px] shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5"
+          className: `${setting.id === 'ULTIMATE' ? 'mt-1.5 h-[62px]' : 'mt-1 h-[51px]'} shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5`
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-center text-[8px] leading-[9px] font-black text-amber-300"
-        }, "\u26A0 ", setting.label, "\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
-          className: setting.id === 'ULTIMATE' ? 'grid grid-cols-2 gap-x-2' : 'block'
-        }, extremeSpecialRuleLines(setting.id).map(([label, value], index) => /*#__PURE__*/React.createElement("div", {
+        }, "\u26A0 ", setting.label, "\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", null, extremeSpecialRuleLines(setting.id).map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
-          className: `${setting.id === 'ULTIMATE' && index === 2 ? 'col-span-2' : ''} grid min-w-0 grid-cols-[auto_1fr] items-center gap-1 ${setting.id === 'ULTIMATE' ? 'text-[7px] leading-[8px]' : 'text-[9px] leading-[10px]'} whitespace-nowrap`
+          className: `grid min-w-0 grid-cols-[auto_1fr] items-center gap-1 ${setting.id === 'ULTIMATE' ? 'text-[8px] leading-[9px]' : 'text-[9px] leading-[10px]'} whitespace-nowrap`
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-300"
         }, label), /*#__PURE__*/React.createElement("b", {
@@ -30945,7 +30945,7 @@ function MonsterHeroGame() {
         className: "text-[11px] font-black tracking-[.12em] text-amber-300"
       }, "ULTIMATE \u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 grid gap-1.5 text-left"
-      }, [['1', '累計ターン圧', /*#__PURE__*/React.createElement(React.Fragment, null, "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u6B21WAVE\u306E\u6575\u304C\u5F37\u5316", /*#__PURE__*/React.createElement("br", null), "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4F9B\u30E2\u30F3\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\u304C\u4F4E\u4E0B", /*#__PURE__*/React.createElement("br", null), "\u7D4C\u904E\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4E0E\u30C0\u30E1\u30FC\u30B8\u4F4E\u4E0B\uFF08\u6700\u4F4E25%\uFF09")], ['2', isQuickMode(runMode) ? '自動成長低下' : 'トレーニング低下', isQuickMode(runMode) ? 'このWAVEのターン数×0.75% 次回の自動成長が10%から低下（最低0%）' : 'このWAVEのターン数×0.75% 次回のトレーニング4種すべてが低下'], ['3', 'DISTANCE BREAK', '累計35ターンごとに、安全距離以外の3距離をLv1→Lv2→Lv3…と段階強化']].map(([number, title, text]) => /*#__PURE__*/React.createElement("div", {
+      }, [['1', '累計ターン圧', /*#__PURE__*/React.createElement(React.Fragment, null, "\u7D2F\u8A08\u30BF\u30FC\u30F3\u3054\u3068\u306B\u6575HP/\u653B\u6483+0.75%", /*#__PURE__*/React.createElement("br", null), "\u7D2F\u8A08\u30BF\u30FC\u30F3\u3054\u3068\u306B\u4F9B\u30E2\u30F3\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\u500D\u7387-0.75pt", /*#__PURE__*/React.createElement("br", null), "\u7D4C\u904E\u7D2F\u8A08\u30BF\u30FC\u30F3\u3054\u3068\u306B\u4E0E\u30C0\u30E1\u500D\u7387-0.75pt\uFF0825%\u3067\u505C\u6B62\uFF09")], ['2', isQuickMode(runMode) ? '自動成長低下' : 'トレーニング低下', isQuickMode(runMode) ? 'このWAVEのターン数×0.75% 次回の自動成長が10%から低下（最低0%）' : 'このWAVEのターン数×0.75% 次回のトレーニング4種すべてが低下'], ['3', 'DISTANCE BREAK', '累計35ターンごとに、味方側の1距離の与ダメージ弱体Lvが上昇（最終的に3距離が弱体・1距離が安全）']].map(([number, title, text]) => /*#__PURE__*/React.createElement("div", {
         key: number,
         className: "rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"
       }, /*#__PURE__*/React.createElement("div", {
