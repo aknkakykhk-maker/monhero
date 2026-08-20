@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6d8e1a2e502cfab1
+// source-sha256: 67f9a130a34056a5
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 19:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 22:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -170,6 +170,27 @@ const PRO_BREEDER_XP_MULT = 1.5;
 // プロモードで始める前に選ぶ供モン候補の数と、そこから実際に加入候補として出す数
 const PRO_ALLY_POOL_SIZE = 5;
 const PRO_ALLY_OFFER_SIZE = 3;
+// 前回確定したプロ編成は、既存の進行・記録キーと混ぜず専用キーへ保存する。
+const PRO_LAST_PARTY_KEY = 'mh_pro_last_party';
+const EMPTY_PRO_LAST_PARTY = Object.freeze({
+  heroBaseId: null,
+  heroDistance: null,
+  allyBaseIds: Object.freeze(Array(PRO_ALLY_POOL_SIZE).fill(null))
+});
+const normalizeProLastParty = (value, unlockedBaseIds = []) => {
+  const unlocked = new Set(Array.isArray(unlockedBaseIds) ? unlockedBaseIds.filter(id => typeof id === 'string') : []);
+  const validId = id => typeof id === 'string' && unlocked.has(id) ? id : null;
+  const heroBaseId = validId(value?.heroBaseId);
+  const heroDistance = heroBaseId && Number.isInteger(value?.heroDistance) && value.heroDistance >= 0 && value.heroDistance < 4 ? value.heroDistance : null;
+  const savedAllies = Array.isArray(value?.allyBaseIds) ? value.allyBaseIds : [];
+  return {
+    heroBaseId,
+    heroDistance,
+    allyBaseIds: Array.from({
+      length: PRO_ALLY_POOL_SIZE
+    }, (_, index) => validId(savedAllies[index]))
+  };
+};
 // クイックモードでWAVEごとに味方の全ステータスへかける倍率
 const QUICK_GROWTH_MULT = 1.10;
 const calculateRemainingHp = (currentHp, finalDamage) => Math.max(0, (Number(currentHp) || 0) - (Number(finalDamage) || 0));
@@ -11076,6 +11097,8 @@ function MonsterHeroGame() {
   // ラン中の加入候補はここからしか出さない。ふだんのモードでは使わないので空のまま
   const [proAllyPool, setProAllyPool] = useState([]);
   const [proAllyDetail, setProAllyDetail] = useState(null); // 候補の選択状態とは分けて開く、既存のベースモン詳細
+  // 今回は自動反映せず、次段階で利用できるよう起動時に検証済みの前回編成だけ保持する。
+  const [lastProParty, setLastProParty] = useState(EMPTY_PRO_LAST_PARTY);
   // スキップ(チケットを1枚使って、ボス撃破まで到達したのと同じ経験値・ダイヤを受け取る)
   const [skipFlow, setSkipFlow] = useState(null); // { difficulty, itemId, hero, allies:[] }
   const [skipPickTab, setSkipPickTab] = useState('roster');
@@ -13314,6 +13337,8 @@ function MonsterHeroGame() {
       setMissions(missionState);
       const savedUnlockedMonsters = await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false);
       setUnlockedMonsterIds(savedUnlockedMonsters);
+      const availableBaseIds = Object.values(ALL_PLAYER_MONSTERS).map(mon => mon.id).filter(id => savedUnlockedMonsters.includes(id));
+      setLastProParty(normalizeProLastParty(await storeGet(PRO_LAST_PARTY_KEY, null, false), availableBaseIds));
       const savedMonsterRoster = await storeGet('mh_monster_roster', savedUnlockedMonsters, false);
       const partySetsMigrated = await storeGet(MONSTER_PARTY_SETS_MIGRATED_KEY, false, false);
       const savedPartySets = partySetsMigrated === true ? await storeGet(MONSTER_PARTY_SETS_KEY, null, false) : null;
@@ -19059,6 +19084,16 @@ function MonsterHeroGame() {
         storeSet(`mh_attempts_${difficulty}`, next[difficulty], false);
         return next;
       });
+    }
+    // 選択画面を閉じただけでは保存せず、WAVE 1の開始を確定したこの時点だけ更新する。
+    if (!enemy && isProMode(runMode) && mainHero && proAllyPool.length === PRO_ALLY_POOL_SIZE) {
+      const confirmedParty = normalizeProLastParty({
+        heroBaseId: mainHero.id,
+        heroDistance: initialBattleDistanceRef.current,
+        allyBaseIds: proAllyPool.map(mon => mon.id)
+      }, getUnlockedBaseMonsterList().map(mon => mon.id));
+      setLastProParty(confirmedParty);
+      storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);
     }
     setTimeout(() => {
       setOwnedTeachings(nextTeachings);
