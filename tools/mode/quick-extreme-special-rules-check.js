@@ -66,6 +66,8 @@ for(const [turns,expected] of [[1,.0925],[5,.0625],[10,.025],[14,0],[99,0]]) {
   assert(Math.abs(quickGrowthRate(turns)-expected)<1e-12, `unexpected Quick ULTIMATE growth at ${turns}T`);
 }
 assert(source.includes('const growthRate = quickGrowthRateForRun(runMode,difficulty,waveResult?.turn);'));
+assert(source.includes('data-quick-ultimate-growth') && source.includes("effectiveRate=quickGrowthRateForRun(runMode,difficulty,waveResult.turn)"), 'Quick ULTIMATE result must show the effective shared growth calculation');
+assert(source.includes('normalRate-effectiveRate'), 'Quick ULTIMATE result must compare normal and effective growth');
 assert(source.includes('setHp(nextEffectiveMaxHp); setGuts(nextEffectiveMaxGuts);'), 'HP/guts full recovery must remain');
 assert(source.includes("if(specialDifficulty!==ULTIMATE_SETTING.id) return QUICK_GROWTH_MULT-1;"), 'other quick difficulties must keep 10% growth');
 assert(source.includes("specialRuleDifficultyForRun('challenge','Normal',true,'ULTIMATE')") === false, 'production must not hard-code a Quick-only ULTIMATE rule branch');

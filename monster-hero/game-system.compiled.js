@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6d8a4ee12c1b2748
+// source-sha256: 8b638911ecce35f4
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 22:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 07:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7686,6 +7686,7 @@ const quickGrowthRateForRun = (runMode, difficultyId, waveTurnCount) => {
   return Math.max(0, QUICK_GROWTH_MULT - 1 - Math.max(0, Number(waveTurnCount) || 0) * ULTIMATE_SETTING.specialRules.awakeningPenaltyRate);
 };
 const specialRulePercent = value => `${Math.round((Number(value) || 0) * 100)}%`;
+const compactPercent = value => `${Number(((Number(value) || 0) * 100).toFixed(1))}%`;
 const extremeSpecialRuleLines = (difficultyId, quick = false) => {
   if (difficultyId === ULTIMATE_SETTING.id) return [['敵強化', '累計T ×0.75%'], ['供モン加入B低下', '累計T ×0.75%'], ['与ダメ低下', '経過累計T ×0.75%（最低25%）'], [quick ? '自動成長低下' : 'トレーニング低下', 'WAVE T ×0.75%'], ['距離BREAK', '35Tごと / 3距離を段階強化']];
   const rules = extremeDifficultySetting(difficultyId)?.specialRules || {};
@@ -11911,6 +11912,7 @@ function MonsterHeroGame() {
       tint: 'text-amber-300'
     }].map(stat => ({
       ...stat,
+      normalDiff: Number(bonus[stat.key]) || 0,
       after: stat.before + stat.diff
     }));
     // 間合い適性は「置いた距離に関係なく4距離すべてへ加算される」ので、距離ごとの合計補正で見せる
@@ -27873,7 +27875,17 @@ function MonsterHeroGame() {
       className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"
     }, /*#__PURE__*/React.createElement(Flag, {
       size: 14
-    })))), enemy && /*#__PURE__*/React.createElement("div", {
+    })))), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
+      const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
+      const enemyMultiplier = ultimateEnemyTurnMultiplier(elapsedTotalTurns);
+      const damageMultiplier = ultimateDamageTurnMultiplier(elapsedTotalTurns, ULTIMATE_SETTING.id);
+      return /*#__PURE__*/React.createElement("div", {
+        "data-ultimate-battle-status": true,
+        className: "shrink-0 flex items-center justify-center gap-x-2 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "ULTIMATE"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", elapsedTotalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u6575\u5F37\u5316 +", compactPercent(enemyMultiplier - 1)), /*#__PURE__*/React.createElement("span", null, "\u73FE\u5728\u306E\u4E0E\u30C0\u30E1 ", compactPercent(damageMultiplier)));
+    })(), enemy && /*#__PURE__*/React.createElement("div", {
       className: `shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1"
@@ -29550,7 +29562,17 @@ function MonsterHeroGame() {
     })), gameState === 'PICK_ALLY' && /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5",
       "data-join-status": true
-    }, /*#__PURE__*/React.createElement("div", {
+    }, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
+      const totalTurns = waveResult?.totalTurnCount || 0;
+      const normal = 100;
+      const effective = applyAllyJoinBonus(normal, ULTIMATE_SETTING.id, totalTurns);
+      return /*#__PURE__*/React.createElement("div", {
+        "data-ultimate-join-status": true,
+        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "ULTIMATE\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", effective, "%\uFF08-", normal - effective, "%\uFF09"));
+    })(), /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
     }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-1"
@@ -29749,14 +29771,16 @@ function MonsterHeroGame() {
               className: "min-w-0 block"
             }, /*#__PURE__*/React.createElement("span", {
               className: "block text-slate-500 font-black leading-none"
-            }, stat.short), /*#__PURE__*/React.createElement("b", {
+            }, stat.short), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === ULTIMATE_SETTING.id && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
+              className: "block leading-none text-slate-500 line-through"
+            }, "+", stat.normalDiff) : null, /*#__PURE__*/React.createElement("b", {
               className: `block leading-tight ${stat.diff > 0 ? stat.tint : 'text-slate-400'}`,
               style: {
                 fontSize: '9px'
               }
             }, stat.after), /*#__PURE__*/React.createElement("span", {
               className: `block leading-none ${stat.diff > 0 ? 'text-emerald-400' : 'text-slate-700'}`
-            }, stat.diff > 0 ? `+${stat.diff}` : '±0')))), /*#__PURE__*/React.createElement("div", {
+            }, stat.diff > 0 ? `実際 +${stat.diff}` : '実際 ±0')))), /*#__PURE__*/React.createElement("div", {
               className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
               style: {
                 fontSize: '8px'
@@ -31219,7 +31243,20 @@ function MonsterHeroGame() {
       className: "text-[10px] font-black text-amber-200"
     }, "\u7D2F\u8A08\uFF1A", /*#__PURE__*/React.createElement("b", {
       className: "font-mono text-sm text-white"
-    }, waveResult.totalTurnCount), "\u30BF\u30FC\u30F3")), waveResult.pendingUltimateDistanceBreak && /*#__PURE__*/React.createElement("div", {
+    }, waveResult.totalTurnCount), "\u30BF\u30FC\u30F3")), isQuickMode(runMode) && specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
+      const normalRate = quickGrowthRateForRun(runMode, 'Normal', waveResult.turn);
+      const effectiveRate = quickGrowthRateForRun(runMode, difficulty, waveResult.turn);
+      return /*#__PURE__*/React.createElement("div", {
+        "data-quick-ultimate-growth": true,
+        className: "rounded-lg border border-fuchsia-400/40 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "\u81EA\u52D5\u6210\u9577"), "\u3000\u901A\u5E38 +", compactPercent(normalRate), " ", /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500"
+      }, "\u2192"), " \u4ECA\u56DE +", compactPercent(effectiveRate), /*#__PURE__*/React.createElement("span", {
+        className: "block text-[8px] text-purple-300"
+      }, "WAVE ", waveResult.turn, "T / ULTIMATE\u88DC\u6B63 -", compactPercent(normalRate - effectiveRate)));
+    })(), waveResult.pendingUltimateDistanceBreak && /*#__PURE__*/React.createElement("div", {
       "data-ultimate-distance-break-warning": true,
       className: "rounded-lg border border-red-400/60 bg-purple-950/80 px-2 py-1 text-[10px] font-black text-red-200"
     }, "\u26A0 \u6B21WAVE\u3067\u8DDD\u96E2\u5F31\u4F53\u5316\u304C\u767A\u52D5"), /*#__PURE__*/React.createElement("div", {
@@ -31449,7 +31486,23 @@ function MonsterHeroGame() {
         }
       }))), /*#__PURE__*/React.createElement("span", {
         className: "text-[11px] font-black font-mono text-amber-300"
-      }, trainingPicks.length, " / ", TRAINING_PICK_COUNT))), /*#__PURE__*/React.createElement("div", {
+      }, trainingPicks.length, " / ", TRAINING_PICK_COUNT)), specialRule === ULTIMATE_SETTING.id && (() => {
+        const turns = waveResult?.turn || 0;
+        const probe = {
+          atk: 10000,
+          def: 10000,
+          hp: 10000,
+          guts: 10000
+        };
+        const normal = resolveTrainingStep(probe, 'hp', turns, null).hp;
+        const effective = resolveTrainingStep(probe, 'hp', turns, specialRule).hp;
+        return /*#__PURE__*/React.createElement("div", {
+          "data-ultimate-training-status": true,
+          className: "mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-amber-300"
+        }, "ULTIMATE\u88DC\u6B63"), "\u3000\u4ECA\u56DE", turns, "T \u2192 \u5F37\u5316\u52B9\u679C -", Number(((normal - effective) / 100).toFixed(1)), "pt");
+      })()), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 w-full max-w-sm my-2 text-left"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "rewardPick",
@@ -31501,7 +31554,15 @@ function MonsterHeroGame() {
           className: "text-[13px] font-black text-white leading-none"
         }, option.name)), /*#__PURE__*/React.createElement("span", {
           className: `text-[10px] font-black ${st.tint} leading-tight`
-        }, option.effect), /*#__PURE__*/React.createElement("span", {
+        }, option.effect, specialRule === ULTIMATE_SETTING.id && (() => {
+          const normalAfter = resolveTrainingStep(current, option.id, waveResult?.turn, null)[option.stat];
+          const effectiveAfter = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
+          const normalGain = normalAfter - current[option.stat],
+            effectiveGain = effectiveAfter - current[option.stat];
+          return /*#__PURE__*/React.createElement("span", {
+            className: "block text-purple-200"
+          }, "\u901A\u5E38 +", normalGain, " \u2192 \u4ECA\u56DE\u306E\u5B9F\u52B9 +", effectiveGain);
+        })()), /*#__PURE__*/React.createElement("span", {
           className: "w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight"
         }, /*#__PURE__*/React.createElement("span", {
           className: "block text-[8px] text-slate-500 font-black"

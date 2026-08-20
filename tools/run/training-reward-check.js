@@ -129,7 +129,7 @@ if (from >= 0 && to > from) {
   check('確定するまで選び直せる', jsx.includes('setTrainingPicks([])') && jsx.includes('選び直す'));
   const transformed = babel.transformSync(
     'const Screen = ({ gameState, trainingPicks, setTrainingPicks, atk, def, maxHp, maxGuts, waveResult, effect,\n'
-    + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep,\n'
+    + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep, ULTIMATE_SETTING, compactPercent,\n'
     + '  TRAINING_PICK_COUNT, TRAINING_OPTIONS, handleTraining, AssistantBubble, battleTutorialSpotClass,\n'
     + '  Trophy, Heart, Sword, ShieldCheck, Sparkles }) => (<>\n'
     + jsx + '\n</>);\nmodule.exports = { Screen };',
@@ -141,7 +141,7 @@ if (from >= 0 && to > from) {
     gameState: 'REWARD_PICK', trainingPicks: picks, setTrainingPicks: () => {},
     atk: 100, def: 100, maxHp: 500, maxGuts: 100, waveResult: { turn: 0 }, effect: null,
     runMode: 'challenge', difficulty: 'Normal', extremeRun: false, extremeDifficulty: null,
-    specialRuleDifficultyForRun: () => null,
+    specialRuleDifficultyForRun: () => null, ULTIMATE_SETTING: { id: 'ULTIMATE' }, compactPercent: value => `${Number((value*100).toFixed(1))}%`,
     resolveTrainingStats: T.resolveTrainingStats, resolveTrainingStep: T.resolveTrainingStep,
     TRAINING_PICK_COUNT: T.TRAINING_PICK_COUNT, TRAINING_OPTIONS: T.TRAINING_OPTIONS,
     handleTraining: () => {}, AssistantBubble: () => null, battleTutorialSpotClass: () => '',
@@ -188,6 +188,8 @@ if (from >= 0 && to > from) {
       && /env\(safe-area-inset-top\)/.test(jsx) && /env\(safe-area-inset-bottom\)/.test(jsx));
   check('タップ領域を十分にとる(項目・ボタンとも)',
     /min-h-\[112px\]/.test(jsx) && (jsx.match(/min-h-\[52px\]/g) || []).length >= 2);
+  check('ULTIMATE補正は実処理と同じresolveTrainingStepを使う', jsx.includes('data-ultimate-training-status') && jsx.includes("resolveTrainingStep(probe,'hp',turns,specialRule)"));
+  check('各項目の通常値と実効値もresolveTrainingStepで比較する', jsx.includes('normalAfter=resolveTrainingStep') && jsx.includes('effectiveAfter=resolveTrainingStep'));
 }
 
 // ---- 「トレーニング完了」への遷移 ----
