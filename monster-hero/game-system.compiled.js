@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 67f9a130a34056a5
+// source-sha256: c94e97dd213daa33
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 22:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 22:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11097,8 +11097,9 @@ function MonsterHeroGame() {
   // ラン中の加入候補はここからしか出さない。ふだんのモードでは使わないので空のまま
   const [proAllyPool, setProAllyPool] = useState([]);
   const [proAllyDetail, setProAllyDetail] = useState(null); // 候補の選択状態とは分けて開く、既存のベースモン詳細
-  // 今回は自動反映せず、次段階で利用できるよう起動時に検証済みの前回編成だけ保持する。
+  // 起動時に検証した前回編成と、勇者選択画面へ初期表示する勇者・配置距離。
   const [lastProParty, setLastProParty] = useState(EMPTY_PRO_LAST_PARTY);
+  const [proHeroPreset, setProHeroPreset] = useState(null);
   // スキップ(チケットを1枚使って、ボス撃破まで到達したのと同じ経験値・ダイヤを受け取る)
   const [skipFlow, setSkipFlow] = useState(null); // { difficulty, itemId, hero, allies:[] }
   const [skipPickTab, setSkipPickTab] = useState('roster');
@@ -18946,7 +18947,9 @@ function MonsterHeroGame() {
       // WAVE 2の供モン合流で「勝手に勇者モンが選ばれている」ように見えてしまう
       if (isProMode(runMode)) {
         setCurrentPickingMon(null);
-        setProAllyPool([]);
+        setProHeroPreset(null);
+        // 前回候補のうち、今回の勇者と同じ種だけは候補から外す。それ以外の有効な候補は初期選択として残す。
+        setProAllyPool(prev => prev.filter(mon => mon.id !== m.id));
         setGameState('PICK_PRO_ALLIES');
         return;
       }
@@ -23279,8 +23282,14 @@ function MonsterHeroGame() {
             setDebugBattle(false);
             setExtremeRun(false);
             setDebugOutcome(null);
-            setProAllyPool([]);
-            setMonSelection(pro ? getUnlockedBaseMonsterList() : getActiveMonsterList());
+            const baseMons = pro ? getUnlockedBaseMonsterList() : [];
+            const savedHero = pro ? baseMons.find(mon => mon.id === lastProParty.heroBaseId) : null;
+            setProHeroPreset(savedHero && lastProParty.heroDistance !== null ? {
+              heroBaseId: savedHero.id,
+              heroDistance: lastProParty.heroDistance
+            } : null);
+            setProAllyPool(pro ? lastProParty.allyBaseIds.map(id => baseMons.find(mon => mon.id === id)).filter(mon => mon && mon.id !== savedHero?.id) : []);
+            setMonSelection(pro ? baseMons : getActiveMonsterList());
             setHeroPickTab(pro ? 'base' : 'roster');
             setGameState('PICK_HERO');
           },
@@ -29650,8 +29659,14 @@ function MonsterHeroGame() {
           key: m.id
         }, renderProMonsterRow({
           mon: m,
+          selected: proHeroPreset?.heroBaseId === m.id,
           disabled: !scenarioPicksHero(m.id),
           onSelect: () => {
+            if (proHeroPreset?.heroBaseId === m.id) {
+              setupMon(m, proHeroPreset.heroDistance);
+              return;
+            }
+            setProHeroPreset(null);
             setCurrentPickingMon(m);
             setGameState('PICK_SLOT');
           },
@@ -29869,7 +29884,10 @@ function MonsterHeroGame() {
           "aria-label": "\u623B\u308B",
           onClick: () => {
             setProAllyDetail(null);
-            setProAllyPool([]);
+            setProHeroPreset(mainHero ? {
+              heroBaseId: mainHero.id,
+              heroDistance: initialBattleDistanceRef.current
+            } : null);
             setMainHero(null);
             setSlots([null, null, null, null]);
             setCurrentPickingMon(null);

@@ -39,6 +39,7 @@ vm.runInContext([
   grab(source, 'const PRO_RANKING_PREFIX =', '// 通信、state、リクエスト管理、画面参照で共有する唯一のランキング内部キー'),
   'globalThis.__m={BATTLE_MODES,PUBLIC_BATTLE_MODES,battleModeInfo,normalizeBattleMode,isQuickMode,isProMode,QUICK_REWARD_MULT,QUICK_GROWTH_MULT,'
   + 'PRO_BOND_XP_MULT,PRO_BREEDER_XP_MULT,PRO_ALLY_POOL_SIZE,PRO_ALLY_OFFER_SIZE,'
+  + 'PRO_LAST_PARTY_KEY,EMPTY_PRO_LAST_PARTY,normalizeProLastParty,'
   + 'modeBreederXpMult,modeBondXpMult,modeGoldMult,applyModeReward,modeHasRanking,modeBondAction,modeKeyPrefix,'
   + 'QUICK_REWARD_POLICY_GROWTH,QUICK_REWARD_POLICY_PSYCHE,QUICK_REWARD_POLICY_DIAMOND,normalizeQuickRewardPolicy,applyQuickXpPolicy,applyQuickPsychePolicy,applyQuickDiamondPolicy,clearPsycheReward,'
   + 'waveXpGain,waveGoldGain,xpForWavesCleared,goldForWavesCleared,xpForWavesClearedInMode,goldForWavesClearedInMode,'
@@ -57,6 +58,15 @@ check('プロは正しいモードとして通る', m.normalizeBattleMode('pro')
 check('クイックの倍率は1.5', m.QUICK_REWARD_MULT === 1.5);
 check('プロの倍率は絆3倍・ブリーダー1.5倍', m.PRO_BOND_XP_MULT === 3 && m.PRO_BREEDER_XP_MULT === 1.5);
 check('プロの供モンは5体選んで3体', m.PRO_ALLY_POOL_SIZE === 5 && m.PRO_ALLY_OFFER_SIZE === 3);
+check('前回プロ編成は専用キーを使う', m.PRO_LAST_PARTY_KEY === 'mh_pro_last_party');
+{
+  const restored = m.normalizeProLastParty({heroBaseId:'Mocchi',heroDistance:2,allyBaseIds:['Golem','Mew','missing','Suezo','Hare']}, ['Mocchi','Golem','Mew','Suezo','Hare']);
+  check('前回プロ編成は解放済みの勇者・距離・供モンを復元する', restored.heroBaseId === 'Mocchi' && restored.heroDistance === 2 && restored.allyBaseIds.join(',') === 'Golem,Mew,,Suezo,Hare');
+  const missingHero = m.normalizeProLastParty({heroBaseId:'missing',heroDistance:1,allyBaseIds:['Golem']}, ['Golem']);
+  check('存在しない勇者だけを未選択にして配置距離も外す', missingHero.heroBaseId === null && missingHero.heroDistance === null && missingHero.allyBaseIds[0] === 'Golem');
+  const empty = m.normalizeProLastParty(null, ['Mocchi']);
+  check('保存がなければプロ編成はすべて未選択', empty.heroBaseId === null && empty.heroDistance === null && empty.allyBaseIds.every(id=>id===null));
+}
 // 「全部3倍」ではないことを、倍率そのものの形で固定する
 check('プロは絆だけ3倍。ブリーダーは1.5倍でダイヤは等倍',
   m.modeBondXpMult('pro') === 3 && m.modeBreederXpMult('pro') === 1.5 && m.modeGoldMult('pro') === 1);
@@ -403,13 +413,13 @@ check('プロの助手コメントが場面として用意されている', assi
 check('プロの助手コメントが5件以上ある',
   (assistantsSrc.match(/battlePro: \[|battlePro: \{/g) || []).length >= 2);
 check('プロの親密度行動があり、既存の獲得量は変わっていない',
-  assistantsSrc.includes("pro:       { amount:2, dailyMax:10, label:'プロモード' },")
-    && assistantsSrc.includes("challenge: { amount:2, dailyMax:10, label:'チャレンジモード' },")
-    && assistantsSrc.includes("quick:     { amount:1, dailyMax:6,  label:'クイックモード' },")
-    && assistantsSrc.includes('const ASSISTANT_BOND_DAILY_MAX = 30;'));
+  assistantsSrc.includes("pro:       { amount:4, dailyMax:20, label:'プロモード' },")
+    && assistantsSrc.includes("challenge: { amount:4, dailyMax:20, label:'チャレンジモード' },")
+    && assistantsSrc.includes("quick:     { amount:2, dailyMax:12, label:'クイックモード' },")
+    && assistantsSrc.includes('const ASSISTANT_BOND_DAILY_MAX = Object.values(ASSISTANT_BOND_ACTIONS).reduce'));
 check('遊んだモードに応じて親密度の行動を切り替える',
   m.modeBondAction('challenge') === 'challenge' && m.modeBondAction('quick') === 'quick' && m.modeBondAction('pro') === 'pro'
-    && has("addAssistantBond('battle'); addAssistantBond(modeBondAction(runMode));"));
+    && has("addAssistantBond('battle');") && has("addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode));"));
 
 // --- ⑧ 新しいバトルの入口(第2段階) ---
 // 「バトル → バトルモード選択 → 難易度選択」の3画面。まだデバッグからだけ開ける
@@ -512,8 +522,8 @@ check('実際に開いて押せることを確かめる道具がある',
 // --- ⑨ プロモードの中身(第3段階) ---
 // 編成はベースモンだけ。育てたマスモンは勇者モンにも供モンにも出さない
 check('プロの勇者モン選択はベースモンだけ',
-  has("setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');")
-    && has("const rawList=gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;")
+  has("setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');")
+    && has("const savedRawList=gameState==='PICK_HERO'&&(heroPickTab==='base'||isProMode(runMode))?getUnlockedBaseMonsterList():monSelection;")
     && has('{!isProMode(runMode)&&<div className="flex gap-1.5">'));
 check('プロの勇者モン選択に編成タブを出さない',
   has("isProMode(runMode)?'プロモードはベースモンだけで挑みます。育てたマスモンは連れていけません'"));
@@ -583,7 +593,7 @@ check('横スライドは開くたびに先頭から見せる',
 // プロだけ早く return するので、関数の最後にある片付けを通らない。
 // 閉じ忘れると、WAVE 2の供モン合流で「勝手に勇者モンが選ばれている」ように見える
 check('勇者モンの詳細を開いたまま次の画面へ行かない',
-  has("if (isProMode(runMode)) { setCurrentPickingMon(null); setProAllyPool([]); setGameState('PICK_PRO_ALLIES'); return; }"));
+  has('if (isProMode(runMode)) {') && has('setCurrentPickingMon(null);') && has("setGameState('PICK_PRO_ALLIES');"));
 check('供モン合流を開くときも開いていた詳細を閉じる',
   has("// 前の画面で開いていた詳細が残っていると、開いた瞬間に別の子が選ばれて見える\n    setCurrentPickingMon(null);"));
 // 画面を切り替える早い return が増えたときの取りこぼしを見つけるための目安
@@ -593,8 +603,15 @@ check('チャレンジ・クイックの供モン一覧はこれまでどおり2
   has("allyCarousel?'flex items-start gap-2.5") && has(":'grid grid-cols-2 gap-2.5'"));
 // 勇者モンを決めたあと、プロだけ供モン候補を選ぶ画面へ寄り道する
 check('プロだけ供モン候補の画面をはさむ',
-  has("if (isProMode(runMode)) { setCurrentPickingMon(null); setProAllyPool([]); setGameState('PICK_PRO_ALLIES'); return; }")
+  has("if (isProMode(runMode)) {") && has("setGameState('PICK_PRO_ALLIES');")
     && has("{gameState==='PICK_PRO_ALLIES'&&(()=>{"));
+check('プロ開始時に有効な前回編成だけを初期選択へ入れる',
+  has('setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);')
+    && has('lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id)')
+    && has('selected: proHeroPreset?.heroBaseId===m.id')
+    && has('setupMon(m,proHeroPreset.heroDistance)'));
+check('勇者を変更しても有効な前回供モンを残し、同じ種だけ外す',
+  has('setProAllyPool(prev=>prev.filter(mon=>mon.id!==m.id));'));
 check('候補が5体そろうまで始められない',
   has('const ready=proAllyPool.length===need;') && has('<button disabled={!ready}')
     && has("setTeachingPool([...getActiveTeachingCards()]);setGameState('PICK_TEACHING');"));
