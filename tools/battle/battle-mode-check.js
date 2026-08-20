@@ -613,8 +613,14 @@ check('プロ開始時に有効な前回編成だけを初期選択へ入れる'
 check('勇者を変更しても有効な前回供モンを残し、同じ種だけ外す',
   has('setProAllyPool(prev=>prev.filter(mon=>mon.id!==m.id));'));
 check('候補が5体そろうまで始められない',
-  has('const ready=proAllyPool.length===need;') && has('<button disabled={!ready}')
-    && has("setTeachingPool([...getActiveTeachingCards()]);setGameState('PICK_TEACHING');"));
+  has('const ready=!!mainHero&&proAllyPool.length===need;') && has('<button disabled={!ready}')
+    && has('onClick={confirmProParty}') && has("setGameState('PICK_TEACHING');"));
+check('現在の6枠を一覧にして1枠ずつ変更できる',
+  has('[["勇者モン",mainHero],...Array.from({length:need}') && has('setProEditingAllyIndex(i-1)')
+    && has('変えたい枠だけ「変更」を押してください'));
+check('この編成で開始した時点で前回編成を更新する',
+  has('const confirmProParty = () => {') && has('storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);')
+    && has('onClick={confirmProParty}') && has("ready?'この編成で開始'"));
 check('勇者モンにした種は候補から外す',
   has('const candidates=getUnlockedBaseMonsterList().filter(m=>m.id!==mainHero?.id);'));
 // ラン中の画面は「全画面のかぶせ方」で出す。これが抜けるとふだんの画面の下敷きになり、
@@ -622,7 +628,7 @@ check('勇者モンにした種は候補から外す',
 const RUN_OVERLAY = 'style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}}';
 for (const [label, screen] of [['勇者モン・供モン選択', "(gameState==='PICK_HERO'||gameState==='PICK_ALLY')&&("], ['配置場所', "{gameState==='PICK_SLOT'&&("], ['プロの供モン候補', "{gameState==='PICK_PRO_ALLIES'&&(()=>{"]]) {
   const at = source.indexOf(screen);
-  const near = at >= 0 ? source.slice(at, at + 900) : '';
+  const near = at >= 0 ? source.slice(at, at + 1800) : '';
   check(`${label}の画面は全画面でかぶせる`, near.includes(RUN_OVERLAY), at < 0 ? '画面が見つからない' : '');
 }
 check('ベースモンが足りないときはプロを始められない',
