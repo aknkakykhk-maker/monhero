@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 53ea363362f45191
+// source-sha256: 9e890fdf063ebdb9
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 11:36"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 14:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -18381,7 +18381,8 @@ function MonsterHeroGame() {
   const computeGuardLevel = defVal => Math.max(0, Math.min(GUARD_EVOLUTION.length - 1, Math.floor((defVal || 0) / 100)));
   const spawnEnemy = useCallback((w, forcedEnemyKey = null, initialDistance = null) => {
     const battleSetting = extremeRunRef.current ? extremeRuleSetting(extremeDifficulty) : null;
-    const enemyTurnMultiplier = battleSetting?.id === ULTIMATE_SETTING.id ? ultimateEnemyTurnMultiplier(totalTurnCount) : 1;
+    const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    const enemyTurnMultiplier = specialRuleDifficulty === ULTIMATE_SETTING.id ? ultimateEnemyTurnMultiplier(totalTurnCount) : 1;
     const newEnemy = createBattleEnemy(w, difficulty, forcedEnemyKey, battleSetting?.power ?? null, enemyTurnMultiplier);
     if (!newEnemy) return null;
     // 最高到達WAVEもモードごとに別々に記録する。
@@ -18506,7 +18507,8 @@ function MonsterHeroGame() {
     setGuardBonusCount(nGB);
     const pool = buildDeck(currentSlots, nAtkL, nGrdL, u || ownedUniques, t || ownedTeachings, nGB, slotUniqueChoice, slotUniqueLevelChoice, inheritedUniqueEvo, heroForDeck);
     const showExtremeRule = w === 1 && !!specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    const breakPending = w > 1 && ultimateDistanceBreakPendingRef.current && extremeRunRef.current && extremeDifficulty === ULTIMATE_SETTING.id;
+    const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+    const breakPending = w > 1 && ultimateDistanceBreakPendingRef.current && specialRuleDifficulty === ULTIMATE_SETTING.id;
     setHand(pool.slice(0, 5));
     setDeck(pool.slice(5));
     setGraveyard([]);
