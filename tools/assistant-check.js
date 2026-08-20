@@ -337,7 +337,11 @@ for (const match of source.matchAll(/\bscene=(?:"([A-Za-z][A-Za-z0-9]*)"|\{([^}\
   if (match[1]) sceneRefs.add(match[1]);
   if (!match[2]) continue;
   addQuotedSceneRefs(match[2]);
-  for (const id of match[2].matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) {
+  // `scene={battleModeAssistantScene(current.id)}` の `.id` のようなプロパティ名は変数ではない。
+  // これを変数として扱うと、無関係な `const id = typeof x === 'string' ? …` を場面の定義だと
+  // 誤解して 'string' を場面名として拾ってしまう(実際に誤検知していた)
+  const withoutProps = match[2].replace(/\.\s*[A-Za-z_$][\w$]*/g, '');
+  for (const id of withoutProps.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) {
     const declaration = source.match(new RegExp(`const\\s+${id[1]}\\s*=([^\\n;]+)`));
     if (declaration) addQuotedSceneRefs(declaration[1]);
   }

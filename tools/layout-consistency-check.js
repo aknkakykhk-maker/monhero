@@ -27,10 +27,22 @@ check('カードの共通サイズを1か所で決めている',
     && has("const MONSTER_CARD_ICON_CLASS = 'w-12 h-12 rounded-full overflow-hidden shrink-0';"));
 check('中身が無くても同じ高さの行を確保する',
   has("style={{height:'14px'}}") && has("style={{height:'22px'}}") && has("style={{height:'13px'}}") && has("style={{height:'18px'}}"));
-check('編成・ベースモン一覧・マスモン一覧の4種のカードが共通サイズを使う', count('style={MONSTER_CARD_STYLE}') === 4, `${count('style={MONSTER_CARD_STYLE}')}か所`);
-check('アイコンの大きさも4種で共通', count('MONSTER_CARD_ICON_CLASS}') === 4, `${count('MONSTER_CARD_ICON_CLASS}')}か所`);
-check('強化ポイントの有無で行が消えない', has('{monsterCardSub((masu.distAptPoints||0)>0?') && count('{monsterCardSub(null)}') === 2);
-check('編成中バッジの有無で行が消えない', count('{monsterCardStatus(') === 4, `${count('{monsterCardStatus(')}か所`);
+// カードを描く画面は増えていくので件数は決め打ちにせず、「外枠のクラスを使う行は
+// 必ず共通サイズも指定する」で見る。片方だけ書いた画面があるとそこだけ高さがずれる
+const cardLines = source.split('\n').filter(line => line.includes('MONSTER_CARD_CLASS') && !line.includes('const MONSTER_CARD_CLASS'));
+const cardLinesWithoutStyle = cardLines.filter(line => !line.includes('MONSTER_CARD_STYLE'));
+check('カードを描く画面はすべて共通クラスと共通サイズをセットで使う',
+  cardLines.length >= 4 && cardLinesWithoutStyle.length === 0,
+  `${cardLines.length}画面 / サイズ指定もれ ${cardLinesWithoutStyle.length}件`);
+// 中身(アイコン・補足行・状態行)は共通部品の中だけで組み立てる。画面ごとに書き写すと
+// 片方だけ直したときにずれる(実際にプロモードの横長カードで起きた)
+check('カードの中身は共通部品1か所だけで組み立てる',
+  count('MONSTER_CARD_ICON_CLASS') === 2 && count('monsterCardSub(') === 1 && count('monsterCardStatus(') === 1,
+  `アイコン${count('MONSTER_CARD_ICON_CLASS') - 1}か所 / 補足行${count('monsterCardSub(')}か所 / 状態行${count('monsterCardStatus(')}か所`);
+// 中身が無いときは行ごと消さずnullを渡す。消すとカードごとに高さが変わる
+check('強化ポイントや編成中バッジが無くても行が消えない',
+  has('{monsterCardSub(') && has('{monsterCardStatus(status)}')
+    && has("style={{height:'13px'}}>{node||null}") && has("style={{height:'18px'}}>{node||null}"));
 check('種別ごとにバラバラだった旧サイズが残っていない',
   !has('className="w-14 h-14 rounded-full overflow-hidden border border-white/10 shrink-0"')
     && !has('<div className="relative w-10 h-10 shrink-0">'));
@@ -100,10 +112,13 @@ check('詳細と購入ボタンを押し間違えない間隔がある',
 check('購入ボタンの文字は折り返さない',
   has("aria-label={`${item.name}を${item.cost}${usesGold?'ダイヤ':'pt'}で購入`}") && has('rounded-full flex items-center gap-0.5 whitespace-nowrap'));
 check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">近日追加</div>') && has('rounded-full whitespace-nowrap">所持済み</div>'));
-check('ききだけを約22%追加拡大し、縦横比と円形クリップを保つ',
-  has("const marketProfileIconStyle = (id) => id === 'kiki_icon'")
-    && has("transform: 'scale(1.58) translateY(12%)'")
-    && count('style={marketProfileIconStyle(') >= 6
+// 拡大量は表示コードへ直接書かず、アイコンIDごとの表を1か所に持つ。
+// ききはマーケット商品とブリーダーカードの両方で同じ値を使うので、定数を共有する
+check('ききの拡大量を1か所の表で持ち、縦横比と円形クリップを保つ',
+  has('const KIKI_FACE_ICON_ADJUSTMENT = Object.freeze({ scale:2.37, x:0, y:19 });')
+    && has('kiki_icon: KIKI_FACE_ICON_ADJUSTMENT,') && has('kiki: KIKI_FACE_ICON_ADJUSTMENT,')
+    && has("transform:`translate(${x}%, ${y}%) scale(${scale})`, transformOrigin:'center center'")
+    && has('className="absolute inset-0 w-full h-full object-contain"')
     && !has('images/breeder-icons/kiki.PNG') /* 画像パス判定を表示コードへ重複させない */);
 
 // --- ③ Masterの色 ---
