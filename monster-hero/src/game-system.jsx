@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 22:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 22:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5670,8 +5670,9 @@ function MonsterHeroGame() {
   // ラン中の加入候補はここからしか出さない。ふだんのモードでは使わないので空のまま
   const [proAllyPool, setProAllyPool] = useState([]);
   const [proAllyDetail, setProAllyDetail] = useState(null); // 候補の選択状態とは分けて開く、既存のベースモン詳細
-  // 今回は自動反映せず、次段階で利用できるよう起動時に検証済みの前回編成だけ保持する。
+  // 起動時に検証した前回編成と、勇者選択画面へ初期表示する勇者・配置距離。
   const [lastProParty, setLastProParty] = useState(EMPTY_PRO_LAST_PARTY);
+  const [proHeroPreset, setProHeroPreset] = useState(null);
   // スキップ(チケットを1枚使って、ボス撃破まで到達したのと同じ経験値・ダイヤを受け取る)
   const [skipFlow, setSkipFlow] = useState(null);       // { difficulty, itemId, hero, allies:[] }
   const [skipPickTab, setSkipPickTab] = useState('roster');
@@ -10877,7 +10878,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // ここで早く返すので、関数の最後にある setCurrentPickingMon(null) を通らない。
       // 消し忘れると、選んだ勇者モンの詳細が開いたまま残り、
       // WAVE 2の供モン合流で「勝手に勇者モンが選ばれている」ように見えてしまう
-      if (isProMode(runMode)) { setCurrentPickingMon(null); setProAllyPool([]); setGameState('PICK_PRO_ALLIES'); return; }
+      if (isProMode(runMode)) {
+        setCurrentPickingMon(null);
+        setProHeroPreset(null);
+        // 前回候補のうち、今回の勇者と同じ種だけは候補から外す。それ以外の有効な候補は初期選択として残す。
+        setProAllyPool(prev=>prev.filter(mon=>mon.id!==m.id));
+        setGameState('PICK_PRO_ALLIES');
+        return;
+      }
       setTeachingPool([...getActiveTeachingCards()]); setGameState('PICK_TEACHING');
     } else {
       const bonus=m.plusStats||{};
@@ -12031,7 +12039,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               ベースモンのタブで開く。編成(マスモン入り)は使えない */}
                           {/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
                               ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}
-                          <button disabled={(pro&&!proReady)||!quickUnlocked||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setProAllyPool([]);setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{!quickUnlocked?'🔒 同じ難易度クリアで解放':pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
+                          <button disabled={(pro&&!proReady)||!quickUnlocked||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);const baseMons=pro?getUnlockedBaseMonsterList():[];const savedHero=pro?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{!quickUnlocked?'🔒 同じ難易度クリアで解放':pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
                           {/* 難易度カードからもランキングへ入れる。ここから開いたときは、この難易度のタブが最初に選ばれる */}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
                           {/* スキップはクイックモード専用。チケットが無い難易度では出さない */}
@@ -14613,8 +14621,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               if(gameState==='PICK_HERO'&&isProMode(runMode)) return (
                 <React.Fragment key={m.id}>{renderProMonsterRow({
                   mon: m,
+                  selected: proHeroPreset?.heroBaseId===m.id,
                   disabled: !scenarioPicksHero(m.id),
-                  onSelect: ()=>{setCurrentPickingMon(m);setGameState('PICK_SLOT');},
+                  onSelect: ()=>{if(proHeroPreset?.heroBaseId===m.id){setupMon(m,proHeroPreset.heroDistance);return;}setProHeroPreset(null);setCurrentPickingMon(m);setGameState('PICK_SLOT');},
                   onDetail: ()=>setCurrentPickingMon(m),
                   selectLabel: `${m.name}を勇者モンに選ぶ`,
                   activeClass: 'active:bg-indigo-900/30',
@@ -14742,7 +14751,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">
           <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))'}}>
             {/* 勇者モンから選び直せるようにしておく(まだバトルは始まっていない) */}
-            <button aria-label="戻る" onClick={()=>{setProAllyDetail(null);setProAllyPool([]);setMainHero(null);setSlots([null,null,null,null]);setCurrentPickingMon(null);setGameState('PICK_HERO');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+            <button aria-label="戻る" onClick={()=>{setProAllyDetail(null);setProHeroPreset(mainHero?{heroBaseId:mainHero.id,heroDistance:initialBattleDistanceRef.current}:null);setMainHero(null);setSlots([null,null,null,null]);setCurrentPickingMon(null);setGameState('PICK_HERO');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
             <h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>供モンの候補</h2>
             <div className="w-10"></div>
           </div>
