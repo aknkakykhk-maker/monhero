@@ -47,14 +47,43 @@ const featureEntry = annotatedEntries.find(entry => entry.assistantNotice.type =
 const featureNotice = officialNotices.find(n => n.id === featureEntry.assistantNotice.id);
 assert.strictEqual(featureNotice.destination, featureEntry.assistantNotice.destination, 'feature の遷移先を引き継ぐ必要があります');
 
-const unseenNotices = seenIds => officialNotices.filter(n => !seenIds.includes(n.id));
-assert(unseenNotices([]).some(n => n.id === marketNotice.id), '未読通知だけを表示候補にする必要があります');
-assert(!unseenNotices([marketNotice.id]).some(n => n.id === marketNotice.id), '既読後は同じ通知を再表示してはいけません');
-assert(unseenNotices([]).some(n => n.id === resetTicketNotice.id), '未読のスキルポイントリセット券通知を表示する必要があります');
-assert(!unseenNotices([resetTicketNotice.id]).some(n => n.id === resetTicketNotice.id), '既読後はスキルポイントリセット券通知を再表示してはいけません');
+const noticePlannerSource = game.slice(
+  game.indexOf("const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1';"),
+  game.indexOf('const localCalendarDate =', game.indexOf("const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1';")),
+);
+const plannerContext = { ASSISTANT_UPDATE_NOTICES: officialNotices };
+vm.runInNewContext(`${noticePlannerSource}\nthis.plan=planUpdateNoticesForLogin;this.normalize=normalizeSeenUpdateNoticeIds;`, plannerContext);
+const planLogin = (all, seen) => {
+  const result = plannerContext.plan(all, seen);
+  return { queue: Array.from(result.queue), seen: Array.from(result.seen) };
+};
+const markConfirmed = (seen, notice) => Array.from(plannerContext.normalize([...seen, notice.id]));
+const fixtureNotices = Array.from({ length: 11 }, (_, i) => ({ id: `notice_${11 - i}` }));
+
+for (const count of [1, 2, 3]) {
+  const plan = planLogin(fixtureNotices.slice(0, count), []);
+  assert.deepStrictEqual(plan.queue.map(n => n.id), fixtureNotices.slice(0, count).map(n => n.id), `未読${count}件はすべて新しい順で案内する必要があります`);
+  assert.deepStrictEqual(plan.seen, [], `未読${count}件を表示前に一括既読にしてはいけません`);
+}
+
+const firstLogin = planLogin(fixtureNotices.slice(1), []);
+assert.deepStrictEqual(firstLogin.queue.map(n => n.id), ['notice_10', 'notice_9', 'notice_8'], '未読10件は最新3件だけを案内する必要があります');
+assert.deepStrictEqual(firstLogin.seen, ['notice_7', 'notice_6', 'notice_5', 'notice_4', 'notice_3', 'notice_2', 'notice_1'], '4件目より古い未読7件は既読にする必要があります');
+
+const afterOneConfirmed = markConfirmed(firstLogin.seen, firstLogin.queue[0]);
+const resumedLogin = planLogin(fixtureNotices.slice(1), afterOneConfirmed);
+assert.deepStrictEqual(resumedLogin.queue.map(n => n.id), ['notice_9', 'notice_8'], '3件のうち1件だけ確認して終了した場合は残り2件を次回表示する必要があります');
+assert.strictEqual(resumedLogin.seen.length, 8, '古い7件は次回ログインでも未読へ戻してはいけません');
+
+const allThreeConfirmed = markConfirmed(markConfirmed(afterOneConfirmed, firstLogin.queue[1]), firstLogin.queue[2]);
+assert.deepStrictEqual(planLogin(fixtureNotices.slice(1), allThreeConfirmed).queue, [], '既読通知は再表示してはいけません');
+const afterNewNotice = planLogin(fixtureNotices, allThreeConfirmed);
+assert.deepStrictEqual(afterNewNotice.queue.map(n => n.id), ['notice_11'], '新しい通知の追加後は新たな未読を正常に案内する必要があります');
+
 assert(game.includes("const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1'"));
 assert(game.includes('new Set((Array.isArray(value) ? value : [])'), '不正値の正規化と重複除去が必要です');
 assert(game.includes('else await storeSet(UPDATE_NOTICE_SEEN_KEY'), '新規プレイヤーの既存通知seedが必要です');
+assert(game.includes('availableUpdateNotices().map(n=>n.id)'), '新規プレイヤー向けの既存通知seedを維持する必要があります');
 assert(game.includes('await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seen, current.id])'), '終了時の既読保存が必要です');
 assert(!/BUILD_DATE[^\n]*ASSISTANT_UPDATE_NOTICES|ASSISTANT_UPDATE_NOTICES[^\n]*BUILD_DATE/.test(game + assistantsSource), 'BUILD_DATEと通知を連動してはいけません');
 assert(game.includes("market:'BREEDER_MARKET'") && game.includes('setGameState(destinationState)'), 'マーケット通知からマーケットへ遷移する必要があります');

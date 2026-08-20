@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 15:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 15:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4146,11 +4146,20 @@ const BATTLE_TUTORIAL_GUIDE_SHOWN_KEY = 'mh_battle_tutorial_guide_shown_v1';
 // 既存セーブにキーが無い場合は未表示として安全に扱う。
 const DAILY_MASU_ADVICE_KEY = 'mh_daily_masu_advice_date_v1';
 const UPDATE_NOTICE_SEEN_KEY = 'mh_seen_update_notices_v1';
+const UPDATE_NOTICE_LOGIN_LIMIT = 3;
 const normalizeSeenUpdateNoticeIds = value => [...new Set((Array.isArray(value) ? value : [])
   .filter(id => typeof id === 'string' && id.trim()).map(id => id.trim()))];
 const availableUpdateNotices = ({ debug=false }={}) =>
   (((typeof ASSISTANT_UPDATE_NOTICES !== 'undefined' && ASSISTANT_UPDATE_NOTICES) || [])
     .filter(notice => notice && notice.enabled === true && typeof notice.id === 'string' && (debug ? notice.debugOnly === true : notice.debugOnly !== true)));
+const planUpdateNoticesForLogin = (notices, seenIds) => {
+  const seen = normalizeSeenUpdateNoticeIds(seenIds);
+  const unseen = (Array.isArray(notices) ? notices : []).filter(notice => !seen.includes(notice.id));
+  return {
+    queue: unseen.slice(0, UPDATE_NOTICE_LOGIN_LIMIT),
+    seen: normalizeSeenUpdateNoticeIds([...seen, ...unseen.slice(UPDATE_NOTICE_LOGIN_LIMIT).map(notice => notice.id)]),
+  };
+};
 const localCalendarDate = (now = new Date()) => {
   const d = now instanceof Date ? now : new Date(now);
   const pad = n => String(n).padStart(2, '0');
@@ -7427,7 +7436,13 @@ function MonsterHeroGame() {
       const seenUpdateIds = normalizeSeenUpdateNoticeIds(await storeGet(UPDATE_NOTICE_SEEN_KEY, [], false));
       // 新規プレイヤーには、その時点ですでに公開済みの案内を見せない。既存プレイヤーだけ未読を並べる。
       // プロフィール確定時にも再度seedするため、初回設定の途中で閉じても通知ラッシュにならない。
-      if (wasOnboarded) setUpdateGuideQueue(availableUpdateNotices().filter(notice => !seenUpdateIds.includes(notice.id)));
+      if (wasOnboarded) {
+        // 更新履歴の新しい順を保ったまま3件だけ案内し、それより古い未読はここで既読にする。
+        // 案内する3件は閉じた時に1件ずつ保存するため、途中終了した未確認分は次回も残る。
+        const noticePlan = planUpdateNoticesForLogin(availableUpdateNotices(), seenUpdateIds);
+        if (noticePlan.seen.length !== seenUpdateIds.length) await storeSet(UPDATE_NOTICE_SEEN_KEY, noticePlan.seen, false);
+        setUpdateGuideQueue(noticePlan.queue);
+      }
       else await storeSet(UPDATE_NOTICE_SEEN_KEY, normalizeSeenUpdateNoticeIds([...seenUpdateIds, ...availableUpdateNotices().map(n=>n.id)]), false);
       if (!wasOnboarded) {
         // 決め終わっていない項目はプロフィール画面で続きから設定してもらう。
