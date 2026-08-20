@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 07:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 07:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3882,6 +3882,7 @@ const quickGrowthRateForRun = (runMode, difficultyId, waveTurnCount) => {
 };
 const specialRulePercent = (value) => `${Math.round((Number(value)||0)*100)}%`;
 const compactPercent = (value) => `${Number(((Number(value)||0)*100).toFixed(1))}%`;
+const precisePercent = (value) => `${Number(((Number(value)||0)*100).toFixed(2))}%`;
 const extremeSpecialRuleLines = (difficultyId, quick=false) => {
   if (difficultyId===ULTIMATE_SETTING.id) return [
     ['敵強化','累計T ×0.75%'],
@@ -3936,6 +3937,7 @@ const applyUltimateDistanceBreak = (damage, slotIndex, breakLevels, specialDiffi
 };
 const ultimateDamageTurnMultiplier = (turns, specialDifficulty=null) => specialDifficulty===ULTIMATE_SETTING.id
   ? Math.max(ULTIMATE_SETTING.specialRules.minimumDamageDealt,1-Math.max(0,Number(turns)||0)*ULTIMATE_SETTING.specialRules.damageTurnRate) : 1;
+const ultimateAllyJoinMultiplier = (turns) => Math.max(0,1-Math.max(0,Number(turns)||0)*ULTIMATE_SETTING.specialRules.allyJoinPenaltyRate);
 // ===== トレーニング(WAVEクリアごとの強化。旧「能力覚醒」) =====
 // 4種類から2回選ぶ。同じ項目を2回選んでもよく、その場合は1回目を適用した結果へ
 // 2回目をかける(2回分をまとめて足す別計算にはしない)。
@@ -3977,8 +3979,7 @@ const applyExtremeIntegerRule = (value, specialDifficulty=null, rule) => Math.fl
 // WAVE結果に確定済みの累計ターンを使い、CHAOSの固定50%とは重ねない。
 const applyAllyJoinBonus = (value, specialDifficulty=null, totalTurns=0) => {
   if(specialDifficulty===ULTIMATE_SETTING.id){
-    const multiplier=Math.max(0,1-Math.max(0,Number(totalTurns)||0)*ULTIMATE_SETTING.specialRules.allyJoinPenaltyRate);
-    return Math.floor((Number(value)||0)*multiplier);
+    return Math.floor((Number(value)||0)*ultimateAllyJoinMultiplier(totalTurns));
   }
   return applyExtremeIntegerRule(value,specialDifficulty,'allyJoinBonus');
 };
@@ -13833,10 +13834,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </header>
             {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===ULTIMATE_SETTING.id&&(()=>{
               const elapsedTotalTurns=totalTurnCount+Math.max(0,turnCount-1);
-              const enemyMultiplier=ultimateEnemyTurnMultiplier(elapsedTotalTurns);
+              const enemyMultiplier=ultimateEnemyTurnMultiplier(totalTurnCount);
               const damageMultiplier=ultimateDamageTurnMultiplier(elapsedTotalTurns,ULTIMATE_SETTING.id);
-              return <div data-ultimate-battle-status className="shrink-0 flex items-center justify-center gap-x-2 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100">
-                <span className="text-amber-300">ULTIMATE</span><span>累計{elapsedTotalTurns}T</span><span>敵強化 +{compactPercent(enemyMultiplier-1)}</span><span>現在の与ダメ {compactPercent(damageMultiplier)}</span>
+              return <div data-ultimate-battle-status className="shrink-0 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100">
+                <span className="text-amber-300">ULTIMATE</span><span>敵強化 +{compactPercent(enemyMultiplier-1)}（WAVE開始時 累計{totalTurnCount}T）</span><span>与ダメ {compactPercent(damageMultiplier)}（現在 累計{elapsedTotalTurns}T）</span>
               </div>;
             })()}
             {enemy&&(
@@ -14570,9 +14571,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5" data-join-status>
               {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===ULTIMATE_SETTING.id&&(()=>{
                 const totalTurns=waveResult?.totalTurnCount||0;
-                const normal=100;
-                const effective=applyAllyJoinBonus(normal,ULTIMATE_SETTING.id,totalTurns);
-                return <div data-ultimate-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"><span className="text-amber-300">ULTIMATE補正</span><span>累計{totalTurns}T</span><span>加入ボーナス {effective}%（-{normal-effective}%）</span></div>;
+                const multiplier=ultimateAllyJoinMultiplier(totalTurns);
+                return <div data-ultimate-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"><span className="text-amber-300">ULTIMATE補正</span><span>累計{totalTurns}T</span><span>加入ボーナス {precisePercent(multiplier)}（-{precisePercent(1-multiplier)}）</span></div>;
               })()}
               <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス</div>
               <div className="grid grid-cols-4 gap-1">

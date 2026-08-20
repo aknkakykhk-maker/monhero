@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-20 22:46",
+    date: "2026-08-21 07:18",
     type: 'update',
     title: 'プロモードの前回編成を1枠ずつ変更できるようにしました',
     items: [
@@ -10,7 +10,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-20 22:46",
+    date: "2026-08-21 07:18",
     type: 'update',
     title: 'プロモードで前回の編成を復元するようにしました',
     items: [
@@ -19,7 +19,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-20 22:46",
+    date: "2026-08-21 07:18",
     type: 'update',
     title: 'プロモードの前回編成を保存するようにしました',
     items: [
@@ -29,7 +29,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-20 22:46",
+    date: "2026-08-21 07:18",
     type: 'issue',
     title: 'カード選択中の「合計DMG」が実際より少なく出る不具合を修正',
     items: [
@@ -39,7 +39,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-20 22:46",
+    date: "2026-08-21 07:18",
     type: 'issue',
     title: 'WAVEリザルトで「次へ進む」が押せなくなることがある不具合を修正',
     items: [
@@ -49,7 +49,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-20 22:46",
+    date: "2026-08-21 07:18",
     type: 'update',
     title: 'クイックモードに「ULTIMATE」を追加しました',
     assistantNotice: { id:'update_notice_quick_ultimate_v1', type:'mode' },
