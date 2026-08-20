@@ -1,11 +1,11 @@
 # リポジトリ共通の開発ルール
 
 このファイルは、このリポジトリ全体で作業する AI エージェントに適用します。詳細な手順は
-[`DEVELOPMENT.md`](DEVELOPMENT.md)、プロジェクトの前提は [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) を正本とします。
+[`DEVELOPMENT.md`](DEVELOPMENT.md)、プロジェクトの前提は [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) を正本とします。
 
 ## 作業の開始と範囲
 
-- 作業開始時に、この `AGENTS.md`、[`README.md`](README.md)、[`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) を読む。続いて `DEVELOPMENT.md` と変更箇所に適用される下位の `AGENTS.md`、関連文書を確認する。
+- 作業開始時に、この `AGENTS.md`、[`README.md`](README.md)、[`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) を読む。続いて `DEVELOPMENT.md` と変更箇所に適用される下位の `AGENTS.md`、関連文書を確認する。
 - `git status --short --branch` で既存変更を確認し、利用者の変更を破棄・上書きしない。
 - 依頼範囲外のコード、仕様、データ、アセット、文書を「ついでに」変更しない。不明な要件は推測せず、質問するか未確認事項として明記する。
 - ゲーム仕様・バランス、ランキング、Supabase のスキーマや通信、セーブデータ形式は、明示的な依頼と互換性・移行方針なしに変更しない。

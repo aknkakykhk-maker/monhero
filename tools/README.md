@@ -38,116 +38,247 @@ node tools/build.js --check
 
 ## スクリプト
 
+`tools/` の直下にすべて平置きしている。`build.js` と `harness.js`(共通ヘルパー、直接は実行しない)
+以外はすべて `〇〇-check.js` / `〇〇-report.js` で、`node tools/〇〇.js` という書き方が
+`CLAUDE.md`・CI・過去の作業記録の各所に載っているため、**フォルダへ分けて実行パスを変えない**。
+代わりに、ここで用途ごとに並べる。**この一覧に載っていないスクリプトを作らないこと**
+(足したら同じPRでここへ1行足す)。
+
+以下はすべて `tools/` の中で実行する。`node tools/〇〇.js` のようにリポジトリのルートから
+呼んでもよい(ルート配信を前提とする実ブラウザ検査は、ルートから呼ぶほうが確実)。
+
+### ビルドと必須検査（`game-system.jsx` を触ったら必ず通す）
+
 | コマンド | 内容 |
 | --- | --- |
+| `node build.js` | **BUILD_DATE・version.json・更新履歴の最新日時を揃え、game-system.jsx を配信用JSへ変換して `monster-hero/game-system.compiled.js` を書き出す。改修したら必ず実行する。** |
+| `node build.js --check` | compiled が jsx と一致しているか確認する(古ければ終了コード1)。出荷前チェック用。 |
 | `node check-syntax.js` | `monster-hero/game-system.jsx` をBabelで変換して構文エラーが無いか確認する。**改修後は必ず実行する。** |
-| `node compiled-runtime-check.js` | 配信用コードが `jsxDEV` / automatic JSX runtime など、`index.html` が用意していないランタイムを参照していないことと、React / ReactDOM の読込順を確認する。 |
 | `node undefined-reference-check.js` | `game-system.jsx` が「その場所からは見えない変数」を参照していないか、Babelでスコープをたどって確認する。構文としては正しいので `check-syntax.js` では見つからず、その画面を開いた瞬間だけ真っ白になる類の不具合を防ぐ。**改修後は必ず実行する。** |
-| `node dye-report.js [モンスターID...]` | 染色もどきの部位マスクを実画像で生成し、部位ごとの画素数・被覆率を出力する。回帰テスト用。 |
-| `node dye-mask-editor-check.js` | 汎用染色マスクエディタの縦横比、本体内だけの描画、外部連結領域だけの掃除、Undo、境界警告、PNG正規化と輪郭内の透明穴維持を確認する。 |
-| `node dye-report.js --save-baseline` | 現在の結果を `dye-baseline.json` に保存する。以降は実行のたびに差分が表示される。 |
-| `node dye-region-map.js out.png <ID> [y0 y1]` | 染色もどきの部位分けを絵で確かめる。元の絵と、部位ごとに塗り分けた絵(①赤・②黄・③青)を左右に並べて書き出す。被覆率だけでは分からない「どこが混ざっているか」を見るために使う。 |
-| `node undine-dye-mask-check.js` | ウンディーネの染色1（髪）・染色2（顔、首、耳、腕、尻尾、尾びれ）・染色3（服）と3色同時の本番マスクを、正解見本 `undine-dye-mask.PNG` と画素単位で比較する。正解PNGは検査時だけ読み込む。 |
-| `node yaobikuni-dye-mask-check.js` | ヤオビクニの染色1（髪・胸飾り・両腕〜手・下半身〜尾びれ）・染色2（左右のヒレ／羽状部分）・染色3（顔・耳・首〜胴体）を、保存済み3色マスクと画素単位で比較する。 |
-| `node region-map.js [モンスターID...]` | 部位分けを色分けしたPNGを `out/` に書き出す。目視確認用。 |
-| `node image-report.js` | `monster-hero/images/` のPNGをフォルダごとにサイズ順で出す。中身が同じ重複ファイル・どこからも参照されていないファイルも検出する。 |
-| `node monster-image-quality-check.js` | 敵・味方の全身画像数、PNG読込、透過隅、可視画素を検査する。 |
-| `node extract-images.js [--dry-run]` | data/*.js に base64 で埋め込まれた画像をPNGファイルとして `monster-hero/images/` へ書き出し、定数をそのパスへ置き換える。置き場所はスクリプト内の `PLACEMENT` 表で決める。 |
-| `node image-asset-check.js` | 画像の参照先が実在するか、キャッシュキー(`?v=`)が中身と一致しているか、使われていない画像が残っていないかを確認する。 |
-| `node stamp-version.js` | BUILD_DATE、version.json、本体JSのキャッシュキーを現在の日本時間に揃える。手で書くと未来の時刻が入るので必ずこれを使う。 |
-| `node update-notice-dismiss-check.js` | 新バージョン通知が「押すと更新／×で今回は閉じる」の2択になっているか確認する。 |
-| `node update-notice-check.js` | 新バージョンの定期検知、常時表示、キャッシュ回避付き更新を静的に確認する。 |
-| `node boot-check.js` | 起動時の事前ロード画面と、画面遷移でBGMが重ならないことを確認する。 |
-| `node root-redirect-check.js` | ルートURLがLF APPSを描画せず、`location.replace`でゲームへ直接遷移することを確認する。 |
+| `node jsx-text-brace-check.js` | JSXの中に、閉じ忘れ・閉じすぎでできた「{」「}」がそのまま文字として混ざっていないかを調べる。`{cond&&<div>…</div>}` の開き `{cond&&` を書き忘れると、余った `}` は画面に出る文字として扱われ構文エラーにならない。**改修後は必ず実行する。** |
+| `node render-error-check.js` | 画面が真っ白になる類の不具合(JSの実行時エラー)を、実際にブラウザで開いて確かめる。構文も参照先も正しいのに描画した瞬間だけ落ちる(宣言前の定数を読むなど)場合はここでしか止められない。**改修後は必ず実行する。** |
+| `node compiled-runtime-check.js` | 配信用コードが `jsxDEV` / automatic JSX runtime など、`index.html` が用意していないランタイムを参照していないことと、React / ReactDOM の読込順を確認する。 |
 | `node boot-flow-check.js` | 音声失敗時のTITLE遷移、全画面タイトルタップ、同期的な多重実行防止、GAME準備と演出の並列化を静的に確認する。 |
-| `node bulk-enhance-check.js` | マスモンの「まとめて強化」が正しく動くか確認する。 |
-| `node mission-gift-badge-check.js` | ミッション・ギフトの未受取バッジ、ミッション一括受取、編成決定後の戻り先、ランキングのタブ分離を確認する。 |
-| `node mission-check.js` | デイリー・ウィークリーのJST期間、達成条件、バッジ、ギフト報酬と重複防止を確認する。 |
-| `node donation-check.js` | 神殿の寄付額、マスモン削除、8体編成の補正、二重実行防止、保存キー、BGM・戻り先・一覧タイトルを確認する。 |
-| `node rebirth-check.js` | Lv30上限移行の補償、二重補償防止、転生条件・費用・効果、固有技Lv、星表示、演出、保存キー、神殿BGMを確認する。 |
-| `node bgm-check.js` | BGM(audio/のmp3)が画面に応じて切り替わるかを実ブラウザで確認する。 |
-| `node audio-route-check.js` | BGMのaudio要素が再生前にWeb Audioへ接続され、iOSのメディア再生経路へ漏れないことを確認する。 |
-| `node emergency-audio-breeder-check.js` | 起動タップ内の音声有効化、保存ミュート保護、ブリーダーLvランキングの独立取得と表示状態を確認する。 |
-| `node breeder-ranking-browser-check.js` | Supabaseをスタブした実ブラウザで、全難易度のブリーダーLv集約、重複排除、複数件のDOM表示、タブ往復後の保持を確認する。 |
-| `node breeder-ranking-paging-check.js` | ブリーダーLvランキングが「よく遊ぶ人の記録に取得枠を食われて下位の人が消える」状態に戻っていないかを、Supabaseをスタブした実ブラウザで確認する。記録が数百件ある人と1件しかない人を混ぜ、全員が並ぶこと・1人1件にまとまること・ページ送りしていることを見る(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
-| `node bgm-arrangement-check.js` | BGMトラック登録、場面別アレンジ保存、最終ボス後のクリア曲、試聴、曲別音量補正を確認する。 |
-| `node ranking-member-level-check.js` | スコアランキングの編成に、そのプレイ時点の絆Lvが表示されるか確認する。 |
-| `node ranking-monster-icon-check.js` | ランキングのモンスターアイコンがID・名前・旧記録から解決できるか確認する。 |
-| `node ranking-check.js` | ランキングの集計仕様(スコアは当時のまま固定/ブリーダーLv・絆Lvは最新)を確認する。通信はスタブ。 |
-| `node ranking-request-check.js` | Normal/Hard/MasterのData APIリクエスト、難易度正規化と`eq`取得、旧`clear_id=NULL`表示、`clear_id`重複防止を通信スタブで確認する。 |
-| `node ranking-normal-display-check.js` | NormalのGET 3件が変換・絞り込み・並べ替え・重複排除を経て、正規化済みの同一stateキーで画面へ3件表示されることを確認する。 |
-| `node enemy-scan-check.js` | ENEMY SCANと実戦の行動定義・確率・威力倍率の共有、表示時に乱数を消費しないことを確認する。 |
-| `node bond-ranking-dedupe-check.js` | 同じ人・同じ種類のマスモンが、個体ID付きの記録と古い記録に分かれて二重に並ばないことを確認する。 |
-| `node bond-levels-table-check.js` | 絆Lvの正本テーブル(`bond_levels`)まわりを、Supabaseをスタブした実ブラウザで確認する。テーブルがある場合は正本の全員が並び、正本にまだ載っていない人は記録側の集計で補われること、テーブルが無い場合(適用前)は404を受けても壊れず従来どおり表示されることを見る(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
-| `node bond-levels-schema-match-check.js` | アプリが送るリクエストの形(取得する列・upsertで送る列・`on_conflict`・`Prefer`)と、本番へ適用したテーブル定義(`docs/BOND_LEVELS_APPLY.sql`)が食い違っていないかを突き合わせる。上のスモークはSupabaseを差し替えた偽物で動くため、列名を打ち間違えても200が返って通ってしまう。`bond_levels` は削除の権限をわざと与えていない(消せない)ので、間違った形で書き始める前にここで止める。`rankings` へ後から足した列(`docs/RUN_STATS_APPLY.sql` の `turns` / `reached_wave`)も同じ考え方で照合する。 |
-| `node ranking-run-stats-check.js` | スコアランキングの「◯◯ターンでクリア」「WAVE ◯ で終了」を、Supabaseをスタブした実ブラウザで確認する。列がある場合の表示(クリアはターン数・途中終了はWAVE・古い記録は何も出さない)に加えて、**列がまだ無い環境でスコアの保存が落ちないこと**を見る。ここが崩れるとSQLを適用するまで新しい記録が1件も残らなくなる(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
-| `node bond-ranking-check.js` | 絆ランキングの全party集計、新旧個体識別、最高Lv重複排除、空・失敗表示を確認する。 |
-| `node battle-check.js` | 実際にWAVEを自動で戦い、距離撃の取得・撃破ファンファーレ・引き継ぎ技の強化を確認する。 |
-| `node guts-recovery-check.js` | 固有技の強化画面で、強化ポイント1つを使って現在ガッツを10回復できることを確認する。押せる条件と回復後の値の式を本体からそのまま取り出して動かし、最大を超えないこと・満タンやポイント0では何も起きないこと・持っているポイントぶんだけ使えることを数値で見る。同じ描画の間に連打しても1ポイントで2回ぶん回復できないこと(同期の錠)、ガッツ回復を取り消す導線が無いこと、技の＋／－・ポイントの持ち越し・WAVEクリア時の付与・クイックモードの自動強化に触れていないこと、iPhone縦画面でタップしやすいことも確認する。 |
-| `node reflect-enemy-hp-check.js` | 反射(モノリスの勇者特性・固有技の障壁)で敵のライフが増えないことを確認する。反射はライフを絶対値で書き戻すため、クロージャが持つ「ターン開始時の `enemy.hp`」を使うと、そのターンに削ったぶんがまるごと巻き戻って敵が回復してしまう(実際に出した不具合)。敵の行動中に古い `enemy.hp` を読んでいないこと、最新のライフを呼び出し側から受け取っていること、撃破判定と同じ値を使い回していることを見たうえで、Reactのstateと同じ振る舞いを再現して代表的な場面のライフを実際に計算する。 |
-| `node battle-damage-preview-check.js` | 味方の連撃・追撃を含む共通予測と、選択中ガードを反映した敵の予定ダメージ表示を確認する。おりょう・ゴーレム・モッチー/ミタラシ・ききのように「使ったターンからすぐ効く」カードを攻撃カードより先に選んだとき、カード選択中の「合計DMG」がその上乗せぶんを正しく含むかを、実際の処理(processTurn)と同じ並び順で検算する。 |
-| `node enemy-defeat-check.js` | 反射ダメージの未満・同値・超過の境界値と、通常攻撃・固有技・連撃・追撃・反射が二重実行防止つきの共通撃破処理へ進むことを確認する。 |
-| `node battle-card-gesture-check.js` | カード名を含むカード全体から約10pxでスワイプへ切り替わり、終了後のclickを無効化しつつ通常タップと技変更を維持することを確認する。 |
-| `node bond-reward-check.js` | 周回終了時の勇者・参加・控えマスモンへの絆経験値配分、重複防止、上限・強化ポイント計算を確認する。 |
-| `node unique-range-check.js` | 固有技系統IDによる重複補正と、距離撃の威力判定・移動先・優先順を確認する。 |
-| `node debug-battle-check.js` | 隠しデバッグ戦の敵データ再利用、通常記録からの分離、BGM・終了導線・フラグ解除を静的に確認する。 |
-| `node title-bgm-check.js` | iOS相当の自動再生制限を再現し、最初のタップだけでタイトルBGMが鳴るか、起動タップがトップ画面へ届いていないかを確認する。 |
-| `node difficulty-item-check.js` | 新難易度(Grand Master/Hell/Legend)の表示と色、絆経験値チケットのまとめ使いを確認する。 |
-| `node battle-carousel-check.js` | 難易度カードの順序・スワイプ/矢印・敵生成共通化・全WAVE詳細・挑戦導線を確認する。 |
-| `node battle-menu-browser-check.js` | 390×844の実ブラウザでHOMEから難易度画面へ入り、例外ゼロ・矢印/スワイプ・全WAVE詳細・戻る/再入場・勇者選択を確認する。 |
-| `node ranking-party-check.js` | ランキングpartyの役割保存、旧記録互換、供モン人数と勇者重複防止を確認する。 |
+| `node update-notice-check.js` | 新バージョンの定期検知、常時表示、キャッシュ回避付き更新を静的に確認する。 |
+| `node stamp-version.js` | BUILD_DATE、version.json、本体JSのキャッシュキーを現在の日本時間に揃える。手で書くと未来の時刻が入るので必ずこれを使う。 |
+| `node stamp-boot-sizes.js` | 起動時に読み込むファイルの実サイズ(バイト)を `index.html` の `__mhBoot` へ書き込む。`build.js` から自動で呼ばれる。 |
+| `node data-cache-key-check.js` | index.htmlが読み込むdata/*.jsのキャッシュキーが中身と一致しているか確認する(古いデータが読まれて画面が真っ暗になるのを防ぐ)。 |
+
+### 起動・トップ・はじめての案内
+
+| コマンド | 内容 |
+| --- | --- |
+| `node boot-check.js` | 起動時の事前ロード画面と、画面遷移でBGMが重ならないことを確認する。 |
+| `node boot-progress-check.js` | 起動ローディングのゲージが実際の読み込みに沿って動き、最後に100%へ届くかを確かめる。 |
+| `node root-redirect-check.js` | ルートURLがLF APPSを描画せず、`location.replace`でゲームへ直接遷移することを確認する。 |
+| `node update-notice-dismiss-check.js` | 新バージョン通知が「押すと更新／×で今回は閉じる」の2択になっているか確認する。 |
+| `node ui-preferences-check.js` | 設定値の読み込みを確認する。保存が無ければ従来の初期値、壊れた値なら初期値へ戻ることを見る。 |
 | `node new-player-onboarding-check.js` | 空の保存領域から始まる新規プレイヤーの流れ(助手をえらぶ → 選んだ助手のあいさつ → プロフィール設定 → 村の案内)と、途中再開導線・既存プレイヤーへ助手選択を出さないことを確認する。 |
 | `node kiki-intro-check.js` | きき加入の会話(既存プレイヤーへ初回ログインで1回だけ)を確認する。台本の掛け合いと固定の呼び方(みゅあ→ひめちん / きき→みゅあちん)、プレイヤー向けの呼び方を使っていないこと、未閲覧フラグだけで判定せずオンボーディング完了と合わせて出していること、新規プレイヤーには出ないこと、会話で助手や仲良し度が変わらないこと、会話画面が発言者ごとの顔と表情で描けて縦画面で見切れないことを確認する。 |
 | `node onboarding-preview-check.js` | デバッグの「初回プレイを最初から再生」を確認する。入口が1つに統合されていること、再生の順番が本番と同じ(助手選択→あいさつ→プロフィール→村の案内→HOME)で画面も台本も作り直していないこと、途中でやめても控えた値へ必ず戻ること、iPhone縦画面で帯と見出しが重ならないことを見る。**いちばんの要は「保存が走らないこと」**で、本体の `storeSet` をそのまま取り出して動かし、再生中に流れうる保存(助手の選択・きき加入フラグ・名前・アイコン・mh_onboarded・案内の既読・仲良し度など)を実際に呼んで1件も書かれないこと、メモリの控えにも残らないこと、終了後はまた保存できることまで確かめる。 |
 | `node assistant-select-render-check.js` | 「助手をえらぶ」画面のJSXだけを取り出してReactで描き、落ちずに全助手が並ぶこと・顔と紹介と選ぶボタンが出ること・縦画面向けに2列でスクロールできることを確認する(BGMの事前ロードが終わらないサンドボックスでも、この画面だけは実際に描いて確かめられる)。 |
+| `node event-replay-check.js` | イベント回想(プロフィールから、見たことのある会話イベントを何度でも見返す機能)を確認する。 |
+| `node gift-login-check.js` | ギフト受取と、日本時間4時更新のログインボーナスを本番ソースの関数で検証する。 |
+| `node mission-check.js` | デイリー・ウィークリーのJST期間、達成条件、バッジ、ギフト報酬と重複防止を確認する。 |
+| `node mission-gift-badge-check.js` | ミッション・ギフトの未受取バッジ、ミッション一括受取、編成決定後の戻り先、ランキングのタブ分離を確認する。 |
+
+### バトル
+
+| コマンド | 内容 |
+| --- | --- |
+| `node battle-check.js` | 実際にWAVEを自動で戦い、距離撃の取得・撃破ファンファーレ・引き継ぎ技の強化を確認する。 |
+| `node battle-balance-check.js` | 難易度カードと全WAVE詳細が共通の敵生成を使い、WAVE1の敵情報を難易度カードへ戻していないことを確認する。 |
+| `node battle-scenario-check.js` | バトルのれんしゅう(台本どおりに動くバトル)の数値を、実際の計算式で検算する。 |
+| `node battle-damage-preview-check.js` | 味方の連撃・追撃を含む共通予測と、選択中ガードを反映した敵の予定ダメージ表示を確認する。おりょう・ゴーレム・モッチー/ミタラシ・ききのように「使ったターンからすぐ効く」カードを攻撃カードより先に選んだとき、カード選択中の「合計DMG」がその上乗せぶんを正しく含むかを、実際の処理(processTurn)と同じ並び順で検算する。 |
+| `node battle-card-gesture-check.js` | カード名を含むカード全体から約10pxでスワイプへ切り替わり、終了後のclickを無効化しつつ通常タップと技変更を維持することを確認する。 |
+| `node battle-carousel-check.js` | 難易度カードの順序・スワイプ/矢印・敵生成共通化・全WAVE詳細・挑戦導線を確認する。 |
+| `node battle-menu-browser-check.js` | 390×844の実ブラウザでHOMEから難易度画面へ入り、例外ゼロ・矢印/スワイプ・全WAVE詳細・戻る/再入場・勇者選択を確認する。 |
+| `node battle-mode-check.js` | チャレンジ／クイック／プロの報酬と記録を確認する。クイックの育成・プシュケー優先・ダイヤ優先の各方針、他モードへの非適用、ランキング分離、WAVEごとの自動成長、伴モン加入、画面・BGM設定の結線を見る。 |
+| `node battle-mode-select-check.js` | バトルの入口(バトルモード選択 → 難易度選択 → モード別スコアランキング)を実ブラウザで開き、押して進めることを確かめる。 |
+| `node battle-tutorial-check.js` | バトルチュートリアル(操作しながら覚える練習)の3つの入口(デバッグ設定・はじめての案内の最後・ヘルプ)を確認する。 |
+| `node battle-tutorial-v2-check.js` | いま本番で使っているバトルチュートリアル(モード選択から始まる版)を、実ブラウザで通してみる。 |
+| `node enemy-scan-check.js` | ENEMY SCANと実戦の行動定義・確率・威力倍率の共有、表示時に乱数を消費しないことを確認する。 |
+| `node enemy-defeat-check.js` | 反射ダメージの未満・同値・超過の境界値と、通常攻撃・固有技・連撃・追撃・反射が二重実行防止つきの共通撃破処理へ進むことを確認する。 |
+| `node reflect-enemy-hp-check.js` | 反射(モノリスの勇者特性・固有技の障壁)で敵のライフが増えないことを確認する。反射はライフを絶対値で書き戻すため、クロージャが持つ「ターン開始時の `enemy.hp`」を使うと、そのターンに削ったぶんがまるごと巻き戻って敵が回復してしまう(実際に出した不具合)。敵の行動中に古い `enemy.hp` を読んでいないこと、最新のライフを呼び出し側から受け取っていること、撃破判定と同じ値を使い回していることを見たうえで、Reactのstateと同じ振る舞いを再現して代表的な場面のライフを実際に計算する。 |
+| `node hero-marker-check.js` | バトル画面で「どれが勇者モンか」「勇者特性で同時使用枚数が増えているか」が分かるかを確認する。勇者モンの判定が種idで1か所にまとまっていること、モンスター枠に王冠が出ること、枚数の加算が計算と表示で同じ出どころを使っていること、ヘルプにも載っていることを見る。 |
+| `node guard-card-check.js` | デッキに入るガードカードの枚数を確かめる。 |
+| `node guard-defense-balance-check.js` | 丈夫さの基本防御とガード値を、表示と実処理で同じ式から出していることを固定する。 |
+| `node move-hint-layout-check.js` | 敵の「移動しようとしている」吹き出しの大きさと位置を、実ブラウザで測る。 |
+| `node unique-range-check.js` | 固有技系統IDによる重複補正と、距離撃の威力判定・移動先・優先順を確認する。 |
+| `node unique-effect-check.js` | 固有技の「効果の説明文」と実際の実装が食い違っていないかを見張る。 |
+| `node dist-aptitude-check.js` | 間合い適性が距離ごとの補正値(%)として扱われ、編成全員ぶんが置いた距離に関係なく4距離すべてへ加算されるか確認する。 |
+| `node balance-second-card-check.js` | 同じターンの2枚目以降のカードが効果半減になるか(ブリーダーカードは対象外)と、かどみうむの効果量・説明文を確認する。 |
+| `node card-icon-check.js` | カードやアイテムの `icon` 欄が、画像と絵文字へ正しく振り分けられているかを確認する。 |
+| `node debug-battle-check.js` | 隠しデバッグ戦の敵データ再利用、通常記録からの分離、BGM・終了導線・フラグ解除を静的に確認する。 |
+
+### 難易度とモード（チャレンジ／クイック／プロ／極限）
+
+| コマンド | 内容 |
+| --- | --- |
+| `node difficulty-item-check.js` | 新難易度(Grand Master/Hell/Legend)の表示と色、絆経験値チケットのまとめ使いを確認する。 |
+| `node extreme-challenge-check.js` | 極限チャレンジ(正式版)を確認する。EXTREMEの倍率と未実装段階、Grand Master以上クリアの解放条件、ブリーダーカード50%がEXTREME固有ルールに閉じていること、正式プレイは報酬・クリア記録を保存しデバッグプレイでは保存しないこと、既存の保存キーと全国ランキングへ混ぜていないことを見る。 |
+| `node extreme-reward-check.js` | 極限チャレンジの数値を本番の定義で計算して確かめる。EXTREMEの敵×13と報酬倍率、通常難易度(Beginner〜Legend)の敵性能に回帰がないこと(powerOverride=nullを0と取り違えない)、解放判定の境界を見る。 |
+| `node extreme-browser-check.js` | 極限チャレンジを実ブラウザで遊んで確認する。未解放時のロック表示、Grand Masterクリア後の解放、EXTREMEを押してバトルが始まること、敵の強さが×13、極限ルール発動の表示、通常難易度に影響が無いこと、正式公開の初回案内が1回だけ出ることを見る。 |
+| `node nightmare-rules-check.js` | NIGHTMAREのWAVE後強化50%、自動回復率・距離適性のプラス50%／マイナス200%を代表値で確認し、WAVE後距離強化との分離、EXTREMEと通常モードへの非適用も確認する。 |
+| `node ultimate-rules-check.js` | 正式ULTIMATEの解放・報酬・記録共通経路と、累計ターンによる敵強化・供モン加入ボーナス低下、WAVEターンによるトレーニング低下、DISTANCE BREAK、デバッグ戦との分離を代表値で確認する。 |
+| `node chaos-rules-check.js` | CHAOSの特殊ルール(与ダメージ50%・加入ボーナス50%・消費ガッツ150%、いずれも端数切り捨て)と、極限チャレンジの説明文を確認する。 |
+| `node quick-chaos-check.js` | クイックCHAOSの3報酬方針、同難易度解放、特殊ルール共有、ランキング除外、デバッグ保存なし、既存記録キー、カード構成、一度きり通知を確認する。 |
+| `node quick-extreme-special-rules-check.js` | クイック極限難易度が極限本体の `specialRules` を共用することに加え、クイックULTIMATEの公開順・3報酬方針・自動成長低下・全回復・開始表示・固定カード高・ランキング除外・更新通知を確認する。 |
+| `node quick-extreme-render-check.js` | クイック難易度カルーセルの再描画で、EXTREME/NIGHTMAREが通常難易度表に無くても表示・報酬値を解決できることを固定する。 |
+| `node quick-difficulty-unlock-check.js` | クイックの難易度解放条件を確認する。極限のNIGHTMAREクリアでクイックNIGHTMAREが解放され、EXTREMEやCHAOSのクリアだけでは解放されないことを見る。 |
+| `node pro-mode-check.js` | プロモードを実ブラウザで最初から遊んでみて、仕様どおりに動くかを確かめる。 |
+| `node skip-ticket-check.js` | スキップチケット(序/破/急)の値段・配布・報酬計算と、スコアやランキングに記録しないこと、勇者モン選択のタブを確認する。 |
+
+### ラン中の育成・報酬・リザルト
+
+| コマンド | 内容 |
+| --- | --- |
 | `node training-check.js` | 修行の難易度・参加券・24マスマップ・一時保存・道具・報酬・BGM/SE・二重確定防止を確認する。 |
-| `node tap-sound-trace.js` | 起動画面のタップからの出来事(イベント・再生・Web Audioの接続)を時系列で並べる。音まわりの調査用。 |
-| `node build.js` | **BUILD_DATE・version.json・更新履歴の最新日時を揃え、game-system.jsx を配信用JSへ変換して `monster-hero/game-system.compiled.js` を書き出す。改修したら必ず実行する。** |
-| `node build.js --check` | compiled が jsx と一致しているか確認する(古ければ終了コード1)。出荷前チェック用。 |
-| `node monster-list-filter-check.js` | ベースモン一覧・マスモン一覧が種別チェックの影響で空にならないか確認する。 |
+| `node training-reward-check.js` | WAVE後のトレーニング（4種×2回選択）の計算・同一項目2回の複利・ULTIMATE低下・クイック非適用・2回そろうまで決定できないUIを確認する。 |
+| `node ally-join-view-check.js` | 供モン合流(PICK_ALLY)の画面を確認する。「現在のステータス」パネル(4ステータス＋間合い適性4距離)、候補カードが加算量ではなく合流後の値と変化量を出すこと、あふれても上側へ届くこと、そして本体の `allyJoinPreview` をそのまま動かして通常／ULTIMATE(累計ターンで加算低下)／NIGHTMARE(適性半減)の数値が実際の合流処理と一致することを見る。 |
+| `node masu-register-check.js` | ラン終了画面(優勝/敗北/リタイア)の「マスモンとして登録する」にたどり着けるかを確認する。1WAVE以上クリアしたときだけ案内が出ること、リタイアでも獲得内訳を作ってから結果を出すこと、3画面とも中央のスクロール領域が `justify-center` ではなく(はみ出すと上側へ永久に届かなくなるため)内側を `m-auto` で寄せていること、登録の案内を獲得内訳より前に置いていることを見る。 |
+| `node guts-recovery-check.js` | 固有技の強化画面で、強化ポイント1つを使って現在ガッツを10回復できることを確認する。押せる条件と回復後の値の式を本体からそのまま取り出して動かし、最大を超えないこと・満タンやポイント0では何も起きないこと・持っているポイントぶんだけ使えることを数値で見る。同じ描画の間に連打しても1ポイントで2回ぶん回復できないこと(同期の錠)、ガッツ回復を取り消す導線が無いこと、技の＋／－・ポイントの持ち越し・WAVEクリア時の付与・クイックモードの自動強化に触れていないこと、iPhone縦画面でタップしやすいことも確認する。 |
+| `node bond-reward-check.js` | 周回終了時の勇者・参加・控えマスモンへの絆経験値配分、重複防止、上限・強化ポイント計算を確認する。 |
+| `node unique-skill-point-check.js` | 固有技ポイント(限界突破・転生で「あとで決める」を選んだときに残るぶん)を検証する。 |
+| `node inherited-unique-definition-check.js` | 継承した固有技の定義を確認する。旧スナップショット名ではなく `monId` から最新の固有技名を参照していることを見る。 |
+| `node inherited-unique-level-check.js` | 継承固有技のLvを確認する。ラン中の強化、Lv.8上限、明示した下位Lvを恒久Lvへ戻さないことを見る。 |
+| `node ranking-finish-check.js` | ラン終了時のランキング処理が、再び画面遷移を通信待ちにしたり多重送信を許したりしないかを、配信用ソースと生成物の両方で確認する。実通信には依存しない。 |
+
+### マスモンの育成・神殿・保存形式
+
+| コマンド | 内容 |
+| --- | --- |
 | `node monster-power-check.js` | 総合力(モンスターの育成結果を1つの数値にした派生指標)の計算式を検算する。能力1あたりの点・間合い適性1段階=+10・4距離すべてを合計すること・固有技1個=+100とLv1段階=+200/3、未使用強化ポイント/絆Lv/限界突破/転生/合体/勇者特性/合流ボーナスを加点しないこと、最後だけ四捨五入すること、一括強化のプレビューが実データを書き換えず確定後の値と一致すること、詳細・一覧・並べ替え・強化画面が同じ共通関数を使っていることを確認する。 |
+| `node monster-list-filter-check.js` | ベースモン一覧・マスモン一覧が種別チェックの影響で空にならないか確認する。 |
+| `node monster-detail-unified-check.js` | モンスター詳細(編成・ベースモン一覧・マスモン一覧・勇者モン選択・ランキング)が、外枠・上部サマリー・本文まで1つのマスターUIを通っているか確認する。呼び出し元固有の操作だけを引数で受け取っていること、上部サマリーの並び(総合力・絆Lv/上限・限界突破・転生)、限界突破(rebirthCount)と転生(reincarnateCount)を取り違えていないことも見る。 |
+| `node monster-detail-actions-check.js` | マスモン詳細の育成導線が対象個体を引き継ぎ、神殿の機能を混ぜていないことを確認する。 |
+| `node bulk-enhance-check.js` | マスモンの「まとめて強化」が正しく動くか確認する。 |
+| `node breeder-level-cap-check.js` | ブリーダーレベルの計算(`levelInfo`)に実質的な上限が無いことを確認する。以前はループの安全策(200回まで)がそのままレベル上限になっており、Lv.201から上がらなくなっていた。固定回数の`for`ループが残っていないこと、実際に計算関数を動かしてLv.201を超えて正しく上がることを見る。**あわせて、その打ち切りが兼ねていた安全弁の代わりが効いているかも見る**: `NaN`・`Infinity`・文字列などの壊れた保存値は「`xp < need`」がいつまでも偽になるため、守りが無いとその場で無限ループして画面が固まる。1秒以内にLv.1へ落ち着くこと、正しい数値文字列は従来どおり数値として扱うこと、極端に大きい経験値でも短時間で終わることを確認する。 |
+| `node fusion-rebirth-check.js` | 合体で上がったレベルぶんの強化ポイントが配られるか、合体・転生の消費ダイヤ単価(絆レベル1あたり50)を確認する。 |
+| `node fusion-detail-check.js` | 合体詳細ページと、ランキングへ載せる合体履歴・総合力スナップショットを確認する。 |
+| `node fusion-breakthrough-check.js` | 合体と同時に行う複数回限界突破の事前計算を、本番関数で検証する。 |
+| `node fusion-reincarnate-bonus-check.js` | 転生ボーナスを確認する。旧セーブを一度だけ正規化すること、保存済みの実ボーナスを回数から再計算しないこと、二重実行ロックを継承加算より前に取ることを見る。 |
+| `node fusion-animation-browser-check.js` | 通常合体と「限界突破して合体」が、実ブラウザで同じ演出を最後まで表示することを確認する。 |
+| `node rebirth-check.js` | Lv30上限移行の補償、二重補償防止、転生条件・費用・効果、固有技Lv、星表示、演出、保存キー、神殿BGMを確認する。 |
+| `node breakthrough-item-check.js` | 限界突破専用アイテム「虹のプシュケー」を確認する。所持数がそのまま限界突破の可否になるため、数え方を固定する。 |
+| `node breakthrough-star-check.js` | 限界突破の★(凸数と色・個数)と、最終限界突破(Lv.180 → Lv.200)を確認する。★は保存せず `rebirthCount` から毎回組み立てる。 |
+| `node donation-check.js` | 神殿の寄付額、マスモン削除、8体編成の補正、二重実行防止、保存キー、BGM・戻り先・一覧タイトルを確認する。 |
+| `node temple-update-check.js` | 神殿の合体・寄付・再生の仕様と後方互換性を編集元ソースから確認する。再生個体の90〜110%の能力差と間合い適性の維持、既存個体との互換性、合体の費用・継承条件、寄付報酬、二重処理ロック、円盤石画像の実在を見る。 |
+| `node party-set-check.js` | 編成セット(セット1〜5、通常用など)の正規化を確認する。 |
+| `node pasture-check.js` | HOME放牧設定の0体・1体・5体保存、旧セーブ互換、削除済みID除外、歩行タイマーの停止を確認する。 |
 | `node masu-baseline-resolution-check.js` | マスモンの旧形式を非変更で維持すること、新規通常・再生個体の新旧表現と総合力、再生乱数回数、適性強化・リセット・転生、最新ベースへの新形式だけの追従、適性上限Mに加え、第4段階の非保存ドライラン分類・候補・保全・一覧集計を確認する。 |
+| `node legacy-regeneration-baseline-check.js` | 旧再生個体の4能力から歴代ベースを判定する純粋関数を検査する。 |
 | `node legacy-dist-apt-boosts-check.js` | 第6B-2の旧距離適性候補について、通常種の安全判定・不正値拒否・旧ゴーレム保留・新形式ゴーレム正常・入力非変更・保存処理不在を確認する。 |
 | `node legacy-masu-migration-diagnosis-check.js` | 第6B-3の個体全体診断について、能力・間合いの独立分類、SAFE_EXACT/PARTIAL/AMBIGUOUS/BLOCKED/ALREADY_MODERN、歴代ベースからの個体差と能力変化量、間合い・既存ポイントの保全、総合力再計算、入力非変更、保存処理不在を確認する。 |
 | `node safe-masu-baseline-migration-check.js` | 第6Cの実移行について、SAFE_EXACTだけへの診断候補追加、全非対象分類の無変更、保存直前の個体差・基礎値差ぶんの能力変化・4距離・現行式の総合力・ポイント・旧フィールド・再診断、冪等性、歴代ベース、34凸・35凸、旧保存への再適用を確認する。 |
-| `node monster-detail-unified-check.js` | モンスター詳細(編成・ベースモン一覧・マスモン一覧・勇者モン選択・ランキング)が、外枠・上部サマリー・本文まで1つのマスターUIを通っているか確認する。呼び出し元固有の操作だけを引数で受け取っていること、上部サマリーの並び(総合力・絆Lv/上限・限界突破・転生)、限界突破(rebirthCount)と転生(reincarnateCount)を取り違えていないことも見る。 |
-| `node dist-aptitude-check.js` | 間合い適性が距離ごとの補正値(%)として扱われ、編成全員ぶんが置いた距離に関係なく4距離すべてへ加算されるか確認する。 |
-| `node fusion-rebirth-check.js` | 合体で上がったレベルぶんの強化ポイントが配られるか、合体・転生の消費ダイヤ単価(絆レベル1あたり50)を確認する。 |
-| `node skip-ticket-check.js` | スキップチケット(序/破/急)の値段・配布・報酬計算と、スコアやランキングに記録しないこと、勇者モン選択のタブを確認する。 |
-| `node layout-consistency-check.js` | モンスターカードの大きさ統一・難易度カードの高さ・マーケットの商品カードの並び・Masterの文字色・各画面に縦スクロールがあるかを確認する。 |
-| `node extreme-challenge-check.js` | 極限チャレンジ(正式版)を確認する。EXTREMEの倍率と未実装段階、Grand Master以上クリアの解放条件、ブリーダーカード50%がEXTREME固有ルールに閉じていること、正式プレイは報酬・クリア記録を保存しデバッグプレイでは保存しないこと、既存の保存キーと全国ランキングへ混ぜていないことを見る。 |
-| `node nightmare-rules-check.js` | NIGHTMAREのWAVE後強化50%、自動回復率・距離適性のプラス50%／マイナス200%を代表値で確認し、WAVE後距離強化との分離、EXTREMEと通常モードへの非適用も確認する。 |
-| `node training-reward-check.js` | WAVE後のトレーニング（4種×2回選択）の計算・同一項目2回の複利・ULTIMATE低下・クイック非適用・2回そろうまで決定できないUIを確認する。 |
-| `node ally-join-view-check.js` | 供モン合流(PICK_ALLY)の画面を確認する。「現在のステータス」パネル(4ステータス＋間合い適性4距離)、候補カードが加算量ではなく合流後の値と変化量を出すこと、あふれても上側へ届くこと、そして本体の `allyJoinPreview` をそのまま動かして通常／ULTIMATE(累計ターンで加算低下)／NIGHTMARE(適性半減)の数値が実際の合流処理と一致することを見る。 |
-| `node breeder-level-cap-check.js` | ブリーダーレベルの計算(`levelInfo`)に実質的な上限が無いことを確認する。以前はループの安全策(200回まで)がそのままレベル上限になっており、Lv.201から上がらなくなっていた。固定回数の`for`ループが残っていないこと、実際に計算関数を動かしてLv.201を超えて正しく上がることを見る。**あわせて、その打ち切りが兼ねていた安全弁の代わりが効いているかも見る**: `NaN`・`Infinity`・文字列などの壊れた保存値は「`xp < need`」がいつまでも偽になるため、守りが無いとその場で無限ループして画面が固まる。1秒以内にLv.1へ落ち着くこと、正しい数値文字列は従来どおり数値として扱うこと、極端に大きい経験値でも短時間で終わることを確認する。 |
-| `node masu-register-check.js` | ラン終了画面(優勝/敗北/リタイア)の「マスモンとして登録する」にたどり着けるかを確認する。1WAVE以上クリアしたときだけ案内が出ること、リタイアでも獲得内訳を作ってから結果を出すこと、3画面とも中央のスクロール領域が `justify-center` ではなく(はみ出すと上側へ永久に届かなくなるため)内側を `m-auto` で寄せていること、登録の案内を獲得内訳より前に置いていることを見る。 |
-| `node ultimate-rules-check.js` | 正式ULTIMATEの解放・報酬・記録共通経路と、累計ターンによる敵強化・供モン加入ボーナス低下、WAVEターンによるトレーニング低下、DISTANCE BREAK、デバッグ戦との分離を代表値で確認する。 |
-| `node quick-extreme-special-rules-check.js` | クイック極限難易度が極限本体の `specialRules` を共用することに加え、クイックULTIMATEの公開順・3報酬方針・自動成長低下・全回復・開始表示・固定カード高・ランキング除外・更新通知を確認する。 |
-| `node quick-chaos-check.js` | クイックCHAOSの3報酬方針、同難易度解放、特殊ルール共有、ランキング除外、デバッグ保存なし、既存記録キー、カード構成、一度きり通知を確認する。 |
-| `node extreme-reward-check.js` | 極限チャレンジの数値を本番の定義で計算して確かめる。EXTREMEの敵×13と報酬倍率、通常難易度(Beginner〜Legend)の敵性能に回帰がないこと(powerOverride=nullを0と取り違えない)、解放判定の境界を見る。 |
-| `node extreme-browser-check.js` | 極限チャレンジを実ブラウザで遊んで確認する。未解放時のロック表示、Grand Masterクリア後の解放、EXTREMEを押してバトルが始まること、敵の強さが×13、極限ルール発動の表示、通常難易度に影響が無いこと、正式公開の初回案内が1回だけ出ることを見る。 |
+
+### モンスター個別・ブリーダーカード・マーケット
+
+| コマンド | 内容 |
+| --- | --- |
+| `node golem-balance-check.js` | 勇者モンの素の能力が壊れた形になっていないかを、実装と同じ式で見張る。 |
+| `node snegurochka-check.js` | スネグーラチカ系3体の基礎能力・適性・合流値、絶氷の楔の状態と距離条件、自動ガッツ回復率の加算と上限(勇者限定)、特性説明を確認する。 |
 | `node mermaid-monsters-check.js` | ウンディーネ／ヤオビクニ(スネグーラチカと同系統の人魚)を確認する。ステータス・合流ボーナス・距離適性・通常技9段階・固有技9段階・専用モーション・絶氷の楔と氷海の支配者の共有、マーケット6商品、アイコンを画像複製ではなくscale/x/yで合わせていること、3色染色の部位、スネグーラチカに影響が無いことを見る。 |
 | `node mermaid-browser-check.js` | ウンディーネ／ヤオビクニを実ブラウザで確認する。マーケットのアイコン／円盤石タブに6商品が並ぶこと、4つのブリーダーアイコンと2つの円盤石を実際に購入できること、円盤石でモンスターが解放されベースモン一覧に出ること、購入したアイコンがプロフィール選択に並び設定でき、再読み込みしても残ることを見る(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
-| `node battle-mode-check.js` | チャレンジ／クイック／プロの報酬と記録を確認する。クイックの育成・プシュケー優先・ダイヤ優先の各方針、他モードへの非適用、ランキング分離、WAVEごとの自動成長、伴モン加入、画面・BGM設定の結線を見る。 |
-| `node hero-marker-check.js` | バトル画面で「どれが勇者モンか」「勇者特性で同時使用枚数が増えているか」が分かるかを確認する。勇者モンの判定が種idで1か所にまとまっていること、モンスター枠に王冠が出ること、枚数の加算が計算と表示で同じ出どころを使っていること、ヘルプにも載っていることを見る。 |
+| `node meloso-breeder-check.js` | メロソのカード定義、マーケット解放、6枠維持、回復・ガード・枚数条件・次ターン予約・予測共通化を確認する。 |
+| `node kiki-breeder-check.js` | ききのブリーダーカード(応援／本気／全力全開)の定義と種別を確認する。 |
+| `node market-icon-check.js` | マーケットのアイコン商品を確認する。 |
+| `node monster-art-fit-check.js` | ウンディーネ・ヤオビクニ(縦長2:3の立ち絵)が、丸枠・正方形枠の一覧で頭のてっぺんや尾びれを欠かさず表示できているかを確認する。 |
+
+### ランキング（Supabase）
+
+| コマンド | 内容 |
+| --- | --- |
+| `node ranking-check.js` | ランキングの集計仕様(スコアは当時のまま固定/ブリーダーLv・絆Lvは最新)を確認する。通信はスタブ。 |
+| `node ranking-request-check.js` | Normal/Hard/MasterのData APIリクエスト、難易度正規化と`eq`取得、旧`clear_id=NULL`表示、`clear_id`重複防止を通信スタブで確認する。 |
+| `node ranking-normal-display-check.js` | NormalのGET 3件が変換・絞り込み・並べ替え・重複排除を経て、正規化済みの同一stateキーで画面へ3件表示されることを確認する。 |
+| `node ranking-normal-integration-check.js` | 結果送信の入口からinsert相当、成功判定、ローカル退避までを一続きで確認する。 |
+| `node ranking-refresh-race-check.js` | 保存前GETと保存後の強制GETの競合を、Normalのstate反映まで再現する回帰テスト。 |
+| `node ranking-party-check.js` | ランキングpartyの役割保存、旧記録互換、供モン人数と勇者重複防止を確認する。 |
+| `node ranking-member-level-check.js` | スコアランキングの編成に、そのプレイ時点の絆Lvが表示されるか確認する。 |
+| `node ranking-monster-icon-check.js` | ランキングのモンスターアイコンがID・名前・旧記録から解決できるか確認する。 |
+| `node ranking-monster-detail-check.js` | ランキングの編成から開くモンスター詳細を確認する。 |
+| `node ranking-detail-distance-check.js` | ランキングの表示まわり(間合いの出し方など)を確認する。 |
+| `node ranking-dye-color-check.js` | ランキングの記録に載せる染色カラーが、実際の染色と同じ部位に付くかを確認する。 |
+| `node ranking-dye-cost-check.js` | ランキングの編成に実際の染色色を出す場合の重さを実測する。 |
+| `node ranking-run-stats-check.js` | スコアランキングの「◯◯ターンでクリア」「WAVE ◯ で終了」を、Supabaseをスタブした実ブラウザで確認する。列がある場合の表示(クリアはターン数・途中終了はWAVE・古い記録は何も出さない)に加えて、**列がまだ無い環境でスコアの保存が落ちないこと**を見る。ここが崩れるとSQLを適用するまで新しい記録が1件も残らなくなる(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
+| `node bond-ranking-check.js` | 絆ランキングの全party集計、新旧個体識別、最高Lv重複排除、空・失敗表示を確認する。 |
+| `node bond-ranking-dedupe-check.js` | 同じ人・同じ種類のマスモンが、個体ID付きの記録と古い記録に分かれて二重に並ばないことを確認する。 |
+| `node bond-ranking-submit-check.js` | 絆Lvランキングへ、そのプレイの絆Lv(`party[].bondLevel`)がちゃんと載るかを確認する。 |
+| `node bond-levels-table-check.js` | 絆Lvの正本テーブル(`bond_levels`)まわりを、Supabaseをスタブした実ブラウザで確認する。テーブルがある場合は正本の全員が並び、正本にまだ載っていない人は記録側の集計で補われること、テーブルが無い場合(適用前)は404を受けても壊れず従来どおり表示されることを見る(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
+| `node bond-levels-schema-match-check.js` | アプリが送るリクエストの形(取得する列・upsertで送る列・`on_conflict`・`Prefer`)と、本番へ適用したテーブル定義(`docs/sql/bond-levels/BOND_LEVELS_APPLY.sql`)が食い違っていないかを突き合わせる。上のスモークはSupabaseを差し替えた偽物で動くため、列名を打ち間違えても200が返って通ってしまう。`bond_levels` は削除の権限をわざと与えていない(消せない)ので、間違った形で書き始める前にここで止める。`rankings` へ後から足した列(`docs/sql/run-stats/RUN_STATS_APPLY.sql` の `turns` / `reached_wave`)も同じ考え方で照合する。 |
+| `node breeder-ranking-browser-check.js` | Supabaseをスタブした実ブラウザで、全難易度のブリーダーLv集約、重複排除、複数件のDOM表示、タブ往復後の保持を確認する。 |
+| `node breeder-ranking-paging-check.js` | ブリーダーLvランキングが「よく遊ぶ人の記録に取得枠を食われて下位の人が消える」状態に戻っていないかを、Supabaseをスタブした実ブラウザで確認する。記録が数百件ある人と1件しかない人を混ぜ、全員が並ぶこと・1人1件にまとまること・ページ送りしていることを見る(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
+| `node emergency-audio-breeder-check.js` | 起動タップ内の音声有効化、保存ミュート保護、ブリーダーLvランキングの独立取得と表示状態を確認する。 |
+
+### 助手（みゅあ・きき）
+
+| コマンド | 内容 |
+| --- | --- |
 | `node assistant-check.js` | 助手(ナビゲーター)システムを確認する。助手の定義・表情画像・場面(scene)の登録・吹き出しの共通コンポーネントに加え、JSXで使うsceneが実在すること、sceneのhelp参照先が実在すること、1画面につき5種類以上のセリフがあること、実際に引いて直前と同じものが出ないこと、条件つきのセリフが通常より優先されること、説明書のような言い回しや語尾の偏りが無いことを見る。 |
 | `node assistant-bond-check.js` | 助手との仲良し度を確認する。段階と呼び方、どのLvでも話すことが尽きないか、行動ごとの獲得量と1日上限が指定どおりか(表で1つずつ突き合わせる)、1日の合計上限が行動ごとの上限の合計へ自動追随しているか、Lvアップに必要な累積量を変えていないか、みゅあとききの保存が混ざらないかを見る。**助手のブリーダーカード分は本体の `grantEquippedAssistantCardBond` / `addAssistantBondFor` を取り出して実際に走らせ**、みゅあカード→みゅあ・ききカード→きき・選択中の助手が別でも本人へ入ること、両方編成なら両方へ入ること、編成保存だけでは増えず実際のバトル開始とカード使用でだけ数えること、選んでいない助手のLvアップ通知を出さないことまで確認する。 |
 | `node assistant-update-notice-check.js` | 正式アップデートの初回助手案内について、通知ID、データ形式、既読の正規化、新規プレイヤー保護、終了時保存、遷移先、デバッグ通知の隔離を確認する。 |
-| `node daily-masu-advice-check.js` | みゅあの日次ワンポイント案内の本文データ、7体・8体の条件、通常ログインとDEBUGの共通表示経路、本文領域の可視スタイルを確認する。 |
+| `node assistant-face-check.js` | 助手の顔アイコンが「顔が真ん中」に切り出せているかを見る。丸く切って使う場所が多いため、中央からずれると欠ける。表情画像を差し替えたら流す。 |
 | `node make-assistant-faces.js` | 助手の表情画像(`monster-hero/images/assistant/myua_*.PNG`)から、吹き出し用の小さい顔アイコンを `images/assistant/face/` へ書き出す。元絵は1枚1.5MBあるので、表情画像を差し替え・追加したら必ず流し直す。 |
+| `node daily-masu-advice-check.js` | みゅあの日次ワンポイント案内の本文データ、7体・8体の条件、通常ログインとDEBUGの共通表示経路、本文領域の可視スタイルを確認する。 |
+
+### ヘルプ（更新漏れの検出）
+
+| コマンド | 内容 |
+| --- | --- |
 | `node help-coverage-check.js` | 「機能を足したのにヘルプに載っていない」を検出する。全画面(gameState)が HELP_SCREEN_COVERAGE に載っているか、難易度・アイテム・ログボ・ミッション・教えが実データから全件出ているかを確認する。 |
-| `node help-render-check.js` | ヘルプ画面のJSXを切り出してReactで実際に描画し、カテゴリ一覧・項目一覧・全項目の本文が最後まで描けることを確認する(未定義の変数を参照していれば失敗する)。 |
 | `node help-guide-check.js` | ヘルプ(攻略情報局)を確認する。data/help.js のデータの形、全項目に助手のひとことがあること、カテゴリ→項目→本文の3階層で描かれていること、本文の数値が実際の計算と一致することを見る。 |
-| `node data-cache-key-check.js` | index.htmlが読み込むdata/*.jsのキャッシュキーが中身と一致しているか確認する(古いデータが読まれて画面が真っ暗になるのを防ぐ)。 |
-| `node meloso-breeder-check.js` | メロソのカード定義、マーケット解放、6枠維持、回復・ガード・枚数条件・次ターン予約・予測共通化を確認する。 |
-| `node balance-second-card-check.js` | 同じターンの2枚目以降のカードが効果半減になるか(ブリーダーカードは対象外)と、かどみうむの効果量・説明文を確認する。 |
-| `node pasture-check.js` | HOME放牧設定の0体・1体・5体保存、旧セーブ互換、削除済みID除外、歩行タイマーの停止を確認する。 |
+| `node help-render-check.js` | ヘルプ画面のJSXを切り出してReactで実際に描画し、カテゴリ一覧・項目一覧・全項目の本文が最後まで描けることを確認する(未定義の変数を参照していれば失敗する)。 |
+
+### 見た目・レイアウト
+
+| コマンド | 内容 |
+| --- | --- |
+| `node layout-consistency-check.js` | モンスターカードの大きさ統一・難易度カードの高さ・マーケットの商品カードの並び・Masterの文字色・各画面に縦スクロールがあるかを確認する。 |
+| `node home-layout-check.js` | HOME画面の配置(みゅあの吹き出し・施設・はじめての案内)を、実ブラウザで測って重なりを数値で確かめる。HOMEの見た目を触ったら流す。 |
+| `node face-render-check.js` | 顔アイコンが実ブラウザで正しく描画されるか確認し、アイコン選択画面と同じ見た目のスクリーンショットを出す。 |
+
+### 音まわり
+
+| コマンド | 内容 |
+| --- | --- |
+| `node bgm-check.js` | BGM(audio/のmp3)が画面に応じて切り替わるかを実ブラウザで確認する。 |
+| `node bgm-arrangement-check.js` | BGMトラック登録、場面別アレンジ保存、最終ボス後のクリア曲、試聴、曲別音量補正を確認する。 |
+| `node title-bgm-check.js` | iOS相当の自動再生制限を再現し、最初のタップだけでタイトルBGMが鳴るか、起動タップがトップ画面へ届いていないかを確認する。 |
+| `node audio-route-check.js` | BGMのaudio要素が再生前にWeb Audioへ接続され、iOSのメディア再生経路へ漏れないことを確認する。 |
+| `node tap-sound-trace.js` | 起動画面のタップからの出来事(イベント・再生・Web Audioの接続)を時系列で並べる。音まわりの調査用。 |
+| `node compress-audio.js` | 配信するBGM(MP3)のビットレートをそろえて軽くする。引数なしなら対象を表示するだけで書き換えない。 |
+
+### 画像と染色
+
+| コマンド | 内容 |
+| --- | --- |
+| `node image-asset-check.js` | 画像の参照先が実在するか、キャッシュキー(`?v=`)が中身と一致しているか、使われていない画像が残っていないかを確認する。 |
+| `node image-report.js` | `monster-hero/images/` のPNGをフォルダごとにサイズ順で出す。中身が同じ重複ファイル・どこからも参照されていないファイルも検出する。 |
+| `node monster-image-quality-check.js` | 敵・味方の全身画像数、PNG読込、透過隅、可視画素を検査する。 |
+| `node extract-images.js [--dry-run]` | data/*.js に base64 で埋め込まれた画像をPNGファイルとして `monster-hero/images/` へ書き出し、定数をそのパスへ置き換える。置き場所はスクリプト内の `PLACEMENT` 表で決める。 |
+| `node import-monster-art.js` | 受け取ったモンスターのイラストを、ゲームで使う形(正方形・余白そろえ・透過)へ整えて `monster-hero/images/monsters/` へ書き出す。 |
+| `node compress-images.js` | 配信する画像(PNG)を、見た目を落とさない範囲で軽くする。引数なしなら対象を表示するだけで書き換えない。 |
+| `node make-face-icons.js [--preview] [MOCCHI ...]` | 立ち絵から顔部分を切り出して256pxの顔アイコンを作り、`images/monster-icons/face/` のPNGを上書きする。モンスターIDを指定すると対象だけを更新する。切り出し範囲はスクリプト内の `FACE_BOXES`。 |
+| `node grid-overlay.js 変数名...` | 立ち絵に0.1刻みの目盛りを重ねたPNGを出す。顔クロップや染色bboxの範囲を実測するときに使う。 |
+| `node region-map.js [モンスターID...]` | 部位分けを色分けしたPNGを `out/` に書き出す。目視確認用。 |
+| `node dye-report.js [モンスターID...]` | 染色もどきの部位マスクを実画像で生成し、部位ごとの画素数・被覆率を出力する。回帰テスト用。 |
+| `node dye-report.js --save-baseline` | 現在の結果を `dye-baseline.json` に保存する。以降は実行のたびに差分が表示される。 |
+| `node dye-region-map.js out.png <ID> [y0 y1]` | 染色もどきの部位分けを絵で確かめる。元の絵と、部位ごとに塗り分けた絵(①赤・②黄・③青)を左右に並べて書き出す。被覆率だけでは分からない「どこが混ざっているか」を見るために使う。 |
+| `node dye-alpha-check.js` | 染色の「濃さ(透過率)」を確かめる。 |
+| `node dye-edge-check.js` | 染色もどきの「輪郭の塗り残し」を実測して見張る。部位マスクは縮小画像で作るため、等倍へ戻すと境界に隙間が出やすい。 |
+| `node dye-quality-report.js` | 染色もどきの部位マスクの品質を実測し、モンスターごとに比べる。輪郭のギザギザや白い縁の原因調査用。 |
+| `node dye-mask-editor-check.js` | 汎用染色マスクエディタの縦横比、本体内だけの描画、外部連結領域だけの掃除、Undo、境界警告、PNG正規化と輪郭内の透明穴維持を確認する。 |
+| `node undine-dye-mask-check.js` | ウンディーネの染色1（髪）・染色2（顔、首、耳、腕、尻尾、尾びれ）・染色3（服）と3色同時の本番マスクを、正解見本 `art-sources/dye-masks/undine-dye-mask.PNG` と画素単位で比較する。正解PNGは検査時だけ読み込むので、配信フォルダには置いていない。 |
+| `node yaobikuni-dye-mask-check.js` | ヤオビクニの染色1（髪・胸飾り・両腕〜手・下半身〜尾びれ）・染色2（左右のヒレ／羽状部分）・染色3（顔・耳・首〜胴体）を、保存済み3色マスクと画素単位で比較する。 |
+
+### 通し確認・性能
+
+| コマンド | 内容 |
+| --- | --- |
 | `node feature-check.js` | 実ブラウザでゲームを起動し、主要機能が動くかを確認する。 |
 | `node perf-check.js` | 読み込みにかかる時間と転送量を実ブラウザで計測する。 |
 | `node smoke.js` | 実ブラウザ(Chromium)で `data/*.js` を読み込み、画像の変数がすべて解決されるか確認する。事前にリポジトリのルートをHTTPで配信しておくこと(`python3 tools/serve.py`)。 |
-| `node grid-overlay.js 変数名...` | 立ち絵に0.1刻みの目盛りを重ねたPNGを出す。顔クロップや染色bboxの範囲を実測するときに使う。 |
-| `node make-face-icons.js [--preview] [MOCCHI ...]` | 立ち絵から顔部分を切り出して256pxの顔アイコンを作り、`images/monster-icons/face/` のPNGを上書きする。モンスターIDを指定すると対象だけを更新する。切り出し範囲はスクリプト内の `FACE_BOXES`。 |
-| `node face-render-check.js` | 顔アイコンが実ブラウザで正しく描画されるか確認し、アイコン選択画面と同じ見た目のスクリーンショットを出す。 |
 
 `dye-baseline.json` は「現在正しいとされている染色結果」の記録なので、
 染色を意図的に変更したときだけ `--save-baseline` で更新すること。
@@ -178,7 +309,9 @@ BGMのmp3(合計約20MB)を読み込んでいるあいだ他のファイルが�
 ## リポジトリの構成
 
 ```
-monster-hero/
+index.html                    monster-hero/ へ転送するだけの入口
+README.md AGENTS.md CLAUDE.md DEVELOPMENT.md   ルートに置く文書はこの4つだけ
+monster-hero/                 ★ここに置いたものはすべて配信される★
   index.html                  配信のエントリ。ここから下のファイルを読み込む
   game-v4.html                旧URL。index.html へのリダイレクトだけ置いている
   game-system.compiled.js     ★自動生成物★ src/game-system.jsx を tools/build.js で変換したもの
@@ -189,17 +322,29 @@ monster-hero/
     enemy-monsters.js         敵モンスターの定義
     breeder.js                ブリーダーカード・マーケット・ブリーダー用の画像
     skills.js                 技・ガード・カードの色定義
+    assistants.js             助手(みゅあ・きき)の定義と場面別のセリフ
+    help.js                   ヘルプ本文
     changelog.js              更新履歴(更新のたびに先頭へ追記する)
+  images/                     ゲームが実際に読む画像だけ
   vendor/                     React / ReactDOM(CDNを使わず同梱している)
   audio/                      BGMのmp3(タイトル/別ページ/通常戦/ボス戦の4曲)
   icons/ manifest.json version.json
 tools/                        開発用の検証スクリプト(配信されない)
-atsu-cup/                     別アプリ(モンヒロとは独立)
-index.html                    2つのアプリへのハブページ
+  harness.js                  本体から関数を取り出すための共通ヘルパー
+  art-sources/                配信しない原本・検査用の見本画像
+  out/                        検査が書き出すPNGなど(Git管理外)
+  node_modules/               検査用の依存(ゲームへは同梱しない)
+docs/                         仕様・SQL・調査記録(案内は docs/README.md)
+supabase/migrations/          再現可能なDB構造変更の正本
+.github/workflows/            生成物の一致検査 → 必須検査 → Pagesへのデプロイ
 ```
 
 絵の実体は `monster-hero/images/` のPNGにまとめてあるので、ゲームのバランスやデータを直すときに
 開くファイル(`ally-monsters.js` など)と、めったに開かない画像ファイルが混ざらない。
+
+`monster-hero/` の下はそのまま配信されるので、**ゲームが一度も読まないファイルをここへ置かない**。
+検査用の正解見本や差し替え前の原本は `tools/art-sources/` に置く(`tools/art-sources/README.md`)。
+置き場所を間違えると `node image-asset-check.js` の「使われていない画像が残っていない」で止まる。
 
 ## ブラウザに配信しているもの
 

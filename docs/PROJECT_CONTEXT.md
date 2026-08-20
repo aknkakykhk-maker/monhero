@@ -1,7 +1,7 @@
 # プロジェクトコンテキスト
 
 新しいチャットや開発者が、モンスターヒーローの目的と技術的な前提を短時間で把握するための文書です。
-作業手順は [`DEVELOPMENT.md`](DEVELOPMENT.md)、既知の課題は [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) を参照してください。
+作業手順は [`DEVELOPMENT.md`](../DEVELOPMENT.md)、既知の課題は [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) を参照してください。
 
 ## プロジェクト概要
 
@@ -46,25 +46,37 @@ BGM は必要な画面で読み込み、SE の一部は Tone.js で生成しま�
 
 ## ディレクトリ構成
 
+ルート直下に置く文書は4つだけです。`AGENTS.md` と `CLAUDE.md` はツールが読む場所が
+決まっているためルートに固定し、それ以外の文書は `docs/` 以下へまとめています。
+
 ```text
 ./
-├─ index.html                         複数アプリへのハブ
+├─ index.html                         monster-hero/ への転送
+├─ README.md                          リポジトリの入口
+├─ AGENTS.md                          AI 共通の作業ルール（Codex が読む）
 ├─ CLAUDE.md                          Claude 固有の会話・公開運用
-├─ DEVELOPMENT.md                     AI 共通の開発ルール
-├─ PROJECT_CONTEXT.md                 本文書（概要・構成）
-├─ KNOWN_ISSUES.md                    未解決事項と技術的負債
-├─ PROMPT_TEMPLATE.md                 作業依頼テンプレート
-├─ START_NEW_CODEX_CHAT.md            Codex 新規チャット開始手順
-├─ monster-hero/
+├─ DEVELOPMENT.md                     AI 共通の開発・検証手順
+├─ monster-hero/                      ★ここに置いたものはすべて配信される
 │  ├─ index.html                      配信エントリ
 │  ├─ src/game-system.jsx             ゲーム本体の編集元
 │  ├─ game-system.compiled.js         自動生成される配信用コード
-│  ├─ data/                           ゲーム定義、画像、更新履歴
-│  ├─ audio/                          BGM
-│  ├─ vendor/                         配信用ライブラリ
+│  ├─ data/                           ゲーム定義、画像パス、更新履歴、ヘルプ
+│  ├─ images/                         ゲームが実際に読む画像だけ
+│  ├─ audio/  icons/  vendor/         BGM・アイコン・配信用ライブラリ
 │  └─ manifest.json / version.json    PWA・リリース情報
-├─ tools/                              ビルド・自動検証ツール
-└─ docs/                               補助資料
+├─ tools/                             ビルド・自動検証ツール
+│  └─ art-sources/                    配信しない原本・検査用の見本画像
+├─ docs/
+│  ├─ PROJECT_CONTEXT.md              本文書（概要・構成）
+│  ├─ PROJECT_STRUCTURE.md            フォルダ構成の詳細
+│  ├─ KNOWN_ISSUES.md                 未解決事項と技術的負債
+│  ├─ spec/                           現行のゲーム仕様
+│  ├─ sql/                            Supabase へ流す SQL と実行手順
+│  ├─ history/                        過去の調査・移行の記録
+│  ├─ codex/                          Codex 用のテンプレート・開始手順
+│  ├─ references/                     参考資料（図・試作 HTML）
+│  └─ archive/                        実行済みで再実行しない単発作業
+└─ supabase/migrations/               再現可能なDB構造変更の正本
 ```
 
 ## 重要な判断基準
@@ -81,8 +93,9 @@ BGM は必要な画面で読み込み、SE の一部は Tone.js で生成しま�
 | 情報 | 正本 |
 | --- | --- |
 | AI 共通の開発・検証・Git 手順 | `DEVELOPMENT.md` |
-| プロジェクト概要・構成 | `PROJECT_CONTEXT.md` |
-| 未解決事項・回避策 | `KNOWN_ISSUES.md` |
+| プロジェクト概要・構成 | `docs/PROJECT_CONTEXT.md` |
+| フォルダ構成の詳細 | `docs/PROJECT_STRUCTURE.md` |
+| 未解決事項・回避策 | `docs/KNOWN_ISSUES.md` |
 | 検証スクリプトの詳細 | `tools/README.md` |
 | Claude 固有の会話・公開フロー | `CLAUDE.md` |
 | 現行ゲーム仕様 | `monster-hero/src/game-system.jsx` と `monster-hero/data/` |

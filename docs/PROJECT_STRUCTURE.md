@@ -24,18 +24,38 @@
 
 ## 2. リポジトリ直下
 
+文書がどこにあるか分からなくならないよう、**ルート直下に置く `.md` は4つだけ**と決めている。
+`AGENTS.md`（Codex）と `CLAUDE.md`（Claude）はツールが読む場所が固定されているためルートに残し、
+残りはすべて `docs/` 以下へ入れる。
+
 | パス | 役割 |
 | --- | --- |
-| `index.html` | LF Appsハブ。ゲームへリンクし、独自のversion更新通知を持つ |
+| `index.html` | `monster-hero/` へ転送するだけの入口 |
+| `version.json` | 入口ページのbuild日時 |
+| `README.md` | リポジトリの入口。主なフォルダの案内 |
+| `AGENTS.md` | AI共通の作業ルール（Codexが起動時に読む） |
 | `CLAUDE.md` | Claude向け会話・コミット・公開運用 |
 | `DEVELOPMENT.md` | AI共通の開発、検証、出荷手順 |
-| `PROJECT_CONTEXT.md` | 短いプロジェクト概要と正本案内 |
-| `KNOWN_ISSUES.md` | 確認済みの未解決課題 |
-| `PROMPT_TEMPLATE.md` | 作業依頼テンプレート |
-| `START_NEW_CODEX_CHAT.md` | Codexチャット開始用文面 |
-| `version.json` | ハブのbuild日時 |
-| `docs/` | 設計・補助資料。本書群は現行コードの理解用 |
-| `tools/` | ビルド、静的検査、実ブラウザ回帰、画像解析 |
+| `monster-hero/` | 公開ゲーム本体。**ここに置いたものはすべて配信される** |
+| `tools/` | ビルド、静的検査、実ブラウザ回帰、画像解析。配信しない画像も `tools/art-sources/` に置く |
+| `docs/` | 仕様・SQL・調査記録。案内は `docs/README.md` |
+| `supabase/migrations/` | 再現可能なDB構造変更の正本 |
+| `.github/workflows/compiled-check.yml` | 生成物の一致検査 → 必須検査 → GitHub Pagesへのデプロイ |
+
+### `docs/` の中
+
+| パス | 役割 |
+| --- | --- |
+| `docs/README.md` | どこに何があるかの案内 |
+| `docs/PROJECT_CONTEXT.md` | 短いプロジェクト概要と正本案内 |
+| `docs/PROJECT_STRUCTURE.md` | 本書。フォルダ構成の詳細 |
+| `docs/KNOWN_ISSUES.md` | 確認済みの未解決課題 |
+| `docs/spec/` | 現行のゲーム仕様（バトル、モンスター、セーブデータ、UI規則） |
+| `docs/sql/rankings/` `docs/sql/bond-levels/` `docs/sql/run-stats/` | Supabaseへ流すSQLと、iPhoneからの実行手順 |
+| `docs/history/` | 過去の調査・移行の記録（当時の判断を残すためのもの） |
+| `docs/codex/` | Codex用のチャット開始手順・作業依頼テンプレート |
+| `docs/references/` | 参考資料（制作ルールの図、試作HTML） |
+| `docs/archive/` | 本番で実行済みの単発SQL。**再実行しない** |
 
 ## 3. `monster-hero/`
 
@@ -52,17 +72,25 @@
 | `data/skills.js` | 通常技・ガード・距離技段階、カード色 | 共通カード定義の正本 |
 | `data/breeder.js` | 教えカード、効果段階、マーケット商品、関連画像 | ブリーダー系データの正本 |
 | `data/changelog.js` | 利用者向け更新・不具合履歴 | 機能出荷時に先頭へ追記 |
+| `data/assistants.js` | 助手（みゅあ・きき）の定義、場面別セリフ、仲良し度 | 助手データの正本 |
+| `data/help.js` | プレイヤー向けヘルプ本文 | 機能追加・変更時に必ず更新（`CLAUDE.md` ⑤） |
 | `data/images/images-ally.js` | 味方の画像のパス表 | 実体は `monster-hero/images/monsters` ほか。通常ロジック変更で触らない |
 | `data/images/images-enemy.js` | 敵の画像のパス表 | 実体は `monster-hero/images/enemies`。同上 |
+| `images/` | ゲームが実際に読む画像だけ | 検査用の見本・差し替え前の原本は置かない（`tools/art-sources/` へ） |
 | `audio/` | 画面別BGM、勝利ジングル | `preload='none'` で遅延読込 |
 | `vendor/` | React 18 / ReactDOM 18 production UMD | バージョン更新時のみ差替え |
 | `icons/` | favicon、Apple touch、PWAアイコン | manifest/HTML参照と同期 |
+
+`monster-hero/` の下は**そのまま GitHub Pages で配信される**。ゲームが一度も読まない
+ファイルをここへ置くと、閲覧できてしまううえ `tools/image-asset-check.js` の
+「使われていない画像が残っていない」検査に例外を足すことになり、本当の消し忘れを
+見逃す原因になる。配信しない画像は `tools/art-sources/` に置く。
 
 データファイルはES moduleではなく、HTMLのclassic scriptとして順番に読み、トップレベル定数を本体から参照する。本体もexportを持たない単一ファイルで、最後に `ReactDOM.createRoot` して描画する。
 
 ## 4. 本体ソース内の責務配置
 
-`game-system.jsx` は約6,750行の単一ファイルで、概ね次の順序で並ぶ。
+`game-system.jsx` は16,000行を超える単一ファイルで、概ね次の順序で並ぶ。
 
 1. 内蔵SVGアイコン、待機、build日時、経験値曲線。
 2. `Audio_`（BGM、ジングル、Tone.js SE、モバイル音声解除）。
@@ -78,11 +106,20 @@
 
 ## 5. ツール構造
 
-- **生成・整合:** `build.js`, `check-syntax.js`, `stamp-version.js`。
+`tools/` はスクリプトを**平置き**にしている。160本以上あるが、`build.js` と `harness.js`
+以外はすべて `〇〇-check.js` / `〇〇-report.js` という名前で役割が分かる形に揃えてあり、
+`node tools/〇〇.js` というコマンドが `CLAUDE.md`・CI・過去の作業記録の各所に書かれているため、
+**フォルダへ分けて実行パスを変えることはしない**。何がどれかは
+[`tools/README.md`](../tools/README.md) の一覧を正本とする。
+
+- **生成・整合:** `build.js`, `harness.js`, `check-syntax.js`, `stamp-version.js`, `stamp-boot-sizes.js`。
+- **CIが必ず通す6本:** `build.js --check`, `compiled-runtime-check.js`, `check-syntax.js`, `undefined-reference-check.js`, `boot-flow-check.js`, `update-notice-check.js`。ここが1つでも落ちるとデプロイが黙って飛ばされる。
 - **主要回帰:** `feature-check.js`, `battle-check.js`, `boot-check.js`, `ranking-check.js`, `ranking-finish-check.js`, `difficulty-item-check.js`, `bulk-enhance-check.js`。
 - **音声:** `bgm-check.js`, `title-bgm-check.js`, `tap-sound-trace.js`。
-- **画像・染色:** `harness.js`, `dye-report.js`, `region-map.js`, `grid-overlay.js`, `make-face-icons.js`, `face-render-check.js`, `image-report.js`, `extract-images.js`, `image-asset-check.js`。
+- **画像・染色:** `dye-report.js`, `region-map.js`, `grid-overlay.js`, `make-face-icons.js`, `face-render-check.js`, `image-report.js`, `image-asset-check.js`。
 - **配信・性能:** `serve.py`, `smoke.js`, `perf-check.js`。
+- **配信しない素材:** `art-sources/monsters/`（顔アイコン用の高解像度原本）、`art-sources/dye-masks/`（染色の正解見本）。
+- **出力先:** `tools/out/` は検査が書き出すPNG等の置き場で、`tools/.gitignore` によりGit管理外。
 
 Node依存は `tools/package.json` / `package-lock.json` に閉じ、ゲーム配信物へバンドルしない。ブラウザ検査はリポジトリルートを `python3 tools/serve.py` でポート8899に配信する前提である。
 
@@ -100,14 +137,15 @@ Node依存は `tools/package.json` / `package-lock.json` に閉じ、ゲーム�
 - `game-system.compiled.js` はレビュー対象になる生成物だが編集元ではない。
 - 画像(`monster-hero/images/`)と音声は通信・差分コストが大きく、不要な移動や再エンコードをしない。
 - Tailwindは実行時CDN生成のため、動的クラスだけに重要色を依存させない。
-- ランキング以外のゲーム進行は端末保存。ランキングのサーバースキーマ管理ファイル、CI設定、service workerはリポジトリ内に**未確認**。
+- ランキング以外のゲーム進行は端末保存。ランキングのサーバースキーマは `supabase/migrations/` と `docs/sql/` が正本で、CI設定は `.github/workflows/compiled-check.yml`。service workerはリポジトリ内に無い。
 
 ## 7. 文書間の正本
 
 - 開発手順: `DEVELOPMENT.md`
 - Claude固有運用: `CLAUDE.md`
-- 概要: `PROJECT_CONTEXT.md`
-- 未解決事項: `KNOWN_ISSUES.md`
+- 概要: `docs/PROJECT_CONTEXT.md`
+- 未解決事項: `docs/KNOWN_ISSUES.md`
+- 検証スクリプト: `tools/README.md`
 - 現行仕様: `monster-hero/src/game-system.jsx` と `monster-hero/data/`
 - 本書群: 現行仕様への案内と解析結果。実装と食い違う場合はコードを確認し、同じ変更で文書を更新する。
 

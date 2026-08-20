@@ -271,9 +271,17 @@ async function decodeDataUrl(src) {
   return loadImage(imageFilePath(src));
 }
 
-// 画像のパス(images/... 。?v= が付いていても可)を実ファイルの絶対パスへ直す
+// 画像のパス(images/... 。?v= が付いていても可)を実ファイルの絶対パスへ直す。
+// 検査用の見本画像のように配信フォルダの外にあるものは、絶対パスをそのまま渡せる
 function imageFilePath(rel) {
-  return path.join(REPO_ROOT, 'monster-hero', String(rel).split('?')[0]);
+  const clean = String(rel).split('?')[0];
+  return path.isAbsolute(clean) ? clean : path.join(REPO_ROOT, 'monster-hero', clean);
 }
 
-module.exports = { REPO_ROOT, GAME_SYSTEM, transformGameSystem, loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, imageFilePath, createCanvas };
+// 配信しない原本・見本画像の置き場(tools/art-sources/)。
+// 例: artSourcePath('dye-masks', 'undine-dye-mask.PNG')
+function artSourcePath(...parts) {
+  return path.join(REPO_ROOT, 'tools', 'art-sources', ...parts);
+}
+
+module.exports = { REPO_ROOT, GAME_SYSTEM, transformGameSystem, loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, imageFilePath, artSourcePath, createCanvas };

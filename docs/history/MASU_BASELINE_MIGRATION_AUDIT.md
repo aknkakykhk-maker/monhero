@@ -6,8 +6,8 @@
 保持する方式へ移行するための現状調査である。本書は 2026-08-14 時点の作業ブランチ（調査開始時の先頭は
 `33ace5e`）の実コードを正本としている。今回はコード、ゲーム挙動、保存キー、保存形式、既存セーブを変更しない。
 
-確認対象は `AGENTS.md`、`README.md`、`PROJECT_CONTEXT.md`、`DEVELOPMENT.md`、`KNOWN_ISSUES.md`、
-`docs/MONSTER_SYSTEM.md`、`docs/SAVE_DATA.md`、`tools/README.md`、
+確認対象は `AGENTS.md`、`README.md`、`docs/PROJECT_CONTEXT.md`、`DEVELOPMENT.md`、`docs/KNOWN_ISSUES.md`、
+`docs/spec/MONSTER_SYSTEM.md`、`docs/spec/SAVE_DATA.md`、`tools/README.md`、
 `monster-hero/src/game-system.jsx`、`monster-hero/data/ally-monsters.js` およびランキング関連コードである。
 
 用語は次のように区別する。
@@ -140,8 +140,8 @@
   `buildRegeneratedMasu`, `rankingMasuDetail`, `rankingDetailToMasu`, `reconcileMasuPoints`,
   `useBondResetScroll`, `executeMasuFusion`, `registerMasuMon`。
 - `monster-hero/data/ally-monsters.js`: `ALL_PLAYER_MONSTERS` の能力、`plusStats`、距離適性、固有技定義。
-- `docs/MONSTER_SYSTEM.md`: 現行の育成、保存形、総合力、ランキング詳細の設計。
-- `docs/SAVE_DATA.md`: `mh_masu_mons`、移行フラグ、保存・復元・ランキングの互換性方針。
+- `docs/spec/MONSTER_SYSTEM.md`: 現行の育成、保存形、総合力、ランキング詳細の設計。
+- `docs/spec/SAVE_DATA.md`: `mh_masu_mons`、移行フラグ、保存・復元・ランキングの互換性方針。
 
 ## 7. 第2段階の実装状況（2026-08-14）
 

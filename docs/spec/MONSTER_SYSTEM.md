@@ -1,7 +1,7 @@
 # モンスターシステム設計書
 
 マスモンの基礎値追従方式に関する現状調査と段階的な移行案は、
-[`MASU_BASELINE_MIGRATION_AUDIT.md`](MASU_BASELINE_MIGRATION_AUDIT.md) を参照する。
+[`MASU_BASELINE_MIGRATION_AUDIT.md`](../history/MASU_BASELINE_MIGRATION_AUDIT.md) を参照する。
 
 ## 1. 用語とデータモデル
 
