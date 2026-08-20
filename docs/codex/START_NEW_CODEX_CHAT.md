@@ -25,8 +25,8 @@ Claude や ChatGPT を使う場合も、ツール名に関する箇所以外は�
 最初に以下を読み、内容の優先関係と現状を確認してください。
 1. `CLAUDE.md`
 2. `DEVELOPMENT.md`
-3. `PROJECT_CONTEXT.md`
-4. `KNOWN_ISSUES.md`
+3. `docs/PROJECT_CONTEXT.md`
+4. `docs/KNOWN_ISSUES.md`
 5. `tools/README.md`
 6. 関連コードと直近の Git 履歴
 
@@ -110,8 +110,8 @@ Git 作業: <コミットのみ / プッシュとPRまで / 不要>
 変更内容に応じて、次のうち関連するものを更新します。
 
 - `DEVELOPMENT.md`
-- `PROJECT_CONTEXT.md`
-- `KNOWN_ISSUES.md`
+- `docs/PROJECT_CONTEXT.md`
+- `docs/KNOWN_ISSUES.md`
 - `docs/` 以下の関連設計書
 
 ### 更新が必要な場合

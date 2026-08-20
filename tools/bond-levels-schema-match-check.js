@@ -1,4 +1,4 @@
-// アプリが送るリクエストの形と、本番へ適用したテーブル定義(docs/BOND_LEVELS_APPLY.sql)が
+// アプリが送るリクエストの形と、本番へ適用したテーブル定義(docs/sql/bond-levels/BOND_LEVELS_APPLY.sql)が
 // 食い違っていないかを、実際のファイルから読み取って突き合わせる。
 //
 //   node bond-levels-schema-match-check.js
@@ -16,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const { REPO_ROOT, GAME_SYSTEM } = require('./harness');
 
-const APPLY_SQL = path.join(REPO_ROOT, 'docs', 'BOND_LEVELS_APPLY.sql');
+const APPLY_SQL = path.join(REPO_ROOT, 'docs', 'sql', 'bond-levels', 'BOND_LEVELS_APPLY.sql');
 const results = [];
 const check = (name, ok, detail = '') => {
   results.push(ok);
@@ -82,7 +82,7 @@ const upsertColumns = rowBuildMatch
   : [];
 
 // ---- ③ 突き合わせ ----
-console.log('== テーブルの姿(docs/BOND_LEVELS_APPLY.sql) ==');
+console.log('== テーブルの姿(docs/sql/bond-levels/BOND_LEVELS_APPLY.sql) ==');
 console.log(`  列: ${sqlColumns.join(', ')}`);
 console.log(`  主キー: ${pkColumns.join(', ')}`);
 console.log(`  権限: ${grantedPrivileges.join(', ')}`);
@@ -153,7 +153,7 @@ check('upsertは周回の進行を止めない(結果を待たない)',
 // ---- ④ rankings へ後から足した列(ターン数・到達WAVE)も同じ考え方で照合する ----
 // 足した列を送る/選ぶと、SQLをまだ適用していない環境では400になる。
 // insertが400のまま終わるとスコアが1件も残らないので、外して送り直すことまで見る
-const RUN_STATS_SQL = path.join(REPO_ROOT, 'docs', 'RUN_STATS_APPLY.sql');
+const RUN_STATS_SQL = path.join(REPO_ROOT, 'docs', 'sql', 'run-stats', 'RUN_STATS_APPLY.sql');
 if (fs.existsSync(RUN_STATS_SQL)) {
   console.log('\n== rankings に足した列(ターン数・到達WAVE) ==');
   const runSql = fs.readFileSync(RUN_STATS_SQL, 'utf8');

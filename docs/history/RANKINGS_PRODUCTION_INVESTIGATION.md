@@ -25,7 +25,7 @@
 
 ## 本番接続が必要な事項
 
-カラムの型・既定値・NULL 可否、Primary Key、Unique 制約、Index、RLS の有効状態、各ポリシーはリポジトリや公開 Data API の応答だけでは確定できない。これらを推測で断定せず、[`RANKINGS_PRODUCTION_AUDIT_AND_APPLY.sql`](./RANKINGS_PRODUCTION_AUDIT_AND_APPLY.sql) の **セクション A** を本番 Supabase SQL Editor で実行し、その結果を保存する。
+カラムの型・既定値・NULL 可否、Primary Key、Unique 制約、Index、RLS の有効状態、各ポリシーはリポジトリや公開 Data API の応答だけでは確定できない。これらを推測で断定せず、[`RANKINGS_PRODUCTION_AUDIT_AND_APPLY.sql`](../sql/rankings/RANKINGS_PRODUCTION_AUDIT_AND_APPLY.sql) の **セクション A** を本番 Supabase SQL Editor で実行し、その結果を保存する。
 
 セクション A は SELECT のみであり、本番データ・スキーマ・RLS を変更しない。確認できる内容は次のとおり。
 
@@ -61,4 +61,4 @@
 - SQL Editor の管理者接続で成功しても `anon` の Data API が成功する証明にはならない。適用後の Data API スモークテストは必須である。
 - `clear_id` を送らない旧クライアントの新規行は UNIQUE の対象外になる。公開中の現行コードが `clear_id` を必ず送ることを確認してから適用する。
 - 3列一致の既存重複削除と `clear_id` 導入は独立している。3列重複が残っていても `clear_id` の追加は可能であり、今回の適用では既存データを削除しない。
-- iPhone から作業する場合を含む実施手順、判定基準、緊急時対応は [`RANKINGS_SUPABASE_IPHONE_RUNBOOK.md`](./RANKINGS_SUPABASE_IPHONE_RUNBOOK.md) を参照する。
+- iPhone から作業する場合を含む実施手順、判定基準、緊急時対応は [`RANKINGS_SUPABASE_IPHONE_RUNBOOK.md`](../sql/rankings/RANKINGS_SUPABASE_IPHONE_RUNBOOK.md) を参照する。

@@ -10,7 +10,7 @@
 
 1. Safari で Supabase Dashboard を開き、対象プロジェクト `zrzevudkbgtxlbvmuziy` を選ぶ。
 2. 左上のメニューから **SQL Editor** を開き、**New query** を選ぶ。
-3. GitHub で `docs/RANKINGS_PRODUCTION_AUDIT_AND_APPLY.sql` を開き、まずセクション **A**（A-1〜A-8）だけをコピーして **Run** する。結果をスクリーンショットまたは CSV で保存する。
+3. GitHub で `docs/sql/rankings/RANKINGS_PRODUCTION_AUDIT_AND_APPLY.sql` を開き、まずセクション **A**（A-1〜A-8）だけをコピーして **Run** する。結果をスクリーンショットまたは CSV で保存する。
 4. `clear_id` が既にある場合、A-8 のコメントを外して実行する。非 `NULL` の同一 `clear_id` が複数あれば停止し、削除せず担当者へ結果を共有する。
 5. 同ファイルのセクション **B** を、末尾が `rollback;` のまま実行する。`rankings_clear_id_unique` が `is_unique=true`、`is_valid=true`、`is_ready=true` と表示され、エラーがないことを確認する。この試行は保存されない。
 6. B の末尾で `rollback;` を `-- rollback;` にし、直前の `-- commit;` を `commit;` に変えて、B 全体をもう一度 **Run** する。

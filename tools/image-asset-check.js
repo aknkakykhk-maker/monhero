@@ -93,14 +93,10 @@ const referenced = new Set(entries.map(([, v]) => v.split('?')[0]));
 for (const m of sources.matchAll(/["'`](images\/[^"'`\s)?]+\.(?:png|jpe?g|webp|PNG))(?:\?[^"'`\s)]*)?["'`]/g)) referenced.add(m[1]);
 // 助手の表情画像のように「imageDir + 表情名」で組み立てるものは、フォルダごと参照済みとみなす
 const referencedDirs = [...sources.matchAll(/imageDir:\s*["'`](images\/[^"'`]+)["'`]/g)].map((m) => m[1]);
-// 染色マスクの差し替え時に比較・ロールバックできるよう、旧版として明示された原本は保持する。
-const retainedDyeMasks = new Set([
-  'images/monsters/undine-dye-mask.PNG',
-  'images/monsters/yaobikuni-dye-mask.PNG',
-]);
+// 検査用の正解見本・差し替え前の原本は配信フォルダに置かず tools/art-sources/ で管理する。
+// そのため images/ に「どこからも参照されない画像」が残っていたら、それは消し忘れとみなす。
 const orphans = files.filter((rel) => !referenced.has(rel)
-  && !referencedDirs.some((d) => rel.startsWith(d + '/'))
-  && !retainedDyeMasks.has(rel));
+  && !referencedDirs.some((d) => rel.startsWith(d + '/')));
 check('images/ に使われていない画像が残っていない', orphans.length === 0, orphans.slice(0, 8).join(' / '));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');

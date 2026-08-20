@@ -1,6 +1,7 @@
 // ウンディーネの本番染色マスクを、リポジトリに保存した正解見本と画素単位で比較する。
 // 正解PNGは検査時にだけ読み込み、ゲーム実行時には利用しない。
-const { loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, createCanvas } = require('./harness');
+// そのため見本は配信フォルダではなく tools/art-sources/dye-masks/ に置いている。
+const { loadDyeModule, loadEmbeddedImages, imageForBaseId, decodeDataUrl, artSourcePath, createCanvas } = require('./harness');
 
 const LABELS = ['染色1（髪）', '染色2（肌・尻尾）', '染色3（服）', '染色対象外'];
 const ALPHA_THRESHOLD = 128;
@@ -32,7 +33,7 @@ const referenceRegion = (pixels, offset) => {
   const imageUrl = imageForBaseId('Undine', images);
   const [source, reference, maskUrls] = await Promise.all([
     decodeDataUrl(imageUrl),
-    decodeDataUrl('images/monsters/undine-dye-mask.PNG'),
+    decodeDataUrl(artSourcePath('dye-masks', 'undine-dye-mask.PNG')),
     dye.getDyeRegionMasks('Undine', imageUrl),
   ]);
   if (!maskUrls || maskUrls.length !== 3) throw new Error('ウンディーネの3色マスクを生成できませんでした');

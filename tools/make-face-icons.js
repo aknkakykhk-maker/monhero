@@ -19,11 +19,16 @@ const ART_SOURCES = path.join(__dirname, 'art-sources');
 async function loadSourceImage(name, dataUrl) {
   // 現行のモンスター原本置き場を優先し、過去の顔アイコン専用原本にも対応する。
   // GitHub 経由で保存されたファイルは拡張子が大文字になる場合があるため、双方を探す。
+  // 配信フォルダに大文字名の原本(マーケットのアイコン商品として使っている高解像度版)が
+  // ある場合はそれも原本として扱う。以前は同じ画像を art-sources へコピーして置いていたが、
+  // 1バイトも違わない二重管理になっていたため、配信側の1枚を正本にした。
+  const shipped = path.join(REPO_ROOT, 'monster-hero', 'images', 'monsters');
   const candidates = [
     path.join(ART_SOURCES, 'monsters', `${name}.png`),
     path.join(ART_SOURCES, 'monsters', `${name}.PNG`),
     path.join(ART_SOURCES, `${name}.png`),
     path.join(ART_SOURCES, `${name}.PNG`),
+    path.join(shipped, `${name}.PNG`),
   ];
   const file = candidates.find(candidate => fs.existsSync(candidate));
   if (file) {

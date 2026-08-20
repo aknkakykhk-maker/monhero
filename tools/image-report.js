@@ -34,7 +34,10 @@ const sources = ['data/images/images-ally.js', 'data/images/images-enemy.js', 'd
   .map(p => fs.readFileSync(p, 'utf8'))
   .join('\n');
 const referenced = new Set(Object.values(loadEmbeddedImages()).map(v => String(v).split('?')[0]));
-for (const m of sources.matchAll(/["'`](images\/[^"'`\s)]+\.(?:png|jpe?g|webp|PNG))["'`]/g)) referenced.add(m[1]);
+// キャッシュキー(`?v=...`)が付いた書き方も拾う。これを取りこぼすと、マーケットの
+// アイコン商品のように data/breeder.js から直接パスで参照している画像を
+// 「どこからも参照されていない」と誤って報告してしまう
+for (const m of sources.matchAll(/["'`](images\/[^"'`\s)?]+\.(?:png|jpe?g|webp|PNG))(?:\?[^"'`\s)]*)?["'`]/g)) referenced.add(m[1]);
 const referencedDirs = new Set();
 for (const m of sources.matchAll(/imageDir:\s*["'`](images\/[^"'`]+)["'`]/g)) referencedDirs.add(m[1]);
 const isReferenced = (rel) => referenced.has(rel) || [...referencedDirs].some(d => rel.startsWith(d + '/'));

@@ -35,7 +35,7 @@ Claude・Codex・ChatGPT へ作業を依頼するときにコピーして使う�
 ## 参考情報
 - 関連 Issue / PR: <#番号またはなし>
 - スクリーンショット / ログ: <場所またはなし>
-- `KNOWN_ISSUES.md` の項目: <KI-NNN またはなし>
+- `docs/KNOWN_ISSUES.md` の項目: <KI-NNN またはなし>
 
 ## 検証
 - 必須: `<実行してほしいコマンド>`
@@ -79,9 +79,9 @@ Claude・Codex・ChatGPT へ作業を依頼するときにコピーして使う�
 ## AI への共通指示（必要に応じて添付）
 
 ```markdown
-作業前に `CLAUDE.md`、`DEVELOPMENT.md`、`PROJECT_CONTEXT.md`、
-`KNOWN_ISSUES.md` と関連コードを読んでください。既存の未コミット変更を保持し、
+作業前に `CLAUDE.md`、`DEVELOPMENT.md`、`docs/PROJECT_CONTEXT.md`、
+`docs/KNOWN_ISSUES.md` と関連コードを読んでください。既存の未コミット変更を保持し、
 推測でゲーム仕様を変更しないでください。最小限の差分で実装し、変更範囲に対応する
 `tools/` のチェックを実行してください。新しい制約や未解決事項を発見した場合は、
-`KNOWN_ISSUES.md` の更新案を示してください。報告は日本語で行ってください。
+`docs/KNOWN_ISSUES.md` の更新案を示してください。報告は日本語で行ってください。
 ```
