@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 15:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 16:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3830,15 +3830,14 @@ const ULTIMATE_SETTING = EXTREME_DIFFICULTIES[3];
 const extremeRuleSetting = (difficultyId) => EXTREME_DIFFICULTIES.find(setting=>setting.id===difficultyId)||null;
 // クイックの極限難易度は極限チャレンジ本体の報酬を変更せず、依頼された基準倍率だけを
 // クイック用に持つ。敵強度と表示色は既存の難易度定義を再利用する。
+const QUICK_ULTIMATE_SETTING = Object.freeze({
+  label:'ULTIMATE', power:ULTIMATE_SETTING.power, xp:35, gold:12, psyche:60, bg:'#3f0d5e', text:'#f5d0fe',
+});
 const QUICK_EXTREME_SETTINGS = Object.freeze({
   EXTREME: { label:'EXTREME', power:EXTREME_SETTING.power, xp:20, gold:4.5, psyche:30, bg:'#a21caf', text:'#f0abfc' },
   NIGHTMARE: { label:'NIGHTMARE', power:NIGHTMARE_SETTING.power, xp:25, gold:6, psyche:40, bg:'#6b21a8', text:'#e9d5ff' },
   CHAOS: { label:'CHAOS', power:CHAOS_SETTING.power, xp:30, gold:9, psyche:50, bg:'#581c87', text:'#f5d0fe' },
-});
-// 次回公開用の内部定義。通常クイック一覧へ混ぜるとカードが公開されるため、実行時の解決だけに使う。
-// ULTIMATE本体の敵強度を参照し、報酬だけクイック用の基準値を持つ。specialRulesは複製しない。
-const QUICK_ULTIMATE_SETTING = Object.freeze({
-  label:'ULTIMATE', power:ULTIMATE_SETTING.power, xp:35, gold:12, psyche:60, bg:'#3f0d5e', text:'#f5d0fe',
+  ULTIMATE: QUICK_ULTIMATE_SETTING,
 });
 const QUICK_DIFFICULTY_SETTINGS = Object.freeze({
   ...DIFFICULTY_SETTINGS,
@@ -3867,12 +3866,12 @@ const quickGrowthRateForRun = (runMode, difficultyId, waveTurnCount) => {
   return Math.max(0,(QUICK_GROWTH_MULT-1)-Math.max(0,Number(waveTurnCount)||0)*ULTIMATE_SETTING.specialRules.awakeningPenaltyRate);
 };
 const specialRulePercent = (value) => `${Math.round((Number(value)||0)*100)}%`;
-const extremeSpecialRuleLines = (difficultyId) => {
+const extremeSpecialRuleLines = (difficultyId, quick=false) => {
   if (difficultyId===ULTIMATE_SETTING.id) return [
     ['敵強化','累計T ×0.75%'],
     ['供モン加入B低下','累計T ×0.75%'],
     ['与ダメ低下','経過累計T ×0.75%（最低25%）'],
-    ['トレーニング低下','WAVE T ×0.75%'],
+    [quick?'自動成長低下':'トレーニング低下','WAVE T ×0.75%'],
     ['距離BREAK','35Tごと / 3距離を段階強化'],
   ];
   const rules=extremeDifficultySetting(difficultyId)?.specialRules || {};
@@ -15173,7 +15172,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="mt-3 grid gap-1.5 text-left">
               {[
                 ['1','累計ターン圧',<>累計ターン×0.75% 次WAVEの敵が強化<br/>累計ターン×0.75% 供モン加入ボーナスが低下<br/>経過累計ターン×0.75% 与ダメージ低下（最低25%）</>],
-                ['2','トレーニング低下','このWAVEのターン数×0.75% 次回のトレーニング4種すべてが低下'],
+                ['2',isQuickMode(runMode)?'自動成長低下':'トレーニング低下',isQuickMode(runMode)?'このWAVEのターン数×0.75% 次回の自動成長が10%から低下（最低0%）':'このWAVEのターン数×0.75% 次回のトレーニング4種すべてが低下'],
                 ['3','DISTANCE BREAK','累計35ターンごとに、安全距離以外の3距離をLv1→Lv2→Lv3…と段階強化'],
               ].map(([number,title,text])=><div key={number} className="rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"><div className="text-[9px] font-black text-fuchsia-300">RULE {number}｜{title}</div><div className="mt-0.5 text-[10px] font-bold leading-snug text-white">{text}</div>{number==='2'&&<div className="mt-0.5 text-[8px] font-black text-amber-300">※距離強化は対象外</div>}</div>)}
             </div>

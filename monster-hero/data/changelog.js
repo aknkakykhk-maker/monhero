@@ -1,5 +1,16 @@
 const CHANGELOG = [
   {
+    date: "2026-08-20 16:56",
+    type: 'update',
+    title: 'クイックモードに「ULTIMATE」を追加しました',
+    assistantNotice: { id:'update_notice_quick_ultimate_v1', type:'mode' },
+    items: [
+      '極限チャレンジのULTIMATEをクリアすると、クイックモードでもULTIMATEへ挑戦できるようになりました。Legend・EXTREME・NIGHTMARE・CHAOS・ULTIMATEの順で表示します。',
+      '育成は経験値×52.5・ダイヤ×18・虹のプシュケー60個、プシュケー優先は経験値0・ダイヤ×18・虹120個、ダイヤ優先は経験値0・ダイヤ×36・虹60個です。ランキングはありません。',
+      '極限ULTIMATEと同じ累計ターン特殊ルールとDISTANCE BREAKをすべて適用します。クイックの自動成長は10%からWAVEターン数×0.75%ずつ低下し、最低0%になります。ライフ・ガッツの全回復はこれまでどおりです。',
+    ],
+  },
+  {
     date: "2026-08-20 15:58",
     type: 'update',
     title: '助手が案内する未読アップデートを最新3件までにしました',
