@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 14:25"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 15:27"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -115,8 +115,9 @@ const calculateRemainingHp = (currentHp, finalDamage) => Math.max(0, (Number(cur
 // 恒久成長後の基礎最大値とバトル中の上限バフから、表示・回復上限に使う実効最大値を一意に求める。
 const resolveEffectiveMaxStat = (baseMax, buffPct) => Math.floor((Number(baseMax) || 0) * (1 + (Number(buffPct) || 0)));
 const quickGrowStat = (value) => Math.floor((Number(value) || 0) * QUICK_GROWTH_MULT);
-const resolveQuickGrowthStats = ({hp, atk, def, guts}) => ({
-  hp: quickGrowStat(hp), atk: quickGrowStat(atk), def: quickGrowStat(def), guts: quickGrowStat(guts),
+const resolveQuickGrowthStats = ({hp, atk, def, guts}, growthRate=QUICK_GROWTH_MULT-1) => ({
+  hp: Math.floor((Number(hp)||0)*(1+growthRate)), atk: Math.floor((Number(atk)||0)*(1+growthRate)),
+  def: Math.floor((Number(def)||0)*(1+growthRate)), guts: Math.floor((Number(guts)||0)*(1+growthRate)),
 });
 const isQuickMode = (mode) => normalizeBattleMode(mode) === BATTLE_MODE_QUICK;
 const isProMode = (mode) => normalizeBattleMode(mode) === BATTLE_MODE_PRO;
@@ -3834,10 +3835,17 @@ const QUICK_EXTREME_SETTINGS = Object.freeze({
   NIGHTMARE: { label:'NIGHTMARE', power:NIGHTMARE_SETTING.power, xp:25, gold:6, psyche:40, bg:'#6b21a8', text:'#e9d5ff' },
   CHAOS: { label:'CHAOS', power:CHAOS_SETTING.power, xp:30, gold:9, psyche:50, bg:'#581c87', text:'#f5d0fe' },
 });
+// 次回公開用の内部定義。通常クイック一覧へ混ぜるとカードが公開されるため、実行時の解決だけに使う。
+// ULTIMATE本体の敵強度を参照し、報酬だけクイック用の基準値を持つ。specialRulesは複製しない。
+const QUICK_ULTIMATE_SETTING = Object.freeze({
+  label:'ULTIMATE', power:ULTIMATE_SETTING.power, xp:35, gold:12, psyche:60, bg:'#3f0d5e', text:'#f5d0fe',
+});
 const QUICK_DIFFICULTY_SETTINGS = Object.freeze({
   ...DIFFICULTY_SETTINGS,
   ...QUICK_EXTREME_SETTINGS,
 });
+const quickDifficultySetting = (difficultyId) => difficultyId===ULTIMATE_SETTING.id
+  ? QUICK_ULTIMATE_SETTING : QUICK_DIFFICULTY_SETTINGS[difficultyId];
 const extremeDifficultySetting = (difficultyId) => extremeRuleSetting(difficultyId);
 const extremeSpecialRule = (difficultyId, rule) =>
   extremeDifficultySetting(difficultyId)?.specialRules?.[rule] ?? 1;
@@ -3850,6 +3858,13 @@ const hasExtremeSpecialRules = (difficultyId) => {
 const specialRuleDifficultyForRun = (runMode, difficultyId, extremeRun=false, extremeDifficultyId=null) => {
   const candidate=extremeRun ? extremeDifficultyId : (isQuickMode(runMode) ? difficultyId : null);
   return hasExtremeSpecialRules(candidate) ? candidate : null;
+};
+// クイックULTIMATEだけ、通常10%から同じWAVEのターン数に応じたULTIMATE覚醒低下率を引く。
+// 低下率はULTIMATE本体のspecialRulesを参照し、クイック側には数値を重複定義しない。
+const quickGrowthRateForRun = (runMode, difficultyId, waveTurnCount) => {
+  const specialDifficulty=specialRuleDifficultyForRun(runMode,difficultyId);
+  if(specialDifficulty!==ULTIMATE_SETTING.id) return QUICK_GROWTH_MULT-1;
+  return Math.max(0,(QUICK_GROWTH_MULT-1)-Math.max(0,Number(waveTurnCount)||0)*ULTIMATE_SETTING.specialRules.awakeningPenaltyRate);
 };
 const specialRulePercent = (value) => `${Math.round((Number(value)||0)*100)}%`;
 const extremeSpecialRuleLines = (difficultyId) => {
@@ -3989,7 +4004,7 @@ const normalizeExtremeRecordValue = (value) => Math.max(0, Math.floor(Number(val
 const isNightmareUnlocked = (extremeClearCount) => (Number(extremeClearCount) || 0) > 0;
 const isChaosUnlocked = (nightmareClearCount) => (Number(nightmareClearCount) || 0) > 0;
 const isUltimateUnlocked = (chaosClearCount) => (Number(chaosClearCount) || 0) > 0;
-const normalizeBattleDifficulty = (value) => Object.prototype.hasOwnProperty.call(QUICK_DIFFICULTY_SETTINGS, value) ? value : 'Normal';
+const normalizeBattleDifficulty = (value) => quickDifficultySetting(value) ? value : 'Normal';
 // 難易度選択を開いたときの既定位置。前に遊んだ難易度を引きずらず、いつでもノーマルから始める
 const BATTLE_DEFAULT_DIFFICULTY = 'Normal';
 // クリアするともらえる虹のプシュケー。難易度が高いほど多い。
@@ -4000,6 +4015,7 @@ const CLEAR_PSYCHE_REWARD = Object.freeze({
   Beginner: 1, Easy: 2, Normal: 3, Hard: 5, Expert: 7,
   Master: 10, GrandMaster: 15, Hell: 20, Legend: 25,
   EXTREME: 30, NIGHTMARE: 40, CHAOS: 50,
+  ULTIMATE: QUICK_ULTIMATE_SETTING.psyche,
 });
 const clearPsycheReward = (difficulty) => Math.max(0, Math.floor(Number(CLEAR_PSYCHE_REWARD[normalizeBattleDifficulty(difficulty)]) || 0));
 // ヘルプの中に出す「実データから作る表」。data/help.js の { t:'data', id } がこれを呼ぶ。
@@ -6225,7 +6241,7 @@ function MonsterHeroGame() {
   const activeExtremeBattleSetting = activeExtremeSetting;
   // クイックのEXTREME/NIGHTMAREは通常難易度表に存在しない。カルーセルのonScrollで
   // difficultyが切り替わった直後の再描画でも、クイック用の表から倍率を解決する。
-  const activeDifficultySetting = QUICK_DIFFICULTY_SETTINGS[safeDifficulty];
+  const activeDifficultySetting = quickDifficultySetting(safeDifficulty);
   const scoreMultiplier = extremeRun ? (activeExtremeBattleSetting.score||1) : (isQuickMode(runMode) ? (activeDifficultySetting.xp ?? activeDifficultySetting.score) : activeDifficultySetting.score);
   const xpMultiplier = extremeRun ? (activeExtremeBattleSetting.xp||1) : scoreMultiplier;
   const goldMultiplier = extremeRun ? (activeExtremeBattleSetting.gold||1) : activeDifficultySetting.gold;
@@ -8595,7 +8611,7 @@ function MonsterHeroGame() {
     // 極限チャレンジはスコア×20・経験値×25・ダイヤ×7.5。通常の難易度表ではなく EXTREME_SETTING を使う
     const extreme = extremeRunRef.current;
     const selectedExtremeSetting = EXTREME_DIFFICULTIES.find(setting => setting.id === extremeDifficulty) || EXTREME_SETTING;
-    const quickExtremeSetting = isQuickMode(runMode) ? QUICK_EXTREME_SETTINGS[difficulty] : null;
+    const quickExtremeSetting = isQuickMode(runMode) ? quickDifficultySetting(difficulty) : null;
     const scoreMult = extreme ? selectedExtremeSetting.score : (quickExtremeSetting?.xp || DIFFICULTY_SETTINGS[difficulty]?.score || 1.0);
     const goldMult = extreme ? selectedExtremeSetting.gold : (quickExtremeSetting?.gold || DIFFICULTY_SETTINGS[difficulty]?.gold || 1.0);
     // 経験値はスコアと倍率が違う(極限はスコア×20に対して経験値×25)ので別に持つ
@@ -10256,7 +10272,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // 端数は既存の強化処理と同じくMath.floorで落とす。
   const beginQuickGrowth = () => {
     const before = { hp: maxHp, atk, def, guts: maxGuts };
-    const after = resolveQuickGrowthStats(before);
+    const growthRate = quickGrowthRateForRun(runMode,difficulty,waveResult?.turn);
+    const after = resolveQuickGrowthStats(before,growthRate);
     // setMax*後の古いmemo値は読まず、成長後の基礎値と現在のバフ率から実効最大値をここで確定する。
     const nextEffectiveMaxHp = resolveEffectiveMaxStat(after.hp, getPermaBuff('muaHpPct'));
     const nextEffectiveMaxGuts = resolveEffectiveMaxStat(after.guts, getPermaBuff('muaGutsPct'));

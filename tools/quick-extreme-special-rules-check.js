@@ -48,6 +48,27 @@ assert(!source.includes('ultimateDistanceBreakPendingRef.current&&extremeRunRef.
 assert(!/QUICK_EXTREME_SETTINGS[\s\S]{0,700}(breederCardEffect|waveEnhancement|positiveModifier|negativeModifier|damageDealt|allyJoinBonus|gutsCost)/.test(source), 'quick settings must not duplicate special-rule values');
 const quickExtremeSettings=source.match(/const QUICK_EXTREME_SETTINGS = Object\.freeze\(\{([\s\S]*?)\n\}\);/)?.[1]||'';
 assert(quickExtremeSettings&&!quickExtremeSettings.includes('ULTIMATE'), 'Quick ULTIMATE must not be published yet');
+assert(source.includes("const QUICK_ULTIMATE_SETTING = Object.freeze({\n  label:'ULTIMATE', power:ULTIMATE_SETTING.power, xp:35, gold:12, psyche:60"), 'hidden Quick ULTIMATE must use power/xp/diamond/psyche 35/35/12/60');
+assert(source.includes('const quickDifficultySetting = (difficultyId) => difficultyId===ULTIMATE_SETTING.id')
+  && source.includes('? QUICK_ULTIMATE_SETTING : QUICK_DIFFICULTY_SETTINGS[difficultyId];'), 'hidden setting must be available to runtime without entering the visible settings');
+assert(source.includes('const quickExtremeSetting = isQuickMode(runMode) ? quickDifficultySetting(difficulty) : null;'), 'runtime rewards must resolve the hidden setting');
+assert(source.includes('ULTIMATE: QUICK_ULTIMATE_SETTING.psyche'), 'Quick ULTIMATE clear reward must resolve to 60 psyche');
+assert.strictEqual(35*1.5,52.5, 'growth XP must include the existing quick multiplier');
+assert.strictEqual(12*1.5,18, 'growth diamond must include the existing quick multiplier');
+assert.strictEqual(60*2,120, 'psyche policy must double psyche');
+assert.strictEqual(12*1.5*2,36, 'diamond policy must double the final quick diamond reward');
+assert(source.includes('const quickGrowthRateForRun = (runMode, difficultyId, waveTurnCount) =>'));
+assert(source.includes('specialRuleDifficultyForRun(runMode,difficultyId)'), 'growth penalty must share the special-rule resolver');
+assert(source.includes('ULTIMATE_SETTING.specialRules.awakeningPenaltyRate'), 'growth penalty must reuse the ULTIMATE rate');
+assert(!/quickGrowthRateForRun[\s\S]{0,500}0\.0075/.test(source), 'quick growth must not duplicate the ULTIMATE rate');
+const quickGrowthRate = turns => Math.max(0,0.10-Math.max(0,Number(turns)||0)*0.0075);
+for(const [turns,expected] of [[1,.0925],[5,.0625],[10,.025],[14,0],[99,0]]) {
+  assert(Math.abs(quickGrowthRate(turns)-expected)<1e-12, `unexpected Quick ULTIMATE growth at ${turns}T`);
+}
+assert(source.includes('const growthRate = quickGrowthRateForRun(runMode,difficulty,waveResult?.turn);'));
+assert(source.includes('setHp(nextEffectiveMaxHp); setGuts(nextEffectiveMaxGuts);'), 'HP/guts full recovery must remain');
+assert(source.includes("if(specialDifficulty!==ULTIMATE_SETTING.id) return QUICK_GROWTH_MULT-1;"), 'other quick difficulties must keep 10% growth');
+assert(source.includes("specialRuleDifficultyForRun('challenge','Normal',true,'ULTIMATE')") === false, 'production must not hard-code a Quick-only ULTIMATE rule branch');
 assert(source.includes("quick?'h-[366px] flex flex-col':''"), 'fixed quick card height must remain unchanged');
 assert(source.includes('if (isQuickMode(runMode)) {') && source.includes('return;'), 'quick ranking exclusion path must remain present');
 console.log('OK: クイック極限難易度はspecialRulesを共用し、通常難易度・報酬・ランキング・固定カード高を維持');

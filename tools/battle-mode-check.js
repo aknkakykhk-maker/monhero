@@ -188,8 +188,9 @@ check('既存のランキング行を書き換える処理を足していない'
 check('成長倍率は10%', m.QUICK_GROWTH_MULT === 1.10);
 check('クイックだけ強化フェーズを飛ばす', has('} else if (isQuickMode(runMode)) {') && has('beginQuickGrowth();'));
 const growthBlock = grab(source, 'const beginQuickGrowth = () => {', 'const finishQuickGrowth');
-check('味方の全ステータスを10%上げる',
-  growthBlock.includes('const after = resolveQuickGrowthStats(before);'));
+check('味方の全ステータスを難易度別の成長率で上げる',
+  growthBlock.includes('const growthRate = quickGrowthRateForRun(runMode,difficulty,waveResult?.turn);')
+    && growthBlock.includes('const after = resolveQuickGrowthStats(before,growthRate);'));
 check('端数は既存の強化と同じくfloor', has('const quickGrowStat = (value) => Math.floor((Number(value) || 0) * QUICK_GROWTH_MULT);'));
 check('ライフとガッツをバフ込み実効最大値まで全回復する',
   growthBlock.includes('setHp(nextEffectiveMaxHp); setGuts(nextEffectiveMaxGuts);'));
