@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 22:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 07:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3881,6 +3881,7 @@ const quickGrowthRateForRun = (runMode, difficultyId, waveTurnCount) => {
   return Math.max(0,(QUICK_GROWTH_MULT-1)-Math.max(0,Number(waveTurnCount)||0)*ULTIMATE_SETTING.specialRules.awakeningPenaltyRate);
 };
 const specialRulePercent = (value) => `${Math.round((Number(value)||0)*100)}%`;
+const compactPercent = (value) => `${Number(((Number(value)||0)*100).toFixed(1))}%`;
 const extremeSpecialRuleLines = (difficultyId, quick=false) => {
   if (difficultyId===ULTIMATE_SETTING.id) return [
     ['敵強化','累計T ×0.75%'],
@@ -6245,7 +6246,7 @@ function MonsterHeroGame() {
       { key:'atk',  label:'ちから', short:'力', before:atk,     diff:add('atk'),  tint:'text-red-300' },
       { key:'def',  label:'丈夫さ', short:'防', before:def,     diff:add('def'),  tint:'text-emerald-300' },
       { key:'guts', label:'ガッツ', short:'G',  before:maxGuts, diff:add('guts'), tint:'text-amber-300' },
-    ].map(stat => ({ ...stat, after: stat.before + stat.diff }));
+    ].map(stat => ({ ...stat, normalDiff:Number(bonus[stat.key])||0, after: stat.before + stat.diff }));
     // 間合い適性は「置いた距離に関係なく4距離すべてへ加算される」ので、距離ごとの合計補正で見せる
     const aptDelta = getMonsterAptPct(mon, rule);
     const apt = RANGE_LABELS.map((label, idx) => {
@@ -13830,6 +13831,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
               <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:opacity-50" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}</button><button onClick={toggleQuickMute} aria-label="音量" className="shrink-0 p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[28px] h-[28px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} aria-label="ヘルプ" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button data-battle-quit disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} aria-label="諦める" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
             </header>
+            {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===ULTIMATE_SETTING.id&&(()=>{
+              const elapsedTotalTurns=totalTurnCount+Math.max(0,turnCount-1);
+              const enemyMultiplier=ultimateEnemyTurnMultiplier(elapsedTotalTurns);
+              const damageMultiplier=ultimateDamageTurnMultiplier(elapsedTotalTurns,ULTIMATE_SETTING.id);
+              return <div data-ultimate-battle-status className="shrink-0 flex items-center justify-center gap-x-2 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100">
+                <span className="text-amber-300">ULTIMATE</span><span>累計{elapsedTotalTurns}T</span><span>敵強化 +{compactPercent(enemyMultiplier-1)}</span><span>現在の与ダメ {compactPercent(damageMultiplier)}</span>
+              </div>;
+            })()}
             {enemy&&(
               <div className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
                 <div className="flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1">
@@ -14559,6 +14568,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               ここが無いと「合流後の値」だけを見て比べることになり、どれが得か分からなかった */}
           {gameState==='PICK_ALLY'&&(
             <div className="shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5" data-join-status>
+              {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===ULTIMATE_SETTING.id&&(()=>{
+                const totalTurns=waveResult?.totalTurnCount||0;
+                const normal=100;
+                const effective=applyAllyJoinBonus(normal,ULTIMATE_SETTING.id,totalTurns);
+                return <div data-ultimate-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"><span className="text-amber-300">ULTIMATE補正</span><span>累計{totalTurns}T</span><span>加入ボーナス {effective}%（-{normal-effective}%）</span></div>;
+              })()}
               <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス</div>
               <div className="grid grid-cols-4 gap-1">
                 {[['ライフ',maxHp,'text-pink-300'],['ちから',atk,'text-red-300'],['丈夫さ',def,'text-emerald-300'],['ガッツ',maxGuts,'text-amber-300']].map(([label,value,tint])=>(
@@ -14659,8 +14674,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {preview.stats.map(stat=>(
                         <span key={stat.key} className="min-w-0 block">
                           <span className="block text-slate-500 font-black leading-none">{stat.short}</span>
+                          {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===ULTIMATE_SETTING.id&&stat.normalDiff!==stat.diff?<span className="block leading-none text-slate-500 line-through">+{stat.normalDiff}</span>:null}
                           <b className={`block leading-tight ${stat.diff>0?stat.tint:'text-slate-400'}`} style={{fontSize:'9px'}}>{stat.after}</b>
-                          <span className={`block leading-none ${stat.diff>0?'text-emerald-400':'text-slate-700'}`}>{stat.diff>0?`+${stat.diff}`:'±0'}</span>
+                          <span className={`block leading-none ${stat.diff>0?'text-emerald-400':'text-slate-700'}`}>{stat.diff>0?`実際 +${stat.diff}`:'実際 ±0'}</span>
                         </span>
                       ))}
                     </div>
@@ -15355,6 +15371,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <span className="text-[10px] font-black text-indigo-200">今回：<b className="font-mono text-sm text-white">{waveResult.turn}</b>ターン</span>
               <span className="text-[10px] font-black text-amber-200">累計：<b className="font-mono text-sm text-white">{waveResult.totalTurnCount}</b>ターン</span>
             </div>
+            {isQuickMode(runMode)&&specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty)===ULTIMATE_SETTING.id&&(()=>{
+              const normalRate=quickGrowthRateForRun(runMode,'Normal',waveResult.turn);
+              const effectiveRate=quickGrowthRateForRun(runMode,difficulty,waveResult.turn);
+              return <div data-quick-ultimate-growth className="rounded-lg border border-fuchsia-400/40 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"><span className="text-amber-300">自動成長</span>　通常 +{compactPercent(normalRate)} <span className="text-slate-500">→</span> 今回 +{compactPercent(effectiveRate)}<span className="block text-[8px] text-purple-300">WAVE {waveResult.turn}T / ULTIMATE補正 -{compactPercent(normalRate-effectiveRate)}</span></div>;
+            })()}
             {waveResult.pendingUltimateDistanceBreak&&<div data-ultimate-distance-break-warning className="rounded-lg border border-red-400/60 bg-purple-950/80 px-2 py-1 text-[10px] font-black text-red-200">⚠ 次WAVEで距離弱体化が発動</div>}
             <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">WAVE 与ダメージ</span><span className="text-red-400 font-mono font-black text-base">{waveResult.totalDamage.toLocaleString()}</span></div>
             {waveResult.totalAllDamage!=null&&(<div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">全WAVE累計ダメージ</span><span className="text-orange-400 font-mono font-black text-base">{waveResult.totalAllDamage.toLocaleString()}</span></div>)}
@@ -15420,6 +15441,13 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </span>
               <span className="text-[11px] font-black font-mono text-amber-300">{trainingPicks.length} / {TRAINING_PICK_COUNT}</span>
             </div>
+            {specialRule===ULTIMATE_SETTING.id&&(()=>{
+              const turns=waveResult?.turn||0;
+              const probe={atk:10000,def:10000,hp:10000,guts:10000};
+              const normal=resolveTrainingStep(probe,'hp',turns,null).hp;
+              const effective=resolveTrainingStep(probe,'hp',turns,specialRule).hp;
+              return <div data-ultimate-training-status className="mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"><span className="text-amber-300">ULTIMATE補正</span>　今回{turns}T → 強化効果 -{Number(((normal-effective)/100).toFixed(1))}pt</div>;
+            })()}
           </div>
           <div className="shrink-0 w-full max-w-sm my-2 text-left"><AssistantBubble scene="rewardPick" compact/></div>
           {/* いま選んでいるぶんを反映した4ステータス。選ぶ前は現在値だけ、選ぶと増える量も出る。
@@ -15459,7 +15487,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 何回選んだかを ×1 / ×2 で明確に出す */}
                   {count>0&&<span className={`absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
                   <span className={`flex items-center gap-1.5 ${st.tint}`}>{st.icon}<b className="text-[13px] font-black text-white leading-none">{option.name}</b></span>
-                  <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}</span>
+                  <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{specialRule===ULTIMATE_SETTING.id&&(()=>{
+                    const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null)[option.stat];
+                    const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
+                    const normalGain=normalAfter-current[option.stat],effectiveGain=effectiveAfter-current[option.stat];
+                    return <span className="block text-purple-200">通常 +{normalGain} → 今回の実効 +{effectiveGain}</span>;
+                  })()}</span>
                   <span className="w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight">
                     <span className="block text-[8px] text-slate-500 font-black">{option.statLabel}</span>
                     <span className="block text-[11px] font-black text-slate-300">{before} <span className="text-slate-600">→</span> <b className={st.tint}>{after}</b></span>

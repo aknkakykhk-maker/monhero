@@ -43,7 +43,7 @@ check('カードは加算量そのままではなく allyJoinPreview を通す',
 // 現在値はすぐ上のパネルにあるので、カードは合流後の値と変化量を出す。
 // 「1480→1600」のように1枠へ両方入れるとiPhone SEの幅で数字が切れる(実測で確認済み)
 check('カードに合流後の値と変化量を出す',
-  has('{stat.after}</b>') && has("{stat.diff>0?`+${stat.diff}`:'±0'}"));
+  has('{stat.after}</b>') && has("{stat.diff>0?`実際 +${stat.diff}`:'実際 ±0'}"));
 check('カードに距離補正の変動を出す',
   has('{preview.apt.map(range=>(') && has('{formatAptPct(range.after)}') && has("{range.diff!==0?formatAptPct(range.diff):'±0'}"));
 check('勇者モン選択は今までどおりその子の基礎値を出す',
@@ -52,6 +52,12 @@ check('詳細ポップアップも同じ allyJoinPreview を通す',
   has('allyJoinPreview(currentPickingMon).stats.map(') && has('allyJoinPreview(currentPickingMon).apt.map(range=>range.diff)'));
 check('NIGHTMAREの適性半減を詳細側にも反映できる(aptDeltaPct)',
   has('aptDeltaPct = null } = opts;') && has('const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade);'));
+
+check('ULTIMATE補正はapplyAllyJoinBonusで算出し、カードは本来値と実際値を比較する',
+  has('data-ultimate-join-status') && has('applyAllyJoinBonus(normal,ULTIMATE_SETTING.id,totalTurns)')
+    && has('stat.normalDiff!==stat.diff') && has('実際 +${stat.diff}'));
+const aptitudeCards = slice('{preview.apt.map(range=>(', "<div className=\"min-h-[32px]");
+check('間合い適性にはULTIMATE低下の比較表示を付けない', !aptitudeCards.includes('normalDiff'));
 
 // ---- ④ スクロールで全部たどれること ----
 const listArea = slice('flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0', 'バトルチュートリアル中は');
