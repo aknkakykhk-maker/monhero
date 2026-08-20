@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: c94e97dd213daa33
+// source-sha256: 6d8a4ee12c1b2748
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 22:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 22:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11097,6 +11097,7 @@ function MonsterHeroGame() {
   // ラン中の加入候補はここからしか出さない。ふだんのモードでは使わないので空のまま
   const [proAllyPool, setProAllyPool] = useState([]);
   const [proAllyDetail, setProAllyDetail] = useState(null); // 候補の選択状態とは分けて開く、既存のベースモン詳細
+  const [proEditingAllyIndex, setProEditingAllyIndex] = useState(null); // null=編成確認、数値=その供モン枠だけ変更
   // 起動時に検証した前回編成と、勇者選択画面へ初期表示する勇者・配置距離。
   const [lastProParty, setLastProParty] = useState(EMPTY_PRO_LAST_PARTY);
   const [proHeroPreset, setProHeroPreset] = useState(null);
@@ -19050,6 +19051,20 @@ function MonsterHeroGame() {
     }
     setCurrentPickingMon(null);
   };
+
+  // 「この編成で開始」で確定した6枠だけを次回用に保存する。個別変更の途中では更新しない。
+  const confirmProParty = () => {
+    if (!mainHero || proAllyPool.length !== PRO_ALLY_POOL_SIZE) return;
+    const confirmedParty = normalizeProLastParty({
+      heroBaseId: mainHero.id,
+      heroDistance: initialBattleDistanceRef.current,
+      allyBaseIds: proAllyPool.map(mon => mon.id)
+    }, getUnlockedBaseMonsterList().map(mon => mon.id));
+    setLastProParty(confirmedParty);
+    storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);
+    setTeachingPool([...getActiveTeachingCards()]);
+    setGameState('PICK_TEACHING');
+  };
   const confirmPickTeaching = () => {
     if (!selectedTeachingCard) return;
     const teaching = selectedTeachingCard;
@@ -19087,16 +19102,6 @@ function MonsterHeroGame() {
         storeSet(`mh_attempts_${difficulty}`, next[difficulty], false);
         return next;
       });
-    }
-    // 選択画面を閉じただけでは保存せず、WAVE 1の開始を確定したこの時点だけ更新する。
-    if (!enemy && isProMode(runMode) && mainHero && proAllyPool.length === PRO_ALLY_POOL_SIZE) {
-      const confirmedParty = normalizeProLastParty({
-        heroBaseId: mainHero.id,
-        heroDistance: initialBattleDistanceRef.current,
-        allyBaseIds: proAllyPool.map(mon => mon.id)
-      }, getUnlockedBaseMonsterList().map(mon => mon.id));
-      setLastProParty(confirmedParty);
-      storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);
     }
     setTimeout(() => {
       setOwnedTeachings(nextTeachings);
@@ -29849,159 +29854,142 @@ function MonsterHeroGame() {
       }, gameState === 'PICK_HERO' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
     })), gameState === 'PICK_PRO_ALLIES' && (() => {
       const mode = battleModeInfo(runMode);
-      // 勇者モンにした種は候補から外す(同じ種は1体しか編成に入らないため)
       const candidates = getUnlockedBaseMonsterList().filter(m => m.id !== mainHero?.id);
       const need = Math.min(PRO_ALLY_POOL_SIZE, candidates.length);
-      const chosenIds = proAllyPool.map(m => m.id);
-      const toggle = m => {
-        if (chosenIds.includes(m.id)) {
-          setProAllyPool(prev => prev.filter(x => x.id !== m.id));
-          return;
-        }
-        if (proAllyPool.length >= need) return;
-        setProAllyPool(prev => [...prev, m]);
+      const ready = !!mainHero && proAllyPool.length === need;
+      const changeAlly = m => {
+        if (!Number.isInteger(proEditingAllyIndex)) return;
+        setProAllyPool(prev => {
+          const next = [...prev];
+          next[proEditingAllyIndex] = m;
+          return next.filter(Boolean);
+        });
+        setProEditingAllyIndex(null);
       };
-      const ready = proAllyPool.length === need;
-      return (
-        /*#__PURE__*/
-        // ラン中の画面(勇者モン選択・配置・教え)と同じ全画面のかぶせ方にする。
-        // これを付けないと、ふだんの画面の下敷きになってカードを押せなくなる
-        React.createElement("div", {
-          style: {
-            position: "absolute",
-            inset: 0,
-            backgroundColor: "#020617",
-            zIndex: 30000
-          },
-          className: "absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden",
-          "data-screen": "pick-pro-allies"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "mb-2 text-center flex items-center justify-between px-2 shrink-0",
-          style: {
-            paddingTop: 'calc(.35rem + env(safe-area-inset-top))'
-          }
-        }, /*#__PURE__*/React.createElement("button", {
-          "aria-label": "\u623B\u308B",
-          onClick: () => {
-            setProAllyDetail(null);
-            setProHeroPreset(mainHero ? {
-              heroBaseId: mainHero.id,
-              heroDistance: initialBattleDistanceRef.current
-            } : null);
-            setMainHero(null);
-            setSlots([null, null, null, null]);
-            setCurrentPickingMon(null);
-            setGameState('PICK_HERO');
-          },
-          className: "p-3 text-slate-400 active:scale-90"
-        }, /*#__PURE__*/React.createElement(ArrowLeft, {
-          size: 20
-        })), /*#__PURE__*/React.createElement("h2", {
-          className: "text-xl font-black italic uppercase tracking-widest truncate",
-          style: {
-            color: mode.color
-          }
-        }, "\u4F9B\u30E2\u30F3\u306E\u5019\u88DC"), /*#__PURE__*/React.createElement("div", {
-          className: "w-10"
-        })), /*#__PURE__*/React.createElement("div", {
-          className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "shrink-0 w-full mb-2"
-        }, /*#__PURE__*/React.createElement(AssistantBubble, {
-          scene: "pickProAllies",
-          accent: mode.color,
-          compact: true
-        })), /*#__PURE__*/React.createElement("div", {
-          className: "shrink-0 rounded-2xl border px-3 py-2 mb-2",
-          style: {
-            borderColor: `${mode.color}55`,
-            backgroundColor: 'rgba(0,0,0,.35)'
-          }
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-baseline justify-between"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[11px] font-black text-slate-200"
-        }, "\u4F9B\u30E2\u30F3\u5019\u88DC"), /*#__PURE__*/React.createElement("b", {
-          className: "text-base font-black",
-          style: {
-            color: mode.color
-          }
-        }, proAllyPool.length, " / ", need)), /*#__PURE__*/React.createElement("p", {
-          className: "text-[9px] text-slate-400 leading-snug mt-0.5"
-        }, "\u5408\u6D41\u306E\u5834\u9762\u3067\u306F\u3001\u3053\u306E", need, "\u4F53\u304B\u3089\u30E9\u30F3\u30C0\u30E0\u306B", Math.min(PRO_ALLY_OFFER_SIZE, need), "\u4F53\u3060\u3051\u304C\u51FA\u307E\u3059\u3002\u8AB0\u304C\u6765\u3066\u3082\u3044\u3044\u3088\u3046\u306B\u7D44\u3093\u3067\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
-          className: "flex gap-1 mt-1.5 min-h-[26px] items-center"
-        }, Array.from({
-          length: need
-        }).map((_, i) => {
-          const m = proAllyPool[i];
-          return /*#__PURE__*/React.createElement("div", {
-            key: i,
-            className: "flex-1 h-[26px] rounded-lg border flex items-center justify-center overflow-hidden",
-            style: {
-              borderColor: m ? `${mode.color}88` : 'rgba(255,255,255,.1)',
-              backgroundColor: m ? 'rgba(0,0,0,.5)' : 'transparent'
-            }
-          }, m ? m.imgUrl ? /*#__PURE__*/React.createElement("img", {
-            src: m.imgUrl,
-            alt: m.name,
-            className: "h-[22px] object-contain"
-          }) : /*#__PURE__*/React.createElement("span", {
-            className: "text-sm"
-          }, m.emoji) : /*#__PURE__*/React.createElement("span", {
-            className: "text-[9px] text-slate-600 font-black"
-          }, i + 1));
-        }))), /*#__PURE__*/React.createElement("div", {
-          className: "flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex flex-col gap-2.5"
-        }, candidates.map(m => {
-          const isSel = chosenIds.includes(m.id);
-          const full = !isSel && proAllyPool.length >= need;
-          return /*#__PURE__*/React.createElement(React.Fragment, {
-            key: m.id
-          }, renderProMonsterRow({
-            mon: m,
-            selected: isSel,
-            disabled: full,
-            onSelect: () => toggle(m),
-            onDetail: () => setProAllyDetail(m),
-            selectLabel: `${m.name}を供モン候補${isSel ? 'から解除' : 'に追加'}`,
-            activeClass: 'active:bg-pink-900/30'
-          }));
-        }))), proAllyDetail && renderMonsterDetailModal({
-          mon: proAllyDetail,
-          onClose: () => setProAllyDetail(null),
-          accent: 'pink',
-          zIndex: 31000,
-          label: `${proAllyDetail.name}のベースモン詳細`,
-          footer: /*#__PURE__*/React.createElement("div", {
-            className: "flex gap-2 shrink-0"
-          }, /*#__PURE__*/React.createElement("button", {
-            onClick: () => setProAllyDetail(null),
-            className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95"
-          }, "\u4E00\u89A7\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-            disabled: !chosenIds.includes(proAllyDetail.id) && proAllyPool.length >= need,
-            onClick: () => toggle(proAllyDetail),
-            className: `flex-1 min-h-[48px] rounded-2xl font-black text-[12px] shadow-lg active:scale-95 disabled:opacity-35 ${chosenIds.includes(proAllyDetail.id) ? 'bg-slate-700 text-pink-200' : 'bg-pink-600 text-white'}`
-          }, chosenIds.includes(proAllyDetail.id) ? '供モン候補から解除' : '供モン候補に追加'))
-        }), /*#__PURE__*/React.createElement("div", {
-          className: "shrink-0 pt-1",
-          style: {
-            paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
-          }
-        }, /*#__PURE__*/React.createElement("button", {
-          disabled: !ready,
-          onClick: () => {
-            setTeachingPool([...getActiveTeachingCards()]);
-            setGameState('PICK_TEACHING');
-          },
-          className: "w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30",
-          style: {
-            backgroundColor: mode.color,
-            color: '#0f172a'
-          }
-        }, ready ? 'この候補で始める' : `あと${need - proAllyPool.length}体えらんでください`))))
-      );
+      const returnToHero = () => {
+        setProAllyDetail(null);
+        setProEditingAllyIndex(null);
+        setProHeroPreset(mainHero ? {
+          heroBaseId: mainHero.id,
+          heroDistance: initialBattleDistanceRef.current
+        } : null);
+        setMainHero(null);
+        setSlots([null, null, null, null]);
+        setCurrentPickingMon(null);
+        setGameState('PICK_HERO');
+      };
+      return /*#__PURE__*/React.createElement("div", {
+        style: {
+          position: "absolute",
+          inset: 0,
+          backgroundColor: "#020617",
+          zIndex: 30000
+        },
+        className: "absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden",
+        "data-screen": "pick-pro-allies"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "mb-2 text-center flex items-center justify-between px-2 shrink-0",
+        style: {
+          paddingTop: 'calc(.35rem + env(safe-area-inset-top))'
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u623B\u308B",
+        onClick: returnToHero,
+        className: "p-3 text-slate-400 active:scale-90"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-xl font-black italic uppercase tracking-widest truncate",
+        style: {
+          color: mode.color
+        }
+      }, proEditingAllyIndex === null ? 'プロモード編成' : `供モン${proEditingAllyIndex + 1}を変更`), /*#__PURE__*/React.createElement("div", {
+        className: "w-10"
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col"
+      }, proEditingAllyIndex === null ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full mb-2"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "pickProAllies",
+        accent: mode.color,
+        compact: true
+      })), /*#__PURE__*/React.createElement("p", {
+        className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
+      }, "\u5909\u3048\u305F\u3044\u67A0\u3060\u3051\u300C\u5909\u66F4\u300D\u3092\u62BC\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u4ED6\u306E\u67A0\u306F\u305D\u306E\u307E\u307E\u7DAD\u6301\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5 pb-2"
+      }, [["勇者モン", mainHero], ...Array.from({
+        length: need
+      }, (_, i) => [`供モン${i + 1}`, proAllyPool[i]])].map(([label, mon], i) => /*#__PURE__*/React.createElement("div", {
+        key: label,
+        className: "min-h-[58px] rounded-2xl border border-white/10 bg-slate-900/80 px-2 py-1.5 flex items-center gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: `w-14 shrink-0 text-[9px] font-black ${i === 0 ? 'text-amber-300' : 'text-pink-300'}`
+      }, label), /*#__PURE__*/React.createElement("button", {
+        disabled: !mon,
+        onClick: () => setProAllyDetail(mon),
+        className: "flex-1 min-w-0 flex items-center gap-2 text-left disabled:opacity-50",
+        "aria-label": mon ? `${mon.name}の詳細を見る` : `${label}は未選択`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden shrink-0"
+      }, mon ? mon.imgUrl ? /*#__PURE__*/React.createElement("img", {
+        src: mon.imgUrl,
+        alt: "",
+        className: "w-full h-full object-contain"
+      }) : /*#__PURE__*/React.createElement("span", {
+        className: "text-xl"
+      }, mon.emoji) : /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-600"
+      }, "\uFF0B")), /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-[11px] text-white truncate"
+      }, mon?.name || '未選択'), i === 0 && /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] text-slate-500"
+      }, RANGE_LABELS[initialBattleDistanceRef.current], "\u8DDD\u96E2\u306B\u914D\u7F6E"))), /*#__PURE__*/React.createElement("button", {
+        onClick: () => i === 0 ? returnToHero() : setProEditingAllyIndex(i - 1),
+        className: "min-w-[58px] min-h-[42px] rounded-xl border border-pink-400/50 bg-pink-950/60 text-pink-200 text-[11px] font-black active:scale-95"
+      }, "\u5909\u66F4")))), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 pt-1",
+        style: {
+          paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        disabled: !ready,
+        onClick: confirmProParty,
+        className: "w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30",
+        style: {
+          backgroundColor: mode.color,
+          color: '#0f172a'
+        }
+      }, ready ? 'この編成で開始' : `あと${need - proAllyPool.length}体えらんでください`))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+        className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
+      }, "\u3053\u306E\u67A0\u306B\u5165\u308C\u308B\u30D9\u30FC\u30B9\u30E2\u30F3\u30921\u4F53\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex flex-col gap-2.5"
+      }, candidates.filter(m => !proAllyPool.some((chosen, i) => i !== proEditingAllyIndex && chosen.id === m.id)).map(m => /*#__PURE__*/React.createElement(React.Fragment, {
+        key: m.id
+      }, renderProMonsterRow({
+        mon: m,
+        selected: proAllyPool[proEditingAllyIndex]?.id === m.id,
+        onSelect: () => changeAlly(m),
+        onDetail: () => setProAllyDetail(m),
+        selectLabel: `${m.name}を供モン${proEditingAllyIndex + 1}に選ぶ`,
+        activeClass: 'active:bg-pink-900/30'
+      }))))), /*#__PURE__*/React.createElement("button", {
+        onClick: () => setProEditingAllyIndex(null),
+        className: "shrink-0 w-full min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm mb-1"
+      }, "\u5909\u66F4\u305B\u305A\u623B\u308B")), proAllyDetail && renderMonsterDetailModal({
+        mon: proAllyDetail,
+        onClose: () => setProAllyDetail(null),
+        accent: 'pink',
+        zIndex: 31000,
+        label: `${proAllyDetail.name}のベースモン詳細`,
+        footer: /*#__PURE__*/React.createElement("button", {
+          onClick: () => setProAllyDetail(null),
+          className: "w-full min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95"
+        }, "\u9589\u3058\u308B")
+      })));
     })(), gameState === 'PICK_SLOT' && /*#__PURE__*/React.createElement("div", {
       style: {
         position: "absolute",

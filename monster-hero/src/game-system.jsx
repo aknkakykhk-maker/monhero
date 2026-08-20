@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 22:39"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 22:46"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5670,6 +5670,7 @@ function MonsterHeroGame() {
   // ラン中の加入候補はここからしか出さない。ふだんのモードでは使わないので空のまま
   const [proAllyPool, setProAllyPool] = useState([]);
   const [proAllyDetail, setProAllyDetail] = useState(null); // 候補の選択状態とは分けて開く、既存のベースモン詳細
+  const [proEditingAllyIndex, setProEditingAllyIndex] = useState(null); // null=編成確認、数値=その供モン枠だけ変更
   // 起動時に検証した前回編成と、勇者選択画面へ初期表示する勇者・配置距離。
   const [lastProParty, setLastProParty] = useState(EMPTY_PRO_LAST_PARTY);
   const [proHeroPreset, setProHeroPreset] = useState(null);
@@ -10932,6 +10933,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setCurrentPickingMon(null);
   };
 
+  // 「この編成で開始」で確定した6枠だけを次回用に保存する。個別変更の途中では更新しない。
+  const confirmProParty = () => {
+    if (!mainHero || proAllyPool.length !== PRO_ALLY_POOL_SIZE) return;
+    const confirmedParty = normalizeProLastParty({
+      heroBaseId:mainHero.id,
+      heroDistance:initialBattleDistanceRef.current,
+      allyBaseIds:proAllyPool.map(mon=>mon.id),
+    }, getUnlockedBaseMonsterList().map(mon=>mon.id));
+    setLastProParty(confirmedParty);
+    storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);
+    setTeachingPool([...getActiveTeachingCards()]);
+    setGameState('PICK_TEACHING');
+  };
+
   const confirmPickTeaching = () => {
     if (!selectedTeachingCard) return;
     const teaching=selectedTeachingCard; const alreadyOwned=ownedTeachings.find(t=>t.id===teaching.id);
@@ -10944,16 +10959,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 極限チャレンジ・デバッグ戦・練習は、チャレンジの挑戦回数(mh_attempts_*)へ数えない
     if (!enemy && !extremeRunRef.current && !debugBattleRef.current) {
       setAttemptCounts(prev => { const next = { ...prev, [difficulty]: (prev[difficulty]||0)+1 }; storeSet(`mh_attempts_${difficulty}`, next[difficulty], false); return next; });
-    }
-    // 選択画面を閉じただけでは保存せず、WAVE 1の開始を確定したこの時点だけ更新する。
-    if (!enemy && isProMode(runMode) && mainHero && proAllyPool.length === PRO_ALLY_POOL_SIZE) {
-      const confirmedParty = normalizeProLastParty({
-        heroBaseId:mainHero.id,
-        heroDistance:initialBattleDistanceRef.current,
-        allyBaseIds:proAllyPool.map(mon=>mon.id),
-      }, getUnlockedBaseMonsterList().map(mon=>mon.id));
-      setLastProParty(confirmedParty);
-      storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);
     }
     setTimeout(()=>{setOwnedTeachings(nextTeachings); if(!enemy) initBattle(1,slots,ownedUniques,nextTeachings,def); else initBattle(wave+1,slots,ownedUniques,nextTeachings,def); setSelectedTeachingCard(null);},battleMs(150));
   };
@@ -14729,82 +14734,57 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         </div>
       )}
 
-      {/* PICK PRO ALLIES — プロモードだけの画面。
-          勇者モンを決めたあと、ラン中に加入する可能性のある供モンの候補を5体えらぶ。
-          実際に合流の場面で出るのは、この5体からランダムに選ばれた3体。
-          誰が来てもいいように候補を組むところまでが編成、という考え方 */}
+      {/* PICK PRO ALLIES — 現在の6枠を確認し、必要な1枠だけ変更する。 */}
       {gameState==='PICK_PRO_ALLIES'&&(()=>{
         const mode=battleModeInfo(runMode);
-        // 勇者モンにした種は候補から外す(同じ種は1体しか編成に入らないため)
         const candidates=getUnlockedBaseMonsterList().filter(m=>m.id!==mainHero?.id);
         const need=Math.min(PRO_ALLY_POOL_SIZE,candidates.length);
-        const chosenIds=proAllyPool.map(m=>m.id);
-        const toggle=(m)=>{
-          if(chosenIds.includes(m.id)){setProAllyPool(prev=>prev.filter(x=>x.id!==m.id));return;}
-          if(proAllyPool.length>=need)return;
-          setProAllyPool(prev=>[...prev,m]);
+        const ready=!!mainHero&&proAllyPool.length===need;
+        const changeAlly=(m)=>{
+          if(!Number.isInteger(proEditingAllyIndex))return;
+          setProAllyPool(prev=>{
+            const next=[...prev];
+            next[proEditingAllyIndex]=m;
+            return next.filter(Boolean);
+          });
+          setProEditingAllyIndex(null);
         };
-        const ready=proAllyPool.length===need;
+        const returnToHero=()=>{
+          setProAllyDetail(null);
+          setProEditingAllyIndex(null);
+          setProHeroPreset(mainHero?{heroBaseId:mainHero.id,heroDistance:initialBattleDistanceRef.current}:null);
+          setMainHero(null);setSlots([null,null,null,null]);setCurrentPickingMon(null);setGameState('PICK_HERO');
+        };
         return (
-        // ラン中の画面(勇者モン選択・配置・教え)と同じ全画面のかぶせ方にする。
-        // これを付けないと、ふだんの画面の下敷きになってカードを押せなくなる
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">
           <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))'}}>
-            {/* 勇者モンから選び直せるようにしておく(まだバトルは始まっていない) */}
-            <button aria-label="戻る" onClick={()=>{setProAllyDetail(null);setProHeroPreset(mainHero?{heroBaseId:mainHero.id,heroDistance:initialBattleDistanceRef.current}:null);setMainHero(null);setSlots([null,null,null,null]);setCurrentPickingMon(null);setGameState('PICK_HERO');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-            <h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>供モンの候補</h2>
+            <button aria-label="戻る" onClick={returnToHero} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+            <h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{proEditingAllyIndex===null?'プロモード編成':`供モン${proEditingAllyIndex+1}を変更`}</h2>
             <div className="w-10"></div>
           </div>
           <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col">
-            <div className="shrink-0 w-full mb-2"><AssistantBubble scene="pickProAllies" accent={mode.color} compact/></div>
-            {/* いま何体えらんだか。押した順に並ぶので、選び直しも分かりやすい */}
-            <div className="shrink-0 rounded-2xl border px-3 py-2 mb-2" style={{borderColor:`${mode.color}55`,backgroundColor:'rgba(0,0,0,.35)'}}>
-              <div className="flex items-baseline justify-between">
-                <span className="text-[11px] font-black text-slate-200">供モン候補</span>
-                <b className="text-base font-black" style={{color:mode.color}}>{proAllyPool.length} / {need}</b>
+            {proEditingAllyIndex===null?<>
+              <div className="shrink-0 w-full mb-2"><AssistantBubble scene="pickProAllies" accent={mode.color} compact/></div>
+              <p className="shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2">変えたい枠だけ「変更」を押してください。他の枠はそのまま維持されます。</p>
+              <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5 pb-2">
+                {[["勇者モン",mainHero],...Array.from({length:need},(_,i)=>[`供モン${i+1}`,proAllyPool[i]])].map(([label,mon],i)=><div key={label} className="min-h-[58px] rounded-2xl border border-white/10 bg-slate-900/80 px-2 py-1.5 flex items-center gap-2">
+                  <span className={`w-14 shrink-0 text-[9px] font-black ${i===0?'text-amber-300':'text-pink-300'}`}>{label}</span>
+                  <button disabled={!mon} onClick={()=>setProAllyDetail(mon)} className="flex-1 min-w-0 flex items-center gap-2 text-left disabled:opacity-50" aria-label={mon?`${mon.name}の詳細を見る`:`${label}は未選択`}>
+                    <span className="w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">{mon?(mon.imgUrl?<img src={mon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-xl">{mon.emoji}</span>):<span className="text-slate-600">＋</span>}</span>
+                    <span className="min-w-0"><b className="block text-[11px] text-white truncate">{mon?.name||'未選択'}</b>{i===0&&<small className="block text-[8px] text-slate-500">{RANGE_LABELS[initialBattleDistanceRef.current]}距離に配置</small>}</span>
+                  </button>
+                  <button onClick={()=>i===0?returnToHero():setProEditingAllyIndex(i-1)} className="min-w-[58px] min-h-[42px] rounded-xl border border-pink-400/50 bg-pink-950/60 text-pink-200 text-[11px] font-black active:scale-95">変更</button>
+                </div>)}
               </div>
-              <p className="text-[9px] text-slate-400 leading-snug mt-0.5">合流の場面では、この{need}体からランダムに{Math.min(PRO_ALLY_OFFER_SIZE,need)}体だけが出ます。誰が来てもいいように組んでください。</p>
-              <div className="flex gap-1 mt-1.5 min-h-[26px] items-center">
-                {Array.from({length:need}).map((_,i)=>{const m=proAllyPool[i];return (
-                  <div key={i} className="flex-1 h-[26px] rounded-lg border flex items-center justify-center overflow-hidden" style={{borderColor:m?`${mode.color}88`:'rgba(255,255,255,.1)',backgroundColor:m?'rgba(0,0,0,.5)':'transparent'}}>
-                    {m?(m.imgUrl?<img src={m.imgUrl} alt={m.name} className="h-[22px] object-contain"/>:<span className="text-sm">{m.emoji}</span>):<span className="text-[9px] text-slate-600 font-black">{i+1}</span>}
-                  </div>
-                );})}
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto mh-scroll pb-2 min-h-0">
-              {/* 第1弾のプロ勇者モン選択と同じ横長カード。カード本体は選択、右端は詳細だけに分ける。 */}
-              <div className="flex flex-col gap-2.5">
-                {/* カードの見た目は「勇者モンを選択」と同じ共通部品(renderProMonsterRow)を通す */}
-                {candidates.map(m=>{const isSel=chosenIds.includes(m.id);const full=!isSel&&proAllyPool.length>=need;return (
-                  <React.Fragment key={m.id}>{renderProMonsterRow({
-                    mon: m,
-                    selected: isSel,
-                    disabled: full,
-                    onSelect: ()=>toggle(m),
-                    onDetail: ()=>setProAllyDetail(m),
-                    selectLabel: `${m.name}を供モン候補${isSel?'から解除':'に追加'}`,
-                    activeClass: 'active:bg-pink-900/30',
-                  })}</React.Fragment>
-                );})}
-              </div>
-            </div>
-            {proAllyDetail&&renderMonsterDetailModal({
-              mon: proAllyDetail,
-              onClose: ()=>setProAllyDetail(null),
-              accent: 'pink',
-              zIndex: 31000,
-              label: `${proAllyDetail.name}のベースモン詳細`,
-              footer: (
-                <div className="flex gap-2 shrink-0">
-                  <button onClick={()=>setProAllyDetail(null)} className="w-2/5 min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95">一覧へ戻る</button>
-                  <button disabled={!chosenIds.includes(proAllyDetail.id)&&proAllyPool.length>=need} onClick={()=>toggle(proAllyDetail)} className={`flex-1 min-h-[48px] rounded-2xl font-black text-[12px] shadow-lg active:scale-95 disabled:opacity-35 ${chosenIds.includes(proAllyDetail.id)?'bg-slate-700 text-pink-200':'bg-pink-600 text-white'}`}>{chosenIds.includes(proAllyDetail.id)?'供モン候補から解除':'供モン候補に追加'}</button>
-                </div>
-              ),
-            })}
-            <div className="shrink-0 pt-1" style={{paddingBottom:'calc(.25rem + env(safe-area-inset-bottom))'}}>
-              <button disabled={!ready} onClick={()=>{setTeachingPool([...getActiveTeachingCards()]);setGameState('PICK_TEACHING');}} className="w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30" style={{backgroundColor:mode.color,color:'#0f172a'}}>{ready?'この候補で始める':`あと${need-proAllyPool.length}体えらんでください`}</button>
-            </div>
+              <div className="shrink-0 pt-1" style={{paddingBottom:'calc(.25rem + env(safe-area-inset-bottom))'}}><button disabled={!ready} onClick={confirmProParty} className="w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30" style={{backgroundColor:mode.color,color:'#0f172a'}}>{ready?'この編成で開始':`あと${need-proAllyPool.length}体えらんでください`}</button></div>
+            </>:<>
+              <p className="shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2">この枠に入れるベースモンを1体選んでください。</p>
+              <div className="flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"><div className="flex flex-col gap-2.5">
+                {candidates.filter(m=>!proAllyPool.some((chosen,i)=>i!==proEditingAllyIndex&&chosen.id===m.id)).map(m=><React.Fragment key={m.id}>{renderProMonsterRow({mon:m,selected:proAllyPool[proEditingAllyIndex]?.id===m.id,onSelect:()=>changeAlly(m),onDetail:()=>setProAllyDetail(m),selectLabel:`${m.name}を供モン${proEditingAllyIndex+1}に選ぶ`,activeClass:'active:bg-pink-900/30'})}</React.Fragment>)}
+              </div></div>
+              <button onClick={()=>setProEditingAllyIndex(null)} className="shrink-0 w-full min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm mb-1">変更せず戻る</button>
+            </>}
+            {proAllyDetail&&renderMonsterDetailModal({mon:proAllyDetail,onClose:()=>setProAllyDetail(null),accent:'pink',zIndex:31000,label:`${proAllyDetail.name}のベースモン詳細`,footer:<button onClick={()=>setProAllyDetail(null)} className="w-full min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95">閉じる</button>})}
           </div>
         </div>);
       })()}
