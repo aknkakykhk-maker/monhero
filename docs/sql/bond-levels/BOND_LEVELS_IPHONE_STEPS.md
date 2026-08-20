@@ -99,5 +99,5 @@ PostgreSQL 16 のローカル環境に、Supabaseと同じ前提（`anon` / `aut
 
 ### 検査
 
-- `node tools/bond-levels-table-check.js` … Supabaseをスタブした実ブラウザで、テーブルあり／無しの両方と「詳細 ›」の挙動を確認する
-- `node tools/bond-levels-schema-match-check.js` … アプリが送るリクエストの形（列名・`on_conflict`・`Prefer`）と、このディレクトリの `BOND_LEVELS_APPLY.sql` が食い違っていないかを突き合わせる。スタブでは列名の打ち間違いを検出できないため、`bond_levels` に削除の権限が無い（消せない）ことを踏まえて機械的に止める
+- `node tools/ranking/bond-levels-table-check.js` … Supabaseをスタブした実ブラウザで、テーブルあり／無しの両方と「詳細 ›」の挙動を確認する
+- `node tools/ranking/bond-levels-schema-match-check.js` … アプリが送るリクエストの形（列名・`on_conflict`・`Prefer`）と、このディレクトリの `BOND_LEVELS_APPLY.sql` が食い違っていないかを突き合わせる。スタブでは列名の打ち間違いを検出できないため、`bond_levels` に削除の権限が無い（消せない）ことを踏まえて機械的に止める

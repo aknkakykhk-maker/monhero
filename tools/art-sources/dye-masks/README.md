@@ -5,7 +5,7 @@
 
 | ファイル | 使うところ |
 | --- | --- |
-| `undine-dye-mask.PNG` | `node tools/undine-dye-mask-check.js` の正解見本(256x384) |
+| `undine-dye-mask.PNG` | `node tools/image/undine-dye-mask-check.js` の正解見本(256x384) |
 | `yaobikuni-dye-mask.PNG` | ヤオビクニの差し替え前の原本。今の検査は配信中の `yaobikuni-dye-mask2.PNG` を使うため、比較・巻き戻し用に保管しているだけ |
 
 見本はデバッグ画面の「染色マスクエディタ」から書き出した PNG を、そのままここへ置く。

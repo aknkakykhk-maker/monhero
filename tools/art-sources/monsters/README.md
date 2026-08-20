@@ -1,6 +1,6 @@
 # モンスターの原本画像
 
-`node tools/make-face-icons.js` が顔アイコンを切り出すときに使う、**立ち絵より高解像度な原本**を置く。
+`node tools/image/make-face-icons.js` が顔アイコンを切り出すときに使う、**立ち絵より高解像度な原本**を置く。
 
 - ファイル名は `FACE_BOXES` のキーと同じ大文字(例: `ZAN.PNG`)。
 - ここにファイルがあれば、`monster-hero/images/monsters/` の配信画像より優先して使う。

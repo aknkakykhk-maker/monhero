@@ -5,8 +5,8 @@ GitHub Pages では配信されない。
 
 | フォルダ | 中身 | 使うところ |
 | --- | --- | --- |
-| `monsters/` | 顔アイコンを切り出すための、立ち絵より高解像度な原本 | `node tools/make-face-icons.js` |
-| `dye-masks/` | 染色の部位分けが正しいかを比べるための正解見本 | `node tools/undine-dye-mask-check.js` など |
+| `monsters/` | 顔アイコンを切り出すための、立ち絵より高解像度な原本 | `node tools/image/make-face-icons.js` |
+| `dye-masks/` | 染色の部位分けが正しいかを比べるための正解見本 | `node tools/image/undine-dye-mask-check.js` など |
 
 ## なぜここに置くか
 

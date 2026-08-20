@@ -56,8 +56,8 @@ node tools/check-syntax.js
 node tools/build.js --check
 
 # ゲーム機能を変更した場合の代表例
-node tools/feature-check.js
-node tools/dye-report.js
+node tools/browser/feature-check.js
+node tools/image/dye-report.js
 ```
 
 `npm ci` が 403 になる場合は、まずエラーになった URL と `npm config list` を記録します。
@@ -82,7 +82,7 @@ Codex クラウドの通信ポリシーによる 403 は、レジストリ変更
 4. `monster-hero/data/changelog.js` の先頭へ利用者向け変更内容を追記してから再度ビルドする。
    新モード、新難易度、新機能、新モンスター、マーケット新商品、重要な仕様変更は更新履歴の対象とし、
    デバッグ限定変更や内部修正は掲載しない。新モード・主要新機能・マーケット新商品には `assistantNotice` も付け、
-   `node tools/assistant-update-notice-check.js` で初回通知と遷移先を確認する。
+   `node tools/assistant/assistant-update-notice-check.js` で初回通知と遷移先を確認する。
 5. **`monster-hero/data/help.js` のヘルプにも同じ変更を反映する**（更新履歴だけ書いてヘルプが古いままにしない）。
    一覧になるものは手書きせず `{ t:'data', id:'...' }` で実データから表を作り、画面を増やした場合は
    `HELP_SCREEN_COVERAGE` にも追加する。`node tools/help-coverage-check.js` /

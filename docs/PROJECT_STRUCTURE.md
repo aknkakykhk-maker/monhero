@@ -106,18 +106,25 @@
 
 ## 5. ツール構造
 
-`tools/` はスクリプトを**平置き**にしている。160本以上あるが、`build.js` と `harness.js`
-以外はすべて `〇〇-check.js` / `〇〇-report.js` という名前で役割が分かる形に揃えてあり、
-`node tools/〇〇.js` というコマンドが `CLAUDE.md`・CI・過去の作業記録の各所に書かれているため、
-**フォルダへ分けて実行パスを変えることはしない**。何がどれかは
-[`tools/README.md`](../tools/README.md) の一覧を正本とする。
+`tools/` は162本ある。置き場所の決め方は2つだけ。
+
+- **`tools/` 直下(21本)** … `CLAUDE.md` の必須手順と CI ワークフローが名指しする定番と、
+  その裏方(`build.js` / `harness.js` / `stamp-*.js`)。**ここは動かさない。**
+  動かすと `CLAUDE.md` と `.github/workflows/compiled-check.yml` の書き換えが必要になり、
+  CI は1つでも落ちるとデプロイを黙って飛ばすため、事故がいちばん起きやすい。
+- **`tools/<分類>/`(141本)** … 場面ごとの検査。`boot` `battle` `mode` `run` `masu`
+  `monster` `ranking` `assistant` `audio` `image` `browser` の11フォルダ。
+
+分類フォルダのスクリプトは1つ下の階層にあるので、`__dirname` の代わりに
+`TOOLS_DIR`(= `tools/` 直下)を使い、共通ヘルパーは `require('../harness')` で読む。
+何がどれかは [`tools/README.md`](../tools/README.md) の一覧を正本とする。
 
 - **生成・整合:** `build.js`, `harness.js`, `check-syntax.js`, `stamp-version.js`, `stamp-boot-sizes.js`。
 - **CIが必ず通す6本:** `build.js --check`, `compiled-runtime-check.js`, `check-syntax.js`, `undefined-reference-check.js`, `boot-flow-check.js`, `update-notice-check.js`。ここが1つでも落ちるとデプロイが黙って飛ばされる。
-- **主要回帰:** `feature-check.js`, `battle-check.js`, `boot-check.js`, `ranking-check.js`, `ranking-finish-check.js`, `difficulty-item-check.js`, `bulk-enhance-check.js`。
-- **音声:** `bgm-check.js`, `title-bgm-check.js`, `tap-sound-trace.js`。
-- **画像・染色:** `dye-report.js`, `region-map.js`, `grid-overlay.js`, `make-face-icons.js`, `face-render-check.js`, `image-report.js`, `image-asset-check.js`。
-- **配信・性能:** `serve.py`, `smoke.js`, `perf-check.js`。
+- **主要回帰:** `browser/feature-check.js`, `battle/battle-check.js`, `boot/boot-check.js`, `ranking/ranking-check.js`, `run/ranking-finish-check.js`, `mode/difficulty-item-check.js`, `masu/bulk-enhance-check.js`。
+- **音声:** `audio/bgm-check.js`, `audio/title-bgm-check.js`, `audio/tap-sound-trace.js`。
+- **画像・染色:** `image/dye-report.js`, `image/region-map.js`, `image/grid-overlay.js`, `image/make-face-icons.js`, `image/face-render-check.js`, `image/image-report.js`, 直下の `image-asset-check.js`。
+- **配信・性能:** `serve.py`, `browser/smoke.js`, `browser/perf-check.js`。
 - **配信しない素材:** `art-sources/monsters/`（顔アイコン用の高解像度原本）、`art-sources/dye-masks/`（染色の正解見本）。
 - **出力先:** `tools/out/` は検査が書き出すPNG等の置き場で、`tools/.gitignore` によりGit管理外。
 
