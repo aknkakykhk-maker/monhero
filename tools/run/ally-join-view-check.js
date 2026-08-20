@@ -53,8 +53,9 @@ check('詳細ポップアップも同じ allyJoinPreview を通す',
 check('NIGHTMAREの適性半減を詳細側にも反映できる(aptDeltaPct)',
   has('aptDeltaPct = null } = opts;') && has('const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade);'));
 
-check('ULTIMATE補正はapplyAllyJoinBonusで算出し、カードは本来値と実際値を比較する',
-  has('data-ultimate-join-status') && has('applyAllyJoinBonus(normal,ULTIMATE_SETTING.id,totalTurns)')
+check('ULTIMATE補正率は共通倍率を小数精度で表示し、カードは本来値と実際値を比較する',
+  has('data-ultimate-join-status') && has('const multiplier=ultimateAllyJoinMultiplier(totalTurns);')
+    && has('加入ボーナス {precisePercent(multiplier)}（-{precisePercent(1-multiplier)}）')
     && has('stat.normalDiff!==stat.diff') && has('実際 +${stat.diff}'));
 const aptitudeCards = slice('{preview.apt.map(range=>(', "<div className=\"min-h-[32px]");
 check('間合い適性にはULTIMATE低下の比較表示を付けない', !aptitudeCards.includes('normalDiff'));
@@ -74,11 +75,12 @@ ${slice('const DIST_APTITUDE_MULT', 'const DIST_APTITUDE_COLOR')}
 ${slice('const EXTREME_DIFFICULTIES = Object.freeze', 'const extremeRuleSetting')}
 ${slice('const extremeRuleSetting', 'const specialRulePercent')}
 ${slice('const applyNightmareSignedModifier', 'const applyNightmareWaveEnhancement')}
+${slice('const ultimateAllyJoinMultiplier', '// ===== トレーニング')}
 ${slice('const aptGradeToPct', '// 補正値の表示用文字列')}
 ${slice('const formatAptPct', '// 合流ボーナス欄に出す間合い適性')}
 ${slice('const applyExtremeIntegerRule', '// 極限チャレンジの説明にはモード全体に共通する')}
 const RANGE_LABELS = ${JSON.stringify(['零','近','中','遠'])};
-module.exports={specialRuleDifficultyForRun,applyAllyJoinBonus,getMonsterAptPct,formatAptPct,RANGE_LABELS};`;
+module.exports={specialRuleDifficultyForRun,ultimateAllyJoinMultiplier,applyAllyJoinBonus,getMonsterAptPct,formatAptPct,RANGE_LABELS};`;
 const mod = { exports: {} };
 try {
   new Function('module', 'exports', calcSrc)(mod, mod.exports);
@@ -89,6 +91,9 @@ const C = mod.exports;
 check('本体の計算関数を取り出せる', typeof C.applyAllyJoinBonus === 'function' && typeof C.getMonsterAptPct === 'function');
 
 if (typeof C.applyAllyJoinBonus === 'function') {
+  check('ULTIMATE加入率は0.75%刻みを丸めず算出する',
+    Math.abs(C.ultimateAllyJoinMultiplier(1) - 0.9925) < 1e-9
+      && Math.abs(C.ultimateAllyJoinMultiplier(40) - 0.70) < 1e-9);
   // 本体の allyJoinPreview をそのまま持ってきて、状態だけ差し替えて動かす
   const previewSrc = slice('const allyJoinPreview = (mon) => {', '// 極限チャレンジの解放判定');
   const makePreview = new Function('ctx', `with(ctx){${previewSrc}\nreturn allyJoinPreview;}`);

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8b638911ecce35f4
+// source-sha256: edfbc017ec539d1f
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 07:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 07:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7687,6 +7687,7 @@ const quickGrowthRateForRun = (runMode, difficultyId, waveTurnCount) => {
 };
 const specialRulePercent = value => `${Math.round((Number(value) || 0) * 100)}%`;
 const compactPercent = value => `${Number(((Number(value) || 0) * 100).toFixed(1))}%`;
+const precisePercent = value => `${Number(((Number(value) || 0) * 100).toFixed(2))}%`;
 const extremeSpecialRuleLines = (difficultyId, quick = false) => {
   if (difficultyId === ULTIMATE_SETTING.id) return [['敵強化', '累計T ×0.75%'], ['供モン加入B低下', '累計T ×0.75%'], ['与ダメ低下', '経過累計T ×0.75%（最低25%）'], [quick ? '自動成長低下' : 'トレーニング低下', 'WAVE T ×0.75%'], ['距離BREAK', '35Tごと / 3距離を段階強化']];
   const rules = extremeDifficultySetting(difficultyId)?.specialRules || {};
@@ -7730,6 +7731,7 @@ const applyUltimateDistanceBreak = (damage, slotIndex, breakLevels, specialDiffi
   return specialDifficulty === ULTIMATE_SETTING.id && isMonsterAttack && level > 0 ? Math.floor((Number(damage) || 0) * ULTIMATE_SETTING.specialRules.distanceBreak.damageDealtPerLevel ** level) : damage;
 };
 const ultimateDamageTurnMultiplier = (turns, specialDifficulty = null) => specialDifficulty === ULTIMATE_SETTING.id ? Math.max(ULTIMATE_SETTING.specialRules.minimumDamageDealt, 1 - Math.max(0, Number(turns) || 0) * ULTIMATE_SETTING.specialRules.damageTurnRate) : 1;
+const ultimateAllyJoinMultiplier = turns => Math.max(0, 1 - Math.max(0, Number(turns) || 0) * ULTIMATE_SETTING.specialRules.allyJoinPenaltyRate);
 // ===== トレーニング(WAVEクリアごとの強化。旧「能力覚醒」) =====
 // 4種類から2回選ぶ。同じ項目を2回選んでもよく、その場合は1回目を適用した結果へ
 // 2回目をかける(2回分をまとめて足す別計算にはしない)。
@@ -7808,8 +7810,7 @@ const applyExtremeIntegerRule = (value, specialDifficulty = null, rule) => Math.
 // WAVE結果に確定済みの累計ターンを使い、CHAOSの固定50%とは重ねない。
 const applyAllyJoinBonus = (value, specialDifficulty = null, totalTurns = 0) => {
   if (specialDifficulty === ULTIMATE_SETTING.id) {
-    const multiplier = Math.max(0, 1 - Math.max(0, Number(totalTurns) || 0) * ULTIMATE_SETTING.specialRules.allyJoinPenaltyRate);
-    return Math.floor((Number(value) || 0) * multiplier);
+    return Math.floor((Number(value) || 0) * ultimateAllyJoinMultiplier(totalTurns));
   }
   return applyExtremeIntegerRule(value, specialDifficulty, 'allyJoinBonus');
 };
@@ -27877,14 +27878,14 @@ function MonsterHeroGame() {
       size: 14
     })))), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
       const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
-      const enemyMultiplier = ultimateEnemyTurnMultiplier(elapsedTotalTurns);
+      const enemyMultiplier = ultimateEnemyTurnMultiplier(totalTurnCount);
       const damageMultiplier = ultimateDamageTurnMultiplier(elapsedTotalTurns, ULTIMATE_SETTING.id);
       return /*#__PURE__*/React.createElement("div", {
         "data-ultimate-battle-status": true,
-        className: "shrink-0 flex items-center justify-center gap-x-2 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100"
+        className: "shrink-0 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, "ULTIMATE"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", elapsedTotalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u6575\u5F37\u5316 +", compactPercent(enemyMultiplier - 1)), /*#__PURE__*/React.createElement("span", null, "\u73FE\u5728\u306E\u4E0E\u30C0\u30E1 ", compactPercent(damageMultiplier)));
+      }, "ULTIMATE"), /*#__PURE__*/React.createElement("span", null, "\u6575\u5F37\u5316 +", compactPercent(enemyMultiplier - 1), "\uFF08WAVE\u958B\u59CB\u6642 \u7D2F\u8A08", totalTurnCount, "T\uFF09"), /*#__PURE__*/React.createElement("span", null, "\u4E0E\u30C0\u30E1 ", compactPercent(damageMultiplier), "\uFF08\u73FE\u5728 \u7D2F\u8A08", elapsedTotalTurns, "T\uFF09"));
     })(), enemy && /*#__PURE__*/React.createElement("div", {
       className: `shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`
     }, /*#__PURE__*/React.createElement("div", {
@@ -29564,14 +29565,13 @@ function MonsterHeroGame() {
       "data-join-status": true
     }, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
       const totalTurns = waveResult?.totalTurnCount || 0;
-      const normal = 100;
-      const effective = applyAllyJoinBonus(normal, ULTIMATE_SETTING.id, totalTurns);
+      const multiplier = ultimateAllyJoinMultiplier(totalTurns);
       return /*#__PURE__*/React.createElement("div", {
         "data-ultimate-join-status": true,
         className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"
       }, /*#__PURE__*/React.createElement("span", {
         className: "text-amber-300"
-      }, "ULTIMATE\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", effective, "%\uFF08-", normal - effective, "%\uFF09"));
+      }, "ULTIMATE\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", precisePercent(multiplier), "\uFF08-", precisePercent(1 - multiplier), "\uFF09"));
     })(), /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
     }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
