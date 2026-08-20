@@ -32,5 +32,7 @@ assert.strictEqual((source.match(/applyAllyJoinBonus\(bonus\[key\]\|\|0,specialR
 assert(source.includes("const aptDelta=getMonsterAptPct(m,specialRuleDifficulty)"), '間合い適性の加入処理を維持');
 assert(source.includes('const newAllyUnique={...m.unique'), '固有技の加入処理を維持');
 assert(help.includes('CHAOS だけの特殊ルール') && help.includes('供モンの加入、間合い適性、固有技の取得は半減しません'), 'ヘルプに正式仕様と対象外を記載');
+assert(source.includes("['与ダメ',specialRulePercent(extremeSpecialRule(difficultyId,'damageDealt'))]") && source.includes("['消費ガッツ',specialRulePercent(extremeSpecialRule(difficultyId,'gutsCost'))]") && source.includes("['加入B',specialRulePercent(extremeSpecialRule(difficultyId,'allyJoinBonus'))]"), 'バトル表示はspecialRulesの3項目を使う');
+assert(source.includes('data-chaos-join-status') && source.includes('本来 +{stat.normalDiff}'), '加入表示はステータスの本来値と実値を比較する');
 
 console.log('OK: CHAOS特殊ルール（与ダメージ50%・加入ボーナス50%・消費ガッツ150%・一重適用・他難易度隔離）');
