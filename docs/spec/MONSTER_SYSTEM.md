@@ -150,7 +150,7 @@ max(1, round(50 × level^1.4 × 0.05))
 強化のプレビューは `applyEnhancePlanToMasu`（下書きを実データへ触れずに当てはめる）を通し、
 確定処理も同じ関数を使うので、プレビューの値と確定後の総合力が一致する。
 
-回帰確認: `node tools/monster-power-check.js`
+回帰確認: `node tools/masu/monster-power-check.js`
 
 ## 5.6. ランキングの記録形（RANKING_DETAIL_VERSION）
 
@@ -223,7 +223,7 @@ WAVE1で諦めた場合だけはクリアWAVEが0で絆経験値の加算が起�
 件数も60件では狭く、プレイ直後の自分の記録すら枠に入らないことがあったため120件へ広げた
 （絆Lvは編成 `party` ごと取るので1行が重い。ここを増やしすぎると読み込みが重くなる）。
 
-回帰確認: `node tools/bond-ranking-submit-check.js`、`node tools/bond-ranking-check.js`
+回帰確認: `node tools/ranking/bond-ranking-submit-check.js`、`node tools/ranking/bond-ranking-check.js`
 
 ### ランキングの詳細は readOnly
 
@@ -231,7 +231,7 @@ WAVE1で諦めた場合だけはクリアWAVEが0で絆経験値の加算が起�
 `renderFusionDetailModal` を使う。違いは `readOnly: true` を渡すことだけで、
 名前変更・強化・編成・合体・限界突破・転生・寄付といった所有者だけの操作は呼び出し元が渡さない。
 
-回帰確認: `node tools/ranking-monster-detail-check.js`、`node tools/fusion-detail-check.js`
+回帰確認: `node tools/ranking/ranking-monster-detail-check.js`、`node tools/masu/fusion-detail-check.js`
 
 ## 6. 融合
 
@@ -271,7 +271,7 @@ WAVE1で諦めた場合だけはクリアWAVEが0で絆経験値の加算が起�
 
 と出す。架空の相手・日時は生成しない（`hasDetail` で見分ける）。
 
-回帰確認: `node tools/fusion-detail-check.js`
+回帰確認: `node tools/masu/fusion-detail-check.js`
 
 ## 7. 転生
 
@@ -340,7 +340,7 @@ Lv.200へ達すると `levelCap >= MAX_MASU_LEVEL_CAP` の判定で突破でき�
   `clearRecordedRef` が二重付与を止める。敗北・リタイア・スキップチケットはこの関数を通らない。
 - マーケットでは売らない（`shop:false`）。獲得数はリザルトの `psycheGain` に出す。
 
-回帰確認: `node tools/breakthrough-item-check.js`
+回帰確認: `node tools/masu/breakthrough-item-check.js`
 
 ### ★の段階
 
@@ -369,7 +369,7 @@ Lv.200へ達すると `levelCap >= MAX_MASU_LEVEL_CAP` の判定で突破でき�
 ★を描くのは `RebirthStars` の1か所だけで、マスモン詳細・一覧カード・編成・放牧・限界突破/転生画面・
 HOMEの放牧マスモン・ランキングの詳細まで、すべて同じ実装を通る。限界突破の演出も同じ色を使う。
 
-回帰確認: `node tools/breakthrough-star-check.js`
+回帰確認: `node tools/masu/breakthrough-star-check.js`
 
 
 
@@ -399,4 +399,4 @@ HOMEの放牧マスモン・ランキングの詳細まで、すべて同じ実�
 - 絆Lvランキングへ送る値: `submitLocalScore` / `postRunMasuMonsRef` / `runHeroBondLevelRef`
 - 限界突破の★とレベル上限: `breakthroughStars` / `BREAKTHROUGH_STAR_TIERS` / `BREAKTHROUGH_FINAL_LEVEL_CAP` / `buildMasuBreakthrough`
 - 限界突破に使うアイテム: `BREAKTHROUGH_ITEM_ID` / `breakthroughItemCost` / `CLEAR_PSYCHE_REWARD` / `awardClearPsyche`
-- 回帰確認: `node tools/monster-power-check.js`、`node tools/monster-detail-unified-check.js`、`node tools/fusion-detail-check.js`、`node tools/ranking-monster-detail-check.js`、`node tools/bond-ranking-submit-check.js`、`node tools/breakthrough-star-check.js`、`node tools/breakthrough-item-check.js`、`node tools/bulk-enhance-check.js`、`node tools/dye-report.js`、`node tools/battle-check.js`
+- 回帰確認: `node tools/masu/monster-power-check.js`、`node tools/masu/monster-detail-unified-check.js`、`node tools/masu/fusion-detail-check.js`、`node tools/ranking/ranking-monster-detail-check.js`、`node tools/ranking/bond-ranking-submit-check.js`、`node tools/masu/breakthrough-star-check.js`、`node tools/masu/breakthrough-item-check.js`、`node tools/masu/bulk-enhance-check.js`、`node tools/image/dye-report.js`、`node tools/battle/battle-check.js`

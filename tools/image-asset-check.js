@@ -1,7 +1,7 @@
 // 画像がPNGファイルとして正しく置かれているかを見張る検査。
 //
 // 2026年8月に、モンスターの絵やアイコンを data/*.js への base64 埋め込みから
-// monster-hero/images/ 以下のPNGファイルへ移した(tools/extract-images.js)。
+// monster-hero/images/ 以下のPNGファイルへ移した(tools/image/extract-images.js)。
 // ファイル参照は綴りを1文字まちがえても手元では気づけず、公開してから
 // 「絵が出ない」ことになる(GitHub Pagesは大文字小文字を区別する)。
 // そのため次を機械的に確認する。

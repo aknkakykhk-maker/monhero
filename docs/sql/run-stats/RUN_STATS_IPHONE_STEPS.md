@@ -87,5 +87,5 @@ PostgreSQL 16 のローカル環境に、Supabaseと同じ前提（`anon` / `aut
 
 ## 検査
 
-- `node tools/ranking-run-stats-check.js` … Supabaseをスタブした実ブラウザで、列がある場合と無い場合の両方を通す。無い場合に**スコアの保存が落ちない**ことをここで固定している
-- `node tools/bond-levels-schema-match-check.js` … アプリが送る列と、このディレクトリのSQLが食い違っていないかを突き合わせる
+- `node tools/ranking/ranking-run-stats-check.js` … Supabaseをスタブした実ブラウザで、列がある場合と無い場合の両方を通す。無い場合に**スコアの保存が落ちない**ことをここで固定している
+- `node tools/ranking/bond-levels-schema-match-check.js` … アプリが送る列と、このディレクトリのSQLが食い違っていないかを突き合わせる

@@ -56,7 +56,7 @@ AI と人間が、未解決の不具合・技術的負債・調査事項を共�
 | 優先度 / 種別 | P3 / 性能・技術的負債 |
 | 影響 | base64 画像ファイルと BGM が大きく、モバイル回線の通信量、キャッシュ、差分レビューへ負荷がかかる |
 | 現状 | 画像は `data/images/` に分離し、BGM は `preload='none'` で必要時に読み込む。重複画像の検査ツールがある |
-| 回避策 | `node tools/image-report.js` と `node tools/perf-check.js` で増加を確認し、大容量追加を避ける |
+| 回避策 | `node tools/image/image-report.js` と `node tools/browser/perf-check.js` で増加を確認し、大容量追加を避ける |
 | 完了条件 | 端末・回線別の容量目標を定め、品質を損なわない最適化方針を決める |
 | 関連 | GitHub Issue 未登録 |
 
@@ -88,13 +88,13 @@ AI と人間が、未解決の不具合・技術的負債・調査事項を共�
 
 - 再調査結果: 前回はHTMLAudioElementを`createMediaElementSource`へ接続しただけで、音源そのものはiOSで消音モードを無視し得るメディア再生経路のままだった。BGMとジングルの`new Audio()`・`.play()`も配信コードに残っていた。
 - 解決内容: BGMとジングルを`fetch` / `decodeAudioData`でAudioBuffer化し、AudioBufferSourceNodeから再生する経路へ統一した。SEは従来どおりTone.jsのWeb Audio合成経路を使う。
-- 検証: `node tools/audio-route-check.js`、`node tools/build.js --check`、iPhone実機の通常モード・消音モード（実機確認は要実施）
+- 検証: `node tools/audio/audio-route-check.js`、`node tools/build.js --check`、iPhone実機の通常モード・消音モード（実機確認は要実施）
 - 関連: 本修正のPR
 
 ### KI-005: 全国ランキング失敗を端末内保存成功で隠していた（2026-07-28 解決）
 
 - 解決内容: 全国POST失敗と端末内フォールバックの結果を別々に返し、全難易度を全項目の単一payloadで送る共通経路へ統一した。失敗時はHTTP status・PostgREST code・response bodyを端末内記録へ残す。
-- 検証: `node tools/ranking-normal-integration-check.js`、`node tools/ranking-request-check.js`、`node tools/ranking-finish-check.js`
+- 検証: `node tools/ranking/ranking-normal-integration-check.js`、`node tools/ranking/ranking-request-check.js`、`node tools/run/ranking-finish-check.js`
 - 関連: 本修正のPR
 
 解決した項目は削除せず、要約、解決日、PR、検証方法を残します。

@@ -161,7 +161,7 @@ WAVE経験値基礎値は `[4,5,6,7,8,10,12,14,16,18]`、ゴールド基礎値�
 - **クイック** … モンスターの**育成**（短い時間で何周でも回せる）
 - **プロ** … 育てたマスモンを一切使えない、**ベースモンだけで挑む難しさ**（絆経験値3倍は結果であって売りではない）
 
-`tools/battle-mode-check.js` が、見出しの並びが3モードでそろっていることと、モードの違いを表す項目が必ず書き分けられていることを見る。
+`tools/battle/battle-mode-check.js` が、見出しの並びが3モードでそろっていることと、モードの違いを表す項目が必ず書き分けられていることを見る。
 
 | モード | id | ブリーダーXP | 絆XP | ダイヤ | スコアランキング | 保存キーの接頭辞 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -262,14 +262,14 @@ HOMEの「バトル」は `バトル → バトルモード選択 → 難易度�
 - 敵: `monster-hero/data/enemy-monsters.js`
 - 味方特性: `monster-hero/data/ally-monsters.js`
 - 敵の行動: `ENEMY_ACTION_DEFINITIONS`、`evaluateEnemyActions`、`chooseEnemyAction`、`advanceEnemyIntents`
-- 回帰確認: `node tools/battle-check.js`、`node tools/difficulty-item-check.js`、
-  `node tools/enemy-scan-check.js`、`node tools/battle-scenario-check.js`、
-  `node tools/guard-card-check.js`、`node tools/golem-balance-check.js`、
-  `node tools/battle-mode-check.js`（モードの倍率・保存キー・ランキング名前空間・新しい入口）、
-  `node tools/battle-mode-select-check.js`（新しい入口を実ブラウザで開いて押せるか）、
-  `node tools/pro-mode-check.js`（プロモードを実ブラウザで最初から遊んでみる）、
-  `node tools/battle-tutorial-check.js`（台本の中身と、通るべき画面の並び）、
-  `node tools/battle-tutorial-v2-check.js`（新しいチュートリアルを実ブラウザで通してみる）、
-  `node tools/extreme-challenge-check.js`（極限チャレンジの解放条件・固有ルール・記録の分離）、
-  `node tools/extreme-reward-check.js`（EXTREMEの倍率と、通常難易度の敵性能に回帰がないこと）、
-  `node tools/extreme-browser-check.js`（極限チャレンジを実ブラウザで開始まで進めてみる）
+- 回帰確認: `node tools/battle/battle-check.js`、`node tools/mode/difficulty-item-check.js`、
+  `node tools/battle/enemy-scan-check.js`、`node tools/battle/battle-scenario-check.js`、
+  `node tools/battle/guard-card-check.js`、`node tools/monster/golem-balance-check.js`、
+  `node tools/battle/battle-mode-check.js`（モードの倍率・保存キー・ランキング名前空間・新しい入口）、
+  `node tools/battle/battle-mode-select-check.js`（新しい入口を実ブラウザで開いて押せるか）、
+  `node tools/mode/pro-mode-check.js`（プロモードを実ブラウザで最初から遊んでみる）、
+  `node tools/battle/battle-tutorial-check.js`（台本の中身と、通るべき画面の並び）、
+  `node tools/battle/battle-tutorial-v2-check.js`（新しいチュートリアルを実ブラウザで通してみる）、
+  `node tools/mode/extreme-challenge-check.js`（極限チャレンジの解放条件・固有ルール・記録の分離）、
+  `node tools/mode/extreme-reward-check.js`（EXTREMEの倍率と、通常難易度の敵性能に回帰がないこと）、
+  `node tools/mode/extreme-browser-check.js`（極限チャレンジを実ブラウザで開始まで進めてみる）

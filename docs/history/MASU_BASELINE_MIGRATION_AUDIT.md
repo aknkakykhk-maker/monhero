@@ -147,7 +147,7 @@
 
 `mergeMasuIntoMon` の共通経路へ、`individualStatOffsets` と `distAptBoosts` の解決を追加した。優先順位はそれぞれ
 「新形式 → 旧 `individualStats` / `distApt` → 最新ベース」であり、能力、適性、総合力、各表示は同じ解決結果を使う。
-専用回帰検査は `node tools/masu-baseline-resolution-check.js`。
+専用回帰検査は `node tools/masu/masu-baseline-resolution-check.js`。
 
 これは新旧両形式を安全に読み取る**受け皿**のみである。既存データは未移行で、起動時一括書換え、新規生成の本番切替、
 旧フィールド削除はいまだ未実施であり、基礎値追従方式への移行完了ではない。継承固有技の定義は

@@ -74,5 +74,5 @@
 - 配信枠・safe area・ロード: `monster-hero/index.html`
 - 全画面UI・アニメーション: `monster-hero/src/game-system.jsx`
 - 色定義: `RANGE_STYLES`、`TYPE_INLINE_STYLE`、`difficultyStyle`
-- 実ブラウザ確認: `node tools/feature-check.js`、`node tools/boot-check.js`、`node tools/title-bgm-check.js`
+- 実ブラウザ確認: `node tools/browser/feature-check.js`、`node tools/boot/boot-check.js`、`node tools/audio/title-bgm-check.js`
 

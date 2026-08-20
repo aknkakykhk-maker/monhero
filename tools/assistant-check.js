@@ -310,7 +310,7 @@ check('初回プレイを最初から通しで見られる',
     && has("setGameState('ASSISTANT_SELECT');"));
 // 「保存しない」は画面ごとの分岐ではなく、保存の入口(storeSet)を丸ごと止めて実現している。
 // 画面ごとに書き分けると必ず書き忘れが出るため、鍵ひとつに集約した
-// (詳しい動作確認は tools/onboarding-preview-check.js が実際に storeSet を動かして行う)
+// (詳しい動作確認は tools/boot/onboarding-preview-check.js が実際に storeSet を動かして行う)
 check('見るだけの表示では何も保存しない',
   has('  if (_storageWriteBlocked) return;')
     && /const startOnboardingPreview = \(\) => \{[\s\S]{0,900}setStorageWriteBlocked\(true\)/.test(source)

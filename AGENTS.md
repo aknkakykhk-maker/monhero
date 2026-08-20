@@ -13,7 +13,7 @@
   保存項目を増やすときは新しいキーを足し、読み込みは必ず既定値へ落ちる正規化を通す。一度きりの移行には専用フラグを持たせて二重適用を防ぐ。
 - 機能を追加・変更したときは、`monster-hero/data/changelog.js`（更新履歴）と `monster-hero/data/help.js`（ヘルプ）の
   両方を必ず更新する。ヘルプの更新漏れは `node tools/help-coverage-check.js` で検出できる。
-- 新モード・主要新機能・マーケット新商品は、更新履歴に加えて `assistantNotice` による助手の初回通知まで確認し、`node tools/assistant-update-notice-check.js` を実行する。
+- 新モード・主要新機能・マーケット新商品は、更新履歴に加えて `assistantNotice` による助手の初回通知まで確認し、`node tools/assistant/assistant-update-notice-check.js` を実行する。
 
 ## Codex 作業ルール
 
