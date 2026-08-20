@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: edfbc017ec539d1f
+// source-sha256: 58c5ed5d8c041646
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 07:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 07:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7689,7 +7689,7 @@ const specialRulePercent = value => `${Math.round((Number(value) || 0) * 100)}%`
 const compactPercent = value => `${Number(((Number(value) || 0) * 100).toFixed(1))}%`;
 const precisePercent = value => `${Number(((Number(value) || 0) * 100).toFixed(2))}%`;
 const extremeSpecialRuleLines = (difficultyId, quick = false) => {
-  if (difficultyId === ULTIMATE_SETTING.id) return [['敵強化', '累計T ×0.75%'], ['供モン加入B低下', '累計T ×0.75%'], ['与ダメ低下', '経過累計T ×0.75%（最低25%）'], [quick ? '自動成長低下' : 'トレーニング低下', 'WAVE T ×0.75%'], ['距離BREAK', '35Tごと / 3距離を段階強化']];
+  if (difficultyId === ULTIMATE_SETTING.id) return [['敵強化', '累計T×0.75%'], ['加入B低下', '累計T×0.75%'], ['与ダメ低下', '経過累計T×0.75%（最低25%）'], [quick ? '自動成長低下' : 'トレ低下', 'WAVE T×0.75%'], ['距離BREAK', '35TごとLv強化（3距離）']];
   const rules = extremeDifficultySetting(difficultyId)?.specialRules || {};
   const lines = [];
   if (rules.breederCardEffect != null) lines.push(['ブリーダーカード効果', specialRulePercent(rules.breederCardEffect)]);
@@ -23032,17 +23032,20 @@ function MonsterHeroGame() {
         }, "\u26A0 EXTREME\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("b", {
           className: "block text-[11px] text-white whitespace-nowrap"
         }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u52B9\u679C 50%")) : /*#__PURE__*/React.createElement("div", {
-          className: "mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"
+          "data-extreme-special-rules": setting.id,
+          className: "mt-1 h-[51px] shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5"
         }, /*#__PURE__*/React.createElement("small", {
-          className: "block text-center text-[8px] leading-tight font-black text-amber-300"
-        }, "\u26A0 ", setting.label, "\u7279\u6B8A\u30EB\u30FC\u30EB"), extremeSpecialRuleLines(setting.id).map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+          className: "block text-center text-[8px] leading-[9px] font-black text-amber-300"
+        }, "\u26A0 ", setting.label, "\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
+          className: setting.id === 'ULTIMATE' ? 'grid grid-cols-2 gap-x-2' : 'block'
+        }, extremeSpecialRuleLines(setting.id).map(([label, value], index) => /*#__PURE__*/React.createElement("div", {
           key: label,
-          className: "grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[10px] whitespace-nowrap"
+          className: `${setting.id === 'ULTIMATE' && index === 2 ? 'col-span-2' : ''} grid min-w-0 grid-cols-[auto_1fr] items-center gap-1 text-[7px] leading-[8px] whitespace-nowrap`
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-300"
         }, label), /*#__PURE__*/React.createElement("b", {
-          className: "text-right text-white"
-        }, value))))) : /*#__PURE__*/React.createElement("div", {
+          className: "min-w-0 text-right text-white"
+        }, value)))))) : /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500"
         }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("div", {
           className: "grid gap-1.5 mt-auto pt-1.5"

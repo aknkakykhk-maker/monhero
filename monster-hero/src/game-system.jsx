@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 07:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 07:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3885,11 +3885,11 @@ const compactPercent = (value) => `${Number(((Number(value)||0)*100).toFixed(1))
 const precisePercent = (value) => `${Number(((Number(value)||0)*100).toFixed(2))}%`;
 const extremeSpecialRuleLines = (difficultyId, quick=false) => {
   if (difficultyId===ULTIMATE_SETTING.id) return [
-    ['敵強化','累計T ×0.75%'],
-    ['供モン加入B低下','累計T ×0.75%'],
-    ['与ダメ低下','経過累計T ×0.75%（最低25%）'],
-    [quick?'自動成長低下':'トレーニング低下','WAVE T ×0.75%'],
-    ['距離BREAK','35Tごと / 3距離を段階強化'],
+    ['敵強化','累計T×0.75%'],
+    ['加入B低下','累計T×0.75%'],
+    ['与ダメ低下','経過累計T×0.75%（最低25%）'],
+    [quick?'自動成長低下':'トレ低下','WAVE T×0.75%'],
+    ['距離BREAK','35TごとLv強化（3距離）'],
   ];
   const rules=extremeDifficultySetting(difficultyId)?.specialRules || {};
   const lines=[];
@@ -11969,7 +11969,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <div className="grid grid-cols-2 gap-1 mt-1">{[['経験値',setting.xp?`×${setting.xp}`:'対象外'],['虹のプシュケー',setting.psyche??'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <p className="mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200">{setting.description}</p>
-                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div className="mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"><small className="block text-center text-[8px] leading-tight font-black text-amber-300">⚠ {setting.label}特殊ルール</small>{extremeSpecialRuleLines(setting.id).map(([label,value])=><div key={label} className="grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[10px] whitespace-nowrap"><span className="text-slate-300">{label}</span><b className="text-right text-white">{value}</b></div>)}</div>}
+                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div data-extreme-special-rules={setting.id} className="mt-1 h-[51px] shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5"><small className="block text-center text-[8px] leading-[9px] font-black text-amber-300">⚠ {setting.label}特殊ルール</small><div className={setting.id==='ULTIMATE'?'grid grid-cols-2 gap-x-2':'block'}>{extremeSpecialRuleLines(setting.id).map(([label,value],index)=><div key={label} className={`${setting.id==='ULTIMATE'&&index===2?'col-span-2':''} grid min-w-0 grid-cols-[auto_1fr] items-center gap-1 text-[7px] leading-[8px] whitespace-nowrap`}><span className="text-slate-300">{label}</span><b className="min-w-0 text-right text-white">{value}</b></div>)}</div></div>}
                         </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
                         <div className="grid gap-1.5 mt-auto pt-1.5">
                           <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
