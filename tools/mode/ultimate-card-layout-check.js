@@ -18,14 +18,20 @@ const ultimateRules = source.slice(
 );
 
 check('極限難易度カードの外寸は382pxのまま', card.includes('h-[382px]'));
-check('特殊ルール欄の外寸は51pxのまま', card.includes('h-[51px]'));
-check('ULTIMATEだけを2列にして内容を枠内で隠さない',
-  card.includes("setting.id==='ULTIMATE'?'grid grid-cols-2 gap-x-2':'block'")
-  && card.includes("index===2?'col-span-2':''")
+check('ULTIMATE説明は専用要約を固定高へ収める',
+  source.includes("cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。'")
+  && card.includes("setting.id==='ULTIMATE'?'mt-1 h-[32px] shrink-0':'mt-1 min-h-[35px]'")
+  && card.includes('{setting.cardDescription||setting.description}'));
+check('ULTIMATE特殊ルール欄へ説明後の余白と62pxの高さを確保する',
+  card.includes("setting.id==='ULTIMATE'?'mt-1.5 h-[62px]':'mt-1 h-[51px]'")
   && card.includes('overflow-hidden'));
-check('重要な低下率・最低値・DISTANCE BREAK間隔を表示する',
-  ['累計T×0.75%', '経過累計T×0.75%（最低25%）', 'WAVE T×0.75%', '35TごとLv強化（3距離）']
+check('ULTIMATEルールは8px以上で読みやすく表示する',
+  card.includes("setting.id==='ULTIMATE'?'text-[8px] leading-[9px]':'text-[9px] leading-[10px]'"));
+check('重要な増減率・停止値・DISTANCE BREAK間隔を表示する',
+  ['累計Tごと+0.75%', '累計Tごと-0.75pt', '経過Tごと-0.75pt（25%で停止）', 'WAVE Tごと-0.75pt', '35Tごと1距離の弱体Lv上昇']
     .every(text => ultimateRules.includes(text)));
+check('曖昧な下限表現とBREAKの強化表現を使わない',
+  !ultimateRules.includes('最低25%') && !ultimateRules.includes('Lv強化'));
 check('クイックULTIMATEの特殊ルール表示は従来どおり開始案内を使う',
   source.includes('quick&&hasExtremeSpecialRules(key)')
   && source.includes('specialDifficulty===ULTIMATE_SETTING.id'));

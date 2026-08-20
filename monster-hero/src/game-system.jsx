@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 07:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 08:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3834,7 +3834,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ breederCardEffect:0.5 }) },
   { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
   { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:true, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
-  { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
+  { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
   { id:'INFINITY', label:'INFINITY', available:false },
 ]);
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
@@ -3885,11 +3885,11 @@ const compactPercent = (value) => `${Number(((Number(value)||0)*100).toFixed(1))
 const precisePercent = (value) => `${Number(((Number(value)||0)*100).toFixed(2))}%`;
 const extremeSpecialRuleLines = (difficultyId, quick=false) => {
   if (difficultyId===ULTIMATE_SETTING.id) return [
-    ['敵強化','累計T×0.75%'],
-    ['加入B低下','累計T×0.75%'],
-    ['与ダメ低下','経過累計T×0.75%（最低25%）'],
-    [quick?'自動成長低下':'トレ低下','WAVE T×0.75%'],
-    ['距離BREAK','35TごとLv強化（3距離）'],
+    ['敵HP/攻撃','累計Tごと+0.75%'],
+    ['加入B倍率','累計Tごと-0.75pt'],
+    ['与ダメ倍率','経過Tごと-0.75pt（25%で停止）'],
+    [quick?'自動成長':'トレーニング','WAVE Tごと-0.75pt'],
+    ['距離BREAK','35Tごと1距離の弱体Lv上昇'],
   ];
   if (difficultyId===NIGHTMARE_SETTING.id) return [
     ['強化',specialRulePercent(extremeSpecialRule(difficultyId,'waveEnhancement'))],
@@ -11980,8 +11980,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <div className="grid grid-cols-2 gap-1 mt-1">{[['経験値',setting.xp?`×${setting.xp}`:'対象外'],['虹のプシュケー',setting.psyche??'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
-                          <p className="mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200">{setting.description}</p>
-                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div data-extreme-special-rules={setting.id} className="mt-1 h-[51px] shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5"><small className="block text-center text-[8px] leading-[9px] font-black text-amber-300">⚠ {setting.label}特殊ルール</small><div className={setting.id==='ULTIMATE'?'grid grid-cols-2 gap-x-2':'block'}>{extremeSpecialRuleLines(setting.id).map(([label,value],index)=><div key={label} className={`${setting.id==='ULTIMATE'&&index===2?'col-span-2':''} grid min-w-0 grid-cols-[auto_1fr] items-center gap-1 ${setting.id==='ULTIMATE'?'text-[7px] leading-[8px]':'text-[9px] leading-[10px]'} whitespace-nowrap`}><span className="text-slate-300">{label}</span><b className="min-w-0 text-right text-white">{value}</b></div>)}</div></div>}
+                          <p data-extreme-card-description={setting.id} className={`${setting.id==='ULTIMATE'?'mt-1 h-[32px] shrink-0':'mt-1 min-h-[35px]'} rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200`}>{setting.cardDescription||setting.description}</p>
+                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div data-extreme-special-rules={setting.id} className={`${setting.id==='ULTIMATE'?'mt-1.5 h-[62px]':'mt-1 h-[51px]'} shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5`}><small className="block text-center text-[8px] leading-[9px] font-black text-amber-300">⚠ {setting.label}特殊ルール</small><div>{extremeSpecialRuleLines(setting.id).map(([label,value])=><div key={label} className={`grid min-w-0 grid-cols-[auto_1fr] items-center gap-1 ${setting.id==='ULTIMATE'?'text-[8px] leading-[9px]':'text-[9px] leading-[10px]'} whitespace-nowrap`}><span className="text-slate-300">{label}</span><b className="min-w-0 text-right text-white">{value}</b></div>)}</div></div>}
                         </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
                         <div className="grid gap-1.5 mt-auto pt-1.5">
                           <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
@@ -15238,9 +15238,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="text-[11px] font-black tracking-[.12em] text-amber-300">ULTIMATE 特殊ルール</div>
             <div className="mt-3 grid gap-1.5 text-left">
               {[
-                ['1','累計ターン圧',<>累計ターン×0.75% 次WAVEの敵が強化<br/>累計ターン×0.75% 供モン加入ボーナスが低下<br/>経過累計ターン×0.75% 与ダメージ低下（最低25%）</>],
+                ['1','累計ターン圧',<>累計ターンごとに敵HP/攻撃+0.75%<br/>累計ターンごとに供モン加入ボーナス倍率-0.75pt<br/>経過累計ターンごとに与ダメ倍率-0.75pt（25%で停止）</>],
                 ['2',isQuickMode(runMode)?'自動成長低下':'トレーニング低下',isQuickMode(runMode)?'このWAVEのターン数×0.75% 次回の自動成長が10%から低下（最低0%）':'このWAVEのターン数×0.75% 次回のトレーニング4種すべてが低下'],
-                ['3','DISTANCE BREAK','累計35ターンごとに、安全距離以外の3距離をLv1→Lv2→Lv3…と段階強化'],
+                ['3','DISTANCE BREAK','累計35ターンごとに、味方側の1距離の与ダメージ弱体Lvが上昇（最終的に3距離が弱体・1距離が安全）'],
               ].map(([number,title,text])=><div key={number} className="rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"><div className="text-[9px] font-black text-fuchsia-300">RULE {number}｜{title}</div><div className="mt-0.5 text-[10px] font-bold leading-snug text-white">{text}</div>{number==='2'&&<div className="mt-0.5 text-[8px] font-black text-amber-300">※距離強化は対象外</div>}</div>)}
             </div>
             <div className="mt-2 rounded-xl border border-amber-300/40 bg-black/45 px-3 py-2 text-left text-[10px] leading-relaxed text-slate-200">
