@@ -22,5 +22,9 @@ assert(source.includes('const baseRecoveryDelta=Math.max(-0.05,Math.min(0.05,(re
 assert(source.includes('const recoveryDelta=applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty);'), 'recovery rule must apply after the base calculation');
 assert(source.includes("isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'breederCardEffect')"), 'EXTREME breeder-card rule must stay intact');
 assert(!source.includes("specialRules:Object.freeze({ breederCardEffect:0.5, waveEnhancement"), 'NIGHTMARE rules must not leak into EXTREME');
+assert(source.includes('data-extreme-battle-status={rule}') && source.includes("['強化',specialRulePercent(extremeSpecialRule(difficultyId,'waveEnhancement'))]"), 'battle status must show shared NIGHTMARE values');
+assert(source.includes('data-nightmare-training-status') && source.includes('通常 +{normalGain} → 実際 +{effectiveGain}'), 'training must compare resolver results');
+assert(source.includes('baseRecoveryDelta,recoveryDelta') && source.includes('通常 {waveResult.baseRecoveryDelta'), 'recovery must compare base and effective values');
+assert(source.includes('normalGainedDistBonus') && source.includes('通常 +${normalGained.toFixed(1)} → 実際 +${gained.toFixed(1)}'), 'WAVE growth must compare normal and effective values');
 
 console.log('OK: NIGHTMARE特殊ルール（WAVE後50%、自動回復・距離適性のプラス50%／マイナス200%、既存モード分離）');

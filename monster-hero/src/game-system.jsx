@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 07:29"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 07:43"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3891,6 +3891,16 @@ const extremeSpecialRuleLines = (difficultyId, quick=false) => {
     [quick?'自動成長低下':'トレ低下','WAVE T×0.75%'],
     ['距離BREAK','35TごとLv強化（3距離）'],
   ];
+  if (difficultyId===NIGHTMARE_SETTING.id) return [
+    ['強化',specialRulePercent(extremeSpecialRule(difficultyId,'waveEnhancement'))],
+    ['＋補正',specialRulePercent(extremeSpecialRule(difficultyId,'positiveModifier'))],
+    ['－補正',specialRulePercent(extremeSpecialRule(difficultyId,'negativeModifier'))],
+  ];
+  if (difficultyId===CHAOS_SETTING.id) return [
+    ['与ダメ',specialRulePercent(extremeSpecialRule(difficultyId,'damageDealt'))],
+    ['消費ガッツ',specialRulePercent(extremeSpecialRule(difficultyId,'gutsCost'))],
+    ['加入B',specialRulePercent(extremeSpecialRule(difficultyId,'allyJoinBonus'))],
+  ];
   const rules=extremeDifficultySetting(difficultyId)?.specialRules || {};
   const lines=[];
   if (rules.breederCardEffect != null) lines.push(['ブリーダーカード効果',specialRulePercent(rules.breederCardEffect)]);
@@ -6249,10 +6259,11 @@ function MonsterHeroGame() {
       { key:'guts', label:'ガッツ', short:'G',  before:maxGuts, diff:add('guts'), tint:'text-amber-300' },
     ].map(stat => ({ ...stat, normalDiff:Number(bonus[stat.key])||0, after: stat.before + stat.diff }));
     // 間合い適性は「置いた距離に関係なく4距離すべてへ加算される」ので、距離ごとの合計補正で見せる
+    const normalAptDelta = getMonsterAptPct(mon, null);
     const aptDelta = getMonsterAptPct(mon, rule);
     const apt = RANGE_LABELS.map((label, idx) => {
       const before = distTotalBonus(idx), diff = aptDelta[idx] || 0;
-      return { label, idx, before, diff, after: before + diff };
+      return { label, idx, before, normalDiff:normalAptDelta[idx] || 0, diff, after: before + diff };
     });
     return { stats, apt, changed: stats.some(s=>s.diff!==0) || apt.some(a=>a.diff!==0) };
   };
@@ -9755,6 +9766,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setScore(s=>s+finalRoundScore);
     const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
+    const normalGainedDistBonus=finalDistDamage.map(d=>d*0.001/100);
     const gainedDistBonus=finalDistDamage.map(d=>applyNightmareWaveEnhancement(d*0.001/100,specialRuleDifficulty));
     const newDistBonus=distDmgBonus.map((b,i)=>b+gainedDistBonus[i]);
     setDistDmgBonus(newDistBonus);
@@ -9767,7 +9779,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const newTotalRecoveryDelta=totalRecoveryDelta+recoveryDelta;
     writePermaBuffs(p=>({...p, autoHpRecovery:Math.max(0,(p.autoHpRecovery??0.1)+recoveryDelta)}));
     setTotalRecoveryDelta(newTotalRecoveryDelta);
-    setWaveResult({wave,waveMult,turn:turnCount,totalTurnCount:newTotalTurnCount,pendingUltimateDistanceBreak:!!distanceBreakThreshold,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,gainedDistBonus,newDistBonus,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
+    setWaveResult({wave,waveMult,turn:turnCount,totalTurnCount:newTotalTurnCount,pendingUltimateDistanceBreak:!!distanceBreakThreshold,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,normalGainedDistBonus,gainedDistBonus,newDistBonus,baseRecoveryDelta,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
@@ -11969,7 +11981,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <div className="grid grid-cols-2 gap-1 mt-1">{[['経験値',setting.xp?`×${setting.xp}`:'対象外'],['虹のプシュケー',setting.psyche??'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <p className="mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200">{setting.description}</p>
-                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div data-extreme-special-rules={setting.id} className="mt-1 h-[51px] shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5"><small className="block text-center text-[8px] leading-[9px] font-black text-amber-300">⚠ {setting.label}特殊ルール</small><div className={setting.id==='ULTIMATE'?'grid grid-cols-2 gap-x-2':'block'}>{extremeSpecialRuleLines(setting.id).map(([label,value],index)=><div key={label} className={`${setting.id==='ULTIMATE'&&index===2?'col-span-2':''} grid min-w-0 grid-cols-[auto_1fr] items-center gap-1 text-[7px] leading-[8px] whitespace-nowrap`}><span className="text-slate-300">{label}</span><b className="min-w-0 text-right text-white">{value}</b></div>)}</div></div>}
+                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div data-extreme-special-rules={setting.id} className="mt-1 h-[51px] shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5"><small className="block text-center text-[8px] leading-[9px] font-black text-amber-300">⚠ {setting.label}特殊ルール</small><div className={setting.id==='ULTIMATE'?'grid grid-cols-2 gap-x-2':'block'}>{extremeSpecialRuleLines(setting.id).map(([label,value],index)=><div key={label} className={`${setting.id==='ULTIMATE'&&index===2?'col-span-2':''} grid min-w-0 grid-cols-[auto_1fr] items-center gap-1 ${setting.id==='ULTIMATE'?'text-[7px] leading-[8px]':'text-[9px] leading-[10px]'} whitespace-nowrap`}><span className="text-slate-300">{label}</span><b className="min-w-0 text-right text-white">{value}</b></div>)}</div></div>}
                         </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
                         <div className="grid gap-1.5 mt-auto pt-1.5">
                           <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
@@ -13840,6 +13852,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <span className="text-amber-300">ULTIMATE</span><span>敵強化 +{compactPercent(enemyMultiplier-1)}（WAVE開始時 累計{totalTurnCount}T）</span><span>与ダメ {compactPercent(damageMultiplier)}（現在 累計{elapsedTotalTurns}T）</span>
               </div>;
             })()}
+            {(()=>{const rule=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);return [NIGHTMARE_SETTING.id,CHAOS_SETTING.id].includes(rule)&&<div data-extreme-battle-status={rule} className="shrink-0 grid grid-cols-4 items-center gap-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[9px] font-black leading-none text-purple-100"><span className="text-amber-300">{rule}</span>{extremeSpecialRuleLines(rule).map(([label,value])=><span key={label} className="text-center whitespace-nowrap">{label} {value}</span>)}</div>;})()}
             {enemy&&(
               <div className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
                 <div className="flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1">
@@ -14574,6 +14587,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 const multiplier=ultimateAllyJoinMultiplier(totalTurns);
                 return <div data-ultimate-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"><span className="text-amber-300">ULTIMATE補正</span><span>累計{totalTurns}T</span><span>加入ボーナス {precisePercent(multiplier)}（-{precisePercent(1-multiplier)}）</span></div>;
               })()}
+              {(()=>{const rule=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);if(rule===NIGHTMARE_SETTING.id)return <div data-nightmare-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"><span className="text-amber-300">NIGHTMARE補正</span>　間合い適性：＋{specialRulePercent(extremeSpecialRule(rule,'positiveModifier'))} / －{specialRulePercent(extremeSpecialRule(rule,'negativeModifier'))}</div>;if(rule===CHAOS_SETTING.id)return <div data-chaos-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"><span className="text-amber-300">CHAOS補正</span>　加入ボーナス {specialRulePercent(extremeSpecialRule(rule,'allyJoinBonus'))}</div>;return null;})()}
               <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス</div>
               <div className="grid grid-cols-4 gap-1">
                 {[['ライフ',maxHp,'text-pink-300'],['ちから',atk,'text-red-300'],['丈夫さ',def,'text-emerald-300'],['ガッツ',maxGuts,'text-amber-300']].map(([label,value,tint])=>(
@@ -14674,7 +14688,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {preview.stats.map(stat=>(
                         <span key={stat.key} className="min-w-0 block">
                           <span className="block text-slate-500 font-black leading-none">{stat.short}</span>
-                          {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===ULTIMATE_SETTING.id&&stat.normalDiff!==stat.diff?<span className="block leading-none text-slate-500 line-through">+{stat.normalDiff}</span>:null}
+                          {[ULTIMATE_SETTING.id,CHAOS_SETTING.id].includes(specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty))&&stat.normalDiff!==stat.diff?<span className="block leading-none text-slate-500">本来 +{stat.normalDiff}</span>:null}
                           <b className={`block leading-tight ${stat.diff>0?stat.tint:'text-slate-400'}`} style={{fontSize:'9px'}}>{stat.after}</b>
                           <span className={`block leading-none ${stat.diff>0?'text-emerald-400':'text-slate-700'}`}>{stat.diff>0?`実際 +${stat.diff}`:'実際 ±0'}</span>
                         </span>
@@ -14684,8 +14698,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {preview.apt.map(range=>(
                         <span key={range.idx} className="min-w-0 block">
                           <span className="block text-slate-500 font-black leading-none">{range.label}</span>
+                          {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===NIGHTMARE_SETTING.id&&range.normalDiff!==range.diff?<span className="block leading-none text-slate-500">通常 {formatAptPct(range.normalDiff)} →</span>:null}
                           <b className={`block leading-tight ${range.diff>0?'text-cyan-300':range.diff<0?'text-red-300':'text-slate-400'}`}>{formatAptPct(range.after)}</b>
-                          <span className={`block leading-none ${range.diff>0?'text-emerald-400':range.diff<0?'text-red-400':'text-slate-700'}`}>{range.diff!==0?formatAptPct(range.diff):'±0'}</span>
+                          <span className={`block leading-none ${range.diff>0?'text-emerald-400':range.diff<0?'text-red-400':'text-slate-700'}`}>{range.diff!==0?`${range.normalDiff!==range.diff?'実際 ':''}${formatAptPct(range.diff)}`:'±0'}</span>
                         </span>
                       ))}
                     </div>
@@ -15382,18 +15397,18 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             {waveResult.distDamage&&(<div className="border-b border-white/10 pb-1.5">
               <div className="text-cyan-400 font-black uppercase tracking-widest mb-1 text-left" style={{fontSize:'9px'}}>距離別ダメージ（味方位置）& 補正値(永続)</div>
               <div className="grid grid-cols-4 gap-1">
-                {['零','近','中','遠'].map((lbl,i)=>{const dmg=waveResult.distDamage[i]||0; const cumDmg=waveResult.totalDistDamage?.[i]||0; const gained=(waveResult.gainedDistBonus?.[i]||0)*100; const total=(waveResult.newDistBonus?.[i]||0)*100; const mon=slots[i]; const aptPct=(distAptPct[i]||0)*100; const combinedTotal=total+aptPct;
+                {['零','近','中','遠'].map((lbl,i)=>{const dmg=waveResult.distDamage[i]||0; const cumDmg=waveResult.totalDistDamage?.[i]||0; const normalGained=(waveResult.normalGainedDistBonus?.[i]||0)*100; const gained=(waveResult.gainedDistBonus?.[i]||0)*100; const total=(waveResult.newDistBonus?.[i]||0)*100; const mon=slots[i]; const aptPct=(distAptPct[i]||0)*100; const combinedTotal=total+aptPct;
                   return(<div key={i} className="bg-black/40 rounded-lg border border-white/5 flex flex-col items-center justify-center" style={{padding:'4px 2px',gap:'2px'}}>
                     <div className="flex items-center" style={{gap:'3px'}}><div className="rounded-full bg-indigo-600/40 border border-indigo-400/50 flex items-center justify-center overflow-hidden shrink-0" style={{width:'26px',height:'26px'}}>{mon?(mon.imgUrl?<img src={mon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span style={{fontSize:'13px'}}>{mon.emoji}</span>):<span className="text-slate-600" style={{fontSize:'9px'}}>-</span>}</div><div className="font-black text-slate-300" style={{fontSize:'10px'}}>{lbl}</div></div>
                     <div className="font-mono font-black text-red-400 leading-none" style={{fontSize:'11px'}}>{dmg.toLocaleString()}</div>
                     <div className="text-orange-300/80 font-mono leading-none" style={{fontSize:'7px'}}>累計{cumDmg.toLocaleString()}</div>
                     <div className="font-mono font-black text-cyan-300 leading-none" style={{fontSize:'9px'}}>+{total.toFixed(1)}%</div>
-                    {gained>0&&<div className="text-emerald-400 font-mono leading-none" style={{fontSize:'7px'}}>(+{gained.toFixed(1)})</div>}
+                    {gained>0&&<div className="text-emerald-400 font-mono leading-none" style={{fontSize:'7px'}}>{normalGained!==gained?`通常 +${normalGained.toFixed(1)} → 実際 +${gained.toFixed(1)}`:`(+${gained.toFixed(1)})`}</div>}
                     {mon&&<div className="text-indigo-300 font-mono font-black leading-none" style={{fontSize:'8px'}}>適性込合計+{combinedTotal.toFixed(1)}%</div>}
                   </div>);})}
               </div>
             </div>)}
-            {waveResult.recoveryDelta!=null&&(<div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">自動回復率 補正</span><span className="flex items-baseline gap-2"><span className={`font-mono font-black text-base ${waveResult.recoveryDelta>=0?'text-emerald-400':'text-red-400'}`}>{waveResult.recoveryDelta>=0?'+':''}{(waveResult.recoveryDelta*100).toFixed(1)}%</span><span className="text-[8px] text-slate-500 font-mono">累計 <span className={`${waveResult.totalRecoveryDelta>=0?'text-emerald-300':'text-red-300'}`}>{waveResult.totalRecoveryDelta>=0?'+':''}{(waveResult.totalRecoveryDelta*100).toFixed(1)}%</span></span></span></div>)}
+            {waveResult.recoveryDelta!=null&&(<div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">自動回復率 補正</span><span className="flex items-baseline gap-2"><span className={`font-mono font-black text-base ${waveResult.recoveryDelta>=0?'text-emerald-400':'text-red-400'}`}>{waveResult.baseRecoveryDelta!==waveResult.recoveryDelta&&<>通常 {waveResult.baseRecoveryDelta>=0?'+':''}{(waveResult.baseRecoveryDelta*100).toFixed(1)}% → 実際 </>}{waveResult.recoveryDelta>=0?'+':''}{(waveResult.recoveryDelta*100).toFixed(1)}%</span><span className="text-[8px] text-slate-500 font-mono">累計 <span className={`${waveResult.totalRecoveryDelta>=0?'text-emerald-300':'text-red-300'}`}>{waveResult.totalRecoveryDelta>=0?'+':''}{(waveResult.totalRecoveryDelta*100).toFixed(1)}%</span></span></span></div>)}
             {/* スコアの内訳。クイックモードはスコアを競わないので出さない */}
             {!isQuickMode(runMode)&&(<>
             <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">WAVE ボーナス ({waveResult.wave} WAVE)</span><span className="text-yellow-400 font-mono font-black text-base">x{waveResult.waveMult.toFixed(2)}</span></div>
@@ -15448,6 +15463,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const effective=resolveTrainingStep(probe,'hp',turns,specialRule).hp;
               return <div data-ultimate-training-status className="mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"><span className="text-amber-300">ULTIMATE補正</span>　今回{turns}T → 強化効果 -{Number(((normal-effective)/100).toFixed(1))}pt</div>;
             })()}
+            {specialRule==='NIGHTMARE'&&<div data-nightmare-training-status className="mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"><span className="text-amber-300">NIGHTMARE補正</span>　強化量 {specialRulePercent(extremeSpecialRule(specialRule,'waveEnhancement'))}</div>}
           </div>
           <div className="shrink-0 w-full max-w-sm my-2 text-left"><AssistantBubble scene="rewardPick" compact/></div>
           {/* いま選んでいるぶんを反映した4ステータス。選ぶ前は現在値だけ、選ぶと増える量も出る。
@@ -15487,11 +15503,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 何回選んだかを ×1 / ×2 で明確に出す */}
                   {count>0&&<span className={`absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
                   <span className={`flex items-center gap-1.5 ${st.tint}`}>{st.icon}<b className="text-[13px] font-black text-white leading-none">{option.name}</b></span>
-                  <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{specialRule===ULTIMATE_SETTING.id&&(()=>{
+                  <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{[ULTIMATE_SETTING.id,'NIGHTMARE'].includes(specialRule)&&(()=>{
                     const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null)[option.stat];
                     const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
                     const normalGain=normalAfter-current[option.stat],effectiveGain=effectiveAfter-current[option.stat];
-                    return <span className="block text-purple-200">通常 +{normalGain} → 今回の実効 +{effectiveGain}</span>;
+                    return <span className="block text-purple-200">通常 +{normalGain} → 実際 +{effectiveGain}</span>;
                   })()}</span>
                   <span className="w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight">
                     <span className="block text-[8px] text-slate-500 font-black">{option.statLabel}</span>
