@@ -40,17 +40,17 @@ for (const use of [
   'applyNightmareStatGain(base,after,specialDifficulty)',
 ]) assert(source.includes(use), `${use} must use the shared run rule difficulty`);
 assert(source.includes('quick&&hasExtremeSpecialRules(key)') && source.includes('特殊ルールあり'));
-assert(source.includes('extremeSpecialRuleLines(specialDifficulty).map'), 'battle intro must share the rule presentation');
+assert(source.includes("isQuickMode(runMode)?'自動成長低下':'トレーニング低下'"), 'Quick ULTIMATE intro must describe automatic growth without changing the extreme training label');
 assert(source.includes('extremeSpecialRuleLines(setting.id).map'), 'official card must share the same rule presentation');
 assert(source.includes('const enemyTurnMultiplier=specialRuleDifficulty===ULTIMATE_SETTING.id?ultimateEnemyTurnMultiplier(totalTurnCount):1;'), 'ULTIMATE enemy turn scaling must use the shared run rule difficulty');
 assert(source.includes('const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&specialRuleDifficulty===ULTIMATE_SETTING.id;'), 'ULTIMATE BREAK reveal must use the shared run rule difficulty');
 assert(!source.includes('ultimateDistanceBreakPendingRef.current&&extremeRunRef.current&&extremeDifficulty===ULTIMATE_SETTING.id'), 'BREAK activation must not depend on the extreme-run flags directly');
 assert(!/QUICK_EXTREME_SETTINGS[\s\S]{0,700}(breederCardEffect|waveEnhancement|positiveModifier|negativeModifier|damageDealt|allyJoinBonus|gutsCost)/.test(source), 'quick settings must not duplicate special-rule values');
 const quickExtremeSettings=source.match(/const QUICK_EXTREME_SETTINGS = Object\.freeze\(\{([\s\S]*?)\n\}\);/)?.[1]||'';
-assert(quickExtremeSettings&&!quickExtremeSettings.includes('ULTIMATE'), 'Quick ULTIMATE must not be published yet');
-assert(source.includes("const QUICK_ULTIMATE_SETTING = Object.freeze({\n  label:'ULTIMATE', power:ULTIMATE_SETTING.power, xp:35, gold:12, psyche:60"), 'hidden Quick ULTIMATE must use power/xp/diamond/psyche 35/35/12/60');
+assert(quickExtremeSettings.includes('ULTIMATE: QUICK_ULTIMATE_SETTING'), 'Quick ULTIMATE must be published after CHAOS');
+assert(source.includes("const QUICK_ULTIMATE_SETTING = Object.freeze({\n  label:'ULTIMATE', power:ULTIMATE_SETTING.power, xp:35, gold:12, psyche:60"), 'Quick ULTIMATE must use power/xp/diamond/psyche 35/35/12/60');
 assert(source.includes('const quickDifficultySetting = (difficultyId) => difficultyId===ULTIMATE_SETTING.id')
-  && source.includes('? QUICK_ULTIMATE_SETTING : QUICK_DIFFICULTY_SETTINGS[difficultyId];'), 'hidden setting must be available to runtime without entering the visible settings');
+  && source.includes('? QUICK_ULTIMATE_SETTING : QUICK_DIFFICULTY_SETTINGS[difficultyId];'), 'runtime must keep using the shared Quick ULTIMATE resolver');
 assert(source.includes('const quickExtremeSetting = isQuickMode(runMode) ? quickDifficultySetting(difficulty) : null;'), 'runtime rewards must resolve the hidden setting');
 assert(source.includes('ULTIMATE: QUICK_ULTIMATE_SETTING.psyche'), 'Quick ULTIMATE clear reward must resolve to 60 psyche');
 assert.strictEqual(35*1.5,52.5, 'growth XP must include the existing quick multiplier');
@@ -71,4 +71,8 @@ assert(source.includes("if(specialDifficulty!==ULTIMATE_SETTING.id) return QUICK
 assert(source.includes("specialRuleDifficultyForRun('challenge','Normal',true,'ULTIMATE')") === false, 'production must not hard-code a Quick-only ULTIMATE rule branch');
 assert(source.includes("quick?'h-[366px] flex flex-col':''"), 'fixed quick card height must remain unchanged');
 assert(source.includes('if (isQuickMode(runMode)) {') && source.includes('return;'), 'quick ranking exclusion path must remain present');
-console.log('OK: クイック極限難易度はspecialRulesを共用し、通常難易度・報酬・ランキング・固定カード高を維持');
+const changelog=fs.readFileSync('monster-hero/data/changelog.js','utf8');
+const assistants=fs.readFileSync('monster-hero/data/assistants.js','utf8');
+assert(changelog.includes("id:'update_notice_quick_ultimate_v1', type:'mode'"), 'official notice must come from changelog');
+assert(!assistants.includes('update_notice_quick_ultimate_v1'), 'notice must not be duplicated in assistants.js');
+console.log('OK: クイックULTIMATEの公開・報酬・特殊ルール・自動成長・全回復・ランキング除外・表示・通知');

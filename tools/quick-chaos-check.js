@@ -3,7 +3,7 @@
 const fs = require('fs');
 const assert = require('assert');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
-const assistants = fs.readFileSync('monster-hero/data/assistants.js', 'utf8');
+const changelog = fs.readFileSync('monster-hero/data/changelog.js', 'utf8');
 const help = fs.readFileSync('monster-hero/data/help.js', 'utf8');
 
 assert(source.includes("CHAOS: { label:'CHAOS', power:CHAOS_SETTING.power, xp:30, gold:9, psyche:50"));
@@ -23,6 +23,6 @@ const order = source.indexOf("Legend:") < source.indexOf("EXTREME: { label:'EXTR
 assert(order, 'Legend → EXTREME → NIGHTMARE → CHAOSの順序');
 assert(source.includes("quick?'h-[366px] flex flex-col':''"), 'クイックカードの固定高を共用');
 assert(source.includes('data-difficulty-assistant') && source.includes('compact={quick}'), '助手コメントをカード外のコンパクト枠へ配置');
-assert(assistants.includes("id: 'update_notice_quick_chaos_v1'") && assistants.includes("id: 'update_notice_chaos_v1'"), '極限CHAOSとは別IDの通知');
+assert(changelog.includes("id:'update_notice_quick_chaos_v1'") && changelog.includes("id:'update_notice_chaos_v1'"), '極限CHAOSとは別IDの通知');
 assert(help.includes("title:'クイック CHAOS'") && help.includes('経験値×45・ダイヤ×13.5'), 'ヘルプに正式仕様を掲載');
 console.log('OK: クイックCHAOS（3報酬方針・解放・特殊ルール共有・記録・ランキング除外・デバッグ・カード・通知）');
