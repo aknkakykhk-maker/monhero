@@ -67,6 +67,12 @@ const localBoostFromCard = (card) => {
   return null;
 };
 
+// 固有技は「効果を足してから、その同じカードで攻撃する」。processTurnの
+//   if(card.type==='unique'){ …localOryoAdd+=boost… } の直後に getDmg(...,localOryoAdd,...)
+// という並びがそのまま自分への適用になっている。おりょう・ききのバフカードは自分では
+// 攻撃しないので、この違いはダメージに出ない。
+const appliesToSelf = (card) => card.type==='unique';
+
 // processTurnと同じ「並び順どおりに1回だけ回す」実行モデル。
 // 攻撃カードの最終ダメージは baseAtk*(1+dmgModがそのターン加算されたぶん)*(1+oryoがそのターン加算されたぶん) とし、
 // comboは別ヒットとして加算する簡略モデル(本物と同じ4値の受け渡し方だけを見る)
@@ -77,21 +83,23 @@ const runProcessTurnOrder = (orderedCards, baseAtk=100) => {
     const isPenalty=!card.isBreeder;
     const halved=isPenalty&&penaltyCnt>0;
     const effMul=cardEffectMultiplier(card,halved);
+    const boost=localBoostFromCard(card);
+    // 固有技は自分の効果を先に乗せる
+    if (boost&&appliesToSelf(card)) { oryo+=(boost.oryo||0)*effMul; dmgMod+=(boost.dmgMod||0)*effMul; combo+=(boost.combo||0)*effMul; }
     if (card.isAttack) {
       const dmg=Math.floor(baseAtk*(1+oryo)*(1+dmgMod));
       const comboHit=Math.floor(dmg*combo);
       totalDmg+=dmg+comboHit;
       perCardDmg.push(dmg+comboHit);
     }
-    const boost=localBoostFromCard(card);
-    if (boost) { oryo+=(boost.oryo||0)*effMul; dmgMod+=(boost.dmgMod||0)*effMul; combo+=(boost.combo||0)*effMul; }
+    if (boost&&!appliesToSelf(card)) { oryo+=(boost.oryo||0)*effMul; dmgMod+=(boost.dmgMod||0)*effMul; combo+=(boost.combo||0)*effMul; }
     if (isPenalty) penaltyCnt++;
   }
   return { totalDmg, perCardDmg };
 };
 
-// previewLocalBoostsと同じ「そのカードの手前までを積む」スキャン。
-// getDmg/getAttackPredictedDmgへ渡す値を作る側を模す
+// previewLocalBoosts + boostsForCardDamage と同じ「そのカードのダメージを出すときの値」を作るスキャン。
+// 固有技は自分のぶんを含める(含めないと、実行した瞬間だけダメージが増える)
 const runPreviewOrder = (orderedCards, baseAtk=100) => {
   let oryo=0, dmgMod=0, combo=0, penaltyCnt=0, totalDmg=0;
   const perCardDmg=[];
@@ -99,14 +107,18 @@ const runPreviewOrder = (orderedCards, baseAtk=100) => {
     const isPenalty=!card.isBreeder;
     const halved=isPenalty&&penaltyCnt>0;
     const effMul=cardEffectMultiplier(card,halved);
+    const boost=localBoostFromCard(card);
+    const own=(boost&&appliesToSelf(card))?boost:null;
     if (card.isAttack) {
-      // ここが今回の修正点: 0,0固定ではなく、その時点までの累計(oryo/dmgMod/combo)を渡す
-      const dmg=Math.floor(baseAtk*(1+oryo)*(1+dmgMod));
-      const comboHit=Math.floor(dmg*combo);
+      // その時点までの累計に、自分に乗るぶん(固有技)を足した値で予測する
+      const useOryo=oryo+(own?(own.oryo||0)*effMul:0);
+      const useDmgMod=dmgMod+(own?(own.dmgMod||0)*effMul:0);
+      const useCombo=combo+(own?(own.combo||0)*effMul:0);
+      const dmg=Math.floor(baseAtk*(1+useOryo)*(1+useDmgMod));
+      const comboHit=Math.floor(dmg*useCombo);
       totalDmg+=dmg+comboHit;
       perCardDmg.push(dmg+comboHit);
     }
-    const boost=localBoostFromCard(card);
     if (boost) { oryo+=(boost.oryo||0)*effMul; dmgMod+=(boost.dmgMod||0)*effMul; combo+=(boost.combo||0)*effMul; }
     if (isPenalty) penaltyCnt++;
   }
@@ -144,7 +156,21 @@ for (const [label, order] of [
   assert.strictEqual(actual.perCardDmg[0], 100, `${label}: 先に使った攻撃にバフが乗ってしまっている`);
 }
 
-// ケース3: 2枚目以降の半減もバフの量に正しく反映されること(ゴーレムが2枚目なら半分の効果)
+// ケース3: 固有技は自分の効果を自分にも乗せる。
+// 予測がここを含めないと「カードを選んでいるときは低く、実行した瞬間に増える」ことになる
+// (実際の報告: ゴーレムの攻撃アップぶん +7.5% / モッチー・ミタラシ +10%)
+for (const [label, card, expected] of [
+  ['ゴーレム1枚', golem, Math.floor(100*1.075)],
+  ['モッチー1枚', mocchi, Math.floor(100*1.1)],
+]) {
+  const actual=runProcessTurnOrder([card]);
+  const predicted=runPreviewOrder([card]);
+  assert.deepStrictEqual(predicted, actual, `${label}: 予測と実行がずれている`);
+  assert.strictEqual(actual.perCardDmg[0], expected,
+    `${label}: 固有技が自分の効果を自分に乗せていない(実行=${actual.perCardDmg[0]} / 期待=${expected})`);
+}
+
+// ケース4: 2枚目以降の半減もバフの量に正しく反映されること(ゴーレムが2枚目なら半分の効果)
 {
   const filler = { type:'atk', isBreeder:false, isAttack:false }; // 攻撃はしないがpenaltyCntだけ進める枠
   const order=[filler, golem, attack];
@@ -152,10 +178,36 @@ for (const [label, order] of [
   const predicted=runPreviewOrder(order);
   assert.deepStrictEqual(predicted, actual, '2枚目以降半減時: 予測と実行がずれている');
   // filler(1枚目、非ブリーダー) → 何もしない。golem(2枚目、非ブリーダーなので半減) →
-  // 自分自身は未強化の100のまま(perCardDmg[0])、oryo += 0.075*0.5 = 0.0375 が積み上がる。
-  // attack(3枚目、golemの後)がそのぶんを受け取る(perCardDmg[1])
-  assert.strictEqual(actual.perCardDmg[0], 100, '2枚目以降半減時: ゴーレム自身に自分の効果が乗ってしまっている');
+  // oryo += 0.075*0.5 = 0.0375。固有技は自分にも乗るので golem 自身も 1.0375 倍(perCardDmg[0])、
+  // attack(3枚目、golemの後)も同じぶんを受け取る(perCardDmg[1])
+  assert.strictEqual(actual.perCardDmg[0], Math.floor(100*1.0375), '2枚目以降半減時: ゴーレム自身に半減後の効果が乗っていない');
   assert.strictEqual(actual.perCardDmg[1], Math.floor(100*1.0375), '2枚目以降半減時: ゴーレムの効果が半分になっていない');
 }
+
+// ケース5: 保留中(タップしただけでまだ置いていない)のカードも、置いたときの値で予測する。
+// 保留カードは積み上げにも枚数にも数えないが、自分に乗る効果だけは含める(forPending)
+{
+  const order=[kiki, golem];           // ききを選んだ状態で、ゴーレムを保留にしている想定
+  const actual=runProcessTurnOrder(order);
+  const predicted=runPreviewOrder(order);
+  assert.deepStrictEqual(predicted, actual, '保留カード: 予測と実行がずれている');
+  // きき(ブリーダー、combo+0.03) → ゴーレム(自分の+7.5%が乗り、ききの連撃も乗る)
+  const base=Math.floor(100*1.075);
+  assert.strictEqual(actual.perCardDmg[0], base+Math.floor(base*0.03),
+    '保留カード: 手前のバフと自分の効果の両方が乗っていない');
+}
+
+// DRIFT GUARD: 上のモデルが前提にしている「固有技だけが自分に乗る」判定と、
+// 予測側がそれを使っていることを実コードで確かめる
+assert(source.includes("const localBoostAppliesToSelf = (card) => card?.type==='unique';"),
+  '固有技だけが自分に乗る、という判定が実コードから消えている');
+assert(source.includes('const boostsForCardDamage = (base, card, halved) => {'),
+  'そのカードのダメージに使う補正をまとめる関数が必要');
+assert(source.includes('perCard[idx]=boostsForCardDamage({oryo,dmgMod,combo},card,halved);'),
+  '選択済みカードの予測が自分のぶんを含めていない');
+assert(/forPending:boostsForCardDamage\(\{oryo,dmgMod,combo\},pendingCard,pendingHalved\)/.test(source),
+  '保留カードの予測が自分のぶんを含めていない');
+assert(!/getDmg\(pendingCardObj,[^)]*\.final\./.test(source),
+  '保留カードの予測が forPending ではなく final を使っている(自分のぶんが抜ける)');
 
 console.log('battle damage preview checks passed');

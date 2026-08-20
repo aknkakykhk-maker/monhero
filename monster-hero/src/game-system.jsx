@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 19:41"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-20 19:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9622,25 +9622,43 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (card.type==='unique' && (card.monId==='Mocchi'||card.monId==='Mitarashi')) return { dmgMod: 0.1 };
     return null;
   };
+  // 固有技は「自分の効果を乗せてから、その同じカードで攻撃する」(processTurnの並び。
+  // 効果を足す if(card.type==='unique'){…} のあとで getDmg を呼んでいる)。
+  // おりょう・きき・かどみうむのようなバフカードは自分では攻撃しないので、ここには入らない。
+  const localBoostAppliesToSelf = (card) => card?.type==='unique';
+  // このカードのダメージを出すときに使う即時補正。自分の効果が自分に乗るカード(固有技)は
+  // 自分のぶんも足す。これを忘れると、カード選択中の予測より実行後のダメージが増える
+  // (ゴーレムなら+7.5%、モッチー/ミタラシなら+10%)。
+  const boostsForCardDamage = (base, card, halved) => {
+    const boost=localBoostAppliesToSelf(card)?localBoostFromCard(card):null;
+    if(!boost) return base;
+    const effMul=cardEffectMultiplier(card,halved);
+    return { oryo:base.oryo+(boost.oryo||0)*effMul, dmgMod:base.dmgMod+(boost.dmgMod||0)*effMul, combo:base.combo+(boost.combo||0)*effMul };
+  };
   // カード選択中のプレビュー専用。選択順に並べて、指定した1枚(excludeIdx、保留中のカード)の
   // 「手前まで」に積み上がる即時補正を求める。processTurnの数え方(2枚目以降半減・EXTREME倍率)と
   // 同じ式(cardEffectMultiplier)を使うため、この並びで実行したときの結果と必ず一致する。
+  // perCard[idx] は「そのカードのダメージを出すときに使う値」で、固有技は自分のぶんを含む。
+  // forPending は保留中のカードぶん(同じく自分のぶんを含む)。
   const previewLocalBoosts = (excludeIdx=null) => {
     let oryo=0, dmgMod=0, combo=0, penaltyCnt=0;
     const perCard={};
     selectedCards.forEach(idx=>{
-      if(idx===excludeIdx){ perCard[idx]={oryo,dmgMod,combo}; return; }
       const card=hand[idx];
-      perCard[idx]={oryo,dmgMod,combo};
-      if(!card) return;
       const isPenalty=!isBreederCard(card);
       const halved=isPenalty&&penaltyCnt>0;
+      perCard[idx]=boostsForCardDamage({oryo,dmgMod,combo},card,halved);
+      // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので積み上げにも枚数にも数えない
+      if(idx===excludeIdx) return;
+      if(!card) return;
       const effMul=cardEffectMultiplier(card,halved);
       const boost=localBoostFromCard(card);
       if(boost){ oryo+=(boost.oryo||0)*effMul; dmgMod+=(boost.dmgMod||0)*effMul; combo+=(boost.combo||0)*effMul; }
       if(isPenalty) penaltyCnt++;
     });
-    return { perCard, final:{oryo,dmgMod,combo} };
+    const pendingCard=excludeIdx!=null?hand[excludeIdx]:null;
+    const pendingHalved=!!pendingCard&&!isBreederCard(pendingCard)&&penaltyCnt>0;
+    return { perCard, final:{oryo,dmgMod,combo}, forPending:boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved) };
   };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
     if (!mon||!card||['guard','draw','buff','heal','weak_guard'].includes(card.type)) return 0;
@@ -14080,7 +14098,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
                     const maxUses=slotMaxUses(s); if(assignedCount>=maxUses) continue;
                     if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                    pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.final.oryo,boosts.final.dmgMod,!isBreederCard(pendingCardObj)&&committedPenaltyCnt>0); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.final.combo); break;
+                    pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,!isBreederCard(pendingCardObj)&&committedPenaltyCnt>0); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo); break;
                   }
                 }
                 const projectedTotal=committedTotal+pendingAdd;
@@ -14164,8 +14182,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     let committedPenalty=0;
                     selectedCards.forEach(idx=>{if(idx!==pendingIdx&&!isBreederCard(hand[idx]))committedPenalty++;});
                     const isSecondOrLater = committedPenalty>=1 && !isBreederCard(pendingCardObj);
-                    const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.final.oryo,slotBoosts.final.dmgMod,isSecondOrLater);
-                    previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.final.combo);
+                    const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater);
+                    previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo);
                     isPendingPreview=true; isPendingHalved=isSecondOrLater;
                   } else if(s){
                     // 選択順で「ブリーダーカード以外」を数え、2枚目以降は半減として予測する
