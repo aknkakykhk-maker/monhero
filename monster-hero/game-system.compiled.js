@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 7d4fa9f2d2623d24
+// source-sha256: 8ef860d2ba6c5ec7
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 08:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 09:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -22999,7 +22999,7 @@ function MonsterHeroGame() {
           key: setting.id,
           "aria-disabled": !previewable,
           "data-extreme-difficulty-card": setting.id,
-          className: `snap-center shrink-0 w-[82%] h-[382px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+          className: `snap-center shrink-0 w-[82%] h-[400px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? '#f0abfc' : 'rgba(255,255,255,.12)',
             background: previewable ? 'linear-gradient(180deg,#34133f,#160d2b)' : 'linear-gradient(180deg,#1e293b,#0d142b)',
@@ -23055,7 +23055,8 @@ function MonsterHeroGame() {
         }, value)))))) : /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500"
         }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("div", {
-          className: "grid gap-1.5 mt-auto pt-1.5"
+          "data-extreme-card-actions": true,
+          className: "grid gap-1.5 mt-auto pt-2 pb-1"
         }, /*#__PURE__*/React.createElement("button", {
           disabled: !previewable,
           onClick: () => setShowWaveDetails(true),
@@ -23092,14 +23093,16 @@ function MonsterHeroGame() {
         onClick: () => selectDifficultyIndex(selectedIndex + 1),
         className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
       }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-center gap-1 py-0.5"
+        "data-extreme-page-dots": true,
+        className: "flex justify-center gap-1 pt-1.5 pb-1"
       }, difficulties.map((setting, i) => /*#__PURE__*/React.createElement("button", {
         key: setting.id,
         "aria-label": `${i + 1}ページ目`,
         onClick: () => selectDifficultyIndex(i),
         className: `w-1.5 h-1.5 rounded-full ${setting.id === extremeDifficulty ? 'bg-fuchsia-300 scale-125' : 'bg-slate-700'}`
       }))), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 pt-1.5 pb-1"
+        "data-extreme-assistant": true,
+        className: "shrink-0 pt-2 pb-1"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         key: extremeDifficultyAssistantScene,
         scene: extremeDifficultyAssistantScene,

@@ -121,7 +121,7 @@ assert(sceneLines('nightmareDifficulty') >= 5, 'the NIGHTMARE scene needs at lea
 for (const name of ['chaosDifficulty', 'ultimateDifficulty', 'infinityDifficulty']) {
   assert(sceneLines(name) >= 5, `the ${name} preview scene needs at least 5 lines`);
 }
-assert(source.includes('data-extreme-difficulty-card={setting.id}') && source.includes('h-[382px] flex flex-col'), 'all five EXTREME tier cards must share one fixed outer height');
+assert(source.includes('data-extreme-difficulty-card={setting.id}') && source.includes('h-[400px] flex flex-col') && !source.includes('h-[382px]'), 'all five EXTREME tier cards must share one expanded fixed outer height');
 assert(source.includes("lines.push(['自動回復補正',signed],['距離適性補正',signed])") && source.includes('grid-cols-[6.5rem_1fr]') && source.includes('whitespace-nowrap'), 'NIGHTMARE rule labels and values must remain aligned and unbroken');
 for (const expected of ["['与ダメージ',specialRulePercent(rules.damageDealt)]", "['供モン加入ボーナス',specialRulePercent(rules.allyJoinBonus)]", "['消費ガッツ',specialRulePercent(rules.gutsCost)]"]) {
   assert(source.includes(expected), `CHAOS debug card must label its planned special rule: ${expected}`);
