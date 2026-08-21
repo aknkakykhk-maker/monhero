@@ -155,7 +155,7 @@ check('丈夫さバフを乗せた実効値がある',
   /const effectiveDef = useMemo\(\(\) => resolveEffectiveMaxStat\(def, getPermaBuff\('defPct'\)\), \[def, permaBuffs\]\);/.test(source));
 // 丈夫さの固定軽減の係数は 0.75 → 0.5 と調整されている。係数そのものを固定すると
 // バランス調整のたびにここが落ちるだけなので、「実効の丈夫さを使っているか」を見る。
-// 係数を変えたときは meloso-breeder-check.js のモデルも直す必要があるため、
+// 係数を変えたときは meloso-assist-check.js のモデルも直す必要があるため、
 // あちらのDRIFT GUARDが係数を見張っている
 check('被ダメージの固定軽減に実効の丈夫さを使う',
   /Math\.max\(30,\(atkVal-effectiveDef\*[\d.]+\)\*\(1-defenseRate\)\)/.test(source));

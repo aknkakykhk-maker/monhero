@@ -65,9 +65,9 @@ check('スコア×20', m.EXTREME_SETTING.score === 20);
 check('経験値×25', m.EXTREME_SETTING.xp === 25);
 check('ダイヤ×7.5', m.EXTREME_SETTING.gold === 7.5);
 check('虹のプシュケー30個', m.EXTREME_SETTING.psyche === 30);
-check('ブリーダーカード効果50%はEXTREME固有ルール',
-  m.extremeSpecialRule('EXTREME', 'breederCardEffect') === 0.5
-    && m.extremeSpecialRule('NIGHTMARE', 'breederCardEffect') === 1);
+check('アシストカード効果50%はEXTREME固有ルール',
+  m.extremeSpecialRule('EXTREME', 'assistCardEffect') === 0.5
+    && m.extremeSpecialRule('NIGHTMARE', 'assistCardEffect') === 1);
 check('NIGHTMAREは×15 / ×20 / ×30 / ×10 / 虹40を持つ',
   m.NIGHTMARE_SETTING.available === true
     && m.NIGHTMARE_SETTING.power === 15 && m.NIGHTMARE_SETTING.score === 20

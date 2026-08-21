@@ -99,7 +99,7 @@ const extremeCardInfo = () => {
     check('モード説明が他モードと同じ見出しで並ぶ',
       ['編成', 'WAVEのあいだの強化', '難しさ', 'もらえる経験値とダイヤ', 'スコアと記録', '供モンの加入', 'マスモン登録', 'スキップチケット', 'こんな人におすすめ'].every(t => info.includes(t)),
       info.slice(0, 80));
-    check('モード説明にEXTREME固有の50%ルールを書かない', !info.includes('ブリーダーカード'), info.slice(0, 60));
+    check('モード説明にEXTREME固有の50%ルールを書かない', !info.includes('アシストカード'), info.slice(0, 60));
     await page.evaluate(() => { document.querySelector('[aria-label="説明を閉じる"]')?.click(); });
     await page.waitForTimeout(700);
 
@@ -126,7 +126,7 @@ const extremeCardInfo = () => {
     const diff = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
     check('極限専用の難易度画面が開く', !!(await page.$('[data-extreme-difficulties]')));
     check('EXTREMEの倍率と報酬が出ている', ['×13', '×20', '×25', '×7.5', '虹のプシュケー ×30'].every(v => diff.includes(v)), diff.slice(0, 110));
-    check('EXTREME特殊ルールを難易度側で見せる', diff.includes('EXTREME特殊ルール') && diff.includes('ブリーダーカード効果 50%'));
+    check('EXTREME特殊ルールを難易度側で見せる', diff.includes('EXTREME特殊ルール') && diff.includes('アシストカード効果 50%'));
     check('デバッグ表記が残っていない', !/DEBUG|デバッグ|保存されません/.test(diff));
     const tiers = await page.evaluate(() => [...document.querySelectorAll('[data-extreme-difficulties] article')].map(a => ({
       label: a.querySelector('h3')?.textContent.trim(),
@@ -185,7 +185,7 @@ const extremeCardInfo = () => {
         // 配置場所(零/近/中/遠)は距離のラベルで選ぶ
         const slot = [...document.querySelectorAll('button')].find(x => !x.disabled && /(零|近|中|遠)距離/.test(x.textContent));
         if (slot) { slot.click(); return; }
-        // ブリーダーカードは「習得する／強化する」で確定できる状態まで進める
+        // アシストカードは「習得する／強化する」で確定できる状態まで進める
         const confirm = [...document.querySelectorAll('button')].find(x => !x.disabled && /^(習得する|強化する)$/.test(x.textContent.trim()));
         if (confirm) { confirm.click(); return; }
         const teaching = [...document.querySelectorAll('button')].find(x => !x.disabled && /新規習得|強化後/.test(x.textContent));
@@ -198,7 +198,7 @@ const extremeCardInfo = () => {
       await page.waitForTimeout(1200);
     }
     const battleText = await page.evaluate(() => document.body.innerText.replace(/\s+/g, ' '));
-    check('バトルが始まり極限ルールの発動が出る', battleText.includes('極限ルール発動') && battleText.includes('ブリーダーカードの効果量が半分になります'), battleText.slice(0, 110));
+    check('バトルが始まり極限ルールの発動が出る', battleText.includes('極限ルール発動') && battleText.includes('アシストカードの効果量が半分になります'), battleText.slice(0, 110));
     // テロップを閉じて敵の強さを読む
     await page.evaluate(() => { document.querySelector('[role="dialog"][aria-label="極限ルール発動"]')?.click(); });
     await page.waitForTimeout(1200);

@@ -20,8 +20,8 @@ assert(source.includes('applyNightmareWaveEnhancement(d*0.001/100,specialRuleDif
 assert(source.includes("applyNightmareSignedModifier(aptGradeToPct(apt[i] || 'C'), nightmare)"), 'monster aptitude must use the signed rule separately');
 assert(source.includes('const baseRecoveryDelta=Math.max(-0.05,Math.min(0.05,(remainingTurns-10)*0.005));'), 'recovery base formula and bounds must stay intact');
 assert(source.includes('const recoveryDelta=applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty);'), 'recovery rule must apply after the base calculation');
-assert(source.includes("isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'breederCardEffect')"), 'EXTREME breeder-card rule must stay intact');
-assert(!source.includes("specialRules:Object.freeze({ breederCardEffect:0.5, waveEnhancement"), 'NIGHTMARE rules must not leak into EXTREME');
+assert(source.includes("isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect')"), 'EXTREME breeder-card rule must stay intact');
+assert(!source.includes("specialRules:Object.freeze({ assistCardEffect:0.5, waveEnhancement"), 'NIGHTMARE rules must not leak into EXTREME');
 assert(source.includes('data-extreme-battle-status={rule}') && source.includes("['強化',specialRulePercent(extremeSpecialRule(difficultyId,'waveEnhancement'))]"), 'battle status must show shared NIGHTMARE values');
 assert(source.includes('data-nightmare-training-status') && source.includes('通常 +{normalGain} → 実際 +{effectiveGain}'), 'training must compare resolver results');
 assert(source.includes('baseRecoveryDelta,recoveryDelta') && source.includes('通常 {waveResult.baseRecoveryDelta'), 'recovery must compare base and effective values');

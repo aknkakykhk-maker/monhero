@@ -311,7 +311,7 @@ const ASSISTANT_BOND_ACTIONS = {
   quickClear:   { amount:2, dailyMax:12, label:'クイックモードをクリア' },
   proClear:     { amount:4, dailyMax:16, label:'プロモードをクリア' },
   extremeClear: { amount:8, dailyMax:24, label:'極限チャレンジをクリア' },
-  // 助手のブリーダーカード(みゅあ・きき)だけの行動。
+  // 助手のアシストカード(みゅあ・きき)だけの行動。
   // ここだけは「いま選んでいる助手」ではなく、そのカード本人の仲良し度が増える。
   // 編成を保存しただけでは増えない(付け外しでは稼げず、実際にバトルを始めた時だけ数える)
   assistantCardEquip: { amount:4, dailyMax:20, label:'助手のカードを編成して挑む' },
@@ -539,7 +539,7 @@ const ASSISTANT_SCENES = {
       { e:'normal',  t:'今の強さを取るか、完成形を狙うか…作戦しだいだね。' },
       { e:'happy',   t:'あたしはとりあえず重ねる派♪' },
       { e:'excited', t:'進化するとけっこう跳ね上がるよ！' },
-      { e:'normal',  t:'ブリーダーカードは効果が半減しないのが強いとこ！' },
+      { e:'normal',  t:'アシストカードは効果が半減しないのが強いとこ！' },
     ],
   },
   rewardPick: {
@@ -659,11 +659,11 @@ const ASSISTANT_SCENES = {
       { e:'normal',  t:'編成もベースモンもマスモンも、ここから見られるよ。' },
       { e:'wink',    t:'解放しただけじゃ出てこないから、編成に入れてね！' },
       { e:'happy',   t:'最後に「決定」まで押すのを忘れずに♪' },
-      { e:'normal',  t:'ブリーダーカードの編成もここからだよ。' },
+      { e:'normal',  t:'アシストカードの編成もここからだよ。' },
       { e:'excited', t:'マスモン詳細から強化・トレーニング・染色へ直行できるよ！' },
     ],
   },
-  // 編成(モンスター編成・ブリーダーカード編成)
+  // 編成(モンスター編成・アシストカード編成)
   roster: {
     help: 'home/roster',
     lines: [
@@ -671,7 +671,7 @@ const ASSISTANT_SCENES = {
       { e:'wink',    t:'最後に「決定」まで押さないと反映されないよ！' },
       { e:'normal',  t:'距離のバランスを見ると、けっこう安定するよ。' },
       { e:'excited', t:'この編成、いい感じじゃーん♪' },
-      { e:'normal',  t:'ブリーダーカードのほうも忘れずにね！' },
+      { e:'normal',  t:'アシストカードのほうも忘れずにね！' },
     ],
   },
   monsterList: {
@@ -910,7 +910,7 @@ const ASSISTANT_LINE_PACKS = [];
 const addAssistantLinePack = (pack) => { if (pack && pack.id && (pack.lines || pack.conditions)) ASSISTANT_LINE_PACKS.push(pack); };
 
 // 極限チャレンジ。モード選択(extremeChallenge)ではモード全体に共通する特徴を案内し、
-// EXTREME固有の倍率やブリーダーカード50%は難易度側(extremeDifficulty)でだけ触れる。
+// EXTREME固有の倍率やアシストカード50%は難易度側(extremeDifficulty)でだけ触れる。
 addAssistantLinePack({
   id: 'extremeChallengeGuide',
   label: '極限チャレンジ案内',
@@ -926,7 +926,7 @@ addAssistantLinePack({
       { e:'happy', t:'手強くなるほど高い報酬も狙えるよ。育てた子と一緒に限界へ挑も♪' },
     ],
     extremeDifficulty: [
-      { e:'troubled', t:'EXTREMEはブリーダーカードの効果が半分！ いつもの感覚だと危ないよ！' },
+      { e:'troubled', t:'EXTREMEはアシストカードの効果が半分！ いつもの感覚だと危ないよ！' },
       { e:'surprise', t:'敵強度はなんと×13！ 育てた子の本気を見せるときだね！' },
       { e:'excited', t:'虹のプシュケー報酬と全WAVE詳細、挑む前に見ておこ♪' },
       { e:'wink', t:'ここはEXTREME！ 準備できてるなら、思いっきりいこ！' },
@@ -1197,7 +1197,7 @@ addAssistantLinePack({
       { e:'wink',     t:'同じ種類ばかりだと、間合いが偏っちゃうから注意ね！' },
       { e:'excited',  t:'育てたい子を勇者モンにすると、絆経験値がいっぱい入るよ♪' },
       { e:'normal',   t:'編成を変えても、マスモンの記録は消えないから安心して。' },
-      { e:'happy',    t:'ブリーダーカードも忘れずに入れてね！' },
+      { e:'happy',    t:'アシストカードも忘れずに入れてね！' },
       { e:'normal',   t:'カードの枚数は勇者モンの特性で増えることがあるよ。' },
       { e:'surprise', t:'この並び、なんか強そうな気がする…！', w:0.3 },
       { e:'wink',     t:'正解はひとつじゃないから、好きな子を入れていいと思うよ♪' },
@@ -1230,7 +1230,7 @@ addAssistantLinePack({
       { e:'happy',    t:'{name}、あたしのアイコン使ってくれてたら嬉しいな♪', bond:5, w:0.6 },
       { e:'excited',  t:'{name}、たまには自分にご褒美あげよ！', bond:5 },
       { e:'normal',   t:'円盤石を買うと新しいモンスターが解放されるよ。' },
-      { e:'happy',    t:'ブリーダーカードはバトル中に使える強い味方だよ♪' },
+      { e:'happy',    t:'アシストカードはバトル中に使える強い味方だよ♪' },
       { e:'normal',   t:'アイテムの効果は「詳細」から見られるよ。' },
       { e:'wink',     t:'ptはブリーダーレベルが上がるともらえるよ！' },
       { e:'normal',   t:'買っただけだと使えないよ。M/B管理から編成に入れてね。' },
@@ -1441,7 +1441,7 @@ addAssistantLinePack({
       { e:'wink',     t:'準備が整っているなら、思いきって挑んでみましょ。' },
     ],
     extremeDifficulty: [
-      { e:'troubled', t:'EXTREMEはブリーダーカードの効果が半分。ご注意を。' },
+      { e:'troubled', t:'EXTREMEはアシストカードの効果が半分。ご注意を。' },
       { e:'surprise', t:'敵の強さは×13。いつもの感覚だと危ないでつ。' },
       { e:'normal',   t:'虹のプシュケー報酬と全WAVE詳細、先に見ると安心ですよ。' },
       { e:'happy',    t:'準備が整っているなら、いってらっしゃい♪' },
@@ -1597,7 +1597,7 @@ addAssistantLinePack({
       { e:'normal',   t:'今の強さを取るか、完成形を狙うか…作戦しだいですね。' },
       { e:'happy',    t:'私は、とりあえず重ねる派でつ♪' },
       { e:'excited',  t:'進化すると、けっこう跳ね上がりまつ。' },
-      { e:'normal',   t:'ブリーダーカードは効果が半減しないのが強みでつ。' },
+      { e:'normal',   t:'アシストカードは効果が半減しないのが強みでつ。' },
     ],
     rewardPick: [
       { e:'happy',    t:'WAVEクリアお疲れさまでつ♪ トレーニングを2つえらびましょ。' },
@@ -1655,7 +1655,7 @@ addAssistantLinePack({
       { e:'normal',   t:'編成もベースモンもマスモンも、ここから見られまつ。' },
       { e:'wink',     t:'解放しただけでは出てこないので、編成に入れましょ。' },
       { e:'happy',    t:'最後に「決定」を押すのだけ、お忘れなく♪' },
-      { e:'normal',   t:'ブリーダーカードの編成も、ここからでつ。' },
+      { e:'normal',   t:'アシストカードの編成も、ここからでつ。' },
       { e:'excited',  t:'編成を整えると、戦いがぐっとラクになりまつよ♪' },
     ],
     roster: [
@@ -1664,7 +1664,7 @@ addAssistantLinePack({
       { e:'happy',    t:'お気に入りの子を入れると、気分が上がりまつね。' },
       { e:'normal',   t:'「決定」を押すまで反映されないので、ご注意を。' },
       { e:'excited',  t:'編成を変えると、戦い方もガラッと変わりまつ♪' },
-      { e:'normal',   t:'ブリーダーカードの編成も、同じように選べまつよ。' },
+      { e:'normal',   t:'アシストカードの編成も、同じように選べまつよ。' },
     ],
     monsterList: [
       { e:'normal',   t:'ベースモンは種類の基本、マスモンは育てた個体でつ。' },
@@ -2172,7 +2172,7 @@ const ASSISTANT_BATTLE_TUTORIAL_BODY = [
   { id:'teachingTalk', at:'PICK_TEACHING', e:'normal',  title:'ブリーダーの教え', t:'バトル中に使える助っ人カードだよ。ここで持ち込むの。', spot:'teachings', wait:'next' },
   { id:'teaching',     at:'PICK_TEACHING', e:'happy',   title:'1つ選ぼう', t:'好きな教えを1つ押してね♪', spot:'teachings', wait:'act' },
   // バトル。まず画面の見かたを上から順に、そのあとは台本どおりの敵と戦いながら
-  // ガード → 必殺技 → ブリーダーカード → 緊急回復と敵の移動 → 距離技 → 攻撃 →
+  // ガード → 必殺技 → アシストカード → 緊急回復と敵の移動 → 距離技 → 攻撃 →
   // 技変更 → 固有技、を1つずつ操作してもらう
   { id:'battle',       at:'BATTLE',        e:'excited', title:'バトル開始！', t:'いよいよ本番！ 画面の見かたから順番に教えるね♪', wait:'next' },
   { id:'waveTalk',     at:'BATTLE',        e:'normal',  title:'上のバー', t:'今のWAVEとターン数だよ。20ターン以内に敵を倒せないと負けちゃう。', spot:'waveInfo', wait:'next' },
@@ -2181,9 +2181,9 @@ const ASSISTANT_BATTLE_TUTORIAL_BODY = [
   { id:'heroTalk2',    at:'BATTLE',        e:'normal',  title:'自分の情報', t:'左上の「ステータス」で、自分のHP・力・丈夫さ・ガッツを確認できるよ。', spot:'heroStatus', wait:'next' },
   { id:'slotTalk2',    at:'BATTLE',        e:'wink',    title:'4つの距離枠', t:'仲間が並んでる枠が距離。敵と同じ距離の子ほど大ダメージを出せるよ！', spot:'battleSlots', wait:'next' },
   { id:'cards',        at:'BATTLE',        e:'normal',  title:'手札のカード', t:'下にあるのが今つかえるカード。ガッツが足りる子だけ光ってるよ。', spot:'cards', wait:'next' },
-  { id:'cardKinds',    at:'BATTLE',        e:'normal',  title:'カードの種類', t:'攻めの攻撃カード、ダメージを減らすガードカード、力を底上げするブリーダーカードがあるよ。', spot:'cards', wait:'next' },
+  { id:'cardKinds',    at:'BATTLE',        e:'normal',  title:'カードの種類', t:'攻めの攻撃カード、ダメージを減らすガードカード、力を底上げするアシストカードがあるよ。', spot:'cards', wait:'next' },
   { id:'limitTalk',    at:'BATTLE',        e:'normal',  title:'使える枚数', t:'1ターンに出せる枚数はここ。勇者モンの特性で増えることもあるんだ♪', spot:'cardCount', wait:'next' },
-  { id:'cardOrder',    at:'BATTLE',        e:'surprise',title:'2枚目からは半減', t:'同じターンに攻撃やガードを重ねると2枚目から効果が半分。ブリーダーカードは半減しないよ。', spot:'cards', wait:'next' },
+  { id:'cardOrder',    at:'BATTLE',        e:'surprise',title:'2枚目からは半減', t:'同じターンに攻撃やガードを重ねると2枚目から効果が半分。アシストカードは半減しないよ。', spot:'cards', wait:'next' },
   { id:'deckTalk',     at:'BATTLE',        e:'happy',   title:'山札のこと', t:'「VIEW」で山札と使い終わったカードを確認できるよ。無くなったら混ぜ直すの。', spot:'deckView', wait:'next' },
   // ① 敵の攻撃予告 → ガードで受ける
   { id:'intentTalk',   at:'BATTLE',        e:'surprise',title:'敵の攻撃予告！', t:'敵の下に次の行動と予測ダメージが出てるよ。今ターンは殴ってくる！', spot:'enemyIntent', wait:'next' },
@@ -2195,9 +2195,9 @@ const ASSISTANT_BATTLE_TUTORIAL_BODY = [
   { id:'chargeReady',  at:'BATTLE',        e:'normal',  title:'もう一度ガード', t:'必殺技もガードで受け止められるよ。手札のガードを見て！', spot:'cards', wait:'next' },
   { id:'chargeDo',     at:'BATTLE',        e:'excited', title:'受け止めよう！', t:'ガードカードを選んでACTIONだよ♪', spot:'cards', wait:'do', need:'guard' },
   { id:'chargeSeen',   at:'BATTLE',        e:'surprise',title:'さすがに痛い！', t:'ガードしてもこれだけ減るんだ。必殺技の予告が出たら気をつけてね。', wait:'next' },
-  // ③ ブリーダーカードでバフ
-  { id:'breederTalk',  at:'BATTLE',        e:'happy',   title:'ブリーダーカード', t:'次はブリーダーカード。おりょうの力で、こっちの攻撃力が上がるよ！', spot:'cards', wait:'next' },
-  { id:'breederDo',    at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'ブリーダーカードを選んでACTION！ 攻撃UPの表示が出るよ♪', spot:'cards', wait:'do', need:'teaching' },
+  // ③ アシストカードでバフ
+  { id:'breederTalk',  at:'BATTLE',        e:'happy',   title:'アシストカード', t:'次はアシストカード。おりょうの力で、こっちの攻撃力が上がるよ！', spot:'cards', wait:'next' },
+  { id:'breederDo',    at:'BATTLE',        e:'wink',    title:'使ってみよう', t:'アシストカードを選んでACTION！ 攻撃UPの表示が出るよ♪', spot:'cards', wait:'do', need:'teaching' },
   { id:'breederSeen',  at:'BATTLE',        e:'happy',   title:'攻撃アップ！', t:'「攻撃UP!」って出たでしょ？ この効果はバトルの最後まで続くよ♪', wait:'next' },
   // ④ 緊急回復と敵の移動
   { id:'emergTalk',    at:'BATTLE',        e:'normal',  title:'緊急回復', t:'左の「緊急」はライフとガッツが3割もどるよ。そのターンは攻撃できないの。', spot:'emergency', wait:'next' },
@@ -2355,7 +2355,7 @@ const findAssistantScene = (key) => (key && ASSISTANT_SCENES[key]) || null;
 
 // ---------- バトルのれんしゅう: シナリオ(台本どおりに動くバトル) ----------
 // ふだんのバトルは敵の行動も手札も抽選だが、練習のときだけこの台本どおりに固定して、
-// ガード → 必殺技 → ブリーダーカード → 緊急回復と敵の移動 → 距離技 → 攻撃 →
+// ガード → 必殺技 → アシストカード → 緊急回復と敵の移動 → 距離技 → 攻撃 →
 // 技変更 → 固有技でトドメ、という一連の流れを必ず同じ順で見せられるようにする。
 //
 // 画面側は「台本があるときだけ」この値を使い、ふだんのバトルの抽選には一切触れない。
@@ -2381,7 +2381,7 @@ const BATTLE_TUTORIAL_SCENARIO = {
     { type:'ATTACK' },              // 1ターン目 … 攻撃予告 → ガードで受ける
     { type:'CHARGE' },              // 2ターン目 … 必殺技のためを見せる(ダメージは無い)
     { type:'SPECIAL' },             // 3ターン目 … ためた必殺技が飛んでくる
-    { type:'WAIT' },                // 4ターン目 … ブリーダーカードでバフ
+    { type:'WAIT' },                // 4ターン目 … アシストカードでバフ
     { type:'MOVE', targetDist:3 },  // 5ターン目 … 緊急回復のあいだに遠距離へ移動
     { type:'WAIT' },                // 6ターン目 … 距離技で引き戻す
     { type:'WAIT' },                // 7ターン目 … 通常攻撃

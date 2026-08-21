@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3558780dfc853d94
+// source-sha256: 128eb1050e1c37ce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 09:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 11:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6009,11 +6009,11 @@ const PatternPlacementPreview = ({
 };
 // カードやアイテムの icon 欄には「絵文字1文字」と「画像」が混在している。
 // 2026年8月に画像を base64 の埋め込みから images/ 以下のPNGファイルへ移したため、
-// 「data: で始まるかどうか」では画像だと判定できなくなり、ブリーダーカードや
+// 「data: で始まるかどうか」では画像だと判定できなくなり、アシストカードや
 // ブリーダーの教えのアイコンがパスの文字列のまま画面に出る不具合を出した。
 // 判定はこの1か所に集約し、以後どちらの形でも画像として扱えるようにする。
 const isImageIconValue = v => typeof v === 'string' && (v.startsWith('images/') || v.startsWith('data:') || /^https?:\/\//.test(v));
-// ききの元画像は全身を含むため、ブリーダーカードで使う丸アイコンだけ顔へ寄せる。
+// ききの元画像は全身を含むため、アシストカードで使う丸アイコンだけ顔へ寄せる。
 // 同じ画像を使うプロフィール用アイコンは別IDなので、従来のプロフィール構図を維持する。
 const KIKI_FACE_ICON_ADJUSTMENT = Object.freeze({
   scale: 2.37,
@@ -6028,10 +6028,10 @@ const iconAdjustmentTransformStyle = ({
   transform: `translate(${x}%, ${y}%) scale(${scale})`,
   transformOrigin: 'center center'
 });
-const BREEDER_CARD_ICON_STYLES = Object.freeze({
+const ASSIST_CARD_ICON_STYLES = Object.freeze({
   kiki: KIKI_FACE_ICON_ADJUSTMENT
 });
-const BreederCardIcon = ({
+const AssistCardIcon = ({
   icon,
   cardId,
   className = '',
@@ -6049,12 +6049,12 @@ const BreederCardIcon = ({
     WebkitUserSelect: 'none',
     userSelect: 'none',
     pointerEvents: 'none',
-    ...iconAdjustmentTransformStyle(BREEDER_CARD_ICON_STYLES[cardId])
+    ...iconAdjustmentTransformStyle(ASSIST_CARD_ICON_STYLES[cardId])
   },
   className: "absolute inset-0 w-full h-full object-contain"
 }));
 // icon欄が画像なら<img>、絵文字ならそのまま返す。sizePxは画像のときの表示サイズ
-const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon) ? BREEDER_CARD_ICON_STYLES[cardId] ? /*#__PURE__*/React.createElement(BreederCardIcon, {
+const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon) ? ASSIST_CARD_ICON_STYLES[cardId] ? /*#__PURE__*/React.createElement(AssistCardIcon, {
   icon: icon,
   cardId: cardId,
   style: {
@@ -6872,11 +6872,11 @@ const assistantBondKeyFor = assistantId => {
   const id = normalizeAssistantId(assistantId);
   return id === (typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID || 'mua') ? ASSISTANT_BOND_KEY : `mh_assistant_bond_${id}_v1`;
 };
-// そのブリーダーカードが助手本人のカードなら、その助手のIDを返す(違えばnull)。★重要
-// ブリーダーカードのIDと助手のIDは同じ綴り('mua'/'kiki')なので、そのまま本人へ結び付く。
+// そのアシストカードが助手本人のカードなら、その助手のIDを返す(違えばnull)。★重要
+// アシストカードのIDと助手のIDは同じ綴り('mua'/'kiki')なので、そのまま本人へ結び付く。
 // カード名の文字列で見ると、進化で名前が変わったとき(みゅあの愛→深愛→慈愛)に外れるため、
 // 必ずIDで判定する。助手を増やしてもカードIDを合わせておけば、ここは書き換え不要
-const assistantIdOfBreederCard = cardId => {
+const assistantIdOfAssistCard = cardId => {
   const id = String(cardId == null ? '' : cardId);
   const list = typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS) ? ASSISTANTS : [];
   return list.some(a => a && a.id === id) ? id : null;
@@ -7605,7 +7605,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   psyche: 30,
   description: '通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。',
   specialRules: Object.freeze({
-    breederCardEffect: 0.5
+    assistCardEffect: 0.5
   })
 }, {
   id: 'NIGHTMARE',
@@ -7751,7 +7751,7 @@ const extremeSpecialRuleLines = (difficultyId, quick = false) => {
   if (difficultyId === CHAOS_SETTING.id) return [['与ダメ', specialRulePercent(extremeSpecialRule(difficultyId, 'damageDealt'))], ['消費ガッツ', specialRulePercent(extremeSpecialRule(difficultyId, 'gutsCost'))], ['加入B', specialRulePercent(extremeSpecialRule(difficultyId, 'allyJoinBonus'))]];
   const rules = extremeDifficultySetting(difficultyId)?.specialRules || {};
   const lines = [];
-  if (rules.breederCardEffect != null) lines.push(['ブリーダーカード効果', specialRulePercent(rules.breederCardEffect)]);
+  if (rules.assistCardEffect != null) lines.push(['アシストカード効果', specialRulePercent(rules.assistCardEffect)]);
   if (rules.waveEnhancement != null) lines.push(['WAVE後強化', specialRulePercent(rules.waveEnhancement)]);
   if (rules.positiveModifier != null || rules.negativeModifier != null) {
     const signed = `＋${specialRulePercent(rules.positiveModifier ?? 1)} / −${specialRulePercent(rules.negativeModifier ?? 1)}`;
@@ -7760,7 +7760,7 @@ const extremeSpecialRuleLines = (difficultyId, quick = false) => {
   if (rules.damageDealt != null) lines.push(['与ダメージ', specialRulePercent(rules.damageDealt)]);
   if (rules.allyJoinBonus != null) lines.push(['供モン加入ボーナス', specialRulePercent(rules.allyJoinBonus)]);
   if (rules.gutsCost != null) lines.push(['消費ガッツ', specialRulePercent(rules.gutsCost)]);
-  const known = new Set(['breederCardEffect', 'waveEnhancement', 'positiveModifier', 'negativeModifier', 'damageDealt', 'allyJoinBonus', 'gutsCost']);
+  const known = new Set(['assistCardEffect', 'waveEnhancement', 'positiveModifier', 'negativeModifier', 'damageDealt', 'allyJoinBonus', 'gutsCost']);
   Object.entries(rules).filter(([rule]) => !known.has(rule)).forEach(([rule, value]) => lines.push([rule, specialRulePercent(value)]));
   return lines;
 };
@@ -7874,7 +7874,7 @@ const applyAllyJoinBonus = (value, specialDifficulty = null, totalTurns = 0) => 
   return applyExtremeIntegerRule(value, specialDifficulty, 'allyJoinBonus');
 };
 // 極限チャレンジの説明にはモード全体に共通する特徴を十分に載せる。EXTREME固有の倍率や
-// ブリーダーカード50%は、ここではなく難易度カード側で案内する
+// アシストカード50%は、ここではなく難易度カード側で案内する
 const EXTREME_MODE = Object.freeze({
   id: 'extreme',
   label: '極限チャレンジ',
@@ -7938,7 +7938,7 @@ const clearPsycheReward = difficulty => Math.max(0, Math.floor(Number(CLEAR_PSYC
 // ダイヤで買う商品のうち、いちばん安いものの値段。助手が「ダイヤが心もとない」と
 // 声をかけるかどうかの判定にだけ使う(購入の可否は各商品ごとに別途見ている)。
 // マーケットの画面から参照するので、必ず一番外側に置くこと
-const CHEAPEST_GOLD_ITEM_COST = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || []).filter(i => i.type === 'disc' || i.type === 'breeder' || i.type === 'item').reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
+const CHEAPEST_GOLD_ITEM_COST = (typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS || []).filter(i => i.type === 'disc' || i.type === 'assist' || i.type === 'item').reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
 
 // マーケットは1行に4商品ずつ並べる。カードが細くなるので中身も小さくそろえる
 const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';
@@ -7946,7 +7946,7 @@ const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';
 // ブリーダーアイコンやカード・アイテムは名前のほうが大事なので小さくする
 const MARKET_ICON_SIZE = {
   disc: 'w-12 h-12',
-  breeder: 'w-10 h-10',
+  assist: 'w-10 h-10',
   icon: 'w-10 h-10',
   item: 'w-9 h-9'
 };
@@ -11596,9 +11596,9 @@ function MonsterHeroGame() {
   const [monsterPartySets, setMonsterPartySets] = useState(() => normalizeMonsterPartySets(null, STARTER_MONSTER_IDS));
   const [editingPartySetIndex, setEditingPartySetIndex] = useState(0);
   const [partySetCopyTarget, setPartySetCopyTarget] = useState(null);
-  const [unlockedTeachingIds, setUnlockedTeachingIds] = useState(STARTER_TEACHING_IDS); // 解放済みブリーダーカードid(初期6枚+購入分、端末保存)
-  const [teachingRosterIds, setTeachingRosterIds] = useState(STARTER_TEACHING_IDS); // ブリーダーカード編成(解放済みの中から周回で使う候補、端末保存)
-  const [marketTab, setMarketTab] = useState('icon'); // ブリーダーマーケットの表示カテゴリ: 'icon'|'disc'|'breeder'
+  const [unlockedTeachingIds, setUnlockedTeachingIds] = useState(STARTER_TEACHING_IDS); // 解放済みアシストカードid(初期6枚+購入分、端末保存)
+  const [teachingRosterIds, setTeachingRosterIds] = useState(STARTER_TEACHING_IDS); // アシストカード編成(解放済みの中から周回で使う候補、端末保存)
+  const [marketTab, setMarketTab] = useState('icon'); // マーケットの表示カテゴリ: 'icon'|'disc'|'assist'
   const [rosterTab, setRosterTab] = useState('monster'); // 編成画面の表示カテゴリ: 'monster'|'teaching'
   const [draftMonsterRoster, setDraftMonsterRoster] = useState([]); // 編成画面での仮選択(決定を押すまでmonsterRosterIdsには反映しない)
   // モンスター一覧系画面(編成・ベースモン一覧・マスモン一覧)共通のソート・表示設定。3画面で共有する
@@ -11612,7 +11612,7 @@ function MonsterHeroGame() {
   const [sortFilterModalSingleType, setSortFilterModalSingleType] = useState(false); // ベースモン一覧/マスモン一覧から開いた場合true(種別チップを出さない)
   const [draftTeachingRoster, setDraftTeachingRoster] = useState([]); // 編成画面での仮選択(決定を押すまでteachingRosterIdsには反映しない)
   const [rosterDetailMon, setRosterDetailMon] = useState(null); // 編成画面: 長押しで詳細表示中のモンスター
-  const [rosterDetailTeaching, setRosterDetailTeaching] = useState(null); // 編成画面: 長押しで詳細表示中のブリーダーカード
+  const [rosterDetailTeaching, setRosterDetailTeaching] = useState(null); // 編成画面: 長押しで詳細表示中のアシストカード
   const [rosterSkillDetail, setRosterSkillDetail] = useState(null); // モンスタープロフィール: タップ中の技(通常技/固有技)のレベル別詳細 {mon,kind}
   const [showNameEdit, setShowNameEdit] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -14210,7 +14210,7 @@ function MonsterHeroGame() {
       className: "text-slate-500 shrink-0"
     })));
   };
-  // 現在の周回で使う候補モンスター/ブリーダーカード(編成で選んだもの)。空の場合は解放済み全体にフォールバック
+  // 現在の周回で使う候補モンスター/アシストカード(編成で選んだもの)。空の場合は解放済み全体にフォールバック
   const getActiveMonsterList = () => {
     const list = monsterRosterIds.map(resolveRosterEntryToMon).filter(Boolean);
     return list.length > 0 ? list : Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
@@ -14256,7 +14256,7 @@ function MonsterHeroGame() {
   // 指定した助手の仲良し度を、行動に応じて増やす。上限に達していれば何も起きない。
   // 続けて呼ばれても取りこぼさないよう、いまの値は ref から読む。
   // 触るのは渡された助手のぶんだけで、もう片方の助手の値には一切触れない。
-  // 助手のブリーダーカードのように「いま選んでいる助手とは別の本人へ入れたい」場面から使う
+  // 助手のアシストカードのように「いま選んでいる助手とは別の本人へ入れたい」場面から使う
   const addAssistantBondFor = useCallback((assistantId, actionKey) => {
     const id = normalizeAssistantId(assistantId);
     const current = normalizeAssistantBond(assistantBondsRef.current[id]);
@@ -14284,14 +14284,14 @@ function MonsterHeroGame() {
     const id = selectedAssistantIdRef.current;
     addAssistantBondFor(id, actionKey);
   }, [addAssistantBondFor]);
-  // いま編成しているブリーダーカードのうち、助手本人のカード(みゅあ・きき)を探して
+  // いま編成しているアシストカードのうち、助手本人のカード(みゅあ・きき)を探して
   // 「そのカード本人」の仲良し度を増やす。★重要
   // ここだけは、いま選んでいる助手ではなくカード本人へ入る。
   // 例) 助手＝みゅあ・カード＝きき なら、増えるのは「きき」の仲良し度
   // 両方を編成していれば、それぞれ本人へ1回ずつ入る
   const grantEquippedAssistantCardBond = actionKey => {
     getActiveTeachingCards().forEach(card => {
-      const who = assistantIdOfBreederCard(card && card.id);
+      const who = assistantIdOfAssistCard(card && card.id);
       if (who) addAssistantBondFor(who, actionKey);
     });
   };
@@ -14388,7 +14388,7 @@ function MonsterHeroGame() {
   }), [assistantBond.points, assistantBondLevelNow, breederName, assistantCallStyle, selectedAssistantId, addAssistantBond]);
   const isMarketItemOwned = item => {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
-    if (item.type === 'breeder') return unlockedTeachingIds.includes(item.id);
+    if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
     if (item.type === 'item') return false;
     return ownedMarketIcons.includes(item.id);
   };
@@ -14451,7 +14451,7 @@ function MonsterHeroGame() {
   const buyMarketItem = item => {
     if (item.available === false) return; // 実装準備中のアイテムは購入不可
     if (isMarketItemOwned(item)) return;
-    const usesGold = item.type === 'disc' || item.type === 'breeder' || item.type === 'item';
+    const usesGold = item.type === 'disc' || item.type === 'assist' || item.type === 'item';
     if (usesGold) {
       if (gold < item.cost) return;
       setGold(prev => {
@@ -14481,13 +14481,13 @@ function MonsterHeroGame() {
           rosters
         });
       }
-    } else if (item.type === 'breeder') {
+    } else if (item.type === 'assist') {
       setUnlockedTeachingIds(prev => {
         const next = [...prev, item.id];
         storeSet('mh_unlocked_teachings', next, false);
         return next;
       });
-      // 編成はブリーダーカード6枚固定。既に6枚埋まっている場合は自動追加せず、編成画面で手動入れ替えしてもらう
+      // 編成はアシストカード6枚固定。既に6枚埋まっている場合は自動追加せず、編成画面で手動入れ替えしてもらう
       setTeachingRosterIds(prev => {
         if (prev.length >= STARTER_TEACHING_IDS.length) return prev;
         const next = [...prev, item.id];
@@ -14513,8 +14513,8 @@ function MonsterHeroGame() {
     saveMissionProgress('market');
   };
 
-  // 編成画面: 解放済みモンスター/ブリーダーカードの中から、次回以降の周回で使う候補を仮選択する。
-  // 仮選択は自由に増減でき、「決定」を押してモンスター8体・ブリーダーカード6枚ちょうどの時だけ確定保存する。
+  // 編成画面: 解放済みモンスター/アシストカードの中から、次回以降の周回で使う候補を仮選択する。
+  // 仮選択は自由に増減でき、「決定」を押してモンスター8体・アシストカード6枚ちょうどの時だけ確定保存する。
   // モンスターは同じ種(baseId)につき1枠のみ選べるため、プレーン種・マスモンを問わず同じ種の
   // 別の候補を選ぶと、既に選択中だった同じ種の候補は自動的に選択解除される
   const toggleDraftMonster = entry => {
@@ -14546,8 +14546,8 @@ function MonsterHeroGame() {
     setTeachingRosterIds(draftTeachingRoster);
     storeSet('mh_teaching_roster', draftTeachingRoster, false);
     addAssistantBond('partySet');
-    // 決定したらM/B管理のブリーダーカードタブへ戻る(古い編成メニューは経由しない)
-    setManagementTab('breeder');
+    // 決定したらM/B管理のアシストカードタブへ戻る(古い編成メニューは経由しない)
+    setManagementTab('assist');
     setGameState('MB_MANAGEMENT');
   };
 
@@ -17069,14 +17069,14 @@ function MonsterHeroGame() {
   };
 
   // 同じターンに2枚目以降で使ったカードは効果が半減する(ハムの連続攻撃で複数枚使うときの調整)。
-  // ブリーダーカード(教えカード)だけは対象外で、何枚目に使っても効果は変わらない。
+  // アシストカード(教えカード)だけは対象外で、何枚目に使っても効果は変わらない。
   // 「何枚目か」の数え方をここに集約し、画面のダメージ予測とprocessTurnの実処理がずれないようにする。
-  const isBreederCard = card => !!card && TEACHING_CARDS.some(t => t.id === card.id);
+  const isAssistCard = card => !!card && TEACHING_CARDS.some(t => t.id === card.id);
   // ガードカードの重み(弱ガードは半分)。軽減量の合計表示と実処理で同じ式を使う。
   const guardCardWeight = card => card?.type === 'guard' || card?.subType === 'heal_guard_meloso' ? 1 : card?.type === 'weak_guard' ? 0.5 : 0;
   const cardEffectMultiplier = (card, halved = false) => {
     const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-    return isBreederCard(card) && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'breederCardEffect') : halved ? 0.5 : 1;
+    return isAssistCard(card) && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
   };
   // flat は互換用（現行定義は0）。実質は「実効丈夫さ × 倍率の合計」。
   const guardValueOf = (flat, mult) => flat > 0 || mult > 0 ? Math.floor(flat + effectiveDef * mult) : 0;
@@ -17135,7 +17135,7 @@ function MonsterHeroGame() {
     const perCard = {};
     selectedCards.forEach(idx => {
       const card = hand[idx];
-      const isPenalty = !isBreederCard(card);
+      const isPenalty = !isAssistCard(card);
       const halved = isPenalty && penaltyCnt > 0;
       perCard[idx] = boostsForCardDamage({
         oryo,
@@ -17155,7 +17155,7 @@ function MonsterHeroGame() {
       if (isPenalty) penaltyCnt++;
     });
     const pendingCard = excludeIdx != null ? hand[excludeIdx] : null;
-    const pendingHalved = !!pendingCard && !isBreederCard(pendingCard) && penaltyCnt > 0;
+    const pendingHalved = !!pendingCard && !isAssistCard(pendingCard) && penaltyCnt > 0;
     return {
       perCard,
       final: {
@@ -17588,7 +17588,7 @@ function MonsterHeroGame() {
     const usedCards = usedCardEntries.map(e => e.card);
     // 練習中は「何をしたか」を覚えておく。ガードを使ったら次へ、のように操作で進めるために使う。
     // 合図を出すのはターンがすべて終わってから(このあとの敵の行動まで見せてから進める)
-    const tutorialKinds = battleScenarioRef.current ? usedCards.map(c => isBreederCard(c) ? 'teaching' : c.type) : [];
+    const tutorialKinds = battleScenarioRef.current ? usedCards.map(c => isAssistCard(c) ? 'teaching' : c.type) : [];
     const totalGuts = usedCards.reduce((a, c) => a + getCardGuts(c), 0);
     if (guts < totalGuts) return;
     // Fallback slot for cards without assignment (buffs etc.)
@@ -17615,23 +17615,23 @@ function MonsterHeroGame() {
 
     // カットイン廃止: 技名はスロット上にインライン表示する（実行ループ内で行う）
 
-    let penaltyCardCount = 0; // ブリーダーカード以外を何枚使ったか(2枚目以降は効果半減)
+    let penaltyCardCount = 0; // アシストカード以外を何枚使ったか(2枚目以降は効果半減)
     for (const entry of usedCardEntries) {
       const card = entry.card;
       const totalHealBeforeCard = totalHeal;
-      // 2枚目以降のカードは効果が半減する。ブリーダーカードは対象外で、枚数にも数えない。
-      const isBreeder = isBreederCard(card);
-      // 助手のブリーダーカード(みゅあ・きき)を実際に切ったぶん。
+      // 2枚目以降のカードは効果が半減する。アシストカードは対象外で、枚数にも数えない。
+      const isBreeder = isAssistCard(card);
+      // 助手のアシストカード(みゅあ・きき)を実際に切ったぶん。
       // 手札にあるだけ・編成しているだけでは増えず、使ったここでだけ数える。
       // 増えるのは、いま選んでいる助手ではなく「そのカード本人」の仲良し度
       if (isBreeder && !debugBattleRef.current) {
-        const cardAssistant = assistantIdOfBreederCard(card.id);
+        const cardAssistant = assistantIdOfAssistCard(card.id);
         if (cardAssistant) addAssistantBondFor(cardAssistant, 'assistantCardUse');
       }
       const halved = !isBreeder && penaltyCardCount > 0;
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
       const specialRuleDifficulty = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
-      const effMul = isBreeder && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'breederCardEffect') : halved ? 0.5 : 1;
+      const effMul = isBreeder && specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty, 'assistCardEffect') : halved ? 0.5 : 1;
       if (!isBreeder) penaltyCardCount++;
       if (halved) addPopup('2枚目以降 効果半減', 'hero', 'text-slate-300 text-sm font-black');
       const slotIdx = entry.slotIdx != null ? entry.slotIdx : defaultSlot;
@@ -18677,7 +18677,7 @@ function MonsterHeroGame() {
     if (w === 1 && !forcedEnemyKey) {
       addAssistantBond('battle');
       addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode));
-      // 助手のブリーダーカードを編成して挑んだぶん。編成を保存しただけでは増えず、
+      // 助手のアシストカードを編成して挑んだぶん。編成を保存しただけでは増えず、
       // 実際にバトルを始めたここでだけ数える(付け外しをくり返して稼げないようにするため)。
       // デバッグ戦は報酬も記録も残さないので、ここでも数えない
       if (!debugBattleRef.current) grantEquippedAssistantCardBond('assistantCardEquip');
@@ -18898,7 +18898,7 @@ function MonsterHeroGame() {
   // 説明中(next)から光らせておける(どこを押すのかを読みながら確かめられる)
   const battleTutorialNeedCard = battleTutorial ? battleTutorial.needCard || null : null;
   const battleTutorialCardTarget = battleTutorialNeedCard || (battleTutorialNeed && battleTutorialNeed !== 'emergency' && battleTutorialNeed !== 'skillPicker' ? battleTutorialNeed : null);
-  const battleTutorialCardKind = card => isBreederCard(card) ? 'teaching' : card.type;
+  const battleTutorialCardKind = card => isAssistCard(card) ? 'teaching' : card.type;
   const battleTutorialCardAllowed = card => {
     if (!battleTutorialNeed || !card) return true;
     if (battleTutorialNeed === 'emergency') return false; // 緊急回復の番はカードを使わせない
@@ -19068,7 +19068,7 @@ function MonsterHeroGame() {
       setAtk(m.baseAtk);
       setDef(m.baseDef);
       // プロモードは、ここで先に供モンの候補5体を選んでもらう。
-      // 選び終わったらふだんと同じブリーダーカードの画面へ合流する
+      // 選び終わったらふだんと同じアシストカードの画面へ合流する
       // ここで早く返すので、関数の最後にある setCurrentPickingMon(null) を通らない。
       // 消し忘れると、選んだ勇者モンの詳細が開いたまま残り、
       // WAVE 2の供モン合流で「勝手に勇者モンが選ばれている」ように見えてしまう
@@ -19466,7 +19466,7 @@ function MonsterHeroGame() {
     return rows;
   };
 
-  // ブリーダーカードの効果説明。表記は全カードで次のルールに統一している。
+  // アシストカードの効果説明。表記は全カードで次のルールに統一している。
   //  ・区切りは中黒「・」だけを使う(以前は「＆」「＋」「/」「()」が混在していた)
   //  ・増減は「アップ」「ダウン」と書く(以前は「UP」「DOWN」「+」が混在していた)
   //  ・ステータス名は画面表記に合わせて「ライフ」「ガッツ」「攻撃」に統一する
@@ -21449,9 +21449,9 @@ function MonsterHeroGame() {
       onClick: () => setManagementTab('monster'),
       className: `min-h-[48px] rounded-xl font-black ${managementTab === 'monster' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400'}`
     }, "\u30E2\u30F3\u30B9\u30BF\u30FC"), /*#__PURE__*/React.createElement("button", {
-      onClick: () => setManagementTab('breeder'),
-      className: `min-h-[48px] rounded-xl font-black ${managementTab === 'breeder' ? 'bg-purple-600 text-white' : 'bg-slate-900 text-slate-400'}`
-    }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9")), /*#__PURE__*/React.createElement("div", {
+      onClick: () => setManagementTab('assist'),
+      className: `min-h-[48px] rounded-xl font-black ${managementTab === 'assist' ? 'bg-purple-600 text-white' : 'bg-slate-900 text-slate-400'}`
+    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9")), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-md mx-auto space-y-3 overflow-y-auto mh-scroll"
     }, managementTab === 'monster' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
       onClick: () => setGameState('OWNED_MONSTERS'),
@@ -21478,7 +21478,7 @@ function MonsterHeroGame() {
         setGameState('ROSTER');
       },
       className: "mh-management-link"
-    }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u7DE8\u6210"))), gameState === 'TEMPLE' && /*#__PURE__*/React.createElement("div", {
+    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u7DE8\u6210"))), gameState === 'TEMPLE' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
@@ -23155,7 +23155,7 @@ function MonsterHeroGame() {
           className: "block text-[8px] font-black text-amber-300"
         }, "\u26A0 EXTREME\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("b", {
           className: "block text-[11px] text-white whitespace-nowrap"
-        }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u52B9\u679C 50%")) : /*#__PURE__*/React.createElement("div", {
+        }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u52B9\u679C 50%")) : /*#__PURE__*/React.createElement("div", {
           "data-extreme-special-rules": setting.id,
           className: `${setting.id === 'ULTIMATE' ? 'mt-1.5 h-[62px]' : 'mt-1 h-[51px]'} shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5`
         }, /*#__PURE__*/React.createElement("small", {
@@ -25219,8 +25219,8 @@ function MonsterHeroGame() {
       key: 'disc',
       label: '円盤石'
     }, {
-      key: 'breeder',
-      label: 'ブリーダー'
+      key: 'assist',
+      label: 'アシスト'
     }, {
       key: 'item',
       label: 'アイテム'
@@ -25237,11 +25237,11 @@ function MonsterHeroGame() {
     }, BREEDER_MARKET_ITEMS.filter(item => item.type === marketTab && item.shop !== false).map(item => {
       const comingSoon = item.available === false;
       const owned = !comingSoon && isMarketItemOwned(item);
-      const usesGold = item.type === 'disc' || item.type === 'breeder' || item.type === 'item';
+      const usesGold = item.type === 'disc' || item.type === 'assist' || item.type === 'item';
       const balance = usesGold ? gold : breederPoints;
       const canBuy = !comingSoon && !owned && balance >= item.cost;
       const detailMon = item.type === 'disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
-      const detailTeaching = item.type === 'breeder' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
+      const detailTeaching = item.type === 'assist' ? TEACHING_CARDS.find(t => t.id === item.id) : null;
       return (
         /*#__PURE__*/
         // 名前・所持数・詳細ボタンは商品によって有無や行数が変わるため、
@@ -25259,7 +25259,7 @@ function MonsterHeroGame() {
           id: item.id,
           alt: item.name,
           className: "w-full h-full"
-        }) : item.type === 'breeder' && BREEDER_CARD_ICON_STYLES[item.id] ? /*#__PURE__*/React.createElement(BreederCardIcon, {
+        }) : item.type === 'assist' && ASSIST_CARD_ICON_STYLES[item.id] ? /*#__PURE__*/React.createElement(AssistCardIcon, {
           icon: item.icon,
           cardId: item.id,
           className: "w-full h-full"
@@ -25322,7 +25322,7 @@ function MonsterHeroGame() {
       className: "flex items-center gap-2 mb-2 shrink-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => {
-        setManagementTab(rosterTab === 'monster' ? 'monster' : 'breeder');
+        setManagementTab(rosterTab === 'monster' ? 'monster' : 'assist');
         setGameState('MB_MANAGEMENT');
       },
       className: "p-3 text-slate-400 active:scale-90"
@@ -25330,7 +25330,7 @@ function MonsterHeroGame() {
       size: 20
     })), /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black italic text-indigo-400 uppercase tracking-widest"
-    }, rosterTab === 'monster' ? 'モンスター編成' : 'ブリーダーカード編成')), /*#__PURE__*/React.createElement("div", {
+    }, rosterTab === 'monster' ? 'モンスター編成' : 'アシストカード編成')), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2"
     }, /*#__PURE__*/React.createElement(AssistantBubble, {
       scene: "roster",
@@ -28481,7 +28481,7 @@ function MonsterHeroGame() {
         previewPenaltyCnt = 0;
       selectedCards.forEach(idx => {
         const card = hand[idx];
-        const isPenalty = !isBreederCard(card);
+        const isPenalty = !isAssistCard(card);
         const halved = isPenalty && previewPenaltyCnt > 0;
         const weight = guardCardWeight(card);
         if (weight > 0) {
@@ -28682,7 +28682,7 @@ function MonsterHeroGame() {
       // Existing total = sum of already-assigned attack cards.
       // If a card is pending and validly assignable somewhere, also compute the projected new total.
       // committed (already assigned) attack cards in selection order
-      // 2枚目以降のカードは効果半減。processTurnと同じく「ブリーダーカード以外の枚数」で数える。
+      // 2枚目以降のカードは効果半減。processTurnと同じく「アシストカード以外の枚数」で数える。
       // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので枚数に数えない。
       // ここを数えてしまうと、1枚目なのに自分自身を2枚目とみなして半減表示になる。
       const pendingCardObj = pendingCard != null ? hand[pendingCard] : dragState && dragState.active ? dragState.card : null;
@@ -28699,7 +28699,7 @@ function MonsterHeroGame() {
         if (idx === pendingIdx) return;
         const card = hand[idx];
         const slotIdx = cardAssignments[idx];
-        const isPenalty = !isBreederCard(card);
+        const isPenalty = !isAssistCard(card);
         const halved = isPenalty && committedPenaltyCnt > 0;
         const b = boosts.perCard[idx] || {
           oryo: 0,
@@ -28721,7 +28721,7 @@ function MonsterHeroGame() {
       const committedGuard = guardValueOf(guardFlat, guardMult);
       // 保留カードがガードなら、置いたあとの合計軽減も出す
       const pendingGuardWeight = guardCardWeight(pendingCardObj);
-      const pendingGuardHalved = pendingGuardWeight > 0 && !isBreederCard(pendingCardObj) && committedPenaltyCnt > 0;
+      const pendingGuardHalved = pendingGuardWeight > 0 && !isAssistCard(pendingCardObj) && committedPenaltyCnt > 0;
       const pendingGuardEffect = cardEffectMultiplier(pendingCardObj, pendingGuardHalved);
       const projectedGuard = pendingGuardWeight > 0 ? guardValueOf(guardFlat + GUARD_EVOLUTION[guardLevel].flat * pendingGuardWeight * pendingGuardEffect, guardMult + GUARD_EVOLUTION[guardLevel].mult * pendingGuardWeight * pendingGuardEffect) : committedGuard;
       const pendingIsAtk = isAttackCard(pendingCardObj);
@@ -28738,7 +28738,7 @@ function MonsterHeroGame() {
           if (assignedCount >= maxUses) continue;
           if (pendingCardObj.type === 'unique' && pendingCardObj.ownerSlotIdx !== i) continue;
           pendingValidSlot = i;
-          const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, !isBreederCard(pendingCardObj) && committedPenaltyCnt > 0);
+          const baseDmg = getDmg(pendingCardObj, i, s, boosts.forPending.oryo, boosts.forPending.dmgMod, !isAssistCard(pendingCardObj) && committedPenaltyCnt > 0);
           pendingAdd = getAttackPredictedDmg(pendingCardObj, s, baseDmg, boosts.forPending.combo);
           break;
         }
@@ -28816,7 +28816,7 @@ function MonsterHeroGame() {
         canAssign = assignedCount < maxUses;
         if (pendingCardObj.type === 'unique') canAssign = canAssign && pendingCardObj.ownerSlotIdx === i;
       }
-      // 選択順に「ブリーダーカード以外」を数え、どのカードが2枚目以降(効果半減)かを出す。
+      // 選択順に「アシストカード以外」を数え、どのカードが2枚目以降(効果半減)かを出す。
       // 保留中のカードはまだ使っていないので数えない。
       // 保留中のカードは自分を数えず、「次に使う1枚」として半減かどうかを決める。
       // (数えてしまうと1枚目でも半減、除外しっぱなしだと2枚目でも全開の表示になる)
@@ -28826,11 +28826,11 @@ function MonsterHeroGame() {
         selectedCards.forEach(idx => {
           if (idx === pendingIdx) return;
           const c = hand[idx];
-          const p = !isBreederCard(c);
+          const p = !isAssistCard(c);
           halvedByIdx[idx] = p && n > 0;
           if (p) n++;
         });
-        if (pendingIdx != null && selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx] = !isBreederCard(hand[pendingIdx]) && n > 0;
+        if (pendingIdx != null && selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx] = !isAssistCard(hand[pendingIdx]) && n > 0;
       }
       // Preview damage:
       // - if a card is pending assignment, show what THIS card would do on this monster
@@ -28843,23 +28843,23 @@ function MonsterHeroGame() {
       let isPendingPreview = false;
       let isPendingHalved = false;
       if (s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)) {
-        // 既に選んだ「ブリーダーカード以外」の枚数を数え、保留カードはその次の1枚として扱う
+        // 既に選んだ「アシストカード以外」の枚数を数え、保留カードはその次の1枚として扱う
         let committedPenalty = 0;
         selectedCards.forEach(idx => {
-          if (idx !== pendingIdx && !isBreederCard(hand[idx])) committedPenalty++;
+          if (idx !== pendingIdx && !isAssistCard(hand[idx])) committedPenalty++;
         });
-        const isSecondOrLater = committedPenalty >= 1 && !isBreederCard(pendingCardObj);
+        const isSecondOrLater = committedPenalty >= 1 && !isAssistCard(pendingCardObj);
         const baseDmg = getDmg(pendingCardObj, i, s, slotBoosts.forPending.oryo, slotBoosts.forPending.dmgMod, isSecondOrLater);
         previewDmg = getAttackPredictedDmg(pendingCardObj, s, baseDmg, slotBoosts.forPending.combo);
         isPendingPreview = true;
         isPendingHalved = isSecondOrLater;
       } else if (s) {
-        // 選択順で「ブリーダーカード以外」を数え、2枚目以降は半減として予測する
+        // 選択順で「アシストカード以外」を数え、2枚目以降は半減として予測する
         let globalPenaltyCnt = 0;
         selectedCards.forEach(idx => {
           if (idx === pendingIdx) return;
           const card = hand[idx];
-          const isPenalty = !isBreederCard(card);
+          const isPenalty = !isAssistCard(card);
           const halved = isPenalty && globalPenaltyCnt > 0;
           if (cardAssignments[idx] === i) {
             const b = slotBoosts.perCard[idx] || {
@@ -29194,7 +29194,7 @@ function MonsterHeroGame() {
       }), curGuts))));
     }))))), marketIconZoom && (() => {
       const item = marketIconZoom;
-      const round = item.type === 'icon' || item.type === 'breeder';
+      const round = item.type === 'icon' || item.type === 'assist';
       return /*#__PURE__*/React.createElement("div", {
         onClick: () => setMarketIconZoom(null),
         className: "fixed inset-0 flex items-center justify-center p-6",
@@ -29217,7 +29217,7 @@ function MonsterHeroGame() {
         id: item.id,
         alt: item.name,
         className: "w-full h-full"
-      }) : item.type === 'breeder' && BREEDER_CARD_ICON_STYLES[item.id] ? /*#__PURE__*/React.createElement(BreederCardIcon, {
+      }) : item.type === 'assist' && ASSIST_CARD_ICON_STYLES[item.id] ? /*#__PURE__*/React.createElement(AssistCardIcon, {
         icon: item.icon,
         cardId: item.id,
         className: "w-full h-full"
@@ -30178,7 +30178,7 @@ function MonsterHeroGame() {
       className: "mb-4 text-center shrink-0"
     }, /*#__PURE__*/React.createElement("h2", {
       className: "text-xl font-black text-purple-400 italic"
-    }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u30AB\u30FC\u30C9\u306E\u7D99\u627F\u30FB\u5F37\u5316"), /*#__PURE__*/React.createElement("p", {
+    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u306E\u7D99\u627F\u30FB\u5F37\u5316"), /*#__PURE__*/React.createElement("p", {
       className: "text-[9px] text-slate-400 uppercase mt-1 tracking-widest"
     }, "Select Breeder Card")), /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-sm mb-2"
@@ -32416,7 +32416,7 @@ function MonsterHeroGame() {
       selectedCards.forEach(idx => {
         if (idx === pendingCard) return;
         const c = hand[idx];
-        const p = !isBreederCard(c);
+        const p = !isAssistCard(c);
         if (idx === fIdx) {
           halved = p && n > 0;
           found = true;

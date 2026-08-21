@@ -64,7 +64,7 @@ check('検算に使う数値を実装から読めている',
 const hero = d.ALL_PLAYER_MONSTERS[sc.heroId];
 check('勇者モンが実在する', !!hero, `${sc.heroId}`);
 check('敵が実在する', !!d.ENEMY_DATA[sc.enemyKey], `${sc.enemyKey}`);
-check('ブリーダーカードが実在する', d.TEACHING_CARDS.some(t => t.id === sc.teachingId), `${sc.teachingId}`);
+check('アシストカードが実在する', d.TEACHING_CARDS.some(t => t.id === sc.teachingId), `${sc.teachingId}`);
 check('置く距離が4枠の中にある', Number.isInteger(sc.slotIndex) && sc.slotIndex >= 0 && sc.slotIndex < 4, `${sc.slotIndex}`);
 check('敵の初期距離が4枠の中にある', Number.isInteger(sc.enemyDist) && sc.enemyDist >= 0 && sc.enemyDist < 4, `${sc.enemyDist}`);
 check('はじめは勇者モンと敵が同じ距離', sc.slotIndex === sc.enemyDist);

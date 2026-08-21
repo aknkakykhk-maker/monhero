@@ -1,6 +1,6 @@
-// ブリーダーカード「メロソ」の定義・実処理・次ターン予約の流れを確認する。
+// アシストカード「メロソ」の定義・実処理・次ターン予約の流れを確認する。
 //
-//   node monster/meloso-breeder-check.js
+//   node monster/meloso-assist-check.js
 //
 // 【このファイルの読み方】
 // 前半は game-system.jsx / breeder.js の実コードに対する照合。
@@ -22,7 +22,7 @@ assert(/id:'meloso',[^\n]*step:0[,\s]/.test(breeder), 'メロソに step が無�
 assert(breeder.includes(`icon:MELOPANMAN_ICON`) && breeder.includes(`subType:'heal_guard_meloso'`));
 const starter = breeder.match(/const STARTER_TEACHING_IDS = \[([^\n]+)\]/)[1];
 assert(!starter.includes('meloso') && starter.split(',').length === 6);
-assert(breeder.includes(`id:'meloso', name:"ブリーダーカード「メロソ」", type:'breeder', icon:MELOPANMAN_ICON, cost:1500`));
+assert(breeder.includes(`id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:1500`));
 
 // ---- 実処理 ----
 assert(game.includes(`liveEffectiveMaxHp()*0.3*effMul`) && game.includes(`liveEffectiveMaxGuts()*0.3*effMul`));
@@ -143,7 +143,7 @@ const advanceCombatTurn = (state, { guard=0 }={}) => {
     nextTurnBuffs:{},
   };
 };
-// effMul はブリーダーカード効果倍率(EXTREMEなら0.5、それ以外は1)
+// effMul はアシストカード効果倍率(EXTREMEなら0.5、それ以外は1)
 const useMeloso = (state, { level, usedCardCount, guard=0, effMul=1 }) => ({
   ...state,
   hp:Math.min(state.maxHp,state.hp+Math.floor(state.maxHp*0.3*effMul)),
@@ -199,7 +199,7 @@ assert.strictEqual(lv3.turnBuffs.takenDamageMult,0.5); // 軽減はこのター�
 lv3=startPlayerTurn({...lv3,hp:60,guts:70});
 assert.deepStrictEqual([lv3.hp,lv3.guts],[60,70]); // 全回復は1回だけ
 
-// EXTREME(ブリーダーカード効果倍率0.5): 回復・軽減・予約のすべてが半分になる
+// EXTREME(アシストカード効果倍率0.5): 回復・軽減・予約のすべてが半分になる
 const ex=useMeloso({...base,hp:20,guts:20},{level:2,usedCardCount:3,guard:0,effMul:0.5});
 assert.deepStrictEqual([ex.hp,ex.guts],[35,35]); // 30%ではなく15%回復
 assert.strictEqual(ex.nextTurnBuffs.takenDamageMult,0.75); // 50%減ではなく25%減

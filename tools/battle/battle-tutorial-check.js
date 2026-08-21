@@ -79,7 +79,7 @@ const BATTLE_TOPICS = [
   ['敵の解析', /解析/],
   ['自分のステータス', /ステータス/],
   ['距離の枠', /距離枠|同じ距離/],
-  ['攻撃・ガード・ブリーダーカード', /ガードカード/],
+  ['攻撃・ガード・アシストカード', /ガードカード/],
   ['2枚目からの半減', /半減|半分/],
   ['使える枚数', /枚数/],
   ['山札', /山札/],
@@ -250,7 +250,7 @@ check('つぎへとスキップ(やめる)がある',
 check('置く距離は押せる枠だけ光らせる',
   has("disabled:opacity-20${scenarioPicksSlot(i)?battleTutorialSpotClass('slots'):''}")
     && !has("max-w-xs${battleTutorialSpotClass('slots')}"));
-check('ブリーダーカードは押せるカードだけ光らせる',
+check('アシストカードは押せるカードだけ光らせる',
   has("disabled:opacity-20${scenarioPicksTeaching(t.id)?battleTutorialSpotClass('teachings'):''}")
     && !has("content-center${battleTutorialSpotClass('teachings')}"));
 check('手札は使わせたい種類だけ押せる',

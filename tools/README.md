@@ -114,7 +114,7 @@ node tools/build.js --check
 | `node battle/unique-range-check.js` | 固有技系統IDによる重複補正と、距離撃の威力判定・移動先・優先順を確認する。 |
 | `node battle/unique-effect-check.js` | 固有技の「効果の説明文」と実際の実装が食い違っていないかを見張る。 |
 | `node battle/dist-aptitude-check.js` | 間合い適性が距離ごとの補正値(%)として扱われ、編成全員ぶんが置いた距離に関係なく4距離すべてへ加算されるか確認する。 |
-| `node battle/balance-second-card-check.js` | 同じターンの2枚目以降のカードが効果半減になるか(ブリーダーカードは対象外)と、かどみうむの効果量・説明文を確認する。 |
+| `node battle/balance-second-card-check.js` | 同じターンの2枚目以降のカードが効果半減になるか(アシストカードは対象外)と、かどみうむの効果量・説明文を確認する。 |
 | `node battle/card-icon-check.js` | カードやアイテムの `icon` 欄が、画像と絵文字へ正しく振り分けられているかを確認する。 |
 | `node battle/debug-battle-check.js` | 隠しデバッグ戦の敵データ再利用、通常記録からの分離、BGM・終了導線・フラグ解除を静的に確認する。 |
 
@@ -123,7 +123,7 @@ node tools/build.js --check
 | コマンド | 内容 |
 | --- | --- |
 | `node mode/difficulty-item-check.js` | 新難易度(Grand Master/Hell/Legend)の表示と色、絆経験値チケットのまとめ使いを確認する。 |
-| `node mode/extreme-challenge-check.js` | 極限チャレンジ(正式版)を確認する。EXTREMEの倍率と未実装段階、Grand Master以上クリアの解放条件、ブリーダーカード50%がEXTREME固有ルールに閉じていること、正式プレイは報酬・クリア記録を保存しデバッグプレイでは保存しないこと、既存の保存キーと全国ランキングへ混ぜていないことを見る。 |
+| `node mode/extreme-challenge-check.js` | 極限チャレンジ(正式版)を確認する。EXTREMEの倍率と未実装段階、Grand Master以上クリアの解放条件、アシストカード50%がEXTREME固有ルールに閉じていること、正式プレイは報酬・クリア記録を保存しデバッグプレイでは保存しないこと、既存の保存キーと全国ランキングへ混ぜていないことを見る。 |
 | `node mode/extreme-reward-check.js` | 極限チャレンジの数値を本番の定義で計算して確かめる。EXTREMEの敵×13と報酬倍率、通常難易度(Beginner〜Legend)の敵性能に回帰がないこと(powerOverride=nullを0と取り違えない)、解放判定の境界を見る。 |
 | `node mode/extreme-browser-check.js` | 極限チャレンジを実ブラウザで遊んで確認する。未解放時のロック表示、Grand Masterクリア後の解放、EXTREMEを押してバトルが始まること、敵の強さが×13、極限ルール発動の表示、通常難易度に影響が無いこと、正式公開の初回案内が1回だけ出ることを見る。 |
 | `node mode/nightmare-rules-check.js` | NIGHTMAREのWAVE後強化50%、自動回復率・距離適性のプラス50%／マイナス200%を代表値で確認し、WAVE後距離強化との分離、EXTREMEと通常モードへの非適用も確認する。 |
@@ -180,7 +180,7 @@ node tools/build.js --check
 | `node masu/legacy-masu-migration-diagnosis-check.js` | 第6B-3の個体全体診断について、能力・間合いの独立分類、SAFE_EXACT/PARTIAL/AMBIGUOUS/BLOCKED/ALREADY_MODERN、歴代ベースからの個体差と能力変化量、間合い・既存ポイントの保全、総合力再計算、入力非変更、保存処理不在を確認する。 |
 | `node masu/safe-masu-baseline-migration-check.js` | 第6Cの実移行について、SAFE_EXACTだけへの診断候補追加、全非対象分類の無変更、保存直前の個体差・基礎値差ぶんの能力変化・4距離・現行式の総合力・ポイント・旧フィールド・再診断、冪等性、歴代ベース、34凸・35凸、旧保存への再適用を確認する。 |
 
-### モンスター個別・ブリーダーカード・マーケット
+### モンスター個別・アシストカード・マーケット
 
 | コマンド | 内容 |
 | --- | --- |
@@ -188,8 +188,8 @@ node tools/build.js --check
 | `node monster/snegurochka-check.js` | スネグーラチカ系3体の基礎能力・適性・合流値、絶氷の楔の状態と距離条件、自動ガッツ回復率の加算と上限(勇者限定)、特性説明を確認する。 |
 | `node monster/mermaid-monsters-check.js` | ウンディーネ／ヤオビクニ(スネグーラチカと同系統の人魚)を確認する。ステータス・合流ボーナス・距離適性・通常技9段階・固有技9段階・専用モーション・絶氷の楔と氷海の支配者の共有、マーケット6商品、アイコンを画像複製ではなくscale/x/yで合わせていること、3色染色の部位、スネグーラチカに影響が無いことを見る。 |
 | `node monster/mermaid-browser-check.js` | ウンディーネ／ヤオビクニを実ブラウザで確認する。マーケットのアイコン／円盤石タブに6商品が並ぶこと、4つのブリーダーアイコンと2つの円盤石を実際に購入できること、円盤石でモンスターが解放されベースモン一覧に出ること、購入したアイコンがプロフィール選択に並び設定でき、再読み込みしても残ることを見る(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
-| `node monster/meloso-breeder-check.js` | メロソのカード定義、マーケット解放、6枠維持、回復・ガード・枚数条件・次ターン予約・予測共通化を確認する。 |
-| `node monster/kiki-breeder-check.js` | ききのブリーダーカード(応援／本気／全力全開)の定義と種別を確認する。 |
+| `node monster/meloso-assist-check.js` | メロソのカード定義、マーケット解放、6枠維持、回復・ガード・枚数条件・次ターン予約・予測共通化を確認する。 |
+| `node monster/kiki-assist-check.js` | ききのアシストカード(応援／本気／全力全開)の定義と種別を確認する。 |
 | `node monster/market-icon-check.js` | マーケットのアイコン商品を確認する。 |
 | `node monster/monster-art-fit-check.js` | ウンディーネ・ヤオビクニ(縦長2:3の立ち絵)が、丸枠・正方形枠の一覧で頭のてっぺんや尾びれを欠かさず表示できているかを確認する。 |
 
@@ -224,7 +224,7 @@ node tools/build.js --check
 | コマンド | 内容 |
 | --- | --- |
 | `node assistant-check.js` | 助手(ナビゲーター)システムを確認する。助手の定義・表情画像・場面(scene)の登録・吹き出しの共通コンポーネントに加え、JSXで使うsceneが実在すること、sceneのhelp参照先が実在すること、1画面につき5種類以上のセリフがあること、実際に引いて直前と同じものが出ないこと、条件つきのセリフが通常より優先されること、説明書のような言い回しや語尾の偏りが無いことを見る。 |
-| `node assistant-bond-check.js` | 助手との仲良し度を確認する。段階と呼び方、どのLvでも話すことが尽きないか、行動ごとの獲得量と1日上限が指定どおりか(表で1つずつ突き合わせる)、1日の合計上限が行動ごとの上限の合計へ自動追随しているか、Lvアップに必要な累積量を変えていないか、みゅあとききの保存が混ざらないかを見る。**助手のブリーダーカード分は本体の `grantEquippedAssistantCardBond` / `addAssistantBondFor` を取り出して実際に走らせ**、みゅあカード→みゅあ・ききカード→きき・選択中の助手が別でも本人へ入ること、両方編成なら両方へ入ること、編成保存だけでは増えず実際のバトル開始とカード使用でだけ数えること、選んでいない助手のLvアップ通知を出さないことまで確認する。 |
+| `node assistant-bond-check.js` | 助手との仲良し度を確認する。段階と呼び方、どのLvでも話すことが尽きないか、行動ごとの獲得量と1日上限が指定どおりか(表で1つずつ突き合わせる)、1日の合計上限が行動ごとの上限の合計へ自動追随しているか、Lvアップに必要な累積量を変えていないか、みゅあとききの保存が混ざらないかを見る。**助手のアシストカード分は本体の `grantEquippedAssistantCardBond` / `addAssistantBondFor` を取り出して実際に走らせ**、みゅあカード→みゅあ・ききカード→きき・選択中の助手が別でも本人へ入ること、両方編成なら両方へ入ること、編成保存だけでは増えず実際のバトル開始とカード使用でだけ数えること、選んでいない助手のLvアップ通知を出さないことまで確認する。 |
 | `node assistant/assistant-update-notice-check.js` | 正式アップデートの初回助手案内について、通知ID、データ形式、既読の正規化、新規プレイヤー保護、終了時保存、遷移先、デバッグ通知の隔離を確認する。 |
 | `node assistant-face-check.js` | 助手の顔アイコンが「顔が真ん中」に切り出せているかを見る。丸く切って使う場所が多いため、中央からずれると欠ける。表情画像を差し替えたら流す。 |
 | `node make-assistant-faces.js` | 助手の表情画像(`monster-hero/images/assistant/myua_*.PNG`)から、吹き出し用の小さい顔アイコンを `images/assistant/face/` へ書き出す。元絵は1枚1.5MBあるので、表情画像を差し替え・追加したら必ず流し直す。 |
@@ -328,7 +328,7 @@ monster-hero/                 ★ここに置いたものはすべて配信さ�
     images/                   立ち絵・アイコンの置き場所を書いたパス表(images-ally.js / images-enemy.js)
     ally-monsters.js          味方モンスターの定義
     enemy-monsters.js         敵モンスターの定義
-    breeder.js                ブリーダーカード・マーケット・ブリーダー用の画像
+    breeder.js                アシストカード・マーケット・ブリーダー用の画像
     skills.js                 技・ガード・カードの色定義
     assistants.js             助手(みゅあ・きき)の定義と場面別のセリフ
     help.js                   ヘルプ本文
@@ -349,7 +349,7 @@ tools/                        開発用の検証スクリプト(配信されな�
   mode/                       難易度とモード(13本)
   run/                        ラン中の育成・報酬・リザルト(10本)
   masu/                       マスモンの育成・神殿・保存形式(23本)
-  monster/                    モンスター個別・ブリーダーカード(8本)
+  monster/                    モンスター個別・アシストカード(8本)
   ranking/                    ランキング(21本)
   assistant/                  助手(3本)
   audio/                      音まわり(6本)

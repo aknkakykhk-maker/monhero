@@ -48,7 +48,7 @@ for (const [def,value] of [[800,5576],[900,6273],[1000,6970],[1200,8364]]) {
 const buffed=resolved({attack:2000,baseDef:400,defPct:.25,weights:[{}]});
 assert.deepStrictEqual([buffed.def,buffed.level,buffed.guard],[500,4,1820]);
 
-// 複数枚・弱ガード・2枚目以降半減。ブリーダーカードは特殊倍率だけを受ける。
+// 複数枚・弱ガード・2枚目以降半減。アシストカードは特殊倍率だけを受ける。
 assert.strictEqual(resolved({attack:9999,baseDef:400,weights:[{},{}]}).guard,2912);
 assert.strictEqual(resolved({attack:9999,baseDef:400,weights:[{weight:.5}]}).guard,728);
 assert.strictEqual(resolved({attack:9999,baseDef:400,weights:[{},{effect:.5}]}).guard,2184);

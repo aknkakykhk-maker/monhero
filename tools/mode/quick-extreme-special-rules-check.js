@@ -4,7 +4,7 @@ const fs = require('fs');
 const assert = require('assert');
 const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
 
-const extreme = { breederCardEffect: 0.5 };
+const extreme = { assistCardEffect: 0.5 };
 const nightmare = { waveEnhancement: 0.5, positiveModifier: 0.5, negativeModifier: 2 };
 const chaos = { damageDealt: 0.5, allyJoinBonus: 0.5, gutsCost: 1.5 };
 const rule = (rules, key) => rules?.[key] ?? 1;
@@ -12,13 +12,13 @@ const specialRuleDifficulty = (runMode, difficultyId, extremeRun=false, extremeD
   const candidate=extremeRun ? extremeDifficultyId : (runMode==='quick' ? difficultyId : null);
   return ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE'].includes(candidate) ? candidate : null;
 };
-assert.strictEqual(rule(extreme, 'breederCardEffect'), 0.5);
+assert.strictEqual(rule(extreme, 'assistCardEffect'), 0.5);
 assert.strictEqual(rule(extreme, 'waveEnhancement'), 1);
-assert.strictEqual(rule(nightmare, 'breederCardEffect'), 1);
+assert.strictEqual(rule(nightmare, 'assistCardEffect'), 1);
 assert.strictEqual(rule(nightmare, 'waveEnhancement'), 0.5);
 assert.strictEqual(rule(nightmare, 'positiveModifier'), 0.5);
 assert.strictEqual(rule(nightmare, 'negativeModifier'), 2);
-assert.strictEqual(rule(null, 'breederCardEffect'), 1);
+assert.strictEqual(rule(null, 'assistCardEffect'), 1);
 assert.strictEqual(rule(chaos, 'damageDealt'), 0.5);
 assert.strictEqual(rule(chaos, 'allyJoinBonus'), 0.5);
 assert.strictEqual(rule(chaos, 'gutsCost'), 1.5);
@@ -32,7 +32,7 @@ assert(source.includes('const specialRuleDifficultyForRun = (runMode, difficulty
 assert(source.includes('const candidate=extremeRun ? extremeDifficultyId : (isQuickMode(runMode) ? difficultyId : null);'));
 assert(source.includes('return hasExtremeSpecialRules(candidate) ? candidate : null;'));
 assert(!source.includes('extremeRunRef.current?extremeSpecialRule(extremeDifficulty'), 'special rule activation must not depend only on extremeRunRef');
-assert(source.includes("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'breederCardEffect')"));
+assert(source.includes("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect')"));
 for (const use of [
   'applyNightmareWaveEnhancement(d*0.001/100,specialRuleDifficulty)',
   'applyNightmareSignedModifier(baseRecoveryDelta,specialRuleDifficulty)',
@@ -47,7 +47,7 @@ assert(source.includes('extremeSpecialRuleLines(setting.id).map'), 'official car
 assert(source.includes('const enemyTurnMultiplier=specialRuleDifficulty===ULTIMATE_SETTING.id?ultimateEnemyTurnMultiplier(totalTurnCount):1;'), 'ULTIMATE enemy turn scaling must use the shared run rule difficulty');
 assert(source.includes('const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&specialRuleDifficulty===ULTIMATE_SETTING.id;'), 'ULTIMATE BREAK reveal must use the shared run rule difficulty');
 assert(!source.includes('ultimateDistanceBreakPendingRef.current&&extremeRunRef.current&&extremeDifficulty===ULTIMATE_SETTING.id'), 'BREAK activation must not depend on the extreme-run flags directly');
-assert(!/QUICK_EXTREME_SETTINGS[\s\S]{0,700}(breederCardEffect|waveEnhancement|positiveModifier|negativeModifier|damageDealt|allyJoinBonus|gutsCost)/.test(source), 'quick settings must not duplicate special-rule values');
+assert(!/QUICK_EXTREME_SETTINGS[\s\S]{0,700}(assistCardEffect|waveEnhancement|positiveModifier|negativeModifier|damageDealt|allyJoinBonus|gutsCost)/.test(source), 'quick settings must not duplicate special-rule values');
 const quickExtremeSettings=source.match(/const QUICK_EXTREME_SETTINGS = Object\.freeze\(\{([\s\S]*?)\n\}\);/)?.[1]||'';
 assert(quickExtremeSettings.includes('ULTIMATE: QUICK_ULTIMATE_SETTING'), 'Quick ULTIMATE must be published after CHAOS');
 assert(source.includes("const QUICK_ULTIMATE_SETTING = Object.freeze({\n  label:'ULTIMATE', power:ULTIMATE_SETTING.power, xp:35, gold:12, psyche:60"), 'Quick ULTIMATE must use power/xp/diamond/psyche 35/35/12/60');
