@@ -59,9 +59,21 @@ check('既存アシストカードの構成を変えていない',
 
 const market = BREEDER_MARKET_ITEMS.find(i => i.id === 'poltz');
 check('マーケットのアシストタブに並んでいる', !!market && market.type === 'assist');
-// 販売価格が未確定のあいだは available:false(「近日追加」)にして、買えない状態で並べる。
-// 価格が決まったら cost を入れて available:false を外す — この検査もそのとき更新する。
-check('販売価格が決まるまでは購入できない(近日追加)', !!market && market.available === false);
+// 販売価格はきき・メロソと同じ1500ダイヤ(2026年8月にユーザーが指定)。
+// available:false(「近日追加」)は外してあるので、ダイヤがあれば購入して解放できる
+check('きき・メロソと同じ1500ダイヤで購入できる',
+  !!market && market.cost === 1500 && market.available !== false,
+  market && `${market.cost}ダイヤ`);
+check('アシストカードの価格がきき・メロソと揃っている',
+  BREEDER_MARKET_ITEMS.filter(i => i.type === 'assist').every(i => i.cost === 1500),
+  BREEDER_MARKET_ITEMS.filter(i => i.type === 'assist').map(i => `${i.id}:${i.cost}`).join(' / '));
+
+// プロフィールアイコンはカードと同じ絵を id を分けて並べる(きき/kiki_icon と同じ作り)。
+// 値段はほかのアイコン商品と同じ1pt
+const iconItem = BREEDER_MARKET_ITEMS.find(i => i.id === 'poltz_icon');
+check('プロフィールアイコンがアイコンタブに並んでいる',
+  !!iconItem && iconItem.type === 'icon' && iconItem.icon === market.icon);
+check('アイコンの値段がほかのアイコン商品と同じ1pt', !!iconItem && iconItem.cost === 1, iconItem && `${iconItem.cost}pt`);
 
 // ---------- ① 発動処理そのものを取り出して動かす ----------
 const grab = (source, startMark, endMark) => {
