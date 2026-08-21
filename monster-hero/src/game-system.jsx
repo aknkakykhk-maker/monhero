@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 09:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 09:51"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -1345,6 +1345,47 @@ const applyEnhancePlanToMasu = (masu, plan) => {
   if (used <= 0) return null;
   return { masu: { ...masu, distApt, ...(distAptBoosts ? { distAptBoosts } : {}), statPoints, distAptPoints: available - used }, used };
 };
+// リセット直前の「ポイントで上げた分」だけを、同じ個体の保存値へ小さなスナップショットとして残す。
+// 絆XP・絆Lv・固有技などは含めず、旧形式の個体でも現行の下書き(plan)へ直せる形にそろえる。
+const buildBondResetAllocationSnapshot = (masu, base) => {
+  if (!masu || !base) return null;
+  const baseApt = base.distAptitude || ['C','C','C','C'];
+  const resolvedApt = resolveMasuDistAptitude(masu, base);
+  const apt = Array.isArray(masu.distAptBoosts)
+    ? [0,1,2,3].map(i => Math.max(0, Math.floor(Number(masu.distAptBoosts[i]) || 0)))
+    : [0,1,2,3].map(i => Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[i]) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])));
+  const stat = Object.fromEntries(Object.keys(STAT_POINT_KEYS).map(key => [key,
+    Math.max(0, Math.ceil((Number(masu.statPoints?.[key]) || 0) / (STAT_POINT_GAIN[key] || 1)))
+  ]));
+  const total = apt.reduce((sum, value) => sum + value, 0) + Object.values(stat).reduce((sum, value) => sum + value, 0);
+  return total > 0 ? { version:1, apt, stat } : null;
+};
+// 保存済みスナップショットを現在の上限と残りptへ安全に収めた下書きへ変換する。
+// 完全に戻せない場合も不正なplanを作らず、omittedをUIで知らせる。
+const buildBondResetRestorePlan = (masu, snapshot) => {
+  if (!masu || !snapshot || snapshot.version !== 1 || !Array.isArray(snapshot.apt) || !snapshot.stat || typeof snapshot.stat !== 'object') return null;
+  let remaining = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
+  const base = ALL_PLAYER_MONSTERS[masu.baseId] || {};
+  const currentApt = resolveMasuDistAptitude(masu, base);
+  const plan = { apt:[0,0,0,0], stat:{hp:0,atk:0,def:0,guts:0} };
+  let requested = 0;
+  [0,1,2,3].forEach(idx => {
+    const wanted = Math.max(0, Math.floor(Number(snapshot.apt[idx]) || 0));
+    requested += wanted;
+    const currentIndex = Math.max(0, DIST_APTITUDE_GRADES.indexOf(currentApt[idx] || 'C'));
+    const capacity = Math.max(0, DIST_APTITUDE_GRADES.length - 1 - currentIndex);
+    plan.apt[idx] = Math.min(wanted, capacity, remaining);
+    remaining -= plan.apt[idx];
+  });
+  Object.keys(STAT_POINT_KEYS).forEach(key => {
+    const wanted = Math.max(0, Math.floor(Number(snapshot.stat[key]) || 0));
+    requested += wanted;
+    plan.stat[key] = Math.min(wanted, remaining);
+    remaining -= plan.stat[key];
+  });
+  const restored = plan.apt.reduce((sum, value) => sum + value, 0) + Object.values(plan.stat).reduce((sum, value) => sum + value, 0);
+  return { plan, requested, restored, omitted:Math.max(0, requested - restored) };
+};
 // 絆ポイントリセットの保存値計算。新形式は投入段階数を直接返却し、新旧の適性表現を同時に戻す。
 // 旧形式は従来どおり完成適性と最新ベースとの差から返却数を求める。
 const buildMasuBondPointReset = (masu, base) => {
@@ -1356,6 +1397,7 @@ const buildMasuBondPointReset = (masu, base) => {
   const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, val]) => sum + Math.ceil((val || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
   const totalRefund = aptSpent + statSpent;
   if (totalRefund <= 0) return null;
+  const allocationSnapshot = buildBondResetAllocationSnapshot(masu, base);
   return {
     refundedPoints: totalRefund,
     nextMasu: {
@@ -1364,6 +1406,7 @@ const buildMasuBondPointReset = (masu, base) => {
       ...(Array.isArray(masu.distAptBoosts) ? { distAptBoosts:[0,0,0,0] } : {}),
       statPoints: { hp:0, atk:0, def:0, guts:0 },
       distAptPoints: (masu.distAptPoints || 0) + totalRefund,
+      bondResetAllocationSnapshot: allocationSnapshot,
     },
   };
 };
@@ -8246,7 +8289,9 @@ function MonsterHeroGame() {
     const masu = getMasuMon(masuId);
     const applied = applyEnhancePlanToMasu(masu, plan);
     if (!applied) return null;
-    const updatedMasu = applied.masu;
+    // 何らかの配分を確定した時点で、リセット直後の復元候補としての役目は終わる。
+    // 残したままだと後日の強化に以前の全量を重ねられてしまうため、この個体だけから取り除く。
+    const { bondResetAllocationSnapshot: _usedResetSnapshot, ...updatedMasu } = applied.masu;
     setMasuMons(prev => {
       const next = prev.map(m => m.id === masuId ? updatedMasu : m);
       storeSet('mh_masu_mons', next, false);
@@ -13438,6 +13483,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const plan = bulkPlan || { apt:[0,0,0,0], stat:{hp:0,atk:0,def:0,guts:0} };
           const planUsed = plan.apt.reduce((a,b)=>a+b,0) + Object.values(plan.stat).reduce((a,b)=>a+b,0);
           const planLeft = points - planUsed;
+          const restoreDraft = buildBondResetRestorePlan(masu, masu.bondResetAllocationSnapshot);
+          const restoreResetAllocation = () => { if (restoreDraft?.restored > 0) setBulkPlan(restoreDraft.plan); };
           // 下書き段階での間合い適性(何段階上がるか)。上限Mを超えないようにする
           const plannedGrade = (idx) => {
             const cur = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[idx]||'C');
@@ -13493,6 +13540,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3" role="group" aria-label="振り分け単位">
                       {[1,5,10,'MAX'].map(unit=><button type="button" key={unit} aria-pressed={bulkEnhanceUnit===unit} onClick={()=>setBulkEnhanceUnit(unit)} className={`min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${bulkEnhanceUnit===unit?'bg-amber-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
                     </div>
+                    {restoreDraft&&restoreDraft.requested>0&&<div className="mb-3 rounded-xl border border-cyan-700/40 bg-cyan-950/20 p-2">
+                      <button type="button" onClick={restoreResetAllocation} disabled={restoreDraft.restored<=0} className="w-full min-h-[40px] rounded-lg bg-slate-800 text-cyan-200 text-[10px] font-black active:scale-95 disabled:opacity-40">↩ リセット前の配分を復元</button>
+                      <div className={`mt-1 text-[8px] font-bold text-center ${restoreDraft.omitted>0?'text-amber-300':'text-slate-500'}`}>{restoreDraft.omitted>0?`現行の上限・残りptに合わせ、${restoreDraft.restored}ptを仮配分（復元できない分 ${restoreDraft.omitted}pt）`:'保存は「強化する」を押した時だけです'}</div>
+                    </div>}
                     <div className="mb-3">{renderPowerBadge(plannedMasuPowerOf(masu, plan), {before: currentPower, size:'md'})}</div>
                     <div className="text-[9px] text-slate-400 font-bold mb-1.5">間合い適性</div>
                     <div className="space-y-1.5 mb-3">
