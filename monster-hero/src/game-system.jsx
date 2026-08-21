@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 09:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 09:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -5383,6 +5383,32 @@ const DyeMaskTouchEditor=({onClose,onTryInGame,onReleaseTemporary,onReleaseAllTe
  <section className="shrink-0 rounded-t-2xl border-t-2 border-cyan-400 bg-slate-900 px-2 pt-1" style={{paddingBottom:'max(.4rem,env(safe-area-inset-bottom))'}}><div className="grid grid-cols-8 gap-1">{colorButton('red','赤','#f00')}{colorButton('green','緑','#080')}{colorButton('blue','青','#00f')}{colorButton('eraser','消す','#475569')}<button onClick={undo} disabled={!history.undo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Undo</button><button onClick={redo} disabled={!history.redo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Redo</button><button onClick={()=>setTool('brush')} className={`rounded-xl text-[7px] ${tool==='brush'?'bg-violet-700':'bg-slate-700'}`}>ブラシ</button><button onClick={()=>setTool('fill')} className={`rounded-xl text-[7px] ${tool==='fill'?'bg-violet-700':'bg-slate-700'}`}>塗りつぶし</button></div><div className="mt-1 grid grid-cols-3 gap-1"><button onClick={tryInGame} disabled={!ready} className="min-h-[38px] rounded-lg bg-fuchsia-700 text-[8px] font-black disabled:opacity-40">ゲームで試す</button><button onClick={()=>onReleaseTemporary(target.baseId)} disabled={!temporaryMasks[target.baseId]} className="rounded-lg bg-amber-800 text-[7px] font-black disabled:opacity-30">一時反映を解除</button><button onClick={onReleaseAllTemporary} disabled={!Object.keys(temporaryMasks).length} className="rounded-lg bg-red-900 text-[8px] font-black disabled:opacity-30">すべて解除</button></div>{temporaryMasks[target.baseId]&&<p className="pt-0.5 text-center text-[8px] font-black text-fuchsia-300">● 一時反映中</p>}<button onClick={()=>setDetails(v=>!v)} className="mt-1 min-h-[28px] w-full rounded-lg bg-slate-700 text-[8px]">詳細 {details?'▲':'▼'}</button>{details&&<div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-800 p-2 text-[8px]"><div className="col-span-2 grid grid-cols-3 gap-1">{Array.from({length:dyeRegionCount(target.baseId)},(_,idx)=><label key={idx} className="text-[7px] text-fuchsia-200">染色{'①②③'[idx]}<select value={previewColors[idx]||''} onChange={e=>setPreviewColors(current=>{const next=[...current];next[idx]=e.target.value||null;return next;})} className="block min-h-[28px] w-full rounded bg-slate-700 text-[8px]"><option value="">元の色</option>{Object.keys(MASU_COLOR_TARGET).map(id=><option key={id} value={id}>{MASU_COLOR_LABELS[id]}</option>)}</select></label>)}</div><label>ブラシ {size}px<input className="block w-full" type="range" min="2" max="100" step="2" value={size} onChange={e=>setSize(+e.target.value)}/></label><label>透明度 {opacity}%<input className="block w-full" type="range" min="25" max="100" step="25" value={opacity} onChange={e=>setOpacity(+e.target.value)}/></label><label>ポインター距離<select value={pointerDistance} onChange={e=>setPointerDistance(+e.target.value)} className="block w-full bg-slate-700">{[0,30,50,70].map(n=><option key={n} value={n}>{n}px</option>)}</select></label><label>方向<select value={pointerDirection} onChange={e=>setPointerDirection(e.target.value)} className="block w-full bg-slate-700"><option value="up">真上</option><option value="left">左上</option><option value="right">右上</option></select></label><button onClick={()=>setLoupe(v=>!v)} className="rounded bg-slate-700">拡大鏡 {loupe?'ON':'OFF'}</button><button onClick={()=>{setZoom(1);setPan({x:0,y:0});}} className="rounded bg-slate-700">全体表示</button><button onClick={cleanOutside} className="rounded bg-fuchsia-900">範囲外を掃除</button><button onClick={clearAll} className="rounded bg-red-900">全消去</button><button onClick={resetOriginal} className="rounded bg-amber-900">元マスク再読込</button></div>}<p className="pt-1 text-center text-[7px] text-slate-400">1本指：描画・2本指：パン/ピンチ・ダブルタップ：全体表示・{Math.round(zoom*100)}%</p></section></main>;
 };
 
+// タップは1回、長押しは一定間隔で繰り返す。Pointer Eventsを使ってタッチを優先し、
+// 指が外れた時と画面破棄時のどちらでもタイマーを残さない。
+function PressRepeatButton({ onPress, disabled, className, children, ...props }) {
+  const delayRef = useRef(null), repeatRef = useRef(null), longPressedRef = useRef(false);
+  const clearPress = useCallback(() => {
+    if (delayRef.current !== null) clearTimeout(delayRef.current);
+    if (repeatRef.current !== null) clearInterval(repeatRef.current);
+    delayRef.current = repeatRef.current = null;
+  }, []);
+  useEffect(() => clearPress, [clearPress]);
+  const startPress = event => {
+    if (disabled || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    clearPress(); longPressedRef.current = false;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    delayRef.current = setTimeout(() => {
+      longPressedRef.current = true; onPress();
+      repeatRef.current = setInterval(onPress, 110);
+    }, 420);
+  };
+  const clickPress = event => {
+    if (longPressedRef.current) { longPressedRef.current = false; event.preventDefault(); return; }
+    onPress();
+  };
+  return <button type="button" disabled={disabled} onPointerDown={startPress} onPointerUp={clearPress} onPointerCancel={clearPress} onLostPointerCapture={clearPress} onClick={clickPress} className={className} style={{touchAction:'manipulation',WebkitTouchCallout:'none'}} {...props}>{children}</button>;
+}
+
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -5652,6 +5678,7 @@ function MonsterHeroGame() {
   const battleEntryStateRef = useRef('BATTLE_DIFFICULTY_SELECT');
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
   const [bulkPlan, setBulkPlan] = useState(null); // null=1ポイントずつのモード / {apt:[0,0,0,0], stat:{...}}
+  const [bulkEnhanceUnit, setBulkEnhanceUnit] = useState(1); // 1 / 5 / 10 / 'MAX'（全項目共通）
   // 合体画面の並べかえ。マスモンが増えると目的の個体を探しにくいため
   const [fusionSortKey, setFusionSortKey] = useState('bond'); // 'bond'|'lineage'|'name'|'fused'
   const [fusionSortDir, setFusionSortDir] = useState('desc');
@@ -13402,9 +13429,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 総合力は共通関数から都度出す。1ポイント強化も一括強化も、強化前と強化後を
           // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
           const currentPower = masuPowerOf(masu);
-          const powerAfterApt = (idx) => plannedMasuPowerOf(masu, {apt:[0,1,2,3].map(i=>i===idx?1:0), stat:{}});
-          const powerAfterStat = (key) => plannedMasuPowerOf(masu, {apt:[0,0,0,0], stat:{[key]:1}});
-          const powerDeltaLabel = (after) => {const d=after-currentPower; return d===0?null:<span className={`text-[8px] font-mono font-black ${d>0?'text-amber-300':'text-red-300'}`}>総合力 {d>0?'+':''}{formatMonsterPower(d)}</span>;};
           const ps = mergeMasuIntoMon(masu)?.plusStats||{};
           // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
           // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
@@ -13420,8 +13444,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             return DIST_APTITUDE_GRADES[Math.min(DIST_APTITUDE_GRADES.length-1, Math.max(0, cur + plan.apt[idx]))];
           };
           const canPlanApt = (idx) => planLeft>0 && DIST_APTITUDE_GRADES.indexOf(plannedGrade(idx)) < DIST_APTITUDE_GRADES.length-1;
-          const addPlanApt = (idx, d) => setBulkPlan(p=>{const q=p?{apt:[...p.apt],stat:{...p.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}}; q.apt[idx]=Math.max(0,q.apt[idx]+d); return q;});
-          const addPlanStat = (key, d) => setBulkPlan(p=>{const q=p?{apt:[...p.apt],stat:{...p.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}}; q.stat[key]=Math.max(0,(q.stat[key]||0)+d); return q;});
+          const changePlan = (kind, target, direction) => setBulkPlan(previous => {
+            const q=previous?{apt:[...previous.apt],stat:{...previous.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}};
+            const current=kind==='apt'?q.apt[target]:(q.stat[target]||0);
+            const used=q.apt.reduce((a,b)=>a+b,0)+Object.values(q.stat).reduce((a,b)=>a+b,0);
+            const remaining=Math.max(0,points-used);
+            let amount=bulkEnhanceUnit==='MAX'?(direction>0?remaining:current):Math.min(Number(bulkEnhanceUnit),direction>0?remaining:current);
+            if(kind==='apt'&&direction>0){
+              const baseGradeIndex=DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[target]||'C');
+              amount=Math.min(amount,DIST_APTITUDE_GRADES.length-1-baseGradeIndex-current);
+            }
+            const next=Math.max(0,current+direction*Math.max(0,amount));
+            if(kind==='apt')q.apt[target]=next;else q.stat[target]=next;
+            return q;
+          });
+          const addPlanApt = (idx, direction) => changePlan('apt',idx,direction);
+          const addPlanStat = (key, direction) => changePlan('stat',key,direction);
           const applyPlan = () => {
             const updated = spendPointsBulk(masu.id, plan);
             if (!updated) return;
@@ -13446,62 +13484,41 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
                 {/* まとめて強化: 1ポイントずつタップするのが手間なので、
                     振り分けを下書きしてから一度に確定できるようにしている */}
-                {points>0&&(
-                  <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-4 shadow-xl">
-                    <div className="flex items-center justify-between mb-3">
+                {points>0&&(<>
+                  <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-3 shadow-xl">
+                    <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={14}/>まとめて強化</div>
-                      <div className="text-[10px] font-black text-white">残り <span className={`font-mono text-[15px] ${planLeft>0?'text-amber-300':'text-slate-500'}`}>{planLeft}</span> / {points} pt</div>
+                      <div className="text-[9px] text-slate-400 font-bold">全項目共通</div>
                     </div>
-                    {/* 下書きの中身に合わせてリアルタイムに動く。確定するまで実データは書き換えない */}
-                    <div className="mb-3">{renderPowerBadge(plannedMasuPowerOf(masu, plan), {before: currentPower, size:'md'})}
-                      {planUsed>0&&<div className="text-[8px] text-slate-500 font-bold mt-1">使用予定 強化P {planUsed}</div>}
+                    <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3" role="group" aria-label="振り分け単位">
+                      {[1,5,10,'MAX'].map(unit=><button type="button" key={unit} aria-pressed={bulkEnhanceUnit===unit} onClick={()=>setBulkEnhanceUnit(unit)} className={`min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${bulkEnhanceUnit===unit?'bg-amber-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
                     </div>
-                    <div className="text-[9px] text-slate-400 font-bold mb-2">間合い適性</div>
-                    <div className="grid grid-cols-4 gap-1.5 mb-3">
-                      {RANGE_LABELS.map((label,idx)=>{
-                        const g = plannedGrade(idx);
-                        const added = plan.apt[idx];
-                        return (
-                          <div key={idx} className="flex flex-col items-center gap-1">
-                            <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
-                            <span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[g]}`}>{g}</span>
-                            <span className={`text-[8px] font-mono font-black leading-none ${aptGradeToPct(g)>0?'text-cyan-300':aptGradeToPct(g)<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(aptGradeToPct(g))}</span>
-                            <div className="flex items-center gap-1 w-full">
-                              <button disabled={added<=0} onClick={()=>addPlanApt(idx,-1)} className="flex-1 text-[11px] font-black bg-slate-800 text-slate-300 rounded py-0.5 active:scale-90 disabled:opacity-20">−</button>
-                              <span className="text-[9px] font-mono font-black text-amber-300 w-4 text-center">{added>0?`+${added}`:'0'}</span>
-                              <button disabled={!canPlanApt(idx)} onClick={()=>addPlanApt(idx,1)} className="flex-1 text-[11px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-90 disabled:opacity-20 disabled:bg-slate-700">＋</button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="mb-3">{renderPowerBadge(plannedMasuPowerOf(masu, plan), {before: currentPower, size:'md'})}</div>
+                    <div className="text-[9px] text-slate-400 font-bold mb-1.5">間合い適性</div>
+                    <div className="space-y-1.5 mb-3">
+                      {RANGE_LABELS.map((label,idx)=>{const before=resolvedDistAptitude[idx]||'C',after=plannedGrade(idx),added=plan.apt[idx];return <div key={idx} className="grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5">
+                        <span className={`text-[8px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
+                        <div className="text-center font-mono font-black text-[12px]"><span className={DIST_APTITUDE_COLOR[before]}>{before}</span><span className="text-slate-500 mx-1">→</span><span className={added>0?'text-cyan-300':'text-slate-300'}>{after}</span></div>
+                        <span className="text-center text-[9px] font-mono font-black text-amber-300">{added}pt</span>
+                        <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}距離適性を減らす`} disabled={added<=0} onPress={()=>addPlanApt(idx,-1)} className="min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20">−</PressRepeatButton><PressRepeatButton aria-label={`${label}距離適性を増やす`} disabled={!canPlanApt(idx)} onPress={()=>addPlanApt(idx,1)} className="min-h-[40px] rounded-lg bg-amber-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20">＋</PressRepeatButton></div>
+                      </div>;})}
                     </div>
-                    <div className="text-[9px] text-slate-400 font-bold mb-2">ステータス</div>
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                      {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{
-                        const n = plan.stat[key]||0;
-                        const gain = n*(STAT_POINT_GAIN[key]||1);
-                        return (
-                          <div key={key} className="bg-black/40 border border-emerald-500/25 rounded-xl p-2">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[9px] text-emerald-300 font-black">{label}</span>
-                              <span className="text-[10px] font-mono font-black text-white">{currentStatValue(key)}{gain>0&&<span className="text-emerald-400"> → {currentStatValue(key)+gain}</span>}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <button disabled={n<=0} onClick={()=>addPlanStat(key,-1)} className="flex-1 text-[11px] font-black bg-slate-800 text-slate-300 rounded py-0.5 active:scale-90 disabled:opacity-20">−</button>
-                              <span className="text-[9px] font-mono font-black text-amber-300 w-6 text-center">{n>0?`+${n}pt`:'0'}</span>
-                              <button disabled={planLeft<=0} onClick={()=>addPlanStat(key,1)} className="flex-1 text-[11px] font-black bg-emerald-700 text-white rounded py-0.5 active:scale-90 disabled:opacity-20 disabled:bg-slate-700">＋</button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="text-[9px] text-slate-400 font-bold mb-1.5">ステータス</div>
+                    <div className="space-y-1.5">
+                      {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{const n=plan.stat[key]||0,gain=n*(STAT_POINT_GAIN[key]||1),before=currentStatValue(key);return <div key={key} className="grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5">
+                        <span className="text-[8px] text-center text-emerald-300 font-black">{label}</span>
+                        <div className="text-center font-mono font-black text-[11px]"><span className="text-white">{before}</span><span className="text-slate-500 mx-1">→</span><span className={gain>0?'text-emerald-300':'text-slate-300'}>{before+gain}</span></div>
+                        <span className="text-center text-[9px] font-mono font-black text-amber-300">{n}pt</span>
+                        <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}を減らす`} disabled={n<=0} onPress={()=>addPlanStat(key,-1)} className="min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20">−</PressRepeatButton><PressRepeatButton aria-label={`${label}を増やす`} disabled={planLeft<=0} onPress={()=>addPlanStat(key,1)} className="min-h-[40px] rounded-lg bg-emerald-700 text-lg font-black disabled:bg-slate-700 disabled:opacity-20">＋</PressRepeatButton></div>
+                      </div>;})}
                     </div>
-                    <div className="flex gap-2">
-                      <button disabled={planUsed<=0} onClick={()=>setBulkPlan(null)} className="px-4 py-2.5 rounded-xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30">リセット</button>
-                      <button disabled={planUsed<=0} onClick={applyPlan} className="flex-1 py-2.5 rounded-xl font-black text-[12px] bg-gradient-to-r from-amber-600 to-orange-600 text-white active:scale-95 disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700 shadow-lg">{planUsed>0?`${planUsed}pt を使って強化する`:'振り分けてください'}</button>
-                    </div>
-                    <div className="text-[8px] text-slate-500 mt-2 leading-relaxed">※ 確定するまでポイントは減りません。1つずつ振りたい場合は下の各項目からも操作できます。</div>
+                    <div className="text-[8px] text-slate-500 mt-2">＋／−は長押しでも連続調整できます。確定するまで保存データは変わりません。</div>
                   </div>
-                )}
+                  <div className="sticky bottom-0 z-20 -mx-4 px-4 pt-2 border-t border-amber-500/30 bg-slate-950/95" style={{paddingBottom:'max(.75rem,env(safe-area-inset-bottom))'}} aria-label="強化の確定操作">
+                    <div className="flex items-center justify-between mb-2"><span className="text-[10px] font-black text-slate-300">残りpt</span><span className="font-mono font-black"><b className={planLeft>0?'text-amber-300':'text-slate-500'}>{planLeft}</b><small className="text-slate-500"> / {points} pt</small></span></div>
+                    <div className="flex gap-2"><button type="button" disabled={planUsed<=0} onClick={()=>setBulkPlan(null)} className="min-h-[46px] px-3 rounded-xl font-black text-[10px] bg-slate-800 text-slate-300 disabled:opacity-30">配分をすべて取消</button><button type="button" disabled={planUsed<=0} onClick={applyPlan} className="min-h-[46px] flex-1 rounded-xl font-black text-[12px] bg-gradient-to-r from-amber-600 to-orange-600 text-white disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700">{planUsed>0?`${planUsed}ptを使って強化する`:'振り分けてください'}</button></div>
+                  </div>
+                </>)}
                 <div className="flex items-center gap-4 bg-slate-900 border border-amber-500/30 rounded-3xl p-4 shadow-xl">
                   <div className="relative w-20 h-20 shrink-0">
                     <div className={`w-20 h-20 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-2 ring-amber-400':'border-amber-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
@@ -13529,62 +13546,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="text-[8px] text-pink-400 uppercase font-bold">合流ボーナス(このマスモンが供モンとして合流した時に加算される値)</div>
                   <div className="text-[10px] text-white font-bold mt-1">{ps.hp>0&&`HP+${ps.hp} `}{ps.atk>0&&`攻+${ps.atk} `}{ps.def>0&&`防+${ps.def} `}{ps.guts>0&&`G+${ps.guts} `}{!(ps.hp>0||ps.atk>0||ps.def>0||ps.guts>0)&&'なし'}</div>
                 </div>
-                <div className="bg-black/40 p-3 rounded-2xl border border-cyan-500/30">
-                  <div className="text-[9px] text-cyan-400 uppercase font-bold mb-2">間合い適性を強化</div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {RANGE_LABELS.map((label,idx)=>{
-                      const grade=resolvedDistAptitude[idx]||'C';
-                      const gIdx=DIST_APTITUDE_GRADES.indexOf(grade);
-                      const nextGrade=gIdx<DIST_APTITUDE_GRADES.length-1?DIST_APTITUDE_GRADES[gIdx+1]:null;
-                      const canUp=points>0&&nextGrade;
-                      return(
-                        <div key={idx} className="flex flex-col items-center gap-1">
-                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
-                          <span className={`w-full text-center py-1 rounded-lg border text-base font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>
-                          <span className={`text-[9px] font-mono font-black leading-none ${aptGradeToPct(grade)>0?'text-cyan-300':aptGradeToPct(grade)<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(aptGradeToPct(grade))}</span>
-                          <span className="text-[7px] text-slate-500 font-mono h-3">{nextGrade?`次: ${nextGrade} ${formatAptPct(aptGradeToPct(nextGrade))}`:'MAX'}</span>
-                          <span className="h-3 flex items-center">{canUp?powerDeltaLabel(powerAfterApt(idx)):null}</span>
-                          <button disabled={!canUp} onClick={()=>{
-                            const beforeGrade=grade;
-                            const updated=spendAptPoint(masu.id,idx);
-                            if(!updated) return;
-                            setMasuMonDetail(updated);
-                            saveMissionProgress('enhance');
-                            addAssistantBond('enhance');
-                            const afterGrade=resolveMasuDistAptitude(updated,base)[idx]||beforeGrade;
-                            setEffect({type:'enhance',label:`${label}距離適性 強化！`,icon:'📈',monEmoji:base.emoji,imgUrl:base.iconUrl,baseId:masu.baseId,colors:getMasuColors(updated),subLabel:`${label}距離適性 ${beforeGrade} → ${afterGrade}`});
-                            setTimeout(()=>setEffect(null),900);
-                          }} className="w-full text-[9px] font-black bg-amber-600 text-white rounded-lg py-1 active:scale-95 disabled:opacity-20 disabled:bg-slate-700">+1</button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="bg-black/40 p-3 rounded-2xl border border-emerald-500/30">
-                  <div className="text-[9px] text-emerald-400 uppercase font-bold mb-2">ステータスを強化</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{
-                      const before=currentStatValue(key);
-                      const gain=STAT_POINT_GAIN[key]||1;
-                      const after=before+gain;
-                      return(
-                        <button key={key} disabled={points<=0} onClick={()=>{
-                          const updated=spendStatPoint(masu.id,key);
-                          if(!updated) return;
-                          setMasuMonDetail(updated);
-                          saveMissionProgress('enhance');
-                          addAssistantBond('enhance');
-                          setEffect({type:'enhance',label:`${label}強化！`,icon:'💪',monEmoji:base.emoji,imgUrl:base.iconUrl,baseId:masu.baseId,colors:getMasuColors(updated),subLabel:`${label} ${before} → ${after}`});
-                          setTimeout(()=>setEffect(null),900);
-                        }} className="flex flex-col items-center gap-1 bg-emerald-950/50 border border-emerald-500/30 rounded-xl py-2.5 active:scale-95 disabled:opacity-20">
-                          <span className="text-[9px] text-emerald-300 font-black">{label}</span>
-                          <span className="text-[11px] text-white font-mono font-black">{before} → <span className="text-emerald-400">{after}</span></span>
-                          <span className="h-3 flex items-center">{points>0?powerDeltaLabel(powerAfterStat(key)):null}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <div className="text-[8px] text-slate-500 font-bold text-center px-2">強化は上の「まとめて強化」で下書きし、確定すると保存されます。</div>
                 <button onClick={backToDetail} className="w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2">完了</button>
               </div>
             </div>

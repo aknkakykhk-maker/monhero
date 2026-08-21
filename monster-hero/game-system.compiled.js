@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8ef860d2ba6c5ec7
+// source-sha256: 877128f8ddeeaf5c
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 09:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 09:38"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -10735,6 +10735,59 @@ const DyeMaskTouchEditor = ({
     className: "pt-1 text-center text-[7px] text-slate-400"
   }, "1\u672C\u6307\uFF1A\u63CF\u753B\u30FB2\u672C\u6307\uFF1A\u30D1\u30F3/\u30D4\u30F3\u30C1\u30FB\u30C0\u30D6\u30EB\u30BF\u30C3\u30D7\uFF1A\u5168\u4F53\u8868\u793A\u30FB", Math.round(zoom * 100), "%")));
 };
+
+// タップは1回、長押しは一定間隔で繰り返す。Pointer Eventsを使ってタッチを優先し、
+// 指が外れた時と画面破棄時のどちらでもタイマーを残さない。
+function PressRepeatButton({
+  onPress,
+  disabled,
+  className,
+  children,
+  ...props
+}) {
+  const delayRef = useRef(null),
+    repeatRef = useRef(null),
+    longPressedRef = useRef(false);
+  const clearPress = useCallback(() => {
+    if (delayRef.current !== null) clearTimeout(delayRef.current);
+    if (repeatRef.current !== null) clearInterval(repeatRef.current);
+    delayRef.current = repeatRef.current = null;
+  }, []);
+  useEffect(() => clearPress, [clearPress]);
+  const startPress = event => {
+    if (disabled || event.pointerType === 'mouse' && event.button !== 0) return;
+    clearPress();
+    longPressedRef.current = false;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    delayRef.current = setTimeout(() => {
+      longPressedRef.current = true;
+      onPress();
+      repeatRef.current = setInterval(onPress, 110);
+    }, 420);
+  };
+  const clickPress = event => {
+    if (longPressedRef.current) {
+      longPressedRef.current = false;
+      event.preventDefault();
+      return;
+    }
+    onPress();
+  };
+  return /*#__PURE__*/React.createElement("button", _extends({
+    type: "button",
+    disabled: disabled,
+    onPointerDown: startPress,
+    onPointerUp: clearPress,
+    onPointerCancel: clearPress,
+    onLostPointerCapture: clearPress,
+    onClick: clickPress,
+    className: className,
+    style: {
+      touchAction: 'manipulation',
+      WebkitTouchCallout: 'none'
+    }
+  }, props), children);
+}
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -11072,6 +11125,7 @@ function MonsterHeroGame() {
   const battleEntryStateRef = useRef('BATTLE_DIFFICULTY_SELECT');
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
   const [bulkPlan, setBulkPlan] = useState(null); // null=1ポイントずつのモード / {apt:[0,0,0,0], stat:{...}}
+  const [bulkEnhanceUnit, setBulkEnhanceUnit] = useState(1); // 1 / 5 / 10 / 'MAX'（全項目共通）
   // 合体画面の並べかえ。マスモンが増えると目的の個体を探しにくいため
   const [fusionSortKey, setFusionSortKey] = useState('bond'); // 'bond'|'lineage'|'name'|'fused'
   const [fusionSortDir, setFusionSortDir] = useState('desc');
@@ -26911,22 +26965,6 @@ function MonsterHeroGame() {
       // 総合力は共通関数から都度出す。1ポイント強化も一括強化も、強化前と強化後を
       // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
       const currentPower = masuPowerOf(masu);
-      const powerAfterApt = idx => plannedMasuPowerOf(masu, {
-        apt: [0, 1, 2, 3].map(i => i === idx ? 1 : 0),
-        stat: {}
-      });
-      const powerAfterStat = key => plannedMasuPowerOf(masu, {
-        apt: [0, 0, 0, 0],
-        stat: {
-          [key]: 1
-        }
-      });
-      const powerDeltaLabel = after => {
-        const d = after - currentPower;
-        return d === 0 ? null : /*#__PURE__*/React.createElement("span", {
-          className: `text-[8px] font-mono font-black ${d > 0 ? 'text-amber-300' : 'text-red-300'}`
-        }, "\u7DCF\u5408\u529B ", d > 0 ? '+' : '', formatMonsterPower(d));
-      };
       const ps = mergeMasuIntoMon(masu)?.plusStats || {};
       // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
       // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
@@ -26954,11 +26992,11 @@ function MonsterHeroGame() {
         return DIST_APTITUDE_GRADES[Math.min(DIST_APTITUDE_GRADES.length - 1, Math.max(0, cur + plan.apt[idx]))];
       };
       const canPlanApt = idx => planLeft > 0 && DIST_APTITUDE_GRADES.indexOf(plannedGrade(idx)) < DIST_APTITUDE_GRADES.length - 1;
-      const addPlanApt = (idx, d) => setBulkPlan(p => {
-        const q = p ? {
-          apt: [...p.apt],
+      const changePlan = (kind, target, direction) => setBulkPlan(previous => {
+        const q = previous ? {
+          apt: [...previous.apt],
           stat: {
-            ...p.stat
+            ...previous.stat
           }
         } : {
           apt: [0, 0, 0, 0],
@@ -26969,27 +27007,20 @@ function MonsterHeroGame() {
             guts: 0
           }
         };
-        q.apt[idx] = Math.max(0, q.apt[idx] + d);
+        const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
+        const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
+        const remaining = Math.max(0, points - used);
+        let amount = bulkEnhanceUnit === 'MAX' ? direction > 0 ? remaining : current : Math.min(Number(bulkEnhanceUnit), direction > 0 ? remaining : current);
+        if (kind === 'apt' && direction > 0) {
+          const baseGradeIndex = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[target] || 'C');
+          amount = Math.min(amount, DIST_APTITUDE_GRADES.length - 1 - baseGradeIndex - current);
+        }
+        const next = Math.max(0, current + direction * Math.max(0, amount));
+        if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
         return q;
       });
-      const addPlanStat = (key, d) => setBulkPlan(p => {
-        const q = p ? {
-          apt: [...p.apt],
-          stat: {
-            ...p.stat
-          }
-        } : {
-          apt: [0, 0, 0, 0],
-          stat: {
-            hp: 0,
-            atk: 0,
-            def: 0,
-            guts: 0
-          }
-        };
-        q.stat[key] = Math.max(0, (q.stat[key] || 0) + d);
-        return q;
-      });
+      const addPlanApt = (idx, direction) => changePlan('apt', idx, direction);
+      const addPlanStat = (key, direction) => changePlan('stat', key, direction);
       const applyPlan = () => {
         const updated = spendPointsBulk(masu.id, plan);
         if (!updated) return;
@@ -27043,98 +27074,134 @@ function MonsterHeroGame() {
         compact: true
       })), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full"
-      }, points > 0 && /*#__PURE__*/React.createElement("div", {
-        className: "bg-slate-900 border border-amber-500/40 rounded-3xl p-4 shadow-xl"
+      }, points > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        className: "bg-slate-900 border border-amber-500/40 rounded-3xl p-3 shadow-xl"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between mb-3"
+        className: "flex items-center justify-between gap-2 mb-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5"
       }, /*#__PURE__*/React.createElement(Sparkles, {
         size: 14
       }), "\u307E\u3068\u3081\u3066\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-black text-white"
-      }, "\u6B8B\u308A ", /*#__PURE__*/React.createElement("span", {
-        className: `font-mono text-[15px] ${planLeft > 0 ? 'text-amber-300' : 'text-slate-500'}`
-      }, planLeft), " / ", points, " pt")), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] text-slate-400 font-bold"
+      }, "\u5168\u9805\u76EE\u5171\u901A")), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3",
+        role: "group",
+        "aria-label": "\u632F\u308A\u5206\u3051\u5358\u4F4D"
+      }, [1, 5, 10, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        key: unit,
+        "aria-pressed": bulkEnhanceUnit === unit,
+        onClick: () => setBulkEnhanceUnit(unit),
+        className: `min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${bulkEnhanceUnit === unit ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`
+      }, unit === 'MAX' ? 'MAX' : `${unit}P`))), /*#__PURE__*/React.createElement("div", {
         className: "mb-3"
       }, renderPowerBadge(plannedMasuPowerOf(masu, plan), {
         before: currentPower,
         size: 'md'
-      }), planUsed > 0 && /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500 font-bold mt-1"
-      }, "\u4F7F\u7528\u4E88\u5B9A \u5F37\u5316P ", planUsed)), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 font-bold mb-2"
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] text-slate-400 font-bold mb-1.5"
       }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-1.5 mb-3"
+        className: "space-y-1.5 mb-3"
       }, RANGE_LABELS.map((label, idx) => {
-        const g = plannedGrade(idx);
-        const added = plan.apt[idx];
+        const before = resolvedDistAptitude[idx] || 'C',
+          after = plannedGrade(idx),
+          added = plan.apt[idx];
         return /*#__PURE__*/React.createElement("div", {
           key: idx,
-          className: "flex flex-col items-center gap-1"
+          className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
         }, /*#__PURE__*/React.createElement("span", {
-          className: `text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`
-        }, label), /*#__PURE__*/React.createElement("span", {
-          className: `w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[g]}`
-        }, g), /*#__PURE__*/React.createElement("span", {
-          className: `text-[8px] font-mono font-black leading-none ${aptGradeToPct(g) > 0 ? 'text-cyan-300' : aptGradeToPct(g) < 0 ? 'text-red-300' : 'text-slate-500'}`
-        }, formatAptPct(aptGradeToPct(g))), /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-1 w-full"
-        }, /*#__PURE__*/React.createElement("button", {
+          className: `text-[8px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`
+        }, label), /*#__PURE__*/React.createElement("div", {
+          className: "text-center font-mono font-black text-[12px]"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: DIST_APTITUDE_COLOR[before]
+        }, before), /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500 mx-1"
+        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+          className: added > 0 ? 'text-cyan-300' : 'text-slate-300'
+        }, after)), /*#__PURE__*/React.createElement("span", {
+          className: "text-center text-[9px] font-mono font-black text-amber-300"
+        }, added, "pt"), /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-2 gap-1"
+        }, /*#__PURE__*/React.createElement(PressRepeatButton, {
+          "aria-label": `${label}距離適性を減らす`,
           disabled: added <= 0,
-          onClick: () => addPlanApt(idx, -1),
-          className: "flex-1 text-[11px] font-black bg-slate-800 text-slate-300 rounded py-0.5 active:scale-90 disabled:opacity-20"
-        }, "\u2212"), /*#__PURE__*/React.createElement("span", {
-          className: "text-[9px] font-mono font-black text-amber-300 w-4 text-center"
-        }, added > 0 ? `+${added}` : '0'), /*#__PURE__*/React.createElement("button", {
+          onPress: () => addPlanApt(idx, -1),
+          className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
+        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+          "aria-label": `${label}距離適性を増やす`,
           disabled: !canPlanApt(idx),
-          onClick: () => addPlanApt(idx, 1),
-          className: "flex-1 text-[11px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-90 disabled:opacity-20 disabled:bg-slate-700"
+          onPress: () => addPlanApt(idx, 1),
+          className: "min-h-[40px] rounded-lg bg-amber-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
         }, "\uFF0B")));
       })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 font-bold mb-2"
+        className: "text-[9px] text-slate-400 font-bold mb-1.5"
       }, "\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2 mb-3"
+        className: "space-y-1.5"
       }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
-        const n = plan.stat[key] || 0;
-        const gain = n * (STAT_POINT_GAIN[key] || 1);
+        const n = plan.stat[key] || 0,
+          gain = n * (STAT_POINT_GAIN[key] || 1),
+          before = currentStatValue(key);
         return /*#__PURE__*/React.createElement("div", {
           key: key,
-          className: "bg-black/40 border border-emerald-500/25 rounded-xl p-2"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center justify-between mb-1"
+          className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
         }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[9px] text-emerald-300 font-black"
-        }, label), /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-mono font-black text-white"
-        }, currentStatValue(key), gain > 0 && /*#__PURE__*/React.createElement("span", {
-          className: "text-emerald-400"
-        }, " \u2192 ", currentStatValue(key) + gain))), /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-1"
-        }, /*#__PURE__*/React.createElement("button", {
+          className: "text-[8px] text-center text-emerald-300 font-black"
+        }, label), /*#__PURE__*/React.createElement("div", {
+          className: "text-center font-mono font-black text-[11px]"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-white"
+        }, before), /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500 mx-1"
+        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+          className: gain > 0 ? 'text-emerald-300' : 'text-slate-300'
+        }, before + gain)), /*#__PURE__*/React.createElement("span", {
+          className: "text-center text-[9px] font-mono font-black text-amber-300"
+        }, n, "pt"), /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-2 gap-1"
+        }, /*#__PURE__*/React.createElement(PressRepeatButton, {
+          "aria-label": `${label}を減らす`,
           disabled: n <= 0,
-          onClick: () => addPlanStat(key, -1),
-          className: "flex-1 text-[11px] font-black bg-slate-800 text-slate-300 rounded py-0.5 active:scale-90 disabled:opacity-20"
-        }, "\u2212"), /*#__PURE__*/React.createElement("span", {
-          className: "text-[9px] font-mono font-black text-amber-300 w-6 text-center"
-        }, n > 0 ? `+${n}pt` : '0'), /*#__PURE__*/React.createElement("button", {
+          onPress: () => addPlanStat(key, -1),
+          className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
+        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+          "aria-label": `${label}を増やす`,
           disabled: planLeft <= 0,
-          onClick: () => addPlanStat(key, 1),
-          className: "flex-1 text-[11px] font-black bg-emerald-700 text-white rounded py-0.5 active:scale-90 disabled:opacity-20 disabled:bg-slate-700"
+          onPress: () => addPlanStat(key, 1),
+          className: "min-h-[40px] rounded-lg bg-emerald-700 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
         }, "\uFF0B")));
       })), /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-slate-500 mt-2"
+      }, "\uFF0B\uFF0F\u2212\u306F\u9577\u62BC\u3057\u3067\u3082\u9023\u7D9A\u8ABF\u6574\u3067\u304D\u307E\u3059\u3002\u78BA\u5B9A\u3059\u308B\u307E\u3067\u4FDD\u5B58\u30C7\u30FC\u30BF\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
+        className: "sticky bottom-0 z-20 -mx-4 px-4 pt-2 border-t border-amber-500/30 bg-slate-950/95",
+        style: {
+          paddingBottom: 'max(.75rem,env(safe-area-inset-bottom))'
+        },
+        "aria-label": "\u5F37\u5316\u306E\u78BA\u5B9A\u64CD\u4F5C"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between mb-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black text-slate-300"
+      }, "\u6B8B\u308Apt"), /*#__PURE__*/React.createElement("span", {
+        className: "font-mono font-black"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: planLeft > 0 ? 'text-amber-300' : 'text-slate-500'
+      }, planLeft), /*#__PURE__*/React.createElement("small", {
+        className: "text-slate-500"
+      }, " / ", points, " pt"))), /*#__PURE__*/React.createElement("div", {
         className: "flex gap-2"
       }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
         disabled: planUsed <= 0,
         onClick: () => setBulkPlan(null),
-        className: "px-4 py-2.5 rounded-xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30"
-      }, "\u30EA\u30BB\u30C3\u30C8"), /*#__PURE__*/React.createElement("button", {
+        className: "min-h-[46px] px-3 rounded-xl font-black text-[10px] bg-slate-800 text-slate-300 disabled:opacity-30"
+      }, "\u914D\u5206\u3092\u3059\u3079\u3066\u53D6\u6D88"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
         disabled: planUsed <= 0,
         onClick: applyPlan,
-        className: "flex-1 py-2.5 rounded-xl font-black text-[12px] bg-gradient-to-r from-amber-600 to-orange-600 text-white active:scale-95 disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700 shadow-lg"
-      }, planUsed > 0 ? `${planUsed}pt を使って強化する` : '振り分けてください')), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500 mt-2 leading-relaxed"
-      }, "\u203B \u78BA\u5B9A\u3059\u308B\u307E\u3067\u30DD\u30A4\u30F3\u30C8\u306F\u6E1B\u308A\u307E\u305B\u3093\u30021\u3064\u305A\u3064\u632F\u308A\u305F\u3044\u5834\u5408\u306F\u4E0B\u306E\u5404\u9805\u76EE\u304B\u3089\u3082\u64CD\u4F5C\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+        className: "min-h-[46px] flex-1 rounded-xl font-black text-[12px] bg-gradient-to-r from-amber-600 to-orange-600 text-white disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700"
+      }, planUsed > 0 ? `${planUsed}ptを使って強化する` : '振り分けてください')))), /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-4 bg-slate-900 border border-amber-500/30 rounded-3xl p-4 shadow-xl"
       }, /*#__PURE__*/React.createElement("div", {
         className: "relative w-20 h-20 shrink-0"
@@ -27219,95 +27286,8 @@ function MonsterHeroGame() {
       }, "\u5408\u6D41\u30DC\u30FC\u30CA\u30B9(\u3053\u306E\u30DE\u30B9\u30E2\u30F3\u304C\u4F9B\u30E2\u30F3\u3068\u3057\u3066\u5408\u6D41\u3057\u305F\u6642\u306B\u52A0\u7B97\u3055\u308C\u308B\u5024)"), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-white font-bold mt-1"
       }, ps.hp > 0 && `HP+${ps.hp} `, ps.atk > 0 && `攻+${ps.atk} `, ps.def > 0 && `防+${ps.def} `, ps.guts > 0 && `G+${ps.guts} `, !(ps.hp > 0 || ps.atk > 0 || ps.def > 0 || ps.guts > 0) && 'なし')), /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 p-3 rounded-2xl border border-cyan-500/30"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-cyan-400 uppercase font-bold mb-2"
-      }, "\u9593\u5408\u3044\u9069\u6027\u3092\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-2"
-      }, RANGE_LABELS.map((label, idx) => {
-        const grade = resolvedDistAptitude[idx] || 'C';
-        const gIdx = DIST_APTITUDE_GRADES.indexOf(grade);
-        const nextGrade = gIdx < DIST_APTITUDE_GRADES.length - 1 ? DIST_APTITUDE_GRADES[gIdx + 1] : null;
-        const canUp = points > 0 && nextGrade;
-        return /*#__PURE__*/React.createElement("div", {
-          key: idx,
-          className: "flex flex-col items-center gap-1"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: `text-[8px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`
-        }, label), /*#__PURE__*/React.createElement("span", {
-          className: `w-full text-center py-1 rounded-lg border text-base font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`
-        }, grade), /*#__PURE__*/React.createElement("span", {
-          className: `text-[9px] font-mono font-black leading-none ${aptGradeToPct(grade) > 0 ? 'text-cyan-300' : aptGradeToPct(grade) < 0 ? 'text-red-300' : 'text-slate-500'}`
-        }, formatAptPct(aptGradeToPct(grade))), /*#__PURE__*/React.createElement("span", {
-          className: "text-[7px] text-slate-500 font-mono h-3"
-        }, nextGrade ? `次: ${nextGrade} ${formatAptPct(aptGradeToPct(nextGrade))}` : 'MAX'), /*#__PURE__*/React.createElement("span", {
-          className: "h-3 flex items-center"
-        }, canUp ? powerDeltaLabel(powerAfterApt(idx)) : null), /*#__PURE__*/React.createElement("button", {
-          disabled: !canUp,
-          onClick: () => {
-            const beforeGrade = grade;
-            const updated = spendAptPoint(masu.id, idx);
-            if (!updated) return;
-            setMasuMonDetail(updated);
-            saveMissionProgress('enhance');
-            addAssistantBond('enhance');
-            const afterGrade = resolveMasuDistAptitude(updated, base)[idx] || beforeGrade;
-            setEffect({
-              type: 'enhance',
-              label: `${label}距離適性 強化！`,
-              icon: '📈',
-              monEmoji: base.emoji,
-              imgUrl: base.iconUrl,
-              baseId: masu.baseId,
-              colors: getMasuColors(updated),
-              subLabel: `${label}距離適性 ${beforeGrade} → ${afterGrade}`
-            });
-            setTimeout(() => setEffect(null), 900);
-          },
-          className: "w-full text-[9px] font-black bg-amber-600 text-white rounded-lg py-1 active:scale-95 disabled:opacity-20 disabled:bg-slate-700"
-        }, "+1"));
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 p-3 rounded-2xl border border-emerald-500/30"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-emerald-400 uppercase font-bold mb-2"
-      }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u3092\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
-      }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
-        const before = currentStatValue(key);
-        const gain = STAT_POINT_GAIN[key] || 1;
-        const after = before + gain;
-        return /*#__PURE__*/React.createElement("button", {
-          key: key,
-          disabled: points <= 0,
-          onClick: () => {
-            const updated = spendStatPoint(masu.id, key);
-            if (!updated) return;
-            setMasuMonDetail(updated);
-            saveMissionProgress('enhance');
-            addAssistantBond('enhance');
-            setEffect({
-              type: 'enhance',
-              label: `${label}強化！`,
-              icon: '💪',
-              monEmoji: base.emoji,
-              imgUrl: base.iconUrl,
-              baseId: masu.baseId,
-              colors: getMasuColors(updated),
-              subLabel: `${label} ${before} → ${after}`
-            });
-            setTimeout(() => setEffect(null), 900);
-          },
-          className: "flex flex-col items-center gap-1 bg-emerald-950/50 border border-emerald-500/30 rounded-xl py-2.5 active:scale-95 disabled:opacity-20"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[9px] text-emerald-300 font-black"
-        }, label), /*#__PURE__*/React.createElement("span", {
-          className: "text-[11px] text-white font-mono font-black"
-        }, before, " \u2192 ", /*#__PURE__*/React.createElement("span", {
-          className: "text-emerald-400"
-        }, after)), /*#__PURE__*/React.createElement("span", {
-          className: "h-3 flex items-center"
-        }, points > 0 ? powerDeltaLabel(powerAfterStat(key)) : null));
-      }))), /*#__PURE__*/React.createElement("button", {
+        className: "text-[8px] text-slate-500 font-bold text-center px-2"
+      }, "\u5F37\u5316\u306F\u4E0A\u306E\u300C\u307E\u3068\u3081\u3066\u5F37\u5316\u300D\u3067\u4E0B\u66F8\u304D\u3057\u3001\u78BA\u5B9A\u3059\u308B\u3068\u4FDD\u5B58\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
         onClick: backToDetail,
         className: "w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2"
       }, "\u5B8C\u4E86")));
