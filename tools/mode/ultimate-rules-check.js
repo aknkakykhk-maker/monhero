@@ -40,5 +40,5 @@ assert(source.includes('waveResult?.turn,specialRuleDifficulty')&&source.include
 assert(source.includes("specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 })")&&source.includes("specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 })"),'NIGHTMARE and CHAOS rules must remain unchanged');
 assert(help.includes('敵強度×35・スコア×20・経験値×40・ダイヤ×20')&&help.includes('25%まで下がると停止')&&help.includes('安全距離'),'help must match new rules');
 assert(changelog.includes('ULTIMATEの難易度を調整しました'),'changelog must announce adjustment');
-assert(source.includes('h-[382px]')&&source.includes("setting.id==='ULTIMATE'?'mt-1.5 h-[62px]':'mt-1 h-[51px]'"),'difficulty card dimensions and ULTIMATE rule space must remain fixed');
+assert(source.includes('h-[400px]')&&!source.includes('h-[382px]')&&source.includes("setting.id==='ULTIMATE'?'mt-1.5 h-[62px]':'mt-1 h-[51px]'"),'difficulty cards must use the shared expanded height while ULTIMATE rule space remains fixed');
 console.log('OK: ULTIMATE難易度調整（×35、各0.75%、最低25%、35T段階BREAK、安全距離、予測共通経路、他難易度回帰）');

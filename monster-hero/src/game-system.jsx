@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 08:10"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 09:03"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -11969,7 +11969,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
                     {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:false);const previewable=(setting.available||debugBattle&&setting.id===ULTIMATE_SETTING.id)&&unlocked;return (
-                      <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[382px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?'#f0abfc':'rgba(255,255,255,.12)',background:previewable?'linear-gradient(180deg,#34133f,#160d2b)':'linear-gradient(180deg,#1e293b,#0d142b)',boxShadow:active?'0 0 30px rgba(232,121,249,.35)':'none'}}>
+                      <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[400px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?'#f0abfc':'rgba(255,255,255,.12)',background:previewable?'linear-gradient(180deg,#34133f,#160d2b)':'linear-gradient(180deg,#1e293b,#0d142b)',boxShadow:active?'0 0 30px rgba(232,121,249,.35)':'none'}}>
                         <div className="text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
                         <h3 className="text-center text-lg font-black leading-tight text-fuchsia-200">{setting.label}</h3>
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/45 px-2.5 py-1">
@@ -11983,7 +11983,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <p data-extreme-card-description={setting.id} className={`${setting.id==='ULTIMATE'?'mt-1 h-[32px] shrink-0':'mt-1 min-h-[35px]'} rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200`}>{setting.cardDescription||setting.description}</p>
                           {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div data-extreme-special-rules={setting.id} className={`${setting.id==='ULTIMATE'?'mt-1.5 h-[62px]':'mt-1 h-[51px]'} shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5`}><small className="block text-center text-[8px] leading-[9px] font-black text-amber-300">⚠ {setting.label}特殊ルール</small><div>{extremeSpecialRuleLines(setting.id).map(([label,value])=><div key={label} className={`grid min-w-0 grid-cols-[auto_1fr] items-center gap-1 ${setting.id==='ULTIMATE'?'text-[8px] leading-[9px]':'text-[9px] leading-[10px]'} whitespace-nowrap`}><span className="text-slate-300">{label}</span><b className="min-w-0 text-right text-white">{value}</b></div>)}</div></div>}
                         </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
-                        <div className="grid gap-1.5 mt-auto pt-1.5">
+                        <div data-extreme-card-actions className="grid gap-1.5 mt-auto pt-2 pb-1">
                           <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
                           {/* 極限は難易度そのものが別表なので、通常の難易度は Normal のまま触らない。
                               debugBattleRef はここで書き換えないこと。デバッグ設定から入ったときだけ true のままになり、
@@ -11996,8 +11996,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                   <button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
                 </div>
-                <div className="flex justify-center gap-1 py-0.5">{difficulties.map((setting,i)=><button key={setting.id} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${setting.id===extremeDifficulty?'bg-fuchsia-300 scale-125':'bg-slate-700'}`}/>)}</div>
-                <div className="shrink-0 pt-1.5 pb-1"><AssistantBubble key={extremeDifficultyAssistantScene} scene={extremeDifficultyAssistantScene} accent="#e879f9" faceSize={56} compact/></div>
+                <div data-extreme-page-dots className="flex justify-center gap-1 pt-1.5 pb-1">{difficulties.map((setting,i)=><button key={setting.id} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${setting.id===extremeDifficulty?'bg-fuchsia-300 scale-125':'bg-slate-700'}`}/>)}</div>
+                <div data-extreme-assistant className="shrink-0 pt-2 pb-1"><AssistantBubble key={extremeDifficultyAssistantScene} scene={extremeDifficultyAssistantScene} accent="#e879f9" faceSize={56} compact/></div>
                 <div className="shrink-0 pt-1.5 pb-1 text-center text-[9px] text-slate-500">スコアは極限チャレンジ専用のランキングへ載り、チャレンジの記録は変わりません</div>
               </div>
             </div>
