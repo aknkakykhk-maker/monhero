@@ -37,6 +37,7 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
       id: 'masu_test', baseId: 'Suezo', name: 'テストスエゾー',
       bondXp: 3000, distAptPoints: 100,
       distApt: ['C', 'C', 'C', 'C'], statPoints: { hp: 0, atk: 0, def: 0, guts: 0 },
+      bondResetAllocationSnapshot: { version:1, apt:[1,2,0,0], stat:{hp:3,atk:4,def:0,guts:0} },
       createdAt: Date.now(),
     }]));
   });
@@ -103,6 +104,7 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
 
   const text = () => page.evaluate(() => (document.body ? document.body.innerText : '').replace(/\s+/g, ' '));
   check('まとめて強化の枠が出ている', (await text()).includes('まとめて強化'));
+  check('リセット済みの同じ個体にだけ復元ボタンを表示する', (await text()).includes('リセット前の配分を復元'));
 
   const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('mh_masu_mons'))[0]);
   const before = await stored();
@@ -117,10 +119,16 @@ const check = (name, ok, detail = '') => { results.push(ok); console.log(`  ${ok
     return match ? { left:Number(match[1]), total:Number(match[2]), text:area.innerText } : null;
   });
 
+  await click('リセット前の配分を復元');
+  let allocation = await shownAllocation();
+  check('復元すると以前の4距離・4能力構成を仮配分する', allocation && allocation.total-allocation.left === 10, allocation?.text);
+  check('復元しただけではセーブ値が変わらない', JSON.stringify(await stored()) === JSON.stringify(before));
+  await click('配分をすべて取消');
+
   check('1P・5P・10P・MAXの共通切替がある', await page.locator('[aria-label="振り分け単位"] button').count() === 4);
 
   await clickExact('1P'); await clickControl('ライフを増やす');
-  let allocation = await shownAllocation();
+  allocation = await shownAllocation();
   check('1P配分', allocation && allocation.total-allocation.left === 1, allocation?.text);
   check('確定前はセーブ値が変わらない（1P）', JSON.stringify(await stored()) === JSON.stringify(before));
 
