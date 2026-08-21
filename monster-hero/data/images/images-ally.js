@@ -16,6 +16,7 @@
 // 崩れていないかは tools/image-report.js で確認できる。
 // パスの綴り間違い・置き忘れは tools/image-asset-check.js が拾う。
 const MOCCHI_IMG = "images/monsters/mocchi.png?v=f8d4f69ac32c";
+const MOCCHI_DYE_MASK = "images/monsters/mocchi-dye-mask.PNG?v=9ae119148b72";
 const HAM_IMG = "images/monsters/ham.png?v=40397c7cc50e";
 const TIGER_ROLLBACK_IMG = "images/monsters/tiger.png?v=7066f58deafb";
 const TIGER_ROLLBACK_ICON = "images/monster-icons/tiger.png?v=d45553b8bd12";

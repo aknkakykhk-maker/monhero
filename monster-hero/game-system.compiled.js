@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e9db7bd38ce3ea45
+// source-sha256: 9d675ef7aa7a3d69
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 12:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 17:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4812,8 +4812,13 @@ const _getUndineExactRegion = (nx, ny) => {
   const region = _undineExactRegionBytes[i >> 2] >> (i & 3) * 2 & 3;
   return region < 3 ? region : -1;
 };
-// 新しい保存済みヤオビクニマスクは本体と同じ1024x1536・同一座標で作成されている。
-const YAOBIKUNI_DYE_MASK_PLACEMENT = Object.freeze({
+// 保存済みの正式RGBマスクは本体画像と同じ座標で作成されている。
+// 本番、エディタの「合成」、「ゲームで試す」のすべてがこの対応表を通る。
+const EXACT_DYE_MASKS = Object.freeze({
+  Mocchi: MOCCHI_DYE_MASK,
+  Yaobikuni: YAOBIKUNI_DYE_MASK
+});
+const EXACT_DYE_MASK_PLACEMENT = Object.freeze({
   scaleX: 1,
   scaleY: 1,
   x: 0,
@@ -4826,7 +4831,7 @@ const makeDyeMaskEditorTargets = () => Object.values(ALL_PLAYER_MONSTERS).map(mo
   baseId: monster.id,
   name: monster.name,
   imageUrl: monster.imgUrl,
-  maskUrl: monster.id === 'Yaobikuni' ? YAOBIKUNI_DYE_MASK : null,
+  maskUrl: EXACT_DYE_MASKS[monster.id] || null,
   hasMask: Array.isArray(MASU_COLOR_REGION_HUES[monster.id]) && MASU_COLOR_REGION_HUES[monster.id].length > 0
 }));
 // Debug専用。画像全体の透明余白を除外し、実際に描かれた輪郭同士が重なる初期調整値を求める。
@@ -4972,10 +4977,10 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
           srcCtx.imageSmoothingQuality = 'high';
           srcCtx.drawImage(img, 0, 0, w, h);
           const src = srcCtx.getImageData(0, 0, w, h).data;
-          // ヤオビクニは保存済みマスクの赤・緑・青を染色①・②・③として使う。
+          // 正式マスクがあるモンスターは、保存済みPNGの赤・緑・青を染色①・②・③として使う。
           // マスクの透明／無彩色部分は対象外のままにし、色相推定による目や境界への誤染色を防ぐ。
-          const exactMaskUrl = debugPlacement?.maskUrl || (baseId === 'Yaobikuni' ? YAOBIKUNI_DYE_MASK : null);
-          const exactMask = exactMaskUrl ? await _loadExactDyeMask(exactMaskUrl, w, h, debugPlacement || YAOBIKUNI_DYE_MASK_PLACEMENT) : null;
+          const exactMaskUrl = debugPlacement?.maskUrl || EXACT_DYE_MASKS[baseId] || null;
+          const exactMask = exactMaskUrl ? await _loadExactDyeMask(exactMaskUrl, w, h, debugPlacement || EXACT_DYE_MASK_PLACEMENT) : null;
           const aaAlphaThreshold = baseId === 'Mocchi' ? 96 : 200;
           const maskCanvases = regionDefs.map(() => {
             const c = document.createElement('canvas');
@@ -5061,7 +5066,8 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
             iterations
           } = _getSmoothParams(baseId, w);
           let smoothed = grid;
-          for (let iter = 0; iter < iterations; iter++) {
+          // 正式RGBマスクはエディタで確定した境界そのものが正本なので、自動平滑化しない。
+          for (let iter = 0; !exactMask && iter < iterations; iter++) {
             const next = new Int8Array(smoothed);
             for (let y = 0; y < h; y++) {
               for (let x = 0; x < w; x++) {
@@ -5101,7 +5107,8 @@ const getDyeRegionMasks = (baseId, imgUrl, debugPlacement = null) => {
             if (def && typeof def === 'object' && (def.noEdgeGuard || def.posBbox)) smoothed[i] = orig;
           }
           // 元絵が解析サイズより大幅に大きいモンスターは、マスクだけ高解像度で書き出す
-          const hiRes = MASK_HIRES_BASE_IDS[baseId] ? _buildHiResMaskUrls(smoothed, regionDefs, src, w, h, natW, natH) : null;
+          // 正式RGBマスクには自動生成マスク用の輪郭拡張も適用しない（透明領域を染めないため）。
+          const hiRes = !exactMask && MASK_HIRES_BASE_IDS[baseId] ? _buildHiResMaskUrls(smoothed, regionDefs, src, w, h, natW, natH) : null;
           if (hiRes) {
             resolve(hiRes);
             return;
