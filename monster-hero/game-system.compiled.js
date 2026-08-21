@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: b8f6d0360f711fbb
+// source-sha256: 128eb1050e1c37ce
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 11:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 11:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -170,6 +170,27 @@ const PRO_BREEDER_XP_MULT = 1.5;
 // プロモードで始める前に選ぶ供モン候補の数と、そこから実際に加入候補として出す数
 const PRO_ALLY_POOL_SIZE = 5;
 const PRO_ALLY_OFFER_SIZE = 3;
+// 前回確定したプロ編成は、既存の進行・記録キーと混ぜず専用キーへ保存する。
+const PRO_LAST_PARTY_KEY = 'mh_pro_last_party';
+const EMPTY_PRO_LAST_PARTY = Object.freeze({
+  heroBaseId: null,
+  heroDistance: null,
+  allyBaseIds: Object.freeze(Array(PRO_ALLY_POOL_SIZE).fill(null))
+});
+const normalizeProLastParty = (value, unlockedBaseIds = []) => {
+  const unlocked = new Set(Array.isArray(unlockedBaseIds) ? unlockedBaseIds.filter(id => typeof id === 'string') : []);
+  const validId = id => typeof id === 'string' && unlocked.has(id) ? id : null;
+  const heroBaseId = validId(value?.heroBaseId);
+  const heroDistance = heroBaseId && Number.isInteger(value?.heroDistance) && value.heroDistance >= 0 && value.heroDistance < 4 ? value.heroDistance : null;
+  const savedAllies = Array.isArray(value?.allyBaseIds) ? value.allyBaseIds : [];
+  return {
+    heroBaseId,
+    heroDistance,
+    allyBaseIds: Array.from({
+      length: PRO_ALLY_POOL_SIZE
+    }, (_, index) => validId(savedAllies[index]))
+  };
+};
 // クイックモードでWAVEごとに味方の全ステータスへかける倍率
 const QUICK_GROWTH_MULT = 1.10;
 const calculateRemainingHp = (currentHp, finalDamage) => Math.max(0, (Number(currentHp) || 0) - (Number(finalDamage) || 0));
@@ -1677,6 +1698,60 @@ const applyEnhancePlanToMasu = (masu, plan) => {
     used
   };
 };
+// リセット直前の「ポイントで上げた分」だけを、同じ個体の保存値へ小さなスナップショットとして残す。
+// 絆XP・絆Lv・固有技などは含めず、旧形式の個体でも現行の下書き(plan)へ直せる形にそろえる。
+const buildBondResetAllocationSnapshot = (masu, base) => {
+  if (!masu || !base) return null;
+  const baseApt = base.distAptitude || ['C', 'C', 'C', 'C'];
+  const resolvedApt = resolveMasuDistAptitude(masu, base);
+  const apt = Array.isArray(masu.distAptBoosts) ? [0, 1, 2, 3].map(i => Math.max(0, Math.floor(Number(masu.distAptBoosts[i]) || 0))) : [0, 1, 2, 3].map(i => Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[i]) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])));
+  const stat = Object.fromEntries(Object.keys(STAT_POINT_KEYS).map(key => [key, Math.max(0, Math.ceil((Number(masu.statPoints?.[key]) || 0) / (STAT_POINT_GAIN[key] || 1)))]));
+  const total = apt.reduce((sum, value) => sum + value, 0) + Object.values(stat).reduce((sum, value) => sum + value, 0);
+  return total > 0 ? {
+    version: 1,
+    apt,
+    stat
+  } : null;
+};
+// 保存済みスナップショットを現在の上限と残りptへ安全に収めた下書きへ変換する。
+// 完全に戻せない場合も不正なplanを作らず、omittedをUIで知らせる。
+const buildBondResetRestorePlan = (masu, snapshot) => {
+  if (!masu || !snapshot || snapshot.version !== 1 || !Array.isArray(snapshot.apt) || !snapshot.stat || typeof snapshot.stat !== 'object') return null;
+  let remaining = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
+  const base = ALL_PLAYER_MONSTERS[masu.baseId] || {};
+  const currentApt = resolveMasuDistAptitude(masu, base);
+  const plan = {
+    apt: [0, 0, 0, 0],
+    stat: {
+      hp: 0,
+      atk: 0,
+      def: 0,
+      guts: 0
+    }
+  };
+  let requested = 0;
+  [0, 1, 2, 3].forEach(idx => {
+    const wanted = Math.max(0, Math.floor(Number(snapshot.apt[idx]) || 0));
+    requested += wanted;
+    const currentIndex = Math.max(0, DIST_APTITUDE_GRADES.indexOf(currentApt[idx] || 'C'));
+    const capacity = Math.max(0, DIST_APTITUDE_GRADES.length - 1 - currentIndex);
+    plan.apt[idx] = Math.min(wanted, capacity, remaining);
+    remaining -= plan.apt[idx];
+  });
+  Object.keys(STAT_POINT_KEYS).forEach(key => {
+    const wanted = Math.max(0, Math.floor(Number(snapshot.stat[key]) || 0));
+    requested += wanted;
+    plan.stat[key] = Math.min(wanted, remaining);
+    remaining -= plan.stat[key];
+  });
+  const restored = plan.apt.reduce((sum, value) => sum + value, 0) + Object.values(plan.stat).reduce((sum, value) => sum + value, 0);
+  return {
+    plan,
+    requested,
+    restored,
+    omitted: Math.max(0, requested - restored)
+  };
+};
 // 絆ポイントリセットの保存値計算。新形式は投入段階数を直接返却し、新旧の適性表現を同時に戻す。
 // 旧形式は従来どおり完成適性と最新ベースとの差から返却数を求める。
 const buildMasuBondPointReset = (masu, base) => {
@@ -1686,6 +1761,7 @@ const buildMasuBondPointReset = (masu, base) => {
   const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, val]) => sum + Math.ceil((val || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
   const totalRefund = aptSpent + statSpent;
   if (totalRefund <= 0) return null;
+  const allocationSnapshot = buildBondResetAllocationSnapshot(masu, base);
   return {
     refundedPoints: totalRefund,
     nextMasu: {
@@ -1700,7 +1776,8 @@ const buildMasuBondPointReset = (masu, base) => {
         def: 0,
         guts: 0
       },
-      distAptPoints: (masu.distAptPoints || 0) + totalRefund
+      distAptPoints: (masu.distAptPoints || 0) + totalRefund,
+      bondResetAllocationSnapshot: allocationSnapshot
     }
   };
 };
@@ -7574,6 +7651,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([{
   psyche: 60,
   unlockRequirement: 'CHAOS',
   description: '累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。',
+  cardDescription: '累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。',
   specialRules: Object.freeze({
     enemyTurnRate: 0.0075,
     allyJoinPenaltyRate: 0.0075,
@@ -7665,8 +7743,12 @@ const quickGrowthRateForRun = (runMode, difficultyId, waveTurnCount) => {
   return Math.max(0, QUICK_GROWTH_MULT - 1 - Math.max(0, Number(waveTurnCount) || 0) * ULTIMATE_SETTING.specialRules.awakeningPenaltyRate);
 };
 const specialRulePercent = value => `${Math.round((Number(value) || 0) * 100)}%`;
+const compactPercent = value => `${Number(((Number(value) || 0) * 100).toFixed(1))}%`;
+const precisePercent = value => `${Number(((Number(value) || 0) * 100).toFixed(2))}%`;
 const extremeSpecialRuleLines = (difficultyId, quick = false) => {
-  if (difficultyId === ULTIMATE_SETTING.id) return [['敵強化', '累計T ×0.75%'], ['供モン加入B低下', '累計T ×0.75%'], ['与ダメ低下', '経過累計T ×0.75%（最低25%）'], [quick ? '自動成長低下' : 'トレーニング低下', 'WAVE T ×0.75%'], ['距離BREAK', '35Tごと / 3距離を段階強化']];
+  if (difficultyId === ULTIMATE_SETTING.id) return [['敵HP/攻撃', '累計Tごと+0.75%'], ['加入B倍率', '累計Tごと-0.75pt'], ['与ダメ倍率', '経過Tごと-0.75pt（25%で停止）'], [quick ? '自動成長' : 'トレーニング', 'WAVE Tごと-0.75pt'], ['距離BREAK', '35Tごと1距離の弱体Lv上昇']];
+  if (difficultyId === NIGHTMARE_SETTING.id) return [['強化', specialRulePercent(extremeSpecialRule(difficultyId, 'waveEnhancement'))], ['＋補正', specialRulePercent(extremeSpecialRule(difficultyId, 'positiveModifier'))], ['－補正', specialRulePercent(extremeSpecialRule(difficultyId, 'negativeModifier'))]];
+  if (difficultyId === CHAOS_SETTING.id) return [['与ダメ', specialRulePercent(extremeSpecialRule(difficultyId, 'damageDealt'))], ['消費ガッツ', specialRulePercent(extremeSpecialRule(difficultyId, 'gutsCost'))], ['加入B', specialRulePercent(extremeSpecialRule(difficultyId, 'allyJoinBonus'))]];
   const rules = extremeDifficultySetting(difficultyId)?.specialRules || {};
   const lines = [];
   if (rules.assistCardEffect != null) lines.push(['アシストカード効果', specialRulePercent(rules.assistCardEffect)]);
@@ -7708,6 +7790,7 @@ const applyUltimateDistanceBreak = (damage, slotIndex, breakLevels, specialDiffi
   return specialDifficulty === ULTIMATE_SETTING.id && isMonsterAttack && level > 0 ? Math.floor((Number(damage) || 0) * ULTIMATE_SETTING.specialRules.distanceBreak.damageDealtPerLevel ** level) : damage;
 };
 const ultimateDamageTurnMultiplier = (turns, specialDifficulty = null) => specialDifficulty === ULTIMATE_SETTING.id ? Math.max(ULTIMATE_SETTING.specialRules.minimumDamageDealt, 1 - Math.max(0, Number(turns) || 0) * ULTIMATE_SETTING.specialRules.damageTurnRate) : 1;
+const ultimateAllyJoinMultiplier = turns => Math.max(0, 1 - Math.max(0, Number(turns) || 0) * ULTIMATE_SETTING.specialRules.allyJoinPenaltyRate);
 // ===== トレーニング(WAVEクリアごとの強化。旧「能力覚醒」) =====
 // 4種類から2回選ぶ。同じ項目を2回選んでもよく、その場合は1回目を適用した結果へ
 // 2回目をかける(2回分をまとめて足す別計算にはしない)。
@@ -7786,8 +7869,7 @@ const applyExtremeIntegerRule = (value, specialDifficulty = null, rule) => Math.
 // WAVE結果に確定済みの累計ターンを使い、CHAOSの固定50%とは重ねない。
 const applyAllyJoinBonus = (value, specialDifficulty = null, totalTurns = 0) => {
   if (specialDifficulty === ULTIMATE_SETTING.id) {
-    const multiplier = Math.max(0, 1 - Math.max(0, Number(totalTurns) || 0) * ULTIMATE_SETTING.specialRules.allyJoinPenaltyRate);
-    return Math.floor((Number(value) || 0) * multiplier);
+    return Math.floor((Number(value) || 0) * ultimateAllyJoinMultiplier(totalTurns));
   }
   return applyExtremeIntegerRule(value, specialDifficulty, 'allyJoinBonus');
 };
@@ -10709,6 +10791,59 @@ const DyeMaskTouchEditor = ({
     className: "pt-1 text-center text-[7px] text-slate-400"
   }, "1\u672C\u6307\uFF1A\u63CF\u753B\u30FB2\u672C\u6307\uFF1A\u30D1\u30F3/\u30D4\u30F3\u30C1\u30FB\u30C0\u30D6\u30EB\u30BF\u30C3\u30D7\uFF1A\u5168\u4F53\u8868\u793A\u30FB", Math.round(zoom * 100), "%")));
 };
+
+// タップは1回、長押しは一定間隔で繰り返す。Pointer Eventsを使ってタッチを優先し、
+// 指が外れた時と画面破棄時のどちらでもタイマーを残さない。
+function PressRepeatButton({
+  onPress,
+  disabled,
+  className,
+  children,
+  ...props
+}) {
+  const delayRef = useRef(null),
+    repeatRef = useRef(null),
+    longPressedRef = useRef(false);
+  const clearPress = useCallback(() => {
+    if (delayRef.current !== null) clearTimeout(delayRef.current);
+    if (repeatRef.current !== null) clearInterval(repeatRef.current);
+    delayRef.current = repeatRef.current = null;
+  }, []);
+  useEffect(() => clearPress, [clearPress]);
+  const startPress = event => {
+    if (disabled || event.pointerType === 'mouse' && event.button !== 0) return;
+    clearPress();
+    longPressedRef.current = false;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    delayRef.current = setTimeout(() => {
+      longPressedRef.current = true;
+      onPress();
+      repeatRef.current = setInterval(onPress, 110);
+    }, 420);
+  };
+  const clickPress = event => {
+    if (longPressedRef.current) {
+      longPressedRef.current = false;
+      event.preventDefault();
+      return;
+    }
+    onPress();
+  };
+  return /*#__PURE__*/React.createElement("button", _extends({
+    type: "button",
+    disabled: disabled,
+    onPointerDown: startPress,
+    onPointerUp: clearPress,
+    onPointerCancel: clearPress,
+    onLostPointerCapture: clearPress,
+    onClick: clickPress,
+    className: className,
+    style: {
+      touchAction: 'manipulation',
+      WebkitTouchCallout: 'none'
+    }
+  }, props), children);
+}
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -11046,6 +11181,7 @@ function MonsterHeroGame() {
   const battleEntryStateRef = useRef('BATTLE_DIFFICULTY_SELECT');
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
   const [bulkPlan, setBulkPlan] = useState(null); // null=1ポイントずつのモード / {apt:[0,0,0,0], stat:{...}}
+  const [bulkEnhanceUnit, setBulkEnhanceUnit] = useState(1); // 1 / 5 / 10 / 'MAX'（全項目共通）
   // 合体画面の並べかえ。マスモンが増えると目的の個体を探しにくいため
   const [fusionSortKey, setFusionSortKey] = useState('bond'); // 'bond'|'lineage'|'name'|'fused'
   const [fusionSortDir, setFusionSortDir] = useState('desc');
@@ -11076,6 +11212,10 @@ function MonsterHeroGame() {
   // ラン中の加入候補はここからしか出さない。ふだんのモードでは使わないので空のまま
   const [proAllyPool, setProAllyPool] = useState([]);
   const [proAllyDetail, setProAllyDetail] = useState(null); // 候補の選択状態とは分けて開く、既存のベースモン詳細
+  const [proEditingAllyIndex, setProEditingAllyIndex] = useState(null); // null=編成確認、数値=その供モン枠だけ変更
+  // 起動時に検証した前回編成と、勇者選択画面へ初期表示する勇者・配置距離。
+  const [lastProParty, setLastProParty] = useState(EMPTY_PRO_LAST_PARTY);
+  const [proHeroPreset, setProHeroPreset] = useState(null);
   // スキップ(チケットを1枚使って、ボス撃破まで到達したのと同じ経験値・ダイヤを受け取る)
   const [skipFlow, setSkipFlow] = useState(null); // { difficulty, itemId, hero, allies:[] }
   const [skipPickTab, setSkipPickTab] = useState('roster');
@@ -11886,9 +12026,11 @@ function MonsterHeroGame() {
       tint: 'text-amber-300'
     }].map(stat => ({
       ...stat,
+      normalDiff: Number(bonus[stat.key]) || 0,
       after: stat.before + stat.diff
     }));
     // 間合い適性は「置いた距離に関係なく4距離すべてへ加算される」ので、距離ごとの合計補正で見せる
+    const normalAptDelta = getMonsterAptPct(mon, null);
     const aptDelta = getMonsterAptPct(mon, rule);
     const apt = RANGE_LABELS.map((label, idx) => {
       const before = distTotalBonus(idx),
@@ -11897,6 +12039,7 @@ function MonsterHeroGame() {
         label,
         idx,
         before,
+        normalDiff: normalAptDelta[idx] || 0,
         diff,
         after: before + diff
       };
@@ -13314,6 +13457,8 @@ function MonsterHeroGame() {
       setMissions(missionState);
       const savedUnlockedMonsters = await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false);
       setUnlockedMonsterIds(savedUnlockedMonsters);
+      const availableBaseIds = Object.values(ALL_PLAYER_MONSTERS).map(mon => mon.id).filter(id => savedUnlockedMonsters.includes(id));
+      setLastProParty(normalizeProLastParty(await storeGet(PRO_LAST_PARTY_KEY, null, false), availableBaseIds));
       const savedMonsterRoster = await storeGet('mh_monster_roster', savedUnlockedMonsters, false);
       const partySetsMigrated = await storeGet(MONSTER_PARTY_SETS_MIGRATED_KEY, false, false);
       const savedPartySets = partySetsMigrated === true ? await storeGet(MONSTER_PARTY_SETS_KEY, null, false) : null;
@@ -14438,7 +14583,12 @@ function MonsterHeroGame() {
     const masu = getMasuMon(masuId);
     const applied = applyEnhancePlanToMasu(masu, plan);
     if (!applied) return null;
-    const updatedMasu = applied.masu;
+    // 何らかの配分を確定した時点で、リセット直後の復元候補としての役目は終わる。
+    // 残したままだと後日の強化に以前の全量を重ねられてしまうため、この個体だけから取り除く。
+    const {
+      bondResetAllocationSnapshot: _usedResetSnapshot,
+      ...updatedMasu
+    } = applied.masu;
     setMasuMons(prev => {
       const next = prev.map(m => m.id === masuId ? updatedMasu : m);
       storeSet('mh_masu_mons', next, false);
@@ -17104,6 +17254,7 @@ function MonsterHeroGame() {
     setScore(s => s + finalRoundScore);
     const finalDistDamage = waveDistDamage.map((value, index) => (value || 0) + (distDamage[index] || 0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
+    const normalGainedDistBonus = finalDistDamage.map(d => d * 0.001 / 100);
     const gainedDistBonus = finalDistDamage.map(d => applyNightmareWaveEnhancement(d * 0.001 / 100, specialRuleDifficulty));
     const newDistBonus = distDmgBonus.map((b, i) => b + gainedDistBonus[i]);
     setDistDmgBonus(newDistBonus);
@@ -17132,8 +17283,10 @@ function MonsterHeroGame() {
       roundScore: finalRoundScore,
       totalScore: score + finalRoundScore,
       distDamage: finalDistDamage,
+      normalGainedDistBonus,
       gainedDistBonus,
       newDistBonus,
+      baseRecoveryDelta,
       recoveryDelta,
       totalDistDamage: newTotalDistDamage,
       totalAllDamage: newTotalAllDamage,
@@ -18921,7 +19074,9 @@ function MonsterHeroGame() {
       // WAVE 2の供モン合流で「勝手に勇者モンが選ばれている」ように見えてしまう
       if (isProMode(runMode)) {
         setCurrentPickingMon(null);
-        setProAllyPool([]);
+        setProHeroPreset(null);
+        // 前回候補のうち、今回の勇者と同じ種だけは候補から外す。それ以外の有効な候補は初期選択として残す。
+        setProAllyPool(prev => prev.filter(mon => mon.id !== m.id));
         setGameState('PICK_PRO_ALLIES');
         return;
       }
@@ -19021,6 +19176,20 @@ function MonsterHeroGame() {
       }, battleMs(1400));
     }
     setCurrentPickingMon(null);
+  };
+
+  // 「この編成で開始」で確定した6枠だけを次回用に保存する。個別変更の途中では更新しない。
+  const confirmProParty = () => {
+    if (!mainHero || proAllyPool.length !== PRO_ALLY_POOL_SIZE) return;
+    const confirmedParty = normalizeProLastParty({
+      heroBaseId: mainHero.id,
+      heroDistance: initialBattleDistanceRef.current,
+      allyBaseIds: proAllyPool.map(mon => mon.id)
+    }, getUnlockedBaseMonsterList().map(mon => mon.id));
+    setLastProParty(confirmedParty);
+    storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);
+    setTeachingPool([...getActiveTeachingCards()]);
+    setGameState('PICK_TEACHING');
   };
   const confirmPickTeaching = () => {
     if (!selectedTeachingCard) return;
@@ -22945,7 +23114,7 @@ function MonsterHeroGame() {
           key: setting.id,
           "aria-disabled": !previewable,
           "data-extreme-difficulty-card": setting.id,
-          className: `snap-center shrink-0 w-[82%] h-[382px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
+          className: `snap-center shrink-0 w-[82%] h-[400px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active ? 'scale-100 opacity-100' : 'scale-[.92] opacity-55'}`,
           style: {
             borderColor: active ? '#f0abfc' : 'rgba(255,255,255,.12)',
             background: previewable ? 'linear-gradient(180deg,#34133f,#160d2b)' : 'linear-gradient(180deg,#1e293b,#0d142b)',
@@ -22978,28 +23147,31 @@ function MonsterHeroGame() {
         }, label, /*#__PURE__*/React.createElement("b", {
           className: "block text-[11px] leading-tight text-white"
         }, value)))), /*#__PURE__*/React.createElement("p", {
-          className: "mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200"
-        }, setting.description), setting.id === 'EXTREME' ? /*#__PURE__*/React.createElement("div", {
+          "data-extreme-card-description": setting.id,
+          className: `${setting.id === 'ULTIMATE' ? 'mt-1 h-[32px] shrink-0' : 'mt-1 min-h-[35px]'} rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200`
+        }, setting.cardDescription || setting.description), setting.id === 'EXTREME' ? /*#__PURE__*/React.createElement("div", {
           className: "mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"
         }, /*#__PURE__*/React.createElement("small", {
           className: "block text-[8px] font-black text-amber-300"
         }, "\u26A0 EXTREME\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("b", {
           className: "block text-[11px] text-white whitespace-nowrap"
         }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u52B9\u679C 50%")) : /*#__PURE__*/React.createElement("div", {
-          className: "mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"
+          "data-extreme-special-rules": setting.id,
+          className: `${setting.id === 'ULTIMATE' ? 'mt-1.5 h-[62px]' : 'mt-1 h-[51px]'} shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5`
         }, /*#__PURE__*/React.createElement("small", {
-          className: "block text-center text-[8px] leading-tight font-black text-amber-300"
-        }, "\u26A0 ", setting.label, "\u7279\u6B8A\u30EB\u30FC\u30EB"), extremeSpecialRuleLines(setting.id).map(([label, value]) => /*#__PURE__*/React.createElement("div", {
+          className: "block text-center text-[8px] leading-[9px] font-black text-amber-300"
+        }, "\u26A0 ", setting.label, "\u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", null, extremeSpecialRuleLines(setting.id).map(([label, value]) => /*#__PURE__*/React.createElement("div", {
           key: label,
-          className: "grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[10px] whitespace-nowrap"
+          className: `grid min-w-0 grid-cols-[auto_1fr] items-center gap-1 ${setting.id === 'ULTIMATE' ? 'text-[8px] leading-[9px]' : 'text-[9px] leading-[10px]'} whitespace-nowrap`
         }, /*#__PURE__*/React.createElement("span", {
           className: "text-slate-300"
         }, label), /*#__PURE__*/React.createElement("b", {
-          className: "text-right text-white"
-        }, value))))) : /*#__PURE__*/React.createElement("div", {
+          className: "min-w-0 text-right text-white"
+        }, value)))))) : /*#__PURE__*/React.createElement("div", {
           className: "mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500"
         }, "\uFF1F\uFF1F\uFF1F"), /*#__PURE__*/React.createElement("div", {
-          className: "grid gap-1.5 mt-auto pt-1.5"
+          "data-extreme-card-actions": true,
+          className: "grid gap-1.5 mt-auto pt-2 pb-1"
         }, /*#__PURE__*/React.createElement("button", {
           disabled: !previewable,
           onClick: () => setShowWaveDetails(true),
@@ -23036,14 +23208,16 @@ function MonsterHeroGame() {
         onClick: () => selectDifficultyIndex(selectedIndex + 1),
         className: "absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"
       }, /*#__PURE__*/React.createElement(ChevronRight, null))), /*#__PURE__*/React.createElement("div", {
-        className: "flex justify-center gap-1 py-0.5"
+        "data-extreme-page-dots": true,
+        className: "flex justify-center gap-1 pt-1.5 pb-1"
       }, difficulties.map((setting, i) => /*#__PURE__*/React.createElement("button", {
         key: setting.id,
         "aria-label": `${i + 1}ページ目`,
         onClick: () => selectDifficultyIndex(i),
         className: `w-1.5 h-1.5 rounded-full ${setting.id === extremeDifficulty ? 'bg-fuchsia-300 scale-125' : 'bg-slate-700'}`
       }))), /*#__PURE__*/React.createElement("div", {
-        className: "shrink-0 pt-1.5 pb-1"
+        "data-extreme-assistant": true,
+        className: "shrink-0 pt-2 pb-1"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         key: extremeDifficultyAssistantScene,
         scene: extremeDifficultyAssistantScene,
@@ -23244,8 +23418,14 @@ function MonsterHeroGame() {
             setDebugBattle(false);
             setExtremeRun(false);
             setDebugOutcome(null);
-            setProAllyPool([]);
-            setMonSelection(pro ? getUnlockedBaseMonsterList() : getActiveMonsterList());
+            const baseMons = pro ? getUnlockedBaseMonsterList() : [];
+            const savedHero = pro ? baseMons.find(mon => mon.id === lastProParty.heroBaseId) : null;
+            setProHeroPreset(savedHero && lastProParty.heroDistance !== null ? {
+              heroBaseId: savedHero.id,
+              heroDistance: lastProParty.heroDistance
+            } : null);
+            setProAllyPool(pro ? lastProParty.allyBaseIds.map(id => baseMons.find(mon => mon.id === id)).filter(mon => mon && mon.id !== savedHero?.id) : []);
+            setMonSelection(pro ? baseMons : getActiveMonsterList());
             setHeroPickTab(pro ? 'base' : 'roster');
             setGameState('PICK_HERO');
           },
@@ -26846,22 +27026,6 @@ function MonsterHeroGame() {
       // 総合力は共通関数から都度出す。1ポイント強化も一括強化も、強化前と強化後を
       // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
       const currentPower = masuPowerOf(masu);
-      const powerAfterApt = idx => plannedMasuPowerOf(masu, {
-        apt: [0, 1, 2, 3].map(i => i === idx ? 1 : 0),
-        stat: {}
-      });
-      const powerAfterStat = key => plannedMasuPowerOf(masu, {
-        apt: [0, 0, 0, 0],
-        stat: {
-          [key]: 1
-        }
-      });
-      const powerDeltaLabel = after => {
-        const d = after - currentPower;
-        return d === 0 ? null : /*#__PURE__*/React.createElement("span", {
-          className: `text-[8px] font-mono font-black ${d > 0 ? 'text-amber-300' : 'text-red-300'}`
-        }, "\u7DCF\u5408\u529B ", d > 0 ? '+' : '', formatMonsterPower(d));
-      };
       const ps = mergeMasuIntoMon(masu)?.plusStats || {};
       // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
       // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
@@ -26883,17 +27047,21 @@ function MonsterHeroGame() {
       };
       const planUsed = plan.apt.reduce((a, b) => a + b, 0) + Object.values(plan.stat).reduce((a, b) => a + b, 0);
       const planLeft = points - planUsed;
+      const restoreDraft = buildBondResetRestorePlan(masu, masu.bondResetAllocationSnapshot);
+      const restoreResetAllocation = () => {
+        if (restoreDraft?.restored > 0) setBulkPlan(restoreDraft.plan);
+      };
       // 下書き段階での間合い適性(何段階上がるか)。上限Mを超えないようにする
       const plannedGrade = idx => {
         const cur = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[idx] || 'C');
         return DIST_APTITUDE_GRADES[Math.min(DIST_APTITUDE_GRADES.length - 1, Math.max(0, cur + plan.apt[idx]))];
       };
       const canPlanApt = idx => planLeft > 0 && DIST_APTITUDE_GRADES.indexOf(plannedGrade(idx)) < DIST_APTITUDE_GRADES.length - 1;
-      const addPlanApt = (idx, d) => setBulkPlan(p => {
-        const q = p ? {
-          apt: [...p.apt],
+      const changePlan = (kind, target, direction) => setBulkPlan(previous => {
+        const q = previous ? {
+          apt: [...previous.apt],
           stat: {
-            ...p.stat
+            ...previous.stat
           }
         } : {
           apt: [0, 0, 0, 0],
@@ -26904,27 +27072,20 @@ function MonsterHeroGame() {
             guts: 0
           }
         };
-        q.apt[idx] = Math.max(0, q.apt[idx] + d);
+        const current = kind === 'apt' ? q.apt[target] : q.stat[target] || 0;
+        const used = q.apt.reduce((a, b) => a + b, 0) + Object.values(q.stat).reduce((a, b) => a + b, 0);
+        const remaining = Math.max(0, points - used);
+        let amount = bulkEnhanceUnit === 'MAX' ? direction > 0 ? remaining : current : Math.min(Number(bulkEnhanceUnit), direction > 0 ? remaining : current);
+        if (kind === 'apt' && direction > 0) {
+          const baseGradeIndex = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[target] || 'C');
+          amount = Math.min(amount, DIST_APTITUDE_GRADES.length - 1 - baseGradeIndex - current);
+        }
+        const next = Math.max(0, current + direction * Math.max(0, amount));
+        if (kind === 'apt') q.apt[target] = next;else q.stat[target] = next;
         return q;
       });
-      const addPlanStat = (key, d) => setBulkPlan(p => {
-        const q = p ? {
-          apt: [...p.apt],
-          stat: {
-            ...p.stat
-          }
-        } : {
-          apt: [0, 0, 0, 0],
-          stat: {
-            hp: 0,
-            atk: 0,
-            def: 0,
-            guts: 0
-          }
-        };
-        q.stat[key] = Math.max(0, (q.stat[key] || 0) + d);
-        return q;
-      });
+      const addPlanApt = (idx, direction) => changePlan('apt', idx, direction);
+      const addPlanStat = (key, direction) => changePlan('stat', key, direction);
       const applyPlan = () => {
         const updated = spendPointsBulk(masu.id, plan);
         if (!updated) return;
@@ -26978,98 +27139,143 @@ function MonsterHeroGame() {
         compact: true
       })), /*#__PURE__*/React.createElement("div", {
         className: "flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full"
-      }, points > 0 && /*#__PURE__*/React.createElement("div", {
-        className: "bg-slate-900 border border-amber-500/40 rounded-3xl p-4 shadow-xl"
+      }, points > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        className: "bg-slate-900 border border-amber-500/40 rounded-3xl p-3 shadow-xl"
       }, /*#__PURE__*/React.createElement("div", {
-        className: "flex items-center justify-between mb-3"
+        className: "flex items-center justify-between gap-2 mb-2"
       }, /*#__PURE__*/React.createElement("div", {
         className: "text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5"
       }, /*#__PURE__*/React.createElement(Sparkles, {
         size: 14
       }), "\u307E\u3068\u3081\u3066\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
-        className: "text-[10px] font-black text-white"
-      }, "\u6B8B\u308A ", /*#__PURE__*/React.createElement("span", {
-        className: `font-mono text-[15px] ${planLeft > 0 ? 'text-amber-300' : 'text-slate-500'}`
-      }, planLeft), " / ", points, " pt")), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] text-slate-400 font-bold"
+      }, "\u5168\u9805\u76EE\u5171\u901A")), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3",
+        role: "group",
+        "aria-label": "\u632F\u308A\u5206\u3051\u5358\u4F4D"
+      }, [1, 5, 10, 'MAX'].map(unit => /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        key: unit,
+        "aria-pressed": bulkEnhanceUnit === unit,
+        onClick: () => setBulkEnhanceUnit(unit),
+        className: `min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${bulkEnhanceUnit === unit ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}`
+      }, unit === 'MAX' ? 'MAX' : `${unit}P`))), restoreDraft && restoreDraft.requested > 0 && /*#__PURE__*/React.createElement("div", {
+        className: "mb-3 rounded-xl border border-cyan-700/40 bg-cyan-950/20 p-2"
+      }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
+        onClick: restoreResetAllocation,
+        disabled: restoreDraft.restored <= 0,
+        className: "w-full min-h-[40px] rounded-lg bg-slate-800 text-cyan-200 text-[10px] font-black active:scale-95 disabled:opacity-40"
+      }, "\u21A9 \u30EA\u30BB\u30C3\u30C8\u524D\u306E\u914D\u5206\u3092\u5FA9\u5143"), /*#__PURE__*/React.createElement("div", {
+        className: `mt-1 text-[8px] font-bold text-center ${restoreDraft.omitted > 0 ? 'text-amber-300' : 'text-slate-500'}`
+      }, restoreDraft.omitted > 0 ? `現行の上限・残りptに合わせ、${restoreDraft.restored}ptを仮配分（復元できない分 ${restoreDraft.omitted}pt）` : '保存は「強化する」を押した時だけです')), /*#__PURE__*/React.createElement("div", {
         className: "mb-3"
       }, renderPowerBadge(plannedMasuPowerOf(masu, plan), {
         before: currentPower,
         size: 'md'
-      }), planUsed > 0 && /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500 font-bold mt-1"
-      }, "\u4F7F\u7528\u4E88\u5B9A \u5F37\u5316P ", planUsed)), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 font-bold mb-2"
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "text-[9px] text-slate-400 font-bold mb-1.5"
       }, "\u9593\u5408\u3044\u9069\u6027"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-1.5 mb-3"
+        className: "space-y-1.5 mb-3"
       }, RANGE_LABELS.map((label, idx) => {
-        const g = plannedGrade(idx);
-        const added = plan.apt[idx];
+        const before = resolvedDistAptitude[idx] || 'C',
+          after = plannedGrade(idx),
+          added = plan.apt[idx];
         return /*#__PURE__*/React.createElement("div", {
           key: idx,
-          className: "flex flex-col items-center gap-1"
+          className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
         }, /*#__PURE__*/React.createElement("span", {
-          className: `text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`
-        }, label), /*#__PURE__*/React.createElement("span", {
-          className: `w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[g]}`
-        }, g), /*#__PURE__*/React.createElement("span", {
-          className: `text-[8px] font-mono font-black leading-none ${aptGradeToPct(g) > 0 ? 'text-cyan-300' : aptGradeToPct(g) < 0 ? 'text-red-300' : 'text-slate-500'}`
-        }, formatAptPct(aptGradeToPct(g))), /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-1 w-full"
-        }, /*#__PURE__*/React.createElement("button", {
+          className: `text-[8px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`
+        }, label), /*#__PURE__*/React.createElement("div", {
+          className: "text-center font-mono font-black text-[12px]"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: DIST_APTITUDE_COLOR[before]
+        }, before), /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500 mx-1"
+        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+          className: added > 0 ? 'text-cyan-300' : 'text-slate-300'
+        }, after)), /*#__PURE__*/React.createElement("span", {
+          className: "text-center text-[9px] font-mono font-black text-amber-300"
+        }, added, "pt"), /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-2 gap-1"
+        }, /*#__PURE__*/React.createElement(PressRepeatButton, {
+          "aria-label": `${label}距離適性を減らす`,
           disabled: added <= 0,
-          onClick: () => addPlanApt(idx, -1),
-          className: "flex-1 text-[11px] font-black bg-slate-800 text-slate-300 rounded py-0.5 active:scale-90 disabled:opacity-20"
-        }, "\u2212"), /*#__PURE__*/React.createElement("span", {
-          className: "text-[9px] font-mono font-black text-amber-300 w-4 text-center"
-        }, added > 0 ? `+${added}` : '0'), /*#__PURE__*/React.createElement("button", {
+          onPress: () => addPlanApt(idx, -1),
+          className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
+        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+          "aria-label": `${label}距離適性を増やす`,
           disabled: !canPlanApt(idx),
-          onClick: () => addPlanApt(idx, 1),
-          className: "flex-1 text-[11px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-90 disabled:opacity-20 disabled:bg-slate-700"
+          onPress: () => addPlanApt(idx, 1),
+          className: "min-h-[40px] rounded-lg bg-amber-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
         }, "\uFF0B")));
       })), /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-slate-400 font-bold mb-2"
+        className: "text-[9px] text-slate-400 font-bold mb-1.5"
       }, "\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2 mb-3"
+        className: "space-y-1.5"
       }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
-        const n = plan.stat[key] || 0;
-        const gain = n * (STAT_POINT_GAIN[key] || 1);
+        const n = plan.stat[key] || 0,
+          gain = n * (STAT_POINT_GAIN[key] || 1),
+          before = currentStatValue(key);
         return /*#__PURE__*/React.createElement("div", {
           key: key,
-          className: "bg-black/40 border border-emerald-500/25 rounded-xl p-2"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center justify-between mb-1"
+          className: "grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5"
         }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[9px] text-emerald-300 font-black"
-        }, label), /*#__PURE__*/React.createElement("span", {
-          className: "text-[10px] font-mono font-black text-white"
-        }, currentStatValue(key), gain > 0 && /*#__PURE__*/React.createElement("span", {
-          className: "text-emerald-400"
-        }, " \u2192 ", currentStatValue(key) + gain))), /*#__PURE__*/React.createElement("div", {
-          className: "flex items-center gap-1"
-        }, /*#__PURE__*/React.createElement("button", {
+          className: "text-[8px] text-center text-emerald-300 font-black"
+        }, label), /*#__PURE__*/React.createElement("div", {
+          className: "text-center font-mono font-black text-[11px]"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-white"
+        }, before), /*#__PURE__*/React.createElement("span", {
+          className: "text-slate-500 mx-1"
+        }, "\u2192"), /*#__PURE__*/React.createElement("span", {
+          className: gain > 0 ? 'text-emerald-300' : 'text-slate-300'
+        }, before + gain)), /*#__PURE__*/React.createElement("span", {
+          className: "text-center text-[9px] font-mono font-black text-amber-300"
+        }, n, "pt"), /*#__PURE__*/React.createElement("div", {
+          className: "grid grid-cols-2 gap-1"
+        }, /*#__PURE__*/React.createElement(PressRepeatButton, {
+          "aria-label": `${label}を減らす`,
           disabled: n <= 0,
-          onClick: () => addPlanStat(key, -1),
-          className: "flex-1 text-[11px] font-black bg-slate-800 text-slate-300 rounded py-0.5 active:scale-90 disabled:opacity-20"
-        }, "\u2212"), /*#__PURE__*/React.createElement("span", {
-          className: "text-[9px] font-mono font-black text-amber-300 w-6 text-center"
-        }, n > 0 ? `+${n}pt` : '0'), /*#__PURE__*/React.createElement("button", {
+          onPress: () => addPlanStat(key, -1),
+          className: "min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20"
+        }, "\u2212"), /*#__PURE__*/React.createElement(PressRepeatButton, {
+          "aria-label": `${label}を増やす`,
           disabled: planLeft <= 0,
-          onClick: () => addPlanStat(key, 1),
-          className: "flex-1 text-[11px] font-black bg-emerald-700 text-white rounded py-0.5 active:scale-90 disabled:opacity-20 disabled:bg-slate-700"
+          onPress: () => addPlanStat(key, 1),
+          className: "min-h-[40px] rounded-lg bg-emerald-700 text-lg font-black disabled:bg-slate-700 disabled:opacity-20"
         }, "\uFF0B")));
       })), /*#__PURE__*/React.createElement("div", {
+        className: "text-[8px] text-slate-500 mt-2"
+      }, "\uFF0B\uFF0F\u2212\u306F\u9577\u62BC\u3057\u3067\u3082\u9023\u7D9A\u8ABF\u6574\u3067\u304D\u307E\u3059\u3002\u78BA\u5B9A\u3059\u308B\u307E\u3067\u4FDD\u5B58\u30C7\u30FC\u30BF\u306F\u5909\u308F\u308A\u307E\u305B\u3093\u3002")), /*#__PURE__*/React.createElement("div", {
+        className: "sticky bottom-0 z-20 -mx-4 px-4 pt-2 border-t border-amber-500/30 bg-slate-950/95",
+        style: {
+          paddingBottom: 'max(.75rem,env(safe-area-inset-bottom))'
+        },
+        "aria-label": "\u5F37\u5316\u306E\u78BA\u5B9A\u64CD\u4F5C"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center justify-between mb-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-[10px] font-black text-slate-300"
+      }, "\u6B8B\u308Apt"), /*#__PURE__*/React.createElement("span", {
+        className: "font-mono font-black"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: planLeft > 0 ? 'text-amber-300' : 'text-slate-500'
+      }, planLeft), /*#__PURE__*/React.createElement("small", {
+        className: "text-slate-500"
+      }, " / ", points, " pt"))), /*#__PURE__*/React.createElement("div", {
         className: "flex gap-2"
       }, /*#__PURE__*/React.createElement("button", {
+        type: "button",
         disabled: planUsed <= 0,
         onClick: () => setBulkPlan(null),
-        className: "px-4 py-2.5 rounded-xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30"
-      }, "\u30EA\u30BB\u30C3\u30C8"), /*#__PURE__*/React.createElement("button", {
+        className: "min-h-[46px] px-3 rounded-xl font-black text-[10px] bg-slate-800 text-slate-300 disabled:opacity-30"
+      }, "\u914D\u5206\u3092\u3059\u3079\u3066\u53D6\u6D88"), /*#__PURE__*/React.createElement("button", {
+        type: "button",
         disabled: planUsed <= 0,
         onClick: applyPlan,
-        className: "flex-1 py-2.5 rounded-xl font-black text-[12px] bg-gradient-to-r from-amber-600 to-orange-600 text-white active:scale-95 disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700 shadow-lg"
-      }, planUsed > 0 ? `${planUsed}pt を使って強化する` : '振り分けてください')), /*#__PURE__*/React.createElement("div", {
-        className: "text-[8px] text-slate-500 mt-2 leading-relaxed"
-      }, "\u203B \u78BA\u5B9A\u3059\u308B\u307E\u3067\u30DD\u30A4\u30F3\u30C8\u306F\u6E1B\u308A\u307E\u305B\u3093\u30021\u3064\u305A\u3064\u632F\u308A\u305F\u3044\u5834\u5408\u306F\u4E0B\u306E\u5404\u9805\u76EE\u304B\u3089\u3082\u64CD\u4F5C\u3067\u304D\u307E\u3059\u3002")), /*#__PURE__*/React.createElement("div", {
+        className: "min-h-[46px] flex-1 rounded-xl font-black text-[12px] bg-gradient-to-r from-amber-600 to-orange-600 text-white disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700"
+      }, planUsed > 0 ? `${planUsed}ptを使って強化する` : '振り分けてください')))), /*#__PURE__*/React.createElement("div", {
         className: "flex items-center gap-4 bg-slate-900 border border-amber-500/30 rounded-3xl p-4 shadow-xl"
       }, /*#__PURE__*/React.createElement("div", {
         className: "relative w-20 h-20 shrink-0"
@@ -27154,95 +27360,8 @@ function MonsterHeroGame() {
       }, "\u5408\u6D41\u30DC\u30FC\u30CA\u30B9(\u3053\u306E\u30DE\u30B9\u30E2\u30F3\u304C\u4F9B\u30E2\u30F3\u3068\u3057\u3066\u5408\u6D41\u3057\u305F\u6642\u306B\u52A0\u7B97\u3055\u308C\u308B\u5024)"), /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] text-white font-bold mt-1"
       }, ps.hp > 0 && `HP+${ps.hp} `, ps.atk > 0 && `攻+${ps.atk} `, ps.def > 0 && `防+${ps.def} `, ps.guts > 0 && `G+${ps.guts} `, !(ps.hp > 0 || ps.atk > 0 || ps.def > 0 || ps.guts > 0) && 'なし')), /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 p-3 rounded-2xl border border-cyan-500/30"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-cyan-400 uppercase font-bold mb-2"
-      }, "\u9593\u5408\u3044\u9069\u6027\u3092\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-4 gap-2"
-      }, RANGE_LABELS.map((label, idx) => {
-        const grade = resolvedDistAptitude[idx] || 'C';
-        const gIdx = DIST_APTITUDE_GRADES.indexOf(grade);
-        const nextGrade = gIdx < DIST_APTITUDE_GRADES.length - 1 ? DIST_APTITUDE_GRADES[gIdx + 1] : null;
-        const canUp = points > 0 && nextGrade;
-        return /*#__PURE__*/React.createElement("div", {
-          key: idx,
-          className: "flex flex-col items-center gap-1"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: `text-[8px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`
-        }, label), /*#__PURE__*/React.createElement("span", {
-          className: `w-full text-center py-1 rounded-lg border text-base font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`
-        }, grade), /*#__PURE__*/React.createElement("span", {
-          className: `text-[9px] font-mono font-black leading-none ${aptGradeToPct(grade) > 0 ? 'text-cyan-300' : aptGradeToPct(grade) < 0 ? 'text-red-300' : 'text-slate-500'}`
-        }, formatAptPct(aptGradeToPct(grade))), /*#__PURE__*/React.createElement("span", {
-          className: "text-[7px] text-slate-500 font-mono h-3"
-        }, nextGrade ? `次: ${nextGrade} ${formatAptPct(aptGradeToPct(nextGrade))}` : 'MAX'), /*#__PURE__*/React.createElement("span", {
-          className: "h-3 flex items-center"
-        }, canUp ? powerDeltaLabel(powerAfterApt(idx)) : null), /*#__PURE__*/React.createElement("button", {
-          disabled: !canUp,
-          onClick: () => {
-            const beforeGrade = grade;
-            const updated = spendAptPoint(masu.id, idx);
-            if (!updated) return;
-            setMasuMonDetail(updated);
-            saveMissionProgress('enhance');
-            addAssistantBond('enhance');
-            const afterGrade = resolveMasuDistAptitude(updated, base)[idx] || beforeGrade;
-            setEffect({
-              type: 'enhance',
-              label: `${label}距離適性 強化！`,
-              icon: '📈',
-              monEmoji: base.emoji,
-              imgUrl: base.iconUrl,
-              baseId: masu.baseId,
-              colors: getMasuColors(updated),
-              subLabel: `${label}距離適性 ${beforeGrade} → ${afterGrade}`
-            });
-            setTimeout(() => setEffect(null), 900);
-          },
-          className: "w-full text-[9px] font-black bg-amber-600 text-white rounded-lg py-1 active:scale-95 disabled:opacity-20 disabled:bg-slate-700"
-        }, "+1"));
-      }))), /*#__PURE__*/React.createElement("div", {
-        className: "bg-black/40 p-3 rounded-2xl border border-emerald-500/30"
-      }, /*#__PURE__*/React.createElement("div", {
-        className: "text-[9px] text-emerald-400 uppercase font-bold mb-2"
-      }, "\u30B9\u30C6\u30FC\u30BF\u30B9\u3092\u5F37\u5316"), /*#__PURE__*/React.createElement("div", {
-        className: "grid grid-cols-2 gap-2"
-      }, Object.entries(STAT_POINT_KEYS).map(([key, label]) => {
-        const before = currentStatValue(key);
-        const gain = STAT_POINT_GAIN[key] || 1;
-        const after = before + gain;
-        return /*#__PURE__*/React.createElement("button", {
-          key: key,
-          disabled: points <= 0,
-          onClick: () => {
-            const updated = spendStatPoint(masu.id, key);
-            if (!updated) return;
-            setMasuMonDetail(updated);
-            saveMissionProgress('enhance');
-            addAssistantBond('enhance');
-            setEffect({
-              type: 'enhance',
-              label: `${label}強化！`,
-              icon: '💪',
-              monEmoji: base.emoji,
-              imgUrl: base.iconUrl,
-              baseId: masu.baseId,
-              colors: getMasuColors(updated),
-              subLabel: `${label} ${before} → ${after}`
-            });
-            setTimeout(() => setEffect(null), 900);
-          },
-          className: "flex flex-col items-center gap-1 bg-emerald-950/50 border border-emerald-500/30 rounded-xl py-2.5 active:scale-95 disabled:opacity-20"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[9px] text-emerald-300 font-black"
-        }, label), /*#__PURE__*/React.createElement("span", {
-          className: "text-[11px] text-white font-mono font-black"
-        }, before, " \u2192 ", /*#__PURE__*/React.createElement("span", {
-          className: "text-emerald-400"
-        }, after)), /*#__PURE__*/React.createElement("span", {
-          className: "h-3 flex items-center"
-        }, points > 0 ? powerDeltaLabel(powerAfterStat(key)) : null));
-      }))), /*#__PURE__*/React.createElement("button", {
+        className: "text-[8px] text-slate-500 font-bold text-center px-2"
+      }, "\u5F37\u5316\u306F\u4E0A\u306E\u300C\u307E\u3068\u3081\u3066\u5F37\u5316\u300D\u3067\u4E0B\u66F8\u304D\u3057\u3001\u78BA\u5B9A\u3059\u308B\u3068\u4FDD\u5B58\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("button", {
         onClick: backToDetail,
         className: "w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2"
       }, "\u5B8C\u4E86")));
@@ -27824,7 +27943,28 @@ function MonsterHeroGame() {
       className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"
     }, /*#__PURE__*/React.createElement(Flag, {
       size: 14
-    })))), enemy && /*#__PURE__*/React.createElement("div", {
+    })))), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
+      const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
+      const enemyMultiplier = ultimateEnemyTurnMultiplier(totalTurnCount);
+      const damageMultiplier = ultimateDamageTurnMultiplier(elapsedTotalTurns, ULTIMATE_SETTING.id);
+      return /*#__PURE__*/React.createElement("div", {
+        "data-ultimate-battle-status": true,
+        className: "shrink-0 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "ULTIMATE"), /*#__PURE__*/React.createElement("span", null, "\u6575\u5F37\u5316 +", compactPercent(enemyMultiplier - 1), "\uFF08WAVE\u958B\u59CB\u6642 \u7D2F\u8A08", totalTurnCount, "T\uFF09"), /*#__PURE__*/React.createElement("span", null, "\u4E0E\u30C0\u30E1 ", compactPercent(damageMultiplier), "\uFF08\u73FE\u5728 \u7D2F\u8A08", elapsedTotalTurns, "T\uFF09"));
+    })(), (() => {
+      const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+      return [NIGHTMARE_SETTING.id, CHAOS_SETTING.id].includes(rule) && /*#__PURE__*/React.createElement("div", {
+        "data-extreme-battle-status": rule,
+        className: "shrink-0 grid grid-cols-4 items-center gap-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[9px] font-black leading-none text-purple-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, rule), extremeSpecialRuleLines(rule).map(([label, value]) => /*#__PURE__*/React.createElement("span", {
+        key: label,
+        className: "text-center whitespace-nowrap"
+      }, label, " ", value)));
+    })(), enemy && /*#__PURE__*/React.createElement("div", {
       className: `shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`
     }, /*#__PURE__*/React.createElement("div", {
       className: "flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1"
@@ -29501,7 +29641,31 @@ function MonsterHeroGame() {
     })), gameState === 'PICK_ALLY' && /*#__PURE__*/React.createElement("div", {
       className: "shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5",
       "data-join-status": true
-    }, /*#__PURE__*/React.createElement("div", {
+    }, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
+      const totalTurns = waveResult?.totalTurnCount || 0;
+      const multiplier = ultimateAllyJoinMultiplier(totalTurns);
+      return /*#__PURE__*/React.createElement("div", {
+        "data-ultimate-join-status": true,
+        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "ULTIMATE\u88DC\u6B63"), /*#__PURE__*/React.createElement("span", null, "\u7D2F\u8A08", totalTurns, "T"), /*#__PURE__*/React.createElement("span", null, "\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", precisePercent(multiplier), "\uFF08-", precisePercent(1 - multiplier), "\uFF09"));
+    })(), (() => {
+      const rule = specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty);
+      if (rule === NIGHTMARE_SETTING.id) return /*#__PURE__*/React.createElement("div", {
+        "data-nightmare-join-status": true,
+        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "NIGHTMARE\u88DC\u6B63"), "\u3000\u9593\u5408\u3044\u9069\u6027\uFF1A\uFF0B", specialRulePercent(extremeSpecialRule(rule, 'positiveModifier')), " / \uFF0D", specialRulePercent(extremeSpecialRule(rule, 'negativeModifier')));
+      if (rule === CHAOS_SETTING.id) return /*#__PURE__*/React.createElement("div", {
+        "data-chaos-join-status": true,
+        className: "mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "CHAOS\u88DC\u6B63"), "\u3000\u52A0\u5165\u30DC\u30FC\u30CA\u30B9 ", specialRulePercent(extremeSpecialRule(rule, 'allyJoinBonus')));
+      return null;
+    })(), /*#__PURE__*/React.createElement("div", {
       className: "text-[8px] font-black tracking-widest text-slate-500 text-left mb-1"
     }, "\u73FE\u5728\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"), /*#__PURE__*/React.createElement("div", {
       className: "grid grid-cols-4 gap-1"
@@ -29615,8 +29779,14 @@ function MonsterHeroGame() {
           key: m.id
         }, renderProMonsterRow({
           mon: m,
+          selected: proHeroPreset?.heroBaseId === m.id,
           disabled: !scenarioPicksHero(m.id),
           onSelect: () => {
+            if (proHeroPreset?.heroBaseId === m.id) {
+              setupMon(m, proHeroPreset.heroDistance);
+              return;
+            }
+            setProHeroPreset(null);
             setCurrentPickingMon(m);
             setGameState('PICK_SLOT');
           },
@@ -29694,14 +29864,16 @@ function MonsterHeroGame() {
               className: "min-w-0 block"
             }, /*#__PURE__*/React.createElement("span", {
               className: "block text-slate-500 font-black leading-none"
-            }, stat.short), /*#__PURE__*/React.createElement("b", {
+            }, stat.short), [ULTIMATE_SETTING.id, CHAOS_SETTING.id].includes(specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty)) && stat.normalDiff !== stat.diff ? /*#__PURE__*/React.createElement("span", {
+              className: "block leading-none text-slate-500"
+            }, "\u672C\u6765 +", stat.normalDiff) : null, /*#__PURE__*/React.createElement("b", {
               className: `block leading-tight ${stat.diff > 0 ? stat.tint : 'text-slate-400'}`,
               style: {
                 fontSize: '9px'
               }
             }, stat.after), /*#__PURE__*/React.createElement("span", {
               className: `block leading-none ${stat.diff > 0 ? 'text-emerald-400' : 'text-slate-700'}`
-            }, stat.diff > 0 ? `+${stat.diff}` : '±0')))), /*#__PURE__*/React.createElement("div", {
+            }, stat.diff > 0 ? `実際 +${stat.diff}` : '実際 ±0')))), /*#__PURE__*/React.createElement("div", {
               className: "w-full rounded-lg bg-black/40 px-1 py-1 grid grid-cols-4 gap-0.5 text-center font-mono",
               style: {
                 fontSize: '8px'
@@ -29711,11 +29883,13 @@ function MonsterHeroGame() {
               className: "min-w-0 block"
             }, /*#__PURE__*/React.createElement("span", {
               className: "block text-slate-500 font-black leading-none"
-            }, range.label), /*#__PURE__*/React.createElement("b", {
+            }, range.label), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === NIGHTMARE_SETTING.id && range.normalDiff !== range.diff ? /*#__PURE__*/React.createElement("span", {
+              className: "block leading-none text-slate-500"
+            }, "\u901A\u5E38 ", formatAptPct(range.normalDiff), " \u2192") : null, /*#__PURE__*/React.createElement("b", {
               className: `block leading-tight ${range.diff > 0 ? 'text-cyan-300' : range.diff < 0 ? 'text-red-300' : 'text-slate-400'}`
             }, formatAptPct(range.after)), /*#__PURE__*/React.createElement("span", {
               className: `block leading-none ${range.diff > 0 ? 'text-emerald-400' : range.diff < 0 ? 'text-red-400' : 'text-slate-700'}`
-            }, range.diff !== 0 ? formatAptPct(range.diff) : '±0')))));
+            }, range.diff !== 0 ? `${range.normalDiff !== range.diff ? '実際 ' : ''}${formatAptPct(range.diff)}` : '±0')))));
           })(), /*#__PURE__*/React.createElement("div", {
             className: "min-h-[32px] w-full rounded-xl border border-indigo-400/40 bg-indigo-950/50 text-indigo-200 font-black mt-1 flex items-center justify-center gap-1",
             style: {
@@ -29799,156 +29973,142 @@ function MonsterHeroGame() {
       }, gameState === 'PICK_HERO' ? '勇者モンに選ぶ' : 'この供モンを選ぶ'))
     })), gameState === 'PICK_PRO_ALLIES' && (() => {
       const mode = battleModeInfo(runMode);
-      // 勇者モンにした種は候補から外す(同じ種は1体しか編成に入らないため)
       const candidates = getUnlockedBaseMonsterList().filter(m => m.id !== mainHero?.id);
       const need = Math.min(PRO_ALLY_POOL_SIZE, candidates.length);
-      const chosenIds = proAllyPool.map(m => m.id);
-      const toggle = m => {
-        if (chosenIds.includes(m.id)) {
-          setProAllyPool(prev => prev.filter(x => x.id !== m.id));
-          return;
-        }
-        if (proAllyPool.length >= need) return;
-        setProAllyPool(prev => [...prev, m]);
+      const ready = !!mainHero && proAllyPool.length === need;
+      const changeAlly = m => {
+        if (!Number.isInteger(proEditingAllyIndex)) return;
+        setProAllyPool(prev => {
+          const next = [...prev];
+          next[proEditingAllyIndex] = m;
+          return next.filter(Boolean);
+        });
+        setProEditingAllyIndex(null);
       };
-      const ready = proAllyPool.length === need;
-      return (
-        /*#__PURE__*/
-        // ラン中の画面(勇者モン選択・配置・教え)と同じ全画面のかぶせ方にする。
-        // これを付けないと、ふだんの画面の下敷きになってカードを押せなくなる
-        React.createElement("div", {
-          style: {
-            position: "absolute",
-            inset: 0,
-            backgroundColor: "#020617",
-            zIndex: 30000
-          },
-          className: "absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden",
-          "data-screen": "pick-pro-allies"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "mb-2 text-center flex items-center justify-between px-2 shrink-0",
-          style: {
-            paddingTop: 'calc(.35rem + env(safe-area-inset-top))'
-          }
-        }, /*#__PURE__*/React.createElement("button", {
-          "aria-label": "\u623B\u308B",
-          onClick: () => {
-            setProAllyDetail(null);
-            setProAllyPool([]);
-            setMainHero(null);
-            setSlots([null, null, null, null]);
-            setCurrentPickingMon(null);
-            setGameState('PICK_HERO');
-          },
-          className: "p-3 text-slate-400 active:scale-90"
-        }, /*#__PURE__*/React.createElement(ArrowLeft, {
-          size: 20
-        })), /*#__PURE__*/React.createElement("h2", {
-          className: "text-xl font-black italic uppercase tracking-widest truncate",
-          style: {
-            color: mode.color
-          }
-        }, "\u4F9B\u30E2\u30F3\u306E\u5019\u88DC"), /*#__PURE__*/React.createElement("div", {
-          className: "w-10"
-        })), /*#__PURE__*/React.createElement("div", {
-          className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "shrink-0 w-full mb-2"
-        }, /*#__PURE__*/React.createElement(AssistantBubble, {
-          scene: "pickProAllies",
-          accent: mode.color,
-          compact: true
-        })), /*#__PURE__*/React.createElement("div", {
-          className: "shrink-0 rounded-2xl border px-3 py-2 mb-2",
-          style: {
-            borderColor: `${mode.color}55`,
-            backgroundColor: 'rgba(0,0,0,.35)'
-          }
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex items-baseline justify-between"
-        }, /*#__PURE__*/React.createElement("span", {
-          className: "text-[11px] font-black text-slate-200"
-        }, "\u4F9B\u30E2\u30F3\u5019\u88DC"), /*#__PURE__*/React.createElement("b", {
-          className: "text-base font-black",
-          style: {
-            color: mode.color
-          }
-        }, proAllyPool.length, " / ", need)), /*#__PURE__*/React.createElement("p", {
-          className: "text-[9px] text-slate-400 leading-snug mt-0.5"
-        }, "\u5408\u6D41\u306E\u5834\u9762\u3067\u306F\u3001\u3053\u306E", need, "\u4F53\u304B\u3089\u30E9\u30F3\u30C0\u30E0\u306B", Math.min(PRO_ALLY_OFFER_SIZE, need), "\u4F53\u3060\u3051\u304C\u51FA\u307E\u3059\u3002\u8AB0\u304C\u6765\u3066\u3082\u3044\u3044\u3088\u3046\u306B\u7D44\u3093\u3067\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
-          className: "flex gap-1 mt-1.5 min-h-[26px] items-center"
-        }, Array.from({
-          length: need
-        }).map((_, i) => {
-          const m = proAllyPool[i];
-          return /*#__PURE__*/React.createElement("div", {
-            key: i,
-            className: "flex-1 h-[26px] rounded-lg border flex items-center justify-center overflow-hidden",
-            style: {
-              borderColor: m ? `${mode.color}88` : 'rgba(255,255,255,.1)',
-              backgroundColor: m ? 'rgba(0,0,0,.5)' : 'transparent'
-            }
-          }, m ? m.imgUrl ? /*#__PURE__*/React.createElement("img", {
-            src: m.imgUrl,
-            alt: m.name,
-            className: "h-[22px] object-contain"
-          }) : /*#__PURE__*/React.createElement("span", {
-            className: "text-sm"
-          }, m.emoji) : /*#__PURE__*/React.createElement("span", {
-            className: "text-[9px] text-slate-600 font-black"
-          }, i + 1));
-        }))), /*#__PURE__*/React.createElement("div", {
-          className: "flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"
-        }, /*#__PURE__*/React.createElement("div", {
-          className: "flex flex-col gap-2.5"
-        }, candidates.map(m => {
-          const isSel = chosenIds.includes(m.id);
-          const full = !isSel && proAllyPool.length >= need;
-          return /*#__PURE__*/React.createElement(React.Fragment, {
-            key: m.id
-          }, renderProMonsterRow({
-            mon: m,
-            selected: isSel,
-            disabled: full,
-            onSelect: () => toggle(m),
-            onDetail: () => setProAllyDetail(m),
-            selectLabel: `${m.name}を供モン候補${isSel ? 'から解除' : 'に追加'}`,
-            activeClass: 'active:bg-pink-900/30'
-          }));
-        }))), proAllyDetail && renderMonsterDetailModal({
-          mon: proAllyDetail,
-          onClose: () => setProAllyDetail(null),
-          accent: 'pink',
-          zIndex: 31000,
-          label: `${proAllyDetail.name}のベースモン詳細`,
-          footer: /*#__PURE__*/React.createElement("div", {
-            className: "flex gap-2 shrink-0"
-          }, /*#__PURE__*/React.createElement("button", {
-            onClick: () => setProAllyDetail(null),
-            className: "w-2/5 min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95"
-          }, "\u4E00\u89A7\u3078\u623B\u308B"), /*#__PURE__*/React.createElement("button", {
-            disabled: !chosenIds.includes(proAllyDetail.id) && proAllyPool.length >= need,
-            onClick: () => toggle(proAllyDetail),
-            className: `flex-1 min-h-[48px] rounded-2xl font-black text-[12px] shadow-lg active:scale-95 disabled:opacity-35 ${chosenIds.includes(proAllyDetail.id) ? 'bg-slate-700 text-pink-200' : 'bg-pink-600 text-white'}`
-          }, chosenIds.includes(proAllyDetail.id) ? '供モン候補から解除' : '供モン候補に追加'))
-        }), /*#__PURE__*/React.createElement("div", {
-          className: "shrink-0 pt-1",
-          style: {
-            paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
-          }
-        }, /*#__PURE__*/React.createElement("button", {
-          disabled: !ready,
-          onClick: () => {
-            setTeachingPool([...getActiveTeachingCards()]);
-            setGameState('PICK_TEACHING');
-          },
-          className: "w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30",
-          style: {
-            backgroundColor: mode.color,
-            color: '#0f172a'
-          }
-        }, ready ? 'この候補で始める' : `あと${need - proAllyPool.length}体えらんでください`))))
-      );
+      const returnToHero = () => {
+        setProAllyDetail(null);
+        setProEditingAllyIndex(null);
+        setProHeroPreset(mainHero ? {
+          heroBaseId: mainHero.id,
+          heroDistance: initialBattleDistanceRef.current
+        } : null);
+        setMainHero(null);
+        setSlots([null, null, null, null]);
+        setCurrentPickingMon(null);
+        setGameState('PICK_HERO');
+      };
+      return /*#__PURE__*/React.createElement("div", {
+        style: {
+          position: "absolute",
+          inset: 0,
+          backgroundColor: "#020617",
+          zIndex: 30000
+        },
+        className: "absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden",
+        "data-screen": "pick-pro-allies"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "mb-2 text-center flex items-center justify-between px-2 shrink-0",
+        style: {
+          paddingTop: 'calc(.35rem + env(safe-area-inset-top))'
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        "aria-label": "\u623B\u308B",
+        onClick: returnToHero,
+        className: "p-3 text-slate-400 active:scale-90"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("h2", {
+        className: "text-xl font-black italic uppercase tracking-widest truncate",
+        style: {
+          color: mode.color
+        }
+      }, proEditingAllyIndex === null ? 'プロモード編成' : `供モン${proEditingAllyIndex + 1}を変更`), /*#__PURE__*/React.createElement("div", {
+        className: "w-10"
+      })), /*#__PURE__*/React.createElement("div", {
+        className: "w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col"
+      }, proEditingAllyIndex === null ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 w-full mb-2"
+      }, /*#__PURE__*/React.createElement(AssistantBubble, {
+        scene: "pickProAllies",
+        accent: mode.color,
+        compact: true
+      })), /*#__PURE__*/React.createElement("p", {
+        className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
+      }, "\u5909\u3048\u305F\u3044\u67A0\u3060\u3051\u300C\u5909\u66F4\u300D\u3092\u62BC\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u4ED6\u306E\u67A0\u306F\u305D\u306E\u307E\u307E\u7DAD\u6301\u3055\u308C\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5 pb-2"
+      }, [["勇者モン", mainHero], ...Array.from({
+        length: need
+      }, (_, i) => [`供モン${i + 1}`, proAllyPool[i]])].map(([label, mon], i) => /*#__PURE__*/React.createElement("div", {
+        key: label,
+        className: "min-h-[58px] rounded-2xl border border-white/10 bg-slate-900/80 px-2 py-1.5 flex items-center gap-2"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: `w-14 shrink-0 text-[9px] font-black ${i === 0 ? 'text-amber-300' : 'text-pink-300'}`
+      }, label), /*#__PURE__*/React.createElement("button", {
+        disabled: !mon,
+        onClick: () => setProAllyDetail(mon),
+        className: "flex-1 min-w-0 flex items-center gap-2 text-left disabled:opacity-50",
+        "aria-label": mon ? `${mon.name}の詳細を見る` : `${label}は未選択`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden shrink-0"
+      }, mon ? mon.imgUrl ? /*#__PURE__*/React.createElement("img", {
+        src: mon.imgUrl,
+        alt: "",
+        className: "w-full h-full object-contain"
+      }) : /*#__PURE__*/React.createElement("span", {
+        className: "text-xl"
+      }, mon.emoji) : /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-600"
+      }, "\uFF0B")), /*#__PURE__*/React.createElement("span", {
+        className: "min-w-0"
+      }, /*#__PURE__*/React.createElement("b", {
+        className: "block text-[11px] text-white truncate"
+      }, mon?.name || '未選択'), i === 0 && /*#__PURE__*/React.createElement("small", {
+        className: "block text-[8px] text-slate-500"
+      }, RANGE_LABELS[initialBattleDistanceRef.current], "\u8DDD\u96E2\u306B\u914D\u7F6E"))), /*#__PURE__*/React.createElement("button", {
+        onClick: () => i === 0 ? returnToHero() : setProEditingAllyIndex(i - 1),
+        className: "min-w-[58px] min-h-[42px] rounded-xl border border-pink-400/50 bg-pink-950/60 text-pink-200 text-[11px] font-black active:scale-95"
+      }, "\u5909\u66F4")))), /*#__PURE__*/React.createElement("div", {
+        className: "shrink-0 pt-1",
+        style: {
+          paddingBottom: 'calc(.25rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("button", {
+        disabled: !ready,
+        onClick: confirmProParty,
+        className: "w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30",
+        style: {
+          backgroundColor: mode.color,
+          color: '#0f172a'
+        }
+      }, ready ? 'この編成で開始' : `あと${need - proAllyPool.length}体えらんでください`))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", {
+        className: "shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2"
+      }, "\u3053\u306E\u67A0\u306B\u5165\u308C\u308B\u30D9\u30FC\u30B9\u30E2\u30F3\u30921\u4F53\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex flex-col gap-2.5"
+      }, candidates.filter(m => !proAllyPool.some((chosen, i) => i !== proEditingAllyIndex && chosen.id === m.id)).map(m => /*#__PURE__*/React.createElement(React.Fragment, {
+        key: m.id
+      }, renderProMonsterRow({
+        mon: m,
+        selected: proAllyPool[proEditingAllyIndex]?.id === m.id,
+        onSelect: () => changeAlly(m),
+        onDetail: () => setProAllyDetail(m),
+        selectLabel: `${m.name}を供モン${proEditingAllyIndex + 1}に選ぶ`,
+        activeClass: 'active:bg-pink-900/30'
+      }))))), /*#__PURE__*/React.createElement("button", {
+        onClick: () => setProEditingAllyIndex(null),
+        className: "shrink-0 w-full min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm mb-1"
+      }, "\u5909\u66F4\u305B\u305A\u623B\u308B")), proAllyDetail && renderMonsterDetailModal({
+        mon: proAllyDetail,
+        onClose: () => setProAllyDetail(null),
+        accent: 'pink',
+        zIndex: 31000,
+        label: `${proAllyDetail.name}のベースモン詳細`,
+        footer: /*#__PURE__*/React.createElement("button", {
+          onClick: () => setProAllyDetail(null),
+          className: "w-full min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95"
+        }, "\u9589\u3058\u308B")
+      })));
     })(), gameState === 'PICK_SLOT' && /*#__PURE__*/React.createElement("div", {
       style: {
         position: "absolute",
@@ -30842,7 +31002,7 @@ function MonsterHeroGame() {
         className: "text-[11px] font-black tracking-[.12em] text-amber-300"
       }, "ULTIMATE \u7279\u6B8A\u30EB\u30FC\u30EB"), /*#__PURE__*/React.createElement("div", {
         className: "mt-3 grid gap-1.5 text-left"
-      }, [['1', '累計ターン圧', /*#__PURE__*/React.createElement(React.Fragment, null, "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u6B21WAVE\u306E\u6575\u304C\u5F37\u5316", /*#__PURE__*/React.createElement("br", null), "\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4F9B\u30E2\u30F3\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\u304C\u4F4E\u4E0B", /*#__PURE__*/React.createElement("br", null), "\u7D4C\u904E\u7D2F\u8A08\u30BF\u30FC\u30F3\xD70.75% \u4E0E\u30C0\u30E1\u30FC\u30B8\u4F4E\u4E0B\uFF08\u6700\u4F4E25%\uFF09")], ['2', isQuickMode(runMode) ? '自動成長低下' : 'トレーニング低下', isQuickMode(runMode) ? 'このWAVEのターン数×0.75% 次回の自動成長が10%から低下（最低0%）' : 'このWAVEのターン数×0.75% 次回のトレーニング4種すべてが低下'], ['3', 'DISTANCE BREAK', '累計35ターンごとに、安全距離以外の3距離をLv1→Lv2→Lv3…と段階強化']].map(([number, title, text]) => /*#__PURE__*/React.createElement("div", {
+      }, [['1', '累計ターン圧', /*#__PURE__*/React.createElement(React.Fragment, null, "\u7D2F\u8A08\u30BF\u30FC\u30F3\u3054\u3068\u306B\u6575HP/\u653B\u6483+0.75%", /*#__PURE__*/React.createElement("br", null), "\u7D2F\u8A08\u30BF\u30FC\u30F3\u3054\u3068\u306B\u4F9B\u30E2\u30F3\u52A0\u5165\u30DC\u30FC\u30CA\u30B9\u500D\u7387-0.75pt", /*#__PURE__*/React.createElement("br", null), "\u7D4C\u904E\u7D2F\u8A08\u30BF\u30FC\u30F3\u3054\u3068\u306B\u4E0E\u30C0\u30E1\u500D\u7387-0.75pt\uFF0825%\u3067\u505C\u6B62\uFF09")], ['2', isQuickMode(runMode) ? '自動成長低下' : 'トレーニング低下', isQuickMode(runMode) ? 'このWAVEのターン数×0.75% 次回の自動成長が10%から低下（最低0%）' : 'このWAVEのターン数×0.75% 次回のトレーニング4種すべてが低下'], ['3', 'DISTANCE BREAK', '累計35ターンごとに、味方側の1距離の与ダメージ弱体Lvが上昇（最終的に3距離が弱体・1距離が安全）']].map(([number, title, text]) => /*#__PURE__*/React.createElement("div", {
         key: number,
         className: "rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"
       }, /*#__PURE__*/React.createElement("div", {
@@ -31178,7 +31338,20 @@ function MonsterHeroGame() {
       className: "text-[10px] font-black text-amber-200"
     }, "\u7D2F\u8A08\uFF1A", /*#__PURE__*/React.createElement("b", {
       className: "font-mono text-sm text-white"
-    }, waveResult.totalTurnCount), "\u30BF\u30FC\u30F3")), waveResult.pendingUltimateDistanceBreak && /*#__PURE__*/React.createElement("div", {
+    }, waveResult.totalTurnCount), "\u30BF\u30FC\u30F3")), isQuickMode(runMode) && specialRuleDifficultyForRun(runMode, difficulty, extremeRun, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
+      const normalRate = quickGrowthRateForRun(runMode, 'Normal', waveResult.turn);
+      const effectiveRate = quickGrowthRateForRun(runMode, difficulty, waveResult.turn);
+      return /*#__PURE__*/React.createElement("div", {
+        "data-quick-ultimate-growth": true,
+        className: "rounded-lg border border-fuchsia-400/40 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "\u81EA\u52D5\u6210\u9577"), "\u3000\u901A\u5E38 +", compactPercent(normalRate), " ", /*#__PURE__*/React.createElement("span", {
+        className: "text-slate-500"
+      }, "\u2192"), " \u4ECA\u56DE +", compactPercent(effectiveRate), /*#__PURE__*/React.createElement("span", {
+        className: "block text-[8px] text-purple-300"
+      }, "WAVE ", waveResult.turn, "T / ULTIMATE\u88DC\u6B63 -", compactPercent(normalRate - effectiveRate)));
+    })(), waveResult.pendingUltimateDistanceBreak && /*#__PURE__*/React.createElement("div", {
       "data-ultimate-distance-break-warning": true,
       className: "rounded-lg border border-red-400/60 bg-purple-950/80 px-2 py-1 text-[10px] font-black text-red-200"
     }, "\u26A0 \u6B21WAVE\u3067\u8DDD\u96E2\u5F31\u4F53\u5316\u304C\u767A\u52D5"), /*#__PURE__*/React.createElement("div", {
@@ -31205,6 +31378,7 @@ function MonsterHeroGame() {
     }, ['零', '近', '中', '遠'].map((lbl, i) => {
       const dmg = waveResult.distDamage[i] || 0;
       const cumDmg = waveResult.totalDistDamage?.[i] || 0;
+      const normalGained = (waveResult.normalGainedDistBonus?.[i] || 0) * 100;
       const gained = (waveResult.gainedDistBonus?.[i] || 0) * 100;
       const total = (waveResult.newDistBonus?.[i] || 0) * 100;
       const mon = slots[i];
@@ -31266,7 +31440,7 @@ function MonsterHeroGame() {
         style: {
           fontSize: '7px'
         }
-      }, "(+", gained.toFixed(1), ")"), mon && /*#__PURE__*/React.createElement("div", {
+      }, normalGained !== gained ? `通常 +${normalGained.toFixed(1)} → 実際 +${gained.toFixed(1)}` : `(+${gained.toFixed(1)})`), mon && /*#__PURE__*/React.createElement("div", {
         className: "text-indigo-300 font-mono font-black leading-none",
         style: {
           fontSize: '8px'
@@ -31280,7 +31454,7 @@ function MonsterHeroGame() {
       className: "flex items-baseline gap-2"
     }, /*#__PURE__*/React.createElement("span", {
       className: `font-mono font-black text-base ${waveResult.recoveryDelta >= 0 ? 'text-emerald-400' : 'text-red-400'}`
-    }, waveResult.recoveryDelta >= 0 ? '+' : '', (waveResult.recoveryDelta * 100).toFixed(1), "%"), /*#__PURE__*/React.createElement("span", {
+    }, waveResult.baseRecoveryDelta !== waveResult.recoveryDelta && /*#__PURE__*/React.createElement(React.Fragment, null, "\u901A\u5E38 ", waveResult.baseRecoveryDelta >= 0 ? '+' : '', (waveResult.baseRecoveryDelta * 100).toFixed(1), "% \u2192 \u5B9F\u969B "), waveResult.recoveryDelta >= 0 ? '+' : '', (waveResult.recoveryDelta * 100).toFixed(1), "%"), /*#__PURE__*/React.createElement("span", {
       className: "text-[8px] text-slate-500 font-mono"
     }, "\u7D2F\u8A08 ", /*#__PURE__*/React.createElement("span", {
       className: `${waveResult.totalRecoveryDelta >= 0 ? 'text-emerald-300' : 'text-red-300'}`
@@ -31408,7 +31582,28 @@ function MonsterHeroGame() {
         }
       }))), /*#__PURE__*/React.createElement("span", {
         className: "text-[11px] font-black font-mono text-amber-300"
-      }, trainingPicks.length, " / ", TRAINING_PICK_COUNT))), /*#__PURE__*/React.createElement("div", {
+      }, trainingPicks.length, " / ", TRAINING_PICK_COUNT)), specialRule === ULTIMATE_SETTING.id && (() => {
+        const turns = waveResult?.turn || 0;
+        const probe = {
+          atk: 10000,
+          def: 10000,
+          hp: 10000,
+          guts: 10000
+        };
+        const normal = resolveTrainingStep(probe, 'hp', turns, null).hp;
+        const effective = resolveTrainingStep(probe, 'hp', turns, specialRule).hp;
+        return /*#__PURE__*/React.createElement("div", {
+          "data-ultimate-training-status": true,
+          className: "mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"
+        }, /*#__PURE__*/React.createElement("span", {
+          className: "text-amber-300"
+        }, "ULTIMATE\u88DC\u6B63"), "\u3000\u4ECA\u56DE", turns, "T \u2192 \u5F37\u5316\u52B9\u679C -", Number(((normal - effective) / 100).toFixed(1)), "pt");
+      })(), specialRule === 'NIGHTMARE' && /*#__PURE__*/React.createElement("div", {
+        "data-nightmare-training-status": true,
+        className: "mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "text-amber-300"
+      }, "NIGHTMARE\u88DC\u6B63"), "\u3000\u5F37\u5316\u91CF ", specialRulePercent(extremeSpecialRule(specialRule, 'waveEnhancement')))), /*#__PURE__*/React.createElement("div", {
         className: "shrink-0 w-full max-w-sm my-2 text-left"
       }, /*#__PURE__*/React.createElement(AssistantBubble, {
         scene: "rewardPick",
@@ -31460,7 +31655,15 @@ function MonsterHeroGame() {
           className: "text-[13px] font-black text-white leading-none"
         }, option.name)), /*#__PURE__*/React.createElement("span", {
           className: `text-[10px] font-black ${st.tint} leading-tight`
-        }, option.effect), /*#__PURE__*/React.createElement("span", {
+        }, option.effect, [ULTIMATE_SETTING.id, 'NIGHTMARE'].includes(specialRule) && (() => {
+          const normalAfter = resolveTrainingStep(current, option.id, waveResult?.turn, null)[option.stat];
+          const effectiveAfter = resolveTrainingStep(current, option.id, waveResult?.turn, specialRule)[option.stat];
+          const normalGain = normalAfter - current[option.stat],
+            effectiveGain = effectiveAfter - current[option.stat];
+          return /*#__PURE__*/React.createElement("span", {
+            className: "block text-purple-200"
+          }, "\u901A\u5E38 +", normalGain, " \u2192 \u5B9F\u969B +", effectiveGain);
+        })()), /*#__PURE__*/React.createElement("span", {
           className: "w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight"
         }, /*#__PURE__*/React.createElement("span", {
           className: "block text-[8px] text-slate-500 font-black"

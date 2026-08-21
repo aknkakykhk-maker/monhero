@@ -30,10 +30,15 @@ assert(source.includes('const distanceBreakThreshold=pendingUltimateDistanceBrea
 assert(source.includes('const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&specialRuleDifficulty===ULTIMATE_SETTING.id;'),'BREAK draw, level update, and reveal must use shared run rule difficulty');
 assert(source.includes('specialDifficulty===ULTIMATE_SETTING.id?<>' )&&source.includes('ultimateDistanceBreakLevels.map'),'ULTIMATE rule and BREAK status presentation must use shared run rule difficulty');
 assert(source.includes('ultimateDistanceBreakLevelsRef.current=[0,0,0,0]')&&!source.includes('ultimateWeakenedDistances'),'levels must be run-only and replace weakened-distance list');
+const battleStatus=source.slice(source.indexOf("{gameState==='BATTLE'&&(\n"),source.indexOf('{enemy&&(',source.indexOf("{gameState==='BATTLE'&&(\n")));
+assert(battleStatus.includes('data-ultimate-battle-status')&&battleStatus.includes('ultimateEnemyTurnMultiplier(totalTurnCount)')&&!battleStatus.includes('ultimateEnemyTurnMultiplier(elapsedTotalTurns)'),'enemy status must use the WAVE-start total turn count');
+assert(battleStatus.includes('ultimateDamageTurnMultiplier(elapsedTotalTurns,ULTIMATE_SETTING.id)')&&battleStatus.includes('WAVE開始時 累計{totalTurnCount}T')&&battleStatus.includes('現在 累計{elapsedTotalTurns}T'),'damage status must use elapsed turns and label both turn-count bases');
+assert(source.includes('const ultimateAllyJoinMultiplier = (turns) =>')&&source.includes('ultimateAllyJoinMultiplier(totalTurns)')&&source.includes('precisePercent(multiplier)')&&source.includes('precisePercent(1-multiplier)'),'ally join status must show the shared multiplier at 0.75-point precision');
+assert(!source.includes('applyAllyJoinBonus(100,ULTIMATE_SETTING.id,totalTurns)'),'ally join percentage display must not round through integer battle calculation');
 assert(source.includes('DISTANCE BREAK OVERWRITE')&&source.includes("distanceBreakLevel===1?'⚠':'☠'")&&source.includes('data-distance-break-level'),'level presentation and overwrite reveal must exist');
 assert(source.includes('waveResult?.turn,specialRuleDifficulty')&&source.includes('const gainedDistBonus=finalDistDamage.map(d=>applyNightmareWaveEnhancement'),'existing wave-stat resolver must remain and distance enhancement must stay excluded');
 assert(source.includes("specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 })")&&source.includes("specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 })"),'NIGHTMARE and CHAOS rules must remain unchanged');
-assert(help.includes('敵強度×35・スコア×20・経験値×40・ダイヤ×20')&&help.includes('最低25%')&&help.includes('安全距離'),'help must match new rules');
+assert(help.includes('敵強度×35・スコア×20・経験値×40・ダイヤ×20')&&help.includes('25%まで下がると停止')&&help.includes('安全距離'),'help must match new rules');
 assert(changelog.includes('ULTIMATEの難易度を調整しました'),'changelog must announce adjustment');
-assert(source.includes('h-[382px]')&&source.includes('h-[51px]'),'difficulty card dimensions must remain fixed');
+assert(source.includes('h-[400px]')&&!source.includes('h-[382px]')&&source.includes("setting.id==='ULTIMATE'?'mt-1.5 h-[62px]':'mt-1 h-[51px]'"),'difficulty cards must use the shared expanded height while ULTIMATE rule space remains fixed');
 console.log('OK: ULTIMATE難易度調整（×35、各0.75%、最低25%、35T段階BREAK、安全距離、予測共通経路、他難易度回帰）');

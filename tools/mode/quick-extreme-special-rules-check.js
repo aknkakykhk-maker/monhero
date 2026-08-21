@@ -41,6 +41,8 @@ for (const use of [
 ]) assert(source.includes(use), `${use} must use the shared run rule difficulty`);
 assert(source.includes('quick&&hasExtremeSpecialRules(key)') && source.includes('特殊ルールあり'));
 assert(source.includes("isQuickMode(runMode)?'自動成長低下':'トレーニング低下'"), 'Quick ULTIMATE intro must describe automatic growth without changing the extreme training label');
+assert(source.includes("[quick?'自動成長':'トレーニング','WAVE Tごと-0.75pt']"), 'Quick ULTIMATE card must call the WAVE effect automatic growth');
+assert(source.includes("['与ダメ倍率','経過Tごと-0.75pt（25%で停止）']")&&!source.includes('経過累計T×0.75%（最低25%）'), 'Quick ULTIMATE card must explain the damage floor as a stopping point');
 assert(source.includes('extremeSpecialRuleLines(setting.id).map'), 'official card must share the same rule presentation');
 assert(source.includes('const enemyTurnMultiplier=specialRuleDifficulty===ULTIMATE_SETTING.id?ultimateEnemyTurnMultiplier(totalTurnCount):1;'), 'ULTIMATE enemy turn scaling must use the shared run rule difficulty');
 assert(source.includes('const breakPending=w>1&&ultimateDistanceBreakPendingRef.current&&specialRuleDifficulty===ULTIMATE_SETTING.id;'), 'ULTIMATE BREAK reveal must use the shared run rule difficulty');
@@ -66,6 +68,8 @@ for(const [turns,expected] of [[1,.0925],[5,.0625],[10,.025],[14,0],[99,0]]) {
   assert(Math.abs(quickGrowthRate(turns)-expected)<1e-12, `unexpected Quick ULTIMATE growth at ${turns}T`);
 }
 assert(source.includes('const growthRate = quickGrowthRateForRun(runMode,difficulty,waveResult?.turn);'));
+assert(source.includes('data-quick-ultimate-growth') && source.includes("effectiveRate=quickGrowthRateForRun(runMode,difficulty,waveResult.turn)"), 'Quick ULTIMATE result must show the effective shared growth calculation');
+assert(source.includes('normalRate-effectiveRate'), 'Quick ULTIMATE result must compare normal and effective growth');
 assert(source.includes('setHp(nextEffectiveMaxHp); setGuts(nextEffectiveMaxGuts);'), 'HP/guts full recovery must remain');
 assert(source.includes("if(specialDifficulty!==ULTIMATE_SETTING.id) return QUICK_GROWTH_MULT-1;"), 'other quick difficulties must keep 10% growth');
 assert(source.includes("specialRuleDifficultyForRun('challenge','Normal',true,'ULTIMATE')") === false, 'production must not hard-code a Quick-only ULTIMATE rule branch');

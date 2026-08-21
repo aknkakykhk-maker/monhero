@@ -128,6 +128,7 @@ node tools/build.js --check
 | `node mode/extreme-browser-check.js` | 極限チャレンジを実ブラウザで遊んで確認する。未解放時のロック表示、Grand Masterクリア後の解放、EXTREMEを押してバトルが始まること、敵の強さが×13、極限ルール発動の表示、通常難易度に影響が無いこと、正式公開の初回案内が1回だけ出ることを見る。 |
 | `node mode/nightmare-rules-check.js` | NIGHTMAREのWAVE後強化50%、自動回復率・距離適性のプラス50%／マイナス200%を代表値で確認し、WAVE後距離強化との分離、EXTREMEと通常モードへの非適用も確認する。 |
 | `node mode/ultimate-rules-check.js` | 正式ULTIMATEの解放・報酬・記録共通経路と、累計ターンによる敵強化・供モン加入ボーナス低下、WAVEターンによるトレーニング低下、DISTANCE BREAK、デバッグ戦との分離を代表値で確認する。 |
+| `node mode/ultimate-card-layout-check.js` | iPhone縦画面向けに全極限難易度カードを共通の外寸へ収め、説明・特殊ルール・3ボタン・下余白と、カード・ページドット・助手コメントの分離を確認する。ULTIMATEの重要な数値、文字サイズ、クイックULTIMATEの開始案内も維持していることを確認する。 |
 | `node mode/chaos-rules-check.js` | CHAOSの特殊ルール(与ダメージ50%・加入ボーナス50%・消費ガッツ150%、いずれも端数切り捨て)と、極限チャレンジの説明文を確認する。 |
 | `node mode/quick-chaos-check.js` | クイックCHAOSの3報酬方針、同難易度解放、特殊ルール共有、ランキング除外、デバッグ保存なし、既存記録キー、カード構成、一度きり通知を確認する。 |
 | `node mode/quick-extreme-special-rules-check.js` | クイック極限難易度が極限本体の `specialRules` を共用することに加え、クイックULTIMATEの公開順・3報酬方針・自動成長低下・全回復・開始表示・固定カード高・ランキング除外・更新通知を確認する。 |

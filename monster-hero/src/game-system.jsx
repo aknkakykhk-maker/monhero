@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 11:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 11:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -109,6 +109,21 @@ const PRO_BREEDER_XP_MULT = 1.5;
 // プロモードで始める前に選ぶ供モン候補の数と、そこから実際に加入候補として出す数
 const PRO_ALLY_POOL_SIZE = 5;
 const PRO_ALLY_OFFER_SIZE = 3;
+// 前回確定したプロ編成は、既存の進行・記録キーと混ぜず専用キーへ保存する。
+const PRO_LAST_PARTY_KEY = 'mh_pro_last_party';
+const EMPTY_PRO_LAST_PARTY = Object.freeze({heroBaseId:null,heroDistance:null,allyBaseIds:Object.freeze(Array(PRO_ALLY_POOL_SIZE).fill(null))});
+const normalizeProLastParty = (value, unlockedBaseIds=[]) => {
+  const unlocked = new Set(Array.isArray(unlockedBaseIds) ? unlockedBaseIds.filter(id=>typeof id==='string') : []);
+  const validId = id => typeof id === 'string' && unlocked.has(id) ? id : null;
+  const heroBaseId = validId(value?.heroBaseId);
+  const heroDistance = heroBaseId && Number.isInteger(value?.heroDistance) && value.heroDistance >= 0 && value.heroDistance < 4 ? value.heroDistance : null;
+  const savedAllies = Array.isArray(value?.allyBaseIds) ? value.allyBaseIds : [];
+  return {
+    heroBaseId,
+    heroDistance,
+    allyBaseIds:Array.from({length:PRO_ALLY_POOL_SIZE},(_,index)=>validId(savedAllies[index])),
+  };
+};
 // クイックモードでWAVEごとに味方の全ステータスへかける倍率
 const QUICK_GROWTH_MULT = 1.10;
 const calculateRemainingHp = (currentHp, finalDamage) => Math.max(0, (Number(currentHp) || 0) - (Number(finalDamage) || 0));
@@ -1330,6 +1345,47 @@ const applyEnhancePlanToMasu = (masu, plan) => {
   if (used <= 0) return null;
   return { masu: { ...masu, distApt, ...(distAptBoosts ? { distAptBoosts } : {}), statPoints, distAptPoints: available - used }, used };
 };
+// リセット直前の「ポイントで上げた分」だけを、同じ個体の保存値へ小さなスナップショットとして残す。
+// 絆XP・絆Lv・固有技などは含めず、旧形式の個体でも現行の下書き(plan)へ直せる形にそろえる。
+const buildBondResetAllocationSnapshot = (masu, base) => {
+  if (!masu || !base) return null;
+  const baseApt = base.distAptitude || ['C','C','C','C'];
+  const resolvedApt = resolveMasuDistAptitude(masu, base);
+  const apt = Array.isArray(masu.distAptBoosts)
+    ? [0,1,2,3].map(i => Math.max(0, Math.floor(Number(masu.distAptBoosts[i]) || 0)))
+    : [0,1,2,3].map(i => Math.max(0, DIST_APTITUDE_GRADES.indexOf(resolvedApt[i]) - DIST_APTITUDE_GRADES.indexOf(baseApt[i])));
+  const stat = Object.fromEntries(Object.keys(STAT_POINT_KEYS).map(key => [key,
+    Math.max(0, Math.ceil((Number(masu.statPoints?.[key]) || 0) / (STAT_POINT_GAIN[key] || 1)))
+  ]));
+  const total = apt.reduce((sum, value) => sum + value, 0) + Object.values(stat).reduce((sum, value) => sum + value, 0);
+  return total > 0 ? { version:1, apt, stat } : null;
+};
+// 保存済みスナップショットを現在の上限と残りptへ安全に収めた下書きへ変換する。
+// 完全に戻せない場合も不正なplanを作らず、omittedをUIで知らせる。
+const buildBondResetRestorePlan = (masu, snapshot) => {
+  if (!masu || !snapshot || snapshot.version !== 1 || !Array.isArray(snapshot.apt) || !snapshot.stat || typeof snapshot.stat !== 'object') return null;
+  let remaining = Math.max(0, Math.floor(Number(masu.distAptPoints) || 0));
+  const base = ALL_PLAYER_MONSTERS[masu.baseId] || {};
+  const currentApt = resolveMasuDistAptitude(masu, base);
+  const plan = { apt:[0,0,0,0], stat:{hp:0,atk:0,def:0,guts:0} };
+  let requested = 0;
+  [0,1,2,3].forEach(idx => {
+    const wanted = Math.max(0, Math.floor(Number(snapshot.apt[idx]) || 0));
+    requested += wanted;
+    const currentIndex = Math.max(0, DIST_APTITUDE_GRADES.indexOf(currentApt[idx] || 'C'));
+    const capacity = Math.max(0, DIST_APTITUDE_GRADES.length - 1 - currentIndex);
+    plan.apt[idx] = Math.min(wanted, capacity, remaining);
+    remaining -= plan.apt[idx];
+  });
+  Object.keys(STAT_POINT_KEYS).forEach(key => {
+    const wanted = Math.max(0, Math.floor(Number(snapshot.stat[key]) || 0));
+    requested += wanted;
+    plan.stat[key] = Math.min(wanted, remaining);
+    remaining -= plan.stat[key];
+  });
+  const restored = plan.apt.reduce((sum, value) => sum + value, 0) + Object.values(plan.stat).reduce((sum, value) => sum + value, 0);
+  return { plan, requested, restored, omitted:Math.max(0, requested - restored) };
+};
 // 絆ポイントリセットの保存値計算。新形式は投入段階数を直接返却し、新旧の適性表現を同時に戻す。
 // 旧形式は従来どおり完成適性と最新ベースとの差から返却数を求める。
 const buildMasuBondPointReset = (masu, base) => {
@@ -1341,6 +1397,7 @@ const buildMasuBondPointReset = (masu, base) => {
   const statSpent = Object.entries(masu.statPoints || {}).reduce((sum, [key, val]) => sum + Math.ceil((val || 0) / (STAT_POINT_GAIN[key] || 1)), 0);
   const totalRefund = aptSpent + statSpent;
   if (totalRefund <= 0) return null;
+  const allocationSnapshot = buildBondResetAllocationSnapshot(masu, base);
   return {
     refundedPoints: totalRefund,
     nextMasu: {
@@ -1349,6 +1406,7 @@ const buildMasuBondPointReset = (masu, base) => {
       ...(Array.isArray(masu.distAptBoosts) ? { distAptBoosts:[0,0,0,0] } : {}),
       statPoints: { hp:0, atk:0, def:0, guts:0 },
       distAptPoints: (masu.distAptPoints || 0) + totalRefund,
+      bondResetAllocationSnapshot: allocationSnapshot,
     },
   };
 };
@@ -3819,7 +3877,7 @@ const EXTREME_DIFFICULTIES = Object.freeze([
   { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ assistCardEffect:0.5 }) },
   { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
   { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:true, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
-  { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
+  { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', cardDescription:'累計ターンで敵が強化され、味方側の各効果が低下。35TごとにDISTANCE BREAKが進行する最高難度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
   { id:'INFINITY', label:'INFINITY', available:false },
 ]);
 const EXTREME_SETTING = EXTREME_DIFFICULTIES[0];
@@ -3866,13 +3924,25 @@ const quickGrowthRateForRun = (runMode, difficultyId, waveTurnCount) => {
   return Math.max(0,(QUICK_GROWTH_MULT-1)-Math.max(0,Number(waveTurnCount)||0)*ULTIMATE_SETTING.specialRules.awakeningPenaltyRate);
 };
 const specialRulePercent = (value) => `${Math.round((Number(value)||0)*100)}%`;
+const compactPercent = (value) => `${Number(((Number(value)||0)*100).toFixed(1))}%`;
+const precisePercent = (value) => `${Number(((Number(value)||0)*100).toFixed(2))}%`;
 const extremeSpecialRuleLines = (difficultyId, quick=false) => {
   if (difficultyId===ULTIMATE_SETTING.id) return [
-    ['敵強化','累計T ×0.75%'],
-    ['供モン加入B低下','累計T ×0.75%'],
-    ['与ダメ低下','経過累計T ×0.75%（最低25%）'],
-    [quick?'自動成長低下':'トレーニング低下','WAVE T ×0.75%'],
-    ['距離BREAK','35Tごと / 3距離を段階強化'],
+    ['敵HP/攻撃','累計Tごと+0.75%'],
+    ['加入B倍率','累計Tごと-0.75pt'],
+    ['与ダメ倍率','経過Tごと-0.75pt（25%で停止）'],
+    [quick?'自動成長':'トレーニング','WAVE Tごと-0.75pt'],
+    ['距離BREAK','35Tごと1距離の弱体Lv上昇'],
+  ];
+  if (difficultyId===NIGHTMARE_SETTING.id) return [
+    ['強化',specialRulePercent(extremeSpecialRule(difficultyId,'waveEnhancement'))],
+    ['＋補正',specialRulePercent(extremeSpecialRule(difficultyId,'positiveModifier'))],
+    ['－補正',specialRulePercent(extremeSpecialRule(difficultyId,'negativeModifier'))],
+  ];
+  if (difficultyId===CHAOS_SETTING.id) return [
+    ['与ダメ',specialRulePercent(extremeSpecialRule(difficultyId,'damageDealt'))],
+    ['消費ガッツ',specialRulePercent(extremeSpecialRule(difficultyId,'gutsCost'))],
+    ['加入B',specialRulePercent(extremeSpecialRule(difficultyId,'allyJoinBonus'))],
   ];
   const rules=extremeDifficultySetting(difficultyId)?.specialRules || {};
   const lines=[];
@@ -3920,6 +3990,7 @@ const applyUltimateDistanceBreak = (damage, slotIndex, breakLevels, specialDiffi
 };
 const ultimateDamageTurnMultiplier = (turns, specialDifficulty=null) => specialDifficulty===ULTIMATE_SETTING.id
   ? Math.max(ULTIMATE_SETTING.specialRules.minimumDamageDealt,1-Math.max(0,Number(turns)||0)*ULTIMATE_SETTING.specialRules.damageTurnRate) : 1;
+const ultimateAllyJoinMultiplier = (turns) => Math.max(0,1-Math.max(0,Number(turns)||0)*ULTIMATE_SETTING.specialRules.allyJoinPenaltyRate);
 // ===== トレーニング(WAVEクリアごとの強化。旧「能力覚醒」) =====
 // 4種類から2回選ぶ。同じ項目を2回選んでもよく、その場合は1回目を適用した結果へ
 // 2回目をかける(2回分をまとめて足す別計算にはしない)。
@@ -3961,8 +4032,7 @@ const applyExtremeIntegerRule = (value, specialDifficulty=null, rule) => Math.fl
 // WAVE結果に確定済みの累計ターンを使い、CHAOSの固定50%とは重ねない。
 const applyAllyJoinBonus = (value, specialDifficulty=null, totalTurns=0) => {
   if(specialDifficulty===ULTIMATE_SETTING.id){
-    const multiplier=Math.max(0,1-Math.max(0,Number(totalTurns)||0)*ULTIMATE_SETTING.specialRules.allyJoinPenaltyRate);
-    return Math.floor((Number(value)||0)*multiplier);
+    return Math.floor((Number(value)||0)*ultimateAllyJoinMultiplier(totalTurns));
   }
   return applyExtremeIntegerRule(value,specialDifficulty,'allyJoinBonus');
 };
@@ -5356,6 +5426,32 @@ const DyeMaskTouchEditor=({onClose,onTryInGame,onReleaseTemporary,onReleaseAllTe
  <section className="shrink-0 rounded-t-2xl border-t-2 border-cyan-400 bg-slate-900 px-2 pt-1" style={{paddingBottom:'max(.4rem,env(safe-area-inset-bottom))'}}><div className="grid grid-cols-8 gap-1">{colorButton('red','赤','#f00')}{colorButton('green','緑','#080')}{colorButton('blue','青','#00f')}{colorButton('eraser','消す','#475569')}<button onClick={undo} disabled={!history.undo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Undo</button><button onClick={redo} disabled={!history.redo.length} className="rounded-xl bg-slate-700 text-[7px] disabled:opacity-30">Redo</button><button onClick={()=>setTool('brush')} className={`rounded-xl text-[7px] ${tool==='brush'?'bg-violet-700':'bg-slate-700'}`}>ブラシ</button><button onClick={()=>setTool('fill')} className={`rounded-xl text-[7px] ${tool==='fill'?'bg-violet-700':'bg-slate-700'}`}>塗りつぶし</button></div><div className="mt-1 grid grid-cols-3 gap-1"><button onClick={tryInGame} disabled={!ready} className="min-h-[38px] rounded-lg bg-fuchsia-700 text-[8px] font-black disabled:opacity-40">ゲームで試す</button><button onClick={()=>onReleaseTemporary(target.baseId)} disabled={!temporaryMasks[target.baseId]} className="rounded-lg bg-amber-800 text-[7px] font-black disabled:opacity-30">一時反映を解除</button><button onClick={onReleaseAllTemporary} disabled={!Object.keys(temporaryMasks).length} className="rounded-lg bg-red-900 text-[8px] font-black disabled:opacity-30">すべて解除</button></div>{temporaryMasks[target.baseId]&&<p className="pt-0.5 text-center text-[8px] font-black text-fuchsia-300">● 一時反映中</p>}<button onClick={()=>setDetails(v=>!v)} className="mt-1 min-h-[28px] w-full rounded-lg bg-slate-700 text-[8px]">詳細 {details?'▲':'▼'}</button>{details&&<div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-slate-800 p-2 text-[8px]"><div className="col-span-2 grid grid-cols-3 gap-1">{Array.from({length:dyeRegionCount(target.baseId)},(_,idx)=><label key={idx} className="text-[7px] text-fuchsia-200">染色{'①②③'[idx]}<select value={previewColors[idx]||''} onChange={e=>setPreviewColors(current=>{const next=[...current];next[idx]=e.target.value||null;return next;})} className="block min-h-[28px] w-full rounded bg-slate-700 text-[8px]"><option value="">元の色</option>{Object.keys(MASU_COLOR_TARGET).map(id=><option key={id} value={id}>{MASU_COLOR_LABELS[id]}</option>)}</select></label>)}</div><label>ブラシ {size}px<input className="block w-full" type="range" min="2" max="100" step="2" value={size} onChange={e=>setSize(+e.target.value)}/></label><label>透明度 {opacity}%<input className="block w-full" type="range" min="25" max="100" step="25" value={opacity} onChange={e=>setOpacity(+e.target.value)}/></label><label>ポインター距離<select value={pointerDistance} onChange={e=>setPointerDistance(+e.target.value)} className="block w-full bg-slate-700">{[0,30,50,70].map(n=><option key={n} value={n}>{n}px</option>)}</select></label><label>方向<select value={pointerDirection} onChange={e=>setPointerDirection(e.target.value)} className="block w-full bg-slate-700"><option value="up">真上</option><option value="left">左上</option><option value="right">右上</option></select></label><button onClick={()=>setLoupe(v=>!v)} className="rounded bg-slate-700">拡大鏡 {loupe?'ON':'OFF'}</button><button onClick={()=>{setZoom(1);setPan({x:0,y:0});}} className="rounded bg-slate-700">全体表示</button><button onClick={cleanOutside} className="rounded bg-fuchsia-900">範囲外を掃除</button><button onClick={clearAll} className="rounded bg-red-900">全消去</button><button onClick={resetOriginal} className="rounded bg-amber-900">元マスク再読込</button></div>}<p className="pt-1 text-center text-[7px] text-slate-400">1本指：描画・2本指：パン/ピンチ・ダブルタップ：全体表示・{Math.round(zoom*100)}%</p></section></main>;
 };
 
+// タップは1回、長押しは一定間隔で繰り返す。Pointer Eventsを使ってタッチを優先し、
+// 指が外れた時と画面破棄時のどちらでもタイマーを残さない。
+function PressRepeatButton({ onPress, disabled, className, children, ...props }) {
+  const delayRef = useRef(null), repeatRef = useRef(null), longPressedRef = useRef(false);
+  const clearPress = useCallback(() => {
+    if (delayRef.current !== null) clearTimeout(delayRef.current);
+    if (repeatRef.current !== null) clearInterval(repeatRef.current);
+    delayRef.current = repeatRef.current = null;
+  }, []);
+  useEffect(() => clearPress, [clearPress]);
+  const startPress = event => {
+    if (disabled || (event.pointerType === 'mouse' && event.button !== 0)) return;
+    clearPress(); longPressedRef.current = false;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    delayRef.current = setTimeout(() => {
+      longPressedRef.current = true; onPress();
+      repeatRef.current = setInterval(onPress, 110);
+    }, 420);
+  };
+  const clickPress = event => {
+    if (longPressedRef.current) { longPressedRef.current = false; event.preventDefault(); return; }
+    onPress();
+  };
+  return <button type="button" disabled={disabled} onPointerDown={startPress} onPointerUp={clearPress} onPointerCancel={clearPress} onLostPointerCapture={clearPress} onClick={clickPress} className={className} style={{touchAction:'manipulation',WebkitTouchCallout:'none'}} {...props}>{children}</button>;
+}
+
 function MonsterHeroGame() {
   const [gameState, setGameState] = useState('HOME');
   const [battleMenuTab, setBattleMenuTab] = useState('difficulty');
@@ -5625,6 +5721,7 @@ function MonsterHeroGame() {
   const battleEntryStateRef = useRef('BATTLE_DIFFICULTY_SELECT');
   // マスモン強化の「まとめて振る」下書き。確定するまで実際のポイントは減らさない
   const [bulkPlan, setBulkPlan] = useState(null); // null=1ポイントずつのモード / {apt:[0,0,0,0], stat:{...}}
+  const [bulkEnhanceUnit, setBulkEnhanceUnit] = useState(1); // 1 / 5 / 10 / 'MAX'（全項目共通）
   // 合体画面の並べかえ。マスモンが増えると目的の個体を探しにくいため
   const [fusionSortKey, setFusionSortKey] = useState('bond'); // 'bond'|'lineage'|'name'|'fused'
   const [fusionSortDir, setFusionSortDir] = useState('desc');
@@ -5655,6 +5752,10 @@ function MonsterHeroGame() {
   // ラン中の加入候補はここからしか出さない。ふだんのモードでは使わないので空のまま
   const [proAllyPool, setProAllyPool] = useState([]);
   const [proAllyDetail, setProAllyDetail] = useState(null); // 候補の選択状態とは分けて開く、既存のベースモン詳細
+  const [proEditingAllyIndex, setProEditingAllyIndex] = useState(null); // null=編成確認、数値=その供モン枠だけ変更
+  // 起動時に検証した前回編成と、勇者選択画面へ初期表示する勇者・配置距離。
+  const [lastProParty, setLastProParty] = useState(EMPTY_PRO_LAST_PARTY);
+  const [proHeroPreset, setProHeroPreset] = useState(null);
   // スキップ(チケットを1枚使って、ボス撃破まで到達したのと同じ経験値・ダイヤを受け取る)
   const [skipFlow, setSkipFlow] = useState(null);       // { difficulty, itemId, hero, allies:[] }
   const [skipPickTab, setSkipPickTab] = useState('roster');
@@ -6226,12 +6327,13 @@ function MonsterHeroGame() {
       { key:'atk',  label:'ちから', short:'力', before:atk,     diff:add('atk'),  tint:'text-red-300' },
       { key:'def',  label:'丈夫さ', short:'防', before:def,     diff:add('def'),  tint:'text-emerald-300' },
       { key:'guts', label:'ガッツ', short:'G',  before:maxGuts, diff:add('guts'), tint:'text-amber-300' },
-    ].map(stat => ({ ...stat, after: stat.before + stat.diff }));
+    ].map(stat => ({ ...stat, normalDiff:Number(bonus[stat.key])||0, after: stat.before + stat.diff }));
     // 間合い適性は「置いた距離に関係なく4距離すべてへ加算される」ので、距離ごとの合計補正で見せる
+    const normalAptDelta = getMonsterAptPct(mon, null);
     const aptDelta = getMonsterAptPct(mon, rule);
     const apt = RANGE_LABELS.map((label, idx) => {
       const before = distTotalBonus(idx), diff = aptDelta[idx] || 0;
-      return { label, idx, before, diff, after: before + diff };
+      return { label, idx, before, normalDiff:normalAptDelta[idx] || 0, diff, after: before + diff };
     });
     return { stats, apt, changed: stats.some(s=>s.diff!==0) || apt.some(a=>a.diff!==0) };
   };
@@ -7353,6 +7455,8 @@ function MonsterHeroGame() {
       setMissions(missionState);
       const savedUnlockedMonsters = await storeGet('mh_unlocked_monsters', STARTER_MONSTER_IDS, false);
       setUnlockedMonsterIds(savedUnlockedMonsters);
+      const availableBaseIds = Object.values(ALL_PLAYER_MONSTERS).map(mon=>mon.id).filter(id=>savedUnlockedMonsters.includes(id));
+      setLastProParty(normalizeProLastParty(await storeGet(PRO_LAST_PARTY_KEY, null, false), availableBaseIds));
       const savedMonsterRoster = await storeGet('mh_monster_roster', savedUnlockedMonsters, false);
       const partySetsMigrated = await storeGet(MONSTER_PARTY_SETS_MIGRATED_KEY, false, false);
       const savedPartySets = partySetsMigrated === true ? await storeGet(MONSTER_PARTY_SETS_KEY, null, false) : null;
@@ -8185,7 +8289,9 @@ function MonsterHeroGame() {
     const masu = getMasuMon(masuId);
     const applied = applyEnhancePlanToMasu(masu, plan);
     if (!applied) return null;
-    const updatedMasu = applied.masu;
+    // 何らかの配分を確定した時点で、リセット直後の復元候補としての役目は終わる。
+    // 残したままだと後日の強化に以前の全量を重ねられてしまうため、この個体だけから取り除く。
+    const { bondResetAllocationSnapshot: _usedResetSnapshot, ...updatedMasu } = applied.masu;
     setMasuMons(prev => {
       const next = prev.map(m => m.id === masuId ? updatedMasu : m);
       storeSet('mh_masu_mons', next, false);
@@ -9732,6 +9838,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     setScore(s=>s+finalRoundScore);
     const finalDistDamage=waveDistDamage.map((value,index)=>(value||0)+(distDamage[index]||0));
     // WAVE後の距離強化はモンスター自身の距離適性とは別枠で、通常の獲得量を出してから半減する。
+    const normalGainedDistBonus=finalDistDamage.map(d=>d*0.001/100);
     const gainedDistBonus=finalDistDamage.map(d=>applyNightmareWaveEnhancement(d*0.001/100,specialRuleDifficulty));
     const newDistBonus=distDmgBonus.map((b,i)=>b+gainedDistBonus[i]);
     setDistDmgBonus(newDistBonus);
@@ -9744,7 +9851,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const newTotalRecoveryDelta=totalRecoveryDelta+recoveryDelta;
     writePermaBuffs(p=>({...p, autoHpRecovery:Math.max(0,(p.autoHpRecovery??0.1)+recoveryDelta)}));
     setTotalRecoveryDelta(newTotalRecoveryDelta);
-    setWaveResult({wave,waveMult,turn:turnCount,totalTurnCount:newTotalTurnCount,pendingUltimateDistanceBreak:!!distanceBreakThreshold,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,gainedDistBonus,newDistBonus,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
+    setWaveResult({wave,waveMult,turn:turnCount,totalTurnCount:newTotalTurnCount,pendingUltimateDistanceBreak:!!distanceBreakThreshold,remainingTurns,turnMult,totalDamage:totalWaveDamage,roundScore:finalRoundScore,totalScore:score+finalRoundScore,distDamage:finalDistDamage,normalGainedDistBonus,gainedDistBonus,newDistBonus,baseRecoveryDelta,recoveryDelta,totalDistDamage:newTotalDistDamage,totalAllDamage:newTotalAllDamage,totalRecoveryDelta:newTotalRecoveryDelta});
     await saveMissionProgress('battle');
     await saveMissionProgress('win');
     setWaveHistory(prev => [...prev, { wave, roundScore: finalRoundScore, totalScore: score + finalRoundScore, ...(extremeRun?{xpGain:waveXpGainInMode(wave, xpMultiplier, runMode)}:{xpGain: waveXpGainInMode(wave, scoreMultiplier, runMode)}), goldGain: waveGoldGainInMode(wave, goldMultiplier, runMode) }]);
@@ -10858,7 +10965,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       // ここで早く返すので、関数の最後にある setCurrentPickingMon(null) を通らない。
       // 消し忘れると、選んだ勇者モンの詳細が開いたまま残り、
       // WAVE 2の供モン合流で「勝手に勇者モンが選ばれている」ように見えてしまう
-      if (isProMode(runMode)) { setCurrentPickingMon(null); setProAllyPool([]); setGameState('PICK_PRO_ALLIES'); return; }
+      if (isProMode(runMode)) {
+        setCurrentPickingMon(null);
+        setProHeroPreset(null);
+        // 前回候補のうち、今回の勇者と同じ種だけは候補から外す。それ以外の有効な候補は初期選択として残す。
+        setProAllyPool(prev=>prev.filter(mon=>mon.id!==m.id));
+        setGameState('PICK_PRO_ALLIES');
+        return;
+      }
       setTeachingPool([...getActiveTeachingCards()]); setGameState('PICK_TEACHING');
     } else {
       const bonus=m.plusStats||{};
@@ -10903,6 +11017,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setTimeout(()=>{setEffect(null); setGameState('UPGRADE_SKILL');},battleMs(1400));
     }
     setCurrentPickingMon(null);
+  };
+
+  // 「この編成で開始」で確定した6枠だけを次回用に保存する。個別変更の途中では更新しない。
+  const confirmProParty = () => {
+    if (!mainHero || proAllyPool.length !== PRO_ALLY_POOL_SIZE) return;
+    const confirmedParty = normalizeProLastParty({
+      heroBaseId:mainHero.id,
+      heroDistance:initialBattleDistanceRef.current,
+      allyBaseIds:proAllyPool.map(mon=>mon.id),
+    }, getUnlockedBaseMonsterList().map(mon=>mon.id));
+    setLastProParty(confirmedParty);
+    storeSet(PRO_LAST_PARTY_KEY, confirmedParty, false);
+    setTeachingPool([...getActiveTeachingCards()]);
+    setGameState('PICK_TEACHING');
   };
 
   const confirmPickTeaching = () => {
@@ -11913,7 +12041,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <button aria-label="前の難易度" disabled={selectedIndex===0} onClick={()=>selectDifficultyIndex(selectedIndex-1)} className="absolute left-0 top-[42%] z-20 w-9 h-12 rounded-r-xl bg-black/70 disabled:opacity-20"><ChevronLeft/></button>
                   <div ref={modeDifficultyCarouselRef} onScroll={e=>{const root=e.currentTarget,c=root.scrollLeft+root.clientWidth/2;let best=0,d=Infinity;[...root.children].forEach((card,i)=>{const n=Math.abs(card.offsetLeft+card.offsetWidth/2-c);if(n<d){d=n;best=i;}});if(difficulties[best]?.id!==extremeDifficulty)setExtremeDifficulty(difficulties[best].id);}} className="flex items-start gap-2.5 overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-x-contain py-0.5 mh-scroll" style={{paddingLeft:'11%',paddingRight:'11%',touchAction:'pan-x pinch-zoom'}}>
                     {difficulties.map(setting=>{const active=setting.id===extremeDifficulty;const unlocked=debugBattle||(setting.id==='EXTREME'?extremeUnlocked:setting.id==='NIGHTMARE'?nightmareUnlocked:setting.id==='CHAOS'?chaosUnlocked:setting.id==='ULTIMATE'?ultimateUnlocked:false);const previewable=(setting.available||debugBattle&&setting.id===ULTIMATE_SETTING.id)&&unlocked;return (
-                      <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[382px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?'#f0abfc':'rgba(255,255,255,.12)',background:previewable?'linear-gradient(180deg,#34133f,#160d2b)':'linear-gradient(180deg,#1e293b,#0d142b)',boxShadow:active?'0 0 30px rgba(232,121,249,.35)':'none'}}>
+                      <article key={setting.id} aria-disabled={!previewable} data-extreme-difficulty-card={setting.id} className={`snap-center shrink-0 w-[82%] h-[400px] flex flex-col rounded-[24px] border-2 px-3 py-2 overflow-hidden transition-all ${active?'scale-100 opacity-100':'scale-[.92] opacity-55'}`} style={{borderColor:active?'#f0abfc':'rgba(255,255,255,.12)',background:previewable?'linear-gradient(180deg,#34133f,#160d2b)':'linear-gradient(180deg,#1e293b,#0d142b)',boxShadow:active?'0 0 30px rgba(232,121,249,.35)':'none'}}>
                         <div className="text-center text-[7px] leading-none tracking-[.2em] text-slate-400 font-black">BATTLE DIFFICULTY</div>
                         <h3 className="text-center text-lg font-black leading-tight text-fuchsia-200">{setting.label}</h3>
                         <div className="mt-1 h-[42px] shrink-0 rounded-xl bg-black/45 px-2.5 py-1">
@@ -11924,10 +12052,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         {previewable?<>
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <div className="grid grid-cols-2 gap-1 mt-1">{[['経験値',setting.xp?`×${setting.xp}`:'対象外'],['虹のプシュケー',setting.psyche??'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
-                          <p className="mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200">{setting.description}</p>
-                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">アシストカード効果 50%</b></div>:<div className="mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"><small className="block text-center text-[8px] leading-tight font-black text-amber-300">⚠ {setting.label}特殊ルール</small>{extremeSpecialRuleLines(setting.id).map(([label,value])=><div key={label} className="grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[10px] whitespace-nowrap"><span className="text-slate-300">{label}</span><b className="text-right text-white">{value}</b></div>)}</div>}
+                          <p data-extreme-card-description={setting.id} className={`${setting.id==='ULTIMATE'?'mt-1 h-[32px] shrink-0':'mt-1 min-h-[35px]'} rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200`}>{setting.cardDescription||setting.description}</p>
+                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">アシストカード効果 50%</b></div>:<div data-extreme-special-rules={setting.id} className={`${setting.id==='ULTIMATE'?'mt-1.5 h-[62px]':'mt-1 h-[51px]'} shrink-0 overflow-hidden rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-1.5 py-0.5`}><small className="block text-center text-[8px] leading-[9px] font-black text-amber-300">⚠ {setting.label}特殊ルール</small><div>{extremeSpecialRuleLines(setting.id).map(([label,value])=><div key={label} className={`grid min-w-0 grid-cols-[auto_1fr] items-center gap-1 ${setting.id==='ULTIMATE'?'text-[8px] leading-[9px]':'text-[9px] leading-[10px]'} whitespace-nowrap`}><span className="text-slate-300">{label}</span><b className="min-w-0 text-right text-white">{value}</b></div>)}</div></div>}
                         </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
-                        <div className="grid gap-1.5 mt-auto pt-1.5">
+                        <div data-extreme-card-actions className="grid gap-1.5 mt-auto pt-2 pb-1">
                           <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
                           {/* 極限は難易度そのものが別表なので、通常の難易度は Normal のまま触らない。
                               debugBattleRef はここで書き換えないこと。デバッグ設定から入ったときだけ true のままになり、
@@ -11940,8 +12068,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   </div>
                   <button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button>
                 </div>
-                <div className="flex justify-center gap-1 py-0.5">{difficulties.map((setting,i)=><button key={setting.id} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${setting.id===extremeDifficulty?'bg-fuchsia-300 scale-125':'bg-slate-700'}`}/>)}</div>
-                <div className="shrink-0 pt-1.5 pb-1"><AssistantBubble key={extremeDifficultyAssistantScene} scene={extremeDifficultyAssistantScene} accent="#e879f9" faceSize={56} compact/></div>
+                <div data-extreme-page-dots className="flex justify-center gap-1 pt-1.5 pb-1">{difficulties.map((setting,i)=><button key={setting.id} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${setting.id===extremeDifficulty?'bg-fuchsia-300 scale-125':'bg-slate-700'}`}/>)}</div>
+                <div data-extreme-assistant className="shrink-0 pt-2 pb-1"><AssistantBubble key={extremeDifficultyAssistantScene} scene={extremeDifficultyAssistantScene} accent="#e879f9" faceSize={56} compact/></div>
                 <div className="shrink-0 pt-1.5 pb-1 text-center text-[9px] text-slate-500">スコアは極限チャレンジ専用のランキングへ載り、チャレンジの記録は変わりません</div>
               </div>
             </div>
@@ -12002,7 +12130,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                               ベースモンのタブで開く。編成(マスモン入り)は使えない */}
                           {/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
                               ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}
-                          <button disabled={(pro&&!proReady)||!quickUnlocked||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setProAllyPool([]);setMonSelection(pro?getUnlockedBaseMonsterList():getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{!quickUnlocked?'🔒 同じ難易度クリアで解放':pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
+                          <button disabled={(pro&&!proReady)||!quickUnlocked||(!!battleTutorial&&key!=='Beginner')} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);setRunMode(battleMode);quickRewardPolicyRunRef.current=quick?normalizeQuickRewardPolicy(quickRewardPolicy):QUICK_REWARD_POLICY_GROWTH;battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);const baseMons=pro?getUnlockedBaseMonsterList():[];const savedHero=pro?baseMons.find(mon=>mon.id===lastProParty.heroBaseId):null;setProHeroPreset(savedHero&&lastProParty.heroDistance!==null?{heroBaseId:savedHero.id,heroDistance:lastProParty.heroDistance}:null);setProAllyPool(pro?lastProParty.allyBaseIds.map(id=>baseMons.find(mon=>mon.id===id)).filter(mon=>mon&&mon.id!==savedHero?.id):[]);setMonSelection(pro?baseMons:getActiveMonsterList());setHeroPickTab(pro?'base':'roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>{!quickUnlocked?'🔒 同じ難易度クリアで解放':pro&&!proReady?`ベースモンが${PRO_ALLY_POOL_SIZE+1}種必要です`:'この難易度で挑戦'}</button>
                           {/* 難易度カードからもランキングへ入れる。ここから開いたときは、この難易度のタブが最初に選ばれる */}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
                           {/* スキップはクイックモード専用。チケットが無い難易度では出さない */}
@@ -13346,9 +13474,6 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           // 総合力は共通関数から都度出す。1ポイント強化も一括強化も、強化前と強化後を
           // 同じ計算に通した差分を出すので、画面に「+10」を直接書かない
           const currentPower = masuPowerOf(masu);
-          const powerAfterApt = (idx) => plannedMasuPowerOf(masu, {apt:[0,1,2,3].map(i=>i===idx?1:0), stat:{}});
-          const powerAfterStat = (key) => plannedMasuPowerOf(masu, {apt:[0,0,0,0], stat:{[key]:1}});
-          const powerDeltaLabel = (after) => {const d=after-currentPower; return d===0?null:<span className={`text-[8px] font-mono font-black ${d>0?'text-amber-300':'text-red-300'}`}>総合力 {d>0?'+':''}{formatMonsterPower(d)}</span>;};
           const ps = mergeMasuIntoMon(masu)?.plusStats||{};
           // 強化はマスモン詳細の「育成・カスタム」から入るので、戻り先も詳細にする。
           // ここで masuMonDetail を消すと一覧まで戻され、続けて染色やトレーニングをしたいときに
@@ -13358,14 +13483,30 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const plan = bulkPlan || { apt:[0,0,0,0], stat:{hp:0,atk:0,def:0,guts:0} };
           const planUsed = plan.apt.reduce((a,b)=>a+b,0) + Object.values(plan.stat).reduce((a,b)=>a+b,0);
           const planLeft = points - planUsed;
+          const restoreDraft = buildBondResetRestorePlan(masu, masu.bondResetAllocationSnapshot);
+          const restoreResetAllocation = () => { if (restoreDraft?.restored > 0) setBulkPlan(restoreDraft.plan); };
           // 下書き段階での間合い適性(何段階上がるか)。上限Mを超えないようにする
           const plannedGrade = (idx) => {
             const cur = DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[idx]||'C');
             return DIST_APTITUDE_GRADES[Math.min(DIST_APTITUDE_GRADES.length-1, Math.max(0, cur + plan.apt[idx]))];
           };
           const canPlanApt = (idx) => planLeft>0 && DIST_APTITUDE_GRADES.indexOf(plannedGrade(idx)) < DIST_APTITUDE_GRADES.length-1;
-          const addPlanApt = (idx, d) => setBulkPlan(p=>{const q=p?{apt:[...p.apt],stat:{...p.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}}; q.apt[idx]=Math.max(0,q.apt[idx]+d); return q;});
-          const addPlanStat = (key, d) => setBulkPlan(p=>{const q=p?{apt:[...p.apt],stat:{...p.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}}; q.stat[key]=Math.max(0,(q.stat[key]||0)+d); return q;});
+          const changePlan = (kind, target, direction) => setBulkPlan(previous => {
+            const q=previous?{apt:[...previous.apt],stat:{...previous.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}};
+            const current=kind==='apt'?q.apt[target]:(q.stat[target]||0);
+            const used=q.apt.reduce((a,b)=>a+b,0)+Object.values(q.stat).reduce((a,b)=>a+b,0);
+            const remaining=Math.max(0,points-used);
+            let amount=bulkEnhanceUnit==='MAX'?(direction>0?remaining:current):Math.min(Number(bulkEnhanceUnit),direction>0?remaining:current);
+            if(kind==='apt'&&direction>0){
+              const baseGradeIndex=DIST_APTITUDE_GRADES.indexOf(resolvedDistAptitude[target]||'C');
+              amount=Math.min(amount,DIST_APTITUDE_GRADES.length-1-baseGradeIndex-current);
+            }
+            const next=Math.max(0,current+direction*Math.max(0,amount));
+            if(kind==='apt')q.apt[target]=next;else q.stat[target]=next;
+            return q;
+          });
+          const addPlanApt = (idx, direction) => changePlan('apt',idx,direction);
+          const addPlanStat = (key, direction) => changePlan('stat',key,direction);
           const applyPlan = () => {
             const updated = spendPointsBulk(masu.id, plan);
             if (!updated) return;
@@ -13390,62 +13531,45 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
                 {/* まとめて強化: 1ポイントずつタップするのが手間なので、
                     振り分けを下書きしてから一度に確定できるようにしている */}
-                {points>0&&(
-                  <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-4 shadow-xl">
-                    <div className="flex items-center justify-between mb-3">
+                {points>0&&(<>
+                  <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-3 shadow-xl">
+                    <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5"><Sparkles size={14}/>まとめて強化</div>
-                      <div className="text-[10px] font-black text-white">残り <span className={`font-mono text-[15px] ${planLeft>0?'text-amber-300':'text-slate-500'}`}>{planLeft}</span> / {points} pt</div>
+                      <div className="text-[9px] text-slate-400 font-bold">全項目共通</div>
                     </div>
-                    {/* 下書きの中身に合わせてリアルタイムに動く。確定するまで実データは書き換えない */}
-                    <div className="mb-3">{renderPowerBadge(plannedMasuPowerOf(masu, plan), {before: currentPower, size:'md'})}
-                      {planUsed>0&&<div className="text-[8px] text-slate-500 font-bold mt-1">使用予定 強化P {planUsed}</div>}
+                    <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-black/40 mb-3" role="group" aria-label="振り分け単位">
+                      {[1,5,10,'MAX'].map(unit=><button type="button" key={unit} aria-pressed={bulkEnhanceUnit===unit} onClick={()=>setBulkEnhanceUnit(unit)} className={`min-h-[40px] rounded-lg text-[11px] font-black active:scale-95 ${bulkEnhanceUnit===unit?'bg-amber-500 text-slate-950 shadow':'bg-slate-800 text-slate-300'}`}>{unit==='MAX'?'MAX':`${unit}P`}</button>)}
                     </div>
-                    <div className="text-[9px] text-slate-400 font-bold mb-2">間合い適性</div>
-                    <div className="grid grid-cols-4 gap-1.5 mb-3">
-                      {RANGE_LABELS.map((label,idx)=>{
-                        const g = plannedGrade(idx);
-                        const added = plan.apt[idx];
-                        return (
-                          <div key={idx} className="flex flex-col items-center gap-1">
-                            <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
-                            <span className={`w-full text-center py-0.5 rounded-lg border text-[13px] font-black leading-none ${DIST_APTITUDE_COLOR[g]}`}>{g}</span>
-                            <span className={`text-[8px] font-mono font-black leading-none ${aptGradeToPct(g)>0?'text-cyan-300':aptGradeToPct(g)<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(aptGradeToPct(g))}</span>
-                            <div className="flex items-center gap-1 w-full">
-                              <button disabled={added<=0} onClick={()=>addPlanApt(idx,-1)} className="flex-1 text-[11px] font-black bg-slate-800 text-slate-300 rounded py-0.5 active:scale-90 disabled:opacity-20">−</button>
-                              <span className="text-[9px] font-mono font-black text-amber-300 w-4 text-center">{added>0?`+${added}`:'0'}</span>
-                              <button disabled={!canPlanApt(idx)} onClick={()=>addPlanApt(idx,1)} className="flex-1 text-[11px] font-black bg-amber-600 text-white rounded py-0.5 active:scale-90 disabled:opacity-20 disabled:bg-slate-700">＋</button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    {restoreDraft&&restoreDraft.requested>0&&<div className="mb-3 rounded-xl border border-cyan-700/40 bg-cyan-950/20 p-2">
+                      <button type="button" onClick={restoreResetAllocation} disabled={restoreDraft.restored<=0} className="w-full min-h-[40px] rounded-lg bg-slate-800 text-cyan-200 text-[10px] font-black active:scale-95 disabled:opacity-40">↩ リセット前の配分を復元</button>
+                      <div className={`mt-1 text-[8px] font-bold text-center ${restoreDraft.omitted>0?'text-amber-300':'text-slate-500'}`}>{restoreDraft.omitted>0?`現行の上限・残りptに合わせ、${restoreDraft.restored}ptを仮配分（復元できない分 ${restoreDraft.omitted}pt）`:'保存は「強化する」を押した時だけです'}</div>
+                    </div>}
+                    <div className="mb-3">{renderPowerBadge(plannedMasuPowerOf(masu, plan), {before: currentPower, size:'md'})}</div>
+                    <div className="text-[9px] text-slate-400 font-bold mb-1.5">間合い適性</div>
+                    <div className="space-y-1.5 mb-3">
+                      {RANGE_LABELS.map((label,idx)=>{const before=resolvedDistAptitude[idx]||'C',after=plannedGrade(idx),added=plan.apt[idx];return <div key={idx} className="grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5">
+                        <span className={`text-[8px] text-center font-black px-1 py-1 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
+                        <div className="text-center font-mono font-black text-[12px]"><span className={DIST_APTITUDE_COLOR[before]}>{before}</span><span className="text-slate-500 mx-1">→</span><span className={added>0?'text-cyan-300':'text-slate-300'}>{after}</span></div>
+                        <span className="text-center text-[9px] font-mono font-black text-amber-300">{added}pt</span>
+                        <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}距離適性を減らす`} disabled={added<=0} onPress={()=>addPlanApt(idx,-1)} className="min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20">−</PressRepeatButton><PressRepeatButton aria-label={`${label}距離適性を増やす`} disabled={!canPlanApt(idx)} onPress={()=>addPlanApt(idx,1)} className="min-h-[40px] rounded-lg bg-amber-600 text-lg font-black disabled:bg-slate-700 disabled:opacity-20">＋</PressRepeatButton></div>
+                      </div>;})}
                     </div>
-                    <div className="text-[9px] text-slate-400 font-bold mb-2">ステータス</div>
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                      {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{
-                        const n = plan.stat[key]||0;
-                        const gain = n*(STAT_POINT_GAIN[key]||1);
-                        return (
-                          <div key={key} className="bg-black/40 border border-emerald-500/25 rounded-xl p-2">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[9px] text-emerald-300 font-black">{label}</span>
-                              <span className="text-[10px] font-mono font-black text-white">{currentStatValue(key)}{gain>0&&<span className="text-emerald-400"> → {currentStatValue(key)+gain}</span>}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <button disabled={n<=0} onClick={()=>addPlanStat(key,-1)} className="flex-1 text-[11px] font-black bg-slate-800 text-slate-300 rounded py-0.5 active:scale-90 disabled:opacity-20">−</button>
-                              <span className="text-[9px] font-mono font-black text-amber-300 w-6 text-center">{n>0?`+${n}pt`:'0'}</span>
-                              <button disabled={planLeft<=0} onClick={()=>addPlanStat(key,1)} className="flex-1 text-[11px] font-black bg-emerald-700 text-white rounded py-0.5 active:scale-90 disabled:opacity-20 disabled:bg-slate-700">＋</button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="text-[9px] text-slate-400 font-bold mb-1.5">ステータス</div>
+                    <div className="space-y-1.5">
+                      {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{const n=plan.stat[key]||0,gain=n*(STAT_POINT_GAIN[key]||1),before=currentStatValue(key);return <div key={key} className="grid grid-cols-[44px_1fr_46px_1fr] items-center gap-1 rounded-xl bg-black/35 p-1.5">
+                        <span className="text-[8px] text-center text-emerald-300 font-black">{label}</span>
+                        <div className="text-center font-mono font-black text-[11px]"><span className="text-white">{before}</span><span className="text-slate-500 mx-1">→</span><span className={gain>0?'text-emerald-300':'text-slate-300'}>{before+gain}</span></div>
+                        <span className="text-center text-[9px] font-mono font-black text-amber-300">{n}pt</span>
+                        <div className="grid grid-cols-2 gap-1"><PressRepeatButton aria-label={`${label}を減らす`} disabled={n<=0} onPress={()=>addPlanStat(key,-1)} className="min-h-[40px] rounded-lg bg-slate-700 text-lg font-black disabled:opacity-20">−</PressRepeatButton><PressRepeatButton aria-label={`${label}を増やす`} disabled={planLeft<=0} onPress={()=>addPlanStat(key,1)} className="min-h-[40px] rounded-lg bg-emerald-700 text-lg font-black disabled:bg-slate-700 disabled:opacity-20">＋</PressRepeatButton></div>
+                      </div>;})}
                     </div>
-                    <div className="flex gap-2">
-                      <button disabled={planUsed<=0} onClick={()=>setBulkPlan(null)} className="px-4 py-2.5 rounded-xl font-black text-[11px] bg-slate-800 text-slate-300 active:scale-95 disabled:opacity-30">リセット</button>
-                      <button disabled={planUsed<=0} onClick={applyPlan} className="flex-1 py-2.5 rounded-xl font-black text-[12px] bg-gradient-to-r from-amber-600 to-orange-600 text-white active:scale-95 disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700 shadow-lg">{planUsed>0?`${planUsed}pt を使って強化する`:'振り分けてください'}</button>
-                    </div>
-                    <div className="text-[8px] text-slate-500 mt-2 leading-relaxed">※ 確定するまでポイントは減りません。1つずつ振りたい場合は下の各項目からも操作できます。</div>
+                    <div className="text-[8px] text-slate-500 mt-2">＋／−は長押しでも連続調整できます。確定するまで保存データは変わりません。</div>
                   </div>
-                )}
+                  <div className="sticky bottom-0 z-20 -mx-4 px-4 pt-2 border-t border-amber-500/30 bg-slate-950/95" style={{paddingBottom:'max(.75rem,env(safe-area-inset-bottom))'}} aria-label="強化の確定操作">
+                    <div className="flex items-center justify-between mb-2"><span className="text-[10px] font-black text-slate-300">残りpt</span><span className="font-mono font-black"><b className={planLeft>0?'text-amber-300':'text-slate-500'}>{planLeft}</b><small className="text-slate-500"> / {points} pt</small></span></div>
+                    <div className="flex gap-2"><button type="button" disabled={planUsed<=0} onClick={()=>setBulkPlan(null)} className="min-h-[46px] px-3 rounded-xl font-black text-[10px] bg-slate-800 text-slate-300 disabled:opacity-30">配分をすべて取消</button><button type="button" disabled={planUsed<=0} onClick={applyPlan} className="min-h-[46px] flex-1 rounded-xl font-black text-[12px] bg-gradient-to-r from-amber-600 to-orange-600 text-white disabled:opacity-30 disabled:from-slate-700 disabled:to-slate-700">{planUsed>0?`${planUsed}ptを使って強化する`:'振り分けてください'}</button></div>
+                  </div>
+                </>)}
                 <div className="flex items-center gap-4 bg-slate-900 border border-amber-500/30 rounded-3xl p-4 shadow-xl">
                   <div className="relative w-20 h-20 shrink-0">
                     <div className={`w-20 h-20 rounded-full overflow-hidden border ${(masu.fusionHistory||[]).length>0?'border-amber-400 ring-2 ring-amber-400':'border-amber-400/40'}`}><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div>
@@ -13473,62 +13597,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="text-[8px] text-pink-400 uppercase font-bold">合流ボーナス(このマスモンが供モンとして合流した時に加算される値)</div>
                   <div className="text-[10px] text-white font-bold mt-1">{ps.hp>0&&`HP+${ps.hp} `}{ps.atk>0&&`攻+${ps.atk} `}{ps.def>0&&`防+${ps.def} `}{ps.guts>0&&`G+${ps.guts} `}{!(ps.hp>0||ps.atk>0||ps.def>0||ps.guts>0)&&'なし'}</div>
                 </div>
-                <div className="bg-black/40 p-3 rounded-2xl border border-cyan-500/30">
-                  <div className="text-[9px] text-cyan-400 uppercase font-bold mb-2">間合い適性を強化</div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {RANGE_LABELS.map((label,idx)=>{
-                      const grade=resolvedDistAptitude[idx]||'C';
-                      const gIdx=DIST_APTITUDE_GRADES.indexOf(grade);
-                      const nextGrade=gIdx<DIST_APTITUDE_GRADES.length-1?DIST_APTITUDE_GRADES[gIdx+1]:null;
-                      const canUp=points>0&&nextGrade;
-                      return(
-                        <div key={idx} className="flex flex-col items-center gap-1">
-                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full ${RANGE_STYLES[idx].labelBg}`}>{label}</span>
-                          <span className={`w-full text-center py-1 rounded-lg border text-base font-black leading-none ${DIST_APTITUDE_COLOR[grade]}`}>{grade}</span>
-                          <span className={`text-[9px] font-mono font-black leading-none ${aptGradeToPct(grade)>0?'text-cyan-300':aptGradeToPct(grade)<0?'text-red-300':'text-slate-500'}`}>{formatAptPct(aptGradeToPct(grade))}</span>
-                          <span className="text-[7px] text-slate-500 font-mono h-3">{nextGrade?`次: ${nextGrade} ${formatAptPct(aptGradeToPct(nextGrade))}`:'MAX'}</span>
-                          <span className="h-3 flex items-center">{canUp?powerDeltaLabel(powerAfterApt(idx)):null}</span>
-                          <button disabled={!canUp} onClick={()=>{
-                            const beforeGrade=grade;
-                            const updated=spendAptPoint(masu.id,idx);
-                            if(!updated) return;
-                            setMasuMonDetail(updated);
-                            saveMissionProgress('enhance');
-                            addAssistantBond('enhance');
-                            const afterGrade=resolveMasuDistAptitude(updated,base)[idx]||beforeGrade;
-                            setEffect({type:'enhance',label:`${label}距離適性 強化！`,icon:'📈',monEmoji:base.emoji,imgUrl:base.iconUrl,baseId:masu.baseId,colors:getMasuColors(updated),subLabel:`${label}距離適性 ${beforeGrade} → ${afterGrade}`});
-                            setTimeout(()=>setEffect(null),900);
-                          }} className="w-full text-[9px] font-black bg-amber-600 text-white rounded-lg py-1 active:scale-95 disabled:opacity-20 disabled:bg-slate-700">+1</button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="bg-black/40 p-3 rounded-2xl border border-emerald-500/30">
-                  <div className="text-[9px] text-emerald-400 uppercase font-bold mb-2">ステータスを強化</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{
-                      const before=currentStatValue(key);
-                      const gain=STAT_POINT_GAIN[key]||1;
-                      const after=before+gain;
-                      return(
-                        <button key={key} disabled={points<=0} onClick={()=>{
-                          const updated=spendStatPoint(masu.id,key);
-                          if(!updated) return;
-                          setMasuMonDetail(updated);
-                          saveMissionProgress('enhance');
-                          addAssistantBond('enhance');
-                          setEffect({type:'enhance',label:`${label}強化！`,icon:'💪',monEmoji:base.emoji,imgUrl:base.iconUrl,baseId:masu.baseId,colors:getMasuColors(updated),subLabel:`${label} ${before} → ${after}`});
-                          setTimeout(()=>setEffect(null),900);
-                        }} className="flex flex-col items-center gap-1 bg-emerald-950/50 border border-emerald-500/30 rounded-xl py-2.5 active:scale-95 disabled:opacity-20">
-                          <span className="text-[9px] text-emerald-300 font-black">{label}</span>
-                          <span className="text-[11px] text-white font-mono font-black">{before} → <span className="text-emerald-400">{after}</span></span>
-                          <span className="h-3 flex items-center">{points>0?powerDeltaLabel(powerAfterStat(key)):null}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <div className="text-[8px] text-slate-500 font-bold text-center px-2">強化は上の「まとめて強化」で下書きし、確定すると保存されます。</div>
                 <button onClick={backToDetail} className="w-full bg-white text-black py-3.5 rounded-2xl font-black text-sm uppercase active:scale-95 shadow-lg mt-2">完了</button>
               </div>
             </div>
@@ -13788,6 +13857,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
               <div data-battle-controls className="flex shrink-0 items-center gap-0.5"><button type="button" disabled={!!battleTutorial} onClick={cycleBattleSpeed} aria-label={battleTutorial?'バトルのれんしゅう中は1倍固定':`バトル速度、現在${battleSpeed}倍。タップで切り替え`} className="shrink-0 min-w-[42px] h-[28px] px-1.5 rounded-lg border-2 font-black text-[11px] leading-none active:scale-90 disabled:opacity-50" style={{color:'#fef3c7',borderColor:'#f59e0b',backgroundColor:'rgba(120,53,15,.72)',boxShadow:'0 0 9px rgba(245,158,11,.35)'}}>×{battleSpeed}</button><button onClick={toggleQuickMute} aria-label="音量" className="shrink-0 p-1.5 bg-slate-800 rounded text-slate-300 active:scale-90 text-[12px] leading-none w-[28px] h-[28px] flex items-center justify-center">{audioMuted?'🔇':'🔊'}</button><button onClick={()=>openHelp()} aria-label="ヘルプ" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-emerald-400 active:scale-90"><HelpCircle size={14}/></button><button data-battle-quit disabled={!!battleTutorial} onClick={()=>setShowQuitConfirm(true)} aria-label="諦める" className="shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"><Flag size={14}/></button></div>
             </header>
+            {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===ULTIMATE_SETTING.id&&(()=>{
+              const elapsedTotalTurns=totalTurnCount+Math.max(0,turnCount-1);
+              const enemyMultiplier=ultimateEnemyTurnMultiplier(totalTurnCount);
+              const damageMultiplier=ultimateDamageTurnMultiplier(elapsedTotalTurns,ULTIMATE_SETTING.id);
+              return <div data-ultimate-battle-status className="shrink-0 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[8px] font-black leading-none text-purple-100">
+                <span className="text-amber-300">ULTIMATE</span><span>敵強化 +{compactPercent(enemyMultiplier-1)}（WAVE開始時 累計{totalTurnCount}T）</span><span>与ダメ {compactPercent(damageMultiplier)}（現在 累計{elapsedTotalTurns}T）</span>
+              </div>;
+            })()}
+            {(()=>{const rule=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);return [NIGHTMARE_SETTING.id,CHAOS_SETTING.id].includes(rule)&&<div data-extreme-battle-status={rule} className="shrink-0 grid grid-cols-4 items-center gap-1 border-b border-fuchsia-500/30 bg-purple-950/80 px-2 py-1 text-[9px] font-black leading-none text-purple-100"><span className="text-amber-300">{rule}</span>{extremeSpecialRuleLines(rule).map(([label,value])=><span key={label} className="text-center whitespace-nowrap">{label} {value}</span>)}</div>;})()}
             {enemy&&(
               <div className={`shrink-0 bg-slate-950/95 border-b border-red-900/40 px-4 py-1.5 z-[6400] shadow-[0_4px_12px_rgba(0,0,0,0.6)]${battleTutorialSpotClass('enemyBar')}`}>
                 <div className="flex justify-between items-center text-[10px] font-black italic uppercase tracking-tighter mb-1">
@@ -14517,6 +14595,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               ここが無いと「合流後の値」だけを見て比べることになり、どれが得か分からなかった */}
           {gameState==='PICK_ALLY'&&(
             <div className="shrink-0 w-full max-w-md mx-auto mb-2 rounded-2xl border border-white/10 bg-slate-900/60 px-2 py-1.5" data-join-status>
+              {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===ULTIMATE_SETTING.id&&(()=>{
+                const totalTurns=waveResult?.totalTurnCount||0;
+                const multiplier=ultimateAllyJoinMultiplier(totalTurns);
+                return <div data-ultimate-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100 flex flex-wrap justify-between gap-x-2"><span className="text-amber-300">ULTIMATE補正</span><span>累計{totalTurns}T</span><span>加入ボーナス {precisePercent(multiplier)}（-{precisePercent(1-multiplier)}）</span></div>;
+              })()}
+              {(()=>{const rule=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);if(rule===NIGHTMARE_SETTING.id)return <div data-nightmare-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"><span className="text-amber-300">NIGHTMARE補正</span>　間合い適性：＋{specialRulePercent(extremeSpecialRule(rule,'positiveModifier'))} / －{specialRulePercent(extremeSpecialRule(rule,'negativeModifier'))}</div>;if(rule===CHAOS_SETTING.id)return <div data-chaos-join-status className="mb-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"><span className="text-amber-300">CHAOS補正</span>　加入ボーナス {specialRulePercent(extremeSpecialRule(rule,'allyJoinBonus'))}</div>;return null;})()}
               <div className="text-[8px] font-black tracking-widest text-slate-500 text-left mb-1">現在のステータス</div>
               <div className="grid grid-cols-4 gap-1">
                 {[['ライフ',maxHp,'text-pink-300'],['ちから',atk,'text-red-300'],['丈夫さ',def,'text-emerald-300'],['ガッツ',maxGuts,'text-amber-300']].map(([label,value,tint])=>(
@@ -14584,8 +14668,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               if(gameState==='PICK_HERO'&&isProMode(runMode)) return (
                 <React.Fragment key={m.id}>{renderProMonsterRow({
                   mon: m,
+                  selected: proHeroPreset?.heroBaseId===m.id,
                   disabled: !scenarioPicksHero(m.id),
-                  onSelect: ()=>{setCurrentPickingMon(m);setGameState('PICK_SLOT');},
+                  onSelect: ()=>{if(proHeroPreset?.heroBaseId===m.id){setupMon(m,proHeroPreset.heroDistance);return;}setProHeroPreset(null);setCurrentPickingMon(m);setGameState('PICK_SLOT');},
                   onDetail: ()=>setCurrentPickingMon(m),
                   selectLabel: `${m.name}を勇者モンに選ぶ`,
                   activeClass: 'active:bg-indigo-900/30',
@@ -14616,8 +14701,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {preview.stats.map(stat=>(
                         <span key={stat.key} className="min-w-0 block">
                           <span className="block text-slate-500 font-black leading-none">{stat.short}</span>
+                          {[ULTIMATE_SETTING.id,CHAOS_SETTING.id].includes(specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty))&&stat.normalDiff!==stat.diff?<span className="block leading-none text-slate-500">本来 +{stat.normalDiff}</span>:null}
                           <b className={`block leading-tight ${stat.diff>0?stat.tint:'text-slate-400'}`} style={{fontSize:'9px'}}>{stat.after}</b>
-                          <span className={`block leading-none ${stat.diff>0?'text-emerald-400':'text-slate-700'}`}>{stat.diff>0?`+${stat.diff}`:'±0'}</span>
+                          <span className={`block leading-none ${stat.diff>0?'text-emerald-400':'text-slate-700'}`}>{stat.diff>0?`実際 +${stat.diff}`:'実際 ±0'}</span>
                         </span>
                       ))}
                     </div>
@@ -14625,8 +14711,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       {preview.apt.map(range=>(
                         <span key={range.idx} className="min-w-0 block">
                           <span className="block text-slate-500 font-black leading-none">{range.label}</span>
+                          {specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty)===NIGHTMARE_SETTING.id&&range.normalDiff!==range.diff?<span className="block leading-none text-slate-500">通常 {formatAptPct(range.normalDiff)} →</span>:null}
                           <b className={`block leading-tight ${range.diff>0?'text-cyan-300':range.diff<0?'text-red-300':'text-slate-400'}`}>{formatAptPct(range.after)}</b>
-                          <span className={`block leading-none ${range.diff>0?'text-emerald-400':range.diff<0?'text-red-400':'text-slate-700'}`}>{range.diff!==0?formatAptPct(range.diff):'±0'}</span>
+                          <span className={`block leading-none ${range.diff>0?'text-emerald-400':range.diff<0?'text-red-400':'text-slate-700'}`}>{range.diff!==0?`${range.normalDiff!==range.diff?'実際 ':''}${formatAptPct(range.diff)}`:'±0'}</span>
                         </span>
                       ))}
                     </div>
@@ -14691,82 +14778,57 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         </div>
       )}
 
-      {/* PICK PRO ALLIES — プロモードだけの画面。
-          勇者モンを決めたあと、ラン中に加入する可能性のある供モンの候補を5体えらぶ。
-          実際に合流の場面で出るのは、この5体からランダムに選ばれた3体。
-          誰が来てもいいように候補を組むところまでが編成、という考え方 */}
+      {/* PICK PRO ALLIES — 現在の6枠を確認し、必要な1枠だけ変更する。 */}
       {gameState==='PICK_PRO_ALLIES'&&(()=>{
         const mode=battleModeInfo(runMode);
-        // 勇者モンにした種は候補から外す(同じ種は1体しか編成に入らないため)
         const candidates=getUnlockedBaseMonsterList().filter(m=>m.id!==mainHero?.id);
         const need=Math.min(PRO_ALLY_POOL_SIZE,candidates.length);
-        const chosenIds=proAllyPool.map(m=>m.id);
-        const toggle=(m)=>{
-          if(chosenIds.includes(m.id)){setProAllyPool(prev=>prev.filter(x=>x.id!==m.id));return;}
-          if(proAllyPool.length>=need)return;
-          setProAllyPool(prev=>[...prev,m]);
+        const ready=!!mainHero&&proAllyPool.length===need;
+        const changeAlly=(m)=>{
+          if(!Number.isInteger(proEditingAllyIndex))return;
+          setProAllyPool(prev=>{
+            const next=[...prev];
+            next[proEditingAllyIndex]=m;
+            return next.filter(Boolean);
+          });
+          setProEditingAllyIndex(null);
         };
-        const ready=proAllyPool.length===need;
+        const returnToHero=()=>{
+          setProAllyDetail(null);
+          setProEditingAllyIndex(null);
+          setProHeroPreset(mainHero?{heroBaseId:mainHero.id,heroDistance:initialBattleDistanceRef.current}:null);
+          setMainHero(null);setSlots([null,null,null,null]);setCurrentPickingMon(null);setGameState('PICK_HERO');
+        };
         return (
-        // ラン中の画面(勇者モン選択・配置・教え)と同じ全画面のかぶせ方にする。
-        // これを付けないと、ふだんの画面の下敷きになってカードを押せなくなる
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] flex flex-col h-full min-h-0 px-4 overflow-hidden" data-screen="pick-pro-allies">
           <div className="mb-2 text-center flex items-center justify-between px-2 shrink-0" style={{paddingTop:'calc(.35rem + env(safe-area-inset-top))'}}>
-            {/* 勇者モンから選び直せるようにしておく(まだバトルは始まっていない) */}
-            <button aria-label="戻る" onClick={()=>{setProAllyDetail(null);setProAllyPool([]);setMainHero(null);setSlots([null,null,null,null]);setCurrentPickingMon(null);setGameState('PICK_HERO');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-            <h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>供モンの候補</h2>
+            <button aria-label="戻る" onClick={returnToHero} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+            <h2 className="text-xl font-black italic uppercase tracking-widest truncate" style={{color:mode.color}}>{proEditingAllyIndex===null?'プロモード編成':`供モン${proEditingAllyIndex+1}を変更`}</h2>
             <div className="w-10"></div>
           </div>
           <div className="w-full max-w-md mx-auto flex-1 min-h-0 flex flex-col">
-            <div className="shrink-0 w-full mb-2"><AssistantBubble scene="pickProAllies" accent={mode.color} compact/></div>
-            {/* いま何体えらんだか。押した順に並ぶので、選び直しも分かりやすい */}
-            <div className="shrink-0 rounded-2xl border px-3 py-2 mb-2" style={{borderColor:`${mode.color}55`,backgroundColor:'rgba(0,0,0,.35)'}}>
-              <div className="flex items-baseline justify-between">
-                <span className="text-[11px] font-black text-slate-200">供モン候補</span>
-                <b className="text-base font-black" style={{color:mode.color}}>{proAllyPool.length} / {need}</b>
+            {proEditingAllyIndex===null?<>
+              <div className="shrink-0 w-full mb-2"><AssistantBubble scene="pickProAllies" accent={mode.color} compact/></div>
+              <p className="shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2">変えたい枠だけ「変更」を押してください。他の枠はそのまま維持されます。</p>
+              <div className="flex-1 overflow-y-auto mh-scroll min-h-0 space-y-1.5 pb-2">
+                {[["勇者モン",mainHero],...Array.from({length:need},(_,i)=>[`供モン${i+1}`,proAllyPool[i]])].map(([label,mon],i)=><div key={label} className="min-h-[58px] rounded-2xl border border-white/10 bg-slate-900/80 px-2 py-1.5 flex items-center gap-2">
+                  <span className={`w-14 shrink-0 text-[9px] font-black ${i===0?'text-amber-300':'text-pink-300'}`}>{label}</span>
+                  <button disabled={!mon} onClick={()=>setProAllyDetail(mon)} className="flex-1 min-w-0 flex items-center gap-2 text-left disabled:opacity-50" aria-label={mon?`${mon.name}の詳細を見る`:`${label}は未選択`}>
+                    <span className="w-10 h-10 rounded-full bg-black/40 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">{mon?(mon.imgUrl?<img src={mon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-xl">{mon.emoji}</span>):<span className="text-slate-600">＋</span>}</span>
+                    <span className="min-w-0"><b className="block text-[11px] text-white truncate">{mon?.name||'未選択'}</b>{i===0&&<small className="block text-[8px] text-slate-500">{RANGE_LABELS[initialBattleDistanceRef.current]}距離に配置</small>}</span>
+                  </button>
+                  <button onClick={()=>i===0?returnToHero():setProEditingAllyIndex(i-1)} className="min-w-[58px] min-h-[42px] rounded-xl border border-pink-400/50 bg-pink-950/60 text-pink-200 text-[11px] font-black active:scale-95">変更</button>
+                </div>)}
               </div>
-              <p className="text-[9px] text-slate-400 leading-snug mt-0.5">合流の場面では、この{need}体からランダムに{Math.min(PRO_ALLY_OFFER_SIZE,need)}体だけが出ます。誰が来てもいいように組んでください。</p>
-              <div className="flex gap-1 mt-1.5 min-h-[26px] items-center">
-                {Array.from({length:need}).map((_,i)=>{const m=proAllyPool[i];return (
-                  <div key={i} className="flex-1 h-[26px] rounded-lg border flex items-center justify-center overflow-hidden" style={{borderColor:m?`${mode.color}88`:'rgba(255,255,255,.1)',backgroundColor:m?'rgba(0,0,0,.5)':'transparent'}}>
-                    {m?(m.imgUrl?<img src={m.imgUrl} alt={m.name} className="h-[22px] object-contain"/>:<span className="text-sm">{m.emoji}</span>):<span className="text-[9px] text-slate-600 font-black">{i+1}</span>}
-                  </div>
-                );})}
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto mh-scroll pb-2 min-h-0">
-              {/* 第1弾のプロ勇者モン選択と同じ横長カード。カード本体は選択、右端は詳細だけに分ける。 */}
-              <div className="flex flex-col gap-2.5">
-                {/* カードの見た目は「勇者モンを選択」と同じ共通部品(renderProMonsterRow)を通す */}
-                {candidates.map(m=>{const isSel=chosenIds.includes(m.id);const full=!isSel&&proAllyPool.length>=need;return (
-                  <React.Fragment key={m.id}>{renderProMonsterRow({
-                    mon: m,
-                    selected: isSel,
-                    disabled: full,
-                    onSelect: ()=>toggle(m),
-                    onDetail: ()=>setProAllyDetail(m),
-                    selectLabel: `${m.name}を供モン候補${isSel?'から解除':'に追加'}`,
-                    activeClass: 'active:bg-pink-900/30',
-                  })}</React.Fragment>
-                );})}
-              </div>
-            </div>
-            {proAllyDetail&&renderMonsterDetailModal({
-              mon: proAllyDetail,
-              onClose: ()=>setProAllyDetail(null),
-              accent: 'pink',
-              zIndex: 31000,
-              label: `${proAllyDetail.name}のベースモン詳細`,
-              footer: (
-                <div className="flex gap-2 shrink-0">
-                  <button onClick={()=>setProAllyDetail(null)} className="w-2/5 min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95">一覧へ戻る</button>
-                  <button disabled={!chosenIds.includes(proAllyDetail.id)&&proAllyPool.length>=need} onClick={()=>toggle(proAllyDetail)} className={`flex-1 min-h-[48px] rounded-2xl font-black text-[12px] shadow-lg active:scale-95 disabled:opacity-35 ${chosenIds.includes(proAllyDetail.id)?'bg-slate-700 text-pink-200':'bg-pink-600 text-white'}`}>{chosenIds.includes(proAllyDetail.id)?'供モン候補から解除':'供モン候補に追加'}</button>
-                </div>
-              ),
-            })}
-            <div className="shrink-0 pt-1" style={{paddingBottom:'calc(.25rem + env(safe-area-inset-bottom))'}}>
-              <button disabled={!ready} onClick={()=>{setTeachingPool([...getActiveTeachingCards()]);setGameState('PICK_TEACHING');}} className="w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30" style={{backgroundColor:mode.color,color:'#0f172a'}}>{ready?'この候補で始める':`あと${need-proAllyPool.length}体えらんでください`}</button>
-            </div>
+              <div className="shrink-0 pt-1" style={{paddingBottom:'calc(.25rem + env(safe-area-inset-bottom))'}}><button disabled={!ready} onClick={confirmProParty} className="w-full min-h-[52px] rounded-2xl font-black text-sm active:scale-[.98] disabled:opacity-30" style={{backgroundColor:mode.color,color:'#0f172a'}}>{ready?'この編成で開始':`あと${need-proAllyPool.length}体えらんでください`}</button></div>
+            </>:<>
+              <p className="shrink-0 text-[9px] text-slate-400 font-bold text-center mb-2">この枠に入れるベースモンを1体選んでください。</p>
+              <div className="flex-1 overflow-y-auto mh-scroll pb-2 min-h-0"><div className="flex flex-col gap-2.5">
+                {candidates.filter(m=>!proAllyPool.some((chosen,i)=>i!==proEditingAllyIndex&&chosen.id===m.id)).map(m=><React.Fragment key={m.id}>{renderProMonsterRow({mon:m,selected:proAllyPool[proEditingAllyIndex]?.id===m.id,onSelect:()=>changeAlly(m),onDetail:()=>setProAllyDetail(m),selectLabel:`${m.name}を供モン${proEditingAllyIndex+1}に選ぶ`,activeClass:'active:bg-pink-900/30'})}</React.Fragment>)}
+              </div></div>
+              <button onClick={()=>setProEditingAllyIndex(null)} className="shrink-0 w-full min-h-[48px] rounded-2xl bg-slate-800 text-slate-300 font-black text-sm mb-1">変更せず戻る</button>
+            </>}
+            {proAllyDetail&&renderMonsterDetailModal({mon:proAllyDetail,onClose:()=>setProAllyDetail(null),accent:'pink',zIndex:31000,label:`${proAllyDetail.name}のベースモン詳細`,footer:<button onClick={()=>setProAllyDetail(null)} className="w-full min-h-[48px] bg-slate-800 text-slate-300 rounded-2xl font-black text-sm active:scale-95">閉じる</button>})}
           </div>
         </div>);
       })()}
@@ -15189,9 +15251,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="text-[11px] font-black tracking-[.12em] text-amber-300">ULTIMATE 特殊ルール</div>
             <div className="mt-3 grid gap-1.5 text-left">
               {[
-                ['1','累計ターン圧',<>累計ターン×0.75% 次WAVEの敵が強化<br/>累計ターン×0.75% 供モン加入ボーナスが低下<br/>経過累計ターン×0.75% 与ダメージ低下（最低25%）</>],
+                ['1','累計ターン圧',<>累計ターンごとに敵HP/攻撃+0.75%<br/>累計ターンごとに供モン加入ボーナス倍率-0.75pt<br/>経過累計ターンごとに与ダメ倍率-0.75pt（25%で停止）</>],
                 ['2',isQuickMode(runMode)?'自動成長低下':'トレーニング低下',isQuickMode(runMode)?'このWAVEのターン数×0.75% 次回の自動成長が10%から低下（最低0%）':'このWAVEのターン数×0.75% 次回のトレーニング4種すべてが低下'],
-                ['3','DISTANCE BREAK','累計35ターンごとに、安全距離以外の3距離をLv1→Lv2→Lv3…と段階強化'],
+                ['3','DISTANCE BREAK','累計35ターンごとに、味方側の1距離の与ダメージ弱体Lvが上昇（最終的に3距離が弱体・1距離が安全）'],
               ].map(([number,title,text])=><div key={number} className="rounded-xl border border-fuchsia-400/25 bg-purple-950/55 px-2.5 py-1.5"><div className="text-[9px] font-black text-fuchsia-300">RULE {number}｜{title}</div><div className="mt-0.5 text-[10px] font-bold leading-snug text-white">{text}</div>{number==='2'&&<div className="mt-0.5 text-[8px] font-black text-amber-300">※距離強化は対象外</div>}</div>)}
             </div>
             <div className="mt-2 rounded-xl border border-amber-300/40 bg-black/45 px-3 py-2 text-left text-[10px] leading-relaxed text-slate-200">
@@ -15337,24 +15399,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               <span className="text-[10px] font-black text-indigo-200">今回：<b className="font-mono text-sm text-white">{waveResult.turn}</b>ターン</span>
               <span className="text-[10px] font-black text-amber-200">累計：<b className="font-mono text-sm text-white">{waveResult.totalTurnCount}</b>ターン</span>
             </div>
+            {isQuickMode(runMode)&&specialRuleDifficultyForRun(runMode,difficulty,extremeRun,extremeDifficulty)===ULTIMATE_SETTING.id&&(()=>{
+              const normalRate=quickGrowthRateForRun(runMode,'Normal',waveResult.turn);
+              const effectiveRate=quickGrowthRateForRun(runMode,difficulty,waveResult.turn);
+              return <div data-quick-ultimate-growth className="rounded-lg border border-fuchsia-400/40 bg-purple-950/70 px-2 py-1 text-[9px] font-black text-purple-100"><span className="text-amber-300">自動成長</span>　通常 +{compactPercent(normalRate)} <span className="text-slate-500">→</span> 今回 +{compactPercent(effectiveRate)}<span className="block text-[8px] text-purple-300">WAVE {waveResult.turn}T / ULTIMATE補正 -{compactPercent(normalRate-effectiveRate)}</span></div>;
+            })()}
             {waveResult.pendingUltimateDistanceBreak&&<div data-ultimate-distance-break-warning className="rounded-lg border border-red-400/60 bg-purple-950/80 px-2 py-1 text-[10px] font-black text-red-200">⚠ 次WAVEで距離弱体化が発動</div>}
             <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">WAVE 与ダメージ</span><span className="text-red-400 font-mono font-black text-base">{waveResult.totalDamage.toLocaleString()}</span></div>
             {waveResult.totalAllDamage!=null&&(<div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">全WAVE累計ダメージ</span><span className="text-orange-400 font-mono font-black text-base">{waveResult.totalAllDamage.toLocaleString()}</span></div>)}
             {waveResult.distDamage&&(<div className="border-b border-white/10 pb-1.5">
               <div className="text-cyan-400 font-black uppercase tracking-widest mb-1 text-left" style={{fontSize:'9px'}}>距離別ダメージ（味方位置）& 補正値(永続)</div>
               <div className="grid grid-cols-4 gap-1">
-                {['零','近','中','遠'].map((lbl,i)=>{const dmg=waveResult.distDamage[i]||0; const cumDmg=waveResult.totalDistDamage?.[i]||0; const gained=(waveResult.gainedDistBonus?.[i]||0)*100; const total=(waveResult.newDistBonus?.[i]||0)*100; const mon=slots[i]; const aptPct=(distAptPct[i]||0)*100; const combinedTotal=total+aptPct;
+                {['零','近','中','遠'].map((lbl,i)=>{const dmg=waveResult.distDamage[i]||0; const cumDmg=waveResult.totalDistDamage?.[i]||0; const normalGained=(waveResult.normalGainedDistBonus?.[i]||0)*100; const gained=(waveResult.gainedDistBonus?.[i]||0)*100; const total=(waveResult.newDistBonus?.[i]||0)*100; const mon=slots[i]; const aptPct=(distAptPct[i]||0)*100; const combinedTotal=total+aptPct;
                   return(<div key={i} className="bg-black/40 rounded-lg border border-white/5 flex flex-col items-center justify-center" style={{padding:'4px 2px',gap:'2px'}}>
                     <div className="flex items-center" style={{gap:'3px'}}><div className="rounded-full bg-indigo-600/40 border border-indigo-400/50 flex items-center justify-center overflow-hidden shrink-0" style={{width:'26px',height:'26px'}}>{mon?(mon.imgUrl?<img src={mon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span style={{fontSize:'13px'}}>{mon.emoji}</span>):<span className="text-slate-600" style={{fontSize:'9px'}}>-</span>}</div><div className="font-black text-slate-300" style={{fontSize:'10px'}}>{lbl}</div></div>
                     <div className="font-mono font-black text-red-400 leading-none" style={{fontSize:'11px'}}>{dmg.toLocaleString()}</div>
                     <div className="text-orange-300/80 font-mono leading-none" style={{fontSize:'7px'}}>累計{cumDmg.toLocaleString()}</div>
                     <div className="font-mono font-black text-cyan-300 leading-none" style={{fontSize:'9px'}}>+{total.toFixed(1)}%</div>
-                    {gained>0&&<div className="text-emerald-400 font-mono leading-none" style={{fontSize:'7px'}}>(+{gained.toFixed(1)})</div>}
+                    {gained>0&&<div className="text-emerald-400 font-mono leading-none" style={{fontSize:'7px'}}>{normalGained!==gained?`通常 +${normalGained.toFixed(1)} → 実際 +${gained.toFixed(1)}`:`(+${gained.toFixed(1)})`}</div>}
                     {mon&&<div className="text-indigo-300 font-mono font-black leading-none" style={{fontSize:'8px'}}>適性込合計+{combinedTotal.toFixed(1)}%</div>}
                   </div>);})}
               </div>
             </div>)}
-            {waveResult.recoveryDelta!=null&&(<div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">自動回復率 補正</span><span className="flex items-baseline gap-2"><span className={`font-mono font-black text-base ${waveResult.recoveryDelta>=0?'text-emerald-400':'text-red-400'}`}>{waveResult.recoveryDelta>=0?'+':''}{(waveResult.recoveryDelta*100).toFixed(1)}%</span><span className="text-[8px] text-slate-500 font-mono">累計 <span className={`${waveResult.totalRecoveryDelta>=0?'text-emerald-300':'text-red-300'}`}>{waveResult.totalRecoveryDelta>=0?'+':''}{(waveResult.totalRecoveryDelta*100).toFixed(1)}%</span></span></span></div>)}
+            {waveResult.recoveryDelta!=null&&(<div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">自動回復率 補正</span><span className="flex items-baseline gap-2"><span className={`font-mono font-black text-base ${waveResult.recoveryDelta>=0?'text-emerald-400':'text-red-400'}`}>{waveResult.baseRecoveryDelta!==waveResult.recoveryDelta&&<>通常 {waveResult.baseRecoveryDelta>=0?'+':''}{(waveResult.baseRecoveryDelta*100).toFixed(1)}% → 実際 </>}{waveResult.recoveryDelta>=0?'+':''}{(waveResult.recoveryDelta*100).toFixed(1)}%</span><span className="text-[8px] text-slate-500 font-mono">累計 <span className={`${waveResult.totalRecoveryDelta>=0?'text-emerald-300':'text-red-300'}`}>{waveResult.totalRecoveryDelta>=0?'+':''}{(waveResult.totalRecoveryDelta*100).toFixed(1)}%</span></span></span></div>)}
             {/* スコアの内訳。クイックモードはスコアを競わないので出さない */}
             {!isQuickMode(runMode)&&(<>
             <div className="flex justify-between items-center border-b border-white/10 pb-0.5"><span className="text-slate-400 text-[11px] font-bold uppercase">WAVE ボーナス ({waveResult.wave} WAVE)</span><span className="text-yellow-400 font-mono font-black text-base">x{waveResult.waveMult.toFixed(2)}</span></div>
@@ -15402,6 +15469,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </span>
               <span className="text-[11px] font-black font-mono text-amber-300">{trainingPicks.length} / {TRAINING_PICK_COUNT}</span>
             </div>
+            {specialRule===ULTIMATE_SETTING.id&&(()=>{
+              const turns=waveResult?.turn||0;
+              const probe={atk:10000,def:10000,hp:10000,guts:10000};
+              const normal=resolveTrainingStep(probe,'hp',turns,null).hp;
+              const effective=resolveTrainingStep(probe,'hp',turns,specialRule).hp;
+              return <div data-ultimate-training-status className="mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"><span className="text-amber-300">ULTIMATE補正</span>　今回{turns}T → 強化効果 -{Number(((normal-effective)/100).toFixed(1))}pt</div>;
+            })()}
+            {specialRule==='NIGHTMARE'&&<div data-nightmare-training-status className="mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"><span className="text-amber-300">NIGHTMARE補正</span>　強化量 {specialRulePercent(extremeSpecialRule(specialRule,'waveEnhancement'))}</div>}
           </div>
           <div className="shrink-0 w-full max-w-sm my-2 text-left"><AssistantBubble scene="rewardPick" compact/></div>
           {/* いま選んでいるぶんを反映した4ステータス。選ぶ前は現在値だけ、選ぶと増える量も出る。
@@ -15441,7 +15516,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {/* 何回選んだかを ×1 / ×2 で明確に出す */}
                   {count>0&&<span className={`absolute top-1.5 right-1.5 ${st.chip} text-white text-[11px] font-black rounded-full px-2 py-0.5 shadow-lg`}>×{count}</span>}
                   <span className={`flex items-center gap-1.5 ${st.tint}`}>{st.icon}<b className="text-[13px] font-black text-white leading-none">{option.name}</b></span>
-                  <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}</span>
+                  <span className={`text-[10px] font-black ${st.tint} leading-tight`}>{option.effect}{[ULTIMATE_SETTING.id,'NIGHTMARE'].includes(specialRule)&&(()=>{
+                    const normalAfter=resolveTrainingStep(current,option.id,waveResult?.turn,null)[option.stat];
+                    const effectiveAfter=resolveTrainingStep(current,option.id,waveResult?.turn,specialRule)[option.stat];
+                    const normalGain=normalAfter-current[option.stat],effectiveGain=effectiveAfter-current[option.stat];
+                    return <span className="block text-purple-200">通常 +{normalGain} → 実際 +{effectiveGain}</span>;
+                  })()}</span>
                   <span className="w-full rounded-lg bg-black/40 px-1.5 py-1 font-mono leading-tight">
                     <span className="block text-[8px] text-slate-500 font-black">{option.statLabel}</span>
                     <span className="block text-[11px] font-black text-slate-300">{before} <span className="text-slate-600">→</span> <b className={st.tint}>{after}</b></span>

@@ -43,15 +43,27 @@ check('カードは加算量そのままではなく allyJoinPreview を通す',
 // 現在値はすぐ上のパネルにあるので、カードは合流後の値と変化量を出す。
 // 「1480→1600」のように1枠へ両方入れるとiPhone SEの幅で数字が切れる(実測で確認済み)
 check('カードに合流後の値と変化量を出す',
-  has('{stat.after}</b>') && has("{stat.diff>0?`+${stat.diff}`:'±0'}"));
+  has('{stat.after}</b>') && has("{stat.diff>0?`実際 +${stat.diff}`:'実際 ±0'}"));
 check('カードに距離補正の変動を出す',
-  has('{preview.apt.map(range=>(') && has('{formatAptPct(range.after)}') && has("{range.diff!==0?formatAptPct(range.diff):'±0'}"));
+  has('{preview.apt.map(range=>(') && has('{formatAptPct(range.after)}') && has("${formatAptPct(range.diff)}`:'±0'}"));
 check('勇者モン選択は今までどおりその子の基礎値を出す',
   has('<span className="text-pink-400 font-bold">{m.baseHp}</span>'));
 check('詳細ポップアップも同じ allyJoinPreview を通す',
   has('allyJoinPreview(currentPickingMon).stats.map(') && has('allyJoinPreview(currentPickingMon).apt.map(range=>range.diff)'));
 check('NIGHTMAREの適性半減を詳細側にも反映できる(aptDeltaPct)',
   has('aptDeltaPct = null } = opts;') && has('const pct=aptDeltaPct?(aptDeltaPct[idx]||0):aptGradeToPct(grade);'));
+
+check('ULTIMATE補正率は共通倍率を小数精度で表示し、カードは本来値と実際値を比較する',
+  has('data-ultimate-join-status') && has('const multiplier=ultimateAllyJoinMultiplier(totalTurns);')
+    && has('加入ボーナス {precisePercent(multiplier)}（-{precisePercent(1-multiplier)}）')
+    && has('stat.normalDiff!==stat.diff') && has('実際 +${stat.diff}'));
+const aptitudeCards = slice('{preview.apt.map(range=>(', "<div className=\"min-h-[32px]");
+check('間合い適性の比較表示はNIGHTMAREだけに限定する',
+  aptitudeCards.includes("===NIGHTMARE_SETTING.id&&range.normalDiff!==range.diff") && !aptitudeCards.includes('ULTIMATE_SETTING.id'));
+check('NIGHTMAREは間合い適性だけ通常値と実値を比較する',
+  has('data-nightmare-join-status') && aptitudeCards.includes('通常 {formatAptPct(range.normalDiff)} →') && aptitudeCards.includes("'実際 ':''"));
+check('CHAOSは4ステータスの加入ボーナスだけ通常値と実値を比較する',
+  has('data-chaos-join-status') && has("[ULTIMATE_SETTING.id,CHAOS_SETTING.id].includes") && !aptitudeCards.includes('CHAOS_SETTING.id'));
 
 // ---- ④ スクロールで全部たどれること ----
 const listArea = slice('flex-1 overflow-y-auto mh-scroll w-full max-w-md mx-auto pb-4 min-h-0', 'バトルチュートリアル中は');
@@ -68,11 +80,12 @@ ${slice('const DIST_APTITUDE_MULT', 'const DIST_APTITUDE_COLOR')}
 ${slice('const EXTREME_DIFFICULTIES = Object.freeze', 'const extremeRuleSetting')}
 ${slice('const extremeRuleSetting', 'const specialRulePercent')}
 ${slice('const applyNightmareSignedModifier', 'const applyNightmareWaveEnhancement')}
+${slice('const ultimateAllyJoinMultiplier', '// ===== トレーニング')}
 ${slice('const aptGradeToPct', '// 補正値の表示用文字列')}
 ${slice('const formatAptPct', '// 合流ボーナス欄に出す間合い適性')}
 ${slice('const applyExtremeIntegerRule', '// 極限チャレンジの説明にはモード全体に共通する')}
 const RANGE_LABELS = ${JSON.stringify(['零','近','中','遠'])};
-module.exports={specialRuleDifficultyForRun,applyAllyJoinBonus,getMonsterAptPct,formatAptPct,RANGE_LABELS};`;
+module.exports={specialRuleDifficultyForRun,ultimateAllyJoinMultiplier,applyAllyJoinBonus,getMonsterAptPct,formatAptPct,RANGE_LABELS};`;
 const mod = { exports: {} };
 try {
   new Function('module', 'exports', calcSrc)(mod, mod.exports);
@@ -83,6 +96,9 @@ const C = mod.exports;
 check('本体の計算関数を取り出せる', typeof C.applyAllyJoinBonus === 'function' && typeof C.getMonsterAptPct === 'function');
 
 if (typeof C.applyAllyJoinBonus === 'function') {
+  check('ULTIMATE加入率は0.75%刻みを丸めず算出する',
+    Math.abs(C.ultimateAllyJoinMultiplier(1) - 0.9925) < 1e-9
+      && Math.abs(C.ultimateAllyJoinMultiplier(40) - 0.70) < 1e-9);
   // 本体の allyJoinPreview をそのまま持ってきて、状態だけ差し替えて動かす
   const previewSrc = slice('const allyJoinPreview = (mon) => {', '// 極限チャレンジの解放判定');
   const makePreview = new Function('ctx', `with(ctx){${previewSrc}\nreturn allyJoinPreview;}`);
