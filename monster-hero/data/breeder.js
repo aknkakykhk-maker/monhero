@@ -10,6 +10,7 @@ const GEZUDERO_ICON = "images/breeder-icons/gezudero.png?v=d79a38ee0679";
 const MELOPANMAN_ICON = "images/breeder-icons/melopanman.png?v=1eba631f1832";
 const CADMIUM_FACE_ICON = "images/breeder-icons/cadmium.png?v=bfaf6e5ecfad";
 const KIKI_FACE_ICON = "images/breeder-icons/kiki.PNG?v=35362d7b6e3e";
+const POLTZ_FACE_ICON = "images/breeder-icons/poltz.PNG?v=9c4d7b5c3ff1";
 
 // ==================== モンスター円盤石アイコン ====================
 // DISC_STONE_BASE: 円盤石の土台画像(全モンスター共通)。作り方の詳細はBREEDER_MARKET_ITEMS手前のコメント参照。
@@ -30,7 +31,8 @@ const BREEDER_EVO_NAMES = {
   atsu: ["あつの挑発", "あつの暴言", "あつの怒号"],
   myaru: ["みゃるの薬", "みゃるの怪薬", "みゃるの禁薬"],
   kiki: ["ききの応援", "ききの本気", "ききの全力全開"],
-  meloso: ["メロソの解析", "メロソの予測", "メロソの最適解"]
+  meloso: ["メロソの解析", "メロソの予測", "メロソの最適解"],
+  poltz: ["ポルツの弁当", "ポルツの挫折", "ポルツの目覚め"]
 };
 
 // かどみうむ(guts_buff)の進化段階ごとの効果量。
@@ -46,6 +48,19 @@ const CADMIUM_TIERS = [
   { autoHp:0.01,  autoGuts:0.01,  hpLimit:0.07, gutsLimit:0.07 },
 ];
 
+// ポルツ(buff_poltz)の進化段階ごとの効果量。かどみうむと同じく、効果の適用も説明文の生成も
+// この表だけを見るようにして、実装と表示の食い違いを防ぐ。
+//   charges     : カードを使ったあと、待機して発動できる敵攻撃の回数(Lvが上がるほど増える)
+//   healGuts    : 1回発動するごとに回復する、実効最大ガッツに対する割合
+//   gutsRecover : 1回発動するごとに加算する自動ガッツ回復(バトル中永続)
+//   atk         : 1回発動するごとに加算する攻撃アップ(バトル中永続)。Lv3だけ
+// 累計は charges 倍になる: 弁当=回復1%、挫折=回復5%、目覚め=回復10.5%・攻撃30%
+const POLTZ_TIERS = [
+  { charges:1, healGuts:0.2, gutsRecover:0.01,  atk:0 },
+  { charges:2, healGuts:0.2, gutsRecover:0.025, atk:0 },
+  { charges:3, healGuts:0.2, gutsRecover:0.035, atk:0.10 },
+];
+
 const TEACHING_CARDS = [
   { id:'oryo',    baseName:"おりょうの力",    icon:ORYO_FACE_ICON,    type:'buff',   subType:'atk_buff',    baseValue:0.1, step:0.1,  desc:"攻撃アップ",   evoLevel:0, guts:20 },
   { id:'dra',     baseName:"ドラの緑膝",      icon:DRA_FACE_ICON,     type:'buff',   subType:'dmg_cut_buff', baseValue:0.03,step:0.03, desc:"被ダメージダウン",     evoLevel:0, guts:20 },
@@ -56,7 +71,10 @@ const TEACHING_CARDS = [
   { id:'kiki',    baseName:"ききの応援",      icon:KIKI_FACE_ICON,    type:'buff',   subType:'buff_kiki',   baseValue:0.03, step:0.02, desc:"次ターンからカード上限アップ・全体連撃", evoLevel:0, guts:20 },
   // メロソの回復量はレベルで変わらない(強化で増えるのは次ターンの予約効果)。
   // step が無いと強化時の baseValue+step が NaN になるため、増えない意味で 0 を明示する
-  { id:'meloso',  baseName:"メロソの解析",      icon:MELOPANMAN_ICON,   type:'heal',   subType:'heal_guard_meloso', baseValue:0.3, step:0,  desc:"緊急回復相当・現在ガード・次ターン予約", evoLevel:0, guts:20 }
+  { id:'meloso',  baseName:"メロソの解析",      icon:MELOPANMAN_ICON,   type:'heal',   subType:'heal_guard_meloso', baseValue:0.3, step:0,  desc:"緊急回復相当・現在ガード・次ターン予約", evoLevel:0, guts:20 },
+  // ポルツの効果量はレベルで変わる部分をすべて POLTZ_TIERS に置いてあるので、
+  // baseValue は1回あたりの回復割合(表示・検査用)だけを持ち、step は増えない意味の 0 を明示する
+  { id:'poltz',   baseName:"ポルツの弁当",      icon:POLTZ_FACE_ICON,   type:'buff',   subType:'buff_poltz', baseValue:0.2, step:0,  desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ", evoLevel:0, guts:20 }
 ];
 
 // 初期から無料で使えるアシストカード(教えカード)のid一覧(固定)。
@@ -121,6 +139,9 @@ const BREEDER_MARKET_ITEMS = [
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:'images/breeder-icons/kiki.PNG?v=35362d7b6e3e', cost:1 },
   { id:'kiki', name:"アシストカード「きき」", type:'assist', icon:KIKI_FACE_ICON, cost:1500, desc:"次ターンから使用可能カード枚数+1・バトル中永続で全体連撃を強化" },
   { id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:1500, desc:"緊急回復相当＋現在ガード。複数枚使用で次ターンを強化" },
+  // ポルツ。カードの効果は実装済みだが、販売価格がまだ決まっていないため available:false
+  // (「近日追加」表示)で並べている。価格が決まったら cost を入れて available:false を外す。
+  { id:'poltz', name:"アシストカード「ポルツ」", type:'assist', icon:POLTZ_FACE_ICON, cost:0, available:false, desc:"敵の攻撃を受けるたびガッツ回復・自動ガッツ回復アップ（Lv3は攻撃アップも）" },
   { id:'oryo',    name:"おりょうのアイコン",     type:'icon', icon:ORYO_FACE_ICON,    cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
   { id:'cadmium', name:"かどみうむのアイコン",   type:'icon', icon:CADMIUM_FACE_ICON, cost:1 },

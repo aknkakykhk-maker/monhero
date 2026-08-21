@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 128eb1050e1c37ce
+// source-sha256: f6761abfc58e1cb8
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 11:05"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 12:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9013,6 +9013,13 @@ const TEACHING_FX_STYLE = {
     text: "text-sky-300",
     ring: "border-sky-300",
     rgb: "56,189,248"
+  },
+  poltz: {
+    icon: "🍱",
+    label: "弁当を構える!",
+    text: "text-lime-300",
+    ring: "border-lime-300",
+    rgb: "163,230,53"
   }
 };
 
@@ -17309,6 +17316,35 @@ function MonsterHeroGame() {
     return true;
   };
 
+  // ポルツの待機を1回ぶん消化する。★重要
+  // 呼ぶのは「敵の攻撃を実際に受け止めた」ときだけ。
+  //   発動する: 普通に殴られてダメージを受けた / ガードで受け止めた
+  //             (貫通・最終ダメージ0・ガード余剰でライフとガッツが増えた場合も含む)
+  //   発動しない: 回避・無効化・反射・吸収・スタン・眼力など、敵の攻撃がこちらへ届かなかったとき
+  // permaBuffs から読むが、同じターンに何度も書き換わるので必ず ref(livePermaBuff)を見る。
+  // 効果はどれも「バトル中永続」なので、待機回数が0になったあとも消えない。
+  const consumePoltzCharge = async () => {
+    const charges = Math.floor(Number(livePermaBuff('poltzCharges')) || 0);
+    if (charges <= 0) return;
+    const tierIdx = Math.max(0, Math.min(Math.floor(Number(livePermaBuff('poltzTier')) || 0), POLTZ_TIERS.length - 1));
+    const tier = POLTZ_TIERS[tierIdx];
+    const effMulRaw = Number(livePermaBuff('poltzEffMul', 1));
+    const effMul = Number.isFinite(effMulRaw) && effMulRaw > 0 ? effMulRaw : 1;
+    writePermaBuffs(p => ({
+      ...p,
+      poltzCharges: Math.max(0, charges - 1)
+    }));
+    const gutsGain = Math.floor(liveEffectiveMaxGuts() * tier.healGuts * effMul);
+    if (gutsGain > 0) {
+      setGuts(p => Math.min(liveEffectiveMaxGuts(), p + gutsGain));
+      addPopup(`⚡ ガッツ +${gutsGain}`, 'guts', 'text-lime-300 font-black text-2xl drop-shadow-md');
+    }
+    if (tier.gutsRecover > 0) addPermaBuff('gutsRecoverPct', tier.gutsRecover * effMul);
+    if (tier.atk > 0) addPermaBuff('atkPct', tier.atk * effMul);
+    addPopup(`🍱 ${BREEDER_EVO_NAMES.poltz[tierIdx]}!`, 'hero', 'text-lime-300 font-black text-xl drop-shadow-md');
+    await battleWait(700);
+  };
+
   // enemyHpAtAttackStart: 敵が動き出す時点の、敵の本当のライフ。★重要
   // このクロージャが持つ enemy は「ターンが始まった時点」の値で固定されており、
   // 同じターンにこちらが与えたダメージ(setEnemyの関数型更新)は反映されていない。
@@ -17398,6 +17434,8 @@ function MonsterHeroGame() {
         }
         const isReflect = getTurnBuff('reflect', false) || mainHero?.id === 'Monol' && Math.random() < 0.3;
         const isAbsorb = mainHero?.id === 'Oboro' && Math.random() < 0.3;
+        // ポルツの待機を消化してよいか。敵の攻撃をこちらが受け止めたときだけ true にする
+        let tookEnemyAttack = false;
 
         // Enemy lunge animation + attack effect (normal = ! mark, special = aura burst)
         const fxKind = enemy?.id === 'Moo' ? 'moo' : intent.type === 'SPECIAL' ? 'special' : 'normal';
@@ -17442,6 +17480,8 @@ function MonsterHeroGame() {
           addPopup("回避！", 'hero', 'text-blue-400 font-black text-xl drop-shadow-lg');
           await battleWait(1000);
         } else if (guardValue > 0) {
+          // ガードは最終ダメージが0でも(余剰でライフ・ガッツが増えても)「受け止めた」扱いにする
+          tookEnemyAttack = true;
           const diff = guardValue - incomingBeforeTurnReduction;
           // キーンと弾くガード演出
           setGuardFx(true);
@@ -17467,6 +17507,7 @@ function MonsterHeroGame() {
             await battleWait(1000);
           }
         } else {
+          tookEnemyAttack = true;
           addPopup(`-${incomingDmg}`, 'hero', 'text-pink-600 text-4xl font-black drop-shadow-lg animate-bounce');
           triggerShake();
           const remainingHp = calculateRemainingHp(currentHp, incomingDmg);
@@ -17474,6 +17515,7 @@ function MonsterHeroGame() {
           setHp(remainingHp);
           await battleWait(1000);
         }
+        if (tookEnemyAttack) await consumePoltzCharge();
       }
     }
     setEnemySkillName(null);
@@ -17734,6 +17776,23 @@ function MonsterHeroGame() {
           addPopup(`自傷-${selfDmgAmt}`, 'hero', 'text-red-600 text-2xl font-black');
           hpBeforeEnemyAttack = Math.max(1, hpBeforeEnemyAttack - selfDmgAmt);
           setHp(hpBeforeEnemyAttack);
+        }
+        // ポルツ: すぐには何も起きず、「有効な敵の攻撃を受けた回数」ぶんだけ待機する。
+        // 発動時の効果量はレベル(POLTZ_TIERS)とEXTREME等の効果倍率(effMul)で決まるが、
+        // 発動するのは敵ターン(handleEnemyTurn)でカードがもう手元に無いため、
+        // 待機回数・段階・効果倍率を permaBuffs へ預けておく(すべて数値・バトル中のみ)。
+        // すでに待機中に重ねて使った場合は加算せず、そのレベルの最大回数へ張り直す。
+        else if (card.subType === 'buff_poltz') {
+          const owned = ownedTeachings.find(ot => ot.id === card.id);
+          const tier = Math.min(owned ? owned.evoLevel : 0, POLTZ_TIERS.length - 1);
+          const conf = POLTZ_TIERS[tier];
+          writePermaBuffs(p => ({
+            ...p,
+            poltzTier: tier,
+            poltzEffMul: effMul,
+            poltzCharges: conf.charges
+          }));
+          addPopup(`🍱 ${BREEDER_EVO_NAMES.poltz[tier]} ×${conf.charges}`, 'hero', 'text-lime-300 font-black text-xl drop-shadow-md');
         } else if (card.subType === 'buff_kiki') {
           const owned = ownedTeachings.find(ot => ot.id === card.id);
           const level = Math.min(owned ? owned.evoLevel : 0, 2);
@@ -19496,6 +19555,12 @@ function MonsterHeroGame() {
       return `次ターン攻撃 ${v.toFixed(1)}倍・自傷 ${d}%`;
     }
     if (t.id === 'kiki') return `次の${level + 2}ターン 使用可能カード枚数 +1・全体連撃 ${3 + level * 2}%アップ（バトル中永続・使用ごとに加算）`;
+    if (t.id === 'poltz') {
+      const tier = POLTZ_TIERS[Math.min(level, POLTZ_TIERS.length - 1)];
+      const parts = [`敵の攻撃を${tier.charges}回受けるまで待機`, `1回ごとにガッツ ${pct(tier.healGuts)}%回復`, `ガッツ自動回復 ${pct(tier.gutsRecover)}%アップ（次のターンから・バトル中永続）`];
+      if (tier.atk > 0) parts.push(`攻撃 ${pct(tier.atk)}%アップ（バトル中永続）`);
+      return parts.join('・');
+    }
     if (t.id === 'meloso') return level === 0 ? 'ライフ・ガッツ30%回復・現在ガード' : level === 1 ? 'ライフ・ガッツ30%回復・現在ガード・1枚使用で次ターン被ダメージ25%減・合計2枚以上で50%減' : 'ライフ・ガッツ30%回復・現在ガード・1枚使用で次ターン被ダメージ25%減・合計2枚で50%減・合計3枚以上で50%減+次ターン開始時ライフ・ガッツ全回復';
     return t.desc;
   };
@@ -28550,7 +28615,11 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-amber-400 bg-black/60 px-2 py-0.5 rounded border border-amber-400/50 flex items-center gap-1 shadow-lg uppercase"
     }, /*#__PURE__*/React.createElement(Zap, {
       size: 7
-    }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100), "%"), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
+    }), " \u30AC\u30C3\u30C4\u56DE\u5FA9 ", Math.round(applyIceRulerAutoGutsRecovery(Math.max(0, 0.05 + (getPermaBuff('autoHpRecovery', 0.1) - 0.1)) + getPermaBuff('gutsRecoverPct'), mainHero?.id, iceLockActive, heroDist, enemyDist) * 100), "%"), getPermaBuff('poltzCharges') > 0 && /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] font-black text-lime-300 bg-lime-950/60 px-2 py-1 rounded-full border border-lime-400/50 animate-pulse flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement(Zap, {
+      size: 8
+    }), " ", BREEDER_EVO_NAMES.poltz[Math.max(0, Math.min(getPermaBuff('poltzTier'), 2))], " \xD7", Math.floor(getPermaBuff('poltzCharges'))), getNextTurnBuff('melosoFullRecoveryMult', 0) > 0 && /*#__PURE__*/React.createElement("div", {
       className: "text-[7px] font-black text-rose-300 bg-rose-950/60 px-2 py-1 rounded-full border border-rose-400/50 animate-pulse flex items-center gap-1"
     }, /*#__PURE__*/React.createElement(Heart, {
       size: 8
