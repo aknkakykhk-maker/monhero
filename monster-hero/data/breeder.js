@@ -59,14 +59,14 @@ const TEACHING_CARDS = [
   { id:'meloso',  baseName:"メロソの解析",      icon:MELOPANMAN_ICON,   type:'heal',   subType:'heal_guard_meloso', baseValue:0.3, step:0,  desc:"緊急回復相当・現在ガード・次ターン予約", evoLevel:0, guts:20 }
 ];
 
-// 初期から無料で使えるブリーダーカード(教えカード)のid一覧(固定)。
+// 初期から無料で使えるアシストカード(教えカード)のid一覧(固定)。
 // 今後TEACHING_CARDSに新規カードを追加しても、ここに含めない限り
 // 自動では解放されず、ブリーダーマーケットで購入して解放する対象になる。
 const STARTER_TEACHING_IDS = ['oryo','dra','cadmium','mua','atsu','myaru'];
 
 // ブリーダーマーケット: ブリーダーレベルアップで得たポイントで購入できるアイテム
 // type:'icon' はプロフィールアイコン、type:'disc' はモンスターの円盤石(購入でそのモンスターが解放される)、
-// type:'breeder' はブリーダーカードの解放アイテム。idはicon以外の場合、解放対象(モンスター/カード)のidと一致させる。
+// type:'assist' はアシストカードの解放アイテム。idはicon以外の場合、解放対象(モンスター/カード)のidと一致させる。
 // type:'item' はマスモンに使う消耗アイテム(ダイヤで購入・何度でも買える。所持数はownedItemsで管理し、
 // マスモン詳細画面から使用する)。iconの代わりにemojiを指定してよい。
 // 円盤石のiconは必ずDISC_STONE_BASE(円盤石の土台画像、模様入り)を土台にして、その上に
@@ -119,8 +119,8 @@ const KIKI_MARKET_ICONS = MYUA_ICON_EXPRESSIONS.map(([key, label]) => ({
 const BREEDER_MARKET_ITEMS = [
   // プロフィール用の追加画像は助手画像と分け、images/breeder-icons/ に置く。
   { id:'kiki_icon', name:"ききのアイコン", type:'icon', icon:'images/breeder-icons/kiki.PNG?v=35362d7b6e3e', cost:1 },
-  { id:'kiki', name:"ブリーダーカード「きき」", type:'breeder', icon:KIKI_FACE_ICON, cost:1500, desc:"次ターンから使用可能カード枚数+1・バトル中永続で全体連撃を強化" },
-  { id:'meloso', name:"ブリーダーカード「メロソ」", type:'breeder', icon:MELOPANMAN_ICON, cost:1500, desc:"緊急回復相当＋現在ガード。複数枚使用で次ターンを強化" },
+  { id:'kiki', name:"アシストカード「きき」", type:'assist', icon:KIKI_FACE_ICON, cost:1500, desc:"次ターンから使用可能カード枚数+1・バトル中永続で全体連撃を強化" },
+  { id:'meloso', name:"アシストカード「メロソ」", type:'assist', icon:MELOPANMAN_ICON, cost:1500, desc:"緊急回復相当＋現在ガード。複数枚使用で次ターンを強化" },
   { id:'oryo',    name:"おりょうのアイコン",     type:'icon', icon:ORYO_FACE_ICON,    cost:1 },
   { id:'dra',     name:"ドラのアイコン",        type:'icon', icon:DRA_FACE_ICON,     cost:1 },
   { id:'cadmium', name:"かどみうむのアイコン",   type:'icon', icon:CADMIUM_FACE_ICON, cost:1 },

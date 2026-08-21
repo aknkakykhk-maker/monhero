@@ -2,7 +2,7 @@
 // 極限チャレンジ(正式公開)の仕様を静的に確認する。
 //   ① 難易度表(EXTREME・NIGHTMARE・CHAOS・ULTIMATEを公開)と倍率
 //   ② 解放条件(チャレンジ Grand Master以上のクリア)
-//   ③ EXTREME固有のブリーダーカード50%が「極限共通ルール」になっていないこと
+//   ③ EXTREME固有のアシストカード50%が「極限共通ルール」になっていないこと
 //   ④ 正式プレイは報酬・クリア記録を保存し、デバッグプレイでは保存しないこと
 //   ⑤ 既存の保存キー・全国ランキングへ混ぜないこと
 //   ⑥ 演出(邪気オーラ・WAVE1のルール発動)と助手のセリフ
@@ -16,7 +16,7 @@ const config = source.slice(source.indexOf('const EXTREME_DIFFICULTIES'), source
 
 // --- ① 難易度表 ---
 for (const name of ['EXTREME','NIGHTMARE','CHAOS','ULTIMATE','INFINITY']) assert(config.includes(`'${name}'`), `${name} must be listed`);
-assert(/EXTREME[^\n]+available:true[^\n]+power:13[^\n]+score:20[^\n]+xp:25[^\n]+gold:7\.5[^\n]+psyche:30[^\n]+specialRules:Object\.freeze\(\{ breederCardEffect:0\.5 \}\)/.test(config), 'EXTREME settings and its difficulty-specific rule must match the official specification');
+assert(/EXTREME[^\n]+available:true[^\n]+power:13[^\n]+score:20[^\n]+xp:25[^\n]+gold:7\.5[^\n]+psyche:30[^\n]+specialRules:Object\.freeze\(\{ assistCardEffect:0\.5 \}\)/.test(config), 'EXTREME settings and its difficulty-specific rule must match the official specification');
 assert(/NIGHTMARE[^\n]+available:true[^\n]+power:15[^\n]+score:20[^\n]+xp:30[^\n]+gold:10[^\n]+psyche:40[^\n]+specialRules/.test(config), 'NIGHTMARE must expose its official values and rules for battle');
 assert(/CHAOS[^\n]+available:true[^\n]+power:20[^\n]+score:20[^\n]+xp:35[^\n]+gold:15[^\n]+psyche:50[^\n]+unlockRequirement:'NIGHTMARE'[^\n]+specialRules:Object\.freeze\(\{ damageDealt:0\.5, allyJoinBonus:0\.5, gutsCost:1\.5 \}\)/.test(config), 'CHAOS must expose its official specification');
 assert(/ULTIMATE[^\n]+available:true[^\n]+power:35[^\n]+score:20[^\n]+xp:40[^\n]+gold:20[^\n]+psyche:60[^\n]+unlockRequirement:'CHAOS'[^\n]+specialRules/.test(config), 'ULTIMATE must expose its official specification');
@@ -42,14 +42,14 @@ assert(source.includes("disabled={!previewable} onClick={()=>setShowWaveDetails(
 assert(source.includes("{previewable?'全WAVE詳細':'詳細 ？？？'}"), 'only unlocked previewable tiers may open WAVE details');
 
 // --- ③ EXTREME固有ルール ---
-assert(source.includes("isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'breederCardEffect')"), 'only breeder cards must receive the selected EXTREME difficulty rule');
+assert(source.includes("isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect')"), 'only breeder cards must receive the selected EXTREME difficulty rule');
 assert(source.includes("addPermaBuff('atkPct',card.baseValue*effMul)"), 'normal breeder buff must use the shared multiplier');
 assert(source.includes('Math.floor(getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)*effMul)'), 'breeder attack damage must use the shared multiplier');
 assert(source.includes("const d=getDmg(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved"), 'non-breeder attacks must retain their existing calculation');
-assert(!config.includes('teachingEffect') && source.includes("lines.push(['ブリーダーカード効果',specialRulePercent(rules.breederCardEffect)])"), 'the 50% breeder-card rule must use the shared EXTREME specialRules presentation');
-assert(!/highlights:\[[^\]]*ブリーダーカード/.test(config), 'the mode-level description must not mention the EXTREME-only breeder-card rule');
+assert(!config.includes('teachingEffect') && source.includes("lines.push(['アシストカード効果',specialRulePercent(rules.assistCardEffect)])"), 'the 50% breeder-card rule must use the shared EXTREME specialRules presentation');
+assert(!/highlights:\[[^\]]*アシストカード/.test(config), 'the mode-level description must not mention the EXTREME-only breeder-card rule');
 const modeDescription = config.slice(config.indexOf('const EXTREME_MODE'), config.indexOf('const EXTREME_UNLOCK_DIFFICULTIES'));
-for (const forbidden of ['×13', '13倍', '×20', '20倍', '×25', '25倍', '×7.5', '7.5倍', '75個', 'ブリーダーカード', '50%']) {
+for (const forbidden of ['×13', '13倍', '×20', '20倍', '×25', '25倍', '×7.5', '7.5倍', '75個', 'アシストカード', '50%']) {
   assert(!modeDescription.includes(forbidden), `the mode-level description must not include EXTREME-only information: ${forbidden}`);
 }
 for (const expected of ['通常チャレンジを超える高難易度', 'EXTREMEから始まる、さらなる強敵への挑戦', '高難易度に見合った高い報酬']) {
@@ -130,7 +130,7 @@ assert(source.includes('有利な補正は弱まり、不利な補正は重く�
 assert(source.includes('h-[42px] shrink-0') && source.includes('h-[51px] shrink-0') && source.includes('mt-auto pt-1.5'), 'available tier cards must reserve equal record, rule, and footer regions');
 for (const expected of ['EXTREMEの次', '有利な補正', '不利な補正', '距離適性', 'WAVEごとの戦い方']) assert(assistants.includes(expected), `NIGHTMARE assistant guidance must include: ${expected}`);
 const modeScene = assistants.slice(assistants.indexOf('extremeChallenge: ['), assistants.indexOf('extremeDifficulty: ['));
-assert(!modeScene.includes('ブリーダーカード'), 'the mode scene must not explain the EXTREME-only breeder-card rule');
+assert(!modeScene.includes('アシストカード'), 'the mode scene must not explain the EXTREME-only breeder-card rule');
 for (const forbidden of ['×13', '×20', '×25', '×7.5', '75', '50%']) {
   assert(!modeScene.includes(forbidden), `the mode assistant scene must not include EXTREME-only information: ${forbidden}`);
 }

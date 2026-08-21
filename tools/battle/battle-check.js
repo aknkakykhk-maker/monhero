@@ -85,7 +85,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
   await clickText('^決定$'); await page.waitForTimeout(900);
   const placed = await clickText('近距離'); await page.waitForTimeout(1200);
   check('マスモンを近距離に配置できる', placed);
-  // ブリーダーカードを1枚習得してバトルへ
+  // アシストカードを1枚習得してバトルへ
   await clickText('おりょうの力'); await page.waitForTimeout(700);
   await clickText('習得する'); await page.waitForTimeout(1800);
 
@@ -194,7 +194,7 @@ const check = (name, ok, detail = '') => { results.push({ name, ok }); console.l
       if (!(await clickText('^決定する$'))) { await clickText('攻撃覚醒'); }
       await page.waitForTimeout(1000); continue;
     }
-    if (t.includes('ブリーダーカードの継承')) {
+    if (t.includes('アシストカードの継承')) {
       if (!(await clickText('^習得する$|^強化する$'))) await clickText('おりょうの力|あつの挑発');
       await page.waitForTimeout(1200); continue;
     }

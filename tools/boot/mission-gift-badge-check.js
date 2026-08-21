@@ -71,8 +71,8 @@ check('保存済みの進捗で判定し直す', has('const targets=(missionList
 
 // 編成の戻り先
 check('モンスター編成の決定でモンスタータブへ戻る', has("setManagementTab('monster');\n    setGameState('MB_MANAGEMENT');"));
-check('ブリーダーカード編成の決定でブリーダーカードタブへ戻る', has("setManagementTab('breeder');\n    setGameState('MB_MANAGEMENT');"));
-check('編成画面の戻るボタンも同じ導線', has("onClick={()=>{setManagementTab(rosterTab==='monster'?'monster':'breeder');setGameState('MB_MANAGEMENT');}}"));
+check('アシストカード編成の決定でアシストカードタブへ戻る', has("setManagementTab('assist');\n    setGameState('MB_MANAGEMENT');"));
+check('編成画面の戻るボタンも同じ導線', has("onClick={()=>{setManagementTab(rosterTab==='monster'?'monster':'assist');setGameState('MB_MANAGEMENT');}}"));
 check('古いFORMATION_MENUが残っていない', !source.includes('FORMATION_MENU'));
 
 // ランキング

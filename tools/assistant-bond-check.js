@@ -162,7 +162,7 @@ const WANT_AMOUNTS = {
   reincarnate: [4, 12], regenerate: [2, 6], donate: [4, 12], enhance: [2, 12],
   dye: [2, 6], partySet: [2, 6], extreme: [6, 18], clear: [4, 16],
   quickClear: [2, 12], proClear: [4, 16], extremeClear: [8, 24],
-  // 助手のブリーダーカード専用
+  // 助手のアシストカード専用
   assistantCardEquip: [4, 20], assistantCardUse: [6, 24],
 };
 const wrongAmounts = Object.entries(WANT_AMOUNTS)
@@ -423,7 +423,7 @@ check('アップデート通知も、いま選んでいる助手が出す',
 
 
 // ==========================================================================
-// 助手のブリーダーカード(みゅあ・きき)で仲良し度が増える。★重要
+// 助手のアシストカード(みゅあ・きき)で仲良し度が増える。★重要
 // ここだけは「いま選んでいる助手」ではなく「そのカード本人」へ入る。
 // 混ざると、みゅあを選んだままききカードを使って、みゅあの仲良し度が上がってしまう
 // ==========================================================================
@@ -433,21 +433,21 @@ const cardCtx = {};
 vm.createContext(cardCtx);
 vm.runInContext([
   `const ASSISTANTS = ${JSON.stringify(A.ASSISTANTS.map(a => ({ id: a.id, name: a.name })))};`,
-  grab(source, 'const assistantIdOfBreederCard = (cardId) => {', '// 呼び方の上書きも助手ごとに分ける'),
-  'globalThis.__c = { assistantIdOfBreederCard };',
+  grab(source, 'const assistantIdOfAssistCard = (cardId) => {', '// 呼び方の上書きも助手ごとに分ける'),
+  'globalThis.__c = { assistantIdOfAssistCard };',
 ].join('\n'), cardCtx);
 const C = cardCtx.__c;
 
-check('みゅあカード(id:mua)はみゅあ本人へ結び付く', C.assistantIdOfBreederCard('mua') === 'mua', String(C.assistantIdOfBreederCard('mua')));
-check('ききカード(id:kiki)はきき本人へ結び付く', C.assistantIdOfBreederCard('kiki') === 'kiki', String(C.assistantIdOfBreederCard('kiki')));
-check('助手以外のブリーダーカードは結び付かない',
-  ['oryo', 'dra', 'atsu', 'cadmium', 'meloso', 'mocchi'].every(id => C.assistantIdOfBreederCard(id) === null));
+check('みゅあカード(id:mua)はみゅあ本人へ結び付く', C.assistantIdOfAssistCard('mua') === 'mua', String(C.assistantIdOfAssistCard('mua')));
+check('ききカード(id:kiki)はきき本人へ結び付く', C.assistantIdOfAssistCard('kiki') === 'kiki', String(C.assistantIdOfAssistCard('kiki')));
+check('助手以外のアシストカードは結び付かない',
+  ['oryo', 'dra', 'atsu', 'cadmium', 'meloso', 'mocchi'].every(id => C.assistantIdOfAssistCard(id) === null));
 check('壊れた値でも落ちずにnullを返す',
-  [null, undefined, '', 0, {}, []].every(v => C.assistantIdOfBreederCard(v) === null));
+  [null, undefined, '', 0, {}, []].every(v => C.assistantIdOfAssistCard(v) === null));
 // カード名は進化で変わる(みゅあの愛→深愛→慈愛)。名前で判定していたら、ここで外れる
 check('カード名ではなくIDで判定している(進化で名前が変わっても外れない)',
-  !/assistantIdOfBreederCard[\s\S]{0,300}(baseName|BREEDER_EVO_NAMES|みゅあの愛)/.test(source)
-    && has('const assistantIdOfBreederCard = (cardId) => {'));
+  !/assistantIdOfAssistCard[\s\S]{0,300}(baseName|BREEDER_EVO_NAMES|みゅあの愛)/.test(source)
+    && has('const assistantIdOfAssistCard = (cardId) => {'));
 
 // --- 誰の仲良し度に入るか。両助手ぶんの保存を並べて実際に加算してみる ---
 // 本体と同じ「助手ごとに別の入れ物へ持つ」形を作り、addAssistantBondFor と同じ手順で動かす
@@ -525,7 +525,7 @@ const runEquip = ({ selected, equippedCardIds, actionKey = 'assistantCardEquip' 
     `const DEFAULT_ASSISTANT_ID = 'mua';`,
     // normalizeAssistantId は本体側(下のslice)の実装をそのまま使う。ここでは土台だけ用意する
     `const assistantIdOrDefault = (id) => ASSISTANTS.some(a => a.id === id) ? id : DEFAULT_ASSISTANT_ID;`,
-    // このsliceの中に normalizeAssistantId・assistantIdOfBreederCard・仲良し度の計算がまとめて入っている
+    // このsliceの中に normalizeAssistantId・assistantIdOfAssistCard・仲良し度の計算がまとめて入っている
     grab(source, 'const loginBonusPeriodKey =', 'const assistantBondLevelOf'),
     // 本体の中身をそのまま持ってくる(refやsetStateの部分だけ、この場の入れ物へ差し替える)
     `const selectedAssistantIdRef = { current: __selected };`,
@@ -593,10 +593,10 @@ check('カード編成分は、実際にバトルを始めた時だけ数える'
 check('編成中のカードから本人を引いて加算する',
   has('const grantEquippedAssistantCardBond = (actionKey) => {')
     && has('getActiveTeachingCards().forEach(card => {')
-    && has('const who = assistantIdOfBreederCard(card && card.id);')
+    && has('const who = assistantIdOfAssistCard(card && card.id);')
     && has('if (who) addAssistantBondFor(who, actionKey);'));
 check('カード使用分は、実際にカードを使った時だけ数える',
-  has("if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfBreederCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }"));
+  has("if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }"));
 check('カード使用の加算は、実際に使ったカードを回すループの中にある', (() => {
   const at = source.indexOf('for (const entry of usedCardEntries) {');
   if (at < 0) return false;
@@ -618,9 +618,9 @@ const changelogSrc = fs.readFileSync(path.join(root, 'monster-hero/data/changelo
 check('ヘルプは獲得量を実データから表にしている(手で書き写していない)',
   /\{ t:'data', id:'assistantBondActions' \}/.test(helpSrc));
 check('ヘルプに助手カードで仲良し度が増えることが書いてある',
-  helpSrc.includes('助手のブリーダーカード'));
+  helpSrc.includes('助手のアシストカード'));
 check('更新履歴に書いてある',
-  changelogSrc.includes('仲良し度') && changelogSrc.includes('助手のブリーダーカード'));
+  changelogSrc.includes('仲良し度') && changelogSrc.includes('助手のアシストカード'));
 
 console.log(failed ? `\n${failed}件のNGがあります` : '\nすべてOK');
 process.exit(failed ? 1 : 0);

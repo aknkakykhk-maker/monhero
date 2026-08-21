@@ -98,9 +98,9 @@ check('商品アイコンはタップで拡大できる',
   has('onClick={()=>setMarketIconZoom(item)}') && has('aria-label={`${item.name}を大きく見る`}')
     && has('{marketIconZoom&&(()=>{const item=marketIconZoom;'));
 check('拡大表示は実際に使われる形(丸／角丸)で出す',
-  has("const round=item.type==='icon'||item.type==='breeder';"));
+  has("const round=item.type==='icon'||item.type==='assist';"));
 check('商品アイコンの大きさを1か所で決めている',
-  has("const MARKET_ICON_SIZE = { disc: 'w-12 h-12', breeder: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };")
+  has("const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };")
     && has("${MARKET_ICON_SIZE[item.type]||'w-10 h-10'}"));
 check('所持数は0でも消さずに出す', has('×{ownedItems[item.id]||0}') && !has('{item.type===\'item\'&&(ownedItems[item.id]||0)>0&&('));
 // 「詳細」のすぐ下に買うボタンがあると、押し間違えて買ってしまう。
@@ -113,7 +113,7 @@ check('購入ボタンの文字は折り返さない',
   has("aria-label={`${item.name}を${item.cost}${usesGold?'ダイヤ':'pt'}で購入`}") && has('rounded-full flex items-center gap-0.5 whitespace-nowrap'));
 check('状態の表示も折り返さない', has('rounded-full whitespace-nowrap">近日追加</div>') && has('rounded-full whitespace-nowrap">所持済み</div>'));
 // 拡大量は表示コードへ直接書かず、アイコンIDごとの表を1か所に持つ。
-// ききはマーケット商品とブリーダーカードの両方で同じ値を使うので、定数を共有する
+// ききはマーケット商品とアシストカードの両方で同じ値を使うので、定数を共有する
 check('ききの拡大量を1か所の表で持ち、縦横比と円形クリップを保つ',
   has('const KIKI_FACE_ICON_ADJUSTMENT = Object.freeze({ scale:2.37, x:0, y:19 });')
     && has('kiki_icon: KIKI_FACE_ICON_ADJUSTMENT,') && has('kiki: KIKI_FACE_ICON_ADJUSTMENT,')

@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-20 19:56"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-21 11:02"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3017,24 +3017,24 @@ const PatternPlacementPreview = ({ masu, base, colors, settings, selectedDecal, 
 };
 // カードやアイテムの icon 欄には「絵文字1文字」と「画像」が混在している。
 // 2026年8月に画像を base64 の埋め込みから images/ 以下のPNGファイルへ移したため、
-// 「data: で始まるかどうか」では画像だと判定できなくなり、ブリーダーカードや
+// 「data: で始まるかどうか」では画像だと判定できなくなり、アシストカードや
 // ブリーダーの教えのアイコンがパスの文字列のまま画面に出る不具合を出した。
 // 判定はこの1か所に集約し、以後どちらの形でも画像として扱えるようにする。
 const isImageIconValue = (v) => typeof v === 'string' && (v.startsWith('images/') || v.startsWith('data:') || /^https?:\/\//.test(v));
-// ききの元画像は全身を含むため、ブリーダーカードで使う丸アイコンだけ顔へ寄せる。
+// ききの元画像は全身を含むため、アシストカードで使う丸アイコンだけ顔へ寄せる。
 // 同じ画像を使うプロフィール用アイコンは別IDなので、従来のプロフィール構図を維持する。
 const KIKI_FACE_ICON_ADJUSTMENT = Object.freeze({ scale:2.37, x:0, y:19 });
 const iconAdjustmentTransformStyle = ({ scale=1, x=0, y=0 }={}) => ({ transform:`translate(${x}%, ${y}%) scale(${scale})`, transformOrigin:'center center' });
-const BREEDER_CARD_ICON_STYLES = Object.freeze({
+const ASSIST_CARD_ICON_STYLES = Object.freeze({
   kiki: KIKI_FACE_ICON_ADJUSTMENT,
 });
-const BreederCardIcon = ({ icon, cardId, className='', style }) => (
-  <span aria-hidden="true" style={style} className={`relative overflow-hidden rounded-full inline-block shrink-0 align-middle ${className}`}><img src={icon} alt="" draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none',...iconAdjustmentTransformStyle(BREEDER_CARD_ICON_STYLES[cardId])}} className="absolute inset-0 w-full h-full object-contain"/></span>
+const AssistCardIcon = ({ icon, cardId, className='', style }) => (
+  <span aria-hidden="true" style={style} className={`relative overflow-hidden rounded-full inline-block shrink-0 align-middle ${className}`}><img src={icon} alt="" draggable={false} style={{WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none',...iconAdjustmentTransformStyle(ASSIST_CARD_ICON_STYLES[cardId])}} className="absolute inset-0 w-full h-full object-contain"/></span>
 );
 // icon欄が画像なら<img>、絵文字ならそのまま返す。sizePxは画像のときの表示サイズ
 const cardIconNode = (icon, sizePx, cardId) => isImageIconValue(icon)
-  ? (BREEDER_CARD_ICON_STYLES[cardId]
-    ? <BreederCardIcon icon={icon} cardId={cardId} style={{width:sizePx,height:sizePx}}/>
+  ? (ASSIST_CARD_ICON_STYLES[cardId]
+    ? <AssistCardIcon icon={icon} cardId={cardId} style={{width:sizePx,height:sizePx}}/>
     : <img src={icon} alt="" draggable={false} style={{width:sizePx,height:sizePx,WebkitTouchCallout:'none',WebkitUserSelect:'none',userSelect:'none',pointerEvents:'none'}} className="rounded-full object-cover inline-block shrink-0"/>)
   : icon;
 // ランキングの記録に載せる部位別の色を作る。
@@ -3520,11 +3520,11 @@ const assistantBondKeyFor = (assistantId) => {
   return id === ((typeof DEFAULT_ASSISTANT_ID !== 'undefined' && DEFAULT_ASSISTANT_ID) || 'mua')
     ? ASSISTANT_BOND_KEY : `mh_assistant_bond_${id}_v1`;
 };
-// そのブリーダーカードが助手本人のカードなら、その助手のIDを返す(違えばnull)。★重要
-// ブリーダーカードのIDと助手のIDは同じ綴り('mua'/'kiki')なので、そのまま本人へ結び付く。
+// そのアシストカードが助手本人のカードなら、その助手のIDを返す(違えばnull)。★重要
+// アシストカードのIDと助手のIDは同じ綴り('mua'/'kiki')なので、そのまま本人へ結び付く。
 // カード名の文字列で見ると、進化で名前が変わったとき(みゅあの愛→深愛→慈愛)に外れるため、
 // 必ずIDで判定する。助手を増やしてもカードIDを合わせておけば、ここは書き換え不要
-const assistantIdOfBreederCard = (cardId) => {
+const assistantIdOfAssistCard = (cardId) => {
   const id = String(cardId == null ? '' : cardId);
   const list = (typeof ASSISTANTS !== 'undefined' && Array.isArray(ASSISTANTS)) ? ASSISTANTS : [];
   return list.some(a => a && a.id === id) ? id : null;
@@ -3816,7 +3816,7 @@ const DIFFICULTY_SETTINGS = {
 // 別の表にしてある。通常の難易度・全国ランキング・既存の保存キーへは混ぜない。
 // ULTIMATEまで正式に実戦可能。INFINITYは公開準備が整うまで選択不可にする。
 const EXTREME_DIFFICULTIES = Object.freeze([
-  { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ breederCardEffect:0.5 }) },
+  { id:'EXTREME', label:'EXTREME', japanese:'エクストリーム', available:true, power:13, score:20, xp:25, gold:7.5, psyche:30, description:'通常チャレンジを超える敵に、育てたモンスターで限界まで挑む最高難易度。', specialRules:Object.freeze({ assistCardEffect:0.5 }) },
   { id:'NIGHTMARE', label:'NIGHTMARE', japanese:'ナイトメア', available:true, power:15, score:20, xp:30, gold:10, psyche:40, description:'有利な補正は弱まり、不利な補正は重くなる。距離適性とWAVEごとの立ち回りが重要な高難易度。', specialRules:Object.freeze({ waveEnhancement:0.5, positiveModifier:0.5, negativeModifier:2.0 }) },
   { id:'CHAOS', label:'CHAOS', japanese:'カオス', available:true, power:20, score:20, xp:35, gold:15, psyche:50, unlockRequirement:'NIGHTMARE', description:'力と報酬がさらに跳ね上がり、与えるダメージと供モン加入ボーナスが半減し、消費ガッツが増加する極限難易度。', specialRules:Object.freeze({ damageDealt:0.5, allyJoinBonus:0.5, gutsCost:1.5 }) },
   { id:'ULTIMATE', label:'ULTIMATE', available:true, power:35, score:20, xp:40, gold:20, psyche:60, unlockRequirement:'CHAOS', description:'累計ターンで敵が強化され、供モン加入ボーナス・トレーニング・与ダメージが低下し、35ターンごとに3距離のBREAKレベルが上がる最高難易度。', specialRules:Object.freeze({ enemyTurnRate:0.0075, allyJoinPenaltyRate:0.0075, damageTurnRate:0.0075, minimumDamageDealt:0.25, awakeningPenaltyRate:0.0075, awakeningPenaltyExcludes:Object.freeze(['distance']), distanceBreak:Object.freeze({ interval:35, damageDealtPerLevel:0.5, safeDistanceCount:1, persistsForRun:true }) }) },
@@ -3876,7 +3876,7 @@ const extremeSpecialRuleLines = (difficultyId, quick=false) => {
   ];
   const rules=extremeDifficultySetting(difficultyId)?.specialRules || {};
   const lines=[];
-  if (rules.breederCardEffect != null) lines.push(['ブリーダーカード効果',specialRulePercent(rules.breederCardEffect)]);
+  if (rules.assistCardEffect != null) lines.push(['アシストカード効果',specialRulePercent(rules.assistCardEffect)]);
   if (rules.waveEnhancement != null) lines.push(['WAVE後強化',specialRulePercent(rules.waveEnhancement)]);
   if (rules.positiveModifier != null || rules.negativeModifier != null) {
     const signed=`＋${specialRulePercent(rules.positiveModifier ?? 1)} / −${specialRulePercent(rules.negativeModifier ?? 1)}`;
@@ -3885,7 +3885,7 @@ const extremeSpecialRuleLines = (difficultyId, quick=false) => {
   if (rules.damageDealt != null) lines.push(['与ダメージ',specialRulePercent(rules.damageDealt)]);
   if (rules.allyJoinBonus != null) lines.push(['供モン加入ボーナス',specialRulePercent(rules.allyJoinBonus)]);
   if (rules.gutsCost != null) lines.push(['消費ガッツ',specialRulePercent(rules.gutsCost)]);
-  const known=new Set(['breederCardEffect','waveEnhancement','positiveModifier','negativeModifier','damageDealt','allyJoinBonus','gutsCost']);
+  const known=new Set(['assistCardEffect','waveEnhancement','positiveModifier','negativeModifier','damageDealt','allyJoinBonus','gutsCost']);
   Object.entries(rules).filter(([rule])=>!known.has(rule)).forEach(([rule,value])=>lines.push([rule,specialRulePercent(value)]));
   return lines;
 };
@@ -3967,7 +3967,7 @@ const applyAllyJoinBonus = (value, specialDifficulty=null, totalTurns=0) => {
   return applyExtremeIntegerRule(value,specialDifficulty,'allyJoinBonus');
 };
 // 極限チャレンジの説明にはモード全体に共通する特徴を十分に載せる。EXTREME固有の倍率や
-// ブリーダーカード50%は、ここではなく難易度カード側で案内する
+// アシストカード50%は、ここではなく難易度カード側で案内する
 const EXTREME_MODE = Object.freeze({
   id:'extreme', label:'極限チャレンジ', short:'極限', emoji:'🔥', color:'#e879f9',
   tagline:'育てたモンスターで限界へ挑む、上級者向け高難度モード',
@@ -4025,14 +4025,14 @@ const clearPsycheReward = (difficulty) => Math.max(0, Math.floor(Number(CLEAR_PS
 // 声をかけるかどうかの判定にだけ使う(購入の可否は各商品ごとに別途見ている)。
 // マーケットの画面から参照するので、必ず一番外側に置くこと
 const CHEAPEST_GOLD_ITEM_COST = ((typeof BREEDER_MARKET_ITEMS !== 'undefined' && BREEDER_MARKET_ITEMS) || [])
-  .filter(i => i.type === 'disc' || i.type === 'breeder' || i.type === 'item')
+  .filter(i => i.type === 'disc' || i.type === 'assist' || i.type === 'item')
   .reduce((min, i) => Math.min(min, Number(i.cost) || Infinity), Infinity);
 
 // マーケットは1行に4商品ずつ並べる。カードが細くなるので中身も小さくそろえる
 const MARKET_GRID_CLASS = 'grid grid-cols-4 gap-2 pb-4';
 // 商品アイコンの大きさ。円盤石は絵を見せたいのでいちばん大きく、
 // ブリーダーアイコンやカード・アイテムは名前のほうが大事なので小さくする
-const MARKET_ICON_SIZE = { disc: 'w-12 h-12', breeder: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };
+const MARKET_ICON_SIZE = { disc: 'w-12 h-12', assist: 'w-10 h-10', icon: 'w-10 h-10', item: 'w-9 h-9' };
 // 全身画像を使う一部のアイコンは、画像自体には手を加えず表示時だけ顔まわりへ寄せる。
 // 帽子を残したまま顔が円の中央で大きく見えるよう、対象IDごとに拡大率と位置を固定する。
 const MARKET_PROFILE_ICON_STYLES = {
@@ -5985,9 +5985,9 @@ function MonsterHeroGame() {
   const [monsterPartySets, setMonsterPartySets] = useState(() => normalizeMonsterPartySets(null, STARTER_MONSTER_IDS));
   const [editingPartySetIndex, setEditingPartySetIndex] = useState(0);
   const [partySetCopyTarget, setPartySetCopyTarget] = useState(null);
-  const [unlockedTeachingIds, setUnlockedTeachingIds] = useState(STARTER_TEACHING_IDS); // 解放済みブリーダーカードid(初期6枚+購入分、端末保存)
-  const [teachingRosterIds, setTeachingRosterIds] = useState(STARTER_TEACHING_IDS); // ブリーダーカード編成(解放済みの中から周回で使う候補、端末保存)
-  const [marketTab, setMarketTab] = useState('icon'); // ブリーダーマーケットの表示カテゴリ: 'icon'|'disc'|'breeder'
+  const [unlockedTeachingIds, setUnlockedTeachingIds] = useState(STARTER_TEACHING_IDS); // 解放済みアシストカードid(初期6枚+購入分、端末保存)
+  const [teachingRosterIds, setTeachingRosterIds] = useState(STARTER_TEACHING_IDS); // アシストカード編成(解放済みの中から周回で使う候補、端末保存)
+  const [marketTab, setMarketTab] = useState('icon'); // マーケットの表示カテゴリ: 'icon'|'disc'|'assist'
   const [rosterTab, setRosterTab] = useState('monster'); // 編成画面の表示カテゴリ: 'monster'|'teaching'
   const [draftMonsterRoster, setDraftMonsterRoster] = useState([]); // 編成画面での仮選択(決定を押すまでmonsterRosterIdsには反映しない)
   // モンスター一覧系画面(編成・ベースモン一覧・マスモン一覧)共通のソート・表示設定。3画面で共有する
@@ -5999,7 +5999,7 @@ function MonsterHeroGame() {
   const [sortFilterModalSingleType, setSortFilterModalSingleType] = useState(false); // ベースモン一覧/マスモン一覧から開いた場合true(種別チップを出さない)
   const [draftTeachingRoster, setDraftTeachingRoster] = useState([]); // 編成画面での仮選択(決定を押すまでteachingRosterIdsには反映しない)
   const [rosterDetailMon, setRosterDetailMon] = useState(null); // 編成画面: 長押しで詳細表示中のモンスター
-  const [rosterDetailTeaching, setRosterDetailTeaching] = useState(null); // 編成画面: 長押しで詳細表示中のブリーダーカード
+  const [rosterDetailTeaching, setRosterDetailTeaching] = useState(null); // 編成画面: 長押しで詳細表示中のアシストカード
   const [rosterSkillDetail, setRosterSkillDetail] = useState(null); // モンスタープロフィール: タップ中の技(通常技/固有技)のレベル別詳細 {mon,kind}
   const [showNameEdit, setShowNameEdit] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -7902,7 +7902,7 @@ function MonsterHeroGame() {
       </div>
     );
   };
-  // 現在の周回で使う候補モンスター/ブリーダーカード(編成で選んだもの)。空の場合は解放済み全体にフォールバック
+  // 現在の周回で使う候補モンスター/アシストカード(編成で選んだもの)。空の場合は解放済み全体にフォールバック
   const getActiveMonsterList = () => {
     const list = monsterRosterIds.map(resolveRosterEntryToMon).filter(Boolean);
     return list.length > 0 ? list : Object.values(ALL_PLAYER_MONSTERS).filter(m => unlockedMonsterIds.includes(m.id));
@@ -7945,7 +7945,7 @@ function MonsterHeroGame() {
   // 指定した助手の仲良し度を、行動に応じて増やす。上限に達していれば何も起きない。
   // 続けて呼ばれても取りこぼさないよう、いまの値は ref から読む。
   // 触るのは渡された助手のぶんだけで、もう片方の助手の値には一切触れない。
-  // 助手のブリーダーカードのように「いま選んでいる助手とは別の本人へ入れたい」場面から使う
+  // 助手のアシストカードのように「いま選んでいる助手とは別の本人へ入れたい」場面から使う
   const addAssistantBondFor = useCallback((assistantId, actionKey) => {
     const id = normalizeAssistantId(assistantId);
     const current = normalizeAssistantBond(assistantBondsRef.current[id]);
@@ -7965,14 +7965,14 @@ function MonsterHeroGame() {
     const id = selectedAssistantIdRef.current;
     addAssistantBondFor(id, actionKey);
   }, [addAssistantBondFor]);
-  // いま編成しているブリーダーカードのうち、助手本人のカード(みゅあ・きき)を探して
+  // いま編成しているアシストカードのうち、助手本人のカード(みゅあ・きき)を探して
   // 「そのカード本人」の仲良し度を増やす。★重要
   // ここだけは、いま選んでいる助手ではなくカード本人へ入る。
   // 例) 助手＝みゅあ・カード＝きき なら、増えるのは「きき」の仲良し度
   // 両方を編成していれば、それぞれ本人へ1回ずつ入る
   const grantEquippedAssistantCardBond = (actionKey) => {
     getActiveTeachingCards().forEach(card => {
-      const who = assistantIdOfBreederCard(card && card.id);
+      const who = assistantIdOfAssistCard(card && card.id);
       if (who) addAssistantBondFor(who, actionKey);
     });
   };
@@ -8043,7 +8043,7 @@ function MonsterHeroGame() {
 
   const isMarketItemOwned = (item) => {
     if (item.type === 'disc') return unlockedMonsterIds.includes(item.id);
-    if (item.type === 'breeder') return unlockedTeachingIds.includes(item.id);
+    if (item.type === 'assist') return unlockedTeachingIds.includes(item.id);
     if (item.type === 'item') return false;
     return ownedMarketIcons.includes(item.id);
   };
@@ -8095,7 +8095,7 @@ function MonsterHeroGame() {
   const buyMarketItem = (item) => {
     if (item.available === false) return; // 実装準備中のアイテムは購入不可
     if (isMarketItemOwned(item)) return;
-    const usesGold = item.type === 'disc' || item.type === 'breeder' || item.type === 'item';
+    const usesGold = item.type === 'disc' || item.type === 'assist' || item.type === 'item';
     if (usesGold) {
       if (gold < item.cost) return;
       setGold(prev => { const next = prev - item.cost; storeSet('mh_gold', next, false); return next; });
@@ -8110,9 +8110,9 @@ function MonsterHeroGame() {
         const rosters = monsterPartySets.rosters.map((roster,index)=>index===monsterPartySets.activeIndex?[...roster,item.id]:roster);
         saveMonsterPartySets({ ...monsterPartySets, rosters });
       }
-    } else if (item.type === 'breeder') {
+    } else if (item.type === 'assist') {
       setUnlockedTeachingIds(prev => { const next = [...prev, item.id]; storeSet('mh_unlocked_teachings', next, false); return next; });
-      // 編成はブリーダーカード6枚固定。既に6枚埋まっている場合は自動追加せず、編成画面で手動入れ替えしてもらう
+      // 編成はアシストカード6枚固定。既に6枚埋まっている場合は自動追加せず、編成画面で手動入れ替えしてもらう
       setTeachingRosterIds(prev => { if (prev.length >= STARTER_TEACHING_IDS.length) return prev; const next = [...prev, item.id]; storeSet('mh_teaching_roster', next, false); return next; });
     } else if (item.type === 'item') {
       setOwnedItems(prev => { const next = { ...prev, [item.id]: (prev[item.id] || 0) + 1 }; storeSet('mh_owned_items', next, false); return next; });
@@ -8122,8 +8122,8 @@ function MonsterHeroGame() {
     saveMissionProgress('market');
   };
 
-  // 編成画面: 解放済みモンスター/ブリーダーカードの中から、次回以降の周回で使う候補を仮選択する。
-  // 仮選択は自由に増減でき、「決定」を押してモンスター8体・ブリーダーカード6枚ちょうどの時だけ確定保存する。
+  // 編成画面: 解放済みモンスター/アシストカードの中から、次回以降の周回で使う候補を仮選択する。
+  // 仮選択は自由に増減でき、「決定」を押してモンスター8体・アシストカード6枚ちょうどの時だけ確定保存する。
   // モンスターは同じ種(baseId)につき1枠のみ選べるため、プレーン種・マスモンを問わず同じ種の
   // 別の候補を選ぶと、既に選択中だった同じ種の候補は自動的に選択解除される
   const toggleDraftMonster = (entry) => {
@@ -8151,8 +8151,8 @@ function MonsterHeroGame() {
     setTeachingRosterIds(draftTeachingRoster);
     storeSet('mh_teaching_roster', draftTeachingRoster, false);
     addAssistantBond('partySet');
-    // 決定したらM/B管理のブリーダーカードタブへ戻る(古い編成メニューは経由しない)
-    setManagementTab('breeder');
+    // 決定したらM/B管理のアシストカードタブへ戻る(古い編成メニューは経由しない)
+    setManagementTab('assist');
     setGameState('MB_MANAGEMENT');
   };
 
@@ -9594,14 +9594,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   };
 
   // 同じターンに2枚目以降で使ったカードは効果が半減する(ハムの連続攻撃で複数枚使うときの調整)。
-  // ブリーダーカード(教えカード)だけは対象外で、何枚目に使っても効果は変わらない。
+  // アシストカード(教えカード)だけは対象外で、何枚目に使っても効果は変わらない。
   // 「何枚目か」の数え方をここに集約し、画面のダメージ予測とprocessTurnの実処理がずれないようにする。
-  const isBreederCard = (card) => !!card && TEACHING_CARDS.some(t => t.id === card.id);
+  const isAssistCard = (card) => !!card && TEACHING_CARDS.some(t => t.id === card.id);
   // ガードカードの重み(弱ガードは半分)。軽減量の合計表示と実処理で同じ式を使う。
   const guardCardWeight = (card) => card?.type === 'guard' || card?.subType === 'heal_guard_meloso' ? 1 : (card?.type === 'weak_guard' ? 0.5 : 0);
   const cardEffectMultiplier = (card, halved=false) => {
     const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-    return isBreederCard(card)&&specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty,'breederCardEffect') : (halved?0.5:1);
+    return isAssistCard(card)&&specialRuleDifficulty ? extremeSpecialRule(specialRuleDifficulty,'assistCardEffect') : (halved?0.5:1);
   };
   // flat は互換用（現行定義は0）。実質は「実効丈夫さ × 倍率の合計」。
   const guardValueOf = (flat, mult) => (flat > 0 || mult > 0) ? Math.floor(flat + effectiveDef * mult) : 0;
@@ -9645,7 +9645,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     const perCard={};
     selectedCards.forEach(idx=>{
       const card=hand[idx];
-      const isPenalty=!isBreederCard(card);
+      const isPenalty=!isAssistCard(card);
       const halved=isPenalty&&penaltyCnt>0;
       perCard[idx]=boostsForCardDamage({oryo,dmgMod,combo},card,halved);
       // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので積み上げにも枚数にも数えない
@@ -9657,7 +9657,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       if(isPenalty) penaltyCnt++;
     });
     const pendingCard=excludeIdx!=null?hand[excludeIdx]:null;
-    const pendingHalved=!!pendingCard&&!isBreederCard(pendingCard)&&penaltyCnt>0;
+    const pendingHalved=!!pendingCard&&!isAssistCard(pendingCard)&&penaltyCnt>0;
     return { perCard, final:{oryo,dmgMod,combo}, forPending:boostsForCardDamage({oryo,dmgMod,combo},pendingCard,pendingHalved) };
   };
   const getDmg = useCallback((card, slotIdx, mon, additionalOryo=0, additionalDmgMod=0, isSecondOrLaterAtk=false, attackStartDist=enemyDist) => {
@@ -9943,7 +9943,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     // 練習中は「何をしたか」を覚えておく。ガードを使ったら次へ、のように操作で進めるために使う。
     // 合図を出すのはターンがすべて終わってから(このあとの敵の行動まで見せてから進める)
     const tutorialKinds=battleScenarioRef.current
-      ? usedCards.map(c=>(isBreederCard(c)?'teaching':c.type)) : [];
+      ? usedCards.map(c=>(isAssistCard(c)?'teaching':c.type)) : [];
     const totalGuts=usedCards.reduce((a,c)=>a+getCardGuts(c),0);
     if (guts<totalGuts) return;
     // Fallback slot for cards without assignment (buffs etc.)
@@ -9958,20 +9958,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
     // カットイン廃止: 技名はスロット上にインライン表示する（実行ループ内で行う）
 
-    let penaltyCardCount=0; // ブリーダーカード以外を何枚使ったか(2枚目以降は効果半減)
+    let penaltyCardCount=0; // アシストカード以外を何枚使ったか(2枚目以降は効果半減)
     for (const entry of usedCardEntries) {
       const card=entry.card;
       const totalHealBeforeCard=totalHeal;
-      // 2枚目以降のカードは効果が半減する。ブリーダーカードは対象外で、枚数にも数えない。
-      const isBreeder=isBreederCard(card);
-      // 助手のブリーダーカード(みゅあ・きき)を実際に切ったぶん。
+      // 2枚目以降のカードは効果が半減する。アシストカードは対象外で、枚数にも数えない。
+      const isBreeder=isAssistCard(card);
+      // 助手のアシストカード(みゅあ・きき)を実際に切ったぶん。
       // 手札にあるだけ・編成しているだけでは増えず、使ったここでだけ数える。
       // 増えるのは、いま選んでいる助手ではなく「そのカード本人」の仲良し度
-      if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfBreederCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }
+      if(isBreeder&&!debugBattleRef.current){ const cardAssistant=assistantIdOfAssistCard(card.id); if(cardAssistant) addAssistantBondFor(cardAssistant,'assistantCardUse'); }
       const halved=!isBreeder&&penaltyCardCount>0;
       // EXTREMEでは消費量・枚数でなく、教えカードから発生する効果量だけを半減する。
       const specialRuleDifficulty=specialRuleDifficultyForRun(runMode,difficulty,extremeRunRef.current,extremeDifficulty);
-      const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'breederCardEffect'):(halved?0.5:1);
+      const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);
       if(!isBreeder) penaltyCardCount++;
       if(halved) addPopup('2枚目以降 効果半減','hero','text-slate-300 text-sm font-black');
       const slotIdx=entry.slotIdx!=null?entry.slotIdx:defaultSlot;
@@ -10577,7 +10577,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     if (w === 1 && !forcedEnemyKey) {
       addAssistantBond('battle');
       addAssistantBond(extremeRunRef.current ? 'extreme' : modeBondAction(runMode));
-      // 助手のブリーダーカードを編成して挑んだぶん。編成を保存しただけでは増えず、
+      // 助手のアシストカードを編成して挑んだぶん。編成を保存しただけでは増えず、
       // 実際にバトルを始めたここでだけ数える(付け外しをくり返して稼げないようにするため)。
       // デバッグ戦は報酬も記録も残さないので、ここでも数えない
       if (!debugBattleRef.current) grantEquippedAssistantCardBond('assistantCardEquip');
@@ -10740,7 +10740,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   const battleTutorialNeedCard = battleTutorial ? (battleTutorial.needCard || null) : null;
   const battleTutorialCardTarget = battleTutorialNeedCard
     || (battleTutorialNeed && battleTutorialNeed !== 'emergency' && battleTutorialNeed !== 'skillPicker' ? battleTutorialNeed : null);
-  const battleTutorialCardKind = (card) => (isBreederCard(card) ? 'teaching' : card.type);
+  const battleTutorialCardKind = (card) => (isAssistCard(card) ? 'teaching' : card.type);
   const battleTutorialCardAllowed = (card) => {
     if (!battleTutorialNeed || !card) return true;
     if (battleTutorialNeed === 'emergency') return false;   // 緊急回復の番はカードを使わせない
@@ -10854,7 +10854,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setOwnedUniques([initialUnique]); setMainHero(m); setMaxHp(m.baseHp); setHp(m.baseHp);
       setMaxGuts(m.baseGuts); setGuts(Math.floor(m.baseGuts*0.5)); setAtk(m.baseAtk); setDef(m.baseDef);
       // プロモードは、ここで先に供モンの候補5体を選んでもらう。
-      // 選び終わったらふだんと同じブリーダーカードの画面へ合流する
+      // 選び終わったらふだんと同じアシストカードの画面へ合流する
       // ここで早く返すので、関数の最後にある setCurrentPickingMon(null) を通らない。
       // 消し忘れると、選んだ勇者モンの詳細が開いたまま残り、
       // WAVE 2の供モン合流で「勝手に勇者モンが選ばれている」ように見えてしまう
@@ -11047,7 +11047,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     return rows;
   };
 
-  // ブリーダーカードの効果説明。表記は全カードで次のルールに統一している。
+  // アシストカードの効果説明。表記は全カードで次のルールに統一している。
   //  ・区切りは中黒「・」だけを使う(以前は「＆」「＋」「/」「()」が混在していた)
   //  ・増減は「アップ」「ダウン」と書く(以前は「UP」「DOWN」「+」が混在していた)
   //  ・ステータス名は画面表記に合わせて「ライフ」「ガッツ」「攻撃」に統一する
@@ -11634,9 +11634,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='MB_MANAGEMENT'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-5 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-indigo-300">M/B管理</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="mbManagement"/></div>
-            <div className="grid grid-cols-2 gap-2 mb-5 shrink-0"><button onClick={()=>setManagementTab('monster')} className={`min-h-[48px] rounded-xl font-black ${managementTab==='monster'?'bg-indigo-600 text-white':'bg-slate-900 text-slate-400'}`}>モンスター</button><button onClick={()=>setManagementTab('breeder')} className={`min-h-[48px] rounded-xl font-black ${managementTab==='breeder'?'bg-purple-600 text-white':'bg-slate-900 text-slate-400'}`}>ブリーダーカード</button></div>
+            <div className="grid grid-cols-2 gap-2 mb-5 shrink-0"><button onClick={()=>setManagementTab('monster')} className={`min-h-[48px] rounded-xl font-black ${managementTab==='monster'?'bg-indigo-600 text-white':'bg-slate-900 text-slate-400'}`}>モンスター</button><button onClick={()=>setManagementTab('assist')} className={`min-h-[48px] rounded-xl font-black ${managementTab==='assist'?'bg-purple-600 text-white':'bg-slate-900 text-slate-400'}`}>アシストカード</button></div>
             <div className="w-full max-w-md mx-auto space-y-3 overflow-y-auto mh-scroll">
-              {managementTab==='monster'?<><button onClick={()=>setGameState('OWNED_MONSTERS')} className="mh-management-link">ベースモン一覧</button><button onClick={()=>setGameState('MASU_MONS')} className="mh-management-link">マスモン一覧</button><button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('monster');setGameState('ROSTER');}} className="mh-management-link">モンスター編成</button><button onClick={openPastureSettings} className="mh-management-link">放牧設定</button></>:<button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('teaching');setGameState('ROSTER');}} className="mh-management-link">ブリーダーカード編成</button>}
+              {managementTab==='monster'?<><button onClick={()=>setGameState('OWNED_MONSTERS')} className="mh-management-link">ベースモン一覧</button><button onClick={()=>setGameState('MASU_MONS')} className="mh-management-link">マスモン一覧</button><button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('monster');setGameState('ROSTER');}} className="mh-management-link">モンスター編成</button><button onClick={openPastureSettings} className="mh-management-link">放牧設定</button></>:<button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('teaching');setGameState('ROSTER');}} className="mh-management-link">アシストカード編成</button>}
             </div>
           </div>
         )}
@@ -11925,7 +11925,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           <div className="grid grid-cols-3 gap-1 mt-1">{[['敵強度',`×${setting.power}`],['スコア',setting.score?`×${setting.score}`:'対象外'],['ダイヤ',setting.gold?`×${setting.gold}`:'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <div className="grid grid-cols-2 gap-1 mt-1">{[['経験値',setting.xp?`×${setting.xp}`:'対象外'],['虹のプシュケー',setting.psyche??'対象外']].map(([label,value])=><div key={label} className="rounded-lg bg-black/35 py-0.5 text-center text-[8px] leading-tight text-slate-400 whitespace-nowrap">{label}<b className="block text-[11px] leading-tight text-white">{value}</b></div>)}</div>
                           <p className="mt-1 min-h-[35px] rounded-lg bg-black/30 px-1.5 py-1 text-[9px] leading-[1.25] text-slate-200">{setting.description}</p>
-                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">ブリーダーカード効果 50%</b></div>:<div className="mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"><small className="block text-center text-[8px] leading-tight font-black text-amber-300">⚠ {setting.label}特殊ルール</small>{extremeSpecialRuleLines(setting.id).map(([label,value])=><div key={label} className="grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[10px] whitespace-nowrap"><span className="text-slate-300">{label}</span><b className="text-right text-white">{value}</b></div>)}</div>}
+                          {setting.id==='EXTREME'?<div className="mt-1 h-[51px] shrink-0 rounded-lg border-2 border-fuchsia-400/80 bg-fuchsia-950/75 px-2 py-1 text-center shadow-[0_0_18px_rgba(232,121,249,.28)] flex flex-col justify-center"><small className="block text-[8px] font-black text-amber-300">⚠ EXTREME特殊ルール</small><b className="block text-[11px] text-white whitespace-nowrap">アシストカード効果 50%</b></div>:<div className="mt-1 h-[51px] shrink-0 rounded-lg border border-fuchsia-400/60 bg-fuchsia-950/50 px-2 py-0.5"><small className="block text-center text-[8px] leading-tight font-black text-amber-300">⚠ {setting.label}特殊ルール</small>{extremeSpecialRuleLines(setting.id).map(([label,value])=><div key={label} className="grid grid-cols-[6.5rem_1fr] items-center gap-1 text-[9px] leading-[10px] whitespace-nowrap"><span className="text-slate-300">{label}</span><b className="text-right text-white">{value}</b></div>)}</div>}
                         </>:<div className="mt-1.5 rounded-xl border border-white/10 bg-black/25 px-3 py-8 text-center text-lg font-black tracking-[.35em] text-slate-500">？？？</div>}
                         <div className="grid gap-1.5 mt-auto pt-1.5">
                           <button disabled={!previewable} onClick={()=>setShowWaveDetails(true)} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs disabled:opacity-50">{previewable?'全WAVE詳細':'詳細 ？？？'}</button>
@@ -12445,7 +12445,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             </div>
             <div className="flex gap-1.5 mb-3 shrink-0">
-              {[{key:'icon',label:'アイコン'},{key:'disc',label:'円盤石'},{key:'breeder',label:'ブリーダー'},{key:'item',label:'アイテム'}].map(tab=>(
+              {[{key:'icon',label:'アイコン'},{key:'disc',label:'円盤石'},{key:'assist',label:'アシスト'},{key:'item',label:'アイテム'}].map(tab=>(
                 <button key={tab.key} onClick={()=>setMarketTab(tab.key)} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase ${marketTab===tab.key?'bg-amber-500 text-black':'bg-slate-900 border border-slate-800 text-slate-400'}`}>{tab.label}</button>
               ))}
             </div>
@@ -12458,17 +12458,17 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {BREEDER_MARKET_ITEMS.filter(item=>item.type===marketTab&&item.shop!==false).map(item=>{
                   const comingSoon = item.available === false;
                   const owned = !comingSoon && isMarketItemOwned(item);
-                  const usesGold = item.type==='disc' || item.type==='breeder' || item.type==='item';
+                  const usesGold = item.type==='disc' || item.type==='assist' || item.type==='item';
                   const balance = usesGold ? gold : breederPoints;
                   const canBuy = !comingSoon && !owned && balance>=item.cost;
                   const detailMon = item.type==='disc' ? ALL_PLAYER_MONSTERS[item.id] : null;
-                  const detailTeaching = item.type==='breeder' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
+                  const detailTeaching = item.type==='assist' ? TEACHING_CARDS.find(t=>t.id===item.id) : null;
                   return (
                     // 名前・所持数・詳細ボタンは商品によって有無や行数が変わるため、
                     // 高さを決めた枠に入れて並びを崩さない。購入ボタンはmt-autoでカード下端に揃える
                     <div key={item.id} className={`rounded-xl border-2 p-1.5 flex flex-col items-center gap-1 ${owned?'bg-emerald-900/30 border-emerald-500/50':comingSoon?'bg-slate-900/60 border-slate-800/60':'bg-slate-900 border-slate-800'}`}>
                       {/* 1行に4つ並べているぶん小さいので、タップすると大きく見られるようにしている */}
-                      <button type="button" onClick={()=>setMarketIconZoom(item)} aria-label={`${item.name}を大きく見る`} className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='breeder'&&BREEDER_CARD_ICON_STYLES[item.id]?<BreederCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>}</button>
+                      <button type="button" onClick={()=>setMarketIconZoom(item)} aria-label={`${item.name}を大きく見る`} className={`${MARKET_ICON_SIZE[item.type]||'w-10 h-10'} rounded-full overflow-hidden border-2 border-white/10 shrink-0 flex items-center justify-center bg-black/30 active:scale-90 ${comingSoon?'grayscale opacity-50':''}`}>{item.icon?(item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className="w-full h-full object-cover"/>):<span className="text-xl">{item.emoji}</span>}</button>
                       {/* 名前の枠は3行ぶん。細い端末で長い名前が3行になっても、
                           カードの高さが商品ごとにばらつかないようにしている */}
                       <div className={`w-full flex items-center justify-center text-center text-[9px] font-black leading-[1.15] ${comingSoon?'text-slate-500':'text-white'}`} style={{minHeight:'36px'}}>{item.name}</div>
@@ -12503,8 +12503,8 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='ROSTER'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4">
             <div className="flex items-center gap-2 mb-2 shrink-0">
-              <button onClick={()=>{setManagementTab(rosterTab==='monster'?'monster':'breeder');setGameState('MB_MANAGEMENT');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
-              <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{rosterTab==='monster'?'モンスター編成':'ブリーダーカード編成'}</h2>
+              <button onClick={()=>{setManagementTab(rosterTab==='monster'?'monster':'assist');setGameState('MB_MANAGEMENT');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+              <h2 className="text-xl font-black italic text-indigo-400 uppercase tracking-widest">{rosterTab==='monster'?'モンスター編成':'アシストカード編成'}</h2>
             </div>
             <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="roster" compact/></div>
             {rosterTab==='monster'?(
@@ -12579,7 +12579,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               </div>
             ):(
               <div className="flex-1 min-h-0 flex flex-col">
-                {/* 編成中のブリーダーカードを小さいアイコンで並べ、タップで編成から外せる */}
+                {/* 編成中のアシストカードを小さいアイコンで並べ、タップで編成から外せる */}
                 <div className="flex items-center gap-2 mb-2 shrink-0 bg-purple-950/30 border border-purple-500/30 rounded-2xl px-2 py-2">
                   <span className="text-[9px] font-black text-purple-300 shrink-0 leading-tight">編成中<br/>{draftTeachingRoster.length}/{STARTER_TEACHING_IDS.length}</span>
                   <div className="flex-1 flex gap-1.5 overflow-x-auto scrollbar-hide min-h-[36px] items-center">
@@ -14005,7 +14005,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 let previewGuardFlat=0, previewGuardMult=0, previewPenaltyCnt=0;
                 selectedCards.forEach(idx=>{
                   const card=hand[idx];
-                  const isPenalty=!isBreederCard(card);
+                  const isPenalty=!isAssistCard(card);
                   const halved=isPenalty&&previewPenaltyCnt>0;
                   const weight=guardCardWeight(card);
                   if(weight>0){const effect=cardEffectMultiplier(card,halved); previewGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*weight*effect; previewGuardMult+=GUARD_EVOLUTION[guardLevel].mult*weight*effect;}
@@ -14059,7 +14059,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 // Existing total = sum of already-assigned attack cards.
                 // If a card is pending and validly assignable somewhere, also compute the projected new total.
                 // committed (already assigned) attack cards in selection order
-                // 2枚目以降のカードは効果半減。processTurnと同じく「ブリーダーカード以外の枚数」で数える。
+                // 2枚目以降のカードは効果半減。processTurnと同じく「アシストカード以外の枚数」で数える。
                 // 保留中(タップしただけでまだ置いていない)カードは、まだ使っていないので枚数に数えない。
                 // ここを数えてしまうと、1枚目なのに自分自身を2枚目とみなして半減表示になる。
                 const pendingCardObj=pendingCard!=null?hand[pendingCard]:(dragState&&dragState.active?dragState.card:null);
@@ -14072,7 +14072,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 selectedCards.forEach(idx=>{
                   if(idx===pendingIdx) return;
                   const card=hand[idx]; const slotIdx=cardAssignments[idx];
-                  const isPenalty=!isBreederCard(card);
+                  const isPenalty=!isAssistCard(card);
                   const halved=isPenalty&&committedPenaltyCnt>0;
                   const b=boosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
                   if(slotIdx!=null&&isAttackCard(card)){const baseDmg=getDmg(card,slotIdx,slots[slotIdx],b.oryo,b.dmgMod,halved); committedTotal+=getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo);}
@@ -14083,7 +14083,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 const committedGuard=guardValueOf(guardFlat,guardMult);
                 // 保留カードがガードなら、置いたあとの合計軽減も出す
                 const pendingGuardWeight=guardCardWeight(pendingCardObj);
-                const pendingGuardHalved=pendingGuardWeight>0&&!isBreederCard(pendingCardObj)&&committedPenaltyCnt>0;
+                const pendingGuardHalved=pendingGuardWeight>0&&!isAssistCard(pendingCardObj)&&committedPenaltyCnt>0;
                 const pendingGuardEffect=cardEffectMultiplier(pendingCardObj,pendingGuardHalved);
                 const projectedGuard=pendingGuardWeight>0
                   ? guardValueOf(guardFlat+GUARD_EVOLUTION[guardLevel].flat*pendingGuardWeight*pendingGuardEffect, guardMult+GUARD_EVOLUTION[guardLevel].mult*pendingGuardWeight*pendingGuardEffect)
@@ -14098,7 +14098,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     const assignedCount=Object.values(cardAssignments).filter(v=>v===i).length;
                     const maxUses=slotMaxUses(s); if(assignedCount>=maxUses) continue;
                     if(pendingCardObj.type==='unique'&&pendingCardObj.ownerSlotIdx!==i) continue;
-                    pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,!isBreederCard(pendingCardObj)&&committedPenaltyCnt>0); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo); break;
+                    pendingValidSlot=i; const baseDmg=getDmg(pendingCardObj,i,s,boosts.forPending.oryo,boosts.forPending.dmgMod,!isAssistCard(pendingCardObj)&&committedPenaltyCnt>0); pendingAdd=getAttackPredictedDmg(pendingCardObj,s,baseDmg,boosts.forPending.combo); break;
                   }
                 }
                 const projectedTotal=committedTotal+pendingAdd;
@@ -14161,14 +14161,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                     canAssign = assignedCount<maxUses;
                     if(pendingCardObj.type==='unique') canAssign = canAssign && (pendingCardObj.ownerSlotIdx===i);
                   }
-                  // 選択順に「ブリーダーカード以外」を数え、どのカードが2枚目以降(効果半減)かを出す。
+                  // 選択順に「アシストカード以外」を数え、どのカードが2枚目以降(効果半減)かを出す。
                   // 保留中のカードはまだ使っていないので数えない。
                   // 保留中のカードは自分を数えず、「次に使う1枚」として半減かどうかを決める。
                   // (数えてしまうと1枚目でも半減、除外しっぱなしだと2枚目でも全開の表示になる)
                   const halvedByIdx={};
                   {let n=0;
-                    selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; const c=hand[idx]; const p=!isBreederCard(c); halvedByIdx[idx]=p&&n>0; if(p) n++; });
-                    if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=!isBreederCard(hand[pendingIdx])&&n>0;}
+                    selectedCards.forEach(idx=>{ if(idx===pendingIdx) return; const c=hand[idx]; const p=!isAssistCard(c); halvedByIdx[idx]=p&&n>0; if(p) n++; });
+                    if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=!isAssistCard(hand[pendingIdx])&&n>0;}
                   // Preview damage:
                   // - if a card is pending assignment, show what THIS card would do on this monster
                   // - otherwise show the sum of damage from cards already assigned to this slot,
@@ -14178,20 +14178,20 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   const slotBoosts=previewLocalBoosts(pendingIdx);
                   let previewDmg=0; let isPendingPreview=false; let isPendingHalved=false;
                   if(s && pendingCardObj && canAssign && isAttackCard(pendingCardObj)){
-                    // 既に選んだ「ブリーダーカード以外」の枚数を数え、保留カードはその次の1枚として扱う
+                    // 既に選んだ「アシストカード以外」の枚数を数え、保留カードはその次の1枚として扱う
                     let committedPenalty=0;
-                    selectedCards.forEach(idx=>{if(idx!==pendingIdx&&!isBreederCard(hand[idx]))committedPenalty++;});
-                    const isSecondOrLater = committedPenalty>=1 && !isBreederCard(pendingCardObj);
+                    selectedCards.forEach(idx=>{if(idx!==pendingIdx&&!isAssistCard(hand[idx]))committedPenalty++;});
+                    const isSecondOrLater = committedPenalty>=1 && !isAssistCard(pendingCardObj);
                     const baseDmg=getDmg(pendingCardObj,i,s,slotBoosts.forPending.oryo,slotBoosts.forPending.dmgMod,isSecondOrLater);
                     previewDmg=getAttackPredictedDmg(pendingCardObj,s,baseDmg,slotBoosts.forPending.combo);
                     isPendingPreview=true; isPendingHalved=isSecondOrLater;
                   } else if(s){
-                    // 選択順で「ブリーダーカード以外」を数え、2枚目以降は半減として予測する
+                    // 選択順で「アシストカード以外」を数え、2枚目以降は半減として予測する
                     let globalPenaltyCnt=0;
                     selectedCards.forEach(idx=>{
                       if(idx===pendingIdx) return;
                       const card=hand[idx];
-                      const isPenalty=!isBreederCard(card);
+                      const isPenalty=!isAssistCard(card);
                       const halved=isPenalty&&globalPenaltyCnt>0;
                       if(cardAssignments[idx]===i){
                         const b=slotBoosts.perCard[idx]||{oryo:0,dmgMod:0,combo:0};
@@ -14325,12 +14325,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* マーケットのアイテムの効果説明。カードを小さくしたぶん、ここで詳しく出す */}
       {/* マーケットの商品アイコンを大きく見る。カードの中では小さいので、絵を確かめたいとき用。
           アイコンはプロフィール画像になるので、実際に使われるのと同じ丸い形で出す */}
-      {marketIconZoom&&(()=>{const item=marketIconZoom;const round=item.type==='icon'||item.type==='breeder';return(
+      {marketIconZoom&&(()=>{const item=marketIconZoom;const round=item.type==='icon'||item.type==='assist';return(
         <div onClick={()=>setMarketIconZoom(null)} className="fixed inset-0 flex items-center justify-center p-6" style={{position:'fixed',inset:0,backgroundColor:'rgba(2,6,23,0.94)',zIndex:41500}} role="dialog" aria-modal="true" aria-label={`${item.name}の拡大表示`}>
           <div onClick={e=>e.stopPropagation()} className="w-full max-w-[280px] rounded-3xl border-2 border-amber-400/60 bg-slate-950 p-4 flex flex-col items-center gap-3">
             <div className={`w-full aspect-square overflow-hidden bg-black/40 border border-white/10 flex items-center justify-center ${round?'rounded-full':'rounded-2xl'}`}>
               {item.icon
-                ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='breeder'&&BREEDER_CARD_ICON_STYLES[item.id]?<BreederCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
+                ? (item.type==='icon'?<BreederIcon src={item.icon} id={item.id} alt={item.name} className="w-full h-full"/>:item.type==='assist'&&ASSIST_CARD_ICON_STYLES[item.id]?<AssistCardIcon icon={item.icon} cardId={item.id} className="w-full h-full"/>:<img src={item.icon} alt={item.name} className={`w-full h-full ${round?'object-cover':'object-contain'}`}/>)
                 : <span style={{fontSize:'96px'}}>{item.emoji}</span>}
             </div>
             <div className="text-center text-sm font-black text-white leading-tight">{item.name}</div>
@@ -14795,7 +14795,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       {/* PICK TEACHING */}
       {gameState==='PICK_TEACHING'&&(
         <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 z-[3000] p-4 flex flex-col items-center justify-center overflow-hidden">
-          <div className="mb-4 text-center shrink-0"><h2 className="text-xl font-black text-purple-400 italic">ブリーダーカードの継承・強化</h2><p className="text-[9px] text-slate-400 uppercase mt-1 tracking-widest">Select Breeder Card</p></div>
+          <div className="mb-4 text-center shrink-0"><h2 className="text-xl font-black text-purple-400 italic">アシストカードの継承・強化</h2><p className="text-[9px] text-slate-400 uppercase mt-1 tracking-widest">Select Breeder Card</p></div>
           <div className="shrink-0 w-full max-w-sm mb-2"><AssistantBubble scene="pickTeaching" compact/></div>
           {/* 練習中は押せるカードだけを光らせる */}
           <div className="grid grid-cols-2 gap-3 w-full max-w-sm mx-auto overflow-y-auto min-h-0 p-1 flex-1 content-center">
@@ -15845,7 +15845,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               const raw=(focusedCard.flat||0)+def*(focusedCard.mult||0);
               const fIdx=hand.findIndex(c=>c&&c.uid===focusedCard.uid);
               let n=0, halved=false, found=false;
-              selectedCards.forEach(idx=>{ if(idx===pendingCard) return; const c=hand[idx]; const p=!isBreederCard(c); if(idx===fIdx){ halved=p&&n>0; found=true; } if(p) n++; });
+              selectedCards.forEach(idx=>{ if(idx===pendingCard) return; const c=hand[idx]; const p=!isAssistCard(c); if(idx===fIdx){ halved=p&&n>0; found=true; } if(p) n++; });
               if(!found) halved=n>0; // まだ置いていないカードは「次に使う1枚」として判定する
               return(<div className="text-center font-bold">敵の攻撃を最大 {Math.floor(halved?raw*0.5:raw)} 軽減{halved&&<span className="text-amber-300 font-black">（2枚目以降のため半減）</span>}<span className="text-slate-400 font-normal">（{focusedCard.flat||0} ＋ 丈夫さ×{focusedCard.mult||0}{halved?' の半分':''}）</span></div>);
             })()}

@@ -1,6 +1,6 @@
 const TOOLS_DIR = require('path').join(__dirname, '..'); // tools/ 直下。分類フォルダから見た1つ上
 // バランス調整の検証:
-//   ① 同じターンの2枚目以降のカードは効果半減(ブリーダーカードは対象外・ガードも半減)
+//   ① 同じターンの2枚目以降のカードは効果半減(アシストカードは対象外・ガードも半減)
 //   ② かどみうむカードの効果量(CADMIUM_TIERS)と、そこから作られる説明文
 //   ③ みゃるの薬系の進化段階ごとの自傷率と表示
 // 効果量と説明文は実際の定義・関数をNode上で動かして確かめ、画面側の結線はソースで確認する。
@@ -24,16 +24,16 @@ const has = (needle) => source.includes(needle);
 // 「何枚目か」の数え方を実際の定義で動かす
 const ctx = { TEACHING_CARDS: [{ id: 'oryo' }, { id: 'dra' }, { id: 'cadmium' }, { id: 'mua' }, { id: 'atsu' }, { id: 'myaru' }] };
 vm.createContext(ctx);
-const isBreederSrc = source.match(/const isBreederCard = [^\n]+/);
-check('ブリーダーカード判定の定義がある', !!isBreederSrc);
-vm.runInContext(`${isBreederSrc[0]}\nglobalThis.__f = isBreederCard;`, ctx);
-const isBreederCard = ctx.__f;
+const isBreederSrc = source.match(/const isAssistCard = [^\n]+/);
+check('アシストカード判定の定義がある', !!isBreederSrc);
+vm.runInContext(`${isBreederSrc[0]}\nglobalThis.__f = isAssistCard;`, ctx);
+const isAssistCard = ctx.__f;
 
 // 実処理と同じ数え方を再現し、どのカードが半減になるかを確かめる
 const halveFlags = (cards) => {
   let n = 0;
   return cards.map(c => {
-    const breeder = isBreederCard(c);
+    const breeder = isAssistCard(c);
     const halved = !breeder && n > 0;
     if (!breeder) n++;
     return halved;
@@ -41,21 +41,21 @@ const halveFlags = (cards) => {
 };
 const atk = { type: 'atk' }, guard = { type: 'guard' }, uniq = { type: 'unique' }, oryo = { id: 'oryo', type: 'buff' };
 
-check('ブリーダーカードを見分けられる', isBreederCard(oryo) === true && isBreederCard(atk) === false);
+check('アシストカードを見分けられる', isAssistCard(oryo) === true && isAssistCard(atk) === false);
 check('1枚だけなら半減しない', halveFlags([atk]).join() === 'false');
 check('攻撃2枚なら2枚目が半減', halveFlags([atk, atk]).join() === 'false,true');
 check('攻撃3枚なら2枚目以降が半減', halveFlags([atk, atk, uniq]).join() === 'false,true,true');
 check('ガードも半減の対象(攻撃→ガード)', halveFlags([atk, guard]).join() === 'false,true');
 check('ガードが先でも2枚目の攻撃は半減', halveFlags([guard, atk]).join() === 'false,true');
-check('ブリーダーカードは何枚目でも半減しない', halveFlags([atk, oryo]).join() === 'false,false');
-check('ブリーダーカードは枚数に数えない', halveFlags([oryo, atk]).join() === 'false,false');
-check('ブリーダーカードを挟んでも攻撃の順番は変わらない', halveFlags([atk, oryo, atk]).join() === 'false,false,true');
+check('アシストカードは何枚目でも半減しない', halveFlags([atk, oryo]).join() === 'false,false');
+check('アシストカードは枚数に数えない', halveFlags([oryo, atk]).join() === 'false,false');
+check('アシストカードを挟んでも攻撃の順番は変わらない', halveFlags([atk, oryo, atk]).join() === 'false,false,true');
 
 // 画面側の結線
 check('processTurnで2枚目以降を判定している',
   has('const halved=!isBreeder&&penaltyCardCount>0;')
-    && has("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'breederCardEffect'):(halved?0.5:1);"));
-check('ブリーダーカードは枚数に数えない(実処理)', has('if(!isBreeder) penaltyCardCount++;'));
+    && has("const effMul=isBreeder&&specialRuleDifficulty?extremeSpecialRule(specialRuleDifficulty,'assistCardEffect'):(halved?0.5:1);"));
+check('アシストカードは枚数に数えない(実処理)', has('if(!isBreeder) penaltyCardCount++;'));
 check('ガードの軽減量を半減する',
   has('currentTurnGuardFlat+=GUARD_EVOLUTION[guardLevel].flat*effMul') && has('currentTurnGuardMult+=GUARD_EVOLUTION[guardLevel].mult*effMul'));
 check('弱ガードも同じ扱い', has('GUARD_EVOLUTION[guardLevel].flat*0.5*effMul'));
@@ -64,7 +64,7 @@ check('弱ガードも同じ扱い', has('GUARD_EVOLUTION[guardLevel].flat*0.5*e
 check('攻撃ダメージの半減が枚数基準になっている',
   /getDmg\(card,slotIdx,activeMon,localOryoAdd,localDmgModAdd,halved,attackStartDist[,)]/.test(source)
     && !has('localDmgModAdd,attackCount>0,attackStartDist'));
-check('あつの挑発(ブリーダーカード)の攻撃は半減しない', has('getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)'));
+check('あつの挑発(アシストカード)の攻撃は半減しない', has('getDmg(card,slotIdx,stunMon,localOryoAdd,localDmgModAdd,false)'));
 // 効果量そのものはバランス調整で変わるので、数字ではなく「*effMul が掛かっているか」を見る。
 // (実際にゴーレムの闘志を 0.1 → 0.075 にしたときここが落ちた。見たいのは半減の結線であって
 //  効果量ではないので、数字を書き写さない形にしてある)
@@ -75,7 +75,7 @@ check('固有技の数値効果も半減する',
     && buffHalved('addPermaBuff', 'critRatePct') && buffHalved('addWaveBuff', 'enemyAtkDebuffPct'));
 check('半減したことを画面に出す', has("addPopup('2枚目以降 効果半減'"));
 check('ダメージ予測も同じ数え方を使う',
-  has('let committedTotal=0; let committedPenaltyCnt=0;') && has('const isPenalty=!isBreederCard(card);')
+  has('let committedTotal=0; let committedPenaltyCnt=0;') && has('const isPenalty=!isAssistCard(card);')
     && has('let globalPenaltyCnt=0;'));
 check('攻撃だけを数える古い判定が残っていない',
   !has('committedAtkCnt') && !has('globalAtkCnt') && !has('let committedAtk=0;') && !has('assignedAttackCount'));
@@ -83,7 +83,7 @@ check('攻撃だけを数える古い判定が残っていない',
 // 保留中(タップしただけでまだ置いていない)カードを自分自身で数えると、1枚目なのに半減表示になる
 const pendingGuards = (source.match(/if\(idx===pendingIdx\) return;/g) || []).length;
 check('予測は保留中のカードを枚数に数えない', pendingGuards >= 2, `${pendingGuards}か所`);
-check('スロット予測も保留中のカードを除く', has('selectedCards.forEach(idx=>{if(idx!==pendingIdx&&!isBreederCard(hand[idx]))committedPenalty++;});'));
+check('スロット予測も保留中のカードを除く', has('selectedCards.forEach(idx=>{if(idx!==pendingIdx&&!isAssistCard(hand[idx]))committedPenalty++;});'));
 check('保留カードの判定にドラッグ中の手札位置も使う', has('dragState.cardIndex:null'));
 check('半減マークは保留カード自身の判定で出す', has("{isPendingPreview&&isPendingHalved?'½ ':''}DMG:"));
 
@@ -103,12 +103,12 @@ check('スロットのガード表示に軽減量を出す', has('{gv>0&&<span')
 check('半減するカードには½を付ける', has("{halvedByIdx[idx]?'½':''}{card.name}"));
 check('ガードのカード詳細も半減後の値を出す', has('（2枚目以降のため半減）') && has('Math.floor(halved?raw*0.5:raw)'));
 check('ドラッグ中のカードも「次の1枚」として半減判定する',
-  has('if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=!isBreederCard(hand[pendingIdx])&&n>0;'));
+  has('if(pendingIdx!=null&&selectedCards.includes(pendingIdx)) halvedByIdx[pendingIdx]=!isAssistCard(hand[pendingIdx])&&n>0;'));
 
 // スワイプではカード効果のパネルを出さない(出したままだと合計表示が隠れる)
 check('タップとスワイプでカード効果の表示を切り替えられる', has('const selectCardAt = (i, showDetail = true)') && has('const focus=(card)=>setFocusedCard(showDetail?card:null);'));
 check('スワイプ経由の選択はパネルを出さない', has('selectCardAt(cardIndex, false);'));
-const dragBlock = source.slice(source.indexOf('const dragAssignToSlot'), source.indexOf('const isBreederCard'));
+const dragBlock = source.slice(source.indexOf('const dragAssignToSlot'), source.indexOf('const isAssistCard'));
 check('スワイプで置いたときにパネルを出さない', !dragBlock.includes('setFocusedCard(c)'), `${(dragBlock.match(/setFocusedCard\(null\)/g)||[]).length}か所でパネルを閉じる`);
 // ヘルプの本文は data/help.js にデータとして持っている
 const helpSrc = fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8');

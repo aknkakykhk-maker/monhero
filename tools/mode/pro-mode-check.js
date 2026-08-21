@@ -157,7 +157,7 @@ const check = (name, ok, detail = '') => {
 
     // --- ⑤ バトルへ。WAVE 2の合流候補は選んだ5体から3体だけ ---
     await page.getByRole('button', { name: 'この候補で始める' }).dispatchEvent('click');
-    await page.getByRole('heading', { name: 'ブリーダーカードの継承・強化' }).waitFor({ timeout: 15000 });
+    await page.getByRole('heading', { name: 'アシストカードの継承・強化' }).waitFor({ timeout: 15000 });
     await page.locator('.grid > button').first().dispatchEvent('click');
     await page.getByRole('button', { name: /習得する|強化する/ }).dispatchEvent('click', {}, { timeout: 15000 });
     await page.locator('[data-battle-controls]').waitFor({ timeout: 20000 });
