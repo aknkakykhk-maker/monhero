@@ -211,6 +211,14 @@ const round = (v) => Math.round(v * 1e6) / 1e6;
     gameSource.includes("if(t.id==='poltz'){")
     && gameSource.includes('const tier=POLTZ_TIERS[Math.min(level,POLTZ_TIERS.length-1)];')
     && !/if\(t\.id==='poltz'\)[^\n]*20%/.test(gameSource));
+  // 「待機」ではなく「発動（N回まで）」で統一する(2026年8月にユーザーが指定)。
+  // カード説明・ヘルプ・更新履歴でばらけると、同じ仕組みが別物に見えてしまう
+  check('カード説明が「発動（N回まで）」の言い方になっている',
+    gameSource.includes('敵の攻撃を受けるたびに発動（${tier.charges}回まで）')
+    && gameSource.includes('発動ごとにガッツ ${pct(tier.healGuts)}%回復'));
+  check('ヘルプ・更新履歴にも「待機」が残っていない',
+    !/ポルツ[^\n]*待機|待機[^\n]*ポルツ/.test(helpSource)
+    && !/ポルツ[^\n]*待機/.test(fs.readFileSync(path.join(REPO_ROOT, 'monster-hero/data/changelog.js'), 'utf8')));
   check('カード使用時の演出が登録されている', /poltz:\s*\{ icon:"🍱"/.test(gameSource));
   // 待機回数・段階・倍率は既存の permaBuffs(バトル中だけの数値)へ足すだけで、保存キーは増やさない
   check('新しい保存キーを増やしていない',
