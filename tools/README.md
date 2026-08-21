@@ -190,6 +190,7 @@ node tools/build.js --check
 | `node monster/mermaid-browser-check.js` | ウンディーネ／ヤオビクニを実ブラウザで確認する。マーケットのアイコン／円盤石タブに6商品が並ぶこと、4つのブリーダーアイコンと2つの円盤石を実際に購入できること、円盤石でモンスターが解放されベースモン一覧に出ること、購入したアイコンがプロフィール選択に並び設定でき、再読み込みしても残ることを見る(`python3 -m http.server 8899` でルートを配信した状態で実行する)。 |
 | `node monster/meloso-assist-check.js` | メロソのカード定義、マーケット解放、6枠維持、回復・ガード・枚数条件・次ターン予約・予測共通化を確認する。 |
 | `node monster/kiki-assist-check.js` | ききのアシストカード(応援／本気／全力全開)の定義と種別を確認する。 |
+| `node monster/poltz-assist-check.js` | ポルツのアシストカード(弁当／挫折／目覚め)の定義と、発動処理を実際に動かして1回あたり・累計の効果量とEXTREME倍率、発動する／しない場面の結線を確認する。 |
 | `node monster/market-icon-check.js` | マーケットのアイコン商品を確認する。 |
 | `node monster/monster-art-fit-check.js` | ウンディーネ・ヤオビクニ(縦長2:3の立ち絵)が、丸枠・正方形枠の一覧で頭のてっぺんや尾びれを欠かさず表示できているかを確認する。 |
 
