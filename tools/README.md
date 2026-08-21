@@ -87,6 +87,7 @@ node tools/build.js --check
 | `node boot/gift-login-check.js` | ギフト受取と、日本時間4時更新のログインボーナスを本番ソースの関数で検証する。 |
 | `node boot/mission-check.js` | デイリー・ウィークリーのJST期間、達成条件、バッジ、ギフト報酬と重複防止を確認する。 |
 | `node boot/mission-gift-badge-check.js` | ミッション・ギフトの未受取バッジ、ミッション一括受取、編成決定後の戻り先、ランキングのタブ分離を確認する。 |
+| `node boot/market-notice-check.js` | マーケットへ商品を足したのに助手の告知(`assistantNotice`)を付け忘れていないか、告知idの重複・種類・本文の有無を確認する。 |
 
 ### バトル
 
