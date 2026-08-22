@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+'use strict';
+const fs = require('fs');
+const vm = require('vm');
+const source = fs.readFileSync('monster-hero/src/game-system.jsx', 'utf8');
+const start = source.indexOf("const AUTO_SETTINGS_KEY = 'mh_auto_settings_v1';");
+const end = source.indexOf('// 難易度。', start);
+if (start < 0 || end < 0) throw new Error('AUTO設定の正規化定義が見つかりません');
+const context = {};
+vm.runInNewContext(`${source.slice(start, end)};this.normalizeAutoSettings=normalizeAutoSettings;`, context);
+const normalize = value => JSON.parse(JSON.stringify(context.normalizeAutoSettings(value, ['Mocchi','masu:one','masu:two'])));
+const expectedDefault = {strategy:'random',allies:[{rosterEntry:null,slot:null},{rosterEntry:null,slot:null},{rosterEntry:null,slot:null}]};
+const assert = (condition, message) => { if (!condition) throw new Error(message); };
+assert(JSON.stringify(normalize(null)) === JSON.stringify(expectedDefault), 'キーなしを既定値へ戻せません');
+assert(JSON.stringify(normalize({strategy:'unknown',allies:'broken'})) === JSON.stringify(expectedDefault), '壊れた値を既定値へ戻せません');
+const normalized = normalize({strategy:'offense',allies:[{rosterEntry:'masu:one',slot:3},{rosterEntry:'masu:one',slot:1},{rosterEntry:'missing',slot:0}]});
+assert(normalized.strategy === 'offense', '有効な方針を保持できません');
+assert(normalized.allies[0].rosterEntry === 'masu:one' && normalized.allies[0].slot === 3, 'masu roster entryまたは距離を保持できません');
+assert(normalized.allies[1].rosterEntry === null && normalized.allies[2].rosterEntry === null, '重複または候補外のentryを除外できません');
+assert(source.includes("await storeSet(AUTO_SETTINGS_KEY, normalized, false)"), '決定時の保存処理が見つかりません');
+assert(source.includes("k.startsWith('mh_')"), 'mh_キーのバックアップ処理が見つかりません');
+console.log('OK: AUTO設定の既定値・壊れた値・重複・候補外・masu roster entry・保存・バックアップ対象を確認');
