@@ -10,6 +10,7 @@
 //   ・セットアップ画面の「人数」がいちばん上にあり、スクロールせずに味方・敵の数を変えられる
 //   ・戦闘画面で敵1〜4体・味方1〜4体のどれでもコマンドが画面内に収まり、押せる大きさ(44px以上)がある
 //   ・対象を選ばなくても「ねらい」が必ず1体に決まり、その表示が画面内にある
+//   ・ダメージの数字が読める大きさで出て、名前と重ならず、画面の外へ出ない
 //   ・攻撃モーション中も枠からはみ出さず、味方は上・敵は下へ動く
 //   ・結果画面の一覧が見切れず、下のボタンまで届く
 //
@@ -70,7 +71,14 @@ const setGameState = noop, setRpgPartySize = noop, setRpgEnemyCount = noop;
 // 「技」の一覧はコマンド欄の中で開く。画面だけの開閉なので、測るときは URL から切り替える
 const rpgSkillMenu = new URLSearchParams(location.search).get('p') === 'skill';
 const setRpgSkillMenu = noop;
-const rpgHits = null;
+// ダメージの数字は表示だけの状態。p=hit のとき、通常ダメージ・会心・回避・戦闘不能を
+// 一度に出した状態で測る(いちばん混み合う場面をわざと作る)
+const rpgHits = params.get('p') === 'hit'
+  ? { at: 3,
+      ally:  [{ damage:284, evaded:false, crit:false, down:false }, null, null, null],
+      enemy: [{ damage:1362, evaded:false, crit:true, down:false }, { damage:0, evaded:true, crit:false, down:false },
+              { damage:97, evaded:false, crit:false, down:true }, { damage:6, evaded:false, crit:false, down:false }] }
+  : null;
 // 「ねらい」は画面だけの状態。p=aim のとき2体目を固定してあり、それ以外は自動(ライフ最小)
 const rpgAim = params.get('p') === 'aim' ? 1 : null;
 const setRpgAim = noop;
@@ -102,7 +110,7 @@ battle.allies.forEach((u, i) => { u.record = { dealt: 123456, taken: 65432, atta
 battle.enemies.forEach(u => { u.record = { dealt: 54321, taken: 98765, attacks: 9, skills: 5, gutsSpent: 45, crits: 13, evaded: 12 }; u.hp = Math.max(1, Math.floor(u.maxHp * 0.6)); });
 battle.outcome = 'win';
 // 行動順の帯を「そのターンの確定順」で最大(味方4+敵4=8体)まで並べた状態にする
-if (params.get('p') === 'resolve' || rpgActing) {
+if (params.get('p') === 'resolve' || params.get('p') === 'hit' || rpgActing) {
   battle.phase = 'resolve';
   battle.plan = rpgSpeedOrder(battle).map((entry, i) => ({ ...entry, command:'attack', targetSide: entry.side === 'ally' ? 'enemy' : 'ally', targetIndex:0, value: 100 - i }));
   battle.planStep = Math.min(2, battle.plan.length - 1);
@@ -179,6 +187,7 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
       ['battle', 4, 4, '戦闘(味方4・敵4・技一覧を開いた状態)', 'skill'],
       ['battle', 4, 4, '戦闘(味方4・敵4・敵をタップしてねらいを固定)', 'aim'],
       ['battle', 4, 4, '戦闘(味方4・敵4・行動順8体を実行中)', 'resolve'],
+      ['battle', 4, 4, '戦闘(味方4・敵4・ダメージ/会心/回避/戦闘不能の数字が出た瞬間)', 'hit'],
       ['battle', 4, 4, '戦闘(味方4・敵4・味方の攻撃モーション中)', 'motion'],
       ['battle', 4, 4, '戦闘(味方4・敵4・敵の攻撃モーション中)', 'motionfoe'],
       ['result', 4, 4, '結果(味方4・敵4)', 'command'],
@@ -188,6 +197,12 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
       page.on('pageerror', e => errors.push(e.message));
       await page.goto(`file://${path.join(dir, 'index.html')}?s=${screen}&a=${allies}&e=${enemies}&p=${phase}`);
       await page.waitForTimeout(120);
+      // ダメージの数字は動いている途中なので、測るたびに結果が変わらないよう
+      // 「出はじめ(いちばん下にある瞬間)」で止めてから測る。ここが名前と重なりやすい
+      if (phase === 'hit') {
+        await page.evaluate(() => document.querySelectorAll('.mh-rpg-hit')
+          .forEach(el => el.getAnimations().forEach(a => { a.pause(); a.currentTime = 0; })));
+      }
       const m = await page.evaluate(() => {
         const rect = (sel) => { const el = document.querySelector(sel); return el ? el.getBoundingClientRect().toJSON() : null; };
         const scroller = document.querySelector('.mh-rpg-scroll');
@@ -214,6 +229,20 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
           rendered: !!document.querySelector('.mh-rpg-screen, .mh-rpg-battle'),
           docWidth: document.documentElement.scrollWidth,
           bodyWidth: document.body.scrollWidth,
+          hits: [...document.querySelectorAll('.mh-rpg-hit')].map(el => ({
+            text: el.textContent,
+            font: parseFloat(getComputedStyle(el).fontSize),
+            r: el.getBoundingClientRect().toJSON(),
+          })),
+          // 数字は絵の上へ重ねて出す。味方カードでは名前と重ならないことも見る
+          hitOverName: [...document.querySelectorAll('.mh-rpg-member')].some(card => {
+            const hit = card.querySelector('.mh-rpg-hit'), name = card.querySelector('.mh-rpg-member-body b');
+            if (!hit || !name) return false;
+            const a = hit.getBoundingClientRect(), b = name.getBoundingClientRect();
+            return a.right > b.left && a.left < b.right && a.bottom > b.top && a.top < b.bottom;
+          }),
+          fieldScrollX: document.querySelector('.mh-rpg-field')
+            ? { w: document.querySelector('.mh-rpg-field').clientWidth, s: document.querySelector('.mh-rpg-field').scrollWidth } : null,
           aimBox: rect('.mh-rpg-aim'),
           aimText: (document.querySelector('.mh-rpg-aim') || {}).textContent || '',
           aimHighlight: document.querySelectorAll('.mh-rpg-foe.aimed, .mh-rpg-foe.auto').length,
@@ -282,7 +311,7 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
         check(`${tag}: 敵・メッセージ・味方・コマンドが縦に全部入る`,
           !!m.enemies && !!m.allies && m.enemies.top >= -0.5 && m.allies.bottom <= m.commands.top + 0.5,
           `敵 ${Math.round(m.enemies?.bottom)} → 味方 ${Math.round(m.allies?.top)}〜${Math.round(m.allies?.bottom)} → コマンド ${Math.round(m.commands?.top)}`);
-        if (phase === 'resolve' || phase.startsWith('motion')) {
+        if (phase === 'resolve' || phase === 'hit' || phase.startsWith('motion')) {
           // 実行中はコマンドを出さず「行動中…」を出す
           check(`${tag}: 実行中はコマンドの代わりに進行状況が出る`, !m.firstCommand && !!m.commands);
           check(`${tag}: 実行中は現在コマンド入力中の味方が居ない`, m.activeMembers === 0);
@@ -319,6 +348,24 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
             mo ? `ずれ ${Math.round(mo.end.top - mo.at0.top)}px` : '');
           check(`${tag}: モーション中も横スクロールが増えない`, !!mo && mo.docWidth <= width && mo.bodyWidth <= width,
             `幅 ${mo?.docWidth}px / 画面 ${width}px`);
+        }
+        if (phase === 'hit') {
+          check(`${tag}: ダメージの数字が当たった数だけ出る`, m.hits.length === 5, `${m.hits.length}個`);
+          check(`${tag}: 通常ダメージ・会心・回避・戦闘不能がすべて読める形で出る`,
+            m.hits.some(h => h.text === '-284') && m.hits.some(h => h.text === '会心-1362')
+            && m.hits.some(h => h.text === 'MISS') && m.hits.some(h => h.text === '-97'),
+            m.hits.map(h => h.text).join(' / '));
+          // 「目立たせる」ための下限。小さくすると気づけないので、実測の文字サイズで見る
+          check(`${tag}: 数字が小さすぎない(14px以上・会心は19px以上)`,
+            m.hits.every(h => h.font >= 14) && m.hits.filter(h => h.text.startsWith('会心')).every(h => h.font >= 19),
+            `最小 ${Math.min(...m.hits.map(h => h.font))}px`);
+          check(`${tag}: 味方の数字が名前と重ならない`, !m.hitOverName);
+          check(`${tag}: 数字が画面の外へ出ない`,
+            m.hits.every(h => h.r.left >= -0.5 && h.r.right <= width + 0.5 && h.r.top >= -0.5 && h.r.bottom <= height + 0.5),
+            `左端 ${Math.round(Math.min(...m.hits.map(h => h.r.left)))} / 右端 ${Math.round(Math.max(...m.hits.map(h => h.r.right)))} / 上端 ${Math.round(Math.min(...m.hits.map(h => h.r.top)))} / 下端 ${Math.round(Math.max(...m.hits.map(h => h.r.bottom)))} — 画面 ${width}x${height}`);
+          check(`${tag}: 数字が出ても敵エリアが横スクロールしない`,
+            !!m.fieldScrollX && m.fieldScrollX.s <= m.fieldScrollX.w + 1,
+            m.fieldScrollX ? `表示 ${m.fieldScrollX.w}px / 中身 ${m.fieldScrollX.s}px` : '見つからない');
         }
         if (phase === 'skill') {
           // 技ボタン → 技一覧 → 技選択 の途中。一覧が画面外へはみ出さないこと
@@ -374,6 +421,11 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
       }
       check(`${tag}: 小さすぎるタップ領域が無い`, m.minTap === null || m.minTap >= MIN_TAP, `最小 ${Math.round(m.minTap)}px`);
       if (width === 375) {
+        // 確認用の画像は「いちばん読ませたい山」で撮る(測定は出はじめで止めたまま)
+        if (phase === 'hit') {
+          await page.evaluate(() => document.querySelectorAll('.mh-rpg-hit')
+            .forEach(el => el.getAnimations().forEach(a => { a.currentTime = a.effect.getTiming().duration * 0.3; })));
+        }
         const file = path.join(dir, `${screen}-${allies}v${enemies}-${phase}.png`);
         await page.screenshot({ path: file });
         shots.push(file);
