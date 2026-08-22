@@ -516,12 +516,31 @@ check('戦闘不能・防御が見て分かる',
   rpgUi.includes('mh-rpg-down-mark') && rpgUi.includes('mh-rpg-guard-mark')
   && /\.mh-rpg-foe\.down\{[^}]*grayscale/.test(source) && /\.mh-rpg-member\.down\{[^}]*grayscale/.test(source));
 check('ダメージ・会心・回避がモンスターの上に出る',
-  rpgUi.includes('const hitNode=(hit)=>') && rpgUi.includes("hit.evaded?'MISS'") && rpgUi.includes("hit.crit?'会心 '")
+  rpgUi.includes('const hitNode=(hit)=>') && rpgUi.includes("hit.evaded?'MISS'") && rpgUi.includes('<i>会心</i>')
   && /\.mh-rpg-hit\{/.test(source) && /\.mh-rpg-hit\.crit\{/.test(source) && /\.mh-rpg-hit\.miss\{/.test(source));
 check('ダメージ表示は戦闘の計算に触らず、前後の状態の差だけを見ている',
   source.includes('const rpgPrevBattleRef = useRef(null);')
   && source.includes('rpgBattle.planStep !== prev.planStep + 1) return;')
   && !/rpgHits/.test(rpgSource));
+// 同じ相手へ2回続けて当たると、Reactが同じ要素を使い回してアニメーションが動かない。
+// 行動の番号をキーにして、当たるたびに必ず出し直す
+check('同じ相手へ続けて当たっても数字を出し直す',
+  rpgUi.includes('key={rpgHits?rpgHits.at:0}') && source.includes("at: rpgBattle.planStep };"));
+check('会心・回避・戦闘不能が数字だけで見分けられる',
+  rpgUi.includes("hit.crit?'crit':''") && rpgUi.includes("hit.evaded?'miss':''") && rpgUi.includes("hit.down?'down':''")
+  && /\.mh-rpg-hit\.crit\{/.test(source) && /\.mh-rpg-hit\.miss\{/.test(source) && /\.mh-rpg-hit\.down\{/.test(source));
+// 「読めない大きさ」に戻さないための下限。CSSの実値をそのまま見る
+{
+  const hitCss = (grab(source, '.mh-rpg-hit{', '}') + '}');
+  const critCss = (grab(source, '.mh-rpg-hit.crit{', '}') + '}');
+  const size = (css) => Number((css.match(/font-size:(\d+)px/) || [])[1] || 0);
+  const ms = Number((hitCss.match(/rpgHitPop (\d+)ms/) || [])[1] || 0);
+  check('ダメージの数字が読める大きさ(通常18px以上・会心22px以上)',
+    size(hitCss) >= 18 && size(critCss) >= 22, `通常 ${size(hitCss)}px / 会心 ${size(critCss)}px`);
+  check('数字が出てから消えるまで0.8秒以上ある', ms >= 800, `${ms}ms`);
+  check('数字を消すまでの時間がアニメーションと揃っている',
+    source.includes(`setTimeout(() => setRpgHits(null), ${ms});`), `${ms}ms`);
+}
 
 // --- 攻撃モーション(通常バトルからの流用) ---
 // モーションの種類は通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion から決める。
