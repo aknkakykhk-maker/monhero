@@ -70,7 +70,8 @@ const rpgResetAllocAll = noop, rpgStartBattle = noop, rpgCommand = noop, setRpgB
 const setRpgVarianceOn = noop;
 const rpgVarianceOn = false;
 const MONS = rpgMonsterList();
-const partySlots = Array.from({length:N_ALLY}, (_, i) => ({ monId: MONS[i % MONS.length].id, level: 50, alloc: rpgNormalizeAlloc({hp:20,atk:15,def:9,guts:5}, 50) }));
+// 6ステータスすべてへ振り切った状態(使用49/49P)で測る
+const partySlots = Array.from({length:N_ALLY}, (_, i) => ({ monId: MONS[i % MONS.length].id, level: 50, alloc: rpgNormalizeAlloc({hp:14,atk:11,def:9,guts:7,speed:5,luck:3}, 50) }));
 const enemySlots = Array.from({length:N_ENEMY}, (_, i) => ({ monId: MONS[(i+3) % MONS.length].id, level: 50, typeId: RPG_ENEMY_TYPES[i % 3].id }));
 const rpgPartySize = N_ALLY, rpgEnemyCount = N_ENEMY;
 const rpgActiveParty = partySlots, rpgActiveEnemies = enemySlots;
@@ -78,9 +79,19 @@ const rpgActiveParty = partySlots, rpgActiveEnemies = enemySlots;
 let battle = rpgCreateBattle(partySlots, enemySlots);
 battle.turn = 12;
 battle.log = ['ヤオビクニのアクアゲイザー！','赤ゴーレムに1234ダメージ','赤ゴーレムは戦闘不能！','--- TURN 12 ---','スネグーラチカのこうげき！'];
-battle.allies.forEach((u, i) => { u.record = { dealt: 123456, taken: 65432, attacks: 12, skills: 8, gutsSpent: 96 }; u.hp = Math.max(1, Math.floor(u.maxHp * 0.4)); });
-battle.enemies.forEach(u => { u.record = { dealt: 54321, taken: 98765, attacks: 9, skills: 5, gutsSpent: 45 }; u.hp = Math.max(1, Math.floor(u.maxHp * 0.6)); });
+battle.allies.forEach((u, i) => { u.record = { dealt: 123456, taken: 65432, attacks: 12, skills: 8, gutsSpent: 96, crits: 14, evaded: 11 }; u.hp = Math.max(1, Math.floor(u.maxHp * 0.4)); });
+battle.enemies.forEach(u => { u.record = { dealt: 54321, taken: 98765, attacks: 9, skills: 5, gutsSpent: 45, crits: 13, evaded: 12 }; u.hp = Math.max(1, Math.floor(u.maxHp * 0.6)); });
 battle.outcome = 'win';
+// 行動順の帯を「そのターンの確定順」で最大(味方4+敵4=8体)まで並べた状態にする
+if (params.get('p') === 'resolve') {
+  battle.phase = 'resolve';
+  battle.plan = rpgSpeedOrder(battle).map((entry, i) => ({ ...entry, command:'attack', targetSide: entry.side === 'ally' ? 'enemy' : 'ally', targetIndex:0, value: 100 - i }));
+  battle.planStep = Math.min(2, battle.plan.length - 1);
+} else {
+  battle.phase = 'command';
+  battle.inputIndex = 0;
+  battle.inputs = {};
+}
 const rpgBattle = battle;
 
 function Setup() {
@@ -136,26 +147,35 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const shots = [];
   for (const [label, width, height] of VIEWPORTS) {
-    for (const [screen, allies, enemies, caseLabel] of [
-      ['setup', 4, 4, 'セットアップ(味方4・敵4)'],
-      ['battle', 1, 1, '戦闘(味方1・敵1)'],
-      ['battle', 4, 4, '戦闘(味方4・敵4)'],
-      ['result', 4, 4, '結果(味方4・敵4)'],
+    for (const [screen, allies, enemies, caseLabel, phase] of [
+      ['setup', 4, 4, 'セットアップ(味方4・敵4・6ステータス)', 'command'],
+      ['battle', 1, 1, '戦闘(味方1・敵1)', 'command'],
+      ['battle', 4, 4, '戦闘(味方4・敵4・コマンド入力中)', 'command'],
+      ['battle', 4, 4, '戦闘(味方4・敵4・行動順8体を実行中)', 'resolve'],
+      ['result', 4, 4, '結果(味方4・敵4)', 'command'],
     ]) {
       const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 2 });
       const errors = [];
       page.on('pageerror', e => errors.push(e.message));
-      await page.goto(`file://${path.join(dir, 'index.html')}?s=${screen}&a=${allies}&e=${enemies}`);
+      await page.goto(`file://${path.join(dir, 'index.html')}?s=${screen}&a=${allies}&e=${enemies}&p=${phase}`);
       await page.waitForTimeout(120);
       const m = await page.evaluate(() => {
         const rect = (sel) => { const el = document.querySelector(sel); return el ? el.getBoundingClientRect().toJSON() : null; };
         const scroller = document.querySelector('.mh-rpg-scroll');
         const taps = [...document.querySelectorAll('.mh-rpg-command-row button, .mh-rpg-footer button, .mh-rpg-count button, .mh-rpg-stat button, .mh-rpg-enemy')]
           .map(el => el.getBoundingClientRect().height);
+        const order = document.querySelector('.mh-rpg-order-list');
+        const chips = [...document.querySelectorAll('.mh-rpg-order-chip')];
         return {
           rendered: !!document.querySelector('.mh-rpg-screen, .mh-rpg-battle'),
           docWidth: document.documentElement.scrollWidth,
           bodyWidth: document.body.scrollWidth,
+          statRows: document.querySelectorAll('.mh-rpg-card:first-of-type .mh-rpg-stat').length,
+          statRowMaxRight: Math.max(0, ...[...document.querySelectorAll('.mh-rpg-stat')].map(el => el.getBoundingClientRect().right)),
+          orderCount: chips.length,
+          orderBox: order ? order.getBoundingClientRect().toJSON() : null,
+          orderMaxRight: chips.length ? Math.max(...chips.map(el => el.getBoundingClientRect().right)) : 0,
+          resultMaxRight: Math.max(0, ...[...document.querySelectorAll('.mh-rpg-result-row')].map(el => el.getBoundingClientRect().right)),
           footer: rect('.mh-rpg-footer'),
           commands: rect('.mh-rpg-commands'),
           firstCommand: rect('.mh-rpg-command-row button'),
@@ -170,13 +190,25 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
       check(`${tag}: 描画できている`, m.rendered && errors.length === 0, errors.join(' / '));
       check(`${tag}: 横スクロールしない`, m.docWidth <= width && m.bodyWidth <= width, `幅 ${m.docWidth}px / 画面 ${width}px`);
       if (screen === 'battle') {
+        // 行動順の帯。最大8体でも折り返して画面内に収まること
+        check(`${tag}: 行動順が生存者ぶん出ている`, m.orderCount === allies + enemies, `${m.orderCount}体`);
+        check(`${tag}: 行動順が横にはみ出さない`, m.orderMaxRight <= width + 0.5, `右端 ${Math.round(m.orderMaxRight)}px / 画面 ${width}px`);
         check(`${tag}: コマンドが画面内に収まる`, !!m.commands && m.commands.bottom <= height + 0.5,
           m.commands ? `下端 ${Math.round(m.commands.bottom)}px` : '見つからない');
         check(`${tag}: 敵・味方・ログ・コマンドが縦に全部入る`,
           !!m.enemies && !!m.allies && !!m.log && m.enemies.top >= -0.5 && m.log.bottom <= m.allies.top + 0.5 && m.allies.bottom <= m.commands.top + 0.5,
           `敵 ${Math.round(m.enemies?.bottom)} → 味方 ${Math.round(m.allies?.top)}〜${Math.round(m.allies?.bottom)} → コマンド ${Math.round(m.commands?.top)}`);
-        check(`${tag}: コマンドが押せる大きさ`, !!m.firstCommand && m.firstCommand.height >= MIN_TAP, `${Math.round(m.firstCommand?.height)}px`);
+        // 実行中はコマンドを出さず「行動中…」を出すので、押せる大きさを見るのは入力中だけ
+        if (phase === 'resolve') check(`${tag}: 実行中はコマンドの代わりに進行状況が出る`, !m.firstCommand && !!m.commands);
+        else check(`${tag}: コマンドが押せる大きさ`, !!m.firstCommand && m.firstCommand.height >= MIN_TAP, `${Math.round(m.firstCommand?.height)}px`);
       } else {
+        if (screen === 'setup') {
+          check(`${tag}: ステ振りの行が6ステータスぶん出ている`, m.statRows === 6, `${m.statRows}行`);
+          check(`${tag}: ステ振りの行が横にはみ出さない`, m.statRowMaxRight <= width + 0.5, `右端 ${Math.round(m.statRowMaxRight)}px`);
+        }
+        if (screen === 'result') {
+          check(`${tag}: 結果の表(会心・回避を含む9列)が横にはみ出さない`, m.resultMaxRight <= width + 0.5, `右端 ${Math.round(m.resultMaxRight)}px`);
+        }
         check(`${tag}: 下のボタンが画面内に収まる`, !!m.footer && m.footer.bottom <= height + 0.5,
           m.footer ? `下端 ${Math.round(m.footer.bottom)}px` : '見つからない');
         check(`${tag}: 上の内容をスクロールで全部追える`, !!m.scrollable && m.scrollable.h > 0,
@@ -184,7 +216,7 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
       }
       check(`${tag}: 小さすぎるタップ領域が無い`, m.minTap === null || m.minTap >= MIN_TAP, `最小 ${Math.round(m.minTap)}px`);
       if (width === 375) {
-        const file = path.join(dir, `${screen}-${allies}v${enemies}.png`);
+        const file = path.join(dir, `${screen}-${allies}v${enemies}-${phase}.png`);
         await page.screenshot({ path: file });
         shots.push(file);
       }
