@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 6f96a710a23d24b6
+// source-sha256: d1a8760203c910b0
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 08:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 08:48"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -14897,6 +14897,38 @@ function MonsterHeroGame() {
     }
     return mon.name;
   };
+  const renderAutoAllySummary = entry => {
+    if (!entry) return null;
+    const isMasu = entry.startsWith('masu:');
+    const masu = isMasu ? getMasuMon(entry.slice(5)) : null;
+    const base = isMasu ? ALL_PLAYER_MONSTERS[masu?.baseId] : ALL_PLAYER_MONSTERS[entry];
+    const mon = isMasu ? mergeMasuIntoMon(masu) : base;
+    if (!mon || !base) return null;
+    const aptitude = isMasu ? resolveMasuDistAptitude(masu, base) : RANGE_LABELS.map((_, index) => getDistAptitude(mon, index));
+    const power = isMasu ? masuPowerOf(masu) : monsterPowerOf(mon);
+    const displayName = isMasu && mon.name !== base.name ? `${mon.name}（${base.name}）` : mon.name;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0 overflow-hidden rounded-xl border border-indigo-400/30 bg-black/30 px-2.5 py-2",
+      "aria-label": `${displayName}の簡易情報`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "truncate text-xs font-black text-white"
+    }, displayName), /*#__PURE__*/React.createElement("div", {
+      className: "mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] font-black"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: isMasu ? 'text-pink-300' : 'text-cyan-300'
+    }, isMasu ? 'マスモン' : 'ベースモン'), isMasu && /*#__PURE__*/React.createElement("span", {
+      className: "text-pink-300"
+    }, "\u7D46Lv.", masuBondLevelInfo(masu).level), /*#__PURE__*/React.createElement("span", {
+      className: "text-slate-200"
+    }, "\u7DCF\u5408\u529B ", formatMonsterPower(power))), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1.5 grid min-w-0 grid-cols-4 gap-1"
+    }, RANGE_LABELS.map((label, index) => /*#__PURE__*/React.createElement("div", {
+      key: label,
+      className: `min-w-0 rounded-md px-1 py-1 text-center text-[9px] font-black leading-none ${RANGE_STYLES[index].labelBg}`
+    }, /*#__PURE__*/React.createElement("span", null, label), /*#__PURE__*/React.createElement("span", {
+      className: "ml-1"
+    }, aptitude[index] || 'C')))));
+  };
   // 編成の1枠が対象とする「モンスター種id」を返す(プレーン種でもマスモンでも、種としては同じ扱い)
   const baseIdOfRosterEntry = entry => {
     if (typeof entry === 'string' && entry.startsWith('masu:')) return getMasuMon(entry.slice(5))?.baseId || null;
@@ -22470,7 +22502,7 @@ function MonsterHeroGame() {
         key: entry,
         value: entry,
         disabled: selectedEntries.includes(entry) && ally.rosterEntry !== entry
-      }, autoRosterLabel(entry)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      }, autoRosterLabel(entry)))), renderAutoAllySummary(ally.rosterEntry), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
         className: "text-[10px] font-black text-slate-300 mb-1.5"
       }, "\u914D\u7F6E\u8DDD\u96E2"), /*#__PURE__*/React.createElement("div", {
         className: "grid grid-cols-5 gap-1"
