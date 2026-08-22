@@ -489,6 +489,54 @@ check('ダメージ表示は戦闘の計算に触らず、前後の状態の差�
   source.includes('const rpgPrevBattleRef = useRef(null);')
   && source.includes('rpgBattle.planStep !== prev.planStep + 1) return;')
   && !/rpgHits/.test(rpgSource));
+
+// --- 攻撃モーション(通常バトルからの流用) ---
+// モーションの種類は通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion から決める。
+// RPG用に別のモーションデータを持たないので、モンスターを足しても更新漏れが起きない
+check('モーションの種類は通常バトルと同じ atkMotion から決める',
+  source.includes('const RPG_MOTION_BY_ATK = Object.freeze({ default:\'Attack\', floatStab:\'Float\', waterBurst:\'Water\', zanCombo:\'Dash\' });')
+  && source.includes('RPG_MOTION_BY_ATK[ALL_PLAYER_MONSTERS[monId]?.atkMotion]'));
+const atkMotionKinds = [...new Set(Object.values(R.ALL_PLAYER_MONSTERS).map(m => m.atkMotion))];
+const motionMap = (source.match(/const RPG_MOTION_BY_ATK = Object\.freeze\(\{([^}]*)\}\)/) || [])[1] || '';
+check('本編にある atkMotion がすべて対応表に載っている',
+  atkMotionKinds.every(kind => motionMap.includes(`${kind}:`)),
+  `本編 ${atkMotionKinds.join(' / ')}`);
+// 通常バトルの keyframes は大きな立ち絵向けで移動量が大きい(味方-180px・敵+90px)ので、
+// RPG画面の大きさに合わせた縮小版を用意する。味方は上へ、敵は下へ動くのは通常バトルと同じ
+const rpgMotionNames = ['rpgAllyAttack', 'rpgAllySpecial', 'rpgAllyFloat', 'rpgAllyWater', 'rpgAllyDash',
+  'rpgFoeAttack', 'rpgFoeSpecial', 'rpgFoeFloat', 'rpgFoeWater', 'rpgFoeDash'];
+check('RPG画面向けの縮小版モーションがそろっている',
+  rpgMotionNames.every(name => source.includes(`@keyframes ${name}{`)), `${rpgMotionNames.length}種`);
+check('通常バトルのモーションはそのまま残っている（RPG側が奪っていない）',
+  ['attackFly', 'specialLunge', 'floatStabAttack', 'waterBurstAttack', 'zanComboDash', 'enemyAttackFly']
+    .every(name => source.includes(`@keyframes ${name} {`) || source.includes(`@keyframes ${name}{`)));
+const allyAttackFrames = grab(source, '@keyframes rpgAllyAttack{', '@keyframes rpgAllySpecial{');
+const foeAttackFrames = grab(source, '@keyframes rpgFoeAttack{', '@keyframes rpgFoeSpecial{');
+check('味方は上へ・敵は下へ動く（通常バトルと同じ向き）',
+  /translateY\(-\d+px\)/.test(allyAttackFrames) && !/translateY\(\d\d+px\)/.test(allyAttackFrames)
+  && /translateY\(\d+px\)/.test(foeAttackFrames) && !/translateY\(-\d\d+px\)/.test(foeAttackFrames),
+  `味方 ${(allyAttackFrames.match(/translateY\((-?\d+)px\)/g) || []).join(' ')} / 敵 ${(foeAttackFrames.match(/translateY\((-?\d+)px\)/g) || []).join(' ')}`);
+check('モーションは敵の丸枠と味方の顔アイコンへ当てる',
+  rpgUi.includes("const motionOf=(side,index)=>")
+  && rpgUi.includes('style={motionOf(\'enemy\',index)}') && rpgUi.includes('style={motionOf(\'ally\',index)}'));
+// モーションの対応表は同じ塊の末尾に置いてあるので、そこより前(計算と進行の本体)だけを見る
+const rpgEngineSource = grab(rpgSource, 'const RPG_MAX_LEVEL = 50;', '// ---------- RPG戦闘の攻撃モーション(表示だけ) ----------');
+check('モーションも戦闘の計算に触らない（表示だけ）',
+  !/rpgActing|rpgMotionName|@keyframes|atkMotion/.test(rpgEngineSource)
+  && source.includes('const [rpgActing, setRpgActing] = useState(null);'));
+check('防御のときはモーションを出さない', source.includes("acted.command !== 'guard'"));
+
+// --- 人数は編成画面のいちばん上でまとめて変える ---
+const setupUi = grab(rpgUi, "{gameState==='RPG_DEBUG_SETUP'&&", "{gameState==='RPG_DEBUG_BATTLE'&&");
+const countsAt = setupUi.indexOf('mh-rpg-counts');
+check('味方・敵の人数を1か所でまとめて変えられる',
+  countsAt >= 0 && setupUi.includes('renderCount(rpgPartySize,RPG_MAX_PARTY,setRpgPartySize)')
+  && setupUi.includes('renderCount(rpgEnemyCount,RPG_MAX_ENEMIES,setRpgEnemyCount)')
+  && (setupUi.match(/renderCount\(/g) || []).length === 2, // 味方1 + 敵1(定義は renderCount= なので数えない)
+  `renderCount ${(setupUi.match(/renderCount\(/g) || []).length}か所`);
+check('人数はモンスターの詳細カードより前にある（スクロールせずに変えられる）',
+  countsAt >= 0 && countsAt < setupUi.indexOf('mh-rpg-card'),
+  `人数 ${countsAt} < カード ${setupUi.indexOf('mh-rpg-card')}`);
 check('戦闘画面に行動順が出る',
   rpgUi.includes('mh-rpg-order-list') && rpgUi.includes('rpgSpeedOrder(battle)') && rpgUi.includes('battle.plan'));
 // 戦闘画面は「能力の表」ではなく「モンスターが戦っている画面」にする。
