@@ -55,7 +55,7 @@ const EXPORTS = [
   'rpgDamage', 'rpgVarianceRoll', 'rpgActionValue', 'rpgEvadeRate', 'rpgCritRate', 'rpgRollPercent',
   'rpgStartGuts', 'rpgTurnGutsRegen', 'rpgMonsterList', 'rpgMonsterById',
   'rpgCreateBattle', 'rpgSetCommand', 'rpgResolveStep', 'rpgAliveIndexes', 'rpgSpeedOrder', 'rpgUnitAt',
-  'rpgLowestHpEnemy',
+  'rpgLowestHpEnemy', 'rpgStepDelay', 'RPG_STEP_MS', 'RPG_SPECIAL_STEP_MS', 'RPG_SPECIAL_MS',
 ];
 // index.html と同じ順でデータを流し込む(ALL_PLAYER_MONSTERS を本物のまま使う)
 const sandbox = { console, Math, JSON, Number, Object, Array, String, Boolean, isNaN, isFinite };
@@ -497,7 +497,8 @@ check('いま誰をねらっているかが画面に出る',
 check('ねらいは画面だけの状態で、戦闘の状態には入れない',
   source.includes('const [rpgAim, setRpgAim] = useState(null);') && !/rpgAim/.test(rpgSource),
   '戦闘の状態(rpgBattle)は素のまま');
-check('戦闘を始めるときにねらいを初期化する', source.includes('setRpgAim(null);\n    setRpgBattle(rpgCreateBattle('));
+check('戦闘を始めるときにねらいと技の演出を初期化する',
+  source.includes('setRpgAim(null);\n    setRpgSpecial(null);\n    setRpgBattle(rpgCreateBattle('));
 // 自動のねらい先は乱数を使わずに決める。同じ盤面なら誰が見ても同じ相手になる
 {
   const battle = { enemies: [
@@ -541,6 +542,52 @@ check('会心・回避・戦闘不能が数字だけで見分けられる',
   check('数字を消すまでの時間がアニメーションと揃っている',
     source.includes(`setTimeout(() => setRpgHits(null), ${ms});`), `${ms}ms`);
 }
+
+// --- 技の演出 ---
+// 技は通常こうげきより重い行動なので、技名の帯・閃光・揺れ・衝撃波で強調する。
+// すべて表示だけで、ダメージ・行動順・ガッツの計算には関係しない
+check('技を撃つと技名と撃った本人が帯に出る',
+  rpgUi.includes('mh-rpg-special-band') && rpgUi.includes('<small>{rpgSpecial.by}</small><b>{rpgSpecial.name}</b>'));
+check('技を撃つと画面が光り、戦う場所が揺れる',
+  rpgUi.includes('mh-rpg-special-flash') && rpgUi.includes("${rpgSpecial?'shake':''}")
+  && /\.mh-rpg-special-flash\{/.test(source) && /@keyframes rpgSpecialShake\{/.test(source));
+// 画面ごと揺らすと、いちばん下のコマンド欄が一瞬だけ画面の外へ出てしまう。
+// 揺れは横だけ・戦う場所だけに限る
+check('揺れは横だけで、上下には動かさない',
+  !/@keyframes rpgSpecialShake\{[^@]*translateY/.test(source)
+  && !/@keyframes rpgSpecialShake\{[^@]*translate\(-?\d+px,\s*-?\d+px\)/.test(source),
+  grab(source, '@keyframes rpgSpecialShake{', '}}').slice(0, 60) + '…');
+check('技を受けた相手にも当たった印が出る（敵は衝撃波・味方はカードが光る）',
+  rpgUi.includes("const struckBySpecial=(side,index)=>") && rpgUi.includes("struckBySpecial('enemy',index)")
+  && rpgUi.includes("struckBySpecial('ally',index)?'struck':''")
+  && /\.mh-rpg-special-ring\{/.test(source) && /\.mh-rpg-member\.struck\{/.test(source));
+// ガッツが足りないと技は出ず通常こうげきになる。そのときに演出だけ出ると嘘になる
+check('技が出たかどうかは「技を使った回数が増えたか」で見る',
+  source.includes("const usedSkill = !!(acted && acted.command === 'skill' && actor && now")
+  && source.includes("(now.record.skills || 0) > (actor.record.skills || 0));")
+  && source.includes('if (usedSkill && actor.skill) {'));
+check('ガッツが足りずに通常こうげきへ落ちたときは必殺モーションも出さない',
+  source.includes('rpgMotionName(acted.side, actor.monId, usedSkill)')
+  && !source.includes("rpgMotionName(acted.side, actor.monId, acted.command === 'skill')"),
+  '選んだコマンドではなく、実際に技が出たかで決めている');
+check('技の演出は画面だけの状態で、戦闘の状態には入れない',
+  source.includes('const [rpgSpecial, setRpgSpecial] = useState(null);') && !/rpgSpecial/.test(rpgSource));
+check('演出を消すまでの時間と、演出そのものの長さが揃っている',
+  source.includes('setTimeout(() => setRpgSpecial(null), RPG_SPECIAL_MS);')
+  && /animation:rpgSpecialBand 940ms/.test(source) && R.RPG_SPECIAL_MS === 940, `${R.RPG_SPECIAL_MS}ms`);
+// 演出を見せるぶん、技の直後だけ次の行動を待つ。順番も結果も変わらない
+check('技を撃った直後だけ、次の行動までの間を長くとる',
+  R.RPG_SPECIAL_STEP_MS > R.RPG_STEP_MS
+  && R.rpgStepDelay({ plan:[{ command:'skill' }], planStep:1 }) === R.RPG_SPECIAL_STEP_MS
+  && R.rpgStepDelay({ plan:[{ command:'attack' }], planStep:1 }) === R.RPG_STEP_MS
+  && R.rpgStepDelay({ plan:[{ command:'guard' }], planStep:1 }) === R.RPG_STEP_MS,
+  `通常 ${R.RPG_STEP_MS}ms / 技のあと ${R.RPG_SPECIAL_STEP_MS}ms`);
+check('間の取り方が壊れた戦闘状態でも落ちない',
+  R.rpgStepDelay(null) === R.RPG_STEP_MS && R.rpgStepDelay({}) === R.RPG_STEP_MS
+  && R.rpgStepDelay({ plan:'こわれた値', planStep:3 }) === R.RPG_STEP_MS
+  && R.rpgStepDelay({ plan:[], planStep:0 }) === R.RPG_STEP_MS);
+check('間の取り方は plan を読むだけで書き換えない',
+  !/rpgStepDelay[\s\S]{0,400}?(plan\s*=|plan\.push|planStep\s*=)/.test(grab(source, 'const rpgStepDelay', '\n};')));
 
 // --- 攻撃モーション(通常バトルからの流用) ---
 // モーションの種類は通常バトルとまったく同じ ALL_PLAYER_MONSTERS[].atkMotion から決める。
