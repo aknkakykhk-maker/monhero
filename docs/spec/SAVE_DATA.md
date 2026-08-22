@@ -26,6 +26,7 @@
 | `mh_owned_items` | object / `{}` | 消耗品ID→個数 |
 | `mh_unlocked_monsters` | string[] / 初期8種 | 解放済み種ID |
 | `mh_monster_roster` | string[] / 解放済み一覧 | 候補編成。種IDまたは `masu:<id>` |
+| `mh_auto_settings_v1` | object / `{strategy:'random', allies:[{rosterEntry:null,slot:null} × 3]}` | AUTO用の事前設定。方針は `random` / `offense` / `defense` / `guts`、供モンは種IDまたは `masu:<id>`、距離は `null`（自動）または0～3 |
 | `mh_unlocked_teachings` | string[] / 初期6枚 | 解放済み教えID |
 | `mh_teaching_roster` | string[] / 解放済み一覧 | 教え候補編成 |
 | `mh_masu_mons` | object[] / `[]` | マスモン個体一覧。`uniqueSkillPoints`（未使用の固有技ポイント）は後から足した項目で、持っていない既存データは0として読む |

@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: abf673cc8a098365
+// source-sha256: 6f96a710a23d24b6
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 08:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 08:32"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -7490,6 +7490,44 @@ const RANGE_STYLES = {
     labelBg: "bg-blue-600 text-white"
   }
 };
+const AUTO_SETTINGS_KEY = 'mh_auto_settings_v1';
+const AUTO_STRATEGIES = ['random', 'offense', 'defense', 'guts'];
+const DEFAULT_AUTO_SETTINGS = Object.freeze({
+  strategy: 'random',
+  allies: [{
+    rosterEntry: null,
+    slot: null
+  }, {
+    rosterEntry: null,
+    slot: null
+  }, {
+    rosterEntry: null,
+    slot: null
+  }]
+});
+// roster entry が正本。候補外・重複・壊れた距離は、安全な未指定/自動へ落とす。
+const normalizeAutoSettings = (value, validRosterEntries = null) => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const valid = validRosterEntries == null ? null : new Set(Array.isArray(validRosterEntries) ? validRosterEntries : []);
+  const seen = new Set();
+  const allies = Array.from({
+    length: 3
+  }, (_, index) => {
+    const raw = Array.isArray(source.allies) && source.allies[index] && typeof source.allies[index] === 'object' ? source.allies[index] : {};
+    const entry = typeof raw.rosterEntry === 'string' && raw.rosterEntry.length > 0 ? raw.rosterEntry : null;
+    const rosterEntry = entry && (!valid || valid.has(entry)) && !seen.has(entry) ? entry : null;
+    if (rosterEntry) seen.add(rosterEntry);
+    const slot = raw.slot === null || raw.slot === undefined ? null : Number(raw.slot);
+    return {
+      rosterEntry,
+      slot: Number.isInteger(slot) && slot >= 0 && slot <= 3 ? slot : null
+    };
+  });
+  return {
+    strategy: AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random',
+    allies
+  };
+};
 
 // 難易度。keyはランキングの記録やハイスコアの保存にも使うので、既存のものは変更しない。
 // bg=選んだときの背景色 / text=選んでいないときの文字色(難易度の雰囲気に合わせた色)。
@@ -12205,6 +12243,8 @@ function MonsterHeroGame() {
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS); // モンスター編成(解放済みの中から周回で使う候補、端末保存)
+  const [autoSettings, setAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
+  const [draftAutoSettings, setDraftAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
   const [monsterPartySets, setMonsterPartySets] = useState(() => normalizeMonsterPartySets(null, STARTER_MONSTER_IDS));
   const [editingPartySetIndex, setEditingPartySetIndex] = useState(0);
   const [partySetCopyTarget, setPartySetCopyTarget] = useState(null);
@@ -13475,6 +13515,8 @@ function MonsterHeroGame() {
     // モンスター一覧メニュー
     MB_MANAGEMENT: 'management',
     // M/B管理はモンスター一覧・編成と同じ曲を続ける
+    AUTO_SETTINGS: 'management',
+    // AUTO事前設定もM/B管理の曲を続ける
     PASTURE_SETTINGS: 'management',
     // 放牧設定もM/B管理の曲を続ける
     TEMPLE: 'temple',
@@ -14257,7 +14299,11 @@ function MonsterHeroGame() {
       }
       setMonsterPartySets(normalizedPartySets);
       setEditingPartySetIndex(normalizedPartySets.activeIndex);
-      setMonsterRosterIds(normalizedPartySets.rosters[normalizedPartySets.activeIndex]);
+      const activeMonsterRoster = normalizedPartySets.rosters[normalizedPartySets.activeIndex];
+      setMonsterRosterIds(activeMonsterRoster);
+      const savedAutoSettings = normalizeAutoSettings(await storeGet(AUTO_SETTINGS_KEY, DEFAULT_AUTO_SETTINGS, false), activeMonsterRoster);
+      setAutoSettings(savedAutoSettings);
+      setDraftAutoSettings(savedAutoSettings);
       const savedUnlockedTeachings = await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false);
       setUnlockedTeachingIds(savedUnlockedTeachings);
       const savedTeachingRoster = await storeGet('mh_teaching_roster', savedUnlockedTeachings, false);
@@ -14820,6 +14866,36 @@ function MonsterHeroGame() {
       return mergeMasuIntoMon(masu);
     }
     return ALL_PLAYER_MONSTERS[entry] || null;
+  };
+  const openAutoSettings = () => {
+    const candidates = monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry));
+    setDraftAutoSettings(normalizeAutoSettings(autoSettings, candidates));
+    setGameState('AUTO_SETTINGS');
+  };
+  const updateDraftAutoAlly = (index, patch) => {
+    setDraftAutoSettings(current => normalizeAutoSettings({
+      ...current,
+      allies: current.allies.map((ally, allyIndex) => allyIndex === index ? {
+        ...ally,
+        ...patch
+      } : ally)
+    }, monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry))));
+  };
+  const saveAutoSettings = async () => {
+    const normalized = normalizeAutoSettings(draftAutoSettings, monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry)));
+    await storeSet(AUTO_SETTINGS_KEY, normalized, false);
+    setAutoSettings(normalized);
+    setDraftAutoSettings(normalized);
+    setGameState('MB_MANAGEMENT');
+  };
+  const autoRosterLabel = entry => {
+    const mon = resolveRosterEntryToMon(entry);
+    if (!mon) return entry;
+    if (entry.startsWith('masu:')) {
+      const baseName = ALL_PLAYER_MONSTERS[getMasuMon(entry.slice(5))?.baseId]?.name;
+      return baseName && mon.name !== baseName ? `${mon.name}（${baseName}）` : `${mon.name}（マスモン）`;
+    }
+    return mon.name;
   };
   // 編成の1枠が対象とする「モンスター種id」を返す(プレーン種でもマスモンでも、種としては同じ扱い)
   const baseIdOfRosterEntry = entry => {
@@ -22324,7 +22400,92 @@ function MonsterHeroGame() {
         setGameState('ROSTER');
       },
       className: "mh-management-link"
-    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u7DE8\u6210"))), gameState === 'TEMPLE' && /*#__PURE__*/React.createElement("div", {
+    }, "\u30A2\u30B7\u30B9\u30C8\u30AB\u30FC\u30C9\u7DE8\u6210"), /*#__PURE__*/React.createElement("button", {
+      onClick: openAutoSettings,
+      className: "mh-management-link"
+    }, "AUTO\u8A2D\u5B9A"))), gameState === 'AUTO_SETTINGS' && (() => {
+      const strategies = [['random', 'ランダム', 'AUTOが候補からランダムに選択'], ['offense', '火力重視', '攻撃・ちから系を優先'], ['defense', '耐久重視', 'ライフ・丈夫さ系を優先'], ['guts', 'ガッツ重視', 'ガッツ系を優先']];
+      const ranges = [[null, '自動'], [0, '零'], [1, '近'], [2, '中'], [3, '遠']];
+      const selectedEntries = draftAutoSettings.allies.map(ally => ally.rosterEntry).filter(Boolean);
+      return /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 flex flex-col h-full min-h-0 p-4",
+        style: {
+          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))'
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "flex items-center gap-2 mb-3 shrink-0"
+      }, /*#__PURE__*/React.createElement("button", {
+        onClick: () => setGameState('MB_MANAGEMENT'),
+        className: "p-3 text-slate-400 active:scale-90",
+        "aria-label": "M/B\u7BA1\u7406\u3078\u623B\u308B"
+      }, /*#__PURE__*/React.createElement(ArrowLeft, {
+        size: 20
+      })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
+        className: "text-xl font-black italic text-indigo-300"
+      }, "AUTO\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("p", {
+        className: "text-[9px] text-slate-400 font-bold"
+      }, "\u5C06\u6765\u306EAUTO\u7528\u4E8B\u524D\u8A2D\u5B9A"))), /*#__PURE__*/React.createElement("div", {
+        className: "flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-md mx-auto space-y-4 pb-3"
+      }, /*#__PURE__*/React.createElement("section", {
+        className: "rounded-2xl border border-indigo-500/40 bg-slate-950/70 p-3"
+      }, /*#__PURE__*/React.createElement("h3", {
+        className: "text-sm font-black text-indigo-200 mb-2"
+      }, "1. AUTO\u65B9\u91DD"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-2 gap-2"
+      }, strategies.map(([key, label, description]) => /*#__PURE__*/React.createElement("button", {
+        key: key,
+        "aria-pressed": draftAutoSettings.strategy === key,
+        onClick: () => setDraftAutoSettings(current => ({
+          ...current,
+          strategy: key
+        })),
+        className: `min-h-[68px] min-w-0 rounded-xl border p-2 text-left active:scale-[.98] ${draftAutoSettings.strategy === key ? 'border-cyan-300 bg-indigo-600 ring-2 ring-cyan-300/50' : 'border-slate-700 bg-slate-900'}`
+      }, /*#__PURE__*/React.createElement("span", {
+        className: "block text-xs font-black"
+      }, label), /*#__PURE__*/React.createElement("span", {
+        className: "block mt-1 text-[9px] leading-snug text-slate-300"
+      }, description))))), /*#__PURE__*/React.createElement("section", {
+        className: "space-y-3"
+      }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h3", {
+        className: "text-sm font-black text-indigo-200"
+      }, "2. \u4F9B\u30E2\u30F3\u4E8B\u524D\u8A2D\u5B9A"), /*#__PURE__*/React.createElement("p", {
+        className: "text-[9px] leading-relaxed text-slate-400 mt-1"
+      }, "WAVE2\u30FB4\u30FB6\u306E\u9806\u306B\u5BFE\u5FDC\u3057\u307E\u3059\u3002\u8A2D\u5B9A\u3057\u305F\u4F9B\u30E2\u30F3\u304C\u5019\u88DC\u306B\u3044\u306A\u3044\u5834\u5408\u306FAUTO\u6642\u306B\u30E9\u30F3\u30C0\u30E0\u3067\u88DC\u5B8C\u3055\u308C\u307E\u3059\u3002")), draftAutoSettings.allies.map((ally, index) => /*#__PURE__*/React.createElement("div", {
+        key: index,
+        className: "rounded-2xl border border-indigo-500/30 bg-slate-900 p-3 space-y-2"
+      }, /*#__PURE__*/React.createElement("label", {
+        className: "block text-xs font-black text-white",
+        htmlFor: `auto-ally-${index}`
+      }, "\u4F9B\u30E2\u30F3", ['①', '②', '③'][index]), /*#__PURE__*/React.createElement("select", {
+        id: `auto-ally-${index}`,
+        value: ally.rosterEntry || '',
+        onChange: event => updateDraftAutoAlly(index, {
+          rosterEntry: event.target.value || null
+        }),
+        className: "w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"
+      }, /*#__PURE__*/React.createElement("option", {
+        value: ""
+      }, "\u672A\u6307\u5B9A\uFF08\u30E9\u30F3\u30C0\u30E0\uFF09"), monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry)).map(entry => /*#__PURE__*/React.createElement("option", {
+        key: entry,
+        value: entry,
+        disabled: selectedEntries.includes(entry) && ally.rosterEntry !== entry
+      }, autoRosterLabel(entry)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+        className: "text-[10px] font-black text-slate-300 mb-1.5"
+      }, "\u914D\u7F6E\u8DDD\u96E2"), /*#__PURE__*/React.createElement("div", {
+        className: "grid grid-cols-5 gap-1"
+      }, ranges.map(([slot, label]) => /*#__PURE__*/React.createElement("button", {
+        key: label,
+        onClick: () => updateDraftAutoAlly(index, {
+          slot
+        }),
+        "aria-pressed": ally.slot === slot,
+        className: `min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${ally.slot === slot ? 'ring-2 ring-white border-white' : slot === null ? 'bg-slate-700 border-slate-500 text-white' : `${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}`
+      }, label)))))))), /*#__PURE__*/React.createElement("button", {
+        onClick: saveAutoSettings,
+        className: "w-full max-w-md mx-auto min-h-[52px] shrink-0 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]"
+      }, "\u6C7A\u5B9A"));
+    })(), gameState === 'TEMPLE' && /*#__PURE__*/React.createElement("div", {
       className: "flex-1 flex flex-col h-full min-h-0 p-4",
       style: {
         paddingTop: 'calc(1rem + env(safe-area-inset-top))',
