@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-22 22:30",
+    date: "2026-08-23 00:12",
     type: 'update',
     title: '新しいアシストカード「ポルツ」を追加しました',
     assistantNotice: { id:'update_notice_poltz_assist_v1', type:'market' },
@@ -13,7 +13,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-22 22:30",
+    date: "2026-08-23 00:12",
     type: 'update',
     title: '「ブリーダーカード」を「アシストカード」という名前に変えました',
     items: [

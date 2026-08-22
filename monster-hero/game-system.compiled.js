@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e3585fdf28a17c29
+// source-sha256: 288f85457a3a2027
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-22 22:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 00:12"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -9598,12 +9598,30 @@ const rpgMotionName = (side, monId, isSkill) => {
 // 固有技は少し長め。連撃(ザン)は短く刻む
 const rpgMotionMs = name => name.endsWith('Special') ? 460 : name.endsWith('Dash') ? 360 : 420;
 
+// 画面側で「1体ぶん処理が進んだ」を見分けるための判定(表示だけに使う)。
+// rpgResolveStep() の出口は3つあり、抜け方によって phase と planStep の変わり方が違う。
+//   ・まだ続く          → phase:'resolve'、planStep が1つ進む
+//   ・決着がついた      → phase:'result'、planStep はそのまま
+//   ・そのターンの最後  → phase:'command'、planStep は0へ戻り turn が1つ進む
+// 以前は1つめしか見ていなかったため、ターンの最後の行動と決着の一撃だけ
+// 技名の帯・ダメージの数字・攻撃モーションが丸ごと出ていなかった。
+const rpgSteppedOnce = (prev, next) => {
+  if (!prev || !next || prev.phase !== 'resolve') return false;
+  if (next.phase === 'resolve') return next.planStep === prev.planStep + 1;
+  if (next.phase === 'result') return next.turn === prev.turn;
+  if (next.phase === 'command') return next.turn === prev.turn + 1;
+  return false;
+};
+
 // ---------- RPG戦闘の技の演出(表示だけ) ----------
 // 技は通常こうげきより重い行動なので、技名の帯・画面の閃光・軽い揺れ・対象への衝撃波を出す。
 // 演出が出ている間は次の行動を少し待つ(戦闘の計算・順番・ダメージには一切関係しない)。
 const RPG_SPECIAL_MS = 940; // 技の演出が出ている長さ
 const RPG_STEP_MS = 620; // ふだんの「1体ぶん処理する」間隔
 const RPG_SPECIAL_STEP_MS = 1000; // 技を撃った直後だけ、演出を見せるために長くとる間隔
+// 決着がついた瞬間に結果画面へ飛ばすと、最後の一撃のダメージも技の演出も見えないまま終わる。
+// いちばん長い演出(技の帯940ms・ダメージの数字900ms)より少しだけ長く待ってから移る
+const RPG_FINISH_MS = 1100;
 // 直前に処理した行動が技だったかどうかだけを見る。plan は読むだけで書き換えない
 const rpgStepDelay = battle => {
   const last = battle && Array.isArray(battle.plan) ? battle.plan[battle.planStep - 1] : null;
@@ -12672,7 +12690,10 @@ function MonsterHeroGame() {
     return () => clearTimeout(timer);
   }, [gameState, rpgBattle?.phase, rpgBattle?.planStep, rpgVarianceOn]);
   useEffect(() => {
-    if (gameState === 'RPG_DEBUG_BATTLE' && rpgBattle?.phase === 'result') setGameState('RPG_DEBUG_RESULT');
+    if (gameState !== 'RPG_DEBUG_BATTLE' || rpgBattle?.phase !== 'result') return;
+    // 決着の一撃も見せてから結果画面へ移る
+    const timer = setTimeout(() => setGameState('RPG_DEBUG_RESULT'), RPG_FINISH_MS);
+    return () => clearTimeout(timer);
   }, [gameState, rpgBattle?.phase]);
   // 1体ぶんの行動を処理するたび、直前の状態と見比べて「誰が何ダメージ受けたか」を拾い、
   // モンスターの上へ数字を出す。戦闘の計算には一切触らず、表示のためだけに差分を見ている
@@ -12686,8 +12707,8 @@ function MonsterHeroGame() {
     const prev = rpgPrevBattleRef.current;
     rpgPrevBattleRef.current = rpgBattle;
     if (!rpgBattle || !prev) return;
-    // 同じ戦闘の中で1手ぶん進んだときだけ見る(戦闘の作り直し・ターン跨ぎは対象外)
-    if (prev.phase !== 'resolve' || rpgBattle.phase !== 'resolve' || rpgBattle.planStep !== prev.planStep + 1) return;
+    // 同じ戦闘の中で1手ぶん進んだときだけ見る(戦闘の作り直しは対象外)
+    if (!rpgSteppedOnce(prev, rpgBattle)) return;
     // いま動いた1体。通常バトルと同じ atkMotion を使ってモーションを選ぶ(データは足さない)
     const acted = prev.plan[prev.planStep];
     const actor = acted ? rpgUnitAt(prev, acted.side, acted.index) : null;

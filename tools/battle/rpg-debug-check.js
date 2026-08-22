@@ -55,7 +55,7 @@ const EXPORTS = [
   'rpgDamage', 'rpgVarianceRoll', 'rpgActionValue', 'rpgEvadeRate', 'rpgCritRate', 'rpgRollPercent',
   'rpgStartGuts', 'rpgTurnGutsRegen', 'rpgMonsterList', 'rpgMonsterById',
   'rpgCreateBattle', 'rpgSetCommand', 'rpgResolveStep', 'rpgAliveIndexes', 'rpgSpeedOrder', 'rpgUnitAt',
-  'rpgLowestHpEnemy', 'rpgStepDelay', 'RPG_STEP_MS', 'RPG_SPECIAL_STEP_MS', 'RPG_SPECIAL_MS',
+  'rpgLowestHpEnemy', 'rpgStepDelay', 'rpgSteppedOnce', 'rpgBeginInput', 'RPG_FINISH_MS', 'RPG_STEP_MS', 'RPG_SPECIAL_STEP_MS', 'RPG_SPECIAL_MS',
 ];
 // index.html と同じ順でデータを流し込む(ALL_PLAYER_MONSTERS を本物のまま使う)
 const sandbox = { console, Math, JSON, Number, Object, Array, String, Boolean, isNaN, isFinite };
@@ -521,7 +521,7 @@ check('ダメージ・会心・回避がモンスターの上に出る',
   && /\.mh-rpg-hit\{/.test(source) && /\.mh-rpg-hit\.crit\{/.test(source) && /\.mh-rpg-hit\.miss\{/.test(source));
 check('ダメージ表示は戦闘の計算に触らず、前後の状態の差だけを見ている',
   source.includes('const rpgPrevBattleRef = useRef(null);')
-  && source.includes('rpgBattle.planStep !== prev.planStep + 1) return;')
+  && source.includes('if (!rpgSteppedOnce(prev, rpgBattle)) return;')
   && !/rpgHits/.test(rpgSource));
 // 同じ相手へ2回続けて当たると、Reactが同じ要素を使い回してアニメーションが動かない。
 // 行動の番号をキーにして、当たるたびに必ず出し直す
@@ -542,6 +542,65 @@ check('会心・回避・戦闘不能が数字だけで見分けられる',
   check('数字を消すまでの時間がアニメーションと揃っている',
     source.includes(`setTimeout(() => setRpgHits(null), ${ms});`), `${ms}ms`);
 }
+
+// --- 演出・ダメージ表示の取りこぼし ---
+// rpgResolveStep() は3通りの抜け方をする(まだ続く / 決着 / そのターンの最後)。
+// 画面側はこの3つすべてを「1手進んだ」と見なさないと、その1手ぶんの
+// 技名の帯・ダメージの数字・攻撃モーションが丸ごと出なくなる。
+// 実際に戦闘を最後まで流して、1手も取りこぼさないことを確かめる
+{
+  const mons = R.rpgMonsterList();
+  const party = [0, 1].map(i => ({ monId: mons[i].id, level: 24, alloc: R.rpgNormalizeAlloc({ atk: 23 }, 24) }));
+  const foes = [0, 1].map(i => ({ monId: mons[i + 2].id, level: 3, typeId: 'normal' }));
+  let battle = R.rpgCreateBattle(party, foes);
+  const rng = constRng(0.5); // 回避も会心も起きない・敵は通常こうげき
+  let steps = 0, missed = 0, turns = 0, ended = false, sawTurnEnd = false;
+  for (let guard = 0; guard < 400 && !ended; guard++) {
+    if (battle.phase === 'command') {
+      // 生きている味方ぜんぶへコマンドを入れて、行動順の実行へ進める
+      let safety = 0;
+      // 対象は画面と同じ「ライフ最小の敵」。倒れた敵を指すとコマンドが入らない
+      while (battle.phase === 'command' && safety++ < 8) battle = R.rpgSetCommand(battle, 'attack', R.rpgLowestHpEnemy(battle), rng);
+      if (battle.phase !== 'resolve') break;
+      turns += 1;
+      continue;
+    }
+    if (battle.phase !== 'resolve') break;
+    const prev = battle;
+    battle = R.rpgResolveStep(prev, false, rng);
+    steps += 1;
+    if (!R.rpgSteppedOnce(prev, battle)) missed += 1;
+    if (battle.phase === 'command') sawTurnEnd = true;   // そのターンの最後の行動
+    if (battle.phase === 'result') ended = true;         // 決着の一撃
+  }
+  // 取りこぼしが起きるのはこの2か所なので、テストが両方を通ったことを確かめる
+  check('テストがターンの終わりと決着の一撃を両方通っている', ended && sawTurnEnd && turns >= 2,
+    `${turns}ターン / ${steps}手 / ターン終わり=${sawTurnEnd} / 決着=${ended}`);
+  check('1手ぶんの演出・ダメージ表示を1度も取りこぼさない', missed === 0,
+    `取りこぼし ${missed}手 / 全${steps}手`);
+}
+// 3通りの抜け方を、状態を直接作って1つずつ確かめる
+check('そのターンがまだ続くとき', R.rpgSteppedOnce({ phase:'resolve', planStep:2, turn:5 }, { phase:'resolve', planStep:3, turn:5 }) === true);
+check('決着がついた一撃も拾う', R.rpgSteppedOnce({ phase:'resolve', planStep:2, turn:5 }, { phase:'result', planStep:3, turn:5 }) === true);
+check('そのターン最後の行動も拾う', R.rpgSteppedOnce({ phase:'resolve', planStep:3, turn:5 }, { phase:'command', planStep:0, turn:6 }) === true);
+check('戦闘を作り直したときは演出を出さない',
+  R.rpgSteppedOnce({ phase:'resolve', planStep:3, turn:5 }, { phase:'command', planStep:0, turn:1 }) === false);
+check('コマンド入力中の書き換えでは演出を出さない',
+  R.rpgSteppedOnce({ phase:'command', planStep:0, turn:5 }, { phase:'command', planStep:0, turn:5 }) === false
+  && R.rpgSteppedOnce({ phase:'command', planStep:0, turn:5 }, { phase:'resolve', planStep:0, turn:5 }) === false);
+check('状態が無いときも落ちない',
+  R.rpgSteppedOnce(null, { phase:'resolve', planStep:1, turn:1 }) === false
+  && R.rpgSteppedOnce({ phase:'resolve', planStep:0, turn:1 }, null) === false);
+// 決着がついた瞬間に結果画面へ飛ばすと、最後の一撃だけ何も見えないまま終わる
+check('決着の一撃を見せてから結果画面へ移る',
+  source.includes("setTimeout(() => setGameState('RPG_DEBUG_RESULT'), RPG_FINISH_MS);")
+  && !source.includes("rpgBattle?.phase === 'result') setGameState('RPG_DEBUG_RESULT');"), `${R.RPG_FINISH_MS}ms`);
+check('結果画面へ移るまでの間が、いちばん長い演出より長い',
+  R.RPG_FINISH_MS > R.RPG_SPECIAL_MS && R.RPG_FINISH_MS > 900,
+  `結果へ ${R.RPG_FINISH_MS}ms / 技の演出 ${R.RPG_SPECIAL_MS}ms / ダメージの数字 900ms`);
+check('画面側はこの判定だけを使う（planStepの増加を直接見ない）',
+  source.includes('if (!rpgSteppedOnce(prev, rpgBattle)) return;')
+  && !source.includes("rpgBattle.planStep !== prev.planStep + 1"));
 
 // --- 技の演出 ---
 // 技は通常こうげきより重い行動なので、技名の帯・閃光・揺れ・衝撃波で強調する。
