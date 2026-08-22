@@ -10,6 +10,7 @@
 //   ・セットアップ画面の「人数」がいちばん上にあり、スクロールせずに味方・敵の数を変えられる
 //   ・戦闘画面で敵1〜4体・味方1〜4体のどれでもコマンドが画面内に収まり、押せる大きさ(44px以上)がある
 //   ・対象を選ばなくても「ねらい」が必ず1体に決まり、その表示が画面内にある
+//   ・行動順の並びが、同じモンスターでも味方と敵を色と形の両方で見分けられる
 //   ・ダメージの数字が読める大きさで出て、名前と重ならず、画面の外へ出ない
 //   ・技の演出(技名の帯・閃光・衝撃波)が出て、長い技名でも切れず画面からはみ出さない
 //   ・技名の帯とダメージの数字が同時に出ても重ならない(敵1・2・4体すべて)
@@ -240,6 +241,15 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
           rendered: !!document.querySelector('.mh-rpg-screen, .mh-rpg-battle'),
           docWidth: document.documentElement.scrollWidth,
           bodyWidth: document.body.scrollWidth,
+          // 予測順・行動順の並び。同じモンスターが敵味方どちらにも居ても見分けられるか
+          orderChips: [...document.querySelectorAll('.mh-rpg-order-chip')].map(el => ({
+            enemy: el.classList.contains('enemy'),
+            current: el.classList.contains('current'),
+            color: getComputedStyle(el).borderTopColor,
+            radius: getComputedStyle(el).borderTopLeftRadius,
+            alpha: getComputedStyle(el).borderTopColor.startsWith('rgba')
+              ? parseFloat(getComputedStyle(el).borderTopColor.split(',')[3]) : 1,
+          })),
           band: rect('.mh-rpg-special-band'),
           bandName: (document.querySelector('.mh-rpg-special-band b') || {}).getBoundingClientRect
             ? { r: document.querySelector('.mh-rpg-special-band b').getBoundingClientRect().toJSON(),
@@ -317,6 +327,24 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
         // 行動順は小さな顔アイコンだけ。最大8体でも折り返して画面内に収まること
         check(`${tag}: 行動順が生存者ぶん出ている`, m.orderCount === allies + enemies, `${m.orderCount}体`);
         check(`${tag}: 行動順が横にはみ出さない`, m.orderMaxRight <= width + 0.5, `右端 ${Math.round(m.orderMaxRight)}px / 画面 ${width}px`);
+        // 同じモンスターが敵にも味方にも居ることがあるので、顔だけでは見分けられない。
+        // 枠の色と形の両方で分かるようにしてある
+        {
+          const ally = m.orderChips.filter(c => !c.enemy), foe = m.orderChips.filter(c => c.enemy);
+          const one = (arr, key) => arr.length && arr.every(c => c[key] === arr[0][key]) ? arr[0][key] : null;
+          check(`${tag}: 行動順の枠の色が味方と敵で違う`,
+            !!one(ally, 'color') && !!one(foe, 'color') && one(ally, 'color') !== one(foe, 'color'),
+            `味方 ${one(ally, 'color')} / 敵 ${one(foe, 'color')}`);
+          check(`${tag}: 行動順の枠の形が味方と敵で違う`,
+            !!one(ally, 'radius') && !!one(foe, 'radius') && one(ally, 'radius') !== one(foe, 'radius'),
+            `味方 ${one(ally, 'radius')} / 敵 ${one(foe, 'radius')}`);
+          check(`${tag}: 行動順の枠の色が薄すぎない`, m.orderChips.every(c => c.alpha >= 0.9),
+            `いちばん薄い枠 ${Math.min(...m.orderChips.map(c => c.alpha))}`);
+          // いま動いている1体を光らせるときに枠の色まで変えると、その1体だけ味方か敵か分からなくなる
+          const cur = m.orderChips.find(c => c.current);
+          if (cur) check(`${tag}: いま動いている1体も味方か敵か分かる`,
+            cur.color === one(cur.enemy ? foe : ally, 'color'), `${cur.enemy ? '敵' : '味方'} ${cur.color}`);
+        }
         // モンスターの立ち絵が主役。丸枠が小さくなりすぎないこと
         check(`${tag}: 敵の立ち絵が敵の数だけ出ている`, m.foeCount === enemies, `${m.foeCount}体`);
         // 「小さくなりすぎない」は画面幅に対する割合で見る。狭い画面で敵4体だと物理的に大きくできないので、
