@@ -7,7 +7,9 @@
 //
 //   ・横スクロールが起きない(body幅 <= 画面幅)
 //   ・セットアップ画面の「戦闘開始」が常に画面内にあり、上の内容はスクロールで全部追える
+//   ・セットアップ画面の「人数」がいちばん上にあり、スクロールせずに味方・敵の数を変えられる
 //   ・戦闘画面で敵1〜4体・味方1〜4体のどれでもコマンドが画面内に収まり、押せる大きさ(44px以上)がある
+//   ・攻撃モーション中も枠からはみ出さず、味方は上・敵は下へ動く
 //   ・結果画面の一覧が見切れず、下のボタンまで届く
 //
 //   node tools/battle/rpg-debug-layout-check.js
@@ -78,6 +80,16 @@ const partySlots = Array.from({length:N_ALLY}, (_, i) => ({ monId: MONS[i % MONS
 const enemySlots = Array.from({length:N_ENEMY}, (_, i) => ({ monId: MONS[(i+3) % MONS.length].id, level: 50, typeId: RPG_ENEMY_TYPES[i % 3].id }));
 const rpgPartySize = N_ALLY, rpgEnemyCount = N_ENEMY;
 const rpgActiveParty = partySlots, rpgActiveEnemies = enemySlots;
+// 攻撃モーションは表示だけの状態。p=motion / p=motionfoe のとき、
+// 本体と同じ rpgMotionName() でモーション名を決めて1体へ当てる
+const MOTION_PHASE = params.get('p');
+const rpgActing = (MOTION_PHASE === 'motion' || MOTION_PHASE === 'motionfoe')
+  ? (() => {
+      const side = MOTION_PHASE === 'motion' ? 'ally' : 'enemy';
+      const monId = (side === 'ally' ? partySlots : enemySlots)[0].monId;
+      return { side, index: 0, motion: rpgMotionName(side, monId, false) };
+    })()
+  : null;
 // 戦闘中の状態は本体の関数でそのまま作る(ログが最大まで溜まった状態で測る)
 let battle = rpgCreateBattle(partySlots, enemySlots);
 battle.turn = 12;
@@ -86,7 +98,7 @@ battle.allies.forEach((u, i) => { u.record = { dealt: 123456, taken: 65432, atta
 battle.enemies.forEach(u => { u.record = { dealt: 54321, taken: 98765, attacks: 9, skills: 5, gutsSpent: 45, crits: 13, evaded: 12 }; u.hp = Math.max(1, Math.floor(u.maxHp * 0.6)); });
 battle.outcome = 'win';
 // 行動順の帯を「そのターンの確定順」で最大(味方4+敵4=8体)まで並べた状態にする
-if (params.get('p') === 'resolve') {
+if (params.get('p') === 'resolve' || rpgActing) {
   battle.phase = 'resolve';
   battle.plan = rpgSpeedOrder(battle).map((entry, i) => ({ ...entry, command:'attack', targetSide: entry.side === 'ally' ? 'enemy' : 'ally', targetIndex:0, value: 100 - i }));
   battle.planStep = Math.min(2, battle.plan.length - 1);
@@ -168,6 +180,8 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
       ['battle', 4, 4, '戦闘(味方4・敵4・技一覧を開いた状態)', 'skill'],
       ['battle', 4, 4, '戦闘(味方4・敵4・対象選択中)', 'target'],
       ['battle', 4, 4, '戦闘(味方4・敵4・行動順8体を実行中)', 'resolve'],
+      ['battle', 4, 4, '戦闘(味方4・敵4・味方の攻撃モーション中)', 'motion'],
+      ['battle', 4, 4, '戦闘(味方4・敵4・敵の攻撃モーション中)', 'motionfoe'],
       ['result', 4, 4, '結果(味方4・敵4)', 'command'],
     ]) {
       const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 2 });
@@ -201,6 +215,13 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
           rendered: !!document.querySelector('.mh-rpg-screen, .mh-rpg-battle'),
           docWidth: document.documentElement.scrollWidth,
           bodyWidth: document.body.scrollWidth,
+          countsBox: rect('.mh-rpg-counts'),
+          countRows: document.querySelectorAll('.mh-rpg-count').length,
+          countButtons: document.querySelectorAll('.mh-rpg-count button').length,
+          countActive: document.querySelectorAll('.mh-rpg-count button.active').length,
+          countMaxRight: Math.max(0, ...[...document.querySelectorAll('.mh-rpg-count button')].map(el => el.getBoundingClientRect().right)),
+          firstCardTop: document.querySelector('.mh-rpg-card') ? document.querySelector('.mh-rpg-card').getBoundingClientRect().top : null,
+          scrollTop: scroller ? scroller.scrollTop : null,
           statRows: document.querySelectorAll('.mh-rpg-card:first-of-type .mh-rpg-stat').length,
           statRowMaxRight: Math.max(0, ...[...document.querySelectorAll('.mh-rpg-stat')].map(el => el.getBoundingClientRect().right)),
           orderCount: chips.length,
@@ -245,11 +266,45 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
         check(`${tag}: 敵・メッセージ・味方・コマンドが縦に全部入る`,
           !!m.enemies && !!m.allies && m.enemies.top >= -0.5 && m.allies.bottom <= m.commands.top + 0.5,
           `敵 ${Math.round(m.enemies?.bottom)} → 味方 ${Math.round(m.allies?.top)}〜${Math.round(m.allies?.bottom)} → コマンド ${Math.round(m.commands?.top)}`);
-        if (phase === 'resolve') {
+        if (phase === 'resolve' || phase.startsWith('motion')) {
           // 実行中はコマンドを出さず「行動中…」を出す
           check(`${tag}: 実行中はコマンドの代わりに進行状況が出る`, !m.firstCommand && !!m.commands);
           check(`${tag}: 実行中は現在コマンド入力中の味方が居ない`, m.activeMembers === 0);
-        } else if (phase === 'skill') {
+        }
+        if (phase.startsWith('motion')) {
+          const isAlly = phase === 'motion';
+          // アニメーションを止めて途中(45%)へ送り、実際にどれだけ動くかを測る。
+          // 「動いた気がする」ではなく、位置の差と枠の中に収まっているかを数値で見る
+          const mo = await page.evaluate((sel) => {
+            const el = document.querySelector(sel);
+            if (!el) return null;
+            const anims = el.getAnimations();
+            if (!anims.length) return { anims: 0 };
+            const a = anims[0];
+            const dur = a.effect.getTiming().duration;
+            a.pause();
+            a.currentTime = 0;
+            const at0 = el.getBoundingClientRect().toJSON();
+            a.currentTime = dur * 0.45;
+            const mid = el.getBoundingClientRect().toJSON();
+            a.currentTime = dur;
+            const end = el.getBoundingClientRect().toJSON();
+            const others = [...document.querySelectorAll('.mh-rpg-foe-ring, .mh-rpg-member-face')]
+              .filter(e => e !== el).reduce((n, e) => n + (e.getAnimations().length ? 1 : 0), 0);
+            return { anims: anims.length, name: a.animationName, dur, at0, mid, end, others,
+              docWidth: document.documentElement.scrollWidth, bodyWidth: document.body.scrollWidth };
+          }, isAlly ? '.mh-rpg-party .mh-rpg-member:first-child .mh-rpg-member-face' : '.mh-rpg-field .mh-rpg-foe:first-child .mh-rpg-foe-ring');
+          check(`${tag}: 動いている1体にだけモーションが付く`, !!mo && mo.anims === 1 && mo.others === 0,
+            mo ? `本人 ${mo.anims}件 / ほか ${mo.others}体` : '見つからない');
+          check(`${tag}: モーションの長さが本体の指定どおり`, !!mo && mo.dur >= 300 && mo.dur <= 500, `${Math.round(mo?.dur)}ms`);
+          const dy = mo ? mo.mid.top - mo.at0.top : 0;
+          check(`${tag}: ${isAlly ? '味方は上' : '敵は下'}へ動く`, isAlly ? dy <= -6 : dy >= 6, `${Math.round(dy)}px`);
+          check(`${tag}: 動き終わると元の位置へ戻る`, !!mo && Math.abs(mo.end.top - mo.at0.top) <= 1 && Math.abs(mo.end.left - mo.at0.left) <= 1,
+            mo ? `ずれ ${Math.round(mo.end.top - mo.at0.top)}px` : '');
+          check(`${tag}: モーション中も横スクロールが増えない`, !!mo && mo.docWidth <= width && mo.bodyWidth <= width,
+            `幅 ${mo?.docWidth}px / 画面 ${width}px`);
+        }
+        if (phase === 'skill') {
           // 技ボタン → 技一覧 → 技選択 の途中。一覧が画面外へはみ出さないこと
           check(`${tag}: 技一覧が出ている`, m.skills.length >= 1, `${m.skills.length}件`);
           check(`${tag}: 技一覧が画面内に収まる`,
@@ -262,7 +317,7 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
           check(`${tag}: 生存している敵が選べる状態になる`, m.selectable === enemies, `${m.selectable}体`);
           check(`${tag}: 選べる敵が押せる大きさ`, m.foeMinSize >= MIN_TAP, `${Math.round(m.foeMinSize)}px`);
           check(`${tag}: 対象選択にも「もどる」がある`, !!m.firstCancel && m.firstCancel.height >= MIN_TAP, `${Math.round(m.firstCancel?.height)}px`);
-        } else {
+        } else if (phase === 'command') {
           check(`${tag}: コマンドが押せる大きさ`, !!m.firstCommand && m.firstCommand.height >= MIN_TAP, `${Math.round(m.firstCommand?.height)}px`);
           check(`${tag}: いまコマンドを入力する味方が1体だけ強調される`, m.activeMembers === 1, `${m.activeMembers}体`);
           check(`${tag}: 入力中の味方にCOMMANDの目印が出る`, m.commandBadge === 1);
@@ -271,6 +326,18 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
         if (screen === 'setup') {
           check(`${tag}: ステ振りの行が6ステータスぶん出ている`, m.statRows === 6, `${m.statRows}行`);
           check(`${tag}: ステ振りの行が横にはみ出さない`, m.statRowMaxRight <= width + 0.5, `右端 ${Math.round(m.statRowMaxRight)}px`);
+          // 人数は「味方」「敵」の2列だけ。カードの中に散らばっていないこと
+          check(`${tag}: 人数を変える所が味方・敵の2か所にまとまっている`, m.countRows === 2, `${m.countRows}か所`);
+          check(`${tag}: 人数のボタンが味方4+敵4ぶん出ている`, m.countButtons === 8, `${m.countButtons}個`);
+          check(`${tag}: 味方・敵それぞれ今の人数が選択済みで分かる`, m.countActive === 2, `${m.countActive}個`);
+          // いちばん上に置いた意味が無いと困るので、開いた直後(スクロール0)に画面内で押せることを見る
+          check(`${tag}: 人数がスクロールせずに見える`,
+            m.scrollTop === 0 && !!m.countsBox && m.countsBox.top >= -0.5 && m.countsBox.bottom <= height + 0.5,
+            m.countsBox ? `${Math.round(m.countsBox.top)}〜${Math.round(m.countsBox.bottom)}px / 画面 ${height}px` : '見つからない');
+          check(`${tag}: 人数がモンスターの詳細カードより上にある`,
+            !!m.countsBox && m.firstCardTop !== null && m.countsBox.bottom <= m.firstCardTop + 0.5,
+            `人数の下端 ${Math.round(m.countsBox?.bottom)}px / 最初のカード ${Math.round(m.firstCardTop)}px`);
+          check(`${tag}: 人数のボタンが横にはみ出さない`, m.countMaxRight <= width + 0.5, `右端 ${Math.round(m.countMaxRight)}px`);
         }
         if (screen === 'result') {
           check(`${tag}: 結果の表(会心・回避を含む9列)が横にはみ出さない`, m.resultMaxRight <= width + 0.5, `右端 ${Math.round(m.resultMaxRight)}px`);
