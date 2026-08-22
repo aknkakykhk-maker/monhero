@@ -64,10 +64,10 @@ const Heart=_icon('Heart'), Zap=_icon('Zap'), Sword=_icon('Sword'), Shield=_icon
 
 // --- Helpers ---
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
-const BATTLE_SPEEDS = [1, 1.5, 2];
+const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 08:33"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 08:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3850,6 +3850,32 @@ const RANGE_STYLES = {
   3: { bg: "bg-blue-950/90", border: "border-blue-500", text: "text-blue-400", shadow: "shadow-blue-500/50", glow: "drop-shadow-[0_0_15px_rgba(59,130,246,0.9)]", slotBg: "bg-blue-900/50", labelBg: "bg-blue-600 text-white" }
 };
 
+const AUTO_SETTINGS_KEY = 'mh_auto_settings_v1';
+const AUTO_STRATEGIES = ['random','offense','defense','guts'];
+const DEFAULT_AUTO_SETTINGS = Object.freeze({
+  strategy:'random',
+  allies:[
+    { rosterEntry:null, slot:null },
+    { rosterEntry:null, slot:null },
+    { rosterEntry:null, slot:null },
+  ],
+});
+// roster entry が正本。候補外・重複・壊れた距離は、安全な未指定/自動へ落とす。
+const normalizeAutoSettings = (value, validRosterEntries = null) => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const valid = validRosterEntries == null ? null : new Set(Array.isArray(validRosterEntries) ? validRosterEntries : []);
+  const seen = new Set();
+  const allies = Array.from({length:3}, (_, index) => {
+    const raw = Array.isArray(source.allies) && source.allies[index] && typeof source.allies[index] === 'object' ? source.allies[index] : {};
+    const entry = typeof raw.rosterEntry === 'string' && raw.rosterEntry.length > 0 ? raw.rosterEntry : null;
+    const rosterEntry = entry && (!valid || valid.has(entry)) && !seen.has(entry) ? entry : null;
+    if (rosterEntry) seen.add(rosterEntry);
+    const slot = raw.slot === null || raw.slot === undefined ? null : Number(raw.slot);
+    return { rosterEntry, slot:Number.isInteger(slot) && slot >= 0 && slot <= 3 ? slot : null };
+  });
+  return { strategy:AUTO_STRATEGIES.includes(source.strategy) ? source.strategy : 'random', allies };
+};
+
 // 難易度。keyはランキングの記録やハイスコアの保存にも使うので、既存のものは変更しない。
 // bg=選んだときの背景色 / text=選んでいないときの文字色(難易度の雰囲気に合わせた色)。
 // Tailwindの動的なクラス生成は稀に失敗して色が出ないことがあるため、実際の色はinline styleで指定する
@@ -6550,6 +6576,8 @@ function MonsterHeroGame() {
   const [ownedMarketIcons, setOwnedMarketIcons] = useState([]); // ブリーダーマーケットで購入済みのアイコンidリスト(端末保存)
   const [unlockedMonsterIds, setUnlockedMonsterIds] = useState(STARTER_MONSTER_IDS); // 解放済みモンスターid(初期8体+円盤石購入分、端末保存)
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS); // モンスター編成(解放済みの中から周回で使う候補、端末保存)
+  const [autoSettings, setAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
+  const [draftAutoSettings, setDraftAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
   const [monsterPartySets, setMonsterPartySets] = useState(() => normalizeMonsterPartySets(null, STARTER_MONSTER_IDS));
   const [editingPartySetIndex, setEditingPartySetIndex] = useState(0);
   const [partySetCopyTarget, setPartySetCopyTarget] = useState(null);
@@ -7409,6 +7437,7 @@ function MonsterHeroGame() {
     SKIP_RESULT: 'result',       // スキップのリザルト(通常のリザルトと同じ曲)
     MONSTER_LIST_MENU: 'management', // モンスター一覧メニュー
     MB_MANAGEMENT: 'management', // M/B管理はモンスター一覧・編成と同じ曲を続ける
+    AUTO_SETTINGS: 'management', // AUTO事前設定もM/B管理の曲を続ける
     PASTURE_SETTINGS: 'management', // 放牧設定もM/B管理の曲を続ける
     TEMPLE: 'temple',           // 神殿は合体と同じ曲を続ける
     MASU_REGENERATION: 'temple',
@@ -8062,7 +8091,11 @@ function MonsterHeroGame() {
       }
       setMonsterPartySets(normalizedPartySets);
       setEditingPartySetIndex(normalizedPartySets.activeIndex);
-      setMonsterRosterIds(normalizedPartySets.rosters[normalizedPartySets.activeIndex]);
+      const activeMonsterRoster = normalizedPartySets.rosters[normalizedPartySets.activeIndex];
+      setMonsterRosterIds(activeMonsterRoster);
+      const savedAutoSettings = normalizeAutoSettings(await storeGet(AUTO_SETTINGS_KEY, DEFAULT_AUTO_SETTINGS, false), activeMonsterRoster);
+      setAutoSettings(savedAutoSettings);
+      setDraftAutoSettings(savedAutoSettings);
       const savedUnlockedTeachings = await storeGet('mh_unlocked_teachings', STARTER_TEACHING_IDS, false);
       setUnlockedTeachingIds(savedUnlockedTeachings);
       const savedTeachingRoster = await storeGet('mh_teaching_roster', savedUnlockedTeachings, false);
@@ -8487,6 +8520,33 @@ function MonsterHeroGame() {
       return mergeMasuIntoMon(masu);
     }
     return ALL_PLAYER_MONSTERS[entry] || null;
+  };
+  const openAutoSettings = () => {
+    const candidates = monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry));
+    setDraftAutoSettings(normalizeAutoSettings(autoSettings, candidates));
+    setGameState('AUTO_SETTINGS');
+  };
+  const updateDraftAutoAlly = (index, patch) => {
+    setDraftAutoSettings(current => normalizeAutoSettings({
+      ...current,
+      allies:current.allies.map((ally, allyIndex) => allyIndex === index ? { ...ally, ...patch } : ally),
+    }, monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry))));
+  };
+  const saveAutoSettings = async () => {
+    const normalized = normalizeAutoSettings(draftAutoSettings, monsterRosterIds.filter(entry => !!resolveRosterEntryToMon(entry)));
+    await storeSet(AUTO_SETTINGS_KEY, normalized, false);
+    setAutoSettings(normalized);
+    setDraftAutoSettings(normalized);
+    setGameState('MB_MANAGEMENT');
+  };
+  const autoRosterLabel = (entry) => {
+    const mon = resolveRosterEntryToMon(entry);
+    if (!mon) return entry;
+    if (entry.startsWith('masu:')) {
+      const baseName = ALL_PLAYER_MONSTERS[getMasuMon(entry.slice(5))?.baseId]?.name;
+      return baseName && mon.name !== baseName ? `${mon.name}（${baseName}）` : `${mon.name}（マスモン）`;
+    }
+    return mon.name;
   };
   // 編成の1枠が対象とする「モンスター種id」を返す(プレーン種でもマスモンでも、種としては同じ扱い)
   const baseIdOfRosterEntry = (entry) => {
@@ -12406,9 +12466,29 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="grid grid-cols-2 gap-2 mb-5 shrink-0"><button onClick={()=>setManagementTab('monster')} className={`min-h-[48px] rounded-xl font-black ${managementTab==='monster'?'bg-indigo-600 text-white':'bg-slate-900 text-slate-400'}`}>モンスター</button><button onClick={()=>setManagementTab('assist')} className={`min-h-[48px] rounded-xl font-black ${managementTab==='assist'?'bg-purple-600 text-white':'bg-slate-900 text-slate-400'}`}>アシストカード</button></div>
             <div className="w-full max-w-md mx-auto space-y-3 overflow-y-auto mh-scroll">
               {managementTab==='monster'?<><button onClick={()=>setGameState('OWNED_MONSTERS')} className="mh-management-link">ベースモン一覧</button><button onClick={()=>setGameState('MASU_MONS')} className="mh-management-link">マスモン一覧</button><button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('monster');setGameState('ROSTER');}} className="mh-management-link">モンスター編成</button><button onClick={openPastureSettings} className="mh-management-link">放牧設定</button></>:<button onClick={()=>{setDraftMonsterRoster(monsterRosterIds);setDraftTeachingRoster(teachingRosterIds);setRosterTab('teaching');setGameState('ROSTER');}} className="mh-management-link">アシストカード編成</button>}
+              <button onClick={openAutoSettings} className="mh-management-link">AUTO設定</button>
             </div>
           </div>
         )}
+
+        {gameState==='AUTO_SETTINGS'&&(()=>{
+          const strategies = [
+            ['random','ランダム','AUTOが候補からランダムに選択'],
+            ['offense','火力重視','攻撃・ちから系を優先'],
+            ['defense','耐久重視','ライフ・丈夫さ系を優先'],
+            ['guts','ガッツ重視','ガッツ系を優先'],
+          ];
+          const ranges = [[null,'自動'],[0,'零'],[1,'近'],[2,'中'],[3,'遠']];
+          const selectedEntries = draftAutoSettings.allies.map(ally=>ally.rosterEntry).filter(Boolean);
+          return <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+            <div className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('MB_MANAGEMENT')} className="p-3 text-slate-400 active:scale-90" aria-label="M/B管理へ戻る"><ArrowLeft size={20}/></button><div><h2 className="text-xl font-black italic text-indigo-300">AUTO設定</h2><p className="text-[9px] text-slate-400 font-bold">将来のAUTO用事前設定</p></div></div>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-md mx-auto space-y-4 pb-3">
+              <section className="rounded-2xl border border-indigo-500/40 bg-slate-950/70 p-3"><h3 className="text-sm font-black text-indigo-200 mb-2">1. AUTO方針</h3><div className="grid grid-cols-2 gap-2">{strategies.map(([key,label,description])=><button key={key} aria-pressed={draftAutoSettings.strategy===key} onClick={()=>setDraftAutoSettings(current=>({...current,strategy:key}))} className={`min-h-[68px] min-w-0 rounded-xl border p-2 text-left active:scale-[.98] ${draftAutoSettings.strategy===key?'border-cyan-300 bg-indigo-600 ring-2 ring-cyan-300/50':'border-slate-700 bg-slate-900'}`}><span className="block text-xs font-black">{label}</span><span className="block mt-1 text-[9px] leading-snug text-slate-300">{description}</span></button>)}</div></section>
+              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className="rounded-2xl border border-indigo-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未指定（ランダム）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select><div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${ally.slot===slot?'ring-2 ring-white border-white':slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}`}>{label}</button>)}</div></div></div>)}</section>
+            </div>
+            <button onClick={saveAutoSettings} className="w-full max-w-md mx-auto min-h-[52px] shrink-0 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定</button>
+          </div>;
+        })()}
 
         {gameState==='TEMPLE'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
