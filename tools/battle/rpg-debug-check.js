@@ -55,6 +55,7 @@ const EXPORTS = [
   'rpgDamage', 'rpgVarianceRoll', 'rpgActionValue', 'rpgEvadeRate', 'rpgCritRate', 'rpgRollPercent',
   'rpgStartGuts', 'rpgTurnGutsRegen', 'rpgMonsterList', 'rpgMonsterById',
   'rpgCreateBattle', 'rpgSetCommand', 'rpgResolveStep', 'rpgAliveIndexes', 'rpgSpeedOrder', 'rpgUnitAt',
+  'rpgLowestHpEnemy',
 ];
 // index.html と同じ順でデータを流し込む(ALL_PLAYER_MONSTERS を本物のまま使う)
 const sandbox = { console, Math, JSON, Number, Object, Array, String, Boolean, isNaN, isFinite };
@@ -469,13 +470,45 @@ check('技は「技ボタン → 技一覧 → 技選択」の順で選ぶ',
   && rpgUi.includes('{skillList.map((skill,i)=>{')
   && rpgUi.includes('<b>{skill.name}</b>') && rpgUi.includes('消費ガッツ {skill.cost}')
   && rpgUi.includes("startAction('skill')"));
-check('技一覧から通常コマンドへ戻れる', (rpgUi.match(/mh-rpg-cancel/g) || []).length === 2);
-check('対象選択は画面上の敵を直接タップする',
-  rpgUi.includes("onClick={()=>rpgCommand(battle.pendingCommand||'attack',index)}")
-  && rpgUi.includes('const selectable=targeting&&unit.alive;')
-  && rpgUi.includes('上の敵をタップして選んでください'));
-check('敵が1体だけなら対象選択を挟まない',
-  rpgUi.includes("if(aliveEnemies.length<=1){rpgCommand(command,aliveEnemies[0]);return;}"));
+check('技一覧から通常コマンドへ戻れる', (rpgUi.match(/mh-rpg-cancel/g) || []).length === 1);
+// --- ねらい(対象は選ばなくてよい) ---
+// 「敵を選んでから撃つ」を必須にすると、コマンドを連打できず試作の回転が悪くなる。
+// ふだんは自動でライフ最小の敵へ飛ばし、狙いたいときだけ敵をタップして固定する
+check('対象を選ばずに撃つとライフがいちばん低い敵へ飛ぶ',
+  rpgUi.includes('const autoTarget=rpgLowestHpEnemy(battle);')
+  && rpgUi.includes('const targetIndex=aimIndex>=0?aimIndex:autoTarget;')
+  && rpgUi.includes('rpgCommand(command,targetIndex);'));
+check('コマンドを押しても対象選択の画面を挟まない',
+  !rpgUi.includes("phase:'target'") && !rpgUi.includes('上の敵をタップして選んでください'),
+  'こうげき・技はその場で実行される');
+check('ねらいは敵をタップして固定・もう一度タップで自動へ戻る',
+  rpgUi.includes('const toggleAim=(index)=>setRpgAim(prev=>(prev===index?null:index));')
+  && rpgUi.includes('onClick={()=>toggleAim(index)}'));
+check('ねらいの誤タップで行動を消費しない',
+  !rpgUi.includes("onClick={()=>rpgCommand(battle.pendingCommand||'attack',index)}")
+  && rpgUi.includes('const selectable=inputting&&unit.alive;'),
+  '敵のタップはねらいの切り替えだけ');
+check('ねらった敵が倒れたら自動(ライフ最小)へ戻る',
+  rpgUi.includes('const aimUnit=(rpgAim!==null&&battle.enemies[rpgAim]&&battle.enemies[rpgAim].alive)?battle.enemies[rpgAim]:null;')
+  && rpgUi.includes('const aimIndex=aimUnit?rpgAim:-1;'));
+check('いま誰をねらっているかが画面に出る',
+  rpgUi.includes('mh-rpg-aim') && rpgUi.includes('ねらい: <b>{targetUnit?targetUnit.name:') 
+  && rpgUi.includes('自動・ライフ最小') && rpgUi.includes('mh-rpg-aim-mark'));
+check('ねらいは画面だけの状態で、戦闘の状態には入れない',
+  source.includes('const [rpgAim, setRpgAim] = useState(null);') && !/rpgAim/.test(rpgSource),
+  '戦闘の状態(rpgBattle)は素のまま');
+check('戦闘を始めるときにねらいを初期化する', source.includes('setRpgAim(null);\n    setRpgBattle(rpgCreateBattle('));
+// 自動のねらい先は乱数を使わずに決める。同じ盤面なら誰が見ても同じ相手になる
+{
+  const battle = { enemies: [
+    { alive:true, hp:50 }, { alive:true, hp:12 }, { alive:false, hp:1 }, { alive:true, hp:12 },
+  ] };
+  check('自動のねらい先は生きている敵のうちライフ最小', R.rpgLowestHpEnemy(battle) === 1, `${R.rpgLowestHpEnemy(battle)}番`);
+  check('ライフが同じなら並び順が早いほうを狙う(毎回同じ結果)',
+    R.rpgLowestHpEnemy(battle) === R.rpgLowestHpEnemy(battle) && R.rpgLowestHpEnemy(battle) === 1);
+  check('倒れた敵は狙わない', R.rpgLowestHpEnemy({ enemies: [{ alive:false, hp:1 }, { alive:true, hp:99 }] }) === 1);
+  check('全滅していたら狙う相手が無い(-1)', R.rpgLowestHpEnemy({ enemies: [{ alive:false, hp:1 }] }) === -1);
+}
 check('いまコマンドを入力する味方が分かる',
   rpgUi.includes("const isActor=inputting&&index===battle.inputIndex;")
   && rpgUi.includes('${isActor?\'active\':\'\'}') && rpgUi.includes('<em>COMMAND</em>'));

@@ -9,6 +9,7 @@
 //   ・セットアップ画面の「戦闘開始」が常に画面内にあり、上の内容はスクロールで全部追える
 //   ・セットアップ画面の「人数」がいちばん上にあり、スクロールせずに味方・敵の数を変えられる
 //   ・戦闘画面で敵1〜4体・味方1〜4体のどれでもコマンドが画面内に収まり、押せる大きさ(44px以上)がある
+//   ・対象を選ばなくても「ねらい」が必ず1体に決まり、その表示が画面内にある
 //   ・攻撃モーション中も枠からはみ出さず、味方は上・敵は下へ動く
 //   ・結果画面の一覧が見切れず、下のボタンまで届く
 //
@@ -70,6 +71,9 @@ const setGameState = noop, setRpgPartySize = noop, setRpgEnemyCount = noop;
 const rpgSkillMenu = new URLSearchParams(location.search).get('p') === 'skill';
 const setRpgSkillMenu = noop;
 const rpgHits = null;
+// 「ねらい」は画面だけの状態。p=aim のとき2体目を固定してあり、それ以外は自動(ライフ最小)
+const rpgAim = params.get('p') === 'aim' ? 1 : null;
+const setRpgAim = noop;
 const rpgPatchAlly = noop, rpgPatchEnemy = noop, rpgResetAlloc = noop, rpgStepAlloc = noop;
 const rpgResetAllocAll = noop, rpgStartBattle = noop, rpgCommand = noop, setRpgBattle = noop;
 const setRpgVarianceOn = noop;
@@ -102,11 +106,6 @@ if (params.get('p') === 'resolve' || rpgActing) {
   battle.phase = 'resolve';
   battle.plan = rpgSpeedOrder(battle).map((entry, i) => ({ ...entry, command:'attack', targetSide: entry.side === 'ally' ? 'enemy' : 'ally', targetIndex:0, value: 100 - i }));
   battle.planStep = Math.min(2, battle.plan.length - 1);
-} else if (params.get('p') === 'target') {
-  battle.phase = 'target';
-  battle.pendingCommand = 'attack';
-  battle.inputIndex = 0;
-  battle.inputs = {};
 } else {
   battle.phase = 'command';
   battle.inputIndex = 0;
@@ -178,7 +177,7 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
       ['battle', 4, 3, '戦闘(味方4・敵3)', 'command'],
       ['battle', 4, 4, '戦闘(味方4・敵4・コマンド入力中)', 'command'],
       ['battle', 4, 4, '戦闘(味方4・敵4・技一覧を開いた状態)', 'skill'],
-      ['battle', 4, 4, '戦闘(味方4・敵4・対象選択中)', 'target'],
+      ['battle', 4, 4, '戦闘(味方4・敵4・敵をタップしてねらいを固定)', 'aim'],
       ['battle', 4, 4, '戦闘(味方4・敵4・行動順8体を実行中)', 'resolve'],
       ['battle', 4, 4, '戦闘(味方4・敵4・味方の攻撃モーション中)', 'motion'],
       ['battle', 4, 4, '戦闘(味方4・敵4・敵の攻撃モーション中)', 'motionfoe'],
@@ -215,6 +214,23 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
           rendered: !!document.querySelector('.mh-rpg-screen, .mh-rpg-battle'),
           docWidth: document.documentElement.scrollWidth,
           bodyWidth: document.body.scrollWidth,
+          aimBox: rect('.mh-rpg-aim'),
+          aimText: (document.querySelector('.mh-rpg-aim') || {}).textContent || '',
+          aimHighlight: document.querySelectorAll('.mh-rpg-foe.aimed, .mh-rpg-foe.auto').length,
+          aimMarks: document.querySelectorAll('.mh-rpg-aim-mark').length,
+          // 光っている敵が「固定したほうか」「ライフ最小か」を、画面のHP表示から確かめる
+          aimedIndexIsFixed: (() => {
+            const foes = [...document.querySelectorAll('.mh-rpg-foe')];
+            const i = foes.findIndex(el => el.classList.contains('aimed'));
+            return i === 1 && !foes.some(el => el.classList.contains('auto'));
+          })(),
+          autoIsLowestHp: (() => {
+            const foes = [...document.querySelectorAll('.mh-rpg-foe')];
+            const hp = foes.map(el => Number((el.querySelector('.mh-rpg-foe-hp') || {}).textContent.split('/')[0]) || Infinity);
+            const lowest = hp.indexOf(Math.min(...hp));
+            const i = foes.findIndex(el => el.classList.contains('auto'));
+            return i >= 0 && i === lowest && !foes.some(el => el.classList.contains('aimed'));
+          })(),
           countsBox: rect('.mh-rpg-counts'),
           countRows: document.querySelectorAll('.mh-rpg-count').length,
           countButtons: document.querySelectorAll('.mh-rpg-count button').length,
@@ -312,15 +328,24 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
             m.skillListBox ? `${Math.round(m.skillListBox.top)}〜${Math.round(m.skillListBox.bottom)}px / 画面 ${height}px` : '見つからない');
           check(`${tag}: 技が押せる大きさ`, m.skills.every(r => r.height >= MIN_TAP), `最小 ${Math.round(Math.min(...m.skills.map(r => r.height)))}px`);
           check(`${tag}: 技一覧から「もどる」で通常コマンドへ帰れる`, !!m.firstCancel && m.firstCancel.height >= MIN_TAP, `${Math.round(m.firstCancel?.height)}px`);
-        } else if (phase === 'target') {
-          // 対象選択は画面上の敵を直接タップする方式
-          check(`${tag}: 生存している敵が選べる状態になる`, m.selectable === enemies, `${m.selectable}体`);
-          check(`${tag}: 選べる敵が押せる大きさ`, m.foeMinSize >= MIN_TAP, `${Math.round(m.foeMinSize)}px`);
-          check(`${tag}: 対象選択にも「もどる」がある`, !!m.firstCancel && m.firstCancel.height >= MIN_TAP, `${Math.round(m.firstCancel?.height)}px`);
-        } else if (phase === 'command') {
+        } else if (phase === 'command' || phase === 'aim') {
           check(`${tag}: コマンドが押せる大きさ`, !!m.firstCommand && m.firstCommand.height >= MIN_TAP, `${Math.round(m.firstCommand?.height)}px`);
           check(`${tag}: いまコマンドを入力する味方が1体だけ強調される`, m.activeMembers === 1, `${m.activeMembers}体`);
           check(`${tag}: 入力中の味方にCOMMANDの目印が出る`, m.commandBadge === 1);
+          // 対象選択を挟まないぶん、いま誰へ飛ぶかが常に画面に出ていること
+          check(`${tag}: ねらいの表示が画面内にあってはみ出さない`,
+            !!m.aimBox && m.aimBox.bottom <= height + 0.5 && m.aimBox.right <= width + 0.5,
+            m.aimBox ? `${Math.round(m.aimBox.top)}〜${Math.round(m.aimBox.bottom)}px / 右端 ${Math.round(m.aimBox.right)}px` : '見つからない');
+          check(`${tag}: ねらっている敵が1体だけ光る`, m.aimHighlight === 1, `${m.aimHighlight}体`);
+          check(`${tag}: ねらいの🎯が1体だけに付く`, m.aimMarks === 1, `${m.aimMarks}個`);
+          // 敵はいつでも押せる(押すのはねらいの切り替えだけなので行動を消費しない)
+          check(`${tag}: 生きている敵はいつでも押せる`, m.selectable === enemies, `${m.selectable}体`);
+          check(`${tag}: 敵が押せる大きさ`, m.foeMinSize >= MIN_TAP, `${Math.round(m.foeMinSize)}px`);
+          if (phase === 'aim') {
+            check(`${tag}: タップで固定したほうがねらいになる`, m.aimedIndexIsFixed, m.aimText || '');
+          } else {
+            check(`${tag}: 自動のときはライフがいちばん低い敵がねらいになる`, m.autoIsLowestHp, m.aimText || '');
+          }
         }
       } else {
         if (screen === 'setup') {
