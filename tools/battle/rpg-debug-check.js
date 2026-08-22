@@ -460,11 +460,47 @@ check('セットアップのステ振りは6ステータスすべてを RPG_STAT
   (rpgUi.match(/RPG_STAT_KEYS\.map/g) || []).length === 2 && rpgUi.includes('rpgStepAlloc(index,key,'),
   '画面側でステータス名を書き並べていない');
 check('こうげき・技・防御の3コマンドがある',
-  rpgUi.includes('>こうげき</button>') && rpgUi.includes("chooseCommand('skill')") && rpgUi.includes("chooseCommand('guard')"));
+  rpgUi.includes('>こうげき</button>') && rpgUi.includes("startAction('attack')") && rpgUi.includes("startAction('guard')")
+  && rpgUi.includes('setRpgSkillMenu(true)'));
+// 「技」は直接発動せず、覚えている技の一覧を経由してから対象選択へ進む。
+// 今は固有技1つだけだが、増えても戦闘画面を作り直さずに済むようにしておく
+check('技は「技ボタン → 技一覧 → 技選択」の順で選ぶ',
+  rpgUi.includes('const skillList=actor&&actor.skill?[actor.skill]:[];')
+  && rpgUi.includes('{skillList.map((skill,i)=>{')
+  && rpgUi.includes('<b>{skill.name}</b>') && rpgUi.includes('消費ガッツ {skill.cost}')
+  && rpgUi.includes("startAction('skill')"));
+check('技一覧から通常コマンドへ戻れる', (rpgUi.match(/mh-rpg-cancel/g) || []).length === 2);
+check('対象選択は画面上の敵を直接タップする',
+  rpgUi.includes("onClick={()=>rpgCommand(battle.pendingCommand||'attack',index)}")
+  && rpgUi.includes('const selectable=targeting&&unit.alive;')
+  && rpgUi.includes('上の敵をタップして選んでください'));
+check('敵が1体だけなら対象選択を挟まない',
+  rpgUi.includes("if(aliveEnemies.length<=1){rpgCommand(command,aliveEnemies[0]);return;}"));
+check('いまコマンドを入力する味方が分かる',
+  rpgUi.includes("const isActor=inputting&&index===battle.inputIndex;")
+  && rpgUi.includes('${isActor?\'active\':\'\'}') && rpgUi.includes('<em>COMMAND</em>'));
+check('戦闘不能・防御が見て分かる',
+  rpgUi.includes('mh-rpg-down-mark') && rpgUi.includes('mh-rpg-guard-mark')
+  && /\.mh-rpg-foe\.down\{[^}]*grayscale/.test(source) && /\.mh-rpg-member\.down\{[^}]*grayscale/.test(source));
+check('ダメージ・会心・回避がモンスターの上に出る',
+  rpgUi.includes('const hitNode=(hit)=>') && rpgUi.includes("hit.evaded?'MISS'") && rpgUi.includes("hit.crit?'会心 '")
+  && /\.mh-rpg-hit\{/.test(source) && /\.mh-rpg-hit\.crit\{/.test(source) && /\.mh-rpg-hit\.miss\{/.test(source));
+check('ダメージ表示は戦闘の計算に触らず、前後の状態の差だけを見ている',
+  source.includes('const rpgPrevBattleRef = useRef(null);')
+  && source.includes('rpgBattle.planStep !== prev.planStep + 1) return;')
+  && !/rpgHits/.test(rpgSource));
 check('戦闘画面に行動順が出る',
   rpgUi.includes('mh-rpg-order-list') && rpgUi.includes('rpgSpeedOrder(battle)') && rpgUi.includes('battle.plan'));
-check('戦闘画面に素早さ・運が出る',
-  (rpgUi.match(/速\{unit\.speed\}/g) || []).length === 2 && (rpgUi.match(/運\{unit\.luck\}/g) || []).length === 2);
+// 戦闘画面は「能力の表」ではなく「モンスターが戦っている画面」にする。
+// 敵は 名前・HPバー・現在HP、味方は 名前・HP・ガッツ が最低限で、素早さ・運は小さく添えるだけ
+check('敵は名前とHPバーと現在HPが出る',
+  rpgUi.includes('<b>{unit.name}</b>') && rpgUi.includes("bar(unit.hp,unit.maxHp,'hp')")
+  && rpgUi.includes('<span className="mh-rpg-foe-hp">{unit.hp} / {unit.maxHp}</span>'));
+check('味方は名前・HP・ガッツが出る',
+  rpgUi.includes('<small>{unit.hp}/{unit.maxHp}</small>') && rpgUi.includes("bar(unit.guts,unit.maxGuts,'guts')"));
+check('素早さ・運は小さく添えるだけで、能力の表にしない',
+  (rpgUi.match(/速\{unit\.speed\}/g) || []).length === 1 && (rpgUi.match(/運\{unit\.luck\}/g) || []).length === 1
+  && !rpgUi.includes('丈{unit.def}'));
 check('結果画面に会心回数・回避回数が出る',
   rpgUi.includes('<span>会心</span>') && rpgUi.includes('<span>回避</span>')
   && rpgUi.includes('{unit.record.crits}') && rpgUi.includes('{unit.record.evaded}'));

@@ -54,9 +54,8 @@ check('画面のCSSを本体から取り出せている', cssRules.includes('.mh
 
 const app = `
 const ArrowLeft = ({size}) => React.createElement('span', {style:{fontSize:size}}, '<');
-const BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-// 画像の読み込みで測定がぶれないよう、絵だけ1x1へ置き換える(枠の大きさはCSSで決まっている)
-Object.values(ALL_PLAYER_MONSTERS).forEach(m => { m.iconUrl = BLANK; m.imgUrl = BLANK; m.faceIconUrl = BLANK; });
+// 絵は本物を出す(images/ へのリンクを置いてある)。枠の大きさはCSSで決まっているので、
+// 画像の有無で測定結果は変わらないが、見た目の確認画像が実物になる
 
 const params = new URLSearchParams(location.search);
 const SCREEN = params.get('s') || 'setup';
@@ -65,6 +64,10 @@ const N_ENEMY = Number(params.get('e') || 4);
 
 const noop = () => {};
 const setGameState = noop, setRpgPartySize = noop, setRpgEnemyCount = noop;
+// 「技」の一覧はコマンド欄の中で開く。画面だけの開閉なので、測るときは URL から切り替える
+const rpgSkillMenu = new URLSearchParams(location.search).get('p') === 'skill';
+const setRpgSkillMenu = noop;
+const rpgHits = null;
 const rpgPatchAlly = noop, rpgPatchEnemy = noop, rpgResetAlloc = noop, rpgStepAlloc = noop;
 const rpgResetAllocAll = noop, rpgStartBattle = noop, rpgCommand = noop, setRpgBattle = noop;
 const setRpgVarianceOn = noop;
@@ -87,6 +90,11 @@ if (params.get('p') === 'resolve') {
   battle.phase = 'resolve';
   battle.plan = rpgSpeedOrder(battle).map((entry, i) => ({ ...entry, command:'attack', targetSide: entry.side === 'ally' ? 'enemy' : 'ally', targetIndex:0, value: 100 - i }));
   battle.planStep = Math.min(2, battle.plan.length - 1);
+} else if (params.get('p') === 'target') {
+  battle.phase = 'target';
+  battle.pendingCommand = 'attack';
+  battle.inputIndex = 0;
+  battle.inputs = {};
 } else {
   battle.phase = 'command';
   battle.inputIndex = 0;
@@ -119,6 +127,10 @@ fs.copyFileSync(path.join(web, 'vendor', 'react.production.min.js'), path.join(d
 fs.copyFileSync(path.join(web, 'vendor', 'react-dom.production.min.js'), path.join(dir, 'react-dom.js'));
 fs.copyFileSync(path.join(web, 'data', 'images', 'images-ally.js'), path.join(dir, 'images-ally.js'));
 fs.copyFileSync(path.join(web, 'data', 'ally-monsters.js'), path.join(dir, 'ally-monsters.js'));
+// data/*.js が持つ画像パスは monster-hero/ からの相対なので、同じ名前でリンクを張って実物を出す
+const imagesLink = path.join(dir, 'images');
+try { fs.unlinkSync(imagesLink); } catch {}
+try { fs.symlinkSync(path.join(web, 'images'), imagesLink, 'dir'); } catch {}
 fs.writeFileSync(path.join(dir, 'rpg.js'), babel.transformSync(rpgSource, { filename: 'rpg.js', babelrc: false, configFile: false }).code);
 fs.writeFileSync(path.join(dir, 'app.js'), out.code);
 // この画面はTailwindを使わず専用CSSだけで組んでいるので、本体のCSSをそのまま貼れば本番と同じになる。
@@ -150,7 +162,11 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
     for (const [screen, allies, enemies, caseLabel, phase] of [
       ['setup', 4, 4, 'セットアップ(味方4・敵4・6ステータス)', 'command'],
       ['battle', 1, 1, '戦闘(味方1・敵1)', 'command'],
+      ['battle', 2, 2, '戦闘(味方2・敵2)', 'command'],
+      ['battle', 4, 3, '戦闘(味方4・敵3)', 'command'],
       ['battle', 4, 4, '戦闘(味方4・敵4・コマンド入力中)', 'command'],
+      ['battle', 4, 4, '戦闘(味方4・敵4・技一覧を開いた状態)', 'skill'],
+      ['battle', 4, 4, '戦闘(味方4・敵4・対象選択中)', 'target'],
       ['battle', 4, 4, '戦闘(味方4・敵4・行動順8体を実行中)', 'resolve'],
       ['result', 4, 4, '結果(味方4・敵4)', 'command'],
     ]) {
@@ -166,7 +182,22 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
           .map(el => el.getBoundingClientRect().height);
         const order = document.querySelector('.mh-rpg-order-list');
         const chips = [...document.querySelectorAll('.mh-rpg-order-chip')];
+        const foeRings = [...document.querySelectorAll('.mh-rpg-foe-ring')];
+        const members = [...document.querySelectorAll('.mh-rpg-member')];
         return {
+          foeCount: foeRings.length,
+          foeMinSize: foeRings.length ? Math.min(...foeRings.map(el => el.getBoundingClientRect().width)) : 0,
+          foeMaxRight: foeRings.length ? Math.max(...[...document.querySelectorAll('.mh-rpg-foe')].map(el => el.getBoundingClientRect().right)) : 0,
+          foeTop: foeRings.length ? Math.min(...foeRings.map(el => el.getBoundingClientRect().top)) : 0,
+          selectable: document.querySelectorAll('.mh-rpg-foe.selectable').length,
+          memberCount: members.length,
+          activeMembers: document.querySelectorAll('.mh-rpg-member.active').length,
+          commandBadge: document.querySelectorAll('.mh-rpg-member.active .mh-rpg-member-body em').length,
+          message: (document.querySelector('.mh-rpg-message') || {}).getBoundingClientRect ? document.querySelector('.mh-rpg-message').getBoundingClientRect().toJSON() : null,
+          skills: [...document.querySelectorAll('.mh-rpg-skill')].map(el => el.getBoundingClientRect().toJSON()),
+          fieldScroll: document.querySelector('.mh-rpg-field') ? { h: document.querySelector('.mh-rpg-field').clientHeight, s: document.querySelector('.mh-rpg-field').scrollHeight } : null,
+          skillListBox: document.querySelector('.mh-rpg-skill-list') ? document.querySelector('.mh-rpg-skill-list').getBoundingClientRect().toJSON() : null,
+          hud: document.querySelector('.mh-rpg-hud') ? document.querySelector('.mh-rpg-hud').getBoundingClientRect().toJSON() : null,
           rendered: !!document.querySelector('.mh-rpg-screen, .mh-rpg-battle'),
           docWidth: document.documentElement.scrollWidth,
           bodyWidth: document.body.scrollWidth,
@@ -179,9 +210,10 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
           footer: rect('.mh-rpg-footer'),
           commands: rect('.mh-rpg-commands'),
           firstCommand: rect('.mh-rpg-command-row button'),
-          enemies: rect('.mh-rpg-enemies'),
-          allies: rect('.mh-rpg-allies'),
-          log: rect('.mh-rpg-log'),
+          firstCancel: rect('.mh-rpg-cancel'),
+          enemies: rect('.mh-rpg-field'),
+          allies: rect('.mh-rpg-party'),
+          log: rect('.mh-rpg-message'),
           scrollable: scroller ? { h: scroller.clientHeight, s: scroller.scrollHeight } : null,
           minTap: taps.length ? Math.min(...taps) : null,
         };
@@ -190,17 +222,51 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
       check(`${tag}: 描画できている`, m.rendered && errors.length === 0, errors.join(' / '));
       check(`${tag}: 横スクロールしない`, m.docWidth <= width && m.bodyWidth <= width, `幅 ${m.docWidth}px / 画面 ${width}px`);
       if (screen === 'battle') {
-        // 行動順の帯。最大8体でも折り返して画面内に収まること
+        // 行動順は小さな顔アイコンだけ。最大8体でも折り返して画面内に収まること
         check(`${tag}: 行動順が生存者ぶん出ている`, m.orderCount === allies + enemies, `${m.orderCount}体`);
         check(`${tag}: 行動順が横にはみ出さない`, m.orderMaxRight <= width + 0.5, `右端 ${Math.round(m.orderMaxRight)}px / 画面 ${width}px`);
+        // モンスターの立ち絵が主役。丸枠が小さくなりすぎないこと
+        check(`${tag}: 敵の立ち絵が敵の数だけ出ている`, m.foeCount === enemies, `${m.foeCount}体`);
+        // 「小さくなりすぎない」は画面幅に対する割合で見る。狭い画面で敵4体だと物理的に大きくできないので、
+        // 固定pxではなく「画面幅の20%以上」を下限にする(320pxなら64px、393pxなら約79px)
+        check(`${tag}: 敵の立ち絵が小さくなりすぎない`, m.foeMinSize >= width * 0.2 - 0.5,
+          `いちばん小さい丸枠 ${Math.round(m.foeMinSize)}px（画面幅の${Math.round(m.foeMinSize / width * 100)}%）`);
+        check(`${tag}: 敵の立ち絵が横にはみ出さない`, m.foeMaxRight <= width + 0.5, `右端 ${Math.round(m.foeMaxRight)}px`);
+        check(`${tag}: 敵の立ち絵がヘッダーより下にある`, !!m.hud && m.foeTop >= m.hud.bottom - 0.5, `敵 ${Math.round(m.foeTop)}px / ヘッダー下端 ${Math.round(m.hud?.bottom)}px`);
+        // 敵の名前・HPが切れないこと(技一覧を開いたときに押しつぶされていないか)
+        check(`${tag}: 敵エリアが切れていない`, !!m.fieldScroll && m.fieldScroll.s <= m.fieldScroll.h + 1,
+          m.fieldScroll ? `表示 ${m.fieldScroll.h}px / 中身 ${m.fieldScroll.s}px` : '見つからない');
+        check(`${tag}: 味方が人数ぶん出ている`, m.memberCount === allies, `${m.memberCount}体`);
+        check(`${tag}: メッセージ欄が敵と味方の間にある`,
+          !!m.message && !!m.enemies && !!m.allies && m.message.top >= m.enemies.bottom - 0.5 && m.message.bottom <= m.allies.top + 0.5,
+          `敵 ${Math.round(m.enemies?.bottom)} → メッセージ ${Math.round(m.message?.top)}〜${Math.round(m.message?.bottom)} → 味方 ${Math.round(m.allies?.top)}`);
         check(`${tag}: コマンドが画面内に収まる`, !!m.commands && m.commands.bottom <= height + 0.5,
           m.commands ? `下端 ${Math.round(m.commands.bottom)}px` : '見つからない');
-        check(`${tag}: 敵・味方・ログ・コマンドが縦に全部入る`,
-          !!m.enemies && !!m.allies && !!m.log && m.enemies.top >= -0.5 && m.log.bottom <= m.allies.top + 0.5 && m.allies.bottom <= m.commands.top + 0.5,
+        check(`${tag}: 敵・メッセージ・味方・コマンドが縦に全部入る`,
+          !!m.enemies && !!m.allies && m.enemies.top >= -0.5 && m.allies.bottom <= m.commands.top + 0.5,
           `敵 ${Math.round(m.enemies?.bottom)} → 味方 ${Math.round(m.allies?.top)}〜${Math.round(m.allies?.bottom)} → コマンド ${Math.round(m.commands?.top)}`);
-        // 実行中はコマンドを出さず「行動中…」を出すので、押せる大きさを見るのは入力中だけ
-        if (phase === 'resolve') check(`${tag}: 実行中はコマンドの代わりに進行状況が出る`, !m.firstCommand && !!m.commands);
-        else check(`${tag}: コマンドが押せる大きさ`, !!m.firstCommand && m.firstCommand.height >= MIN_TAP, `${Math.round(m.firstCommand?.height)}px`);
+        if (phase === 'resolve') {
+          // 実行中はコマンドを出さず「行動中…」を出す
+          check(`${tag}: 実行中はコマンドの代わりに進行状況が出る`, !m.firstCommand && !!m.commands);
+          check(`${tag}: 実行中は現在コマンド入力中の味方が居ない`, m.activeMembers === 0);
+        } else if (phase === 'skill') {
+          // 技ボタン → 技一覧 → 技選択 の途中。一覧が画面外へはみ出さないこと
+          check(`${tag}: 技一覧が出ている`, m.skills.length >= 1, `${m.skills.length}件`);
+          check(`${tag}: 技一覧が画面内に収まる`,
+            !!m.skillListBox && m.skillListBox.bottom <= height + 0.5 && m.skillListBox.right <= width + 0.5 && m.skillListBox.top >= -0.5,
+            m.skillListBox ? `${Math.round(m.skillListBox.top)}〜${Math.round(m.skillListBox.bottom)}px / 画面 ${height}px` : '見つからない');
+          check(`${tag}: 技が押せる大きさ`, m.skills.every(r => r.height >= MIN_TAP), `最小 ${Math.round(Math.min(...m.skills.map(r => r.height)))}px`);
+          check(`${tag}: 技一覧から「もどる」で通常コマンドへ帰れる`, !!m.firstCancel && m.firstCancel.height >= MIN_TAP, `${Math.round(m.firstCancel?.height)}px`);
+        } else if (phase === 'target') {
+          // 対象選択は画面上の敵を直接タップする方式
+          check(`${tag}: 生存している敵が選べる状態になる`, m.selectable === enemies, `${m.selectable}体`);
+          check(`${tag}: 選べる敵が押せる大きさ`, m.foeMinSize >= MIN_TAP, `${Math.round(m.foeMinSize)}px`);
+          check(`${tag}: 対象選択にも「もどる」がある`, !!m.firstCancel && m.firstCancel.height >= MIN_TAP, `${Math.round(m.firstCancel?.height)}px`);
+        } else {
+          check(`${tag}: コマンドが押せる大きさ`, !!m.firstCommand && m.firstCommand.height >= MIN_TAP, `${Math.round(m.firstCommand?.height)}px`);
+          check(`${tag}: いまコマンドを入力する味方が1体だけ強調される`, m.activeMembers === 1, `${m.activeMembers}体`);
+          check(`${tag}: 入力中の味方にCOMMANDの目印が出る`, m.commandBadge === 1);
+        }
       } else {
         if (screen === 'setup') {
           check(`${tag}: ステ振りの行が6ステータスぶん出ている`, m.statRows === 6, `${m.statRows}行`);

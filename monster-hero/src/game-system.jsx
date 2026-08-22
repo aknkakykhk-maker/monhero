@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-22 16:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-22 18:49"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6744,7 +6744,11 @@ function MonsterHeroGame() {
     setRpgBattle(rpgCreateBattle(rpgParty.slice(0, rpgPartySize), rpgEnemySlots.slice(0, rpgEnemyCount)));
     setGameState('RPG_DEBUG_BATTLE');
   };
-  const rpgCommand = (command, targetIndex) => setRpgBattle(prev => (prev ? rpgSetCommand(prev, command, targetIndex) : prev));
+  const rpgCommand = (command, targetIndex) => { setRpgSkillMenu(false); setRpgBattle(prev => (prev ? rpgSetCommand(prev, command, targetIndex) : prev)); };
+  // 「技」を押したときに出す技一覧。今は固有技1つだけだが、将来技が増えても
+  // 戦闘画面を作り直さずに済むよう、最初から一覧を経由する形にしてある。
+  // 戦闘の状態(rpgBattle)には入れず、画面だけの開閉として持つ
+  const [rpgSkillMenu, setRpgSkillMenu] = useState(false);
   // 行動順が決まったあとは、1体ずつ間を置いて処理する(ログを読める速さにする)
   useEffect(() => {
     if (gameState !== 'RPG_DEBUG_BATTLE' || rpgBattle?.phase !== 'resolve') return;
@@ -6754,6 +6758,38 @@ function MonsterHeroGame() {
   useEffect(() => {
     if (gameState === 'RPG_DEBUG_BATTLE' && rpgBattle?.phase === 'result') setGameState('RPG_DEBUG_RESULT');
   }, [gameState, rpgBattle?.phase]);
+  // 1体ぶんの行動を処理するたび、直前の状態と見比べて「誰が何ダメージ受けたか」を拾い、
+  // モンスターの上へ数字を出す。戦闘の計算には一切触らず、表示のためだけに差分を見ている
+  const rpgPrevBattleRef = useRef(null);
+  const [rpgHits, setRpgHits] = useState(null);
+  useEffect(() => {
+    const prev = rpgPrevBattleRef.current;
+    rpgPrevBattleRef.current = rpgBattle;
+    if (!rpgBattle || !prev) return;
+    // 同じ戦闘の中で1手ぶん進んだときだけ見る(戦闘の作り直し・ターン跨ぎは対象外)
+    if (prev.phase !== 'resolve' || rpgBattle.phase !== 'resolve' || rpgBattle.planStep !== prev.planStep + 1) return;
+    const sideHits = (side) => rpgBattle[side].map((unit, i) => {
+      const was = prev[side][i];
+      if (!was) return null;
+      const damage = Math.max(0, was.hp - unit.hp);
+      const evaded = (unit.record.evaded || 0) > (was.record.evaded || 0);
+      if (!damage && !evaded) return null;
+      // 会心かどうかは「このターンに会心を出した相手がいるか」で判断する
+      const crit = damage > 0 && [...rpgBattle.allies, ...rpgBattle.enemies].some((u, j) => {
+        const wasAttacker = j < rpgBattle.allies.length ? prev.allies[j] : prev.enemies[j - rpgBattle.allies.length];
+        return wasAttacker && (u.record.crits || 0) > (wasAttacker.record.crits || 0);
+      });
+      return { damage, evaded, crit, down: !unit.alive && was.alive };
+    });
+    const hits = { ally: sideHits('allies'), enemy: sideHits('enemies'), at: rpgBattle.planStep };
+    if (!hits.ally.some(Boolean) && !hits.enemy.some(Boolean)) return;
+    setRpgHits(hits);
+  }, [rpgBattle]);
+  useEffect(() => {
+    if (!rpgHits) return;
+    const timer = setTimeout(() => setRpgHits(null), 640);
+    return () => clearTimeout(timer);
+  }, [rpgHits]);
 
   // 供モンが合流したときの「いまの値 → 合流後の値」をまとめて作る。★重要
   // 実際に合流させる confirmPick と同じ applyAllyJoinBonus / getMonsterAptPct を通すので、
@@ -12853,80 +12889,127 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const targeting=battle.phase==='target';
           const resolving=battle.phase==='resolve';
           const aliveEnemies=rpgAliveIndexes(battle.enemies);
-          const chooseCommand=(command)=>{
+          // 対象が1体だけならそのまま撃つ。2体以上のときだけ、画面の敵をタップして選ぶ
+          const startAction=(command)=>{
             if(command==='guard'){rpgCommand('guard');return;}
             if(aliveEnemies.length<=1){rpgCommand(command,aliveEnemies[0]);return;}
+            setRpgSkillMenu(false);
             setRpgBattle(prev=>prev?{...prev,phase:'target',pendingCommand:command}:prev);
           };
-          const canSkill=!!actor?.skill&&actor.guts>=actor.skill.cost;
+          const backToCommand=()=>{setRpgSkillMenu(false);setRpgBattle(prev=>prev?{...prev,phase:'command',pendingCommand:null}:prev);};
+          // 覚えている技の一覧。いまは固有技1つだけだが、増えてもここへ並ぶだけで済むようにしている
+          const skillList=actor&&actor.skill?[actor.skill]:[];
           const bar=(value,max,cls)=><div className={`mh-rpg-bar ${cls}`}><i style={{width:`${Math.max(0,Math.min(100,(value/Math.max(1,max))*100))}%`}}/></div>;
-          // 行動順の帯。実行中はそのターンの確定順、入力中は素早さ順の予測を出す。
-          // 最大8体でも横にはみ出さないよう、折り返す小さなチップで並べる
+          // 直近の行動で出たダメージ・会心・回避を、モンスターの上へ一瞬だけ出す
+          const hitOf=(side,index)=>(rpgHits&&rpgHits[side]?rpgHits[side][index]:null)||null;
+          const hitNode=(hit)=>hit?<span className={`mh-rpg-hit ${hit.crit?'crit':''} ${hit.evaded?'miss':''}`}>{hit.evaded?'MISS':`${hit.crit?'会心 ':''}-${hit.damage}`}</span>:null;
+          // 行動順。最大8体でも横にはみ出さないよう、小さな顔アイコンで折り返して並べる
           const orderEntries=resolving?battle.plan:rpgSpeedOrder(battle);
           const inputCount=Object.keys(battle.inputs||{}).length;
           const aliveAllyCount=rpgAliveIndexes(battle.allies).length;
+          // メッセージ欄。直近の3行だけを出し、いちばん新しい行を強調する
+          const messages=battle.log.slice(0,3);
+          const messageTone=(line)=>line.includes('会心')?'crit':line.includes('かわした')?'miss':line.includes('戦闘不能')?'down':line.includes('ダメージ')?'damage':line.includes('身を守っている')?'guard':'';
           return <main className="mh-rpg-battle">
             <div className="mh-debug-banner">DEBUG・保存されません</div>
-            <section className="mh-rpg-enemies" data-count={battle.enemies.length}>
+            <header className="mh-rpg-hud">
+              <span className="mh-rpg-hud-tag">RPG TEST</span>
+              <span className="mh-rpg-hud-turn">TURN {battle.turn}</span>
+              <span className="mh-rpg-hud-step">{resolving?`行動 ${Math.min(battle.planStep+1,battle.plan.length)} / ${battle.plan.length}`:`入力 ${Math.min(inputCount+1,aliveAllyCount)} / ${aliveAllyCount}`}</span>
+              <button type="button" aria-label="デバッグ設定へ戻る" onClick={()=>{setRpgSkillMenu(false);setRpgBattle(null);setGameState('DEBUG_SETTINGS');}}>✕</button>
+            </header>
+            <div className="mh-rpg-order">
+              <b>{resolving?'行動順':'予測順'}</b>
+              <div className="mh-rpg-order-list">
+                {orderEntries.map((entry,i)=>{
+                  const unit=rpgUnitAt(battle,entry.side,entry.index);
+                  if(!unit) return null;
+                  const done=resolving&&i<battle.planStep;
+                  const current=resolving&&i===battle.planStep;
+                  return <span key={`o${entry.side}${entry.index}`} className={`mh-rpg-order-chip ${entry.side} ${done?'done':''} ${current?'current':''}`} title={unit.name}>
+                    <img src={unit.faceIconUrl||unit.iconUrl} alt={unit.name} style={entry.side==='enemy'?{filter:rpgEnemyType(unit.typeId).filter}:undefined}/>
+                  </span>;
+                })}
+              </div>
+            </div>
+            {/* 敵フィールド。通常バトルと同じく、丸枠の立ち絵を主役にする */}
+            <section className={`mh-rpg-field overflow-y-auto ${targeting?'targeting':''}`} data-count={battle.enemies.length}>
               {battle.enemies.map((unit,index)=>{
                 const type=rpgEnemyType(unit.typeId);
-                return <button key={`e${index}`} className={`mh-rpg-enemy ${unit.alive?'':'down'} ${targeting&&unit.alive?'selectable':''}`} disabled={!targeting||!unit.alive} onClick={()=>rpgCommand(battle.pendingCommand||'attack',index)}>
-                  <img src={unit.imgUrl||unit.iconUrl} alt={unit.name} style={{filter:type.filter}}/>
+                const hit=hitOf('enemy',index);
+                const selectable=targeting&&unit.alive;
+                // 丸枠の色は通常バトルの敵枠に寄せる。赤・青タイプはその色にして見分けやすくする
+                const ring=type.id==='normal'?'#ef4444':type.accent;
+                return <button key={`e${index}`} type="button" style={{'--rpg-foe-ring':ring}} className={`mh-rpg-foe ${unit.alive?'':'down'} ${selectable?'selectable':''}`} disabled={!selectable} aria-label={`${unit.name} ライフ${unit.hp}/${unit.maxHp}`} onClick={()=>rpgCommand(battle.pendingCommand||'attack',index)}>
+                  <span className="mh-rpg-foe-fx">{hitNode(hit)}</span>
+                  <span className="mh-rpg-foe-ring">
+                    <img src={unit.imgUrl||unit.iconUrl} alt="" style={{filter:type.filter}}/>
+                    {!unit.alive&&<span className="mh-rpg-down-mark" aria-hidden="true">✖</span>}
+                    {unit.guarding&&<span className="mh-rpg-guard-mark" aria-hidden="true">🛡</span>}
+                  </span>
                   <b>{unit.name}</b>
-                  <small>Lv.{unit.level}・丈{unit.def}</small>
-                  <small>速{unit.speed}・運{unit.luck}</small>
                   {bar(unit.hp,unit.maxHp,'hp')}
-                  <span>{unit.hp} / {unit.maxHp}</span>
-                  {bar(unit.guts,unit.maxGuts,'guts')}
-                  <span>G {unit.guts} / {unit.maxGuts}</span>
+                  <span className="mh-rpg-foe-hp">{unit.hp} / {unit.maxHp}</span>
                 </button>;
               })}
             </section>
-            <section className="mh-rpg-mid">
-              <div className="mh-rpg-turn">TURN {battle.turn}</div>
-              <div className="mh-rpg-order">
-                <b>{resolving?'行動順':'素早さ順（予測）'}</b>
-                <div className="mh-rpg-order-list">
-                  {orderEntries.map((entry,i)=>{
-                    const unit=rpgUnitAt(battle,entry.side,entry.index);
-                    if(!unit) return null;
-                    const done=resolving&&i<battle.planStep;
-                    const current=resolving&&i===battle.planStep;
-                    return <span key={`o${entry.side}${entry.index}`} className={`mh-rpg-order-chip ${entry.side} ${done?'done':''} ${current?'current':''}`}>
-                      <img src={unit.iconUrl} alt="" style={entry.side==='enemy'?{filter:rpgEnemyType(unit.typeId).filter}:undefined}/>
-                      <em>{unit.name}</em>
-                    </span>;
-                  })}
-                </div>
-              </div>
-              <ul className="mh-rpg-log">{battle.log.slice(0,5).map((line,i)=><li key={`${battle.log.length}-${i}`}>{line}</li>)}</ul>
+            {/* メッセージ欄 */}
+            <div className="mh-rpg-message">
+              {messages.length===0?<p>&nbsp;</p>:messages.map((line,i)=><p key={`${battle.log.length}-${i}`} className={`${i===0?'now':''} ${messageTone(line)}`}>{line}</p>)}
+            </div>
+            {/* 味方パーティ */}
+            <section className="mh-rpg-party" data-count={battle.allies.length}>
+              {battle.allies.map((unit,index)=>{
+                const hit=hitOf('ally',index);
+                const isActor=inputting&&index===battle.inputIndex;
+                return <div key={`a${index}`} className={`mh-rpg-member ${unit.alive?'':'down'} ${isActor?'active':''} ${battle.inputs&&battle.inputs[index]?'ready':''}`}>
+                  <span className="mh-rpg-member-fx">{hitNode(hit)}</span>
+                  <span className="mh-rpg-member-face">
+                    <img src={unit.faceIconUrl||unit.iconUrl} alt=""/>
+                    {!unit.alive&&<span className="mh-rpg-down-mark" aria-hidden="true">✖</span>}
+                    {unit.guarding&&<span className="mh-rpg-guard-mark" aria-hidden="true">🛡</span>}
+                  </span>
+                  <div className="mh-rpg-member-body">
+                    <b>{unit.name}{isActor&&<em>COMMAND</em>}</b>
+                    {bar(unit.hp,unit.maxHp,'hp')}
+                    <small>{unit.hp}/{unit.maxHp}</small>
+                    {bar(unit.guts,unit.maxGuts,'guts')}
+                    <small>G {unit.guts}/{unit.maxGuts}・速{unit.speed}・運{unit.luck}</small>
+                  </div>
+                </div>;
+              })}
             </section>
-            <section className="mh-rpg-allies" data-count={battle.allies.length}>
-              {battle.allies.map((unit,index)=><div key={`a${index}`} className={`mh-rpg-ally ${unit.alive?'':'down'} ${inputting&&index===battle.inputIndex?'active':''} ${battle.inputs&&battle.inputs[index]?'ready':''}`}>
-                <img src={unit.iconUrl} alt={unit.name}/>
-                <div>
-                  <b>{unit.name}{unit.guarding?' 🛡':''}</b>
-                  <small>Lv.{unit.level}・速{unit.speed}・運{unit.luck}</small>
-                  {bar(unit.hp,unit.maxHp,'hp')}
-                  <span>{unit.hp}/{unit.maxHp}</span>
-                  {bar(unit.guts,unit.maxGuts,'guts')}
-                  <span>G {unit.guts}/{unit.maxGuts}</span>
-                </div>
-              </div>)}
-            </section>
+            {/* コマンド。将来ここへ「アイテム」「逃げる」を足せるよう、横並びの枠だけ広げてある */}
             <footer className="mh-rpg-commands">
-              {resolving&&<p className="mh-rpg-wait">行動中…（{Math.min(battle.planStep+1,battle.plan.length)} / {battle.plan.length}）</p>}
+              {resolving&&<p className="mh-rpg-wait">行動中…</p>}
               {targeting&&<>
-                <p className="mh-rpg-wait">攻撃する敵をタップしてください</p>
-                <button className="mh-rpg-cancel" onClick={()=>setRpgBattle(prev=>prev?{...prev,phase:'command',pendingCommand:null}:prev)}>やめる</button>
+                <p className="mh-rpg-wait">▼ 上の敵をタップして選んでください</p>
+                <button type="button" className="mh-rpg-cancel" onClick={backToCommand}>もどる</button>
               </>}
-              {battle.phase==='command'&&actor&&<>
-                <p className="mh-rpg-actor">{actor.name} の行動（{inputCount+1} / {aliveAllyCount}体目）</p>
+              {battle.phase==='command'&&actor&&!rpgSkillMenu&&<>
+                <p className="mh-rpg-actor">{actor.name} は どうする？</p>
                 <div className="mh-rpg-command-row">
-                  <button onClick={()=>chooseCommand('attack')}>こうげき</button>
-                  <button disabled={!canSkill} onClick={()=>chooseCommand('skill')}>{actor.skill?actor.skill.name:'技なし'}<small>{actor.skill?`消費G ${actor.skill.cost}`:'—'}</small></button>
-                  <button onClick={()=>chooseCommand('guard')}>防御<small>被ダメ50%</small></button>
+                  <button type="button" onClick={()=>startAction('attack')}>こうげき</button>
+                  <button type="button" disabled={skillList.length===0} onClick={()=>setRpgSkillMenu(true)}>技<small>{skillList.length}コ</small></button>
+                  <button type="button" onClick={()=>startAction('guard')}>防御<small>被ダメ50%</small></button>
                 </div>
+              </>}
+              {/* 技一覧はコマンド欄の上へ重ねて出す。敵の立ち絵を押しつぶさないようにするため */}
+              {battle.phase==='command'&&actor&&rpgSkillMenu&&<>
+                <div className="mh-rpg-skill-panel">
+                  <p className="mh-rpg-actor">{actor.name} の技（ガッツ {actor.guts}/{actor.maxGuts}）</p>
+                  <div className="mh-rpg-skill-list">
+                    {skillList.map((skill,i)=>{
+                      const enough=actor.guts>=skill.cost;
+                      return <button key={i} type="button" className="mh-rpg-skill" disabled={!enough} onClick={()=>startAction('skill')}>
+                        <b>{skill.name}</b>
+                        <span>消費ガッツ {skill.cost}{enough?'':'（足りない）'}</span>
+                      </button>;
+                    })}
+                  </div>
+                </div>
+                <p className="mh-rpg-actor">技をえらぶ</p>
+                <button type="button" className="mh-rpg-cancel" onClick={()=>setRpgSkillMenu(false)}>もどる</button>
               </>}
             </footer>
           </main>;
@@ -17233,7 +17316,7 @@ const createAnimationStyle = () => {
 .mh-dice-overlay{position:absolute;z-index:200;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#020617c9;pointer-events:none}.mh-dice-overlay b{font-size:24px;color:#fef3c7;text-shadow:0 3px 8px #000}.mh-dice-cube{display:grid;place-items:center;width:112px;height:112px;border:7px solid #f8fafc;border-radius:25px;background:linear-gradient(145deg,#fff,#cbd5e1);color:#172554;font-size:62px;font-weight:1000;box-shadow:0 18px 35px #000b,inset -8px -8px 12px #64748b55}.mh-dice-overlay.rolling .mh-dice-cube{animation:trainingDiceRoll .22s linear infinite}.mh-dice-overlay.result .mh-dice-cube{animation:trainingDiceResult .5s cubic-bezier(.2,1.7,.4,1)}@keyframes trainingDiceRoll{25%{transform:translate(-18px,-8px) rotate(-18deg) scale(.92)}50%{transform:translate(12px,-22px) rotate(22deg) scale(1.08)}75%{transform:translate(20px,4px) rotate(8deg)}}@keyframes trainingDiceResult{0%{transform:scale(.35) rotate(-90deg)}70%{transform:scale(1.18) rotate(8deg)}100%{transform:scale(1)}}.mh-training-message{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}.mh-training-message strong{padding:3px 7px;border-radius:7px;background:#fbbf24;color:#451a03;font-size:11px}.mh-training-message small{color:#94a3b8;font-size:7px}.mh-space-detail div{padding:8px 0;border-bottom:1px solid #ffffff1f}.mh-space-detail dt{color:#a5b4fc;font-size:8px;font-weight:1000}.mh-space-detail dd{margin-top:2px;color:#e2e8f0;font-size:10px}
 .mh-tile-viewport{background:radial-gradient(circle at 55% 45%,#365314aa,#0f2940 55%,#061521),repeating-linear-gradient(135deg,#fff4 0 2px,transparent 2px 14px)}.mh-tile-board>i{height:18px;border:3px solid #f8fafccc;background:linear-gradient(#94a3b8,#475569);box-shadow:0 4px 0 #020617,0 0 8px #000;transition:.2s}.mh-tile-board>i.route{z-index:1;border-color:#fef9c3;background:#facc15;box-shadow:0 0 14px #fde047,0 4px 0 #713f12}.mh-training-tile{width:64px;height:64px;margin:-32px;border-radius:9px}.mh-training-tile.route-preview{box-shadow:0 0 0 4px #fef08a99,0 0 20px #fde047,0 5px 0 #0f172a}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 6px #fb923c,0 0 28px #f97316,0 5px 0 #7c2d12;animation:trainingStop  .65s infinite alternate}.mh-branch-arrow{position:absolute;z-index:12;top:-27px;left:50%;transform:translateX(-50%);min-width:52px;padding:4px 6px;border-radius:999px;background:#f97316;color:#fff;font-size:8px;font-style:normal;font-weight:1000;white-space:nowrap;box-shadow:0 0 14px #fb923c}.mh-map-legend{position:sticky;z-index:20;left:7px;top:7px;display:flex;width:max-content;gap:4px;padding:5px;border:1px solid #ffffff55;border-radius:9px;background:#020617df;pointer-events:none}.mh-map-legend b{padding:2px 4px;border-radius:5px;background:#ffffff12;font-size:6px}.mh-goal-guide{position:sticky;z-index:20;float:right;right:7px;top:7px;padding:5px 8px;border-radius:8px;background:#713f12e8;color:#fef08a;font-size:8px;font-weight:1000;pointer-events:none}.mh-goal-guide span{display:inline-block;animation:goalPoint .7s infinite alternate}.mh-tile-viewport.overview .mh-map-legend{position:absolute;left:6px;top:6px}.mh-tile-viewport.overview .mh-goal-guide{display:none}@keyframes trainingStop{to{transform:scale(1.1)}}@keyframes goalPoint{to{transform:translateX(4px)}}
 .mh-training-result{height:100%;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));text-align:center;background:radial-gradient(circle,#14532d,#020617 65%)}.mh-training-result.failure{background:radial-gradient(circle,#3f3f46,#020617 65%)}.mh-training-result>div{width:100%;max-width:360px}.mh-result-mark{display:block;font-size:64px}.mh-training-result small{color:#f9a8d4;font:900 9px monospace;letter-spacing:.22em}.mh-training-result h2{font-size:28px;font-weight:1000}.mh-training-result>div>p{margin:7px;color:#cbd5e1;font-size:10px}.mh-training-result section{margin:18px 0;padding:13px;border:1px solid #ffffff22;border-radius:18px;background:#0007}.mh-training-result section div{display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #ffffff12}.mh-training-result section div:last-child{border:0}.mh-training-result section span{font-size:11px}.mh-training-result section b{color:#fde68a}.mh-training-result .mh-result-note{font-size:8px}.mh-training-result>div>button{width:100%;min-height:52px;margin-top:10px;border-radius:18px;background:#fff;color:#172554;font-weight:1000}
-.mh-rpg-screen,.mh-rpg-battle{height:100%;display:flex;flex-direction:column;overflow:hidden;background:radial-gradient(circle at top,#064e3b,#04121b 62%)}.mh-rpg-screen{padding:0 0 calc(6px + env(safe-area-inset-bottom));padding-top:env(safe-area-inset-top)}.mh-rpg-head{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;flex:none;padding:2px 8px}.mh-rpg-head>button{min-height:44px;display:flex;align-items:center;justify-content:center;background:transparent;color:#94a3b8}.mh-rpg-head div{text-align:center;min-width:0}.mh-rpg-head small{display:block;color:#6ee7b7;font:900 8px monospace;letter-spacing:.22em}.mh-rpg-head h2{font-size:16px;font-weight:1000}.mh-rpg-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 10px 12px}.mh-rpg-section{margin-bottom:14px}.mh-rpg-section h3{margin:6px 0;color:#6ee7b7;font-size:11px;font-weight:1000;letter-spacing:.08em}.mh-rpg-count{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}.mh-rpg-count button{min-height:44px;border:2px solid #334155;border-radius:12px;background:#0f172acc;font-size:11px;font-weight:900;color:#cbd5e1}.mh-rpg-count button.active{border-color:#34d399;background:#065f4655;color:#a7f3d0}.mh-rpg-card{margin-bottom:9px;padding:9px;border:2px solid #334155;border-radius:16px;background:#0f172ad9}.mh-rpg-card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}.mh-rpg-card-head img{width:44px;height:44px;object-fit:contain;flex:none}.mh-rpg-card-head select{flex:1;min-width:0;min-height:44px;padding:0 8px;border:1px solid #ffffff22;border-radius:10px;background:#020617;color:#e2e8f0;font-size:12px;font-weight:900}.mh-rpg-types{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px}.mh-rpg-types button{min-height:40px;padding:0 2px;border:2px solid #334155;border-radius:10px;background:#020617;color:#94a3b8;font-size:9px;font-weight:900}.mh-rpg-types button.active{background:#1e293b}.mh-rpg-level{display:flex;align-items:center;gap:8px;margin-bottom:6px}.mh-rpg-level b{flex:none;width:52px;color:#fde68a;font-size:12px}.mh-rpg-level input{flex:1;min-width:0;height:32px;accent-color:#34d399}.mh-rpg-points{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;font-size:10px;color:#cbd5e1;font-weight:900}.mh-rpg-points button{min-height:36px;padding:0 10px;border-radius:10px;background:#334155;color:#e2e8f0;font-size:9px;font-weight:900}.mh-rpg-stat{display:grid;grid-template-columns:44px 34px 12px 40px 44px 22px 44px;align-items:center;gap:2px;padding:2px 0;font-size:10px}.mh-rpg-stat-name{color:#94a3b8;font-weight:900}.mh-rpg-stat-base{color:#64748b;text-align:right}.mh-rpg-stat-arrow{color:#475569;text-align:center}.mh-rpg-stat-final{color:#f8fafc;font-weight:1000;text-align:right}.mh-rpg-stat button{min-height:40px;border-radius:9px;background:#1e293b;color:#e2e8f0;font-size:15px;font-weight:900}.mh-rpg-stat button:disabled{opacity:.28}.mh-rpg-stat em{color:#fbbf24;font-style:normal;font-weight:900;text-align:center}.mh-rpg-enemy-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mh-rpg-enemy-stats span{padding:5px 2px;border-radius:8px;background:#02061788;text-align:center}.mh-rpg-enemy-stats small{display:block;color:#94a3b8;font-size:7px;font-weight:900}.mh-rpg-enemy-stats b{font-size:12px}.mh-rpg-skill{margin-top:6px;color:#a5b4fc;font-size:8px;font-weight:900}.mh-rpg-toggle{width:100%;min-height:56px;padding:8px 12px;border:2px solid #334155;border-radius:14px;background:#0f172acc;color:#cbd5e1;font-size:12px;font-weight:1000;text-align:left}.mh-rpg-toggle.active{border-color:#fbbf24;color:#fde68a}.mh-rpg-toggle small{display:block;margin-top:3px;color:#94a3b8;font-size:8px;font-weight:700}.mh-rpg-footer{flex:none;padding:8px 10px calc(4px + env(safe-area-inset-bottom));background:linear-gradient(transparent,#04121b 30%)}.mh-rpg-footer button{display:block;width:100%;min-height:50px;margin-top:6px;border-radius:16px;background:linear-gradient(90deg,#059669,#0284c7);font-size:13px;font-weight:1000}.mh-rpg-footer button.sub{min-height:44px;background:#1e293b;color:#cbd5e1;font-size:11px}.mh-rpg-battle{padding-top:env(safe-area-inset-top)}.mh-rpg-enemies{flex:none;display:grid;gap:5px;padding:6px 8px 2px}.mh-rpg-enemies[data-count="1"]{grid-template-columns:1fr}.mh-rpg-enemies[data-count="2"]{grid-template-columns:repeat(2,1fr)}.mh-rpg-enemies[data-count="3"],.mh-rpg-enemies[data-count="4"]{grid-template-columns:repeat(4,1fr)}.mh-rpg-enemy{min-width:0;padding:5px 3px;border:2px solid #334155;border-radius:14px;background:#0f172ab8;text-align:center}.mh-rpg-enemy.selectable{border-color:#fbbf24;box-shadow:0 0 12px #fbbf2455}.mh-rpg-enemy.down{opacity:.32}.mh-rpg-enemy img{width:100%;height:clamp(64px,14vh,110px);object-fit:contain}.mh-rpg-enemies[data-count="1"] .mh-rpg-enemy img{height:clamp(120px,30vh,220px)}.mh-rpg-enemies[data-count="2"] .mh-rpg-enemy img{height:clamp(100px,22vh,170px)}.mh-rpg-enemy b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.mh-rpg-enemy small,.mh-rpg-enemy span{display:block;color:#94a3b8;font-size:7px;font-weight:900}.mh-rpg-bar{height:5px;margin:2px 0 1px;border-radius:999px;background:#020617;overflow:hidden}.mh-rpg-bar i{display:block;height:100%;border-radius:999px}.mh-rpg-bar.hp i{background:linear-gradient(90deg,#f43f5e,#fb7185)}.mh-rpg-bar.guts i{background:linear-gradient(90deg,#d97706,#fde047)}.mh-rpg-mid{flex:1;min-height:54px;display:flex;flex-direction:column;justify-content:flex-end;padding:2px 10px}.mh-rpg-turn{color:#6ee7b7;font:1000 10px monospace;letter-spacing:.2em}.mh-rpg-order{margin:3px 0 2px}.mh-rpg-order>b{display:block;color:#94a3b8;font-size:7px;font-weight:900;letter-spacing:.1em;margin-bottom:2px}.mh-rpg-order-list{display:flex;flex-wrap:wrap;gap:3px}.mh-rpg-order-chip{display:inline-flex;align-items:center;gap:2px;max-width:84px;padding:2px 5px 2px 2px;border:1px solid #334155;border-radius:999px;background:#0f172acc}.mh-rpg-order-chip.enemy{border-color:#7f1d1d;background:#450a0a66}.mh-rpg-order-chip.done{opacity:.35}.mh-rpg-order-chip.current{border-color:#fbbf24;background:#78350f66;box-shadow:0 0 8px #fbbf2455}.mh-rpg-order-chip img{width:16px;height:16px;object-fit:contain;flex:none}.mh-rpg-order-chip em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-style:normal;font-size:8px;font-weight:900}.mh-rpg-ally.ready{border-color:#0ea5e9}.mh-rpg-log{margin-top:2px;padding:5px 8px;border-radius:10px;background:#02061799;font-size:9px;line-height:1.5;color:#e2e8f0}.mh-rpg-log li{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-rpg-log li:first-child{color:#fde68a;font-weight:900}.mh-rpg-allies{flex:none;display:grid;gap:4px;padding:4px 8px}.mh-rpg-allies[data-count="1"]{grid-template-columns:1fr}.mh-rpg-allies[data-count="2"]{grid-template-columns:repeat(2,1fr)}.mh-rpg-allies[data-count="3"],.mh-rpg-allies[data-count="4"]{grid-template-columns:repeat(2,1fr)}.mh-rpg-ally{display:flex;align-items:center;gap:5px;min-width:0;padding:4px;border:2px solid #1e293b;border-radius:12px;background:#0f172ab8}.mh-rpg-ally.active{border-color:#34d399;background:#065f4644}.mh-rpg-ally.down{opacity:.32}.mh-rpg-ally img{width:32px;height:32px;object-fit:contain;flex:none}.mh-rpg-ally>div{flex:1;min-width:0}.mh-rpg-ally b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.mh-rpg-ally small,.mh-rpg-ally span{display:block;color:#94a3b8;font-size:7px;font-weight:900}.mh-rpg-commands{flex:none;min-height:96px;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:#020617cc}.mh-rpg-actor{margin-bottom:4px;color:#a7f3d0;font-size:10px;font-weight:1000}.mh-rpg-wait{padding:14px 0;text-align:center;color:#fde68a;font-size:12px;font-weight:1000}.mh-rpg-command-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.mh-rpg-command-row button{min-height:58px;padding:2px;border-radius:14px;background:linear-gradient(#1e293b,#0f172a);border:2px solid #475569;font-size:11px;font-weight:1000;color:#f1f5f9}.mh-rpg-command-row button:disabled{opacity:.3}.mh-rpg-command-row small{display:block;margin-top:2px;color:#94a3b8;font-size:7px;font-weight:900}.mh-rpg-cancel{width:100%;min-height:44px;border-radius:12px;background:#334155;font-size:11px;font-weight:900}.mh-rpg-result-turn{margin:6px 0;color:#fde68a;font-size:12px;font-weight:1000;text-align:center}.mh-rpg-result-table{border:1px solid #ffffff1a;border-radius:12px;overflow:hidden}.mh-rpg-result-row{display:grid;grid-template-columns:1.45fr 1.15fr 1fr 1fr .62fr .62fr .8fr .62fr .62fr;gap:1px;padding:6px 3px;font-size:8px;border-top:1px solid #ffffff12}.mh-rpg-result-row:first-child{border-top:0}.mh-rpg-result-row.head{background:#02061799;color:#6ee7b7;font-weight:1000;font-size:7px}.mh-rpg-result-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mh-rpg-screen,.mh-rpg-battle{height:100%;display:flex;flex-direction:column;overflow:hidden;background:radial-gradient(circle at top,#064e3b,#04121b 62%)}.mh-rpg-screen{padding:0 0 calc(6px + env(safe-area-inset-bottom));padding-top:env(safe-area-inset-top)}.mh-rpg-head{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;flex:none;padding:2px 8px}.mh-rpg-head>button{min-height:44px;display:flex;align-items:center;justify-content:center;background:transparent;color:#94a3b8}.mh-rpg-head div{text-align:center;min-width:0}.mh-rpg-head small{display:block;color:#6ee7b7;font:900 8px monospace;letter-spacing:.22em}.mh-rpg-head h2{font-size:16px;font-weight:1000}.mh-rpg-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 10px 12px}.mh-rpg-section{margin-bottom:14px}.mh-rpg-section h3{margin:6px 0;color:#6ee7b7;font-size:11px;font-weight:1000;letter-spacing:.08em}.mh-rpg-count{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}.mh-rpg-count button{min-height:44px;border:2px solid #334155;border-radius:12px;background:#0f172acc;font-size:11px;font-weight:900;color:#cbd5e1}.mh-rpg-count button.active{border-color:#34d399;background:#065f4655;color:#a7f3d0}.mh-rpg-card{margin-bottom:9px;padding:9px;border:2px solid #334155;border-radius:16px;background:#0f172ad9}.mh-rpg-card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}.mh-rpg-card-head img{width:44px;height:44px;object-fit:contain;flex:none}.mh-rpg-card-head select{flex:1;min-width:0;min-height:44px;padding:0 8px;border:1px solid #ffffff22;border-radius:10px;background:#020617;color:#e2e8f0;font-size:12px;font-weight:900}.mh-rpg-types{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px}.mh-rpg-types button{min-height:40px;padding:0 2px;border:2px solid #334155;border-radius:10px;background:#020617;color:#94a3b8;font-size:9px;font-weight:900}.mh-rpg-types button.active{background:#1e293b}.mh-rpg-level{display:flex;align-items:center;gap:8px;margin-bottom:6px}.mh-rpg-level b{flex:none;width:52px;color:#fde68a;font-size:12px}.mh-rpg-level input{flex:1;min-width:0;height:32px;accent-color:#34d399}.mh-rpg-points{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;font-size:10px;color:#cbd5e1;font-weight:900}.mh-rpg-points button{min-height:36px;padding:0 10px;border-radius:10px;background:#334155;color:#e2e8f0;font-size:9px;font-weight:900}.mh-rpg-stat{display:grid;grid-template-columns:44px 34px 12px 40px 44px 22px 44px;align-items:center;gap:2px;padding:2px 0;font-size:10px}.mh-rpg-stat-name{color:#94a3b8;font-weight:900}.mh-rpg-stat-base{color:#64748b;text-align:right}.mh-rpg-stat-arrow{color:#475569;text-align:center}.mh-rpg-stat-final{color:#f8fafc;font-weight:1000;text-align:right}.mh-rpg-stat button{min-height:40px;border-radius:9px;background:#1e293b;color:#e2e8f0;font-size:15px;font-weight:900}.mh-rpg-stat button:disabled{opacity:.28}.mh-rpg-stat em{color:#fbbf24;font-style:normal;font-weight:900;text-align:center}.mh-rpg-enemy-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.mh-rpg-enemy-stats span{padding:5px 2px;border-radius:8px;background:#02061788;text-align:center}.mh-rpg-enemy-stats small{display:block;color:#94a3b8;font-size:7px;font-weight:900}.mh-rpg-enemy-stats b{font-size:12px}.mh-rpg-skill{margin-top:6px;color:#a5b4fc;font-size:8px;font-weight:900}.mh-rpg-toggle{width:100%;min-height:56px;padding:8px 12px;border:2px solid #334155;border-radius:14px;background:#0f172acc;color:#cbd5e1;font-size:12px;font-weight:1000;text-align:left}.mh-rpg-toggle.active{border-color:#fbbf24;color:#fde68a}.mh-rpg-toggle small{display:block;margin-top:3px;color:#94a3b8;font-size:8px;font-weight:700}.mh-rpg-footer{flex:none;padding:8px 10px calc(4px + env(safe-area-inset-bottom));background:linear-gradient(transparent,#04121b 30%)}.mh-rpg-footer button{display:block;width:100%;min-height:50px;margin-top:6px;border-radius:16px;background:linear-gradient(90deg,#059669,#0284c7);font-size:13px;font-weight:1000}.mh-rpg-footer button.sub{min-height:44px;background:#1e293b;color:#cbd5e1;font-size:11px}.mh-rpg-bar{height:5px;margin:2px 0 1px;border-radius:999px;background:#020617;overflow:hidden}.mh-rpg-bar i{display:block;height:100%;border-radius:999px}.mh-rpg-bar.hp i{background:linear-gradient(90deg,#f43f5e,#fb7185)}.mh-rpg-bar.guts i{background:linear-gradient(90deg,#d97706,#fde047)}.mh-rpg-result-turn{margin:6px 0;color:#fde68a;font-size:12px;font-weight:1000;text-align:center}.mh-rpg-result-table{border:1px solid #ffffff1a;border-radius:12px;overflow:hidden}.mh-rpg-result-row{display:grid;grid-template-columns:1.45fr 1.15fr 1fr 1fr .62fr .62fr .8fr .62fr .62fr;gap:1px;padding:6px 3px;font-size:8px;border-top:1px solid #ffffff12}.mh-rpg-result-row:first-child{border-top:0}.mh-rpg-result-row.head{background:#02061799;color:#6ee7b7;font-weight:1000;font-size:7px}.mh-rpg-result-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-rpg-battle{padding-top:env(safe-area-inset-top);background:radial-gradient(circle at 50% 24%,#3b2b6b 0,#131033 42%,#04060f 82%)}.mh-rpg-hud{flex:none;display:flex;align-items:center;gap:6px;min-height:34px;padding:3px 6px;background:#0f172a;border-bottom:1px solid #ffffff0d}.mh-rpg-hud-tag{padding:2px 6px;border:1px solid #a78bfa88;border-radius:6px;background:#4c1d9522;color:#c4b5fd;font:1000 8px monospace;letter-spacing:.12em;white-space:nowrap}.mh-rpg-hud-turn{color:#60a5fa;font:1000 10px monospace;letter-spacing:.12em;white-space:nowrap}.mh-rpg-hud-step{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;color:#fbbf24;font:900 9px monospace}.mh-rpg-hud>button{flex:none;width:30px;height:30px;border-radius:8px;background:#1e293b;color:#94a3b8;font-size:13px;font-weight:900}.mh-rpg-order{flex:none;display:flex;align-items:center;gap:6px;padding:4px 8px}.mh-rpg-order>b{flex:none;white-space:nowrap;color:#94a3b8;font-size:8px;font-weight:900;letter-spacing:.06em}.mh-rpg-order-list{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:3px}.mh-rpg-order-chip{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:1px;border:2px solid #38bdf8aa;border-radius:50%;background:#0f172acc;overflow:hidden}.mh-rpg-order-chip.enemy{border-color:#f8717199;background:#450a0a88}.mh-rpg-order-chip.done{opacity:.3}.mh-rpg-order-chip.current{border-color:#fbbf24;box-shadow:0 0 10px #fbbf24aa;transform:scale(1.14)}.mh-rpg-order-chip img{width:100%;height:100%;object-fit:cover;border-radius:50%}.mh-rpg-field{flex:1;min-height:0;display:grid;align-content:safe center;justify-items:center;gap:6px;padding:2px 8px;overflow-y:auto;-webkit-overflow-scrolling:touch}.mh-rpg-field[data-count="1"]{grid-template-columns:1fr}.mh-rpg-field[data-count="2"]{grid-template-columns:repeat(2,1fr)}.mh-rpg-field[data-count="3"]{grid-template-columns:repeat(3,1fr)}.mh-rpg-field[data-count="4"]{grid-template-columns:repeat(4,1fr)}.mh-rpg-foe{position:relative;width:100%;min-width:0;padding:0;background:transparent;text-align:center}.mh-rpg-foe.down{opacity:.34;filter:grayscale(.7)}.mh-rpg-foe-ring{position:relative;display:flex;align-items:center;justify-content:center;margin:0 auto;border:4px solid var(--rpg-foe-ring,#ef4444);border-radius:50%;background:radial-gradient(circle at 50% 35%,#00000055,#020617ee);box-shadow:0 0 26px var(--rpg-foe-ring,#ef4444),inset 0 0 20px #000000aa}.mh-rpg-foe-ring img{object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,.8))}.mh-rpg-field[data-count="1"] .mh-rpg-foe-ring{width:clamp(140px,34vw,210px);height:clamp(140px,34vw,210px)}.mh-rpg-field[data-count="1"] .mh-rpg-foe-ring img{width:80%;height:80%}.mh-rpg-field[data-count="2"] .mh-rpg-foe-ring{width:min(42vw,180px);height:min(42vw,180px)}.mh-rpg-field[data-count="2"] .mh-rpg-foe-ring img{width:80%;height:80%}.mh-rpg-field[data-count="3"] .mh-rpg-foe-ring{width:min(28vw,138px);height:min(28vw,138px)}.mh-rpg-field[data-count="3"] .mh-rpg-foe-ring img{width:82%;height:82%}.mh-rpg-field[data-count="4"] .mh-rpg-foe-ring{width:min(21.5vw,112px);height:min(21.5vw,112px)}.mh-rpg-field[data-count="4"] .mh-rpg-foe-ring img{width:82%;height:82%}.mh-rpg-foe.selectable .mh-rpg-foe-ring{border-color:#fbbf24;box-shadow:0 0 22px #fbbf24cc,inset 0 0 18px #00000099;animation:rpgTargetPulse 900ms ease-in-out infinite}.mh-rpg-foe b{display:block;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:1000;text-shadow:0 1px 4px #000}.mh-rpg-field[data-count="4"] .mh-rpg-foe b{font-size:8px}.mh-rpg-field[data-count="4"] .mh-rpg-foe-hp{font-size:7px}.mh-rpg-foe-hp{display:block;color:#fca5a5;font:900 8px ui-monospace,monospace}.mh-rpg-foe .mh-rpg-bar{margin:2px 4px 1px}.mh-rpg-foe-fx,.mh-rpg-member-fx{position:absolute;left:50%;top:2px;transform:translateX(-50%);z-index:5;pointer-events:none;white-space:nowrap}.mh-rpg-hit{display:inline-block;padding:1px 7px;border-radius:8px;background:#020617cc;color:#fb7185;font-size:15px;font-weight:1000;text-shadow:0 2px 6px #000;animation:rpgHitPop 640ms ease-out forwards}.mh-rpg-hit.crit{color:#fde047;font-size:17px}.mh-rpg-hit.miss{color:#7dd3fc;font-size:13px}.mh-rpg-down-mark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#f87171;font-size:34px;font-weight:1000;text-shadow:0 2px 6px #000}.mh-rpg-guard-mark{position:absolute;right:-2px;bottom:-2px;font-size:15px;filter:drop-shadow(0 1px 3px #000)}@keyframes rpgHitPop{0%{transform:translateY(6px) scale(.7);opacity:0}25%{transform:translateY(-2px) scale(1.15);opacity:1}100%{transform:translateY(-16px) scale(1);opacity:0}}@keyframes rpgTargetPulse{0%,100%{box-shadow:0 0 16px #fbbf2488,inset 0 0 18px #00000099}50%{box-shadow:0 0 30px #fbbf24ee,inset 0 0 18px #00000099}}.mh-rpg-message{flex:none;min-height:44px;margin:2px 8px;padding:5px 9px;border:1px solid #ffffff1a;border-radius:12px;background:#020617cc;font-size:10px;line-height:1.5}.mh-rpg-message p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748b}.mh-rpg-message p.now{color:#f1f5f9;font-weight:900}.mh-rpg-message p.damage.now{color:#fda4af}.mh-rpg-message p.crit.now{color:#fde047}.mh-rpg-message p.miss.now{color:#7dd3fc}.mh-rpg-message p.down.now{color:#d8b4fe}.mh-rpg-message p.guard.now{color:#93c5fd}.mh-rpg-party{flex:none;display:grid;gap:4px;padding:2px 8px 4px}.mh-rpg-party[data-count="1"]{grid-template-columns:1fr}.mh-rpg-party[data-count="2"],.mh-rpg-party[data-count="3"],.mh-rpg-party[data-count="4"]{grid-template-columns:repeat(2,1fr)}.mh-rpg-member{position:relative;display:flex;align-items:center;gap:5px;min-width:0;padding:4px;border:2px solid #1e293b;border-radius:12px;background:#0f172acc}.mh-rpg-member.ready{border-color:#0ea5e955}.mh-rpg-member.active{border-color:#34d399;background:#065f4655;box-shadow:0 0 14px #34d39955}.mh-rpg-member.down{opacity:.34;filter:grayscale(.7)}.mh-rpg-member-face{position:relative;flex:none;width:38px;height:38px;border:2px solid #38bdf888;border-radius:50%;overflow:hidden;background:#020617}.mh-rpg-member.active .mh-rpg-member-face{border-color:#34d399}.mh-rpg-member-face img{width:100%;height:100%;object-fit:cover}.mh-rpg-member-body{flex:1;min-width:0}.mh-rpg-member-body b{display:flex;align-items:center;gap:4px;overflow:hidden;font-size:9px;font-weight:1000}.mh-rpg-member-body b em{flex:none;padding:1px 4px;border-radius:5px;background:#059669;color:#ecfdf5;font:1000 6px monospace;font-style:normal;letter-spacing:.08em}.mh-rpg-member-body small{display:block;color:#94a3b8;font-size:7px;font-weight:900}.mh-rpg-commands{position:relative;flex:none;min-height:98px;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:#020617e6;border-top:1px solid #ffffff12}.mh-rpg-actor{margin-bottom:4px;color:#a7f3d0;font-size:10px;font-weight:1000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-rpg-wait{padding:14px 0;text-align:center;color:#fde68a;font-size:12px;font-weight:1000}.mh-rpg-command-row{display:flex;flex-wrap:wrap;gap:6px}.mh-rpg-command-row button{flex:1 1 28%;min-width:88px;min-height:58px;padding:2px;border-radius:14px;background:linear-gradient(#1e293b,#0f172a);border:2px solid #475569;font-size:12px;font-weight:1000;color:#f1f5f9;box-shadow:0 2px 0 #00000066}.mh-rpg-command-row button:disabled{opacity:.3}.mh-rpg-command-row small{display:block;margin-top:2px;color:#94a3b8;font-size:7px;font-weight:900}.mh-rpg-skill-panel{position:absolute;left:8px;right:8px;bottom:100%;margin-bottom:6px;max-height:44vh;overflow:hidden;display:flex;flex-direction:column;padding:8px;border:2px solid #6366f188;border-radius:14px;background:#020617f2;box-shadow:0 -6px 20px #000000aa}.mh-rpg-skill-list{flex:1;min-height:0;display:grid;align-content:start;gap:5px;overflow-y:auto;-webkit-overflow-scrolling:touch}.mh-rpg-skill{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:48px;padding:6px 10px;border:2px solid #6366f1;border-radius:12px;background:linear-gradient(#312e81,#1e1b4b);text-align:left}.mh-rpg-skill:disabled{opacity:.35}.mh-rpg-skill b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:1000}.mh-rpg-skill span{flex:none;color:#c7d2fe;font-size:8px;font-weight:900}.mh-rpg-cancel{width:100%;min-height:44px;border-radius:12px;background:#334155;font-size:11px;font-weight:900}
     `;
   document.head.appendChild(style);
 };
