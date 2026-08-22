@@ -11,6 +11,7 @@
 //   ・戦闘画面で敵1〜4体・味方1〜4体のどれでもコマンドが画面内に収まり、押せる大きさ(44px以上)がある
 //   ・対象を選ばなくても「ねらい」が必ず1体に決まり、その表示が画面内にある
 //   ・ダメージの数字が読める大きさで出て、名前と重ならず、画面の外へ出ない
+//   ・技の演出(技名の帯・閃光・衝撃波)が出て、長い技名でも切れず画面からはみ出さない
 //   ・攻撃モーション中も枠からはみ出さず、味方は上・敵は下へ動く
 //   ・結果画面の一覧が見切れず、下のボタンまで届く
 //
@@ -79,6 +80,10 @@ const rpgHits = params.get('p') === 'hit'
       enemy: [{ damage:1362, evaded:false, crit:true, down:false }, { damage:0, evaded:true, crit:false, down:false },
               { damage:97, evaded:false, crit:false, down:true }, { damage:6, evaded:false, crit:false, down:false }] }
   : null;
+// 技の演出も表示だけの状態。p=special のとき、いちばん長い技名で帯を出した状態にする
+const rpgSpecial = params.get('p') === 'special'
+  ? { side:'ally', index:0, by:'スネグーラチカ', name:'ブリザードエンドオブザワールド', targetSide:'enemy', targetIndex:2 }
+  : null;
 // 「ねらい」は画面だけの状態。p=aim のとき2体目を固定してあり、それ以外は自動(ライフ最小)
 const rpgAim = params.get('p') === 'aim' ? 1 : null;
 const setRpgAim = noop;
@@ -110,7 +115,7 @@ battle.allies.forEach((u, i) => { u.record = { dealt: 123456, taken: 65432, atta
 battle.enemies.forEach(u => { u.record = { dealt: 54321, taken: 98765, attacks: 9, skills: 5, gutsSpent: 45, crits: 13, evaded: 12 }; u.hp = Math.max(1, Math.floor(u.maxHp * 0.6)); });
 battle.outcome = 'win';
 // 行動順の帯を「そのターンの確定順」で最大(味方4+敵4=8体)まで並べた状態にする
-if (params.get('p') === 'resolve' || params.get('p') === 'hit' || rpgActing) {
+if (params.get('p') === 'resolve' || params.get('p') === 'hit' || params.get('p') === 'special' || rpgActing) {
   battle.phase = 'resolve';
   battle.plan = rpgSpeedOrder(battle).map((entry, i) => ({ ...entry, command:'attack', targetSide: entry.side === 'ally' ? 'enemy' : 'ally', targetIndex:0, value: 100 - i }));
   battle.planStep = Math.min(2, battle.plan.length - 1);
@@ -188,6 +193,7 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
       ['battle', 4, 4, '戦闘(味方4・敵4・敵をタップしてねらいを固定)', 'aim'],
       ['battle', 4, 4, '戦闘(味方4・敵4・行動順8体を実行中)', 'resolve'],
       ['battle', 4, 4, '戦闘(味方4・敵4・ダメージ/会心/回避/戦闘不能の数字が出た瞬間)', 'hit'],
+      ['battle', 4, 4, '戦闘(味方4・敵4・技の演出中)', 'special'],
       ['battle', 4, 4, '戦闘(味方4・敵4・味方の攻撃モーション中)', 'motion'],
       ['battle', 4, 4, '戦闘(味方4・敵4・敵の攻撃モーション中)', 'motionfoe'],
       ['result', 4, 4, '結果(味方4・敵4)', 'command'],
@@ -229,6 +235,21 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
           rendered: !!document.querySelector('.mh-rpg-screen, .mh-rpg-battle'),
           docWidth: document.documentElement.scrollWidth,
           bodyWidth: document.body.scrollWidth,
+          band: rect('.mh-rpg-special-band'),
+          bandName: (document.querySelector('.mh-rpg-special-band b') || {}).getBoundingClientRect
+            ? { r: document.querySelector('.mh-rpg-special-band b').getBoundingClientRect().toJSON(),
+                font: parseFloat(getComputedStyle(document.querySelector('.mh-rpg-special-band b')).fontSize),
+                text: document.querySelector('.mh-rpg-special-band b').textContent,
+                clipped: document.querySelector('.mh-rpg-special-band b').scrollWidth > document.querySelector('.mh-rpg-special-band b').clientWidth + 1 }
+            : null,
+          bandBy: (document.querySelector('.mh-rpg-special-band small') || {}).textContent || '',
+          flash: rect('.mh-rpg-special-flash'),
+          specialRings: document.querySelectorAll('.mh-rpg-special-ring').length,
+          ringOnTarget: (() => {
+            const foes = [...document.querySelectorAll('.mh-rpg-foe')];
+            return foes.findIndex(el => el.querySelector('.mh-rpg-special-ring'));
+          })(),
+          struckMembers: document.querySelectorAll('.mh-rpg-member.struck').length,
           hits: [...document.querySelectorAll('.mh-rpg-hit')].map(el => ({
             text: el.textContent,
             font: parseFloat(getComputedStyle(el).fontSize),
@@ -311,7 +332,7 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
         check(`${tag}: 敵・メッセージ・味方・コマンドが縦に全部入る`,
           !!m.enemies && !!m.allies && m.enemies.top >= -0.5 && m.allies.bottom <= m.commands.top + 0.5,
           `敵 ${Math.round(m.enemies?.bottom)} → 味方 ${Math.round(m.allies?.top)}〜${Math.round(m.allies?.bottom)} → コマンド ${Math.round(m.commands?.top)}`);
-        if (phase === 'resolve' || phase === 'hit' || phase.startsWith('motion')) {
+        if (phase === 'resolve' || phase === 'hit' || phase === 'special' || phase.startsWith('motion')) {
           // 実行中はコマンドを出さず「行動中…」を出す
           check(`${tag}: 実行中はコマンドの代わりに進行状況が出る`, !m.firstCommand && !!m.commands);
           check(`${tag}: 実行中は現在コマンド入力中の味方が居ない`, m.activeMembers === 0);
@@ -348,6 +369,25 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
             mo ? `ずれ ${Math.round(mo.end.top - mo.at0.top)}px` : '');
           check(`${tag}: モーション中も横スクロールが増えない`, !!mo && mo.docWidth <= width && mo.bodyWidth <= width,
             `幅 ${mo?.docWidth}px / 画面 ${width}px`);
+        }
+        if (phase === 'special') {
+          // 技は通常こうげきより重い行動なので、必ず気づける形で出す
+          check(`${tag}: 技名の帯が出ている`, !!m.band && !!m.bandName, m.bandName ? m.bandName.text : '見つからない');
+          check(`${tag}: 技を撃った本人の名前も出る`, m.bandBy === 'スネグーラチカ', m.bandBy);
+          check(`${tag}: 技名が読める大きさ(18px以上)`, !!m.bandName && m.bandName.font >= 18, `${m.bandName?.font}px`);
+          check(`${tag}: 長い技名でも横にはみ出さない`,
+            !!m.band && m.band.left >= -0.5 && m.band.right <= width + 0.5,
+            `${Math.round(m.band?.left)}〜${Math.round(m.band?.right)}px / 画面 ${width}px`);
+          check(`${tag}: 長い技名が切れずに全部読める`, !!m.bandName && !m.bandName.clipped,
+            m.bandName ? `${m.bandName.text}` : '');
+          check(`${tag}: 帯が画面の縦にも収まる`, !!m.band && m.band.top >= -0.5 && m.band.bottom <= height + 0.5,
+            `${Math.round(m.band?.top)}〜${Math.round(m.band?.bottom)}px / 画面 ${height}px`);
+          check(`${tag}: 画面が光る`, !!m.flash && m.flash.width >= width - 0.5 && m.flash.height >= height * 0.5);
+          check(`${tag}: 技を受けた敵にだけ衝撃波が出る`, m.specialRings === 1 && m.ringOnTarget === 2,
+            `${m.specialRings}個 / ${m.ringOnTarget}番目の敵`);
+          check(`${tag}: 味方が受けたわけではないので味方は光らない`, m.struckMembers === 0, `${m.struckMembers}体`);
+          check(`${tag}: 演出が出ていても敵の立ち絵が隠れきらない`, !!m.enemies && m.band.bottom < m.enemies.bottom,
+            `帯の下端 ${Math.round(m.band?.bottom)} / 敵エリアの下端 ${Math.round(m.enemies?.bottom)}`);
         }
         if (phase === 'hit') {
           check(`${tag}: ダメージの数字が当たった数だけ出る`, m.hits.length === 5, `${m.hits.length}個`);
