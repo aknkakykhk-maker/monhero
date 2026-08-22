@@ -64,7 +64,10 @@ check('もう無い画面が対応表に残っていない', staleScreens.length
 
 const covered = Object.entries(coverage).filter(([, v]) => v !== null);
 check('対象外にした画面は開発用と別担当のものだけ',
-  Object.entries(coverage).filter(([, v]) => v === null).every(([k]) => k === 'DEBUG_SETTINGS' || k === 'EXTREME_DEBUG_DIFFICULTY_SELECT' || k.startsWith('TRAINING_')),
+  // 対象外にしてよいのは、デバッグ設定からだけ入れて通常プレイに一切現れない画面と、別担当のTRAINING_*。
+  // RPG_DEBUG_* は将来のダンジョンRPGの戦闘だけを先に試す試作で、正式コンテンツ化するときに
+  // ここから外してヘルプ項目を作る。プレイヤーが到達できる画面は今までどおり必ず説明が要る。
+  Object.entries(coverage).filter(([, v]) => v === null).every(([k]) => k === 'DEBUG_SETTINGS' || k === 'EXTREME_DEBUG_DIFFICULTY_SELECT' || k.startsWith('TRAINING_') || k.startsWith('RPG_DEBUG_')),
   `説明あり${covered.length} / 対象外${Object.keys(coverage).length - covered.length}`);
 
 // --- ② 一覧は実データから作る ---

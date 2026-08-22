@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-21 17:28"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-22 14:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4737,6 +4737,267 @@ const TEACHING_FX_STYLE = {
 };
 
 
+// ==================== ダンジョンRPG戦闘テスト(デバッグ専用) ====================
+// 将来つくる「独立型ダンジョンRPG／ハクスラ」の戦闘そのものが面白いか、
+// ステータスの数値感が妥当かを実機で確かめるための試作。まだ正式コンテンツではない。
+//
+// ★このブロックの決めごと
+//   ・入口はデバッグ設定(DEBUG_SETTINGS)だけ。通常のHOME・バトル・マスモン管理へは出さない
+//   ・保存・報酬・ランキング・ミッション・絆経験値へ一切触れない(メモリ上だけの状態)
+//   ・使うのはベースモン(ALL_PLAYER_MONSTERS)だけ。マスモン(個体)は使わない
+//   ・通常バトルの計算式には触れない。RPGの式はここに閉じている
+//
+// 数値はすべてこの定数群が正本で、画面側で式を書き直さないこと。
+const RPG_MAX_LEVEL = 50;              // デバッグで指定できるLvの上限(味方・敵とも)
+const RPG_MAX_PARTY = 4;               // 味方の最大人数。6体編成は今回作らない
+const RPG_MAX_ENEMIES = 4;             // 敵の最大数
+const RPG_STAT_DIVISOR = 10;           // 現在のベース能力 → RPGのLv1能力(約1/10)
+const RPG_POINTS_PER_LEVEL = 1;        // Lvが1上がるごとにもらえる配分ポイント(暫定)
+// 配分ポイント1点ぶんの上昇量(暫定)。ライフだけ伸びが大きい
+const RPG_GAIN_PER_POINT = Object.freeze({ hp:6, atk:2, def:2, guts:2 });
+const RPG_STAT_KEYS = Object.freeze(['hp','atk','def','guts']);
+const RPG_STAT_LABELS = Object.freeze({ hp:'ライフ', atk:'ちから', def:'丈夫さ', guts:'ガッツ' });
+const RPG_NORMAL_ATTACK_MULT = 1.0;    // 「こうげき」の技倍率
+const RPG_DEF_COEFF = 4;               // ダメージ式で丈夫さに掛ける係数
+const RPG_GUARD_MULT = 0.5;            // 「防御」を選んだターンの被ダメージ倍率
+const RPG_START_GUTS_RATE = 0.5;       // 戦闘開始時のガッツ(最大値に対する割合)
+const RPG_TURN_GUTS_RATE = 0.2;        // ターン開始時に回復するガッツ(最大値に対する割合)
+const RPG_SKILL_GUTS_DIVISOR = 10;     // 固有技の消費ガッツ(本編の baseGuts を割る)
+const RPG_ENEMY_SKILL_CHANCE = 0.35;   // 敵が固有技を撃てるときに実際に撃つ確率
+const RPG_DAMAGE_VARIANCE = 0.05;      // ダメージ乱数をONにしたときの振れ幅(±)
+
+// 敵の色違いタイプ。画像は正式ベースモンのものをそのまま使い、見た目はCSSフィルタだけで変える
+// (画像ファイルの加工・複製・base64化はしない)。補正値と配分の周期はここだけを直せばよい。
+//   cycle : 配分ポイントを上から順に振っていく周期。同じLv・同じ種なら必ず同じ能力になる
+//   mult  : 配分後に掛ける軽い補正。低Lvでも見た目の性格差が出るようにするためのデバッグ用
+const RPG_ENEMY_TYPES = Object.freeze([
+  { id:'normal', label:'通常種', short:'通常', accent:'#94a3b8', filter:'none',
+    cycle:Object.freeze(['hp','atk','def','guts']),
+    mult:Object.freeze({ hp:1, atk:1, def:1, guts:1 }) },
+  { id:'red', label:'赤（攻撃型）', short:'赤', accent:'#f87171',
+    filter:'sepia(1) saturate(6) hue-rotate(-25deg) brightness(0.95)',
+    cycle:Object.freeze(['atk','atk','hp','guts','def']),
+    mult:Object.freeze({ hp:0.95, atk:1.15, def:0.90, guts:1 }) },
+  { id:'blue', label:'青（耐久型）', short:'青', accent:'#60a5fa',
+    filter:'sepia(1) saturate(5) hue-rotate(175deg) brightness(1.02)',
+    cycle:Object.freeze(['def','hp','def','hp','atk']),
+    mult:Object.freeze({ hp:1.15, atk:0.90, def:1.15, guts:1 }) },
+]);
+const rpgEnemyType = (id) => RPG_ENEMY_TYPES.find(t => t.id === id) || RPG_ENEMY_TYPES[0];
+
+const rpgClampLevel = (level) => {
+  const n = Math.floor(Number(level));
+  return Number.isFinite(n) ? Math.max(1, Math.min(RPG_MAX_LEVEL, n)) : 1;
+};
+// 現在のベース能力をRPG向けの小さな数値へ落とす。最低1は必ず残す
+const rpgScaleStat = (value) => Math.max(1, Math.round((Number(value) || 0) / RPG_STAT_DIVISOR));
+// ベースモン定義(ALL_PLAYER_MONSTERS の1件)から、そのままRPGのLv1能力を作る。
+// RPG用に同じ数値を別表として書き写さないための唯一の入口。
+const rpgBaseStatsOf = (mon) => ({
+  hp: rpgScaleStat(mon?.baseHp), atk: rpgScaleStat(mon?.baseAtk),
+  def: rpgScaleStat(mon?.baseDef), guts: rpgScaleStat(mon?.baseGuts),
+});
+// そのLvで使える配分ポイント(Lv1は0P、Lv50は49P)
+const rpgPointsForLevel = (level) => Math.max(0, rpgClampLevel(level) - 1) * RPG_POINTS_PER_LEVEL;
+const rpgEmptyAlloc = () => ({ hp:0, atk:0, def:0, guts:0 });
+const rpgAllocTotal = (alloc) => RPG_STAT_KEYS.reduce((sum, key) => sum + Math.max(0, Math.floor(Number(alloc?.[key]) || 0)), 0);
+// Lvを下げたときなど、使用可能ポイントを超えた配分を上から順に切り詰める
+const rpgNormalizeAlloc = (alloc, level) => {
+  const limit = rpgPointsForLevel(level);
+  const next = rpgEmptyAlloc();
+  let used = 0;
+  for (const key of RPG_STAT_KEYS) {
+    const want = Math.max(0, Math.floor(Number(alloc?.[key]) || 0));
+    const give = Math.max(0, Math.min(want, limit - used));
+    next[key] = give; used += give;
+  }
+  return next;
+};
+// 基礎能力 + 配分ポイント → 実際に戦う能力
+const rpgApplyAlloc = (base, alloc) => RPG_STAT_KEYS.reduce((out, key) => {
+  out[key] = Math.max(1, Math.round((base?.[key] || 0) + (Math.max(0, Math.floor(Number(alloc?.[key]) || 0)) * RPG_GAIN_PER_POINT[key])));
+  return out;
+}, {});
+// 敵の自動配分。乱数を使わないので、同じLv・同じ色タイプなら毎回まったく同じ能力になる
+const rpgEnemyAlloc = (typeId, level) => {
+  const cycle = rpgEnemyType(typeId).cycle;
+  const alloc = rpgEmptyAlloc();
+  const points = rpgPointsForLevel(level);
+  for (let i = 0; i < points; i++) alloc[cycle[i % cycle.length]] += 1;
+  return alloc;
+};
+const rpgEnemyStats = (mon, typeId, level) => {
+  const type = rpgEnemyType(typeId);
+  const grown = rpgApplyAlloc(rpgBaseStatsOf(mon), rpgEnemyAlloc(typeId, level));
+  return RPG_STAT_KEYS.reduce((out, key) => { out[key] = Math.max(1, Math.round(grown[key] * type.mult[key])); return out; }, {});
+};
+// 固有技のRPG用消費ガッツ。本編の baseGuts をそのまま持ってきて1/10にする
+const rpgSkillCost = (unique) => Math.max(1, Math.round((Number(unique?.baseGuts) || 0) / RPG_SKILL_GUTS_DIVISOR));
+// そのモンスターの固有技(名前・倍率・消費)を本編定義から取り出す。無ければ null
+const rpgSkillOf = (mon) => {
+  const unique = mon?.unique;
+  if (!unique || !Number.isFinite(Number(unique.baseMult))) return null;
+  return { name: unique.name, mult: Number(unique.baseMult), cost: rpgSkillCost(unique) };
+};
+
+// ★RPG専用のダメージ計算。味方→敵も敵→味方もここだけを通す(画面ごとに式を複製しない)。
+// 通常バトル(getDmg / getIncomingDamageBeforeTurnReduction)とは完全に別物で、互いに影響しない。
+//
+//   基本ダメージ = ちから × 技倍率 × 100 ÷ (100 + 丈夫さ × 4)
+//
+// 乱数(variance)は0.95〜1.05の範囲で、デバッグ設定でOFFにすると必ず1.0になる。
+// 防御中は最後に0.5を掛け、四捨五入して最低1ダメージにする
+// (先に丸めてから半分にすると「最低1」が0.5になってしまうため、丸めは最後に1回だけ行う)。
+const rpgDamage = ({ atk, mult = RPG_NORMAL_ATTACK_MULT, def, guarding = false, variance = 1 }) => {
+  const power = Math.max(0, Number(atk) || 0) * (Number(mult) || 0);
+  const resist = 100 + Math.max(0, Number(def) || 0) * RPG_DEF_COEFF;
+  let raw = power * 100 / resist;
+  raw *= Number.isFinite(variance) && variance > 0 ? variance : 1;
+  if (guarding) raw *= RPG_GUARD_MULT;
+  return Math.max(1, Math.round(raw));
+};
+// 乱数ONのときだけ0.95〜1.05を返す。OFFなら必ず1.0(バランス確認をしやすくするため既定はOFF)
+const rpgVarianceRoll = (enabled) => enabled ? 1 - RPG_DAMAGE_VARIANCE + Math.random() * RPG_DAMAGE_VARIANCE * 2 : 1;
+const rpgStartGuts = (maxGuts) => Math.min(maxGuts, Math.ceil(Math.max(0, maxGuts) * RPG_START_GUTS_RATE));
+const rpgTurnGutsRegen = (maxGuts) => Math.max(1, Math.round(Math.max(0, maxGuts) * RPG_TURN_GUTS_RATE));
+
+// ---------- RPG戦闘の進行(コマンド式ターン制) ----------
+// 味方ターン → 生存している味方が並び順に行動 → 敵ターン → 生存している敵が表示順に行動 → 次ターン。
+// 素早さは今回作らない。状態はすべてこのオブジェクトの中だけにあり、保存も送信も一切しない。
+//
+// 使えるベースモンの一覧。正式にプレイできる種だけを自動で拾うので、
+// モンスターを追加してもRPGデバッグ側の更新漏れが起きない。
+// デバッグ専用個体(debugOnly)とマスモン(個体)は入らない。
+const rpgMonsterList = () => Object.values(ALL_PLAYER_MONSTERS).filter(mon => mon && mon.id && !mon.debugOnly);
+const rpgMonsterById = (id) => rpgMonsterList().find(mon => mon.id === id) || rpgMonsterList()[0] || null;
+
+const rpgEmptyRecord = () => ({ dealt:0, taken:0, attacks:0, skills:0, gutsSpent:0 });
+const rpgMakeUnit = (mon, level, stats, extra = {}) => ({
+  monId: mon.id, name: mon.name, emoji: mon.emoji,
+  imgUrl: mon.imgUrl, iconUrl: mon.iconUrl,
+  level: rpgClampLevel(level),
+  maxHp: stats.hp, maxGuts: stats.guts, atk: stats.atk, def: stats.def,
+  hp: stats.hp, guts: rpgStartGuts(stats.guts),
+  guarding: false, alive: true,
+  skill: rpgSkillOf(mon),
+  record: rpgEmptyRecord(),
+  ...extra,
+});
+// セットアップ画面の1枠 → 実際に戦うユニット。ここが味方・敵で共通の入口になる
+const rpgBuildAlly = (slot) => {
+  const mon = rpgMonsterById(slot?.monId);
+  if (!mon) return null;
+  const level = rpgClampLevel(slot?.level);
+  const stats = rpgApplyAlloc(rpgBaseStatsOf(mon), rpgNormalizeAlloc(slot?.alloc, level));
+  return rpgMakeUnit(mon, level, stats, { side:'ally' });
+};
+const rpgBuildEnemy = (slot) => {
+  const mon = rpgMonsterById(slot?.monId);
+  if (!mon) return null;
+  const type = rpgEnemyType(slot?.typeId);
+  const level = rpgClampLevel(slot?.level);
+  return rpgMakeUnit(mon, level, rpgEnemyStats(mon, type.id, level), {
+    side:'enemy', typeId:type.id,
+    name: type.id === 'normal' ? mon.name : `${type.short}${mon.name}`,
+  });
+};
+const rpgCreateBattle = (partySlots, enemySlots) => {
+  const allies = (partySlots || []).map(rpgBuildAlly).filter(Boolean);
+  const enemies = (enemySlots || []).map(rpgBuildEnemy).filter(Boolean);
+  return {
+    turn: 1, phase: allies.length && enemies.length ? 'command' : 'result',
+    actorIndex: 0, pendingCommand: null,
+    allies, enemies, log: ['戦闘開始！'], outcome: allies.length && enemies.length ? null : 'lose',
+  };
+};
+// ログは最新から積む。画面では先頭数件だけ出すのでスマホでも溢れない
+const rpgPushLog = (battle, text) => { battle.log = [text, ...battle.log].slice(0, 40); };
+const rpgAliveIndexes = (units) => units.map((u, i) => (u.alive ? i : -1)).filter(i => i >= 0);
+// 1回の攻撃を解決する。与ダメージ・被ダメージの集計もここでまとめて行う
+const rpgResolveHit = (battle, attacker, defender, mult, label, varianceOn) => {
+  const damage = rpgDamage({
+    atk: attacker.atk, mult, def: defender.def,
+    guarding: defender.guarding, variance: rpgVarianceRoll(varianceOn),
+  });
+  defender.hp = Math.max(0, defender.hp - damage);
+  attacker.record.dealt += damage;
+  defender.record.taken += damage;
+  rpgPushLog(battle, `${attacker.name}の${label}！`);
+  rpgPushLog(battle, `${defender.name}に${damage}ダメージ`);
+  if (defender.hp <= 0 && defender.alive) { defender.alive = false; rpgPushLog(battle, `${defender.name}は戦闘不能！`); }
+  return damage;
+};
+const rpgCheckOutcome = (battle) => {
+  if (!battle.enemies.some(u => u.alive)) { battle.outcome = 'win'; battle.phase = 'result'; rpgPushLog(battle, '敵を全滅させた！'); return true; }
+  if (!battle.allies.some(u => u.alive)) { battle.outcome = 'lose'; battle.phase = 'result'; rpgPushLog(battle, 'パーティは全滅した…'); return true; }
+  return false;
+};
+// 次に行動する味方へ進める。もう誰も残っていなければ敵ターンへ渡す
+const rpgAdvanceActor = (battle, fromIndex) => {
+  for (let i = fromIndex + 1; i < battle.allies.length; i++) {
+    if (battle.allies[i].alive) { battle.actorIndex = i; battle.phase = 'command'; battle.pendingCommand = null; return; }
+  }
+  battle.phase = 'enemy'; battle.pendingCommand = null;
+};
+// 味方1体ぶんの行動。command は 'attack' / 'skill' / 'guard'
+const rpgAllyAct = (battle, command, targetIndex, varianceOn) => {
+  const next = JSON.parse(JSON.stringify(battle));
+  const actor = next.allies[next.actorIndex];
+  if (!actor || !actor.alive || next.phase === 'result') return next;
+  if (command === 'guard') {
+    actor.guarding = true;
+    rpgPushLog(next, `${actor.name}は身を守っている`);
+  } else {
+    const target = next.enemies[targetIndex];
+    if (!target || !target.alive) return next;
+    if (command === 'skill') {
+      if (!actor.skill || actor.guts < actor.skill.cost) return next;
+      actor.guts -= actor.skill.cost;
+      actor.record.gutsSpent += actor.skill.cost;
+      actor.record.skills += 1;
+      rpgResolveHit(next, actor, target, actor.skill.mult, actor.skill.name, varianceOn);
+    } else {
+      actor.record.attacks += 1;
+      rpgResolveHit(next, actor, target, RPG_NORMAL_ATTACK_MULT, 'こうげき', varianceOn);
+    }
+  }
+  if (rpgCheckOutcome(next)) return next;
+  rpgAdvanceActor(next, next.actorIndex);
+  return next;
+};
+// 敵ターンをまとめて解決する。AIは「撃てるなら一定確率で固有技、それ以外は通常攻撃」だけ
+const rpgEnemyPhase = (battle, varianceOn) => {
+  const next = JSON.parse(JSON.stringify(battle));
+  if (next.phase !== 'enemy') return next;
+  // ターン開始時のガッツ回復(1ターン目は戦闘開始時の値で戦うので回復しない)
+  if (next.turn > 1) next.enemies.forEach(u => { if (u.alive) u.guts = Math.min(u.maxGuts, u.guts + rpgTurnGutsRegen(u.maxGuts)); });
+  for (const enemy of next.enemies) {
+    if (!enemy.alive) continue;
+    const targets = rpgAliveIndexes(next.allies);
+    if (!targets.length) break;
+    const target = next.allies[targets[Math.floor(Math.random() * targets.length)]];
+    const canSkill = !!enemy.skill && enemy.guts >= enemy.skill.cost;
+    if (canSkill && Math.random() < RPG_ENEMY_SKILL_CHANCE) {
+      enemy.guts -= enemy.skill.cost;
+      enemy.record.gutsSpent += enemy.skill.cost;
+      enemy.record.skills += 1;
+      rpgResolveHit(next, enemy, target, enemy.skill.mult, enemy.skill.name, varianceOn);
+    } else {
+      enemy.record.attacks += 1;
+      rpgResolveHit(next, enemy, target, RPG_NORMAL_ATTACK_MULT, 'こうげき', varianceOn);
+    }
+    if (rpgCheckOutcome(next)) return next;
+  }
+  // 次の味方ターンへ。防御は解除し、味方のガッツを回復する
+  next.turn += 1;
+  next.allies.forEach(u => { u.guarding = false; if (u.alive) u.guts = Math.min(u.maxGuts, u.guts + rpgTurnGutsRegen(u.maxGuts)); });
+  next.enemies.forEach(u => { u.guarding = false; });
+  rpgPushLog(next, `--- TURN ${next.turn} ---`);
+  next.phase = 'command'; next.pendingCommand = null; next.actorIndex = -1;
+  rpgAdvanceActor(next, -1);
+  return next;
+};
+
 // Storage helpers — window.storage は元々の別プラットフォーム向けAPIで、
 // GitHub Pages上には存在しない。実ブラウザのlocalStorageを使い、
 // それも使えない場合のみメモリ内フォールバック(リロードで消える)にする。
@@ -6317,6 +6578,59 @@ function MonsterHeroGame() {
   const [debugStrongestHero, setDebugStrongestHero] = useState(false);
   const [debugOutcome, setDebugOutcome] = useState(null);
   const debugResultRef = useRef(false);
+
+  // ---------- ダンジョンRPG戦闘テスト(デバッグ専用) ----------
+  // すべてメモリ上だけの状態。画面を抜けたり再読込すると消える(保存も送信もしない)。
+  const rpgDefaultAlly = (index) => {
+    const list = rpgMonsterList();
+    const mon = list[index % Math.max(1, list.length)] || list[0];
+    return { monId: mon?.id || null, level: 10, alloc: rpgEmptyAlloc() };
+  };
+  const rpgDefaultEnemy = (index) => {
+    const list = rpgMonsterList();
+    const mon = list[(index + 2) % Math.max(1, list.length)] || list[0];
+    return { monId: mon?.id || null, level: 10, typeId: RPG_ENEMY_TYPES[index % RPG_ENEMY_TYPES.length].id };
+  };
+  const [rpgParty, setRpgParty] = useState(() => Array.from({length:RPG_MAX_PARTY}, (_, i) => rpgDefaultAlly(i)));
+  const [rpgEnemySlots, setRpgEnemySlots] = useState(() => Array.from({length:RPG_MAX_ENEMIES}, (_, i) => rpgDefaultEnemy(i)));
+  const [rpgPartySize, setRpgPartySize] = useState(2);
+  const [rpgEnemyCount, setRpgEnemyCount] = useState(1);
+  const [rpgVarianceOn, setRpgVarianceOn] = useState(false);
+  const [rpgBattle, setRpgBattle] = useState(null);
+  const rpgActiveParty = rpgParty.slice(0, rpgPartySize);
+  const rpgActiveEnemies = rpgEnemySlots.slice(0, rpgEnemyCount);
+  const rpgPatchAlly = (index, patch) => setRpgParty(prev => prev.map((slot, i) => {
+    if (i !== index) return slot;
+    const merged = { ...slot, ...patch };
+    return { ...merged, alloc: rpgNormalizeAlloc(merged.alloc, merged.level) };
+  }));
+  const rpgPatchEnemy = (index, patch) => setRpgEnemySlots(prev => prev.map((slot, i) => (i === index ? { ...slot, ...patch } : slot)));
+  // ステ振りの＋／−。使用可能ポイントを超えないよう、その場で正規化する
+  const rpgStepAlloc = (index, key, diff) => setRpgParty(prev => prev.map((slot, i) => {
+    if (i !== index) return slot;
+    const alloc = rpgNormalizeAlloc(slot.alloc, slot.level);
+    const used = rpgAllocTotal(alloc);
+    const limit = rpgPointsForLevel(slot.level);
+    const next = Math.max(0, alloc[key] + diff);
+    if (diff > 0 && used >= limit) return slot;
+    return { ...slot, alloc: { ...alloc, [key]: next } };
+  }));
+  const rpgResetAlloc = (index) => rpgPatchAlly(index, { alloc: rpgEmptyAlloc() });
+  const rpgStartBattle = () => {
+    // 保存・報酬・ランキングへは一切触れない。作るのはメモリ上の戦闘状態だけ
+    setRpgBattle(rpgCreateBattle(rpgParty.slice(0, rpgPartySize), rpgEnemySlots.slice(0, rpgEnemyCount)));
+    setGameState('RPG_DEBUG_BATTLE');
+  };
+  const rpgCommand = (command, targetIndex) => setRpgBattle(prev => (prev ? rpgAllyAct(prev, command, targetIndex, rpgVarianceOn) : prev));
+  // 敵ターンは味方の行動が終わった直後に少しだけ間を置いて動かす(ログを読める速さにする)
+  useEffect(() => {
+    if (gameState !== 'RPG_DEBUG_BATTLE' || rpgBattle?.phase !== 'enemy') return;
+    const timer = setTimeout(() => setRpgBattle(prev => (prev && prev.phase === 'enemy' ? rpgEnemyPhase(prev, rpgVarianceOn) : prev)), 650);
+    return () => clearTimeout(timer);
+  }, [gameState, rpgBattle?.phase, rpgBattle?.turn, rpgVarianceOn]);
+  useEffect(() => {
+    if (gameState === 'RPG_DEBUG_BATTLE' && rpgBattle?.phase === 'result') setGameState('RPG_DEBUG_RESULT');
+  }, [gameState, rpgBattle?.phase]);
 
   // 供モンが合流したときの「いまの値 → 合流後の値」をまとめて作る。★重要
   // 実際に合流させる confirmPick と同じ applyAllyJoinBonus / getMonsterAptPct を通すので、
@@ -12310,9 +12624,199 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const playPreview=()=>{const masu=previewMasu(3);setReincarnateAnimation({masu,base,fromLevel:100,nextLevel:1,raisesSkill:false,keptSkillPoints:1,nextPoints:13});setTimeout(()=>setReincarnateAnimation(null),4100);};
           return <main className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <header className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('DEBUG_SETTINGS')} className="p-3 text-slate-400"><ArrowLeft size={20}/></button><div><small className="text-[8px] font-black text-cyan-300">DEBUG・本番と同じ ReincarnateAura / RebirthStars</small><h2 className="text-sm font-black">転生表示確認</h2></div></header>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll">
             <p className="mb-3 text-[9px] leading-relaxed text-slate-400">表示用の一時データだけを使います。所持マスモン・転生回数・ダイヤは変更も保存もしません。</p>
             <section className="grid grid-cols-2 gap-3">{[0,1,2,3].map(count=>{const masu=previewMasu(count);return <article key={count} className="rounded-2xl border border-white/10 bg-slate-900/90 p-3 text-center"><div className="relative mx-auto w-16 h-16 mh-reincarnate-stack"><div className="relative z-[1] w-16 h-16 overflow-hidden rounded-full border border-pink-400/40"><DyedMonsterImage baseId={base.id} src={base.iconUrl||base.imgUrl} alt={base.name} masuColors={[]} className="w-full h-full object-cover"/></div><ReincarnateAura count={count}/><RebirthStars count={3} className="mh-rebirth-stars-overlay"/></div><b className="mt-3 block text-[11px] text-white">{count===0?'未転生':count===1?'1回：青画像':count===2?'2回：黄画像':'3回：赤画像'}</b></article>})}</section>
-            <button onClick={playPreview} className="mt-5 min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-sm font-black text-white active:scale-95">転生演出を再生</button>
+            </div>
+            <button onClick={playPreview} className="mt-3 shrink-0 min-h-[52px] rounded-2xl border-2 border-violet-300 bg-gradient-to-r from-violet-700 to-blue-600 text-sm font-black text-white active:scale-95">転生演出を再生</button>
+          </main>;
+        })()}
+
+        {/* ===== ダンジョンRPG戦闘テスト(デバッグ専用・3画面) =====
+            将来の独立型ダンジョンRPGの「戦闘の芯」だけを先に試すための試作。
+            入口はデバッグ設定だけで、保存・報酬・ランキング・ミッションへは一切触れない。
+            使うのはベースモンだけで、マスモン(育てた個体)は候補に出ない。 */}
+        {gameState==='RPG_DEBUG_SETUP'&&(()=>{
+          const monsters=rpgMonsterList();
+          const renderCount=(value,max,onPick)=><div className="mh-rpg-count">{Array.from({length:max},(_,i)=>i+1).map(n=><button key={n} className={value===n?'active':''} onClick={()=>onPick(n)}>{n}体</button>)}</div>;
+          return <main className="mh-rpg-screen">
+            <div className="mh-debug-banner">DEBUG・保存／報酬／ランキングへ一切影響しません</div>
+            <header className="mh-rpg-head">
+              <button aria-label="戻る" onClick={()=>setGameState('DEBUG_SETTINGS')}><ArrowLeft size={20}/></button>
+              <div><small>DUNGEON RPG TEST</small><h2>編成とステータス</h2></div>
+              <i/>
+            </header>
+            <div className="mh-rpg-scroll overflow-y-auto">
+              <section className="mh-rpg-section">
+                <h3>味方パーティ</h3>
+                {renderCount(rpgPartySize,RPG_MAX_PARTY,setRpgPartySize)}
+                {rpgActiveParty.map((slot,index)=>{
+                  const mon=rpgMonsterById(slot.monId);
+                  if(!mon) return null;
+                  const base=rpgBaseStatsOf(mon);
+                  const alloc=rpgNormalizeAlloc(slot.alloc,slot.level);
+                  const final=rpgApplyAlloc(base,alloc);
+                  const limit=rpgPointsForLevel(slot.level);
+                  const used=rpgAllocTotal(alloc);
+                  const skill=rpgSkillOf(mon);
+                  return <article key={`ally-${index}`} className="mh-rpg-card">
+                    <div className="mh-rpg-card-head">
+                      <img src={mon.iconUrl} alt={mon.name}/>
+                      <select aria-label={`味方${index+1}のモンスター`} value={mon.id} onChange={e=>rpgPatchAlly(index,{monId:e.target.value})}>{monsters.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select>
+                    </div>
+                    <div className="mh-rpg-level">
+                      <b>Lv.{slot.level}</b>
+                      <input type="range" min="1" max={RPG_MAX_LEVEL} value={slot.level} aria-label={`味方${index+1}のレベル`} onChange={e=>rpgPatchAlly(index,{level:rpgClampLevel(e.target.value)})}/>
+                    </div>
+                    <div className="mh-rpg-points">
+                      <span>使用 {used} / {limit}P</span>
+                      <button onClick={()=>rpgResetAlloc(index)}>配分をリセット</button>
+                    </div>
+                    <div className="mh-rpg-stats">
+                      {RPG_STAT_KEYS.map(key=><div key={key} className="mh-rpg-stat">
+                        <span className="mh-rpg-stat-name">{RPG_STAT_LABELS[key]}</span>
+                        <span className="mh-rpg-stat-base">{base[key]}</span>
+                        <span className="mh-rpg-stat-arrow">→</span>
+                        <span className="mh-rpg-stat-final">{final[key]}</span>
+                        <button aria-label={`${RPG_STAT_LABELS[key]}を減らす`} disabled={alloc[key]<=0} onClick={()=>rpgStepAlloc(index,key,-1)}>−</button>
+                        <em>{alloc[key]}</em>
+                        <button aria-label={`${RPG_STAT_LABELS[key]}を増やす`} disabled={used>=limit} onClick={()=>rpgStepAlloc(index,key,1)}>＋</button>
+                      </div>)}
+                    </div>
+                    <p className="mh-rpg-skill">{skill?`固有技「${skill.name}」倍率${skill.mult} / 消費ガッツ${skill.cost}`:'固有技なし'}</p>
+                  </article>;
+                })}
+              </section>
+              <section className="mh-rpg-section">
+                <h3>敵</h3>
+                {renderCount(rpgEnemyCount,RPG_MAX_ENEMIES,setRpgEnemyCount)}
+                {rpgActiveEnemies.map((slot,index)=>{
+                  const mon=rpgMonsterById(slot.monId);
+                  if(!mon) return null;
+                  const type=rpgEnemyType(slot.typeId);
+                  const stats=rpgEnemyStats(mon,type.id,slot.level);
+                  const skill=rpgSkillOf(mon);
+                  return <article key={`enemy-${index}`} className="mh-rpg-card">
+                    <div className="mh-rpg-card-head">
+                      <img src={mon.iconUrl} alt={mon.name} style={{filter:type.filter}}/>
+                      <select aria-label={`敵${index+1}のモンスター`} value={mon.id} onChange={e=>rpgPatchEnemy(index,{monId:e.target.value})}>{monsters.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select>
+                    </div>
+                    <div className="mh-rpg-types">{RPG_ENEMY_TYPES.map(t=><button key={t.id} className={t.id===type.id?'active':''} style={t.id===type.id?{borderColor:t.accent,color:t.accent}:undefined} onClick={()=>rpgPatchEnemy(index,{typeId:t.id})}>{t.label}</button>)}</div>
+                    <div className="mh-rpg-level">
+                      <b>Lv.{slot.level}</b>
+                      <input type="range" min="1" max={RPG_MAX_LEVEL} value={slot.level} aria-label={`敵${index+1}のレベル`} onChange={e=>rpgPatchEnemy(index,{level:rpgClampLevel(e.target.value)})}/>
+                    </div>
+                    <div className="mh-rpg-enemy-stats">{RPG_STAT_KEYS.map(key=><span key={key}><small>{RPG_STAT_LABELS[key]}</small><b>{stats[key]}</b></span>)}</div>
+                    <p className="mh-rpg-skill">{skill?`固有技「${skill.name}」倍率${skill.mult} / 消費ガッツ${skill.cost}`:'固有技なし'}・能力は自動配分</p>
+                  </article>;
+                })}
+              </section>
+              <section className="mh-rpg-section">
+                <h3>テスト設定</h3>
+                <button className={`mh-rpg-toggle ${rpgVarianceOn?'active':''}`} aria-pressed={rpgVarianceOn} onClick={()=>setRpgVarianceOn(v=>!v)}>
+                  ダメージ乱数 {rpgVarianceOn?'ON':'OFF'}
+                  <small>ONにすると最終ダメージへ0.95〜1.05を掛けます。OFFなら常に1.0固定でバランスを比べやすくなります</small>
+                </button>
+              </section>
+            </div>
+            <footer className="mh-rpg-footer"><button onClick={rpgStartBattle}>この編成で戦闘開始</button></footer>
+          </main>;
+        })()}
+
+        {gameState==='RPG_DEBUG_BATTLE'&&rpgBattle&&(()=>{
+          const battle=rpgBattle;
+          const actor=battle.allies[battle.actorIndex]||null;
+          const targeting=battle.phase==='target';
+          const aliveEnemies=rpgAliveIndexes(battle.enemies);
+          const chooseCommand=(command)=>{
+            if(command==='guard'){rpgCommand('guard');return;}
+            if(aliveEnemies.length<=1){rpgCommand(command,aliveEnemies[0]);return;}
+            setRpgBattle(prev=>prev?{...prev,phase:'target',pendingCommand:command}:prev);
+          };
+          const canSkill=!!actor?.skill&&actor.guts>=actor.skill.cost;
+          const bar=(value,max,cls)=><div className={`mh-rpg-bar ${cls}`}><i style={{width:`${Math.max(0,Math.min(100,(value/Math.max(1,max))*100))}%`}}/></div>;
+          return <main className="mh-rpg-battle">
+            <div className="mh-debug-banner">DEBUG・保存されません</div>
+            <section className="mh-rpg-enemies" data-count={battle.enemies.length}>
+              {battle.enemies.map((unit,index)=>{
+                const type=rpgEnemyType(unit.typeId);
+                return <button key={`e${index}`} className={`mh-rpg-enemy ${unit.alive?'':'down'} ${targeting&&unit.alive?'selectable':''}`} disabled={!targeting||!unit.alive} onClick={()=>rpgCommand(battle.pendingCommand||'attack',index)}>
+                  <img src={unit.imgUrl||unit.iconUrl} alt={unit.name} style={{filter:type.filter}}/>
+                  <b>{unit.name}</b>
+                  <small>Lv.{unit.level}・丈{unit.def}</small>
+                  {bar(unit.hp,unit.maxHp,'hp')}
+                  <span>{unit.hp} / {unit.maxHp}</span>
+                  {bar(unit.guts,unit.maxGuts,'guts')}
+                  <span>G {unit.guts} / {unit.maxGuts}</span>
+                </button>;
+              })}
+            </section>
+            <section className="mh-rpg-mid">
+              <div className="mh-rpg-turn">TURN {battle.turn}</div>
+              <ul className="mh-rpg-log">{battle.log.slice(0,5).map((line,i)=><li key={`${battle.log.length}-${i}`}>{line}</li>)}</ul>
+            </section>
+            <section className="mh-rpg-allies" data-count={battle.allies.length}>
+              {battle.allies.map((unit,index)=><div key={`a${index}`} className={`mh-rpg-ally ${unit.alive?'':'down'} ${index===battle.actorIndex&&battle.phase!=='enemy'?'active':''}`}>
+                <img src={unit.iconUrl} alt={unit.name}/>
+                <div>
+                  <b>{unit.name}{unit.guarding?' 🛡':''}</b>
+                  <small>Lv.{unit.level}</small>
+                  {bar(unit.hp,unit.maxHp,'hp')}
+                  <span>{unit.hp}/{unit.maxHp}</span>
+                  {bar(unit.guts,unit.maxGuts,'guts')}
+                  <span>G {unit.guts}/{unit.maxGuts}</span>
+                </div>
+              </div>)}
+            </section>
+            <footer className="mh-rpg-commands">
+              {battle.phase==='enemy'&&<p className="mh-rpg-wait">敵のターン…</p>}
+              {targeting&&<>
+                <p className="mh-rpg-wait">攻撃する敵をタップしてください</p>
+                <button className="mh-rpg-cancel" onClick={()=>setRpgBattle(prev=>prev?{...prev,phase:'command',pendingCommand:null}:prev)}>やめる</button>
+              </>}
+              {battle.phase==='command'&&actor&&<>
+                <p className="mh-rpg-actor">{actor.name} の行動</p>
+                <div className="mh-rpg-command-row">
+                  <button onClick={()=>chooseCommand('attack')}>こうげき</button>
+                  <button disabled={!canSkill} onClick={()=>chooseCommand('skill')}>{actor.skill?actor.skill.name:'技なし'}<small>{actor.skill?`消費G ${actor.skill.cost}`:'—'}</small></button>
+                  <button onClick={()=>chooseCommand('guard')}>防御<small>被ダメ50%</small></button>
+                </div>
+              </>}
+            </footer>
+          </main>;
+        })()}
+
+        {gameState==='RPG_DEBUG_RESULT'&&rpgBattle&&(()=>{
+          const battle=rpgBattle;
+          const renderRows=(units,withHp)=><div className="mh-rpg-result-table">
+            <div className="mh-rpg-result-row head"><span>名前</span><span>残HP</span><span>与ダメ</span><span>被ダメ</span><span>通常</span><span>技</span><span>消費G</span></div>
+            {units.map((unit,i)=><div key={i} className="mh-rpg-result-row">
+              <span>{unit.name}</span>
+              <span>{withHp?`${unit.hp}/${unit.maxHp}`:`${unit.hp}/${unit.maxHp}`}</span>
+              <span>{unit.record.dealt}</span>
+              <span>{unit.record.taken}</span>
+              <span>{unit.record.attacks}</span>
+              <span>{unit.record.skills}</span>
+              <span>{unit.record.gutsSpent}</span>
+            </div>)}
+          </div>;
+          return <main className="mh-rpg-screen">
+            <div className="mh-debug-banner">DEBUG・保存／報酬／ランキングへ一切影響しません</div>
+            <header className="mh-rpg-head">
+              <button aria-label="戻る" onClick={()=>setGameState('RPG_DEBUG_SETUP')}><ArrowLeft size={20}/></button>
+              <div><small>DUNGEON RPG TEST</small><h2>{battle.outcome==='win'?'勝利':'敗北'}</h2></div>
+              <i/>
+            </header>
+            <div className="mh-rpg-scroll overflow-y-auto">
+              <p className="mh-rpg-result-turn">総ターン数 {battle.turn}</p>
+              <section className="mh-rpg-section"><h3>味方</h3>{renderRows(battle.allies,true)}</section>
+              <section className="mh-rpg-section"><h3>敵</h3>{renderRows(battle.enemies,true)}</section>
+            </div>
+            <footer className="mh-rpg-footer">
+              <button onClick={rpgStartBattle}>同じ条件でもう一度</button>
+              <button className="sub" onClick={()=>setGameState('RPG_DEBUG_SETUP')}>編成・Lv・ステータスを変更</button>
+              <button className="sub" onClick={()=>{setRpgBattle(null);setGameState('DEBUG_SETTINGS');}}>デバッグ設定へ戻る</button>
+            </footer>
           </main>;
         })()}
 
@@ -12320,6 +12824,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           <div className="flex-1 flex flex-col h-full p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-4 shrink-0"><button onClick={()=>{setGameState('SETTINGS');openHelp();}} className="p-3 text-slate-500"><ArrowLeft size={20}/></button><h2 className="text-base font-black text-slate-400 tracking-widest">BATTLE TEST</h2></div>
             <div className="flex-1 overflow-y-auto mh-scroll space-y-5"><button onClick={()=>setGameState('REINCARNATE_DISPLAY_DEBUG')} className="w-full min-h-[64px] bg-violet-950 border-2 border-cyan-300 text-violet-100 rounded-2xl font-black">♻️ 転生表示確認<small className="block text-[8px] text-cyan-200">0～3回と完了演出を保存せず比較</small></button><button onClick={()=>setGameState('BREAKTHROUGH_STAR_DEBUG')} className="w-full min-h-[64px] bg-amber-950 border-2 border-amber-500 text-amber-100 rounded-2xl font-black">⭐ 限界突破★表示確認<small className="block text-[8px] text-amber-300">全色段階を本番と同じ★で比較</small></button><button onClick={()=>setGameState('MONSTER_IMAGE_DEBUG')} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🖼️ モンスター画像・染色確認<small className="block text-[8px] text-cyan-300">本番表示と染色を保存せず確認</small></button><button onClick={()=>{setDyeMaskEditorOpened(true);setGameState('DYE_MASK_POSITION_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-400 text-cyan-100 rounded-2xl font-black">🖌️ 染色マスク編集<small className="block text-[8px] text-cyan-300">全ベースモンを選択して直接描画・PNG出力</small></button><button onClick={openDebugTraining} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🎲 修行テスト<small className="block text-[8px] text-fuchsia-300">報酬・進行は保存されません</small></button><button onClick={()=>setGameState('BREEDER_ICON_DEBUG')} className="w-full min-h-[64px] bg-fuchsia-950 border-2 border-fuchsia-500 text-fuchsia-100 rounded-2xl font-black">🙂 ブリーダーアイコン調整<small className="block text-[8px] text-fuchsia-300">表示値は保存されません</small></button><button onClick={()=>{setPatternMasuId(null);setPatternSettings(makePatternSettings());setGameState('MASU_PATTERN_DEBUG');}} className="w-full min-h-[64px] bg-cyan-950 border-2 border-cyan-500 text-cyan-100 rounded-2xl font-black">🎨 マスモン模様カスタムテスト<small className="block text-[8px] text-cyan-300">模様は保存されません</small></button>
+              {/* 将来つくる独立型ダンジョンRPGの戦闘だけを先に試す試作。入口はここだけで、
+                  通常HOME・通常バトル・マスモン管理には出さない。保存・報酬・ランキングへは触れない */}
+              <button data-debug-rpg-battle onClick={()=>{setRpgBattle(null);setGameState('RPG_DEBUG_SETUP');}} className="w-full min-h-[64px] rounded-2xl border-2 border-emerald-400/70 bg-emerald-950/40 text-emerald-100 font-black">⚔️ ダンジョンRPG戦闘テスト<small className="block text-[8px] text-emerald-300">コマンド式ターン制の試作・ベースモンのみ・保存も報酬もありません</small></button>
               <button data-debug-battle-mode onClick={()=>{debugBattleRef.current=true;extremeRunRef.current=false;setDebugBattle(true);setExtremeRun(false);setBattleMode(BATTLE_MODE_CHALLENGE);setModeSelectTab('mode');setGameState('BATTLE_MODE_SELECT');}} className="w-full min-h-[64px] rounded-2xl border-2 border-fuchsia-500/70 bg-fuchsia-950/30 text-fuchsia-100 font-black">⚔️ バトルモード<small className="block text-[8px] text-fuchsia-300">極限チャレンジを含む試験用モード選択・結果は保存されません</small></button>
               {/* 助手(みゅあ)の確認用。通常のプレイでは出ない画面からだけ開ける */}
               <section className="rounded-2xl border-2 border-pink-500/60 bg-pink-950/30 p-3">
@@ -16578,6 +17085,7 @@ const createAnimationStyle = () => {
 .mh-dice-overlay{position:absolute;z-index:200;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:#020617c9;pointer-events:none}.mh-dice-overlay b{font-size:24px;color:#fef3c7;text-shadow:0 3px 8px #000}.mh-dice-cube{display:grid;place-items:center;width:112px;height:112px;border:7px solid #f8fafc;border-radius:25px;background:linear-gradient(145deg,#fff,#cbd5e1);color:#172554;font-size:62px;font-weight:1000;box-shadow:0 18px 35px #000b,inset -8px -8px 12px #64748b55}.mh-dice-overlay.rolling .mh-dice-cube{animation:trainingDiceRoll .22s linear infinite}.mh-dice-overlay.result .mh-dice-cube{animation:trainingDiceResult .5s cubic-bezier(.2,1.7,.4,1)}@keyframes trainingDiceRoll{25%{transform:translate(-18px,-8px) rotate(-18deg) scale(.92)}50%{transform:translate(12px,-22px) rotate(22deg) scale(1.08)}75%{transform:translate(20px,4px) rotate(8deg)}}@keyframes trainingDiceResult{0%{transform:scale(.35) rotate(-90deg)}70%{transform:scale(1.18) rotate(8deg)}100%{transform:scale(1)}}.mh-training-message{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}.mh-training-message strong{padding:3px 7px;border-radius:7px;background:#fbbf24;color:#451a03;font-size:11px}.mh-training-message small{color:#94a3b8;font-size:7px}.mh-space-detail div{padding:8px 0;border-bottom:1px solid #ffffff1f}.mh-space-detail dt{color:#a5b4fc;font-size:8px;font-weight:1000}.mh-space-detail dd{margin-top:2px;color:#e2e8f0;font-size:10px}
 .mh-tile-viewport{background:radial-gradient(circle at 55% 45%,#365314aa,#0f2940 55%,#061521),repeating-linear-gradient(135deg,#fff4 0 2px,transparent 2px 14px)}.mh-tile-board>i{height:18px;border:3px solid #f8fafccc;background:linear-gradient(#94a3b8,#475569);box-shadow:0 4px 0 #020617,0 0 8px #000;transition:.2s}.mh-tile-board>i.route{z-index:1;border-color:#fef9c3;background:#facc15;box-shadow:0 0 14px #fde047,0 4px 0 #713f12}.mh-training-tile{width:64px;height:64px;margin:-32px;border-radius:9px}.mh-training-tile.route-preview{box-shadow:0 0 0 4px #fef08a99,0 0 20px #fde047,0 5px 0 #0f172a}.mh-training-tile.stop-preview{z-index:7;border-color:#fff;box-shadow:0 0 0 6px #fb923c,0 0 28px #f97316,0 5px 0 #7c2d12;animation:trainingStop  .65s infinite alternate}.mh-branch-arrow{position:absolute;z-index:12;top:-27px;left:50%;transform:translateX(-50%);min-width:52px;padding:4px 6px;border-radius:999px;background:#f97316;color:#fff;font-size:8px;font-style:normal;font-weight:1000;white-space:nowrap;box-shadow:0 0 14px #fb923c}.mh-map-legend{position:sticky;z-index:20;left:7px;top:7px;display:flex;width:max-content;gap:4px;padding:5px;border:1px solid #ffffff55;border-radius:9px;background:#020617df;pointer-events:none}.mh-map-legend b{padding:2px 4px;border-radius:5px;background:#ffffff12;font-size:6px}.mh-goal-guide{position:sticky;z-index:20;float:right;right:7px;top:7px;padding:5px 8px;border-radius:8px;background:#713f12e8;color:#fef08a;font-size:8px;font-weight:1000;pointer-events:none}.mh-goal-guide span{display:inline-block;animation:goalPoint .7s infinite alternate}.mh-tile-viewport.overview .mh-map-legend{position:absolute;left:6px;top:6px}.mh-tile-viewport.overview .mh-goal-guide{display:none}@keyframes trainingStop{to{transform:scale(1.1)}}@keyframes goalPoint{to{transform:translateX(4px)}}
 .mh-training-result{height:100%;display:flex;align-items:center;justify-content:center;padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));text-align:center;background:radial-gradient(circle,#14532d,#020617 65%)}.mh-training-result.failure{background:radial-gradient(circle,#3f3f46,#020617 65%)}.mh-training-result>div{width:100%;max-width:360px}.mh-result-mark{display:block;font-size:64px}.mh-training-result small{color:#f9a8d4;font:900 9px monospace;letter-spacing:.22em}.mh-training-result h2{font-size:28px;font-weight:1000}.mh-training-result>div>p{margin:7px;color:#cbd5e1;font-size:10px}.mh-training-result section{margin:18px 0;padding:13px;border:1px solid #ffffff22;border-radius:18px;background:#0007}.mh-training-result section div{display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #ffffff12}.mh-training-result section div:last-child{border:0}.mh-training-result section span{font-size:11px}.mh-training-result section b{color:#fde68a}.mh-training-result .mh-result-note{font-size:8px}.mh-training-result>div>button{width:100%;min-height:52px;margin-top:10px;border-radius:18px;background:#fff;color:#172554;font-weight:1000}
+.mh-rpg-screen,.mh-rpg-battle{height:100%;display:flex;flex-direction:column;overflow:hidden;background:radial-gradient(circle at top,#064e3b,#04121b 62%)}.mh-rpg-screen{padding:0 0 calc(6px + env(safe-area-inset-bottom));padding-top:env(safe-area-inset-top)}.mh-rpg-head{display:grid;grid-template-columns:46px 1fr 46px;align-items:center;flex:none;padding:2px 8px}.mh-rpg-head>button{min-height:44px;display:flex;align-items:center;justify-content:center;background:transparent;color:#94a3b8}.mh-rpg-head div{text-align:center;min-width:0}.mh-rpg-head small{display:block;color:#6ee7b7;font:900 8px monospace;letter-spacing:.22em}.mh-rpg-head h2{font-size:16px;font-weight:1000}.mh-rpg-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 10px 12px}.mh-rpg-section{margin-bottom:14px}.mh-rpg-section h3{margin:6px 0;color:#6ee7b7;font-size:11px;font-weight:1000;letter-spacing:.08em}.mh-rpg-count{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}.mh-rpg-count button{min-height:44px;border:2px solid #334155;border-radius:12px;background:#0f172acc;font-size:11px;font-weight:900;color:#cbd5e1}.mh-rpg-count button.active{border-color:#34d399;background:#065f4655;color:#a7f3d0}.mh-rpg-card{margin-bottom:9px;padding:9px;border:2px solid #334155;border-radius:16px;background:#0f172ad9}.mh-rpg-card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}.mh-rpg-card-head img{width:44px;height:44px;object-fit:contain;flex:none}.mh-rpg-card-head select{flex:1;min-width:0;min-height:44px;padding:0 8px;border:1px solid #ffffff22;border-radius:10px;background:#020617;color:#e2e8f0;font-size:12px;font-weight:900}.mh-rpg-types{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px}.mh-rpg-types button{min-height:40px;padding:0 2px;border:2px solid #334155;border-radius:10px;background:#020617;color:#94a3b8;font-size:9px;font-weight:900}.mh-rpg-types button.active{background:#1e293b}.mh-rpg-level{display:flex;align-items:center;gap:8px;margin-bottom:6px}.mh-rpg-level b{flex:none;width:52px;color:#fde68a;font-size:12px}.mh-rpg-level input{flex:1;min-width:0;height:32px;accent-color:#34d399}.mh-rpg-points{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;font-size:10px;color:#cbd5e1;font-weight:900}.mh-rpg-points button{min-height:36px;padding:0 10px;border-radius:10px;background:#334155;color:#e2e8f0;font-size:9px;font-weight:900}.mh-rpg-stat{display:grid;grid-template-columns:44px 34px 12px 40px 44px 22px 44px;align-items:center;gap:2px;padding:2px 0;font-size:10px}.mh-rpg-stat-name{color:#94a3b8;font-weight:900}.mh-rpg-stat-base{color:#64748b;text-align:right}.mh-rpg-stat-arrow{color:#475569;text-align:center}.mh-rpg-stat-final{color:#f8fafc;font-weight:1000;text-align:right}.mh-rpg-stat button{min-height:40px;border-radius:9px;background:#1e293b;color:#e2e8f0;font-size:15px;font-weight:900}.mh-rpg-stat button:disabled{opacity:.28}.mh-rpg-stat em{color:#fbbf24;font-style:normal;font-weight:900;text-align:center}.mh-rpg-enemy-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.mh-rpg-enemy-stats span{padding:5px 2px;border-radius:8px;background:#02061788;text-align:center}.mh-rpg-enemy-stats small{display:block;color:#94a3b8;font-size:7px;font-weight:900}.mh-rpg-enemy-stats b{font-size:12px}.mh-rpg-skill{margin-top:6px;color:#a5b4fc;font-size:8px;font-weight:900}.mh-rpg-toggle{width:100%;min-height:56px;padding:8px 12px;border:2px solid #334155;border-radius:14px;background:#0f172acc;color:#cbd5e1;font-size:12px;font-weight:1000;text-align:left}.mh-rpg-toggle.active{border-color:#fbbf24;color:#fde68a}.mh-rpg-toggle small{display:block;margin-top:3px;color:#94a3b8;font-size:8px;font-weight:700}.mh-rpg-footer{flex:none;padding:8px 10px calc(4px + env(safe-area-inset-bottom));background:linear-gradient(transparent,#04121b 30%)}.mh-rpg-footer button{display:block;width:100%;min-height:50px;margin-top:6px;border-radius:16px;background:linear-gradient(90deg,#059669,#0284c7);font-size:13px;font-weight:1000}.mh-rpg-footer button.sub{min-height:44px;background:#1e293b;color:#cbd5e1;font-size:11px}.mh-rpg-battle{padding-top:env(safe-area-inset-top)}.mh-rpg-enemies{flex:none;display:grid;gap:5px;padding:6px 8px 2px}.mh-rpg-enemies[data-count="1"]{grid-template-columns:1fr}.mh-rpg-enemies[data-count="2"]{grid-template-columns:repeat(2,1fr)}.mh-rpg-enemies[data-count="3"],.mh-rpg-enemies[data-count="4"]{grid-template-columns:repeat(4,1fr)}.mh-rpg-enemy{min-width:0;padding:5px 3px;border:2px solid #334155;border-radius:14px;background:#0f172ab8;text-align:center}.mh-rpg-enemy.selectable{border-color:#fbbf24;box-shadow:0 0 12px #fbbf2455}.mh-rpg-enemy.down{opacity:.32}.mh-rpg-enemy img{width:100%;height:clamp(64px,14vh,110px);object-fit:contain}.mh-rpg-enemies[data-count="1"] .mh-rpg-enemy img{height:clamp(120px,30vh,220px)}.mh-rpg-enemies[data-count="2"] .mh-rpg-enemy img{height:clamp(100px,22vh,170px)}.mh-rpg-enemy b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.mh-rpg-enemy small,.mh-rpg-enemy span{display:block;color:#94a3b8;font-size:7px;font-weight:900}.mh-rpg-bar{height:5px;margin:2px 0 1px;border-radius:999px;background:#020617;overflow:hidden}.mh-rpg-bar i{display:block;height:100%;border-radius:999px}.mh-rpg-bar.hp i{background:linear-gradient(90deg,#f43f5e,#fb7185)}.mh-rpg-bar.guts i{background:linear-gradient(90deg,#d97706,#fde047)}.mh-rpg-mid{flex:1;min-height:54px;display:flex;flex-direction:column;justify-content:flex-end;padding:2px 10px}.mh-rpg-turn{color:#6ee7b7;font:1000 10px monospace;letter-spacing:.2em}.mh-rpg-log{margin-top:2px;padding:5px 8px;border-radius:10px;background:#02061799;font-size:9px;line-height:1.5;color:#e2e8f0}.mh-rpg-log li{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-rpg-log li:first-child{color:#fde68a;font-weight:900}.mh-rpg-allies{flex:none;display:grid;gap:4px;padding:4px 8px}.mh-rpg-allies[data-count="1"]{grid-template-columns:1fr}.mh-rpg-allies[data-count="2"]{grid-template-columns:repeat(2,1fr)}.mh-rpg-allies[data-count="3"],.mh-rpg-allies[data-count="4"]{grid-template-columns:repeat(2,1fr)}.mh-rpg-ally{display:flex;align-items:center;gap:5px;min-width:0;padding:4px;border:2px solid #1e293b;border-radius:12px;background:#0f172ab8}.mh-rpg-ally.active{border-color:#34d399;background:#065f4644}.mh-rpg-ally.down{opacity:.32}.mh-rpg-ally img{width:32px;height:32px;object-fit:contain;flex:none}.mh-rpg-ally>div{flex:1;min-width:0}.mh-rpg-ally b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}.mh-rpg-ally small,.mh-rpg-ally span{display:block;color:#94a3b8;font-size:7px;font-weight:900}.mh-rpg-commands{flex:none;min-height:96px;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:#020617cc}.mh-rpg-actor{margin-bottom:4px;color:#a7f3d0;font-size:10px;font-weight:1000}.mh-rpg-wait{padding:14px 0;text-align:center;color:#fde68a;font-size:12px;font-weight:1000}.mh-rpg-command-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.mh-rpg-command-row button{min-height:58px;padding:2px;border-radius:14px;background:linear-gradient(#1e293b,#0f172a);border:2px solid #475569;font-size:11px;font-weight:1000;color:#f1f5f9}.mh-rpg-command-row button:disabled{opacity:.3}.mh-rpg-command-row small{display:block;margin-top:2px;color:#94a3b8;font-size:7px;font-weight:900}.mh-rpg-cancel{width:100%;min-height:44px;border-radius:12px;background:#334155;font-size:11px;font-weight:900}.mh-rpg-result-turn{margin:6px 0;color:#fde68a;font-size:12px;font-weight:1000;text-align:center}.mh-rpg-result-table{border:1px solid #ffffff1a;border-radius:12px;overflow:hidden}.mh-rpg-result-row{display:grid;grid-template-columns:1.5fr 1.1fr 1fr 1fr .7fr .7fr .9fr;gap:2px;padding:6px 5px;font-size:9px;border-top:1px solid #ffffff12}.mh-rpg-result-row:first-child{border-top:0}.mh-rpg-result-row.head{background:#02061799;color:#6ee7b7;font-weight:1000;font-size:8px}.mh-rpg-result-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     `;
   document.head.appendChild(style);
 };
