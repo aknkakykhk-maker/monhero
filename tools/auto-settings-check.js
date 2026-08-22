@@ -19,4 +19,8 @@ assert(normalized.allies[0].rosterEntry === 'masu:one' && normalized.allies[0].s
 assert(normalized.allies[1].rosterEntry === null && normalized.allies[2].rosterEntry === null, '重複または候補外のentryを除外できません');
 assert(source.includes("await storeSet(AUTO_SETTINGS_KEY, normalized, false)"), '決定時の保存処理が見つかりません');
 assert(source.includes("k.startsWith('mh_')"), 'mh_キーのバックアップ処理が見つかりません');
-console.log('OK: AUTO設定の既定値・壊れた値・重複・候補外・masu roster entry・保存・バックアップ対象を確認');
+assert(source.includes('onClick={()=>setAutoAllyDetail({ mon, masu })}'), '選択済み供モンの詳細導線が見つかりません');
+assert(source.includes('autoAllyDetail&&renderMonsterDetailModal({mon:autoAllyDetail.mon,masu:autoAllyDetail.masu'), '共通モンスター詳細UIの再利用が見つかりません');
+assert(source.includes("readOnly:true,label:`${autoAllyDetail.mon.name}の確認用詳細`"), 'AUTO設定の詳細が読み取り専用ではありません');
+assert(source.includes('if (!entry) return null;'), '未指定の簡易情報・詳細導線を隠す処理が見つかりません');
+console.log('OK: AUTO設定の正規化・保存と、選択個体の読み取り専用詳細導線を確認');
