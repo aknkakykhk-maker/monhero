@@ -11,6 +11,7 @@
 //   ・戦闘画面で敵1〜4体・味方1〜4体のどれでもコマンドが画面内に収まり、押せる大きさ(44px以上)がある
 //   ・対象を選ばなくても「ねらい」が必ず1体に決まり、その表示が画面内にある
 //   ・行動順の並びが、同じモンスターでも味方と敵を色と形の両方で見分けられる
+//   ・決めた味方をタップでやり直せる（押せる大きさ・何を選んだかが分かる・実行中は押せない）
 //   ・ダメージの数字が読める大きさで出て、名前と重ならず、画面の外へ出ない
 //   ・技の演出(技名の帯・閃光・衝撃波)が出て、長い技名でも切れず画面からはみ出さない
 //   ・技名の帯とダメージの数字が同時に出ても重ならない(敵1・2・4体すべて)
@@ -122,6 +123,12 @@ if (params.get('p') === 'resolve' || HIT_PHASE || params.get('p') === 'special' 
   battle.phase = 'resolve';
   battle.plan = rpgSpeedOrder(battle).map((entry, i) => ({ ...entry, command:'attack', targetSide: entry.side === 'ally' ? 'enemy' : 'ally', targetIndex:0, value: 100 - i }));
   battle.planStep = Math.min(2, battle.plan.length - 1);
+} else if (params.get('p') === 'undo') {
+  // 味方4体のうち2体まで決めた状態。決めた2体はタップでやり直せる
+  battle.phase = 'command';
+  battle.inputs = { 0: { command:'attack', targetSide:'enemy', targetIndex:0 },
+                    1: { command:'skill',  targetSide:'enemy', targetIndex:1 } };
+  battle.inputIndex = 2;
 } else {
   battle.phase = 'command';
   battle.inputIndex = 0;
@@ -192,6 +199,7 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
       ['battle', 2, 2, '戦闘(味方2・敵2)', 'command'],
       ['battle', 4, 3, '戦闘(味方4・敵3)', 'command'],
       ['battle', 4, 4, '戦闘(味方4・敵4・コマンド入力中)', 'command'],
+      ['battle', 4, 4, '戦闘(味方4・敵4・2体まで決めてやり直せる状態)', 'undo'],
       ['battle', 4, 4, '戦闘(味方4・敵4・技一覧を開いた状態)', 'skill'],
       ['battle', 4, 4, '戦闘(味方4・敵4・敵をタップしてねらいを固定)', 'aim'],
       ['battle', 4, 4, '戦闘(味方4・敵4・行動順8体を実行中)', 'resolve'],
@@ -242,6 +250,21 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
           docWidth: document.documentElement.scrollWidth,
           bodyWidth: document.body.scrollWidth,
           // 予測順・行動順の並び。同じモンスターが敵味方どちらにも居ても見分けられるか
+          // 決めた味方はタップでやり直せる。押せるか・何を選んだかが分かるか
+          members: [...document.querySelectorAll('.mh-rpg-member')].map(el => ({
+            undoable: el.classList.contains('undoable'),
+            disabled: !!el.disabled,
+            tag: el.querySelector('.mh-rpg-member-body b em.done')
+              ? el.querySelector('.mh-rpg-member-body b em.done').textContent : '',
+            h: el.getBoundingClientRect().height,
+            isButton: el.tagName === 'BUTTON',
+          })),
+          undoHint: (document.querySelector('.mh-rpg-actor > small') || {}).textContent || '',
+          actorBox: rect('.mh-rpg-actor'),
+          actorClipped: (() => {
+            const el = document.querySelector('.mh-rpg-actor');
+            return el ? el.scrollWidth > el.clientWidth + 1 : null;
+          })(),
           orderChips: [...document.querySelectorAll('.mh-rpg-order-chip')].map(el => ({
             enemy: el.classList.contains('enemy'),
             current: el.classList.contains('current'),
@@ -369,6 +392,8 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
           // 実行中はコマンドを出さず「行動中…」を出す
           check(`${tag}: 実行中はコマンドの代わりに進行状況が出る`, !m.firstCommand && !!m.commands);
           check(`${tag}: 実行中は現在コマンド入力中の味方が居ない`, m.activeMembers === 0);
+          check(`${tag}: 実行中はコマンドをやり直せない`, m.members.every(x => x.disabled && !x.undoable),
+            `やり直せる ${m.members.filter(x => x.undoable).length}体`);
         }
         if (phase.startsWith('motion')) {
           const isAlly = phase === 'motion';
@@ -467,7 +492,7 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
             m.skillListBox ? `${Math.round(m.skillListBox.top)}〜${Math.round(m.skillListBox.bottom)}px / 画面 ${height}px` : '見つからない');
           check(`${tag}: 技が押せる大きさ`, m.skills.every(r => r.height >= MIN_TAP), `最小 ${Math.round(Math.min(...m.skills.map(r => r.height)))}px`);
           check(`${tag}: 技一覧から「もどる」で通常コマンドへ帰れる`, !!m.firstCancel && m.firstCancel.height >= MIN_TAP, `${Math.round(m.firstCancel?.height)}px`);
-        } else if (phase === 'command' || phase === 'aim') {
+        } else if (phase === 'command' || phase === 'aim' || phase === 'undo') {
           check(`${tag}: コマンドが押せる大きさ`, !!m.firstCommand && m.firstCommand.height >= MIN_TAP, `${Math.round(m.firstCommand?.height)}px`);
           check(`${tag}: いまコマンドを入力する味方が1体だけ強調される`, m.activeMembers === 1, `${m.activeMembers}体`);
           check(`${tag}: 入力中の味方にCOMMANDの目印が出る`, m.commandBadge === 1);
@@ -480,6 +505,25 @@ const MIN_TAP = 40; // タップ領域の下限(px)。本文の指示より少�
           // 敵はいつでも押せる(押すのはねらいの切り替えだけなので行動を消費しない)
           check(`${tag}: 生きている敵はいつでも押せる`, m.selectable === enemies, `${m.selectable}体`);
           check(`${tag}: 敵が押せる大きさ`, m.foeMinSize >= MIN_TAP, `${Math.round(m.foeMinSize)}px`);
+          if (phase === 'undo') {
+            // 決めた2体だけが押せて、あとは押せない(まだ決めていない味方を先に飛ばせない)
+            check(`${tag}: 決めた味方だけタップでやり直せる`,
+              m.members.filter(x => x.undoable && !x.disabled).length === 2
+              && m.members.filter(x => x.disabled).length === 2,
+              `やり直せる ${m.members.filter(x => x.undoable && !x.disabled).length}体 / 押せない ${m.members.filter(x => x.disabled).length}体`);
+            check(`${tag}: 味方カードは押せる部品になっている`, m.members.every(x => x.isButton));
+            check(`${tag}: やり直せるカードが押せる大きさ`,
+              m.members.filter(x => x.undoable).every(x => x.h >= MIN_TAP),
+              `最小 ${Math.round(Math.min(...m.members.filter(x => x.undoable).map(x => x.h)))}px`);
+            check(`${tag}: 何を選んだかがカードに出る`,
+              m.members.filter(x => x.tag).length === 2
+              && m.members.some(x => x.tag.startsWith('こうげき')) && m.members.some(x => x.tag.startsWith('技')),
+              m.members.map(x => x.tag).filter(Boolean).join(' / '));
+            check(`${tag}: やり直せることが画面に書いてある`, m.undoHint.includes('やり直し'), m.undoHint);
+            check(`${tag}: 見出しの行が切れず、高さも増えていない`,
+              m.actorClipped === false && !!m.actorBox && m.actorBox.height <= 18,
+              `高さ ${Math.round(m.actorBox?.height)}px`);
+          }
           if (phase === 'aim') {
             check(`${tag}: タップで固定したほうがねらいになる`, m.aimedIndexIsFixed, m.aimText || '');
           } else {
