@@ -607,6 +607,12 @@ check('画面側はこの判定だけを使う（planStepの増加を直接見�
 // すべて表示だけで、ダメージ・行動順・ガッツの計算には関係しない
 check('技を撃つと技名と撃った本人が帯に出る',
   rpgUi.includes('mh-rpg-special-band') && rpgUi.includes('<small>{rpgSpecial.by}</small><b>{rpgSpecial.name}</b>'));
+// ダメージの数字はモンスターの頭の上に出る。帯を同じ場所へ出すと数字が読めなくなるので、
+// 帯はメッセージ欄を基準にして「敵エリアのすぐ下」へ置く
+check('技名の帯はモンスターの上ではなくメッセージ欄の真上に出す',
+  /\.mh-rpg-special-band\{[^}]*bottom:calc\(100% \+ 3px\)/.test(source)
+  && /\.mh-rpg-message\{position:relative/.test(source)
+  && !/\.mh-rpg-special-band\{[^}]*top:\d+%/.test(source));
 check('技を撃つと画面が光り、戦う場所が揺れる',
   rpgUi.includes('mh-rpg-special-flash') && rpgUi.includes("${rpgSpecial?'shake':''}")
   && /\.mh-rpg-special-flash\{/.test(source) && /@keyframes rpgSpecialShake\{/.test(source));
