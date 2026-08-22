@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-23 08:32",
+    date: "2026-08-23 08:48",
     type: 'update',
     title: 'AUTO用の事前設定を追加しました',
     items: [
