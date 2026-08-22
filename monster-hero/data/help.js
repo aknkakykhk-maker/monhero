@@ -981,6 +981,11 @@ const HELP_SCREEN_COVERAGE = {
   TRAINING_BOARD:   null,
   TRAINING_CONFIRM: null,
   TRAINING_RESULT:  null,
+  // 対象外: ダンジョンRPG戦闘テストは開発用の試作。デバッグ設定からだけ入れて通常プレイには
+  // 一切現れないため、プレイヤー向けのヘルプ項目は作らない(正式コンテンツ化するときに追加する)
+  RPG_DEBUG_SETUP:  null,
+  RPG_DEBUG_BATTLE: null,
+  RPG_DEBUG_RESULT: null,
 };
 
 // ブロックを読み上げ用のプレーンテキストにする。助手の音声・要約や検索でそのまま使える。
