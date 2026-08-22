@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 08:53"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 08:58"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6578,6 +6578,7 @@ function MonsterHeroGame() {
   const [monsterRosterIds, setMonsterRosterIds] = useState(STARTER_MONSTER_IDS); // モンスター編成(解放済みの中から周回で使う候補、端末保存)
   const [autoSettings, setAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
   const [draftAutoSettings, setDraftAutoSettings] = useState(DEFAULT_AUTO_SETTINGS);
+  const [autoAllyDetail, setAutoAllyDetail] = useState(null); // AUTO設定: 選択中の供モン詳細（確認専用）
   const [monsterPartySets, setMonsterPartySets] = useState(() => normalizeMonsterPartySets(null, STARTER_MONSTER_IDS));
   const [editingPartySetIndex, setEditingPartySetIndex] = useState(0);
   const [partySetCopyTarget, setPartySetCopyTarget] = useState(null);
@@ -8547,6 +8548,23 @@ function MonsterHeroGame() {
       return baseName && mon.name !== baseName ? `${mon.name}（${baseName}）` : `${mon.name}（マスモン）`;
     }
     return mon.name;
+  };
+  const renderAutoAllySummary = (entry) => {
+    if (!entry) return null;
+    const isMasu = entry.startsWith('masu:');
+    const masu = isMasu ? getMasuMon(entry.slice(5)) : null;
+    const base = isMasu ? ALL_PLAYER_MONSTERS[masu?.baseId] : ALL_PLAYER_MONSTERS[entry];
+    const mon = isMasu ? mergeMasuIntoMon(masu) : base;
+    if (!mon || !base) return null;
+    const aptitude = isMasu ? resolveMasuDistAptitude(masu, base) : RANGE_LABELS.map((_, index)=>getDistAptitude(mon,index));
+    const power = isMasu ? masuPowerOf(masu) : monsterPowerOf(mon);
+    const displayName = isMasu && mon.name !== base.name ? `${mon.name}（${base.name}）` : mon.name;
+    return <button type="button" onClick={()=>setAutoAllyDetail({ mon, masu })} className="block w-full min-w-0 overflow-hidden rounded-xl border border-indigo-400/30 bg-black/30 px-2.5 py-2 text-left active:scale-[.99]" aria-label={`${displayName}の詳細を見る`}>
+      <div className="truncate text-xs font-black text-white">{displayName}</div>
+      <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] font-black"><span className={isMasu?'text-pink-300':'text-cyan-300'}>{isMasu?'マスモン':'ベースモン'}</span>{isMasu&&<span className="text-pink-300">絆Lv.{masuBondLevelInfo(masu).level}</span>}<span className="text-slate-200">総合力 {formatMonsterPower(power)}</span></div>
+      <div className="mt-1.5 grid min-w-0 grid-cols-4 gap-1">{RANGE_LABELS.map((label,index)=><div key={label} className={`min-w-0 rounded-md px-1 py-1 text-center text-[9px] font-black leading-none ${RANGE_STYLES[index].labelBg}`}><span>{label}</span><span className="ml-1">{aptitude[index]||'C'}</span></div>)}</div>
+      <div className="mt-2 text-right text-[10px] font-black text-indigo-200">詳細を見る ›</div>
+    </button>;
   };
   // 編成の1枠が対象とする「モンスター種id」を返す(プレーン種でもマスモンでも、種としては同じ扱い)
   const baseIdOfRosterEntry = (entry) => {
@@ -12484,9 +12502,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('MB_MANAGEMENT')} className="p-3 text-slate-400 active:scale-90" aria-label="M/B管理へ戻る"><ArrowLeft size={20}/></button><div><h2 className="text-xl font-black italic text-indigo-300">AUTO設定</h2><p className="text-[9px] text-slate-400 font-bold">将来のAUTO用事前設定</p></div></div>
             <div className="flex-1 min-h-0 overflow-y-auto mh-scroll w-full max-w-md mx-auto space-y-4 pb-3">
               <section className="rounded-2xl border border-indigo-500/40 bg-slate-950/70 p-3"><h3 className="text-sm font-black text-indigo-200 mb-2">1. AUTO方針</h3><div className="grid grid-cols-2 gap-2">{strategies.map(([key,label,description])=><button key={key} aria-pressed={draftAutoSettings.strategy===key} onClick={()=>setDraftAutoSettings(current=>({...current,strategy:key}))} className={`min-h-[68px] min-w-0 rounded-xl border p-2 text-left active:scale-[.98] ${draftAutoSettings.strategy===key?'border-cyan-300 bg-indigo-600 ring-2 ring-cyan-300/50':'border-slate-700 bg-slate-900'}`}><span className="block text-xs font-black">{label}</span><span className="block mt-1 text-[9px] leading-snug text-slate-300">{description}</span></button>)}</div></section>
-              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className="rounded-2xl border border-indigo-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未指定（ランダム）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select><div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${ally.slot===slot?'ring-2 ring-white border-white':slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}`}>{label}</button>)}</div></div></div>)}</section>
+              <section className="space-y-3"><div><h3 className="text-sm font-black text-indigo-200">2. 供モン事前設定</h3><p className="text-[9px] leading-relaxed text-slate-400 mt-1">WAVE2・4・6の順に対応します。設定した供モンが候補にいない場合はAUTO時にランダムで補完されます。</p></div>{draftAutoSettings.allies.map((ally,index)=><div key={index} className="rounded-2xl border border-indigo-500/30 bg-slate-900 p-3 space-y-2"><label className="block text-xs font-black text-white" htmlFor={`auto-ally-${index}`}>供モン{['①','②','③'][index]}</label><select id={`auto-ally-${index}`} value={ally.rosterEntry||''} onChange={event=>updateDraftAutoAlly(index,{rosterEntry:event.target.value||null})} className="w-full min-h-[48px] min-w-0 rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white"><option value="">未指定（ランダム）</option>{monsterRosterIds.filter(entry=>!!resolveRosterEntryToMon(entry)).map(entry=><option key={entry} value={entry} disabled={selectedEntries.includes(entry)&&ally.rosterEntry!==entry}>{autoRosterLabel(entry)}</option>)}</select>{renderAutoAllySummary(ally.rosterEntry)}<div><div className="text-[10px] font-black text-slate-300 mb-1.5">配置距離</div><div className="grid grid-cols-5 gap-1">{ranges.map(([slot,label])=><button key={label} onClick={()=>updateDraftAutoAlly(index,{slot})} aria-pressed={ally.slot===slot} className={`min-h-[44px] min-w-0 rounded-lg border text-[10px] font-black active:scale-95 ${ally.slot===slot?'ring-2 ring-white border-white':slot===null?'bg-slate-700 border-slate-500 text-white':`${RANGE_STYLES[slot].labelBg} ${RANGE_STYLES[slot].border}`}`}>{label}</button>)}</div></div></div>)}</section>
             </div>
             <button onClick={saveAutoSettings} className="w-full max-w-md mx-auto min-h-[52px] shrink-0 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg active:scale-[.98]">決定</button>
+            {autoAllyDetail&&renderMonsterDetailModal({mon:autoAllyDetail.mon,masu:autoAllyDetail.masu,onClose:()=>setAutoAllyDetail(null),accent:'indigo',readOnly:true,label:`${autoAllyDetail.mon.name}の確認用詳細`})}
           </div>;
         })()}
 
