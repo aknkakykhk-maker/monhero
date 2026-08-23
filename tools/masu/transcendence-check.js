@@ -334,6 +334,10 @@ check('プシュケーの変換は専用のシートで行う',
   source.includes('data-transcend-exchange-open') && source.includes('data-transcend-exchange-sheet')
   && source.includes('data-transcend-exchange-commit')
   && source.indexOf('data-transcend-exchange-sheet') > source.indexOf('data-transcend-commit'));
+check('プシュケー変換シートは低い画面でもSafe Area内を縦スクロールできる',
+  source.includes("maxHeight:'calc(100% - env(safe-area-inset-top))'")
+    && source.includes('overflow-y-auto overscroll-contain')
+    && source.includes("paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'"));
 check('ヘルプに超越の項目がある',
   help.includes("id: 'transcendence'") && help.includes('MASU_TRANSCENDENCE: ') && help.includes('MASU_TRANSCEND_ENHANCE: '));
 check('ヘルプに解放条件・コスト・仕様が書いてある',
