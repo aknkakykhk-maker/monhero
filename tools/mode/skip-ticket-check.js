@@ -130,6 +130,36 @@ check('経験値・ダイヤ・絆経験値がすべて枚数ぶんになる',
   skipBlock.includes('xpForWavesCleared(SKIP_WAVES, scoreMult) * count;\n      const breederLevelBefore')
     && skipBlock.includes('goldForWavesCleared(SKIP_WAVES, goldMult) * count;')
     && skipBlock.includes('const gain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;'));
+
+// --- 報酬方針との組み合わせ ---
+// 「プシュケー優先」「ダイヤ優先」は経験値を0にする代わりに虹・ダイヤを2倍にする方針だが、
+// スキップは虹のプシュケーを配らない。この2つでスキップできてしまうと、
+// ブリーダー経験値も絆経験値も0のままチケットだけ減る(実際にその不具合を出した)。
+check('スキップは報酬方針が「育成」のときだけ使える',
+  has("const skipAllowedByPolicy = (policy) => normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_GROWTH;")
+    && has('if (!skipAllowedByPolicy(quickRewardPolicy)) return;'));
+check('画面側でも押せないようにしてある（2つの入口とも）',
+  (source.match(/skipAllowedByPolicy\(quickRewardPolicy\)/g) || []).length >= 4,
+  `${(source.match(/skipAllowedByPolicy\(quickRewardPolicy\)/g) || []).length}か所`);
+check('押せない理由を画面に書いてある',
+  (source.match(/スキップは「育成」方針のときだけ使えます/g) || []).length >= 2);
+check('実行時にも方針を確かめてから消費する',
+  skipBlock.indexOf('if (!skipAllowedByPolicy(quickRewardPolicy)) return;') >= 0
+    && skipBlock.indexOf('if (!skipAllowedByPolicy(quickRewardPolicy)) return;') < skipBlock.indexOf('ownedItems[item.id] || 0) - count'));
+// 方針で経験値を消す処理がスキップへ残っていると、また同じことが起きる
+check('スキップの報酬に報酬方針を掛けていない',
+  !skipBlock.includes('applyQuickXpPolicy') && !skipBlock.includes('applyQuickDiamondPolicy')
+    && !skipBlock.includes('flow.rewardPolicy'));
+// マスモンを勇者モンにしたのに「マスモンではない」と出ていた。
+// 絆経験値が入らなかった理由を、保存済みの heroIsMasu で書き分ける
+check('リザルトはマスモンかどうかを heroIsMasu で判断する',
+  has('heroIsMasu: !!flow.hero.masuId,') && has('{skipResult.heroIsMasu?'));
+// お詫びのスキップチケット・急5枚。idが同じものは二度配られない仕組みに乗せる
+check('不具合のお詫びをギフトで配る',
+  has("id: 'gift_compensation_20260823_skip',") && has("{ type:'skipTicketKyu', amount:5 },"));
+// ヘルプにも「育成のときだけ」と書く(プレイヤーが仕様を確かめる唯一の場所のため)
+check('ヘルプに報酬方針の条件が書いてある',
+  fs.readFileSync(path.join(root, 'monster-hero/data/help.js'), 'utf8').includes('スキップが使えるのは、クイックモードの報酬方針が「育成」のときだけです'));
 check('枚数を選ぶボタンがある',
   has('aria-label="使う枚数を1枚減らす"') && has('aria-label="使う枚数を1枚増やす"') && has('changeSkipCount(max)'));
 check('所持数を超える枚数は選べない', has('disabled={n>=max}') && has('disabled={n<=1}'));

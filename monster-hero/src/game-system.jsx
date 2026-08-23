@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 11:06"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 11:30"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -3756,6 +3756,14 @@ const COMPENSATION_GIFTS = [
       { type:'skipTicketJo', amount:1 },
       { type:'skipTicketHa', amount:1 },
       { type:'skipTicketKyu', amount:1 },
+    ],
+  },
+  {
+    id: 'gift_compensation_20260823_skip',
+    title: 'お詫びのしるし',
+    description: 'クイックモードの報酬方針を「プシュケー優先」「ダイヤ優先」にしたままスキップすると、経験値も絆経験値も入らないままチケットだけ減っていた不具合のお詫びです。ご迷惑をおかけしました。',
+    rewards: [
+      { type:'skipTicketKyu', amount:5 },
     ],
   },
   {
@@ -9698,6 +9706,7 @@ function MonsterHeroGame() {
     const flow = skipFlow;
     const item = BREEDER_MARKET_ITEMS.find(i => i.id === flow?.itemId);
     if (!flow || !item || !flow.hero) return;
+    if (!skipAllowedByPolicy(quickRewardPolicy)) return;
     if ((ownedItems[item.id] || 0) <= 0) return;
     // まとめて使う枚数。画面の値が壊れていても所持数を超えて消費しないよう、ここでも必ず丸める
     const count = clampSkipCount(flow.count, item.id);
@@ -9711,7 +9720,7 @@ function MonsterHeroGame() {
       const goldMult = DIFFICULTY_SETTINGS[flow.difficulty]?.gold || 1.0;
 
       // ブリーダー経験値・ブリーダーポイント(枚数ぶんまとめて受け取る)
-      const breederXpGain = applyQuickXpPolicy(xpForWavesCleared(SKIP_WAVES, scoreMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy);
+      const breederXpGain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;
       const breederLevelBefore = levelInfo(breederXp);
       const nextBreederXp = breederXp + breederXpGain;
       const breederLevelAfter = levelInfo(nextBreederXp);
@@ -9724,14 +9733,14 @@ function MonsterHeroGame() {
       }
 
       // ダイヤ
-      const goldGain = applyQuickDiamondPolicy(goldForWavesCleared(SKIP_WAVES, goldMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy);
+      const goldGain = goldForWavesCleared(SKIP_WAVES, goldMult) * count;
       const goldBefore = gold;
       const goldAfter = gold + goldGain;
       setGold(goldAfter);
       await storeSet('mh_gold', goldAfter, false);
 
       // 絆経験値。勇者モン=満額、選んだ供モン=1/2、編成内で選ばなかったマスモン=1/4 も通常と同じ
-      const gain = applyQuickXpPolicy(xpForWavesCleared(SKIP_WAVES, scoreMult) * count, BATTLE_MODE_QUICK, flow.rewardPolicy);
+      const gain = xpForWavesCleared(SKIP_WAVES, scoreMult) * count;
       const allies = (flow.allies || []).filter(Boolean);
       const bondAwards = buildRunBondAwards({
         gain,
@@ -9783,13 +9792,19 @@ function MonsterHeroGame() {
       skipProcessingRef.current = false;
     }
   };
+  // スキップは報酬方針が「育成」のときだけ使える。
+  // 「プシュケー優先」「ダイヤ優先」は経験値を0にする代わりに虹・ダイヤを2倍にする方針だが、
+  // スキップは虹のプシュケーを配らない仕様なので、プシュケー優先で使うと
+  // 経験値も絆経験値も0のままチケットだけ減っていた。使えないようにして取り違えを防ぐ
+  const skipAllowedByPolicy = (policy) => normalizeQuickRewardPolicy(policy) === QUICK_REWARD_POLICY_GROWTH;
   const openBattleSkip = (difficultyKey) => {
     // スキップはクイックモード専用。画面側でも押せないようにしているが、
     // ここでも止めておく(チャレンジで使えるとスコアを出さずに報酬だけ取れてしまう)
     if (!isQuickMode(battleMode)) return;
+    if (!skipAllowedByPolicy(quickRewardPolicy)) return;
     const itemId = SKIP_TICKETS[difficultyKey];
     if (!itemId || (ownedItems[itemId] || 0) <= 0) return;
-    setSkipFlow({ difficulty: difficultyKey, itemId, hero: null, allies: [], count: 1, rewardPolicy: normalizeQuickRewardPolicy(quickRewardPolicy) });
+    setSkipFlow({ difficulty: difficultyKey, itemId, hero: null, allies: [], count: 1 });
     setSkipPickTab('roster');
     setSkipConfirmOpen(false);
     setGameState('SKIP_PICK');
@@ -13067,7 +13082,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               );})()}<div className="grid grid-cols-3 gap-1 mt-1.5">{rateCells(setting).map(([label,value,boosted])=><div key={label} className="rounded-xl bg-black/35 py-1 text-center text-[8px] text-slate-400 whitespace-nowrap">{label}<b className="block text-xs" style={{color:boosted?mode.color:'#ffffff'}}>{value}</b></div>)}</div><div className="mt-1 rounded-xl border px-2 py-0.5 text-center text-[8px] font-black whitespace-nowrap overflow-hidden" style={{borderColor:`${mode.color}55`,color:mode.color}}>{noteText}</div><div className="grid gap-1.5 mt-1.5"><button onClick={()=>{setDifficulty(key);setShowWaveDetails(true);}} className="min-h-[38px] rounded-xl bg-slate-700 font-black text-xs">全WAVE詳細</button>{/* 練習中はビギナーだけ押せるようにして、記録の残らない練習用の開始処理へ回す。
                 ふだんの処理は debugBattleRef を false に戻すので、そのまま通すと練習が記録されてしまう */}<button disabled={!!battleTutorial&&key!=='Beginner'} onClick={()=>{if(battleTutorial){beginBattleTutorialRun();return;}battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);setRunMode(battleMode);battleScenarioRef.current=null;battleScenarioIntentIndexRef.current=0;debugBattleRef.current=false;extremeRunRef.current=false;setDebugBattle(false);setExtremeRun(false);setDebugOutcome(null);setMonSelection(getActiveMonsterList());setHeroPickTab('roster');setGameState('PICK_HERO');}} className={`min-h-[44px] rounded-xl font-black text-sm disabled:opacity-30${key==='Beginner'?battleTutorialSpotClass('battleStart'):''}`} style={{backgroundColor:setting.bg,color:setting.darkText?'#0f172a':'#ffffff'}}>この難易度で挑戦</button>{/* スキップ行。チケットが無い難易度でもカードの高さが変わらないよう、同じ高さの案内を出す。
                 スキップはクイックモード専用。チャレンジで使えるとスコアを出さずに報酬だけ取れてしまい、
-                ランキングを競う意味が薄れるため */}{(()=>{const tid=SKIP_TICKETS[key];if(!quick)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">スキップはクイックモード専用</div>);if(!tid)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">この難易度はスキップできません</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1 py-0.5">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
+                ランキングを競う意味が薄れるため */}{(()=>{const tid=SKIP_TICKETS[key];if(!quick)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">スキップはクイックモード専用</div>);if(!tid)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center text-[10px] font-black text-slate-500 whitespace-nowrap">この難易度はスキップできません</div>);if(!skipAllowedByPolicy(quickRewardPolicy))return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center px-2 text-[10px] font-black text-slate-500 text-center leading-tight">スキップは「育成」方針のときだけ使えます</div>);const have=ownedItems[tid]||0;return(<div className="flex gap-1.5"><button disabled={have<=0} onClick={()=>{battleEntryStateRef.current='BATTLE_MENU';setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>);})()}</div></article>})}</div><button aria-label="次の難易度" disabled={selectedIndex===difficulties.length-1} onClick={()=>selectDifficultyIndex(selectedIndex+1)} className="absolute right-0 top-[42%] z-20 w-9 h-12 rounded-l-xl bg-black/70 disabled:opacity-20"><ChevronRight/></button></div><div className="flex justify-center gap-1 py-0.5">{difficulties.map(([key],i)=><button key={key} aria-label={`${i+1}ページ目`} onClick={()=>selectDifficultyIndex(i)} className={`w-1.5 h-1.5 rounded-full ${key===safeDifficulty?'bg-indigo-300 scale-125':'bg-slate-700'}`}/>)}</div>
               {/* ランキングへの導線はモードのタブのすぐ下へ移したので、ここには助手コメントだけを置く */}
               <div className="shrink-0 pt-1.5 pb-1"><AssistantBubble key={battleMode} scene={quick?'battleQuick':'battleChallenge'} accent={mode.color} faceSize={56}/></div>
               </div>;})()}
@@ -13269,7 +13284,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                           {/* 難易度カードからもランキングへ入れる。ここから開いたときは、この難易度のタブが最初に選ばれる */}
                           {ranked&&<button disabled={!!battleTutorial} onClick={()=>openModeScoreRanking(battleMode,key,'BATTLE_DIFFICULTY_SELECT')} className="min-h-[40px] rounded-xl bg-slate-800 border border-indigo-400/40 text-indigo-200 font-black text-[11px] active:scale-[.98] flex items-center justify-center gap-1 px-2 disabled:opacity-30"><span className="flex-1 text-center whitespace-nowrap">🏆 {setting.label}のランキング</span><ChevronRight size={16} className="shrink-0"/></button>}
                           {/* スキップはクイックモード専用。チケットが無い難易度では出さない */}
-                          {quick&&(()=>{const tid=SKIP_TICKETS[key];if(!tid)return null;const have=ownedItems[tid]||0;return(
+                          {quick&&(()=>{const tid=SKIP_TICKETS[key];if(!tid)return null;const have=ownedItems[tid]||0;const policyOk=skipAllowedByPolicy(quickRewardPolicy);if(!policyOk)return(<div className="min-h-[40px] rounded-xl bg-black/25 border border-white/5 flex items-center justify-center px-2 text-[10px] font-black text-slate-500 text-center leading-tight">スキップは「育成」方針のときだけ使えます</div>);return(
                             <div className="flex gap-1.5"><button disabled={!quickUnlocked||have<=0||!!battleTutorial} onClick={()=>{battleEntryStateRef.current='BATTLE_DIFFICULTY_SELECT';setDifficulty(key);openBattleSkip(key);}} className={`flex-1 min-h-[40px] rounded-xl font-black text-sm flex items-center justify-center gap-1.5 whitespace-nowrap ${quickUnlocked&&have>0?'bg-teal-600 text-white active:scale-95':'bg-slate-800 text-slate-500'}`}><span>スキップ</span><span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${quickUnlocked&&have>0?'bg-black/30 text-teal-100':'bg-black/40 text-slate-500'}`}>{have}枚</span></button><button onClick={()=>setSkipInfoItemId(tid)} aria-label="スキップの説明" className="shrink-0 w-11 min-h-[40px] rounded-xl bg-slate-700 text-white font-black active:scale-95">？</button></div>
                           );})()}
                         </div>
@@ -16013,7 +16028,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   {skipResult.heroBondGain.levelAfter.level>skipResult.heroBondGain.levelBefore.level&&(<div className="text-[8px] text-amber-300 font-black mt-1 flex items-center gap-1"><Sparkles size={9}/>強化ポイント +{skipResult.heroBondGain.levelAfter.level-skipResult.heroBondGain.levelBefore.level}</div>)}
                 </div>
               ):(
-                <div className="bg-black/30 rounded-2xl border border-white/10 p-3 text-[10px] text-slate-400 font-bold leading-relaxed">勇者モンがマスモンではないため、絆経験値は入りませんでした。スキップではマスモン登録はできません。</div>
+                <div className="bg-black/30 rounded-2xl border border-white/10 p-3 text-[10px] text-slate-400 font-bold leading-relaxed">{skipResult.heroIsMasu?'勇者モンの絆経験値は入りませんでした。スキップではマスモン登録はできません。':'勇者モンがマスモンではないため、絆経験値は入りませんでした。スキップではマスモン登録はできません。'}</div>
               )}
               {skipResult.allyBondGains.map(a=>(
                 <div key={a.masuId} className="bg-black/40 rounded-2xl border border-pink-500/20 p-3">
