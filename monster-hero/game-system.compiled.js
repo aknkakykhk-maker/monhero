@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 3d886008f2dd2c09
+// source-sha256: e6e72f5c2eb82776
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 10:31"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 10:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -443,6 +443,35 @@ const MAX_UNIQUE_SKILL_LEVEL = 8;
 // 最大ガッツそのものは増やさず、最大までの範囲で現在値だけを回復する。
 const GUTS_RECOVERY_POINT_COST = 1; // 1回に使う強化ポイント
 const GUTS_RECOVERY_AMOUNT = 10; // 1回で戻る現在ガッツ
+// UPGRADE_SKILLのAUTO配分を同期的に決める。画面に並んだ合法な技だけを受け取り、
+// 1Pごとに候補を引き直すため、途中で上限へ達した技は以後の抽選から外れる。
+const chooseAutoUniqueUpgradePlan = (uniques, upgradePoints, maxLevel = MAX_UNIQUE_SKILL_LEVEL, rng = Math.random) => {
+  if (!Array.isArray(uniques) || !Number.isInteger(upgradePoints) || upgradePoints < 0 || !Number.isInteger(maxLevel) || maxLevel < 0 || typeof rng !== 'function') return null;
+  const levels = {};
+  const allocations = {};
+  for (const entry of uniques) {
+    const key = typeof entry?.key === 'string' ? entry.key : '';
+    const level = entry?.level;
+    if (!key || Object.prototype.hasOwnProperty.call(levels, key) || !Number.isInteger(level) || level < 0 || level > maxLevel) return null;
+    levels[key] = level;
+  }
+  let remainingPoints = upgradePoints;
+  while (remainingPoints > 0) {
+    const candidates = Object.keys(levels).filter(key => levels[key] < maxLevel);
+    if (candidates.length === 0) break;
+    const roll = rng();
+    if (!Number.isFinite(roll) || roll < 0 || roll >= 1) return null;
+    const key = candidates[Math.floor(roll * candidates.length)];
+    levels[key] += 1;
+    allocations[key] = (allocations[key] || 0) + 1;
+    remainingPoints -= 1;
+  }
+  return {
+    allocations,
+    levels,
+    remainingPoints
+  };
+};
 const INHERITED_UNIQUE_LEVEL_KEY_PREFIX = 'inhId:';
 let inheritedUniqueIdSequence = 0;
 const createInheritedUniqueId = () => {
@@ -20565,10 +20594,20 @@ function MonsterHeroGame() {
     }, battleMs(900));
   };
 
+  // UPGRADE_SKILL画面の手動ボタンとAUTOが共有する既存の次画面処理。
+  const continueAfterUniqueUpgrade = () => {
+    const availableTeachings = getActiveTeachingCards().filter(tc => {
+      const owned = ownedTeachings.find(ot => ot.id === tc.id);
+      return !owned || owned.evoLevel < 2;
+    });
+    setTeachingPool(availableTeachings.sort(() => Math.random() - 0.5).slice(0, 4));
+    setGameState('PICK_TEACHING');
+  };
+
   // AUTO中にWAVE後の選択画面へ入ったときだけ、決めた対象をstateを経由せず直接確定する。
   // 実行ロックは画面を離れるまで保持し、再描画やStrictModeでも同じ報酬を二重処理しない。
   useEffect(() => {
-    if (gameState !== 'REWARD_PICK' && gameState !== 'PICK_ALLY' && gameState !== 'PICK_TEACHING') {
+    if (gameState !== 'REWARD_PICK' && gameState !== 'PICK_ALLY' && gameState !== 'PICK_TEACHING' && gameState !== 'UPGRADE_SKILL') {
       autoPostWaveRunningRef.current = false;
       autoPostWaveScheduledRef.current = false;
       return;
@@ -20617,6 +20656,48 @@ function MonsterHeroGame() {
           return;
         }
         confirmPickTeaching(choice);
+      });
+      return;
+    }
+    if (gameState === 'UPGRADE_SKILL') {
+      autoPostWaveRunningRef.current = false;
+      autoPostWaveScheduledRef.current = false;
+      if (!autoBattleRef.current) return;
+      autoPostWaveScheduledRef.current = true;
+      Promise.resolve().then(() => {
+        autoPostWaveScheduledRef.current = false;
+        if (!autoBattleRef.current || autoPostWaveRunningRef.current) return;
+        autoPostWaveRunningRef.current = true;
+        const entries = uniqueUpgradeEntries();
+        const plan = chooseAutoUniqueUpgradePlan(entries.map(entry => ({
+          key: entry.rowKey,
+          level: entry.u.evoLevel || 0
+        })), upgradePoints, MAX_UNIQUE_SKILL_LEVEL);
+        if (!plan) {
+          stopAutoBattle();
+          autoPostWaveRunningRef.current = false;
+          addPopup('AUTO停止：固有技を強化できません', 'hero', 'text-amber-300 font-black text-sm');
+          return;
+        }
+        // 最終値を先に確定し、技・残りポイントを一括反映してから共通の進行処理を1回だけ呼ぶ。
+        const nextOwnedUniques = ownedUniques.map(u => {
+          const level = plan.levels[`own:${u.monId}`];
+          return level == null ? u : {
+            ...u,
+            evoLevel: level
+          };
+        });
+        const nextInheritedUniqueEvo = {
+          ...inheritedUniqueEvo
+        };
+        entries.filter(entry => entry.inherited).forEach(entry => {
+          const match = /^inh:(\d+):(\d+)$/.exec(entry.rowKey);
+          if (match) nextInheritedUniqueEvo[inhEvoKey(Number(match[1]), Number(match[2]))] = plan.levels[entry.rowKey];
+        });
+        setOwnedUniques(nextOwnedUniques);
+        setInheritedUniqueEvo(nextInheritedUniqueEvo);
+        setUpgradePoints(plan.remainingPoints);
+        continueAfterUniqueUpgrade();
       });
       return;
     }
@@ -33187,14 +33268,7 @@ function MonsterHeroGame() {
     })(), /*#__PURE__*/React.createElement("div", {
       className: "w-full max-w-sm space-y-3 mb-2 min-h-0 overflow-y-auto mh-scroll flex-1 p-1 flex flex-col justify-start pt-2"
     }, uniqueUpgradeEntries().map(e => uniqueUpgradeRow(e))), /*#__PURE__*/React.createElement("button", {
-      onClick: () => {
-        const availableTeachings = getActiveTeachingCards().filter(tc => {
-          const owned = ownedTeachings.find(ot => ot.id === tc.id);
-          return !owned || owned.evoLevel < 2;
-        });
-        setTeachingPool(availableTeachings.sort(() => Math.random() - 0.5).slice(0, 4));
-        setGameState('PICK_TEACHING');
-      },
+      onClick: continueAfterUniqueUpgrade,
       className: "w-full max-w-xs bg-white text-black py-3 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-transform mt-auto shrink-0"
     }, "\u30D6\u30EA\u30FC\u30C0\u30FC\u7D99\u627F\u3078")), gameState === 'WAVE_RESULT' && waveResult &&
     /*#__PURE__*/

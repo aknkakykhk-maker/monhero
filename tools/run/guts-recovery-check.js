@@ -107,7 +107,7 @@ check('固有技の＋／－は従来どおり',
 // ---- ⑤ 既存仕様に触れていないこと ----
 // 強化フェーズを抜けるときにポイントを捨てていないこと(残したぶんは次回へ持ち越す)。
 // 「ブリーダー継承へ」で次の画面に進むところに、ポイントを0へ戻す処理が無いことを見る
-const nextButton = slice("setTeachingPool(availableTeachings.sort", "ブリーダー継承へ");
+const nextButton = slice('const continueAfterUniqueUpgrade =', '// AUTO中にWAVE後の選択画面へ');
 check('未使用ポイントを残して次へ進んでも捨てられない', !/setUpgradePoints/.test(nextButton), nextButton.slice(0, 80));
 // ポイントを0へ戻すのは、ランを始めるとき(resetAllState経由)だけ
 check('ポイントを0へ戻すのはラン開始時だけ',
