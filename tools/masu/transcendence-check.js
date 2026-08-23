@@ -320,6 +320,12 @@ check('ステータス表示は通常強化の(+○)と基礎+○を分けてい
   && source.includes('基礎+{transcendPlus}'));
 check('強化画面で通常強化と超越強化を切り替えられる',
   source.includes('data-transcend-enhance-tabs') && source.includes("setGameState('MASU_TRANSCEND_ENHANCE')"));
+// 詳細モーダル(z=31000)は強化画面(z=30000)より手前に出る。除外し忘れると超越強化が
+// まるごと隠れて、閉じたときに暗い画面だけが残る。実際にその不具合を出している
+check('強化画面を開いているあいだは詳細モーダルを重ねない',
+  source.includes("const MASU_ENHANCE_STATES = ['MASU_ENHANCE','MASU_TRANSCEND_ENHANCE']")
+  && source.includes('{masuMonDetail&&!MASU_ENHANCE_STATES.includes(gameState)&&')
+  && !source.includes("{masuMonDetail&&gameState!=='MASU_ENHANCE'&&"));
 check('超越強化はまとめて振れる（1Pずつ何十回も押させない）',
   source.includes("data-transcend-exchange={label}") && source.includes("[['+1P',1],['+10P',10],['MAX',maxExchange.maxPoints]]"));
 check('ヘルプに超越の項目がある',

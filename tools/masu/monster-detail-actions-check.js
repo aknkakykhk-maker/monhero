@@ -5,7 +5,8 @@ const breeder = fs.readFileSync('monster-hero/data/breeder.js', 'utf8');
 let failed = false;
 const check = (name, ok) => { console.log(`${ok ? 'OK' : 'NG'}: ${name}`); failed ||= !ok; };
 
-const start = source.indexOf("{masuMonDetail&&gameState!=='MASU_ENHANCE'");
+// 詳細モーダルの表示条件。強化画面(通常・超越)を開いているあいだは出さない
+const start = source.indexOf("{masuMonDetail&&!MASU_ENHANCE_STATES.includes(gameState)&&");
 const end = source.indexOf("{/* マスモン強化:", start);
 const detail = source.slice(start, end);
 check('詳細にコンパクトな育成・カスタム3導線', detail.includes('育成・カスタム') && detail.includes('grid grid-cols-3') && ['強化','トレーニング','染色'].every(label=>detail.includes(`>${label}<`)));
