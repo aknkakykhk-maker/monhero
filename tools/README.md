@@ -101,6 +101,7 @@ node tools/build.js --check
 | `node auto-turn-check.js` | AUTOの1ターン判断helperについて、ガッツ・枚数・割当先・固有技の所有枠・スロット上限の合法判定、4方針、固定乱数、入力stateの非破壊性を確認する。 |
 | `node auto-turn-integration-check.js` | AUTOの1ターン判断結果が選択stateを経由せず既存processTurnへ明示入力され、手動ACTION経路と共通の戦闘処理を使うことを確認する。 |
 | `node auto-battle-check.js` | 通常バトルのAUTO ON/OFF、連続実行の同期ロック、実行条件、合法行動なしの停止、手動カード操作・ACTION・緊急回復との排他を確認する。 |
+| `node run/auto-full-run-check.js` | WAVE結果・Quick成長結果・Quick加入結果が既存handlerとWAVE後AUTOロックを使って1回だけ進み、WAVE10の終了順序、自動再挑戦・マスモン自動登録を追加していないことを確認する。 |
 | `node battle/battle-carousel-check.js` | 難易度カードの順序・スワイプ/矢印・敵生成共通化・全WAVE詳細・挑戦導線を確認する。 |
 | `node battle/battle-menu-browser-check.js` | 390×844の実ブラウザでHOMEから難易度画面へ入り、例外ゼロ・矢印/スワイプ・全WAVE詳細・戻る/再入場・勇者選択を確認する。 |
 | `node battle/battle-mode-check.js` | チャレンジ／クイック／プロの報酬と記録を確認する。クイックの育成・プシュケー優先・ダイヤ優先の各方針、他モードへの非適用、ランキング分離、WAVEごとの自動成長、伴モン加入、画面・BGM設定の結線を見る。 |
