@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 17:42"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 18:18"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4203,7 +4203,11 @@ const extremeRuleDetailGroups = (difficultyId, quick=false) => {
     rules.damageTurnRate!=null&&['与ダメ倍率',`経過Tごと-${turnPointText(rules.damageTurnRate)}（${specialRulePercent(rules.minimumDamageDealt??0)}で停止）`],
   ]);
   push('WAVEターン',[
-    rules.awakeningPenaltyRate!=null&&[quick?'自動成長':'トレーニング',`WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`],
+    // クイックの自動成長は成長率そのものから引く(10%→…)ので「pt」、
+    // トレーニングは増える量へ掛かるので「%」。掛かり方が違うので言い方も分ける
+    rules.awakeningPenaltyRate!=null&&(quick
+      ? ['自動成長',`WAVE Tごと-${turnPointText(rules.awakeningPenaltyRate)}`]
+      : ['トレーニング',`強化量が WAVE Tごと-${precisePercent(rules.awakeningPenaltyRate)}`]),
     rules.awakeningPenaltyRate!=null&&Array.isArray(rules.awakeningPenaltyExcludes)&&rules.awakeningPenaltyExcludes.includes('distance')&&['対象外','距離強化は下がらない'],
   ]);
   const breakRule=extremeDistanceBreakRule(difficultyId);
@@ -4271,6 +4275,16 @@ const ultimateAllyJoinMultiplier = (turns, specialDifficulty=ULTIMATE_SETTING.id
   if(rate==null)return 1;
   return Math.max(extremeRuleNumber(specialDifficulty,'minimumAllyJoinBonus')??0,1-Math.max(0,Number(turns)||0)*rate);
 };
+// トレーニングで「上がる量」へ掛かる倍率。そのWAVEのターン数1つにつき
+// awakeningPenaltyRate ぶん減る(ULTIMATE / INFINITYは0.75%)。
+// **率から引くのではなく、増加量へ掛ける。** 率から引くと、ちから+5%・ガッツ+5%のように
+// 元の率が小さい項目だけが7ターンで増加0になり、ライフ・丈夫さ(+20%)との差が開きすぎる。
+// ターン数は20で頭打ち(それ以上長引いても低下は進まない)。
+const trainingGainRate = (turns, specialDifficulty=null) => {
+  const penaltyRate=extremeRuleNumber(specialDifficulty,'awakeningPenaltyRate');
+  if(penaltyRate==null)return 1;
+  return Math.max(0,1-Math.max(0,Math.min(20,Number(turns)||0))*penaltyRate);
+};
 // ===== トレーニング(WAVEクリアごとの強化。旧「能力覚醒」) =====
 // 4種類から2回選ぶ。同じ項目を2回選んでもよく、その場合は1回目を適用した結果へ
 // 2回目をかける(2回分をまとめて足す別計算にはしない)。
@@ -4300,21 +4314,21 @@ const chooseAutoTeachingCard = (candidates, owned, isInitial, rng=Math.random) =
   return choices[Math.floor(rng()*choices.length)]||choices[0]||null;
 };
 const trainingOptionOf = (id) => TRAINING_OPTIONS.find(option=>option.id===id) || null;
-// トレーニング1回ぶんを適用する。丸め方と特殊ルールの掛かり方は旧「能力覚醒」と同じ:
-//   ・割合はULTIMATEのペナルティぶんだけ下がる(max(0, 効果 - ペナルティ))
-//   ・固定値(猛勉強の+5)はULTIMATEのfixedScaleで減る
+// トレーニング1回ぶんを適用する。掛かり方は次の順:
+//   ・まず通常どおりの増加後の値を出す(固定値を足してから割合を掛け、Math.floor)
+//   ・ULTIMATE / INFINITYは、その増加量へ trainingGainRate を掛ける
+//     (率から引かない。4種すべてが同じ割合で目減りする)
 //   ・NIGHTMAREは増えたぶんだけをapplyNightmareStatGainで調整する
-//   ・最後にMath.floorで整数へ落とす
 const resolveTrainingStep = (stats, optionId, turns, specialDifficulty=null) => {
   const before={atk:Number(stats?.atk)||0,def:Number(stats?.def)||0,hp:Number(stats?.hp)||0,guts:Number(stats?.guts)||0};
   const option=trainingOptionOf(optionId);
   if(!option)return before;
-  const penaltyRate=extremeRuleNumber(specialDifficulty,'awakeningPenaltyRate');
-  const safeTurns=Math.max(0,Math.min(20,Number(turns)||0));
-  const penalty=penaltyRate!=null?safeTurns*penaltyRate:0;
-  const fixedScale=penaltyRate!=null?Math.max(0,1-safeTurns/20):1;
   const base=before[option.stat];
-  const after=Math.floor((base+option.flat*fixedScale)*(1+Math.max(0,option.rate-penalty)));
+  // 通常の増加量を先に出してから、低下ぶんを「増加量へ掛ける」。
+  // 以前は率から引いていた(max(0, 効果率 - T×0.75%))ため、ちから+5%・ガッツ+5%のように
+  // 元の率が小さい項目だけが7ターンで増加0になり、ライフ・丈夫さ(+20%)との差が開きすぎていた。
+  const normalAfter=Math.floor((base+option.flat)*(1+option.rate));
+  const after=base+Math.floor((normalAfter-base)*trainingGainRate(turns,specialDifficulty));
   return {...before,[option.stat]:applyNightmareStatGain(base,after,specialDifficulty)};
 };
 // 選んだ順に1回ずつ重ねてかける。同じ項目を2回選んだときも、この積み重ねで自然に複利になる
@@ -17338,10 +17352,9 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             </div>
             {extremeRuleNumber(specialRule,'awakeningPenaltyRate')!=null&&(()=>{
               const turns=waveResult?.turn||0;
-              const probe={atk:10000,def:10000,hp:10000,guts:10000};
-              const normal=resolveTrainingStep(probe,'hp',turns,null).hp;
-              const effective=resolveTrainingStep(probe,'hp',turns,specialRule).hp;
-              return <div data-ultimate-training-status={specialRule} className="mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"><span className="text-amber-300">{specialRule}補正</span>　今回{turns}T → 強化効果 -{Number(((normal-effective)/100).toFixed(1))}pt</div>;
+              // 低下は増加量へ掛かるので、率から引いた「-○pt」ではなく倍率で出す
+              const gainRate=trainingGainRate(turns,specialRule);
+              return <div data-ultimate-training-status={specialRule} className="mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"><span className="text-amber-300">{specialRule}補正</span>　今回{turns}T → 強化量 {compactPercent(gainRate)}（-{compactPercent(1-gainRate)}）</div>;
             })()}
             {specialRule==='NIGHTMARE'&&<div data-nightmare-training-status className="mt-1 rounded-lg border border-fuchsia-400/30 bg-purple-950/70 px-2 py-1 text-center text-[9px] font-black text-purple-100"><span className="text-amber-300">NIGHTMARE補正</span>　強化量 {specialRulePercent(extremeSpecialRule(specialRule,'waveEnhancement'))}</div>}
           </div>

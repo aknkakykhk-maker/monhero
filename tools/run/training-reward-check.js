@@ -43,8 +43,8 @@ const extremeSpecialRule=(d,r)=>(d==='NIGHTMARE'&&r==='waveEnhancement')?0.5:1;
 // ここではULTIMATE / INFINITYだけが持つ状態を再現する(本体の表と同じ0.75%)。
 const extremeRuleNumber=(d,r)=>(['ULTIMATE','INFINITY'].includes(d)&&r==='awakeningPenaltyRate')?0.0075:null;
 ${slice('const applyNightmareWaveEnhancement', 'const ultimateEnemyTurnMultiplier')}
-${slice('const TRAINING_PICK_COUNT', '// 整数で扱うバトル値の特殊ルール倍率')}
-module.exports={TRAINING_PICK_COUNT,TRAINING_OPTIONS,chooseAutoTrainingPicks,trainingOptionOf,resolveTrainingStep,resolveTrainingStats};`;
+${slice('// トレーニングで「上がる量」へ掛かる倍率', '// 整数で扱うバトル値の特殊ルール倍率')}
+module.exports={TRAINING_PICK_COUNT,TRAINING_OPTIONS,chooseAutoTrainingPicks,trainingOptionOf,resolveTrainingStep,resolveTrainingStats,trainingGainRate};`;
 const mod = { exports: {} };
 new Function('module', 'exports', calcSrc)(mod, mod.exports);
 const T = mod.exports;
@@ -103,15 +103,24 @@ check('異なる2項目はそれぞれに効く', mixed.hp === 600 && mixed.atk 
 check('別ステータスなら選ぶ順で結果が変わらない',
   JSON.stringify(T.resolveTrainingStats(base, ['atk', 'hp'], 0, null)) === JSON.stringify(mixed));
 
-// ---- ULTIMATEのトレーニング低下(低下率・計算ルールは従来どおり) ----
-// 割合は max(0, 効果 - ターン数×0.75%)、固定値は (1 - ターン数/20) で縮む
+// ---- ULTIMATE / INFINITY のトレーニング低下 ----
+// 低下は「増えるぶん」へ掛ける(率から引かない)。率から引いていたころは
+// ちから+5%・ガッツ+5%だけが7ターンで増加0になり、+20%の2項目と差が開きすぎていた。
 const ult = (id, t) => T.resolveTrainingStep(base, id, t, 'ULTIMATE');
+const gainOf = (id, t, d) => T.resolveTrainingStep(base, id, t, d)[T.trainingOptionOf(id).stat] - base[T.trainingOptionOf(id).stat];
 check('ULTIMATE T=0 は低下しない',
   ult('hp', 0).hp === 600 && ult('atk', 0).atk === 105 && ult('def', 0).def === 120 && ult('guts', 0).guts === 110);
-check('ULTIMATE T=10 走り込み 562 (20%→12.5%)', ult('hp', 10).hp === Math.floor(500 * 1.125), String(ult('hp', 10).hp));
-check('ULTIMATE T=10 丸太うけ 112 (20%→12.5%)', ult('def', 10).def === Math.floor(100 * 1.125), String(ult('def', 10).def));
-check('ULTIMATE T=10 ドミノ倒し 100 (5%→0%で頭打ち)', ult('atk', 10).atk === 100, String(ult('atk', 10).atk));
-check('ULTIMATE T=10 猛勉強 102 (+5が半分の+2.5・割合0%)', ult('guts', 10).guts === 102, String(ult('guts', 10).guts));
+check('低下倍率は 1 - ターン数×0.75%（20Tで頭打ち）', [[0, 1], [10, 0.925], [20, 0.85], [40, 0.85]]
+  .every(([turns, want]) => Math.abs(T.trainingGainRate(turns, 'ULTIMATE') - want) < 1e-9),
+  `10T=${T.trainingGainRate(10, 'ULTIMATE')} / 20T=${T.trainingGainRate(20, 'ULTIMATE')}`);
+check('4項目すべてが同じ倍率で目減りする(率の小さい項目だけ0にならない)', WANT.every(w => {
+  const normal = gainOf(w.id, 10, null), effective = gainOf(w.id, 10, 'ULTIMATE');
+  return effective === Math.floor(normal * 0.925);
+}), WANT.map(w => `${w.name} ${gainOf(w.id, 10, null)}→${gainOf(w.id, 10, 'ULTIMATE')}`).join(' / '));
+check('ちから+5%が10ターンで増加0にならない', gainOf('atk', 10, 'ULTIMATE') > 0, `+${gainOf('atk', 10, 'ULTIMATE')}`);
+check('ガッツ+5%が10ターンで増加0にならない', gainOf('guts', 10, 'ULTIMATE') > 0, `+${gainOf('guts', 10, 'ULTIMATE')}`);
+check('INFINITYもULTIMATEと同じ低下になる',
+  WANT.every(w => gainOf(w.id, 12, 'INFINITY') === gainOf(w.id, 12, 'ULTIMATE')));
 check('ULTIMATE はターン数が増えるほど下がる(4項目すべて)', WANT.every(w => {
   const at0 = ult(w.id, 0)[w.stat], at20 = ult(w.id, 20)[w.stat];
   return at20 <= at0;
@@ -155,7 +164,7 @@ if (from >= 0 && to > from) {
   check('確定するまで選び直せる', jsx.includes('setTrainingPicks([])') && jsx.includes('選び直す'));
   const transformed = babel.transformSync(
     'const Screen = ({ gameState, trainingPicks, setTrainingPicks, atk, def, maxHp, maxGuts, waveResult, effect,\n'
-    + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep, ULTIMATE_SETTING, extremeRuleNumber, compactPercent, specialRulePercent, extremeSpecialRule, quickGrowthRateForRun, isQuickMode,\n'
+    + '  runMode, difficulty, extremeRun, extremeDifficulty, specialRuleDifficultyForRun, resolveTrainingStats, resolveTrainingStep, ULTIMATE_SETTING, extremeRuleNumber, trainingGainRate, compactPercent, specialRulePercent, extremeSpecialRule, quickGrowthRateForRun, isQuickMode,\n'
     + '  TRAINING_PICK_COUNT, TRAINING_OPTIONS, handleTraining, AssistantBubble, battleTutorialSpotClass,\n'
     + '  Trophy, Heart, Sword, ShieldCheck, Sparkles }) => (<>\n'
     + jsx + '\n</>);\nmodule.exports = { Screen };',
@@ -169,7 +178,7 @@ if (from >= 0 && to > from) {
     runMode: 'challenge', difficulty: 'Normal', extremeRun: false, extremeDifficulty: null,
     specialRuleDifficultyForRun: () => null, ULTIMATE_SETTING: { id: 'ULTIMATE' }, compactPercent: value => `${Number((value*100).toFixed(1))}%`,
     // トレーニング低下は難易度名ではなく specialRules の有無で効く。通常チャレンジなので常にnull
-    extremeRuleNumber: () => null, specialRulePercent: value => `${Math.round(value*100)}%`,
+    extremeRuleNumber: () => null, trainingGainRate: T.trainingGainRate, specialRulePercent: value => `${Math.round(value*100)}%`,
     extremeSpecialRule: () => 1, quickGrowthRateForRun: () => 0.1, isQuickMode: () => false,
     resolveTrainingStats: T.resolveTrainingStats, resolveTrainingStep: T.resolveTrainingStep,
     TRAINING_PICK_COUNT: T.TRAINING_PICK_COUNT, TRAINING_OPTIONS: T.TRAINING_OPTIONS,
@@ -217,7 +226,9 @@ if (from >= 0 && to > from) {
       && /env\(safe-area-inset-top\)/.test(jsx) && /env\(safe-area-inset-bottom\)/.test(jsx));
   check('タップ領域を十分にとる(項目・ボタンとも)',
     /min-h-\[112px\]/.test(jsx) && (jsx.match(/min-h-\[52px\]/g) || []).length >= 2);
-  check('ULTIMATE補正は実処理と同じresolveTrainingStepを使う', jsx.includes('data-ultimate-training-status') && jsx.includes("resolveTrainingStep(probe,'hp',turns,specialRule)"));
+  check('ULTIMATE補正の表示は実処理と同じ低下倍率を使う（別計算を作っていない）',
+    jsx.includes('data-ultimate-training-status') && jsx.includes('trainingGainRate(turns,specialRule)')
+    && !/強化効果 -\{[^}]*0\.0075/.test(jsx));
   check('各項目の通常値と実効値もresolveTrainingStepで比較する', jsx.includes('normalAfter=resolveTrainingStep') && jsx.includes('effectiveAfter=resolveTrainingStep'));
 }
 

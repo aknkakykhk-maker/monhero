@@ -73,6 +73,7 @@ const pendingBreak = G('pendingUltimateDistanceBreak');
 const drawBreak = G('drawUltimateDistanceBreak');
 const trainingStep = G('resolveTrainingStep');
 const applyDistance = G('applyDistanceEnhancement');
+const trainingRate = G('trainingGainRate');
 const applyJoin = G('applyAllyJoinBonus');
 const specialRule = G('extremeSpecialRule');
 const ruleLines = G('extremeRuleDetailGroups');
@@ -105,9 +106,22 @@ check('加入Bは累計Tごと-0.75pt・最低10%',
 check('与ダメは経過Tごと-1.0pt・最低30%',
   percents(t => damageMul(t, 'INFINITY'), [[0, 1], [10, 0.9], [25, 0.75], [50, 0.5], [70, 0.3], [100, 0.3]]),
   `70T=${damageMul(70, 'INFINITY')} / 100T=${damageMul(100, 'INFINITY')}`);
-check('トレーニングは1Tごと-0.75pt（ULTIMATEと同じ計算を共有する）', (() => {
+check('トレーニングは1Tごと-0.75%（ULTIMATEと同じ計算を共有する）', (() => {
   const probe = { atk: 10000, def: 10000, hp: 10000, guts: 10000 };
-  return [0, 5, 10, 20].every(t => trainingStep(probe, 'hp', t, 'INFINITY').hp === trainingStep(probe, 'hp', t, 'ULTIMATE').hp);
+  return [0, 5, 10, 20].every(t => trainingStep(probe, 'hp', t, 'INFINITY').hp === trainingStep(probe, 'hp', t, 'ULTIMATE').hp)
+    && [[0, 1], [10, 0.925], [20, 0.85], [40, 0.85]].every(([turns, want]) => near(trainingRate(turns, 'INFINITY'), want));
+})(), `10T=${trainingRate(10, 'INFINITY')} / 20T=${trainingRate(20, 'INFINITY')}`);
+// 低下は増える量へ掛ける。率から引くと、ちから+5%・ガッツ+5%だけが数ターンで増加0になる
+check('低下は増える量へ掛かる（率から引いていない）', (() => {
+  const probe = { atk: 10000, def: 10000, hp: 10000, guts: 10000 };
+  const gain = (id, stat, difficulty) => trainingStep(probe, id, 10, difficulty)[stat] - probe[stat];
+  return [['hp', 'hp'], ['atk', 'atk'], ['def', 'def'], ['guts', 'guts']]
+    .every(([id, stat]) => gain(id, stat, 'INFINITY') === Math.floor(gain(id, stat, null) * 0.925));
+})());
+check('ちから+5%・ガッツ+5%が10ターンで増加0にならない', (() => {
+  const probe = { atk: 10000, def: 10000, hp: 10000, guts: 10000 };
+  return trainingStep(probe, 'atk', 10, 'INFINITY').atk > probe.atk
+    && trainingStep(probe, 'guts', 10, 'INFINITY').guts > probe.guts;
 })());
 check('距離強化は50%',
   applyDistance(100, 'INFINITY') === 50 && applyDistance(100, 'ULTIMATE') === 100,
@@ -162,6 +176,11 @@ check('NIGHTMAREは 強化50% / ＋50% / －200% のまま',
   JSON.stringify(NIGHTMARE.specialRules) === JSON.stringify({ waveEnhancement: 0.5, positiveModifier: 0.5, negativeModifier: 2.0 }));
 check('CHAOSは 与ダメ50% / 加入B50% / ガッツ150% のまま',
   JSON.stringify(CHAOS.specialRules) === JSON.stringify({ damageDealt: 0.5, allyJoinBonus: 0.5, gutsCost: 1.5 }));
+check('ULTIMATEのトレーニング低下も増える量へ掛かる', (() => {
+  const probe = { atk: 10000, def: 10000, hp: 10000, guts: 10000 };
+  const gain = (difficulty) => trainingStep(probe, 'atk', 10, difficulty).atk - probe.atk;
+  return gain('ULTIMATE') === Math.floor(gain(null) * 0.925) && gain('ULTIMATE') > 0;
+})());
 check('ULTIMATEの率と下限とBREAK間隔が変わっていない',
   ULTIMATE.specialRules.enemyTurnRate === 0.0075 && ULTIMATE.specialRules.allyJoinPenaltyRate === 0.0075
   && ULTIMATE.specialRules.damageTurnRate === 0.0075 && ULTIMATE.specialRules.minimumDamageDealt === 0.25
@@ -204,7 +223,8 @@ check('ルール詳細の本文はspecialRulesから作る（数値を書き写�
   const groups = ruleLines('INFINITY');
   const flat = groups.flatMap(group => group.lines.map(([label, value]) => `${label} ${value}`)).join(' / ');
   return groups.length >= 4 && flat.includes('50%') && flat.includes('150%') && flat.includes('0.75%')
-    && flat.includes('1.0pt') && flat.includes('30%で停止') && flat.includes('最低10%') && flat.includes('25Tごと');
+    && flat.includes('1.0pt') && flat.includes('30%で停止') && flat.includes('最低10%') && flat.includes('25Tごと')
+    && flat.includes('強化量が WAVE Tごと-0.75%');
 })());
 check('難易度ごとに違う内容が出る', (() => {
   const key = (id) => JSON.stringify(ruleLines(id));
