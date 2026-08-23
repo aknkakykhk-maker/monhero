@@ -19,6 +19,5 @@ if(!/repeatRunTemplateRef\.current=createRepeatRunTemplate\(\{ hero:mainHero, al
 for(const token of ['resolveRosterEntryToMon','allowedEntries.has',"reason:'hero-unavailable'","reason:'pro-ally-unavailable'",'PRO_ALLY_POOL_SIZE','mon.masuId != null'])if(!resolve.includes(token))fail(`再resolve条件 ${token} がありません`);
 const reset=body('applyResetAllState','createRepeatRunTemplate');
 for(const token of ['resolveRepeatRunTemplate(template)','beginNewRankingRun({','applyResetAllState()',"setGameState('PICK_TEACHING')",'runId:runIdRef.current','resetAllState()'])if(!(start+reset).includes(token))fail(`新規ラン初期化 ${token} がありません`);
-if(/autoInfinity|∞周回/.test(source))fail('AUTO∞ UIが追加されています');
 if(/['"]mh_[^'"]*(?:repeat|infinity)/.test(source))fail('再周回用保存キーが追加されています');
 console.log('auto repeat template check passed');

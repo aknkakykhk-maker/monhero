@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 12:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6432,7 +6432,7 @@ function MonsterHeroGame() {
   const autoPostWaveRunningRef = useRef(false);
   const autoPostWaveScheduledRef = useRef(false);
   const [autoTurnCycle, setAutoTurnCycle] = useState(0);
-  // AUTO∞もラン中だけの一時状態。5CでUIを接続するまでは内部状態だけを持ち、永続化しない。
+  // AUTO∞もラン中だけの一時状態。リロード後は必ずOFFに戻す。
   const [autoRepeat, setAutoRepeat] = useState(false);
   const autoRepeatRef = useRef(false);
   const autoRepeatStartingRef = useRef(false);
@@ -11379,7 +11379,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
 
   const setAutoBattleEnabled = (enabled) => {
     const next=!!enabled;
-    if(!next){stopAutoBattle();return;}
+    if(!next){stopAllAuto();return;}
     autoBattleRef.current=next;
     setAutoBattle(next);
     if(next){
@@ -11388,6 +11388,15 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       setDragState(null);cardDragActiveRef.current=false;
       setAutoTurnCycle(n=>n+1);
     }
+  };
+
+  // ∞周回は通常AUTOに上乗せする。∞だけをOFFにしても通常AUTOは続ける。
+  const setAutoRepeatEnabled = (enabled) => {
+    const next=!!enabled;
+    autoRepeatRef.current=next;
+    setAutoRepeat(next);
+    if(next)setAutoBattleEnabled(true);
+    else autoRepeatStartingRef.current=false;
   };
 
   // ランの終了表示・新しい周回の勇者選択へ入った時点で停止する。
@@ -15916,10 +15925,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* 勇者モンの特性で枚数が増えているときは、その分を王冠付きで出す。
                     「勇者モンに選んだときだけ効く特性」が今効いていることを確かめられるようにする */}
                 <span className={`shrink-0 flex items-center gap-1${battleTutorialSpotClass('cardCount')}`}>Action Cards <span className="bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}</span>
-                <div className="flex items-center gap-1 shrink-0 min-w-0">
-                  <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={10}/><span className="text-[7px]">VIEW</span></button>
-                  <button type="button" disabled={!!battleScenarioRef.current||battleTutorialStep!=null} onClick={()=>setAutoBattleEnabled(!autoBattleRef.current)} aria-pressed={autoBattle} className={`h-8 min-w-[48px] px-1.5 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoBattle?'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]':'border-slate-500 bg-slate-800 text-slate-300'}`}><span className="block text-[7px]">{autoBattle?'ON':'OFF'}</span>AUTO{autoBattle?' ON':''}</button>
-                  {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!autoBattle&&!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={()=>processTurn()} disabled={!canAct} className={`h-9 min-w-0 px-3 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] active:scale-90 flex items-center justify-center gap-1 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={12}/> Action</button>);})()}
+                <div className="flex items-center gap-0.5 shrink-0 min-w-0">
+                  <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-0.5 px-1.5 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={9}/><span className="text-[7px]">VIEW</span></button>
+                  <button type="button" disabled={!!battleScenarioRef.current||battleTutorialStep!=null} onClick={()=>setAutoBattleEnabled(!autoBattleRef.current)} aria-pressed={autoBattle} className={`h-8 min-w-[44px] px-1 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoBattle?'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]':'border-slate-500 bg-slate-800 text-slate-300'}`}><span className="block text-[7px]">{autoBattle?'ON':'OFF'}</span>AUTO</button>
+                  <button type="button" disabled={!!battleScenarioRef.current||battleTutorialStep!=null} onClick={()=>setAutoRepeatEnabled(!autoRepeatRef.current)} aria-pressed={autoRepeat} className={`h-8 min-w-[44px] px-1 rounded-lg border-2 font-black text-[8px] leading-tight whitespace-nowrap active:scale-90 disabled:opacity-25 ${autoRepeat?'border-fuchsia-300 bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,.65)]':'border-slate-500 bg-slate-800 text-slate-300'}`}><span className="block text-[7px]">{autoRepeat?'ON':'OFF'}</span>∞周回</button>
+                  {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!autoBattle&&!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={()=>processTurn()} disabled={!canAct} className={`h-9 min-w-0 px-2 sm:px-5 rounded-full font-black text-[10px] sm:text-[13px] active:scale-90 flex items-center justify-center gap-0.5 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={11}/> Action</button>);})()}
                 </div>
               </div>
               {/* 使うカードが決まっている番は、その種類だけを光らせる(枠全体は光らせない) */}

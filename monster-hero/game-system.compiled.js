@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 95861d33773e39b6
+// source-sha256: e0e0ad15f1688515
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 12:00"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 12:11"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12119,7 +12119,7 @@ function MonsterHeroGame() {
   const autoPostWaveRunningRef = useRef(false);
   const autoPostWaveScheduledRef = useRef(false);
   const [autoTurnCycle, setAutoTurnCycle] = useState(0);
-  // AUTO∞もラン中だけの一時状態。5CでUIを接続するまでは内部状態だけを持ち、永続化しない。
+  // AUTO∞もラン中だけの一時状態。リロード後は必ずOFFに戻す。
   const [autoRepeat, setAutoRepeat] = useState(false);
   const autoRepeatRef = useRef(false);
   const autoRepeatStartingRef = useRef(false);
@@ -19578,7 +19578,7 @@ function MonsterHeroGame() {
   const setAutoBattleEnabled = enabled => {
     const next = !!enabled;
     if (!next) {
-      stopAutoBattle();
+      stopAllAuto();
       return;
     }
     autoBattleRef.current = next;
@@ -19594,6 +19594,14 @@ function MonsterHeroGame() {
       cardDragActiveRef.current = false;
       setAutoTurnCycle(n => n + 1);
     }
+  };
+
+  // ∞周回は通常AUTOに上乗せする。∞だけをOFFにしても通常AUTOは続ける。
+  const setAutoRepeatEnabled = enabled => {
+    const next = !!enabled;
+    autoRepeatRef.current = next;
+    setAutoRepeat(next);
+    if (next) setAutoBattleEnabled(true);else autoRepeatStartingRef.current = false;
   };
 
   // ランの終了表示・新しい周回の勇者選択へ入った時点で停止する。
@@ -31264,12 +31272,12 @@ function MonsterHeroGame() {
     }), "+", heroCardBonus), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
       className: "px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap"
     }, "\u5FDC\u63F4+1")), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-1 shrink-0 min-w-0"
+      className: "flex items-center gap-0.5 shrink-0 min-w-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowDeckInfo(true),
-      className: `flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`
+      className: `flex items-center gap-0.5 px-1.5 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`
     }, /*#__PURE__*/React.createElement(Layers, {
-      size: 10
+      size: 9
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[7px]"
     }, "VIEW")), /*#__PURE__*/React.createElement("button", {
@@ -31277,19 +31285,27 @@ function MonsterHeroGame() {
       disabled: !!battleScenarioRef.current || battleTutorialStep != null,
       onClick: () => setAutoBattleEnabled(!autoBattleRef.current),
       "aria-pressed": autoBattle,
-      className: `h-8 min-w-[48px] px-1.5 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoBattle ? 'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]' : 'border-slate-500 bg-slate-800 text-slate-300'}`
+      className: `h-8 min-w-[44px] px-1 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoBattle ? 'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]' : 'border-slate-500 bg-slate-800 text-slate-300'}`
     }, /*#__PURE__*/React.createElement("span", {
       className: "block text-[7px]"
-    }, autoBattle ? 'ON' : 'OFF'), "AUTO", autoBattle ? ' ON' : ''), (() => {
+    }, autoBattle ? 'ON' : 'OFF'), "AUTO"), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      disabled: !!battleScenarioRef.current || battleTutorialStep != null,
+      onClick: () => setAutoRepeatEnabled(!autoRepeatRef.current),
+      "aria-pressed": autoRepeat,
+      className: `h-8 min-w-[44px] px-1 rounded-lg border-2 font-black text-[8px] leading-tight whitespace-nowrap active:scale-90 disabled:opacity-25 ${autoRepeat ? 'border-fuchsia-300 bg-fuchsia-500 text-slate-950 shadow-[0_0_12px_rgba(217,70,239,.65)]' : 'border-slate-500 bg-slate-800 text-slate-300'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[7px]"
+    }, autoRepeat ? 'ON' : 'OFF'), "\u221E\u5468\u56DE"), (() => {
       const allAttackAssigned = selectedCards.filter(idx => cardNeedsMonster(hand[idx])).every(idx => cardAssignments[idx] != null);
       const canAct = !autoBattle && !isBusy && selectedCards.length > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker';
       return /*#__PURE__*/React.createElement("button", {
         onClick: () => processTurn(),
         disabled: !canAct,
-        className: `h-9 min-w-0 px-3 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] active:scale-90 flex items-center justify-center gap-1 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-slate-700 text-slate-500 opacity-50'}`
+        className: `h-9 min-w-0 px-2 sm:px-5 rounded-full font-black text-[10px] sm:text-[13px] active:scale-90 flex items-center justify-center gap-0.5 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-slate-700 text-slate-500 opacity-50'}`
       }, /*#__PURE__*/React.createElement(Play, {
         fill: "currentColor",
-        size: 12
+        size: 11
       }), " Action");
     })())), /*#__PURE__*/React.createElement("div", {
       className: `flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialCardTarget ? '' : battleTutorialSpotClass('cards')}`
