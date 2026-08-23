@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 18:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 22:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -355,6 +355,26 @@ const levelInfo = (totalXp) => {
   }
   return { level, xpIntoLevel: xp, xpForNext: xpForBreederLevel(level), totalXp: safeTotal };
 };
+// 【超越】Lv400・虹★5(35凸)まで育てた個体だけが神殿で行える、限界の先の育成。
+// 限界突破の上限(35凸)はそのままで、超越が伸ばすのは「Lv上限」だけ。
+// MAX_MASU_LEVEL_CAP は限界突破の天井として400のまま使い続けるので、36凸は作られない。
+const TRANSCEND_LEVEL_CAP = 500;
+const TRANSCEND_PSYCHE_COST = 5000;
+const TRANSCEND_DIAMOND_COST = 1000000;
+// Lv400→401は通常式の10倍。以降1Lvごとに+0.1倍(Lv499→500で19.9倍)
+const TRANSCEND_XP_BASE_MULTIPLIER = 10;
+const TRANSCEND_XP_MULTIPLIER_STEP = 0.1;
+// 虹のプシュケー100個 → 超越ポイント1
+const TRANSCEND_PSYCHE_PER_POINT = 100;
+const TRANSCEND_STAT_KEYS = Object.freeze(['hp', 'atk', 'def', 'guts']);
+const isTranscended = (masu) => !!(masu && masu.transcended);
+// 超越済みならLv上限500まで、まだなら従来どおりLv400まで
+const masuLevelCapLimit = (masu) => (isTranscended(masu) ? TRANSCEND_LEVEL_CAP : MAX_MASU_LEVEL_CAP);
+// 旧セーブにはこれらの項目が無いので、必ず安全な初期値(0)へ落として読む
+const normalizeTranscendStatPoints = (value) => Object.fromEntries(TRANSCEND_STAT_KEYS
+  .map(key => [key, Math.max(0, Math.floor(Number(value?.[key]) || 0))]));
+const normalizeTranscendAptBoosts = (value) => Array.from({ length: 4 },
+  (_, index) => Math.max(0, Math.floor(Number(Array.isArray(value) ? value[index] : 0) || 0)));
 // --- マスモンの絆レベル: ブリーダーレベルより上げやすくするため、必要XPを基準値から大幅に割り引く
 // (バランス調整用の係数。小さくするほど上げやすい。後日調整しやすいようここに1箇所だけ置く。
 // 0.35 → 0.175 → 0.10 → 0.05 → 0.025 と緩和してきている。係数を下げると同じ絆経験値でも絆レベルが上がるため、
@@ -362,17 +382,30 @@ const levelInfo = (totalXp) => {
 // 必ず不足分を補填している)
 const BOND_XP_DISCOUNT = 0.025;
 const xpForBondLevel = (level) => Math.max(1, Math.round(xpForLevel(level) * BOND_XP_DISCOUNT));
+// Lv400以降(超越の領域)だけ、通常式が出した必要経験値へ重い倍率を掛ける。
+// 倍率は Lv400で10倍、以降1Lvごとに+0.1倍(Lv499→500で19.9倍)。
+// Lv399以下はこれまでどおりの値をそのまま返すので、既存の必要経験値・累計XPは1も変わらない。
+const transcendXpMultiplier = (level) =>
+  TRANSCEND_XP_BASE_MULTIPLIER + (level - MAX_MASU_LEVEL_CAP) * TRANSCEND_XP_MULTIPLIER_STEP;
+const xpForBondLevelAt = (level) => {
+  const normal = xpForBondLevel(level);
+  return level < MAX_MASU_LEVEL_CAP ? normal : Math.max(1, Math.round(normal * transcendXpMultiplier(level)));
+};
 const bondLevelInfo = (totalXp) => {
-  let level = 1, xp = totalXp;
+  // 壊れた保存値(NaN・Infinity・負数)で回り続けないよう、先に有限の0以上へ落とす
+  const safeTotal = Math.max(0, Math.floor(Number(totalXp) || 0));
+  let level = 1, xp = safeTotal;
   for (let i = 0; i < MAX_BOND_LEVEL_ITERATIONS; i++) {
-    const need = xpForBondLevel(level);
+    const need = xpForBondLevelAt(level);
     if (xp < need) break;
     xp -= need; level++;
   }
-  return { level, xpIntoLevel: xp, xpForNext: xpForBondLevel(level), totalXp };
+  return { level, xpIntoLevel: xp, xpForNext: xpForBondLevelAt(level), totalXp: safeTotal };
 };
 const INITIAL_MASU_LEVEL_CAP = 30;
-const MAX_BOND_LEVEL_ITERATIONS = 400;
+// 超越後はLv500まで数える。Lv1から数え上げるので、繰り返し回数は上限-1。
+// こうしておくと壊れた絆経験値が来てもLv501にはならず、無限ループにもならない。
+const MAX_BOND_LEVEL_ITERATIONS = TRANSCEND_LEVEL_CAP - 1;
 // 限界突破1回でレベル上限がいくつ上がるか
 const BREAKTHROUGH_LEVEL_CAP_GAIN = 5;
 const MAX_UNIQUE_SKILL_LEVEL = 8;
@@ -550,7 +583,7 @@ const normalizeInheritedUniqueLineages = (masuMons) => (Array.isArray(masuMons) 
 });
 const totalBondXpForLevel = (level) => {
   let total = 0;
-  for (let current = 1; current < Math.max(1, level); current++) total += xpForBondLevel(current);
+  for (let current = 1; current < Math.max(1, level); current++) total += xpForBondLevelAt(current);
   return total;
 };
 // 【限界突破と転生】
@@ -713,7 +746,12 @@ const normalizeMasuProgression = (masu) => ({
   reincarnateBonusPoints: ownReincarnateBonusPoints(masu),
   inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
   inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
-  levelCap: Math.min(MAX_MASU_LEVEL_CAP, Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+  levelCap: Math.min(masuLevelCapLimit(masu), Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+  // 超越の項目。旧セーブには存在しないので、未超越・0として読む(移行処理はいらない)
+  transcended: isTranscended(masu),
+  transcendPoints: Math.max(0, Math.floor(Number(masu?.transcendPoints) || 0)),
+  transcendStatPoints: normalizeTranscendStatPoints(masu?.transcendStatPoints),
+  transcendAptBoosts: normalizeTranscendAptBoosts(masu?.transcendAptBoosts),
   uniqueSkillLevels: masu?.uniqueSkillLevels && typeof masu.uniqueSkillLevels === 'object' ? { ...masu.uniqueSkillLevels } : {},
   // 未使用の固有技ポイント。限界突破・転生でその場に上げなかったぶんをここへ貯めておき、
   // マスモンの詳細からいつでも使える。後から足した項目なので、持っていない既存データは0
@@ -779,7 +817,12 @@ const resetMasuForRebirth = (masu, { rebirthCount, reincarnateCount, reincarnate
     reincarnateBonusPoints: Math.max(0, Math.floor(Number(reincarnateBonusPoints ?? ownReincarnateBonusPoints(masu)) || 0)),
     inheritedReincarnateBonusPoints: inheritedReincarnateBonusPointsOf(masu),
     inheritedReincarnateCount: inheritedReincarnateCountOf(masu),
-    levelCap: Math.min(MAX_MASU_LEVEL_CAP, Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+    levelCap: Math.min(masuLevelCapLimit(masu), Math.max(INITIAL_MASU_LEVEL_CAP, Math.floor(Number(levelCap ?? masu?.levelCap) || INITIAL_MASU_LEVEL_CAP))),
+    // 超越は転生で失われない。状態・未使用の超越P・超越で上げた基礎値をそのまま持ち越す
+    transcended: isTranscended(masu),
+    transcendPoints: Math.max(0, Math.floor(Number(masu?.transcendPoints) || 0)),
+    transcendStatPoints: normalizeTranscendStatPoints(masu?.transcendStatPoints),
+    transcendAptBoosts: normalizeTranscendAptBoosts(masu?.transcendAptBoosts),
     uniqueSkillLevels: { ...(uniqueSkillLevels ?? masu?.uniqueSkillLevels ?? {}) },
     // 固有技のレベルは転生でも残るので、未使用のぶんもそのまま持ち越す
     uniqueSkillPoints: Math.max(0, Math.floor(Number(uniqueSkillPoints ?? masu?.uniqueSkillPoints) || 0)),
@@ -809,13 +852,27 @@ const applyBondXpGain = (masu, gain = 0) => {
   const after = bondLevelInfo(bondXp);
   const gainedLevels = Math.max(0, after.level - before.level);
   const pointMultiplier = levelUpPointMultiplier(masu?.rebirthCount);
-  const gainedPoints = gainedLevels * pointMultiplier;
+  // Lv400までは今までどおり通常の強化ポイント。Lv401以降(超越の領域)は
+  // 通常ポイントを配らず、1レベルにつき超越ポイントを1だけ配る。
+  // 400をまたいでレベルが上がったときも、400までのぶんと401以降のぶんを分けて数える。
+  const cap = MAX_MASU_LEVEL_CAP;
+  const normalLevels = Math.max(0, Math.min(cap, after.level) - Math.min(cap, before.level));
+  const gainedTranscendPoints = Math.max(0, after.level - Math.max(cap, before.level));
+  const gainedPoints = normalLevels * pointMultiplier;
   return {
-    masu: { ...masu, bondXp, distAptPoints: (masu.distAptPoints || 0) + gainedPoints },
+    masu: {
+      ...masu,
+      bondXp,
+      distAptPoints: (masu.distAptPoints || 0) + gainedPoints,
+      ...(gainedTranscendPoints > 0
+        ? { transcendPoints: Math.max(0, Math.floor(Number(masu.transcendPoints) || 0)) + gainedTranscendPoints }
+        : {}),
+    },
     before,
     after,
     gainedLevels,
     gainedPoints,
+    gainedTranscendPoints,
     pointMultiplier,
     xpGain: Math.max(0, bondXp - donationDiamondValue(masu.bondXp)),
   };
@@ -851,31 +908,50 @@ const masuBondLevelInfo = (masu) => bondLevelInfo(cappedBondXp(masu));
 const getMasuColors = (masu) => (masu && masu.colors) || (masu && masu.color ? [masu.color] : []);
 // マスモンの個体基礎値を新旧どちらの保存形式からも解決する。
 // 新形式があれば最新ベースへ差分を足し、無ければ完成値保存の individualStats をそのまま優先する。
+// 超越で上げた基礎値は、種のベースデータも individualStats も書き換えず、
+// 別項目(transcendStatPoints)として持ったまま「解決するとき」にだけ足す。
+// こうしておくと、何が超越由来かが最後まで分かり、通常強化ぶん(statPoints)とも混ざらない。
 const resolveMasuIndividualStats = (masu, base) => {
+  const transcend = normalizeTranscendStatPoints(masu?.transcendStatPoints);
   const offsets = masu?.individualStatOffsets;
   if (offsets && typeof offsets === 'object' && !Array.isArray(offsets)) {
     const offset = (key) => Number.isFinite(Number(offsets[key])) ? Number(offsets[key]) : 0;
     return {
-      hp: base.baseHp + offset('hp'), atk: base.baseAtk + offset('atk'),
-      def: base.baseDef + offset('def'), guts: base.baseGuts + offset('guts'),
+      hp: base.baseHp + offset('hp') + transcend.hp, atk: base.baseAtk + offset('atk') + transcend.atk,
+      def: base.baseDef + offset('def') + transcend.def, guts: base.baseGuts + offset('guts') + transcend.guts,
     };
   }
   return {
-    hp: masu?.individualStats?.hp ?? base.baseHp,
-    atk: masu?.individualStats?.atk ?? base.baseAtk,
-    def: masu?.individualStats?.def ?? base.baseDef,
-    guts: masu?.individualStats?.guts ?? base.baseGuts,
+    hp: (masu?.individualStats?.hp ?? base.baseHp) + transcend.hp,
+    atk: (masu?.individualStats?.atk ?? base.baseAtk) + transcend.atk,
+    def: (masu?.individualStats?.def ?? base.baseDef) + transcend.def,
+    guts: (masu?.individualStats?.guts ?? base.baseGuts) + transcend.guts,
   };
 };
+// 間合い適性の段階。ここより下(個体値の解決・超越の基礎適性)から使うので、宣言をこの位置に置く。
+const DIST_APTITUDE_GRADES = ['G','F','E','D','C','B','A','S','S+','SS','SS+','M'];
 // 間合い適性も同様に、新形式の上昇段階数を最新ベースへ適用する。各値は0以上の整数としMで止める。
+const raiseAptitudeGrade = (grade, steps) => {
+  const current = Math.max(0, DIST_APTITUDE_GRADES.indexOf(grade));
+  const up = Math.max(0, Math.floor(Number(steps) || 0));
+  return DIST_APTITUDE_GRADES[Math.min(DIST_APTITUDE_GRADES.length - 1, current + up)];
+};
+// 超越で上げた「基礎」側の間合い適性。通常の強化ポイントで上げたぶんはこの上へ乗る。
+// 段階の上限は既存どおりMで、それ以上へは上がらない。
+const masuTranscendBaseAptitude = (masu, base) => {
+  const baseApt = Array.isArray(base?.distAptitude) ? base.distAptitude.slice(0, 4) : ['C','C','C','C'];
+  const boosts = normalizeTranscendAptBoosts(masu?.transcendAptBoosts);
+  return baseApt.map((grade, index) => raiseAptitudeGrade(grade, boosts[index]));
+};
 const resolveMasuDistAptitude = (masu, base) => {
-  const baseApt = Array.isArray(base?.distAptitude) ? base.distAptitude : ['C','C','C','C'];
-  if (Array.isArray(masu?.distAptBoosts)) return baseApt.slice(0, 4).map((grade, index) => {
-    const current = Math.max(0, DIST_APTITUDE_GRADES.indexOf(grade));
-    const boost = Math.max(0, Math.floor(Number(masu.distAptBoosts[index]) || 0));
-    return DIST_APTITUDE_GRADES[Math.min(DIST_APTITUDE_GRADES.length - 1, current + boost)];
-  });
-  return masu?.distApt || baseApt;
+  const transcendBase = masuTranscendBaseAptitude(masu, base);
+  if (Array.isArray(masu?.distAptBoosts)) return transcendBase
+    .map((grade, index) => raiseAptitudeGrade(grade, masu.distAptBoosts[index]));
+  // 旧形式(distAptに完成値を保存)の個体は、その値へ超越ぶんだけを足す
+  const boosts = normalizeTranscendAptBoosts(masu?.transcendAptBoosts);
+  return Array.isArray(masu?.distApt)
+    ? masu.distApt.slice(0, 4).map((grade, index) => raiseAptitudeGrade(grade, boosts[index]))
+    : transcendBase;
 };
 // マスモンの保存データへ、種の基礎データ(ALL_PLAYER_MONSTERS)と強化ポイントぶんを合成して
 // 「モンスターらしいオブジェクト」を作る。詳細画面の表示も総合力の計算もこの結果を使うので、
@@ -1388,11 +1464,104 @@ const applyEnhancePlanToMasu = (masu, plan) => {
   if (used <= 0) return null;
   return { masu: { ...masu, distApt, ...(distAptBoosts ? { distAptBoosts } : {}), statPoints, distAptPoints: available - used }, used };
 };
+// ==================== 超越 ====================
+// Lv400・虹★5(35凸)まで育てた個体だけが神殿で行える、限界の先の育成。
+// 資格・コスト・次の状態はここだけで決め、画面はその結果を出すだけにする
+// (押した瞬間の値と保存する値がずれないようにするため)。
+const canTranscendMasu = (masu) => {
+  if (!masu) return { ok:false, reason:'対象のマスモンが見つかりません。' };
+  const normalized = normalizeMasuProgression(masu);
+  if (normalized.transcended) return { ok:false, reason:'この個体はすでに超越しています。' };
+  if (!isFinalBreakthroughCount(normalized.rebirthCount)) {
+    return { ok:false, reason:`限界突破${FINAL_BREAKTHROUGH_COUNT}回（虹★${BREAKTHROUGH_STARS_PER_TIER}）まで進めると超越できます。` };
+  }
+  if (masuBondLevelInfo(masu).level < MAX_MASU_LEVEL_CAP) {
+    return { ok:false, reason:`Lv.${MAX_MASU_LEVEL_CAP}に到達すると超越できます。` };
+  }
+  return { ok:true };
+};
+const buildMasuTranscendence = ({ masu, gold = 0, psycheOwned = 0 } = {}) => {
+  const psycheCost = TRANSCEND_PSYCHE_COST;
+  const diamondCost = TRANSCEND_DIAMOND_COST;
+  const psycheHave = Math.max(0, Math.floor(Number(psycheOwned) || 0));
+  const goldHave = Math.max(0, Math.floor(Number(gold) || 0));
+  const info = { psycheCost, diamondCost, psycheHave, goldHave };
+  const eligible = canTranscendMasu(masu);
+  if (!eligible.ok) return { ...info, ok:false, reason:eligible.reason };
+  if (psycheHave < psycheCost) return { ...info, ok:false, reason:`虹のプシュケーが足りません（あと ${(psycheCost - psycheHave).toLocaleString()}）。` };
+  if (goldHave < diamondCost) return { ...info, ok:false, reason:`ダイヤが足りません（あと ${(diamondCost - goldHave).toLocaleString()}）。` };
+  const normalized = normalizeMasuProgression(masu);
+  return {
+    ...info,
+    ok: true,
+    nextPsyche: psycheHave - psycheCost,
+    nextGold: goldHave - diamondCost,
+    fromLevelCap: normalized.levelCap,
+    toLevelCap: TRANSCEND_LEVEL_CAP,
+    // レベルは Lv.400 のまま。変わるのは上限だけ(Lv401へ勝手に上げない)
+    nextMasu: { ...normalized, transcended: true, levelCap: TRANSCEND_LEVEL_CAP },
+  };
+};
+// 虹のプシュケーを超越ポイントへ替える。100個ちょうどで1P、端数のプシュケーは消費しない
+const transcendPsycheExchange = (psycheOwned, wantedPoints) => {
+  const have = Math.max(0, Math.floor(Number(psycheOwned) || 0));
+  const maxPoints = Math.floor(have / TRANSCEND_PSYCHE_PER_POINT);
+  const points = Math.max(0, Math.min(maxPoints, Math.floor(Number(wantedPoints) || 0)));
+  const psycheCost = points * TRANSCEND_PSYCHE_PER_POINT;
+  return { ok: points > 0, points, psycheCost, maxPoints, nextPsyche: have - psycheCost };
+};
+// 交換を個体へ反映する。超越Pは個体ごとの育成値なので、必ず選んでいるその個体へ足す
+const applyTranscendExchange = (masu, psycheOwned, wantedPoints) => {
+  const normalized = normalizeMasuProgression(masu);
+  if (!normalized.transcended) return null;
+  const plan = transcendPsycheExchange(psycheOwned, wantedPoints);
+  if (!plan.ok) return null;
+  return { ...plan, nextMasu: { ...normalized, transcendPoints: normalized.transcendPoints + plan.points } };
+};
+// 超越ポイントの配分。通常の強化(applyEnhancePlanToMasu)と同じ下書きの形を使うが、
+// 上げるのは「基礎値」側(transcendStatPoints / transcendAptBoosts)で、通常強化とは混ざらない。
+// 1Pあたりの効果は通常の強化ポイントと同じ価値基準(ライフ+10 / ほか+3 / 適性1段階)。
+const applyTranscendPlanToMasu = (masu, plan) => {
+  const normalized = normalizeMasuProgression(masu);
+  if (!normalized.transcended) return null;
+  const base = (typeof ALL_PLAYER_MONSTERS !== 'undefined') ? ALL_PLAYER_MONSTERS[normalized.baseId] : null;
+  if (!base) return null;
+  const available = normalized.transcendPoints;
+  const aptPlan = (plan && plan.apt) || [0, 0, 0, 0];
+  const statPlan = (plan && plan.stat) || {};
+  const wanted = aptPlan.reduce((a, b) => a + (b || 0), 0) + Object.values(statPlan).reduce((a, b) => a + (b || 0), 0);
+  if (wanted <= 0 || wanted > available) return null;
+  const baseApt = Array.isArray(base.distAptitude) ? base.distAptitude.slice(0, 4) : ['C','C','C','C'];
+  const transcendAptBoosts = [...normalized.transcendAptBoosts];
+  let used = 0;
+  aptPlan.forEach((n, idx) => {
+    for (let i = 0; i < (n || 0); i++) {
+      const current = Math.max(0, DIST_APTITUDE_GRADES.indexOf(baseApt[idx] || 'C')) + transcendAptBoosts[idx];
+      if (current >= DIST_APTITUDE_GRADES.length - 1) break; // 基礎の段階もMで止める
+      transcendAptBoosts[idx] += 1;
+      used++;
+    }
+  });
+  const transcendStatPoints = { ...normalized.transcendStatPoints };
+  Object.entries(statPlan).forEach(([key, n]) => {
+    if (!STAT_POINT_KEYS[key]) return;
+    for (let i = 0; i < (n || 0); i++) {
+      transcendStatPoints[key] += (STAT_POINT_GAIN[key] || 1);
+      used++;
+    }
+  });
+  if (used <= 0) return null;
+  return { masu: { ...normalized, transcendAptBoosts, transcendStatPoints, transcendPoints: available - used }, used };
+};
+// 超越で上げた基礎の合計段階数(表示・検査用)
+const transcendAptBoostTotal = (masu) => normalizeTranscendAptBoosts(masu?.transcendAptBoosts)
+  .reduce((sum, value) => sum + value, 0);
 // リセット直前の「ポイントで上げた分」だけを、同じ個体の保存値へ小さなスナップショットとして残す。
 // 絆XP・絆Lv・固有技などは含めず、旧形式の個体でも現行の下書き(plan)へ直せる形にそろえる。
 const buildBondResetAllocationSnapshot = (masu, base) => {
   if (!masu || !base) return null;
-  const baseApt = base.distAptitude || ['C','C','C','C'];
+  // 通常強化ぶんだけを数える。超越で上げた基礎はリセットの対象外なので、基準側へ含める
+  const baseApt = masuTranscendBaseAptitude(masu, base);
   const resolvedApt = resolveMasuDistAptitude(masu, base);
   const apt = Array.isArray(masu.distAptBoosts)
     ? [0,1,2,3].map(i => Math.max(0, Math.floor(Number(masu.distAptBoosts[i]) || 0)))
@@ -3367,6 +3536,20 @@ const BreakthroughStarDebugCard = ({ count, compact = false }) => {
   </article>;
 };
 // 転生の回数プレート。詳細画面など、回数を確認する場所だけで使う。
+// モーション軽減設定。CSS側は @media(prefers-reduced-motion:reduce) で止めるが、
+// JS側の演出の長さもここで短くする(読み取れない環境では通常どおり)。
+const prefersReducedMotion = () => {
+  try {
+    return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch { return false; }
+};
+// 超越済みであることを示す共通マーク。虹★(画像の下)・転生バッジ(画像の下)と重ならないよう、
+// 画像の空いている上側へ置く。画像は増やさず、CSSのグラデーションと「超」の文字だけで作る。
+const TranscendenceBadge = ({ transcended = false, className = '', small = false }) => {
+  if (!transcended) return null;
+  return <span className={`mh-transcend-badge${small ? ' is-small' : ''} ${className}`} aria-label="超越済み"><b aria-hidden="true">超</b></span>;
+};
 const ReincarnateBadge = ({ count = 0, className = '' }) => {
   const value = Math.max(0, Math.floor(Number(count) || 0));
   if (!value) return null;
@@ -3563,7 +3746,6 @@ const VolumeSlider = ({ label, icon, value, onChange, onInteractStart, gradient,
     </div>
   );
 };
-const DIST_APTITUDE_GRADES = ['G','F','E','D','C','B','A','S','S+','SS','SS+','M'];
 const DIST_APTITUDE_MULT = { G: 0.8, F: 0.85, E: 0.9, D: 0.95, C: 1.0, B: 1.05, A: 1.1, S: 1.15, 'S+': 1.175, SS: 1.2, 'SS+': 1.225, M: 1.25 };
 const DIST_APTITUDE_COLOR = { S: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", 'S+': "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", SS: "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", 'SS+': "text-yellow-300 bg-yellow-950/60 border-yellow-400/50", M: "text-fuchsia-300 bg-gradient-to-br from-purple-950/70 to-pink-950/70 border-fuchsia-400/60", A: "text-red-400 bg-red-950/60 border-red-400/50", B: "text-pink-300 bg-pink-950/60 border-pink-400/50", C: "text-green-300 bg-green-950/60 border-green-400/50", D: "text-teal-300 bg-teal-950/60 border-teal-400/50", E: "text-cyan-300 bg-cyan-950/60 border-cyan-400/50", F: "text-purple-300 bg-purple-950/60 border-purple-400/50", G: "text-slate-400 bg-slate-800/60 border-slate-500/50" };
 // 強化ポイント1つあたりのステータス上昇量。ライフだけ他より大きく上がる(バランス調整中の暫定値)
@@ -3918,7 +4100,9 @@ const reconcileMasuPoints = (masu) => {
   // せっかく足したポイントが消えたように見える。
   // ここを新しい方式で数え直すことが、そのまま既存のマスモンの調整にもなる
   // (読み込みのたびに不足分だけを補うので、二重に配られることはない)。
-  const earned = Math.max(0, masuBondLevelInfo(masu).level - 1)
+  // 通常強化ポイントの「レベル由来ぶん」はLv400までで止める。Lv401以降で得られるのは
+  // 超越ポイントであって通常の強化ポイントではないので、ここへ含めると誤って補填してしまう。
+  const earned = Math.max(0, Math.min(MAX_MASU_LEVEL_CAP, masuBondLevelInfo(masu).level) - 1)
     + totalBreakthroughPoints(masu.rebirthCount)
     + ownReincarnateBonusPoints(masu)
     + inheritedReincarnateBonusPointsOf(masu);
@@ -6883,6 +7067,13 @@ function MonsterHeroGame() {
   const [reincarnateAnimation, setReincarnateAnimation] = useState(null);
   const reincarnateProcessingRef = useRef(false);
   const rebirthProcessingRef = useRef(false);
+  // 超越: 選択中の個体・エラー・演出・二重処理ロック
+  const [transcendSelectedId, setTranscendSelectedId] = useState(null);
+  const [transcendError, setTranscendError] = useState('');
+  const [transcendAnimation, setTranscendAnimation] = useState(null);
+  const [transcendPlan, setTranscendPlan] = useState(null);
+  const [transcendExchangeError, setTranscendExchangeError] = useState('');
+  const transcendProcessingRef = useRef(false);
   const [levelCapCompensation, setLevelCapCompensation] = useState(null);
   const [inheritedUniqueCompensation, setInheritedUniqueCompensation] = useState(false);
   const masuMonsRef = useRef(masuMons);
@@ -7077,6 +7268,7 @@ function MonsterHeroGame() {
               : <div className="w-full h-full flex items-center justify-center text-2xl">{base.emoji}</div>)}
         </div>
         {masu&&<RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/>}
+        {masu&&<TranscendenceBadge transcended={normalizeMasuProgression(masu).transcended} small/>}
         {badge}
         {masu&&<ReincarnateAura count={masu.reincarnateCount} className="is-small"/>}
       </div>
@@ -7821,12 +8013,13 @@ function MonsterHeroGame() {
     MASU_DONATION: 'temple',    // 寄付ページも神殿の曲を続ける
     MASU_REBIRTH: 'temple',     // 限界突破ページも神殿の曲を継続する
     MASU_REINCARNATE: 'temple', // 転生ページも同じ
+    MASU_TRANSCENDENCE: 'temple', // 超越ページも神殿の曲を継続する
     BREEDER_MARKET: 'market',   // マーケットページ
     TRAINING_SELECT: 'trainingMenu', TRAINING_DIFFICULTY: 'trainingMenu', TRAINING_CONFIRM: 'trainingMenu', TRAINING_RESULT: 'trainingMenu',
     TRAINING_BOARD: 'trainingBoard',
   };
   // プロフィール本体とアイテムはHOMEの曲を続ける。その他の詳細ページ群は従来のプロフィール曲を維持する。
-  const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE'];
+  const PROFILE_BGM_STATES = ['ROSTER','OWNED_MONSTERS','MASU_MONS','MASU_ENHANCE','MASU_TRANSCEND_ENHANCE'];
   // 1回のプレイの中で流れる画面。「まだ1度も戦っていない準備中」か「WAVEを終えたあと」かで曲を分ける。
   //  ・準備中(最初の勇者モン選択〜最初のバトルの直前) … 強化フェーズの曲
   //  ・WAVEを終えたあと(リザルト〜次のバトルの直前)   … リザルトの曲をそのまま続ける
@@ -9636,6 +9829,69 @@ function MonsterHeroGame() {
     } catch {
       rebirthProcessingRef.current=false;
       setRebirthError('限界突破のデータを保存できませんでした。もう一度お試しください。');
+    }
+  };
+  // 超越: レベルはそのままで、Lv上限だけ400→500へ伸ばす。
+  // 限界突破・転生と同じ順番(資格と所持数を再確認 → ロック → 次の状態を計算 → 保存 → state → 演出)で、
+  // 連打しても2回成立しないようにする。保存に失敗したらプシュケーもダイヤも減らさない。
+  const executeMasuTranscendence = async () => {
+    if (transcendProcessingRef.current || !transcendSelectedId) return;
+    const masu = masuMonsRef.current.find(m=>String(m.id)===String(transcendSelectedId));
+    const result = buildMasuTranscendence({ masu, gold, psycheOwned:ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID) });
+    if (!result.ok) { setTranscendError(result.reason); return; }
+    transcendProcessingRef.current = true;
+    setTranscendError('');
+    const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?result.nextMasu:m);
+    const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]: result.nextPsyche };
+    try {
+      await storeSet('mh_masu_mons', next, false);
+      await storeSet('mh_gold', result.nextGold, false);
+      await storeSet('mh_owned_items', nextItems, false);
+      masuMonsRef.current = next;
+      ownedItemsRef.current = nextItems;
+      setMasuMons(next); setGold(result.nextGold); setOwnedItems(nextItems);
+      addAssistantBond('breakthrough');
+      const base = ALL_PLAYER_MONSTERS[masu.baseId];
+      setTranscendAnimation({ masu:result.nextMasu, base, fromLevelCap:result.fromLevelCap, toLevelCap:result.toLevelCap });
+      setTimeout(()=>{ setTranscendAnimation(null); setTranscendSelectedId(null); transcendProcessingRef.current=false; }, prefersReducedMotion()?900:4400);
+    } catch {
+      transcendProcessingRef.current=false;
+      setTranscendError('超越のデータを保存できませんでした。もう一度お試しください。');
+    }
+  };
+  // 超越ポイントの配分を確定する。通常の強化ポイントには一切触らない
+  const commitTranscendPlan = async (masu, plan) => {
+    const applied = applyTranscendPlanToMasu(masu, plan);
+    if (!applied) return null;
+    const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?applied.masu:m);
+    await storeSet('mh_masu_mons', next, false);
+    masuMonsRef.current = next; setMasuMons(next);
+    setMasuMonDetail(prev=>prev&&String(prev.id)===String(masu.id)?applied.masu:prev);
+    setTranscendPlan(null);
+    return applied;
+  };
+  // 虹のプシュケーを超越ポイントへ替える。プシュケーは共通の所持品、超越Pは個体ごとの育成値
+  const commitTranscendExchange = async (masu, wantedPoints) => {
+    if (transcendProcessingRef.current) return null;
+    const have = ownedItemCount(ownedItemsRef.current, BREAKTHROUGH_ITEM_ID);
+    const applied = applyTranscendExchange(masu, have, wantedPoints);
+    if (!applied) { setTranscendExchangeError(`虹のプシュケーが${TRANSCEND_PSYCHE_PER_POINT}個以上必要です。`); return null; }
+    transcendProcessingRef.current = true;
+    try {
+      const next = masuMonsRef.current.map(m=>String(m.id)===String(masu.id)?applied.nextMasu:m);
+      const nextItems = { ...ownedItemsRef.current, [BREAKTHROUGH_ITEM_ID]: applied.nextPsyche };
+      await storeSet('mh_masu_mons', next, false);
+      await storeSet('mh_owned_items', nextItems, false);
+      masuMonsRef.current = next; ownedItemsRef.current = nextItems;
+      setMasuMons(next); setOwnedItems(nextItems);
+      setMasuMonDetail(prev=>prev&&String(prev.id)===String(masu.id)?applied.nextMasu:prev);
+      setTranscendExchangeError('');
+      return applied;
+    } catch {
+      setTranscendExchangeError('交換を保存できませんでした。もう一度お試しください。');
+      return null;
+    } finally {
+      transcendProcessingRef.current = false;
     }
   };
   // 転生: レベルを99ぶん返して、振った強化をすべて振り直す
@@ -12781,7 +13037,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               ? <DyedMonsterImage baseId={mon.id} src={mon.iconUrl || mon.imgUrl} alt={mon.name} masuColors={mon.colors} className="w-full h-full object-cover"/>
               : <div className="w-full h-full flex items-center justify-center text-4xl">{mon.emoji}</div>}
           </div>
-          {masu && <><ReincarnateAura count={norm.reincarnateCount}/><RebirthStars count={norm.rebirthCount} className="mh-rebirth-stars-overlay"/></>}
+          {masu && <><ReincarnateAura count={norm.reincarnateCount}/><RebirthStars count={norm.rebirthCount} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={norm.transcended}/></>}
         </div>
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-start gap-1.5 min-w-0">
@@ -12799,7 +13055,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           {extraLine}
           {masu && !compact && (<>
             <div className="flex items-center justify-between gap-2 text-[10px] font-black">
-              <span className="text-pink-300 flex items-center gap-1 shrink-0"><Heart size={10}/>絆 Lv.{lvl.level} <span className="text-slate-500">/ {norm.levelCap}</span></span>
+              <span className="text-pink-300 flex items-center gap-1 shrink-0"><Heart size={10}/>絆 Lv.{lvl.level} <span className="text-slate-500">/ {norm.levelCap}</span>{lvl.level>=norm.levelCap&&<span className="text-amber-300">MAX</span>}</span>
               <span className="flex items-center gap-1.5 text-[8px] shrink-0">
                 {norm.rebirthCount > 0 && <span className="text-violet-300">限界突破 {norm.rebirthCount}</span>}
                 <span className="text-amber-300">転生 {norm.reincarnateCount}回{norm.inheritedReincarnateCount > 0 && <span className="text-amber-200">（継承 {norm.inheritedReincarnateCount}回分）</span>}</span>
@@ -13240,7 +13496,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='TEMPLE'&&(
           <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
             <div className="flex items-center gap-2 mb-5 shrink-0"><button onClick={returnToHome} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-violet-300">神殿</h2></div><div className="shrink-0 w-full max-w-md mx-auto mb-3"><AssistantBubble scene="temple"/></div>
-            <div className="w-full max-w-md mx-auto space-y-2"><button onClick={()=>{setRegenerationSelectedId(null);setRegenerationResult(null);setGameState('MASU_REGENERATION');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>再生</button><button onClick={()=>{resetFusionFlow();setGameState('MASU_FUSION');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>合体</button><button onClick={()=>{resetDonationFlow();setGameState('MASU_DONATION');}} className="mh-management-link mh-temple-link"><Gem size={18}/>寄付</button><button onClick={()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');}} className="mh-management-link mh-temple-link"><Star size={18}/>限界突破</button><button onClick={()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateError('');setGameState('MASU_REINCARNATE');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>転生</button></div>
+            <div className="w-full max-w-md mx-auto space-y-2"><button onClick={()=>{setRegenerationSelectedId(null);setRegenerationResult(null);setGameState('MASU_REGENERATION');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>再生</button><button onClick={()=>{resetFusionFlow();setGameState('MASU_FUSION');}} className="mh-management-link mh-temple-link"><Sparkles size={18}/>合体</button><button onClick={()=>{resetDonationFlow();setGameState('MASU_DONATION');}} className="mh-management-link mh-temple-link"><Gem size={18}/>寄付</button><button onClick={()=>{setRebirthSelectedId(null);setRebirthSkillKey(null);setRebirthError('');setGameState('MASU_REBIRTH');}} className="mh-management-link mh-temple-link"><Star size={18}/>限界突破</button><button onClick={()=>{setReincarnateSelectedId(null);setReincarnateSkillKey(null);setReincarnateError('');setGameState('MASU_REINCARNATE');}} className="mh-management-link mh-temple-link"><RotateCcw size={18}/>転生</button><button onClick={()=>{setTranscendSelectedId(null);setTranscendError('');setGameState('MASU_TRANSCENDENCE');}} className="mh-management-link mh-temple-link mh-transcend-link"><Sparkles size={18}/>超越</button></div>
           </div>
         )}
 
@@ -13309,6 +13565,79 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         </div></div>})()}
 
         {regenerationResult&&(()=>{const statRows=[['ライフ','hp','baseHp'],['ちから','atk','baseAtk'],['丈夫さ','def','baseDef'],['ガッツ','guts','baseGuts']];return <div className="mh-regeneration-animation" role="dialog" aria-modal="true"><img src={REGENERATION_DISC_IMAGE} alt="円盤石" className="mh-regeneration-disc"/><div className="mh-regeneration-born"><img src={regenerationResult.base.iconUrl} alt={regenerationResult.masu.name} className="w-28 h-28 object-contain mx-auto"/><h3>モンスター誕生！</h3><div className="text-[8px] text-slate-400 font-bold mt-1">ベースモンの基礎値との差</div><div className="grid grid-cols-2 gap-1 text-[11px] text-left mt-2">{statRows.map(([label,key,baseKey])=>{const value=regenerationResult.masu.individualStats[key];const delta=value-regenerationResult.base[baseKey];return <span key={key}>{label} <b>{value} <small className={`text-[9px] ${delta>0?'text-emerald-300':delta<0?'text-red-300':'text-slate-400'}`}>（{delta>0?'+':delta<0?'':'±'}{delta}）</small></b></span>;})}</div><button onClick={()=>{setRegenerationResult(null);setRegenerationSelectedId(null);setGameState('MASU_REGENERATION');}} className="mt-4 w-full py-3 bg-amber-500 text-black rounded-xl font-black">一覧へ戻る</button></div></div>;})()}
+        {/* 超越: Lv400・虹★5まで育てた個体だけが進める、限界の先の育成。
+            画面は buildMasuTranscendence の結果を出すだけにして、押した瞬間の値と保存する値をそろえる */}
+        {gameState==='MASU_TRANSCENDENCE'&&(()=>{
+          const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+          const selected = masuMons.find(m=>String(m.id)===String(transcendSelectedId));
+          if (!selected) {
+            const entries = sortMonsterEntries(buildUnifiedMonsterEntries([], masuMons, monsterRosterIds))
+              .filter(e=>e.type==='masu'&&monsterEntryMatchesDisplayFlags(e, monsterDisplayFlags));
+            return <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+              <div className="flex items-center gap-2 mb-3 shrink-0"><button onClick={()=>setGameState('TEMPLE')} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-amber-200">超越</h2></div>
+              <div className="shrink-0 w-full max-w-md mx-auto mb-2"><AssistantBubble scene="transcendence" compact/></div>
+              <div className="text-[10px] text-slate-400 mb-3 shrink-0">Lv.{MAX_MASU_LEVEL_CAP}・虹★{BREAKTHROUGH_STARS_PER_TIER}（限界突破{FINAL_BREAKTHROUGH_COUNT}回）まで育てたマスモンだけが超越できます。超越するとLv上限が{TRANSCEND_LEVEL_CAP}になり、Lv{MAX_MASU_LEVEL_CAP+1}以降のレベルアップで超越ポイントを獲得します。1個体につき1回だけです。</div>
+              <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 mb-3 shrink-0">
+                <span className="text-[10px] font-black text-amber-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケー</span>
+                <span className="text-[11px] font-mono font-black text-white">所持 {psycheHave.toLocaleString()}</span>
+              </div>
+              <div className="text-[9px] text-slate-500 font-bold mb-2 shrink-0">超越には虹のプシュケー{TRANSCEND_PSYCHE_COST.toLocaleString()}個とダイヤ{TRANSCEND_DIAMOND_COST.toLocaleString()}が必要です。</div>
+              {renderMonsterSortFilterBar({singleType:true})}
+              <div className="grid grid-cols-3 gap-2 overflow-y-auto mh-scroll">{entries.map(({masu})=>{
+                const base=ALL_PLAYER_MONSTERS[masu.baseId]; if(!base) return null;
+                const lvl=masuBondLevelInfo(masu); const normalized=normalizeMasuProgression(masu);
+                const eligible=canTranscendMasu(masu);
+                return <button key={masu.id} data-transcend-candidate={masu.id} disabled={!eligible.ok} onClick={()=>{setTranscendSelectedId(masu.id);setTranscendError('');}} className="relative rounded-2xl border border-amber-400/40 bg-slate-900 p-2 disabled:opacity-35">
+                  <div className="relative w-14 h-14 mx-auto rounded-full overflow-visible"><div className="w-14 h-14 rounded-full overflow-hidden"><DyedMonsterImage baseId={masu.baseId} src={base.iconUrl} alt={masu.name} masuColors={getMasuColors(masu)} className="w-full h-full object-cover"/></div><RebirthStars count={masu.rebirthCount} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={normalized.transcended} small/></div>
+                  <div className="text-[9px] font-black truncate">{masu.name}</div>
+                  <div className="text-[8px] text-pink-300">Lv.{lvl.level}/{normalized.levelCap}</div>
+                  <div className={`text-[8px] font-black ${normalized.transcended?'text-amber-300':eligible.ok?'text-emerald-300':'text-slate-500'}`}>{normalized.transcended?'超越済み':eligible.ok?'超越できます':'条件未達'}</div>
+                </button>;
+              })}</div>
+            </div>;
+          }
+          const base=ALL_PLAYER_MONSTERS[selected.baseId];
+          const lvl=masuBondLevelInfo(selected);
+          const normalized=normalizeMasuProgression(selected);
+          const plan=buildMasuTranscendence({ masu:selected, gold, psycheOwned:psycheHave });
+          const psycheShort=Math.max(0, TRANSCEND_PSYCHE_COST - psycheHave);
+          const goldShort=Math.max(0, TRANSCEND_DIAMOND_COST - gold);
+          return <div className="flex-1 flex flex-col h-full min-h-0 p-4" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))',paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}} data-transcend-confirm={selected.id}>
+            <div className="flex items-center gap-2 mb-2 shrink-0"><button disabled={transcendProcessingRef.current} onClick={()=>{setTranscendSelectedId(null);setTranscendError('');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button><h2 className="text-xl font-black italic text-amber-200">超越の儀式</h2></div>
+            <div className="flex-1 min-h-0 overflow-y-auto mh-scroll space-y-2.5">
+              <div className="flex items-center gap-3 bg-slate-900 rounded-2xl p-3">
+                <div className="relative w-20 h-20 rounded-full overflow-visible shrink-0"><div className="w-20 h-20 rounded-full overflow-hidden"><DyedMonsterImage baseId={selected.baseId} src={base?.iconUrl} alt={selected.name} masuColors={getMasuColors(selected)} className="w-full h-full object-cover"/></div><RebirthStars count={selected.rebirthCount} className="mh-rebirth-stars-overlay"/><TranscendenceBadge transcended={normalized.transcended}/></div>
+                <div className="min-w-0">
+                  <b className="block truncate">{selected.name}</b>
+                  <div className="text-pink-300 text-xs">Lv.{lvl.level} / {normalized.levelCap}</div>
+                  <div className="text-amber-200 text-[10px] font-black">虹★{BREAKTHROUGH_STARS_PER_TIER}（限界突破{normalized.rebirthCount}回）</div>
+                  <div className="text-emerald-300 text-[10px] font-black">超越するとLv上限が{TRANSCEND_LEVEL_CAP}になります</div>
+                </div>
+              </div>
+              <div className="rounded-xl border border-amber-400/30 bg-black/40 p-3 text-[10px] leading-relaxed text-slate-200 space-y-1.5">
+                <p>Lv.{MAX_MASU_LEVEL_CAP}・虹★{BREAKTHROUGH_STARS_PER_TIER}まで育ったマスモンだけが行える、限界の先へ進むための特別な儀式です。</p>
+                <p>超越するとLv{MAX_MASU_LEVEL_CAP+1}以降の成長が解放され、Lv上限が{TRANSCEND_LEVEL_CAP}になります。</p>
+                <p>Lv{MAX_MASU_LEVEL_CAP+1}以降のレベルアップでは通常の強化ポイントではなく「超越ポイント」を獲得します。</p>
+                <p>超越ポイントは通常の強化とは別に、モンスターの基礎能力を永久的に強化できます。</p>
+                <p>超越状態と超越強化は、転生や強化ポイントリセットを行っても失われません。</p>
+              </div>
+              <div className="rounded-xl border border-fuchsia-500/30 bg-black/40 p-3 space-y-1.5">
+                <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要な虹のプシュケー</span><span className={`font-black flex items-center gap-1 ${psycheShort===0?'text-fuchsia-300':'text-red-400'}`}><span aria-hidden="true">🌈</span>{TRANSCEND_PSYCHE_COST.toLocaleString()}</span></div>
+                <div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持数</span><span className="text-slate-300 font-black">{psycheHave.toLocaleString()}</span></div>
+                {psycheShort>0&&<div className="text-[8px] text-red-400 font-black">虹のプシュケーが足りません（あと {psycheShort.toLocaleString()}）</div>}
+              </div>
+              <div className="rounded-xl border border-amber-500/30 bg-black/40 p-3 space-y-1.5">
+                <div className="flex justify-between text-[10px] font-bold"><span className="text-slate-400">必要ダイヤ</span><span className={`font-black flex items-center gap-1 ${goldShort===0?'text-amber-300':'text-red-400'}`}><Gem size={12}/>{TRANSCEND_DIAMOND_COST.toLocaleString()}</span></div>
+                <div className="flex justify-between text-[9px] font-bold"><span className="text-slate-500">所持ダイヤ</span><span className="text-slate-300 font-black">{gold.toLocaleString()}</span></div>
+                {goldShort>0&&<div className="text-[8px] text-red-400 font-black">ダイヤが足りません（あと {goldShort.toLocaleString()}）</div>}
+              </div>
+              <div className="rounded-xl border-2 border-red-400/60 bg-red-950/40 px-3 py-2 text-center text-[11px] font-black text-red-200">⚠ 超越は取り消せません</div>
+              {transcendError&&<div className="text-[10px] text-red-400 font-black text-center">{transcendError}</div>}
+            </div>
+            <button data-transcend-execute disabled={!plan.ok||transcendProcessingRef.current} onClick={executeMasuTranscendence} className="shrink-0 mt-3 min-h-[52px] w-full rounded-2xl bg-gradient-to-r from-amber-500 via-fuchsia-500 to-sky-400 text-slate-950 font-black text-sm disabled:opacity-40 disabled:from-slate-700 disabled:via-slate-700 disabled:to-slate-700 disabled:text-slate-400 active:scale-[.98]">超越する</button>
+          </div>;
+        })()}
+
         {levelCapCompensation&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:50000,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full bg-slate-900 border-2 border-amber-400 rounded-3xl p-6 text-center"><Gem size={38} className="text-amber-300 mx-auto mb-3"/><h2 className="font-black text-lg mb-2">Lv30上限補償</h2><p className="text-[11px] text-slate-300 leading-relaxed">Lv30を超えていた未限界突破マスモンの超過絆経験値を削除し、同数のダイヤへ還元しました。</p><div className="text-2xl text-amber-300 font-black my-4">+{levelCapCompensation.diamonds.toLocaleString()} ダイヤ</div><button onClick={()=>{setLevelCapCompensation(null);storeSet('mh_masu_level_cap_compensation_notice_seen_v1',true,false);}} className="w-full bg-amber-500 text-black py-3 rounded-2xl font-black">受け取る</button></div></div>}
         {inheritedUniqueCompensation&&<div className="fixed inset-0 flex items-center justify-center p-5" style={{position:'fixed',inset:0,zIndex:49999,backgroundColor:'rgba(2,6,23,.96)'}}><div className="max-w-sm w-full bg-slate-900 border-2 border-fuchsia-400 rounded-3xl p-6 text-center"><div className="text-4xl mb-3">🌈</div><h2 className="font-black text-lg mb-2">お詫びの配布</h2><p className="text-[11px] text-slate-300 leading-relaxed">継承固有技Lv不具合修正のお詫びとして虹のプシュケー×20を配布しました。</p><button onClick={()=>setInheritedUniqueCompensation(false)} className="w-full bg-fuchsia-500 text-white py-3 mt-5 rounded-2xl font-black">確認</button></div></div>}
         {/* 限界突破の演出。転生とは別物なので専用の見た目にし、最後に星が1つ増える */}
@@ -13325,6 +13654,22 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             <div className="mh-breakthrough-copy"><b>{finalBreak?'最終限界突破！':'限界突破！'}</b><span>{finalBreak?'★ が虹になりました':'★ が1つ増えました'}</span><span>{rebirthAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${rebirthAnimation.keptSkillPoints}）`:`${rebirthAnimation.skillName} Lv.${rebirthAnimation.skillLevel}へ進化`}</span><span>強化ポイント +{rebirthAnimation.gainedPoints}</span></div>
           </div>;
         })()}
+        {/* 超越の演出。限界突破・転生より明確に格上に見えるよう、虹と金の光が集まって
+            一度強く白く弾け、衝撃波が広がってから「超　越」と超越マークが出る。
+            新しい画像・音声・ライブラリは足さず、CSSのグラデーションとアニメーションだけで作る。
+            モーション軽減設定では @media(prefers-reduced-motion:reduce) 側で止め、JSの表示時間も短くする */}
+        {transcendAnimation&&<div className="mh-transcend-animation" role="status" aria-live="polite">
+          <div className="mh-transcend-converge" aria-hidden="true"><i style={{'--i':0}}/><i style={{'--i':1}}/><i style={{'--i':2}}/><i style={{'--i':3}}/><i style={{'--i':4}}/><i style={{'--i':5}}/><i style={{'--i':6}}/><i style={{'--i':7}}/></div>
+          <div className="mh-transcend-halo" aria-hidden="true"></div>
+          <div className="mh-transcend-halo is-second" aria-hidden="true"></div>
+          <div className="mh-transcend-rays" aria-hidden="true"></div>
+          <div className="mh-transcend-mon"><DyedMonsterImage baseId={transcendAnimation.masu.baseId} src={transcendAnimation.base?.iconUrl} alt={transcendAnimation.masu.name} masuColors={getMasuColors(transcendAnimation.masu)} className="w-full h-full object-contain"/></div>
+          <div className="mh-transcend-flash" aria-hidden="true"></div>
+          <div className="mh-transcend-shock" aria-hidden="true"></div>
+          <div className="mh-transcend-title" aria-hidden="true">超　越</div>
+          <div className="mh-transcend-mark" aria-hidden="true"><TranscendenceBadge transcended/></div>
+          <div className="mh-transcend-copy"><b>超越完了！</b><span>Lv上限 {transcendAnimation.fromLevelCap} → {transcendAnimation.toLevelCap}</span><span>Lv{MAX_MASU_LEVEL_CAP+1}以降が解放されました</span><span>超越ポイントが解放されました</span></div>
+        </div>}
         {/* 転生の演出。モンスターの背面で対応色の画像オーラを一度だけ強く発光させる。 */}
         {reincarnateAnimation&&<div className="mh-reincarnation-animation" role="status" aria-live="polite"><div className="mh-reincarnation-light"></div><div className="mh-reincarnation-mon mh-reincarnate-stack"><DyedMonsterImage baseId={reincarnateAnimation.masu.baseId} src={reincarnateAnimation.base?.iconUrl||reincarnateAnimation.base?.imgUrl} alt={reincarnateAnimation.masu.name} masuColors={getMasuColors(reincarnateAnimation.masu)} className="w-full h-full object-contain"/><ReincarnateAura count={reincarnateAnimation.masu.reincarnateCount} className="is-ceremony"/><RebirthStars count={reincarnateAnimation.masu.rebirthCount} className="mh-rebirth-stars-overlay"/></div><div className="mh-reincarnation-copy"><b>転生完了！</b><span>Lv.{reincarnateAnimation.fromLevel} → Lv.{reincarnateAnimation.nextLevel}</span><span>{reincarnateAnimation.raisesSkill===false?`固有技ポイント +1（所持 ${reincarnateAnimation.keptSkillPoints}）`:`${reincarnateAnimation.skillName} Lv.${reincarnateAnimation.skillLevel}へ進化`}</span><span>強化ポイント {reincarnateAnimation.nextPoints} を振り直せます</span></div></div>}
         {donationAnimation&&<div className="mh-donation-animation" role="status" aria-live="polite" aria-label="寄付を処理中"><div className="mh-donation-beam"></div><div className="mh-donation-monster"><DyedMonsterImage baseId={donationAnimation.baseId} src={donationAnimation.src} alt={donationAnimation.name} masuColors={donationAnimation.colors} className="w-full h-full object-contain"/></div><div className="mh-donation-gem"><Gem size={42}/></div><div className="mh-donation-particles">{Array.from({length:8},(_,i)=><i key={i} style={{'--i':i}}></i>)}</div><div className="mh-donation-copy">神殿へ寄付中…</div></div>}
@@ -15227,7 +15572,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
           const mergedMasu = mergeMasuIntoMon(masu);
           const inRoster = monsterRosterIds.includes('masu:'+masu.id);
           const sp = masu.statPoints || {};
-          const masuStatRow = (label, value, plus, color) => [label, (<>{value}{plus>0&&<span className="text-emerald-400 text-[8px]"> (+{plus})</span>}</>), color];
+          const masuNorm = normalizeMasuProgression(masu);
+          const tsp = masuNorm.transcendStatPoints;
+          const masuLvl = masuBondLevelInfo(masu);
+          // (+○)は今までどおり通常の強化ポイントぶん。基礎+○は超越で永久に上げたぶんで、別物として並べる
+          const masuStatRow = (label, value, plus, color, transcendPlus = 0) => [label, (<>{value}{plus>0&&<span className="text-emerald-400 text-[8px]"> (+{plus})</span>}{transcendPlus>0&&<span className="text-amber-300 text-[8px]"> 基礎+{transcendPlus}</span>}</>), color];
           return renderMonsterDetailModal({
             mon: mergedMasu,
             masu,
@@ -15237,12 +15586,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
             detailOpts: {
               statTitle: '現在のステータス(強化分込み)',
               statValues: [
-                masuStatRow('ライフ', mergedMasu.baseHp, sp.hp||0, 'text-pink-400'),
-                masuStatRow('ちから', mergedMasu.baseAtk, sp.atk||0, 'text-red-400'),
-                masuStatRow('丈夫さ', mergedMasu.baseDef, sp.def||0, 'text-emerald-400'),
-                masuStatRow('ガッツ', mergedMasu.baseGuts, sp.guts||0, 'text-amber-400'),
+                masuStatRow('ライフ', mergedMasu.baseHp, sp.hp||0, 'text-pink-400', tsp.hp),
+                masuStatRow('ちから', mergedMasu.baseAtk, sp.atk||0, 'text-red-400', tsp.atk),
+                masuStatRow('丈夫さ', mergedMasu.baseDef, sp.def||0, 'text-emerald-400', tsp.def),
+                masuStatRow('ガッツ', mergedMasu.baseGuts, sp.guts||0, 'text-amber-400', tsp.guts),
               ],
-              aptPointsLabel: <div className="text-[8px] text-amber-300 font-black flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</div>,
+              aptPointsLabel: <div className="text-[8px] text-amber-300 font-black flex flex-wrap items-center gap-x-2 gap-y-0.5"><span className="flex items-center gap-1"><Sparkles size={9}/>強化P: {masu.distAptPoints||0}</span>{masuNorm.transcended&&<span className="text-sky-300 flex items-center gap-1">超越P: {masuNorm.transcendPoints}</span>}{transcendAptBoostTotal(masu)>0&&<span className="text-amber-200">基礎適性 +{transcendAptBoostTotal(masu)}段階</span>}</div>,
               // 限界突破・転生で残した固有技ポイントは、この詳細からいつでも使える
               extraAfterApt: renderUniqueSkillPointBox(masu, updated=>setMasuMonDetail(updated)),
             },
@@ -15254,6 +15603,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   <div className="space-y-1">{masu.inheritedUniques.map((u,idx)=>(<div key={idx} className="text-[8px] text-amber-200 font-bold bg-black/30 rounded-lg px-2 py-1">{u.name}<span className="text-slate-500 font-normal">(元{u.sourceMasuName})</span></div>))}</div>
                 </div>
               )}
+              {/* Lv上限に届いたら、次に何をすればいいのかが分かるようにする(毎回ポップアップは出さない) */}
+              {masuNorm.transcended
+                ? <div data-transcend-detail-note className="rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[9px] font-black text-amber-200 text-center leading-relaxed">超越済み ／ Lv上限 {TRANSCEND_LEVEL_CAP}{masuLvl.level>=TRANSCEND_LEVEL_CAP&&'（MAX）'}<br/><span className="text-slate-300 font-bold">Lv{MAX_MASU_LEVEL_CAP+1}以降のレベルアップで超越ポイントを獲得します。「強化」から超越強化へ切り替えて使えます。</span></div>
+                : (canTranscendMasu(masu).ok
+                  ? <div data-transcend-detail-note className="rounded-xl border border-amber-400/40 bg-amber-950/30 px-3 py-2 text-[9px] font-black text-amber-200 text-center leading-relaxed">Lv上限到達<br/><span className="text-slate-300 font-bold">神殿で超越するとLv{MAX_MASU_LEVEL_CAP+1}以降が解放され、Lv上限が{TRANSCEND_LEVEL_CAP}になります。</span></div>
+                  : null)}
               <div className="text-[8px] text-slate-500 font-bold text-center px-2">{inRoster?'現在、編成に入っています':'編成画面で選ぶと、次の周回でこのマスモンを使えます'}</div>
               <div className="text-[8px] text-teal-400/80 font-bold text-center px-2">絆ポイントリセットの書は「アイテム」から使用できます</div>
               <button onClick={()=>{ if(window.confirm(`「${masu.name}」を削除しますか？この操作は取り消せません。`)){ deleteMasuMon(masu.id); setMasuMonDetail(null); } }} className="w-full min-h-[40px] text-[10px] font-black text-red-300 bg-red-950/40 border border-red-500/30 rounded-xl active:scale-95">このマスモンを削除する</button>
@@ -15272,6 +15627,113 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         })()}
 
         {/* マスモン強化: 専用ページ(間合い適性・ステータス強化を、変動値のプレビュー付きで行う) */}
+        {/* 超越強化: 超越ポイントで「基礎値」を永久に上げる。通常の強化ポイントには一切触らない。
+            下書き(plan)の形は通常強化と同じ {apt, stat} を使い、確定するまで保存へ触らない */}
+        {gameState==='MASU_TRANSCEND_ENHANCE'&&masuMonDetail&&(()=>{
+          const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
+          const base = ALL_PLAYER_MONSTERS[masu.baseId];
+          const normalized = normalizeMasuProgression(masu);
+          if (!base || !normalized.transcended) { setGameState('MASU_ENHANCE'); return null; }
+          const points = normalized.transcendPoints;
+          const psycheHave = ownedItemCount(ownedItems, BREAKTHROUGH_ITEM_ID);
+          const plan = transcendPlan || { apt:[0,0,0,0], stat:{hp:0,atk:0,def:0,guts:0} };
+          const planUsed = plan.apt.reduce((a,b)=>a+b,0) + Object.values(plan.stat).reduce((a,b)=>a+b,0);
+          const planLeft = points - planUsed;
+          const preview = planUsed>0 ? applyTranscendPlanToMasu(masu, plan) : null;
+          const previewMasu = preview ? preview.masu : masu;
+          const currentPower = masuPowerOf(masu);
+          const previewPower = masuPowerOf(previewMasu);
+          const baseApt = Array.isArray(base.distAptitude) ? base.distAptitude.slice(0,4) : ['C','C','C','C'];
+          const transcendGrade = (idx, extra=0) => raiseAptitudeGrade(baseApt[idx]||'C', normalized.transcendAptBoosts[idx] + extra);
+          const aptAtMax = (idx) => transcendGrade(idx, plan.apt[idx]) === DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length-1];
+          const addApt = (idx, n) => setTranscendPlan(prev=>{ const q=prev?{apt:[...prev.apt],stat:{...prev.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}}; q.apt[idx]=Math.max(0,q.apt[idx]+n); return q; });
+          const addStat = (key, n) => setTranscendPlan(prev=>{ const q=prev?{apt:[...prev.apt],stat:{...prev.stat}}:{apt:[0,0,0,0],stat:{hp:0,atk:0,def:0,guts:0}}; q.stat[key]=Math.max(0,(q.stat[key]||0)+n); return q; });
+          const exchange = (wanted) => commitTranscendExchange(masu, wanted);
+          const maxExchange = transcendPsycheExchange(psycheHave, Number.MAX_SAFE_INTEGER);
+          return (
+            <div style={{position:"absolute",inset:0,backgroundColor:"#020617",zIndex:30000}} className="absolute inset-0 flex flex-col overflow-hidden" data-transcend-enhance={masu.id}>
+              <div className="flex items-center gap-2 p-4 shrink-0 border-b border-white/10" style={{paddingTop:'calc(1rem + env(safe-area-inset-top))'}}>
+                <button onClick={()=>{setTranscendPlan(null);setGameState('MASU_ENHANCE');}} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
+                <h2 className="text-xl font-black italic text-sky-300 uppercase tracking-widest flex-1">超越強化</h2>
+              </div>
+              <div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
+                <button onClick={()=>{setTranscendPlan(null);setGameState('MASU_ENHANCE');}} className="min-h-[40px] rounded-xl border border-amber-400/50 bg-slate-900 text-amber-200 text-[11px] font-black active:scale-95">通常強化</button>
+                <button className="min-h-[40px] rounded-xl bg-sky-500 text-slate-950 text-[11px] font-black">超越強化</button>
+              </div>
+              <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene="transcendence" compact/></div>
+              <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+                <div className="rounded-2xl border border-sky-400/40 bg-sky-950/30 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-black text-sky-200">超越ポイント</span>
+                    <span data-transcend-points className="text-lg font-black font-mono text-white">{planLeft}<span className="text-[10px] text-slate-400"> / {points}</span></span>
+                  </div>
+                  <div className="mt-1 text-[9px] text-slate-400 font-bold">通常の強化ポイントとは別枠です。1Pで基礎ライフ+{STAT_POINT_GAIN.hp}／ちから・丈夫さ・ガッツ+{STAT_POINT_GAIN.atk}／間合い適性1段階（どれも総合力+10相当）。</div>
+                </div>
+                {/* 虹のプシュケーから超越ポイントへ交換。1Pずつ何十回も押さずに済むよう +1 / +10 / MAX を並べる */}
+                <div className="rounded-2xl border border-fuchsia-400/40 bg-fuchsia-950/25 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-black text-fuchsia-200 flex items-center gap-1"><span aria-hidden="true">🌈</span>虹のプシュケーから交換</span>
+                    <span className="text-[11px] font-mono font-black text-white">所持 {psycheHave.toLocaleString()}</span>
+                  </div>
+                  <div className="text-[9px] text-slate-400 font-bold">虹のプシュケー {TRANSCEND_PSYCHE_PER_POINT} 個 → 超越ポイント 1（{TRANSCEND_PSYCHE_PER_POINT}個未満の端数は消費しません）</div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[['+1P',1],['+10P',10],['MAX',maxExchange.maxPoints]].map(([label,amount])=>{
+                      const quote = transcendPsycheExchange(psycheHave, amount);
+                      return <button key={label} data-transcend-exchange={label} disabled={!quote.ok} onClick={()=>exchange(amount)} className="min-h-[52px] rounded-xl border border-fuchsia-400/50 bg-slate-900 text-fuchsia-100 font-black text-[11px] disabled:opacity-35 active:scale-95 flex flex-col items-center justify-center gap-0.5">
+                        <span>{label}</span>
+                        <small className="text-[8px] text-slate-400">{quote.ok?`🌈${quote.psycheCost.toLocaleString()} → +${quote.points}P`:'不足'}</small>
+                      </button>;
+                    })}
+                  </div>
+                  <div className="text-[9px] font-bold text-slate-400">MAXで交換すると 🌈{maxExchange.psycheCost.toLocaleString()} を使って超越P +{maxExchange.maxPoints}、交換後の所持は {maxExchange.nextPsyche.toLocaleString()} になります。</div>
+                  {transcendExchangeError&&<div className="text-[9px] font-black text-red-400">{transcendExchangeError}</div>}
+                </div>
+                {/* 基礎ステータス強化 */}
+                <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-3 space-y-2">
+                  <div className="text-[11px] font-black text-amber-300">基礎ステータスを上げる</div>
+                  {Object.entries(STAT_POINT_KEYS).map(([key,label])=>{
+                    const gainPer = STAT_POINT_GAIN[key] || 1;
+                    const planned = plan.stat[key] || 0;
+                    const before = normalized.transcendStatPoints[key];
+                    return <div key={key} className="grid grid-cols-[52px_1fr_auto] items-center gap-2 rounded-xl bg-black/35 p-2">
+                      <span className="text-[10px] font-black text-slate-300">{label}</span>
+                      <span className="text-[10px] font-mono font-black text-white">基礎+{before}{planned>0&&<span className="text-emerald-400"> → 基礎+{before+planned*gainPer}</span>}</span>
+                      <span className="flex items-center gap-1">
+                        <button aria-label={`${label}の超越強化を1つ戻す`} disabled={planned<=0} onClick={()=>addStat(key,-1)} className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800 text-white font-black disabled:opacity-30 active:scale-90">-</button>
+                        <button aria-label={`${label}を超越強化`} disabled={planLeft<=0} onClick={()=>addStat(key,1)} className="min-h-[36px] min-w-[36px] rounded-lg bg-sky-600 text-white font-black disabled:opacity-30 active:scale-90">+</button>
+                      </span>
+                    </div>;
+                  })}
+                </div>
+                {/* 基礎距離適性強化 */}
+                <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-3 space-y-2">
+                  <div className="text-[11px] font-black text-amber-300">基礎の間合い適性を上げる<span className="ml-1 text-[9px] font-bold text-slate-400">（上限は{DIST_APTITUDE_GRADES[DIST_APTITUDE_GRADES.length-1]}）</span></div>
+                  {RANGE_LABELS.map((label,idx)=>{
+                    const planned = plan.apt[idx] || 0;
+                    return <div key={idx} className="grid grid-cols-[44px_1fr_auto] items-center gap-2 rounded-xl bg-black/35 p-2">
+                      <span className="text-[10px] font-black text-slate-300">{label}</span>
+                      <span className="text-[10px] font-mono font-black text-white">{transcendGrade(idx)}{planned>0&&<span className="text-emerald-400"> → {transcendGrade(idx,planned)}</span>}</span>
+                      <span className="flex items-center gap-1">
+                        <button aria-label={`${label}の超越強化を1つ戻す`} disabled={planned<=0} onClick={()=>addApt(idx,-1)} className="min-h-[36px] min-w-[36px] rounded-lg bg-slate-800 text-white font-black disabled:opacity-30 active:scale-90">-</button>
+                        <button aria-label={`${label}を超越強化`} disabled={planLeft<=0||aptAtMax(idx)} onClick={()=>addApt(idx,1)} className="min-h-[36px] min-w-[36px] rounded-lg bg-sky-600 text-white font-black disabled:opacity-30 active:scale-90">+</button>
+                      </span>
+                    </div>;
+                  })}
+                </div>
+                <div className="rounded-2xl border border-amber-400/30 bg-black/40 p-3 text-[10px] font-black text-slate-300 flex items-center justify-between">
+                  <span>総合力</span>
+                  <span className="font-mono text-white">{currentPower.toLocaleString()}{planUsed>0&&<span className="text-emerald-400"> → {previewPower.toLocaleString()}</span>}</span>
+                </div>
+                <div className="text-[9px] font-bold text-slate-400 leading-relaxed">超越強化は「基礎値」を上げるので、絆ポイントリセットの書で通常の強化を戻しても消えません。転生しても残ります。</div>
+              </div>
+              <div className="shrink-0 grid grid-cols-2 gap-2 p-4 border-t border-white/10" style={{paddingBottom:'calc(1rem + env(safe-area-inset-bottom))'}}>
+                <button onClick={()=>setTranscendPlan(null)} disabled={planUsed<=0} className="min-h-[48px] rounded-2xl bg-slate-800 text-slate-200 font-black text-xs disabled:opacity-35 active:scale-95">キャンセル</button>
+                <button data-transcend-commit disabled={planUsed<=0} onClick={()=>commitTranscendPlan(masu, plan)} className="min-h-[48px] rounded-2xl bg-sky-500 text-slate-950 font-black text-xs disabled:opacity-35 active:scale-95">この配分で確定</button>
+              </div>
+            </div>
+          );
+        })()}
+
         {gameState==='MASU_ENHANCE'&&masuMonDetail&&(()=>{
           const masu = getMasuMon(masuMonDetail.id) || masuMonDetail;
           const base = ALL_PLAYER_MONSTERS[masu.baseId];
@@ -15337,6 +15799,12 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 <button onClick={backToDetail} className="p-3 text-slate-400 active:scale-90"><ArrowLeft size={20}/></button>
                 <h2 className="text-xl font-black italic text-amber-400 uppercase tracking-widest flex-1">マスモン強化</h2>
               </div>
+              {/* 超越済みの個体だけ、通常強化と超越強化を切り替えられるようにする。
+                  未超越の個体はこれまでどおり通常強化だけで、見た目も変わらない */}
+              {normalizeMasuProgression(masu).transcended&&<div data-transcend-enhance-tabs className="shrink-0 w-full max-w-md mx-auto px-4 pt-3 grid grid-cols-2 gap-1.5">
+                <button className="min-h-[40px] rounded-xl bg-amber-600 text-slate-950 text-[11px] font-black">通常強化</button>
+                <button onClick={()=>{setTranscendPlan(null);setTranscendExchangeError('');setGameState('MASU_TRANSCEND_ENHANCE');}} className="min-h-[40px] rounded-xl border border-sky-400/50 bg-slate-900 text-sky-200 text-[11px] font-black active:scale-95">超越強化</button>
+              </div>}
               <div className="shrink-0 w-full max-w-md mx-auto px-4 pt-3"><AssistantBubble scene="masuEnhance" compact/></div>
               <div className="flex-1 overflow-y-auto mh-scroll p-4 space-y-3 max-w-md mx-auto w-full">
 
@@ -18345,6 +18813,40 @@ const createAnimationStyle = () => {
     @keyframes mhReincarnateFoot{0%,100%{opacity:.38;transform:translateY(2%) scale(.96);filter:brightness(1.05)}45%{opacity:.7;transform:translateY(-5%) scale(1.08);filter:brightness(1.3)}72%{opacity:.47;transform:translateY(-1%) scale(1.01);filter:brightness(1.12)}}
     @keyframes mhReincarnateSpark{0%,30%{opacity:0;transform:translate(0,0) scale(.5)}42%{opacity:.8}78%,100%{opacity:0;transform:translate(8px,-28px) scale(.15)}}
     .mh-reincarnate-badge{position:absolute;left:50%;bottom:-11px;transform:translateX(-50%);min-width:max-content;border:1px solid #bae6fd;border-radius:9999px;padding:2px 6px;background:linear-gradient(90deg,#5b21b6,#1d4ed8);color:#fff;font-size:7px;font-weight:1000;line-height:1;white-space:nowrap;z-index:6;box-shadow:0 1px 5px #020617,0 0 6px #818cf8}.mh-reincarnate-badge.is-small{bottom:-8px;padding:1px 4px;font-size:6px}.mh-reincarnate-aura.is-home{inset:-25%}.mh-reincarnate-aura.is-home .mh-reincarnate-flame.is-back{opacity:.24}.mh-reincarnate-aura.is-home .mh-reincarnate-sparks{transform:scale(.7)}
+    /* 超越マーク。虹★(画像の下)・転生バッジ(画像の下)と重ならないよう画像の上側へ置く。
+       画像は使わず、虹と金のグラデーションと「超」の1文字だけで最終育成らしさを出す。
+       親の overflow:hidden で切れないよう、置く側は overflow-visible にしておくこと。 */
+    .mh-transcend-badge{position:absolute;left:50%;top:-9px;transform:translateX(-50%);z-index:7;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;border:1.5px solid #fff7d6;background:conic-gradient(from 210deg,#fde68a,#f472b6,#60a5fa,#34d399,#fde68a);box-shadow:0 0 7px #fde68acc,0 0 14px #f472b666,0 1px 4px #020617;pointer-events:none}
+    .mh-transcend-badge>b{display:block;color:#3b1d05;font-size:10px;font-weight:1000;line-height:1;text-shadow:0 1px 0 #fff9}
+    .mh-transcend-badge.is-small{width:15px;height:15px;top:-7px;border-width:1px}.mh-transcend-badge.is-small>b{font-size:8px}
+    .mh-transcend-link{border-color:#fcd34daa;background:linear-gradient(135deg,#4c1d95aa,#78350faa)}
+    /* 超越の演出。3〜5秒で一度だけ流す。終わったら要素ごと消えるので常時アニメは残らない */
+    .mh-transcend-animation{position:fixed;inset:0;z-index:51500;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 46%,#3b0764 0,#0b0518 42%,#020617 76%);pointer-events:auto;touch-action:none;padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px)}
+    .mh-transcend-converge{position:absolute;inset:0;z-index:1;pointer-events:none}
+    .mh-transcend-converge i{position:absolute;left:50%;top:48%;width:9px;height:9px;border-radius:50%;background:radial-gradient(circle,#fffbe8,#fde68a 45%,#f472b6);box-shadow:0 0 12px #fde68a;opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-58vmin);animation:mhTranscendConverge 1.5s cubic-bezier(.4,0,.2,1) forwards}
+    .mh-transcend-halo{position:absolute;z-index:2;width:210px;height:210px;border-radius:50%;border:3px solid #fde68a;box-shadow:0 0 26px #fde68aaa,inset 0 0 26px #f472b688;opacity:0;animation:mhTranscendHalo 2.2s ease-out forwards}
+    .mh-transcend-halo.is-second{width:290px;height:290px;border-color:#a5b4fc;animation-delay:.22s;box-shadow:0 0 26px #a5b4fcaa,inset 0 0 26px #60a5fa66}
+    .mh-transcend-rays{position:absolute;z-index:1;width:150vmax;height:150vmax;opacity:0;background:conic-gradient(from 0deg,#fde68a33 0 6deg,transparent 6deg 24deg);animation:mhTranscendRays 2.6s ease-out forwards}
+    .mh-transcend-mon{position:relative;z-index:3;width:150px;height:150px;animation:mhTranscendMon 3s ease-out forwards}
+    .mh-transcend-flash{position:absolute;inset:0;z-index:5;background:#fff;opacity:0;pointer-events:none;animation:mhTranscendFlash 3s ease-out forwards}
+    .mh-transcend-shock{position:absolute;z-index:4;width:40px;height:40px;border-radius:50%;border:4px solid #fffbe8;opacity:0;pointer-events:none;animation:mhTranscendShock 3s ease-out forwards}
+    .mh-transcend-title{position:absolute;z-index:6;font-size:clamp(38px,15vw,66px);font-weight:1000;letter-spacing:.12em;color:#fffbe8;opacity:0;text-shadow:0 0 18px #fde68a,0 0 42px #f472b6;animation:mhTranscendTitle 3.4s ease-out forwards}
+    .mh-transcend-mark{position:absolute;z-index:6;top:calc(env(safe-area-inset-top) + 16%);opacity:0;transform:scale(.4);animation:mhTranscendMark 3.6s ease-out forwards}
+    .mh-transcend-mark .mh-transcend-badge{position:relative;left:auto;top:auto;transform:none;width:52px;height:52px;border-width:3px}
+    .mh-transcend-mark .mh-transcend-badge>b{font-size:26px}
+    .mh-transcend-copy{position:absolute;z-index:6;bottom:calc(9% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:1px;padding:0 14px;text-align:center;color:#fde68a;font-size:11px;font-weight:900;opacity:0;animation:mhTranscendCopy 4.2s ease-out forwards}
+    .mh-transcend-copy b{font-size:23px;color:#fff;text-shadow:0 0 14px #fde68a}
+    @keyframes mhTranscendConverge{0%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-58vmin) scale(.6)}25%{opacity:1}100%{opacity:0;transform:rotate(calc(var(--i)*45deg)) translateY(-6vmin) scale(1.5)}}
+    @keyframes mhTranscendHalo{0%{opacity:0;transform:scale(.35)}40%{opacity:.95;transform:scale(1)}100%{opacity:0;transform:scale(1.45)}}
+    @keyframes mhTranscendRays{0%{opacity:0;transform:rotate(0)}45%{opacity:.55}100%{opacity:0;transform:rotate(42deg)}}
+    @keyframes mhTranscendMon{0%{transform:scale(.94);filter:brightness(1)}42%{transform:scale(1.06);filter:brightness(1.9)}52%{filter:brightness(4.5)}62%{filter:brightness(1.2)}100%{transform:scale(1);filter:brightness(1)}}
+    @keyframes mhTranscendFlash{0%,46%{opacity:0}52%{opacity:1}70%,100%{opacity:0}}
+    @keyframes mhTranscendShock{0%,50%{opacity:0;transform:scale(.2)}56%{opacity:.95}100%{opacity:0;transform:scale(26)}}
+    @keyframes mhTranscendTitle{0%,55%{opacity:0;transform:scale(1.7)}66%{opacity:1;transform:scale(1)}84%{opacity:1}100%{opacity:0;transform:scale(.94)}}
+    @keyframes mhTranscendMark{0%,68%{opacity:0;transform:scale(.4)}80%{opacity:1;transform:scale(1)}100%{opacity:1;transform:scale(1)}}
+    @keyframes mhTranscendCopy{0%,72%{opacity:0;transform:translateY(14px)}86%,100%{opacity:1;transform:none}}
+    @media(max-height:620px){.mh-transcend-copy{bottom:calc(5% + env(safe-area-inset-bottom))}.mh-transcend-mon{width:120px;height:120px}}
+    @media(prefers-reduced-motion:reduce){.mh-transcend-animation *{animation-duration:.01ms!important;animation-iteration-count:1!important}.mh-transcend-copy,.mh-transcend-mark,.mh-transcend-title{opacity:1;transform:none}.mh-transcend-flash,.mh-transcend-shock,.mh-transcend-rays,.mh-transcend-converge{display:none}}
     .mh-rebirth-stars-overlay,.mh-home-masumon-stars{z-index:4}.mh-home-masumon-bob>div:first-child,.mh-reincarnation-mon>div:first-child{position:relative;z-index:1}
 
     .mh-reincarnation-animation{position:fixed;inset:0;z-index:51000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 48%,#172554 0,#0f172a 34%,#020617 70%);pointer-events:auto;touch-action:none}.mh-reincarnation-light{position:absolute;inset:0;z-index:0;background:radial-gradient(circle at 50% 48%,#fff 0,#fff8 24%,transparent 62%);opacity:0;pointer-events:none;animation:mhReincarnationLight 4s ease-out forwards}.mh-reincarnation-mon{position:relative;z-index:1;width:140px;height:140px;animation:mhReincarnationMon 4s ease-out forwards}.mh-reincarnate-aura.is-ceremony{inset:-48%;opacity:0;animation:mhReincarnationAura 4s cubic-bezier(.2,.75,.25,1) forwards}.mh-reincarnate-aura.is-ceremony .is-main{animation-duration:1.45s}.mh-reincarnate-aura.is-ceremony .is-back{animation-duration:1.8s}.mh-reincarnate-aura.is-ceremony .is-foot{animation-duration:1.1s}.mh-reincarnate-aura.is-ceremony img{filter:brightness(1.1) drop-shadow(0 0 8px #fff8)}.mh-reincarnation-copy{position:absolute;bottom:calc(8% + env(safe-area-inset-bottom));z-index:4;display:flex;flex-direction:column;align-items:center;color:#e0f2fe;font-size:11px;font-weight:900;animation:mhReincarnationCopy 4s ease-out forwards}.mh-reincarnation-copy b{font-size:25px;color:#fff;text-shadow:0 0 12px #818cf8}.mh-reincarnation-copy span{margin-top:2px}@keyframes mhReincarnationLight{0%,43%{opacity:0}48%{opacity:.36}56%,100%{opacity:0}}@keyframes mhReincarnationMon{0%{opacity:1;transform:translateY(8px) scale(.96)}18%{transform:none}42%{transform:scale(1.02)}55%,100%{opacity:1;transform:none}}@keyframes mhReincarnationAura{0%,16%{opacity:0;transform:scale(.88)}30%{opacity:.86;transform:scale(1)}47%{opacity:1;transform:scale(1.13);filter:brightness(1.45)}64%{opacity:.9;transform:scale(1);filter:brightness(1)}100%{opacity:1;transform:scale(1);filter:brightness(1)}}@keyframes mhReincarnationCopy{0%,55%{opacity:0;transform:translateY(12px)}68%,88%{opacity:1;transform:none}100%{opacity:0}}@media(max-height:620px){.mh-reincarnation-copy{bottom:calc(4% + env(safe-area-inset-bottom))}}@media(prefers-reduced-motion:reduce){.mh-reincarnate-flame,.mh-reincarnate-sparks,.mh-reincarnate-sparks::before,.mh-reincarnate-sparks::after{animation:none}.mh-reincarnation-animation *{animation-duration:.01ms!important}}

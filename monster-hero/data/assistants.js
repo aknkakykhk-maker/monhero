@@ -800,6 +800,16 @@ const ASSISTANT_SCENES = {
       { e:'normal',  t:'コストを確認したら、いってみよ！' },
     ],
   },
+  transcendence: {
+    help: 'masu/transcendence',
+    lines: [
+      { e:'excited', t:'Lv400まで育てた子だけが挑める、限界の先の育成だよ！' },
+      { e:'normal',  t:'超越するとLv401以上が解放されて、上限がLv500になるんだ。' },
+      { e:'happy',   t:'ここからは普通の強化Pじゃなくて、基礎そのものを伸ばす超越Pが手に入るよ♪' },
+      { e:'wink',    t:'虹のプシュケー100個で超越P1にも替えられるから、余ってたら使い道になるね！' },
+      { e:'troubled', t:'一度超越したら取り消せないよ。コストもすごいから、よく考えてね。' },
+    ],
+  },
   reincarnate: {
     help: 'masu/reincarnate',
     lines: [
@@ -1419,6 +1429,13 @@ addAssistantLinePack({
       { e:'excited',  t:'{name}、この瞬間いつ見てもいいよね〜♪', bond:5 },
       { e:'normal',   t:'レベルはそのまま、上限だけ上がるよ。' },
     ],
+    transcendence: [
+      { e:'excited',  t:'{name}、Lv400の子がいるなんて…！ ここが最後の扉だよ。', bond:[1,2] },
+      { e:'happy',    t:'{name}、超越したら基礎から強くできるよ♪', bond:[3,4] },
+      { e:'wink',     t:'{name}、あたしも見届けるからね！', bond:5 },
+      { e:'normal',   t:'Lv401からは超越Pだよ。通常の強化Pとは別枠なんだ。' },
+      { e:'troubled', t:'コストは虹のプシュケー5000とダイヤ100万…気合い入れていこ。' },
+    ],
     reincarnate: [
       { e:'excited',  t:'{name}、ここまで育てたんですね…！', bond:[1,2] },
       { e:'happy',    t:'{name}、振り直しのチャンスだよ♪', bond:[3,4] },
@@ -1775,6 +1792,13 @@ addAssistantLinePack({
       { e:'happy',    t:'お気に入りの子を、さらに先へ連れていけまつね♪' },
       { e:'normal',   t:'継承する技も、ここで選べまつよ。' },
       { e:'excited',  t:'星が増えると、見た目にも育ちが分かりまつ♪' },
+    ],
+    transcendence: [
+      { e:'normal',   t:'超越でつ。Lv400の子だけが進める、限界の先の道でつよ。' },
+      { e:'surprise', t:'Lv上限が500になりまつ。必要な経験値もぐっと重くなりまつ。' },
+      { e:'happy',    t:'Lv401からのレベルアップで、超越ポイントが1ずつ貯まりまつ♪' },
+      { e:'normal',   t:'超越ポイントは基礎値を上げまつ。リセットしても転生しても消えません。' },
+      { e:'wink',     t:'虹のプシュケー100個で1ポイント。余りの使い道にもなりまつね。' },
     ],
     reincarnate: [
       { e:'normal',   t:'転生でつ。別の姿へ生まれ変わらせられまつ。' },

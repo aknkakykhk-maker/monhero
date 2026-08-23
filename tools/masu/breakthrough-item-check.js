@@ -150,7 +150,10 @@ for (const [label, code] of [['ソース', source], ['配信用JS', compiled]]) 
 
   // 消費するのは限界突破が成立したときだけ
   const execFrom = code.indexOf('const executeMasuBreakthrough');
-  const execBody = execFrom > 0 ? code.slice(execFrom, code.indexOf('const executeMasuReincarnation', execFrom) > execFrom ? code.indexOf('const executeMasuReincarnation', execFrom) : execFrom + 2500) : '';
+  // 限界突破の実行だけを見たいので、次に来る実行処理(超越・転生)の手前で切る
+  const execEnds = ['const executeMasuTranscendence', 'const executeMasuReincarnation']
+    .map(name => code.indexOf(name, execFrom)).filter(at => at > execFrom);
+  const execBody = execFrom > 0 ? code.slice(execFrom, execEnds.length ? Math.min(...execEnds) : execFrom + 2500) : '';
   check(`${label}: 限界突破の実行が所持数を渡す`, /psycheOwned:\s*ownedItemCount\(ownedItemsRef\.current, BREAKTHROUGH_ITEM_ID\)/.test(execBody));
   check(`${label}: 失敗したら何も減らさない`,
     execBody.indexOf('if (!result.ok)') < execBody.indexOf('BREAKTHROUGH_ITEM_ID]: result.nextPsyche'));

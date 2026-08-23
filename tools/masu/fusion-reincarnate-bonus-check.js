@@ -9,7 +9,8 @@ const check = (name, ok) => { console.log(`${ok ? 'OK' : 'NG'}: ${name}`); if (!
 const grab = (from, to) => source.slice(source.indexOf(from), source.indexOf(to));
 const ctx = { MAX_MASU_LEVEL_CAP:200, INITIAL_MASU_LEVEL_CAP:30 };
 vm.createContext(ctx);
-vm.runInContext(`${grab('const REINCARNATE_POINTS =', 'const applyUniqueSkillPointPlan =')}globalThis.x={normalizeMasuProgression,transferableReincarnateBonus};`, ctx);
+// 超越(Lv上限を伸ばす育成)の定数・正規化。normalizeMasuProgression がLv上限の判定に使う
+vm.runInContext(`${grab('const TRANSCEND_LEVEL_CAP =', '// --- マスモンの絆レベル')}\n${grab('const REINCARNATE_POINTS =', 'const applyUniqueSkillPointPlan =')}globalThis.x={normalizeMasuProgression,transferableReincarnateBonus};`, ctx);
 const { normalizeMasuProgression: normalize, transferableReincarnateBonus: transfer } = ctx.x;
 
 const cases = [

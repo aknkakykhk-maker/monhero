@@ -126,8 +126,18 @@ check('種類別タブ用の索引がある(monster_id)',
 
 // 絆Lvは計算上の上限があるため、CHECK制約に引っかかって
 // バッチ全体が400で落ちることが無いことを確かめる
-const iterMatch = src.match(/const MAX_BOND_LEVEL_ITERATIONS = (\d+);/);
-const maxBondLevel = iterMatch ? Number(iterMatch[1]) + 1 : null;
+// 数え上げの上限は数値そのままとは限らない(超越のLv上限から引いた式で書いてある)ので、
+// 式に出てくる定数を実装から引いて解いてから比べる
+const numericConst = (name) => {
+  const found = src.match(new RegExp(`const ${name} = (\\d+);`));
+  return found ? Number(found[1]) : NaN;
+};
+const iterMatch = src.match(/const MAX_BOND_LEVEL_ITERATIONS = ([^;]+);/);
+const iterExpr = iterMatch
+  ? iterMatch[1].replace(/[A-Z][A-Z0-9_]*/g, (name) => String(numericConst(name)))
+  : '';
+const iterations = /^[\d\s+\-*/().]+$/.test(iterExpr) ? Number(new Function(`return ${iterExpr};`)()) : NaN;
+const maxBondLevel = Number.isFinite(iterations) ? iterations + 1 : null;
 check('ありうる絆LvがCHECK制約の範囲に収まる',
   !!bondRange && !!maxBondLevel && maxBondLevel <= bondRange.max,
   `絆Lvの上限=${maxBondLevel} / 制約=${bondRange ? `${bondRange.min}〜${bondRange.max}` : '不明'}`);
