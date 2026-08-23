@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: d2a12fcab8c8f308
+// source-sha256: f29c7d1f48b697aa
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-24 00:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-24 00:15"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6673,8 +6673,10 @@ const prefersReducedMotion = () => {
     return false;
   }
 };
-// 超越済みであることを示す共通マーク。虹★(画像の下)・転生バッジ(画像の下)と重ならないよう、
-// 画像の空いている上側へ置く。画像は増やさず、CSSのグラデーションと「超」の文字だけで作る。
+// 超越済みであることを示す共通マーク。モンスターの絵(まるく切り抜いてある)に重ならないよう、
+// 丸の外側になる右上の角へ置く。角は丸の外なので、染色した絵をマークが隠さない。
+// 虹★・転生バッジは絵の下なので、そちらとも重ならない。
+// 画像は増やさず、CSSのグラデーションと「超」の文字だけで作る。
 const TranscendenceBadge = ({
   transcended = false,
   className = '',
@@ -37578,9 +37580,9 @@ const createAnimationStyle = () => {
     /* 超越マーク。虹★(画像の下)・転生バッジ(画像の下)と重ならないよう画像の上側へ置く。
        画像は使わず、虹と金のグラデーションと「超」の1文字だけで最終育成らしさを出す。
        親の overflow:hidden で切れないよう、置く側は overflow-visible にしておくこと。 */
-    .mh-transcend-badge{position:absolute;left:50%;top:-9px;transform:translateX(-50%);z-index:7;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;border:1.5px solid #fff7d6;background:conic-gradient(from 210deg,#fde68a,#f472b6,#60a5fa,#34d399,#fde68a);box-shadow:0 0 7px #fde68acc,0 0 14px #f472b666,0 1px 4px #020617;pointer-events:none}
+    .mh-transcend-badge{position:absolute;right:-7px;top:-7px;z-index:7;display:flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;border:1.5px solid #fff7d6;background:conic-gradient(from 210deg,#fde68a,#f472b6,#60a5fa,#34d399,#fde68a);box-shadow:0 0 7px #fde68acc,0 0 14px #f472b666,0 1px 4px #020617;pointer-events:none}
     .mh-transcend-badge>b{display:block;color:#3b1d05;font-size:10px;font-weight:1000;line-height:1;text-shadow:0 1px 0 #fff9}
-    .mh-transcend-badge.is-small{width:15px;height:15px;top:-7px;border-width:1px}.mh-transcend-badge.is-small>b{font-size:8px}
+    .mh-transcend-badge.is-small{width:15px;height:15px;right:-8px;top:-8px;border-width:1px}.mh-transcend-badge.is-small>b{font-size:8px}
     .mh-transcend-link{border-color:#fcd34daa;background:linear-gradient(135deg,#4c1d95aa,#78350faa)}
     /* 超越の演出。3〜5秒で一度だけ流す。終わったら要素ごと消えるので常時アニメは残らない */
     .mh-transcend-animation{position:fixed;inset:0;z-index:51500;display:flex;align-items:center;justify-content:center;overflow:hidden;background:radial-gradient(circle at 50% 46%,#3b0764 0,#0b0518 42%,#020617 76%);pointer-events:auto;touch-action:none;padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px)}
@@ -37594,7 +37596,7 @@ const createAnimationStyle = () => {
     .mh-transcend-shock{position:absolute;z-index:4;width:40px;height:40px;border-radius:50%;border:4px solid #fffbe8;opacity:0;pointer-events:none;animation:mhTranscendShock 3s ease-out forwards}
     .mh-transcend-title{position:absolute;z-index:6;font-size:clamp(38px,15vw,66px);font-weight:1000;letter-spacing:.12em;color:#fffbe8;opacity:0;text-shadow:0 0 18px #fde68a,0 0 42px #f472b6;animation:mhTranscendTitle 3.4s ease-out forwards}
     .mh-transcend-mark{position:absolute;z-index:6;top:calc(env(safe-area-inset-top) + 16%);opacity:0;transform:scale(.4);animation:mhTranscendMark 3.6s ease-out forwards}
-    .mh-transcend-mark .mh-transcend-badge{position:relative;left:auto;top:auto;transform:none;width:52px;height:52px;border-width:3px}
+    .mh-transcend-mark .mh-transcend-badge{position:relative;right:auto;left:auto;top:auto;transform:none;width:52px;height:52px;border-width:3px}
     .mh-transcend-mark .mh-transcend-badge>b{font-size:26px}
     .mh-transcend-copy{position:absolute;z-index:6;bottom:calc(9% + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:1px;padding:0 14px;text-align:center;color:#fde68a;font-size:11px;font-weight:900;opacity:0;animation:mhTranscendCopy 4.2s ease-out forwards}
     .mh-transcend-copy b{font-size:23px;color:#fff;text-shadow:0 0 14px #fde68a}

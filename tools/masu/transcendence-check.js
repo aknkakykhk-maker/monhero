@@ -305,8 +305,11 @@ check('保存が済んでから演出を出す（保存失敗時はロックを�
 })());
 check('超越マークは共通コンポーネントを使い回す',
   (source.match(/<TranscendenceBadge/g) || []).length >= 4 && source.includes('const TranscendenceBadge ='));
-check('超越マークは画像の上側へ置き、虹★・転生バッジと重ならない',
-  source.includes('.mh-transcend-badge{position:absolute;left:50%;top:-9px')
+// マークはモンスターの絵(まるく切り抜き)に重ねない。丸の外になる右上の角へ置く。
+// 虹★・転生バッジは絵の下なので、そちらとも当たらない
+check('超越マークは絵の外(右上の角)へ置き、虹★・転生バッジと重ならない',
+  source.includes('.mh-transcend-badge{position:absolute;right:-7px;top:-7px')
+  && source.includes('.mh-transcend-badge.is-small{width:15px;height:15px;right:-8px;top:-8px')
   && source.includes('.mh-rebirth-stars-overlay{position:absolute;left:0;right:0;bottom:1px}')
   && source.includes('.mh-reincarnate-badge{position:absolute;left:50%;bottom:-11px'));
 check('超越演出はSafe Areaを考慮し、モーション軽減にも対応する',
