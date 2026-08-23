@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 8d96e4792a99a1f7
+// source-sha256: 8ff008298da7143d
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 10:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 10:21"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -326,11 +326,35 @@ const battleModeAssistantScene = mode => mode === EXTREME_MODE.id ? 'extremeChal
 // activeIds で外れるが、そこに頼ると取りこぼしたときに自分自身が候補として出てしまうため、
 // 種idでも明示的に外している。
 // プロモードは pool に「始める前に選んだ5体」が入るので、そこからランダムに offerSize 体だけ出る。
+const joinRosterEntry = mon => mon?.masuId != null ? `masu:${mon.masuId}` : mon?.id || null;
 const pickJoinCandidates = (pool, activeIds, heroId, offerSize) => {
   const used = new Set([...(Array.isArray(activeIds) ? activeIds : []), heroId].filter(Boolean));
-  const list = (Array.isArray(pool) ? pool : []).filter(m => m && m.id && !used.has(m.id));
+  const list = (Array.isArray(pool) ? pool : []).filter(m => m && m.id && m.id !== heroId && !used.has(joinRosterEntry(m)));
   const shuffled = [...list].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, Math.max(0, Number(offerSize) || 0));
+};
+
+// AUTOの供モンと配置先だけを決める。候補の合法判定は手動と同じpickJoinCandidatesを通し、
+// 実際の加入ボーナスやモード別処理は既存のsetupMonへ任せる。
+const chooseAutoAllyJoin = ({
+  pool,
+  activeMons,
+  heroId,
+  setting,
+  slots
+}, rng = Math.random) => {
+  const activeEntries = (Array.isArray(activeMons) ? activeMons : []).map(joinRosterEntry).filter(Boolean);
+  const legal = pickJoinCandidates(pool, activeEntries, heroId, Array.isArray(pool) ? pool.length : 0);
+  const desired = setting?.rosterEntry;
+  const mon = (desired ? legal.find(candidate => joinRosterEntry(candidate) === desired) : null) || legal[Math.floor(rng() * legal.length)];
+  const emptySlots = (Array.isArray(slots) ? slots : []).map((value, index) => value == null ? index : null).filter(index => index != null);
+  if (!mon || emptySlots.length === 0) return null;
+  const preferred = Number.isInteger(setting?.slot) && emptySlots.includes(setting.slot) ? setting.slot : null;
+  const slotIdx = preferred ?? emptySlots[Math.floor(rng() * emptySlots.length)];
+  return {
+    mon,
+    slotIdx
+  };
 };
 // そのレベルから次レベルに必要なXP(基準値)。指数を上げるほど高レベルが急に重くなる。
 // 10WAVE完全クリアを1周=100XPとして、Lv30到達までの周回数は次のように緩和してきている。
@@ -19517,7 +19541,7 @@ function MonsterHeroGame() {
     const nextStats = quickGrowth?.nextStats;
     setQuickGrowth(null);
     const joinWaves = [2, 4, 6];
-    const activeIds = slots.filter(s => s).map(s => s.id);
+    const activeIds = slots.filter(Boolean).map(joinRosterEntry);
     const avail = pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
     if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
       setMonSelection(avail);
@@ -20506,7 +20530,7 @@ function MonsterHeroGame() {
     setTimeout(() => {
       setEffect(null);
       const joinWaves = [2, 4, 6];
-      const activeIds = slots.filter(s => s).map(s => s.id);
+      const activeIds = slots.filter(Boolean).map(joinRosterEntry);
       const avail = pickJoinCandidates(joinCandidatePool(), activeIds, mainHero?.id, joinOfferSize());
       if (joinWaves.includes(wave) && slots.filter(s => s).length < 4 && avail.length > 0) {
         setMonSelection(avail);
@@ -20535,9 +20559,36 @@ function MonsterHeroGame() {
   // AUTO中にREWARD_PICKへ入ったときだけ、決めた配列をstateを経由せず直接確定する。
   // 実行ロックは画面を離れるまで保持し、再描画やStrictModeでも同じ報酬を二重処理しない。
   useEffect(() => {
-    if (gameState !== 'REWARD_PICK') {
+    if (gameState !== 'REWARD_PICK' && gameState !== 'PICK_ALLY') {
       autoPostWaveRunningRef.current = false;
       autoPostWaveScheduledRef.current = false;
+      return;
+    }
+    if (gameState === 'PICK_ALLY') {
+      // REWARD_PICKの処理中ロックをこの画面への遷移時に引き継がず、同じロックで加入を1回だけ予約する。
+      autoPostWaveRunningRef.current = false;
+      autoPostWaveScheduledRef.current = false;
+      if (!autoBattleRef.current) return;
+      autoPostWaveScheduledRef.current = true;
+      Promise.resolve().then(() => {
+        autoPostWaveScheduledRef.current = false;
+        if (!autoBattleRef.current || autoPostWaveRunningRef.current) return;
+        autoPostWaveRunningRef.current = true;
+        const settingIndex = [2, 4, 6].indexOf(wave);
+        const choice = settingIndex >= 0 ? chooseAutoAllyJoin({
+          pool: joinCandidatePool(),
+          activeMons: slots.filter(Boolean),
+          heroId: mainHero?.id,
+          setting: autoSettings.allies[settingIndex],
+          slots
+        }) : null;
+        if (!choice) {
+          stopAutoBattle();
+          addPopup('AUTO停止：供モンを選べません', 'hero', 'text-amber-300 font-black text-sm');
+          return;
+        }
+        setupMon(choice.mon, choice.slotIdx);
+      });
       return;
     }
     if (!autoBattleRef.current || autoPostWaveRunningRef.current || autoPostWaveScheduledRef.current) return;
