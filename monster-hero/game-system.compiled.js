@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: e82df39f2aa6c7cd
+// source-sha256: 099f89508eb51884
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 09:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 09:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -12017,6 +12017,12 @@ function MonsterHeroGame() {
   const initialBattleDistanceRef = useRef(2);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
+  // AUTOのON/OFFはラン中だけの一時状態。state反映前の操作やeffect再実行にも同じ値を見せるためrefも同期する。
+  const [autoBattle, setAutoBattle] = useState(false);
+  const autoBattleRef = useRef(false);
+  const autoTurnRunningRef = useRef(false);
+  const autoTurnScheduledRef = useRef(false);
+  const [autoTurnCycle, setAutoTurnCycle] = useState(0);
   const [monSelection, setMonSelection] = useState([]);
   const [heroPickTab, setHeroPickTab] = useState('roster'); // 勇者モン選択のタブ: 'roster'(編成) / 'base'(ベースモン)
   // プロモードで、始める前に選んだ供モンの候補(ベースモンだけ)。
@@ -18036,7 +18042,7 @@ function MonsterHeroGame() {
   // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
   // 合計DMG・合計軽減の表示が隠れてしまうため、スワイプではパネルを出さない。
   const selectCardAt = (i, showDetail = true) => {
-    if (isBusy) return;
+    if (isBusy || autoBattleRef.current) return;
     const c = hand[i];
     if (!c) return;
     const focus = card => setFocusedCard(showDetail ? card : null);
@@ -18077,7 +18083,7 @@ function MonsterHeroGame() {
   // スワイプ操作ではカード効果のパネルを出さない(出したままだと合計DMG・合計軽減が隠れるため)。
   // 効果を見たいときはカードをタップする。
   const dragAssignToSlot = (cardIndex, slotIdx) => {
-    if (isBusy) return;
+    if (isBusy || autoBattleRef.current) return;
     const c = hand[cardIndex];
     if (!c) return;
     const targetMon = slots[slotIdx];
@@ -19233,7 +19239,8 @@ function MonsterHeroGame() {
       await battleWait(100);
     }
     const drawCount = usedCards.filter(c => c.type === 'draw').length;
-    let nextHand = hand.filter((_, i) => !selectedCards.includes(i));
+    const usedHandIndexes = new Set(usedCardEntries.map(entry => entry.handIndex));
+    let nextHand = hand.filter((_, i) => !usedHandIndexes.has(i));
     let nextDeck = [...deck],
       nextGraveyard = [...graveyard, ...usedCards];
     const replenish = count => {
@@ -19246,7 +19253,7 @@ function MonsterHeroGame() {
         if (nextDeck.length > 0) nextHand.push(nextDeck.pop());
       }
     };
-    replenish(selectedCards.length + drawCount);
+    replenish(usedCardEntries.length + drawCount);
     while (nextHand.length < 5 && (nextDeck.length > 0 || nextGraveyard.length > 0)) replenish(1);
     if (getTurnBuff('zeroGuts', false)) setImmediateTurnBuff('zeroGuts', false);
     writePermaBuffs(p => p.kikiCardBonusTurns > 0 ? {
@@ -19317,8 +19324,51 @@ function MonsterHeroGame() {
       cardNeedsMonster,
       slotMaxUses
     });
-    if (entries.length > 0) processTurn(entries);
+    return entries.length > 0 ? processTurn(entries) : null;
   };
+  const setAutoBattleEnabled = enabled => {
+    const next = !!enabled;
+    autoBattleRef.current = next;
+    setAutoBattle(next);
+    if (next) {
+      // 手動操作の途中状態はAUTOの明示entriesと混ぜず、開始時にまとめて破棄する。
+      setSelectedCards([]);
+      setCardAssignments({});
+      setPendingCard(null);
+      setFocusedCard(null);
+      setSkillPicker(null);
+      setDragState(null);
+      cardDragActiveRef.current = false;
+      setAutoTurnCycle(n => n + 1);
+    }
+  };
+
+  // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
+  // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
+  useEffect(() => {
+    const blocked = gameState !== 'BATTLE' || !enemy || enemy.hp <= 0 || isBusy || autoTurnRunningRef.current || autoTurnScheduledRef.current || !!battleScenarioRef.current || battleTutorialStep != null || !!skillPicker || !!showDeckInfo || !!showEnemyInfo || !!showHeroInfo || !!showQuitConfirm || !!skillEffectDetail || !!ultimateDistanceBreakReveal || !!extremeRuleOpen || !!effect;
+    if (!autoBattleRef.current || blocked) return;
+    autoTurnScheduledRef.current = true;
+    Promise.resolve().then(async () => {
+      autoTurnScheduledRef.current = false;
+      if (!autoBattleRef.current || autoTurnRunningRef.current) return;
+      autoTurnRunningRef.current = true;
+      try {
+        const turnPromise = runAutoTurnOnce();
+        if (!turnPromise) {
+          autoBattleRef.current = false;
+          setAutoBattle(false);
+          addPopup('AUTO停止：使えるカードがありません', 'hero', 'text-amber-300 text-sm font-black');
+          return;
+        }
+        await turnPromise;
+      } finally {
+        autoTurnRunningRef.current = false;
+        // processTurn完了後のstateが操作可能になった描画を、次の1回の判定へつなぐ。
+        if (autoBattleRef.current) setAutoTurnCycle(n => n + 1);
+      }
+    });
+  }, [autoBattle, autoTurnCycle, gameState, enemy?.hp, isBusy, skillPicker, showDeckInfo, showEnemyInfo, showHeroInfo, showQuitConfirm, skillEffectDetail, ultimateDistanceBreakReveal, extremeRuleOpen, effect, battleTutorialStep]);
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
@@ -29701,7 +29751,7 @@ function MonsterHeroGame() {
       className: "text-[7px] font-black text-white"
     }, "\u30B9\u30C6\u30FC\u30BF\u30B9")), /*#__PURE__*/React.createElement("button", {
       onClick: useEmergency,
-      disabled: isBusy || !battleTutorialAllowsEmergency,
+      disabled: isBusy || autoBattle || !battleTutorialAllowsEmergency,
       className: `absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`
     }, /*#__PURE__*/React.createElement(Activity, {
       className: "text-blue-400 mb-0.5",
@@ -30592,7 +30642,7 @@ function MonsterHeroGame() {
         "data-distance-break-level": distanceBroken ? distanceBreakLevel : undefined,
         "aria-label": `${RANGE_LABELS[i]}距離${distanceBroken ? `（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）` : ''}`,
         onClick: () => {
-          if (isBusy) return;
+          if (isBusy || autoBattleRef.current) return;
           if (pendingCard != null && canAssign) {
             setCardAssignments(p => ({
               ...p,
@@ -30607,7 +30657,7 @@ function MonsterHeroGame() {
             }, 500);
           }
         },
-        disabled: isBusy,
+        disabled: isBusy || autoBattle,
         className: `relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken ? 'border-red-400' : ' ' + RANGE_STYLES[i].border} ${canAssign || dragState?.active && dragOverSlot === i ? 'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse' : 'opacity-100'} ${assignedCount > 0 ? 'ring-2 ring-indigo-500' : ''} ${dragState?.active && dragOverSlot === i ? 'ring-4 ring-green-400 scale-110' : ''} ${slotSettle === i ? 'ring-4 ring-white' : ''}`,
         style: isAnimating ? {
           zIndex: 9999,
@@ -30652,10 +30702,10 @@ function MonsterHeroGame() {
           onPointerDown: e => e.stopPropagation(),
           onClick: e => {
             e.stopPropagation();
-            if (isBusy) return;
+            if (isBusy || autoBattleRef.current) return;
             cycleActiveUniqueForSlot(i);
           },
-          className: "shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95"
+          className: `shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle ? ' opacity-40' : ''}`
         }, /*#__PURE__*/React.createElement(RefreshCcw, {
           size: 7,
           className: "text-white"
@@ -30785,7 +30835,7 @@ function MonsterHeroGame() {
     }), "+", heroCardBonus), kikiCardBonus > 0 && /*#__PURE__*/React.createElement("span", {
       className: "px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap"
     }, "\u5FDC\u63F4+1")), /*#__PURE__*/React.createElement("div", {
-      className: "flex items-center gap-2 shrink-0"
+      className: "flex items-center gap-1 shrink-0 min-w-0"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setShowDeckInfo(true),
       className: `flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`
@@ -30793,16 +30843,24 @@ function MonsterHeroGame() {
       size: 10
     }), /*#__PURE__*/React.createElement("span", {
       className: "text-[7px]"
-    }, "VIEW")), (() => {
+    }, "VIEW")), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      disabled: !!battleScenarioRef.current || battleTutorialStep != null,
+      onClick: () => setAutoBattleEnabled(!autoBattleRef.current),
+      "aria-pressed": autoBattle,
+      className: `h-8 min-w-[48px] px-1.5 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoBattle ? 'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]' : 'border-slate-500 bg-slate-800 text-slate-300'}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block text-[7px]"
+    }, autoBattle ? 'ON' : 'OFF'), "AUTO", autoBattle ? ' ON' : ''), (() => {
       const allAttackAssigned = selectedCards.filter(idx => cardNeedsMonster(hand[idx])).every(idx => cardAssignments[idx] != null);
-      const canAct = !isBusy && selectedCards.length > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker';
+      const canAct = !autoBattle && !isBusy && selectedCards.length > 0 && pendingCard === null && allAttackAssigned && battleTutorialNeed !== 'skillPicker';
       return /*#__PURE__*/React.createElement("button", {
         onClick: () => processTurn(),
         disabled: !canAct,
-        className: `h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-slate-700 text-slate-500 opacity-50'}`
+        className: `h-9 min-w-0 px-3 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] active:scale-90 flex items-center justify-center gap-1 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'bg-slate-700 text-slate-500 opacity-50'}`
       }, /*#__PURE__*/React.createElement(Play, {
         fill: "currentColor",
-        size: 13
+        size: 12
       }), " Action");
     })())), /*#__PURE__*/React.createElement("div", {
       className: `flex-1 flex gap-1.5 overflow-x-auto items-stretch scrollbar-hide px-1 pb-1 justify-center${battleTutorialCardTarget ? '' : battleTutorialSpotClass('cards')}`
@@ -30824,7 +30882,7 @@ function MonsterHeroGame() {
         className: "flex-1 min-w-0 max-w-[20%] flex"
       }, /*#__PURE__*/React.createElement("button", {
         onPointerDown: e => {
-          if (isBusy || !tutorialAllowed) return;
+          if (isBusy || autoBattleRef.current || !tutorialAllowed) return;
           const pt = e.touches ? e.touches[0] : e;
           cardDragActiveRef.current = false;
           setDragState({
@@ -30874,7 +30932,7 @@ function MonsterHeroGame() {
       }, ['atk', 'range_atk', 'unique'].includes(c.type) ? /*#__PURE__*/React.createElement("div", {
         onClick: ev => {
           ev.stopPropagation();
-          if (isBusy || Date.now() <= suppressCardClickRef.current) return;
+          if (isBusy || autoBattleRef.current || Date.now() <= suppressCardClickRef.current) return;
           setSkillPicker({
             handIndex: i
           });

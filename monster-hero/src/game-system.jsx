@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 09:34"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 09:45"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6346,6 +6346,12 @@ function MonsterHeroGame() {
   const initialBattleDistanceRef = useRef(2);
   const [selectedCards, setSelectedCards] = useState([]);
   const [isBusy, setIsBusy] = useState(false);
+  // AUTOのON/OFFはラン中だけの一時状態。state反映前の操作やeffect再実行にも同じ値を見せるためrefも同期する。
+  const [autoBattle, setAutoBattle] = useState(false);
+  const autoBattleRef = useRef(false);
+  const autoTurnRunningRef = useRef(false);
+  const autoTurnScheduledRef = useRef(false);
+  const [autoTurnCycle, setAutoTurnCycle] = useState(0);
   const [monSelection, setMonSelection] = useState([]);
   const [heroPickTab, setHeroPickTab] = useState('roster'); // 勇者モン選択のタブ: 'roster'(編成) / 'base'(ベースモン)
   // プロモードで、始める前に選んだ供モンの候補(ベースモンだけ)。
@@ -10413,7 +10419,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // showDetail=false はスワイプ(ドラッグ)で置いたとき。カード効果のパネルが出たままだと
   // 合計DMG・合計軽減の表示が隠れてしまうため、スワイプではパネルを出さない。
   const selectCardAt = (i, showDetail = true) => {
-    if(isBusy) return;
+    if(isBusy||autoBattleRef.current) return;
     const c=hand[i]; if(!c) return;
     const focus=(card)=>setFocusedCard(showDetail?card:null);
     if(pendingCard!==null && pendingCard!==i){ focus(c); return; }
@@ -10440,7 +10446,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
   // スワイプ操作ではカード効果のパネルを出さない(出したままだと合計DMG・合計軽減が隠れるため)。
   // 効果を見たいときはカードをタップする。
   const dragAssignToSlot = (cardIndex, slotIdx) => {
-    if(isBusy) return;
+    if(isBusy||autoBattleRef.current) return;
     const c=hand[cardIndex]; if(!c) return;
     const targetMon=slots[slotIdx];
     // 攻撃カード: モンスターのいるスロットに割り当て
@@ -11152,10 +11158,11 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
     } else { await battleWait(100); }
 
     const drawCount=usedCards.filter(c=>c.type==='draw').length;
-    let nextHand=hand.filter((_,i)=>!selectedCards.includes(i));
+    const usedHandIndexes=new Set(usedCardEntries.map(entry=>entry.handIndex));
+    let nextHand=hand.filter((_,i)=>!usedHandIndexes.has(i));
     let nextDeck=[...deck], nextGraveyard=[...graveyard,...usedCards];
     const replenish=(count)=>{for(let i=0;i<count;i++){if(nextDeck.length===0){if(nextGraveyard.length===0)break; nextDeck=[...nextGraveyard].sort(()=>Math.random()-0.5); nextGraveyard=[];} if(nextDeck.length>0)nextHand.push(nextDeck.pop());}};
-    replenish(selectedCards.length+drawCount);
+    replenish(usedCardEntries.length+drawCount);
     while(nextHand.length<5&&(nextDeck.length>0||nextGraveyard.length>0))replenish(1);
     if(getTurnBuff('zeroGuts',false)) setImmediateTurnBuff('zeroGuts',false);
     writePermaBuffs(p=>p.kikiCardBonusTurns>0?({...p,kikiCardBonusTurns:Math.max(0,p.kikiCardBonusTurns-1)}):p);
@@ -11193,8 +11200,49 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       hand, slots, guts, cardLimit, strategy:autoSettings.strategy,
       getCardGuts, cardNeedsMonster, slotMaxUses,
     });
-    if (entries.length>0) processTurn(entries);
+    return entries.length>0 ? processTurn(entries) : null;
   };
+
+  const setAutoBattleEnabled = (enabled) => {
+    const next=!!enabled;
+    autoBattleRef.current=next;
+    setAutoBattle(next);
+    if(next){
+      // 手動操作の途中状態はAUTOの明示entriesと混ぜず、開始時にまとめて破棄する。
+      setSelectedCards([]);setCardAssignments({});setPendingCard(null);setFocusedCard(null);setSkillPicker(null);
+      setDragState(null);cardDragActiveRef.current=false;
+      setAutoTurnCycle(n=>n+1);
+    }
+  };
+
+  // 操作可能なBATTLEへ入った描画で1回だけAUTOを予約する。同期refを先に立てるため、
+  // StrictModeや別stateの再描画が重なっても同じターンのprocessTurnを二重に開始しない。
+  useEffect(()=>{
+    const blocked=gameState!=='BATTLE'||!enemy||enemy.hp<=0||isBusy||
+      autoTurnRunningRef.current||autoTurnScheduledRef.current||!!battleScenarioRef.current||battleTutorialStep!=null||
+      !!skillPicker||!!showDeckInfo||!!showEnemyInfo||!!showHeroInfo||!!showQuitConfirm||!!skillEffectDetail||
+      !!ultimateDistanceBreakReveal||!!extremeRuleOpen||!!effect;
+    if(!autoBattleRef.current||blocked)return;
+    autoTurnScheduledRef.current=true;
+    Promise.resolve().then(async()=>{
+      autoTurnScheduledRef.current=false;
+      if(!autoBattleRef.current||autoTurnRunningRef.current)return;
+      autoTurnRunningRef.current=true;
+      try{
+        const turnPromise=runAutoTurnOnce();
+        if(!turnPromise){
+          autoBattleRef.current=false;setAutoBattle(false);
+          addPopup('AUTO停止：使えるカードがありません','hero','text-amber-300 text-sm font-black');
+          return;
+        }
+        await turnPromise;
+      } finally {
+        autoTurnRunningRef.current=false;
+        // processTurn完了後のstateが操作可能になった描画を、次の1回の判定へつなぐ。
+        if(autoBattleRef.current)setAutoTurnCycle(n=>n+1);
+      }
+    });
+  },[autoBattle,autoTurnCycle,gameState,enemy?.hp,isBusy,skillPicker,showDeckInfo,showEnemyInfo,showHeroInfo,showQuitConfirm,skillEffectDetail,ultimateDistanceBreakReveal,extremeRuleOpen,effect,battleTutorialStep]);
 
   // WAVE 10のムー撃破後は同期ロックしたまま報酬計算とランキング保存を各1回だけ行う。
   // リザルトは先に表示するが、保存確定までは全面入力ロックで遷移・連打を通さない。
@@ -15049,7 +15097,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
               {/* 移動の吹き出し(画面の上から22%)と重なるため、左の「緊急」と同じ高さまで下げている */}
               <button onClick={()=>setShowEnemyInfo(true)} className="absolute right-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-red-500 bg-red-950/30 active:scale-90 z-20 shadow-lg"><Search className="text-red-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">解析</span></button>
               <button onClick={()=>setShowHeroInfo(true)} className={`absolute left-2 top-10 flex flex-col items-center justify-center p-2 rounded-2xl border border-indigo-500 bg-indigo-950/30 active:scale-90 z-20 shadow-lg${battleTutorialSpotClass('heroStatus')}`}><Crown className="text-indigo-400 mb-0.5" size={14}/><span className="text-[7px] font-black text-white">ステータス</span></button>
-              <button onClick={useEmergency} disabled={isBusy||!battleTutorialAllowsEmergency} className={`absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[7px] font-black text-white">緊急</span></button>
+              <button onClick={useEmergency} disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency} className={`absolute left-2 top-24 flex flex-col items-center justify-center p-2 rounded-2xl border border-blue-500 bg-blue-900/30 active:scale-90 disabled:opacity-20 z-20 shadow-lg${battleTutorialSpotClass('emergency')}`}><Activity className="text-blue-400 mb-0.5" size={16}/><span className="text-[7px] font-black text-white">緊急</span></button>
               <div className="mt-1 relative flex flex-col items-center">
                 {enemySkillName&&(
                   <div className="fixed left-1/2 -translate-x-1/2 pointer-events-none whitespace-nowrap" style={{top:'14%',zIndex:65000,animation:'skillNamePop 350ms ease-out forwards'}}>
@@ -15463,7 +15511,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   const distanceBreakPercent=100*(0.5**distanceBreakLevel);
                   const distanceBreakRoman=['','I','II','III','IV'][distanceBreakLevel]||String(distanceBreakLevel);
                   return(<button key={i} data-slot-index={i} data-distance-broken={distanceBroken?'true':undefined} data-distance-break-level={distanceBroken?distanceBreakLevel:undefined} aria-label={`${RANGE_LABELS[i]}距離${distanceBroken?`（BREAK Lv${distanceBreakLevel}・与ダメージ${distanceBreakPercent}%）`:''}`} onClick={()=>{
-                    if(isBusy)return;
+                    if(isBusy||autoBattleRef.current)return;
                     if(pendingCard!=null && canAssign){
                       setCardAssignments(p=>({...p,[pendingCard]:i}));
                       setPendingCard(null);
@@ -15472,7 +15520,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                       setSlotSettle(i);
                       setTimeout(()=>{ setSlotSettle(null); }, 500);
                     }
-                  }} disabled={isBusy} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards')):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards')))))}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined))}>
+                  }} disabled={isBusy||autoBattle} className={`relative rounded-xl border-2 flex flex-col items-stretch overflow-visible transition-all ${RANGE_STYLES[i].bg} ${distanceBroken?'border-red-400':' '+RANGE_STYLES[i].border} ${(canAssign||(dragState?.active&&dragOverSlot===i))?'ring-2 ring-yellow-400 scale-105 z-10 shadow-lg animate-pulse':'opacity-100'} ${assignedCount>0?'ring-2 ring-indigo-500':''} ${dragState?.active&&dragOverSlot===i?'ring-4 ring-green-400 scale-110':''} ${slotSettle===i?'ring-4 ring-white':''}`} style={isAnimating?{zIndex:9999, animation:(attackAnim.zanCombo?'zanComboDash 320ms ease-out forwards':(attackAnim.charge?'specialCharge 650ms ease-out forwards':(attackAnim.charge===false?(attackAnim.motion==='floatStab'?'floatStabLunge 700ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstLunge 520ms ease-out forwards':'specialLunge 500ms ease-in forwards')):(attackAnim.motion==='floatStab'?'floatStabAttack 650ms ease-in forwards':(attackAnim.motion==='waterBurst'?'waterBurstAttack 520ms ease-out forwards':'attackFly 450ms ease-in forwards')))))}:(distanceBroken?{backgroundColor:distanceBreakLevel>=2?'rgb(12,2,5)':'rgb(24,5,25)',boxShadow:`inset 0 0 0 ${Math.min(4,distanceBreakLevel+1)}px rgba(248,113,113,.95), inset 0 0 ${28+distanceBreakLevel*8}px rgba(76,5,25,.98), 0 0 ${9+distanceBreakLevel*4}px rgba(220,38,38,.65)`}:(slotSettle===i?{animation:'slotSettle 400ms ease-out'}:undefined))}>
                     {distanceBroken&&<>
                       <div className="absolute inset-0 rounded-lg pointer-events-none z-[15]" style={{background:`repeating-linear-gradient(${135+distanceBreakLevel*12}deg,rgba(0,0,0,.12) 0 ${Math.max(3,8-distanceBreakLevel)}px,rgba(127,29,29,${Math.min(.8,.28+distanceBreakLevel*.14)}) ${Math.max(4,9-distanceBreakLevel)}px ${Math.max(5,10-distanceBreakLevel)}px),radial-gradient(circle at 50% 40%,rgba(${distanceBreakLevel>=2?'69,10,10':'88,28,135'},.55),rgba(5,0,2,.9))`}}></div>
                       <div className="absolute inset-[2px] rounded-lg border border-red-300/80 pointer-events-none z-[45]" style={{boxShadow:'inset 0 0 12px rgba(239,68,68,.7)'}}></div>
@@ -15483,7 +15531,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                         「勇者モン選択時だけ効く特性」が効いているのか判断できないため */}
                     <div className={`h-[25%] flex items-center justify-center px-1 border-b z-20 ${isHeroSlotMon(s)?'bg-amber-500/25 border-amber-300/50':'bg-black/60 border-white/10'}`}>{isHeroSlotMon(s)&&<Crown size={8} className="shrink-0 mr-0.5 text-amber-300"/>}<span className={`text-[7px] font-black truncate uppercase leading-none ${isHeroSlotMon(s)?'text-amber-100':'text-white'}`}>{s?.name||'---'}</span>{assignedCount>0&&<span className="ml-1 text-[7px] font-black text-indigo-300">×{assignedCount}</span>}</div>
                     {(()=>{const uOptions=getAvailableUniquesForSlot(s,ownedUniques,i); if(uOptions.length<2) return null; const curKey=slotUniqueChoice[i]||'own'; const curIdx=Math.max(0,uOptions.findIndex(o=>o.key===curKey));
-                      return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy)return; cycleActiveUniqueForSlot(i);}} className="shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95">
+                      return(<div onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation(); if(isBusy||autoBattleRef.current)return; cycleActiveUniqueForSlot(i);}} className={`shrink-0 z-20 flex items-center justify-center gap-0.5 bg-purple-700/90 border-b border-purple-300/50 py-0.5 active:scale-95${autoBattle?' opacity-40':''}`}>
                         <RefreshCcw size={7} className="text-white"/><span className="text-[6px] font-black text-white leading-none">固有技 {curIdx+1}/{uOptions.length}</span>
                       </div>);
                     })()}
@@ -15536,9 +15584,10 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                 {/* 勇者モンの特性で枚数が増えているときは、その分を王冠付きで出す。
                     「勇者モンに選んだときだけ効く特性」が今効いていることを確かめられるようにする */}
                 <span className={`shrink-0 flex items-center gap-1${battleTutorialSpotClass('cardCount')}`}>Action Cards <span className="bg-white/10 text-white px-2 py-0.5 rounded-full font-mono">{selectedCards.length}/{cardLimit}</span>{heroCardBonus>0&&<span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-300/40 text-amber-200 whitespace-nowrap"><Crown size={8}/>+{heroCardBonus}</span>}{kikiCardBonus>0&&<span className="px-1.5 py-0.5 rounded-full bg-violet-500/20 border border-violet-300/40 text-violet-200 whitespace-nowrap">応援+1</span>}</span>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1 shrink-0 min-w-0">
                   <button onClick={()=>setShowDeckInfo(true)} className={`flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg border border-white/10 active:scale-95${battleTutorialSpotClass('deckView')}`}><Layers size={10}/><span className="text-[7px]">VIEW</span></button>
-                  {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={()=>processTurn()} disabled={!canAct} className={`h-9 px-6 rounded-full font-black text-[13px] active:scale-90 flex items-center justify-center gap-1.5 border-2 border-black uppercase tracking-widest transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={13}/> Action</button>);})()}
+                  <button type="button" disabled={!!battleScenarioRef.current||battleTutorialStep!=null} onClick={()=>setAutoBattleEnabled(!autoBattleRef.current)} aria-pressed={autoBattle} className={`h-8 min-w-[48px] px-1.5 rounded-lg border-2 font-black text-[8px] leading-tight active:scale-90 disabled:opacity-25 ${autoBattle?'border-cyan-300 bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,.65)]':'border-slate-500 bg-slate-800 text-slate-300'}`}><span className="block text-[7px]">{autoBattle?'ON':'OFF'}</span>AUTO{autoBattle?' ON':''}</button>
+                  {(()=>{const allAttackAssigned=selectedCards.filter(idx=>cardNeedsMonster(hand[idx])).every(idx=>cardAssignments[idx]!=null); const canAct=!autoBattle&&!isBusy&&selectedCards.length>0&&pendingCard===null&&allAttackAssigned&&battleTutorialNeed!=='skillPicker'; return(<button onClick={()=>processTurn()} disabled={!canAct} className={`h-9 min-w-0 px-3 sm:px-5 rounded-full font-black text-[11px] sm:text-[13px] active:scale-90 flex items-center justify-center gap-1 border-2 border-black uppercase tracking-wide transition-all${battleTutorialSpotClass('action')} ${canAct?'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)]':'bg-slate-700 text-slate-500 opacity-50'}`}><Play fill="currentColor" size={12}/> Action</button>);})()}
                 </div>
               </div>
               {/* 使うカードが決まっている番は、その種類だけを光らせる(枠全体は光らせない) */}
@@ -15554,14 +15603,14 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
                   // 光らせるのは「いま触ってほしい種類」だけ。技変更の番は名前のところも光らせる
                   const tutorialTargeted=!!battleTutorialCardTarget&&battleTutorialCardKind(c)===battleTutorialCardTarget;
                   return(<div key={c.uid} className="flex-1 min-w-0 max-w-[20%] flex"><button onPointerDown={(e)=>{
-                    if(isBusy||!tutorialAllowed)return;
+                    if(isBusy||autoBattleRef.current||!tutorialAllowed)return;
                     const pt=e.touches?e.touches[0]:e;
                     cardDragActiveRef.current=false;
                     setDragState({cardIndex:i, x:pt.clientX, y:pt.clientY, active:false, card:c});
                   }} style={{...(isDragging?{touchAction:'none',position:'fixed',left:dragState.x,top:dragState.y,transform:'translate(-50%,-50%) rotate(-3deg) scale(1.15)',zIndex:70000,width:'72px',pointerEvents:'none',transition:'none',filter:'drop-shadow(0 12px 18px rgba(0,0,0,0.65))'}:{touchAction:'none'}),...(TYPE_INLINE_STYLE[c.type]||{})}} className={`relative w-full rounded-xl border-2 p-1 flex flex-col items-center justify-between bg-gradient-to-b ${TYPE_COLORS[c.type]} ${isDragging?'ring-4 ring-white shadow-[0_0_24px_rgba(255,255,255,0.6)]':isSel?'transition-all -translate-y-1.5 ring-4 ring-cyan-300 z-20 scale-105 opacity-60 saturate-[0.7] shadow-[0_0_18px_rgba(103,232,249,0.6)]':'transition-all opacity-90'} ${isPending?'ring-4 ring-yellow-400 animate-pulse shadow-[0_0_20px_rgba(250,204,21,0.7)]':''} ${!isSelectable&&!isSel&&!isDragging?'grayscale opacity-50':''}${tutorialTargeted?' is-battle-tutorial-spot':''}${battleTutorialCardTarget&&!tutorialTargeted?' grayscale opacity-25':''}`}>
                     {isSel&&!assignedMon&&(<div className="absolute top-0.5 left-0.5 z-30 w-5 h-5 rounded-full bg-cyan-400 border-2 border-white flex items-center justify-center shadow-lg"><Check size={10} className="text-white" strokeWidth={4}/></div>)}
                     {assignedMon&&(<div className="absolute top-0.5 right-0.5 z-30 w-5 h-5 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center overflow-hidden shadow-lg">{assignedMon.imgUrl?<img src={assignedMon.imgUrl} alt="" className="w-full h-full object-contain"/>:<span className="text-[9px]">{assignedMon.emoji}</span>}</div>)}
-                    <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div>)}<div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button></div>);
+                    <div className="text-3xl mt-1.5">{cardIconNode(c.icon,32,c.id)}</div><div className="w-full text-center flex flex-col justify-end gap-0.5">{['atk','range_atk','unique'].includes(c.type)?(<div onClick={(ev)=>{ev.stopPropagation(); if(isBusy||autoBattleRef.current||Date.now()<=suppressCardClickRef.current)return; setSkillPicker({handIndex:i});}} className={`text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5 underline decoration-dotted decoration-white/60 underline-offset-2 active:opacity-60${battleTutorialNeedCard&&tutorialTargeted?' is-battle-tutorial-spot':''}`}>{c.name}</div>):(<div className="text-[9px] font-black leading-tight w-full whitespace-normal h-7 flex items-center justify-center overflow-hidden uppercase italic px-0.5">{c.name}</div>)}<div className="text-[9px] font-black bg-black/40 text-white rounded py-1 flex items-center justify-center gap-0.5"><Zap size={9}/>{curGuts}</div></div></button></div>);
                 })}
               </div>
             </div>
