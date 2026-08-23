@@ -54,7 +54,7 @@ if(/(?:lite|ultra|eco)BattleView|ecoMode|data-(?:lite|ultra)/.test(champion))fai
 const repeatToggle=between('const setAutoRepeatEnabled = (enabled) => {','// 特殊ルール説明を閉じる正規経路');
 if(!repeatToggle.includes('const next=!!enabled&&isQuickMode(runMode)'))fail('∞周回のクイック限定が維持されていません');
 if(!repeatToggle.includes("if(!next)setEcoModeSafe('off')"))fail('AUTO∞ OFF時に省エネをOFFにしていません');
-for(const token of ['flex-1 min-w-0 flex flex-wrap','min-w-[52px] shrink-0'])if(!battle.includes(token))fail('ACTION見切れ防止レイアウトが維持されていません');
+for(const token of ['flex-1 min-w-0 flex flex-wrap','min-h-[44px] min-w-[84px] shrink-0'])if(!battle.includes(token))fail('ACTION見切れ防止レイアウトが維持されていません');
 if(/['"]mh_[^'"]*eco/i.test(source)||/localStorage[\s\S]{0,160}(?:ecoMode|eco_mode)/i.test(source))fail('省エネ状態を永続化しています');
 if(battle.includes('onClick={cycleEcoMode}')||battle.includes('onClick={()=>cycleEcoMode'))fail('未実装の省エネ切替ボタンがあります');
 console.log('eco mode ultra battle render check passed');

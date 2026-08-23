@@ -10,6 +10,12 @@ for(const token of ['const next=!!enabled&&isQuickMode(runMode)','autoRepeatRef.
 if(repeatToggle.includes('stopAutoBattle')||repeatToggle.includes('stopAllAuto'))fail('∞周回単独OFFが通常AUTOを停止します');
 const battleToggle=between('const setAutoBattleEnabled = (enabled) => {','// ∞周回は');
 if(!battleToggle.includes('if(!next){stopAllAuto();return;}'))fail('通常AUTO OFFがstopAllAutoを使っていません');
-for(const token of ['{isQuickMode(runMode)&&<button type="button"','onClick={()=>setAutoRepeatEnabled(!autoRepeatRef.current)}','aria-pressed={autoRepeat}','∞周回'])if(!source.includes(token))fail(`クイック限定の∞周回UIに ${token} がありません`);
+const cycle=between('const cycleBattleAuto = () => {','// 特殊ルール説明を閉じる正規経路');
+for(const token of ['if(autoRepeatRef.current){setAutoBattleEnabled(false);return;}','if(autoBattleRef.current){','if(isQuickMode(runMode))setAutoRepeatEnabled(true);','else setAutoBattleEnabled(false);','setAutoBattleEnabled(true);'])if(!cycle.includes(token))fail(`統合AUTOの循環処理に ${token} がありません`);
+const battleControls=between('<span className={`flex-1 min-w-0 flex flex-wrap','{/* 使うカードが決まっている番は');
+for(const token of ['onClick={cycleBattleAuto}','aria-pressed={autoBattle}',"autoRepeat?'∞':autoBattle?'ON':'OFF'",'min-h-[44px] min-w-[84px] shrink-0'])if(!battleControls.includes(token))fail(`統合AUTO/ACTION UIに ${token} がありません`);
+if(battleControls.includes('setAutoRepeatEnabled(!autoRepeatRef.current)')||battleControls.includes('∞周回</button>'))fail('バトル内に独立した∞周回ボタンが残っています');
+if(/const \[[^\]]*(?:autoMode|autoStatus|battleAuto)[^\]]*\] = useState/i.test(source))fail('統合AUTO表示用のstateを追加しています');
+for(const width of [320,390,430])if(width-16-(40+44+84+4)<100)fail(`${width}pxでACTIONを維持した操作列が収まりません`);
 if(/['"]mh_[^'"]*(?:repeat|infinity)/.test(source))fail('AUTO∞を永続化する保存キーがあります');
 console.log('auto repeat UI check passed');
