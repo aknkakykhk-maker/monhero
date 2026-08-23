@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 15:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 15:16"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -6878,20 +6878,37 @@ function MonsterHeroGame() {
   const [bgmArrangement, setBgmArrangement] = useState(DEFAULT_BGM_ARRANGEMENT);
   const [previewTrackId, setPreviewTrackId] = useState(null);
   const [quickMuted, setQuickMuted] = useState(false);
+  // 超省エネが自動で消音した場合だけ、入る前の状態と、その後の手動操作を一時的に覚える。
+  const ultraAudioSessionRef = useRef(null);
   const audioOn = audioUnlocked && !quickMuted;
   const setSeVolumeRaw = (nv) => { setSeVolumeState(nv); storeSet('mh_se_volume', nv, false); };
   const setBgmVolumeRaw = (nv) => { setBgmVolumeState(nv); storeSet('mh_bgm_volume', nv, false); };
   // 音量スライダー操作時に呼ぶ: 未解除ならブラウザの音声ロックを解除しつつ値を保存する
-  const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeRaw(nv); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
-  const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeRaw(nv); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
+  const noteUltraAudioManualChange = () => { if (ultraAudioSessionRef.current) ultraAudioSessionRef.current.manuallyChanged=true; };
+  const changeSeVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setSeVolumeRaw(nv); noteUltraAudioManualChange(); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
+  const changeBgmVolume = (v) => { const nv = Math.max(0, Math.min(100, v)); setBgmVolumeRaw(nv); noteUltraAudioManualChange(); setQuickMuted(false); if (!audioUnlocked) setAudioUnlocked(true); Audio_.unlock(true); };
   const audioMuted = !audioOn;
   // バトル画面などスペースが限られる場所向けの1タップミュート切替(詳細な音量調整は設定パネルのスライダーで行う)
-  const toggleQuickMute = () => {
-    storeSet('mh_audio_muted', !quickMuted, false);
-    if (quickMuted) Audio_.unlock();
+  const toggleQuickMute = (automatic=false) => {
+    if (automatic!==true) noteUltraAudioManualChange();
+    const nextMuted=!quickMuted;
+    storeSet('mh_audio_muted', nextMuted, false);
+    if (!nextMuted) Audio_.unlock();
     else Audio_.setEnabled(false);
-    setQuickMuted(current => !current);
+    setQuickMuted(nextMuted);
   };
+  useEffect(() => {
+    if (ultraBattleView) {
+      if (ultraAudioSessionRef.current) return;
+      ultraAudioSessionRef.current={mutedBefore:audioMuted,automaticallyMuted:!audioMuted,manuallyChanged:false};
+      if (!audioMuted) toggleQuickMute(true);
+      return;
+    }
+    const session=ultraAudioSessionRef.current;
+    if (!session) return;
+    ultraAudioSessionRef.current=null;
+    if (!session.mutedBefore&&session.automaticallyMuted&&!session.manuallyChanged&&audioMuted) toggleQuickMute(true);
+  },[ultraBattleView]);
   const closeBgmArrangement = () => { Audio_.stopPreview(); setPreviewTrackId(null); setShowBgmArrangement(false); };
   const changeBgmArrangement = (scene, trackId) => {
     if (!BGM_TRACK_BY_ID[trackId] || bgmArrangement[scene] === trackId) return;
@@ -15496,6 +15513,7 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
         {gameState==='BATTLE'&&(
           <div className="flex-1 flex flex-col h-full relative" data-battle-speed={battleSpeed} data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}>
             {liteBattleView&&<div data-lite-eco-dimmer className="absolute inset-0 bg-black/20 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
+            {ultraBattleView&&<div data-ultra-eco-dimmer className="absolute inset-0 bg-black/55 pointer-events-none" style={{zIndex:89999}} aria-hidden="true"/>}
             <header data-battle-header className="h-[5%] min-h-[40px] shrink-0 bg-slate-900 px-1.5 flex items-center border-b border-white/5 z-[6500] overflow-hidden">
               <div className={`flex flex-1 min-w-0 items-center gap-0.5 overflow-hidden${battleTutorialSpotClass('waveInfo')}`}>{debugBattle&&<span className="text-[7px] font-black text-fuchsia-300 border border-fuchsia-500/40 rounded px-1 py-0.5 tracking-widest">DEBUG</span>}<span className={`text-[8px] font-black bg-opacity-10 px-1 py-0.5 rounded border tracking-tight whitespace-nowrap ${difficulty==='Hard'?'text-red-400 bg-red-500 border-red-500':'text-indigo-400 bg-indigo-500 border-indigo-500'}`}>WAVE {wave}/10</span>{/* 狭い幅ではモード名だけを縮め、ターン・スコアと右側の操作領域は動かさない */}<span className="min-w-0 overflow-hidden text-ellipsis text-[7px] font-black px-1 py-0.5 rounded border whitespace-nowrap" style={{color:battleModeInfo(runMode).color,borderColor:`${battleModeInfo(runMode).color}66`,backgroundColor:'rgba(0,0,0,.35)'}}>{extremeRun?`極限チャレンジ / ${extremeDifficulty}`:<>{battleModeInfo(runMode).short} / {QUICK_DIFFICULTY_SETTINGS[safeDifficulty]?.label||safeDifficulty}</>}</span></div>
               <div data-battle-metrics className="shrink-0 flex items-center gap-1 px-1 leading-none">
