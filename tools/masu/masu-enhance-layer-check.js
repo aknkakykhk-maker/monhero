@@ -28,7 +28,7 @@ const seed = () => {
   localStorage.setItem('mh_battle_tutorial_guide_shown_v1', JSON.stringify(true));
   localStorage.setItem('mh_masu_migrated', JSON.stringify(true));
   localStorage.setItem('mh_gold', JSON.stringify(99999));
-  localStorage.setItem('mh_owned_items', JSON.stringify({ rainbow_psyche: 3500 }));
+  localStorage.setItem('mh_owned_items', JSON.stringify({ rainbow_psyche: 3500, transcend_reset_scroll: 2 }));
   // 超越強化はどのマスモンでも使える。ここでは「まだ超越していない・低Lv・0凸」で確かめる
   localStorage.setItem('mh_masu_mons', JSON.stringify([
     { id: 't1', baseId: 'Golem', name: 'レイヤーテスト', bondXp: 0, rebirthCount: 0, levelCap: 30,
@@ -201,6 +201,39 @@ const fullScreenLayers = () => [...document.querySelectorAll('body *')].filter((
     check('超越強化しても transcended は false のまま', afterPlan.transcended === false);
     check('Lv上限が勝手に500にならない', afterPlan.levelCap === 30, `上限${afterPlan.levelCap}`);
     check('超越マークが付かない', afterPlan.badge === false);
+
+    // 超越ポイントリセットの書。使ったぶんが未使用へ戻り、本が1冊だけ減る
+    await page.evaluate(() => { const b = document.querySelector('[data-transcend-reset-open]'); b && b.click(); });
+    await page.waitForTimeout(900);
+    check('リセットの確認シートが開く', await page.evaluate(() => !!document.querySelector('[data-transcend-reset-sheet]')));
+    check('確認シートに使用済みとリセット後の超越Pを出す',
+      await page.evaluate(() => /使用済み超越P/.test(document.body.innerText) && /リセット後の未使用超越P/.test(document.body.innerText)));
+    const beforeReset = await page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('mh_masu_mons') || '[]')[0] || {};
+      return { hp: (saved.transcendStatPoints || {}).hp || 0, points: saved.transcendPoints || 0,
+        scroll: JSON.parse(localStorage.getItem('mh_owned_items') || '{}').transcend_reset_scroll || 0,
+        psyche: JSON.parse(localStorage.getItem('mh_owned_items') || '{}').rainbow_psyche || 0 };
+    });
+    // 連打しても2冊消費しないこと(同じフレームで2回押す)
+    await page.evaluate(() => { const b = document.querySelector('[data-transcend-reset-commit]'); if (b) { b.click(); b.click(); } });
+    await page.waitForTimeout(1800);
+    const afterReset = await page.evaluate(() => {
+      const saved = JSON.parse(localStorage.getItem('mh_masu_mons') || '[]')[0] || {};
+      const items = JSON.parse(localStorage.getItem('mh_owned_items') || '{}');
+      return { hp: (saved.transcendStatPoints || {}).hp || 0, points: saved.transcendPoints || 0,
+        transcended: saved.transcended === true, levelCap: saved.levelCap,
+        scroll: items.transcend_reset_scroll || 0, psyche: items.rainbow_psyche || 0,
+        sheet: !!document.querySelector('[data-transcend-reset-sheet]') };
+    });
+    check('リセットで使用済み超越Pが未使用へ戻る',
+      afterReset.hp === 0 && afterReset.points === beforeReset.points + 1,
+      `基礎+${beforeReset.hp}→${afterReset.hp} / 未使用 ${beforeReset.points}→${afterReset.points}`);
+    check('連打しても書は1冊しか減らない', beforeReset.scroll - afterReset.scroll === 1,
+      `×${beforeReset.scroll} → ×${afterReset.scroll}`);
+    check('虹のプシュケーは戻らない', afterReset.psyche === beforeReset.psyche,
+      `${beforeReset.psyche} → ${afterReset.psyche}`);
+    check('リセットしても超越済みかどうか・Lv上限は変わらない',
+      afterReset.transcended === false && afterReset.levelCap === 30);
 
     check('超越強化から戻れる', await page.evaluate(() => {
       const b = document.querySelector('[data-transcend-enhance] button');
