@@ -67,7 +67,7 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = (value) => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 09:55"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 10:09"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -4139,6 +4139,14 @@ const TRAINING_OPTIONS = Object.freeze([
   Object.freeze({ id:'def',  name:'丸太うけ',   stat:'def',  flat:0, rate:0.20, statLabel:'丈夫さ',  effect:'丈夫さ +20%' }),
   Object.freeze({ id:'guts', name:'猛勉強',     stat:'guts', flat:5, rate:0.05, statLabel:'ガッツ',  effect:'ガッツ +5 ＆ +5%' }),
 ]);
+const chooseAutoTrainingPicks = (strategy, rng=Math.random) => {
+  const fixed={offense:['atk','guts'],defense:['hp','def'],guts:['guts','guts']}[strategy];
+  if(fixed)return [...fixed];
+  return Array.from({length:TRAINING_PICK_COUNT},()=>{
+    const roll=Math.max(0,Math.min(0.999999999999,Number(rng())||0));
+    return TRAINING_OPTIONS[Math.floor(roll*TRAINING_OPTIONS.length)].id;
+  });
+};
 const trainingOptionOf = (id) => TRAINING_OPTIONS.find(option=>option.id===id) || null;
 // トレーニング1回ぶんを適用する。丸め方と特殊ルールの掛かり方は旧「能力覚醒」と同じ:
 //   ・割合はULTIMATEのペナルティぶんだけ下がる(max(0, 効果 - ペナルティ))
@@ -6351,11 +6359,14 @@ function MonsterHeroGame() {
   const autoBattleRef = useRef(false);
   const autoTurnRunningRef = useRef(false);
   const autoTurnScheduledRef = useRef(false);
+  const autoPostWaveRunningRef = useRef(false);
+  const autoPostWaveScheduledRef = useRef(false);
   const [autoTurnCycle, setAutoTurnCycle] = useState(0);
   // 停止時は実行中のターンを完走させつつ、予約済みの次ターンだけを無効にする。
   const stopAutoBattle = () => {
     autoBattleRef.current = false;
     autoTurnScheduledRef.current = false;
+    autoPostWaveScheduledRef.current = false;
     setAutoBattle(false);
   };
   const [monSelection, setMonSelection] = useState([]);
@@ -11985,6 +11996,25 @@ const distAfterIntent = (intent, currentDist) => (intent && intent.type === 'MOV
       } else { initBattle(wave+1,slots,ownedUniques,ownedTeachings,nDef); }
     },battleMs(900));
   };
+
+  // AUTO中にREWARD_PICKへ入ったときだけ、決めた配列をstateを経由せず直接確定する。
+  // 実行ロックは画面を離れるまで保持し、再描画やStrictModeでも同じ報酬を二重処理しない。
+  useEffect(()=>{
+    if(gameState!=='REWARD_PICK'){
+      autoPostWaveRunningRef.current=false;
+      autoPostWaveScheduledRef.current=false;
+      return;
+    }
+    if(!autoBattleRef.current||autoPostWaveRunningRef.current||autoPostWaveScheduledRef.current)return;
+    autoPostWaveScheduledRef.current=true;
+    Promise.resolve().then(()=>{
+      autoPostWaveScheduledRef.current=false;
+      if(!autoBattleRef.current||autoPostWaveRunningRef.current)return;
+      autoPostWaveRunningRef.current=true;
+      const picks=chooseAutoTrainingPicks(autoSettings.strategy);
+      handleTraining(picks);
+    });
+  },[autoBattle,gameState]);
 
   const upgradeUnique = (monId, diff) => {
     setOwnedUniques(prev=>prev.map(u=>{

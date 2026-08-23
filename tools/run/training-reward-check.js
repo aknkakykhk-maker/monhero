@@ -41,10 +41,21 @@ const ULTIMATE_SETTING={id:'ULTIMATE',specialRules:{awakeningPenaltyRate:0.0075}
 const extremeSpecialRule=(d,r)=>(d==='NIGHTMARE'&&r==='waveEnhancement')?0.5:1;
 ${slice('const applyNightmareWaveEnhancement', 'const ultimateEnemyTurnMultiplier')}
 ${slice('const TRAINING_PICK_COUNT', '// 整数で扱うバトル値の特殊ルール倍率')}
-module.exports={TRAINING_PICK_COUNT,TRAINING_OPTIONS,trainingOptionOf,resolveTrainingStep,resolveTrainingStats};`;
+module.exports={TRAINING_PICK_COUNT,TRAINING_OPTIONS,chooseAutoTrainingPicks,trainingOptionOf,resolveTrainingStep,resolveTrainingStats};`;
 const mod = { exports: {} };
 new Function('module', 'exports', calcSrc)(mod, mod.exports);
 const T = mod.exports;
+
+// ---- AUTO方針 ----
+check('AUTO randomは固定rngで再現可能な2個を返す',
+  JSON.stringify(T.chooseAutoTrainingPicks('random',()=>0.26))===JSON.stringify(['atk','atk']));
+check('AUTO randomは同じ項目を2回選べる',
+  JSON.stringify(T.chooseAutoTrainingPicks('invalid',()=>0.99))===JSON.stringify(['guts','guts']));
+check('AUTO offenseは atk + guts', JSON.stringify(T.chooseAutoTrainingPicks('offense'))===JSON.stringify(['atk','guts']));
+check('AUTO defenseは hp + def', JSON.stringify(T.chooseAutoTrainingPicks('defense'))===JSON.stringify(['hp','def']));
+check('AUTO gutsは guts + guts', JSON.stringify(T.chooseAutoTrainingPicks('guts'))===JSON.stringify(['guts','guts']));
+check('AUTO helperはReact stateや確定処理を呼ばない',
+  !/setTrainingPicks|setGameState|handleTraining/.test(slice('const chooseAutoTrainingPicks', 'const trainingOptionOf')));
 
 // ---- ① 定義 ----
 check('4項目から2回選ぶ', T.TRAINING_PICK_COUNT === 2 && T.TRAINING_OPTIONS.length === 4,
@@ -117,6 +128,14 @@ check('クイックはトレーニング画面へ行かず自動成長する',
 check('トレーニングを開くのはクイック以外の分岐だけ',
   (source.match(/setGameState\('REWARD_PICK'\)/g) || []).length === 1);
 check('開くたびに前回の選択を空へ戻す', has('setTrainingPicks([]);\n      setGameState(\'REWARD_PICK\');'));
+check('AUTO OFFではREWARD_PICKを自動処理しない', has("if(!autoBattleRef.current||autoPostWaveRunningRef.current||autoPostWaveScheduledRef.current)return;"));
+check('AUTO ONのREWARD_PICKは専用ロックで1回だけ処理する',
+  has('const autoPostWaveRunningRef = useRef(false);') && has('const autoPostWaveScheduledRef = useRef(false);')
+    && has('autoPostWaveRunningRef.current=true;'));
+check('AUTOトレーニングは決めたpicksをhandleTrainingへ直接渡す',
+  has('const picks=chooseAutoTrainingPicks(autoSettings.strategy);\n      handleTraining(picks);'));
+check('AUTO後も供モン等の既存遷移を自動選択しない',
+  !slice('// AUTO中にREWARD_PICKへ入ったときだけ', 'const upgradeUnique').includes("setGameState('PICK_ALLY')"));
 
 // ---- ③ 画面 ----
 const START = "      {gameState==='REWARD_PICK'&&(()=>{";

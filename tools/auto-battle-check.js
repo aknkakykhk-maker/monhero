@@ -8,6 +8,8 @@ assert(has('const [autoBattle, setAutoBattle] = useState(false);'), 'AUTOの初�
 assert(has('const autoBattleRef = useRef(false);'), 'AUTOの同期refがありません');
 assert(has('const autoTurnRunningRef = useRef(false);'), 'AUTO実行ロックがありません');
 assert(has('const autoTurnScheduledRef = useRef(false);'), 'AUTO予約ロックがありません');
+assert(has('const autoPostWaveRunningRef = useRef(false);'), 'WAVE後AUTO実行ロックがありません');
+assert(has('const autoPostWaveScheduledRef = useRef(false);'), 'WAVE後AUTO予約ロックがありません');
 assert(!/setInterval\s*\(/.test(source.slice(source.indexOf('const setAutoBattleEnabled'), source.indexOf('// WAVE 10'))), 'AUTOがsetIntervalを使用しています');
 assert(has('const turnPromise=runAutoTurnOnce();'), '連続AUTOがrunAutoTurnOnceを使用していません');
 assert(has('return entries.length>0 ? processTurn(entries) : null'), 'AUTOが明示entriesのPromiseを返していません');
@@ -19,7 +21,8 @@ assert(has('const canAct=!autoBattle&&!isBusy'), 'AUTO中のACTION無効化が�
 assert(has('disabled={isBusy||autoBattle||!battleTutorialAllowsEmergency}'), 'AUTO中の緊急回復無効化がありません');
 assert(has("setSelectedCards([]);setCardAssignments({});setPendingCard(null);setFocusedCard(null);setSkillPicker(null);"), 'AUTO開始時に手動選択を破棄していません');
 assert(has('const stopAutoBattle = () => {'), 'AUTO停止helperがありません');
-assert(has('autoBattleRef.current = false;\n    autoTurnScheduledRef.current = false;\n    setAutoBattle(false);'), 'AUTO停止helperがref・予約・stateを停止していません');
+assert(has('autoBattleRef.current = false;\n    autoTurnScheduledRef.current = false;\n    autoPostWaveScheduledRef.current = false;\n    setAutoBattle(false);'), 'AUTO停止helperがref・予約・stateを停止していません');
+assert(has('autoPostWaveScheduledRef.current = false;'), 'AUTO停止helperがWAVE後の予約を停止していません');
 assert(!source.slice(source.indexOf('const stopAutoBattle = () => {'), source.indexOf('};', source.indexOf('const stopAutoBattle = () => {'))).includes('autoTurnRunningRef.current'), '停止helperが実行中ターンのロックを解除しています');
 assert(has("if(hp<=0||gaveUp||gameState==='CHAMPION'||gameState==='PICK_HERO')stopAutoBattle();"), '敗北・リタイア・CHAMPION・新規周回の停止条件がありません');
 assert(has('const returnToHome = () => {\n    stopAutoBattle();'), 'HOME遷移時にAUTOを停止していません');
