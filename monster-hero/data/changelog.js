@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-23 12:53",
+    date: "2026-08-23 13:04",
     type: 'update',
     title: '呼び方を決められるようになったことを助手が教えてくれます',
     assistantNotice: { id:'update_notice_assistant_call_style_guide_v1', type:'feature' },
@@ -13,10 +13,11 @@ const CHANGELOG = [
   {
     date: "2026-08-23 12:11",
     type: 'update',
-    title: 'AUTO機能が完成！∞周回に対応しました',
+    title: 'AUTO機能が完成！∞周回はクイックモードのみ利用可能です',
     assistantNotice: { id:'update_notice_auto_complete_v1', type:'feature' },
     items: [
       'AUTOをONにすると、戦闘からWAVE10まで自動で進行します。トレーニング、供モン加入、アシストカード選択、固有技強化、必要なときの緊急回復も自動で行います。',
+      '∞周回はクイックモードのみ利用可能です。通常AUTOはほかのモードでもこれまでどおり利用できます。',
       '「∞周回」をONにすると、各周回の最終結果と報酬演出を確認してから、同じ出撃条件で新しいランを始めます。敗北・リタイア・HOMEへの移動・バックグラウンド移行で停止します。',
       'オフライン中の周回と、勝利後のマスモン自動登録は行いません。',
     ],

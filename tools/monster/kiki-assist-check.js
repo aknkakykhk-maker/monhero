@@ -29,9 +29,9 @@ assert(gameSource.includes("if(t.id==='kiki') return `次の${level+2}ターン 
   "kikiCardBonusTurns",
   'heroCardBonus + kikiCardBonus',
   "prev.length >= STARTER_TEACHING_IDS.length",
-  "getAttackPredictedDmg(card,slots[slotIdx],baseDmg)",
+  "getAttackPredictedDmg(card,slots[slotIdx],baseDmg,b.combo)",
 ].forEach(text=>assert(gameSource.includes(text),`実装結線が不足: ${text}`));
-assert(gameSource.includes("total += extraHit(getPermaBuff('globalComboDmgPct'))"),'共通予測に全体連撃を含める');
+assert(gameSource.includes("total += extraHit(getPermaBuff('globalComboDmgPct')+additionalGlobalCombo)"),'共通予測に全体連撃を含める');
 assert(gameSource.includes('const KIKI_FACE_ICON_ADJUSTMENT = Object.freeze({ scale:2.37, x:0, y:19 })'),'ききの顔寄り調整値を1か所で定義する');
 assert(gameSource.includes('kiki: KIKI_FACE_ICON_ADJUSTMENT')&&gameSource.includes('kiki_icon: KIKI_FACE_ICON_ADJUSTMENT'),'アシストカードと既存プロフィール用設定で同じ調整値を再利用する');
 assert(gameSource.includes('ASSIST_CARD_ICON_STYLES[cardId]'),'画像パスではなくアシストカードIDで専用表示を適用する');
@@ -41,4 +41,16 @@ assert(gameSource.includes('cardIconNode(t.icon,40,t.id)'),'編成画面のカ�
 assert(gameSource.includes('cardIconNode(c.icon,32,c.id)'),'バトル中のカードへ専用表示を適用する');
 assert(gameSource.includes("0.3+comboDmgBonus")&&gameSource.includes("0.2+comboDmgBonus"),'ザン既存補正を維持する');
 assert(!/globalComboDmgPct[^\n]*comboDmgPct|comboDmgPct[^\n]*globalComboDmgPct/.test(gameSource),'ザン補正と全体連撃を混ぜない');
+const actionHeaderStart=gameSource.indexOf('flex-1 min-w-0 flex flex-wrap');
+const actionHeader=gameSource.slice(actionHeaderStart,gameSource.indexOf('使うカードが決まっている番は',actionHeaderStart));
+['flex-1 min-w-0 flex flex-wrap','gap-y-0.5','flex items-center gap-0.5 shrink-0','min-w-[52px] shrink-0'].forEach(text=>
+  assert(actionHeader.includes(text),`ACTION操作列を守るレイアウトが不足: ${text}`));
+for(const width of [320,390,430]) {
+  // 右側はVIEW約40px + AUTO44px + ∞44px + ACTION52px + gap。最小幅でも固定領域が収まる。
+  assert(width-16-(40+44+44+52+6)>=100,`${width}pxで左側の折り返し領域を確保できない`);
+}
+for(const [hero,kiki] of [[0,0],[1,0],[0,1],[1,1]]) {
+  assert((hero?gameSource.includes('heroCardBonus>0'):true)&&(kiki?gameSource.includes('kikiCardBonus>0'):true),
+    `勇者+${hero}・応援+${kiki}の表示条件がない`);
+}
 console.log('kiki assist check: OK');

@@ -41,6 +41,8 @@ check('WAVE10はAUTO停止後に既存の終了ロック・報酬・記録・CHA
     && finalizer.indexOf("setGameState('CHAMPION');") < finalizer.indexOf('await submitRunScoreOnce();'));
 check('AUTO controllerから自動Retry・マスモン登録を実行しない',
   !/retry|returnToHome|register|masu/i.test(controller));
+check('通常AUTOのcontrollerをクイックモード限定にしない',
+  !/isQuickMode|autoRepeat/.test(controller));
 
 if (failed) process.exit(1);
 console.log('AUTO 1周完走チェック: すべてOK');
