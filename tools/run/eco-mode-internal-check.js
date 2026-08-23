@@ -25,12 +25,14 @@ if(!stopAll.includes("setEcoModeSafe('off')"))fail('stopAllAutoで省エネをOF
 const battle=between("{gameState==='BATTLE'&&(",' {/* スキップ: 勇者モンと供モン3体を選ぶ */}'.trimStart());
 for(const token of [
   "data-eco-view={ultraBattleView?'ultra':liteBattleView?'lite':'off'}",
-  'data-lite-eco-dimmer','bg-black/20','data-ultra-eco-dimmer','bg-black/45',
-  '[data-eco-view="ultra"] *','animation:none!important','transition:none!important',
-  'WAVE {wave}/10','{turnCount}/20','{enemy.name}','enemy.hp',
-  'Ally Life','Ally Guts','slots.map((s,i)=>','Action Cards',
+  'data-lite-eco-dimmer','bg-black/20','data-ultra-battle-view',
+  'ultraBattleView?(','WAVE {wave}/10','{turnCount}/20','{enemy.name}','enemy.hp',
+  '現在距離','味方HP','ガッツ','slots.map((s,i)=>','Action Cards','AUTO∞で進行中',
   '{slotSkill.name}','{enemySkillName.label}','popups.filter',
 ])if(!battle.includes(token))fail(`省エネでも残す戦闘表示 ${token} がありません`);
+const ultra=between('data-ultra-battle-view','):(<>');
+for(const token of ['hand.map((c,i)=>','enemyAttackFx?.kind','attackAnim &&','animate-pulse','transition-all','drop-shadow'])if(ultra.includes(token))fail(`ultra軽量表示へ通常の重い描画 ${token} が混入しています`);
+if(!battle.includes('):(<>' ))fail('ultraと通常/liteのBATTLE描画ツリーが分離されていません');
 for(const token of [
   '!ecoBattleView&&guardFx','!ecoBattleView&&teachingFx',
   "!ecoBattleView&&enemyAttackFx?.kind==='move'",

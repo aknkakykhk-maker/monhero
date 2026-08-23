@@ -2,7 +2,7 @@
 // このファイルは tools/build.js が game-system.jsx から自動生成したものです。
 // 直接編集しないでください。変更は game-system.jsx に対して行い、
 // リポジトリのルートで `cd tools && node build.js` を実行して作り直します。
-// source-sha256: 73fe803d02640c46
+// source-sha256: c8f6e9294734d42e
 // ============================================================
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 // ==== グローバル(UMD)から React フックと lucide アイコンを取得 ====
@@ -128,7 +128,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const BATTLE_SPEEDS = [1, 1.5, 2, 3, 4];
 const normalizeBattleSpeed = value => BATTLE_SPEEDS.includes(Number(value)) ? Number(value) : 1;
 const BATTLE_SPEED_KEY = 'mh_battle_speed_v1';
-const BUILD_DATE = "2026-08-23 13:37"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
+const BUILD_DATE = "2026-08-23 15:04"; // 更新のたびに手動で書き換える(日付+時刻、JST) ※version.jsonのbuildも同じ値に合わせること
 
 // --- ブリーダーレベル/絆レベル: WAVEクリアごとに獲得する経験値。WAVEが進むほど段階的に増加するが、
 // 10WAVE制覇時の合計は旧仕様(一律10XP×10WAVE=100)と変わらない
@@ -30149,16 +30149,9 @@ function MonsterHeroGame() {
       className: "flex-1 flex flex-col h-full relative",
       "data-battle-speed": battleSpeed,
       "data-eco-view": ultraBattleView ? 'ultra' : liteBattleView ? 'lite' : 'off'
-    }, ultraBattleView && /*#__PURE__*/React.createElement("style", null, `[data-eco-view="ultra"] *,[data-eco-view="ultra"] *::before,[data-eco-view="ultra"] *::after{animation:none!important;transition:none!important}`), liteBattleView && /*#__PURE__*/React.createElement("div", {
+    }, liteBattleView && /*#__PURE__*/React.createElement("div", {
       "data-lite-eco-dimmer": true,
       className: "absolute inset-0 bg-black/20 pointer-events-none",
-      style: {
-        zIndex: 89999
-      },
-      "aria-hidden": "true"
-    }), ultraBattleView && /*#__PURE__*/React.createElement("div", {
-      "data-ultra-eco-dimmer": true,
-      className: "absolute inset-0 bg-black/45 pointer-events-none",
       style: {
         zIndex: 89999
       },
@@ -30234,7 +30227,149 @@ function MonsterHeroGame() {
       className: "shrink-0 w-[28px] h-[28px] flex items-center justify-center bg-slate-800 rounded text-slate-400 active:scale-90 disabled:opacity-25"
     }, /*#__PURE__*/React.createElement(Flag, {
       size: 14
-    })))), specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
+    })))), ultraBattleView ? /*#__PURE__*/React.createElement("div", {
+      "data-ultra-battle-view": true,
+      className: "flex-1 min-h-0 flex flex-col bg-slate-950 text-slate-100"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex-1 min-h-0 px-2 py-1.5 flex flex-col gap-1.5 overflow-y-auto"
+    }, enemy && /*#__PURE__*/React.createElement("section", {
+      className: "rounded-xl border border-red-900/70 bg-slate-900/95 px-2 py-1.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-2 text-[10px] font-black"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "min-w-0 truncate text-red-200"
+    }, enemy.name), /*#__PURE__*/React.createElement("span", {
+      className: "shrink-0 font-mono text-red-300"
+    }, Math.max(0, enemy.hp).toLocaleString(), " / ", enemy.maxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 h-2 overflow-hidden rounded-full bg-slate-800"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "h-full bg-red-600",
+      style: {
+        width: `${Math.max(0, enemy.hp) / enemy.maxHp * 100}%`
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 flex items-center justify-center gap-3"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "h-[clamp(82px,16dvh,132px)] w-[clamp(82px,16dvh,132px)] flex items-center justify-center"
+    }, enemy.imgUrl ? /*#__PURE__*/React.createElement("img", {
+      src: enemy.imgUrl,
+      alt: enemy.name,
+      className: "w-full h-full object-contain"
+    }) : /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 'clamp(58px,11dvh,104px)',
+        lineHeight: 1
+      }
+    }, enemy.emoji)), /*#__PURE__*/React.createElement("div", {
+      className: "text-center"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] font-black text-slate-400"
+    }, "\u73FE\u5728\u8DDD\u96E2"), /*#__PURE__*/React.createElement("div", {
+      className: `mt-1 rounded-full border px-3 py-1 text-[11px] font-black ${RANGE_STYLES[enemyDist].bg} ${RANGE_STYLES[enemyDist].border}`
+    }, RANGE_LABELS[enemyDist], "\u8DDD\u96E2"))), (enemySkillName || popups.some(p => p.side === 'enemy')) && /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 min-h-[38px] rounded-lg border border-red-800/60 bg-black/50 px-2 py-1 text-center"
+    }, enemySkillName && /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black text-red-200"
+    }, enemySkillName.label), popups.filter(p => p.side === 'enemy').map(p => /*#__PURE__*/React.createElement("div", {
+      key: p.id,
+      className: `${p.color} text-base font-black`
+    }, p.text)))), /*#__PURE__*/React.createElement("section", {
+      className: "rounded-xl border border-indigo-900/70 bg-slate-900/95 px-2 py-1.5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-4 gap-1"
+    }, slots.map((s, i) => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      className: `min-w-0 rounded-lg border px-0.5 py-1 text-center ${RANGE_STYLES[i].bg} ${RANGE_STYLES[i].border}`
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "truncate text-[7px] font-black text-white"
+    }, s?.name || '---'), /*#__PURE__*/React.createElement("div", {
+      className: "mx-auto flex h-12 w-full items-center justify-center"
+    }, s?.imgUrl ? /*#__PURE__*/React.createElement(DyedMonsterImage, {
+      baseId: s.id,
+      src: s.imgUrl,
+      alt: s.name,
+      masuColors: s.colors,
+      className: "w-full h-full object-contain"
+    }) : /*#__PURE__*/React.createElement("span", {
+      className: "text-3xl"
+    }, s?.emoji || '')), /*#__PURE__*/React.createElement("div", {
+      className: "text-[7px] font-black"
+    }, RANGE_LABELS[i], "\u8DDD\u96E2")))), /*#__PURE__*/React.createElement("div", {
+      className: "mt-1.5 space-y-1"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between text-[8px] font-black text-pink-300"
+    }, /*#__PURE__*/React.createElement("span", null, "\u5473\u65B9HP"), /*#__PURE__*/React.createElement("span", {
+      className: "font-mono"
+    }, hp.toLocaleString(), " / ", effectiveMaxHp.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      className: "h-1.5 overflow-hidden rounded-full bg-slate-800"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "h-full bg-pink-500",
+      style: {
+        width: `${hp / effectiveMaxHp * 100}%`
+      }
+    }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "flex justify-between text-[8px] font-black text-amber-300"
+    }, /*#__PURE__*/React.createElement("span", null, "\u30AC\u30C3\u30C4"), /*#__PURE__*/React.createElement("span", {
+      className: "font-mono"
+    }, Math.floor(guts).toLocaleString(), " / ", effectiveMaxGuts.toLocaleString())), /*#__PURE__*/React.createElement("div", {
+      className: "h-1.5 overflow-hidden rounded-full bg-slate-800"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "h-full bg-amber-400",
+      style: {
+        width: `${guts / effectiveMaxGuts * 100}%`
+      }
+    })))), (slotSkill || popups.some(p => ['hero', 'life', 'guts'].includes(p.side))) && /*#__PURE__*/React.createElement("div", {
+      className: "mt-1 min-h-[38px] rounded-lg border border-indigo-800/60 bg-black/50 px-2 py-1 text-center"
+    }, slotSkill && /*#__PURE__*/React.createElement("div", {
+      className: "text-[11px] font-black text-indigo-200"
+    }, slotSkill.name), popups.filter(p => ['hero', 'life', 'guts'].includes(p.side)).map(p => /*#__PURE__*/React.createElement("div", {
+      key: p.id,
+      className: `${p.color} text-base font-black`
+    }, p.text))))), /*#__PURE__*/React.createElement("div", {
+      className: "shrink-0 border-t border-white/10 bg-slate-900 p-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between gap-1 px-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0 flex-1"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-[8px] font-black uppercase tracking-wider text-indigo-300"
+    }, "Action Cards"), /*#__PURE__*/React.createElement("div", {
+      className: "truncate text-[9px] font-bold text-slate-300"
+    }, "AUTO\u221E\u3067\u9032\u884C\u4E2D")), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setShowDeckInfo(true),
+      className: "flex min-h-[32px] items-center gap-0.5 rounded-lg border border-white/10 bg-white/5 px-2 text-[7px] font-black"
+    }, /*#__PURE__*/React.createElement(Layers, {
+      size: 9
+    }), "VIEW"), /*#__PURE__*/React.createElement("div", {
+      className: "w-[44px] shrink-0 flex flex-col gap-0.5"
+    }, /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      disabled: !!battleScenarioRef.current || battleTutorialStep != null,
+      onClick: cycleBattleAuto,
+      "aria-pressed": autoBattle,
+      "aria-label": `AUTO ${autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF'}`,
+      className: "h-8 w-full rounded-lg border-2 border-fuchsia-300 bg-fuchsia-500 text-[8px] font-black leading-tight text-slate-950"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, "AUTO"), /*#__PURE__*/React.createElement("span", {
+      className: "block text-[7px]"
+    }, autoRepeat ? '∞' : autoBattle ? 'ON' : 'OFF')), /*#__PURE__*/React.createElement("button", {
+      type: "button",
+      onClick: cycleEcoMode,
+      "aria-label": "\u7701\u30A8\u30CD \u8D85",
+      className: "min-h-[24px] w-full rounded-md border border-lime-200 bg-lime-500 text-[7px] font-black leading-[9px] text-slate-950"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, "\u7701\u30A8\u30CD"), /*#__PURE__*/React.createElement("span", {
+      className: "block"
+    }, "\u8D85"))), /*#__PURE__*/React.createElement("button", {
+      disabled: true,
+      className: "min-h-[44px] min-w-[84px] shrink-0 rounded-full border-2 border-black bg-slate-700 px-2 text-[11px] font-black uppercase text-slate-400 opacity-50"
+    }, /*#__PURE__*/React.createElement(Play, {
+      fill: "currentColor",
+      size: 12,
+      className: "inline mr-1"
+    }), "Action")))) : /*#__PURE__*/React.createElement(React.Fragment, null, specialRuleDifficultyForRun(runMode, difficulty, extremeRunRef.current, extremeDifficulty) === ULTIMATE_SETTING.id && (() => {
       const elapsedTotalTurns = totalTurnCount + Math.max(0, turnCount - 1);
       const enemyMultiplier = ultimateEnemyTurnMultiplier(totalTurnCount);
       const damageMultiplier = ultimateDamageTurnMultiplier(elapsedTotalTurns, ULTIMATE_SETTING.id);
@@ -31513,7 +31648,7 @@ function MonsterHeroGame() {
       }, /*#__PURE__*/React.createElement(Zap, {
         size: 9
       }), curGuts))));
-    }))))), marketIconZoom && (() => {
+    })))))), marketIconZoom && (() => {
       const item = marketIconZoom;
       const round = item.type === 'icon' || item.type === 'assist';
       return /*#__PURE__*/React.createElement("div", {
