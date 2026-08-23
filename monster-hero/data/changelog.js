@@ -1,6 +1,6 @@
 const CHANGELOG = [
   {
-    date: "2026-08-23 11:30",
+    date: "2026-08-23 11:51",
     type: 'issue',
     title: 'スキップで経験値が入らないことがある問題を修正',
     items: [
@@ -11,7 +11,7 @@ const CHANGELOG = [
     ],
   },
   {
-    date: "2026-08-23 11:30",
+    date: "2026-08-23 11:51",
     type: 'issue',
     title: 'AUTOが途中で止まる問題を修正しました',
     items: [
