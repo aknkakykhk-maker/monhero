@@ -46,11 +46,11 @@ assert(has('onClick={()=>confirmPickTeaching()}'), '手動確定ボタンがイ�
 assert(!has('setSelectedTeachingCard(choice);'), 'AUTO確定が選択stateの反映待ちに依存しています');
 assert(has("addPopup('AUTO停止：アシストカードを選べません'"), '候補0件時の安全なAUTO停止がありません');
 assert(!source.slice(source.indexOf('const stopAutoBattle = () => {'), source.indexOf('};', source.indexOf('const stopAutoBattle = () => {'))).includes('autoTurnRunningRef.current'), '停止helperが実行中ターンのロックを解除しています');
-assert(has("if(hp<=0||gaveUp||gameState==='CHAMPION'||gameState==='PICK_HERO')stopAutoBattle();"), '敗北・リタイア・CHAMPION・新規周回の停止条件がありません');
-assert(has('const returnToHome = () => {\n    stopAutoBattle();'), 'HOME遷移時にAUTOを停止していません');
-assert(has('const handleRetry = () => {\n    stopAutoBattle();'), 'Retry時にAUTOを停止していません');
-assert(has('const startBattleTutorial = (returnTo = \'DEBUG_SETTINGS\', variant = \'v2\') => {\n    stopAutoBattle();'), 'バトル練習開始時にAUTOを停止していません');
-assert(has('const onHidden = () => { Audio_.setPageHidden(true); stopAutoBattle(); };'), 'バックグラウンド移行時にAUTOを停止していません');
+assert(has("if(hp<=0||gaveUp||gameState==='PICK_HERO')stopAllAuto();"), '敗北・リタイア・新規周回の停止条件がありません');
+assert(has('const returnToHome = () => {\n    stopAllAuto();'), 'HOME遷移時にAUTOを停止していません');
+assert(has('const handleRetry = () => {\n    stopAllAuto();'), 'Retry時にAUTOを停止していません');
+assert(has('const startBattleTutorial = (returnTo = \'DEBUG_SETTINGS\', variant = \'v2\') => {\n    stopAllAuto();'), 'バトル練習開始時にAUTOを停止していません');
+assert(has('const onHidden = () => { Audio_.setPageHidden(true); stopAllAuto(); };'), 'バックグラウンド移行時にAUTOを停止していません');
 assert(has("window.addEventListener('pagehide', onHidden);"), 'pagehideでAUTO停止処理を呼んでいません');
 assert(!/const onVisible = \(\) => \{[^}]*setAutoBattleEnabled|const onVisible = \(\) => \{[^}]*setAutoBattle\(/.test(source), '画面復帰時にAUTOを再開しています');
 assert(!/gameState==='REWARD_PICK'\)stopAutoBattle|gameState==='WAVE_RESULT'\)stopAutoBattle/.test(source), '通常WAVE後の選択画面でAUTOを停止しています');
