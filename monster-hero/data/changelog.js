@@ -1,5 +1,16 @@
 const CHANGELOG = [
   {
+    date: "2026-08-23 10:42",
+    type: 'update',
+    title: '固有技強化をAUTO対応しました',
+    assistantNotice: { id:'update_notice_auto_unique_upgrade_v1', type:'feature' },
+    items: [
+      'AUTOがONのとき、固有技強化では強化可能な固有技へ残りポイントを1Pずつランダムに配分します。上限Lv.8へ達した技は、その後の抽選候補から外れます。',
+      'すべての固有技が最大になるなどして使い切れないポイントは持ち越します。AUTOでは強化ポイントによるガッツ回復を使いません。',
+      'バトル操作・トレーニング・WAVE2・4・6の供モン加入・アシストカード選択もAUTO対応済みです。AUTO∞（自動周回）は未実装です。',
+    ],
+  },
+  {
     date: "2026-08-23 10:31",
     type: 'update',
     title: 'アシストカード選択をAUTO対応しました',
